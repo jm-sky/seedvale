@@ -6,8 +6,10 @@ export type ItemInstance = {
   kind: ItemKind
 }
 
+export type TrapKind = 'trap_simple' | 'trap_good'
+
 export type TrapItemInstance = ItemInstance & {
-  kind: 'trap_simple' | 'trap_good'
+  kind: TrapKind
   durability: number
 }
 
@@ -128,8 +130,12 @@ export function isInstanceBackedKind(kind: ItemKind): boolean {
   return INSTANCE_BACKED_KINDS.has(kind)
 }
 
+export function isTrapKind(kind: ItemKind): kind is TrapKind {
+  return kind === 'trap_simple' || kind === 'trap_good'
+}
+
 export function isTrapItemInstance(instance: ItemInstance): instance is TrapItemInstance {
-  return instance.kind === 'trap_simple' || instance.kind === 'trap_good'
+  return isTrapKind(instance.kind)
 }
 
 export function clamp01(n: number): number {

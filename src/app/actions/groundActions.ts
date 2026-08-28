@@ -4,6 +4,7 @@ import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
+import { createAcquiredInstance } from '../../items/trade'
 import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
 import { HIDDEN_TREASURE_MARKER_COUNT, hiddenTreasureDigHit } from '../../settlement/hiddenTreasure'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
@@ -98,14 +99,18 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       Math.random() * (HIDDEN_TREASURE_COIN_MAX - HIDDEN_TREASURE_COIN_MIN + 1),
     )
     const swordKind = HIDDEN_TREASURE_SWORD_KINDS[Math.floor(Math.random() * HIDDEN_TREASURE_SWORD_KINDS.length)]!
-    // Sword first, so it always claims its space before coins fill the rest
-    // of the chest's gabarite capacity (`items/container.ts` — 24 units,
-    // never a "whole stack is one slot" exemption). Coins beyond that don't
-    // fit physically in one chest; the remainder goes straight to the player
-    // the same way a quest reward that overflows the player's own inventory
-    // already does (`grantItem` — spills any leftover as individual ground
-    // drops rather than losing it).
-    bundle.placedContainers.deposit(record.id, swordKind, 1)
+    // The 3 sword kinds are all `WEAPON_MAINTENANCE_KINDS` (durability +
+    // sharpness) — `isInstanceBackedKind`. Their container/inventory UI reads
+    // only `getInstances(kind)`, never the plain `counts` map, so a real
+    // `ItemInstance` via `createAcquiredInstance` (same dispatch quest
+    // rewards/purchases/world pickups already use) is required for it to show
+    // up at all, not just `deposit()`'s count-based add.
+    const swordInstance = createAcquiredInstance(swordKind)
+    if (swordInstance) bundle.placedContainers.depositInstance(record.id, swordInstance)
+    // `coin` is gabarite-exempt (`items/items.ts`'s `itemSizeUnits`), so the
+    // full 200-300 always fits in the chest's capacity; `remainingCoins` is a
+    // defensive fallback (`grantItem`, same overflow path a quest reward
+    // already uses), not the expected case.
     const depositedCoins = bundle.placedContainers.deposit(record.id, 'coin', coinCount)
     const remainingCoins = coinCount - depositedCoins
     if (remainingCoins > 0) ctx.grantItem('coin', remainingCoins)

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { SMALL_MESH_SHADOW_THRESHOLD } from '../assets/loadGltf'
+import { isTrapKind } from './itemInstances'
 import { cloneItemGlb } from './itemModels'
 
 export type ItemKind =
@@ -93,11 +94,12 @@ export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 /** Item gabarite (plan 164) — deliberately independent of `weight`. Governs
  *  container/inventory *size* capacity only; a small heavy item and a large
  *  light item fail different checks (`Inventory.ts`'s `canAdd`). */
-export type ItemSize = 'XS' | 'SM' | 'MD' | 'LG' | 'XL'
+export type ItemSize = 'XXS' | 'XS' | 'SM' | 'MD' | 'LG' | 'XL'
 
 /** Abstract capacity units per `ItemSize` — not physical dimensions, just a
  *  scalar "how much room" answer (plan 164 §9: no Tetris packing). */
 export const ITEM_SIZE_UNITS: Record<ItemSize, number> = {
+  XXS: 0.01,
   XS: 1,
   SM: 2,
   MD: 3,
@@ -624,7 +626,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     label: 'moneta',
     categories: ['resource'],
     weight: 0.001,
-    size: 'XS',
+    size: 'XXS',
     color: 0xc9a227,
     description: 'Bity krążek metalu. Kupiec płaci nim za towar i przyjmuje go za zakupy — także za działki na sprzedaż.'
   },
@@ -1402,7 +1404,7 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'trap_simple' || kind === 'trap_good') {
+  if (isTrapKind(kind)) {
     // Folded-shut trap as a pickup (the placed prop lives in `trapProp.ts`).
     const group = new THREE.Group()
     const ring = new THREE.Mesh(

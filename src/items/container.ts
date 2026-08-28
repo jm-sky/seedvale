@@ -43,7 +43,7 @@ export const CONTAINER_DEFS: Record<ContainerKind, ContainerDef> = {
     kind: 'chest',
     itemKind: 'chest',
     label: 'skrzynia',
-    capacityUnits: 24,
+    capacityUnits: 32,
     baseWeightKg: 4,
     footprintRadius: 0.6,
     separation: 1.6,

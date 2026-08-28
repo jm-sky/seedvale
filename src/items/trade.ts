@@ -3,6 +3,7 @@ import {
   isInstanceBackedKind,
   isLiquidContainerKind,
   isTrapItemInstance,
+  isTrapKind,
   isWeaponItemInstance,
   isWeaponMaintenanceKind,
   type ItemInstance,
@@ -124,7 +125,7 @@ function removeOffer(inventory: Inventory, offer: Partial<Record<ItemKind, numbe
  *  world pickups (`app/createApp.ts`'s `grantItem`, `app/gameLoop.ts`'s item
  *  pickup) so no call site hard-codes which kinds are instance-backed. */
 export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
-  if (kind === 'trap_simple' || kind === 'trap_good') return createTrapInstance(kind)
+  if (isTrapKind(kind)) return createTrapInstance(kind)
   if (isWeaponMaintenanceKind(kind)) return createWeaponInstance(kind)
   if (isLiquidContainerKind(kind)) return createLiquidContainerInstance(kind)
   return null

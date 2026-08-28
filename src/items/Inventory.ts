@@ -6,6 +6,7 @@ import {
   isLiquidContainerInstance,
   isLiquidContainerKind,
   isTrapItemInstance,
+  isTrapKind,
   isWeaponItemInstance,
   isWeaponMaintenanceKind,
   type ItemInstance,
@@ -395,7 +396,7 @@ export class Inventory {
     const out: ItemInstance[] = []
     for (const row of rows) {
       if (!row.id || !row.kind) continue
-      if (row.kind === 'trap_simple' || row.kind === 'trap_good') {
+      if (isTrapKind(row.kind)) {
         if (typeof row.durability !== 'number' || !Number.isFinite(row.durability)) continue
         const trap: TrapItemInstance = {
           id: row.id,

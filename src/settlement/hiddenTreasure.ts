@@ -7,7 +7,7 @@ import type * as THREE from 'three'
  *  collider/`Interactable`) — this module only owns the shared marker
  *  geometry so `props.ts` (placement) and `groundActions.ts` (dig-hit test)
  *  agree on the same 3 spots without either one re-deriving them. */
-export const HIDDEN_TREASURE_MARKER_COUNT = 3
+export const HIDDEN_TREASURE_MARKER_COUNT = 4
 
 /** Digging within this many world units of a marker counts as hitting it.
  *  The actual dig point (`interactables.ts`'s `DIG_REACH`) is a fixed

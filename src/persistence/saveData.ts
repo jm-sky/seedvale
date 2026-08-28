@@ -13,6 +13,7 @@ import type { WellStage } from '../world/playerWell'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import { isToolKind } from '../items/HeldTool'
 import { type ItemKind } from '../items/items'
+import { isTrapKind } from '../items/itemInstances'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -530,7 +531,7 @@ function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
     if (!entry || typeof entry !== 'object') return false
     const row = entry as Record<string, unknown>
     if (typeof row.id !== 'string' || typeof row.kind !== 'string') return false
-    if (row.kind === 'trap_simple' || row.kind === 'trap_good') {
+    if (isTrapKind(row.kind as ItemKind)) {
       return typeof row.durability === 'number' && Number.isFinite(row.durability)
     }
     if (row.durability !== undefined && typeof row.durability !== 'number') return false

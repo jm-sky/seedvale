@@ -684,7 +684,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
-    notes: 'Plan 129 / issue 035 — physical currency: Kupiec buy/sell, rare world_chunk pickup, quest reward, land-plot price (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight so a land-plot price does not blow the carry limit. Shells stay barter-only.',
+    notes: 'Plan 129 / issue 035 — physical currency: Kupiec buy/sell, rare world_chunk pickup, quest reward, land-plot price (`settlement/landPurchase.ts`). Stacks like any other item; near-zero weight and `XXS` gabarite (`items.ts`) so a land-plot price (up to several thousand) does not blow the carry limit. Shells stay barter-only.',
   },
   herb: {
     kind: 'herb',
