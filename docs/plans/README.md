@@ -131,6 +131,8 @@ Natural vegetation
 
 > Place for newly created plans.
 
+| ◼️ `fauna-004-sheep-wool-and-shepherd.md` | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
+
 ---
 
 ## Todo
