@@ -75,7 +75,8 @@ function install(
   const config = {} as unknown as WorldConfig
   const teleport = opts.teleport ?? vi.fn(async () => {})
   const getPlayerPosition = opts.getPlayerPosition ?? (() => ({ x: 0, z: 0 }))
-  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport)
+  const worldFlags = { hiddenTreasureFound: false }
+  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags)
   return { teleport, api: typeof window === 'undefined' ? undefined : window.seedvale?.debug }
 }
 

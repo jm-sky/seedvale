@@ -16,7 +16,7 @@ export const HIDDEN_TREASURE_MARKER_COUNT = 3
  *  hole itself. Matched to `DIG_RADIUS` (the hole's own visible radius) so
  *  "my dig hole visibly reaches the flower" is exactly the rule, not a
  *  tighter invisible sub-region. */
-export const HIDDEN_TREASURE_DIG_TOLERANCE = DIG_RADIUS
+export const HIDDEN_TREASURE_DIG_TOLERANCE = (DIG_RADIUS * 0.8) + 0.2
 
 /** How far past the plaza's packed-dirt edge (`ClearingLayout.core.radius`)
  *  the flower cluster sits — on the grass just behind the square, not in the
@@ -37,9 +37,9 @@ const CAMPFIRE_ANGLE_OFFSET = 0.55
  *  resolves the residual overlap deterministically), while staying a small,
  *  readable cluster next to the plaza. */
 const MARKER_LOCAL_OFFSETS: ReadonlyArray<{ forward: number, side: number }> = [
-  { forward: 0, side: -1.4 },
-  { forward: 0, side: 1.4 },
-  { forward: 1.9, side: 0 },
+  { forward: 0, side: -1 },
+  { forward: 0, side: 1 },
+  { forward: 1.2, side: 0 },
 ]
 
 export type HiddenTreasureAnchorSource = {
@@ -80,6 +80,7 @@ export function hiddenTreasureDigHit(
 ): number {
   let best = -1
   let bestDist = HIDDEN_TREASURE_DIG_TOLERANCE
+
   for (let i = 0; i < markerPositions.length; i++) {
     const m = markerPositions[i]!
     const dist = Math.hypot(m.x - x, m.z - z)
@@ -88,5 +89,6 @@ export function hiddenTreasureDigHit(
       bestDist = dist
     }
   }
+
   return best
 }

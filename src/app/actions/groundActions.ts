@@ -43,9 +43,9 @@ export type GroundActions = {
   startMoundAt: (x: number, z: number) => void
   startTreeChop: (treeId: string, x: number, z: number) => void
   startDepositMine: (depositId: string, x: number, z: number) => void
-  /** Clears the in-session "which flower markers have already been dug"
-   *  progress (New Game only — a discovered treasure's own one-shot flag
-   *  lives in `worldFlags`, not here). */
+  /** Clears the in-session hidden-treasure dig progress (New Game only).
+   *  A discovered treasure's own one-shot flag lives in `worldFlags`.
+   */
   resetTreasureProgress: () => void
 }
 
@@ -72,20 +72,24 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     z: player.mesh.position.z - Math.cos(mouseLook.state.yaw) * DIG_REACH,
   })
 
-  // Hidden-treasure marker progress (quick task) — which of the 3 flower
-  // spots have already been dug this session. The home settlement never
-  // streams out, so this stays valid for as long as `worldFlags` does; a New
-  // Game clears both together via `resetTreasureProgress`.
-  const dugTreasureMarkers = new Set<number>()
+  // Hidden-treasure dig progress (quick task) — successful digs in the
+  // hidden-treasure area during this session.
+  let hiddenTreasureDigCount = 0
 
   const checkHiddenTreasureDig = (x: number, z: number): void => {
     if (worldFlags.hiddenTreasureFound) return
     const markers = bundle.settlementsManager.home?.landmarks.hiddenTreasureMarkers
+
     if (!markers || markers.length === 0) return
+
     const hitIndex = hiddenTreasureDigHit(markers, x, z)
+
     if (hitIndex === -1) return
-    dugTreasureMarkers.add(hitIndex)
-    if (dugTreasureMarkers.size < HIDDEN_TREASURE_MARKER_COUNT) return
+
+    hiddenTreasureDigCount++
+
+    if (hiddenTreasureDigCount < HIDDEN_TREASURE_MARKER_COUNT) return
+
     worldFlags.hiddenTreasureFound = true
     const cx = markers.reduce((sum, m) => sum + m.x, 0) / markers.length
     const cz = markers.reduce((sum, m) => sum + m.z, 0) / markers.length
@@ -289,6 +293,6 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     startMoundAt,
     startTreeChop,
     startDepositMine,
-    resetTreasureProgress: () => dugTreasureMarkers.clear(),
+    resetTreasureProgress: () => hiddenTreasureDigCount = 0,
   }
 }

@@ -1071,6 +1071,7 @@ export async function createApp(
       await bundle.chunkManager.waitForChunks(chunksNear(x, z, config.terrain.chunkSize))
       player.setPosition(x, z)
     },
+    worldFlags,
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {

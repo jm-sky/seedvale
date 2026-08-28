@@ -79,6 +79,19 @@ export type TeleportToDebugApi = {
   oceanNearest: () => Promise<boolean>
 }
 
+export type HiddenTreasureDebugApi = {
+  /** The 3 flower/dig-marker positions for the home settlement's hidden
+   *  treasure (quick task, `settlement/hiddenTreasure.ts`) — `null` while the
+   *  home settlement hasn't finished its own build yet. */
+  markers: () => WorldPoint[] | null
+  /** Same one-shot flag `groundActions.ts` checks/sets — `true` once the
+   *  reward chest has already been spawned. */
+  found: () => boolean
+  /** Teleports to marker `index` (default 0). `false` if markers aren't
+   *  available yet. */
+  teleport: (index?: number) => Promise<boolean>
+}
+
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
@@ -98,6 +111,8 @@ export type SeedvaleDebugApi = {
    *  query and teleport to it directly. Awaits terrain readiness first;
    *  resolves `false` (no teleport) if the location is `null`. */
   teleportTo: TeleportToDebugApi
+  /** Hidden-treasure dig markers (quick task) — inspect/teleport for testing. */
+  hiddenTreasure: HiddenTreasureDebugApi
   help: () => string
 }
 
@@ -118,6 +133,7 @@ const HELP_TEXT = [
   'locations.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — bounded deterministic nearest-feature search from the player; null if none found within budget',
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
   'setFrenzyWolf() — debug combat trigger',
+  'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -137,6 +153,9 @@ export function installNpcDebugApi(
   getTimeOfDay: () => number,
   getPlayerPosition: () => WorldPoint,
   teleport: (x: number, z: number) => Promise<void>,
+  /** Same persisted one-shot bag `groundActions.ts` reads/writes — lets
+   *  `hiddenTreasure.found()` reflect the real state. */
+  worldFlags: { hiddenTreasureFound: boolean },
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
 
@@ -214,6 +233,20 @@ export function installNpcDebugApi(
       villageHandle({ id: s.id, name: s.name, size: s.size, x: s.center.x, z: s.center.z })),
     locations,
     teleportTo,
+    hiddenTreasure: {
+      markers: () => {
+        const markers = bundle.settlementsManager.home?.landmarks.hiddenTreasureMarkers
+        return markers ? markers.map((m) => ({ x: m.x, z: m.z })) : null
+      },
+      found: () => worldFlags.hiddenTreasureFound,
+      teleport: async (index = 0) => {
+        const markers = bundle.settlementsManager.home?.landmarks.hiddenTreasureMarkers
+        const target = markers?.[index]
+        if (!target) return false
+        await teleport(target.x, target.z)
+        return true
+      },
+    },
     help: () => HELP_TEXT,
   }
   window.seedvale = { ...window.seedvale, debug: api }
