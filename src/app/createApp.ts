@@ -794,7 +794,11 @@ export async function createApp(
   }
 
   const placement = createPlacementActions(actionCtx)
-  const containers = createContainerActions(actionCtx, { vueUi, tentBlockers: placement.tentBlockers })
+  const containers = createContainerActions(actionCtx, {
+    vueUi,
+    tentBlockers: placement.tentBlockers,
+    rendererElement: renderer.domElement,
+  })
   const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
   const ground = createGroundActions(actionCtx, { worldFlags })

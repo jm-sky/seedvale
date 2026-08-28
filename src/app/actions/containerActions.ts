@@ -1,5 +1,6 @@
 import type { VueUi } from '../../ui-vue/mount'
 import type { PlacementBlocker } from './placementActions'
+import { exitGamePointerLock } from '../../input/MouseLook'
 import {
   CONTAINER_DEFS,
   CONTAINER_PLACE_REACH,
@@ -28,6 +29,9 @@ export type ContainerActionDeps = {
   vueUi: VueUi
   /** Shared ground-placement blockers (see `placementActions.ts`). */
   tentBlockers: (x: number, z: number) => PlacementBlocker[]
+  /** Renderer canvas — released from pointer lock when the container screen
+   *  opens, same as inventory/skills/character (`createApp.ts`). */
+  rendererElement: HTMLElement
 }
 
 export function createContainerActions(
@@ -35,7 +39,7 @@ export function createContainerActions(
   deps: ContainerActionDeps,
 ): ContainerActions {
   const { bundle, player, inventory, hud, toast, busy, mouseLook } = ctx
-  const { vueUi, tentBlockers } = deps
+  const { vueUi, tentBlockers, rendererElement } = deps
 
   /** The container currently shown by the transfer screen — set on open,
    *  cleared when that same container is picked up, so `configureContainerScreen`'s
@@ -117,6 +121,7 @@ export function createContainerActions(
     if (isActionBlocked(ctx)) return
     const entry = bundle.placedContainers.find(id)
     if (!entry) return
+    exitGamePointerLock(rendererElement)
     openContainerId = id
     const def = CONTAINER_DEFS[entry.kind]
     vueUi.openContainerScreen(

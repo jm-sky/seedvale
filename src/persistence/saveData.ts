@@ -12,8 +12,8 @@ import type { CropId } from '../world/cropLifecycle'
 import type { WellStage } from '../world/playerWell'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import { isToolKind } from '../items/HeldTool'
-import { type ItemKind } from '../items/items'
 import { isTrapKind } from '../items/itemInstances'
+import { type ItemKind } from '../items/items'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
