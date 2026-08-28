@@ -40,6 +40,7 @@ import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
 import type { ClimateState, WeatherState } from '../world/weather'
 import type { WeatherParticles } from '../world/weatherParticles'
+import type { MountActions } from './actions/mountActions'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
@@ -239,6 +240,11 @@ export type GameLoopDeps = {
   restCamp: RestCampSequence
   inventory: Inventory
   heldTool: HeldTool
+  /** Riding (plan fauna-003) — mount/dismount + per-frame drive. `update()`
+   *  must run before `player.update()` each frame so the camera picks up the
+   *  fresh seat transform; the `[E]` mount action and the dedicated
+   *  Dismount button both go through this. */
+  mount: MountActions
   /** Persistent land-plot ownership (plan 129) — read by `buildInteractables`
    *  and mutated by the `[E]` purchase handler below. */
   landOwnership: LandOwnershipRegistry
@@ -403,7 +409,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startCookAt, startIgniteFire,
     startDestroySpawner,
@@ -1148,6 +1154,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           aimMode,
         )
       }
+      // While mounted, the only player action is the dedicated Dismount
+      // button (plan fauna-003 §10) — no gaze prompt, no `[E]`/`[R]`
+      // interact dispatch below, since the player's position is driven by
+      // the mount every frame and most of those actions assume normal
+      // on-foot state.
+      if (mount.isMounted()) target = null
 
       const cycleHint = playerCombat.isActive()
         ? (livingTargets.length > 1 ? ' · [Tab] Cel · [Shift+Tab] Świat' : ' · [Shift+Tab] Świat')
@@ -1424,6 +1436,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 player.beginRangedDraw()
               }
             }
+          } else if (target.animal.isMountable()) {
+            mount.tryMount(target.animal)
           } else {
             const outcome = resolveInteraction(target, questManager)
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
@@ -1593,6 +1607,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // order of cost as the HUD weight readout already updated on every
       // inventory mutation) rather than threaded through every mutation site.
       player.setEncumbrance(inventory.totalWeight() + bundle.placedContainers.carriedWeightKg(), inventory.maxWeight)
+      // Riding (plan fauna-003) drives the mount + syncs the player's seat
+      // transform onto `player.mesh` before `player.update()` runs, so this
+      // frame's camera/gaze/interactables all see the fresh position. No-op
+      // while not mounted.
+      mount.update(dt)
       withCategory(monitor, 'PHYSICS', () => { player.update(dt, dayNight.dayLengthSec) })
       // Hunger/thirst/vigor progress on `worldDt` (scaled during a time-skip,
       // see above) — stamina keeps ticking inside `player.update(dt)` on raw
@@ -1635,6 +1654,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.skills.defense.xp,
         player.skills.archery.value,
         player.skills.archery.xp,
+        player.skills.riding.value,
+        player.skills.riding.xp,
       )
       houseDoors.update(
         player.mesh.position.x,

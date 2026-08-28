@@ -28,6 +28,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
@@ -96,6 +97,24 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+
+## `app/actions/mountActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `fauna/AnimalAgent.ts`
+- `player/PlayerNeeds.ts`
+- `player/PlayerSkills.ts`
+- `player/playerDamage.ts`
+- `player/ridingStability.ts`
+- `shared/StaminaState.ts`
+- `terrain/slopeConstraint.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
 
 ## `app/actions/placementActions.ts`
 
@@ -258,6 +277,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
@@ -284,6 +304,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspectTrigger.ts`
+- `fauna/AnimalAgent.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `input/createTouchControls.ts`
@@ -377,6 +398,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/NpcAgent.ts`
+- `app/actions/mountActions.ts`
 - `app/busyAction.ts`
 - `app/interactables.ts`
 - `app/modalState.ts`

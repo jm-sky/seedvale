@@ -17,7 +17,7 @@ import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
-import { ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
+import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -100,7 +100,12 @@ const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
 
 function animalPromptLabel(kind: AnimalKind, heldTool: ToolKind | null): string {
   const label = ANIMAL_LABELS[kind]
-  return isMeleeTool(heldTool) || isRangedTool(heldTool) ? `Atakuj: ${label}` : `Obserwuj: ${label}`
+  if (isMeleeTool(heldTool) || isRangedTool(heldTool)) return `Atakuj: ${label}`
+  // Any animal carrying a `mount` config is mountable (plan fauna-003 §5) —
+  // no ownership/taming gate yet, so the prompt is unconditional whenever no
+  // weapon is held.
+  if (ANIMAL_DEFS[kind].mount) return `Dosiądź: ${label}`
+  return `Obserwuj: ${label}`
 }
 
 /** A held bow's own attack range, so a distant animal still enters the gaze

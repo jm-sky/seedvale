@@ -94,6 +94,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/groundActions.ts`
+- `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
@@ -114,6 +115,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/gatheringActions.ts`
+- `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
@@ -205,6 +207,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/mountActions.ts`
 - `app/gameLoop.ts`
 - `player/playerDownedRecovery.test.ts`
 
@@ -273,6 +276,12 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `player/playerRanged.test.ts`
+
+## `player/ridingStability.ts`
+
+**Imported by**
+
+- `app/actions/mountActions.ts`
 
 ## `player/torchLightPresets.ts`
 

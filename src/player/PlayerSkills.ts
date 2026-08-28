@@ -5,7 +5,7 @@
  * state (the only thing persisted); `value` is always derived from it through
  * `xpToSkillValue` so the two can never drift apart.
  */
-export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense' | 'archery'
+export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense' | 'archery' | 'riding'
 
 export type SkillState = {
   /** [0,1] — derived from `xp`, never assigned independently. */
@@ -65,6 +65,7 @@ export function createPlayerSkills(): PlayerSkills {
     traps: createSkillState(),
     defense: createSkillState(),
     archery: createSkillState(),
+    riding: createSkillState(),
   }
 }
 
@@ -118,6 +119,9 @@ export const SKILL_XP_AWARD = {
   /** Plan 162 — awarded once per arrow that actually hits a target, never
    *  per shot fired (a clean miss teaches nothing). */
   rangedHit: 6,
+  /** Per `RIDING_XP_DISTANCE_M` actually covered while mounted (plan
+   *  fauna-003 §12), same "use → XP" shape as `sneakDistance`. */
+  ridingDistance: 3,
 } as const
 
 /** Metres of real sneaking movement per XP award — the "significant completed
@@ -140,6 +144,28 @@ export function accumulateSneakUse(
   while (total >= SNEAK_XP_DISTANCE_M) {
     total -= SNEAK_XP_DISTANCE_M
     awardSkillXp(skills, 'sneak', SKILL_XP_AWARD.sneakDistance)
+  }
+  return total
+}
+
+/** Metres of mounted travel per XP award (plan fauna-003 §12) — mirrors
+ *  `SNEAK_XP_DISTANCE_M`'s "significant completed action" unit. */
+export const RIDING_XP_DISTANCE_M = 20
+
+/** Folds one frame's mounted travel distance into the riding-use
+ *  accumulator and awards XP for every whole interval crossed — same shape
+ *  as `accumulateSneakUse`, just keyed to distance the *mount* covered
+ *  rather than the player's own steps. */
+export function accumulateRidingUse(
+  skills: PlayerSkills,
+  accumulated: number,
+  distance: number,
+): number {
+  if (!Number.isFinite(distance) || distance <= 0) return accumulated
+  let total = accumulated + distance
+  while (total >= RIDING_XP_DISTANCE_M) {
+    total -= RIDING_XP_DISTANCE_M
+    awardSkillXp(skills, 'riding', SKILL_XP_AWARD.ridingDistance)
   }
   return total
 }

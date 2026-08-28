@@ -38,6 +38,7 @@ const validSave: SaveData = {
     traps: { xp: 28 },
     defense: { xp: 0 },
     archery: { xp: 0 },
+    riding: { xp: 0 },
   },
   spawnPoints: [
     { id: 'home:cave', state: 'disabled', deathsThisCycle: 2, disabledAtDay: 9.5 },

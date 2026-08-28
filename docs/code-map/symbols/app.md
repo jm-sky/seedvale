@@ -25,6 +25,12 @@ Generated from exported TypeScript symbols.
 - `createGroundActions` — function — line 34
 - `GroundActions` — type — line 19
 
+## `app/actions/mountActions.ts`
+
+- `createMountActions` — function — line 40
+- `DismountReason` — type — line 18
+- `MountActions` — type — line 20
+
 ## `app/actions/placementActions.ts`
 
 - `createPlacementActions` — function — line 119
@@ -75,13 +81,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 195
+- `createApp` — function — line 197
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 401
-- `GameLoop` — type — line 375
-- `GameLoopDeps` — type — line 202
+- `createGameLoop` — function — line 407
+- `GameLoop` — type — line 381
+- `GameLoopDeps` — type — line 203
 
 ## `app/graphicsSettings.ts`
 
@@ -91,10 +97,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 716
-- `buildDigTarget` — function — line 663
-- `buildInteractables` — function — line 241
-- `collectItem` — function — line 763
+- `buildCombatTarget` — function — line 721
+- `buildDigTarget` — function — line 668
+- `buildInteractables` — function — line 246
+- `collectItem` — function — line 768
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70
@@ -137,7 +143,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 75
+- `createSaveState` — function — line 80
 - `SaveState` — type — line 34
 - `SaveStateDeps` — type — line 44
 

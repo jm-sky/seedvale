@@ -1,7 +1,7 @@
 # Plan: Jazda konna
 
 **Created:** 2026-08-28  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none  
 **Domain:** `fauna`  

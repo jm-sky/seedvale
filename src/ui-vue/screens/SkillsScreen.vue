@@ -17,6 +17,7 @@ const survivalLevel = computed(() => percent(ui.skillsScreen.survivalValue))
 const trapsLevel = computed(() => percent(ui.skillsScreen.trapsValue))
 const defenseLevel = computed(() => percent(ui.skillsScreen.defenseValue))
 const archeryLevel = computed(() => percent(ui.skillsScreen.archeryValue))
+const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
 </script>
 
 <template>
@@ -147,6 +148,28 @@ const archeryLevel = computed(() => percent(ui.skillsScreen.archeryValue))
         </ul>
         <div class="mt-1 text-[11px] opacity-50">
           Doświadczenie: {{ Math.round(ui.skillsScreen.archeryXp) }}
+        </div>
+      </div>
+
+      <div class="mt-3 rounded-md border border-white/15 px-3.5 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium">Jeździectwo · {{ ridingLevel }}</span>
+          <span class="ml-3 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70">
+            Pasywne
+          </span>
+        </div>
+        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            class="h-full rounded-full bg-violet-400/80"
+            :style="{ width: ridingLevel }"
+          />
+        </div>
+        <ul class="mt-2 list-disc space-y-0.5 pl-4 text-xs opacity-70">
+          <li>Mniejsze ryzyko upadku z wierzchowca</li>
+          <li>Mniejsze obrażenia przy upadku</li>
+        </ul>
+        <div class="mt-1 text-[11px] opacity-50">
+          Doświadczenie: {{ Math.round(ui.skillsScreen.ridingXp) }}
         </div>
       </div>
 

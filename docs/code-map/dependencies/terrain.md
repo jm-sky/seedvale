@@ -651,6 +651,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/mountActions.ts`
 - `fauna/AnimalAgent.ts`
 - `player/PlayerController.ts`
 - `terrain/slopeConstraint.test.ts`

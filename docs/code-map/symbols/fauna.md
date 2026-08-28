@@ -4,9 +4,9 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `ANIMAL_DEFS` — const — line 450
+- `ANIMAL_DEFS` — const — line 464
 - `ANIMAL_LABELS` — const — line 405
-- `AnimalAgent` — class — line 674
+- `AnimalAgent` — class — line 690
 - `AnimalDef` — type — line 421
 - `AnimalKind` — type — line 390
 - `AnimalLifeStage` — type — line 387
@@ -19,13 +19,14 @@ Generated from exported TypeScript symbols.
 - `corpsePhaseFromElapsed` — function — line 110
 - `FAUNA_SHADOW_DISTANCE` — const — line 68
 - `forageEdgeScore` — function — line 317
-- `FrenzyWolfCandidate` — type — line 646
+- `FrenzyWolfCandidate` — type — line 662
 - `HARVEST_MEAT_DURATION_SEC` — const — line 148
 - `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 78
 - `isCarcassEdible` — function — line 326
 - `isWithinVillageRadius` — function — line 357
-- `NearbyNpcCandidate` — type — line 641
-- `pickNearestEligibleWolf` — function — line 655
+- `MountPointConfig` — type — line 457
+- `NearbyNpcCandidate` — type — line 657
+- `pickNearestEligibleWolf` — function — line 671
 - `rotFxRelevant` — function — line 119
 - `shoreProbeHits` — function — line 300
 - `villageFleeBiasFalloff` — function — line 369

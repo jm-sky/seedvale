@@ -210,6 +210,13 @@ export class PlayerController {
   private rangedDrawing = false
   private moving = false
   private sprinting = false
+  /** True while riding a mount (plan fauna-003) — suspends normal WASD/
+   *  gravity/collision movement in `update()`; the riding system
+   *  (`app/actions/mountActions.ts`) calls `setMountedTransform()` every
+   *  frame instead, copying the mount's seat transform onto this same
+   *  `mesh` (never reparented, so camera/gaze/interactables/streaming all
+   *  keep reading world-space `mesh.position` unmodified). */
+  private mounted = false
   /** Set once per frame by `setEncumbrance()` (plan 164 §9) — `app/gameLoop.ts`
    *  is the sole caller, right before `update()`. */
   private encumbranceSpeedMultiplier = 1
@@ -697,7 +704,43 @@ export class PlayerController {
     this.jumpRequested = true
   }
 
+  /** Enters/exits mounted locomotion (plan fauna-003 §5/§6). No-op if already
+   *  in the requested state. Movement/position is not touched here — the
+   *  riding system calls `setMountedTransform()` separately, every frame. */
+  setMounted(mounted: boolean): void {
+    if (this.mounted === mounted) return
+    this.mounted = mounted
+    this.moving = false
+    this.sprinting = false
+    this.meleeAttacking = false
+    this.rangedDrawing = false
+    // No riding animation clip exists on this rig (plan fauna-003 §7) — the
+    // accepted fallback is a static seated pose, i.e. just Idle, correctly
+    // positioned and moving with the mount, instead of the walk/run cycle
+    // `syncAnimation()` would otherwise pick.
+    this.playAction(this.idleAction)
+  }
+
+  isMounted(): boolean {
+    return this.mounted
+  }
+
+  /** Copies the mount's seat world transform onto the player (plan fauna-003
+   *  §6) — called once per frame by the riding system, before `update()`
+   *  runs, so this frame's `syncCamera()`/gaze/interactables all see the
+   *  fresh position. */
+  setMountedTransform(x: number, y: number, z: number, yaw: number): void {
+    this.mesh.position.set(x, y, z)
+    this.mesh.rotation.y = yaw
+  }
+
   update(dt: number, dayLengthSec: number): void {
+    if (this.mounted) {
+      this.syncCamera()
+      this.syncHpBar()
+      this.mixer?.update(dt)
+      return
+    }
     if (this.downed) {
       tickPlayerStamina(this.needs.stamina, dt, false)
       this.syncCamera()

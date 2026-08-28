@@ -66,6 +66,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcStamina.test.ts`
 - `ai/npcVigor.test.ts`
+- `app/actions/mountActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `fauna/AnimalAgent.ts`

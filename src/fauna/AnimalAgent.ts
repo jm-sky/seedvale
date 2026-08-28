@@ -445,6 +445,20 @@ export type AnimalDef = {
    *  regardless of facing direction — startled at close range, though even
    *  here detection is probabilistic, not absolute (plan 120). */
   playerPanicRange: number
+  /** Presence of this field IS the `mountable` capability (plan fauna-003) —
+   *  no separate boolean, so a future mountable species only ever needs to
+   *  add this block, never a species branch in the riding code itself. */
+  mount?: MountPointConfig
+}
+
+/** Rider seat placement for a mountable `AnimalDef` (plan fauna-003 §6) —
+ *  world-space seat transform is derived from these plus the animal's own
+ *  `mesh.position`/`mesh.rotation.y` in `AnimalAgent.mountSeatTransform()`. */
+export type MountPointConfig = {
+  /** Seat height (m) above the animal's own ground-snapped `mesh.position.y`. */
+  seatHeight: number
+  /** Seat offset (m) along the animal's forward facing, + toward the head. */
+  seatForwardOffset: number
 }
 
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
@@ -573,6 +587,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 10,
     playerNoticeRange: 0,
     playerPanicRange: 0,
+    mount: { seatHeight: 1.28, seatForwardOffset: 0.05 },
   },
   donkey: {
     kind: 'donkey',
@@ -587,6 +602,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 9,
     playerNoticeRange: 0,
     playerPanicRange: 0,
+    mount: { seatHeight: 0.98, seatForwardOffset: 0.02 },
   },
   cow: {
     kind: 'cow',
@@ -715,6 +731,11 @@ export class AnimalAgent {
   private readonly wanderRadius: readonly [number, number]
   private moving = false
   private sprinting = false
+  /** True while a player is riding this animal (plan fauna-003) — suppresses
+   *  the AI decision branch in `update()` (the riding system drives movement
+   *  instead, via `driveMounted()`), but needs/stamina/hp/animation
+   *  bookkeeping keeps running exactly as it would while free-roaming. */
+  private mounted = false
   private readonly mixer: THREE.AnimationMixer | null
   private readonly idleAction: THREE.AnimationAction | null
   private readonly walkAction: THREE.AnimationAction | null
@@ -1004,6 +1025,109 @@ export class AnimalAgent {
 
   isDead(): boolean {
     return this.health.dead
+  }
+
+  /** True for any live animal whose `def` carries a `mount` config (plan
+   *  fauna-003 §5) — species-agnostic: horse and donkey qualify today purely
+   *  through data, no kind check here. */
+  isMountable(): boolean {
+    return this.def.mount !== undefined && !this.health.dead
+  }
+
+  isMounted(): boolean {
+    return this.mounted
+  }
+
+  /** This tick's gait, as last set by `driveMounted()`/`update()` — read by
+   *  the riding system's stability check instead of recomputing it. */
+  isSprinting(): boolean {
+    return this.sprinting
+  }
+
+  /** Enters/exits ridden state (plan fauna-003 §5). The riding system is the
+   *  sole caller; `update()` early-returns while `mounted` (see its own
+   *  comment) and `driveMounted()` takes over movement/bookkeeping instead. */
+  setMounted(mounted: boolean): void {
+    this.mounted = mounted
+    if (!mounted) {
+      this.moving = false
+      this.sprinting = false
+      this.updateAnim()
+    }
+  }
+
+  /** World-space seat transform for this animal's `def.mount` point (plan
+   *  fauna-003 §6) — `null` if this animal has no `mount` config at all
+   *  (callers are expected to have already checked `isMountable()`). */
+  mountSeatTransform(): { x: number, y: number, z: number, yaw: number } | null {
+    const cfg = this.def.mount
+    if (!cfg) return null
+    const yaw = this.mesh.rotation.y
+    return {
+      x: this.mesh.position.x + Math.sin(yaw) * cfg.seatForwardOffset,
+      y: this.mesh.position.y + cfg.seatHeight,
+      z: this.mesh.position.z + Math.cos(yaw) * cfg.seatForwardOffset,
+      yaw,
+    }
+  }
+
+  /** Per-frame mounted movement — the "shared riding system" driving both
+   *  horse and donkey generically (plan fauna-003 §5/§6). Called by the
+   *  riding system instead of `update()` while `mounted`; reuses the same
+   *  stepping/animation/needs tail `update()`'s own AI branch would otherwise
+   *  reach, minus `clampBounds()` — a ridden mount must be able to go
+   *  wherever the player takes it, not stay within its home wander radius.
+   *  `wishX`/`wishZ` is the player's raw (not necessarily normalized)
+   *  movement intent in world space, same convention as `PlayerController`'s
+   *  own `wish` vector. */
+  driveMounted(dt: number, wishX: number, wishZ: number, sprintRequested: boolean): void {
+    if (this.health.dead) return
+    const distSq = wishX * wishX + wishZ * wishZ
+    this.moving = distSq > 1e-6
+    this.sprinting = this.moving && sprintRequested && !isExhausted(this.life.stamina)
+    if (this.moving) {
+      const dist = Math.sqrt(distSq)
+      const dirX = wishX / dist
+      const dirZ = wishZ / dist
+      this.mesh.rotation.y = Math.atan2(dirX, dirZ)
+      const speed = this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()
+      const result = stepWithSlopeAndCollision({
+        x: this.mesh.position.x,
+        z: this.mesh.position.z,
+        dirX,
+        dirZ,
+        speed,
+        dt,
+        sampleHeight: this.sampleHeight,
+        isWalkable: (x, z) => this.isWalkable(x, z),
+      })
+      this.mesh.position.x = result.x
+      this.mesh.position.z = result.z
+    }
+    this.snapY()
+    this.updateAnim()
+    tickAnimalLife(this.life, dt, this.sprinting)
+    this.lastHpPercent = applyBarPercent(
+      this.hpFillEl,
+      computeBarPercent(this.health.currentHp, this.health.maxHp),
+      this.lastHpPercent,
+    )
+    this.lastStaminaPercent = applyBarPercent(
+      this.staminaFillEl,
+      computeBarPercent(this.life.stamina.current, this.life.stamina.max),
+      this.lastStaminaPercent,
+    )
+    this.lastSatietyPercent = applyBarPercent(
+      this.satietyFillEl,
+      Math.round((1 - this.life.hunger) * 100),
+      this.lastSatietyPercent,
+    )
+    this.lastHydrationPercent = applyBarPercent(
+      this.hydrationFillEl,
+      Math.round((1 - this.life.thirst) * 100),
+      this.lastHydrationPercent,
+    )
+    this.mixer?.update(dt)
   }
 
   /** Marks this individual as "the" dangerous target of a `kill_target_animal
@@ -1338,6 +1462,12 @@ export class AnimalAgent {
       }
       return
     }
+    // While ridden, `driveMounted()` (called by the riding system earlier
+    // this same frame, before the fauna/settlement update pass reaches this
+    // agent) already did this frame's movement/needs/animation/bookkeeping —
+    // running the AI decision branch here too would fight player control and
+    // double-tick life/needs (plan fauna-003 §5).
+    if (this.mounted) return
     if (this.attackCooldown > 0) this.attackCooldown -= dt
     if (this.alertTimer > 0) this.alertTimer -= dt
     if (this.provokedTimer > 0) this.provokedTimer -= dt

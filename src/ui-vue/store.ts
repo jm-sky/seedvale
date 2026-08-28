@@ -275,6 +275,8 @@ type SkillsScreenState = {
   defenseXp: number
   archeryValue: number
   archeryXp: number
+  ridingValue: number
+  ridingXp: number
   onToggleSneak: (() => void) | null
 }
 type HudState = {
@@ -303,6 +305,9 @@ type HudState = {
    *  `held`. Backed by `items/primaryWeapons.ts`, not a separate UI model. */
   primaryMeleeLabel: string
   primaryRangedLabel: string
+  /** Dedicated Dismount button (plan fauna-003 §10) — `active` gates the
+   *  HUD's own always-visible button, independent of touch-device chrome. */
+  mounted: { active: boolean, animalLabel: string, onDismount: (() => void) | null }
 }
 type AudioSettingsState = { volumes: AudioVolumes }
 type MinimapState = { collapsed: boolean }
@@ -413,6 +418,8 @@ export const ui = reactive({
     defenseXp: 0,
     archeryValue: 0,
     archeryXp: 0,
+    ridingValue: 0,
+    ridingXp: 0,
     onToggleSneak: null,
   } as SkillsScreenState,
   hud: {
@@ -429,6 +436,7 @@ export const ui = reactive({
     aimTargetScreen: null,
     primaryMeleeLabel: '',
     primaryRangedLabel: '',
+    mounted: { active: false, animalLabel: '', onDismount: null },
   } as HudState,
   audio: { volumes: { ...DEFAULT_AUDIO_VOLUMES } } as AudioSettingsState,
   minimap: { collapsed: false } as MinimapState,
@@ -977,6 +985,8 @@ export function setSkillsState(
   defenseXp: number,
   archeryValue: number,
   archeryXp: number,
+  ridingValue: number,
+  ridingXp: number,
 ): void {
   const s = ui.skillsScreen
   if (
@@ -984,7 +994,8 @@ export function setSkillsState(
     s.survivalValue === survivalValue && s.survivalXp === survivalXp &&
     s.trapsValue === trapsValue && s.trapsXp === trapsXp &&
     s.defenseValue === defenseValue && s.defenseXp === defenseXp &&
-    s.archeryValue === archeryValue && s.archeryXp === archeryXp
+    s.archeryValue === archeryValue && s.archeryXp === archeryXp &&
+    s.ridingValue === ridingValue && s.ridingXp === ridingXp
   ) return
   s.sneakValue = sneakValue
   s.sneakActive = sneakActive
@@ -997,6 +1008,8 @@ export function setSkillsState(
   s.defenseXp = defenseXp
   s.archeryValue = archeryValue
   s.archeryXp = archeryXp
+  s.ridingValue = ridingValue
+  s.ridingXp = ridingXp
 }
 
 export function setHudFps(fps: number): void {
@@ -1058,6 +1071,13 @@ export function setHudPlayerNeeds(needs: { hp: number, stamina: number, vigor: n
 export function setHudAiming(aiming: boolean, targetScreen: { x: number, y: number } | null = null): void {
   ui.hud.aiming = aiming
   ui.hud.aimTargetScreen = targetScreen
+}
+/** Dedicated Dismount button (plan fauna-003 §10). Pushed once on mount/
+ *  dismount by `app/actions/mountActions.ts` via the vanilla `Hud` facade. */
+export function setHudMounted(mounted: boolean, animalLabel: string, onDismount: (() => void) | null): void {
+  ui.hud.mounted.active = mounted
+  ui.hud.mounted.animalLabel = animalLabel
+  ui.hud.mounted.onDismount = onDismount
 }
 
 export function toggleMinimap(): void { ui.minimap.collapsed = !ui.minimap.collapsed }

@@ -24,7 +24,17 @@ export type SaveConfig = {
   settlements: WorldConfig['settlements']
 }
 
-export type SavePlayer = { x: number, z: number, yaw: number, pitch: number }
+export type SavePlayer = {
+  x: number
+  z: number
+  yaw: number
+  pitch: number
+  /** Livestock `animalId` currently ridden (plan fauna-003) — `undefined`
+   *  when not mounted. Only livestock kinds have a deterministic id, so this
+   *  is safe to round-trip; a missing/invalid id on load just fails to
+   *  reattach (see `createApp.ts`'s `resolveMountAnimal`). */
+  mountedAnimalId?: string
+}
 
 export type QuestProgressEntry = { id: string, state: QuestState, stageIndex: number }
 
@@ -356,7 +366,8 @@ function isSavePlayer(value: unknown): value is SavePlayer {
     typeof player.x === 'number' &&
     typeof player.z === 'number' &&
     typeof player.yaw === 'number' &&
-    typeof player.pitch === 'number'
+    typeof player.pitch === 'number' &&
+    (player.mountedAnimalId === undefined || typeof player.mountedAnimalId === 'string')
   )
 }
 
@@ -460,7 +471,12 @@ function isSkillsField(value: unknown): value is SaveSkills {
     isSaveSkill(s.survival) &&
     isSaveSkill(s.traps) &&
     isSaveSkill(s.defense) &&
-    isSaveSkill(s.archery)
+    isSaveSkill(s.archery) &&
+    // `riding` is optional here only (plan fauna-003) — a save written
+    // before this skill existed has no such field at all; `restorePersistedSkills`
+    // already defaults a missing key's xp to 0, so this keeps old v1 saves
+    // loadable without a version bump.
+    (s.riding === undefined || isSaveSkill(s.riding))
   )
 }
 

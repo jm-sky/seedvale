@@ -75,24 +75,25 @@ Generated from exported TypeScript symbols.
 - `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 73
 - `createPlayerNeeds` — function — line 127
 - `DEHYDRATION_HP_PER_SEC` — const — line 100
-- `drinkWater` — function — line 240
-- `eatFood` — function — line 236
+- `drinkWater` — function — line 251
+- `eatFood` — function — line 247
 - `hungerSevereDurationSec` — function — line 86
-- `isTakingDeprivationDamage` — function — line 248
+- `isTakingDeprivationDamage` — function — line 259
 - `PLAYER_MAX_HUNGER` — const — line 33
 - `PLAYER_MAX_STAMINA` — const — line 31
 - `PLAYER_MAX_THIRST` — const — line 34
 - `PLAYER_MAX_VIGOR` — const — line 32
 - `PlayerNeeds` — type — line 22
 - `resetPlayerNeeds` — function — line 139
-- `restoreNeedsFromSleep` — function — line 230
+- `restoreNeedsFromSleep` — function — line 241
 - `restorePersistedNeeds` — function — line 160
 - `STARVATION_HP_PER_SEC` — const — line 99
 - `thirstSevereDurationSec` — function — line 89
-- `tickHealthRegen` — function — line 257
-- `tickPlayerMovementVigor` — function — line 214
+- `tickHealthRegen` — function — line 268
+- `tickPlayerMovementVigor` — function — line 225
 - `tickPlayerNeeds` — function — line 185
 - `tickPlayerStamina` — function — line 205
+- `tickRidingStamina` — function — line 216
 
 ## `player/playerRanged.ts`
 
@@ -102,24 +103,26 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateSneakUse` — function — line 133
-- `applySneakSpeedModifier` — function — line 152
-- `awardSkillXp` — function — line 76
+- `accumulateRidingUse` — function — line 159
+- `accumulateSneakUse` — function — line 137
+- `applySneakSpeedModifier` — function — line 178
+- `awardSkillXp` — function — line 77
 - `createPlayerSkills` — function — line 61
 - `PlayerSkills` — type — line 20
-- `restorePersistedSkills` — function — line 86
+- `restorePersistedSkills` — function — line 87
+- `RIDING_XP_DISTANCE_M` — const — line 153
 - `SKILL_MIN_VALUE` — const — line 26
-- `SKILL_XP_AWARD` — const — line 105
+- `SKILL_XP_AWARD` — const — line 106
 - `SKILL_XP_HALF_VALUE` — const — line 31
 - `SkillId` — type — line 8
 - `SkillState` — type — line 10
 - `SNEAK_LEGACY_VALUE` — const — line 54
 - `SNEAK_LEGACY_XP` — const — line 55
-- `SNEAK_SPEED_MULTIPLIER` — const — line 150
-- `SNEAK_XP_DISTANCE_M` — const — line 125
-- `survivalDurationMultiplier` — function — line 166
-- `survivalFoodMultiplier` — function — line 176
-- `toggleSneak` — function — line 99
+- `SNEAK_SPEED_MULTIPLIER` — const — line 176
+- `SNEAK_XP_DISTANCE_M` — const — line 129
+- `survivalDurationMultiplier` — function — line 192
+- `survivalFoodMultiplier` — function — line 202
+- `toggleSneak` — function — line 100
 - `xpForSkillValue` — function — line 44
 - `xpToSkillValue` — function — line 35
 
@@ -130,6 +133,13 @@ Generated from exported TypeScript symbols.
 - `TORCH_FUEL_BRANCH` — const — line 21
 - `TORCH_FUEL_WOODEN` — const — line 23
 - `TorchSource` — type — line 32
+
+## `player/ridingStability.ts`
+
+- `fallDamage` — function — line 65
+- `fallRiskPerSecond` — function — line 38
+- `rollFall` — function — line 55
+- `StabilityInput` — type — line 11
 
 ## `player/torchLightPresets.ts`
 

@@ -24,6 +24,12 @@ export type Hud = {
   /** Raw current/max for the Character screen (plan 105) — the HUD bars above
    *  only need ratios, but the Character screen also shows absolute values. */
   setCharacterStats: (stats: CharacterStats) => void
+  /** Dedicated Dismount button (plan fauna-003 §10) — visible only while
+   *  `mounted`, on both desktop and mobile (a plain clickable/tappable
+   *  button, not gated on touch-device detection). `onDismount` is called
+   *  once per click; `animalLabel`/`onDismount` are ignored while `mounted`
+   *  is `false`. */
+  setMounted: (mounted: boolean, animalLabel: string, onDismount: (() => void) | null) => void
   dispose: () => void
 }
 
@@ -41,6 +47,9 @@ export function createHud(_parent: HTMLElement): Hud {
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },
     setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },
+    setMounted: (mounted, animalLabel, onDismount) => {
+      if (!disposed) getUi()?.setHudMounted(mounted, animalLabel, onDismount)
+    },
     dispose: () => { disposed = true },
   }
 }

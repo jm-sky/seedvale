@@ -1,13 +1,12 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-27 22:21:59  
+> Date: 2026-08-28 08:39:10  
 
 ## PLANS
 
 - `fauna-001-rabies-and-animal-infection.md`
 - `fauna-002-livestock-food-production.md`
-- `fauna-003-horse-riding.md`
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-004-animal-and-npc-social-audio.md`
 - `tools-000-weapon-browser-observatory.md`
@@ -62,36 +61,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/fauna-002-livestock-food-production-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `fauna-003-horse-riding.md`
-
-Prompt:
-
-```
-Zrób review planu `fauna-003-horse-riding.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/fauna-003-horse-riding.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/fauna-003-horse-riding-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

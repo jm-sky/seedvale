@@ -70,6 +70,11 @@ export type SaveStateDeps = {
   /** Same live-accessor contract as the ids/arrays above (plan 198/201) —
    *  `createApp` replaces the underlying `Map` on a genuinely new world. */
   getResourceDepletion: () => ResourceDepletionState
+  /** Live accessor (plan fauna-003) — `null` while not mounted. Only
+   *  livestock (deterministic `animalId`) can ever be the mounted animal
+   *  today, so this round-trips safely; see `app/createApp.ts`'s
+   *  `resolveMountAnimal`. */
+  getMountedAnimalId: () => string | null
 }
 
 export function createSaveState(deps: SaveStateDeps): SaveState {
@@ -92,6 +97,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       z: player.mesh.position.z,
       yaw: mouseLook.state.yaw,
       pitch: mouseLook.state.pitch,
+      mountedAnimalId: deps.getMountedAnimalId() ?? undefined,
     },
     savedAt: Date.now(),
     quests: {
@@ -132,6 +138,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       traps: { xp: player.skills.traps.xp },
       defense: { xp: player.skills.defense.xp },
       archery: { xp: player.skills.archery.xp },
+      riding: { xp: player.skills.riding.xp },
     },
     spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
     foodBatches: inventory.foodBatchesToJSON(),

@@ -28,8 +28,10 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/gatheringActions.ts`
+- `app/actions/mountActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
+- `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
 - `assets/assetIndex.ts`

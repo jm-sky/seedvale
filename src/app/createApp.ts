@@ -1,4 +1,5 @@
 import type { PlayerSocialLookup } from '../ai/reactionChance'
+import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
@@ -109,6 +110,7 @@ import { createWorldContext } from '../world/worldContext'
 import { createContainerActions } from './actions/containerActions'
 import { createGatheringActions } from './actions/gatheringActions'
 import { createGroundActions } from './actions/groundActions'
+import { createMountActions } from './actions/mountActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createRestActions } from './actions/restActions'
 import { createSurvivalActions } from './actions/survivalActions'
@@ -771,6 +773,24 @@ export async function createApp(
     refreshInventoryScreen: () => refreshInventoryScreen(),
   }
 
+  // Riding (plan fauna-003) — livestock has a deterministic per-house
+  // `animalId` (`settlement/livestock.ts`), so a saved `mountedAnimalId`
+  // resolves back to the same individual after reload; a wild-fauna id would
+  // not (see `LIVESTOCK_KINDS`), but only `mount`-configured kinds (horse/
+  // donkey, both livestock-only today) can ever be the target in the first
+  // place.
+  const resolveMountAnimal = (animalId: string): AnimalAgent | null => {
+    for (const settlement of bundle.settlementsManager.getLoaded()) {
+      const found = settlement.livestock.find((a) => a.animalId === animalId)
+      if (found) return found
+    }
+    return bundle.fauna.getAgents().find((a) => a.animalId === animalId) ?? null
+  }
+  const mount = createMountActions(actionCtx, resolveMountAnimal)
+  if (initialSave?.player.mountedAnimalId) {
+    mount.restoreMountedAnimalId(initialSave.player.mountedAnimalId)
+  }
+
   const placement = createPlacementActions(actionCtx)
   const containers = createContainerActions(actionCtx, { vueUi, tentBlockers: placement.tentBlockers })
   const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
@@ -825,6 +845,7 @@ export async function createApp(
     getModifications: () => modifications,
     getTreeLifecycle: () => treeLifecycle,
     getResourceDepletion: () => resourceDepletion,
+    getMountedAnimalId: () => mount.mountedAnimalId(),
   })
 
   let rebuilding = false
@@ -1305,7 +1326,7 @@ export async function createApp(
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, landOwnership, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork: (mode, x, z) => {
       if (hasItemCapability(heldTool.held(), 'rock_mining')) {

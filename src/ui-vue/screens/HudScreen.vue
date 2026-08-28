@@ -70,6 +70,23 @@ const needBars = computed(() => [
     </div>
   </div>
 
+  <!-- Dedicated Dismount button (plan fauna-003 §10) — bottom-center, clear
+       of the bottom-left joystick and bottom-right action cluster; a plain
+       button works for both a mouse click and a touch tap, so this covers
+       desktop and mobile without touch-specific wiring. -->
+  <div
+    v-if="ui.hud.mounted.active"
+    class="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[5] flex justify-center"
+  >
+    <button
+      type="button"
+      class="pointer-events-auto cursor-pointer rounded-full border border-white/20 bg-black/55 px-5 py-2.5 text-sm font-semibold tracking-wide text-ink shadow-lg backdrop-blur-sm transition-colors hover:bg-black/70 active:bg-black/80"
+      @click="ui.hud.mounted.onDismount?.()"
+    >
+      Zejdź z wierzchowca ({{ ui.hud.mounted.animalLabel }})
+    </button>
+  </div>
+
   <!-- Ranged-aim reticle (plan 186 §1) — visible only while drawing a bow.
        Free Aim sits at a fixed screen-space offset from center; a soft lock
        reprojects the target's world-space aim point every frame instead

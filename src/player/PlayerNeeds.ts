@@ -207,6 +207,17 @@ export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: 
   else restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
 }
 
+/** Stamina cost of riding a mount (plan fauna-003 §9) — far lighter than
+ *  sprinting on foot, but non-zero: riding is an effective way to travel,
+ *  not a completely free one. Regens at the same idle rate as normal
+ *  movement while the mount isn't actually going anywhere. */
+const RIDING_STAMINA_DRAIN_PER_SEC = 3
+
+export function tickRidingStamina(stamina: StaminaState, dt: number, mountMoving: boolean): void {
+  if (mountMoving) drainStamina(stamina, RIDING_STAMINA_DRAIN_PER_SEC * dt)
+  else restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
+}
+
 /** Extra Vigor cost for actually moving, on top of the idle baseline
  *  `tickPlayerNeeds` already applies every tick — called from
  *  `PlayerController.update` only while `moving` is true, with the same
