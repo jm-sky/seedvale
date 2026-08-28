@@ -1,9 +1,9 @@
 import {
+  Dirent,
   readdir,
   readFile,
 } from 'node:fs/promises'
 import { resolve } from 'node:path'
-
 import {
   DOCS_DIR,
   repoRelative,
@@ -307,12 +307,7 @@ function escapeTableCell(
 async function getMarkdownFiles(
   directory: string,
 ): Promise<string[]> {
-  const entries = await readdir(
-    directory,
-    {
-      withFileTypes: true,
-    },
-  )
+  const entries: Dirent[] = await readdir(directory, { withFileTypes: true })
 
   return entries
     .filter(
