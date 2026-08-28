@@ -283,7 +283,7 @@ const getExistingFiles = (lines: string[], lastRowIdx: number, separatorIdx: num
   const existingFiles = new Set<string>()
 
   for (let i = separatorIdx + 1; i <= lastRowIdx; i++) {
-    const match = lines[i].match(/\`([^\`]+\.md)\`/)
+    const match = lines[i].match(/`([^`]+\.md)`/)
     if (match) {
       existingFiles.add(match[1])
     }
@@ -321,7 +321,7 @@ const syncImplementationNotesMarkers = (
   return lines.map((line, idx) => {
     if (idx < startIdx || idx > endIdx) return line
 
-    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^\`]+\.md)`\s*\|/)
+    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
 
     if (!match) return line
 
@@ -333,7 +333,7 @@ const syncImplementationNotesMarkers = (
     const marker = hasNotes ? '💡' : '◼️'
 
     return line.replace(
-      /^\|\s*(💡|◼️)?\s*`([^\`]+\.md)`\s*\|/,
+      /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
       `| ${marker} \`${file}\` |`,
     )
   })
@@ -345,7 +345,7 @@ const removeCompletedPlansFromPlannedSection = async (
   const { separatorIdx, lastRowIdx } = findPlannedTableRange(lines)
 
   for (let i = lastRowIdx; i > separatorIdx; i--) {
-    const match = lines[i].match(/^\|\s*(?:💡|◼️)?\s*`([^\`]+\.md)`\s*\|/)
+    const match = lines[i].match(/^\|\s*(?:💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
 
     if (!match) continue
 

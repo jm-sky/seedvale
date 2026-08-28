@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { readdir, readFile } from 'node:fs/promises'
-import { dirname, resolve, relative as pathRelative } from 'node:path'
+import { dirname, relative as pathRelative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))

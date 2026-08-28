@@ -103,6 +103,8 @@ Natural vegetation
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 
+- `settlements-001-house-collision-geometry.md`
+
 ---
 
 ## Planned
@@ -115,9 +117,7 @@ Natural vegetation
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
-| 💡 `settlements-001-house-collision-geometry.md`                       | - | 🔴 | L | 111 |
 | ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
-| ◼️ `fauna-003-horse-riding.md`                                         | - | 🟡 | M | - |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
