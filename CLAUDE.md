@@ -1,50 +1,127 @@
 # Seedvale — Agent Guide
 
-Seedvale is a browser 3D sandbox built with **Three.js + WebGL2 + Vite + TypeScript**. The simulation/game layer is vanilla Three.js; UI is currently hybrid vanilla DOM + Vue 3/Tailwind v4.
+Seedvale is a browser-based 3D sandbox/simulation. The player participates in a living world rather than driving it.
 
-## Read order
+## Source of truth
 
-Before making a non-trivial change:
+When sources disagree, trust them in this order:
 
-1. **[docs/STATE.md](docs/STATE.md)** — factual current implementation state.
-2. **[docs/VISION.md](docs/VISION.md)** — product intent and architectural philosophy.
-3. **[docs/plans/README.md](docs/plans/README.md)** — current plan/status index.
-4. The selected plan, its implementation notes, and any linked review.
+1. **Current code**
+2. **Tests / build configuration**
+3. **Implementation notes / reviews**
+4. **Plans**
+5. **Roadmap / Vision**
 
-`docs/STATE.md` is the compact handoff for the codebase. Do not reconstruct the whole project from old plans when the state document already answers the question.
+Never assume a planned feature exists. Verify the current implementation.
 
-## Core principles
+## Before changing code
 
-- Seedvale is about a world that lives independently of the player. Prefer systems that create emergent behaviour over scripted player-centric flows.
-- Extend existing system couplings before creating parallel mechanisms.
-- Reuse shared domain types and lifecycle boundaries. In particular inspect `WorldBundle`, `HealthState`, `NpcAgent`, `AnimalAgent`, `Inventory`, `QuestManager` and `ChunkManager` before introducing new abstractions.
-- Keep the simulation/game layer vanilla Three.js. Do not introduce React/R3F or another rendering abstraction unless explicitly planned.
-- UI migration to Vue is incremental. Do not migrate or rewrite unrelated vanilla screens just because Vue exists.
-- Do not infer that a planned feature is implemented. Verify the code.
-- Do not mark visual Three.js work as fully verified solely because TypeScript/lint/build pass.
-- Shader GLSL lives inside JS/TS template literals. Never put backticks or markdown in comments inside those strings: a backtick closes the template literal and is a syntax error.
-- **Performance is an architectural constraint.** Keep the main thread responsive; prefer event-driven/batched simulation and use workers for CPU-heavy, data-oriented work when the cost of worker communication is justified. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md).
-- **Seedvale is single-player today; do not build multiplayer, netcode or WebSockets.** But keep decisions from foreclosing a later move to a small (~2–5 player) shared world with server-authoritative simulation: keep simulation state representable independently of Three.js/rendering objects and avoid baking in an implicit single-client owner of world state. See [Performance & Simulation Architecture](docs/architecture/performance-and-workers.md) and [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
+For non-trivial work:
 
-## Development
+1. Read the relevant part of `docs/STATE.md`.
+2. Check `docs/plans/README.md` and the relevant plan if one exists.
+3. Check relevant architecture/state documentation.
+4. Use the code map to locate the implementation.
+5. Inspect the actual code before deciding how to implement the change.
+
+Do not read large amounts of unrelated documentation or source code when the indexes/maps can narrow the search.
+
+## Code navigation
+
+Use the documentation and generated code map as a routing system:
 
 ```text
-pnpm run dev
+documentation README/index
+        ↓
+docs/CODE_INDEX.md
+        ↓
+code-map/symbols/
+        ↓
+specific source file
+        ↓
+code-map/dependencies/   ← callers/importers when needed
 ```
 
-The Vite dev server uses port `5577` with `strictPort` (`vite.config.ts`).
+* `docs/CODE_INDEX.md` provides semantic system ownership and important entry points.
+* `docs/code-map/symbols/` maps exported symbols to source files.
+* `docs/code-map/dependencies/` maps imports and dependants.
+* README indexes provide local documentation navigation.
+* If the map is insufficient, use targeted search in `src/`.
+* Avoid broad `src/` scans when the map can narrow the search.
+* The code map is a navigation aid, not a source of truth.
 
-### Asset lists (models & sounds)
+Regenerate generated documentation with:
 
-When planning or implementing a feature, review and update the living asset backlogs if the work needs new media:
+```text
+pnpm docs:sync
+```
 
-- [docs/assets/MODELS.md](docs/assets/MODELS.md) — required / not-yet-wired models
-- [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) — required / not-yet-wired sounds
-- [docs/items/CATALOG.md](docs/items/CATALOG.md) — item gameplay flags / hold / melee / roadmap (`src/items/itemCatalog.ts`)
+Generated sections between `AUTO-GENERATED:START` and `AUTO-GENERATED:END` must not be edited manually.
 
-If the feature needs a new model or sound, add (or update) a row during planning/implementation. If nothing new is needed, leave the lists unchanged. Credits for models already in the repo live in [docs/assets/CREDITS.md](docs/assets/CREDITS.md); sound file sources in [`public/sounds/README.md`](public/sounds/README.md). Folder index: [docs/assets/README.md](docs/assets/README.md).
+## Core engineering rules
 
-Technical verification normally includes:
+* Extend existing systems before creating parallel mechanisms.
+* Reuse existing types, lifecycle boundaries and shared state.
+* Keep authoritative simulation state separate from Three.js runtime objects.
+* Preserve stable entity identity across unload/reload/rebuild.
+* The world must continue operating independently of the player or camera.
+* Prefer deterministic, event-driven, lazy or batched simulation over unnecessary per-frame work.
+* Consider off-screen/remote simulation and higher-fidelity simulation only where justified.
+* Keep the main thread responsive. Use existing worker pipelines for CPU-heavy data-only work when worker overhead is justified.
+* Do not introduce multiplayer/netcode now, but avoid architectural decisions that unnecessarily prevent a future small shared-world model.
+* Do not introduce a new abstraction merely to hide a small amount of existing logic.
+
+## Architecture invariants
+
+Read `docs/architecture/ARCHITECTURE.md` when touching architecture or world lifecycle.
+
+Important invariants:
+
+* `WorldBundle` is the world lifetime/rebuild boundary.
+* Runtime objects are reconstructed from authoritative state; they are not a second owner of that state.
+* Entity identity survives runtime lifecycle changes.
+* Time-skip must use the same simulation semantics as normal progression.
+* Persistence is currently save v1 only; do not add migration/version compatibility unless explicitly planned.
+* Split large files by real ownership boundaries, not by LOC alone.
+
+## Performance
+
+Performance is a first-class constraint.
+
+Before adding work, consider:
+
+* update frequency,
+* entity/chunk count,
+* memory and GC,
+* rendering/draw-call cost,
+* worker communication,
+* off-screen simulation cost.
+
+Do not move code to a worker mechanically. Prefer batching, lazy evaluation, lower-frequency updates and existing pipelines where appropriate.
+
+## Plans
+
+For substantial work:
+
+1. Read the complete plan.
+2. Read `--implementation-notes.md` when present.
+3. Read linked reviews.
+4. Verify the plan against current code.
+5. Keep implementation scoped to the plan.
+6. Record out-of-scope blockers or ideas in `docs/plans/LOOSE-ENDS.md`.
+7. Run appropriate verification.
+
+Plans describe intended work, not current implementation.
+
+## Verification
+
+Separate these states:
+
+* **Implemented** — code change exists.
+* **Technically verified** — tests/type-check/lint/build pass.
+* **Browser/manual verified** — gameplay or visual behaviour was actually observed.
+
+Typical technical checks:
 
 ```text
 npx tsc --noEmit
@@ -53,120 +130,53 @@ pnpm run build
 pnpm run test
 ```
 
-For `.vue` files, `npm run build` uses `vue-tsc`. Unit tests use Vitest (`*.test.ts`). Current unit coverage is primarily pure logic rather than Three.js/DOM/`.vue` integration.
+Do not claim visual or gameplay correctness from technical checks alone.
 
-Don't lint/test/build changes made only to .md files in docs/ folder.
+For Three.js visual/gameplay changes, use the browser verification workflow described in the relevant project documentation. Do not launch headless browser automation by default.
 
-CI (`.github/workflows/ci.yml`) runs `type-check`, `lint`, `build` and `test` on every PR and on push to `main` as a verification gate — it does not replace running these locally before committing.
+## Documentation
 
-### Browser verification
+Keep documentation synchronized with implementation.
 
-Do **not** launch headless Chrome/Playwright yourself as the default way to test visual/gameplay changes. First run technical checks. If manual browser verification is needed, ask the user to test the already-running dev server and provide concrete steps and expected results.
+Important entry points:
 
-In case of running benchmarks in browser - check `docs/performance/agent-browser-benchmarking.md`
+* `docs/STATE.md` — current implementation state
+* `docs/CODE_INDEX.md` — semantic code ownership
+* `docs/code-map/` — generated symbol/dependency maps
+* `docs/plans/README.md` — plan status and priorities
+* `docs/plans/` — implementation plans
+* `docs/architecture/` — architectural constraints
+* `docs/reviews/` — implementation/performance reviews
 
-## Documentation workflow
+Use the relevant local README/index before opening an entire documentation directory.
 
-| Area | Source |
-|---|---|
-| Product vision | [docs/VISION.md](docs/VISION.md) |
-| Current implementation state | [docs/STATE.md](docs/STATE.md) |
-| Where a system lives in the code | [docs/CODE_INDEX.md](docs/CODE_INDEX.md) |
-| Settlements / NPC life | [docs/state/settlements.md](docs/state/settlements.md) |
-| Graphics decisions / visual contracts | [docs/architecture/GRAPHICS.md](docs/architecture/GRAPHICS.md) |
-| Water (ocean + lakes + rivers) | [docs/state/water.md](docs/state/water.md) |
-| Terrain/world generation (chunking, vegetation, mountains, weather) | [docs/state/terrain-and-world-generation.md](docs/state/terrain-and-world-generation.md) |
-| Combat (melee/ranged, NPC combat, animal defense) | [docs/state/combat.md](docs/state/combat.md) |
-| Player survival/world-object systems (needs, skills, wells, traps, planting) | [docs/state/player-systems.md](docs/state/player-systems.md) |
-| Strategic roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
-| Plan index/status | [docs/plans/README.md](docs/plans/README.md) |
-| Loose ends found mid-plan (blockers, spun-off ideas, unfinished threads) | [docs/plans/LOOSE-ENDS.md](docs/plans/LOOSE-ENDS.md) |
-| Implementation plans | [docs/plans/](docs/plans/) |
-| Archived plans (frozen batch) | [docs/plans/archive/](docs/plans/archive/) |
-| Architecture | [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md), [docs/architecture/](docs/architecture/) |
-| Issues | [docs/issues/README.md](docs/issues/README.md) |
-| Reviews | [docs/reviews/README.md](docs/reviews/README.md) |
-| Research | [docs/research/README.md](docs/research/README.md) |
-| Required models / sounds | [docs/assets/MODELS.md](docs/assets/MODELS.md), [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) |
-| Item catalog (hold/melee/spawn) | [docs/items/CATALOG.md](docs/items/CATALOG.md) |
-| Weapon stats / prices | [docs/items/WEAPONS.md](docs/items/WEAPONS.md) |
-| Blender / MPFB2 AI character pipeline | [docs/blender/README.md](docs/blender/README.md) |
+## Assets
 
-Statuses are: `todo` · `planned` · `in progress` · `done` · `verification needed`.
+When a feature requires new media, update:
 
-New plans files use `<domain>-<id>-<title>.md` with an independent sequence per domain.
-New issue/review/research files use `YYYY-MM-DD--NNN--slug.md` with an independent sequence per document type.
-New plans stay in `docs/plans/` regardless of status; `docs/plans/archive/` is a one-time freeze of the 2026-08-07–2026-08-14 batch.
+* `docs/assets/MODELS.md`
+* `docs/assets/SOUNDS.md`
 
-## Plan execution rules
+Do not modify these lists when no new assets are required.
 
-1. Do not implement a large change from the plan title alone.
-2. Read the complete plan.
-3. Read implementation notes if present.
-4. Read linked review material before implementation; review findings are actionable constraints, not background commentary.
-5. Inspect the actual code paths named by the plan. If the repository differs from the plan, trust the code and update the plan/notes as appropriate.
-6. Keep the change scoped to the plan. Do not opportunistically redesign unrelated systems.
-7. If the plan needs new models or sounds, update [docs/assets/MODELS.md](docs/assets/MODELS.md) / [docs/assets/SOUNDS.md](docs/assets/SOUNDS.md) as part of the work (skip when no new assets are required).
-8. Run the relevant technical checks.
-9. Clearly separate **implemented**, **technically verified**, and **browser/manual verified**.
-10. If a side blocker, spun-off idea, or unfinished thread comes up that's out of scope for the current plan, add a one-line entry to [docs/plans/LOOSE-ENDS.md](docs/plans/LOOSE-ENDS.md) instead of expanding scope or silently dropping it.
+You can find information about local assets (not stored in the repository) in `docs/assets/LOCAL_ASSETS.md`.
 
-## Git workflow for agents
+## Git
 
-`main` is the production branch — Cloudflare Pages deploys it automatically on every push. There is no separate deploy step to trigger; CI (see below) is the verification gate before/after a change lands, not a replacement for it.
+Work directly on `main`.
 
-- Committing is part of finishing a task, not an optional extra step — don't leave finished work uncommitted.
-- Before pushing, sync with the remote (`git pull --rebase origin main`, or the current branch's upstream) rather than pushing on top of stale local history.
-- Never use `git reset --hard` or force-push to resolve a rejected push or a conflict. Rebase, resolve conflicts normally, and keep other agents'/contributors' changes — do not silently overwrite them.
-- If a push is rejected because `main` moved, rebase, re-resolve, re-run the relevant technical checks, then push again.
-- Expect commits from Github workflow that update `docs/plans/README.md` and/or `docs/plans/PLANS-WITHOUT-NOTES.md`
+Before pushing:
 
-## Important architecture
+```text
+git pull --rebase origin main
+```
 
-`WorldBundle` (`src/app/worldBundle.ts`) is the core world lifetime/rebuild boundary. The authoritative rebuild/lifetime rule (don't capture a replaceable bundle field in a stale closure) lives in [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — "World lifecycle" / "Rebuild / lifetime invariants". Read it there; it is not restated here.
+Never force-push or use `git reset --hard` to resolve conflicts. Preserve other contributors' changes.
 
-Entry points: the canonical, kept-current list is [docs/STATE.md](docs/STATE.md) — "Important code entry points".
+Finished work should be committed and pushed to `main`.
 
-### Architecture invariants that are easy to miss
+Expect automated commits that may update generated plan documentation.
 
-- **Authoritative state is not runtime representation.** Streaming/rebuild must reconstruct runtime objects from authoritative state; runtime objects must not become a second owner.
-- **Entity identity survives runtime lifecycle.** Unload/reload/rebuild must preserve stable entity identity rather than treating a new runtime object as a new entity.
-- **Time-skip uses the same simulation semantics.** Do not add a separate accelerated simulation path that bypasses normal state transitions.
-- **Persistence is currently save v1 only.** Do not add legacy save-version compatibility or migration unless explicitly planned.
-- **Large files are not problems because of LOC alone.** Split by real responsibility/ownership boundaries; a coherent large coordinator may remain large.
+## Final rule
 
-## Current configuration / stack facts
-
-- Three.js + WebGL2, Vite, TypeScript.
-- `simplex-noise` and `lil-gui` are used by the world/config layer.
-- Vue 3 + Tailwind v4 + `lucide-vue-next` are used by the current Vue UI overlay.
-- Vue is mounted through `src/ui-vue/mount.ts` into `#vue-ui`.
-- IndexedDB persistence lives in `src/persistence/`.
-- World configuration is merged from URL/localStorage/defaults; inspect `src/config/worldConfig.ts` before changing precedence or save compatibility.
-
-## When changing architecture
-
-Before introducing a new cross-system service, ask:
-
-- Does an existing manager/agent already own this responsibility?
-- Can the existing shared type be extended instead?
-- Does the new lifecycle match `WorldBundle`?
-- Does the change need persistence?
-- Does it need to work when the player is far away from the relevant world location?
-- Does it create a second implementation of an existing mechanic?
-- **Does the work need frame-rate resolution, or can it be event-driven, lazy or batched?**
-- **Can CPU-heavy data-only work reuse an existing worker pipeline without unnecessary serialization/synchronization cost?**
-
-Prefer a small, explicit seam over a new generic framework.
-
-## Truth hierarchy
-
-For implementation questions:
-
-1. **Current code** — what actually exists.
-2. **Tests/build configuration** — what is mechanically verified.
-3. **Implementation notes/reviews** — known decisions and constraints.
-4. **Plan** — intended implementation.
-5. **Roadmap/Vision** — product direction, not implementation evidence.
-
-When documentation and code disagree, do not silently assume the documentation is correct. Call out the discrepancy and update the appropriate document when part of the task.
+Prefer the smallest change that strengthens existing systems, preserves deterministic simulation, keeps the world independent of the player, and remains cheap for future agents to understand and navigate.
