@@ -36,7 +36,7 @@ Generated from exported TypeScript symbols.
 - `HeightSampler` — type — line 148
 - `PLAYER_HEIGHT` — const — line 53
 - `PLAYER_MODEL_URL` — const — line 146
-- `PlayerController` — class — line 153
+- `PlayerController` — class — line 159
 - `PlayerMovementState` — type — line 39
 
 ## `player/playerDamage.ts`
@@ -72,28 +72,28 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerNeeds.ts`
 
-- `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 73
-- `createPlayerNeeds` — function — line 127
-- `DEHYDRATION_HP_PER_SEC` — const — line 100
-- `drinkWater` — function — line 251
-- `eatFood` — function — line 247
-- `hungerSevereDurationSec` — function — line 86
-- `isTakingDeprivationDamage` — function — line 259
-- `PLAYER_MAX_HUNGER` — const — line 33
-- `PLAYER_MAX_STAMINA` — const — line 31
-- `PLAYER_MAX_THIRST` — const — line 34
-- `PLAYER_MAX_VIGOR` — const — line 32
-- `PlayerNeeds` — type — line 22
-- `resetPlayerNeeds` — function — line 139
-- `restoreNeedsFromSleep` — function — line 241
-- `restorePersistedNeeds` — function — line 160
-- `STARVATION_HP_PER_SEC` — const — line 99
-- `thirstSevereDurationSec` — function — line 89
-- `tickHealthRegen` — function — line 268
-- `tickPlayerMovementVigor` — function — line 225
-- `tickPlayerNeeds` — function — line 185
-- `tickPlayerStamina` — function — line 205
-- `tickRidingStamina` — function — line 216
+- `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 81
+- `createPlayerNeeds` — function — line 135
+- `DEHYDRATION_HP_PER_SEC` — const — line 108
+- `drinkWater` — function — line 259
+- `eatFood` — function — line 255
+- `hungerSevereDurationSec` — function — line 94
+- `isTakingDeprivationDamage` — function — line 267
+- `PLAYER_MAX_HUNGER` — const — line 41
+- `PLAYER_MAX_STAMINA` — const — line 39
+- `PLAYER_MAX_THIRST` — const — line 42
+- `PLAYER_MAX_VIGOR` — const — line 40
+- `PlayerNeeds` — type — line 30
+- `resetPlayerNeeds` — function — line 147
+- `restoreNeedsFromSleep` — function — line 249
+- `restorePersistedNeeds` — function — line 168
+- `STARVATION_HP_PER_SEC` — const — line 107
+- `thirstSevereDurationSec` — function — line 97
+- `tickHealthRegen` — function — line 276
+- `tickPlayerMovementVigor` — function — line 233
+- `tickPlayerNeeds` — function — line 193
+- `tickPlayerStamina` — function — line 213
+- `tickRidingStamina` — function — line 224
 
 ## `player/playerRanged.ts`
 
@@ -103,28 +103,28 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateRidingUse` — function — line 159
-- `accumulateSneakUse` — function — line 137
-- `applySneakSpeedModifier` — function — line 178
-- `awardSkillXp` — function — line 77
-- `createPlayerSkills` — function — line 61
-- `PlayerSkills` — type — line 20
-- `restorePersistedSkills` — function — line 87
-- `RIDING_XP_DISTANCE_M` — const — line 153
-- `SKILL_MIN_VALUE` — const — line 26
-- `SKILL_XP_AWARD` — const — line 106
-- `SKILL_XP_HALF_VALUE` — const — line 31
-- `SkillId` — type — line 8
-- `SkillState` — type — line 10
-- `SNEAK_LEGACY_VALUE` — const — line 54
-- `SNEAK_LEGACY_XP` — const — line 55
-- `SNEAK_SPEED_MULTIPLIER` — const — line 176
-- `SNEAK_XP_DISTANCE_M` — const — line 129
-- `survivalDurationMultiplier` — function — line 192
-- `survivalFoodMultiplier` — function — line 202
-- `toggleSneak` — function — line 100
-- `xpForSkillValue` — function — line 44
-- `xpToSkillValue` — function — line 35
+- `accumulateRidingUse` — function — line 164
+- `accumulateSneakUse` — function — line 142
+- `applySneakSpeedModifier` — function — line 183
+- `awardSkillXp` — function — line 82
+- `createPlayerSkills` — function — line 66
+- `PlayerSkills` — type — line 25
+- `restorePersistedSkills` — function — line 92
+- `RIDING_XP_DISTANCE_M` — const — line 158
+- `SKILL_MIN_VALUE` — const — line 31
+- `SKILL_XP_AWARD` — const — line 111
+- `SKILL_XP_HALF_VALUE` — const — line 36
+- `SkillId` — type — line 13
+- `SkillState` — type — line 15
+- `SNEAK_LEGACY_VALUE` — const — line 59
+- `SNEAK_LEGACY_XP` — const — line 60
+- `SNEAK_SPEED_MULTIPLIER` — const — line 181
+- `SNEAK_XP_DISTANCE_M` — const — line 134
+- `survivalDurationMultiplier` — function — line 197
+- `survivalFoodMultiplier` — function — line 207
+- `toggleSneak` — function — line 105
+- `xpForSkillValue` — function — line 49
+- `xpToSkillValue` — function — line 40
 
 ## `player/PlayerTorch.ts`
 

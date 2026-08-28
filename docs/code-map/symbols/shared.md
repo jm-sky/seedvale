@@ -17,11 +17,11 @@ Generated from exported TypeScript symbols.
 
 ## `shared/HealthState.ts`
 
-- `createHealthState` — function — line 7
-- `damageHealth` — function — line 13
-- `healHealth` — function — line 22
-- `HealthState` — type — line 1
-- `isAlive` — function — line 27
+- `createHealthState` — function — line 13
+- `damageHealth` — function — line 19
+- `healHealth` — function — line 28
+- `HealthState` — type — line 7
+- `isAlive` — function — line 33
 
 ## `shared/HungerState.ts`
 
@@ -40,12 +40,12 @@ Generated from exported TypeScript symbols.
 
 ## `shared/StaminaState.ts`
 
-- `createStaminaState` — function — line 6
-- `drainStamina` — function — line 10
-- `getStaminaRatio` — function — line 24
-- `isExhausted` — function — line 20
-- `restoreStamina` — function — line 15
-- `StaminaState` — type — line 1
+- `createStaminaState` — function — line 12
+- `drainStamina` — function — line 16
+- `getStaminaRatio` — function — line 30
+- `isExhausted` — function — line 26
+- `restoreStamina` — function — line 21
+- `StaminaState` — type — line 7
 
 ## `shared/ThirstState.ts`
 
@@ -59,10 +59,10 @@ Generated from exported TypeScript symbols.
 
 ## `shared/VigorState.ts`
 
-- `createVigorState` — function — line 9
-- `drainVigor` — function — line 13
-- `getVigorRatio` — function — line 27
-- `isCollapsed` — function — line 23
-- `restoreVigor` — function — line 18
-- `VIGOR_COLLAPSE_THRESHOLD` — const — line 7
-- `VigorState` — type — line 1
+- `createVigorState` — function — line 15
+- `drainVigor` — function — line 19
+- `getVigorRatio` — function — line 33
+- `isCollapsed` — function — line 29
+- `restoreVigor` — function — line 24
+- `VIGOR_COLLAPSE_THRESHOLD` — const — line 13
+- `VigorState` — type — line 7

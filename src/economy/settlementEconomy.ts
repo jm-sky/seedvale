@@ -14,6 +14,12 @@ type Reservation = {
   goods: readonly StockAmount[]
 }
 
+/**
+ * @domain settlements
+ * @system settlement-economy
+ * @role Owns a settlement's bulk stock, demand-driven shortage/surplus and reservations. Not player `Inventory`.
+ * @owns SettlementEconomy
+ */
 export type SettlementEconomy = {
   readonly settlementId: string
   add: (kind: EconomicKind, amount: number) => void

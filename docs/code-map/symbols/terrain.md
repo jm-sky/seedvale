@@ -118,7 +118,7 @@ Generated from exported TypeScript symbols.
 - `applyModificationToTile` — function — line 592
 - `ChunkManager` — type — line 374
 - `ChunkManagerConfig` — type — line 233
-- `createChunkManager` — function — line 724
+- `createChunkManager` — function — line 731
 - `CropHarvestOutcome` — type — line 720
 - `drainByBudget` — function — line 710
 - `FinalizeStage` — type — line 319

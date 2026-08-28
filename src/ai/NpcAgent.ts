@@ -748,6 +748,15 @@ function applySociableBoost(
   }
 }
 
+/**
+ * @domain settlements-npcs
+ * @system npc-agent
+ * @role Central per-NPC behaviour integration point: needs, FSM/schedule,
+ *  personality-driven decisions and combat.
+ * @owns NpcAuthoritativeState
+ * @uses Household SettlementEconomy Needs
+ * @simulation tick
+ */
 export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject

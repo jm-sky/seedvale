@@ -1,5 +1,12 @@
 import type { DefenseConfig } from '../items/itemCatalog'
 
+/**
+ * @domain shared
+ * @system defense-resolver
+ * @role Resolves an incoming hit into block/partial/full damage, shared by player and NPC combat.
+ * @uses ItemCatalog HealthState
+ */
+
 /** Minimum dot(defenderForward, toAttacker) for a held item to count as
  *  blocking — attacks from behind/sides slip past (plan 150 §6). */
 export const DEFENSE_FRONT_ARC_DOT = 0.2

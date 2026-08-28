@@ -4,6 +4,11 @@
  * levels, no perks, no points to spend. `xp` is the authoritative progression
  * state (the only thing persisted); `value` is always derived from it through
  * `xpToSkillValue` so the two can never drift apart.
+ *
+ * @domain items-player
+ * @system player-skills
+ * @role Owns the player's skill XP curve and the single award path.
+ * @owns PlayerSkills
  */
 export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense' | 'archery' | 'riding'
 

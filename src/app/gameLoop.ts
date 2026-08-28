@@ -415,7 +415,13 @@ export type GameLoop = {
  *  `createApp.ts` after every dependency it closes over already exists.
  *  `deps.bundle` is the one mutable-container exception (see
  *  `worldBundle.ts`): every other dependency here is a stable reference for
- *  the lifetime of one `createApp()` call. */
+ *  the lifetime of one `createApp()` call.
+ *
+ * @system game-loop
+ * @role Runs one frame's worth of simulation update + render.
+ * @uses WorldBundle PlayerController
+ * @simulation tick
+ */
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,

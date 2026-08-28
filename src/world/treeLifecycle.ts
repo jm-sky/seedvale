@@ -1,6 +1,14 @@
 import type { ItemKind } from '../items/items'
 import type { BiomeWeights } from '../terrain/biomeRegions'
 
+/**
+ * @domain world-terrain
+ * @system tree-lifecycle
+ * @role Owns tree growth stage progression and multi-stage chop state.
+ * @simulation tick
+ * @lifecycle growth
+ */
+
 /** Explicit lifecycle stages — not inferred from model scale. */
 export type TreeGrowthStage =
   | 'sapling'

@@ -36,12 +36,12 @@ Generated from exported TypeScript symbols.
 
 ## `simulation/types.ts`
 
-- `ActionLifecycle` — type — line 101
-- `ActionLifecycleStatus` — type — line 94
-- `copyVec3` — function — line 21
-- `DecisionContext` — type — line 59
-- `DecisionPressure` — type — line 42
-- `PlannedAction` — type — line 85
-- `SimulationEntityRef` — type — line 29
-- `vec3` — function — line 16
-- `Vec3` — type — line 10
+- `ActionLifecycle` — type — line 106
+- `ActionLifecycleStatus` — type — line 99
+- `copyVec3` — function — line 26
+- `DecisionContext` — type — line 64
+- `DecisionPressure` — type — line 47
+- `PlannedAction` — type — line 90
+- `SimulationEntityRef` — type — line 34
+- `vec3` — function — line 21
+- `Vec3` — type — line 15

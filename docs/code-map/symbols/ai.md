@@ -82,7 +82,7 @@ Generated from exported TypeScript symbols.
 - `NPC_HEIGHT` — const — line 208
 - `NPC_MODEL_URLS` — const — line 253
 - `NPC_SHADOW_DISTANCE` — const — line 213
-- `NpcAgent` — class — line 751
+- `NpcAgent` — class — line 760
 - `NpcInspectionSnapshot` — type — line 358
 - `NpcWhy` — type — line 408
 - `Phase` — type — line 280

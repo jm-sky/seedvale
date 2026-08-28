@@ -18,7 +18,15 @@ import { gameDaysToRealSeconds } from '../world/timeConversion'
  *  capability penalty and eventual HP loss in `tickPlayerNeeds` below and
  *  reset to 0 the moment the pool climbs back above critical — including via
  *  `eatFood`/`drinkWater`, since those raise `hunger.current`/`thirst.current`
- *  directly and the very next tick observes the pool is no longer critical. */
+ *  directly and the very next tick observes the pool is no longer critical.
+ *
+ * @domain items-player
+ * @system player-needs
+ * @role Owns the player's stamina/vigor/hunger/thirst survival pools.
+ * @owns PlayerNeeds
+ * @uses StaminaState VigorState
+ * @simulation tick
+ */
 export type PlayerNeeds = {
   stamina: StaminaState
   vigor: VigorState

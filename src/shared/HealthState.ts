@@ -1,3 +1,9 @@
+/**
+ * @domain shared
+ * @system health
+ * @role Shared health/damage/death state used by the player, NPCs and fauna.
+ * @owns HealthState
+ */
 export type HealthState = {
   maxHp: number
   currentHp: number

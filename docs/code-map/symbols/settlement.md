@@ -150,15 +150,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 179
-- `createHouseholdRegistry` — function — line 245
-- `Household` — type — line 119
-- `HouseholdId` — type — line 13
-- `householdIdFor` — function — line 154
-- `HouseholdRegistry` — type — line 236
-- `HouseholdResourceKind` — type — line 21
-- `HouseholdSnapshot` — type — line 103
-- `WaterReserve` — type — line 66
+- `createHousehold` — function — line 185
+- `createHouseholdRegistry` — function — line 251
+- `Household` — type — line 125
+- `HouseholdId` — type — line 19
+- `householdIdFor` — function — line 160
+- `HouseholdRegistry` — type — line 242
+- `HouseholdResourceKind` — type — line 27
+- `HouseholdSnapshot` — type — line 109
+- `WaterReserve` — type — line 72
 
 ## `settlement/houseLighting.ts`
 
@@ -406,7 +406,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 129
+- `createSettlementsManager` — function — line 136
 - `SettlementsManager` — type — line 60
 
 ## `settlement/settlementStructures.ts`

@@ -77,6 +77,13 @@ export type SaveStateDeps = {
   getMountedAnimalId: () => string | null
 }
 
+/**
+ * @domain persistence
+ * @system save-state
+ * @role Assembles the live runtime state into `SaveData` and owns when it is written.
+ * @produces SaveData
+ * @integration Reads across WorldBundle, player and UI state to build one save.
+ */
 export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, playerTorch,

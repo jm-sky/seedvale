@@ -194,6 +194,12 @@ export function consumeNeedNoun(need: ConsumableNeed): string {
   }
 }
 
+/**
+ * @domain items-player
+ * @system item-catalog
+ * @role Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
+ * @owns ItemCatalogEntry
+ */
 export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
   shell: {
     kind: 'shell',

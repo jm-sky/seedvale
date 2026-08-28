@@ -47,9 +47,9 @@ Generated from exported TypeScript symbols.
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 36
+- `createSettlementEconomy` — function — line 42
 - `SettlementDemand` — type — line 6
-- `SettlementEconomy` — type — line 17
+- `SettlementEconomy` — type — line 23
 
 ## `economy/stock.ts`
 

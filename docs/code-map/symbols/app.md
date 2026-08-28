@@ -62,9 +62,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/appRenderLoop.ts`
 
-- `AppRenderLoop` — type — line 20
-- `AppRenderLoopDeps` — type — line 26
-- `createAppRenderLoop` — function — line 40
+- `AppRenderLoop` — type — line 26
+- `AppRenderLoopDeps` — type — line 32
+- `createAppRenderLoop` — function — line 46
 
 ## `app/busyAction.ts`
 
@@ -84,11 +84,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 197
+- `createApp` — function — line 204
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 419
+- `createGameLoop` — function — line 425
 - `GameLoop` — type — line 393
 - `GameLoopDeps` — type — line 204
 
@@ -147,7 +147,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 80
+- `createSaveState` — function — line 87
 - `SaveState` — type — line 34
 - `SaveStateDeps` — type — line 44
 
@@ -162,10 +162,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 469
-- `createWorldBundle` — function — line 749
-- `disposeWorldBundle` — function — line 1021
+- `BuiltWorldSystems` — type — line 476
+- `createWorldBundle` — function — line 756
+- `disposeWorldBundle` — function — line 1028
 - `HOME_RADIUS` — const — line 74
 - `homeChunks` — function — line 85
-- `rebuildWorldBundle` — function — line 878
-- `WorldBundle` — type — line 101
+- `rebuildWorldBundle` — function — line 885
+- `WorldBundle` — type — line 108

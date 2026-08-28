@@ -1,3 +1,9 @@
+/**
+ * @domain shared
+ * @system stamina
+ * @role Shared physical-effort capacity used by the player, NPCs and fauna.
+ * @owns StaminaState
+ */
 export type StaminaState = {
   max: number
   current: number
