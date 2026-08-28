@@ -117,7 +117,6 @@ Natural vegetation
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
-| ◼️ `fauna-001-rabies-and-animal-infection.md`                          | - | 🟡 | M | ~~188~~ |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | ◼️ `tools-002-trace-analyzer-application-cpu-attribution.md`           | - | 🔴 | M | - |
@@ -208,6 +207,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `world-terrain-002-terrain-modification-and-land-preparation.md` | [notes](./implementation-notes/world-terrain-002-terrain-modification-and-land-preparation-implementation-notes.md) |
 | `world-003-faster-application-startup.md` | [notes](./implementation-notes/world-003-faster-application-startup-implementation-notes.md) |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` | [notes](./implementation-notes/tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md); repeated-run stability (§8) needs manual `?benchmark=` browser verification |
+| `fauna-001-rabies-and-animal-infection.md` | [notes](./implementation-notes/fauna-001-rabies-and-animal-infection-implementation-notes.md); browser verification per plan's §Weryfikacja/Browser-manual list |
 
 ---
 

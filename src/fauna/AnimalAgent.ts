@@ -76,6 +76,19 @@ const CONTACT_RANGE = 0.8
 /** Minimum seconds between bites from the same predator, so contact doesn't
  *  melt prey HP in a single frame. */
 const ATTACK_COOLDOWN = 0.6
+/** Rabies bite-transmission chance (plan fauna-001) — one roll per landed
+ *  bite (`attack()`), never per-tick, so the outcome can't be farmed by
+ *  camping at a low frame rate. Set below the corpse-contact chance: a
+ *  chase typically lands several bites in a row, so a lower per-bite roll
+ *  still produces a fast-spreading outbreak without near-guaranteeing
+ *  infection on the very first bite. */
+export const RABIES_BITE_INFECTION_CHANCE = 0.35
+/** Radius (world units) within which a rabid animal detects and chases its
+ *  next live target (plan fauna-001) — flat across every `AnimalKind`,
+ *  since rabies overrides the normal predator `detectRange`/prey
+ *  `fleeRange` split (meaningless or zero for several roles). Roughly
+ *  matches the existing predator detect-range scale (14–20). */
+const RABIES_TARGET_DETECT_RANGE = 14
 /** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
 const CORPSE_LINGER_SECONDS = 60
 /** Seconds harvested remains stay after a knife harvest (plan 137) — own
@@ -105,6 +118,13 @@ const CORPSE_FX_DISTANCE = 22
  *  instead of a new disease/status-effect system. */
 const CORPSE_ROT_INFLUENCE_RADIUS = 5
 const CORPSE_ROT_STAMINA_DRAIN_PER_SEC = 0.03
+/** Radius (world units) within which a live animal's contact with a
+ *  rabies-infected, `rotting` corpse can transmit rabies (plan fauna-001 —
+ *  the feature's explicit "wejście w promień 0.5 m" figure). */
+export const RABIES_CORPSE_CONTACT_RADIUS = 0.5
+/** Chance a single corpse-contact exposure actually transmits rabies (plan
+ *  fauna-001 — the feature's explicit 50% figure). */
+export const RABIES_CORPSE_INFECTION_CHANCE = 0.5
 /** Sickly tint applied to a rotting corpse's materials — same technique as
  *  `markDangerous()`'s `tintPropMaterials` call, just a different hex. */
 const CORPSE_ROT_TINT_HEX = 0x3a4224
@@ -718,6 +738,54 @@ export function pickNearestEligibleWolf(
   return best
 }
 
+/** Single infection roll shared by bite and corpse-contact transmission
+ *  (plan fauna-001) — one call per discrete event (a landed bite, or a
+ *  corpse's first-contact exposure), never per-tick, so the outcome is
+ *  independent of frame rate/tick frequency. Pure/exported so it's
+ *  unit-testable without instantiating `AnimalAgent`. */
+export function rollsRabiesInfection(chance: number, roll: number): boolean {
+  return roll < chance
+}
+
+/** Whether a live animal at `distance` from a corpse counts as rabies
+ *  contact (plan fauna-001) — only a `rotting`, rabies-infected corpse is
+ *  contagious; `fresh`/`bones` corpses and healthy corpses never are. Pure
+ *  so it's unit-testable without instantiating `AnimalAgent`/Three.js, same
+ *  technique as `corpsePhaseFromElapsed`. */
+export function isRabiesCorpseContact(opts: {
+  corpsePhase: CorpsePhase
+  corpseInfected: boolean
+  distance: number
+}): boolean {
+  return opts.corpseInfected && opts.corpsePhase === 'rotting' && opts.distance < RABIES_CORPSE_CONTACT_RADIUS
+}
+
+/** Nearest live animal of *any* role within `range` (plan fauna-001) — a
+ *  rabid animal's target search, unlike the role-filtered `nearest()` used
+ *  by normal predator/prey AI. Generic/structural (same "testable without
+ *  real agents" shape as `shouldSkipForPopulationProtection` in
+ *  `huntingHooks.ts`) so production code can pass the real `AnimalAgent[]`
+ *  directly with no extra allocation, while tests pass plain candidates. */
+export function pickRabidTarget<
+  T extends { animalId: string, isDead: () => boolean, mesh: { position: { x: number, z: number } } },
+>(
+  self: { animalId: string, mesh: { position: { x: number, z: number } } },
+  others: readonly T[],
+  range: number,
+): T | null {
+  let best: T | null = null
+  let bestD = range
+  for (const o of others) {
+    if (o.animalId === self.animalId || o.isDead()) continue
+    const d = Math.hypot(o.mesh.position.x - self.mesh.position.x, o.mesh.position.z - self.mesh.position.z)
+    if (d < bestD) {
+      bestD = d
+      best = o
+    }
+  }
+  return best
+}
+
 /**
  * @domain fauna
  * @system animal-agent
@@ -844,6 +912,18 @@ export class AnimalAgent {
    *  wander-avoidance (`pickPointNear`). Never persisted (plan 179 §3
    *  "Persistence": wild fauna isn't a save source in V1). */
   private frenzied = false
+  /** Rabies infection state (plan fauna-001) — a persistent disease state,
+   *  distinct from `frenzied` (a debug/runtime behavior trait). Never
+   *  cleared once set: infection lasts until death (no incubation, no
+   *  natural recovery in V1), and the same `AnimalAgent` instance persists
+   *  through its corpse-linger lifetime, so this also marks an infected
+   *  corpse as contagious (see `applyRabiesCorpseExposure`). */
+  private rabid = false
+  /** `animalId`s of live animals this corpse has already rolled a rabies
+   *  contact-exposure check against (plan fauna-001) — a one-shot guard so
+   *  an animal lingering next to an infected `rotting` corpse doesn't get
+   *  re-rolled every tick. Only ever populated/read while `rabid`. */
+  private readonly rabiesExposedAnimalIds = new Set<string>()
   /** Strategic (not combat) target set alongside `frenzied` — the nearest
    *  loaded village at frenzy time, a plain position/radius snapshot (plan
    *  179 §3/§5), not a live `Settlement`/scene reference. Drives
@@ -1212,6 +1292,20 @@ export class AnimalAgent {
     this.strategicVillage = { ...village }
   }
 
+  /** True once this animal has been infected with rabies (plan fauna-001) —
+   *  stays true through death, since the same instance is also this
+   *  animal's corpse for the rest of its linger lifetime. */
+  isRabid(): boolean {
+    return this.rabid
+  }
+
+  /** Marks this animal infected with rabies (plan fauna-001). No incubation
+   *  period: the very next `update()` tick already uses rabid behavior
+   *  (`updateRabid`). Idempotent. */
+  infectWithRabies(): void {
+    this.rabid = true
+  }
+
   /** True while this predator's latest throttled decision is `attack`
    *  (player or, when frenzied, a noticed NPC) — see `threateningHuman`'s
    *  field doc. `NpcAgent`'s bounded local threat perception reads this
@@ -1415,7 +1509,10 @@ export class AnimalAgent {
       this.corpsePhaseValue = phase
       this.onCorpsePhaseChanged(phase)
     }
-    if (phase === 'rotting') this.applyRotInfluence(dt, others)
+    if (phase === 'rotting') {
+      this.applyRotInfluence(dt, others)
+      if (this.rabid) this.applyRabiesCorpseExposure(others)
+    }
     this.updateRotFx(dt, phase, observerPos)
   }
 
@@ -1454,6 +1551,26 @@ export class AnimalAgent {
       if (this.withinRange(other.mesh.position.x, other.mesh.position.z, CORPSE_ROT_INFLUENCE_RADIUS)) {
         drainStamina(other.life.stamina, CORPSE_ROT_STAMINA_DRAIN_PER_SEC * dt)
       }
+    }
+  }
+
+  /** Rabies corpse-contact transmission (plan fauna-001) — this corpse is
+   *  infected and currently `rotting`; any nearby live, not-yet-infected
+   *  animal gets a single, guarded contact-exposure roll (never repeated
+   *  for the same pair, see `rabiesExposedAnimalIds`). Reuses the same
+   *  local/bounded `others` list `applyRotInfluence` already iterates —
+   *  no separate corpse/disease scan. */
+  private applyRabiesCorpseExposure(others: readonly AnimalAgent[]): void {
+    for (const other of others) {
+      if (other === this || other.health.dead || other.rabid) continue
+      if (this.rabiesExposedAnimalIds.has(other.animalId)) continue
+      const distance = Math.hypot(
+        other.mesh.position.x - this.mesh.position.x,
+        other.mesh.position.z - this.mesh.position.z,
+      )
+      if (!isRabiesCorpseContact({ corpsePhase: this.corpsePhaseValue, corpseInfected: this.rabid, distance })) continue
+      this.rabiesExposedAnimalIds.add(other.animalId)
+      if (rollsRabiesInfection(RABIES_CORPSE_INFECTION_CHANCE, Math.random())) other.infectWithRabies()
     }
   }
 
@@ -1596,7 +1713,17 @@ export class AnimalAgent {
       ? this.senseNpcThreat(nearbyNpcs)
       : null
 
-    if (sense.playerActive) {
+    if (this.rabid) {
+      // Rabies bypasses normal predator/prey AI entirely, including
+      // human/NPC/fire fear (plan fauna-001: "chore zwierzęta nie powinny
+      // zachowywać normalnego lęku przed człowiekiem") — a rabid animal
+      // never flees or considers human/NPC targets, it single-mindedly
+      // chases the nearest live animal (see `updateRabid`).
+      this.threateningHuman = false
+      this.humanDecisionTimer = 0
+      this.provokedTimer = 0
+      this.updateRabid(dt, others)
+    } else if (sense.playerActive) {
       this.cancelSourceTarget()
       if (this.def.role === 'predator') {
         this.humanDecisionTimer -= dt
@@ -2112,12 +2239,26 @@ export class AnimalAgent {
     this.wander(dt)
   }
 
-  private attack(prey: AnimalAgent): void {
+  /** Shared bite seam for both normal predator hunting (`updatePredator`)
+   *  and rabid attacks on any species (`updateRabid`) — `target` is "prey"
+   *  only in the predator case, so the parameter is named generically (plan
+   *  fauna-001). */
+  private attack(target: AnimalAgent): void {
     if (this.attackCooldown > 0) return
     if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
-    prey.takeDamage(damageFor(this.def.kind, prey.def.kind))
+    target.takeDamage(damageFor(this.def.kind, target.def.kind))
+    if (this.rabid) this.tryRabiesBiteInfection(target)
+  }
+
+  /** Rabies bite transmission (plan fauna-001) — a single roll immediately
+   *  after this bite's damage actually landed, gated on the target still
+   *  being alive and not already infected. Never rolled from `chase`/mere
+   *  contact, only from an actual `attack()` event. */
+  private tryRabiesBiteInfection(target: AnimalAgent): void {
+    if (target.health.dead || target.rabid) return
+    if (rollsRabiesInfection(RABIES_BITE_INFECTION_CHANCE, Math.random())) target.infectWithRabies()
   }
 
   private updatePrey(dt: number, others: AnimalAgent[]): void {
@@ -2131,6 +2272,36 @@ export class AnimalAgent {
     if (this.pursueNeeds(dt, others)) return
     this.setIntent('wander')
     this.wander(dt)
+  }
+
+  /** Rabies overrides normal predator/prey/human-fear behavior entirely
+   *  (plan fauna-001): a rabid animal ignores need-pursuit and chases the
+   *  nearest live animal of *any* role within `RABIES_TARGET_DETECT_RANGE`,
+   *  biting it on contact through the same `attack()` seam predators
+   *  already use. Falls back to plain wander with no target in range or
+   *  while exhausted. Only ever picks another animal, never a human — V1
+   *  transmission/aggression is animal-to-animal only. */
+  private updateRabid(dt: number, others: readonly AnimalAgent[]): void {
+    const target = isExhausted(this.life.stamina)
+      ? null
+      : pickRabidTarget(this, others, RABIES_TARGET_DETECT_RANGE)
+    if (!target) {
+      this.setIntent('wander')
+      this.wander(dt)
+      return
+    }
+    this.cancelSourceTarget()
+    this.setIntent('chase', copyVec3(target.mesh.position))
+    this.sprinting = true
+    const dist = Math.hypot(
+      target.mesh.position.x - this.mesh.position.x,
+      target.mesh.position.z - this.mesh.position.z,
+    )
+    if (dist < CONTACT_RANGE) {
+      this.attack(target)
+    } else {
+      this.steerToward(target.mesh.position, this.sprintSpeedNow(), dt)
+    }
   }
 
   /** Real food/water pursuit (plan 094) — searches for and moves to a
