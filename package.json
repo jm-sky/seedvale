@@ -21,7 +21,8 @@
     "docs:symbol-index": "tsx scripts/docs/docs-symbol-index.ts",
     "docs:dependency-map": "tsx scripts/docs/docs-dependency-map.ts",
     "docs:code-index": "tsx scripts/docs/docs-code-index.ts",
-    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/planned-plans-without-notes.ts && tsx scripts/docs/docs-readme-index.ts && tsx scripts/docs/docs-symbol-index.ts && tsx scripts/docs/docs-dependency-map.ts && tsx scripts/docs/docs-code-index.ts"
+    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/planned-plans-without-notes.ts && tsx scripts/docs/docs-readme-index.ts && tsx scripts/docs/docs-symbol-index.ts && tsx scripts/docs/docs-dependency-map.ts && tsx scripts/docs/docs-code-index.ts",
+    "claude:preflight": "tsx scripts/claude/pre-implementation.ts"
   },
   "dependencies": {
     "@lucide/vue": "^1.31.0",
