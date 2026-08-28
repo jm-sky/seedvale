@@ -52,7 +52,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `005`
+- settlements-npcs: `006`
 - tools: `004`
 - ui-input: `004`
 - world: `006`
@@ -125,6 +125,7 @@ Natural vegetation
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `world-005-new-game-time-reset.md`                        | - | 🟡 | S | - |
+| ◼️ `settlements-npcs-005-local-resource-exchange.md`         | - | 🔴 | M | ~~156~~ ~~002~~ |
 
 ### Fresh new
 
