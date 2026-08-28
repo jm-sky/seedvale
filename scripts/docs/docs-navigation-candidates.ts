@@ -1,6 +1,7 @@
 import {
   readdir,
   readFile,
+  writeFile,
 } from 'node:fs/promises'
 import {
   resolve,
@@ -14,13 +15,19 @@ const DEPENDENCY_DIR = resolve(
   'code-map/dependencies',
 )
 
-const CODE_INDEX_FILE = resolve(
+const CODE_INDEX_PATH = resolve(
   DOCS_DIR,
   'CODE_INDEX.md',
 )
 
-const MAX_CANDIDATES_PER_DOMAIN = 3
+const AI_NAVIGATION_INDEX_START =
+  '<!-- AI_NAVIGATION_INDEX_START -->'
+
+const AI_NAVIGATION_INDEX_END =
+  '<!-- AI_NAVIGATION_INDEX_END -->'
+
 const MAX_INDEX_ENTRIES = 20
+const MAX_CANDIDATES_PER_DOMAIN = 3
 const MIN_SCORE = 20
 
 const IGNORE_FILE_PATTERNS = [
@@ -71,6 +78,22 @@ const TECHNICAL_PATTERNS = [
   { pattern: /Debug/i, penalty: 12 },
 ]
 
+type DependencyInfo = {
+  file: string
+  imports: string[]
+  importedBy: string[]
+}
+
+type Candidate = {
+  domain: string
+  file: string
+  score: number
+  imports: number
+  importedBy: number
+  reasons: string[]
+  role: string
+}
+
 function importedByScore(
   importedBy: number,
 ): number {
@@ -107,11 +130,13 @@ function calculateScore(
   let role = ''
 
   for (const rule of ROLE_PATTERNS) {
-    if (rule.pattern.test(fileName)) {
-      if (rule.score > roleScore) {
-        roleScore = rule.score
-        role = rule.role
-      }
+    if (!rule.pattern.test(fileName)) {
+      continue
+    }
+
+    if (rule.score > roleScore) {
+      roleScore = rule.score
+      role = rule.role
     }
   }
 
@@ -194,22 +219,8 @@ function calculateScore(
     importedBy:
       dependency.importedBy.length,
     reasons,
+    role,
   }
-}
-
-type DependencyInfo = {
-  file: string
-  imports: string[]
-  importedBy: string[]
-}
-
-type Candidate = {
-  domain: string
-  file: string
-  score: number
-  imports: number
-  importedBy: number
-  reasons: string[]
 }
 
 function shouldIgnore(
@@ -370,45 +381,89 @@ async function readDependencyMaps(): Promise<
   return result
 }
 
-async function readIndexedFiles(): Promise<
-  Set<string>
-> {
-  const content =
-    await readFile(
-      CODE_INDEX_FILE,
-      'utf8',
+function parseIndexedFiles(
+  content: string,
+): Set<string> {
+  const indexed = new Set<string>()
+
+  const start =
+    content.indexOf(
+      AI_NAVIGATION_INDEX_START,
     )
 
-  const indexed =
-    new Set<string>()
+  const end =
+    content.indexOf(
+      AI_NAVIGATION_INDEX_END,
+    )
 
-  const linkPattern =
-    /\]\(\.\.\/src\/([^)]+\.tsx?)\)/g
+  if (
+    start === -1 ||
+    end === -1 ||
+    end <= start
+  ) {
+    return indexed
+  }
+
+  const section =
+    content.slice(
+      start,
+      end,
+    )
+
+  const pattern =
+    /\]\(\.\.\/src\/([^)\s]+\.tsx?)\)/g
 
   for (
-    const match of content.matchAll(
-      linkPattern,
+    const match of section.matchAll(
+      pattern,
     )
   ) {
-    const file = match[1]
+    const file =
+      match[1]
 
     if (file) {
-      indexed.add(
-        normalizePath(file),
-      )
+      indexed.add(file)
     }
   }
 
   return indexed
 }
 
-function normalizePath(
-  file: string,
-): string {
-  return file
-    .replaceAll('\\', '/')
-    .replace(/^src\//, '')
-    .replace(/^\/+/, '')
+async function readCodeIndex(): Promise<{
+  content: string
+  indexedFiles: Set<string>
+}> {
+  const content =
+    await readFile(
+      CODE_INDEX_PATH,
+      'utf8',
+    )
+
+  const start =
+    content.indexOf(
+      AI_NAVIGATION_INDEX_START,
+    )
+
+  const end =
+    content.indexOf(
+      AI_NAVIGATION_INDEX_END,
+    )
+
+  if (
+    start === -1 ||
+    end === -1 ||
+    end <= start
+  ) {
+    throw new Error(
+      'CODE_INDEX.md does not contain a valid AI navigation index marker pair.',
+    )
+  }
+
+  return {
+    content,
+    indexedFiles:
+      parseIndexedFiles(content),
+  }
 }
 
 function sortCandidates(
@@ -419,6 +474,8 @@ function sortCandidates(
     b.score - a.score ||
     b.importedBy -
       a.importedBy ||
+    b.imports -
+      a.imports ||
     a.file.localeCompare(
       b.file,
     )
@@ -452,16 +509,27 @@ function selectRecommended(
   }
 
   const selected: Candidate[] = []
-  const domainCounts =
-    new Map<string, number>()
+  const selectedFiles = new Set<string>()
+  const selectedPerDomain = new Map<string, number>()
 
-  // First pass:
-  // give each domain one chance.
-  for (
-    const domain of [
-      ...byDomain.keys(),
-    ].toSorted()
-  ) {
+  /*
+   * First pass:
+   * give every domain one chance.
+   *
+   * Domains are sorted by name, so the result is
+   * deterministic when there are more domains than slots.
+   */
+  const domains =
+    [...byDomain.keys()].toSorted()
+
+  for (const domain of domains) {
+    if (
+      selected.length >=
+      MAX_INDEX_ENTRIES
+    ) {
+      break
+    }
+
     const candidate =
       byDomain.get(domain)?.[0]
 
@@ -470,24 +538,28 @@ function selectRecommended(
     }
 
     selected.push(candidate)
-    domainCounts.set(
-      domain,
-      1,
-    )
+    selectedFiles.add(candidate.file)
+    selectedPerDomain.set(domain, 1)
   }
 
-  // Remaining slots:
-  // prefer strongest candidates globally,
-  // while respecting the per-domain cap.
+  /*
+   * Remaining slots:
+   * select globally strongest candidates.
+   *
+   * MAX_CANDIDATES_PER_DOMAIN is enforced here as
+   * well as during the first pass.
+   */
   const remaining =
     candidates
       .filter(
         candidate =>
-          !selected.includes(
-            candidate,
+          !selectedFiles.has(
+            candidate.file,
           ),
       )
-      .toSorted(sortCandidates)
+      .toSorted(
+        sortCandidates,
+      )
 
   for (const candidate of remaining) {
     if (
@@ -498,7 +570,7 @@ function selectRecommended(
     }
 
     const count =
-      domainCounts.get(
+      selectedPerDomain.get(
         candidate.domain,
       ) ?? 0
 
@@ -510,8 +582,8 @@ function selectRecommended(
     }
 
     selected.push(candidate)
-
-    domainCounts.set(
+    selectedFiles.add(candidate.file)
+    selectedPerDomain.set(
       candidate.domain,
       count + 1,
     )
@@ -532,26 +604,193 @@ function formatCandidate(
   ].join('\n')
 }
 
+function formatNavigationDescription(
+  candidate: Candidate,
+): string {
+  const fileName =
+    getFileName(candidate.file)
+
+  const symbol =
+    fileName.replace(
+      /\.tsx?$/,
+      '',
+    )
+
+  switch (candidate.role) {
+    case 'agent':
+      return `primary ${candidate.domain} agent; open first for runtime behaviour and agent state.`
+
+    case 'controller':
+      return `primary ${candidate.domain} controller; open first for coordination and control flow.`
+
+    case 'domain entry':
+      return `${candidate.domain} domain entry; open first for the main ${candidate.domain} data and API surface.`
+
+    case 'factory':
+      return `${candidate.domain} factory; open first when tracing creation and setup of domain objects.`
+
+    case 'generator':
+      return `primary ${candidate.domain} generator; open first for domain generation logic.`
+
+    case 'lifecycle':
+      return `primary ${candidate.domain} lifecycle; open first for entity lifecycle behaviour.`
+
+    case 'manager':
+      return `primary ${candidate.domain} manager; open first for domain coordination and state management.`
+
+    case 'resolver':
+      return `primary ${candidate.domain} resolver; open first for domain resolution logic.`
+
+    case 'service':
+      return `primary ${candidate.domain} service; open first for domain service operations.`
+
+    case 'system':
+      return `primary ${candidate.domain} system; open first for core runtime system behaviour.`
+
+    default:
+      return `${symbol}; open first for the primary ${candidate.domain} domain logic.`
+  }
+}
+
+function formatNavigationEntry(
+  candidate: Candidate,
+): string {
+  return `- \`../src/${candidate.file}\` — ${formatNavigationDescription(candidate)}`
+}
+
+function formatNavigationSection(
+  candidates: Candidate[],
+): string {
+  const byDomain =
+    new Map<
+      string,
+      Candidate[]
+    >()
+
+  for (const candidate of candidates) {
+    const list =
+      byDomain.get(
+        candidate.domain,
+      ) ?? []
+
+    list.push(candidate)
+    byDomain.set(
+      candidate.domain,
+      list,
+    )
+  }
+
+  const sections: string[] = []
+
+  for (
+    const domain of [
+      ...byDomain.keys(),
+    ].toSorted()
+  ) {
+    const domainCandidates =
+      byDomain.get(domain) ?? []
+
+    domainCandidates.sort(
+      sortCandidates,
+    )
+
+    sections.push(
+      [
+        `### ${domain}`,
+        '',
+        ...domainCandidates.map(
+          formatNavigationEntry,
+        ),
+      ].join('\n'),
+    )
+  }
+
+  return [
+    AI_NAVIGATION_INDEX_START,
+    '',
+    ...sections.flatMap(
+      section => [
+        section,
+        '',
+      ],
+    ),
+    AI_NAVIGATION_INDEX_END,
+  ].join('\n')
+}
+
+function updateCodeIndex(
+  content: string,
+  candidates: Candidate[],
+): string {
+  const start =
+    content.indexOf(
+      AI_NAVIGATION_INDEX_START,
+    )
+
+  const end =
+    content.indexOf(
+      AI_NAVIGATION_INDEX_END,
+    )
+
+  if (
+    start === -1 ||
+    end === -1 ||
+    end <= start
+  ) {
+    throw new Error(
+      'CODE_INDEX.md does not contain a valid AI navigation index marker pair.',
+    )
+  }
+
+  const before =
+    content.slice(
+      0,
+      start,
+    )
+
+  const after =
+    content.slice(
+      end +
+      AI_NAVIGATION_INDEX_END.length,
+    )
+
+  const section =
+    formatNavigationSection(
+      candidates,
+    )
+
+  return [
+    before.trimEnd(),
+    '',
+    section,
+    after.trimStart(),
+  ].join('\n') + '\n'
+}
+
 async function main(): Promise<void> {
   console.log(
-    'Documentation navigation candidates v6',
+    'Documentation navigation candidates v9',
   )
   console.log('')
 
-  const [
-    dependencies,
-    indexedFiles,
-  ] = await Promise.all([
-    readDependencyMaps(),
-    readIndexedFiles(),
-  ])
+  const dependencies =
+    await readDependencyMaps()
 
-  const allCandidates =
+  const {
+    content: codeIndex,
+    indexedFiles,
+  } =
+    await readCodeIndex()
+
+  const candidates =
     dependencies
       .filter(
         dependency =>
           dependency.file &&
           !shouldIgnore(
+            dependency.file,
+          ) &&
+          !indexedFiles.has(
             dependency.file,
           ),
       )
@@ -561,26 +800,6 @@ async function main(): Promise<void> {
           candidate.score >=
           MIN_SCORE,
       )
-
-  const alreadyIndexed =
-    allCandidates.filter(
-      candidate =>
-        indexedFiles.has(
-          normalizePath(
-            candidate.file,
-          ),
-        ),
-    )
-
-  const candidates =
-    allCandidates.filter(
-      candidate =>
-        !indexedFiles.has(
-          normalizePath(
-            candidate.file,
-          ),
-        ),
-    )
 
   const recommended =
     selectRecommended(
@@ -595,29 +814,48 @@ async function main(): Promise<void> {
       ),
     )
 
+  const updatedCodeIndex =
+    updateCodeIndex(
+      codeIndex,
+      recommended,
+    )
+
+  await writeFile(
+    CODE_INDEX_PATH,
+    updatedCodeIndex,
+    'utf8',
+  )
+
   console.log(
     `Dependency entries: ${dependencies.length}`,
   )
+
   console.log(
     `Indexed files:      ${indexedFiles.size}`,
   )
+
   console.log(
-    `Already indexed:    ${alreadyIndexed.length}`,
+    `Already indexed:    ${indexedFiles.size}`,
   )
+
   console.log(
-    `Candidates:          ${candidates.length}`,
+    `Candidates:         ${candidates.length}`,
   )
+
   console.log(
-    `Domains analysed:    ${domains.size}`,
+    `Domains analysed:   ${domains.size}`,
   )
+
   console.log(
     `Recommended entries: ${recommended.length}`,
   )
+
   console.log('')
 
   console.log(
     'Recommended CODE_INDEX additions',
   )
+
   console.log('')
 
   for (const candidate of recommended) {
@@ -631,6 +869,7 @@ async function main(): Promise<void> {
   console.log(
     'Selected candidates',
   )
+
   console.log('')
 
   for (const candidate of recommended) {
@@ -643,10 +882,11 @@ async function main(): Promise<void> {
     )
 
     console.log('')
+
   }
 
   console.log(
-    'No files were modified.',
+    `Updated: ${CODE_INDEX_PATH}`,
   )
 }
 
