@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 /**
- * Seedvale implementation preflight v7.
+ * Seedvale implementation preflight v8.
  *
  * Purpose:
  *   Compile a small, targeted briefing for Claude Code before implementation.
@@ -23,12 +23,33 @@
  *   from a separately generated index — those helpers are cheap enough to
  *   call per-file for the small set of files a plan actually names.
  *
- *   v7 extends symbol discovery beyond exported top-level declarations:
+ *   v7 extended symbol discovery beyond exported top-level declarations:
  *   `getInternalSymbols` (reusing the same `getArchitecturalMetadata` tag
  *   parsing) surfaces documented internal methods of an already-relevant
  *   exported class/function — e.g. `NpcAgent.takeDamage()` — so a plan's
  *   real implementation seam isn't hidden behind one large exported class.
- *   See `findRelevantSymbols` for the four-tier selection this enables.
+ *   See `findRelevantSymbols` for the resulting five-tier selection.
+ *
+ *   v8 closes two gaps that still stopped discovery too early on plans whose
+ *   implementation seam is a *method* rather than a *class* (e.g.
+ *   `Inventory.instancesToJSON()`):
+ *     - `collectExplicitFiles` now also resolves the domain-relative file
+ *       form this repo's implementation notes use interchangeably with the
+ *       `src/`-rooted one (`` `items/Inventory.ts` `` as well as
+ *       `` `src/items/Inventory.ts` ``), and existence-checks every match —
+ *       a file plans/notes actually name can no longer be silently dropped
+ *       just because it's referenced without the `src/` prefix, or lose its
+ *       candidate-file slot to a stale/typo'd path that no longer resolves.
+ *     - `getInternalSymbols` no longer requires an architectural tag on a
+ *       *class method* (top-level functions are unchanged) — an untagged
+ *       method explicitly named by the plan/notes (`collectCallReferenceTerms`
+ *       now finds `Owner.method()`/`method()` call syntax anywhere in the
+ *       prose, not only inside backticks) is exactly the implementation
+ *       anchor a plan is likely to touch, and `findExactSymbols` already
+ *       ranks an explicit reference above everything else. The broader,
+ *       lower-signal call-graph tier (`findConnectedInternalSymbols`) stays
+ *       restricted to tagged methods only, so this doesn't turn a large
+ *       interconnected class into a method dump.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -52,6 +73,14 @@ const ROOT = process.cwd()
 
 const LIMITS = {
   maxSymbols: 12,
+  /** Soft cap on how many of `maxSymbols` one file can contribute. A plan
+   *  naming several explicit methods on the same class (e.g. `Inventory`'s
+   *  serialization boundary) can otherwise exhaust the whole budget before a
+   *  second, equally-explicit concept (e.g. `liquidContainer.ts`'s domain
+   *  rules) gets a single slot — this keeps the output spread across the
+   *  distinct concepts a plan actually names instead of exhausting it on
+   *  the first one encountered. */
+  maxSymbolsPerFile: 2,
   maxFiles: 12,
   maxSnippets: 8,
   snippetLines: 8,
@@ -186,38 +215,73 @@ function findImplementationNotes(
     : undefined
 }
 
+/**
+ * File-path mentions in plan/notes prose. Accepts both the repo-root-relative
+ * form (`` `src/items/Inventory.ts` ``) and the domain-relative form this
+ * repo's implementation notes also use interchangeably
+ * (`` `items/Inventory.ts` `` — a `src/`-relative path without the `src/`
+ * prefix), resolved against `src/` when the literal path isn't already
+ * rooted at `src`/`scripts`/`docs`.
+ *
+ * Every match is existence-checked (not just the resolved-relative ones), so
+ * a stale path in prose (e.g. a plan naming a since-moved/renamed file)
+ * doesn't silently occupy a candidate-file slot for nothing.
+ */
+const FILE_REFERENCE = /(?:`)?((?:[\w-]+\/)+[\w.-]+\.(?:ts|tsx|js|vue|md))(?:`)?/g
+
+function resolveExplicitFile(raw: string): string | undefined {
+  const normalized = normalizePath(raw)
+
+  const candidate =
+    normalized.startsWith('src/') ||
+    normalized.startsWith('scripts/') ||
+    normalized.startsWith('docs/')
+      ? normalized
+      : `src/${normalized}`
+
+  return exists(candidate) ? candidate : undefined
+}
+
 function collectExplicitFiles(
   text: string,
 ): FileReference[] {
-  const result: FileReference[] = []
+  const result: string[] = []
 
-  for (const match of text.matchAll(
-    /(?:`)?((?:src|scripts|docs)\/[\w./-]+\.(?:ts|tsx|js|vue|md))(?:`)?/g,
-  )) {
-    result.push({
-      file: normalizePath(match[1]),
-    })
+  for (const match of text.matchAll(FILE_REFERENCE)) {
+    const resolved = resolveExplicitFile(match[1])
+
+    if (resolved) {
+      result.push(resolved)
+    }
   }
 
-  return unique(
-    result.map((item) => item.file),
-  ).map((file) => ({ file }))
+  return unique(result).map((file) => ({ file }))
 }
 
 /**
- * A qualified call reference, e.g. `` `NpcAgent.takeDamage()` `` — the
- * plan/notes prose form for naming a specific internal method, as opposed
- * to a bare exported identifier. Extracted separately from the identifier
- * check below since the trailing `()` (and leading `Owner.`) fails that
- * regex outright.
+ * Explicit method/function-call references anywhere in plan/notes prose —
+ * qualified (`` `Inventory.instancesToJSON()` ``) or bare
+ * (`` `cloneItemInstance()` ``) — with or without surrounding backticks.
  *
- * Requires the dotted owner qualifier on purpose: an unqualified call like
- * `` `healHealth()` `` is far more common in this repo's prose as an
- * incidental mention of an already-exported function, and would otherwise
- * compete with genuinely internal-method references for the small key-symbol
- * budget (`LIMITS.maxSymbols`).
+ * Call syntax is a much stronger signal than a bare identifier (see
+ * `collectBacktickTerms` below), so unlike that generic-identifier
+ * extraction this does not require backtick quoting: this repo's
+ * implementation notes name methods in plain bullet lists just as often as
+ * in backtick spans (e.g. `` - Inventory.instancesToJSON() ``). Only the
+ * final (method) name is kept — the owner qualifier, if any, is discarded
+ * here; owner-scoped selection happens separately in `findRelevantSymbols`.
  */
-const METHOD_REFERENCE = /^(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*)\(\)$/
+const CALL_REFERENCE = /\b(?:[A-Za-z_$][\w$]*\.)*([A-Za-z_$][\w$]*)\(\)/g
+
+function collectCallReferenceTerms(
+  text: string,
+): string[] {
+  return unique(
+    [...text.matchAll(CALL_REFERENCE)].map(
+      (match) => match[1]!,
+    ),
+  )
+}
 
 function collectBacktickTerms(
   text: string,
@@ -228,13 +292,6 @@ function collectBacktickTerms(
     /`([^`\n]+)`/g,
   )) {
     const value = match[1].trim()
-
-    const methodReference = value.match(METHOD_REFERENCE)
-
-    if (methodReference) {
-      terms.push(methodReference[1])
-      continue
-    }
 
     if (
       value.length < 3 ||
@@ -348,7 +405,12 @@ function escapeRegExp(value: string): string {
  * Exact identifier matches have the strongest signal. Runs over the
  * combined exported+internal pool, so a method named directly (e.g.
  * `` `NpcAgent.applyIncomingCombatDamage()` `` in prose — see
- * `METHOD_REFERENCE`) is found the same way an exported type is.
+ * `CALL_REFERENCE`) is found the same way an exported type is. This is also
+ * where an explicitly plan/notes-referenced but otherwise undocumented
+ * method (e.g. `Inventory.instancesToJSON()`) gets picked up — `internal`
+ * now includes every class method (see `getInternalSymbols`), not only
+ * tagged ones, so a real name match here doesn't depend on the method
+ * carrying architectural metadata.
  */
 function findExactSymbols(
   index: SymbolInfo[],
@@ -376,6 +438,12 @@ function findExactSymbols(
  * Only architecturally documented symbols are promoted.
  * This prevents a large file from expanding into dozens of symbols.
  */
+function hasArchitecturalMetadata(symbol: SymbolInfo): boolean {
+  return ARCHITECTURAL_METADATA_ORDER.some(
+    (tag) => formatValue(symbolMetadata(symbol)[tag]).length > 0,
+  )
+}
+
 function findDocumentedSymbolsInFiles(
   index: SymbolInfo[],
   files: string[],
@@ -388,14 +456,7 @@ function findDocumentedSymbolsInFiles(
     .filter((symbol) =>
       fileSet.has(normalizePath(symbol.file)),
     )
-    .filter((symbol) =>
-      ARCHITECTURAL_METADATA_ORDER.some(
-        (tag) =>
-          formatValue(
-            symbolMetadata(symbol)[tag],
-          ).length > 0,
-      ),
-    )
+    .filter(hasArchitecturalMetadata)
     .sort(
       (a, b) =>
         normalizePath(a.file).localeCompare(
@@ -471,6 +532,13 @@ function findConceptMatchedOwnedSymbols(
  * Cheap text scan over each candidate's own node text (`bodyText`,
  * captured once during the AST walk in `getInternalSymbols`); no second
  * parse and no full call-graph, just "does the source literally call it".
+ *
+ * Restricted to *tagged* internal symbols, same as v7 — `internalIndex` now
+ * also carries every untagged class method (see `getInternalSymbols`), and
+ * without this filter a large interconnected class (e.g. `NpcAgent`) would
+ * pull in most of its own method set through call-site connectivity alone.
+ * An untagged method explicitly named by the plan/notes is still found —
+ * via `findExactSymbols`, which is not restricted this way.
  */
 function findConnectedInternalSymbols(
   internalIndex: InternalSymbolInfo[],
@@ -479,11 +547,13 @@ function findConnectedInternalSymbols(
   const calls = (bodyText: string, name: string): boolean =>
     new RegExp(`\\b${escapeRegExp(name)}\\s*\\(`).test(bodyText)
 
-  return internalIndex
+  const tagged = internalIndex.filter(hasArchitecturalMetadata)
+
+  return tagged
     .filter((symbol) => !selectedNames.has(symbol.name))
     .filter((symbol) =>
       [...selectedNames].some((name) => calls(symbol.bodyText, name)) ||
-      internalIndex.some(
+      tagged.some(
         (other) =>
           selectedNames.has(other.name) &&
           calls(other.bodyText, symbol.name),
@@ -522,25 +592,42 @@ function findConceptMatchedSymbols(
 /**
  * Resolve relevant symbols.
  *
- * Priority:
- *   1. symbol name explicitly mentioned in plan/notes (exported or
- *      internal — `findExactSymbols` over the combined pool);
+ * Priority (v8 reorders this to match the plan's explicit ranking —
+ * "explicitly referenced implementation point > directly related API >
+ * lifecycle/integration boundary > generic architectural symbol > broad
+ * dependency" — rather than a single flat exact-match pass):
+ *   1. call/qualified-method reference explicitly named in plan/notes, e.g.
+ *      `` `Inventory.instancesToJSON()` `` (`priorityTerms` —
+ *      `collectCallReferenceTerms`). As of v8 this also reaches an untagged
+ *      class method, since `internal` now carries every method (see
+ *      `getInternalSymbols`) — an explicit call reference is the strongest
+ *      signal there is, tag or no tag;
  *   2. documented symbols in explicit files (existing v6 mechanism,
  *      unchanged — kept in its original position right after exact match);
  *   3. documented internal symbol belonging to an already-selected exported
- *      symbol and matching a plan concept;
- *   4. symbol directly connected to an already-selected key symbol;
- *   5. symbol whose JSDoc architectural metadata matches a plan concept.
+ *      symbol and matching a plan concept (a lifecycle/integration
+ *      boundary, e.g. `NpcAgent.beginNeed()` once `NpcAgent` is selected);
+ *   4. bare-identifier exact match not already covered above — a real
+ *      explicit mention, but of a type/const name rather than a call, so it
+ *      ranks below the more specific tiers above (section 9's "generic
+ *      architectural symbol");
+ *   5. tagged internal symbol directly connected to an already-selected key
+ *      symbol (restricted to tagged methods even in v8 — see
+ *      `findConnectedInternalSymbols`);
+ *   6. symbol whose JSDoc architectural metadata matches a plan concept.
  *
- * (Steps 3-5 above are v7's addition and correspond to the plan's priority
- * list items 2-4; step 2 is v6's existing file-scoped mechanism, preserved
- * unchanged per the plan's instruction not to disturb it.)
+ * Steps 1 and 4 together are what v7 did as a single undifferentiated
+ * "exact match" tier; splitting them stops a low-signal bare-identifier hit
+ * (e.g. a plain `ActionId` mention) from claiming a budget slot ahead of a
+ * higher-signal call reference or lifecycle-boundary method just because
+ * both happen to be found by the same underlying name-match mechanism.
  */
 function findRelevantSymbols(
   exportedIndex: SymbolInfo[],
   internalIndex: InternalSymbolInfo[],
   files: string[],
   terms: string[],
+  priorityTerms: string[],
 ): SymbolInfo[] {
   const result: SymbolInfo[] = []
   const seen = new Set<string>()
@@ -567,14 +654,40 @@ function findRelevantSymbols(
     ...internalIndex,
   ]
 
+  // Soft per-file cap (`LIMITS.maxSymbolsPerFile`), shared across the two
+  // exact-match passes below (steps 1 and 4). Exact-name matches are the
+  // mechanism most prone to piling onto a single class's own boundary (e.g.
+  // several of `Inventory`'s own methods named individually) at the expense
+  // of a second, equally-explicit concept in a different file (e.g.
+  // `liquidContainer.ts`'s domain rules). The concept/connectivity tiers
+  // (3, 5, 6) are already narrowly scoped by their own tag/relationship
+  // requirements and stay uncapped — that's what lets `NpcAgent` legitimately
+  // contribute more than this many of its own tagged methods
+  // (`update`/`startAction`/`beginNeed`/...) once it's the plan's one
+  // clearly central symbol.
+  const exactMatchFileCounts = new Map<string, number>()
+
+  const addExactMatch = (symbol: SymbolInfo): boolean => {
+    const file = normalizePath(symbol.file)
+    const fileCount = exactMatchFileCounts.get(file) ?? 0
+
+    if (fileCount >= LIMITS.maxSymbolsPerFile) return false
+
+    exactMatchFileCounts.set(file, fileCount + 1)
+    add(symbol)
+    return true
+  }
+
+  // 1. Explicit call/qualified-method references.
   for (const symbol of findExactSymbols(
     combinedIndex,
-    terms,
+    priorityTerms,
   )) {
-    add(symbol)
+    addExactMatch(symbol)
     if (atLimit()) return result
   }
 
+  // 2. Documented symbols in explicit files.
   for (const symbol of findDocumentedSymbolsInFiles(
     exportedIndex,
     files,
@@ -583,6 +696,7 @@ function findRelevantSymbols(
     if (atLimit()) return result
   }
 
+  // 3. Owner-concept-matched internal (lifecycle/integration boundary).
   for (const symbol of findConceptMatchedOwnedSymbols(
     internalIndex,
     selectedNames,
@@ -592,6 +706,18 @@ function findRelevantSymbols(
     if (atLimit()) return result
   }
 
+  // 4. Remaining bare-identifier exact matches (generic architectural
+  //    symbol) — `seen`/`exactMatchFileCounts` naturally skip anything step
+  //    1 already placed or capped.
+  for (const symbol of findExactSymbols(
+    combinedIndex,
+    terms,
+  )) {
+    addExactMatch(symbol)
+    if (atLimit()) return result
+  }
+
+  // 5. Call-graph-connected tagged internal symbol.
   for (const symbol of findConnectedInternalSymbols(
     internalIndex,
     selectedNames,
@@ -600,6 +726,7 @@ function findRelevantSymbols(
     if (atLimit()) return result
   }
 
+  // 6. Broadest net: architectural-metadata concept match.
   for (const symbol of findConceptMatchedSymbols(
     combinedIndex,
     terms,
@@ -646,12 +773,33 @@ function readSnippet(
   }
 }
 
+/**
+ * `LIMITS.maxSnippets` (8) is smaller than `LIMITS.maxSymbols` (12), so not
+ * every selected symbol gets a code snippet. A symbol with architectural
+ * JSDoc metadata already has a full description in the (unbounded)
+ * "Relevant architecture" section — role/uses/produces/consumes — so the
+ * scarce snippet budget is better spent on a symbol with none, whose code
+ * is its *only* description (e.g. an explicitly-referenced but undocumented
+ * method like `Inventory.instancesToJSON()`). Stable partition: relative
+ * priority order within each group (already reflecting `findRelevantSymbols`'
+ * tiers) is preserved.
+ */
+function prioritizeForSnippets(
+  symbols: SymbolInfo[],
+): SymbolInfo[] {
+  return [...symbols].sort(
+    (a, b) =>
+      Number(hasArchitecturalMetadata(a)) -
+        Number(hasArchitecturalMetadata(b)),
+  )
+}
+
 function sourceSnippets(
   symbols: SymbolInfo[],
 ): Snippet[] {
   const result: Snippet[] = []
 
-  for (const symbol of symbols) {
+  for (const symbol of prioritizeForSnippets(symbols)) {
     const snippet =
       readSnippet(symbol)
 
@@ -1137,10 +1285,18 @@ function main(): void {
       combined,
     )
 
+  // Explicit call/qualified-method references (`Owner.method()`/`method()`)
+  // are the strongest implementation-anchor signal there is — kept separate
+  // from `terms` so `findRelevantSymbols` can give them a selection pass of
+  // their own ahead of a plain bare-identifier mention (see its docstring).
+  const callReferenceTerms =
+    collectCallReferenceTerms(combined)
+
   const terms =
-    collectBacktickTerms(
-      combined,
-    )
+    unique([
+      ...callReferenceTerms,
+      ...collectBacktickTerms(combined),
+    ])
 
   const candidateSrcFiles =
     explicitFiles
@@ -1161,18 +1317,23 @@ function main(): void {
         (item) => item.file,
       ),
       terms,
+      callReferenceTerms,
     )
 
+  // Symbol-backed files first: they're proven relevant (a selected symbol
+  // actually lives there — see the anchors/architecture sections), so an
+  // unrelated explicit doc mention (`docs/assets/MODELS.md`) earlier in the
+  // plan's prose must not claim a `LIMITS.maxFiles` slot ahead of them.
   const relevantFiles =
     unique([
-      ...explicitFiles.map(
-        (item) => item.file,
-      ),
       ...relevantSymbols.map(
         (symbol) =>
           normalizePath(
             symbol.file,
           ),
+      ),
+      ...explicitFiles.map(
+        (item) => item.file,
       ),
     ]).slice(
       0,

@@ -388,17 +388,28 @@ export type InternalSymbolInfo = {
 } & SymbolInfo
 
 /**
- * Non-exported symbols eligible for preflight discovery: class methods and
- * top-level functions that carry at least one architectural JSDoc tag
+ * Non-exported symbols eligible for preflight discovery: every class method,
+ * plus top-level functions that carry at least one architectural JSDoc tag
  * (`@domain`/`@role`/`@uses`/etc, via `getArchitecturalMetadata` — the same
  * bar `getExportedSymbols` callers already apply via
  * `ARCHITECTURAL_METADATA_ORDER` filtering).
  *
- * Requiring a tag, not just prose, is deliberate: most large functions in
- * this codebase carry heavy prose comments on inner declarations, and a
- * "has any comment" bar would dump most of a large file's internals. A tag
- * is an explicit, opt-in signal that a specific internal symbol is worth
- * surfacing — the caller only needs to add one where discovery matters.
+ * Top-level functions still require a tag: most large functions in this
+ * codebase carry heavy prose comments on inner declarations, and a "has any
+ * comment" bar would dump most of a large file's internals. A tag is an
+ * explicit, opt-in signal that a specific internal function is worth
+ * surfacing.
+ *
+ * Class methods are not tag-gated (v8): an untagged method with no other
+ * discovery route (e.g. `Inventory.instancesToJSON()`) is still the correct
+ * implementation anchor when a plan/implementation-notes explicitly names it
+ * — requiring a tag would hide exactly the seam a plan is most likely to
+ * touch. Noise control for the untagged majority of methods is the caller's
+ * job: `pre-implementation.ts`'s selection tiers only surface an untagged
+ * method when it is explicitly referenced or reachable from one that is,
+ * never as a blanket "every method of this class" dump. `metadata` is
+ * `undefined` for an untagged method, same as an untagged top-level symbol
+ * elsewhere in this file.
  */
 export function getInternalSymbols(
   sourceFile: ts.SourceFile,
@@ -410,7 +421,7 @@ export function getInternalSymbols(
     kind: string,
     node: ts.Node,
     owner: string | undefined,
-    metadata: ArchitecturalMetadata,
+    metadata: ArchitecturalMetadata | undefined,
   ): void => {
     const position =
       sourceFile.getLineAndCharacterOfPosition(
@@ -441,11 +452,7 @@ export function getInternalSymbols(
           continue
         }
 
-        const metadata = getArchitecturalMetadata(member)
-
-        if (metadata) {
-          add(member.name.text, 'method', member, owner, metadata)
-        }
+        add(member.name.text, 'method', member, owner, getArchitecturalMetadata(member))
       }
     } else if (
       ts.isFunctionDeclaration(node) &&
