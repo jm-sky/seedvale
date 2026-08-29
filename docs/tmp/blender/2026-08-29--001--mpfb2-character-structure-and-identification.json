@@ -1,0 +1,1046 @@
+{
+  "recon": {
+    "purpose": "MPFB2 character structure and identification",
+    "blender_version": "5.2.0 LTS"
+  },
+  "scene": {
+    "object_count": 18,
+    "objects": [
+      {
+        "name": "Camera",
+        "blender_type": "CAMERA",
+        "parent": null,
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": null,
+        "modifiers": [],
+        "materials": [],
+        "vertex_groups": []
+      },
+      {
+        "name": "Human",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Hide helpers",
+            "type": "MASK"
+          }
+        ],
+        "materials": [
+          "Human.body"
+        ],
+        "vertex_groups": [
+          "HelperGeometry",
+          "JointCubes",
+          "Left",
+          "Mid",
+          "Right",
+          "body",
+          "helper-genital",
+          "helper-hair",
+          "helper-l-eye",
+          "helper-l-eyelashes-1",
+          "helper-l-eyelashes-2",
+          "helper-lower-teeth",
+          "helper-r-eye",
+          "helper-r-eyelashes-1",
+          "helper-r-eyelashes-2",
+          "helper-skirt",
+          "helper-tights",
+          "helper-tongue",
+          "helper-upper-teeth",
+          "joint-ground",
+          "joint-head",
+          "joint-head-2",
+          "joint-jaw",
+          "joint-l-ankle",
+          "joint-l-clavicle",
+          "joint-l-elbow",
+          "joint-l-eye",
+          "joint-l-eye-target",
+          "joint-l-finger-1-1",
+          "joint-l-finger-1-2",
+          "joint-l-finger-1-3",
+          "joint-l-finger-1-4",
+          "joint-l-finger-2-1",
+          "joint-l-finger-2-2",
+          "joint-l-finger-2-3",
+          "joint-l-finger-2-4",
+          "joint-l-finger-3-1",
+          "joint-l-finger-3-2",
+          "joint-l-finger-3-3",
+          "joint-l-finger-3-4",
+          "joint-l-finger-4-1",
+          "joint-l-finger-4-2",
+          "joint-l-finger-4-3",
+          "joint-l-finger-4-4",
+          "joint-l-finger-5-1",
+          "joint-l-finger-5-2",
+          "joint-l-finger-5-3",
+          "joint-l-finger-5-4",
+          "joint-l-foot-1",
+          "joint-l-foot-2",
+          "joint-l-hand",
+          "joint-l-hand-2",
+          "joint-l-hand-3",
+          "joint-l-knee",
+          "joint-l-lowerlid",
+          "joint-l-scapula",
+          "joint-l-shoulder",
+          "joint-l-toe-1-1",
+          "joint-l-toe-1-2",
+          "joint-l-toe-1-3",
+          "joint-l-toe-2-1",
+          "joint-l-toe-2-2",
+          "joint-l-toe-2-3",
+          "joint-l-toe-2-4",
+          "joint-l-toe-3-1",
+          "joint-l-toe-3-2",
+          "joint-l-toe-3-3",
+          "joint-l-toe-3-4",
+          "joint-l-toe-4-1",
+          "joint-l-toe-4-2",
+          "joint-l-toe-4-3",
+          "joint-l-toe-4-4",
+          "joint-l-toe-5-1",
+          "joint-l-toe-5-2",
+          "joint-l-toe-5-3",
+          "joint-l-toe-5-4",
+          "joint-l-upper-leg",
+          "joint-l-upperlid",
+          "joint-mouth",
+          "joint-neck",
+          "joint-pelvis",
+          "joint-r-ankle",
+          "joint-r-clavicle",
+          "joint-r-elbow",
+          "joint-r-eye",
+          "joint-r-eye-target",
+          "joint-r-finger-1-1",
+          "joint-r-finger-1-2",
+          "joint-r-finger-1-3",
+          "joint-r-finger-1-4",
+          "joint-r-finger-2-1",
+          "joint-r-finger-2-2",
+          "joint-r-finger-2-3",
+          "joint-r-finger-2-4",
+          "joint-r-finger-3-1",
+          "joint-r-finger-3-2",
+          "joint-r-finger-3-3",
+          "joint-r-finger-3-4",
+          "joint-r-finger-4-1",
+          "joint-r-finger-4-2",
+          "joint-r-finger-4-3",
+          "joint-r-finger-4-4",
+          "joint-r-finger-5-1",
+          "joint-r-finger-5-2",
+          "joint-r-finger-5-3",
+          "joint-r-finger-5-4",
+          "joint-r-foot-1",
+          "joint-r-foot-2",
+          "joint-r-hand",
+          "joint-r-hand-2",
+          "joint-r-hand-3",
+          "joint-r-knee",
+          "joint-r-lowerlid",
+          "joint-r-scapula",
+          "joint-r-shoulder",
+          "joint-r-toe-1-1",
+          "joint-r-toe-1-2",
+          "joint-r-toe-1-3",
+          "joint-r-toe-2-1",
+          "joint-r-toe-2-2",
+          "joint-r-toe-2-3",
+          "joint-r-toe-2-4",
+          "joint-r-toe-3-1",
+          "joint-r-toe-3-2",
+          "joint-r-toe-3-3",
+          "joint-r-toe-3-4",
+          "joint-r-toe-4-1",
+          "joint-r-toe-4-2",
+          "joint-r-toe-4-3",
+          "joint-r-toe-4-4",
+          "joint-r-toe-5-1",
+          "joint-r-toe-5-2",
+          "joint-r-toe-5-3",
+          "joint-r-toe-5-4",
+          "joint-r-upper-leg",
+          "joint-r-upperlid",
+          "joint-spine-1",
+          "joint-spine-2",
+          "joint-spine-3",
+          "joint-spine-4",
+          "joint-tongue-1",
+          "joint-tongue-2",
+          "joint-tongue-3",
+          "joint-tongue-4",
+          "nippleTip",
+          "nipple",
+          "lips",
+          "fingernails",
+          "toenails",
+          "ears",
+          "scalp",
+          "genitals",
+          "mixamorig:Hips",
+          "mixamorig:LeftUpLeg",
+          "mixamorig:LeftLeg",
+          "mixamorig:LeftFoot",
+          "mixamorig:LeftToeBase",
+          "mixamorig:RightUpLeg",
+          "mixamorig:RightLeg",
+          "mixamorig:RightFoot",
+          "mixamorig:RightToeBase",
+          "mixamorig:Spine",
+          "mixamorig:Spine1",
+          "mixamorig:Spine2",
+          "mixamorig:LeftShoulder",
+          "mixamorig:LeftArm",
+          "mixamorig:LeftForeArm",
+          "mixamorig:LeftHand",
+          "mixamorig:LeftHandIndex1",
+          "mixamorig:LeftHandIndex2",
+          "mixamorig:LeftHandIndex3",
+          "mixamorig:LeftHandMiddle1",
+          "mixamorig:LeftHandMiddle2",
+          "mixamorig:LeftHandMiddle3",
+          "mixamorig:LeftHandPinky1",
+          "mixamorig:LeftHandPinky2",
+          "mixamorig:LeftHandPinky3",
+          "mixamorig:LeftHandRing1",
+          "mixamorig:LeftHandRing2",
+          "mixamorig:LeftHandRing3",
+          "mixamorig:LeftHandThumb1",
+          "mixamorig:LeftHandThumb2",
+          "mixamorig:LeftHandThumb3",
+          "mixamorig:Neck",
+          "mixamorig:Head",
+          "mixamorig:RightShoulder",
+          "mixamorig:RightArm",
+          "mixamorig:RightForeArm",
+          "mixamorig:RightHand",
+          "mixamorig:RightHandIndex1",
+          "mixamorig:RightHandIndex2",
+          "mixamorig:RightHandIndex3",
+          "mixamorig:RightHandMiddle1",
+          "mixamorig:RightHandMiddle2",
+          "mixamorig:RightHandMiddle3",
+          "mixamorig:RightHandPinky1",
+          "mixamorig:RightHandPinky2",
+          "mixamorig:RightHandPinky3",
+          "mixamorig:RightHandRing1",
+          "mixamorig:RightHandRing2",
+          "mixamorig:RightHandRing3",
+          "mixamorig:RightHandThumb1",
+          "mixamorig:RightHandThumb2",
+          "mixamorig:RightHandThumb3",
+          "Delete.joachip_cyborg_suit",
+          "Delete.elvs_male_muscle_shirt1"
+        ]
+      },
+      {
+        "name": "Human.elvs_male_athletic_tank1",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.elvs_male_athletic_tank1"
+        ],
+        "vertex_groups": [
+          "mixamorig:Hips",
+          "mixamorig:LeftUpLeg",
+          "mixamorig:RightUpLeg",
+          "mixamorig:Spine",
+          "mixamorig:Spine1",
+          "mixamorig:Spine2",
+          "mixamorig:LeftShoulder",
+          "mixamorig:LeftArm",
+          "mixamorig:Neck",
+          "mixamorig:RightShoulder",
+          "mixamorig:RightArm"
+        ]
+      },
+      {
+        "name": "Human.elvs_male_athletic_tank1_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.elvs_male_athletic_tank1"
+        ],
+        "vertex_groups": [
+          "mixamorig:Hips",
+          "mixamorig:LeftUpLeg",
+          "mixamorig:RightUpLeg",
+          "mixamorig:Spine",
+          "mixamorig:Spine1",
+          "mixamorig:Spine2",
+          "mixamorig:LeftShoulder",
+          "mixamorig:LeftArm",
+          "mixamorig:Neck",
+          "mixamorig:RightShoulder",
+          "mixamorig:RightArm"
+        ]
+      },
+      {
+        "name": "Human.grinsegold_moustache",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.grinsegold_moustache"
+        ],
+        "vertex_groups": [
+          "mixamorig:Head"
+        ]
+      },
+      {
+        "name": "Human.grinsegold_moustache_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.grinsegold_moustache"
+        ],
+        "vertex_groups": [
+          "mixamorig:Head"
+        ]
+      },
+      {
+        "name": "Human.low-poly",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.low-poly"
+        ],
+        "vertex_groups": [
+          "mixamorig:Head"
+        ]
+      },
+      {
+        "name": "Human.low-poly_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.low-poly"
+        ],
+        "vertex_groups": [
+          "mixamorig:Head"
+        ]
+      },
+      {
+        "name": "Human.rehmanpolanski_viking_boots",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.rehmanpolanski_viking_boots"
+        ],
+        "vertex_groups": [
+          "mixamorig:LeftLeg",
+          "mixamorig:LeftFoot",
+          "mixamorig:LeftToeBase",
+          "mixamorig:RightLeg",
+          "mixamorig:RightFoot",
+          "mixamorig:RightToeBase"
+        ]
+      },
+      {
+        "name": "Human.rehmanpolanski_viking_boots_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.rehmanpolanski_viking_boots"
+        ],
+        "vertex_groups": [
+          "mixamorig:LeftLeg",
+          "mixamorig:LeftFoot",
+          "mixamorig:LeftToeBase",
+          "mixamorig:RightLeg",
+          "mixamorig:RightFoot",
+          "mixamorig:RightToeBase"
+        ]
+      },
+      {
+        "name": "Human.rehmanpolanski_viking_pants",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.rehmanpolanski_viking_pants"
+        ],
+        "vertex_groups": [
+          "mixamorig:Hips",
+          "mixamorig:LeftUpLeg",
+          "mixamorig:LeftLeg",
+          "mixamorig:RightUpLeg",
+          "mixamorig:RightLeg"
+        ]
+      },
+      {
+        "name": "Human.rehmanpolanski_viking_pants_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.rehmanpolanski_viking_pants"
+        ],
+        "vertex_groups": [
+          "mixamorig:Hips",
+          "mixamorig:LeftUpLeg",
+          "mixamorig:LeftLeg",
+          "mixamorig:RightUpLeg",
+          "mixamorig:RightLeg"
+        ]
+      },
+      {
+        "name": "Human.rig",
+        "blender_type": "ARMATURE",
+        "parent": null,
+        "children": [
+          "Human",
+          "Human.elvs_male_athletic_tank1",
+          "Human.grinsegold_moustache",
+          "Human.low-poly",
+          "Human.rehmanpolanski_viking_boots",
+          "Human.rehmanpolanski_viking_pants",
+          "Human.short04"
+        ],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": null,
+        "modifiers": [],
+        "materials": [],
+        "vertex_groups": []
+      },
+      {
+        "name": "Human.rig_export_copy",
+        "blender_type": "ARMATURE",
+        "parent": null,
+        "children": [
+          "Human.elvs_male_athletic_tank1_export_copy",
+          "Human.grinsegold_moustache_export_copy",
+          "Human.low-poly_export_copy",
+          "Human.rehmanpolanski_viking_boots_export_copy",
+          "Human.rehmanpolanski_viking_pants_export_copy",
+          "Human.short04_export_copy",
+          "Human_export_copy"
+        ],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": null,
+        "modifiers": [],
+        "materials": [],
+        "vertex_groups": []
+      },
+      {
+        "name": "Human.short04",
+        "blender_type": "MESH",
+        "parent": "Human.rig",
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.short04"
+        ],
+        "vertex_groups": [
+          "mixamorig:Spine2",
+          "mixamorig:Neck",
+          "mixamorig:Head"
+        ]
+      },
+      {
+        "name": "Human.short04_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          },
+          {
+            "name": "Subdivision",
+            "type": "SUBSURF"
+          }
+        ],
+        "materials": [
+          "Human.short04"
+        ],
+        "vertex_groups": [
+          "mixamorig:Spine2",
+          "mixamorig:Neck",
+          "mixamorig:Head"
+        ]
+      },
+      {
+        "name": "Human_export_copy",
+        "blender_type": "MESH",
+        "parent": "Human.rig_export_copy",
+        "children": [],
+        "collections": [
+          "export copy"
+        ],
+        "mpfb2": {},
+        "armature": "Human.rig_export_copy",
+        "modifiers": [
+          {
+            "name": "Armature",
+            "type": "ARMATURE"
+          }
+        ],
+        "materials": [
+          "Human.body"
+        ],
+        "vertex_groups": [
+          "HelperGeometry",
+          "JointCubes",
+          "Left",
+          "Mid",
+          "Right",
+          "body",
+          "helper-genital",
+          "helper-hair",
+          "helper-l-eye",
+          "helper-l-eyelashes-1",
+          "helper-l-eyelashes-2",
+          "helper-lower-teeth",
+          "helper-r-eye",
+          "helper-r-eyelashes-1",
+          "helper-r-eyelashes-2",
+          "helper-skirt",
+          "helper-tights",
+          "helper-tongue",
+          "helper-upper-teeth",
+          "joint-ground",
+          "joint-head",
+          "joint-head-2",
+          "joint-jaw",
+          "joint-l-ankle",
+          "joint-l-clavicle",
+          "joint-l-elbow",
+          "joint-l-eye",
+          "joint-l-eye-target",
+          "joint-l-finger-1-1",
+          "joint-l-finger-1-2",
+          "joint-l-finger-1-3",
+          "joint-l-finger-1-4",
+          "joint-l-finger-2-1",
+          "joint-l-finger-2-2",
+          "joint-l-finger-2-3",
+          "joint-l-finger-2-4",
+          "joint-l-finger-3-1",
+          "joint-l-finger-3-2",
+          "joint-l-finger-3-3",
+          "joint-l-finger-3-4",
+          "joint-l-finger-4-1",
+          "joint-l-finger-4-2",
+          "joint-l-finger-4-3",
+          "joint-l-finger-4-4",
+          "joint-l-finger-5-1",
+          "joint-l-finger-5-2",
+          "joint-l-finger-5-3",
+          "joint-l-finger-5-4",
+          "joint-l-foot-1",
+          "joint-l-foot-2",
+          "joint-l-hand",
+          "joint-l-hand-2",
+          "joint-l-hand-3",
+          "joint-l-knee",
+          "joint-l-lowerlid",
+          "joint-l-scapula",
+          "joint-l-shoulder",
+          "joint-l-toe-1-1",
+          "joint-l-toe-1-2",
+          "joint-l-toe-1-3",
+          "joint-l-toe-2-1",
+          "joint-l-toe-2-2",
+          "joint-l-toe-2-3",
+          "joint-l-toe-2-4",
+          "joint-l-toe-3-1",
+          "joint-l-toe-3-2",
+          "joint-l-toe-3-3",
+          "joint-l-toe-3-4",
+          "joint-l-toe-4-1",
+          "joint-l-toe-4-2",
+          "joint-l-toe-4-3",
+          "joint-l-toe-4-4",
+          "joint-l-toe-5-1",
+          "joint-l-toe-5-2",
+          "joint-l-toe-5-3",
+          "joint-l-toe-5-4",
+          "joint-l-upper-leg",
+          "joint-l-upperlid",
+          "joint-mouth",
+          "joint-neck",
+          "joint-pelvis",
+          "joint-r-ankle",
+          "joint-r-clavicle",
+          "joint-r-elbow",
+          "joint-r-eye",
+          "joint-r-eye-target",
+          "joint-r-finger-1-1",
+          "joint-r-finger-1-2",
+          "joint-r-finger-1-3",
+          "joint-r-finger-1-4",
+          "joint-r-finger-2-1",
+          "joint-r-finger-2-2",
+          "joint-r-finger-2-3",
+          "joint-r-finger-2-4",
+          "joint-r-finger-3-1",
+          "joint-r-finger-3-2",
+          "joint-r-finger-3-3",
+          "joint-r-finger-3-4",
+          "joint-r-finger-4-1",
+          "joint-r-finger-4-2",
+          "joint-r-finger-4-3",
+          "joint-r-finger-4-4",
+          "joint-r-finger-5-1",
+          "joint-r-finger-5-2",
+          "joint-r-finger-5-3",
+          "joint-r-finger-5-4",
+          "joint-r-foot-1",
+          "joint-r-foot-2",
+          "joint-r-hand",
+          "joint-r-hand-2",
+          "joint-r-hand-3",
+          "joint-r-knee",
+          "joint-r-lowerlid",
+          "joint-r-scapula",
+          "joint-r-shoulder",
+          "joint-r-toe-1-1",
+          "joint-r-toe-1-2",
+          "joint-r-toe-1-3",
+          "joint-r-toe-2-1",
+          "joint-r-toe-2-2",
+          "joint-r-toe-2-3",
+          "joint-r-toe-2-4",
+          "joint-r-toe-3-1",
+          "joint-r-toe-3-2",
+          "joint-r-toe-3-3",
+          "joint-r-toe-3-4",
+          "joint-r-toe-4-1",
+          "joint-r-toe-4-2",
+          "joint-r-toe-4-3",
+          "joint-r-toe-4-4",
+          "joint-r-toe-5-1",
+          "joint-r-toe-5-2",
+          "joint-r-toe-5-3",
+          "joint-r-toe-5-4",
+          "joint-r-upper-leg",
+          "joint-r-upperlid",
+          "joint-spine-1",
+          "joint-spine-2",
+          "joint-spine-3",
+          "joint-spine-4",
+          "joint-tongue-1",
+          "joint-tongue-2",
+          "joint-tongue-3",
+          "joint-tongue-4",
+          "nippleTip",
+          "nipple",
+          "lips",
+          "fingernails",
+          "toenails",
+          "ears",
+          "scalp",
+          "genitals",
+          "mixamorig:Hips",
+          "mixamorig:LeftUpLeg",
+          "mixamorig:LeftLeg",
+          "mixamorig:LeftFoot",
+          "mixamorig:LeftToeBase",
+          "mixamorig:RightUpLeg",
+          "mixamorig:RightLeg",
+          "mixamorig:RightFoot",
+          "mixamorig:RightToeBase",
+          "mixamorig:Spine",
+          "mixamorig:Spine1",
+          "mixamorig:Spine2",
+          "mixamorig:LeftShoulder",
+          "mixamorig:LeftArm",
+          "mixamorig:LeftForeArm",
+          "mixamorig:LeftHand",
+          "mixamorig:LeftHandIndex1",
+          "mixamorig:LeftHandIndex2",
+          "mixamorig:LeftHandIndex3",
+          "mixamorig:LeftHandMiddle1",
+          "mixamorig:LeftHandMiddle2",
+          "mixamorig:LeftHandMiddle3",
+          "mixamorig:LeftHandPinky1",
+          "mixamorig:LeftHandPinky2",
+          "mixamorig:LeftHandPinky3",
+          "mixamorig:LeftHandRing1",
+          "mixamorig:LeftHandRing2",
+          "mixamorig:LeftHandRing3",
+          "mixamorig:LeftHandThumb1",
+          "mixamorig:LeftHandThumb2",
+          "mixamorig:LeftHandThumb3",
+          "mixamorig:Neck",
+          "mixamorig:Head",
+          "mixamorig:RightShoulder",
+          "mixamorig:RightArm",
+          "mixamorig:RightForeArm",
+          "mixamorig:RightHand",
+          "mixamorig:RightHandIndex1",
+          "mixamorig:RightHandIndex2",
+          "mixamorig:RightHandIndex3",
+          "mixamorig:RightHandMiddle1",
+          "mixamorig:RightHandMiddle2",
+          "mixamorig:RightHandMiddle3",
+          "mixamorig:RightHandPinky1",
+          "mixamorig:RightHandPinky2",
+          "mixamorig:RightHandPinky3",
+          "mixamorig:RightHandRing1",
+          "mixamorig:RightHandRing2",
+          "mixamorig:RightHandRing3",
+          "mixamorig:RightHandThumb1",
+          "mixamorig:RightHandThumb2",
+          "mixamorig:RightHandThumb3",
+          "Delete.joachip_cyborg_suit",
+          "Delete.elvs_male_muscle_shirt1"
+        ]
+      },
+      {
+        "name": "Light",
+        "blender_type": "LIGHT",
+        "parent": null,
+        "children": [],
+        "collections": [
+          "Collection"
+        ],
+        "mpfb2": {},
+        "armature": null,
+        "modifiers": [],
+        "materials": [],
+        "vertex_groups": []
+      }
+    ],
+    "hierarchy": [
+      {
+        "name": "Camera",
+        "type": "CAMERA",
+        "children": []
+      },
+      {
+        "name": "Human.rig",
+        "type": "ARMATURE",
+        "children": [
+          {
+            "name": "Human",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.elvs_male_athletic_tank1",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.grinsegold_moustache",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.low-poly",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.rehmanpolanski_viking_boots",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.rehmanpolanski_viking_pants",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.short04",
+            "type": "MESH",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Human.rig_export_copy",
+        "type": "ARMATURE",
+        "children": [
+          {
+            "name": "Human.elvs_male_athletic_tank1_export_copy",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.grinsegold_moustache_export_copy",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.low-poly_export_copy",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.rehmanpolanski_viking_boots_export_copy",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.rehmanpolanski_viking_pants_export_copy",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human.short04_export_copy",
+            "type": "MESH",
+            "children": []
+          },
+          {
+            "name": "Human_export_copy",
+            "type": "MESH",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Light",
+        "type": "LIGHT",
+        "children": []
+      }
+    ],
+    "candidates": {
+      "armatures": [
+        "Human.rig",
+        "Human.rig_export_copy"
+      ],
+      "meshes": [
+        "Human",
+        "Human.elvs_male_athletic_tank1",
+        "Human.elvs_male_athletic_tank1_export_copy",
+        "Human.grinsegold_moustache",
+        "Human.grinsegold_moustache_export_copy",
+        "Human.low-poly",
+        "Human.low-poly_export_copy",
+        "Human.rehmanpolanski_viking_boots",
+        "Human.rehmanpolanski_viking_boots_export_copy",
+        "Human.rehmanpolanski_viking_pants",
+        "Human.rehmanpolanski_viking_pants_export_copy",
+        "Human.short04",
+        "Human.short04_export_copy",
+        "Human_export_copy"
+      ],
+      "objects_with_mpfb2_metadata": [],
+      "objects_with_armature_modifier": [
+        "Human",
+        "Human.elvs_male_athletic_tank1",
+        "Human.elvs_male_athletic_tank1_export_copy",
+        "Human.grinsegold_moustache",
+        "Human.grinsegold_moustache_export_copy",
+        "Human.low-poly",
+        "Human.low-poly_export_copy",
+        "Human.rehmanpolanski_viking_boots",
+        "Human.rehmanpolanski_viking_boots_export_copy",
+        "Human.rehmanpolanski_viking_pants",
+        "Human.rehmanpolanski_viking_pants_export_copy",
+        "Human.short04",
+        "Human.short04_export_copy",
+        "Human_export_copy"
+      ],
+      "objects_with_delete_groups": [
+        "Human",
+        "Human_export_copy"
+      ]
+    }
+  }
+}
