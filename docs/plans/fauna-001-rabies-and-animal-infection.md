@@ -1,7 +1,7 @@
 # Plan: Rabies and Animal Infection
 
 **Created:** 2026-08-26
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~188~~
 **Domain:** `fauna`
