@@ -46,3 +46,7 @@ Generated from exported TypeScript symbols.
 - `HomeVillageSize` — type — line 10
 - `triangleCount` — function — line 561
 - `WorldConfig` — type — line 49
+  - domain: world
+  - system: world-config
+  - role: Owns terrain/graphics/gameplay tunables shared by the debug GUI, world-config screen and benchmark runner.
+  - owns: WorldConfig

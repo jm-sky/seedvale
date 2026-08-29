@@ -76,6 +76,10 @@ Generated from exported TypeScript symbols.
 ## `items/HeldTool.ts`
 
 - `createHeldTool` — function — line 68
+  - domain: items-player
+  - system: held-tool
+  - role: Tracks which single tool/weapon instance is currently equipped in hand.
+  - uses: Inventory
 - `HeldTool` — type — line 38
 - `isToolKind` — function — line 34
 - `ToolKind` — type — line 7
@@ -98,6 +102,11 @@ Generated from exported TypeScript symbols.
 - `DEFAULT_MAX_SIZE` — const — line 33
 - `FoodBatch` — type — line 76
 - `Inventory` — class — line 92
+  - domain: items-player
+  - system: inventory
+  - role: Owns item ownership: stack counts, item instances and perishable food batches.
+  - owns: FoodBatch
+  - produces: SaveItemInstance
 - `inventoryFullToastText` — function — line 449
 - `ItemAmount` — type — line 38
 - `SaveItemInstance` — type — line 40
@@ -124,6 +133,10 @@ Generated from exported TypeScript symbols.
 - `isMeleeToolKind` — function — line 1046
 - `isRangedTool` — function — line 1038
 - `ITEM_CATALOG` — const — line 203
+  - domain: items-player
+  - system: item-catalog
+  - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
+  - owns: ItemCatalogEntry
 - `ITEM_SYSTEM_ROADMAP` — const — line 1092
 - `ItemCapability` — type — line 87
 - `ItemCatalogEntry` — type — line 127

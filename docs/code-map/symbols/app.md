@@ -63,6 +63,10 @@ Generated from exported TypeScript symbols.
 ## `app/appRenderLoop.ts`
 
 - `AppRenderLoop` — type — line 26
+  - system: app-render-loop
+  - role: Drives `requestAnimationFrame` scheduling, viewport/DPR resize and WebGL context loss/restore around the game loop.
+  - uses: GameLoop
+  - lifecycle: frame-scheduling
 - `AppRenderLoopDeps` — type — line 32
 - `createAppRenderLoop` — function — line 46
 
@@ -85,10 +89,19 @@ Generated from exported TypeScript symbols.
 ## `app/createApp.ts`
 
 - `createApp` — function — line 204
+  - system: app-composition
+  - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
+  - owns: WorldBundle, GameLoop, AppRenderLoop
+  - lifecycle: boot
+  - integration: Wires world, player, UI, persistence and audio systems together.
 
 ## `app/gameLoop.ts`
 
 - `createGameLoop` — function — line 425
+  - system: game-loop
+  - role: Runs one frame's worth of simulation update + render.
+  - uses: WorldBundle, PlayerController
+  - simulation: tick
 - `GameLoop` — type — line 393
 - `GameLoopDeps` — type — line 204
 
@@ -148,6 +161,11 @@ Generated from exported TypeScript symbols.
 ## `app/saveState.ts`
 
 - `createSaveState` — function — line 87
+  - domain: persistence
+  - system: save-state
+  - role: Assembles the live runtime state into `SaveData` and owns when it is written.
+  - produces: SaveData
+  - integration: Reads across WorldBundle, player and UI state to build one save.
 - `SaveState` — type — line 34
 - `SaveStateDeps` — type — line 44
 
@@ -169,3 +187,7 @@ Generated from exported TypeScript symbols.
 - `homeChunks` — function — line 85
 - `rebuildWorldBundle` — function — line 885
 - `WorldBundle` — type — line 108
+  - system: world-bundle
+  - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
+  - owns: WorldBundle
+  - lifecycle: rebuild

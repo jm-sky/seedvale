@@ -55,6 +55,7 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.test.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.test.ts`
+- `fauna/rabies.test.ts`
 - `fauna/villageAvoidance.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
@@ -392,6 +393,12 @@ Generated from TypeScript imports.
 
 - `fauna/createFauna.ts`
 - `settlement/livestock.ts`
+
+## `fauna/rabies.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
 
 ## `fauna/spawnerLabels.test.ts`
 

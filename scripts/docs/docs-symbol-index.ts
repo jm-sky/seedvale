@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import {
   CODE_MAP_DIR,
   createProgram,
+  formatArchitecturalMetadata,
   getExportedSymbols,
   loadSourceFiles,
   repoRelative,
@@ -48,6 +49,10 @@ function formatSymbols(
       lines.push(
         `- \`${symbol.name}\` — ${symbol.kind} — line ${symbol.line}`,
       )
+
+      if (symbol.metadata) {
+        lines.push(...formatArchitecturalMetadata(symbol.metadata))
+      }
     }
 
     lines.push('')

@@ -18,6 +18,10 @@ Generated from exported TypeScript symbols.
 ## `combat/defenseResolver.ts`
 
 - `DEFENSE_FRONT_ARC_DOT` — const — line 12
+  - domain: shared
+  - system: defense-resolver
+  - role: Resolves an incoming hit into block/partial/full damage, shared by player and NPC combat.
+  - uses: ItemCatalog, HealthState
 - `defenseBlockRoll` — function — line 31
 - `DefenseOutcome` — type — line 14
 - `isAttackFromDefensibleDirection` — function — line 50

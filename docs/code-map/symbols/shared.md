@@ -21,6 +21,10 @@ Generated from exported TypeScript symbols.
 - `damageHealth` — function — line 19
 - `healHealth` — function — line 28
 - `HealthState` — type — line 7
+  - domain: shared
+  - system: health
+  - role: Shared health/damage/death state used by the player, NPCs and fauna.
+  - owns: HealthState
 - `isAlive` — function — line 33
 
 ## `shared/HungerState.ts`
@@ -46,6 +50,10 @@ Generated from exported TypeScript symbols.
 - `isExhausted` — function — line 26
 - `restoreStamina` — function — line 21
 - `StaminaState` — type — line 7
+  - domain: shared
+  - system: stamina
+  - role: Shared physical-effort capacity used by the player, NPCs and fauna.
+  - owns: StaminaState
 
 ## `shared/ThirstState.ts`
 
@@ -66,3 +74,7 @@ Generated from exported TypeScript symbols.
 - `restoreVigor` — function — line 24
 - `VIGOR_COLLAPSE_THRESHOLD` — const — line 13
 - `VigorState` — type — line 7
+  - domain: shared
+  - system: vigor
+  - role: NPC daily physiological budget; collapse gates sleep through the NPC FSM. Not used by fauna.
+  - owns: VigorState

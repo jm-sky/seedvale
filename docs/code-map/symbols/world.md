@@ -517,6 +517,11 @@ Generated from exported TypeScript symbols.
 - `TREE_TEMPLATE_HEIGHT_M` — const — line 116
 - `TreeEnvSample` — type — line 41
 - `TreeGrowthStage` — type — line 13
+  - domain: world-terrain
+  - system: tree-lifecycle
+  - role: Owns tree growth stage progression and multi-stage chop state.
+  - simulation: tick
+  - lifecycle: growth
 - `TreeHarvestStepResult` — type — line 417
 - `TreeId` — type — line 31
 - `TreeLifecycle` — type — line 421
@@ -583,6 +588,9 @@ Generated from exported TypeScript symbols.
 - `DRINK_THIRST_RELIEF` — const — line 21
 - `UNSAFE_WATER_WARNING` — const — line 25
 - `WaterQuality` — type — line 12
+  - domain: world
+  - system: water-source
+  - role: Shared well/lake drink/fill abstraction; future river/polluted/treated sources should reuse it.
 - `WaterSource` — type — line 14
 
 ## `world/weather.ts`

@@ -15,6 +15,11 @@ Generated from exported TypeScript symbols.
 - `QuestItemGrant` — type — line 56
 - `QuestListEntry` — type — line 37
 - `QuestManager` — class — line 129
+  - domain: quests-progression
+  - system: quest-manager
+  - role: Owns quest progress, objective/stage evaluation and NPC relation levels.
+  - owns: QuestProgressEntry
+  - integration: Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly.
 - `QuestManagerInitial` — type — line 50
 - `QuestProgressEntry` — type — line 48
 

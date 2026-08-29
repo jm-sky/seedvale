@@ -7,7 +7,9 @@ import {
   resolve,
 } from 'node:path'
 import {
+  type DependencyInfo,
   DOCS_DIR,
+  parseDependencyMap,
 } from './utils.js'
 
 const DEPENDENCY_DIR = resolve(
@@ -77,12 +79,6 @@ const TECHNICAL_PATTERNS = [
   { pattern: /Visual\.ts$/, penalty: 10 },
   { pattern: /Debug/i, penalty: 12 },
 ]
-
-type DependencyInfo = {
-  file: string
-  imports: string[]
-  importedBy: string[]
-}
 
 type Candidate = {
   domain: string
@@ -247,94 +243,6 @@ function getFileName(
     file.split('/').at(-1) ??
     file
   )
-}
-
-function parseDependencyMap(
-  content: string,
-): DependencyInfo[] {
-  const lines =
-    content.split(/\r?\n/)
-
-  const result: DependencyInfo[] = []
-
-  let current:
-    | DependencyInfo
-    | null = null
-
-  let section:
-    | 'imports'
-    | 'importedBy'
-    | null = null
-
-  const flush = (): void => {
-    if (current) {
-      result.push(current)
-    }
-
-    current = null
-    section = null
-  }
-
-  for (const line of lines) {
-    const heading =
-      line.match(
-        /^##\s+`([^`]+\.tsx?)`$/,
-      )
-
-    if (heading) {
-      flush()
-
-      current = {
-        file: heading[1],
-        imports: [],
-        importedBy: [],
-      }
-
-      continue
-    }
-
-    if (!current) {
-      continue
-    }
-
-    if (
-      line.trim() ===
-      '**Imports**'
-    ) {
-      section = 'imports'
-      continue
-    }
-
-    if (
-      line.trim() ===
-      '**Imported by**'
-    ) {
-      section = 'importedBy'
-      continue
-    }
-
-    if (
-      line.startsWith('- `') &&
-      line.endsWith('`')
-    ) {
-      const file =
-        line.trim().slice(2, -1)
-
-      if (
-        section === 'imports'
-      ) {
-        current.imports.push(file)
-      } else if (
-        section === 'importedBy'
-      ) {
-        current.importedBy.push(file)
-      }
-    }
-  }
-
-  flush()
-
-  return result
 }
 
 async function readDependencyMaps(): Promise<

@@ -10,6 +10,10 @@ Generated from exported TypeScript symbols.
 - `SaveCarriedContainer` — type — line 186
 - `SaveConfig` — type — line 20
 - `SaveData` — type — line 292
+  - domain: persistence
+  - system: save-schema
+  - role: Owns the SaveData shape and its validation/defaulting.
+  - owns: SaveData
 - `SaveDroppedItem` — type — line 50
 - `SaveDryingRack` — type — line 145
 - `SaveFishingBait` — type — line 168

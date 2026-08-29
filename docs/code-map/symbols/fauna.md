@@ -4,35 +4,46 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `ANIMAL_DEFS` — const — line 492
-- `ANIMAL_LABELS` — const — line 410
-- `AnimalAgent` — class — line 729
-- `AnimalDef` — type — line 426
-- `AnimalKind` — type — line 395
-- `AnimalLifeStage` — type — line 392
-- `AnimalRole` — type — line 384
-- `AnimalSociability` — type — line 388
-- `BURY_DURATION_SEC` — const — line 150
-- `canHarvestMeatFrom` — function — line 134
-- `corpseLingerSeconds` — function — line 85
-- `CorpsePhase` — type — line 93
-- `corpsePhaseFromElapsed` — function — line 115
+- `ANIMAL_DEFS` — const — line 512
+- `ANIMAL_LABELS` — const — line 430
+- `AnimalAgent` — class — line 797
+  - domain: fauna
+  - system: animal-agent
+  - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
+  - uses: HealthState, StaminaState
+  - simulation: tick
+- `AnimalDef` — type — line 446
+- `AnimalKind` — type — line 415
+- `AnimalLifeStage` — type — line 412
+- `AnimalRole` — type — line 404
+- `AnimalSociability` — type — line 408
+- `BURY_DURATION_SEC` — const — line 170
+- `canHarvestMeatFrom` — function — line 154
+- `corpseLingerSeconds` — function — line 98
+- `CorpsePhase` — type — line 106
+- `corpsePhaseFromElapsed` — function — line 135
 - `FAUNA_SHADOW_DISTANCE` — const — line 73
-- `forageEdgeScore` — function — line 322
-- `FrenzyWolfCandidate` — type — line 693
-- `HARVEST_MEAT_DURATION_SEC` — const — line 153
-- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 83
-- `isCarcassEdible` — function — line 331
-- `isWithinVillageRadius` — function — line 362
-- `LivestockProductionConfig` — type — line 486
-- `LivestockProductKind` — type — line 473
-- `MountPointConfig` — type — line 466
-- `NearbyNpcCandidate` — type — line 688
-- `pickNearestEligibleWolf` — function — line 702
-- `rotFxRelevant` — function — line 124
-- `shoreProbeHits` — function — line 305
-- `villageFleeBiasFalloff` — function — line 374
-- `VillageInfo` — type — line 356
+- `forageEdgeScore` — function — line 342
+- `FrenzyWolfCandidate` — type — line 713
+- `HARVEST_MEAT_DURATION_SEC` — const — line 173
+- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 96
+- `isCarcassEdible` — function — line 351
+- `isRabiesCorpseContact` — function — line 755
+- `isWithinVillageRadius` — function — line 382
+- `LivestockProductionConfig` — type — line 506
+- `LivestockProductKind` — type — line 493
+- `MountPointConfig` — type — line 486
+- `NearbyNpcCandidate` — type — line 708
+- `pickNearestEligibleWolf` — function — line 722
+- `pickRabidTarget` — function — line 769
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 85
+- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 124
+- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 127
+- `rollsRabiesInfection` — function — line 746
+- `rotFxRelevant` — function — line 144
+- `shoreProbeHits` — function — line 325
+- `villageFleeBiasFalloff` — function — line 394
+- `VillageInfo` — type — line 376
 
 ## `fauna/animalDialogue.ts`
 

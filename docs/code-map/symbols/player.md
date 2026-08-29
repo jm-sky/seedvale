@@ -37,6 +37,10 @@ Generated from exported TypeScript symbols.
 - `PLAYER_HEIGHT` — const — line 53
 - `PLAYER_MODEL_URL` — const — line 146
 - `PlayerController` — class — line 159
+  - domain: items-player
+  - system: player-controller
+  - role: Owns player movement, animation and runtime transform state.
+  - simulation: tick
 - `PlayerMovementState` — type — line 39
 
 ## `player/playerDamage.ts`
@@ -84,6 +88,12 @@ Generated from exported TypeScript symbols.
 - `PLAYER_MAX_THIRST` — const — line 42
 - `PLAYER_MAX_VIGOR` — const — line 40
 - `PlayerNeeds` — type — line 30
+  - domain: items-player
+  - system: player-needs
+  - role: Owns the player's stamina/vigor/hunger/thirst survival pools.
+  - owns: PlayerNeeds
+  - uses: StaminaState, VigorState
+  - simulation: tick
 - `resetPlayerNeeds` — function — line 147
 - `restoreNeedsFromSleep` — function — line 249
 - `restorePersistedNeeds` — function — line 168
@@ -115,6 +125,10 @@ Generated from exported TypeScript symbols.
 - `SKILL_XP_AWARD` — const — line 111
 - `SKILL_XP_HALF_VALUE` — const — line 36
 - `SkillId` — type — line 13
+  - domain: items-player
+  - system: player-skills
+  - role: Owns the player's skill XP curve and the single award path.
+  - owns: PlayerSkills
 - `SkillState` — type — line 15
 - `SNEAK_LEGACY_VALUE` — const — line 59
 - `SNEAK_LEGACY_XP` — const — line 60

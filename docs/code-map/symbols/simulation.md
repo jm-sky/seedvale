@@ -45,3 +45,7 @@ Generated from exported TypeScript symbols.
 - `SimulationEntityRef` — type — line 34
 - `vec3` — function — line 21
 - `Vec3` — type — line 15
+  - domain: shared
+  - system: simulation-contracts
+  - role: Domain-agnostic shapes (`PlannedAction`, `DecisionContext`, `ActionLifecycle`) shared by NPC and fauna decision/action code.
+  - uses: (none — deliberately Three.js- and domain-free)

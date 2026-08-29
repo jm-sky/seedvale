@@ -119,6 +119,11 @@ Generated from exported TypeScript symbols.
 - `ChunkManager` — type — line 374
 - `ChunkManagerConfig` — type — line 233
 - `createChunkManager` — function — line 731
+  - domain: world-terrain
+  - system: chunk-manager
+  - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
+  - simulation: on-demand
+  - performance: nearby-only
 - `CropHarvestOutcome` — type — line 720
 - `drainByBudget` — function — line 710
 - `FinalizeStage` — type — line 319

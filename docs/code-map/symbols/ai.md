@@ -83,6 +83,12 @@ Generated from exported TypeScript symbols.
 - `NPC_MODEL_URLS` — const — line 253
 - `NPC_SHADOW_DISTANCE` — const — line 213
 - `NpcAgent` — class — line 760
+  - domain: settlements-npcs
+  - system: npc-agent
+  - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
+  - owns: NpcAuthoritativeState
+  - uses: Household, SettlementEconomy, Needs
+  - simulation: tick
 - `NpcInspectionSnapshot` — type — line 358
 - `NpcWhy` — type — line 408
 - `Phase` — type — line 280
