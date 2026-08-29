@@ -1,13 +1,18 @@
 #!/usr/bin/env tsx
 
 /**
- * Seedvale implementation preflight.
+ * Seedvale implementation preflight v5.
  *
- * Compiles a small, targeted briefing for Claude Code before implementation.
+ * Purpose:
+ *   Compile a small, targeted briefing for Claude Code before implementation.
  *
  * Usage:
  *   pnpm claude:preflight npc-002
  *   pnpm claude:preflight docs/plans/npc-002-npc-healing.md
+ *
+ * Important:
+ *   This script is intentionally context-oriented. It should produce
+ *   navigation information, not a copy of the repository.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -53,28 +58,32 @@ type SymbolRecord = {
   file: string
   line?: number
   documentation?: ArchitecturalDoc
+  docBlock?: string
   [key: string]: unknown
 }
 
 type FileReference = {
   file: string
   line?: number
-  reason?: string
 }
 
 type Snippet = {
-  symbol?: string
+  symbol: string
   file: string
   line: number
   lines: string[]
 }
 
-function readFile(file: string): string {
-  return fs.readFileSync(path.join(ROOT, file), 'utf8')
+function absolute(file: string): string {
+  return path.join(ROOT, file)
 }
 
 function exists(file: string): boolean {
-  return fs.existsSync(path.join(ROOT, file))
+  return fs.existsSync(absolute(file))
+}
+
+function readFile(file: string): string {
+  return fs.readFileSync(absolute(file), 'utf8')
 }
 
 function normalizePath(file: string): string {
@@ -87,25 +96,26 @@ function unique<T>(values: T[]): T[] {
   return [...new Set(values)]
 }
 
-function section(text: string, heading: string): string {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-  const match = text.match(
-    new RegExp(
-      `^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|$)`,
-      'm',
-    ),
-  )
-
-  return match?.[1]?.trim() ?? ''
+function git(args: string[]): string {
+  try {
+    return execFileSync('git', args, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return ''
+  }
 }
 
 function findPlan(input: string): string {
   const normalized = normalizePath(input)
 
-  if (exists(normalized)) return normalized
+  if (exists(normalized)) {
+    return normalized
+  }
 
-  const plansDir = path.join(ROOT, 'docs/plans')
+  const plansDir = absolute('docs/plans')
 
   if (!fs.existsSync(plansDir)) {
     throw new Error(`Plans directory not found: ${plansDir}`)
@@ -129,19 +139,33 @@ function findPlan(input: string): string {
   return `docs/plans/${match}`
 }
 
-function findImplementationNotes(plan: string): string | undefined {
+function findImplementationNotes(
+  plan: string,
+): string | undefined {
+  const notesDir = absolute(
+    'docs/plans/implementation-notes',
+  )
+
+  if (!fs.existsSync(notesDir)) {
+    return undefined
+  }
+
   const planBase = path.basename(plan, '.md')
-  const notesDir = path.join(ROOT, 'docs/plans/implementation-notes')
 
-  if (!fs.existsSync(notesDir)) return undefined
+  const exact =
+    `docs/plans/implementation-notes/${planBase}-implementation-notes.md`
 
-  const exact = `docs/plans/implementation-notes/${planBase}-implementation-notes.md`
+  if (exists(exact)) {
+    return exact
+  }
 
-  if (exists(exact)) return exact
+  const id = planBase.match(
+    /^([a-z]+-\d+)/,
+  )?.[1]
 
-  const id = planBase.match(/^([a-z]+-\d+)/)?.[1]
-
-  if (!id) return undefined
+  if (!id) {
+    return undefined
+  }
 
   const match = fs
     .readdirSync(notesDir)
@@ -156,59 +180,17 @@ function findImplementationNotes(plan: string): string | undefined {
     : undefined
 }
 
-function git(args: string[]): string {
-  try {
-    return execFileSync('git', args, {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-  } catch {
-    return ''
-  }
-}
-
-function loadSymbolIndex(): SymbolRecord[] {
-  const candidates = [
-    'docs/code-map/symbols.json',
-    'docs/code-map/symbols/index.json',
-    'docs/code-map/symbols/symbols.json',
-  ]
-
-  for (const file of candidates) {
-    if (!exists(file)) continue
-
-    try {
-      const parsed = JSON.parse(readFile(file))
-
-      if (Array.isArray(parsed)) return parsed
-
-      if (Array.isArray(parsed.symbols)) {
-        return parsed.symbols
-      }
-    } catch {
-      // Continue to the next generated index candidate.
-    }
-  }
-
-  return []
-}
-
-function collectExplicitFiles(text: string): FileReference[] {
+function collectExplicitFiles(
+  text: string,
+): FileReference[] {
   const result: FileReference[] = []
 
   for (const match of text.matchAll(
     /(?:`)?((?:src|scripts|docs)\/[\w./-]+\.(?:ts|tsx|js|vue|md))(?:`)?/g,
   )) {
-    const file = normalizePath(match[1])
-
-    if (
-      file.startsWith('src/') ||
-      file.startsWith('scripts/') ||
-      file.startsWith('docs/')
-    ) {
-      result.push({ file })
-    }
+    result.push({
+      file: normalizePath(match[1]),
+    })
   }
 
   return unique(
@@ -216,10 +198,14 @@ function collectExplicitFiles(text: string): FileReference[] {
   ).map((file) => ({ file }))
 }
 
-function collectBacktickTerms(text: string): string[] {
+function collectBacktickTerms(
+  text: string,
+): string[] {
   const terms: string[] = []
 
-  for (const match of text.matchAll(/`([^`\n]+)`/g)) {
+  for (const match of text.matchAll(
+    /`([^`\n]+)`/g,
+  )) {
     const value = match[1].trim()
 
     if (
@@ -241,18 +227,147 @@ function collectBacktickTerms(text: string): string[] {
       continue
     }
 
+    /*
+     * Strong identifier-like terms only.
+     *
+     * Do not turn normal prose into repository searches.
+     */
     if (
       /^[A-Z][A-Za-z0-9_$]*$/.test(value) ||
-      /^[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*$/.test(value) ||
-      /^[A-Z][A-Za-z0-9_$]*(?:Manager|System|State|Agent|Action)$/.test(
-        value,
-      )
+      /^[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*$/.test(value)
     ) {
       terms.push(value)
     }
   }
 
   return unique(terms)
+}
+
+/**
+ * Locate the repository's existing generated symbol index.
+ *
+ * We intentionally do not assume a particular directory layout.
+ * The repository's own docs tooling is the source of truth.
+ */
+function findExistingSymbolIndex(): string | undefined {
+  const candidates = [
+    'docs/code-map/symbol-index.json',
+    'docs/code-map/symbols.json',
+    'docs/code-map/symbols/index.json',
+    'docs/code-map/symbols/symbols.json',
+    'docs/generated/symbol-index.json',
+    'docs/generated/symbols.json',
+  ]
+
+  for (const file of candidates) {
+    if (exists(file)) {
+      return file
+    }
+  }
+
+  return undefined
+}
+
+function normalizeSymbol(
+  value: Record<string, unknown>,
+): SymbolRecord | undefined {
+  const name =
+    typeof value.name === 'string'
+      ? value.name
+      : typeof value.symbol === 'string'
+        ? value.symbol
+        : undefined
+
+  const file =
+    typeof value.file === 'string'
+      ? value.file
+      : typeof value.path === 'string'
+        ? value.path
+        : undefined
+
+  if (!name || !file) {
+    return undefined
+  }
+
+  const line =
+    typeof value.line === 'number'
+      ? value.line
+      : typeof value.startLine === 'number'
+        ? value.startLine
+        : undefined
+
+  const documentation =
+    typeof value.documentation === 'object' &&
+    value.documentation !== null
+      ? value.documentation as ArchitecturalDoc
+      : typeof value.doc === 'object' &&
+          value.doc !== null
+        ? value.doc as ArchitecturalDoc
+        : undefined
+
+  return {
+    ...value,
+    name,
+    file: normalizePath(file),
+    line,
+    documentation,
+  }
+}
+
+/**
+ * Load the existing symbol index.
+ *
+ * Supports the common shapes used by generated documentation:
+ *
+ *   [...]
+ *   { symbols: [...] }
+ *   { entries: [...] }
+ *
+ * No repository scan is performed here.
+ */
+function loadSymbolIndex(): SymbolRecord[] {
+  const indexFile =
+    findExistingSymbolIndex()
+
+  if (!indexFile) {
+    return []
+  }
+
+  try {
+    const parsed =
+      JSON.parse(readFile(indexFile)) as unknown
+
+    const values =
+      Array.isArray(parsed)
+        ? parsed
+        : typeof parsed === 'object' &&
+            parsed !== null &&
+            Array.isArray(
+              (parsed as { symbols?: unknown[] }).symbols,
+            )
+          ? (parsed as { symbols: unknown[] }).symbols
+          : typeof parsed === 'object' &&
+              parsed !== null &&
+              Array.isArray(
+                (parsed as { entries?: unknown[] }).entries,
+              )
+            ? (parsed as { entries: unknown[] }).entries
+            : []
+
+    return values
+      .filter(
+        (value): value is Record<string, unknown> =>
+          typeof value === 'object' &&
+          value !== null,
+      )
+      .map(normalizeSymbol)
+      .filter(
+        (value): value is SymbolRecord =>
+          value !== undefined,
+      )
+  } catch {
+    return []
+  }
 }
 
 function symbolDocumentation(
@@ -272,71 +387,87 @@ function formatValue(
 }
 
 /**
- * Resolve symbols from explicit files first.
+ * Symbols explicitly named in the plan/notes.
  *
- * This is intentionally separate from text-search fallback.
- * A referenced file is strong evidence; symbols inside that file
- * should be inspected before fuzzy repository search.
+ * Exact identifier matches have the strongest signal.
  */
-function findSymbolsInFiles(
-  index: SymbolRecord[],
-  files: string[],
-): SymbolRecord[] {
-  const fileSet = new Set(files.map(normalizePath))
-
-  return index
-    .filter((symbol) => fileSet.has(normalizePath(symbol.file)))
-    .sort(
-      (a, b) =>
-        normalizePath(a.file).localeCompare(
-          normalizePath(b.file),
-        ) ||
-        (a.line ?? 0) - (b.line ?? 0) ||
-        a.name.localeCompare(b.name),
-    )
-}
-
-/**
- * Resolve symbols by exact identifier.
- */
-function findSymbolsByTerms(
+function findExactSymbols(
   index: SymbolRecord[],
   terms: string[],
 ): SymbolRecord[] {
   const termSet = new Set(terms)
 
   return index
-    .filter((symbol) => termSet.has(symbol.name))
+    .filter((symbol) =>
+      termSet.has(symbol.name),
+    )
     .sort(
       (a, b) =>
-        terms.indexOf(a.name) - terms.indexOf(b.name),
+        terms.indexOf(a.name) -
+          terms.indexOf(b.name) ||
+        normalizePath(a.file).localeCompare(
+          normalizePath(b.file),
+        ),
     )
 }
 
 /**
- * Build the small set of symbols actually worth exposing.
+ * Symbols from explicitly referenced files.
+ *
+ * Only architecturally documented symbols are promoted.
+ * This prevents a large file from expanding into dozens of symbols.
+ */
+function findDocumentedSymbolsInFiles(
+  index: SymbolRecord[],
+  files: string[],
+): SymbolRecord[] {
+  const fileSet = new Set(
+    files.map(normalizePath),
+  )
+
+  return index
+    .filter((symbol) =>
+      fileSet.has(normalizePath(symbol.file)),
+    )
+    .filter((symbol) =>
+      ARCH_TAGS.some(
+        (tag) =>
+          formatValue(
+            symbolDocumentation(symbol)[tag],
+          ).length > 0,
+      ),
+    )
+    .sort(
+      (a, b) =>
+        normalizePath(a.file).localeCompare(
+          normalizePath(b.file),
+        ) ||
+        (a.line ?? 0) -
+          (b.line ?? 0) ||
+        a.name.localeCompare(b.name),
+    )
+}
+
+/**
+ * Resolve relevant symbols.
  *
  * Priority:
- *   1. symbols from explicit files,
- *   2. exact symbol references,
- *   3. symbols carrying architectural metadata,
- *   4. nothing else.
- *
- * Do not expand into every symbol from a referenced file.
+ *   1. exact symbol references,
+ *   2. documented symbols in explicit files.
  */
 function findRelevantSymbols(
   index: SymbolRecord[],
   files: string[],
   terms: string[],
 ): SymbolRecord[] {
-  const fromFiles = findSymbolsInFiles(index, files)
-  const exactTerms = findSymbolsByTerms(index, terms)
-
   const result: SymbolRecord[] = []
   const seen = new Set<string>()
 
-  const add = (symbol: SymbolRecord) => {
-    const key = `${normalizePath(symbol.file)}:${symbol.line ?? 0}:${symbol.name}`
+  const add = (
+    symbol: SymbolRecord,
+  ): void => {
+    const key =
+      `${normalizePath(symbol.file)}:${symbol.line ?? 0}:${symbol.name}`
 
     if (seen.has(key)) return
 
@@ -344,28 +475,30 @@ function findRelevantSymbols(
     result.push(symbol)
   }
 
-  // First: symbols explicitly named by the plan/notes.
-  for (const symbol of exactTerms) {
+  for (const symbol of findExactSymbols(
+    index,
+    terms,
+  )) {
     add(symbol)
 
-    if (result.length >= LIMITS.maxSymbols) {
+    if (
+      result.length >=
+      LIMITS.maxSymbols
+    ) {
       return result
     }
   }
 
-  // Second: only architecturally documented symbols from referenced files.
-  for (const symbol of fromFiles) {
-    const doc = symbolDocumentation(symbol)
-
-    const hasArchitecture = ARCH_TAGS.some(
-      (tag) => formatValue(doc[tag]).length > 0,
-    )
-
-    if (!hasArchitecture) continue
-
+  for (const symbol of findDocumentedSymbolsInFiles(
+    index,
+    files,
+  )) {
     add(symbol)
 
-    if (result.length >= LIMITS.maxSymbols) {
+    if (
+      result.length >=
+      LIMITS.maxSymbols
+    ) {
       return result
     }
   }
@@ -374,24 +507,37 @@ function findRelevantSymbols(
 }
 
 function readSnippet(
-  file: string,
-  line: number,
-  symbol?: string,
+  symbol: SymbolRecord,
 ): Snippet | undefined {
-  if (!exists(file)) return undefined
+  if (!symbol.line) {
+    return undefined
+  }
 
-  const lines = readFile(file).split(/\r?\n/)
-  const start = Math.max(0, line - 1)
-  const end = Math.min(
-    lines.length,
-    start + LIMITS.snippetLines,
-  )
+  if (!exists(symbol.file)) {
+    return undefined
+  }
+
+  const lines =
+    readFile(symbol.file)
+      .split(/\r?\n/)
+
+  const start =
+    Math.max(0, symbol.line - 1)
+
+  const end =
+    Math.min(
+      lines.length,
+      start + LIMITS.snippetLines,
+    )
 
   return {
-    symbol,
-    file,
+    symbol: symbol.name,
+    file: symbol.file,
     line: start + 1,
-    lines: lines.slice(start, end),
+    lines: lines.slice(
+      start,
+      end,
+    ),
   }
 }
 
@@ -401,17 +547,19 @@ function sourceSnippets(
   const result: Snippet[] = []
 
   for (const symbol of symbols) {
-    if (!symbol.line) continue
+    const snippet =
+      readSnippet(symbol)
 
-    const snippet = readSnippet(
-      symbol.file,
-      symbol.line,
-      symbol.name,
-    )
+    if (snippet) {
+      result.push(snippet)
+    }
 
-    if (snippet) result.push(snippet)
-
-    if (result.length >= LIMITS.maxSnippets) break
+    if (
+      result.length >=
+      LIMITS.maxSnippets
+    ) {
+      break
+    }
   }
 
   return result
@@ -420,35 +568,53 @@ function sourceSnippets(
 function formatArchitecture(
   symbols: SymbolRecord[],
 ): string {
-  if (symbols.length === 0) return ''
-
-  const lines = ['## Relevant architecture', '']
+  const blocks: string[] = []
 
   for (const symbol of symbols) {
-    const doc = symbolDocumentation(symbol)
+    const doc =
+      symbolDocumentation(symbol)
 
-    const metadata = ARCH_TAGS
-      .map((tag) => {
-        const value = formatValue(doc[tag])
+    const metadata =
+      ARCH_TAGS
+        .map((tag) => {
+          const value =
+            formatValue(doc[tag])
 
-        return value
-          ? `- ${tag}: ${value}`
-          : ''
-      })
-      .filter(Boolean)
+          return value
+            ? `- ${tag}: ${value}`
+            : ''
+        })
+        .filter(Boolean)
 
-    if (metadata.length === 0) continue
+    if (
+      metadata.length === 0
+    ) {
+      continue
+    }
 
-    lines.push(
-      `### \`${symbol.name}\` — ${normalizePath(symbol.file)}${
-        symbol.line ? `:${symbol.line}` : ''
-      }`,
-      ...metadata,
-      '',
+    blocks.push(
+      [
+        `### \`${symbol.name}\` — ${symbol.file}${
+          symbol.line
+            ? `:${symbol.line}`
+            : ''
+        }`,
+        ...metadata,
+      ].join('\n'),
     )
   }
 
-  return lines.join('\n').trim()
+  if (
+    blocks.length === 0
+  ) {
+    return ''
+  }
+
+  return [
+    '## Relevant architecture',
+    '',
+    ...blocks,
+  ].join('\n\n')
 }
 
 function formatRelationships(
@@ -457,75 +623,111 @@ function formatRelationships(
   const lines: string[] = []
 
   for (const symbol of symbols) {
-    const doc = symbolDocumentation(symbol)
+    const doc =
+      symbolDocumentation(symbol)
 
     const relationships: string[] = []
 
-    const owns = formatValue(doc.owns)
-    const uses = formatValue(doc.uses)
-    const produces = formatValue(doc.produces)
-    const consumes = formatValue(doc.consumes)
+    const owns =
+      formatValue(doc.owns)
 
-    if (owns) relationships.push(`owns ${owns}`)
-    if (uses) relationships.push(`uses ${uses}`)
-    if (produces) relationships.push(`produces ${produces}`)
-    if (consumes) relationships.push(`consumes ${consumes}`)
+    const uses =
+      formatValue(doc.uses)
 
-    if (relationships.length > 0) {
+    const produces =
+      formatValue(doc.produces)
+
+    const consumes =
+      formatValue(doc.consumes)
+
+    if (owns) {
+      relationships.push(
+        `owns ${owns}`,
+      )
+    }
+
+    if (uses) {
+      relationships.push(
+        `uses ${uses}`,
+      )
+    }
+
+    if (produces) {
+      relationships.push(
+        `produces ${produces}`,
+      )
+    }
+
+    if (consumes) {
+      relationships.push(
+        `consumes ${consumes}`,
+      )
+    }
+
+    if (
+      relationships.length > 0
+    ) {
       lines.push(
         `- \`${symbol.name}\` ${relationships.join('; ')}`,
       )
     }
   }
 
-  return lines.length
-    ? [
-        '## Relationships',
-        '',
-        '### Architectural (JSDoc)',
-        ...lines,
-      ].join('\n')
-    : ''
+  if (lines.length === 0) {
+    return ''
+  }
+
+  return [
+    '## Relationships',
+    '',
+    '### Architectural (JSDoc)',
+    ...lines,
+  ].join('\n')
 }
 
 function formatSnippets(
   snippets: Snippet[],
 ): string {
-  if (snippets.length === 0) return ''
-
-  const lines = [
-    '## Implementation anchors',
-    '',
-  ]
-
-  for (const snippet of snippets) {
-    lines.push(
-      `### \`${snippet.symbol ?? 'source'}\` — ${snippet.file}:${snippet.line}`,
-      '```ts',
-      ...snippet.lines,
-      '```',
-      '',
-    )
+  if (snippets.length === 0) {
+    return ''
   }
 
-  return lines.join('\n').trim()
+  const blocks =
+    snippets.map(
+      (snippet) =>
+        [
+          `### \`${snippet.symbol}\` — ${snippet.file}:${snippet.line}`,
+          '```ts',
+          ...snippet.lines,
+          '```',
+        ].join('\n'),
+    )
+
+  return [
+    '## Implementation anchors',
+    '',
+    ...blocks,
+  ].join('\n\n')
 }
 
 function fallbackSearch(
   terms: string[],
   knownFiles: Set<string>,
-): Array<{ term: string; matches: string[] }> {
-  const candidates = terms.slice(
-    0,
-    LIMITS.maxFallbackTerms,
-  )
-
+): Array<{
+  term: string
+  matches: string[]
+}> {
   const result: Array<{
     term: string
     matches: string[]
   }> = []
 
-  for (const term of candidates) {
+  for (
+    const term of terms.slice(
+      0,
+      LIMITS.maxFallbackTerms,
+    )
+  ) {
     let output
 
     try {
@@ -534,7 +736,10 @@ function fallbackSearch(
         '-n',
         '-I',
         '-E',
-        `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+        `\\b${term.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&',
+        )}\\b`,
         '--',
         'src',
       ])
@@ -542,28 +747,38 @@ function fallbackSearch(
       continue
     }
 
-    const matches = output
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .filter((line) => {
-        const file = normalizePath(line.split(':')[0])
+    const matches =
+      output
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .filter((line) => {
+          const file =
+            normalizePath(
+              line.split(':')[0],
+            )
 
-        return !knownFiles.has(file)
-      })
-      .filter((line) => {
-        // Prefer actual code over comments/docs.
-        const content = line
-          .replace(/^[^:]+:\d+:/, '')
-          .trim()
+          return !knownFiles.has(file)
+        })
+        .filter((line) => {
+          const content =
+            line.replace(
+              /^[^:]+:\d+:/,
+              '',
+            ).trim()
 
-        return !content.startsWith('*')
-      })
-      .slice(
-        0,
-        LIMITS.maxFallbackMatchesPerTerm,
-      )
+          return (
+            !content.startsWith('*') &&
+            !content.startsWith('//')
+          )
+        })
+        .slice(
+          0,
+          LIMITS.maxFallbackMatchesPerTerm,
+        )
 
-    if (matches.length > 0) {
+    if (
+      matches.length > 0
+    ) {
       result.push({
         term,
         matches,
@@ -580,7 +795,11 @@ function formatFallback(
     matches: string[]
   }>,
 ): string {
-  if (fallback.length === 0) return ''
+  if (
+    fallback.length === 0
+  ) {
+    return ''
+  }
 
   const lines = [
     '## Limited text-search fallback',
@@ -588,31 +807,44 @@ function formatFallback(
   ]
 
   for (const item of fallback) {
-    lines.push(`- \`${item.term}\``)
+    lines.push(
+      `- \`${item.term}\``,
+    )
 
-    for (const match of item.matches) {
-      lines.push(`  - ${match}`)
+    for (
+      const match of item.matches
+    ) {
+      lines.push(
+        `  - ${match}`,
+      )
     }
   }
 
-  return lines.join('\n').trim()
+  return lines.join('\n')
 }
 
 function extractIntent(
   planText: string,
 ): string {
-  const candidates = [
-    'Cel',
-    'Goal',
-    'Purpose',
-    'Intent',
-  ]
+  for (
+    const heading of [
+      'Cel',
+      'Goal',
+      'Purpose',
+      'Intent',
+    ]
+  ) {
+    const value =
+      section(
+        planText,
+        heading,
+      )
 
-  for (const heading of candidates) {
-    const content = section(planText, heading)
-
-    if (content) {
-      return content.slice(0, 2_500)
+    if (value) {
+      return value.slice(
+        0,
+        2_500,
+      )
     }
   }
 
@@ -622,31 +854,65 @@ function extractIntent(
 function extractConstraints(
   notesText: string,
 ): string {
-  if (!notesText) return ''
+  if (!notesText) {
+    return ''
+  }
 
-  const candidates = [
-    'Final implementation guidance',
-    'Implementation constraints',
-    'Zakres implementacyjny',
-    'Implementation scope',
-  ]
+  for (
+    const heading of [
+      'Final implementation guidance',
+      'Implementation constraints',
+      'Zakres implementacyjny',
+      'Implementation scope',
+    ]
+  ) {
+    const value =
+      section(
+        notesText,
+        heading,
+      )
 
-  for (const heading of candidates) {
-    const content = section(
-      notesText,
-      heading,
-    )
-
-    if (content) {
-      return content.slice(0, 4_000)
+    if (value) {
+      return value.slice(
+        0,
+        4_000,
+      )
     }
   }
 
   return ''
 }
 
-function trimToLimit(text: string): string {
-  if (text.length <= LIMITS.maxOutputChars) {
+function section(
+  text: string,
+  heading: string,
+): string {
+  const escaped =
+    heading.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      '\\$&',
+    )
+
+  const match =
+    text.match(
+      new RegExp(
+        `^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|$)`,
+        'm',
+      ),
+    )
+
+  return (
+    match?.[1]?.trim() ?? ''
+  )
+}
+
+function trimToLimit(
+  text: string,
+): string {
+  if (
+    text.length <=
+    LIMITS.maxOutputChars
+  ) {
     return text
   }
 
@@ -656,16 +922,15 @@ function trimToLimit(text: string): string {
   return (
     text.slice(
       0,
-      Math.max(
-        0,
-        LIMITS.maxOutputChars - marker.length,
-      ),
+      LIMITS.maxOutputChars -
+        marker.length,
     ) + marker
   )
 }
 
 function main(): void {
-  const input = process.argv[2]
+  const input =
+    process.argv[2]
 
   if (!input) {
     console.error(
@@ -674,27 +939,34 @@ function main(): void {
     process.exit(1)
   }
 
-  const plan = findPlan(input)
-  const notes = findImplementationNotes(plan)
+  const plan =
+    findPlan(input)
 
-  const planText = readFile(plan)
-  const notesText = notes
-    ? readFile(notes)
-    : ''
+  const notes =
+    findImplementationNotes(
+      plan,
+    )
 
-  const combined = `${planText}\n${notesText}`
+  const planText =
+    readFile(plan)
 
-  /*
-   * Strong signals only.
-   *
-   * We intentionally do not use every backtick term as a
-   * repository search query.
-   */
+  const notesText =
+    notes
+      ? readFile(notes)
+      : ''
+
+  const combined =
+    `${planText}\n${notesText}`
+
   const explicitFiles =
-    collectExplicitFiles(combined)
+    collectExplicitFiles(
+      combined,
+    )
 
   const terms =
-    collectBacktickTerms(combined)
+    collectBacktickTerms(
+      combined,
+    )
 
   const symbolIndex =
     loadSymbolIndex()
@@ -708,23 +980,26 @@ function main(): void {
       terms,
     )
 
-  const relevantFiles = unique([
-    ...explicitFiles.map(
-      (item) => item.file,
-    ),
-    ...relevantSymbols.map(
-      (symbol) =>
-        normalizePath(symbol.file),
-    ),
-  ]).slice(0, LIMITS.maxFiles)
+  const relevantFiles =
+    unique([
+      ...explicitFiles.map(
+        (item) => item.file,
+      ),
+      ...relevantSymbols.map(
+        (symbol) =>
+          normalizePath(
+            symbol.file,
+          ),
+      ),
+    ]).slice(
+      0,
+      LIMITS.maxFiles,
+    )
 
-  /*
-   * Important:
-   * source snippets come from resolved symbols,
-   * not from fallback grep matches.
-   */
   const snippets =
-    sourceSnippets(relevantSymbols)
+    sourceSnippets(
+      relevantSymbols,
+    )
 
   const fallback =
     fallbackSearch(
@@ -733,10 +1008,14 @@ function main(): void {
     )
 
   const intent =
-    extractIntent(planText)
+    extractIntent(
+      planText,
+    )
 
   const constraints =
-    extractConstraints(notesText)
+    extractConstraints(
+      notesText,
+    )
 
   const output: string[] = [
     '# SEEDVALE — IMPLEMENTATION PREFLIGHT',
@@ -749,14 +1028,22 @@ function main(): void {
         : 'MISSING'
     }`,
     `HEAD: ${
-      git(['rev-parse', '--short', 'HEAD']) ||
-      'unknown'
+      git([
+        'rev-parse',
+        '--short',
+        'HEAD',
+      ]) || 'unknown'
     } | branch: ${
-      git(['branch', '--show-current']) ||
-      'unknown'
+      git([
+        'branch',
+        '--show-current',
+      ]) || 'unknown'
     }`,
     `Working tree: ${
-      git(['status', '--porcelain'])
+      git([
+        'status',
+        '--porcelain',
+      ])
         ? 'HAS CHANGES — preserve them'
         : 'clean'
     }`,
@@ -766,6 +1053,7 @@ function main(): void {
     output.push(
       '',
       '## Intent',
+      '',
       intent,
     )
   }
@@ -782,13 +1070,16 @@ function main(): void {
     )
   }
 
-  if (relevantFiles.length > 0) {
+  if (
+    relevantFiles.length > 0
+  ) {
     output.push(
       '',
       '## Relevant files',
       '',
       ...relevantFiles.map(
-        (file) => `- \`${file}\``,
+        (file) =>
+          `- \`${file}\``,
       ),
     )
   }
@@ -815,7 +1106,9 @@ function main(): void {
   }
 
   const snippetText =
-    formatSnippets(snippets)
+    formatSnippets(
+      snippets,
+    )
 
   if (snippetText) {
     output.push(
@@ -825,7 +1118,9 @@ function main(): void {
   }
 
   const fallbackText =
-    formatFallback(fallback)
+    formatFallback(
+      fallback,
+    )
 
   if (fallbackText) {
     output.push(
@@ -835,10 +1130,12 @@ function main(): void {
   }
 
   /*
-   * Do not duplicate Relevant files as Recommended reads.
-   * The files themselves are the navigation targets.
+   * Keep navigation explicit, but do not repeat it as a
+   * second full list of "recommended reads".
    */
-  if (relevantFiles.length > 0) {
+  if (
+    relevantFiles.length > 0
+  ) {
     output.push(
       '',
       '## Recommended reads',
@@ -860,7 +1157,8 @@ function main(): void {
 
   process.stdout.write(
     trimToLimit(
-      output.join('\n') + '\n',
+      output.join('\n') +
+        '\n',
     ),
   )
 }
