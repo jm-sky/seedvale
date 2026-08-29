@@ -206,3 +206,24 @@ Beyond the plan's checks, explicitly test:
 - well pit completes in one normal work session while well/roof retain their 1h requirements.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+
+## Current-code review delta (2026-08-29)
+
+The repository was rechecked against `main`; these points are important for implementation and supersede any older assumptions in this note:
+
+- `src/app/userActions.ts` still places both simple fires and fire pits directly at `player.mesh.position` and consumes their materials immediately. There is no fire-specific ground validator. For this plan, do not implement fire preview rules in Vue; refactor the existing fire action just enough to expose an authoritative aimed placement/validation seam, then reuse it from the shared placement mode. Keep the existing costs, capability rules and `PlacedFires` ownership.
+- `src/app/actions/containerActions.ts::placeContainerAtAim()` is already a complete authoritative chest placement path. Keep it as the final mutation seam; the preview must not replace its revalidation/busy-channel semantics.
+- `src/app/actions/placementActions.ts::tentBlockers()` is already the shared nearby blocker query despite its legacy name. Reuse it rather than creating a second blocker service.
+- `src/app/actions/terrainPreparationActions.ts::tickPreview()` currently calls `previewMesh.setFootprint()` every frame. `src/world/terrainPreparationPreview.ts::setFootprint()` disposes and recreates the line geometry. This is an existing allocation/rebuild hotspot that should be fixed while adding per-cell visualisation: rebuild footprint geometry only after size/resolution changes.
+- The current terrain preview is driven by pointer-locked `mouseLook.state.yaw`; there is no free world cursor. Placement UX should follow the same aim model unless implementation discovers an existing input mechanism that genuinely supports something else.
+- `QuickActionsScreen.vue` already groups actions, while `createQuickActions.ts` is only a compatibility facade. The requested construction category should therefore be implemented as nested presentation state in the Vue screen/store, not as a second action registry. Reset category state on close.
+- `PreparationSize` is still `2 | 3 | 4` and `SIZES` is `[2, 3, 4]`; both must change for 9m. `resolvePreparationSamples()` already derives sample count from terrain step and should remain the source of truth.
+- `MAX_PREPARATION_DELTA` is still `3`. Increase that constant only; retain immutable `originalHeights`, water checks, pickaxe checks and the shared ground-suitability validation.
+- `TerrainPreparationPreview` currently exposes only global `setValid(valid)`. Per-cell colour data should be computed in `terrainPreparationActions.ts` from the already sampled `originalHeights` and passed into the renderer. Do not make the renderer perform another terrain sampling pass.
+
+## Implementation boundary
+
+The safest implementation sequence is: first fix terrain size/tolerance and preview rendering; then introduce the shared aimed placement lifecycle; adapt chest/tent/fire to it without moving their domain ownership; finally add the Quick Actions hierarchy. Keep the well change independent and limited to the game-hours credited by the existing 8-second work channel.
+
+**Zrób git commit i push do main, rebase jeżeli trzeba**
