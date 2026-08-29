@@ -119,7 +119,6 @@ Natural vegetation
 | ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
-| 💡 `tools-002-trace-analyzer-application-cpu-attribution.md`           | Done — `TOP APPLICATION CPU OPERATIONS` report section | 🔴 | M | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `world-005-new-game-time-reset.md`                        | - | 🟡 | S | - |
