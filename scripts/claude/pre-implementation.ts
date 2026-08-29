@@ -1,502 +1,641 @@
+#!/usr/bin/env tsx
+
+/**
+ * Seedvale implementation preflight.
+ *
+ * Purpose:
+ *   Compile a small, targeted briefing for Claude Code before implementation.
+ *
+ * Design goals:
+ *   - Prefer explicit file/symbol references over fuzzy text search.
+ *   - Consume architectural JSDoc metadata when available.
+ *   - Never dump large repository documents into the briefing.
+ *   - Keep source evidence small and deterministic.
+ *
+ * Usage:
+ *   pnpm claude:preflight npc-002
+ *   pnpm claude:preflight docs/plans/npc-002-npc-healing.md
+ */
+
 import { execFileSync } from 'node:child_process'
-import { readdir, readFile } from 'node:fs/promises'
-import { relative as pathRelative, resolve } from 'node:path'
-import {
-  CODE_MAP_DIR,
-  formatArchitecturalMetadata,
-  getDomain,
-  getExportedSymbols,
-  parseDependencyMap,
-  parseStandaloneSourceFile,
-  repoRelative,
-  ROOT_DIR,
-  SRC_DIR,
-  type SymbolInfo,
-} from '../docs/utils.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import process from 'node:process'
 
-const PLANS_DIR = resolve(ROOT_DIR, 'docs/plans')
-const NOTES_DIR = resolve(PLANS_DIR, 'implementation-notes')
-const SYMBOLS_DIR = resolve(CODE_MAP_DIR, 'symbols')
-const DEPENDENCIES_DIR = resolve(CODE_MAP_DIR, 'dependencies')
+const ROOT = process.cwd()
 
-const MAX_OUTPUT_CHARS = 18000
-const MAX_RELEVANT_SYMBOLS = 10
-const MAX_RELEVANT_FILES = 12
-const MAX_SOURCE_SNIPPETS = 8
-const SOURCE_SNIPPET_RADIUS = 2
-const MAX_GREP_TERMS = 8
-const MAX_SEARCH_RESULTS_PER_TERM = 8
-const MAX_DOMAINS = 4
-const MAX_NOTE_SECTIONS = 4
-const MAX_WARNINGS = 6
+const LIMITS = {
+  maxSymbols: 10,
+  maxFiles: 12,
+  maxSnippets: 8,
+  snippetLines: 8,
+  maxOutputChars: 18_000,
+  maxFallbackTerms: 4,
+  maxFallbackMatchesPerTerm: 3,
+} as const
 
-// ---------------------------------------------------------------------------
-// Small file/git helpers (same shape as v1)
-// ---------------------------------------------------------------------------
+const ARCH_TAGS = [
+  'domain',
+  'system',
+  'role',
+  'owns',
+  'uses',
+  'produces',
+  'consumes',
+  'simulation',
+  'performance',
+  'lifecycle',
+  'integration',
+] as const
 
-const readText = async (path: string): Promise<string | null> => {
-  try { return await readFile(path, 'utf8') } catch { return null }
+type ArchTag = (typeof ARCH_TAGS)[number]
+
+type ArchitecturalDoc = Partial<
+  Record<ArchTag, string | string[]>
+>
+
+type SymbolRecord = {
+  name: string
+  kind?: string
+  file: string
+  line?: number
+  documentation?: ArchitecturalDoc
+  [key: string]: unknown
 }
 
-const findPlan = async (input: string): Promise<{ path: string, content: string }> => {
-  const files = (await readdir(PLANS_DIR)).filter(file => file.endsWith('.md'))
-  const normalized = input.replace(/\\/g, '/').replace(/\.md$/, '')
-  const exact = files.find(file => file.replace(/\.md$/, '') === normalized)
-  const matches = exact ? [exact] : files.filter(file => file.replace(/\.md$/, '').includes(normalized))
-  if (matches.length !== 1) {
-    if (matches.length === 0) throw new Error('Plan not found: ' + input)
-    throw new Error('Plan input is ambiguous: ' + input + '\n' + matches.join('\n'))
+type FileReference = {
+  file: string
+  line?: number
+  reason?: string
+}
+
+type Snippet = {
+  file: string
+  line: number
+  lines: string[]
+}
+
+function readFile(file: string): string {
+  return fs.readFileSync(path.join(ROOT, file), 'utf8')
+}
+
+function exists(file: string): boolean {
+  return fs.existsSync(path.join(ROOT, file))
+}
+
+function normalizePath(file: string): string {
+  return file
+    .replaceAll('\\', '/')
+    .replace(/^\.\/+/, '')
+}
+
+function unique<T>(values: T[]): T[] {
+  return [...new Set(values)]
+}
+
+function section(text: string, heading: string): string {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = text.match(
+    new RegExp(
+      `^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|$)`,
+      'm',
+    ),
+  )
+
+  return match?.[1]?.trim() ?? ''
+}
+
+function findPlan(input: string): string {
+  const normalized = normalizePath(input)
+
+  if (exists(normalized)) return normalized
+
+  const plansDir = path.join(ROOT, 'docs/plans')
+
+  if (!fs.existsSync(plansDir)) {
+    throw new Error(`Plans directory not found: ${plansDir}`)
   }
-  const path = resolve(PLANS_DIR, matches[0])
-  const content = await readText(path)
-  if (!content) throw new Error('Cannot read plan: ' + path)
-  return { path, content }
+
+  const candidates = fs
+    .readdirSync(plansDir)
+    .filter((name) => name.endsWith('.md'))
+
+  const match = candidates.find(
+    (name) =>
+      name === normalized ||
+      name.startsWith(`${normalized}-`) ||
+      name.replace(/\.md$/, '') === normalized,
+  )
+
+  if (!match) {
+    throw new Error(`Plan not found: ${input}`)
+  }
+
+  return `docs/plans/${match}`
 }
 
-const findImplementationNotes = async (planPath: string) => {
-  const base = pathRelative(PLANS_DIR, planPath).replace(/\.md$/, '')
-  const expected = resolve(NOTES_DIR, base + '-implementation-notes.md')
-  const expectedContent = await readText(expected)
-  if (expectedContent) return { path: expected, content: expectedContent }
-  const files = await readdir(NOTES_DIR)
-  const matches = files.filter(file => file.endsWith('-implementation-notes.md') && file.includes(base))
-  if (matches.length !== 1) return null
-  const path = resolve(NOTES_DIR, matches[0])
-  const content = await readText(path)
-  return content ? { path, content } : null
+function findImplementationNotes(plan: string): string | undefined {
+  const planBase = path.basename(plan, '.md')
+  const id = planBase.split('-')[0] === 'implementation'
+    ? undefined
+    : planBase.match(/^([a-z]+-\d+)/)?.[1]
+
+  const candidates = [
+    `docs/plans/implementation-notes/${planBase}-implementation-notes.md`,
+    ...(id
+      ? fs
+          .readdirSync(
+            path.join(ROOT, 'docs/plans/implementation-notes'),
+          )
+          .filter((name) => name.startsWith(`${id}-`))
+          .map(
+            (name) =>
+              `docs/plans/implementation-notes/${name}`,
+          )
+      : []),
+  ]
+
+  return candidates.find(exists)
 }
 
-const runGit = (args: string[]): string => {
-  try { return execFileSync('git', args, { cwd: ROOT_DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() }
-  catch { return '' }
+function git(args: string[]): string {
+  try {
+    return execFileSync('git', args, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return ''
+  }
 }
 
-const searchGit = (term: string): string[] => {
-  const result = runGit(['grep', '-n', '-I', '-F', '--', term, 'src'])
-  return result.split('\n').filter(Boolean).slice(0, MAX_SEARCH_RESULTS_PER_TERM)
+function loadSymbolIndex(): SymbolRecord[] {
+  const candidates = [
+    'docs/code-map/symbols.json',
+    'docs/code-map/symbols/index.json',
+    'docs/code-map/symbols/symbols.json',
+  ]
+
+  for (const file of candidates) {
+    if (!exists(file)) continue
+
+    try {
+      const parsed = JSON.parse(readFile(file))
+      if (Array.isArray(parsed)) return parsed
+      if (Array.isArray(parsed.symbols)) return parsed.symbols
+    } catch {
+      // Ignore invalid/generated index and continue.
+    }
+  }
+
+  return []
 }
 
-// ---------------------------------------------------------------------------
-// Plan / notes text extraction — no hardcoded section names, no "any
-// backticked word is a symbol" heuristic.
-// ---------------------------------------------------------------------------
+function collectExplicitFiles(text: string): FileReference[] {
+  const result: FileReference[] = []
 
-const extractPaths = (content: string): string[] => {
-  const matches = content.match(/(?:src|docs)\/[A-Za-z0-9_./-]+\.(?:ts|tsx|md)/g) ?? []
-  return [...new Set(matches)]
+  const patterns = [
+    /\b(?:src|scripts|docs)\/[\w./-]+\.(?:ts|tsx|js|vue|md)\b/g,
+    /`((?:src|scripts|docs)\/[^`\s]+)`/g,
+  ]
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const file = normalizePath(match[1] ?? match[0])
+
+      if (
+        file.startsWith('src/') ||
+        file.startsWith('scripts/') ||
+        file.startsWith('docs/')
+      ) {
+        result.push({ file })
+      }
+    }
+  }
+
+  return result
 }
 
-/** Backticked tokens shaped like a real identifier — plain lowercase prose words (`planned`, `food`, `dead`) never qualify. */
-const extractIdentifierLikeTerms = (content: string): string[] => {
-  const values = content.match(/`([^`]{2,60})`/g) ?? []
-  return [...new Set(values.map(value => value.slice(1, -1)))].filter(value =>
-    /^[A-Za-z][A-Za-z0-9_.]*$/.test(value) && /[A-Z]/.test(value),
+function collectBacktickTerms(text: string): string[] {
+  const terms: string[] = []
+
+  for (const match of text.matchAll(/`([^`\n]+)`/g)) {
+    const value = match[1].trim()
+
+    if (
+      value.length < 3 ||
+      value.length > 80 ||
+      /\s{2,}/.test(value) ||
+      value.includes('/') ||
+      value.includes('.') ||
+      value.startsWith('http')
+    ) {
+      continue
+    }
+
+    // Avoid prose words and Markdown metadata.
+    if (
+      /^(planned|complete|medium|high|low|small|large|none|unknown)$/i.test(
+        value,
+      )
+    ) {
+      continue
+    }
+
+    // Prefer identifier-like terms.
+    if (
+      /^[A-Z][A-Za-z0-9_$]*$/.test(value) ||
+      /^[a-z][A-Za-z0-9_$]*[A-Z][A-Za-z0-9_$]*$/.test(value) ||
+      /^[A-Z][A-Za-z0-9_$]*(?:Manager|System|State|Agent|Action)$/.test(
+        value,
+      )
+    ) {
+      terms.push(value)
+    }
+  }
+
+  return unique(terms)
+}
+
+function symbolDocumentation(symbol: SymbolRecord): ArchitecturalDoc {
+  return symbol.documentation ?? {}
+}
+
+function formatValue(value: string | string[] | undefined): string {
+  if (!value) return ''
+
+  return Array.isArray(value)
+    ? value.join(', ')
+    : value
+}
+
+function formatArchitecture(
+  symbols: SymbolRecord[],
+): string {
+  if (symbols.length === 0) return ''
+
+  const lines = ['## Relevant architecture', '']
+
+  for (const symbol of symbols) {
+    const doc = symbolDocumentation(symbol)
+
+    lines.push(
+      `### \`${symbol.name}\` — ${symbol.file}${
+        symbol.line ? `:${symbol.line}` : ''
+      }`,
+    )
+
+    for (const tag of ARCH_TAGS) {
+      const value = formatValue(doc[tag])
+      if (value) lines.push(`- ${tag}: ${value}`)
+    }
+
+    lines.push('')
+  }
+
+  return lines.join('\n').trim()
+}
+
+function findRelevantSymbols(
+  index: SymbolRecord[],
+  files: string[],
+  terms: string[],
+): SymbolRecord[] {
+  const normalizedFiles = new Set(files)
+
+  const scored = index
+    .filter((symbol) => symbol.file)
+    .map((symbol) => {
+      let score = 0
+
+      if (normalizedFiles.has(normalizePath(symbol.file))) score += 100
+
+      if (terms.includes(symbol.name)) score += 80
+
+      const doc = symbolDocumentation(symbol)
+
+      const searchable = [
+        symbol.name,
+        formatValue(doc.domain),
+        formatValue(doc.system),
+        formatValue(doc.role),
+        formatValue(doc.owns),
+        formatValue(doc.uses),
+        formatValue(doc.produces),
+        formatValue(doc.consumes),
+        formatValue(doc.simulation),
+        formatValue(doc.performance),
+        formatValue(doc.lifecycle),
+        formatValue(doc.integration),
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      for (const term of terms) {
+        if (searchable.includes(term.toLowerCase())) score += 10
+      }
+
+      return { symbol, score }
+    })
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.symbol.file.localeCompare(b.symbol.file) ||
+        a.symbol.name.localeCompare(b.symbol.name),
+    )
+
+  return unique(
+    scored
+      .slice(0, LIMITS.maxSymbols)
+      .map((entry) => entry.symbol),
   )
 }
 
-const tokenizeIdentifiers = (content: string): string[] =>
-  [...new Set(content.match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) ?? [])]
+function readSnippet(file: string, line: number): Snippet | undefined {
+  if (!exists(file)) return undefined
 
-const extractHeadings = (content: string): string[] =>
-  content.split('\n').filter(line => /^#{1,3}\s/.test(line)).map(line => line.trim())
+  const lines = readFile(file).split(/\r?\n/)
+  const start = Math.max(0, line - 1)
+  const end = Math.min(
+    lines.length,
+    start + LIMITS.snippetLines,
+  )
 
-const parseMetadata = (content: string): string[] => {
-  const keys = ['Created', 'Status', 'Priority', 'Depends on', 'Domain']
-  return content.split('\n').filter(line => keys.some(key => line.startsWith('**' + key + ':**'))).slice(0, keys.length)
+  return {
+    file,
+    line: start + 1,
+    lines: lines.slice(start, end),
+  }
 }
 
-type Section = { heading: string, level: number, bodyLines: string[] }
+function sourceSnippets(
+  symbols: SymbolRecord[],
+): Snippet[] {
+  const result: Snippet[] = []
 
-/** Splits on any `##`/`###` heading — plans and notes do not share a fixed section vocabulary, so nothing here assumes one. */
-const splitSections = (content: string): Section[] => {
-  const sections: Section[] = []
-  let current: Section | null = null
+  for (const symbol of symbols) {
+    if (!symbol.line) continue
 
-  for (const rawLine of content.split('\n')) {
-    const match = rawLine.match(/^(#{2,3})\s+(.*)$/)
-    if (match) {
-      if (current) sections.push(current)
-      current = { heading: match[2].trim(), level: match[1].length, bodyLines: [] }
+    const snippet = readSnippet(symbol.file, symbol.line)
+    if (snippet) result.push(snippet)
+
+    if (result.length >= LIMITS.maxSnippets) break
+  }
+
+  return result
+}
+
+function fallbackSearch(
+  terms: string[],
+  knownFiles: Set<string>,
+): Array<{ term: string; matches: string[] }> {
+  const candidates = terms.slice(0, LIMITS.maxFallbackTerms)
+  const result: Array<{ term: string; matches: string[] }> = []
+
+  for (const term of candidates) {
+    let output
+
+    try {
+      output = git([
+        'grep',
+        '-n',
+        '-I',
+        '-E',
+        `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+        '--',
+        'src',
+      ])
+    } catch {
       continue
     }
-    if (current && rawLine.trim()) current.bodyLines.push(rawLine.trim())
-  }
-  if (current) sections.push(current)
-  return sections
-}
 
-const WARNING_MARKERS = /\b(do not|don't|never|must not|should not|avoid)\b|nie (twórz|powinien|może|zakładaj|hardcode|zmieniaj)/i
+    const matches = output
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .filter((line) => {
+        const file = line.split(':')[0]
+        return !knownFiles.has(normalizePath(file))
+      })
+      .slice(0, LIMITS.maxFallbackMatchesPerTerm)
 
-const extractWarningLines = (content: string): string[] =>
-  content.split('\n')
-    .map(line => line.trim())
-    .filter(line => line.startsWith('-') || line.startsWith('*') || /^[A-ZŁŚŻŹĆŃÓĄĘ]/.test(line))
-    .filter(line => WARNING_MARKERS.test(line))
-
-// ---------------------------------------------------------------------------
-// Symbol name index — read from the already-generated symbol maps
-// (`pnpm docs:symbol-index`) rather than re-walking the whole src tree.
-// ---------------------------------------------------------------------------
-
-type SymbolLocation = { file: string, line: number }
-
-const loadSymbolNameIndex = async (): Promise<Map<string, SymbolLocation[]>> => {
-  const index = new Map<string, SymbolLocation[]>()
-  let entries: string[]
-  try {
-    entries = (await readdir(SYMBOLS_DIR)).filter(name => name.endsWith('.md') && name !== 'README.md')
-  } catch {
-    return index
-  }
-
-  for (const entry of entries) {
-    const content = await readText(resolve(SYMBOLS_DIR, entry))
-    if (!content) continue
-
-    let currentFile = ''
-    for (const line of content.split('\n')) {
-      const heading = line.match(/^##\s+`([^`]+)`$/)
-      if (heading) { currentFile = heading[1]; continue }
-      if (line.startsWith('  ')) continue // indented JSDoc-metadata sub-bullet
-
-      const symbolLine = line.match(/^- `([^`]+)` — \S+ — line (\d+)$/)
-      if (symbolLine && currentFile) {
-        const list = index.get(symbolLine[1]) ?? []
-        list.push({ file: currentFile, line: Number(symbolLine[2]) })
-        index.set(symbolLine[1], list)
-      }
+    if (matches.length > 0) {
+      result.push({ term, matches })
     }
   }
 
-  return index
+  return result
 }
 
-// ---------------------------------------------------------------------------
-// Targeted AST parsing — only the handful of candidate files this run
-// actually needs, reusing the same TS AST + JSDoc pipeline as the symbol
-// index (`scripts/docs/utils.ts`), not a second parser.
-// ---------------------------------------------------------------------------
+function formatSnippets(snippets: Snippet[]): string {
+  if (snippets.length === 0) return ''
 
-type ParsedSrcFile = { lines: string[], symbols: SymbolInfo[] }
+  const lines = ['## Current implementation anchors', '']
 
-const parseCache = new Map<string, ParsedSrcFile | null>()
+  for (const snippet of snippets) {
+    lines.push(`\`${snippet.file}:${snippet.line}\``)
+    lines.push('```ts')
+    lines.push(...snippet.lines)
+    lines.push('```')
+    lines.push('')
+  }
 
-const parseSrcFile = async (srcRelFile: string): Promise<ParsedSrcFile | null> => {
-  if (parseCache.has(srcRelFile)) return parseCache.get(srcRelFile) ?? null
-
-  const absolutePath = resolve(SRC_DIR, srcRelFile)
-  const content = await readText(absolutePath)
-  if (content === null) { parseCache.set(srcRelFile, null); return null }
-
-  const sourceFile = parseStandaloneSourceFile(absolutePath, content)
-  const parsed: ParsedSrcFile = { lines: content.split('\n'), symbols: getExportedSymbols(sourceFile) }
-  parseCache.set(srcRelFile, parsed)
-  return parsed
+  return lines.join('\n').trim()
 }
 
-const toSrcRel = (repoRelPath: string): string | null =>
-  repoRelPath.startsWith('src/') ? repoRelPath.slice('src/'.length) : null
+function formatFallback(
+  fallback: Array<{ term: string; matches: string[] }>,
+): string {
+  if (fallback.length === 0) return ''
 
-type ResolvedSymbol = SymbolInfo & { origin: 'name-match' | 'explicit-file' | 'ast-grep' }
+  const lines = ['## Limited text-search fallback', '']
 
-const snippetFor = (parsed: ParsedSrcFile, line: number): string => {
-  const start = Math.max(1, line - SOURCE_SNIPPET_RADIUS)
-  const end = Math.min(parsed.lines.length, line + SOURCE_SNIPPET_RADIUS)
-  return parsed.lines.slice(start - 1, end)
-    .map((value, index) => '  ' + String(start + index).padStart(4, ' ') + ' | ' + value)
-    .join('\n')
+  for (const item of fallback) {
+    lines.push(`- \`${item.term}\``)
+    for (const match of item.matches) {
+      lines.push(`  - ${match}`)
+    }
+  }
+
+  return lines.join('\n').trim()
 }
 
-const trimOutput = (value: string): string => value.length <= MAX_OUTPUT_CHARS
-  ? value
-  : value.slice(0, MAX_OUTPUT_CHARS) + '\n\n[output truncated at ' + MAX_OUTPUT_CHARS + ' chars]'
+function trimToLimit(text: string): string {
+  if (text.length <= LIMITS.maxOutputChars) return text
 
-const main = async () => {
+  const marker =
+    '\n\n[Preflight output truncated — lower-priority evidence omitted.]\n'
+
+  return text.slice(
+    0,
+    Math.max(0, LIMITS.maxOutputChars - marker.length),
+  ) + marker
+}
+
+function main(): void {
   const input = process.argv[2]
-  if (!input) { console.error('Usage: pnpm claude:preflight <plan-id-or-filename>'); process.exitCode = 1; return }
 
-  const plan = await findPlan(input)
-  const notes = await findImplementationNotes(plan.path)
-  const state = await readText(resolve(ROOT_DIR, 'docs/STATE.md'))
-  const plansReadme = await readText(resolve(PLANS_DIR, 'README.md'))
-  const combined = plan.content + '\n' + (notes?.content ?? '')
-
-  const branch = runGit(['branch', '--show-current'])
-  const head = runGit(['rev-parse', '--short', 'HEAD'])
-  const status = runGit(['status', '--short'])
-
-  // --- Priority 1: explicit repository paths --------------------------------
-
-  const referencedPaths = extractPaths(combined)
-  const explicitDocPaths = referencedPaths.filter(path => path.startsWith('docs/'))
-  const explicitSrcFiles = referencedPaths
-    .map(toSrcRel)
-    .filter((path): path is string => path !== null)
-
-  // --- Priority 2: real symbols — direct name mentions against the ----------
-  // --- generated symbol index (not "any backticked word") -------------------
-
-  const symbolNameIndex = await loadSymbolNameIndex()
-  const mentionedTokens = tokenizeIdentifiers(combined)
-
-  const resolvedSymbols = new Map<string, ResolvedSymbol>()
-
-  const addResolved = async (name: string, file: string, origin: ResolvedSymbol['origin']): Promise<void> => {
-    const key = file + '#' + name
-    if (resolvedSymbols.has(key)) return
-    const parsed = await parseSrcFile(file)
-    const found = parsed?.symbols.find(symbol => symbol.name === name)
-    if (found) resolvedSymbols.set(key, { ...found, origin })
+  if (!input) {
+    console.error(
+      'Usage: pnpm claude:preflight <plan-id-or-filename>',
+    )
+    process.exit(1)
   }
 
-  for (const token of mentionedTokens) {
-    const locations = symbolNameIndex.get(token)
-    if (!locations) continue
-    for (const location of locations) await addResolved(token, location.file, 'name-match')
+  const plan = findPlan(input)
+  const notes = findImplementationNotes(plan)
+
+  const planText = readFile(plan)
+  const notesText = notes ? readFile(notes) : ''
+
+  const combined = `${planText}\n${notesText}`
+
+  const explicitFiles = collectExplicitFiles(combined)
+  const terms = collectBacktickTerms(combined)
+
+  const index = loadSymbolIndex()
+
+  const relevantSymbols = findRelevantSymbols(
+    index,
+    explicitFiles.map((item) => item.file),
+    terms,
+  )
+
+  const relevantFiles = unique([
+    ...explicitFiles.map((item) => item.file),
+    ...relevantSymbols.map((symbol) => symbol.file),
+  ]).slice(0, LIMITS.maxFiles)
+
+  const snippets = sourceSnippets(relevantSymbols)
+
+  const fallback = fallbackSearch(
+    terms,
+    new Set(relevantFiles),
+  )
+
+  const planSections = planText
+    .match(/^##\s+.+$/gm)
+    ?.map((line) => line.replace(/^##\s+/, '').trim())
+    .slice(0, 20) ?? []
+
+  const intent = section(planText, 'Cel') ||
+    section(planText, 'Goal') ||
+    section(planText, 'Purpose')
+
+  const lines = [
+    '# SEEDVALE — IMPLEMENTATION PREFLIGHT',
+    '',
+    '## Target',
+    `Plan: \`${plan}\``,
+    `Implementation notes: ${
+      notes ? `\`${notes}\`` : 'MISSING'
+    }`,
+    `HEAD: ${git(['rev-parse', '--short', 'HEAD']) || 'unknown'} | branch: ${
+      git(['branch', '--show-current']) || 'unknown'
+    }`,
+    `Working tree: ${
+      git(['status', '--porcelain'])
+        ? 'HAS CHANGES — preserve them'
+        : 'clean'
+    }`,
+    '',
+    `Plan sections: ${planSections.join(' · ') || 'none'}`,
+  ]
+
+  if (intent) {
+    lines.push('', '## Intent', intent)
   }
 
-  // Explicit files: surface their own exports even without a name mention —
-  // the plan/notes named the file itself, capped so one large file can't
-  // flood the symbol list.
-  for (const file of explicitSrcFiles) {
-    const parsed = await parseSrcFile(file)
-    if (!parsed) continue
-    for (const symbol of parsed.symbols.slice(0, 4)) {
-      await addResolved(symbol.name, file, 'explicit-file')
+  const architecture = formatArchitecture(relevantSymbols)
+  if (architecture) lines.push('', architecture)
+
+  if (relevantFiles.length > 0) {
+    lines.push(
+      '',
+      '## Relevant files',
+      ...relevantFiles.map((file) => `- \`${file}\``),
+    )
+  }
+
+  const architecturalRelationships = relevantSymbols
+    .map((symbol) => {
+      const doc = symbolDocumentation(symbol)
+      const parts: string[] = []
+
+      const owns = formatValue(doc.owns)
+      const uses = formatValue(doc.uses)
+      const produces = formatValue(doc.produces)
+
+      if (owns) parts.push(`owns ${owns}`)
+      if (uses) parts.push(`uses ${uses}`)
+      if (produces) parts.push(`produces ${produces}`)
+
+      return parts.length
+        ? `- \`${symbol.name}\` ${parts.join('; ')}`
+        : ''
+    })
+    .filter(Boolean)
+
+  if (architecturalRelationships.length > 0) {
+    lines.push(
+      '',
+      '## Relationships',
+      '### Architectural (JSDoc)',
+      ...architecturalRelationships,
+    )
+  }
+
+  const constraints =
+    section(notesText, 'Final implementation guidance') ||
+    section(notesText, 'Implementation constraints') ||
+    section(notesText, 'Zakres implementacyjny')
+
+  if (constraints) {
+    lines.push(
+      '',
+      '## Important implementation-note constraints',
+      constraints.slice(0, 4_000),
+    )
+  }
+
+  const snippetText = formatSnippets(snippets)
+  if (snippetText) lines.push('', snippetText)
+
+  const fallbackText = formatFallback(fallback)
+  if (fallbackText) lines.push('', fallbackText)
+
+  if (notesText) {
+    const warningText =
+      section(notesText, 'Review verdict') ||
+      section(notesText, 'Warnings')
+
+    if (warningText) {
+      lines.push(
+        '',
+        '## Warnings',
+        warningText.slice(0, 3_000),
+      )
     }
   }
 
-  // --- Priority 3/6: AST-promoted grep hits, then raw text-search fallback --
-
-  const resolvedNames = new Set([...resolvedSymbols.values()].map(symbol => symbol.name))
-  const grepTerms = extractIdentifierLikeTerms(combined)
-    .filter(term => !resolvedNames.has(term))
-    .slice(0, MAX_GREP_TERMS)
-
-  const searchResults = new Map<string, string[]>()
-  const rawSnippetHits: string[] = []
-
-  for (const term of grepTerms) {
-    const matches = searchGit(term)
-    if (!matches.length) continue
-    searchResults.set(term, matches)
-
-    for (const match of matches) {
-      const parsedMatch = match.match(/^(.+?):(\d+):/)
-      if (!parsedMatch) continue
-      const srcRelFile = toSrcRel(parsedMatch[1])
-      const line = Number(parsedMatch[2])
-
-      const parsed = srcRelFile ? await parseSrcFile(srcRelFile) : null
-      const nearby = parsed?.symbols.find(symbol => Math.abs(symbol.line - line) <= 12)
-
-      if (srcRelFile && nearby) {
-        await addResolved(nearby.name, srcRelFile, 'ast-grep')
-      } else {
-        rawSnippetHits.push(match)
-      }
-    }
+  if (relevantFiles.length > 0) {
+    lines.push(
+      '',
+      '## Recommended reads',
+      ...relevantFiles
+        .slice(0, 8)
+        .map((file) => `- \`${file}\``),
+    )
   }
 
-  const originRank: Record<ResolvedSymbol['origin'], number> = { 'name-match': 0, 'explicit-file': 1, 'ast-grep': 2 }
-  const relevantSymbols = [...resolvedSymbols.values()]
-    .toSorted((a, b) => originRank[a.origin] - originRank[b.origin])
-    .slice(0, MAX_RELEVANT_SYMBOLS)
+  lines.push(
+    '',
+    '## Rules',
+    'Current source code is authoritative. Use this briefing to navigate to targeted code rather than reading large repository documents wholesale.',
+  )
 
-  // --- Relevant files (paths ∪ files owning relevant symbols ∪ grep hits) ---
-
-  const relevantFiles: string[] = []
-  const addFile = (file: string): void => { if (!relevantFiles.includes(file)) relevantFiles.push(file) }
-  for (const file of explicitSrcFiles) addFile(file)
-  for (const symbol of relevantSymbols) addFile(symbol.file)
-  for (const hit of rawSnippetHits) {
-    const srcRelFile = toSrcRel(hit.match(/^(.+?):(\d+):/)?.[1] ?? '')
-    if (srcRelFile) addFile(srcRelFile)
-  }
-  const cappedRelevantFiles = relevantFiles.slice(0, MAX_RELEVANT_FILES)
-
-  // --- Relationships: architectural (JSDoc) vs. import dependencies ---------
-
-  const architecturalSymbols = relevantSymbols.filter(symbol => symbol.metadata)
-
-  const domains = [...new Set(cappedRelevantFiles.map(getDomain))].slice(0, MAX_DOMAINS)
-  const dependencyByFile = new Map<string, { imports: string[], importedBy: string[] }>()
-  for (const domain of domains) {
-    const content = await readText(resolve(DEPENDENCIES_DIR, domain + '.md'))
-    if (!content) continue
-    for (const info of parseDependencyMap(content)) {
-      dependencyByFile.set(info.file, { imports: info.imports, importedBy: info.importedBy })
-    }
-  }
-
-  const relevantFileSet = new Set(cappedRelevantFiles)
-  const importRelationships: string[] = []
-  for (const file of cappedRelevantFiles) {
-    const info = dependencyByFile.get(file)
-    if (!info) continue
-    const imports = info.imports.filter(imported => relevantFileSet.has(imported))
-    const importedBy = info.importedBy.filter(importer => relevantFileSet.has(importer))
-    if (imports.length === 0 && importedBy.length === 0) continue
-    const parts: string[] = []
-    if (imports.length) parts.push('imports ' + imports.map(value => '`' + value + '`').join(', '))
-    if (importedBy.length) parts.push('imported by ' + importedBy.map(value => '`' + value + '`').join(', '))
-    importRelationships.push('- `' + file + '` — ' + parts.join('; '))
-  }
-
-  // --- Implementation-note constraints: score sections by relevance, -------
-  // --- don't assume any section name exists. --------------------------------
-
-  const relevanceTerms = [...new Set([
-    ...relevantSymbols.map(symbol => symbol.name),
-    ...cappedRelevantFiles.map(file => file.split('/').pop()?.replace(/\.[^.]+$/, '') ?? ''),
-  ])].filter(Boolean)
-
-  const scoreText = (text: string): number =>
-    relevanceTerms.reduce((score, term) => score + (text.includes(term) ? 1 : 0), 0)
-
-  const noteSections = notes
-    ? splitSections(notes.content)
-      .map(section => ({ section, score: scoreText(section.heading + ' ' + section.bodyLines.join(' ')) }))
-      .filter(entry => entry.score > 0)
-      .toSorted((a, b) => b.score - a.score)
-      .slice(0, MAX_NOTE_SECTIONS)
-    : []
-
-  const warnings = [...new Set([
-    ...extractWarningLines(plan.content),
-    ...(notes ? extractWarningLines(notes.content) : []),
-  ])]
-    .toSorted((a, b) => scoreText(b) - scoreText(a))
-    .slice(0, MAX_WARNINGS)
-
-  // --- Source snippets: relevant symbols first, then raw grep evidence ------
-
-  const snippets: string[] = []
-  for (const symbol of relevantSymbols) {
-    if (snippets.length >= MAX_SOURCE_SNIPPETS) break
-    const parsed = await parseSrcFile(symbol.file)
-    if (!parsed) continue
-    snippets.push('src/' + symbol.file + ':' + symbol.line + '\n' + snippetFor(parsed, symbol.line))
-  }
-  for (const hit of rawSnippetHits) {
-    if (snippets.length >= MAX_SOURCE_SNIPPETS) break
-    const match = hit.match(/^(.+?):(\d+):/)
-    if (!match) continue
-    const srcRelFile = toSrcRel(match[1])
-    const parsed = srcRelFile ? await parseSrcFile(srcRelFile) : null
-    if (!parsed) continue
-    snippets.push(match[1] + ':' + match[2] + '\n' + snippetFor(parsed, Number(match[2])))
-  }
-
-  // --- Assemble ---------------------------------------------------------
-
-  const output: string[] = []
-  output.push('# SEEDVALE — IMPLEMENTATION PREFLIGHT', '')
-
-  output.push('## Target')
-  output.push('Plan: `' + repoRelative(plan.path) + '`')
-  output.push('Implementation notes: ' + (notes ? '`' + repoRelative(notes.path) + '`' : 'MISSING'))
-  output.push('HEAD: ' + (head || 'unknown') + ' | branch: ' + (branch || 'unknown'))
-  output.push('Working tree: ' + (status ? 'HAS CHANGES — preserve them' : 'clean'))
-  output.push(...parseMetadata(plan.content).map(line => line))
-  const planSectionTitles = splitSections(plan.content).map(section => section.heading)
-  if (planSectionTitles.length) output.push('Plan sections: ' + planSectionTitles.slice(0, 14).join(' · '))
-  output.push('')
-
-  const firstSection = splitSections(plan.content)[0]
-  output.push('## Intent')
-  if (firstSection) {
-    output.push('### ' + firstSection.heading)
-    output.push(...firstSection.bodyLines.slice(0, 8).map(line => '- ' + line))
-  } else {
-    output.push('- no plan sections found')
-  }
-  output.push('')
-
-  if (architecturalSymbols.length) {
-    output.push('## Relevant architecture', '')
-    for (const symbol of architecturalSymbols) {
-      output.push('### `' + symbol.name + '` — src/' + symbol.file + ':' + symbol.line)
-      if (symbol.metadata) output.push(...formatArchitecturalMetadata(symbol.metadata, ''))
-      output.push('')
-    }
-  }
-
-  output.push('## Relevant files')
-  output.push(...(cappedRelevantFiles.length
-    ? cappedRelevantFiles.map(file => '- `src/' + file + '`')
-    : ['- none identified']))
-  if (explicitDocPaths.length) output.push(...explicitDocPaths.map(path => '- `' + path + '`'))
-  output.push('')
-
-  if (architecturalSymbols.length || importRelationships.length) {
-    output.push('## Relationships')
-    if (architecturalSymbols.length) {
-      output.push('### Architectural (JSDoc)')
-      for (const symbol of architecturalSymbols) {
-        const meta = symbol.metadata ?? {}
-        const parts: string[] = []
-        if (meta.owns) parts.push('owns ' + meta.owns.join(', '))
-        if (meta.uses) parts.push('uses ' + meta.uses.join(', '))
-        if (meta.produces) parts.push('produces ' + meta.produces.join(', '))
-        if (meta.consumes) parts.push('consumes ' + meta.consumes.join(', '))
-        if (parts.length) output.push('- `' + symbol.name + '` ' + parts.join('; '))
-      }
-      output.push('')
-    }
-    if (importRelationships.length) {
-      output.push('### Import dependencies (within relevant files)')
-      output.push(...importRelationships)
-      output.push('')
-    }
-  }
-
-  if (warnings.length) {
-    output.push('## Warnings')
-    output.push(...warnings.map(line => '- ' + line))
-    output.push('')
-  }
-
-  if (noteSections.length) {
-    output.push('## Implementation-note constraints')
-    for (const { section } of noteSections) {
-      output.push('### ' + section.heading)
-      output.push(...section.bodyLines.slice(0, 8).map(line => '- ' + line))
-    }
-    output.push('')
-  }
-
-  if (state) {
-    output.push('## Current implementation anchors')
-    output.push(...extractHeadings(state).slice(0, 16).map(line => '- ' + line), '')
-  }
-
-  output.push('## Source evidence')
-  output.push(...(snippets.length ? snippets.map(snippet => '```text\n' + snippet + '\n```') : ['- none']), '')
-
-  if (searchResults.size) {
-    output.push('## Text-search fallback (unresolved terms)')
-    for (const [term, matches] of searchResults) {
-      output.push('- `' + term + '`: ' + matches.length + ' match(es), e.g. `' + matches[0] + '`')
-    }
-    output.push('')
-  }
-
-  if (plansReadme) {
-    const needle = plan.path.split('/').pop() ?? ''
-    const lines = plansReadme.split('\n').filter(line => line.includes(needle)).slice(0, 10)
-    if (lines.length) {
-      output.push('## Plan index context')
-      output.push(...lines.map(line => '- ' + line.trim()), '')
-    }
-  }
-
-  output.push('## Recommended next reads')
-  output.push(...(cappedRelevantFiles.length
-    ? cappedRelevantFiles.slice(0, 12).map(file => '- `src/' + file + '`')
-    : ['- Select the smallest relevant files from source evidence above.']))
-
-  console.log(trimOutput(output.join('\n')))
+  process.stdout.write(trimToLimit(lines.join('\n') + '\n'))
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1 })
+main()
