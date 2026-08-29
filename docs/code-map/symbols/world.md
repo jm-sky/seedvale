@@ -179,11 +179,12 @@ Generated from exported TypeScript symbols.
 - `createDayNightState` — function — line 43
 - `DayNightState` — type — line 29
 - `DEFAULT_TIME_OF_DAY` — const — line 27
-- `formatClock` — function — line 194
-- `parseTimeOfDayFromUrl` — function — line 178
-- `phaseName` — function — line 201
-- `skyParamsFromTime` — function — line 66
-- `tickDayNight` — function — line 56
+- `formatClock` — function — line 200
+- `parseTimeOfDayFromUrl` — function — line 184
+- `phaseName` — function — line 207
+- `resetDayNightForNewGame` — function — line 57
+- `skyParamsFromTime` — function — line 72
+- `tickDayNight` — function — line 62
 
 ## `world/dryingRacks.ts`
 

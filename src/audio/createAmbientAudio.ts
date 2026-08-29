@@ -1,16 +1,18 @@
+import { MathUtils } from 'three'
+import type { WeatherState, WeatherType } from '../world/weather'
 import type { AmbientSamplers } from './ambientWeights'
 import type { AudioLoopHandle, WorldAudio } from './createWorldAudio'
 import { ambientWeightsAt } from './ambientWeights'
 
-/** Night ambience (crickets), audible through full night and crossfaded out across
- *  dawn/dusk in step with dayNight's dayFactor (0 = full night, 1 = full day) — no
- *  hard on/off switch at a fixed clock time. Source/license: public/sounds/README.md. */
+/** Night ambience (crickets) — active through the night, crossfaded out over
+ *  a tunable window instead of a hard on/off switch at a fixed clock time.
+ *  Source/license: public/sounds/README.md. */
 const NIGHT_LOOP_URL = '/sounds/ambient-night-crickets-loop-01.ogg'
 const NIGHT_MAX_VOLUME = 0.35
 
 /** Day ambience (birds/wind) + coastal surf — area-dependent layers, crossfaded
- *  by `ambientWeightsAt`'s forest/ocean/mountain weights. Wind/meadow/soft-waves
- *  load lazily the first time their gain is non-zero. */
+ *  by `ambientWeightsAt`'s forest/ocean/mountain weights. Wind/meadow/soft-waves/
+ *  birds load lazily the first time their gain is non-zero. */
 const FOREST_LOOP_URL = '/sounds/ambient-forest-loop-01.ogg'
 const COAST_LOOP_URL = '/sounds/ambient-coast-seagulls-waves-01.ogg'
 const COAST_SOFT_LOOP_URL = '/sounds/ambient-waves-soft-01.ogg'
@@ -21,6 +23,72 @@ const COAST_MAX_VOLUME = 0.4
 const COAST_SOFT_MAX_VOLUME = 0.28
 const WIND_MAX_VOLUME = 0.32
 const MEADOW_MAX_VOLUME = 0.28
+
+/** Bird ambient (plan world-006 §1) — one sample for now (`-2`/`-3` staged
+ *  for future random-variant crossfade, out of scope here per the plan).
+ *  Stronger in forest than in open meadow (plan §4), silent over
+ *  ocean/mountain (both already excluded from `forest`/meadow weights by
+ *  `ambientWeightsAt`). Source/license: public/sounds/README.md. */
+const BIRDS_LOOP_URL = '/sounds/meadowsinging-birds-1.ogg'
+const BIRDS_FOREST_MAX_VOLUME = 0.3
+const BIRDS_MEADOW_MAX_VOLUME = 0.18
+
+/** Clock points (`dayNight.ts`'s `timeOfDay`, plan world-006 §2) bounding the
+ *  night half of the cycle — matches `skyParamsFromTime`'s `elev` zero-
+ *  crossings (`0.25` dawn, `0.75` dusk), so this stays in step with the
+ *  visual day/night without re-deriving it from `dayFactor` (which is flat
+ *  0 for the *entire* night half, too coarse for a late-night taper). */
+const DUSK = 0.75
+const NIGHT_LENGTH = 0.5
+/** Fractions of the night's length (dusk → dawn) bounding the cricket
+ *  profile's rise / sustained peak / taper phases — tunable per plan §2. */
+const CRICKET_RISE_END = 0.15
+const CRICKET_PEAK_END = 0.65
+const CRICKET_TAPER_END = 0.85
+
+/** `timeOfDay` → [0, 1) progress from dusk to the next dawn, or `null`
+ *  during the day half. Pure, unit-testable in isolation from `dayFactor`. */
+function nightPhase(timeOfDay: number): number | null {
+  const sinceDusk = (((timeOfDay - DUSK) % 1) + 1) % 1
+  return sinceDusk < NIGHT_LENGTH ? sinceDusk / NIGHT_LENGTH : null
+}
+
+/** Cricket time-of-day profile (plan world-006 §2): silent by day, rising at
+ *  dusk, active through most of the night, then a smooth taper into a quiet
+ *  stretch before dawn — rather than the flat "full volume for the whole
+ *  night" `1 - dayFactor` gave. */
+export function cricketsTimeFactor(timeOfDay: number): number {
+  const phase = nightPhase(timeOfDay)
+  if (phase === null) return 0
+  if (phase < CRICKET_RISE_END) return MathUtils.smoothstep(phase, 0, CRICKET_RISE_END)
+  if (phase < CRICKET_PEAK_END) return 1
+  if (phase < CRICKET_TAPER_END) return 1 - MathUtils.smoothstep(phase, CRICKET_PEAK_END, CRICKET_TAPER_END)
+  return 0
+}
+
+/** Weather → ambient multiplier for birds/crickets (plan world-006 §3) —
+ *  independent of the time-of-day/biome factors so each stays separately
+ *  tunable (plan §5). Rain scales continuously with `weather.intensity`
+ *  instead of a hard light/heavy split, so a strengthening storm reads as
+ *  one continuous change rather than a step. Not wired to `fog` in the
+ *  plan's table — treated close to `cloudy` (thick fog muffles birds a
+ *  little more than plain cloud cover, crickets barely care). */
+export type WeatherAmbientFactor = { birds: number, crickets: number }
+
+const WEATHER_AMBIENT_FACTOR: Record<Exclude<WeatherType, 'rain'>, WeatherAmbientFactor> = {
+  clear: { birds: 1, crickets: 1 },
+  cloudy: { birds: 0.7, crickets: 0.85 },
+  fog: { birds: 0.5, crickets: 0.8 },
+  snow: { birds: 0, crickets: 0 },
+}
+
+export function weatherAmbientFactor(weather: WeatherState): WeatherAmbientFactor {
+  if (weather.type !== 'rain') return WEATHER_AMBIENT_FACTOR[weather.type]
+  return {
+    birds: 1 - weather.intensity * 1.8,
+    crickets: 1 - weather.intensity,
+  }
+}
 
 /** Terrain samplers are cheap but not free (a few `smoothstep`s) — resample
  *  the player's area weights on a throttle instead of every frame; gain
@@ -34,9 +102,20 @@ const NIGHT_LOOP_TRIGGER_DAY_FACTOR = 0.95
 
 export type AmbientAudio = {
   /** Call once per frame. `dt` throttles the area-weight resample;
-   *  `dayFactor` (0 full night .. 1 full day) drives the night/day crossfade;
-   *  `playerX`/`playerZ` drive the area (forest/coast) crossfade. */
-  update: (dt: number, dayFactor: number, playerX: number, playerZ: number) => void
+   *  `dayFactor` (0 full night .. 1 full day) drives the day layers'
+   *  (forest/meadow/birds) day/night crossfade; `timeOfDay` (`dayNight.ts`,
+   *  0-1) drives the crickets' dusk/night/pre-dawn profile, which needs
+   *  finer resolution than `dayFactor` gives across the night half;
+   *  `weather` scales birds/crickets (plan world-006 §3); `playerX`/`playerZ`
+   *  drive the area (forest/coast) crossfade. */
+  update: (
+    dt: number,
+    dayFactor: number,
+    timeOfDay: number,
+    weather: WeatherState,
+    playerX: number,
+    playerZ: number,
+  ) => void
   dispose: () => void
 }
 
@@ -51,13 +130,22 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
   let coastSoftLoop: AudioLoopHandle | null = null
   let windLoop: AudioLoopHandle | null = null
   let meadowLoop: AudioLoopHandle | null = null
+  let birdsLoop: AudioLoopHandle | null = null
   let sampleAccum = 0
 
-  function update(dt: number, dayFactor: number, playerX: number, playerZ: number): void {
+  function update(
+    dt: number,
+    dayFactor: number,
+    timeOfDay: number,
+    weather: WeatherState,
+    playerX: number,
+    playerZ: number,
+  ): void {
+    const weatherFactor = weatherAmbientFactor(weather)
     if (!nightLoop && dayFactor < NIGHT_LOOP_TRIGGER_DAY_FACTOR) {
       nightLoop = worldAudio.createLoop(NIGHT_LOOP_URL)
     }
-    nightLoop?.setTargetGain((1 - dayFactor) * NIGHT_MAX_VOLUME)
+    nightLoop?.setTargetGain(cricketsTimeFactor(timeOfDay) * weatherFactor.crickets * NIGHT_MAX_VOLUME)
 
     sampleAccum += dt
     if (sampleAccum < SAMPLE_INTERVAL) return
@@ -82,6 +170,12 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
       meadowLoop = worldAudio.createLoop(MEADOW_LOOP_URL)
     }
     meadowLoop?.setTargetGain(meadow * dayFactor * MEADOW_MAX_VOLUME)
+    if (!birdsLoop && (w.forest > 0 || meadow > 0)) {
+      birdsLoop = worldAudio.createLoop(BIRDS_LOOP_URL)
+    }
+    birdsLoop?.setTargetGain(
+      (w.forest * BIRDS_FOREST_MAX_VOLUME + meadow * BIRDS_MEADOW_MAX_VOLUME) * dayFactor * weatherFactor.birds,
+    )
   }
 
   function dispose(): void {
@@ -91,6 +185,7 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     coastSoftLoop?.dispose()
     windLoop?.dispose()
     meadowLoop?.dispose()
+    birdsLoop?.dispose()
   }
 
   return { update, dispose }

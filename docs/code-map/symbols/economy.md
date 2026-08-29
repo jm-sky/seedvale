@@ -20,6 +20,11 @@ Generated from exported TypeScript symbols.
 - `EconomicKind` — type — line 13
 - `isEconomicKind` — function — line 17
 
+## `economy/localExchange.ts`
+
+- `claimEconomySurplus` — function — line 33
+- `claimHouseholdSurplus` — function — line 24
+
 ## `economy/npcWork.ts`
 
 - `commitHunterArrowProduction` — function — line 41

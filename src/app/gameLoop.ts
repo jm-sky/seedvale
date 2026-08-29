@@ -46,7 +46,7 @@ import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
 import { NPC_SHADOW_DISTANCE } from '../ai/NpcAgent'
 import { playActionBowDraw, playActionBowRelease, playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
-import { playAnimalAggroSound, playAnimalSound } from '../audio/animalSounds'
+import { playAnimalAggroSound, playAnimalSound, playSpontaneousAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
 import { advanceProjectile, type Projectile, sweptProjectileHit } from '../combat/projectile'
@@ -1621,6 +1621,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       ambientAudio.update(
         dt,
         cachedSky.dayFactor,
+        dayNight.timeOfDay,
+        climate.weather,
         player.mesh.position.x,
         player.mesh.position.z,
       )
@@ -1764,6 +1766,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             threateningAnimals,
             (kind, x, z, onCollected) => bundle.droppedItems.drop(kind, x, z, undefined, onCollected),
             dayNight.elapsedDays,
+            (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
           )
         })
         withCategory(monitor, 'FAUNA', () => {

@@ -129,6 +129,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/household.ts`
+- `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
 - `settlement/minorLocations.ts`
 - `settlement/npcPhysicalProfile.ts`
@@ -373,6 +374,8 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
+- `economy/localExchange.test.ts`
+- `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
 - `fauna/AnimalAgent.ts`
@@ -381,7 +384,28 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/household.test.ts`
+- `settlement/householdExchange.test.ts`
+- `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
+
+## `settlement/householdExchange.test.ts`
+
+**Imports**
+
+- `settlement/household.ts`
+- `settlement/householdExchange.ts`
+
+## `settlement/householdExchange.ts`
+
+**Imports**
+
+- `settlement/household.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `settlement/createSettlement.ts`
+- `settlement/householdExchange.test.ts`
 
 ## `settlement/landOwnership.ts`
 

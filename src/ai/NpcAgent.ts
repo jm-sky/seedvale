@@ -176,11 +176,13 @@ import {
   tickVigorForSimulatedStep,
 } from './npcVigor'
 import {
+  FRIENDLY_TALK_SOUND_VOLUME,
   NPC_GREETING_SOUND_URLS,
   NPC_HMM_VOICE_URLS,
   NPC_QUEST_COMPLETE_SOUND_URLS,
   NPC_REACTION_SOUND_URLS,
   type NpcVoiceActor,
+  pickNpcFriendlyTalkSound,
   REACTION_SOUND_VOLUME,
   voiceActorForIndex,
 } from './npcVoiceLines'
@@ -3616,6 +3618,11 @@ export class NpcAgent {
     if (!this.socialPlace) return
     this.conversationPartnerId = partnerId
     this.onConversationEarlyExit = onEarlyExit
+    // Friendly-talk SFX (plan settlements-npcs-004 §3) — a consequence of
+    // this actually-starting conversation, never a random NPC-proximity
+    // sound. Silent no-op until the clips are added (see `npcVoiceLines.ts`).
+    const talkUrl = pickNpcFriendlyTalkSound(this.gender)
+    if (talkUrl) this.playAt(talkUrl, this.mesh.position, FRIENDLY_TALK_SOUND_VOLUME)
     this.startAction({
       kind: 'conversation',
       destination: copyVec3(this.socialPlace.position),

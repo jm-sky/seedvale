@@ -72,6 +72,9 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | ambient-meadow-loop-01.ogg | AMBSwmp_Meadow Pipits…Wind blowing through Grass_JSE_HoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Highlands of Norway | Open / meadow bed (trimmed ~25 s) |
 | ambient-waves-soft-01.ogg | WATRWave_Soft Waves Cliffs_JSE_RCoN_Stereo.wav | Sonniss GDC 2026 — Just Sound Effects Rocky Coast of Norway | Soft coast waves (trimmed ~20 s); supplement to seagulls coast |
 | ambient-crowd-kids-01.ogg | CRWDChld_Walla Children Kids…Playground 01_ESM_CPS.wav | Sonniss GDC 2026 — Epic Stock Media Crowds Walla | **not wired**; weak S12 stand-in (kids playground walla, trimmed ~25 s) |
+| meadowsinging-birds-1.ogg | — | **TODO: source/license not recorded** | wired (plan world-006, `audio/createAmbientAudio.ts`); day/forest+meadow bird bed |
+| meadowsinging-birds-2.ogg | — | **TODO: source/license not recorded** | **not wired**; staged for a future random-variant crossfade (plan world-006 "poza zakresem") |
+| meadowsinging-birds-3.ogg | — | **TODO: source/license not recorded** | **not wired**; staged for a future random-variant crossfade (plan world-006 "poza zakresem") |
 
 ## Items / Inventory
 

@@ -49,9 +49,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 82
-- `hasCarriedMilkContainer` — function — line 76
-- `SurvivalActions` — type — line 50
+- `createSurvivalActions` — function — line 83
+- `hasCarriedMilkContainer` — function — line 77
+- `SurvivalActions` — type — line 51
 
 ## `app/actions/terrainPreparationActions.ts`
 

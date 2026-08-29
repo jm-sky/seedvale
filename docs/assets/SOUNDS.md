@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-08-18
+**Last updated:** 2026-08-29
 
 ## How to use
 
@@ -29,8 +29,8 @@ If the feature needs no new sound, do nothing to this file.
 | Category | Files | Notes |
 |----------|-------|-------|
 | NPC | hmm / thank-you / greeting / farewell / confirmation (M/F, per-actor voice) | Dialogue reactions + Super Dialogue Audio Pack v1 (plan 116) — greeting on dialogue open, farewell on close, confirmation on offer accept, extra hmm/thank-you variety |
-| Animals | chicken, cow, wolf | `[E]` on animal (donkey/horse/sheep reuse silence until clips exist) |
-| Ambient | forest, night crickets, coast, wind, meadow, soft waves, fire loop, rain loop | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1) |
+| Animals | chicken, cow, wolf, horse, sheep | `[E]` on animal (donkey still silent, no clip). Cow/sheep/chicken also: spontaneous per-animal ambient vocalization with cooldown + concurrent-play cap (plan settlements-npcs-004 §1), milking completion (§2), chicken egg-laid (§2) — all reuse this same `[E]` clip/volume via `animalSounds.ts`'s `playSpontaneousAnimalSound`/`playAnimalSound` |
+| Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006) |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
@@ -76,6 +76,7 @@ If the feature needs no new sound, do nothing to this file.
 | S22 | Bow draw / release (twang) | Ranged attack draw start / arrow release (plan 162) | `wired` | `public/sounds/bow-draw.ogg`/`bow-release.ogg` via `playActionBowDraw`/`playActionBowRelease` (`src/audio/actionSounds.ts`) — draw plays on a successful `requestDraw()`, release plays on the frame the shot actually fires (not on an early-release cancel). Arrow hit/kill still reuses `playActionMeleeHit`/`playActionMeleeKill` (S-none — no dedicated arrow-impact clip) |
 | S23 | Whetstone sharpening (scrape) | Inventory "Naostrz" action (plan 161) | `needed` | Currently silent |
 | S24 | Bear growl (aggro) | Plays once a bear commits to chasing a human (`animalSounds.ts`'s `playAnimalAggroSound`, wired through `Fauna`'s `onAnimalAggro`) | `needed` | plan 188 (`sounds/bear-growl.ogg`), silent until the clip is wired in |
+| S25 | NPC friendly-talk murmur | Short, non-verbal chatter when a Social Place `conversation` actually begins (plan settlements-npcs-004 §3) | `needed` | Plumbing wired (`ai/npcVoiceLines.ts`'s `NPC_FRIENDLY_TALK_SOUND_URLS`/`pickNpcFriendlyTalkSound`, called from `NpcAgent.beginConversation()`), pools left empty — silent no-op until clips are added. Suggested naming once acquired: `/sounds/npc-talk-{gender}-{NN}.ogg` (male/female pools, no per-actor split) |
 
 ## Acquisition rules
 

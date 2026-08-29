@@ -6,6 +6,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `audio/animalSounds.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/bloodSplat.ts`
 - `fauna/corpseDecayFx.ts`

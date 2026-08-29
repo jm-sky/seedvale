@@ -1,7 +1,7 @@
 # Plan: Animal and NPC Social Audio
 
 **Created:** 2026-08-26  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~151~~  
 **Domain:** `settlements-npcs`

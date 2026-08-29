@@ -7,7 +7,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
-import type { AnimalAgent, VillageInfo } from '../fauna/AnimalAgent'
+import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
@@ -197,6 +197,12 @@ export type Settlement = {
      *  Defaults to 0 so existing callers/tests that never touch livestock
      *  production are unaffected. */
     nowDays?: number,
+    /** Animal-vocalization audio hook (plan settlements-npcs-004 §1) —
+     *  forwarded to each livestock `AnimalAgent.update()`'s spontaneous
+     *  cooldown roll, and also fired directly on an egg-laid event, so both
+     *  world-triggered vocalizations share one throttled call site instead
+     *  of duplicating triggers between simulation events and audio. */
+    onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -719,7 +725,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize) {
       currentNowDays = nowDays
       const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
       const pushX = new Array<number>(agents.length).fill(0)
@@ -768,7 +774,7 @@ export async function createSettlement(
       for (const animal of livestock) {
         animal.update(
           dt, livestock, observerPos, dayFactor, 0, litFires, villages,
-          undefined, undefined, undefined, undefined, undefined, undefined, nowDays,
+          undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
         )
         // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item
         // the instant its cycle completes, at wherever it's currently
@@ -777,6 +783,10 @@ export async function createSettlement(
         if (animal.readyToLayEgg(nowDays) && dropLivestockProduct) {
           dropLivestockProduct('egg', animal.mesh.position.x, animal.mesh.position.z, () => animal.notifyEggCollected(currentNowDays))
           animal.markEggLaid()
+          // Contextual vocalization (plan settlements-npcs-004 §2) — reuses
+          // the same throttled hook as the spontaneous roll above rather
+          // than a second UI/simulation trigger for the same clip.
+          onAnimalVocalize?.(animal.def.kind, animal.mesh.position.x, animal.mesh.position.z)
         }
       }
       if (livestock.some((a) => a.readyToRemove())) {

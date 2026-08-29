@@ -4,6 +4,7 @@ import type { ItemKind } from '../../items/items'
 import type { VillageFire } from '../../settlement/VillageFire'
 import type { WaterSource } from '../../world/WaterSource'
 import { playActionDig, playActionWell } from '../../audio/actionSounds'
+import { playAnimalSound } from '../../audio/animalSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { ANIMAL_LABELS, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../../fauna/AnimalAgent'
 import { harvestAnimalIntoInventory } from '../../fauna/animalHarvest'
@@ -333,6 +334,11 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       })
       if (!applied || poured <= 0) return
       animal.startMilkCooldown(dayNight.elapsedDays)
+      // Contextual vocalization (plan settlements-npcs-004 §2) — the animal
+      // reacts to the direct interaction, same clip/volume as the `[E]`
+      // interact sound, always plays (a completed player action, not a
+      // throttled ambient roll).
+      playAnimalSound(animal.def.kind, worldAudio.playAt, animal.mesh.position)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show(`+${poured} l mleka`, 'pickup')

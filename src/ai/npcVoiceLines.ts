@@ -119,3 +119,32 @@ export const NPC_QUEST_COMPLETE_SOUND_URLS: Record<NpcGender, readonly string[]>
 /** Quiet enough to stay under dialogue/ambient, audible enough to register —
  *  `NpcAgent.playReactionSound()`'s playback volume. */
 export const REACTION_SOUND_VOLUME = 0.35
+
+/**
+ * Short, non-verbal "friendly talk" murmur played when a Social Place
+ * `conversation` actually begins (plan settlements-npcs-004 §3) — a
+ * consequence of the existing `conversation` action, not a random ambient
+ * NPC-proximity sound. Deliberately **not** the Super Dialogue Audio Pack's
+ * spoken lines above: distinct short, wordless chatter clips.
+ *
+ * These clips don't exist in `public/sounds/` yet (manual asset addition —
+ * see `docs/assets/SOUNDS.md`); the pools stay empty until then, so
+ * `pickNpcFriendlyTalkSound` returns `undefined` and playback is a silent
+ * no-op — same "gap in the lookup, no fetch attempted" shape as
+ * `audio/animalSounds.ts`'s `ANIMAL_SOUND_URLS`. Once added, fill the arrays
+ * below with the real filenames (suggested convention:
+ * `/sounds/npc-talk-{gender}-{NN}.ogg`, split by gender only — no per-actor
+ * pool, per the plan's "opcjonalnie rozdzielony na pule męskie/żeńskie").
+ */
+export const NPC_FRIENDLY_TALK_SOUND_URLS: Record<NpcGender, readonly string[]> = {
+  male: [],
+  female: [],
+}
+
+/** Quieter than a reaction sound — background chatter, not a foregrounded cue. */
+export const FRIENDLY_TALK_SOUND_VOLUME = 0.25
+
+export function pickNpcFriendlyTalkSound(gender: NpcGender): string | undefined {
+  const pool = NPC_FRIENDLY_TALK_SOUND_URLS[gender]
+  return pool[Math.floor(Math.random() * pool.length)]
+}

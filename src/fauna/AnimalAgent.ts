@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
+import {
+  initialSpontaneousVocalizeCooldownSec,
+  tickSpontaneousVocalizeCooldown,
+} from '../audio/animalSounds'
 import { tintPropMaterials } from '../settlement/props'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
@@ -1004,6 +1008,11 @@ export class AnimalAgent {
    *  threading it through `wander()`'s call sites (same technique as
    *  `currentVillages` above, plan 118). */
   private currentOthers: AnimalAgent[] = []
+  /** Spontaneous ambient vocalization timer (plan settlements-npcs-004 §1) —
+   *  seeded per-instance in the constructor, ticked in `update()` via
+   *  `tickSpontaneousVocalizeCooldown`. `Infinity` (and never fires) for any
+   *  kind without a configured vocalization. */
+  private spontaneousVocalizeCooldownSec: number
 
   constructor(
     def: AnimalDef,
@@ -1042,6 +1051,7 @@ export class AnimalAgent {
     this.wanderRadius = wanderRadius
     this.health = createHealthState(MAX_HP[def.kind])
     this.life = createAnimalLifeState(Math.random())
+    this.spontaneousVocalizeCooldownSec = initialSpontaneousVocalizeCooldownSec(def.kind)
 
     if (visual) {
       this.mesh = visual
@@ -1674,6 +1684,11 @@ export class AnimalAgent {
     /** Aggression/alert audio hook (plan 188 §11) — fired once on the rising
      *  edge of this predator committing to a human chase, not every frame. */
     onAggro?: (kind: AnimalKind, x: number, z: number) => void,
+    /** Spontaneous ambient vocalization hook (plan settlements-npcs-004 §1) —
+     *  fired at most once per tick, on the frame `tickSpontaneousVocalizeCooldown`
+     *  rolls a success. No-op for any kind without a configured vocalization
+     *  (currently cow/sheep/chicken only). */
+    onVocalize?: (kind: AnimalKind, x: number, z: number) => void,
     /** `dayNight.elapsedDays` (plan fauna-002) — only meaningful for a
      *  livestock kind with `def.production`; drives the day-anchor
      *  production readiness check (`tickProduction`/`livestockProduction.ts`).
@@ -1698,6 +1713,9 @@ export class AnimalAgent {
     if (this.alertTimer > 0) this.alertTimer -= dt
     if (this.provokedTimer > 0) this.provokedTimer -= dt
     if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
+    const vocalizeTick = tickSpontaneousVocalizeCooldown(this.def.kind, dt, this.spontaneousVocalizeCooldownSec)
+    this.spontaneousVocalizeCooldownSec = vocalizeTick.cooldownSec
+    if (vocalizeTick.fire) onVocalize?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
     this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false

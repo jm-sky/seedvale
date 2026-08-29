@@ -26,6 +26,12 @@ Generated from TypeScript imports.
 
 - `audio/createAmbientAudio.ts`
 
+## `audio/animalSounds.test.ts`
+
+**Imports**
+
+- `audio/animalSounds.ts`
+
 ## `audio/animalSounds.ts`
 
 **Imports**
@@ -35,7 +41,10 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
+- `audio/animalSounds.test.ts`
+- `fauna/AnimalAgent.ts`
 
 ## `audio/audioSettings.test.ts`
 
@@ -51,17 +60,25 @@ Generated from TypeScript imports.
 - `audio/createWorldAudio.ts`
 - `ui-vue/store.ts`
 
+## `audio/createAmbientAudio.test.ts`
+
+**Imports**
+
+- `audio/createAmbientAudio.ts`
+
 ## `audio/createAmbientAudio.ts`
 
 **Imports**
 
 - `audio/ambientWeights.ts`
 - `audio/createWorldAudio.ts`
+- `world/weather.ts`
 
 **Imported by**
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `audio/createAmbientAudio.test.ts`
 
 ## `audio/createWorldAudio.ts`
 

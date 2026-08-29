@@ -178,6 +178,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `audio/actionSounds.ts`
+- `audio/animalSounds.ts`
 - `audio/inventorySounds.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`

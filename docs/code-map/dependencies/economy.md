@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `economy/development.ts`
 - `economy/initial.ts`
 - `economy/kinds.ts`
+- `economy/localExchange.ts`
 - `economy/npcWork.ts`
 - `economy/production.ts`
 - `economy/registry.ts`
@@ -65,6 +66,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
+- `economy/localExchange.ts`
 - `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
@@ -73,6 +75,27 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `terrain/depositMining.test.ts`
 - `terrain/depositMining.ts`
+
+## `economy/localExchange.test.ts`
+
+**Imports**
+
+- `economy/localExchange.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/household.ts`
+
+## `economy/localExchange.ts`
+
+**Imports**
+
+- `economy/kinds.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/household.ts`
+
+**Imported by**
+
+- `economy/index.ts`
+- `economy/localExchange.test.ts`
 
 ## `economy/npcWork.test.ts`
 
@@ -165,6 +188,8 @@ Generated from TypeScript imports.
 
 - `economy/index.ts`
 - `economy/initial.ts`
+- `economy/localExchange.test.ts`
+- `economy/localExchange.ts`
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
 - `economy/registry.ts`

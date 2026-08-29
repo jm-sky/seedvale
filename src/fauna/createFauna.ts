@@ -860,6 +860,10 @@ export async function createFauna(
           nearbyNpcs,
           onNpcHit,
           onAnimalAggro,
+          // Wild-only spawner: cow/sheep/chicken (the only configured
+          // spontaneous-vocalization kinds) never spawn here, only via
+          // `settlement/livestock.ts` — see `createSettlement.ts`.
+          undefined,
           worldDays,
         )
       }

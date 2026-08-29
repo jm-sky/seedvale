@@ -30,8 +30,11 @@ Generated from exported TypeScript symbols.
 
 - `ANIMAL_AGGRO_SOUND_URLS` — const — line 40
 - `ANIMAL_SOUND_URLS` — const — line 6
+- `initialSpontaneousVocalizeCooldownSec` — function — line 92
 - `playAnimalAggroSound` — function — line 50
 - `playAnimalSound` — function — line 24
+- `playSpontaneousAnimalSound` — function — line 140
+- `tickSpontaneousVocalizeCooldown` — function — line 106
 
 ## `audio/audioSettings.ts`
 
@@ -46,8 +49,11 @@ Generated from exported TypeScript symbols.
 
 ## `audio/createAmbientAudio.ts`
 
-- `AmbientAudio` — type — line 35
-- `createAmbientAudio` — function — line 43
+- `AmbientAudio` — type — line 103
+- `createAmbientAudio` — function — line 122
+- `cricketsTimeFactor` — function — line 60
+- `weatherAmbientFactor` — function — line 85
+- `WeatherAmbientFactor` — type — line 76
 
 ## `audio/createWorldAudio.ts`
 

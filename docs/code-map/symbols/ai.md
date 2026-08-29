@@ -73,27 +73,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 300
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 558
-- `classifyPendingActivity` — function — line 433
-- `CurrentActivity` — type — line 343
-- `CurrentActivityKind` — type — line 341
-- `findWeaponNeedingMaintenance` — function — line 661
-- `NPC_HEIGHT` — const — line 208
-- `NPC_MODEL_URLS` — const — line 253
-- `NPC_SHADOW_DISTANCE` — const — line 213
-- `NpcAgent` — class — line 760
+- `ActionId` — type — line 305
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 578
+- `classifyPendingActivity` — function — line 444
+- `CurrentActivity` — type — line 354
+- `CurrentActivityKind` — type — line 352
+- `findWeaponNeedingMaintenance` — function — line 681
+- `NPC_HEIGHT` — const — line 213
+- `NPC_MODEL_URLS` — const — line 258
+- `NPC_SHADOW_DISTANCE` — const — line 218
+- `NpcAgent` — class — line 780
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 358
-- `NpcWhy` — type — line 408
-- `Phase` — type — line 280
-- `projectNpcWhy` — function — line 460
-- `promoteChainKind` — function — line 425
+- `NpcInspectionSnapshot` — type — line 369
+- `NpcWhy` — type — line 419
+- `Phase` — type — line 285
+- `projectNpcWhy` — function — line 471
+- `promoteChainKind` — function — line 436
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -164,16 +164,16 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcStrategies.ts`
 
-- `FoodStrategyContext` — type — line 31
-- `getFoodStrategyCandidates` — function — line 64
-- `getWaterDutyStrategyCandidates` — function — line 90
-- `getWaterStrategyCandidates` — function — line 80
-- `getWoodStrategyCandidates` — function — line 103
-- `NpcStrategyCandidate` — type — line 26
+- `FoodStrategyContext` — type — line 33
+- `getFoodStrategyCandidates` — function — line 79
+- `getWaterDutyStrategyCandidates` — function — line 107
+- `getWaterStrategyCandidates` — function — line 97
+- `getWoodStrategyCandidates` — function — line 128
+- `NpcStrategyCandidate` — type — line 28
 - `NpcStrategyId` — type — line 15
-- `selectStrategy` — function — line 112
-- `WaterStrategyContext` — type — line 74
-- `WoodStrategyContext` — type — line 94
+- `selectStrategy` — function — line 141
+- `WaterStrategyContext` — type — line 91
+- `WoodStrategyContext` — type — line 111
 
 ## `ai/npcVigor.ts`
 
@@ -196,8 +196,10 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcVoiceLines.ts`
 
+- `FRIENDLY_TALK_SOUND_VOLUME` — const — line 145
 - `NPC_CONFIRMATION_SOUND_URLS` — const — line 76
 - `NPC_FAREWELL_SOUND_URLS` — const — line 72
+- `NPC_FRIENDLY_TALK_SOUND_URLS` — const — line 139
 - `NPC_GREETING_SOUND_URLS` — const — line 68
 - `NPC_HMM_VOICE_URLS` — const — line 64
 - `NPC_QUEST_COMPLETE_SOUND_URLS` — const — line 114
@@ -205,6 +207,7 @@ Generated from exported TypeScript symbols.
 - `NpcVoiceActor` — type — line 18
 - `pickNpcConfirmationSound` — function — line 97
 - `pickNpcFarewellSound` — function — line 91
+- `pickNpcFriendlyTalkSound` — function — line 147
 - `pickNpcGreetingSound` — function — line 85
 - `REACTION_SOUND_VOLUME` — const — line 121
 - `voiceActorForIndex` — function — line 25

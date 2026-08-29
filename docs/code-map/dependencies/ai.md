@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `settlement/householdExchange.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcState.ts`
 - `settlement/places.ts`

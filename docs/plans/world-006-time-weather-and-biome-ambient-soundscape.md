@@ -1,7 +1,7 @@
 # Plan: Time, Weather and Biome Ambient Soundscape
 
 **Created:** 2026-08-29  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** S  
 **Depends on:** none  
 **Domain:** `world`

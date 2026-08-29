@@ -5,7 +5,7 @@ import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { EconomicKind } from '../economy/kinds'
-import type { VillageInfo } from '../fauna/AnimalAgent'
+import type { AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
@@ -97,6 +97,9 @@ export type SettlementsManager = {
     /** `dayNight.elapsedDays`, forwarded straight to each loaded
      *  `Settlement.update` (plan fauna-002). */
     nowDays?: number,
+    /** Forwarded straight to each loaded `Settlement.update` (plan
+     *  settlements-npcs-004 §1/§2). */
+    onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -510,7 +513,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
@@ -527,6 +530,7 @@ export async function createSettlementsManager(
           nearbyAnimalThreats,
           dropLivestockProduct,
           nowDays,
+          onAnimalVocalize,
         )
       }
       for (const instances of midpoints.values()) {

@@ -1009,6 +1009,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `audio/createAmbientAudio.ts`
 - `audio/weatherSounds.ts`
 - `ui/createDebugGui.ts`
 - `world/animalTraps.test.ts`

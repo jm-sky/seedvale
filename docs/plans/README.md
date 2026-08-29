@@ -116,13 +116,11 @@ Natural vegetation
 | 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
-| ◼️ `settlements-npcs-004-animal-and-npc-social-audio.md`               | - | 🟡 | S | ~~151~~ |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
-| ◼️ `world-006-time-weather-and-biome-ambient-soundscape.md`  | - | 🟡 | S | - |
 
 ### Fresh new
 
@@ -208,6 +206,8 @@ Implementation is complete; only browser/manual verification remains unless note
 | `tools-001-performance-benchmark-determinism-and-reliability.md` | [notes](./implementation-notes/tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md); repeated-run stability (§8) needs manual `?benchmark=` browser verification |
 | `fauna-001-rabies-and-animal-infection.md` | [notes](./implementation-notes/fauna-001-rabies-and-animal-infection-implementation-notes.md); browser verification per plan's §Weryfikacja/Browser-manual list |
 | `settlements-npcs-005-local-resource-exchange.md` | [notes](./implementation-notes/settlements-npcs-005-local-resource-exchange-implementation-notes.md); household ↔ household and village storage ↔ household exchange need browser verification (real surplus/shortage, physical NPC movement) |
+| `settlements-npcs-004-animal-and-npc-social-audio.md` | Spontaneous cow/sheep/chicken vocalization (cooldown + concurrent-play cap), milking + egg-laid contextual sounds, and a friendly-talk SFX hook on Social Place `conversation` start (pools empty — no clips in repo yet, per plan) all implemented; needs browser verification of cooldown feel/no audio-spam with real herds |
+| `world-006-time-weather-and-biome-ambient-soundscape.md` | Bird ambient (1 sample) + reworked cricket day/dusk/night/pre-dawn profile + weather (clear/cloudy/fog/rain/snow) and biome (forest/meadow) factors implemented in `createAmbientAudio.ts`; needs browser verification of the full day-cycle/weather/biome combination for audible clicks or overly abrupt transitions |
 
 ---
 
