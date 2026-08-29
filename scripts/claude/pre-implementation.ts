@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 /**
- * Seedvale implementation preflight v6.
+ * Seedvale implementation preflight v7.
  *
  * Purpose:
  *   Compile a small, targeted briefing for Claude Code before implementation.
@@ -22,6 +22,13 @@
  *   AST helpers `docs-symbol-index.ts` uses (`scripts/docs/utils.ts`), not
  *   from a separately generated index — those helpers are cheap enough to
  *   call per-file for the small set of files a plan actually names.
+ *
+ *   v7 extends symbol discovery beyond exported top-level declarations:
+ *   `getInternalSymbols` (reusing the same `getArchitecturalMetadata` tag
+ *   parsing) surfaces documented internal methods of an already-relevant
+ *   exported class/function — e.g. `NpcAgent.takeDamage()` — so a plan's
+ *   real implementation seam isn't hidden behind one large exported class.
+ *   See `findRelevantSymbols` for the four-tier selection this enables.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -34,6 +41,8 @@ import {
   type DependencyInfo,
   formatArchitecturalMetadata,
   getExportedSymbols,
+  getInternalSymbols,
+  type InternalSymbolInfo,
   parseDependencyMap,
   parseStandaloneSourceFile,
   type SymbolInfo,
@@ -42,7 +51,7 @@ import {
 const ROOT = process.cwd()
 
 const LIMITS = {
-  maxSymbols: 10,
+  maxSymbols: 12,
   maxFiles: 12,
   maxSnippets: 8,
   snippetLines: 8,
@@ -195,6 +204,21 @@ function collectExplicitFiles(
   ).map((file) => ({ file }))
 }
 
+/**
+ * A qualified call reference, e.g. `` `NpcAgent.takeDamage()` `` — the
+ * plan/notes prose form for naming a specific internal method, as opposed
+ * to a bare exported identifier. Extracted separately from the identifier
+ * check below since the trailing `()` (and leading `Owner.`) fails that
+ * regex outright.
+ *
+ * Requires the dotted owner qualifier on purpose: an unqualified call like
+ * `` `healHealth()` `` is far more common in this repo's prose as an
+ * incidental mention of an already-exported function, and would otherwise
+ * compete with genuinely internal-method references for the small key-symbol
+ * budget (`LIMITS.maxSymbols`).
+ */
+const METHOD_REFERENCE = /^(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*)\(\)$/
+
 function collectBacktickTerms(
   text: string,
 ): string[] {
@@ -204,6 +228,13 @@ function collectBacktickTerms(
     /`([^`\n]+)`/g,
   )) {
     const value = match[1].trim()
+
+    const methodReference = value.match(METHOD_REFERENCE)
+
+    if (methodReference) {
+      terms.push(methodReference[1])
+      continue
+    }
 
     if (
       value.length < 3 ||
@@ -241,18 +272,21 @@ function collectBacktickTerms(
 }
 
 /**
- * Build a symbol index directly from source, for a small, bounded set of
- * files — reusing the exact AST helpers `docs-symbol-index.ts` uses
- * (`parseStandaloneSourceFile` + `getExportedSymbols`, which already reads
- * `@domain`/`@owns`/etc. JSDoc via `getArchitecturalMetadata`).
+ * Build both symbol indexes directly from source, for a small, bounded set
+ * of files — reusing the exact AST helpers `docs-symbol-index.ts` uses
+ * (`parseStandaloneSourceFile` + `getExportedSymbols` + `getInternalSymbols`,
+ * which already read `@domain`/`@owns`/etc. JSDoc via
+ * `getArchitecturalMetadata`). Each file is parsed once and both indexes are
+ * derived from that single AST.
  *
  * Intentionally does not scan `src/` — only the files the plan/notes
  * actually named. Cheap enough to parse per-file for a handful of files.
  */
-function buildSymbolIndex(
+function buildSymbolIndexes(
   files: string[],
-): SymbolInfo[] {
-  const symbols: SymbolInfo[] = []
+): { exported: SymbolInfo[], internal: InternalSymbolInfo[] } {
+  const exported: SymbolInfo[] = []
+  const internal: InternalSymbolInfo[] = []
 
   for (const file of files) {
     if (!file.startsWith('src/')) {
@@ -274,17 +308,18 @@ function buildSymbolIndex(
       continue
     }
 
+    // `getExportedSymbols`/`getInternalSymbols` report paths relative to
+    // `src/`; the rest of this script works with repo-root-relative paths.
     for (const symbol of getExportedSymbols(sourceFile)) {
-      symbols.push({
-        ...symbol,
-        // `getExportedSymbols` reports paths relative to `src/`; the rest
-        // of this script works with repo-root-relative paths.
-        file: `src/${symbol.file}`,
-      })
+      exported.push({ ...symbol, file: `src/${symbol.file}` })
+    }
+
+    for (const symbol of getInternalSymbols(sourceFile)) {
+      internal.push({ ...symbol, file: `src/${symbol.file}` })
     }
   }
 
-  return symbols
+  return { exported, internal }
 }
 
 function symbolMetadata(
@@ -303,10 +338,17 @@ function formatValue(
     : value
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 /**
  * Symbols explicitly named in the plan/notes.
  *
- * Exact identifier matches have the strongest signal.
+ * Exact identifier matches have the strongest signal. Runs over the
+ * combined exported+internal pool, so a method named directly (e.g.
+ * `` `NpcAgent.applyIncomingCombatDamage()` `` in prose — see
+ * `METHOD_REFERENCE`) is found the same way an exported type is.
  */
 function findExactSymbols(
   index: SymbolInfo[],
@@ -365,20 +407,144 @@ function findDocumentedSymbolsInFiles(
     )
 }
 
+/** A metadata value token "matches" a plan-concept term on either a plain
+ *  equal, or a substring in either direction — covers e.g. an `@consumes
+ *  NpcPlannedAction` tag against the plan's bare `PlannedAction` term, and a
+ *  `@role` sentence that names the concept in passing. */
+function valueMatchesTerm(value: string, term: string): boolean {
+  return value === term || value.includes(term) || term.includes(value)
+}
+
+function metadataMatchesTerms(
+  metadata: ArchitecturalMetadata,
+  terms: string[],
+): boolean {
+  if (terms.length === 0) return false
+
+  for (const tag of ARCHITECTURAL_METADATA_ORDER) {
+    const value = metadata[tag]
+
+    if (!value) continue
+
+    const tokens = Array.isArray(value) ? value : [value]
+
+    if (
+      tokens.some((token) =>
+        terms.some((term) => valueMatchesTerm(token, term)),
+      )
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Priority 2: a documented internal symbol (method) whose owning class has
+ * already been selected as a relevant symbol, and whose own architectural
+ * metadata matches a plan concept — e.g. `NpcAgent.beginNeed()` once
+ * `NpcAgent` itself is already a key symbol.
+ */
+function findConceptMatchedOwnedSymbols(
+  internalIndex: InternalSymbolInfo[],
+  ownerNames: Set<string>,
+  terms: string[],
+): InternalSymbolInfo[] {
+  return internalIndex
+    .filter((symbol) =>
+      symbol.owner !== undefined && ownerNames.has(symbol.owner),
+    )
+    .filter((symbol) =>
+      metadataMatchesTerms(symbolMetadata(symbol), terms),
+    )
+    .sort(
+      (a, b) =>
+        (a.line ?? 0) - (b.line ?? 0) ||
+        a.name.localeCompare(b.name),
+    )
+}
+
+/**
+ * Priority 3: a documented internal symbol directly connected — by an
+ * actual call site, in either direction — to a symbol already selected.
+ * Cheap text scan over each candidate's own node text (`bodyText`,
+ * captured once during the AST walk in `getInternalSymbols`); no second
+ * parse and no full call-graph, just "does the source literally call it".
+ */
+function findConnectedInternalSymbols(
+  internalIndex: InternalSymbolInfo[],
+  selectedNames: Set<string>,
+): InternalSymbolInfo[] {
+  const calls = (bodyText: string, name: string): boolean =>
+    new RegExp(`\\b${escapeRegExp(name)}\\s*\\(`).test(bodyText)
+
+  return internalIndex
+    .filter((symbol) => !selectedNames.has(symbol.name))
+    .filter((symbol) =>
+      [...selectedNames].some((name) => calls(symbol.bodyText, name)) ||
+      internalIndex.some(
+        (other) =>
+          selectedNames.has(other.name) &&
+          calls(other.bodyText, symbol.name),
+      ),
+    )
+    .sort(
+      (a, b) =>
+        (a.line ?? 0) - (b.line ?? 0) ||
+        a.name.localeCompare(b.name),
+    )
+}
+
+/**
+ * Priority 4: broadest net — any not-yet-selected symbol (exported or
+ * internal) whose JSDoc architectural metadata matches a plan concept,
+ * regardless of file or owner selection.
+ */
+function findConceptMatchedSymbols(
+  index: SymbolInfo[],
+  terms: string[],
+): SymbolInfo[] {
+  return index
+    .filter((symbol) =>
+      metadataMatchesTerms(symbolMetadata(symbol), terms),
+    )
+    .sort(
+      (a, b) =>
+        normalizePath(a.file).localeCompare(
+          normalizePath(b.file),
+        ) ||
+        (a.line ?? 0) - (b.line ?? 0) ||
+        a.name.localeCompare(b.name),
+    )
+}
+
 /**
  * Resolve relevant symbols.
  *
  * Priority:
- *   1. exact symbol references,
- *   2. documented symbols in explicit files.
+ *   1. symbol name explicitly mentioned in plan/notes (exported or
+ *      internal — `findExactSymbols` over the combined pool);
+ *   2. documented symbols in explicit files (existing v6 mechanism,
+ *      unchanged — kept in its original position right after exact match);
+ *   3. documented internal symbol belonging to an already-selected exported
+ *      symbol and matching a plan concept;
+ *   4. symbol directly connected to an already-selected key symbol;
+ *   5. symbol whose JSDoc architectural metadata matches a plan concept.
+ *
+ * (Steps 3-5 above are v7's addition and correspond to the plan's priority
+ * list items 2-4; step 2 is v6's existing file-scoped mechanism, preserved
+ * unchanged per the plan's instruction not to disturb it.)
  */
 function findRelevantSymbols(
-  index: SymbolInfo[],
+  exportedIndex: SymbolInfo[],
+  internalIndex: InternalSymbolInfo[],
   files: string[],
   terms: string[],
 ): SymbolInfo[] {
   const result: SymbolInfo[] = []
   const seen = new Set<string>()
+  const selectedNames = new Set<string>()
 
   const add = (
     symbol: SymbolInfo,
@@ -389,35 +555,57 @@ function findRelevantSymbols(
     if (seen.has(key)) return
 
     seen.add(key)
+    selectedNames.add(symbol.name)
     result.push(symbol)
   }
 
+  const atLimit = (): boolean =>
+    result.length >= LIMITS.maxSymbols
+
+  const combinedIndex: SymbolInfo[] = [
+    ...exportedIndex,
+    ...internalIndex,
+  ]
+
   for (const symbol of findExactSymbols(
-    index,
+    combinedIndex,
     terms,
   )) {
     add(symbol)
-
-    if (
-      result.length >=
-      LIMITS.maxSymbols
-    ) {
-      return result
-    }
+    if (atLimit()) return result
   }
 
   for (const symbol of findDocumentedSymbolsInFiles(
-    index,
+    exportedIndex,
     files,
   )) {
     add(symbol)
+    if (atLimit()) return result
+  }
 
-    if (
-      result.length >=
-      LIMITS.maxSymbols
-    ) {
-      return result
-    }
+  for (const symbol of findConceptMatchedOwnedSymbols(
+    internalIndex,
+    selectedNames,
+    terms,
+  )) {
+    add(symbol)
+    if (atLimit()) return result
+  }
+
+  for (const symbol of findConnectedInternalSymbols(
+    internalIndex,
+    selectedNames,
+  )) {
+    add(symbol)
+    if (atLimit()) return result
+  }
+
+  for (const symbol of findConceptMatchedSymbols(
+    combinedIndex,
+    terms,
+  )) {
+    add(symbol)
+    if (atLimit()) return result
   }
 
   return result
@@ -960,14 +1148,15 @@ function main(): void {
       .filter((file) => file.startsWith('src/'))
       .slice(0, LIMITS.maxFiles)
 
-  const symbolIndex =
-    buildSymbolIndex(
+  const { exported: symbolIndex, internal: internalSymbolIndex } =
+    buildSymbolIndexes(
       candidateSrcFiles,
     )
 
   const relevantSymbols =
     findRelevantSymbols(
       symbolIndex,
+      internalSymbolIndex,
       explicitFiles.map(
         (item) => item.file,
       ),

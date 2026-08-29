@@ -1584,6 +1584,8 @@ export class NpcAgent {
    * cost. `HealthState` stays combat-agnostic (plan 092). The single place
    * that turns a death-crossing hit into this NPC's own death consequences
    * (plan 177 §9/§13) — combat itself never handles death.
+   * @role NPC-owned damage entry point: applies `HealthState` HP loss, vigor cost and death.
+   * @uses HealthState
    */
   takeDamage(amount: number): void {
     if (this.health.dead) return
@@ -1598,7 +1600,10 @@ export class NpcAgent {
    *  itself goes through the same `takeDamage()` every other damage source
    *  uses. Returns the resolved outcome so a caller (e.g. a future
    *  animal-attack decision) can react (retaliate, flee) without
-   *  duplicating the defense roll. */
+   *  duplicating the defense roll.
+   *  @role Resolves defense, then routes final damage into `takeDamage`.
+   *  @uses HealthState
+   */
   applyIncomingCombatDamage(params: {
     amount: number
     attackerX?: number
@@ -1971,7 +1976,11 @@ export class NpcAgent {
    *  `night_owl` overlay shifts the sleep block rather than skipping it.
    *  `nearbyNpcCount` — other NPCs from the same settlement within
    *  `GROUP_REACTION_RADIUS` (`createSettlement.ts`), used to dampen the
-   *  reaction-sound trigger chance below (issue 010). */
+   *  reaction-sound trigger chance below (issue 010).
+   *  @role Per-tick NPC loop: needs/stamina/vigor, phase FSM, and the
+   *  `choose` phase that hands the picked need to `beginNeed`.
+   *  @uses NpcPlannedAction
+   */
   update(
     dt: number,
     observerPos: THREE.Vector3,
@@ -2523,7 +2532,12 @@ export class NpcAgent {
    *  old `this.phase = 'goWell'` etc. one-liners.
    *  Caller must `join` a queue (if any) *before* this when `action.queueId`
    *  is set; we only clear a *different* prior queue here so we do not
-   *  immediately `leave` the membership just established. */
+   *  immediately `leave` the membership just established.
+   *  @role Generic `goTo` → `execute` kickoff shared by every NPC action —
+   *  the one place a planned action becomes the active `ActionLifecycle`.
+   *  @consumes NpcPlannedAction
+   *  @produces ActionLifecycle
+   */
   private startAction(action: NpcPlannedAction): void {
     this.applyRimDestination(action.destination)
     if (this.isAbandonedDestination(action.destination.x, action.destination.z)) {
@@ -2643,7 +2657,11 @@ export class NpcAgent {
 
   /** `need` is `'water' | 'waterDuty' | 'food' | 'wood'` in practice —
    *  `'choose'` routes `'idle'` to `beginIdle` instead and already set
-   *  `this.activeNeed`. */
+   *  `this.activeNeed`.
+   *  @role Executes the already-picked need via its existing branches;
+   *  each branch ends by calling `startAction` with a `NpcPlannedAction`.
+   *  @produces NpcPlannedAction
+   */
   private beginNeed(need: NeedId): void {
     if (need === 'water') {
       // Household-aware (plan 122): drink stored `WaterBarrel` water at

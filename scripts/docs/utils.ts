@@ -378,6 +378,95 @@ export function getExportedSymbols(
   return symbols
 }
 
+export type InternalSymbolInfo = {
+  /** Enclosing class name, when the symbol is a method. */
+  owner?: string
+  /** Node text (signature + body, no leading JSDoc) — used by callers to
+   *  detect call-site connections to other candidate symbols without a
+   *  second parse pass. */
+  bodyText: string
+} & SymbolInfo
+
+/**
+ * Non-exported symbols eligible for preflight discovery: class methods and
+ * top-level functions that carry at least one architectural JSDoc tag
+ * (`@domain`/`@role`/`@uses`/etc, via `getArchitecturalMetadata` — the same
+ * bar `getExportedSymbols` callers already apply via
+ * `ARCHITECTURAL_METADATA_ORDER` filtering).
+ *
+ * Requiring a tag, not just prose, is deliberate: most large functions in
+ * this codebase carry heavy prose comments on inner declarations, and a
+ * "has any comment" bar would dump most of a large file's internals. A tag
+ * is an explicit, opt-in signal that a specific internal symbol is worth
+ * surfacing — the caller only needs to add one where discovery matters.
+ */
+export function getInternalSymbols(
+  sourceFile: ts.SourceFile,
+): InternalSymbolInfo[] {
+  const symbols: InternalSymbolInfo[] = []
+
+  const add = (
+    name: string,
+    kind: string,
+    node: ts.Node,
+    owner: string | undefined,
+    metadata: ArchitecturalMetadata,
+  ): void => {
+    const position =
+      sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile),
+      )
+
+    symbols.push({
+      name,
+      kind,
+      file: srcRelative(sourceFile.fileName),
+      line: position.line + 1,
+      metadata,
+      owner,
+      bodyText: node.getText(sourceFile),
+    })
+  }
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isClassDeclaration(node) && node.name) {
+      const owner = node.name.text
+
+      for (const member of node.members) {
+        if (
+          !ts.isMethodDeclaration(member) ||
+          !member.name ||
+          !ts.isIdentifier(member.name)
+        ) {
+          continue
+        }
+
+        const metadata = getArchitecturalMetadata(member)
+
+        if (metadata) {
+          add(member.name.text, 'method', member, owner, metadata)
+        }
+      }
+    } else if (
+      ts.isFunctionDeclaration(node) &&
+      node.name &&
+      !isExported(node)
+    ) {
+      const metadata = getArchitecturalMetadata(node)
+
+      if (metadata) {
+        add(node.name.text, 'function', node, undefined, metadata)
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+
+  return symbols
+}
+
 /**
  * Parses a single file's content without building a full `ts.Program`
  * (no module resolution or type-checking). Cheap enough to call per-file
