@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 /**
- * Seedvale implementation preflight v5.
+ * Seedvale implementation preflight v6.
  *
  * Purpose:
  *   Compile a small, targeted briefing for Claude Code before implementation.
@@ -10,15 +10,34 @@
  *   pnpm claude:preflight npc-002
  *   pnpm claude:preflight docs/plans/npc-002-npc-healing.md
  *
+ *   For clean redirected output (no pnpm/corepack lifecycle banner in the
+ *   file), pass --silent to pnpm itself:
+ *     pnpm --silent claude:preflight npc-002 > docs/tmp/npc-002-preflight.md
+ *
  * Important:
  *   This script is intentionally context-oriented. It should produce
  *   navigation information, not a copy of the repository.
+ *
+ *   Symbol/architecture data is derived directly from source via the same
+ *   AST helpers `docs-symbol-index.ts` uses (`scripts/docs/utils.ts`), not
+ *   from a separately generated index — those helpers are cheap enough to
+ *   call per-file for the small set of files a plan actually names.
  */
 
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import {
+  ARCHITECTURAL_METADATA_ORDER,
+  type ArchitecturalMetadata,
+  type DependencyInfo,
+  formatArchitecturalMetadata,
+  getExportedSymbols,
+  parseDependencyMap,
+  parseStandaloneSourceFile,
+  type SymbolInfo,
+} from '../docs/utils.js'
 
 const ROOT = process.cwd()
 
@@ -30,41 +49,12 @@ const LIMITS = {
   maxOutputChars: 18_000,
   maxFallbackTerms: 4,
   maxFallbackMatchesPerTerm: 3,
+  maxDependencyFiles: 6,
+  maxDependencyEdges: 6,
 } as const
-
-const ARCH_TAGS = [
-  'domain',
-  'system',
-  'role',
-  'owns',
-  'uses',
-  'produces',
-  'consumes',
-  'simulation',
-  'performance',
-  'lifecycle',
-  'integration',
-] as const
-
-type ArchTag = (typeof ARCH_TAGS)[number]
-
-type ArchitecturalDoc = Partial<
-  Record<ArchTag, string | string[]>
->
-
-type SymbolRecord = {
-  name: string
-  kind?: string
-  file: string
-  line?: number
-  documentation?: ArchitecturalDoc
-  docBlock?: string
-  [key: string]: unknown
-}
 
 type FileReference = {
   file: string
-  line?: number
 }
 
 type Snippet = {
@@ -72,6 +62,13 @@ type Snippet = {
   file: string
   line: number
   lines: string[]
+}
+
+type DependencyEdges = {
+  label: string
+  file: string
+  imports: string[]
+  importedBy: string[]
 }
 
 function absolute(file: string): string {
@@ -244,136 +241,56 @@ function collectBacktickTerms(
 }
 
 /**
- * Locate the repository's existing generated symbol index.
+ * Build a symbol index directly from source, for a small, bounded set of
+ * files — reusing the exact AST helpers `docs-symbol-index.ts` uses
+ * (`parseStandaloneSourceFile` + `getExportedSymbols`, which already reads
+ * `@domain`/`@owns`/etc. JSDoc via `getArchitecturalMetadata`).
  *
- * We intentionally do not assume a particular directory layout.
- * The repository's own docs tooling is the source of truth.
+ * Intentionally does not scan `src/` — only the files the plan/notes
+ * actually named. Cheap enough to parse per-file for a handful of files.
  */
-function findExistingSymbolIndex(): string | undefined {
-  const candidates = [
-    'docs/code-map/symbol-index.json',
-    'docs/code-map/symbols.json',
-    'docs/code-map/symbols/index.json',
-    'docs/code-map/symbols/symbols.json',
-    'docs/generated/symbol-index.json',
-    'docs/generated/symbols.json',
-  ]
+function buildSymbolIndex(
+  files: string[],
+): SymbolInfo[] {
+  const symbols: SymbolInfo[] = []
 
-  for (const file of candidates) {
-    if (exists(file)) {
-      return file
+  for (const file of files) {
+    if (!file.startsWith('src/')) {
+      continue
+    }
+
+    if (!exists(file)) {
+      continue
+    }
+
+    let sourceFile
+
+    try {
+      sourceFile = parseStandaloneSourceFile(
+        absolute(file),
+        readFile(file),
+      )
+    } catch {
+      continue
+    }
+
+    for (const symbol of getExportedSymbols(sourceFile)) {
+      symbols.push({
+        ...symbol,
+        // `getExportedSymbols` reports paths relative to `src/`; the rest
+        // of this script works with repo-root-relative paths.
+        file: `src/${symbol.file}`,
+      })
     }
   }
 
-  return undefined
+  return symbols
 }
 
-function normalizeSymbol(
-  value: Record<string, unknown>,
-): SymbolRecord | undefined {
-  const name =
-    typeof value.name === 'string'
-      ? value.name
-      : typeof value.symbol === 'string'
-        ? value.symbol
-        : undefined
-
-  const file =
-    typeof value.file === 'string'
-      ? value.file
-      : typeof value.path === 'string'
-        ? value.path
-        : undefined
-
-  if (!name || !file) {
-    return undefined
-  }
-
-  const line =
-    typeof value.line === 'number'
-      ? value.line
-      : typeof value.startLine === 'number'
-        ? value.startLine
-        : undefined
-
-  const documentation =
-    typeof value.documentation === 'object' &&
-    value.documentation !== null
-      ? value.documentation as ArchitecturalDoc
-      : typeof value.doc === 'object' &&
-          value.doc !== null
-        ? value.doc as ArchitecturalDoc
-        : undefined
-
-  return {
-    ...value,
-    name,
-    file: normalizePath(file),
-    line,
-    documentation,
-  }
-}
-
-/**
- * Load the existing symbol index.
- *
- * Supports the common shapes used by generated documentation:
- *
- *   [...]
- *   { symbols: [...] }
- *   { entries: [...] }
- *
- * No repository scan is performed here.
- */
-function loadSymbolIndex(): SymbolRecord[] {
-  const indexFile =
-    findExistingSymbolIndex()
-
-  if (!indexFile) {
-    return []
-  }
-
-  try {
-    const parsed =
-      JSON.parse(readFile(indexFile)) as unknown
-
-    const values =
-      Array.isArray(parsed)
-        ? parsed
-        : typeof parsed === 'object' &&
-            parsed !== null &&
-            Array.isArray(
-              (parsed as { symbols?: unknown[] }).symbols,
-            )
-          ? (parsed as { symbols: unknown[] }).symbols
-          : typeof parsed === 'object' &&
-              parsed !== null &&
-              Array.isArray(
-                (parsed as { entries?: unknown[] }).entries,
-              )
-            ? (parsed as { entries: unknown[] }).entries
-            : []
-
-    return values
-      .filter(
-        (value): value is Record<string, unknown> =>
-          typeof value === 'object' &&
-          value !== null,
-      )
-      .map(normalizeSymbol)
-      .filter(
-        (value): value is SymbolRecord =>
-          value !== undefined,
-      )
-  } catch {
-    return []
-  }
-}
-
-function symbolDocumentation(
-  symbol: SymbolRecord,
-): ArchitecturalDoc {
-  return symbol.documentation ?? {}
+function symbolMetadata(
+  symbol: SymbolInfo,
+): ArchitecturalMetadata {
+  return symbol.metadata ?? {}
 }
 
 function formatValue(
@@ -392,9 +309,9 @@ function formatValue(
  * Exact identifier matches have the strongest signal.
  */
 function findExactSymbols(
-  index: SymbolRecord[],
+  index: SymbolInfo[],
   terms: string[],
-): SymbolRecord[] {
+): SymbolInfo[] {
   const termSet = new Set(terms)
 
   return index
@@ -418,9 +335,9 @@ function findExactSymbols(
  * This prevents a large file from expanding into dozens of symbols.
  */
 function findDocumentedSymbolsInFiles(
-  index: SymbolRecord[],
+  index: SymbolInfo[],
   files: string[],
-): SymbolRecord[] {
+): SymbolInfo[] {
   const fileSet = new Set(
     files.map(normalizePath),
   )
@@ -430,10 +347,10 @@ function findDocumentedSymbolsInFiles(
       fileSet.has(normalizePath(symbol.file)),
     )
     .filter((symbol) =>
-      ARCH_TAGS.some(
+      ARCHITECTURAL_METADATA_ORDER.some(
         (tag) =>
           formatValue(
-            symbolDocumentation(symbol)[tag],
+            symbolMetadata(symbol)[tag],
           ).length > 0,
       ),
     )
@@ -456,15 +373,15 @@ function findDocumentedSymbolsInFiles(
  *   2. documented symbols in explicit files.
  */
 function findRelevantSymbols(
-  index: SymbolRecord[],
+  index: SymbolInfo[],
   files: string[],
   terms: string[],
-): SymbolRecord[] {
-  const result: SymbolRecord[] = []
+): SymbolInfo[] {
+  const result: SymbolInfo[] = []
   const seen = new Set<string>()
 
   const add = (
-    symbol: SymbolRecord,
+    symbol: SymbolInfo,
   ): void => {
     const key =
       `${normalizePath(symbol.file)}:${symbol.line ?? 0}:${symbol.name}`
@@ -507,7 +424,7 @@ function findRelevantSymbols(
 }
 
 function readSnippet(
-  symbol: SymbolRecord,
+  symbol: SymbolInfo,
 ): Snippet | undefined {
   if (!symbol.line) {
     return undefined
@@ -542,7 +459,7 @@ function readSnippet(
 }
 
 function sourceSnippets(
-  symbols: SymbolRecord[],
+  symbols: SymbolInfo[],
 ): Snippet[] {
   const result: Snippet[] = []
 
@@ -566,25 +483,16 @@ function sourceSnippets(
 }
 
 function formatArchitecture(
-  symbols: SymbolRecord[],
+  symbols: SymbolInfo[],
 ): string {
   const blocks: string[] = []
 
   for (const symbol of symbols) {
-    const doc =
-      symbolDocumentation(symbol)
-
     const metadata =
-      ARCH_TAGS
-        .map((tag) => {
-          const value =
-            formatValue(doc[tag])
-
-          return value
-            ? `- ${tag}: ${value}`
-            : ''
-        })
-        .filter(Boolean)
+      formatArchitecturalMetadata(
+        symbolMetadata(symbol),
+        '',
+      )
 
     if (
       metadata.length === 0
@@ -613,75 +521,153 @@ function formatArchitecture(
   return [
     '## Relevant architecture',
     '',
-    ...blocks,
-  ].join('\n\n')
+    blocks.join('\n\n'),
+  ].join('\n')
 }
 
-function formatRelationships(
-  symbols: SymbolRecord[],
+function domainOfSrcFile(
+  file: string,
 ): string {
-  const lines: string[] = []
+  return (
+    file.replace(/^src\//, '').split('/')[0] ??
+    'other'
+  )
+}
+
+/** Reads `docs/code-map/dependencies/<domain>.md` — generated by
+ *  `docs-dependency-map.ts` — and parses it with the shared
+ *  `parseDependencyMap` reader (also used by `docs-navigation-candidates.ts`). */
+function loadDependencyMap(
+  domain: string,
+): DependencyInfo[] {
+  const file =
+    `docs/code-map/dependencies/${domain}.md`
+
+  if (!exists(file)) {
+    return []
+  }
+
+  try {
+    return parseDependencyMap(
+      readFile(file),
+    )
+  } catch {
+    return []
+  }
+}
+
+function truncateList(
+  items: string[],
+  max: number,
+): string {
+  if (items.length === 0) {
+    return 'none'
+  }
+
+  const shown =
+    items.slice(0, max)
+
+  const extra =
+    items.length - shown.length
+
+  const text =
+    shown
+      .map((item) => `\`${item}\``)
+      .join(', ')
+
+  return extra > 0
+    ? `${text}, +${extra} more`
+    : text
+}
+
+/**
+ * Real import graph edges for relevant files, from the generated dependency
+ * map — not a substitute for JSDoc metadata, a complement to it.
+ */
+function findRelevantDependencies(
+  symbols: SymbolInfo[],
+  files: string[],
+): DependencyEdges[] {
+  const labelByFile = new Map<string, string>()
 
   for (const symbol of symbols) {
-    const doc =
-      symbolDocumentation(symbol)
+    const file = normalizePath(symbol.file)
 
-    const relationships: string[] = []
-
-    const owns =
-      formatValue(doc.owns)
-
-    const uses =
-      formatValue(doc.uses)
-
-    const produces =
-      formatValue(doc.produces)
-
-    const consumes =
-      formatValue(doc.consumes)
-
-    if (owns) {
-      relationships.push(
-        `owns ${owns}`,
-      )
-    }
-
-    if (uses) {
-      relationships.push(
-        `uses ${uses}`,
-      )
-    }
-
-    if (produces) {
-      relationships.push(
-        `produces ${produces}`,
-      )
-    }
-
-    if (consumes) {
-      relationships.push(
-        `consumes ${consumes}`,
-      )
-    }
-
-    if (
-      relationships.length > 0
-    ) {
-      lines.push(
-        `- \`${symbol.name}\` ${relationships.join('; ')}`,
-      )
+    if (!labelByFile.has(file)) {
+      labelByFile.set(file, symbol.name)
     }
   }
 
-  if (lines.length === 0) {
+  const domainCache = new Map<string, DependencyInfo[]>()
+  const result: DependencyEdges[] = []
+
+  for (const file of files) {
+    if (!file.startsWith('src/')) {
+      continue
+    }
+
+    const domain = domainOfSrcFile(file)
+
+    if (!domainCache.has(domain)) {
+      domainCache.set(
+        domain,
+        loadDependencyMap(domain),
+      )
+    }
+
+    const relPath = file.replace(/^src\//, '')
+
+    const entry = (
+      domainCache.get(domain) ?? []
+    ).find((dep) => dep.file === relPath)
+
+    if (
+      !entry ||
+      (entry.imports.length === 0 &&
+        entry.importedBy.length === 0)
+    ) {
+      continue
+    }
+
+    result.push({
+      label: labelByFile.get(file) ?? relPath,
+      file,
+      imports: entry.imports,
+      importedBy: entry.importedBy,
+    })
+
+    if (
+      result.length >=
+      LIMITS.maxDependencyFiles
+    ) {
+      break
+    }
+  }
+
+  return result
+}
+
+function formatDependencies(
+  edges: DependencyEdges[],
+): string {
+  if (edges.length === 0) {
     return ''
   }
 
+  const blocks =
+    edges.map(
+      (edge) =>
+        [
+          `### \`${edge.label}\` — ${edge.file}`,
+          `- imports: ${truncateList(edge.imports, LIMITS.maxDependencyEdges)}`,
+          `- imported by: ${truncateList(edge.importedBy, LIMITS.maxDependencyEdges)}`,
+        ].join('\n'),
+    )
+
   return [
-    '## Relationships',
+    '## Dependencies',
     '',
-    '### Architectural (JSDoc)',
-    ...lines,
+    blocks.join('\n\n'),
   ].join('\n')
 }
 
@@ -706,8 +692,8 @@ function formatSnippets(
   return [
     '## Implementation anchors',
     '',
-    ...blocks,
-  ].join('\n\n')
+    blocks.join('\n\n'),
+  ].join('\n')
 }
 
 function fallbackSearch(
@@ -968,8 +954,16 @@ function main(): void {
       combined,
     )
 
+  const candidateSrcFiles =
+    explicitFiles
+      .map((item) => item.file)
+      .filter((file) => file.startsWith('src/'))
+      .slice(0, LIMITS.maxFiles)
+
   const symbolIndex =
-    loadSymbolIndex()
+    buildSymbolIndex(
+      candidateSrcFiles,
+    )
 
   const relevantSymbols =
     findRelevantSymbols(
@@ -999,6 +993,12 @@ function main(): void {
   const snippets =
     sourceSnippets(
       relevantSymbols,
+    )
+
+  const dependencyEdges =
+    findRelevantDependencies(
+      relevantSymbols,
+      relevantFiles,
     )
 
   const fallback =
@@ -1084,15 +1084,15 @@ function main(): void {
     )
   }
 
-  const relationships =
-    formatRelationships(
-      relevantSymbols,
+  const dependenciesText =
+    formatDependencies(
+      dependencyEdges,
     )
 
-  if (relationships) {
+  if (dependenciesText) {
     output.push(
       '',
-      relationships,
+      dependenciesText,
     )
   }
 
@@ -1126,26 +1126,6 @@ function main(): void {
     output.push(
       '',
       fallbackText,
-    )
-  }
-
-  /*
-   * Keep navigation explicit, but do not repeat it as a
-   * second full list of "recommended reads".
-   */
-  if (
-    relevantFiles.length > 0
-  ) {
-    output.push(
-      '',
-      '## Recommended reads',
-      '',
-      ...relevantFiles
-        .slice(0, 8)
-        .map(
-          (file) =>
-            `- \`${file}\``,
-        ),
     )
   }
 

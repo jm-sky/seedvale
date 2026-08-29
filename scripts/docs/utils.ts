@@ -486,7 +486,7 @@ export function parseDependencyMap(
     }
 
     if (line.startsWith('- `') && line.endsWith('`')) {
-      const file = line.trim().slice(2, -1)
+      const file = line.trim().slice(3, -1)
 
       if (section === 'imports') {
         current.imports.push(file)

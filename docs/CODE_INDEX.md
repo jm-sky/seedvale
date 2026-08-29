@@ -76,7 +76,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ### assets
 
-- `../src/assets/assetIndex.ts` — assetIndex; open first for the primary assets domain logic.
+- `../src/assets/loadGltf.ts` — loadGltf; open first for the primary assets domain logic.
 
 ### audio
 
@@ -128,7 +128,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ### scene
 
-- `../src/scene/createScene.ts` — scene factory; open first when tracing creation and setup of domain objects.
+- `../src/scene/createCamera.ts` — scene factory; open first when tracing creation and setup of domain objects.
 
 ### settlement
 
@@ -136,15 +136,15 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ### shared
 
-- `../src/shared/HealthState.ts` — HealthState; open first for the primary shared domain logic.
+- `../src/shared/StaminaState.ts` — StaminaState; open first for the primary shared domain logic.
+
+### simulation
+
+- `../src/simulation/actionLifecycle.ts` — primary simulation lifecycle; open first for entity lifecycle behaviour.
 
 ### terrain
 
 - `../src/terrain/chunkManager.ts` — primary terrain manager; open first for domain coordination and state management.
-
-### tools
-
-- `../src/tools/assetBrowser/viewer/createAssetSlot.ts` — tools factory; open first when tracing creation and setup of domain objects.
 
 <!-- AI_NAVIGATION_INDEX_END -->
 
