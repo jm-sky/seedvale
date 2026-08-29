@@ -93,7 +93,7 @@ import { createToast } from '../ui/createToast'
 import { TRAP_DEFS } from '../world/animalTraps'
 import { type BeehiveRecord } from '../world/beehives'
 import { createClouds } from '../world/clouds'
-import { createDayNightState, DEFAULT_TIME_OF_DAY, parseTimeOfDayFromUrl } from '../world/dayNight'
+import { createDayNightState, parseTimeOfDayFromUrl, resetDayNightForNewGame } from '../world/dayNight'
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
@@ -883,8 +883,7 @@ export async function createApp(
         plantedCrops = []
         modifications = []
         resourceDepletion = new Map()
-        dayNight.elapsedDays = 0
-        dayNight.timeOfDay = DEFAULT_TIME_OF_DAY
+        resetDayNightForNewGame(dayNight)
         treeLifecycle = createTreeLifecycle(config.seed, {})
         landOwnership.clear()
       }

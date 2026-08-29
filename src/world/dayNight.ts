@@ -53,6 +53,12 @@ export function createDayNightState(
   }
 }
 
+/** Fresh-world clock defaults — used by New Game (`rebuildWorld(true)`). */
+export function resetDayNightForNewGame(state: DayNightState): void {
+  state.elapsedDays = 0
+  state.timeOfDay = DEFAULT_TIME_OF_DAY
+}
+
 export function tickDayNight(state: DayNightState, dt: number): void {
   if (!state.enabled) return
   const len = Math.max(30, state.dayLengthSec)

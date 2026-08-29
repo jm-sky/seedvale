@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createDayNightState, parseTimeOfDayFromUrl, tickDayNight } from './dayNight'
+import {
+  createDayNightState,
+  DEFAULT_TIME_OF_DAY,
+  parseTimeOfDayFromUrl,
+  resetDayNightForNewGame,
+  tickDayNight,
+} from './dayNight'
 
 describe('parseTimeOfDayFromUrl', () => {
   it('returns null when neither time nor hour is set', () => {
@@ -48,6 +54,26 @@ describe('parseTimeOfDayFromUrl', () => {
     expect(parseTimeOfDayFromUrl('?time=banana')).toBeNull()
     expect(parseTimeOfDayFromUrl('?time=24')).toBeNull()
     expect(parseTimeOfDayFromUrl('?time=12:60')).toBeNull()
+  })
+})
+
+describe('resetDayNightForNewGame', () => {
+  it('restores fresh-world clock after play (world-005 New Game)', () => {
+    const state = createDayNightState({
+      timeOfDay: (18 * 60 + 30) / (24 * 60),
+      elapsedDays: 42,
+    })
+    resetDayNightForNewGame(state)
+    expect(state.elapsedDays).toBe(0)
+    expect(state.timeOfDay).toBe(DEFAULT_TIME_OF_DAY)
+  })
+
+  it('matches createDayNightState defaults so New Game and boot stay aligned', () => {
+    const fresh = createDayNightState()
+    const played = createDayNightState({ timeOfDay: 0.77, elapsedDays: 9 })
+    resetDayNightForNewGame(played)
+    expect(played.timeOfDay).toBe(fresh.timeOfDay)
+    expect(played.elapsedDays).toBe(fresh.elapsedDays)
   })
 })
 

@@ -1,7 +1,7 @@
 # Plan: New Game — reset czasu świata
 
 **Created:** 2026-08-28  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Priority:** medium · **Effort:** S  
 **Depends on:** none  
 **Domain:** `world`
