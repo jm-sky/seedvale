@@ -2,54 +2,101 @@
 
 **Target:** Blender 5.2.
 
+Recon findings are `researched` unless explicitly marked verified.
+
 ## API rules
 
-- Use the Blender 5.2 Python API as the API truth.
-- Do not copy Python calls from older tutorials without checking 5.2.
-- Prefer direct `bpy.data`/datablock access.
-- Use `bpy.ops` only when needed; explicitly establish active object, selection and mode/context.
-- Scope operations to the intended character/collection; avoid broad scene-wide operations.
+- Use the Blender 5.2 Python API as truth.
+- Prefer direct `bpy.data` / datablock access.
+- Use `bpy.ops` only where necessary and establish context explicitly.
+- Scope operations to the intended character/collection.
+- Do not copy older tutorial calls without checking Blender 5.2.
 
-## Scene safety
+## Useful datablocks
+
+```python
+bpy.data.objects
+bpy.data.meshes
+bpy.data.materials
+bpy.data.armatures
+bpy.data.actions
+bpy.data.collections
+```
+
+## Animation baking
+
+Blender 5.2 exposes:
+
+```python
+bpy.ops.nla.bake(
+    frame_start=1,
+    frame_end=250,
+    step=1,
+    only_selected=True,
+    visual_keying=False,
+    clear_constraints=False,
+    clear_parents=False,
+    use_current_action=False,
+    clean_curves=False,
+    bake_types={'POSE'},
+)
+```
+
+Exact context, selection and channel settings depend on the actual animation. Status: researched.
+
+## GLB / glTF export
+
+Use:
+
+```python
+bpy.ops.export_scene.gltf(...)
+```
+
+Relevant options include `export_format`, `export_animations`, `export_skins`, `export_morph`, `export_morph_animation`, `export_materials`, `export_image_format`, `use_selection`, `use_visible`, `collection`, `export_yup`, `export_use_gltfpack`, `export_meshopt_compression_enable` and `export_draco_mesh_compression_enable`.
+
+The exporter is independent of MPFB2. A likely deterministic pipeline is:
+
+```text
+MPFB2 character
+→ Export Copy
+→ bake/remove helpers
+→ validate
+→ bpy.ops.export_scene.gltf(...)
+```
+
+## Alpha / materials
+
+glTF alpha behaviour depends on the exported material/node graph. Do not assume a Blender viewport/render setting alone determines correct GLB output.
+
+```text
+Opaque material → OPAQUE
+Real alpha material → MASK or BLEND as appropriate
+```
+
+The current Seedvale alpha workaround is diagnostic, not a confirmed universal rule.
+
+## Scene and geometry safety
 
 Before destructive work:
 
 ```text
 identify source/generated/export collections
-  -> verify active scene/view layer
-  -> isolate intended objects
-  -> operate
-  -> validate
+→ verify active scene/view layer
+→ isolate intended objects
+→ operate
+→ validate
 ```
 
-## Geometry validation
+Validate where relevant:
 
-Validate the actual intended export/evaluated geometry when relevant:
-
-- mesh/object count;
-- triangle count;
+- object/mesh count;
+- evaluated triangle count;
 - material slots;
 - textures/images;
 - armature/skinning;
 - transforms;
-- unexpected modifiers;
+- remaining modifiers;
 - unintended export objects.
-
-Do not use viewport statistics as the only source when evaluated/export geometry matters.
-
-## GLB
-
-Use Blender's glTF 2.0 exporter for Seedvale unless a tested pipeline requires another route. Configure export settings explicitly.
-
-Blender 5.2's glTF tooling exposes gltfpack-related optimization/simplification options. Test their effect on Seedvale output before making them part of the standard profile.
-
-Visual export correctness must be checked through the actual Seedvale import/runtime path.
-
-## LOD / optimization
-
-Do not copy generic polygon targets from tutorials. Seedvale budgets belong in `SEEDVALE_CHARACTER_RULES.md` and must be based on measured runtime needs.
-
-Remove authoring-only objects, unnecessary materials/textures and unnecessary modifiers from export assets.
 
 ## Sources
 
