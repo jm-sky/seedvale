@@ -42,7 +42,10 @@ Dodać ambient ptaków:
 
 - **1 sample** na obecnym etapie,
 - ładowany przez istniejący system loopów,
-- asset dodany ręcznie przez użytkownika.
+- asset dodany ręcznie przez użytkownika:
+  - `public/sounds/meadowsinging-birds-1.ogg`
+  - `public/sounds/meadowsinging-birds-2.ogg`
+  - `public/sounds/meadowsinging-birds-3.ogg`
 
 Profil dobowy:
 
