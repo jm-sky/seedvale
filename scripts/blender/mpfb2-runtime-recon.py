@@ -49,6 +49,7 @@ MPFB_ROOTS = (
     "mpfb",
 )
 
+OUTPUT_DIR = "d:\\"
 OUTPUT_FILENAME = "seedvale_mpfb2_runtime_recon.json"
 
 
@@ -462,7 +463,7 @@ def main() -> None:
     output_path = (
         Path(bpy.data.filepath).parent / OUTPUT_FILENAME
         if bpy.data.filepath
-        else Path("/tmp") / OUTPUT_FILENAME
+        else Path(OUTPUT_DIR) / OUTPUT_FILENAME
     )
 
     data = {
