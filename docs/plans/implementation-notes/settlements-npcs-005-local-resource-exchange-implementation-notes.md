@@ -1,348 +1,297 @@
-
 # Implementation Notes: Local Resource Exchange
 
-**Plan:** settlements-npcs-005-local-resource-exchange.md
-**Reviewed:** 2026-08-29
-**Status:** planned 📋
+**Plan:** `settlements-npcs-005-local-resource-exchange.md`  
+**Reviewed:** 2026-08-29  
+**Status:** `planned` 📋
 
-## Review summary
+## Review result
 
-Plan ma właściwy kierunek, ale kilka założeń wymaga korekty względem obecnego codebase:
+Plan jest wykonalny i dobrze pasuje do obecnej architektury, ale **nie należy implementować kolejnego systemu transportu**. Plan 156, household logistics i obecny NPC action pipeline już istnieją.
 
-- plan 156 jest już **done** i większość transportu NPC istnieje; nie implementować ponownie generycznego gather → carry → deposit;
-- Household przechowuje obecnie tylko food/wood jako EconomicStock; water jest osobnym WaterReserve;
-- SettlementEconomy ma rezerwacje, ale Household nie ma analogicznego reservation API;
-- obecny trader jako rola NPC już przenosi surplus własnego gospodarstwa do SettlementEconomy przy pasującym shortage;
-- istniejący item trade (src/items/trade.ts) dotyczy Inventory/ItemKind/monet i nie jest ekonomią EconomicKind. Nie należy mieszać tych mechanizmów;
-- SettlementEconomy zawiera także water, ale dokumentacja i runtime traktują wodę gospodarstwa jako osobny reserve. Nie rozszerzać automatycznie household exchange na wodę przez EconomicKind.
+Najważniejsza luka to:
 
-Najważniejszy cel implementacji: **dodać brakujący przepływ popyt → lokalna podaż → transfer do konkretnego właściciela**, wykorzystując istniejące akcje NPC i istniejące stocki, a nie budować nowy system transportu.
-
-## 1. Właściciele stanu
-
-Aktualny podział jest właściwy:
-
-~~~text
-SettlementEconomy → settlement bulk stock
-Household        → food/wood stock + osobny water reserve + item Inventory
-NpcAgent         → tymczasowo niesiony zasób
-Three.js props    → tylko prezentacja/interakcja
-~~~
-
-Nie przenosić stocku do storage object i nie tworzyć StorageInventory.
-
-Household.stock używa EconomicStock, ale jego publiczny kontrakt jest węższy niż SettlementEconomy: tylko food i wood są legalnymi HouseholdResourceKind. To celowe — iron/coal/gold pozostają stockiem osady.
-
-## 2. Istniejący transport — rozszerzać, nie zastępować
-
-Plan 156 potwierdził istniejący wzorzec:
-
-~~~text
-goTo source
-  ↓
-extract / gather
-  ↓
-next: deposit
-  ↓
-goTo destination
-  ↓
-commit destination
-~~~
-
-Wood, water i ore już korzystają z tego wzorca, choć szczegóły ownershipu/carry różnią się między zasobami. Przed dodaniem nowego kodu w NpcAgent znaleźć aktualne ścieżki deposit, carried, waterDuty, mining i woodcutting i wyciągnąć wyłącznie wspólną część, jeśli faktycznie jest potrzebna.
-
-Nie tworzyć ResourceTransportManager, TradeManager, WoodTransport itd.
-
-## 3. Brakujący mechanizm: lokalny transfer
-
-Najbardziej uzasadnione nowe API to mała, deterministyczna operacja domenowa transferująca istniejący stock między właścicielami — **nie manager**.
-
-Powinna operować na już istniejących ownerach:
-
-~~~text
-source stock
-    ↓ atomic validation/claim
-NPC carried state
+```text
+household B shortage
     ↓
-destination stock
-~~~
-
-Dla transferu bez pośredniego NPC można mieć mały helper transakcyjny, ale normalna symulacja powinna nadal wykonywać transfer przez NpcAgent i PlannedAction.
-
-Jeżeli cross-owner atomicity wymaga funkcji poza Household i SettlementEconomy, preferowany jest mały moduł pure/domain utility zamiast kolejnego singletonowego systemu.
-
-## 4. Reservation — istotna luka względem planu
-
-Plan zakłada „existing reservation mechanisms”, ale aktualnie rezerwacje istnieją w SettlementEconomy, nie w Household.
-
-SettlementEconomy.reserve() usuwa stock i później może go zwolnić przez releaseReservation(). Household.deposit() nie ma analogicznego mechanizmu.
-
-Przy wielu NPC decyzja może zostać podjęta na podstawie tego samego household surplus/shortage. Nie opierać bezpieczeństwa transferu wyłącznie na snapshotcie z choose().
-
-Minimalne rozwiązanie:
-- dla settlement stock wykorzystać istniejące reserve/consumeReservation/releaseReservation;
-- dla household source albo dodać analogiczny minimalny reservation seam, albo atomowo odejmować stock dokładnie w momencie rozpoczęcia transportu i przechowywać claimed amount w NPC;
-- nie rezerwować zasobu już przy samym scoringu/kandydacie.
-
-Reservation nie może być kolejnym globalnym managerem.
-
-## 5. Conservation / failure
-
-Najważniejszy invariant:
-
-~~~text
-source + carried + destination = stała suma
-~~~
-
-W praktyce:
-- source jest zmniejszany dopiero przy udanym claim;
-- claimed amount musi być zapisany w stanie action/NPC;
-- destination przyjmuje tylko rzeczywiście niesioną ilość;
-- jeśli destination przyjmie mniej, remainder musi mieć jawny następny los (source/settlement stock), nigdy „zniknięcie”;
-- cancellation/failure po claim musi zwrócić carried do jednego authoritative ownera;
-- nie wykonywać osobno „sprawdź” i później „odejmij” bez ochrony przed zmianą stocku.
-
-Dla Household.deposit() obecny overflow jest już poprawnie kierowany do SettlementEconomy; warto użyć tego zamiast implementować drugi overflow path.
-
-## 6. Household shortage / surplus
-
-Aktualne API jest wystarczające jako punkt wyjścia:
-
-- household.shortage(kind) = poniżej minimum;
-- household.shouldAcquire(kind) = poniżej targetu;
-- household.surplus(kind) = powyżej targetu;
-- capacity jest osobną granicą i nie powinna być traktowana jako potrzeba.
-
-Nie dodawać kolejnego modelu need/target w AI.
-
-Nie interpretować capacity - stock jako shortage. Exchange powinien używać minimum/target, zgodnie z istniejącą polityką gospodarstwa.
-
-## 7. Household ↔ Household
-
-To jest faktycznie nowa funkcjonalność.
-
-Proponowany przepływ:
-
-~~~text
-household B: shortage
-       ↓
-candidate source households in same settlement
-       ↓
-source surplus
-       ↓
-reserve/claim amount
-       ↓
-NPC transport
-       ↓
+znajdź lokalny household A z surplus
+    ↓
+claim
+    ↓
+NPC goTo → execute → goTo → execute
+    ↓
 household B
-~~~
+```
 
-Nie skanować wszystkich gospodarstw przy każdym frame. SettlementsManager już posiada registry gospodarstw; wykorzystać istniejący lokalny zbiór gospodarstw osady i cadence decyzji NPC.
+Obecny `Trader` nie jest jeszcze przykładem takiego fizycznego transportu: `beginTraderWork()` wykonuje akcję przy workplace, a w `onComplete` bezpośrednio odejmuje `Household.stock` i dodaje do `SettlementEconomy`. Nie zakładać więc, że istnieje gotowy generyczny transport ekonomicznych stocków.
 
-Deterministyczny wybór źródła powinien mieć stabilny tie-breaker, np. relevance → distance → household.id. Nie używać przypadkowego wyboru.
+## 1. Ownership — zachować bez zmian
 
-Nie tworzyć bezpośredniego teleport transfer. W normalnej symulacji musi istnieć realna akcja NPC.
+```text
+SettlementEconomy → settlement-wide EconomicKind stock
+Household.stock   → tylko food + wood
+Household.water   → osobny WaterReserve
+Household.items   → konkretne ItemKind / instances
+NpcAgent.carried  → tymczasowy Inventory dla konkretnych itemów
+```
 
-## 8. Settlement storage ↔ Household
+Nie przenosić ekonomii do fizycznych storage propsów.
 
-Storage fizyczny z planu 156 już jest tylko projekcją SettlementEconomy. Nie dodawać drugiego stocku.
+`iron`, `coal`, `gold`, `copper_ore` pozostają settlement-level. Nie rozszerzać `HouseholdResourceKind`.
 
-Docelowo:
+Woda jest wyjątkiem: nie scalać `Household.water` z `SettlementEconomy` tylko na potrzeby tego planu.
 
-~~~text
-SettlementEconomy surplus
-        ↓
-NPC decides delivery
-        ↓
-Household shortage
-        ↓
-NPC carries
-        ↓
-Household.stock
-~~~
+## 2. EconomicKind ≠ ItemKind
 
-W drugą stronę pozostawić istniejący household surplus → settlement economy flow i tylko wykorzystać wspólną operację transferu, jeżeli zmniejszy to duplikację.
+To jest istotne dla implementacji.
 
-## 9. Trader role vs item merchant — nie pomylić
+`EconomicKind` ma `food/wood/water/iron/coal/gold/copper_ore`, natomiast `ItemKind` nie ma ogólnego `food` ani `wood`; istnieją konkretne produkty i materiały.
 
-W codebase są dwa różne pojęcia:
+Dlatego lokalny transfer **nie powinien sztucznie konwertować** scalar `Household.stock` na `Inventory` tylko po to, aby użyć `NpcAgent.carried`.
 
-1. **NPC role trader** — obecna praca NPC, która już przenosi własny household food/wood surplus do SettlementEconomy, gdy osada ma matching shortage.
-2. **Item trade** — src/items/trade.ts + merchant UI, operujący na Inventory, ItemKind, coins i concrete item instances.
+Dla F1 sensowniejszy jest tymczasowy, jawny stan ekonomicznego ładunku w istniejącym NPC action chain. Jeśli implementacja potrzebuje wspólnej abstrakcji, mały pure/domain helper jest właściwy; nie `TradeManager`/singleton.
 
-Plan 005 powinien rozszerzać pierwszy mechanizm. Nie przepinać ekonomii na src/items/trade.ts.
+## 3. Istniejący stock i atomicity
 
-Obecny trader jest dobrym kandydatem do pierwszego konsumenta wspólnego exchange seam: zamiast mieć własną logikę household surplus → settlement, powinien używać tej samej operacji transferu co przyszły household shortage delivery.
+`SettlementEconomy` ma już:
 
-## 10. Profession ↔ profession
+- `query/add/remove`,
+- `shortage()/surplus()`,
+- `reserve()`,
+- `consumeReservation()`,
+- `releaseReservation()`.
 
-To powinno być przygotowanie API, nie pełna implementacja nowych łańcuchów.
+`EconomicStock.remove()` jest atomowe w sensie synchronicznego JS: przy braku ilości niczego nie usuwa.
 
-Obecne src/economy/production.ts i npcWork.ts są punktami commitowania produkcji. Nie zmieniać ich na nowy scheduler.
+`Household` ma:
 
-Dla przyszłości wystarczy, aby destination mogło być dowolnym istniejącym ownerem stocku:
+- `shortage()`,
+- `shouldAcquire()`,
+- `surplus()`,
+- `deposit()`.
 
-~~~text
-producer output
-    ↓
-existing stock owner
-    ↓
-local consumer shortage
-~~~
+Nie ma jednak household reservation API.
 
-Nie implementować teraz Blacksmith/Carpenter/mining chain, zgodnie z planem.
+**Nie rezerwować przy samym wyborze strategii.** Przy rozpoczęciu transportu trzeba atomowo claimować źródło albo wprowadzić minimalny reservation seam dla Household. Kwota claimed musi być przechowywana aż do końcowego depositu.
 
-## 11. Ore
+## 4. Conservation invariant
 
-ore nie jest household resource. MineableOre mapuje się bezpośrednio na EconomicKind (iron, coal, gold, copper_ore), a NPC mining ma już carrying/deposit path.
+Dla transferu:
 
-Dlatego F1 nie powinno próbować robić:
+```text
+source + in-transit + destination = constant
+```
 
-~~~text
-ore → Household.stock
-~~~
+Po claimie zasób nie może pozostać w source.
 
-Naturalnym destination jest SettlementEconomy. Jeśli późniejszy profession exchange potrzebuje ore → blacksmith, należy wykorzystać settlement raw stock jako istniejący owner.
+Po anulowaniu/failure musi mieć dokładnie jednego właściciela.
 
-## 12. Water
+Szczególnie ważne:
 
-Woda jest obecnie wyjątkiem architektonicznym:
+- revalidate source przy claimie, nie używać starego wyniku `choose()`;
+- destination revalidate przy deposit;
+- nie zakładać, że shortage/surplus z momentu wyboru nadal obowiązuje;
+- partial destination acceptance musi pozostawić remainder jawnie przypisany;
+- cancellation/watchdog/death nie mogą zostawić „zasobu w NPC” bez recovery.
 
-~~~text
-Household.water : WaterReserve
-~~~
+Najlepiej wykorzystać istniejące `PlannedAction.next` i lifecycle zamiast budować osobny transport FSM.
 
-nie Household.stock i nie aktywna ekonomia EconomicKind dla potrzeb gospodarstwa.
+## 5. Household ↔ Household
 
-Nie refaktoryzować tego do EconomicStock tylko po to, żeby uzyskać jednolity exchange API.
+To jest główna nowa funkcja.
 
-Jeśli plan 005 ma dostarczać wodę z village stock, trzeba najpierw sprawdzić, czy obecny SettlementEconomy.water ma rzeczywistego producenta/konsumenta — aktualny stan mówi, że jest to inertny stock. Bez takiej ścieżki nie budować sztucznego handlu wodą.
+Źródła powinny być ograniczone do **tego samego settlement**. Nie skanować wszystkich gospodarstw świata.
 
-Istniejący waterDuty / well → household water flow powinien pozostać źródłem prawdy dla obecnej logistyki wody.
+Obecny `SettlementsManager` posiada `HouseholdRegistry`, ale registry nie udostępnia obecnie gotowego query „all households for settlement”. Najmniejszym rozszerzeniem jest lokalny bounded lookup, np. iteracja registry dla danego settlementu; nie potrzeba globalnego indeksu.
 
-## 13. AI integration
+Kandydat:
 
-Aktualny flow to:
+```text
+destination shortage
+→ same settlement
+→ source surplus
+→ stable ordering: relevance/distance/id
+→ claim
+```
 
-~~~text
-pressure
- ↓
-scoreNeedCandidates()
- ↓
-NeedId
- ↓
-candidate strategies
- ↓
-availability/constraints
- ↓
-strategy selection
- ↓
-PlannedAction
-~~~
+Nie używać `Math.random()` do wyboru źródła.
 
-Exchange powinien wejść jako **candidate strategy realizująca istniejącą potrzebę/pressure**, nie jako nowy Need i nie jako osobny TradeAI.
+Jeżeli odległość jest potrzebna, użyć pozycji household home, nie skanować Object3D.
 
-Hard constraints:
-- source exists;
-- source ma dostępny surplus;
-- destination ma shortage/target deficit;
-- NPC należy do tej samej osady;
-- NPC może wykonać transport;
-- source/destination są osiągalne przez istniejący movement/action path.
+## 6. SettlementEconomy ↔ Household
 
-Personality/role może wpływać na scoring przez istniejący ai-002 seam, ale nie może pokonać hard constraints.
+Oba kierunki powinny korzystać z tego samego transfer seam:
 
-## 14. Performance
+```text
+SettlementEconomy surplus → NPC → Household shortage
+Household surplus         → NPC → SettlementEconomy
+```
 
-Największe ryzyko to O(N²): każdy NPC szuka każdego household/source.
+Drugi kierunek już częściowo istnieje w `Household.deposit()` / obecnych ścieżkach produkcji.
 
-Preferować:
-- decyzję w istniejącej cadence NpcAgent.choose();
-- ograniczenie do aktualnej osady;
-- tylko kandydatów z realnym surplus/shortage;
-- stabilny lokalny wybór;
-- brak per-frame skanów;
-- brak nowych workerów — transfer jest mały i synchroniczny.
+Nie tworzyć drugiego settlement storage. Fizyczny stockpile pozostaje prezentacją istniejącego `SettlementEconomy`.
 
-Jeśli później liczba gospodarstw wzrośnie, dopiero pomiar powinien uzasadnić indeks przestrzenny/cache.
+Dla transferu do Household trzeba respektować jego capacity. Obecne `deposit()` automatycznie kieruje overflow do settlement economy, ale jego API zwraca `void`; jeśli exchange potrzebuje dokładnej ilości przyjętej, lepiej rozszerzyć istniejący kontrakt o wynik niż pisać równoległą matematykę capacity.
 
-## 15. Streaming / rebuild
+## 7. AI integration — nie dodawać nowego Need
 
-HouseholdRegistry i EconomyRegistry należą do SettlementsManager i przeżywają stream-out/in w tej samej sesji. Storage props z planu 156 są odtwarzane z tych danych.
+Aktualny flow jest:
 
-Nie przechowywać exchange state w Three.js.
+```text
+generateNeedPressures()
+→ scoreNeedCandidates()
+→ pick NeedId
+→ beginNeed() / beginIdle()
+→ PlannedAction
+```
 
-Jeśli NPC zostanie streamowany/recreated w trakcie transportu, nie wolno dopuścić do:
-- ponownego wykonania extract;
-- pozostawienia claimed stocku poza ownerem;
-- podwójnego deposit.
+`NeedId` obecnie obejmuje tylko `food | water | waterDuty | wood | idle`.
 
-Trzeba wykorzystać istniejące lifecycle/action cancellation semantics zamiast dopisywać drugi mechanizm recovery.
+Exchange powinien realizować istniejący `food`/`wood` shortage, a nie tworzyć `trade` jako nową potrzebę.
 
-Pełna persistence exchange reservation/active transport nie jest obecnie uzasadniona: NPC runtime nie jest pełnym snapshotem SaveData.
+Najbardziej naturalny seam to candidate strategy:
 
-## 16. Konkretne miejsca do wykorzystania
+```text
+food/wood need
+→ household stock available?
+→ local exchange available?
+→ existing source/gather fallback
+```
 
-Przed implementacją sprawdzić aktualne symbole w:
+Obecny `npcStrategies.ts` jest już dokładnie takim seamem. Rozszerzyć go tylko o rzeczywiście potrzebną strategię, zamiast budować drugi scoring engine.
 
-- src/settlement/household.ts — stock, shortage, shouldAcquire, surplus, deposit, registry;
-- src/economy/settlementEconomy.ts — stock, shortage/surplus i istniejące reservations;
-- src/economy/registry.ts — settlement economy ownership/lifecycle;
-- src/economy/npcWork.ts — obecny trader/work commit seam;
-- src/ai/NpcAgent.ts — carrying, decisions, PlannedAction, deposit, current trader behaviour;
-- src/ai/Needs.ts + candidate-strategy files — miejsce integracji decyzji;
-- src/settlement/SettlementsManager.ts / createSettlement.ts — dostęp do household/economy i lokalnych NPC;
-- src/settlement/props.ts, src/interaction/Interactable.ts, src/interaction/resolveInteraction.ts — istniejące storage presentation/interactions;
-- src/terrain/depositMining.ts — ore → EconomicKind mapping;
-- src/items/trade.ts — tylko jako regresja/odrębny item-trade system, nie jako backend exchange.
+Personality/role może modyfikować istniejące pressure/strategy scoring, ale nie może omijać hard constraints źródła i celu.
 
-## 17. Testy o największej wartości
+## 8. Trader
 
-Oprócz testów planu wymusić przypadki atomicity:
+Nie przepinać na `src/items/trade.ts`.
 
-- source surplus dokładnie równy requested amount;
-- source surplus mniejszy od requested amount;
-- dwa transfery konkurujące o ten sam surplus;
-- destination shortage mniejszy od carried amount;
-- source/destination ten sam household;
-- cancelled transport po claim;
-- failed destination po claim;
-- overflow household → settlement economy;
-- brak transferu z household poniżej targetu;
-- deterministic tie-break dwóch równych źródeł;
-- trader role używa wspólnego mechanizmu;
-- item trade pozostaje bez zmian.
+Są dwa niezależne systemy:
 
-Browser verification powinna potwierdzić **realny ruch NPC**, a nie tylko zmianę liczb w stocku.
+1. NPC role `trader` + `Household.stock` + `SettlementEconomy`;
+2. player-facing item trade: `Inventory` / `ItemKind` / coins / merchant UI.
 
-## 18. Review conclusion
+`beginTraderWork()` jest obecnie prostym abstrakcyjnym transferem household → settlement. Plan 005 może ujednolicić jego **domain transfer operation** z nowym exchange seam, ale nie musi wymuszać fizycznego carry dla istniejącego zachowania, jeśli nie daje to wartości.
 
-Plan jest **wart implementacji**, ale implementacja powinna być mniejsza niż sugeruje sekcja generic transport. Transport, household storage, settlement storage, ore transport i podstawowy trader flow już istnieją.
+Nie wywoływać UI ani `MerchantScreen` z symulacji.
 
-Największy nowy element to:
+## 9. Profession ↔ Profession
 
-~~~text
-household shortage
-      ↓
-local source selection
-      ↓
-atomic claim
-      ↓
-existing NPC carrying/action pipeline
-      ↓
-household deposit
-~~~
+Na tym etapie przygotować owner-agnostic transfer, ale nie implementować nowych łańcuchów produkcyjnych.
 
-oraz ujednolicenie istniejącego trader flow z tym samym transfer seam.
+Aktualny mining path:
 
-Nie należy:
-- tworzyć nowego economy/trade managera;
-- przepisywać istniejącego transportu;
-- traktować item trade jako EconomicKind exchange;
-- przenosić ore do household;
-- scalać water reserve z economy bez konkretnej potrzeby;
-- robić globalnego skanowania gospodarstw co frame.
+```ResourceDeposits
+→ NPC carried Inventory
+→ SettlementEconomy
+```
 
-**Verification status:** review oparty na aktualnym main, STATE.md, planie 005, planach 069/156, aktualnym economy/household/NPC/item-trade code oraz architekturze. To jest review dokumentacyjne; nie wykonano browser verification planu 005, ponieważ nie jest jeszcze zaimplementowany.
+jest już działający i powinien pozostać bez zmian.
+
+Przyszły:
+
+```miner → ore → blacksmith
+woodcutter → wood → carpenter
+```
+
+powinien używać istniejących ownerów stocku, nie nowych profession stores.
+
+## 10. Existing action pipeline
+
+W `NpcAgent` użyć istniejącego:
+
+```startAction()
+→ goTo
+→ execute / onComplete
+→ optional next
+→ goTo
+→ execute / onComplete
+```
+
+To już obsługuje watchdog, exhaustion, cancellation i debug trace.
+
+Nie tworzyć `ResourceTransportManager`, `TradeScheduler`, `ExchangeFSM` ani specjalnego phase w NPC.
+
+Jeżeli trzeba dodać ekonomiczny cargo state, powinien być mały i związany z aktualnym action lifecycle, a nie trwałym inventory.
+
+## 11. Streaming / lifecycle
+
+`HouseholdRegistry` i `EconomyRegistry` żyją na `SettlementsManager`, więc stock przeżywa unload/reload settlementu.
+
+`WorldBundle.rebuildWorldBundle()` również snapshotuje household/economy state.
+
+Nie zapisywać aktywnego transportu w Three.js.
+
+Pełna persistence NPC transportu nie jest obecnie uzasadniona, bo NPC runtime nie jest pełnym snapshotem SaveData. Przy stream-out/recreation trzeba natomiast zastosować istniejący action cleanup tak, aby claimed resource został zwrócony lub przekazany jednoznacznie.
+
+## 12. Performance
+
+Największa pułapka to O(N²):
+
+```text
+każdy NPC → każdy household
+```
+
+Nie robić globalnego wyszukiwania per frame.
+
+Wystarczy:
+
+- query tylko przy decyzji NPC;
+- tylko aktualny settlement;
+- tylko householdy z dodatnim surplus;
+- tylko cele z realnym shortage;
+- stabilne sortowanie/tie-break;
+- brak workera — operacja jest mała i synchroniczna.
+
+Dopiero pomiar może uzasadnić późniejszy indeks/cache.
+
+## 13. Tests — najważniejsze przypadki
+
+Poza podstawowymi testami planu koniecznie:
+
+- source surplus dokładnie = requested;
+- source surplus < requested;
+- dwóch NPC próbuje pobrać ten sam surplus;
+- destination shortage < carried;
+- source == destination;
+- cancellation po claimie;
+- failed destination po claimie;
+- overflow Household → SettlementEconomy;
+- brak transferu, gdy source jest tylko na poziomie targetu;
+- deterministic tie-break źródeł;
+- trader regression;
+- item trade regression.
+
+Testy domenowe powinny testować liczby i ownership; browser test ma potwierdzić rzeczywisty ruch NPC.
+
+## 14. Zalecana kolejność implementacji
+
+```text
+1. Audyt aktualnych helperów deposit/stock i pełnego beginNeed()/beginIdle()
+2. Mały owner-agnostic transfer/claim seam
+3. Household → Household
+4. SettlementEconomy → Household
+5. Wspólne użycie przez istniejący Trader tam, gdzie faktycznie usuwa duplikację
+6. Integracja jako istniejąca food/wood strategy
+7. Atomicity/cancellation tests
+8. Regression tests
+9. Browser verification
+```
+
+Nie refaktoryzować Woodcutter/Hunter/Miner, jeśli wspólny seam nie daje realnego uproszczenia.
+
+## 15. Najważniejsze pułapki
+
+- Nie zakładać, że obecny Trader fizycznie przenosi stock — obecnie nie.
+- Nie mapować automatycznie `EconomicKind` → `ItemKind`.
+- Nie rozszerzać Household na ore/water tylko dla wspólnego API.
+- Nie tworzyć nowego Need `trade`.
+- Nie robić globalnego skanu gospodarstw.
+- Nie rezerwować przy scoringu.
+- Nie teleportować stocku między ownerami poza istniejącym action chain.
+- Nie używać player-facing `items/trade.ts` jako backendu economic exchange.
+- Nie przechowywać authoritative exchange state w Object3D.
+- Nie dodawać persistence aktywnego transportu bez rozwiązania pełnego NPC runtime lifecycle.
+
+**Verification status:** review wykonany na `main` względem `docs/STATE.md`, planu 005, aktualnych `Household`, `SettlementEconomy`, `EconomicStock`, `NpcAgent`, `npcStrategies`, `SettlementsManager`, planów 156/002 oraz istniejącego item-trade. Nie wykonano browser verification, ponieważ plan 005 jest nadal `planned`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
