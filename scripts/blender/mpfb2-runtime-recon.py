@@ -1,22 +1,21 @@
 """
-Seedvale — MPFB2 Runtime API Recon
+Seedvale — MPFB2 Targeted Runtime API Recon
 
 Run inside Blender 5.2 with MPFB2 enabled.
 
-Purpose:
-    Discover the installed MPFB2 Python API without producing an
-    unfiltered wall of filesystem paths and inherited methods.
+This is intentionally NOT a full API dump.
 
-Output is grouped as:
-    module
-        class
-            method
+Strategy:
+    1. Discover module names without importing every module.
+    2. Select candidate modules by target terms / hints.
+    3. Inspect only those modules.
+    4. Report only matching classes, methods and functions.
+    5. Inspect matching MPFB2 operators.
+    6. Keep paths compact and deduplicated.
 
-FILTER_TERMS can narrow the recon to a topic such as:
-    animation, mixamo, rig, bake, snap, map, action
-
-This script establishes runtime availability only. It does not prove that an
-operation works correctly; execution tests remain a separate verification step.
+Evidence:
+    This discovers runtime availability. It does not prove that an operation
+    works correctly; execution tests remain a separate verification step.
 """
 
 from __future__ import annotations
@@ -37,27 +36,41 @@ import bpy
 # Configuration
 # ---------------------------------------------------------------------------
 
-# Empty = discover all public MPFB2 API entries.
-# Example:
-# FILTER_TERMS = ["animation", "mixamo", "rig", "bake", "snap", "map"]
-FILTER_TERMS: list[str] = []
+TARGET_TERMS = [
+    "animation",
+    "mixamo",
+    "rig",
+    "snap",
+    "map",
+    "bake",
+    "action",
+]
+
+# Module names containing these terms are inspected even when they do not
+# contain a TARGET_TERM. This is useful for known MPFB2 UI packages.
+TARGET_MODULE_HINTS = [
+    "animops",
+    "rigging",
+]
 
 INCLUDE_PRIVATE = False
+MAX_MODULES = 100
+MAX_METHODS_PER_CLASS = 80
 
 MPFB_ROOTS = (
     "bl_ext.extensions_blender_org.mpfb",
     "mpfb",
 )
 
-OUTPUT_DIR = "d:\\"
-OUTPUT_FILENAME = "seedvale_mpfb2_runtime_recon.json"
+OUTPUT_DIR = "D:\\"
+OUTPUT_FILENAME = "seedvale_mpfb2_targeted_runtime_recon.json"
 
 
 # ---------------------------------------------------------------------------
-# Formatting / filtering
+# Helpers
 # ---------------------------------------------------------------------------
 
-def normalize_text(value: Any) -> str:
+def norm(value: Any) -> str:
     if value is None:
         return ""
     return str(value).replace("\\", "/").strip()
@@ -66,53 +79,50 @@ def normalize_text(value: Any) -> str:
 def normalize_path(path: str | None) -> str | None:
     if not path:
         return None
-
     try:
         return Path(path).resolve().as_posix()
     except Exception:
-        return normalize_text(path)
-
-
-def relative_path(path: str | None, base: str | None) -> str | None:
-    if not path or not base:
-        return path
-
-    try:
-        return Path(path).relative_to(Path(base)).as_posix()
-    except Exception:
-        return path
+        return norm(path)
 
 
 def common_base(paths: list[str]) -> str | None:
     if not paths:
         return None
-
     try:
         return os.path.commonpath(paths).replace("\\", "/")
     except Exception:
         return None
 
 
-def matches_filter(*values: Any) -> bool:
-    if not FILTER_TERMS:
-        return True
-
-    haystack = " ".join(
-        normalize_text(value).lower()
-        for value in values
-        if value is not None
-    )
-
-    return any(term.lower() in haystack for term in FILTER_TERMS)
+def relative_path(path: str | None, base: str | None) -> str | None:
+    if not path or not base:
+        return path
+    try:
+        return Path(path).relative_to(Path(base)).as_posix()
+    except Exception:
+        return path
 
 
 def public_name(name: str) -> bool:
     return INCLUDE_PRIVATE or not name.startswith("_")
 
 
-# ---------------------------------------------------------------------------
-# Safe introspection
-# ---------------------------------------------------------------------------
+def matches(*values: Any) -> bool:
+    haystack = " ".join(
+        norm(value).lower()
+        for value in values
+        if value is not None
+    )
+    return any(term.lower() in haystack for term in TARGET_TERMS)
+
+
+def module_is_candidate(name: str) -> bool:
+    lowered = name.lower()
+    return (
+        any(term.lower() in lowered for term in TARGET_TERMS)
+        or any(hint.lower() in lowered for hint in TARGET_MODULE_HINTS)
+    )
+
 
 def safe_signature(value: Any) -> str | None:
     try:
@@ -121,7 +131,7 @@ def safe_signature(value: Any) -> str | None:
         return None
 
 
-def safe_source_file(value: Any) -> str | None:
+def safe_source(value: Any) -> str | None:
     try:
         return normalize_path(
             inspect.getsourcefile(value) or inspect.getfile(value)
@@ -130,49 +140,55 @@ def safe_source_file(value: Any) -> str | None:
         return None
 
 
-def safe_members(owner: Any) -> list[tuple[str, Any]]:
+def safe_doc(value: Any) -> str:
     try:
-        return [
-            (name, getattr(owner, name))
-            for name in dir(owner)
-            if public_name(name)
-        ]
+        return inspect.getdoc(value) or ""
     except Exception:
-        return []
+        return ""
 
 
 # ---------------------------------------------------------------------------
-# MPFB2 discovery
+# MPFB2 module discovery
 # ---------------------------------------------------------------------------
 
-def import_mpfb_root() -> tuple[ModuleType | None, str | None]:
+def import_root() -> tuple[ModuleType | None, str | None]:
     for name in MPFB_ROOTS:
         try:
             return importlib.import_module(name), name
         except Exception:
-            continue
-
+            pass
     return None, None
 
 
-def discover_submodules(root: ModuleType) -> list[ModuleType]:
-    modules = [root]
+def discover_candidate_module_names(root: ModuleType) -> list[str]:
+    names: list[str] = []
     root_path = getattr(root, "__path__", None)
 
     if not root_path:
-        return modules
+        return [root.__name__]
 
     prefix = root.__name__ + "."
 
     try:
         for info in pkgutil.walk_packages(root_path, prefix):
-            try:
-                modules.append(importlib.import_module(info.name))
-            except Exception:
-                # Optional/broken modules must not abort the recon.
-                continue
+            if module_is_candidate(info.name):
+                names.append(info.name)
+                if len(names) >= MAX_MODULES:
+                    break
     except Exception:
         pass
+
+    return sorted(set(names))
+
+
+def import_candidate_modules(names: list[str]) -> list[ModuleType]:
+    modules: list[ModuleType] = []
+
+    for name in names:
+        try:
+            modules.append(importlib.import_module(name))
+        except Exception:
+            pass
 
     return modules
 
@@ -181,7 +197,12 @@ def discover_submodules(root: ModuleType) -> list[ModuleType]:
 # API extraction
 # ---------------------------------------------------------------------------
 
-def class_record(module: ModuleType, name: str, cls: type) -> dict[str, Any] | None:
+def class_record(
+    module: ModuleType,
+    name: str,
+    cls: type,
+) -> dict[str, Any] | None:
+    class_doc = safe_doc(cls)
     methods: list[dict[str, Any]] = []
 
     try:
@@ -202,12 +223,14 @@ def class_record(module: ModuleType, name: str, cls: type) -> dict[str, Any] | N
             continue
 
         signature = safe_signature(value)
+        doc = safe_doc(value)
 
-        if not matches_filter(
+        if not matches(
             module.__name__,
             name,
             method_name,
             signature,
+            doc,
         ):
             continue
 
@@ -215,18 +238,19 @@ def class_record(module: ModuleType, name: str, cls: type) -> dict[str, Any] | N
             {
                 "name": method_name,
                 "signature": signature,
-                "source": safe_source_file(value),
+                "source": safe_source(value),
             }
         )
 
-    class_matches = matches_filter(module.__name__, name)
+        if len(methods) >= MAX_METHODS_PER_CLASS:
+            break
 
-    if FILTER_TERMS and not class_matches and not methods:
+    if not matches(module.__name__, name, class_doc) and not methods:
         return None
 
     return {
         "name": name,
-        "source": safe_source_file(cls),
+        "source": safe_source(cls),
         "methods": methods,
     }
 
@@ -235,7 +259,15 @@ def module_record(module: ModuleType) -> dict[str, Any] | None:
     classes: list[dict[str, Any]] = []
     functions: list[dict[str, Any]] = []
 
-    for name, value in safe_members(module):
+    for name in sorted(
+        item for item in dir(module)
+        if public_name(item)
+    ):
+        try:
+            value = getattr(module, name)
+        except Exception:
+            continue
+
         if (
             inspect.isclass(value)
             and getattr(value, "__module__", None) == module.__name__
@@ -249,77 +281,90 @@ def module_record(module: ModuleType) -> dict[str, Any] | None:
             and getattr(value, "__module__", None) == module.__name__
         ):
             signature = safe_signature(value)
+            doc = safe_doc(value)
 
-            if matches_filter(module.__name__, name, signature):
+            if matches(module.__name__, name, signature, doc):
                 functions.append(
                     {
                         "name": name,
                         "signature": signature,
-                        "source": safe_source_file(value),
+                        "source": safe_source(value),
                     }
                 )
 
-    if FILTER_TERMS and not matches_filter(module.__name__) and not classes and not functions:
+    if not classes and not functions:
         return None
 
     return {
         "name": module.__name__,
         "file": normalize_path(getattr(module, "__file__", None)),
-        "classes": sorted(classes, key=lambda item: item["name"].lower()),
-        "functions": sorted(functions, key=lambda item: item["name"].lower()),
+        "classes": classes,
+        "functions": functions,
     }
 
 
 # ---------------------------------------------------------------------------
-# Blender / MPFB2 operators
+# MPFB2 operators
 # ---------------------------------------------------------------------------
 
 def discover_mpfb_operators() -> list[dict[str, str]]:
-    operators: list[dict[str, str]] = []
+    result: list[dict[str, str]] = []
 
     try:
         groups = dir(bpy.ops.mpfb)
     except Exception:
-        return operators
+        return result
 
     for group_name in sorted(
         name for name in groups if public_name(name)
     ):
         try:
             group = getattr(bpy.ops.mpfb, group_name)
-            names = [
+            operator_names = [
                 name for name in dir(group)
                 if public_name(name)
             ]
         except Exception:
             continue
 
-        for operator_name in sorted(names):
-            if not matches_filter(group_name, operator_name, "mpfb"):
+        for operator_name in sorted(operator_names):
+            idname = f"mpfb.{group_name}.{operator_name}"
+
+            if not matches(group_name, operator_name, idname):
                 continue
 
-            operators.append(
+            result.append(
                 {
                     "group": group_name,
                     "name": operator_name,
-                    "idname": f"mpfb.{group_name}.{operator_name}",
+                    "idname": idname,
                 }
             )
 
-    return operators
+    return result
 
+
+# ---------------------------------------------------------------------------
+# Blender API candidates
+# ---------------------------------------------------------------------------
 
 def discover_blender_api() -> list[dict[str, str]]:
     candidates = (
-        ("bpy.ops.nla", "bake"),
-        ("bpy.ops.export_scene", "gltf"),
-        ("bpy.data", "actions"),
+        ("bpy.ops.nla", "bake", "animation bake"),
+        ("bpy.ops.export_scene", "gltf", "GLB export"),
+        ("bpy.data", "actions", "Action datablocks"),
+        ("bpy.types.Object", "animation_data", "object animation data"),
+        ("bpy.types.Action", "fcurves", "Action curves"),
     )
 
     return [
-        {"owner": owner, "name": name}
-        for owner, name in candidates
-        if matches_filter(owner, name, "animation")
+        {
+            "owner": owner,
+            "name": name,
+            "purpose": purpose,
+        }
+        for owner, name, purpose in candidates
+        if matches(owner, name, purpose)
     ]
 
 
@@ -331,19 +376,24 @@ def collect_paths(modules: list[dict[str, Any]]) -> list[str]:
     paths: list[str] = []
 
     for module in modules:
-        for value in (
-            module.get("file"),
-            *(cls.get("source") for cls in module["classes"]),
-            *(method.get("source") for cls in module["classes"] for method in cls["methods"]),
-            *(function.get("source") for function in module["functions"]),
-        ):
-            if value:
-                paths.append(value)
+        paths.append(module["file"]) if module.get("file") else None
+
+        for cls in module["classes"]:
+            paths.append(cls["source"]) if cls.get("source") else None
+
+            for method in cls["methods"]:
+                paths.append(method["source"]) if method.get("source") else None
+
+        for function in module["functions"]:
+            paths.append(function["source"]) if function.get("source") else None
 
     return sorted(set(paths))
 
 
-def compact_paths(modules: list[dict[str, Any]], base: str | None) -> None:
+def compact_paths(
+    modules: list[dict[str, Any]],
+    base: str | None,
+) -> None:
     for module in modules:
         module["file"] = relative_path(module.get("file"), base)
 
@@ -365,11 +415,11 @@ def print_report(data: dict[str, Any]) -> None:
     summary = data["summary"]
 
     print("\n" + "=" * 72)
-    print("Seedvale — MPFB2 Runtime API Recon")
+    print("Seedvale — MPFB2 Targeted Runtime API Recon")
     print("=" * 72)
+    print(f"Blender:   {data['recon']['blender_version']}")
     print(f"MPFB2:     {data['mpfb2']['import']}")
-    print(f"File:      {data['mpfb2']['file'] or 'unknown'}")
-    print(f"Filter:    {', '.join(FILTER_TERMS) if FILTER_TERMS else 'none'}")
+    print(f"Terms:     {', '.join(TARGET_TERMS)}")
     print(
         "Found:     "
         f"{summary['modules']} modules, "
@@ -381,8 +431,9 @@ def print_report(data: dict[str, Any]) -> None:
 
     if data["path_base"]:
         print(f"Path base: {data['path_base']}")
+        print(f"Unique paths: {data['unique_paths']}")
 
-    print("\nAPI")
+    print("\nMPFB2 API")
 
     for module in data["modules"]:
         print(f"\n[{module['name']}]")
@@ -393,9 +444,6 @@ def print_report(data: dict[str, Any]) -> None:
         for cls in module["classes"]:
             print(f"  class {cls['name']}")
 
-            if cls["source"]:
-                print(f"    source: {cls['source']}")
-
             for method in cls["methods"]:
                 signature = method["signature"] or "(...)"
                 print(f"    .{method['name']}{signature}")
@@ -404,18 +452,21 @@ def print_report(data: dict[str, Any]) -> None:
             signature = function["signature"] or "(...)"
             print(f"  function {function['name']}{signature}")
 
-    print("\nMPFB2 operators")
+    print("\nMPFB2 OPERATORS")
 
-    for operator in data["operators"]:
-        print(f"  {operator['idname']}")
-
-    if not data["operators"]:
+    if data["operators"]:
+        for operator in data["operators"]:
+            print(f"  {operator['idname']}")
+    else:
         print("  none")
 
-    print("\nBlender API candidates")
+    print("\nBLENDER ANIMATION API")
 
     for item in data["blender_api"]:
-        print(f"  {item['owner']}.{item['name']}")
+        print(
+            f"  {item['owner']}.{item['name']}"
+            f" — {item['purpose']}"
+        )
 
     print("\n" + "=" * 72)
     print(f"JSON: {data['output']}")
@@ -427,7 +478,7 @@ def print_report(data: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    root, import_name = import_mpfb_root()
+    root, import_name = import_root()
 
     if root is None:
         raise RuntimeError(
@@ -435,30 +486,36 @@ def main() -> None:
             + ", ".join(MPFB_ROOTS)
         )
 
-    modules = []
+    candidate_names = discover_candidate_module_names(root)
+    modules = import_candidate_modules(candidate_names)
 
-    for module in discover_submodules(root):
+    records: list[dict[str, Any]] = []
+
+    for module in modules:
         try:
             record = module_record(module)
             if record:
-                modules.append(record)
+                records.append(record)
         except Exception:
             continue
 
-    paths = collect_paths(modules)
+    paths = collect_paths(records)
     path_base = common_base(paths)
-    compact_paths(modules, path_base)
+    compact_paths(records, path_base)
 
     operators = discover_mpfb_operators()
     blender_api = discover_blender_api()
 
-    class_count = sum(len(module["classes"]) for module in modules)
+    class_count = sum(len(module["classes"]) for module in records)
     method_count = sum(
         len(cls["methods"])
-        for module in modules
+        for module in records
         for cls in module["classes"]
     )
-    function_count = sum(len(module["functions"]) for module in modules)
+    function_count = sum(
+        len(module["functions"])
+        for module in records
+    )
 
     output_path = (
         Path(bpy.data.filepath).parent / OUTPUT_FILENAME
@@ -468,9 +525,10 @@ def main() -> None:
 
     data = {
         "recon": {
-            "purpose": "MPFB2 runtime API discovery",
+            "purpose": "targeted MPFB2 runtime API discovery",
             "blender_version": bpy.app.version_string,
-            "filter_terms": FILTER_TERMS,
+            "terms": TARGET_TERMS,
+            "module_hints": TARGET_MODULE_HINTS,
             "include_private": INCLUDE_PRIVATE,
         },
         "mpfb2": {
@@ -478,11 +536,12 @@ def main() -> None:
             "file": normalize_path(getattr(root, "__file__", None)),
         },
         "path_base": path_base,
-        "modules": modules,
+        "unique_paths": len(paths),
+        "modules": records,
         "operators": operators,
         "blender_api": blender_api,
         "summary": {
-            "modules": len(modules),
+            "modules": len(records),
             "classes": class_count,
             "methods": method_count,
             "functions": function_count,
