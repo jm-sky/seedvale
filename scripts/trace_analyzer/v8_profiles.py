@@ -1,29 +1,126 @@
 """
 Extraction of embedded V8 CPU profiles (`args.data.cpuProfile`) into
-`ProfileOperation`s, restricted to WebGL/shader/Three.js renderer
-functions (see `categorize`).
+`ProfileOperation`s: WebGL/shader/Three.js renderer functions (see
+`categorize.normalize_category`) plus Seedvale application functions
+and other code-ownership buckets (see `categorize.classify_source_ownership`).
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any, Iterable
 
-from .categorize import normalize_category
+from .categorize import (
+    CATEGORY_APPLICATION,
+    classify_source_ownership,
+    normalize_category,
+)
 from .models import ProfileOperation
 from .trace_parser import safe_int
+
+WEBGL_FAMILY_CATEGORIES = {
+    "WebGL",
+    "SHADER / PROGRAM",
+    "THREE.JS RENDERER",
+}
+
+
+def _profile_chunk(event: dict[str, Any]) -> dict[str, Any] | None:
+    args = event.get("args") or {}
+    data = args.get("data") or {}
+
+    chunk = data.get("cpuProfile")
+
+    return chunk if isinstance(chunk, dict) else None
+
+
+def _merge_profile_chunks(
+    chunks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    nodes: list[Any] = []
+    samples: list[Any] = []
+    time_deltas: list[Any] = []
+
+    for chunk in chunks:
+        chunk_nodes = chunk.get("nodes")
+
+        if isinstance(chunk_nodes, list):
+            nodes.extend(chunk_nodes)
+
+        chunk_samples = chunk.get("samples")
+
+        if isinstance(chunk_samples, list):
+            samples.extend(chunk_samples)
+
+        chunk_deltas = chunk.get("timeDeltas")
+
+        if isinstance(chunk_deltas, list):
+            time_deltas.extend(chunk_deltas)
+
+    return {
+        "nodes": nodes,
+        "samples": samples,
+        "timeDeltas": time_deltas,
+    }
 
 
 def iter_cpu_profiles(
     events: list[dict[str, Any]],
 ) -> Iterable[dict[str, Any]]:
+    """
+    Yields one merged CPU profile per V8 profiler id, accumulating
+    `nodes`/`samples`/`timeDeltas` across every `ProfileChunk` event
+    that shares that id.
+
+    Chrome's tracing format splits a single logical V8 CPU profile
+    into many `ProfileChunk` events on the wire: only some chunks
+    introduce new `nodes` — later chunks routinely reference node ids
+    that were defined by an earlier chunk of the SAME profile id.
+    Treating each chunk as an independent profile (the previous
+    behaviour here) resolves sample node ids only against that
+    chunk's own `nodes` list, which silently drops almost every
+    sample whose defining node arrived in an earlier chunk.
+    """
+    tagged: list[tuple[int, Any, Any, dict[str, Any]]] = []
+
     for event in events:
-        args = event.get("args") or {}
-        data = args.get("data") or {}
+        chunk = _profile_chunk(event)
 
-        profile = data.get("cpuProfile")
+        if chunk is None:
+            continue
 
-        if isinstance(profile, dict):
-            yield profile
+        tagged.append(
+            (
+                safe_int(event.get("ts")),
+                event.get("pid"),
+                event.get("id"),
+                chunk,
+            )
+        )
+
+    tagged.sort(key=lambda item: item[0])
+
+    chunks_by_id: dict[
+        tuple[Any, Any],
+        list[dict[str, Any]],
+    ] = defaultdict(list)
+
+    fallback: list[dict[str, Any]] = []
+
+    for _, pid, profile_id, chunk in tagged:
+        if profile_id is None:
+            # No profiler id to group by (defensive: not observed in
+            # practice) — treat the chunk as a standalone profile
+            # rather than risk merging unrelated chunks together.
+            fallback.append(chunk)
+            continue
+
+        chunks_by_id[(pid, profile_id)].append(chunk)
+
+    for chunks in chunks_by_id.values():
+        yield _merge_profile_chunks(chunks)
+
+    yield from fallback
 
 
 def profile_nodes(
@@ -152,7 +249,7 @@ def profile_node_operation(
     node: dict[str, Any],
     nodes_by_id: dict[int, dict[str, Any]],
     parents: dict[int, int],
-) -> ProfileOperation | None:
+) -> ProfileOperation:
     frame = get_node_call_frame(node)
 
     name = (
@@ -163,16 +260,20 @@ def profile_node_operation(
 
     name = str(name)
 
-    category = normalize_category(name)
-
-    if category not in {
-        "WebGL",
-        "SHADER / PROGRAM",
-        "THREE.JS RENDERER",
-    }:
-        return None
-
     url = str(frame.get("url") or "")
+
+    # Two classification axes: `normalize_category` identifies
+    # WebGL/shader/Three.js-renderer calls by function name (kept
+    # exactly as before). Everything else falls back to a URL-based
+    # code-ownership classification (Seedvale application code vs.
+    # framework/runtime vs. Chrome/V8 infrastructure vs. ambiguous).
+    webgl_category = normalize_category(name)
+
+    category = (
+        webgl_category
+        if webgl_category in WEBGL_FAMILY_CATEGORIES
+        else classify_source_ownership(url)
+    )
 
     line = frame.get("lineNumber")
     column = frame.get("columnNumber")
@@ -245,9 +346,6 @@ def extract_profile_operations(
                 parents,
             )
 
-            if operation is None:
-                continue
-
             delta_us = 0.0
 
             if index < len(deltas):
@@ -298,9 +396,6 @@ def extract_profile_operations(
                 parents,
             )
 
-            if operation is None:
-                continue
-
             key = (
                 operation.name,
                 operation.url,
@@ -319,3 +414,34 @@ def extract_profile_operations(
                 node_seen.add(key)
 
     return list(operations.values())
+
+
+def application_profile_operations(
+    operations: list[ProfileOperation],
+) -> list[ProfileOperation]:
+    """
+    Seedvale application-owned operations with real sampling evidence,
+    ranked by sampled CPU time where the trace provides it (see
+    `ProfileOperation.duration_ms`), falling back to sample count when
+    it does not — some traces' `ProfileChunk` events carry no
+    `timeDeltas` at all, in which case `duration_ms` stays 0 for every
+    operation and callers must not present that as a real
+    zero-cost measurement.
+    """
+    result = [
+        operation
+        for operation in operations
+        if operation.category == CATEGORY_APPLICATION
+        and (operation.samples > 0 or operation.node_occurrences > 0)
+    ]
+
+    result.sort(
+        key=lambda operation: (
+            operation.duration_ms,
+            operation.samples,
+            operation.node_occurrences,
+        ),
+        reverse=True,
+    )
+
+    return result

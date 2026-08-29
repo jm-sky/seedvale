@@ -1,7 +1,7 @@
 # Plan: Trace Analyzer — Real Application CPU Attribution
 
 **Created:** 2026-08-24
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** high · **Effort:** M
 **Depends on:** -
 

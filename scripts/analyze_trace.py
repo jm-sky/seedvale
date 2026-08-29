@@ -161,6 +161,10 @@ def main() -> None:
         profile_operations
     )
 
+    report.print_application_profiles(
+        profile_operations
+    )
+
     report.print_webgl_trace(
         raw_events
     )

@@ -5,7 +5,7 @@
 ### High priority
 
 - [ ] **Actionable findings** — add a concise `Findings` section that identifies likely bottlenecks instead of only listing trace events.
-- [ ] **Real application CPU attribution** — look through `RunTask`, `RunMicrotasks` and other browser/container events to the actual application call tree.
+- [x] **Real application CPU attribution** — look through `RunTask`, `RunMicrotasks` and other browser/container events to the actual application call tree. (plan tools-002 — `TOP APPLICATION CPU OPERATIONS` report section, functions identified by `url + line + column`, conservative Seedvale/Three.js/framework/Chrome ownership classification.)
 - [ ] **Hitch → cause correlation** — for the longest / worst frames, identify the CPU work or other trace activity responsible where possible.
 - [ ] **Three.js attribution** — report meaningful CPU time, call count and percentage for renderer operations, with useful call trees instead of isolated function names.
 - [ ] **GPU attribution** — distinguish attributable GPU work from generic `GPUTask`; explicitly report when the trace does not provide enough information.

@@ -19,6 +19,7 @@ from .hitch_analysis import (
     top_long_cpu_tasks,
 )
 from .models import Event, MAX_TREE_DEPTH, Node, ProfileOperation, TOP_N
+from .v8_profiles import application_profile_operations
 from .webgl_analysis import (
     aggregate_webgl_trace,
     webgl_profile_operations,
@@ -345,6 +346,89 @@ def print_webgl_profiles(
         emit(
             f"   {item.category}   "
             f"Profile CPU: {ms(item.duration_ms)}   "
+            f"Samples: {item.samples}   "
+            f"Profiles: {item.profile_count}   "
+            f"Nodes: {item.node_occurrences}"
+        )
+
+        if item.url:
+            location = item.url
+
+            if item.line is not None:
+                location += f":{item.line}"
+
+                if item.column is not None:
+                    location += f":{item.column}"
+
+            emit(
+                f"   Location: {location}"
+            )
+
+        if item.tree:
+            emit()
+            emit(
+                "   Profile call tree:"
+            )
+
+            for depth, name in enumerate(
+                item.tree[-MAX_TREE_DEPTH:]
+            ):
+                emit(
+                    f"{'  ' * depth}   → {name}"
+                )
+
+        emit()
+
+
+def print_application_profiles(
+    operations: list[ProfileOperation],
+) -> None:
+    emit()
+    emit("-" * 72)
+    emit(md_header("TOP APPLICATION CPU OPERATIONS"))
+    emit("-" * 72, True)
+
+    items = application_profile_operations(
+        operations
+    )
+
+    if not items:
+        emit(
+            "No Seedvale application functions identified in CPU "
+            "profiles (no sampled call frame resolved to a "
+            "`/src/` source location)."
+        )
+        return
+
+    total_duration = sum(
+        item.duration_ms for item in items
+    )
+
+    if total_duration <= 0.0:
+        emit(
+            "This trace's embedded CPU profiles carry no "
+            "`timeDeltas` (per-sample timing), so sampled CPU time "
+            "cannot be computed for any function, application or "
+            "otherwise. Ranking below falls back to sample/node "
+            "count, which reflects sampling frequency, not "
+            "wall-clock CPU cost. To get real per-function CPU "
+            "time, re-record with a capture path that preserves "
+            "`timeDeltas` on `disabled-by-default-v8.cpu_profiler` "
+            "`ProfileChunk` events."
+        )
+        emit()
+
+    for index, item in enumerate(
+        items[:TOP_N],
+        1,
+    ):
+        emit(
+            f"{index}. {item.name}"
+        )
+
+        emit(
+            f"   {item.category}   "
+            f"Sampled CPU: {ms(item.duration_ms)}   "
             f"Samples: {item.samples}   "
             f"Profiles: {item.profile_count}   "
             f"Nodes: {item.node_occurrences}"
