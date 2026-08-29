@@ -55,7 +55,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `008`
 - tools: `004`
 - ui-input: `005`
-- world: `006`
+- world: `007`
 - world-terrain: `003`
 
 This ids section is maintained automatically from the plan files.
@@ -124,6 +124,7 @@ Natural vegetation
 | ◼️ `world-005-new-game-time-reset.md`                        | - | 🟡 | S | - |
 | ◼️ `settlements-npcs-005-local-resource-exchange.md`         | - | 🔴 | M | ~~156~~ ~~002~~ |
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
+| ◼️ `world-006-time-weather-and-biome-ambient-soundscape.md`  | - | 🟡 | S | - |
 
 ### Fresh new
 
