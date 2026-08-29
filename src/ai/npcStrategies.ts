@@ -14,6 +14,8 @@
  */
 export type NpcStrategyId =
   | 'householdFood'
+  | 'economyWithdraw'
+  | 'householdExchange'
   | 'hunt'
   | 'nearbyFoodSource'
   | 'gardenGather'
@@ -51,13 +53,26 @@ export type FoodStrategyContext = {
    *  to fire precisely when the household is comfortably stocked, not when
    *  it's running low. */
   deliveryAvailable: boolean
+  /** Local resource exchange (plan settlements-npcs-005) — the settlement's
+   *  own `SettlementEconomy` village storage currently has real surplus food
+   *  and this household has a real shortage (existing
+   *  `Household.shortage`/`SettlementEconomy.surplus`, no new need model). */
+  economyWithdrawAvailable: boolean
+  /** Local resource exchange — a same-settlement household currently has
+   *  real surplus food this household's real shortage can claim. */
+  householdExchangeAvailable: boolean
 }
 
 /**
- * Food's vertical slice (ai-003 §2, extended by plan 167):
- * `playerStorageDelivery` (only when eligible, see `FoodStrategyContext`
- * above) → `householdFood` → `hunt` (hunters only) → `nearbyFoodSource` →
- * `gardenGather`. `gardenGather` is always available — it is the existing
+ * Food's vertical slice (ai-003 §2, extended by plan 167 and
+ * settlements-npcs-005): `playerStorageDelivery` (only when eligible, see
+ * `FoodStrategyContext` above) → `householdFood` → `economyWithdraw` →
+ * `householdExchange` → `hunt` (hunters only) → `nearbyFoodSource` →
+ * `gardenGather`. The two local-exchange strategies sit right after the
+ * household's own pantry and before hunting/foraging/the abstract garden —
+ * a real, already-produced surplus sitting in village storage or a
+ * neighbour's pantry is a faster, more "local" resupply than a fresh hunt or
+ * gather trip. `gardenGather` is always available — it is the existing
  * unconditional abstract-garden fallback, never a source that can be "out of
  * food".
  */
@@ -65,6 +80,8 @@ export function getFoodStrategyCandidates(ctx: FoodStrategyContext): NpcStrategy
   const candidates: NpcStrategyCandidate[] = []
   if (ctx.deliveryAvailable) candidates.push({ id: 'playerStorageDelivery', available: true })
   candidates.push({ id: 'householdFood', available: ctx.householdHasFood })
+  candidates.push({ id: 'economyWithdraw', available: ctx.economyWithdrawAvailable })
+  candidates.push({ id: 'householdExchange', available: ctx.householdExchangeAvailable })
   if (ctx.isHunter) candidates.push({ id: 'hunt', available: ctx.huntTargetAvailable })
   candidates.push({ id: 'nearbyFoodSource', available: ctx.nearbyFoodSourceAvailable })
   candidates.push({ id: 'gardenGather', available: true })
@@ -96,12 +113,24 @@ export type WoodStrategyContext = {
    *  loaded tree landmarks) — computed by the caller from the same
    *  conditions `beginNeed`'s `wood` branch already gates on. */
   available: boolean
+  /** Local resource exchange (plan settlements-npcs-005) — mirrors
+   *  `FoodStrategyContext.economyWithdrawAvailable` for wood. */
+  economyWithdrawAvailable: boolean
+  /** Local resource exchange — mirrors
+   *  `FoodStrategyContext.householdExchangeAvailable` for wood. */
+  householdExchangeAvailable: boolean
 }
 
-/** `wood` currently has a single concrete chop→deposit route (ai-003 §2) —
- *  no artificial alternatives just to exercise the mechanism. */
+/** `wood` (plan settlements-npcs-005 extends ai-003 §2): `economyWithdraw` →
+ *  `householdExchange` → the original chop→deposit route. A household short
+ *  on wood tries the settlement's own stockpile / a neighbour's surplus
+ *  before sending someone to fell a tree. */
 export function getWoodStrategyCandidates(ctx: WoodStrategyContext): NpcStrategyCandidate[] {
-  return [{ id: 'chopDeposit', available: ctx.available }]
+  return [
+    { id: 'economyWithdraw', available: ctx.economyWithdrawAvailable },
+    { id: 'householdExchange', available: ctx.householdExchangeAvailable },
+    { id: 'chopDeposit', available: ctx.available },
+  ]
 }
 
 /** First-available-wins (ai-003 §5) — deliberately not a scoring engine.

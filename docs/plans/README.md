@@ -121,7 +121,6 @@ Natural vegetation
 | ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
-| ◼️ `settlements-npcs-005-local-resource-exchange.md`         | - | 🔴 | M | ~~156~~ ~~002~~ |
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | ◼️ `world-006-time-weather-and-biome-ambient-soundscape.md`  | - | 🟡 | S | - |
 
@@ -208,6 +207,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `world-005-new-game-time-reset.md` | New Game resets `elapsedDays` and `timeOfDay` via `resetDayNightForNewGame()` |
 | `tools-001-performance-benchmark-determinism-and-reliability.md` | [notes](./implementation-notes/tools-001-performance-benchmark-determinism-and-reliability-implementation-notes.md); repeated-run stability (§8) needs manual `?benchmark=` browser verification |
 | `fauna-001-rabies-and-animal-infection.md` | [notes](./implementation-notes/fauna-001-rabies-and-animal-infection-implementation-notes.md); browser verification per plan's §Weryfikacja/Browser-manual list |
+| `settlements-npcs-005-local-resource-exchange.md` | [notes](./implementation-notes/settlements-npcs-005-local-resource-exchange-implementation-notes.md); household ↔ household and village storage ↔ household exchange need browser verification (real surplus/shortage, physical NPC movement) |
 
 ---
 

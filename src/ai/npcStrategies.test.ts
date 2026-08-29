@@ -15,6 +15,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(candidates.some((c) => c.id === 'hunt')).toBe(false)
   })
@@ -26,6 +28,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     const withTarget = getFoodStrategyCandidates({
       householdHasFood: false,
@@ -33,6 +37,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(noTarget.find((c) => c.id === 'hunt')?.available).toBe(false)
     expect(withTarget.find((c) => c.id === 'hunt')?.available).toBe(true)
@@ -45,6 +51,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(candidates.find((c) => c.id === 'householdFood')?.available).toBe(false)
   })
@@ -56,6 +64,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: true,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(candidates.find((c) => c.id === 'nearbyFoodSource')?.available).toBe(true)
   })
@@ -67,6 +77,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(candidates.find((c) => c.id === 'gardenGather')?.available).toBe(true)
   })
@@ -78,8 +90,44 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: true,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     }
     expect(getFoodStrategyCandidates(ctx)).toEqual(getFoodStrategyCandidates(ctx))
+  })
+
+  it('places economyWithdraw and householdExchange between householdFood and hunt/foraging', () => {
+    const candidates = getFoodStrategyCandidates({
+      householdHasFood: false,
+      isHunter: true,
+      huntTargetAvailable: true,
+      nearbyFoodSourceAvailable: true,
+      deliveryAvailable: false,
+      economyWithdrawAvailable: true,
+      householdExchangeAvailable: true,
+    })
+    expect(candidates.map((c) => c.id)).toEqual([
+      'householdFood',
+      'economyWithdraw',
+      'householdExchange',
+      'hunt',
+      'nearbyFoodSource',
+      'gardenGather',
+    ])
+    expect(selectStrategy(candidates)).toBe('economyWithdraw')
+  })
+
+  it('falls through to householdExchange when economyWithdraw is unavailable', () => {
+    const candidates = getFoodStrategyCandidates({
+      householdHasFood: false,
+      isHunter: false,
+      huntTargetAvailable: false,
+      nearbyFoodSourceAvailable: false,
+      deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: true,
+    })
+    expect(selectStrategy(candidates)).toBe('householdExchange')
   })
 
   it('omits playerStorageDelivery when unavailable', () => {
@@ -89,6 +137,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(candidates.some((c) => c.id === 'playerStorageDelivery')).toBe(false)
   })
@@ -100,6 +150,8 @@ describe('getFoodStrategyCandidates', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: true,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(candidates[0]).toEqual({ id: 'playerStorageDelivery', available: true })
     expect(selectStrategy(candidates)).toBe('playerStorageDelivery')
@@ -118,6 +170,8 @@ describe('selectStrategy', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: true,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(selectStrategy(candidates)).toBe('nearbyFoodSource')
   })
@@ -129,6 +183,8 @@ describe('selectStrategy', () => {
       huntTargetAvailable: true,
       nearbyFoodSourceAvailable: true,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(selectStrategy(candidates)).toBe('householdFood')
   })
@@ -140,6 +196,8 @@ describe('selectStrategy', () => {
       huntTargetAvailable: false,
       nearbyFoodSourceAvailable: false,
       deliveryAvailable: false,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: false,
     })
     expect(selectStrategy(candidates)).toBe('gardenGather')
   })
@@ -163,8 +221,22 @@ describe('getWaterDutyStrategyCandidates', () => {
 })
 
 describe('getWoodStrategyCandidates', () => {
-  it('reflects the caller-computed availability of the single chop route', () => {
-    expect(selectStrategy(getWoodStrategyCandidates({ available: true }))).toBe('chopDeposit')
-    expect(selectStrategy(getWoodStrategyCandidates({ available: false }))).toBeNull()
+  it('reflects the caller-computed availability of the chop route', () => {
+    const noExchange = { economyWithdrawAvailable: false, householdExchangeAvailable: false }
+    expect(selectStrategy(getWoodStrategyCandidates({ available: true, ...noExchange }))).toBe('chopDeposit')
+    expect(selectStrategy(getWoodStrategyCandidates({ available: false, ...noExchange }))).toBeNull()
+  })
+
+  it('prefers economyWithdraw, then householdExchange, over chopping a tree', () => {
+    expect(selectStrategy(getWoodStrategyCandidates({
+      available: true,
+      economyWithdrawAvailable: true,
+      householdExchangeAvailable: true,
+    }))).toBe('economyWithdraw')
+    expect(selectStrategy(getWoodStrategyCandidates({
+      available: true,
+      economyWithdrawAvailable: false,
+      householdExchangeAvailable: true,
+    }))).toBe('householdExchange')
   })
 })

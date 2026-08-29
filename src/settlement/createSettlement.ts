@@ -41,6 +41,7 @@ import { createNullPointLightBudget, type PointLightBudget } from '../world/poin
 import { applyTreeStageVisual } from '../world/treeVisuals'
 import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
+import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
 import { disposeLivestock, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
@@ -403,6 +404,18 @@ export async function createSettlement(
     const hasHunter = family.members.some((m) => m.character.role === 'hunter')
     return householdRegistry.getOrCreate(householdIdFor(def.id, familyIndex), def.id, home.id, hasHunter)
   })
+  // Local resource exchange (plan settlements-npcs-005) — one bounded,
+  // same-settlement candidate list built once from `households`/`homePlaces`
+  // above (no world-wide household scan, no second registry query). Home
+  // positions are static once a settlement is built, so this snapshot stays
+  // valid for the settlement's whole lifetime; `Household` objects
+  // themselves are live references, so `surplus()` always reflects current
+  // stock at claim time regardless of when this list was built.
+  const householdExchangeCandidates: readonly HouseholdSurplusCandidate[] = households.map((household, familyIndex) => {
+    const position = homePlaces[familyIndex % homePlaces.length]!.position
+    return { household, position: { x: position.x, z: position.z } }
+  })
+  const householdExchange = createHouseholdExchangeHooks(householdExchangeCandidates)
   // Household storage container binding (plan 156) — same
   // `familyIndex % homePlaces.length` indexing as `households` above so a
   // household's container sits at its own home's yard, not a mismatched one.
@@ -638,6 +651,7 @@ export async function createSettlement(
         foodSources,
         hunting,
         helperDelivery,
+        householdExchange,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

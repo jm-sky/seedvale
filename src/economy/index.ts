@@ -1,6 +1,7 @@
 export { type DevelopmentDef, type DevelopmentStatus, WOODSHED_DEVELOPMENT } from './development'
 export { demandsFor, initialStockFor, type SettlementEconomySeed } from './initial'
 export { ECONOMIC_KINDS, type EconomicKind, isEconomicKind } from './kinds'
+export { claimEconomySurplus, claimHouseholdSurplus } from './localExchange'
 export {
   commitHunterArrowProduction,
   commitRoleWork,

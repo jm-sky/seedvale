@@ -1,7 +1,7 @@
 # Plan: Local Resource Exchange
 
 **Created:** 2026-08-28
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~156~~ ~~002~~
 **Domain:** `settlements-npcs`

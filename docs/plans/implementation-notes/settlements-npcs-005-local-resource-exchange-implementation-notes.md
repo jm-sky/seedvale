@@ -294,4 +294,25 @@ Nie refaktoryzować Woodcutter/Hunter/Miner, jeśli wspólny seam nie daje realn
 
 **Verification status:** review wykonany na `main` względem `docs/STATE.md`, planu 005, aktualnych `Household`, `SettlementEconomy`, `EconomicStock`, `NpcAgent`, `npcStrategies`, `SettlementsManager`, planów 156/002 oraz istniejącego item-trade. Nie wykonano browser verification, ponieważ plan 005 jest nadal `planned`.
 
+## 16. Implementacja (2026-08-29)
+
+Zaimplementowano zgodnie z zaleconą kolejnością (§14), bez transport FSM/`TradeManager`/nowego `Need`:
+
+- `src/economy/localExchange.ts` — mały owner-agnostic claim seam: `claimHouseholdSurplus(household, kind, amount)` i `claimEconomySurplus(economy, kind, amount)`. Oba re-czytają `surplus()` na żywo i atomowo `remove()` tylko tyle, ile faktycznie dostępne (0 gdy brak nadwyżki). Eksportowane z `economy/index.ts`.
+- `src/settlement/householdExchange.ts` — czysty `selectHouseholdSurplusSource(candidates, excludeHouseholdId, kind, near)` (nearest-first, deterministyczny tie-break po `household.id`, nigdy `Math.random`) + `HouseholdExchangeHooks`/`createHouseholdExchangeHooks`, mirror `world/helperDeliveryHooks.ts`'s "tylko potrzebna operacja domenowa" shape.
+- `createSettlement.ts` buduje listę kandydatów (`HouseholdSurplusCandidate[]`) raz na settlement z już istniejącej lokalnej tablicy `households`/`homePlaces` (bez rozszerzania `HouseholdRegistry` o globalny indeks — okazało się niepotrzebne, bo `createSettlement()` już miał bounded per-settlement listę) i wstrzykuje `householdExchange` do każdego `NpcAgent.create()` tym samym wzorcem co `helperDelivery`/`mining`/`foodSources`.
+- `NpcAgent`: dwie nowe strategie, `economyWithdraw` (village storage → household) i `householdExchange` (household → household), obsługiwane przez `beginEconomyWithdraw()`/`beginHouseholdExchange()` — obie reużywają istniejący `goTo → execute → next(deposit)` chain (nowy `ActionId: 'exchange'` tylko dla pickup-legu; `deposit` reużyty dla drugiego legu, spada do `classifyPendingActivity`'s domyślnego `'need'` tak jak istniejące chop/mine/fetch chainy). Claim następuje w `onComplete` pierwszego legu (rewalidacja na żywo, nie wartość z decyzji), deposit + need-relief w `onComplete` drugiego — dokładnie ten sam "lost-on-cancel-between-legs" tradeoff co istniejący chop→deposit/mine→deposit, żaden nowy reservation system.
+- Priorytet w `npcStrategies.ts`: `food` → `playerStorageDelivery → householdFood → economyWithdraw → householdExchange → hunt → nearbyFoodSource → gardenGather`; `wood` → `economyWithdraw → householdExchange → chopDeposit`. Oba nowe kandydaty gated na `household.shortage(kind) > 0` (istniejący koncept, nie nowy).
+- `beginTraderWork()` zrefaktoryzowany o jedną linię, żeby reużyć `claimHouseholdSurplus` zamiast duplikować `surplus()+remove()` — jedyna zmiana w istniejącym Traderze, zgodnie z §8/§14 punkt 5 (usuwa realną duplikację, nie zmienia zachowania).
+- Village storage destination dla `economyWithdraw` to `landmarks.stockpile` (już reużywany jako "existing shared storage point" przez minera) — brak osobnego landmarku dla żywności w kodzie, więc oba kindy (`food`/`wood`) współdzielą tę samą fizyczną lokalizację.
+- `HouseholdResourceKind` (`food`/`wood`) pozostał bez zmian — brak rozszerzenia na `iron`/`coal`/`gold`/`water`, zgodnie z §1.
+
+### Automated verification
+
+`npx tsc --noEmit`, `pnpm lint:fix`, `npx vitest run` (2060/2060 including new `localExchange.test.ts`/`householdExchange.test.ts` and updated `npcStrategies.test.ts`), `pnpm run build` — wszystkie przeszły. Nowe testy pokrywają: exact-claim, claim-capped-by-surplus, zero-surplus, conservation (removed == claimed), nearest-first selection, id tie-break (order-independent), self-exclusion, stale-candidate-reselection-after-claim, strategy priority ordering/fallback dla obu kierunków.
+
+### Browser/manual verification — nie wykonane
+
+Zgodnie z planu §Verification/Browser-manual: wymaga obserwacji settlementu z realnym household surplus/shortage i potwierdzenia fizycznego ruchu NPC do stockpile/sąsiedniego domu i z powrotem. Do zrobienia przez użytkownika.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
