@@ -2,114 +2,162 @@
 
 Recipes are repeatable procedures, not verification. Mark a recipe verified only after executing it in the target Blender/MPFB2 environment.
 
-## Create character
+## Character assembly
 
 ```text
-inspect scene + MPFB2 version
-  -> isolated character context
-  -> create human via supported MPFB2 API
-  -> apply deterministic Seedvale spec
-  -> add required assets
-  -> create runtime rig
-  -> validate
+inspect Blender + MPFB2 version
+  → create human
+  → deterministic macro/micro targets
+  → skin / eyes
+  → MHCLO hair / beard / clothing
+  → Mixamo rig
+  → validate
+  → Export Copy
+  → bake/remove helpers
+  → GLB
 ```
 
-## Deterministic variation
+**Status:** researched, not end-to-end verified.
+
+## Body / face variation
 
 ```text
-Seedvale NPC
-  -> stable appearance seed/spec
-  -> MPFB2 targets/randomization
-  -> reproducible appearance
+character spec
+  → macro targets
+  → individual targets
+  → reapply macro details where required
+  → validate
 ```
 
-Do not rely on Blender global randomness or UI state.
+Seedvale face research currently provides:
 
-## Add hair / beard / clothing
+- Female: HYB1, HYB2.
+- Male: BLACKSMITH, BARD.
+
+These are Seedvale art-direction presets, not MPFB2 built-in presets.
+
+## Add MHCLO asset
 
 ```text
 resolve installed asset
-  -> load asset
-  -> use MPFB2 fitting/attachment mechanism
-  -> verify generated objects
-  -> verify rig compatibility
+  → HumanService.add_mhclo_asset(...)
+  → MPFB2 fitting
+  → material setup
+  → rigging/weights
+  → validate object
 ```
 
-Do not assume display names are stable IDs. Resolve against the installed asset library.
+Do not manually parent/scale MHCLO assets unless a verified exception requires it.
 
-## Profession outfit
-
-Profession is resolved by Seedvale before Blender execution:
+## Clothing fitting
 
 ```text
-profession
-  -> outfit profile
-  -> asset IDs
-  -> equipment IDs
-  -> MPFB2 asset resolution
+MHCLO
+  → three basemesh vertices + barycentric weights + offset
+  → ClothesService.fit_clothes_to_human(...)
 ```
 
-Examples:
+This is the native fitting model.
+
+## Native Delete Groups
+
+Preferred test path:
 
 ```text
-hunter    -> hunter clothes + bow + knife
-farmer    -> simple/work clothes + scythe
-woodcutter -> work clothes + axe
+human + fitted clothing
+  → ClothesService.update_delete_group(...)
+     OR
+  → ClothesService.create_new_delete_group(...)
+  → validate Delete.* group / MASK modifier
 ```
 
-Exact asset IDs belong to Seedvale data, not MPFB2 API code.
+Do not assume the result is correct in GLB until Export Copy → bake → GLB → Seedvale import has been tested.
 
-## Rig
+## Seedvale diagnostic Delete Group path
+
+Existing diagnostic scripts use:
 
 ```text
-Seedvale runtime rig contract
-  -> MPFB2-supported rig generation
-  -> attached assets follow rig
-  -> validate bones + skinning
+clothing copy
+→ apply ARMATURE where required
+→ temporary vertex-group preprocessing
+→ MeshCrossRef
+→ VertexMatch
+→ create_new_delete_group()
+→ remove temporary copy
 ```
 
-Do not solve rigging errors with arbitrary parenting before inspecting the MPFB2 workflow.
+This is useful for diagnosing/reconstructing Delete Groups. It should not automatically replace the native MPFB2 asset pipeline.
 
-## Optimize / LOD
+## Mixamo
+
+Confirmed source-level MPFB2 operation:
+
+```python
+HumanService.add_builtin_rig(human, "mixamo")
+```
+
+External Mixamo website steps are outside the confirmed MPFB2 API:
 
 ```text
-reproducible source
-  -> remove authoring-only content
-  -> simplify geometry/materials where justified
-  -> create LODs
-  -> validate each LOD
+Export Reduced doll
+→ upload to Mixamo
+→ choose/download animation
 ```
 
-Use Seedvale optimization profiles, not generic tutorial ratios.
+Snap/Map to Mixamo was not located as a confirmed MPFB2 API.
 
-## Export GLB
+## Animation bake
+
+Once an animation has been mapped/posed in Blender:
 
 ```text
-validate export collection
-  -> explicit glTF settings
-  -> export .glb
-  -> inspect/import through Seedvale
+select Human / armature
+→ bpy.ops.nla.bake(...)
+→ rename Action
+→ validate
 ```
 
-Do not depend on current Blender UI export state.
+Status: researched, not end-to-end verified.
 
-## Batch
+## Export Copy → GLB
 
-Use deterministic specs/seeds. Generate in controlled batches, validate every result and quarantine failures. Clean temporary data between characters where safe.
+```text
+working character
+  → ExportService.create_character_copy(...)
+  → ExportService.bake_modifiers_remove_helpers(...)
+  → validate export copy
+  → bpy.ops.export_scene.gltf(...)
+  → import into Seedvale
+  → visual validation
+```
 
-## Proposed helper API
+This is the primary verification recipe for the current skin-through-clothing problem.
+
+## Batch generation
+
+Do not batch expensive operations before one character is verified.
+
+```text
+deterministic spec
+→ build one character
+→ validate
+→ export
+→ repeat
+```
+
+Quarantine failures and clean temporary data between characters.
+
+## Proposed helper boundary
+
+These are proposed interfaces, not existing APIs:
 
 ```text
 create_character(spec)
 set_body(character, spec)
 set_appearance(character, spec)
 add_asset(character, asset)
-equip_item(character, item)
 setup_rig(character, rig)
-optimize_character(character, profile)
-create_lods(character, profile)
 validate_character(character)
 export_glb(character, export_spec)
 ```
-
-These names are proposed interfaces, not existing APIs.
