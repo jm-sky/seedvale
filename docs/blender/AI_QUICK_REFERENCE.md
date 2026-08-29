@@ -1,86 +1,87 @@
 # Seedvale Blender AI Quick Reference
 
-**Target:** Blender 5.2 + current MPFB2 2.x.
+**Target:** Blender 5.2 + MPFB2 2.x.  
+**Seedvale-tested MPFB2:** 2.0.17.
 
 ## Before doing anything
 
-1. Inspect the Blender scene and installed MPFB2 version.
-2. Inspect the relevant Seedvale recipe/rule.
-3. Check the installed MPFB2 source/API for exact signatures.
-4. Never assume object names, selection, active context or old tutorial APIs.
+1. Inspect Blender and installed MPFB2 version.
+2. Read the relevant recipe.
+3. Check installed MPFB2 source/API for exact signatures.
+4. Inspect the actual asset inventory.
+5. Never assume object names, selection, active context or old tutorial APIs.
+6. Treat `researched` and `verified` as different states.
 
 ## Architecture
 
 ```text
-Seedvale NPC spec
-  -> Blender MCP
-  -> Blender 5.2 / bpy
-  -> MPFB2
-  -> Seedvale helpers
-  -> validate
-  -> LOD / optimize
-  -> GLB
+Seedvale character spec
+  → Blender Python
+  → MPFB2 services
+  → validate
+  → Export Copy
+  → GLB
+  → Seedvale validation
 ```
-
-Blender MCP is only the control/transport layer. MPFB2 is a Blender addon; use its Python API/services rather than inventing an MPFB2-specific MCP layer.
 
 ## Prefer
 
-- direct `bpy.data` / datablock access;
-- MPFB2 services/API;
-- Seedvale helpers;
-- deterministic character seeds;
+- MPFB2 native services/entities;
+- direct `bpy.data` access;
+- deterministic specs/seeds;
 - isolated source/generated/export collections;
 - explicit export settings;
+- temporary copies for destructive preprocessing;
 - validation before export.
 
 ## Avoid
 
-- UI automation when an API exists;
-- guessed MPFB2 properties/functions;
-- arbitrary parenting as a clothing/rig fix;
-- destructive edits to reusable source characters;
-- generic polygon budgets copied from tutorials;
-- exporting based on accidental UI state;
-- claiming documentation is verification.
+- guessed MPFB2 APIs;
+- UI automation where a supported API exists;
+- arbitrary parenting as a clothing/rig solution;
+- destructive edits to reusable source assets;
+- generic polygon budgets;
+- relying on Blender UI export state;
+- claiming source research is runtime verification.
 
-## MPFB2 mental model
-
-Useful service areas:
-
-`HumanService` · `AssetService` · `TargetService` · `MaterialService` · `RigService` · `ClothesService`
-
-MHCLO-based assets are central to the MPFB2 asset workflow. Hair/clothes/body assets should use the supported asset/fitting mechanism.
-
-MPFB2 supports controlled/random character generation and batch workflows. Seedvale should provide a deterministic seed/specification so appearance can be reproduced.
-
-## Character pipeline
+## Important native operations
 
 ```text
-spec
- -> human/body/appearance
- -> hair/beard/clothing assets
- -> equipment
- -> game/runtime rig
- -> optimize
- -> LODs
- -> validate
- -> GLB
+HumanService.create_human(...)
+HumanService.add_mhclo_asset(...)
+HumanService.set_character_skin(...)
+HumanService.add_builtin_rig(..., "mixamo")
+HumanService.refit(...)
+ClothesService.fit_clothes_to_human(...)
+ClothesService.update_delete_group(...)
+ClothesService.create_new_delete_group(...)
+ExportService.create_character_copy(...)
+ExportService.bake_modifiers_remove_helpers(...)
+bpy.ops.nla.bake(...)
+bpy.ops.export_scene.gltf(...)
 ```
 
-## Verification
+See `MPFB2_REFERENCE.md` for signatures and caveats.
 
-`researched` != `verified`.
+## Verification
 
 A verified procedure records:
 
 - Blender version;
 - MPFB2 version;
 - Seedvale commit;
-- exact procedure/result.
+- exact procedure;
+- expected and actual result;
+- limitations.
 
-Visual correctness of exported characters requires Seedvale/browser verification where applicable.
+Visual correctness of exported characters requires Seedvale/browser validation where applicable.
 
 ## When stuck
 
-Search `TROUBLESHOOTING.md`, then inspect the installed MPFB2 source/API and Blender 5.2 API. Do not guess.
+1. Read `TROUBLESHOOTING.md`.
+2. Inspect installed MPFB2 source/API.
+3. Check Blender 5.2 API.
+4. Run a minimal isolated test.
+5. Record the result before generalizing it.
+
+Do not guess.
