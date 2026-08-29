@@ -2,7 +2,7 @@ import { healHealth, type HealthState } from '../shared/HealthState'
 import { createHungerState, drainHunger, type HungerState, isStarving, restoreHunger } from '../shared/HungerState'
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
 import { createThirstState, drainThirst, isDehydrated, restoreThirst, type ThirstState } from '../shared/ThirstState'
-import { createVigorState, drainVigor, type VigorState } from '../shared/VigorState'
+import { createVigorState, drainVigor, restoreVigor, type VigorState } from '../shared/VigorState'
 import { gameDaysToRealSeconds } from '../world/timeConversion'
 
 /** Plan 106 — the player's four survival pools. `stamina`/`vigor` reuse the
@@ -243,12 +243,18 @@ export function tickPlayerMovementVigor(vigor: VigorState, dt: number, sprinting
  *
  *  `quality` (plan 128 §6, from `app/campRest.ts`) is how good the bivouac
  *  was: 1 for a bed in town / a full camp, less for a blanket on bare ground.
- *  It caps the *vigor* the night gives back — sleeping rough never lowers
- *  vigor below where it already was, it just fails to fill the bar. Stamina
- *  is short-term effort and always comes back in full. */
+ *  It scales how much Vigor the night actually gives back — `quality * max`
+ *  is added on top of whatever Vigor is left after the night's passive drain
+ *  (`tickPlayerNeeds` keeps running through a sleep skip via `gameLoop.ts`'s
+ *  time-multiplied `worldDt`), clamped to max via `restoreVigor`. A full-
+ *  quality night always tops Vigor back out; a rough bivouac still restores
+ *  a genuine amount, it just restores less of it — unlike a target-level cap,
+ *  this can never do nothing just because Vigor didn't fall far enough
+ *  during the skip. Stamina is short-term effort and always comes back in
+ *  full. */
 export function restoreNeedsFromSleep(needs: PlayerNeeds, quality = 1): void {
   const fraction = Number.isFinite(quality) ? Math.max(0, Math.min(1, quality)) : 1
-  needs.vigor.current = Math.max(needs.vigor.current, needs.vigor.max * fraction)
+  restoreVigor(needs.vigor, needs.vigor.max * fraction)
   needs.stamina.current = needs.stamina.max
 }
 

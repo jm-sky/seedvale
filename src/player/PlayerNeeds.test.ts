@@ -189,13 +189,51 @@ describe('restoreNeedsFromSleep', () => {
     expect(needs.dehydrationDuration).toBe(7)
   })
 
-  it('still fills vigor/stamina per quality, unaffected by plan 165 changes', () => {
+  it('still fills stamina in full and restores vigor by quality * max, clamped to max', () => {
     const needs = createPlayerNeeds()
     needs.vigor.current = 10
     needs.stamina.current = 10
     restoreNeedsFromSleep(needs, 0.5)
-    expect(needs.vigor.current).toBe(50)
+    expect(needs.vigor.current).toBe(60)
     expect(needs.stamina.current).toBe(100)
+  })
+
+  it('regression: still restores Vigor even when it is above the quality threshold after the sleep skip', () => {
+    // Sleep Vigor Recovery bug: the old `Math.max(current, max * quality)`
+    // treated `quality` as a target level, so once Vigor (after 8h of
+    // passive drain during the skip) was already above `max * quality`,
+    // the restore was a no-op — sleep could give back nothing at all.
+    const needs = createPlayerNeeds()
+    needs.vigor.current = 70 // e.g. drained from 80 over an 8h skip
+    const vigorBeforeRestore = needs.vigor.current
+    restoreNeedsFromSleep(needs, 0.3) // low-quality bivouac: threshold well below 70
+    expect(needs.vigor.current).toBeGreaterThan(vigorBeforeRestore)
+  })
+
+  it('never restores Vigor past max', () => {
+    const needs = createPlayerNeeds()
+    needs.vigor.current = 95
+    restoreNeedsFromSleep(needs, 1)
+    expect(needs.vigor.current).toBe(100)
+  })
+
+  it('higher rest quality restores more Vigor than lower quality from the same starting point', () => {
+    const low = createPlayerNeeds()
+    low.vigor.current = 40
+    restoreNeedsFromSleep(low, 0.3)
+
+    const high = createPlayerNeeds()
+    high.vigor.current = 40
+    restoreNeedsFromSleep(high, 0.8)
+
+    expect(high.vigor.current).toBeGreaterThan(low.vigor.current)
+  })
+
+  it('low Vigor still regenerates correctly and stays clamped to max', () => {
+    const needs = createPlayerNeeds()
+    needs.vigor.current = 5
+    restoreNeedsFromSleep(needs, 1)
+    expect(needs.vigor.current).toBe(100)
   })
 })
 
