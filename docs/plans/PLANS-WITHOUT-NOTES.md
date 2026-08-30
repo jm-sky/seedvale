@@ -1,10 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-30 07:53:25  
+> Date: 2026-08-30 17:25:35  
 
 ## PLANS
 
+- `PLANNING.md`
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-010-physical-storage-visualization.md`
 - `tools-000-weapon-browser-observatory.md`
@@ -13,6 +14,36 @@
 
 --------------------------------
 ## PROMPTS
+
+### `PLANNING.md`
+
+Prompt:
+
+```
+Zrób review planu `PLANNING.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/PLANNING-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
 
 ### `npc-000--mpfb2-npc-hero-character-pipeline.md`
 
