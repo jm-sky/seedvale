@@ -1,12 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-30 07:16:04  
+> Date: 2026-08-30 07:46:58  
 
 ## PLANS
 
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-010-physical-storage-visualization.md`
+- `settlements-npcs-011-yards-and-space.md`
 - `tools-000-weapon-browser-observatory.md`
 - `tools-003-house-browser-and-tools-menu.md`
 - `tools-004-claude-preflight-completion.md`
@@ -59,6 +60,36 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-010-physical-storage-visualization-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-npcs-011-yards-and-space.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-npcs-011-yards-and-space.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/settlements-npcs-011-yards-and-space.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-npcs-011-yards-and-space-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
