@@ -34,6 +34,7 @@ import {
   loadHousePartTemplates,
 } from './houseBuilder'
 import { type HouseLampMount, type HouseLampStyle, pickHomeHouse, resolveHouseHeight } from './houseCatalog'
+import { HOUSEHOLD_YARD_PROP_OFFSETS } from './householdYard'
 import {
   createHouseLight,
   createProceduralTorchPost,
@@ -1097,7 +1098,7 @@ export async function buildSettlementProps(
     })
   const householdBarrelInstances = buildInstancedProps(
     barrelTemplates,
-    houseYardPlacements(0.85, 0.9),
+    houseYardPlacements(HOUSEHOLD_YARD_PROP_OFFSETS.barrel, 0.9),
     'settlement-household-barrels',
   )
   if (householdBarrelInstances) group.add(householdBarrelInstances.group)
@@ -1105,7 +1106,7 @@ export async function buildSettlementProps(
   const troughTemplates = [createTrough()]
   const troughInstances = buildInstancedProps(
     troughTemplates,
-    houseYardPlacements(1.35, 0.9),
+    houseYardPlacements(HOUSEHOLD_YARD_PROP_OFFSETS.trough, 0.9),
     'settlement-household-troughs',
   )
   if (troughInstances) group.add(troughInstances.group)
@@ -1119,7 +1120,7 @@ export async function buildSettlementProps(
     [{ url: '/models/settlement/crate.glb', height: 0.6 }],
     () => createCrate(1),
   )
-  const householdStoragePlacements = houseYardPlacements(1.9, 0.9)
+  const householdStoragePlacements = houseYardPlacements(HOUSEHOLD_YARD_PROP_OFFSETS.storage, 0.9)
   landmarks.householdStorages = householdStoragePlacements.map(
     (p) => new THREE.Vector3(p.x, p.groundY, p.z),
   )

@@ -51,7 +51,12 @@ export const PLOT_SCORE_WEIGHTS = {
 
 const LOCAL_SLOPE_STEP = 2.2
 const PLOT_CANDIDATE_ATTEMPTS = 10
-const HOUSE_PLOT_RADIUS = 4.5
+/** Reserved spacing radius for a house plot — must stay >= the household-
+ *  yard clearance contract (`householdYard.ts`'s `householdYardRadius()`,
+ *  plan 011) so the house's own storage/barrel/trough never spill past
+ *  neighbouring plots. Verified in `householdYard.test.ts`, not duplicated
+ *  as a separate "yard radius" field here. */
+export const HOUSE_PLOT_RADIUS = 4.5
 const INFRA_PLOT_RADIUS = 2.4
 const WORK_PLOT_RADIUS = 5.5
 const FOOD_PLOT_RADIUS = 6
@@ -552,41 +557,55 @@ function pickPlot(
   )
   if (req.maxCenterDist != null) fallbackRing = Math.min(fallbackRing, req.maxCenterDist)
 
-  if (req.role === 'house') {
+  // Ring search shared by every role (plan 011) — a non-house plot (garden,
+  // stockpile, market, ...) used to skip straight to the always-succeeding
+  // unconstrained placement below, which could land it on top of a house's
+  // yard since spacing was never re-checked. Trying the same 12 angles here
+  // first keeps `minDistToPlots`'s hard reject meaningful for every role.
+  // Growing the ring outward a few steps (bounded, generation-time only)
+  // gives a packed cluster (e.g. a dense LG residential ring) somewhere to
+  // go instead of exhausting all 12 angles at the one original radius.
+  {
     const base =
       zone != null
         ? Math.atan2(zone.z - center.z, zone.x - center.x)
         : baseAngle
-    for (let i = 0; i < 12; i++) {
-      const angle = base + (i / 12) * Math.PI * 2
-      const fx = center.x + Math.cos(angle) * fallbackRing
-      const fz = center.z + Math.sin(angle) * fallbackRing
-      const score = scorePlotCandidate(
-        fx,
-        fz,
-        sampleHeight(fx, fz),
-        { ...req, preferredRing: fallbackRing },
-        center,
-        boundary,
-        existing,
-        seedForCell,
-        sampleHeight,
-        waterLevel,
-        minSpacing,
-      )
-      if (score === null) continue
-      return {
-        id: req.id,
-        role: req.role,
-        x: fx,
-        z: fz,
-        y: sampleHeight(fx, fz),
-        radius: req.radius,
-        rotation: angle,
-        zoneId: zone?.id ?? null,
-        familyIndex: req.familyIndex,
-        familyId: req.familyId,
+    const ringSteps = [1, 1.15, 1.3, 1.5, 1.75]
+    for (const ringMul of ringSteps) {
+      let ring = fallbackRing * ringMul
+      if (req.maxCenterDist != null) ring = Math.min(ring, req.maxCenterDist)
+      for (let i = 0; i < 12; i++) {
+        const angle = base + (i / 12) * Math.PI * 2
+        const fx = center.x + Math.cos(angle) * ring
+        const fz = center.z + Math.sin(angle) * ring
+        const score = scorePlotCandidate(
+          fx,
+          fz,
+          sampleHeight(fx, fz),
+          { ...req, preferredRing: fallbackRing },
+          center,
+          boundary,
+          existing,
+          seedForCell,
+          sampleHeight,
+          waterLevel,
+          minSpacing,
+        )
+        if (score === null) continue
+        return {
+          id: req.id,
+          role: req.role,
+          x: fx,
+          z: fz,
+          y: sampleHeight(fx, fz),
+          radius: req.radius,
+          rotation: angle,
+          zoneId: zone?.id ?? null,
+          familyIndex: req.familyIndex,
+          familyId: req.familyId,
+        }
       }
+      if (req.maxCenterDist != null && ring >= req.maxCenterDist) break
     }
   }
 

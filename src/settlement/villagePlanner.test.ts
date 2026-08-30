@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { VillageIdentity } from './villagePlan'
 import { generateFamilies } from './families'
-import { gardenPlazaMinCenterDist, type GardenScale } from './gardenScale'
+import { gardenClearingRadius, gardenPlazaMinCenterDist, type GardenScale } from './gardenScale'
+import { householdYardRadius } from './householdYard'
 import { plazaCoreRadius } from './villageClearing'
 import { chooseLayoutPattern, planVillageLayout, PLOT_SCORE_WEIGHTS } from './villagePlanner'
 
@@ -334,6 +335,80 @@ describe('sale plots (plan 129)', () => {
     for (const plot of layout.plots.filter((p) => p.role === 'sale')) {
       const dist = Math.hypot(plot.x - layout.boundary.x, plot.z - layout.boundary.z)
       expect(dist).toBeLessThanOrEqual(layout.boundary.radius + plot.radius + 0.01)
+    }
+  })
+})
+
+describe('household yard & settlement space (plan settlements-npcs-011)', () => {
+  const SIZES: VillageIdentity['size'][] = ['SM', 'MD', 'LG', 'XL']
+  const SEEDS = Array.from({ length: 15 }, (_, i) => i * 11 + 3)
+  const yardR = householdYardRadius()
+
+  // One deterministic layout per size/seed, reused by every check below —
+  // regenerating per-assertion would just multiply the same seeded work.
+  function layoutsFor(size: VillageIdentity['size']) {
+    return SEEDS.map((seed) => {
+      const id = identity({ id: `yard_${size}_${seed}`, size })
+      const families = generateFamilies(seed, size, false, 'polish')
+      return { seed, layout: planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, seed, flatHeight, WATER) }
+    })
+  }
+
+  it.each(SIZES)('%s: household yards do not overlap each other', (size) => {
+    for (const { seed, layout } of layoutsFor(size)) {
+      const houses = layout.plots.filter((p) => p.role === 'house')
+      for (let i = 0; i < houses.length; i++) {
+        for (let j = i + 1; j < houses.length; j++) {
+          const a = houses[i]!
+          const b = houses[j]!
+          const gap = Math.hypot(a.x - b.x, a.z - b.z) - yardR * 2
+          expect(gap, `${size} seed ${seed} house${i}<->house${j}`).toBeGreaterThanOrEqual(-0.01)
+        }
+      }
+    }
+  })
+
+  it.each(SIZES)('%s: household yards do not overlap garden clearings', (size) => {
+    for (const { seed, layout } of layoutsFor(size)) {
+      const houses = layout.plots.filter((p) => p.role === 'house')
+      const gardens = layout.plots.filter((p) => p.id.startsWith('plot-infra-garden-'))
+      for (let i = 0; i < houses.length; i++) {
+        for (const garden of gardens) {
+          const scale = (garden.id.match(/-(S|M|L)$/)?.[1] ?? 'S') as GardenScale
+          const gap =
+            Math.hypot(houses[i]!.x - garden.x, houses[i]!.z - garden.z) - yardR - gardenClearingRadius(scale)
+          expect(gap, `${size} seed ${seed} house${i}<->${garden.id}`).toBeGreaterThanOrEqual(-0.01)
+        }
+      }
+    }
+  })
+
+  it.each(SIZES)('%s: household yards do not overlap other infrastructure plots', (size) => {
+    for (const { seed, layout } of layoutsFor(size)) {
+      const houses = layout.plots.filter((p) => p.role === 'house')
+      const infra = layout.plots.filter(
+        (p) => p.role === 'infrastructure' && !p.id.startsWith('plot-infra-garden-'),
+      )
+      for (let i = 0; i < houses.length; i++) {
+        for (const other of infra) {
+          const gap = Math.hypot(houses[i]!.x - other.x, houses[i]!.z - other.z) - yardR - other.radius
+          expect(gap, `${size} seed ${seed} house${i}<->${other.id}`).toBeGreaterThanOrEqual(-0.01)
+        }
+      }
+    }
+  })
+
+  it.each(SIZES)('%s: house/garden/infra plots fit inside the settlement boundary with margin', (size) => {
+    // Sale plots (plan 129) deliberately hug the outer ring and are not
+    // part of the household-yard/garden capacity this plan calibrates.
+    for (const { seed, layout } of layoutsFor(size)) {
+      for (const plot of layout.plots) {
+        if (plot.role === 'sale') continue
+        const dist = Math.hypot(plot.x - layout.center.x, plot.z - layout.center.z)
+        expect(dist + plot.radius, `${size} seed ${seed} ${plot.id}`).toBeLessThanOrEqual(
+          layout.boundary.radius + 0.5,
+        )
+      }
     }
   })
 })

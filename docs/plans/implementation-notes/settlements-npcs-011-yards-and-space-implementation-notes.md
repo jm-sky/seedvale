@@ -2,7 +2,7 @@
 
 **Reviewed:** 2026-08-30  
 **Plan:** `settlements-npcs-011-yards-and-space.md`  
-**Status:** `reviewed`
+**Status:** `verification needed` 🔍 — implemented 2026-08-30, see plan's "Implementation summary" for what actually shipped.
 
 ## Review conclusion
 
