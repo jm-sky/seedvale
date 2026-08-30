@@ -226,3 +226,30 @@ Also read the archived Plan 156 implementation notes for context, but verify eve
 ```
 
 The key objective is a small extension of existing storage/logistics, with **no parallel inventory or logistics architecture**.
+
+## Implementation (what was actually built)
+
+Verified against current code: `landmarks.stockpile` (the village woodpile) was already the real physical destination for every wood chop/mine deposit and for `beginEconomyWithdraw`'s wood leg — wood needed no destination change (kept on its existing scalar path, per the pitfalls above). `this.home` was already the real destination for every food-consuming/food-receiving flow (eating, real food gathering, farm harvest, hunter/fisher delivery, household exchange). The only genuinely wrong physical destination was `beginEconomyWithdraw`'s **food** pickup leg, which walked to the wood stockpile to withdraw food.
+
+Added `src/settlement/storageDestinations.ts` — the single shared "WHERE" resolver the plan asked for, built entirely on existing landmarks/positions (no new props, no new positions):
+
+- `classifyItemStorageKind(kind: ItemKind): HouseholdResourceKind | null` — reuses `hasItemKindCategory(kind, 'food')` (plan 008), `null` for anything with no storage-destination category.
+- `householdStorageDestination(kind, home, stockpile)` — `food` → `home` (a household's pantry), `wood` → `stockpile` (the shared village pile).
+- `settlementStorageDestination(kind, stockpile, settlementStorage)` — `food` → `landmarks.settlementStorage` (previously a read-only presentation crate, plan 156 — now also the settlement's real Food Storage destination), `wood` → `stockpile`.
+
+Wired into `src/ai/NpcAgent.ts`:
+
+- Wood chop → deposit destination now goes through `householdStorageDestination('wood', ...)` (same value as before, `landmarks.stockpile` — no behaviour change, just named/centralized).
+- Fisher's catch → deposit destination now goes through `householdStorageDestination('food', ...)` (same value as before, `this.home` — no behaviour change).
+- `beginEconomyWithdraw`'s pickup-leg destination (both `food` and `wood` branches) now goes through `settlementStorageDestination(kind, ...)` — this **fixes** the food branch (now walks to `landmarks.settlementStorage` instead of the wood stockpile) and is a no-op for wood (still `landmarks.stockpile`).
+
+Not changed, deliberately:
+
+- `beginHouseholdExchange`'s pickup leg (`source.position`, the source household's home) — already correct for food, and left untouched for wood per "keep wood on its existing path."
+- Every deposit-*into-a-household* leg (`copyVec3(this.home)` after an exchange/withdrawal) — this is "carry what I claimed to my own house," not resource-kind-dependent, so it stays a plain `this.home` rather than being forced through the resolver.
+- `beginTraderWork`'s market-stall destination — a distinct "go trade at market" flow (plan settlements-npcs-002), not part of `settlements-npcs-005`'s local exchange; preserved unchanged as an "existing transferable resource, existing destination rule."
+- Farmer's harvest and the abstract garden/real-food-gathering paths — these deposit directly at the harvest site with no travel leg at all (an existing convention, not a delivery bug).
+
+Missing-destination handling (plan §6): every wood/food landmark (`home`, `landmarks.stockpile`, `landmarks.settlementStorage`) is unconditionally initialized per settlement/household, so the resolver functions are total (never return null/undefined) and no new failure/retry path was needed. Every call site already guards on `household`/`economy` being present before starting a delivery action, falling through to the next strategy candidate (existing `beginNeed`/strategy-selection fallback) exactly as the plan's "recoverable simulation state" requirement asks for.
+
+Tests: `src/settlement/storageDestinations.test.ts` covers classification (every `FOOD_ITEM_KINDS` entry → `'food'`, non-food → `null`), household/settlement resolution for both kinds, cross-contamination guards (food never resolves to the wood destination or vice versa), and determinism. `NpcAgent` itself has no existing unit-test harness (verified — no `NpcAgent.test.ts`); its delivery-destination fixes are covered by the full existing suite (2121 tests) staying green plus browser/manual verification of the flows below.

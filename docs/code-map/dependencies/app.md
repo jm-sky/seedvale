@@ -719,7 +719,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
-- `economy/kinds.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`

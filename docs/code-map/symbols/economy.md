@@ -10,9 +10,10 @@ Generated from exported TypeScript symbols.
 
 ## `economy/initial.ts`
 
-- `demandsFor` — function — line 63
-- `initialStockFor` — function — line 48
-- `SettlementEconomySeed` — type — line 7
+- `demandsFor` — function — line 77
+- `initialFoodFor` — function — line 68
+- `initialStockFor` — function — line 50
+- `SettlementEconomySeed` — type — line 8
 
 ## `economy/kinds.ts`
 
@@ -48,17 +49,18 @@ Generated from exported TypeScript symbols.
 ## `economy/registry.ts`
 
 - `createEconomyRegistry` — function — line 19
-- `EconomyRegistry` — type — line 10
+- `EconomyRegistry` — type — line 9
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 42
-- `SettlementDemand` — type — line 6
-- `SettlementEconomy` — type — line 23
+- `createSettlementEconomy` — function — line 73
+- `SettlementDemand` — type — line 10
+- `SettlementEconomy` — type — line 39
   - domain: settlements
   - system: settlement-economy
   - role: Owns a settlement's bulk stock, demand-driven shortage/surplus and reservations. Not player `Inventory`.
   - owns: SettlementEconomy
+- `SettlementEconomySnapshot` — type — line 28
 
 ## `economy/stock.ts`
 

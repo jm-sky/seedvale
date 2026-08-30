@@ -55,6 +55,7 @@ import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInst
 import { sharpenWeapon } from '../items/weaponMaintenance'
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
+import { householdStorageDestination, settlementStorageDestination } from '../settlement/storageDestinations'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import {
   drainStamina,
@@ -2856,7 +2857,7 @@ export class NpcAgent {
         },
         next: {
           kind: 'deposit',
-          destination: copyVec3(this.landmarks.stockpile),
+          destination: copyVec3(householdStorageDestination('wood', this.home, this.landmarks.stockpile)),
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
             this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
@@ -2997,7 +2998,7 @@ export class NpcAgent {
       let claimed: readonly ItemAmount[] = []
       this.startAction({
         kind: 'exchange',
-        destination: copyVec3(this.landmarks.stockpile),
+        destination: copyVec3(settlementStorageDestination('food', this.landmarks.stockpile, this.landmarks.settlementStorage)),
         durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => {
           claimed = economy.withdrawFood(requested)
@@ -3021,7 +3022,7 @@ export class NpcAgent {
     let claimed = 0
     this.startAction({
       kind: 'exchange',
-      destination: copyVec3(this.landmarks.stockpile),
+      destination: copyVec3(settlementStorageDestination(kind, this.landmarks.stockpile, this.landmarks.settlementStorage)),
       durationSec: 1.2 * this.waitMultiplier,
       onComplete: () => {
         claimed = claimEconomySurplus(economy, kind, requested)
@@ -3479,7 +3480,7 @@ export class NpcAgent {
       },
       next: {
         kind: 'deposit',
-        destination: copyVec3(this.home),
+        destination: copyVec3(householdStorageDestination('food', this.home, this.landmarks.stockpile)),
         durationSec: 0.8 * this.waitMultiplier,
         onComplete: () => {
           if (this.household) depositCarriedItems(this.carried, this.household, FISH_YIELD_KINDS)

@@ -1,7 +1,7 @@
 # Plan: Physical Storage Destinations & Resource Delivery
 
 **Created:** 2026-08-30
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~008~~ ~~005~~
 **Domain:** `settlements-npcs`

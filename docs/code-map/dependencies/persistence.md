@@ -13,7 +13,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `config/worldConfig.ts`
-- `economy/kinds.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/AnimalSpawner.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`

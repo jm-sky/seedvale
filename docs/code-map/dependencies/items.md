@@ -84,6 +84,7 @@ Generated from TypeScript imports.
 - `app/userActions.ts`
 - `economy/production.test.ts`
 - `economy/production.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/huntingHooks.ts`
 - `items/HeldTool.test.ts`
@@ -96,6 +97,8 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.test.ts`
 - `items/createDroppedItems.ts`
+- `items/foodItems.test.ts`
+- `items/foodItems.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
@@ -285,6 +288,29 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `items/Inventory.ts`
 - `items/foodFreshness.test.ts`
+
+## `items/foodItems.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+
+## `items/foodItems.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `economy/localExchange.test.ts`
+- `economy/settlementEconomy.ts`
+- `items/foodItems.test.ts`
+- `settlement/household.ts`
+- `settlement/storageDestinations.test.ts`
 
 ## `items/guardSword.test.ts`
 
@@ -496,6 +522,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `combat/projectile.ts`
+- `economy/initial.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
 - `fauna/harvestedRemains.ts`
@@ -513,6 +541,7 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/foodFreshness.ts`
+- `items/foodItems.ts`
 - `items/guardSword.ts`
 - `items/heldToolVisual.ts`
 - `items/highQualityWeapons.test.ts`
@@ -534,6 +563,7 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `settlement/VillageFire.ts`
 - `settlement/household.ts`
+- `settlement/storageDestinations.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`

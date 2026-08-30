@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveData.ts`
 
-- `isSaveData` — function — line 798
-- `loadSaveData` — function — line 845
+- `isSaveData` — function — line 816
+- `loadSaveData` — function — line 863
 - `QuestProgressEntry` — type — line 40
 - `SaveCarriedContainer` — type — line 186
 - `SaveConfig` — type — line 20
