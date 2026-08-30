@@ -87,6 +87,13 @@ import {
   createWheatField,
   layoutCropsGarden,
 } from './settlementStructures'
+import {
+  createFoodStorageVisual,
+  createWoodPileVisual,
+  type FoodStorageVisual,
+  WOOD_PILE_EXTRA_OFFSETS,
+  type WoodPileVisual,
+} from './storageVisuals'
 import { pathPlansToCorridorData } from './villagePlanner'
 
 export type SettlementHouseLandmark = {
@@ -202,6 +209,16 @@ export type SettlementLandmarks = {
    *  to `group` alongside the forest belt; undefined for every non-home
    *  settlement. */
   hiddenTreasureMarkers?: THREE.Vector3[]
+}
+
+/** Physical storage visual controllers (plan settlements-npcs-010), returned
+ *  alongside `landmarks` so `createSettlement.ts` can drive them from live
+ *  `Household`/`SettlementEconomy` state each tick. `householdFood` is
+ *  same-order as `landmarks.householdStorages`. */
+export type SettlementStorageVisuals = {
+  wood: WoodPileVisual
+  settlementFood: FoodStorageVisual
+  householdFood: FoodStorageVisual[]
 }
 
 /** One settlement sale plot's materialized (non-persistent) data — plan 129. */
@@ -630,6 +647,7 @@ export async function buildSettlementProps(
   houseLights: HouseLight[]
   villageTorches: VillageTorch[]
   houseAssemblies: HouseAssembly[]
+  storageVisual: SettlementStorageVisuals
 }> {
   const group = new THREE.Group()
   group.name = 'settlement'
@@ -689,6 +707,22 @@ export async function buildSettlementProps(
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
+  // Wood pile visual (plan settlements-npcs-010) — the same `stockpile` prop
+  // above, now driven by the settlement's actual stored wood instead of
+  // always showing full. A handful of extra piles, pre-placed but hidden,
+  // cover the "21+" overflow band without rebuilding geometry at runtime.
+  const woodPileExtras = await loadPropTemplates(
+    WOOD_PILE_EXTRA_OFFSETS.map(() => ({ url: WOOD_PILE_URL, height: WOOD_PILE_HEIGHT })),
+    createStockpile,
+  )
+  for (let i = 0; i < woodPileExtras.length; i++) {
+    const extra = woodPileExtras[i]!
+    const offset = WOOD_PILE_EXTRA_OFFSETS[i]!
+    placeOnGround(extra, stockX + offset.dx, stockZ + offset.dz, sampleHeight)
+    group.add(extra)
+  }
+  const woodStorageVisual = createWoodPileVisual(stockpile, woodPileExtras)
+
   // Settlement storage container (plan 156) — physical representation of
   // `SettlementEconomy`, one per settlement, next to the wood stockpile
   // (opposite side from `createSettlement.ts`'s woodshed-complete pile so
@@ -705,6 +739,13 @@ export async function buildSettlementProps(
     settlementStorageX,
     sampleHeight(settlementStorageX, settlementStorageZ),
     settlementStorageZ,
+  )
+  // Concrete-food visual for the settlement's storage crate above (plan
+  // settlements-npcs-010) — same mechanism `householdFoodVisuals` below use.
+  const settlementFoodVisual = createFoodStorageVisual(
+    group,
+    { x: settlementStorageX, z: settlementStorageZ },
+    sampleHeight,
   )
 
   const gardenLms = (plan?.landmarks.filter((l) => l.kind === 'garden') ?? [])
@@ -1130,6 +1171,14 @@ export async function buildSettlementProps(
     'settlement-household-storage',
   )
   if (householdStorageInstances) group.add(householdStorageInstances.group)
+
+  // Concrete-food visual per household crate above (plan settlements-npcs-010)
+  // — same order as `householdStoragePlacements`/`landmarks.householdStorages`,
+  // so `createSettlement.ts` can zip it against its own household list the
+  // same way it already zips `landmarks.householdStorages`.
+  const householdFoodVisuals: FoodStorageVisual[] = householdStoragePlacements.map((p) =>
+    createFoodStorageVisual(group, { x: p.x, z: p.z }, sampleHeight),
+  )
 
   // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
   // stockpile pickup via item spawners (plan 090), not a decorative prop.
@@ -1635,7 +1684,14 @@ export async function buildSettlementProps(
     if (bushInstances) group.add(bushInstances.group)
   }
 
-  return { group, landmarks, houseLights, villageTorches, houseAssemblies }
+  return {
+    group,
+    landmarks,
+    houseLights,
+    villageTorches,
+    houseAssemblies,
+    storageVisual: { wood: woodStorageVisual, settlementFood: settlementFoodVisual, householdFood: householdFoodVisuals },
+  }
 }
 
 export function disposeSettlementGroup(group: THREE.Group): void {

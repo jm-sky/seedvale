@@ -1,7 +1,7 @@
 # Plan: Physical Storage Visualization
 
 **Created:** 2026-08-30
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** L
 **Depends on:** ~~009~~
 **Domain:** `settlements-npcs`

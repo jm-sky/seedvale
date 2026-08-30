@@ -340,7 +340,7 @@ export async function createSettlement(
   } finally {
     bootMarkEnd('buildSettlementProps')
   }
-  const { group, landmarks, houseLights, villageTorches, houseAssemblies } = propsResult
+  const { group, landmarks, houseLights, villageTorches, houseAssemblies, storageVisual } = propsResult
   scene.add(group)
   // Plan 157 — one bounded walk of this settlement's own root, not the whole
   // scene: captures every house lamp, village torch, and the settlement's
@@ -804,6 +804,22 @@ export async function createSettlement(
         livestock.push(...kept)
       }
       placeWoodshedIfComplete()
+      // Physical storage visuals (plan settlements-npcs-010) — cheap derived
+      // sync every tick; each controller no-ops unless its own visual state
+      // actually changed. The one shared wood pile reflects every household's
+      // own pantry wood plus the settlement's bulk wood, since both are
+      // physically deposited at the same `landmarks.stockpile` destination
+      // (plan settlements-npcs-009). Food is per-storage-location, so each
+      // household's crate reflects only that household's own `items`.
+      const totalWood = households.reduce((sum, h) => sum + h.stock.query('wood'), 0) + economy.query('wood')
+      storageVisual.wood.sync(totalWood)
+      storageVisual.settlementFood.sync(economy.items)
+      if (storageVisual.householdFood.length > 0) {
+        for (let i = 0; i < householdStorages.length; i++) {
+          const visual = storageVisual.householdFood[i % storageVisual.householdFood.length]!
+          visual.sync(householdStorages[i]!.household.items)
+        }
+      }
       for (const torch of villageTorches) torch.update(dt)
       for (const assembly of houseAssemblies) {
         let wantOpen = false

@@ -247,3 +247,50 @@ Browser verification should cover:
 - draw-call/FPS impact.
 
 Only mark the feature browser/manual verified after observing the running game.
+
+## Implementation (what was actually built)
+
+### Asset recon
+
+No new assets were needed or added — confirms the review's "no new asset currently required" conclusion. Wood pile (`settlement/wood_pile.glb`, M33), storage crate (`settlement/crate.glb`) and `createItemMesh(kind)`'s existing per-food-kind pickup meshes (procedural fallback for carrot/cabbage/potato/tomato/fish — GLBs still `needed` per `docs/assets/MODELS.md` M36) were reused as-is. No `docs/assets/MODELS.md`/`LOCAL_ASSETS.md` changes.
+
+### Mechanism
+
+One new module, `src/settlement/storageVisuals.ts`, matches the recommended architecture:
+
+- `woodPileVisualState(quantity)` — pure function, quantity → `{ visible, scale, extraPiles }`. `WOOD_PILE_BANDS` is the single source of truth for the 0/1-3/4-7/8-12/13-20 thresholds; `WOOD_PILE_OVERFLOW_STEP`/`WOOD_PILE_MAX_EXTRA` (3) control the 21+ "additional pile" behaviour.
+- `createWoodPileVisual(mainPile, extraPiles)` — wraps the settlement's existing `stockpile` prop plus a handful of pre-placed, pre-hidden extra-pile clones into one `sync(quantity)` controller. Toggles `.visible`/`.scale` only; the primary pile mesh is reused in place (per "avoid duplicate stockpile visuals" above), never duplicated. A signature-string check makes a `sync()` call with an unchanged resulting state a cheap no-op — the low-frequency/bounded-fingerprint synchronization this review asked for.
+- `selectFoodStorageSlots(items)` — pure function, an `Inventory` → up to `FOOD_STORAGE_MAX_SLOTS` (4) `{ kind, count, scale }` entries, iterated in `FOOD_ITEM_KINDS`' existing deterministic catalog order — no hard-coded food list.
+- `createFoodStorageVisual(group, center, sampleHeight)` — one food-storage visual location; `sync(items)` reuses `createItemMesh(kind)` for each selected slot, swapping meshes only when the selected kinds/scale actually change (same signature-check pattern). Used identically for a household's pantry crate and the settlement's storage crate.
+
+Wood and food keep separate `sync()` signatures (`number` vs `Inventory`) rather than one shared shape — they have different authoritative owners (`EconomicStock` vs a concrete-item `Inventory`, plan settlements-npcs-009 §3) — but share the module and its read-only/change-driven/bounded/deterministic-offset plumbing, and the household/settlement duplication this review flags is eliminated (one `createFoodStorageVisual` factory, not per-scope or per-kind renderers).
+
+### Wood pile quantity — what it actually represents
+
+Verified against `settlement/storageDestinations.ts`: every household's wood deposit **and** the settlement's own bulk wood both physically land at the same single `landmarks.stockpile` position (`householdStorageDestination`/`settlementStorageDestination` both resolve `'wood'` to `stockpile` unconditionally) — there is one shared pile per settlement, not one per household. So the pile's visual quantity is `Σ household.stock.query('wood') + economy.query('wood')`, computed once per settlement `update()` tick in `createSettlement.ts` (a handful of households — cheap) and fed to `storageVisual.wood.sync(totalWood)`. This matches this review's "household wood → Household.stock.query('wood')" / "settlement wood → SettlementEconomy.query('wood')" ownership list, summed because they share one physical destination.
+
+### `stockpileSecondary` (LG/XL) — deliberately left static
+
+The review flags "For LG/XL there are two physical stockpile positions. Preserve both... never display the full settlement quantity at both locations." Verified against current code: `landmarks.stockpileSecondary` (built only when `infra.stockpiles > 1`) is referenced **only** by `settlementPropColliders.ts` for its collision disk — `storageDestinations.ts` and every NPC wood chop/deposit/withdraw path in `NpcAgent.ts` resolve *exclusively* to `landmarks.stockpile`. No wood is ever authoritatively associated with the secondary position; it is decorative "this is a large settlement" set-dressing, not a second storage destination. Making it quantity-driven would mean inventing a split of the single tracked wood total across two visual points with no basis in the data model — out of scope for "visualize existing storage destinations." It is left as the existing static `createStockpile()`/GLB prop, unchanged. `landmarks.stockpile`/`stockpileSecondary` positions and the collider contract are both untouched.
+
+### Wiring
+
+- `src/settlement/props.ts`'s `buildSettlementProps()`: builds the wood-pile extras (`loadPropTemplates`, same loader/fallback path as the main pile) and the settlement/household `FoodStorageVisual`s at the point the underlying `stockpile`/`settlementStorage`/`householdStorages` props are already placed. Returns them as a new `storageVisual: SettlementStorageVisuals` field alongside the existing `group`/`landmarks`/etc. — reuses `landmarks.stockpile`/`landmarks.settlementStorage`/`landmarks.householdStorages` positions exactly, no new placement system.
+- `src/settlement/createSettlement.ts`: destructures `storageVisual` and calls `sync()` on it once per settlement `update()` tick, next to the existing `placeWoodshedIfComplete()` live-state→prop sync call (same established low-frequency pattern). Household food visuals are indexed through the already-existing `householdStorages` (household ↔ position) list built earlier in the same function, reusing its existing modulo-safe indexing rather than adding a second one — "preserve the existing createSettlement.ts index mapping between households and householdStorages," as recommended.
+- Disposal: extra wood piles and food-item meshes are ordinary children of the settlement's own `group`; the existing `disposeSettlementGroup(group)` teardown already recursively disposes them via `disposeObject3D`'s `sharedGpu` guard, same as every other prop in `group`. `WoodPileVisual`/`FoodStorageVisual` also expose their own `dispose()` (used internally on every content-driven mesh swap; covered by unit tests) but nothing extra was wired into `Settlement.dispose()` — no double-disposal.
+
+### Food visual anchor — one deliberate deviation
+
+Household food visuals anchor the household's storage crate (`landmarks.householdStorages[i]`, the plan-156 presentation crate in each house's yard) rather than `this.home`/`landmarks.homes[i]` itself (the actual `storageDestinations.ts` delivery target for household food, per this review's own ownership list). The two points are a small fixed offset apart in the same yard (`HOUSEHOLD_YARD_PROP_OFFSETS.storage`); the crate is the existing dedicated "physical representation of a household's stored goods" prop (this review: "the household storage crate... is currently a presentation/interactable anchor from plan 156"), reused as the visual anchor rather than adding a second physical marker at the house itself. The Plan 009 destination resolver itself was not touched.
+
+### Tests
+
+`src/settlement/storageVisuals.test.ts` (20 tests, no new test infrastructure — plain `vitest` + real `THREE.Object3D`/`Inventory`, same style as other settlement tests) covers all 11 points from this review's test list: every `FOOD_ITEM_KINDS` entry individually representable; non-food kinds (`arrow`/`stone`) never selected; bounded slot count; distinguishable simultaneous kinds; wood band transitions at 3/4, 7/8, 12/13, 20/21; extra-pile count above 20 bounded at `WOOD_PILE_MAX_EXTRA`; determinism for repeated identical input; visuals change when contents change; `selectFoodStorageSlots`/`sync()` never mutate the `Inventory`/`Household`/`SettlementEconomy` they read; household and settlement `FoodStorageVisual`s (same factory) produce equivalent output for equivalent contents; `dispose()` removes every created object from its parent.
+
+Missing-asset safety (plan §6 "a missing visual asset must never remove or alter the underlying stored item") wasn't re-tested directly — it already holds structurally, because `createItemMesh()` (existing, untouched) always returns a mesh (GLB or procedural fallback) and `selectFoodStorageSlots`/`sync()` never call any `Inventory` mutator.
+
+Full suite: `npx tsc --noEmit`, `pnpm lint:fix`, `npx vitest run` (2161 tests, all settlement tests included) and `pnpm run build` all pass.
+
+### Still needed
+
+Browser/manual verification only (plan §11 / this review's "Verification emphasis") — wood pile band transitions during real NPC deposit/withdraw, food item visuals for carrot/potato/cabbage/tomato/fish at both household and settlement storage, multiple simultaneous food kinds, an LG/XL settlement's static secondary pile reading correctly alongside the dynamic primary, settlement creation/removal lifecycle (no duplicated/leaked visuals), and no visible NPC navigation obstruction or FPS/draw-call regression from the extra piles/food meshes.
