@@ -1,243 +1,193 @@
 # Implementation Notes: Physical Storage Destinations & Resource Delivery
 
 **Reviewed:** 2026-08-30  
-**Plan:** `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md`  
-**Review status:** plan is partially obsolete; implementation should be a focused migration/extension, not a new logistics system
+**Plan:** `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md`
 
-## 1. Critical finding: most of the planned logistics/storage foundation already exists
+## Review conclusion
 
-The archived plan `docs/plans/archive/2026-08-18--156--npc-household-and-settlement-storage-logistics.md` is marked **done** and explicitly records that the generic transport contract was already implemented.
+Plan 009 is still valid, but the current codebase already contains much of the physical-storage and generic transport foundation. Treat this as a **typed destination + food-delivery integration**, not as a new logistics system.
 
-Current code confirms this:
+Plan 008 is a hard prerequisite for the food path. Its implementation notes identify the required migration from scalar `food` to concrete `ItemKind` inventory.
 
-- `NpcAgent` already uses the shared `goTo → execute/onComplete → next deposit` action chain;
-- NPC carrying uses the existing `Inventory`;
-- `localExchange.ts` already provides owner-agnostic atomic surplus claims;
-- `householdExchange.ts` already provides bounded, same-settlement household source lookup;
-- `createSettlement.ts` already materializes `householdStorages`;
-- `settlementStorage` / `householdStorage` are already represented by existing interactable/prop infrastructure;
-- `resolveInteraction.ts` already exposes live household/settlement stock.
+## Existing systems to reuse
 
-**Do not reimplement any of these systems.** Plan 009 should extend the existing mechanisms only where the 008 food migration requires it.
+The current code already has:
 
-## 2. Plan 008 is the real prerequisite
+- generic NPC `goTo → execute/onComplete → next` action flow in `src/ai/NpcAgent.ts`;
+- NPC/household `Inventory`;
+- local exchange claim seams in `src/economy/localExchange.ts`;
+- bounded same-settlement household source lookup in `src/settlement/householdExchange.ts`;
+- physical household storage instances created by `src/settlement/createSettlement.ts`;
+- existing storage/interactable infrastructure in `src/settlement/props.ts`, `src/interaction/Interactable.ts` and `src/interaction/resolveInteraction.ts`.
 
-Current `Household` still has:
+The archived Plan 156 implementation is historical evidence that generic household/settlement transport was already introduced. Do not duplicate it.
 
-```text
-stock: EconomicStock
-  food: number
-  wood: number
+## 1. Destination model
 
-items: Inventory
-  concrete ItemKind
-```
-
-Plan 008/its implementation notes identify the required migration of authoritative food from scalar `stock.food` to concrete `ItemKind` inventory.
-
-Therefore Plan 009 must not be implemented against the current scalar-food API as its final architecture.
-
-Expected dependency:
+A storage destination should answer only:
 
 ```text
-008
-concrete food ownership
-      ↓
-009
-typed storage destination
-      ↓
-010
-visual representation
+Can this physical destination accept this resource/item?
 ```
 
-## 3. Existing physical storage is currently generic
-
-The existing household storage container is a presentation/interactable object associated with a household; it is not a second inventory.
-
-Current `createSettlement.ts` builds `householdStorages` by matching the already-created household list to home/storage positions. Preserve this ownership/indexing scheme.
-
-The same applies to settlement storage.
-
-Do not introduce:
-
-- a new `StorageManager`;
-- `WoodStorageSystem`;
-- `FoodStorageSystem`;
-- storage-local quantities;
-- another settlement/household registry.
-
-For the new typed destinations, prefer extending the existing storage metadata/landmark/interactable contract.
-
-## 4. Storage destination should be a classification, not another inventory
-
-The required distinction is:
+Keep the concepts separate:
 
 ```text
-physical destination
-  = where an NPC delivers
-
-Inventory/resource state
-  = authoritative amount/items
+destination = WHERE
+inventory/economic state = WHAT + HOW MUCH
 ```
 
-For this plan, a destination needs enough metadata to answer:
+Do not store quantities on the Three.js/interactable storage object.
+
+Extend the existing storage metadata/landmark/interactable mechanism instead of adding `StorageManager`, separate `WoodStorageSystem`/`FoodStorageSystem`, or another registry.
+
+Minimum destination categories:
+
+- `wood`;
+- `food`.
+
+## 2. Food classification
+
+Food must use the existing `ItemKind` and item metadata/category from `src/items/items.ts`.
+
+Do not create a logistics-side list of carrots, potatoes, cabbage, tomatoes, etc.
+
+After Plan 008:
 
 ```text
-Can this destination accept this resource/item?
+ItemKind → existing food category → Food Storage
 ```
 
-Minimum logical categories are:
+This also means newly classified food items should work without changing the logistics resolver.
+
+## 3. Wood and food have different authoritative owners
+
+Do not force all resources into the same inventory model.
+
+Current architecture distinguishes:
 
 ```text
 wood
+→ scalar economic stock
+
 food
+→ concrete ItemKind Inventory after Plan 008
 ```
 
-Food must resolve from the existing `ItemKind`/item-category mechanism after Plan 008.
+The shared abstraction should be the delivery/destination flow, not identical storage representation.
 
-Do not add a logistics-side hard-coded list such as:
+Water and ore have their own existing semantics. Avoid touching them unless required by the destination abstraction.
 
-```ts
-const FOOD = ['carrot', 'potato', ...]
-```
+## 4. Household storage already exists
 
-## 5. Important distinction: bulk wood vs concrete food
+`createSettlement.ts` already builds `householdStorages` using the settlement's existing households and storage/home positions.
 
-The current architecture deliberately keeps `Household.stock` for scalar economic resources such as wood, while concrete food belongs in `Household.items` after Plan 008.
+Preserve this indexing and ownership relationship.
 
-Therefore the delivery implementation must support both:
+Do not create a replacement physical storage object.
 
-```text
-wood
-→ existing scalar household/settlement stock
+Plan 009 should add type/compatibility information to the existing destination, which Plan 010 can later use for visualization.
 
-food ItemKind
-→ concrete household/settlement Inventory
-```
+## 5. Settlement concrete food is the important architectural seam
 
-Do not force wood into `ItemKind` merely to make the storage resolver uniform.
+Current `SettlementEconomy` still uses scalar `EconomicStock`; it does not currently have the same concrete `Inventory` seam as `Household.items`.
 
-The shared abstraction should be the **delivery/destination flow**, not identical ownership representation for every resource.
+Plan 008 implementation notes already flag this as necessary.
 
-## 6. Existing exchange must be adapted, not duplicated
+Therefore:
 
-`src/economy/localExchange.ts` currently claims scalar surplus using:
+- do not implement Plan 009's food delivery against scalar `SettlementEconomy.food` as the final model;
+- consume the concrete settlement-food API established by Plan 008;
+- keep non-food settlement economic stock unchanged.
 
-```text
-claimHouseholdSurplus()
-claimEconomySurplus()
-```
+If Plan 008 is not implemented yet, stop rather than creating a temporary scalar-food destination path.
 
-These functions currently call `Household.surplus()` / `SettlementEconomy.surplus()` and remove scalar stock.
+## 6. Exchange integration
 
-After Plan 008, food cannot continue through these scalar methods as authoritative food.
+`src/economy/localExchange.ts` currently uses atomic/live surplus claims, while `src/settlement/householdExchange.ts` provides bounded source selection.
 
-Do not delete/rewrite the generic exchange architecture. Add the smallest concrete-food claim/transfer seam needed by 008/009, preserving:
+Preserve:
 
-- live revalidation;
+- live revalidation at claim time;
 - atomic source claim;
-- bounded local source selection;
-- existing `HouseholdExchangeHooks`.
+- same-settlement restriction;
+- deterministic nearest-first ordering/tie-break;
+- existing exchange action lifecycle.
 
-Wood should continue using the current scalar claim path.
+The food side needs a concrete-item transfer seam after Plan 008. Do not rewrite the whole exchange system.
 
-## 7. Existing NPC strategies are already integrated
+Wood can continue using the existing scalar claim path.
 
-Current `npcStrategies.ts` / `NpcAgent.ts` already contain:
+## 7. NPC decision vs destination
 
-- `economyWithdraw`;
-- `householdExchange`;
-- existing resource work/delivery;
-- the shared action lifecycle.
+Do not add a new NPC candidate generator for storage.
 
-Do not add another candidate generator for storage.
+Existing strategy code already handles `economyWithdraw`, `householdExchange` and resource work/delivery.
 
-The storage destination should be resolved by the existing action/transport path after a source is selected.
-
-The decision layer should continue to answer **why/what**, while destination resolution answers **where**.
-
-## 8. Do not reimplement water/ore transport
-
-The archived 156 implementation notes and current state describe existing generic transport for:
-
-- wood;
-- water;
-- ore.
-
-Water also has its separate authoritative household `water` reserve, deliberately outside `EconomicKind`.
-
-Ore remains settlement/economic stock.
-
-Plan 009 should only touch these flows if the new destination abstraction actually requires a compatibility fix. Do not rewrite working water/ore lifecycles.
-
-## 9. Physical storage is not yet the final visual design
-
-Current storage props are generic containers. That is sufficient for this plan.
-
-Do not implement:
-
-- quantity-based log piles;
-- separate fish/vegetable crates;
-- visible carrots/potatoes/cabbage/tomatoes;
-- storage visual state.
-
-Those belong to Plan 010.
-
-Plan 009 should establish/consume the physical destination identity that Plan 010 can later render.
-
-## 10. Missing-destination handling
-
-The current `NpcAgent` already has substantial action failure/recovery machinery, including movement watchdog/repath/abandon behaviour.
-
-Do not create another retry system.
-
-A failed destination lookup should fail/skip the delivery action through the existing action lifecycle and return the NPC to the normal decision point.
-
-Be particularly careful not to:
-
-- leave an item permanently in NPC carrying;
-- remove source stock before a destination is guaranteed;
-- duplicate the item on retry;
-- repeatedly select an unavailable destination.
-
-The transfer boundary must remain conservation-safe.
-
-## 11. Streaming considerations
-
-`HouseholdRegistry` keeps household objects stable across settlement stream-out/in, and `createSettlement.ts` reconstructs physical props from the simulation-owned state.
-
-Storage objects must remain disposable/recreatable presentation objects.
-
-Do not put authoritative quantities into the storage `Object3D`.
-
-If a delivery is interrupted by settlement streaming, preserve the existing action/carry lifecycle rather than inventing persistence for the physical container.
-
-## 12. Recommended implementation scope
-
-The current plan should effectively become:
+Keep the separation:
 
 ```text
-1. Verify 008's concrete-food API
-2. Extend existing storage destination metadata
-3. Add shared ItemKind/category → compatible destination resolution
-4. Adapt existing food delivery to concrete Inventory
-5. Adapt concrete-food exchange claims/transfers
-6. Keep wood/water/ore on existing ownership paths
-7. Handle unavailable destination through existing action failure
-8. Update focused tests
-9. Browser verification
+decision layer → WHAT / WHY
+destination resolver → WHERE
+existing action chain → HOW
 ```
 
-The agent should first inspect the exact post-008 code before changing anything. If 008 has not been implemented yet, stop rather than implementing a parallel scalar-food solution.
+## 8. Conservation and failure handling
 
-## 13. Files to inspect first
+The current `NpcAgent` already has action failure/repath/watchdog recovery. Reuse it.
 
-Focused starting set:
+Important transfer ordering:
+
+```text
+resolve valid destination
+→ perform movement/action
+→ transfer ownership exactly once
+```
+
+Never:
+
+- remove source stock before the transfer can complete;
+- duplicate an item on retry;
+- leave a carried item permanently after failed delivery;
+- repeatedly retry an impossible destination forever.
+
+A missing destination should return through the existing action failure/decision flow.
+
+## 9. Streaming
+
+Storage props are presentation objects rebuilt with settlement creation. They must not become authoritative state.
+
+If a settlement streams out/in:
+
+- authoritative resource/inventory state survives through existing simulation state;
+- physical storage objects are recreated;
+- NPC action/carry state must use the existing lifecycle.
+
+Do not introduce storage-specific persistence.
+
+## 10. Tests to prioritize
+
+Focus on the changed seams:
+
+1. wood resolves to Wood Storage;
+2. every existing food-category `ItemKind` resolves to Food Storage;
+3. household and settlement destinations resolve correctly;
+4. food transfer moves concrete item ownership exactly once;
+5. wood remains on its existing scalar path;
+6. exchange remains atomic/live;
+7. incompatible destination is rejected;
+8. missing destination does not strand the carrier or create an infinite retry;
+9. destination resolution is deterministic.
+
+Update existing tests instead of adding infrastructure.
+
+## 11. Focused files
+
+Start with:
 
 - `src/settlement/household.ts`
 - `src/items/Inventory.ts`
 - `src/items/items.ts`
-- `src/items/itemCatalog.ts`
 - `src/economy/settlementEconomy.ts`
 - `src/economy/localExchange.ts`
 - `src/settlement/householdExchange.ts`
@@ -248,22 +198,31 @@ Focused starting set:
 - `src/interaction/Interactable.ts`
 - `src/interaction/resolveInteraction.ts`
 
-Use the archived 156 implementation notes as historical context, but verify every detail against current code.
+Also read the archived Plan 156 implementation notes for context, but verify everything against current code.
 
-## 14. Key pitfalls
+## Main pitfalls
 
-- The archived 156 plan is **done**; do not repeat its generic logistics implementation.
-- Current physical storage props already exist; do not create replacement containers.
-- Current food is still scalar in `Household.stock`; this is precisely what Plan 008 must change.
-- Do not retain scalar `food` as a second authoritative cache after 008.
-- Do not convert `EconomicKind` wholesale to `ItemKind`.
-- Do not create a second food list in logistics.
-- Do not make storage `Object3D` authoritative.
-- Do not rewrite water/ore/wood transport merely to make the code look uniform.
-- Do not modify Plan 010's visual concerns here.
+- Plan 156 is already implemented; do not rebuild generic logistics.
+- Physical household storage already exists; extend it.
+- Do not retain scalar `food` as a second authoritative cache after Plan 008.
+- Do not convert all `EconomicKind` values into `ItemKind`.
+- Do not create a second food-kind list.
+- Do not put quantities into storage `Object3D`/interactable state.
+- Do not implement Plan 010's visual storage system here.
+- Do not rewrite working water/ore/wood transport just for symmetry.
 
-## Review conclusion
+## Recommended implementation order
 
-**Plan 009 remains useful, but its original implementation scope is too large for the current codebase.** The generic transport and physical storage foundation already exists from completed work. The meaningful remaining work is the **typed-food integration created by Plan 008** plus a clean compatibility/destination layer that can distinguish wood from concrete food without duplicating inventory or logistics.
+```text
+1. Verify the concrete-food API delivered by Plan 008.
+2. Extend the existing storage destination metadata.
+3. Add one shared ItemKind/category → destination compatibility resolver.
+4. Adapt existing food delivery to concrete Inventory.
+5. Adapt concrete-food exchange claims/transfers.
+6. Keep wood/water/ore on their existing ownership paths.
+7. Reuse existing action failure/recovery for unavailable destinations.
+8. Update focused tests.
+9. Run typecheck/lint/build and browser verification.
+```
 
-For Claude Code cost efficiency, this should be treated as a focused extension of the existing 005/156 mechanisms, not as a fresh storage-logistics implementation.
+The key objective is a small extension of existing storage/logistics, with **no parallel inventory or logistics architecture**.
