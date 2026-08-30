@@ -335,6 +335,8 @@ Generated from TypeScript imports.
 - `assets/assetIndex.ts`
 - `settlement/houseCatalog.test.ts`
 - `settlement/houseLighting.ts`
+- `settlement/householdYard.test.ts`
+- `settlement/householdYard.ts`
 - `settlement/props.lampMount.test.ts`
 - `settlement/props.ts`
 
@@ -407,6 +409,26 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `settlement/createSettlement.ts`
 - `settlement/householdExchange.test.ts`
+
+## `settlement/householdYard.test.ts`
+
+**Imports**
+
+- `settlement/houseCatalog.ts`
+- `settlement/householdYard.ts`
+- `settlement/villagePlanner.ts`
+
+## `settlement/householdYard.ts`
+
+**Imports**
+
+- `settlement/houseCatalog.ts`
+
+**Imported by**
+
+- `settlement/householdYard.test.ts`
+- `settlement/props.ts`
+- `settlement/villagePlanner.test.ts`
 
 ## `settlement/landOwnership.ts`
 
@@ -676,6 +698,7 @@ Generated from TypeScript imports.
 - `settlement/houseBuilder.ts`
 - `settlement/houseCatalog.ts`
 - `settlement/houseLighting.ts`
+- `settlement/householdYard.ts`
 - `settlement/merchantWagon.ts`
 - `settlement/propSpecs.ts`
 - `settlement/propUtils.ts`
@@ -973,6 +996,7 @@ Generated from TypeScript imports.
 
 - `settlement/families.ts`
 - `settlement/gardenScale.ts`
+- `settlement/householdYard.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
@@ -994,6 +1018,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `settlement/householdYard.test.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`

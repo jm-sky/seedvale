@@ -172,6 +172,12 @@ Generated from exported TypeScript symbols.
 - `HouseholdSurplusCandidate` — type — line 12
 - `selectHouseholdSurplusSource` — function — line 30
 
+## `settlement/householdYard.ts`
+
+- `HOUSEHOLD_YARD_PROP_OFFSETS` — const — line 26
+- `householdYardRadius` — function — line 33
+- `MAX_HOUSE_FOOTPRINT_RADIUS` — const — line 21
+
 ## `settlement/houseLighting.ts`
 
 - `createHouseLight` — function — line 167
@@ -298,13 +304,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 592
-- `disposeSettlementGroup` — function — line 1640
-- `SettlementHouseBed` — type — line 120
-- `SettlementHouseLandmark` — type — line 91
-- `SettlementLandmarks` — type — line 127
-- `SettlementLandPlot` — type — line 207
-- `SettlementTreeLandmark` — type — line 214
+- `buildSettlementProps` — function — line 593
+- `disposeSettlementGroup` — function — line 1641
+- `SettlementHouseBed` — type — line 121
+- `SettlementHouseLandmark` — type — line 92
+- `SettlementLandmarks` — type — line 128
+- `SettlementLandPlot` — type — line 208
+- `SettlementTreeLandmark` — type — line 215
 
 ## `settlement/propSpecs.ts`
 
@@ -503,13 +509,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 940
-- `chooseLayoutPattern` — function — line 118
-- `pathPlansToCorridorData` — function — line 1305
-- `planLocalPathsAndEntrances` — function — line 1186
-- `planVillageLayout` — function — line 631
+- `buildingsAndLandmarksFromPlots` — function — line 959
+- `chooseLayoutPattern` — function — line 123
+- `HOUSE_PLOT_RADIUS` — const — line 59
+- `pathPlansToCorridorData` — function — line 1324
+- `planLocalPathsAndEntrances` — function — line 1205
+- `planVillageLayout` — function — line 650
 - `PLOT_SCORE_WEIGHTS` — const — line 38
-- `VillageLayoutDraft` — type — line 87
+- `VillageLayoutDraft` — type — line 92
 
 ## `settlement/wellInteractionQueue.ts`
 

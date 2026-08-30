@@ -1,7 +1,7 @@
 # Plan: Household Yards & Settlement Space
 
 **Created:** 2026-08-30  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none  
 **Domain:** `settlements-npcs`
@@ -156,5 +156,56 @@ Sprawdzić:
 8. czas generowania nie ulega istotnemu pogorszeniu.
 
 Końcowy layout wymaga browser/manual verification.
+
+## Implementation summary (2026-08-30)
+
+Measured `planVillageLayout` output for SM/MD/LG/XL across 150 deterministic
+seeds each (600 settlements total) before changing anything, per the
+implementation notes' recommended sequence.
+
+Findings:
+
+- `VILLAGE_SIZE_CONFIG.footprintRadius`/`houseSpacing`/`houseRingMax` already
+  have healthy margin for households, gardens and infrastructure at every
+  size (SM: ~9–10 unit boundary margin, XL: ~16). Sale plots (plan 129)
+  intentionally hug the outer ring at up to `boundary.radius * ~1.05`, which
+  is a separate, already-known feature, not a household/garden capacity
+  problem — **no size constants changed**.
+- The one real defect: `villagePlanner.ts`'s `pickPlot()` had a deterministic
+  fallback ring-search loop for when the normal randomized attempts found no
+  valid candidate, but it only ran for `role === 'house'`. Every other role
+  (garden, stockpile, campfire, market, ...) fell straight through to an
+  **unconstrained** final placement that never re-checked spacing — so a
+  garden or piece of infrastructure could land on top of a house's yard once
+  a settlement was packed enough that the initial randomized attempts all
+  failed. Reproduced with real negative house↔garden clearance at MD/LG
+  before the fix, positive across 150 seeds × 4 sizes after it.
+- Fix: the same ring-search fallback now runs for every role, and grows the
+  ring outward through a few bounded steps (`[1, 1.15, 1.3, 1.5, 1.75] ×
+  fallbackRing`) instead of only trying the original radius, since a single
+  ring of 12 angles could still be fully blocked in a dense cluster (LG).
+  Bounded, generation-time-only, no worker/spatial-index added.
+- New `settlement/householdYard.ts` gives the "household yard" concept from
+  the plan a single pure definition: `householdYardRadius()` = the real
+  worst-case house `footprintRadius` (from `houseCatalog.ts`) plus the
+  outermost yard-prop offset (household storage, plan 156). `props.ts`'s
+  `houseYardPlacements()` offsets (barrel/trough/storage) now read from the
+  same `HOUSEHOLD_YARD_PROP_OFFSETS` constant instead of separate magic
+  numbers, and `villagePlanner.ts`'s `HOUSE_PLOT_RADIUS` is asserted (test)
+  to stay `>=` this contract. No `YardManager`/`SettlementAreaManager` —
+  gardens remain settlement-owned infrastructure, unchanged.
+- New tests (`householdYard.test.ts`, plus a "household yard & settlement
+  space" suite in `villagePlanner.test.ts`) assert, per size across 15
+  deterministic seeds: no household-yard/household-yard overlap, no
+  household-yard/garden-clearing overlap, no household-yard/other-infra
+  overlap, and every non-sale plot stays within the settlement boundary.
+- Livestock untouched, per plan — no pens/pastures/zones, no boundary
+  interaction added.
+
+Not done (out of scope, unchanged): garden ownership model, storage/economy
+changes, livestock pens, full settlement-generator rework.
+
+Browser/manual verification (final visual layout across sizes/seeds,
+livestock leaving the settlement, terrain clearing) is still pending.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
