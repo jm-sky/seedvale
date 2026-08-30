@@ -52,7 +52,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `009`
+- settlements-npcs: `010`
 - tools: `005`
 - ui-input: `005`
 - world: `007`
@@ -123,6 +123,7 @@ Natural vegetation
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | ◼️ `tools-004-claude-preflight-completion.md`                | - | 🟡 | S | - |
 | ◼️ `settlements-npcs-008-household-and-settlement-food-storage-model.md` | - | 🔴 | M | ~~069~~ ~~122~~ ~~106~~ ~~005~~ |
+| ◼️ `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md` | - | 🔴 | M | ~~008~~ ~~005~~ |
 
 ### Fresh new
 
