@@ -1,5 +1,5 @@
 import type { WorldConfig } from '../config/worldConfig'
-import type { EconomicKind } from '../economy/kinds'
+import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
@@ -327,7 +327,7 @@ export type SaveData = {
   placedTraps: SavePlacedTrap[]
   worldFlags: SaveWorldFlags
   map: SaveMap
-  settlementEconomies: Record<string, Partial<Record<EconomicKind, number>>>
+  settlementEconomies: Record<string, SettlementEconomySnapshot>
   playerNeeds: SavePlayerNeeds
   /** Sparse `settlementId:plotId` composite-key list
    *  (`settlement/landOwnership.ts`); an empty list means no purchased plots. */
@@ -443,13 +443,31 @@ function isSaveMap(value: unknown): value is SaveMap {
   return map.discoveredCells.every((cell) => typeof cell === 'string')
 }
 
-function isSettlementEconomiesField(value: unknown): value is Record<string, Partial<Record<EconomicKind, number>>> {
+/** Validates one settlement's `{ stock, food }` snapshot (plan
+ *  settlements-npcs-008) — `food.counts` is validated with the same loose
+ *  "object of numbers" check `stock` always used; `food.instances` reuses
+ *  `isSaveItemInstancesField` (food items are plain counts today, but the
+ *  shape is the same `SaveItemInstance[]` every other `Inventory` uses). */
+function isSettlementEconomySnapshot(value: unknown): value is SettlementEconomySnapshot {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-  for (const stock of Object.values(value as Record<string, unknown>)) {
-    if (!stock || typeof stock !== 'object' || Array.isArray(stock)) return false
-    for (const amount of Object.values(stock as Record<string, unknown>)) {
-      if (typeof amount !== 'number') return false
-    }
+  const v = value as Record<string, unknown>
+  if (!v.stock || typeof v.stock !== 'object' || Array.isArray(v.stock)) return false
+  for (const amount of Object.values(v.stock as Record<string, unknown>)) {
+    if (typeof amount !== 'number') return false
+  }
+  if (!v.food || typeof v.food !== 'object' || Array.isArray(v.food)) return false
+  const food = v.food as Record<string, unknown>
+  if (!food.counts || typeof food.counts !== 'object' || Array.isArray(food.counts)) return false
+  for (const amount of Object.values(food.counts as Record<string, unknown>)) {
+    if (typeof amount !== 'number') return false
+  }
+  return isSaveItemInstancesField(food.instances)
+}
+
+function isSettlementEconomiesField(value: unknown): value is Record<string, SettlementEconomySnapshot> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  for (const snapshot of Object.values(value as Record<string, unknown>)) {
+    if (!isSettlementEconomySnapshot(snapshot)) return false
   }
   return true
 }

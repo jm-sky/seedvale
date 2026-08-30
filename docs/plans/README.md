@@ -122,7 +122,6 @@ Natural vegetation
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | ◼️ `tools-004-claude-preflight-completion.md`                | - | 🟡 | S | - |
-| ◼️ `settlements-npcs-008-household-and-settlement-food-storage-model.md` | - | 🔴 | M | ~~069~~ ~~122~~ ~~106~~ ~~005~~ |
 | ◼️ `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md` | - | 🔴 | M | ~~008~~ ~~005~~ |
 | ◼️ `settlements-npcs-010-physical-storage-visualization.md`  | - | 🟡 | L | ~~009~~ |
 
@@ -157,6 +156,7 @@ Implementation is complete; only browser/manual verification remains unless note
 
 | File        | Notes              |
 | ----------- | ------------------ |
+| `settlements-npcs-008-household-and-settlement-food-storage-model.md` | [notes](./implementation-notes/settlements-npcs-008-household-and-settlement-food-storage-model-implementation-notes.md); household/settlement `food` is now concrete `ItemKind` items (`Household.items`/new `SettlementEconomy.items`), no authoritative scalar remains — NPC eat/gather/exchange/trader flows need browser verification |
 | `items-player-001-containers-waterskins-and-copper-items.md` | [notes](./implementation-notes/items-player-001-containers-waterskins-and-copper-items-implementation-notes.md); new waterskin sizes/fill/drink, buckets, saddlebags, copper ore/copper need browser verification |
 | `fauna-002-livestock-food-production.md` | [notes](./implementation-notes/fauna-002-livestock-food-production-implementation-notes.md); egg laying/collection, milking (both bucket kinds, capacity clamp, cooldown) need browser verification |
 | `settlements-npcs-002-npc-professions-complete-profession-work-integration.md` | [notes](./implementation-notes/settlements-npcs-002-npc-professions-complete-profession-work-integration-implementation-notes.md); new blacksmith prop placement + all 5 new profession behaviours need browser verification |

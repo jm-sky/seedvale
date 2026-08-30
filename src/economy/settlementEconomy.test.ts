@@ -10,7 +10,7 @@ const DEMANDS = [
   { kind: 'water' as const, target: 6 },
 ]
 
-function economy(initial: Partial<Record<'food' | 'water' | 'wood', number>> = {}) {
+function economy(initial: Partial<Record<'water' | 'wood', number>> = {}) {
   return createSettlementEconomy('s1', initial, DEMANDS)
 }
 
@@ -40,31 +40,31 @@ describe('EconomicStock add/remove', () => {
 
 describe('production', () => {
   it('consumes inputs and adds outputs atomically', () => {
-    const eco = economy({ wood: 4, food: 1 })
+    const eco = economy({ wood: 4, water: 1 })
     const ok = eco.produce({
       id: 'test.mill',
       inputs: [{ kind: 'wood', amount: 2 }],
-      outputs: [{ kind: 'food', amount: 3 }],
+      outputs: [{ kind: 'water', amount: 3 }],
     })
     expect(ok).toBe(true)
     expect(eco.query('wood')).toBe(2)
-    expect(eco.query('food')).toBe(4)
+    expect(eco.query('water')).toBe(4)
   })
 
   it('failed production does not partially consume inputs', () => {
-    const eco = economy({ wood: 4, food: 0 })
+    const eco = economy({ wood: 4, water: 0 })
     const ok = eco.produce({
       id: 'test.fail',
       inputs: [
         { kind: 'wood', amount: 2 },
-        { kind: 'food', amount: 1 },
+        { kind: 'water', amount: 1 },
       ],
-      outputs: [{ kind: 'water', amount: 9 }],
+      outputs: [{ kind: 'iron', amount: 9 }],
     })
     expect(ok).toBe(false)
     expect(eco.query('wood')).toBe(4)
-    expect(eco.query('food')).toBe(0)
     expect(eco.query('water')).toBe(0)
+    expect(eco.query('iron')).toBe(0)
   })
 
   it('woodcutting adds wood with no inputs', () => {
@@ -72,18 +72,35 @@ describe('production', () => {
     expect(eco.produce(WOODCUTTING_PRODUCTION)).toBe(true)
     expect(eco.query('wood')).toBe(3)
   })
+
+  it('produce/reserve never touch food — no real production recipe targets it (plan settlements-npcs-008)', () => {
+    const eco = economy({ wood: 4 })
+    eco.depositFood('carrot', 2)
+    eco.produce({ id: 'test.food-noop', inputs: [{ kind: 'wood', amount: 1 }], outputs: [{ kind: 'food', amount: 5 }] })
+    expect(eco.query('food')).toBe(2)
+  })
 })
 
 describe('shortage / surplus', () => {
   it('computes deficit and surplus against demand targets', () => {
-    const eco = economy({ wood: 3, food: 6, water: 10 })
+    const eco = economy({ wood: 3, water: 10 })
     expect(eco.shortage('wood')).toBe(5)
     expect(eco.hasShortage('wood')).toBe(true)
     expect(eco.surplus('wood')).toBe(0)
-    expect(eco.shortage('food')).toBe(0)
-    expect(eco.hasShortage('food')).toBe(false)
     expect(eco.surplus('water')).toBe(4)
     expect(eco.hasSurplus('water')).toBe(true)
+  })
+
+  it('computes food deficit/surplus from concrete items, not a scalar (plan settlements-npcs-008)', () => {
+    const eco = economy()
+    expect(eco.shortage('food')).toBe(6)
+    expect(eco.hasShortage('food')).toBe(true)
+    eco.depositFood('carrot', 6)
+    expect(eco.shortage('food')).toBe(0)
+    expect(eco.hasShortage('food')).toBe(false)
+    eco.depositFood('fish', 4)
+    expect(eco.surplus('food')).toBe(4)
+    expect(eco.hasSurplus('food')).toBe(true)
   })
 })
 

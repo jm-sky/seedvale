@@ -1,6 +1,10 @@
+import type { SaveItemInstance } from '../items/Inventory'
+import type { ItemKind } from '../items/items'
 import type { DevelopmentDef, DevelopmentStatus } from './development'
 import type { EconomicKind } from './kinds'
 import type { ProductionDef } from './production'
+import { claimFoodItems, foodItemCount } from '../items/foodItems'
+import { Inventory, type ItemAmount } from '../items/Inventory'
 import { EconomicStock, type StockAmount } from './stock'
 
 export type SettlementDemand = {
@@ -14,6 +18,18 @@ type Reservation = {
   goods: readonly StockAmount[]
 }
 
+/** Plain-data carry snapshot — mirrors `settlement/household.ts`'s
+ *  `HouseholdSnapshot` shape (plan settlements-npcs-008): `stock` is the
+ *  existing bulk `EconomicKind` quantities (never `food`, see `items`
+ *  below), `food` is the settlement's own concrete-item store. Used both to
+ *  seed a freshly-constructed `EconomyRegistry` across a `WorldBundle`
+ *  rebuild and, since this plan, as `SaveData.settlementEconomies`'
+ *  per-settlement record. */
+export type SettlementEconomySnapshot = {
+  stock: Partial<Record<EconomicKind, number>>
+  food: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] }
+}
+
 /**
  * @domain settlements
  * @system settlement-economy
@@ -22,6 +38,14 @@ type Reservation = {
  */
 export type SettlementEconomy = {
   readonly settlementId: string
+  /** Concrete food storage (plan settlements-npcs-008) — the settlement-level
+   *  counterpart of `Household.items`, reusing the same `Inventory` class.
+   *  The sole authoritative owner of settlement food; `query`/`shortage`/
+   *  `surplus`/`hasShortage`/`hasSurplus` derive `'food'` from this instead
+   *  of `EconomicStock`. Mutate through `depositFood`/`withdrawFood`, not
+   *  directly — `add`/`remove` below no-op for `'food'` (no `ItemKind` to
+   *  carry). */
+  readonly items: Inventory
   add: (kind: EconomicKind, amount: number) => void
   remove: (kind: EconomicKind, amount: number) => boolean
   query: (kind: EconomicKind) => number
@@ -33,18 +57,33 @@ export type SettlementEconomy = {
   surplus: (kind: EconomicKind) => number
   hasShortage: (kind: EconomicKind) => boolean
   hasSurplus: (kind: EconomicKind) => boolean
+  /** Concrete-food deposit — the mutation entry point every food producer/
+   *  transfer must use instead of `add('food', amount)`. */
+  depositFood: (kind: ItemKind, amount: number) => void
+  /** Claims up to `amount` food units, deterministic kind order (may span
+   *  multiple kinds) — the settlement-storage half of a food transfer,
+   *  mirroring `economy/localExchange.ts`'s claim seam for bulk goods. */
+  withdrawFood: (amount: number) => readonly ItemAmount[]
   developmentStatus: (id: string) => DevelopmentStatus
   reserveDevelopment: (def: DevelopmentDef) => boolean
   payDevelopment: (def: DevelopmentDef) => boolean
-  snapshot: () => Partial<Record<EconomicKind, number>>
+  snapshot: () => SettlementEconomySnapshot
 }
 
 export function createSettlementEconomy(
   settlementId: string,
   initial: Partial<Record<EconomicKind, number>>,
   demands: readonly SettlementDemand[],
+  /** Carried across a `WorldBundle` rebuild / loaded from `SaveData`, same
+   *  contract as `initial` above — omitted for a genuinely new settlement. */
+  initialFood?: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] },
 ): SettlementEconomy {
   const stock = new EconomicStock(initial)
+  const items = new Inventory(
+    initialFood?.counts,
+    Infinity,
+    initialFood ? Inventory.instancesFromJSON(initialFood.instances) : undefined,
+  )
   const demandByKind = new Map<EconomicKind, number>()
   for (const demand of demands) demandByKind.set(demand.kind, demand.target)
 
@@ -58,14 +97,17 @@ export function createSettlementEconomy(
 
   return {
     settlementId,
+    items,
     add(kind, amount) {
+      if (kind === 'food') return
       stock.add(kind, amount)
     },
     remove(kind, amount) {
+      if (kind === 'food') return false
       return stock.remove(kind, amount)
     },
     query(kind) {
-      return stock.query(kind)
+      return kind === 'food' ? foodItemCount(items) : stock.query(kind)
     },
     produce(def) {
       return stock.applyRecipe(def.inputs, def.outputs)
@@ -88,16 +130,22 @@ export function createSettlementEconomy(
       return true
     },
     shortage(kind) {
-      return Math.max(0, targetOf(kind) - stock.query(kind))
+      return Math.max(0, targetOf(kind) - this.query(kind))
     },
     surplus(kind) {
-      return Math.max(0, stock.query(kind) - targetOf(kind))
+      return Math.max(0, this.query(kind) - targetOf(kind))
     },
     hasShortage(kind) {
       return this.shortage(kind) > 0
     },
     hasSurplus(kind) {
       return this.surplus(kind) > 0
+    },
+    depositFood(kind, amount) {
+      if (amount > 0) items.add(kind, amount)
+    },
+    withdrawFood(amount) {
+      return claimFoodItems(items, amount)
     },
     developmentStatus(id) {
       return developments.get(id)?.status ?? 'unmet'
@@ -118,7 +166,7 @@ export function createSettlementEconomy(
       return true
     },
     snapshot() {
-      return stock.toJSON()
+      return { stock: stock.toJSON(), food: { counts: items.toJSON(), instances: items.instancesToJSON() } }
     },
   }
 }

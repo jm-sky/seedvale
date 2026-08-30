@@ -2,7 +2,7 @@ import { type Scene, Vector3 } from 'three'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { WorldConfig } from '../config/worldConfig'
-import type { EconomicKind } from '../economy/kinds'
+import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
@@ -201,7 +201,7 @@ function buildSettlementsManager(
   forest: SettlementForestHooks,
   worldContext: WorldContext,
   mining: SettlementMiningHooks,
-  initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
+  initialEconomies?: Record<string, SettlementEconomySnapshot>,
   onAnimalDeath?: (animalId: string) => void,
   getPlayerSocial?: PlayerSocialLookup,
   isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
@@ -405,7 +405,7 @@ type WorldSystemsSeed = {
   terrainPreparations: readonly TerrainPreparationRecord[]
   dryingRacks: readonly DryingRackRecord[]
   hives: readonly BeehiveRecord[]
-  economies?: Record<string, Partial<Record<EconomicKind, number>>>
+  economies?: Record<string, SettlementEconomySnapshot>
   households?: Record<HouseholdId, HouseholdSnapshot>
   npcStates?: Record<NpcId, NpcStateSnapshot>
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
@@ -794,7 +794,7 @@ export async function createWorldBundle(
    *  above. */
   initialDryingRacks: readonly DryingRackRecord[] = [],
   initialHives: readonly BeehiveRecord[] = [],
-  initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
+  initialEconomies?: Record<string, SettlementEconomySnapshot>,
   /** Reports any wild-fauna or livestock death (any cause) by `animalId` —
    *  threaded down into `buildFauna`/`buildSettlementsManager` so
    *  `QuestManager` can observe `animal_died` generically (plan 110). */

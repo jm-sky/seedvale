@@ -1,6 +1,5 @@
-import type { EconomicKind } from './kinds'
-import { demandsFor, initialStockFor, type SettlementEconomySeed } from './initial'
-import { createSettlementEconomy, type SettlementEconomy } from './settlementEconomy'
+import { demandsFor, initialFoodFor, initialStockFor, type SettlementEconomySeed } from './initial'
+import { createSettlementEconomy, type SettlementEconomy, type SettlementEconomySnapshot } from './settlementEconomy'
 
 /**
  * Per-manager economy map. Lives on `SettlementsManager`, not a process
@@ -11,23 +10,26 @@ export type EconomyRegistry = {
   getOrCreate: (seed: SettlementEconomySeed) => SettlementEconomy
   get: (id: string) => SettlementEconomy | undefined
   clear: () => void
-  /** Stock-only snapshot of every economy created so far — reservations/
-   *  developments are intentionally not included, same as `snapshot()`. */
-  serialize: () => Record<string, Partial<Record<EconomicKind, number>>>
+  /** Stock + concrete-food snapshot of every economy created so far —
+   *  reservations/developments are intentionally not included, same as
+   *  `snapshot()`. */
+  serialize: () => Record<string, SettlementEconomySnapshot>
 }
 
 export function createEconomyRegistry(
-  initialStocks?: Record<string, Partial<Record<EconomicKind, number>>>,
+  initialStocks?: Record<string, SettlementEconomySnapshot>,
 ): EconomyRegistry {
   const byId = new Map<string, SettlementEconomy>()
   return {
     getOrCreate(seed) {
       const existing = byId.get(seed.id)
       if (existing) return existing
+      const snapshot = initialStocks?.[seed.id]
       const created = createSettlementEconomy(
         seed.id,
-        initialStocks?.[seed.id] ?? initialStockFor(seed),
+        snapshot?.stock ?? initialStockFor(seed),
         demandsFor(seed),
+        snapshot?.food ?? { counts: initialFoodFor(seed), instances: [] },
       )
       byId.set(seed.id, created)
       return created
@@ -39,7 +41,7 @@ export function createEconomyRegistry(
       byId.clear()
     },
     serialize() {
-      const result: Record<string, Partial<Record<EconomicKind, number>>> = {}
+      const result: Record<string, SettlementEconomySnapshot> = {}
       for (const [id, economy] of byId) result[id] = economy.snapshot()
       return result
     },

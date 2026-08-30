@@ -49,7 +49,8 @@ import {
   tryAdvanceDevelopment,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
-import { Inventory } from '../items/Inventory'
+import { claimFoodItems, depositFoodItems } from '../items/foodItems'
+import { Inventory, type ItemAmount } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
@@ -578,13 +579,14 @@ const HOUSEHOLD_EXCHANGE_MAX_TRANSFER: Record<HouseholdResourceKind, number> = {
 export const BLACKSMITH_SHARPEN_THRESHOLD = 0.9
 
 /** Helper resource delivery (plan 167) — the concrete `ItemKind` a
- *  household's abstract `EconomicStock` `food` surplus converts into while
- *  carried/deposited (household stock itself has no concrete item identity,
- *  see the plan's §6 "food ma inną ścieżkę"). `bread` already exists as a
- *  plain, non-species-specific staple (catalog notes: "prepared for future/
- *  emergency use"), so this reuses it rather than adding a new `ItemKind`.
- *  One trip moves at most `HELPER_DELIVERY_MAX_CARRY` units — comfortably
- *  under `NPC_CARRY_MAX_WEIGHT` alongside this NPC's role weapon. */
+ *  household's real (mixed-kind, since plan settlements-npcs-008) food
+ *  surplus is presented as while carried/deposited into a player `Container`,
+ *  rather than the exact mixed kinds actually claimed. `bread` already exists
+ *  as a plain, non-species-specific staple (catalog notes: "prepared for
+ *  future/emergency use"), so this reuses it rather than widening
+ *  `HelperDeliveryHooks.deposit` to a per-kind list. One trip moves at most
+ *  `HELPER_DELIVERY_MAX_CARRY` units — comfortably under
+ *  `NPC_CARRY_MAX_WEIGHT` alongside this NPC's role weapon. */
 const HELPER_DELIVERY_ITEM_KIND: ItemKind = 'bread'
 const HELPER_DELIVERY_MAX_CARRY = 3
 
@@ -651,9 +653,13 @@ function depositWoodHarvest(household: Household | null, economy: SettlementEcon
  *  overflow to the settlement economy) before the NPC eats from it — the
  *  personal-need equivalent of `depositWoodHarvest`. No-op without a
  *  household (isolated fallback) — matches the pre-069 behaviour where
- *  eating did not touch any resource pool. */
+ *  eating did not touch any resource pool. The abstract garden gather has no
+ *  producer-known `ItemKind` (plan settlements-npcs-008 §5 — this is
+ *  deliberately *not* a real crop/hunt/fish yield), so it reuses
+ *  `HELPER_DELIVERY_ITEM_KIND`'s existing "abstract food, no specific
+ *  producer kind" convention rather than inventing a new mapping. */
 function depositFoodHarvest(household: Household | null, economy: SettlementEconomy | null): void {
-  household?.deposit('food', FOOD_GATHER_AMOUNT, economy)
+  household?.depositFood(HELPER_DELIVERY_ITEM_KIND, FOOD_GATHER_AMOUNT, economy)
 }
 
 /** Generic carried-item → household-item-storage delivery (plan 178 §6/§7,
@@ -1455,7 +1461,7 @@ export class NpcAgent {
       health: { current: this.health.currentHp, max: this.health.maxHp },
       household: this.household
         ? {
-            food: this.household.stock.query('food'),
+            food: this.household.foodCount(),
             wood: this.household.stock.query('wood'),
             water: this.household.water.current,
           }
@@ -2500,7 +2506,7 @@ export class NpcAgent {
       : '-'
     const staminaPercent = Math.round(getStaminaRatio(this.stamina) * 100)
     const householdText = this.household
-      ? ` · hh f${this.household.stock.query('food')} w${this.household.stock.query('wood')} h2o${this.household.water.current}`
+      ? ` · hh f${this.household.foodCount()} w${this.household.stock.query('wood')} h2o${this.household.water.current}`
         + (this.role === 'hunter' ? ` arr${this.household.items.count('arrow')}` : '')
       : ''
     // Hunter-only diagnostics (plan 178 §14) — equipment/ammo carried, the
@@ -2766,7 +2772,7 @@ export class NpcAgent {
           destination: copyVec3(this.home),
           durationSec: 1.2 * this.waitMultiplier,
           onComplete: () => {
-            household.stock.remove('food', 1)
+            household.takeFood()
             this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
           },
         })
@@ -2791,7 +2797,7 @@ export class NpcAgent {
         durationSec: 1.4 * this.waitMultiplier,
         onComplete: () => {
           depositFoodHarvest(household, this.economy)
-          household?.stock.remove('food', Math.min(1, household.stock.query('food')))
+          household?.takeFood()
           this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
         },
       })
@@ -2984,7 +2990,32 @@ export class NpcAgent {
     const economy = this.economy
     if (!household || !economy) return false
     if (household.shortage(kind) <= 0) return false
-    const requested = Math.min(economy.surplus(kind), HOUSEHOLD_EXCHANGE_MAX_TRANSFER[kind])
+    const maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER[kind]
+    if (kind === 'food') {
+      const requested = Math.min(economy.surplus('food'), maxTransfer)
+      if (requested <= 0) return false
+      let claimed: readonly ItemAmount[] = []
+      this.startAction({
+        kind: 'exchange',
+        destination: copyVec3(this.landmarks.stockpile),
+        durationSec: 1.2 * this.waitMultiplier,
+        onComplete: () => {
+          claimed = economy.withdrawFood(requested)
+        },
+        next: {
+          kind: 'deposit',
+          destination: copyVec3(this.home),
+          durationSec: 0.8 * this.waitMultiplier,
+          onComplete: () => {
+            if (claimed.length === 0) return
+            depositFoodItems(household.items, claimed)
+            this.satisfyHouseholdResourceNeed(household, 'food')
+          },
+        },
+      })
+      return true
+    }
+    const requested = Math.min(economy.surplus(kind), maxTransfer)
     if (requested <= 0) return false
 
     let claimed = 0
@@ -3023,19 +3054,45 @@ export class NpcAgent {
     if (household.shortage(kind) <= 0) return false
     const source = hooks.findSurplusSource(household.id, kind, this.home)
     if (!source) return false
-    const requested = Math.min(source.household.surplus(kind), HOUSEHOLD_EXCHANGE_MAX_TRANSFER[kind])
+    const maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER[kind]
+    const sourceHousehold = source.household
+    const destination = copyVec3({
+      x: source.position.x,
+      y: this.sampleHeight(source.position.x, source.position.z),
+      z: source.position.z,
+    })
+    if (kind === 'food') {
+      const requested = Math.min(sourceHousehold.surplus('food'), maxTransfer)
+      if (requested <= 0) return false
+      let claimed: readonly ItemAmount[] = []
+      this.startAction({
+        kind: 'exchange',
+        destination,
+        durationSec: 1.2 * this.waitMultiplier,
+        onComplete: () => {
+          claimed = claimFoodItems(sourceHousehold.items, requested)
+        },
+        next: {
+          kind: 'deposit',
+          destination: copyVec3(this.home),
+          durationSec: 0.8 * this.waitMultiplier,
+          onComplete: () => {
+            if (claimed.length === 0) return
+            depositFoodItems(household.items, claimed)
+            this.satisfyHouseholdResourceNeed(household, 'food')
+          },
+        },
+      })
+      return true
+    }
+    const requested = Math.min(sourceHousehold.surplus(kind), maxTransfer)
     if (requested <= 0) return false
 
     const economy = this.economy
-    const sourceHousehold = source.household
     let claimed = 0
     this.startAction({
       kind: 'exchange',
-      destination: copyVec3({
-        x: source.position.x,
-        y: this.sampleHeight(source.position.x, source.position.z),
-        z: source.position.z,
-      }),
+      destination,
       durationSec: 1.2 * this.waitMultiplier,
       onComplete: () => {
         claimed = claimHouseholdSurplus(sourceHousehold, kind, requested)
@@ -3063,7 +3120,7 @@ export class NpcAgent {
    *  duty pressure itself eases. */
   private satisfyHouseholdResourceNeed(household: Household, kind: HouseholdResourceKind): void {
     if (kind === 'food') {
-      household.stock.remove('food', Math.min(1, household.stock.query('food')))
+      household.takeFood()
       this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
     } else {
       this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
@@ -3124,8 +3181,9 @@ export class NpcAgent {
       onComplete: () => {
         const take = Math.min(household.surplus('food'), requested)
         if (take <= 0) return
-        household.stock.remove('food', take)
-        if (this.carried.add(HELPER_DELIVERY_ITEM_KIND, take)) gathered = take
+        const removed = claimFoodItems(household.items, take)
+        const removedTotal = removed.reduce((n, r) => n + r.amount, 0)
+        if (removedTotal > 0 && this.carried.add(HELPER_DELIVERY_ITEM_KIND, removedTotal)) gathered = removedTotal
       },
       next: {
         kind: 'deposit',
@@ -3182,8 +3240,8 @@ export class NpcAgent {
           this.maybeWaterNearbyGarden(target.x, target.z)
         }
         if (result.count <= 0) return
-        household?.deposit('food', result.count, this.economy)
-        household?.stock.remove('food', Math.min(1, household.stock.query('food')))
+        household?.depositFood(result.kind, result.count, this.economy)
+        household?.takeFood()
         this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
       },
     })
@@ -3370,7 +3428,7 @@ export class NpcAgent {
         durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
         onComplete: () => {
           const result = foodSources.harvest(target)
-          if (result && result.count > 0) household?.deposit('food', result.count, economy)
+          if (result && result.count > 0) household?.depositFood(result.kind, result.count, economy)
         },
       })
       return true
@@ -3478,6 +3536,14 @@ export class NpcAgent {
       destination: copyVec3(this.workplace.position),
       durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
       onComplete: () => {
+        if (kind === 'food') {
+          // Concrete-item counterpart of the wood claim below (plan
+          // settlements-npcs-008) — this trader's full surplus is the
+          // requested amount, so the cap is a no-op in practice.
+          const claimed = claimFoodItems(household.items, household.surplus('food'))
+          for (const { kind: itemKind, amount } of claimed) economy.depositFood(itemKind, amount)
+          return
+        }
         // Reuses the same atomic claim seam local exchange uses
         // (`economy/localExchange.ts`) — this trader's full surplus is the
         // requested amount, so the cap is a no-op in practice, just a shared
@@ -3485,7 +3551,7 @@ export class NpcAgent {
         const amount = claimHouseholdSurplus(household, kind, household.surplus(kind))
         if (amount <= 0) return
         economy.add(kind, amount)
-        if (kind === 'wood') tryAdvanceDevelopment(economy)
+        tryAdvanceDevelopment(economy)
       },
     })
     return true
@@ -3557,7 +3623,7 @@ export class NpcAgent {
           durationSec: 1.4 * this.waitMultiplier,
           onComplete: () => {
             depositFoodHarvest(this.household, this.economy)
-            this.household?.stock.remove('food', Math.min(1, this.household.stock.query('food')))
+            this.household?.takeFood()
             this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
             this.settledIdleActivity = 'eat'
           },

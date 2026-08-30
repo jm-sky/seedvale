@@ -29,7 +29,7 @@ const validSave: SaveData = {
   placedTraps: [],
   worldFlags: {},
   map: { discoveredCells: ['0,0', '1,0'] },
-  settlementEconomies: { home: { food: 3, wood: 1 } },
+  settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [] } } },
   playerNeeds: { hunger: 12, thirst: 8, vigor: 40, starvationDuration: 5400, dehydrationDuration: 900 },
   ownedLandPlots: ['0_0:plot-sale-0'],
   skills: {

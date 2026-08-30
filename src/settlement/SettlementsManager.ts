@@ -4,7 +4,7 @@ import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
-import type { EconomicKind } from '../economy/kinds'
+import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
@@ -119,7 +119,7 @@ export type SettlementsManager = {
   peekDef: (cell: SettlementCell) => SettlementDef | null
   /** Stock-only snapshot of every settlement economy created so far (loaded
    *  or previously streamed out) — see `EconomyRegistry.serialize`. */
-  snapshotEconomies: () => Record<string, Partial<Record<EconomicKind, number>>>
+  snapshotEconomies: () => Record<string, SettlementEconomySnapshot>
   /** Stock-only snapshot of every household created so far — see
    *  `HouseholdRegistry.serialize` (plan 197 §8). */
   snapshotHouseholds: () => Record<HouseholdId, HouseholdSnapshot>
@@ -157,7 +157,7 @@ export async function createSettlementsManager(
   clearColliders: (ownerKey: string) => void,
   forest?: SettlementForestHooks,
   homeSize: HomeVillageSize = 'auto',
-  initialEconomies?: Record<string, Partial<Record<EconomicKind, number>>>,
+  initialEconomies?: Record<string, SettlementEconomySnapshot>,
   /** Reports any settlement's livestock deaths (any cause) by `animalId` —
    *  forwarded into every `createSettlement` call, home and streamed-in
    *  alike (plan 110). */

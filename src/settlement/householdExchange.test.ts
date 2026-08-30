@@ -4,8 +4,8 @@ import { createHouseholdExchangeHooks, selectHouseholdSurplusSource } from './ho
 
 function householdWithFood(id: string, amount: number) {
   const household = createHousehold(id, 's', `home:${id}`)
-  household.stock.remove('food', household.stock.query('food'))
-  if (amount > 0) household.deposit('food', amount)
+  household.items.remove('bread', household.items.count('bread'))
+  if (amount > 0) household.depositFood('carrot', amount)
   return household
 }
 
@@ -52,7 +52,7 @@ describe('selectHouseholdSurplusSource', () => {
     const source = householdWithFood('source', 20)
     const candidates = [{ household: source, position: { x: 0, z: 0 } }]
     expect(selectHouseholdSurplusSource(candidates, 'requester', 'food', { x: 0, z: 0 })?.household.id).toBe('source')
-    source.stock.remove('food', source.stock.query('food'))
+    source.items.remove('carrot', source.items.count('carrot'))
     expect(selectHouseholdSurplusSource(candidates, 'requester', 'food', { x: 0, z: 0 })).toBeNull()
   })
 })
