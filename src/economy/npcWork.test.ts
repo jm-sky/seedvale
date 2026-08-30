@@ -40,7 +40,8 @@ describe('commitRoleWork', () => {
   })
 
   it('applies the shared farmer production hook (no-op until 069)', () => {
-    const eco = createSettlementEconomy('s1', { food: 2 }, DEMANDS)
+    const eco = createSettlementEconomy('s1', {}, DEMANDS)
+    eco.depositFood('carrot', 2)
     expect(commitRoleWork(eco, 'farmer')).toBe(true)
     expect(eco.query('food')).toBe(2)
     expect(FARMING_PRODUCTION.outputs).toEqual([])

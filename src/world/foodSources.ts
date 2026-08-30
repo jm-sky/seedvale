@@ -36,8 +36,13 @@ export type SettlementFoodSourceHooks = {
    *  settlements-npcs-001 §6/§7) — `count` can legitimately be `0` for a
    *  heavily-neglected or hydration-dead plot; the harvest itself (crop
    *  removal from the world) still happened. Also resets the plot's
-   *  accumulated drought stress (plan §6). */
-  harvest: (target: FoodSourceTarget) => { count: number } | null
+   *  accumulated drought stress (plan §6). `kind` (plan settlements-npcs-008)
+   *  is the concrete `ItemKind` actually harvested — `target.itemKind` for an
+   *  `item` target, `CropHarvestOutcome.yield.kind` for a `crop` target
+   *  (mature `harvestItem` or spoiled `spoiledItem`, already resolved by
+   *  `ChunkManager.harvestCrop`) — so a caller depositing the yield never has
+   *  to re-derive it from `cropId`. */
+  harvest: (target: FoodSourceTarget) => { count: number, kind: ItemKind } | null
   /** Nearest player-built garden plot within reach of `(x, z)` (plan 176
    *  §6.1's "NPC already at the field" condition) — only ever called right
    *  after `harvest` succeeded for a `crop` target, never as an independent
@@ -168,7 +173,7 @@ export function createFoodSourceHooks(
     },
     harvest(target) {
       if (target.kind === 'item') {
-        return chunkManager.collectItem(target.id) ? { count: 1 } : null
+        return chunkManager.collectItem(target.id) ? { count: 1, kind: target.itemKind } : null
       }
       const outcome = chunkManager.harvestCrop(target.id)
       if (!outcome.ok) return null
@@ -180,7 +185,7 @@ export function createFoodSourceHooks(
         count = cultivationYieldCount(count, care, hydrationState?.droughtStressDays ?? 0, (hydrationState?.hydration ?? 100) <= 0)
         playerGardens.recordHarvest(garden.id, getWorldDays())
       }
-      return { count }
+      return { count, kind: outcome.yield.kind }
     },
     gardenNear(x, z) {
       const garden = findNearestGarden(playerGardens.list(), x, z)

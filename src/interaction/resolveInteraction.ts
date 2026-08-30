@@ -43,7 +43,7 @@ function pickFrom(pool: readonly string[]): string {
 function formatHouseholdStorage(household: Household): string {
   return [
     `Drewno: ${household.stock.query('wood')}`,
-    `Jedzenie: ${household.stock.query('food')}`,
+    `Jedzenie: ${household.foodCount()}`,
     `Woda: ${household.water.current}`,
   ].join('\n')
 }

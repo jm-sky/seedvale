@@ -1,7 +1,7 @@
 # Plan: Household & Settlement Food Storage Model
 
 **Created:** 2026-08-30
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~069~~ ~~122~~ ~~106~~ ~~005~~
 **Domain:** `settlements-npcs`

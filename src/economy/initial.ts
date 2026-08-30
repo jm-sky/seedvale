@@ -1,3 +1,4 @@
+import type { ItemKind } from '../items/items'
 import type { VillageSize } from '../settlement/families'
 import type { FoodSourceType } from '../settlement/villagePlan'
 import type { NaturalResource } from '../terrain/naturalResources'
@@ -43,21 +44,34 @@ function hashString(value: string): number {
 /**
  * Deterministic starting stock from settlement identity. Modest on purpose —
  * must not look like an infinite depot. Jitter is a 0–2 hash of `id`, not
- * `Math.random()`.
+ * `Math.random()`. `food` moved to `initialFoodFor` (plan
+ * settlements-npcs-008) — it's no longer an `EconomicKind` bulk quantity.
  */
 export function initialStockFor(
   seed: SettlementEconomySeed,
 ): Partial<Record<EconomicKind, number>> {
   const jitter = hashString(seed.id) % 3
+  return {
+    water: WATER_INITIAL,
+    wood: BASE_WOOD[seed.size] + jitter,
+  }
+}
+
+/** Starting concrete settlement food (plan settlements-npcs-008) — same
+ *  `BASE_FOOD`/`dominantResource` magnitude the old scalar `food` used,
+ *  converted to a concrete item. `bread` is the existing "abstract food, no
+ *  specific producer kind" convention (see `NpcAgent.ts`'s
+ *  `HELPER_DELIVERY_ITEM_KIND`), reused here rather than inventing a new
+ *  starting-food mapping. Only consulted for a genuinely new settlement
+ *  (`EconomyRegistry.getOrCreate` when no carried/saved food snapshot
+ *  exists). */
+export function initialFoodFor(seed: SettlementEconomySeed): Partial<Record<ItemKind, number>> {
   const foodBonus =
     seed.dominantResource?.type === 'fertile_soil' || seed.dominantResource?.type === 'fish'
       ? 1
       : 0
-  return {
-    food: BASE_FOOD[seed.foodSourceType] + foodBonus,
-    water: WATER_INITIAL,
-    wood: BASE_WOOD[seed.size] + jitter,
-  }
+  const jitter = hashString(`${seed.id}:food`) % 3
+  return { bread: BASE_FOOD[seed.foodSourceType] + foodBonus + jitter }
 }
 
 export function demandsFor(seed: SettlementEconomySeed): readonly SettlementDemand[] {

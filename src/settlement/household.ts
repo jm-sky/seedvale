@@ -1,8 +1,8 @@
-import type { EconomicKind } from '../economy/kinds'
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import { EconomicStock } from '../economy/stock'
+import { foodItemCount, takeOneFoodItem } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 
 /**
@@ -19,26 +19,44 @@ import { Inventory } from '../items/Inventory'
 export type HouseholdId = string
 
 /** Water stays source-based (well/`WaterSource`) for 069 — see plan 069
- *  implementation notes §9. Only food/wood become household stock — a
- *  household is a family pantry, not a village depot. Deliberately *not*
- *  derived from `EconomicKind` anymore (plan 131): `iron`/`coal`/`gold`
- *  are settlement-level raw resource stock and must not automatically
- *  become household-storable just because they're `EconomicKind`s. */
+ *  implementation notes §9. `wood` stays household stock — a household is a
+ *  family pantry, not a village depot. Deliberately *not* derived from
+ *  `EconomicKind` anymore (plan 131): `iron`/`coal`/`gold` are
+ *  settlement-level raw resource stock and must not automatically become
+ *  household-storable just because they're `EconomicKind`s.
+ *
+ *  `food` stays part of this union for every existing shortage/surplus/
+ *  exchange call site (plan settlements-npcs-008) — but, unlike `wood`, it is
+ *  no longer backed by `stock`. `has`/`shortage`/`shouldAcquire`/`surplus`
+ *  derive it from concrete food `ItemKind`s in `items` instead
+ *  (`items/foodItems.ts`'s `foodItemCount`); see `deposit`/`depositFood`
+ *  below for why the two kinds need separate mutation entry points. */
 export type HouseholdResourceKind = 'food' | 'wood'
 
 const INITIAL_HOUSEHOLD_STOCK: Record<string, number> = {
   water: 4,
-  food: 3,
   wood: 2,
 }
 
 const INITIAL_HOUSEHOLD_RANDOM_OFFSET: Record<string, number> = {
   water: 3,
-  food: 3,
   wood: 2,
 }
 
-const HOUSEHOLD_KINDS: readonly HouseholdResourceKind[] = ['food', 'wood']
+/** Starting concrete food (plan settlements-npcs-008) — same jittered
+ *  magnitude the old scalar `stock.food` used, converted to a concrete item.
+ *  `bread` is the existing "abstract food surplus, no specific producer
+ *  kind" convention (see `NpcAgent.ts`'s `HELPER_DELIVERY_ITEM_KIND`),
+ *  reused here rather than inventing a new starting-food mapping. */
+const INITIAL_HOUSEHOLD_FOOD_KIND: ItemKind = 'bread'
+const INITIAL_HOUSEHOLD_FOOD: Record<string, number> = {
+  food: 3,
+}
+const INITIAL_HOUSEHOLD_FOOD_RANDOM_OFFSET: Record<string, number> = {
+  food: 3,
+}
+
+const HOUSEHOLD_STOCK_KINDS: readonly HouseholdResourceKind[] = ['wood']
 
 type HouseholdPolicy = {
   /** Below this, the household has an urgent shortage. */
@@ -53,7 +71,8 @@ type HouseholdPolicy = {
 
 /** Deterministic constants, not an economic planner (plan 069 §14) —
  *  intentionally small so a household reads as a real family pantry, not a
- *  depot. */
+ *  depot. `food`'s thresholds are concrete food-item unit counts since plan
+ *  settlements-npcs-008 (same numbers, new meaning). */
 const HOUSEHOLD_POLICY: Record<HouseholdResourceKind, HouseholdPolicy> = {
   food: { minimum: 1, target: 3, capacity: 7 },
   wood: { minimum: 1, target: 3, capacity: 5 },
@@ -127,6 +146,8 @@ export type Household = {
   readonly settlementId: string
   /** The `Place.id` of this household's home. */
   readonly homeId: string
+  /** `wood` only since plan settlements-npcs-008 — concrete food lives in
+   *  `items` instead (see `HouseholdResourceKind`'s doc comment). */
   readonly stock: EconomicStock
   /** Water reserve backing this household's `WaterBarrel`/`AnimalTrough`
    *  (plan 122) — separate from `stock` since water is not an `EconomicKind`. */
@@ -134,11 +155,10 @@ export type Household = {
   /** Generic item storage (plan 178) — reuses the same `Inventory` class as
    *  player/NPC carrying, unbounded weight/size (a house, not a backpack).
    *  Owns arbitrary discrete items (hunted meat/hide, crafted arrows,
-   *  bandages) that `stock`'s scalar `EconomicStock` was deliberately never
-   *  meant to represent (implementation notes §7 — do not add item-instance
-   *  fields to `stock`, this is the generic seam for that instead). */
+   *  bandages, and — since plan settlements-npcs-008 — every concrete food
+   *  `ItemKind` too, the sole authoritative food store). */
   readonly items: Inventory
-  has: (kind: EconomicKind, amount: number) => boolean
+  has: (kind: HouseholdResourceKind, amount: number) => boolean
   /** > 0 when stock is below the resource's minimum (urgent). */
   shortage: (kind: HouseholdResourceKind) => number
   /** True while stock is below the resource's target (worth acquiring, not urgent). */
@@ -149,11 +169,23 @@ export type Household = {
    *  §3), which only ever matters at gather time. */
   surplus: (kind: HouseholdResourceKind) => number
   /**
-   * Deposits gathered resource, capped at the household's capacity. Any
+   * Deposits gathered wood, capped at the household's capacity. Any
    * remainder is routed to `economy` when given, otherwise dropped — mirrors
-   * plan 069 §3/§6 (full household -> village storage).
+   * plan 069 §3/§6 (full household -> village storage). `food` moved to
+   * `depositFood` (plan settlements-npcs-008) — it needs a concrete
+   * `ItemKind`, which a bare scalar `amount` can't carry.
    */
-  deposit: (kind: HouseholdResourceKind, amount: number, economy?: SettlementEconomy | null) => void
+  deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null) => void
+  /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
+   *  shape, gathered/received food lands as `itemKind` units in `items`. */
+  depositFood: (itemKind: ItemKind, amount: number, economy?: SettlementEconomy | null) => void
+  /** Removes exactly one concrete food item (deterministic kind order, see
+   *  `items/foodItems.ts`) — the "eat one unit" primitive every consumption
+   *  path uses instead of the old `stock.remove('food', 1)`. */
+  takeFood: () => ItemKind | null
+  /** Total concrete food-item units currently held — the authoritative
+   *  replacement for the old `stock.query('food')`. */
+  foodCount: () => number
   snapshot: () => HouseholdSnapshot
 }
 
@@ -171,15 +203,24 @@ function hashString(value: string): number {
   return h >>> 0
 }
 
-/** Deterministic small starting reserve, jittered per household id so a
+/** Deterministic small starting wood reserve, jittered per household id so a
  *  settlement's households don't all start identical (same spirit as
  *  `economy/initial.ts`'s `initialStockFor`). */
 function initialHouseholdStock(id: HouseholdId): Partial<Record<HouseholdResourceKind, number>> {
   const out: Partial<Record<HouseholdResourceKind, number>> = {}
-  for (const kind of HOUSEHOLD_KINDS) {
+  for (const kind of HOUSEHOLD_STOCK_KINDS) {
     out[kind] = INITIAL_HOUSEHOLD_STOCK[kind] + (hashString(`${id}:${kind}`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET[kind])
   }
   return out
+}
+
+/** Deterministic small starting concrete food, jittered per household id —
+ *  same magnitude/spirit as `initialHouseholdStock`, converted to
+ *  `INITIAL_HOUSEHOLD_FOOD_KIND` units (plan settlements-npcs-008). */
+function initialHouseholdFoodCounts(id: HouseholdId): Partial<Record<ItemKind, number>> {
+  const amount =
+    INITIAL_HOUSEHOLD_FOOD.food + (hashString(`${id}:food`) % INITIAL_HOUSEHOLD_FOOD_RANDOM_OFFSET.food)
+  return amount > 0 ? { [INITIAL_HOUSEHOLD_FOOD_KIND]: amount } : {}
 }
 
 export function createHousehold(
@@ -200,7 +241,7 @@ export function createHousehold(
     initial?.water ?? INITIAL_HOUSEHOLD_STOCK.water + (hashString(`${id}:water`) % INITIAL_HOUSEHOLD_RANDOM_OFFSET.water),
   )
   const items = new Inventory(
-    initial?.items?.counts,
+    initial?.items?.counts ?? (initial ? undefined : initialHouseholdFoodCounts(id)),
     Infinity,
     initial?.items ? Inventory.instancesFromJSON(initial.items.instances) : undefined,
   )
@@ -212,10 +253,17 @@ export function createHousehold(
     stock,
     water,
     items,
-    has: (kind, amount) => stock.has(kind, amount),
-    shortage: (kind) => Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind)),
-    shouldAcquire: (kind) => stock.query(kind) < HOUSEHOLD_POLICY[kind].target,
-    surplus: (kind) => Math.max(0, stock.query(kind) - HOUSEHOLD_POLICY[kind].target),
+    has: (kind, amount) => (kind === 'food' ? foodItemCount(items) >= amount : stock.has(kind, amount)),
+    shortage: (kind) =>
+      kind === 'food'
+        ? Math.max(0, HOUSEHOLD_POLICY.food.minimum - foodItemCount(items))
+        : Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind)),
+    shouldAcquire: (kind) =>
+      kind === 'food' ? foodItemCount(items) < HOUSEHOLD_POLICY.food.target : stock.query(kind) < HOUSEHOLD_POLICY[kind].target,
+    surplus: (kind) =>
+      kind === 'food'
+        ? Math.max(0, foodItemCount(items) - HOUSEHOLD_POLICY.food.target)
+        : Math.max(0, stock.query(kind) - HOUSEHOLD_POLICY[kind].target),
     deposit: (kind, amount, economy) => {
       if (amount <= 0) return
       const capacity = HOUSEHOLD_POLICY[kind].capacity
@@ -225,6 +273,17 @@ export function createHousehold(
       const overflow = amount - toHousehold
       if (overflow > 0 && economy) economy.add(kind, overflow)
     },
+    depositFood: (itemKind, amount, economy) => {
+      if (amount <= 0) return
+      const capacity = HOUSEHOLD_POLICY.food.capacity
+      const room = Math.max(0, capacity - foodItemCount(items))
+      const toHousehold = Math.min(amount, room)
+      if (toHousehold > 0) items.add(itemKind, toHousehold)
+      const overflow = amount - toHousehold
+      if (overflow > 0 && economy) economy.depositFood(itemKind, overflow)
+    },
+    takeFood: () => takeOneFoodItem(items),
+    foodCount: () => foodItemCount(items),
     snapshot: () => ({
       stock: stock.toJSON(),
       water: water.current,

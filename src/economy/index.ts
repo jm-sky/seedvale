@@ -1,5 +1,5 @@
 export { type DevelopmentDef, type DevelopmentStatus, WOODSHED_DEVELOPMENT } from './development'
-export { demandsFor, initialStockFor, type SettlementEconomySeed } from './initial'
+export { demandsFor, initialFoodFor, initialStockFor, type SettlementEconomySeed } from './initial'
 export { ECONOMIC_KINDS, type EconomicKind, isEconomicKind } from './kinds'
 export { claimEconomySurplus, claimHouseholdSurplus } from './localExchange'
 export {
@@ -25,5 +25,6 @@ export {
   createSettlementEconomy,
   type SettlementDemand,
   type SettlementEconomy,
+  type SettlementEconomySnapshot,
 } from './settlementEconomy'
 export { EconomicStock, type StockAmount } from './stock'
