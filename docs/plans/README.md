@@ -123,7 +123,7 @@ Natural vegetation
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | ◼️ `tools-004-claude-preflight-completion.md`                | - | 🟡 | S | - |
 | ◼️ `settlements-npcs-010-physical-storage-visualization.md`  | - | 🟡 | L | ~~009~~ |
-| ◼️ `settlements-npcs-011-yards-and-space.md`                 | - | 🟡 | M | - |
+| 💡 `settlements-npcs-011-yards-and-space.md`                 | - | 🟡 | M | - |
 
 ### Fresh new
 
