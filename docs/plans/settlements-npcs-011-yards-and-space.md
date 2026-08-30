@@ -42,10 +42,12 @@ Household powinien mieć logiczną przestrzeń użytkową wokół domu obejmują
 ```
 house
 + access / movement
-+ garden
++ garden allowance
 + storage
 + household props
 ```
+
+`garden allowance` oznacza miejsce potrzebne w settlement layout dla istniejących wspólnych ogrodów. Nie oznacza prywatnego ogródka przypisanego do każdego householdu.
 
 Nie musi być ona fizyczną ani nieprzekraczalną granicą.
 
