@@ -66,6 +66,14 @@ Generated from exported TypeScript symbols.
 - `isFoodPerishable` — function — line 19
 - `isSpoiled` — function — line 32
 
+## `items/foodItems.ts`
+
+- `claimFoodItems` — function — line 45
+- `depositFoodItems` — function — line 64
+- `FOOD_ITEM_KINDS` — const — line 18
+- `foodItemCount` — function — line 24
+- `takeOneFoodItem` — function — line 33
+
 ## `items/guardSword.ts`
 
 - `askGuardForSword` — function — line 22

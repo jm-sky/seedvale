@@ -222,10 +222,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/foodSources.ts`
 
-- `createFoodSourceHooks` — function — line 158
+- `createFoodSourceHooks` — function — line 163
 - `FoodSourceTarget` — type — line 19
-- `nearestFoodSource` — function — line 93
-- `nearestHarvestableCrop` — function — line 133
+- `nearestFoodSource` — function — line 98
+- `nearestHarvestableCrop` — function — line 138
 - `SettlementFoodSourceHooks` — type — line 26
 
 ## `world/gardenPlotProp.ts`

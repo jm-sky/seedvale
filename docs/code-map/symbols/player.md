@@ -79,10 +79,10 @@ Generated from exported TypeScript symbols.
 - `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 81
 - `createPlayerNeeds` — function — line 135
 - `DEHYDRATION_HP_PER_SEC` — const — line 108
-- `drinkWater` — function — line 259
-- `eatFood` — function — line 255
+- `drinkWater` — function — line 265
+- `eatFood` — function — line 261
 - `hungerSevereDurationSec` — function — line 94
-- `isTakingDeprivationDamage` — function — line 267
+- `isTakingDeprivationDamage` — function — line 273
 - `PLAYER_MAX_HUNGER` — const — line 41
 - `PLAYER_MAX_STAMINA` — const — line 39
 - `PLAYER_MAX_THIRST` — const — line 42
@@ -95,11 +95,11 @@ Generated from exported TypeScript symbols.
   - uses: StaminaState, VigorState
   - simulation: tick
 - `resetPlayerNeeds` — function — line 147
-- `restoreNeedsFromSleep` — function — line 249
+- `restoreNeedsFromSleep` — function — line 255
 - `restorePersistedNeeds` — function — line 168
 - `STARVATION_HP_PER_SEC` — const — line 107
 - `thirstSevereDurationSec` — function — line 97
-- `tickHealthRegen` — function — line 276
+- `tickHealthRegen` — function — line 282
 - `tickPlayerMovementVigor` — function — line 233
 - `tickPlayerNeeds` — function — line 193
 - `tickPlayerStamina` — function — line 213

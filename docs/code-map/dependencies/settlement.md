@@ -37,7 +37,7 @@ Generated from TypeScript imports.
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
 - `economy/index.ts`
-- `economy/kinds.ts`
+- `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
@@ -364,10 +364,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `economy/kinds.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
+- `items/foodItems.ts`
 - `items/items.ts`
 
 **Imported by**
@@ -387,6 +387,7 @@ Generated from TypeScript imports.
 - `settlement/householdExchange.test.ts`
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
+- `settlement/storageDestinations.ts`
 
 ## `settlement/householdExchange.test.ts`
 
@@ -886,6 +887,25 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
+
+## `settlement/storageDestinations.test.ts`
+
+**Imports**
+
+- `items/foodItems.ts`
+- `settlement/storageDestinations.ts`
+
+## `settlement/storageDestinations.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `settlement/household.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `settlement/storageDestinations.test.ts`
 
 ## `settlement/villageClearing.test.ts`
 

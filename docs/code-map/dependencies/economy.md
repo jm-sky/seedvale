@@ -48,6 +48,7 @@ Generated from TypeScript imports.
 
 - `economy/kinds.ts`
 - `economy/settlementEconomy.ts`
+- `items/items.ts`
 - `settlement/families.ts`
 - `settlement/villagePlan.ts`
 - `terrain/naturalResources.ts`
@@ -63,16 +64,11 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `app/worldBundle.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
 - `economy/localExchange.ts`
-- `economy/registry.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
-- `persistence/saveData.ts`
-- `settlement/SettlementsManager.ts`
-- `settlement/household.ts`
 - `terrain/depositMining.test.ts`
 - `terrain/depositMining.ts`
 
@@ -82,6 +78,7 @@ Generated from TypeScript imports.
 
 - `economy/localExchange.ts`
 - `economy/settlementEconomy.ts`
+- `items/foodItems.ts`
 - `settlement/household.ts`
 
 ## `economy/localExchange.ts`
@@ -158,7 +155,6 @@ Generated from TypeScript imports.
 **Imports**
 
 - `economy/initial.ts`
-- `economy/kinds.ts`
 - `economy/settlementEconomy.ts`
 
 **Imported by**
@@ -183,9 +179,13 @@ Generated from TypeScript imports.
 - `economy/kinds.ts`
 - `economy/production.ts`
 - `economy/stock.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/items.ts`
 
 **Imported by**
 
+- `app/worldBundle.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
 - `economy/localExchange.test.ts`
@@ -196,6 +196,8 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
 - `settlement/household.test.ts`
 - `settlement/household.ts`
 

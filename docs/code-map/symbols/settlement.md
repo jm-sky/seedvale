@@ -150,20 +150,20 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 185
-- `createHouseholdRegistry` — function — line 251
-- `Household` — type — line 125
+- `createHousehold` — function — line 226
+- `createHouseholdRegistry` — function — line 310
+- `Household` — type — line 144
 - `HouseholdId` — type — line 19
   - domain: settlements-npcs
   - system: household
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 160
-- `HouseholdRegistry` — type — line 242
-- `HouseholdResourceKind` — type — line 27
-- `HouseholdSnapshot` — type — line 109
-- `WaterReserve` — type — line 72
+- `householdIdFor` — function — line 192
+- `HouseholdRegistry` — type — line 301
+- `HouseholdResourceKind` — type — line 34
+- `HouseholdSnapshot` — type — line 128
+- `WaterReserve` — type — line 91
 
 ## `settlement/householdExchange.ts`
 
@@ -450,6 +450,15 @@ Generated from exported TypeScript symbols.
 - `classifySettlementTerrain` — function — line 36
 - `MOUNTAIN_RIDGE_THRESHOLD` — const — line 28
 - `TerrainSamplers` — type — line 6
+
+## `settlement/storageDestinations.ts`
+
+- `classifyItemStorageKind` — function — line 33
+  - domain: settlements-npcs
+  - system: storage-destinations
+  - role: Resolves the physical destination for a wood/food delivery, given the household or settlement it belongs to.
+- `householdStorageDestination` — function — line 39
+- `settlementStorageDestination` — function — line 45
 
 ## `settlement/villageClearing.ts`
 

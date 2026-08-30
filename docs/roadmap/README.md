@@ -23,6 +23,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 | `horse-and-riding.md` |
 | `npc-ai.md` |
 | `npc-professions-households-and-age.md` |
+| `physical-resource-storage-and-logistics.md` |
 | `player-founded-settlement.md` |
 | `textiles-and-herbal-medicine.md` |
 <!-- AUTO-GENERATED:END -->

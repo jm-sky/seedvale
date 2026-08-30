@@ -66,6 +66,7 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `fauna/huntingHooks.ts`
 - `items/Inventory.ts`
+- `items/foodItems.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/weaponMaintenance.ts`
@@ -77,6 +78,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/places.ts`
 - `settlement/props.ts`
+- `settlement/storageDestinations.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
