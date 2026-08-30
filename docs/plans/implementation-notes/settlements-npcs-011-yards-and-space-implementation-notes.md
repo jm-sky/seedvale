@@ -1,23 +1,66 @@
 # Implementation Notes: Household Yards & Settlement Space
 
 **Reviewed:** 2026-08-30  
-**Plan:** `settlements-npcs-011-yards-and-space.md`
+**Plan:** `settlements-npcs-011-yards-and-space.md`  
+**Status:** `reviewed`
 
 ## Review conclusion
 
-Plan 011 is valid, but the current code is already further along than the plan implies. The important change is **spatial capacity/calibration**, not a new yard system.
+Plan 011 is valid, but the current code is already significantly further along than the plan description suggests.
 
-The main architectural seam is the existing `VillagePlan`: it already owns the authoritative settlement boundary, zones, plots, buildings, landmarks and paths. Extend that pipeline rather than adding a separate spatial manager.
+The correct implementation target is **not a new yard/spatial system**. The main task is to establish a shared, measurable household-space contract and calibrate the existing settlement envelope/placement pipeline around it.
 
-One important discrepancy: current gardens are **settlement-level garden landmarks**, not one garden per household. Do not silently reinterpret them as household-owned gardens during this plan. If the intended design is one garden per household, that is a separate layout decision and should be made explicitly before implementation.
+The authoritative spatial pipeline is already:
 
-## Existing systems to reuse
+```
+settlementGenerator
+  → findSettlementSite
+  → VillagePlan
+      → zones
+      → plots
+      → landmarks
+      → paths / entrances
+  → props / clearings runtime projection
+```
 
-### `families.ts`
+Extend this pipeline. Do **not** add `YardManager`, `SettlementAreaManager`, a global spatial registry, or a second placement solver.
 
-`VILLAGE_SIZE_CONFIG` is the single source of truth for family count, `footprintRadius`, `houseSpacing`, `houseRingMax`, and zone/infrastructure budgets. Do not duplicate SM/MD/LG/XL values elsewhere.
+## Important finding: gardens are not household-owned
 
-Current values:
+The plan currently says every household needs space for a garden.
+
+That does **not** match the code.
+
+Current garden generation is shared settlement infrastructure:
+
+- `gardenUnitsFromHouses()` derives garden capacity from total house count;
+- `packGardenScales()` creates S/M/L garden clusters;
+- gardens are `VillagePlan` infrastructure plots/landmarks;
+- `landmarks.gardens` is settlement-level;
+- `layoutClearingsFromPlan()` creates garden clearings from those landmarks.
+
+Relevant files:
+
+- `src/settlement/gardenScale.ts`
+- `src/settlement/villagePlanner.ts`
+- `src/settlement/villageClearing.ts`
+- `src/settlement/props.ts`
+
+For plan 011, interpret this as:
+
+```
+household yard
+  = private/residential clearance around the house
+
+garden allowance
+  = settlement layout capacity reserved for the existing shared gardens
+```
+
+Do not silently change garden ownership or create one private garden per household. That would be a separate design decision.
+
+## Current size configuration
+
+`src/settlement/families.ts` is the single source of truth:
 
 | Size | Families | footprint | house ring | spacing |
 |---|---:|---:|---:|---:|
@@ -26,169 +69,416 @@ Current values:
 | LG | 5–7 | 56 | 36 | 16 |
 | XL | 7–9 | 72 | 48 | 18 |
 
-### `settlementGenerator.ts` + `findSettlementSite.ts`
+Do not duplicate these values.
 
-Generation is already plan-first:
+The house ring used by the planner is:
 
 ```
-cell/context
-→ provisional size
-→ footprint-aware site search
-→ identity/families
-→ VillagePlan
-→ SettlementDef compatibility projection
+houseRing = houseRingMax * 0.85
 ```
 
-`findSettlementSite()` already evaluates `footprintRadius` and `houseRingMax` for dry land, height spread, slope and dry paths. A larger settlement footprint therefore automatically participates in site selection.
+so the nominal preferred house-center radius is:
 
-Do not add a second site-selection pass.
+- SM: 23.8
+- MD: 27.2
+- LG: 30.6
+- XL: 40.8
 
-Important limitation: the candidate search box is still `DEFAULT_SITE_SEARCH_MARGIN = 24` for normal settlements. A larger footprint does **not** widen the search area. This is probably desirable for deterministic locality and grid spacing; only change it if verification shows the larger footprint needs a wider search.
+The planner house plot radius is currently `4.5`.
 
-### `villagePlanner.ts`
+The existing household props are placed from the **actual house landmark footprint**:
 
-`planVillageLayout()` sets `boundary.radius = villageSizeConfig(size).footprintRadius` and then places all plots through the shared `pickPlot()` scorer.
+```
+barrel:  footprint + 0.85
+trough:  footprint + 1.35
+storage: footprint + 1.90
+```
 
-House plots currently use fixed `HOUSE_PLOT_RADIUS = 4.5`, preferred ring `houseRingMax * 0.85`, minimum center distance from the plaza, `houseSpacing`, house-spoke avoidance, and terrain/water/path checks.
+This is important: storage is already a real physical yard prop, not merely a future placeholder.
 
-The scorer's boundary handling is a **soft penalty**, not a hard containment rule. A candidate can technically extend outside the boundary if its score still wins. This matters when increasing the boundary: do not assume boundary radius is a strict geometric enclosure.
+## Existing household-yard placement
 
-### Gardens
+`src/settlement/props.ts` contains `houseYardPlacements()`.
 
-`gardenScale.ts` is the authoritative garden sizing model:
+Current behaviour:
 
-- S plot radius: 4.8
-- M: 6.4
-- L: 8.4
-- clearing radius is larger than plot radius because it includes the actual beds + skirt.
+```
+house center
+  → radial direction from settlement core
+  → actual house footprintRadius
+  → fixed offset
+  → small angular jitter
+```
 
-Garden count is derived from house count: `ceil(houseCount / 3)` → `packGardenScales()`.
+It is currently used for:
 
-The planner places these gardens as shared settlement infrastructure, normally outside the plaza. `layoutClearingsFromPlan()` then creates garden clearings from the same landmarks.
+- household barrel,
+- animal trough,
+- household storage crate.
 
-Do not duplicate garden dimensions in plan 011.
+The storage position is exposed through:
 
-### `villageClearing.ts`
+```
+SettlementLandmarks.householdStorages
+```
 
-Clearings are a projection of the authoritative `VillagePlan`, not an independent layout.
+and `createSettlement.ts` zips those positions with households by family index.
 
-House clearings use `max(params.houseRadius, plot.radius * 0.85)`. Garden clearings use `gardenClearingRadius(scale)`. Regional smoothing already covers `plan.boundary.radius`.
+Therefore plan 011 should **align and harden this existing mechanism**, not replace it.
 
-This means increasing the boundary is already understood by the terrain-clearing layer; avoid introducing another yard clearing unless the yard itself must receive terrain treatment.
+## Existing planner boundary behaviour
 
-### `props.ts`
+`src/settlement/villagePlanner.ts` uses a shared `pickPlot()` scorer.
 
-Household props already exist around each house, including household storage, barrel and trough. They are presentation projections and should continue to use authoritative household/economy state elsewhere.
+Important detail:
 
-Current placement is still partly offset-based. In particular, storage/barrel/trough placement should not become a second spatial solver in 009/010. If 011 exposes a shared household-space calculation, these consumers can use it.
+```
+outside = distanceFromCenter + plot.radius - boundary.radius
+```
 
-The forest/decorative placement code already uses the concept of a residential `courtyardRadius` and rejects trees inside it. Reuse/align with this existing notion rather than creating another unrelated radius.
+outside-boundary placement receives a strong score penalty, but it is **not a hard containment rule**.
 
-### Livestock
+Therefore increasing `footprintRadius` does not by itself prove that every plot/prop fits. Verification must measure final generated extents.
 
-Livestock has `ownerHouseId`, but its movement is not constrained to a household yard. This is compatible with the plan.
+House placement already has:
 
-Do not expand settlement boundary to accommodate livestock wandering. Animal movement remains an ecosystem/fauna concern.
+- house plot radius = `4.5`;
+- preferred ring = `houseRingMax * 0.85`;
+- minimum distance from plaza;
+- house-to-house spacing;
+- house-spoke avoidance;
+- terrain/water/path gates.
+
+House spacing is independent from the settlement envelope. **Do not increase `houseSpacing` just because the boundary changes.**
+
+## Existing site selection
+
+`src/settlement/findSettlementSite.ts` already evaluates the requested settlement footprint.
+
+It samples:
+
+- `houseRingMax * 0.55`;
+- `houseRingMax`;
+- `footprintRadius` when materially larger;
+- dry ratio;
+- height spread;
+- average slope;
+- dry paths back to the site.
+
+The hard footprint dry-ratio threshold is currently `0.4`.
+
+Normal settlements still use:
+
+```
+DEFAULT_SITE_SEARCH_MARGIN = 24
+```
+
+A larger footprint therefore already participates in site suitability, but the search box is not automatically widened.
+
+Do not add another site-selection pass.
+
+Only revisit the search margin if browser/determinism tests demonstrate that the larger required layout cannot reliably fit within the existing search locality.
+
+## Existing clearing / terrain integration
+
+`src/settlement/villageClearing.ts` projects the authoritative `VillagePlan`.
+
+Current behaviour:
+
+- house clearings use `max(params.houseRadius, plot.radius * 0.85)`;
+- garden clearings use `gardenClearingRadius(scale)`;
+- regional smoothing uses `plan.boundary.radius`.
+
+Therefore boundary changes already propagate into terrain clearing.
+
+Do not create a separate yard clearing system unless implementation proves that yard terrain itself needs a distinct smoothing/rejection contract.
+
+## Existing decorative forest / courtyard concept
+
+`src/settlement/props.ts` already calculates a residential `courtyardRadius` for forest/decorative placement.
+
+It is derived from:
+
+```
+max(
+  clearings.core.radius * 1.6,
+  minimum house-to-core distance * 0.55
+)
+```
+
+Trees/clusters are rejected from this area.
+
+This is an existing residential-space concept. If plan 011 needs a common residential clearance, first determine whether this concept can be promoted/reused instead of introducing another radius with overlapping meaning.
+
+Do not blindly rename it into a new API.
 
 ## Recommended implementation
 
-### 1. Derive required settlement extent from actual layout
+### 1. Measure before changing constants
 
-Do not simply hard-code `SM 46 / MD 54 / LG 64 / XL 80`. Those values are starting hypotheses, not established requirements.
+Do not start by changing:
 
-The implementation should calculate/check the outer extent needed by the generated static layout:
+- `footprintRadius`,
+- `houseSpacing`,
+- `houseRingMax`,
+- search margins.
 
-```
-house plot
-+ required household yard margin
-+ garden/household-space requirement
-+ edge margin
-```
+First instrument/test the generated layout for several deterministic seeds.
 
-The result should be compared with `VILLAGE_SIZE_CONFIG.footprintRadius`.
-
-Prefer a small number of centralized size/layout constants over many per-prop offsets.
-
-### 2. Keep house spacing independent
-
-Do not increase `houseSpacing` merely because the settlement boundary grows. `houseSpacing` controls relationships between plot centers; `footprintRadius` controls the available settlement envelope.
-
-Only change spacing if generated layouts demonstrate house-to-house collision/overlap after accounting for yard requirements.
-
-### 3. Give the yard a logical spatial contract, not a manager
-
-A useful implementation seam is a derived household-space requirement used by layout/placement code. It should describe required clearance around the house rather than own runtime objects.
-
-Do not create `YardManager`, `SettlementAreaManager`, a global spatial registry, or another placement solver.
-
-### 4. Gardens need an explicit interpretation
-
-Current gardens are shared settlement garden clusters. The plan currently says each household needs room for an “ogród”, but that does not match the implementation.
-
-For this plan, the safest interpretation is:
+For every SM/MD/LG/XL case collect:
 
 ```
-household yard = space reserved around the house
-garden allowance = space that must not be consumed by neighboring/static props
+house center + plot radius
+house actual footprint
+household barrel
+trough
+storage
+garden center + gardenPlotRadius
+garden clearing radius
+stockpile / well / market / campfire
+sale plots
+local paths
+settlement boundary
 ```
 
-without changing garden ownership.
+Measure the maximum radial extent from `plan.center`.
 
-If later the design requires one private garden per household, that should extend `VillagePlan`/house plots explicitly rather than be inferred from the existing shared garden landmarks.
-
-### 5. Boundary calibration
-
-Increasing `footprintRadius` also affects zone radius, zone offsets, garden preferred rings, sale plot positions, livestock/work/food zone positions, site suitability scoring, regional terrain smoothing, and decorative forest bands.
-
-Therefore test the whole generated layout, not just house placement. Avoid compensating for one changed radius with unrelated hard-coded offsets.
-
-### 6. Settlement grid safety
-
-`SETTLEMENT_GRID_STEP = 280`. Even an ~80-unit settlement boundary remains comfortably below the inter-settlement grid spacing. There is no reason to modify the settlement grid as part of this plan.
-
-## Potential pitfalls
-
-- **Boundary is not a hard containment guarantee.** `pickPlot()` applies an outside-boundary score penalty; verify final plot extents rather than assuming containment.
-- **House plot radius is fixed at 4.5**, while actual assembled house geometry has several variants. Do not assume every house has identical visual footprint; use existing house footprint/collider helpers if exact clearance is required.
-- **Garden plot radius and garden clearing radius differ.** Use the appropriate one for spacing vs terrain/visual clearance.
-- **Current garden count is based on total houses, not household ownership.**
-- **Increasing boundary changes zone placement**, so a seemingly harmless radius change can move public/food/production/livestock infrastructure.
-- **Site selection samples only a small number of footprint points.** It is a suitability heuristic, not a full collision/layout validation.
-- **Deterministic RNG streams matter.** Avoid inserting unrelated random calls into existing layout streams unless the resulting deterministic layout change is intentional.
-- **Do not involve livestock wandering in boundary calculations.**
-
-## Suggested verification
-
-For a fixed seed, inspect every size:
-
-1. Generate SM/MD/LG/XL.
-2. Record actual house centers and plot radii.
-3. Record garden landmark centers and `gardenClearingRadius`.
-4. Measure the outermost static layout extent.
-5. Check house↔house, house↔garden and house↔infrastructure clearances.
-6. Check paths/entrances after any radius change.
-7. Check terrain clearing/regional smoothing coverage.
-8. Generate several deterministic seeds per size to catch unlucky layouts.
-9. Confirm the same seed still produces the same plan.
-10. Browser-verify the resulting settlement visually.
-
-Do not use livestock positions as a failure criterion.
-
-## Recommended implementation scope
-
-Keep 011 focused on the **static settlement envelope and household-space contract**.
-
-A likely implementation sequence is:
+The goal is to answer:
 
 ```
-1. Measure current generated extents.
-2. Define the minimum household-yard clearance.
-3. Derive/check required boundary radius per size.
-4. Adjust VILLAGE_SIZE_CONFIG only where measurements require it.
-5. Align household prop placement with the shared space assumptions.
-6. Verify gardens and existing infrastructure still fit.
-7. Run deterministic/layout tests.
-8. Browser-verify several sizes/seeds.
+requiredExtent(size, seed)
+  = max(all static household/infrastructure extents)
 ```
 
-Plan 009 can then consume the resulting household storage positions/space without inventing another placement model.
+Then compare it with `VILLAGE_SIZE_CONFIG[size].footprintRadius`.
+
+### 2. Define the household-space contract
+
+The contract should be a **pure layout/geometry calculation**, not an owner/manager.
+
+It should answer approximately:
+
+```
+What clearance does one household require around its house
+so its known yard props and access remain usable?
+```
+
+It must not own:
+
+- households,
+- props,
+- NPCs,
+- runtime objects,
+- persistence.
+
+Prefer a small shared helper or existing plot/landmark data over a new system.
+
+### 3. Keep garden ownership unchanged
+
+Do not make gardens household plots in 011.
+
+The planner already knows the garden footprint and count. Use those existing dimensions when checking household/infrastructure capacity.
+
+The garden model is:
+
+```
+house count
+→ garden units
+→ S/M/L garden scales
+→ garden plot radius
+→ garden clearing radius
+```
+
+Reuse these functions rather than copying their numbers.
+
+### 4. Align household prop placement
+
+The existing `houseYardPlacements()` is the natural integration point.
+
+If review/testing shows collisions, improve this helper or move its pure geometric calculation into an appropriate shared module.
+
+Do not create a second household-prop placement algorithm.
+
+At minimum, the final placement must be checked against:
+
+- the house footprint,
+- neighboring house footprints,
+- garden clearings,
+- settlement core/infrastructure,
+- local path corridors.
+
+Avoid adding a general-purpose spatial collision engine for this.
+
+### 5. Prefer conservative layout capacity over arbitrary spacing
+
+If measurements show insufficient capacity, prefer this order:
+
+1. improve household-space/plot clearance assumptions;
+2. adjust `footprintRadius` per size;
+3. only then consider `houseRingMax`;
+4. change `houseSpacing` only if actual house-to-house overlap is demonstrated.
+
+This preserves the existing meaning of `houseSpacing`.
+
+### 6. Do not hard-code guessed radii
+
+Do not introduce values such as:
+
+```
+SM = 46
+MD = 54
+LG = 64
+XL = 80
+```
+
+without measurements.
+
+Those are only possible hypotheses, not validated requirements.
+
+## Likely files
+
+### Primary
+
+- `src/settlement/families.ts`
+  - `VILLAGE_SIZE_CONFIG`
+  - size-dependent footprint/spacing configuration.
+
+- `src/settlement/villagePlanner.ts`
+  - authoritative `VillagePlan`;
+  - house/infrastructure plot placement;
+  - shared plot scoring;
+  - garden placement.
+
+- `src/settlement/props.ts`
+  - actual house construction;
+  - `houseYardPlacements()`;
+  - household storage/barrel/trough placement;
+  - residential/courtyard decorative exclusion.
+
+- `src/settlement/villageClearing.ts`
+  - terrain clearing projection;
+  - regional settlement smoothing.
+
+- `src/settlement/findSettlementSite.ts`
+  - footprint-aware site suitability.
+
+### Secondary
+
+- `src/settlement/gardenScale.ts`
+  - reuse garden dimensions/count; do not duplicate.
+
+- `src/settlement/createSettlement.ts`
+  - confirms household ↔ house ↔ storage index mapping;
+  - avoid changing ownership/lifecycle.
+
+- `src/settlement/villagePlan.ts`
+  - inspect types before adding any new layout field.
+
+- `src/settlement/houseBuilder.ts`
+  - use only if exact assembled-house footprint/collision data is needed.
+
+- `src/settlement/places.ts`
+  - do not create a new Place type for yards; a yard is spatial capacity, not an NPC Place.
+
+## Tests
+
+Prefer tests around pure deterministic layout calculations.
+
+Likely targets:
+
+- `src/settlement/villagePlanner.test.ts`
+- `src/settlement/families.test.ts`
+- existing garden/layout tests where relevant.
+
+Test:
+
+1. same seed → same `VillagePlan`;
+2. SM/MD/LG/XL produce valid house counts;
+3. household-space extent fits the configured boundary;
+4. house-to-house clearance remains valid;
+5. garden clearings do not overlap household-required space;
+6. storage/trough/barrel positions remain outside house footprints;
+7. local paths remain usable;
+8. several seeds do not produce pathological layouts.
+
+Avoid asserting exact coordinates unless the test is specifically a deterministic-regression test.
+
+## Determinism
+
+Be careful with seeded RNG.
+
+`villagePlanner.ts`, `props.ts`, livestock and settlement generation already use independent seeded streams.
+
+If adding calculations that do not require randomness, keep them pure.
+
+If randomness is unavoidable, use a dedicated stream so adding yard placement does not reshuffle unrelated settlement generation.
+
+## Performance
+
+Plan 011 should remain cheap.
+
+Do not add per-frame spatial queries.
+
+Settlement layout happens during generation/build, so bounded measurements or candidate checks are acceptable.
+
+Do not introduce a general spatial index or worker solely for this plan.
+
+## Livestock
+
+The current livestock system has `ownerHouseId`, but animal movement is deliberately not constrained to settlement/yard boundaries.
+
+Keep this unchanged.
+
+Do not include livestock wandering distance in settlement boundary calculations.
+
+The plan's statement that livestock can leave the settlement is already compatible with the current architecture.
+
+## Browser verification
+
+Technical tests cannot prove the final visual layout.
+
+Browser verification should inspect at least:
+
+- one SM;
+- one MD;
+- one LG;
+- one XL;
+- several seeds;
+- house ↔ storage/trough/barrel clearance;
+- house ↔ garden clearance;
+- house ↔ house spacing;
+- path entrances;
+- well/market/stockpile/campfire placement;
+- terrain clearing;
+- settlement edge;
+- livestock leaving the settlement normally.
+
+For visual layout, classify the result as **browser/manual verified** only after actual gameplay observation.
+
+## Recommended implementation sequence
+
+```
+1. Add/extend deterministic layout measurement tests.
+2. Measure current SM/MD/LG/XL extents across several seeds.
+3. Define the minimum household-yard clearance from actual current props.
+4. Reuse the existing VillagePlan / plot pipeline for that requirement.
+5. Fix household prop placement only where measurements show real conflicts.
+6. Adjust VILLAGE_SIZE_CONFIG footprint only where measured capacity is insufficient.
+7. Re-check site selection and terrain clearing after any footprint change.
+8. Run deterministic/layout tests.
+9. Browser-verify several sizes and seeds.
+```
+
+The expected result is a **small extension of the existing settlement layout pipeline**, not a new spatial subsystem.
+
+## Relationship to plans 009/010
+
+Plan 009 already uses physical household storage destinations and `landmarks.householdStorages`.
+
+Plan 010 is about physical storage visualization.
+
+Plan 011 should therefore establish the **space contract and placement quality** that 009/010 can consume, rather than duplicating storage ownership or logistics.
+
+Do not expand 011 into storage/economy changes.
+
+**Zrób git commit i push do main, rebase jeżeli trzeba**
