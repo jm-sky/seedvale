@@ -111,8 +111,8 @@ export function skyParamsFromTime(timeOfDay: number): SkyParams & {
 
   // Start fog further out so mid-ground hills stay readable; `fogFar` still
   // covers the chunk stream-in edge (~unloadRadius × chunkSize).
-  const fogNear = 160 + dayFactor * 50
-  const fogFar = 230 + dayFactor * 70
+  const fogNear = 50 + dayFactor * 80
+  const fogFar = 150 + dayFactor * 100
   const fogColor = fogColorFromElev(elev)
 
   return {

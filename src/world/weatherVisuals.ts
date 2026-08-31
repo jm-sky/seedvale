@@ -26,9 +26,9 @@ type WeatherVisualProfile = {
 
 const WEATHER_VISUAL_PROFILES: Record<WeatherType, WeatherVisualProfile> = {
   clear: { lightScale: 1, fogNearMul: 1, fogFarMul: 1, fogTint: null, fogTintStrength: 0 },
-  cloudy: { lightScale: 0.8, fogNearMul: 0.9, fogFarMul: 0.85, fogTint: 0x8a97a3, fogTintStrength: 0.35 },
-  rain: { lightScale: 0.62, fogNearMul: 0.55, fogFarMul: 0.55, fogTint: 0x5c6b78, fogTintStrength: 0.55 },
-  fog: { lightScale: 0.75, fogNearMul: 0.22, fogFarMul: 0.3, fogTint: 0xc7cdd2, fogTintStrength: 0.75 },
+  cloudy: { lightScale: 0.8, fogNearMul: 0.8, fogFarMul: 0.85, fogTint: 0x8a97a3, fogTintStrength: 0.35 },
+  rain: { lightScale: 0.62, fogNearMul: 0.45, fogFarMul: 0.55, fogTint: 0x5c6b78, fogTintStrength: 0.55 },
+  fog: { lightScale: 0.75, fogNearMul: 0.12, fogFarMul: 0.32, fogTint: 0xc7cdd2, fogTintStrength: 0.75 },
   snow: { lightScale: 0.78, fogNearMul: 0.6, fogFarMul: 0.65, fogTint: 0xdfe6ec, fogTintStrength: 0.5 },
 }
 

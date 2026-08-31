@@ -16,7 +16,7 @@ import { isSystemEnabled } from '../debug/debugMode'
  *  implementation used (`drift`), not a new field — `WeatherState` (plan 040)
  *  intentionally carries no wind vector, and this task must not extend it. */
 
-const VOLUME_RADIUS = 26
+const VOLUME_RADIUS = 30
 const VOLUME_HEIGHT = 20
 const RAIN_MAX_COUNT = 900
 const SNOW_MAX_COUNT = 500
@@ -247,7 +247,7 @@ export function createWeatherParticles(opts: WeatherParticlesOptions): WeatherPa
     cameraFovDeg: number,
     viewportHeight: number,
   ): void {
-    const centerY = playerY + VOLUME_HEIGHT * 0.4
+    const centerY = playerY + VOLUME_HEIGHT * 0.15
     // Player-following volume: move the container, not the particles —
     // per-particle positions stay local offsets baked in at creation.
     rain.points.position.set(playerX, centerY, playerZ)
