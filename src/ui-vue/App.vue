@@ -13,6 +13,7 @@ import MerchantScreen from './screens/MerchantScreen.vue'
 import MinimapScreen from './screens/MinimapScreen.vue'
 import NotesScreen from './screens/NotesScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
+import PlacementPreviewOverlay from './screens/PlacementPreviewOverlay.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
 import SkillsScreen from './screens/SkillsScreen.vue'
@@ -23,7 +24,7 @@ import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import WorldMapScreen from './screens/WorldMapScreen.vue'
-import { abortBusy, abortRest, abortTerrainPreparation, closeTopOverlay, togglePause, ui } from './store'
+import { abortBusy, abortPlacementPreview, abortRest, abortTerrainPreparation, closeTopOverlay, togglePause, ui } from './store'
 
 const touchDevice = isTouchDevice()
 
@@ -31,6 +32,7 @@ function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
   if (abortRest()) return
   if (abortTerrainPreparation()) return
+  if (abortPlacementPreview()) return
   if (abortBusy()) return
   if (ui.openStack.length > 0) closeTopOverlay()
   else togglePause()
@@ -70,5 +72,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <TimeSkipOverlay />
     <BusyOverlay />
     <TerrainPreparationOverlay />
+    <PlacementPreviewOverlay />
   </div>
 </template>

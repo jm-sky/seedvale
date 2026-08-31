@@ -1,9 +1,13 @@
+import type { createMouseLook } from '../input/MouseLook'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { Hud } from '../ui/createHud'
+import type { PlacementBlocker, PlacementPreviewResult } from './actions/placementActions'
 import type { WorldBundle } from './worldBundle'
+import { evaluateGroundPlacement } from '../items/tentPlacement'
+
 
 /** Resource costs for the fire-building/lighting quick actions
  *  (`settlement/PlacedFires.ts`, `player/PlayerTorch.ts`) — see
@@ -15,6 +19,14 @@ import type { WorldBundle } from './worldBundle'
 export const SIMPLE_FIRE_BRANCH_COST = 2
 export const FIRE_PIT_STONE_COST = 4
 export const TORCH_BRANCH_COST = 1
+
+/** Ground-suitability constants for placing a new fire (plan `ui-input-004`
+ *  §2/§5) — same shape as `world/playerWell.ts`'s well constants: how far
+ *  ahead of the player it's placed, the clearance it needs against
+ *  blockers, and the minimum spacing from another placed fire. */
+export const FIRE_PLACE_REACH = 1.6
+export const FIRE_FOOTPRINT_RADIUS = 0.7
+export const FIRE_SEPARATION = 2.2
 
 /** Plan 175 §3 — one-time material cost to build a grate on an existing
  *  nearby fire. Centralized here (single source, like `FIRE_PIT_STONE_COST`
@@ -38,23 +50,71 @@ const getUserActions = (
   hud: Hud,
   heldTool: HeldTool,
   syncHeldHud: () => void,
+  mouseLook: ReturnType<typeof createMouseLook>,
+  /** Shared nearby-object blocker query (`placementActions.ts`'s
+   *  `tentBlockers`) — reused here rather than a second blocker service. */
+  blockersNear: (x: number, z: number) => PlacementBlocker[],
 ) => {
   // Shared by the pause menu's fire/torch buttons and the quick-actions popup
   // below — two UI entry points onto identical logic, not a duplicate.
   // Both read `bundle.placedFires` at call time (not a captured field) since
   // these closures outlive `rebuildWorldBundle()`, which replaces it — see
   // `WorldBundle`'s doc comment.
+  const fireAimPoint = (): { x: number, z: number, yaw: number } => {
+    const yaw = mouseLook.state.yaw
+    return {
+      x: player.mesh.position.x - Math.sin(yaw) * FIRE_PLACE_REACH,
+      z: player.mesh.position.z - Math.cos(yaw) * FIRE_PLACE_REACH,
+      yaw,
+    }
+  }
+
+  /** Ground-suitability check for a new fire at `(x, z)` (plan `ui-input-004`
+   *  §5) — the same shared `evaluateGroundPlacement` every other placeable
+   *  uses, peers being other placed fires. Previously fires had no location
+   *  validation at all (placed directly under the player); this is the
+   *  "authoritative aimed placement/validation seam" both the instant build
+   *  and the shared placement-preview mode call. */
+  const evaluateFirePlacement = (x: number, z: number): boolean =>
+    evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: blockersNear(x, z),
+      peers: bundle.placedFires.nodes(),
+      footprintRadius: FIRE_FOOTPRINT_RADIUS,
+      separation: FIRE_SEPARATION,
+    }) === 'ok'
+
+  const previewFirePlacement = (): PlacementPreviewResult => {
+    const aim = fireAimPoint()
+    const valid = evaluateFirePlacement(aim.x, aim.z)
+    return {
+      x: aim.x,
+      z: aim.z,
+      yaw: aim.yaw,
+      footprintRadius: FIRE_FOOTPRINT_RADIUS,
+      valid,
+      reasonLabel: valid ? '' : 'Za mało miejsca lub zbyt blisko wody/zbocza.',
+    }
+  }
+
   const buildSimpleFire = (): boolean => {
     if (!inventory.hasCapability('fire_starting') || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
+    const aim = fireAimPoint()
+    if (!evaluateFirePlacement(aim.x, aim.z)) return false
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
-    bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'simple')
+    bundle.placedFires.place(aim.x, aim.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     return true
   }
   const buildFirePit = (): boolean => {
     if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
+    const aim = fireAimPoint()
+    if (!evaluateFirePlacement(aim.x, aim.z)) return false
     inventory.remove('stone', FIRE_PIT_STONE_COST)
-    bundle.placedFires.place(player.mesh.position.x, player.mesh.position.z, 'pit')
+    bundle.placedFires.place(aim.x, aim.z, 'pit')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     return true
   }
@@ -132,6 +192,7 @@ const getUserActions = (
   }
 
   return {
+    previewFirePlacement,
     buildSimpleFire,
     buildFirePit,
     buildGrate,

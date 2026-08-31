@@ -57,9 +57,9 @@ Generated from exported TypeScript symbols.
 ## `world/clouds.ts`
 
 - `CloudAppearance` — type — line 59
-- `cloudAppearanceFor` — function — line 70
-- `CloudSystem` — type — line 99
-- `createClouds` — function — line 105
+- `cloudAppearanceFor` — function — line 99
+- `CloudSystem` — type — line 129
+- `createClouds` — function — line 135
 
 ## `world/collision.ts`
 
@@ -314,6 +314,11 @@ Generated from exported TypeScript symbols.
 - `setUrlSearchParam` — function — line 30
 - `syncSeedInUrl` — function — line 37
 
+## `world/placementPreview.ts`
+
+- `createPlacementPreviewGhost` — function — line 38
+- `PlacementPreviewGhost` — type — line 27
+
 ## `world/plantedCrops.ts`
 
 - `CROP_PLANT_DURATION_SEC` — const — line 14
@@ -390,7 +395,7 @@ Generated from exported TypeScript symbols.
 - `activeWellStage` — function — line 96
 - `isWellCompleted` — function — line 87
 - `isWellStageWorkComplete` — function — line 81
-- `NearbyPlayerWellLookup` — type — line 164
+- `NearbyPlayerWellLookup` — type — line 173
 - `nextWellStage` — function — line 76
 - `PlayerWellRecord` — type — line 23
 - `WELL_FOOTPRINT_RADIUS` — const — line 113
@@ -400,13 +405,14 @@ Generated from exported TypeScript symbols.
 - `WELL_SEPARATION` — const — line 114
 - `WELL_STAGE_CAPABILITY` — const — line 64
 - `WELL_STAGE_COST` — const — line 52
-- `WELL_STAGE_START_PROMPT` — const — line 128
+- `WELL_STAGE_START_PROMPT` — const — line 137
 - `WELL_STAGE_WORK_HOURS` — const — line 40
-- `WELL_WORK_LABEL` — const — line 135
+- `WELL_WORK_LABEL` — const — line 144
+- `WELL_WORK_SESSION_HOURS` — const — line 134
 - `WELL_WORK_SESSION_SEC` — const — line 125
 - `WellMaterialCost` — type — line 46
 - `WellPlacementReason` — type — line 101
-- `wellPromptLabel` — function — line 149
+- `wellPromptLabel` — function — line 158
 - `WellStage` — type — line 18
 
 ## `world/playerWellProp.ts`
@@ -441,7 +447,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/terrainPreparationPreview.ts`
 
-- `createTerrainPreparationPreview` — function — line 28
+- `createTerrainPreparationPreview` — function — line 42
 - `TerrainPreparationPreview` — type — line 15
 
 ## `world/terrainPreparationProp.ts`

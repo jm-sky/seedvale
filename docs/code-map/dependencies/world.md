@@ -663,6 +663,12 @@ Generated from TypeScript imports.
 - `world/createBeehives.ts`
 - `world/largeCaves.ts`
 
+## `world/placementPreview.ts`
+
+**Imported by**
+
+- `app/actions/placementPreviewActions.ts`
+
 ## `world/plantedCrops.test.ts`
 
 **Imports**
@@ -866,7 +872,6 @@ Generated from TypeScript imports.
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
 - `ai/socialBehaviour.ts`
-- `app/actions/placementActions.ts`
 - `fauna/createFauna.ts`
 - `player/PlayerNeeds.ts`
 - `world/dayNight.ts`

@@ -17,7 +17,7 @@ import { type DigEnv, isRockGround } from './dig'
  * keeps chunk-seam texels matching in `applyModificationToTile`).
  */
 
-export type PreparationSize = 2 | 3 | 4
+export type PreparationSize = 2 | 3 | 4 | 9
 
 export type GridSample = { x: number, z: number }
 export type HeightSample = GridSample & { height: number }
@@ -124,8 +124,11 @@ export function resolvePreparationSamples(
   return { center: { x: o.x + cx * o.step, z: o.z + cz * o.step }, samples }
 }
 
-/** Maximum single-sample height change a preparation may request (plan §3). */
-export const MAX_PREPARATION_DELTA = 3
+/** Maximum single-sample height change a preparation may request (plan §3,
+ *  raised from `3` by plan `ui-input-004` §8 — a balance value, not an
+ *  architectural one, kept as this single exported constant so it can be
+ *  retuned without touching validation code). */
+export const MAX_PREPARATION_DELTA = 6
 
 /** Every affected sample must stay within `MAX_PREPARATION_DELTA` of its own
  *  original height — checked against the immutable original snapshot, never

@@ -112,6 +112,7 @@ import { createGatheringActions } from './actions/gatheringActions'
 import { createGroundActions } from './actions/groundActions'
 import { createMountActions } from './actions/mountActions'
 import { createPlacementActions } from './actions/placementActions'
+import { createPlacementPreviewActions } from './actions/placementPreviewActions'
 import { createRestActions } from './actions/restActions'
 import { createSurvivalActions } from './actions/survivalActions'
 import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
@@ -499,6 +500,7 @@ export async function createApp(
   const syncQuickActionAvailability = (): void => {
     vueUi.setQuickActionsHasDiggingTool(inventory.hasCapability('soil_digging'))
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
+    vueUi.setQuickActionsHasChest(inventory.has('chest', 1))
     vueUi.setQuickActionsTraps({
       simple: inventory.countInstances(TRAP_DEFS.simple.itemKind) > 0,
       good: inventory.countInstances(TRAP_DEFS.good.itemKind) > 0,
@@ -814,6 +816,12 @@ export async function createApp(
     busyOverlay,
     openLodgingPanel: (title, description, actions) => vueUi.openFlavorDialog(title, description, actions),
   })
+  // Mutual exclusion between the two world preview modes (plan `ui-input-004`
+  // §9) — `terrainPrep` is constructed first but needs a check against
+  // `placementPreview`, which needs `terrainPrep` itself; the forward
+  // reference is filled in once `placementPreview` exists below (both
+  // closures are only ever called later, during the tick loop).
+  let placementPreviewIsActive: () => boolean = () => false
   const terrainPrep = createTerrainPreparationActions(actionCtx, {
     scene,
     timeSkipOverlay,
@@ -821,6 +829,7 @@ export async function createApp(
     blockersNear: placement.tentBlockers,
     showPreview: (view) => vueUi.showTerrainPreparationPreview(view),
     hidePreview: () => vueUi.hideTerrainPreparationPreview(),
+    isOtherPreviewActive: () => placementPreviewIsActive(),
   })
 
   onTrapCaptureTarget = gathering.onTrapCapture
@@ -1117,7 +1126,7 @@ export async function createApp(
   }
 
   const {
-    buildSimpleFire, buildFirePit, buildGrate, lightBranch, lightWoodenTorch,
+    previewFirePlacement, buildSimpleFire, buildFirePit, buildGrate, lightBranch, lightWoodenTorch,
     canBuildSimpleFire, canBuildFirePit, canBuildGrate, canLightBranch, canLightWoodenTorch,
   } = getUserActions(
     inventory,
@@ -1127,7 +1136,24 @@ export async function createApp(
     hud,
     heldTool,
     syncHeldHud,
+    mouseLook,
+    placement.tentBlockers,
   )
+
+  const placementPreview = createPlacementPreviewActions(actionCtx, {
+    scene,
+    placement,
+    containers,
+    previewFire: previewFirePlacement,
+    buildSimpleFire,
+    buildFirePit,
+    showPreview: (view) => vueUi.showPlacementPreview(view),
+    hidePreview: () => vueUi.hidePlacementPreview(),
+    isOtherPreviewActive: () => terrainPrep.isPreviewActive(),
+  })
+  placementPreviewIsActive = placementPreview.isActive
+  vueUi.configureAbortPlacementPreview(placementPreview.cancel)
+  vueUi.configurePlacementPreviewConfirm(placementPreview.confirm)
 
   const syncNearTownQuickActions = (): void => {
     vueUi.setQuickActionsNearTown(rest.isNearTown())
@@ -1139,6 +1165,7 @@ export async function createApp(
   const quickActions = createQuickActions(container, {
     hasDiggingTool: inventory.hasCapability('soil_digging'),
     hasTent: inventory.has('tent', 1),
+    hasChest: inventory.has('chest', 1),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
     hasTreeSeed: inventory.has('tree_seed', 1),
     cropSeeds: {
@@ -1160,8 +1187,6 @@ export async function createApp(
       restorePointerLockAfterQuickActions = false
       requestGamePointerLock(renderer.domElement)
     },
-    onBuildSimpleFire: buildSimpleFire,
-    onBuildFirePit: buildFirePit,
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
@@ -1180,7 +1205,7 @@ export async function createApp(
       ground.startMoundAt(p.x, p.z)
     },
     onPrepareTerrain: terrainPrep.startPreview,
-    onPlaceTent: placement.placeTentAtAim,
+    onStartPlacementPreview: placementPreview.start,
     onPlaceTrap: placement.placeTrapAtAim,
     onPutDownContainer: containers.putDownContainerAtAim,
     onBuildWell: placement.placeWellAtAim,
@@ -1379,6 +1404,7 @@ export async function createApp(
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
+    tickPlacementPreview: placementPreview.tick,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,
     tickTerrainPreparationWork: terrainPrep.tickWork,
     onTerrainPreparationWorkFinished: terrainPrep.onWorkSkipFinished,

@@ -1,5 +1,5 @@
 import type { VueUi } from '../../ui-vue/mount'
-import type { PlacementBlocker } from './placementActions'
+import type { PlacementBlocker, PlacementPreviewResult } from './placementActions'
 import { exitGamePointerLock } from '../../input/MouseLook'
 import {
   CONTAINER_DEFS,
@@ -19,6 +19,12 @@ import { isActionBlocked, type PlayerActionContext } from './actionContext'
  *  player's. Contents never pass through player `Inventory` when a container
  *  is picked up — they travel with the entry. */
 export type ContainerActions = {
+  /** Read-only preview of a new-chest placement at the player's current aim
+   *  (plan `ui-input-004` §2) — backs the shared placement-preview
+   *  ghost/UI; `placeContainerAtAim` remains the only mutation seam. Does
+   *  not apply to `putDownContainerAtAim` (the carried-container put-down
+   *  path), which stays its own instant action. */
+  previewContainerPlacement: () => PlacementPreviewResult
   placeContainerAtAim: () => void
   putDownContainerAtAim: () => void
   openContainer: (id: string) => void
@@ -55,6 +61,31 @@ export function createContainerActions(
    *  inventory item is only spent when the channel completes. `peers` is
    *  containers only (not tents/traps) — `CONTAINER_PLACEMENT_MESSAGE`'s
    *  `container` reason is specifically "another chest already stands here". */
+  const previewContainerPlacement = (): PlacementPreviewResult => {
+    const def = CONTAINER_DEFS.chest
+    const yaw = mouseLook.state.yaw
+    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
+    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
+    const reason = evaluateGroundPlacement({
+      x,
+      z,
+      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(x, z),
+      peers: bundle.placedContainers.nodes(),
+      footprintRadius: def.footprintRadius,
+      separation: def.separation,
+    })
+    return {
+      x,
+      z,
+      yaw,
+      footprintRadius: def.footprintRadius,
+      valid: reason === 'ok',
+      reasonLabel: reason === 'ok' ? '' : CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason],
+    }
+  }
+
   const placeContainerAtAim = (): void => {
     if (!inventory.has('chest', 1) || isActionBlocked(ctx)) return
     const def = CONTAINER_DEFS.chest
@@ -222,5 +253,5 @@ export function createContainerActions(
     },
   })
 
-  return { placeContainerAtAim, putDownContainerAtAim, openContainer, pickUpContainer }
+  return { previewContainerPlacement, placeContainerAtAim, putDownContainerAtAim, openContainer, pickUpContainer }
 }

@@ -670,6 +670,7 @@ Generated from TypeScript imports.
 - `settlement/decorProps.ts`
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/storageVisuals.ts`
 
 ## `settlement/props.lampMount.test.ts`
 
@@ -705,6 +706,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementStructures.ts`
+- `settlement/storageVisuals.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
@@ -929,6 +931,29 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `settlement/storageDestinations.test.ts`
+
+## `settlement/storageVisuals.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `settlement/storageVisuals.ts`
+
+## `settlement/storageVisuals.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/items.ts`
+- `settlement/propUtils.ts`
+
+**Imported by**
+
+- `settlement/props.ts`
+- `settlement/storageVisuals.test.ts`
 
 ## `settlement/villageClearing.test.ts`
 

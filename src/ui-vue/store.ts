@@ -1,5 +1,6 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
 import type { LightActionResult } from '../app/userActions'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { QualityPreset } from '../config/qualityProfiles'
@@ -118,15 +119,32 @@ export type QuickActionsFireAvailability = {
   lightBranch: boolean
   lightWoodenTorch: boolean
 }
+/** Quick Actions top-level category (plan `ui-input-004` §3) — a presentation
+ *  grouping over the same existing actions/availability below, not a second
+ *  action registry. `null` at the panel root; selecting a category drills
+ *  into it, "Wróć" (or closing the panel) returns to `null`. */
+export type QuickActionsCategoryId =
+  | 'budowa'
+  | 'ogien'
+  | 'lopata'
+  | 'teren'
+  | 'pulapki'
+  | 'sadzenie'
+  | 'czekaj'
+  | 'skrzynia'
+  | 'odpoczynek'
+
 type QuickActionsState = {
   open: boolean
+  /** `null` at the category-picker root; the selected category while
+   *  drilled in. Reset on close (`closeQuickActions`) so reopening never
+   *  exposes stale navigation state (implementation notes §6). */
+  category: QuickActionsCategoryId | null
   /** Any carried item with the `soil_digging` capability (plan 184) — not
    *  literally a shovel. */
   hasDiggingTool: boolean
   nearTown: boolean
   fireAvailability: QuickActionsFireAvailability
-  onBuildSimpleFire: (() => boolean) | null
-  onBuildFirePit: (() => boolean) | null
   onBuildGrate: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null
   onLightWoodenTorch: (() => LightActionResult) | null
@@ -138,13 +156,21 @@ type QuickActionsState = {
   onMound: (() => void) | null
   /** "Przygotuj teren" (plan `world-terrain-002` §2) — enters the preview mode. */
   onPrepareTerrain: (() => void) | null
-  onPlaceTent: (() => void) | null
+  /** Enters the shared placement-preview mode for `kind` (plan `ui-input-004`
+   *  §2/§7/§3's "Budowa" category) — replaces the old instant
+   *  `onPlaceTent`/`onBuildSimpleFire`/`onBuildFirePit`/new-chest handlers
+   *  for Quick Actions specifically; Pause → Akcje keeps its own instant
+   *  fire-build handlers unchanged. */
+  onStartPlacementPreview: ((kind: PlacementPreviewKind) => void) | null
   onPlaceTrap: ((kind: TrapKind) => void) | null
   hasTent: boolean
+  /** Owning at least one unplaced `chest` item (plan `ui-input-004` §3) —
+   *  drives "Postaw skrzynię" under "Budowa", same shape as `hasTent`. */
+  hasChest: boolean
   traps: QuickActionsTraps
   /** True while the player is carrying a placed container (plan 164 §8) —
    *  drives the "Odłóż skrzynię" action, the put-down counterpart of
-   *  `onPlaceTent`/inventory's `onPlaceContainer`. */
+   *  the new-chest placement preview/inventory's `onPlaceContainer`. */
   hasCarriedContainer: boolean
   onPutDownContainer: (() => void) | null
   /** Places a new player-built well ahead of the player (plan 127) — shown
@@ -209,6 +235,15 @@ type TerrainPreparationPreviewState = {
   visible: boolean
   sizeLabel: string
   heightLabel: string
+  valid: boolean
+  reasonLabel: string
+}
+/** Shared object-placement preview HUD (plan `ui-input-004` §2/§7) — mirrors
+ *  `PlacementPreviewActions.tick`'s per-frame view, same convention as
+ *  `TerrainPreparationPreviewState`. */
+type PlacementPreviewState = {
+  visible: boolean
+  label: string
   valid: boolean
   reasonLabel: string
 }
@@ -368,18 +403,19 @@ export const ui = reactive({
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
   quickActions: {
-    open: false, hasDiggingTool: false, nearTown: false, hasTent: false,
+    open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false,
     traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
-    onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
+    onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null,
-    onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onPlaceTrap: null, onOpen: null, onClose: null,
+    onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onStartPlacementPreview: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
+  placementPreview: { visible: false, label: '', valid: false, reasonLabel: '' } as PlacementPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
@@ -735,6 +771,7 @@ export function isContainerScreenOpen(): boolean { return ui.containerScreen.ope
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
 export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { ui.quickActions.hasDiggingTool = hasDiggingTool }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
+export function setQuickActionsHasChest(hasChest: boolean): void { ui.quickActions.hasChest = hasChest }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function setQuickActionsTraps(traps: QuickActionsTraps): void {
@@ -757,10 +794,15 @@ export function openQuickActions(): void {
 export function closeQuickActions(): void {
   if (!ui.quickActions.open) return
   ui.quickActions.open = false
+  // Reset drill-down navigation so reopening never shows a stale category
+  // (plan `ui-input-004` implementation notes §6).
+  ui.quickActions.category = null
   ui.quickActions.onClose?.()
 }
 export function toggleQuickActions(): void { if (ui.quickActions.open) closeQuickActions(); else openQuickActions() }
 export function isQuickActionsOpen(): boolean { return ui.quickActions.open }
+export function selectQuickActionsCategory(category: QuickActionsCategoryId): void { ui.quickActions.category = category }
+export function backToQuickActionsCategories(): void { ui.quickActions.category = null }
 
 /** Esc during rest (tent/camp/town) — not wait. Returns true if consumed. */
 let abortRestHandler: (() => boolean) | null = null
@@ -883,6 +925,38 @@ export function showTerrainPreparationPreview(view: {
 }
 export function hideTerrainPreparationPreview(): void {
   ui.terrainPreparationPreview.visible = false
+}
+
+/** Esc during the shared object-placement preview (plan `ui-input-004` §2) —
+ *  checked in `App.vue`'s Esc chain alongside `abortTerrainPreparation`.
+ *  Mirrors `abortTerrainPreparation`/`configureAbortTerrainPreparation`. */
+let abortPlacementPreviewHandler: (() => boolean) | null = null
+export function configureAbortPlacementPreview(handler: (() => boolean) | null): void {
+  abortPlacementPreviewHandler = handler
+}
+export function abortPlacementPreview(): boolean {
+  return abortPlacementPreviewHandler?.() ?? false
+}
+
+/** Explicit confirm button for the placement-preview panel — thin wrapper
+ *  over the same `PlacementPreviewActions.confirm` the keyboard `[E]` path
+ *  already calls, mirroring `confirmTerrainPreparation`. */
+let placementPreviewConfirmHandler: (() => void) | null = null
+export function configurePlacementPreviewConfirm(handler: (() => void) | null): void {
+  placementPreviewConfirmHandler = handler
+}
+export function confirmPlacementPreview(): void {
+  placementPreviewConfirmHandler?.()
+}
+
+export function showPlacementPreview(view: { label: string, valid: boolean, reasonLabel: string }): void {
+  ui.placementPreview.visible = true
+  ui.placementPreview.label = view.label
+  ui.placementPreview.valid = view.valid
+  ui.placementPreview.reasonLabel = view.reasonLabel
+}
+export function hidePlacementPreview(): void {
+  ui.placementPreview.visible = false
 }
 
 export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: {

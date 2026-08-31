@@ -3,6 +3,7 @@ import {
   averageAbsHeightDelta,
   computeRequiredWork,
   exceedsMaxDeformation,
+  MAX_PREPARATION_DELTA,
   MINIMUM_PREPARATION_WORK_HOURS,
   nearestGridPoint,
   preparationSamplesPerSide,
@@ -58,13 +59,13 @@ describe('resolvePreparationSamples', () => {
 })
 
 describe('exceedsMaxDeformation', () => {
-  it('rejects when any sample would need more than 3m of change', () => {
-    const originals = [{ x: 0, z: 0, height: 10 }, { x: 4, z: 0, height: 13.5 }]
+  it('rejects when any sample would need more than MAX_PREPARATION_DELTA of change', () => {
+    const originals = [{ x: 0, z: 0, height: 10 }, { x: 4, z: 0, height: 10 + MAX_PREPARATION_DELTA + 0.5 }]
     expect(exceedsMaxDeformation(originals, 10)).toBe(true)
   })
 
-  it('allows exactly 3m', () => {
-    const originals = [{ x: 0, z: 0, height: 10 }, { x: 4, z: 0, height: 13 }]
+  it('allows exactly MAX_PREPARATION_DELTA', () => {
+    const originals = [{ x: 0, z: 0, height: 10 }, { x: 4, z: 0, height: 10 + MAX_PREPARATION_DELTA }]
     expect(exceedsMaxDeformation(originals, 10)).toBe(false)
   })
 })
@@ -143,7 +144,7 @@ describe('validatePreparationSamples', () => {
 
   it('rejects a deformation beyond the cap', () => {
     const originals = [{ x: 0, z: 0, height: 10 }]
-    const result = validatePreparationSamples(originals, 14, env)
+    const result = validatePreparationSamples(originals, 10 + MAX_PREPARATION_DELTA + 1, env)
     expect(result).toEqual({ ok: false, reason: 'deformation' })
   })
 

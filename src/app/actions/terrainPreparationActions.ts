@@ -9,6 +9,7 @@ import {
   computeRequiredWork,
   type GridSample,
   type HeightSample,
+  MAX_PREPARATION_DELTA,
   preparationSamplesPerSide,
   type PreparationSize,
   progressiveHeights,
@@ -21,15 +22,23 @@ import { createTerrainPreparationPreview } from '../../world/terrainPreparationP
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import type { Scene } from 'three'
 
-/** How far ahead (world units) of the player the preview/preparation area is
- *  centered — comfortably larger than `DIG_REACH`/`WELL_PLACE_REACH` so even
- *  the largest 4×4 m footprint doesn't overlap the player's own standing
- *  point. There is no free-moving cursor in this game (pointer-locked FPS
- *  camera) — "follows the mouse position" (plan §2) means the same thing
- *  every other aimed action already means: it follows `mouseLook.state.yaw`. */
+/** Minimum how-far-ahead (world units) the preview/preparation area is
+ *  centered — comfortably larger than `DIG_REACH`/`WELL_PLACE_REACH` so a
+ *  small footprint doesn't overlap the player's own standing point. There is
+ *  no free-moving cursor in this game (pointer-locked FPS camera) — "follows
+ *  the mouse position" (plan §2) means the same thing every other aimed
+ *  action already means: it follows `mouseLook.state.yaw`. */
 const TERRAIN_PREP_REACH = 2.6
 
-const SIZES: readonly PreparationSize[] = [2, 3, 4]
+/** Actual reach for a given footprint size — grows with `sizeMeters` (plan
+ *  `ui-input-004` §4's 9×9m size) so the area's near edge still clears the
+ *  player's standing point instead of the fixed `TERRAIN_PREP_REACH` letting
+ *  a large footprint straddle them. */
+function terrainPrepReach(sizeMeters: PreparationSize): number {
+  return Math.max(TERRAIN_PREP_REACH, sizeMeters / 2 + 0.5)
+}
+
+const SIZES: readonly PreparationSize[] = [2, 3, 4, 9]
 const HEIGHT_STEP = 0.25
 /** Wheel `deltaY` per resize step — most mice report ±100 per notch;
  *  trackpads fire many smaller deltas, so this accumulates instead of
@@ -79,6 +88,10 @@ export type TerrainPreparationActionDeps = {
   blockersNear: (x: number, z: number) => readonly PlacementBlocker[]
   showPreview: (view: TerrainPreparationPreviewView) => void
   hidePreview: () => void
+  /** Mutual exclusion with the shared object-placement preview mode (plan
+   *  `ui-input-004` §9) — only one world preview mode may be active at a
+   *  time. */
+  isOtherPreviewActive: () => boolean
 }
 
 export type TerrainPreparationActions = {
@@ -125,11 +138,16 @@ export function createTerrainPreparationActions(
   deps: TerrainPreparationActionDeps,
 ): TerrainPreparationActions {
   const { bundle, player, inventory, mouseLook, keyboard, toast, timeSkip } = ctx
-  const { scene, timeSkipOverlay, wheelTarget, blockersNear, showPreview, hidePreview } = deps
+  const { scene, timeSkipOverlay, wheelTarget, blockersNear, showPreview, hidePreview, isOtherPreviewActive } = deps
 
   const previewMesh: TerrainPreparationPreview = createTerrainPreparationPreview()
   let preview: { size: PreparationSize, heightOffset: number } | null = null
   let wheelAccum = 0
+  /** Last footprint actually pushed to `previewMesh` — `setFootprint()`
+   *  disposes and recreates geometry, so `tickPreview()` only calls it again
+   *  when size/divisions actually changed (implementation notes §11), not
+   *  every frame. */
+  let lastFootprint: { size: PreparationSize, divisions: number } | null = null
 
   let activeWork: {
     id: string
@@ -179,7 +197,7 @@ export function createTerrainPreparationActions(
   }
 
   const startPreview = (): void => {
-    if (preview || !inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
+    if (preview || isOtherPreviewActive() || !inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
     preview = { size: 2, heightOffset: 0 }
     mouseLook.state.zoomLocked = true
     wheelTarget.addEventListener('wheel', onWheel, { passive: false })
@@ -245,8 +263,9 @@ export function createTerrainPreparationActions(
     if (keyboard.consumePeriod()) raiseHeight()
 
     const chunkManager = bundle.chunkManager
-    const aimX = player.mesh.position.x - Math.sin(mouseLook.state.yaw) * TERRAIN_PREP_REACH
-    const aimZ = player.mesh.position.z - Math.cos(mouseLook.state.yaw) * TERRAIN_PREP_REACH
+    const reach = terrainPrepReach(preview.size)
+    const aimX = player.mesh.position.x - Math.sin(mouseLook.state.yaw) * reach
+    const aimZ = player.mesh.position.z - Math.cos(mouseLook.state.yaw) * reach
     const { center, samples } = resolvePreparationSamples(aimX, aimZ, preview.size, chunkManager.chunkSize, chunkManager.resolution)
     const centerHeight = chunkManager.sampleHeight(center.x, center.z)
     const targetHeight = centerHeight + preview.heightOffset
@@ -256,7 +275,7 @@ export function createTerrainPreparationActions(
     let valid = validation.ok
     let reasonLabel = ''
     if (!validation.ok) {
-      reasonLabel = validation.reason === 'water' ? 'Zbyt blisko wody.' : 'Zbyt duża zmiana wysokości (maks. 3 m).'
+      reasonLabel = validation.reason === 'water' ? 'Zbyt blisko wody.' : `Zbyt duża zmiana wysokości (maks. ${MAX_PREPARATION_DELTA} m).`
     } else if (validation.requiresPickaxe && !inventory.hasCapability('rock_mining')) {
       valid = false
       reasonLabel = 'Skalisty teren wymaga kilofa.'
@@ -278,9 +297,13 @@ export function createTerrainPreparationActions(
     }
 
     const divisions = preparationSamplesPerSide(preview.size, chunkManager.chunkSize, chunkManager.resolution) - 1
-    previewMesh.setFootprint(preview.size, divisions)
+    if (!lastFootprint || lastFootprint.size !== preview.size || lastFootprint.divisions !== divisions) {
+      previewMesh.setFootprint(preview.size, divisions)
+      lastFootprint = { size: preview.size, divisions }
+    }
     previewMesh.setTransform(center.x, center.z, targetHeight)
     previewMesh.setValid(valid)
+    previewMesh.setHeightDeltas(originalHeights.map((s) => Math.abs(targetHeight - s.height)), MAX_PREPARATION_DELTA)
     const sign = preview.heightOffset > 0 ? '+' : ''
     showPreview({
       sizeLabel: `${preview.size}×${preview.size} m`,

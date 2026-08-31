@@ -1,7 +1,7 @@
 # Plan: Construction Placement & Terrain Preparation UX
 
 **Created:** 2026-08-29
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, browser/gameplay verification pending (see implementation notes)
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `ui-input`

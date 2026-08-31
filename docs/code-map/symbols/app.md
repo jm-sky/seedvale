@@ -10,9 +10,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 28
+- `ContainerActionDeps` — type — line 34
 - `ContainerActions` — type — line 21
-- `createContainerActions` — function — line 37
+- `createContainerActions` — function — line 43
 
 ## `app/actions/gatheringActions.ts`
 
@@ -34,10 +34,19 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 119
-- `PlacementActions` — type — line 80
+- `createPlacementActions` — function — line 138
+- `PlacementActions` — type — line 95
 - `PlacementBlocker` — type — line 71
-- `WellWorkView` — type — line 73
+- `PlacementPreviewResult` — type — line 79
+- `WellWorkView` — type — line 88
+
+## `app/actions/placementPreviewActions.ts`
+
+- `createPlacementPreviewActions` — function — line 65
+- `PlacementPreviewActionDeps` — type — line 34
+- `PlacementPreviewActions` — type — line 48
+- `PlacementPreviewKind` — type — line 19
+- `PlacementPreviewUiView` — type — line 21
 
 ## `app/actions/restActions.ts`
 
@@ -55,10 +64,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/terrainPreparationActions.ts`
 
-- `createTerrainPreparationActions` — function — line 123
-- `TerrainPreparationActionDeps` — type — line 72
-- `TerrainPreparationActions` — type — line 84
-- `TerrainPreparationPreviewView` — type — line 65
+- `createTerrainPreparationActions` — function — line 136
+- `TerrainPreparationActionDeps` — type — line 81
+- `TerrainPreparationActions` — type — line 97
+- `TerrainPreparationPreviewView` — type — line 74
 
 ## `app/appRenderLoop.ts`
 
@@ -88,7 +97,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 204
+- `createApp` — function — line 205
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
@@ -97,12 +106,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 425
+- `createGameLoop` — function — line 431
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 393
+- `GameLoop` — type — line 399
 - `GameLoopDeps` — type — line 204
 
 ## `app/graphicsSettings.ts`
@@ -171,12 +180,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/userActions.ts`
 
-- `FIRE_PIT_STONE_COST` — const — line 16
-- `GRATE_BUILD_RANGE` — const — line 29
-- `GRATE_COST` — const — line 23
-- `LightActionResult` — type — line 31
-- `SIMPLE_FIRE_BRANCH_COST` — const — line 15
-- `TORCH_BRANCH_COST` — const — line 17
+- `FIRE_FOOTPRINT_RADIUS` — const — line 28
+- `FIRE_PIT_STONE_COST` — const — line 20
+- `FIRE_PLACE_REACH` — const — line 27
+- `FIRE_SEPARATION` — const — line 29
+- `GRATE_BUILD_RANGE` — const — line 41
+- `GRATE_COST` — const — line 35
+- `LightActionResult` — type — line 43
+- `SIMPLE_FIRE_BRANCH_COST` — const — line 19
+- `TORCH_BRANCH_COST` — const — line 21
 
 ## `app/worldBundle.ts`
 

@@ -29,7 +29,7 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/buildChunkGeometry.ts`
 
-- `buildChunkGeometry` — function — line 420
+- `buildChunkGeometry` — function — line 440
 - `ChunkMeshResult` — type — line 21
 - `createTerrainMaterial` — function — line 69
 - `SCORCH_CHARCOAL` — const — line 32
@@ -311,25 +311,25 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/terrainPreparation.ts`
 
-- `averageAbsHeightDelta` — function — line 154
-- `computeRequiredWork` — function — line 150
-- `exceedsMaxDeformation` — function — line 133
-- `formatHeightDelta` — function — line 215
+- `averageAbsHeightDelta` — function — line 157
+- `computeRequiredWork` — function — line 153
+- `exceedsMaxDeformation` — function — line 136
+- `formatHeightDelta` — function — line 218
 - `GridSample` — type — line 22
 - `HeightSample` — type — line 23
-- `MAX_PREPARATION_DELTA` — const — line 128
-- `MINIMUM_PREPARATION_WORK_HOURS` — const — line 147
+- `MAX_PREPARATION_DELTA` — const — line 131
+- `MINIMUM_PREPARATION_WORK_HOURS` — const — line 150
 - `nearestGridPoint` — function — line 61
 - `preparationSamplesPerSide` — function — line 89
 - `PreparationSize` — type — line 20
-- `PreparationValidationResult` — type — line 190
-- `progressiveHeight` — function — line 177
-- `progressiveHeights` — function — line 182
+- `PreparationValidationResult` — type — line 193
+- `progressiveHeight` — function — line 180
+- `progressiveHeights` — function — line 185
 - `resolveLevelSamples` — function — line 72
 - `resolvePreparationSamples` — function — line 105
 - `TerrainPreparationRecord` — type — line 36
-- `toolSpeedMultiplier` — function — line 165
-- `validatePreparationSamples` — function — line 202
+- `toolSpeedMultiplier` — function — line 168
+- `validatePreparationSamples` — function — line 205
 
 ## `terrain/vegetationRegionBatcher.ts`
 

@@ -31,6 +31,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
@@ -51,6 +52,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/placementPreviewActions.ts`
 - `app/createApp.ts`
 
 ## `app/actions/gatheringActions.ts`
@@ -141,13 +143,29 @@ Generated from TypeScript imports.
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
-- `world/timeConversion.ts`
 
 **Imported by**
 
 - `app/actions/containerActions.ts`
+- `app/actions/placementPreviewActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/createApp.ts`
+- `app/userActions.ts`
+
+## `app/actions/placementPreviewActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/containerActions.ts`
+- `app/actions/placementActions.ts`
+- `world/placementPreview.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `ui-vue/store.ts`
+- `ui/createQuickActions.ts`
 
 ## `app/actions/restActions.ts`
 
@@ -287,6 +305,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
@@ -697,9 +716,12 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `app/actions/placementActions.ts`
 - `app/worldBundle.ts`
+- `input/MouseLook.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/tentPlacement.ts`
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
 - `ui/createHud.ts`

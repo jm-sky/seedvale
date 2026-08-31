@@ -116,6 +116,8 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
+- `settlement/storageVisuals.test.ts`
+- `settlement/storageVisuals.ts`
 - `terrain/digAction.ts`
 - `world/createPlacedContainers.ts`
 
@@ -311,6 +313,8 @@ Generated from TypeScript imports.
 - `items/foodItems.test.ts`
 - `settlement/household.ts`
 - `settlement/storageDestinations.test.ts`
+- `settlement/storageVisuals.test.ts`
+- `settlement/storageVisuals.ts`
 
 ## `items/guardSword.test.ts`
 
@@ -564,6 +568,7 @@ Generated from TypeScript imports.
 - `settlement/VillageFire.ts`
 - `settlement/household.ts`
 - `settlement/storageDestinations.ts`
+- `settlement/storageVisuals.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`
@@ -644,6 +649,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/busyChannelDurations.test.ts`
+- `app/userActions.ts`
 - `items/container.ts`
 - `items/tentPlacement.test.ts`
 - `terrain/terrainPreparation.ts`

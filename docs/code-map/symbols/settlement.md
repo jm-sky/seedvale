@@ -304,13 +304,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 593
-- `disposeSettlementGroup` — function — line 1641
-- `SettlementHouseBed` — type — line 121
-- `SettlementHouseLandmark` — type — line 92
-- `SettlementLandmarks` — type — line 128
-- `SettlementLandPlot` — type — line 208
-- `SettlementTreeLandmark` — type — line 215
+- `buildSettlementProps` — function — line 610
+- `disposeSettlementGroup` — function — line 1697
+- `SettlementHouseBed` — type — line 128
+- `SettlementHouseLandmark` — type — line 99
+- `SettlementLandmarks` — type — line 135
+- `SettlementLandPlot` — type — line 225
+- `SettlementStorageVisuals` — type — line 218
+- `SettlementTreeLandmark` — type — line 232
 
 ## `settlement/propSpecs.ts`
 
@@ -465,6 +466,25 @@ Generated from exported TypeScript symbols.
   - role: Resolves the physical destination for a wood/food delivery, given the household or settlement it belongs to.
 - `householdStorageDestination` — function — line 39
 - `settlementStorageDestination` — function — line 45
+
+## `settlement/storageVisuals.ts`
+
+- `createFoodStorageVisual` — function — line 165
+- `createWoodPileVisual` — function — line 82
+- `FOOD_STORAGE_MAX_SLOTS` — const — line 108
+- `FoodStorageSlot` — type — line 120
+- `FoodStorageVisual` — type — line 148
+- `selectFoodStorageSlots` — function — line 127
+- `WOOD_PILE_BANDS` — const — line 24
+  - domain: settlements-npcs
+  - system: storage-visuals
+  - role: Derives a bounded, deterministic Three.js visual from a storage destination's authoritative quantity/contents.
+- `WOOD_PILE_EXTRA_OFFSETS` — const — line 43
+- `WOOD_PILE_MAX_EXTRA` — const — line 35
+- `WOOD_PILE_OVERFLOW_STEP` — const — line 34
+- `WoodPileVisual` — type — line 66
+- `woodPileVisualState` — function — line 57
+- `WoodPileVisualState` — type — line 49
 
 ## `settlement/villageClearing.ts`
 

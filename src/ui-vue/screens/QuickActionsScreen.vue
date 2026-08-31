@@ -2,9 +2,11 @@
 import { BowArrow, Sword, Zap } from 'lucide-vue-next'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
+import type { PlacementPreviewKind } from '../../app/actions/placementPreviewActions'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TrapKind } from '../../world/animalTraps'
 import type { CropId } from '../../world/cropLifecycle'
+import { FIRE_PIT_STONE_COST, SIMPLE_FIRE_BRANCH_COST } from '../../app/userActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
 import SkillsHudButton from '../components/SkillsHudButton.vue'
@@ -12,10 +14,13 @@ import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { visibleFireActions } from '../playerQuickActions'
 import {
+  backToQuickActionsCategories,
   closeQuickActions,
   equipPrimaryMelee,
   equipPrimaryRanged,
   isQuickActionsOpen,
+  type QuickActionsCategoryId,
+  selectQuickActionsCategory,
   showToast,
   toggleQuickActions,
   ui,
@@ -33,7 +38,18 @@ const restStatusText: Record<Exclude<RestOutcome, 'ok' | 'choose'>, string> = {
   'no-lodging': 'Nie znaleziono noclegu',
 }
 
-const fireActions = computed(() => visibleFireActions(ui.quickActions.fireAvailability, ui.quickActions))
+// "Zbuduj ognisko"/"Zbuduj palenisko" moved under "Budowa" as placement-
+// preview actions (plan `ui-input-004` §2/§3) — Pause → Akcje keeps both as
+// instant actions via its own separate `ui.pauseMenu` handlers/list.
+const fireActions = computed(() =>
+  visibleFireActions(ui.quickActions.fireAvailability, ui.quickActions)
+    .filter((action) => action.id !== 'buildSimpleFire' && action.id !== 'buildFirePit'),
+)
+
+function startPlacementPreview(kind: PlacementPreviewKind): void {
+  closeQuickActions()
+  ui.quickActions.onStartPlacementPreview?.(kind)
+}
 
 function runFireAction(run: () => { ok: boolean; toast: string; kind: 'info' | 'error' }): void {
   const result = run()
@@ -52,11 +68,6 @@ function rest(variant: RestVariant): void {
     return
   }
   showToast(restStatusText[result], 'error')
-}
-
-function placeTent(): void {
-  closeQuickActions()
-  ui.quickActions.onPlaceTent?.()
 }
 
 function placeTrap(kind: TrapKind): void {
@@ -145,10 +156,33 @@ const shovelActions: Action[] = [
   { label: 'Wykop dołek', cost: 'łopata', onClick: dig },
   { label: 'Wyrównaj', cost: 'łopata', onClick: level },
   { label: 'Zrób górkę', cost: 'łopata', onClick: mound },
-  { label: 'Przygotuj teren', cost: 'łopata', onClick: prepareTerrain },
   { label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell },
   { label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden },
 ]
+
+const terrainActions: Action[] = [
+  { label: 'Przygotuj teren', cost: 'łopata', onClick: prepareTerrain },
+]
+
+// "Postaw skrzynię"/"Rozstaw namiot"/"Zbuduj ognisko"/"Zbuduj palenisko" —
+// the shared placement-preview actions grouped under "Budowa" (plan
+// `ui-input-004` §2/§3/§7).
+const buildActions = computed<Action[]>(() => {
+  const list: Action[] = []
+  if (ui.quickActions.hasChest) {
+    list.push({ label: 'Postaw skrzynię', cost: '1× skrzynia', onClick: () => startPlacementPreview('chest') })
+  }
+  if (ui.quickActions.hasTent) {
+    list.push({ label: 'Rozstaw namiot', cost: '1× namiot', onClick: () => startPlacementPreview('tent') })
+  }
+  if (ui.quickActions.fireAvailability.buildSimpleFire) {
+    list.push({ label: 'Zbuduj ognisko', cost: `${SIMPLE_FIRE_BRANCH_COST}× gałąź`, onClick: () => startPlacementPreview('fireSimple') })
+  }
+  if (ui.quickActions.fireAvailability.buildFirePit) {
+    list.push({ label: 'Zbuduj palenisko', cost: `${FIRE_PIT_STONE_COST}× kamień`, onClick: () => startPlacementPreview('firePit') })
+  }
+  return list
+})
 
 const CROP_SEED_LABEL: Record<CropId, string> = {
   carrot: 'Zasadź: marchew',
@@ -167,6 +201,36 @@ const plantActions = computed<Action[]>(() => {
   }
   return list
 })
+
+// Quick Actions category hierarchy (plan `ui-input-004` §3) — a presentation
+// layer over the same existing action lists above; category visibility just
+// mirrors each list/flag's own existing v-if condition. Selecting a category
+// drills in (`ui.quickActions.category`); "Wróć" returns to this root.
+const CATEGORY_LABEL: Record<QuickActionsCategoryId, string> = {
+  budowa: 'Budowa',
+  ogien: 'Ogień',
+  lopata: 'Łopata',
+  teren: 'Teren',
+  pulapki: 'Pułapki',
+  sadzenie: 'Sadzenie',
+  czekaj: 'Czekaj',
+  skrzynia: 'Skrzynia',
+  odpoczynek: 'Odpoczynek',
+}
+
+const categories = computed(() => (
+  [
+    { id: 'budowa', visible: buildActions.value.length > 0 },
+    { id: 'ogien', visible: fireActions.value.length > 0 },
+    { id: 'lopata', visible: ui.quickActions.hasDiggingTool },
+    { id: 'teren', visible: ui.quickActions.hasDiggingTool },
+    { id: 'pulapki', visible: trapActions.value.length > 0 },
+    { id: 'sadzenie', visible: plantActions.value.length > 0 },
+    { id: 'czekaj', visible: true },
+    { id: 'skrzynia', visible: ui.quickActions.hasCarriedContainer },
+    { id: 'odpoczynek', visible: true },
+  ] as const satisfies readonly { id: QuickActionsCategoryId, visible: boolean }[]
+).filter((c) => c.visible))
 </script>
 
 <template>
@@ -223,87 +287,132 @@ const plantActions = computed<Action[]>(() => {
         touchAction: 'pan-y',
       }"
   >
-    <QuickActionsGroup
-      v-if="fireActions.length"
-      label="Ogień"
-    >
+    <!-- Root: category picker (plan `ui-input-004` §3). -->
+    <QuickActionsGroup v-if="!ui.quickActions.category">
       <QuickActionsButton
-        v-for="action in fireActions"
-        :key="action.id"
-        :label="action.label"
-        :cost="action.cost"
-        @click="runFireAction(action.run)"
+        v-for="category in categories"
+        :key="category.id"
+        :label="CATEGORY_LABEL[category.id]"
+        @click="selectQuickActionsCategory(category.id)"
       />
     </QuickActionsGroup>
-    <QuickActionsGroup
-      v-if="ui.quickActions.hasDiggingTool"
-      label="Łopata"
-    >
-      <QuickActionsButton
-        v-for="action in shovelActions"
-        :key="action.label"
-        :label="action.label"
-        :cost="action.cost"
-        @click="action.onClick"
-      />
-    </QuickActionsGroup>
-    <QuickActionsGroup
-      v-if="trapActions.length"
-      label="Pułapki"
-    >
-      <QuickActionsButton
-        v-for="action in trapActions"
-        :key="action.label"
-        :label="action.label"
-        :cost="action.cost"
-        @click="action.onClick"
-      />
-    </QuickActionsGroup>
-    <QuickActionsGroup
-      v-if="plantActions.length"
-      label="Sadzenie"
-    >
-      <QuickActionsButton
-        v-for="action in plantActions"
-        :key="action.label"
-        :label="action.label"
-        :cost="action.cost"
-        @click="action.onClick"
-      />
-    </QuickActionsGroup>
-    <QuickActionsGroup label="Czekaj">
-      <QuickActionsButton
-        v-for="hours in [1, 2, 4, 6]"
-        :key="hours"
-        :label="`${hours}h`"
-        @click="wait(hours)"
-      />
-    </QuickActionsGroup>
-    <QuickActionsGroup
-      v-if="ui.quickActions.hasCarriedContainer"
-      label="Skrzynia"
-    >
-      <QuickActionsButton
-        label="Odłóż skrzynię"
-        @click="putDownContainer"
-      />
-    </QuickActionsGroup>
-    <QuickActionsGroup label="Odpoczynek">
-      <QuickActionsButton
-        v-if="ui.quickActions.hasTent"
-        label="Rozstaw namiot"
-        cost="1× namiot"
-        @click="placeTent"
-      />
-      <QuickActionsButton
-        label="Rozbij obóz (8h)"
-        @click="rest('camp')"
-      />
-      <QuickActionsButton
-        v-if="ui.quickActions.nearTown"
-        label="Nocuj w mieście"
-        @click="rest('town')"
-      />
-    </QuickActionsGroup>
+
+    <!-- Drilled-in: one category's actions + an unambiguous way back
+         (implementation notes §6/mobile touch-scroll unaffected). -->
+    <template v-else>
+      <QuickActionsGroup>
+        <QuickActionsButton
+          label="← Wróć"
+          @click="backToQuickActionsCategories"
+        />
+      </QuickActionsGroup>
+
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'budowa'"
+        label="Budowa"
+      >
+        <QuickActionsButton
+          v-for="action in buildActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'ogien'"
+        label="Ogień"
+      >
+        <QuickActionsButton
+          v-for="action in fireActions"
+          :key="action.id"
+          :label="action.label"
+          :cost="action.cost"
+          @click="runFireAction(action.run)"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'lopata'"
+        label="Łopata"
+      >
+        <QuickActionsButton
+          v-for="action in shovelActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'teren'"
+        label="Teren"
+      >
+        <QuickActionsButton
+          v-for="action in terrainActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'pulapki'"
+        label="Pułapki"
+      >
+        <QuickActionsButton
+          v-for="action in trapActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'sadzenie'"
+        label="Sadzenie"
+      >
+        <QuickActionsButton
+          v-for="action in plantActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'czekaj'"
+        label="Czekaj"
+      >
+        <QuickActionsButton
+          v-for="hours in [1, 2, 4, 6]"
+          :key="hours"
+          :label="`${hours}h`"
+          @click="wait(hours)"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'skrzynia'"
+        label="Skrzynia"
+      >
+        <QuickActionsButton
+          label="Odłóż skrzynię"
+          @click="putDownContainer"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'odpoczynek'"
+        label="Odpoczynek"
+      >
+        <QuickActionsButton
+          label="Rozbij obóz (8h)"
+          @click="rest('camp')"
+        />
+        <QuickActionsButton
+          v-if="ui.quickActions.nearTown"
+          label="Nocuj w mieście"
+          @click="rest('town')"
+        />
+      </QuickActionsGroup>
+    </template>
   </div>
 </template>

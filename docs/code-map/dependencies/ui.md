@@ -152,6 +152,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `app/actions/placementPreviewActions.ts`
 - `app/userActions.ts`
 - `ui-vue/mount.ts`
 - `world/animalTraps.ts`

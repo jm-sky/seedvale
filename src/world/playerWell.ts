@@ -124,6 +124,15 @@ export const WELL_PLACE_DURATION_SEC = 3
  *  reached over several repeated bouts, never one long frozen channel). */
 export const WELL_WORK_SESSION_SEC = 8
 
+/** Active-work hours credited by one *full-length* `WELL_WORK_SESSION_SEC`
+ *  bout (plan `ui-input-004` §1) — deliberately decoupled from the ambient
+ *  day/night clock's own real-time/game-time ratio (`world/timeConversion.ts`),
+ *  which would otherwise only credit ~0.4h per 8s bout. Sized so `pit`
+ *  (`WELL_STAGE_WORK_HOURS.pit`) completes in a single bout, while `roof`
+ *  keeps its full 1h requirement (i.e. still needs its own bout(s), never
+ *  shortened by this constant alone). */
+export const WELL_WORK_SESSION_HOURS = 2
+
 /** `[E]` prompt to start (fresh) or resume/transition into a stage's work. */
 export const WELL_STAGE_START_PROMPT: Record<WellStage, string> = {
   pit: '[E] Wykop dół',

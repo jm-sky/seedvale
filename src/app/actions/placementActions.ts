@@ -5,7 +5,7 @@ import { isLiquidContainerInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LI
 import { ITEM_DEFS } from '../../items/items'
 import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidContainer'
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../../items/tentPlacement'
-import { TENT_LENGTH } from '../../items/tentProp'
+import { TENT_FOOTPRINT_RADIUS, TENT_LENGTH } from '../../items/tentProp'
 import { selectInstanceToPlace } from '../../items/trade'
 import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD, survivalDurationMultiplier } from '../../player/PlayerSkills'
@@ -58,9 +58,9 @@ import {
   WELL_STAGE_COST,
   WELL_STAGE_WORK_HOURS,
   WELL_WORK_LABEL,
+  WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
 } from '../../world/playerWell'
-import { gameHoursToRealSeconds, realSecondsToGameHours } from '../../world/timeConversion'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** A world object the player can put down in front of themselves — the shared
@@ -69,6 +69,21 @@ import { isActionBlocked, type PlayerActionContext } from './actionContext'
  *  127). The item/material is always spent when the channel *completes*, so
  *  Esc costs nothing. */
 export type PlacementBlocker = { x: number, z: number, radius: number }
+
+/** Read-only per-frame result backing the shared placement-preview ghost/UI
+ *  (plan `ui-input-004` §2/§7) — every `preview*Placement()` below returns
+ *  this same shape so `app/actions/placementPreviewActions.ts` can render
+ *  and validate any of chest/tent/fire without knowing their individual
+ *  reason types. Never authoritative: the real placement action re-resolves
+ *  aim and re-validates from scratch at confirm time. */
+export type PlacementPreviewResult = {
+  x: number
+  z: number
+  yaw: number
+  footprintRadius: number
+  valid: boolean
+  reasonLabel: string
+}
 
 export type WellWorkView = {
   title: string
@@ -85,6 +100,10 @@ export type PlacementActions = {
    *  Shared by every placeable (tent, trap, chest, well) — the name predates
    *  the others but the geometry is the same. */
   tentBlockers: (x: number, z: number) => PlacementBlocker[]
+  /** Read-only preview of tent placement at the player's current aim (plan
+   *  `ui-input-004` §2) — backs the shared placement-preview ghost/UI;
+   *  `placeTentAtAim` remains the only mutation seam. */
+  previewTentPlacement: () => PlacementPreviewResult
   placeTentAtAim: () => void
   placeTrapAtAim: (kind: TrapKind) => void
   placeWellAtAim: () => void
@@ -144,6 +163,26 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       }
     }
     return blockers
+  }
+
+  const previewTentPlacement = (): PlacementPreviewResult => {
+    const aim = tentAimPoint()
+    const reason = evaluateTentPlacement({
+      x: aim.x,
+      z: aim.z,
+      sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
+      waterLevel: bundle.chunkManager.waterLevel,
+      blockers: tentBlockers(aim.x, aim.z),
+      otherTents: bundle.placedTents.nodes(),
+    })
+    return {
+      x: aim.x,
+      z: aim.z,
+      yaw: aim.yaw,
+      footprintRadius: TENT_FOOTPRINT_RADIUS,
+      valid: reason === 'ok',
+      reasonLabel: reason === 'ok' ? '' : TENT_PLACEMENT_MESSAGE[reason],
+    }
   }
 
   const placeTentAtAim = (): void => {
@@ -260,12 +299,15 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *     missing), then transition the record into it (resets progress,
    *     swaps mesh/collider).
    *  4. Start one busy-channel work bout, capped at `WELL_WORK_SESSION_SEC`
-   *     — a stage's full requirement is reached over several repeated
-   *     presses, never one long frozen channel. The *measured* world-time
-   *     delta over the bout (not the precomputed cap) is what gets credited
-   *     to `workProgress`, on both natural completion and cancellation
-   *     (Escape) — so an interruption keeps exactly the work actually done,
-   *     never rolling back stage/materials. */
+   *     real seconds — a stage's full requirement is reached over several
+   *     repeated presses, never one long frozen channel. A full bout credits
+   *     `WELL_WORK_SESSION_HOURS` of active work (plan `ui-input-004` §1) —
+   *     deliberately decoupled from the ambient day/night clock, which would
+   *     otherwise only pass ~0.4h of game time per 8s bout. The *measured*
+   *     wall-clock fraction of the bout actually run (not the precomputed
+   *     cap) is what gets credited on cancellation (Escape), so an
+   *     interruption keeps exactly the work actually done, never rolling
+   *     back stage/materials. */
   const workOnWell = (id: string): void => {
     if (isActionBlocked(ctx)) return
     const well = bundle.playerWells.list().find((entry) => entry.id === id)
@@ -306,15 +348,16 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     const workedSoFar = startingNewStage ? 0 : well.workProgress
     const remainingHours = Math.max(0, WELL_STAGE_WORK_HOURS[stage] - workedSoFar)
-    const sessionHours = Math.min(realSecondsToGameHours(WELL_WORK_SESSION_SEC, dayNight.dayLengthSec), remainingHours)
-    const sessionSec = gameHoursToRealSeconds(sessionHours, dayNight.dayLengthSec)
-    const startDays = dayNight.elapsedDays
-    const commitProgress = (): void => {
-      const elapsedHours = Math.max(0, (dayNight.elapsedDays - startDays) * 24)
-      bundle.playerWells.addWork(id, elapsedHours)
+    const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
+    const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
+    const startedAt = performance.now()
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      bundle.playerWells.addWork(id, sessionHours * fraction)
     }
-    busy.start(sessionSec, WELL_WORK_LABEL[stage], commitProgress, {
-      onCancel: commitProgress,
+    busy.start(sessionSec, WELL_WORK_LABEL[stage], () => bundle.playerWells.addWork(id, sessionHours), {
+      onCancel: creditPartial,
       staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC,
     })
   }
@@ -551,6 +594,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   return {
     tentAimPoint,
     tentBlockers,
+    previewTentPlacement,
     placeTentAtAim,
     placeTrapAtAim,
     placeWellAtAim,

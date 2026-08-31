@@ -108,6 +108,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcVoiceLines.ts`
+- `app/actions/placementPreviewActions.ts`
 - `app/userActions.ts`
 - `audio/audioSettings.ts`
 - `audio/createWorldAudio.ts`

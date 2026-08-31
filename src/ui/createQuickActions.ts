@@ -1,3 +1,4 @@
+import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
 import type { LightActionResult } from '../app/userActions'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
@@ -21,12 +22,6 @@ export type RestVariant = 'camp' | 'town'
 export type RestOutcome = 'ok' | 'too-far' | 'no-blanket' | 'no-lodging' | 'choose'
 
 export type QuickActionsHandlers = {
-  /** Same handlers passed to `createPauseMenu`'s fire/torch buttons — these
-   *  are a second UI entry point onto identical logic (`app/userActions.ts`),
-   *  not a duplicate. Each returns false (consumes nothing) if the player
-   *  lacks the resources. */
-  onBuildSimpleFire?: () => boolean
-  onBuildFirePit?: () => boolean
   /** Grate upgrade for the nearest qualifying player-built fire (plan 175). */
   onBuildGrate?: () => boolean
   onLightBranch?: () => LightActionResult
@@ -53,9 +48,11 @@ export type QuickActionsHandlers = {
   /** "Przygotuj teren" (plan `world-terrain-002` §2) — enters the preview
    *  mode; confirm/cancel happen in-world, not through this panel. */
   onPrepareTerrain?: () => void
-  onPlaceTent?: () => void
+  /** Enters the shared placement-preview mode for `kind` (plan `ui-input-004`
+   *  §2/§3/§7) — the "Budowa" category's chest/tent/fire actions. */
+  onStartPlacementPreview?: (kind: PlacementPreviewKind) => void
   /** Sets an animal trap down in front of the player (plan 141) — the same
-   *  inventory → world placement shape as `onPlaceTent`. */
+   *  inventory → world placement shape as the tent placement preview. */
   onPlaceTrap?: (kind: TrapKind) => void
   /** Puts the carried container back down (plan 164 §8) — shown only while
    *  `hasCarriedContainer` is true. */
@@ -74,6 +71,8 @@ export type QuickActionsHandlers = {
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
   hasTent?: boolean
+  /** Initial unplaced-chest ownership for showing "Postaw skrzynię". */
+  hasChest?: boolean
   /** Initial carried-container flag for showing "Odłóż skrzynię". */
   hasCarriedContainer?: boolean
   /** Which trap kinds the player currently carries (plan 141). */
@@ -111,6 +110,9 @@ export function createQuickActions(
   }
   if (typeof handlers.hasTent === 'boolean') {
     getUi()?.setQuickActionsHasTent(handlers.hasTent)
+  }
+  if (typeof handlers.hasChest === 'boolean') {
+    getUi()?.setQuickActionsHasChest(handlers.hasChest)
   }
   if (typeof handlers.hasCarriedContainer === 'boolean') {
     getUi()?.setQuickActionsHasCarriedContainer(handlers.hasCarriedContainer)

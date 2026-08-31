@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/saveState.ts`
+- `app/userActions.ts`
 - `input/createTouchControls.ts`
 - `player/PlayerController.ts`
 

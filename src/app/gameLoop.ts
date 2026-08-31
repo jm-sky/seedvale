@@ -343,6 +343,12 @@ export type GameLoopDeps = {
    *  `[E]` press is consumed here rather than falling through to it. No-ops
    *  when the preview isn't active. */
   tickTerrainPreparationPreview?: () => void
+  /** Shared object-placement preview mode (plan `ui-input-004` §2) — same
+   *  unconditional, before-gaze/interact-dispatch convention as
+   *  `tickTerrainPreparationPreview`; the two are mutually exclusive so only
+   *  one ever actually consumes the confirming `[E]` press. No-ops when the
+   *  preview isn't active. */
+  tickPlacementPreview?: () => void
   /** `[E]` on an active preparation's marker — starts/resumes its work
    *  session (plan `world-terrain-002` §8). */
   resumeTerrainPreparationWork?: (id: string) => void
@@ -434,7 +440,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork,
-    tickTerrainPreparationPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
+    tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -763,6 +769,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // before the gaze/interact dispatch below gets a chance to see it
       // (plan `world-terrain-002` §2).
       tickTerrainPreparationPreview?.()
+      tickPlacementPreview?.()
       const held = heldTool.held()
       const hasMilkContainer = hasCarriedMilkContainer(inventory)
       const interactables = buildInteractables(

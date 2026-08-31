@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isTouchDevice } from '../../input/isTouchDevice'
 import {
   abortTerrainPreparation,
   confirmTerrainPreparation,
@@ -8,6 +9,8 @@ import {
   shrinkTerrainPreparation,
   ui,
 } from '../store'
+
+const touchDevice = isTouchDevice()
 </script>
 
 <template>
@@ -15,7 +18,10 @@ import {
     v-if="ui.terrainPreparationPreview.visible"
     class="pointer-events-none fixed inset-x-0 bottom-24 z-[12] flex justify-center"
   >
-    <div class="pointer-events-auto relative flex flex-col items-center gap-1.5 rounded-lg bg-panel px-4.5 py-2 text-[15px] text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
+    <div
+      class="pointer-events-auto relative flex flex-col items-center gap-1.5 rounded-lg px-4.5 py-2 text-[15px] text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]"
+      :class="touchDevice ? 'bg-black/35' : 'bg-panel'"
+    >
       <div class="flex items-center gap-3">
         <span class="flex items-center gap-1">
           Rozmiar: {{ ui.terrainPreparationPreview.sizeLabel }}

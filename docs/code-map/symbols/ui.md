@@ -72,13 +72,13 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createQuickActions.ts`
 
-- `createQuickActions` — function — line 102
-- `QuickActions` — type — line 93
-- `QuickActionsCropSeeds` — type — line 12
-- `QuickActionsHandlers` — type — line 23
-- `QuickActionsTraps` — type — line 8
-- `RestOutcome` — type — line 21
-- `RestVariant` — type — line 14
+- `createQuickActions` — function — line 101
+- `QuickActions` — type — line 92
+- `QuickActionsCropSeeds` — type — line 13
+- `QuickActionsHandlers` — type — line 24
+- `QuickActionsTraps` — type — line 9
+- `RestOutcome` — type — line 22
+- `RestVariant` — type — line 15
 
 ## `ui/createStartScreen.ts`
 
