@@ -1616,7 +1616,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         dt, climate.weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z,
         camera.fov, renderer.domElement.clientHeight,
       )
-      clouds.update(dt, climate.weather, player.mesh.position.x, player.mesh.position.z)
+      clouds.update(dt, climate.weather, cachedSky.elev, player.mesh.position.x, player.mesh.position.z)
       weatherAudio.update(climate.weather)
       ambientAudio.update(
         dt,

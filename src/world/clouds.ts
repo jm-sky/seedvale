@@ -61,19 +61,49 @@ export type CloudAppearance = {
   tint: number
 }
 
+/** Ambient "light" clouds are multiplied by across the day/night cycle —
+ *  not a replacement tint (that would erase weather-tint differences, e.g.
+ *  rain clouds vs clear clouds would look identical at night) but an RGB
+ *  multiplier applied on top of whatever `CLOUD_VISUAL_PROFILES` picked, the
+ *  same way real clouds dim/cool under a darker sky. Day is a no-op
+ *  (1,1,1); dusk/dawn warms and dims slightly; night is a dark cool
+ *  blue-grey, chosen bright enough to still read against `dayNight.ts`'s
+ *  `NIGHT_FOG` (0x1a2233) instead of blending into it. */
+const DAY_CLOUD_LIGHT = new Color(0xffffff)
+const DUSK_CLOUD_LIGHT = new Color(0xffdcc0)
+const NIGHT_CLOUD_LIGHT = new Color(0x5a6b8c)
+const tmpLightColor = new Color()
 const tmpBaseColor = new Color()
 const tmpTargetColor = new Color()
 
+/** Mirrors `dayNight.ts`'s `fogColorFromElev` 3-stop smooth blend (same
+ *  -0.3/0/0.3 elevation breakpoints) so clouds and fog transition through
+ *  dusk/dawn in lockstep instead of drifting apart. `elev` (not `dayFactor`)
+ *  because `dayFactor` is clamped to 0 for the entire below-horizon range —
+ *  multiplying by it would make clouds vanish at night rather than just
+ *  darken. */
+function cloudLightFromElev(elev: number): Color {
+  if (elev <= -0.3) return tmpLightColor.copy(NIGHT_CLOUD_LIGHT)
+  if (elev >= 0.3) return tmpLightColor.copy(DAY_CLOUD_LIGHT)
+  if (elev <= 0) {
+    return tmpLightColor.copy(NIGHT_CLOUD_LIGHT).lerp(DUSK_CLOUD_LIGHT, (elev + 0.3) / 0.3)
+  }
+  return tmpLightColor.copy(DUSK_CLOUD_LIGHT).lerp(DAY_CLOUD_LIGHT, elev / 0.3)
+}
+
 /** Pure — mirrors `weatherVisuals.ts`'s `applyWeatherOverlay`: linearly
  *  blends the baseline toward the active weather type's profile by
- *  `weather.intensity`. */
-export function cloudAppearanceFor(weather: WeatherState): CloudAppearance {
+ *  `weather.intensity`, then applies the day/night ambient multiplier so
+ *  night clouds read as dark/cool rather than staying white (plan
+ *  world-terrain-001). */
+export function cloudAppearanceFor(weather: WeatherState, elev: number): CloudAppearance {
   const profile = CLOUD_VISUAL_PROFILES[weather.type]
   const t = weather.intensity
   const coverage = BASE_COVERAGE + (profile.coverage - BASE_COVERAGE) * t
   tmpBaseColor.setHex(BASE_TINT)
   tmpTargetColor.setHex(profile.tint)
   tmpBaseColor.lerp(tmpTargetColor, t)
+  tmpBaseColor.multiply(cloudLightFromElev(elev))
   return { coverage, tint: tmpBaseColor.getHex() }
 }
 
@@ -98,7 +128,7 @@ function randomize(cs: CloudSprite, materials: SpriteMaterial[]): void {
 
 export type CloudSystem = {
   addTo: (scene: Scene) => void
-  update: (dt: number, weather: WeatherState, playerX: number, playerZ: number) => void
+  update: (dt: number, weather: WeatherState, elev: number, playerX: number, playerZ: number) => void
   dispose: () => void
 }
 
@@ -139,12 +169,12 @@ export function createClouds(): CloudSystem {
     }
   }).catch(() => { /* clouds stay absent if textures fail to load */ })
 
-  function update(dt: number, weather: WeatherState, playerX: number, playerZ: number): void {
+  function update(dt: number, weather: WeatherState, elev: number, playerX: number, playerZ: number): void {
     group.visible = isSystemEnabled('weather')
     // XZ-follow only; altitude is baked into each sprite's local Y.
     group.position.set(playerX, 0, playerZ)
     if (sprites.length === 0) return
-    const appearance = cloudAppearanceFor(weather)
+    const appearance = cloudAppearanceFor(weather, elev)
     for (const cs of sprites) {
       cs.localX += WIND_SPEED * dt
       if (cs.localX > AREA_HALF_WIDTH) {

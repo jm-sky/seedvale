@@ -65,6 +65,10 @@ Initial visual mapping:
 - Do not create a second weather state or duplicate weather logic.
 - Existing rain/snow effects continue to be controlled by the existing weather system.
 
+### 3b. Day/night integration
+
+Weather-tint alone left clouds bright white at night, disconnected from the dark sky (found post-implementation). `cloudAppearanceFor()` now also takes `dayNight.ts`'s `elev` (not `dayFactor`, which clamps to 0 below the horizon and would hide clouds entirely) and multiplies the weather tint by a day/dusk/night ambient-light color, mirroring `fogColorFromElev`'s breakpoints (`-0.3`/`0`/`0.3`) so clouds and fog transition together. Night dims/cools rather than blacks out; weather-tint differences (e.g. rain vs. clear) remain visible at night since it's a multiplier, not a replacement.
+
 ### 4. Lifecycle and integration
 
 - Add the cloud system at the appropriate existing world/rendering ownership point rather than introducing a new global manager.
