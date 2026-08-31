@@ -63,4 +63,13 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  .lil-gui select {
+    color: #fff;
+  }
+
+  .lil-gui select option {
+    background-color: #222e;
+    color: #eee;
+  }
 }
