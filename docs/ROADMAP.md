@@ -137,6 +137,57 @@ The current world uses a **flat chunk grid with streaming**. A fully spherical/c
 
 Do not start a cube-sphere rewrite merely because the roadmap mentions it. First establish whether the current streaming model actually becomes a product limitation.
 
+### 8. Simulation observability and domain verification
+
+As Seedvale's simulation becomes more interconnected, debugging must make the resulting behaviour explainable and verifiable.
+
+The goal is not a collection of unrelated debug buttons, but a coherent **domain observability** layer that makes it possible to understand both current state and how the world arrived there.
+
+Priority direction:
+
+- use the existing NPC inspector/trace as the reference model,
+- introduce hierarchical domain history for NPC → household → settlement,
+- make significant domain events observable without logging per-frame state,
+- expose causal explanations (`why`) where decisions or state changes matter,
+- provide structured snapshots of domain state,
+- provide AI-readable exports for diagnosis and verification,
+- extend equivalent observability to animals,
+- later extend it to settlements, households, resources/economy, relationships and emergent quests,
+- support deterministic scenario control where required for verification.
+
+The preferred conceptual model is:
+
+```
+Inspect
+Trace
+Explain
+Control
+Trigger
+Verify
+```
+
+The first high-ROI implementation target is **hierarchical domain history**, building on the existing NPC trace rather than creating independent history systems.
+
+The intended progression is:
+
+```
+History
+  ↓
+Why / causal explanation
+  ↓
+Snapshots
+  ↓
+Animal observability
+  ↓
+Broader domain observability
+  ↓
+AI-readable / human-readable representations
+```
+
+JSON should be treated primarily as the structured transport/export format. Human- and AI-oriented representations may later provide compact semantic descriptions instead of exposing only raw implementation state.
+
+See [Domain Debug & Verification Audit](./reviews/2026-08-31--domain-debug-and-verification-audit.md) for the current baseline and identified gaps.
+
 ## Deliberately deferred
 
 The following remain intentionally outside the immediate scope:
