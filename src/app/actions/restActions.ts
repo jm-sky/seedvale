@@ -9,7 +9,9 @@ import { tentRestPose } from '../../items/tentProp'
 import { restoreNeedsFromSleep } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
 import {
+  advanceLodgingProgress,
   hayLodgingId,
+  initialLodgingProgress,
   LODGING_ARRIVE_TOLERANCE,
   lodgingChoiceLabel,
   lodgingPlaceLabel,
@@ -69,8 +71,9 @@ export type RestActions = {
   sleepInHay: (settlementId: string) => void
   /** Per-frame: walks the player to the resolved lodging option and starts
    *  Sleep on arrival — called from `gameLoop.ts` the same way `restCamp.tick`
-   *  is (plan 168). */
-  tickLodging: () => void
+   *  is (plan 168), now with a stuck-movement watchdog/recovery (plan
+   *  `ui-input-005`) driven by the same per-frame `dt`. */
+  tickLodging: (dt: number) => void
   /** True while walking to a resolved lodging option (not yet asleep) — used
    *  to gate other input the same way `restCamp.isActive()` does. */
   isLodgingActive: () => boolean
@@ -116,6 +119,16 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
   let lodgingWalkTarget: LodgingOption | null = null
   /** A paid lodging offer awaiting `confirmLodgingPayment`/`cancelLodgingConfirm`. */
   let lodgingConfirmTarget: LodgingOption | null = null
+
+  /** Stuck-movement watchdog for the current `lodgingWalkTarget` (plan
+   *  `ui-input-005`) — see `advanceLodgingProgress` for the pure calculation.
+   *  Reset on every arm/cancel/arrival so no stale progress ever leaks into a
+   *  later walk. */
+  let lodgingProgress = initialLodgingProgress()
+
+  const resetLodgingProgress = (): void => {
+    lodgingProgress = initialLodgingProgress()
+  }
 
   /** Captured once, the instant the current rest/sleep actually begins
    *  (camp, tent or lodging — never `startWait`'s fadeStrength-0.5 skip):
@@ -219,12 +232,14 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
 
   const armLodgingWalk = (option: LodgingOption): void => {
     lodgingWalkTarget = option
+    resetLodgingProgress()
   }
 
   const cancelLodgingWalk = (silent = false): void => {
     if (!lodgingWalkTarget) return
     lodgingWalkTarget = null
     keyboard.state.forward = false
+    resetLodgingProgress()
     if (!silent) toast.show('Przerwano nocleg', 'info')
   }
 
@@ -286,7 +301,38 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     commitLodgingSelection(hayLodgingId(settlementId))
   }
 
-  const tickLodging = (): void => {
+  /** Shared by normal arrival and stuck-recovery arrival (plan `ui-input-005`
+   *  §6/§7) — the one place a lodging walk hands off into sleep, so recovery
+   *  never duplicates the completion sequence. Always clears the walk/
+   *  watchdog state first; re-validates the option against a fresh
+   *  candidate collection rather than trusting it's still available. */
+  const completeLodgingArrival = (option: LodgingOption): void => {
+    lodgingWalkTarget = null
+    keyboard.state.forward = false
+    resetLodgingProgress()
+    if (!isLodgingOptionStillAvailable(option)) {
+      toast.show('To miejsce jest już zajęte', 'error')
+      return
+    }
+    if (option.facing != null) player.mesh.rotation.y = option.facing
+    pendingLodgingQuality = lodgingRestQuality(option.quality)
+    captureRestCancelVigorGate()
+    player.lieDown()
+    timeSkip.start(8, { fadeStrength: 1, label: `Nocujesz (${lodgingPlaceLabel(option)})...` })
+  }
+
+  /** @domain ui-input
+   *  Per-frame lodging autowalk (plan 168), extended with a stuck-movement
+   *  watchdog (plan `ui-input-005`) — house colliders can stop the player
+   *  before `approachPoint` while `keys.forward` keeps being forced, so
+   *  progress (not just elapsed time since the walk started), computed by
+   *  the pure `advanceLodgingProgress` (`settlement/lodging.ts`), decides
+   *  when to recover. Recovery reuses the existing
+   *  `PlayerController.setPosition()` seam (already used by `startTentRest`)
+   *  to place the player exactly on the authoritative `approachPoint`, then
+   *  converges on the same `completeLodgingArrival` normal arrival uses —
+   *  never a second sleep-start path. */
+  const tickLodging = (dt: number): void => {
     const option = lodgingWalkTarget
     if (!option) return
     const keys = keyboard.state
@@ -300,17 +346,14 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     const dz = option.approachPoint.z - pz
     const dist = Math.hypot(dx, dz)
     if (dist <= LODGING_ARRIVE_TOLERANCE) {
-      lodgingWalkTarget = null
-      keys.forward = false
-      if (!isLodgingOptionStillAvailable(option)) {
-        toast.show('To miejsce jest już zajęte', 'error')
-        return
-      }
-      if (option.facing != null) player.mesh.rotation.y = option.facing
-      pendingLodgingQuality = lodgingRestQuality(option.quality)
-      captureRestCancelVigorGate()
-      player.lieDown()
-      timeSkip.start(8, { fadeStrength: 1, label: `Nocujesz (${lodgingPlaceLabel(option)})...` })
+      completeLodgingArrival(option)
+      return
+    }
+    const advanced = advanceLodgingProgress(lodgingProgress, dist, dt)
+    lodgingProgress = advanced.state
+    if (advanced.stuck) {
+      player.setPosition(option.approachPoint.x, option.approachPoint.z)
+      completeLodgingArrival(option)
       return
     }
     keys.forward = true

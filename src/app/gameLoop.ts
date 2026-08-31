@@ -373,8 +373,9 @@ export type GameLoopDeps = {
   onSleepFinished: () => void
   /** Per-frame: walks the player to the resolved "Nocuj w mieście" lodging
    *  target and starts Sleep on arrival (plan 168) — ticked the same way
-   *  `restCamp.tick` is. */
-  tickLodging: () => void
+   *  `restCamp.tick` is, now with a stuck-movement watchdog/recovery driven
+   *  by the same per-frame `dt` (plan `ui-input-005`). */
+  tickLodging: (dt: number) => void
   /** True while walking to a resolved lodging target (plan 168) — folded
    *  into `activeModal` the same way `restCamp.isActive()` is. */
   isLodgingActive: () => boolean
@@ -690,7 +691,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     // no second movement pipeline. Mutually exclusive with restCamp/busy
     // (`restActions.ts`'s `startRest` won't arm a walk while either is
     // active), so it never fights their key-clearing above.
-    tickLodging()
+    tickLodging(dt)
+    // Drives the lodging-walk "Anuluj [Esc]" HUD button (plan `ui-input-005`)
+    // straight from the authoritative walk state — no separate UI flag that
+    // could diverge from it.
+    vueUi.setLodgingWalkActive(isLodgingActive())
 
     const modal = activeModal(
       pauseMenu, npcDialog, questLog, vueUi, inventoryScreen, quickActions, timeSkip, busy, restCamp,

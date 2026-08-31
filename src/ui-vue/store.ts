@@ -229,6 +229,11 @@ type ContainerScreenState = {
   onWithdrawInstance: ((instanceId: string) => void) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean; canCancelTerrainPreparation: boolean }
+/** Lodging autowalk cancel HUD (plan `ui-input-005`) — separate from
+ *  `TimeSkipState` because the walk itself isn't a `timeSkip` (that only
+ *  starts once the player arrives), so `ui.timeSkip.visible` is false the
+ *  whole time this button needs to show. */
+type LodgingWalkState = { active: boolean }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
 /** `Przygotuj teren` preview HUD (plan `world-terrain-002` §2) — mirrors
  *  `TerrainPreparationActions.tickPreview`'s per-frame view. */
@@ -420,6 +425,7 @@ export const ui = reactive({
     onPlantTree: null, onPlantCrop: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
+  lodgingWalk: { active: false } as LodgingWalkState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
   placementPreview: { visible: false, label: '', valid: false, reasonLabel: '' } as PlacementPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
@@ -839,6 +845,12 @@ export function updateTimeSkipRestUi(progress: number | null, canCancelRest: boo
  *  gates the rest-cancel branch in `gameLoop.ts`. */
 export function setCanCancelTerrainPreparation(canCancel: boolean): void {
   ui.timeSkip.canCancelTerrainPreparation = canCancel
+}
+/** Drives the lodging autowalk's own "Anuluj [Esc]" HUD button (plan
+ *  `ui-input-005`) — called every frame from `gameLoop.ts` straight off
+ *  `RestActions.isLodgingActive()`, mirroring `setCanCancelTerrainPreparation`. */
+export function setLodgingWalkActive(active: boolean): void {
+  ui.lodgingWalk.active = active
 }
 export function hideTimeSkip(): void {
   if (!ui.timeSkip.visible) return

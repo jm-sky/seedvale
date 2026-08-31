@@ -46,7 +46,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
-| 💡 `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | - | 🔴 | S | `none` |
 
 ---
 
@@ -119,6 +118,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `settlements-npcs-004-animal-and-npc-social-audio.md` | Spontaneous cow/sheep/chicken vocalization (cooldown + concurrent-play cap), milking + egg-laid contextual sounds, and a friendly-talk SFX hook on Social Place `conversation` start (pools empty — no clips in repo yet, per plan) all implemented; needs browser verification of cooldown feel/no audio-spam with real herds |
 | `world-006-time-weather-and-biome-ambient-soundscape.md` | Bird ambient (1 sample) + reworked cricket day/dusk/night/pre-dawn profile + weather (clear/cloudy/fog/rain/snow) and biome (forest/meadow) factors implemented in `createAmbientAudio.ts`; needs browser verification of the full day-cycle/weather/biome combination for audible clicks or overly abrupt transitions |
 | `npc-005-npc-animal-target-commitment.md` | [notes](./implementation-notes/2026-08-31--npc-005-npc-animal-target-commitment-implementation-notes.md); recon found NPC-side target commitment already correct (177's `combatIntent`/`phase === 'combat'` guard already blocks re-targeting during combat/defend/hunt) and frenzy wolf→NPC already stabilized by a same-day prior fix (`frenzyNpcTarget`/`resolveFrenzyNpcTarget()`); the one real gap was live predator→prey hunting (`AnimalAgent.updatePredator`), which re-ran `nearest(others, 'prey', detectRange)` every tick — added `preyTarget`/`resolvePreyTarget()` (same lock-on-until-dead-or-out-of-range shape as `resolveFrenzyNpcTarget`) so a wolf keeps chasing its committed deer even when another deer gets closer; NPC-vs-NPC combat has no decision system yet in this codebase, so nothing to commit there beyond the existing `beginCombat`/phase guard; wolf→deer no-switch behavior and frenzy wolf single-NPC commitment need browser verification |
+| `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | [notes](./implementation-notes/ui-input-005-lodging-navigation-recovery-and-cancellation-implementation-notes.md); `abortRest()`/`Esc` already covered lodging-walk cancellation (plan 168) — added the missing HUD "Anuluj [Esc]" button (`LodgingWalkOverlay.vue`, driven by `isLodgingActive()`); `tickLodging()` extended with a stuck-movement watchdog (pure `advanceLodgingProgress` in `settlement/lodging.ts`, ~12 s of no meaningful `approachPoint`-distance progress) that recovers via the existing `PlayerController.setPosition()` seam and converges on the same `completeLodgingArrival` normal arrival uses; normal lodging, Esc, button cancellation, house-collider stuck/recovery and post-recovery sleep need browser verification |
 
 ---
 

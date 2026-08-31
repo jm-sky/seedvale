@@ -1,7 +1,7 @@
 # Plan: Lodging Navigation Recovery and Cancellation
 
 **Created:** 2026-08-31  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** 🔴 high · **Effort:** S  
 **Depends on:** `none`  
 **Domain:** `ui-input`  
@@ -217,21 +217,21 @@ Plan 168 i 169 są kontekstem istniejącego lodging/house implementation. Nie na
 
 ## Acceptance criteria
 
-- [ ] Podczas dojścia do noclegu widoczny jest przycisk **„Anuluj [Esc]”**.
-- [ ] `Esc` anuluje lodging walk bez otwierania pause menu.
-- [ ] Kliknięcie przycisku i `Esc` korzystają z tego samego `abortRest()`.
-- [ ] Po anulowaniu gracz natychmiast odzyskuje normalny movement i look control.
-- [ ] `forward` nie pozostaje wymuszony po żadnym zakończeniu lodging walk.
-- [ ] Utknięcie przy ścianie jest wykrywane przez brak postępu, a nie przez krótki fixed timeout.
-- [ ] Timeout braku postępu wynosi około 10–15 s i jest resetowany przez rzeczywisty progress.
-- [ ] Utknięty gracz może kontynuować lodging dzięki kontrolowanemu recovery.
-- [ ] Recovery nie wyłącza globalnie colliderów i nie wprowadza globalnego noclip.
-- [ ] Po recovery normalny lodging flow kończy się snem.
-- [ ] Niedostępne miejsce po recovery nie rozpoczyna snu.
-- [ ] Istniejące camp/tent/wait cancellation zachowują dotychczasowe zachowanie.
-- [ ] Nie powstaje drugi system ruchu ani drugi system cancellation.
-- [ ] Dodano/zmieniono focused tests dla state cleanup i stuck detection tam, gdzie obecna architektura testów na to pozwala.
-- [ ] `tsc`, testy i build przechodzą.
+- [x] Podczas dojścia do noclegu widoczny jest przycisk **„Anuluj [Esc]”**.
+- [x] `Esc` anuluje lodging walk bez otwierania pause menu.
+- [x] Kliknięcie przycisku i `Esc` korzystają z tego samego `abortRest()`.
+- [x] Po anulowaniu gracz natychmiast odzyskuje normalny movement i look control.
+- [x] `forward` nie pozostaje wymuszony po żadnym zakończeniu lodging walk.
+- [x] Utknięcie przy ścianie jest wykrywane przez brak postępu, a nie przez krótki fixed timeout.
+- [x] Timeout braku postępu wynosi około 10–15 s i jest resetowany przez rzeczywisty progress.
+- [x] Utknięty gracz może kontynuować lodging dzięki kontrolowanemu recovery.
+- [x] Recovery nie wyłącza globalnie colliderów i nie wprowadza globalnego noclip.
+- [x] Po recovery normalny lodging flow kończy się snem.
+- [x] Niedostępne miejsce po recovery nie rozpoczyna snu.
+- [x] Istniejące camp/tent/wait cancellation zachowują dotychczasowe zachowanie.
+- [x] Nie powstaje drugi system ruchu ani drugi system cancellation.
+- [x] Dodano/zmieniono focused tests dla state cleanup i stuck detection tam, gdzie obecna architektura testów na to pozwala.
+- [x] `tsc`, testy i build przechodzą.
 - [ ] Browser verification obejmuje: normalny lodging, `Esc`, button cancellation, utknięcie na colliderze domu, recovery i zapis gry po zakończeniu/anulowaniu.
 
 ## Implementation instruction

@@ -9,6 +9,7 @@ import FlavorDialog from './screens/FlavorDialog.vue'
 import HudRightColumn from './screens/HudRightColumn.vue'
 import HudScreen from './screens/HudScreen.vue'
 import InventoryScreen from './screens/InventoryScreen.vue'
+import LodgingWalkOverlay from './screens/LodgingWalkOverlay.vue'
 import MerchantScreen from './screens/MerchantScreen.vue'
 import MinimapScreen from './screens/MinimapScreen.vue'
 import NotesScreen from './screens/NotesScreen.vue'
@@ -73,5 +74,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <BusyOverlay />
     <TerrainPreparationOverlay />
     <PlacementPreviewOverlay />
+    <LodgingWalkOverlay />
   </div>
 </template>

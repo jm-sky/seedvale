@@ -66,6 +66,46 @@ export function lodgingRestQuality(quality: LodgingQuality): number {
  *  pathing (there is no pathfinding, only a straight-line walk). */
 export const LODGING_ARRIVE_TOLERANCE = 1.6
 
+/** Minimum XZ-distance-to-`approachPoint` improvement (world units) that
+ *  counts as real lodging-walk progress (plan `ui-input-005`) — filters out
+ *  per-frame floating-point jitter while a player pressed against a wall
+ *  still reads as "no progress". */
+export const LODGING_STUCK_PROGRESS_EPSILON = 0.05
+
+/** Seconds of no meaningful lodging-walk progress before stuck-recovery
+ *  kicks in (plan `ui-input-005`) — long enough that a normal, if slow, walk
+ *  across a settlement is never cut short (walk speed is 8 m/s), short
+ *  enough that a player stuck on a house collider isn't stranded. */
+export const LODGING_STUCK_TIMEOUT_SEC = 12
+
+/** Pure state `restActions.ts::tickLodging()` carries across frames for the
+ *  active `lodgingWalkTarget` — the closest XZ distance to `approachPoint`
+ *  reached so far this walk, and how many seconds have elapsed since it last
+ *  improved by more than `LODGING_STUCK_PROGRESS_EPSILON`. */
+export type LodgingProgress = { bestDistance: number | null, stuckSeconds: number }
+
+export function initialLodgingProgress(): LodgingProgress {
+  return { bestDistance: null, stuckSeconds: 0 }
+}
+
+/** @domain ui-input
+ *  Advances the lodging-walk stuck watchdog by one frame — a meaningful
+ *  distance improvement resets the timer, otherwise `dt` accumulates until
+ *  `LODGING_STUCK_TIMEOUT_SEC` is reached. Pure and frame-count-independent
+ *  (driven by `dt`, not calls) so it can be unit-tested without a running
+ *  game loop or a `PlayerActionContext` mock. */
+export function advanceLodgingProgress(
+  progress: LodgingProgress,
+  distance: number,
+  dt: number,
+): { state: LodgingProgress, stuck: boolean } {
+  if (progress.bestDistance === null || distance < progress.bestDistance - LODGING_STUCK_PROGRESS_EPSILON) {
+    return { state: { bestDistance: distance, stuckSeconds: 0 }, stuck: false }
+  }
+  const stuckSeconds = progress.stuckSeconds + dt
+  return { state: { bestDistance: progress.bestDistance, stuckSeconds }, stuck: stuckSeconds >= LODGING_STUCK_TIMEOUT_SEC }
+}
+
 const LODGING_TYPE_LABEL: Record<LodgingType, string> = {
   bed: 'Łóżko',
   friend: 'Nocleg u znajomego',
