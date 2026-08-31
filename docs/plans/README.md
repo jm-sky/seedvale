@@ -50,6 +50,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
 | ◼️ `world-008-player-world-placement-foundation.md`     | - | 🟡 | M | - |
 | ◼️ `items-player-009-player-built-torch-and-ignition.md` | - | 🟡 | M | 008 |
+| ◼️ `items-player-010-player-built-palisade-and-building-removal.md` | - | 🟡 | M | 008 |
 
 ---
 
@@ -184,7 +185,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `005`
-- items-player: `010`
+- items-player: `011`
 - npc: `007`
 - persistence: `001`
 - quests-progression: `001`
