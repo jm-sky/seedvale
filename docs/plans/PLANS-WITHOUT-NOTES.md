@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 14:14:27  
+> Date: 2026-08-31 15:01:33  
 
 ## PLANS
 
 - `fauna-004-sheep-wool-and-shepherd.md`
 - `items-player-002-food-provenance-freshness-and-storage.md`
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
-- `npc-005-npc-animal-target-commitment.md`
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-012-physical-storage-inspection.md`
@@ -97,37 +96,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-000--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `npc-005-npc-animal-target-commitment.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-005-npc-animal-target-commitment.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/npc-005-npc-animal-target-commitment.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/npc-005-npc-animal-target-commitment-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
