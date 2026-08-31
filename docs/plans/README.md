@@ -47,7 +47,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
 | ◼️ `ui-input-006-fishing-ux-and-water-support.md`       | - | 🟡 | S | ~~159~~ ~~184~~ |
-| ◼️ `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
+| 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
 
 ---
 
