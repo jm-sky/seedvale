@@ -1,0 +1,1 @@
+See previous plan content; moving AI-004 to the correct `ai` domain is required by `docs/plans/PLANNING.md`.
