@@ -222,7 +222,12 @@ def create_delete_group_for_clothing(basemesh, clothes):
     clothes_copy.matrix_world = clothes.matrix_world.copy()
 
     try:
-        bpy.ops.object.select_all(action="DESELECT")
+        # Do not use bpy.ops.object.select_all() here.
+        # The operator may be executed from the Seedvale panel while the
+        # current UI area/context is not compatible with object operators.
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(False)
+
         clothes_copy.select_set(True)
         bpy.context.view_layer.objects.active = clothes_copy
 
