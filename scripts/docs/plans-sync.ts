@@ -112,6 +112,10 @@ const matchOne = (
   return match[1]
 }
 
+const getNotesMarker = (isPlanned: boolean, hasNotes: boolean): string => !isPlanned ? '' : hasNotes ? '💡' : '◼️'
+const getPlanTitle = (marker: string, file: string): string => `${marker} \`${file}\``
+const getPaddedPlanTitle = (marker: string, file: string): string => getPlanTitle(marker, file).padEnd(PLAN_TITLE_PAD_END_SIZE)
+
 const buildRow = (
   file: string,
   content: string,
@@ -148,10 +152,10 @@ const buildRow = (
   ).trim()
 
   const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
-  const marker = !isPlanned ? '' : hasNotes ? '💡' : '◼️'
-  const title = `${marker} \`${file}\``
+  const marker = getNotesMarker(isPlanned, hasNotes)
+  const title = getPaddedPlanTitle(marker, file)
 
-  return `| ${title.padEnd(PLAN_TITLE_PAD_END_SIZE)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
+  return `| ${title} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
 
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
@@ -318,14 +322,8 @@ const handleMissingPlans = async (
     const newRows: string[] = []
 
     for (const file of missing) {
-      const content = await readFile(
-        resolve(PLANS_PATH, file),
-        'utf8',
-      )
-      const hasNotes = hasImplementationNotes(
-        file,
-        implementationNotesFiles,
-      )
+      const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
+      const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
 
       newRows.push(buildRow(file, content, hasNotes))
     }
@@ -360,12 +358,12 @@ const syncImplementationNotesMarkers = (
       file,
       implementationNotesFiles,
     )
-    const marker = hasNotes ? '💡' : '◼️'
-    const title = `| ${marker} \`${file}\``
+    const marker = getNotesMarker(true, hasNotes)
+    const title = getPaddedPlanTitle(marker, file)
 
     return line.replace(
       /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
-      `${title.padEnd(PLAN_TITLE_PAD_END_SIZE)} |`,
+      `| ${title} |`,
     )
   })
 }
