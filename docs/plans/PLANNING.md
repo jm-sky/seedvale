@@ -120,6 +120,8 @@ If the plan conflicts with the current code, document the discrepancy and follow
 
 `scripts/claude/pre-implementation.ts` produces a bounded implementation briefing. `Domain`, `Subdomains` and `Tags` may improve its relevance.
 
+When creating a plan, add an implementation instruction to add JSDoc for important architectural/public functions and classes when needed for preflight discovery. Suggest using the `@domain` tag.
+
 Keep the distinction:
 
 - **Plan** — what and why.
