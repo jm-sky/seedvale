@@ -46,7 +46,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
-| ◼️ `ui-input-006-fishing-ux-and-water-support.md`       | - | 🟡 | S | ~~159~~ ~~184~~ |
 | 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
 | ◼️ `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
 
@@ -92,6 +91,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `ui-input-002-ui-ux-interaction-and-action-system-polish.md` | [notes](./implementation-notes/ui-input-002-ui-ux-interaction-and-action-system-polish-implementation-notes.md) |
 | `2026-08-21--186--combat-and-player-interactions.md` | [notes](./implementation-notes/2026-08-21--186--combat-and-player-interactions-implementation-notes.md) |
 | `2026-08-21--187--building-resources.md` | [notes](./implementation-notes/2026-08-21--187--building-resources-implementation-notes.md) |
+| `ui-input-006-fishing-ux-and-water-support.md` | new "Łów ryby" Quick Action equips a carried `fishing_rod` via the existing `HeldTool` mechanism; `app/interactables.ts`'s old lake-only `isNearLakeShore` replaced by a unified `resolveWaterBodyShore`/`WaterBodyKind` resolver (lake/ocean via the existing shore probe + continentalness mix, river via cached river-channel segments + new `riverNetwork.ts`'s `nearestRiverBankDistance` point-to-segment check, exposed as `ChunkManager.riverShoreDistance`) — fishing/bait/drink-fill unchanged otherwise, still a single `fish` item regardless of body kind; Quick Action + lake/river/ocean fishing/drink flows need browser verification |
 | `2026-08-21--188--fauna-and-dead-animal-lifecycle.md` | - |
 | `2026-08-20--175--cooking-vessels-grates-and-iron-rods.md` | [notes](./implementation-notes/2026-08-20--175--cooking-vessels-grates-and-iron-rods-implementation-notes.md) |
 | `2026-08-20--174--player-garden-and-npc-need-sources.md` | [notes](./implementation-notes/2026-08-20--174--player-garden-and-npc-need-sources-implementation-notes.md) |

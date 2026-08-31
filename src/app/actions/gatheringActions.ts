@@ -25,10 +25,11 @@ import { cultivationYieldCount, findNearestGarden, resolveCultivationCare } from
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** Food/resource gathering the player does on already-existing world objects:
- *  animal traps (plan 141 + plan 159's bait), lake fishing, settlement drying
- *  racks and wild hives (plan 159), and naturally-generated wild crops (plan
- *  172). Placing a trap belongs to `placementActions.ts`; this module owns
- *  what happens *afterwards*. */
+ *  animal traps (plan 141 + plan 159's bait), lake/river/ocean fishing (plan
+ *  159, shorelines extended by plan `ui-input-006`), settlement drying racks
+ *  and wild hives (plan 159), and naturally-generated wild crops (plan 172).
+ *  Placing a trap belongs to `placementActions.ts`; this module owns what
+ *  happens *afterwards*. */
 export type GatheringActions = {
   armTrap: (id: string) => void
   disarmTrap: (id: string) => void
@@ -131,8 +132,11 @@ export function createGatheringActions(
     }
   }
 
-  /** Plan 159 §9 — cast at a lake shore with `fishing_rod` held. Deterministic
-   *  catch roll (`world/fishing.ts`), boosted by the spot's active bait. */
+  /** Plan 159 §9, shorelines extended to river/ocean by plan `ui-input-006` —
+   *  cast at a water's edge with `fishing_rod` held. Position-only spot id
+   *  (`fishingSpotId`), so which water body it is never affects the roll.
+   *  Deterministic catch roll (`world/fishing.ts`), boosted by the spot's
+   *  active bait. */
   const startFishing = (x: number, z: number): void => {
     if (isActionBlocked(ctx)) return
     if (!inventory.canAdd('fish', 1)) {

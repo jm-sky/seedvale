@@ -131,6 +131,7 @@ export type QuickActionsCategoryId =
   | 'teren'
   | 'pulapki'
   | 'sadzenie'
+  | 'wedkarstwo'
   | 'czekaj'
   | 'skrzynia'
   | 'odpoczynek'
@@ -188,6 +189,12 @@ type QuickActionsState = {
   cropSeeds: QuickActionsCropSeeds
   onPlantTree: (() => void) | null
   onPlantCrop: ((cropId: CropId) => void) | null
+  /** Owning at least one `fishing_rod` (plan `ui-input-006`) — drives the
+   *  "Łów ryby" Quick Action, the main way to equip it for fishing. */
+  hasFishingRod: boolean
+  /** Equips the carried fishing rod via the existing `HeldTool` mechanism —
+   *  does not itself look for water or start fishing. */
+  onEquipFishingRod: (() => void) | null
   onOpen: (() => void) | null
   onClose: (() => void) | null
 }
@@ -423,6 +430,7 @@ export const ui = reactive({
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
+    hasFishingRod: false, onEquipFishingRod: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,
@@ -795,6 +803,7 @@ export function setQuickActionsTraps(traps: QuickActionsTraps): void {
 }
 export function setQuickActionsFireAvailability(availability: QuickActionsFireAvailability): void { ui.quickActions.fireAvailability = availability }
 export function setQuickActionsHasTreeSeed(hasTreeSeed: boolean): void { ui.quickActions.hasTreeSeed = hasTreeSeed }
+export function setQuickActionsHasFishingRod(hasFishingRod: boolean): void { ui.quickActions.hasFishingRod = hasFishingRod }
 export function setQuickActionsCropSeeds(cropSeeds: QuickActionsCropSeeds): void {
   const current = ui.quickActions.cropSeeds
   if (current.carrot === cropSeeds.carrot && current.potato === cropSeeds.potato && current.cabbage === cropSeeds.cabbage) return

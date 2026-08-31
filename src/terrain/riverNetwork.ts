@@ -1,5 +1,6 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import type { RawSampleParams, RiverChannelSegment } from './chunkHeightmap'
+import { projectOntoSegment } from '../math/segment'
 import { createSeededRandom } from '../world/parseSeed'
 import {
   classifyStreams,
@@ -228,6 +229,29 @@ export function riverChannelSegmentsNear(
     }
   }
   return segments
+}
+
+/** Signed distance from `(x, z)` to the nearest of `segments`' own bank edge —
+ *  negative while inside the channel (down to `-halfWidth` at the centerline),
+ *  0 exactly at the bank, positive on dry land beyond it. Uses the same
+ *  per-segment interpolated half-width and `projectOntoSegment` point-to-
+ *  segment math `chunkHeightmap.ts`'s `applyRiverChannel` carving pass reads,
+ *  so a "standing at the river's edge" gameplay check
+ *  (`app/interactables.ts`'s shoreline resolver) always agrees with where the
+ *  carved terrain actually puts the bank. `null` when `segments` is empty. */
+export function nearestRiverBankDistance(
+  segments: readonly RiverChannelSegment[],
+  x: number,
+  z: number,
+): number | null {
+  let best: number | null = null
+  for (const seg of segments) {
+    const { distSq, t } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
+    const halfWidth = seg.aHalfWidth + (seg.bHalfWidth - seg.aHalfWidth) * t
+    const dist = Math.sqrt(distSq) - halfWidth
+    if (best === null || dist < best) best = dist
+  }
+  return best
 }
 
 // Deterministic meandering (plan 181 Etap 7) — applied once per tile, after

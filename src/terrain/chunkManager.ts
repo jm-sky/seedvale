@@ -96,6 +96,7 @@ import {
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
 import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
+  nearestRiverBankDistance,
   overlappingRiverTiles,
   type RiverChain,
   riverChannelSegmentsNear,
@@ -184,6 +185,13 @@ const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
  *  is documented "unused" for trees (size varies via `sizeJitter`/lifecycle
  *  stage instead), so v1 doesn't attempt to scale this per placement. */
 const TREE_COLLISION_RADIUS = 0.4
+
+/** Box side (world units) `riverShoreDistance` asks `riverChannelSegmentsNear`
+ *  to search around a query point — comfortably past `GAZE_RANGE`/max river
+ *  half-width + bank reach, so a segment whose channel actually passes
+ *  through the query point is never missed just for sitting slightly outside
+ *  a too-tight box. */
+const RIVER_SHORE_QUERY_SIZE = 32
 
 /** Chunk-coord offsets in expanding Chebyshev rings out to `maxRadius`,
  *  center first — the deterministic search order `findLandmarkNear` walks
@@ -390,6 +398,14 @@ export type ChunkManager = {
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
   sampleMoistureRegion: (x: number, z: number) => number
+  /** Signed distance from `(worldX, worldZ)` to the nearest loaded river's own
+   *  bank edge (`riverNetwork.ts`'s `nearestRiverBankDistance`, fed by each
+   *  loaded chunk's already-cached `riverChains` — no separate river query
+   *  system) — negative inside the channel, `null` when no river tile is
+   *  loaded nearby. Used by `app/interactables.ts`'s shoreline resolver so
+   *  drinking/fishing work at a river the same way they already do at a lake
+   *  (plan `ui-input-006`). */
+  riverShoreDistance: (worldX: number, worldZ: number) => number | null
   /** 0 (open / poor forest habitat) – 1 (dense forest) continuous suitability
    *  at (x, z) via `forestDensityAt` (`biomeRegions.ts`) — same signal
    *  `chunkVegetation.ts` uses for tree-density modulation. Runtime bridge
@@ -1876,6 +1892,17 @@ export function createChunkManager(
     sampleContinentalness: (x, z) => readField('continentalness', x, z),
     sampleMountainRidge: (x, z) => readField('mountainRidge', x, z),
     sampleMoistureRegion: (x, z) => readField('moistureRegion', x, z),
+    riverShoreDistance(worldX, worldZ) {
+      let best: number | null = null
+      for (const rec of chunks.values()) {
+        if (!rec.riverChains || rec.riverChains.length === 0) continue
+        const segments = riverChannelSegmentsNear(rec.riverChains, worldX, worldZ, RIVER_SHORE_QUERY_SIZE)
+        if (segments.length === 0) continue
+        const dist = nearestRiverBankDistance(segments, worldX, worldZ)
+        if (dist !== null && (best === null || dist < best)) best = dist
+      }
+      return best
+    },
     sampleForestFactor: (x, z) => {
       const h = readField('heights', x, z)
       const altitude01 = Math.max(0, (h - config.waterLevel) / Math.max(config.heightScale, 0.001))

@@ -1,7 +1,7 @@
 # Plan: Fishing UX and Water Support
 
 **Created:** 2026-08-31
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~159~~ ~~184~~
 **Domain:** `ui-input`

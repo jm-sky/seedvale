@@ -3,6 +3,7 @@ import type { RawSampleParams } from './chunkHeightmap'
 import {
   computeRiverTile,
   depthFromAccumulation,
+  nearestRiverBankDistance,
   overlappingRiverTiles,
   RIVER_TILE_SIZE,
   type RiverChain,
@@ -224,5 +225,32 @@ describe('riverChannelSegmentsNear (plan 189)', () => {
     expect(left).toHaveLength(1)
     expect(right).toHaveLength(1)
     expect(left[0]).toEqual(right[0])
+  })
+})
+
+describe('nearestRiverBankDistance (plan ui-input-006)', () => {
+  it('is null when no segments are nearby', () => {
+    expect(nearestRiverBankDistance([], 0, 0)).toBeNull()
+  })
+
+  it('reads negative on the centerline, ~0 at the bank, positive on dry land beyond it', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const segments = riverChannelSegmentsNear([chain], 32, 0, 64)
+    const halfWidth = widthFromAccumulation(300) / 2
+
+    expect(nearestRiverBankDistance(segments, 32, 0)).toBeCloseTo(-halfWidth, 5)
+    expect(nearestRiverBankDistance(segments, 32, halfWidth)).toBeCloseTo(0, 5)
+    expect(nearestRiverBankDistance(segments, 32, halfWidth + 5)).toBeCloseTo(5, 5)
+  })
+
+  it('picks the nearest of several segments, same as `chunkHeightmap.ts`\'s carving pass would', () => {
+    const near: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const far: RiverChain = { points: [point(0, 50, 100, 300), point(64, 50, 90, 300)] }
+    const segments = [
+      ...riverChannelSegmentsNear([near], 32, 0, 64),
+      ...riverChannelSegmentsNear([far], 32, 50, 64),
+    ]
+    const halfWidth = widthFromAccumulation(300) / 2
+    expect(nearestRiverBankDistance(segments, 32, 5)).toBeCloseTo(5 - halfWidth, 5)
   })
 })

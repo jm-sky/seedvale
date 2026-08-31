@@ -526,6 +526,7 @@ export async function createApp(
       potato: inventory.has('seed_potato', 1),
       cabbage: inventory.has('seed_cabbage', 1),
     })
+    vueUi.setQuickActionsHasFishingRod(inventory.has('fishing_rod', 1))
   }
 
   const keyboard = createKeyboard()
@@ -1187,6 +1188,7 @@ export async function createApp(
       potato: inventory.has('seed_potato', 1),
       cabbage: inventory.has('seed_cabbage', 1),
     },
+    hasFishingRod: inventory.has('fishing_rod', 1),
     nearTown: rest.isNearTown(),
     onOpen: () => {
       restorePointerLockAfterQuickActions = exitGamePointerLock(renderer.domElement)
@@ -1226,6 +1228,7 @@ export async function createApp(
     onBuildGarden: placement.placeGardenAtAim,
     onPlantTree: placement.plantTreeAtAim,
     onPlantCrop: placement.plantCropAtAim,
+    onEquipFishingRod: () => inventoryWiring.equipTool('fishing_rod'),
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()

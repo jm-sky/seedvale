@@ -67,6 +67,10 @@ export type QuickActionsHandlers = {
   onPlantTree?: () => void
   /** Plants a crop seed of `cropId` ahead of the player (plan 126). */
   onPlantCrop?: (cropId: CropId) => void
+  /** Equips the carried `fishing_rod` via the existing `HeldTool`/equipment
+   *  mechanism (plan `ui-input-006`) — the Quick Action only equips it; it
+   *  does not look for water or start fishing itself. */
+  onEquipFishingRod?: () => void
   /** Initial digging-capability ownership for showing dig/level buttons. */
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
@@ -79,6 +83,8 @@ export type QuickActionsHandlers = {
   traps?: QuickActionsTraps
   /** Initial tree-seed ownership for showing "Zasadź drzewo" (plan 126). */
   hasTreeSeed?: boolean
+  /** Initial fishing-rod ownership for showing "Łów ryby" (plan `ui-input-006`). */
+  hasFishingRod?: boolean
   /** Which crop seed kinds the player currently carries (plan 126). */
   cropSeeds?: QuickActionsCropSeeds
   /** Initial near-settlement flag for showing "Odpocznij w mieście". */
@@ -125,6 +131,9 @@ export function createQuickActions(
   }
   if (typeof handlers.hasTreeSeed === 'boolean') {
     getUi()?.setQuickActionsHasTreeSeed(handlers.hasTreeSeed)
+  }
+  if (typeof handlers.hasFishingRod === 'boolean') {
+    getUi()?.setQuickActionsHasFishingRod(handlers.hasFishingRod)
   }
   if (handlers.cropSeeds) {
     getUi()?.setQuickActionsCropSeeds(handlers.cropSeeds)

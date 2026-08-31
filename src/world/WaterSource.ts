@@ -7,23 +7,32 @@
  *
  * @domain world
  * @system water-source
- * @role Shared well/lake drink/fill abstraction; future river/polluted/treated sources should reuse it.
+ * @role Shared well/lake/river/ocean drink/fill abstraction; future polluted/treated sources should reuse it.
  */
 export type WaterQuality = 'safe' | 'unsafe'
 
+/** Natural shoreline kinds the fishing/drink interaction can be offered at
+ *  (plan `ui-input-006`) — resolved by `app/interactables.ts`'s shoreline
+ *  resolver from existing lake/river/ocean terrain detection. Kept distinct
+ *  from `WaterSource['kind']` (which also has `'well'`) since a well is never
+ *  a fishing spot. */
+export type WaterBodyKind = 'lake' | 'river' | 'ocean'
+
 export type WaterSource = {
-  kind: 'well' | 'lake'
+  kind: 'well' | WaterBodyKind
   quality: WaterQuality
 }
 
 /** Thirst restored by one drink action, direct or via a full waterskin —
- *  one flat amount keeps the well/lake/waterskin paths interchangeable. */
+ *  one flat amount keeps the well/lake/river/ocean/waterskin paths
+ *  interchangeable. */
 export const DRINK_THIRST_RELIEF = 45
 
 /** §4 "Lake" — gameplay/UI hook only; no illness system exists to trigger
- *  (explicitly out of scope). */
-export const UNSAFE_WATER_WARNING = 'Woda z jeziora może powodować chorobę.'
+ *  (explicitly out of scope). Generic wording since plan `ui-input-006`
+ *  extends the same unsafe-quality drink to river/ocean shorelines too. */
+export const UNSAFE_WATER_WARNING = 'Ta woda może powodować chorobę.'
 
 export function createWaterSource(kind: WaterSource['kind']): WaterSource {
-  return { kind, quality: kind === 'lake' ? 'unsafe' : 'safe' }
+  return { kind, quality: kind === 'well' ? 'safe' : 'unsafe' }
 }

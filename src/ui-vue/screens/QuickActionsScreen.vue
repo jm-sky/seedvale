@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FlameIcon, LockIcon, ShovelIcon, Sword, TractorIcon, TreesIcon, Zap } from 'lucide-vue-next'
+import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ShovelIcon, Sword, TractorIcon, TreesIcon, Zap } from 'lucide-vue-next'
 import { type Component, computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { PlacementPreviewKind } from '../../app/actions/placementPreviewActions'
@@ -120,6 +120,11 @@ function plantCrop(cropId: CropId): void {
   ui.quickActions.onPlantCrop?.(cropId)
 }
 
+function equipFishingRod(): void {
+  closeQuickActions()
+  ui.quickActions.onEquipFishingRod?.()
+}
+
 function onDocumentClick(event: MouseEvent): void {
   if (panel.value?.contains(event.target as Node)) return
   closeQuickActions()
@@ -213,6 +218,7 @@ const CATEGORY_LABEL: Record<QuickActionsCategoryId, string> = {
   teren: 'Teren',
   pulapki: 'Pułapki',
   sadzenie: 'Sadzenie',
+  wedkarstwo: 'Wędkarstwo',
   czekaj: 'Czekaj',
   skrzynia: 'Skrzynia',
   odpoczynek: 'Odpoczynek',
@@ -226,6 +232,7 @@ const categories = computed(() => (
     { id: 'teren', visible: ui.quickActions.hasDiggingTool, icon: TractorIcon },
     { id: 'pulapki', visible: trapActions.value.length > 0, icon: LockIcon },
     { id: 'sadzenie', visible: plantActions.value.length > 0, icon: TreesIcon },
+    { id: 'wedkarstwo', visible: ui.quickActions.hasFishingRod, icon: FishingRod },
     { id: 'czekaj', visible: true, icon: ClockIcon },
     { id: 'skrzynia', visible: ui.quickActions.hasCarriedContainer, icon: BoxIcon },
     { id: 'odpoczynek', visible: true, icon: BedSingleIcon },
@@ -379,6 +386,15 @@ const categories = computed(() => (
           :label="action.label"
           :cost="action.cost"
           @click="action.onClick"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'wedkarstwo'"
+        label="Wędkarstwo"
+      >
+        <QuickActionsButton
+          label="Łów ryby"
+          @click="equipFishingRod"
         />
       </QuickActionsGroup>
       <QuickActionsGroup

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveHaySpot } from './interactables'
+import { resolveHaySpot, resolveWaterBodyKind } from './interactables'
 
 describe('resolveHaySpot', () => {
   const garden = { x: 0, z: 0 }
@@ -26,5 +26,29 @@ describe('resolveHaySpot', () => {
 
   it('returns null when nothing is in range', () => {
     expect(resolveHaySpot(haySpots, garden, { x: 100, z: 100 }, 2.5)).toBeNull()
+  })
+})
+
+describe('resolveWaterBodyKind (plan ui-input-006)', () => {
+  it('is lake when the shore probe hits and the point reads inland', () => {
+    expect(resolveWaterBodyKind(true, 0, null)).toBe('lake')
+  })
+
+  it('is ocean when the shore probe hits and the point reads oceanic', () => {
+    expect(resolveWaterBodyKind(true, 1, null)).toBe('ocean')
+  })
+
+  it('is river when within the shore margin of a river bank, even with no lake/ocean probe hit', () => {
+    expect(resolveWaterBodyKind(false, 0, 0)).toBe('river')
+    expect(resolveWaterBodyKind(false, 0, 1.5)).toBe('river')
+  })
+
+  it('is null away from any shoreline', () => {
+    expect(resolveWaterBodyKind(false, 0, null)).toBeNull()
+    expect(resolveWaterBodyKind(false, 0, 1.51)).toBeNull()
+  })
+
+  it('prefers the lake/ocean probe over a river reading at the same point', () => {
+    expect(resolveWaterBodyKind(true, 0, 0)).toBe('lake')
   })
 })

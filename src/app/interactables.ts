@@ -35,7 +35,7 @@ import { isDryingComplete } from '../world/dryingRacks'
 import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
 import { isWellCompleted, wellPromptLabel } from '../world/playerWell'
 import { isChoppableStage } from '../world/treeLifecycle'
-import { createWaterSource } from '../world/WaterSource'
+import { createWaterSource, type WaterBodyKind } from '../world/WaterSource'
 import type { Vector3 } from 'three'
 
 /** How close (world units) the player must be to an interactable before it's
@@ -82,7 +82,8 @@ export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
   touch: 0.1,
 }
 
-/** Plan 106 §4 — `[E]` always drinks directly (well or lake); `[R]` fills a
+/** Plan 106 §4, extended to river/ocean shorelines by plan `ui-input-006` —
+ *  `[E]` always drinks directly (well, lake, river or ocean); `[R]` fills a
  *  carried empty waterskin. Static regardless of inventory (same convention
  *  as `campfire`'s "Dołóż gałąź" prompt not checking for a branch first) —
  *  `gameLoop.ts` toasts an error if `[R]` is pressed without one. */
@@ -248,24 +249,48 @@ export function resolveHaySpot(
   return best
 }
 
-/** True when the player is standing at the edge of an inland (non-ocean) body
- *  of water — reuses fauna's own shoreline probe (`shoreProbeHits`, plan 094)
- *  rather than a second implementation, plus a continentalness check
- *  (`oceanMixAt`, `terrain/waterBodies.ts` — the same signal the water shader
- *  uses to mix lake vs ocean) so the ocean shore doesn't also offer a drink
- *  prompt. No discrete "Lake" world object exists (plan 106 §4) — this is a
- *  synthetic candidate built fresh each frame, same pattern as `buildDigTarget`. */
-function isNearLakeShore(playerPos: Vector3, chunkManager: ChunkManager): boolean {
-  if (shoreProbeHits(playerPos.x, playerPos.z, chunkManager.sampleHeight, chunkManager.waterLevel) === 0) {
-    return false
+/** How close (world units) to a river's own bank edge counts as "at the
+ *  shore" — same order of magnitude as `SHORE_PROBE_OFFSETS`' 1.5-unit probe
+ *  radius (`fauna/AnimalAgent.ts`) so lake/river/ocean shorelines all read as
+ *  similarly generous, and true whether the player is standing right on the
+ *  bank or already a step into the shallows. */
+const RIVER_SHORE_MARGIN = 1.5
+
+/** Pure lake-vs-river-vs-ocean decision from already-resolved probe/distance
+ *  inputs (plan `ui-input-006`) — split out from `resolveWaterBodyKind` below
+ *  purely so it's unit-testable without a `ChunkManager`. `hasShoreProbeHit`
+ *  is `shoreProbeHits(...) > 0` (fauna's own lake/ocean shoreline probe,
+ *  plan 094); `oceanMix` is `oceanMixAt(...)` at the same point;
+ *  `riverBankDistance` is `ChunkManager.riverShoreDistance(...)`. */
+export function resolveWaterBodyKind(
+  hasShoreProbeHit: boolean,
+  oceanMix: number,
+  riverBankDistance: number | null,
+): WaterBodyKind | null {
+  if (hasShoreProbeHit) return oceanMix > 0.5 ? 'ocean' : 'lake'
+  if (riverBankDistance !== null && riverBankDistance <= RIVER_SHORE_MARGIN) return 'river'
+  return null
+}
+
+/** Unified lake/river/ocean shoreline resolver — replaces the old lake-only
+ *  `isNearLakeShore` (plan `ui-input-006`) so drinking/filling and the
+ *  fishing interaction both work at any of the three water bodies, reusing
+ *  the detection each already had elsewhere instead of a new fishing-specific
+ *  detector: `shoreProbeHits` + `oceanMixAt` for lake/ocean (fauna's own
+ *  shoreline probe plus the same continentalness mix the water shader uses),
+ *  `chunkManager.riverShoreDistance` (cached river channel segments +
+ *  `math/segment.ts`'s point-to-segment distance) for river. No discrete
+ *  "Lake"/"River" world object exists (plan 106 §4) — this is a synthetic
+ *  candidate built fresh each frame, same pattern as `buildDigTarget`. */
+function resolveWaterBodyShore(playerPos: Vector3, chunkManager: ChunkManager): WaterBodyKind | null {
+  const hasShoreProbeHit = shoreProbeHits(playerPos.x, playerPos.z, chunkManager.sampleHeight, chunkManager.waterLevel) > 0
+  if (hasShoreProbeHit) {
+    const continentalness = chunkManager.sampleContinentalness(playerPos.x, playerPos.z)
+    const oceanMix = oceanMixAt(continentalness, chunkManager.region.oceanThreshold, chunkManager.region.coastThreshold)
+    return resolveWaterBodyKind(true, oceanMix, null)
   }
-  const continentalness = chunkManager.sampleContinentalness(playerPos.x, playerPos.z)
-  const oceanMix = oceanMixAt(
-    continentalness,
-    chunkManager.region.oceanThreshold,
-    chunkManager.region.coastThreshold,
-  )
-  return oceanMix <= 0.5
+  const riverBankDistance = chunkManager.riverShoreDistance(playerPos.x, playerPos.z)
+  return resolveWaterBodyKind(false, 0, riverBankDistance)
 }
 
 /** Assembles this frame's `Interactable` candidates from every world system —
@@ -694,12 +719,13 @@ export function buildInteractables(
     }
   }
 
-  if (isNearLakeShore(playerPos, chunkManager)) {
+  const waterBody = resolveWaterBodyShore(playerPos, chunkManager)
+  if (waterBody) {
     list.push({
       kind: 'waterEdge',
       position: { x: playerPos.x, z: playerPos.z },
       promptLabel: hasItemCapability(heldTool, 'fishing') ? FISHING_PROMPT : WATER_SOURCE_PROMPT,
-      source: createWaterSource('lake'),
+      source: createWaterSource(waterBody),
     })
   }
 
