@@ -33,7 +33,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `2026-08-14--104--underground-caves.md`                | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`       | - | 🟡 | L | 181 |
 | 💡 `world-004-well-depth-groundwater-and-protection.md` | - | 🟡 | M | ~~127~~ |
-| ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
+| 💡 `items-player-002-food-provenance-freshness-and-storage.md` | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`               | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
 | ◼️ `settlements-npcs-006-wool-to-material.md`           | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md` | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
