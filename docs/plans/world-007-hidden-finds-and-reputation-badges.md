@@ -1,7 +1,7 @@
 # Plan: Hidden Finds & Reputation Badges
 
 **Created:** 2026-08-31
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, automated checks pass, browser/manual verification pending
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `world`

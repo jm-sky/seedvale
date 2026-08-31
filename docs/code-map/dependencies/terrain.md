@@ -113,6 +113,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.worker.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkManager.ts`
+- `world/hiddenFinds.ts`
 
 ## `terrain/chunkGrid.test.ts`
 
@@ -422,6 +423,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `terrain/footstepSurface.ts`
 - `terrain/terrainPreparation.ts`
+- `world/hiddenFinds.ts`
 
 ## `terrain/digAction.ts`
 

@@ -3,6 +3,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
 import type { LightActionResult } from '../app/userActions'
 import type { PlayAt } from '../audio/createWorldAudio'
+import type { BadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
 import type { InventoryGroupView } from '../items/inventoryView'
@@ -283,7 +284,12 @@ type StatBar = { current: number, max: number }
  *  read-only layer over "Player state → Needs/Health → Character UI" so a
  *  later server-authoritative move doesn't have to unwind UI-owned state. */
 export type CharacterStats = { hp: StatBar, stamina: StatBar, vigor: StatBar, hunger: StatBar, thirst: StatBar }
-type CharacterScreenState = CharacterStats & { open: boolean }
+/** Reputation Badges / Achievements (plan world-007 §9) — `standing` is
+ *  `QuestManager.getPlayerStanding()` combined with the cemetery-disturbance
+ *  penalty (`badges.ts`'s `communityOffensePenalty`), pushed on demand
+ *  (`setCharacterBadges`) rather than once/frame like the rest of this
+ *  screen: it only ever changes on a discrete Hidden Find event. */
+type CharacterScreenState = CharacterStats & { open: boolean, standing: number, badges: readonly BadgeDef[] }
 /** Skills screen (plan 124, progression added by plan 128) — same
  *  presentation-only convention as `CharacterScreenState`: these mirror
  *  `PlayerController.skills`, pushed once/frame from `gameLoop.ts`.
@@ -433,6 +439,8 @@ export const ui = reactive({
     vigor: { current: 100, max: 100 },
     hunger: { current: 100, max: 100 },
     thirst: { current: 100, max: 100 },
+    standing: 0,
+    badges: [],
   } as CharacterScreenState,
   skillsScreen: {
     open: false,
@@ -1034,6 +1042,13 @@ export function setCharacterStats(stats: CharacterStats): void {
   c.vigor = stats.vigor
   c.hunger = stats.hunger
   c.thirst = stats.thirst
+}
+
+/** Pushed on demand — after a Hidden Find resolves, and once at startup —
+ *  never once/frame (see `CharacterScreenState`'s doc comment). */
+export function setCharacterBadges(standing: number, badges: readonly BadgeDef[]): void {
+  ui.characterScreen.standing = standing
+  ui.characterScreen.badges = badges
 }
 
 export function openSkillsScreen(): void { ui.skillsScreen.open = true; emitUiOpen() }

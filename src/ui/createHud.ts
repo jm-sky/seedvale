@@ -1,3 +1,4 @@
+import type { BadgeDef } from '../badges/badges'
 import type { CharacterStats } from '../ui-vue/store'
 import { getMountedVueUi } from '../ui-vue/mount'
 
@@ -24,6 +25,9 @@ export type Hud = {
   /** Raw current/max for the Character screen (plan 105) — the HUD bars above
    *  only need ratios, but the Character screen also shows absolute values. */
   setCharacterStats: (stats: CharacterStats) => void
+  /** Reputation Badges / Achievements (plan world-007 §9) — on-demand, not
+   *  per-frame (see `store.ts`'s `setCharacterBadges` doc comment). */
+  setPlayerBadges: (standing: number, badges: readonly BadgeDef[]) => void
   /** Dedicated Dismount button (plan fauna-003 §10) — visible only while
    *  `mounted`, on both desktop and mobile (a plain clickable/tappable
    *  button, not gated on touch-device detection). `onDismount` is called
@@ -47,6 +51,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },
     setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },
+    setPlayerBadges: (standing, badges) => { if (!disposed) getUi()?.setCharacterBadges(standing, badges) },
     setMounted: (mounted, animalLabel, onDismount) => {
       if (!disposed) getUi()?.setHudMounted(mounted, animalLabel, onDismount)
     },

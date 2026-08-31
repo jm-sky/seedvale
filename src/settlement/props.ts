@@ -253,6 +253,7 @@ export {
 } from './campfireProps'
 
 export {
+  cemeteryGraveLayout,
   type CemeterySize,
   type CemeteryTemplates,
   createBush,
@@ -327,6 +328,7 @@ export {
   clonePropWithYaw,
   loadPropTemplates,
   placeOnGround,
+  rotateOffsetY,
   tintPropMaterials,
 } from './propUtils'
 export {

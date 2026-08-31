@@ -8,6 +8,7 @@ Generated navigation map for the Seedvale TypeScript codebase.
 - [`app`](./symbols/app.md) · [dependencies](./dependencies/app.md)
 - [`assets`](./symbols/assets.md) · [dependencies](./dependencies/assets.md)
 - [`audio`](./symbols/audio.md) · [dependencies](./dependencies/audio.md)
+- [`badges`](./symbols/badges.md) · [dependencies](./dependencies/badges.md)
 - [`combat`](./symbols/combat.md) · [dependencies](./dependencies/combat.md)
 - [`config`](./symbols/config.md) · [dependencies](./dependencies/config.md)
 - [`debug`](./symbols/debug.md) · [dependencies](./dependencies/debug.md)

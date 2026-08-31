@@ -34,6 +34,16 @@ const rows = computed<StatRow[]>(() => {
 
 function ratio(row: StatRow): number { return row.max > 0 ? row.current / row.max : 0 }
 function isCritical(row: StatRow): boolean { return ratio(row) <= CRITICAL_RATIO }
+
+/** Coarse label for `ui.characterScreen.standing` (plan world-007 §9) — a
+ *  presentation-only mapping, distinct from `RelationLevel`'s per-NPC tiers. */
+function standingLabel(standing: number): string {
+  if (standing < -0.3) return 'Znienawidzony'
+  if (standing < 0) return 'Zła'
+  if (standing < 0.3) return 'Neutralna'
+  if (standing < 0.7) return 'Dobra'
+  return 'Znakomita'
+}
 </script>
 
 <template>
@@ -71,6 +81,33 @@ function isCritical(row: StatRow): boolean { return ratio(row) <= CRITICAL_RATIO
               class="h-full rounded-full transition-[width]"
               :style="{ width: `${Math.round(ratio(row) * 100)}%`, background: isCritical(row) ? '#e05555' : row.color }"
             />
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 border-t border-white/10 pt-3">
+        <div class="mb-1 flex items-baseline justify-between text-sm">
+          <span>Reputacja</span>
+          <span class="text-xs opacity-70">{{ standingLabel(ui.characterScreen.standing) }}</span>
+        </div>
+      </div>
+
+      <div
+        v-if="ui.characterScreen.badges.length > 0"
+        class="mt-3 border-t border-white/10 pt-3"
+      >
+        <div class="mb-2 text-sm">
+          Odznaki
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <div
+            v-for="badge in ui.characterScreen.badges"
+            :key="badge.id"
+            class="text-xs"
+            :title="badge.description"
+          >
+            <span class="mr-1">{{ badge.icon }}</span>
+            <span class="opacity-90">{{ badge.label }}</span>
           </div>
         </div>
       </div>

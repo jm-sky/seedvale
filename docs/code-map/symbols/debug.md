@@ -62,29 +62,30 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `HiddenTreasureDebugApi` — type — line 82
-- `installNpcDebugApi` — function — line 149
-- `LocationsDebugApi` — type — line 65
-- `NpcDebugHandle` — type — line 37
-- `SeedvaleDebugApi` — type — line 95
-- `TeleportToDebugApi` — type — line 73
-- `VillageDebugHandle` — type — line 48
+- `HiddenTreasureDebugApi` — type — line 83
+- `installNpcDebugApi` — function — line 150
+- `LocationsDebugApi` — type — line 66
+- `NpcDebugHandle` — type — line 38
+- `SeedvaleDebugApi` — type — line 96
+- `TeleportToDebugApi` — type — line 74
+- `VillageDebugHandle` — type — line 49
 
 ## `debug/npcInspector.ts`
 
-- `findNpcById` — function — line 45
-- `freezeNpc` — function — line 104
-- `isNpcRegistered` — function — line 56
-- `matchesNpcFilter` — function — line 66
-- `npcHistory` — function — line 96
+- `findNpcById` — function — line 53
+- `freezeNpc` — function — line 112
+- `FrenzyWolfDebugResult` — type — line 37
+- `isNpcRegistered` — function — line 64
+- `matchesNpcFilter` — function — line 74
+- `npcHistory` — function — line 104
 - `NpcQueryFilter` — type — line 24
 - `NpcQueryResult` — type — line 32
 - `NpcRegistryEntry` — type — line 22
-- `npcWhy` — function — line 92
-- `queryNpcs` — function — line 82
-- `reevaluateNpc` — function — line 120
-- `setFrenzyWolf` — function — line 137
-- `unfreezeNpc` — function — line 112
+- `npcWhy` — function — line 100
+- `queryNpcs` — function — line 90
+- `reevaluateNpc` — function — line 128
+- `setFrenzyWolf` — function — line 145
+- `unfreezeNpc` — function — line 120
 
 ## `debug/npcInspectTrigger.ts`
 

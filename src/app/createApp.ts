@@ -12,6 +12,7 @@ import { createHouseDoorTracker } from '../audio/doorSounds'
 import { createFireAudio, playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { applyFootstepPackFromUrl } from '../audio/playerMoveSounds'
 import { createWeatherAudio } from '../audio/weatherSounds'
+import { BadgeManager } from '../badges/badges'
 import { saveAllDomains, savePlayer, saveWorld } from '../config/persistConfig'
 import {
   applyStoredPlayer,
@@ -315,6 +316,12 @@ export async function createApp(
   })
   applyFootstepPackFromUrl()
 
+  // Plan world-007 — Hidden Finds resolved spot ids: never reassigned (unlike
+  // `collectedItemIds` below), only `.clear()`-ed on a genuinely new world —
+  // same "mutated in place" contract as `landOwnership`/`mapDiscovery`, since
+  // it must stay the same reference `ground` (created once, below) captured.
+  const resolvedHiddenFindSpotIds = new Set<string>(initialSave?.resolvedHiddenFindSpotIds ?? [])
+  const badges = new BadgeManager(initialSave?.badges)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
   // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
   // "shared/mutated in place, reset only on a genuinely new world" contract
@@ -717,6 +724,7 @@ export async function createApp(
   }
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+  hud.setPlayerBadges(questManager.getPlayerStanding() - badges.communityOffensePenalty(), badges.listEarned())
 
   // Assigned once `inventoryScreen` exists further down; every caller runs
   // later, so the initial no-op is never the one that fires.
@@ -775,6 +783,7 @@ export async function createApp(
     mouseLook,
     keyboard,
     getPlayerSocial,
+    getPlayerStanding: () => questManager.getPlayerStanding(),
     worldAudio,
     getTreeLifecycle: () => treeLifecycle,
     onInventoryChanged,
@@ -810,7 +819,7 @@ export async function createApp(
   })
   const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
-  const ground = createGroundActions(actionCtx, { worldFlags })
+  const ground = createGroundActions(actionCtx, { worldFlags, badges, resolvedHiddenFindSpotIds })
   const rest = createRestActions(actionCtx, {
     timeSkipOverlay,
     busyOverlay,
@@ -859,6 +868,8 @@ export async function createApp(
     landOwnership,
     vueUi,
     worldFlags,
+    resolvedHiddenFindSpotIds,
+    badges,
     fishingBait,
     getCollectedItemIds: () => collectedItemIds,
     getRemovedCropIds: () => removedCropIds,
@@ -944,6 +955,9 @@ export async function createApp(
         worldFlags.guardSwordGifted = false
         worldFlags.hiddenTreasureFound = false
         ground.resetTreasureProgress()
+        resolvedHiddenFindSpotIds.clear()
+        badges.reset()
+        hud.setPlayerBadges(questManager.getPlayerStanding(), badges.listEarned())
         resetPlayerNeeds(player.needs)
         fishingBait.clear()
         fishingAttempts.clear()

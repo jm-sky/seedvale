@@ -113,6 +113,7 @@ Generated from TypeScript imports.
 - `audio/audioSettings.ts`
 - `audio/createWorldAudio.ts`
 - `audio/uiSounds.ts`
+- `badges/badges.ts`
 - `config/qualityProfiles.ts`
 - `config/worldConfig.ts`
 - `input/isTouchDevice.ts`

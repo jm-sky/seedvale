@@ -6,6 +6,7 @@ Generated symbol maps by source domain.
 - [`app`](./app.md)
 - [`assets`](./assets.md)
 - [`audio`](./audio.md)
+- [`badges`](./badges.md)
 - [`combat`](./combat.md)
 - [`config`](./config.md)
 - [`debug`](./debug.md)
