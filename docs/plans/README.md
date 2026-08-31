@@ -131,6 +131,7 @@ Natural vegetation
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md` | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
 | ◼️ `settlements-npcs-006-wool-to-material.md` | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md` | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
+| ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | Pochodzenie mięsa, FoodBatch, freshness i warunki storage | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 
 ---
 
