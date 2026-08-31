@@ -47,6 +47,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
 | 💡 `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | - | 🔴 | S | `none` |
+| ◼️ `ui-input-006-fishing-ux-and-water-support.md`       | - | 🟡 | S | ~~159~~ ~~184~~ |
 
 ---
 
@@ -186,7 +187,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `003`
 - settlements-npcs: `014`
 - tools: `007`
-- ui-input: `006`
+- ui-input: `007`
 - world: `008`
 - world-terrain: `004`
 
