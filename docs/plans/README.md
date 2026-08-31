@@ -47,7 +47,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
 | 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
-| ◼️ `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
+| 💡 `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
 
 ---
 
