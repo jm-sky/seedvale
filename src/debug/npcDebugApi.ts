@@ -17,6 +17,7 @@ import {
 import {
   findNpcById,
   freezeNpc,
+  type FrenzyWolfDebugResult,
   type NpcQueryFilter,
   type NpcQueryResult,
   queryNpcs,
@@ -96,7 +97,7 @@ export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
   /** `setFrenzyWolf()` (plan 179 §3) — see `npcInspector.ts`'s doc. */
-  setFrenzyWolf: () => boolean
+  setFrenzyWolf: () => FrenzyWolfDebugResult | string
   /** Resolves by id whether or not the village is currently loaded — `npcs()`
    *  is `[]` when unloaded. `null` for an unrecognized id. */
   village: (id: string) => VillageDebugHandle | null

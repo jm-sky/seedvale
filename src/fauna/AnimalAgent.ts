@@ -231,7 +231,7 @@ const VILLAGE_AVOID_MARGIN = 6
  *  follow-up). NPC detection doesn't depend on reaching this radius either:
  *  `npcThreat` (`update()`'s `senseNpcThreat`) is evaluated every frame
  *  independently of which movement branch is active. */
-const FRENZY_VILLAGE_ARRIVAL_RADIUS = 3
+const FRENZY_VILLAGE_ARRIVAL_RADIUS = 5
 /** Clearance (world units) *past* a village's real footprint over which the
  *  flee-direction village bias (`fleeFrom`) ramps in — beyond
  *  `radius + this`, fleeing wild/domestic animals behave the same (the
@@ -1775,6 +1775,10 @@ export class AnimalAgent {
         this.setIntent('flee', copyVec3(observerPos))
         this.fleeFrom(observerPos.x, observerPos.z, dt)
       }
+    } else if (npcThreat && this.frenzied) {
+      this.threateningHuman = true
+      this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
+      this.chaseNpc(npcThreat, dt, onNpcHit)
     } else if (npcThreat) {
       this.cancelSourceTarget()
       this.humanDecisionTimer -= dt
@@ -1965,7 +1969,7 @@ export class AnimalAgent {
       humanDistance: Math.hypot(target.x - this.mesh.position.x, target.z - this.mesh.position.z),
       playerNoticeRange: this.def.playerNoticeRange,
       playerPanicRange: this.def.playerPanicRange,
-      fireNearby: sense.fireNearby,
+      fireNearby: this.frenzied ? false : sense.fireNearby,
       nearbyHumanCount: crowd,
       kind: this.def.kind,
       selfHpRatio: hpRatio,

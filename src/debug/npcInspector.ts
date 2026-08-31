@@ -34,6 +34,14 @@ export type NpcQueryResult = NpcInspectionSnapshot & {
   settlementName: string
 }
 
+export type FrenzyWolfDebugResult = {
+  animalId: string
+  village: {
+    x: number
+    z: number
+  }
+}
+
 function collectNpcs(bundle: WorldBundle): NpcRegistryEntry[] {
   const out: NpcRegistryEntry[] = []
   for (const settlement of bundle.settlementsManager.getLoaded()) {
@@ -134,8 +142,7 @@ export function reevaluateNpc(bundle: WorldBundle, id: string): boolean {
  *  Returns `false` (no mutation) when there's no eligible wolf or no loaded
  *  village — repeated calls then pick a different wolf each time since an
  *  already-frenzied one is excluded from the next selection. */
-export function setFrenzyWolf(bundle: WorldBundle): boolean {
-  if (!isDebugMode()) return false
+export function setFrenzyWolf(bundle: WorldBundle): FrenzyWolfDebugResult | string {
   const wolves = bundle.fauna.getAgents().filter((a) => a.def.kind === 'wolf' && !a.isDead())
   const villages = bundle.settlementsManager.getLoaded().map((s) => ({
     x: s.center.x,
@@ -146,9 +153,19 @@ export function setFrenzyWolf(bundle: WorldBundle): boolean {
     wolves.map((w) => ({ animalId: w.animalId, x: w.mesh.position.x, z: w.mesh.position.z, frenzied: w.isFrenzied() })),
     villages,
   )
-  if (!picked) return false
+
+  if (!picked) return 'No eligible wolf found'
+
   const wolf = wolves.find((w) => w.animalId === picked.animalId)
-  if (!wolf) return false
+  if (!wolf) return 'No wolf found'
+
   wolf.setFrenzied(picked.village)
-  return true
+
+  return {
+    animalId: wolf.animalId,
+    village: {
+      x: picked.village.x,
+      z: picked.village.z,
+    },
+  }
 }

@@ -71,7 +71,7 @@ export default defineConfig(({ mode }) => {
         // file as a candidate to rescan, root-level ones apparently through a
         // different path that doesn't even set `triggeredBy`). Ignored at the
         // watcher level so no plugin downstream ever sees the change.
-        ignored: ['**/*.md', '**/*.test.ts'],
+        ignored: ['**/*.md', '**/*.test.ts', 'scripts/**', '.venv/**', '_temp/**', '_tools/**'],
       },
     },
     worker: {
