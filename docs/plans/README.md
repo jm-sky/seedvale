@@ -43,8 +43,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-003-house-browser-and-tools-menu.md`          | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`            | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
-| ◼️ `ai-004-npc-goals-and-persistent-plans.md` | NPC goals and persistent plans | 🔴 | M | ~~001~~ ~~002~~ ~~003~~ |\n| ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
+| ◼️ `ai-004-npc-goals-and-persistent-plans.md`           | NPC goals and persistent plans | 🔴 | M | ~~001~~ ~~002~~ ~~003~~ |\n| ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
+| ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 
 ---
 
@@ -173,7 +174,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 ## Next plan IDs
 
-- ai: `004`
+- ai: `005`
 - fauna: `005`
 - items-player: `003`
 - npc: `006`
