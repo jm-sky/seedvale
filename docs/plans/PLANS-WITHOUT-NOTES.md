@@ -1,13 +1,14 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 21:07:32  
+> Date: 2026-08-31 21:18:28  
 
 ## PLANS
 
 - `fauna-004-sheep-wool-and-shepherd.md`
 - `items-player-002-food-provenance-freshness-and-storage.md`
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
+- `npc-006-shared-npc-animal-pathfinding.md`
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-012-physical-storage-inspection.md`
@@ -15,6 +16,7 @@
 - `tools-000-weapon-browser-observatory.md`
 - `tools-003-house-browser-and-tools-menu.md`
 - `tools-005-seedvale-character-preparation-panel.md`
+- `ui-input-006-fishing-ux-and-water-support.md`
 
 --------------------------------
 ## PROMPTS
@@ -97,6 +99,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-000--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-006-shared-npc-animal-pathfinding.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-006-shared-npc-animal-pathfinding.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/npc-006-shared-npc-animal-pathfinding.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/npc-006-shared-npc-animal-pathfinding-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -314,6 +347,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `ui-input-006-fishing-ux-and-water-support.md`
+
+Prompt:
+
+```
+Zrób review planu `ui-input-006-fishing-ux-and-water-support.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/ui-input-006-fishing-ux-and-water-support.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/ui-input-006-fishing-ux-and-water-support-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
