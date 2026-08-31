@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { BowArrow, Sword, Zap } from 'lucide-vue-next'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FlameIcon, LockIcon, ShovelIcon, Sword, TractorIcon, TreesIcon, Zap } from 'lucide-vue-next'
+import { type Component, computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { PlacementPreviewKind } from '../../app/actions/placementPreviewActions'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
@@ -220,16 +220,16 @@ const CATEGORY_LABEL: Record<QuickActionsCategoryId, string> = {
 
 const categories = computed(() => (
   [
-    { id: 'budowa', visible: buildActions.value.length > 0 },
-    { id: 'ogien', visible: fireActions.value.length > 0 },
-    { id: 'lopata', visible: ui.quickActions.hasDiggingTool },
-    { id: 'teren', visible: ui.quickActions.hasDiggingTool },
-    { id: 'pulapki', visible: trapActions.value.length > 0 },
-    { id: 'sadzenie', visible: plantActions.value.length > 0 },
-    { id: 'czekaj', visible: true },
-    { id: 'skrzynia', visible: ui.quickActions.hasCarriedContainer },
-    { id: 'odpoczynek', visible: true },
-  ] as const satisfies readonly { id: QuickActionsCategoryId, visible: boolean }[]
+    { id: 'budowa', visible: buildActions.value.length > 0, icon: BuildingIcon },
+    { id: 'ogien', visible: fireActions.value.length > 0, icon: FlameIcon },
+    { id: 'lopata', visible: ui.quickActions.hasDiggingTool, icon: ShovelIcon },
+    { id: 'teren', visible: ui.quickActions.hasDiggingTool, icon: TractorIcon },
+    { id: 'pulapki', visible: trapActions.value.length > 0, icon: LockIcon },
+    { id: 'sadzenie', visible: plantActions.value.length > 0, icon: TreesIcon },
+    { id: 'czekaj', visible: true, icon: ClockIcon },
+    { id: 'skrzynia', visible: ui.quickActions.hasCarriedContainer, icon: BoxIcon },
+    { id: 'odpoczynek', visible: true, icon: BedSingleIcon },
+  ] as const satisfies readonly { id: QuickActionsCategoryId, visible: boolean, icon: Component }[]
 ).filter((c) => c.visible))
 </script>
 
@@ -293,6 +293,7 @@ const categories = computed(() => (
         v-for="category in categories"
         :key="category.id"
         :label="CATEGORY_LABEL[category.id]"
+        :icon="category.icon"
         @click="selectQuickActionsCategory(category.id)"
       />
     </QuickActionsGroup>
