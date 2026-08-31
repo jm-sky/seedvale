@@ -21,12 +21,16 @@ The 2026-08-29 source recon identified these high-value runtime tests:
 1. Character generation from a deterministic spec.
 2. Native MHCLO hair/beard/clothing attachment and fitting.
 3. Medieval/Viking clothing fitting with the selected assets.
-4. Native Delete Groups on fitted clothing.
+4. Native Delete Groups on fitted clothing. **Verified for Blacksmith test character.**
 5. Delete Groups → Export Copy → baked mask → GLB.
-6. Mixamo rig + external animation → mapping/snap → Blender bake → GLB.
+6. Mixamo rig + external animation → mapping/snap → Blender bake → GLB. **Mapping + bake verified; GLB export remains unverified.**
 7. Material/alpha behaviour for hair and beard in GLB.
 8. GLB import and visual validation in Seedvale.
 9. Deterministic batch generation.
 10. Resolve the 2.0.17 asset path discrepancy and identify concrete Low Poly Eyes / Hair assets.
+
+## Recent verified results
+
+- `2026-08-31--automatic-clothing-delete-groups.md` — automatic clothing detection found the Blacksmith clothing meshes and successfully generated three `Delete.*` groups plus three inverted Mask modifiers using the existing verified Seedvale Character Tools implementation.
 
 Until these tests are executed, the corresponding knowledge remains `researched`.
