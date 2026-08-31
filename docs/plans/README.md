@@ -48,6 +48,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
 | 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
+| ◼️ `world-008-player-world-placement-foundation.md`     | - | 🟡 | M | - |
 
 ---
 
@@ -190,7 +191,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `014`
 - tools: `007`
 - ui-input: `007`
-- world: `008`
+- world: `009`
 - world-terrain: `004`
 
 This ids section is maintained automatically from the plan files.
