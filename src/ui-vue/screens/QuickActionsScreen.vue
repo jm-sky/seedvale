@@ -286,6 +286,7 @@ const categories = computed(() => (
         right: 'max(20px, env(safe-area-inset-right))',
         touchAction: 'pan-y',
       }"
+    @click.stop
   >
     <!-- Root: category picker (plan `ui-input-004` §3). -->
     <QuickActionsGroup v-if="!ui.quickActions.category">
