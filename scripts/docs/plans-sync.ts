@@ -21,11 +21,11 @@ const REVIEW_SUFFIX = '-review.md'
 const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
 const PLANNED_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const PLANNED_HEADING = '## Planned'
+const PLAN_TITLE_PAD_END_SIZE = 60
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
-const NEXT_PLAN_ID_END_TAG =
-  'This ids section is maintained automatically from the plan files.'
-const TODO_HEADING = '## TODO'
+const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
+const PLANNED_END_TAG = '## Verification needed'
 
 const PRIORITY_EMOJI: Record<string, string> = {
   high: '🔴',
@@ -151,7 +151,7 @@ const buildRow = (
   const marker = !isPlanned ? '' : hasNotes ? '💡' : '◼️'
   const title = `${marker} \`${file}\``
 
-  return `| ${title.padEnd(60)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
+  return `| ${title.padEnd(PLAN_TITLE_PAD_END_SIZE)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
 }
 
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
@@ -342,19 +342,13 @@ const syncImplementationNotesMarkers = (
   implementationNotesFiles: string[],
 ): string[] => {
   const planFiles = new Set(plans.map(plan => plan.file))
-  const startIdx = lines.findIndex(
-    line => line.trim() === PLANNED_HEADING,
-  )
-  const endIdx = lines.findIndex(
-    line => line.trim() === TODO_HEADING,
-  )
+  const startIdx = lines.findIndex(line => line.trim() === PLANNED_HEADING)
+  const endIdx = lines.findIndex(line => line.trim() === PLANNED_END_TAG)
 
   return lines.map((line, idx) => {
     if (idx < startIdx || idx > endIdx) return line
 
-    const match = line.match(
-      /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
-    )
+    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
 
     if (!match) return line
 
@@ -367,10 +361,11 @@ const syncImplementationNotesMarkers = (
       implementationNotesFiles,
     )
     const marker = hasNotes ? '💡' : '◼️'
+    const title = `| ${marker} \`${file}\``
 
     return line.replace(
       /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
-      `| ${marker} \`${file}\` |`,
+      `${title.padEnd(PLAN_TITLE_PAD_END_SIZE)} |`,
     )
   })
 }

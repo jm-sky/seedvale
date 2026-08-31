@@ -13,6 +13,7 @@ const REVIEWS_PATH = resolve(PLANS_PATH, REVIEWS_DIR)
 const NOTES_TOKEN = 'implementation-notes'
 const UPDATED_REVIEW_TOKEN = '--updated-review'
 const OUTPUT_PATH = resolve(ROOT_DIR, PLANS_DIR, 'PLANS-WITHOUT-NOTES.md')
+const PLAN_FILE_RE = /^([a-z0-9-]+)-(\d{3})-.+\.md$/
 
 const output: string[] = []
 
@@ -131,7 +132,7 @@ const updateFile = async (path: string) => {
 
 const main = async () => {
   const allFiles: string[] = await readdir(PLANS_PATH)
-  const mdFiles: string[] = allFiles.filter(file => file.endsWith('.md'))
+  const mdFiles: string[] = allFiles.filter(file => file.endsWith('.md') && PLAN_FILE_RE.test(file))
 
   // Defensive: notes/reviews normally live in NOTES_PATH/REVIEWS_PATH, not PLANS_PATH itself.
   const plans: string[] = mdFiles.filter(plan => !plan.endsWith(`-${NOTES_TOKEN}.md`) && !plan.endsWith(`${UPDATED_REVIEW_TOKEN}.md`))
