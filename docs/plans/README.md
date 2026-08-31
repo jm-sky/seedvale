@@ -49,6 +49,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
 | ◼️ `world-008-player-world-placement-foundation.md`     | - | 🟡 | M | - |
+| ◼️ `items-player-009-player-built-torch-and-ignition.md` | - | 🟡 | M | 008 |
 
 ---
 
@@ -183,7 +184,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `005`
-- items-player: `004`
+- items-player: `010`
 - npc: `007`
 - persistence: `001`
 - quests-progression: `001`
