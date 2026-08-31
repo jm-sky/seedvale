@@ -1,93 +1,123 @@
 # MPFB2 Animation Runtime Recon
 
 **Date:** 2026-08-29  
-**Status:** `runtime-discovered` — not yet fully verified  
+**Status:** `verified` ✅  
 **Domain:** Blender / MPFB2 / Mixamo animation automation
 
 ## Purpose
 
-Record runtime discoveries from the Blender 5.2 + MPFB2 recon so they are not lost between sessions.
+Record runtime-verified behaviour of the MPFB2 → Mixamo animation workflow in Blender 5.2.
 
-The source of this document is the runtime recon generated from the actual Blender environment:
+The raw runtime recon is:
 
 `docs/tmp/blender/2026-08-29--002--seedvale_mpfb2_runtime_recon.json`
 
-This document intentionally distinguishes runtime discovery from successful execution.
+## Verified workflow
 
-## Runtime-discovered MPFB2 animation operators
-
-The current runtime recon identified these MPFB2 operators as relevant to animation:
-
-- `mpfb.load_animation`
-- `mpfb.map_mixamo`
-- `mpfb.repeat_animation`
-- `mpfb.save_animation`
-
-### Evidence level
-
-**Runtime-discovered:** these operators were present in the current MPFB2 Blender runtime recon.
-
-**Not yet verified:** this does not establish that we know their correct parameters, context requirements, execution behaviour, or suitability for batch automation.
-
-## Relevant Blender animation API
-
-The recon also identified these Blender-side APIs relevant to the intended pipeline:
-
-- `bpy.ops.nla.bake`
-- `bpy.data.actions`
-- `bpy.types.Object.animation_data`
-- `bpy.types.Action.fcurves`
-
-These are the candidate building blocks for the post-mapping bake and Action handling.
-
-## Intended automation flow
-
-The immediate target is:
+With an MPFB2 Human character and an imported Mixamo animation rig on the scene:
 
 ```
-Mixamo animation
-      ↓
-MPFB2 load_animation
-      ↓
-MPFB2 map_mixamo
-      ↓
-Blender NLA bake
-      ↓
-Action
-      ↓
-rename / retain Action
+Human.rig
+    +
+Mixamo animation rig
+        ↓
+mpfb.map_mixamo()
+        ↓
+bpy.ops.nla.bake(...)
+        ↓
+Human.rig → Action
 ```
 
-The final reusable pipeline should eventually support batch processing of multiple Mixamo animations.
+### Verified: Map to Mixamo
 
-## What remains to verify
+`bpy.ops.mpfb.map_mixamo()`
 
-A small runtime test should establish:
+Observed result:
 
-1. how `mpfb.load_animation` is invoked and which parameters it requires;
-2. how `mpfb.map_mixamo` is invoked and which parameters/context it requires;
-3. whether mapping produces the expected animation on the Seedvale character rig;
-4. how `bpy.ops.nla.bake` should be configured after mapping;
-5. whether the resulting Action is suitable for export;
-6. whether the complete sequence can be executed repeatedly for a batch of animations.
+```
+{'FINISHED'}
+```
 
-## Important evidence rule
+The operator added Mixamo-related bone constraints to the target rig.
 
-Do not mark an operation as **Verified** merely because it appears in MPFB2 source code, documentation, or runtime introspection.
+The runtime emitted this warning:
 
-Use:
+> The source and destination rigs do not have exactly the same set of bones. This might cause issues when animating.
+
+Despite the warning, the operation completed successfully and produced the expected mapping.
+
+### Verified: NLA Bake
+
+`bpy.ops.nla.bake(...)`
+
+Observed result:
+
+```
+{'FINISHED'}
+```
+
+The bake was performed on `Human.rig`.
+
+### Verified: Action on Human
+
+After bake:
+
+- target: `Human.rig`
+- Action: `Action`
+- frame range: `1–250`
+- layers: `1`
+- strips: `1`
+- channelbags: `1`
+- F-curves: `468`
+- target pose-bone constraints: `0`
+
+The animation remains on `Human.rig` after the imported Mixamo animation rig is removed.
+
+## Current verified conclusion
+
+The core automation step required by the Seedvale NPC animation workflow is runtime-verified:
+
+**Map to Mixamo → Bake → Action on Human**
+
+This is ready to be extracted into reusable automation code.
+
+## Not yet verified
+
+The following remain separate tasks:
+
+- automatic animation import;
+- deriving Action name from animation/file name;
+- batch processing multiple animations;
+- final GLB export with baked Actions;
+- export-copy workflow;
+- final material/mask preparation;
+- Decimate modifier configuration.
+
+## Future optimization: Decimate
+
+At the final character preparation stage, add a Blender **Decimate** modifier to character meshes to reduce polygon count.
+
+Current working target:
+
+- Decimate ratio approximately **0.2–0.5**;
+- apply to all relevant character parts;
+- **exclude eyes**.
+
+This is a planned optimization, not yet runtime-verified.
+
+The exact ratio and whether every mesh type should use the same value must be tested on representative NPC variants before being fixed in automation.
+
+## Evidence levels
 
 - **Researched** — established from source/documentation.
 - **Runtime-discovered** — observed in the current Blender runtime.
-- **Verified** — actually executed in Blender and the expected result was observed.
-- **Draft / heuristic** — proposed behaviour that still requires testing.
-
-## Recon limitation
-
-The raw runtime recon is intentionally broad and should not become the working API reference by itself. The next step is a focused runtime execution test of the four MPFB2 animation operators and Blender bake API above.
+- **Verified** — actually executed in Blender and expected behaviour observed.
+- **Draft / heuristic** — proposed behaviour requiring testing.
 
 ## Next step
 
-Create/run a small test script against the current Blender character and one imported Mixamo animation. Record the exact operator parameters, context requirements, execution result, generated Action(s), and any errors.
+Build the reusable single-animation processing function around the verified:
 
-Do not build the complete NPC generator yet.
+`map_mixamo → bake → Action`
+
+flow before implementing batch processing.
