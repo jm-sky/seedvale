@@ -45,6 +45,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
+| ◼️ `npc-005-npc-animal-target-commitment.md`            | - | 🔴 | M | ~~177~~ ~~179~~ |
 
 ---
 
@@ -175,7 +176,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `004`
 - fauna: `005`
 - items-player: `003`
-- npc: `005`
+- npc: `006`
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
