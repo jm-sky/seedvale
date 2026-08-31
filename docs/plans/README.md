@@ -47,7 +47,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `004`
 - fauna: `005`
-- items-player: `002`
+- items-player: `003`
 - npc: `003`
 - persistence: `001`
 - quests-progression: `001`
@@ -123,6 +123,7 @@ Natural vegetation
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | ◼️ `tools-004-claude-preflight-completion.md`                | - | 🟡 | S | - |
 | ◼️ `world-terrain-003-weather-puddles-v2.md`                 | - | 🟡 | S | ~~133~~ |
+| ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 
 ### Fresh new
 
