@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 11:24:57  
+> Date: 2026-08-31 11:25:59  
 
 ## PLANS
 
@@ -14,6 +14,7 @@
 - `tools-000-weapon-browser-observatory.md`
 - `tools-003-house-browser-and-tools-menu.md`
 - `tools-005-seedvale-character-preparation-panel.md`
+- `world-007-hidden-finds-and-reputation-badges.md`
 
 --------------------------------
 ## PROMPTS
@@ -282,6 +283,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `world-007-hidden-finds-and-reputation-badges.md`
+
+Prompt:
+
+```
+Zrób review planu `world-007-hidden-finds-and-reputation-badges.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/world-007-hidden-finds-and-reputation-badges.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/world-007-hidden-finds-and-reputation-badges-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

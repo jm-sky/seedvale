@@ -44,6 +44,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `2026-08-08--037--npc-genealogy-lineages.md`           | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md`     | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`       | - | 🔴 | M | - |
+| ◼️ `world-007-hidden-finds-and-reputation-badges.md`         | - | 🟡 | M | - |
 
 ---
 
@@ -181,7 +182,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `013`
 - tools: `006`
 - ui-input: `005`
-- world: `007`
+- world: `008`
 - world-terrain: `004`
 
 This ids section is maintained automatically from the plan files.
