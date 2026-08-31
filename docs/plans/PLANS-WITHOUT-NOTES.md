@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 15:42:35  
+> Date: 2026-08-31 20:26:07  
 
 ## PLANS
 
@@ -11,6 +11,7 @@
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-012-physical-storage-inspection.md`
+- `settlements-npcs-013-hierarchical-domain-history.md`
 - `tools-000-weapon-browser-observatory.md`
 - `tools-003-house-browser-and-tools-menu.md`
 - `tools-005-seedvale-character-preparation-panel.md`
@@ -189,6 +190,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-012-physical-storage-inspection-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-npcs-013-hierarchical-domain-history.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-npcs-013-hierarchical-domain-history.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/settlements-npcs-013-hierarchical-domain-history.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-npcs-013-hierarchical-domain-history-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
