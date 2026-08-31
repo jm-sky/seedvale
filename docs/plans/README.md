@@ -48,6 +48,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
 | ◼️ `ui-input-006-fishing-ux-and-water-support.md`       | - | 🟡 | S | ~~159~~ ~~184~~ |
 | 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
+| ◼️ `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
 
 ---
 
@@ -181,7 +182,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `005`
-- items-player: `003`
+- items-player: `004`
 - npc: `007`
 - persistence: `001`
 - quests-progression: `001`
