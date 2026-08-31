@@ -1,122 +1,613 @@
-import { readFile, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
-import { resolve, dirname } from 'node:path'
+import { readFile, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const PLANS = resolve(ROOT, 'docs/plans')
-const README = resolve(PLANS, 'README.md')
 const DONE = resolve(PLANS, 'DONE.md')
-const STATUS = /^\\*\\*Status:\\*\\*\\s*`([^`]+)`/m
-const DOMAIN = /^\\*\\*Domain:\\*\\*\\s*`([^`]+)`/m
 
-type Record = { plan: string; domain: string; opened: string[]; verificationNeeded: string | null; done: string | null }
-type Event = { commit: string; date: string }
+const STATUS = /^\*\*Status:\*\*\s*`([^`]+)`/m
+const DOMAIN = /^\*\*Domain:\*\*\s*`([^`]+)`/m
 
-const git = (...args: string[]) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
-const rel = (p: string) => p.replace(ROOT, '').replace(/^[/\\\\]/, '').replaceAll('\\\\', '/')
-const idOf = (file: string) => file.replace(/\\.md$/, '')
-const statusOf = (text: string) => text.match(STATUS)?.[1]?.trim().toLowerCase() ?? null
-const domainOf = (text: string) => text.match(DOMAIN)?.[1]?.trim() ?? ''
+type DoneRecord = {
+  plan: string
+  domain: string
+  opened: string[]
+  verificationNeeded: string | null
+  done: string | null
+}
 
-const fileAt = (path: string, commit: string): string | null => { try { return git('show', commit + ':' + rel(resolve(ROOT, path))) } catch { return null } }
-const commitsOf = (file: string) => { const out = git('log', '--follow', '--format=%H', '--', rel(resolve(PLANS, file))); return out ? out.split('\n').reverse() : [] }
-const dateOf = (commit: string) => git('show', '-s', '--format=%aI', commit).replace('T', ' ').slice(0, 19)
+type Event = {
+  commit: string
+  date: string
+}
 
-/** Find first verification-needed and done transitions in Git history. @domain tools */
-const eventsOf = (file: string) => {
-  let previous: string | null = null
+const git = (...args: string[]): string =>
+  execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim()
+
+const relativePath = (path: string): string =>
+  path
+    .replace(ROOT, '')
+    .replace(/^[/\\]/, '')
+    .replaceAll('\\', '/')
+
+const planId = (file: string): string =>
+  file.replace(/\.md$/, '')
+
+const getStatus = (content: string): string | null =>
+  content.match(STATUS)?.[1]?.trim().toLowerCase() ?? null
+
+const getDomain = (content: string): string =>
+  content.match(DOMAIN)?.[1]?.trim() ?? ''
+
+/**
+ * Return plan files currently present in docs/plans.
+ *
+ * @domain tools
+ */
+const getCurrentPlanFiles = async (): Promise<string[]> => {
+  const output = git(
+    'ls-files',
+    'docs/plans/*.md',
+  )
+
+  return output
+    ? output
+        .split('\n')
+        .filter(file => !file.endsWith('/README.md'))
+        .filter(file => !file.endsWith('/PLANNING.md'))
+        .filter(file => !file.endsWith('/DONE.md'))
+        .map(file => file.replace(/^docs\/plans\//, ''))
+    : []
+}
+
+const getGitCommits = (
+  file: string,
+): string[] => {
+  const output = git(
+    'log',
+    '--follow',
+    '--format=%H',
+    '--',
+    `docs/plans/${file}`,
+  )
+
+  return output
+    ? output.split('\n').reverse()
+    : []
+}
+
+const getFileAtCommit = (
+  path: string,
+  commit: string,
+): string | null => {
+  try {
+    return git(
+      'show',
+      `${commit}:${relativePath(resolve(ROOT, path))}`,
+    )
+  } catch {
+    return null
+  }
+}
+
+const getCommitDate = (
+  commit: string,
+): string =>
+  git(
+    'show',
+    '-s',
+    '--format=%aI',
+    commit,
+  )
+    .replace('T', ' ')
+    .slice(0, 19)
+
+/**
+ * Find the first verification-needed and done lifecycle transitions.
+ *
+ * @domain tools
+ */
+const getStatusEvents = (
+  file: string,
+): {
+  verificationNeeded: Event | null
+  done: Event | null
+} => {
+  const commits = getGitCommits(file)
+
+  let previousStatus: string | null = null
   let verificationNeeded: Event | null = null
   let done: Event | null = null
-  for (const commit of commitsOf(file)) {
-    const text = fileAt(resolve(PLANS, file), commit)
-    if (!text) continue
-    const status = statusOf(text)
-    if (status === 'verification needed' && previous !== status && !verificationNeeded) verificationNeeded = { commit, date: dateOf(commit) }
-    if (status === 'done' && previous !== status && !done) done = { commit, date: dateOf(commit) }
-    previous = status
+
+  for (const commit of commits) {
+    const content = getFileAtCommit(
+      resolve(PLANS, file),
+      commit,
+    )
+
+    if (!content) continue
+
+    const status = getStatus(content)
+
+    if (
+      status === 'verification needed' &&
+      previousStatus !== status &&
+      !verificationNeeded
+    ) {
+      verificationNeeded = {
+        commit,
+        date: getCommitDate(commit),
+      }
+    }
+
+    if (
+      status === 'done' &&
+      previousStatus !== status &&
+      !done
+    ) {
+      done = {
+        commit,
+        date: getCommitDate(commit),
+      }
+    }
+
+    previousStatus = status
   }
-  return { verificationNeeded, done }
+
+  return {
+    verificationNeeded,
+    done,
+  }
 }
 
-const aliasesOf = (id: string) => {
-  const aliases = new Set([id])
-  const modern = id.match(/^(.+)-(\\d{3})-/)
-  if (modern) { aliases.add(modern[1] + '-' + modern[2]); aliases.add(modern[2]) }
-  const legacy = id.match(/^\\d{4}-\\d{2}-\\d{2}--(\\d{3})--/)
-  if (legacy) aliases.add(legacy[1])
+const getPlanAliases = (
+  id: string,
+): Set<string> => {
+  const aliases = new Set<string>([id])
+
+  const modern = id.match(
+    /^(.+)-(\d{3})-/,
+  )
+
+  if (modern) {
+    aliases.add(
+      `${modern[1]}-${modern[2]}`,
+    )
+    aliases.add(modern[2])
+  }
+
+  const legacy = id.match(
+    /^\d{4}-\d{2}-\d{2}--(\d{3})--/,
+  )
+
+  if (legacy) {
+    aliases.add(legacy[1])
+  }
+
   return aliases
 }
-const dependencyMatches = (dependency: string, id: string) => [...aliasesOf(id)].some(alias => alias.toLowerCase() === dependency.toLowerCase())
 
-const plannedRows = (readme: string) => {
+const dependencyMatches = (
+  dependency: string,
+  planId: string,
+): boolean =>
+  [...getPlanAliases(planId)].some(
+    alias =>
+      alias.toLowerCase() ===
+      dependency.toLowerCase(),
+  )
+
+type PlannedRow = {
+  file: string
+  depends: string
+}
+
+/**
+ * Parse only the Planned section of README.md.
+ *
+ * @domain tools
+ */
+const getPlannedRows = (
+  readme: string,
+): PlannedRow[] => {
   const lines = readme.split('\n')
-  const start = lines.findIndex(line => line.trim() === '## Planned')
-  if (start < 0) throw new Error('Cannot find ## Planned in README.md')
-  const end = lines.findIndex((line, i) => i > start && /^##\\s/.test(line))
-  const result: Array<{ file: string; depends: string }> = []
-  for (const line of lines.slice(start + 1, end < 0 ? lines.length : end)) {
-    if (!line.trim().startsWith('|')) continue
-    const columns = line.split('|').slice(1, -1).map(x => x.trim())
-    if (columns.length < 5 || columns[0] === 'File') continue
-    const match = columns[0].match(/`([^`]+\\.md)`/)
-    if (match) result.push({ file: match[1], depends: columns[4] })
+
+  const start = lines.findIndex(
+    line => line.trim() === '## Planned',
+  )
+
+  if (start === -1) {
+    throw new Error(
+      'Cannot find "## Planned" section in README.md',
+    )
   }
+
+  const end = lines.findIndex(
+    (line, index) =>
+      index > start &&
+      /^##\s/.test(line),
+  )
+
+  const rows: PlannedRow[] = []
+
+  for (
+    const line of lines.slice(
+      start + 1,
+      end === -1
+        ? lines.length
+        : end,
+    )
+  ) {
+    if (!line.trim().startsWith('|')) {
+      continue
+    }
+
+    const columns = line
+      .split('|')
+      .slice(1, -1)
+      .map(value => value.trim())
+
+    if (
+      columns.length < 5 ||
+      columns[0] === 'File'
+    ) {
+      continue
+    }
+
+    const fileMatch =
+      columns[0].match(
+        /`([^`]+\.md)`/,
+      )
+
+    if (!fileMatch) continue
+
+    rows.push({
+      file: fileMatch[1],
+      depends: columns[4],
+    })
+  }
+
+  return rows
+}
+
+const extractDependencies = (
+  value: string,
+): string[] =>
+  value.match(
+    /[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/g,
+  ) ?? []
+
+/**
+ * Find Planned plans that depended on a completed plan
+ * at the exact commit where it became done.
+ *
+ * @domain tools
+ */
+const getOpenedPlans = (
+  completedPlanId: string,
+  doneCommit: string,
+): string[] => {
+  const readme = getFileAtCommit(
+    'docs/plans/README.md',
+    doneCommit,
+  )
+
+  if (!readme) {
+    return []
+  }
+
+  return getPlannedRows(readme)
+    .filter(row =>
+      extractDependencies(
+        row.depends,
+      ).some(dependency =>
+        dependencyMatches(
+          dependency,
+          completedPlanId,
+        ),
+      ),
+    )
+    .map(row =>
+      planId(row.file),
+    )
+}
+
+const parseDone = async (): Promise<
+  DoneRecord[]
+> => {
+  try {
+    const content =
+      await readFile(
+        DONE,
+        'utf8',
+      )
+
+    return content
+      .split('\n')
+      .filter(line =>
+        line.trim().startsWith('|'),
+      )
+      .map(line =>
+        line
+          .split('|')
+          .slice(1, -1)
+          .map(value => value.trim()),
+      )
+      .filter(
+        columns =>
+          columns.length === 5 &&
+          columns[0] !== 'Plan',
+      )
+      .map(columns => ({
+        plan: columns[0],
+        domain:
+          columns[1].replaceAll(
+            '`',
+            '',
+          ),
+        opened:
+          columns[2] === '—'
+            ? []
+            : columns[2]
+                .split(',')
+                .map(value =>
+                  value.trim(),
+                ),
+        verificationNeeded:
+          columns[3] === '—'
+            ? null
+            : columns[3],
+        done:
+          columns[4] === '—'
+            ? null
+            : columns[4],
+      }))
+  } catch {
+    return []
+  }
+}
+
+const updateRecord = (
+  records: DoneRecord[],
+  next: DoneRecord,
+): DoneRecord[] => {
+  const index =
+    records.findIndex(
+      record =>
+        record.plan === next.plan,
+    )
+
+  if (index === -1) {
+    return [...records, next]
+  }
+
+  const result = [...records]
+  const existing = result[index]
+
+  result[index] = {
+    plan: existing.plan,
+    domain:
+      existing.domain ||
+      next.domain,
+    opened:
+      existing.opened.length > 0
+        ? existing.opened
+        : next.opened,
+    verificationNeeded:
+      existing.verificationNeeded ??
+      next.verificationNeeded,
+    done:
+      existing.done ??
+      next.done,
+  }
+
   return result
 }
 
-const openedOf = (id: string, commit: string) => {
-  const readme = fileAt('docs/plans/README.md', commit)
-  if (!readme) return []
-  return plannedRows(readme).filter(row => (row.depends.match(/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/g) ?? []).some(dep => dependencyMatches(dep, id))).map(row => row.file.replace(/\\.md$/, ''))
-}
+const escapeRegExp = (
+  value: string,
+): string =>
+  value.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&',
+  )
 
-const parseDone = async (): Promise<Record[]> => {
-  try {
-    const text = await readFile(DONE, 'utf8')
-    return text.split('\n').filter(x => x.trim().startsWith('|')).map(x => x.split('|').slice(1, -1).map(y => y.trim())).filter(x => x.length === 5 && x[0] !== 'Plan').map(x => ({ plan: x[0], domain: x[1].replaceAll('`', ''), opened: x[2] === '—' ? [] : x[2].split(',').map(y => y.trim()), verificationNeeded: x[3] === '—' ? null : x[3], done: x[4] === '—' ? null : x[4] }))
-  } catch { return [] }
-}
+/**
+ * Mark the completed dependency in current Planned files.
+ *
+ * @domain tools
+ */
+const markDependencies = async (
+  completedPlanId: string,
+  openedPlans: string[],
+): Promise<void> => {
+  const aliases =
+    getPlanAliases(
+      completedPlanId,
+    )
 
-const planFiles = (readme: string) => plannedRows(readme).map(row => row.file)
-const update = (records: Record[], next: Record) => { const i = records.findIndex(x => x.plan === next.plan); if (i < 0) return [...records, next]; const out = [...records]; out[i] = { plan: out[i].plan, domain: out[i].domain || next.domain, opened: out[i].opened.length ? out[i].opened : next.opened, verificationNeeded: out[i].verificationNeeded ?? next.verificationNeeded, done: out[i].done ?? next.done }; return out }
+  for (const id of openedPlans) {
+    const path = resolve(
+      PLANS,
+      `${id}.md`,
+    )
 
-const markDependencies = async (planId: string, opened: string[]) => {
-  const aliases = [...aliasesOf(planId)]
-  for (const id of opened) {
-    const path = resolve(PLANS, id + '.md')
-    let text: string
-    try { text = await readFile(path, 'utf8') } catch { continue }
-    let next = text
-    for (const alias of aliases) { const escaped = alias.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); next = next.replace(new RegExp('(?<!~~)(?<![A-Za-z0-9-])' + escaped + '(?![A-Za-z0-9-])(?!~~)', 'gi'), '~~' + alias + '~~') }
-    if (next !== text) await writeFile(path, next, 'utf8')
+    let content: string
+
+    try {
+      content =
+        await readFile(
+          path,
+          'utf8',
+        )
+    } catch {
+      continue
+    }
+
+    let updated = content
+
+    for (const alias of aliases) {
+      const escaped =
+        escapeRegExp(alias)
+
+        const pattern = new RegExp(
+          `^(\\*\\*Depends on:\\*\\*.*?)(?<!~~)(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])(?!~~)(.*)$`,
+          'gim',
+        )
+
+      updated = updated.replace(
+        pattern,
+        `$1~~${alias}~~$2`,
+      )
+    }
+
+    if (updated !== content) {
+      await writeFile(
+        path,
+        updated,
+        'utf8',
+      )
+
+      console.log(
+        `Marked ${completedPlanId} dependency as done in ${id}.md`,
+      )
+    }
   }
 }
 
-const generate = (records: Record[]) => {
-  const sorted = [...records].sort((a, b) => (b.done ?? b.verificationNeeded ?? '').localeCompare(a.done ?? a.verificationNeeded ?? ''))
-  return ['# Completed Plans', '', '> Automatically generated from plan history and Git. Do not edit manually.', '', '| Plan | Domain | Opened | Verification needed | Done |', '|---|---|---|---|---|', ...sorted.map(x => '| ' + x.plan + ' | `' + x.domain + '` | ' + (x.opened.length ? x.opened.join(', ') : '—') + ' | ' + (x.verificationNeeded ?? '—') + ' | ' + (x.done ?? '—') + ' |'), ''].join('\n')
+const generateDone = (
+  records: DoneRecord[],
+): string => {
+  const sorted =
+    [...records].sort(
+      (a, b) =>
+        (
+          b.done ??
+          b.verificationNeeded ??
+          ''
+        ).localeCompare(
+          a.done ??
+          a.verificationNeeded ??
+          '',
+        ),
+    )
+
+  const map = sorted.map(record => {
+    const title = `\`${record.plan}\``
+    const domain = record.domain ? `\`${record.domain}\`` : '—'
+    const opened = record.opened.length ? record.opened.join(', ') : '—'
+    return `| ${title.padEnd(60)} | ${domain.padEnd(6)} | ${record.verificationNeeded?.padEnd(16) ?? '—'} | ${record.done?.padEnd(16) ?? '—'} | ${opened.padEnd(8)} |`
+  })
+
+  return [
+    '# Completed Plans',
+    '',
+    '> Automatically generated from plan history and Git. Do not edit manually.',
+    '',
+    '| Plan                                             | Domain | Verification needed | Done   | Opened |',
+    '|--------------------------------------------------|--------|---------------------|--------|--------|',
+    ...map,
+    '',
+  ].join('\n')
 }
 
-const main = async () => {
-  const readme = await readFile(README, 'utf8')
-  const candidates = new Set(planFiles(readme))
+const main = async (): Promise<void> => {
   const existing = await parseDone()
-  const existingByPlan = new Map(existing.map(x => [x.plan, x]))
+
+  const existingByPlan =
+    new Map(
+      existing.map(record => [
+        record.plan,
+        record,
+      ]),
+    )
+
+  const planFiles =
+    await getCurrentPlanFiles()
+
   let records = existing
-  for (const file of candidates) {
-    const id = idOf(file)
-    if (existingByPlan.get(id)?.done) continue
-    const content = await readFile(resolve(PLANS, file), 'utf8')
-    const domain = domainOf(content)
-    const events = eventsOf(file)
-    if (!events.verificationNeeded && !events.done) continue
-    const opened = events.done ? openedOf(id, events.done.commit) : []
-    records = update(records, { plan: id, domain, opened, verificationNeeded: events.verificationNeeded?.date ?? null, done: events.done?.date ?? null })
-    if (events.done) await markDependencies(id, opened)
+
+  /*
+   * Every current plan file is a candidate, but plans already
+   * recorded as Done are never scanned again.
+   *
+   * This is the incremental checkpoint.
+   */
+  for (const file of planFiles) {
+    const id = planId(file)
+
+    if (existingByPlan.get(id)?.done) {
+      continue
+    }
+
+    const content =
+      await readFile(
+        resolve(PLANS, file),
+        'utf8',
+      )
+
+    const events =
+      getStatusEvents(file)
+
+    if (
+      !events.verificationNeeded &&
+      !events.done
+    ) {
+      continue
+    }
+
+    const opened =
+      events.done
+        ? getOpenedPlans(
+            id,
+            events.done.commit,
+          )
+        : []
+
+    records =
+      updateRecord(
+        records,
+        {
+          plan: id,
+          domain:
+            getDomain(content),
+          opened,
+          verificationNeeded:
+            events
+              .verificationNeeded
+              ?.date ?? null,
+          done:
+            events.done?.date ??
+            null,
+        },
+      )
+
+    if (events.done) {
+      await markDependencies(
+        id,
+        opened,
+      )
+    }
   }
-  await writeFile(DONE, generate(records), 'utf8')
-  console.log('Updated ' + rel(DONE) + ' (' + records.length + ' records).')
+
+  await writeFile(
+    DONE,
+    generateDone(records),
+    'utf8',
+  )
+
+  console.log(
+    `Updated ${relativePath(DONE)} (${records.length} records).`,
+  )
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1 })
+main().catch(error => {
+  console.error(error)
+  process.exitCode = 1
+})
