@@ -2,26 +2,29 @@
 
 Rules for AI agents creating Seedvale plans and implementation notes.
 
-## Next Plan IDs
+- Next ideas: [NEXT-IDEAS.md](./NEXT-IDEAS.md)
+- Loose ends: [LOOSE-ENDS.md](./LOOSE-ENDS.md)
 
-<!-- AUTO: NEXT_PLAN_IDS -->
+## Next plan IDs
 
-- `ai`: `...`
-- `fauna`: `...`
-- `items-player`: `...`
-- `npc`: `...`
-- `persistence`: `...`
-- `quests-progression`: `...`
-- `settlements`: `...`
-- `settlements-npcs`: `...`
-- `tools`: `...`
-- `ui-input`: `...`
-- `world`: `...`
-- `world-terrain`: `...`
+- ai: `004`
+- fauna: `005`
+- items-player: `002`
+- npc: `003`
+- persistence: `001`
+- quests-progression: `001`
+- settlements: `003`
+- settlements-npcs: `012`
+- tools: `005`
+- ui-input: `005`
+- world: `007`
+- world-terrain: `003`
 
-<!-- /AUTO: NEXT_PLAN_IDS -->
+This ids section is maintained automatically from the plan files.
 
-Generated from existing plan files. Never select an already used ID or reuse a gap.
+> WARNING: Not auto-updated yet
+
+---
 
 ## Domains
 
