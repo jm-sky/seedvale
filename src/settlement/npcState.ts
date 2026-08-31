@@ -1,4 +1,5 @@
 import type { HelperAssignment } from '../ai/helperAssignment'
+import type { NpcPlan } from '../ai/npcPlan'
 import { createNeedState, type NeedState } from '../ai/Needs'
 import { MAX_VIGOR } from '../ai/npcVigor'
 import { createHealthState, type HealthState } from '../shared/HealthState'
@@ -40,6 +41,12 @@ export type NpcAuthoritativeState = {
    *  `NpcStateSnapshot` below; not part of `SaveData` — no NPC runtime state
    *  is (see this file's module doc). */
   helperAssignment: HelperAssignment | null
+  /** Persistent Goal + Strategy + progress (plan ai-004) — `null` when this
+   *  NPC has no current Plan (e.g. `idle`). Mutable in place, same
+   *  "shared object, no snapshot copy" pattern as `helperAssignment`, so it
+   *  survives an in-session `WorldBundle` rebuild via `NpcStateSnapshot`
+   *  below. Not part of `SaveData` — no NPC runtime state is. */
+  activePlan: NpcPlan | null
 }
 
 /** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -52,6 +59,7 @@ export type NpcStateSnapshot = {
   vigor: { current: number, max: number }
   needs: NeedState
   helperAssignment?: HelperAssignment | null
+  activePlan?: NpcPlan | null
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeState {
@@ -62,6 +70,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeSt
     vigor: { max: snapshot.vigor.max, current: snapshot.vigor.current },
     needs: { ...snapshot.needs },
     helperAssignment: snapshot.helperAssignment ?? null,
+    activePlan: snapshot.activePlan ?? null,
   }
 }
 
@@ -95,6 +104,7 @@ export function createNpcAuthoritativeState(
     vigor: createVigorState(maxima.maxVigor),
     needs: createNeedState(needOffset),
     helperAssignment: null,
+    activePlan: null,
   }
 }
 
@@ -144,6 +154,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           vigor: { current: state.vigor.current, max: state.vigor.max },
           needs: { ...state.needs },
           helperAssignment: state.helperAssignment,
+          activePlan: state.activePlan,
         }
       }
       return out

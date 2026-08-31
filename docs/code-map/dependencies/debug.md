@@ -224,6 +224,7 @@ Generated from TypeScript imports.
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
 - `ai/decisionModifiers.ts`
+- `ai/npcPlan.ts`
 - `ai/npcStrategies.ts`
 
 **Imported by**

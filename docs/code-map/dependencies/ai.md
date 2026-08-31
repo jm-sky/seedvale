@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
 - `ai/dialogueTemplates.ts`
+- `ai/npcPlan.ts`
 - `ai/npcVigor.test.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
@@ -45,6 +46,7 @@ Generated from TypeScript imports.
 - `ai/npcCombat.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcMovementWatchdog.ts`
+- `ai/npcPlan.ts`
 - `ai/npcStrategies.ts`
 - `ai/npcVigor.ts`
 - `ai/npcVoiceLines.ts`
@@ -390,6 +392,26 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcMovementWatchdog.test.ts`
 
+## `ai/npcPlan.test.ts`
+
+**Imports**
+
+- `ai/npcPlan.ts`
+
+## `ai/npcPlan.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/npcStrategies.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcPlan.test.ts`
+- `debug/npcTrace.ts`
+- `settlement/npcState.ts`
+
 ## `ai/npcProfessionWork.test.ts`
 
 **Imports**
@@ -416,6 +438,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcPlan.ts`
 - `ai/npcStrategies.test.ts`
 - `debug/npcTrace.ts`
 

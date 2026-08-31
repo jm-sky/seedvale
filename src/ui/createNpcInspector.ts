@@ -95,6 +95,17 @@ function buildInspectorText(
     lines.push('  -')
   }
 
+  lines.push('', 'Plan')
+  if (snapshot.plan) {
+    lines.push(`  goal: ${snapshot.plan.goal}`)
+    lines.push(`  strategy: ${snapshot.plan.strategy ?? '-'}`)
+    lines.push(`  state: ${snapshot.plan.state}`)
+    lines.push(`  progress: ${snapshot.plan.progress}`)
+    lines.push(`  current step: ${snapshot.plan.currentStep}`)
+  } else {
+    lines.push('  -')
+  }
+
   lines.push('', 'Current action')
   if (snapshot.action) {
     lines.push(`  kind: ${snapshot.action.kind}`)
@@ -158,6 +169,10 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'movement.rescue': return `${t}s movement.rescue → ${event.stage}`
     case 'need.selected': return `${t}s need.selected → ${event.need}`
     case 'phase.changed': return `${t}s phase ${event.from} → ${event.to}`
+    case 'plan.completed': return `${t}s plan.completed → ${event.goal}`
+    case 'plan.created': return `${t}s plan.created → ${event.goal}`
+    case 'plan.progressed': return `${t}s plan.progressed → ${event.goal} +${event.amount} (${event.total})`
+    case 'plan.stateChanged': return `${t}s plan.stateChanged → ${event.goal} ${event.from} → ${event.to}`
     case 'queue.joined': return `${t}s queue.joined → ${event.queueId}`
     case 'queue.left': return `${t}s queue.left → ${event.queueId}`
     case 'queue.served': return `${t}s queue.served → ${event.queueId}`
@@ -196,6 +211,7 @@ export function createNpcInspector(
   const overview = document.createElement('div')
   const needs = document.createElement('div')
   const why = document.createElement('div')
+  const plan = document.createElement('div')
   const action = document.createElement('div')
   const queue = document.createElement('div')
   const household = document.createElement('div')
@@ -218,6 +234,7 @@ export function createNpcInspector(
     section('Overview', overview),
     section('Needs', needs),
     section('Decision / Why', why),
+    section('Plan', plan),
     section('Current action', action),
     section('Queue', queue),
     section('Household', household),
@@ -279,6 +296,17 @@ export function createNpcInspector(
     row(why, 'phase', whyResult.phase)
     row(why, 'action', whyResult.action ? `${whyResult.action.kind}${whyResult.action.target ? ` → ${whyResult.action.target}` : ''}` : '-')
     row(why, 'blocked', whyResult.blocked ?? '-')
+
+    plan.replaceChildren()
+    if (snapshot.plan) {
+      row(plan, 'goal', snapshot.plan.goal)
+      row(plan, 'strategy', snapshot.plan.strategy ?? '-')
+      row(plan, 'state', snapshot.plan.state)
+      row(plan, 'progress', String(snapshot.plan.progress))
+      row(plan, 'current step', snapshot.plan.currentStep)
+    } else {
+      row(plan, 'goal', '-')
+    }
 
     action.replaceChildren()
     if (snapshot.action) {

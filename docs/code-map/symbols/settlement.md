@@ -267,15 +267,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 86
-- `createNpcStateRegistry` — function — line 121
-- `MAX_HP` — const — line 13
-- `MAX_STAMINA` — const — line 14
-- `NpcAuthoritativeState` — type — line 30
-- `NpcId` — type — line 8
-- `NpcPhysicalMaxima` — type — line 72
-- `NpcStateRegistry` — type — line 108
-- `NpcStateSnapshot` — type — line 49
+- `createNpcAuthoritativeState` — function — line 95
+- `createNpcStateRegistry` — function — line 131
+- `MAX_HP` — const — line 14
+- `MAX_STAMINA` — const — line 15
+- `NpcAuthoritativeState` — type — line 31
+- `NpcId` — type — line 9
+- `NpcPhysicalMaxima` — type — line 81
+- `NpcStateRegistry` — type — line 118
+- `NpcStateSnapshot` — type — line 56
 
 ## `settlement/pathDryness.ts`
 
