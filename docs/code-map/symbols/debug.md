@@ -94,11 +94,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 74
-- `NPC_TRACE_CAPACITY` — const — line 72
-- `NpcTraceBuffer` — type — line 61
-- `NpcTraceEvent` — type — line 12
-- `NpcTraceEventType` — type — line 59
+- `createNpcTraceBuffer` — function — line 83
+- `NPC_TRACE_CAPACITY` — const — line 81
+- `NpcTraceBuffer` — type — line 70
+- `NpcTraceEvent` — type — line 13
+- `NpcTraceEventType` — type — line 68
 
 ## `debug/renderStateDebug.ts`
 

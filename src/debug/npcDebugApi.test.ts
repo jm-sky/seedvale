@@ -29,6 +29,7 @@ function baseSnapshot(id: string, overrides: Partial<NpcInspectionSnapshot> = {}
     pressures: [],
     strategyCandidates: [],
     selectedStrategy: null,
+    plan: null,
     action: null,
     queue: null,
     watchdog: { rescueStage: 'none', lowProgressStrikes: 0, recentRescueCount: 0 },

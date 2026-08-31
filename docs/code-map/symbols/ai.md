@@ -73,27 +73,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 307
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 580
-- `classifyPendingActivity` — function — line 446
-- `CurrentActivity` — type — line 356
-- `CurrentActivityKind` — type — line 354
-- `findWeaponNeedingMaintenance` — function — line 688
-- `NPC_HEIGHT` — const — line 215
-- `NPC_MODEL_URLS` — const — line 260
-- `NPC_SHADOW_DISTANCE` — const — line 220
-- `NpcAgent` — class — line 787
+- `ActionId` — type — line 322
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 605
+- `classifyPendingActivity` — function — line 471
+- `CurrentActivity` — type — line 371
+- `CurrentActivityKind` — type — line 369
+- `findWeaponNeedingMaintenance` — function — line 713
+- `NPC_HEIGHT` — const — line 230
+- `NPC_MODEL_URLS` — const — line 275
+- `NPC_SHADOW_DISTANCE` — const — line 235
+- `NpcAgent` — class — line 812
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 371
-- `NpcWhy` — type — line 421
-- `Phase` — type — line 287
-- `projectNpcWhy` — function — line 473
-- `promoteChainKind` — function — line 438
+- `NpcInspectionSnapshot` — type — line 386
+- `NpcWhy` — type — line 446
+- `Phase` — type — line 302
+- `projectNpcWhy` — function — line 498
+- `promoteChainKind` — function — line 463
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -161,6 +161,24 @@ Generated from exported TypeScript symbols.
 - `STUCK_STRIKES_FOR_ESCAPE` — const — line 36
 - `STUCK_STRIKES_FOR_REPATH` — const — line 35
 - `tickMovementWatchdog` — function — line 80
+
+## `ai/npcPlan.ts`
+
+- `blockPlan` — function — line 105
+- `completePlan` — function — line 118
+- `createNpcPlan` — function — line 77
+- `goalForNeed` — function — line 43
+- `interruptPlan` — function — line 88
+- `isPlanTerminal` — function — line 67
+- `needForGoal` — function — line 56
+- `NpcGoalId` — type — line 13
+- `NpcPlan` — type — line 33
+- `NpcPlanState` — type — line 15
+- `obsoletePlan` — function — line 112
+- `planIsResumable` — function — line 73
+- `progressPlan` — function — line 126
+- `resumePlan` — function — line 97
+- `setPlanStrategy` — function — line 81
 
 ## `ai/npcStrategies.ts`
 

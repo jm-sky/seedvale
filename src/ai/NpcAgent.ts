@@ -158,6 +158,21 @@ import {
   tickMovementWatchdog,
 } from './npcMovementWatchdog'
 import {
+  blockPlan,
+  createNpcPlan,
+  goalForNeed,
+  interruptPlan,
+  needForGoal,
+  type NpcGoalId,
+  type NpcPlan,
+  type NpcPlanState,
+  obsoletePlan,
+  planIsResumable,
+  progressPlan,
+  resumePlan,
+  setPlanStrategy,
+} from './npcPlan'
+import {
   getFoodStrategyCandidates,
   getWaterDutyStrategyCandidates,
   getWaterStrategyCandidates,
@@ -390,6 +405,16 @@ export type NpcInspectionSnapshot = {
    *  ai-003) — the same values `beginNeed()` used, never recomputed here. */
   strategyCandidates: readonly NpcStrategyCandidate[]
   selectedStrategy: NpcStrategyId | null
+  /** Persistent Goal + Strategy + progress (plan ai-004) — `null` when this
+   *  NPC has no current Plan. Read straight off `NpcAuthoritativeState`, not
+   *  derived from `pendingAction`. */
+  plan: {
+    goal: NpcGoalId
+    strategy: NpcStrategyId | null
+    state: NpcPlanState
+    progress: number
+    currentStep: string
+  } | null
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -1437,6 +1462,15 @@ export class NpcAgent {
       candidates: this.lastDecisionCandidates,
       strategyCandidates: this.lastStrategyCandidates,
       selectedStrategy: this.selectedStrategy,
+      plan: this.npcState.activePlan
+        ? {
+            goal: this.npcState.activePlan.goal,
+            strategy: this.npcState.activePlan.strategy,
+            state: this.npcState.activePlan.state,
+            progress: this.npcState.activePlan.progress.amount,
+            currentStep: this.npcState.activePlan.currentStep,
+          }
+        : null,
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -1670,6 +1704,9 @@ export class NpcAgent {
     this.previousPhase = null
     this.sleepReason = null
     resetMovementWatchdog(this.watchdog)
+    // A wolf attack (plan ai-004 §8 example) pre-empts whatever Goal this
+    // NPC was pursuing — preserve it, interrupted, instead of discarding it.
+    this.markPlanInterrupted()
 
     this.combatIntent = intent
     this.combatMeleeWeapon = meleeWeapon
@@ -2127,9 +2164,16 @@ export class NpcAgent {
         this.lastPressures = pressures
         this.lastDecisionCandidates = candidates
         this.activeNeed = need
+        // Persistent Plan (plan ai-004) — checked against the same fresh
+        // pressures the need pick just used, before deciding what's next:
+        // a Plan's underlying need dropping out of pressure (any actor's
+        // doing, not just this NPC's own actions) means its Goal is
+        // satisfied, regardless of which strategy/action count achieved it.
+        this.reevaluatePlanCompletion(pressures)
         this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures, candidates })
         const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
         if (need !== 'idle') {
+          this.ensurePlanForNeed(need)
           this.beginNeed(need)
           break
         }
@@ -2647,18 +2691,118 @@ export class NpcAgent {
     return { position: this.landmarks.well, isVillageWell: true }
   }
 
+  /** Records a Plan lifecycle-state transition and applies it — the single
+   *  place `ensurePlanForNeed`/`selectAndTraceStrategy`/interruption call
+   *  sites go through, so a state change is never applied without a matching
+   *  trace entry. No-op when `to` doesn't actually change anything. */
+  private transitionPlan(plan: NpcPlan, to: NpcPlan): void {
+    if (plan.state === to.state) {
+      this.npcState.activePlan = to
+      return
+    }
+    this.trace.record({ simTime: this.simClock, type: 'plan.stateChanged', goal: plan.goal, from: plan.state, to: to.state })
+    this.npcState.activePlan = to
+  }
+
+  /** Establishes or resumes the persistent Plan for `need`'s Goal (plan
+   *  ai-004) — called once per `choose()` decision, right before
+   *  `beginNeed()` runs its existing execution branches. A previous Plan for
+   *  a *different* Goal that hadn't already reached `completed`/`obsolete`
+   *  is superseded here (the arbitration above just picked a different Goal
+   *  as more pressing) — matching Plan §10's "important interruption" case
+   *  and the "must not suppress decision-making forever" guardrail. */
+  private ensurePlanForNeed(need: NeedId): void {
+    const goal = goalForNeed(need)
+    if (!goal) return
+    const existing = this.npcState.activePlan
+    if (existing && existing.goal !== goal) {
+      this.transitionPlan(existing, obsoletePlan(existing))
+    }
+    const current = this.npcState.activePlan
+    if (planIsResumable(current, goal)) {
+      // `blocked` is left as-is here — `selectAndTraceStrategy()` below is
+      // the sole authority for un-blocking (it knows whether a strategy is
+      // actually available again), so resuming it early would just bounce
+      // straight back to `blocked` on a still-unworkable Goal.
+      if (current.state === 'interrupted') {
+        this.transitionPlan(current, resumePlan(current))
+      }
+      return
+    }
+    const created = createNpcPlan(goal)
+    this.npcState.activePlan = created
+    this.trace.record({ simTime: this.simClock, type: 'plan.created', goal })
+  }
+
+  /** Goal satisfaction (plan ai-004 §7) — the underlying need's own
+   *  freshly-generated pressure dropped out (below its arbitration
+   *  threshold), the same signal `choose()` uses to decide whether this need
+   *  is even worth picking. Reused here rather than a second criterion, so a
+   *  Plan completes "regardless of action count" and even when another actor
+   *  (a different NPC, the player, local exchange) satisfied it. */
+  private reevaluatePlanCompletion(pressures: readonly NpcPressure[]): void {
+    const plan = this.npcState.activePlan
+    if (!plan || plan.state === 'completed' || plan.state === 'obsolete') return
+    const need = needForGoal(plan.goal)
+    const pressure = pressures.find((p) => p.target === need)
+    if (!pressure || pressure.value > 0) return
+    this.trace.record({ simTime: this.simClock, type: 'plan.completed', goal: plan.goal })
+    this.npcState.activePlan = null
+  }
+
+  /** Real world-effect progress toward `goal` (plan ai-004 §6) — a no-op
+   *  when there's no matching active Plan, so a stray call from a strategy
+   *  branch that isn't actually plan-tracked right now never resurrects/
+   *  misattributes progress. */
+  private progressActivePlan(goal: NpcGoalId, amount: number): void {
+    if (amount <= 0) return
+    const plan = this.npcState.activePlan
+    if (!plan || plan.goal !== goal) return
+    const updated = progressPlan(plan, amount)
+    if (updated === plan) return
+    this.transitionPlan(plan, updated)
+    this.trace.record({ simTime: this.simClock, type: 'plan.progressed', goal, amount, total: updated.progress.amount })
+  }
+
+  /** Marks the current Plan interrupted (plan ai-004 §8) without discarding
+   *  it — called from every place a concrete action is cancelled out from
+   *  under an in-progress Goal (`interruptCurrentAction`, `abandonStuckAction`,
+   *  `beginCombat`). The next `choose()` resolves through `ensurePlanForNeed`,
+   *  which resumes this same Plan when its Goal is picked again. */
+  private markPlanInterrupted(): void {
+    const plan = this.npcState.activePlan
+    if (!plan || plan.state === 'completed' || plan.state === 'obsolete' || plan.state === 'interrupted') return
+    this.transitionPlan(plan, interruptPlan(plan))
+  }
+
   /** Candidate strategies → selection (plan ai-003) — the explicit seam
    *  between the already-selected `need` and `beginNeed()`'s existing
    *  execution branches below. Records the exact candidate list and pick
    *  into diagnostics/trace; `beginNeed()`'s own conditions (unchanged)
    *  still own what actually executes, so a candidate marked "available"
    *  here that turns out stale by execution time (another actor consumed
-   *  the source) safely falls through the same way it always has. */
+   *  the source) safely falls through the same way it always has.
+   *
+   *  Also carries the selection onto the active Plan (plan ai-004) when one
+   *  is tracking this need's Goal: `selected === null` means no strategy can
+   *  currently produce a step → `blocked`; regaining one un-blocks it. */
   private selectAndTraceStrategy(need: NeedId, candidates: NpcStrategyCandidate[]): NpcStrategyId | null {
     const selected = selectStrategy(candidates)
     this.lastStrategyCandidates = candidates
     this.selectedStrategy = selected
     this.trace.record({ simTime: this.simClock, type: 'strategy.selected', need, candidates, selected })
+    const goal = goalForNeed(need)
+    const plan = this.npcState.activePlan
+    if (goal && plan && plan.goal === goal) {
+      const withStrategy = setPlanStrategy(plan, selected)
+      if (selected === null && withStrategy.state !== 'blocked') {
+        this.transitionPlan(withStrategy, blockPlan(withStrategy))
+      } else if (selected !== null && withStrategy.state === 'blocked') {
+        this.transitionPlan(withStrategy, resumePlan(withStrategy))
+      } else {
+        this.npcState.activePlan = withStrategy
+      }
+    }
     return selected
   }
 
@@ -2742,6 +2886,7 @@ export class NpcAgent {
           onComplete: () => {
             this.needs.waterDuty = Math.max(0, this.needs.waterDuty - WATER_DUTY_SATISFY_AMOUNT)
             household.water.add(WATER_FETCH_AMOUNT)
+            this.progressActivePlan('fulfilWorkDuty', WATER_FETCH_AMOUNT)
           },
         },
       })
@@ -2775,6 +2920,7 @@ export class NpcAgent {
           onComplete: () => {
             household.takeFood()
             this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+            this.progressActivePlan('secureFood', 1)
           },
         })
         return
@@ -2800,6 +2946,7 @@ export class NpcAgent {
           depositFoodHarvest(household, this.economy)
           household?.takeFood()
           this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+          this.progressActivePlan('secureFood', 1)
         },
       })
       return
@@ -2862,6 +3009,7 @@ export class NpcAgent {
           onComplete: () => {
             this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
             depositWoodHarvest(this.household, this.economy, harvestedWood)
+            this.progressActivePlan('obtainWood', harvestedWood)
           },
         },
       })
@@ -4016,6 +4164,11 @@ export class NpcAgent {
     this.wait = 0
     this.repathActive = false
     this.phase = 'choose'
+    // The concrete action is gone, but the Goal it was pursuing may still be
+    // meaningful (plan ai-004 §8) — mark the Plan interrupted, never clear
+    // it; `ensurePlanForNeed()` resumes it once `choose()` re-derives the
+    // same need.
+    this.markPlanInterrupted()
     this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'interrupt' })
   }
 
@@ -4099,6 +4252,10 @@ export class NpcAgent {
     resetMovementWatchdog(this.watchdog)
     if (escalate) this.emergencyTeleport()
     this.phase = 'choose'
+    // Same principle as `interruptCurrentAction()` — the concrete action
+    // failed, but the Goal survives if it's still meaningful (plan
+    // ai-004 §8); the movement watchdog itself stays independent of Plan.
+    this.markPlanInterrupted()
     this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'abandon' })
   }
 

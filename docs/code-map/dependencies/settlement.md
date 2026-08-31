@@ -598,6 +598,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/helperAssignment.ts`
+- `ai/npcPlan.ts`
 - `ai/npcVigor.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`

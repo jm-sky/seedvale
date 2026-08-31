@@ -1,7 +1,7 @@
 # Plan: NPC Goals & Persistent Plans
 
 **Created:** 2026-08-31  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~001~~ ~~002~~ ~~003~~  
 **Domain:** `ai`

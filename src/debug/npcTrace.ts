@@ -1,6 +1,7 @@
 import type { ScoredNeedCandidate } from '../ai/decisionModifiers'
 import type { NeedId, NpcPressure } from '../ai/Needs'
 import type { ActionId, Phase } from '../ai/NpcAgent'
+import type { NpcGoalId, NpcPlanState } from '../ai/npcPlan'
 import type { NpcStrategyCandidate, NpcStrategyId } from '../ai/npcStrategies'
 
 /**
@@ -55,6 +56,14 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'debug.freeze' }
   | { simTime: number; type: 'debug.unfreeze' }
   | { simTime: number; type: 'debug.reevaluate' }
+  /** Persistent Plan lifecycle (plan ai-004) — recorded at establishment,
+   *  every lifecycle-state transition, real progress, and completion. Never
+   *  per-tick; a Plan can sit `active` across many ticks with no trace
+   *  entries at all. */
+  | { simTime: number; type: 'plan.created'; goal: NpcGoalId }
+  | { simTime: number; type: 'plan.stateChanged'; goal: NpcGoalId; from: NpcPlanState; to: NpcPlanState }
+  | { simTime: number; type: 'plan.progressed'; goal: NpcGoalId; amount: number; total: number }
+  | { simTime: number; type: 'plan.completed'; goal: NpcGoalId }
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 
