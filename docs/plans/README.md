@@ -29,20 +29,21 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------- | --------- | --- | --- | --- |
-| 💡 `npc-002-npc-healing.md`                                | NPC używa opatrunków | 🟡 | M | ~~177~~ |
+| 💡 `npc-002-npc-healing.md`                                  | NPC używa opatrunków | 🟡 | M | ~~177~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`       | - | 🟡 | L | 181 |
-| 💡 `world-004-well-depth-groundwater-and-protection.md`    | - | 🟡 | M | ~~127~~ |
+| 💡 `world-004-well-depth-groundwater-and-protection.md`      | - | 🟡 | M | ~~127~~ |
 | ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-| ◼️ `fauna-004-sheep-wool-and-shepherd.md`                  | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
-| ◼️ `settlements-npcs-006-wool-to-material.md`              | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
-| ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`  | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
-| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`         | - | 🔴 | L | - |
-| ◼️ `tools-003-house-browser-and-tools-menu.md`             | - | 🟡 | M | ~~111~~ |
-| ◼️ `tools-000-weapon-browser-observatory.md`               | Weapon Browser w Observatory/Admin | 🟡 | M | - |
+| ◼️ `fauna-004-sheep-wool-and-shepherd.md`                    | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
+| ◼️ `settlements-npcs-006-wool-to-material.md`                | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
+| ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`    | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
+| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`           | - | 🔴 | L | - |
+| ◼️ `tools-003-house-browser-and-tools-menu.md`               | - | 🟡 | M | ~~111~~ |
+| ◼️ `tools-000-weapon-browser-observatory.md`                 | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `2026-08-11--070--world-observatory.md`                | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `2026-08-08--037--npc-genealogy-lineages.md`           | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
-| ◼️ `settlements-npcs-012-physical-storage-inspection.md`   | - | 🟡 | S | ~~009~~ ~~010~~ |
+| ◼️ `settlements-npcs-012-physical-storage-inspection.md`     | - | 🟡 | S | ~~009~~ ~~010~~ |
+| ◼️ `tools-005-seedvale-character-preparation-panel.md`       | - | 🔴 | M | - |
 
 ---
 
@@ -178,7 +179,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `001`
 - settlements: `003`
 - settlements-npcs: `013`
-- tools: `005`
+- tools: `006`
 - ui-input: `005`
 - world: `007`
 - world-terrain: `004`
