@@ -24,6 +24,130 @@ CLOTHING_HAIR_PREFIXES = (
 )
 
 
+DECIMATE_MODIFIER_NAME = "Seedvale Decimate"
+
+# Initial export LOD settings. Keep these centralized for easy tuning.
+DECIMATE_RATIO_BODY = 0.35
+DECIMATE_RATIO_CLOTHING = 0.35
+DECIMATE_RATIO_HEAD = 0.50
+
+
+def find_export_copy_root():
+    """Find the MPFB2 Export Copy armature."""
+    collection = bpy.data.collections.get("export copy")
+    if collection is None:
+        raise RuntimeError("MPFB2 Export Copy collection not found.")
+
+    roots = [
+        obj for obj in collection.objects
+        if obj.type == "ARMATURE"
+        and obj.name.endswith("_export_copy")
+        and obj.parent is None
+    ]
+
+    if len(roots) == 1:
+        return roots[0]
+
+    if not roots:
+        raise RuntimeError("MPFB2 Export Copy armature not found.")
+
+    raise RuntimeError(
+        "Multiple Export Copy armatures found: "
+        + ", ".join(obj.name for obj in roots)
+    )
+
+
+def classify_export_mesh(obj, export_root):
+    """Classify an Export Copy mesh using structural evidence."""
+    if obj.type != "MESH" or obj.parent != export_root:
+        return None
+
+    # Exported MPFB2 Human is the only verified mesh with the body group.
+    if obj.vertex_groups.get("body") is not None:
+        return "body"
+
+    # Head-only weights are shared by hair/beard/eyes. The current verified
+    # character has Human.low-poly as the eye mesh, so keep this narrow
+    # fallback until eye identification is verified structurally.
+    source_name = obj.name.removesuffix("_export_copy")
+    if source_name == "Human.low-poly":
+        return "eyes"
+
+    head_groups = {
+        "mixamorig:Head",
+        "mixamorig:Neck",
+        "mixamorig:Spine2",
+    }
+    group_names = {group.name for group in obj.vertex_groups}
+
+    if group_names and group_names.issubset(head_groups):
+        return "head"
+
+    # Remaining child meshes of the Export Copy armature are currently
+    # treated as renderable clothing/accessories.
+    return "clothing"
+
+
+def find_export_copy_meshes(export_root):
+    """Return Export Copy mesh targets with their classification."""
+    collection = bpy.data.collections.get("export copy")
+    if collection is None:
+        raise RuntimeError("MPFB2 Export Copy collection not found.")
+
+    result = []
+    for obj in collection.objects:
+        component = classify_export_mesh(obj, export_root)
+        if component is not None:
+            result.append((obj, component))
+
+    return result
+
+
+def generate_decimate():
+    """Add or update Seedvale Decimate modifiers on Export Copy meshes."""
+    export_root = find_export_copy_root()
+    targets = find_export_copy_meshes(export_root)
+
+    if not targets:
+        raise RuntimeError("No supported Export Copy mesh targets found.")
+
+    ratios = {
+        "body": DECIMATE_RATIO_BODY,
+        "clothing": DECIMATE_RATIO_CLOTHING,
+        "head": DECIMATE_RATIO_HEAD,
+    }
+
+    changed = 0
+    skipped = 0
+
+    log(f"Export Copy: {export_root.name}")
+    log(f"Decimate targets: {len(targets)}")
+
+    for obj, component in targets:
+        if component == "eyes":
+            skipped += 1
+            log(f"Decimate skipped (eyes): {obj.name}")
+            continue
+
+        ratio = ratios[component]
+        modifier = obj.modifiers.get(DECIMATE_MODIFIER_NAME)
+
+        if modifier is None:
+            modifier = obj.modifiers.new(
+                name=DECIMATE_MODIFIER_NAME,
+                type="DECIMATE",
+            )
+            log(f"Decimate added: {obj.name} [{component}]")
+        else:
+            log(f"Decimate updated: {obj.name} [{component}]")
+
+        modifier.decimate_type = "COLLAPSE"
+        modifier.ratio = ratio
+        changed += 1
+
+    return changed, skipped
+
+
 def log(message):
     print(f"{PREFIX} {message}", flush=True)
 
@@ -260,6 +384,26 @@ class SEEDVALE_OT_generate_delete(bpy.types.Operator):
             return {"CANCELLED"}
 
 
+class SEEDVALE_OT_generate_decimate(bpy.types.Operator):
+    bl_idname = "seedvale.generate_decimate"
+    bl_label = "Generate Decimate"
+    bl_description = "Add or update Decimate modifiers on MPFB2 Export Copy meshes"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+        try:
+            changed, skipped = generate_decimate()
+            self.report(
+                {"INFO"},
+                f"Decimate: {changed} meshes configured, {skipped} skipped",
+            )
+            return {"FINISHED"}
+        except Exception as exc:
+            traceback.print_exc()
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
 class SEEDVALE_OT_fix_alpha(bpy.types.Operator):
     bl_idname = "seedvale.fix_alpha"
     bl_label = "Fix Clothing / Hair Alpha"
@@ -325,6 +469,10 @@ class SEEDVALE_PT_character_tools(bpy.types.Panel):
             "seedvale.fix_alpha",
             icon="MATERIAL",
         )
+        box.operator(
+            "seedvale.generate_decimate",
+            icon="MOD_DECIM",
+        )
 
         layout.separator()
 
@@ -342,6 +490,7 @@ class SEEDVALE_PT_character_tools(bpy.types.Panel):
 
 classes = (
     SEEDVALE_OT_generate_delete,
+    SEEDVALE_OT_generate_decimate,
     SEEDVALE_OT_fix_alpha,
     SEEDVALE_OT_prepare,
     SEEDVALE_PT_character_tools,
