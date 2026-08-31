@@ -938,6 +938,14 @@ export class AnimalAgent {
    *  separate from `steerToward`'s own `this.tmp` scratch (see that method's
    *  comment) and from `fleeTarget`/`sourceDest`. */
   private readonly strategicDest = new THREE.Vector3()
+  /** Locked-in combat target for a frenzied wolf (plan 179 follow-up) — once
+   *  set, `resolveFrenzyNpcTarget()` keeps chasing this exact NPC instead of
+   *  re-picking the nearest candidate every tick (which flickered between
+   *  candidates as NPCs moved, reading as the wolf "jumping"/changing
+   *  direction every frame). Cleared only when the NPC drops out of the
+   *  caller-bounded `nearbyNpcs` list (dead or its settlement unloaded) —
+   *  see `resolveFrenzyNpcTarget()`. */
+  private frenzyNpcTarget: NearbyNpcCandidate | null = null
   /** True while this predator's latest throttled human-response decision
    *  (player or, when frenzied, a noticed NPC) is `attack` — the small
    *  signal `NpcAgent`'s bounded local threat perception reads to react
@@ -1728,7 +1736,7 @@ export class AnimalAgent {
     // player isn't the active threat (plan 179 §5/§8) — cheap bounded scan,
     // see `NearbyNpcCandidate`'s doc.
     const npcThreat = !sense.playerActive && this.frenzied && this.def.role === 'predator'
-      ? this.senseNpcThreat(nearbyNpcs)
+      ? this.resolveFrenzyNpcTarget(nearbyNpcs)
       : null
 
     if (this.rabid) {
@@ -1943,6 +1951,30 @@ export class AnimalAgent {
       }
     }
     return best
+  }
+
+  /** Stable frenzy combat target (plan 179 follow-up — see `frenzyNpcTarget`'s
+   *  doc). Once locked onto an NPC, keeps returning that same NPC's
+   *  latest position from `nearbyNpcs` every tick instead of re-running
+   *  `senseNpcThreat`'s nearest-candidate scan, so `chaseNpc` gets a
+   *  consistent destination. Only re-picks (via `senseNpcThreat`) once the
+   *  locked target drops out of the caller-bounded `nearbyNpcs` list —
+   *  dead (`gameLoop.ts` already filters `npc.health.dead`) or its
+   *  settlement unloaded. Does not re-apply `playerNoticeRange` once
+   *  locked, so the wolf keeps chasing a target it has already outrun that
+   *  radius toward. */
+  private resolveFrenzyNpcTarget(nearbyNpcs: readonly NearbyNpcCandidate[]): NearbyNpcCandidate | null {
+    if (this.frenzyNpcTarget) {
+      const stillPresent = nearbyNpcs.find((npc) => npc.id === this.frenzyNpcTarget!.id)
+      if (stillPresent) {
+        this.frenzyNpcTarget = stillPresent
+        return stillPresent
+      }
+      this.frenzyNpcTarget = null
+    }
+    const found = this.senseNpcThreat(nearbyNpcs)
+    if (found) this.frenzyNpcTarget = found
+    return found
   }
 
   /** Same `decidePredatorHumanIntent` scoring as `decideHumanResponse`, fed
