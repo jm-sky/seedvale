@@ -322,11 +322,7 @@ const parseDone = async (): Promise<
   DoneRecord[]
 > => {
   try {
-    const content =
-      await readFile(
-        DONE,
-        'utf8',
-      )
+    const content = await readFile(DONE, 'utf8')
 
     return content
       .split('\n')
@@ -528,8 +524,7 @@ const main = async (): Promise<void> => {
       ]),
     )
 
-  const planFiles =
-    await getCurrentPlanFiles()
+  const planFiles = await getCurrentPlanFiles()
 
   let records = existing
 
