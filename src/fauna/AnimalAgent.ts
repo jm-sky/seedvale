@@ -946,6 +946,14 @@ export class AnimalAgent {
    *  caller-bounded `nearbyNpcs` list (dead or its settlement unloaded) —
    *  see `resolveFrenzyNpcTarget()`. */
   private frenzyNpcTarget: NearbyNpcCandidate | null = null
+  /** Locked-in live-hunt target for a predator (plan npc-005) — once set,
+   *  `resolvePreyTarget()` keeps chasing this exact prey animal instead of
+   *  re-picking `nearest(others, 'prey', ...)` every tick, which switched
+   *  chase target (and visibly changed direction) whenever a different prey
+   *  animal happened to be momentarily closer. Cleared when the target dies
+   *  or leaves `detectRange` — the same bound `nearest()` already used to
+   *  find it — so a predator can still lose prey that outruns detection. */
+  private preyTarget: AnimalAgent | null = null
   /** True while this predator's latest throttled human-response decision
    *  (player or, when frenzied, a noticed NPC) is `attack` — the small
    *  signal `NpcAgent`'s bounded local threat perception reads to react
@@ -2257,7 +2265,7 @@ export class AnimalAgent {
   }
 
   private updatePredator(dt: number, others: AnimalAgent[]): void {
-    const prey = this.nearest(others, 'prey', this.def.detectRange)
+    const prey = this.resolvePreyTarget(others)
     if (prey && this.isNearVillage(prey.mesh.position)) {
       // Live prey inside the village is not huntable; still allow drink/eat.
       if (this.pursueNeeds(dt, others)) return
@@ -2673,6 +2681,26 @@ export class AnimalAgent {
       if (colliderContainsPoint(collider, x, z)) return false
     }
     return true
+  }
+
+  /** Stable live-hunt target (plan npc-005 — see `preyTarget`'s doc). Keeps
+   *  returning the same committed prey animal while it's alive and still
+   *  within `detectRange`, instead of re-running `nearest()`'s
+   *  closest-candidate scan every tick. Re-picks only once the locked target
+   *  dies or drifts out of range. */
+  private resolvePreyTarget(others: AnimalAgent[]): AnimalAgent | null {
+    if (this.preyTarget) {
+      const target = this.preyTarget
+      const inRange = Math.hypot(
+        target.mesh.position.x - this.mesh.position.x,
+        target.mesh.position.z - this.mesh.position.z,
+      ) <= this.def.detectRange
+      if (!target.health.dead && inRange) return target
+      this.preyTarget = null
+    }
+    const found = this.nearest(others, 'prey', this.def.detectRange)
+    if (found) this.preyTarget = found
+    return found
   }
 
   private nearest(

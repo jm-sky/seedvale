@@ -1,7 +1,7 @@
 # Plan: NPC & Animal Target Commitment
 
 **Created:** 2026-08-31
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~177~~ ~~179~~
 **Domain:** `npc`
@@ -394,5 +394,17 @@ Po implementacji chcemy mieć prostą zasadę obowiązującą w całym AI:
 > **Utility wybiera cel. Commitment utrzymuje cel. Validation decyduje, kiedy cel przestał być ważny.**
 
 To ma być wspólny mechanizm dla NPC i fauna, bez tworzenia równoległego systemu AI.
+
+## 17. Implementation summary (2026-08-31)
+
+Recon (zgodnie z implementation notes) pokazał, że większość wymaganego commitmentu już istniała w kodzie:
+
+- **NPC combat (defend/hunter/animal-defense):** `NpcAgent.beginCombat()` (plan 177) już zapisuje `combatIntent`/`phase = 'combat'` raz, a `update()`'s guard (`this.currentAnimalThreat && this.phase !== 'combat' && ...`) już blokuje ponowną `reactToAnimalThreat()`/retargeting podczas aktywnej walki. Hunter (`attemptHuntKill()`, plan 178) już woła `queryTarget()` tylko raz per attempt i oddaje wynik do tego samego `beginCombat()`. Nie było tu żadnej luki — brak zmian.
+- **Frenzy wolf → NPC:** ustabilizowane wcześniej tego samego dnia (`d11dd7e`, `frenzyNpcTarget`/`resolveFrenzyNpcTarget()`) — wilk trzyma się raz namierzonego NPC, dopóki nie zginie/nie zniknie z `nearbyNpcs`. Brak zmian.
+- **NPC vs NPC:** w obecnym kodzie nie istnieje żaden decision system inicjujący walkę NPC↔NPC (`bandit`/PvNPC to tylko komentarze na przyszłość) — nie ma czego commitować; zgodnie z zakresem planu nie tworzono nowego systemu.
+
+Rzeczywista luka: **wolf → deer (live predation)**. `AnimalAgent.updatePredator()` wołał `this.nearest(others, 'prey', detectRange)` co tick, więc bliższa sarna natychmiast podmieniała cel pościgu (widoczne "skakanie" kierunku). Naprawione przez dodanie `preyTarget`/`resolvePreyTarget()` w `src/fauna/AnimalAgent.ts` — ten sam kształt co istniejący `resolveFrenzyNpcTarget()`: raz namierzona żywa ofiara jest trzymana, dopóki nie umrze albo nie oddali się poza `detectRange` (ten sam promień, który już wcześniej ograniczał wybór — nie nowy, generyczny timeout). `updatePredator()` woła teraz `resolvePreyTarget()` zamiast bezpośrednio `nearest()`.
+
+Techniczna weryfikacja zielona: `tsc --noEmit`, `lint:fix`, `build`, pełny `test` (2165 testów). Bez nowego testu jednostkowego dla `resolvePreyTarget()`/`resolveFrenzyNpcTarget()` — obie to prywatne metody `AnimalAgent` wymagające żywego agenta (ta sama konwencja co `d11dd7e`, patrz implementation notes §12/§15). Browser verification pozostaje ręczna (patrz §15 wyżej: wilk → sarna bez przełączania celu, frenzy wolf → jeden NPC, brak target thrashing).
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
