@@ -29,23 +29,21 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------- | --------- | --- | --- | --- |
+| ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | 💡 `npc-002-npc-healing.md`                               | NPC używa opatrunków | 🟡 | M | ~~177~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`       | - | 🟡 | L | 181 |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`   | - | 🟡 | M | ~~127~~ |
-| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`        | - | 🔴 | L | - |
-| ◼️ `tools-003-house-browser-and-tools-menu.md`            | - | 🟡 | M | ~~111~~ |
-| ◼️ `tools-000-weapon-browser-observatory.md`              | Weapon Browser w Observatory/Admin | 🟡 | M | - |
-| ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
-| ◼️ `tools-004-claude-preflight-completion.md`             | - | 🟡 | S | - |
 | ◼️ `world-terrain-003-weather-puddles-v2.md`              | - | 🟡 | S | ~~133~~ |
 | ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`                 | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
 | ◼️ `settlements-npcs-006-wool-to-material.md`             | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md` | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
-| ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | Pochodzenie mięsa, FoodBatch, freshness i warunki storage | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-| `2026-08-11--070--world-observatory.md`                   | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
-| `2026-08-08--037--npc-genealogy-lineages.md`              | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
+| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`        | - | 🔴 | L | - |
+| ◼️ `tools-003-house-browser-and-tools-menu.md`            | - | 🟡 | M | ~~111~~ |
+| ◼️ `tools-000-weapon-browser-observatory.md`              | Weapon Browser w Observatory/Admin | 🟡 | M | - |
+| ◼️ `2026-08-11--070--world-observatory.md`                | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
+| ◼️ `2026-08-08--037--npc-genealogy-lineages.md`           | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
 
 ---
 
