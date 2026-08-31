@@ -844,7 +844,7 @@ That keeps 070 aligned with Seedvale's central design principle: the Observatory
 
 ## 22. Relationship to the original plan
 
-Keep the original `2026-08-11--070--world-observatory.md` as the long-term product scope. This implementation-notes file is the execution guide.
+Keep the original `tools-006--world-observatory.md` as the long-term product scope. This implementation-notes file is the execution guide.
 
 The original plan's final criterion remains valid:
 

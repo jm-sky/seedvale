@@ -10,7 +10,7 @@ Minimapa ma obracać się z kierunkiem patrzenia gracza (heading-up: góra canva
 
 ## Kontekst
 
-Plan [029](./2026-08-07--029--minimap.md) zostawił mapę north-up (tylko translacja). Punkt 4 w [037](../2026-08-08--037--npc-genealogy-lineages.md) zakładał statyczne „N” u góry — **superseded** przez ten plan (przy rotacji stałe N = „przód”, nie północ).
+Plan [029](./2026-08-07--029--minimap.md) zostawił mapę north-up (tylko translacja). Punkt 4 w [npc-004](../npc-004-npc-genealogy-lineages.md) zakładał statyczne „N” u góry — **superseded** przez ten plan (przy rotacji stałe N = „przód”, nie północ).
 
 Rysowanie żyje w Vue: `src/ui-vue/lib/drawMinimap.ts` + `MinimapScreen.vue`; facade `src/ui/createMinimap.ts`; yaw z `mouseLook.state.yaw` w `gameLoop`.
 
@@ -41,4 +41,4 @@ Rysowanie żyje w Vue: `src/ui-vue/lib/drawMinimap.ts` + `MinimapScreen.vue`; fa
 ## Powiązane
 
 - [minimap](./2026-08-07--029--minimap.md)
-- [npc-genealogy-lineages](../2026-08-08--037--npc-genealogy-lineages.md) — punkt kompasu N superseded
+- [npc-genealogy-lineages](../npc-004-npc-genealogy-lineages.md) — punkt kompasu N superseded
