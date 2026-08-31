@@ -43,6 +43,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-000-weapon-browser-observatory.md`              | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `2026-08-11--070--world-observatory.md`                | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `2026-08-08--037--npc-genealogy-lineages.md`           | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
+| ◼️ `settlements-npcs-012-physical-storage-inspection.md`     | - | 🟡 | S | ~~009~~ ~~010~~ |
 
 ---
 
@@ -176,7 +177,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `012`
+- settlements-npcs: `013`
 - tools: `005`
 - ui-input: `005`
 - world: `007`

@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 08:14:11  
+> Date: 2026-08-31 09:08:48  
 
 ## PLANS
 
@@ -11,6 +11,7 @@
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
+- `settlements-npcs-012-physical-storage-inspection.md`
 - `tools-000-weapon-browser-observatory.md`
 - `tools-003-house-browser-and-tools-menu.md`
 
@@ -188,6 +189,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-007-bandages-and-herbal-medicine-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-npcs-012-physical-storage-inspection.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-npcs-012-physical-storage-inspection.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/settlements-npcs-012-physical-storage-inspection.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-npcs-012-physical-storage-inspection-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
