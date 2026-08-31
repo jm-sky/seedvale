@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 07:05:54  
+> Date: 2026-08-31 07:06:57  
 
 ## PLANS
 
@@ -23,6 +23,7 @@ Zrób review planu `PLANNING.md`
 
 Wczytaj:
 - `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
 - `docs/plans/PLANNING.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
@@ -53,6 +54,7 @@ Zrób review planu `npc-000--mpfb2-npc-hero-character-pipeline.md`
 
 Wczytaj:
 - `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
 - `docs/plans/npc-000--mpfb2-npc-hero-character-pipeline.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
@@ -83,6 +85,7 @@ Zrób review planu `tools-000-weapon-browser-observatory.md`
 
 Wczytaj:
 - `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
 - `docs/plans/tools-000-weapon-browser-observatory.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
@@ -113,6 +116,7 @@ Zrób review planu `tools-003-house-browser-and-tools-menu.md`
 
 Wczytaj:
 - `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
 - `docs/plans/tools-003-house-browser-and-tools-menu.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
@@ -143,6 +147,7 @@ Zrób review planu `tools-004-claude-preflight-completion.md`
 
 Wczytaj:
 - `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
 - `docs/plans/tools-004-claude-preflight-completion.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
