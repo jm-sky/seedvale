@@ -46,6 +46,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
+| ◼️ `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | - | 🔴 | S | `none` |
 
 ---
 
@@ -185,7 +186,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `003`
 - settlements-npcs: `014`
 - tools: `007`
-- ui-input: `005`
+- ui-input: `006`
 - world: `008`
 - world-terrain: `004`
 
