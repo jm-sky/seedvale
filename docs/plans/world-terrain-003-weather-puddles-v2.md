@@ -1,7 +1,7 @@
 # Plan: Weather puddles V2 — stronger shader surface effect
 
 **Created:** 2026-08-31  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified 2026-08-31, browser/gameplay verification pending  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~133~~  
 **Domain:** `world-terrain`

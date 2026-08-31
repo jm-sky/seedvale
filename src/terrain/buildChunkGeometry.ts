@@ -218,7 +218,8 @@ const WET_SAND_CHUNK = /* glsl */ `
  *  itself, no new attribute needed. */
 const WEATHER_SURFACE_COLOR_CHUNK = /* glsl */ `
   float wetGroundAmt = 0.0;
-  float puddleAmt = 0.0;
+  float puddleEdgeAmt = 0.0;
+  float puddleCoreAmt = 0.0;
   float snowCoverAmt = 0.0;
   {
     float aboveWater = smoothstep( uWaterLevel, uWaterLevel + 0.3, vWorldPos.y );
@@ -229,14 +230,24 @@ const WEATHER_SURFACE_COLOR_CHUNK = /* glsl */ `
 
     // Puddles: low-frequency irregular patches, gated to flat, bare-ish,
     // above-water ground; threshold tightens as wetness rises so coverage
-    // grows with it instead of popping in at full extent.
+    // grows with it instead of popping in at full extent. Wider band + lower
+    // ceiling than V1 so patches read bigger/more contiguous at gameplay
+    // camera distance (plan world-terrain-003 v2).
     float puddleNoise = terrainValueNoise( vWorldPos.xz * 0.02 ) * 0.6
       + terrainValueNoise( vWorldPos.xz * 0.05 ) * 0.4;
-    float puddleThreshold = mix( 0.88, 0.42, uWetness );
-    float puddleShape = smoothstep( puddleThreshold, puddleThreshold + 0.12, puddleNoise );
+    float puddleThreshold = mix( 0.86, 0.32, uWetness );
     float puddleFlat = smoothstep( 0.72, 0.95, flatUp );
     float puddleBare = mix( 0.08, 1.0, smoothstep( 0.15, 0.75, vBareGround ) );
-    puddleAmt = puddleShape * puddleFlat * puddleBare * aboveWater * uWetness;
+    float puddleGate = puddleFlat * puddleBare * aboveWater * uWetness;
+
+    // Same noise field, two nested bands — an outer edge (wet rim easing
+    // into standing water) and a smaller inner core (the water itself), so
+    // a puddle reads as dry -> wet -> edge -> center depth instead of one
+    // flat-toned patch. No extra noise evaluation.
+    float puddleOuter = smoothstep( puddleThreshold, puddleThreshold + 0.18, puddleNoise );
+    float puddleInner = smoothstep( puddleThreshold + 0.09, puddleThreshold + 0.26, puddleNoise );
+    puddleEdgeAmt = ( puddleOuter - puddleInner ) * puddleGate;
+    puddleCoreAmt = puddleInner * puddleGate;
 
     // Snow cover: brighter blend favoring flat ground, subtle noise breakup
     // so edges don't read as a hard fill line.
@@ -248,19 +259,27 @@ const WEATHER_SURFACE_COLOR_CHUNK = /* glsl */ `
     );
   }
   diffuseColor.rgb *= 1.0 - wetGroundAmt * 0.32;
-  diffuseColor.rgb *= 1.0 - puddleAmt * 0.4;
+  diffuseColor.rgb *= 1.0 - puddleEdgeAmt * 0.34;
+  diffuseColor.rgb *= 1.0 - puddleCoreAmt * 0.52;
+  // Slight cool cast in the puddle core reads as a thin water layer rather
+  // than just darker dirt — kept subtle to avoid a "wet plastic" look.
+  diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.12, 0.16, 0.20 ), puddleCoreAmt * 0.32 );
   diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.90, 0.94, 0.98 ), snowCoverAmt );
 `
 
-/** Wet ground lowers roughness a little; puddles more so (still nowhere near
- *  a mirror — plan 133 explicitly avoids a reflection pass); snow reads
- *  slightly rougher (fresh snow, not ice). Reuses `wetGroundAmt`/`puddleAmt`/
- *  `snowCoverAmt` computed above — same fragment-shader function body, so
- *  the un-braced `float` declarations in the color chunk are still in scope
- *  here even though three.js splices this in at a separate `#include`. */
+/** Wet ground lowers roughness a little; puddle edge more so; the puddle
+ *  core drops it hard — still nowhere near a mirror (metalness stays 0.04,
+ *  plan 133/world-terrain-003 both explicitly avoid a reflection pass), but
+ *  low enough that `MeshStandardMaterial`'s existing specular response reads
+ *  as a distinct wet-water highlight instead of just a darker patch; snow
+ *  reads slightly rougher (fresh snow, not ice). Reuses `wetGroundAmt`/
+ *  `puddleEdgeAmt`/`puddleCoreAmt`/`snowCoverAmt` computed above — same
+ *  fragment-shader function body, so the un-braced `float` declarations in
+ *  the color chunk are still in scope here even though three.js splices this
+ *  in at a separate `#include`. */
 const WEATHER_SURFACE_ROUGHNESS_CHUNK = /* glsl */ `
   roughnessFactor = clamp(
-    roughnessFactor - wetGroundAmt * 0.18 - puddleAmt * 0.28 + snowCoverAmt * 0.05,
+    roughnessFactor - wetGroundAmt * 0.18 - puddleEdgeAmt * 0.22 - puddleCoreAmt * 0.58 + snowCoverAmt * 0.05,
     0.05, 1.0
   );
 `
@@ -360,10 +379,11 @@ ${MACRO_NOISE_FUNCS}${
   }
   // Every chunk injects identical code for a given detail mode, so they can
   // share one compiled program — but three's default cache key ignores
-  // `onBeforeCompile`, so say so explicitly. Bumped to v5 for plan 133's
-  // added uniforms/varyings/chunks so three never reuses a v4 program.
+  // `onBeforeCompile`, so say so explicitly. Bumped to v6 for plan
+  // world-terrain-003's edge/core puddle split so three never reuses a v5
+  // program compiled against the old single `puddleAmt` chunk.
   material.customProgramCacheKey = () =>
-    detailOn ? 'chunk-terrain-surface-detail-v5' : 'chunk-terrain-surface-v5'
+    detailOn ? 'chunk-terrain-surface-detail-v6' : 'chunk-terrain-surface-v6'
 }
 
 /** Where the surface reads as packed dirt/sand rather than vegetated ground:
