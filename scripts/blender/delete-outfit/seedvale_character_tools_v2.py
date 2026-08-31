@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Seedvale Character Tools v2",
     "author": "Seedvale",
-    "version": (0, 2, 0),
+    "version": (0, 2, 1),
     "blender": (5, 2, 0),
     "location": "View3D > Sidebar > Seedvale",
     "description": "Preparation tools for MPFB2 Export Copy characters.",
@@ -16,22 +16,14 @@ PREFIX = "[Seedvale Character Tools v2]"
 
 EXPORT_COLLECTION_NAME = "export copy"
 EXPORT_COPY_SUFFIX = "_export_copy"
-
 DECIMATE_MODIFIER_NAME = "Seedvale Decimate"
 
 DECIMATE_RATIO_BODY = 0.35
 DECIMATE_RATIO_CLOTHING = 0.35
 DECIMATE_RATIO_HEAD = 0.50
 
-EYE_SOURCE_NAMES = {
-    "Human.low-poly",
-}
-
-HEAD_GROUPS = {
-    "mixamorig:Head",
-    "mixamorig:Neck",
-    "mixamorig:Spine2",
-}
+EYE_SOURCE_NAMES = {"Human.low-poly"}
+HEAD_GROUPS = {"mixamorig:Head", "mixamorig:Neck", "mixamorig:Spine2"}
 
 
 def log(message):
@@ -39,13 +31,10 @@ def log(message):
 
 
 def activate_object(obj):
-    """Activate an object without bpy.ops.object.select_all()."""
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False)
-
     for other in bpy.context.view_layer.objects:
         other.select_set(False)
-
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
@@ -53,34 +42,23 @@ def activate_object(obj):
 def find_export_collection():
     collection = bpy.data.collections.get(EXPORT_COLLECTION_NAME)
     if collection is None:
-        raise RuntimeError(
-            f'MPFB2 Export Copy collection "{EXPORT_COLLECTION_NAME}" not found.'
-        )
+        raise RuntimeError(f'MPFB2 Export Copy collection "{EXPORT_COLLECTION_NAME}" not found.')
     return collection
 
 
 def find_export_copy_root():
-    """Find the MPFB2 Export Copy armature."""
     collection = find_export_collection()
-
     roots = [
-        obj
-        for obj in collection.objects
+        obj for obj in collection.objects
         if obj.type == "ARMATURE"
         and obj.name.endswith(EXPORT_COPY_SUFFIX)
         and obj.parent is None
     ]
-
     if len(roots) == 1:
         return roots[0]
-
     if not roots:
         raise RuntimeError("MPFB2 Export Copy armature not found.")
-
-    raise RuntimeError(
-        "Multiple Export Copy armatures found: "
-        + ", ".join(obj.name for obj in roots)
-    )
+    raise RuntimeError("Multiple Export Copy armatures found: " + ", ".join(obj.name for obj in roots))
 
 
 def is_descendant(obj, root):
@@ -93,10 +71,8 @@ def is_descendant(obj, root):
 
 
 def classify_export_mesh(obj, export_root):
-    """Classify an Export Copy mesh using structural evidence."""
     if obj.type != "MESH" or not is_descendant(obj, export_root):
         return None
-
     if obj.vertex_groups.get("body") is not None:
         return "body"
 
@@ -113,110 +89,76 @@ def classify_export_mesh(obj, export_root):
 
 def find_export_copy_meshes(export_root):
     result = []
-
     for obj in find_export_collection().objects:
         component = classify_export_mesh(obj, export_root)
         if component is not None:
             result.append((obj, component))
-
     if not result:
         raise RuntimeError("No supported Export Copy mesh targets found.")
-
     return result
 
 
 def find_export_basemesh(export_root):
     meshes = [
-        obj
-        for obj in find_export_collection().objects
+        obj for obj in find_export_collection().objects
         if obj.type == "MESH" and is_descendant(obj, export_root)
     ]
-
-    body_meshes = [
-        obj for obj in meshes
-        if obj.vertex_groups.get("body") is not None
-    ]
-
+    body_meshes = [obj for obj in meshes if obj.vertex_groups.get("body") is not None]
     if len(body_meshes) == 1:
         return body_meshes[0]
-
     if not body_meshes:
         raise RuntimeError("Export Copy basemesh not found.")
-
-    raise RuntimeError(
-        "Multiple Export Copy basemesh meshes found: "
-        + ", ".join(obj.name for obj in body_meshes)
-    )
+    raise RuntimeError("Multiple Export Copy basemesh meshes found: " + ", ".join(obj.name for obj in body_meshes))
 
 
 def find_export_clothing(export_root, basemesh):
-    result = []
-
-    for obj in find_export_collection().objects:
-        if obj.type != "MESH":
-            continue
-        if obj == basemesh or not is_descendant(obj, export_root):
-            continue
-
-        if classify_export_mesh(obj, export_root) == "clothing":
-            result.append(obj)
-
-    return result
+    return [
+        obj for obj in find_export_collection().objects
+        if obj.type == "MESH"
+        and obj != basemesh
+        and is_descendant(obj, export_root)
+        and classify_export_mesh(obj, export_root) == "clothing"
+    ]
 
 
 def add_or_update_decimate(obj, ratio):
     modifier = obj.modifiers.get(DECIMATE_MODIFIER_NAME)
-
     if modifier is None:
-        modifier = obj.modifiers.new(
-            name=DECIMATE_MODIFIER_NAME,
-            type="DECIMATE",
-        )
+        modifier = obj.modifiers.new(name=DECIMATE_MODIFIER_NAME, type="DECIMATE")
         log(f"Decimate added: {obj.name} ratio={ratio:.2f}")
     else:
         log(f"Decimate updated: {obj.name} ratio={ratio:.2f}")
-
     modifier.decimate_type = "COLLAPSE"
     modifier.ratio = ratio
     return modifier
 
 
-def generate_decimate():
-    """
-    Add and apply Decimate.
+def apply_decimate(obj, ratio):
+    modifier = add_or_update_decimate(obj, ratio)
+    activate_object(obj)
+    bpy.ops.object.modifier_apply(modifier=modifier.name)
+    log(f"Decimate applied: {obj.name} ratio={ratio:.2f}")
 
-    v1 deliberately applies the modifier immediately so subsequent
-    Delete Group generation operates on reduced Export Copy geometry.
-    """
+
+def decimate_clothing():
     export_root = find_export_copy_root()
-    targets = find_export_copy_meshes(export_root)
+    basemesh = find_export_basemesh(export_root)
+    clothing = find_export_clothing(export_root, basemesh)
 
-    ratios = {
-        "body": DECIMATE_RATIO_BODY,
-        "clothing": DECIMATE_RATIO_CLOTHING,
-        "head": DECIMATE_RATIO_HEAD,
-    }
+    if not clothing:
+        raise RuntimeError("No Export Copy clothing meshes found.")
 
-    changed = 0
-    skipped = 0
+    for obj in clothing:
+        apply_decimate(obj, DECIMATE_RATIO_CLOTHING)
 
-    log(f"Export Copy: {export_root.name}")
-    log(f"Decimate targets: {len(targets)}")
+    return len(clothing)
 
-    for obj, component in targets:
-        if component == "eyes":
-            skipped += 1
-            log(f"Decimate skipped (eyes): {obj.name}")
-            continue
 
-        modifier = add_or_update_decimate(obj, ratios[component])
-        activate_object(obj)
-        bpy.ops.object.modifier_apply(modifier=modifier.name)
-
-        changed += 1
-        log(f"Decimate applied: {obj.name} [{component}]")
-
-    return changed, skipped
+def decimate_body():
+    export_root = find_export_copy_root()
+    basemesh = find_export_basemesh(export_root)
+    apply_decimate(basemesh, DECIMATE_RATIO_BODY)
+    return basemesh.name
 
 
 def remove_mask_if_exists(basemesh, group_name):
@@ -226,30 +168,18 @@ def remove_mask_if_exists(basemesh, group_name):
 
 
 def create_delete_group_for_clothing(basemesh, clothes):
-    from bl_ext.extensions_blender_org.mpfb.services.clothesservice import (
-        ClothesService,
-    )
-    from bl_ext.extensions_blender_org.mpfb.entities.clothes.vertexmatch import (
-        VertexMatch,
-    )
-    from bl_ext.extensions_blender_org.mpfb.entities.meshcrossref import (
-        MeshCrossRef,
-    )
-    from bl_ext.extensions_blender_org.mpfb.entities.objectproperties import (
-        GeneralObjectProperties,
-    )
+    from bl_ext.extensions_blender_org.mpfb.services.clothesservice import ClothesService
+    from bl_ext.extensions_blender_org.mpfb.entities.clothes.vertexmatch import VertexMatch
+    from bl_ext.extensions_blender_org.mpfb.entities.meshcrossref import MeshCrossRef
+    from bl_ext.extensions_blender_org.mpfb.entities.objectproperties import GeneralObjectProperties
     import bl_ext.extensions_blender_org.mpfb
 
-    group_name = (
-        f"Delete."
-        f"{clothes.name.removesuffix(EXPORT_COPY_SUFFIX).removeprefix('Human.')}"
-    )
+    group_name = f"Delete.{clothes.name.removesuffix(EXPORT_COPY_SUFFIX).removeprefix('Human.')}"
 
     existing_group = basemesh.vertex_groups.get(group_name)
     if existing_group:
         log(f"Removing existing vertex group: {group_name}")
         basemesh.vertex_groups.remove(existing_group)
-
     remove_mask_if_exists(basemesh, group_name)
 
     clothes_copy = clothes.copy()
@@ -258,14 +188,11 @@ def create_delete_group_for_clothing(basemesh, clothes):
 
     for collection in clothes.users_collection:
         collection.objects.link(clothes_copy)
-
     clothes_copy.matrix_world = clothes.matrix_world.copy()
 
     try:
         activate_object(clothes_copy)
 
-        # The Export Copy has already had Decimate applied. Only an ARMATURE
-        # modifier is expected here, if any.
         for modifier in list(clothes_copy.modifiers):
             if modifier.type == "ARMATURE":
                 log(f"Applying temporary ARMATURE: {modifier.name}")
@@ -275,11 +202,7 @@ def create_delete_group_for_clothing(basemesh, clothes):
             clothes_copy.vertex_groups.remove(group)
 
         body_group = clothes_copy.vertex_groups.new(name="body")
-        body_group.add(
-            list(range(len(clothes_copy.data.vertices))),
-            1.0,
-            "REPLACE",
-        )
+        body_group.add(list(range(len(clothes_copy.data.vertices))), 1.0, "REPLACE")
 
         reference_scale = ClothesService.get_reference_scale(basemesh)
 
@@ -291,7 +214,6 @@ def create_delete_group_for_clothing(basemesh, clothes):
             write_cache=False,
             read_cache=True,
         )
-
         clothes_xref = MeshCrossRef(
             clothes_copy,
             after_modifiers=True,
@@ -301,10 +223,7 @@ def create_delete_group_for_clothing(basemesh, clothes):
             read_cache=False,
         )
 
-        scale_factor = GeneralObjectProperties.get_value(
-            "scale_factor",
-            entity_reference=basemesh,
-        )
+        scale_factor = GeneralObjectProperties.get_value("scale_factor", entity_reference=basemesh)
 
         mhclo = bl_ext.extensions_blender_org.mpfb.entities.clothes.mhclo.Mhclo()
         mhclo.verts = {}
@@ -315,7 +234,6 @@ def create_delete_group_for_clothing(basemesh, clothes):
             raise RuntimeError(f"No vertices in clothing mesh: {clothes.name}")
 
         started = time.time()
-
         for vert in range(vertex_count):
             vmatch = VertexMatch(
                 clothes_copy,
@@ -332,39 +250,29 @@ def create_delete_group_for_clothing(basemesh, clothes):
             if (vert + 1) % 250 == 0 or vert == vertex_count - 1:
                 elapsed = time.time() - started
                 log(
-                    f"{clothes.name}: vertex match "
-                    f"{vert + 1:,}/{vertex_count:,} "
-                    f"({(vert + 1) / vertex_count * 100:.1f}%) "
-                    f"{elapsed:.1f}s"
+                    f"{clothes.name}: vertex match {vert + 1:,}/{vertex_count:,} "
+                    f"({(vert + 1) / vertex_count * 100:.1f}%) {elapsed:.1f}s"
                 )
 
         ClothesService.create_new_delete_group(
-            basemesh,
-            clothes_copy,
-            mhclo,
-            group_name=group_name,
+            basemesh, clothes_copy, mhclo, group_name=group_name
         )
 
         group = basemesh.vertex_groups.get(group_name)
         if not group:
             raise RuntimeError(f"Delete group was NOT created: {group_name}")
 
-        modifier = basemesh.modifiers.new(
-            name=group_name,
-            type="MASK",
-        )
+        modifier = basemesh.modifiers.new(name=group_name, type="MASK")
         modifier.vertex_group = group_name
         modifier.invert_vertex_group = True
 
         return group_name
-
     finally:
         if clothes_copy.name in bpy.data.objects:
             bpy.data.objects.remove(clothes_copy, do_unlink=True)
 
 
 def generate_delete_groups_and_masks():
-    """Generate Delete Groups on the already-decimated Export Copy."""
     export_root = find_export_copy_root()
     basemesh = find_export_basemesh(export_root)
     clothing = find_export_clothing(export_root, basemesh)
@@ -377,47 +285,29 @@ def generate_delete_groups_and_masks():
     log(f"Export clothing meshes: {len(clothing)}")
 
     created = []
-
     for clothes in clothing:
         log(f"Processing clothing: {clothes.name}")
-        created.append(
-            create_delete_group_for_clothing(
-                basemesh,
-                clothes,
-            )
-        )
-
+        created.append(create_delete_group_for_clothing(basemesh, clothes))
     return len(created)
 
 
 def fix_alpha_materials():
-    """Fix alpha materials used by Export Copy clothing/hair."""
     export_root = find_export_copy_root()
     material_names = set()
 
     for obj, component in find_export_copy_meshes(export_root):
         if component not in {"clothing", "head"}:
             continue
-
         for slot in obj.material_slots:
             if slot.material is not None:
                 material_names.add(slot.material.name)
 
     fixed = 0
-
     for name in sorted(material_names):
         mat = bpy.data.materials.get(name)
         if mat is None or not mat.use_nodes:
             continue
-
-        bsdf = next(
-            (
-                node
-                for node in mat.node_tree.nodes
-                if node.type == "BSDF_PRINCIPLED"
-            ),
-            None,
-        )
+        bsdf = next((node for node in mat.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
         if bsdf is None:
             continue
 
@@ -433,19 +323,63 @@ def fix_alpha_materials():
     return fixed
 
 
-class SEEDVALE_OT_generate_decimate(bpy.types.Operator):
-    bl_idname = "seedvale_v2.generate_decimate"
-    bl_label = "Generate + Apply Decimate"
-    bl_description = "Add and apply Decimate on MPFB2 Export Copy meshes"
+def optimize_character():
+    """
+    V1 pipeline:
+      1. Decimate + apply clothing.
+      2. Generate Delete.* groups and masks against the untouched Export Copy body.
+      3. Decimate + apply the body.
+      4. Fix clothing/hair alpha.
+    """
+    clothing_count = decimate_clothing()
+    groups = generate_delete_groups_and_masks()
+    body_name = decimate_body()
+    materials = fix_alpha_materials()
+
+    return clothing_count, groups, body_name, materials
+
+
+class SEEDVALE_OT_optimize_character(bpy.types.Operator):
+    bl_idname = "seedvale_v2.optimize_character"
+    bl_label = "Optimize Character"
+    bl_description = "Decimate clothing, generate Delete Groups, then decimate the body"
     bl_options = {"REGISTER"}
 
     def execute(self, context):
         try:
-            changed, skipped = generate_decimate()
+            clothing, groups, body, materials = optimize_character()
             self.report(
                 {"INFO"},
-                f"Decimate applied to {changed} meshes, {skipped} skipped",
+                f"Optimized: {clothing} clothing, {groups} Delete groups, body {body}, {materials} materials",
             )
+            return {"FINISHED"}
+        except Exception as exc:
+            traceback.print_exc()
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
+class SEEDVALE_OT_generate_decimate(bpy.types.Operator):
+    bl_idname = "seedvale_v2.generate_decimate"
+    bl_label = "Generate + Apply Decimate"
+    bl_description = "Add and apply Decimate on Export Copy meshes"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+        try:
+            export_root = find_export_copy_root()
+            targets = find_export_copy_meshes(export_root)
+            changed = 0
+            for obj, component in targets:
+                if component == "eyes":
+                    continue
+                apply_decimate(obj, {
+                    "body": DECIMATE_RATIO_BODY,
+                    "clothing": DECIMATE_RATIO_CLOTHING,
+                    "head": DECIMATE_RATIO_HEAD,
+                }[component])
+                changed += 1
+            self.report({"INFO"}, f"Decimate applied to {changed} meshes")
             return {"FINISHED"}
         except Exception as exc:
             traceback.print_exc()
@@ -462,10 +396,7 @@ class SEEDVALE_OT_generate_delete(bpy.types.Operator):
     def execute(self, context):
         try:
             count = generate_delete_groups_and_masks()
-            self.report(
-                {"INFO"},
-                f"Generated {count} Delete groups + Masks",
-            )
+            self.report({"INFO"}, f"Generated {count} Delete groups + Masks")
             return {"FINISHED"}
         except Exception as exc:
             traceback.print_exc()
@@ -499,37 +430,26 @@ class SEEDVALE_PT_character_tools(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-
         layout.label(text="MPFB2 Export Copy")
 
         box = layout.box()
-        box.label(text="1. Reduce Export Copy")
-        box.operator(
-            "seedvale_v2.generate_decimate",
-            icon="MOD_DECIM",
-        )
-
-        box = layout.box()
-        box.label(text="2. Generate Delete Groups")
-        box.operator(
-            "seedvale_v2.generate_delete",
-            icon="MOD_MASK",
-        )
-
-        box = layout.box()
-        box.label(text="3. Materials")
-        box.operator(
-            "seedvale_v2.fix_alpha",
-            icon="MATERIAL",
-        )
+        box.label(text="Recommended")
+        box.operator("seedvale_v2.optimize_character", icon="MODIFIER")
 
         layout.separator()
-        layout.label(
-            text="Export Copy → Decimate → Delete Groups → Alpha → GLB"
-        )
+
+        box = layout.box()
+        box.label(text="Debug / individual steps")
+        box.operator("seedvale_v2.generate_decimate", icon="MOD_DECIM")
+        box.operator("seedvale_v2.generate_delete", icon="MOD_MASK")
+        box.operator("seedvale_v2.fix_alpha", icon="MATERIAL")
+
+        layout.separator()
+        layout.label(text="Export Copy → Optimize Character → GLB")
 
 
 classes = (
+    SEEDVALE_OT_optimize_character,
     SEEDVALE_OT_generate_decimate,
     SEEDVALE_OT_generate_delete,
     SEEDVALE_OT_fix_alpha,
