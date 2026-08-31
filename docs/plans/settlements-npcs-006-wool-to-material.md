@@ -1,7 +1,7 @@
 # Plan: Wool to material
 
 **Created:** 2026-08-29  
-**Status:** planned 📋  
+**Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~fauna-004~~  
 **Domain:** settlements-npcs  

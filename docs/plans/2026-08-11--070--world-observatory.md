@@ -1,6 +1,6 @@
 # Plan — World Observatory
 
-**Status:** `todo`
+**Status:** `planned`
 **Created:** 2026-08-11
 **Priority:** ⚪ low · **Effort:** XL · **Depends on:** 071, 069
 

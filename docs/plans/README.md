@@ -2,97 +2,13 @@
 
 Current planning map for implementation plans: backlog, dependencies, active threads and verification queue. Detailed implementation lives in the plan files; implementation notes and reviews live in their dedicated folders; history lives in [archive/](./archive/README.md).
 
-Status: `in progress` 🔄 · `verification needed` 🔍 · `planned` 📋 · `todo` ⬜ · `done` ✅
+Status: `in progress` 🔄 · `verification needed` 🔍 · `planned` 📋 · `done` ✅
 Priority: 🔴 high · 🟡 medium · ⚪ low
 Effort: `XS` minutes · `S` ~15–30 min · `M` ~30–90 min · `L` ~1–3 h · `XL` several sessions
 
 Unless noted otherwise, `verification needed` means implementation has passed automated checks but still needs browser/manual verification.
 
 **Depends on** = implementation prerequisites (plan IDs). ~~done~~ is crossed out. Thematic overlap is not a dependency.
-
-## Plan naming
-
-New plans use:
-
-`<domain>-<id>-<title>.md`
-
-The ID is three-digit and local to the domain.
-
-Existing legacy plans keep their current date/global-ID names and are not renamed.
-
-## Plan domains
-
-New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only for genuinely secondary domains.
-
-| Domain | Covers |
-|--------|--------|
-| `ai` | AI-assisted dialogue, characterisation and related AI systems |
-| `fauna` | Wildlife, predators/prey, herds, ecosystem simulation |
-| `items-player` | Inventory, tools, player needs, world items |
-| `npc` | NPC behaviour, needs, goals, traits, decisions and actions |
-| `persistence` | SaveData, IndexedDB, persistence |
-| `quests-progression` | Quests, relationships, EXP and progression |
-| `settlements` | Settlements, buildings, population, resources and development |
-| `settlements-npcs` | Settlements + NPCs, households, schedules, economy, dialogue |
-| `tools` | Development/debugging tools and utilities |
-| `ui-input` | UI, HUD, input and player interaction |
-| `world` | World state, resources, places, time, weather and global systems |
-| `world-terrain` | Terrain, chunks, ocean, environment and landmarks |
-
-`Ddomain` means "where to look first". Use `Tags` sparingly.
-
-`Roadmap` is optional, and should point to a file in `docs/roadmap` folder.
-
-## Next plan IDs
-
-- ai: `004`
-- fauna: `005`
-- items-player: `003`
-- npc: `003`
-- persistence: `001`
-- quests-progression: `001`
-- settlements: `003`
-- settlements-npcs: `012`
-- tools: `005`
-- ui-input: `005`
-- world: `007`
-- world-terrain: `004`
-
-This ids section is maintained automatically from the plan files.
-
-Next ideas: [NEXT-IDEAS.md](./NEXT-IDEAS.md)
-Loose ends: [LOOSE-ENDS.md](./LOOSE-ENDS.md)
-
----
-
-## Active threads
-
-Current dependency chains and architectural threads. Not a replacement for `Depends on`.
-
-```text
-Combat & weapons
-  (155 inventory instances) → (160 HQ melee) → (161 weapon maintenance)
-  (150 combat mode) + (155) → (162 bows/ranged) → (177 NPC combat melee+ranged — no live AI trigger yet) → 179 animal attack & NPC defense
-
-Household economy & storage
-  (106 food/cooking) + (069 household resources) + (122 water distribution) → (156 storage logistics)
-      → 152 NPC food/drink help
-      → 159 fishing/preservation/bait
-  (122) → (126 seed planting), (127 player-built well)
-
-World-driven quests
-  (049) + 093 + (110) → 132
-
-Rendering performance
-  (157 PointLight budget 16) → 149 shader program first-use hitch
-
-Construction & lodging
-  (109) → (111) → (169)
-  (165) → (168) → (169)
-
-Natural vegetation
-  (140 landscape flora) → (172 natural crop lifecycle) → (126 seed planting)
-```
 
 ---
 
@@ -112,42 +28,24 @@ Natural vegetation
 > 💡 - plan have `-implementation-notes.md`, ◼️ - have not
 
 | File | Summary | Pri | Effort | Depends |
-| ---------------------------------------------------------------------- | --------- | --- | --- | --- |
-| 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
-| 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
-| 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
-| 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
-| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`                     | - | 🔴 | L | - |
-| ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
-| ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
+| --------------------------------------------------------- | --------- | --- | --- | --- |
+| 💡 `npc-002-npc-healing.md`                               | NPC używa opatrunków | 🟡 | M | ~~177~~ |
+| 💡 `2026-08-14--104--underground-caves.md`                | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
+| 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`       | - | 🟡 | L | 181 |
+| 💡 `world-004-well-depth-groundwater-and-protection.md`   | - | 🟡 | M | ~~127~~ |
+| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`        | - | 🔴 | L | - |
+| ◼️ `tools-003-house-browser-and-tools-menu.md`            | - | 🟡 | M | ~~111~~ |
+| ◼️ `tools-000-weapon-browser-observatory.md`              | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
-| ◼️ `tools-004-claude-preflight-completion.md`                | - | 🟡 | S | - |
-| ◼️ `world-terrain-003-weather-puddles-v2.md`                 | - | 🟡 | S | ~~133~~ |
+| ◼️ `tools-004-claude-preflight-completion.md`             | - | 🟡 | S | - |
+| ◼️ `world-terrain-003-weather-puddles-v2.md`              | - | 🟡 | S | ~~133~~ |
 | ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-
-### Fresh new
-
-> Place for newly created plans.
-
-| ◼️ `fauna-004-sheep-wool-and-shepherd.md` | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
-| ◼️ `settlements-npcs-006-wool-to-material.md` | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
+| ◼️ `fauna-004-sheep-wool-and-shepherd.md`                 | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
+| ◼️ `settlements-npcs-006-wool-to-material.md`             | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md` | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
 | ◼️ `items-player-002-food-provenance-freshness-and-storage.md` | Pochodzenie mięsa, FoodBatch, freshness i warunki storage | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-
----
-
-## Todo
-
-| File                                         | Summary                       | Pri | Effort | Depends                                      |
-| -------------------------------------------- | ----------------------------- | --- | ------ | -------------------------------------------- |
-| `2026-08-11--070--world-observatory.md`      | Panel obserwacji życia świata | ⚪  | XL     | 071 (archived, verification needed), ~~069~~ |
-| `2026-08-08--037--npc-genealogy-lineages.md` | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~                              |
-
-### Issues without plans
-
-- **Merchant UX / Handel**:
-  - Podczas handlu brakuje podglądu kupowanego przedmiotu. Nie wiemy, co kupujemy, jakie ma obrażenia, wagę itp.
-  - Pewnie można dodać inne poprawki UX, szczególnie pod mobile.
+| `2026-08-11--070--world-observatory.md`                   | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
+| `2026-08-08--037--npc-genealogy-lineages.md`              | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
 
 ---
 
@@ -236,6 +134,92 @@ Done plans kept here only while they are relevant to current planning or depende
 | `2026-08-18--160--high-quality-melee-weapons.md`                        | Dependency of `161`                         |
 | `2026-08-19--166--named-save-slots.md`                                  | Recent browser-verified persistence work    |
 | `2026-08-22--193--arch--simulation-architecture-consistency.md`         | Findings driving `194`/`195`                |
+
+---
+
+## Plan naming
+
+New plans use:
+
+`<domain>-<id>-<title>.md`
+
+The ID is three-digit and local to the domain.
+
+Existing legacy plans keep their current date/global-ID names and are not renamed.
+
+## Plan domains
+
+New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only for genuinely secondary domains.
+
+| Domain | Covers |
+|--------|--------|
+| `ai` | AI-assisted dialogue, characterisation and related AI systems |
+| `fauna` | Wildlife, predators/prey, herds, ecosystem simulation |
+| `items-player` | Inventory, tools, player needs, world items |
+| `npc` | NPC behaviour, needs, goals, traits, decisions and actions |
+| `persistence` | SaveData, IndexedDB, persistence |
+| `quests-progression` | Quests, relationships, EXP and progression |
+| `settlements` | Settlements, buildings, population, resources and development |
+| `settlements-npcs` | Settlements + NPCs, households, schedules, economy, dialogue |
+| `tools` | Development/debugging tools and utilities |
+| `ui-input` | UI, HUD, input and player interaction |
+| `world` | World state, resources, places, time, weather and global systems |
+| `world-terrain` | Terrain, chunks, ocean, environment and landmarks |
+
+`Ddomain` means "where to look first". Use `Tags` sparingly.
+
+`Roadmap` is optional, and should point to a file in `docs/roadmap` folder.
+
+## Next plan IDs
+
+- ai: `004`
+- fauna: `005`
+- items-player: `003`
+- npc: `003`
+- persistence: `001`
+- quests-progression: `001`
+- settlements: `003`
+- settlements-npcs: `012`
+- tools: `005`
+- ui-input: `005`
+- world: `007`
+- world-terrain: `004`
+
+This ids section is maintained automatically from the plan files.
+
+Next ideas: [NEXT-IDEAS.md](./NEXT-IDEAS.md)
+Loose ends: [LOOSE-ENDS.md](./LOOSE-ENDS.md)
+
+---
+
+## Active threads
+
+Current dependency chains and architectural threads. Not a replacement for `Depends on`.
+
+```text
+Combat & weapons
+  (155 inventory instances) → (160 HQ melee) → (161 weapon maintenance)
+  (150 combat mode) + (155) → (162 bows/ranged) → (177 NPC combat melee+ranged — no live AI trigger yet) → 179 animal attack & NPC defense
+
+Household economy & storage
+  (106 food/cooking) + (069 household resources) + (122 water distribution) → (156 storage logistics)
+      → 152 NPC food/drink help
+      → 159 fishing/preservation/bait
+  (122) → (126 seed planting), (127 player-built well)
+
+World-driven quests
+  (049) + 093 + (110) → 132
+
+Rendering performance
+  (157 PointLight budget 16) → 149 shader program first-use hitch
+
+Construction & lodging
+  (109) → (111) → (169)
+  (165) → (168) → (169)
+
+Natural vegetation
+  (140 landscape flora) → (172 natural crop lifecycle) → (126 seed planting)
+```
 
 ---
 

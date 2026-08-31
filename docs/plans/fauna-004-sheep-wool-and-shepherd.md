@@ -2,12 +2,12 @@
 # Plan: Sheep wool cycle and shepherd
 
 **Created:** 2026-08-29  
-**Status:** \`planned\` 📋  
+**Status:** `planned` 📋  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none  
-**Domain:** \`fauna\`  
-**Tags:** \`settlements-npcs\`, \`items-player\`  
-**Roadmap:** \`textiles-and-herbal-medicine.md\`
+**Domain:** `fauna`  
+**Tags:** `settlements-npcs`, `items-player`  
+**Roadmap:** `textiles-and-herbal-medicine.md`
 
 ## 1. Cel
 

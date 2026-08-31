@@ -1,7 +1,7 @@
 # Plan: Bandages and herbal medicine
 
 **Created:** 2026-08-29  
-**Status:** planned 📋  
+**Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~settlements-npcs-006~~  
 **Domain:** settlements-npcs  
