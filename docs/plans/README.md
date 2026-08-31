@@ -45,7 +45,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
-| ◼️ `npc-005-npc-animal-target-commitment.md`            | - | 🔴 | M | ~~177~~ ~~179~~ |
 
 ---
 
@@ -115,6 +114,7 @@ Implementation is complete; only browser/manual verification remains unless note
 | `settlements-npcs-005-local-resource-exchange.md` | [notes](./implementation-notes/settlements-npcs-005-local-resource-exchange-implementation-notes.md); household ↔ household and village storage ↔ household exchange need browser verification (real surplus/shortage, physical NPC movement) |
 | `settlements-npcs-004-animal-and-npc-social-audio.md` | Spontaneous cow/sheep/chicken vocalization (cooldown + concurrent-play cap), milking + egg-laid contextual sounds, and a friendly-talk SFX hook on Social Place `conversation` start (pools empty — no clips in repo yet, per plan) all implemented; needs browser verification of cooldown feel/no audio-spam with real herds |
 | `world-006-time-weather-and-biome-ambient-soundscape.md` | Bird ambient (1 sample) + reworked cricket day/dusk/night/pre-dawn profile + weather (clear/cloudy/fog/rain/snow) and biome (forest/meadow) factors implemented in `createAmbientAudio.ts`; needs browser verification of the full day-cycle/weather/biome combination for audible clicks or overly abrupt transitions |
+| `npc-005-npc-animal-target-commitment.md` | [notes](./implementation-notes/2026-08-31--npc-005-npc-animal-target-commitment-implementation-notes.md); recon found NPC-side target commitment already correct (177's `combatIntent`/`phase === 'combat'` guard already blocks re-targeting during combat/defend/hunt) and frenzy wolf→NPC already stabilized by a same-day prior fix (`frenzyNpcTarget`/`resolveFrenzyNpcTarget()`); the one real gap was live predator→prey hunting (`AnimalAgent.updatePredator`), which re-ran `nearest(others, 'prey', detectRange)` every tick — added `preyTarget`/`resolvePreyTarget()` (same lock-on-until-dead-or-out-of-range shape as `resolveFrenzyNpcTarget`) so a wolf keeps chasing its committed deer even when another deer gets closer; NPC-vs-NPC combat has no decision system yet in this codebase, so nothing to commit there beyond the existing `beginCombat`/phase guard; wolf→deer no-switch behavior and frenzy wolf single-NPC commitment need browser verification |
 
 ---
 
