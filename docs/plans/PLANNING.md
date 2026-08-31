@@ -97,6 +97,7 @@ create:
 
 Before writing them, inspect the current codebase and record only implementation-relevant findings:
 
+- read `docs/STATE.md`,
 - exact relevant files and symbols,
 - ownership and lifecycle boundaries,
 - existing mechanisms to reuse,

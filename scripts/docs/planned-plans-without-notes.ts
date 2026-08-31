@@ -66,6 +66,7 @@ const generatePrompt = ({ plan, file, path, updatedReviewPath, notesPath }: Plan
     '',
     'Wczytaj:',
     '- `docs/STATE.md`',
+    '- `docs/plans/PLANNING.md` (Implementation Notes section),',
     `- \`${path}\``,
     '- aktualny codebase,',
     '- potrzebne zależności i powiązane implementacje.',
