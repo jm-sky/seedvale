@@ -7,6 +7,7 @@ const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
 const PLANS_DIR = 'docs/plans'
 const PLANS_PATH = resolve(ROOT_DIR, PLANS_DIR)
 const README_PATH = resolve(PLANS_PATH, 'README.md')
+const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
 const NOTES_DIR = 'implementation-notes'
 const NOTES_PATH = resolve(PLANS_PATH, NOTES_DIR)
 
@@ -22,7 +23,8 @@ const PLANNED_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const PLANNED_HEADING = '## Planned'
 const TABLE_HEADER = '| File | Summary | Pri | Effort | Depends |'
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
-const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
+const NEXT_PLAN_ID_END_TAG =
+  'This ids section is maintained automatically from the plan files.'
 const TODO_HEADING = '## TODO'
 
 const PRIORITY_EMOJI: Record<string, string> = {
@@ -43,7 +45,7 @@ const CANONICAL_DOMAINS = new Set([
   'tools',
   'ui-input',
   'world',
-  'world-terrain'
+  'world-terrain',
 ])
 
 type PlanInfo = {
@@ -110,7 +112,11 @@ const matchOne = (
   return match[1]
 }
 
-const buildRow = (file: string, content: string, hasNotes: boolean): string => {
+const buildRow = (
+  file: string,
+  content: string,
+  hasNotes: boolean,
+): string => {
   const headerBlock = extractHeaderBlock(content)
   const isPlanned = content.includes(PLANNED_STATUS_MARKER)
 
@@ -142,7 +148,7 @@ const buildRow = (file: string, content: string, hasNotes: boolean): string => {
   ).trim()
 
   const depends = dependsRaw.toLowerCase() === 'none' ? '-' : dependsRaw
-  const marker = !isPlanned ? '' : (hasNotes ? '💡' : '◼️')
+  const marker = !isPlanned ? '' : hasNotes ? '💡' : '◼️'
   const title = `${marker} \`${file}\``
 
   return `| ${title.padEnd(60)} | - | ${priorityEmoji} | ${effort} | ${depends} |`
@@ -151,11 +157,14 @@ const buildRow = (file: string, content: string, hasNotes: boolean): string => {
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
   const content = await readFile(resolve(PLANS_PATH, plan.file), 'utf8')
 
-  const match = content.match(/^\*\*domain:\*\*\s*`?([^`\s]+)`?\s*$/im)
+  const match = content.match(
+    /^\*\*domain:\*\*\s*`?([^`\s]+)`?\s*$/im,
+  )
 
   if (!match) {
     console.warn(
-      `Warning: missing "domain:" in \`${plan.file}\`; using filename domain "${plan.domain}"`,
+      `Warning: missing "domain:" in \`${plan.file}\`; ` +
+      `using filename domain "${plan.domain}"`,
     )
     return
   }
@@ -260,7 +269,9 @@ const findPlannedTableRange = (
   }
 }
 
-const getPlannedFiles = async (plans: PlanInfo[]): Promise<string[]> => {
+const getPlannedFiles = async (
+  plans: PlanInfo[],
+): Promise<string[]> => {
   const plannedFiles: string[] = []
 
   for (const plan of plans) {
@@ -279,11 +290,16 @@ const getPlannedFiles = async (plans: PlanInfo[]): Promise<string[]> => {
   return plannedFiles
 }
 
-const getExistingFiles = (lines: string[], lastRowIdx: number, separatorIdx: number): Set<string> => {
+const getExistingFiles = (
+  lines: string[],
+  lastRowIdx: number,
+  separatorIdx: number,
+): Set<string> => {
   const existingFiles = new Set<string>()
 
   for (let i = separatorIdx + 1; i <= lastRowIdx; i++) {
     const match = lines[i].match(/`([^`]+\.md)`/)
+
     if (match) {
       existingFiles.add(match[1])
     }
@@ -292,13 +308,24 @@ const getExistingFiles = (lines: string[], lastRowIdx: number, separatorIdx: num
   return existingFiles
 }
 
-const handleMissingPlans = async (missing: string[], implementationNotesFiles: string[], lines: string[], lastRowIdx: number): Promise<string[]> => {
+const handleMissingPlans = async (
+  missing: string[],
+  implementationNotesFiles: string[],
+  lines: string[],
+  lastRowIdx: number,
+): Promise<string[]> => {
   if (missing.length > 0) {
     const newRows: string[] = []
 
     for (const file of missing) {
-      const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
-      const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
+      const content = await readFile(
+        resolve(PLANS_PATH, file),
+        'utf8',
+      )
+      const hasNotes = hasImplementationNotes(
+        file,
+        implementationNotesFiles,
+      )
 
       newRows.push(buildRow(file, content, hasNotes))
     }
@@ -315,13 +342,19 @@ const syncImplementationNotesMarkers = (
   implementationNotesFiles: string[],
 ): string[] => {
   const planFiles = new Set(plans.map(plan => plan.file))
-  const startIdx = lines.findIndex(line => line.trim() === PLANNED_HEADING)
-  const endIdx = lines.findIndex(line => line.trim() === TODO_HEADING)
+  const startIdx = lines.findIndex(
+    line => line.trim() === PLANNED_HEADING,
+  )
+  const endIdx = lines.findIndex(
+    line => line.trim() === TODO_HEADING,
+  )
 
   return lines.map((line, idx) => {
     if (idx < startIdx || idx > endIdx) return line
 
-    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
+    const match = line.match(
+      /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
+    )
 
     if (!match) return line
 
@@ -329,7 +362,10 @@ const syncImplementationNotesMarkers = (
 
     if (!planFiles.has(file)) return line
 
-    const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
+    const hasNotes = hasImplementationNotes(
+      file,
+      implementationNotesFiles,
+    )
     const marker = hasNotes ? '💡' : '◼️'
 
     return line.replace(
@@ -342,10 +378,13 @@ const syncImplementationNotesMarkers = (
 const removeCompletedPlansFromPlannedSection = async (
   lines: string[],
 ): Promise<string[]> => {
-  const { separatorIdx, lastRowIdx } = findPlannedTableRange(lines)
+  const { separatorIdx, lastRowIdx } =
+    findPlannedTableRange(lines)
 
   for (let i = lastRowIdx; i > separatorIdx; i--) {
-    const match = lines[i].match(/^\|\s*(?:💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
+    const match = lines[i].match(
+      /^\|\s*(?:💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
+    )
 
     if (!match) continue
 
@@ -357,13 +396,17 @@ const removeCompletedPlansFromPlannedSection = async (
     try {
       content = await readFile(planPath, 'utf8')
     } catch {
-      throw new Error(`Planned README entry points to missing file: ${file}`)
+      throw new Error(
+        `Planned README entry points to missing file: ${file}`,
+      )
     }
 
     const statusMatch = content.match(PLANNED_STATUS_RE)
 
     if (!statusMatch) {
-      throw new Error(`Cannot find "**Status:**" in planned plan ${file}`)
+      throw new Error(
+        `Cannot find "**Status:**" in planned plan ${file}`,
+      )
     }
 
     const status = statusMatch[1]
@@ -381,8 +424,11 @@ const removeCompletedPlansFromPlannedSection = async (
   return lines
 }
 
-const validatePlans = async (plans: PlanInfo[]): Promise<void> => {
+const validatePlans = async (
+  plans: PlanInfo[],
+): Promise<void> => {
   validateUniqueIds(plans)
+
   for (const plan of plans) {
     await validatePlan(plan)
   }
@@ -405,17 +451,22 @@ const updateNextPlanIds = (
   )
 
   if (startIdx === -1) {
-    throw new Error(`"${NEXT_PLAN_ID_HEADING}" section not found`)
+    throw new Error(
+      `"${NEXT_PLAN_ID_HEADING}" section not found`,
+    )
   }
 
   if (endIdx === -1) {
-    throw new Error(`"${NEXT_PLAN_ID_END_TAG}" heading not found`)
+    throw new Error(
+      `"${NEXT_PLAN_ID_END_TAG}" heading not found`,
+    )
   }
 
   const rows = [...CANONICAL_DOMAINS]
     .toSorted()
     .map(domain => {
       const nextId = nextPlanIds.get(domain)
+
       return `- ${domain}: \`${String(nextId).padStart(3, '0')}\``
     })
 
@@ -430,17 +481,28 @@ const updateNextPlanIds = (
   return lines
 }
 
+const updatePlanningNextPlanIds = (
+  lines: string[],
+  plans: PlanInfo[],
+): string[] => updateNextPlanIds(lines, plans)
+
 const getSourceFiles = async () => {
   const allFiles: string[] = await readdir(PLANS_PATH)
 
-  const implementationNotesFiles: string[] = (await readdir(NOTES_PATH))
-    .filter((file: string) => file.endsWith(NOTES_SUFFIX))
+  const implementationNotesFiles: string[] = (
+    await readdir(NOTES_PATH)
+  ).filter((file: string) => file.endsWith(NOTES_SUFFIX))
 
   const plans = allFiles
     .map((file: string) => parsePlanFile(file))
-    .filter((plan: PlanInfo | null): plan is PlanInfo => plan !== null)
+    .filter(
+      (plan: PlanInfo | null): plan is PlanInfo =>
+        plan !== null,
+    )
 
-  const legacyPlans = allFiles.filter((file: string) => isLegacyPlanFile(file))
+  const legacyPlans = allFiles.filter(file =>
+    isLegacyPlanFile(file),
+  )
 
   return {
     allFiles,
@@ -458,32 +520,91 @@ const main = async () => {
   } = await getSourceFiles()
 
   if (legacyPlans.length > 0) {
-    console.log(`Ignoring ${legacyPlans.length} legacy plan file(s).`)
+    console.log(
+      `Ignoring ${legacyPlans.length} legacy plan file(s).`,
+    )
   }
 
   await validatePlans(plans)
 
-  const plannedFiles: string[] = await getPlannedFiles(plans)
+  const plannedFiles: string[] =
+    await getPlannedFiles(plans)
 
-  const readmeContent = await readFile(README_PATH, 'utf8')
-  let lines = readmeContent.split('\n')
+  // README.md — existing human-facing synchronization.
+  const readmeContent = await readFile(
+    README_PATH,
+    'utf8',
+  )
+  let readmeLines = readmeContent.split('\n')
 
-  const { lastRowIdx, separatorIdx } = findPlannedTableRange(lines)
-  const existingFiles = getExistingFiles(lines, lastRowIdx, separatorIdx)
-  const missing = plannedFiles.filter(file => !existingFiles.has(file))
+  const {
+    lastRowIdx,
+    separatorIdx,
+  } = findPlannedTableRange(readmeLines)
 
-  lines = await handleMissingPlans(missing, implementationNotesFiles, lines, lastRowIdx)
-  lines = await removeCompletedPlansFromPlannedSection(lines)
-  lines = await updateNextPlanIds(lines, plans)
-  lines = syncImplementationNotesMarkers(lines, plans, implementationNotesFiles)
+  const existingFiles = getExistingFiles(
+    readmeLines,
+    lastRowIdx,
+    separatorIdx,
+  )
 
-  const nextContent = lines.join('\n')
+  const missing = plannedFiles.filter(
+    file => !existingFiles.has(file),
+  )
 
-  if (nextContent !== readmeContent) {
-    await writeFile(README_PATH, nextContent)
-    console.log(`Updated ${README_PATH}: +${missing.length} planned row(s)`)
+  readmeLines = await handleMissingPlans(
+    missing,
+    implementationNotesFiles,
+    readmeLines,
+    lastRowIdx,
+  )
+
+  readmeLines =
+    await removeCompletedPlansFromPlannedSection(
+      readmeLines,
+    )
+
+  readmeLines = syncImplementationNotesMarkers(
+    readmeLines,
+    plans,
+    implementationNotesFiles,
+  )
+
+  readmeLines = updatePlanningNextPlanIds(
+    readmeLines,
+    plans,
+  )
+
+  const nextReadmeContent = readmeLines.join('\n')
+
+  if (nextReadmeContent !== readmeContent) {
+    await writeFile(README_PATH, nextReadmeContent)
+    console.log(
+      `Updated ${README_PATH}: +${missing.length} planned row(s)`,
+    )
   } else {
     console.log(`${README_PATH} already up to date`)
+  }
+
+  // PLANNING.md — AI-facing synchronization.
+  const planningContent = await readFile(
+    PLANNING_PATH,
+    'utf8',
+  )
+  let planningLines = planningContent.split('\n')
+
+  planningLines = updatePlanningNextPlanIds(
+    planningLines,
+    plans,
+  )
+
+  const nextPlanningContent = planningLines.join('\n')
+
+  if (nextPlanningContent !== planningContent) {
+    await writeFile(PLANNING_PATH, nextPlanningContent)
+    console.log(`Updated ${PLANNING_PATH}`)
+  } else {
+    console.log(`${PLANNING_PATH} already up to date`)
   }
 }
 
