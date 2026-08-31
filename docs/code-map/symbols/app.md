@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 69
-- `isChannelBusy` — function — line 76
+- `isActionBlocked` — function — line 74
+- `isChannelBusy` — function — line 81
 - `PlayerActionContext` — type — line 30
 
 ## `app/actions/containerActions.ts`
@@ -22,9 +22,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 59
-- `GroundActions` — type — line 34
-- `GroundActionsDeps` — type — line 53
+- `createGroundActions` — function — line 82
+- `GroundActions` — type — line 38
+- `GroundActionsDeps` — type — line 57
 
 ## `app/actions/mountActions.ts`
 
@@ -64,7 +64,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/terrainPreparationActions.ts`
 
-- `createTerrainPreparationActions` — function — line 136
+- `createTerrainPreparationActions` — function — line 141
 - `TerrainPreparationActionDeps` — type — line 81
 - `TerrainPreparationActions` — type — line 97
 - `TerrainPreparationPreviewView` — type — line 74
@@ -97,7 +97,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 205
+- `createApp` — function — line 206
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
@@ -106,12 +106,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 431
+- `createGameLoop` — function — line 435
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 399
+- `GameLoop` — type — line 403
 - `GameLoopDeps` — type — line 204
 
 ## `app/graphicsSettings.ts`
@@ -169,14 +169,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 87
+- `createSaveState` — function — line 93
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 34
-- `SaveStateDeps` — type — line 44
+- `SaveState` — type — line 35
+- `SaveStateDeps` — type — line 45
 
 ## `app/userActions.ts`
 

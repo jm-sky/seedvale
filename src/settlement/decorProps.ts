@@ -467,8 +467,10 @@ const CEMETERY_LAYOUTS: Record<CemeterySize, CemeteryLayoutSpec> = {
 /** Deterministic local grave positions for one cemetery `size` (plan 173) —
  *  side-by-side blocks separated by an aisle gap, centered on the plot
  *  centerpiece. Pure function of `size`/`scale`, so the layout stays stable
- *  across chunk reload; per-grave jitter is applied by the caller. */
-function cemeteryGraveLayout(size: CemeterySize, scale: number): { x: number, z: number }[] {
+ *  across chunk reload; per-grave jitter is applied by the caller. Exported
+ *  (plan world-007) so `world/hiddenFinds.ts` can derive the same grave world
+ *  positions as Hidden Find dig spots without re-deriving the layout. */
+export function cemeteryGraveLayout(size: CemeterySize, scale: number): { x: number, z: number }[] {
   const spec = CEMETERY_LAYOUTS[size]
   const colSpacing = spec.colSpacing * scale
   const rowSpacing = spec.rowSpacing * scale

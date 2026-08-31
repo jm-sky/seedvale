@@ -587,6 +587,7 @@ Generated from TypeScript imports.
 - `world/fishing.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/hiddenFinds.ts`
 - `world/plantedCrops.ts`
 - `world/restCancel.test.ts`
 - `world/treeHarvest.ts`

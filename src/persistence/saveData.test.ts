@@ -28,6 +28,8 @@ const validSave: SaveData = {
   placedTents: [],
   placedTraps: [],
   worldFlags: {},
+  resolvedHiddenFindSpotIds: ['cemetery:0:0:0:1:0', 'stoneCircle:2:1:0:1'],
+  badges: { earned: ['grave_robber'], gravesDisturbed: 1, hiddenFindsFound: 0 },
   map: { discoveredCells: ['0,0', '1,0'] },
   settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [] } } },
   playerNeeds: { hunger: 12, thirst: 8, vigor: 40, starvationDuration: 5400, dehydrationDuration: 900 },

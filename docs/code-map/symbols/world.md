@@ -237,6 +237,15 @@ Generated from exported TypeScript symbols.
 - `createHelperDeliveryHooks` — function — line 27
 - `HelperDeliveryHooks` — type — line 10
 
+## `world/hiddenFinds.ts`
+
+- `findHiddenFindSpot` — function — line 167
+- `HIDDEN_FIND_SEARCH_RADIUS` — const — line 49
+- `HiddenFindLandmark` — type — line 51
+- `HiddenFindLoot` — type — line 61
+- `HiddenFindMatch` — type — line 157
+- `resolveHiddenFindLoot` — function — line 194
+
 ## `world/largeCaves.ts`
 
 - `LARGE_CAVE_MAX_LENGTH` — const — line 33

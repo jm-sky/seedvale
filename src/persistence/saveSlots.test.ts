@@ -46,6 +46,8 @@ const v1 = {
   placedTents: [],
   placedTraps: [],
   worldFlags: {},
+  resolvedHiddenFindSpotIds: [],
+  badges: { earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 },
   map: { discoveredCells: [] },
   settlementEconomies: {},
   playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 0, dehydrationDuration: 0 },

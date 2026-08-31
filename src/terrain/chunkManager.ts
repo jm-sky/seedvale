@@ -14,6 +14,7 @@ import {
   BUSH_SPECS,
   CACTUS_SPECS,
   CEMETERY_SPECS,
+  type CemeterySize,
   createBush,
   createCactus,
   createCampfire,
@@ -439,11 +440,15 @@ export type ChunkManager = {
   /** Procedural landmarks (`monolith`/`stoneCircle`/`smallRuins`/`cemetery`)
    *  within `radius` of `pos` among currently loaded chunks — same "loaded
    *  chunks only" contract as `getNearbyItems` (plan 132), used for `[E]`
-   *  interaction targeting. */
+   *  interaction targeting. `rotationY`/`scale`/`cemeterySize` (plan world-007)
+   *  are the same placement fields `EnvironmentPlacement` already carries —
+   *  surfaced so `world/hiddenFinds.ts` can derive per-landmark Hidden Find
+   *  dig-spot positions (e.g. the cemetery grave grid) without a second
+   *  landmark query. */
   getNearbyLandmarks: (
     pos: { x: number, z: number },
     radius: number,
-  ) => { id: string, kind: LandmarkKind, x: number, z: number }[]
+  ) => { id: string, kind: LandmarkKind, x: number, z: number, rotationY: number, scale: number, cemeterySize?: CemeterySize }[]
   /** Deterministically finds the nearest existing `kind` landmark to
    *  `(worldX, worldZ)`, searching chunks in expanding rings up to
    *  `maxChunkRadius` and stopping at the first hit (plan 132) — a bounded,
@@ -1954,7 +1959,7 @@ export function createChunkManager(
       return out
     },
     getNearbyLandmarks(pos, radius) {
-      const out: { id: string, kind: LandmarkKind, x: number, z: number }[] = []
+      const out: { id: string, kind: LandmarkKind, x: number, z: number, rotationY: number, scale: number, cemeterySize?: CemeterySize }[] = []
       for (const rec of chunks.values()) {
         if (!rec.tile) continue
         for (const p of rec.tile.environment) {
@@ -1962,7 +1967,15 @@ export function createChunkManager(
           const dx = p.x - pos.x
           const dz = p.z - pos.z
           if (Math.hypot(dx, dz) > radius) continue
-          out.push({ id: p.id, kind: p.kind as LandmarkKind, x: p.x, z: p.z })
+          out.push({
+            id: p.id,
+            kind: p.kind as LandmarkKind,
+            x: p.x,
+            z: p.z,
+            rotationY: p.rotationY,
+            scale: p.scale,
+            cemeterySize: p.cemeterySize,
+          })
         }
       }
       return out

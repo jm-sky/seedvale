@@ -505,6 +505,31 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 
+## `world/hiddenFinds.test.ts`
+
+**Imports**
+
+- `settlement/propUtils.ts`
+- `settlement/props.ts`
+- `world/hiddenFinds.ts`
+
+## `world/hiddenFinds.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `settlement/families.ts`
+- `settlement/propUtils.ts`
+- `settlement/props.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/dig.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/actions/groundActions.ts`
+- `world/hiddenFinds.test.ts`
+
 ## `world/largeCaveVisual.ts`
 
 **Imports**
@@ -629,6 +654,7 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `ai/nameCultures.ts`
+- `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `assets/houseDefinitionExample.ts`
 - `config/worldConfig.ts`
@@ -661,6 +687,7 @@ Generated from TypeScript imports.
 - `terrain/riverNetwork.ts`
 - `terrain/terrainDetailNormalMap.ts`
 - `world/createBeehives.ts`
+- `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
 
 ## `world/placementPreview.ts`

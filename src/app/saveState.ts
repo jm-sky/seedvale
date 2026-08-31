@@ -1,3 +1,4 @@
+import type { BadgeManager } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
 import type { createMouseLook } from '../input/MouseLook'
 import type { HeldTool } from '../items/HeldTool'
@@ -55,6 +56,11 @@ export type SaveStateDeps = {
   landOwnership: LandOwnershipRegistry
   vueUi: VueUi
   worldFlags: { guardSwordGifted: boolean, hiddenTreasureFound: boolean }
+  /** Hidden Finds resolved spot ids (plan world-007) — a stable `Set`
+   *  reference, never reassigned (`createApp.ts` clears it in place on New
+   *  Game), so it's read directly rather than through a live accessor. */
+  resolvedHiddenFindSpotIds: ReadonlySet<string>
+  badges: BadgeManager
   fishingBait: Map<string, FishingBaitState>
   /** Live accessors — `createApp` replaces these three on a New Game, so they
    *  must not be captured by value. */
@@ -88,6 +94,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, playerTorch,
     questManager, dayNight, mapDiscovery, landOwnership, vueUi, worldFlags, fishingBait,
+    resolvedHiddenFindSpotIds, badges,
   } = deps
 
   const buildSaveData = (): SaveData => ({
@@ -127,6 +134,8 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
     placedTraps: bundle.placedTraps.nodes().map((trap) => ({ ...trap })),
     worldFlags: { ...worldFlags },
+    resolvedHiddenFindSpotIds: [...resolvedHiddenFindSpotIds],
+    badges: badges.exportState(),
     map: { discoveredCells: mapDiscovery.serialize() },
     settlementEconomies: bundle.settlementsManager.snapshotEconomies(),
     playerNeeds: {

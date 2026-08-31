@@ -49,6 +49,11 @@ export type PlayerActionContext = {
    *  168's lodging resolver reuses this for "friend" candidates instead of a
    *  second friendship registry. */
   getPlayerSocial: PlayerSocialLookup
+  /** `QuestManager.getPlayerStanding()` — reused as-is (plan world-007 §6) by
+   *  Hidden Finds' cemetery-disturbance UI reading; never mutated by digging,
+   *  since grave-robbing has no NPC witnesses in v1 and must not change the
+   *  value `getPlayerSocial` feeds into NPC reaction chance. */
+  getPlayerStanding: () => number
   worldAudio: ReturnType<typeof createWorldAudio>
   /** Live accessor — `createApp` replaces the `TreeLifecycle` instance when a
    *  genuinely new world is started, so this must not be captured by value. */

@@ -231,6 +231,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
 - `world/createLargeCaves.ts`
+- `world/hiddenFinds.ts`
 
 ## `settlement/findSettlementSite.test.ts`
 
@@ -671,6 +672,8 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/storageVisuals.ts`
+- `world/hiddenFinds.test.ts`
+- `world/hiddenFinds.ts`
 
 ## `settlement/props.lampMount.test.ts`
 
@@ -747,6 +750,8 @@ Generated from TypeScript imports.
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
 - `world/createTerrainPreparations.ts`
+- `world/hiddenFinds.test.ts`
+- `world/hiddenFinds.ts`
 - `world/largeCaveVisual.ts`
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`

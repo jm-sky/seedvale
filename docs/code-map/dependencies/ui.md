@@ -47,6 +47,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `badges/badges.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/store.ts`
 

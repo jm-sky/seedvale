@@ -88,6 +88,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `audio/actionSounds.ts`
 - `audio/inventorySounds.ts`
+- `badges/badges.ts`
+- `debug/locationQueries.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
@@ -97,6 +99,8 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `terrain/dig.ts`
 - `terrain/digAction.ts`
+- `world/hiddenFinds.ts`
+- `world/parseSeed.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
 
@@ -325,6 +329,7 @@ Generated from TypeScript imports.
 - `audio/fireSounds.ts`
 - `audio/playerMoveSounds.ts`
 - `audio/weatherSounds.ts`
+- `badges/badges.ts`
 - `config/persistConfig.ts`
 - `config/worldConfig.ts`
 - `debug/createModelTestScene.ts`
@@ -686,6 +691,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/worldBundle.ts`
+- `badges/badges.ts`
 - `config/worldConfig.ts`
 - `fauna/AnimalSpawner.ts`
 - `input/MouseLook.ts`

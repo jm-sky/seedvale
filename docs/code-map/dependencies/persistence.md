@@ -12,6 +12,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `badges/badges.ts`
 - `config/worldConfig.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalSpawner.ts`

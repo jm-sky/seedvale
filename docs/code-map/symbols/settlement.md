@@ -23,12 +23,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/decorProps.ts`
 
+- `cemeteryGraveLayout` — function — line 473
 - `CemeterySize` — type — line 446
 - `CemeteryTemplates` — type — line 438
 - `createBush` — function — line 103
 - `createCactus` — function — line 144
-- `createCaveMouth` — function — line 576
-- `createCemetery` — function — line 509
+- `createCaveMouth` — function — line 578
+- `createCemetery` — function — line 511
 - `createCemeteryPlot` — function — line 423
 - `createCobblePlate` — function — line 178
 - `createFallenLog` — function — line 260
@@ -304,8 +305,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 610
-- `disposeSettlementGroup` — function — line 1697
+- `buildSettlementProps` — function — line 612
+- `disposeSettlementGroup` — function — line 1699
 - `SettlementHouseBed` — type — line 128
 - `SettlementHouseLandmark` — type — line 99
 - `SettlementLandmarks` — type — line 135

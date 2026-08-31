@@ -1,3 +1,4 @@
+import type { BadgeId } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
@@ -77,6 +78,17 @@ export type SaveWorldFlags = {
 }
 
 export type SaveMap = { discoveredCells: string[] }
+
+/** Reputation Badges / Achievements (plan world-007 §10) — `gravesDisturbed`/
+ *  `hiddenFindsFound` are the counters `badges/badges.ts`'s `BadgeManager`
+ *  derives progress and the UI-facing standing penalty from; not themselves
+ *  re-derivable from `resolvedHiddenFindSpotIds` alone (a resolved spot id
+ *  doesn't say whether it was a grave or which count it bumped). */
+export type SaveBadges = {
+  earned: readonly BadgeId[]
+  gravesDisturbed: number
+  hiddenFindsFound: number
+}
 
 /** Hunger/thirst/vigor pools (`player/PlayerNeeds.ts`) plus the simulation-time
  *  crisis counters that gate real HP loss in `playerDamage.ts` (plan 165).
@@ -326,6 +338,13 @@ export type SaveData = {
   placedTents: SavePlacedTent[]
   placedTraps: SavePlacedTrap[]
   worldFlags: SaveWorldFlags
+  /** Resolved Hidden Find spot ids (plan world-007 §10) — sparse, same
+   *  "already-collected id" contract as `collectedItemIds`/`harvestedCropIds`.
+   *  Positions/outcomes themselves are never persisted — they re-derive
+   *  deterministically from `(landmark id, spot index)`; only "already
+   *  resolved" needs to round-trip. */
+  resolvedHiddenFindSpotIds: string[]
+  badges: SaveBadges
   map: SaveMap
   settlementEconomies: Record<string, SettlementEconomySnapshot>
   playerNeeds: SavePlayerNeeds
@@ -441,6 +460,22 @@ function isSaveMap(value: unknown): value is SaveMap {
   const map = value as Record<string, unknown>
   if (!Array.isArray(map.discoveredCells)) return false
   return map.discoveredCells.every((cell) => typeof cell === 'string')
+}
+
+function isResolvedHiddenFindSpotIdsField(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string')
+}
+
+const BADGE_IDS: ReadonlySet<string> = new Set<BadgeId>(['desecrator', 'grave_robber', 'relic_seeker', 'treasure_hunter'])
+
+function isSaveBadges(value: unknown): value is SaveBadges {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const b = value as Record<string, unknown>
+  return (
+    Array.isArray(b.earned) && b.earned.every((id) => typeof id === 'string' && BADGE_IDS.has(id)) &&
+    typeof b.gravesDisturbed === 'number' &&
+    typeof b.hiddenFindsFound === 'number'
+  )
 }
 
 /** Validates one settlement's `{ stock, food }` snapshot (plan
@@ -834,6 +869,8 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlacedTentsField(v.placedTents)) return false
   if (!isPlacedTrapsField(v.placedTraps)) return false
   if (!isWorldFlagsField(v.worldFlags)) return false
+  if (!isResolvedHiddenFindSpotIdsField(v.resolvedHiddenFindSpotIds)) return false
+  if (!isSaveBadges(v.badges)) return false
   if (!isSaveMap(v.map)) return false
   if (!isSettlementEconomiesField(v.settlementEconomies)) return false
   if (!isPlayerNeedsField(v.playerNeeds)) return false

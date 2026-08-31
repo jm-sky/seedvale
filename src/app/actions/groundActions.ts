@@ -1,6 +1,8 @@
+import type { BadgeDef, BadgeManager } from '../../badges/badges'
 import type { ItemKind } from '../../items/items'
 import { playActionChop, playActionDig, playActionMine } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
+import { villageNearest } from '../../debug/locationQueries'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
@@ -10,6 +12,8 @@ import { HIDDEN_TREASURE_MARKER_COUNT, hiddenTreasureDigHit } from '../../settle
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
+import { findHiddenFindSpot, HIDDEN_FIND_SEARCH_RADIUS, resolveHiddenFindLoot } from '../../world/hiddenFinds'
+import { createSeededRandom } from '../../world/parseSeed'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
 import { bonusYieldForChopStage, isChoppableStage, yieldForChopStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
@@ -54,11 +58,43 @@ export type GroundActionsDeps = {
   /** Same persisted one-shot bag `inventoryWiring.ts`'s guard-sword gift
    *  uses — `hiddenTreasureFound` blocks a second reward chest after reload. */
   worldFlags: { hiddenTreasureFound: boolean }
+  /** Reputation Badges / Achievements (plan world-007 §7) — a stable
+   *  instance never reassigned; `createApp.ts` calls `.reset()` on New Game,
+   *  same contract as `QuestManager`. */
+  badges: BadgeManager
+  /** Sparse set of already-resolved Hidden Find spot ids (plan world-007
+   *  §10) — `${landmarkId}:${graveIndex}` for cemetery graves, `landmarkId`
+   *  for single-roll landmarks (stoneCircle/monolith). Never reassigned;
+   *  `createApp.ts` clears it on New Game, same "mutated in place" contract
+   *  as `landOwnership`/`mapDiscovery`. */
+  resolvedHiddenFindSpotIds: Set<string>
+}
+
+function hashString(value: string): number {
+  let h = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
 }
 
 export function createGroundActions(ctx: PlayerActionContext, deps: GroundActionsDeps): GroundActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
-  const { worldFlags } = deps
+  const { worldFlags, badges, resolvedHiddenFindSpotIds } = deps
+
+  /** Pushes the current earned-badges list + the UI-facing standing reading
+   *  (plan world-007 §9) — `QuestManager.getPlayerStanding()` combined with
+   *  the cemetery-disturbance penalty, computed here rather than inside
+   *  `QuestManager` itself (see `badges.ts`'s `communityOffensePenalty` doc).
+   *  Event-driven only (called after a Hidden Find resolves), never per
+   *  frame. */
+  const refreshBadgesUi = (): void => {
+    hud.setPlayerBadges(ctx.getPlayerStanding() - badges.communityOffensePenalty(), badges.listEarned())
+  }
+  const announceBadges = (newlyEarned: readonly BadgeDef[]): void => {
+    for (const badge of newlyEarned) toast.show(`Nowa odznaka: ${badge.icon} ${badge.label}`, 'info')
+  }
 
   const digFeedback = () => ({
     inventory,
@@ -95,10 +131,14 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     const cx = markers.reduce((sum, m) => sum + m.x, 0) / markers.length
     const cz = markers.reduce((sum, m) => sum + m.z, 0) / markers.length
     const record = bundle.placedContainers.place('chest', cx, cz, mouseLook.state.yaw)
+    // Deterministic (plan world-007 §2) — seeded from the home settlement's
+    // own stable id, not `Math.random()`, so the reward doesn't depend on
+    // when during the session the last marker is dug.
+    const treasureRandom = createSeededRandom(hashString(`${bundle.settlementsManager.home?.id ?? 'home'}:hiddenTreasure`))
     const coinCount = HIDDEN_TREASURE_COIN_MIN + Math.floor(
-      Math.random() * (HIDDEN_TREASURE_COIN_MAX - HIDDEN_TREASURE_COIN_MIN + 1),
+      treasureRandom() * (HIDDEN_TREASURE_COIN_MAX - HIDDEN_TREASURE_COIN_MIN + 1),
     )
-    const swordKind = HIDDEN_TREASURE_SWORD_KINDS[Math.floor(Math.random() * HIDDEN_TREASURE_SWORD_KINDS.length)]!
+    const swordKind = HIDDEN_TREASURE_SWORD_KINDS[Math.floor(treasureRandom() * HIDDEN_TREASURE_SWORD_KINDS.length)]!
     // The 3 sword kinds are all `WEAPON_MAINTENANCE_KINDS` (durability +
     // sharpness) — `isInstanceBackedKind`. Their container/inventory UI reads
     // only `getInstances(kind)`, never the plain `counts` map, so a real
@@ -115,6 +155,45 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     const remainingCoins = coinCount - depositedCoins
     if (remainingCoins > 0) ctx.grantItem('coin', remainingCoins)
     toast.show('Odkopano ukryty skarb!', 'pickup')
+    announceBadges(badges.recordHiddenFindDiscovered(false))
+    refreshBadgesUi()
+  }
+
+  /** Generic Hidden Finds (plan world-007) — cemetery graves and
+   *  stoneCircle/monolith landmark treasures, resolved as a side effect of
+   *  the same ordinary shovel dig every other ground action uses. No
+   *  separate dig pipeline, no grave `Interactable`/prompt, no visible
+   *  marker: a miss (`findHiddenFindSpot` returns `null`) is silently a
+   *  no-op, identical to digging any other patch of ground. */
+  const checkHiddenFindDig = (x: number, z: number): void => {
+    const landmarks = bundle.chunkManager.getNearbyLandmarks({ x, z }, HIDDEN_FIND_SEARCH_RADIUS)
+    const match = findHiddenFindSpot(landmarks, x, z, (spotId) => resolvedHiddenFindSpotIds.has(spotId))
+    if (!match) return
+    resolvedHiddenFindSpotIds.add(match.spotId)
+
+    const isGraveDisturbance = match.landmark.kind === 'cemetery'
+    const settlementSize = isGraveDisturbance
+      ? villageNearest({ x, z }, bundle.settlementsManager)?.size
+      : undefined
+    const loot = resolveHiddenFindLoot(match.landmark, match.spotId, match.spotIndex, settlementSize)
+
+    const newlyEarned: BadgeDef[] = []
+    // The act of disturbing a grave is the offense (plan §6) — independent
+    // of whether it turned out to hold anything.
+    if (isGraveDisturbance) newlyEarned.push(...badges.recordGraveDisturbed())
+
+    if (loot.kind === 'coins') {
+      ctx.grantItem('coin', loot.amount)
+      toast.show(`Znaleziono ${loot.amount} monet!`, 'pickup')
+      newlyEarned.push(...badges.recordHiddenFindDiscovered(false))
+    } else if (loot.kind === 'item') {
+      ctx.grantItem(loot.item, 1)
+      toast.show(`Znaleziono: ${ITEM_DEFS[loot.item].label}!`, 'pickup')
+      newlyEarned.push(...badges.recordHiddenFindDiscovered(loot.rare))
+    }
+
+    announceBadges(newlyEarned)
+    refreshBadgesUi()
   }
 
   const startDigAt = (x: number, z: number): void => {
@@ -128,6 +207,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       checkHiddenTreasureDig(x, z)
+      checkHiddenFindDig(x, z)
       ctx.syncQuickActionAvailability()
     }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
   }
