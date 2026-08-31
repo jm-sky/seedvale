@@ -56,7 +56,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `005`
 - ui-input: `005`
 - world: `007`
-- world-terrain: `003`
+- world-terrain: `004`
 
 This ids section is maintained automatically from the plan files.
 
@@ -122,6 +122,7 @@ Natural vegetation
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | - | 🟡 | M | - |
 | ◼️ `tools-004-claude-preflight-completion.md`                | - | 🟡 | S | - |
+| ◼️ `world-terrain-003-weather-puddles-v2.md`                 | - | 🟡 | S | ~~133~~ |
 
 ### Fresh new
 
