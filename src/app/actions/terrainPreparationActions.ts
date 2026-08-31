@@ -98,6 +98,11 @@ export type TerrainPreparationActions = {
   /** Quick Actions "Przygotuj teren" — enters the preview mode. */
   startPreview: () => void
   isPreviewActive: () => boolean
+  /** True while an active preparation-work session (post-confirm) is
+   *  running — distinct from `isPreviewActive()`, which covers only the
+   *  pre-confirm placement preview. Drives the `TimeSkipOverlay` cancel
+   *  button shown during the actual work `timeSkip`. */
+  isWorkActive: () => boolean
   /** Per-frame while the preview is active (aim tracking, size/height keys,
    *  confirm) — call unconditionally, before the gaze/interact dispatch so a
    *  confirming `[E]` press doesn't also fall through to it. No-ops when the
@@ -205,6 +210,7 @@ export function createTerrainPreparationActions(
   }
 
   const isPreviewActive = (): boolean => preview !== null
+  const isWorkActive = (): boolean => activeWork !== null
 
   const confirmPreparation = (center: GridSample, size: PreparationSize, targetHeight: number, originalHeights: readonly HeightSample[]): void => {
     const area = size * size
@@ -397,6 +403,7 @@ export function createTerrainPreparationActions(
   return {
     startPreview,
     isPreviewActive,
+    isWorkActive,
     tickPreview,
     growSize,
     shrinkSize,

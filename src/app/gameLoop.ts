@@ -357,6 +357,10 @@ export type GameLoopDeps = {
    *  of `modal` state (mirrors `timeSkip.tick()`'s own "the clock keeps
    *  advancing" contract). No-ops when no session is running. */
   tickTerrainPreparationWork?: () => void
+  /** True while an active preparation-work session is running — drives the
+   *  `TimeSkipOverlay` cancel button shown during that `timeSkip` (distinct
+   *  from `canCancelRest`, which only gates on `fadeStrength === 1`). */
+  isTerrainPreparationWorkActive?: () => boolean
   /** The active `timeSkip` finished naturally — owner applies the
    *  preparation's final exact heights/XP if the finished skip belongs to an
    *  active preparation-work session (no-ops otherwise, same "only acts if
@@ -440,7 +444,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork,
-    tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, onTerrainPreparationWorkFinished,
+    tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
 
@@ -612,6 +616,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     // sleep/lodging/terrain-prep) is actually running; no-ops unless the
     // running skip belongs to an active preparation-work session.
     tickTerrainPreparationWork?.()
+    vueUi.setCanCancelTerrainPreparation(isTerrainPreparationWorkActive?.() ?? false)
     if (skip) {
       timeSkipOverlay.show(skip.label, skip.fadeStrength)
       if (skip.fadeStrength === 1) {

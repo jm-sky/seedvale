@@ -1407,6 +1407,7 @@ export async function createApp(
     tickPlacementPreview: placementPreview.tick,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,
     tickTerrainPreparationWork: terrainPrep.tickWork,
+    isTerrainPreparationWorkActive: terrainPrep.isWorkActive,
     onTerrainPreparationWorkFinished: terrainPrep.onWorkSkipFinished,
     onSleepFinished: rest.onSleepFinished,
     tickLodging: rest.tickLodging,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { abortRest, finishTimeSkipHide, ui } from '../store'
+import { abortRest, abortTerrainPreparation, finishTimeSkipHide, ui } from '../store'
 </script>
 
 <template>
@@ -21,6 +21,14 @@ import { abortRest, finishTimeSkipHide, ui } from '../store'
         @click="abortRest()"
       >
         Esc
+      </button>
+      <button
+        v-if="ui.timeSkip.canCancelTerrainPreparation"
+        type="button"
+        class="pointer-events-auto cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1 text-[13px] hover:bg-white/20"
+        @click="abortTerrainPreparation()"
+      >
+        Anuluj [Esc]
       </button>
     </div>
   </div>

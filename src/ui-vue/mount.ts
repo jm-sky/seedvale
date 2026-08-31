@@ -19,7 +19,7 @@ const FORWARDED_FNS = [
   'configureTerrainPreparationControls',
   'configureAbortPlacementPreview', 'abortPlacementPreview',
   'configurePlacementPreviewConfirm',
-  'showTimeSkip', 'hideTimeSkip', 'updateTimeSkipRestUi',
+  'showTimeSkip', 'hideTimeSkip', 'updateTimeSkipRestUi', 'setCanCancelTerrainPreparation',
   'showBusy', 'hideBusy',
   'showTerrainPreparationPreview', 'hideTerrainPreparationPreview',
   'showPlacementPreview', 'hidePlacementPreview',

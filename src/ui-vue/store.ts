@@ -227,7 +227,7 @@ type ContainerScreenState = {
   onDepositInstance: ((instanceId: string) => void) | null
   onWithdrawInstance: ((instanceId: string) => void) | null
 }
-type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean }
+type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean; canCancelTerrainPreparation: boolean }
 type BusyState = { visible: boolean; label: string; blurred: boolean; progress: number | null }
 /** `Przygotuj teren` preview HUD (plan `world-terrain-002` §2) — mirrors
  *  `TerrainPreparationActions.tickPreview`'s per-frame view. */
@@ -413,7 +413,7 @@ export const ui = reactive({
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
   } as QuickActionsState,
-  timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false } as TimeSkipState,
+  timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
   placementPreview: { visible: false, label: '', valid: false, reasonLabel: '' } as PlacementPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
@@ -825,10 +825,18 @@ export function updateTimeSkipRestUi(progress: number | null, canCancelRest: boo
   ui.timeSkip.progress = progress ?? 0
   ui.timeSkip.canCancelRest = canCancelRest
 }
+/** Mirrors `updateTimeSkipRestUi`, but for the `Przygotuj teren` work
+ *  session's own cancel button — kept separate from `canCancelRest` since a
+ *  terrain-prep `timeSkip` runs at `fadeStrength: 0.5`, not the `1` that
+ *  gates the rest-cancel branch in `gameLoop.ts`. */
+export function setCanCancelTerrainPreparation(canCancel: boolean): void {
+  ui.timeSkip.canCancelTerrainPreparation = canCancel
+}
 export function hideTimeSkip(): void {
   if (!ui.timeSkip.visible) return
   ui.timeSkip.progress = 0
   ui.timeSkip.canCancelRest = false
+  ui.timeSkip.canCancelTerrainPreparation = false
   if (!ui.timeSkip.fadeVisible || ui.timeSkip.fadeStrength <= 0) {
     ui.timeSkip.visible = false
     ui.timeSkip.fadeStrength = 0
@@ -842,6 +850,7 @@ export function finishTimeSkipHide(): void {
     ui.timeSkip.fadeStrength = 0
     ui.timeSkip.progress = 0
     ui.timeSkip.canCancelRest = false
+    ui.timeSkip.canCancelTerrainPreparation = false
   }
 }
 
