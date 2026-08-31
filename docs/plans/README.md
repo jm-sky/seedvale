@@ -42,9 +42,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-003-house-browser-and-tools-menu.md`          | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`            | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
-| ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
+| 💡 `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
-| ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
+| 💡 `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
 | 💡 `npc-006-shared-npc-animal-pathfinding.md`           | - | 🔴 | L | `none` |
 | ◼️ `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
