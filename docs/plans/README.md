@@ -46,7 +46,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
 | ◼️ `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
-| ◼️ `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | - | 🔴 | S | `none` |
+| 💡 `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | - | 🔴 | S | `none` |
 
 ---
 
