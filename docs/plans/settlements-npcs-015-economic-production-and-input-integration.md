@@ -21,11 +21,11 @@ resolve input sources
     ↓
 validate all inputs
     ↓
-consume atomically
+reserve / claim
     ↓
-create outputs
+commit input consumption + outputs
     ↓
-commit result
+production result
 ```
 
 Pierwszym celem nie jest implementacja Blacksmitha ani Carpentera. Ten plan ma dostarczyć wspólny, bezpieczny mechanizm wykonania produkcji, który późniejsze processing chains będą mogły wykorzystać.
@@ -76,23 +76,25 @@ ProductionExecutor
     └── Inventory adapter
 ```
 
-Executor odpowiada za kolejność i transakcyjność operacji, natomiast adaptery pozostają właścicielami konkretnych storage semantics.
+Executor odpowiada za orkiestrację recipe i transaction boundary, natomiast adaptery pozostają właścicielami konkretnych storage semantics.
 
 Nie tworzyć trzeciego rodzaju inventory ani równoległego systemu produkcji.
 
 ### Transaction boundary
 
-Recipe jest operacją all-or-nothing:
+Recipe ma mieć **transactional outcome**: nie może zakończyć się trwałym częściowym zużyciem inputów ani outputem bez skutecznego input commitu.
+
+Preferowana kolejność:
 
 ```text
 validate all inputs
         ↓
-reserve/claim inputs
+reserve / claim inputs
         ↓
-commit input consumption + outputs
+commit consumption + outputs
 ```
 
-Jeżeli implementacja istniejących storage helpers pozwala na atomowy claim/commit, należy je wykorzystać. Jeżeli nie, zaprojektować minimalny mechanizm transakcyjny na poziomie production execution, bez kopiowania całego inventory.
+Nie zakładać konkretnego mechanizmu implementacji. Jeżeli istniejące storage helpers wspierają claim/commit, należy je wykorzystać. Jeżeli nie, zaprojektować minimalny mechanizm zapewniający brak partial commit, bez kopiowania całego inventory.
 
 ## 1. Unify Production Execution
 
@@ -115,9 +117,11 @@ Dla `StockAmount` źródłem może być `EconomicStock`.
 
 Dla `ItemAmount` źródłem może być konkretne `Inventory`.
 
-Production execution nie powinien automatycznie kopiować inputów do tymczasowego magazynu.
+Production execution nie powinien automatycznie kopiować inputów do tymczasowego magazynu ani samodzielnie wyszukiwać dóbr w świecie.
 
-Na tym etapie nie wprowadzamy fizycznego transportu. Jeżeli wymagany input znajduje się poza właściwym source, production pozostaje zablokowane.
+**Production nie jest logistyką.**
+
+Jeżeli wymagany input nie znajduje się w właściwym source, production pozostaje zablokowane. Udostępnienie brakującego inputu przez Trader/local goods flow/physical transport należy do innych systemów.
 
 ## 3. Validate All Inputs
 
@@ -145,7 +149,7 @@ NO output
 
 Walidacja powinna uwzględniać rzeczywisty live state, ponieważ stock może zostać zmieniony przez innego aktora od czasu wyboru recipe.
 
-## 4. Atomic Input Consumption
+## 4. Transactional Input Consumption
 
 Po pozytywnej walidacji inputy muszą zostać zarezerwowane/claimed w sposób uniemożliwiający równoczesnej produkcji wykorzystanie tego samego stocku.
 
@@ -162,6 +166,8 @@ output
 ```
 
 Jeżeli jeden z input claims nie może zostać skutecznie wykonany, cała operacja ma zakończyć się bez trwałego częściowego zużycia.
+
+Implementacja może wykorzystać pre-validation, reservation/claim, rollback lub inny istniejący mechanizm, o ile gwarantuje wymagany transactional outcome.
 
 Nie zakładać, że sprawdzenie `count()` samo w sobie jest wystarczające.
 
@@ -189,19 +195,17 @@ Output nie może pozostać wyłącznie wartością zwróconą przez helper.
 
 ## 6. Production Result
 
-Execution powinno zwracać jawny wynik operacji pozwalający odróżnić co najmniej:
+Execution powinno zwracać jawny, mały wynik operacji pozwalający odróżnić co najmniej:
 
 - success,
-- missing/insufficient input,
+- blocked / missing or insufficient input,
 - invalid recipe,
 - unavailable output destination,
-- failed transaction / revalidation.
+- transaction/revalidation failure.
 
-Nazwy i dokładny typ należy dopasować do istniejących conventions.
+Dokładny typ i nazwy należy dopasować do istniejących conventions.
 
-Wynik jest ważny dla przyszłego AI/economy work: późniejsze systemy będą mogły reagować na `missing input` bez analizowania logów lub porównywania inventory po fakcie.
-
-Ten plan nie tworzy jeszcze nowego AI pressure/Need.
+Result ma być użyteczny dla istniejącego work/decision flow oraz przyszłej diagnostyki, ale nie definiuje jeszcze AI pressure ani nowych Needów.
 
 ## 7. NPC Work Integration
 
@@ -303,7 +307,7 @@ Wykorzystać istniejące claim/revalidation semantics tam, gdzie są już dostę
 
 ## 11. Performance
 
-Production execution jest operacją event/work-level, nie per-frame systemem.
+Production execution jest operacją event/work-level, nie per-frame.
 
 Nie tworzyć globalnego production scan.
 
@@ -362,12 +366,13 @@ Input lookup powinien korzystać z już znanych ownerów/source references, a ni
 - `ProductionDef` remains the authoritative recipe definition.
 - NPC production consumes real inputs.
 - All inputs are required for successful execution.
-- Input consumption is atomic from the perspective of the production operation.
+- Production has a transactional outcome with no persistent partial commit.
 - Failed recipes create no output.
 - Successful recipes create real output in the correct owner.
 - `EconomicStock` and `Inventory` retain separate ownership/semantics while participating in one production execution flow.
 - Existing Hunter production continues to work.
 - Production returns a meaningful result for success/failure.
+- Production never performs physical/world logistics to obtain missing inputs.
 - NPC work invokes production without a parallel scheduler.
 - No `ProductionDemand`, new AI Need or production-pressure system is introduced.
 - No third production inventory or duplicate economy state is introduced.
@@ -384,6 +389,7 @@ Input lookup powinien korzystać z już znanych ownerów/source references, a ni
 - market system,
 - inter-settlement production,
 - long-distance transport,
+- physical delivery of production inputs,
 - new physical workplaces,
 - global production scheduler,
 - redesign of `trade.ts` / `tradeCatalog.ts`.
@@ -394,7 +400,7 @@ Input lookup powinien korzystać z już znanych ownerów/source references, a ni
 014 — Local Goods Circulation
 ```
 
-Plan 015 should reuse the goods/storage semantics established by 014 where relevant, but production must remain functional independently of Trader activity.
+Plan 015 may reuse goods/storage semantics established by 014 where relevant, but production must remain functional independently of Trader activity.
 
 The future physical transport system is not a dependency.
 
