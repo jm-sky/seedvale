@@ -53,7 +53,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | - | 🔴 | M | - |
 | 💡 `tools-006--world-observatory.md`                                   | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | - | 🔴 | L | - |
-| ◼️ `npc-007-interaction-destination-approach.md`                       | - | 🔴 | M | ~~006~~ |
+| 💡 `npc-007-interaction-destination-approach.md`                       | - | 🔴 | M | ~~006~~ |
 
 ---
 
