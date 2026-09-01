@@ -4,6 +4,7 @@ import {
   computeRiverTile,
   depthFromAccumulation,
   nearestRiverBankDistance,
+  nearestRiverBankPoint,
   overlappingRiverTiles,
   RIVER_TILE_SIZE,
   type RiverChain,
@@ -252,5 +253,26 @@ describe('nearestRiverBankDistance (plan ui-input-006)', () => {
     ]
     const halfWidth = widthFromAccumulation(300) / 2
     expect(nearestRiverBankDistance(segments, 32, 5)).toBeCloseTo(5 - halfWidth, 5)
+  })
+})
+
+describe('nearestRiverBankPoint (plan ui-input-006 fishing-interaction fix)', () => {
+  it('is null when no segments are nearby', () => {
+    expect(nearestRiverBankPoint([], 0, 0)).toBeNull()
+  })
+
+  it('returns a real bank point on the query side, distinct from the query position', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const segments = riverChannelSegmentsNear([chain], 32, 5, 64)
+    const halfWidth = widthFromAccumulation(300) / 2
+
+    const bank = nearestRiverBankPoint(segments, 32, 5)
+    expect(bank).not.toBeNull()
+    // Centerline runs along z=0 here, so the bank point on the +z side sits
+    // at (32, halfWidth) — on the same side as the query point, not at the
+    // query position itself (unless already exactly on the bank).
+    expect(bank!.x).toBeCloseTo(32, 5)
+    expect(bank!.z).toBeCloseTo(halfWidth, 5)
+    expect(bank).not.toEqual({ x: 32, z: 5 })
   })
 })

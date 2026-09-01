@@ -254,6 +254,38 @@ export function nearestRiverBankDistance(
   return best
 }
 
+/** The actual point on `segments`' nearest bank edge to `(x, z)` — same
+ *  segment/half-width selection as `nearestRiverBankDistance`, but returning
+ *  a real world point (centerline pushed out to the bank along the ray
+ *  toward the query point) instead of a scalar distance, for callers that
+ *  need a concrete interaction position rather than just a proximity check
+ *  (`app/interactables.ts`'s `waterEdge` candidate). `null` when `segments`
+ *  is empty. */
+export function nearestRiverBankPoint(
+  segments: readonly RiverChannelSegment[],
+  x: number,
+  z: number,
+): { x: number, z: number } | null {
+  let best: number | null = null
+  let bestPoint: { x: number, z: number } | null = null
+  for (const seg of segments) {
+    const { distSq, t } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
+    const halfWidth = seg.aHalfWidth + (seg.bHalfWidth - seg.aHalfWidth) * t
+    const dist = Math.sqrt(distSq) - halfWidth
+    if (best !== null && dist >= best) continue
+    best = dist
+    const cx = seg.ax + (seg.bx - seg.ax) * t
+    const cz = seg.az + (seg.bz - seg.az) * t
+    const toQueryX = x - cx
+    const toQueryZ = z - cz
+    const toQueryLen = Math.hypot(toQueryX, toQueryZ)
+    bestPoint = toQueryLen < 1e-6
+      ? { x: cx, z: cz }
+      : { x: cx + (toQueryX / toQueryLen) * halfWidth, z: cz + (toQueryZ / toQueryLen) * halfWidth }
+  }
+  return bestPoint
+}
+
 // Deterministic meandering (plan 181 Etap 7) — applied once per tile, after
 // smoothing, to the canonical pre-clip chain (same reasoning as
 // `smoothChainPoints`: two chunks must always clip identical, already-shaped

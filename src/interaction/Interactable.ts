@@ -39,9 +39,12 @@ export type Interactable =
   | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent, action: 'bury' | 'harvest' }
   /** `[E]` drinks directly; `[R]` fills a carried empty waterskin (plan 106 §4). */
   | { kind: 'well', position: { x: number, z: number }, promptLabel: string }
-  /** Synthetic target for a nearby freshwater (non-ocean) shoreline — built
-   *  fresh each frame from `chunkManager` terrain sampling, no discrete world
-   *  object (plan 106 §4's Lake). Same `[E]`/`[R]` drink/fill contract as `well`. */
+  /** Synthetic target for a nearby lake/river/ocean shoreline (plan
+   *  `ui-input-006`) — built fresh each frame from `chunkManager` terrain
+   *  sampling, no discrete world object (plan 106 §4's Lake). `position` is
+   *  the real shore/bank point the interaction happens at, not the player's
+   *  own position. Same `[E]`/`[R]` drink/fill contract as `well`, plus
+   *  fishing when a fishing rod is held. */
   | { kind: 'waterEdge', position: { x: number, z: number }, promptLabel: string, source: WaterSource }
   | {
     kind: 'house'

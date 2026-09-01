@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { forageEdgeScore, isCarcassEdible, shoreProbeHits } from './AnimalAgent'
+import { forageEdgeScore, isCarcassEdible, nearestShoreProbePoint, shoreProbeHits } from './AnimalAgent'
 
 describe('shoreProbeHits (plan 094)', () => {
   const flatAt = (h: number) => () => h
@@ -18,6 +18,29 @@ describe('shoreProbeHits (plan 094)', () => {
     const hits = shoreProbeHits(0, 0, sampleHeight, 0)
     expect(hits).toBeGreaterThan(0)
     expect(hits).toBeLessThan(4)
+  })
+})
+
+describe('nearestShoreProbePoint (plan ui-input-006 ocean fishing fix)', () => {
+  const flatAt = (h: number) => () => h
+
+  it('is null for a point far from any water', () => {
+    expect(nearestShoreProbePoint(5, -5, flatAt(10), 0)).toBeNull()
+  })
+
+  it('returns a real point distinct from the query position when water is nearby', () => {
+    const point = nearestShoreProbePoint(5, -5, flatAt(-1), 0)
+    expect(point).not.toBeNull()
+    expect(point).not.toEqual({ x: 5, z: -5 })
+    // Must be one of the actual probe offsets, not an arbitrary point.
+    expect(Math.hypot(point!.x - 5, point!.z - (-5))).toBeCloseTo(1.5, 5)
+  })
+
+  it('only returns a point that actually reads as water', () => {
+    // Water only on the +x side.
+    const sampleHeight = (x: number) => (x > 5 ? -1 : 10)
+    const point = nearestShoreProbePoint(5, 0, sampleHeight, 0)
+    expect(point).toEqual({ x: 6.5, z: 0 })
   })
 })
 

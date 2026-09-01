@@ -97,6 +97,7 @@ import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from
 import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
   nearestRiverBankDistance,
+  nearestRiverBankPoint,
   overlappingRiverTiles,
   type RiverChain,
   riverChannelSegmentsNear,
@@ -406,6 +407,13 @@ export type ChunkManager = {
    *  drinking/fishing work at a river the same way they already do at a lake
    *  (plan `ui-input-006`). */
   riverShoreDistance: (worldX: number, worldZ: number) => number | null
+  /** The actual point on the nearest loaded river's bank edge closest to
+   *  `(worldX, worldZ)` (`riverNetwork.ts`'s `nearestRiverBankPoint`) — same
+   *  segment search as `riverShoreDistance`, for callers that need a real
+   *  interaction position rather than a proximity distance
+   *  (`app/interactables.ts`'s `waterEdge` candidate, plan `ui-input-006`
+   *  ocean/river fishing fix). `null` when no river tile is loaded nearby. */
+  riverShorePoint: (worldX: number, worldZ: number) => { x: number, z: number } | null
   /** 0 (open / poor forest habitat) – 1 (dense forest) continuous suitability
    *  at (x, z) via `forestDensityAt` (`biomeRegions.ts`) — same signal
    *  `chunkVegetation.ts` uses for tree-density modulation. Runtime bridge
@@ -1902,6 +1910,21 @@ export function createChunkManager(
         if (dist !== null && (best === null || dist < best)) best = dist
       }
       return best
+    },
+    riverShorePoint(worldX, worldZ) {
+      let bestDist: number | null = null
+      let bestPoint: { x: number, z: number } | null = null
+      for (const rec of chunks.values()) {
+        if (!rec.riverChains || rec.riverChains.length === 0) continue
+        const segments = riverChannelSegmentsNear(rec.riverChains, worldX, worldZ, RIVER_SHORE_QUERY_SIZE)
+        if (segments.length === 0) continue
+        const dist = nearestRiverBankDistance(segments, worldX, worldZ)
+        if (dist !== null && (bestDist === null || dist < bestDist)) {
+          bestDist = dist
+          bestPoint = nearestRiverBankPoint(segments, worldX, worldZ)
+        }
+      }
+      return bestPoint
     },
     sampleForestFactor: (x, z) => {
       const h = readField('heights', x, z)

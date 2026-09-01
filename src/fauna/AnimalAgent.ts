@@ -360,6 +360,25 @@ export function shoreProbeHits(
   return hits
 }
 
+/** First `SHORE_PROBE_OFFSETS` point around (x, z) that is actually water —
+ *  the same signal as `shoreProbeHits`, but returning a real, distinct world
+ *  point instead of a count (plan `ui-input-006` fishing-on-ocean fix:
+ *  `app/interactables.ts`'s `waterEdge` candidate used to sit exactly on the
+ *  player's own position, which `pickInGaze`'s `dist < 1e-4` guard then
+ *  always rejected). `null` when `shoreProbeHits` would be 0. Deterministic
+ *  (fixed offset order), pure so it's unit-testable without `AnimalAgent`. */
+export function nearestShoreProbePoint(
+  x: number,
+  z: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+): { x: number, z: number } | null {
+  for (const [dx, dz] of SHORE_PROBE_OFFSETS) {
+    if (sampleHeight(x + dx, z + dz) <= waterLevel + WATER_MARGIN) return { x: x + dx, z: z + dz }
+  }
+  return null
+}
+
 /** Forage habitat suitability from a `sampleForestFactor` reading — peaks at
  *  forest-edge density (~0.45) rather than open meadow or deep forest,
  *  matching deer/stag habitat preference (plan 094). Pure so it's

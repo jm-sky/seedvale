@@ -17,7 +17,7 @@ import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
-import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind, shoreProbeHits } from '../fauna/AnimalAgent'
+import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind, nearestShoreProbePoint } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -276,21 +276,34 @@ export function resolveWaterBodyKind(
  *  `isNearLakeShore` (plan `ui-input-006`) so drinking/filling and the
  *  fishing interaction both work at any of the three water bodies, reusing
  *  the detection each already had elsewhere instead of a new fishing-specific
- *  detector: `shoreProbeHits` + `oceanMixAt` for lake/ocean (fauna's own
- *  shoreline probe plus the same continentalness mix the water shader uses),
- *  `chunkManager.riverShoreDistance` (cached river channel segments +
+ *  detector: `nearestShoreProbePoint` + `oceanMixAt` for lake/ocean (fauna's
+ *  own shoreline probe plus the same continentalness mix the water shader
+ *  uses), `chunkManager.riverShorePoint` (cached river channel segments +
  *  `math/segment.ts`'s point-to-segment distance) for river. No discrete
  *  "Lake"/"River" world object exists (plan 106 §4) — this is a synthetic
- *  candidate built fresh each frame, same pattern as `buildDigTarget`. */
-function resolveWaterBodyShore(playerPos: Vector3, chunkManager: ChunkManager): WaterBodyKind | null {
-  const hasShoreProbeHit = shoreProbeHits(playerPos.x, playerPos.z, chunkManager.sampleHeight, chunkManager.waterLevel) > 0
-  if (hasShoreProbeHit) {
+ *  candidate built fresh each frame, same pattern as `buildDigTarget`.
+ *
+ *  Returns the real world point the interaction happens at, not the player's
+ *  own position — `waterEdge` used to sit exactly on `playerPos`, which
+ *  `pickInGaze`'s `dist < 1e-4` self-distance guard then always rejected,
+ *  silently disabling drinking/filling/fishing at every shoreline (plan
+ *  `ui-input-006` follow-up: ocean fishing never worked). */
+function resolveWaterBodyShore(
+  playerPos: Vector3,
+  chunkManager: ChunkManager,
+): { kind: WaterBodyKind, position: { x: number, z: number } } | null {
+  const shorePoint = nearestShoreProbePoint(playerPos.x, playerPos.z, chunkManager.sampleHeight, chunkManager.waterLevel)
+  if (shorePoint) {
     const continentalness = chunkManager.sampleContinentalness(playerPos.x, playerPos.z)
     const oceanMix = oceanMixAt(continentalness, chunkManager.region.oceanThreshold, chunkManager.region.coastThreshold)
-    return resolveWaterBodyKind(true, oceanMix, null)
+    const kind = resolveWaterBodyKind(true, oceanMix, null)
+    return kind ? { kind, position: shorePoint } : null
   }
   const riverBankDistance = chunkManager.riverShoreDistance(playerPos.x, playerPos.z)
-  return resolveWaterBodyKind(false, 0, riverBankDistance)
+  const kind = resolveWaterBodyKind(false, 0, riverBankDistance)
+  if (!kind) return null
+  const riverPoint = chunkManager.riverShorePoint(playerPos.x, playerPos.z)
+  return riverPoint ? { kind, position: riverPoint } : null
 }
 
 /** Assembles this frame's `Interactable` candidates from every world system —
@@ -723,9 +736,9 @@ export function buildInteractables(
   if (waterBody) {
     list.push({
       kind: 'waterEdge',
-      position: { x: playerPos.x, z: playerPos.z },
+      position: waterBody.position,
       promptLabel: hasItemCapability(heldTool, 'fishing') ? FISHING_PROMPT : WATER_SOURCE_PROMPT,
-      source: createWaterSource(waterBody),
+      source: createWaterSource(waterBody.kind),
     })
   }
 
