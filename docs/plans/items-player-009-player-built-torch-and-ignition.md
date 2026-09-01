@@ -3,7 +3,7 @@
 **Created:** 2026-09-01
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
-**Depends on:** 008
+**Depends on:** `world-008`
 **Domain:** `items-player`
 
 ## Cel

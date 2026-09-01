@@ -31,8 +31,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ---------------------------------------------------------------------- | --------- | --- | ------ | ------- |
 | 💡 `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md`          | - | 🟡 | M | - |
-| ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | 008 |
-| ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | - | 🟡 | M | 008 |
+| ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | `world-008` |
+| ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | - | 🟡 | M | `world-008` |
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`                              | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
 | ◼️ `settlements-npcs-006-wool-to-material.md`                          | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
