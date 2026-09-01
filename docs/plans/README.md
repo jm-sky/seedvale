@@ -29,7 +29,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary   | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | ------ | ------- |
-| ◼️ `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
+| 💡 `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md`          | - | 🟡 | M | - |
 | ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | 008 |
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | - | 🟡 | M | 008 |
