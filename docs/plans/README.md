@@ -51,6 +51,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `items-player-009-player-built-torch-and-ignition.md` | - | 🟡 | M | 008 |
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md` | - | 🟡 | M | 008 |
 | ◼️ `items-player-011-melee-attack-direction.md`         | - | ⚪ | S | ~~177~~ |
+| ◼️ `settlements-npcs-014-local-goods-circulation.md`    | - | 🔴 | M | ~~008~~ ~~009~~ ~~010~~ |
 
 ---
 
@@ -191,7 +192,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `001`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `014`
+- settlements-npcs: `015`
 - tools: `007`
 - ui-input: `007`
 - world: `009`
