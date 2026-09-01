@@ -4,7 +4,13 @@ import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
 import { isLiquidContainerInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidContainer'
-import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../../items/tentPlacement'
+import {
+  evaluateGroundPlacement,
+  evaluateTentPlacement,
+  TENT_PLACEMENT_MESSAGE,
+  TENT_SETUP_DURATION_SEC,
+  type TentPlacementReason,
+} from '../../items/tentPlacement'
 import { TENT_FOOTPRINT_RADIUS, TENT_LENGTH } from '../../items/tentProp'
 import { selectInstanceToPlace } from '../../items/trade'
 import {
@@ -89,6 +95,58 @@ export type PlacementPreviewResult = {
   reasonLabel: string
 }
 
+/** Aimed transform for a ground-placed object (plan `world-008` §2) —
+ *  resolved fresh on every read, never cached: the site a placement would
+ *  land at right now. */
+export type GroundPlacementSite = { x: number, z: number, yaw: number }
+
+/** Minimal shared placement contract (plan `world-008` §2/§3): the aimed
+ *  transform plus the object's own suitability check — `evaluate` stays
+ *  free to call `evaluateGroundPlacement`, `evaluateTentPlacement` or any
+ *  other object-specific wrapper, so family-specific rules (peers,
+ *  blockers, footprint) remain owned by the object, never flattened into
+ *  one shared rule set (implementation notes §10). `evaluatePlacementSite`/
+ *  `previewGroundPlacement` below are the single seam a `preview*Placement`
+ *  and its matching `place*AtAim` both read from, so they can never
+ *  disagree about *how* a site is evaluated — only about whether the
+ *  result is merely displayed or acted on. Read-only: it never mutates
+ *  anything, never consumes inventory and never starts work — mutation
+ *  stays in the caller's own busy-channel completion.
+ *
+ * @domain world */
+export type GroundPlacementDefinition<Reason extends string> = {
+  aim: () => GroundPlacementSite
+  evaluate: (site: GroundPlacementSite) => Reason
+  footprintRadius: number
+  reasonLabel: (reason: Exclude<Reason, 'ok'>) => string
+}
+
+/** Resolves the current aim + suitability for `def` once. */
+export function evaluatePlacementSite<Reason extends string>(
+  def: GroundPlacementDefinition<Reason>,
+): { site: GroundPlacementSite, reason: Reason } {
+  const site = def.aim()
+  return { site, reason: def.evaluate(site) }
+}
+
+/** Read-only `PlacementPreviewResult` for any `GroundPlacementDefinition` —
+ *  backs the shared placement-preview ghost/UI the same way a hand-written
+ *  `preview*Placement` would. */
+export function previewGroundPlacement<Reason extends string>(
+  def: GroundPlacementDefinition<Reason>,
+): PlacementPreviewResult {
+  const { site, reason } = evaluatePlacementSite(def)
+  const ok = (reason as string) === 'ok'
+  return {
+    x: site.x,
+    z: site.z,
+    yaw: site.yaw,
+    footprintRadius: def.footprintRadius,
+    valid: ok,
+    reasonLabel: ok ? '' : def.reasonLabel(reason as Exclude<Reason, 'ok'>),
+  }
+}
+
 export type WellWorkView = {
   title: string
   description: string
@@ -169,37 +227,28 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     return blockers
   }
 
-  const previewTentPlacement = (): PlacementPreviewResult => {
-    const aim = tentAimPoint()
-    const reason = evaluateTentPlacement({
-      x: aim.x,
-      z: aim.z,
+  /** Shared placement contract for a tent (plan `world-008`) — one `aim` +
+   *  `evaluate` pair `previewTentPlacement` and `placeTentAtAim` both build
+   *  from, so they can never validate a site differently. */
+  const tentPlacementDefinition = (): GroundPlacementDefinition<TentPlacementReason> => ({
+    aim: tentAimPoint,
+    evaluate: (site) => evaluateTentPlacement({
+      x: site.x,
+      z: site.z,
       sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
       waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(aim.x, aim.z),
+      blockers: tentBlockers(site.x, site.z),
       otherTents: bundle.placedTents.nodes(),
-    })
-    return {
-      x: aim.x,
-      z: aim.z,
-      yaw: aim.yaw,
-      footprintRadius: TENT_FOOTPRINT_RADIUS,
-      valid: reason === 'ok',
-      reasonLabel: reason === 'ok' ? '' : TENT_PLACEMENT_MESSAGE[reason],
-    }
-  }
+    }),
+    footprintRadius: TENT_FOOTPRINT_RADIUS,
+    reasonLabel: (reason) => TENT_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewTentPlacement = (): PlacementPreviewResult => previewGroundPlacement(tentPlacementDefinition())
 
   const placeTentAtAim = (): void => {
     if (!inventory.has('tent', 1) || isActionBlocked(ctx)) return
-    const aim = tentAimPoint()
-    const reason = evaluateTentPlacement({
-      x: aim.x,
-      z: aim.z,
-      sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(aim.x, aim.z),
-      otherTents: bundle.placedTents.nodes(),
-    })
+    const { site, reason } = evaluatePlacementSite(tentPlacementDefinition())
     if (reason !== 'ok') {
       toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
       return
@@ -211,7 +260,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       'Rozstawianie namiotu…',
       () => {
         if (!inventory.remove('tent', 1)) return
-        bundle.placedTents.place(aim.x, aim.z, aim.yaw)
+        bundle.placedTents.place(site.x, site.z, site.yaw)
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.syncQuickActionAvailability()
         awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.pitchTent)

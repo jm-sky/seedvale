@@ -1,17 +1,19 @@
 import type { VueUi } from '../../ui-vue/mount'
-import type { PlacementBlocker, PlacementPreviewResult } from './placementActions'
+import type { GroundPlacementDefinition, PlacementBlocker, PlacementPreviewResult } from './placementActions'
 import { exitGamePointerLock } from '../../input/MouseLook'
 import {
   CONTAINER_DEFS,
   CONTAINER_PLACE_REACH,
   CONTAINER_PLACEMENT_MESSAGE,
   CONTAINER_SETUP_DURATION_SEC,
+  type ContainerKind,
   containerTotalWeight,
 } from '../../items/container'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
-import { evaluateGroundPlacement } from '../../items/tentPlacement'
+import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
 
 /** Everything the generic player storage (plan 164) does from the app layer:
  *  putting a bought chest down, carrying one, and the transfer screen that
@@ -56,59 +58,53 @@ export function createContainerActions(
    *  rendered while `ui.containerScreen.open` is true. */
   let openContainerId: string | null = null
 
-  /** Sets a purchased, empty `chest` down in front of the player (plan 164
-   *  §4) — same busy-channel shape as pitching a tent/setting a trap: the
-   *  inventory item is only spent when the channel completes. `peers` is
-   *  containers only (not tents/traps) — `CONTAINER_PLACEMENT_MESSAGE`'s
-   *  `container` reason is specifically "another chest already stands here". */
-  const previewContainerPlacement = (): PlacementPreviewResult => {
-    const def = CONTAINER_DEFS.chest
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.placedContainers.nodes(),
-      footprintRadius: def.footprintRadius,
-      separation: def.separation,
-    })
+  /** Shared placement contract for a container (plan `world-008`) — one
+   *  `aim` + `evaluate` pair `previewContainerPlacement`, `placeContainerAtAim`
+   *  and `putDownContainerAtAim` all build from, so the three can never
+   *  validate a site differently. `peers` is containers only (not
+   *  tents/traps) — `CONTAINER_PLACEMENT_MESSAGE`'s `container` reason is
+   *  specifically "another chest already stands here". */
+  const containerPlacementDefinition = (kind: ContainerKind): GroundPlacementDefinition<GroundPlacementReason> => {
+    const def = CONTAINER_DEFS[kind]
     return {
-      x,
-      z,
-      yaw,
+      aim: () => {
+        const yaw = mouseLook.state.yaw
+        return {
+          x: player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH,
+          z: player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH,
+          yaw,
+        }
+      },
+      evaluate: (site) => evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.placedContainers.nodes(),
+        footprintRadius: def.footprintRadius,
+        separation: def.separation,
+      }),
       footprintRadius: def.footprintRadius,
-      valid: reason === 'ok',
-      reasonLabel: reason === 'ok' ? '' : CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason],
+      reasonLabel: (reason) => CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason],
     }
   }
 
+  /** Sets a purchased, empty `chest` down in front of the player (plan 164
+   *  §4) — same busy-channel shape as pitching a tent/setting a trap: the
+   *  inventory item is only spent when the channel completes. */
+  const previewContainerPlacement = (): PlacementPreviewResult => previewGroundPlacement(containerPlacementDefinition('chest'))
+
   const placeContainerAtAim = (): void => {
     if (!inventory.has('chest', 1) || isActionBlocked(ctx)) return
-    const def = CONTAINER_DEFS.chest
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.placedContainers.nodes(),
-      footprintRadius: def.footprintRadius,
-      separation: def.separation,
-    })
+    const { site, reason } = evaluatePlacementSite(containerPlacementDefinition('chest'))
     if (reason !== 'ok') {
       toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
       return
     }
     busy.start(CONTAINER_SETUP_DURATION_SEC, 'Stawianie skrzyni…', () => {
       if (!inventory.remove('chest', 1)) return
-      bundle.placedContainers.place('chest', x, z, yaw)
+      bundle.placedContainers.place('chest', site.x, site.z, site.yaw)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Postawiono skrzynię.')
@@ -123,26 +119,13 @@ export function createContainerActions(
   const putDownContainerAtAim = (): void => {
     const kind = bundle.placedContainers.carriedKind()
     if (!kind || isActionBlocked(ctx)) return
-    const def = CONTAINER_DEFS[kind]
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.placedContainers.nodes(),
-      footprintRadius: def.footprintRadius,
-      separation: def.separation,
-    })
+    const { site, reason } = evaluatePlacementSite(containerPlacementDefinition(kind))
     if (reason !== 'ok') {
       toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
       return
     }
     busy.start(CONTAINER_SETUP_DURATION_SEC, 'Stawianie skrzyni…', () => {
-      if (!bundle.placedContainers.putDownCarried(x, z, yaw)) return
+      if (!bundle.placedContainers.putDownCarried(site.x, site.z, site.yaw)) return
       ctx.syncQuickActionAvailability()
       toast.show('Odłożono skrzynię.')
     })

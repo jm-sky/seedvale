@@ -1,7 +1,7 @@
 # Plan: Player World Placement Foundation
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `world`

@@ -307,4 +307,30 @@ Primary implementation/recon targets:
 
 The codebase already has most of the mechanics the plan wants to unify, but they are intentionally **typed and owner-specific**. The safe foundation is therefore a small shared placement contract layered under the existing actions, while `WorldBundle`, `SaveData`, interaction discovery and concrete factories remain the ownership boundaries.
 
+## Implementation (what was actually built)
+
+Confirmed against current code before implementing: `WorldBundle` ownership/rebuild, `SaveData`/`saveState.ts`, and `interactables.ts` discovery already satisfy the plan's registration/persistence/interaction-boundary requirements for every existing player-created object (tent, chest, trap, well, garden) — no code there needed to change. The only real duplication left to remove was at the *validation* layer: `preview*Placement()` and its matching `place*AtAim()`/`putDown*AtAim()` each independently rebuilt the aimed transform and called `evaluateGroundPlacement()`/`evaluateTentPlacement()` with the same arguments, so a future edit to one could silently diverge from the other.
+
+Added the minimal placement contract to `src/app/actions/placementActions.ts` (already the module owning `PlacementPreviewResult`/`PlacementBlocker`, so no new file/module):
+
+- `GroundPlacementSite` — `{ x, z, yaw }`, the aimed transform.
+- `GroundPlacementDefinition<Reason extends string>` — `{ aim, evaluate, footprintRadius, reasonLabel }`. `evaluate` stays a plain function the object supplies, so it can call `evaluateGroundPlacement()`, `evaluateTentPlacement()`, or any other object-specific wrapper with its own peers/blockers/footprint — nothing is flattened into one shared rule set.
+- `evaluatePlacementSite(def)` — resolves `{ site, reason }` once.
+- `previewGroundPlacement(def)` — builds the existing `PlacementPreviewResult` shape from a definition.
+
+This is the "small data-oriented contract around the placement operation" the review recommended — aimed transform, footprint, object-specific validation and preview result — with confirm/mutation deliberately left in the caller (never in the contract), per §3/§7 of the review.
+
+Migrated the two seams that actually had duplication to remove:
+
+- **Tent** (`placementActions.ts`) — `previewTentPlacement`/`placeTentAtAim` now both build one `tentPlacementDefinition()` and call `previewGroundPlacement`/`evaluatePlacementSite` on it, instead of each independently calling `evaluateTentPlacement()`.
+- **Container/chest** (`containerActions.ts`) — `previewContainerPlacement`/`placeContainerAtAim`/`putDownContainerAtAim` (three call sites, the most duplicated of all existing placements) now share one `containerPlacementDefinition(kind)`. Chest doubles as both proof cases the plan asks for: a simple placed object, and an object with its own interaction/state lifecycle (`Inventory` contents, carried state, open/pick-up/put-down via `interactables.ts`).
+
+Deliberately **not** migrated: trap, well (initial placement), garden, tree planting, crop planting. Each of these has exactly one call site for its `evaluateGroundPlacement()` check (no separate preview — they aren't part of the `ui-input-004` shared preview UX), so wrapping them in the contract would remove no real duplication, only add a layer of indirection for uniformity — which the plan explicitly says not to do ("Nie migrować obiektu tylko po to, aby zwiększyć pozorną jednolitość kodu"). `workOnWell`'s multi-stage construction lifecycle and the garden's maintenance/hydration state were left untouched, as the plan requires.
+
+`placementPreviewActions.ts` was not changed — it remains the only placement-preview controller, still calling `previewTentPlacement()`/`previewContainerPlacement()` as before; only what those two functions do internally changed.
+
+No `SaveData`, `WorldBundle`, or interaction changes were needed — this plan's foundation was already load-bearing in the existing code, confirmed by inspection rather than by adding a new layer.
+
+Verification: `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build` and the full test suite (2252 tests, including `src/items/tentPlacement.test.ts`) all pass. Browser/manual verification (placing/cancelling a tent and a chest, confirming preview validity matches actual placement, opening/carrying/picking-up/putting-down a chest, save/load) is still needed — see the plan's `Status:` header.
+
 **Zrób git commit i push do main, rebase jeżeli trzeba**
