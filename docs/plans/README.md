@@ -56,7 +56,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-013-night-campfire-gathering.md`                               | -       | 🟡 | S      | ~~151~~ |
 | 💡 `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
 | 💡 `items-player-012-player-gathering-and-fire-cooking-polish.md`      | -       | 🟡 | M      | ~~106~~ ~~122~~ ~~159~~ |
-| ◼️ `npc-014-work-contracts-foundation-and-physical-posting.md`         | -       | 🟡 | M      | -      |
+| 💡 `npc-014-work-contracts-foundation-and-physical-posting.md`         | -       | 🟡 | M      | -      |
 | ◼️ `npc-015-work-contracts-npc-work-and-construction.md`               | -       | 🟡 | L      | npc-014 |
 | ◼️ `npc-016-work-contracts-payment-and-employer-interaction.md`        | -       | 🟡 | M      | npc-015 |
 | ◼️ `npc-017-work-contracts-food-and-drink.md`                          | -       | 🟡 | M      | ~~npc-015~~ |
