@@ -54,7 +54,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | ◼️ `npc-012-weather-reaction-and-shelter.md`                           | -       | 🟡 | M      | ~~040~~ |
 | ◼️ `npc-013-night-campfire-gathering.md`                               | -       | 🟡 | S      | ~~151~~ |
-| 💡 `world-009-blood-traces.md`                                         | -       | 🟡 | M      | -      |
 | ◼️ `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
 
 ---
@@ -82,6 +81,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Visual seeds/peaks/valleys/chunk seams, streaming hitching, river continuity |
 | `items-player-009-player-built-torch-and-ignition.md` | Place a standing torch (preview validity, rejected placement doesn't consume materials, successful placement consumes 1 beam + 1 wooden_torch), confirm unlit state, Ignite with/without fire_starting, flame/light appears and doesn't duplicate on repeated Ignite, save/load restores unlit and lit state, WorldBundle rebuild restores runtime |
 | `items-player-010-player-built-palisade-and-building-removal.md` | Preview/place/snap palisade segments into a chain with a direction change, verify material consumption (2× belka) and rejected placement, save/load restores every segment, select + remove a single segment via `[R]`, confirm partial recovery (1× belka), remaining segments untouched, removal blocked when inventory is full |
+| `world-009-blood-traces.md` | Player/NPC/animal damage spawns a blood decal at the hit position with plausible size/variant/rotation, decal fades over ~1-3 in-world days, rain visibly accelerates fading, decals don't reappear/duplicate on chunk reload or a same-session `WorldBundle` rebuild, no visible per-trace draw-call/mesh cost with many hits |
 
 ---
 

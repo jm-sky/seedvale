@@ -1952,6 +1952,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // actually built (never a world-wide field scan); removal is a lazy
       // world-object mutation, not a per-frame maintenance tick.
       bundle.playerGardens.pruneDecayed(dayNight.elapsedDays)
+      bundle.bloodTraces.tick(dt, player.mesh.position.x, player.mesh.position.z)
       playerTorch.update(dt)
       withCategory(monitor, 'WATER', () => { bundle.chunkManager.tickWater(dt) })
       withCategory(monitor, 'GRASS', () => { bundle.chunkManager.tickGrass(dt) })

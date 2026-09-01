@@ -35,6 +35,7 @@ import {
   type LabelDistanceState,
   updateAgentLabelDistanceState,
 } from '../ui/agentStatusLabel'
+import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import { type AnimalDebugVisual, createAnimalDebugVisual } from './animalDebugVisual'
@@ -1736,6 +1737,7 @@ export class AnimalAgent {
   takeDamage(damage: number, source?: 'npc' | 'player'): void {
     if (this.health.dead) return
     damageHealth(this.health, damage)
+    if (damage > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, this.def.modelHeight, damage)
     if (source === 'player' || source === 'npc') {
       this.provokedTimer = PROVOCATION_SECONDS
       // Force an immediate re-score so healthy wolves can retaliate this frame.

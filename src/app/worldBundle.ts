@@ -50,6 +50,7 @@ import {
   type ResourceDeposits,
   type SettlementMiningHooks,
 } from '../terrain/resourceDeposits'
+import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
 import { type Beehives, createBeehives } from '../world/createBeehives'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
@@ -111,6 +112,7 @@ export function homeChunks(): ChunkCoord[] {
  */
 export type WorldBundle = {
   chunkManager: ChunkManager
+  bloodTraces: BloodTraceSystem
   ocean: WorldOcean
   settlementsManager: SettlementsManager
   fauna: Fauna
@@ -425,6 +427,13 @@ type WorldSystemsSeed = {
   onTrapBaitReturned?: PlacedTrapsHooks['onBaitReturned']
   pointLightBudget?: PointLightBudget
   getNearbyPlayerWell?: NearbyPlayerWellLookup
+  /** Live blood-trace world state carried across an in-session rebuild
+   *  (config change, not a new seed) — same "carried across rebuild, reset
+   *  only on a genuinely new world" contract as `plantedTrees`/`modifications`
+   *  above. `createWorldBundle` always leaves this unset (a genuinely new
+   *  world starts with no traces); only `rebuildWorldBundle` snapshots and
+   *  forwards it. */
+  bloodTraces?: readonly BloodTrace[]
 }
 
 /** Inert stand-ins for the `WorldBundle` members deferred off the critical
@@ -535,6 +544,7 @@ async function buildWorldSystems(
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
+    bloodTraces: initialBloodTraces,
   } = seed
 
   bootMark('createWaterMirror')
@@ -547,6 +557,18 @@ async function buildWorldSystems(
   bootMark('buildChunkManager')
   const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
   bootMarkEnd('buildChunkManager')
+
+  // Plan world-009 — bounded to roughly the streamed terrain footprint
+  // (chunkSize * loadRadius) rather than depending on ChunkManager's own
+  // loaded-chunk bookkeeping; see bloodTraces.ts's `createBloodTraceSystem` doc.
+  const bloodTraces = createBloodTraceSystem(
+    scene,
+    chunkManager.sampleHeight,
+    config.seed,
+    dayNight,
+    config.terrain.chunkSize * config.terrain.loadRadius,
+    initialBloodTraces,
+  )
 
   chunkManager.update(0, 0)
 
@@ -678,6 +700,7 @@ async function buildWorldSystems(
 
   const bundle: WorldBundle = {
     chunkManager,
+    bloodTraces,
     ocean,
     settlementsManager,
     fauna: createEmptyFauna(),
@@ -966,6 +989,11 @@ export async function rebuildWorldBundle(
   const carriedSpawnerState = resetCollectedItems
     ? undefined
     : new Map(bundle.fauna.getSpawners().map((s) => [s.id, snapshotSpawnPointState(s)]))
+  // Blood traces (plan world-009) are positioned by real damage events, not
+  // seed-derived — same "carried across rebuild, reset only on a genuinely
+  // new world" contract as the placed-* arrays below.
+  const carriedBloodTraces = resetCollectedItems ? undefined : bundle.bloodTraces.snapshot()
+  bundle.bloodTraces.dispose()
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
   // Copy before dispose() — nodes() returns a live reference to the internal
@@ -1052,6 +1080,7 @@ export async function rebuildWorldBundle(
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
+    bloodTraces: carriedBloodTraces,
   }, isStale)
   // A rebuild keeps its historical fully-synchronous contract — callers
   // (`app/createApp.ts`) still see every system, including fauna/item
@@ -1066,6 +1095,7 @@ export async function rebuildWorldBundle(
 }
 
 export function disposeWorldBundle(bundle: WorldBundle): void {
+  bundle.bloodTraces.dispose()
   bundle.fauna.dispose()
   bundle.itemSpawners.dispose()
   bundle.droppedItems.dispose()
