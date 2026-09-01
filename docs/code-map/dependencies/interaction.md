@@ -29,11 +29,18 @@ Generated from TypeScript imports.
 - `interaction/resolveInteraction.ts`
 - `player/playerCombat.ts`
 
+## `interaction/findInteractionTarget.test.ts`
+
+**Imports**
+
+- `interaction/findInteractionTarget.ts`
+
 ## `interaction/findInteractionTarget.ts`
 
 **Imported by**
 
 - `app/gameLoop.ts`
+- `interaction/findInteractionTarget.test.ts`
 
 ## `interaction/resolveInteraction.ts`
 

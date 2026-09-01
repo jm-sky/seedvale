@@ -103,8 +103,14 @@ Generated from TypeScript imports.
 - `ai/npcVigor.test.ts`
 - `ai/npcVigor.ts`
 - `app/actions/restActions.ts`
+- `app/createApp.ts`
 - `app/gameLoop.ts`
+- `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
+- `player/playerMelee.test.ts`
+- `player/playerMelee.ts`
+- `player/playerRanged.test.ts`
+- `player/playerRanged.ts`
 - `settlement/npcState.ts`
 - `shared/VigorState.test.ts`
 

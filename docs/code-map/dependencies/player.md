@@ -80,6 +80,7 @@ Generated from TypeScript imports.
 - `shared/HealthState.ts`
 - `shared/HungerState.ts`
 - `shared/ThirstState.ts`
+- `shared/VigorState.ts`
 
 ## `player/PlayerNeeds.ts`
 
@@ -99,11 +100,14 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
+- `app/actions/terrainPreparationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.test.ts`
 - `player/playerDamage.ts`
+- `player/playerMelee.ts`
+- `player/playerRanged.ts`
 
 ## `player/PlayerSkills.test.ts`
 
@@ -240,6 +244,7 @@ Generated from TypeScript imports.
 - `items/itemCatalog.ts`
 - `player/playerMelee.ts`
 - `shared/StaminaState.ts`
+- `shared/VigorState.ts`
 
 ## `player/playerMelee.ts`
 
@@ -247,7 +252,9 @@ Generated from TypeScript imports.
 
 - `combat/meleeAttack.ts`
 - `items/itemCatalog.ts`
+- `player/PlayerNeeds.ts`
 - `shared/StaminaState.ts`
+- `shared/VigorState.ts`
 
 **Imported by**
 
@@ -264,6 +271,7 @@ Generated from TypeScript imports.
 - `items/itemCatalog.ts`
 - `player/playerRanged.ts`
 - `shared/StaminaState.ts`
+- `shared/VigorState.ts`
 
 ## `player/playerRanged.ts`
 
@@ -271,7 +279,9 @@ Generated from TypeScript imports.
 
 - `combat/rangedLifecycle.ts`
 - `items/itemCatalog.ts`
+- `player/PlayerNeeds.ts`
 - `shared/StaminaState.ts`
+- `shared/VigorState.ts`
 
 **Imported by**
 

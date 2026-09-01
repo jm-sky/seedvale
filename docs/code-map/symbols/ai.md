@@ -73,27 +73,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 324
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 607
-- `classifyPendingActivity` — function — line 473
-- `CurrentActivity` — type — line 373
-- `CurrentActivityKind` — type — line 371
-- `findWeaponNeedingMaintenance` — function — line 715
-- `NPC_HEIGHT` — const — line 232
-- `NPC_MODEL_URLS` — const — line 277
-- `NPC_SHADOW_DISTANCE` — const — line 237
-- `NpcAgent` — class — line 814
+- `ActionId` — type — line 336
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 619
+- `classifyPendingActivity` — function — line 485
+- `CurrentActivity` — type — line 385
+- `CurrentActivityKind` — type — line 383
+- `findWeaponNeedingMaintenance` — function — line 727
+- `NPC_HEIGHT` — const — line 234
+- `NPC_MODEL_URLS` — const — line 289
+- `NPC_SHADOW_DISTANCE` — const — line 239
+- `NpcAgent` — class — line 826
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 388
-- `NpcWhy` — type — line 448
-- `Phase` — type — line 304
-- `projectNpcWhy` — function — line 500
-- `promoteChainKind` — function — line 465
+- `NpcInspectionSnapshot` — type — line 400
+- `NpcWhy` — type — line 460
+- `Phase` — type — line 316
+- `projectNpcWhy` — function — line 512
+- `promoteChainKind` — function — line 477
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -123,7 +123,8 @@ Generated from exported TypeScript symbols.
 - `destinationOnColliderRim` — function — line 57
 - `isExteriorPoint` — function — line 37
 - `localEscapeRadii` — function — line 76
-- `pickEmergencyTeleportPoint` — function — line 99
+- `navigationApproachTarget` — function — line 108
+- `pickEmergencyTeleportPoint` — function — line 127
 - `Point2` — type — line 22
 - `pointInsideCollider` — function — line 29
 - `rimPointFacing` — function — line 43
@@ -143,8 +144,9 @@ Generated from exported TypeScript symbols.
 ## `ai/npcLoadout.ts`
 
 - `defaultWeaponForRole` — function — line 22
+- `ensureKnifeCarried` — function — line 46
 - `seedDefaultRoleWeapon` — function — line 32
-- `seedHunterSupplies` — function — line 53
+- `seedHunterSupplies` — function — line 61
 
 ## `ai/npcMovementWatchdog.ts`
 

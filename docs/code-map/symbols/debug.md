@@ -23,7 +23,7 @@ Generated from exported TypeScript symbols.
 
 ## `debug/debugMode.ts`
 
-- `DebugSystemName` — type — line 106
+- `DebugSystemName` — type — line 120
 - `isAdminMode` — function — line 43
 - `isBootMarkMode` — function — line 33
 - `isCameraDebugMode` — function — line 69
@@ -33,9 +33,18 @@ Generated from exported TypeScript symbols.
 - `isHouseTestMode` — function — line 63
 - `isModelTestMode` — function — line 50
 - `isNoShadowsDebugMode` — function — line 76
+- `isNpcCombatDebugMode` — function — line 112
 - `isRenderStateDebugMode` — function — line 90
-- `isSystemEnabled` — function — line 112
+- `isSystemEnabled` — function — line 126
 - `urlParamValue` — function — line 19
+
+## `debug/faunaInspector.ts`
+
+- `FrenzyWolfCandidate` — type — line 17
+- `getCurrentFrenzyWolf` — function — line 48
+- `getFrenzyWolves` — function — line 41
+- `getNextFrenzyWolf` — function — line 60
+- `pickNextFrenzyWolfId` — function — line 25
 
 ## `debug/houseTestDefinition.ts`
 
@@ -62,13 +71,13 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `HiddenTreasureDebugApi` — type — line 84
-- `installNpcDebugApi` — function — line 157
-- `LocationsDebugApi` — type — line 67
-- `NpcDebugHandle` — type — line 39
-- `SeedvaleDebugApi` — type — line 97
-- `TeleportToDebugApi` — type — line 75
-- `VillageDebugHandle` — type — line 50
+- `HiddenTreasureDebugApi` — type — line 87
+- `installNpcDebugApi` — function — line 173
+- `LocationsDebugApi` — type — line 70
+- `NpcDebugHandle` — type — line 41
+- `SeedvaleDebugApi` — type — line 100
+- `TeleportToDebugApi` — type — line 78
+- `VillageDebugHandle` — type — line 53
 
 ## `debug/npcInspector.ts`
 
@@ -94,11 +103,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 83
-- `NPC_TRACE_CAPACITY` — const — line 81
-- `NpcTraceBuffer` — type — line 70
+- `createNpcTraceBuffer` — function — line 91
+- `NPC_TRACE_CAPACITY` — const — line 89
+- `NpcTraceBuffer` — type — line 78
 - `NpcTraceEvent` — type — line 13
-- `NpcTraceEventType` — type — line 68
+- `NpcTraceEventType` — type — line 76
 
 ## `debug/renderStateDebug.ts`
 

@@ -50,6 +50,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcCombat.ts`
+- `app/gameLoop.ts`
 - `combat/defenseResolver.test.ts`
 - `player/playerDamage.ts`
 

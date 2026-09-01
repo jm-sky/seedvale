@@ -1,14 +1,13 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import * as ts from 'typescript'
+import { CODE_MAP_DIR, SRC_DIR } from './config.js'
 import {
-  CODE_MAP_DIR,
   createProgram,
   type DependencyInfo,
   loadSourceFiles,
   repoRelative,
   resolveImport,
-  SRC_DIR,
   walk,
 } from './utils.js'
 

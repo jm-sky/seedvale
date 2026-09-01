@@ -5,7 +5,8 @@ Generated from exported TypeScript symbols.
 ## `navigation/navigation.ts`
 
 - `AgentProfile` — type — line 30
-- `findPath` — function — line 144
+- `DEFAULT_CELL_SIZE` — const — line 83
+- `findPath` — function — line 148
   - domain: npc
 - `NavigationQuery` — type — line 44
 - `PathfindOptions` — type — line 57

@@ -98,6 +98,7 @@ Generated from TypeScript imports.
 - `ai/npcColliderRim.ts`
 - `debug/colliderDebugView.ts`
 - `fauna/AnimalAgent.ts`
+- `navigation/navigation.test.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.ts`
 - `settlement/SettlementsManager.ts`

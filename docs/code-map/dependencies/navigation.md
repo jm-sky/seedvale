@@ -6,7 +6,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/npcColliderRim.ts`
 - `navigation/navigation.ts`
+- `world/collision.ts`
 
 ## `navigation/navigation.ts`
 

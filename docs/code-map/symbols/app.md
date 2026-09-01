@@ -10,9 +10,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 34
-- `ContainerActions` — type — line 21
-- `createContainerActions` — function — line 43
+- `ContainerActionDeps` — type — line 36
+- `ContainerActions` — type — line 23
+- `createContainerActions` — function — line 45
 
 ## `app/actions/gatheringActions.ts`
 
@@ -34,11 +34,16 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 138
-- `PlacementActions` — type — line 95
-- `PlacementBlocker` — type — line 71
-- `PlacementPreviewResult` — type — line 79
-- `WellWorkView` — type — line 88
+- `createPlacementActions` — function — line 200
+- `evaluatePlacementSite` — function — line 125
+- `GroundPlacementDefinition` — type — line 117
+  - domain: world
+- `GroundPlacementSite` — type — line 101
+- `PlacementActions` — type — line 157
+- `PlacementBlocker` — type — line 81
+- `PlacementPreviewResult` — type — line 89
+- `previewGroundPlacement` — function — line 135
+- `WellWorkView` — type — line 150
 
 ## `app/actions/placementPreviewActions.ts`
 
@@ -64,10 +69,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/terrainPreparationActions.ts`
 
-- `createTerrainPreparationActions` — function — line 141
-- `TerrainPreparationActionDeps` — type — line 81
-- `TerrainPreparationActions` — type — line 97
-- `TerrainPreparationPreviewView` — type — line 74
+- `createTerrainPreparationActions` — function — line 142
+- `TerrainPreparationActionDeps` — type — line 82
+- `TerrainPreparationActions` — type — line 98
+- `TerrainPreparationPreviewView` — type — line 75
 
 ## `app/appRenderLoop.ts`
 
@@ -81,10 +86,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/busyAction.ts`
 
-- `BusyAction` — type — line 28
+- `BusyAction` — type — line 35
 - `BusyStartOptions` — type — line 12
 - `BusyTickResult` — type — line 1
-- `createBusyAction` — function — line 60
+- `createBusyAction` — function — line 73
 
 ## `app/campRest.ts`
 
@@ -97,7 +102,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 206
+- `createApp` — function — line 207
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
@@ -106,13 +111,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 436
+- `createGameLoop` — function — line 487
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 404
-- `GameLoopDeps` — type — line 204
+- `GameLoop` — type — line 455
+- `GameLoopDeps` — type — line 255
 
 ## `app/graphicsSettings.ts`
 
@@ -122,10 +127,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 804
-- `buildDigTarget` — function — line 751
-- `buildInteractables` — function — line 305
-- `collectItem` — function — line 851
+- `buildCombatTarget` — function — line 817
+- `buildDigTarget` — function — line 764
+- `buildInteractables` — function — line 318
+- `collectItem` — function — line 864
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70

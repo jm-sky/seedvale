@@ -9,6 +9,7 @@ Generated from TypeScript imports.
 - `ai/npcMovementWatchdog.ts`
 - `audio/animalSounds.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalDebugVisual.ts`
 - `fauna/bloodSplat.ts`
 - `fauna/corpseDecayFx.ts`
 - `fauna/faunaCombat.ts`
@@ -41,6 +42,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `assets/assetIndex.ts`
 - `audio/animalSounds.ts`
+- `debug/faunaInspector.ts`
+- `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalDialogue.ts`
@@ -117,6 +120,12 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
+
+## `fauna/animalDebugVisual.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
 
 ## `fauna/animalDialogue.ts`
 

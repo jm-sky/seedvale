@@ -77,6 +77,24 @@ Generated from TypeScript imports.
 - `world/clouds.ts`
 - `world/weatherParticles.ts`
 
+## `debug/faunaInspector.test.ts`
+
+**Imports**
+
+- `debug/faunaInspector.ts`
+
+## `debug/faunaInspector.ts`
+
+**Imports**
+
+- `app/worldBundle.ts`
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `debug/faunaInspector.test.ts`
+- `debug/npcDebugApi.ts`
+
 ## `debug/houseTestDefinition.test.ts`
 
 **Imports**
@@ -162,11 +180,13 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `config/worldConfig.ts`
 - `debug/debugMode.ts`
+- `debug/faunaInspector.ts`
 - `debug/locationQueries.ts`
 - `debug/locationSearch.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `debug/villageInspector.ts`
+- `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
 - `settlement/families.ts`
 - `world/worldContext.ts`

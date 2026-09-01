@@ -323,6 +323,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcColliderRim.test.ts`
+- `navigation/navigation.test.ts`
 
 ## `ai/npcCombat.test.ts`
 

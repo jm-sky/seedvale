@@ -232,6 +232,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/placementActions.ts`
 - `items/tentPlacement.ts`
+- `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `terrain/dig.ts`
 - `terrain/terrainPreparation.ts`
@@ -367,6 +368,7 @@ Generated from TypeScript imports.
 - `settlement/landOwnership.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`
+- `shared/VigorState.ts`
 - `shared/bootMark.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkManager.ts`
@@ -446,6 +448,7 @@ Generated from TypeScript imports.
 - `audio/inventorySounds.ts`
 - `audio/weatherSounds.ts`
 - `combat/criticalHit.ts`
+- `combat/defenseResolver.ts`
 - `combat/projectile.ts`
 - `combat/rangedAttack.ts`
 - `combat/rangedReticle.ts`
@@ -804,6 +807,7 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `app/userActions.ts`
+- `debug/faunaInspector.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
