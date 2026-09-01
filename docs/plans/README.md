@@ -59,6 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `items-player-012-player-gathering-and-fire-cooking-polish.md`      | -       | 🟡 | M      | ~~106~~ ~~122~~ ~~159~~ |
 | ◼️ `npc-014-work-contracts-foundation-and-physical-posting.md`         | -       | 🟡 | M      | -      |
 | ◼️ `npc-015-work-contracts-npc-work-and-construction.md`               | -       | 🟡 | L      | npc-014 |
+| ◼️ `npc-016-work-contracts-payment-and-employer-interaction.md`        | -       | 🟡 | M      | npc-015 |
 
 ---
 
@@ -146,7 +147,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `006`
 - items-player: `013`
-- npc: `016`
+- npc: `017`
 - persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
