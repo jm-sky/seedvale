@@ -22,8 +22,6 @@ Rules for AI agents creating Seedvale plans and implementation notes.
 
 This ids section is maintained automatically from the plan files.
 
-> WARNING: Not auto-updated yet
-
 ---
 
 ## Domains
