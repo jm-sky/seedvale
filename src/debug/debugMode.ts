@@ -99,6 +99,15 @@ export function isColliderDebugMode(): boolean {
   return urlFlag('debugColliders')
 }
 
+/** `?debug=1&debugNpcCombat=1` — console-logs every animal→NPC hit that
+ *  actually lands (post-defense damage > 0), for diagnosing wolf-vs-NPC
+ *  combat. Requires the `debug` master switch, same convention `?gui=1`
+ *  follows elsewhere in this codebase — not a standalone flag like the
+ *  other `isXDebugMode` functions above. */
+export function isNpcCombatDebugMode(): boolean {
+  return isDebugMode() && urlFlag('debugNpcCombat')
+}
+
 /** Major rendered subsystems that can be independently switched off for
  *  perf/mobile/isolation testing (issue 032 diagnostic follow-up) — visual
  *  only, simulation state keeps running underneath. One name added here per

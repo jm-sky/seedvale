@@ -1950,8 +1950,11 @@ export class AnimalAgent {
      *  settlements' NPCs), never a global scan. */
     nearbyNpcs: readonly NearbyNpcCandidate[] = [],
     /** Fauna→NPC damage seam (plan 179 §9/§11), mirrors `onHumanHit` but
-     *  keyed to the specific NPC id chosen as target. */
-    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+     *  keyed to the specific NPC id chosen as target. `attackerAnimalId` is
+     *  diagnostic-only (`?debug=1&debugNpcCombat=1` combat logging) — lets
+     *  the caller look this animal back up via `getAgents()` without this
+     *  callback needing to know about `AnimalAgent` itself. */
+    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number, attackerAnimalId: string) => void,
     /** Aggression/alert audio hook (plan 188 §11) — fired once on the rising
      *  edge of this predator committing to a human chase, not every frame. */
     onAggro?: (kind: AnimalKind, x: number, z: number) => void,
@@ -2392,7 +2395,7 @@ export class AnimalAgent {
   private chaseNpc(
     target: NearbyNpcCandidate,
     dt: number,
-    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number, attackerAnimalId: string) => void,
   ): void {
     if (isExhausted(this.life.stamina)) {
       this.setIntent('wander')
@@ -2411,7 +2414,7 @@ export class AnimalAgent {
 
   private attackNpc(
     targetId: string,
-    onNpcHit: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+    onNpcHit: (targetId: string, damage: number, attackerX: number, attackerZ: number, attackerAnimalId: string) => void,
   ): void {
     if (this.attackCooldown > 0) return
     if (isExhausted(this.life.stamina)) return
@@ -2423,6 +2426,7 @@ export class AnimalAgent {
       damageVsHuman(this.def.kind) * (this.dangerous ? DANGEROUS_DAMAGE_MULTIPLIER : 1),
       x,
       z,
+      this.animalId,
     )
   }
 

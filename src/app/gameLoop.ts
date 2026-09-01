@@ -6,6 +6,7 @@ import type { ActiveSound, createWorldAudio } from '../audio/createWorldAudio'
 import type { createHouseDoorTracker } from '../audio/doorSounds'
 import type { createFireAudio } from '../audio/fireSounds'
 import type { WeatherAudio } from '../audio/weatherSounds'
+import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { NpcInspectTrigger } from '../debug/npcInspectTrigger'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { PreySpawner } from '../fauna/AnimalSpawner'
@@ -57,7 +58,7 @@ import {
   RANGED_RETICLE_TARGET_HEIGHT,
 } from '../combat/rangedReticle'
 import { createColliderDebugView } from '../debug/colliderDebugView'
-import { isCameraMeshDebugMode, isColliderDebugMode, isDebugMode } from '../debug/debugMode'
+import { isCameraMeshDebugMode, isColliderDebugMode, isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
 import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
@@ -162,6 +163,41 @@ const DAY_NIGHT_APPLY_THRESHOLD = 1 / 2000
 function timeOfDayDelta(a: number, b: number): number {
   const diff = Math.abs(a - b) % 1
   return Math.min(diff, 1 - diff)
+}
+
+/** `?debug=1&debugNpcCombat=1` console log for an animal→NPC hit that
+ *  actually landed (`resolved.finalDamage > 0` — a fully blocked/dodged
+ *  attempt logs nothing, per that flag's contract). Looks the attacking
+ *  animal back up by id since `Fauna`'s `onNpcHit` seam only carries an id,
+ *  not the `AnimalAgent` itself (keeps `NpcAgent`/`Fauna` decoupled from
+ *  each other's types) — a no-longer-present animal (e.g. despawned the
+ *  same tick) still logs, just without the wolf-side fields. */
+function logNpcCombatHit(
+  bundle: WorldBundle,
+  dayNight: DayNightState,
+  attackerAnimalId: string,
+  attackerX: number,
+  attackerZ: number,
+  npc: NpcAgent,
+  npcHpBefore: number,
+  resolved: ResolvedDefense,
+): void {
+  if (!isNpcCombatDebugMode() || resolved.finalDamage <= 0) return
+  const wolfInfo = bundle.fauna.getAgents().find((a) => a.animalId === attackerAnimalId)?.getDebugInfo()
+  const wolfText = wolfInfo
+    ? `wolf=${wolfInfo.animalId}/${wolfInfo.kind} frenzy=${wolfInfo.frenzied} rabid=${wolfInfo.rabid} wolfHp=${Math.round(wolfInfo.health.current)}/${wolfInfo.health.max}`
+    : `wolf=${attackerAnimalId}`
+  console.log(
+    '[NPC COMBAT]',
+    wolfText,
+    `wolfPos=(${attackerX.toFixed(1)},${attackerZ.toFixed(1)})`,
+    `npc=${npc.id}/${npc.name}/${npc.role}`,
+    `npcHp=${Math.round(npcHpBefore)}→${Math.round(npc.health.currentHp)}`,
+    `npcPos=(${npc.mesh.position.x.toFixed(1)},${npc.mesh.position.z.toFixed(1)})`,
+    `canFight=${npc.canFightBack()}`,
+    `damage=${resolved.finalDamage.toFixed(1)}`,
+    `simDay=${dayNight.elapsedDays.toFixed(3)}`,
+  )
 }
 
 function applyDayNight(
@@ -1850,11 +1886,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               movement: player.movementState(),
             },
             nearbyNpcCandidates,
-            (targetId, amount, attackerX, attackerZ) => {
+            (targetId, amount, attackerX, attackerZ, attackerAnimalId) => {
               for (const settlement of loaded) {
                 const target = settlement.npcs.find((npc) => npc.id === targetId)
                 if (!target) continue
-                target.applyIncomingCombatDamage({ amount, attackerX, attackerZ, attackerKey: 'fauna' })
+                const npcHpBefore = target.health.currentHp
+                const resolved = target.applyIncomingCombatDamage({ amount, attackerX, attackerZ, attackerKey: 'fauna' })
+                logNpcCombatHit(bundle, dayNight, attackerAnimalId, attackerX, attackerZ, target, npcHpBefore, resolved)
                 return
               }
             },

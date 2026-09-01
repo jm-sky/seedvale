@@ -1692,6 +1692,16 @@ export class NpcAgent {
     return resolved
   }
 
+  /** Diagnostic-only: whether `carried` currently has a weapon this NPC
+   *  could fight back with — same melee/loaded-ranged capability check
+   *  `reactToAnimalThreat`/`beginCombat` already use, exposed read-only for
+   *  `?debug=1&debugNpcCombat=1` combat logging (no side effect). */
+  canFightBack(): boolean {
+    if (resolveNpcMeleeWeapon(this.carried)) return true
+    const rangedWeapon = resolveNpcRangedWeapon(this.carried)
+    return rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
+  }
+
   /** Executes an already-decided combat intent (plan 177) — `NpcAgent` never
    *  picks its own target, reason to fight or weapon mode; a future Hunter/
    *  animal-defense/bandit decision system supplies all three via `intent`.

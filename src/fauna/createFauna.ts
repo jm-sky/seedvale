@@ -79,8 +79,9 @@ export type Fauna = {
      *  179 §5/§7) — forwarded straight to `AnimalAgent.update`, see its own
      *  doc. Loaded settlements' NPCs, not a world scan. */
     nearbyNpcs?: readonly NearbyNpcCandidate[],
-    /** Fauna→NPC damage callback (plan 179 §9/§11), mirrors `onHumanHit`. */
-    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number) => void,
+    /** Fauna→NPC damage callback (plan 179 §9/§11), mirrors `onHumanHit`.
+     *  `attackerAnimalId` is diagnostic-only, see `AnimalAgent`'s own doc. */
+    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number, attackerAnimalId: string) => void,
     /** Aggression/alert audio hook (plan 188 §11) — forwarded to each
      *  `AnimalAgent.update()`, fired once per predator on the rising edge of
      *  committing to a human chase (see `AnimalAgent`'s own doc). */
