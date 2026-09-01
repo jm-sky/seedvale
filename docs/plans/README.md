@@ -51,7 +51,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
-| ◼️ `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
+| 💡 `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | 💡 `npc-012-weather-reaction-and-shelter.md`                           | -       | 🟡 | M      | ~~040~~ |
 | ◼️ `npc-013-night-campfire-gathering.md`                               | -       | 🟡 | S      | ~~151~~ |
 | 💡 `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
