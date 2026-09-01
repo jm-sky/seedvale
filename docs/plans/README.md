@@ -54,6 +54,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
 | ◼️ `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | ◼️ `npc-012-weather-reaction-and-shelter.md`                           | -       | 🟡 | M      | ~~040~~ |
+| ◼️ `npc-013-night-campfire-gathering.md`                               | -       | 🟡 | S      | ~~151~~ |
 
 ---
 
@@ -140,7 +141,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `005`
 - items-player: `012`
-- npc: `013`
+- npc: `014`
 - persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
