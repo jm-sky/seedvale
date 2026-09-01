@@ -77,6 +77,7 @@ const validSave: SaveData = {
     id: 'garden:1', x: 7, z: 8, yaw: 0.4, care: 82, lastMaintainedAtDays: 3.5,
     hydration: 60, lastHydrationUpdateAtDays: 3.5, droughtStressDays: 0,
   }],
+  standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true }],
   resourceDeposits: { 'resource_1_2': 0, 'resource_3_4': 5 },
 }
 

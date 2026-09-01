@@ -23,6 +23,7 @@ import type { PlayerGardenRecord } from '../world/playerGarden'
 import type { NearbyPlayerWellLookup, PlayerWellRecord } from '../world/playerWell'
 import type { PointLightBudget } from '../world/pointLightBudget'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { StandingTorchRecord } from '../world/standingTorch'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
@@ -61,6 +62,7 @@ import {
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
 import { createPlayerGardens, type PlayerGardens } from '../world/createPlayerGardens'
 import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
+import { createStandingTorches, type StandingTorches } from '../world/createStandingTorches'
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -119,6 +121,7 @@ export type WorldBundle = {
   placedContainers: PlacedContainers
   playerWells: PlayerWells
   playerGardens: PlayerGardens
+  standingTorches: StandingTorches
   terrainPreparations: TerrainPreparations
   largeCaves: LargeCaves
   dryingRacks: DryingRacks
@@ -402,6 +405,7 @@ type WorldSystemsSeed = {
   carriedContainer: SaveCarriedContainer | null
   playerWells: readonly PlayerWellRecord[]
   playerGardens: readonly PlayerGardenRecord[]
+  standingTorches: readonly StandingTorchRecord[]
   terrainPreparations: readonly TerrainPreparationRecord[]
   dryingRacks: readonly DryingRackRecord[]
   hives: readonly BeehiveRecord[]
@@ -515,6 +519,7 @@ async function buildWorldSystems(
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
+    standingTorches: initialStandingTorches,
     terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
@@ -636,6 +641,7 @@ async function buildWorldSystems(
     chunkManager.clearColliders,
     initialPlayerWells,
   )
+  const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
   const terrainPreparations = createTerrainPreparations(
     scene,
     chunkManager,
@@ -672,6 +678,7 @@ async function buildWorldSystems(
     placedContainers,
     playerWells,
     playerGardens,
+    standingTorches,
     terrainPreparations,
     largeCaves,
     dryingRacks: createEmptyDryingRacks(),
@@ -847,6 +854,10 @@ export async function createWorldBundle(
    *  `buildWorldSystems`'s doc comment. Defaults to "never stale" for
    *  existing callers/tests. */
   isStale?: () => boolean,
+  /** Plan items-player-009 — persistent player-built standing torches, same
+   *  "carried across rebuild, reset only on a genuinely new world" contract
+   *  as `initialPlayerWells`/`initialPlayerGardens` above. */
+  initialStandingTorches: readonly StandingTorchRecord[] = [],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -859,6 +870,7 @@ export async function createWorldBundle(
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
+    standingTorches: initialStandingTorches,
     terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
@@ -960,6 +972,10 @@ export async function rebuildWorldBundle(
   // — same carry-across-rebuild contract as `playerWells` above.
   const carriedPlayerGardens = resetCollectedItems ? [] : [...bundle.playerGardens.nodes()]
   bundle.playerGardens.dispose()
+  // Player-built standing torches are positioned by the player, not
+  // seed-derived — same carry-across-rebuild contract as `playerGardens` above.
+  const carriedStandingTorches = resetCollectedItems ? [] : [...bundle.standingTorches.nodes()]
+  bundle.standingTorches.dispose()
   // Active terrain-preparation work sites are positioned by the player, not
   // seed-derived — same carry-across-rebuild contract as `playerWells`/
   // `playerGardens` above.
@@ -1002,6 +1018,7 @@ export async function rebuildWorldBundle(
     carriedContainer: carriedContainerHeld,
     playerWells: carriedPlayerWells,
     playerGardens: carriedPlayerGardens,
+    standingTorches: carriedStandingTorches,
     terrainPreparations: carriedTerrainPreparations,
     dryingRacks: carriedDryingRacks,
     hives: carriedHives,
@@ -1035,6 +1052,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedContainers.dispose()
   bundle.playerWells.dispose()
   bundle.playerGardens.dispose()
+  bundle.standingTorches.dispose()
   bundle.terrainPreparations.dispose()
   bundle.largeCaves.dispose()
   bundle.dryingRacks.dispose()

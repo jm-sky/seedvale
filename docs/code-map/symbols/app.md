@@ -34,22 +34,22 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 200
-- `evaluatePlacementSite` — function — line 125
-- `GroundPlacementDefinition` — type — line 117
+- `createPlacementActions` — function — line 221
+- `evaluatePlacementSite` — function — line 134
+- `GroundPlacementDefinition` — type — line 126
   - domain: world
-- `GroundPlacementSite` — type — line 101
-- `PlacementActions` — type — line 157
-- `PlacementBlocker` — type — line 81
-- `PlacementPreviewResult` — type — line 89
-- `previewGroundPlacement` — function — line 135
-- `WellWorkView` — type — line 150
+- `GroundPlacementSite` — type — line 110
+- `PlacementActions` — type — line 166
+- `PlacementBlocker` — type — line 90
+- `PlacementPreviewResult` — type — line 98
+- `previewGroundPlacement` — function — line 144
+- `WellWorkView` — type — line 159
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 65
-- `PlacementPreviewActionDeps` — type — line 34
-- `PlacementPreviewActions` — type — line 48
+- `createPlacementPreviewActions` — function — line 66
+- `PlacementPreviewActionDeps` — type — line 35
+- `PlacementPreviewActions` — type — line 49
 - `PlacementPreviewKind` — type — line 19
 - `PlacementPreviewUiView` — type — line 21
 
@@ -111,12 +111,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 487
+- `createGameLoop` — function — line 491
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 455
+- `GameLoop` — type — line 459
 - `GameLoopDeps` — type — line 255
 
 ## `app/graphicsSettings.ts`
@@ -127,21 +127,21 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 817
-- `buildDigTarget` — function — line 764
-- `buildInteractables` — function — line 318
-- `collectItem` — function — line 864
-- `COMBAT_TARGET_CONE_DOT` — const — line 80
-- `COMBAT_TARGET_RANGE` — const — line 65
-- `CombatAimMode` — type — line 70
-- `DIG_REACH` — const — line 59
-- `GAZE_RANGE` — const — line 49
-- `INTERACT_MIN_DOT` — const — line 46
-- `INTERACT_RANGE` — const — line 43
-- `KNIFE_BRANCH_BONUS` — const — line 55
-- `resolveHaySpot` — function — line 231
-- `resolveWaterBodyKind` — function — line 265
-- `TREE_BRANCH_CHANCE` — const — line 52
+- `buildCombatTarget` — function — line 832
+- `buildDigTarget` — function — line 779
+- `buildInteractables` — function — line 319
+- `collectItem` — function — line 879
+- `COMBAT_TARGET_CONE_DOT` — const — line 81
+- `COMBAT_TARGET_RANGE` — const — line 66
+- `CombatAimMode` — type — line 71
+- `DIG_REACH` — const — line 60
+- `GAZE_RANGE` — const — line 50
+- `INTERACT_MIN_DOT` — const — line 47
+- `INTERACT_RANGE` — const — line 44
+- `KNIFE_BRANCH_BONUS` — const — line 56
+- `resolveHaySpot` — function — line 232
+- `resolveWaterBodyKind` — function — line 266
+- `TREE_BRANCH_CHANCE` — const — line 53
 
 ## `app/inventoryWiring.ts`
 
@@ -198,13 +198,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 476
-- `createWorldBundle` — function — line 756
-- `disposeWorldBundle` — function — line 1028
-- `HOME_RADIUS` — const — line 74
-- `homeChunks` — function — line 85
-- `rebuildWorldBundle` — function — line 885
-- `WorldBundle` — type — line 108
+- `BuiltWorldSystems` — type — line 480
+- `createWorldBundle` — function — line 763
+- `disposeWorldBundle` — function — line 1045
+- `HOME_RADIUS` — const — line 76
+- `homeChunks` — function — line 87
+- `rebuildWorldBundle` — function — line 897
+- `WorldBundle` — type — line 110
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

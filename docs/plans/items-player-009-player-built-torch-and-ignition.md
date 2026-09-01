@@ -1,7 +1,7 @@
 # Plan: Player-Built Torch and Ignition
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** `world-008`
 **Domain:** `items-player`
@@ -88,6 +88,8 @@ Budowa musi korzystać z istniejącego mechanizmu sprawdzania i zużywania wymag
 Kolejność musi gwarantować, że odrzucony lub nieudany placement nie zużywa materiałów.
 
 Nie dodawać w tym planie nowych materiałów typu linen/cloth.
+
+> **Implementation note (post-implementation):** w aktualnym codebase nie istnieje item `wooden_pole` — `ItemKind` w `src/items/items.ts` go nie zawiera. Kryteria ukończenia tego planu wprost zabraniają dodawania nowego materiału wyłącznie na potrzeby tej receptury. Zaimplementowana receptura używa więc `beam` ("belka" — solidna belka ze ściętego drzewa, istniejący materiał konstrukcyjny) jako odpowiednika "wooden pole". Zob. `src/world/standingTorch.ts`'s `STANDING_TORCH_MATERIAL_REQUIREMENTS`.
 
 ### Przyszłe alternatywne receptury
 

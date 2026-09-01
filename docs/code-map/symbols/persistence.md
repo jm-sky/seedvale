@@ -4,13 +4,13 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveData.ts`
 
-- `isSaveData` — function — line 851
-- `loadSaveData` — function — line 900
+- `isSaveData` — function — line 873
+- `loadSaveData` — function — line 923
 - `QuestProgressEntry` — type — line 41
 - `SaveBadges` — type — line 87
 - `SaveCarriedContainer` — type — line 198
 - `SaveConfig` — type — line 21
-- `SaveData` — type — line 304
+- `SaveData` — type — line 310
   - domain: persistence
   - system: save-schema
   - role: Owns the SaveData shape and its validation/defaulting.
@@ -28,7 +28,7 @@ Generated from exported TypeScript symbols.
 - `SavePlantedCrop` — type — line 267
 - `SavePlantedTree` — type — line 253
 - `SavePlayer` — type — line 29
-- `SavePlayerGarden` — type — line 283
+- `SavePlayerGarden` — type — line 289
 - `SavePlayerNeeds` — type — line 96
 - `SavePlayerTorch` — type — line 63
 - `SavePlayerWell` — type — line 210
@@ -36,6 +36,7 @@ Generated from exported TypeScript symbols.
 - `SaveSkill` — type — line 107
 - `SaveSkills` — type — line 108
 - `SaveSpawnPoint` — type — line 133
+- `SaveStandingTorch` — type — line 279
 - `SaveTerrainModification` — type — line 228
 - `SaveTerrainPreparation` — type — line 239
 - `SaveTimedProcess` — type — line 148

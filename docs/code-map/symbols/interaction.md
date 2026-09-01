@@ -14,7 +14,7 @@ Generated from exported TypeScript symbols.
 ## `interaction/resolveInteraction.ts`
 
 - `InteractionOutcome` — type — line 13
-- `resolveInteraction` — function — line 94
+- `resolveInteraction` — function — line 97
 
 ## `interaction/treeInspection.ts`
 

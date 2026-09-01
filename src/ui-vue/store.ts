@@ -169,6 +169,11 @@ type QuickActionsState = {
   /** Owning at least one unplaced `chest` item (plan `ui-input-004` §3) —
    *  drives "Postaw skrzynię" under "Budowa", same shape as `hasTent`. */
   hasChest: boolean
+  /** Owning at least one portable `wooden_torch` item (plan items-player-009)
+   *  — drives "Postaw pochodnię" under "Budowa", same shape as `hasChest`.
+   *  The recipe's other material (a beam) is checked/consumed at build time,
+   *  same as a well/garden's stone/branch cost — not gated here. */
+  hasWoodenTorch: boolean
   traps: QuickActionsTraps
   /** True while the player is carrying a placed container (plan 164 §8) —
    *  drives the "Odłóż skrzynię" action, the put-down counterpart of
@@ -421,7 +426,7 @@ export const ui = reactive({
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
   quickActions: {
-    open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false,
+    open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
     traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
     onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
@@ -794,6 +799,7 @@ export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 
 export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { ui.quickActions.hasDiggingTool = hasDiggingTool }
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsHasChest(hasChest: boolean): void { ui.quickActions.hasChest = hasChest }
+export function setQuickActionsHasWoodenTorch(hasWoodenTorch: boolean): void { ui.quickActions.hasWoodenTorch = hasWoodenTorch }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function setQuickActionsTraps(traps: QuickActionsTraps): void {

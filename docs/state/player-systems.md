@@ -46,6 +46,10 @@ The walk is cancellable at any time — `Esc` (already first in `App.vue`'s keyd
 
 `world/playerWell.ts` + `world/createPlayerWells.ts` use an **active-work** model: Quick Actions places a persistent record in the `pit` stage with zero progress, and each construction stage (`pit`/`well`/`roof`) only advances from hours of *active* player work (`workProgress`) — never from elapsed world time, so leaving the game does not finish a well. A `[E]` press runs one short busy-channel work bout; the measured world-time delta of that bout (not an assumed value) is credited to `workProgress` on both natural completion and Escape-cancellation, so an interruption keeps exactly the work done and resumes from there. The first bout of a new stage validates its tool requirement and atomically consumes that stage's material cost; resuming the same stage re-checks the tool but never re-charges materials. Once the `roof` stage's work is done, the well becomes a plain `well`-kind water source — the exact settlement-well drink/fill path, no parallel water system. NPCs may also target a completed player well for their own water-fetch when it's closer than the settlement's own well.
 
+## Player-built standing torches (plan items-player-009)
+
+`world/standingTorch.ts` + `world/createStandingTorches.ts` are a single-stage player-built world object, same shape as a garden plot: Quick Actions "Postaw pochodnię" places it directly on ground (no wall/fence/building anchor) through the shared ground-placement preview/evaluator, consuming `1× beam + 1× wooden_torch` atomically from inventory or nearby dropped items via `constructionMaterials.ts` — `beam` stands in for the plan's "wooden pole" since no such item exists in the catalog. A new torch is always `unlit`; `lit` is the only authoritative state (`StandingTorchRecord`). `[E]` ignites it (`fire_starting` capability required, checked only here — never at placement), which is a no-op if already lit. Runtime flame/light reuses the existing village-torch visual (`settlement/houseLighting.ts`'s `createVillageTorchLight`) rather than a new lighting system, and is registered with the shared `PointLightBudget`; the portable `wooden_torch` item stays a separate, unrelated hand-held item.
+
 ## Terrain modification & land preparation (plan `world-terrain-002`)
 
 Shovel `Wyrównaj` levels the nearest 3×3 terrain grid samples to the central sample's own current runtime height (never the procedural base) — a one-shot exact-height write through `ChunkManager.applyExactHeights`, the same primitive active `Przygotuj teren` work uses. `Zrób górkę` is the literal inverse of `Wykop dołek`: the same radial `modifyTerrain` deformation with a negated depth, same limits, no stone yield. Both live in `terrain/digAction.ts`/`app/actions/groundActions.ts`.
@@ -102,6 +106,9 @@ src/world/plantedTrees.ts
 src/world/plantedCrops.ts
 src/world/playerGarden.ts
 src/world/createPlayerGardens.ts
+src/world/standingTorch.ts
+src/world/createStandingTorches.ts
+src/world/standingTorchProp.ts
 src/world/foodSources.ts
 src/world/fishing.ts
 src/world/dryingRacks.ts

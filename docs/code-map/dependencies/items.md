@@ -193,6 +193,7 @@ Generated from TypeScript imports.
 
 - `app/actions/placementActions.ts`
 - `items/constructionMaterials.test.ts`
+- `world/standingTorch.ts`
 
 ## `items/container.test.ts`
 
@@ -657,6 +658,7 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/standingTorch.ts`
 
 ## `items/tentProp.test.ts`
 

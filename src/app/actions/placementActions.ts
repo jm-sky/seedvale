@@ -71,6 +71,15 @@ import {
   WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
 } from '../../world/playerWell'
+import {
+  STANDING_TORCH_FOOTPRINT_RADIUS,
+  STANDING_TORCH_MATERIAL_REQUIREMENTS,
+  STANDING_TORCH_PLACE_DURATION_SEC,
+  STANDING_TORCH_PLACE_REACH,
+  STANDING_TORCH_PLACEMENT_MESSAGE,
+  STANDING_TORCH_SEPARATION,
+  type StandingTorchPlacementReason,
+} from '../../world/standingTorch'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** A world object the player can put down in front of themselves — the shared
@@ -195,6 +204,18 @@ export type PlacementActions = {
   /** Plants a crop seed of `cropId` ahead of the player — only valid near a
    *  settlement garden (plan 126). */
   plantCropAtAim: (cropId: CropId) => void
+  /** Read-only preview of standing-torch placement at the player's current
+   *  aim (plan items-player-009) — backs the shared placement-preview ghost/
+   *  UI; `placeStandingTorchAtAim` remains the only mutation seam. */
+  previewStandingTorchPlacement: () => PlacementPreviewResult
+  /** Places a new, unlit standing torch ahead of the player (plan
+   *  items-player-009 §1/§2) — consumes `STANDING_TORCH_MATERIAL_REQUIREMENTS`
+   *  atomically on completion, nothing on a rejected/cancelled placement. */
+  placeStandingTorchAtAim: () => void
+  /** `[E]` ignites an unlit standing torch (plan items-player-009 §4) —
+   *  requires `fire_starting`; no-op (including re-checking `lit`) if `id` is
+   *  unknown or already lit. Instant, no busy channel or material cost. */
+  igniteStandingTorch: (id: string) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -655,6 +676,83 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     })
   }
 
+  /** Shared placement contract for a standing torch (plan items-player-009
+   *  §1) — same shape as `tentPlacementDefinition` above; only the footprint/
+   *  separation differ (a single post, not a footprint the player stands
+   *  inside). */
+  const standingTorchPlacementDefinition = (): GroundPlacementDefinition<StandingTorchPlacementReason> => ({
+    aim: () => {
+      const yaw = mouseLook.state.yaw
+      return {
+        x: player.mesh.position.x - Math.sin(yaw) * STANDING_TORCH_PLACE_REACH,
+        z: player.mesh.position.z - Math.cos(yaw) * STANDING_TORCH_PLACE_REACH,
+        yaw,
+      }
+    },
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.standingTorches.nodes(),
+        footprintRadius: STANDING_TORCH_FOOTPRINT_RADIUS,
+        separation: STANDING_TORCH_SEPARATION,
+      })
+      return reason === 'occupied' ? 'torch' : reason
+    },
+    footprintRadius: STANDING_TORCH_FOOTPRINT_RADIUS,
+    reasonLabel: (reason) => STANDING_TORCH_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewStandingTorchPlacement = (): PlacementPreviewResult =>
+    previewGroundPlacement(standingTorchPlacementDefinition())
+
+  /** Places a new standing torch ahead of the player (plan items-player-009
+   *  §1/§2/§3) — same "validate, then busy-channel, consume+build only on
+   *  completion" shape as `placeGardenAtAim`. No capability/tool is required
+   *  to build (only to `Ignite` later). */
+  const placeStandingTorchAtAim = (): void => {
+    if (isActionBlocked(ctx)) return
+    const { site, reason } = evaluatePlacementSite(standingTorchPlacementDefinition())
+    if (reason !== 'ok') {
+      toast.show(STANDING_TORCH_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const missing = STANDING_TORCH_MATERIAL_REQUIREMENTS.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    if (missing.length > 0) {
+      toast.show(
+        `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        'error',
+      )
+      return
+    }
+    busy.start(STANDING_TORCH_PLACE_DURATION_SEC, 'Stawianie pochodni…', () => {
+      for (const r of STANDING_TORCH_MATERIAL_REQUIREMENTS) {
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+      }
+      bundle.standingTorches.place(site.x, site.z, site.yaw)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Postawiono pochodnię.')
+    })
+  }
+
+  /** `[E]` ignites an unlit standing torch (plan items-player-009 §4) — the
+   *  same "re-resolve by id, check capability, mutate" shape the plan
+   *  requires; `fire_starting` is only needed here, never for placement. */
+  const igniteStandingTorch = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    if (!inventory.hasCapability('fire_starting')) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
+      return
+    }
+    if (bundle.standingTorches.ignite(id)) toast.show('Zapalono pochodnię.')
+  }
+
   return {
     tentAimPoint,
     tentBlockers,
@@ -669,5 +767,8 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     waterGardenPlot,
     plantTreeAtAim,
     plantCropAtAim,
+    previewStandingTorchPlacement,
+    placeStandingTorchAtAim,
+    igniteStandingTorch,
   }
 }

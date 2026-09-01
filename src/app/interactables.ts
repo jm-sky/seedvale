@@ -16,6 +16,7 @@ import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind, nearestShoreProbePoint } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
@@ -330,6 +331,7 @@ export function buildInteractables(
   hives: Beehives,
   placedWells: PlayerWells,
   playerGardens: PlayerGardens,
+  standingTorches: StandingTorches,
   terrainPreparations: TerrainPreparations,
   /** Current world day (plan 159) — drives drying-complete/honey-available
    *  prompt text. */
@@ -476,6 +478,19 @@ export function buildInteractables(
       promptLabel: gardenPlotPromptLabel(care, hydration),
       id: garden.id,
       care,
+    })
+  }
+
+  // Plan items-player-009 — player-built standing torches; `[E]` ignites an
+  // unlit one, an already-lit one is flavor-only (no action to offer).
+  for (const torch of standingTorches.list()) {
+    if (!withinRange(torch.x, torch.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'standingTorch',
+      position: { x: torch.x, z: torch.z },
+      promptLabel: torch.lit ? 'Zapalona pochodnia' : '[E] Zapal pochodnię',
+      id: torch.id,
+      lit: torch.lit,
     })
   }
 

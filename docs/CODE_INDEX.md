@@ -31,7 +31,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [Action context](../src/app/actions/actionContext.ts) — the shared dependency bundle plus the "another activity is already running" guards.
 - [Ground actions](../src/app/actions/groundActions.ts) — shovel/pickaxe dig and level, multi-stage tree chop, ore-deposit mining.
-- [Placement actions](../src/app/actions/placementActions.ts) — putting a tent/trap/well down in front of the player, and advancing a player-built well's stage.
+- [Placement actions](../src/app/actions/placementActions.ts) — putting a tent/trap/well/garden/standing torch down in front of the player, advancing a player-built well's stage, and igniting a standing torch.
 - [Container actions](../src/app/actions/containerActions.ts) — placing, carrying and opening a chest, plus the transfer screen wiring.
 - [Survival actions](../src/app/actions/survivalActions.ts) — corpse butchering/burial, campfire ignite/cook, water drinking/filling, eating.
 - [Gathering actions](../src/app/actions/gatheringActions.ts) — trap arm/disarm/collect, fishing, drying racks, hives, wild-crop harvest.
