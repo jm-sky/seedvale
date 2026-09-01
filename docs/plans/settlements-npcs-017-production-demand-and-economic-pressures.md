@@ -3,7 +3,7 @@
 **Created:** 2026-09-01  
 **Status:** `planned` 📋  
 **Priority:** high · **Effort:** M  
-**Depends on:** ~~015~~  
+**Depends on:** settlements-npcs-016  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `npc`  
 **Tags:** `production` `demand` `pressure` `shortage`
