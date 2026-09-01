@@ -52,6 +52,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
 | 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`    | - | 🔴 | L | - |
+| ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md` | - | 🔴 | M | ~~015~~ |
 
 ---
 
@@ -192,7 +193,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `016`
+- settlements-npcs: `018`
 - tools: `008`
 - ui-input: `007`
 - world: `009`
