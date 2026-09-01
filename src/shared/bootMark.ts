@@ -22,6 +22,7 @@ export const useBootMark = (group: string = 'global') => {
   }
 
   const bootMarksSummary = () => {
+    if (!isBootMarkMode()) return
     console.log('Boot Marks Summary:')
     console.table(bootMarks)
   }
