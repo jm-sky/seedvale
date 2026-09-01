@@ -1793,10 +1793,9 @@ export class AnimalAgent {
     this.tickMaturity(dt)
     this.tickProduction(nowDays)
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
-    // Only a frenzied predator considers an NPC target, and only once the
-    // player isn't the active threat (plan 179 §5/§8) — cheap bounded scan,
-    // see `NearbyNpcCandidate`'s doc.
-    const npcThreat = !sense.playerActive && this.frenzied && this.def.role === 'predator'
+    // Only a frenzied predator considers an NPC target.
+    // If player is the active threat - NPC can help or flee.
+    const npcThreat = this.frenzied && this.def.role === 'predator'
       ? this.resolveFrenzyNpcTarget(nearbyNpcs)
       : null
 
@@ -1810,6 +1809,7 @@ export class AnimalAgent {
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
       this.updateRabid(dt, others)
+
     } else if (sense.playerActive) {
       this.cancelSourceTarget()
       if (this.def.role === 'predator') {
@@ -1844,6 +1844,13 @@ export class AnimalAgent {
         this.setIntent('flee', copyVec3(observerPos))
         this.fleeFrom(observerPos.x, observerPos.z, dt)
       }
+
+      // A frenzied predator can still expose itself as an NPC threat
+      // while actively engaging the player.
+      if (this.frenzied && npcThreat) {
+        this.threateningHuman = true
+      }
+
     } else if (npcThreat && this.frenzied) {
       this.threateningHuman = true
       this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
