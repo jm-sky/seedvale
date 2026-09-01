@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-01 19:53:37  
+> Date: 2026-09-01 20:26:29  
 
 ## PLANS
 
-- `items-player-012-player-gathering-and-fire-cooking-polish.md`
 - `npc-013-night-campfire-gathering.md`
 - `npc-014-work-contracts-foundation-and-physical-posting.md`
 - `npc-015-work-contracts-npc-work-and-construction.md`
@@ -22,37 +21,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `items-player-012-player-gathering-and-fire-cooking-polish.md`
-
-Prompt:
-
-```
-Zrób review planu `items-player-012-player-gathering-and-fire-cooking-polish.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/items-player-012-player-gathering-and-fire-cooking-polish.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/items-player-012-player-gathering-and-fire-cooking-polish-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `npc-013-night-campfire-gathering.md`
 
