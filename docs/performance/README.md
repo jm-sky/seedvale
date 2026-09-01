@@ -523,6 +523,12 @@ The renderer should remain understandable, scalable and compatible with the game
 - [`Plan 136 — Three.js 0.180 → 0.185 upgrade`](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md)
 
 
+## Recent audit
+
+- [2026-09-01 — Program / Material Census](./audits/2026-09-01--program-census.md) — the fresh census confirms a real shader/program first-use hitch, but 773 materials map to ~72 programs, so blind program/material consolidation is not justified; a targeted investigation is needed before implementation.
+
+---
+
 ## Trace analysis results
 
 Historical Chrome Trace Analyzer results are stored in:
