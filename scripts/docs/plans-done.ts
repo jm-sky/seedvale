@@ -1,11 +1,18 @@
 import { execFileSync } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { isPlanFile, LEGACY_PLAN_ID_RE, PLAN_ID_RE, PLANS_DIR, PLANS_DONE_PATH, ROOT_DIR, relativePath } from './config.js'
-
+import {
+  LEGACY_PLAN_ID_RE,
+  PLAN_ID_RE,
+  PLANS_DIR,
+  PLANS_DONE_PATH,
+  ROOT_DIR,
+} from './config.js'
+import { isPlanFile, relativePath } from './utils.js'
 
 const STATUS = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const DOMAIN = /^\*\*Domain:\*\*\s*`([^`]+)`/m
+const VERIFICATION_MAX_AGE_DAYS = 7
 
 type DoneRecord = {
   plan: string
@@ -27,14 +34,30 @@ const git = (...args: string[]): string =>
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim()
 
-const planId = (file: string): string =>
-  file.replace(/\.md$/, '')
+const planId = (file: string): string => file.replace(/\.md$/, '')
 
 const getStatus = (content: string): string | null =>
   content.match(STATUS)?.[1]?.trim().toLowerCase() ?? null
 
 const getDomain = (content: string): string =>
   content.match(DOMAIN)?.[1]?.trim() ?? ''
+
+const isRecentVerification = (date: string): boolean => {
+  const age = Date.now() - new Date(date).getTime()
+
+  return (
+    age <=
+    VERIFICATION_MAX_AGE_DAYS *
+      24 *
+      60 *
+      60 *
+      1000
+  )
+}
+
+const isPlanRecentVerification = (plan: DoneRecord | undefined): boolean => {
+  return !!(plan?.verificationNeeded && isRecentVerification(plan.verificationNeeded))
+}
 
 /**
  * Return plan files currently present in docs/plans.
@@ -309,7 +332,7 @@ const parseDone = async (): Promise<
   try {
     const content = await readFile(PLANS_DONE_PATH, 'utf8')
 
-    return content
+    const records = content
       .split('\n')
       .filter(line =>
         line.trim().startsWith('|'),
@@ -323,32 +346,18 @@ const parseDone = async (): Promise<
       .filter(
         columns =>
           columns.length === 5 &&
-          columns[0] !== 'Plan',
+          columns[0] !== 'Plan' &&
+          !columns.every(column => /^[-:]+$/.test(column)),
       )
       .map(columns => ({
         plan: columns[0],
-        domain:
-          columns[1].replaceAll(
-            '`',
-            '',
-          ),
-        opened:
-          columns[2] === '—'
-            ? []
-            : columns[2]
-                .split(',')
-                .map(value =>
-                  value.trim(),
-                ),
-        verificationNeeded:
-          columns[3] === '—'
-            ? null
-            : columns[3],
-        done:
-          columns[4] === '—'
-            ? null
-            : columns[4],
+        verificationNeeded: columns[1] === '—' ? null : columns[1],
+        done: columns[2] === '—' ? null : columns[2],
+        domain: columns[3].replaceAll('`', ''),
+        opened: columns[4] === '—' ? [] : columns[4].split(',').map(value => value.trim()),
       }))
+
+    return [...new Map(records.map(record => [record.plan, record])).values()]
   } catch {
     return []
   }
@@ -437,10 +446,10 @@ const markDependencies = async (
       const escaped =
         escapeRegExp(alias)
 
-        const pattern = new RegExp(
-          `^(\\*\\*Depends on:\\*\\*.*?)(?<!~~)(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])(?!~~)(.*)$`,
-          'gim',
-        )
+      const pattern = new RegExp(
+        `^(\\*\\*Depends on:\\*\\*.*?)(?<!~~)(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])(?!~~)(.*)$`,
+        'gim',
+      )
 
       updated = updated.replace(
         pattern,
@@ -480,10 +489,13 @@ const generateDone = (
     )
 
   const map = sorted.map(record => {
-    const title = `\`${record.plan.replaceAll('`', '')}\``
-    const domain = record.domain ? `\`${record.domain}\`` : '—'
-    const opened = record.opened.length ? record.opened.join(', ') : '—'
-    return `| ${title.padEnd(60)} | ${domain.padEnd(6)} | ${record.verificationNeeded?.padEnd(16) ?? '—'} | ${record.done?.padEnd(16) ?? '—'} | ${opened.padEnd(8)} |`
+    const title: string = `\`${record.plan.replaceAll('`', '')}\``
+    const domain: string = record.domain ? `\`${record.domain}\`` : '—'
+    const opened: string = record.opened.length ? record.opened.join(', ') : '—'
+    const verificationNeeded: string = record.verificationNeeded ?? '—'
+    const done: string = record.done ?? '—'
+
+    return `| ${title.padEnd(70)} | ${verificationNeeded.padEnd(19)} | ${done.padEnd(19)} | ${domain.padEnd(10)} | ${opened.padEnd(10)} |`
   })
 
   return [
@@ -491,8 +503,8 @@ const generateDone = (
     '',
     '> Automatically generated from plan history and Git. Do not edit manually.',
     '',
-    '| Plan                                             | Domain | Verification needed | Done   | Opened |',
-    '|--------------------------------------------------|--------|---------------------|--------|--------|',
+    '| Plan                                                                   | To verification     | Done                | Domain | Opened |',
+    '|------------------------------------------------------------------------|---------------------|---------------------|--------|--------|',
     ...map,
     '',
   ].join('\n')
@@ -521,8 +533,14 @@ const main = async (): Promise<void> => {
    */
   for (const file of planFiles) {
     const id = planId(file)
+    const existing = existingByPlan.get(id)
 
-    if (existingByPlan.get(id)?.done) {
+    if (existing?.done) {
+      continue
+    }
+
+    // Verification needed starsze niż 7 dni → nie reewaluujemy
+    if (isPlanRecentVerification(existing)) {
       continue
     }
 

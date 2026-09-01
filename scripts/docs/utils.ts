@@ -12,7 +12,7 @@ import {
   sep,
 } from 'node:path'
 import * as ts from 'typescript'
-import { ROOT_DIR, SRC_DIR } from './config.js'
+import { NOTES_SUFFIX, PLAN_FILE_RE, ROOT_DIR, SRC_DIR } from './config.js'
 
 export const GENERATED_START = /<!--\s*AUTO-GENERATED:START(?:\s+columns:\s*.+?)?\s*-->/
 export const GENERATED_END = '<!-- AUTO-GENERATED:END -->'
@@ -87,6 +87,21 @@ export const repoRelative = (path: string): string => toPosix(relative(ROOT_DIR,
 export const getDomain = (path: string): string => path.split('/')[0] ?? 'other'
 
 export const isTsFile = (name: string): boolean => TS_EXTENSIONS.has(extname(name))
+
+export const isPlanFile = (
+  file: string,
+): boolean =>
+  PLAN_FILE_RE.test(file) &&
+  !file.endsWith(NOTES_SUFFIX)
+
+export const relativePath = (
+  path: string,
+): string =>
+  path
+    .replace(ROOT_DIR, '')
+    .replace(/^[/\\]/, '')
+    .replaceAll('\\', '/')
+
 
 export async function walk(
   directory: string,

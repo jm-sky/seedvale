@@ -23,19 +23,3 @@ export const PLAN_FILE_RE = /-[0-9]{3}-.+\.md$/
 export const PLAN_ID_RE = /^([a-z0-9-]+)-(\d{3})-/
 export const LEGACY_PLAN_FILE_RE = /^\d{4}-\d{2}-\d{2}--\d{3}--.+\.md$/
 export const LEGACY_PLAN_ID_RE = /^\d{4}-\d{2}-\d{2}--(\d{3})--/
-
-export const isPlanFile = (
-  file: string,
-): boolean =>
-  PLAN_FILE_RE.test(file) &&
-  !file.endsWith(
-    '-implementation-notes.md',
-  )
-
-export const relativePath = (
-  path: string,
-): string =>
-  path
-    .replace(ROOT_DIR, '')
-    .replace(/^[/\\]/, '')
-    .replaceAll('\\', '/')
