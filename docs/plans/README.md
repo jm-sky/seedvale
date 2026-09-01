@@ -30,7 +30,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
-| ◼️ `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
+| 💡 `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
 | 💡 `npc-002-npc-healing.md`                                            | -       | 🟡 | M      | ~~177~~ |
 | 💡 `settlements-npcs-012-physical-storage-inspection.md`               | -       | 🟡 | S      | ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
