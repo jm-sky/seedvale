@@ -73,27 +73,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 322
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 605
-- `classifyPendingActivity` — function — line 471
-- `CurrentActivity` — type — line 371
-- `CurrentActivityKind` — type — line 369
-- `findWeaponNeedingMaintenance` — function — line 713
-- `NPC_HEIGHT` — const — line 230
-- `NPC_MODEL_URLS` — const — line 275
-- `NPC_SHADOW_DISTANCE` — const — line 235
-- `NpcAgent` — class — line 812
+- `ActionId` — type — line 324
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 607
+- `classifyPendingActivity` — function — line 473
+- `CurrentActivity` — type — line 373
+- `CurrentActivityKind` — type — line 371
+- `findWeaponNeedingMaintenance` — function — line 715
+- `NPC_HEIGHT` — const — line 232
+- `NPC_MODEL_URLS` — const — line 277
+- `NPC_SHADOW_DISTANCE` — const — line 237
+- `NpcAgent` — class — line 814
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 386
-- `NpcWhy` — type — line 446
-- `Phase` — type — line 302
-- `projectNpcWhy` — function — line 498
-- `promoteChainKind` — function — line 463
+- `NpcInspectionSnapshot` — type — line 388
+- `NpcWhy` — type — line 448
+- `Phase` — type — line 304
+- `projectNpcWhy` — function — line 500
+- `promoteChainKind` — function — line 465
 
 ## `ai/npcAnimalThreat.ts`
 

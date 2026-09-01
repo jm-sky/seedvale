@@ -115,22 +115,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 597
-- `ChunkManager` — type — line 375
-- `ChunkManagerConfig` — type — line 234
-- `createChunkManager` — function — line 736
+- `applyModificationToTile` — function — line 613
+- `ChunkManager` — type — line 383
+- `ChunkManagerConfig` — type — line 242
+- `createChunkManager` — function — line 752
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 725
-- `drainByBudget` — function — line 715
-- `FinalizeStage` — type — line 320
-- `pickNearestQueuedKey` — function — line 675
-- `pickNextFinalizeKey` — function — line 693
-- `ringChunkOffsets` — function — line 193
-- `TerrainModification` — type — line 554
+- `CropHarvestOutcome` — type — line 741
+- `drainByBudget` — function — line 731
+- `FinalizeStage` — type — line 328
+- `pickNearestQueuedKey` — function — line 691
+- `pickNextFinalizeKey` — function — line 709
+- `ringChunkOffsets` — function — line 201
+- `TerrainModification` — type — line 570
 
 ## `terrain/chunkVegetation.ts`
 
@@ -271,23 +271,24 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/riverNetwork.ts`
 
-- `computeRiverTile` — function — line 424
-- `DEFAULT_RIVER_THRESHOLDS` — const — line 53
-- `depthFromAccumulation` — function — line 154
-- `flowFactor` — function — line 122
-- `overlappingRiverTiles` — function — line 80
-- `RIVER_CELL_STEP` — const — line 36
-- `RIVER_TILE_HALO` — const — line 35
-- `RIVER_TILE_SIZE` — const — line 29
-- `RiverChain` — type — line 94
-- `riverChannelSegmentsNear` — function — line 183
-- `RiverPoint` — type — line 93
-- `RiverTileCoord` — type — line 59
-- `riverTileCoordOf` — function — line 61
-- `riverTileCoreRect` — function — line 72
-- `riverTileKey` — function — line 65
-- `widthFromAccumulation` — function — line 136
-- `WorldRect` — type — line 69
+- `computeRiverTile` — function — line 448
+- `DEFAULT_RIVER_THRESHOLDS` — const — line 54
+- `depthFromAccumulation` — function — line 155
+- `flowFactor` — function — line 123
+- `nearestRiverBankDistance` — function — line 242
+- `overlappingRiverTiles` — function — line 81
+- `RIVER_CELL_STEP` — const — line 37
+- `RIVER_TILE_HALO` — const — line 36
+- `RIVER_TILE_SIZE` — const — line 30
+- `RiverChain` — type — line 95
+- `riverChannelSegmentsNear` — function — line 184
+- `RiverPoint` — type — line 94
+- `RiverTileCoord` — type — line 60
+- `riverTileCoordOf` — function — line 62
+- `riverTileCoreRect` — function — line 73
+- `riverTileKey` — function — line 66
+- `widthFromAccumulation` — function — line 137
+- `WorldRect` — type — line 70
 
 ## `terrain/riverTileCache.ts`
 

@@ -17,6 +17,7 @@ Generated dependency maps by source domain.
 - [`items`](./items.md)
 - [`main.ts`](./main.ts.md)
 - [`math`](./math.md)
+- [`navigation`](./navigation.md)
 - [`perf`](./perf.md)
 - [`persistence`](./persistence.md)
 - [`player`](./player.md)

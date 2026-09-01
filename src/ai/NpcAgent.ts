@@ -53,6 +53,8 @@ import { claimFoodItems, depositFoodItems } from '../items/foodItems'
 import { Inventory, type ItemAmount } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
+import { type AgentProfile, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
+import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination, settlementStorageDestination } from '../settlement/storageDestinations'
@@ -988,11 +990,20 @@ export class NpcAgent {
   /** Stuck-movement detection + rescue-stage escalation — ticked only while
    *  `phase` is in `WATCHDOG_PHASES`. Pure state, see `npcMovementWatchdog.ts`. */
   private readonly watchdog: MovementWatchdog = createMovementWatchdog()
-  /** One-shot bypass waypoint set by a `repath` rescue attempt (`attemptRepath`)
-   *  — `steerWithRescue` steers through this before resuming the phase's real
-   *  destination, while `repathActive` is true. */
+  /** Route set by a `repath` rescue attempt (`attemptRepath`, plan npc-006)
+   *  — `steerWithRescue` steers through these one at a time before resuming
+   *  the phase's real destination, while `repathActive` is true. Found by
+   *  `navigation/navigation.ts`'s bounded local-grid A* when a direct hop
+   *  can't reach the stuck destination; falls back to the old single random
+   *  bypass hop (`repathTarget`) when no route exists. */
+  private repathWaypoints: readonly PathPoint[] = []
+  private repathIndex = 0
+  private readonly repathWaypointScratch = new THREE.Vector3()
+  /** Single-hop bypass target — the pre-navigation fallback rescue, still
+   *  used when `findPath` finds no route around the obstacle. */
   private readonly repathTarget = new THREE.Vector3()
   private repathActive = false
+  private repathIsNavRoute = false
   /** Cached `goSleep` target — house rim from the NPC's side, not `home`
    *  center. Frozen at sleep-start so the rim point does not orbit. */
   private readonly sleepDest = new THREE.Vector3()
@@ -1700,7 +1711,7 @@ export class NpcAgent {
     this.pathWaypoints = []
     this.pathIndex = 0
     this.wait = 0
-    this.repathActive = false
+    this.clearRepath()
     this.previousPhase = null
     this.sleepReason = null
     resetMovementWatchdog(this.watchdog)
@@ -1937,7 +1948,7 @@ export class NpcAgent {
     this.pathWaypoints = []
     this.pathIndex = 0
     this.wait = 0
-    this.repathActive = false
+    this.clearRepath()
     this.previousPhase = null
     this.sleepReason = null
     resetMovementWatchdog(this.watchdog)
@@ -2609,7 +2620,7 @@ export class NpcAgent {
     replaceActionLifecycle(this.actionLifecycle)
     this.phase = 'goTo'
     resetMovementWatchdog(this.watchdog)
-    this.repathActive = false
+    this.clearRepath()
     this.trace.record({ simTime: this.simClock, type: 'action.planned', action: action.kind, queueId: action.queueId ?? null })
   }
 
@@ -2666,7 +2677,7 @@ export class NpcAgent {
     this.wait = 0
     this.pathWaypoints = []
     resetMovementWatchdog(this.watchdog)
-    this.repathActive = false
+    this.clearRepath()
     const dist = Math.hypot(
       this.mesh.position.x - this.home.x,
       this.mesh.position.z - this.home.z,
@@ -3904,7 +3915,7 @@ export class NpcAgent {
       this.pathIndex = 0
       this.phase = 'followPath'
       resetMovementWatchdog(this.watchdog)
-      this.repathActive = false
+      this.clearRepath()
       return
     }
     this.wanderNear(this.home)
@@ -3912,7 +3923,7 @@ export class NpcAgent {
 
   private wanderNear(anchor: THREE.Vector3): void {
     resetMovementWatchdog(this.watchdog)
-    this.repathActive = false
+    this.clearRepath()
     for (let attempt = 0; attempt < 6; attempt++) {
       const x = anchor.x + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
       const z = anchor.z + (Math.random() - 0.5) * IDLE_WANDER_SPREAD
@@ -3987,7 +3998,7 @@ export class NpcAgent {
     this.prepareSleepDestination()
     if (this.isAbandonedDestination(this.sleepDest.x, this.sleepDest.z)) return
     resetMovementWatchdog(this.watchdog)
-    this.repathActive = false
+    this.clearRepath()
     this.phase = 'goSleep'
   }
 
@@ -4098,17 +4109,42 @@ export class NpcAgent {
     }
   }
 
-  /** `steerTo` wrapper that detours through a one-shot `repathTarget` (set by
-   *  `attemptRepath`) before resuming the phase's real `dest` — the stuck
-   *  rescue's Level 1. Returns `false` (never "arrived at `dest`") for every
-   *  frame spent on the detour; the caller's normal arrival handling only
-   *  ever sees `dest` itself. */
+  /** `steerTo` wrapper that detours through whatever `attemptRepath` set up
+   *  (a `findPath()` route when one was found, else the single-hop random
+   *  bypass) before resuming the phase's real `dest` — the stuck rescue's
+   *  Level 1. Returns `false` (never "arrived at `dest`") for every frame
+   *  spent on the detour; the caller's normal arrival handling only ever
+   *  sees `dest` itself. */
   private steerWithRescue(dest: THREE.Vector3, dt: number): boolean {
-    if (this.repathActive) {
-      if (this.steerTo(this.repathTarget, dt)) this.repathActive = false
+    if (!this.repathActive) return this.steerTo(dest, dt)
+    if (!this.repathIsNavRoute) {
+      if (this.steerTo(this.repathTarget, dt)) this.clearRepath()
       return false
     }
-    return this.steerTo(dest, dt)
+    const waypoint = this.repathWaypoints[this.repathIndex]
+    if (!waypoint) {
+      this.clearRepath()
+      return this.steerTo(dest, dt)
+    }
+    this.repathWaypointScratch.set(waypoint.x, 0, waypoint.z)
+    if (this.steerTo(this.repathWaypointScratch, dt)) {
+      this.repathIndex++
+      if (this.repathIndex >= this.repathWaypoints.length) this.clearRepath()
+    }
+    return false
+  }
+
+  /** Clears any in-flight repath detour — the single-hop fallback and,
+   *  when one is active, the `findPath()` route (releasing its
+   *  `navigationStats` active-path slot). Call whenever movement toward a
+   *  destination is reset/replaced/abandoned so a stale detour never
+   *  survives into the next leg. */
+  private clearRepath(): void {
+    if (this.repathIsNavRoute) endActivePath()
+    this.repathActive = false
+    this.repathIsNavRoute = false
+    this.repathWaypoints = []
+    this.repathIndex = 0
   }
 
   /** Advances the stuck-movement watchdog and acts on whatever rescue stage
@@ -4162,7 +4198,7 @@ export class NpcAgent {
     this.pathWaypoints = []
     this.pathIndex = 0
     this.wait = 0
-    this.repathActive = false
+    this.clearRepath()
     this.phase = 'choose'
     // The concrete action is gone, but the Goal it was pursuing may still be
     // meaningful (plan ai-004 §8) — mark the Plan interrupted, never clear
@@ -4172,10 +4208,67 @@ export class NpcAgent {
     this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'interrupt' })
   }
 
-  /** Rescue Level 1 — steer through a small random nearby waypoint instead
-   *  of retrying the exact same (already-failing) direct line. Samples must
-   *  be exterior (plan 108) so a hop inside the occupied house is rejected. */
+  /** Rescue Level 1 (plan npc-006) — first tries a real bounded local-grid
+   *  A* route around whatever is blocking progress toward the phase's
+   *  current destination (see `currentMovementDestination`); only falls
+   *  back to the old blind single-hop bypass when no destination is known
+   *  or no route exists. Never changes the destination/action itself — a
+   *  repath only ever changes *how* the NPC gets there. */
   private attemptRepath(): void {
+    const dest = this.currentMovementDestination()
+    if (dest && this.attemptNavRepath(dest)) return
+    this.attemptBlindRepath()
+  }
+
+  /** Real repath: bounded A* from the current position toward `dest` via
+   *  the shared `navigation/navigation.ts` layer, reusing this NPC's own
+   *  `isWalkableExterior`/`sampleHeight` — Navigation never re-derives
+   *  walkability from `ColliderRegistry` itself (see `NavigationQuery`'s
+   *  doc). Starts following the resulting route (`repathWaypoints`) and
+   *  returns `true` on success; `false` leaves the fallback to the caller. */
+  private attemptNavRepath(dest: { x: number, z: number }): boolean {
+    const query: NavigationQuery = {
+      isWalkable: (x, z) => this.isWalkableExterior(x, z),
+      sampleHeight: this.sampleHeight,
+    }
+    const profile: AgentProfile = {}
+    const start = performance.now()
+    const result = findPath(
+      query,
+      profile,
+      { x: this.mesh.position.x, z: this.mesh.position.z },
+      { x: dest.x, z: dest.z },
+    )
+    recordPathRequest(result, performance.now() - start)
+    recordRepath()
+    if (!result || result.waypoints.length === 0) return false
+    this.repathWaypoints = result.waypoints
+    this.repathIndex = 0
+    this.repathActive = true
+    this.repathIsNavRoute = true
+    beginActivePath()
+    return true
+  }
+
+  /** The world-space point the NPC is currently trying to reach, for
+   *  whichever `WATCHDOG_PHASES` phase is active — `null` when the phase
+   *  has no single destination to path toward (falls back to the blind
+   *  bypass hop instead). */
+  private currentMovementDestination(): { x: number, z: number } | null {
+    switch (this.phase) {
+      case 'followPath': return this.pathWaypoints[this.pathIndex] ?? null
+      case 'goSleep': return this.sleepDest
+      case 'goTo': return this.pendingAction?.destination ?? null
+      case 'wander': return this.target
+      default: return null
+    }
+  }
+
+  /** Rescue Level 1 fallback — steer through a small random nearby waypoint
+   *  instead of retrying the exact same (already-failing) direct line, used
+   *  only when `attemptNavRepath` couldn't find a real route. Samples must
+   *  be exterior (plan 108) so a hop inside the occupied house is rejected. */
+  private attemptBlindRepath(): void {
     const occupied = this.collidersNear(this.mesh.position.x, this.mesh.position.z)
     const radii = localEscapeRadii(this.mesh.position, occupied)
     const minR = radii[0] ?? 2
@@ -4188,6 +4281,7 @@ export class NpcAgent {
       if (this.isWalkableExterior(x, z)) {
         this.repathTarget.set(x, 0, z)
         this.repathActive = true
+        this.repathIsNavRoute = false
         return
       }
     }
@@ -4207,7 +4301,7 @@ export class NpcAgent {
         if (this.isWalkableExterior(x, z)) {
           this.mesh.position.x = x
           this.mesh.position.z = z
-          this.repathActive = false
+          this.clearRepath()
           if (isDebugMode()) console.warn('[npc:rescue] local escape', this.name, { x, z })
           return
         }
@@ -4247,7 +4341,7 @@ export class NpcAgent {
     this.pathIndex = 0
     this.wait = 0
     this.sleepReason = null
-    this.repathActive = false
+    this.clearRepath()
     const escalate = registerAbandon(this.watchdog)
     resetMovementWatchdog(this.watchdog)
     if (escalate) this.emergencyTeleport()

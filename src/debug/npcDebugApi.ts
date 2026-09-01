@@ -5,6 +5,7 @@ import type { VillageSize } from '../settlement/families'
 import type { WorldContext } from '../world/worldContext'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
+import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { isAdminMode, isDebugMode } from './debugMode'
 import {
   deepForestNearest,
@@ -114,6 +115,11 @@ export type SeedvaleDebugApi = {
   teleportTo: TeleportToDebugApi
   /** Hidden-treasure dig markers (quick task) — inspect/teleport for testing. */
   hiddenTreasure: HiddenTreasureDebugApi
+  /** Lightweight `navigation/navigationStats.ts` counters (plan npc-006) —
+   *  path requests/successes/failures, search time, visited nodes,
+   *  waypoints, repaths and currently-active routes, session-wide across
+   *  every `NpcAgent`/`AnimalAgent`. */
+  navigation: () => Readonly<NavigationStats>
   help: () => string
 }
 
@@ -135,6 +141,7 @@ const HELP_TEXT = [
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
   'setFrenzyWolf() — debug combat trigger',
   'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
+  'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -248,6 +255,7 @@ export function installNpcDebugApi(
         return true
       },
     },
+    navigation: () => getNavigationStats(),
     help: () => HELP_TEXT,
   }
   window.seedvale = { ...window.seedvale, debug: api }

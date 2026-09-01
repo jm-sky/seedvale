@@ -607,6 +607,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `math/segment.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/hydrology.ts`
 - `world/parseSeed.ts`
@@ -656,6 +657,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/mountActions.ts`
 - `fauna/AnimalAgent.ts`
+- `navigation/navigation.ts`
 - `player/PlayerController.ts`
 - `terrain/slopeConstraint.test.ts`
 

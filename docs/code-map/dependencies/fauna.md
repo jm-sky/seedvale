@@ -6,6 +6,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/npcMovementWatchdog.ts`
 - `audio/animalSounds.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/bloodSplat.ts`
@@ -16,6 +17,8 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
+- `navigation/navigation.ts`
+- `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
 - `settlement/household.ts`
 - `settlement/props.ts`

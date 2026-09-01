@@ -1,10 +1,13 @@
 import * as THREE from 'three'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
+import { createMovementWatchdog, type MovementWatchdog, tickMovementWatchdog } from '../ai/npcMovementWatchdog'
 import {
   initialSpontaneousVocalizeCooldownSec,
   tickSpontaneousVocalizeCooldown,
 } from '../audio/animalSounds'
+import { findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
+import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { tintPropMaterials } from '../settlement/props'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
@@ -68,6 +71,24 @@ import {
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+
+/** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
+ *  npc-006) — see `AnimalAgent.chaseNav`/`fleeNav`'s doc for why chase and
+ *  flee each get their own instance instead of sharing one. */
+type NavRescue = {
+  watchdog: MovementWatchdog
+  waypoints: readonly PathPoint[]
+  index: number
+  active: boolean
+}
+
+function createNavRescue(): NavRescue {
+  return { watchdog: createMovementWatchdog(), waypoints: [], index: 0, active: false }
+}
+
+/** `AnimalAgent.stepNavRescue`'s "this route no longer matches `dest`"
+ *  threshold (meters) — see that method's doc. */
+const STALE_NAV_ROUTE_DIST = 6
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
@@ -954,6 +975,19 @@ export class AnimalAgent {
    *  or leaves `detectRange` — the same bound `nearest()` already used to
    *  find it — so a predator can still lose prey that outruns detection. */
   private preyTarget: AnimalAgent | null = null
+  /** Stuck-movement detection + in-flight repath route for one movement
+   *  mode, shared with `NpcAgent` (plan npc-006) — reuses
+   *  `npcMovementWatchdog.ts`'s pure state/functions rather than a second
+   *  animal-specific stuck detector. Two separate instances (`chaseNav`,
+   *  `fleeNav`) rather than one shared channel, so a repath route found
+   *  mid-chase can never get silently resumed while fleeing (or vice
+   *  versa) after a mode switch — see `stepNavRescue`. No blind single-hop
+   *  fallback for animals the way `NpcAgent` has one: when `findPath` finds
+   *  no route, direct `steerToward` simply resumes next frame, the
+   *  pre-existing behaviour, never worse than before this plan. */
+  private readonly chaseNav: NavRescue = createNavRescue()
+  private readonly fleeNav: NavRescue = createNavRescue()
+  private readonly repathWaypointScratch = new THREE.Vector3()
   /** True while this predator's latest throttled human-response decision
    *  (player or, when frenzied, a noticed NPC) is `attack` — the small
    *  signal `NpcAgent`'s bounded local threat perception reads to react
@@ -2234,7 +2268,7 @@ export class AnimalAgent {
       this.mesh.position.z + this.tmp.z * FLEE_DISTANCE,
     )
     const speed = this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()
-    this.steerToward(this.fleeTarget, speed, dt)
+    this.stepNavRescue(this.fleeNav, this.fleeTarget, speed, dt)
   }
 
   /** Prey move slower at night; predators are unaffected. */
@@ -2292,7 +2326,7 @@ export class AnimalAgent {
       if (dist < CONTACT_RANGE) {
         this.attack(prey)
       } else {
-        this.steerToward(prey.mesh.position, this.sprintSpeedNow(), dt)
+        this.stepNavRescue(this.chaseNav, prey.mesh.position, this.sprintSpeedNow(), dt)
       }
       return
     }
@@ -2749,6 +2783,82 @@ export class AnimalAgent {
     })
     this.mesh.position.x = result.x
     this.mesh.position.z = result.z
+  }
+
+  /** `steerToward` wrapper that adds real stuck-recovery (plan npc-006) —
+   *  ticks `nav`'s watchdog and, once it reports the animal isn't actually
+   *  making progress, requests a bounded local-grid A* route around
+   *  whatever is blocking it (`attemptNavRepath`). While a route is active,
+   *  steers through its waypoints one at a time; once exhausted (or none
+   *  was ever found), falls straight through to steering at `dest`
+   *  directly — the pre-existing behaviour. `dest` itself is never touched
+   *  here: the committed prey/flee target stays whatever the caller already
+   *  decided (plan npc-005's target commitment is upstream of this). */
+  private stepNavRescue(nav: NavRescue, dest: THREE.Vector3, speed: number, dt: number): void {
+    if (nav.active) {
+      // A route computed toward a much earlier `dest` (e.g. a previous,
+      // now-unrelated chase/flee session left it active) is worse than no
+      // route at all — drop it rather than detouring toward the wrong
+      // place. A live target's `dest` only ever drifts gradually frame to
+      // frame, so this never fires mid-pursuit of the same target.
+      const last = nav.waypoints[nav.waypoints.length - 1]
+      if (!last || Math.hypot(last.x - dest.x, last.z - dest.z) > STALE_NAV_ROUTE_DIST) {
+        this.clearNavRescue(nav)
+      }
+    }
+    const stage = tickMovementWatchdog(nav.watchdog, dt, this.mesh.position.x, this.mesh.position.z)
+    if (stage !== 'none') this.attemptNavRepath(nav, dest)
+
+    while (nav.active) {
+      const waypoint = nav.waypoints[nav.index]
+      if (!waypoint) {
+        this.clearNavRescue(nav)
+        break
+      }
+      const dist = Math.hypot(waypoint.x - this.mesh.position.x, waypoint.z - this.mesh.position.z)
+      if (dist >= 0.4) {
+        this.repathWaypointScratch.set(waypoint.x, 0, waypoint.z)
+        this.steerToward(this.repathWaypointScratch, speed, dt)
+        return
+      }
+      nav.index++
+      if (nav.index >= nav.waypoints.length) this.clearNavRescue(nav)
+    }
+    this.steerToward(dest, speed, dt)
+  }
+
+  /** Bounded A* from the current position toward `dest` via the shared
+   *  `navigation/navigation.ts` layer, reusing this animal's own
+   *  `isWalkable`/`sampleHeight` — Navigation never re-derives walkability
+   *  from `ColliderRegistry` itself (see `NavigationQuery`'s doc). A failed
+   *  search leaves `nav` untouched, so `stepNavRescue` simply keeps steering
+   *  straight at `dest` next frame instead of getting stuck waiting. */
+  private attemptNavRepath(nav: NavRescue, dest: THREE.Vector3): void {
+    const query: NavigationQuery = {
+      isWalkable: (x, z) => this.isWalkable(x, z),
+      sampleHeight: this.sampleHeight,
+    }
+    const t0 = performance.now()
+    const result = findPath(
+      query,
+      {},
+      { x: this.mesh.position.x, z: this.mesh.position.z },
+      { x: dest.x, z: dest.z },
+    )
+    recordPathRequest(result, performance.now() - t0)
+    recordRepath()
+    if (!result || result.waypoints.length === 0) return
+    if (!nav.active) beginActivePath()
+    nav.waypoints = result.waypoints
+    nav.index = 0
+    nav.active = true
+  }
+
+  private clearNavRescue(nav: NavRescue): void {
+    if (nav.active) endActivePath()
+    nav.active = false
+    nav.waypoints = []
+    nav.index = 0
   }
 
   private arrived(dest: THREE.Vector3, radius: number): boolean {

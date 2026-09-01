@@ -210,13 +210,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/lodging.ts`
 
-- `hayLodgingId` — function — line 108
+- `advanceLodgingProgress` — function — line 97
+  - domain: ui-input Advances the lodging-walk stuck watchdog by one frame — a meaningful distance improvement resets the timer, otherwise `dt` accumulates until `LODGING_STUCK_TIMEOUT_SEC` is reached. Pure and frame-count-independent (driven by `dt`, not calls) so it can be unit-tested without a running game loop or a `PlayerActionContext` mock.
+- `hayLodgingId` — function — line 148
+- `initialLodgingProgress` — function — line 87
 - `LODGING_ARRIVE_TOLERANCE` — const — line 67
-- `lodgingChoiceLabel` — function — line 97
+- `LODGING_STUCK_PROGRESS_EPSILON` — const — line 73
+- `LODGING_STUCK_TIMEOUT_SEC` — const — line 79
+- `lodgingChoiceLabel` — function — line 137
 - `LodgingOption` — type — line 16
-- `lodgingPlaceLabel` — function — line 76
+- `lodgingPlaceLabel` — function — line 116
+- `LodgingProgress` — type — line 85
 - `LodgingQuality` — type — line 14
-- `lodgingRequiresPayment` — function — line 85
+- `lodgingRequiresPayment` — function — line 125
 - `lodgingRestQuality` — function — line 59
 - `LodgingType` — type — line 12
 

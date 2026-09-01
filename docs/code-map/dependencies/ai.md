@@ -72,6 +72,8 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/weaponMaintenance.ts`
+- `navigation/navigation.ts`
+- `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
@@ -391,6 +393,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcMovementWatchdog.test.ts`
+- `fauna/AnimalAgent.ts`
 
 ## `ai/npcPlan.test.ts`
 

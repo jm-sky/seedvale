@@ -62,13 +62,13 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `HiddenTreasureDebugApi` — type — line 83
-- `installNpcDebugApi` — function — line 150
-- `LocationsDebugApi` — type — line 66
-- `NpcDebugHandle` — type — line 38
-- `SeedvaleDebugApi` — type — line 96
-- `TeleportToDebugApi` — type — line 74
-- `VillageDebugHandle` — type — line 49
+- `HiddenTreasureDebugApi` — type — line 84
+- `installNpcDebugApi` — function — line 157
+- `LocationsDebugApi` — type — line 67
+- `NpcDebugHandle` — type — line 39
+- `SeedvaleDebugApi` — type — line 97
+- `TeleportToDebugApi` — type — line 75
+- `VillageDebugHandle` — type — line 50
 
 ## `debug/npcInspector.ts`
 
