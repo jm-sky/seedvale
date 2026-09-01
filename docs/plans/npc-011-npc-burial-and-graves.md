@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** L
 **Depends on:** 010
-**Domain:** `settlements-npcs`
+**Domain:** `npc`
 
 ## Cel
 
