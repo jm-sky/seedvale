@@ -63,6 +63,14 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-09-01 — Program/material census: first-use hitch confirmed 📝
+
+- Fresh `benchmark=stream` census observed **773 materials → ~72 WebGL programs** (73 max), so the material count does not imply one-program-per-material proliferation.
+- Program creation is progressive during chunk streaming and correlates with significant first-use frame hitches; the clearest event was **43 → 54 programs, ~183 ms post-process render**.
+- No redundant program variants have been established yet. Do **not** add blind program/material consolidation or another `compileAsync` prewarm pass based on these numbers alone.
+- If revisited, investigate the largest first-use transitions by comparing program cache keys, shader defines/material flags and originating assets. Detailed analysis: [program/material census audit](../performance/audits/2026-09-01--program-census.md).
+
+
 ### 2026-08-19 — Village torch fire/light rework: three reusable lessons 🔧
 
 Iterative user-driven fix session on `createVillageTorchLight`/`createHouseLight` (`src/settlement/houseLighting.ts`) — no plan/issue behind it, captured here since the findings generalize past this one prop.
