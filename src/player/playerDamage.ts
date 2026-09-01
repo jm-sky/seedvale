@@ -1,5 +1,4 @@
 import type { ToolKind } from '../items/HeldTool'
-import type { PlayerController } from './PlayerController'
 import {
   defenseBlockRoll,
   type DefenseOutcome,
@@ -8,6 +7,8 @@ import {
 } from '../combat/defenseResolver'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { healHealth, type HealthState } from '../shared/HealthState'
+import { recordBloodHit } from '../world/bloodTraces'
+import { PLAYER_HEIGHT, type PlayerController } from './PlayerController'
 import {
   DEHYDRATION_HP_PER_SEC,
   hungerSevereDurationSec,
@@ -101,6 +102,7 @@ export function applyPlayerDamage(params: ApplyPlayerDamageParams): PlayerDamage
   if (finalDamage > 0) {
     player.health.currentHp = Math.max(0, player.health.currentHp - finalDamage)
     onCombatHit?.()
+    recordBloodHit(player.mesh.position.x, player.mesh.position.z, PLAYER_HEIGHT, finalDamage)
   }
 
   let enteredDowned = false

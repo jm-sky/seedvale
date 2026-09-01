@@ -93,6 +93,7 @@ import {
   updateAgentLabelDistanceState,
 } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
+import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from '../world/collision'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { CROP_SEED_ITEM } from '../world/plantedCrops'
@@ -1665,6 +1666,7 @@ export class NpcAgent {
     if (this.health.dead) return
     damageHealth(this.health, amount)
     applyDamageVigor(this.vigor)
+    if (amount > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, NPC_HEIGHT, amount)
     if (this.health.dead) this.die()
   }
 

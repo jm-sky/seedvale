@@ -206,6 +206,33 @@ export function computeSurfaceWeather(seed: number, elapsedDays: number): Surfac
   return { wetness: clamp01(wetness), snowAmount: clamp01(snow) }
 }
 
+/** Cumulative rain "intensity-days" between two `elapsedDays` timestamps —
+ *  `world/bloodTraces.ts`'s weather-accelerated fading helper (plan
+ *  world-009). Deliberately its own small function rather than reusing
+ *  `computeSurfaceWeather`: that one replays a *fixed* bounded lookback
+ *  window ending at "now" for a visual wetness/snow blend, whereas this
+ *  needs the exact `[fromDays, toDays)` span of one blood trace's own life
+ *  (already bounded to a few days by the trace's own lifetime, so no lookback
+ *  window is needed — cost is just the number of weather cycles the span
+ *  covers). Pure — same inputs always yield the same exposure, independent of
+ *  when it's actually called (time-skip/save-load safe, same guarantee as
+ *  `computeWeather` itself). */
+export function computeRainExposureDays(seed: number, fromDays: number, toDays: number): number {
+  if (toDays <= fromDays) return 0
+  const startCycle = Math.floor(fromDays / WEATHER_CYCLE_DAYS)
+  const endCycle = Math.floor(toDays / WEATHER_CYCLE_DAYS)
+  let exposure = 0
+  for (let cycle = startCycle; cycle <= endCycle; cycle++) {
+    const cycleStart = cycle * WEATHER_CYCLE_DAYS
+    const cycleEnd = cycleStart + WEATHER_CYCLE_DAYS
+    const overlapDays = Math.min(cycleEnd, toDays) - Math.max(cycleStart, fromDays)
+    if (overlapDays <= 0) continue
+    const w = computeWeather(seed, cycleStart, getSeason(cycleStart))
+    if (w.type === 'rain') exposure += overlapDays * w.intensity
+  }
+  return exposure
+}
+
 export type WorldClimateState = {
   season: Season
   seasonProgress: number
