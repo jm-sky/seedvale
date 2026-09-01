@@ -1,13 +1,14 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-08-31 22:47:41  
+> Date: 2026-09-01 07:00:40  
 
 ## PLANS
 
 - `fauna-004-sheep-wool-and-shepherd.md`
 - `items-player-009-player-built-torch-and-ignition.md`
 - `items-player-010-player-built-palisade-and-building-removal.md`
+- `items-player-011-melee-attack-direction.md`
 - `npc-000--mpfb2-npc-hero-character-pipeline.md`
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
@@ -97,6 +98,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/items-player-010-player-built-palisade-and-building-removal-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `items-player-011-melee-attack-direction.md`
+
+Prompt:
+
+```
+Zrób review planu `items-player-011-melee-attack-direction.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/items-player-011-melee-attack-direction.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/items-player-011-melee-attack-direction-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
