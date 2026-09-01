@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** L
 **Depends on:** 181
-**domain:** `world-terrain`
+**Domain:** `world-terrain`
 **Tags:** [terrain, mountains, world-generation]
 
 ## Cel
