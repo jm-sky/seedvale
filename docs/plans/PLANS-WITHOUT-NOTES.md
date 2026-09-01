@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-01 07:59:14  
+> Date: 2026-09-01 08:17:44  
 
 ## PLANS
 
@@ -33,12 +33,12 @@ Zrób review planu `fauna-004-sheep-wool-and-shepherd.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/fauna-004-sheep-wool-and-shepherd.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/fauna-004-sheep-wool-and-shepherd.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/fauna-004-sheep-wool-and-shepherd-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/fauna-004-sheep-wool-and-shepherd-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -64,12 +64,12 @@ Zrób review planu `items-player-009-player-built-torch-and-ignition.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-009-player-built-torch-and-ignition.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/items-player-009-player-built-torch-and-ignition.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-009-player-built-torch-and-ignition-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/items-player-009-player-built-torch-and-ignition-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -95,12 +95,12 @@ Zrób review planu `items-player-010-player-built-palisade-and-building-removal.
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-010-player-built-palisade-and-building-removal.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/items-player-010-player-built-palisade-and-building-removal.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-010-player-built-palisade-and-building-removal-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/items-player-010-player-built-palisade-and-building-removal-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -126,12 +126,12 @@ Zrób review planu `persistence-001-full-simulation-persistence.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/persistence-001-full-simulation-persistence.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/persistence-001-full-simulation-persistence.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/persistence-001-full-simulation-persistence-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/persistence-001-full-simulation-persistence-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -157,12 +157,12 @@ Zrób review planu `settlements-npcs-006-wool-to-material.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-006-wool-to-material.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-006-wool-to-material.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-006-wool-to-material-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-006-wool-to-material-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -188,12 +188,12 @@ Zrób review planu `settlements-npcs-007-bandages-and-herbal-medicine.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-007-bandages-and-herbal-medicine.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-007-bandages-and-herbal-medicine.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-007-bandages-and-herbal-medicine-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-007-bandages-and-herbal-medicine-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -219,12 +219,12 @@ Zrób review planu `settlements-npcs-014-local-goods-circulation.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-014-local-goods-circulation.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-014-local-goods-circulation.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-014-local-goods-circulation-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-014-local-goods-circulation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -250,12 +250,12 @@ Zrób review planu `settlements-npcs-015-economic-production-and-input-integrati
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-015-economic-production-and-input-integration.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-015-economic-production-and-input-integration.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-015-economic-production-and-input-integration-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-015-economic-production-and-input-integration-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -281,12 +281,12 @@ Zrób review planu `settlements-npcs-017-production-demand-and-economic-pressure
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-017-production-demand-and-economic-pressures.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-017-production-demand-and-economic-pressures.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-017-production-demand-and-economic-pressures-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-017-production-demand-and-economic-pressures-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -312,12 +312,12 @@ Zrób review planu `tools-000-weapon-browser-observatory.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/tools-000-weapon-browser-observatory.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/tools-000-weapon-browser-observatory.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/tools-000-weapon-browser-observatory-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-000-weapon-browser-observatory-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -343,12 +343,12 @@ Zrób review planu `tools-003-house-browser-and-tools-menu.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/tools-003-house-browser-and-tools-menu.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/tools-003-house-browser-and-tools-menu.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/tools-003-house-browser-and-tools-menu-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-003-house-browser-and-tools-menu-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -374,12 +374,12 @@ Zrób review planu `tools-005-seedvale-character-preparation-panel.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/tools-005-seedvale-character-preparation-panel.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/tools-005-seedvale-character-preparation-panel.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -405,12 +405,12 @@ Zrób review planu `tools-007--mpfb2-npc-hero-character-pipeline.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/tools-007--mpfb2-npc-hero-character-pipeline.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/tools-007--mpfb2-npc-hero-character-pipeline.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -436,12 +436,12 @@ Zrób review planu `world-008-player-world-placement-foundation.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/world-008-player-world-placement-foundation.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/world-008-player-world-placement-foundation.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/world-008-player-world-placement-foundation-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/world-008-player-world-placement-foundation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
