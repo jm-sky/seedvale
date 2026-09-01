@@ -29,7 +29,9 @@ Nie wracać do scalar `food`. Istniejący `claimHouseholdSurplus()/claimEconomyS
 
 Aktualne `NpcAgent.beginEconomyWithdraw()` i `beginHouseholdExchange()` robią:
 
-`goTo source → claim → goTo destination → deposit`
+```
+goTo source → claim → goTo destination → deposit
+```
 
 Claimed food nie trafia jednak do `NpcAgent.carried`. Oznacza to niejawne „in transit” ownership i potencjalną utratę przy cancellation/interruption między legami.
 
@@ -84,7 +86,9 @@ Kandydat: ten sam settlement, nie własny household, realny surplus, determinist
 
 `NpcAgent` ma już flow:
 
-`generateNeedPressures → choose → strategy candidates → beginNeed/beginIdle`
+```
+generateNeedPressures → choose → strategy candidates → beginNeed/beginIdle
+```
 
 Nie dodawać Need `trade`. Trader collection jest role/work behaviour, analogicznie do obecnego `beginTraderWork()`.
 
@@ -157,7 +161,7 @@ End-to-end:
 
 ## 16. Zalecana kolejność
 
-`text
+```
 1. Ustalić/naprawić ownership istniejącego food exchange między claim i deposit.
 2. Dodać mały concrete-goods claim/cargo seam z conservation invariant.
 3. Dodać bounded Trader source selection.
@@ -165,7 +169,7 @@ End-to-end:
 5. Minimalnie rozszerzyć consumer acquisition tylko jeśli test wykaże brak obsługi.
 6. Dodać cancellation/concurrency/freshness tests i Trader regression.
 7. End-to-end deterministic test.
-`
+```
 
 ## 17. Rozbieżności względem planu
 
