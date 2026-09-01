@@ -1,20 +1,10 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+import { LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_FILE_RE, PLANS_PATH } from './config.js'
 
-const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
-const PLANS_DIR = 'docs/plans'
-const PLANS_PATH = resolve(ROOT_DIR, PLANS_DIR)
 const README_PATH = resolve(PLANS_PATH, 'README.md')
 const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
-const NOTES_DIR = 'implementation-notes'
-const NOTES_PATH = resolve(PLANS_PATH, NOTES_DIR)
 
-const PLAN_FILE_RE = /^([a-z0-9-]+)-(\d{3})-.+\.md$/
-const LEGACY_PLAN_FILE_RE = /^\d{4}-\d{2}-\d{2}--\d{3}--.+\.md$/
-
-const NOTES_SUFFIX = '-implementation-notes.md'
 const UPDATED_REVIEW_SUFFIX = '--updated-review.md'
 const REVIEW_SUFFIX = '-review.md'
 

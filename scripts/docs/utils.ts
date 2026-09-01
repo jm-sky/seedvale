@@ -11,14 +11,8 @@ import {
   resolve,
   sep,
 } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import * as ts from 'typescript'
-
-export const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-export const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
-export const SRC_DIR = resolve(ROOT_DIR, 'src')
-export const DOCS_DIR = resolve(ROOT_DIR, 'docs')
-export const CODE_MAP_DIR = resolve(DOCS_DIR, 'code-map')
+import { ROOT_DIR, SRC_DIR } from './config.js'
 
 export const GENERATED_START = /<!--\s*AUTO-GENERATED:START(?:\s+columns:\s*.+?)?\s*-->/
 export const GENERATED_END = '<!-- AUTO-GENERATED:END -->'

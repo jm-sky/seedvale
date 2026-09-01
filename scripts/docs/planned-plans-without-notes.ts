@@ -1,19 +1,10 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+import { NOTES_DIR, NOTES_PATH, PLAN_FILE_RE, PLANS_DIR, PLANS_PATH, REVIEWS_DIR, REVIEWS_PATH, ROOT_DIR } from './config.js'
 
-const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
-const PLANS_DIR = 'docs/plans'
-const PLANS_PATH = resolve(ROOT_DIR, PLANS_DIR)
-const NOTES_DIR = 'implementation-notes'
-const NOTES_PATH = resolve(PLANS_PATH, NOTES_DIR)
-const REVIEWS_DIR = 'reviews'
-const REVIEWS_PATH = resolve(PLANS_PATH, REVIEWS_DIR)
 const NOTES_TOKEN = 'implementation-notes'
 const UPDATED_REVIEW_TOKEN = '--updated-review'
 const OUTPUT_PATH = resolve(ROOT_DIR, PLANS_DIR, 'PLANS-WITHOUT-NOTES.md')
-const PLAN_FILE_RE = /^([a-z0-9-]+)-(\d{3})-.+\.md$/
 
 const output: string[] = []
 

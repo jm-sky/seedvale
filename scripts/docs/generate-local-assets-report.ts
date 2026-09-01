@@ -1,10 +1,7 @@
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { dirname, extname, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { extname, relative, resolve } from 'node:path'
+import { ASSETS_DIR, ROOT_DIR } from './config.js'
 
-const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
-const ASSETS_DIR = resolve(ROOT_DIR, '_temp')
 const REPORT_FILE = resolve(ROOT_DIR, 'docs/assets/LOCAL_ASSETS.md')
 
 const REPORT_START = '<!-- BEGIN GENERATED ASSET REPORT -->'

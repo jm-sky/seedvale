@@ -6,9 +6,9 @@ import {
 import {
   resolve,
 } from 'node:path'
+import { DOCS_DIR } from './config.js'
 import {
   type DependencyInfo,
-  DOCS_DIR,
   parseDependencyMap,
 } from './utils.js'
 

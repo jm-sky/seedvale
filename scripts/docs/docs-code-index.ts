@@ -1,9 +1,7 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import {
-  CODE_MAP_DIR,
-  repoRelative,
-} from './utils.js'
+import { CODE_MAP_DIR } from './config.js'
+import { repoRelative } from './utils.js'
 import type { Dirent } from 'node:fs'
 
 async function main(): Promise<void> {

@@ -1,13 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { CODE_MAP_DIR, SRC_DIR } from './config.js'
 import {
-  CODE_MAP_DIR,
   createProgram,
   formatArchitecturalMetadata,
   getExportedSymbols,
   loadSourceFiles,
   repoRelative,
-  SRC_DIR,
   walk,
 } from './utils.js'
 

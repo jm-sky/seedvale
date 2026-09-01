@@ -6,13 +6,11 @@ import {
   extname,
   resolve,
 } from 'node:path'
+import { CODE_MAP_DIR, DOCS_DIR, SRC_DIR } from './config.js'
 import {
-  CODE_MAP_DIR,
   createProgram,
-  DOCS_DIR,
   getExportedSymbols,
   loadSourceFiles,
-  SRC_DIR,
   walk,
 } from './utils.js'
 

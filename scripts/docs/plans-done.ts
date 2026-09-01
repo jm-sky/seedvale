@@ -1,11 +1,8 @@
 import { execFileSync } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+import { LEGACY_PLAN_ID_RE, PLAN_ID_RE, PLANS_DIR, PLANS_DONE_PATH, ROOT_DIR } from './config.js'
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const PLANS = resolve(ROOT, 'docs/plans')
-const DONE = resolve(PLANS, 'DONE.md')
 
 const STATUS = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const DOMAIN = /^\*\*Domain:\*\*\s*`([^`]+)`/m
@@ -25,14 +22,14 @@ type Event = {
 
 const git = (...args: string[]): string =>
   execFileSync('git', args, {
-    cwd: ROOT,
+    cwd: ROOT_DIR,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim()
 
 const relativePath = (path: string): string =>
   path
-    .replace(ROOT, '')
+    .replace(ROOT_DIR, '')
     .replace(/^[/\\]/, '')
     .replaceAll('\\', '/')
 
@@ -89,7 +86,7 @@ const getFileAtCommit = (
   try {
     return git(
       'show',
-      `${commit}:${relativePath(resolve(ROOT, path))}`,
+      `${commit}:${relativePath(resolve(ROOT_DIR, path))}`,
     )
   } catch {
     return null
@@ -127,7 +124,7 @@ const getStatusEvents = (
 
   for (const commit of commits) {
     const content = getFileAtCommit(
-      resolve(PLANS, file),
+      resolve(PLANS_DIR, file),
       commit,
     )
 
@@ -171,9 +168,7 @@ const getPlanAliases = (
 ): Set<string> => {
   const aliases = new Set<string>([id])
 
-  const modern = id.match(
-    /^(.+)-(\d{3})-/,
-  )
+  const modern = id.match(PLAN_ID_RE)
 
   if (modern) {
     aliases.add(
@@ -182,9 +177,7 @@ const getPlanAliases = (
     aliases.add(modern[2])
   }
 
-  const legacy = id.match(
-    /^\d{4}-\d{2}-\d{2}--(\d{3})--/,
-  )
+  const legacy = id.match(LEGACY_PLAN_ID_RE)
 
   if (legacy) {
     aliases.add(legacy[1])
@@ -322,7 +315,7 @@ const parseDone = async (): Promise<
   DoneRecord[]
 > => {
   try {
-    const content = await readFile(DONE, 'utf8')
+    const content = await readFile(PLANS_DONE_PATH, 'utf8')
 
     return content
       .split('\n')
@@ -430,7 +423,7 @@ const markDependencies = async (
 
   for (const id of openedPlans) {
     const path = resolve(
-      PLANS,
+      PLANS_DIR,
       `${id}.md`,
     )
 
@@ -543,7 +536,7 @@ const main = async (): Promise<void> => {
 
     const content =
       await readFile(
-        resolve(PLANS, file),
+        resolve(PLANS_DIR, file),
         'utf8',
       )
 
@@ -592,13 +585,13 @@ const main = async (): Promise<void> => {
   }
 
   await writeFile(
-    DONE,
+    PLANS_DONE_PATH,
     generateDone(records),
     'utf8',
   )
 
   console.log(
-    `Updated ${relativePath(DONE)} (${records.length} records).`,
+    `Updated ${relativePath(PLANS_DONE_PATH)} (${records.length} records).`,
   )
 }
 
