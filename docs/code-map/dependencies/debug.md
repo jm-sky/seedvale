@@ -64,6 +64,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `debug/npcInspectTrigger.ts`
 - `debug/npcInspector.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `interaction/resolveInteraction.ts`
 - `main.ts`

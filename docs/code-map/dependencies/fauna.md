@@ -8,6 +8,7 @@ Generated from TypeScript imports.
 
 - `ai/npcMovementWatchdog.ts`
 - `audio/animalSounds.ts`
+- `debug/debugMode.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/animalDebugVisual.ts`
 - `fauna/bloodSplat.ts`
