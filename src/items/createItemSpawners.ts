@@ -356,6 +356,7 @@ export function createItemSpawners(
         el.remove()
       }
       labels.length = 0
+      points.length = 0
     },
   }
 }
