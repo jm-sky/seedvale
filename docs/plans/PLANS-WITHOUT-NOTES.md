@@ -1,13 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-01 14:36:12  
+> Date: 2026-09-01 14:47:54  
 
 ## PLANS
 
-- `items-player-010-player-built-palisade-and-building-removal.md`
-- `npc-009-combat-feedback-and-death-consequences.md`
-- `npc-010-death-and-corpse-lifecycle.md`
+- `npc-011-npc-burial-and-graves.md`
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-014-local-goods-circulation.md`
@@ -22,84 +20,22 @@
 --------------------------------
 ## PROMPTS
 
-### `items-player-010-player-built-palisade-and-building-removal.md`
+### `npc-011-npc-burial-and-graves.md`
 
 Prompt:
 
 ```
-Zrób review planu `items-player-010-player-built-palisade-and-building-removal.md`
+Zrób review planu `npc-011-npc-burial-and-graves.md`
 
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/items-player-010-player-built-palisade-and-building-removal.md`
+- `/home/runner/work/seedvale/seedvale/docs/plans/npc-011-npc-burial-and-graves.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/items-player-010-player-built-palisade-and-building-removal-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `npc-009-combat-feedback-and-death-consequences.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-009-combat-feedback-and-death-consequences.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/npc-009-combat-feedback-and-death-consequences.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/npc-009-combat-feedback-and-death-consequences-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `npc-010-death-and-corpse-lifecycle.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-010-death-and-corpse-lifecycle.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/npc-010-death-and-corpse-lifecycle.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/npc-010-death-and-corpse-lifecycle-implementation-notes.md`
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/npc-011-npc-burial-and-graves-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

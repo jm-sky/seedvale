@@ -30,7 +30,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `items-player-009-player-built-torch-and-ignition.md`               | -       | 🟡 | M      | ~~world-008~~ |
-| ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | -       | 🟡 | M      | ~~world-008~~ |
+| 💡 `items-player-010-player-built-palisade-and-building-removal.md`    | -       | 🟡 | M      | ~~world-008~~ |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | ◼️ `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -51,8 +51,9 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | ◼️ `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -       | 🔴 | M      | settlements-npcs-015 |
-| ◼️ `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
-| ◼️ `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
+| 💡 `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
+| 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
+| ◼️ `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 
 ---
 
@@ -138,7 +139,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `005`
 - items-player: `012`
-- npc: `011`
+- npc: `012`
 - persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
