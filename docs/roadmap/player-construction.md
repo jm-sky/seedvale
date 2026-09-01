@@ -2,11 +2,13 @@
 
 ## Direction
 
-The player can gradually create and develop persistent elements of the world.
+The player can gradually create and develop persistent elements of the world, eventually transforming an unused part of the world into a functioning settlement.
 
 Building is not a separate player-only system. Player-created objects should become normal parts of the world and reuse existing item, resource, interaction, work, logistics, lighting, terrain and settlement systems.
 
-The long-term direction is:
+The player is therefore not simply building a personal base. The long-term progression is from simple world modifications to becoming the founder of an autonomous community.
+
+The overall direction is:
 
 ```
 placement
@@ -15,7 +17,10 @@ placement
 → persistent world change
 → infrastructure
 → NPC cooperation
+→ inhabitants
+→ production
 → settlement
+→ autonomous community
 ```
 
 The system should support both small placed objects and larger construction projects.
@@ -229,7 +234,7 @@ Do not introduce a player-specific worker AI.
 
 Construction should become another type of work/task available to the existing simulation.
 
-### 9. Settlement integration
+### 9. Settlement formation
 
 Connect sufficiently developed player-built areas with the settlement system.
 
@@ -245,9 +250,100 @@ A player-created settlement should eventually support:
 - local needs and problems,
 - relationships with other settlements.
 
+Settlement formation should be based on meaningful world state rather than simply placing a special "settlement" marker. The physical development of the area, available housing and infrastructure, inhabitants, production capacity and other relevant settlement conditions should be the basis for recognizing a new community.
+
 Once established, the settlement must continue operating independently of the player.
 
 Player construction should therefore be an entry point into the normal settlement simulation rather than a parallel player-base system.
+
+### 10. Inviting inhabitants
+
+Allow the player to invite NPCs to join a developing settlement.
+
+Invited NPCs should become inhabitants using the same household, relationship, profession and lifecycle mechanisms as other NPCs.
+
+The player should be able to influence roles and tasks through the existing NPC work/task systems, without creating a player-specific population model.
+
+Possible roles include:
+
+- farming,
+- forestry,
+- hunting,
+- construction,
+- transport,
+- crafting,
+- defense.
+
+The final implementation should reuse the existing profession/work/task systems.
+
+### 11. Settlement growth and economy
+
+Allow a newly formed settlement to develop into a functioning community.
+
+It should be able to support:
+
+- housing and households,
+- infrastructure,
+- storage,
+- resource availability,
+- production,
+- population growth,
+- local needs and problems,
+- professions and social roles,
+- relationships,
+- trade or exchange with other settlements where those systems exist.
+
+The settlement should use the same economy and logistics concepts as existing settlements:
+
+```
+resources
+→ work / production
+→ goods
+→ storage / consumption
+→ surplus / shortage
+→ exchange / trade
+```
+
+Player involvement should influence the settlement without making the player its simulation authority. The settlement must remain capable of making decisions and operating when the player is absent.
+
+### 12. Autonomous community
+
+The final goal is an autonomous player-founded settlement that behaves like any other community in Seedvale.
+
+It should:
+
+- operate without the player,
+- react to shortages and other local problems,
+- assign and perform work,
+- use resources and infrastructure,
+- maintain households and relationships,
+- participate in the wider economy,
+- develop persistent history and consequences.
+
+The player may remain an important inhabitant, founder or leader, but the settlement should not become a player-controlled simulation island.
+
+Over time, player-founded settlements may trade, cooperate or compete with existing settlements and may develop their own identity, problems, relationships and history.
+
+## Progression
+
+The intended progression is:
+
+```
+simple placement
+→ functional objects
+→ land development
+→ construction
+→ infrastructure
+→ NPC cooperation
+→ inhabitants
+→ roles
+→ production
+→ settlement formation
+→ settlement growth
+→ autonomous community
+```
+
+This progression intentionally combines physical world building with social and economic development. There is no separate "player base" system followed by a separate settlement system; construction creates the physical foundation on which the normal settlement simulation can emerge.
 
 ## Design constraints
 
@@ -262,23 +358,37 @@ Player construction should therefore be an entry point into the normal settlemen
 - Avoid architecture that assumes the player is permanently present.
 - Avoid architecture that would make future multiplayer fundamentally harder.
 - Keep individual construction types small and composable rather than creating a monolithic construction manager.
+- Settlement formation should emerge from world state and development rather than being a special player-only mode.
+- Invited NPCs must become normal inhabitants using existing household, profession, relationship and lifecycle systems.
+- A founded settlement must be autonomous after formation and must not depend on the player or camera being present.
+- Player influence should be represented through normal world actions, relationships and simulation state rather than privileged settlement control.
 
-## Long-term progression
+## Long-term vision
 
-The intended progression is:
+The player starts by making small, useful changes to the world. Those changes can grow into infrastructure and buildings, attract NPC cooperation and inhabitants, create productive households, and eventually form a new settlement.
+
+The intended long-term relationship is:
 
 ```
-simple placement
-→ functional objects
-→ land development
-→ construction
-→ infrastructure
-→ NPC cooperation
-→ buildings
-→ settlement
-→ autonomous community
+player
+  ↓
+construction
+  ↓
+infrastructure
+  ↓
+NPC cooperation
+  ↓
+inhabitants
+  ↓
+roles + households
+  ↓
+production + storage
+  ↓
+settlement
+  ↓
+growth + economy
+  ↓
+autonomous community
 ```
 
-This roadmap complements `player-founded-settlement.md`.
-
-`player-founded-settlement.md` describes the long-term goal of the player becoming a settlement founder; this roadmap describes the physical/world-building capabilities that make that progression possible.
+This roadmap therefore covers both the **physical construction capabilities** and the **settlement-founding progression** that they enable.
