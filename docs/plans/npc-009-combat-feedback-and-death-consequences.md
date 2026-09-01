@@ -1,40 +1,60 @@
-# Plan: Combat Feedback and Death Consequences
+# Plan: NPC Combat Feedback
 
 **Created:** 2026-09-01
 **Status:** `planned` 📋
-**Priority:** high · **Effort:** L
-**Depends on:** ~~177~~ ~~179~~ ~~007~~
+**Priority:** high · **Effort:** M
+**Depends on:** 177
 **Domain:** `npc`
-**Tags:** `combat` `death` `corpse` `burial` `reputation`
 
-## Goal
+## Cel
 
-Extend the existing combat system with complete animation/audio feedback and make animal and NPC deaths produce persistent, world-driven consequences.
+Dodać czytelny, spójny feedback wizualny i dźwiękowy do istniejącego combat lifecycle NPC i zwierząt.
 
-Reuse existing combat, animation, audio, action/navigation, hunting/harvesting, inventory/loot, reputation/badges, relationship/household and persistence mechanisms. Do not create parallel systems for these responsibilities.
+Plan obejmuje wyłącznie **prezentację combat/death**. Stan śmierci, corpse, loot, decay, reputation, burial i grave pozostają odpowiedzialnością kolejnych planów.
 
-## Scope
+Zasada:
+
+```text
+existing combat state/events
+        ↓
+animation + audio feedback
+```
+
+Nie tworzyć równoległego combat systemu ani death systemu.
+
+## Zakres
 
 ### 1. Combat animation
 
-Verify and integrate existing GLB animation clips for NPCs and animals:
+Zweryfikować i zintegrować istniejące GLB animation clips dla NPC i zwierząt:
 
-- attack
-- hit/hurt
-- death/collapse
-- butcher, where available
+- attack,
+- hit/hurt,
+- death/collapse.
 
-Use the existing `AnimationClip[]` / `AnimationMixer` pipeline. Where assets use different clip names, resolve them through semantic mapping rather than hard-coded assumptions.
+Jeżeli istnieją odpowiednie dodatkowe klipy, wykorzystać je tam, gdzie pasują do istniejącego combat lifecycle.
 
-Synchronize attack presentation with the existing combat lifecycle so the visible hit aligns with the existing hit window and damage resolution.
+Wykorzystać istniejący AnimationClip[] / AnimationMixer pipeline.
 
-Cover NPC ↔ animal, animal ↔ NPC and NPC ↔ NPC combat, while preserving the shared combat mechanics used by the player.
+Jeżeli assety używają różnych nazw clipów, rozwiązać je przez istniejące lub minimalnie rozszerzone semantic mapping zamiast hard-code'ować nazwy w combat logic.
 
-If an expected animation is absent, record the asset gap and provide a safe fallback rather than expanding this plan into asset production.
+Synchronizować prezentację ataku i trafienia z istniejącym combat lifecycle tak, aby widoczny impact był zgodny z istniejącym momentem rozstrzygnięcia damage.
 
-### 2. Combat audio
+Objąć NPC ↔ animal, animal ↔ NPC oraz NPC ↔ NPC, bez zmiany wspólnych mechanizmów damage/combat.
 
-Extend the existing world audio mechanism with semantic combat feedback for:
+Jeżeli oczekiwany animation clip nie istnieje: zastosować bezpieczny fallback, odnotować brak assetu i nie rozszerzać planu o produkcję nowych animacji.
+
+### 2. Death presentation
+
+Po przejściu istniejącego combat/health state do śmierci odtworzyć właściwy death/collapse feedback.
+
+Death animation jest **prezentacją istniejącego stanu**, a nie mechanizmem, który ten stan ustala.
+
+Nie implementować tutaj corpse creation, corpse lifecycle, removal NPC ani loot transfer. Te odpowiedzialności należą do npc-010.
+
+### 3. Combat audio
+
+Rozszerzyć istniejący world audio mechanism o semantic combat feedback dla:
 
 - attack,
 - hit/impact,
@@ -43,198 +63,148 @@ Extend the existing world audio mechanism with semantic combat feedback for:
 - NPC death,
 - animal death.
 
-Reuse existing sounds where appropriate, but do not use player-specific kill audio as a universal death sound when it contains human-specific vocal/fall content.
+Wykorzystać istniejące sounds/assets tam, gdzie są odpowiednie.
 
-Audio should follow combat/death events rather than introducing audio calls scattered across unrelated systems.
+Nie używać player-specific kill audio jako uniwersalnego death sound, jeśli zawiera human-specific vocal/fall content.
 
-### 3. Death record and lifecycle
+Audio powinno być wywoływane na podstawie istniejących combat/death events lub centralnego feedback seam'u, a nie przez rozproszone wywołania w wielu niezależnych systemach.
 
-Make death a meaningful world state while keeping ownership with the existing NPC/animal systems.
+Jeżeli odpowiedni sound asset nie istnieje, użyć bezpiecznego fallbacku i odnotować asset gap.
 
-Where supported by current architecture, retain:
+### 4. Feedback state and interruption
 
-- cause of death,
-- killer identity/type,
-- time,
-- location.
+Feedback musi poprawnie obsługiwać szybkie zmiany stanu:
 
-Do not introduce a monolithic death manager. Corpse state should be separable from the lifetime of the active agent so off-screen simulation and cleanup remain viable.
+- NPC umiera podczas aktualnego attack animation,
+- NPC otrzymuje kolejne hit events,
+- combat kończy się przed zakończeniem animacji,
+- target znika/unloads.
 
-### 4. Animal corpse consequences
+Death presentation ma mieć pierwszeństwo przed zwykłym combat feedback.
 
-Extend the existing animal corpse lifecycle and hunting/harvesting mechanisms:
+Nie pozostawiać NPC w aktywnej pętli attack/hurt po przejściu do dead state.
 
-```
-animal death
-→ corpse
-→ NPC discovers/selects carcass
-→ approach
-→ butcher/harvest
-→ collect resulting resources
-→ remaining corpse/remains lifecycle
-```
+Wykorzystać istniejący animation state handling zamiast tworzyć osobny combat animation state machine, jeśli obecny system może zostać rozszerzony.
 
-Reuse existing hunting hooks, harvest functions, inventory, resources and navigation/action execution.
+### 5. Off-screen / rendering boundary
 
-If the animal naturally rots or is consumed, preserve the existing lifecycle rather than duplicating it.
+Combat feedback jest warstwą prezentacji.
 
-### 5. NPC corpse and personal loot
+Brak obecności kamery nie może zmieniać combat result, damage ani death state.
 
-An NPC death leaves a world corpse with the deceased NPC's personal loot.
+Dla entities poza aktywnym obszarem rendering/audio może zostać pominięty zgodnie z istniejącym LOD/simulation behaviour.
 
-Loot remains physically accessible.
+Nie dodawać specjalnego off-screen combat simulation.
 
-Use existing inventory, item-instance and ownership semantics. Do not create a separate corpse inventory model unless the current ownership model requires a minimal adapter.
+## Ownership
 
-Distinguish legitimate recovery by the owner/family or otherwise authorized actor from unauthorized corpse looting.
+Preferowany podział:
 
-### 6. Corpse looting and reputation
+```text
+Combat
+  → damage/combat resolution
 
-Unauthorized corpse looting produces a negative consequence through the existing reputation system and an appropriate existing reputation badge.
+HealthState
+  → alive/dead state
 
-Do not create a parallel corpse-crime reputation system.
+npc-009
+  → animation/audio presentation
 
-Where the existing social knowledge/witness mechanisms support it, the consequence should depend on whether the action is witnessed or discovered. If they do not yet provide the required granularity, use the smallest compatible existing reputation path and leave full witness propagation for a later system.
+npc-010
+  → death/corpse lifecycle
 
-### 7. NPC burial
-
-An NPC death creates a burial problem/goal using existing NPC decision/action mechanisms.
-
-The deceased's family/household should receive priority:
-
-```
-NPC death
-→ household/family awareness
-→ burial goal/problem
-→ suitable family member
-→ navigate to corpse
-→ bury
+npc-011
+  → social response/burial/grave
 ```
 
-Do not hard-code a family-only burial manager. The design should allow another suitable community member to handle an unattended death later.
+Nie przenosić ownership state między tymi warstwami.
 
-Use the existing destination/approach and navigation mechanisms.
+## Powiązanie z npc-010
 
-### 8. Grave and stone marker
+Po przejściu do dead:
 
-Successful burial creates a persistent grave world object associated with the deceased.
-
-At minimum retain:
-
-- deceased NPC ID,
-- position,
-- death/burial time,
-- burial state.
-
-The first version creates a stone grave marker without requiring resources.
-
-The grave must be a real world state/object, not only a visual effect, so later systems can reference it for dialogue, relationships, memory, quests and visits.
-
-### 9. Corpse cleanup
-
-Define explicit terminal transitions:
-
-```
-animal corpse
-→ harvested/consumed/rotted
-→ remains/cleanup
-
-NPC corpse
-→ buried
-→ corpse removed
-→ grave remains
+```text
+HealthState → dead
+       ├── npc-009 → death animation + audio
+       └── npc-010 → death/corpse lifecycle
 ```
 
-Avoid leaving cleanup as an implicit side effect of agent destruction.
+npc-009 nie może usuwać NPC z symulacji, tworzyć corpse, przenosić inventory, rozpoczynać burial ani tworzyć grave.
 
-### 10. Persistence and simulation
+## Debug
 
-Preserve death/corpse/burial/grave information according to the existing persistence architecture.
+Wykorzystać istniejące debug conventions.
 
-Do not add isolated persistence for one sub-state if the current SaveData model intentionally excludes the broader runtime state; identify such limitations explicitly and keep the world-state design compatible with the planned full simulation persistence work.
+Jeżeli potrzebne, dodać minimalne informacje pozwalające ustalić:
 
-Remote corpse/grave state should remain lightweight and compatible with hybrid/off-screen simulation.
+- current combat animation,
+- ostatni combat feedback event,
+- death presentation triggered/not triggered,
+- semantic audio event,
+- brakujący animation/audio mapping.
 
-### 11. Debugging
-
-Provide practical diagnostics for:
-
-- dead NPCs and animals,
-- corpse state,
-- NPC corpse loot and looter,
-- death cause/killer where available,
-- burial assignment/state,
-- grave association,
-- reputation consequence of corpse looting.
-
-Reuse existing debug conventions rather than introducing a standalone debug UI.
-
-### 12. Documentation
-
-Update relevant state/domain documentation when the implementation materially changes the current architecture.
-
-Add JSDoc with `@domain` to important new or modified public/architectural functions and classes where needed for implementation preflight discovery.
-
-## Constraints
-
-- Reuse existing combat lifecycle and shared combat mechanics.
-- Reuse existing animation/audio infrastructure.
-- Reuse existing NPC goals, pressures, actions and navigation.
-- Reuse existing animal corpse and hunting/harvest lifecycle.
-- Reuse existing inventory/ownership and reputation/badge systems.
-- Preserve deterministic simulation and world independence from the player.
-- Do not make burial or corpse processing player-only.
-- Do not require resources for the first stone grave marker.
-- Do not introduce a general crime system as part of this plan.
-
-## Non-goals
-
-- Creating new character/animal animation assets when existing clips are sufficient.
-- Full grief/ mourning simulation.
-- Funeral ceremonies.
-- Cemeteries as a separate settlement system.
-- Grave robbing.
-- Inheritance.
-- Economic burial costs.
-- Full crime/witness system.
-- New player combat mechanics.
-- Advanced ecological scavenger behaviour.
+Nie tworzyć osobnego debug UI.
 
 ## Verification
 
-Technical:
+### Animation
 
-- `npx tsc --noEmit`
-- `pnpm run lint:fix`
-- `pnpm run build`
-- `pnpm run test`
+1. NPC wykonuje attack animation.
+2. Hit/hurt animation odpowiada rzeczywistemu trafieniu.
+3. Death animation uruchamia się po przejściu do dead state.
+4. Death ma pierwszeństwo przed attack/hurt.
+5. NPC ↔ animal działa w obu kierunkach.
+6. NPC ↔ NPC działa poprawnie.
+7. Brakujący clip nie powoduje crasha ani zablokowania combat.
 
-Browser/gameplay:
+### Audio
 
-1. Trigger NPC ↔ animal combat and verify attack/hit/hurt/death animations and SFX.
-2. Verify animal death leaves a corpse and an NPC can independently discover and process it.
-3. Verify harvested animal results enter the existing inventory/resource flow and corpse/remains transition correctly.
-4. Kill an NPC and verify the corpse remains in the world with personal loot.
-5. Verify authorized recovery is not treated as corpse theft.
-6. Loot an NPC corpse as an unauthorized actor and verify the existing reputation system/badge receives the negative consequence.
-7. Verify the corpse can be looted without mechanically blocking the action.
-8. Verify the family/household can generate and execute a burial response.
-9. Verify burial removes the corpse and creates a persistent stone grave marker linked to the deceased.
-10. Verify the player is not required for any animal processing or NPC burial step.
-11. Verify behaviour remains coherent when the relevant entities are outside the immediate camera area, within the limits of the current simulation/persistence architecture.
+1. Attack, hit, hurt i death generują odpowiedni semantic feedback.
+2. NPC i animal korzystają z właściwych sound mappings.
+3. Player-specific kill sound nie jest używany jako uniwersalny death sound.
+4. Brakujący asset ma bezpieczny fallback.
+5. Audio nie zmienia wyniku symulacji.
 
-## Implementation order
+### State transitions
 
-1. Audit and map existing animation clips.
-2. Connect combat/death lifecycle to animation feedback.
-3. Add semantic combat/death audio.
-4. Define/extend death and corpse world state.
-5. Extend autonomous animal corpse processing.
-6. Add NPC corpse + loot semantics.
-7. Integrate corpse looting with existing reputation/badges.
-8. Add household/family burial behaviour.
-9. Add grave and stone marker.
-10. Verify cleanup, persistence boundaries and off-screen behaviour.
-11. Update state/domain documentation where required.
+1. NPC nie pozostaje w attack loop po śmierci.
+2. Wielokrotne hit/death events nie powodują wielokrotnego death presentation.
+3. Unload/streaming nie pozostawia błędnego animation state.
+4. Death feedback nie tworzy corpse ani nie usuwa entity.
 
-> **Zrób git commit i push do main, rebase jeżeli trzeba**
+### Off-screen
+
+1. Combat/death simulation działa bez kamery.
+2. Feedback może zostać pominięty poza aktywnym obszarem bez zmiany wyniku symulacji.
+3. Po ponownym załadowaniu entity animation state jest spójny z aktualnym world state.
+
+### Regression
+
+Uruchomić istniejące testy i build.
+
+Nie zmieniać bez potrzeby damage calculation, critical hits, defense, combat decisions, HealthState semantics, NPC death/corpse lifecycle, inventory ani burial.
+
+## Poza zakresem
+
+- NPC death/corpse lifecycle — npc-010,
+- NPC personal loot — npc-010,
+- corpse harvesting/decay — npc-010,
+- corpse looting reputation — npc-010,
+- household death awareness — npc-011,
+- burial — npc-011,
+- graves/markers — npc-011,
+- new animation asset production,
+- new combat mechanics,
+- new damage/health system,
+- new player combat mechanics,
+- full funeral/mourning system.
+
+## Powiązane plany
+
+- **177 — NPC Combat**
+- **179 — Animal Attack & NPC Defense**
+- **007 — Interaction Destination Approach**
+- **010 — NPC Death & Corpse Lifecycle**
+- **011 — NPC Burial & Graves**
+
+**Zrób git commit i push do main, rebase jeżeli trzeba**
