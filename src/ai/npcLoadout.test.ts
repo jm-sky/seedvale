@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { resolveNpcAmmoKind, resolveNpcMeleeWeapon, resolveNpcRangedWeapon } from './npcCombat'
-import { defaultWeaponForRole, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
+import { defaultWeaponForRole, ensureKnifeCarried, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
 
 describe('defaultWeaponForRole', () => {
   it('maps roles to their default melee weapon', () => {
@@ -14,10 +14,11 @@ describe('defaultWeaponForRole', () => {
     expect(defaultWeaponForRole('hunter')).toBe('hunting_bow')
   })
 
-  it('leaves roles without a justified default weapon unarmed', () => {
-    expect(defaultWeaponForRole('trader')).toBeNull()
-    expect(defaultWeaponForRole('miner')).toBeNull()
-    expect(defaultWeaponForRole('fisher')).toBeNull()
+  it('falls back to knife for roles without their own default weapon', () => {
+    expect(defaultWeaponForRole('trader')).toBe('knife')
+    expect(defaultWeaponForRole('miner')).toBe('knife')
+    expect(defaultWeaponForRole('fisher')).toBe('knife')
+    expect(defaultWeaponForRole('blacksmith')).toBe('knife')
   })
 })
 
@@ -43,10 +44,11 @@ describe('seedDefaultRoleWeapon', () => {
     expect(resolveNpcMeleeWeapon(carried)?.kind).toBe('knife')
   })
 
-  it('leaves a trader/miner/fisher unarmed', () => {
+  it('falls back to a knife for a trader/miner/fisher (animal-threat diagnostics task)', () => {
     const carried = new Inventory(undefined, 5)
     seedDefaultRoleWeapon(carried, 'trader')
-    expect(resolveNpcMeleeWeapon(carried)).toBeNull()
+    expect(carried.holdsAny('knife')).toBe(true)
+    expect(resolveNpcMeleeWeapon(carried)?.kind).toBe('knife')
   })
 
   it('does not add a second weapon when the default is already carried', () => {
@@ -82,5 +84,22 @@ describe('seedHunterSupplies (plan 178)', () => {
     seedHunterSupplies(carried)
     expect(carried.countInstances('knife')).toBe(1)
     expect(carried.count('arrow')).toBe(arrowsAfterFirst)
+  })
+})
+
+describe('ensureKnifeCarried', () => {
+  it('gives a woodcutter a knife alongside their axe (animal-threat diagnostics task)', () => {
+    const carried = new Inventory(undefined, 5)
+    seedDefaultRoleWeapon(carried, 'woodcutter')
+    ensureKnifeCarried(carried)
+    expect(carried.holdsAny('axe')).toBe(true)
+    expect(carried.holdsAny('knife')).toBe(true)
+  })
+
+  it('is idempotent — running it twice does not add a second knife', () => {
+    const carried = new Inventory(undefined, 5)
+    ensureKnifeCarried(carried)
+    ensureKnifeCarried(carried)
+    expect(carried.countInstances('knife')).toBe(1)
   })
 })

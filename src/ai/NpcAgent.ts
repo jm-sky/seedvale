@@ -150,7 +150,7 @@ import {
   resolveNpcMeleeWeapon,
   resolveNpcRangedWeapon,
 } from './npcCombat'
-import { seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
+import { ensureKnifeCarried, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -1175,6 +1175,7 @@ export class NpcAgent {
     this.role = character.role
     seedDefaultRoleWeapon(this.carried, this.role)
     if (this.role === 'hunter') seedHunterSupplies(this.carried)
+    if (this.role === 'woodcutter') ensureKnifeCarried(this.carried)
     this.traits = character.traits
     this.personality = character.personality
     this.relation = member.relation
@@ -1919,11 +1920,19 @@ export class NpcAgent {
     const meleeWeapon = resolveNpcMeleeWeapon(this.carried)
     const rangedWeapon = resolveNpcRangedWeapon(this.carried)
     const hasRanged = rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
+    const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     const decision = decideAnimalThreatResponse({
       hasMeleeCapability: meleeWeapon != null,
       hasRangedCapability: hasRanged,
-      healthRatio: this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0,
+      healthRatio,
       neuroticism: this.personality.neuroticism,
+    })
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'animalThreat.response',
+      response: decision,
+      canFight: meleeWeapon != null || hasRanged,
+      healthRatio,
     })
     if (decision === 'defend') {
       const mode: CombatIntent['mode'] = hasRanged ? 'ranged' : 'melee'
@@ -2137,11 +2146,20 @@ export class NpcAgent {
     // player look-at-me pause above (a wolf attack matters more than
     // reacting to the Hero) but never interrupts `combat` (already reacting,
     // 177 owns ending it) or sleep (not perceiving).
+    const previousAnimalThreat = this.currentAnimalThreat
     this.currentAnimalThreat = senseImmediateAnimalThreat(
       this.mesh.position.x,
       this.mesh.position.z,
       nearbyAnimalThreats,
     )
+    if (previousAnimalThreat === null && this.currentAnimalThreat !== null) {
+      this.trace.record({
+        simTime: this.simClock,
+        type: 'animalThreat.sensed',
+        animalId: this.currentAnimalThreat.animalId,
+        distance: this.currentAnimalThreat.distance,
+      })
+    }
     if (
       this.currentAnimalThreat
       && this.phase !== 'combat'

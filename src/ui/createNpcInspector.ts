@@ -159,6 +159,8 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'action.completed': return `${t}s action.completed → ${event.action}`
     case 'action.failed': return `${t}s action.failed → ${event.action ?? '-'} (${event.reason})`
     case 'action.planned': return `${t}s action.planned → ${event.action}${event.queueId ? ` @${event.queueId}` : ''}`
+    case 'animalThreat.response': return `${t}s animalThreat.response → ${event.response} (canFight ${event.canFight ? 'yes' : 'no'}, hp ${(event.healthRatio * 100).toFixed(0)}%)`
+    case 'animalThreat.sensed': return `${t}s animalThreat.sensed → ${event.animalId} @ ${event.distance.toFixed(1)}m`
     case 'combat.died': return `${t}s combat.died`
     case 'combat.ended': return `${t}s combat.ended (${event.outcome})`
     case 'combat.hit': return `${t}s combat.hit → ${event.targetId}`

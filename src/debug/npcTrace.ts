@@ -56,6 +56,14 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'debug.freeze' }
   | { simTime: number; type: 'debug.unfreeze' }
   | { simTime: number; type: 'debug.reevaluate' }
+  /** Animal-threat perception/response diagnostics (animal-threat diagnostics
+   *  task). `sensed` fires only on the `null → threat` transition in
+   *  `NpcAgent.update()` — never per-tick while a threat stays present; a
+   *  threat that disappears and later reappears logs a fresh `sensed`.
+   *  `response` fires once per `reactToAnimalThreat()` call with the actual
+   *  chosen response, not candidate scores. */
+  | { simTime: number; type: 'animalThreat.sensed'; animalId: string; distance: number }
+  | { simTime: number; type: 'animalThreat.response'; response: 'defend' | 'flee'; canFight: boolean; healthRatio: number }
   /** Persistent Plan lifecycle (plan ai-004) — recorded at establishment,
    *  every lifecycle-state transition, real progress, and completion. Never
    *  per-tick; a Plan can sit `active` across many ticks with no trace
