@@ -1,7 +1,12 @@
 import * as THREE from 'three'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
-import { createMovementWatchdog, type MovementWatchdog, tickMovementWatchdog } from '../ai/npcMovementWatchdog'
+import {
+  createMovementWatchdog,
+  type MovementWatchdog,
+  type RescueStage,
+  tickMovementWatchdog,
+} from '../ai/npcMovementWatchdog'
 import {
   initialSpontaneousVocalizeCooldownSec,
   tickSpontaneousVocalizeCooldown,
@@ -31,6 +36,7 @@ import {
 } from '../ui/agentStatusLabel'
 import { colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
+import { type AnimalDebugVisual, createAnimalDebugVisual } from './animalDebugVisual'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
@@ -252,7 +258,7 @@ const VILLAGE_AVOID_MARGIN = 6
  *  follow-up). NPC detection doesn't depend on reaching this radius either:
  *  `npcThreat` (`update()`'s `senseNpcThreat`) is evaluated every frame
  *  independently of which movement branch is active. */
-const FRENZY_VILLAGE_ARRIVAL_RADIUS = 5
+export const FRENZY_VILLAGE_ARRIVAL_RADIUS = 5
 /** Clearance (world units) *past* a village's real footprint over which the
  *  flee-direction village bias (`fleeFrom`) ramps in — beyond
  *  `radius + this`, fleeing wild/domestic animals behave the same (the
@@ -323,6 +329,94 @@ const SHORE_PROBE_OFFSETS: readonly [number, number][] = [
 ]
 
 type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat'
+
+/** Diagnostic-only label for the mutually-exclusive branch `update()` took
+ *  this tick (fauna debug tooling — `AnimalAgent.getDebugInfo()`'s
+ *  `aiBranch`). A pure descriptive tag set alongside each branch, never read
+ *  back by any decision logic — distinct from `pendingAction.kind`
+ *  (`FaunaActionKind`), which `moveTowardStrategicVillage`'s frenzy beeline
+ *  never sets (see that method's doc), so `aiBranch` is the only reliable
+ *  way to tell "beelining to the village" apart from "normal predator
+ *  chase/wander" from the outside. */
+export type FaunaAiBranch =
+  | 'rabid'
+  | 'player-attack'
+  | 'player-ignore'
+  | 'player-flee'
+  | 'player-flee-prey'
+  | 'npc-attack-frenzied'
+  | 'npc-attack'
+  | 'npc-ignore'
+  | 'npc-flee'
+  | 'fire-avoid'
+  | 'frenzy-beeline'
+  | 'predator-normal'
+  | 'prey-normal'
+
+/** One `chaseNav`/`fleeNav` `NavRescue`'s state, serialized for
+ *  `AnimalAgent.getDebugInfo()` — no raw Three.js/route internals, just
+ *  what's needed to answer "is a repath active, and how far along is it". */
+export type FaunaNavRescueDebugInfo = {
+  active: boolean
+  waypointCount: number
+  currentWaypointIndex: number
+  currentWaypoint: { x: number, z: number } | null
+  rescueStage: RescueStage
+  lowProgressStrikes: number
+}
+
+/** Serializable, `console.log`/`console.table`-safe snapshot of one
+ *  `AnimalAgent`'s current state — fauna debug tooling
+ *  (`getFrenzyWolves()`/`getNextFrenzyWolf()` in `debug/faunaInspector.ts`,
+ *  `AnimalAgent.getDebugInfo()`). Deliberately built for the "why did this
+ *  frenzied wolf stop short of the village" question (see that method's
+ *  doc) rather than as a generic dump of every private field — no raw
+ *  Three.js objects. */
+export type AnimalAgentDebugInfo = {
+  animalId: string
+  kind: AnimalKind
+  frenzied: boolean
+  rabid: boolean
+  dead: boolean
+  position: { x: number, y: number, z: number }
+  home: { x: number, z: number }
+  moving: boolean
+  sprinting: boolean
+  /** Net world-space displacement over the last `update()` tick — near-zero
+   *  while `moving === true` is the direct symptom of case G ("wilk stoi w
+   *  miejscu mimo moving === true"): the AI branch is issuing a step but
+   *  `stepWithSlopeAndCollision()` isn't actually advancing the position. */
+  lastStepDistance: number
+  aiBranch: FaunaAiBranch
+  intent: FaunaActionKind | null
+  threateningHuman: boolean
+  health: { current: number, max: number }
+  stamina: { current: number, max: number }
+  strategicVillage: { x: number, z: number, radius: number } | null
+  /** Current steering destination, populated only while `aiBranch` is one
+   *  that actually steers via `strategicDest` (`frenzy-beeline`,
+   *  `npc-attack`, `npc-attack-frenzied`) — `null` otherwise, since the
+   *  underlying `THREE.Vector3` is a shared scratch reused by unrelated
+   *  branches and would otherwise show a stale value. */
+  strategicDest: { x: number, y: number, z: number } | null
+  distanceToStrategicVillage: number | null
+  distanceToStrategicDest: number | null
+  frenzyVillageArrivalRadius: number
+  /** True once within `frenzyVillageArrivalRadius` of `strategicVillage`'s
+   *  center — case F ("arrivedAtStrategicVillage() uznaje go za przybyłego")
+   *  from the outside. */
+  arrivedAtStrategicVillage: boolean
+  frenzyNpcTarget: { id: string, x: number, z: number } | null
+  /** `isWalkable()` at the agent's current position — should always be
+   *  `true` for a live agent; `false` here would itself be the bug. */
+  positionWalkable: boolean
+  /** `isWalkable()` at `strategicDest` — case B ("target jest prawidłowy,
+   *  ale isWalkable(target) jest false"). `null` when `strategicDest` isn't
+   *  currently populated (see that field's doc). */
+  strategicDestWalkable: boolean | null
+  chaseNav: FaunaNavRescueDebugInfo
+  fleeNav: FaunaNavRescueDebugInfo
+}
 
 /** A real-world food/water destination an animal is pursuing (plan 094) —
  *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
@@ -924,6 +1018,18 @@ export class AnimalAgent {
   private timeSinceDeath = 0
   private isNight = false
   private highlighted = false
+  /** True while `showDebug()`'s world-space overlay is active for this
+   *  agent (fauna debug tooling) — at most one agent at a time in practice
+   *  (the DevTools selection cursor in `debug/faunaInspector.ts`), but
+   *  nothing here enforces that; each agent owns its own overlay. */
+  private debugActive = false
+  private debugVisual: AnimalDebugVisual | null = null
+  /** Diagnostic-only label for the branch `update()` took this tick — see
+   *  `FaunaAiBranch`'s doc. Never read by any decision logic. */
+  private debugBranch: FaunaAiBranch = 'predator-normal'
+  /** Net position delta over the last `update()` tick — see
+   *  `AnimalAgentDebugInfo.lastStepDistance`'s doc. */
+  private debugLastStepDist = 0
   /** Counts down from `ALERT_HOLD_SEC` after last noticing the player —
    *  hysteresis for `checkEnvironmentalDanger()`, see its comment. */
   private alertTimer = 0
@@ -1232,6 +1338,8 @@ export class AnimalAgent {
     this.label.removeFromParent()
     this.labelEl.remove()
     this.mixer?.stopAllAction()
+    this.debugVisual?.dispose()
+    this.debugVisual = null
   }
 
   isDead(): boolean {
@@ -1400,6 +1508,100 @@ export class AnimalAgent {
     if (this.highlighted === active) return
     this.highlighted = active
     this.labelEl.classList.toggle('npc-label--highlighted', active)
+  }
+
+  /** DevTools runtime debug entry point (fauna debug tooling — see
+   *  `debug/faunaInspector.ts`'s `getNextFrenzyWolf()`/`getCurrentFrenzyWolf()`
+   *  and this file's `AnimalAgentDebugInfo`/`FaunaAiBranch` docs). Sets the
+   *  highlight (reuses `setHighlighted()`, no parallel indicator) and
+   *  activates a lightweight world-space overlay (`animalDebugVisual.ts`)
+   *  showing the current steering destination, strategic-village marker and
+   *  any in-flight nav-rescue waypoints — updated every `update()` tick
+   *  while active. Idempotent; a no-op once already active for this agent.
+   *  Lazily creates the overlay under `this.mesh.parent` (the scene, already
+   *  set by the time any caller could reach a live `AnimalAgent`). */
+  showDebug(): void {
+    this.setHighlighted(true)
+    this.debugActive = true
+    if (!this.debugVisual && this.mesh.parent) {
+      this.debugVisual = createAnimalDebugVisual(this.mesh.parent)
+    }
+  }
+
+  /** Tears down `showDebug()`'s overlay. Does not clear the highlight —
+   *  that's owned by whatever selected this agent
+   *  (`debug/faunaInspector.ts`'s `getNextFrenzyWolf()`), not by the debug
+   *  overlay itself, so hiding the detail view doesn't lose track of which
+   *  wolf is currently selected. Idempotent. */
+  hideDebug(): void {
+    this.debugActive = false
+    this.debugVisual?.dispose()
+    this.debugVisual = null
+  }
+
+  toggleDebug(): void {
+    if (this.debugActive) this.hideDebug()
+    else this.showDebug()
+  }
+
+  private navDebugInfo(nav: NavRescue): FaunaNavRescueDebugInfo {
+    const current = nav.waypoints[nav.index] ?? null
+    return {
+      active: nav.active,
+      waypointCount: nav.waypoints.length,
+      currentWaypointIndex: nav.index,
+      currentWaypoint: current ? { x: current.x, z: current.z } : null,
+      rescueStage: nav.watchdog.rescueStage,
+      lowProgressStrikes: nav.watchdog.lowProgressStrikes,
+    }
+  }
+
+  /** Serializable diagnostic snapshot — see `AnimalAgentDebugInfo`'s doc for
+   *  what each field answers. Safe for `console.log`/`console.table`: plain
+   *  data only, no `THREE.Object3D`/mesh references. */
+  getDebugInfo(): AnimalAgentDebugInfo {
+    const village = this.strategicVillage
+    const usesStrategicDest = this.debugBranch === 'frenzy-beeline'
+      || this.debugBranch === 'npc-attack-frenzied'
+      || this.debugBranch === 'npc-attack'
+    return {
+      animalId: this.animalId,
+      kind: this.def.kind,
+      frenzied: this.frenzied,
+      rabid: this.rabid,
+      dead: this.health.dead,
+      position: { x: this.mesh.position.x, y: this.mesh.position.y, z: this.mesh.position.z },
+      home: { x: this.home.x, z: this.home.z },
+      moving: this.moving,
+      sprinting: this.sprinting,
+      lastStepDistance: this.debugLastStepDist,
+      aiBranch: this.debugBranch,
+      intent: this.pendingAction?.kind ?? null,
+      threateningHuman: this.threateningHuman,
+      health: { current: this.health.currentHp, max: this.health.maxHp },
+      stamina: { current: this.life.stamina.current, max: this.life.stamina.max },
+      strategicVillage: village ? { x: village.x, z: village.z, radius: village.radius } : null,
+      strategicDest: usesStrategicDest
+        ? { x: this.strategicDest.x, y: this.strategicDest.y, z: this.strategicDest.z }
+        : null,
+      distanceToStrategicVillage: village
+        ? Math.hypot(this.mesh.position.x - village.x, this.mesh.position.z - village.z)
+        : null,
+      distanceToStrategicDest: usesStrategicDest
+        ? Math.hypot(this.mesh.position.x - this.strategicDest.x, this.mesh.position.z - this.strategicDest.z)
+        : null,
+      frenzyVillageArrivalRadius: FRENZY_VILLAGE_ARRIVAL_RADIUS,
+      arrivedAtStrategicVillage: this.arrivedAtStrategicVillage(),
+      frenzyNpcTarget: this.frenzyNpcTarget
+        ? { id: this.frenzyNpcTarget.id, x: this.frenzyNpcTarget.x, z: this.frenzyNpcTarget.z }
+        : null,
+      positionWalkable: this.isWalkable(this.mesh.position.x, this.mesh.position.z),
+      strategicDestWalkable: usesStrategicDest
+        ? this.isWalkable(this.strategicDest.x, this.strategicDest.z)
+        : null,
+      chaseNav: this.navDebugInfo(this.chaseNav),
+      fleeNav: this.navDebugInfo(this.fleeNav),
+    }
   }
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */
@@ -1788,6 +1990,10 @@ export class AnimalAgent {
     this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false
+    // Diagnostic-only snapshot for `debugLastStepDist` (see its field doc) —
+    // never read by movement/AI logic itself.
+    const debugPrevX = this.mesh.position.x
+    const debugPrevZ = this.mesh.position.z
     this.currentVillages = villages
     this.currentOthers = others
     this.tickMaturity(dt)
@@ -1808,6 +2014,7 @@ export class AnimalAgent {
       this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
+      this.debugBranch = 'rabid'
       this.updateRabid(dt, others)
 
     } else if (sense.playerActive) {
@@ -1826,6 +2033,7 @@ export class AnimalAgent {
         }
         this.threateningHuman = this.cachedHumanIntent === 'attack'
         if (this.cachedHumanIntent === 'attack') {
+          this.debugBranch = 'player-attack'
           this.setIntent('attack', copyVec3(observerPos))
           this.chaseHuman(observerPos, dt, onHumanHit)
         } else if (this.cachedHumanIntent === 'ignore') {
@@ -1833,14 +2041,17 @@ export class AnimalAgent {
           // non-threatening human just keeps doing what it was doing instead
           // of panicking — same "no reaction" shape as `updatePredator`'s
           // no-prey-found wander, not a new idle mechanic.
+          this.debugBranch = 'player-ignore'
           this.setIntent('wander')
           this.wander(dt)
         } else {
+          this.debugBranch = 'player-flee'
           this.setIntent('flee', copyVec3(observerPos))
           this.fleeFrom(observerPos.x, observerPos.z, dt)
         }
       } else {
         this.threateningHuman = false
+        this.debugBranch = 'player-flee-prey'
         this.setIntent('flee', copyVec3(observerPos))
         this.fleeFrom(observerPos.x, observerPos.z, dt)
       }
@@ -1853,6 +2064,7 @@ export class AnimalAgent {
 
     } else if (npcThreat && this.frenzied) {
       this.threateningHuman = true
+      this.debugBranch = 'npc-attack-frenzied'
       this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
       this.chaseNpc(npcThreat, dt, onNpcHit)
     } else if (npcThreat) {
@@ -1865,12 +2077,15 @@ export class AnimalAgent {
       }
       this.threateningHuman = this.cachedHumanIntent === 'attack'
       if (this.cachedHumanIntent === 'attack') {
+        this.debugBranch = 'npc-attack'
         this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
         this.chaseNpc(npcThreat, dt, onNpcHit)
       } else if (this.cachedHumanIntent === 'ignore') {
+        this.debugBranch = 'npc-ignore'
         this.setIntent('wander')
         this.wander(dt)
       } else {
+        this.debugBranch = 'npc-flee'
         this.setIntent('flee', { x: npcThreat.x, z: npcThreat.z })
         this.fleeFrom(npcThreat.x, npcThreat.z, dt)
       }
@@ -1886,6 +2101,7 @@ export class AnimalAgent {
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
       this.cancelSourceTarget()
+      this.debugBranch = 'fire-avoid'
       this.setIntent('flee', { x: sense.nearestFire.x, z: sense.nearestFire.z })
       this.fleeFrom(sense.nearestFire.x, sense.nearestFire.z, dt)
     } else if (this.def.role === 'predator') {
@@ -1893,14 +2109,17 @@ export class AnimalAgent {
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
       if (this.frenzied && this.strategicVillage && !this.arrivedAtStrategicVillage()) {
+        this.debugBranch = 'frenzy-beeline'
         this.moveTowardStrategicVillage(dt)
       } else {
+        this.debugBranch = 'predator-normal'
         this.updatePredator(dt, others)
       }
     } else {
       this.threateningHuman = false
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
+      this.debugBranch = 'prey-normal'
       this.updatePrey(dt, others)
     }
     if (this.threateningHuman && !this.wasThreateningHuman) {
@@ -1909,6 +2128,7 @@ export class AnimalAgent {
     this.wasThreateningHuman = this.threateningHuman
     this.clampBounds()
     this.snapY()
+    this.debugLastStepDist = Math.hypot(this.mesh.position.x - debugPrevX, this.mesh.position.z - debugPrevZ)
     this.updateAnim()
     tickAnimalLife(this.life, dt, this.sprinting, {
       hungerThirstRate: this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
@@ -1945,6 +2165,28 @@ export class AnimalAgent {
       this.labelDistanceState,
     )
     this.mixer?.update(dt)
+    if (this.debugActive && this.debugVisual) this.updateDebugVisual()
+  }
+
+  /** Feeds this tick's steering-relevant state to the `showDebug()` overlay
+   *  — see `AnimalDebugVisualState`'s doc for why `strategicDest` is gated
+   *  to the branches that actually steer toward it. `chaseNav`/`fleeNav` are
+   *  mutually exclusive in practice (predator chase vs. flee), so showing
+   *  whichever is currently `active` is enough; if neither is, there's no
+   *  in-flight repath to draw. */
+  private updateDebugVisual(): void {
+    const usesStrategicDest = this.debugBranch === 'frenzy-beeline'
+      || this.debugBranch === 'npc-attack-frenzied'
+      || this.debugBranch === 'npc-attack'
+    const nav = this.chaseNav.active ? this.chaseNav : this.fleeNav.active ? this.fleeNav : null
+    this.debugVisual!.update({
+      position: { x: this.mesh.position.x, z: this.mesh.position.z },
+      sampleHeight: this.sampleHeight,
+      strategicDest: usesStrategicDest ? { x: this.strategicDest.x, z: this.strategicDest.z } : null,
+      strategicVillage: this.strategicVillage,
+      waypoints: nav ? nav.waypoints : [],
+      waypointIndex: nav ? nav.index : 0,
+    })
   }
 
   /** Adopt a fauna intent via the shared action lifecycle (plan 055). */

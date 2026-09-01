@@ -1,12 +1,14 @@
 import type { NpcInspectionSnapshot, NpcWhy } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
+import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { VillageSize } from '../settlement/families'
 import type { WorldContext } from '../world/worldContext'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { isAdminMode, isDebugMode } from './debugMode'
+import { getCurrentFrenzyWolf, getFrenzyWolves, getNextFrenzyWolf } from './faunaInspector'
 import {
   deepForestNearest,
   type LocationResult,
@@ -45,6 +47,7 @@ export type NpcDebugHandle = {
   reevaluate: () => boolean
 }
 
+export type { AnimalAgentDebugInfo } from '../fauna/AnimalAgent'
 export type { LocationKind, LocationResult } from './locationQueries'
 
 export type VillageDebugHandle = {
@@ -120,6 +123,18 @@ export type SeedvaleDebugApi = {
    *  waypoints, repaths and currently-active routes, session-wide across
    *  every `NpcAgent`/`AnimalAgent`. */
   navigation: () => Readonly<NavigationStats>
+  /** Live, frenzied, non-dead wolves (fauna debug tooling —
+   *  `debug/faunaInspector.ts`) — `Fauna`'s own stable order, never a world
+   *  scan. Each returned `AnimalAgent` carries its own
+   *  `showDebug()`/`hideDebug()`/`toggleDebug()`/`getDebugInfo()`. */
+  getFrenzyWolves: () => AnimalAgent[]
+  /** Currently DevTools-selected frenzied wolf, or `null` if nothing is
+   *  selected or the selection is no longer live/frenzied. */
+  getCurrentFrenzyWolf: () => AnimalAgent | null
+  /** Cycles the DevTools selection to the next live frenzied wolf, clearing
+   *  the previous selection's highlight and setting the new one's — wraps
+   *  back to the first past the end, `null` when none is loaded. */
+  getNextFrenzyWolf: () => AnimalAgent | null
   help: () => string
 }
 
@@ -142,6 +157,7 @@ const HELP_TEXT = [
   'setFrenzyWolf() — debug combat trigger',
   'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
   'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
+  'getFrenzyWolves() / getCurrentFrenzyWolf() / getNextFrenzyWolf() — frenzied-wolf DevTools selection; each returned wolf has showDebug()/hideDebug()/toggleDebug()/getDebugInfo()',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -256,6 +272,9 @@ export function installNpcDebugApi(
       },
     },
     navigation: () => getNavigationStats(),
+    getFrenzyWolves: () => getFrenzyWolves(bundle),
+    getCurrentFrenzyWolf: () => getCurrentFrenzyWolf(bundle),
+    getNextFrenzyWolf: () => getNextFrenzyWolf(bundle),
     help: () => HELP_TEXT,
   }
   window.seedvale = { ...window.seedvale, debug: api }
