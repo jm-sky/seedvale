@@ -64,9 +64,11 @@ Optional metadata may help AI preflight:
 ```md
 **Subdomains:** `household` `logistics`
 **Tags:** `delivery` `inventory`
+**Roadmap:** `npc-ai.md`
 ```
 
 Keep `Subdomains` and `Tags` short and relevant. They are hints for navigation/preflight, not a replacement for code recon.
+Optional `Roadmap` should point to a file in `docs/roadmap` folder. 
 
 ## Creating a Plan
 
