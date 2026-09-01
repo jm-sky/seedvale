@@ -44,7 +44,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `persistence-001-full-simulation-persistence.md`                    | -       | 🔴 | L      | -       |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
-| ◼️ `tools-003-house-browser-and-tools-menu.md`                         | -       | 🟡 | M      | ~~111~~ |
+| 💡 `tools-003-house-browser-and-tools-menu.md`                         | -       | 🟡 | M      | ~~111~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
