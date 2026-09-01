@@ -34,22 +34,22 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 221
-- `evaluatePlacementSite` — function — line 134
-- `GroundPlacementDefinition` — type — line 126
+- `createPlacementActions` — function — line 259
+- `evaluatePlacementSite` — function — line 153
+- `GroundPlacementDefinition` — type — line 145
   - domain: world
-- `GroundPlacementSite` — type — line 110
-- `PlacementActions` — type — line 166
-- `PlacementBlocker` — type — line 90
-- `PlacementPreviewResult` — type — line 98
-- `previewGroundPlacement` — function — line 144
-- `WellWorkView` — type — line 159
+- `GroundPlacementSite` — type — line 129
+- `PlacementActions` — type — line 185
+- `PlacementBlocker` — type — line 109
+- `PlacementPreviewResult` — type — line 117
+- `previewGroundPlacement` — function — line 163
+- `WellWorkView` — type — line 178
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 66
-- `PlacementPreviewActionDeps` — type — line 35
-- `PlacementPreviewActions` — type — line 49
+- `createPlacementPreviewActions` — function — line 75
+- `PlacementPreviewActionDeps` — type — line 36
+- `PlacementPreviewActions` — type — line 58
 - `PlacementPreviewKind` — type — line 19
 - `PlacementPreviewUiView` — type — line 21
 
@@ -102,7 +102,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 207
+- `createApp` — function — line 208
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
@@ -111,12 +111,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 491
+- `createGameLoop` — function — line 497
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 459
+- `GameLoop` — type — line 465
 - `GameLoopDeps` — type — line 255
 
 ## `app/graphicsSettings.ts`
@@ -127,21 +127,21 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 832
-- `buildDigTarget` — function — line 779
-- `buildInteractables` — function — line 319
-- `collectItem` — function — line 879
-- `COMBAT_TARGET_CONE_DOT` — const — line 81
-- `COMBAT_TARGET_RANGE` — const — line 66
-- `CombatAimMode` — type — line 71
-- `DIG_REACH` — const — line 60
-- `GAZE_RANGE` — const — line 50
-- `INTERACT_MIN_DOT` — const — line 47
-- `INTERACT_RANGE` — const — line 44
-- `KNIFE_BRANCH_BONUS` — const — line 56
-- `resolveHaySpot` — function — line 232
-- `resolveWaterBodyKind` — function — line 266
-- `TREE_BRANCH_CHANCE` — const — line 53
+- `buildCombatTarget` — function — line 846
+- `buildDigTarget` — function — line 793
+- `buildInteractables` — function — line 320
+- `collectItem` — function — line 893
+- `COMBAT_TARGET_CONE_DOT` — const — line 82
+- `COMBAT_TARGET_RANGE` — const — line 67
+- `CombatAimMode` — type — line 72
+- `DIG_REACH` — const — line 61
+- `GAZE_RANGE` — const — line 51
+- `INTERACT_MIN_DOT` — const — line 48
+- `INTERACT_RANGE` — const — line 45
+- `KNIFE_BRANCH_BONUS` — const — line 57
+- `resolveHaySpot` — function — line 233
+- `resolveWaterBodyKind` — function — line 267
+- `TREE_BRANCH_CHANCE` — const — line 54
 
 ## `app/inventoryWiring.ts`
 
@@ -198,13 +198,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 480
-- `createWorldBundle` — function — line 763
-- `disposeWorldBundle` — function — line 1045
-- `HOME_RADIUS` — const — line 76
-- `homeChunks` — function — line 87
-- `rebuildWorldBundle` — function — line 897
-- `WorldBundle` — type — line 110
+- `BuiltWorldSystems` — type — line 484
+- `createWorldBundle` — function — line 776
+- `disposeWorldBundle` — function — line 1068
+- `HOME_RADIUS` — const — line 78
+- `homeChunks` — function — line 89
+- `rebuildWorldBundle` — function — line 915
+- `WorldBundle` — type — line 112
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

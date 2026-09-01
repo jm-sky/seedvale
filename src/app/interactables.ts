@@ -12,6 +12,7 @@ import type { ChunkManager } from '../terrain/chunkManager'
 import type { ResourceDeposits } from '../terrain/resourceDeposits'
 import type { Beehives } from '../world/createBeehives'
 import type { DryingRacks } from '../world/createDryingRacks'
+import type { Palisades } from '../world/createPalisades'
 import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
@@ -332,6 +333,7 @@ export function buildInteractables(
   placedWells: PlayerWells,
   playerGardens: PlayerGardens,
   standingTorches: StandingTorches,
+  palisades: Palisades,
   terrainPreparations: TerrainPreparations,
   /** Current world day (plan 159) — drives drying-complete/honey-available
    *  prompt text. */
@@ -491,6 +493,18 @@ export function buildInteractables(
       promptLabel: torch.lit ? 'Zapalona pochodnia' : '[E] Zapal pochodnię',
       id: torch.id,
       lit: torch.lit,
+    })
+  }
+
+  // Plan items-player-010 — player-built palisade segments; `[R]` removes
+  // the one segment gazed at, with partial material recovery.
+  for (const segment of palisades.list()) {
+    if (!withinRange(segment.x, segment.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'palisade',
+      position: { x: segment.x, z: segment.z },
+      promptLabel: '[R] Usuń segment palisady',
+      id: segment.id,
     })
   }
 

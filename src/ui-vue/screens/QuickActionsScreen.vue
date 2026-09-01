@@ -189,6 +189,9 @@ const buildActions = computed<Action[]>(() => {
   if (ui.quickActions.hasWoodenTorch) {
     list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch') })
   }
+  if (ui.quickActions.hasPalisadeMaterial) {
+    list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade') })
+  }
   return list
 })
 

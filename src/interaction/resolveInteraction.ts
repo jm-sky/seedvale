@@ -88,14 +88,16 @@ function capitalize(text: string): string {
  *  access this module doesn't have, handled directly in `gameLoop.ts`;
  *  `standingTorch` (plan items-player-009), same `Inventory`-access reason —
  *  `Ignite` checks `fire_starting`, handled directly in `gameLoop.ts`/
- *  `placementActions.ts`) to the
+ *  `placementActions.ts`; `palisade` (plan items-player-010), same
+ *  `Inventory`-access reason — removal recovers materials, handled directly
+ *  in `gameLoop.ts`/`placementActions.ts`) to the
  *  right `QuestManager` call, falling back to flavor text when no active
  *  quest cares. `well` still goes through here for its flavor line/quest hook
  *  — `gameLoop.ts` additionally handles its own drink/fill mechanics (plan
  *  106) alongside the call. A *completed* player-built well becomes a plain
  *  `well` candidate (see `app/interactables.ts`), so it goes through here too. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

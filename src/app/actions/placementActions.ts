@@ -1,5 +1,13 @@
 import type { CropId } from '../../world/cropLifecycle'
-import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../../items/constructionMaterials'
+import {
+  applyRecovery,
+  canReceiveRecovery,
+  computeMaterialRecovery,
+  CONSTRUCTION_MATERIAL_RADIUS,
+  consumeMaterial,
+  hasMaterial,
+  type MaterialRequirement,
+} from '../../items/constructionMaterials'
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
 import { isLiquidContainerInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
@@ -28,6 +36,17 @@ import {
   TRAP_SETUP_DURATION_SEC,
   type TrapKind,
 } from '../../world/animalTraps'
+import {
+  PALISADE_FOOTPRINT_RADIUS,
+  PALISADE_MATERIAL_REQUIREMENTS,
+  PALISADE_PLACE_DURATION_SEC,
+  PALISADE_PLACE_REACH,
+  PALISADE_PLACEMENT_MESSAGE,
+  PALISADE_RECOVERY_RATE,
+  PALISADE_SEPARATION,
+  type PalisadePlacementReason,
+  resolvePalisadeSite,
+} from '../../world/palisade'
 import {
   CROP_PLANT_DURATION_SEC,
   CROP_PLANT_FOOTPRINT_RADIUS,
@@ -216,6 +235,25 @@ export type PlacementActions = {
    *  requires `fire_starting`; no-op (including re-checking `lit`) if `id` is
    *  unknown or already lit. Instant, no busy channel or material cost. */
   igniteStandingTorch: (id: string) => void
+  /** Read-only preview of palisade-segment placement at the player's current
+   *  aim (plan items-player-010 §1/§3/§4) — already snapped to a nearby
+   *  segment endpoint when one is in range; backs the shared
+   *  placement-preview ghost/UI. `placePalisadeAtAim` remains the only
+   *  mutation seam. */
+  previewPalisadePlacement: () => PlacementPreviewResult
+  /** Places a new palisade segment ahead of the player (plan items-player-010
+   *  §1/§2/§3/§4) — snaps to the nearest valid endpoint of an existing
+   *  segment within reach, then consumes `PALISADE_MATERIAL_REQUIREMENTS`
+   *  atomically on completion, nothing on a rejected/cancelled placement. */
+  placePalisadeAtAim: () => void
+  /** `[R]` removes one palisade segment by id (plan items-player-010 §5/§6/
+   *  §7) — the generic player-built removal/recovery seam
+   *  (`items/constructionMaterials.ts`) applied to a palisade segment:
+   *  preflights inventory capacity for the recovered materials before
+   *  removing anything, then removes the authoritative segment + runtime
+   *  representation and adds the recovery. No-op if `id` is unknown or the
+   *  recovered materials wouldn't fit. */
+  removePalisadeSegment: (id: string) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -753,6 +791,97 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (bundle.standingTorches.ignite(id)) toast.show('Zapalono pochodnię.')
   }
 
+  /** Shared placement contract for a palisade segment (plan items-player-010
+   *  §1/§4) — `aim` resolves the player's raw reach point and then, via
+   *  `resolvePalisadeSite`, snaps it onto the nearest existing segment
+   *  endpoint within `PALISADE_SNAP_RADIUS` (pure math in `world/palisade.ts`
+   *  — no palisade-specific placement/collision system, just this object's
+   *  own footprint/separation fed into the same `evaluateGroundPlacement`
+   *  every other placeable uses). `evaluate` re-validates the *resolved*
+   *  (possibly snapped) site — a rejected snap site still shows as invalid,
+   *  it never silently falls back to the raw aim point. */
+  const palisadePlacementDefinition = (): GroundPlacementDefinition<PalisadePlacementReason> => ({
+    aim: () => {
+      const yaw = mouseLook.state.yaw
+      const rawX = player.mesh.position.x - Math.sin(yaw) * PALISADE_PLACE_REACH
+      const rawZ = player.mesh.position.z - Math.cos(yaw) * PALISADE_PLACE_REACH
+      return resolvePalisadeSite({ x: rawX, z: rawZ, yaw }, bundle.palisades.nodes())
+    },
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.palisades.nodes(),
+        footprintRadius: PALISADE_FOOTPRINT_RADIUS,
+        separation: PALISADE_SEPARATION,
+      })
+      return reason === 'occupied' ? 'palisade' : reason
+    },
+    footprintRadius: PALISADE_FOOTPRINT_RADIUS,
+    reasonLabel: (reason) => PALISADE_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewPalisadePlacement = (): PlacementPreviewResult =>
+    previewGroundPlacement(palisadePlacementDefinition())
+
+  /** Places a new palisade segment ahead of the player (plan items-player-010
+   *  §1/§2/§3/§4) — same "validate the resolved site, then busy-channel,
+   *  consume+build only on completion" shape as `placeStandingTorchAtAim`;
+   *  the site (including any snap) is re-resolved and re-validated here, at
+   *  confirm time, never trusted from a cached preview result. */
+  const placePalisadeAtAim = (): void => {
+    if (isActionBlocked(ctx)) return
+    const { site, reason } = evaluatePlacementSite(palisadePlacementDefinition())
+    if (reason !== 'ok') {
+      toast.show(PALISADE_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const missing = PALISADE_MATERIAL_REQUIREMENTS.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    if (missing.length > 0) {
+      toast.show(
+        `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        'error',
+      )
+      return
+    }
+    busy.start(PALISADE_PLACE_DURATION_SEC, 'Stawianie segmentu palisady…', () => {
+      for (const r of PALISADE_MATERIAL_REQUIREMENTS) {
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+      }
+      bundle.palisades.place(site.x, site.z, site.yaw)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Postawiono segment palisady.')
+    })
+  }
+
+  /** `[R]` removes one palisade segment (plan items-player-010 §5/§6/§7) —
+   *  the generic removal/recovery seam: preflight `canReceiveRecovery`
+   *  before touching any authoritative state, remove the segment, then add
+   *  the recovered materials — never the reverse, and never partial. */
+  const removePalisadeSegment = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    if (!bundle.palisades.list().some((entry) => entry.id === id)) return
+    const recovered = computeMaterialRecovery({
+      requirements: PALISADE_MATERIAL_REQUIREMENTS,
+      recoveryRate: PALISADE_RECOVERY_RATE,
+    })
+    if (!canReceiveRecovery(inventory, recovered)) {
+      toast.show('Brak miejsca w ekwipunku na odzyskane materiały.', 'error')
+      return
+    }
+    if (!bundle.palisades.remove(id)) return
+    applyRecovery(inventory, recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Usunięto segment palisady.')
+  }
+
   return {
     tentAimPoint,
     tentBlockers,
@@ -770,5 +899,8 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     previewStandingTorchPlacement,
     placeStandingTorchAtAim,
     igniteStandingTorch,
+    previewPalisadePlacement,
+    placePalisadeAtAim,
+    removePalisadeSegment,
   }
 }

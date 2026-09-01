@@ -174,6 +174,10 @@ type QuickActionsState = {
    *  The recipe's other material (a beam) is checked/consumed at build time,
    *  same as a well/garden's stone/branch cost — not gated here. */
   hasWoodenTorch: boolean
+  /** Owning enough `beam` to build a palisade segment (plan items-player-010)
+   *  — drives "Postaw segment palisady" under "Budowa", same shape as
+   *  `hasWoodenTorch`. */
+  hasPalisadeMaterial: boolean
   traps: QuickActionsTraps
   /** True while the player is carrying a placed container (plan 164 §8) —
    *  drives the "Odłóż skrzynię" action, the put-down counterpart of
@@ -427,6 +431,7 @@ export const ui = reactive({
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
+    hasPalisadeMaterial: false,
     traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
     onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
@@ -800,6 +805,7 @@ export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { u
 export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions.hasTent = hasTent }
 export function setQuickActionsHasChest(hasChest: boolean): void { ui.quickActions.hasChest = hasChest }
 export function setQuickActionsHasWoodenTorch(hasWoodenTorch: boolean): void { ui.quickActions.hasWoodenTorch = hasWoodenTorch }
+export function setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial: boolean): void { ui.quickActions.hasPalisadeMaterial = hasPalisadeMaterial }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function setQuickActionsTraps(traps: QuickActionsTraps): void {

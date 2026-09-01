@@ -143,6 +143,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
+- `world/palisade.ts`
 - `world/plantedCrops.ts`
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
@@ -282,6 +283,7 @@ Generated from TypeScript imports.
 - `items/tentPlacement.ts`
 - `settlement/VillageFire.ts`
 - `terrain/dig.ts`
+- `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/treeHarvest.ts`
@@ -401,6 +403,7 @@ Generated from TypeScript imports.
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`
+- `world/palisade.ts`
 - `world/parseSeed.ts`
 - `world/plantedCrops.ts`
 - `world/plantedTrees.ts`
@@ -578,6 +581,7 @@ Generated from TypeScript imports.
 - `world/beehives.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
+- `world/createPalisades.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
@@ -781,6 +785,7 @@ Generated from TypeScript imports.
 - `world/createDryingRacks.ts`
 - `world/createLargeCaves.ts`
 - `world/createOcean.ts`
+- `world/createPalisades.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
@@ -792,6 +797,7 @@ Generated from TypeScript imports.
 - `world/dryingRacks.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/palisade.ts`
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`

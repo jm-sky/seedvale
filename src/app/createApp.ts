@@ -101,6 +101,7 @@ import { type FishingBaitState } from '../world/fishing'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
+import { PALISADE_MATERIAL_REQUIREMENTS } from '../world/palisade'
 import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
@@ -432,6 +433,7 @@ export async function createApp(
     })),
     () => worldGeneration !== initialWorldGeneration,
     initialSave?.standingTorches ?? [],
+    initialSave?.palisades ?? [],
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -499,6 +501,12 @@ export async function createApp(
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   const primaryWeapons = createPrimaryWeaponSelection()
+  /** Whether the player could build a palisade segment right now, ignoring
+   *  position — same "own the rare/costly component, full cost re-checked at
+   *  build time" gate `hasWoodenTorch` uses, just against a count instead of
+   *  a single item (plan items-player-010). */
+  const hasPalisadeMaterial = (): boolean =>
+    PALISADE_MATERIAL_REQUIREMENTS.every((r) => inventory.has(r.kind, r.count))
   // Renamed from `syncShovelQuickActions` — now the single post-inventory-
   // mutation refresh for every Quick Actions / Pause→Akcje availability flag
   // (review 007 C4), not just shovel/tent. `canBuild*`/`canLight*` come from
@@ -511,6 +519,7 @@ export async function createApp(
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
     vueUi.setQuickActionsHasChest(inventory.has('chest', 1))
     vueUi.setQuickActionsHasWoodenTorch(inventory.has('wooden_torch', 1))
+    vueUi.setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial())
     vueUi.setQuickActionsTraps({
       simple: inventory.countInstances(TRAP_DEFS.simple.itemKind) > 0,
       good: inventory.countInstances(TRAP_DEFS.good.itemKind) > 0,
@@ -1188,6 +1197,7 @@ export async function createApp(
     hasTent: inventory.has('tent', 1),
     hasChest: inventory.has('chest', 1),
     hasWoodenTorch: inventory.has('wooden_torch', 1),
+    hasPalisadeMaterial: hasPalisadeMaterial(),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
     hasTreeSeed: inventory.has('tree_seed', 1),
     cropSeeds: {
@@ -1428,6 +1438,7 @@ export async function createApp(
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
     igniteStandingTorch: placement.igniteStandingTorch,
+    removePalisadeSegment: placement.removePalisadeSegment,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
     tickPlacementPreview: placementPreview.tick,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,

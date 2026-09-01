@@ -108,6 +108,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPropColliders.ts`
 - `terrain/chunkManager.ts`
 - `world/collision.test.ts`
+- `world/createPalisades.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
 
@@ -190,6 +191,21 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/worldBundle.ts`
+
+## `world/createPalisades.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `world/collision.ts`
+- `world/palisade.ts`
+- `world/palisadeProp.ts`
+
+**Imported by**
+
+- `app/interactables.ts`
 - `app/worldBundle.ts`
 
 ## `world/createPlacedContainers.ts`
@@ -665,6 +681,41 @@ Generated from TypeScript imports.
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`
+
+## `world/palisade.test.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `world/palisade.ts`
+
+## `world/palisade.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `items/tentPlacement.ts`
+
+**Imported by**
+
+- `app/actions/placementActions.ts`
+- `app/busyChannelDurations.test.ts`
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `world/createPalisades.ts`
+- `world/palisade.test.ts`
+- `world/palisadeProp.ts`
+
+## `world/palisadeProp.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `world/palisade.ts`
+
+**Imported by**
+
+- `world/createPalisades.ts`
 
 ## `world/parseSeed.ts`
 

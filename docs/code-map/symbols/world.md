@@ -107,6 +107,13 @@ Generated from exported TypeScript symbols.
 - `createOcean` — function — line 33
 - `WorldOcean` — type — line 9
 
+## `world/createPalisades.ts`
+
+- `createPalisades` — function — line 43
+  - domain: items-player
+- `Palisades` — type — line 10
+- `PalisadeSegmentEntry` — type — line 8
+
 ## `world/createPlacedContainers.ts`
 
 - `createPlacedContainers` — function — line 108
@@ -321,6 +328,30 @@ Generated from exported TypeScript symbols.
 - `MapSource` — type — line 25
 - `MapTerrainKind` — type — line 4
 - `MapViewport` — type — line 43
+
+## `world/palisade.ts`
+
+- `nearestPalisadeConnection` — function — line 86
+- `PALISADE_FOOTPRINT_RADIUS` — const — line 24
+- `PALISADE_HALF_LENGTH` — const — line 23
+- `PALISADE_LENGTH` — const — line 22
+- `PALISADE_MATERIAL_REQUIREMENTS` — const — line 56
+- `PALISADE_PLACE_DURATION_SEC` — const — line 39
+- `PALISADE_PLACE_REACH` — const — line 33
+- `PALISADE_PLACEMENT_MESSAGE` — const — line 43
+- `PALISADE_RECOVERY_RATE` — const — line 63
+- `PALISADE_SEPARATION` — const — line 30
+- `PALISADE_SNAP_RADIUS` — const — line 37
+- `palisadeEndpoints` — function — line 70
+- `PalisadePlacementReason` — type — line 41
+- `PalisadeSegmentRecord` — type — line 17
+  - domain: items-player
+- `resolvePalisadeSite` — function — line 120
+
+## `world/palisadeProp.ts`
+
+- `createPalisadeSegmentProp` — function — line 20
+- `disposePalisadeSegmentProp` — function — line 53
 
 ## `world/parseSeed.ts`
 

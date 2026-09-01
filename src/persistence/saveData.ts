@@ -278,6 +278,12 @@ export type SavePlantedCrop = {
  *  directly (plan items-player-009). */
 export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number, lit: boolean }
 
+/** Persistent player-built palisade segment — mirrors `world/palisade.ts`'s
+ *  `PalisadeSegmentRecord`. Each segment round-trips independently; no
+ *  neighbour/connection data is persisted — connection is always re-derived
+ *  from each segment's own transform on load (plan items-player-010 §9). */
+export type SavePalisadeSegment = { id: string, x: number, z: number, yaw: number }
+
 /** Persistent player-built garden plot — mirrors `world/playerGarden.ts`'s
  *  `PlayerGardenRecord`. A plot has no construction stages of its own (crops
  *  planted on it are separate `SavePlantedCrop` records), but does carry
@@ -378,6 +384,7 @@ export type SaveData = {
   plantedCrops: SavePlantedCrop[]
   playerGardens: SavePlayerGarden[]
   standingTorches: SaveStandingTorch[]
+  palisades: SavePalisadeSegment[]
   /** Authoritative mining-hits-remaining override for ore deposits
    *  (`terrain/depositMining.ts`'s `ResourceDepletionState`), keyed by
    *  `NaturalResource.id`. Sparse — an absent id restores as untouched
@@ -870,6 +877,20 @@ function isStandingTorchesField(value: unknown): value is SaveStandingTorch[] {
   })
 }
 
+function isPalisadesField(value: unknown): value is SavePalisadeSegment[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const p = entry as Record<string, unknown>
+    return (
+      typeof p.id === 'string' &&
+      typeof p.x === 'number' &&
+      typeof p.z === 'number' &&
+      typeof p.yaw === 'number'
+    )
+  })
+}
+
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -913,6 +934,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlantedCropsField(v.plantedCrops)) return false
   if (!isPlayerGardensField(v.playerGardens)) return false
   if (!isStandingTorchesField(v.standingTorches)) return false
+  if (!isPalisadesField(v.palisades)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
   return true
 }

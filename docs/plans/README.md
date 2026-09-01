@@ -29,7 +29,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `items-player-010-player-built-palisade-and-building-removal.md`    | -       | 🟡 | M      | ~~world-008~~ |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | ◼️ `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -78,6 +77,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `npc-007-interaction-destination-approach.md` | NPCs reach the well serving point and queue without repath/escape looping; ordinary NPC movement still avoids colliders and rescue still works |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Visual seeds/peaks/valleys/chunk seams, streaming hitching, river continuity |
 | `items-player-009-player-built-torch-and-ignition.md` | Place a standing torch (preview validity, rejected placement doesn't consume materials, successful placement consumes 1 beam + 1 wooden_torch), confirm unlit state, Ignite with/without fire_starting, flame/light appears and doesn't duplicate on repeated Ignite, save/load restores unlit and lit state, WorldBundle rebuild restores runtime |
+| `items-player-010-player-built-palisade-and-building-removal.md` | Preview/place/snap palisade segments into a chain with a direction change, verify material consumption (2× belka) and rejected placement, save/load restores every segment, select + remove a single segment via `[R]`, confirm partial recovery (1× belka), remaining segments untouched, removal blocked when inventory is full |
 
 ---
 

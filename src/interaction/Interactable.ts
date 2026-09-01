@@ -142,3 +142,10 @@ export type Interactable =
    *  resolved snapshot for the prompt only — the ignite action re-resolves
    *  the record and re-checks `lit` itself before mutating anything. */
   | { kind: 'standingTorch', position: { x: number, z: number }, promptLabel: string, id: string, lit: boolean }
+  /** Player-built palisade segment (plan items-player-010) — `[R]` removes
+   *  this one segment via the generic player-built removal/recovery seam
+   *  (`items/constructionMaterials.ts`'s `computeMaterialRecovery`/
+   *  `canReceiveRecovery`/`applyRecovery`), returning part of its material
+   *  cost. Only stable references; the record itself is re-resolved by id at
+   *  interact time, never trusted from this per-frame snapshot. */
+  | { kind: 'palisade', position: { x: number, z: number }, promptLabel: string, id: string }

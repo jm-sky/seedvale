@@ -750,6 +750,7 @@ Generated from TypeScript imports.
 - `terrain/resourceDeposits.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
+- `world/createPalisades.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`

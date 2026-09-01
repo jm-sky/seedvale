@@ -100,3 +100,38 @@ export function consumeMaterial(
   }
   return remaining === 0
 }
+
+/** A player-built object's recovery policy (plan `items-player-010` §6) — the
+ *  same canonical `requirements` used to build it, plus a `recoveryRate`
+ *  attached to that concrete object type (never a hard-coded rule inside a
+ *  specific removal action). */
+export type MaterialRecoveryPolicy = { requirements: readonly MaterialRequirement[], recoveryRate: number }
+
+/**
+ * Deterministic materials returned by removing a player-built object (plan
+ * `items-player-010` §6/§7 — the generic removal/recovery seam every future
+ * player-built object reuses, not a palisade-specific rule). `Math.floor`
+ * per material, clamped so recovery can never exceed the original cost — no
+ * randomness. Zero-count entries are omitted.
+ */
+export function computeMaterialRecovery(policy: MaterialRecoveryPolicy): MaterialRequirement[] {
+  return policy.requirements
+    .map((r) => ({ kind: r.kind, count: Math.min(r.count, Math.max(0, Math.floor(r.count * policy.recoveryRate))) }))
+    .filter((r) => r.count > 0)
+}
+
+/** Would every entry in `recovered` actually fit in `inventory` right now?
+ *  Pair with `applyRecovery` — always call this first so a removal that
+ *  can't be received is refused before any authoritative state is touched
+ *  (plan §7: atomic removal, never remove-then-fail-to-add). */
+export function canReceiveRecovery(inventory: Inventory, recovered: readonly MaterialRequirement[]): boolean {
+  return recovered.every((r) => inventory.canAdd(r.kind, r.count))
+}
+
+/** Adds every recovered material to `inventory` — only call after
+ *  `canReceiveRecovery` returned true for the same `recovered` list, and
+ *  after the authoritative world object has already been removed (plan §7's
+ *  ordering: remove, then add, never the reverse, once capacity is proven). */
+export function applyRecovery(inventory: Inventory, recovered: readonly MaterialRequirement[]): void {
+  for (const r of recovered) inventory.add(r.kind, r.count)
+}

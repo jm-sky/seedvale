@@ -1,7 +1,7 @@
 # Plan: Player-Built Palisade and Building Removal
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** 008
 **Domain:** `items-player`

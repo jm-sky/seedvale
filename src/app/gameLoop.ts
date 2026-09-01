@@ -393,6 +393,12 @@ export type GameLoopDeps = {
    *  `fire_starting`, flips its authoritative `lit`, and updates its runtime
    *  flame/light. No-op (including re-checking `lit`) if already lit. */
   igniteStandingTorch?: (id: string) => void
+  /** `[R]` removes one gazed-at palisade segment (plan items-player-010 §5) —
+   *  the generic player-built removal/recovery seam applied to a palisade:
+   *  preflights inventory capacity for the recovered materials, then removes
+   *  the authoritative segment + runtime mesh/collider and adds the
+   *  recovery, atomically. No-op if `id` is unknown. */
+  removePalisadeSegment?: (id: string) => void
   /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
    *  unconditionally, before the gaze/interact dispatch, so a confirming
    *  `[E]` press is consumed here rather than falling through to it. No-ops
@@ -499,7 +505,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch,
+    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, removePalisadeSegment,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
@@ -863,6 +869,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.playerWells,
         bundle.playerGardens,
         bundle.standingTorches,
+        bundle.palisades,
         bundle.terrainPreparations,
         dayNight.elapsedDays,
         player.mesh.position,
@@ -1421,6 +1428,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
       } else if (target?.kind === 'standingTorch') {
         if (interactPressed && !target.lit) igniteStandingTorch?.(target.id)
+      } else if (target?.kind === 'palisade') {
+        if (altInteractPressed) removePalisadeSegment?.(target.id)
       } else if (target?.kind === 'terrainPreparation') {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {
