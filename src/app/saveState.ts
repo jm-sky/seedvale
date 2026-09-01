@@ -193,6 +193,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     plantedCrops: deps.getPlantedCrops().map((c) => ({ ...c })),
     playerGardens: bundle.playerGardens.nodes().map((g) => ({ ...g })),
     standingTorches: bundle.standingTorches.nodes().map((t) => ({ ...t })),
+    palisades: bundle.palisades.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
   })
 

@@ -80,6 +80,10 @@ export type QuickActionsHandlers = {
   /** Initial `wooden_torch` ownership for showing "Postaw pochodnię" (plan
    *  items-player-009), same shape as `hasChest`. */
   hasWoodenTorch?: boolean
+  /** Initial "enough beam to build a palisade segment" flag for showing
+   *  "Postaw segment palisady" (plan items-player-010), same shape as
+   *  `hasChest`. */
+  hasPalisadeMaterial?: boolean
   /** Initial carried-container flag for showing "Odłóż skrzynię". */
   hasCarriedContainer?: boolean
   /** Which trap kinds the player currently carries (plan 141). */
@@ -125,6 +129,9 @@ export function createQuickActions(
   }
   if (typeof handlers.hasWoodenTorch === 'boolean') {
     getUi()?.setQuickActionsHasWoodenTorch(handlers.hasWoodenTorch)
+  }
+  if (typeof handlers.hasPalisadeMaterial === 'boolean') {
+    getUi()?.setQuickActionsHasPalisadeMaterial(handlers.hasPalisadeMaterial)
   }
   if (typeof handlers.hasCarriedContainer === 'boolean') {
     getUi()?.setQuickActionsHasCarriedContainer(handlers.hasCarriedContainer)

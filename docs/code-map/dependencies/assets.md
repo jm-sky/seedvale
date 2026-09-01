@@ -224,6 +224,7 @@ Generated from TypeScript imports.
 - `world/createPlayerWells.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/palisadeProp.ts`
 - `world/trapProp.ts`
 - `world/treeVisuals.ts`
 

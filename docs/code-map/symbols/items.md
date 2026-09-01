@@ -18,9 +18,13 @@ Generated from exported TypeScript symbols.
 
 ## `items/constructionMaterials.ts`
 
+- `applyRecovery` — function — line 135
+- `canReceiveRecovery` — function — line 127
+- `computeMaterialRecovery` — function — line 117
 - `CONSTRUCTION_MATERIAL_RADIUS` — const — line 12
 - `consumeMaterial` — function — line 78
 - `hasMaterial` — function — line 53
+- `MaterialRecoveryPolicy` — type — line 108
 - `MaterialRequirement` — type — line 8
 - `nearbyWorldMaterialCount` — function — line 40
 

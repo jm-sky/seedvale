@@ -16,7 +16,7 @@ import type { Scene } from 'three'
  * confirm time (implementation notes §2: never trust a cached preview result
  * for the final mutation).
  */
-export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch'
+export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch' | 'palisade'
 
 export type PlacementPreviewUiView = {
   label: string
@@ -30,11 +30,20 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   fireSimple: 'Ognisko',
   firePit: 'Palenisko',
   standingTorch: 'Pochodnia',
+  palisade: 'Palisada',
 }
 
 export type PlacementPreviewActionDeps = {
   scene: Scene
-  placement: Pick<PlacementActions, 'previewTentPlacement' | 'placeTentAtAim' | 'previewStandingTorchPlacement' | 'placeStandingTorchAtAim'>
+  placement: Pick<
+    PlacementActions,
+    | 'previewTentPlacement'
+    | 'placeTentAtAim'
+    | 'previewStandingTorchPlacement'
+    | 'placeStandingTorchAtAim'
+    | 'previewPalisadePlacement'
+    | 'placePalisadeAtAim'
+  >
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
   previewFire: () => PlacementPreviewResult
   buildSimpleFire: () => boolean
@@ -80,6 +89,7 @@ export function createPlacementPreviewActions(
       case 'firePit':
       case 'fireSimple':
         return previewFire()
+      case 'palisade': return placement.previewPalisadePlacement()
       case 'standingTorch': return placement.previewStandingTorchPlacement()
       case 'tent': return placement.previewTentPlacement()
     }
@@ -90,6 +100,7 @@ export function createPlacementPreviewActions(
       case 'chest': containers.placeContainerAtAim(); return
       case 'firePit': buildFirePit(); return
       case 'fireSimple': buildSimpleFire(); return
+      case 'palisade': placement.placePalisadeAtAim(); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
       case 'tent': placement.placeTentAtAim(); return
     }
