@@ -3,7 +3,7 @@
 **Created:** 2026-08-21  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
-**Depends on:** `177`
+**Depends on:** ~~177~~
 
 ## Cel
 

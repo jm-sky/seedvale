@@ -3,7 +3,7 @@
 **Created:** 2026-08-29  
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
-**Depends on:** ~~settlements-npcs-006~~  
+**Depends on:** settlements-npcs-006  
 **Domain:** settlements-npcs  
 **Tags:** items-player, npc  
 **Roadmap:** textiles-and-herbal-medicine.md

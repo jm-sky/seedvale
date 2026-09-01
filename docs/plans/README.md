@@ -32,13 +32,13 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `items-player-009-player-built-torch-and-ignition.md`               | -       | 🟡 | M      | ~~world-008~~ |
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | -       | 🟡 | M      | ~~world-008~~ |
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
-| ◼️ `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | ~~fauna-004~~ |
-| ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | ~~006~~ |
+| ◼️ `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
+| ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
 | 💡 `npc-002-npc-healing.md`                                            | -       | 🟡 | M      | ~~177~~ |
-| 💡 `settlements-npcs-012-physical-storage-inspection.md`               | -       | 🟡 | S      | ~~009~~ ~~010~~ |
-| ◼️ `settlements-npcs-014-local-goods-circulation.md`                   | -       | 🔴 | M      | ~~008~~ ~~009~~ ~~010~~ |
-| ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | -       | 🔴 | M      | ~~014~~ |
-| ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`  | -       | 🔴 | M      | ~~015~~ |
+| 💡 `settlements-npcs-012-physical-storage-inspection.md`               | -       | 🟡 | S      | ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
+| ◼️ `settlements-npcs-014-local-goods-circulation.md`                   | -       | 🔴 | M      | ~~settlements-npcs-008~~ ~~settlements-npcs-010~~ ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
+| ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | -       | 🔴 | M      | settlements-npcs-014 |
+| ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md`               | -       | 🔴 | M      | -       |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | -       | 🟡 | M      | ~~127~~ |

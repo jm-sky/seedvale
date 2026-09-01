@@ -3,7 +3,7 @@
 **Created:** 2026-08-31
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** S
-**Depends on:** ~~009~~ ~~010~~
+**Depends on:** ~~settlements-npcs-009~~ ~~settlements-npcs-010~~
 **Domain:** `settlements-npcs`
 
 ## Cel

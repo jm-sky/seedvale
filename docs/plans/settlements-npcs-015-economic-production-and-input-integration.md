@@ -3,7 +3,7 @@
 **Created:** 2026-09-01  
 **Status:** `planned` 📋  
 **Priority:** high · **Effort:** M  
-**Depends on:** ~~014~~  
+**Depends on:** settlements-npcs-014  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `production`  
 **Tags:** `production` `inventory` `economic-stock`
