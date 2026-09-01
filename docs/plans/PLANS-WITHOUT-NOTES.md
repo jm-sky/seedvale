@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-01 19:37:23  
+> Date: 2026-09-01 19:40:17  
 
 ## PLANS
 
-- `fauna-005-animal-corpse-and-bone-feeding.md`
 - `items-player-012-player-gathering-and-fire-cooking-polish.md`
 - `npc-011-npc-burial-and-graves.md`
 - `npc-012-weather-reaction-and-shelter.md`
@@ -26,37 +25,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `fauna-005-animal-corpse-and-bone-feeding.md`
-
-Prompt:
-
-```
-Zrób review planu `fauna-005-animal-corpse-and-bone-feeding.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/fauna-005-animal-corpse-and-bone-feeding.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/fauna-005-animal-corpse-and-bone-feeding-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `items-player-012-player-gathering-and-fire-cooking-polish.md`
 
