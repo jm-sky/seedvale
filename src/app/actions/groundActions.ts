@@ -15,7 +15,7 @@ import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
 import { findHiddenFindSpot, HIDDEN_FIND_SEARCH_RADIUS, resolveHiddenFindLoot } from '../../world/hiddenFinds'
 import { createSeededRandom } from '../../world/parseSeed'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
-import { bonusYieldForChopStage, isChoppableStage, yieldForChopStage } from '../../world/treeLifecycle'
+import { isChoppableStage } from '../../world/treeLifecycle'
 import { DIG_REACH } from '../interactables'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 
@@ -273,17 +273,9 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       toast.show('To drzewo nie nadaje się do ścięcia.', 'error')
       return
     }
-    const stepYield = yieldForChopStage(target.stage)
-    if (!stepYield) return
-    const bonusYield = bonusYieldForChopStage(target.stage)
-    if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-      toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
-      return
-    }
-    if (bonusYield && !inventory.canAdd(bonusYield.kind, bonusYield.count)) {
-      toast.show(inventoryFullToastText(inventory, bonusYield.kind, bonusYield.count), 'error')
-      return
-    }
+    // Inventory capacity is deliberately not gated here: `ctx.grantItem`
+    // spills any reward that doesn't fit to `droppedItems` at the player's
+    // feet, so a full inventory must never block or lose a harvest.
     const busyLabel =
       target.stage === 'mature' || target.stage === 'old'
         ? 'Oczyszczanie…'
@@ -292,14 +284,6 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
           : 'Rąbanie…'
     playActionChop(worldAudio.playAt, { x, z })
     busy.start(CHOP_DURATION_SEC, busyLabel, () => {
-      if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
-        toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
-        return
-      }
-      if (bonusYield && !inventory.canAdd(bonusYield.kind, bonusYield.count)) {
-        toast.show(inventoryFullToastText(inventory, bonusYield.kind, bonusYield.count), 'error')
-        return
-      }
       const landmark = bundle.settlementsManager
         .getLoaded()
         .flatMap((s) => s.landmarks.trees)
@@ -322,17 +306,15 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
         )
         return
       }
-      inventory.add(result.yield.kind, result.yield.count)
+      // `ctx.grantItem` — never `inventory.add` directly — so overflow spills
+      // to `droppedItems` instead of being silently lost (plan 199's contract).
+      ctx.grantItem(result.yield.kind, result.yield.count)
       let message = `+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`
       if (result.bonusYield) {
-        inventory.add(result.bonusYield.kind, result.bonusYield.count)
+        ctx.grantItem(result.bonusYield.kind, result.bonusYield.count)
         message += `, +${result.bonusYield.count} ${ITEM_DEFS[result.bonusYield.kind].label}`
       }
       playInventoryPickUp(worldAudio.playOnce)
-      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-      heldTool.syncWithInventory()
-      ctx.syncHeldHud()
-      ctx.syncQuickActionAvailability()
       toast.show(message, 'pickup')
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
