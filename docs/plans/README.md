@@ -53,6 +53,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `items-player-011-melee-attack-direction.md`         | - | ⚪ | S | ~~177~~ |
 | ◼️ `settlements-npcs-014-local-goods-circulation.md`    | - | 🔴 | M | ~~008~~ ~~009~~ ~~010~~ |
 | ◼️ `persistence-001-full-simulation-persistence.md`     | - | 🔴 | L | - |
+| ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | - | 🔴 | M | ~~014~~ |
 
 ---
 
@@ -193,7 +194,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `015`
+- settlements-npcs: `016`
 - tools: `007`
 - ui-input: `007`
 - world: `009`

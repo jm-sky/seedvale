@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-01 07:23:28  
+> Date: 2026-09-01 07:26:03  
 
 ## PLANS
 
@@ -14,6 +14,7 @@
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-014-local-goods-circulation.md`
+- `settlements-npcs-015-economic-production-and-input-integration.md`
 - `tools-000-weapon-browser-observatory.md`
 - `tools-003-house-browser-and-tools-menu.md`
 - `tools-005-seedvale-character-preparation-panel.md`
@@ -286,6 +287,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-014-local-goods-circulation-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `settlements-npcs-015-economic-production-and-input-integration.md`
+
+Prompt:
+
+```
+Zrób review planu `settlements-npcs-015-economic-production-and-input-integration.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/settlements-npcs-015-economic-production-and-input-integration.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/settlements-npcs-015-economic-production-and-input-integration-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
