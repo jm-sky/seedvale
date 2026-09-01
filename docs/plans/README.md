@@ -52,6 +52,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md` | - | 🟡 | M | 008 |
 | ◼️ `items-player-011-melee-attack-direction.md`         | - | ⚪ | S | ~~177~~ |
 | ◼️ `settlements-npcs-014-local-goods-circulation.md`    | - | 🔴 | M | ~~008~~ ~~009~~ ~~010~~ |
+| ◼️ `persistence-001-full-simulation-persistence.md`     | - | 🔴 | L | - |
 
 ---
 
@@ -189,7 +190,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - fauna: `005`
 - items-player: `012`
 - npc: `007`
-- persistence: `001`
+- persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
 - settlements-npcs: `015`
