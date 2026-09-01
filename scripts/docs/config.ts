@@ -19,7 +19,7 @@ export const SRC_DIR = resolve(ROOT_DIR, 'src')
 export const DOCS_DIR = resolve(ROOT_DIR, 'docs')
 export const CODE_MAP_DIR = resolve(DOCS_DIR, 'code-map')
 
-export const PLAN_FILE_RE = /^([a-z0-9-]+)-(\d{3})-.+\.md$/
+export const PLAN_FILE_RE = /-[0-9]{3}-.+\.md$/
 export const PLAN_ID_RE = /^([a-z0-9-]+)-(\d{3})-/
 export const LEGACY_PLAN_FILE_RE = /^\d{4}-\d{2}-\d{2}--\d{3}--.+\.md$/
 export const LEGACY_PLAN_ID_RE = /^\d{4}-\d{2}-\d{2}--(\d{3})--/
