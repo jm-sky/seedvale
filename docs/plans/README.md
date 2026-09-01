@@ -29,7 +29,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| ◼️ `items-player-009-player-built-torch-and-ignition.md`               | -       | 🟡 | M      | ~~world-008~~ |
+| 💡 `items-player-009-player-built-torch-and-ignition.md`               | -       | 🟡 | M      | ~~world-008~~ |
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | -       | 🟡 | M      | ~~world-008~~ |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | ◼️ `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
