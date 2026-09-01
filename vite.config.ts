@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
         input: {
           main: resolve(rootDir, 'index.html'),
           assetBrowser: resolve(rootDir, 'asset-browser.html'),
+          houseBrowser: resolve(rootDir, 'house-browser.html'),
         },
       },
     },

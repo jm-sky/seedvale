@@ -44,7 +44,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `persistence-001-full-simulation-persistence.md`                    | -       | 🔴 | L      | -       |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
-| 💡 `tools-003-house-browser-and-tools-menu.md`                         | -       | 🟡 | M      | ~~111~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
@@ -77,6 +76,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-npcs-008-household-and-settlement-food-storage-model.md` | NPC eating, gathering and food exchange work correctly |
 | `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md` | NPCs deliver wood and food to the correct physical storage |
 | `2026-08-20--177--npc-combat.md` | NPC combat behaves correctly in an actual encounter |
+| `tools-003-house-browser-and-tools-menu.md` | House Browser opens at `/house-browser.html`, all houses browse/switch without reload, camera/scene/collider controls work, padding is visual-only, rapid switching leaves no stale assembly, Main Menu `Narzędzia ›` reaches House Browser and Asset Browser, normal gameplay boots unchanged |
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | Animal attacks trigger correctly and NPCs respond/defend as expected |
 | `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | Lodging arrival, cancellation and stuck-movement recovery work correctly |
 | `ui-input-006-fishing-ux-and-water-support.md` | Fishing works from lake, river and ocean; Quick Action equips the rod correctly |
