@@ -145,7 +145,7 @@ const buildRow = (
   const marker = getNotesMarker(isPlanned, hasNotes)
   const title = getPaddedPlanTitle(marker, file)
 
-  return `| ${title} | - | ${priorityEmoji} | ${effort} | ${depends} |`
+  return `| ${title} | -       | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(6)} |`
 }
 
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
