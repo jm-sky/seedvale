@@ -36,7 +36,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
 | 💡 `npc-002-npc-healing.md`                                            | -       | 🟡 | M      | ~~177~~ |
 | 💡 `settlements-npcs-012-physical-storage-inspection.md`               | -       | 🟡 | S      | ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
-| ◼️ `settlements-npcs-014-local-goods-circulation.md`                   | -       | 🔴 | M      | ~~settlements-npcs-008~~ ~~settlements-npcs-010~~ ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
+| ◼️ `settlements-npcs-014-local-goods-circulation.md`                   | -       | 🔴 | M      | ~~settlements-npcs-008~~ ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
 | ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | -       | 🔴 | M      | settlements-npcs-014 |
 | ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md`               | -       | 🔴 | M      | -       |
