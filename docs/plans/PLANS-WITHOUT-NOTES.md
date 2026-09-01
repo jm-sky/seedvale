@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-01 18:40:31  
+> Date: 2026-09-01 18:57:17  
 
 ## PLANS
 
@@ -10,6 +10,7 @@
 - `npc-011-npc-burial-and-graves.md`
 - `npc-012-weather-reaction-and-shelter.md`
 - `npc-013-night-campfire-gathering.md`
+- `npc-014-work-contracts-foundation-and-physical-posting.md`
 - `settlements-npcs-006-wool-to-material.md`
 - `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-015-economic-production-and-input-integration.md`
@@ -163,6 +164,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/npc-013-night-campfire-gathering-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-014-work-contracts-foundation-and-physical-posting.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-014-work-contracts-foundation-and-physical-posting.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `/home/runner/work/seedvale/seedvale/docs/plans/npc-014-work-contracts-foundation-and-physical-posting.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/npc-014-work-contracts-foundation-and-physical-posting-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
