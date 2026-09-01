@@ -21,6 +21,7 @@ Timer.prototype.getDelta = function (): number {
   return isNpcEngagementOpen(engagementState()) ? delta * DIALOGUE_TIME_SCALE : delta
 }
 
+// Added missing `nearbyAnimalThreats` to engage NPC into combat with animals.
 const originalNpcUpdate = NpcAgent.prototype.update
 NpcAgent.prototype.update = function (
   this: NpcAgent,
@@ -30,12 +31,13 @@ NpcAgent.prototype.update = function (
   timeOfDay,
   nearbyNpcCount,
   dayLengthSec,
+  nearbyAnimalThreats,
 ): void {
   if (isEngagedNpc(engagementState(), this)) {
-    originalNpcUpdate.call(this, 0, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec)
+    originalNpcUpdate.call(this, 0, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec, nearbyAnimalThreats)
     return
   }
-  originalNpcUpdate.call(this, dt, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec)
+  originalNpcUpdate.call(this, dt, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec, nearbyAnimalThreats)
 }
 
 const originalPlayerUpdate = PlayerController.prototype.update

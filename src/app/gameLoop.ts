@@ -187,6 +187,16 @@ function logNpcCombatHit(
   const wolfText = wolfInfo
     ? `wolf=${wolfInfo.animalId}/${wolfInfo.kind} frenzy=${wolfInfo.frenzied} rabid=${wolfInfo.rabid} wolfHp=${Math.round(wolfInfo.health.current)}/${wolfInfo.health.max}`
     : `wolf=${attackerAnimalId}`
+  // Snapshot of what the NPC itself knew about this attacker at the exact
+  // moment the bite landed (plan 179 diagnostics follow-up) — read straight
+  // off `NpcAgent`'s own live fields via `combatDebugSnapshot()`, never
+  // recomputed, so it can be compared against `reactToAnimalThreat`'s own
+  // `?debugNpcCombat=1` logs to see whether perception ever ran for this
+  // attacker before/around this hit.
+  const snap = npc.combatDebugSnapshot()
+  const threatText = snap.currentAnimalThreat
+    ? `${snap.currentAnimalThreat.animalId}/${snap.currentAnimalThreat.kind} dist=${snap.currentAnimalThreat.distance.toFixed(2)}`
+    : 'null'
   console.log(
     '[NPC COMBAT]',
     wolfText,
@@ -197,6 +207,10 @@ function logNpcCombatHit(
     `canFight=${npc.canFightBack()}`,
     `damage=${resolved.finalDamage.toFixed(1)}`,
     `simDay=${dayNight.elapsedDays.toFixed(3)}`,
+    `npcPhase=${snap.phase}`,
+    `npcAction=${snap.pendingAction ?? 'none'}`,
+    `npcCurrentAnimalThreat=${threatText}`,
+    `npcLastThreatResponse=${snap.lastAnimalThreatResponse ?? 'never'}`,
   )
 }
 

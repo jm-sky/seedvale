@@ -8,6 +8,8 @@
 **Subdomains:** `decision-making` `fauna`
 **Tags:** `AnimalAgent` `NPCAgent` `DecisionContext` `scoring`
 
+> Consider review: `docs/research/2026-09-01-npc-animal-threat-forwarding.md`
+
 ## Cel
 
 Uporządkować warstwę podejmowania decyzji agentów, przede wszystkim `AnimalAgent`, tak aby priorytety zachowań nie były zakodowane głównie jako kolejność rozbudowanego drzewa `if / else if`.

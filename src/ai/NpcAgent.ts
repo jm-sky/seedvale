@@ -37,7 +37,7 @@ import {
 import { advanceProjectile, sweptProjectileHit } from '../combat/projectile'
 import { rangedAccuracy, rangedDeviationRoll, resolveRangedDirection } from '../combat/rangedAttack'
 import { createRangedAttackLifecycle } from '../combat/rangedLifecycle'
-import { isDebugMode } from '../debug/debugMode'
+import { isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
   claimEconomySurplus,
@@ -128,6 +128,7 @@ import {
   tickNeeds,
 } from './Needs'
 import {
+  type AnimalThreatResponse,
   decideAnimalThreatResponse,
   type ImmediateAnimalThreat,
   senseImmediateAnimalThreat,
@@ -961,11 +962,20 @@ export class NpcAgent {
   /** Monotonic per-agent counter for `resolveDefense`'s incoming-damage roll
    *  (mirrors `PlayerController.nextDefenseAttempt`). */
   private defenseAttempt = 0
+  /** Throttle (1 sim-second) for the `?debugNpcCombat=1` stamina-starved
+   *  attack-skip log in `tickMeleeCombat` — the underlying condition can
+   *  otherwise hold true for many consecutive frames while stamina regens. */
+  private lastStaminaSkipLogSec = -Infinity
   /** This frame's sensed `ImmediateAnimalThreat` (plan 179 §7/§10/§12), or
    *  `null` — refreshed every `update()` call from the caller-supplied
    *  bounded `nearbyAnimalThreats` list, a situation snapshot, not a
    *  decision. See `reactToAnimalThreat()`. */
   private currentAnimalThreat: ImmediateAnimalThreat | null = null
+  /** Last `decideAnimalThreatResponse` outcome (diagnostic-only cache, no
+   *  behavioural effect) — lets `combatDebugSnapshot()` report whether a
+   *  reaction ever ran without recomputing one, for `?debug=1&debugNpcCombat=1`.
+   *  `null` until `reactToAnimalThreat()` runs at least once. */
+  private lastAnimalThreatResponse: AnimalThreatResponse | null = null
   /** Throttles re-running `decideAnimalThreatResponse` while a threat is
    *  still present — perception itself (`currentAnimalThreat` above) stays
    *  fresh every frame; only the defend/flee re-scoring is throttled, same
@@ -1702,6 +1712,33 @@ export class NpcAgent {
     return rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
   }
 
+  /** Diagnostic-only: this NPC's live combat/threat state, read straight off
+   *  the same fields `reactToAnimalThreat`/`beginCombat`/`tickMeleeCombat`
+   *  already maintain — no recomputation, no new state. Built for
+   *  `?debug=1&debugNpcCombat=1`'s `logNpcCombatHit` to snapshot "what did
+   *  this NPC know" at the exact moment an animal bite lands, so a hit can be
+   *  correlated against whether `currentAnimalThreat` was ever set and
+   *  whether a `defend`/`flee` reaction ever ran. */
+  combatDebugSnapshot(): {
+    phase: Phase
+    pendingAction: ActionId | null
+    currentAnimalThreat: { animalId: string, kind: string, distance: number } | null
+    lastAnimalThreatResponse: AnimalThreatResponse | null
+  } {
+    return {
+      phase: this.phase,
+      pendingAction: this.pendingAction?.kind ?? null,
+      currentAnimalThreat: this.currentAnimalThreat
+        ? {
+            animalId: this.currentAnimalThreat.animalId,
+            kind: this.currentAnimalThreat.kind,
+            distance: this.currentAnimalThreat.distance,
+          }
+        : null,
+      lastAnimalThreatResponse: this.lastAnimalThreatResponse,
+    }
+  }
+
   /** Executes an already-decided combat intent (plan 177) — `NpcAgent` never
    *  picks its own target, reason to fight or weapon mode; a future Hunter/
    *  animal-defense/bandit decision system supplies all three via `intent`.
@@ -1807,17 +1844,38 @@ export class NpcAgent {
           this.combatAttackAttempt += 1
           applyNpcMeleeHit(intent.target, tick.config, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
           this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
+          if (isNpcCombatDebugMode()) {
+            console.log('[NPC COMBAT]', `npc=${this.id}/${this.name}/${this.role}`, `attack.hit target=${intent.target.ref.id}`)
+          }
           if (!intent.target.isAlive()) {
             this.endCombat('complete')
             return
           }
+        } else if (isNpcCombatDebugMode()) {
+          console.log(
+            '[NPC COMBAT]',
+            `npc=${this.id}/${this.name}/${this.role}`,
+            `attack.missed target=${intent.target.ref.id}`,
+            `distance=${dist.toFixed(2)}/range=${weapon.melee.range}`,
+          )
         }
+      } else if (isNpcCombatDebugMode()) {
+        console.log('[NPC COMBAT]', `npc=${this.id}/${this.name}/${this.role}`, 'attack.skipped reason=noYaw (target at same position)')
       }
     }
 
-    if (inRange && this.combatAttack.state() === 'idle' && this.stamina.current >= weapon.melee.staminaCost) {
-      drainStamina(this.stamina, weapon.melee.staminaCost)
-      this.combatAttack.start(weapon.melee)
+    if (inRange && this.combatAttack.state() === 'idle') {
+      if (this.stamina.current >= weapon.melee.staminaCost) {
+        drainStamina(this.stamina, weapon.melee.staminaCost)
+        this.combatAttack.start(weapon.melee)
+      } else if (isNpcCombatDebugMode() && this.simClock - this.lastStaminaSkipLogSec > 1) {
+        this.lastStaminaSkipLogSec = this.simClock
+        console.log(
+          '[NPC COMBAT]',
+          `npc=${this.id}/${this.name}/${this.role}`,
+          `attack.skipped reason=stamina stamina=${this.stamina.current.toFixed(1)}/${weapon.melee.staminaCost}`,
+        )
+      }
     }
   }
 
@@ -1948,6 +2006,7 @@ export class NpcAgent {
       healthRatio,
       neuroticism: this.personality.neuroticism,
     })
+    this.lastAnimalThreatResponse = decision
     this.trace.record({
       simTime: this.simClock,
       type: 'animalThreat.response',
@@ -1955,9 +2014,28 @@ export class NpcAgent {
       canFight: meleeWeapon != null || hasRanged,
       healthRatio,
     })
+    if (isNpcCombatDebugMode()) {
+      console.log(
+        '[NPC COMBAT]',
+        `npc=${this.id}/${this.name}/${this.role}`,
+        `npcHp=${Math.round(this.health.currentHp)}/${this.health.maxHp}`,
+        `animal=${threat.animalId}/${threat.kind}`,
+        `distance=${threat.distance.toFixed(2)}`,
+        `canFight=${meleeWeapon != null || hasRanged}`,
+        `response=${decision}`,
+      )
+    }
     if (decision === 'defend') {
       const mode: CombatIntent['mode'] = hasRanged ? 'ranged' : 'melee'
-      if (this.beginCombat({ target: threat.target, mode })) return
+      const started = this.beginCombat({ target: threat.target, mode })
+      if (isNpcCombatDebugMode()) {
+        console.log(
+          '[NPC COMBAT]',
+          `npc=${this.id}/${this.name}/${this.role}`,
+          started ? `combat.started mode=${mode}` : 'combat.startFailed (target invalid or no weapon at beginCombat time)',
+        )
+      }
+      if (started) return
       // Capability was just checked but `beginCombat` still rejected it
       // (e.g. target went invalid between the check and here) — flee rather
       // than leaving the NPC idle next to an active threat.

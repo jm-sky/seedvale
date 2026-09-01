@@ -11,6 +11,7 @@ import {
   initialSpontaneousVocalizeCooldownSec,
   tickSpontaneousVocalizeCooldown,
 } from '../audio/animalSounds'
+import { isNpcCombatDebugMode } from '../debug/debugMode'
 import { findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { tintPropMaterials } from '../settlement/props'
@@ -2066,11 +2067,29 @@ export class AnimalAgent {
       }
 
     } else if (npcThreat && this.frenzied) {
+      if (!this.threateningHuman && isNpcCombatDebugMode()) {
+        console.log(
+          '[NPC COMBAT] threat state ON',
+          `wolf=${this.animalId}/${this.def.kind}`,
+          `frenzy=${this.frenzied}`,
+          `npcThreat=${npcThreat.id}/${npcThreat.id}`,
+          `playerActive=${sense.playerActive}`,
+        )
+      }
       this.threateningHuman = true
       this.debugBranch = 'npc-attack-frenzied'
       this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
       this.chaseNpc(npcThreat, dt, onNpcHit)
     } else if (npcThreat) {
+      if (isNpcCombatDebugMode()) {
+        console.log(
+          '[NPC COMBAT] npcThreat ON',
+          `wolf=${this.animalId}/${this.def.kind}`,
+          `frenzy=${this.frenzied}`,
+          `npcThreat=${npcThreat.id}/${npcThreat.id}`,
+          `playerActive=${sense.playerActive}`,
+        )
+      }
       this.cancelSourceTarget()
       this.humanDecisionTimer -= dt
       if (this.humanDecisionTimer <= 0) {

@@ -99,11 +99,16 @@ export function isColliderDebugMode(): boolean {
   return urlFlag('debugColliders')
 }
 
-/** `?debug=1&debugNpcCombat=1` — console-logs every animal→NPC hit that
- *  actually lands (post-defense damage > 0), for diagnosing wolf-vs-NPC
- *  combat. Requires the `debug` master switch, same convention `?gui=1`
- *  follows elsewhere in this codebase — not a standalone flag like the
- *  other `isXDebugMode` functions above. */
+/** `?debug=1&debugNpcCombat=1` — console-logs NPC/animal combat in both
+ *  directions: every animal→NPC hit that actually lands (post-defense
+ *  damage > 0, see `gameLoop.ts`'s `logNpcCombatHit`), and the NPC→animal
+ *  defend path (`NpcAgent.reactToAnimalThreat`/`beginCombat`/
+ *  `tickMeleeCombat`: threat sensed, defend/flee decision, combat start/fail,
+ *  and each melee attack's hit/miss/skip) — for diagnosing wolf-vs-NPC
+ *  combat where one side seems to never land a hit. Requires the `debug`
+ *  master switch, same convention `?gui=1` follows elsewhere in this
+ *  codebase — not a standalone flag like the other `isXDebugMode` functions
+ *  above. */
 export function isNpcCombatDebugMode(): boolean {
   return isDebugMode() && urlFlag('debugNpcCombat')
 }
