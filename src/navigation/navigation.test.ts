@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { findPath, type NavigationQuery, type PathPoint } from './navigation'
+import { navigationApproachTarget } from '../ai/npcColliderRim'
+import { type CircleCollider, colliderContainsPoint } from '../world/collision'
+import { DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from './navigation'
 
 function openQuery(): NavigationQuery {
   return { isWalkable: () => true, sampleHeight: () => 0 }
@@ -108,5 +110,34 @@ describe('findPath', () => {
     const query = queryWithRect(8, 12, -3, 3)
     const result = findPath(query, {}, { x: 0, z: 0 }, { x: 20, z: 0 }, { boundsPadding: 10, maxNodes: 3 })
     expect(result).toBeNull()
+  })
+
+  // Plan npc-007 regression: an interaction destination close enough to a
+  // collider for locomotion's own destination-aware approach exception
+  // (well serving stand, a workplace) must not be routed to directly —
+  // `NpcAgent.attemptNavRepath` instead aims here at `navigationApproachTarget`'s
+  // pulled-back goal (see `npcColliderRim.test.ts` for that function's own
+  // coverage), the same integration the production repath now performs.
+  it('routes around a collider-adjacent interaction destination via its approach target, never crossing the collider', () => {
+    // Off-grid center so this doesn't coincidentally align with the 1.5m
+    // grid — the exact failure mode this plan fixed.
+    const well: CircleCollider = { type: 'circle', x: 5.37, z: -2.14, radius: 0.85 }
+    const servingDest = { x: well.x, z: well.z - (well.radius + 0.3) } // south rim + serving offset
+    const start = { x: well.x, z: well.z + 6 } // opposite side — direct line to servingDest crosses the well
+    const exteriorOnly: NavigationQuery = {
+      isWalkable: (x, z) => !colliderContainsPoint(well, x, z),
+      sampleHeight: () => 0,
+    }
+    const goal = navigationApproachTarget(servingDest, [well], 0.4, DEFAULT_CELL_SIZE * Math.SQRT2)
+
+    const result = findPath(exteriorOnly, {}, start, goal, { boundsPadding: 10 })
+    expect(result).not.toBeNull()
+    for (const p of [start, ...result!.waypoints]) {
+      expect(colliderContainsPoint(well, p.x, p.z)).toBe(false)
+    }
+    // Landed on the same (south) side as the real destination, not routed
+    // to an arbitrary far/wrong-side walkable cell.
+    const last = result!.waypoints[result!.waypoints.length - 1]!
+    expect(last.z).toBeLessThan(well.z)
   })
 })

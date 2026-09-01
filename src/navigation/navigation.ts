@@ -76,7 +76,11 @@ export type PathResult = {
   visitedNodes: number
 }
 
-const DEFAULT_CELL_SIZE = 1.5
+/** World-space grid resolution `findPath` uses when a caller doesn't
+ *  override it via `PathfindOptions.cellSize` — exported so a caller can
+ *  size an A* goal's clearance from an obstacle to survive this grid's own
+ *  snapping (see `npcColliderRim.ts`'s `navigationApproachTarget`). */
+export const DEFAULT_CELL_SIZE = 1.5
 const DEFAULT_BOUNDS_PADDING = 6
 const DEFAULT_MAX_NODES = 1500
 /** How many rings outward (each `cellSize` wide) to search for a walkable

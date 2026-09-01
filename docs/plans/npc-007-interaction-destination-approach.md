@@ -1,7 +1,7 @@
 # Plan: NPC Navigation — Interaction Destination Approach
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
 **Depends on:** ~~006~~
 **Domain:** `npc`

@@ -53,7 +53,7 @@ import { claimFoodItems, depositFoodItems } from '../items/foodItems'
 import { Inventory, type ItemAmount } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
-import { type AgentProfile, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
+import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
@@ -138,6 +138,7 @@ import {
   destinationOnColliderRim,
   isExteriorPoint,
   localEscapeRadii,
+  navigationApproachTarget,
   pickEmergencyTeleportPoint,
 } from './npcColliderRim'
 import {
@@ -249,6 +250,16 @@ const NPC_COLLIDER_APPROACH_BUFFER = 0.4
  *  this fraction of a collider's radius (keeps feet out of e.g. the well's
  *  water cylinder while still reaching the rim). */
 const NPC_COLLIDER_CORE_FRACTION = 0.55
+/** Clearance (meters) past a collider's rim used for the A* goal when the
+ *  real interaction destination sits inside `NPC_COLLIDER_APPROACH_BUFFER`
+ *  of that collider (plan npc-007) — a raw destination that close can snap,
+ *  on `navigation.ts`'s coarse `DEFAULT_CELL_SIZE` grid, to a goal cell that
+ *  is still inside the collider (or on its wrong side), so A* is instead
+ *  aimed at a point far enough out to survive that grid's worst-case
+ *  snapping error (`cellSize` on each axis). The existing destination-aware
+ *  final approach (`isWalkable`/`resolveSteerTarget`) covers the short
+ *  remaining stretch onto the actual destination once the route arrives. */
+const NAV_APPROACH_CLEARANCE = DEFAULT_CELL_SIZE * Math.SQRT2
 
 /** How strongly nearby NPCs suppress this NPC's chance to react ("Hmm?") to
  *  the player, scaled by `nearbyNpcCount * (1 - openness)` — see
@@ -4242,20 +4253,29 @@ export class NpcAgent {
    *  the shared `navigation/navigation.ts` layer, reusing this NPC's own
    *  `isWalkableExterior`/`sampleHeight` — Navigation never re-derives
    *  walkability from `ColliderRegistry` itself (see `NavigationQuery`'s
-   *  doc). Starts following the resulting route (`repathWaypoints`) and
-   *  returns `true` on success; `false` leaves the fallback to the caller. */
+   *  doc). Routes toward `navigationApproachTarget(dest)` rather than `dest`
+   *  itself (plan npc-007) — the existing destination-aware final approach
+   *  covers the gap when the two differ. Starts following the resulting
+   *  route (`repathWaypoints`) and returns `true` on success; `false` leaves
+   *  the fallback to the caller. */
   private attemptNavRepath(dest: { x: number, z: number }): boolean {
     const query: NavigationQuery = {
       isWalkable: (x, z) => this.isWalkableExterior(x, z),
       sampleHeight: this.sampleHeight,
     }
     const profile: AgentProfile = {}
+    const goal = navigationApproachTarget(
+      dest,
+      this.collidersNear(dest.x, dest.z),
+      NPC_COLLIDER_APPROACH_BUFFER,
+      NAV_APPROACH_CLEARANCE,
+    )
     const start = performance.now()
     const result = findPath(
       query,
       profile,
       { x: this.mesh.position.x, z: this.mesh.position.z },
-      { x: dest.x, z: dest.z },
+      { x: goal.x, z: goal.z },
     )
     recordPathRequest(result, performance.now() - start)
     recordRepath()

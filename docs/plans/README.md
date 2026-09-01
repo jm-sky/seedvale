@@ -29,7 +29,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary   | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | ------ | ------- |
-| 💡 `npc-007-interaction-destination-approach.md`                       | - | 🔴 | M | ~~006~~ |
 | ◼️ `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md`          | - | 🟡 | M | - |
 | ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | 008 |
@@ -54,7 +53,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | - | 🔴 | M | - |
 | 💡 `tools-006--world-observatory.md`                                   | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | - | 🔴 | L | - |
-| 💡 `npc-007-interaction-destination-approach.md`                       | - | 🔴 | M | ~~006~~ |
 
 ---
 
@@ -76,6 +74,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `ui-input-006-fishing-ux-and-water-support.md` | Fishing works from lake, river and ocean; Quick Action equips the rod correctly |
 | `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | Construction placement, terrain preparation and Quick Actions behave correctly |
 | `2026-08-14--111--house-construction.md` | Verify house assembly and confirm the known assembly bug is resolved |
+| `npc-007-interaction-destination-approach.md` | NPCs reach the well serving point and queue without repath/escape looping; ordinary NPC movement still avoids colliders and rescue still works |
 
 ---
 

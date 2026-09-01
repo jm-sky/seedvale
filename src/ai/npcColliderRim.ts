@@ -91,6 +91,34 @@ export function localEscapeRadii(
 }
 
 /**
+ * A* goal for a destination close enough to `colliders` that locomotion's
+ * own destination-aware approach exception would apply to it (plan npc-007
+ * — the identical `colliderSignedDistance <= approachBuffer` test
+ * `NpcAgent.isWalkable` itself uses). `dest` at that range is exactly where
+ * the coarse local-grid A* (`navigation.ts`) can snap its goal cell to a
+ * cell still inside the collider's disk, or on its far side — sending the
+ * route somewhere the real destination never intended. Returns a point
+ * pulled back onto that collider's rim by `clearance` (large enough to
+ * survive the grid's worst-case snapping error) instead, so A* only ever
+ * has to route to open ground; the existing destination-aware final
+ * approach covers the short remaining stretch onto the real `dest` once the
+ * route arrives. Returns `dest` unchanged when no collider is that close —
+ * the common case for an ordinary, not-collider-adjacent destination.
+ */
+export function navigationApproachTarget(
+  dest: Point2,
+  colliders: readonly Collider[],
+  approachBuffer: number,
+  clearance: number,
+): Point2 {
+  for (const collider of colliders) {
+    if (colliderSignedDistance(collider, dest.x, dest.z) > approachBuffer) continue
+    return colliderRimPoint(collider, dest.x, dest.z, clearance)
+  }
+  return dest
+}
+
+/**
  * Emergency-teleport picker: snap each candidate to a foreign collider's
  * rim, then keep the first exterior walkable point. Never returns a point
  * inside any supplied collider (so a house-center `home` candidate is

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { CircleCollider } from '../world/collision'
+import { type CircleCollider, colliderContainsPoint } from '../world/collision'
 import {
   COLLIDER_RIM_MARGIN,
   destinationOnColliderRim,
   isExteriorPoint,
   localEscapeRadii,
+  navigationApproachTarget,
   pickEmergencyTeleportPoint,
   rimPointFacing,
 } from './npcColliderRim'
@@ -65,6 +66,40 @@ describe('rescue probe rejects interior points', () => {
 
   it('keeps the 1.5 / 3 rings when the NPC is already outside', () => {
     expect(localEscapeRadii({ x: 8, z: 0 }, [house])).toEqual([1.5, 3])
+  })
+})
+
+describe('navigationApproachTarget (plan npc-007)', () => {
+  // Mirrors the well serving stand: servingOffset (0.3) puts the real
+  // destination inside NPC_COLLIDER_APPROACH_BUFFER (0.4) of the well's
+  // collider — well within the coarse A* grid's own snapping error.
+  const wellCollider: CircleCollider = { type: 'circle', x: 0, z: 0, radius: 0.85 }
+  const servingDest = { x: 0, z: -(wellCollider.radius + 0.3) }
+  const approachBuffer = 0.4
+  const clearance = 1.5 * Math.SQRT2
+
+  it('pulls a collider-adjacent destination back onto the rim by the requested clearance', () => {
+    const goal = navigationApproachTarget(servingDest, [wellCollider], approachBuffer, clearance)
+    expect(Math.hypot(goal.x - wellCollider.x, goal.z - wellCollider.z)).toBeCloseTo(wellCollider.radius + clearance)
+    // Same side as the real destination (south), not an arbitrary direction.
+    expect(goal.z).toBeLessThan(0)
+    expect(goal.x).toBeCloseTo(0)
+  })
+
+  it('the pulled-back goal survives a worst-case 1.5m grid snap without landing back inside the collider', () => {
+    const goal = navigationApproachTarget(servingDest, [wellCollider], approachBuffer, clearance)
+    // Worst-case rounding error of a 1.5m grid vertex nearest an arbitrary
+    // point, on each axis independently.
+    for (const dx of [-0.75, 0.75]) {
+      for (const dz of [-0.75, 0.75]) {
+        expect(colliderContainsPoint(wellCollider, goal.x + dx, goal.z + dz)).toBe(false)
+      }
+    }
+  })
+
+  it('leaves an ordinary, not-collider-adjacent destination unchanged', () => {
+    const dest = { x: 8, z: 3 }
+    expect(navigationApproachTarget(dest, [wellCollider, house], approachBuffer, clearance)).toEqual(dest)
   })
 })
 
