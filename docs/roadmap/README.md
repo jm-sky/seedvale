@@ -20,6 +20,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 | File |
 |---|
 | `domain-debug-and-simulation-observability.md` |
+| `economy-goods-flow.md` |
 | `economy-production.md` |
 | `horse-and-riding.md` |
 | `npc-ai.md` |

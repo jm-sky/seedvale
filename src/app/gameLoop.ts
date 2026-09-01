@@ -507,12 +507,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  acquisition/facing is loosened for them (plan 142). Derived from the
    *  touch chrome actually being mounted, not re-sniffed per frame. */
   const aimMode: CombatAimMode = touchControls ? 'touch' : 'pointer'
-  /** Yaw the in-flight attack was committed to when it started (plan 142 §2),
-   *  or `null` when the hit should resolve against live camera yaw — always
-   *  the case on `pointer`, which keeps its original behaviour exactly. Set at
-   *  `requestAttack` time and consumed one hit window later, so a touch swing
-   *  lands on the target the player actually tapped rather than on wherever
-   *  the camera happened to drift during wind-up. */
+  /** Yaw the in-flight attack is committed to for its whole hit window (plan
+   *  items-player-011) — `null` only while idle. Set once at `requestAttack`
+   *  time via `yawToward()` (the same forward convention `resolveMeleeHits`
+   *  uses), independent of `aimMode`, so a swing always lands on the target
+   *  the player actually acquired rather than on wherever the camera drifts
+   *  during wind-up. Cleared back to `null` on hit resolution/cancel so the
+   *  next attack always recomputes its own direction. */
   let attackYaw: number | null = null
 
   /** Ranged attack lifecycle (plan 162) — same draw/release/recovery shape
@@ -839,6 +840,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.setMeleeSwing(null)
       }
       if (meleeTick.hitReady && meleeTick.config) {
+        // `attackYaw` is always set while `playerMelee.isAttacking()` (see the
+        // `requestAttack` call site) and this branch only runs inside that
+        // window, so the fallback below never actually fires — kept only as
+        // a type-level safety net, never a "normal" live-yaw path (plan
+        // items-player-011).
         const hitIds = resolveMeleeHits(
           player.mesh.position.x,
           player.mesh.position.z,
@@ -1436,21 +1442,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   if (result.moveX !== 0 || result.moveZ !== 0) {
                     player.gapClose(result.moveX, result.moveZ)
                   }
-                  // Touch auto-facing (plan 142 §2): the character already
-                  // turns to the target above, but the hit test runs off aim
-                  // yaw — commit that too, so a target acquired inside the
-                  // wider touch cone but outside the weapon's arc still
-                  // connects. Computed after the gap-close, since a collision
-                  // can slide the player off the straight line to the target.
-                  // Camera and movement control stay untouched.
-                  attackYaw = aimMode === 'touch'
-                    ? yawToward(
-                        player.mesh.position.x,
-                        player.mesh.position.z,
-                        target.position.x,
-                        target.position.z,
-                      )
-                    : null
+                  // Commit this attack's hit-test direction now (plan
+                  // items-player-011) — `faceToward()` above only sets the
+                  // visual model facing; `resolveMeleeHits()` needs its own
+                  // yaw in that function's `(-sin, -cos)` convention, via
+                  // `yawToward()`. Computed after the gap-close, since a
+                  // collision can slide the player off the straight line to
+                  // the target. Camera/movement control stay untouched, and
+                  // this commit is independent of `aimMode`.
+                  attackYaw = yawToward(
+                    player.mesh.position.x,
+                    player.mesh.position.z,
+                    target.position.x,
+                    target.position.z,
+                  ) ?? mouseLook.state.yaw
                 }
               }
             }

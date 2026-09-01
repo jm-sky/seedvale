@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Priority:** high · **Effort:** L  
 **Depends on:** none  
-**Domain:** `npc`
+**Domain:** `tools`
 
 > **Draft** — roadmap na wysokim poziomie. Szczegóły implementacyjne zostaną uzupełnione przed rozpoczęciem właściwej realizacji planu.
 

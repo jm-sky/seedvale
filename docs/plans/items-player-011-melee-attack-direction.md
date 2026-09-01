@@ -1,7 +1,7 @@
 # Plan: Melee attack direction consistency
 
 **Created:** 2026-09-01  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Priority:** low · **Effort:** S  
 **Depends on:** ~~177~~  
 **Domain:** `items-player`

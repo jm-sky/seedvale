@@ -37,23 +37,21 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`               | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
 | ◼️ `settlements-npcs-006-wool-to-material.md`           | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md` | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
-| ◼️ `npc-000--mpfb2-npc-hero-character-pipeline.md`      | - | 🔴 | L | - |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                  | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
-| ◼️ `tools-003-house-browser-and-tools-menu.md`          | - | 🟡 | M | ~~111~~ |
-| ◼️ `tools-000-weapon-browser-observatory.md`            | Weapon Browser w Observatory/Admin | 🟡 | M | - |
-| 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
-| 💡 `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
-| ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
 | 💡 `settlements-npcs-012-physical-storage-inspection.md` | - | 🟡 | S | ~~009~~ ~~010~~ |
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md` | - | 🔴 | M | `none` |
+| ◼️ `settlements-npcs-014-local-goods-circulation.md`    | - | 🔴 | M | ~~008~~ ~~009~~ ~~010~~ |
+| ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | - | 🔴 | M | ~~014~~ |
 | 💡 `items-player-003-player-physical-effort-stamina-vigor.md` | - | 🟡 | M | - |
 | ◼️ `world-008-player-world-placement-foundation.md`     | - | 🟡 | M | - |
 | ◼️ `items-player-009-player-built-torch-and-ignition.md` | - | 🟡 | M | 008 |
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md` | - | 🟡 | M | 008 |
-| ◼️ `items-player-011-melee-attack-direction.md`         | - | ⚪ | S | ~~177~~ |
-| ◼️ `settlements-npcs-014-local-goods-circulation.md`    | - | 🔴 | M | ~~008~~ ~~009~~ ~~010~~ |
 | ◼️ `persistence-001-full-simulation-persistence.md`     | - | 🔴 | L | - |
-| ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | - | 🔴 | M | ~~014~~ |
+| ◼️ `tools-000-weapon-browser-observatory.md`            | Weapon Browser w Observatory/Admin | 🟡 | M | - |
+| ◼️ `tools-003-house-browser-and-tools-menu.md`          | - | 🟡 | M | ~~111~~ |
+| ◼️ `tools-005-seedvale-character-preparation-panel.md`  | - | 🔴 | M | - |
+| 💡 `tools-006--world-observatory.md`                    | Panel obserwacji życia świata | ⚪  | XL     | ~~071~~, ~~069~~ |
+| ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`    | - | 🔴 | L | - |
 
 ---
 
@@ -195,7 +193,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `001`
 - settlements: `003`
 - settlements-npcs: `016`
-- tools: `007`
+- tools: `008`
 - ui-input: `007`
 - world: `009`
 - world-terrain: `004`
