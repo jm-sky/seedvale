@@ -184,3 +184,30 @@ The visual checks should specifically look for:
 For performance, compare terrain/chunk generation time and streaming hitching before/after. Do not infer performance from draw calls alone; the mountain feature changes the heightfield, not necessarily draw-call count.
 
 Technical verification and browser/manual verification should remain separate, as required by the plan.
+
+## 13. Implemented (2026-09-01)
+
+All changes are confined to `sampleRawTexel()` in `src/terrain/chunkHeightmap.ts` — no new noise handle, worker, config field, or `mountainRidge` semantic change. `mountainRidge`'s returned value is untouched; only the height computation (`nCombined`) that consumes it changed.
+
+- **Massif amplitude variety** — `envelopeStrength = smoothstep(mt, mountainThreshold + mountainThresholdWidth, 1)` (reuses the already-computed `mt` field, no extra noise call) feeds `massifGainFactor` (`MASSIF_ENVELOPE_MIN_GAIN`/`MAX_GAIN` = 0.8/1.25). This lets whole massifs read as taller or more modest depending on how far `mt` sits past the existing gate's blend band, instead of every gated massif converging on the same ridge height.
+- **Peak dominance** — one extra `fbm01` call reusing the `mountain` noise handle at `mountainScale * PEAK_DOMINANCE_SCALE_FACTOR` (0.4, i.e. a finer sub-massif frequency), smoothstepped into `peakDominance` (`PEAK_DOMINANCE_THRESHOLD`/`_WIDTH` = 0.55/0.3). This scales ridge gain per-point between `PEAK_DOMINANCE_MIN_GAIN`/`MAX_GAIN` (0.55/1.3), so a handful of zones per massif dominate while the rest stay subordinate. Gated behind `mountainGate > 0` so this costs nothing outside mountain regions.
+- **Peak detail** — a second extra `fbm01` call reusing the `hills` noise handle at `hillsScale * PEAK_DETAIL_SCALE_FACTOR` (0.5), added as `peakDetailTerm`, weighted by `peakDominance * mountainRidge * PEAK_DETAIL_AMPLITUDE` (0.4) — only visible on/near actual dominant peaks, restrained elsewhere. Gated behind `peakDominance > 0`, itself inside the `mountainGate > 0` branch.
+- **Valleys/saddles** — `hillsTerm` now carries `hillsMountainBoost = mountainGate * (1 - mountainRidge) * HILLS_MOUNTAIN_VALLEY_BOOST` (1.2), reusing the already-computed `hills01`/`mountainGate`/`mountainRidge` (zero extra noise calls). Boost peaks in the "in-between" ground of a massif (envelope active, ridge weak) and fades to 0 both on strong ridge crests and outside mountain regions — deepens saddles without fighting the Worley ridge shape.
+- Every new term is bounded and multiplies through `mountainGate`/`mountainRidge`/`peakDominance`, all of which are themselves continuous `smoothstep`/FBM functions of `(seed, wx, wz)` — no hard thresholds were introduced, so the seam/determinism contract (`sampleHeightAt`/`sampleFloorAt` use the same function as chunk generation, no chunk-local state) holds by construction.
+- Extra `fbm01` evaluations (peak dominance, peak detail) only run when `mountainGate > 0`, i.e. inside/near mountain regions — no added cost across ocean/plains/desert/swamp.
+
+## 14. Technically verified (2026-09-01)
+
+- `npx tsc --noEmit` — clean.
+- `pnpm lint:fix` — clean, no changes needed beyond the edit itself.
+- `pnpm test` (full suite, 224 files / 2236 tests) — all pass. `grassPlacement.test.ts`'s golden snapshot (`computeChunkGrass`, locks in current terrain output) was intentionally updated (`vitest -u`) since the height field change is the intended effect of this plan; no other snapshot/behavioral test needed updating, and `chunkHeightmap.test.ts`'s seam-continuity/determinism tests passed unmodified.
+- `pnpm build` — clean production build.
+
+## 15. Not yet verified — needs browser/manual pass
+
+- Visual appearance of massifs/peaks across several seeds.
+- Peak silhouettes from ground level (irregular vs. cone-like).
+- Valley/pass readability between dominant peaks.
+- Chunk-boundary seams during streaming (expected seamless per the analytic-function argument above, but not eyeballed).
+- Terrain/chunk generation time and streaming hitching with the two extra gated `fbm01` calls in mountain regions.
+- River continuity through the reshaped mountain terrain (plan 181's rivers consume this same height field).

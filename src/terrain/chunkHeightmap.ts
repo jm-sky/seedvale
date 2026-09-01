@@ -324,6 +324,51 @@ const DETAIL_WARP_AMP = 6
  *  `mountainGain`/ridge amplitude itself — only the fine detail layered on it. */
 const MOUNTAIN_DETAIL_DAMPING = 0.45
 
+/** Peak/massif hierarchy (plan 191) — reshapes the existing mountain envelope +
+ *  Worley ridge combination instead of adding a second mountain generator or a
+ *  radial peak stamp. All terms below are smooth functions of the already-computed
+ *  `mt` (mountain envelope) / `mountainGate` / `mountainRidge` fields, so massifs
+ *  stay continuous across chunk seams and `mountainRidge` itself keeps meaning
+ *  "connected ridge strength" for its other consumers (naturalResources, biome
+ *  color, vegetation, rock placement, …). */
+
+/** Whole-massif amplitude variety: envelope strength well past the gate's own
+ *  blend band still scales overall ridge gain, so massifs whose `mt` barely
+ *  clears the threshold read as modest foothill ranges while massifs deep in
+ *  mountain territory read as taller ranges — instead of every gated massif
+ *  converging on the same height once the gate itself saturates to 1. */
+const MASSIF_ENVELOPE_MIN_GAIN = 0.8
+const MASSIF_ENVELOPE_MAX_GAIN = 1.25
+
+/** Sub-massif frequency for peak-dominance modulation, relative to `mountainScale`
+ *  — finer than the massif envelope itself so one massif contains a handful of
+ *  dominant zones rather than rising uniformly. Reuses the `mountain` noise handle
+ *  (no new handle/field) at a second frequency. */
+const PEAK_DOMINANCE_SCALE_FACTOR = 0.4
+/** Narrow blend band: most of a massif stays at subordinate-ridge gain, only the
+ *  high end of the (already coarse) peak field reaches full dominance. */
+const PEAK_DOMINANCE_THRESHOLD = 0.55
+const PEAK_DOMINANCE_THRESHOLD_WIDTH = 0.3
+/** Ridge-gain multiplier range across peak dominance 0..1 — subordinate ridges sit
+ *  below `mountainGain`, dominant peaks rise above it, giving one massif a clear
+ *  height hierarchy instead of every ridge segment reaching a similar crest. */
+const PEAK_DOMINANCE_MIN_GAIN = 0.55
+const PEAK_DOMINANCE_MAX_GAIN = 1.3
+
+/** Restrained high-altitude irregularity: reuses the `hills` noise handle (no new
+ *  handle) at a finer frequency than `hillsScale`, gated to dominant-peak zones
+ *  only (`peakDominance * mountainRidge`) so it shapes an asymmetric/irregular
+ *  summit instead of a smooth stamped cone, and vanishes away from real peaks. */
+const PEAK_DETAIL_SCALE_FACTOR = 0.5
+const PEAK_DETAIL_AMPLITUDE = 0.4
+
+/** Deepens valleys/saddles between ridges inside a massif: boosts the existing
+ *  `hillsTerm` where the macro mountain envelope is active but the local ridge is
+ *  weak (i.e. the "in-between" ground), and fades to no boost on strong ridge
+ *  crests and outside mountain regions entirely — reuses `hills01`, no extra
+ *  noise evaluation. */
+const HILLS_MOUNTAIN_VALLEY_BOOST = 1.2
+
 /** Piecewise-linear continentalness → height bias, in the same normalized units as
  *  the detail FBM's `n` (roughly [0,1] before this bias). Built once at module scope. */
 const continentBiasSpline = new LinearSpline<number>((t, a, b) => a + (b - a) * t)
@@ -432,7 +477,50 @@ function sampleRawTexel(
   // Hierarchy: macro bias + mountain ridge, then medium hills/valleys, then
   // soft local surface detail. Hills stay generation-internal (no tile field).
   const hills01 = fbm01(noise.hills, wx / hillsScale, wz / hillsScale, hillsFbm)
-  const hillsTerm = (hills01 - 0.5) * hillsAmplitude * landWeight
+  // Deeper saddles/valleys between ridges inside a massif (plan 191) — boost is
+  // strongest in the "in-between" ground (mountainGate active, ridge weak) and
+  // fades to zero on strong crests and outside mountain regions, so it never
+  // fights the Worley ridge shape itself.
+  const hillsMountainBoost = mountainGate * (1 - mountainRidge) * HILLS_MOUNTAIN_VALLEY_BOOST
+  const hillsTerm = (hills01 - 0.5) * hillsAmplitude * landWeight * (1 + hillsMountainBoost)
+
+  // Peak/massif height hierarchy (plan 191) — gated to mountain regions only, so
+  // the extra noise evaluations below cost nothing across the rest of the world.
+  let ridgeGainFactor = 1
+  let peakDetailTerm = 0
+  if (mountainGate > 0) {
+    const envelopeStrength = MathUtils.smoothstep(
+      mt,
+      region.mountainThreshold + region.mountainThresholdWidth,
+      1,
+    )
+    const massifGainFactor = MathUtils.lerp(
+      MASSIF_ENVELOPE_MIN_GAIN,
+      MASSIF_ENVELOPE_MAX_GAIN,
+      envelopeStrength,
+    )
+
+    const peakField = fbm01(
+      noise.mountain,
+      wx / (region.mountainScale * PEAK_DOMINANCE_SCALE_FACTOR),
+      wz / (region.mountainScale * PEAK_DOMINANCE_SCALE_FACTOR),
+      region.mountainFbm,
+    )
+    const peakDominance = MathUtils.smoothstep(
+      peakField,
+      PEAK_DOMINANCE_THRESHOLD,
+      PEAK_DOMINANCE_THRESHOLD + PEAK_DOMINANCE_THRESHOLD_WIDTH,
+    )
+    ridgeGainFactor =
+      massifGainFactor * MathUtils.lerp(PEAK_DOMINANCE_MIN_GAIN, PEAK_DOMINANCE_MAX_GAIN, peakDominance)
+
+    if (peakDominance > 0) {
+      const peakDetailScale = hillsScale * PEAK_DETAIL_SCALE_FACTOR
+      const peakDetail01 = fbm01(noise.hills, wx / peakDetailScale, wz / peakDetailScale, hillsFbm)
+      peakDetailTerm =
+        (peakDetail01 - 0.5) * PEAK_DETAIL_AMPLITUDE * peakDominance * mountainRidge
+    }
+  }
 
   const wxw = wx + noise.warp(wx * DETAIL_WARP_FREQ, wz * DETAIL_WARP_FREQ) * DETAIL_WARP_AMP
   const wzw =
@@ -443,7 +531,8 @@ function sampleRawTexel(
     n * ridgeDetailWeight * detailAmplitude +
     regionBias +
     hillsTerm +
-    mountainRidge * region.mountainGain
+    mountainRidge * region.mountainGain * ridgeGainFactor +
+    peakDetailTerm
   const floorH = nCombined * heightScale
   const h = floorH < waterLevel ? waterLevel : floorH
 

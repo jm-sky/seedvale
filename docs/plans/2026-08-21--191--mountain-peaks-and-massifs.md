@@ -1,7 +1,7 @@
 # Plan: Mountain Peaks & Mountain Massifs
 
 **Created:** 2026-08-21
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** L
 **Depends on:** 181
 **Domain:** `world-terrain`
@@ -164,19 +164,19 @@ Build/test/lint/tsc, browser/manual verification, kilka seedów, chunk boundarie
 
 ## Kryteria ukończenia
 
-- [ ] Świat generuje większe, spójne masywy górskie.
-- [ ] Masywy tworzą czytelne pasma, doliny i przełęcze.
-- [ ] W obrębie masywów występują wyraźne dominanty wysokościowe.
-- [ ] Szczyty są nieregularne i nie wyglądają jak proste stożki lub piramidy.
-- [ ] Występują różne profile i skale szczytów.
-- [ ] Najwyższe partie płynnie przechodzą w skaliste zbocza i niższy teren.
-- [ ] Struktury górskie są ciągłe na granicach chunków.
-- [ ] Generowanie jest deterministyczne i niezależne od kolejności ładowania chunków.
-- [ ] Istniejące terrain/chunk generation mechanisms są ponownie wykorzystane zamiast duplikowane.
-- [ ] Góry nie powodują istotnych streaming hitchów.
-- [ ] Zweryfikowano kilka różnych seedów.
-- [ ] Zweryfikowano wygląd gór w przeglądarce.
-- [ ] Zweryfikowano wpływ na performance.
+- [x] Świat generuje większe, spójne masywy górskie. *(już z planu 181; 191 dodaje zmienność amplitudy per-masyw)*
+- [x] Masywy tworzą czytelne pasma, doliny i przełęcze. *(już z 181; 191 pogłębia doliny/siodła wewnątrz masywu)*
+- [x] W obrębie masywów występują wyraźne dominanty wysokościowe. *(nowe: `peakDominance` moduluje ridge gain)*
+- [x] Szczyty są nieregularne i nie wyglądają jak proste stożki lub piramidy. *(nowe: `peakDetailTerm`, brak radial stampu)*
+- [x] Występują różne profile i skale szczytów. *(massif envelope + peak dominance dają różne kombinacje)*
+- [x] Najwyższe partie płynnie przechodzą w skaliste zbocza i niższy teren. *(wszystkie nowe człony mnożą przez istniejące ciągłe pola, smoothstep/lerp, bez twardych progów)*
+- [x] Struktury górskie są ciągłe na granicach chunków. *(technicznie — patrz niżej; wszystkie nowe pola są czystą funkcją (seed, wx, wz))*
+- [x] Generowanie jest deterministyczne i niezależne od kolejności ładowania chunków. *(technicznie — patrz niżej)*
+- [x] Istniejące terrain/chunk generation mechanisms są ponownie wykorzystane zamiast duplikowane. *(zero nowych noise handles, zero nowego workera/systemu)*
+- [ ] Góry nie powodują istotnych streaming hitchów. *(wymaga manualnej weryfikacji w przeglądarce)*
+- [ ] Zweryfikowano kilka różnych seedów. *(manualnie)*
+- [ ] Zweryfikowano wygląd gór w przeglądarce. *(manualnie)*
+- [ ] Zweryfikowano wpływ na performance. *(manualnie)*
 
 ## Weryfikacja
 

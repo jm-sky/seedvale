@@ -44,7 +44,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-013-hierarchical-domain-history.md`               | - | 🔴 | M | `none` |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | Rody NPC | ⚪ | L | ~~022~~ ~~031~~ |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
-| 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | ◼️ `persistence-001-full-simulation-persistence.md`                    | - | 🔴 | L | - |
@@ -75,6 +74,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | Construction placement, terrain preparation and Quick Actions behave correctly |
 | `2026-08-14--111--house-construction.md` | Verify house assembly and confirm the known assembly bug is resolved |
 | `npc-007-interaction-destination-approach.md` | NPCs reach the well serving point and queue without repath/escape looping; ordinary NPC movement still avoids colliders and rescue still works |
+| `2026-08-21--191--mountain-peaks-and-massifs.md` | Visual seeds/peaks/valleys/chunk seams, streaming hitching, river continuity |
 
 ---
 

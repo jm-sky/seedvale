@@ -3,19 +3,24 @@
 exports[`computeChunkGrass > produces a deterministic, non-trivial golden result per chunk (locks in today's output — plan 086 phase 1) > chunk (-18,6) 1`] = `
 {
   "filler": {
-    "baseColorsChecksum": 0.460567,
-    "count": 3,
-    "matricesChecksum": 131.66665,
+    "baseColorsChecksum": 0.779947,
+    "count": 5,
+    "matricesChecksum": 69.128274,
+  },
+  "grain": {
+    "baseColorsChecksum": 2.219515,
+    "count": 9,
+    "matricesChecksum": 284.841569,
   },
   "herb": {
-    "baseColorsChecksum": 0.79158,
-    "count": 4,
-    "matricesChecksum": 172.579579,
+    "baseColorsChecksum": 4.194555,
+    "count": 25,
+    "matricesChecksum": 344.994598,
   },
   "tri": {
-    "baseColorsChecksum": 0.468996,
-    "count": 2,
-    "matricesChecksum": 87.944191,
+    "baseColorsChecksum": 2.909284,
+    "count": 13,
+    "matricesChecksum": 184.912183,
   },
 }
 `;
@@ -50,22 +55,22 @@ exports[`computeChunkGrass > produces a deterministic, non-trivial golden result
   "filler": {
     "baseColorsChecksum": 166.339466,
     "count": 868,
-    "matricesChecksum": 5347.740184,
+    "matricesChecksum": 5347.626265,
   },
   "grain": {
     "baseColorsChecksum": 79.372911,
     "count": 367,
-    "matricesChecksum": 1896.673351,
+    "matricesChecksum": 1896.626112,
   },
   "herb": {
     "baseColorsChecksum": 231.808188,
     "count": 1490,
-    "matricesChecksum": 8661.990405,
+    "matricesChecksum": 8661.862049,
   },
   "tri": {
     "baseColorsChecksum": 239.131013,
     "count": 1091,
-    "matricesChecksum": 5994.386001,
+    "matricesChecksum": 5994.273512,
   },
 }
 `;
