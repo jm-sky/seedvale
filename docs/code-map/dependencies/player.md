@@ -69,6 +69,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/worldContext.ts`
 

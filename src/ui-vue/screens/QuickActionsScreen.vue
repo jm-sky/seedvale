@@ -186,6 +186,9 @@ const buildActions = computed<Action[]>(() => {
   if (ui.quickActions.fireAvailability.buildFirePit) {
     list.push({ label: 'Zbuduj palenisko', cost: `${FIRE_PIT_STONE_COST}× kamień`, onClick: () => startPlacementPreview('firePit') })
   }
+  if (ui.quickActions.hasWoodenTorch) {
+    list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch') })
+  }
   return list
 })
 

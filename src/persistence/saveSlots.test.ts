@@ -73,6 +73,7 @@ const v1 = {
   plantedTrees: [],
   plantedCrops: [],
   playerGardens: [],
+  standingTorches: [],
   resourceDeposits: {},
 }
 

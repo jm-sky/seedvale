@@ -222,6 +222,7 @@ Generated from TypeScript imports.
 - `world/createLargeCaves.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/trapProp.ts`
 - `world/treeVisuals.ts`

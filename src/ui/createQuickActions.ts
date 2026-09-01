@@ -77,6 +77,9 @@ export type QuickActionsHandlers = {
   hasTent?: boolean
   /** Initial unplaced-chest ownership for showing "Postaw skrzynię". */
   hasChest?: boolean
+  /** Initial `wooden_torch` ownership for showing "Postaw pochodnię" (plan
+   *  items-player-009), same shape as `hasChest`. */
+  hasWoodenTorch?: boolean
   /** Initial carried-container flag for showing "Odłóż skrzynię". */
   hasCarriedContainer?: boolean
   /** Which trap kinds the player currently carries (plan 141). */
@@ -119,6 +122,9 @@ export function createQuickActions(
   }
   if (typeof handlers.hasChest === 'boolean') {
     getUi()?.setQuickActionsHasChest(handlers.hasChest)
+  }
+  if (typeof handlers.hasWoodenTorch === 'boolean') {
+    getUi()?.setQuickActionsHasWoodenTorch(handlers.hasWoodenTorch)
   }
   if (typeof handlers.hasCarriedContainer === 'boolean') {
     getUi()?.setQuickActionsHasCarriedContainer(handlers.hasCarriedContainer)

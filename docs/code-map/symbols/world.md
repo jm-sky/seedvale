@@ -146,6 +146,13 @@ Generated from exported TypeScript symbols.
 - `SkyParams` — type — line 4
 - `WorldSky` — type — line 12
 
+## `world/createStandingTorches.ts`
+
+- `createStandingTorches` — function — line 41
+  - domain: items-player
+- `StandingTorchEntry` — type — line 10
+- `StandingTorches` — type — line 12
+
 ## `world/createTerrainPreparations.ts`
 
 - `createTerrainPreparations` — function — line 40
@@ -453,6 +460,23 @@ Generated from exported TypeScript symbols.
 ## `world/settlementForestHooks.ts`
 
 - `SettlementForestHooks` — type — line 4
+
+## `world/standingTorch.ts`
+
+- `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 22
+- `STANDING_TORCH_MATERIAL_REQUIREMENTS` — const — line 50
+- `STANDING_TORCH_PLACE_DURATION_SEC` — const — line 29
+- `STANDING_TORCH_PLACE_REACH` — const — line 26
+- `STANDING_TORCH_PLACEMENT_MESSAGE` — const — line 33
+- `STANDING_TORCH_SEPARATION` — const — line 23
+- `StandingTorchPlacementReason` — type — line 31
+- `StandingTorchRecord` — type — line 18
+  - domain: items-player
+
+## `world/standingTorchProp.ts`
+
+- `createStandingTorchVisual` — function — line 28
+- `preloadStandingTorchTemplate` — function — line 15
 
 ## `world/terrainPreparationPreview.ts`
 

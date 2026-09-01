@@ -147,6 +147,7 @@ Generated from TypeScript imports.
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/standingTorch.ts`
 
 **Imported by**
 
@@ -581,6 +582,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/cropLifecycle.ts`
 - `world/dryingRacks.ts`
@@ -783,6 +785,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
@@ -794,6 +797,7 @@ Generated from TypeScript imports.
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
+- `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 - `world/waterMirror.ts`
 - `world/worldContext.ts`

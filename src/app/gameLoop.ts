@@ -389,6 +389,10 @@ export type GameLoopDeps = {
   /** Read-only preview backing the well's interaction/construction panel
    *  (plan `ui-input-002` §3) — see `placementActions.ts`'s `WellWorkView`. */
   describeWellWork?: (id: string) => { title: string, description: string, canWork: boolean, reasonLabel: string } | null
+  /** `[E]` on an unlit standing torch (plan items-player-009) — validates
+   *  `fire_starting`, flips its authoritative `lit`, and updates its runtime
+   *  flame/light. No-op (including re-checking `lit`) if already lit. */
+  igniteStandingTorch?: (id: string) => void
   /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
    *  unconditionally, before the gaze/interact dispatch, so a confirming
    *  `[E]` press is consumed here rather than falling through to it. No-ops
@@ -495,7 +499,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, pickUpContainer, workOnWell, describeWellWork,
+    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
@@ -858,6 +862,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.hives,
         bundle.playerWells,
         bundle.playerGardens,
+        bundle.standingTorches,
         bundle.terrainPreparations,
         dayNight.elapsedDays,
         player.mesh.position,
@@ -1414,6 +1419,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             ])
           }
         }
+      } else if (target?.kind === 'standingTorch') {
+        if (interactPressed && !target.lit) igniteStandingTorch?.(target.id)
       } else if (target?.kind === 'terrainPreparation') {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {
@@ -1929,6 +1936,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // `tickFire()` for exactly this reason (see its doc comment).
       for (const s of loaded) s.tickFire(worldDt)
       bundle.placedFires.update(worldDt)
+      // Same `worldDt` cadence as `placedFires` above — only lit standing
+      // torches' flame/sparks actually tick (plan items-player-009 §5).
+      bundle.standingTorches.update(worldDt)
       // Plan 176 §6/§20 — bounded to however many plots the player has
       // actually built (never a world-wide field scan); removal is a lazy
       // world-object mutation, not a per-frame maintenance tick.

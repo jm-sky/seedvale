@@ -301,6 +301,23 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/viewer/createViewerScene.ts`
 - `world/dayNight.ts`
 
+## `world/createStandingTorches.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `player/PlayerController.ts`
+- `settlement/houseLighting.ts`
+- `settlement/props.ts`
+- `world/pointLightBudget.ts`
+- `world/standingTorch.ts`
+- `world/standingTorchProp.ts`
+
+**Imported by**
+
+- `app/interactables.ts`
+- `app/worldBundle.ts`
+
 ## `world/createTerrainPreparations.ts`
 
 **Imports**
@@ -826,6 +843,7 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `world/createStandingTorches.ts`
 - `world/pointLightBudget.test.ts`
 
 ## `world/restCancel.test.ts`
@@ -874,6 +892,31 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+
+## `world/standingTorch.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `items/tentPlacement.ts`
+
+**Imported by**
+
+- `app/actions/placementActions.ts`
+- `app/worldBundle.ts`
+- `world/createStandingTorches.ts`
+
+## `world/standingTorchProp.ts`
+
+**Imports**
+
+- `settlement/houseLighting.ts`
+- `settlement/propSpecs.ts`
+- `settlement/propUtils.ts`
+
+**Imported by**
+
+- `world/createStandingTorches.ts`
 
 ## `world/terrainPreparationPreview.ts`
 

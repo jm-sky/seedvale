@@ -272,6 +272,12 @@ export type SavePlantedCrop = {
   stageStartedAt: number
 }
 
+/** Persistent player-built standing torch — mirrors `world/standingTorch.ts`'s
+ *  `StandingTorchRecord`. `lit` is the only authoritative ignition state; the
+ *  runtime flame/light is always re-derived from it on load, never saved
+ *  directly (plan items-player-009). */
+export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number, lit: boolean }
+
 /** Persistent player-built garden plot — mirrors `world/playerGarden.ts`'s
  *  `PlayerGardenRecord`. A plot has no construction stages of its own (crops
  *  planted on it are separate `SavePlantedCrop` records), but does carry
@@ -371,6 +377,7 @@ export type SaveData = {
   plantedTrees: SavePlantedTree[]
   plantedCrops: SavePlantedCrop[]
   playerGardens: SavePlayerGarden[]
+  standingTorches: SaveStandingTorch[]
   /** Authoritative mining-hits-remaining override for ore deposits
    *  (`terrain/depositMining.ts`'s `ResourceDepletionState`), keyed by
    *  `NaturalResource.id`. Sparse — an absent id restores as untouched
@@ -848,6 +855,21 @@ function isPlayerGardensField(value: unknown): value is SavePlayerGarden[] {
   })
 }
 
+function isStandingTorchesField(value: unknown): value is SaveStandingTorch[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const t = entry as Record<string, unknown>
+    return (
+      typeof t.id === 'string' &&
+      typeof t.x === 'number' &&
+      typeof t.z === 'number' &&
+      typeof t.yaw === 'number' &&
+      typeof t.lit === 'boolean'
+    )
+  })
+}
+
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -890,6 +912,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlantedTreesField(v.plantedTrees)) return false
   if (!isPlantedCropsField(v.plantedCrops)) return false
   if (!isPlayerGardensField(v.playerGardens)) return false
+  if (!isStandingTorchesField(v.standingTorches)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
   return true
 }

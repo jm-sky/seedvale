@@ -136,3 +136,9 @@ export type Interactable =
    *  §8) — `[E]` starts/resumes its work session. Removed once the
    *  preparation reaches 100% (no permanent `PreparedTerrain` marker). */
   | { kind: 'terrainPreparation', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Player-built standing torch (plan items-player-009) — `[E]` ignites it
+   *  once, gated on the `fire_starting` capability; an already-lit torch
+   *  shows a flavor-only prompt (no `[E]` action). `lit` is a per-frame
+   *  resolved snapshot for the prompt only — the ignite action re-resolves
+   *  the record and re-checks `lit` itself before mutating anything. */
+  | { kind: 'standingTorch', position: { x: number, z: number }, promptLabel: string, id: string, lit: boolean }

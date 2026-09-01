@@ -431,6 +431,7 @@ export async function createApp(
       status: 'active' as const,
     })),
     () => worldGeneration !== initialWorldGeneration,
+    initialSave?.standingTorches ?? [],
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -509,6 +510,7 @@ export async function createApp(
     vueUi.setQuickActionsHasDiggingTool(inventory.hasCapability('soil_digging'))
     vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
     vueUi.setQuickActionsHasChest(inventory.has('chest', 1))
+    vueUi.setQuickActionsHasWoodenTorch(inventory.has('wooden_torch', 1))
     vueUi.setQuickActionsTraps({
       simple: inventory.countInstances(TRAP_DEFS.simple.itemKind) > 0,
       good: inventory.countInstances(TRAP_DEFS.good.itemKind) > 0,
@@ -1185,6 +1187,7 @@ export async function createApp(
     hasDiggingTool: inventory.hasCapability('soil_digging'),
     hasTent: inventory.has('tent', 1),
     hasChest: inventory.has('chest', 1),
+    hasWoodenTorch: inventory.has('wooden_torch', 1),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
     hasTreeSeed: inventory.has('tree_seed', 1),
     cropSeeds: {
@@ -1424,6 +1427,7 @@ export async function createApp(
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
+    igniteStandingTorch: placement.igniteStandingTorch,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
     tickPlacementPreview: placementPreview.tick,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,

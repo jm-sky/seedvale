@@ -355,6 +355,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/props.ts`
+- `world/createStandingTorches.ts`
+- `world/standingTorchProp.ts`
 
 ## `settlement/household.test.ts`
 
@@ -659,6 +661,7 @@ Generated from TypeScript imports.
 - `settlement/settlementPalisade.ts`
 - `settlement/settlementPropColliders.test.ts`
 - `settlement/settlementPropColliders.ts`
+- `world/standingTorchProp.ts`
 - `world/treeLifecycle.test.ts`
 
 ## `settlement/propUtils.ts`
@@ -675,6 +678,7 @@ Generated from TypeScript imports.
 - `settlement/storageVisuals.ts`
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
+- `world/standingTorchProp.ts`
 
 ## `settlement/props.lampMount.test.ts`
 
@@ -750,6 +754,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
