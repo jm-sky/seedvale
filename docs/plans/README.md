@@ -29,24 +29,25 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary   | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | ------ | ------- |
-| 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
-| 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
-| 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
-| 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
-| 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
+| 💡 `npc-007-interaction-destination-approach.md`                       | - | 🔴 | M | ~~006~~ |
+| ◼️ `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
+| 💡 `items-player-003-player-physical-effort-stamina-vigor.md`          | - | 🟡 | M | - |
+| ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | 008 |
+| ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | - | 🟡 | M | 008 |
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`                              | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
-| 💡 `settlements-npcs-012-physical-storage-inspection.md`               | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-006-wool-to-material.md`                          | Wełna → materiał | 🟡 | M | ~~fauna-004~~ |
 | ◼️ `settlements-npcs-007-bandages-and-herbal-medicine.md`              | Bandaże, zioła i opatrunki | 🟡 | M | ~~006~~ |
-| ◼️ `npc-004-npc-genealogy-lineages.md`                                 | Rody NPC                      | ⚪  | L      | ~~022~~ ~~031~~  |
-| 💡 `settlements-npcs-013-hierarchical-domain-history.md`               | - | 🔴 | M | `none` |
+| 💡 `npc-002-npc-healing.md`                                            | NPC używa opatrunków | 🟡 | M | ~~177~~ |
+| 💡 `settlements-npcs-012-physical-storage-inspection.md`               | - | 🟡 | S | ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-014-local-goods-circulation.md`                   | - | 🔴 | M | ~~008~~ ~~009~~ ~~010~~ |
 | ◼️ `settlements-npcs-015-economic-production-and-input-integration.md` | - | 🔴 | M | ~~014~~ |
 | ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`  | - | 🔴 | M | ~~015~~ |
-| 💡 `items-player-003-player-physical-effort-stamina-vigor.md`          | - | 🟡 | M | - |
-| ◼️ `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
-| ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | 008 |
-| ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | - | 🟡 | M | 008 |
+| 💡 `settlements-npcs-013-hierarchical-domain-history.md`               | - | 🔴 | M | `none` |
+| ◼️ `npc-004-npc-genealogy-lineages.md`                                 | Rody NPC | ⚪ | L | ~~022~~ ~~031~~ |
+| 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
+| 💡 `2026-08-21--191--mountain-peaks-and-massifs.md`                    | - | 🟡 | L | 181 |
+| 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
+| 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | ◼️ `persistence-001-full-simulation-persistence.md`                    | - | 🔴 | L | - |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
