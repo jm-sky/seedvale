@@ -56,6 +56,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-013-night-campfire-gathering.md`                               | -       | 🟡 | S      | ~~151~~ |
 | 💡 `world-009-blood-traces.md`                                         | -       | 🟡 | M      | -      |
 | ◼️ `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
+| ◼️ `items-player-012-player-gathering-and-fire-cooking-polish.md`      | -       | 🟡 | M      | ~~106~~ ~~122~~ ~~159~~ |
 
 ---
 
@@ -142,7 +143,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `006`
-- items-player: `012`
+- items-player: `013`
 - npc: `014`
 - persistence: `002`
 - quests-progression: `001`
