@@ -16,6 +16,7 @@ Generated symbol maps by source domain.
 - [`interaction`](./interaction.md)
 - [`items`](./items.md)
 - [`math`](./math.md)
+- [`navigation`](./navigation.md)
 - [`perf`](./perf.md)
 - [`persistence`](./persistence.md)
 - [`player`](./player.md)

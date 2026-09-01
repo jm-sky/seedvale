@@ -16,9 +16,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/gatheringActions.ts`
 
-- `createGatheringActions` — function — line 56
-- `GatheringActionDeps` — type — line 49
-- `GatheringActions` — type — line 32
+- `createGatheringActions` — function — line 57
+- `GatheringActionDeps` — type — line 50
+- `GatheringActions` — type — line 33
 
 ## `app/actions/groundActions.ts`
 
@@ -50,11 +50,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 101
-- `LodgingChoiceAction` — type — line 27
-- `REST_IN_TOWN_RADIUS` — const — line 35
-- `RestActionDeps` — type — line 89
-- `RestActions` — type — line 41
+- `createRestActions` — function — line 104
+- `LodgingChoiceAction` — type — line 29
+- `REST_IN_TOWN_RADIUS` — const — line 37
+- `RestActionDeps` — type — line 92
+- `RestActions` — type — line 43
 
 ## `app/actions/survivalActions.ts`
 
@@ -106,12 +106,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 435
+- `createGameLoop` — function — line 436
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 403
+- `GameLoop` — type — line 404
 - `GameLoopDeps` — type — line 204
 
 ## `app/graphicsSettings.ts`
@@ -122,10 +122,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 778
-- `buildDigTarget` — function — line 725
-- `buildInteractables` — function — line 280
-- `collectItem` — function — line 825
+- `buildCombatTarget` — function — line 804
+- `buildDigTarget` — function — line 751
+- `buildInteractables` — function — line 305
+- `collectItem` — function — line 851
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70
@@ -134,7 +134,8 @@ Generated from exported TypeScript symbols.
 - `INTERACT_MIN_DOT` — const — line 46
 - `INTERACT_RANGE` — const — line 43
 - `KNIFE_BRANCH_BONUS` — const — line 55
-- `resolveHaySpot` — function — line 230
+- `resolveHaySpot` — function — line 231
+- `resolveWaterBodyKind` — function — line 265
 - `TREE_BRANCH_CHANCE` — const — line 52
 
 ## `app/inventoryWiring.ts`

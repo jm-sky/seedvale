@@ -1,7 +1,7 @@
 # Plan: Shared NPC and Animal Pathfinding
 
 **Created:** 2026-08-31
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** L
 **Depends on:** `none`
 **Domain:** `npc`

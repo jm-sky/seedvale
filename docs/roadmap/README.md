@@ -19,11 +19,13 @@ Plans and current code take precedence over roadmap documents when they disagree
 <!-- AUTO-GENERATED:START -->
 | File |
 |---|
+| `domain-debug-and-simulation-observability.md` |
 | `economy-production.md` |
 | `horse-and-riding.md` |
 | `npc-ai.md` |
 | `npc-professions-households-and-age.md` |
 | `physical-resource-storage-and-logistics.md` |
+| `player-construction.md` |
 | `player-founded-settlement.md` |
 | `textiles-and-herbal-medicine.md` |
 <!-- AUTO-GENERATED:END -->

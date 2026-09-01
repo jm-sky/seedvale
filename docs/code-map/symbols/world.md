@@ -600,14 +600,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/WaterSource.ts`
 
-- `createWaterSource` — function — line 27
-- `DRINK_THIRST_RELIEF` — const — line 21
-- `UNSAFE_WATER_WARNING` — const — line 25
+- `createWaterSource` — function — line 36
+- `DRINK_THIRST_RELIEF` — const — line 29
+- `UNSAFE_WATER_WARNING` — const — line 34
+- `WaterBodyKind` — type — line 19
 - `WaterQuality` — type — line 12
   - domain: world
   - system: water-source
-  - role: Shared well/lake drink/fill abstraction; future river/polluted/treated sources should reuse it.
-- `WaterSource` — type — line 14
+  - role: Shared well/lake/river/ocean drink/fill abstraction; future polluted/treated sources should reuse it.
+- `WaterSource` — type — line 21
 
 ## `world/weather.ts`
 

@@ -45,6 +45,7 @@ Generated from TypeScript imports.
 - `items/createPlacedTents.ts`
 - `items/tentProp.test.ts`
 - `items/tentProp.ts`
+- `navigation/navigation.ts`
 - `player/playerDamage.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`

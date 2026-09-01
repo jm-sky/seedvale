@@ -167,6 +167,7 @@ Generated from TypeScript imports.
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `debug/villageInspector.ts`
+- `navigation/navigationStats.ts`
 - `settlement/families.ts`
 - `world/worldContext.ts`
 

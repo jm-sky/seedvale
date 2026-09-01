@@ -42,6 +42,7 @@ Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements, N
 - Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./state/settlements.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)
 - Still not implemented: inter-settlement trade, full NPC simulation persistence, Social Places beyond a settlement's own campfire, conversation partner ranking by personality/traits/role/relationship.
+- Movement/pathfinding (plan npc-006): `NpcAgent.steerTo`/`AnimalAgent.steerToward` still do straight-line steering plus a per-frame single-obstacle skirt every frame — no path search on normal follow. A shared `navigation/navigation.ts` (bounded local-grid A* + waypoint simplification, `NavigationQuery`/`AgentProfile`, `navigation/navigationStats.ts` counters) only ever runs on a genuine stuck/blocked condition: `NpcAgent`'s existing `npcMovementWatchdog`-triggered repath now tries a real route before its old blind random-hop fallback, and `AnimalAgent`'s predator chase/flee reuse the same watchdog module (two independent instances, `chaseNav`/`fleeNav`) the same way. Repath never changes the destination/committed target (npc-005's prey commitment included). No global navmesh, no worker, no path caching — see the plan for why.
 
 ### Fauna
 
