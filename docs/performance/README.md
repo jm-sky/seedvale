@@ -532,3 +532,24 @@ Historical Chrome Trace Analyzer results are stored in:
 Each result should correspond to a captured performance trace and be kept as a historical record for comparing performance changes over time.
 
 > Those are results of `./scripts/analyze_trace.sh _temp/Performance/Trace-20260820T085349.json`
+
+---
+
+## Batch
+
+- Batch: 2026-09-01
+  - `docs/performance/results/2026-09-01--001--benchmark-stream.json`
+  - `docs/performance/results/2026-09-01--001--benchmark-stream.md`
+  - `docs/performance/results/2026-09-01--002--benchmark-current.json`
+  - `docs/performance/results/2026-09-01--002--benchmark-current.md`
+  - `docs/performance/results/2026-09-01--003--benchmark-forest.json`
+  - `docs/performance/results/2026-09-01--003--benchmark-forest.md`
+  - `docs/performance/results/2026-09-01--004--benchmark-settlement.json`
+  - `docs/performance/results/2026-09-01--004--benchmark-settlement.md`
+  - `docs/performance/results/2026-09-01--005--benchmark-night.json`
+  - `docs/performance/results/2026-09-01--005--benchmark-night.md`
+  - `docs/performance/results/2026-09-01--006--benchmark-stress.json`
+  - `docs/performance/results/2026-09-01--006--benchmark-stress.md`
+  - `docs/performance/results/2026-09-01--007--benchmark-water.json`
+  - `docs/performance/results/2026-09-01--007--benchmark-water.md`
+  - `docs/performance/trace-results/Trace-20260901T090153.md`

@@ -1,0 +1,183 @@
+{
+  "durationSec": 30,
+  "quality": "High",
+  "pixelRatio": 1,
+  "scenario": "stream",
+  "canonical": true,
+  "fps": {
+      "avg": 24.3,
+      "min": 1,
+      "p1": 10
+  },
+  "frameTime": {
+      "avg": 41.1,
+      "p95": 79.3,
+      "max": 945.5
+  },
+  "rendering": {
+      "drawCallsAvg": 830,
+      "drawCallsMax": 1828,
+      "trianglesAvg": 9437364,
+      "mirrorDrawCallsAvg": 177,
+      "geometries": 823,
+      "textures": 451
+  },
+  "scene": {
+      "terrain": {
+          "meshes": 70,
+          "instancedMeshes": 0,
+          "instances": 70,
+          "drawCalls": 70,
+          "triangles": 5160960
+      },
+      "grass": {
+          "meshes": 60,
+          "instancedMeshes": 60,
+          "instances": 94116,
+          "drawCalls": 60,
+          "triangles": 803294
+      },
+      "vegetation": {
+          "meshes": 165,
+          "instancedMeshes": 165,
+          "instances": 876,
+          "drawCalls": 165,
+          "triangles": 1485854
+      },
+      "environment": {
+          "meshes": 67,
+          "instancedMeshes": 20,
+          "instances": 91,
+          "drawCalls": 67,
+          "triangles": 24811
+      },
+      "settlement": {
+          "meshes": 647,
+          "instancedMeshes": 102,
+          "instances": 1164,
+          "drawCalls": 647,
+          "triangles": 701026
+      },
+      "water": {
+          "meshes": 49,
+          "instancedMeshes": 0,
+          "instances": 49,
+          "drawCalls": 49,
+          "triangles": 3547136
+      },
+      "npc": {
+          "meshes": 181,
+          "instancedMeshes": 0,
+          "instances": 181,
+          "drawCalls": 181,
+          "triangles": 127904
+      },
+      "fauna": {
+          "meshes": 167,
+          "instancedMeshes": 0,
+          "instances": 167,
+          "drawCalls": 167,
+          "triangles": 46914
+      },
+      "items": {
+          "meshes": 172,
+          "instancedMeshes": 0,
+          "instances": 172,
+          "drawCalls": 172,
+          "triangles": 19684
+      },
+      "other": {
+          "meshes": 408,
+          "instancedMeshes": 0,
+          "instances": 408,
+          "drawCalls": 408,
+          "triangles": 24368
+      }
+  },
+  "hitches": [
+      {
+          "category": "STREAMING",
+          "label": "chunk mesh",
+          "count": 61,
+          "avgMs": 40.3,
+          "maxMs": 58.2
+      },
+      {
+          "category": "WATER",
+          "label": "chunk water",
+          "count": 1,
+          "avgMs": 12.7,
+          "maxMs": 12.7
+      },
+      {
+          "category": "GRASS",
+          "label": "grass generation",
+          "count": 7,
+          "avgMs": 8.8,
+          "maxMs": 10.7
+      }
+  ],
+  "systems": {
+      "TERRAIN": 4,
+      "WATER": 5.5,
+      "NPC": 2.2,
+      "FAUNA": 0.7,
+      "PHYSICS": 0.1,
+      "RENDER": 25.1
+  },
+  "bottlenecks": [
+      "RENDER",
+      "WATER",
+      "TERRAIN"
+  ],
+  "spikes": [
+      {
+          "category": "STREAMING",
+          "count": 61
+      },
+      {
+          "category": "GRASS",
+          "count": 7
+      },
+      {
+          "category": "WATER",
+          "count": 1
+      }
+  ],
+  "attribution": {
+      "frameMaxMs": 945.5,
+      "largestHitchMs": 58.2,
+      "unattributedMs": 887.3
+  },
+  "recommendation": "Largest frame (945.5 ms) is not explained by labelled hitches (largest 58.2 ms) — unattributed frame spike, not a category bottleneck.",
+  "context": {
+      "loadedChunks": 71,
+      "npcCount": 21,
+      "faunaCount": 23,
+      "pixelRatio": 1,
+      "quality": "High",
+      "seed": 42,
+      "terrainResolution": 193,
+      "loadRadius": 3,
+      "geometries": 823,
+      "textures": 451,
+      "fixtureVersion": "tools-001-v1",
+      "elapsedDays": 0,
+      "season": "spring",
+      "weather": "rain",
+      "timeOfDay": 0.2916666666666667,
+      "scenarioAnchor": {
+          "x": -8.14339355751872,
+          "z": -11.524926211684942
+      },
+      "route": {
+          "startX": -8.14339355751872,
+          "startZ": -11.524926211684942,
+          "speedMps": 14.4,
+          "updateMs": 100,
+          "durationSec": 30
+      },
+      "viewportWidth": 1920,
+      "viewportHeight": 945
+  }
+}

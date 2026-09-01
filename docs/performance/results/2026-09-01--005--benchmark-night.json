@@ -1,0 +1,228 @@
+{
+  "durationSec": 30,
+  "quality": "High",
+  "pixelRatio": 1,
+  "scenario": "night",
+  "canonical": true,
+  "fps": {
+      "avg": 24.4,
+      "min": 1,
+      "p1": 17
+  },
+  "frameTime": {
+      "avg": 41,
+      "p95": 51.5,
+      "max": 760.9
+  },
+  "rendering": {
+      "drawCallsAvg": 1510,
+      "drawCallsMax": 1785,
+      "trianglesAvg": 9215972,
+      "mirrorDrawCallsAvg": 267,
+      "geometries": 618,
+      "textures": 310
+  },
+  "scene": {
+      "terrain": {
+          "meshes": 61,
+          "instancedMeshes": 0,
+          "instances": 61,
+          "drawCalls": 61,
+          "triangles": 4497408
+      },
+      "grass": {
+          "meshes": 84,
+          "instancedMeshes": 84,
+          "instances": 314861,
+          "drawCalls": 84,
+          "triangles": 4517288
+      },
+      "vegetation": {
+          "meshes": 87,
+          "instancedMeshes": 87,
+          "instances": 170,
+          "drawCalls": 87,
+          "triangles": 269830
+      },
+      "environment": {
+          "meshes": 39,
+          "instancedMeshes": 20,
+          "instances": 40,
+          "drawCalls": 39,
+          "triangles": 11710
+      },
+      "settlement": {
+          "meshes": 649,
+          "instancedMeshes": 102,
+          "instances": 1170,
+          "drawCalls": 649,
+          "triangles": 701870
+      },
+      "water": {
+          "meshes": 24,
+          "instancedMeshes": 0,
+          "instances": 24,
+          "drawCalls": 24,
+          "triangles": 1703936
+      },
+      "npc": {
+          "meshes": 182,
+          "instancedMeshes": 0,
+          "instances": 182,
+          "drawCalls": 182,
+          "triangles": 129392
+      },
+      "fauna": {
+          "meshes": 166,
+          "instancedMeshes": 0,
+          "instances": 166,
+          "drawCalls": 166,
+          "triangles": 44986
+      },
+      "items": {
+          "meshes": 130,
+          "instancedMeshes": 0,
+          "instances": 130,
+          "drawCalls": 130,
+          "triangles": 14488
+      },
+      "other": {
+          "meshes": 412,
+          "instancedMeshes": 0,
+          "instances": 412,
+          "drawCalls": 412,
+          "triangles": 25720
+      }
+  },
+  "hitches": [],
+  "isolation": [
+      {
+          "id": "full",
+          "renderMsAvg": 19.66428570662226,
+          "drawCallsAvg": 1515,
+          "trianglesAvg": 9220963
+      },
+      {
+          "id": "hide-grass",
+          "renderMsAvg": 18.178571432828903,
+          "drawCallsAvg": 1471,
+          "trianglesAvg": 5433971
+      },
+      {
+          "id": "hide-vegetation",
+          "renderMsAvg": 16.58823530112996,
+          "drawCallsAvg": 1458,
+          "trianglesAvg": 8971949
+      },
+      {
+          "id": "hide-environment",
+          "renderMsAvg": 18.587500002235174,
+          "drawCallsAvg": 1494,
+          "trianglesAvg": 9213200
+      },
+      {
+          "id": "hide-settlement",
+          "renderMsAvg": 15.87058823599535,
+          "drawCallsAvg": 738,
+          "trianglesAvg": 8381102
+      },
+      {
+          "id": "hide-water",
+          "renderMsAvg": 32.75999999642372,
+          "drawCallsAvg": 1511,
+          "trianglesAvg": 9057123
+      },
+      {
+          "id": "hide-terrain",
+          "renderMsAvg": 22.569230762811806,
+          "drawCallsAvg": 1440,
+          "trianglesAvg": 5153433
+      },
+      {
+          "id": "hide-npc-fauna",
+          "renderMsAvg": 17.471428568874085,
+          "drawCallsAvg": 1380,
+          "trianglesAvg": 9133969
+      },
+      {
+          "id": "no-shadows",
+          "renderMsAvg": 13.36666668123669,
+          "drawCallsAvg": 1039,
+          "trianglesAvg": 7147763
+      },
+      {
+          "id": "no-ao",
+          "renderMsAvg": 11.269999995827675,
+          "drawCallsAvg": 1472,
+          "trianglesAvg": 9137811
+      },
+      {
+          "id": "no-bloom",
+          "renderMsAvg": 17.41428570662226,
+          "drawCallsAvg": 1502,
+          "trianglesAvg": 9220950
+      },
+      {
+          "id": "no-smaa",
+          "renderMsAvg": 15.052941182080437,
+          "drawCallsAvg": 1496,
+          "trianglesAvg": 9176713
+      },
+      {
+          "id": "no-god-rays",
+          "renderMsAvg": 15.211764707284814,
+          "drawCallsAvg": 1499,
+          "trianglesAvg": 9176716
+      },
+      {
+          "id": "no-film-grade",
+          "renderMsAvg": 16.813333328564962,
+          "drawCallsAvg": 1497,
+          "trianglesAvg": 9170817
+      },
+      {
+          "id": "no-reflections",
+          "renderMsAvg": 16.881250005215406,
+          "drawCallsAvg": 1247,
+          "trianglesAvg": 8468780
+      }
+  ],
+  "systems": {
+      "WATER": 3.9,
+      "NPC": 1.6,
+      "FAUNA": 0.8,
+      "PHYSICS": 0.1,
+      "RENDER": 29.7
+  },
+  "bottlenecks": [
+      "RENDER",
+      "WATER",
+      "NPC"
+  ],
+  "spikes": [],
+  "attribution": {
+      "frameMaxMs": 760.9,
+      "largestHitchMs": 0,
+      "unattributedMs": 760.9
+  },
+  "recommendation": "Largest frame (760.9 ms) is not explained by labelled hitches (largest 0 ms) — unattributed frame spike, not a category bottleneck.",
+  "context": {
+      "loadedChunks": 61,
+      "npcCount": 21,
+      "faunaCount": 23,
+      "pixelRatio": 1,
+      "quality": "High",
+      "seed": 42,
+      "terrainResolution": 193,
+      "loadRadius": 3,
+      "geometries": 618,
+      "textures": 310,
+      "fixtureVersion": "tools-001-v1",
+      "elapsedDays": 0,
+      "season": "spring",
+      "weather": "rain",
+      "timeOfDay": 0.05,
+      "viewportWidth": 1920,
+      "viewportHeight": 945
+  }
+}
