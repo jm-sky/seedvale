@@ -52,6 +52,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | ◼️ `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -       | 🔴 | M      | settlements-npcs-015 |
 | ◼️ `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
+| ◼️ `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
 
 ---
 
@@ -137,7 +138,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `005`
 - items-player: `012`
-- npc: `010`
+- npc: `011`
 - persistence: `002`
 - quests-progression: `001`
 - settlements: `003`
