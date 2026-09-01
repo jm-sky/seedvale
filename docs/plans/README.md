@@ -55,6 +55,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | ◼️ `npc-012-weather-reaction-and-shelter.md`                           | -       | 🟡 | M      | ~~040~~ |
 | ◼️ `npc-013-night-campfire-gathering.md`                               | -       | 🟡 | S      | ~~151~~ |
+| ◼️ `world-009-blood-traces.md`                                         | -       | 🟡 | M      | -      |
 
 ---
 
@@ -148,7 +149,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `018`
 - tools: `008`
 - ui-input: `007`
-- world: `009`
+- world: `010`
 - world-terrain: `004`
 
 This ids section is maintained automatically from the plan files.
