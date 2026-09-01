@@ -46,7 +46,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | - | 🟡 | M | ~~127~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | Prawdziwe jaskinie podziemne; wstępny | 🟡 | XL | ~~097~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | - | 🟡 | M | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-| ◼️ `persistence-001-full-simulation-persistence.md`                    | - | 🔴 | L | - |
+| 💡 `persistence-001-full-simulation-persistence.md`                    | - | 🔴 | L | - |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | Weapon Browser w Observatory/Admin | 🟡 | M | - |
 | ◼️ `tools-003-house-browser-and-tools-menu.md`                         | - | 🟡 | M | ~~111~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | - | 🔴 | M | - |
