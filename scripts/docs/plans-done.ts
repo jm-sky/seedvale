@@ -27,12 +27,6 @@ const git = (...args: string[]): string =>
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim()
 
-const relativePath = (path: string): string =>
-  path
-    .replace(ROOT_DIR, '')
-    .replace(/^[/\\]/, '')
-    .replaceAll('\\', '/')
-
 const planId = (file: string): string =>
   file.replace(/\.md$/, '')
 
