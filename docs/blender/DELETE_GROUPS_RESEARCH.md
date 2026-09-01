@@ -67,7 +67,7 @@ The latter uses Blender context-sensitive operators including:
 
 Calling MPFB2 Export Copy operations from an incompatible context caused:
 
-    RuntimeError: Operator bpy.ops.object.select_all.poll() failed, context is incorrect
+    RuntimeError: bpy.ops.object.select_all.poll() failed, context is incorrect
 
 A View3D override was sufficient to execute the MPFB2 Export Copy operator manually from the Seedvale script.
 
@@ -101,48 +101,137 @@ Generated Delete Groups currently cause incorrect holes in the body:
 - holes around the neck/decollete,
 - after GLB export, some holes become visibly triangular.
 
-One diagnostic run showed:
+The issue occurs even when Optimize Character completes successfully.
 
-    Human_export_copy
-      vertices: 12,768
-      triangles: 25,332
-      Delete groups: 2
-        Delete.low-poly: 0 vertices
-        Delete.low-poly_export_copy: 0 vertices
-      MASK modifiers: 0
+## Diagnostic v3 — confirmed geometry state
 
-Other clothing meshes had no Delete Groups because Delete Groups belong to the body mesh.
+A diagnostic run after Optimize reported:
 
-A later optimization run completed successfully:
+    BODY: Human_export_copy
+    vertices: 12,768
+    polygons: 12,666
 
-    Optimized: 4 clothing, 4 Delete groups, body Human_export_copy, 4 materials
+Existing Delete Groups:
 
-Despite successful completion, visual inspection showed that the resulting Delete Groups were too aggressive and removed body geometry that should remain visible.
+    Delete.low-poly
+      vertices: 0
+      coverage: 0.00%
 
-## Important conclusion
+    Delete.low-poly_export_copy
+      vertices: 0
+      coverage: 0.00%
 
-The main unresolved problem is the correctness of MPFB2 Delete Group generation when matching against decimated clothing geometry.
+Tank top:
 
-The GLB exporter should not yet be treated as the primary cause. The triangular holes may simply expose the topology created by the generated body masks more clearly.
+    Delete.elvs_male_athletic_tank1
+      vertices: 1,750
+      coverage: 13.71%
+
+Polygon coverage:
+
+    fully inside:    1,601
+    partially inside: 301
+    outside:         10,764
+    partial ratio:   15.83%
+
+Boundary:
+
+    group vertices:       1,750
+    adjacent non-group:   301
+    boundary/group ratio: 17.20%
+
+Weights:
+
+    count: 1,750
+    min:   1.0000
+    max:   1.0000
+    avg:   1.0000
+
+The affected polygons were reported as 4-vertex polygons: 1,902.
+
+The group consisted of 165 contiguous vertex ranges; the largest reported ranges were:
+
+    3666 - 3977  (312)
+    10025 - 10305 (281)
+    1505 - 1640  (136)
+    7871 - 8002  (132)
+
+The corresponding Mask existed and was configured as:
+
+    group = Delete.elvs_male_athletic_tank1
+    invert = True
+
+## Interpretation of Diagnostic v3
+
+The diagnostic confirms that the Mask is not simply absent or empty.
+
+The tank top Delete Group is substantial and has a significant boundary:
+
+- 1,750 body vertices are removed by the group.
+- 301 group-adjacent vertices form the boundary with non-group vertices.
+- 301 polygons are only partially covered.
+
+This makes an overly aggressive body boundary a strong hypothesis for the visible holes.
+
+The diagnostic does NOT yet prove whether the cause is:
+
+1. MPFB2 VertexMatch itself,
+2. decimated clothing geometry,
+3. coordinate/evaluation mismatch,
+4. temporary ARMATURE application,
+5. temporary triangulation,
+6. Mask evaluation,
+7. GLB export.
+
+The triangular appearance after GLB export is therefore not sufficient evidence that glTF export is the root cause.
+
+## Important pipeline constraint
+
+The current implementation intentionally uses:
+
+    Decimate clothing
+        ↓
+    Generate Delete Groups
+        ↓
+    Decimate body
+
+This ordering is needed for performance, but it may alter the clothing surface used by VertexMatch.
+
+The next investigation must determine whether Delete Group geometry remains valid after clothing decimation.
 
 ## Current hypothesis
 
-Hypothesis — not yet verified:
+**Hypothesis — not yet verified:**
 
-After clothing decimation, VertexMatch can produce an overly broad body Delete Group near clothing boundaries. The inverted Mask modifier then removes valid body surface around the clothing.
+After clothing decimation, VertexMatch produces an overly broad body Delete Group near clothing boundaries. The inverted Mask then removes valid body surface around the clothing.
 
-This needs direct validation by inspecting the generated Delete Groups and their vertex counts/locations before redesigning the algorithm.
+A second related possibility is that the temporary ARMATURE/triangulation processing changes the coordinates/topology used for matching.
 
-## Next research step
+## Current conclusion
 
-1. Run the current pipeline on the same Export Copy.
-2. Inspect the generated Delete.* groups on Human_export_copy.
-3. Record vertex counts for every Delete Group.
-4. Identify whether shoulder, neck and cheek vertices are included.
-5. Compare the result with the corresponding decimated clothing geometry.
-6. Only then modify the matching algorithm.
+Do **not** treat the current Delete Group implementation as verified for production.
 
-Do not add complicated heuristics yet. The target is a simple, deterministic V1 implementation.
+Do not blindly change decimate ratios or add arbitrary smoothing/expansion heuristics.
+
+The next step is a narrow geometric diagnosis comparing:
+
+- generated Delete Group,
+- decimated clothing,
+- body surface,
+- boundary vertices,
+- and the evaluated geometry immediately before Mask application.
+
+## Recommended next investigation
+
+1. Run Optimize Character on a clean Export Copy.
+2. Run Delete Diagnostic v3.
+3. Determine which Delete Group vertices correspond to the shoulder/neck/cheek regions.
+4. Compare those vertices with the nearest surface of the corresponding clothing mesh.
+5. Test the same matching operation without clothing decimation on one controlled copy.
+6. Compare Delete Group counts and boundary behaviour.
+7. Only then decide whether the V1 algorithm should use original clothing geometry, evaluated clothing geometry, or another MPFB2-supported matching path.
+
+The goal remains a simple deterministic V1 implementation.
 
 ## Manual Export Copy
 
@@ -172,12 +261,14 @@ The immediate Seedvale tooling focus is:
 - Blender operator context was identified as the cause of the select_all poll failure.
 - Decimate-before-Delete-Groups is the current intended V1 pipeline.
 - MPFB2 MeshCrossRef requires consistent face vertex counts.
-- Temporary triangulation allows the mixed triangle/quad input to continue through the matching stage.
+- Temporary triangulation allows mixed triangle/quad input to continue through the matching stage.
+- Diagnostic v3 confirmed a substantial tank-top Delete Group and significant boundary coverage.
 
 ### Not yet verified
 
 - Correctness of generated Delete Groups after clothing decimation.
 - Whether MPFB2 VertexMatch is appropriate for decimated clothing in this exact workflow.
+- Whether temporary ARMATURE application affects matching coordinates.
 - Whether triangular GLB holes are caused entirely by generated body masks.
 - Whether the current alpha fix is sufficient for every clothing/hair material.
 - Final triangle/GLB-size budget after a correct Delete Group implementation.
