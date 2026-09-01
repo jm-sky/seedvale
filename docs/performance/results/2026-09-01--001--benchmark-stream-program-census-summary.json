@@ -1,0 +1,188 @@
+{
+  "frames": 1033,
+  "programCountFinal": 72,
+  "programCountMax": 73,
+  "chunkAttachEvents": 259,
+  "stageGrowth": [
+      {
+          "kind": "postprocess-render",
+          "events": 12,
+          "totalDelta": 56,
+          "maxDurationMs": 182.89999997615814
+      },
+      {
+          "kind": "mirror-render",
+          "events": 6,
+          "totalDelta": 6,
+          "maxDurationMs": 26
+      }
+  ],
+  "slowestStages": [
+      {
+          "kind": "postprocess-render",
+          "frame": 50,
+          "tMs": 35724.59999996424,
+          "durationMs": 182.89999997615814,
+          "programCountBefore": 43,
+          "programCountAfter": 54,
+          "programDelta": 11
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 0,
+          "tMs": 31895,
+          "durationMs": 147.19999998807907,
+          "programCountBefore": 11,
+          "programCountAfter": 30,
+          "programDelta": 19
+      },
+      {
+          "kind": "mirror-render",
+          "frame": 0,
+          "tMs": 31747.599999964237,
+          "durationMs": 142.0999999642372,
+          "programCountBefore": 11,
+          "programCountAfter": 11,
+          "programDelta": 0
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 58,
+          "tMs": 36160,
+          "durationMs": 106.80000001192093,
+          "programCountBefore": 56,
+          "programCountAfter": 63,
+          "programDelta": 7
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 408,
+          "tMs": 52574.89999997616,
+          "durationMs": 90.89999997615814,
+          "programCountBefore": 73,
+          "programCountAfter": 73,
+          "programDelta": 0
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 5,
+          "tMs": 32977.30000001192,
+          "durationMs": 59.700000047683716,
+          "programCountBefore": 34,
+          "programCountAfter": 36,
+          "programDelta": 2
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 672,
+          "tMs": 62743.89999997616,
+          "durationMs": 59.69999998807907,
+          "programCountBefore": 72,
+          "programCountAfter": 72,
+          "programDelta": 0
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 1020,
+          "tMs": 75666.80000001192,
+          "durationMs": 52.90000003576279,
+          "programCountBefore": 72,
+          "programCountAfter": 72,
+          "programDelta": 0
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 790,
+          "tMs": 69203.69999998808,
+          "durationMs": 49.5,
+          "programCountBefore": 72,
+          "programCountAfter": 72,
+          "programDelta": 0
+      },
+      {
+          "kind": "postprocess-render",
+          "frame": 12,
+          "tMs": 34252,
+          "durationMs": 45.69999998807907,
+          "programCountBefore": 38,
+          "programCountAfter": 43,
+          "programDelta": 5
+      }
+  ],
+  "finalMaterialSnapshot": {
+      "kind": "material-snapshot",
+      "frame": 1020,
+      "tMs": 75612.80000001192,
+      "programCount": 72,
+      "uniqueMaterialCount": 773,
+      "byBucket": {
+          "other": 324,
+          "terrain": 1,
+          "water": 29,
+          "fauna": 54,
+          "items": 124,
+          "environment": 10,
+          "settlement": 137,
+          "npc": 87,
+          "vegetation": 6,
+          "grass": 1
+      },
+      "byType": {
+          "ShaderMaterial": 50,
+          "MeshStandardMaterial": 722,
+          "MeshBasicMaterial": 1
+      }
+  },
+  "firstUseEvents": 73,
+  "programFamilies": [
+      {
+          "key": "MeshStandardMaterial",
+          "count": 31,
+          "firstFrame": 0,
+          "sampleCacheKey": "physical,STANDARD,,highp,srgb-linear,false,,false,false,false,false,false,uv,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,,false,0,,1,16,0,0,1,0,1,0,0,0,0,1,0,0,0,0,8389696,8520707,srgb,chunk-terrain-surface-detail-v6",
+          "sampleName": ""
+      },
+      {
+          "key": "ShaderMaterial",
+          "count": 24,
+          "firstFrame": 0,
+          "sampleCacheKey": "0,1,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,,false,0,,1,16,0,0,1,0,1,0,0,0,0,1,0,0,0,0,8388608,8524801,srgb,onBeforeCompile() {\n  }",
+          "sampleName": "SkyShader"
+      },
+      {
+          "key": "MeshDepthMaterial",
+          "count": 14,
+          "firstFrame": 1,
+          "sampleCacheKey": "depth,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,1,16,0,0,1,0,1,0,0,0,0,1,0,0,0,3200,8388608,8532992,srgb,onBeforeCompile() {\n  }",
+          "sampleName": ""
+      },
+      {
+          "key": "SpriteMaterial",
+          "count": 1,
+          "firstFrame": 0,
+          "sampleCacheKey": "sprite,highp,srgb-linear,false,,uv,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,,true,0,,1,16,0,0,1,0,1,0,0,0,0,1,0,0,0,0,0,8389633,srgb,onBeforeCompile() {\n  }",
+          "sampleName": ""
+      },
+      {
+          "key": "RawShaderMaterial",
+          "count": 1,
+          "firstFrame": 0,
+          "sampleCacheKey": "37,38,SRGB_TRANSFER,,ACES_FILMIC_TONE_MAPPING,,onBeforeCompile() {\n  }",
+          "sampleName": "OutputShader"
+      },
+      {
+          "key": "PointsMaterial",
+          "count": 1,
+          "firstFrame": 53,
+          "sampleCacheKey": "points,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,,true,0,,1,16,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1024,8389635,srgb,onBeforeCompile() {\n  }",
+          "sampleName": ""
+      },
+      {
+          "key": "MeshBasicMaterial",
+          "count": 1,
+          "firstFrame": 65,
+          "sampleCacheKey": "basic,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,0,,false,0,,1,16,0,0,1,0,1,0,0,0,0,1,0,0,0,0,8388608,8522755,srgb,onBeforeCompile() {\n  }",
+          "sampleName": ""
+      }
+  ]
+}

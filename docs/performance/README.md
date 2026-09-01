@@ -540,6 +540,8 @@ Each result should correspond to a captured performance trace and be kept as a h
 - Batch: 2026-09-01
   - `docs/performance/results/2026-09-01--001--benchmark-stream.json`
   - `docs/performance/results/2026-09-01--001--benchmark-stream.md`
+  - `docs/performance/results/2026-09-01--001--benchmark-stream-program-census-dump.json`
+  - `docs/performance/results/2026-09-01--001--benchmark-stream-program-census-summary.json`
   - `docs/performance/results/2026-09-01--002--benchmark-current.json`
   - `docs/performance/results/2026-09-01--002--benchmark-current.md`
   - `docs/performance/results/2026-09-01--003--benchmark-forest.json`
