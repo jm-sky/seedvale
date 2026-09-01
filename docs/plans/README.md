@@ -30,7 +30,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                   | Summary   | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | --------- | --- | ------ | ------- |
 | 💡 `world-008-player-world-placement-foundation.md`                    | - | 🟡 | M | - |
-| 💡 `items-player-003-player-physical-effort-stamina-vigor.md`          | - | 🟡 | M | - |
 | ◼️ `items-player-009-player-built-torch-and-ignition.md`               | - | 🟡 | M | `world-008` |
 | ◼️ `items-player-010-player-built-palisade-and-building-removal.md`    | - | 🟡 | M | `world-008` |
 | ◼️ `fauna-004-sheep-wool-and-shepherd.md`                              | Owce, cykl wełny i profesja Pasterz | 🟡 | L | - |
@@ -61,6 +60,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | File | Check |
 |------|-------|
+| `items-player-003-player-physical-effort-stamina-vigor.md` | idle/sprint/work Stamina behaviour, work/sprint/heavy-work Vigor drain, well/terrain-prep sessions leave Stamina reduced but not 0 with Vigor visibly lower, post-work recovery pacing, wolf-after-work combat with reduced capacity, sleep still restoring Vigor, fishing/light interactions staying uncosted |
 | `npc-006-shared-npc-animal-pathfinding.md` | NPCs and wolves navigate around obstacles without getting stuck; no obvious performance regression |
 | `ai-004-npc-goals-and-persistent-plans.md` | NPC goals survive interruptions and resume correctly; blocked/completed plans behave correctly |
 | `settlements-npcs-005-local-resource-exchange.md` | Household ↔ household and settlement ↔ household exchange works with real shortages/surpluses and physical NPC movement |

@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { createStaminaState } from '../shared/StaminaState'
+import { createVigorState } from '../shared/VigorState'
 import { createPlayerRanged } from './playerRanged'
+
+/** Arbitrary real-seconds-per-game-day — only the Vigor-cost tests below
+ *  care about its actual value. */
+const DAY_LENGTH_SEC = 600
 
 const SHORT_BOW = ITEM_CATALOG.short_bow.ranged!
 const LONG_BOW = ITEM_CATALOG.long_bow.ranged!
@@ -33,14 +38,14 @@ describe('createPlayerRanged lifecycle', () => {
   it('rejects a draw request with insufficient stamina', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(SHORT_BOW.staminaCost - 1)
-    expect(ranged.requestDraw(SHORT_BOW, stamina)).toBe(false)
+    expect(ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)).toBe(false)
     expect(ranged.state()).toBe('idle')
   })
 
   it('drains stamina and enters draw on a successful request', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
-    expect(ranged.requestDraw(SHORT_BOW, stamina)).toBe(true)
+    expect(ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)).toBe(true)
     expect(ranged.state()).toBe('draw')
     expect(stamina.current).toBe(100 - SHORT_BOW.staminaCost)
   })
@@ -48,14 +53,14 @@ describe('createPlayerRanged lifecycle', () => {
   it('ignores a second request while already drawing', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
-    ranged.requestDraw(SHORT_BOW, stamina)
-    expect(ranged.requestDraw(SHORT_BOW, stamina)).toBe(false)
+    ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)
+    expect(ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)).toBe(false)
   })
 
   it('update() alone never fires — firing is release-gated (press → draw, release → fire)', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
-    ranged.requestDraw(SHORT_BOW, stamina)
+    ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)
     const tick = ranged.update(SHORT_BOW.drawTime * 5)
     expect(tick.fireReady).toBe(false)
     expect(ranged.state()).toBe('draw')
@@ -64,7 +69,7 @@ describe('createPlayerRanged lifecycle', () => {
   it('releaseDraw() at/after drawTime fires exactly once, then recovers to idle', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
-    ranged.requestDraw(SHORT_BOW, stamina)
+    ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)
 
     ranged.update(SHORT_BOW.drawTime)
     const fireTick = ranged.releaseDraw()
@@ -87,7 +92,7 @@ describe('createPlayerRanged lifecycle', () => {
   it('releaseDraw() before drawTime cancels with no shot and no extra stamina cost', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
-    ranged.requestDraw(SHORT_BOW, stamina)
+    ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)
     const afterDrawStart = stamina.current
     expect(afterDrawStart).toBe(100 - SHORT_BOW.staminaCost)
 
@@ -103,7 +108,7 @@ describe('createPlayerRanged lifecycle', () => {
   it('reset cancels an in-flight draw', () => {
     const ranged = createPlayerRanged()
     const stamina = createStaminaState(100)
-    ranged.requestDraw(SHORT_BOW, stamina)
+    ranged.requestDraw(SHORT_BOW, stamina, createVigorState(100), DAY_LENGTH_SEC)
     ranged.reset()
     expect(ranged.state()).toBe('idle')
     expect(ranged.isDrawing()).toBe(false)

@@ -740,7 +740,14 @@ export class PlayerController {
     this.mesh.rotation.y = yaw
   }
 
-  update(dt: number, dayLengthSec: number): void {
+  /** `effortActive` (plan items-player-003 §2/§12) — true while a physical
+   *  `BusyAction`/terrain-preparation channel is draining Stamina through its
+   *  own channel this frame (`app/gameLoop.ts`'s `busy.isPhysical()` /
+   *  terrain-prep check). Suppresses normal Stamina regeneration so the two
+   *  mechanisms can never net out to a positive balance; never drains
+   *  Stamina by itself. */
+  update(dt: number, dayLengthSec: number, effortActive = false): void {
+    const recoveryAllowed = !effortActive
     if (this.mounted) {
       this.syncCamera()
       this.syncHpBar()
@@ -748,14 +755,14 @@ export class PlayerController {
       return
     }
     if (this.downed) {
-      tickPlayerStamina(this.needs.stamina, dt, false)
+      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
       return
     }
     if (this.pose !== 'stand') {
-      tickPlayerStamina(this.needs.stamina, dt, false)
+      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
@@ -774,7 +781,7 @@ export class PlayerController {
     if (this.encumbranceBlocked) this.wish.set(0, 0, 0)
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
-    tickPlayerStamina(this.needs.stamina, dt, this.sprinting)
+    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {

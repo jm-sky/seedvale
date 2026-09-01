@@ -7,7 +7,7 @@ import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { createAcquiredInstance } from '../../items/trade'
-import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
+import { physicalEffortBusyOptions } from '../../player/PlayerNeeds'
 import { HIDDEN_TREASURE_MARKER_COUNT, hiddenTreasureDigHit } from '../../settlement/hiddenTreasure'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
@@ -209,7 +209,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       checkHiddenTreasureDig(x, z)
       checkHiddenFindDig(x, z)
       ctx.syncQuickActionAvailability()
-    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   const startPickaxeDigAt = (x: number, z: number): void => {
@@ -223,7 +223,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     busy.start(DIG_DURATION_SEC, 'Kucie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       ctx.syncQuickActionAvailability()
-    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   const startLevelAt = (x: number, z: number): void => {
@@ -234,7 +234,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     }
     busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
-    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   const startPickaxeLevelAt = (x: number, z: number): void => {
@@ -245,7 +245,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     }
     busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
-    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   /** "Zrób górkę" (plan `world-terrain-002` §1) — inverse of `startDigAt`:
@@ -261,7 +261,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     playActionDig(worldAudio.playOnce)
     busy.start(DIG_DURATION_SEC, 'Usypywanie…', () => {
       applyMoundAt(bundle.chunkManager, x, z, profile.depth, toast)
-    }, { staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   const startTreeChop = (treeId: string, x: number, z: number): void => {
@@ -334,7 +334,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       ctx.syncHeldHud()
       ctx.syncQuickActionAvailability()
       toast.show(message, 'pickup')
-    })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   const startDepositMine = (depositId: string, x: number, z: number): void => {
@@ -366,7 +366,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       heldTool.syncWithInventory()
       ctx.syncHeldHud()
       toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
-    })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   return {

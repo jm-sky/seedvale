@@ -2,18 +2,23 @@ import { describe, expect, it } from 'vitest'
 import { createHealthState } from '../shared/HealthState'
 import { HUNGER_STARVING_THRESHOLD } from '../shared/HungerState'
 import { THIRST_DEHYDRATED_THRESHOLD } from '../shared/ThirstState'
+import { drainVigor } from '../shared/VigorState'
 import {
+  applyRepresentedPhysicalEffortVigor,
   createPlayerNeeds,
   drinkWater,
   eatFood,
   hungerSevereDurationSec,
   isTakingDeprivationDamage,
+  physicalEffortStaminaCostPerSec,
+  physicalEffortVigorCostPerSec,
   restoreNeedsFromSleep,
   restorePersistedNeeds,
   thirstSevereDurationSec,
   tickHealthRegen,
   tickPlayerMovementVigor,
   tickPlayerNeeds,
+  tickPlayerStamina,
 } from './PlayerNeeds'
 
 const DAY_LENGTH_SEC = 480
@@ -234,6 +239,78 @@ describe('restoreNeedsFromSleep', () => {
     needs.vigor.current = 5
     restoreNeedsFromSleep(needs, 1)
     expect(needs.vigor.current).toBe(100)
+  })
+})
+
+describe('tickPlayerStamina — recovery gate (plan items-player-003 §2)', () => {
+  it('regenerates normally when recoveryAllowed is left at its default', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 50
+    tickPlayerStamina(needs.stamina, 1, false)
+    expect(needs.stamina.current).toBeGreaterThan(50)
+  })
+
+  it('suppresses regeneration while recoveryAllowed is false, without draining', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 50
+    tickPlayerStamina(needs.stamina, 1, false, false)
+    expect(needs.stamina.current).toBe(50)
+  })
+
+  it('still drains while sprinting regardless of recoveryAllowed', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 50
+    tickPlayerStamina(needs.stamina, 1, true, false)
+    expect(needs.stamina.current).toBeLessThan(50)
+  })
+})
+
+describe('physical effort profile (plan items-player-003 §4)', () => {
+  it('preserves light < moderate <= heavy for both Stamina and Vigor cost', () => {
+    expect(physicalEffortStaminaCostPerSec('light')).toBeLessThan(physicalEffortStaminaCostPerSec('moderate'))
+    expect(physicalEffortStaminaCostPerSec('moderate')).toBeLessThan(physicalEffortStaminaCostPerSec('heavy'))
+    expect(physicalEffortVigorCostPerSec('light', DAY_LENGTH_SEC)).toBeLessThan(physicalEffortVigorCostPerSec('moderate', DAY_LENGTH_SEC))
+    expect(physicalEffortVigorCostPerSec('moderate', DAY_LENGTH_SEC)).toBeLessThan(physicalEffortVigorCostPerSec('heavy', DAY_LENGTH_SEC))
+  })
+
+  it('moderate physical work drains Vigor faster than plain walking', () => {
+    const walking = createPlayerNeeds()
+    tickPlayerMovementVigor(walking.vigor, 10, false, DAY_LENGTH_SEC)
+
+    const working = createPlayerNeeds()
+    drainVigor(working.vigor, physicalEffortVigorCostPerSec('moderate', DAY_LENGTH_SEC) * 10)
+
+    expect(working.vigor.current).toBeLessThan(walking.vigor.current)
+  })
+
+  it('represented-hours Vigor cost is invariant to how many real seconds the channel took', () => {
+    // Plan §5 — a 2h represented work session must cost the same Vigor
+    // whether the BusyAction/TimeSkip channel representing it ran for 8
+    // real seconds or 20.
+    const fast = createPlayerNeeds()
+    applyRepresentedPhysicalEffortVigor(fast.vigor, 'heavy', 2)
+
+    const slow = createPlayerNeeds()
+    applyRepresentedPhysicalEffortVigor(slow.vigor, 'heavy', 2)
+
+    expect(fast.vigor.current).toBeCloseTo(slow.vigor.current, 10)
+  })
+
+  it('represented-hours Vigor cost scales with the credited fraction (partial cancellation)', () => {
+    const full = createPlayerNeeds()
+    applyRepresentedPhysicalEffortVigor(full.vigor, 'heavy', 2)
+
+    const half = createPlayerNeeds()
+    applyRepresentedPhysicalEffortVigor(half.vigor, 'heavy', 1)
+
+    expect(half.vigor.current).toBeGreaterThan(full.vigor.current)
+  })
+
+  it('a zero/negative represented-hours delta costs nothing', () => {
+    const needs = createPlayerNeeds()
+    applyRepresentedPhysicalEffortVigor(needs.vigor, 'heavy', 0)
+    applyRepresentedPhysicalEffortVigor(needs.vigor, 'heavy', -1)
+    expect(needs.vigor.current).toBe(needs.vigor.max)
   })
 })
 

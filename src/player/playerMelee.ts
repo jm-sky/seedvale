@@ -6,6 +6,8 @@ import {
   type MeleeState,
 } from '../combat/meleeAttack'
 import { drainStamina, type StaminaState } from '../shared/StaminaState'
+import { drainVigor, type VigorState } from '../shared/VigorState'
+import { physicalEffortVigorCostPerSec } from './PlayerNeeds'
 
 /** Universal melee attack lifecycle (plan 123) — driven entirely by the
  *  equipped tool's `ITEM_CATALOG[kind].melee` config. The timer/hit-test
@@ -62,10 +64,16 @@ export type PlayerMelee = {
    *  success), computing a bounded gap-close move toward `(targetX, targetZ)`
    *  when it's outside `config.range` (plan 124 §3). Returns
    *  `started: false` without side effects when idle/stamina reject it —
-   *  callers decide what feedback (if any) an ignored request deserves. */
+   *  callers decide what feedback (if any) an ignored request deserves.
+   *  Also applies the shared physical-effort Vigor cost once, for the
+   *  attack's own `windUp+hitWindow+recovery` duration at `moderate`
+   *  intensity (plan items-player-003 §10) — never for the lunge, which
+   *  already spends its own Stamina only. */
   requestAttack: (
     config: MeleeConfig,
     stamina: StaminaState,
+    vigor: VigorState,
+    dayLengthSec: number,
     playerX: number,
     playerZ: number,
     targetX: number,
@@ -91,10 +99,11 @@ export function createPlayerMelee(): PlayerMelee {
     state: lifecycle.state,
     isAttacking: lifecycle.isAttacking,
     phaseProgress: lifecycle.phaseProgress,
-    requestAttack(cfg, stamina, playerX, playerZ, targetX, targetZ) {
+    requestAttack(cfg, stamina, vigor, dayLengthSec, playerX, playerZ, targetX, targetZ) {
       if (lifecycle.state() !== 'idle') return { started: false, moveX: 0, moveZ: 0 }
       if (stamina.current < cfg.staminaCost) return { started: false, moveX: 0, moveZ: 0 }
       drainStamina(stamina, cfg.staminaCost)
+      drainVigor(vigor, physicalEffortVigorCostPerSec('moderate', dayLengthSec) * (cfg.windUp + cfg.hitWindow + cfg.recovery))
 
       let moveX = 0
       let moveZ = 0

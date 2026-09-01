@@ -73,6 +73,7 @@ import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
 import { drainStamina } from '../shared/StaminaState'
+import { drainVigor } from '../shared/VigorState'
 import { chunksNear } from '../terrain/chunkGrid'
 import { disposeChunkWorkerPool } from '../terrain/chunkWorkerPool'
 import { sampleFootstepSurface } from '../terrain/footstepSurface'
@@ -756,7 +757,10 @@ export async function createApp(
 
   const timeSkip = createTimeSkip(dayNight)
   const timeSkipOverlay = createTimeSkipOverlay(container)
-  const busy = createBusyAction((amount) => drainStamina(player.needs.stamina, amount))
+  const busy = createBusyAction(
+    (amount) => drainStamina(player.needs.stamina, amount),
+    (amount) => drainVigor(player.needs.vigor, amount),
+  )
   const busyOverlay = createBusyOverlay(container)
   const restCamp = createRestCampSequence(scene, player, (x, z) => bundle.chunkManager.sampleHeight(x, z))
 

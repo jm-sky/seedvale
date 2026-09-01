@@ -53,3 +53,37 @@ describe('createBusyAction', () => {
     expect(second).not.toHaveBeenCalled()
   })
 })
+
+describe('createBusyAction — physical effort (plan items-player-003 §2/§9)', () => {
+  it('drains both Stamina and Vigor proportionally to elapsed time when both costs are set', () => {
+    let stamina = 0
+    let vigor = 0
+    const busy = createBusyAction((a) => { stamina += a }, (a) => { vigor += a })
+    busy.start(2, 'Kopanie…', () => {}, { staminaCostPerSec: 6, vigorCostPerSec: 3 })
+    busy.tick(1)
+    expect(stamina).toBeCloseTo(6, 6)
+    expect(vigor).toBeCloseTo(3, 6)
+  })
+
+  it('is not physical when no cost is declared (a purely timed interaction)', () => {
+    const busy = createBusyAction()
+    busy.start(1, 'Gotowanie…', () => {})
+    expect(busy.isPhysical()).toBe(false)
+  })
+
+  it('is physical while a Stamina or Vigor cost is declared, and stops being physical once idle', () => {
+    const busy = createBusyAction()
+    busy.start(1, 'Kopanie…', () => {}, { staminaCostPerSec: 6 })
+    expect(busy.isPhysical()).toBe(true)
+    busy.tick(1)
+    expect(busy.isPhysical()).toBe(false)
+  })
+
+  it('a cancelled physical channel is no longer physical', () => {
+    const busy = createBusyAction()
+    busy.start(5, 'Wyrównywanie…', () => {}, { vigorCostPerSec: 2 })
+    expect(busy.isPhysical()).toBe(true)
+    busy.cancel()
+    expect(busy.isPhysical()).toBe(false)
+  })
+})

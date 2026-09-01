@@ -7,7 +7,11 @@ import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidCo
 import { evaluateGroundPlacement, evaluateTentPlacement, TENT_PLACEMENT_MESSAGE, TENT_SETUP_DURATION_SEC } from '../../items/tentPlacement'
 import { TENT_FOOTPRINT_RADIUS, TENT_LENGTH } from '../../items/tentProp'
 import { selectInstanceToPlace } from '../../items/trade'
-import { BUSY_ACTION_STAMINA_COST_PER_SEC } from '../../player/PlayerNeeds'
+import {
+  applyRepresentedPhysicalEffortVigor,
+  physicalEffortBusyOptions,
+  physicalEffortStaminaCostPerSec,
+} from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD, survivalDurationMultiplier } from '../../player/PlayerSkills'
 import {
   TRAP_DEFS,
@@ -283,7 +287,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     busy.start(WELL_PLACE_DURATION_SEC, 'Kopanie dołu pod studnię…', () => {
       bundle.playerWells.place(x, z, yaw)
       toast.show('Rozpoczęto kopanie studni.')
-    })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   /** Runs one active-work session ("bout") on a player-built well (plan 127,
@@ -351,14 +355,25 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
     const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
     const startedAt = performance.now()
+    // Vigor is `heavy` (plan §8 "studnia heavy") applied per represented
+    // work-hour actually credited — never per real `sessionSec`, so changing
+    // `WELL_WORK_SESSION_SEC` can't silently change the total Vigor cost of
+    // the represented work (plan §5). Stamina stays on the existing
+    // `moderate` real-elapsed-seconds channel (`BUSY_ACTION_STAMINA_COST_PER_SEC`
+    // unchanged per implementation notes).
     const creditPartial = (): void => {
       const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
       const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
-      bundle.playerWells.addWork(id, sessionHours * fraction)
+      const creditedHours = sessionHours * fraction
+      bundle.playerWells.addWork(id, creditedHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', creditedHours)
     }
-    busy.start(sessionSec, WELL_WORK_LABEL[stage], () => bundle.playerWells.addWork(id, sessionHours), {
+    busy.start(sessionSec, WELL_WORK_LABEL[stage], () => {
+      bundle.playerWells.addWork(id, sessionHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', sessionHours)
+    }, {
       onCancel: creditPartial,
-      staminaCostPerSec: BUSY_ACTION_STAMINA_COST_PER_SEC,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
     })
   }
 
@@ -445,7 +460,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Zbudowano grządkę.')
-    })
+    }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
   /** "Zrób porządek" on a player garden plot (plan 176 §4/§10) — same

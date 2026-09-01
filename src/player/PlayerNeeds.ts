@@ -3,7 +3,7 @@ import { createHungerState, drainHunger, type HungerState, isStarving, restoreHu
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
 import { createThirstState, drainThirst, isDehydrated, restoreThirst, type ThirstState } from '../shared/ThirstState'
 import { createVigorState, drainVigor, restoreVigor, type VigorState } from '../shared/VigorState'
-import { gameDaysToRealSeconds } from '../world/timeConversion'
+import { GAME_HOURS_PER_DAY, gameDaysToRealSeconds } from '../world/timeConversion'
 
 /** Plan 106 — the player's four survival pools. `stamina`/`vigor` reuse the
  *  existing NPC/fauna `shared/*State` shape verbatim; `hunger`/`thirst` are
@@ -79,6 +79,79 @@ const STAMINA_REGEN_PER_SEC = 12
  *  (`WELL_WORK_SESSION_SEC` = 8s) costs a clearly-felt ~48% — proportional to
  *  the actual elapsed work time, never a lump sum on start. */
 export const BUSY_ACTION_STAMINA_COST_PER_SEC = 6
+
+/** Physical-effort intensity a player action declares (plan items-player-003
+ *  §4/§9/§12) — actions pick one of these and call the helpers below; they
+ *  never mutate Stamina/Vigor directly. `light` covers simple installs that
+ *  still opt in but shouldn't meaningfully cost anything; `moderate` is the
+ *  existing dig/level/mound/well-pit baseline; `heavy` is reserved for
+ *  larger sustained labor (terrain preparation, well-shaft work). */
+export type PhysicalEffortIntensity = 'light' | 'moderate' | 'heavy'
+
+/** Continuous Stamina cost (real elapsed seconds) of each intensity, for a
+ *  `BusyAction` channel where represented work duration equals real elapsed
+ *  time (a single short dig/chop/mine bout, one combat attack's own
+ *  wind-up+hit+recovery). `moderate` keeps the existing playtest-tuned `6/s`
+ *  baseline unchanged. Not for compressed/represented-time work — see
+ *  `applyRepresentedPhysicalEffortVigor` for that. */
+const EFFORT_STAMINA_COST_PER_SEC: Record<PhysicalEffortIntensity, number> = {
+  light: BUSY_ACTION_STAMINA_COST_PER_SEC / 2,
+  moderate: BUSY_ACTION_STAMINA_COST_PER_SEC,
+  heavy: BUSY_ACTION_STAMINA_COST_PER_SEC * 1.5,
+}
+
+/** Extra Vigor drain (amount per game-day of continuous effort, same tuning
+ *  shape as `VIGOR_WALK_EXTRA_DRAIN_PER_GAME_DAY`) of each intensity — plan
+ *  §4's `light activity < walking < sprint / moderate work < heavy work`:
+ *  `light` costs nothing beyond the idle baseline, `moderate` matches
+ *  sprinting's extra rate, `heavy` doubles it. */
+const EFFORT_VIGOR_EXTRA_DRAIN_PER_GAME_DAY: Record<PhysicalEffortIntensity, number> = {
+  light: 0,
+  moderate: VIGOR_WALK_EXTRA_DRAIN_PER_GAME_DAY * VIGOR_SPRINT_EXTRA_DRAIN_MULTIPLIER,
+  heavy: VIGOR_WALK_EXTRA_DRAIN_PER_GAME_DAY * VIGOR_SPRINT_EXTRA_DRAIN_MULTIPLIER * 2,
+}
+
+/** `BusyAction`'s `staminaCostPerSec` for a given effort intensity — actions
+ *  that keep represented work duration equal to real `BusyAction` seconds
+ *  pass this straight to `busy.start()`'s options. */
+export function physicalEffortStaminaCostPerSec(intensity: PhysicalEffortIntensity): number {
+  return EFFORT_STAMINA_COST_PER_SEC[intensity]
+}
+
+/** Vigor cost per real elapsed second of `intensity` effort — the
+ *  represented-time counterpart of `physicalEffortStaminaCostPerSec` for the
+ *  same not-compressed `BusyAction` channels. */
+export function physicalEffortVigorCostPerSec(intensity: PhysicalEffortIntensity, dayLengthSec: number): number {
+  return ratePerSecond(EFFORT_VIGOR_EXTRA_DRAIN_PER_GAME_DAY[intensity], 1, dayLengthSec)
+}
+
+/** Convenience bundle of `BusyAction`'s `staminaCostPerSec`/`vigorCostPerSec`
+ *  options for a real-time (non-compressed) physical `BusyAction` channel —
+ *  the common case for short dig/chop/mine/construction bouts (plan §9). */
+export function physicalEffortBusyOptions(
+  intensity: PhysicalEffortIntensity,
+  dayLengthSec: number,
+): { staminaCostPerSec: number, vigorCostPerSec: number } {
+  return {
+    staminaCostPerSec: physicalEffortStaminaCostPerSec(intensity),
+    vigorCostPerSec: physicalEffortVigorCostPerSec(intensity, dayLengthSec),
+  }
+}
+
+/** Applies `intensity`'s Vigor cost for a delta of *represented* work time
+ *  (game-hours), decoupled from how many real seconds the channel
+ *  representing it actually ran (plan §5) — `workOnWell`'s compressed bout
+ *  and terrain preparation's `TimeSkip` both call this with the work-hours
+ *  fraction actually completed/credited this update, never the real elapsed
+ *  seconds of the animation/channel. */
+export function applyRepresentedPhysicalEffortVigor(
+  vigor: VigorState,
+  intensity: PhysicalEffortIntensity,
+  representedGameHours: number,
+): void {
+  if (representedGameHours <= 0) return
+  drainVigor(vigor, (EFFORT_VIGOR_EXTRA_DRAIN_PER_GAME_DAY[intensity] / GAME_HOURS_PER_DAY) * representedGameHours)
+}
 
 /** How long Hunger/Thirst must stay continuously critical (plan 165 §2/§3)
  *  before slow HP loss begins — before this, the only consequence is the
@@ -210,9 +283,16 @@ export function tickPlayerNeeds(needs: PlayerNeeds, dt: number, dayLengthSec: nu
   }
 }
 
-export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: boolean): void {
+/** `recoveryAllowed` (plan items-player-003 §2) gates the `else` branch only
+ *  — physical work (a `BusyAction` with a Stamina cost, or active terrain
+ *  preparation) suppresses normal regeneration while it drains Stamina
+ *  through its own channel, so the two mechanisms can't net out to a
+ *  positive balance. `false` here never itself drains Stamina; it only
+ *  withholds the regen this tick would otherwise grant. Defaults to `true`
+ *  so every other caller (riding, downed, resting) is unaffected. */
+export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: boolean, recoveryAllowed = true): void {
   if (sprinting) drainStamina(stamina, STAMINA_SPRINT_DRAIN_PER_SEC * dt)
-  else restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
+  else if (recoveryAllowed) restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
 }
 
 /** Stamina cost of riding a mount (plan fauna-003 §9) — far lighter than

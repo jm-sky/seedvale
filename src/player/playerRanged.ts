@@ -5,6 +5,8 @@ import {
   type RangedState,
 } from '../combat/rangedLifecycle'
 import { drainStamina, type StaminaState } from '../shared/StaminaState'
+import { drainVigor, type VigorState } from '../shared/VigorState'
+import { physicalEffortVigorCostPerSec } from './PlayerNeeds'
 
 /** Universal ranged attack lifecycle (plan 162) — the ranged counterpart of
  *  `playerMelee.ts`'s `createPlayerMelee`, same ownership split (plan 177):
@@ -22,8 +24,10 @@ export type PlayerRanged = {
   /** Progress (0..1) within the current phase — for draw-pose visuals. */
   phaseProgress: () => number
   /** Starts a draw if idle and stamina allows it (draining it on success).
-   *  Returns false without side effects otherwise. */
-  requestDraw: (config: RangedConfig, stamina: StaminaState) => boolean
+   *  Returns false without side effects otherwise. Also applies the shared
+   *  physical-effort Vigor cost once, for the draw's own `drawTime+recovery`
+   *  duration at `moderate` intensity (plan items-player-003 §10). */
+  requestDraw: (config: RangedConfig, stamina: StaminaState, vigor: VigorState, dayLengthSec: number) => boolean
   /** Advances the lifecycle by `dt`. Call once per frame regardless of input.
    *  Never produces `fireReady` on its own — firing is release-gated,
    *  see `releaseDraw()`. */
@@ -44,10 +48,11 @@ export function createPlayerRanged(): PlayerRanged {
     state: lifecycle.state,
     isDrawing: lifecycle.isDrawing,
     phaseProgress: lifecycle.phaseProgress,
-    requestDraw(cfg, stamina) {
+    requestDraw(cfg, stamina, vigor, dayLengthSec) {
       if (lifecycle.state() !== 'idle') return false
       if (stamina.current < cfg.staminaCost) return false
       drainStamina(stamina, cfg.staminaCost)
+      drainVigor(vigor, physicalEffortVigorCostPerSec('moderate', dayLengthSec) * (cfg.drawTime + cfg.recovery))
       return lifecycle.start(cfg, { manualRelease: true })
     },
     update: lifecycle.update,

@@ -2,6 +2,7 @@ import type { TimeSkipOverlay } from '../../ui/createTimeSkipOverlay'
 import type { TerrainPreparationPreview } from '../../world/terrainPreparationPreview'
 import type { PlacementBlocker } from './placementActions'
 import { evaluateGroundPlacement } from '../../items/tentPlacement'
+import { applyRepresentedPhysicalEffortVigor } from '../../player/PlayerNeeds'
 import { awardSkillXp } from '../../player/PlayerSkills'
 import { type DigEnv, isRockGround } from '../../terrain/dig'
 import {
@@ -322,11 +323,20 @@ export function createTerrainPreparationActions(
     if (keyboard.consumeInteract()) confirmPreview()
   }
 
+  /** Vigor cost (plan items-player-003 §7) is `heavy` per represented
+   *  work-hour actually applied this call — `entry.completedWork` (read
+   *  before it's overwritten below) is the previous call's absolute
+   *  progress, so the delta is exactly the represented work newly credited,
+   *  never double-applied across the throttled `tickWork` calls, the final
+   *  progress-1 completion, or a cancel/damage-interrupt's partial credit —
+   *  all of which funnel through this one function. */
   const applyWorkProgress = (work: NonNullable<typeof activeWork>, progress: number): void => {
     const entry = bundle.terrainPreparations.find(work.id)
     if (!entry) return
+    const previousCompletedWork = entry.completedWork
     const clamped = Math.max(0, Math.min(1, progress))
     const completedWork = work.completedWorkAtStart + (work.requiredWork - work.completedWorkAtStart) * clamped
+    applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', Math.max(0, completedWork - previousCompletedWork))
     bundle.terrainPreparations.setCompletedWork(work.id, completedWork)
     const heights = progressiveHeights(entry.originalHeights, entry.targetHeight, completedWork / entry.requiredWork)
     bundle.chunkManager.applyExactHeights(work.id, heights)

@@ -97,6 +97,7 @@ import {
   yawToward,
 } from '../player/playerMelee'
 import {
+  physicalEffortStaminaCostPerSec,
   tickHealthRegen,
   tickPlayerNeeds,
 } from '../player/PlayerNeeds'
@@ -112,7 +113,7 @@ import { villageSizeConfig } from '../settlement/families'
 import { purchaseLandPlot } from '../settlement/landPurchase'
 import { FIRE_FUEL_KINDS, type VillageFire } from '../settlement/VillageFire'
 import { getHungerRatio } from '../shared/HungerState'
-import { getStaminaRatio } from '../shared/StaminaState'
+import { drainStamina, getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
 import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
@@ -618,7 +619,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     // sleep/lodging/terrain-prep) is actually running; no-ops unless the
     // running skip belongs to an active preparation-work session.
     tickTerrainPreparationWork?.()
-    vueUi.setCanCancelTerrainPreparation(isTerrainPreparationWorkActive?.() ?? false)
+    const terrainPrepWorkActive = isTerrainPreparationWorkActive?.() ?? false
+    vueUi.setCanCancelTerrainPreparation(terrainPrepWorkActive)
+    // Terrain preparation's real elapsed seconds (not its represented work
+    // hours — see `terrainPreparationActions.ts`'s own Vigor cost) drain
+    // Stamina the same way a physical `BusyAction` channel does (plan
+    // items-player-003 §7) — `heavy`, the same intensity used for its Vigor
+    // cost below.
+    if (terrainPrepWorkActive) {
+      drainStamina(player.needs.stamina, physicalEffortStaminaCostPerSec('heavy') * dt)
+    }
     if (skip) {
       timeSkipOverlay.show(skip.label, skip.fadeStrength)
       if (skip.fadeStrength === 1) {
@@ -1428,6 +1438,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 const result = playerMelee.requestAttack(
                   config,
                   player.needs.stamina,
+                  player.needs.vigor,
+                  dayNight.dayLengthSec,
                   player.mesh.position.x,
                   player.mesh.position.z,
                   target.position.x,
@@ -1470,7 +1482,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 toast.show('Brak strzał w ekwipunku.', 'error')
               } else if (player.needs.stamina.current < config.staminaCost) {
                 toast.show('Brak siły na strzał.', 'error')
-              } else if (playerRanged.requestDraw(config, player.needs.stamina)) {
+              } else if (playerRanged.requestDraw(config, player.needs.stamina, player.needs.vigor, dayNight.dayLengthSec)) {
                 playerCombat.enter()
                 playerCombat.noteActivity()
                 playerCombat.setSoftLock(livingTargetIdForAnimal(target.animal.animalId))
@@ -1660,7 +1672,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // frame's camera/gaze/interactables all see the fresh position. No-op
       // while not mounted.
       mount.update(dt)
-      withCategory(monitor, 'PHYSICS', () => { player.update(dt, dayNight.dayLengthSec) })
+      // Physical effort active this frame (plan items-player-003 §2/§11/§12)
+      // — a physical `BusyAction` channel or active terrain-preparation work
+      // — suppresses `player.update()`'s normal Stamina regeneration so it
+      // can never net out against the Stamina those channels already drain.
+      const physicalEffortActive = busy.isPhysical() || (isTerrainPreparationWorkActive?.() ?? false)
+      withCategory(monitor, 'PHYSICS', () => { player.update(dt, dayNight.dayLengthSec, physicalEffortActive) })
       // Hunger/thirst/vigor progress on `worldDt` (scaled during a time-skip,
       // see above) — stamina keeps ticking inside `player.update(dt)` on raw
       // `dt` (tied to sprint) regardless of any skip.

@@ -23,10 +23,22 @@ export type BusyStartOptions = {
    *  shouldn't cost Stamina (most of them — only long physical terrain/
    *  construction work opts in). */
   staminaCostPerSec?: number
+  /** Continuous Vigor cost for the duration of this channel (plan
+   *  items-player-003 §4) — same per-`dt` proportional shape as
+   *  `staminaCostPerSec`, for physical work whose represented duration
+   *  equals this channel's real elapsed time. Compressed/represented-time
+   *  work (e.g. `workOnWell`) applies its Vigor cost itself instead — see
+   *  `player/PlayerNeeds.ts`'s `applyRepresentedPhysicalEffortVigor`. */
+  vigorCostPerSec?: number
 }
 
 export type BusyAction = {
   isActive: () => boolean
+  /** True while the active channel declared a Stamina or Vigor cost (plan
+   *  items-player-003 §2/§11) — the game-loop's Stamina-recovery-suppression
+   *  signal, distinguishing physical work from a purely timed interaction
+   *  (cooking, planting, …) that happens to also block input via `busy`. */
+  isPhysical: () => boolean
   /** No-op if already busy. `onComplete` runs once when the timer elapses
    *  (from `tick`), not on cancel. */
   start: (durationSec: number, label: string, onComplete: () => void, options?: BusyStartOptions) => void
@@ -44,6 +56,7 @@ type ActiveBusy = {
   onCancel: (() => void) | null
   blurred: boolean
   staminaCostPerSec: number
+  vigorCostPerSec: number
 }
 
 function progressOf(active: ActiveBusy): number {
@@ -53,15 +66,19 @@ function progressOf(active: ActiveBusy): number {
 
 /** Short timed "channel" (dig, level, …) that blocks player input via
  *  `activeModal(..., busy)` without advancing day/night like `timeSkip`.
- *  `drainStamina` (playtest fixes plan §1) is a callback rather than a direct
- *  `PlayerNeeds` dependency, matching this module's existing decoupling from
- *  the player — `createApp.ts` wires it to the real `StaminaState`, tests
- *  omit it and get a no-op. */
-export function createBusyAction(drainStamina: (amount: number) => void = () => {}): BusyAction {
+ *  `drainStamina`/`drainVigor` (playtest fixes plan §1, items-player-003 §4)
+ *  are callbacks rather than a direct `PlayerNeeds` dependency, matching this
+ *  module's existing decoupling from the player — `createApp.ts` wires them
+ *  to the real `StaminaState`/`VigorState`, tests omit them and get a no-op. */
+export function createBusyAction(
+  drainStamina: (amount: number) => void = () => {},
+  drainVigor: (amount: number) => void = () => {},
+): BusyAction {
   let active: ActiveBusy | null = null
 
   return {
     isActive: () => active !== null,
+    isPhysical: () => active !== null && (active.staminaCostPerSec > 0 || active.vigorCostPerSec > 0),
     start(durationSec, label, onComplete, options) {
       if (active) return
       active = {
@@ -72,12 +89,14 @@ export function createBusyAction(drainStamina: (amount: number) => void = () => 
         onCancel: options?.onCancel ?? null,
         blurred: options?.blurred ?? false,
         staminaCostPerSec: options?.staminaCostPerSec ?? 0,
+        vigorCostPerSec: options?.vigorCostPerSec ?? 0,
       }
     },
     tick(dt) {
       if (!active) return null
       active.remainingSec -= dt
       if (active.staminaCostPerSec > 0) drainStamina(active.staminaCostPerSec * dt)
+      if (active.vigorCostPerSec > 0) drainVigor(active.vigorCostPerSec * dt)
       const { label, onComplete, blurred } = active
       if (active.remainingSec > 0) {
         return { label, justFinished: false, blurred, progress: progressOf(active) }

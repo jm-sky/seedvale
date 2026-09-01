@@ -1,7 +1,7 @@
 # Plan: Player Physical Effort — Stamina & Vigor
 
 **Created:** 2026-09-01  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none  
 **Domain:** `items-player`
