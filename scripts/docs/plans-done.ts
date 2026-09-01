@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { LEGACY_PLAN_ID_RE, PLAN_ID_RE, PLANS_DIR, PLANS_DONE_PATH, ROOT_DIR } from './config.js'
+import { isPlanFile, LEGACY_PLAN_ID_RE, PLAN_ID_RE, PLANS_DIR, PLANS_DONE_PATH, ROOT_DIR, relativePath } from './config.js'
 
 
 const STATUS = /^\*\*Status:\*\*\s*`([^`]+)`/m
@@ -56,9 +56,7 @@ const getCurrentPlanFiles = async (): Promise<string[]> => {
   return output
     ? output
         .split('\n')
-        .filter(file => !file.endsWith('/README.md'))
-        .filter(file => !file.endsWith('/PLANNING.md'))
-        .filter(file => !file.endsWith('/DONE.md'))
+        .filter(isPlanFile)
         .map(file => file.replace(/^docs\/plans\//, ''))
     : []
 }
@@ -488,7 +486,7 @@ const generateDone = (
     )
 
   const map = sorted.map(record => {
-    const title = `\`${record.plan}\``
+    const title = `\`${record.plan.replaceAll('`', '')}\``
     const domain = record.domain ? `\`${record.domain}\`` : '—'
     const opened = record.opened.length ? record.opened.join(', ') : '—'
     return `| ${title.padEnd(60)} | ${domain.padEnd(6)} | ${record.verificationNeeded?.padEnd(16) ?? '—'} | ${record.done?.padEnd(16) ?? '—'} | ${opened.padEnd(8)} |`
