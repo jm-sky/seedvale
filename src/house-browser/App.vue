@@ -15,9 +15,32 @@ import {
 } from './houseBrowserTypes'
 
 const houses = HOME_HOUSE_DEFINITIONS
+
+function getInitialHouseId(): string {
+  const url = new URL(window.location.href)
+  const param = url.searchParams.get('house')
+
+  if (param && houses.some((h) => h.id === param)) return param
+  if (param) clearQueryParam('house')
+
+  return houses[0]?.id ?? ''
+}
+
+function getInitialColliderVisibility(): boolean {
+  const url = new URL(window.location.href)
+  const param = url.searchParams.get('showColliders')
+  return param ? Boolean(param) : DEFAULT_HOUSE_BROWSER_CONFIG.showColliders
+}
+
+function getInitialDoorsOpen(): boolean {
+  const url = new URL(window.location.href)
+  const param = url.searchParams.get('doorsOpen')
+  return param ? Boolean(param) : DEFAULT_HOUSE_BROWSER_CONFIG.doorsOpen
+}
+
 const viewport = ref<HTMLElement | null>(null)
-const selectedId = ref(houses[0]?.id ?? '')
-const config = reactive({ ...DEFAULT_HOUSE_BROWSER_CONFIG })
+const selectedId = ref(getInitialHouseId())
+const config = reactive({ ...DEFAULT_HOUSE_BROWSER_CONFIG, showColliders: getInitialColliderVisibility(), doorsOpen: getInitialDoorsOpen() })
 const assemblyInfo = ref<HouseBrowserAssemblyInfo | null>(null)
 const errorMessage = ref<string | null>(null)
 
@@ -51,7 +74,20 @@ watch(config, () => {
   scene?.setConfig({ ...config })
 })
 
+function putIntoQueryParam(name: string, value: string): void {
+  const url = new URL(window.location.href)
+  url.searchParams.set(name, value)
+  window.history.replaceState({}, '', url)
+}
+
+function clearQueryParam(name: string): void {
+  const url = new URL(window.location.href)
+  url.searchParams.delete(name)
+  window.history.replaceState({}, '', url)
+}
+
 function selectHouse(id: string): void {
+  putIntoQueryParam('house', id)
   selectedId.value = id
 }
 
@@ -61,6 +97,16 @@ function resetCamera(): void {
 
 function setCameraView(view: CameraView): void {
   scene?.setCameraView(view)
+}
+
+function updateColliderVisibility(visible: boolean): void {
+  config.showColliders = visible
+  putIntoQueryParam('showColliders', visible.toString())
+}
+
+function updateDoorsOpen(doorsOpen: boolean): void {
+  config.doorsOpen = doorsOpen
+  putIntoQueryParam('doorsOpen', doorsOpen.toString())
 }
 </script>
 
@@ -86,10 +132,12 @@ function setCameraView(view: CameraView): void {
         v-model:camera-auto-fit="config.cameraAutoFit"
       />
       <ColliderControls
-        v-model:visible="config.showColliders"
         v-model:padding="config.colliderPadding"
-        v-model:doors-open="config.doorsOpen"
+        :doors-open="config.doorsOpen"
+        :visible="config.showColliders"
         :door-count="assemblyInfo?.doorCount ?? 0"
+        @update:doors-open="updateDoorsOpen($event)"
+        @update:visible="updateColliderVisibility($event)"
       />
       <CameraControls
         @reset="resetCamera"
