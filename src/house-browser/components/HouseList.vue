@@ -23,11 +23,12 @@ const emit = defineEmits<{
       >
         <button
           type="button"
-          class="block w-full truncate px-2 py-1 text-left text-sm hover:bg-white/10"
+          class="flex items-center justify-between w-full truncate px-2 py-1 text-left text-sm hover:bg-white/10"
           :class="house.id === selectedId ? 'bg-white/15 font-medium' : ''"
           @click="emit('select', house.id)"
         >
-          {{ house.label ?? house.id }}
+          <span>{{ house.label ?? house.id }} {{ house.footprint.width }} × {{ house.footprint.depth }} m</span>
+          <span class="text-xs text-white/50">({{ house.id }})</span>
         </button>
       </li>
     </ul>
