@@ -154,4 +154,61 @@ The plan also says cache invalidation should cover “relevant runtime terrain m
 - `ChunkManagerConfig.modifications` — caller-owned runtime terrain state; do not duplicate ownership.
 - `ChunkRecord.meshDispose` / `unload()` — current Three.js geometry lifetime.
 
+## Implementation summary (2026-09-02)
+
+Implemented Etap A/B/C together (allocation cleanup and caching didn't warrant
+a separate pass).
+
+- New worker-safe module `chunkMeshData.ts` holds `computeChunkMeshData()` —
+  the data-only per-vertex extraction of the old `buildChunkGeometry()` loop
+  (position Y, apron central-difference normals, vertex color, `aBareGround`).
+  `buildChunkGeometry.ts` now only assembles `THREE.PlaneGeometry`/`Mesh` from
+  an already-computed `ChunkMeshData` (position X/Z/index/uv still come from
+  `PlaneGeometry` — kept deliberately, see below).
+- **Deviation from the plan's "no Three.js in the worker" instruction:**
+  `grassPlacement.ts` (already running in this same worker via
+  `chunkHeightmap.worker.ts`) already imports `* as THREE` for `Color`/
+  `Matrix4`, so `chunkMeshData.ts` also imports `THREE.Color`/`MathUtils`
+  directly (reusing `biomeColors.ts`'s color functions unchanged) rather than
+  hand-porting HSL/lerp math. The instruction's actual goal — don't drag
+  renderer/Object3D code into the worker — still holds; only `Color`/
+  `MathUtils` (already-established precedent) are used.
+- **Resolved discrepancy the plan/notes flagged:** mesh data is requested as
+  a *second*, separate `'mesh'` job on the existing `ChunkWorkerPool` (same
+  pool/worker file, same priority-queue/cancel-by-key infra as `'tile'`/
+  `'grass'` — not a second worker system), issued at actual finalize time
+  with the chunk's tile grids **after** `applyModificationToTile` has already
+  run on the main thread. This reuses 100% of the existing modification logic
+  unchanged (no duplication/divergence risk) instead of teaching the worker
+  about `TerrainModification` — the tile grids ride structured-clone (not
+  transferred), same pattern `GrassRequestParams.grids` already established.
+- `buildAndAttachMesh()`/`attachChunkMesh()` are now `async`, awaiting the
+  worker/cache round-trip; `runFinalize()`'s mesh stage awaits it too, but
+  `drainFinalizeQueue`/`drainFinalizeQueueByBudget` don't await `runFinalize`
+  itself — the existing "1 finalize slot" budget now caps how many finalizes
+  *start* per frame, not how long they take to land (the main-thread work
+  left is brief either way). `modifyTerrain`/`scorchTerrain`/
+  `applyExactHeights` call `buildAndAttachMesh` fire-and-forget, unchanged
+  synchronous boolean return.
+- A `ChunkRecord.meshRequestSeq` counter guards against a stale/superseded
+  request attaching after a fresher one (rapid consecutive digs); a
+  `chunks.get(rec.key) !== rec` check guards against attaching after unload.
+- `STREAMING`'s `'chunk mesh'` hitch now wraps only the post-await Three.js
+  assembly, not the worker wait — per the plan's own guidance.
+- `ChunkMeshData` cache (`chunkMeshCache.ts`) is a small byte-budgeted
+  (64 MB default) `Map`-based LRU, one instance per `ChunkManager`, cleared in
+  `dispose()`. Cache key = per-manager-constant base (seed/resolution/
+  chunkSize/waterLevel/heightScale/region) + chunk coord + a single global
+  `modificationsEpoch` counter (bumped on every `modifyTerrain`/
+  `scorchTerrain`/`applyExactHeights` call, including an `applyExactHeights`
+  same-id *replace*). Deliberately global rather than per-chunk-precise:
+  simpler, still only ever over-invalidates (never returns stale geometry),
+  and the common case this cache targets — revisiting/reloading chunks with
+  no recent world changes — keeps a high hit rate regardless.
+- Tests: `chunkMeshData.test.ts` (flat-terrain normals, analytic slope-normal
+  match, scorch darkening, range checks, determinism) and
+  `chunkMeshCache.test.ts` (get/set, eviction, LRU recency, clear). Existing
+  `chunkManager.test.ts`/`scorchFalloff.test.ts` pass unchanged (they only
+  exercise pure exported helpers, not full `ChunkManager` instantiation).
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

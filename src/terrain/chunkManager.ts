@@ -4,6 +4,7 @@ import type { HeightSampler } from '../player/PlayerController'
 import type { PropPlacement } from '../render/instancedProps'
 import type { TreeEnvSample, TreeGrowthStage, TreeLifecycle, TreePresence } from '../world/treeLifecycle'
 import type { ChunkTileResult, GrassRequestParams } from './chunkHeightmapProtocol'
+import type { ChunkMeshData, ChunkMeshTileGrids } from './chunkMeshData'
 import type { FbmParams } from './fbm'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
@@ -86,11 +87,14 @@ import {
   sampleMoistureRegionAt,
   sampleMountainRidgeAt,
 } from './chunkHeightmap'
+import { createChunkMeshDataCache } from './chunkMeshCache'
 import {
   cancelChunkGrass,
+  cancelChunkMesh,
   cancelChunkTile,
   HeightmapGenerationCancelledError,
   requestChunkGrass,
+  requestChunkMesh,
   requestChunkTile,
 } from './chunkWorkerPool'
 import { densityLodFraction, grassFillerLodFraction, grassGeometryLodTier } from './distanceLod'
@@ -335,6 +339,11 @@ type ChunkRecord = {
   tile?: ChunkTileResult
   mesh?: THREE.Mesh
   meshDispose?: () => void
+  /** Bumped by every `buildAndAttachMesh` call for this record — lets a call
+   *  whose worker/cache round-trip resolves late detect it's been superseded
+   *  by a newer one (rapid consecutive digs) and skip attaching stale
+   *  geometry (plan world-terrain-004). */
+  meshRequestSeq?: number
   water?: WorldWater | null
   river?: WorldRiver | null
   /** River tiles this chunk retained in `riverTileCache` — released in `unload`.
@@ -766,6 +775,42 @@ export function createChunkManager(
   // this is an alias, not a fresh array, so it survives this `ChunkManager`
   // instance's own disposal.
   const modifications = config.modifications
+  // Bumped whenever `modifications` gains a new/changed entry (`modifyTerrain`/
+  // `scorchTerrain`/`applyExactHeights`) — folded into `meshCacheKeyFor` so a
+  // mesh-data cache hit can never return geometry from before a mesh-affecting
+  // modification (plan world-terrain-004). Deliberately global rather than
+  // per-chunk: simpler, still correct (only ever over-invalidates, never
+  // under-invalidates), and the common case this cache targets — revisiting/
+  // reloading chunks with no recent world changes — keeps a high hit rate.
+  let modificationsEpoch = 0
+  // Base identity for every mesh-data cache key this manager ever builds —
+  // everything that can affect mesh output except chunk coordinate and
+  // modification state, which never changes for a live `ChunkManager`
+  // (`onTerrainChange` rebuilds the whole manager instead), so it's computed
+  // once instead of re-stringified per chunk.
+  const meshCacheBaseKey = JSON.stringify({
+    seed: config.seed,
+    resolution: config.resolution,
+    chunkSize: config.chunkSize,
+    waterLevel: config.waterLevel,
+    heightScale: config.heightScale,
+    region: config.region,
+  })
+  function meshCacheKeyFor(coord: ChunkCoord): string {
+    return `${meshCacheBaseKey}:${coord.cx}:${coord.cz}:mod${modificationsEpoch}`
+  }
+  /** Logs a fire-and-forget `buildAndAttachMesh` rejection, except the
+   *  routine cancellation a rapid follow-up modification on the same chunk
+   *  already causes (its own `requestChunkMesh` supersedes the earlier
+   *  in-flight one) — same "cancellation isn't an error" convention as the
+   *  tile-generation `.catch` in `ensureLoaded` below. */
+  function logMeshRebuildFailure(context: string, err: unknown): void {
+    if (err instanceof HeightmapGenerationCancelledError) return
+    console.error(`[chunkManager] mesh rebuild after ${context} failed`, err)
+  }
+  // Runtime-only `ChunkMeshData` cache (plan world-terrain-004 Etap C) — never
+  // `THREE.BufferGeometry`/`THREE.Mesh`. Cleared in `dispose()`.
+  const meshDataCache = createChunkMeshDataCache()
   const grassSystem = createGrassSystem()
   // Single collision index for the whole world (plan 097 §2.2) — terrain
   // chunks register/clear their own colliders keyed by `chunkKey` below;
@@ -1085,33 +1130,86 @@ export function createChunkManager(
     return group
   }
 
+  /** Requests this chunk's `ChunkMeshData` — a cache hit (no worker
+   *  round-trip) or a `'mesh'` chunk-worker job whose result is stored into
+   *  the cache before returning (plan world-terrain-004, Etap A/C). Pure
+   *  data fetch, no scene mutation — safe to await from both a freshly
+   *  streamed-in chunk (`attachChunkMesh`) and a direct re-mesh of an
+   *  already-`ready` chunk after a dig/scorch/prepare. */
+  function requestChunkMeshData(rec: ChunkRecord, tile: ChunkTileResult): Promise<ChunkMeshData> {
+    const cacheKey = meshCacheKeyFor(rec.coord)
+    const cached = meshDataCache.get(cacheKey)
+    if (cached) return Promise.resolve(cached)
+    const { x, z } = chunkCenter(rec.coord, config.chunkSize)
+    const scorches = modifications.filter((m) => m.mode === 'scorch')
+    const tileGrids: ChunkMeshTileGrids = {
+      floorHeights: tile.floorHeights,
+      biomes: tile.biomes,
+      continentalness: tile.continentalness,
+      mountainRidge: tile.mountainRidge,
+      moistureRegion: tile.moistureRegion,
+      roadTint: tile.roadTint,
+    }
+    return requestChunkMesh(rec.key, {
+      tile: tileGrids,
+      resolution: config.resolution,
+      chunkSize: config.chunkSize,
+      chunkOriginX: x,
+      chunkOriginZ: z,
+      waterLevel: config.waterLevel,
+      heightScale: config.heightScale,
+      region: config.region,
+      seed: config.seed,
+      scorches,
+    }).then((meshData) => {
+      meshDataCache.set(cacheKey, meshData)
+      return meshData
+    })
+  }
+
   /** (Re)builds a chunk record's mesh from its current (possibly
    *  dig-modified) tile — disposes the previous mesh first if there is one,
    *  so it doubles as the initial build (`ensureLoaded`) and a post-dig
    *  rebuild (`modifyTerrain`) without duplicating the `buildChunkGeometry`
-   *  call. */
-  function buildAndAttachMesh(rec: ChunkRecord, tile: ChunkTileResult): void {
+   *  call. The expensive per-vertex terrain math now runs in the existing
+   *  chunk worker (`computeChunkMeshData`, plan world-terrain-004) via
+   *  `requestChunkMeshData`; this only awaits that (or a cache hit) and then
+   *  does the now-cheap Three.js assembly, which is what the `STREAMING`
+   *  `'chunk mesh'` hitch measures — unchanged in spirit from before the
+   *  migration, just no longer timing the terrain math itself.
+   *
+   *  A second call for the same record while the first is still in flight
+   *  (e.g. rapid consecutive digs) is resolved by `meshRequestSeq`: only the
+   *  most recently *issued* call ever attaches, regardless of which
+   *  resolves first — the chunk-worker pool's own cancel-by-key already
+   *  drops a superseded in-flight worker job, but a cache hit resolves
+   *  synchronously and bypasses that, so this is the belt-and-braces check
+   *  that a stale result can never overwrite a fresher one. */
+  async function buildAndAttachMesh(rec: ChunkRecord, tile: ChunkTileResult): Promise<void> {
+    const seq = (rec.meshRequestSeq ?? 0) + 1
+    rec.meshRequestSeq = seq
+    const meshData = await requestChunkMeshData(rec, tile)
+    // The chunk may have unloaded (or unloaded-and-reloaded into a fresh
+    // record) while awaiting, or a newer request for this same record may
+    // have already superseded this one — never touch stale scene state.
+    if (chunks.get(rec.key) !== rec || rec.meshRequestSeq !== seq) return
+    const streamT0 = performance.now()
     rec.mesh?.removeFromParent()
     rec.meshDispose?.()
     const { x, z } = chunkCenter(rec.coord, config.chunkSize)
-    const scorches = modifications.filter((m) => m.mode === 'scorch')
     const { mesh, dispose } = buildChunkGeometry(
-      tile,
+      meshData,
       config.resolution,
       config.chunkSize,
       x,
       z,
-      config.waterLevel,
-      config.heightScale,
       terrainMaterial,
-      config.region,
-      config.seed,
       config.terrainCastsShadow,
-      scorches,
     )
     scene.add(mesh)
     rec.mesh = mesh
     rec.meshDispose = dispose
+    getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
   }
 
   function waitForFinalizeSlot(rec: ChunkRecord): Promise<void> {
@@ -1190,9 +1288,16 @@ export function createChunkManager(
     else waiter.resolve()
   }
 
-  /** Sync — both stages run without `await`, so continuations cannot stampede
-   *  when a shared GLB promise resolves (plan 119). */
-  function runFinalize(rec: ChunkRecord): void {
+  /** The content stage still runs without `await`, so its continuations
+   *  cannot stampede when a shared GLB promise resolves (plan 119). The mesh
+   *  stage now awaits `attachChunkMesh`'s worker/cache round-trip (plan
+   *  world-terrain-004); `drainFinalizeQueue`/`drainFinalizeQueueByBudget`
+   *  don't await `runFinalize` itself, so the existing "1 slot" budget caps
+   *  how many finalizes *start* per frame/budget window, not how long they
+   *  take to land — the main-thread work left in a finalize is brief either
+   *  way now that the terrain math moved off-thread. Errors from the awaited
+   *  stage are caught by the same `try`/`catch` as the sync stage always had. */
+  async function runFinalize(rec: ChunkRecord): Promise<void> {
     const tile = rec.tile
     const stage = rec.finalizeStage
     if (!tile || !stage || !rec.finalizeWaiter) return
@@ -1206,7 +1311,14 @@ export function createChunkManager(
           finishFinalize(rec)
           return
         }
-        attachChunkMesh(rec, tile)
+        await attachChunkMesh(rec, tile)
+        // Unloaded while awaiting — `unload()` already resolved/cleared the
+        // waiter, so `finishFinalize` below is a no-op; just don't touch the
+        // (now-gone) chunk's collider/content state.
+        if (!chunks.has(rec.key)) {
+          finishFinalize(rec)
+          return
+        }
         if (chunkNeedsContent(tile)) {
           rec.finalizeStage = 'content'
           finalizeQueue.push(rec.key)
@@ -1258,15 +1370,20 @@ export function createChunkManager(
 
   /** Terrain + water + grass request. Sets `state = 'ready'` so the player
    *  can stand on the chunk before trees/rocks exist. Digs are applied here
-   *  (not at enqueue) so a modification while queued still reaches the mesh. */
-  function attachChunkMesh(rec: ChunkRecord, tile: ChunkTileResult): void {
+   *  (not at enqueue) so a modification while queued still reaches the mesh.
+   *  `buildAndAttachMesh` now awaits a chunk-worker round-trip (or a mesh-data
+   *  cache hit) for the expensive part — see its own doc comment — so this is
+   *  async too; `runFinalize` awaits it before advancing the chunk's finalize
+   *  stage. */
+  async function attachChunkMesh(rec: ChunkRecord, tile: ChunkTileResult): Promise<void> {
     const coord = rec.coord
     for (const mod of modifications) {
       applyModificationToTile(tile, coord, config.chunkSize, config.resolution, mod)
     }
-    const streamT0 = performance.now()
-    buildAndAttachMesh(rec, tile)
-    getMonitor().recordHitch('STREAMING', performance.now() - streamT0, 'chunk mesh')
+    await buildAndAttachMesh(rec, tile)
+    // Unloaded (or unloaded-and-reloaded into a fresh record) while awaiting
+    // — never attach water/river/state to a record that's no longer current.
+    if (chunks.get(rec.key) !== rec) return
 
     const { x, z } = chunkCenter(coord, config.chunkSize)
     const apronRes = config.resolution + 2
@@ -1638,6 +1755,10 @@ export function createChunkManager(
     record.finalizeStage = undefined
     finalizeQueue = finalizeQueue.filter((k) => k !== record.key)
     if (record.state === 'generating') cancelChunkTile(record.key)
+    // Always, regardless of state: a re-mesh (dig/scorch/prepare) can leave a
+    // `'mesh'` job in flight for an already-`ready` chunk too (plan
+    // world-terrain-004) — cheap no-op if nothing is pending.
+    cancelChunkMesh(record.key)
     colliderRegistry.clearColliders(record.key)
     if (record.treeIds) {
       for (const id of record.treeIds) config.treeLifecycle.unregisterPresence(id)
@@ -2163,13 +2284,17 @@ export function createChunkManager(
     modifyTerrain(x, z, radius, depth, source) {
       const mod: TerrainModification = { x, z, radius, depth, mode: 'dig', source }
       modifications.push(mod)
+      modificationsEpoch++
       let touchedAny = false
       for (const rec of chunks.values()) {
         if (rec.state !== 'ready' || !rec.tile) continue
         const touched = applyModificationToTile(rec.tile, rec.coord, config.chunkSize, config.resolution, mod)
         if (!touched) continue
         touchedAny = true
-        buildAndAttachMesh(rec, rec.tile)
+        // Fire-and-forget — the mesh (a worker round-trip, plan
+        // world-terrain-004) attaches asynchronously a moment later; this
+        // call's own return value only reflects the synchronous grid write.
+        buildAndAttachMesh(rec, rec.tile).catch((err: unknown) => logMeshRebuildFailure('dig', err))
         // Dug/mounded ground doesn't keep its grass — same roadTint-based
         // grass-reject `scorchTerrain` below uses; rebuild so a fresh
         // hole/mound doesn't still show blades growing over it.
@@ -2181,13 +2306,14 @@ export function createChunkManager(
     scorchTerrain(x, z, radius, depth, source) {
       const mod: TerrainModification = { x, z, radius, depth, mode: 'scorch', source }
       modifications.push(mod)
+      modificationsEpoch++
       let touchedAny = false
       for (const rec of chunks.values()) {
         if (rec.state !== 'ready' || !rec.tile) continue
         const touched = applyModificationToTile(rec.tile, rec.coord, config.chunkSize, config.resolution, mod)
         if (!touched) continue
         touchedAny = true
-        buildAndAttachMesh(rec, rec.tile)
+        buildAndAttachMesh(rec, rec.tile).catch((err: unknown) => logMeshRebuildFailure('scorch', err))
         // Grass was placed against the pre-scorch `roadTint`; rebuild so the
         // burned patch actually thins blades instead of leaving green cover.
         removeGrass(rec)
@@ -2200,13 +2326,14 @@ export function createChunkManager(
       const existingIndex = modifications.findIndex((m) => m.mode === 'prepare' && m.id === id)
       if (existingIndex >= 0) modifications[existingIndex] = mod
       else modifications.push(mod)
+      modificationsEpoch++
       let touchedAny = false
       for (const rec of chunks.values()) {
         if (rec.state !== 'ready' || !rec.tile) continue
         const touched = applyModificationToTile(rec.tile, rec.coord, config.chunkSize, config.resolution, mod)
         if (!touched) continue
         touchedAny = true
-        buildAndAttachMesh(rec, rec.tile)
+        buildAndAttachMesh(rec, rec.tile).catch((err: unknown) => logMeshRebuildFailure('terrain preparation', err))
         // Same "grass was placed against the pre-modification roadTint,
         // rebuild so worked ground actually thins blades" reasoning as
         // `scorchTerrain` above.
@@ -2253,6 +2380,7 @@ export function createChunkManager(
       riverTileCache.disposeAll()
       grassSystem.dispose()
       terrainMaterial.dispose()
+      meshDataCache.clear()
     },
   }
 }

@@ -5,6 +5,7 @@ import type {
   ChunkWorkerResponse,
   GrassRequestParams,
 } from './chunkHeightmapProtocol'
+import type { ChunkMeshData, ChunkMeshDataParams } from './chunkMeshData'
 import type { GrassChunkData } from './grassPlacement'
 
 export class HeightmapGenerationCancelledError extends Error {
@@ -27,6 +28,11 @@ export type ChunkWorkerPool = {
    *  must never starve tile generation (see `pump()`). */
   requestGrass(key: string, params: GrassRequestParams): Promise<GrassChunkData>
   cancelGrass(key: string): void
+  /** Chunk render mesh data (plan world-terrain-004) — same priority as
+   *  `tile`: a chunk isn't visually ready until its mesh attaches, so this
+   *  must not be starved by grass. */
+  requestMesh(key: string, params: ChunkMeshDataParams): Promise<ChunkMeshData>
+  cancelMesh(key: string): void
   dispose(): void
   readonly pendingCount: number
   readonly busyCount: number
@@ -50,7 +56,16 @@ type GrassJob = {
   reject: (err: Error) => void
 }
 
-type ChunkJob = TileJob | GrassJob
+type MeshJob = {
+  kind: 'mesh'
+  id: number
+  key: string
+  params: ChunkMeshDataParams
+  resolve: (data: ChunkMeshData) => void
+  reject: (err: Error) => void
+}
+
+type ChunkJob = TileJob | GrassJob | MeshJob
 
 function createChunkWorker(): Worker {
   return new Worker(new URL('./chunkHeightmap.worker.ts', import.meta.url), {
@@ -64,18 +79,19 @@ export function defaultChunkWorkerCount(): number {
 }
 
 function toRequest(job: ChunkJob): ChunkWorkerRequest {
-  return job.kind === 'tile'
-    ? { kind: 'tile', id: job.id, params: job.params }
-    : { kind: 'grass', id: job.id, params: job.params }
+  if (job.kind === 'tile') return { kind: 'tile', id: job.id, params: job.params }
+  if (job.kind === 'mesh') return { kind: 'mesh', id: job.id, params: job.params }
+  return { kind: 'grass', id: job.id, params: job.params }
 }
 
 export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWorkerPool {
   const workers: Worker[] = []
   const free: Worker[] = []
-  // Two priority queues instead of one FIFO — terrain tiles are ground under
-  // the player's feet; grass is decorative and must never starve them
-  // (perf review 005, plan 086 §3.3).
+  // Three priority queues instead of one FIFO — terrain tiles and chunk mesh
+  // data are what the player stands on/sees; grass is decorative and must
+  // never starve them (perf review 005, plan 086 §3.3, plan world-terrain-004).
   const queueTile: TileJob[] = []
+  const queueMesh: MeshJob[] = []
   const queueGrass: GrassJob[] = []
   const inflight = new Map<number, ChunkJob>()
   // Namespaced (`tile:${chunkKey}` / `grass:${chunkKey}`) so cancelling one
@@ -100,6 +116,8 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
       let job: ChunkJob | undefined
       if (queueTile.length > 0) {
         job = queueTile.shift()
+      } else if (queueMesh.length > 0) {
+        job = queueMesh.shift()
       } else if (queueGrass.length > 0 && inflightGrassCount() < maxInflightGrass) {
         job = queueGrass.shift()
       }
@@ -150,6 +168,13 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
             })
           } else if (job.kind === 'grass' && msg.kind === 'grass') {
             job.resolve(msg.grass)
+          } else if (job.kind === 'mesh' && msg.kind === 'mesh') {
+            job.resolve({
+              positionY: msg.positionY,
+              normal: msg.normal,
+              color: msg.color,
+              bareGround: msg.bareGround,
+            })
           }
         } else {
           job.reject(new Error(msg.error))
@@ -194,6 +219,12 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
       job!.reject(new HeightmapGenerationCancelledError())
       return
     }
+    const meshIndex = queueMesh.findIndex((job) => job.id === id)
+    if (meshIndex !== -1) {
+      const [job] = queueMesh.splice(meshIndex, 1)
+      job!.reject(new HeightmapGenerationCancelledError())
+      return
+    }
     const job = inflight.get(id)
     if (job) {
       inflight.delete(id)
@@ -207,6 +238,10 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
 
   function cancelGrass(key: string): void {
     cancelByNamespacedKey(`grass:${key}`)
+  }
+
+  function cancelMesh(key: string): void {
+    cancelByNamespacedKey(`mesh:${key}`)
   }
 
   function requestTile(key: string, params: ChunkTileParams): Promise<ChunkTileResult> {
@@ -229,9 +264,21 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
     })
   }
 
+  function requestMesh(key: string, params: ChunkMeshDataParams): Promise<ChunkMeshData> {
+    cancelMesh(key)
+    const id = nextId++
+    keyToId.set(`mesh:${key}`, id)
+    return new Promise<ChunkMeshData>((resolve, reject) => {
+      queueMesh.push({ kind: 'mesh', id, key, params, resolve, reject })
+      pump()
+    })
+  }
+
   function dispose(): void {
     for (const job of queueTile) job.reject(new HeightmapGenerationCancelledError())
     queueTile.length = 0
+    for (const job of queueMesh) job.reject(new HeightmapGenerationCancelledError())
+    queueMesh.length = 0
     for (const job of queueGrass) job.reject(new HeightmapGenerationCancelledError())
     queueGrass.length = 0
     for (const job of inflight.values()) job.reject(new HeightmapGenerationCancelledError())
@@ -248,9 +295,11 @@ export function createChunkWorkerPool(size = defaultChunkWorkerCount()): ChunkWo
     cancelTile,
     requestGrass,
     cancelGrass,
+    requestMesh,
+    cancelMesh,
     dispose,
     get pendingCount() {
-      return queueTile.length + queueGrass.length
+      return queueTile.length + queueMesh.length + queueGrass.length
     },
     get busyCount() {
       return inflight.size
@@ -284,6 +333,17 @@ export function requestChunkGrass(
 
 export function cancelChunkGrass(key: string): void {
   chunkPool?.cancelGrass(key)
+}
+
+export function requestChunkMesh(
+  key: string,
+  params: ChunkMeshDataParams,
+): Promise<ChunkMeshData> {
+  return getChunkPool().requestMesh(key, params)
+}
+
+export function cancelChunkMesh(key: string): void {
+  chunkPool?.cancelMesh(key)
 }
 
 export function disposeChunkWorkerPool(): void {

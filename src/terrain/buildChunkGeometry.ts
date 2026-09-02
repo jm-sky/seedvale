@@ -1,21 +1,6 @@
 import * as THREE from 'three'
 import type { DetailNormalConfig } from '../config/worldConfig'
-import {
-  applyMicroTint,
-  applyMountainRock,
-  applyOceanDepthTint,
-  applyRoadTint,
-  applySlopeRock,
-  colorForTerrain,
-  sandBandAt,
-} from './biomeColors'
-import { biomeWeightsAt } from './biomeRegions'
-import {
-  apronGridWeights,
-  type ChunkTileData,
-  type RegionParams,
-  sampleApronGridWeighted,
-} from './chunkHeightmap'
+import type { ChunkMeshData } from './chunkMeshData'
 import { createTerrainNormalMap } from './terrainDetailNormalMap'
 
 export type ChunkMeshResult = {
@@ -23,31 +8,11 @@ export type ChunkMeshResult = {
   dispose: () => void
 }
 
-/** World-space burn patches applied as vertex-color charcoal (plan 137) —
- *  the same `{x,z,radius}` as `TerrainModification` mode `'scorch'`. Kept as
- *  a narrow type so `buildChunkGeometry` doesn't import `chunkManager`. */
-export type TerrainScorchPatch = { x: number, z: number, radius: number }
-
-/** Charcoal ground color for a fully-scorched vertex. */
-export const SCORCH_CHARCOAL = new THREE.Color(0x1a1410)
-
-/** Radial scorch amount in [0, 1] at a world XZ point — 1 at the center,
- *  0 at/beyond `radius`. Overlapping patches take the max. Pure/exported
- *  so the falloff is unit-tested without building a chunk mesh. */
-export function scorchFalloffAt(
-  wx: number,
-  wz: number,
-  patches: readonly TerrainScorchPatch[],
-): number {
-  let best = 0
-  for (const patch of patches) {
-    const dist = Math.hypot(wx - patch.x, wz - patch.z)
-    if (dist >= patch.radius) continue
-    const falloff = 1 - THREE.MathUtils.smoothstep(dist, 0, patch.radius)
-    if (falloff > best) best = falloff
-  }
-  return best
-}
+/** Re-exported for existing callers/tests — the scorch falloff/patch types
+ *  and the worker-safe mesh-data computation itself now live in
+ *  `chunkMeshData.ts` (plan world-terrain-004), so this module only
+ *  assembles Three.js objects from an already-computed `ChunkMeshData`. */
+export { SCORCH_CHARCOAL, scorchFalloffAt, type TerrainScorchPatch } from './chunkMeshData'
 
 /** Every chunk's material is stateless per-chunk (all differences live in
  *  vertex attributes), so `ChunkManager` builds exactly one and passes it to
@@ -386,141 +351,35 @@ ${MACRO_NOISE_FUNCS}${
     detailOn ? 'chunk-terrain-surface-detail-v6' : 'chunk-terrain-surface-v6'
 }
 
-/** Where the surface reads as packed dirt/sand rather than vegetated ground:
- *  road & village-clearing corridors (`tile.roadTint`), the shore sand band,
- *  and desert regions. Drives the tiling blend above. */
-function bareGroundWeight(
-  roadTint: number,
-  height: number,
-  waterLevel: number,
-  desert: number,
-  sandBand: number,
-): number {
-  // `applyRoadTint` saturates toward dirt; keep a longer mixed band so the
-  // soft corridor edge still shows meadow normals/color before full bare grain.
-  const road = Math.min(1, Math.pow(Math.max(0, roadTint), 0.85) * 1.35)
-  const sand =
-    1 -
-    THREE.MathUtils.smoothstep(height, waterLevel + sandBand * 0.5, waterLevel + sandBand * 1.5)
-  return Math.min(1, Math.max(road, sand, desert))
-}
-
-/** Grid indices of the apron texel nearest `(x, z)` — every core vertex lands
- *  exactly on an apron grid point (the apron is the same step spacing, one
- *  ring wider), so this is exact, not a nearest-neighbor approximation. */
-function apronGridIJ(
-  apronRes: number,
-  apronOriginX: number,
-  apronOriginZ: number,
-  step: number,
-  x: number,
-  z: number,
-): { ix: number; iz: number } {
-  return {
-    ix: Math.max(0, Math.min(apronRes - 1, Math.round((x - apronOriginX) / step))),
-    iz: Math.max(0, Math.min(apronRes - 1, Math.round((z - apronOriginZ) / step))),
-  }
-}
-
 /**
- * Builds one chunk's render mesh from its apron-inclusive tile. Vertex Y, normals
- * and shore/seabed colour use `tile.floorHeights` (true bathymetry) so underwater
- * terrain is a bathtub under the water plane, not a flat lid at `waterLevel`.
- * `tile.heights` stays clamped for the water mask, grass reject and `sampleHeight`.
- *
- * Normals are central differences on that same floor grid (the apron ring exists
- * so every core-edge vertex has a same-grid neighbor on both sides of the seam) —
- * mathematically identical to `computeVertexNormals()` on this grid's regular
- * triangulation, verified numerically against three's own implementation, but without
- * allocating and immediately discarding a helper `PlaneGeometry` per chunk.
- * `computeVertexNormals()` must NOT be called on the core geometry itself, since that
- * would recompute from core-only faces and reintroduce the seam mismatch the apron
- * exists to avoid.
+ * Assembles one chunk's `THREE.Mesh` from an already-computed `ChunkMeshData`
+ * (plan world-terrain-004) — the data-only per-vertex terrain math (position
+ * Y, seam-safe normals, vertex colors, `aBareGround`) now lives in
+ * `chunkMeshData.ts`'s `computeChunkMeshData()`, which `chunkManager.ts` runs
+ * in the existing chunk worker (`chunkHeightmap.worker.ts`) instead of on the
+ * main thread. This function only builds/positions the Three.js objects, and
+ * still owns their disposal.
  */
 export function buildChunkGeometry(
-  tile: ChunkTileData,
+  meshData: ChunkMeshData,
   resolution: number,
   chunkSize: number,
   chunkOriginX: number,
   chunkOriginZ: number,
-  waterLevel: number,
-  heightScale: number,
   material: THREE.MeshStandardMaterial,
-  region: RegionParams,
-  seed: number,
   castShadow: boolean,
-  scorches: readonly TerrainScorchPatch[] = [],
 ): ChunkMeshResult {
-  const step = chunkSize / (resolution - 1)
-  const apronRes = resolution + 2
-  const apronOriginX = -chunkSize / 2 - step
-  const apronOriginZ = -chunkSize / 2 - step
-
   const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, resolution - 1, resolution - 1)
   geometry.rotateX(-Math.PI / 2)
   const positions = geometry.attributes.position as THREE.BufferAttribute
-  const normalAttr = new Float32Array(positions.count * 3)
-  const colors = new Float32Array(positions.count * 3)
-  const bareGround = new Float32Array(positions.count)
-  const tmp = new THREE.Color()
-
   for (let i = 0; i < positions.count; i++) {
-    const x = positions.getX(i)
-    const z = positions.getZ(i)
-    // One set of bilinear weights per vertex, reused for all 6 apron-grid
-    // samples below instead of each recomputing fx/fz/floor/clamp from scratch.
-    const w = apronGridWeights(apronRes, apronOriginX, apronOriginZ, step, x, z)
-    const h = sampleApronGridWeighted(tile.floorHeights, apronRes, w)
-    positions.setY(i, h)
-
-    const { ix, iz } = apronGridIJ(apronRes, apronOriginX, apronOriginZ, step, x, z)
-    const hE = tile.floorHeights[iz * apronRes + Math.min(apronRes - 1, ix + 1)]!
-    const hW = tile.floorHeights[iz * apronRes + Math.max(0, ix - 1)]!
-    const hN = tile.floorHeights[Math.min(apronRes - 1, iz + 1) * apronRes + ix]!
-    const hS = tile.floorHeights[Math.max(0, iz - 1) * apronRes + ix]!
-    const dHdx = (hE - hW) / (2 * step)
-    const dHdz = (hN - hS) / (2 * step)
-    const nLen = Math.hypot(dHdx, 1, dHdz)
-    const ny = 1 / nLen
-    normalAttr[i * 3] = -dHdx / nLen
-    normalAttr[i * 3 + 1] = ny
-    normalAttr[i * 3 + 2] = -dHdz / nLen
-
-    const m = sampleApronGridWeighted(tile.biomes, apronRes, w)
-    const continentalness = sampleApronGridWeighted(tile.continentalness, apronRes, w)
-    const mountainRidge = sampleApronGridWeighted(tile.mountainRidge, apronRes, w)
-    const moistureRegion = sampleApronGridWeighted(tile.moistureRegion, apronRes, w)
-    const roadTint = sampleApronGridWeighted(tile.roadTint, apronRes, w)
-    const steepness = 1 - ny
-    const altitude01 = (h - waterLevel) / Math.max(heightScale, 0.001)
-    const biomeWeights = biomeWeightsAt(moistureRegion, altitude01, region)
-    const wx = chunkOriginX + x
-    const wz = chunkOriginZ + z
-    const sandBand = sandBandAt(wx, wz, seed)
-
-    colorForTerrain(h, m, waterLevel, heightScale, biomeWeights, tmp, sandBand)
-    applySlopeRock(tmp, h, waterLevel, steepness, sandBand)
-    applyMountainRock(tmp, mountainRidge, h, waterLevel, heightScale)
-    applyOceanDepthTint(tmp, continentalness, h, waterLevel)
-    applyMicroTint(tmp, h, waterLevel, wx, wz, 0.045 + Math.min(1, roadTint) * 0.05)
-    applyRoadTint(tmp, roadTint, wx, wz)
-    const scorchAmt = scorchFalloffAt(wx, wz, scorches)
-    if (scorchAmt > 0) {
-      tmp.lerp(SCORCH_CHARCOAL, scorchAmt)
-    }
-
-    colors[i * 3] = tmp.r
-    colors[i * 3 + 1] = tmp.g
-    colors[i * 3 + 2] = tmp.b
-    bareGround[i] = Math.max(
-      bareGroundWeight(roadTint, h, waterLevel, biomeWeights.desert, sandBand),
-      scorchAmt,
-    )
+    positions.setY(i, meshData.positionY[i]!)
   }
+  positions.needsUpdate = true
 
-  geometry.setAttribute('normal', new THREE.BufferAttribute(normalAttr, 3))
-  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-  geometry.setAttribute('aBareGround', new THREE.BufferAttribute(bareGround, 1))
+  geometry.setAttribute('normal', new THREE.BufferAttribute(meshData.normal, 3))
+  geometry.setAttribute('color', new THREE.BufferAttribute(meshData.color, 3))
+  geometry.setAttribute('aBareGround', new THREE.BufferAttribute(meshData.bareGround, 1))
 
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(chunkOriginX, 0, chunkOriginZ)

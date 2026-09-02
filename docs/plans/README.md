@@ -29,7 +29,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | Worker mesh generation + transfer/allocation cleanup + runtime mesh-data cache | 🔴 | M | - |\n| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
+| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | 💡 `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
 | 💡 `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -56,8 +56,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| 💡 `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | -       | 🔴 | M      | -      |
-| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -      |
 
 ---
 
@@ -90,6 +88,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `npc-013-night-campfire-gathering.md` | At night with a lit settlement campfire, idle non-sociable NPCs (not just `sociable` ones) walk to it and can pair into a conversation with another NPC there; a hungry/thirsty/on-duty NPC still does its own thing first; an NPC already at the campfire leaves once the fire goes out or a real need appears; no unreasonable cross-settlement travel to a distant campfire |
 | `npc-012-weather-reaction-and-shelter.md` | During heavy rain/snow an idle or low-priority (schedule-driven work) NPC walks home through normal movement (no teleport) and stays there while the bad weather persists, without endlessly restarting the walk once arrived; light rain/cloudy/fog/clear don't send anyone home; an active physiological need (e.g. drinking at the well) still finishes/takes priority over sheltering; once weather clears, the NPC resumes its normal schedule/need-driven routine |
 | `items-player-013-player-built-sleeping-utilities.md` | Preview/place a bedroll (3× skóra) and a raised platform (6× gałąź), rejected placement doesn't consume materials; bedroll near a tent (with/without fire, with/without a platform under it) raises camp-rest quality without breaking the existing full tent+blanket+fire=1 quality; packing the tent leaves both in place; save/load and a same-session `WorldBundle` rebuild restore position/condition; leaving a bedroll/platform exposed to rain/snow visibly degrades it over world-days while a sheltered one doesn't |
+| `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md` | `?benchmark=stream&seed=42&res=193` — compare `chunk mesh` hitch count/avg/max, frame max/p1, STREAMING hitch count, RENDER avg/p95, FPS against the pre-migration baseline (51 hitches, avg 45.5 ms, max 92.6 ms); no visible terrain/color/normal regression while streaming or after dig/scorch/terrain-prep; revisiting an unmodified chunk shows a mesh-data cache hit |
 
 ---
 
@@ -187,7 +186,8 @@ World-driven quests
   (049) + 093 + (110) → 132
 
 Rendering performance
-  (157 PointLight budget 16) → 149 shader program first-use hitch\n  chunk mesh streaming → world-terrain-004
+  (157 PointLight budget 16) → 149 shader program first-use hitch
+  chunk mesh streaming → world-terrain-004
 
 Construction & lodging
   (109) → (111) → (169)

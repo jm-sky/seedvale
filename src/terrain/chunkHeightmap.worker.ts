@@ -6,6 +6,7 @@ import { computeChunkCrops } from './chunkCrops'
 import { computeChunkEnvironment } from './chunkEnvironment'
 import { computeChunkTile } from './chunkHeightmap'
 import { computeChunkItems } from './chunkItems'
+import { computeChunkMeshData } from './chunkMeshData'
 import { computeChunkVegetation } from './chunkVegetation'
 import { computeChunkGrass, GRASS_SPECIES_ORDER, type GrassChunkData } from './grassPlacement'
 
@@ -85,10 +86,22 @@ ctx.onmessage = ({ data }) => {
           roadTint.buffer,
         ],
       )
-    } else {
+    } else if (kind === 'grass') {
       const { params } = data
       const grass = computeChunkGrass(params, params.grids)
       ctx.postMessage({ kind: 'grass', id, ok: true, grass }, grassTransferList(grass))
+    } else {
+      const { params } = data
+      const meshData = computeChunkMeshData(params)
+      ctx.postMessage(
+        { kind: 'mesh', id, ok: true, ...meshData },
+        [
+          meshData.positionY.buffer,
+          meshData.normal.buffer,
+          meshData.color.buffer,
+          meshData.bareGround.buffer,
+        ],
+      )
     }
   } catch (err) {
     ctx.postMessage(

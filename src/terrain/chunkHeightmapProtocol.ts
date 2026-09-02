@@ -2,6 +2,7 @@ import type { CropPlacement } from '../world/cropLifecycle'
 import type { EnvironmentPlacement } from './chunkEnvironment'
 import type { ChunkTileData, ChunkTileParams } from './chunkHeightmap'
 import type { ItemPlacement } from './chunkItems'
+import type { ChunkMeshData, ChunkMeshDataParams } from './chunkMeshData'
 import type { VegetationPlacement } from './chunkVegetation'
 import type { GrassChunkData, GrassComputeParams, GrassTileGrids } from './grassPlacement'
 
@@ -28,8 +29,10 @@ export type GrassRequestParams = GrassComputeParams & {
 export type ChunkWorkerRequest =
   | { kind: 'tile', id: number, params: ChunkTileParams }
   | { kind: 'grass', id: number, params: GrassRequestParams }
+  | { kind: 'mesh', id: number, params: ChunkMeshDataParams }
 
 export type ChunkWorkerResponse =
   | (ChunkTileResult & { kind: 'tile', id: number, ok: true })
   | { kind: 'grass', id: number, ok: true, grass: GrassChunkData }
-  | { kind: 'tile' | 'grass', id: number, ok: false, error: string }
+  | (ChunkMeshData & { kind: 'mesh', id: number, ok: true })
+  | { kind: 'tile' | 'grass' | 'mesh', id: number, ok: false, error: string }
