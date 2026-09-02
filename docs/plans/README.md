@@ -54,7 +54,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| 💡 `fauna-006-wolf-settlement-entry.md`                                | -       | 🟡 | M      | -      |
 | ◼️ `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
 
 ---
@@ -92,6 +91,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md` | `?benchmark=stream&seed=42&res=193` — compare `chunk mesh` hitch count/avg/max, frame max/p1, STREAMING hitch count, RENDER avg/p95, FPS against the pre-migration baseline (51 hitches, avg 45.5 ms, max 92.6 ms); no visible terrain/color/normal regression while streaming or after dig/scorch/terrain-prep; revisiting an unmodified chunk shows a mesh-data cache hit |
 | `fauna-005-animal-corpse-and-bone-feeding.md` | A wolf discovers and eats a fresh corpse; a sufficiently hungry wolf falls back onto a decaying corpse or bones only when no fresh alternative is reachable, not merely because one exists; bones remain eatable after the fresh/rotting food is gone; player harvest and wolf feeding converge on the same corpse without duplicating/corrupting state; behaviour works with the player away from the scene |
 | `npc-014-work-contracts-foundation-and-physical-posting.md` | Create a construction contract (Quick Actions → Budowa → Zleć budowę, pick a reward) and confirm a flag appears at the target, state is `available`/not advertised; visit a settlement's notice board (`[E]`) and post the contract, confirm it becomes `advertised`; save/load before and after posting preserves contract/flag/board state; cancel a contract before and after posting via Quick Actions → Zlecenia, confirm the flag/advertisement are removed and it can't be posted again |
+| `fauna-006-wolf-settlement-entry.md` | An ordinary (non-frenzied) wolf selects and enters a settlement to reach an NPC or fleeing prey it was already chasing; the chase isn't dropped just because the target crossed into the village avoidance radius; a frenzied wolf still reaches the village as before; fox/deer/other wild fauna still avoid the village for both wander and hunting; a wolf still doesn't wander into the village without an active target; building colliders still block actual movement |
 
 ---
 

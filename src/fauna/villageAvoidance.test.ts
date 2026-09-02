@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isWithinVillageRadius, villageFleeBiasFalloff, type VillageInfo } from './AnimalAgent'
+import { canPredatorPursueIntoVillage, isWithinVillageRadius, villageFleeBiasFalloff, type VillageInfo } from './AnimalAgent'
 
 describe('isWithinVillageRadius (plan 080 — footprint-radius-aware village avoidance)', () => {
   const villageAt = (radius: number): VillageInfo => ({ x: 0, z: 0, radius })
@@ -46,5 +46,27 @@ describe('villageFleeBiasFalloff (plan 080)', () => {
     expect(villageFleeBiasFalloff(50, small, margin)).toBeLessThan(
       villageFleeBiasFalloff(50, large, margin),
     )
+  })
+})
+
+describe('canPredatorPursueIntoVillage (fauna-006 — wolf settlement entry)', () => {
+  it('a non-frenzied wolf may pursue a target into the village', () => {
+    expect(canPredatorPursueIntoVillage('wolf', false)).toBe(true)
+  })
+
+  it('a frenzied wolf may pursue a target into the village', () => {
+    expect(canPredatorPursueIntoVillage('wolf', true)).toBe(true)
+  })
+
+  it('a non-frenzied fox still respects village avoidance', () => {
+    expect(canPredatorPursueIntoVillage('fox', false)).toBe(false)
+  })
+
+  it('a non-frenzied bear still respects village avoidance', () => {
+    expect(canPredatorPursueIntoVillage('bear', false)).toBe(false)
+  })
+
+  it('frenzied stays the general exception for any other predator', () => {
+    expect(canPredatorPursueIntoVillage('fox', true)).toBe(true)
   })
 })

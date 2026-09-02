@@ -1,7 +1,7 @@
 # Plan: Wolf Settlement Entry
 
 **Created:** 2026-09-02
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `fauna`

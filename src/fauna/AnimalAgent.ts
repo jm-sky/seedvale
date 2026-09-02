@@ -591,6 +591,21 @@ export function isWithinVillageRadius(
   return Math.hypot(pos.x - village.x, pos.z - village.z) < village.radius + margin
 }
 
+/** True when a predator of `kind` may pursue a live target (prey or NPC)
+ *  into a settlement's avoidance radius instead of giving up the chase
+ *  (fauna-006) — a wolf always may, since settlement conflict/pursuit is
+ *  intended wolf behaviour; any other predator only while `frenzied` (which
+ *  in practice only ever applies to a wolf — `pickNearestEligibleWolf` only
+ *  ever frenzies a wolf — but this stays explicit rather than relying on
+ *  that invariant). Pure so it's unit-testable without instantiating
+ *  `AnimalAgent`/Three.js. Deliberately does not extend to ordinary
+ *  wander/forage/water search — see `pickPointNear`'s doc — only to
+ *  target-driven pursuit (`updatePredator`'s prey chase,
+ *  `senseNpcThreat`'s NPC candidate selection). */
+export function canPredatorPursueIntoVillage(kind: AnimalKind, frenzied: boolean): boolean {
+  return kind === 'wolf' || frenzied
+}
+
 /** Linear falloff from `1` at the village center to `0` at
  *  `village.radius + margin` — the flee-direction village bias's ramp
  *  (`fleeFrom`). Pure so it's unit-testable without instantiating
@@ -2490,20 +2505,22 @@ export class AnimalAgent {
    *  npc-008 step 6) — deliberately no facing-cone/probability roll like the
    *  player's `isPlayerNoticed()`: a predator that's already committed to a
    *  target doesn't need stealth-grade perception of the humans nearby. A
-   *  non-frenzied predator excludes candidates inside a village's avoidance
-   *  radius (`isNearVillage`), mirroring `updatePredator`'s existing "live
-   *  prey inside the village is not huntable" rule — a frenzied predator is
-   *  explicitly willing to enter a village (`moveTowardStrategicVillage`),
-   *  so it keeps considering every candidate. `nearbyNpcs` is caller-bounded
-   *  (see `NearbyNpcCandidate`'s doc) but, since step 6 dropped the
-   *  frenzy-only gate, is now scanned by every loaded predator every tick —
-   *  squared-distance compare (same idiom as `countNearbyHumans`) instead of
-   *  `Math.hypot` keeps that scan cheap. */
+   *  non-frenzied, non-wolf predator excludes candidates inside a village's
+   *  avoidance radius (`isNearVillage`), mirroring `updatePredator`'s
+   *  existing "live prey inside the village is not huntable" rule — a
+   *  frenzied predator is explicitly willing to enter a village
+   *  (`moveTowardStrategicVillage`), and a wolf (frenzied or not) can enter
+   *  in pursuit of a real target (fauna-006, `canPursueIntoVillage()`), so
+   *  either keeps considering every candidate. `nearbyNpcs` is
+   *  caller-bounded (see `NearbyNpcCandidate`'s doc) but, since step 6
+   *  dropped the frenzy-only gate, is now scanned by every loaded predator
+   *  every tick — squared-distance compare (same idiom as
+   *  `countNearbyHumans`) instead of `Math.hypot` keeps that scan cheap. */
   private senseNpcThreat(nearbyNpcs: readonly NearbyNpcCandidate[]): NearbyNpcCandidate | null {
     let best: NearbyNpcCandidate | null = null
     let bestDSq = this.def.playerNoticeRange * this.def.playerNoticeRange
     for (const npc of nearbyNpcs) {
-      if (!this.frenzied && this.isNearVillage(npc)) continue
+      if (!this.canPursueIntoVillage() && this.isNearVillage(npc)) continue
       const dx = npc.x - this.mesh.position.x
       const dz = npc.z - this.mesh.position.z
       const dSq = dx * dx + dz * dz
@@ -2838,10 +2855,12 @@ export class AnimalAgent {
   }
 
   /** True if `pos` is within that settlement's real footprint + `VILLAGE_AVOID_MARGIN`
-   *  of any loaded settlement — used to make wild predators give up a chase
-   *  that runs into the village (plan 044 §2.4's "lis niechętnie wchodzi do
-   *  bezpiecznego obszaru i może przerwać pościg") and to keep wild wander
-   *  targets off settled ground. */
+   *  of any loaded settlement — used to make non-wolf wild predators give up
+   *  a chase that runs into the village (plan 044 §2.4's "lis niechętnie
+   *  wchodzi do bezpiecznego obszaru i może przerwać pościg"; a wolf is
+   *  exempted from this via `canPursueIntoVillage()`, fauna-006) and to keep
+   *  wild wander targets off settled ground for every wild species,
+   *  including wolf. */
   private isNearVillage(pos: { x: number, z: number }): boolean {
     for (const v of this.currentVillages) {
       if (isWithinVillageRadius(pos, v, VILLAGE_AVOID_MARGIN)) return true
@@ -2849,9 +2868,15 @@ export class AnimalAgent {
     return false
   }
 
+  /** Instance-bound wrapper around the pure `canPredatorPursueIntoVillage`
+   *  (fauna-006) — see that function's doc. */
+  private canPursueIntoVillage(): boolean {
+    return canPredatorPursueIntoVillage(this.def.kind, this.frenzied)
+  }
+
   private updatePredator(dt: number, others: AnimalAgent[]): void {
     const prey = this.resolvePreyTarget(others)
-    if (prey && this.isNearVillage(prey.mesh.position)) {
+    if (prey && !this.canPursueIntoVillage() && this.isNearVillage(prey.mesh.position)) {
       // Live prey inside the village is not huntable; still allow drink/eat.
       if (this.pursueNeeds(dt, others)) return
       this.setIntent('wander')
