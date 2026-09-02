@@ -3,6 +3,7 @@ import type { NeedId, NpcPressure } from '../ai/Needs'
 import type { ActionId, Phase } from '../ai/NpcAgent'
 import type { NpcGoalId, NpcPlanState } from '../ai/npcPlan'
 import type { NpcStrategyCandidate, NpcStrategyId } from '../ai/npcStrategies'
+import { createBoundedHistoryBuffer } from './domainHistory'
 
 /**
  * Bounded per-NPC trace ring buffer (plan 170 — NPC simulation inspector and
@@ -75,12 +76,14 @@ export type NpcTraceEvent =
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 
+/** Record one semantic event — O(1), no allocation beyond the event object
+ *  the caller already built. `history()` returns a chronological
+ *  (oldest → newest) snapshot capped at capacity, a fresh array every call —
+ *  the internal ring cannot be mutated through it. Backed by the shared
+ *  bounded ring buffer (plan settlements-npcs-013, `domainHistory.ts`) also
+ *  used by the household/settlement history buffers. */
 export type NpcTraceBuffer = {
-  /** Record one semantic event — O(1), no allocation beyond the event object
-   *  the caller already built. */
   record(event: NpcTraceEvent): void
-  /** Chronological (oldest → newest) snapshot, capped at capacity. Returns a
-   *  fresh array every call — the internal ring cannot be mutated through it. */
   history(): readonly NpcTraceEvent[]
 }
 
@@ -89,20 +92,5 @@ export type NpcTraceBuffer = {
 export const NPC_TRACE_CAPACITY = 150
 
 export function createNpcTraceBuffer(capacity = NPC_TRACE_CAPACITY): NpcTraceBuffer {
-  const slots: (NpcTraceEvent | undefined)[] = new Array(capacity)
-  let writeIndex = 0
-  let count = 0
-  return {
-    record(event) {
-      slots[writeIndex] = event
-      writeIndex = (writeIndex + 1) % capacity
-      count = Math.min(capacity, count + 1)
-    },
-    history() {
-      const out: NpcTraceEvent[] = []
-      const start = count < capacity ? 0 : writeIndex
-      for (let i = 0; i < count; i++) out.push(slots[(start + i) % capacity]!)
-      return out
-    },
-  }
+  return createBoundedHistoryBuffer<NpcTraceEvent>(capacity)
 }

@@ -3,11 +3,14 @@ import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { VillageSize } from '../settlement/families'
+import type { HouseholdId } from '../settlement/household'
 import type { WorldContext } from '../world/worldContext'
+import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { isAdminMode, isDebugMode } from './debugMode'
+import { type HistoryFilter } from './domainHistory'
 import { getCurrentFrenzyWolf, getFrenzyWolves, getNextFrenzyWolf } from './faunaInspector'
 import {
   deepForestNearest,
@@ -18,14 +21,18 @@ import {
   villageNearest,
 } from './locationQueries'
 import {
+  type DomainHistoryEnvelope,
   findNpcById,
   freezeNpc,
   type FrenzyWolfDebugResult,
+  householdHistory,
+  npcHistory,
   type NpcQueryFilter,
   type NpcQueryResult,
   queryNpcs,
   reevaluateNpc,
   setFrenzyWolf,
+  settlementHistory,
   unfreezeNpc,
 } from './npcInspector'
 import { findVillageDef } from './villageInspector'
@@ -40,11 +47,29 @@ import { findVillageDef } from './villageInspector'
 
 export type NpcDebugHandle = {
   state: () => NpcInspectionSnapshot | null
-  history: () => readonly NpcTraceEvent[] | null
+  history: (filter?: HistoryFilter) => readonly NpcTraceEvent[] | null
   why: () => NpcWhy | null
   freeze: () => boolean
   unfreeze: () => boolean
   reevaluate: () => boolean
+}
+
+/** `debug.household(id).history()` (plan settlements-npcs-013) — the
+ *  household's own bounded mutation history; see `npcInspector.ts`'s
+ *  `householdHistory` doc for why this stays separate from member NPCs'
+ *  traces. Fresh-resolving: works whether or not the owning settlement is
+ *  currently loaded, since `Household` is registry-owned (survives
+ *  streaming) — only `null` when this household id has never been built. */
+export type HouseholdDebugHandle = {
+  history: (filter?: HistoryFilter) => readonly HouseholdHistoryEvent[] | null
+}
+
+/** `debug.settlement(id).history()` — the merged NPC/household/economy
+ *  timeline; see `npcInspector.ts`'s `settlementHistory` doc for ordering
+ *  and the "currently-loaded NPCs only" caveat. `null` only for an
+ *  unrecognized settlement id, not merely an unbuilt one (`[]` then). */
+export type SettlementHistoryDebugHandle = {
+  history: (filter?: HistoryFilter) => readonly DomainHistoryEnvelope[] | null
 }
 
 export type { AnimalAgentDebugInfo } from '../fauna/AnimalAgent'
@@ -100,6 +125,15 @@ export type HiddenTreasureDebugApi = {
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
+  /** Household-level mutation history (plan settlements-npcs-013) —
+   *  fresh-resolving by id, works whether or not the owning settlement is
+   *  currently loaded. `null` for a household id never created. */
+  household: (id: HouseholdId) => HouseholdDebugHandle | null
+  /** Merged NPC/household/economy timeline for a settlement (plan
+   *  settlements-npcs-013) — resolves by id whether or not the settlement is
+   *  currently loaded (NPC-scope entries are then just absent, same as
+   *  `village(id).npcs()`). `null` only for an unrecognized settlement id. */
+  settlement: (id: string) => SettlementHistoryDebugHandle | null
   /** `setFrenzyWolf()` (plan 179 §3) — see `npcInspector.ts`'s doc. */
   setFrenzyWolf: () => FrenzyWolfDebugResult | string
   /** Resolves by id whether or not the village is currently loaded — `npcs()`
@@ -149,6 +183,7 @@ type VillageIdentityLike = { id: string, name: string, size: VillageSize, x: num
 const HELP_TEXT = [
   'window.seedvale.debug — developer console API (?debug=1 only)',
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
+  'npc(id).history(filter?) — NPC decision/action trace (plan 170); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); filter: {since?, limit?, types?}',
   'village(id) — resolves by id even if the village is currently unloaded (npcs() is [] then)',
   'villages() — lists currently loaded villages only',
   'village(id).houses() / villages()[i].houses() — per-house definitionId + hasBed; null while unloaded',
@@ -240,7 +275,7 @@ export function installNpcDebugApi(
       if (!findNpcById(bundle, id)) return null
       return {
         state: () => findNpcById(bundle, id)?.npc.createInspectionSnapshot(getTimeOfDay()) ?? null,
-        history: () => findNpcById(bundle, id)?.npc.history() ?? null,
+        history: (filter) => npcHistory(bundle, id, filter),
         why: () => findNpcById(bundle, id)?.npc.why(getTimeOfDay()) ?? null,
         freeze: () => freezeNpc(bundle, id),
         unfreeze: () => unfreezeNpc(bundle, id),
@@ -248,6 +283,8 @@ export function installNpcDebugApi(
       }
     },
     npcs: (filter) => queryNpcs(bundle, getTimeOfDay(), filter),
+    household: (id) => (bundle.settlementsManager.getHousehold(id) ? { history: (filter) => householdHistory(bundle, id, filter) } : null),
+    settlement: (id) => (findVillageDef(bundle.settlementsManager, id) ? { history: (filter) => settlementHistory(bundle, id, filter) } : null),
     setFrenzyWolf: () => setFrenzyWolf(bundle),
     village: (id) => {
       const def = findVillageDef(bundle.settlementsManager, id)

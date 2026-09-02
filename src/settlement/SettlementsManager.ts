@@ -4,7 +4,7 @@ import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
-import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
+import type { SettlementEconomy, SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
@@ -24,7 +24,7 @@ import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
 import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createSettlement, type Settlement } from './createSettlement'
-import { createHouseholdRegistry, type HouseholdId, type HouseholdSnapshot } from './household'
+import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import { createNpcRelationships } from './npcRelationships'
 import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost, placeOnGround } from './props'
@@ -122,6 +122,17 @@ export type SettlementsManager = {
   getHomeDef: () => SettlementDef
   /** Resolve a settlement def from the shared plan cache without loading meshes. */
   peekDef: (cell: SettlementCell) => SettlementDef | null
+  /** Fresh-resolving household lookup (plan settlements-npcs-013) — the
+   *  registry-owned `Household` survives settlement unload/reload, so this
+   *  works whether or not the owning settlement is currently streamed in.
+   *  `undefined` when this household has never been created (settlement
+   *  never built). Narrow wrapper over `HouseholdRegistry.get`, not a second
+   *  registry — see `debug/npcInspector.ts`'s hierarchical history. */
+  getHousehold: (id: HouseholdId) => Household | undefined
+  /** Fresh-resolving settlement-economy lookup — same "long-lived registry
+   *  owner, resolve fresh every call" contract as `getHousehold` above.
+   *  Narrow wrapper over `EconomyRegistry.get`. */
+  getEconomy: (settlementId: string) => SettlementEconomy | undefined
   /** Stock-only snapshot of every settlement economy created so far (loaded
    *  or previously streamed out) — see `EconomyRegistry.serialize`. */
   snapshotEconomies: () => Record<string, SettlementEconomySnapshot>
@@ -558,6 +569,8 @@ export async function createSettlementsManager(
     },
     getHomeDef: () => homeDef,
     peekDef: (cell) => defFor(cell),
+    getHousehold: (id) => households.get(id),
+    getEconomy: (settlementId) => economies.get(settlementId),
     snapshotEconomies: () => economies.serialize(),
     snapshotHouseholds: () => households.serialize(),
     snapshotNpcStates: () => npcStates.serialize(),

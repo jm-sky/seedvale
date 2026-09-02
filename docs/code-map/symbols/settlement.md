@@ -151,20 +151,20 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 226
-- `createHouseholdRegistry` — function — line 310
-- `Household` — type — line 144
-- `HouseholdId` — type — line 19
+- `createHousehold` — function — line 239
+- `createHouseholdRegistry` — function — line 356
+- `Household` — type — line 147
+- `HouseholdId` — type — line 22
   - domain: settlements-npcs
   - system: household
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 192
-- `HouseholdRegistry` — type — line 301
-- `HouseholdResourceKind` — type — line 34
-- `HouseholdSnapshot` — type — line 128
-- `WaterReserve` — type — line 91
+- `householdIdFor` — function — line 205
+- `HouseholdRegistry` — type — line 347
+- `HouseholdResourceKind` — type — line 37
+- `HouseholdSnapshot` — type — line 131
+- `WaterReserve` — type — line 94
 
 ## `settlement/householdExchange.ts`
 
@@ -432,7 +432,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 144
+- `createSettlementsManager` — function — line 155
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.

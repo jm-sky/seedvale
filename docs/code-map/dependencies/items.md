@@ -534,6 +534,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `combat/projectile.ts`
+- `debug/householdHistory.ts`
+- `debug/settlementHistory.ts`
 - `economy/initial.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/animalHarvest.ts`

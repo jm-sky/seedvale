@@ -42,25 +42,39 @@ function baseSnapshot(id: string, overrides: Partial<NpcInspectionSnapshot> = {}
   }
 }
 
-function fakeNpc(id: string) {
-  return { id, createInspectionSnapshot: () => baseSnapshot(id) }
+function fakeNpc(id: string, household: { id: string } | null = null, history: unknown[] = []) {
+  return { id, household, createInspectionSnapshot: () => baseSnapshot(id), history: () => history }
 }
 
 function fakeSettlement(id: string, npcs: ReturnType<typeof fakeNpc>[] = []) {
   return { id, name: `Settlement ${id}`, size: 'MD', center: { x: 0, z: 0 }, npcs }
 }
 
+function fakeHousehold(id: string, history: unknown[] = []) {
+  return { id, history: () => history }
+}
+
+function fakeEconomy(settlementId: string, history: unknown[] = []) {
+  return { settlementId, history: () => history }
+}
+
 type FakeManagerOpts = {
   loaded?: ReturnType<typeof fakeSettlement>[]
   defs?: Record<string, SettlementDef>
+  households?: Record<string, ReturnType<typeof fakeHousehold>>
+  economies?: Record<string, ReturnType<typeof fakeEconomy>>
 }
 
 function fakeSettlementsManager(opts: FakeManagerOpts): { manager: SettlementsManager, setLoaded: (l: ReturnType<typeof fakeSettlement>[]) => void } {
   let loaded = opts.loaded ?? []
   const defs = opts.defs ?? {}
+  const households = opts.households ?? {}
+  const economies = opts.economies ?? {}
   const manager = {
     getLoaded: () => loaded,
     peekDef: (cell: SettlementCell) => defs[`${cell.gx}_${cell.gz}`] ?? null,
+    getHousehold: (id: string) => households[id],
+    getEconomy: (settlementId: string) => economies[settlementId],
   } as unknown as SettlementsManager
   return { manager, setLoaded: (l) => { loaded = l } }
 }
@@ -205,6 +219,125 @@ describe('village(id)', () => {
 
     setLoaded([fakeSettlement('0_0', [npcB1, npcB2])])
     expect(handle.npcs().map((n) => n.id)).toEqual(['0_0:npc:B1', '0_0:npc:B2'])
+  })
+})
+
+describe('household(id) / settlement(id) (plan settlements-npcs-013)', () => {
+  it('household(id) returns null for a household that was never created', () => {
+    stubWindow('?debug=1')
+    const { manager } = fakeSettlementsManager({})
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.household('0_0:household:0')).toBeNull()
+  })
+
+  it('household(id).history() returns the household own bounded history, fresh-resolving', () => {
+    stubWindow('?debug=1')
+    const householdEvents = [{ simTime: 1, seq: 0, type: 'food.taken', itemKind: 'bread' }]
+    const { manager } = fakeSettlementsManager({
+      households: { '0_0:household:0': fakeHousehold('0_0:household:0', householdEvents) },
+    })
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const handle = api!.household('0_0:household:0')
+    expect(handle).not.toBeNull()
+    expect(handle!.history()).toEqual(householdEvents)
+  })
+
+  it('settlement(id) returns null for an unrecognized settlement id', () => {
+    stubWindow('?debug=1')
+    const { manager } = fakeSettlementsManager({})
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    expect(api!.settlement('99_99')).toBeNull()
+  })
+
+  it('settlement(id).history() merges household + economy + currently-loaded NPC events, oldest first', () => {
+    stubWindow('?debug=1')
+    const npc = fakeNpc('0_0:npc:0', { id: '0_0:household:0' }, [
+      { simTime: 1, type: 'action.completed', action: 'work' },
+    ])
+    const { manager } = fakeSettlementsManager({
+      loaded: [fakeSettlement('0_0', [npc])],
+      defs: { '0_0': { id: '0_0', name: 'Home', size: 'MD', x: 0, z: 0, families: [{}] } as unknown as SettlementDef },
+      households: {
+        '0_0:household:0': fakeHousehold('0_0:household:0', [
+          { simTime: 2, seq: 0, type: 'food.taken', itemKind: 'bread' },
+        ]),
+      },
+      economies: {
+        '0_0': fakeEconomy('0_0', [{ simTime: 3, seq: 0, type: 'stock.added', kind: 'iron', amount: 1 }]),
+      },
+    })
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const handle = api!.settlement('0_0')
+    expect(handle).not.toBeNull()
+    const history = handle!.history()!
+    expect(history.map((e) => e.scope)).toEqual(['npc', 'household', 'settlement'])
+    expect(history.map((e) => e.simTime)).toEqual([1, 2, 3])
+  })
+
+  it('settlement(id).history() does not leak another settlement\'s households/economy/NPCs', () => {
+    stubWindow('?debug=1')
+    const npcA = fakeNpc('0_0:npc:0', { id: '0_0:household:0' }, [{ simTime: 1, type: 'action.completed', action: 'work' }])
+    const npcB = fakeNpc('1_0:npc:0', { id: '1_0:household:0' }, [{ simTime: 1, type: 'action.completed', action: 'work' }])
+    const { manager } = fakeSettlementsManager({
+      loaded: [fakeSettlement('0_0', [npcA]), fakeSettlement('1_0', [npcB])],
+      defs: {
+        '0_0': { id: '0_0', name: 'A', size: 'MD', x: 0, z: 0, families: [{}] } as unknown as SettlementDef,
+        '1_0': { id: '1_0', name: 'B', size: 'MD', x: 280, z: 0, families: [{}] } as unknown as SettlementDef,
+      },
+      households: {
+        '0_0:household:0': fakeHousehold('0_0:household:0', [{ simTime: 1, seq: 0, type: 'food.taken', itemKind: 'bread' }]),
+        '1_0:household:0': fakeHousehold('1_0:household:0', [{ simTime: 1, seq: 0, type: 'food.taken', itemKind: 'bread' }]),
+      },
+      economies: {
+        '0_0': fakeEconomy('0_0', [{ simTime: 1, seq: 0, type: 'stock.added', kind: 'iron', amount: 1 }]),
+        '1_0': fakeEconomy('1_0', [{ simTime: 1, seq: 0, type: 'stock.added', kind: 'iron', amount: 9 }]),
+      },
+    })
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const historyA = api!.settlement('0_0')!.history()!
+    expect(historyA.every((e) => e.settlementId === '0_0')).toBe(true)
+    expect(JSON.stringify(historyA)).not.toContain('1_0:npc:0')
+    expect(JSON.stringify(historyA)).not.toContain('1_0:household:0')
+  })
+
+  it("settlement(id).history() includes a household's history even while the settlement itself is currently unloaded", () => {
+    stubWindow('?debug=1')
+    const { manager } = fakeSettlementsManager({
+      loaded: [],
+      defs: { '0_0': { id: '0_0', name: 'Home', size: 'MD', x: 0, z: 0, families: [{}] } as unknown as SettlementDef },
+      households: {
+        '0_0:household:0': fakeHousehold('0_0:household:0', [
+          { simTime: 5, seq: 0, type: 'food.taken', itemKind: 'bread' },
+        ]),
+      },
+    })
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const history = api!.settlement('0_0')!.history()!
+    expect(history).toHaveLength(1)
+    expect(history[0]).toMatchObject({ scope: 'household', simTime: 5 })
+  })
+
+  it('a simulated settlement reload drops the previous NPC list from settlement(id).history() without a stale reference', () => {
+    stubWindow('?debug=1')
+    const npcOld = fakeNpc('0_0:npc:old', null, [{ simTime: 1, type: 'action.completed', action: 'work' }])
+    const npcNew = fakeNpc('0_0:npc:new', null, [{ simTime: 2, type: 'action.completed', action: 'work' }])
+    const { manager, setLoaded } = fakeSettlementsManager({
+      loaded: [fakeSettlement('0_0', [npcOld])],
+      defs: { '0_0': { id: '0_0', name: 'Home', size: 'MD', x: 0, z: 0, families: [] } as unknown as SettlementDef },
+    })
+    const bundle = { settlementsManager: manager } as unknown as WorldBundle
+    const { api } = install(bundle)
+    const handle = api!.settlement('0_0')!
+    expect(handle.history()!.map((e) => e.simTime)).toEqual([1])
+
+    setLoaded([fakeSettlement('0_0', [npcNew])])
+    expect(handle.history()!.map((e) => e.simTime)).toEqual([2])
   })
 })
 

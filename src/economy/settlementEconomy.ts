@@ -1,8 +1,11 @@
+import type { SettlementHistoryEvent } from '../debug/settlementHistory'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { DevelopmentDef, DevelopmentStatus } from './development'
 import type { EconomicKind } from './kinds'
 import type { ProductionDef } from './production'
+import { createSequenceAllocator } from '../debug/domainHistory'
+import { createSettlementHistoryBuffer } from '../debug/settlementHistory'
 import { claimFoodItems, foodItemCount } from '../items/foodItems'
 import { Inventory, type ItemAmount } from '../items/Inventory'
 import { EconomicStock, type StockAmount } from './stock'
@@ -46,8 +49,11 @@ export type SettlementEconomy = {
    *  directly — `add`/`remove` below no-op for `'food'` (no `ItemKind` to
    *  carry). */
   readonly items: Inventory
-  add: (kind: EconomicKind, amount: number) => void
-  remove: (kind: EconomicKind, amount: number) => boolean
+  /** `simTime` (plan settlements-npcs-013) — the caller's own clock (an
+   *  `NpcAgent`'s `simClock` in every current call site), recorded verbatim
+   *  into `history()`; defaults to `0` for callers with no meaningful clock. */
+  add: (kind: EconomicKind, amount: number, simTime?: number) => void
+  remove: (kind: EconomicKind, amount: number, simTime?: number) => boolean
   query: (kind: EconomicKind) => number
   produce: (def: ProductionDef) => boolean
   reserve: (goods: readonly StockAmount[]) => string | null
@@ -59,15 +65,18 @@ export type SettlementEconomy = {
   hasSurplus: (kind: EconomicKind) => boolean
   /** Concrete-food deposit — the mutation entry point every food producer/
    *  transfer must use instead of `add('food', amount)`. */
-  depositFood: (kind: ItemKind, amount: number) => void
+  depositFood: (kind: ItemKind, amount: number, simTime?: number) => void
   /** Claims up to `amount` food units, deterministic kind order (may span
    *  multiple kinds) — the settlement-storage half of a food transfer,
    *  mirroring `economy/localExchange.ts`'s claim seam for bulk goods. */
-  withdrawFood: (amount: number) => readonly ItemAmount[]
+  withdrawFood: (amount: number, simTime?: number) => readonly ItemAmount[]
   developmentStatus: (id: string) => DevelopmentStatus
   reserveDevelopment: (def: DevelopmentDef) => boolean
   payDevelopment: (def: DevelopmentDef) => boolean
   snapshot: () => SettlementEconomySnapshot
+  /** Bounded settlement-level mutation history (plan settlements-npcs-013) —
+   *  see `debug/settlementHistory.ts`. */
+  history: () => readonly SettlementHistoryEvent[]
 }
 
 export function createSettlementEconomy(
@@ -91,6 +100,13 @@ export function createSettlementEconomy(
   const developments = new Map<string, { reservationId: string | null, status: DevelopmentStatus }>()
   let nextReservation = 1
 
+  // Domain history (plan settlements-npcs-013) — bounded ring + local
+  // sequence counter, recorded only at this economy's own mutation methods
+  // below (first vertical slice: bulk stock add/remove + concrete food
+  // deposit/withdraw; development reservation/completion is out of scope).
+  const historyBuf = createSettlementHistoryBuffer()
+  const seq = createSequenceAllocator()
+
   function targetOf(kind: EconomicKind): number {
     return demandByKind.get(kind) ?? 0
   }
@@ -98,13 +114,16 @@ export function createSettlementEconomy(
   return {
     settlementId,
     items,
-    add(kind, amount) {
+    add(kind, amount, simTime = 0) {
       if (kind === 'food') return
       stock.add(kind, amount)
+      historyBuf.record({ simTime, seq: seq.next(), type: 'stock.added', kind, amount })
     },
-    remove(kind, amount) {
+    remove(kind, amount, simTime = 0) {
       if (kind === 'food') return false
-      return stock.remove(kind, amount)
+      const ok = stock.remove(kind, amount)
+      if (ok) historyBuf.record({ simTime, seq: seq.next(), type: 'stock.removed', kind, amount })
+      return ok
     },
     query(kind) {
       return kind === 'food' ? foodItemCount(items) : stock.query(kind)
@@ -141,11 +160,17 @@ export function createSettlementEconomy(
     hasSurplus(kind) {
       return this.surplus(kind) > 0
     },
-    depositFood(kind, amount) {
-      if (amount > 0) items.add(kind, amount)
+    depositFood(kind, amount, simTime = 0) {
+      if (amount > 0) {
+        items.add(kind, amount)
+        historyBuf.record({ simTime, seq: seq.next(), type: 'food.deposited', kind, amount })
+      }
     },
-    withdrawFood(amount) {
-      return claimFoodItems(items, amount)
+    withdrawFood(amount, simTime = 0) {
+      const claimed = claimFoodItems(items, amount)
+      const total = claimed.reduce((sum, c) => sum + c.amount, 0)
+      if (total > 0) historyBuf.record({ simTime, seq: seq.next(), type: 'food.withdrawn', amount: total })
+      return claimed
     },
     developmentStatus(id) {
       return developments.get(id)?.status ?? 'unmet'
@@ -168,5 +193,6 @@ export function createSettlementEconomy(
     snapshot() {
       return { stock: stock.toJSON(), food: { counts: items.toJSON(), instances: items.instancesToJSON() } }
     },
+    history: () => historyBuf.history(),
   }
 }

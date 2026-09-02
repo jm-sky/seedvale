@@ -39,6 +39,18 @@ Generated from exported TypeScript symbols.
 - `isSystemEnabled` — function — line 113
 - `urlParamValue` — function — line 19
 
+## `debug/domainHistory.ts`
+
+- `BoundedHistoryBuffer` — type — line 14
+  - domain: settlements-npcs
+  - system: domain-history
+  - role: Generic bounded ring buffer + ordering/filter helpers reused by every per-domain history buffer.
+- `createBoundedHistoryBuffer` — function — line 23
+- `createSequenceAllocator` — function — line 48
+- `filterHistory` — function — line 65
+- `HistoryFilter` — type — line 56
+- `SequenceAllocator` — type — line 46
+
 ## `debug/faunaInspector.ts`
 
 - `FrenzyWolfCandidate` — type — line 17
@@ -46,6 +58,14 @@ Generated from exported TypeScript symbols.
 - `getFrenzyWolves` — function — line 41
 - `getNextFrenzyWolf` — function — line 60
 - `pickNextFrenzyWolfId` — function — line 25
+
+## `debug/householdHistory.ts`
+
+- `createHouseholdHistoryBuffer` — function — line 36
+- `HOUSEHOLD_HISTORY_CAPACITY` — const — line 32
+- `HouseholdHistoryBuffer` — type — line 34
+- `HouseholdHistoryEvent` — type — line 18
+- `HouseholdHistoryEventType` — type — line 28
 
 ## `debug/locationQueries.ts`
 
@@ -67,30 +87,36 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `HiddenTreasureDebugApi` — type — line 87
-- `installNpcDebugApi` — function — line 173
-- `LocationsDebugApi` — type — line 70
-- `NpcDebugHandle` — type — line 41
-- `SeedvaleDebugApi` — type — line 100
-- `TeleportToDebugApi` — type — line 78
-- `VillageDebugHandle` — type — line 53
+- `HiddenTreasureDebugApi` — type — line 112
+- `HouseholdDebugHandle` — type — line 63
+- `installNpcDebugApi` — function — line 208
+- `LocationsDebugApi` — type — line 95
+- `NpcDebugHandle` — type — line 48
+- `SeedvaleDebugApi` — type — line 125
+- `SettlementHistoryDebugHandle` — type — line 71
+- `TeleportToDebugApi` — type — line 103
+- `VillageDebugHandle` — type — line 78
 
 ## `debug/npcInspector.ts`
 
-- `findNpcById` — function — line 53
-- `freezeNpc` — function — line 112
-- `FrenzyWolfDebugResult` — type — line 37
-- `isNpcRegistered` — function — line 64
-- `matchesNpcFilter` — function — line 74
-- `npcHistory` — function — line 104
-- `NpcQueryFilter` — type — line 24
-- `NpcQueryResult` — type — line 32
-- `NpcRegistryEntry` — type — line 22
-- `npcWhy` — function — line 100
-- `queryNpcs` — function — line 90
-- `reevaluateNpc` — function — line 128
-- `setFrenzyWolf` — function — line 145
-- `unfreezeNpc` — function — line 120
+- `DomainHistoryEnvelope` — type — line 149
+- `findNpcById` — function — line 67
+- `freezeNpc` — function — line 274
+- `FrenzyWolfDebugResult` — type — line 51
+- `householdHistory` — function — line 131
+- `isNpcRegistered` — function — line 78
+- `matchesNpcFilter` — function — line 88
+- `npcHistory` — function — line 118
+- `NpcQueryFilter` — type — line 38
+- `NpcQueryResult` — type — line 46
+- `NpcRegistryEntry` — type — line 36
+- `npcWhy` — function — line 114
+- `queryNpcs` — function — line 104
+- `reevaluateNpc` — function — line 290
+- `setFrenzyWolf` — function — line 307
+- `settlementHistory` — function — line 213
+- `sortDomainHistory` — function — line 186
+- `unfreezeNpc` — function — line 282
 
 ## `debug/npcInspectTrigger.ts`
 
@@ -99,11 +125,11 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcTrace.ts`
 
-- `createNpcTraceBuffer` — function — line 91
-- `NPC_TRACE_CAPACITY` — const — line 89
-- `NpcTraceBuffer` — type — line 78
-- `NpcTraceEvent` — type — line 13
-- `NpcTraceEventType` — type — line 76
+- `createNpcTraceBuffer` — function — line 94
+- `NPC_TRACE_CAPACITY` — const — line 92
+- `NpcTraceBuffer` — type — line 85
+- `NpcTraceEvent` — type — line 14
+- `NpcTraceEventType` — type — line 77
 
 ## `debug/renderStateDebug.ts`
 
@@ -111,6 +137,14 @@ Generated from exported TypeScript symbols.
 - `getRenderStateDebugText` — function — line 188
 - `sampleRenderState` — function — line 82
 - `setCameraMeshHit` — function — line 23
+
+## `debug/settlementHistory.ts`
+
+- `createSettlementHistoryBuffer` — function — line 31
+- `SETTLEMENT_HISTORY_CAPACITY` — const — line 27
+- `SettlementHistoryBuffer` — type — line 29
+- `SettlementHistoryEvent` — type — line 16
+- `SettlementHistoryEventType` — type — line 22
 
 ## `debug/villageInspector.ts`
 

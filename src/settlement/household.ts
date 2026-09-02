@@ -1,6 +1,9 @@
+import type { HouseholdHistoryEvent } from '../debug/householdHistory'
 import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
+import { createSequenceAllocator } from '../debug/domainHistory'
+import { createHouseholdHistoryBuffer } from '../debug/householdHistory'
 import { EconomicStock } from '../economy/stock'
 import { foodItemCount, takeOneFoodItem } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
@@ -174,19 +177,29 @@ export type Household = {
    * plan 069 §3/§6 (full household -> village storage). `food` moved to
    * `depositFood` (plan settlements-npcs-008) — it needs a concrete
    * `ItemKind`, which a bare scalar `amount` can't carry.
+   *
+   * `simTime` (plan settlements-npcs-013) — the caller's own clock (an
+   * `NpcAgent`'s `simClock` in every current call site), recorded verbatim
+   * into `history()`; defaults to `0` for callers with no meaningful clock
+   * (tests, initial seeding).
    */
-  deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null) => void
+  deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null, simTime?: number) => void
   /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
    *  shape, gathered/received food lands as `itemKind` units in `items`. */
-  depositFood: (itemKind: ItemKind, amount: number, economy?: SettlementEconomy | null) => void
+  depositFood: (itemKind: ItemKind, amount: number, economy?: SettlementEconomy | null, simTime?: number) => void
   /** Removes exactly one concrete food item (deterministic kind order, see
    *  `items/foodItems.ts`) — the "eat one unit" primitive every consumption
    *  path uses instead of the old `stock.remove('food', 1)`. */
-  takeFood: () => ItemKind | null
+  takeFood: (simTime?: number) => ItemKind | null
   /** Total concrete food-item units currently held — the authoritative
    *  replacement for the old `stock.query('food')`. */
   foodCount: () => number
   snapshot: () => HouseholdSnapshot
+  /** Bounded household-level mutation history (plan settlements-npcs-013) —
+   *  see `debug/householdHistory.ts`. Distinct from the NPC trace: this is
+   *  the household-owned side effect, not the NPC's own decision/action
+   *  record. */
+  history: () => readonly HouseholdHistoryEvent[]
 }
 
 export function householdIdFor(settlementId: string, familyIndex: number): HouseholdId {
@@ -246,6 +259,20 @@ export function createHousehold(
     initial?.items ? Inventory.instancesFromJSON(initial.items.instances) : undefined,
   )
   if (!initial && hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
+
+  // Domain history (plan settlements-npcs-013) — bounded ring + local
+  // sequence counter, recorded only at this household's own mutation
+  // methods below. `shortageOf` is pulled out so the shortage-crossing
+  // detection in `deposit`/`depositFood`/`takeFood` can call the exact same
+  // formula the public `shortage` property exposes.
+  const historyBuf = createHouseholdHistoryBuffer()
+  const seq = createSequenceAllocator()
+  function shortageOf(kind: HouseholdResourceKind): number {
+    return kind === 'food'
+      ? Math.max(0, HOUSEHOLD_POLICY.food.minimum - foodItemCount(items))
+      : Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind))
+  }
+
   return {
     id,
     settlementId,
@@ -254,41 +281,60 @@ export function createHousehold(
     water,
     items,
     has: (kind, amount) => (kind === 'food' ? foodItemCount(items) >= amount : stock.has(kind, amount)),
-    shortage: (kind) =>
-      kind === 'food'
-        ? Math.max(0, HOUSEHOLD_POLICY.food.minimum - foodItemCount(items))
-        : Math.max(0, HOUSEHOLD_POLICY[kind].minimum - stock.query(kind)),
+    shortage: shortageOf,
     shouldAcquire: (kind) =>
       kind === 'food' ? foodItemCount(items) < HOUSEHOLD_POLICY.food.target : stock.query(kind) < HOUSEHOLD_POLICY[kind].target,
     surplus: (kind) =>
       kind === 'food'
         ? Math.max(0, foodItemCount(items) - HOUSEHOLD_POLICY.food.target)
         : Math.max(0, stock.query(kind) - HOUSEHOLD_POLICY[kind].target),
-    deposit: (kind, amount, economy) => {
+    deposit: (kind, amount, economy, simTime = 0) => {
       if (amount <= 0) return
+      const before = shortageOf(kind)
       const capacity = HOUSEHOLD_POLICY[kind].capacity
       const room = Math.max(0, capacity - stock.query(kind))
       const toHousehold = Math.min(amount, room)
       if (toHousehold > 0) stock.add(kind, toHousehold)
       const overflow = amount - toHousehold
-      if (overflow > 0 && economy) economy.add(kind, overflow)
+      if (overflow > 0 && economy) economy.add(kind, overflow, simTime)
+      historyBuf.record({ simTime, seq: seq.next(), type: 'wood.deposited', amount: toHousehold, overflowed: overflow })
+      if (before > 0 && shortageOf(kind) === 0) {
+        historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind })
+      }
     },
-    depositFood: (itemKind, amount, economy) => {
+    depositFood: (itemKind, amount, economy, simTime = 0) => {
       if (amount <= 0) return
+      const before = shortageOf('food')
       const capacity = HOUSEHOLD_POLICY.food.capacity
       const room = Math.max(0, capacity - foodItemCount(items))
       const toHousehold = Math.min(amount, room)
       if (toHousehold > 0) items.add(itemKind, toHousehold)
       const overflow = amount - toHousehold
-      if (overflow > 0 && economy) economy.depositFood(itemKind, overflow)
+      if (overflow > 0 && economy) economy.depositFood(itemKind, overflow, simTime)
+      historyBuf.record({ simTime, seq: seq.next(), type: 'food.deposited', itemKind, amount: toHousehold, overflowed: overflow })
+      if (before > 0 && shortageOf('food') === 0) {
+        historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind: 'food' })
+      }
     },
-    takeFood: () => takeOneFoodItem(items),
+    takeFood: (simTime = 0) => {
+      const before = shortageOf('food')
+      const kind = takeOneFoodItem(items)
+      if (kind) {
+        historyBuf.record({ simTime, seq: seq.next(), type: 'food.taken', itemKind: kind })
+        const after = shortageOf('food')
+        if (before === 0 && after > 0) {
+          historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.detected', kind: 'food', amount: after })
+        }
+      }
+      return kind
+    },
     foodCount: () => foodItemCount(items),
     snapshot: () => ({
       stock: stock.toJSON(),
       water: water.current,
       items: { counts: items.toJSON(), instances: items.instancesToJSON() },
     }),
+    history: () => historyBuf.history(),
   }
 }
 

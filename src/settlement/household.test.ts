@@ -231,6 +231,88 @@ describe('household.items (plan 178) — generic item storage, including concret
   })
 })
 
+describe('household.history (plan settlements-npcs-013)', () => {
+  it('starts empty', () => {
+    const household = createHousehold('h', 's', 'home')
+    expect(household.history()).toEqual([])
+  })
+
+  it('records wood.deposited on deposit', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.deposit('wood', 2, null, 10)
+    const events = household.history()
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ type: 'wood.deposited', amount: 2, overflowed: 0, simTime: 10 })
+  })
+
+  it('records the overflow amount separately from what actually landed in the household', () => {
+    const household = createHousehold('h', 's', 'home')
+    const economy = createSettlementEconomy('s', {}, [])
+    const before = household.stock.query('wood')
+    const room = 5 - before // wood capacity is 5
+    household.deposit('wood', room + 3, economy, 1)
+    const [wood] = household.history()
+    expect(wood).toMatchObject({ type: 'wood.deposited', amount: room, overflowed: 3 })
+    expect(economy.query('wood')).toBe(3)
+  })
+
+  it('records food.deposited and food.taken with the concrete ItemKind', () => {
+    // Keeps the default starting food (> minimum) so depositing/taking one
+    // unit doesn't also cross a shortage boundary — isolates this test to
+    // just the deposited/taken events.
+    const household = createHousehold('h', 's', 'home')
+    household.depositFood('carrot', 2, null, 5)
+    household.takeFood(6)
+    const events = household.history()
+    expect(events).toContainEqual(expect.objectContaining({ type: 'food.deposited', itemKind: 'carrot', amount: 2, simTime: 5 }))
+    expect(events).toContainEqual(expect.objectContaining({ type: 'food.taken', simTime: 6 }))
+  })
+
+  it('records shortage.detected only on the 0 -> >0 crossing, not every tick below minimum', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.remove('bread', household.items.count('bread'))
+    household.depositFood('carrot', 1, null, 1) // -> foodCount 1, shortage 0
+    household.takeFood(2) // foodCount 0 -> shortage crosses 0 -> >0
+    const shortageEvents = household.history().filter((e) => e.type === 'shortage.detected')
+    expect(shortageEvents).toHaveLength(1)
+    expect(shortageEvents[0]).toMatchObject({ type: 'shortage.detected', kind: 'food', simTime: 2 })
+  })
+
+  it('records shortage.resolved only on the >0 -> 0 crossing', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.remove('bread', household.items.count('bread'))
+    expect(household.shortage('food')).toBeGreaterThan(0)
+    household.depositFood('carrot', 1, null, 3) // crosses shortage 0
+    household.depositFood('carrot', 5, null, 4) // already resolved, no second event
+    const resolvedEvents = household.history().filter((e) => e.type === 'shortage.resolved')
+    expect(resolvedEvents).toHaveLength(1)
+    expect(resolvedEvents[0]).toMatchObject({ type: 'shortage.resolved', kind: 'food', simTime: 3 })
+  })
+
+  it('takeFood on an empty household records nothing (no food item was actually taken)', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.items.remove('bread', household.items.count('bread'))
+    expect(household.takeFood()).toBeNull()
+    expect(household.history()).toEqual([])
+  })
+
+  it('assigns a strictly increasing local seq to every recorded event', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.deposit('wood', 1, null, 1)
+    household.deposit('wood', 1, null, 1)
+    household.deposit('wood', 1, null, 1)
+    const seqs = household.history().map((e) => e.seq)
+    expect(seqs).toEqual([...seqs].sort((a, b) => a - b))
+    expect(new Set(seqs).size).toBe(seqs.length)
+  })
+
+  it('defaults simTime to 0 when the caller has no meaningful clock', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.deposit('wood', 1)
+    expect(household.history()[0]).toMatchObject({ simTime: 0 })
+  })
+})
+
 describe('householdIdFor', () => {
   it('is stable and namespaced per settlement/family', () => {
     expect(householdIdFor('0_0', 0)).toBe(householdIdFor('0_0', 0))

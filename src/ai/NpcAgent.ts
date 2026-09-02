@@ -712,10 +712,10 @@ const NPC_GARDEN_WATERING_CHANCE = 0.35
  *  `amount` is 0 when the chop step's `harvestWorldTreeFully` call failed
  *  (tree already harvested by someone else, etc., plan 131) — a no-op guard
  *  so a failed harvest never still mints wood at deposit time. */
-function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null, amount: number): void {
+function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null, amount: number, simTime: number): void {
   if (amount <= 0) return
   if (household) {
-    household.deposit('wood', amount, economy)
+    household.deposit('wood', amount, economy, simTime)
     if (economy) tryAdvanceDevelopment(economy)
   } else if (economy) {
     commitWoodcutterDeposit(economy)
@@ -731,8 +731,8 @@ function depositWoodHarvest(household: Household | null, economy: SettlementEcon
  *  deliberately *not* a real crop/hunt/fish yield), so it reuses
  *  `HELPER_DELIVERY_ITEM_KIND`'s existing "abstract food, no specific
  *  producer kind" convention rather than inventing a new mapping. */
-function depositFoodHarvest(household: Household | null, economy: SettlementEconomy | null): void {
-  household?.depositFood(HELPER_DELIVERY_ITEM_KIND, FOOD_GATHER_AMOUNT, economy)
+function depositFoodHarvest(household: Household | null, economy: SettlementEconomy | null, simTime: number): void {
+  household?.depositFood(HELPER_DELIVERY_ITEM_KIND, FOOD_GATHER_AMOUNT, economy, simTime)
 }
 
 /** Generic carried-item → household-item-storage delivery (plan 178 §6/§7,
@@ -3289,7 +3289,7 @@ export class NpcAgent {
           destination: copyVec3(this.home),
           durationSec: 1.2 * this.waitMultiplier,
           onComplete: () => {
-            household.takeFood()
+            household.takeFood(this.simClock)
             this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
             this.progressActivePlan('secureFood', 1)
           },
@@ -3314,8 +3314,8 @@ export class NpcAgent {
         destination: copyVec3(this.landmarks.garden),
         durationSec: 1.4 * this.waitMultiplier,
         onComplete: () => {
-          depositFoodHarvest(household, this.economy)
-          household?.takeFood()
+          depositFoodHarvest(household, this.economy, this.simClock)
+          household?.takeFood(this.simClock)
           this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
           this.progressActivePlan('secureFood', 1)
         },
@@ -3401,7 +3401,7 @@ export class NpcAgent {
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
             this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
-            depositWoodHarvest(this.household, this.economy, harvestedWood)
+            depositWoodHarvest(this.household, this.economy, harvestedWood, this.simClock)
             this.progressActivePlan('obtainWood', harvestedWood)
           },
         },
@@ -3455,7 +3455,7 @@ export class NpcAgent {
         onComplete: () => {
           if (minedCount <= 0) return
           this.carried.remove(itemKind, minedCount)
-          economy.add(oreEconomicKind(target.type), minedCount)
+          economy.add(oreEconomicKind(target.type), minedCount, this.simClock)
         },
       },
     })
@@ -3542,7 +3542,7 @@ export class NpcAgent {
         destination: copyVec3(settlementStorageDestination('food', this.landmarks.stockpile, this.landmarks.settlementStorage)),
         durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => {
-          claimed = economy.withdrawFood(requested)
+          claimed = economy.withdrawFood(requested, this.simClock)
         },
         next: {
           kind: 'deposit',
@@ -3566,7 +3566,7 @@ export class NpcAgent {
       destination: copyVec3(settlementStorageDestination(kind, this.landmarks.stockpile, this.landmarks.settlementStorage)),
       durationSec: 1.2 * this.waitMultiplier,
       onComplete: () => {
-        claimed = claimEconomySurplus(economy, kind, requested)
+        claimed = claimEconomySurplus(economy, kind, requested, this.simClock)
       },
       next: {
         kind: 'deposit',
@@ -3574,7 +3574,7 @@ export class NpcAgent {
         durationSec: 0.8 * this.waitMultiplier,
         onComplete: () => {
           if (claimed <= 0) return
-          household.deposit(kind, claimed, economy)
+          household.deposit(kind, claimed, economy, this.simClock)
           this.satisfyHouseholdResourceNeed(household, kind)
         },
       },
@@ -3645,7 +3645,7 @@ export class NpcAgent {
         durationSec: 0.8 * this.waitMultiplier,
         onComplete: () => {
           if (claimed <= 0) return
-          household.deposit(kind, claimed, economy)
+          household.deposit(kind, claimed, economy, this.simClock)
           this.satisfyHouseholdResourceNeed(household, kind)
         },
       },
@@ -3662,7 +3662,7 @@ export class NpcAgent {
    *  duty pressure itself eases. */
   private satisfyHouseholdResourceNeed(household: Household, kind: HouseholdResourceKind): void {
     if (kind === 'food') {
-      household.takeFood()
+      household.takeFood(this.simClock)
       this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
     } else {
       this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
@@ -3782,8 +3782,8 @@ export class NpcAgent {
           this.maybeWaterNearbyGarden(target.x, target.z)
         }
         if (result.count <= 0) return
-        household?.depositFood(result.kind, result.count, this.economy)
-        household?.takeFood()
+        household?.depositFood(result.kind, result.count, this.economy, this.simClock)
+        household?.takeFood(this.simClock)
         this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
       },
     })
@@ -3970,7 +3970,7 @@ export class NpcAgent {
         durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
         onComplete: () => {
           const result = foodSources.harvest(target)
-          if (result && result.count > 0) household?.depositFood(result.kind, result.count, economy)
+          if (result && result.count > 0) household?.depositFood(result.kind, result.count, economy, this.simClock)
         },
       })
       return true
@@ -4083,7 +4083,7 @@ export class NpcAgent {
           // settlements-npcs-008) — this trader's full surplus is the
           // requested amount, so the cap is a no-op in practice.
           const claimed = claimFoodItems(household.items, household.surplus('food'))
-          for (const { kind: itemKind, amount } of claimed) economy.depositFood(itemKind, amount)
+          for (const { kind: itemKind, amount } of claimed) economy.depositFood(itemKind, amount, this.simClock)
           return
         }
         // Reuses the same atomic claim seam local exchange uses
@@ -4092,7 +4092,7 @@ export class NpcAgent {
         // claim path.
         const amount = claimHouseholdSurplus(household, kind, household.surplus(kind))
         if (amount <= 0) return
-        economy.add(kind, amount)
+        economy.add(kind, amount, this.simClock)
         tryAdvanceDevelopment(economy)
       },
     })
@@ -4200,8 +4200,8 @@ export class NpcAgent {
           destination: copyVec3(this.landmarks.garden),
           durationSec: 1.4 * this.waitMultiplier,
           onComplete: () => {
-            depositFoodHarvest(this.household, this.economy)
-            this.household?.takeFood()
+            depositFoodHarvest(this.household, this.economy, this.simClock)
+            this.household?.takeFood(this.simClock)
             this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
             this.settledIdleActivity = 'eat'
           },

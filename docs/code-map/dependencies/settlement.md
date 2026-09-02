@@ -374,6 +374,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `debug/domainHistory.ts`
+- `debug/householdHistory.ts`
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
@@ -384,6 +386,9 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
+- `debug/householdHistory.ts`
+- `debug/npcDebugApi.ts`
+- `debug/npcInspector.ts`
 - `economy/localExchange.test.ts`
 - `economy/localExchange.ts`
 - `economy/npcWork.test.ts`

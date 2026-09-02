@@ -30,8 +30,8 @@ export function claimHouseholdSurplus(household: Household, kind: HouseholdResou
 /** Claims up to `amount` from a settlement economy's current surplus of
  *  `kind` — mirrors `claimHouseholdSurplus` for the village-storage side of
  *  the same exchange. */
-export function claimEconomySurplus(economy: SettlementEconomy, kind: EconomicKind, amount: number): number {
+export function claimEconomySurplus(economy: SettlementEconomy, kind: EconomicKind, amount: number, simTime = 0): number {
   const available = Math.min(economy.surplus(kind), amount)
   if (available <= 0) return 0
-  return economy.remove(kind, available) ? available : 0
+  return economy.remove(kind, available, simTime) ? available : 0
 }

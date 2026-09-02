@@ -64,6 +64,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/settlementHistory.ts`
 - `economy/index.ts`
 - `economy/initial.ts`
 - `economy/localExchange.ts`
@@ -175,6 +176,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `debug/domainHistory.ts`
+- `debug/settlementHistory.ts`
 - `economy/development.ts`
 - `economy/kinds.ts`
 - `economy/production.ts`

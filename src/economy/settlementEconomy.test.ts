@@ -155,6 +155,74 @@ describe('settlement isolation', () => {
   })
 })
 
+describe('SettlementEconomy.history (plan settlements-npcs-013)', () => {
+  it('starts empty', () => {
+    const eco = economy()
+    expect(eco.history()).toEqual([])
+  })
+
+  it('records stock.added / stock.removed with the given simTime', () => {
+    const eco = economy({ wood: 5 })
+    eco.add('iron', 2, 7)
+    eco.remove('wood', 1, 8)
+    const events = eco.history()
+    expect(events).toHaveLength(2)
+    expect(events[0]).toMatchObject({ type: 'stock.added', kind: 'iron', amount: 2, simTime: 7 })
+    expect(events[1]).toMatchObject({ type: 'stock.removed', kind: 'wood', amount: 1, simTime: 8 })
+  })
+
+  it('does not record a failed remove (insufficient stock)', () => {
+    const eco = economy({ wood: 1 })
+    expect(eco.remove('wood', 5, 3)).toBe(false)
+    expect(eco.history()).toEqual([])
+  })
+
+  it('add/remove never records for food — food goes through depositFood/withdrawFood', () => {
+    const eco = economy()
+    eco.add('food', 5, 1)
+    expect(eco.history()).toEqual([])
+  })
+
+  it('records food.deposited / food.withdrawn with the actually-claimed amount', () => {
+    const eco = economy()
+    eco.depositFood('carrot', 4, 1)
+    eco.withdrawFood(3, 2)
+    const events = eco.history()
+    expect(events[0]).toMatchObject({ type: 'food.deposited', kind: 'carrot', amount: 4, simTime: 1 })
+    expect(events[1]).toMatchObject({ type: 'food.withdrawn', amount: 3, simTime: 2 })
+  })
+
+  it('withdrawing more than available records only what was actually claimed', () => {
+    const eco = economy()
+    eco.depositFood('carrot', 2, 1)
+    eco.withdrawFood(10, 2)
+    const [, withdrawn] = eco.history()
+    expect(withdrawn).toMatchObject({ type: 'food.withdrawn', amount: 2 })
+  })
+
+  it('withdrawing when nothing is available records nothing', () => {
+    const eco = economy()
+    eco.withdrawFood(5, 1)
+    expect(eco.history()).toEqual([])
+  })
+
+  it('assigns a strictly increasing local seq to every recorded event', () => {
+    const eco = economy()
+    eco.add('iron', 1, 1)
+    eco.add('iron', 1, 1)
+    eco.add('iron', 1, 1)
+    const seqs = eco.history().map((e) => e.seq)
+    expect(seqs).toEqual([...seqs].sort((a, b) => a - b))
+    expect(new Set(seqs).size).toBe(seqs.length)
+  })
+
+  it('defaults simTime to 0 when the caller has no meaningful clock', () => {
+    const eco = economy()
+    eco.add('iron', 1)
+    expect(eco.history()[0]).toMatchObject({ simTime: 0 })
+  })
+})
+
 describe('raw ore stock (plan 131)', () => {
   it('accepts NPC-mined ore as settlement-level stock with no demand target', () => {
     const s = economy()

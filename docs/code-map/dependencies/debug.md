@@ -75,6 +75,25 @@ Generated from TypeScript imports.
 - `world/clouds.ts`
 - `world/weatherParticles.ts`
 
+## `debug/domainHistory.test.ts`
+
+**Imports**
+
+- `debug/domainHistory.ts`
+
+## `debug/domainHistory.ts`
+
+**Imported by**
+
+- `debug/domainHistory.test.ts`
+- `debug/householdHistory.ts`
+- `debug/npcDebugApi.ts`
+- `debug/npcInspector.ts`
+- `debug/npcTrace.ts`
+- `debug/settlementHistory.ts`
+- `economy/settlementEconomy.ts`
+- `settlement/household.ts`
+
 ## `debug/faunaInspector.test.ts`
 
 **Imports**
@@ -92,6 +111,20 @@ Generated from TypeScript imports.
 
 - `debug/faunaInspector.test.ts`
 - `debug/npcDebugApi.ts`
+
+## `debug/householdHistory.ts`
+
+**Imports**
+
+- `debug/domainHistory.ts`
+- `items/items.ts`
+- `settlement/household.ts`
+
+**Imported by**
+
+- `debug/npcDebugApi.ts`
+- `debug/npcInspector.ts`
+- `settlement/household.ts`
 
 ## `debug/locationQueries.test.ts`
 
@@ -159,7 +192,9 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `config/worldConfig.ts`
 - `debug/debugMode.ts`
+- `debug/domainHistory.ts`
 - `debug/faunaInspector.ts`
+- `debug/householdHistory.ts`
 - `debug/locationQueries.ts`
 - `debug/locationSearch.ts`
 - `debug/npcInspector.ts`
@@ -168,6 +203,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
 - `settlement/families.ts`
+- `settlement/household.ts`
 - `world/worldContext.ts`
 
 **Imported by**
@@ -201,9 +237,14 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
 - `debug/debugMode.ts`
+- `debug/domainHistory.ts`
+- `debug/householdHistory.ts`
 - `debug/npcTrace.ts`
+- `debug/settlementHistory.ts`
+- `debug/villageInspector.ts`
 - `fauna/AnimalAgent.ts`
 - `settlement/families.ts`
+- `settlement/household.ts`
 
 **Imported by**
 
@@ -226,6 +267,7 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/npcPlan.ts`
 - `ai/npcStrategies.ts`
+- `debug/domainHistory.ts`
 
 **Imported by**
 
@@ -242,6 +284,19 @@ Generated from TypeScript imports.
 - `app/appRenderLoop.ts`
 - `app/gameLoop.ts`
 - `render/createPostProcessing.ts`
+
+## `debug/settlementHistory.ts`
+
+**Imports**
+
+- `debug/domainHistory.ts`
+- `economy/kinds.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `debug/npcInspector.ts`
+- `economy/settlementEconomy.ts`
 
 ## `debug/villageInspector.test.ts`
 
@@ -261,4 +316,5 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `debug/npcDebugApi.ts`
+- `debug/npcInspector.ts`
 - `debug/villageInspector.test.ts`
