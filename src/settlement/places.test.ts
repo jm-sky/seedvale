@@ -107,4 +107,13 @@ describe('socialPlaceFor', () => {
     expect(place).toEqual({ id: 'village_a:social:campfire', type: 'social', position: campfirePosition })
     expect(place?.position).toBe(campfirePosition)
   })
+
+  it('carries the isAvailable predicate through unchanged (plan npc-013 live fire state)', () => {
+    const landmarks = makeLandmarks({
+      campfire: { position: new Vector3(7, 0, 7), flame: {} as CampfireFlame },
+    })
+    const isAvailable = () => false
+    const place = socialPlaceFor('village_a', landmarks, isAvailable)
+    expect(place?.isAvailable).toBe(isAvailable)
+  })
 })

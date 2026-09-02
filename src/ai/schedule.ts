@@ -40,6 +40,26 @@ export type EffectiveScheduleOptions = {
 export const NIGHT_OWL_SHIFT_HOURS = 2
 
 /**
+ * Night-leisure window for the npc-013 campfire opportunity check
+ * (`NpcAgent.resolveIdleActivity`) — deliberately its own thing, not derived
+ * from `createSettlement.ts`'s `NIGHT_FIRE_THRESHOLD` (drives the settlement
+ * fire's own dusk ignition roll, unrelated to NPC leisure) nor from any
+ * role's `sleep` schedule entry (varies per role/trait overlay). Wraps past
+ * midnight: covers the evening through early morning.
+ *
+ * @domain npc
+ */
+export const NIGHT_LEISURE_START_HOUR = 19
+export const NIGHT_LEISURE_END_HOUR = 5
+
+/** True when `timeOfDay` (`dayNight.ts` convention, 0-1, 0 = midnight) falls
+ *  inside the night-leisure window above. Pure — no NPC/Place/Three.js. */
+export function isNightLeisureTime(timeOfDay: number): boolean {
+  const hour = timeOfDay * 24
+  return hour >= NIGHT_LEISURE_START_HOUR || hour < NIGHT_LEISURE_END_HOUR
+}
+
+/**
  * `fast_worker` schedule overlay (distinct from `FAST_WORKER_WAIT_MULT` in
  * `NpcAgent`, which only speeds per-action waits). Delay a `home` that
  * follows `work` so the work block runs this many hours longer.

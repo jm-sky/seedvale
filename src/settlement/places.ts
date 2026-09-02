@@ -23,6 +23,12 @@ export type Place = {
   id: string
   type: PlaceType
   position: Vector3
+  /** Live availability, distinct from the Place merely existing (plan
+   *  npc-013). `socialPlaceFor`'s campfire is the only current user — it
+   *  proves `landmarks.campfire` exists, not that `VillageFire.isLit()`.
+   *  Absent means "always available", so `workplaceFor`/home Places are
+   *  unaffected. Generic on purpose: no campfire-specific field on `Place`. */
+  isAvailable?: () => boolean
 }
 
 /** A home `Place.id` for the `index`-th house in `settlementId` (`homes[i]`/
@@ -56,10 +62,24 @@ export function homeIndexFromPlaceId(settlementId: string, homeId: string): numb
  * same way `workplaceFor` already does for `work`. An NPC only ever receives
  * its own settlement's campfire — there is no cross-settlement/world social
  * place lookup.
+ *
+ * `isAvailable` (plan npc-013) should reflect the live `VillageFire.isLit()`
+ * state, not just prop existence — `places.ts` itself stays `VillageFire`-
+ * agnostic, so the caller (`createSettlement.ts`, which already owns the
+ * fire) passes the predicate in.
  */
-export function socialPlaceFor(settlementId: string, landmarks: SettlementLandmarks): Place | null {
+export function socialPlaceFor(
+  settlementId: string,
+  landmarks: SettlementLandmarks,
+  isAvailable?: () => boolean,
+): Place | null {
   if (!landmarks.campfire) return null
-  return { id: `${settlementId}:social:campfire`, type: 'social', position: landmarks.campfire.position }
+  return {
+    id: `${settlementId}:social:campfire`,
+    type: 'social',
+    position: landmarks.campfire.position,
+    isAvailable,
+  }
 }
 
 /**

@@ -397,10 +397,26 @@ export async function createSettlement(
       ? landmarks.homes.map((position, i) => ({ id: homePlaceId(def.id, i), type: 'home', position }))
       : [{ id: `${def.id}:home:fallback`, type: 'home', position: landmarks.well.clone() }]
 
+  // Runtime fire state (moved ahead of its previous spot further down, plan
+  // npc-013) — the Social Place below needs `isLit()` at construction time so
+  // an idle NPC's night campfire opportunity (`NpcAgent.resolveIdleActivity`)
+  // never targets an unlit or non-existent fire. Nothing between here and the
+  // fire's original spot depended on this ordering.
+  const fire = landmarks.campfire
+    ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame, FUEL_PER_BRANCH, {
+      // Deterministic night autolight (`setDayNight` below) passes
+      // `'night'` — no flint SFX, nobody physically struck one (plan 130 §8).
+      onLight: (pos, source) => { if (source === 'player') playActionFireIgnite(playAt, pos) },
+      onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
+    })
+    : undefined
+
   // Social Place v1 (plan 151) — the settlement's own campfire, or `null`
   // for a settlement without one (SM/OUTPOST). No new campfire generator:
-  // `socialPlaceFor` only wraps the existing `landmarks.campfire`.
-  const socialPlace: Place | null = socialPlaceFor(def.id, landmarks)
+  // `socialPlaceFor` only wraps the existing `landmarks.campfire`. The
+  // `isAvailable` predicate (plan npc-013) reflects `fire.isLit()` live —
+  // `socialPlaceFor` itself only proves the campfire prop exists.
+  const socialPlace: Place | null = socialPlaceFor(def.id, landmarks, fire ? () => fire.isLit() : undefined)
 
   // 1 family = 1 household = 1 house (plan 069 §5): every member of a family
   // shares that family's home place and household stock. `households` stays
@@ -669,15 +685,6 @@ export async function createSettlement(
   }
 
   const spawn = settlementSpawnPoint(def, sampleHeight)
-
-  const fire = landmarks.campfire
-    ? createVillageFire(landmarks.campfire.position, landmarks.campfire.flame, FUEL_PER_BRANCH, {
-      // Deterministic night autolight (`setDayNight` below) passes
-      // `'night'` — no flint SFX, nobody physically struck one (plan 130 §8).
-      onLight: (pos, source) => { if (source === 'player') playActionFireIgnite(playAt, pos) },
-      onExtinguish: (pos) => playActionFireExtinguish(playAt, pos),
-    })
-    : undefined
 
   /** Most recent `update()` call's `nowDays` — read by a chicken's
    *  `onCollected` closure (plan fauna-002), which can fire an arbitrary

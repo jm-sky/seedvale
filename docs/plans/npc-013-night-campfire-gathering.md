@@ -1,7 +1,7 @@
 # Plan: NPC night campfire gathering
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~151~~
 **Domain:** `npc`

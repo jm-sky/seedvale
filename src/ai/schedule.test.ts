@@ -6,6 +6,7 @@ import {
   FAST_WORKER_WORK_EXTEND_HOURS,
   hourToTimeOfDay,
   idleIntentFor,
+  isNightLeisureTime,
   nextBoundary,
   NIGHT_OWL_SHIFT_HOURS,
   SCHEDULE_TEMPLATES,
@@ -237,5 +238,17 @@ describe('effectiveScheduleFor', () => {
     expect(idleIntentFor('sleep')).toBe('sleep')
     expect(idleIntentFor('work')).toBe('work')
     expect(idleIntentFor('social')).toBe('social')
+  })
+})
+
+describe('isNightLeisureTime (plan npc-013)', () => {
+  it('is false at midday and true late evening/early morning', () => {
+    expect(isNightLeisureTime(hourToTimeOfDay(12))).toBe(false)
+    expect(isNightLeisureTime(hourToTimeOfDay(18.9))).toBe(false)
+    expect(isNightLeisureTime(hourToTimeOfDay(19))).toBe(true)
+    expect(isNightLeisureTime(hourToTimeOfDay(23))).toBe(true)
+    expect(isNightLeisureTime(hourToTimeOfDay(0))).toBe(true)
+    expect(isNightLeisureTime(hourToTimeOfDay(4.9))).toBe(true)
+    expect(isNightLeisureTime(hourToTimeOfDay(5))).toBe(false)
   })
 })

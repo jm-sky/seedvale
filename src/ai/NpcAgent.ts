@@ -218,6 +218,7 @@ import {
   activityAt,
   effectiveScheduleFor,
   idleIntentFor,
+  isNightLeisureTime,
   nextBoundary,
   SCHEDULE_TEMPLATES,
   type ScheduleActivity,
@@ -583,6 +584,13 @@ const NPC_CARRY_MAX_WEIGHT = 5
  *  checks its immediate surroundings before falling back to the abstract
  *  settlement-garden gather. */
 const FOOD_SOURCE_SEARCH_RADIUS = 60
+
+/** Night campfire opportunity (plan npc-013) — a maximum willingness-to-
+ *  travel-for-leisure bound, not a pathfinding/search radius: an idle NPC
+ *  farther than this from its settlement's campfire treats the opportunity
+ *  as unavailable rather than crossing the settlement for it. Same order of
+ *  magnitude as the other settlement-local radii above. */
+const NIGHT_CAMPFIRE_MAX_TRAVEL_DISTANCE = 45
 
 /** Farmer work (plan settlements-npcs-002 §3) — search radii around
  *  `landmarks.garden`, same order of magnitude as the other profession
@@ -2312,7 +2320,7 @@ export class NpcAgent {
           this.beginGoSleep()
           break
         }
-        this.beginIdle(scheduledActivity)
+        this.beginIdle(this.resolveIdleActivity(scheduledActivity, timeOfDay))
         break
       }
       case 'combat': {
@@ -3889,12 +3897,48 @@ export class NpcAgent {
     return true
   }
 
+  /**
+   * Night campfire leisure opportunity (plan npc-013) — called once per
+   * `choose()` tick, only once the need-pressure arbitration already picked
+   * `idle` (no meaningful hunger/thirst/duty pressure won) and the schedule
+   * isn't already `sleep`. Two independent jobs, both scoped to the existing
+   * `social` route — this never introduces a new `ScheduleActivity`:
+   *
+   * - Widens the opportunity: a `home`/`wake` idle block becomes `social`
+   *   when it's night, the settlement's campfire (`this.socialPlace`) is
+   *   actually lit right now, and this NPC isn't too far from it to bother.
+   *   `sociable` NPCs already get a `social` block from `applySociable`
+   *   (`schedule.ts`) regardless of this method — this only reaches NPCs
+   *   that overlay didn't touch (non-`sociable`, or outside its window).
+   * - Fixes a gap in the existing `social` block: `applySociable` only
+   *   proves a campfire prop exists (`hasSocialPlace`), not that it's lit
+   *   *now* — this re-validates against the live fire and falls back to
+   *   `home` when it has gone out.
+   *
+   * Deliberately does not gate an already-scheduled `social` block by the
+   * night window itself — that timing is plan 151's `sociable` overlay's
+   * call, not npc-013's.
+   */
+  private resolveIdleActivity(scheduledActivity: ScheduleActivity, timeOfDay: number): ScheduleActivity {
+    const social = this.socialPlace
+    const campfireAvailable =
+      social != null
+      && (social.isAvailable?.() ?? true)
+      && this.mesh.position.distanceTo(social.position) <= NIGHT_CAMPFIRE_MAX_TRAVEL_DISTANCE
+    if (scheduledActivity === 'social') return campfireAvailable ? 'social' : 'home'
+    if ((scheduledActivity === 'home' || scheduledActivity === 'wake') && campfireAvailable && isNightLeisureTime(timeOfDay)) {
+      return 'social'
+    }
+    return scheduledActivity
+  }
+
   /** No active need (`pickNeed` returned `'idle'`) — follow the effective
    *  schedule through the existing generic `goTo`/`execute`/`wander` path.
    *  `wake` maps to staying home; `social` goes to the settlement campfire
-   *  when this NPC has one (plan 151), otherwise also falls back to home.
-   *  Ordinary schedule changes do not interrupt an action already in flight
-   *  — this runs only from `choose`. */
+   *  when this NPC has one (plan 151) and it's actually available right now
+   *  (plan npc-013's `resolveIdleActivity` already resolved that), otherwise
+   *  also falls back to home. Ordinary schedule changes do not interrupt an
+   *  action already in flight — this runs only from `choose`. */
   private beginIdle(scheduledActivity: ScheduleActivity): void {
     if (this.settledIdleActivity !== null && this.settledIdleActivity !== scheduledActivity) {
       this.settledIdleActivity = null
