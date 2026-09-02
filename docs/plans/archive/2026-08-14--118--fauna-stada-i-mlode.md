@@ -1,9 +1,9 @@
 Plan: Fauna — stada i młode
 
-Status: `done` ✅ — playtest accepted 2026-08-18
-Created: 2026-08-14
-Priority: 🟡 medium · Effort: M
-Depends on: /094/
+**Status:** `done` ✅ — playtest accepted 2026-08-18
+**Created:** 2026-08-14
+**Priority:** 🟡 medium · **Effort:** M
+**Depends on:** ~~094~~
 
 Cel
 

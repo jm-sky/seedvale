@@ -3,7 +3,7 @@
 **Created:** 2026-08-28  
 **Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
-**Depends on:** none  
+**Depends on:** -  
 **Domain:** `fauna`  
 **Roadmap:** `horse-and-riding.md`
 

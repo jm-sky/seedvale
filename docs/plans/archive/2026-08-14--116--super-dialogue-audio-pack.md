@@ -1,6 +1,6 @@
 # Super Dialogue Audio Pack v1 — NPC voice lines
 
-Status: `done` ✅ — playtest accepted 2026-08-18
+**Status:** `done` ✅ — playtest accepted 2026-08-18
 
 ## Context
 

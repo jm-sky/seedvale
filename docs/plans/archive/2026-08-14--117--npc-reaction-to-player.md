@@ -1,6 +1,6 @@
 Plan: 117 - NPC — naturalne reakcje na Bohatera
 
-Status: `done` ✅ — playtest accepted 2026-08-18
+**Status:** `done` ✅ — playtest accepted 2026-08-18
 Scope: mała zmiana istniejącego systemu "lookAtPlayer" / reakcji NPC
 Cel: NPC mają zwykle ignorować gracza, ale ich osobowość, relacja z Bohaterem i reputacja Bohatera mogą sprawić, że zaczną reagować coraz wyraźniej.
 

@@ -1,7 +1,7 @@
 # Plan: Agent Decision Architecture Refactor
 
 **Created:** 2026-09-01
-**Status:** `DRAFT` 📝
+**Status:** `draft` 📝
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **Domain:** `npc`

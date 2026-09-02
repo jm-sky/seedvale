@@ -1,14 +1,13 @@
 # Asset Alignment Browser
 
-> **Review:** [2026-08-12--088--asset-alignment-browser-review.md](./2026-08-12--088--asset-alignment-browser-review.md)
+**Status:** `verification needed`
+**Priority:** 🟡 `medium`
+**Effort:** `XL` (raised from `L` by the implementation plan: shared anchor seam + runtime consumers + 5 MVP phases)
+**Dependencies:** `—`
+
+> **Review:** [2026-08-12--088--asset-alignment-browser--review.md](./2026-08-12--088--asset-alignment-browser--review.md)
 > **Implementation plan:** [2026-08-12--088--asset-alignment-browser-implementation-plan.md](./2026-08-12--088--asset-alignment-browser-implementation-plan.md) — resolves the review's Critical/Important points; read it before coding.
 
-## Status
-
-- Status: `verification needed`
-- Priority: 🟡 `medium`
-- Effort: `XL` (raised from `L` by the implementation plan: shared anchor seam + runtime consumers + 5 MVP phases)
-- Dependencies: `—`
 
 ## 1. Goal
 

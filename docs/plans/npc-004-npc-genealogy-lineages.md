@@ -2,6 +2,7 @@
 
 **Status:** `planned`
 **Created:** 2026-08-08
+**Priority:** low · **Effort:** S
 **Scope:** rozszerza [village-generation](./archive/2026-08-08--031--village-generation.md) (`families.ts`, `settlementGenerator.ts`) o nowy, dodatkowy wymiar fabularny. (Kompas „N” na minimapie — superseded przez [067](./archive/2026-08-11--067--minimap-heading-and-north.md).)
 
 ## Skąd to się wzięło

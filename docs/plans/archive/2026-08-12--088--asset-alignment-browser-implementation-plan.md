@@ -1,7 +1,7 @@
 # Implementation Plan — Asset Alignment Browser
 
 **Plan:** [2026-08-12--088--asset-alignment-browser.md](./2026-08-12--088--asset-alignment-browser.md)
-**Review:** [2026-08-12--088--asset-alignment-browser-review.md](./2026-08-12--088--asset-alignment-browser-review.md)
+**Review:** [2026-08-12--088--asset-alignment-browser--review.md](./2026-08-12--088--asset-alignment-browser--review.md)
 
 **Status:** `verification needed` 📋 (Phase 6 partial — well queue + shell-hut lamp anchors wired; per-tool `grip` migration still pending browser verify)
 **Priority:** 🟡 `medium`
@@ -895,7 +895,7 @@ test — §10 item 10 (game regression pass) is the safety net for the runtime t
 ## 17. Related
 
 - [088 — Asset Alignment Browser (PRD)](./2026-08-12--088--asset-alignment-browser.md)
-- [088 — review](./2026-08-12--088--asset-alignment-browser-review.md)
+- [088 — review](./2026-08-12--088--asset-alignment-browser--review.md)
 - [074 — house catalog, scale, lamps, debug](./2026-08-12--074--house-catalog-scale-lamps-debug.md) — owns the lamp-mount data and the `[house:lamp]` paste workflow this plan generalizes.
 - [085 — handheld lights and village torches](./2026-08-12--085--handheld-lights-and-village-torches.md) — owns the held-tool/torch grip data and is the first Phase 6 migration candidate.
 - [079 — interaction queue / well drink](./2026-08-12--079--interaction-queue-well-drink.md) — future `interaction` anchor consumer.

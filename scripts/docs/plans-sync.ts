@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_FILE_RE, PLANS_PATH } from './config.js'
+import { LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_DOMAIN_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
 
 const README_PATH = resolve(PLANS_PATH, 'README.md')
 const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
@@ -9,7 +9,6 @@ const UPDATED_REVIEW_SUFFIX = '--updated-review.md'
 const REVIEW_SUFFIX = '-review.md'
 
 const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
-const PLANNED_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const PLANNED_HEADING = '## Planned'
 const PLAN_TITLE_PAD_END_SIZE = 70
 const TABLE_HEADER = '| File                                                                   | Summary | Pri | Effort | Depends |'
@@ -116,7 +115,7 @@ const buildRow = (
 
   const priorityWord = matchOne(
     headerBlock,
-    /\*\*Priority:\*\*\s*[^\w]*([A-Za-z]+)/,
+    PLAN_PRIORITY_RE,
     file,
     'Priority',
   )
@@ -129,14 +128,14 @@ const buildRow = (
 
   const effort = matchOne(
     headerBlock,
-    /\*\*Effort:\*\*\s*`?([A-Za-z]{1,3})`?/,
+    PLAN_EFFORT_RE,
     file,
     'Effort',
   )
 
   const dependsRaw = matchOne(
     headerBlock,
-    /\*\*Depends on:\*\*\s*(.+)/,
+    PLAN_DEPENDS_RE,
     file,
     'Depends on',
   ).trim()
@@ -151,9 +150,7 @@ const buildRow = (
 const validatePlan = async (plan: PlanInfo): Promise<void> => {
   const content = await readFile(resolve(PLANS_PATH, plan.file), 'utf8')
 
-  const match = content.match(
-    /^\*\*domain:\*\*\s*`?([^`\s]+)`?\s*$/im,
-  )
+  const match = content.match(PLAN_DOMAIN_RE)
 
   if (!match) {
     console.warn(
@@ -384,7 +381,7 @@ const removeCompletedPlansFromPlannedSection = async (
       )
     }
 
-    const statusMatch = content.match(PLANNED_STATUS_RE)
+    const statusMatch = content.match(PLAN_STATUS_RE)
 
     if (!statusMatch) {
       throw new Error(

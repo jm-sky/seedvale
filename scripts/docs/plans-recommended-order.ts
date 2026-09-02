@@ -1,15 +1,24 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import {
+  ARCHIVED_PLANS_PATH,
+  AVAILABLE_STATUSES,
+  COMPLETED_STATUSES,
+  type Effort,
   LEGACY_PLAN_FILE_RE,
   LEGACY_PLAN_ID_RE,
+  NOTES_SUFFIX,
+  PLAN_DEPENDS_RE,
+  PLAN_EFFORT_RE,
   PLAN_FILE_RE,
+  PLAN_PRIORITY_RE,
+  PLAN_STATUS_RE,
+  PLANS_DEPENDENCIES_PATH,
   PLANS_PATH,
+  type Priority,
+  PRIORITY_ICONS,
+  type Status,
 } from './config.js'
-
-type Status = 'in progress' | 'verification needed' | 'planned' | 'done'
-type Priority = 'high' | 'medium' | 'low'
-type Effort = 'XS' | 'S' | 'M' | 'L' | 'XL'
 
 type Plan = {
   file: string
@@ -21,72 +30,93 @@ type Plan = {
   dependencies: string[]
 }
 
-const STATUS_RE = /^\*\*Status:\*\*\s*\x60([^\x60]+)\x60/im
-const PRIORITY_RE = /^\*\*Priority:\*\*\s*[^\w]*([A-Za-z]+)/im
-const EFFORT_RE = /^\*\*Effort:\*\*\s*\x60?([A-Za-z]{1,3})\x60?/im
-const DEPENDS_RE = /^\*\*Depends on:\*\*\s*(.+)$/im
+type PlanFile = {
+  file: string
+  path: string
+  archive: boolean
+}
+
 const TITLE_RE = /^# Plan:\s*(.+)$/m
 
 const PRIORITY_WEIGHT: Record<Priority, number> = { high: 30, medium: 20, low: 10 }
 const EFFORT_PENALTY: Record<Effort, number> = { XS: 0, S: 1, M: 3, L: 6, XL: 10 }
 const COMPLETED = new Set<Status>(['done', 'verification needed'])
 
-const parseDependencies = (raw: string): string[] =>
-  raw.toLowerCase() === 'none' || raw.trim() === '-'
-    ? []
-    : raw
-        .split(/\s+/)
-        .map(value => value.replaceAll('~~', '').replaceAll('\x60', '').replace(/[(),;]/g, '').trim())
-        .filter(Boolean)
+const REVIEW_SUFFIX = '--review.md'
 
-const parsePlan = (file: string, content: string): Plan | null => {
+const getPriorityLabel = (priority: Priority): string => {
+  return PRIORITY_ICONS[priority]
+}
+
+const parseDependencies = (raw: string): string[] => {
+  if (!raw || raw.trim().toLowerCase() === 'none' || raw.trim() === '-') {
+    return []
+  }
+
+  return raw
+      .split(/\s+/)
+      .map(value => value.replaceAll('~~', '').replaceAll('\x60', '').replace(/[(),;]/g, '').trim())
+      .filter(value => value !== '' && value !== '-' && value !== 'none')
+      .filter(Boolean)
+}
+
+
+const parsePlan = (file: string, content: string, archive: boolean): Plan | null => {
   const match = file.match(PLAN_FILE_RE)
   if (!match) return null
 
-  const status = content.match(STATUS_RE)?.[1] as Status | undefined
-  const priority = content.match(PRIORITY_RE)?.[1]?.toLowerCase() as Priority | undefined
-  const effort = content.match(EFFORT_RE)?.[1]?.toUpperCase() as Effort | undefined
+  const status = content.match(PLAN_STATUS_RE)?.[1] as Status | undefined
+  const priority = (content.match(PLAN_PRIORITY_RE)?.[1]?.toLowerCase() ?? 'medium') as Priority
+  const effort = content.match(PLAN_EFFORT_RE)?.[1]?.toUpperCase() as Effort | undefined
   const title = content.match(TITLE_RE)?.[1]?.trim() ?? file
-  const depends = content.match(DEPENDS_RE)?.[1]
+  const depends = content.match(PLAN_DEPENDS_RE)?.[1]
+  const isCompleted: boolean = (status && COMPLETED_STATUSES.has(status)) || archive
 
-  if (!status || !['in progress', 'verification needed', 'planned', 'done'].includes(status))
+  if (!status || !AVAILABLE_STATUSES.includes(status))
     throw new Error('Invalid or missing Status in ' + file)
-  if (!priority || !(priority in PRIORITY_WEIGHT))
+  if ((!priority || !(priority in PRIORITY_WEIGHT)) && !isCompleted)
     throw new Error('Invalid or missing Priority in ' + file)
-  if (!effort || !(effort in EFFORT_PENALTY))
+  if ((!effort || !(effort in EFFORT_PENALTY)) && !isCompleted)
     throw new Error('Invalid or missing Effort in ' + file)
-  if (!depends)
-    throw new Error('Missing Depends on in ' + file)
+  if (!depends) {
+    console.warn('Missing Depends on in ' + file)
+    return null
+  }
 
   return {
     file,
     id: match[1] + '-' + match[2],
     title,
     status,
-    priority,
-    effort,
+    priority: priority ?? 'medium',
+    effort: effort ?? 'M',
     dependencies: parseDependencies(depends),
   }
 }
 
 const loadPlans = async (): Promise<{ plans: Plan[]; byId: Map<string, Plan> }> => {
   const files = await readdir(PLANS_PATH)
+  const archivedFiles = await readdir(ARCHIVED_PLANS_PATH)
+  const allFiles: PlanFile[] = [
+    ...files
+      .filter(file => !file.endsWith(NOTES_SUFFIX))
+      .filter(file => !file.endsWith(REVIEW_SUFFIX))
+      .map(file => ({ file, path: resolve(PLANS_PATH, file), archive: false })),
+    ...archivedFiles
+      .filter(file => !file.endsWith(NOTES_SUFFIX))
+      .filter(file => !file.endsWith(REVIEW_SUFFIX))
+      .map(file => ({ file, path: resolve(ARCHIVED_PLANS_PATH, file), archive: true })),
+  ]
+
   const plans: Plan[] = []
   const byId = new Map<string, Plan>()
 
-  for (const file of files) {
-    if (
-      file === 'README.md' ||
-      file === 'PLANNING.md' ||
-      file === 'NEXT-IDEAS.md' ||
-      file === 'LOOSE-ENDS.md' ||
-      file.endsWith('-implementation-notes.md') ||
-      file.endsWith('-review.md') ||
-      file.endsWith('-updated-review.md') ||
-      LEGACY_PLAN_FILE_RE.test(file)
-    ) continue
+  for (const { file, path, archive } of allFiles) {
+    if (!PLAN_FILE_RE.test(file)) continue
+    if (LEGACY_PLAN_FILE_RE.test(file)) continue
 
-    const plan = parsePlan(file, await readFile(resolve(PLANS_PATH, file), 'utf8'))
+    const plan = parsePlan(file, await readFile(path, 'utf8'), archive)
+
     if (plan) {
       plans.push(plan)
       byId.set(plan.id, plan)
@@ -94,12 +124,12 @@ const loadPlans = async (): Promise<{ plans: Plan[]; byId: Map<string, Plan> }> 
   }
 
   // Legacy plans use a global numeric ID (for example 177), still referenced by new plans.
-  for (const file of files.filter(file => LEGACY_PLAN_FILE_RE.test(file))) {
+  for (const { file, path } of allFiles.filter(({ file }) => LEGACY_PLAN_FILE_RE.test(file))) {
     const id = file.match(LEGACY_PLAN_ID_RE)?.[1]
     if (!id) continue
 
-    const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
-    const status = (content.match(STATUS_RE)?.[1] ?? 'done') as Status
+    const content = await readFile(path, 'utf8')
+    const status = (content.match(PLAN_STATUS_RE)?.[1] ?? 'done') as Status
 
     byId.set(id, {
       file,
@@ -108,7 +138,7 @@ const loadPlans = async (): Promise<{ plans: Plan[]; byId: Map<string, Plan> }> 
       status,
       priority: 'low',
       effort: 'S',
-      dependencies: parseDependencies(content.match(DEPENDS_RE)?.[1] ?? 'none'),
+      dependencies: parseDependencies(content.match(PLAN_DEPENDS_RE)?.[1] ?? 'none'),
     })
   }
 
@@ -118,8 +148,9 @@ const loadPlans = async (): Promise<{ plans: Plan[]; byId: Map<string, Plan> }> 
 const validateDependencies = (plans: Plan[], byId: Map<string, Plan>): void => {
   for (const plan of plans) {
     for (const dependency of plan.dependencies) {
-      if (!byId.has(dependency))
+      if (!byId.has(dependency)) {
         throw new Error('Unknown dependency "' + dependency + '" in ' + plan.file)
+      }
     }
   }
 }
@@ -236,28 +267,30 @@ const main = async (): Promise<void> => {
 
   const dependents = buildDependents(byId)
   const order = recommend(plans, byId, dependents)
+  const output: string[] = []
 
-  console.log('Recommended plan execution order')
-  console.log('================================')
-  console.log('')
-  console.log('Only planned plans are ranked.')
-  console.log('done / verification needed satisfy dependencies.')
-  console.log('Score = priority + direct unlocks + transitive unlocks + depth - effort.')
-  console.log('')
+  output.push('Recommended plan execution order')
+  output.push('================================')
+  output.push('')
+  output.push('Only planned plans are ranked.')
+  output.push('done / verification needed satisfy dependencies.')
+  output.push('Score = priority + direct unlocks + transitive unlocks + depth - effort.')
+  output.push('')
 
   order.forEach((plan, index) => {
     const direct = dependents.get(plan.id)?.size ?? 0
     const transitive = countTransitiveDependents(plan.id, dependents)
 
-    console.log(
-      String(index + 1).padStart(2) +
-      '. ' + plan.id.padEnd(32) +
-      plan.priority.padEnd(7) +
-      plan.effort.padEnd(3) +
-      ' score=' + String(score(plan, byId, dependents)).padStart(3) +
-      ' unlocks=' + direct + '/' + transitive,
+    output.push(
+      String(index + 1) +
+      '. ' + `\`${plan.id}\` - **${plan.title}**  \n` +
+
+      ''.padStart(2) + getPriorityLabel(plan.priority) + ' ' + plan.effort + ' · ' +
+      '**Score:** ' + String(score(plan, byId, dependents)).padStart(3) + '  \n' +
+
+      ''.padStart(2) + ' → **unlocks:** ' + direct + '/' + transitive,
     )
-    console.log('   ' + plan.title)
+    output.push('')
   })
 
   const initiallyReady = new Set(
@@ -266,9 +299,9 @@ const main = async (): Promise<void> => {
       .map(plan => plan.id),
   )
 
-  console.log('')
-  console.log('Initially blocked')
-  console.log('=================')
+  output.push('')
+  output.push('Initially blocked')
+  output.push('=================')
 
   plans
     .filter(plan => plan.status === 'planned' && !initiallyReady.has(plan.id))
@@ -277,25 +310,27 @@ const main = async (): Promise<void> => {
       const blockers = plan.dependencies
         .filter(dep => !COMPLETED.has(byId.get(dep)?.status ?? 'planned'))
         .join(', ')
-      console.log('- ' + plan.id + ': ' + blockers)
+      output.push('- ' + plan.id + ': ' + blockers)
     })
 
-  console.log('')
-  console.log('Dependency graph (planned + their dependencies)')
-  console.log('================================================')
-  console.log('\x60\x60\x60mermaid')
-  console.log('graph TD')
+  output.push('')
+  output.push('Dependency graph (planned + their dependencies)')
+  output.push('================================================')
+  output.push('\x60\x60\x60mermaid')
+  output.push('graph TD')
 
   for (const plan of plans) {
     const node = plan.id.replaceAll('-', '_')
-    console.log('  ' + node + '["' + plan.id + '"]')
+    output.push('  ' + node + '["' + plan.id + '"]')
 
     for (const dep of plan.dependencies) {
-      console.log('  ' + dep.replaceAll('-', '_') + ' --> ' + node)
+      output.push('  ' + dep.replaceAll('-', '_') + ' --> ' + node)
     }
   }
 
-  console.log('\x60\x60\x60')
+  output.push('\x60\x60\x60')
+
+  await writeFile(PLANS_DEPENDENCIES_PATH, output.join('\n') + '\n', 'utf8')
 }
 
 main().catch(error => {
