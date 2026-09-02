@@ -1,13 +1,12 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-02 08:39:39  
+> Date: 2026-09-02 08:44:29  
 
 ## PLANS
 
 - `npc-016-work-contracts-payment-and-employer-interaction.md`
 - `npc-017-work-contracts-food-and-drink.md`
-- `settlements-npcs-007-bandages-and-herbal-medicine.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
 - `tools-000-weapon-browser-observatory.md`
@@ -64,37 +63,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/npc-017-work-contracts-food-and-drink-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-007-bandages-and-herbal-medicine.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-007-bandages-and-herbal-medicine.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-007-bandages-and-herbal-medicine.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-007-bandages-and-herbal-medicine-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
