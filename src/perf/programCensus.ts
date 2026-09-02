@@ -97,6 +97,16 @@ export type ProgramCensusFirstUseEvent = {
    *  depends on light counts/shadow types that live on the renderer, not the
    *  material, and aren't captured here. */
   flags: Record<string, string> | undefined
+  /** `Object3D.name`/`.type` of the mesh whose `currentProgram` matched this
+   *  program at scan time (same best-effort match as `materialUuid`). Empty
+   *  name is common — most procedural meshes don't set one. */
+  objectName: string | undefined
+  objectType: string | undefined
+  /** Nearest ancestor's `userData.assetUrl` — tagged once per GLB cache root
+   *  in `loadGltf.ts`'s `loadCached()`, and preserved by clone (`Object3D.copy()`/
+   *  `SkeletonUtils.clone()` deep-copy `userData`). `undefined` for procedural
+   *  (non-GLB) geometry, e.g. terrain/water/weather shaders. */
+  assetUrl: string | undefined
 }
 
 export type ProgramCensusFrameSnapshot = {
@@ -272,6 +282,23 @@ type ProgramAttribution = {
   bucket: SceneBucket
   defines: Record<string, unknown> | undefined
   flags: Record<string, string>
+  objectName: string
+  objectType: string
+  assetUrl: string | undefined
+}
+
+/** Walks `obj` and its ancestors for the nearest `userData.assetUrl` (see
+ *  `loadGltf.ts`'s `loadCached()`). Cheap — bounded by scene-graph depth, and
+ *  only called from {@link buildProgramAttribution}, itself only invoked when
+ *  the program count actually grew. */
+function findAssetUrl(obj: Object3D): string | undefined {
+  let node: Object3D | null = obj
+  while (node) {
+    const url = (node.userData as { assetUrl?: string }).assetUrl
+    if (url) return url
+    node = node.parent
+  }
+  return undefined
 }
 
 /** Best-effort program → material attribution for the diagnostic report
@@ -292,6 +319,9 @@ function buildProgramAttribution(renderer: WebGLRenderer, scene: Scene): Map<obj
     if (!mesh.isMesh || !mesh.material) return
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     const bucket = classifyObject(obj)
+    const objectName = obj.name
+    const objectType = obj.type
+    const assetUrl = findAssetUrl(obj)
     for (const m of mats) {
       let matProps: unknown
       try {
@@ -307,6 +337,9 @@ function buildProgramAttribution(renderer: WebGLRenderer, scene: Scene): Map<obj
         bucket,
         defines: (m as unknown as { defines?: Record<string, unknown> }).defines,
         flags: readMaterialFlags(m),
+        objectName,
+        objectType,
+        assetUrl,
       })
     }
   })
@@ -395,6 +428,9 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
         materialBucket: attr?.bucket,
         defines: attr?.defines,
         flags: attr?.flags,
+        objectName: attr?.objectName,
+        objectType: attr?.objectType,
+        assetUrl: attr?.assetUrl,
       })
     })
   }
@@ -528,6 +564,28 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
   }
 }
 
+/** Groups `program-first-use` events by the frame they were first-used on. */
+function groupFirstUseByFrame(dump: readonly ProgramCensusFirstUseEvent[]): Map<number, ProgramCensusFirstUseEvent[]> {
+  const byFrame = new Map<number, ProgramCensusFirstUseEvent[]>()
+  for (const ev of dump) {
+    const list = byFrame.get(ev.frame) ?? []
+    list.push(ev)
+    byFrame.set(ev.frame, list)
+  }
+  return byFrame
+}
+
+/** The frame with the most new programs (ties broken toward the lower frame
+ *  number). */
+function findLargestFrame(byFrame: Map<number, ProgramCensusFirstUseEvent[]>): number {
+  const frames = [...byFrame.keys()].sort((a, b) => a - b)
+  let largestFrame = frames[0]!
+  for (const f of frames) {
+    if (byFrame.get(f)!.length > byFrame.get(largestFrame)!.length) largestFrame = f
+  }
+  return largestFrame
+}
+
 /** Groups `program-first-use` events by frame and formats one readable
  *  report for `console.log` at the end of a benchmark run. The frame with
  *  the most new programs — the "largest transition" (e.g. the `43 → 54`
@@ -542,17 +600,9 @@ export function formatProgramCensusReport(census: ProgramCensus): string {
   const dump = census.dumpProgramFirstUse()
   if (dump.length === 0) return '[Seedvale Program Census]\n\nNo new programs were created during this run.'
 
-  const byFrame = new Map<number, ProgramCensusFirstUseEvent[]>()
-  for (const ev of dump) {
-    const list = byFrame.get(ev.frame) ?? []
-    list.push(ev)
-    byFrame.set(ev.frame, list)
-  }
+  const byFrame = groupFirstUseByFrame(dump)
   const frames = [...byFrame.keys()].sort((a, b) => a - b)
-  let largestFrame = frames[0]!
-  for (const f of frames) {
-    if (byFrame.get(f)!.length > byFrame.get(largestFrame)!.length) largestFrame = f
-  }
+  const largestFrame = findLargestFrame(byFrame)
   const largestGroup = byFrame.get(largestFrame)!
 
   const byFrameLines = frames.map((f) => {
@@ -597,6 +647,59 @@ export function formatProgramCensusReport(census: ProgramCensus): string {
     '',
     `Differences within frame ${largestFrame} (grouped by material type):`,
     ...diffLines,
+  ].join('\n')
+}
+
+/** Narrow follow-up diagnostic: resolves the full `program → material →
+ *  object/mesh → asset` attribution chain for the census's two largest
+ *  first-use transitions *other than* the one {@link formatProgramCensusReport}
+ *  already details in full (avoids duplicating that section). Targets the
+ *  runner-up transitions rather than hardcoded frame numbers, since the
+ *  `stream` scenario's exact frame count a chunk lands on is frame-rate
+ *  sensitive even with a fixed seed/route — e.g. the `frame 13 (+15)` /
+ *  `frame 19 (+11)` streamed-chunk transitions observed in one run (`docs/
+ *  performance/results/2026-09-02--008--benchmark-stream-with-programs.md`),
+ *  following plan 149 Phase 1A's loading-window prewarm which already
+ *  absorbs the old frame-0 census's largest burst. Same read-only data as
+ *  `formatProgramCensusReport` (`objectName`/`objectType`/`assetUrl` on
+ *  {@link ProgramCensusFirstUseEvent}, populated by `buildProgramAttribution`
+ *  at scan time) — call after it, at the end of a benchmark run. */
+export function formatProgramAttributionReport(census: ProgramCensus): string {
+  if (!census.enabled) return '[Seedvale Program Attribution] disabled'
+  const dump = census.dumpProgramFirstUse()
+  if (dump.length === 0) return '[Seedvale Program Attribution]\n\nNo new programs were created during this run.'
+
+  const byFrame = groupFirstUseByFrame(dump)
+  const largestFrame = findLargestFrame(byFrame)
+  const targetFrames = [...byFrame.keys()]
+    .filter((f) => f !== largestFrame)
+    .sort((a, b) => byFrame.get(b)!.length - byFrame.get(a)!.length || a - b)
+    .slice(0, 2)
+    .sort((a, b) => a - b)
+
+  if (targetFrames.length === 0) {
+    return '[Seedvale Program Attribution]\n\nNo secondary transition to attribute — every new program was created at the largest transition, already detailed above.'
+  }
+
+  const sections = targetFrames.map((f) => {
+    const group = byFrame.get(f)!
+    return [`Frame ${f} (+${group.length}):`, ...group.map(formatProgramAttributionLine)].join('\n')
+  })
+
+  return ['[Seedvale Program Attribution]', '', ...sections].join('\n\n')
+}
+
+function formatProgramAttributionLine(ev: ProgramCensusFirstUseEvent): string {
+  return [
+    `  Program #${ev.programId}`,
+    `    material: ${ev.materialType ?? 'unknown'} '${ev.name}'`,
+    `    materialUuid: ${ev.materialUuid ?? 'unknown'}`,
+    `    object: ${ev.objectType ?? 'unknown'} '${ev.objectName ?? ''}'`,
+    `    asset: ${ev.assetUrl ?? '(no GLB — procedural geometry or unattributed)'}`,
+    `    cacheKey: ${ev.cacheKey}`,
+    `    defines: ${ev.defines && Object.keys(ev.defines).length > 0 ? JSON.stringify(ev.defines) : 'none'}`,
+    `    vertexShaderHash: ${ev.vertexShaderHash ?? 'unknown'}`,
+    `    fragmentShaderHash: ${ev.fragmentShaderHash ?? 'unknown'}`,
   ].join('\n')
 }
 
@@ -653,6 +756,130 @@ function diffProgramGroup(group: ProgramCensusFirstUseEvent[]): string[] {
     }
   }
   return lines
+}
+
+/** Regex for the `foliage-wind-vN` tag `patchFoliageWindMaterial()`
+ *  (`src/world/foliageWind.ts`) folds into `material.customProgramCacheKey()`
+ *  — and therefore into `WebGLProgram.cacheKey` — via string concatenation.
+ *  Purely a substring check over data the census already captures; adds no
+ *  new collection. */
+const FOLIAGE_WIND_CACHE_KEY_RE = /foliage-wind-v\d+/
+
+type CompileCostReason = 'measured' | 'no-stage-boundary' | 'shared-render-call'
+
+type CompileCostEntry = {
+  ev: ProgramCensusFirstUseEvent
+  measuredMs: number | undefined
+  reason: CompileCostReason
+}
+
+function stageCallKey(frame: number, stage: ProgramCensusStageKind, before: number, after: number): string {
+  return `${frame}|${stage}|${before}|${after}`
+}
+
+/** Best-effort program compile/link cost, attributed from data the census
+ *  already collects — no new render/timing hooks.
+ *
+ * There is no public Three.js/WebGL API that isolates a single
+ * `WebGLProgram`'s compile+link time (that would require patching
+ * `WebGLPrograms`/`WebGLProgram` internals — out of scope, same "no source/
+ * node_modules patching" rule as the rest of this module). What IS already
+ * measured is the wall-clock duration of each `renderer.render()` call
+ * (`mirror-render`/`postprocess-render`, timed by `beginStage`/`endStage`).
+ * When exactly one new program is first-used inside a given call, that
+ * call's full duration is reported here as an **upper bound** for that
+ * program's cost — it still includes the rest of that call's work (drawing
+ * every already-linked program, shadow map update, uniform reads), not just
+ * the new program's link. When a call first-uses more than one program, or a
+ * program shows up outside any stage boundary (`tickFrame`'s fallback path —
+ * see `ProgramCensus.tickFrame` in this file), there is no way to split
+ * that timing per-program, so no number is invented for it. */
+function attributeCompileCost(census: ProgramCensus): CompileCostEntry[] {
+  const dump = census.dumpProgramFirstUse()
+
+  const stageDurations = new Map<string, number>()
+  for (const ev of census.events()) {
+    if (ev.kind === 'mirror-render' || ev.kind === 'postprocess-render') {
+      stageDurations.set(stageCallKey(ev.frame, ev.kind, ev.programCountBefore, ev.programCountAfter), ev.durationMs)
+    }
+  }
+
+  const callGroups = new Map<string, ProgramCensusFirstUseEvent[]>()
+  for (const ev of dump) {
+    if (!ev.stage) continue
+    const key = stageCallKey(ev.frame, ev.stage, ev.programCountBefore, ev.programCountAfter)
+    const list = callGroups.get(key) ?? []
+    list.push(ev)
+    callGroups.set(key, list)
+  }
+
+  return dump.map((ev): CompileCostEntry => {
+    if (!ev.stage) return { ev, measuredMs: undefined, reason: 'no-stage-boundary' }
+    const key = stageCallKey(ev.frame, ev.stage, ev.programCountBefore, ev.programCountAfter)
+    if (callGroups.get(key)!.length > 1) return { ev, measuredMs: undefined, reason: 'shared-render-call' }
+    const durationMs = stageDurations.get(key)
+    if (durationMs === undefined) return { ev, measuredMs: undefined, reason: 'no-stage-boundary' }
+    return { ev, measuredMs: durationMs, reason: 'measured' }
+  })
+}
+
+function formatCompileCostEntry(entry: CompileCostEntry & { measuredMs: number }): string {
+  const { ev, measuredMs } = entry
+  const foliageTag = FOLIAGE_WIND_CACHE_KEY_RE.exec(ev.cacheKey)?.[0]
+  const lines = [
+    `  #${ev.programId}`,
+    `      material: ${ev.materialType ?? 'unknown'} '${ev.name}'`,
+    `      object: ${ev.objectType ?? 'unknown'} '${ev.objectName ?? ''}'`,
+    `      asset: ${ev.assetUrl ?? '(no GLB — procedural geometry or unattributed)'}`,
+  ]
+  if (foliageTag) lines.push(`      ${foliageTag}`)
+  lines.push(`      compile/link: ${measuredMs.toFixed(1)} ms  (upper bound — whole ${ev.stage} call, see note above)`)
+  return lines.join('\n')
+}
+
+/** Console report for the compile/link-cost attribution described on
+ *  {@link attributeCompileCost}. Call after `formatProgramCensusReport`/
+ *  `formatProgramAttributionReport` at the end of a benchmark run — same
+ *  read-only census data, no extra measurement. */
+export function formatProgramCompileCostReport(census: ProgramCensus): string {
+  if (!census.enabled) return '[Seedvale Program Compile Cost] disabled'
+  const dump = census.dumpProgramFirstUse()
+  if (dump.length === 0) return '[Seedvale Program Compile Cost]\n\nNo new programs were created during this run.'
+
+  const entries = attributeCompileCost(census)
+  const noStageBoundary = entries.filter((e) => e.reason === 'no-stage-boundary').length
+  const sharedRenderCall = entries.filter((e) => e.reason === 'shared-render-call').length
+  const measured = entries.filter(
+    (e): e is CompileCostEntry & { measuredMs: number } => e.reason === 'measured' && e.measuredMs !== undefined && e.measuredMs > 1,
+  )
+
+  const byFrame = new Map<number, (CompileCostEntry & { measuredMs: number })[]>()
+  for (const e of measured) {
+    const list = byFrame.get(e.ev.frame) ?? []
+    list.push(e)
+    byFrame.set(e.ev.frame, list)
+  }
+  const frames = [...byFrame.keys()].sort((a, b) => a - b)
+  const sections = frames.map((f) => [`Frame ${f}`, byFrame.get(f)!.map(formatCompileCostEntry).join('\n\n')].join('\n'))
+
+  const maxEntry = measured.length > 0 ? measured.reduce((max, e) => (e.measuredMs > max.measuredMs ? e : max)) : undefined
+  const totalMs = measured.reduce((sum, e) => sum + e.measuredMs, 0)
+
+  return [
+    '[Seedvale Program Compile Cost]',
+    '',
+    'No isolated per-program GPU compile/link timer exists in the public Three.js/WebGL API without patching internals (out of scope here). Each number below is the wall-clock duration of the renderer.render() call (mirror-render/postprocess-render) that first-used the program, reported ONLY when that program was the single new program created during that specific call — an upper bound that also includes the rest of that call\'s render cost, not an isolated compile/link timer.',
+    `Excluded — no reliable per-program timing: ${sharedRenderCall} shared a render call with other new programs, ${noStageBoundary} first-used outside a mirror/postprocess stage boundary.`,
+    '',
+    'Programs with measurable cost > 1 ms:',
+    '',
+    sections.length > 0 ? sections.join('\n\n') : '(none)',
+    '',
+    'Summary:',
+    `  total measured compile/link time: ${totalMs.toFixed(1)} ms`,
+    `  programs >1 ms: ${measured.length}`,
+    `  max: ${maxEntry ? `${maxEntry.measuredMs.toFixed(1)} ms (#${maxEntry.ev.programId})` : 'n/a'}`,
+  ].join('\n')
 }
 
 export function withProgramCensusStage(census: ProgramCensus, kind: ProgramCensusStageKind, fn: () => void): void {

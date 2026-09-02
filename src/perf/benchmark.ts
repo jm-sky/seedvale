@@ -6,8 +6,8 @@ import type { IsolationHost } from './isolationProbe'
 import type { PerfMonitor } from './monitor'
 import type { PerfReportJson } from './types'
 import { worldToChunk } from '../terrain/chunkGrid'
-import { runIsolationProbes } from './isolationProbe'
-import { formatProgramCensusReport, getProgramCensus } from './programCensus'
+import { formatIsolationReport, runIsolationProbes } from './isolationProbe'
+import { formatProgramAttributionReport, formatProgramCensusReport, formatProgramCompileCostReport, getProgramCensus } from './programCensus'
 import { buildReport, formatReport } from './report'
 import { censusScene } from './sceneCensus'
 
@@ -199,9 +199,11 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         if (streamTimer) window.clearInterval(streamTimer)
 
         const scene = censusScene(host.isolation.scene)
-        const isolation = id === 'stream'
-          ? undefined
-          : await runIsolationProbes(host.isolation, monitor)
+        // Previously skipped for `stream` — now runs for every scenario so
+        // the render-cost breakdown (water/vegetation/postprocessing/mirrors/
+        // CPU-GPU separation) is available for the scenario program census
+        // and compile-cost diagnostics already target.
+        const isolation = await runIsolationProbes(host.isolation, monitor)
         monitor.setSource('benchmark', false)
 
         const baseContext = monitor.getContext()
@@ -231,7 +233,21 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         // whole app session, not just this call's measured window, matching
         // how that census's dumps were produced.
         const programCensus = getProgramCensus()
-        if (programCensus.enabled) console.log(formatProgramCensusReport(programCensus))
+        if (programCensus.enabled) {
+          console.log(formatProgramCensusReport(programCensus))
+          // Narrow program → material → object → asset attribution follow-up
+          // (see formatProgramAttributionReport doc comment) for the runner-up
+          // first-use transitions — same census data, no extra measurement.
+          console.log(formatProgramAttributionReport(programCensus))
+          // Best-effort compile/link cost attribution (see
+          // formatProgramCompileCostReport doc comment) — same census data,
+          // no extra measurement, explicit about what can't be isolated.
+          console.log(formatProgramCompileCostReport(programCensus))
+        }
+        // Render-cost isolation breakdown (water/vegetation-grass/
+        // postprocessing/mirrors/CPU-GPU separation) — independent of the
+        // program census, always printed when probes ran.
+        console.log(formatIsolationReport(isolation))
         if (typeof window !== 'undefined') {
           window.__seedvalePerfLastReport = report
           const previous = window.__seedvalePerfReports ?? []

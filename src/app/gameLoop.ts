@@ -74,7 +74,7 @@ import { isInstanceBackedKind, isWeaponItemInstance } from '../items/itemInstanc
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
 import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenanceProfile } from '../items/weaponMaintenance'
-import { getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
+import { getGpuTimer, getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
 import {
   collectLivingCombatTargets,
   collectRangedAnimalCandidates,
@@ -657,6 +657,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     const frameStart = performance.now()
     const monitor = getMonitor()
     const programCensus = getProgramCensus()
+    const gpuTimer = getGpuTimer()
     timer.update()
     const rawDt = timer.getDelta()
     const dt = Math.min(rawDt, 0.05)
@@ -2033,10 +2034,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     recordShadowBudgetFrame(shadowBudgetState, shadowPlayerX, shadowPlayerZ, shadowWanted)
     postProcessing.updateGodRays(camera, sky.sunPosition, cachedSky.elev)
     withCategory(monitor, 'RENDER', () => {
+      // Same span as the CPU `RENDER` category timer above, so isolation
+      // probes can pair a GPU-elapsed number with a directly comparable
+      // CPU wall-clock one (`isolationProbe.ts`'s CPU/GPU separation).
+      gpuTimer.beginFrame()
       withProgramCensusStage(programCensus, 'postprocess-render', () => {
         postProcessing.render()
       })
       labelRenderer.render(scene, camera)
+      gpuTimer.endFrame()
     })
     const renderEnd = performance.now()
     const simulateMs = renderStart - frameStart
@@ -2053,6 +2059,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       mirrorTriangles,
     })
     programCensus.tickFrame()
+    // Drains any GPU timer queries that completed since the last tick —
+    // unconditional (cheap no-op when disabled) so results aren't left
+    // pending between isolation-probe sampling windows.
+    gpuTimer.poll()
     setFrameTiming(simulateMs, renderMs)
   }
 

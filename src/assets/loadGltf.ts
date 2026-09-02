@@ -48,6 +48,11 @@ function loadCached(url: string): Promise<CachedGltf> {
   if (!pending) {
     pending = loader.loadAsync(url).then((gltf) => {
       const root = gltf.scene
+      // Perf diagnostics only (`programCensus.ts`'s program→object→asset
+      // attribution): survives `Object3D.clone()`/`SkeletonUtils.clone()` on
+      // this root (both deep-copy `userData`), so a clone's ancestor chain
+      // still resolves back to the source GLB. Not read by game code.
+      root.userData.assetUrl = url
       root.traverse((obj) => {
         const mesh = obj as Mesh
         if (!mesh.isMesh) return

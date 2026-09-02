@@ -39,6 +39,11 @@ declare module 'n8ao' {
     constructor(scene: Scene, camera: Camera, width?: number, height?: number)
     configuration: N8AOConfiguration
     beautyRenderTarget: WebGLRenderTarget
+    /** Instance property (`this.autoDetectTransparency = true` in the
+     *  constructor), not part of `configuration` — controls whether
+     *  `render()`'s per-frame `detectTransparency()` is allowed to flip
+     *  `configuration.transparencyAware` on. */
+    autoDetectTransparency: boolean
     setQualityMode(mode: N8AOQualityMode): void
     setDisplayMode(mode: N8AODisplayMode): void
     enableDebugMode(): void

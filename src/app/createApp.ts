@@ -49,6 +49,7 @@ import {
   createBenchmarkRunner,
   createPerfMonitor,
   isPerfUrlEnabled,
+  setActiveGpuTimer,
   setActiveMonitor,
   setActiveProgramCensus,
 } from '../perf'
@@ -299,10 +300,11 @@ export async function createApp(
 
 
   bootMark('createRenderStack')
-  const { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus } = createRenderStack(container, config)
+  const { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus, gpuTimer } = createRenderStack(container, config)
   bootMarkEnd('createRenderStack')
 
   setActiveProgramCensus(programCensus)
+  setActiveGpuTimer(gpuTimer)
 
   if (typeof window !== 'undefined') {
     window.__seedvaleProgramCensus = programCensus
@@ -1083,6 +1085,10 @@ export async function createApp(
       setFilmGradeEnabled: (on) => {
         postProcessing.setPassEnabled('filmGrade', on)
       },
+      setPostProcessingBypass: (on) => {
+        postProcessing.setBypassEnabled(on)
+      },
+      gpuTimer,
     },
   })
 
@@ -1568,6 +1574,8 @@ export async function createApp(
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
     setActiveProgramCensus(null)
+    setActiveGpuTimer(null)
+    gpuTimer.dispose()
     if (typeof window !== 'undefined') window.__seedvaleProgramCensus = undefined
     playerTorch.dispose()
     pointLightBudget.dispose()

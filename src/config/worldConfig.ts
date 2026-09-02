@@ -101,6 +101,16 @@ export type WorldConfig = {
     aoRadius: number
     aoIntensity: number
     aoQuality: AoQuality
+    /** N8AO's per-frame transparent-material auto-detection
+     *  (`N8AOPass.autoDetectTransparency`/`configuration.transparencyAware`)
+     *  — once it detects transparency (Seedvale's scene always has some:
+     *  water/clouds/weather/fire), it renders two extra full scene passes
+     *  every frame for the rest of the session. Perf benchmark (`stream`,
+     *  seed=42, res=193) measured RENDER avg 23.0ms/FPS 27.5 with it locked
+     *  on vs RENDER avg 12.1ms/FPS 42.4 with it off — off by default; kept
+     *  configurable in case a future scene needs correct AO under
+     *  transparency badly enough to pay the cost. */
+    aoTransparencyAware: boolean
     /** Subtle glow on the brightest pixels (sun, fire/torch, window light). */
     bloomEnabled: boolean
     bloomStrength: number
@@ -280,6 +290,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       aoRadius: 2,
       aoIntensity: 3,
       aoQuality: 'Performance',
+      aoTransparencyAware: false,
       bloomEnabled: true,
       // three r18x (UnrealBloomPass rewrite, upstream PR #31528) bakes a 3.0×
       // multiplier into the composite shader's RGB output and makes its alpha

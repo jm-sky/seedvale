@@ -104,9 +104,23 @@ export type HitchReportRow = {
 
 export type IsolationProbeRow = {
   id: string
+  /** `RENDER` category (postprocess + label render) wall-clock time —
+   *  `performance.now()` around each render call, so it can include driver/
+   *  GPU wait, not isolated CPU-only cost (see `formatIsolationReport()`'s
+   *  disclaimer). */
   renderMsAvg: number
+  renderMsP95: number
+  renderMsMax: number
   drawCallsAvg: number
   trianglesAvg: number
+  /** GPU-side elapsed time for the exact same `RENDER`-category span, from
+   *  WebGL2 `EXT_disjoint_timer_query_webgl2` timestamp queries. `undefined`
+   *  whenever the extension wasn't available or no query resolved during
+   *  the probe window — never estimated in its place. */
+  gpuMsAvg?: number
+  gpuMsP95?: number
+  gpuMsMax?: number
+  gpuSamples?: number
 }
 
 export type PerfLiveStats = {

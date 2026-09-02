@@ -581,6 +581,10 @@ export function createDebugGui(
     .name('AO intensity')
     .onChange(handlers.onPostProcessingChange)
   postFx
+    .add(config.postProcessing, 'aoTransparencyAware')
+    .name('AO transparency-aware')
+    .onChange(handlers.onPostProcessingChange)
+  postFx
     .add(config.postProcessing, 'bloomEnabled')
     .name('Bloom')
     .onChange(handlers.onPostProcessingChange)

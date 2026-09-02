@@ -13,6 +13,13 @@ export {
   parsePointLightBudgetFlag,
   pointLightBudgetFromUrl,
 } from './flags'
+export { createGpuTimer, getGpuTimer, setActiveGpuTimer } from './gpuTimer'
+export type { GpuTimer } from './gpuTimer'
+export {
+  formatIsolationReport,
+  runIsolationProbes,
+} from './isolationProbe'
+export type { IsolationHost } from './isolationProbe'
 export { createPerfMonitor, withCategory } from './monitor'
 export {
   createProgramCensus,

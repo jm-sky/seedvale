@@ -1,5 +1,6 @@
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { WorldConfig } from '../config/worldConfig'
+import type { GpuTimer } from '../perf/gpuTimer'
 import type { ProgramCensus } from '../perf/programCensus'
 import type { PostProcessing } from '../render/createPostProcessing'
 import type { WorldLights } from '../world/createLights'
@@ -7,6 +8,7 @@ import type { WorldSky } from '../world/createSky'
 import type { PointLightBudget } from '../world/pointLightBudget'
 import { isNoShadowsDebugMode } from '../debug/debugMode'
 import { benchmarkScenarioFromUrl, createProgramCensus, isProgramCensusUrlEnabled, pointLightBudgetFromUrl } from '../perf'
+import { createGpuTimer } from '../perf/gpuTimer'
 import { createPostProcessing } from '../render/createPostProcessing'
 import { createRenderer } from '../render/createRenderer'
 import { createCamera } from '../scene/createCamera'
@@ -38,6 +40,9 @@ export type RenderStack = {
   pointLightBudget: PointLightBudget
   /** Plan 149 Phase 0 — dev/benchmark-only WebGLProgram/material census. */
   programCensus: ProgramCensus
+  /** Dev/benchmark-only WebGL2 GPU timestamp-query source for isolation
+   *  probes' CPU/GPU render-cost separation (`perf/gpuTimer.ts`). */
+  gpuTimer: GpuTimer
 }
 
 export function createRenderStack(container: HTMLElement, config: WorldConfig): RenderStack {
@@ -63,6 +68,12 @@ export function createRenderStack(container: HTMLElement, config: WorldConfig): 
   const programCensus = createProgramCensus(
     renderer,
     scene,
+    benchmarkScenarioFromUrl() === 'stream' || isProgramCensusUrlEnabled(),
+  )
+  // Same gating as programCensus above — benchmark-diagnostic only, no-op
+  // (and no per-frame WebGL query calls at all) otherwise.
+  const gpuTimer = createGpuTimer(
+    renderer,
     benchmarkScenarioFromUrl() === 'stream' || isProgramCensusUrlEnabled(),
   )
 
@@ -91,5 +102,5 @@ export function createRenderStack(container: HTMLElement, config: WorldConfig): 
   sky.addTo(scene)
   sky.applySun(lights.sun)
 
-  return { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus }
+  return { renderer, labelRenderer, scene, camera, postProcessing, lights, sky, pointLightBudget, programCensus, gpuTimer }
 }

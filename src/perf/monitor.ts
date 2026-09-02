@@ -47,6 +47,10 @@ export type SessionTotals = {
   drawCallsSum: number
   drawCallsMax: number
   trianglesSum: number
+  /** Per-frame `RENDER` category time (`withCategory(monitor, 'RENDER', …)`
+   *  in `gameLoop.ts` — postprocess + label render), for isolation probes
+   *  that need p95/max, not just the `categoryMsSum` average. */
+  renderCategoryMs: number[]
   categoryMsSum: Float64Array
   spikeCounts: Int32Array
   hitchCounts: Int32Array
@@ -92,6 +96,7 @@ function emptySession(): SessionTotals {
     drawCallsSum: 0,
     drawCallsMax: 0,
     trianglesSum: 0,
+    renderCategoryMs: [],
     categoryMsSum: new Float64Array(PERF_CATEGORY_COUNT),
     spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
     hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
@@ -254,6 +259,7 @@ export function createPerfMonitor(budgetMs = 1000 / 60): PerfMonitor {
         session.drawCallsSum += input.drawCalls
         session.drawCallsMax = Math.max(session.drawCallsMax, input.drawCalls)
         session.trianglesSum += input.triangles
+        session.renderCategoryMs.push(accum[PERF_CATEGORY_INDEX.RENDER]!)
         session.mirrorDrawCallsSum += input.mirrorDrawCalls ?? 0
         session.geometriesLast = input.geometries ?? session.geometriesLast
         session.texturesLast = input.textures ?? session.texturesLast

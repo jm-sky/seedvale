@@ -27,6 +27,11 @@ export type PostProcessing = {
   applyFrameBudget: (renderMs: number) => void
   /** Isolation-probe toggle. `applyConfig` restores the user/preset state. */
   setPassEnabled: (pass: PostPassId, enabled: boolean) => void
+  /** Isolation-probe toggle: full `EffectComposer` bypass — `render()` calls
+   *  `renderer.render(scene, camera)` directly instead of `composer.render()`
+   *  while `true`. Distinct from `setPassEnabled`, which still leaves
+   *  `RenderPass`/`OutputPass` running through the composer. */
+  setBypassEnabled: (enabled: boolean) => void
   /** Sun screen-projection + camera-facing fade change every frame (camera
    *  moves even while `timeOfDay` doesn't), so this runs outside the
    *  throttled day/night apply — unlike `applyConfig` it's not GUI-driven. */
@@ -128,6 +133,13 @@ export function createPostProcessing(
     aoPass.setQualityMode(next.aoQuality)
     aoPass.configuration.aoRadius = next.aoRadius
     aoPass.configuration.intensity = next.aoIntensity
+    // Perf benchmark (`stream`, seed=42, res=193): off saves ~47% RENDER /
+    // gains ~54% FPS vs N8AO's own auto-detect locking this on for the
+    // session the moment it sees any transparent material (water/clouds/
+    // weather/fire — always present in Seedvale's scene). See
+    // WorldConfig['postProcessing']['aoTransparencyAware'] doc comment.
+    aoPass.autoDetectTransparency = next.aoTransparencyAware
+    aoPass.configuration.transparencyAware = next.aoTransparencyAware
 
     bloomPass.enabled = next.bloomEnabled
     bloomPass.strength = next.bloomStrength
@@ -230,11 +242,20 @@ export function createPostProcessing(
     arm(intensity)
   }
 
+  let bypassed = false
+
   return {
     render: () => {
       // `?debugRenderState=1` — diagnostics only, sampled immediately before
       // the actual render call; never mutates renderer/camera/scene state.
       if (isRenderStateDebugMode()) sampleRenderState(renderer, scene, camera as PerspectiveCamera)
+      if (bypassed) {
+        // Composer's final pass always targets the screen — match that here
+        // so a bypassed frame lands in the same place a normal one would.
+        renderer.setRenderTarget(null)
+        renderer.render(scene, camera)
+        return
+      }
       composer.render()
     },
     setSize: (w, h) => composer.setSize(w, h),
@@ -242,6 +263,7 @@ export function createPostProcessing(
     applyConfig,
     applyFrameBudget,
     setPassEnabled,
+    setBypassEnabled: (enabled) => { bypassed = enabled },
     updateGodRays,
     dispose: () => {
       // `EffectComposer.dispose()` only frees its own two render targets and

@@ -124,6 +124,7 @@ function minimalConfig(): WorldConfig {
       aoRadius: 2,
       aoIntensity: 3,
       aoQuality: 'Low',
+      aoTransparencyAware: false,
       bloomEnabled: true,
       bloomStrength: 0.28,
       bloomRadius: 0.35,
