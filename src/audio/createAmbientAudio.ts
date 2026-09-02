@@ -90,6 +90,27 @@ export function weatherAmbientFactor(weather: WeatherState): WeatherAmbientFacto
   }
 }
 
+/** Owl hoot — random forest-at-night one-shot, not a loop. Owl isn't a fauna
+ *  species (no `AnimalAgent`), so `animalSounds.ts`'s per-entity spontaneous-
+ *  vocalization cooldown doesn't apply; this is the ambient module's own
+ *  equivalent, a single global timer since there's no entity behind it.
+ *  Source/license: public/sounds/README.md. */
+const OWL_SOUND_URL = '/sounds/ambient-owl-at-night.ogg'
+const OWL_SFX_VOLUME = 0.4
+const OWL_COOLDOWN_MIN_SEC = 5 * 60
+const OWL_COOLDOWN_MAX_SEC = 12 * 60
+/** Chance per recheck once the cooldown has elapsed. */
+const OWL_CHANCE = 0.15
+/** Once the cooldown clears without a successful roll, how soon to retry —
+ *  same shape as `animalSounds.ts`'s `VOCALIZE_RECHECK_SEC`. */
+const OWL_RECHECK_SEC = 20
+const OWL_MIN_FOREST_WEIGHT = 0.3
+/** Random offset radius so the hoot reads as "somewhere in the forest"
+ *  rather than pinned to the player — kept inside `playAt`'s `maxDistance`
+ *  (28, see `createWorldAudio.ts`) so it's still audible. */
+const OWL_OFFSET_MIN_M = 8
+const OWL_OFFSET_MAX_M = 22
+
 /** Terrain samplers are cheap but not free (a few `smoothstep`s) — resample
  *  the player's area weights on a throttle instead of every frame; gain
  *  still lerps smoothly every frame via `WorldAudio.update()`. */
@@ -132,6 +153,13 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
   let meadowLoop: AudioLoopHandle | null = null
   let birdsLoop: AudioLoopHandle | null = null
   let sampleAccum = 0
+  // Owl one-shot state — `lastForestWeight` is refreshed only inside the
+  // throttled `sampleAccum` block below (same staleness the area loops
+  // already tolerate); the cooldown itself ticks every frame, same as the
+  // crickets gain. Starts partway through a cooldown draw so a fresh session
+  // doesn't stay silent for a full cooldown before the first possible hoot.
+  let lastForestWeight = 0
+  let owlCooldownSec = Math.random() * OWL_COOLDOWN_MAX_SEC
 
   function update(
     dt: number,
@@ -147,10 +175,31 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     }
     nightLoop?.setTargetGain(cricketsTimeFactor(timeOfDay) * weatherFactor.crickets * NIGHT_MAX_VOLUME)
 
+    owlCooldownSec -= dt
+    if (owlCooldownSec <= 0) {
+      if (nightPhase(timeOfDay) !== null && lastForestWeight >= OWL_MIN_FOREST_WEIGHT) {
+        if (Math.random() < OWL_CHANCE) {
+          const angle = Math.random() * Math.PI * 2
+          const radius = OWL_OFFSET_MIN_M + Math.random() * (OWL_OFFSET_MAX_M - OWL_OFFSET_MIN_M)
+          worldAudio.playAt(
+            OWL_SOUND_URL,
+            { x: playerX + Math.cos(angle) * radius, z: playerZ + Math.sin(angle) * radius },
+            OWL_SFX_VOLUME,
+          )
+          owlCooldownSec = OWL_COOLDOWN_MIN_SEC + Math.random() * (OWL_COOLDOWN_MAX_SEC - OWL_COOLDOWN_MIN_SEC)
+        } else {
+          owlCooldownSec = OWL_RECHECK_SEC
+        }
+      } else {
+        owlCooldownSec = OWL_RECHECK_SEC
+      }
+    }
+
     sampleAccum += dt
     if (sampleAccum < SAMPLE_INTERVAL) return
     sampleAccum = 0
     const w = ambientWeightsAt(playerX, playerZ, samplers)
+    lastForestWeight = w.forest
     const meadow = (1 - w.ocean) * (1 - w.mountain) * (1 - w.forest)
     // Quieter/silent at night — birds are asleep.
     forestLoop.setTargetGain(w.forest * dayFactor * FOREST_MAX_VOLUME)

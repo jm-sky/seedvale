@@ -2,6 +2,7 @@ import type { ItemKind } from '../../items/items'
 import type { TrapCaptureEvent } from '../../world/createPlacedTraps'
 import type { CropGrowthStage, CropId } from '../../world/cropLifecycle'
 import type { FishingBaitState } from '../../world/fishing'
+import { playActionFishingCast } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { ANIMAL_LABELS } from '../../fauna/AnimalAgent'
 import { BAIT_ITEM_PRIORITY } from '../../items/foodFreshness'
@@ -145,6 +146,7 @@ export function createGatheringActions(
     }
     const spotId = fishingSpotId(x, z)
     const attempt = (fishingAttempts.get(spotId) ?? 0) + 1
+    playActionFishingCast(worldAudio.playAt, { x, z })
     busy.start(FISHING_CAST_DURATION_SEC, 'Łowienie ryb…', () => {
       fishingAttempts.set(spotId, attempt)
       const hasBait = isBaitActive(fishingBait.get(spotId), dayNight.elapsedDays)

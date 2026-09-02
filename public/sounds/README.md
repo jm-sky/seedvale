@@ -75,6 +75,7 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | meadowsinging-birds-1.ogg | — | **TODO: source/license not recorded** | wired (plan world-006, `audio/createAmbientAudio.ts`); day/forest+meadow bird bed |
 | meadowsinging-birds-2.ogg | — | **TODO: source/license not recorded** | **not wired**; staged for a future random-variant crossfade (plan world-006 "poza zakresem") |
 | meadowsinging-birds-3.ogg | — | **TODO: source/license not recorded** | **not wired**; staged for a future random-variant crossfade (plan world-006 "poza zakresem") |
+| ambient-owl-at-night.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | Random one-shot (not a loop) — night + forest-weight-gated cooldown timer in `audio/createAmbientAudio.ts` |
 
 ## Items / Inventory
 
@@ -163,6 +164,11 @@ falls back to grass. See `docs/assets/SOUNDS.md` S01.
 | action-fire-extinguish-01.ogg | 42 Campfire, Putting Out Fire, Water from Bottle…Close.wav | Sonniss GDC 2026 — Ivo Vicic Campfire Bonfire FX | S03 extinguish (trimmed ~2.8 s) |
 | bow-draw.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S22 draw; play on a successful ranged `requestDraw()` |
 | bow-release.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | S22 release; play on the frame a shot actually fires |
+| axe-chopping-wood.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | Chop swing variant, random-picked alongside `action-wood-chop-01.ogg` by `playActionChop`; player + NPC |
+| action-branch-breaking.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | `playActionBranchBreak` — delimbing chop step only (mature/old → limbed), player |
+| pine-tree-falling.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | `playActionTreeFall` — the fell transition (limbed → felled); player per-step, NPC once per felling `harvestWorldTreeFully` call |
+| action-building-wood-construction.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | `playActionWellConstruction` — well `roof` ("daszek") work-bout start only |
+| action-casting-fishing-rod.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | `playActionFishingCast` — rod cast start, `startFishing` |
 
 ## License notes (2026-08-12 batch)
 

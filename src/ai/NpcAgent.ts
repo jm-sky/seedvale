@@ -26,7 +26,7 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
-import { playActionWell } from '../audio/actionSounds'
+import { playActionChop, playActionTreeFall, playActionWell } from '../audio/actionSounds'
 import { MELEE_CRITICAL_MULTIPLIER } from '../combat/criticalHit'
 import {
   createMeleeAttackLifecycle,
@@ -2463,6 +2463,8 @@ export class NpcAgent {
             )
           ) {
             playActionWell(this.playAt, this.landmarks.well)
+          } else if (action.kind === 'chop') {
+            playActionChop(this.playAt, action.destination)
           }
         }
         break
@@ -3117,6 +3119,25 @@ export class NpcAgent {
       // chop starting and completing; the chained deposit step must not
       // still mint wood when that happens.
       let harvestedWood = 0
+      // `harvestWorldTreeFully` collapses every remaining chop step (up to a
+      // full felling) into one call — unlike the player's per-step chop,
+      // there's no separate "the tree just fell" transition to hook. Capture
+      // whether the tree was still standing (not yet felled) *before* the
+      // call, so the falling SFX only plays when this action actually caused
+      // that transition.
+      let wasStandingBeforeChop = false
+      if (forest) {
+        const presenceBeforeChop = forest.lifecycle.getPresence(landmark.id)
+        if (presenceBeforeChop) {
+          const stageBeforeChop = forest.lifecycle.resolve(
+            presenceBeforeChop,
+            forest.sampleEnv(landmark.position.x, landmark.position.z),
+            forest.getWorldDays(),
+          ).stage
+          wasStandingBeforeChop = stageBeforeChop === 'mature' || stageBeforeChop === 'old'
+            || stageBeforeChop === 'limbed'
+        }
+      }
       this.startAction({
         kind: 'chop',
         destination: copyVec3(landmark.position),
@@ -3130,7 +3151,10 @@ export class NpcAgent {
             forest.sampleEnv(landmark.position.x, landmark.position.z),
             { landmark },
           )
-          if (result.ok) harvestedWood = WOOD_HARVEST_AMOUNT
+          if (result.ok) {
+            harvestedWood = WOOD_HARVEST_AMOUNT
+            if (wasStandingBeforeChop) playActionTreeFall(this.playAt, landmark.position)
+          }
         },
         next: {
           kind: 'deposit',

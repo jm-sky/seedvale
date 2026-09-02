@@ -1,4 +1,5 @@
 import type { CropId } from '../../world/cropLifecycle'
+import { playActionWellConstruction } from '../../audio/actionSounds'
 import {
   applyRecovery,
   canReceiveRecovery,
@@ -257,7 +258,7 @@ export type PlacementActions = {
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
-  const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook } = ctx
+  const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
 
   const tentAimPoint = (): { x: number, z: number, yaw: number } => {
     const yaw = mouseLook.state.yaw
@@ -475,6 +476,9 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       const creditedHours = sessionHours * fraction
       bundle.playerWells.addWork(id, creditedHours)
       applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', creditedHours)
+    }
+    if (stage === 'roof') {
+      playActionWellConstruction(worldAudio.playAt, { x: well.x, z: well.z })
     }
     busy.start(sessionSec, WELL_WORK_LABEL[stage], () => {
       bundle.playerWells.addWork(id, sessionHours)

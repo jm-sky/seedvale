@@ -1,6 +1,12 @@
 import type { BadgeDef, BadgeManager } from '../../badges/badges'
 import type { ItemKind } from '../../items/items'
-import { playActionChop, playActionDig, playActionMine } from '../../audio/actionSounds'
+import {
+  playActionBranchBreak,
+  playActionChop,
+  playActionDig,
+  playActionMine,
+  playActionTreeFall,
+} from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { villageNearest } from '../../debug/locationQueries'
 import { inventoryFullToastText } from '../../items/Inventory'
@@ -313,6 +319,14 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       if (result.bonusYield) {
         ctx.grantItem(result.bonusYield.kind, result.bonusYield.count)
         message += `, +${result.bonusYield.count} ${ITEM_DEFS[result.bonusYield.kind].label}`
+      }
+      // `target.stage` is the pre-chop stage captured above — identifies
+      // which transition this completed step is, for the two stage-specific
+      // SFX (delimbing vs. the fell itself).
+      if (target.stage === 'mature' || target.stage === 'old') {
+        playActionBranchBreak(worldAudio.playAt, { x, z })
+      } else if (target.stage === 'limbed') {
+        playActionTreeFall(worldAudio.playAt, { x, z })
       }
       playInventoryPickUp(worldAudio.playOnce)
       toast.show(message, 'pickup')

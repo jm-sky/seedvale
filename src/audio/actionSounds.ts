@@ -9,7 +9,14 @@ export const ACTION_DIG_SOUND_URLS = [
   '/sounds/action-dig-04.ogg',
 ] as const
 
-export const ACTION_CHOP_SOUND_URL = '/sounds/action-wood-chop-01.ogg'
+export const ACTION_CHOP_SOUND_URLS = [
+  '/sounds/action-wood-chop-01.ogg',
+  '/sounds/action-wood-chop-02.ogg',
+] as const
+export const ACTION_BRANCH_BREAK_SOUND_URL = '/sounds/action-branch-breaking.ogg'
+export const ACTION_TREE_FALL_SOUND_URL = '/sounds/pine-tree-falling.ogg'
+export const ACTION_WELL_CONSTRUCTION_SOUND_URL = '/sounds/action-building-wood-construction.ogg'
+export const ACTION_FISHING_CAST_SOUND_URL = '/sounds/action-casting-fishing-rod.ogg'
 export const ACTION_MELEE_HIT_SOUND_URL = '/sounds/action-melee-hit-01.ogg'
 export const ACTION_MELEE_KILL_SOUND_URL = '/sounds/action-melee-kill-01.ogg'
 export const ACTION_WELL_SOUND_URL = '/sounds/action-well-01.ogg'
@@ -18,6 +25,10 @@ export const ACTION_BOW_RELEASE_SOUND_URL = '/sounds/bow-release.ogg'
 
 const ACTION_DIG_SFX_VOLUME = 0.45
 const ACTION_CHOP_SFX_VOLUME = 0.5
+const ACTION_BRANCH_BREAK_SFX_VOLUME = 0.45
+const ACTION_TREE_FALL_SFX_VOLUME = 0.55
+const ACTION_WELL_CONSTRUCTION_SFX_VOLUME = 0.5
+const ACTION_FISHING_CAST_SFX_VOLUME = 0.45
 const ACTION_MELEE_HIT_SFX_VOLUME = 0.5
 const ACTION_MELEE_KILL_SFX_VOLUME = 0.55
 /** Quiet — the clip is a deep well echo and reads as “inside” if loud. */
@@ -33,9 +44,32 @@ export function playActionDig(playOnce: PlayOnce): void {
   if (url) playOnce(url, ACTION_DIG_SFX_VOLUME)
 }
 
-/** Axe wood-chop one-shot at the tree — play when the chop channel starts (plan 057). */
+/** Axe wood-chop one-shot at the tree — play when the chop channel starts
+ *  (plan 057); random pick across variants, same shape as `playActionDig`. */
 export function playActionChop(playAt: PlayAt, position: WorldSoundPosition): void {
-  playAt(ACTION_CHOP_SOUND_URL, position, ACTION_CHOP_SFX_VOLUME)
+  const url = ACTION_CHOP_SOUND_URLS[Math.floor(Math.random() * ACTION_CHOP_SOUND_URLS.length)]
+  if (url) playAt(url, position, ACTION_CHOP_SFX_VOLUME)
+}
+
+/** Branch snapping off — the delimbing chop step only (mature/old → limbed,
+ *  the "Oczyszczanie…" busy label), not every branch-yielding chop. */
+export function playActionBranchBreak(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_BRANCH_BREAK_SOUND_URL, position, ACTION_BRANCH_BREAK_SFX_VOLUME)
+}
+
+/** Tree crashing down — the fell transition (limbed → felled) only. */
+export function playActionTreeFall(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_TREE_FALL_SOUND_URL, position, ACTION_TREE_FALL_SFX_VOLUME)
+}
+
+/** Well construction (roof / "daszek") work-bout one-shot. */
+export function playActionWellConstruction(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_WELL_CONSTRUCTION_SOUND_URL, position, ACTION_WELL_CONSTRUCTION_SFX_VOLUME)
+}
+
+/** Fishing-rod cast — play when the cast channel starts. */
+export function playActionFishingCast(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_FISHING_CAST_SOUND_URL, position, ACTION_FISHING_CAST_SFX_VOLUME)
 }
 
 /** Pickaxe strike — reuses dig clips until a dedicated mine SFX exists (plan 090 / S16). */

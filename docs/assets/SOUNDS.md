@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-08-29
+**Last updated:** 2026-09-02
 
 ## How to use
 
@@ -30,10 +30,10 @@ If the feature needs no new sound, do nothing to this file.
 |----------|-------|-------|
 | NPC | hmm / thank-you / greeting / farewell / confirmation (M/F, per-actor voice) | Dialogue reactions + Super Dialogue Audio Pack v1 (plan 116) — greeting on dialogue open, farewell on close, confirmation on offer accept, extra hmm/thank-you variety |
 | Animals | chicken, cow, wolf, horse, sheep | `[E]` on animal (donkey still silent, no clip). Cow/sheep/chicken also: spontaneous per-animal ambient vocalization with cooldown + concurrent-play cap (plan settlements-npcs-004 §1), milking completion (§2), chicken egg-laid (§2) — all reuse this same `[E]` clip/volume via `animalSounds.ts`'s `playSpontaneousAnimalSound`/`playAnimalSound` |
-| Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006) |
+| Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop, owl one-shot | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006); owl is a random one-shot (not a loop) — cooldown-gated on night + forest weight in `audio/createAmbientAudio.ts` |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
-| Actions | dig ×4, wood-chop ×1, melee hit/kill, well ×1, fire ignite/extinguish | Shovel / axe / melee / well / campfire |
+| Actions | dig ×4, wood-chop ×2 (variant pool), branch-break ×1, tree-fall ×1, melee hit/kill, well ×1, well-construction ×1, fishing-cast ×1, fire ignite/extinguish | Shovel / axe (delimb + fell + buck steps, player + NPC) / melee / well draw / well roof construction / fishing rod cast / campfire |
 | Player move | footsteps × terrain sets (grass/sand/stone/road; dirt aliases sand), jump cloth, land = louder surface footstep, water-lap, door open/close/latch/creak | Walk/sprint/land terrain-classified (Anton Z default, plans 121/158); jump stand-in, enter water, house threshold |
 
 ## Backlog
