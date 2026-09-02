@@ -1,7 +1,7 @@
 # Plan: NPC weather reaction & shelter
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~040~~
 **Domain:** `npc`

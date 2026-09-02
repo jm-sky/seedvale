@@ -42,6 +42,10 @@ describe('classifyPendingActivity / promoteChainKind', () => {
     expect(classifyPendingActivity({ kind: 'social' }, 'idle')).toBe('idle')
   })
 
+  it('reports idle for the weather seekShelter reaction (plan npc-012)', () => {
+    expect(classifyPendingActivity({ kind: 'shelter' }, 'idle')).toBe('idle')
+  })
+
   it('reports idle when there is no pending action', () => {
     expect(classifyPendingActivity(undefined, 'idle')).toBe('idle')
   })

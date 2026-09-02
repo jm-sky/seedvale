@@ -16,6 +16,7 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { WeatherState } from '../world/weather'
 import type { TerrainSamplers } from './settlementTerrain'
 import { disposeObject3D } from '../assets/loadGltf'
 import { createEconomyRegistry } from '../economy'
@@ -100,6 +101,10 @@ export type SettlementsManager = {
     /** Forwarded straight to each loaded `Settlement.update` (plan
      *  settlements-npcs-004 §1/§2). */
     onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
+    /** This frame's world weather (plan npc-012) — forwarded straight to
+     *  each loaded `Settlement.update`/`NpcAgent.update`. `undefined` for
+     *  any caller/test that doesn't pass one. */
+    weather?: WeatherState,
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -513,7 +518,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
@@ -531,6 +536,7 @@ export async function createSettlementsManager(
           dropLivestockProduct,
           nowDays,
           onAnimalVocalize,
+          weather,
         )
       }
       for (const instances of midpoints.values()) {

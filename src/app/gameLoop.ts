@@ -1872,6 +1872,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             (kind, x, z, onCollected) => bundle.droppedItems.drop(kind, x, z, undefined, onCollected),
             dayNight.elapsedDays,
             (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
+            climate.weather,
           )
         })
         withCategory(monitor, 'FAUNA', () => {

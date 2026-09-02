@@ -20,6 +20,7 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { WeatherState } from '../world/weather'
 import type { HelperAssignment } from './helperAssignment'
 import {
   disposeObject3D,
@@ -225,6 +226,11 @@ import {
   type ScheduleTemplate,
 } from './schedule'
 import { conversationAttemptCooldownSec } from './socialBehaviour'
+import {
+  type NpcDecisionTarget,
+  WEATHER_SEVERE_SHELTER_THRESHOLD,
+  weatherShelterPressure,
+} from './weatherPressure'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 function randRange([min, max]: [number, number]): number {
@@ -352,6 +358,11 @@ export type ActionId =
   | 'mine'
   | 'plant'
   | 'sharpen'
+  /** Weather-pressure reaction (plan npc-012) — a normal `goTo`/`execute`
+   *  step to the NPC's own `home` Place, no world-mutating effect on
+   *  completion. Reads as `idle` to `classifyPendingActivity`, same as
+   *  `social` — sheltering is a pressure reaction, not a Need. */
+  | 'shelter'
   | 'social'
   | 'work'
 
@@ -503,6 +514,10 @@ export function classifyPendingActivity(
   // `talking` kind (implementation notes §11), not a new one.
   if (chainKind === 'conversation') return 'talking'
   if (pending.kind === 'social' && activeNeed === 'idle') return 'idle'
+  // Weather shelter reaction (plan npc-012) — never Need-driven (activeNeed
+  // is 'idle' whenever `seekShelter` wins arbitration), same "idle" reading
+  // as walking to/settling at the campfire above.
+  if (pending.kind === 'shelter' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
 
@@ -766,6 +781,12 @@ const IDLE_WANDER_SPREAD = 4
  *  same order of magnitude as the resource-action waits above (0.8-1.6). */
 const WORK_DURATION_RANGE: [number, number] = [2, 4]
 
+/** How long (seconds, before `waitMultiplier`) `beginSeekShelter`'s first
+ *  `shelter` action occupies the NPC once it reaches home — same "settle in"
+ *  order of magnitude as `social`'s 1.0 (`beginIdle`), not a real interaction
+ *  duration. */
+const SHELTER_SETTLE_DURATION_SEC = 1.2
+
 /** stamina/sec while walking toward a task (`goTo`) — deliberately low so
  *  ordinary errands (house → well → workplace → storage) don't meaningfully
  *  dent stamina; only sustained heavy work should. */
@@ -917,6 +938,20 @@ export class NpcAgent {
    *  activity until the effective schedule moves on — avoids restarting the
    *  same meal every `choose` cycle. */
   private settledIdleActivity: ScheduleActivity | null = null
+  /** This frame's `WeatherState`, forwarded through `SettlementsManager` →
+   *  `Settlement.update()` → here (plan npc-012) — `null` for any caller/test
+   *  that doesn't pass one, in which case weather never contributes pressure.
+   *  Shared by every NPC in the same settlement for the frame; never
+   *  recomputed here (`computeWeather()` stays owned by `gameLoop.ts`). */
+  private currentWeather: WeatherState | null = null
+  /** Set once this `seekShelter` reaction has actually arrived home and
+   *  settled (plan npc-012) — mirrors `settledIdleActivity`'s "don't restart
+   *  an already-reached destination every `choose` cycle" idiom, kept as its
+   *  own field rather than folded into `settledIdleActivity` (typed
+   *  `ScheduleActivity`) since sheltering is a weather-pressure reaction, not
+   *  a schedule activity (plan §7 — no `shelter` `ScheduleActivity`). Reset
+   *  whenever `choose()` picks anything other than `seekShelter`. */
+  private shelterSettled = false
   /** Plan 151 — the other NPC id this one is currently reserved with for a
    *  `conversation`, or `null`. Set by `beginConversation()`, cleared on
    *  natural completion or early release; `socialCandidate()` treats a
@@ -2166,10 +2201,17 @@ export class NpcAgent {
      *  (see `AnimalAgent.isThreateningHuman()`), never a per-NPC world scan.
      *  Defaults to none so existing callers/tests keep prior behaviour. */
     nearbyAnimalThreats: readonly ThreateningAnimalCandidate[] = [],
+    /** This frame's world weather (plan npc-012), forwarded through
+     *  `SettlementsManager`/`Settlement.update` from `gameLoop.ts`'s own
+     *  `climate.weather` — never recomputed per NPC. `undefined` for any
+     *  caller/test that doesn't pass one; weather then contributes no
+     *  pressure, same as an isolated fallback with no economy/household. */
+    weather?: WeatherState,
   ): void {
     this.simClock += dt
     if (this.frozen) return
     if (this.health.dead) return
+    this.currentWeather = weather ?? null
     const prevPhase = this.phase
     tickNeeds(this.needs, dt, dayLengthSec, {
       hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
@@ -2295,19 +2337,38 @@ export class NpcAgent {
         // remove one. Kept out of `Needs.ts` so base pressure semantics stay
         // reusable without a personality input (see the ai-002 implementation notes).
         const candidates = scoreNeedCandidates(pressures, { personality: this.personality, role: this.role })
-        const need = pickActionKind<NeedId>(
-          candidates.map((c) => ({ kind: c.target, score: c.final })),
+        // Weather pressure (plan npc-012) — a second, independent pressure
+        // producer over `this.currentWeather`, competing in the same
+        // arbitration as a `seekShelter` decision target instead of a fake
+        // `NeedId` (see `weatherPressure.ts`'s `NpcDecisionTarget`).
+        const weatherPressure = this.currentWeather ? weatherShelterPressure(this.currentWeather) : 0
+        const decision = pickActionKind<NpcDecisionTarget>(
+          [
+            ...candidates.map((c) => ({ kind: c.target, score: c.final })),
+            { kind: 'seekShelter', score: weatherPressure },
+          ],
           'idle',
         )
         this.lastPressures = pressures
         this.lastDecisionCandidates = candidates
-        this.activeNeed = need
         // Persistent Plan (plan ai-004) — checked against the same fresh
         // pressures the need pick just used, before deciding what's next:
         // a Plan's underlying need dropping out of pressure (any actor's
         // doing, not just this NPC's own actions) means its Goal is
         // satisfied, regardless of which strategy/action count achieved it.
         this.reevaluatePlanCompletion(pressures)
+        if (decision !== 'seekShelter') this.shelterSettled = false
+        if (decision === 'seekShelter') {
+          // Weather is a pressure source, not a Need (plan npc-012 §1) —
+          // never sets `activeNeed`, so the existing Plan/Strategy/critical-
+          // interrupt machinery stays completely untouched by sheltering.
+          this.activeNeed = 'idle'
+          this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
+          this.beginSeekShelter()
+          break
+        }
+        const need = decision
+        this.activeNeed = need
         this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures, candidates })
         const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
         if (need !== 'idle') {
@@ -4006,6 +4067,37 @@ export class NpcAgent {
   }
 
   /**
+   * Weather-pressure `seekShelter` reaction (plan npc-012) — the generic
+   * strategy the plan asks for, resolved to the only shelter kind this
+   * version implements: the NPC's own `home` Place, via the existing
+   * `goTo`/`execute` action pipeline (`startAction`), same rim-approach
+   * handling `beginGoSleep`/`prepareSleepDestination` already use for the
+   * house collider. No world-mutating effect on completion — sheltering is a
+   * reaction to a transient world condition, not a resource action.
+   *
+   * Mirrors `beginIdle`'s `eat`/`social` "settle in, then stop restarting the
+   * action every `choose` cycle" idiom via `shelterSettled` instead of
+   * `settledIdleActivity` (kept separate — see that field's own doc comment)
+   * so an NPC that has already reached home mills around near it
+   * (`wanderNear`) instead of replanning a zero-distance `goTo` every tick
+   * while the weather pressure stays active.
+   *
+   * @domain npc
+   */
+  private beginSeekShelter(): void {
+    if (this.shelterSettled) {
+      this.wanderNear(this.home)
+      return
+    }
+    this.startAction({
+      kind: 'shelter',
+      destination: copyVec3(this.home),
+      durationSec: SHELTER_SETTLE_DURATION_SEC * this.waitMultiplier,
+      onComplete: () => { this.shelterSettled = true },
+    })
+  }
+
+  /**
    * Plan 151 — the one entry point `advanceSocialPairing` (`socialBehaviour
    * .ts`) uses to discover this NPC as a conversation candidate. Non-null
    * only when this NPC is actually settled at its own Social Place (not
@@ -4347,13 +4439,15 @@ export class NpcAgent {
   }
 
   /** Throttled check for a genuinely urgent reason to abandon a schedule-
-   *  driven action already in flight — vigor collapse or a critical need.
-   *  Mirrors `choose()`'s own precedence: vigor collapse outranks needs
-   *  unconditionally; a critical need only outranks a schedule-driven
-   *  action, so it's gated on `activeNeed === 'idle'` (an already need-
-   *  driven action is left alone — no thrashing between two needs).
-   *  Ordinary schedule/time changes still do not interrupt (plan 060) —
-   *  this only ever fires on `pickNeed`'s stricter `critical` thresholds. */
+   *  driven action already in flight — vigor collapse, a critical need, or
+   *  (plan npc-012) severe weather. Mirrors `choose()`'s own precedence:
+   *  vigor collapse outranks needs unconditionally; a critical need and
+   *  severe weather only outrank a schedule-driven action, so both are gated
+   *  on `activeNeed === 'idle'` (an already need-driven action is left
+   *  alone — no thrashing between two needs, and weather never pre-empts a
+   *  genuinely active need either). Ordinary schedule/time changes still do
+   *  not interrupt (plan 060) — this only ever fires on `pickNeed`'s
+   *  stricter `critical` thresholds or `WEATHER_SEVERE_SHELTER_THRESHOLD`. */
   private tickCriticalInterrupt(dt: number): void {
     this.criticalInterruptCooldown -= dt
     if (this.criticalInterruptCooldown > 0) return
@@ -4364,7 +4458,12 @@ export class NpcAgent {
     }
     if (this.activeNeed !== 'idle') return
     const need = pickNeed(this.needs, { ...this.needPickOptions(), critical: true })
-    if (need !== 'idle') this.interruptCurrentAction()
+    if (need !== 'idle') {
+      this.interruptCurrentAction()
+      return
+    }
+    const weatherPressure = this.currentWeather ? weatherShelterPressure(this.currentWeather) : 0
+    if (weatherPressure >= WEATHER_SEVERE_SHELTER_THRESHOLD) this.interruptCurrentAction()
   }
 
   /** Cancels the in-flight `pendingAction` for a genuinely urgent reason

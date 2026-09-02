@@ -19,6 +19,7 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { WeatherState } from '../world/weather'
 import type { VillageSize } from './families'
 import type { NpcStateRegistry } from './npcState'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
@@ -204,6 +205,11 @@ export type Settlement = {
      *  world-triggered vocalizations share one throttled call site instead
      *  of duplicating triggers between simulation events and audio. */
     onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
+    /** This frame's world weather (plan npc-012) — forwarded straight to
+     *  each `NpcAgent.update()` (`gameLoop.ts`'s own `climate.weather`,
+     *  never recomputed here). `undefined` for any caller/test that doesn't
+     *  pass one; weather then contributes no shelter pressure. */
+    weather?: WeatherState,
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -733,7 +739,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather) {
       currentNowDays = nowDays
       const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
       const pushX = new Array<number>(agents.length).fill(0)
@@ -768,7 +774,7 @@ export async function createSettlement(
       }
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec, nearbyAnimalThreats)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather)
         if (pushX[i] !== 0 || pushZ[i] !== 0) agent.applySeparation(pushX[i]!, pushZ[i]!)
       }
       // Social Place conversation pairing (plan 151) — reuses this

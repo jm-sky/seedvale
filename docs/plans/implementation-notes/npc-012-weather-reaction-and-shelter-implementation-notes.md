@@ -2,7 +2,7 @@
 
 **Plan:** `npc-012-weather-reaction-and-shelter.md`
 **Reviewed:** 2026-09-01
-**Status:** planned 📋
+**Status:** implemented — verification needed 🔍
 
 ## Recon verdict
 
