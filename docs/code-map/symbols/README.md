@@ -12,6 +12,7 @@ Generated symbol maps by source domain.
 - [`debug`](./debug.md)
 - [`economy`](./economy.md)
 - [`fauna`](./fauna.md)
+- [`house-browser`](./house-browser.md)
 - [`input`](./input.md)
 - [`interaction`](./interaction.md)
 - [`items`](./items.md)

@@ -109,6 +109,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `assets/assetAnchorData.ts`
 - `assets/assetAnchors.ts`
+- `assets/assetUrlUtils.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `items/heldToolVisual.ts`
@@ -124,13 +125,19 @@ Generated from TypeScript imports.
 - `assets/assetIndex.test.ts`
 - `assets/constructionCatalog.test.ts`
 - `assets/constructionCatalog.ts`
-- `assets/houseDefinitionExample.ts`
 - `tools/assetBrowser/state.ts`
 - `tools/assetBrowser/viewer/createAssetSlot.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.test.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `tools/assetBrowser/viewer/reportFromScene.ts`
+
+## `assets/assetUrlUtils.ts`
+
+**Imported by**
+
+- `assets/assetIndex.ts`
+- `assets/houseDefinitionExampleConfig.ts`
 
 ## `assets/constructionCatalog.test.ts`
 
@@ -149,7 +156,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `assets/constructionCatalog.test.ts`
-- `debug/createHouseTestScene.ts`
+- `house-browser/houseBrowserScene.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/props.ts`
@@ -159,16 +166,26 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/assetAnchorData.ts`
-- `assets/assetIndex.ts`
+- `assets/houseDefinitionExampleConfig.ts`
 - `settlement/families.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
 
 - `assets/constructionCatalog.test.ts`
-- `debug/createHouseTestScene.ts`
-- `debug/houseTestDefinition.test.ts`
-- `debug/houseTestDefinition.ts`
+- `house-browser/houseBrowserScene.ts`
+- `settlement/houseBuilder.test.ts`
+- `settlement/props.ts`
+
+## `assets/houseDefinitionExampleConfig.ts`
+
+**Imports**
+
+- `assets/assetUrlUtils.ts`
+
+**Imported by**
+
+- `assets/houseDefinitionExample.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/props.ts`
@@ -225,6 +242,7 @@ Generated from TypeScript imports.
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/palisadeProp.ts`
+- `world/sleepingUtilityProp.ts`
 - `world/trapProp.ts`
 - `world/treeVisuals.ts`
 

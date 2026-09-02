@@ -9,9 +9,9 @@ Generated from exported TypeScript symbols.
 
 ## `perf/benchmark.ts`
 
-- `BenchmarkHost` — type — line 41
-- `BenchmarkRunner` — type — line 29
-- `createBenchmarkRunner` — function — line 116
+- `BenchmarkHost` — type — line 42
+- `BenchmarkRunner` — type — line 30
+- `createBenchmarkRunner` — function — line 117
 
 ## `perf/benchmarkFixture.ts`
 
@@ -39,23 +39,31 @@ Generated from exported TypeScript symbols.
 - `parsePointLightBudgetFlag` — function — line 50
 - `pointLightBudgetFromUrl` — function — line 63
 
+## `perf/gpuTimer.ts`
+
+- `createGpuTimer` — function — line 51
+- `getGpuTimer` — function — line 131
+- `GpuTimer` — type — line 11
+- `setActiveGpuTimer` — function — line 127
+
 ## `perf/isolationProbe.ts`
 
-- `IsolationHost` — type — line 14
-- `runIsolationProbes` — function — line 47
+- `formatIsolationReport` — function — line 205
+- `IsolationHost` — type — line 23
+- `runIsolationProbes` — function — line 95
 
 ## `perf/log.ts`
 
-- `createPerfLog` — function — line 28
-- `PerfLog` — type — line 6
+- `createPerfLog` — function — line 29
+- `PerfLog` — type — line 7
 
 ## `perf/monitor.ts`
 
-- `createPerfMonitor` — function — line 105
+- `createPerfMonitor` — function — line 110
 - `FrameEndInput` — type — line 30
-- `PerfMonitor` — type — line 59
+- `PerfMonitor` — type — line 63
 - `SessionTotals` — type — line 41
-- `withCategory` — function — line 370
+- `withCategory` — function — line 376
 
 ## `perf/percentile.ts`
 
@@ -64,21 +72,24 @@ Generated from exported TypeScript symbols.
 
 ## `perf/programCensus.ts`
 
-- `createProgramCensus` — function — line 215
-- `getProgramCensus` — function — line 416
-- `ProgramCensus` — type — line 140
+- `createProgramCensus` — function — line 372
+- `formatProgramAttributionReport` — function — line 667
+- `formatProgramCensusReport` — function — line 598
+- `formatProgramCompileCostReport` — function — line 844
+- `getProgramCensus` — function — line 904
+- `ProgramCensus` — type — line 174
 - `ProgramCensusAttachEvent` — type — line 16
 - `ProgramCensusAttachKind` — type — line 13
-- `ProgramCensusEvent` — type — line 96
-- `ProgramCensusFamilyBreakdown` — type — line 103
+- `ProgramCensusEvent` — type — line 130
+- `ProgramCensusFamilyBreakdown` — type — line 137
 - `ProgramCensusFirstUseEvent` — type — line 39
-- `ProgramCensusFrameSnapshot` — type — line 78
-- `ProgramCensusMaterialSnapshot` — type — line 86
+- `ProgramCensusFrameSnapshot` — type — line 112
+- `ProgramCensusMaterialSnapshot` — type — line 120
 - `ProgramCensusStageEvent` — type — line 29
 - `ProgramCensusStageKind` — type — line 14
-- `ProgramCensusSummary` — type — line 112
-- `setActiveProgramCensus` — function — line 412
-- `withProgramCensusStage` — function — line 397
+- `ProgramCensusSummary` — type — line 146
+- `setActiveProgramCensus` — function — line 900
+- `withProgramCensusStage` — function — line 885
 
 ## `perf/report.ts`
 
@@ -101,7 +112,7 @@ Generated from exported TypeScript symbols.
 
 ## `perf/types.ts`
 
-- `BudgetKind` — type — line 133
+- `BudgetKind` — type — line 147
 - `HitchEvent` — type — line 55
 - `HitchReportRow` — type — line 97
 - `IsolationProbeRow` — type — line 105
@@ -109,15 +120,15 @@ Generated from exported TypeScript symbols.
 - `PERF_CATEGORY_COUNT` — const — line 24
 - `PERF_CATEGORY_INDEX` — const — line 26
 - `PERF_SEVERITY_RANK` — const — line 43
-- `PerfAttribution` — type — line 163
+- `PerfAttribution` — type — line 177
 - `PerfCategory` — type — line 22
 - `PerfContext` — type — line 72
-- `PerfDetection` — type — line 141
+- `PerfDetection` — type — line 155
 - `PerfFilter` — type — line 50
-- `PerfLiveStats` — type — line 112
-- `PerfLogEvent` — type — line 150
-- `PerfReportJson` — type — line 169
+- `PerfLiveStats` — type — line 126
+- `PerfLogEvent` — type — line 164
+- `PerfReportJson` — type — line 183
 - `PerfSeverity` — type — line 41
-- `PerfSuspect` — type — line 135
+- `PerfSuspect` — type — line 149
 - `ScenarioAnchor` — type — line 62
 - `ScenarioRoute` — type — line 64

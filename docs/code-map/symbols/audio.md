@@ -4,21 +4,29 @@ Generated from exported TypeScript symbols.
 
 ## `audio/actionSounds.ts`
 
-- `ACTION_BOW_DRAW_SOUND_URL` — const — line 16
-- `ACTION_BOW_RELEASE_SOUND_URL` — const — line 17
-- `ACTION_CHOP_SOUND_URL` — const — line 12
+- `ACTION_BOW_DRAW_SOUND_URL` — const — line 23
+- `ACTION_BOW_RELEASE_SOUND_URL` — const — line 24
+- `ACTION_BRANCH_BREAK_SOUND_URL` — const — line 16
+- `ACTION_CHOP_SOUND_URLS` — const — line 12
 - `ACTION_DIG_SOUND_URLS` — const — line 5
-- `ACTION_MELEE_HIT_SOUND_URL` — const — line 13
-- `ACTION_MELEE_KILL_SOUND_URL` — const — line 14
-- `ACTION_WELL_SOUND_URL` — const — line 15
-- `playActionBowDraw` — function — line 65
-- `playActionBowRelease` — function — line 70
-- `playActionChop` — function — line 37
-- `playActionDig` — function — line 31
-- `playActionMeleeHit` — function — line 48
-- `playActionMeleeKill` — function — line 53
-- `playActionMine` — function — line 42
-- `playActionWell` — function — line 58
+- `ACTION_FISHING_CAST_SOUND_URL` — const — line 19
+- `ACTION_MELEE_HIT_SOUND_URL` — const — line 20
+- `ACTION_MELEE_KILL_SOUND_URL` — const — line 21
+- `ACTION_TREE_FALL_SOUND_URL` — const — line 17
+- `ACTION_WELL_CONSTRUCTION_SOUND_URL` — const — line 18
+- `ACTION_WELL_SOUND_URL` — const — line 22
+- `playActionBowDraw` — function — line 99
+- `playActionBowRelease` — function — line 104
+- `playActionBranchBreak` — function — line 56
+- `playActionChop` — function — line 49
+- `playActionDig` — function — line 42
+- `playActionFishingCast` — function — line 71
+- `playActionMeleeHit` — function — line 82
+- `playActionMeleeKill` — function — line 87
+- `playActionMine` — function — line 76
+- `playActionTreeFall` — function — line 61
+- `playActionWell` — function — line 92
+- `playActionWellConstruction` — function — line 66
 
 ## `audio/ambientWeights.ts`
 
@@ -49,8 +57,8 @@ Generated from exported TypeScript symbols.
 
 ## `audio/createAmbientAudio.ts`
 
-- `AmbientAudio` — type — line 103
-- `createAmbientAudio` — function — line 122
+- `AmbientAudio` — type — line 124
+- `createAmbientAudio` — function — line 143
 - `cricketsTimeFactor` — function — line 60
 - `weatherAmbientFactor` — function — line 85
 - `WeatherAmbientFactor` — type — line 76

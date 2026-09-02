@@ -22,6 +22,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/groundActions.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
@@ -73,6 +74,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
@@ -195,6 +197,7 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.test.ts`
 - `world/palisade.test.ts`
 - `world/palisade.ts`
+- `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 
 ## `items/container.test.ts`
@@ -465,6 +468,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLoadout.ts`
+- `app/actions/groundActions.test.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
@@ -520,6 +524,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
@@ -661,6 +666,7 @@ Generated from TypeScript imports.
 - `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 
 ## `items/tentProp.test.ts`

@@ -25,6 +25,8 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `ai/npcPlan.ts`
 - `ai/npcVigor.test.ts`
+- `ai/weatherPressure.test.ts`
+- `ai/weatherPressure.ts`
 - `debug/npcInspector.ts`
 - `debug/npcTrace.ts`
 - `fauna/AnimalLife.ts`
@@ -53,6 +55,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `ai/schedule.ts`
 - `ai/socialBehaviour.ts`
+- `ai/weatherPressure.ts`
 - `assets/loadGltf.ts`
 - `audio/actionSounds.ts`
 - `audio/createWorldAudio.ts`
@@ -92,6 +95,7 @@ Generated from TypeScript imports.
 - `terrain/slopeConstraint.ts`
 - `ui/agentStatusLabel.ts`
 - `ui/labelDistance.ts`
+- `world/bloodTraces.ts`
 - `world/collision.ts`
 - `world/cropLifecycle.ts`
 - `world/fishing.ts`
@@ -104,6 +108,7 @@ Generated from TypeScript imports.
 - `world/timeConversion.ts`
 - `world/treeHarvest.ts`
 - `world/waterMirror.ts`
+- `world/weather.ts`
 
 **Imported by**
 
@@ -550,3 +555,24 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/socialBehaviour.test.ts`
 - `settlement/createSettlement.ts`
+
+## `ai/weatherPressure.test.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/weatherPressure.ts`
+- `simulation/index.ts`
+- `world/weather.ts`
+
+## `ai/weatherPressure.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `world/weather.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/weatherPressure.test.ts`

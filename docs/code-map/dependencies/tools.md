@@ -196,3 +196,5 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `tools/assetBrowser/viewer/createViewer.ts`
+
+## `tools/toolRegistry.ts`

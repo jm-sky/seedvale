@@ -72,8 +72,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createQuickActions.ts`
 
-- `createQuickActions` — function — line 114
-- `QuickActions` — type — line 105
+- `createQuickActions` — function — line 121
+- `QuickActions` — type — line 112
 - `QuickActionsCropSeeds` — type — line 13
 - `QuickActionsHandlers` — type — line 24
 - `QuickActionsTraps` — type — line 9

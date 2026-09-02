@@ -62,6 +62,29 @@ Generated from TypeScript imports.
 - `world/beehives.test.ts`
 - `world/createBeehives.ts`
 
+## `world/bloodTraces.test.ts`
+
+**Imports**
+
+- `world/bloodTraces.ts`
+
+## `world/bloodTraces.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `terrain/bloodOverlay.ts`
+- `world/dayNight.ts`
+- `world/weather.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/worldBundle.ts`
+- `fauna/AnimalAgent.ts`
+- `player/playerDamage.ts`
+- `world/bloodTraces.test.ts`
+
 ## `world/clouds.test.ts`
 
 **Imports**
@@ -97,7 +120,10 @@ Generated from TypeScript imports.
 - `ai/npcColliderRim.test.ts`
 - `ai/npcColliderRim.ts`
 - `debug/colliderDebugView.ts`
+- `debug/colliderInstancedVisual.ts`
 - `fauna/AnimalAgent.ts`
+- `house-browser/colliderPreview.test.ts`
+- `house-browser/colliderPreview.ts`
 - `navigation/navigation.test.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.ts`
@@ -317,6 +343,19 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/viewer/createViewerScene.ts`
 - `world/dayNight.ts`
 
+## `world/createSleepingUtilities.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `world/sleepingUtilities.ts`
+- `world/sleepingUtilityProp.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+
 ## `world/createStandingTorches.ts`
 
 **Imports**
@@ -431,6 +470,7 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/viewer/createViewerScene.ts`
 - `ui-vue/store.ts`
 - `ui/createDebugGui.ts`
+- `world/bloodTraces.ts`
 - `world/dayNight.test.ts`
 - `world/timeSkip.ts`
 - `world/worldContext.ts`
@@ -944,6 +984,40 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 
+## `world/sleepingUtilities.test.ts`
+
+**Imports**
+
+- `world/sleepingUtilities.ts`
+
+## `world/sleepingUtilities.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `items/tentPlacement.ts`
+- `world/weather.ts`
+
+**Imported by**
+
+- `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`
+- `world/createSleepingUtilities.ts`
+- `world/sleepingUtilities.test.ts`
+
+## `world/sleepingUtilityProp.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+
+**Imported by**
+
+- `world/createSleepingUtilities.ts`
+
 ## `world/standingTorch.ts`
 
 **Imports**
@@ -1037,6 +1111,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/busyChannelDurations.test.ts`
 
@@ -1057,6 +1132,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `app/interactables.ts`
@@ -1134,16 +1210,23 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/weatherPressure.test.ts`
+- `ai/weatherPressure.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `audio/createAmbientAudio.ts`
 - `audio/weatherSounds.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
 - `ui/createDebugGui.ts`
 - `world/animalTraps.test.ts`
 - `world/animalTraps.ts`
+- `world/bloodTraces.ts`
 - `world/clouds.test.ts`
 - `world/clouds.ts`
 - `world/playerGarden.ts`
+- `world/sleepingUtilities.ts`
 - `world/weather.test.ts`
 - `world/weatherParticles.ts`
 - `world/weatherVisuals.test.ts`

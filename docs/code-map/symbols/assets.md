@@ -65,26 +65,29 @@ Generated from exported TypeScript symbols.
 
 ## `assets/assetIndex.ts`
 
-- `assetEntryMatchesQuery` — function — line 164
-- `assetIndexById` — function — line 462
-- `AssetIndexEntry` — type — line 63
-- `AssetIndexGroup` — type — line 49
-- `AssetIndexStatus` — type — line 61
-- `AssetPrepare` — type — line 44
-- `basenameFromUrl` — function — line 106
-- `buildAssetIndex` — function — line 331
-- `customUrlEntry` — function — line 186
-- `entryFromUrl` — function — line 476
-- `filterAssetIndex` — function — line 177
-- `findAssetEntry` — function — line 468
-- `formatAssetLabel` — function — line 159
-- `groupFromModelUrl` — function — line 133
-- `kindFromBasename` — function — line 120
-- `makeParkedEntry` — function — line 215
-- `mergeParkedManifest` — function — line 233
-- `packFromUrl` — function — line 112
-- `parkedIdFromUrl` — function — line 128
-- `resolveLoadEntry` — function — line 204
+- `assetEntryMatchesQuery` — function — line 162
+- `assetIndexById` — function — line 460
+- `AssetIndexEntry` — type — line 66
+- `AssetIndexGroup` — type — line 52
+- `AssetIndexStatus` — type — line 64
+- `AssetPrepare` — type — line 47
+- `basenameFromUrl` — function — line 109
+- `buildAssetIndex` — function — line 329
+- `customUrlEntry` — function — line 184
+- `entryFromUrl` — function — line 474
+- `filterAssetIndex` — function — line 175
+- `findAssetEntry` — function — line 466
+- `formatAssetLabel` — function — line 157
+- `groupFromModelUrl` — function — line 131
+- `kindFromBasename` — function — line 123
+- `makeParkedEntry` — function — line 213
+- `mergeParkedManifest` — function — line 231
+- `packFromUrl` — function — line 115
+- `resolveLoadEntry` — function — line 202
+
+## `assets/assetUrlUtils.ts`
+
+- `parkedIdFromUrl` — function — line 10
 
 ## `assets/constructionCatalog.ts`
 
@@ -102,56 +105,83 @@ Generated from exported TypeScript symbols.
 
 ## `assets/houseDefinitionExample.ts`
 
-- `capRoof` — function — line 434
-- `capRoofWithGables` — function — line 464
-- `COTTAGE_4X4_A` — const — line 666
-- `COTTAGE_4X4_B` — const — line 684
-- `COTTAGE_4X4_C` — const — line 810
-- `COTTAGE_6X4_A` — const — line 705
-- `COTTAGE_6X4_B` — const — line 724
-- `COTTAGE_6X4_C` — const — line 833
-- `COTTAGE_DEFINITIONS` — const — line 909
-- `gableParts` — function — line 444
-- `HOME_HOUSE_DEFINITIONS` — const — line 927
-- `HOUSE_6X6_A` — const — line 744
-- `HOUSE_6X6_B` — const — line 856
-- `HOUSE_8X6_A` — const — line 766
-- `HOUSE_8X6_B` — const — line 788
-- `HOUSE_8X6_C` — const — line 883
-- `HOUSE_DEFINITIONS` — const — line 918
-- `HOUSE_MODULE_M` — const — line 13
-- `HouseCornerSide` — type — line 16
-- `HouseDecoration` — type — line 73
-- `HouseDefinition` — type — line 116
-- `HouseFurniturePlacement` — type — line 102
-- `HouseFurnitureRole` — type — line 90
-- `HouseGableEnds` — type — line 438
-- `HouseInteractionKind` — type — line 17
-- `HouseInteractionPoint` — type — line 79
-- `HouseLampMount` — type — line 88
-- `HouseOpening` — type — line 37
-- `HousePartTransform` — type — line 21
-- `HouseRoof` — type — line 62
-- `HouseRoofPart` — type — line 56
-- `HouseVec3` — type — line 19
-- `HouseWallPlacement` — type — line 26
-- `HouseWallSide` — type — line 15
-- `pickHouseDefinition` — function — line 953
-- `PLASTER_WALL_TOP_Y` — const — line 148
-- `TEST_HOUSE_01` — const — line 637
-- `TEST_HOUSE_02` — const — line 648
-- `wooden2x1RoofParts` — function — line 414
+- `capRoof` — function — line 299
+- `capRoofWithGables` — function — line 329
+- `COTTAGE_4X4_A` — const — line 531
+- `COTTAGE_4X4_B` — const — line 549
+- `COTTAGE_4X4_C` — const — line 675
+- `COTTAGE_6X4_A` — const — line 570
+- `COTTAGE_6X4_B` — const — line 589
+- `COTTAGE_6X4_C` — const — line 698
+- `COTTAGE_DEFINITIONS` — const — line 774
+- `gableParts` — function — line 309
+- `HOME_HOUSE_DEFINITIONS` — const — line 792
+- `HOUSE_6X6_A` — const — line 609
+- `HOUSE_6X6_B` — const — line 721
+- `HOUSE_8X6_A` — const — line 631
+- `HOUSE_8X6_B` — const — line 653
+- `HOUSE_8X6_C` — const — line 748
+- `HOUSE_DEFINITIONS` — const — line 783
+- `HouseGableEnds` — type — line 303
+- `pickHouseDefinition` — function — line 818
+- `TEST_HOUSE_01` — const — line 502
+- `TEST_HOUSE_02` — const — line 513
+- `wooden2x1RoofParts` — function — line 279
+
+## `assets/houseDefinitionExampleConfig.ts`
+
+- `CHIMNEY` — const — line 151
+- `CORNER` — const — line 149
+- `CORNER_BRICK` — const — line 150
+- `DOOR_FRAME` — const — line 145
+- `DOOR_LEAF` — const — line 146
+- `FLOOR` — const — line 148
+- `FURNITURE_BED` — const — line 170
+- `FURNITURE_CHEST_SENTINEL` — const — line 172
+- `FURNITURE_LAMP_SENTINEL` — const — line 173
+- `FURNITURE_TABLE` — const — line 171
+- `GABLE_4` — const — line 157
+- `GABLE_6` — const — line 158
+- `GABLE_8` — const — line 159
+- `HOUSE_MODULE_M` — const — line 3
+- `HouseCornerSide` — type — line 6
+- `HouseDecoration` — type — line 63
+- `HouseDefinition` — type — line 106
+- `HouseFurniturePlacement` — type — line 92
+- `HouseFurnitureRole` — type — line 80
+- `HouseInteractionKind` — type — line 7
+- `HouseInteractionPoint` — type — line 69
+- `HouseLampMount` — type — line 78
+- `HouseOpening` — type — line 27
+- `HousePartTransform` — type — line 11
+- `HouseRoof` — type — line 52
+- `HouseRoofPart` — type — line 46
+- `HouseVec3` — type — line 9
+- `HouseWallPlacement` — type — line 16
+- `HouseWallSide` — type — line 5
+- `PLASTER_WALL_TOP_Y` — const — line 138
+- `RIDGE` — const — line 153
+- `ROOF_CAP_4X4` — const — line 154
+- `ROOF_CAP_4X6` — const — line 155
+- `ROOF_CAP_6X6` — const — line 156
+- `SLOPE` — const — line 152
+- `WALL_BRICK` — const — line 144
+- `WALL_DOOR` — const — line 141
+- `WALL_STRAIGHT` — const — line 140
+- `WALL_WINDOW` — const — line 142
+- `WALL_WOODGRID` — const — line 143
+- `WINDOW_FILL` — const — line 147
 
 ## `assets/loadGltf.ts`
 
-- `disposeObject3D` — function — line 184
+- `disposeObject3D` — function — line 189
 - `GltfAsset` — type — line 39
-- `invalidateGltf` — function — line 163
-- `loadGltf` — function — line 81
-- `loadGltfAnimated` — function — line 96
-- `loadGltfAsset` — function — line 86
-- `prepareProp` — function — line 115
-- `preparePropFitMax` — function — line 140
+- `invalidateGltf` — function — line 168
+- `loadGltf` — function — line 86
+- `loadGltfAnimated` — function — line 101
+- `loadGltfAsset` — function — line 91
+- `prepareProp` — function — line 120
+- `preparePropFitMax` — function — line 145
 - `SMALL_MESH_SHADOW_THRESHOLD` — const — line 29
 
 ## `assets/loadTexture.ts`

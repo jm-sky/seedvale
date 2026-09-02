@@ -28,6 +28,7 @@ Generated from TypeScript imports.
 
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
@@ -60,6 +61,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `audio/actionSounds.ts`
 - `audio/inventorySounds.ts`
 - `fauna/AnimalAgent.ts`
 - `items/Inventory.ts`
@@ -79,6 +81,21 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+
+## `app/actions/groundActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/groundActions.ts`
+- `app/busyAction.ts`
+- `badges/badges.ts`
+- `items/HeldTool.ts`
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `world/treeHarvest.ts`
+- `world/treeLifecycle.ts`
 
 ## `app/actions/groundActions.ts`
 
@@ -106,6 +123,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/groundActions.test.ts`
 - `app/createApp.ts`
 
 ## `app/actions/mountActions.ts`
@@ -131,6 +149,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `audio/actionSounds.ts`
 - `items/constructionMaterials.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
@@ -148,6 +167,7 @@ Generated from TypeScript imports.
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 
 **Imported by**
@@ -191,6 +211,7 @@ Generated from TypeScript imports.
 - `ui/createBusyOverlay.ts`
 - `ui/createQuickActions.ts`
 - `ui/createTimeSkipOverlay.ts`
+- `world/sleepingUtilities.ts`
 
 **Imported by**
 
@@ -270,6 +291,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/groundActions.test.ts`
 - `app/busyAction.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -408,6 +430,7 @@ Generated from TypeScript imports.
 - `world/plantedCrops.ts`
 - `world/plantedTrees.ts`
 - `world/playerWell.ts`
+- `world/sleepingUtilities.ts`
 - `world/timeSkip.ts`
 - `world/treeLifecycle.ts`
 - `world/weather.ts`
@@ -667,6 +690,7 @@ Generated from TypeScript imports.
 
 - `config/worldConfig.ts`
 - `debug/debugMode.ts`
+- `perf/gpuTimer.ts`
 - `perf/index.ts`
 - `perf/programCensus.ts`
 - `render/createPostProcessing.ts`
@@ -781,6 +805,7 @@ Generated from TypeScript imports.
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
 - `world/beehives.ts`
+- `world/bloodTraces.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
 - `world/createLargeCaves.ts`
@@ -790,6 +815,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/cropLifecycle.ts`
@@ -803,6 +829,7 @@ Generated from TypeScript imports.
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
+- `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 - `world/waterMirror.ts`

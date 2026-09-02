@@ -8,12 +8,12 @@ Generated from exported TypeScript symbols.
 
 ## `shared/getFireParticles.ts`
 
-- `BurstPool` — type — line 20
-- `createEmbers` — function — line 159
-- `createIgniteBurst` — function — line 201
-- `createSparks` — function — line 139
-- `createTorchSparks` — function — line 180
-- `ParticlePool` — type — line 10
+- `BurstPool` — type — line 24
+- `createEmbers` — function — line 169
+- `createIgniteBurst` — function — line 211
+- `createSparks` — function — line 149
+- `createTorchSparks` — function — line 190
+- `ParticlePool` — type — line 14
 
 ## `shared/HealthState.ts`
 

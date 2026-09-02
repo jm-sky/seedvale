@@ -54,6 +54,31 @@ Generated from exported TypeScript symbols.
 - `honeyAvailable` — function — line 24
 - `rollHiveSting` — function — line 46
 
+## `world/bloodTraces.ts`
+
+- `BLOOD_GLOBAL_CAP` — const — line 64
+- `BLOOD_LOCAL_CAP` — const — line 61
+- `BLOOD_LOCAL_RADIUS` — const — line 60
+- `BLOOD_MAX_LIFETIME_DAYS` — const — line 50
+- `BLOOD_MAX_SIZE` — const — line 48
+- `BLOOD_MIN_LIFETIME_DAYS` — const — line 49
+- `BLOOD_MIN_SIZE` — const — line 47
+- `BLOOD_RAIN_FADE_WEIGHT` — const — line 56
+- `BLOOD_VARIANT_COUNT` — const — line 46
+- `BloodTrace` — type — line 26
+- `bloodTraceRemainingFraction` — function — line 135
+- `BloodTraceSink` — type — line 216
+- `bloodTracesNear` — function — line 206
+- `BloodTraceSystem` — type — line 239
+- `BloodTraceWorldState` — type — line 41
+- `computeBloodTraceSize` — function — line 97
+- `createBloodTraceSystem` — function — line 262
+- `createBloodTraceWorldState` — function — line 86
+- `pruneBloodTraces` — function — line 146
+- `recordBloodHit` — function — line 235
+- `recordBloodTrace` — function — line 162
+- `setBloodTraceSink` — function — line 228
+
 ## `world/clouds.ts`
 
 - `CloudAppearance` — type — line 59
@@ -152,6 +177,14 @@ Generated from exported TypeScript symbols.
 - `createSky` — function — line 31
 - `SkyParams` — type — line 4
 - `WorldSky` — type — line 12
+
+## `world/createSleepingUtilities.ts`
+
+- `BedrollEntry` — type — line 12
+- `createSleepingUtilities` — function — line 52
+  - domain: items-player
+- `PlatformEntry` — type — line 13
+- `SleepingUtilities` — type — line 15
 
 ## `world/createStandingTorches.ts`
 
@@ -492,6 +525,41 @@ Generated from exported TypeScript symbols.
 
 - `SettlementForestHooks` — type — line 4
 
+## `world/sleepingUtilities.ts`
+
+- `BEDROLL_FOOTPRINT_RADIUS` — const — line 51
+- `BEDROLL_MATERIAL_REQUIREMENTS` — const — line 64
+- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 96
+- `BEDROLL_PLACE_DURATION_SEC` — const — line 54
+- `BEDROLL_PLACE_REACH` — const — line 53
+- `BEDROLL_PLACEMENT_MESSAGE` — const — line 71
+- `BEDROLL_REST_RADIUS` — const — line 90
+- `BEDROLL_SEPARATION` — const — line 52
+- `BedrollPlacementReason` — type — line 68
+- `BedrollRecord` — type — line 24
+- `findNearestSleepingUtility` — function — line 102
+- `PLATFORM_FOOTPRINT_RADIUS` — const — line 56
+- `PLATFORM_MATERIAL_REQUIREMENTS` — const — line 66
+- `PLATFORM_PLACE_DURATION_SEC` — const — line 59
+- `PLATFORM_PLACE_REACH` — const — line 58
+- `PLATFORM_PLACEMENT_MESSAGE` — const — line 79
+- `PLATFORM_SEPARATION` — const — line 57
+- `PlatformPlacementReason` — type — line 69
+- `PlatformRecord` — type — line 39
+- `resolveSleepingUtilityCondition` — function — line 175
+- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 122
+- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 132
+- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 138
+- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 133
+- `SleepingUtilityVariant` — type — line 22
+  - domain: items-player
+
+## `world/sleepingUtilityProp.ts`
+
+- `createBedrollProp` — function — line 13
+- `createPlatformProp` — function — line 46
+- `disposeSleepingUtilityProp` — function — line 74
+
 ## `world/standingTorch.ts`
 
 - `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 22
@@ -667,11 +735,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/weather.ts`
 
-- `ClimateState` — type — line 232
-- `computeClimate` — function — line 218
+- `ClimateState` — type — line 259
+- `computeClimate` — function — line 245
+- `computeRainExposureDays` — function — line 220
 - `computeSurfaceWeather` — function — line 166
 - `computeWeather` — function — line 116
-- `createClimateState` — function — line 245
+- `createClimateState` — function — line 272
 - `DAYS_PER_SEASON` — const — line 31
 - `getSeason` — function — line 33
 - `getSeasonProgress` — function — line 39
@@ -681,13 +750,13 @@ Generated from exported TypeScript symbols.
 - `SNOW_MELT_WINDOW_DAYS` — const — line 143
 - `SurfaceWeatherState` — type — line 151
 - `temperatureFor` — function — line 69
-- `tickClimate` — function — line 249
+- `tickClimate` — function — line 276
 - `WEATHER_CYCLE_DAYS` — const — line 77
 - `WEATHER_LABELS` — const — line 21
 - `WeatherState` — type — line 101
 - `WeatherType` — type — line 9
 - `WETNESS_DRY_WINDOW_DAYS` — const — line 136
-- `WorldClimateState` — type — line 209
+- `WorldClimateState` — type — line 236
 
 ## `world/weatherParticles.ts`
 

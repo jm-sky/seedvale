@@ -14,6 +14,7 @@ Generated navigation map for the Seedvale TypeScript codebase.
 - [`debug`](./symbols/debug.md) · [dependencies](./dependencies/debug.md)
 - [`economy`](./symbols/economy.md) · [dependencies](./dependencies/economy.md)
 - [`fauna`](./symbols/fauna.md) · [dependencies](./dependencies/fauna.md)
+- [`house-browser`](./symbols/house-browser.md) · [dependencies](./dependencies/house-browser.md)
 - [`input`](./symbols/input.md) · [dependencies](./dependencies/input.md)
 - [`interaction`](./symbols/interaction.md) · [dependencies](./dependencies/interaction.md)
 - [`items`](./symbols/items.md) · [dependencies](./dependencies/items.md)

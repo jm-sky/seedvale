@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-02 09:15:42  
+> Date: 2026-09-02 10:36:58  
 
 ## PLANS
 
@@ -24,12 +24,12 @@ Zrób review planu `settlements-npcs-016-first-processing-chain-and-blacksmith-p
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
+- `docs/plans/settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-016-first-processing-chain-and-blacksmith-production-implementation-notes.md`
+`docs/plans/implementation-notes/settlements-npcs-016-first-processing-chain-and-blacksmith-production-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -55,12 +55,12 @@ Zrób review planu `settlements-npcs-017-production-demand-and-economic-pressure
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/settlements-npcs-017-production-demand-and-economic-pressures.md`
+- `docs/plans/settlements-npcs-017-production-demand-and-economic-pressures.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/settlements-npcs-017-production-demand-and-economic-pressures-implementation-notes.md`
+`docs/plans/implementation-notes/settlements-npcs-017-production-demand-and-economic-pressures-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -86,12 +86,12 @@ Zrób review planu `tools-000-weapon-browser-observatory.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/tools-000-weapon-browser-observatory.md`
+- `docs/plans/tools-000-weapon-browser-observatory.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-000-weapon-browser-observatory-implementation-notes.md`
+`docs/plans/implementation-notes/tools-000-weapon-browser-observatory-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -117,12 +117,12 @@ Zrób review planu `tools-005-seedvale-character-preparation-panel.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/tools-005-seedvale-character-preparation-panel.md`
+- `docs/plans/tools-005-seedvale-character-preparation-panel.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
+`docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
@@ -148,12 +148,12 @@ Zrób review planu `tools-007--mpfb2-npc-hero-character-pipeline.md`
 Wczytaj:
 - `docs/STATE.md`
 - `docs/plans/PLANNING.md` (Implementation Notes section),
-- `/home/runner/work/seedvale/seedvale/docs/plans/tools-007--mpfb2-npc-hero-character-pipeline.md`
+- `docs/plans/tools-007--mpfb2-npc-hero-character-pipeline.md`
 - aktualny codebase,
 - potrzebne zależności i powiązane implementacje.
 
 Na podstawie review utwórz w repo plik:
-`/home/runner/work/seedvale/seedvale/docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
+`docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

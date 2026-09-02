@@ -16,15 +16,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/gatheringActions.ts`
 
-- `createGatheringActions` — function — line 57
-- `GatheringActionDeps` — type — line 50
-- `GatheringActions` — type — line 33
+- `createGatheringActions` — function — line 58
+- `GatheringActionDeps` — type — line 51
+- `GatheringActions` — type — line 34
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 82
-- `GroundActions` — type — line 38
-- `GroundActionsDeps` — type — line 57
+- `createGroundActions` — function — line 88
+- `GroundActions` — type — line 44
+- `GroundActionsDeps` — type — line 63
 
 ## `app/actions/mountActions.ts`
 
@@ -34,32 +34,32 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 259
-- `evaluatePlacementSite` — function — line 153
-- `GroundPlacementDefinition` — type — line 145
+- `createPlacementActions` — function — line 291
+- `evaluatePlacementSite` — function — line 170
+- `GroundPlacementDefinition` — type — line 162
   - domain: world
-- `GroundPlacementSite` — type — line 129
-- `PlacementActions` — type — line 185
-- `PlacementBlocker` — type — line 109
-- `PlacementPreviewResult` — type — line 117
-- `previewGroundPlacement` — function — line 163
-- `WellWorkView` — type — line 178
+- `GroundPlacementSite` — type — line 146
+- `PlacementActions` — type — line 202
+- `PlacementBlocker` — type — line 126
+- `PlacementPreviewResult` — type — line 134
+- `previewGroundPlacement` — function — line 180
+- `WellWorkView` — type — line 195
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 75
-- `PlacementPreviewActionDeps` — type — line 36
-- `PlacementPreviewActions` — type — line 58
+- `createPlacementPreviewActions` — function — line 81
+- `PlacementPreviewActionDeps` — type — line 38
+- `PlacementPreviewActions` — type — line 64
 - `PlacementPreviewKind` — type — line 19
 - `PlacementPreviewUiView` — type — line 21
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 104
-- `LodgingChoiceAction` — type — line 29
-- `REST_IN_TOWN_RADIUS` — const — line 37
-- `RestActionDeps` — type — line 92
-- `RestActions` — type — line 43
+- `createRestActions` — function — line 109
+- `LodgingChoiceAction` — type — line 34
+- `REST_IN_TOWN_RADIUS` — const — line 42
+- `RestActionDeps` — type — line 97
+- `RestActions` — type — line 48
 
 ## `app/actions/survivalActions.ts`
 
@@ -94,15 +94,15 @@ Generated from exported TypeScript symbols.
 ## `app/campRest.ts`
 
 - `CampRestContext` — type — line 11
-- `campRestQuality` — function — line 99
-- `hasTentNear` — function — line 52
-- `hasWarmFireNear` — function — line 39
-- `TENT_SHELTER_RADIUS` — const — line 27
-- `WARM_FIRE_RADIUS` — const — line 23
+- `campRestQuality` — function — line 128
+- `hasTentNear` — function — line 62
+- `hasWarmFireNear` — function — line 49
+- `TENT_SHELTER_RADIUS` — const — line 37
+- `WARM_FIRE_RADIUS` — const — line 33
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 208
+- `createApp` — function — line 210
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
@@ -127,10 +127,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 846
-- `buildDigTarget` — function — line 793
+- `buildCombatTarget` — function — line 862
+- `buildDigTarget` — function — line 809
 - `buildInteractables` — function — line 320
-- `collectItem` — function — line 893
+- `collectItem` — function — line 909
 - `COMBAT_TARGET_CONE_DOT` — const — line 82
 - `COMBAT_TARGET_RANGE` — const — line 67
 - `CombatAimMode` — type — line 72
@@ -164,8 +164,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/renderStack.ts`
 
-- `createRenderStack` — function — line 43
-- `RenderStack` — type — line 27
+- `createRenderStack` — function — line 48
+- `RenderStack` — type — line 29
 
 ## `app/restCampSequence.ts`
 
@@ -198,13 +198,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 484
-- `createWorldBundle` — function — line 776
-- `disposeWorldBundle` — function — line 1068
-- `HOME_RADIUS` — const — line 78
-- `homeChunks` — function — line 89
-- `rebuildWorldBundle` — function — line 915
-- `WorldBundle` — type — line 112
+- `BuiltWorldSystems` — type — line 498
+- `createWorldBundle` — function — line 814
+- `disposeWorldBundle` — function — line 1126
+- `HOME_RADIUS` — const — line 81
+- `homeChunks` — function — line 92
+- `rebuildWorldBundle` — function — line 960
+- `WorldBundle` — type — line 115
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

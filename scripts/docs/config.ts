@@ -8,7 +8,7 @@ export type Effort = 'XS' | 'S' | 'M' | 'L' | 'XL'
 export const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 export const ROOT_DIR = resolve(SCRIPT_DIR, '../..')
 
-export const PLANS_DIR = resolve(ROOT_DIR, 'docs/plans')
+export const PLANS_DIR = 'docs/plans'
 export const PLANS_PATH = resolve(ROOT_DIR, PLANS_DIR)
 export const ARCHIVED_PLANS_DIR = resolve(PLANS_DIR, 'archive')
 export const ARCHIVED_PLANS_PATH = resolve(ROOT_DIR, ARCHIVED_PLANS_DIR)

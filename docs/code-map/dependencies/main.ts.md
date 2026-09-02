@@ -8,7 +8,6 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
-- `debug/createHouseTestScene.ts`
 - `debug/debugMode.ts`
 - `perf/benchmarkFixture.ts`
 - `perf/flags.ts`

@@ -11,7 +11,9 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 

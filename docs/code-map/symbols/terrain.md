@@ -27,6 +27,12 @@ Generated from exported TypeScript symbols.
 - `forestBiomeAt` — function — line 150
 - `forestDensityAt` — function — line 95
 
+## `terrain/bloodOverlay.ts`
+
+- `BloodOverlayPlacement` — type — line 31
+- `BloodOverlaySystem` — type — line 41
+- `createBloodOverlaySystem` — function — line 156
+
 ## `terrain/buildChunkGeometry.ts`
 
 - `buildChunkGeometry` — function — line 440

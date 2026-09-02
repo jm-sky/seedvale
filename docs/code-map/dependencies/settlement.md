@@ -61,6 +61,7 @@ Generated from TypeScript imports.
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
+- `world/weather.ts`
 
 **Imported by**
 
@@ -140,6 +141,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPropColliders.ts`
+- `settlement/storageVisuals.ts`
 - `settlement/wellInteractionQueue.ts`
 - `shared/SettlementName.ts`
 - `shared/bootMark.ts`
@@ -155,6 +157,7 @@ Generated from TypeScript imports.
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
 - `world/treeVisuals.ts`
+- `world/weather.ts`
 
 **Imported by**
 
@@ -297,6 +300,7 @@ Generated from TypeScript imports.
 
 - `assets/constructionCatalog.ts`
 - `assets/houseDefinitionExample.ts`
+- `assets/houseDefinitionExampleConfig.ts`
 - `assets/loadGltf.ts`
 - `settlement/houseBuilder.ts`
 - `world/collision.ts`
@@ -306,13 +310,14 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/constructionCatalog.ts`
-- `assets/houseDefinitionExample.ts`
+- `assets/houseDefinitionExampleConfig.ts`
 - `assets/loadGltf.ts`
 - `world/collision.ts`
 
 **Imported by**
 
-- `debug/createHouseTestScene.ts`
+- `house-browser/houseBrowserScene.ts`
+- `house-browser/houseBrowserTypes.ts`
 - `settlement/createSettlement.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/props.ts`
@@ -393,6 +398,8 @@ Generated from TypeScript imports.
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
 - `settlement/storageDestinations.ts`
+- `settlement/storageVisuals.test.ts`
+- `settlement/storageVisuals.ts`
 
 ## `settlement/householdExchange.test.ts`
 
@@ -693,6 +700,7 @@ Generated from TypeScript imports.
 
 - `assets/constructionCatalog.ts`
 - `assets/houseDefinitionExample.ts`
+- `assets/houseDefinitionExampleConfig.ts`
 - `assets/loadGltf.ts`
 - `debug/debugMode.ts`
 - `math/segment.ts`
@@ -755,6 +763,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/hiddenFinds.test.ts`
@@ -948,8 +957,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
+- `settlement/household.ts`
 - `settlement/storageVisuals.ts`
 
 ## `settlement/storageVisuals.ts`
@@ -957,13 +968,17 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
+- `settlement/household.ts`
 - `settlement/propUtils.ts`
 
 **Imported by**
 
+- `interaction/resolveInteraction.ts`
+- `settlement/createSettlement.ts`
 - `settlement/props.ts`
 - `settlement/storageVisuals.test.ts`
 

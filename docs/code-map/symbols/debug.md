@@ -4,8 +4,14 @@ Generated from exported TypeScript symbols.
 
 ## `debug/colliderDebugView.ts`
 
-- `ColliderDebugView` — type — line 20
-- `createColliderDebugView` — function — line 38
+- `ColliderDebugView` — type — line 14
+- `createColliderDebugView` — function — line 21
+
+## `debug/colliderInstancedVisual.ts`
+
+- `ColliderInstancedVisual` — type — line 33
+- `ColliderInstancedVisualOptions` — type — line 17
+- `createColliderInstancedVisual` — function — line 43
 
 ## `debug/createCameraDebugOverlay.ts`
 
@@ -13,29 +19,24 @@ Generated from exported TypeScript symbols.
 - `CameraDebugSnapshot` — type — line 3
 - `createCameraDebugOverlay` — function — line 26
 
-## `debug/createHouseTestScene.ts`
-
-- `createHouseTestScene` — function — line 112
-
 ## `debug/createModelTestScene.ts`
 
 - `createModelTestScene` — function — line 44
 
 ## `debug/debugMode.ts`
 
-- `DebugSystemName` — type — line 120
+- `DebugSystemName` — type — line 107
 - `isAdminMode` — function — line 43
 - `isBootMarkMode` — function — line 33
-- `isCameraDebugMode` — function — line 69
-- `isCameraMeshDebugMode` — function — line 82
-- `isColliderDebugMode` — function — line 98
+- `isCameraDebugMode` — function — line 56
+- `isCameraMeshDebugMode` — function — line 69
+- `isColliderDebugMode` — function — line 85
 - `isDebugMode` — function — line 38
-- `isHouseTestMode` — function — line 63
 - `isModelTestMode` — function — line 50
-- `isNoShadowsDebugMode` — function — line 76
-- `isNpcCombatDebugMode` — function — line 112
-- `isRenderStateDebugMode` — function — line 90
-- `isSystemEnabled` — function — line 126
+- `isNoShadowsDebugMode` — function — line 63
+- `isNpcCombatDebugMode` — function — line 99
+- `isRenderStateDebugMode` — function — line 77
+- `isSystemEnabled` — function — line 113
 - `urlParamValue` — function — line 19
 
 ## `debug/faunaInspector.ts`
@@ -45,11 +46,6 @@ Generated from exported TypeScript symbols.
 - `getFrenzyWolves` — function — line 41
 - `getNextFrenzyWolf` — function — line 60
 - `pickNextFrenzyWolfId` — function — line 25
-
-## `debug/houseTestDefinition.ts`
-
-- `houseDefinitionFromUrl` — function — line 22
-- `HouseDefinitionLookup` — type — line 13
 
 ## `debug/locationQueries.ts`
 

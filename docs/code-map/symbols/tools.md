@@ -108,3 +108,8 @@ Generated from exported TypeScript symbols.
 
 - `buildReportFromScene` — function — line 89
 - `findAnchorByName` — function — line 177
+
+## `tools/toolRegistry.ts`
+
+- `ToolDefinition` — interface — line 10
+- `TOOLS` — const — line 17

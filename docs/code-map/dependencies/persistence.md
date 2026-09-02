@@ -28,6 +28,7 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
 - `world/playerWell.ts`
+- `world/sleepingUtilities.ts`
 - `world/treeLifecycle.ts`
 
 **Imported by**

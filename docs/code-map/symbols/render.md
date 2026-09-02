@@ -11,7 +11,7 @@ Generated from exported TypeScript symbols.
 
 ## `render/createPostProcessing.ts`
 
-- `createPostProcessing` — function — line 56
+- `createPostProcessing` — function — line 61
 - `PostPassId` — type — line 15
 - `PostProcessing` — type — line 17
 

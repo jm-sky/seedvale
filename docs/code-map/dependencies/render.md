@@ -37,8 +37,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/renderStack.ts`
-- `debug/createHouseTestScene.ts`
 - `debug/createModelTestScene.ts`
+- `house-browser/houseBrowserScene.ts`
 - `tools/assetBrowser/viewer/createViewer.ts`
 
 ## `render/godRaysShader.ts`

@@ -95,6 +95,7 @@ This model should remain understandable and testable. More sophisticated behavio
 | `agriculture.md` |
 | `combat.md` |
 | `companions.md` |
+| `crime-and-social-consequences.md` |
 | `economy.md` |
 | `fauna.md` |
 | `items.md` |

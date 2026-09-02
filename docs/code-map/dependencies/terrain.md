@@ -56,6 +56,16 @@ Generated from TypeScript imports.
 - `world/treeLifecycle.ts`
 - `world/worldContext.ts`
 
+## `terrain/bloodOverlay.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+
+**Imported by**
+
+- `world/bloodTraces.ts`
+
 ## `terrain/buildChunkGeometry.ts`
 
 **Imports**

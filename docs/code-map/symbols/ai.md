@@ -73,27 +73,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 336
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 619
-- `classifyPendingActivity` — function — line 485
-- `CurrentActivity` — type — line 385
-- `CurrentActivityKind` — type — line 383
-- `findWeaponNeedingMaintenance` — function — line 727
-- `NPC_HEIGHT` — const — line 234
-- `NPC_MODEL_URLS` — const — line 289
-- `NPC_SHADOW_DISTANCE` — const — line 239
-- `NpcAgent` — class — line 826
+- `ActionId` — type — line 344
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 643
+- `classifyPendingActivity` — function — line 498
+- `CurrentActivity` — type — line 398
+- `CurrentActivityKind` — type — line 396
+- `findWeaponNeedingMaintenance` — function — line 751
+- `NPC_HEIGHT` — const — line 242
+- `NPC_MODEL_URLS` — const — line 297
+- `NPC_SHADOW_DISTANCE` — const — line 247
+- `NpcAgent` — class — line 856
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 400
-- `NpcWhy` — type — line 460
-- `Phase` — type — line 316
-- `projectNpcWhy` — function — line 512
-- `promoteChainKind` — function — line 477
+- `NpcInspectionSnapshot` — type — line 413
+- `NpcWhy` — type — line 473
+- `Phase` — type — line 324
+- `projectNpcWhy` — function — line 529
+- `promoteChainKind` — function — line 490
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -242,20 +242,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/schedule.ts`
 
-- `activityAt` — function — line 282
-- `effectiveScheduleFor` — function — line 155
+- `activityAt` — function — line 302
+- `effectiveScheduleFor` — function — line 175
 - `EffectiveScheduleOptions` — type — line 29
-- `FAST_WORKER_WORK_EXTEND_HOURS` — const — line 47
-- `hourMod24` — function — line 65
-- `hourToTimeOfDay` — function — line 61
-- `idleIntentFor` — function — line 179
-- `nextBoundary` — function — line 301
+- `FAST_WORKER_WORK_EXTEND_HOURS` — const — line 67
+- `hourMod24` — function — line 85
+- `hourToTimeOfDay` — function — line 81
+- `idleIntentFor` — function — line 199
+- `isNightLeisureTime` — function — line 57
+- `nextBoundary` — function — line 321
+- `NIGHT_LEISURE_END_HOUR` — const — line 53
+- `NIGHT_LEISURE_START_HOUR` — const — line 52
+  - domain: npc
 - `NIGHT_OWL_SHIFT_HOURS` — const — line 40
-- `SCHEDULE_TEMPLATES` — const — line 69
+- `SCHEDULE_TEMPLATES` — const — line 89
 - `ScheduleActivity` — type — line 16
 - `ScheduleEntry` — type — line 18
 - `ScheduleTemplate` — type — line 26
-- `SOCIABLE_SOCIAL_HOURS` — const — line 53
+- `SOCIABLE_SOCIAL_HOURS` — const — line 73
 
 ## `ai/socialBehaviour.ts`
 
@@ -267,3 +271,10 @@ Generated from exported TypeScript symbols.
 - `findConversationPartner` — function — line 60
 - `SocialCandidateView` — type — line 48
 - `SocialParticipant` — type — line 24
+
+## `ai/weatherPressure.ts`
+
+- `NpcDecisionTarget` — type — line 14
+  - domain: npc
+- `WEATHER_SEVERE_SHELTER_THRESHOLD` — const — line 42
+- `weatherShelterPressure` — function — line 51

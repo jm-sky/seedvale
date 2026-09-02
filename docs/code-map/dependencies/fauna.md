@@ -29,6 +29,7 @@ Generated from TypeScript imports.
 - `simulation/index.ts`
 - `terrain/slopeConstraint.ts`
 - `ui/agentStatusLabel.ts`
+- `world/bloodTraces.ts`
 - `world/collision.ts`
 - `world/waterMirror.ts`
 

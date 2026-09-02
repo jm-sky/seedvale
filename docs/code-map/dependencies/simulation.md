@@ -54,6 +54,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
+- `ai/weatherPressure.test.ts`
 - `combat/combatIntent.ts`
 - `fauna/AnimalAgent.ts`
 - `settlement/createSettlement.ts`

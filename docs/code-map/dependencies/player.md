@@ -59,10 +59,12 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
+- `terrain/bloodOverlay.ts`
 - `terrain/chunkManager.ts`
 - `terrain/dig.ts`
 - `terrain/naturalResources.ts`
 - `terrain/slopeConstraint.ts`
+- `world/bloodTraces.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
 - `world/createPalisades.ts`
@@ -70,6 +72,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/worldContext.ts`
@@ -211,6 +214,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `shared/HealthState.ts`
+- `world/bloodTraces.ts`
 
 **Imported by**
 

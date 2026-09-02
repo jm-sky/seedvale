@@ -45,15 +45,15 @@ Generated from exported TypeScript symbols.
 
 ## `player/playerDamage.ts`
 
-- `applyDownedRecovery` — function — line 30
-- `applyPlayerDamage` — function — line 57
-- `ApplyPlayerDamageParams` — type — line 42
-- `DOWNED_DURATION_SEC` — const — line 20
-- `DOWNED_RECOVERY_HP_MAX` — const — line 22
-- `DOWNED_RECOVERY_HP_MIN` — const — line 21
-- `PlayerDamageResult` — type — line 36
-- `rollDownedRecoveryHp` — function — line 24
-- `tickPlayerStarvationDamage` — function — line 125
+- `applyDownedRecovery` — function — line 31
+- `applyPlayerDamage` — function — line 58
+- `ApplyPlayerDamageParams` — type — line 43
+- `DOWNED_DURATION_SEC` — const — line 21
+- `DOWNED_RECOVERY_HP_MAX` — const — line 23
+- `DOWNED_RECOVERY_HP_MIN` — const — line 22
+- `PlayerDamageResult` — type — line 37
+- `rollDownedRecoveryHp` — function — line 25
+- `tickPlayerStarvationDamage` — function — line 127
 
 ## `player/playerEncumbrance.ts`
 

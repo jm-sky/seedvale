@@ -6,31 +6,29 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `debug/colliderInstancedVisual.ts`
 - `world/collision.ts`
 
 **Imported by**
 
 - `app/gameLoop.ts`
 
+## `debug/colliderInstancedVisual.ts`
+
+**Imports**
+
+- `world/collision.ts`
+
+**Imported by**
+
+- `debug/colliderDebugView.ts`
+- `house-browser/colliderPreview.ts`
+
 ## `debug/createCameraDebugOverlay.ts`
 
 **Imported by**
 
 - `app/appRenderLoop.ts`
-
-## `debug/createHouseTestScene.ts`
-
-**Imports**
-
-- `assets/constructionCatalog.ts`
-- `assets/houseDefinitionExample.ts`
-- `debug/houseTestDefinition.ts`
-- `render/createRenderer.ts`
-- `settlement/houseBuilder.ts`
-
-**Imported by**
-
-- `main.ts`
 
 ## `debug/createModelTestScene.ts`
 
@@ -60,7 +58,6 @@ Generated from TypeScript imports.
 - `app/renderStack.ts`
 - `config/worldConfig.ts`
 - `debug/debugMode.test.ts`
-- `debug/houseTestDefinition.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspectTrigger.ts`
 - `debug/npcInspector.ts`
@@ -95,25 +92,6 @@ Generated from TypeScript imports.
 
 - `debug/faunaInspector.test.ts`
 - `debug/npcDebugApi.ts`
-
-## `debug/houseTestDefinition.test.ts`
-
-**Imports**
-
-- `assets/houseDefinitionExample.ts`
-- `debug/houseTestDefinition.ts`
-
-## `debug/houseTestDefinition.ts`
-
-**Imports**
-
-- `assets/houseDefinitionExample.ts`
-- `debug/debugMode.ts`
-
-**Imported by**
-
-- `debug/createHouseTestScene.ts`
-- `debug/houseTestDefinition.test.ts`
 
 ## `debug/locationQueries.test.ts`
 
