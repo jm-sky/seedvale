@@ -44,13 +44,13 @@ export type FaunaDecisionInput = {
    *  today's branch #2). */
   playerIntent: PredatorHumanIntent | null
   /** Whether a bounded NPC target was resolved this tick (caller-bounded
-   *  `nearbyNpcs`, see `AnimalAgent.resolveFrenzyNpcTarget`). */
+   *  `nearbyNpcs`, see `AnimalAgent.resolveNpcTarget`) — resolved for any
+   *  predator, frenzied or not (npc-008 step 6). */
   npcThreat: boolean
   /** Throttled intent for the non-frenzied NPC-threat path (`npc-attack` /
-   *  `npc-ignore` / `npc-flee`) — currently unreachable at runtime because
-   *  `AnimalAgent` only ever resolves `npcThreat` for a frenzied predator
-   *  (implementation notes F1); kept as an input so this module already
-   *  supports plan step 6 without another structural change. */
+   *  `npc-ignore` / `npc-flee`), live since npc-008 step 6. `null` for a
+   *  frenzied predator, which resolves via `npc-attack-frenzied` instead and
+   *  never scores (implementation notes F1). */
   npcIntent: PredatorHumanIntent | null
   fireNearby: boolean
   hasStrategicVillage: boolean

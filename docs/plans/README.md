@@ -18,7 +18,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
-| `npc-008-agent-decision-architecture-refactor.md`          | Etap 1 (recon + projekt) done; dalej: `faunaDecision.ts` + migracja `AnimalAgent.update()` | 🔴  | L      | -               |
 
 - `settlements-001-house-collision-geometry.md`
 
@@ -74,6 +73,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-npcs-008-household-and-settlement-food-storage-model.md` | NPC eating, gathering and food exchange work correctly |
 | `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md` | NPCs deliver wood and food to the correct physical storage |
 | `2026-08-20--177--npc-combat.md` | NPC combat behaves correctly in an actual encounter |
+| `npc-008-agent-decision-architecture-refactor.md` | Frenzied wolf still reaches a settlement and attacks via `npc-attack-frenzied` (regression check); a non-frenzied predator can now `npc-attack`/`npc-flee`/`npc-ignore` a nearby NPC and the reaction reads as sensible (not jittery); a non-frenzied predator does not chase an NPC into a settlement; a predator near a lit campfire with an NPC nearby resolves to one coherent reaction instead of oscillating between fire-avoid and npc-flee |
 | `tools-003-house-browser-and-tools-menu.md` | House Browser opens at `/house-browser.html`, all houses browse/switch without reload, camera/scene/collider controls work, padding is visual-only, rapid switching leaves no stale assembly, Main Menu `Narzędzia ›` reaches House Browser and Asset Browser, normal gameplay boots unchanged |
 | `2026-08-20--179--animal-attack-and-npc-defense.md` | Animal attacks trigger correctly and NPCs respond/defend as expected |
 | `ui-input-005-lodging-navigation-recovery-and-cancellation.md` | Lodging arrival, cancellation and stuck-movement recovery work correctly |

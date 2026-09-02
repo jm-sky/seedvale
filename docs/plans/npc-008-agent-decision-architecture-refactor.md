@@ -1,7 +1,7 @@
 # Plan: Agent Decision Architecture Refactor
 
 **Created:** 2026-09-01
-**Status:** `in progress` 🔄 — kroki 2-5 zrobione (parytet zachowania zweryfikowany testami); pozostał krok 6 (generalizacja animal↔NPC threat, osobny commit)
+**Status:** `verification needed` 🔍 — kroki 2-6 zaimplementowane (kroki 2-5: refaktor/parytet, zweryfikowany testami; krok 6: generalizacja animal↔NPC threat, osobny commit). Testy/typecheck/lint przechodzą; brakuje browser/manual verification zachowania animal↔NPC (zobacz implementation notes §5.6 "co zweryfikować w grze").
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **Domain:** `npc`
@@ -147,6 +147,8 @@ Recon (F1) pokazał, że `npcThreat` w `AnimalAgent.update()` jest bramkowane pr
 Decyzja (2026-09-02): to jest za wąskie. Zagrożenie i walka animals ↔ NPC mają być zachowaniem ogólnym, a `frenzy` jest mechanizmem wymuszania combatu (testy) i overridem, który pomija scoring — nie warunkiem zauważania NPC.
 
 Zakres i konsekwencje: implementation notes §5.6 (krok 6 w kolejności z §5.4 — nie mylić z punktem 6 listy powyżej, który dotyczy `NPCAgent`). Wykonać **po** krokach 2-5, osobnym commitem, bo to pierwsza realna zmiana zachowania w tym wątku — parytet jest jedynym sposobem weryfikacji samego refaktoru (F6). Jeżeli kierunek urośnie poza zmianę bramki + strojenie, zakłada się osobny plan `npc-018`.
+
+**Zrobione (2026-09-02):** `AnimalAgent.ts:2010`'s `this.frenzied` gate is dropped (only `role === 'predator'` remains); `resolveFrenzyNpcTarget()` → `resolveNpcTarget()` (target commitment mechanism unchanged). The already-built `faunaDecision.ts` priority table needed no change — `npc-attack`/`npc-ignore`/`npc-flee` (rank 60, above `fire-avoid`) were already gated on `!frenzied` there, they were just unreachable. Two things beyond the gate flip, both required for correctness rather than scope growth: (1) a non-frenzied predator's `senseNpcThreat()` now excludes NPC candidates inside a village's avoidance radius (`isNearVillage`), mirroring `updatePredator`'s existing "prey inside the village is not huntable" rule — otherwise a non-frenzied wolf could `chaseNpc()` into a settlement, which the "wild animals avoid settled ground" invariant (plan 044) forbids everywhere else; (2) `refreshThrottledNpcIntent` got its own `npcDecisionTimer`/`cachedNpcIntent`/`cachedNpcAggressionRoll` instead of sharing `refreshThrottledHumanIntent`'s cache — safe before step 6 because `npcThreat` implied `frenzied`, so the two throttled refreshes' guards were mutually exclusive; not safe after, since a non-frenzied predator can have both `sense.playerActive` and `npcThreat` true in the same tick. `senseNpcThreat()` also switched to a squared-distance compare (implementation notes' explicit perf ask). Stayed within "gate change + tuning" — no new gameplay mechanic, no `npc-018`. Remaining open question (not blocking, not a new mechanic): target commitment doesn't re-check the village exclusion once locked, so a predator that locked onto an NPC before it entered a village keeps chasing it in — recorded in `LOOSE-ENDS.md`. Browser/manual verification of the resulting behaviour is still open (see implementation notes §5.6).
 
 ## Weryfikacja
 

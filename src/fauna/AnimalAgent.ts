@@ -407,7 +407,9 @@ export type AnimalAgentDebugInfo = {
    *  center — case F ("arrivedAtStrategicVillage() uznaje go za przybyłego")
    *  from the outside. */
   arrivedAtStrategicVillage: boolean
-  frenzyNpcTarget: { id: string, x: number, z: number } | null
+  /** Current NPC target commitment (`npcTarget`) — set for any predator with
+   *  a resolved `npcThreat`, not only a frenzied one (npc-008 step 6). */
+  npcTarget: { id: string, x: number, z: number } | null
   /** `isWalkable()` at the agent's current position — should always be
    *  `true` for a live agent; `false` here would itself be the bug. */
   positionWalkable: boolean
@@ -1054,6 +1056,16 @@ export class AnimalAgent {
   private cachedHumanIntent: PredatorHumanIntent = 'flee'
   /** Roll paired with `cachedHumanIntent` so the 0.2s window does not flicker. */
   private cachedAggressionRoll = 0
+  /** Same staggered-reevaluation idiom as `humanDecisionTimer`, kept separate
+   *  (own timer/cache/roll) rather than shared — since npc-008 step 6 made
+   *  `npcThreat` general, a predator can have `sense.playerActive` and an
+   *  NPC target true in the same tick, and `refreshThrottledHumanIntent`/
+   *  `refreshThrottledNpcIntent` would otherwise race on one shared cache
+   *  (whichever runs second overwrites the other's in-flight intent). Only
+   *  ever written by `refreshThrottledNpcIntent`. */
+  private npcDecisionTimer = 0
+  private cachedNpcIntent: PredatorHumanIntent = 'flee'
+  private cachedNpcAggressionRoll = 0
   /** Counts down after a player hit — feeds wolf retaliation (plan 056 ext). */
   private provokedTimer = 0
   /** This tick's `decideFaunaBehaviour()` input (npc-008 step 4) — `null`
@@ -1091,14 +1103,15 @@ export class AnimalAgent {
    *  separate from `steerToward`'s own `this.tmp` scratch (see that method's
    *  comment) and from `fleeTarget`/`sourceDest`. */
   private readonly strategicDest = new THREE.Vector3()
-  /** Locked-in combat target for a frenzied wolf (plan 179 follow-up) — once
-   *  set, `resolveFrenzyNpcTarget()` keeps chasing this exact NPC instead of
+  /** Locked-in NPC target for a predator (plan 179 follow-up; generalized to
+   *  every predator, not just a frenzied one, in npc-008 step 6) — once set,
+   *  `resolveNpcTarget()` keeps returning this exact NPC instead of
    *  re-picking the nearest candidate every tick (which flickered between
-   *  candidates as NPCs moved, reading as the wolf "jumping"/changing
+   *  candidates as NPCs moved, reading as the animal "jumping"/changing
    *  direction every frame). Cleared only when the NPC drops out of the
    *  caller-bounded `nearbyNpcs` list (dead or its settlement unloaded) —
-   *  see `resolveFrenzyNpcTarget()`. */
-  private frenzyNpcTarget: NearbyNpcCandidate | null = null
+   *  see `resolveNpcTarget()`. */
+  private npcTarget: NearbyNpcCandidate | null = null
   /** Locked-in live-hunt target for a predator (plan npc-005) — once set,
    *  `resolvePreyTarget()` keeps chasing this exact prey animal instead of
    *  re-picking `nearest(others, 'prey', ...)` every tick, which switched
@@ -1600,8 +1613,8 @@ export class AnimalAgent {
         : null,
       frenzyVillageArrivalRadius: FRENZY_VILLAGE_ARRIVAL_RADIUS,
       arrivedAtStrategicVillage: this.arrivedAtStrategicVillage(),
-      frenzyNpcTarget: this.frenzyNpcTarget
-        ? { id: this.frenzyNpcTarget.id, x: this.frenzyNpcTarget.x, z: this.frenzyNpcTarget.z }
+      npcTarget: this.npcTarget
+        ? { id: this.npcTarget.id, x: this.npcTarget.x, z: this.npcTarget.z }
         : null,
       positionWalkable: this.isWalkable(this.mesh.position.x, this.mesh.position.z),
       strategicDestWalkable: usesStrategicDest
@@ -1748,6 +1761,7 @@ export class AnimalAgent {
       this.provokedTimer = PROVOCATION_SECONDS
       // Force an immediate re-score so healthy wolves can retaliate this frame.
       this.humanDecisionTimer = 0
+      this.npcDecisionTimer = 0
     }
     if (this.health.dead) this.collapse()
   }
@@ -2015,10 +2029,13 @@ export class AnimalAgent {
     this.tickMaturity(dt)
     this.tickProduction(nowDays)
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
-    // Only a frenzied predator considers an NPC target.
-    // If player is the active threat - NPC can help or flee.
-    const npcThreat = this.frenzied && this.def.role === 'predator'
-      ? this.resolveFrenzyNpcTarget(nearbyNpcs)
+    // Any predator can notice a nearby NPC (npc-008 step 6 — animal↔NPC
+    // threat is a general predator behaviour, not something only a frenzied
+    // animal does). `frenzied` no longer gates whether an NPC target is
+    // resolved at all; it still forces the engagement via
+    // `npc-attack-frenzied`, which skips scoring (`isBehaviourValid`).
+    const npcThreat = this.def.role === 'predator'
+      ? this.resolveNpcTarget(nearbyNpcs)
       : null
 
     if (this.rabid) {
@@ -2029,6 +2046,7 @@ export class AnimalAgent {
       // chases the nearest live animal (see `updateRabid`).
       this.threateningHuman = false
       this.humanDecisionTimer = 0
+      this.npcDecisionTimer = 0
       this.provokedTimer = 0
       this.debugBranch = 'rabid'
       this.lastFaunaDecisionInput = null
@@ -2039,10 +2057,11 @@ export class AnimalAgent {
       // before selection under exactly the old branch #2 guard so the
       // 0.2s cache window's timing is unchanged.
       const playerIntent = this.refreshThrottledHumanIntent(sense, observerPos, nearbyHumanCount, dt)
-      // `npc-attack`/`npc-ignore`/`npc-flee` stay unreachable here (F1) —
-      // `npcThreat` above is only ever non-null while `this.frenzied` is
-      // true, so `npcIntent` is always `null` and `npc-attack-frenzied`
-      // always wins first. Relaxing the `npcThreat` gate is plan step 6.
+      // Live since npc-008 step 6: `npcThreat` can now be set for a
+      // non-frenzied predator, so `npc-attack`/`npc-ignore`/`npc-flee`
+      // (scored via `npcIntent`) are reachable. For a frenzied predator
+      // `npcIntent` stays `null` (guard below), so `npc-attack-frenzied`
+      // still wins first and skips scoring entirely.
       const npcIntent = this.refreshThrottledNpcIntent(npcThreat, nearbyNpcs, sense, dt)
       const decisionInput: FaunaDecisionInput = {
         role: this.def.role,
@@ -2071,6 +2090,7 @@ export class AnimalAgent {
           // Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
           this.threateningHuman = false
           this.humanDecisionTimer = 0
+          this.npcDecisionTimer = 0
           this.provokedTimer = 0
           this.cancelSourceTarget()
           this.setIntent('flee', { x: sense.nearestFire!.x, z: sense.nearestFire!.z })
@@ -2080,6 +2100,7 @@ export class AnimalAgent {
         case 'frenzy-beeline': {
           this.threateningHuman = false
           this.humanDecisionTimer = 0
+          this.npcDecisionTimer = 0
           this.provokedTimer = 0
           this.moveTowardStrategicVillage(dt)
           break
@@ -2184,6 +2205,7 @@ export class AnimalAgent {
         case 'predator-normal': {
           this.threateningHuman = false
           this.humanDecisionTimer = 0
+          this.npcDecisionTimer = 0
           this.provokedTimer = 0
           this.updatePredator(dt, others)
           break
@@ -2191,6 +2213,7 @@ export class AnimalAgent {
         case 'prey-normal': {
           this.threateningHuman = false
           this.humanDecisionTimer = 0
+          this.npcDecisionTimer = 0
           this.provokedTimer = 0
           this.updatePrey(dt, others)
           break
@@ -2360,45 +2383,58 @@ export class AnimalAgent {
   }
 
   /** Nearest NPC candidate within `playerNoticeRange`, or `null` (plan 179
-   *  §7/§8) — deliberately no facing-cone/probability roll like the
-   *  player's `isPlayerNoticed()`: a frenzied wolf that's already committed
-   *  to reaching the settlement doesn't need stealth-grade perception of
-   *  the humans living there. `nearbyNpcs` is caller-bounded (see
-   *  `NearbyNpcCandidate`'s doc), so this stays a small local scan. */
+   *  §7/§8; generalized to every predator, not just a frenzied one, in
+   *  npc-008 step 6) — deliberately no facing-cone/probability roll like the
+   *  player's `isPlayerNoticed()`: a predator that's already committed to a
+   *  target doesn't need stealth-grade perception of the humans nearby. A
+   *  non-frenzied predator excludes candidates inside a village's avoidance
+   *  radius (`isNearVillage`), mirroring `updatePredator`'s existing "live
+   *  prey inside the village is not huntable" rule — a frenzied predator is
+   *  explicitly willing to enter a village (`moveTowardStrategicVillage`),
+   *  so it keeps considering every candidate. `nearbyNpcs` is caller-bounded
+   *  (see `NearbyNpcCandidate`'s doc) but, since step 6 dropped the
+   *  frenzy-only gate, is now scanned by every loaded predator every tick —
+   *  squared-distance compare (same idiom as `countNearbyHumans`) instead of
+   *  `Math.hypot` keeps that scan cheap. */
   private senseNpcThreat(nearbyNpcs: readonly NearbyNpcCandidate[]): NearbyNpcCandidate | null {
     let best: NearbyNpcCandidate | null = null
-    let bestD = this.def.playerNoticeRange
+    let bestDSq = this.def.playerNoticeRange * this.def.playerNoticeRange
     for (const npc of nearbyNpcs) {
-      const d = Math.hypot(npc.x - this.mesh.position.x, npc.z - this.mesh.position.z)
-      if (d < bestD) {
-        bestD = d
+      if (!this.frenzied && this.isNearVillage(npc)) continue
+      const dx = npc.x - this.mesh.position.x
+      const dz = npc.z - this.mesh.position.z
+      const dSq = dx * dx + dz * dz
+      if (dSq < bestDSq) {
+        bestDSq = dSq
         best = npc
       }
     }
     return best
   }
 
-  /** Stable frenzy combat target (plan 179 follow-up — see `frenzyNpcTarget`'s
-   *  doc). Once locked onto an NPC, keeps returning that same NPC's
-   *  latest position from `nearbyNpcs` every tick instead of re-running
-   *  `senseNpcThreat`'s nearest-candidate scan, so `chaseNpc` gets a
-   *  consistent destination. Only re-picks (via `senseNpcThreat`) once the
-   *  locked target drops out of the caller-bounded `nearbyNpcs` list —
-   *  dead (`gameLoop.ts` already filters `npc.health.dead`) or its
-   *  settlement unloaded. Does not re-apply `playerNoticeRange` once
-   *  locked, so the wolf keeps chasing a target it has already outrun that
-   *  radius toward. */
-  private resolveFrenzyNpcTarget(nearbyNpcs: readonly NearbyNpcCandidate[]): NearbyNpcCandidate | null {
-    if (this.frenzyNpcTarget) {
-      const stillPresent = nearbyNpcs.find((npc) => npc.id === this.frenzyNpcTarget!.id)
+  /** Stable NPC target commitment (plan 179 follow-up; generalized to every
+   *  predator in npc-008 step 6 — see `npcTarget`'s doc). Once locked onto
+   *  an NPC, keeps returning that same NPC's latest position from
+   *  `nearbyNpcs` every tick instead of re-running `senseNpcThreat`'s
+   *  nearest-candidate scan, so `chaseNpc`/`fleeFrom` get a consistent
+   *  destination. Only re-picks (via `senseNpcThreat`) once the locked
+   *  target drops out of the caller-bounded `nearbyNpcs` list — dead
+   *  (`gameLoop.ts` already filters `npc.health.dead`) or its settlement
+   *  unloaded. Does not re-apply `playerNoticeRange` or the village
+   *  exclusion once locked, so a predator keeps its target even if the
+   *  target then wanders into a village (recorded as a follow-up, see
+   *  `docs/plans/LOOSE-ENDS.md`). */
+  private resolveNpcTarget(nearbyNpcs: readonly NearbyNpcCandidate[]): NearbyNpcCandidate | null {
+    if (this.npcTarget) {
+      const stillPresent = nearbyNpcs.find((npc) => npc.id === this.npcTarget!.id)
       if (stillPresent) {
-        this.frenzyNpcTarget = stillPresent
+        this.npcTarget = stillPresent
         return stillPresent
       }
-      this.frenzyNpcTarget = null
+      this.npcTarget = null
     }
     const found = this.senseNpcThreat(nearbyNpcs)
-    if (found) this.frenzyNpcTarget = found
+    if (found) this.npcTarget = found
     return found
   }
 
@@ -2436,15 +2472,17 @@ export class AnimalAgent {
   }
 
   /** Same throttled-refresh idiom as `refreshThrottledHumanIntent`, for the
-   *  non-frenzied npc-threat path (`npc-attack`/`npc-ignore`/`npc-flee`).
-   *  Only ever engages when `npcThreat && !this.frenzied` — today that is
-   *  never true, because `update()` only resolves `npcThreat` for a
-   *  frenzied predator in the first place (implementation notes F1), so
-   *  this stays dead in practice until plan step 6 relaxes that gate. It
-   *  shares `humanDecisionTimer`/`cachedHumanIntent`/`cachedAggressionRoll`
-   *  with `refreshThrottledHumanIntent`, same as the pre-refactor code —
-   *  safe because the two conditions can never both hold (this one requires
-   *  `!this.frenzied`, the other's `npcThreat` already implies `frenzied`). */
+   *  non-frenzied npc-threat path (`npc-attack`/`npc-ignore`/`npc-flee`,
+   *  live since npc-008 step 6). Only engages when `npcThreat &&
+   *  !this.frenzied` — a frenzied predator's `npcThreat` instead resolves
+   *  via `npc-attack-frenzied`, which skips scoring entirely (implementation
+   *  notes F1). Uses its own `npcDecisionTimer`/`cachedNpcIntent`/
+   *  `cachedNpcAggressionRoll` rather than sharing
+   *  `refreshThrottledHumanIntent`'s cache — step 6 means `sense.playerActive`
+   *  and `npcThreat` can both be true in the same tick (predator sees player
+   *  and NPC at once), and a shared cache would let whichever of the two
+   *  refreshes runs second clobber the other's in-flight intent (see
+   *  `npcDecisionTimer`'s doc). */
   private refreshThrottledNpcIntent(
     npcThreat: NearbyNpcCandidate | null,
     nearbyNpcs: readonly NearbyNpcCandidate[],
@@ -2452,13 +2490,13 @@ export class AnimalAgent {
     dt: number,
   ): PredatorHumanIntent | null {
     if (!(npcThreat && !this.frenzied)) return null
-    this.humanDecisionTimer -= dt
-    if (this.humanDecisionTimer <= 0) {
-      this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
-      this.cachedAggressionRoll = Math.random()
-      this.cachedHumanIntent = this.decideNpcResponse(npcThreat, nearbyNpcs, sense, this.cachedAggressionRoll)
+    this.npcDecisionTimer -= dt
+    if (this.npcDecisionTimer <= 0) {
+      this.npcDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+      this.cachedNpcAggressionRoll = Math.random()
+      this.cachedNpcIntent = this.decideNpcResponse(npcThreat, nearbyNpcs, sense, this.cachedNpcAggressionRoll)
     }
-    return this.cachedHumanIntent
+    return this.cachedNpcIntent
   }
 
   /** True once a frenzied wolf is within `FRENZY_VILLAGE_ARRIVAL_RADIUS` of

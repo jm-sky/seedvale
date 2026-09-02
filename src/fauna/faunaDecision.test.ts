@@ -54,7 +54,7 @@ describe('decideFaunaBehaviour — priority table (implementation notes §2.1)',
     })).toBe('npc-attack-frenzied')
   })
 
-  it('#5 npc-attack / npc-ignore / npc-flee: npcThreat without frenzy (F1 — currently unreachable from AnimalAgent, see below)', () => {
+  it('#5 npc-attack / npc-ignore / npc-flee: npcThreat without frenzy (F1 — live in AnimalAgent since npc-008 step 6)', () => {
     expect(decideFaunaBehaviour({
       ...base, role: 'predator', npcThreat: true, npcIntent: 'attack',
     })).toBe('npc-attack')
@@ -83,6 +83,42 @@ describe('decideFaunaBehaviour — priority table (implementation notes §2.1)',
   it('#9 prey-normal: terminal fallback, always valid', () => {
     expect(decideFaunaBehaviour(base)).toBe('prey-normal')
     expect(decideFaunaBehaviour({ ...base, role: 'livestock' })).toBe('prey-normal')
+  })
+})
+
+describe('decideFaunaBehaviour — npc-008 step 6 (generalized animal↔NPC threat)', () => {
+  it('a non-frenzied predator resolves npc-attack/npc-flee/npc-ignore purely from npcIntent, same as a frenzied one resolves npc-attack-frenzied — no new scoring path', () => {
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: false, npcThreat: true, npcIntent: 'attack',
+    })).toBe('npc-attack')
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: false, npcThreat: true, npcIntent: 'flee',
+    })).toBe('npc-flee')
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: false, npcThreat: true, npcIntent: 'ignore',
+    })).toBe('npc-ignore')
+  })
+
+  it('frenzy still forces npc-attack-frenzied and skips scoring, even when npcIntent would have said flee/ignore', () => {
+    // A non-frenzied predator with the same npcIntent would flee/ignore instead.
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: true, npcThreat: true, npcIntent: 'flee',
+    })).toBe('npc-attack-frenzied')
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: true, npcThreat: true, npcIntent: 'ignore',
+    })).toBe('npc-attack-frenzied')
+  })
+
+  it('npcThreat without a resolved npcIntent yet (throttle window not refreshed) falls through to predator-normal, not a stale npc-* branch', () => {
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: false, npcThreat: true, npcIntent: null,
+    })).toBe('predator-normal')
+  })
+
+  it('npc threat outranks fire-avoid for a non-frenzied predator too (same priority as the frenzied case)', () => {
+    expect(decideFaunaBehaviour({
+      ...base, role: 'predator', frenzied: false, npcThreat: true, npcIntent: 'flee', fireNearby: true,
+    })).toBe('npc-flee')
   })
 })
 
