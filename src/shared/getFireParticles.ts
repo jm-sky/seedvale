@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 
-const fireAtlas = new THREE.TextureLoader().load('/images/flame/fire_atlas.png')
-fireAtlas.colorSpace = THREE.SRGBColorSpace
+const fireAtlas =
+  typeof window !== 'undefined' ? new THREE.TextureLoader().load('/images/flame/fire_atlas.png') : undefined
+if (fireAtlas) fireAtlas.colorSpace = THREE.SRGBColorSpace
 
 type PoolParticle = {
   position: THREE.Vector3
