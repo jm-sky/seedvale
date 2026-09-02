@@ -1,6 +1,7 @@
 import {
   AmbientLight,
   Box3,
+  Clock,
   Color,
   DirectionalLight,
   GridHelper,
@@ -96,6 +97,7 @@ export function createHouseBrowserScene(
     renderer.shadowMap.enabled = config.showShadows
     colliderPreview.setVisible(config.showColliders)
     colliderPreview.setPadding(config.colliderPadding)
+    for (const door of assembly?.doors ?? []) door.setOpen(config.doorsOpen)
   }
   applyConfigToScene()
 
@@ -118,6 +120,12 @@ export function createHouseBrowserScene(
     }
     assembly = next
     scene.add(next.root)
+    // Snap doors to the current toggle state immediately (rather than animating
+    // in from closed) so the auto-fit bounds below reflect the real pose.
+    for (const door of next.doors) {
+      door.setOpen(config.doorsOpen)
+      door.update(1)
+    }
 
     const bounds = new Box3().setFromObject(next.root)
     lastBounds = bounds
@@ -129,6 +137,7 @@ export function createHouseBrowserScene(
       definitionId: next.definitionId,
       census: next.census,
       colliderCount: colliders.length,
+      doorCount: next.doors.length,
     })
   }
 
@@ -199,8 +208,10 @@ export function createHouseBrowserScene(
   window.addEventListener('resize', onResize)
 
   let running = true
+  const clock = new Clock()
   const tick = (): void => {
     if (!running) return
+    assembly?.update(clock.getDelta())
     controls.update()
     renderer.render(scene, camera)
     requestAnimationFrame(tick)

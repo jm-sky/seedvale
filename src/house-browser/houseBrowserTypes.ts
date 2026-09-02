@@ -9,6 +9,7 @@ export interface HouseBrowserConfig {
   showColliders: boolean
   colliderPadding: number
   cameraAutoFit: boolean
+  doorsOpen: boolean
 }
 
 export const DEFAULT_HOUSE_BROWSER_CONFIG: HouseBrowserConfig = {
@@ -18,6 +19,7 @@ export const DEFAULT_HOUSE_BROWSER_CONFIG: HouseBrowserConfig = {
   showColliders: false,
   colliderPadding: 0,
   cameraAutoFit: true,
+  doorsOpen: false,
 }
 
 export type CameraView = 'front' | 'back' | 'left' | 'right' | 'top'
@@ -29,6 +31,7 @@ export interface HouseBrowserAssemblyInfo {
   definitionId: string
   census: HouseAssemblyCensus
   colliderCount: number
+  doorCount: number
 }
 
 export interface HouseBrowserScene {

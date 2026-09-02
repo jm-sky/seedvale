@@ -65,7 +65,7 @@ function setCameraView(view: CameraView): void {
 </script>
 
 <template>
-  <div class="flex h-full w-full bg-[#14181c] text-[#f2f6fa]">
+  <div class="flex h-full w-full bg-[#14181c] text-ink">
     <aside class="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-r border-white/10 bg-black/20 p-4">
       <h1 class="text-lg font-semibold tracking-wide">
         House Browser
@@ -88,6 +88,8 @@ function setCameraView(view: CameraView): void {
       <ColliderControls
         v-model:visible="config.showColliders"
         v-model:padding="config.colliderPadding"
+        v-model:doors-open="config.doorsOpen"
+        :door-count="assemblyInfo?.doorCount ?? 0"
       />
       <CameraControls
         @reset="resetCamera"
