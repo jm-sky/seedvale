@@ -35,13 +35,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/buildChunkGeometry.ts`
 
-- `buildChunkGeometry` — function — line 440
-- `ChunkMeshResult` — type — line 21
-- `createTerrainMaterial` — function — line 69
-- `SCORCH_CHARCOAL` — const — line 32
-- `scorchFalloffAt` — function — line 37
-- `TerrainScorchPatch` — type — line 29
-- `TerrainWeatherUniforms` — type — line 64
+- `buildChunkGeometry` — function — line 363
+- `ChunkMeshResult` — type — line 6
+- `createTerrainMaterial` — function — line 34
+- `TerrainWeatherUniforms` — type — line 29
 
 ## `terrain/chunkCrops.ts`
 
@@ -109,10 +106,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmapProtocol.ts`
 
-- `ChunkTileResult` — type — line 11
-- `ChunkWorkerRequest` — type — line 28
-- `ChunkWorkerResponse` — type — line 32
-- `GrassRequestParams` — type — line 24
+- `ChunkTileResult` — type — line 12
+- `ChunkWorkerRequest` — type — line 29
+- `ChunkWorkerResponse` — type — line 34
+- `GrassRequestParams` — type — line 25
 
 ## `terrain/chunkItems.ts`
 
@@ -121,22 +118,38 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 621
-- `ChunkManager` — type — line 384
-- `ChunkManagerConfig` — type — line 243
-- `createChunkManager` — function — line 760
+- `applyModificationToTile` — function — line 630
+- `ChunkManager` — type — line 393
+- `ChunkManagerConfig` — type — line 247
+- `createChunkManager` — function — line 769
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 749
-- `drainByBudget` — function — line 739
-- `FinalizeStage` — type — line 329
-- `pickNearestQueuedKey` — function — line 699
-- `pickNextFinalizeKey` — function — line 717
-- `ringChunkOffsets` — function — line 202
-- `TerrainModification` — type — line 578
+- `CropHarvestOutcome` — type — line 758
+- `drainByBudget` — function — line 748
+- `FinalizeStage` — type — line 333
+- `pickNearestQueuedKey` — function — line 708
+- `pickNextFinalizeKey` — function — line 726
+- `ringChunkOffsets` — function — line 206
+- `TerrainModification` — type — line 587
+
+## `terrain/chunkMeshCache.ts`
+
+- `ChunkMeshDataCache` — type — line 13
+- `createChunkMeshDataCache` — function — line 35
+- `DEFAULT_MESH_CACHE_BUDGET_BYTES` — const — line 33
+
+## `terrain/chunkMeshData.ts`
+
+- `ChunkMeshData` — type — line 63
+- `ChunkMeshDataParams` — type — line 75
+- `ChunkMeshTileGrids` — type — line 47
+- `computeChunkMeshData` — function — line 125
+- `SCORCH_CHARCOAL` — const — line 22
+- `scorchFalloffAt` — function — line 27
+- `TerrainScorchPatch` — type — line 19
 
 ## `terrain/chunkVegetation.ts`
 
@@ -145,15 +158,17 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkWorkerPool.ts`
 
-- `cancelChunkGrass` — function — line 285
-- `cancelChunkTile` — function — line 274
-- `ChunkWorkerPool` — type — line 22
-- `createChunkWorkerPool` — function — line 72
-- `defaultChunkWorkerCount` — function — line 61
-- `disposeChunkWorkerPool` — function — line 289
-- `HeightmapGenerationCancelledError` — class — line 10
-- `requestChunkGrass` — function — line 278
-- `requestChunkTile` — function — line 267
+- `cancelChunkGrass` — function — line 334
+- `cancelChunkMesh` — function — line 345
+- `cancelChunkTile` — function — line 323
+- `ChunkWorkerPool` — type — line 23
+- `createChunkWorkerPool` — function — line 87
+- `defaultChunkWorkerCount` — function — line 76
+- `disposeChunkWorkerPool` — function — line 349
+- `HeightmapGenerationCancelledError` — class — line 11
+- `requestChunkGrass` — function — line 327
+- `requestChunkMesh` — function — line 338
+- `requestChunkTile` — function — line 316
 
 ## `terrain/coastPlacement.ts`
 

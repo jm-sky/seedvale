@@ -24,6 +24,7 @@ import {
   createActionLifecycle,
   type DecisionContext,
   type PlannedAction,
+  type ScoredAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import {
@@ -53,6 +54,12 @@ import {
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { animateCorpseRotFx, createCorpseRotFx, disposeCorpseRotFx } from './corpseDecayFx'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
+import {
+  decideFaunaBehaviour,
+  type FaunaBehaviourKind,
+  type FaunaDecisionInput,
+  scoreFaunaBehaviours,
+} from './faunaDecision'
 import {
   createHarvestedRemainsAsync,
   createNaturalRemainsAsync,
@@ -340,20 +347,7 @@ type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drin
  *  never sets (see that method's doc), so `aiBranch` is the only reliable
  *  way to tell "beelining to the village" apart from "normal predator
  *  chase/wander" from the outside. */
-export type FaunaAiBranch =
-  | 'rabid'
-  | 'player-attack'
-  | 'player-ignore'
-  | 'player-flee'
-  | 'player-flee-prey'
-  | 'npc-attack-frenzied'
-  | 'npc-attack'
-  | 'npc-ignore'
-  | 'npc-flee'
-  | 'fire-avoid'
-  | 'frenzy-beeline'
-  | 'predator-normal'
-  | 'prey-normal'
+export type FaunaAiBranch = 'rabid' | FaunaBehaviourKind
 
 /** One `chaseNav`/`fleeNav` `NavRescue`'s state, serialized for
  *  `AnimalAgent.getDebugInfo()` — no raw Three.js/route internals, just
@@ -390,6 +384,11 @@ export type AnimalAgentDebugInfo = {
    *  `stepWithSlopeAndCollision()` isn't actually advancing the position. */
   lastStepDistance: number
   aiBranch: FaunaAiBranch
+  /** `scoreFaunaBehaviours()` over this tick's decision input (npc-008 step
+   *  4) — shows why `aiBranch` won, ranked highest first. `null` while a
+   *  gate (`rabid`/`mounted`/`dead`) bypassed the ranked decision this tick,
+   *  same set of ticks where `aiBranch` isn't one of `FaunaBehaviourKind`. */
+  behaviourCandidates: ScoredAction<FaunaBehaviourKind>[] | null
   intent: FaunaActionKind | null
   threateningHuman: boolean
   health: { current: number, max: number }
@@ -1057,6 +1056,12 @@ export class AnimalAgent {
   private cachedAggressionRoll = 0
   /** Counts down after a player hit — feeds wolf retaliation (plan 056 ext). */
   private provokedTimer = 0
+  /** This tick's `decideFaunaBehaviour()` input (npc-008 step 4) — `null`
+   *  while the `rabid`/`mounted`/`dead` gates bypassed the decision
+   *  entirely. Cached only so `getDebugInfo()` can recompute
+   *  `scoreFaunaBehaviours()` on demand for `?debug=1` without the runtime
+   *  `update()` path allocating a `ScoredAction[]` every tick. */
+  private lastFaunaDecisionInput: FaunaDecisionInput | null = null
   /** Runtime-only trait set by the `setFrenzyWolf()` DevTools command (plan
    *  179 §3/§4) — not a new species/FSM, just an input to the existing
    *  predator-human decision (see `decideHumanResponse`/`decideNpcResponse`'s
@@ -1578,6 +1583,7 @@ export class AnimalAgent {
       sprinting: this.sprinting,
       lastStepDistance: this.debugLastStepDist,
       aiBranch: this.debugBranch,
+      behaviourCandidates: this.lastFaunaDecisionInput ? scoreFaunaBehaviours(this.lastFaunaDecisionInput) : null,
       intent: this.pendingAction?.kind ?? null,
       threateningHuman: this.threateningHuman,
       health: { current: this.health.currentHp, max: this.health.maxHp },
@@ -1978,6 +1984,7 @@ export class AnimalAgent {
         this.timeSinceDeath += dt
         this.advanceCorpseDecay(dt, others, observerPos)
       }
+      this.lastFaunaDecisionInput = null
       return
     }
     // While ridden, `driveMounted()` (called by the riding system earlier
@@ -1985,7 +1992,10 @@ export class AnimalAgent {
     // agent) already did this frame's movement/needs/animation/bookkeeping —
     // running the AI decision branch here too would fight player control and
     // double-tick life/needs (plan fauna-003 §5).
-    if (this.mounted) return
+    if (this.mounted) {
+      this.lastFaunaDecisionInput = null
+      return
+    }
     if (this.attackCooldown > 0) this.attackCooldown -= dt
     if (this.alertTimer > 0) this.alertTimer -= dt
     if (this.provokedTimer > 0) this.provokedTimer -= dt
@@ -2021,130 +2031,182 @@ export class AnimalAgent {
       this.humanDecisionTimer = 0
       this.provokedTimer = 0
       this.debugBranch = 'rabid'
+      this.lastFaunaDecisionInput = null
       this.updateRabid(dt, others)
 
-    } else if (sense.playerActive) {
-      this.cancelSourceTarget()
-      if (this.def.role === 'predator') {
-        this.humanDecisionTimer -= dt
-        if (this.humanDecisionTimer <= 0) {
-          this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
-          this.cachedAggressionRoll = Math.random()
-          this.cachedHumanIntent = this.decideHumanResponse(
-            sense,
-            observerPos,
-            nearbyHumanCount,
-            this.cachedAggressionRoll,
-          )
+    } else {
+      // Throttled player-intent refresh (implementation notes F4), computed
+      // before selection under exactly the old branch #2 guard so the
+      // 0.2s cache window's timing is unchanged.
+      const playerIntent = this.refreshThrottledHumanIntent(sense, observerPos, nearbyHumanCount, dt)
+      // `npc-attack`/`npc-ignore`/`npc-flee` stay unreachable here (F1) —
+      // `npcThreat` above is only ever non-null while `this.frenzied` is
+      // true, so `npcIntent` is always `null` and `npc-attack-frenzied`
+      // always wins first. Relaxing the `npcThreat` gate is plan step 6.
+      const npcIntent = this.refreshThrottledNpcIntent(npcThreat, nearbyNpcs, sense, dt)
+      const decisionInput: FaunaDecisionInput = {
+        role: this.def.role,
+        frenzied: this.frenzied,
+        playerActive: sense.playerActive,
+        playerIntent,
+        npcThreat: npcThreat !== null,
+        npcIntent,
+        fireNearby: sense.nearestFire !== null,
+        hasStrategicVillage: this.strategicVillage !== null,
+        arrivedAtStrategicVillage: this.arrivedAtStrategicVillage(),
+      }
+      this.lastFaunaDecisionInput = decisionInput
+      const branch = decideFaunaBehaviour(decisionInput)
+      this.debugBranch = branch
+      switch (branch) {
+        case 'fire-avoid': {
+          // `!this.frenzied` (enforced by `isBehaviourValid`): FIRE_AVOID_RADIUS
+          // (11) is bigger than a wolf's NPC-notice radius (playerNoticeRange,
+          // 10 — see senseNpcThreat), and a settlement's campfire sits right by
+          // its buildings. Without this bypass a frenzied wolf gets
+          // flee-repelled by the fire before it can ever notice an NPC
+          // (npcThreat, above) or finish its village beeline
+          // (moveTowardStrategicVillage, below) — it just oscillates outside
+          // the fire radius, short of the village (plan 179 follow-up).
+          // Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
+          this.threateningHuman = false
+          this.humanDecisionTimer = 0
+          this.provokedTimer = 0
+          this.cancelSourceTarget()
+          this.setIntent('flee', { x: sense.nearestFire!.x, z: sense.nearestFire!.z })
+          this.fleeFrom(sense.nearestFire!.x, sense.nearestFire!.z, dt)
+          break
         }
-        this.threateningHuman = this.cachedHumanIntent === 'attack'
-        if (this.cachedHumanIntent === 'attack') {
-          this.debugBranch = 'player-attack'
+        case 'frenzy-beeline': {
+          this.threateningHuman = false
+          this.humanDecisionTimer = 0
+          this.provokedTimer = 0
+          this.moveTowardStrategicVillage(dt)
+          break
+        }
+        case 'npc-attack': {
+          if (isNpcCombatDebugMode()) {
+            console.log(
+              '[NPC COMBAT] npcThreat ON',
+              `wolf=${this.animalId}/${this.def.kind}`,
+              `frenzy=${this.frenzied}`,
+              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
+              `playerActive=${sense.playerActive}`,
+            )
+          }
+          this.cancelSourceTarget()
+          this.threateningHuman = true
+          this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
+          this.chaseNpc(npcThreat!, dt, onNpcHit)
+          break
+        }
+        case 'npc-attack-frenzied': {
+          // No `cancelSourceTarget()` here — asymmetric with the other
+          // branches on purpose (implementation notes F2, not fixed here).
+          if (!this.threateningHuman && isNpcCombatDebugMode()) {
+            console.log(
+              '[NPC COMBAT] threat state ON',
+              `wolf=${this.animalId}/${this.def.kind}`,
+              `frenzy=${this.frenzied}`,
+              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
+              `playerActive=${sense.playerActive}`,
+            )
+          }
+          this.threateningHuman = true
+          this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
+          this.chaseNpc(npcThreat!, dt, onNpcHit)
+          break
+        }
+        case 'npc-flee': {
+          if (isNpcCombatDebugMode()) {
+            console.log(
+              '[NPC COMBAT] npcThreat ON',
+              `wolf=${this.animalId}/${this.def.kind}`,
+              `frenzy=${this.frenzied}`,
+              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
+              `playerActive=${sense.playerActive}`,
+            )
+          }
+          this.cancelSourceTarget()
+          this.threateningHuman = false
+          this.setIntent('flee', { x: npcThreat!.x, z: npcThreat!.z })
+          this.fleeFrom(npcThreat!.x, npcThreat!.z, dt)
+          break
+        }
+        case 'npc-ignore': {
+          if (isNpcCombatDebugMode()) {
+            console.log(
+              '[NPC COMBAT] npcThreat ON',
+              `wolf=${this.animalId}/${this.def.kind}`,
+              `frenzy=${this.frenzied}`,
+              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
+              `playerActive=${sense.playerActive}`,
+            )
+          }
+          this.cancelSourceTarget()
+          this.threateningHuman = false
+          this.setIntent('wander')
+          this.wander(dt)
+          break
+        }
+        case 'player-attack': {
+          this.cancelSourceTarget()
+          this.threateningHuman = true
           this.setIntent('attack', copyVec3(observerPos))
           this.chaseHuman(observerPos, dt, onHumanHit)
-        } else if (this.cachedHumanIntent === 'ignore') {
+          break
+        }
+        case 'player-flee': {
+          this.cancelSourceTarget()
+          this.threateningHuman = false
+          this.setIntent('flee', copyVec3(observerPos))
+          this.fleeFrom(observerPos.x, observerPos.z, dt)
+          break
+        }
+        case 'player-flee-prey': {
+          this.cancelSourceTarget()
+          this.threateningHuman = false
+          this.setIntent('flee', copyVec3(observerPos))
+          this.fleeFrom(observerPos.x, observerPos.z, dt)
+          break
+        }
+        case 'player-ignore': {
           // A bold predator (bear, playtest fixes plan §3) noticing a distant,
           // non-threatening human just keeps doing what it was doing instead
           // of panicking — same "no reaction" shape as `updatePredator`'s
           // no-prey-found wander, not a new idle mechanic.
-          this.debugBranch = 'player-ignore'
+          this.cancelSourceTarget()
+          this.threateningHuman = false
           this.setIntent('wander')
           this.wander(dt)
-        } else {
-          this.debugBranch = 'player-flee'
-          this.setIntent('flee', copyVec3(observerPos))
-          this.fleeFrom(observerPos.x, observerPos.z, dt)
+          break
         }
-      } else {
-        this.threateningHuman = false
-        this.debugBranch = 'player-flee-prey'
-        this.setIntent('flee', copyVec3(observerPos))
-        this.fleeFrom(observerPos.x, observerPos.z, dt)
+        case 'predator-normal': {
+          this.threateningHuman = false
+          this.humanDecisionTimer = 0
+          this.provokedTimer = 0
+          this.updatePredator(dt, others)
+          break
+        }
+        case 'prey-normal': {
+          this.threateningHuman = false
+          this.humanDecisionTimer = 0
+          this.provokedTimer = 0
+          this.updatePrey(dt, others)
+          break
+        }
       }
 
       // A frenzied predator can still expose itself as an NPC threat
       // while actively engaging the player.
-      if (this.frenzied && npcThreat) {
+      if (
+        this.frenzied
+        && npcThreat
+        && (branch === 'player-attack' || branch === 'player-ignore'
+          || branch === 'player-flee' || branch === 'player-flee-prey')
+      ) {
         this.threateningHuman = true
       }
-
-    } else if (npcThreat && this.frenzied) {
-      if (!this.threateningHuman && isNpcCombatDebugMode()) {
-        console.log(
-          '[NPC COMBAT] threat state ON',
-          `wolf=${this.animalId}/${this.def.kind}`,
-          `frenzy=${this.frenzied}`,
-          `npcThreat=${npcThreat.id}/${npcThreat.id}`,
-          `playerActive=${sense.playerActive}`,
-        )
-      }
-      this.threateningHuman = true
-      this.debugBranch = 'npc-attack-frenzied'
-      this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
-      this.chaseNpc(npcThreat, dt, onNpcHit)
-    } else if (npcThreat) {
-      if (isNpcCombatDebugMode()) {
-        console.log(
-          '[NPC COMBAT] npcThreat ON',
-          `wolf=${this.animalId}/${this.def.kind}`,
-          `frenzy=${this.frenzied}`,
-          `npcThreat=${npcThreat.id}/${npcThreat.id}`,
-          `playerActive=${sense.playerActive}`,
-        )
-      }
-      this.cancelSourceTarget()
-      this.humanDecisionTimer -= dt
-      if (this.humanDecisionTimer <= 0) {
-        this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
-        this.cachedAggressionRoll = Math.random()
-        this.cachedHumanIntent = this.decideNpcResponse(npcThreat, nearbyNpcs, sense, this.cachedAggressionRoll)
-      }
-      this.threateningHuman = this.cachedHumanIntent === 'attack'
-      if (this.cachedHumanIntent === 'attack') {
-        this.debugBranch = 'npc-attack'
-        this.setIntent('attack', { x: npcThreat.x, z: npcThreat.z })
-        this.chaseNpc(npcThreat, dt, onNpcHit)
-      } else if (this.cachedHumanIntent === 'ignore') {
-        this.debugBranch = 'npc-ignore'
-        this.setIntent('wander')
-        this.wander(dt)
-      } else {
-        this.debugBranch = 'npc-flee'
-        this.setIntent('flee', { x: npcThreat.x, z: npcThreat.z })
-        this.fleeFrom(npcThreat.x, npcThreat.z, dt)
-      }
-    } else if (sense.nearestFire && !this.frenzied) {
-      // `!this.frenzied`: FIRE_AVOID_RADIUS (11) is bigger than a wolf's NPC-notice
-      // radius (playerNoticeRange, 10 — see senseNpcThreat), and a settlement's
-      // campfire sits right by its buildings. Without this bypass a frenzied wolf
-      // gets flee-repelled by the fire before it can ever notice an NPC (npcThreat,
-      // above) or finish its village beeline (moveTowardStrategicVillage, below) —
-      // it just oscillates outside the fire radius, short of the village (plan 179
-      // follow-up). Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
-      this.threateningHuman = false
-      this.humanDecisionTimer = 0
-      this.provokedTimer = 0
-      this.cancelSourceTarget()
-      this.debugBranch = 'fire-avoid'
-      this.setIntent('flee', { x: sense.nearestFire.x, z: sense.nearestFire.z })
-      this.fleeFrom(sense.nearestFire.x, sense.nearestFire.z, dt)
-    } else if (this.def.role === 'predator') {
-      this.threateningHuman = false
-      this.humanDecisionTimer = 0
-      this.provokedTimer = 0
-      if (this.frenzied && this.strategicVillage && !this.arrivedAtStrategicVillage()) {
-        this.debugBranch = 'frenzy-beeline'
-        this.moveTowardStrategicVillage(dt)
-      } else {
-        this.debugBranch = 'predator-normal'
-        this.updatePredator(dt, others)
-      }
-    } else {
-      this.threateningHuman = false
-      this.humanDecisionTimer = 0
-      this.provokedTimer = 0
-      this.debugBranch = 'prey-normal'
-      this.updatePrey(dt, others)
     }
     if (this.threateningHuman && !this.wasThreateningHuman) {
       onAggro?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
@@ -2235,6 +2297,35 @@ export class AnimalAgent {
       nearbyHumanCount,
       nearbyFireCount: sense.fireNearby ? 1 : 0,
     }
+  }
+
+  /** Throttled player-intent refresh (implementation notes F4) — decrements
+   *  `humanDecisionTimer` and re-rolls `cachedHumanIntent`/`cachedAggressionRoll`
+   *  only once it expires (`HUMAN_DECISION_INTERVAL_SEC`), under exactly the
+   *  condition the old inline branch used (`sense.playerActive && role ===
+   *  'predator'`). Returns `null` outside that condition — extracted
+   *  verbatim from the pre-refactor branch #2 body so `decideFaunaBehaviour`
+   *  can be fed the (still throttled) result before selection, without
+   *  changing the cache's timing. */
+  private refreshThrottledHumanIntent(
+    sense: EnvironmentSense,
+    observerPos: THREE.Vector3,
+    nearbyHumanCount: number,
+    dt: number,
+  ): PredatorHumanIntent | null {
+    if (!(sense.playerActive && this.def.role === 'predator')) return null
+    this.humanDecisionTimer -= dt
+    if (this.humanDecisionTimer <= 0) {
+      this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+      this.cachedAggressionRoll = Math.random()
+      this.cachedHumanIntent = this.decideHumanResponse(
+        sense,
+        observerPos,
+        nearbyHumanCount,
+        this.cachedAggressionRoll,
+      )
+    }
+    return this.cachedHumanIntent
   }
 
   private decideHumanResponse(
@@ -2342,6 +2433,32 @@ export class AnimalAgent {
       provoked: this.provokedTimer > 0 || this.frenzied,
       aggressionRoll,
     })
+  }
+
+  /** Same throttled-refresh idiom as `refreshThrottledHumanIntent`, for the
+   *  non-frenzied npc-threat path (`npc-attack`/`npc-ignore`/`npc-flee`).
+   *  Only ever engages when `npcThreat && !this.frenzied` — today that is
+   *  never true, because `update()` only resolves `npcThreat` for a
+   *  frenzied predator in the first place (implementation notes F1), so
+   *  this stays dead in practice until plan step 6 relaxes that gate. It
+   *  shares `humanDecisionTimer`/`cachedHumanIntent`/`cachedAggressionRoll`
+   *  with `refreshThrottledHumanIntent`, same as the pre-refactor code —
+   *  safe because the two conditions can never both hold (this one requires
+   *  `!this.frenzied`, the other's `npcThreat` already implies `frenzied`). */
+  private refreshThrottledNpcIntent(
+    npcThreat: NearbyNpcCandidate | null,
+    nearbyNpcs: readonly NearbyNpcCandidate[],
+    sense: EnvironmentSense,
+    dt: number,
+  ): PredatorHumanIntent | null {
+    if (!(npcThreat && !this.frenzied)) return null
+    this.humanDecisionTimer -= dt
+    if (this.humanDecisionTimer <= 0) {
+      this.humanDecisionTimer = HUMAN_DECISION_INTERVAL_SEC
+      this.cachedAggressionRoll = Math.random()
+      this.cachedHumanIntent = this.decideNpcResponse(npcThreat, nearbyNpcs, sense, this.cachedAggressionRoll)
+    }
+    return this.cachedHumanIntent
   }
 
   /** True once a frenzied wolf is within `FRENZY_VILLAGE_ARRIVAL_RADIUS` of

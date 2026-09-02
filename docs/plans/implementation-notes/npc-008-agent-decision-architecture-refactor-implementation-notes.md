@@ -7,6 +7,8 @@
 
 No production code was changed in this stage. Everything below is verified against current source, not against plan documents.
 
+**Update 2026-09-02 (same day):** steps 2a–5 implemented as designed in §5 — new `src/fauna/faunaDecision.ts` (+`faunaDecision.test.ts`, 18 tests covering the §2.1 table, the §5.5 ordering pairs and the F1 pinning case), `AnimalAgent.update()`'s `if`/`else if` chain replaced by `decideFaunaBehaviour()` + a `switch`, `refreshThrottledHumanIntent()`/`refreshThrottledNpcIntent()` extracted per F4, `scoreFaunaBehaviours()` wired into `getDebugInfo().behaviourCandidates`. `decideNpcResponse`/the `npc-attack`/`npc-ignore`/`npc-flee` switch cases stay unreachable exactly as before (F1 not revived) — `npcIntent` is computed via `refreshThrottledNpcIntent`, whose guard (`npcThreat && !frenzied`) can never hold today. `cancelSourceTarget()`'s asymmetry (F2) is preserved as-is. `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run test` (2371 tests) all pass. Step 6 (§5.6, generalizing the animal↔NPC threat gate) is separate, deliberately not done here.
+
 ---
 
 ## 1. Ownership map (who decides what today)

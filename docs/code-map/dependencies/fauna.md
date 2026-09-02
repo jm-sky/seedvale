@@ -14,6 +14,7 @@ Generated from TypeScript imports.
 - `fauna/bloodSplat.ts`
 - `fauna/corpseDecayFx.ts`
 - `fauna/faunaCombat.ts`
+- `fauna/faunaDecision.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/livestockProduction.ts`
@@ -55,6 +56,7 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
+- `fauna/faunaDecision.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/frenzyWolf.test.ts`
 - `fauna/harvestedRemains.test.ts`
@@ -259,6 +261,25 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `items/highQualityWeapons.test.ts`
 
+## `fauna/faunaDecision.test.ts`
+
+**Imports**
+
+- `fauna/faunaDecision.ts`
+
+## `fauna/faunaDecision.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/predatorHumanDecision.ts`
+- `simulation/scoreActions.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/faunaDecision.test.ts`
+
 ## `fauna/foodWaterTargeting.test.ts`
 
 **Imports**
@@ -400,6 +421,7 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/faunaDecision.ts`
 - `fauna/predatorHumanDecision.test.ts`
 
 ## `fauna/proceduralAnimals.ts`

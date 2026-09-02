@@ -1,7 +1,7 @@
 # Plan: Agent Decision Architecture Refactor
 
 **Created:** 2026-09-01
-**Status:** `in progress` 🔄 — etap 1 (recon + projekt implementacji) zrobiony
+**Status:** `in progress` 🔄 — kroki 2-5 zrobione (parytet zachowania zweryfikowany testami); pozostał krok 6 (generalizacja animal↔NPC threat, osobny commit)
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **Domain:** `npc`

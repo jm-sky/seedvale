@@ -19,7 +19,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `terrain/biomeColors.test.ts`
-- `terrain/buildChunkGeometry.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/dig.ts`
 - `terrain/footstepSurface.ts`
 - `terrain/grassPlacement.ts`
@@ -44,11 +44,11 @@ Generated from TypeScript imports.
 - `settlement/settlementTerrain.ts`
 - `terrain/biomeColors.ts`
 - `terrain/biomeRegions.test.ts`
-- `terrain/buildChunkGeometry.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.ts`
 - `terrain/naturalResources.ts`
@@ -71,9 +71,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `config/worldConfig.ts`
-- `terrain/biomeColors.ts`
-- `terrain/biomeRegions.ts`
-- `terrain/chunkHeightmap.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/terrainDetailNormalMap.ts`
 
 **Imported by**
@@ -183,7 +181,6 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.ts`
 - `terrain/biomeRegions.test.ts`
 - `terrain/biomeRegions.ts`
-- `terrain/buildChunkGeometry.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkHeightmap.test.ts`
@@ -193,6 +190,8 @@ Generated from TypeScript imports.
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.test.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkMeshData.test.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/chunkWorkerPool.ts`
@@ -222,6 +221,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkHeightmapProtocol.ts`
 - `terrain/chunkItems.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.ts`
 
@@ -232,6 +232,7 @@ Generated from TypeScript imports.
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkItems.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.ts`
 - `world/cropLifecycle.ts`
@@ -296,6 +297,8 @@ Generated from TypeScript imports.
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkHeightmapProtocol.ts`
+- `terrain/chunkMeshCache.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/chunkWorkerPool.ts`
 - `terrain/distanceLod.ts`
 - `terrain/fbm.ts`
@@ -329,6 +332,50 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/worldContext.ts`
 
+## `terrain/chunkMeshCache.test.ts`
+
+**Imports**
+
+- `terrain/chunkMeshCache.ts`
+- `terrain/chunkMeshData.ts`
+
+## `terrain/chunkMeshCache.ts`
+
+**Imports**
+
+- `terrain/chunkMeshData.ts`
+
+**Imported by**
+
+- `terrain/chunkManager.ts`
+- `terrain/chunkMeshCache.test.ts`
+
+## `terrain/chunkMeshData.test.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkMeshData.ts`
+
+## `terrain/chunkMeshData.ts`
+
+**Imports**
+
+- `terrain/biomeColors.ts`
+- `terrain/biomeRegions.ts`
+- `terrain/chunkHeightmap.ts`
+
+**Imported by**
+
+- `terrain/buildChunkGeometry.ts`
+- `terrain/chunkHeightmap.worker.ts`
+- `terrain/chunkHeightmapProtocol.ts`
+- `terrain/chunkManager.ts`
+- `terrain/chunkMeshCache.test.ts`
+- `terrain/chunkMeshCache.ts`
+- `terrain/chunkMeshData.test.ts`
+- `terrain/chunkWorkerPool.ts`
+
 ## `terrain/chunkVegetation.test.ts`
 
 **Imports**
@@ -360,6 +407,7 @@ Generated from TypeScript imports.
 
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkHeightmapProtocol.ts`
+- `terrain/chunkMeshData.ts`
 - `terrain/grassPlacement.ts`
 
 **Imported by**

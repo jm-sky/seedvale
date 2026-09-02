@@ -94,6 +94,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcAnimalThreat.ts`
+- `fauna/faunaDecision.ts`
 - `fauna/predatorHumanDecision.ts`
 - `simulation/index.ts`
 - `simulation/scoreActions.test.ts`
