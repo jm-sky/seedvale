@@ -561,4 +561,8 @@ Each result should correspond to a captured performance trace and be kept as a h
   - `docs/performance/results/2026-09-01--007--benchmark-water.json`
   - `docs/performance/results/2026-09-01--007--benchmark-water.md`
   - `docs/performance/trace-results/Trace-20260901T090153.md`
+
+- Batch: 2026-09-02
+  - `docs/performance/results/2026-09-02--008--summary.md`
   - `docs/performance/results/2026-09-02--008--benchmark-stream-webgl-program-census.md`
+  - `docs/performance/results/2026-09-02--010--summary--ao-transparency-aware-benchmark.md`
