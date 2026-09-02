@@ -24,6 +24,7 @@ import type { PlayerGardenRecord } from '../world/playerGarden'
 import type { NearbyPlayerWellLookup, PlayerWellRecord } from '../world/playerWell'
 import type { PointLightBudget } from '../world/pointLightBudget'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
+import type { BedrollRecord, PlatformRecord } from '../world/sleepingUtilities'
 import type { StandingTorchRecord } from '../world/standingTorch'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
@@ -65,6 +66,7 @@ import {
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
 import { createPlayerGardens, type PlayerGardens } from '../world/createPlayerGardens'
 import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
+import { createSleepingUtilities, type SleepingUtilities } from '../world/createSleepingUtilities'
 import { createStandingTorches, type StandingTorches } from '../world/createStandingTorches'
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createFoodSourceHooks } from '../world/foodSources'
@@ -127,6 +129,7 @@ export type WorldBundle = {
   playerGardens: PlayerGardens
   standingTorches: StandingTorches
   palisades: Palisades
+  sleepingUtilities: SleepingUtilities
   terrainPreparations: TerrainPreparations
   largeCaves: LargeCaves
   dryingRacks: DryingRacks
@@ -412,6 +415,8 @@ type WorldSystemsSeed = {
   playerGardens: readonly PlayerGardenRecord[]
   standingTorches: readonly StandingTorchRecord[]
   palisades: readonly PalisadeSegmentRecord[]
+  sleepingUtilityBedrolls: readonly BedrollRecord[]
+  sleepingUtilityPlatforms: readonly PlatformRecord[]
   terrainPreparations: readonly TerrainPreparationRecord[]
   dryingRacks: readonly DryingRackRecord[]
   hives: readonly BeehiveRecord[]
@@ -534,6 +539,8 @@ async function buildWorldSystems(
     playerGardens: initialPlayerGardens,
     standingTorches: initialStandingTorches,
     palisades: initialPalisades,
+    sleepingUtilityBedrolls: initialSleepingUtilityBedrolls,
+    sleepingUtilityPlatforms: initialSleepingUtilityPlatforms,
     terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
@@ -676,6 +683,13 @@ async function buildWorldSystems(
     chunkManager.clearColliders,
     initialPalisades,
   )
+  const sleepingUtilities = createSleepingUtilities(
+    scene,
+    chunkManager.sampleHeight,
+    initialSleepingUtilityBedrolls,
+    initialSleepingUtilityPlatforms,
+    config.seed,
+  )
   const terrainPreparations = createTerrainPreparations(
     scene,
     chunkManager,
@@ -715,6 +729,7 @@ async function buildWorldSystems(
     playerGardens,
     standingTorches,
     palisades,
+    sleepingUtilities,
     terrainPreparations,
     largeCaves,
     dryingRacks: createEmptyDryingRacks(),
@@ -898,6 +913,11 @@ export async function createWorldBundle(
    *  "carried across rebuild, reset only on a genuinely new world" contract
    *  as `initialStandingTorches` above. */
   initialPalisades: readonly PalisadeSegmentRecord[] = [],
+  /** Plan items-player-013 — persistent player-built bedrolls/sleeping
+   *  platforms, same "carried across rebuild, reset only on a genuinely new
+   *  world" contract as `initialStandingTorches`/`initialPalisades` above. */
+  initialSleepingUtilityBedrolls: readonly BedrollRecord[] = [],
+  initialSleepingUtilityPlatforms: readonly PlatformRecord[] = [],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -912,6 +932,8 @@ export async function createWorldBundle(
     playerGardens: initialPlayerGardens,
     standingTorches: initialStandingTorches,
     palisades: initialPalisades,
+    sleepingUtilityBedrolls: initialSleepingUtilityBedrolls,
+    sleepingUtilityPlatforms: initialSleepingUtilityPlatforms,
     terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
@@ -1026,6 +1048,11 @@ export async function rebuildWorldBundle(
   // seed-derived — same carry-across-rebuild contract as `standingTorches` above.
   const carriedPalisades = resetCollectedItems ? [] : [...bundle.palisades.nodes()]
   bundle.palisades.dispose()
+  // Player-built bedrolls/platforms are positioned by the player, not
+  // seed-derived — same carry-across-rebuild contract as `palisades` above.
+  const carriedBedrolls = resetCollectedItems ? [] : [...bundle.sleepingUtilities.bedrolls.nodes()]
+  const carriedPlatforms = resetCollectedItems ? [] : [...bundle.sleepingUtilities.platforms.nodes()]
+  bundle.sleepingUtilities.dispose()
   // Active terrain-preparation work sites are positioned by the player, not
   // seed-derived — same carry-across-rebuild contract as `playerWells`/
   // `playerGardens` above.
@@ -1070,6 +1097,8 @@ export async function rebuildWorldBundle(
     playerGardens: carriedPlayerGardens,
     standingTorches: carriedStandingTorches,
     palisades: carriedPalisades,
+    sleepingUtilityBedrolls: carriedBedrolls,
+    sleepingUtilityPlatforms: carriedPlatforms,
     terrainPreparations: carriedTerrainPreparations,
     dryingRacks: carriedDryingRacks,
     hives: carriedHives,
@@ -1107,6 +1136,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.playerGardens.dispose()
   bundle.standingTorches.dispose()
   bundle.palisades.dispose()
+  bundle.sleepingUtilities.dispose()
   bundle.terrainPreparations.dispose()
   bundle.largeCaves.dispose()
   bundle.dryingRacks.dispose()

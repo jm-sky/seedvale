@@ -83,4 +83,36 @@ describe('campRestQuality', () => {
       expect(quality).toBeLessThanOrEqual(1)
     }
   })
+
+  describe('bedroll bonus (plan items-player-013)', () => {
+    it('leaves a full camp (tent+blanket+fire) at exactly 1, bedroll or not', () => {
+      const full = context({ hasTent: true, hasWarmFire: true })
+      const fullWithBedroll = context({ hasTent: true, hasWarmFire: true, bedrollCondition: 100, hasRaisedBedroll: true })
+      expect(campRestQuality(full, survival)).toBe(1)
+      expect(campRestQuality(fullWithBedroll, survival)).toBe(1)
+    })
+
+    it('a bedroll improves quality over the same setup without one', () => {
+      const withoutBedroll = campRestQuality(context({ hasTent: true }), survival)
+      const withBedroll = campRestQuality(context({ hasTent: true, bedrollCondition: 100 }), survival)
+      expect(withBedroll).toBeGreaterThan(withoutBedroll)
+    })
+
+    it('a raised bedroll (on a platform) beats the same bedroll on the ground', () => {
+      const ground = campRestQuality(context({ hasTent: true, hasWarmFire: true, bedrollCondition: 100 }), survival)
+      const raised = campRestQuality(context({ hasTent: true, hasWarmFire: true, bedrollCondition: 100, hasRaisedBedroll: true }), survival)
+      expect(raised).toBeGreaterThanOrEqual(ground)
+    })
+
+    it('a degraded bedroll (condition 0) contributes nothing — a platform alone never grants anything', () => {
+      const withoutBedroll = campRestQuality(context({ hasTent: true }), survival)
+      const zeroCondition = campRestQuality(context({ hasTent: true, bedrollCondition: 0, hasRaisedBedroll: true }), survival)
+      expect(zeroCondition).toBe(withoutBedroll)
+    })
+
+    it('never exceeds 1 even with every bonus stacked', () => {
+      const stacked = context({ hasTent: true, hasBlanket: true, hasWarmFire: true, bedrollCondition: 100, hasRaisedBedroll: true })
+      expect(campRestQuality(stacked, 1)).toBe(1)
+    })
+  })
 })

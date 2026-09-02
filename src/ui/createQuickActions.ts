@@ -84,6 +84,13 @@ export type QuickActionsHandlers = {
    *  "Postaw segment palisady" (plan items-player-010), same shape as
    *  `hasChest`. */
   hasPalisadeMaterial?: boolean
+  /** Initial "enough hide to build a bedroll" flag for showing "Rozłóż
+   *  posłanie" (plan items-player-013), same shape as `hasPalisadeMaterial`. */
+  hasBedrollMaterial?: boolean
+  /** Initial "enough branches to build a raised sleeping platform" flag for
+   *  showing "Zbuduj podest" (plan items-player-013), same shape as
+   *  `hasPalisadeMaterial`. */
+  hasPlatformMaterial?: boolean
   /** Initial carried-container flag for showing "Odłóż skrzynię". */
   hasCarriedContainer?: boolean
   /** Which trap kinds the player currently carries (plan 141). */
@@ -132,6 +139,12 @@ export function createQuickActions(
   }
   if (typeof handlers.hasPalisadeMaterial === 'boolean') {
     getUi()?.setQuickActionsHasPalisadeMaterial(handlers.hasPalisadeMaterial)
+  }
+  if (typeof handlers.hasBedrollMaterial === 'boolean') {
+    getUi()?.setQuickActionsHasBedrollMaterial(handlers.hasBedrollMaterial)
+  }
+  if (typeof handlers.hasPlatformMaterial === 'boolean') {
+    getUi()?.setQuickActionsHasPlatformMaterial(handlers.hasPlatformMaterial)
   }
   if (typeof handlers.hasCarriedContainer === 'boolean') {
     getUi()?.setQuickActionsHasCarriedContainer(handlers.hasCarriedContainer)

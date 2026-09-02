@@ -16,7 +16,7 @@ import type { Scene } from 'three'
  * confirm time (implementation notes §2: never trust a cached preview result
  * for the final mutation).
  */
-export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch' | 'palisade'
+export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch' | 'palisade' | 'bedroll' | 'platform'
 
 export type PlacementPreviewUiView = {
   label: string
@@ -31,6 +31,8 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   firePit: 'Palenisko',
   standingTorch: 'Pochodnia',
   palisade: 'Palisada',
+  bedroll: 'Posłanie',
+  platform: 'Podest do spania',
 }
 
 export type PlacementPreviewActionDeps = {
@@ -43,6 +45,10 @@ export type PlacementPreviewActionDeps = {
     | 'placeStandingTorchAtAim'
     | 'previewPalisadePlacement'
     | 'placePalisadeAtAim'
+    | 'previewBedrollPlacement'
+    | 'placeBedrollAtAim'
+    | 'previewPlatformPlacement'
+    | 'placePlatformAtAim'
   >
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
   previewFire: () => PlacementPreviewResult
@@ -85,11 +91,13 @@ export function createPlacementPreviewActions(
 
   const resolvePreview = (kind: PlacementPreviewKind): PlacementPreviewResult => {
     switch (kind) {
+      case 'bedroll': return placement.previewBedrollPlacement()
       case 'chest': return containers.previewContainerPlacement()
       case 'firePit':
       case 'fireSimple':
         return previewFire()
       case 'palisade': return placement.previewPalisadePlacement()
+      case 'platform': return placement.previewPlatformPlacement()
       case 'standingTorch': return placement.previewStandingTorchPlacement()
       case 'tent': return placement.previewTentPlacement()
     }
@@ -97,10 +105,12 @@ export function createPlacementPreviewActions(
 
   const commit = (kind: PlacementPreviewKind): void => {
     switch (kind) {
+      case 'bedroll': placement.placeBedrollAtAim(); return
       case 'chest': containers.placeContainerAtAim(); return
       case 'firePit': buildFirePit(); return
       case 'fireSimple': buildSimpleFire(); return
       case 'palisade': placement.placePalisadeAtAim(); return
+      case 'platform': placement.placePlatformAtAim(); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
       case 'tent': placement.placeTentAtAim(); return
     }

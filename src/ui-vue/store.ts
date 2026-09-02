@@ -178,6 +178,13 @@ type QuickActionsState = {
    *  — drives "Postaw segment palisady" under "Budowa", same shape as
    *  `hasWoodenTorch`. */
   hasPalisadeMaterial: boolean
+  /** Owning enough `hide` to build a bedroll (plan items-player-013) — drives
+   *  "Rozłóż posłanie" under "Budowa", same shape as `hasPalisadeMaterial`. */
+  hasBedrollMaterial: boolean
+  /** Owning enough `branch` to build a raised sleeping platform (plan
+   *  items-player-013) — drives "Zbuduj podest" under "Budowa", same shape
+   *  as `hasPalisadeMaterial`. */
+  hasPlatformMaterial: boolean
   traps: QuickActionsTraps
   /** True while the player is carrying a placed container (plan 164 §8) —
    *  drives the "Odłóż skrzynię" action, the put-down counterpart of
@@ -431,7 +438,7 @@ export const ui = reactive({
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
-    hasPalisadeMaterial: false,
+    hasPalisadeMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
     traps: { simple: false, good: false },
     fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
     onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
@@ -806,6 +813,8 @@ export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions
 export function setQuickActionsHasChest(hasChest: boolean): void { ui.quickActions.hasChest = hasChest }
 export function setQuickActionsHasWoodenTorch(hasWoodenTorch: boolean): void { ui.quickActions.hasWoodenTorch = hasWoodenTorch }
 export function setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial: boolean): void { ui.quickActions.hasPalisadeMaterial = hasPalisadeMaterial }
+export function setQuickActionsHasBedrollMaterial(hasBedrollMaterial: boolean): void { ui.quickActions.hasBedrollMaterial = hasBedrollMaterial }
+export function setQuickActionsHasPlatformMaterial(hasPlatformMaterial: boolean): void { ui.quickActions.hasPlatformMaterial = hasPlatformMaterial }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
 export function setQuickActionsNearTown(nearTown: boolean): void { ui.quickActions.nearTown = nearTown }
 export function setQuickActionsTraps(traps: QuickActionsTraps): void {

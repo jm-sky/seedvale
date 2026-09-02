@@ -75,6 +75,8 @@ const v1 = {
   playerGardens: [],
   standingTorches: [],
   palisades: [],
+  bedrolls: [],
+  platforms: [],
   resourceDeposits: {},
 }
 

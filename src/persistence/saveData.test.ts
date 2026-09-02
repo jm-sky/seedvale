@@ -79,6 +79,8 @@ const validSave: SaveData = {
   }],
   standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true }],
   palisades: [{ id: 'palisade:1', x: 11, z: -2, yaw: 0.4 }],
+  bedrolls: [{ id: 'bedroll:1', x: 12, z: -3, yaw: 0.4, variant: 'leather', condition: 90, lastConditionUpdateAtDays: 3.5 }],
+  platforms: [{ id: 'platform:1', x: 13, z: -4, yaw: 0.4, condition: 95, lastConditionUpdateAtDays: 3.5 }],
   resourceDeposits: { 'resource_1_2': 0, 'resource_3_4': 5 },
 }
 

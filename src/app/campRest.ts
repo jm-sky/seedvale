@@ -9,13 +9,23 @@
 /** Which of the three camp ingredients the player actually has around them.
  *  Resolved once, at rest start — never polled per frame. */
 export type CampRestContext = {
-  /** The bedroll: `blanket` in the inventory (the quick action already
+  /** The blanket: `blanket` in the inventory (the quick action already
    *  requires it) or the tent-rest path's own bedding. */
   hasBlanket: boolean
   /** Sleeping inside/next to a pitched tent. */
   hasTent: boolean
   /** A *lit* fire close enough to keep the camp warm. */
   hasWarmFire: boolean
+  /** Resolved 0..100 condition of the nearest player-built bedroll actually
+   *  in use (`world/sleepingUtilities.ts`'s `resolveSleepingUtilityCondition`),
+   *  or `0` when none is nearby (plan items-player-013). Optional so existing
+   *  callers/tests that predate the bedroll plan keep compiling unchanged —
+   *  `bedrollBonus` below treats a missing value as `0`. */
+  bedrollCondition?: number
+  /** Whether that bedroll sits on a nearby raised sleeping platform (plan
+   *  items-player-013) — a platform on its own (no bedroll) contributes
+   *  nothing; see `bedrollBonus`. */
+  hasRaisedBedroll?: boolean
 }
 
 /** XZ metres a player campfire keeps a camp warm over. Small on purpose: a
@@ -91,13 +101,32 @@ function baseQuality(context: CampRestContext): number {
   return CAMP_REST_BASE_QUALITY.rough
 }
 
+/** Extra quality a nearby bedroll contributes on top of `baseQuality` (plan
+ *  items-player-013 — "tent + bedroll → improved sleeping surface", "tent +
+ *  fire + bedroll → high quality", "tent + fire + platform + bedroll →
+ *  further improved"). Additive rather than a fifth `baseQuality` tier so the
+ *  existing four blanket-driven combinations (including the `full` = 1
+ *  ceiling) are left completely unchanged when no bedroll is present — the
+ *  implementation notes' top pitfall is regressing that existing behaviour.
+ *  A platform with no bedroll on it contributes nothing (`bedrollCondition`
+ *  stays 0), and `campRestQuality`'s final `Math.min(1, …)` means a bedroll
+ *  can never push an already-full camp above 1. */
+function bedrollBonus(context: CampRestContext): number {
+  const condition = context.bedrollCondition ?? 0
+  if (condition <= 0) return 0
+  const shelterFactor = context.hasTent ? 0.3 : 0.18
+  const fireFactor = context.hasWarmFire ? 1 : 0.6
+  const raisedFactor = context.hasRaisedBedroll ? 1 : 0.75
+  return shelterFactor * fireFactor * raisedFactor * (condition / 100)
+}
+
 /**
  * [0,1] fraction of max vigor the finished sleep restores. Deterministic:
  * same context + same Survival value always yields the same number. Survival
  * only ever *reduces* the penalty, so a full camp stays 1 at any skill level.
  */
 export function campRestQuality(context: CampRestContext, survivalValue: number): number {
-  const base = baseQuality(context)
+  const base = Math.min(1, baseQuality(context) + bedrollBonus(context))
   const survival = Math.max(0, Math.min(1, survivalValue))
   return base + (1 - base) * SURVIVAL_REST_COMPENSATION * survival
 }

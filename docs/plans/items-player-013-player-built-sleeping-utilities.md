@@ -1,7 +1,7 @@
 # Plan: Player-Built Sleeping Utilities
 
 **Created:** 2026-09-02
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** `items-player-009` `items-player-010`
 **Domain:** `items-player`

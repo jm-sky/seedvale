@@ -192,6 +192,12 @@ const buildActions = computed<Action[]>(() => {
   if (ui.quickActions.hasPalisadeMaterial) {
     list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade') })
   }
+  if (ui.quickActions.hasBedrollMaterial) {
+    list.push({ label: 'Rozłóż posłanie', cost: '3× skóra', onClick: () => startPlacementPreview('bedroll') })
+  }
+  if (ui.quickActions.hasPlatformMaterial) {
+    list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform') })
+  }
   return list
 })
 

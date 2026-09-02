@@ -11,6 +11,7 @@ import type { PreparationSize } from '../terrain/terrainPreparation'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { WellStage } from '../world/playerWell'
+import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import { isToolKind } from '../items/HeldTool'
 import { isTrapKind } from '../items/itemInstances'
@@ -284,6 +285,26 @@ export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number,
  *  from each segment's own transform on load (plan items-player-010 §9). */
 export type SavePalisadeSegment = { id: string, x: number, z: number, yaw: number }
 
+/** Persistent player-built bedroll — mirrors `world/sleepingUtilities.ts`'s
+ *  `BedrollRecord`. `condition`/`lastConditionUpdateAtDays` round-trip the
+ *  lazy weather-degradation anchor (plan items-player-013) — same "resolve
+ *  on demand from a persisted anchor" shape as `SavePlayerGarden.care`. */
+export type SaveBedroll = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  variant: SleepingUtilityVariant
+  condition: number
+  lastConditionUpdateAtDays: number
+}
+
+/** Persistent player-built raised sleeping platform — mirrors
+ *  `world/sleepingUtilities.ts`'s `PlatformRecord`. No `bedroll` reference is
+ *  persisted — which bedroll (if any) is "on" a platform is always resolved
+ *  spatially on demand (plan items-player-013 §"Relacja bedroll ↔ platform"). */
+export type SavePlatform = { id: string, x: number, z: number, yaw: number, condition: number, lastConditionUpdateAtDays: number }
+
 /** Persistent player-built garden plot — mirrors `world/playerGarden.ts`'s
  *  `PlayerGardenRecord`. A plot has no construction stages of its own (crops
  *  planted on it are separate `SavePlantedCrop` records), but does carry
@@ -385,6 +406,8 @@ export type SaveData = {
   playerGardens: SavePlayerGarden[]
   standingTorches: SaveStandingTorch[]
   palisades: SavePalisadeSegment[]
+  bedrolls: SaveBedroll[]
+  platforms: SavePlatform[]
   /** Authoritative mining-hits-remaining override for ore deposits
    *  (`terrain/depositMining.ts`'s `ResourceDepletionState`), keyed by
    *  `NaturalResource.id`. Sparse — an absent id restores as untouched
@@ -891,6 +914,39 @@ function isPalisadesField(value: unknown): value is SavePalisadeSegment[] {
   })
 }
 
+function isBedrollsField(value: unknown): value is SaveBedroll[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const b = entry as Record<string, unknown>
+    return (
+      typeof b.id === 'string' &&
+      typeof b.x === 'number' &&
+      typeof b.z === 'number' &&
+      typeof b.yaw === 'number' &&
+      b.variant === 'leather' &&
+      typeof b.condition === 'number' &&
+      typeof b.lastConditionUpdateAtDays === 'number'
+    )
+  })
+}
+
+function isPlatformsField(value: unknown): value is SavePlatform[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const p = entry as Record<string, unknown>
+    return (
+      typeof p.id === 'string' &&
+      typeof p.x === 'number' &&
+      typeof p.z === 'number' &&
+      typeof p.yaw === 'number' &&
+      typeof p.condition === 'number' &&
+      typeof p.lastConditionUpdateAtDays === 'number'
+    )
+  })
+}
+
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -935,6 +991,8 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlayerGardensField(v.playerGardens)) return false
   if (!isStandingTorchesField(v.standingTorches)) return false
   if (!isPalisadesField(v.palisades)) return false
+  if (!isBedrollsField(v.bedrolls)) return false
+  if (!isPlatformsField(v.platforms)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
   return true
 }

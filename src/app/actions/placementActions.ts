@@ -92,6 +92,22 @@ import {
   WELL_WORK_SESSION_SEC,
 } from '../../world/playerWell'
 import {
+  BEDROLL_FOOTPRINT_RADIUS,
+  BEDROLL_MATERIAL_REQUIREMENTS,
+  BEDROLL_PLACE_DURATION_SEC,
+  BEDROLL_PLACE_REACH,
+  BEDROLL_PLACEMENT_MESSAGE,
+  BEDROLL_SEPARATION,
+  type BedrollPlacementReason,
+  PLATFORM_FOOTPRINT_RADIUS,
+  PLATFORM_MATERIAL_REQUIREMENTS,
+  PLATFORM_PLACE_DURATION_SEC,
+  PLATFORM_PLACE_REACH,
+  PLATFORM_PLACEMENT_MESSAGE,
+  PLATFORM_SEPARATION,
+  type PlatformPlacementReason,
+} from '../../world/sleepingUtilities'
+import {
   STANDING_TORCH_FOOTPRINT_RADIUS,
   STANDING_TORCH_MATERIAL_REQUIREMENTS,
   STANDING_TORCH_PLACE_DURATION_SEC,
@@ -255,6 +271,21 @@ export type PlacementActions = {
    *  representation and adds the recovery. No-op if `id` is unknown or the
    *  recovered materials wouldn't fit. */
   removePalisadeSegment: (id: string) => void
+  /** Read-only preview of bedroll placement at the player's current aim
+   *  (plan items-player-013) — same shape as `previewStandingTorchPlacement`;
+   *  `placeBedrollAtAim` remains the only mutation seam. */
+  previewBedrollPlacement: () => PlacementPreviewResult
+  /** Places a new leather bedroll ahead of the player (plan items-player-013)
+   *  — consumes `BEDROLL_MATERIAL_REQUIREMENTS` atomically on completion,
+   *  nothing on a rejected/cancelled placement. */
+  placeBedrollAtAim: () => void
+  /** Read-only preview of raised-platform placement at the player's current
+   *  aim (plan items-player-013) — same shape as `previewBedrollPlacement`. */
+  previewPlatformPlacement: () => PlacementPreviewResult
+  /** Places a new raised sleeping platform ahead of the player (plan
+   *  items-player-013) — consumes `PLATFORM_MATERIAL_REQUIREMENTS` atomically
+   *  on completion, nothing on a rejected/cancelled placement. */
+  placePlatformAtAim: () => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -886,6 +917,127 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     toast.show('Usunięto segment palisady.')
   }
 
+  /** Shared placement contract for a bedroll (plan items-player-013) — same
+   *  shape as `standingTorchPlacementDefinition`. */
+  const bedrollPlacementDefinition = (): GroundPlacementDefinition<BedrollPlacementReason> => ({
+    aim: () => {
+      const yaw = mouseLook.state.yaw
+      return {
+        x: player.mesh.position.x - Math.sin(yaw) * BEDROLL_PLACE_REACH,
+        z: player.mesh.position.z - Math.cos(yaw) * BEDROLL_PLACE_REACH,
+        yaw,
+      }
+    },
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.sleepingUtilities.bedrolls.nodes(),
+        footprintRadius: BEDROLL_FOOTPRINT_RADIUS,
+        separation: BEDROLL_SEPARATION,
+      })
+      return reason === 'occupied' ? 'bedroll' : reason
+    },
+    footprintRadius: BEDROLL_FOOTPRINT_RADIUS,
+    reasonLabel: (reason) => BEDROLL_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewBedrollPlacement = (): PlacementPreviewResult => previewGroundPlacement(bedrollPlacementDefinition())
+
+  /** Places a new leather bedroll ahead of the player (plan items-player-013)
+   *  — same "validate, then busy-channel, consume+build only on completion"
+   *  shape as `placeStandingTorchAtAim`. No capability/tool is required. */
+  const placeBedrollAtAim = (): void => {
+    if (isActionBlocked(ctx)) return
+    const { site, reason } = evaluatePlacementSite(bedrollPlacementDefinition())
+    if (reason !== 'ok') {
+      toast.show(BEDROLL_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const missing = BEDROLL_MATERIAL_REQUIREMENTS.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    if (missing.length > 0) {
+      toast.show(
+        `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        'error',
+      )
+      return
+    }
+    busy.start(BEDROLL_PLACE_DURATION_SEC, 'Rozkładanie posłania…', () => {
+      for (const r of BEDROLL_MATERIAL_REQUIREMENTS) {
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+      }
+      bundle.sleepingUtilities.bedrolls.place(site.x, site.z, site.yaw, dayNight.elapsedDays, 'leather')
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Rozłożono posłanie.')
+    })
+  }
+
+  /** Shared placement contract for a raised sleeping platform (plan
+   *  items-player-013) — same shape as `bedrollPlacementDefinition`. */
+  const platformPlacementDefinition = (): GroundPlacementDefinition<PlatformPlacementReason> => ({
+    aim: () => {
+      const yaw = mouseLook.state.yaw
+      return {
+        x: player.mesh.position.x - Math.sin(yaw) * PLATFORM_PLACE_REACH,
+        z: player.mesh.position.z - Math.cos(yaw) * PLATFORM_PLACE_REACH,
+        yaw,
+      }
+    },
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.sleepingUtilities.platforms.nodes(),
+        footprintRadius: PLATFORM_FOOTPRINT_RADIUS,
+        separation: PLATFORM_SEPARATION,
+      })
+      return reason === 'occupied' ? 'platform' : reason
+    },
+    footprintRadius: PLATFORM_FOOTPRINT_RADIUS,
+    reasonLabel: (reason) => PLATFORM_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewPlatformPlacement = (): PlacementPreviewResult => previewGroundPlacement(platformPlacementDefinition())
+
+  /** Places a new raised sleeping platform ahead of the player (plan
+   *  items-player-013) — same shape as `placeBedrollAtAim`. */
+  const placePlatformAtAim = (): void => {
+    if (isActionBlocked(ctx)) return
+    const { site, reason } = evaluatePlacementSite(platformPlacementDefinition())
+    if (reason !== 'ok') {
+      toast.show(PLATFORM_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const missing = PLATFORM_MATERIAL_REQUIREMENTS.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    if (missing.length > 0) {
+      toast.show(
+        `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        'error',
+      )
+      return
+    }
+    busy.start(PLATFORM_PLACE_DURATION_SEC, 'Budowa podestu…', () => {
+      for (const r of PLATFORM_MATERIAL_REQUIREMENTS) {
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+      }
+      bundle.sleepingUtilities.platforms.place(site.x, site.z, site.yaw, dayNight.elapsedDays)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Zbudowano podest do spania.')
+    })
+  }
+
   return {
     tentAimPoint,
     tentBlockers,
@@ -906,5 +1058,9 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     previewPalisadePlacement,
     placePalisadeAtAim,
     removePalisadeSegment,
+    previewBedrollPlacement,
+    placeBedrollAtAim,
+    previewPlatformPlacement,
+    placePlatformAtAim,
   }
 }

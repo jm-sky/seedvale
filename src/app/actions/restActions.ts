@@ -19,6 +19,11 @@ import {
 } from '../../settlement/lodging'
 import { collectLodgingCandidates, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
 import { getVigorRatio } from '../../shared/VigorState'
+import {
+  BEDROLL_ON_PLATFORM_RADIUS,
+  BEDROLL_REST_RADIUS,
+  findNearestSleepingUtility,
+} from '../../world/sleepingUtilities'
 import { type CampRestContext, campRestQuality, hasTentNear, hasWarmFireNear } from '../campRest'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -102,7 +107,7 @@ export type RestActionDeps = {
 }
 
 export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps): RestActions {
-  const { bundle, player, inventory, hud, toast, busy, timeSkip, restCamp, keyboard, mouseLook, getPlayerSocial } = ctx
+  const { bundle, player, inventory, hud, toast, busy, timeSkip, restCamp, keyboard, mouseLook, getPlayerSocial, dayNight } = ctx
   const { timeSkipOverlay, busyOverlay, openLodgingPanel } = deps
 
   /** Rest quality + XP for the sleep currently in flight (plan 128 §5-§7),
@@ -144,20 +149,34 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
 
   /** One-shot proximity lookup at rest start — never a per-frame scan. Only
    *  player-built fires count as camp warmth; a village's own campfire belongs
-   *  to town rest, which is already a full night. */
-  const resolveCampContext = (hasBlanket: boolean, hasTent: boolean): CampRestContext => ({
-    hasBlanket,
-    hasTent: hasTent || hasTentNear(
-      bundle.placedTents.list(),
-      player.mesh.position.x,
-      player.mesh.position.z,
-    ),
-    hasWarmFire: hasWarmFireNear(
-      bundle.placedFires.list(),
-      player.mesh.position.x,
-      player.mesh.position.z,
-    ),
-  })
+   *  to town rest, which is already a full night. The nearest player-built
+   *  bedroll within `BEDROLL_REST_RADIUS` (plan items-player-013) contributes
+   *  its resolved current condition; a platform only matters when it's
+   *  actually supporting that same bedroll (`hasRaisedBedroll`) — a lone
+   *  platform never grants anything on its own. */
+  const resolveCampContext = (hasBlanket: boolean, hasTent: boolean): CampRestContext => {
+    const px = player.mesh.position.x
+    const pz = player.mesh.position.z
+    const nearestBedroll = findNearestSleepingUtility(bundle.sleepingUtilities.bedrolls.list(), px, pz, BEDROLL_REST_RADIUS)
+    const bedrollSheltered = nearestBedroll !== null
+      && hasTentNear(bundle.placedTents.nodes(), nearestBedroll.x, nearestBedroll.z)
+    const bedrollCondition = nearestBedroll
+      ? bundle.sleepingUtilities.bedrolls.conditionOf(nearestBedroll.id, dayNight.elapsedDays, bedrollSheltered) ?? 0
+      : 0
+    const hasRaisedBedroll = nearestBedroll !== null && findNearestSleepingUtility(
+      bundle.sleepingUtilities.platforms.nodes(),
+      nearestBedroll.x,
+      nearestBedroll.z,
+      BEDROLL_ON_PLATFORM_RADIUS,
+    ) !== null
+    return {
+      hasBlanket,
+      hasTent: hasTent || hasTentNear(bundle.placedTents.list(), px, pz),
+      hasWarmFire: hasWarmFireNear(bundle.placedFires.list(), px, pz),
+      bedrollCondition,
+      hasRaisedBedroll,
+    }
+  }
 
   const beginCampRest = (context: CampRestContext): void => {
     pendingRest = {

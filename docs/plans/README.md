@@ -44,7 +44,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `items-player-012-player-gathering-and-fire-cooking-polish.md`      | -       | 🟡 | M      | ~~106~~ ~~122~~ ~~159~~ |
-| 💡 `items-player-013-player-built-sleeping-utilities.md`               | -       | 🟡 | M      | `items-player-009` `items-player-010` |
 | 💡 `persistence-001-full-simulation-persistence.md`                    | -       | 🔴 | L      | -       |
 | 💡 `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
@@ -88,6 +87,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-009-blood-traces.md` | Player/NPC/animal damage spawns a blood decal at the hit position with plausible size/variant/rotation, decal fades over ~1-3 in-world days, rain visibly accelerates fading, decals don't reappear/duplicate on chunk reload or a same-session `WorldBundle` rebuild, no visible per-trace draw-call/mesh cost with many hits |
 | `settlements-npcs-012-physical-storage-inspection.md` | Approach the primary wood stockpile, `[E] Zbadaj stertę drewna` prompt appears, inspecting shows the correct combined household+economy wood quantity, quantity updates after wood changes via simulation, settlement storage crate remains a separate aggregated interaction, LG/XL secondary/overflow piles don't create duplicate interactions, NPC navigation/colliders unchanged |
 | `npc-013-night-campfire-gathering.md` | At night with a lit settlement campfire, idle non-sociable NPCs (not just `sociable` ones) walk to it and can pair into a conversation with another NPC there; a hungry/thirsty/on-duty NPC still does its own thing first; an NPC already at the campfire leaves once the fire goes out or a real need appears; no unreasonable cross-settlement travel to a distant campfire |
+| `items-player-013-player-built-sleeping-utilities.md` | Preview/place a bedroll (3× skóra) and a raised platform (6× gałąź), rejected placement doesn't consume materials; bedroll near a tent (with/without fire, with/without a platform under it) raises camp-rest quality without breaking the existing full tent+blanket+fire=1 quality; packing the tent leaves both in place; save/load and a same-session `WorldBundle` rebuild restore position/condition; leaving a bedroll/platform exposed to rain/snow visibly degrades it over world-days while a sheltered one doesn't |
 
 ---
 

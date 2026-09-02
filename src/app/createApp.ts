@@ -105,6 +105,7 @@ import { PALISADE_MATERIAL_REQUIREMENTS } from '../world/palisade'
 import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
+import { BEDROLL_MATERIAL_REQUIREMENTS, PLATFORM_MATERIAL_REQUIREMENTS } from '../world/sleepingUtilities'
 import { createTimeSkip } from '../world/timeSkip'
 import { createTreeLifecycle, parseTreeOverrides } from '../world/treeLifecycle'
 import { createClimateState } from '../world/weather'
@@ -434,6 +435,8 @@ export async function createApp(
     () => worldGeneration !== initialWorldGeneration,
     initialSave?.standingTorches ?? [],
     initialSave?.palisades ?? [],
+    initialSave?.bedrolls ?? [],
+    initialSave?.platforms ?? [],
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -507,6 +510,13 @@ export async function createApp(
    *  a single item (plan items-player-010). */
   const hasPalisadeMaterial = (): boolean =>
     PALISADE_MATERIAL_REQUIREMENTS.every((r) => inventory.has(r.kind, r.count))
+  /** Same "own the material, full cost re-checked at build time" gate as
+   *  `hasPalisadeMaterial`, for the two sleeping utilities (plan
+   *  items-player-013). */
+  const hasBedrollMaterial = (): boolean =>
+    BEDROLL_MATERIAL_REQUIREMENTS.every((r) => inventory.has(r.kind, r.count))
+  const hasPlatformMaterial = (): boolean =>
+    PLATFORM_MATERIAL_REQUIREMENTS.every((r) => inventory.has(r.kind, r.count))
   // Renamed from `syncShovelQuickActions` — now the single post-inventory-
   // mutation refresh for every Quick Actions / Pause→Akcje availability flag
   // (review 007 C4), not just shovel/tent. `canBuild*`/`canLight*` come from
@@ -520,6 +530,8 @@ export async function createApp(
     vueUi.setQuickActionsHasChest(inventory.has('chest', 1))
     vueUi.setQuickActionsHasWoodenTorch(inventory.has('wooden_torch', 1))
     vueUi.setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial())
+    vueUi.setQuickActionsHasBedrollMaterial(hasBedrollMaterial())
+    vueUi.setQuickActionsHasPlatformMaterial(hasPlatformMaterial())
     vueUi.setQuickActionsTraps({
       simple: inventory.countInstances(TRAP_DEFS.simple.itemKind) > 0,
       good: inventory.countInstances(TRAP_DEFS.good.itemKind) > 0,
@@ -1198,6 +1210,8 @@ export async function createApp(
     hasChest: inventory.has('chest', 1),
     hasWoodenTorch: inventory.has('wooden_torch', 1),
     hasPalisadeMaterial: hasPalisadeMaterial(),
+    hasBedrollMaterial: hasBedrollMaterial(),
+    hasPlatformMaterial: hasPlatformMaterial(),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
     hasTreeSeed: inventory.has('tree_seed', 1),
     cropSeeds: {
