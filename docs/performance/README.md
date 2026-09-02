@@ -246,7 +246,37 @@ The goal is not to hide the stall but to prevent first-use compilation from happ
 
 ---
 
-## 4.6 CPU simulation scalability — LOW CURRENT / HIGH FUTURE
+## 4.6 Chunk mesh CPU generation — CRITICAL (largest confirmed streaming hitch)
+
+This is a separate problem from 4.5's shader/program first-use stall: it is CPU cost, not a GPU/driver wait.
+
+### Current state
+
+`ChunkManager`'s worker pool (`chunkWorkerPool.ts` / `chunkHeightmap.worker.ts`) already runs off the main thread, but it only produces **tile data** — heights, biomes, road tint, vegetation/item/environment/crop placements — transferred back as typed-array `ArrayBuffer`s.
+
+Building the actual chunk mesh (`buildChunkGeometry.ts`: per-vertex position/color/normal assembly, apron sampling, biome/road/scorch tinting, `THREE.BufferGeometry` construction) runs entirely on the **main thread**, time-sliced through `ChunkManager`'s finalize queue (`drainByBudget`) rather than in a worker.
+
+The `benchmark=stream` harness confirms this is currently the largest recurring CPU hitch during streaming:
+
+- **51 ×** `chunk mesh` hitches,
+- avg **~45.5 ms**,
+- max **~92.6 ms**.
+
+This is a **streaming/chunk-generation cost, not a sustained render bottleneck** — it does not show up in steady-state frame time (§3), only when new chunks are generated while the player moves through the world.
+
+### Planned direction (not yet implemented)
+
+Full rationale: [`optymalizacja-chunk-mesh-streaming-geometrii.md`](./optymalizacja-chunk-mesh-streaming-geometrii.md).
+
+1. **Move chunk mesh generation into the existing worker pool.** The worker computes geometry data (vertices/indices/normals/colors); the main thread stays responsible only for building `THREE.BufferGeometry`/`THREE.Mesh` and attaching it to the scene.
+2. **Optimize allocation/copy/transfer as part of that move** — `TypedArray`s, `Transferable` buffers, avoiding structured-clone copies and unnecessary temporary arrays — without introducing a separate optimization pass.
+3. **Cache computed chunk geometry data** so re-entering an already-generated, unmodified chunk state does not redo the CPU-heavy generation.
+
+None of these three are implemented yet — do not describe this pipeline as worker-based or cached anywhere else in this document.
+
+---
+
+## 4.7 CPU simulation scalability — LOW CURRENT / HIGH FUTURE
 
 NPC and fauna simulation are currently relatively cheap.
 
@@ -269,7 +299,9 @@ This should serve both NPCs and fauna rather than creating separate spatial-quer
 
 | Technique | Status |
 |---|---|
-| Web Workers for terrain generation | ✅ |
+| Web Workers for terrain tile data (heights/biomes/vegetation/items/environment/crops) | ✅ |
+| Chunk mesh generation moved to worker (§4.6) | ❌ (still main-thread, planned) |
+| Chunk mesh geometry cache (§4.6) | ❌ (planned) |
 | Chunk streaming | ✅ |
 | Time-sliced chunk finalization | ✅ |
 | `InstancedMesh` | ✅ |
@@ -299,6 +331,8 @@ This should serve both NPCs and fauna rather than creating separate spatial-quer
 
 | Technique | Expected value | Priority |
 |---|---|---|
+| Chunk mesh generation → worker | Very High for streaming hitches | P1 |
+| Chunk mesh geometry cache | High for revisited chunks | P1 |
 | Region vegetation batching | High | P1 |
 | Program/material consolidation | High | P1 |
 | Safe shader/program pre-warming | High for hitches | P1 |
@@ -320,6 +354,8 @@ This should serve both NPCs and fauna rather than creating separate spatial-quer
 
 | Optimization | CPU | GPU | Memory | Effort | Risk | Expected impact |
 |---|---|---|---|---|---|---|
+| Chunk mesh generation → worker (+ allocation/transfer cleanup) | 🔴 | 🟢 | 🟠 | M | M | Very High streaming-hitch reduction |
+| Chunk mesh geometry cache | 🔴 | 🟢 | 🟠 | S/M | M | High for revisited chunks |
 | Program/material consolidation | 🟢 | 🔴 | 🟢 | M | M | Very High hitch reduction |
 | Safe shader pre-warming | 🟠 | 🔴 | 🟢 | M/L | M | Very High hitch reduction |
 | Region vegetation batching | 🟠 | 🔴 | 🟢 | L | M | High |
@@ -361,19 +397,23 @@ Before major optimization:
 
 ## P1 — Remove major unnecessary work
 
-### 1. Program/material investigation
+### 1. Chunk mesh generation → worker + cache
+
+Move chunk mesh geometry-data generation (§4.6) into the existing worker pool, clean up allocation/copy/transfer as part of that move, and add a bounded cache of computed chunk geometry data. Currently the largest confirmed CPU streaming hitch (51× / avg ~45.5 ms / max ~92.6 ms, `benchmark=stream`). Not yet implemented — see [`optymalizacja-chunk-mesh-streaming-geometrii.md`](./optymalizacja-chunk-mesh-streaming-geometrii.md).
+
+### 2. Program/material investigation
 
 Determine why many shader/program variants are created and identify consolidation opportunities.
 
-### 2. Streaming hitch solution
+### 3. Streaming hitch solution (shader first-use)
 
-Design safe pre-warming or another mechanism that prevents first-use shader work from blocking chunk visibility.
+Design safe pre-warming or another mechanism that prevents first-use shader work from blocking chunk visibility (§4.5 — a separate GPU/driver-wait problem from #1 above).
 
-### 3. Region vegetation batching
+### 4. Region vegetation batching
 
 Implement region-level batching without destroying spatial culling.
 
-### 4. Shadow budget
+### 5. Shadow budget
 
 Reduce unnecessary shadow participation and updates. Implemented in plan 145 (R1 dirty/budget shadow-map update, R2 small-item shadow threshold); pending benchmark and browser visual verification before the gain is confirmed.
 

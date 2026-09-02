@@ -4,7 +4,7 @@
 
 **Nie jest:** listą assetów ([assets/](../assets/README.md)), stanem implementacji ([STATE.md](../STATE.md)), domeną wody ([WATER.md](../state/water.md)), ani planem ([plans/](../plans/README.md)). Tu zapisujemy *dlaczego* coś wygląda / renderuje się tak, a nie inaczej.
 
-**Last updated:** 2026-08-19
+**Last updated:** 2026-09-02
 
 Domena wody (stan, historia, kolejność poprawek): [WATER.md](../state/water.md). Tu zostają kontrakty G4–G6 i wpisy logu, które dotyczą renderu.
 
@@ -41,6 +41,7 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 | G14 | `PointLight`'s `distance` (3. arg konstruktora) to **tylko hard cutoff**, nie dźwignia zasięgu. Przy `decay: 2` (fizyczny inverse-square — używany wszędzie w projekcie) jasność w danym punkcie to już ~`intensity / distance²` na długo przed cutoffem. Podbicie `distance` bez podbicia `intensity` **nie zmienia nic widocznego**. Dźwignia "świeci dalej" = **intensity**. | `src/settlement/houseLighting.ts`, `src/player/torchLightPresets.ts`, `src/settlement/campfireProps.ts` |
 | G15 | Materiał GLB z `loadGltf.ts` cache'u jest **jeden obiekt na URL, dzielony przez referencję** między wszystkimi klonami (`sharedGpu`). JS-side override (`material.transparent = true` itp.) w runtime realnie działa, ale subtelna wartość (np. `opacity: 0.7` na jasnym emissive materiale, na tle nocnego nieba) potrafi wizualnie nie różnić się od opaque. Dla efektu, który ma być **jednolity na każdym klonie danego assetu**, wypiecz zmianę w samym GLB (`alphaMode: BLEND`, `baseColorFactor` alpha, `emissiveFactor`) zamiast patchować w JS — patrz log 2026-08-19 po recepturę edycji binarnej bez zewnętrznych narzędzi. | `public/models/settlement/torch.glb`, `src/settlement/houseLighting.ts` |
 | G16 | `shared/getFireParticles.ts`'s trzy presety (`createSparks`/`createEmbers`/`createIgniteBurst`) są tuningowane pod **ognisko na ziemi** — jeden argument `scale` skaluje `size`/`upSpeed`/`spawnRadius` razem, więc "ekonomiczny" mały `scale` (np. 0.35) dla efektu w innym kontekście (np. pochodnia na słupie) robi cząstki jednocześnie mniejsze *i* wolniejsze/niżej latające. Dla nowego kontekstu dodaj **osobny preset** (patrz `createTorchSparks`) zamiast przeskalowywać istniejący w dół. | `src/shared/getFireParticles.ts` |
+| G17 | Chunk mesh pipeline (stan kodu): `chunkWorkerPool` / `chunkHeightmap.worker.ts` liczy poza main threadem tylko **dane** kafla (heights/biomes/road tint/vegetation/items/environment/crops), zwracane jako transferable `ArrayBuffer`y. `buildChunkGeometry.ts` (pozycje/kolory/normalne wierzchołków, apron sampling, biome/road/scorch tint, `THREE.BufferGeometry`) działa **na main threadzie**, tylko time-sliced przez `ChunkManager`'s finalize queue (`drainByBudget`) — to nie jest worker offload. Potwierdzony jako największy CPU streaming hitch (benchmark `stream`: 51×, avg ~45.5 ms, max ~92.6 ms). Docelowy kierunek (niezaimplementowany): przenieść generację danych geometrii chunka do istniejącego worker poola, main thread zostaje tylko przy `BufferGeometry`/`Mesh`/scene attach; ograniczyć allocation/copy/transfer przy tej okazji (Transferable buffers, bez structured-clone kopii); dodać ograniczony rozmiarowo cache gotowych danych geometrii kafla, żeby powrót do niezmienionego stanu chunku nie wymagał ponownej generacji. Nie projektować jeszcze API cache'u/worker message shape poza tym, co już istnieje. | `src/terrain/buildChunkGeometry.ts`, `src/terrain/chunkWorkerPool.ts`, `src/terrain/chunkHeightmap.worker.ts`, [performance/optymalizacja-chunk-mesh-streaming-geometrii.md](../performance/optymalizacja-chunk-mesh-streaming-geometrii.md) |
 
 ---
 
@@ -62,6 +63,12 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 ---
 
 ## Log
+
+### 2026-09-02 — Chunk mesh generation pipeline documented (G17) 📝
+
+- Read current code (`chunkWorkerPool.ts`, `chunkHeightmap.worker.ts`, `buildChunkGeometry.ts`, `chunkManager.ts`) to confirm the actual chunk mesh pipeline against the performance doc's planned direction — see G17.
+- Worker pool already offloads tile **data** generation; chunk mesh **geometry** (`buildChunkGeometry.ts`) still runs on the main thread, only time-sliced. No chunk geometry cache exists yet.
+- Confirms `docs/performance/optymalizacja-chunk-mesh-streaming-geometrii.md`'s premise: worker migration, allocation/transfer cleanup, and a geometry cache are all still **planned**, not implemented.
 
 ### 2026-09-01 — Program/material census: first-use hitch confirmed 📝
 
