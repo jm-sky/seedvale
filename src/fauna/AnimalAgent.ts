@@ -301,6 +301,23 @@ const HUMAN_DECISION_INTERVAL_SEC = 0.2
  *  or a scavengeable carcass once hunger crosses `NEED_ELEVATED_THRESHOLD`
  *  (plan 094). */
 const FOOD_SEARCH_RADIUS = 14
+/** Hunger (`AnimalLifeState.hunger`) a scavenging-capable predator must
+ *  reach before a `rotting` corpse becomes a viable food candidate at all
+ *  (plan fauna-005) — well above `NEED_ELEVATED_THRESHOLD` (the threshold
+ *  that starts food search in general), so a lightly hungry predator still
+ *  prefers to keep looking for a fresh kill instead of falling back onto
+ *  carrion just because it exists. */
+const SCAVENGE_ROTTING_HUNGER_THRESHOLD = 0.65
+/** Same idea as above but for `bones`, the lowest-value tier — needs the
+ *  eater even hungrier before it's worth considering (plan fauna-005). */
+const SCAVENGE_BONES_HUNGER_THRESHOLD = 0.8
+/** Score weight applied to a carcass candidate's food value before
+ *  subtracting distance (plan fauna-005), same `weight*value - distance`
+ *  idiom as `findWaterTarget`/`findForageTarget`'s `hits`/`suitability`
+ *  scoring. Large enough that, within `FOOD_SEARCH_RADIUS`, a `fresh`
+ *  corpse (value 1) always outscores a `rotting`/`bones` candidate for the
+ *  tuned wolf preference values: `weight * (1 - value) > FOOD_SEARCH_RADIUS`. */
+const CARCASS_VALUE_WEIGHT = 30
 /** Radius (world units) searched around the animal for a walkable shoreline
  *  point once thirst crosses `NEED_ELEVATED_THRESHOLD` (plan 094). */
 const WATER_SEARCH_RADIUS = 20
@@ -419,6 +436,10 @@ export type AnimalAgentDebugInfo = {
   strategicDestWalkable: boolean | null
   chaseNav: FaunaNavRescueDebugInfo
   fleeNav: FaunaNavRescueDebugInfo
+  /** Current carcass food-target diagnostics (plan fauna-005) — `null` when
+   *  not currently pursuing a carcass. `riskPenalty` is always 0 today: the
+   *  `carcassCandidateScore` disease/food-safety seam has no consumer yet. */
+  foodTarget: { corpsePhase: CorpsePhase, foodValue: number, score: number, riskPenalty: number } | null
 }
 
 /** A real-world food/water destination an animal is pursuing (plan 094) —
@@ -434,6 +455,13 @@ type SourceTarget = {
    *  (plan 122) rather than a natural shoreline — `performSourceAction`
    *  drains `household.water` in addition to relieving `life.thirst`. */
   trough?: boolean
+  /** Set only for `kind: 'carcass'` — corpse phase/value/score captured at
+   *  selection time (plan fauna-005), for `getDebugInfo()`'s `foodTarget`
+   *  diagnostics only. The authoritative eat-time check re-reads the live
+   *  corpse phase/value (`performSourceAction`), never these cached values. */
+  corpsePhase?: CorpsePhase
+  foodValue?: number
+  score?: number
 }
 
 /** One trough visit's draw against the household water reserve — same order
@@ -500,6 +528,41 @@ export function isCarcassEdible(opts: {
   if (!opts.dead || opts.expired || opts.consumed || opts.harvested) return false
   if (opts.claimedBy != null && opts.claimedBy !== opts.eater) return false
   return true
+}
+
+/** Food value of a corpse `phase` for a given eater (plan fauna-005) — `null`
+ *  when this phase isn't food for this eater right now:
+ *  - `fresh` is always full value (1), the pre-existing plan 094 baseline
+ *    available to any predator regardless of `scavenging`.
+ *  - `rotting`/`bones` require both the eater's `scavenging` capability
+ *    (absent for a non-scavenger, e.g. fox/bear) *and* hunger past that
+ *    tier's threshold (`SCAVENGE_ROTTING_HUNGER_THRESHOLD`/
+ *    `SCAVENGE_BONES_HUNGER_THRESHOLD`) — a barely-hungry wolf won't fall
+ *    back onto carrion just because it exists.
+ *  A `rotting`/`bones` value is always below `fresh`'s 1, so
+ *  `carcassCandidateScore` naturally prefers a reachable fresh kill.
+ *  Pure/exported so preference/hunger-gating is unit-testable without
+ *  instantiating `AnimalAgent`, same technique as `corpsePhaseFromElapsed`. */
+export function carcassFoodValue(
+  phase: CorpsePhase,
+  scavenging: ScavengingConfig | undefined,
+  hunger: number,
+): number | null {
+  if (phase === 'fresh') return 1
+  if (!scavenging) return null
+  if (phase === 'rotting') return hunger >= SCAVENGE_ROTTING_HUNGER_THRESHOLD ? scavenging.rottingValue : null
+  return hunger >= SCAVENGE_BONES_HUNGER_THRESHOLD ? scavenging.bonesValue : null
+}
+
+/** Carcass candidate selection score (plan fauna-005) — combines food value
+ *  (`carcassFoodValue`) with distance (closer preferred, same
+ *  `weight*value - distance` idiom as `findWaterTarget`/`findForageTarget`).
+ *  `riskPenalty` is a decision seam for a future disease/food-safety system
+ *  (plan fauna-005 §12) — always 0 today since no such system exists yet; a
+ *  future one can pass a positive penalty here without any other change to
+ *  selection. Pure/exported for the same reason as `carcassFoodValue`. */
+export function carcassCandidateScore(value: number, distance: number, riskPenalty = 0): number {
+  return value * CARCASS_VALUE_WEIGHT - distance - riskPenalty
 }
 
 type EnvironmentSense = {
@@ -619,6 +682,28 @@ export type AnimalDef = {
    *  fauna-002) — same "no separate boolean, no per-species branch" shape
    *  as `mount` above. Absent for every wild `AnimalKind`. */
   production?: LivestockProductionConfig
+  /** Presence of this field IS the corpse/bones-scavenging capability (plan
+   *  fauna-005) — same "no separate boolean, no per-species branch" shape as
+   *  `mount`/`production` above. A `fresh` corpse is always food for any
+   *  predator (pre-existing plan 094 baseline); only a species with this
+   *  block will additionally fall back onto a `rotting` corpse or `bones`
+   *  once hungry enough — see `carcassFoodValue()`. Absent for every
+   *  `AnimalKind` but wolf initially. */
+  scavenging?: ScavengingConfig
+}
+
+/** Per-species scavenging preference (plan fauna-005) — the single config
+ *  block `carcassFoodValue()` reads instead of a wolf-specific branch in
+ *  food selection/consumption. Both values are relative to a fresh kill's
+ *  implicit value of 1. */
+export type ScavengingConfig = {
+  /** Relative food value of a `rotting` corpse for this species — scales
+   *  both selection score (`carcassCandidateScore`) and the hunger relief a
+   *  completed eat action grants (`AnimalLife.ts`'s `consumeFood`). */
+  rottingValue: number
+  /** Relative food value of `bones` remains for this species — the lowest
+   *  tier, see `SCAVENGE_BONES_HUNGER_THRESHOLD`. */
+  bonesValue: number
 }
 
 /** Rider seat placement for a mountable `AnimalDef` (plan fauna-003 §6) —
@@ -664,6 +749,10 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 0,
     playerNoticeRange: 10,
     playerPanicRange: 3,
+    // Plan fauna-005: the initial (and currently only) scavenging-capable
+    // species — rotting is a meaningful but clearly worse fallback, bones a
+    // low-priority last resort.
+    scavenging: { rottingValue: 0.4, bonesValue: 0.15 },
   },
   fox: {
     kind: 'fox',
@@ -1175,9 +1264,12 @@ export class AnimalAgent {
    *  — guards against two predators completing an eat action on the same
    *  corpse (plan 094). */
   private foodClaimedBy: AnimalAgent | null = null
-  /** Set once a predator finishes eating this corpse — the carcass stays
-   *  visible for the rest of its linger time, but is no longer food. */
-  private foodConsumed = false
+  /** The `CorpsePhase` a predator was in when it last finished eating this
+   *  corpse, `null` until then (plan 094/fauna-005) — per-phase rather than
+   *  a single flag so a corpse eaten `fresh` can still be scavenged again
+   *  once it later decays into `rotting`/`bones`: only the *current* phase
+   *  being equal to this value means "already eaten, no food left here". */
+  private foodConsumedPhase: CorpsePhase | null = null
   /** Set once the player knife-harvests `raw_meat` from this corpse (plan
    *  106) — independent of `foodConsumed` (predator eating and player
    *  harvesting are different consumers), guards against harvesting twice. */
@@ -1622,6 +1714,17 @@ export class AnimalAgent {
         : null,
       chaseNav: this.navDebugInfo(this.chaseNav),
       fleeNav: this.navDebugInfo(this.fleeNav),
+      foodTarget: this.sourceTarget?.kind === 'carcass'
+          && this.sourceTarget.corpsePhase != null
+          && this.sourceTarget.foodValue != null
+          && this.sourceTarget.score != null
+        ? {
+            corpsePhase: this.sourceTarget.corpsePhase,
+            foodValue: this.sourceTarget.foodValue,
+            score: this.sourceTarget.score,
+            riskPenalty: 0,
+          }
+        : null,
     }
   }
 
@@ -2881,16 +2984,21 @@ export class AnimalAgent {
     if (target.kind === 'carcass') {
       const corpse = target.corpse
       if (!corpse) return false
-      return isCarcassEdible({
+      const phase = corpse.corpsePhase()
+      if (!isCarcassEdible({
         dead: corpse.health.dead,
-        // Rotting/bones is deliberately inedible too (plan 188), not just
-        // the final `readyToRemove()` moment — a decomposing carcass isn't
-        // fresh food.
-        expired: corpse.readyToRemove() || corpse.corpsePhase() !== 'fresh',
-        consumed: corpse.foodConsumed,
+        expired: corpse.readyToRemove(),
+        consumed: corpse.foodConsumedPhase === phase,
+        harvested: corpse.meatHarvested,
         claimedBy: corpse.foodClaimedBy,
         eater: this,
-      }) && corpse.foodClaimedBy === this
+      })) return false
+      // Plan fauna-005: a non-scavenger's fresh target can decay past
+      // `fresh` while it's still approaching — same rejection `findCarcassTarget`
+      // would apply to a fresh search this frame, checked live rather than
+      // trusting the phase cached on `target` at selection time.
+      if (carcassFoodValue(phase, this.def.scavenging, this.life.hunger) == null) return false
+      return corpse.foodClaimedBy === this
     }
     if (!this.isWalkable(target.x, target.z)) return false
     return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
@@ -2948,9 +3056,20 @@ export class AnimalAgent {
       } else {
         drinkWater(this.life)
       }
+    } else if (target.kind === 'carcass' && target.corpse) {
+      // Re-read the live corpse rather than the value cached on `target` at
+      // selection time — a failed revalidation (already harvested, phase
+      // drifted past what this eater can still eat) must not grant free
+      // hunger relief (plan fauna-005).
+      const corpse = target.corpse
+      const phase = corpse.corpsePhase()
+      const value = corpse.meatHarvested ? null : carcassFoodValue(phase, this.def.scavenging, this.life.hunger)
+      if (value != null) {
+        consumeFood(this.life, value)
+        corpse.markFoodConsumed(phase)
+      }
     } else {
       consumeFood(this.life)
-      if (target.kind === 'carcass') target.corpse?.markFoodConsumed()
     }
     this.cancelSourceTarget()
   }
@@ -3016,35 +3135,58 @@ export class AnimalAgent {
     return best
   }
 
-  /** Nearest unclaimed dead prey within `FOOD_SEARCH_RADIUS`, claimed on
-   *  selection so a second predator can't also target it (plan 094 §8). */
+  /** Best-scoring unclaimed dead prey within `FOOD_SEARCH_RADIUS` (plan
+   *  094/fauna-005): a `fresh` corpse is always eligible baseline food;
+   *  `rotting`/`bones` are additionally scored via `carcassFoodValue`/
+   *  `carcassCandidateScore` so only a species with the `scavenging`
+   *  capability (currently only wolf), hungry enough, will fall back onto
+   *  lower-quality remains — and even then a reachable fresh kill always
+   *  wins (see `CARCASS_VALUE_WEIGHT`'s doc). Claimed on selection so a
+   *  second predator can't also target it (plan 094 §8). */
   private findCarcassTarget(others: readonly AnimalAgent[]): SourceTarget | null {
     let best: AnimalAgent | null = null
-    let bestD = FOOD_SEARCH_RADIUS
+    let bestScore = -Infinity
+    let bestValue = 0
     for (const o of others) {
       if (o === this || o.def.role !== 'prey') continue
+      const phase = o.corpsePhase()
       if (!isCarcassEdible({
         dead: o.health.dead,
-        expired: o.readyToRemove() || o.corpsePhase() !== 'fresh',
-        consumed: o.foodConsumed,
+        expired: o.readyToRemove(),
+        consumed: o.foodConsumedPhase === phase,
         harvested: o.meatHarvested,
         claimedBy: o.foodClaimedBy,
         eater: this,
       })) continue
       const d = Math.hypot(o.mesh.position.x - this.mesh.position.x, o.mesh.position.z - this.mesh.position.z)
-      if (d < bestD) {
-        bestD = d
+      if (d > FOOD_SEARCH_RADIUS) continue
+      const value = carcassFoodValue(phase, this.def.scavenging, this.life.hunger)
+      if (value == null) continue
+      const score = carcassCandidateScore(value, d)
+      if (score > bestScore) {
+        bestScore = score
         best = o
+        bestValue = value
       }
     }
     if (!best || !best.claimAsFood(this)) return null
-    return { kind: 'carcass', x: best.mesh.position.x, z: best.mesh.position.z, corpse: best }
+    return {
+      kind: 'carcass',
+      x: best.mesh.position.x,
+      z: best.mesh.position.z,
+      corpse: best,
+      corpsePhase: best.corpsePhase(),
+      foodValue: bestValue,
+      score: bestScore,
+    }
   }
 
-  /** True if this corpse is unclaimed or already claimed by `by` — guards
-   *  against two predators both completing an eat action on one carcass. */
+  /** True if this corpse's current phase is unclaimed or already claimed by
+   *  `by` — guards against two predators both completing an eat action on
+   *  one carcass. Once this phase's food is gone (`foodConsumedPhase`), a
+   *  later decay into a new phase (plan fauna-005) makes it claimable again. */
   private claimAsFood(by: AnimalAgent): boolean {
-    if (this.foodConsumed) return false
+    if (this.foodConsumedPhase === this.corpsePhaseValue) return false
     if (this.foodClaimedBy && this.foodClaimedBy !== by) return false
     this.foodClaimedBy = by
     return true
@@ -3054,8 +3196,12 @@ export class AnimalAgent {
     if (this.foodClaimedBy === by) this.foodClaimedBy = null
   }
 
-  private markFoodConsumed(): void {
-    this.foodConsumed = true
+  /** Marks `phase` as eaten-out on this corpse (plan fauna-005) — the eater
+   *  passes the live phase it just finished eating at, not necessarily
+   *  `corpsePhaseValue` at some other time, so a corpse that decays mid-eat
+   *  can't have the wrong phase marked consumed. */
+  private markFoodConsumed(phase: CorpsePhase): void {
+    this.foodConsumedPhase = phase
     this.foodClaimedBy = null
   }
 

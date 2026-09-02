@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { forageEdgeScore, isCarcassEdible, nearestShoreProbePoint, shoreProbeHits } from './AnimalAgent'
+import {
+  ANIMAL_DEFS,
+  carcassCandidateScore,
+  carcassFoodValue,
+  forageEdgeScore,
+  isCarcassEdible,
+  nearestShoreProbePoint,
+  shoreProbeHits,
+} from './AnimalAgent'
 
 describe('shoreProbeHits (plan 094)', () => {
   const flatAt = (h: number) => () => h
@@ -133,5 +141,70 @@ describe('isCarcassEdible (plan 094)', () => {
       claimedBy: null,
       eater,
     })).toBe(false)
+  })
+})
+
+describe('carcassFoodValue (plan fauna-005 — corpse/bone scavenging)', () => {
+  const wolfScavenging = ANIMAL_DEFS.wolf.scavenging
+
+  it('is always 1 for a fresh corpse, regardless of species or hunger', () => {
+    expect(carcassFoodValue('fresh', wolfScavenging, 0)).toBe(1)
+    expect(carcassFoodValue('fresh', undefined, 0)).toBe(1)
+  })
+
+  it('rejects rotting/bones outright for a species without the scavenging capability', () => {
+    expect(carcassFoodValue('rotting', undefined, 1)).toBeNull()
+    expect(carcassFoodValue('bones', undefined, 1)).toBeNull()
+  })
+
+  it('rejects rotting/bones for a scavenger below the hunger threshold', () => {
+    expect(carcassFoodValue('rotting', wolfScavenging, 0.5)).toBeNull()
+    expect(carcassFoodValue('bones', wolfScavenging, 0.7)).toBeNull()
+  })
+
+  it('returns the species preference value once hungry enough', () => {
+    expect(carcassFoodValue('rotting', wolfScavenging, 0.65)).toBe(wolfScavenging!.rottingValue)
+    expect(carcassFoodValue('bones', wolfScavenging, 0.8)).toBe(wolfScavenging!.bonesValue)
+  })
+
+  it('ranks fresh > rotting > bones for an eligible, sufficiently hungry scavenger', () => {
+    const fresh = carcassFoodValue('fresh', wolfScavenging, 1)!
+    const rotting = carcassFoodValue('rotting', wolfScavenging, 1)!
+    const bones = carcassFoodValue('bones', wolfScavenging, 1)!
+    expect(fresh).toBeGreaterThan(rotting)
+    expect(rotting).toBeGreaterThan(bones)
+  })
+
+  it('bones requires a higher hunger threshold than rotting', () => {
+    // Hungry enough for rotting but not yet for bones.
+    expect(carcassFoodValue('rotting', wolfScavenging, 0.7)).not.toBeNull()
+    expect(carcassFoodValue('bones', wolfScavenging, 0.7)).toBeNull()
+  })
+})
+
+describe('carcassCandidateScore (plan fauna-005)', () => {
+  const wolfScavenging = ANIMAL_DEFS.wolf.scavenging!
+
+  it('a reachable fresh corpse always outscores rotting/bones within the food search radius', () => {
+    const FOOD_SEARCH_RADIUS = 14
+    const freshValue = carcassFoodValue('fresh', wolfScavenging, 1)!
+    const rottingValue = carcassFoodValue('rotting', wolfScavenging, 1)!
+    const bonesValue = carcassFoodValue('bones', wolfScavenging, 1)!
+    // Worst case for fresh (far away) vs. best case for the lower tiers (right next to the eater).
+    const freshScore = carcassCandidateScore(freshValue, FOOD_SEARCH_RADIUS)
+    const rottingScore = carcassCandidateScore(rottingValue, 0)
+    const bonesScore = carcassCandidateScore(bonesValue, 0)
+    expect(freshScore).toBeGreaterThan(rottingScore)
+    expect(freshScore).toBeGreaterThan(bonesScore)
+    expect(rottingScore).toBeGreaterThan(bonesScore)
+  })
+
+  it('prefers a closer candidate of the same food value', () => {
+    expect(carcassCandidateScore(1, 2)).toBeGreaterThan(carcassCandidateScore(1, 8))
+  })
+
+  it('a positive riskPenalty lowers the score without changing the ranking rule', () => {
+    const base = carcassCandidateScore(0.4, 3)
+    expect(carcassCandidateScore(0.4, 3, 5)).toBeLessThan(base)
   })
 })

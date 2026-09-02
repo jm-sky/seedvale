@@ -68,9 +68,12 @@ export function tickAnimalLife(
 
 /** Call once, on completion of a real eat action (forage or carcass) —
  *  `AnimalAgent` is responsible for only calling this after the animal has
- *  actually reached and finished eating at a source (plan 094). */
-export function consumeFood(life: AnimalLifeState): void {
-  life.hunger = Math.max(0, life.hunger - FOOD_RELIEF)
+ *  actually reached and finished eating at a source (plan 094).
+ *  `reliefScale` (default 1, full `FOOD_RELIEF`) lets a lower-quality food
+ *  source — a decaying corpse or bones (plan fauna-005) — grant proportionally
+ *  less relief than a fresh kill or forage spot. */
+export function consumeFood(life: AnimalLifeState, reliefScale = 1): void {
+  life.hunger = Math.max(0, life.hunger - FOOD_RELIEF * reliefScale)
 }
 
 /** Call once, on completion of a real drink action at a shoreline — see

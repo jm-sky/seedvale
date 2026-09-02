@@ -1,7 +1,7 @@
 # Plan: Animal Corpse and Bone Feeding
 
 **Created:** 2026-09-01  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented and tested; browser/gameplay verification pending.  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none  
 **Domain:** `fauna`  
