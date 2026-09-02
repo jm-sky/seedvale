@@ -4,47 +4,51 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveData.ts`
 
-- `isSaveData` — function — line 950
-- `loadSaveData` — function — line 1003
+- `isSaveData` — function — line 1017
+- `loadSaveData` — function — line 1071
 - `QuestProgressEntry` — type — line 42
-- `SaveBadges` — type — line 88
-- `SaveBedroll` — type — line 292
-- `SaveCarriedContainer` — type — line 199
+- `SaveBadges` — type — line 91
+- `SaveBedroll` — type — line 295
+- `SaveCarriedContainer` — type — line 202
 - `SaveConfig` — type — line 22
-- `SaveData` — type — line 337
+- `SaveConstructionContractTarget` — type — line 348
+- `SaveData` — type — line 373
   - domain: persistence
   - system: save-schema
   - role: Owns the SaveData shape and its validation/defaulting.
   - owns: SaveData
 - `SaveDroppedItem` — type — line 52
-- `SaveDryingRack` — type — line 158
-- `SaveFishingBait` — type — line 181
-- `SaveFoodBatch` — type — line 144
-- `SaveHive` — type — line 167
-- `SaveMap` — type — line 81
-- `SavePalisadeSegment` — type — line 286
-- `SavePlacedContainer` — type — line 187
+- `SaveDryingRack` — type — line 161
+- `SaveFishingBait` — type — line 184
+- `SaveFoodBatch` — type — line 147
+- `SaveHive` — type — line 170
+- `SaveMap` — type — line 84
+- `SavePalisadeSegment` — type — line 289
+- `SavePlacedContainer` — type — line 190
 - `SavePlacedFire` — type — line 56
-- `SavePlacedTent` — type — line 70
-- `SavePlacedTrap` — type — line 116
-- `SavePlantedCrop` — type — line 268
-- `SavePlantedTree` — type — line 254
-- `SavePlatform` — type — line 306
+- `SavePlacedTent` — type — line 73
+- `SavePlacedTrap` — type — line 119
+- `SavePlantedCrop` — type — line 271
+- `SavePlantedTree` — type — line 257
+- `SavePlatform` — type — line 309
 - `SavePlayer` — type — line 30
-- `SavePlayerGarden` — type — line 316
-- `SavePlayerNeeds` — type — line 97
-- `SavePlayerTorch` — type — line 64
-- `SavePlayerWell` — type — line 211
+- `SavePlayerGarden` — type — line 319
+- `SavePlayerNeeds` — type — line 100
+- `SavePlayerTorch` — type — line 67
+- `SavePlayerWell` — type — line 214
 - `SaveQuests` — type — line 44
-- `SaveSkill` — type — line 108
-- `SaveSkills` — type — line 109
-- `SaveSpawnPoint` — type — line 134
-- `SaveStandingTorch` — type — line 280
-- `SaveTerrainModification` — type — line 229
-- `SaveTerrainPreparation` — type — line 240
-- `SaveTimedProcess` — type — line 149
+- `SaveSkill` — type — line 111
+- `SaveSkills` — type — line 112
+- `SaveSpawnPoint` — type — line 137
+- `SaveStandingTorch` — type — line 283
+- `SaveTerrainModification` — type — line 232
+- `SaveTerrainPreparation` — type — line 243
+- `SaveTimedProcess` — type — line 152
 - `SaveTreeOverride` — type — line 58
-- `SaveWorldFlags` — type — line 72
+- `SaveWorkContract` — type — line 349
+- `SaveWorkContractAdvertisement` — type — line 347
+- `SaveWorkContractState` — type — line 337
+- `SaveWorldFlags` — type — line 75
 
 ## `persistence/saveDb.ts`
 

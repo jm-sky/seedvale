@@ -47,7 +47,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
-| 💡 `npc-014-work-contracts-foundation-and-physical-posting.md`         | -       | 🟡 | M      | -      |
 | 💡 `npc-015-work-contracts-npc-work-and-construction.md`               | -       | 🟡 | L      | npc-014 |
 | 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`        | -       | 🟡 | M      | npc-015 |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                          | -       | 🟡 | M      | ~~npc-015~~ |
@@ -92,6 +91,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `items-player-013-player-built-sleeping-utilities.md` | Preview/place a bedroll (3× skóra) and a raised platform (6× gałąź), rejected placement doesn't consume materials; bedroll near a tent (with/without fire, with/without a platform under it) raises camp-rest quality without breaking the existing full tent+blanket+fire=1 quality; packing the tent leaves both in place; save/load and a same-session `WorldBundle` rebuild restore position/condition; leaving a bedroll/platform exposed to rain/snow visibly degrades it over world-days while a sheltered one doesn't |
 | `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md` | `?benchmark=stream&seed=42&res=193` — compare `chunk mesh` hitch count/avg/max, frame max/p1, STREAMING hitch count, RENDER avg/p95, FPS against the pre-migration baseline (51 hitches, avg 45.5 ms, max 92.6 ms); no visible terrain/color/normal regression while streaming or after dig/scorch/terrain-prep; revisiting an unmodified chunk shows a mesh-data cache hit |
 | `fauna-005-animal-corpse-and-bone-feeding.md` | A wolf discovers and eats a fresh corpse; a sufficiently hungry wolf falls back onto a decaying corpse or bones only when no fresh alternative is reachable, not merely because one exists; bones remain eatable after the fresh/rotting food is gone; player harvest and wolf feeding converge on the same corpse without duplicating/corrupting state; behaviour works with the player away from the scene |
+| `npc-014-work-contracts-foundation-and-physical-posting.md` | Create a construction contract (Quick Actions → Budowa → Zleć budowę, pick a reward) and confirm a flag appears at the target, state is `available`/not advertised; visit a settlement's notice board (`[E]`) and post the contract, confirm it becomes `advertised`; save/load before and after posting preserves contract/flag/board state; cancel a contract before and after posting via Quick Actions → Zlecenia, confirm the flag/advertisement are removed and it can't be posted again |
 
 ---
 

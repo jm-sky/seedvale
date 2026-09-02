@@ -657,6 +657,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/terrainPreparationActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/userActions.ts`
 - `items/container.ts`

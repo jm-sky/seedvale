@@ -156,3 +156,9 @@ export type Interactable =
    *  cost. Only stable references; the record itself is re-resolved by id at
    *  interact time, never trusted from this per-frame snapshot. */
   | { kind: 'palisade', position: { x: number, z: number }, promptLabel: string, id: string }
+  /** Settlement notice board (plan npc-014) — `[E]` opens the physical-
+   *  posting panel listing the player's own `available`/`not_posted` work
+   *  contracts. `settlementId` resolves the board's stable id
+   *  (`world/workContract.ts`'s `noticeBoardId`) and its `postedAt()` query
+   *  at interact time — never a cached list of postings. */
+  | { kind: 'noticeBoard', position: { x: number, z: number }, promptLabel: string, settlementId: string }

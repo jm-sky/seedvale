@@ -400,6 +400,9 @@ export type GameLoopDeps = {
    *  the authoritative segment + runtime mesh/collider and adds the
    *  recovery, atomically. No-op if `id` is unknown. */
   removePalisadeSegment?: (id: string) => void
+  /** `[E]` on a settlement notice board (plan npc-014) — opens the physical-
+   *  posting panel listing the player's own postable contracts. */
+  openNoticeBoard?: (settlementId: string) => void
   /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
    *  unconditionally, before the gaze/interact dispatch, so a confirming
    *  `[E]` press is consumed here rather than falling through to it. No-ops
@@ -506,7 +509,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, removePalisadeSegment,
+    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, removePalisadeSegment, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
@@ -1432,6 +1435,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed && !target.lit) igniteStandingTorch?.(target.id)
       } else if (target?.kind === 'palisade') {
         if (altInteractPressed) removePalisadeSegment?.(target.id)
+      } else if (target?.kind === 'noticeBoard') {
+        if (interactPressed) openNoticeBoard?.(target.settlementId)
       } else if (target?.kind === 'terrainPreparation') {
         if (interactPressed) resumeTerrainPreparationWork?.(target.id)
       } else if (target?.kind === 'item') {

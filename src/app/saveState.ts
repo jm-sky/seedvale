@@ -197,6 +197,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     bedrolls: bundle.sleepingUtilities.bedrolls.nodes().map((b) => ({ ...b })),
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
+    workContracts: bundle.workContracts.nodes().map((c) => ({ ...c, target: { ...c.target } })),
   })
 
   const saveNow = (): Promise<void> => writeSave(buildSaveData())

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ShovelIcon, Sword, TractorIcon, TreesIcon, Zap } from 'lucide-vue-next'
+import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ScrollText, ShovelIcon, Sword, TractorIcon, TreesIcon, Zap } from 'lucide-vue-next'
 import { type Component, computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { PlacementPreviewKind } from '../../app/actions/placementPreviewActions'
@@ -128,6 +128,10 @@ function equipFishingRod(): void {
   ui.quickActions.onEquipFishingRod?.()
 }
 
+function cancelWorkContract(id: string): void {
+  ui.quickActions.onCancelWorkContract?.(id)
+}
+
 function onDocumentClick(event: MouseEvent): void {
   if (panel.value?.contains(event.target as Node)) return
   closeQuickActions()
@@ -201,6 +205,9 @@ const buildActions = computed<Action[]>(() => {
   if (ui.quickActions.hasPlatformMaterial) {
     list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform') })
   }
+  // "Zleć budowę" (plan npc-014) — always available, no material cost; the
+  // reward is chosen after the target is placed, not spent up front.
+  list.push({ label: 'Zleć budowę', cost: '', onClick: () => startPlacementPreview('workContract') })
   return list
 })
 
@@ -237,6 +244,7 @@ const CATEGORY_LABEL: Record<QuickActionsCategoryId, string> = {
   czekaj: 'Czekaj',
   skrzynia: 'Skrzynia',
   odpoczynek: 'Odpoczynek',
+  zlecenia: 'Zlecenia',
 }
 
 const categories = computed(() => (
@@ -251,6 +259,7 @@ const categories = computed(() => (
     { id: 'czekaj', visible: true, icon: ClockIcon },
     { id: 'skrzynia', visible: ui.quickActions.hasCarriedContainer, icon: BoxIcon },
     { id: 'odpoczynek', visible: true, icon: BedSingleIcon },
+    { id: 'zlecenia', visible: ui.quickActions.workContracts.length > 0, icon: ScrollText },
   ] as const satisfies readonly { id: QuickActionsCategoryId, visible: boolean, icon: Component }[]
 ).filter((c) => c.visible))
 </script>
@@ -444,6 +453,18 @@ const categories = computed(() => (
           v-if="ui.quickActions.nearTown"
           label="Nocuj w mieście"
           @click="rest('town')"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'zlecenia'"
+        label="Zlecenia"
+      >
+        <QuickActionsButton
+          v-for="contract in ui.quickActions.workContracts"
+          :key="contract.id"
+          :label="contract.label"
+          :cost="contract.cost"
+          @click="cancelWorkContract(contract.id)"
         />
       </QuickActionsGroup>
     </template>

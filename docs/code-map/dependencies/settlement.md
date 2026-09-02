@@ -766,6 +766,7 @@ Generated from TypeScript imports.
 - `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/createWorkContracts.ts`
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaveVisual.ts`

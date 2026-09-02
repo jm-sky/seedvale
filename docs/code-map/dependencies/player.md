@@ -75,6 +75,7 @@ Generated from TypeScript imports.
 - `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/createWorkContracts.ts`
 - `world/worldContext.ts`
 
 ## `player/PlayerNeeds.test.ts`

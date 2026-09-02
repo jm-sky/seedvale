@@ -27,6 +27,7 @@ import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { BedrollRecord, PlatformRecord } from '../world/sleepingUtilities'
 import type { StandingTorchRecord } from '../world/standingTorch'
 import type { TreeLifecycle } from '../world/treeLifecycle'
+import type { WorkContractRecord } from '../world/workContract'
 import { type SavedSpawnPointState, snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { createFauna, type Fauna, SPAWNER_RING_OFFSET } from '../fauna/createFauna'
 import { createHuntingHooks } from '../fauna/huntingHooks'
@@ -69,6 +70,7 @@ import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
 import { createSleepingUtilities, type SleepingUtilities } from '../world/createSleepingUtilities'
 import { createStandingTorches, type StandingTorches } from '../world/createStandingTorches'
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
+import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
@@ -134,6 +136,7 @@ export type WorldBundle = {
   largeCaves: LargeCaves
   dryingRacks: DryingRacks
   hives: Beehives
+  workContracts: WorkContracts
 }
 
 function buildChunkManager(
@@ -420,6 +423,10 @@ type WorldSystemsSeed = {
   terrainPreparations: readonly TerrainPreparationRecord[]
   dryingRacks: readonly DryingRackRecord[]
   hives: readonly BeehiveRecord[]
+  /** Plan npc-014 — persistent player-issued work contracts, same "carried
+   *  across rebuild, reset only on a genuinely new world" contract as
+   *  `standingTorches`/`palisades` above. */
+  workContracts: readonly WorkContractRecord[]
   economies?: Record<string, SettlementEconomySnapshot>
   households?: Record<HouseholdId, HouseholdSnapshot>
   npcStates?: Record<NpcId, NpcStateSnapshot>
@@ -544,6 +551,7 @@ async function buildWorldSystems(
     terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
+    workContracts: initialWorkContracts,
     economies: initialEconomies,
     households: initialHouseholds,
     npcStates: initialNpcStates,
@@ -696,6 +704,7 @@ async function buildWorldSystems(
     chunkManager.sampleHeight,
     initialTerrainPreparations,
   )
+  const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
   bootMarkEnd('droppedItems+placed+wells+terrainPrep')
 
   // Only needs `homeDef.size` (sync, see §4's `buildFauna` doc above) — kept
@@ -734,6 +743,7 @@ async function buildWorldSystems(
     largeCaves,
     dryingRacks: createEmptyDryingRacks(),
     hives: createEmptyBeehives(),
+    workContracts,
   }
 
   // Deferred: fauna (§4), item preloads (§5), item spawners/drying racks/
@@ -918,6 +928,10 @@ export async function createWorldBundle(
    *  world" contract as `initialStandingTorches`/`initialPalisades` above. */
   initialSleepingUtilityBedrolls: readonly BedrollRecord[] = [],
   initialSleepingUtilityPlatforms: readonly PlatformRecord[] = [],
+  /** Plan npc-014 — persistent player-issued work contracts, same "carried
+   *  across rebuild, reset only on a genuinely new world" contract as
+   *  `initialStandingTorches`/`initialPalisades` above. */
+  initialWorkContracts: readonly WorkContractRecord[] = [],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -937,6 +951,7 @@ export async function createWorldBundle(
     terrainPreparations: initialTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
+    workContracts: initialWorkContracts,
     economies: initialEconomies,
     spawnerState: initialSpawnerState,
     resourceDepletion,
@@ -1062,6 +1077,11 @@ export async function rebuildWorldBundle(
   bundle.dryingRacks.dispose()
   const carriedHives = resetCollectedItems ? [] : [...bundle.hives.nodes()]
   bundle.hives.dispose()
+  // Player-issued work contracts are positioned by the player, not
+  // seed-derived — same carry-across-rebuild contract as `hives`/
+  // `terrainPreparations` above (plan npc-014).
+  const carriedWorkContracts = resetCollectedItems ? [] : [...bundle.workContracts.nodes()]
+  bundle.workContracts.dispose()
   const carriedEconomies = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotEconomies()
   // Households (plan 197 §8) and NPC authoritative state (plan 197 §7) get
   // the same same-seed-only carry contract as `carriedEconomies` above —
@@ -1102,6 +1122,7 @@ export async function rebuildWorldBundle(
     terrainPreparations: carriedTerrainPreparations,
     dryingRacks: carriedDryingRacks,
     hives: carriedHives,
+    workContracts: carriedWorkContracts,
     economies: carriedEconomies,
     households: carriedHouseholds,
     npcStates: carriedNpcStates,
@@ -1141,6 +1162,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.largeCaves.dispose()
   bundle.dryingRacks.dispose()
   bundle.hives.dispose()
+  bundle.workContracts.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()

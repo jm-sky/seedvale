@@ -204,6 +204,12 @@ Generated from exported TypeScript symbols.
 - `createChunkWater` — function — line 46
 - `WorldWater` — type — line 15
 
+## `world/createWorkContracts.ts`
+
+- `createWorkContracts` — function — line 73
+  - domain: npc
+- `WorkContracts` — type — line 15
+
 ## `world/cropLifecycle.ts`
 
 - `CROP_DEFS` — const — line 26
@@ -619,60 +625,63 @@ Generated from exported TypeScript symbols.
 
 ## `world/treeLifecycle.ts`
 
-- `advanceStage` — function — line 385
-- `bonusYieldForChopStage` — function — line 186
-- `canopyGrowthFactor` — function — line 366
-- `canReachOld` — function — line 171
-- `CHOP_SCALE_MULT` — const — line 123
-- `CHOP_YIELDS` — const — line 137
-- `clamp01` — function — line 236
-- `coastalFactor` — function — line 324
-- `createTreeLifecycle` — function — line 506
-- `envGrowthFactor` — function — line 334
-- `FELLING_BEAM_YIELD` — const — line 154
-- `HARVEST_YIELD` — const — line 145
-- `HarvestYield` — type — line 132
-- `HEIGHT_RANGE_M` — const — line 85
-- `isCanopyStage` — function — line 167
-- `isChoppableStage` — function — line 163
-- `lerp` — function — line 240
-- `livingHeightM` — function — line 250
-- `makeTreeId` — function — line 495
-- `OLD_SPAWN_CHANCE` — const — line 110
-- `parseTreeOverrides` — function — line 789
-- `PINE_SPECIES_INDICES` — const — line 120
-- `quantizeTreeCoord` — function — line 487
-- `ResolvedTreeState` — type — line 227
-- `rollLivingAge` — function — line 297
-- `rollSizeClass` — function — line 286
-- `SIZE_CLASS_T` — const — line 93
-- `SIZE_CLASS_WEIGHTS` — const — line 100
-- `SIZE_JITTER_HALF` — const — line 107
-- `sizeT` — function — line 245
-- `speciesPrefs` — function — line 312
-- `STAGE_DURATION_DAYS` — const — line 75
-- `templateHeightM` — function — line 259
-- `TREE_SPECIES_PREFS` — const — line 203
-- `TREE_TEMPLATE_HEIGHT_M` — const — line 116
-- `TreeEnvSample` — type — line 41
-- `TreeGrowthStage` — type — line 13
+- `advanceStage` — function — line 409
+- `bonusYieldForChopStage` — function — line 210
+- `BRANCH_REGENERATION_DAYS` — const — line 165
+- `BRANCH_YIELD_BY_SIZE` — const — line 170
+- `BranchHarvestResult` — type — line 176
+- `canopyGrowthFactor` — function — line 390
+- `canReachOld` — function — line 195
+- `CHOP_SCALE_MULT` — const — line 129
+- `CHOP_YIELDS` — const — line 143
+- `clamp01` — function — line 260
+- `coastalFactor` — function — line 348
+- `createTreeLifecycle` — function — line 547
+- `envGrowthFactor` — function — line 358
+- `FELLING_BEAM_YIELD` — const — line 160
+- `HARVEST_YIELD` — const — line 151
+- `HarvestYield` — type — line 138
+- `HEIGHT_RANGE_M` — const — line 91
+- `isCanopyStage` — function — line 191
+- `isChoppableStage` — function — line 187
+- `lerp` — function — line 264
+- `livingHeightM` — function — line 274
+- `makeTreeId` — function — line 536
+- `OLD_SPAWN_CHANCE` — const — line 116
+- `parseTreeOverrides` — function — line 903
+- `PINE_SPECIES_INDICES` — const — line 126
+- `quantizeTreeCoord` — function — line 528
+- `ResolvedTreeState` — type — line 251
+- `rollLivingAge` — function — line 321
+- `rollSizeClass` — function — line 310
+- `SIZE_CLASS_T` — const — line 99
+- `SIZE_CLASS_WEIGHTS` — const — line 106
+- `SIZE_JITTER_HALF` — const — line 113
+- `sizeT` — function — line 269
+- `speciesPrefs` — function — line 336
+- `STAGE_DURATION_DAYS` — const — line 81
+- `templateHeightM` — function — line 283
+- `TREE_SPECIES_PREFS` — const — line 227
+- `TREE_TEMPLATE_HEIGHT_M` — const — line 122
+- `TreeEnvSample` — type — line 47
+- `TreeGrowthStage` — type — line 14
   - domain: world-terrain
   - system: tree-lifecycle
   - role: Owns tree growth stage progression and multi-stage chop state.
   - simulation: tick
   - lifecycle: growth
-- `TreeHarvestStepResult` — type — line 417
-- `TreeId` — type — line 31
-- `TreeLifecycle` — type — line 421
-- `TreeLivingAge` — type — line 23
-- `TreePresence` — type — line 215
-- `TreeSizeClass` — type — line 26
-- `TreeSpeciesPrefs` — type — line 61
-- `TreeStateOverride` — type — line 35
-- `treeVisualKind` — function — line 190
-- `TreeVisualKind` — type — line 29
-- `visualScaleForTree` — function — line 267
-- `yieldForChopStage` — function — line 175
+- `TreeHarvestStepResult` — type — line 452
+- `TreeId` — type — line 32
+- `TreeLifecycle` — type — line 456
+- `TreeLivingAge` — type — line 24
+- `TreePresence` — type — line 239
+- `TreeSizeClass` — type — line 27
+- `TreeSpeciesPrefs` — type — line 67
+- `TreeStateOverride` — type — line 36
+- `treeVisualKind` — function — line 214
+- `TreeVisualKind` — type — line 30
+- `visualScaleForTree` — function — line 291
+- `yieldForChopStage` — function — line 199
 
 ## `world/treeVisuals.ts`
 
@@ -768,6 +777,24 @@ Generated from exported TypeScript symbols.
 
 - `applyWeatherOverlay` — function — line 39
 - `WeatherVisualOverlay` — type — line 11
+
+## `world/workContract.ts`
+
+- `cancelWorkContract` — function — line 135
+- `canPostContract` — function — line 85
+- `ConstructionContractTarget` — type — line 40
+- `contractHasActiveTarget` — function — line 77
+- `ContractTarget` — type — line 47
+- `createWorkContractRecord` — function — line 97
+- `invalidateWorkContract` — function — line 143
+- `isContractTerminal` — function — line 71
+- `noticeBoardId` — function — line 93
+- `postWorkContract` — function — line 124
+- `WorkContractAdvertisement` — type — line 29
+- `WorkContractRecord` — type — line 49
+- `WorkContractState` — type — line 18
+  - domain: npc
+- `WorkType` — type — line 32
 
 ## `world/worldContext.ts`
 

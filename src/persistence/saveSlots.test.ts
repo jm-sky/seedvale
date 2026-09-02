@@ -78,6 +78,7 @@ const v1 = {
   bedrolls: [],
   platforms: [],
   resourceDeposits: {},
+  workContracts: [],
 }
 
 function loaded(extra?: Partial<{ savedAt: number, seed: number, playerName: string, elapsedDays: number }>): SaveData {

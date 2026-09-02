@@ -14,7 +14,7 @@ import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
-import type { QuickActionsCropSeeds, QuickActionsTraps, RestOutcome, RestVariant } from '../ui/createQuickActions'
+import type { QuickActionsCropSeeds, QuickActionsTraps, QuickActionsWorkContract, RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
@@ -135,6 +135,7 @@ export type QuickActionsCategoryId =
   | 'czekaj'
   | 'skrzynia'
   | 'odpoczynek'
+  | 'zlecenia'
 
 type QuickActionsState = {
   open: boolean
@@ -213,6 +214,10 @@ type QuickActionsState = {
   onEquipFishingRod: (() => void) | null
   onOpen: (() => void) | null
   onClose: (() => void) | null
+  /** "Zlecenia" category rows (plan npc-014) — every non-terminal work
+   *  contract the player currently holds, view/cancel only. */
+  workContracts: QuickActionsWorkContract[]
+  onCancelWorkContract: ((id: string) => void) | null
 }
 type MerchantState = {
   open: boolean
@@ -448,6 +453,7 @@ export const ui = reactive({
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
     hasFishingRod: false, onEquipFishingRod: null,
+    workContracts: [], onCancelWorkContract: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,
@@ -829,6 +835,9 @@ export function setQuickActionsCropSeeds(cropSeeds: QuickActionsCropSeeds): void
   const current = ui.quickActions.cropSeeds
   if (current.carrot === cropSeeds.carrot && current.potato === cropSeeds.potato && current.cabbage === cropSeeds.cabbage) return
   ui.quickActions.cropSeeds = { ...cropSeeds }
+}
+export function setQuickActionsWorkContracts(workContracts: QuickActionsWorkContract[]): void {
+  ui.quickActions.workContracts = workContracts
 }
 export function openQuickActions(): void {
   if (ui.quickActions.open) return

@@ -400,6 +400,27 @@ Generated from TypeScript imports.
 
 - `terrain/chunkManager.ts`
 
+## `world/createWorkContracts.test.ts`
+
+**Imports**
+
+- `world/createWorkContracts.ts`
+- `world/workContract.ts`
+
+## `world/createWorkContracts.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/createWorkContracts.test.ts`
+
 ## `world/cropLifecycle.test.ts`
 
 **Imports**
@@ -798,6 +819,7 @@ Generated from TypeScript imports.
 - `world/createBeehives.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
+- `world/treeLifecycle.ts`
 
 ## `world/placementPreview.ts`
 
@@ -1128,6 +1150,7 @@ Generated from TypeScript imports.
 
 - `items/items.ts`
 - `terrain/biomeRegions.ts`
+- `world/parseSeed.ts`
 
 **Imported by**
 
@@ -1261,6 +1284,22 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `world/weatherVisuals.test.ts`
+
+## `world/workContract.test.ts`
+
+**Imports**
+
+- `world/workContract.ts`
+
+## `world/workContract.ts`
+
+**Imported by**
+
+- `app/actions/workContractActions.ts`
+- `app/worldBundle.ts`
+- `world/createWorkContracts.test.ts`
+- `world/createWorkContracts.ts`
+- `world/workContract.test.ts`
 
 ## `world/worldContext.ts`
 

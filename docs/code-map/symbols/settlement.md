@@ -311,14 +311,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 613
-- `disposeSettlementGroup` — function — line 1700
-- `SettlementHouseBed` — type — line 129
-- `SettlementHouseLandmark` — type — line 100
-- `SettlementLandmarks` — type — line 136
-- `SettlementLandPlot` — type — line 226
-- `SettlementStorageVisuals` — type — line 219
-- `SettlementTreeLandmark` — type — line 233
+- `buildSettlementProps` — function — line 620
+- `disposeSettlementGroup` — function — line 1723
+- `SettlementHouseBed` — type — line 130
+- `SettlementHouseLandmark` — type — line 101
+- `SettlementLandmarks` — type — line 137
+- `SettlementLandPlot` — type — line 233
+- `SettlementStorageVisuals` — type — line 226
+- `SettlementTreeLandmark` — type — line 240
 
 ## `settlement/propSpecs.ts`
 

@@ -82,6 +82,7 @@ import {
   createGrindWorkbench,
   createHayBale,
   createHut,
+  createSignpost,
   createStockpile,
   createTrough,
   createWell,
@@ -203,6 +204,12 @@ export type SettlementLandmarks = {
   /** One settlement-wide storage container position (plan 156), next to the
    *  wood stockpile. Presentation only — `SettlementEconomy` owns the stock. */
   settlementStorage: THREE.Vector3
+  /** Settlement notice board (plan npc-014) — the one physical publication
+   *  point work-contract announcements are posted at. Built unconditionally
+   *  like well/market/blacksmith, with a stable identity derived from
+   *  `Settlement.id` (`world/workContract.ts`'s `noticeBoardId`), never an
+   *  array index or Object3D reference. */
+  noticeBoard: THREE.Vector3
   /** Hidden-treasure dig markers (quick task, home settlement only, see
    *  `plantForest` below) — world position of each of the 3 flower clumps a
    *  shovel dig must land within `HIDDEN_TREASURE_DIG_TOLERANCE` of
@@ -681,6 +688,7 @@ export async function buildSettlementProps(
     })),
     householdStorages: [],
     settlementStorage: new THREE.Vector3(),
+    noticeBoard: new THREE.Vector3(),
   }
 
   const coreRandom = createSeededRandom(seed ^ 0x5a17e)
@@ -846,6 +854,21 @@ export async function buildSettlementProps(
   placeOnGround(grindWorkbench, forgeX + 1, forgeZ + 0.4, sampleHeight)
   group.add(grindWorkbench)
   landmarks.blacksmith.set(forgeX, sampleHeight(forgeX, forgeZ), forgeZ)
+
+  // Notice board (plan npc-014) — built unconditionally like well/market/
+  // blacksmith, near the plaza. No dedicated notice-board asset exists yet;
+  // reuses the existing procedural signpost prop as a stand-in (same
+  // "procedural until a dedicated asset is authored" convention as the
+  // blacksmith's parked-asset comment above).
+  const { x: boardX, z: boardZ } = placeFromLandmark(
+    site, undefined, 3.5, 3.5, sampleHeight, waterLevel, coreRandom,
+    { x: marketX, z: marketZ, minDist: 3 },
+  )
+  const noticeBoardProp = createSignpost()
+  noticeBoardProp.rotation.y = coreRandom() * Math.PI * 2
+  placeOnGround(noticeBoardProp, boardX, boardZ, sampleHeight)
+  group.add(noticeBoardProp)
+  landmarks.noticeBoard.set(boardX, sampleHeight(boardX, boardZ), boardZ)
 
   const houseLights: HouseLight[] = []
   const villageTorches: VillageTorch[] = []

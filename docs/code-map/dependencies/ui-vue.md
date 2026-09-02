@@ -78,6 +78,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/containerActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`

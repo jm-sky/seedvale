@@ -1,5 +1,6 @@
 import type { ContainerActions } from './containerActions'
 import type { PlacementActions, PlacementPreviewResult } from './placementActions'
+import type { WorkContractActions } from './workContractActions'
 import { createPlacementPreviewGhost, type PlacementPreviewGhost } from '../../world/placementPreview'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import type { Scene } from 'three'
@@ -16,7 +17,7 @@ import type { Scene } from 'three'
  * confirm time (implementation notes §2: never trust a cached preview result
  * for the final mutation).
  */
-export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch' | 'palisade' | 'bedroll' | 'platform'
+export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch' | 'palisade' | 'bedroll' | 'platform' | 'workContract'
 
 export type PlacementPreviewUiView = {
   label: string
@@ -33,6 +34,7 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   palisade: 'Palisada',
   bedroll: 'Posłanie',
   platform: 'Podest do spania',
+  workContract: 'Zlecenie budowy',
 }
 
 export type PlacementPreviewActionDeps = {
@@ -51,6 +53,7 @@ export type PlacementPreviewActionDeps = {
     | 'placePlatformAtAim'
   >
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
+  workContract: Pick<WorkContractActions, 'previewContractPlacement' | 'confirmContractPlacementAtAim'>
   previewFire: () => PlacementPreviewResult
   buildSimpleFire: () => boolean
   buildFirePit: () => boolean
@@ -83,7 +86,7 @@ export function createPlacementPreviewActions(
   deps: PlacementPreviewActionDeps,
 ): PlacementPreviewActions {
   const { bundle, mouseLook, keyboard } = ctx
-  const { scene, placement, containers, previewFire, buildSimpleFire, buildFirePit, showPreview, hidePreview, isOtherPreviewActive } = deps
+  const { scene, placement, containers, workContract, previewFire, buildSimpleFire, buildFirePit, showPreview, hidePreview, isOtherPreviewActive } = deps
 
   const ghost: PlacementPreviewGhost = createPlacementPreviewGhost()
   let active: PlacementPreviewKind | null = null
@@ -100,6 +103,7 @@ export function createPlacementPreviewActions(
       case 'platform': return placement.previewPlatformPlacement()
       case 'standingTorch': return placement.previewStandingTorchPlacement()
       case 'tent': return placement.previewTentPlacement()
+      case 'workContract': return workContract.previewContractPlacement()
     }
   }
 
@@ -113,6 +117,7 @@ export function createPlacementPreviewActions(
       case 'platform': placement.placePlatformAtAim(); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
       case 'tent': placement.placeTentAtAim(); return
+      case 'workContract': workContract.confirmContractPlacementAtAim(); return
     }
   }
 

@@ -121,6 +121,7 @@ import { createPlacementPreviewActions } from './actions/placementPreviewActions
 import { createRestActions } from './actions/restActions'
 import { createSurvivalActions } from './actions/survivalActions'
 import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
+import { createWorkContractActions } from './actions/workContractActions'
 import { createAppRenderLoop } from './appRenderLoop'
 import { createBusyAction } from './busyAction'
 import { createGameLoop } from './gameLoop'
@@ -439,6 +440,7 @@ export async function createApp(
     initialSave?.palisades ?? [],
     initialSave?.bedrolls ?? [],
     initialSave?.platforms ?? [],
+    initialSave?.workContracts ?? [],
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -553,6 +555,7 @@ export async function createApp(
       cabbage: inventory.has('seed_cabbage', 1),
     })
     vueUi.setQuickActionsHasFishingRod(inventory.has('fishing_rod', 1))
+    vueUi.setQuickActionsWorkContracts(contracts.quickActionsList())
   }
 
   const keyboard = createKeyboard()
@@ -846,6 +849,10 @@ export async function createApp(
     vueUi,
     tentBlockers: placement.tentBlockers,
     rendererElement: renderer.domElement,
+  })
+  const contracts = createWorkContractActions(actionCtx, {
+    vueUi,
+    tentBlockers: placement.tentBlockers,
   })
   const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
@@ -1192,6 +1199,7 @@ export async function createApp(
     scene,
     placement,
     containers,
+    workContract: contracts,
     previewFire: previewFirePlacement,
     buildSimpleFire,
     buildFirePit,
@@ -1266,6 +1274,7 @@ export async function createApp(
     onPlantTree: placement.plantTreeAtAim,
     onPlantCrop: placement.plantCropAtAim,
     onEquipFishingRod: () => inventoryWiring.equipTool('fishing_rod'),
+    onCancelWorkContract: contracts.cancelContract,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -1460,6 +1469,7 @@ export async function createApp(
     describeWellWork: placement.describeWellWork,
     igniteStandingTorch: placement.igniteStandingTorch,
     removePalisadeSegment: placement.removePalisadeSegment,
+    openNoticeBoard: contracts.openNoticeBoard,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
     tickPlacementPreview: placementPreview.tick,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,

@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/createApp.ts`
 
 ## `app/actions/containerActions.ts`
@@ -175,6 +176,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/terrainPreparationActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/createApp.ts`
 - `app/userActions.ts`
 
@@ -185,6 +187,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/workContractActions.ts`
 - `world/placementPreview.ts`
 
 **Imported by**
@@ -266,6 +269,21 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/actions/workContractActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/placementActions.ts`
+- `items/tentPlacement.ts`
+- `ui-vue/mount.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `app/actions/placementPreviewActions.ts`
+- `app/createApp.ts`
+
 ## `app/appRenderLoop.ts`
 
 **Imports**
@@ -339,6 +357,7 @@ Generated from TypeScript imports.
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/appRenderLoop.ts`
 - `app/busyAction.ts`
 - `app/gameLoop.ts`
@@ -818,6 +837,7 @@ Generated from TypeScript imports.
 - `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
+- `world/createWorkContracts.ts`
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
 - `world/dryingRacks.ts`
@@ -833,6 +853,7 @@ Generated from TypeScript imports.
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 - `world/waterMirror.ts`
+- `world/workContract.ts`
 - `world/worldContext.ts`
 
 **Imported by**

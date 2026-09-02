@@ -82,6 +82,20 @@ const validSave: SaveData = {
   bedrolls: [{ id: 'bedroll:1', x: 12, z: -3, yaw: 0.4, variant: 'leather', condition: 90, lastConditionUpdateAtDays: 3.5 }],
   platforms: [{ id: 'platform:1', x: 13, z: -4, yaw: 0.4, condition: 95, lastConditionUpdateAtDays: 3.5 }],
   resourceDeposits: { 'resource_1_2': 0, 'resource_3_4': 5 },
+  workContracts: [{
+    id: 'workContract:1',
+    employer: 'player',
+    workType: 'construction',
+    target: { kind: 'construction', targetId: 'contractTarget:1' },
+    x: 14,
+    z: -5,
+    rewardCoins: 25,
+    state: 'advertised',
+    advertisement: 'posted',
+    postedBoardId: 'noticeBoard:home',
+    createdAt: 2,
+    postedAt: 2.1,
+  }],
 }
 
 describe('loadSaveData v1 contract', () => {
@@ -190,6 +204,13 @@ describe('loadSaveData v1 contract', () => {
   it('rejects malformed resource-deposit fields', () => {
     expect(loadSaveData({ ...validSave, resourceDeposits: { a: 'nope' } })).toBeNull()
     expect(loadSaveData({ ...validSave, resourceDeposits: 'nope' })).toBeNull()
+  })
+
+  it('rejects malformed work-contract fields', () => {
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], state: 'bogus' }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], target: { kind: 'bogus', targetId: 'x' } }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], advertisement: 'bogus' }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, workContracts: 'nope' })).toBeNull()
   })
 
   it('rejects malformed starvation/dehydration duration fields', () => {

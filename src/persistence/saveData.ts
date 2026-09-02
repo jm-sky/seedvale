@@ -328,6 +328,39 @@ export type SavePlayerGarden = {
   droughtStressDays: number
 }
 
+/** Persistent player-issued work contract — mirrors `world/workContract.ts`'s
+ *  `WorkContractRecord` (plan npc-014). `target`/`x`/`z` round-trip the
+ *  contract's concrete world target; `postedBoardId` is the only publication
+ *  state kept here — a board never gets its own duplicated posting list, it
+ *  is always resolved by querying contracts (see `createWorkContracts.ts`'s
+ *  `postedAt`). */
+export type SaveWorkContractState =
+  | 'available'
+  | 'advertised'
+  | 'accepted'
+  | 'travelling'
+  | 'working'
+  | 'payment_due'
+  | 'completed'
+  | 'cancelled'
+  | 'invalidated'
+export type SaveWorkContractAdvertisement = 'not_posted' | 'posted'
+export type SaveConstructionContractTarget = { kind: 'construction', targetId: string }
+export type SaveWorkContract = {
+  id: string
+  employer: string
+  workType: 'construction'
+  target: SaveConstructionContractTarget
+  x: number
+  z: number
+  rewardCoins: number
+  state: SaveWorkContractState
+  advertisement: SaveWorkContractAdvertisement
+  postedBoardId: string | null
+  createdAt: number
+  postedAt: number | null
+}
+
 /** Canonical (and, for now, only) save contract. Versioning/migration can be
  *  reintroduced later if the format changes again — this module intentionally
  *  carries no history of prior schemas.
@@ -416,6 +449,7 @@ export type SaveData = {
    *  `NaturalResource.id`. Sparse — an absent id restores as untouched
    *  (deterministic initial from richness); `0` means depleted. */
   resourceDeposits: Record<string, number>
+  workContracts: SaveWorkContract[]
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -951,6 +985,35 @@ function isPlatformsField(value: unknown): value is SavePlatform[] {
   })
 }
 
+const WORK_CONTRACT_STATES: ReadonlySet<string> = new Set([
+  'accepted', 'advertised', 'available', 'cancelled', 'completed', 'invalidated', 'payment_due', 'travelling', 'working',
+])
+
+function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const c = entry as Record<string, unknown>
+    const target = c.target as Record<string, unknown> | undefined
+    return (
+      typeof c.id === 'string' &&
+      typeof c.employer === 'string' &&
+      c.workType === 'construction' &&
+      !!target && typeof target === 'object' &&
+      target.kind === 'construction' &&
+      typeof target.targetId === 'string' &&
+      typeof c.x === 'number' &&
+      typeof c.z === 'number' &&
+      typeof c.rewardCoins === 'number' &&
+      typeof c.state === 'string' && WORK_CONTRACT_STATES.has(c.state) &&
+      (c.advertisement === 'not_posted' || c.advertisement === 'posted') &&
+      (c.postedBoardId === null || typeof c.postedBoardId === 'string') &&
+      typeof c.createdAt === 'number' &&
+      (c.postedAt === null || typeof c.postedAt === 'number')
+    )
+  })
+}
+
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -998,6 +1061,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isBedrollsField(v.bedrolls)) return false
   if (!isPlatformsField(v.platforms)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
+  if (!isWorkContractsField(v.workContracts)) return false
   return true
 }
 

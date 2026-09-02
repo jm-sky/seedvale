@@ -655,6 +655,17 @@ export function buildInteractables(
         plotId: plot.plotId,
       })
     }
+
+    // Plan npc-014 — the settlement's notice board, a physical publication
+    // point for posted work-contract announcements.
+    if (withinRange(settlement.landmarks.noticeBoard.x, settlement.landmarks.noticeBoard.z, playerPos, GAZE_RANGE)) {
+      list.push({
+        kind: 'noticeBoard',
+        position: { x: settlement.landmarks.noticeBoard.x, z: settlement.landmarks.noticeBoard.z },
+        promptLabel: '[E] Tablica ogłoszeń',
+        settlementId: settlement.id,
+      })
+    }
   }
 
   // Settlement + streamed trees share TreeLifecycle registration — one nearby

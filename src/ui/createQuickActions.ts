@@ -12,6 +12,11 @@ export type QuickActionsTraps = Record<TrapKind, boolean>
  *  live-kept-flag shape as `QuickActionsTraps`. */
 export type QuickActionsCropSeeds = Record<CropId, boolean>
 
+/** One row of the "Zlecenia" category (plan npc-014) — view/cancel only,
+ *  kept live by `createApp.ts`'s `syncQuickActionAvailability` the same way
+ *  `traps`/`cropSeeds` are. */
+export type QuickActionsWorkContract = { id: string, label: string, cost: string }
+
 export type RestVariant = 'camp' | 'town'
 /** `'choose'` — near a settlement with at least one available lodging option;
  *  `onRest` already opened the "Nocuj w mieście" choice panel (plan 168
@@ -71,6 +76,9 @@ export type QuickActionsHandlers = {
    *  mechanism (plan `ui-input-006`) — the Quick Action only equips it; it
    *  does not look for water or start fishing itself. */
   onEquipFishingRod?: () => void
+  /** Cancels one work contract from the "Zlecenia" list (plan npc-014 §10) —
+   *  removes its flag/advertisement; no-op if already terminal. */
+  onCancelWorkContract?: (id: string) => void
   /** Initial digging-capability ownership for showing dig/level buttons. */
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */
