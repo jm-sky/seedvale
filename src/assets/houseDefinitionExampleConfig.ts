@@ -1,4 +1,4 @@
-import { parkedIdFromUrl } from './assetIndex'
+import { parkedIdFromUrl } from './assetUrlUtils'
 
 export const HOUSE_MODULE_M = 2
 

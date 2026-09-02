@@ -1,4 +1,7 @@
 import type { AssetAnchorDef } from './assetAnchors'
+import { parkedIdFromUrl } from './assetUrlUtils'
+
+export { parkedIdFromUrl } from './assetUrlUtils'
 import { NPC_HEIGHT, NPC_MODEL_URLS } from '../ai/NpcAgent'
 import { ANIMAL_DEFS } from '../fauna/AnimalAgent'
 import { FAUNA_URLS } from '../fauna/createFauna'
@@ -123,11 +126,6 @@ export function kindFromBasename(name: string): string | undefined {
     if (n === prefix || n.startsWith(`${prefix}_`)) return prefix
   }
   return undefined
-}
-
-export function parkedIdFromUrl(url: string): string {
-  const path = url.replace(/^\/models\//, '').replace(/\.glb$/i, '')
-  return `parked:${path}`
 }
 
 export function groupFromModelUrl(url: string): AssetIndexGroup {
