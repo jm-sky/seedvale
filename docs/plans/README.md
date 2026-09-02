@@ -29,7 +29,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
+| `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md` | Worker mesh generation + transfer/allocation cleanup + runtime mesh-data cache | 🔴 | M | - |\n| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | 💡 `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
 | 💡 `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -186,7 +186,7 @@ World-driven quests
   (049) + 093 + (110) → 132
 
 Rendering performance
-  (157 PointLight budget 16) → 149 shader program first-use hitch
+  (157 PointLight budget 16) → 149 shader program first-use hitch\n  chunk mesh streaming → world-terrain-004
 
 Construction & lodging
   (109) → (111) → (169)
