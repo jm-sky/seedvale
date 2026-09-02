@@ -200,7 +200,13 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     workContracts: bundle.workContracts.nodes().map((c) => ({ ...c, target: { ...c.target } })),
   })
 
-  const saveNow = (): Promise<void> => writeSave(buildSaveData())
+  // `writeSave()`'s result is diagnostic-only here — a rejected write (an
+  // unreadable existing slot, plan persistence-002) must fail safely rather
+  // than surface a UI error; the dev-console diagnostic already happened
+  // inside `writeSave()`.
+  const saveNow = async (): Promise<void> => {
+    await writeSave(buildSaveData())
+  }
 
   const refreshActiveSaveName = async (): Promise<void> => {
     const slots = await listSaves()

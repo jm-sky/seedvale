@@ -1,7 +1,7 @@
 # Plan: save integrity guard
 
 **Created:** 2026-09-03
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** high · **Effort:** S
 **Depends on:** none
 **Domain:** `persistence`

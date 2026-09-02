@@ -30,7 +30,26 @@ export type CreateSaveResult =
   | { ok: true, id: string, name: string }
   | { ok: false, error: CreateSaveError }
 
+/** Why a `writeSave()` call did not persist. `invalid-existing-slot` means the
+ *  guard refused to overwrite a record it could not read/parse (plan
+ *  persistence-002) — the original bytes are untouched. `db-error` covers an
+ *  IndexedDB failure during the attempt itself. */
+export type WriteSaveError = 'invalid-existing-slot' | 'db-error'
+export type WriteSaveResult =
+  | { ok: true }
+  | { ok: false, error: WriteSaveError }
+
 let pendingNewSaveName: string | null = null
+
+type SaveDiagnosticKind = 'missing' | 'invalid' | 'read-error' | 'write-error'
+
+/** Dev-console-only breadcrumb for a persistence anomaly. Never pass the
+ *  `SaveData`/envelope value itself — `context` should be an operation +
+ *  slot id, `detail` an error object at most (plan persistence-002). */
+function logSaveDiagnostic(kind: SaveDiagnosticKind, context: string, detail?: unknown): void {
+  if (!import.meta.env.DEV) return
+  console.warn(`[persistence] ${kind}: ${context}`, detail ?? '')
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -133,7 +152,13 @@ async function readAllSlots(db: IDBDatabase): Promise<NonNullable<ReturnType<typ
   const slots: NonNullable<ReturnType<typeof parseStoredSave>>[] = []
   for (const row of rows) {
     const parsed = parseRow(row.key, row.value)
-    if (parsed) slots.push(parsed)
+    if (parsed) {
+      slots.push(parsed)
+    } else if (typeof row.key === 'string' && row.key !== LEGACY_SAVE_KEY) {
+      // Present but unreadable — kept out of the list (it can't be sorted/
+      // shown as a normal slot) but never dropped from the store itself.
+      logSaveDiagnostic('invalid', `listSaves:${row.key}`)
+    }
   }
   return slots
 }
@@ -168,7 +193,13 @@ export async function listSaves(): Promise<SaveSlotInfo[]> {
     } finally {
       db.close()
     }
-  } catch {
+  } catch (err) {
+    // A genuine IndexedDB failure here must not be mistaken by a caller for
+    // "confirmed zero saves" — it's surfaced as a diagnostic, and callers
+    // deciding whether to start a new game must not also clear/repurpose
+    // `activeSaveId`, since `writeSave()` re-validates the target record on
+    // every write regardless of how the caller got here (plan persistence-002).
+    logSaveDiagnostic('read-error', 'listSaves', err)
     return []
   }
 }
@@ -178,23 +209,41 @@ export async function readSave(id?: string): Promise<SaveData | null> {
     await migrateLegacyIfNeeded()
     const slots = await listSaves()
     const targetId = id ?? pickActiveSaveId(getActiveSaveId(), slots)
-    if (!targetId) return null
+    if (!targetId) {
+      logSaveDiagnostic('missing', 'readSave:no-active-slot')
+      return null
+    }
     const db = await openDb()
     try {
       const raw = await storeGet(db, targetId)
-      const parsed = parseStoredSave(targetId, raw)
-      if (!parsed) return null
+      if (raw === undefined) {
+        logSaveDiagnostic('missing', `readSave:${targetId}`)
+        return null
+      }
+      const parsed = parseRow(targetId, raw)
+      if (!parsed) {
+        logSaveDiagnostic('invalid', `readSave:${targetId}`)
+        return null
+      }
       if (!id) setActiveSaveId(targetId)
       return parsed.data
     } finally {
       db.close()
     }
-  } catch {
+  } catch (err) {
+    logSaveDiagnostic('read-error', `readSave:${id ?? 'active'}`, err)
     return null
   }
 }
 
-export async function writeSave(data: SaveData, id?: string): Promise<void> {
+/**
+ * @domain persistence
+ * @role Writes `data` into the active (or given) named slot.
+ * @integration Never overwrites a slot whose existing record is present but
+ *  fails to parse — see `docs/plans/persistence-002-save-integrity-guard.md`.
+ *  A slot with no existing record still gets created normally.
+ */
+export async function writeSave(data: SaveData, id?: string): Promise<WriteSaveResult> {
   try {
     await migrateLegacyIfNeeded()
     const targetId = id ?? getActiveSaveId()
@@ -203,21 +252,40 @@ export async function writeSave(data: SaveData, id?: string): Promise<void> {
       const existingNames = slots.map((slot) => slot.name)
       const pending = getPendingNewSaveName()
       const name = pending ?? nextDefaultSaveName(existingNames)
-      await createSave(name, data)
-      return
+      const created = await createSave(name, data)
+      return created.ok ? { ok: true } : { ok: false, error: 'db-error' }
     }
     const db = await openDb()
     try {
       const raw = await storeGet(db, targetId)
-      const parsed = parseStoredSave(targetId, raw)
-      const name = parsed?.name ?? getPendingNewSaveName() ?? nextDefaultSaveName([])
+      if (raw !== undefined) {
+        const parsed = parseRow(targetId, raw)
+        if (!parsed) {
+          // The slot exists but the current code can't read it (e.g. it
+          // predates a schema change). Overwriting it here would silently
+          // destroy the only copy of that record — refuse instead and let
+          // the caller decide (autosave just fails safely for this slot).
+          logSaveDiagnostic('invalid', `writeSave:${targetId}`)
+          return { ok: false, error: 'invalid-existing-slot' }
+        }
+        await storePut(db, wrapSave(parsed.name, data), targetId)
+        setActiveSaveId(targetId)
+        return { ok: true }
+      }
+      // No existing row under this id — retain the existing new-slot
+      // behavior (e.g. `activeSaveId` pointing at an id never actually
+      // written yet).
+      const name = getPendingNewSaveName() ?? nextDefaultSaveName([])
       await storePut(db, wrapSave(name, data), targetId)
       setActiveSaveId(targetId)
+      return { ok: true }
     } finally {
       db.close()
     }
-  } catch {
-    // Quota / unsupported / interrupted by unload — ignore.
+  } catch (err) {
+    // Quota / unsupported / interrupted by unload / other IndexedDB failure.
+    logSaveDiagnostic('write-error', `writeSave:${id ?? 'active'}`, err)
+    return { ok: false, error: 'db-error' }
   }
 }
 

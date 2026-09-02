@@ -52,18 +52,23 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveDb.ts`
 
-- `beginNewSave` — function — line 121
-- `createSave` — function — line 224
+- `beginNewSave` — function — line 140
+- `createSave` — function — line 292
 - `CreateSaveResult` — type — line 29
-- `deleteSave` — function — line 268
-- `getActiveSaveId` — function — line 94
-- `getPendingNewSaveName` — function — line 112
-- `listSaves` — function — line 161
-- `readSave` — function — line 176
-- `renameSave` — function — line 245
-- `setActiveSaveId` — function — line 103
-- `setPendingNewSaveName` — function — line 116
-- `writeSave` — function — line 197
+- `deleteSave` — function — line 336
+- `getActiveSaveId` — function — line 113
+- `getPendingNewSaveName` — function — line 131
+- `listSaves` — function — line 186
+- `readSave` — function — line 207
+- `renameSave` — function — line 313
+- `setActiveSaveId` — function — line 122
+- `setPendingNewSaveName` — function — line 135
+- `writeSave` — function — line 246
+  - domain: persistence
+  - role: Writes `data` into the active (or given) named slot.
+  - integration: Never overwrites a slot whose existing record is present but fails to parse — see `docs/plans/persistence-002-save-integrity-guard.md`. A slot with no existing record still gets created normally.
+- `WriteSaveError` — type — line 37
+- `WriteSaveResult` — type — line 38
 
 ## `persistence/saveSlots.ts`
 
