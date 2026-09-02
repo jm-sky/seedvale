@@ -334,3 +334,84 @@ konkretny fix
 ```
 
 To pozwoli uniknąć optymalizacji shaderów, które są liczne, ale tanie, oraz skupić się na programach faktycznie odpowiedzialnych za spadek frame time.
+
+---
+
+## Update
+
+Tak — **to już daje nam bardzo dobry sygnał**. Najważniejsze jest to, że mamy teraz realną separację GPU.
+
+### Co z tego wynika
+
+**1. AO jest zdecydowanie największym kosztem renderingu**
+
+```text
+baseline       GPU 17.0 ms
+no AO          CPU  5.5 ms
+               Δ     -59%
+```
+
+To jest zdecydowanie pierwszy kandydat do optymalizacji.
+
+**2. GPU jest istotnie obciążone**
+
+GPU elapsed: **17.0 ms avg**, podczas gdy CPU wall: **13.3 ms**.
+
+Czyli wcześniejsze `RENDER = 23 ms` faktycznie nie oznaczało „23 ms CPU”. Mieliśmy tam mieszankę submission + synchronizacji/driver/GPU.
+
+**3. Postprocessing jako całość nie jest głównym problemem**
+
+`no postprocessing` daje tylko **-21%** wall time.
+
+Ale pojedyncze efekty są ciekawe:
+
+```text
+AO          -59%
+no bloom    +41%  ← wynik anomalityczny
+no SMAA     +39%  ← wynik anomalityczny
+no shadows  +33%  ← wynik anomalityczny
+```
+
+Te wartości **nie powinny być traktowane jako rzeczywisty koszt tych efektów**, bo wyłączanie kolejnych passów zmienia synchronizację GPU, kolejność pracy i charakter pomiaru. Fakt, że „no bloom” jest wolniejsze od baseline, jest tego dobrym dowodem.
+
+**4. Water, grass, mirrors nie są obecnie priorytetem**
+
+```text
+no water             -6%
+hide-grass             0%
+hide-vegetation      -9%
+no mirrors            +2%
+```
+
+Nie ma tu podstaw, żeby teraz optymalizować te systemy pod kątem `RENDER`.
+
+**5. Terrain wygląda podejrzanie**
+
+`hide-terrain = +52%`, podobnie jak wcześniejsze anomalie.
+
+To **nie oznacza, że terrain przyspiesza render, gdy go włączymy**. To kolejny sygnał, że te izolacje są wrażliwe na GPU scheduling / synchronizację.
+
+---
+
+### Co bym zrobił teraz
+
+**Nie ruszałbym jeszcze terrain/water/vegetation.**
+
+Priorytet:
+
+> **AO → zbadać dokładnie, dlaczego kosztuje tak dużo i czy można go ograniczyć bez dużej utraty jakości.**
+
+A osobno mamy drugi problem:
+
+> **streaming chunk mesh: avg 45.5 ms / max 92.6 ms**
+
+To jest nadal **największy faktyczny hitch CPU**, więc po AO kolejnym celem powinien być streaming.
+
+Czyli obecnie kolejność:
+
+```text
+1. AO / GPU rendering       ← największy potwierdzony koszt GPU
+2. chunk mesh streaming     ← największe CPU hitches
+3. shader lazy compilation  ← sporadyczne 20–65 ms spikes
+4. reszta renderingu        ← na razie nie ruszać
+```
