@@ -18,6 +18,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
+| `npc-008-agent-decision-architecture-refactor.md`          | Etap 1 (recon + projekt) done; dalej: `faunaDecision.ts` + migracja `AnimalAgent.update()` | 🔴  | L      | -               |
 
 - `settlements-001-house-collision-geometry.md`
 

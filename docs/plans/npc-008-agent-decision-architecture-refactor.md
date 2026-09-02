@@ -1,13 +1,17 @@
 # Plan: Agent Decision Architecture Refactor
 
 **Created:** 2026-09-01
-**Status:** `draft` 📝
+**Status:** `in progress` 🔄 — etap 1 (recon + projekt implementacji) zrobiony
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **Domain:** `npc`
 **Subdomains:** `decision-making` `fauna`
 **Tags:** `AnimalAgent` `NPCAgent` `DecisionContext` `scoring`
 
+> Implementation notes: [`npc-008-agent-decision-architecture-refactor-implementation-notes.md`](./implementation-notes/npc-008-agent-decision-architecture-refactor-implementation-notes.md)
+> — recon obecnego decision flow (tabela priorytetów, hard gates, throttling, findings F1–F6)
+> oraz projekt kroków 2–4. Zacznij od niego, nie od ponownego czytania `AnimalAgent.ts`.
+>
 > Consider review: `docs/research/2026-09-01-npc-animal-threat-forwarding.md`
 
 ## Cel
