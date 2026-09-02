@@ -1,10 +1,14 @@
 # Seedvale — Performance & Rendering Strategy
 
-**Updated:** 2026-08-20
+**Updated:** 2026-09-02
 **Status:** active
 **Scope:** CPU · GPU · memory · rendering · chunk streaming · scalability
 
 ---
+
+## Recent plans
+
+- `docs/performance/optymalizacja-chunk-mesh-streaming-geometrii.md`
 
 ## 1. Purpose
 
