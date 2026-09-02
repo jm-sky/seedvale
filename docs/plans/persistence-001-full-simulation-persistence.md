@@ -157,11 +157,23 @@ This keeps SaveData bounded and preserves the hybrid/off-screen simulation model
 
 ## 11. Merchant horse scope
 
-Do not persist the individual merchant horse in this plan.
+Do not treat the merchant horse as ordinary disposable fauna.
 
-It is an `AnimalAgent`, but it is not house-owned livestock and is currently deterministically reconstructed without a gameplay requirement for individual continuity.
+The merchant horse is an "AnimalAgent", but it can be ridden by the player, so its individual gameplay state may become authoritative.
 
-A future persistent merchant/transport animal system can extend the model separately if its gameplay state becomes authoritative.
+For this plan:
+
+- persist the merchant horse if the current runtime treats its identity, position, ownership or lifecycle as persistent gameplay state;
+- preserve its stable identity across Save → Load;
+- persist its meaningful world position ("x", "z", yaw) rather than relying solely on deterministic reconstruction;
+- do not persist navigation, animation or other transient runtime state;
+- prevent duplicate deterministic spawning when a persisted merchant horse exists.
+
+If the current merchant-horse implementation does not yet expose a stable ownership/identity boundary suitable for persistence, document the exact gap rather than introducing an ad-hoc persistence mechanism.
+
+The merchant horse should use the same persistence mechanisms and ownership boundaries as other persistent animals where practical.
+
+Future expansion of persistent mounts or transport animals can extend this model without creating a separate persistence system.
 
 ## 12. Settlement lifecycle and ownership
 
@@ -292,7 +304,7 @@ Cover at minimum:
 ## Non-goals
 
 - Individual wild fauna persistence
-- Merchant horse individual persistence
+- Individual persistence for other non-persistent transport/mount animals
 - Pathfinding persistence
 - Pending-action persistence
 - Animation persistence
