@@ -4,7 +4,7 @@
 **Last audited:** 2026-09-03  
 **Scope:** plan files in `docs/plans/`, planning documentation and plan-related generators/scripts.
 
-This document is the audit of plan metadata: what fields exist, what values are allowed or observed, why they exist, and which repository tooling consumes them.
+This document is the audit of plan metadata: what fields exist, what values are allowed or recommended, why they exist, and which repository tooling consumes them.
 
 The repository source code is authoritative. This document describes the current planning contract; it is not a substitute for code recon.
 
@@ -12,64 +12,113 @@ The repository source code is authoritative. This document describes the current
 
 ## 1. Current plan header
 
-The canonical required header is defined in `docs/plans/PLANNING.md`:
+The canonical plan header is:
 
 ```md
 # Plan: <name>
 
 **Created:** YYYY-MM-DD
 **Status:** `planned` 📋
+**Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~005~~ ~~008~~
 **Domain:** `npc`
+**Subdomains:** `behavior` `decision-making`
+**Tags:** `gameplay` `combat`
+**Roadmap:** `npc-ai.md`
 ```
 
 Required metadata:
 
 - `Created`
 - `Status`
+- `Type`
 - `Priority`
 - `Effort`
 - `Depends on`
 - `Domain`
 
-Optional metadata currently documented:
+Optional metadata:
 
 - `Subdomains`
 - `Tags`
 - `Roadmap`
+- `Implemented at`
 
 ---
 
 ## 2. Metadata contract
 
-| Field | Required | Current value model | Primary purpose | Current consumers |
+| Field | Required | Values | Primary purpose | Current consumers |
 |---|---|---|---|---|
-| `Created` | yes | `YYYY-MM-DD` | Human-readable plan creation date | Currently documentation-level; no dedicated parser found in audited plan generators |
-| `Status` | yes | `draft`, `planned`, `in progress`, `verification needed`, `done` | Plan lifecycle | `plans-sync.ts`, `plans-recommended-order.ts`, `plans-done.ts`, `planned-plans-without-notes.ts` |
+| `Created` | yes | `YYYY-MM-DD` | Plan creation date | Documentation-level in audited generators |
+| `Status` | yes | `draft`, `planned`, `in progress`, `verification needed`, `done` | Lifecycle | `plans-sync.ts`, `plans-recommended-order.ts`, `plans-done.ts`, `planned-plans-without-notes.ts` |
+| `Type` | yes | `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure` | Kind of work | Planned future recommendation/filtering input |
 | `Priority` | yes | `high`, `medium`, `low` | Relative planning priority | `plans-sync.ts`, `plans-recommended-order.ts` |
 | `Effort` | yes | `XS`, `S`, `M`, `L`, `XL` | Approximate implementation cost | `plans-sync.ts`, `plans-recommended-order.ts` |
-| `Depends on` | yes | plan IDs, or `-` / `none` | Implementation prerequisites | `plans-sync.ts`, `plans-recommended-order.ts`, dependency graph |
+| `Depends on` | yes | plan IDs, `-` / `none` | Implementation prerequisites | `plans-sync.ts`, `plans-recommended-order.ts`, dependency graph |
 | `Domain` | yes | canonical domain list | Primary ownership/navigation | `plans-sync.ts`; filename convention; planning docs |
-| `Subdomains` | no | free-form short values | More precise navigation/preflight hints | Documented for AI preflight; no controlled vocabulary currently defined |
-| `Tags` | no | free-form short values | Secondary navigation/preflight hints | Documented for AI preflight; no controlled vocabulary currently defined |
-| `Roadmap` | no | filename in `docs/roadmap/` | Links plan to roadmap item | Documentation/preflight context; not a planning score |
+| `Subdomains` | no | recommended per-domain values; extensible | More precise navigation/preflight hints | Planning/preflight context |
+| `Tags` | no | recommended global values; extensible | Cross-cutting classification/navigation | Planning/preflight context |
+| `Roadmap` | no | filename in `docs/roadmap/` | Links plan to roadmap item | Documentation/preflight context |
+| `Implemented at` | no | `YYYY-MM-DD HH:mm` | Explicit implementation completion timestamp | Not yet consumed |
 
-### Important distinction
+### Classification model
 
-`Domain` is the canonical primary classification.
+```
+Type        = what kind of work is this?
+Domain      = where does it primarily belong?
+Subdomains  = which more specific areas does it concern?
+Tags        = which cross-cutting concepts apply?
+```
 
-`Subdomains` and `Tags` are deliberately lightweight hints. `PLANNING.md` says they are not a replacement for code recon.
+Do not use Tags as a replacement for Type or Domain.
 
-Do not turn every useful derived concept into manual metadata. Recommendation-oriented values such as readiness, number of dependents, unlock potential, or quick-win status should normally be calculated by generators.
+Do not turn derived concepts such as readiness, unlock potential, or quick-win status into manually maintained metadata.
 
 ---
 
-## 3. Status
+## 3. Type
 
 ### Allowed values
 
-Defined in `scripts/docs/config.ts`:
+`Type` is a required classification with this fixed vocabulary:
+
+- `feature`
+- `bug`
+- `fix`
+- `polish`
+- `optimization`
+- `refactor`
+- `infrastructure`
+
+### Semantics
+
+| Type | Meaning |
+|---|---|
+| `feature` | New functionality, capability, or world/system behaviour |
+| `bug` | Correction of behaviour that is objectively incorrect or broken |
+| `fix` | Deliberate correction/improvement of an existing implementation that is not necessarily a bug |
+| `polish` | Quality improvement such as UX, visual presentation, animation, audio, feedback, or feel |
+| `optimization` | Performance/scalability/resource-cost improvement |
+| `refactor` | Internal restructuring without intended behavioural change |
+| `infrastructure` | Tooling, build, development infrastructure, scripts, CI, or other supporting infrastructure |
+
+### `bug` vs `fix`
+
+Use `bug` when the current behaviour is wrong.
+
+Use `fix` when the current solution works but needs a deliberate correction or improvement.
+
+`gameplay` is **not** a Type. It is a cross-cutting concept and belongs in Tags.
+
+`research` is deliberately **not** a Type. Recon, investigation, and experiments should normally be represented by the plan itself, implementation notes, or an appropriate existing Type.
+
+---
+
+## 4. Status
+
+### Allowed values
 
 - `draft`
 - `planned`
@@ -84,32 +133,24 @@ Defined in `scripts/docs/config.ts`:
 | `draft` | Plan exists but is not yet committed to the implementation backlog |
 | `planned` | Ready for implementation; participates in planned ordering |
 | `in progress` | Implementation currently underway |
-| `verification needed` | Automated implementation checks passed; meaningful browser/manual verification remains |
+| `verification needed` | Implementation is complete enough to require meaningful browser/manual verification |
 | `done` | Implementation and required verification are complete |
 
-`verification needed` and `done` are treated as completed dependencies by `plans-recommended-order.ts`.
+`verification needed` and `done` satisfy dependencies.
 
-Only `planned` plans are ranked by the current recommendation generator.
+Only `planned` plans are currently ranked by the recommendation generator.
 
 ---
 
-## 4. Priority
+## 5. Priority
 
-### Allowed values
-
-Defined in `scripts/docs/config.ts`:
+Allowed values:
 
 - `high`
 - `medium`
 - `low`
 
-Human-facing icons:
-
-- `high` → 🔴
-- `medium` → 🟡
-- `low` → ⚪
-
-Current recommendation weights in `plans-recommended-order.ts`:
+Current recommendation weights:
 
 | Priority | Weight |
 |---|---:|
@@ -117,15 +158,13 @@ Current recommendation weights in `plans-recommended-order.ts`:
 | medium | 20 |
 | low | 10 |
 
-Priority is therefore already a quantitative planning signal.
+Priority is a quantitative planning signal.
 
 ---
 
-## 5. Effort
+## 6. Effort
 
-### Allowed values
-
-Defined in `scripts/docs/config.ts`:
+Allowed values:
 
 - `XS` — minutes
 - `S` — ~15–30 min
@@ -143,13 +182,13 @@ Current recommendation penalty:
 | L | 6 |
 | XL | 10 |
 
-This makes Effort suitable for future profiles such as **Quick Wins** without adding another manual field.
+This naturally supports future **Quick Wins** recommendations.
 
 ---
 
-## 6. Depends on
+## 7. Depends on
 
-`Depends on` contains **implementation prerequisites**, represented by plan IDs.
+`Depends on` contains implementation prerequisites represented by plan IDs.
 
 Examples:
 
@@ -161,25 +200,21 @@ Examples:
 **Depends on:** ~~015~~ ~~npc-014~~
 ```
 
-The current parser accepts whitespace-separated references and strips presentation markers such as `~~`, backticks and punctuation.
-
-### Semantics
+Semantics:
 
 - A dependency is a prerequisite, not thematic overlap.
 - `done` and `verification needed` satisfy dependencies.
-- Unknown dependencies are errors in `plans-recommended-order.ts`.
+- Unknown dependencies are errors.
 - Dependency cycles are detected.
-- The reverse graph is used to calculate direct and transitive unlocks.
+- The reverse graph provides direct and transitive unlock information.
 
-This is currently the strongest structural input for recommendation ranking.
+This is currently the strongest structural input to recommendation scoring.
 
 ---
 
-## 7. Domain
+## 8. Domain
 
 ### Canonical values
-
-The canonical domain list is maintained by `scripts/docs/plans-sync.ts` and documented in `README.md` / `PLANNING.md`:
 
 - `ai`
 - `fauna`
@@ -194,91 +229,102 @@ The canonical domain list is maintained by `scripts/docs/plans-sync.ts` and docu
 - `world`
 - `world-terrain`
 
-### Semantics
+Domain is the primary ownership classification.
 
-Domain answers:
-
-> Where should an AI/developer look first?
-
-It is the **primary ownership classification**, not a list of every system touched by the plan.
-
-New plans use the domain as the filename prefix:
+New plans use:
 
 ```
 <domain>-<id>-<title>.md
 ```
 
-`plans-sync.ts` validates that the filename domain and `Domain:` metadata agree.
+Filename and `Domain:` must agree.
 
 ---
 
-## 8. Subdomains
+## 9. Subdomains
 
-Current documented shape:
+Example:
 
 ```md
 **Subdomains:** `household` `logistics`
 ```
 
-### Audit finding
+### Value model
 
-There is currently **no canonical list of allowed Subdomain values** in `PLANNING.md`, `config.ts`, or the audited plan generators.
+Subdomains are **recommended vocabulary, not a global enum**.
 
-This appears intentional: the planning guide describes Subdomains as short navigation/preflight hints.
+Recommended values should be documented per Domain and can be extended when the existing vocabulary does not describe the plan adequately.
 
-### Recommendation
+Examples:
 
-Keep `Subdomains` as an open vocabulary for now.
+| Domain | Suggested Subdomains |
+|---|---|
+| `npc` | `behavior`, `needs`, `goals`, `decision-making`, `relationships`, `memory`, `lifecycle`, `work`, `combat`, `dialogue` |
+| `fauna` | `predation`, `prey`, `habitat`, `reproduction`, `migration`, `lifecycle`, `population`, `domestication` |
+| `settlements` | `buildings`, `population`, `resources`, `development`, `economy` |
+| `settlements-npcs` | `household`, `schedules`, `economy`, `logistics`, `social` |
+| `world` | `resources`, `places`, `time`, `weather`, `events`, `simulation` |
+| `world-terrain` | `terrain`, `chunks`, `vegetation`, `roads`, `landmarks`, `rendering` |
+| `items-player` | `inventory`, `items`, `tools`, `interaction`, `player-needs` |
+| `quests-progression` | `quests`, `relationships`, `progression`, `rewards` |
+| `persistence` | `save-data`, `serialization`, `storage`, `migration` |
+| `ui-input` | `hud`, `menus`, `input`, `interaction`, `feedback` |
+| `tools` | `debug`, `development`, `diagnostics`, `automation` |
+| `ai` | `dialogue`, `characterisation`, `generation`, `agents` |
 
-Do not introduce a global enum unless real usage demonstrates that a stable controlled vocabulary is needed.
-
-If standardization becomes useful, prefer a documented **recommended vocabulary per Domain** rather than one global list.
+These are starting recommendations, not a closed schema.
 
 ---
 
-## 9. Tags
+## 10. Tags
 
-Current documented shape:
+Example:
 
 ```md
-**Tags:** `delivery` `inventory`
+**Tags:** `gameplay` `economy`
 ```
 
-### Audit finding
+Tags are **global recommended vocabulary with an extensible/open model**.
 
-There is currently **no canonical list of allowed Tags**.
-
-Tags are documented as optional navigation/preflight hints and are intentionally short and relevant.
-
-### Recommendation
-
-Keep Tags open-ended.
-
-Tags are the best existing place for cross-cutting concepts such as:
+Recommended tags include:
 
 - `gameplay`
-- `economy`
+- `bug`
 - `combat`
+- `economy`
 - `persistence`
 - `performance`
+- `ui`
+- `visual`
+- `audio`
+- `animation`
+- `simulation`
+- `multiplayer`
+- `ai`
 - `polish`
-- `bug`
+- `tooling`
 
-However, these should only be introduced where they provide real navigation or recommendation value. Avoid using Tags as a duplicate of Domain or as a manually maintained score.
+Use a new tag when it represents a useful cross-cutting concept that cannot be expressed adequately by existing tags.
 
-A future recommendation generator can use Tags as **signals**, while keeping the scoring rules in code.
+Avoid tags that merely duplicate:
+
+- Type
+- Domain
+- Status
+- Priority
+- Effort
 
 ---
 
-## 10. Roadmap
+## 11. Roadmap
 
-Current documented shape:
+Example:
 
 ```md
 **Roadmap:** `npc-ai.md`
 ```
 
-The value should point to a file in `docs/roadmap/`.
+The value points to a file in `docs/roadmap/`.
 
 Purpose:
 
@@ -286,45 +332,39 @@ Purpose:
 - provide context to AI agents;
 - avoid copying roadmap text into individual plans.
 
-It should not become another priority system.
+It is not another priority system.
 
 ---
 
-## 11. Created
+## 12. Created
 
-Current documented format:
+Format:
 
 ```
 YYYY-MM-DD
 ```
 
-### Audit finding
-
-The field is part of the documented metadata contract, but the audited plan generators do not currently use it for synchronization or recommendation scoring.
-
-It remains useful as human-facing provenance.
+Created is plan provenance. It is currently not a significant input to recommendation scoring.
 
 ---
 
-## 12. Proposed: Implemented at
+## 13. Implemented at
 
-Suggested field:
+**Accepted metadata field.**
+
+Example:
 
 ```md
 **Implemented at:** 2026-09-03 00:42
 ```
 
-### Purpose
+### Semantics
 
-Record when implementation of the plan was completed.
+Record when the implementation work was completed and the plan reached the state where implementation is ready for or undergoing verification.
 
-This should mean:
+It is **not** the browser/manual verification timestamp.
 
-> The implementation work reached the point represented by `verification needed` or `done`.
-
-It should **not** mean browser/manual verification time.
-
-Recommended lifecycle:
+Lifecycle:
 
 ```
 Created
@@ -340,69 +380,55 @@ verification needed
 done
 ```
 
-### Important distinction from existing tooling
-
-`scripts/docs/plans-done.ts` currently derives lifecycle transition dates from Git history rather than reading an `Implemented at` field.
-
-Therefore adding the field should not initially duplicate or replace that historical mechanism without a deliberate design decision.
-
-Potential future uses:
-
-- recent implementation context;
-- plan history;
-- planning velocity;
-- time-to-implementation analysis;
-- recently implemented features/fixes;
-- recommendation freshness signals.
-
 ### Format
 
-Use a single repository convention. Recommended:
+Use:
 
 ```
 YYYY-MM-DD HH:mm
 ```
 
-The timezone should be explicitly standardized before the field is widely adopted. Europe/Warsaw is practical for this project, but UTC is preferable if repository activity may become geographically distributed.
+The repository should standardize the timezone. Prefer UTC for an unambiguous machine-readable history, or explicitly document `Europe/Warsaw` if the project intentionally uses local project time.
+
+### Relationship to Git history
+
+`scripts/docs/plans-done.ts` currently derives lifecycle transition dates from Git history.
+
+`Implemented at` is explicit plan metadata and does not replace Git-derived history.
+
+Future uses may include:
+
+- recent implementation context;
+- implementation velocity;
+- time-to-implementation analysis;
+- recently implemented feature/fix lists;
+- recommendation freshness.
 
 ---
 
-## 13. Legacy plans
+## 14. Legacy plans
 
-The repository still contains legacy date/global-ID plan filenames, for example:
+The repository contains legacy date/global-ID plan filenames such as:
 
 ```
 2026-08-20--177--npc-combat.md
 ```
 
-The current generators explicitly account for these files.
-
-New plans use domain-local IDs:
+New plans use domain-local IDs such as:
 
 ```
 npc-018-...
 ```
 
-Do not introduce new metadata rules solely to make legacy plans identical unless migration is explicitly planned.
+Do not migrate legacy plans solely to normalize metadata unless migration is explicitly planned.
 
 ---
 
-## 14. Current script usage
+## 15. Current script usage
 
 ### `scripts/docs/config.ts`
 
-Central source for:
-
-- metadata regexes;
-- Status type and allowed values;
-- Priority type;
-- Effort type;
-- canonical plan paths;
-- plan filename conventions;
-- completed statuses;
-- priority icons.
-
-Notably, it currently defines a `PLAN_DOMAIN_RE`, but Domain validation is additionally enforced by `plans-sync.ts`.
+Central source for metadata regexes, Status/Priority/Effort types, plan paths, filename conventions, completed statuses, and priority icons.
 
 ### `scripts/docs/plans-sync.ts`
 
@@ -414,15 +440,7 @@ Uses:
 - Depends on
 - Domain
 
-Responsibilities include:
-
-- validating plan domains;
-- validating filename/domain agreement;
-- synchronizing planned-plan index rows;
-- synchronizing implementation-note markers;
-- maintaining next plan IDs.
-
-It does not currently consume Subdomains, Tags, Roadmap, Created, or Implemented at.
+It validates domains, filename/domain agreement, and synchronizes plan indexes and implementation-note markers.
 
 ### `scripts/docs/plans-recommended-order.ts`
 
@@ -433,39 +451,33 @@ Uses:
 - Effort
 - Depends on
 
-Current score:
+Current score combines:
 
-```
-priority
-+ direct dependents × 4
-+ transitive dependents × 10
-+ dependency depth × 2
-- effort penalty
-```
+- priority;
+- direct dependents;
+- transitive dependents;
+- dependency depth;
+- effort penalty.
 
-This is important for future work: the recommendation system already has a scoring model and dependency-derived signals.
+This is the natural foundation for future recommendation profiles.
 
 ### `scripts/docs/plans-done.ts`
 
-Uses Status and Domain directly.
-
-It also uses Git history to reconstruct lifecycle transition dates, including the first transition to `verification needed` and `done`.
+Uses Status and Domain and Git history to reconstruct lifecycle transition dates.
 
 ### `scripts/docs/planned-plans-without-notes.ts`
 
-Uses Status to select currently planned plans and checks implementation-note presence.
+Uses Status to select planned plans and checks implementation-note presence.
 
 ### `scripts/claude/pre-implementation.ts`
 
-The planning documentation says that Domain, Subdomains and Tags may improve AI preflight relevance.
-
-The preflight itself primarily derives navigation from plan text, explicit files, symbols, dependencies and implementation notes. Metadata should therefore remain concise and navigational rather than becoming a second implementation specification.
+Planning metadata can provide navigation hints, especially Domain, Subdomains and Tags. It does not replace recon of the current codebase.
 
 ---
 
-## 15. What should remain derived
+## 16. Derived values
 
-The following should generally **not** become manually maintained plan fields:
+Do not add manual fields for concepts that can be calculated:
 
 | Concept | Derive from |
 |---|---|
@@ -474,75 +486,45 @@ The following should generally **not** become manually maintained plan fields:
 | Transitive unlock count | Dependency graph |
 | Dependency depth | Dependency graph |
 | Quick Win | Effort + Priority + readiness + impact |
-| Foundation / unblocker | Downstream dependency count |
-| Recently implemented | Implemented at or Git history |
+| Foundation / unlocker | Downstream dependency count |
+| Recently implemented | Implemented at / Git history |
 | Implementation-note presence | Filesystem |
 | Filename/domain consistency | Filename + Domain |
 | Next plan ID | Existing plan filenames |
 | Plan ordering | Recommendation algorithm |
 
-This keeps plan metadata small and prevents duplicated state.
-
 ---
 
-## 16. Findings and recommended direction
+## 17. Findings and direction
 
-### Findings
+1. The core metadata should remain small and explicit.
+2. `Type` is useful because it describes the kind of work and is not equivalent to Domain or Tags.
+3. `Type` is a fixed vocabulary: `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure`.
+4. `research` is intentionally not a Type.
+5. `Subdomains` should have recommended values per Domain, but remain extensible.
+6. `Tags` should have a global recommended vocabulary, but remain extensible.
+7. `Implemented at` should be an optional explicit timestamp.
+8. Recommendation categories should be derived from metadata and dependency graph rather than stored as fields.
 
-1. The current metadata model is already sufficient for a first-generation recommendation engine.
-2. `Priority`, `Effort` and `Depends on` already form a useful quantitative basis.
-3. `Domain` is controlled and validated.
-4. `Subdomains` and `Tags` are intentionally open-ended and currently lack controlled vocabularies.
-5. `Created` is documented but currently has little machine use.
-6. Lifecycle timing is already recoverable from Git history.
-7. `Implemented at` could provide a simpler explicit lifecycle timestamp, but should not duplicate existing history semantics accidentally.
-8. The current `plans-recommended-order.ts` is already doing graph-based scoring, so expanding it should build on that mechanism rather than introducing a separate planner.
-
-### Recommended metadata direction
-
-Keep the core schema small:
-
-```
-Required:
-  Created
-  Status
-  Priority
-  Effort
-  Depends on
-  Domain
-
-Optional:
-  Subdomains
-  Tags
-  Roadmap
-  Implemented at
-```
-
-Do **not** add a generic `Type: feature | bug | fix | gameplay` field yet.
-
-Instead, use Tags for genuinely cross-cutting classification where needed, and derive recommendation categories from existing metadata plus dependency information.
-
-The next logical step is to evolve `plans-recommended-order.ts` into multiple recommendation profiles, for example:
+A future `plans-recommended-order.ts` can expose profiles such as:
 
 - Overall
 - Quick Wins
 - Gameplay
 - Bugs / Fixes
 - Performance
+- Polish
 - Foundation / Unlockers
-
-The scoring rules should remain in the generator, not in individual plan files.
 
 ---
 
-## 17. Maintenance rule
+## 18. Maintenance rule
 
 When adding or changing plan metadata:
 
 1. Update this document.
 2. Update `docs/plans/PLANNING.md` if the authoring contract changes.
-3. Update `scripts/docs/config.ts` if the field has a machine-readable controlled vocabulary.
+3. Update `scripts/docs/config.ts` for controlled machine-readable values.
 4. Update affected generators/validators.
 5. Regenerate derived documents instead of editing generated output manually.
 6. Prefer derived signals over additional manually maintained metadata.
-
