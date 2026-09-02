@@ -138,7 +138,15 @@ Refaktor powinien być inkrementalny:
 4. Zachować istniejące execution methods i lifecycle/bookkeeping.
 5. Zweryfikować interakcje predator/prey, player, NPC, fire, frenzy i rabid.
 6. Dopiero po stabilizacji ocenić, czy część decyzji `NPCAgent` powinna korzystać z tych samych małych primitives.
-7. Nie wprowadzać nowych gameplayowych priorytetów w ramach tego refaktoru.
+7. Nie wprowadzać nowych gameplayowych priorytetów w ramach kroków 2-5.
+
+## Follow-up: ogólne zagrożenie animals ↔ NPC
+
+Recon (F1) pokazał, że `npcThreat` w `AnimalAgent.update()` jest bramkowane przez `frenzied`, przez co gałąź `npc-attack`/`npc-ignore`/`npc-flee` i `decideNpcResponse()` są martwym kodem.
+
+Decyzja (2026-09-02): to jest za wąskie. Zagrożenie i walka animals ↔ NPC mają być zachowaniem ogólnym, a `frenzy` jest mechanizmem wymuszania combatu (testy) i overridem, który pomija scoring — nie warunkiem zauważania NPC.
+
+Zakres i konsekwencje: implementation notes §5.6 (krok 6 w kolejności z §5.4 — nie mylić z punktem 6 listy powyżej, który dotyczy `NPCAgent`). Wykonać **po** krokach 2-5, osobnym commitem, bo to pierwsza realna zmiana zachowania w tym wątku — parytet jest jedynym sposobem weryfikacji samego refaktoru (F6). Jeżeli kierunek urośnie poza zmianę bramki + strojenie, zakłada się osobny plan `npc-018`.
 
 ## Weryfikacja
 

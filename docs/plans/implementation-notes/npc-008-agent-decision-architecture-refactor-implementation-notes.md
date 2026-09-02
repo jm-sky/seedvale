@@ -98,10 +98,15 @@ Everything from #2 down is a real "what should this animal do now" answer and be
 
 ## 3. Findings from the recon
 
-**F1 — the scored NPC branch is dead code.**
+**F1 — the scored NPC branch is dead code, and the gate that kills it is narrower than the intended design.**
 `npcThreat` is only ever non-null when `this.frenzied && role === 'predator'` (`:2010`), and branch #4's guard is `npcThreat && this.frenzied`. Therefore branch #5 (`npc-attack` / `npc-ignore` / `npc-flee`) and `decideNpcResponse()` (`:2321`) are **unreachable at runtime**; `decideNpcResponse` has no test either. `getDebugInfo()`/`updateDebugVisual()` still reference `'npc-attack'` (`:1568`, `:2204`).
 This predates the current commit: `0fb2f7b` relaxed the `!sense.playerActive` part of the gate, but `frenzied` was always required on both sides.
-→ Consequence: a frenzied wolf **always** commits to `chaseNpc`, and never flees a crowd/fire-protected NPC. Keeping that behaviour is correct for this refactor (no gameplay change), but the priority table must record it explicitly so the dead branch is not silently "revived" by re-ordering. Whether to make it reachable is a gameplay decision → `LOOSE-ENDS.md`, not this plan.
+
+**Design intent (owner, 2026-09-02):** `npcThreat` should *not* be frenzy-gated. Animal↔NPC threat and combat is a wanted general behaviour; `frenzy` is a forcing/test mechanism for combat, not the condition for it. So the correct end state is: any predator senses NPCs and scores its response, and `frenzied` stays an override that skips the scoring (a frenzied wolf never flees). That is exactly what branches #4 and #5 already express — the frenzy gate on `npcThreat` is the only thing keeping #5 dead.
+
+The caller already supplies what the general case needs: `gameLoop.ts:1843` builds `nearbyNpcCandidates` from **all** loaded settlements' live NPCs every frame, with no frenzy condition, and the NPC side of the loop (`threateningAnimals` → `NpcAgent`'s animal-threat interrupt, plan 179) is already generic. Only `AnimalAgent.ts:2010` is narrow.
+
+→ Steps 2–4 still preserve today's behaviour exactly (parity is the only way to verify the refactor, see F6). Generalizing the gate is a gameplay change and lands as **step 6** (§5.6), where the refactor pays for itself: the priority table, the scored branch and its tests already exist, so it becomes a gate change plus tuning rather than new decision code.
 
 **F2 — inconsistent bookkeeping across branches.**
 `cancelSourceTarget()` is called in #2/#3, #5, #6 but **not** in #4 (`npc-attack-frenzied`) and not in #7. A frenzied wolf that had claimed a carcass therefore keeps the claim while chasing an NPC (`foodClaimedBy` stays set until `pursueNeeds`/`isSourceTargetValid` clears it). Preserve as-is in step 2–3; record it as a candidate follow-up rather than fixing it inside the refactor.
@@ -214,7 +219,8 @@ onAggro rising edge + tail bookkeeping                     unchanged
 2. **Step 2b** — extract `refreshThrottledHumanIntent()` (private) from branch #2, no behaviour change (F4).
 3. **Step 3** — replace the `if / else if` chain with `decideFaunaBehaviour()` + `switch`. `rabid` stays a gate above it.
 4. **Step 4** — wire `scoreFaunaBehaviours()` into `getDebugInfo()` (new optional `behaviourCandidates` field on `AnimalAgentDebugInfo`) so `?debug=1` shows why a branch won. The only consumers are `src/debug/faunaInspector.ts` and `gameLoop.ts:186`; `src/ui/agentStatusLabel.ts` does not render `aiBranch` and stays untouched.
-5. **Step 5** — documentation: `docs/STATE.md` fauna paragraph (line 49 area), `docs/CODE_INDEX.md` fauna entry, `pnpm docs:sync`; move F2/F5 and the F1 gameplay question to `docs/plans/LOOSE-ENDS.md`.
+5. **Step 5** — documentation: `docs/STATE.md` fauna paragraph (line 49 area), `docs/CODE_INDEX.md` fauna entry, `pnpm docs:sync`; move F2/F5 to `docs/plans/LOOSE-ENDS.md`.
+6. **Step 6** — generalize animal→NPC threat (§5.6). Separate commit, after parity is verified — it is the first *behaviour* change in this thread.
 
 ### 5.5 Test plan (step 2a, the parity harness)
 
@@ -228,6 +234,27 @@ onAggro rising edge + tail bookkeeping                     unchanged
 
 Verification set for the whole refactor: `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run test`. Browser verification is only needed for step 3 (frenzied wolf reaching a settlement, wolf-vs-campfire, predator hunt, player scare) — technical checks cannot establish gameplay parity.
 
+
+### 5.6 Step 6 — generalize animal→NPC threat (behaviour change, after parity)
+
+Target semantics (F1): a predator treats a nearby NPC as a possible target the same way it already treats the player; `frenzied` becomes an override that forces the engagement instead of the precondition for noticing NPCs at all.
+
+Change set (small, because steps 2–4 already put the pieces in place):
+
+1. `AnimalAgent.ts:2010` — drop `this.frenzied` from the gate, keep `role === 'predator'`; rename `resolveFrenzyNpcTarget()` → `resolveNpcTarget()` (target commitment semantics unchanged, only the name and the doc).
+2. Priority table: keep `npc-attack-frenzied` (rank above `npc-*`) as the frenzy override — a frenzied wolf still skips scoring and never flees. Non-frenzied predators now fall through to the scored `npc-attack` / `npc-ignore` / `npc-flee` branch, which becomes live.
+3. `decideNpcResponse()` already handles the general case: distance, crowd fear around the *NPC* (not the player), `fireNearby`, hunger, HP and `provoked`. No new scoring code; expect **tuning**, not new mechanics.
+4. Nothing changes on the NPC side or in `gameLoop.ts` — `threateningHuman` → `threateningAnimals` → `NpcAgent`'s animal-threat interrupt is already generic (plan 179).
+
+Consequences to check when doing it:
+
+- **Perception cost.** `senseNpcThreat()` would run for every loaded predator every tick instead of for the ~1 frenzied wolf. `nearbyNpcs` is all loaded settlements' NPCs (tens), predators are tens → up to ~10³ distance checks per frame. Before shipping: switch its `Math.hypot` to a squared-distance compare (the idiom `countNearbyHumans()` already uses) and consider refreshing the target on the existing throttle cadence rather than every tick. The *branch selection* must stay per-tick (§2.3).
+- **Priority interactions.** NPC threat sits above `fire-avoid` (#6), so a wolf that notices an NPC standing at a lit campfire now resolves inside `decideNpcResponse` (where `fireNearby` adds `FIRE_FEAR`) instead of the fire branch — likely `npc-flee`, which flees the NPC rather than the fire. Verify this reads correctly in play; it is the main behavioural difference from today's non-frenzied wolf, which simply avoids the fire radius.
+- **Village avoidance.** `pickPointNear()` (`:2991`) excludes villages for wild animals unless `frenzied`, and `updatePredator()` refuses prey inside a village. A non-frenzied wolf can now decide `npc-attack` on an NPC inside the settlement while its wander/prey logic still treats the village as off-limits. Decide explicitly whether "attack an NPC inside a village" is allowed, or whether NPC candidates should be filtered by the same village rule for non-frenzied predators.
+- **Frenzy stays useful** as the forcing mechanism (`?debug=1` frenzy wolf tooling, `faunaInspector.ts`), which is its stated purpose.
+
+Scope note: this is a gameplay direction of its own ("zagrożenia i walki animals vs NPC, a potem więcej"). If it grows past the gate change plus tuning above — species-specific NPC aggression, guards deliberately provoking predators, livestock predation, night raids — it deserves its own plan (`npc-018`), with npc-008 stopping at step 5.
+
 ---
 
 ## 6. Explicit non-changes (guard rails for the next session)
@@ -235,6 +262,6 @@ Verification set for the whole refactor: `npx tsc --noEmit`, `pnpm run lint:fix`
 - No `AgentAIManager`/`BehaviourManager`/God object; no shared "agent AI" module between `src/ai` and `src/fauna` — `src/simulation` already owns the only shared primitives, and they suffice.
 - No change to `AnimalAgent.update()`'s signature (F5 stays a loose end).
 - No change to the perception radii, scoring constants, throttle intervals or randomness sources.
-- No revival of the dead NPC-response branch (F1) and no fix of the `cancelSourceTarget()` asymmetry (F2) inside this refactor.
+- No revival of the dead NPC-response branch (F1) inside steps 2–4 — step 6 does exactly that, deliberately, once parity is verified — and no fix of the `cancelSourceTarget()` asymmetry (F2) anywhere in this plan.
 - `updatePredator`/`updatePrey`/`pursueNeeds`'s internal ordering stays as-is; only the *outer* arbitration becomes data.
 - `NpcAgent` is not touched (§4).
