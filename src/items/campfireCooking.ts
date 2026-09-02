@@ -21,6 +21,10 @@ export const COOKING_RECIPES: readonly CookingRecipe[] = [
   { input: 'boar_meat', output: 'roasted_meat', count: 1 },
   { input: 'rabbit_meat', output: 'roasted_meat', count: 1 },
   { input: 'beef', output: 'roasted_meat', count: 1 },
+  // Plan items-player-012 — fish is a distinct food identity from terrestrial
+  // meat, so it gets its own recipe row/output rather than folding into
+  // roasted_meat.
+  { input: 'fish', output: 'roasted_fish', count: 1 },
 ]
 
 /** Busy-channel duration for cooking one item — real-time (not a time-skip),

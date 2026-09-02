@@ -1429,6 +1429,7 @@ export async function createApp(
       else ground.startDigAt(x, z)
     },
     startTreeChop: ground.startTreeChop,
+    gatherBranch: ground.gatherBranch,
     startDepositMine: ground.startDepositMine,
     startBuryCorpse: survival.startBuryCorpse,
     startHarvestMeat: survival.startHarvestMeat,

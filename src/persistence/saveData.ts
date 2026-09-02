@@ -58,6 +58,9 @@ export type SavePlacedFire = { id: string, x: number, z: number, kind: PlacedFir
 export type SaveTreeOverride = {
   stage: 'sapling' | 'young' | 'mature' | 'old' | 'limbed' | 'felled' | 'harvested'
   stageStartedAt: number
+  /** Plan items-player-012 — game-day a branch harvest becomes available
+   *  again; absent means available now. */
+  branchRegeneratesAt?: number
 }
 
 /** Portable hand light mid-burn (`player/PlayerTorch.ts`). */
@@ -461,6 +464,7 @@ function isTreeOverridesField(value: unknown): value is Record<string, SaveTreeO
       return false
     }
     if (typeof rec.stageStartedAt !== 'number') return false
+    if (rec.branchRegeneratesAt !== undefined && typeof rec.branchRegeneratesAt !== 'number') return false
   }
   return true
 }

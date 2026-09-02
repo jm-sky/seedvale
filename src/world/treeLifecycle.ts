@@ -1,5 +1,6 @@
 import type { ItemKind } from '../items/items'
 import type { BiomeWeights } from '../terrain/biomeRegions'
+import { createSeededRandom } from './parseSeed'
 
 /**
  * @domain world-terrain
@@ -36,6 +37,11 @@ export type TreeStateOverride = {
   stage: TreeGrowthStage
   /** `DayNightState.elapsedDays` when this stage began. */
   stageStartedAt: number
+  /** Plan items-player-012 — `DayNightState.elapsedDays` a branch harvest
+   *  becomes available again; absent/past means available now. Lives on the
+   *  same sparse override as `stage` rather than a second per-tree map, and
+   *  survives independently of chop-stage pruning (see `resolvePresence`). */
+  branchRegeneratesAt?: number
 }
 
 export type TreeEnvSample = {
@@ -152,6 +158,24 @@ export const HARVEST_YIELD: HarvestYield = CHOP_YIELDS.felled
  *  step (mature/old/limbed → next), so it can never be duplicated by
  *  re-resolving a tree's stage. */
 export const FELLING_BEAM_YIELD: HarvestYield = { kind: 'beam', count: 4 }
+
+/** Plan items-player-012 — game-days before a tree's branches become
+ *  harvestable again after a successful pick. Easily-adjustable gameplay
+ *  constant, not derived from anything else. */
+export const BRANCH_REGENERATION_DAYS = 2
+
+/** Plan items-player-012 — branch count rolled on a successful harvest,
+ *  keyed by the same `TreeSizeClass` chop yields already use. Gameplay
+ *  constants, tune freely. */
+export const BRANCH_YIELD_BY_SIZE: Record<TreeSizeClass, { min: number, max: number }> = {
+  small: { min: 1, max: 3 },
+  medium: { min: 2, max: 4 },
+  large: { min: 3, max: 6 },
+}
+
+export type BranchHarvestResult =
+  | { ok: true, yield: HarvestYield }
+  | { ok: false, reason: 'unknown-tree' | 'not-available' | 'regenerating' }
 
 const CHOP_NEXT: Record<ChoppableLiving | 'limbed' | 'felled', TreeGrowthStage> = {
   mature: 'limbed',
@@ -410,6 +434,17 @@ export function advanceStage(
   return { stage: current, stageStartedAt: started }
 }
 
+/** FNV-1a — same small per-file hash convention as `world/fishing.ts` /
+ *  `world/animalTraps.ts`, feeding `parseSeed.ts`'s `createSeededRandom`. */
+function hashString(value: string): number {
+  let h = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
 function cellKey(x: number, z: number): string {
   return `${Math.floor(x / CANOPY_RADIUS)}:${Math.floor(z / CANOPY_RADIUS)}`
 }
@@ -450,6 +485,12 @@ export type TreeLifecycle = {
     worldDays: number,
     env: TreeEnvSample,
   ) => TreeHarvestStepResult
+  /** Plan items-player-012 — the branch-picking counterpart of
+   *  `advanceHarvest`/`harvestFully`: never changes chop stage, only rolls a
+   *  size-based branch count and starts that tree's regeneration cooldown.
+   *  Refuses (without rolling or mutating anything) while the tree has no
+   *  living crown or its cooldown hasn't elapsed. */
+  harvestBranch: (id: TreeId, worldDays: number, env: TreeEnvSample) => BranchHarvestResult
   findHarvestableNear: (
     x: number,
     z: number,
@@ -586,17 +627,17 @@ export function createTreeLifecycle(
     return count
   }
 
-  function resolvePresence(
+  /** Shared growth-rate calc (env × local canopy competition) — the one
+   *  input `advanceStage` needs beyond a stage/anchor, factored out so
+   *  `resolvePresence` and `harvestBranch`'s anchor lookup can't drift apart. */
+  function growthRateFor(
     presence: TreePresence,
     env: TreeEnvSample,
     worldDays: number,
-  ): ResolvedTreeState {
+    lookingStage: TreeGrowthStage,
+  ): number {
     const prefs = speciesPrefs(presence.speciesIndex)
     const envRate = envGrowthFactor(env, prefs)
-    const override = overrides.get(presence.id)
-    const lookingStage = override?.stage ?? presence.initialStage
-    const allowOld = allowOldFor(presence)
-
     const matureNeighbors = countMatureNearInternal(
       presence.x,
       presence.z,
@@ -604,8 +645,36 @@ export function createTreeLifecycle(
       worldDays,
       () => env,
     )
-    const canopy = canopyGrowthFactor(matureNeighbors, lookingStage)
-    const growthRate = envRate * canopy
+    return envRate * canopyGrowthFactor(matureNeighbors, lookingStage)
+  }
+
+  /** Current stage + the anchor day it started, whether or not an override
+   *  already exists — the same `{stage, stageStartedAt}` pair `resolvePresence`
+   *  would carry forward into a fresh override. `harvestBranch` reuses this to
+   *  seed a branch-regeneration override on a tree that had none. */
+  function currentStageAnchor(
+    presence: TreePresence,
+    env: TreeEnvSample,
+    worldDays: number,
+  ): { stage: TreeGrowthStage, stageStartedAt: number } {
+    const override = overrides.get(presence.id)
+    const allowOld = allowOldFor(presence)
+    const lookingStage = override?.stage ?? presence.initialStage
+    const growthRate = growthRateFor(presence, env, worldDays, lookingStage)
+    return override
+      ? advanceStage(override.stage, override.stageStartedAt, worldDays, growthRate, allowOld)
+      : advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld)
+  }
+
+  function resolvePresence(
+    presence: TreePresence,
+    env: TreeEnvSample,
+    worldDays: number,
+  ): ResolvedTreeState {
+    const override = overrides.get(presence.id)
+    const lookingStage = override?.stage ?? presence.initialStage
+    const allowOld = allowOldFor(presence)
+    const growthRate = growthRateFor(presence, env, worldDays, lookingStage)
 
     let stage: TreeGrowthStage
     if (override) {
@@ -618,12 +687,21 @@ export function createTreeLifecycle(
       )
       stage = advanced.stage
       const procedural = advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld)
+      const branchRegeneratesAt = override.branchRegeneratesAt
+      const branchActive = branchRegeneratesAt !== undefined && worldDays < branchRegeneratesAt
       // Prune sparse override once fully grown again and procedural growth
-      // matches (harvest scar no longer needed).
+      // matches (harvest scar no longer needed) — unless an active branch
+      // regeneration cooldown still needs the override to live in (plan
+      // items-player-012): collapse to the procedural anchor instead of
+      // discarding the timestamp.
       if (isCanopyStage(stage) && stage === procedural.stage) {
-        overrides.delete(presence.id)
+        if (branchActive) {
+          overrides.set(presence.id, { stage: procedural.stage, stageStartedAt: procedural.stageStartedAt, branchRegeneratesAt })
+        } else {
+          overrides.delete(presence.id)
+        }
       } else if (stage !== override.stage || advanced.stageStartedAt !== override.stageStartedAt) {
-        overrides.set(presence.id, { stage, stageStartedAt: advanced.stageStartedAt })
+        overrides.set(presence.id, { stage, stageStartedAt: advanced.stageStartedAt, branchRegeneratesAt })
       }
     } else {
       stage = advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld).stage
@@ -695,6 +773,33 @@ export function createTreeLifecycle(
       : { ok: true, yield: { kind: 'branch', count: total }, stage: lastStage }
   }
 
+  function harvestBranch(id: TreeId, worldDays: number, env: TreeEnvSample): BranchHarvestResult {
+    const presence = byId.get(id)
+    if (!presence) return { ok: false, reason: 'unknown-tree' }
+    // Resolving first applies any pending growth/prune to this tree's
+    // override, same lazy-update contract every other read goes through.
+    const resolved = resolvePresence(presence, env, worldDays)
+    if (resolved.visual !== 'living') return { ok: false, reason: 'not-available' }
+    const existing = overrides.get(id)
+    if (existing?.branchRegeneratesAt !== undefined && worldDays < existing.branchRegeneratesAt) {
+      return { ok: false, reason: 'regenerating' }
+    }
+    // Deterministic per-(tree, harvest-day) roll — same hash+seed convention
+    // as `world/fishing.ts`/`world/animalTraps.ts`, keyed on a stable tree id
+    // and the harvest's own world-day anchor instead of `Math.random()`.
+    const roll = createSeededRandom(hashString(`${id}@${worldDays}`))()
+    const range = BRANCH_YIELD_BY_SIZE[presence.sizeClass]
+    const span = range.max - range.min + 1
+    const count = range.min + Math.min(span - 1, Math.floor(roll * span))
+    const anchor = currentStageAnchor(presence, env, worldDays)
+    overrides.set(id, {
+      stage: anchor.stage,
+      stageStartedAt: anchor.stageStartedAt,
+      branchRegeneratesAt: worldDays + BRANCH_REGENERATION_DAYS,
+    })
+    return { ok: true, yield: { kind: 'branch', count } }
+  }
+
   function registerPresence(presence: TreePresence): void {
     const existing = byId.get(presence.id)
     if (existing) removeFromCell(existing)
@@ -721,6 +826,7 @@ export function createTreeLifecycle(
     advanceHarvest,
     harvestFully,
     harvest: harvestFully,
+    harvestBranch,
     findHarvestableNear(x, z, radius, worldDays, envAt) {
       let best: TreePresence | null = null
       let bestDist = Infinity
@@ -756,7 +862,11 @@ export function createTreeLifecycle(
       return overrides.get(id)
     },
     setOverride(id, override) {
-      overrides.set(id, { stage: override.stage, stageStartedAt: override.stageStartedAt })
+      overrides.set(id, {
+        stage: override.stage,
+        stageStartedAt: override.stageStartedAt,
+        branchRegeneratesAt: override.branchRegeneratesAt,
+      })
     },
     serializeOverrides() {
       const out: Record<TreeId, TreeStateOverride> = {}
@@ -766,7 +876,11 @@ export function createTreeLifecycle(
     replaceOverrides(next) {
       overrides.clear()
       for (const [id, value] of Object.entries(next)) {
-        overrides.set(id, { stage: value.stage, stageStartedAt: value.stageStartedAt })
+        overrides.set(id, {
+          stage: value.stage,
+          stageStartedAt: value.stageStartedAt,
+          branchRegeneratesAt: value.branchRegeneratesAt,
+        })
       }
     },
     clearOverrides() {
@@ -796,7 +910,11 @@ export function parseTreeOverrides(value: unknown): Record<TreeId, TreeStateOver
     const stage = rec.stage
     if (typeof stage !== 'string' || !VALID_STAGES.has(stage)) continue
     if (typeof rec.stageStartedAt !== 'number' || !Number.isFinite(rec.stageStartedAt)) continue
-    out[id] = { stage: stage as TreeGrowthStage, stageStartedAt: rec.stageStartedAt }
+    const entry: TreeStateOverride = { stage: stage as TreeGrowthStage, stageStartedAt: rec.stageStartedAt }
+    if (typeof rec.branchRegeneratesAt === 'number' && Number.isFinite(rec.branchRegeneratesAt)) {
+      entry.branchRegeneratesAt = rec.branchRegeneratesAt
+    }
+    out[id] = entry
   }
   return out
 }

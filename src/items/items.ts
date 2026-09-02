@@ -75,6 +75,7 @@ export type ItemKind =
   | 'cabbage'
   | 'fish'
   | 'dried_fish'
+  | 'roasted_fish'
   | 'fishing_rod'
   | 'whetstone'
   | 'short_bow'
@@ -792,6 +793,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XS',
     color: 0x6b7a6b,
     description: 'Ryba wysuszona na suszarce. Lekka i długo się nie psuje.'
+  },
+  roasted_fish: {
+    kind: 'roasted_fish',
+    label: 'pieczona ryba',
+    categories: ['food'],
+    weight: 0.45,
+    size: 'SM',
+    color: 0xb0824a,
+    description: 'Ryba upieczona przy ognisku. Sycący posiłek.'
   },
   fishing_rod: {
     kind: 'fishing_rod',
@@ -1528,7 +1538,7 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     mesh.castShadow = true
     return mesh
   }
-  if (kind === 'fish' || kind === 'dried_fish') {
+  if (kind === 'fish' || kind === 'dried_fish' || kind === 'roasted_fish') {
     const mesh = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.03, 0.18, 3, 5),
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),

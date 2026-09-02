@@ -3,6 +3,8 @@ import { TREE_SPECS } from '../settlement/propSpecs'
 import {
   advanceStage,
   bonusYieldForChopStage,
+  BRANCH_REGENERATION_DAYS,
+  BRANCH_YIELD_BY_SIZE,
   canopyGrowthFactor,
   canReachOld,
   CHOP_YIELDS,
@@ -420,6 +422,102 @@ describe('createTreeLifecycle', () => {
     const serialized = life.serializeOverrides()
     expect(Object.keys(serialized)).toEqual([p.id])
     expect(serialized[p.id]?.stage).toBe('limbed')
+  })
+})
+
+describe('harvestBranch (plan items-player-012)', () => {
+  it('rolls a count within the size-based range on every successful harvest', () => {
+    const life = createTreeLifecycle(1)
+    let x = 0
+    for (const size of ['small', 'medium', 'large'] as const) {
+      const range = BRANCH_YIELD_BY_SIZE[size]
+      for (let i = 0; i < 20; i++) {
+        const p = presence({ id: life.makeId(x, 0, 0), x, z: 0, initialStage: 'mature', sizeClass: size })
+        life.registerPresence(p)
+        const result = life.harvestBranch(p.id, i, goodEnv)
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.yield.kind).toBe('branch')
+          expect(result.yield.count).toBeGreaterThanOrEqual(range.min)
+          expect(result.yield.count).toBeLessThanOrEqual(range.max)
+        }
+        x += 1
+      }
+    }
+  })
+
+  it('starts a regeneration cooldown on success and blocks further harvests until it elapses', () => {
+    const life = createTreeLifecycle(2)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
+    life.registerPresence(p)
+
+    const first = life.harvestBranch(p.id, 0, goodEnv)
+    expect(first.ok).toBe(true)
+    expect(life.getOverride(p.id)?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
+
+    // Repeated attempts during the cooldown must yield nothing and must not
+    // move or extend the regeneration timestamp.
+    expect(life.harvestBranch(p.id, 0.5, goodEnv)).toEqual({ ok: false, reason: 'regenerating' })
+    expect(life.harvestBranch(p.id, BRANCH_REGENERATION_DAYS - 0.01, goodEnv)).toEqual({
+      ok: false,
+      reason: 'regenerating',
+    })
+    expect(life.getOverride(p.id)?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
+
+    expect(life.harvestBranch(p.id, BRANCH_REGENERATION_DAYS + 0.01, goodEnv).ok).toBe(true)
+  })
+
+  it('refuses without mutating state on a non-living tree, or an unregistered id', () => {
+    const life = createTreeLifecycle(4)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'felled', sizeClass: 'medium' })
+    life.registerPresence(p)
+    expect(life.harvestBranch(p.id, 0, goodEnv)).toEqual({ ok: false, reason: 'not-available' })
+    expect(life.getOverride(p.id)).toBeUndefined()
+    expect(life.harvestBranch('no-such-id', 0, goodEnv)).toEqual({ ok: false, reason: 'unknown-tree' })
+  })
+
+  it('rolls a deterministic count for the same stable tree id + harvest day', () => {
+    const lifeA = createTreeLifecycle(5)
+    const pA = presence({ id: lifeA.makeId(3, 4, 0), x: 3, z: 4, initialStage: 'mature', sizeClass: 'large' })
+    lifeA.registerPresence(pA)
+
+    const lifeB = createTreeLifecycle(5)
+    const pB = presence({ id: lifeB.makeId(3, 4, 0), x: 3, z: 4, initialStage: 'mature', sizeClass: 'large' })
+    lifeB.registerPresence(pB)
+
+    expect(lifeA.harvestBranch(pA.id, 10, goodEnv)).toEqual(lifeB.harvestBranch(pB.id, 10, goodEnv))
+  })
+
+  it('round-trips an active cooldown through serialize/replaceOverrides', () => {
+    const life = createTreeLifecycle(9)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
+    life.registerPresence(p)
+    life.harvestBranch(p.id, 0, goodEnv)
+    const serialized = life.serializeOverrides()
+    expect(serialized[p.id]?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
+
+    const restored = createTreeLifecycle(9)
+    restored.registerPresence(p)
+    restored.replaceOverrides(serialized)
+    expect(restored.getOverride(p.id)?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
+    expect(restored.harvestBranch(p.id, 0.5, goodEnv)).toEqual({ ok: false, reason: 'regenerating' })
+  })
+
+  it('keeps a canopy-equivalent override alive instead of pruning away an active cooldown', () => {
+    const life = createTreeLifecycle(3)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
+    life.registerPresence(p)
+    life.harvestBranch(p.id, 0, goodEnv)
+    expect(life.getOverride(p.id)).toBeDefined()
+
+    // A plain resolve (what the renderer calls every frame) would previously
+    // prune any override once growth stage caught back up to procedural —
+    // it must not discard a still-active branch cooldown while doing so.
+    life.resolve(p, goodEnv, 0.1)
+    expect(life.getOverride(p.id)?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
+
+    life.resolve(p, goodEnv, BRANCH_REGENERATION_DAYS + 1)
+    expect(life.getOverride(p.id)).toBeUndefined()
   })
 })
 

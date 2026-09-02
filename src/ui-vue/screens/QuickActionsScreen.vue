@@ -38,12 +38,15 @@ const restStatusText: Record<Exclude<RestOutcome, 'ok' | 'choose'>, string> = {
   'no-lodging': 'Nie znaleziono noclegu',
 }
 
-// "Zbuduj ognisko"/"Zbuduj palenisko" moved under "Budowa" as placement-
-// preview actions (plan `ui-input-004` §2/§3) — Pause → Akcje keeps both as
-// instant actions via its own separate `ui.pauseMenu` handlers/list.
+// "Zbuduj palenisko" moved under "Budowa" only, as a placement-preview
+// action (plan `ui-input-004` §2/§3) — Pause → Akcje keeps both as instant
+// actions via its own separate `ui.pauseMenu` handlers/list. "Zbuduj
+// ognisko" stays in both Budowa (placement preview) and Ogień (this instant
+// entry) per plan items-player-012 — same `buildSimpleFire` action/cost
+// either way, just two different entry points into it.
 const fireActions = computed(() =>
   visibleFireActions(ui.quickActions.fireAvailability, ui.quickActions)
-    .filter((action) => action.id !== 'buildSimpleFire' && action.id !== 'buildFirePit'),
+    .filter((action) => action.id !== 'buildFirePit'),
 )
 
 function startPlacementPreview(kind: PlacementPreviewKind): void {

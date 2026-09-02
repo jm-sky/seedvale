@@ -53,6 +53,11 @@ export type GroundActions = {
   /** "Zrób górkę" (plan `world-terrain-002` §1) — inverse of `startDigAt`. */
   startMoundAt: (x: number, z: number) => void
   startTreeChop: (treeId: string, x: number, z: number) => void
+  /** `[E]`-inspecting a living tree the player isn't chopping right now
+   *  (`Interactable`'s `canHarvest` was false) — instant, lifecycle-owned
+   *  branch pick gated by that tree's own regeneration cooldown (plan
+   *  items-player-012), not a per-attempt chance roll. */
+  gatherBranch: (treeId: string, x: number, z: number) => void
   startDepositMine: (depositId: string, x: number, z: number) => void
   /** Clears the in-session hidden-treasure dig progress (New Game only).
    *  A discovered treasure's own one-shot flag lives in `worldFlags`.
@@ -333,6 +338,25 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 
+  /** Plan items-player-012 — replaces the old per-attempt chance roll with a
+   *  size-based branch count and a per-tree cooldown, both owned by
+   *  `TreeLifecycle.harvestBranch`. Capacity is checked before the harvest
+   *  mutates the tree's cooldown, so a full inventory can't burn the
+   *  regeneration window for nothing; a partial-capacity overflow still
+   *  spills via `ctx.grantItem`, same as `startTreeChop`. */
+  const gatherBranch = (treeId: string, x: number, z: number): void => {
+    if (isActionBlocked(ctx) || !inventory.canAdd('branch', 1)) return
+    const result = ctx.getTreeLifecycle().harvestBranch(
+      treeId,
+      dayNight.elapsedDays,
+      bundle.chunkManager.sampleTreeEnv(x, z),
+    )
+    if (!result.ok) return
+    ctx.grantItem(result.yield.kind, result.yield.count)
+    playInventoryPickUp(worldAudio.playOnce)
+    toast.show(`+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`, 'pickup')
+  }
+
   const startDepositMine = (depositId: string, x: number, z: number): void => {
     if (!hasItemCapability(heldTool.held(), 'rock_mining') || isActionBlocked(ctx)) return
     const target = bundle.resourceDeposits.queryNearest(x, z, 0.75)
@@ -373,6 +397,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     startPickaxeLevelAt,
     startMoundAt,
     startTreeChop,
+    gatherBranch,
     startDepositMine,
     resetTreasureProgress: () => hiddenTreasureDigCount = 0,
   }

@@ -79,3 +79,23 @@ describe('findCookingRecipe (plan 106, unchanged)', () => {
     expect(findCookingRecipe(new Inventory())).toBeNull()
   })
 })
+
+describe('fish cooking (plan items-player-012)', () => {
+  it('cooks fish to a distinct roasted_fish output, never roasted_meat', () => {
+    const inv = new Inventory()
+    inv.add('fish', 2)
+    const batch = findCookingBatch(inv, 4)
+    expect(batch).not.toBeNull()
+    expect(batch!.recipe.output).toBe('roasted_fish')
+    expect(batch!.recipe.output).not.toBe('roasted_meat')
+    expect(batch!.batch).toBe(2)
+  })
+
+  it('prefers meat over fish when both are carried (first matching recipe row)', () => {
+    const inv = new Inventory()
+    inv.add('fish', 3)
+    inv.add('raw_meat', 1)
+    const batch = findCookingBatch(inv, 4)
+    expect(batch?.recipe.output).toBe('roasted_meat')
+  })
+})

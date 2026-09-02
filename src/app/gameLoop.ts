@@ -133,8 +133,6 @@ import {
   GAZE_RANGE,
   INTERACT_MIN_DOT,
   INTERACT_RANGE,
-  KNIFE_BRANCH_BONUS,
-  TREE_BRANCH_CHANCE,
 } from './interactables'
 import { activeModal } from './modalState'
 import type { Object3D, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
@@ -317,6 +315,9 @@ export type GameLoopDeps = {
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
   startTreeChop: (treeId: string, x: number, z: number) => void
+  /** Instant lifecycle-owned branch pick on a gazed living tree that isn't
+   *  choppable right now (plan items-player-012). */
+  gatherBranch: (treeId: string, x: number, z: number) => void
   /** Start the pickaxe mine channel for a gaze-selected ore deposit (plan 090). */
   startDepositMine: (depositId: string, x: number, z: number) => void
   /** Shovel-bury a dead animal corpse (busy channel). */
@@ -501,7 +502,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
-    startGroundWork, startTreeChop, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
+    startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
@@ -1470,14 +1471,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           } else {
             const outcome = resolveInteraction(target, questManager)
             if (treeInspectionCanYieldBranch(target.stage)) {
-              const branchChance = TREE_BRANCH_CHANCE + (inventory.hasCapability('branch_trimming') ? KNIFE_BRANCH_BONUS : 0)
-              if (Math.random() < branchChance && inventory.canAdd('branch')) {
-                inventory.add('branch')
-                playInventoryPickUp(worldAudio.playOnce)
-                hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-                onInventoryChanged()
-                toast.show('+1 Gałąź', 'pickup')
-              }
+              gatherBranch(target.id, target.position.x, target.position.z)
             }
             npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           }

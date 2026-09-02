@@ -218,7 +218,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     const capacity = resolveCookingCapacity(fire, inventory)
     const found = findCookingBatch(inventory, capacity)
     if (!found) {
-      toast.show('Potrzebujesz surowego mięsa.', 'error')
+      toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
       return
     }
     const { recipe } = found
@@ -227,7 +227,10 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       toast.show(inventoryFullToastText(inventory, recipe.output, outputFor(found.batch)), 'error')
       return
     }
-    const label = found.batch > 1 ? `Pieczenie mięsa (${found.batch}×)…` : 'Pieczenie mięsa…'
+    // `recipe.output` alone tells us what's on the fire — no separate
+    // "is this a fish recipe" flag to keep in sync with `COOKING_RECIPES`.
+    const verb = recipe.output === 'roasted_fish' ? 'Pieczenie ryby' : 'Pieczenie mięsa'
+    const label = found.batch > 1 ? `${verb} (${found.batch}×)…` : `${verb}…`
     busy.start(COOK_DURATION_SEC, label, () => {
       if (!fire.isLit()) {
         toast.show('Ogień zgasł.', 'error')
@@ -237,7 +240,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       // have run long enough for the carried amount to have changed.
       const batch = Math.min(capacity, inventory.count(recipe.input))
       if (batch <= 0) {
-        toast.show('Potrzebujesz surowego mięsa.', 'error')
+        toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
         return
       }
       const outputCount = outputFor(batch)

@@ -1,7 +1,7 @@
 # Plan: Player Gathering and Fire Cooking Polish
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented and tested (`npx tsc --noEmit`, `vue-tsc --noEmit`, `eslint`, full `vitest` suite all green); browser/gameplay verification pending (see Verification section below).
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~106~~ ~~122~~ ~~159~~
 **Domain:** `items-player`

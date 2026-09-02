@@ -883,6 +883,17 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     consumable: { need: 'hunger', relief: 22 },
     food: { freshness: { freshDurationDays: 20, mediumDurationDays: 20 } },
   },
+  roasted_fish: {
+    kind: 'roasted_fish',
+    label: 'pieczona ryba',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-012 — cooked from `fish` at a lit campfire (`items/campfireCooking.ts`), mirrors `roasted_meat`. A distinct food identity, never converted into `roasted_meat`.',
+    consumable: { need: 'hunger', relief: 18 },
+    food: { freshness: { freshDurationDays: 1.5, mediumDurationDays: 1.5 } },
+  },
   fishing_rod: {
     kind: 'fishing_rod',
     label: 'wędka',

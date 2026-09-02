@@ -49,12 +49,6 @@ export const INTERACT_MIN_DOT = 0.5
 /** Gaze-highlight range — deliberately larger than `INTERACT_RANGE` so the glow
  *  reads as an "approaching" cue before the `[E]` prompt appears. */
 export const GAZE_RANGE = INTERACT_RANGE * 2
-/** Chance an `[E]`-inspected tree also yields a branch, on top of the
- *  renewable branch spawn points (`createItemSpawners.ts`). */
-export const TREE_BRANCH_CHANCE = 0.25
-/** Added to `TREE_BRANCH_CHANCE` while the player carries a knife (plan
- *  `2026-08-08--043` §9) — a bonus, not a hard requirement. */
-export const KNIFE_BRANCH_BONUS = 0.15
 /** How far ahead (world units) of the player the shovel's synthetic dig
  *  target sits — inside `INTERACT_RANGE` so it's always within reach once
  *  offered; see `buildDigTarget`. */
