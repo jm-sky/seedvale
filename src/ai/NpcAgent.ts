@@ -27,7 +27,16 @@ import {
   loadGltfAnimated,
   prepareProp,
 } from '../assets/loadGltf'
-import { playActionChop, playActionTreeFall, playActionWell } from '../audio/actionSounds'
+import {
+  playActionBowRelease,
+  playActionChop,
+  playActionTreeFall,
+  playActionWell,
+  playAnimalCombatDeath,
+  playCombatBowDraw,
+  playCombatHit,
+  playNpcCombatDeath,
+} from '../audio/actionSounds'
 import { MELEE_CRITICAL_MULTIPLIER } from '../combat/criticalHit'
 import {
   createMeleeAttackLifecycle,
@@ -911,6 +920,27 @@ export class NpcAgent {
   private readonly idleAction: THREE.AnimationAction | null
   private readonly walkAction: THREE.AnimationAction | null
   private readonly interactAction: THREE.AnimationAction | null
+  /** Combat/death presentation clips (plan npc-009) — semantic mapping over
+   *  whatever the loaded GLB actually exports (`findAction`'s existing
+   *  name-list fallback), never a hard-coded clip name in combat logic. `null`
+   *  is a safe, silent fallback (existing Idle/Walk keep playing, no crash) —
+   *  every model in `NPC_MODEL_URLS` today carries all four, but a future
+   *  pool entry might not. */
+  private readonly attackMeleeAction: THREE.AnimationAction | null
+  private readonly attackRangedAction: THREE.AnimationAction | null
+  private readonly hurtAction: THREE.AnimationAction | null
+  private readonly deathAction: THREE.AnimationAction | null
+  /** Counts down while the one-shot `hurtAction` should keep pre-empting
+   *  `syncAnimation()`'s normal idle/walk/interact crossfade (plan npc-009) —
+   *  `0` outside a hurt reaction. Set from `takeDamage()`, decremented in
+   *  `update()` alongside the other cooldown-style timers. */
+  private hurtAnimTimer = 0
+  /** `simClock` at which the one-shot `deathAction` finishes playing (plan
+   *  npc-009) — bounds how long a dead NPC's `update()` keeps ticking its own
+   *  mixer (see the `health.dead` branch there) instead of forever. `null`
+   *  when there is no `deathAction` to play (fallback tip-pose, no mixer
+   *  ticking needed). */
+  private deathAnimSettleAtSimClock: number | null = null
   private readonly needMarker: THREE.Mesh
   private phase: Phase = 'choose'
   private activeNeed: NeedId = 'idle'
@@ -1279,6 +1309,13 @@ export class NpcAgent {
     this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
     this.walkAction = this.findAction(animations, ['Walk', 'Run'])
     this.interactAction = this.findAction(animations, ['Interact', 'Wave'])
+    // Quaternius Modular Men/Women (`NPC_MODEL_URLS`) export `Sword_Slash`/
+    // `Gun_Shoot`/`HitRecieve`/`Death` today; `findAction`'s name-list already
+    // falls back to `null` for any future pool entry without them.
+    this.attackMeleeAction = this.findAction(animations, ['Sword_Slash'])
+    this.attackRangedAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot'])
+    this.hurtAction = this.findAction(animations, ['HitRecieve', 'HitRecieve_2'])
+    this.deathAction = this.findAction(animations, ['Death'])
     this.idleAction?.play()
 
     const markerGeo = new THREE.SphereGeometry(0.12, 8, 8)
@@ -1318,7 +1355,11 @@ export class NpcAgent {
     // it — reflect the dead pose immediately instead of leaving the
     // fresh-alive setup above in place (plan 197 §5). Safe to reuse `die()`
     // here: every field it touches is still at its just-constructed default.
-    if (this.health.dead) this.die()
+    // `alreadySettled` (plan npc-009) skips playing the death clip from frame
+    // 0 — a reconstructed corpse should present its settled end pose
+    // immediately, not replay the whole collapse animation on every load/
+    // stream-in.
+    if (this.health.dead) this.die(true)
   }
 
   static async create(
@@ -1710,7 +1751,14 @@ export class NpcAgent {
     damageHealth(this.health, amount)
     applyDamageVigor(this.vigor)
     if (amount > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, NPC_HEIGHT, amount)
-    if (this.health.dead) this.die()
+    if (this.health.dead) {
+      this.die()
+    } else if (amount > 0) {
+      // Hurt presentation lives on the seam right after real damage is
+      // resolved (plan npc-009) — never from attack intent/defense alone, so
+      // a blocked/missed attack never triggers a flinch.
+      this.hurtAnimTimer = this.playCombatOneShot(this.hurtAction)
+    }
   }
 
   /** Incoming combat damage (plan 177 §8/§10 — `animal → NPC`, `NPC → NPC`,
@@ -1769,6 +1817,18 @@ export class NpcAgent {
     pendingAction: ActionId | null
     currentAnimalThreat: { animalId: string, kind: string, distance: number } | null
     lastAnimalThreatResponse: AnimalThreatResponse | null
+    /** Combat/death presentation state (plan npc-009) — which one-shot clip
+     *  is currently pre-empting normal locomotion (if any), `dead` once the
+     *  death clip has been triggered, and which semantic clips this model
+     *  actually resolved (`false` marks a missing-clip fallback, not a bug). */
+    presentation: {
+      current: 'hurt' | 'attack' | null
+      dead: boolean
+      hasAttackMeleeClip: boolean
+      hasAttackRangedClip: boolean
+      hasHurtClip: boolean
+      hasDeathClip: boolean
+    }
   } {
     return {
       phase: this.phase,
@@ -1781,6 +1841,16 @@ export class NpcAgent {
           }
         : null,
       lastAnimalThreatResponse: this.lastAnimalThreatResponse,
+      presentation: {
+        current: this.hurtAnimTimer > 0
+          ? 'hurt'
+          : this.phase === 'combat' && !this.isCombatCycleIdle() ? 'attack' : null,
+        dead: this.health.dead,
+        hasAttackMeleeClip: this.attackMeleeAction != null,
+        hasAttackRangedClip: this.attackRangedAction != null,
+        hasHurtClip: this.hurtAction != null,
+        hasDeathClip: this.deathAction != null,
+      },
     }
   }
 
@@ -1892,6 +1962,7 @@ export class NpcAgent {
           if (isNpcCombatDebugMode()) {
             console.log('[NPC COMBAT]', `npc=${this.id}/${this.name}/${this.role}`, `attack.hit target=${intent.target.ref.id}`)
           }
+          this.playCombatImpactSound(intent.target, targetPos)
           if (!intent.target.isAlive()) {
             this.endCombat('complete')
             return
@@ -1913,6 +1984,7 @@ export class NpcAgent {
       if (this.stamina.current >= weapon.melee.staminaCost) {
         drainStamina(this.stamina, weapon.melee.staminaCost)
         this.combatAttack.start(weapon.melee)
+        this.playCombatOneShot(this.attackMeleeAction)
       } else if (isNpcCombatDebugMode() && this.simClock - this.lastStaminaSkipLogSec > 1) {
         this.lastStaminaSkipLogSec = this.simClock
         console.log(
@@ -1991,6 +2063,8 @@ export class NpcAgent {
           attackKey: `ranged:${ammoKind}`,
           attempt: this.combatAttackAttempt,
         }
+        this.playCombatOneShot(this.attackRangedAction)
+        playActionBowRelease(this.playAt, this.mesh.position)
       }
     }
 
@@ -2006,6 +2080,7 @@ export class NpcAgent {
         applyNpcRangedHit(intent.target, this.combatProjectile)
         this.combatProjectile = null
         this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
+        this.playCombatImpactSound(intent.target, targetPos)
         if (!intent.target.isAlive()) {
           this.endCombat('complete')
           return
@@ -2024,6 +2099,7 @@ export class NpcAgent {
       if (resolveNpcAmmoKind(this.carried, weapon.ranged)) {
         drainStamina(this.stamina, weapon.ranged.staminaCost)
         this.combatRangedAttack.start(weapon.ranged)
+        playCombatBowDraw(this.playAt, this.mesh.position)
       } else {
         // Out of ammo entirely — no point staying in a combat that can
         // never fire again; hands control back to the normal decision flow.
@@ -2155,8 +2231,13 @@ export class NpcAgent {
   /** One-time death consequence (plan 177 §9/§13) — stops the NPC in place
    *  (mirrors `AnimalAgent.collapse()`'s tip-over) rather than a corpse/loot
    *  system, which stays out of this plan's scope. `update()` no-ops for a
-   *  dead NPC from the next tick on. */
-  private die(): void {
+   *  dead NPC from the next tick on.
+   *  @param alreadySettled Reconstructed from already-dead authoritative
+   *  state (plan npc-009, e.g. the constructor's own hydration call) — jumps
+   *  the death clip straight to its final clamped frame instead of playing
+   *  the collapse animation from the start, so a stream-in/reload never
+   *  replays a death that already happened. */
+  private die(alreadySettled = false): void {
     this.releaseConversationIfAny()
     this.leaveActiveQueue()
     this.pendingAction = null
@@ -2167,8 +2248,34 @@ export class NpcAgent {
     this.combatRangedAttack.reset()
     this.combatProjectile = null
     if (this.actionLifecycle.status === 'active') failActionLifecycle(this.actionLifecycle)
-    this.mixer.stopAllAction()
-    this.mesh.rotation.z = Math.PI / 2
+    if (this.deathAction && alreadySettled) {
+      // Reconstructed from already-dead state — jump straight to the clip's
+      // settled end pose with no fade/blend against whatever the fresh-alive
+      // constructor path already started playing (plan npc-009 hydration
+      // case), rather than `playCombatOneShot()`'s normal fade-in (which
+      // would briefly blend a live idle pose with a near-zero-weight death
+      // pose at `dt=0`).
+      for (const action of [
+        this.idleAction, this.walkAction, this.interactAction,
+        this.attackMeleeAction, this.attackRangedAction, this.hurtAction,
+      ]) action?.stop()
+      this.deathAction.reset()
+      this.deathAction.setLoop(THREE.LoopOnce, 1)
+      this.deathAction.clampWhenFinished = true
+      this.deathAction.setEffectiveWeight(1)
+      this.deathAction.play()
+      this.deathAction.time = this.deathAction.getClip().duration
+      this.mixer.update(0)
+      this.deathAnimSettleAtSimClock = null
+    } else if (this.deathAction) {
+      // Real death clip — let it actually play instead of the manual tip
+      // fallback below (plan npc-009). `update()`'s `health.dead` branch
+      // keeps ticking the mixer only until `deathAnimSettleAtSimClock`.
+      this.deathAnimSettleAtSimClock = this.simClock + this.playCombatOneShot(this.deathAction)
+    } else {
+      this.mixer.stopAllAction()
+      this.mesh.rotation.z = Math.PI / 2
+    }
     this.lastHpPercent = 0
     this.hpFillEl.style.width = '0%'
     this.labelBarsEl.style.display = 'none'
@@ -2210,7 +2317,17 @@ export class NpcAgent {
   ): void {
     this.simClock += dt
     if (this.frozen) return
-    if (this.health.dead) return
+    if (this.health.dead) {
+      // Keep the mixer advancing only long enough for the one-shot death
+      // clip to actually play (plan npc-009) — bounded by
+      // `deathAnimSettleAtSimClock`, `null` when there was no clip to play
+      // (manual tip fallback, no mixer work needed) so a permanently dead NPC
+      // never costs a per-frame mixer update for the rest of the session.
+      if (this.deathAnimSettleAtSimClock != null && this.simClock < this.deathAnimSettleAtSimClock) {
+        this.mixer.update(dt)
+      }
+      return
+    }
     this.currentWeather = weather ?? null
     const prevPhase = this.phase
     tickNeeds(this.needs, dt, dayLengthSec, {
@@ -2247,6 +2364,7 @@ export class NpcAgent {
 
     if (this.abandonCooldown > 0) this.abandonCooldown -= dt
     if (this.threatReactionCooldown > 0) this.threatReactionCooldown -= dt
+    if (this.hurtAnimTimer > 0) this.hurtAnimTimer -= dt
 
     if (WATCHDOG_PHASES.has(this.phase)) {
       this.tickWatchdog(dt)
@@ -2722,6 +2840,14 @@ export class NpcAgent {
   }
 
   private syncAnimation(): void {
+    // Combat/death presentation pre-empts normal locomotion (plan npc-009).
+    // Hurt outranks an in-flight attack (a hit landing mid-swing should still
+    // read as a flinch); both are one-shots already started elsewhere
+    // (`takeDamage()`/`tickMeleeCombat`/`tickRangedCombat`) — skip here
+    // rather than restarting them every frame. Death itself never reaches
+    // this method: `update()` returns before `syncAnimation()` once dead.
+    if (this.hurtAnimTimer > 0) return
+    if (this.phase === 'combat' && !this.isCombatCycleIdle()) return
     // Busy actions (drink / eat / talk) must not keep Walk — prioritize
     // Interact over locomotion even if `moving` somehow stayed true.
     if (this.isBusyPhase() && this.interactAction) {
@@ -2730,6 +2856,47 @@ export class NpcAgent {
       this.crossfade(this.walkAction)
     } else if (this.idleAction) {
       this.crossfade(this.idleAction)
+    }
+  }
+
+  /** Plays a one-shot combat/death clip (attack/hurt/death — plan npc-009):
+   *  clamps on its last frame instead of looping, and fades out every other
+   *  known action the same way `crossfade()` does, so it's safe to call from
+   *  a combat tick or `takeDamage()`/`die()` without fighting the normal
+   *  idle/walk/interact cycle. `null` is a safe no-op (missing clip — see the
+   *  action fields' own doc comment). Returns the clip's duration (`0` for a
+   *  no-op) so a caller that needs to gate `syncAnimation()` for the clip's
+   *  length (`hurtAnimTimer`) can do so without a second clip lookup. */
+  private playCombatOneShot(action: THREE.AnimationAction | null): number {
+    if (!action) return 0
+    action.reset()
+    action.setLoop(THREE.LoopOnce, 1)
+    action.clampWhenFinished = true
+    for (const other of [
+      this.idleAction, this.walkAction, this.interactAction,
+      this.attackMeleeAction, this.attackRangedAction, this.hurtAction, this.deathAction,
+    ]) {
+      if (other && other !== action) other.fadeOut(0.15)
+    }
+    action.setEffectiveWeight(1).fadeIn(0.1).play()
+    return action.getClip().duration
+  }
+
+  /** Impact-or-death sound at the exact moment an attack of this NPC's own
+   *  actually lands (plan npc-009) — mirrors `gameLoop.ts`'s existing
+   *  `killed ? playActionMeleeKill : playActionMeleeHit` idiom for the
+   *  player. Branches on the target's own `ref.kind` so an animal death never
+   *  gets the human moan+fall clip (see `playAnimalCombatDeath`'s doc). The
+   *  target's own hurt *animation* is a separate, target-owned concern
+   *  (`takeDamage()`/`AnimalAgent.takeDamage()`) — this only ever plays the
+   *  attacker-side hit/death sound once per resolved hit. */
+  private playCombatImpactSound(target: CombatIntent['target'], targetPos: { x: number, z: number }): void {
+    if (target.isAlive()) {
+      playCombatHit(this.playAt, targetPos)
+    } else if (target.ref.kind === 'animal') {
+      playAnimalCombatDeath(this.playAt, targetPos)
+    } else {
+      playNpcCombatDeath(this.playAt, targetPos)
     }
   }
 
@@ -2775,7 +2942,10 @@ export class NpcAgent {
   private crossfade(next: THREE.AnimationAction): void {
     if (next.isRunning() && next.getEffectiveWeight() > 0.9) return
     next.reset().fadeIn(0.2).play()
-    for (const action of [this.idleAction, this.walkAction, this.interactAction]) {
+    for (const action of [
+      this.idleAction, this.walkAction, this.interactAction,
+      this.attackMeleeAction, this.attackRangedAction, this.hurtAction, this.deathAction,
+    ]) {
       if (action && action !== next) action.fadeOut(0.2)
     }
   }

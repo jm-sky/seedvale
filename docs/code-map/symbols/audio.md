@@ -27,6 +27,10 @@ Generated from exported TypeScript symbols.
 - `playActionTreeFall` — function — line 61
 - `playActionWell` — function — line 92
 - `playActionWellConstruction` — function — line 66
+- `playAnimalCombatDeath` — function — line 133
+- `playCombatBowDraw` — function — line 111
+- `playCombatHit` — function — line 118
+- `playNpcCombatDeath` — function — line 125
 
 ## `audio/ambientWeights.ts`
 

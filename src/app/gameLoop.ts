@@ -46,7 +46,15 @@ import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
 import type { WorldBundle } from './worldBundle'
 import { NPC_SHADOW_DISTANCE } from '../ai/NpcAgent'
-import { playActionBowDraw, playActionBowRelease, playActionMeleeHit, playActionMeleeKill, playActionWell } from '../audio/actionSounds'
+import {
+  playActionBowDraw,
+  playActionBowRelease,
+  playActionMeleeHit,
+  playActionMeleeKill,
+  playActionWell,
+  playCombatHit,
+  playNpcCombatDeath,
+} from '../audio/actionSounds'
 import { playAnimalAggroSound, playAnimalSound, playSpontaneousAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
@@ -1924,6 +1932,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 const npcHpBefore = target.health.currentHp
                 const resolved = target.applyIncomingCombatDamage({ amount, attackerX, attackerZ, attackerKey: 'fauna' })
                 logNpcCombatHit(bundle, dayNight, attackerAnimalId, attackerX, attackerZ, target, npcHpBefore, resolved)
+                // Impact/death sound for an animal biting an NPC (plan
+                // npc-009) — the NPC's own hurt/death *animation* is target-
+                // owned (`NpcAgent.takeDamage()`/`die()`); this is the
+                // attacker-side sound, mirroring the `killed ? ... : ...`
+                // idiom already used above for player-vs-animal. A fully
+                // blocked hit (`finalDamage === 0`) stays silent.
+                if (resolved.finalDamage > 0) {
+                  if (target.health.dead) playNpcCombatDeath(worldAudio.playAt, { x: attackerX, z: attackerZ })
+                  else playCombatHit(worldAudio.playAt, { x: attackerX, z: attackerZ })
+                }
                 return
               }
             },

@@ -104,3 +104,32 @@ export function playActionBowDraw(playAtCancelable: PlayAtCancelable, position: 
 export function playActionBowRelease(playAt: PlayAt, position: WorldSoundPosition): void {
   playAt(ACTION_BOW_RELEASE_SOUND_URL, position, ACTION_BOW_RELEASE_SFX_VOLUME)
 }
+
+/** NPC ranged-combat draw start (plan npc-009) — same clip as the player's own
+ *  `playActionBowDraw`, but fire-and-forget: NPC combat has no early-release
+ *  cancel path that needs to cut the clip short. */
+export function playCombatBowDraw(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_BOW_DRAW_SOUND_URL, position, ACTION_BOW_DRAW_SFX_VOLUME)
+}
+
+/** Non-lethal NPC/animal combat impact (plan npc-009) — the target survives
+ *  the hit. Reuses the player's own vocal-free impact clip; safe for any
+ *  target (human or animal) since it carries no species-specific content. */
+export function playCombatHit(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_MELEE_HIT_SOUND_URL, position, ACTION_MELEE_HIT_SFX_VOLUME)
+}
+
+/** NPC death (plan npc-009) — hit + human moan + body fall; human-specific
+ *  content, so this must stay NPC-only. Never use for animal death — see
+ *  `playAnimalCombatDeath`. */
+export function playNpcCombatDeath(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_MELEE_KILL_SOUND_URL, position, ACTION_MELEE_KILL_SFX_VOLUME)
+}
+
+/** Animal death (plan npc-009) — no dedicated species-agnostic death/whimper
+ *  clip exists yet (asset gap, see docs/assets/SOUNDS.md S26); reuses the
+ *  vocal-free impact clip instead of the human moan+fall kill clip, which
+ *  would be the wrong content for a non-human death. */
+export function playAnimalCombatDeath(playAt: PlayAt, position: WorldSoundPosition): void {
+  playAt(ACTION_MELEE_HIT_SOUND_URL, position, ACTION_MELEE_HIT_SFX_VOLUME)
+}

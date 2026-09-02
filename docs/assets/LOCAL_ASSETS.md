@@ -59,6 +59,7 @@ Credits and runtime model documentation:
 | `_temp/people/`     | Character bases, outfits and low-poly NPC models                |
 | `_temp/packs/`      | Complete downloaded asset packs; keep each pack together        |
 | `_temp/animations/` | Animation sources, primarily Mixamo FBX files                   |
+| `_temp/Images/`      | Loose 2D image assets (sprite sheets, textures) — not 3D models  |
 
 `characters/` and `world/` are currently not represented as loose `_temp` categories.
 
@@ -143,6 +144,16 @@ public/models/<category>/...
 The original staging asset should remain untouched.
 
 ## Special notes
+
+### Particle Pack (Kenney, CC0)
+
+New as of 2026-09-02:
+
+```text
+_temp/Images/Particle Pack/
+```
+
+2D sprite-sheet particle textures (smoke, spark, flame, star, dirt, magic, window-break, etc.), transparent and black-background variants, plus Unity samples. CC0 (`License.txt`, Kenney.nl) — no credit required. Not inspected in depth and not wired to any runtime VFX yet; a candidate source for future 2D particle effects (e.g. impact/dust/magic sprites) if a system needs one.
 
 ### M15 fishing rod
 

@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-08-24
+**Last verified:** 2026-09-02
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -59,6 +59,14 @@ On the NPC side, `src/ai/npcAnimalThreat.ts` (`senseImmediateAnimalThreat()`/`de
 ## Combat interruption (plan 186)
 
 Taking damage (combat or starvation/dehydration) interrupts an active `rest`/`wait`/`busy` channel — `app/actions/restActions.ts`'s `interruptRestForDamage()` bypasses the Esc-only cancel gate (being hurt should wake the player at any point, not just near the end of a skip), called from the single player-damage entry point alongside the existing `abortBusy()`. Any partial progress (e.g. a player well's `workProgress`) is credited exactly as an Esc-cancel would credit it.
+
+## NPC/animal combat animation & audio (plan npc-009)
+
+Presentation-only layer over the existing combat lifecycle above — never a second combat/death system, never a source of damage/timing. `NpcAgent`/`AnimalAgent` each gained a small one-shot animation helper (`playCombatOneShot`/`playOneShotAnim`: `LoopOnce` + `clampWhenFinished`, reusing the existing per-agent `AnimationMixer`/`findAction`/crossfade) for attack/hurt/death clips, semantically mapped per model (`Sword_Slash`/`Gun_Shoot`/`HitRecieve`/`Death` for the Quaternius NPC pool; `Attack`/`Attack_Headbutt`/`Idle_HitReact1`/`Idle_HitReact_Left`/`Death` for fauna) — `null` (missing clip) is a silent, safe fallback, not every species has all three (sheep/chicken/bear have none).
+
+Trigger points: NPC attack plays at `combatAttack.start()`/`combatRangedAttack.start()` (not every combat tick); NPC/animal hurt plays from `takeDamage()` only when real damage lands and the target survives (never from a block/miss); death plays from `NpcAgent.die()`/`AnimalAgent.collapse()` — `AnimalAgent.collapse()` prefers the real `Death` clip over its older manual tip-rotation fallback when one exists, unchanged for species without one. `syncAnimation()`/`updateAnim()` skip their normal idle/walk/interact crossfade while a one-shot is in flight (hurt takes priority over an in-flight attack). A dead agent's `update()` keeps ticking its own mixer only until the death clip's own duration elapses (`deathAnimSettleAtSimClock`/`deathAnimDurationSec`), never forever. An `NpcAgent` reconstructed from already-dead authoritative state (`die(alreadySettled = true)`) jumps straight to the clip's settled end pose instead of replaying the collapse — fauna has no equivalent case since animal HP/death isn't persisted.
+
+Audio reuses existing wired clips via new semantic helpers in `src/audio/actionSounds.ts` (`playCombatBowDraw`/`playCombatHit`/`playNpcCombatDeath`/`playAnimalCombatDeath`) — no new assets. `playNpcCombatDeath` reuses the human moan+fall kill clip (NPCs are human, safe); `playAnimalCombatDeath` deliberately reuses the vocal-free impact clip instead (no species-agnostic animal death clip exists yet — asset gap, `docs/assets/SOUNDS.md` S26). NPC-attacker sound plays from `NpcAgent` itself, synchronously at each combat tick's own hit resolution (branching on the target's `CombatTargetHandle.ref.kind`). Animal→NPC sound plays from `gameLoop.ts`'s existing `onNpcHit` callback (which already has `worldAudio.playAt` and the target `NpcAgent` in scope) rather than threading a new callback through `AnimalAgent`/`createFauna.ts`/`livestock.ts`. Animal→player and animal↔animal combat sound are out of this plan's scope (animation only); player→animal audio is unchanged (existing `gameLoop.ts` wiring).
 
 ## Not implemented / deliberately out of scope
 
