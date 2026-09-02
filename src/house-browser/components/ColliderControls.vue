@@ -33,7 +33,10 @@ const doorsOpen = defineModel<boolean>('doorsOpen', { required: true })
     <h2 class="text-xs font-semibold uppercase tracking-wide text-white/60">
       Doors
     </h2>
-    <label class="flex items-center gap-2 text-sm" :class="{ 'opacity-40': doorCount === 0 }">
+    <label
+      class="flex items-center gap-2 text-sm"
+      :class="{ 'opacity-40': doorCount === 0 }"
+    >
       <input
         v-model="doorsOpen"
         type="checkbox"
