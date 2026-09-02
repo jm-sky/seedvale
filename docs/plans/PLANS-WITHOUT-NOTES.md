@@ -1,10 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-02 23:46:43  
+> Date: 2026-09-02 23:57:35  
 
 ## PLANS
 
+- `persistence-003-save-schema-versioning-and-migrations.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
 - `tools-000-weapon-browser-observatory.md`
@@ -13,6 +14,37 @@
 
 --------------------------------
 ## PROMPTS
+
+### `persistence-003-save-schema-versioning-and-migrations.md`
+
+Prompt:
+
+```
+Zrób review planu `persistence-003-save-schema-versioning-and-migrations.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/persistence-003-save-schema-versioning-and-migrations.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/persistence-003-save-schema-versioning-and-migrations-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
 
 ### `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 
