@@ -8,7 +8,7 @@ Rules for AI agents creating Seedvale plans and implementation notes.
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `007`
+- fauna: `008`
 - items-player: `015`
 - npc: `018`
 - persistence: `002`
@@ -18,7 +18,7 @@ Rules for AI agents creating Seedvale plans and implementation notes.
 - tools: `008`
 - ui-input: `007`
 - world: `010`
-- world-terrain: `005`
+- world-terrain: `006`
 
 This ids section is maintained automatically from the plan files.
 

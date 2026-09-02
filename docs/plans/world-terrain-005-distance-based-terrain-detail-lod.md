@@ -1,7 +1,7 @@
 # Plan: Distance-Based Terrain Detail LOD
 
 **Created:** 2026-09-02
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~004~~
 **Domain:** `world-terrain`

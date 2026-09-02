@@ -18,6 +18,9 @@ export type QualityKnobs = {
   terrainCastsShadow: boolean
   shadowMapSize: number
   lodScale: number
+  /** Grass filler-coverage LOD reach (plan world-terrain-005, 0..1) — see
+   *  `WorldConfig.quality.grassFillerCoverage`. */
+  grassFillerCoverage: number
 }
 
 export const QUALITY_PRESETS: Record<Exclude<QualityPreset, 'Custom'>, QualityKnobs> = {
@@ -31,6 +34,7 @@ export const QUALITY_PRESETS: Record<Exclude<QualityPreset, 'Custom'>, QualityKn
     terrainCastsShadow: false,
     shadowMapSize: 512,
     lodScale: 0.5,
+    grassFillerCoverage: 0,
   },
   Medium: {
     pixelRatioCap: 1.5,
@@ -42,6 +46,7 @@ export const QUALITY_PRESETS: Record<Exclude<QualityPreset, 'Custom'>, QualityKn
     terrainCastsShadow: true,
     shadowMapSize: 1024,
     lodScale: 0.75,
+    grassFillerCoverage: 0.35,
   },
   High: {
     pixelRatioCap: 2,
@@ -53,6 +58,7 @@ export const QUALITY_PRESETS: Record<Exclude<QualityPreset, 'Custom'>, QualityKn
     terrainCastsShadow: true,
     shadowMapSize: 1024,
     lodScale: 1,
+    grassFillerCoverage: 0.6,
   },
 }
 
@@ -76,7 +82,7 @@ export function knobsFromConfig(input: {
     terrainCastsShadow: boolean
     shadowMapSize: number
   }
-  quality: { lodScale: number }
+  quality: { lodScale: number, grassFillerCoverage: number }
 }): QualityKnobs {
   const { postProcessing: p, quality } = input
   return {
@@ -89,6 +95,7 @@ export function knobsFromConfig(input: {
     terrainCastsShadow: p.terrainCastsShadow,
     shadowMapSize: p.shadowMapSize,
     lodScale: quality.lodScale,
+    grassFillerCoverage: quality.grassFillerCoverage,
   }
 }
 
@@ -103,6 +110,7 @@ export function knobsMatch(a: QualityKnobs, b: QualityKnobs): boolean {
     && a.terrainCastsShadow === b.terrainCastsShadow
     && a.shadowMapSize === b.shadowMapSize
     && Math.abs(a.lodScale - b.lodScale) < 0.001
+    && Math.abs(a.grassFillerCoverage - b.grassFillerCoverage) < 0.001
   )
 }
 
@@ -125,7 +133,7 @@ export function applyQualityKnobs(
       terrainCastsShadow: boolean
       shadowMapSize: number
     }
-    quality: { preset: QualityPreset; lodScale: number }
+    quality: { preset: QualityPreset; lodScale: number; grassFillerCoverage: number }
   },
   knobs: QualityKnobs,
   preset: QualityPreset,
@@ -140,6 +148,7 @@ export function applyQualityKnobs(
   p.terrainCastsShadow = knobs.terrainCastsShadow
   p.shadowMapSize = knobs.shadowMapSize
   target.quality.lodScale = knobs.lodScale
+  target.quality.grassFillerCoverage = knobs.grassFillerCoverage
   target.quality.preset = preset
 }
 
@@ -155,7 +164,7 @@ export function applyQualityPreset(
       terrainCastsShadow: boolean
       shadowMapSize: number
     }
-    quality: { preset: QualityPreset; lodScale: number }
+    quality: { preset: QualityPreset; lodScale: number; grassFillerCoverage: number }
   },
   preset: Exclude<QualityPreset, 'Custom'>,
 ): void {

@@ -64,6 +64,12 @@ function rawParams(overrides: Partial<RawSampleParams> = {}): RawSampleParams {
         potholeThreshold: 0.72,
         meanderAmplitude: 2,
         meanderScale: 0.04,
+        surfaceDetailEnabled: true,
+        rutDepth: 0.05,
+        rutOffsetFraction: 0.42,
+        rutWidthFraction: 0.16,
+        microBumpStrength: 0.025,
+        microBumpScale: 0.6,
       },
       village: {
         coreRadius: 9,
@@ -264,6 +270,39 @@ describe('chunkHeightmap road irregularity', () => {
     const b = tileWithRoads(99)
     expect(a.floorHeights).toEqual(b.floorHeights)
     expect(a.roadTint).toEqual(b.roadTint)
+  })
+
+  it('near-field surface detail (ruts + micro bumps) is deterministic, actually reshapes the corridor, and can be fully disabled (plan world-terrain-005)', () => {
+    const params = rawParams({ seed: 11 })
+    const tileWith = (overrides: Partial<typeof params.region.roadNetwork>) =>
+      computeChunkTile({
+        ...params,
+        region: { ...params.region, roadNetwork: { ...params.region.roadNetwork, ...overrides } },
+        cx: 0,
+        cz: 0,
+        chunkSize: 64,
+        resolution: 33,
+        isHomeChunk: false,
+        vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+        roadSegments: [roadSeg],
+        clearings: [],
+        regional: [],
+        riverSegments: [],
+      })
+
+    // Baseline with potholes but no ruts/bumps.
+    const baseline = tileWith({ surfaceDetailEnabled: false })
+    // Same knobs, computed twice — must be bit-identical.
+    const enabledA = tileWith({})
+    const enabledB = tileWith({})
+    expect(enabledA.floorHeights).toEqual(enabledB.floorHeights)
+
+    // The feature must actually change the corridor's height field...
+    expect(enabledA.floorHeights).not.toEqual(baseline.floorHeights)
+    // ...and disabling it must reproduce the pre-feature baseline exactly,
+    // not just "some" different-but-still-off value.
+    const disabledAgain = tileWith({ surfaceDetailEnabled: false, rutDepth: 0.3, microBumpStrength: 0.3 })
+    expect(disabledAgain.floorHeights).toEqual(baseline.floorHeights)
   })
 
   it('does not change clearings-only tiles when road irregularity knobs vary', () => {

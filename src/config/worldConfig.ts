@@ -143,6 +143,11 @@ export type WorldConfig = {
     lodScale: number
     /** Adaptive Quality (plan 103 etap 5) — stored, ignored until implemented. */
     adaptiveEnabled: boolean
+    /** How far the cheap grass filler bucket reaches across the grass ring
+     *  (0..1, plan world-terrain-005) — 0 keeps it near-only (issue 023's
+     *  original radius), 1 extends it across the whole grass ring instead of
+     *  raising detailed-species density. Live, no world rebuild. */
+    grassFillerCoverage: number
   }
   /** Show lil-gui panel. Hidden by default; `?debug=1` or `?gui=1` reveals it,
    *  `?gui=0` forces it hidden (review 007 C11). Settings → Panel debug writes
@@ -239,6 +244,12 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
           potholeThreshold: 0.72,
           meanderAmplitude: 2,
           meanderScale: 0.04,
+          surfaceDetailEnabled: true,
+          rutDepth: 0.05,
+          rutOffsetFraction: 0.42,
+          rutWidthFraction: 0.16,
+          microBumpStrength: 0.025,
+          microBumpScale: 0.6,
         },
         village: {
           coreRadius: 9,
@@ -325,6 +336,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
       preset: DEFAULT_QUALITY_PRESET,
       lodScale: 1,
       adaptiveEnabled: false,
+      grassFillerCoverage: 0.6,
     },
     showGui: false,
     player: {
@@ -472,6 +484,9 @@ export function applyStoredQuality(
     target.lodScale = Math.min(1, Math.max(0.25, q.lodScale))
   }
   if (typeof q.adaptiveEnabled === 'boolean') target.adaptiveEnabled = q.adaptiveEnabled
+  if (typeof q.grassFillerCoverage === 'number' && Number.isFinite(q.grassFillerCoverage)) {
+    target.grassFillerCoverage = Math.min(1, Math.max(0, q.grassFillerCoverage))
+  }
 }
 
 export function applyStoredPostProcessing(

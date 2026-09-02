@@ -54,6 +54,12 @@ function tileParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
         potholeThreshold: 0.72,
         meanderAmplitude: 2,
         meanderScale: 0.04,
+        surfaceDetailEnabled: true,
+        rutDepth: 0.05,
+        rutOffsetFraction: 0.42,
+        rutWidthFraction: 0.16,
+        microBumpStrength: 0.025,
+        microBumpScale: 0.6,
       },
       village: {
         coreRadius: 9,

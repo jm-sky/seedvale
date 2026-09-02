@@ -114,6 +114,25 @@ export type RoadNetworkParams = {
   meanderAmplitude: number
   /** World-space frequency of route meander noise. */
   meanderScale: number
+  /** Near-field surface detail (plan world-terrain-005) — wheel ruts + fine
+   *  bump/dip roughness baked into the same corridor height blend as
+   *  potholes, independently toggleable so it can be A/B'd on its own. Off
+   *  leaves the pre-existing pothole/edge-wobble look untouched. */
+  surfaceDetailEnabled: boolean
+  /** Depth (world units) of the two wheel-rut grooves either side of the
+   *  corridor centerline. */
+  rutDepth: number
+  /** Rut center distance from the corridor centerline, as a fraction of the
+   *  (wobbled) half-width. */
+  rutOffsetFraction: number
+  /** Rut groove softness (Gaussian half-width), as a fraction of half-width. */
+  rutWidthFraction: number
+  /** Signed fine bump/dip amplitude (world units) — general unevenness
+   *  ("grudki"), continuous rather than sparsely gated like potholes. */
+  microBumpStrength: number
+  /** World-space frequency of the fine bump/dip noise — higher than
+   *  potholes' so it reads as fine clumps, not a second pothole layer. */
+  microBumpScale: number
 }
 
 /** A single road/path segment's terrain-shaping data, already resolved to
@@ -726,6 +745,24 @@ function roadCandidate(
       // Lower target only; final dip is further scaled by falloff×heightStrength
       // in the corridor blend — paths (low heightStrength) stay nearly flat.
       targetH -= rn.potholeDepth * sparse * falloff
+    }
+  }
+  if (rn.surfaceDetailEnabled && falloff > 0) {
+    // Two symmetric wheel-rut grooves either side of the centerline — `dist`
+    // is unsigned, so a single Gaussian centered away from 0 naturally reads
+    // as two ruts (one per side) without needing a signed lateral offset.
+    if (rn.rutDepth > 0) {
+      const rutCenter = effectiveHalfWidth * rn.rutOffsetFraction
+      const rutSigma = Math.max(0.01, effectiveHalfWidth * rn.rutWidthFraction)
+      const rutT = (dist - rutCenter) / rutSigma
+      targetH -= rn.rutDepth * Math.exp(-0.5 * rutT * rutT) * falloff
+    }
+    // Fine, continuous bump/dip roughness ("grudki") — unlike potholes, not
+    // sparsely gated, so it reads as general unevenness rather than isolated
+    // dips. Own noise domain offset so it doesn't correlate with potholes.
+    if (rn.microBumpStrength > 0) {
+      const bumpN = roadNoise(wx * rn.microBumpScale + 41.9, wz * rn.microBumpScale - 7.3)
+      targetH += rn.microBumpStrength * bumpN * falloff
     }
   }
 

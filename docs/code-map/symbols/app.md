@@ -128,9 +128,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/graphicsSettings.ts`
 
-- `createGraphicsSettings` — function — line 49
+- `createGraphicsSettings` — function — line 50
 - `GraphicsSettings` — type — line 19
-- `GraphicsSettingsDeps` — type — line 36
+- `GraphicsSettingsDeps` — type — line 37
 
 ## `app/interactables.ts`
 
@@ -203,12 +203,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 505
-- `createWorldBundle` — function — line 824
-- `disposeWorldBundle` — function — line 1147
+- `BuiltWorldSystems` — type — line 506
+- `createWorldBundle` — function — line 825
+- `disposeWorldBundle` — function — line 1148
 - `HOME_RADIUS` — const — line 83
 - `homeChunks` — function — line 94
-- `rebuildWorldBundle` — function — line 975
+- `rebuildWorldBundle` — function — line 976
 - `WorldBundle` — type — line 117
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).

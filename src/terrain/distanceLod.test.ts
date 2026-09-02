@@ -22,10 +22,23 @@ describe('densityLodFraction', () => {
 })
 
 describe('grassFillerLodFraction', () => {
-  it('is only drawn in the near ring', () => {
-    expect(grassFillerLodFraction(0, 1)).toBe(1)
-    expect(grassFillerLodFraction(1, 1)).toBeGreaterThan(0)
-    expect(grassFillerLodFraction(2, 1)).toBe(0)
+  it('is only drawn in the near ring when radius is 1 (coverage disabled)', () => {
+    expect(grassFillerLodFraction(0, 1, 1)).toBe(1)
+    expect(grassFillerLodFraction(1, 1, 1)).toBe(0)
+    expect(grassFillerLodFraction(2, 1, 1)).toBe(0)
+  })
+
+  it('extends across a larger radius (grassFillerCoverage > 0)', () => {
+    expect(grassFillerLodFraction(0, 3, 1)).toBe(1)
+    const mid = grassFillerLodFraction(1.5, 3, 1)
+    expect(mid).toBeGreaterThan(0)
+    expect(mid).toBeLessThan(1)
+    expect(grassFillerLodFraction(3, 3, 1)).toBe(0)
+  })
+
+  it('scales with lodScale and treats radius <= 0 as fully off', () => {
+    expect(grassFillerLodFraction(0, 2, 0.5)).toBe(0.5)
+    expect(grassFillerLodFraction(0, 0, 1)).toBe(0)
   })
 })
 

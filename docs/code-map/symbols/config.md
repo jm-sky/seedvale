@@ -18,33 +18,33 @@ Generated from exported TypeScript symbols.
 
 ## `config/qualityProfiles.ts`
 
-- `applyQualityKnobs` — function — line 116
-- `applyQualityPreset` — function — line 146
-- `DEFAULT_QUALITY_PRESET` — const — line 62
-- `isQualityPreset` — function — line 64
-- `knobsFromConfig` — function — line 68
-- `knobsMatch` — function — line 95
-- `matchQualityPreset` — function — line 109
-- `QUALITY_PRESET_IDS` — const — line 59
-- `QUALITY_PRESETS` — const — line 23
+- `applyQualityKnobs` — function — line 124
+- `applyQualityPreset` — function — line 155
+- `DEFAULT_QUALITY_PRESET` — const — line 68
+- `isQualityPreset` — function — line 70
+- `knobsFromConfig` — function — line 74
+- `knobsMatch` — function — line 102
+- `matchQualityPreset` — function — line 117
+- `QUALITY_PRESET_IDS` — const — line 65
+- `QUALITY_PRESETS` — const — line 26
 - `QualityKnobs` — type — line 11
 - `QualityPreset` — type — line 5
 
 ## `config/worldConfig.ts`
 
 - `AoQuality` — type — line 13
-- `applyStoredPlayer` — function — line 456
-- `applyStoredPostProcessing` — function — line 477
-- `applyStoredQuality` — function — line 465
-- `applyStoredSettlements` — function — line 346
-- `applyStoredSky` — function — line 448
-- `applyStoredTerrain` — function — line 361
-- `createBenchmarkWorldConfig` — function — line 560
-- `createWorldConfig` — function — line 504
-- `defaultTerrainConfig` — function — line 497
+- `applyStoredPlayer` — function — line 468
+- `applyStoredPostProcessing` — function — line 492
+- `applyStoredQuality` — function — line 477
+- `applyStoredSettlements` — function — line 358
+- `applyStoredSky` — function — line 460
+- `applyStoredTerrain` — function — line 373
+- `createBenchmarkWorldConfig` — function — line 575
+- `createWorldConfig` — function — line 519
+- `defaultTerrainConfig` — function — line 512
 - `DetailNormalConfig` — type — line 21
 - `HomeVillageSize` — type — line 10
-- `triangleCount` — function — line 572
+- `triangleCount` — function — line 587
 - `WorldConfig` — type — line 49
   - domain: world
   - system: world-config

@@ -35,6 +35,7 @@ export type DebugGuiHandlers = {
   onQualityPresetChange: (preset: QualityPreset) => void
   onShadowMapSizeChange: () => void
   onLodScaleChange: () => void
+  onGrassFillerCoverageChange: () => void
   onPerfTimingsToggle: (enabled: boolean) => void
   onRunBenchmark: (id: BenchmarkScenarioId) => void
 }
@@ -447,6 +448,45 @@ export function createDebugGui(
       .onFinishChange(handlers.onTerrainChange),
   )
 
+  // Near-field surface detail (plan world-terrain-005) — wheel ruts + fine
+  // bump/dip roughness, independently toggleable from potholes/edge-wobble.
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'surfaceDetailEnabled')
+      .name('Surface detail enabled')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'rutDepth', 0, 0.2, 0.005)
+      .name('Rut depth')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'rutOffsetFraction', 0.1, 0.9, 0.01)
+      .name('Rut offset (frac. half-width)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'rutWidthFraction', 0.02, 0.4, 0.01)
+      .name('Rut width (frac. half-width)')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'microBumpStrength', 0, 0.1, 0.002)
+      .name('Micro bump/dip strength')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+  terrainControllers.push(
+    roads
+      .add(config.terrain.region.roadNetwork, 'microBumpScale', 0.1, 2, 0.05)
+      .name('Micro bump/dip scale')
+      .onFinishChange(handlers.onTerrainChange),
+  )
+
   const village = terrain.addFolder('Village')
   if (handlers.onDumpVillagePlan) {
     village
@@ -641,6 +681,12 @@ export function createDebugGui(
     .add(config.quality, 'lodScale', 0.25, 1, 0.05)
     .name('Vegetation LOD scale')
     .onFinishChange(handlers.onLodScaleChange)
+  // Live re-sync, no rebuild — filler instances already exist for every
+  // grass chunk, only their draw fraction changes (plan world-terrain-005).
+  postFx
+    .add(config.quality, 'grassFillerCoverage', 0, 1, 0.05)
+    .name('Grass filler coverage')
+    .onFinishChange(handlers.onGrassFillerCoverageChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

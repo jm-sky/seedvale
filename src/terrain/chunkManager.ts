@@ -326,6 +326,9 @@ export type ChunkManagerConfig = {
   waterMirror: WaterMirror
   /** Quality-profile multiplier on grass/vegetation LOD (plan 103). Live. */
   lodScale: number
+  /** Quality-profile grass filler-coverage knob (plan world-terrain-005,
+   *  0..1). Live — see `ChunkManager.setGrassFillerCoverage`. */
+  grassFillerCoverage: number
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -571,6 +574,11 @@ export type ChunkManager = {
   /** Live quality-profile LOD scale (plan 103). Re-applies grass/vegetation
    *  `setLodFraction` on already-loaded chunks. */
   setLodScale: (scale: number) => void
+  /** Live quality knob (plan world-terrain-005, 0..1) — how far the cheap
+   *  grass filler bucket reaches across the grass ring. Re-applies
+   *  `setLodFraction` on already-loaded chunks; no rebuild (filler instances
+   *  already exist for every grass chunk, only their draw fraction changes). */
+  setGrassFillerCoverage: (coverage: number) => void
   /** Collision colliders (plan 097 §2.2) near (x, z) — terrain-chunk
    *  environment/vegetation plus anything registered via `registerColliders`
    *  (settlements, the well). Feed straight into `world/collision.ts`'s
@@ -974,16 +982,23 @@ export function createChunkManager(
 
   let lastPlayerChunk: ChunkCoord = { cx: 0, cz: 0 }
   let lodScale = Math.min(1, Math.max(0.25, config.lodScale ?? 1))
+  /** Live quality knob (plan world-terrain-005, 0..1) — how far across
+   *  `effectiveGrassRadius` the cheap filler bucket reaches. 0 reproduces the
+   *  original near-only radius (1 chunk); 1 extends filler across the whole
+   *  grass ring. See `grassFillerLodFraction`. */
+  let grassFillerCoverage = Math.min(1, Math.max(0, config.grassFillerCoverage ?? 0))
 
   /** Cheap distance LOD: render fewer blades in farther chunks. Near stays
    *  full density; far drops to ~8% (plan 113 P2) instead of the old ~25%
-   *  floor. Short filler blades only in the player's chunk + immediate ring
-   *  (issue 023). `lodScale` (plan 103) multiplies the curve without changing
-   *  generation density. */
+   *  floor. Short filler blades extend from the player's chunk out to
+   *  `grassFillerCoverage` of the grass ring (plan world-terrain-005 — cheap
+   *  coverage instead of more detailed-species density). `lodScale` (plan 103)
+   *  multiplies the curve without changing generation density. */
   function grassLodForDistance(dist: number): { mainFrac: number, fillerFrac: number, geometryTier: ReturnType<typeof grassGeometryLodTier> } {
+    const fillerRadius = 1 + grassFillerCoverage * Math.max(0, effectiveGrassRadius - 1)
     return {
       mainFrac: densityLodFraction(dist, effectiveGrassRadius, lodScale),
-      fillerFrac: grassFillerLodFraction(dist, lodScale),
+      fillerFrac: grassFillerLodFraction(dist, fillerRadius, lodScale),
       // Purely distance-based (not `lodScale`-scaled) — geometry LOD trims
       // triangles-per-instance, density LOD trims instance count; keeping the
       // two independent is what plan 148 S asked for ("nie walczyć" with the
@@ -2369,6 +2384,15 @@ export function createChunkManager(
           const { mainFrac, fillerFrac } = grassLodForDistance(dist)
           record.grass.setLodFraction(mainFrac, fillerFrac)
         }
+      }
+    },
+    setGrassFillerCoverage(coverage) {
+      grassFillerCoverage = Math.min(1, Math.max(0, coverage))
+      for (const record of chunks.values()) {
+        if (!record.grass) continue
+        const dist = chebyshevDistance(record.coord, lastPlayerChunk)
+        const { mainFrac, fillerFrac } = grassLodForDistance(dist)
+        record.grass.setLodFraction(mainFrac, fillerFrac)
       }
     },
     collidersNear: (x, z) => colliderRegistry.query(x, z),

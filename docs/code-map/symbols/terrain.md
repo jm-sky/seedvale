@@ -79,28 +79,28 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmap.ts`
 
-- `apronGridWeights` — function — line 623
-- `ApronGridWeights` — type — line 614
-- `apronOriginWorld` — function — line 594
-- `ChunkTileData` — type — line 278
-- `ChunkTileParams` — type — line 198
-- `ClearingSegment` — type — line 142
-- `computeChunkTile` — function — line 916
-- `extractCoreGrid` — function — line 678
-- `RawSampleParams` — type — line 264
-- `RegionalSmoothingSegment` — type — line 190
+- `apronGridWeights` — function — line 642
+- `ApronGridWeights` — type — line 633
+- `apronOriginWorld` — function — line 613
+- `ChunkTileData` — type — line 297
+- `ChunkTileParams` — type — line 217
+- `ClearingSegment` — type — line 161
+- `computeChunkTile` — function — line 953
+- `extractCoreGrid` — function — line 697
+- `RawSampleParams` — type — line 283
+- `RegionalSmoothingSegment` — type — line 209
 - `RegionParams` — type — line 12
-- `RiverChannelSegment` — type — line 168
-- `RoadCorridorSegment` — type — line 124
+- `RiverChannelSegment` — type — line 187
+- `RoadCorridorSegment` — type — line 143
 - `RoadNetworkParams` — type — line 80
-- `sampleApronGrid` — function — line 661
-- `sampleApronGridWeighted` — function — line 646
-- `sampleBiomeAt` — function — line 565
-- `sampleContinentalnessAt` — function — line 569
-- `sampleFloorAt` — function — line 561
-- `sampleHeightAt` — function — line 557
-- `sampleMoistureRegionAt` — function — line 577
-- `sampleMountainRidgeAt` — function — line 585
+- `sampleApronGrid` — function — line 680
+- `sampleApronGridWeighted` — function — line 665
+- `sampleBiomeAt` — function — line 584
+- `sampleContinentalnessAt` — function — line 588
+- `sampleFloorAt` — function — line 580
+- `sampleHeightAt` — function — line 576
+- `sampleMoistureRegionAt` — function — line 596
+- `sampleMountainRidgeAt` — function — line 604
 - `VegetationKind` — type — line 10
 - `VillageClearingParams` — type — line 61
 
@@ -118,22 +118,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 630
-- `ChunkManager` — type — line 393
+- `applyModificationToTile` — function — line 638
+- `ChunkManager` — type — line 396
 - `ChunkManagerConfig` — type — line 247
-- `createChunkManager` — function — line 769
+- `createChunkManager` — function — line 777
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 758
-- `drainByBudget` — function — line 748
-- `FinalizeStage` — type — line 333
-- `pickNearestQueuedKey` — function — line 708
-- `pickNextFinalizeKey` — function — line 726
+- `CropHarvestOutcome` — type — line 766
+- `drainByBudget` — function — line 756
+- `FinalizeStage` — type — line 336
+- `pickNearestQueuedKey` — function — line 716
+- `pickNextFinalizeKey` — function — line 734
 - `ringChunkOffsets` — function — line 206
-- `TerrainModification` — type — line 587
+- `TerrainModification` — type — line 595
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -223,9 +223,9 @@ Generated from exported TypeScript symbols.
 ## `terrain/distanceLod.ts`
 
 - `densityLodFraction` — function — line 6
-- `grassFillerLodFraction` — function — line 13
-- `grassGeometryLodTier` — function — line 24
-- `GrassGeometryLodTier` — type — line 22
+- `grassFillerLodFraction` — function — line 20
+- `grassGeometryLodTier` — function — line 32
+- `GrassGeometryLodTier` — type — line 30
 
 ## `terrain/fbm.ts`
 

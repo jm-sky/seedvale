@@ -20,7 +20,7 @@ function target(preset: QualityPreset = 'High') {
       terrainCastsShadow: true,
       shadowMapSize: 1024,
     },
-    quality: { preset, lodScale: 1, adaptiveEnabled: false },
+    quality: { preset, lodScale: 1, adaptiveEnabled: false, grassFillerCoverage: 0.6 },
   }
 }
 
@@ -37,6 +37,7 @@ describe('qualityProfiles', () => {
     expect(cfg.postProcessing.aoEnabled).toBe(false)
     expect(cfg.postProcessing.waterReflections).toBe(false)
     expect(cfg.quality.lodScale).toBe(0.5)
+    expect(cfg.quality.grassFillerCoverage).toBe(0)
     expect(knobsMatch(knobsFromConfig(cfg), QUALITY_PRESETS.Low)).toBe(true)
   })
 

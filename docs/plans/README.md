@@ -55,7 +55,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
-| ◼️ `world-terrain-005-distance-based-terrain-detail-lod.md`            | -       | 🟡 | M      | ~~004~~ |
 
 ---
 
@@ -93,6 +92,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `fauna-005-animal-corpse-and-bone-feeding.md` | A wolf discovers and eats a fresh corpse; a sufficiently hungry wolf falls back onto a decaying corpse or bones only when no fresh alternative is reachable, not merely because one exists; bones remain eatable after the fresh/rotting food is gone; player harvest and wolf feeding converge on the same corpse without duplicating/corrupting state; behaviour works with the player away from the scene |
 | `npc-014-work-contracts-foundation-and-physical-posting.md` | Create a construction contract (Quick Actions → Budowa → Zleć budowę, pick a reward) and confirm a flag appears at the target, state is `available`/not advertised; visit a settlement's notice board (`[E]`) and post the contract, confirm it becomes `advertised`; save/load before and after posting preserves contract/flag/board state; cancel a contract before and after posting via Quick Actions → Zlecenia, confirm the flag/advertisement are removed and it can't be posted again |
 | `fauna-006-wolf-settlement-entry.md` | An ordinary (non-frenzied) wolf selects and enters a settlement to reach an NPC or fleeing prey it was already chasing; the chase isn't dropped just because the target crossed into the village avoidance radius; a frenzied wolf still reaches the village as before; fox/deer/other wild fauna still avoid the village for both wander and hunting; a wolf still doesn't wander into the village without an active target; building colliders still block actual movement |
+| `world-terrain-005-distance-based-terrain-detail-lod.md` | Grass: baseline vs `grassFillerCoverage` (0/0.35/0.6/1) near camera and along a distant road, watching triangle/instance count and draw calls; Road: baseline (`surfaceDetailEnabled` off) vs on at a few `rutDepth`/`microBumpStrength` values close-up on a road segment, confirm no chunk-boundary seams and paths stay flatter than roads; combined on/off matrix per plan §7 |
 
 ---
 

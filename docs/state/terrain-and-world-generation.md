@@ -4,7 +4,7 @@
 
 **Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../architecture/GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../state/water.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
-**Last verified:** 2026-08-25
+**Last verified:** 2026-09-02
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -15,7 +15,7 @@ When this file and the code disagree, the code wins — update this file.
 - Procedurally chunked terrain (macro continental bias + ridges, hills/valleys, softened detail FBM), generated on a worker pool with load/unload radii and pinned home chunks.
 - `ChunkManager.update()` spends one finalize slot per frame on either a terrain mesh or vegetation/environment content (mesh takes priority) so streaming doesn't spike the main thread; `CHUNKS_STARTED_PER_FRAME` caps how many new chunk generations can start per frame (it does not cap finalization).
 - GLB prop templates preload when `ChunkManager` is constructed, so template parsing happens off the streaming hot path.
-- Shore sand band varies in world space; grass thins into mountain foothills; road corridors are a soft tint + dirt micro-contrast baked onto the terrain mesh (grass soft-fades in a corridor, never a hard bald cut — see [GRAPHICS.md](../architecture/GRAPHICS.md) G9).
+- Shore sand band varies in world space; grass thins into mountain foothills; road corridors are a soft tint + dirt micro-contrast baked onto the terrain mesh (grass soft-fades in a corridor, never a hard bald cut — see [GRAPHICS.md](../architecture/GRAPHICS.md) G9). Near-field surface detail (plan world-terrain-005) — wheel ruts + continuous fine bump/dip roughness — is baked into the same corridor height blend as the pre-existing sparse potholes (`chunkHeightmap.ts`'s `roadCandidate`), independently toggleable via `WorldConfig.terrain.region.roadNetwork.surfaceDetailEnabled`; see [GRAPHICS.md](../architecture/GRAPHICS.md) G18 for why it's baked geometry rather than a shader-only effect.
 - `forestDensityAt` (`ChunkManager.sampleForestFactor`) is a single continuous function driving both tree density and fauna habitat — there is no separate forest manager. `forestBiomeAt(forestDensity)` (plan 182) classifies that same continuous reading into `open`/`forest`/`deepForest` (thresholds 0.35/0.72) as one shared discrete world query (`ChunkManager.sampleForestBiome` / `WorldContext.sampleForestBiome`) — not a parallel biome system or a stored per-chunk label.
 
 ## Mountains
@@ -31,6 +31,7 @@ When this file and the code disagree, the code wins — update this file.
 - Stage meshes and procedural landmarks stay individual `Object3D`s, not instanced.
 - Settlement palisade/bushes/barrels/hay are instanced directly via `instancedProps.ts` with no chunk boundaries, so they were explicitly left out of region batching (plan 143). Harvestable settlement trees stay individual (plan 113).
 - Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks.
+- Grass (`src/terrain/grass.ts`/`grassPlacement.ts`) is per-chunk, not region-batched. Each grass chunk carries a cheap "filler" bucket (short, few-fin blades, no per-species geometry LOD) alongside the detailed species buckets; `ChunkManager`'s `grassFillerLodFraction`/`grassFillerCoverage` quality knob (plan world-terrain-005, live, no rebuild) controls how far across the grass ring that filler bucket draws — extending visual grass coverage without raising detailed-species instance count.
 
 ## Trees
 

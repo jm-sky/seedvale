@@ -188,6 +188,7 @@ function buildChunkManager(
     getWorldDays,
     waterMirror,
     lodScale: config.quality.lodScale,
+    grassFillerCoverage: config.quality.grassFillerCoverage,
   }
   return createChunkManager(scene, cfg)
 }

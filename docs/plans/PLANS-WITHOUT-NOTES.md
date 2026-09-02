@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-02 17:23:38  
+> Date: 2026-09-02 20:36:27  
 
 ## PLANS
 
@@ -11,7 +11,6 @@
 - `tools-000-weapon-browser-observatory.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `tools-007--mpfb2-npc-hero-character-pipeline.md`
-- `world-terrain-005-distance-based-terrain-detail-lod.md`
 
 --------------------------------
 ## PROMPTS
@@ -187,37 +186,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `world-terrain-005-distance-based-terrain-detail-lod.md`
-
-Prompt:
-
-```
-Zrób review planu `world-terrain-005-distance-based-terrain-detail-lod.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/world-terrain-005-distance-based-terrain-detail-lod.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/world-terrain-005-distance-based-terrain-detail-lod-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

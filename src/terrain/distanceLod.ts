@@ -9,9 +9,17 @@ export function densityLodFraction(dist: number, radius: number, lodScale: numbe
   return Math.max(0.08, Math.min(1, unscaled * lodScale))
 }
 
-/** Short near-field filler blades — only the player's chunk + immediate ring. */
-export function grassFillerLodFraction(dist: number, lodScale: number): number {
-  return dist <= 1 ? Math.max(0, (1 - dist * 0.55) * lodScale) : 0
+/** Short cheap filler blades — distance LOD for the ground-cover bucket that
+ *  densifies grass coverage without paying detailed-species fill-rate (plan
+ *  world-terrain-005). Linear falloff to 0 at `radius`, so `radius = 1`
+ *  reproduces the original near-only behaviour (issue 023) while a larger
+ *  `radius` (`ChunkManager`'s `grassFillerCoverage` quality knob, scaled into
+ *  `effectiveGrassRadius`) lets cheap filler extend across the whole grass
+ *  ring instead of detailed species density, matching the plan's "far → very
+ *  cheap filler" model. */
+export function grassFillerLodFraction(dist: number, radius: number, lodScale: number): number {
+  if (radius <= 0) return 0
+  return Math.max(0, (1 - dist / radius) * lodScale)
 }
 
 /** Grass blade-cluster geometry LOD (plan 148 S) — how many fins/segments a

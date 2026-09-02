@@ -27,6 +27,7 @@ export type GraphicsSettings = {
   updateTerrainShadowFromGui: () => void
   updateShadowMapFromGui: () => void
   updateLodScaleFromGui: () => void
+  updateGrassFillerCoverageFromGui: () => void
   applyNamedQualityPreset: (preset: Exclude<QualityPreset, 'Custom'>) => void
   onQualityPresetChange: (preset: QualityPreset) => void
   /** Day/night toggle — re-syncs sky/light/fog immediately when re-enabled. */
@@ -69,6 +70,7 @@ export function createGraphicsSettings(deps: GraphicsSettingsDeps): GraphicsSett
     lights.setShadowMapSize(config.postProcessing.shadowMapSize)
     bundle.chunkManager.setTerrainCastsShadow(config.postProcessing.terrainCastsShadow)
     bundle.chunkManager.setLodScale(config.quality.lodScale)
+    bundle.chunkManager.setGrassFillerCoverage(config.quality.grassFillerCoverage)
   }
 
   const updatePostProcessingFromGui = () => {
@@ -112,6 +114,15 @@ export function createGraphicsSettings(deps: GraphicsSettingsDeps): GraphicsSett
     saveGraphics(config)
   }
 
+  // Live re-sync on already-loaded chunks (`ChunkManager.setGrassFillerCoverage`)
+  // — filler instances already exist for every grass chunk, so this only
+  // changes their draw fraction, no world rebuild (plan world-terrain-005).
+  const updateGrassFillerCoverageFromGui = () => {
+    bundle.chunkManager.setGrassFillerCoverage(config.quality.grassFillerCoverage)
+    syncQualityLabel()
+    saveGraphics(config)
+  }
+
   const applyNamedQualityPreset = (preset: Exclude<QualityPreset, 'Custom'>) => {
     applyQualityPreset(config, preset)
     applyLiveGraphics()
@@ -139,6 +150,7 @@ export function createGraphicsSettings(deps: GraphicsSettingsDeps): GraphicsSett
     updateTerrainShadowFromGui,
     updateShadowMapFromGui,
     updateLodScaleFromGui,
+    updateGrassFillerCoverageFromGui,
     applyNamedQualityPreset,
     onQualityPresetChange,
     onDayNightChange,
