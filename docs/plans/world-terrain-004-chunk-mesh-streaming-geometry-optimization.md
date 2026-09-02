@@ -211,6 +211,8 @@ Użyć tego samego scenariusza benchmarkowego:
 ?benchmark=stream&seed=42&res=193
 ```
 
+> **Uwaga:** Benchmark i browser verification robi użytkownik, aby nie tracić tokenów.
+
 Porównać przede wszystkim:
 
 - `chunk mesh` hitch count,
