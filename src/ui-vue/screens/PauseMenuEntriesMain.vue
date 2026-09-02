@@ -15,6 +15,7 @@ const buildDate = __BUILD_DATE__
 const emit = defineEmits<{
   'open-actions': []
   'open-settings': []
+  'open-tools': []
   'open-save-as': []
   'open-load': []
   'open-new-game': []
@@ -39,6 +40,7 @@ function openMap(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onWorld
 function resume(): void { emitUiClick(); closePauseMenu() }
 function openActions(): void { emitUiClick(); emit('open-actions') }
 function openSettings(): void { emitUiClick(); emit('open-settings') }
+function openTools(): void { emitUiClick(); emit('open-tools') }
 </script>
 
 <template>
@@ -88,6 +90,12 @@ function openSettings(): void { emitUiClick(); emit('open-settings') }
       @click="openActions"
     >
       Akcje
+    </UiButton>
+    <UiButton
+      class="mb-2 w-full"
+      @click="openTools"
+    >
+      Narzędzia ›
     </UiButton>
     <div class="my-3 mx-auto h-px w-1/2 self-center border-t border-white/15" />
     <UiButton

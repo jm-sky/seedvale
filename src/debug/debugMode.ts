@@ -51,19 +51,6 @@ export function isModelTestMode(): boolean {
   return urlFlag('modelTest')
 }
 
-/** `?houseTest` — standalone `HouseDefinition`/`HouseBuilder` preview scene
- *  (renderer/camera/light/one `HouseAssembly` only), bypassing the normal
- *  world/save/UI bootstrap entirely. Takes precedence over `?modelTest`.
- *  Definition lookup lives in `./houseTestDefinition.ts`, not here —
- *  `debugMode.ts` is a low-level module widely imported by core runtime code
- *  (e.g. `settlement/livestock.ts`, `settlement/props.ts`), and pulling in
- *  `assets/houseDefinitionExample.ts`'s data here created a circular-import
- *  TDZ crash (`HOUSE_MODULE_M` in `houseBuilder.ts`) via
- *  assetIndex → livestock → debugMode → houseDefinitionExample. */
-export function isHouseTestMode(): boolean {
-  return urlFlag('houseTest')
-}
-
 /** `?camdebug=1` — camera/renderer overlay for the mobile black-world diagnosis.
  *  Off in production; not wired into the normal HUD. */
 export function isCameraDebugMode(): boolean {

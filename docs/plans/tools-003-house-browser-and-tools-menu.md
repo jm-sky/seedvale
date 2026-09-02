@@ -1,7 +1,7 @@
 # Plan: House Browser and Tools Menu
 
 **Created:** 2026-08-26
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~111~~
 **Domain:** `tools`
