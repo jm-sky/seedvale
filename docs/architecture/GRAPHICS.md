@@ -64,6 +64,14 @@ Trwałe reguły. Zmiana = nowy wpis w logu + aktualizacja tej sekcji.
 
 ## Log
 
+### 2026-09-02 — Torch fire particles
+
+Torch fire effects use a shared `THREE.Points` particle pool with textured PNG sprites from `public/images/flame/fire_atlas.png`.
+
+The atlas allows multiple visual variants to be selected per particle via `atlasIndex`, while a single `ShaderMaterial` and draw call render the whole pool. Particles support per-particle color and lifetime fading with additive blending (`src/shared/getFireParticles.ts`).
+
+The same technique is suitable for a denser torch flame made from overlapping flame sprites, providing a more organic fire appearance without requiring a separate mesh/material per flame element.
+
 ### 2026-09-02 — Chunk mesh generation pipeline documented (G17) 📝
 
 - Read current code (`chunkWorkerPool.ts`, `chunkHeightmap.worker.ts`, `buildChunkGeometry.ts`, `chunkManager.ts`) to confirm the actual chunk mesh pipeline against the performance doc's planned direction — see G17.

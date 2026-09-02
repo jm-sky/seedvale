@@ -1,5 +1,20 @@
 import * as THREE from 'three'
 
+/**
+ * Fire rendering update:
+ * - Torch sparks now use textured PNG particles from `/images/flame/fire_atlas.png`.
+ * - A single atlas contains multiple spark/flame variants; `atlasIndex` selects
+ *   the variant per particle, avoiding separate textures/materials/draw calls.
+ * - Particles use a custom ShaderMaterial with additive blending, per-particle
+ *   color and lifetime fade.
+ * - Torch sparks are intentionally implemented as one shared THREE.Points pool,
+ *   keeping the effect cheap even with dozens of particles.
+ *
+ * The same textured-particle approach can also be used for the torch flame
+ * itself: a denser pool of overlapping flame sprites can replace the current
+ * single/static flame representation while keeping rendering cost low.
+ */
+
 const fireAtlas =
   typeof window !== 'undefined' ? new THREE.TextureLoader().load('/images/flame/fire_atlas.png') : undefined
 if (fireAtlas) fireAtlas.colorSpace = THREE.SRGBColorSpace
@@ -82,6 +97,7 @@ function createParticlePool(
   })
 
   const geometry = new THREE.BufferGeometry()
+  const baseColor = new THREE.Color(tuning.color)
   const positionAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count * 3), 3)
   const colorAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count * 3), 3)
   const atlasAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
@@ -90,12 +106,56 @@ function createParticlePool(
   geometry.setAttribute('color', colorAttribute)
   geometry.setAttribute('atlasIndex', atlasAttribute)
 
-  const material = new THREE.PointsMaterial({
-    color: tuning.color,
-    size: tuning.size * scale,
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: fireAtlas },
+      pointSize: { value: tuning.size * scale },
+    },
+
+    vertexShader: `
+      attribute float atlasIndex;
+      attribute vec3 color;
+
+      varying float vAtlasIndex;
+      varying vec3 vColor;
+
+      uniform float pointSize;
+
+      void main() {
+        vAtlasIndex = atlasIndex;
+        vColor = color;
+
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+
+        gl_PointSize = pointSize * (300.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+
+    fragmentShader: `
+      uniform sampler2D map;
+
+      varying float vAtlasIndex;
+      varying vec3 vColor;
+
+      void main() {
+        vec2 uv = gl_PointCoord;
+
+        uv.x = (uv.x + vAtlasIndex) * 0.5;
+
+        vec4 texel = texture2D(map, uv);
+
+        if (texel.a < 0.01) discard;
+
+        gl_FragColor = vec4(
+          texel.rgb * vColor,
+          texel.a * vColor.r
+        );
+      }
+    `,
+
     transparent: true,
     depthWrite: false,
-    vertexColors: true,
     blending: THREE.AdditiveBlending,
   })
 
@@ -123,7 +183,13 @@ function createParticlePool(
       const fade = 1 - t * t
       atlasAttribute.setX(i, current.atlasIndex)
       positionAttribute.setXYZ(i, current.position.x, current.position.y, current.position.z)
-      colorAttribute.setXYZ(i, fade, fade, fade)
+
+      colorAttribute.setXYZ(
+        i,
+        baseColor.r * fade,
+        baseColor.g * fade,
+        baseColor.b * fade,
+      )
     }
     positionAttribute.needsUpdate = true
     colorAttribute.needsUpdate = true
@@ -136,7 +202,7 @@ function createParticlePool(
 const SPARK_TUNING: PoolTuning = {
   count: 8,
   color: 0xffb347,
-  size: 0.05,
+  size: 0.3,
   spawnRadius: 0.08,
   upSpeed: [0.7, 1.2],
   lateralSpeed: 0.35,
@@ -155,7 +221,7 @@ export function createSparks(scale: number): ParticlePool {
 const EMBER_TUNING: PoolTuning = {
   count: 10,
   color: 0xff5522,
-  size: 0.045,
+  size: 0.25,
   spawnRadius: 0.14,
   upSpeed: [0.08, 0.22],
   lateralSpeed: 0.08,
@@ -175,7 +241,7 @@ export function createEmbers(scale: number): ParticlePool {
 const TORCH_SPARK_TUNING: PoolTuning = {
   count: 12,
   color: 0xffb347,
-  size: 0.045,
+  size: 0.3, // Maybe tuning is needed for this
   spawnRadius: 0.09,
   upSpeed: [0.45, 0.9],
   lateralSpeed: 0.22,
@@ -196,7 +262,7 @@ export function createTorchSparks(scale: number): ParticlePool {
 const IGNITE_BURST_TUNING: PoolTuning = {
   count: 12,
   color: 0xffffff,
-  size: 0.06,
+  size: 0.1,
   spawnRadius: 0.05,
   upSpeed: [1.6, 2.6],
   lateralSpeed: 1.1,
