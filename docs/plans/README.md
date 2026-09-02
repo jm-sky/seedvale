@@ -29,7 +29,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| ◼️ `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | Worker mesh generation + transfer/allocation cleanup + runtime mesh-data cache | 🔴 | M | - |\n| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
+| 💡 `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | Worker mesh generation + transfer/allocation cleanup + runtime mesh-data cache | 🔴 | M | - |\n| 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | 💡 `fauna-005-animal-corpse-and-bone-feeding.md`                       | -       | 🟡 | M      | -      |
 | 💡 `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -56,7 +56,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| ◼️ `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | -       | 🔴 | M      | -      |
+| 💡 `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | -       | 🔴 | M      | -      |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -      |
 
 ---
