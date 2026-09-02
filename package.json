@@ -15,6 +15,7 @@
     "plans:without-notes": "tsx scripts/docs/planned-plans-without-notes.ts",
     "plans:sync": "tsx scripts/docs/plans-sync.ts",
     "plans:done": "tsx scripts/docs/plans-done.ts",
+    "plans:recommended-order": "tsx scripts/docs/plans-recommended-order.ts",
     "assets:report": "tsx scripts/docs/generate-local-assets-report.ts",
     "docs:map-audit": "tsx scripts/docs/docs-map-audit.ts",
     "docs:navigation-candidates": "tsx scripts/docs/docs-navigation-candidates.ts",
