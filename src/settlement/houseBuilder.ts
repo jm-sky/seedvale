@@ -22,7 +22,7 @@ import {
   type HouseVec3,
   type HouseWallPlacement,
   type HouseWallSide,
-} from '../assets/houseDefinitionExample'
+} from '../assets/houseDefinitionExampleConfig'
 import { disposeObject3D, loadGltf } from '../assets/loadGltf'
 
 /**

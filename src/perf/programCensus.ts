@@ -73,6 +73,30 @@ export type ProgramCensusFirstUseEvent = {
   stage: ProgramCensusStageKind | undefined
   programCountBefore: number
   programCountAfter: number
+  /** FNV-1a hash of `gl.getShaderSource(program.vertexShader)` — cheap,
+   *  synchronous, distinguishes "same cacheKey-relevant params but different
+   *  generated GLSL" from "genuinely identical shader". `undefined` when the
+   *  GL context/shader source isn't readable (e.g. in unit tests, or if the
+   *  shader was already released by the time the scan ran). */
+  vertexShaderHash: string | undefined
+  /** Same as {@link vertexShaderHash} for the fragment stage. */
+  fragmentShaderHash: string | undefined
+  /** Best-effort attribution: the material whose `currentProgram` (read via
+   *  `renderer.properties`) matched this program by object identity at scan
+   *  time. `undefined` if no material in the scene currently points at it. */
+  materialUuid: string | undefined
+  materialName: string | undefined
+  materialBucket: SceneBucket | undefined
+  /** `material.defines` at scan time, if the material declares any — the
+   *  direct cause of a cacheKey difference for `ShaderMaterial`-style
+   *  variants (see `getProgramCacheKey` in three's `WebGLPrograms.js`). */
+  defines: Record<string, unknown> | undefined
+  /** Small curated set of cacheKey-relevant material flags, read generically
+   *  (duck-typed) so this works across material subtypes without importing
+   *  each one. Not exhaustive — `MeshStandardMaterial`'s cacheKey also
+   *  depends on light counts/shadow types that live on the renderer, not the
+   *  material, and aren't captured here. */
+  flags: Record<string, string> | undefined
 }
 
 export type ProgramCensusFrameSnapshot = {
@@ -189,6 +213,106 @@ function collectMaterials(
   return { count: seen.size, byBucket, byType }
 }
 
+/** FNV-1a 32-bit — synchronous and good enough to tell "different generated
+ *  GLSL" from "identical", which is all the diagnostic report needs. Not a
+ *  cryptographic hash. */
+function hashShaderSource(src: string): string {
+  let h = 2166136261
+  for (let i = 0; i < src.length; i++) {
+    h ^= src.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (h >>> 0).toString(16)
+}
+
+/** Reads back the compiled shader source via the public `gl.getShaderSource`
+ *  API (read-only, no Three.js patching) and hashes it. Three deletes the
+ *  underlying `WebGLShader`s on a program's first use (`WebGLProgram.js`'s
+ *  `onFirstUse`), but doesn't detach them from the program first (iOS
+ *  crash workaround, see that file), so the source stays queryable until the
+ *  program itself is destroyed. Never throws — worst case both hashes are
+ *  `undefined`. */
+function readShaderHashes(
+  renderer: WebGLRenderer,
+  p: { vertexShader?: WebGLShader, fragmentShader?: WebGLShader },
+): { vertexShaderHash: string | undefined, fragmentShaderHash: string | undefined } {
+  try {
+    const gl = renderer.getContext()
+    const vSrc = p.vertexShader ? gl.getShaderSource(p.vertexShader) : null
+    const fSrc = p.fragmentShader ? gl.getShaderSource(p.fragmentShader) : null
+    return {
+      vertexShaderHash: vSrc ? hashShaderSource(vSrc) : undefined,
+      fragmentShaderHash: fSrc ? hashShaderSource(fSrc) : undefined,
+    }
+  } catch {
+    return { vertexShaderHash: undefined, fragmentShaderHash: undefined }
+  }
+}
+
+const FLAG_KEYS = ['transparent', 'alphaTest', 'vertexColors', 'fog', 'wireframe', 'flatShading', 'skinning', 'morphTargets'] as const
+
+/** Duck-typed so it works across `MeshStandardMaterial`/`ShaderMaterial`/etc.
+ *  without importing each subtype — see the `flags` doc comment on
+ *  {@link ProgramCensusFirstUseEvent}. */
+function readMaterialFlags(m: Material): Record<string, string> {
+  const mm = m as Material & Partial<Record<(typeof FLAG_KEYS)[number], unknown>> & { map?: unknown, normalMap?: unknown, envMap?: unknown }
+  const flags: Record<string, string> = {}
+  for (const key of FLAG_KEYS) {
+    if (mm[key] !== undefined) flags[key] = String(mm[key])
+  }
+  flags.map = String(!!mm.map)
+  flags.normalMap = String(!!mm.normalMap)
+  flags.envMap = String(!!mm.envMap)
+  return flags
+}
+
+type ProgramAttribution = {
+  materialUuid: string
+  materialName: string
+  bucket: SceneBucket
+  defines: Record<string, unknown> | undefined
+  flags: Record<string, string>
+}
+
+/** Best-effort program → material attribution for the diagnostic report
+ *  only. Reads `renderer.properties` (a public `WebGLRenderer` field, typed
+ *  in `@types/three`'s `WebGLRenderer.d.ts`) to find which material's
+ *  `currentProgram` (set in `WebGLRenderer.js` right after program
+ *  acquisition) matches a just-created `WebGLProgram` by object identity.
+ *  One scene traversal per call — only invoked from `scanNewPrograms`, i.e.
+ *  the handful of times per benchmark the program count actually grows.
+ *  Never throws: an unmatched or unavailable program simply gets no
+ *  attribution. */
+function buildProgramAttribution(renderer: WebGLRenderer, scene: Scene): Map<object, ProgramAttribution> {
+  const map = new Map<object, ProgramAttribution>()
+  const props = (renderer as unknown as { properties?: { get: (o: unknown) => unknown } }).properties
+  if (!props) return map
+  scene.traverse((obj) => {
+    const mesh = obj as { isMesh?: boolean, material?: Material | Material[] }
+    if (!mesh.isMesh || !mesh.material) return
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    const bucket = classifyObject(obj)
+    for (const m of mats) {
+      let matProps: unknown
+      try {
+        matProps = props.get(m)
+      } catch {
+        continue
+      }
+      const program = (matProps as { currentProgram?: object } | undefined)?.currentProgram
+      if (!program || map.has(program)) continue
+      map.set(program, {
+        materialUuid: m.uuid,
+        materialName: m.name,
+        bucket,
+        defines: (m as unknown as { defines?: Record<string, unknown> }).defines,
+        flags: readMaterialFlags(m),
+      })
+    }
+  })
+  return map
+}
+
 const NOOP_SUMMARY: ProgramCensusSummary = {
   frames: 0,
   programCountFinal: 0,
@@ -241,13 +365,16 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
   function scanNewPrograms(stage: ProgramCensusStageKind | undefined, before: number, after: number): void {
     const programs = renderer.info.programs
     if (!programs) return
+    const attribution = buildProgramAttribution(renderer, scene)
     programs.forEach((p, index) => {
       if (!p || seenPrograms.has(p)) return
       seenPrograms.add(p)
       // `type` is a real runtime field (`WebGLProgram.js`: `this.type = parameters.shaderType`)
       // that `@types/three` doesn't declare for this version — see the
       // `materialType` doc comment on `ProgramCensusFirstUseEvent`.
-      const raw = p as unknown as { id?: number, name?: string, cacheKey?: string, usedTimes?: number, type?: string }
+      const raw = p as unknown as { id?: number, name?: string, cacheKey?: string, usedTimes?: number, type?: string, vertexShader?: WebGLShader, fragmentShader?: WebGLShader }
+      const hashes = readShaderHashes(renderer, raw)
+      const attr = attribution.get(p)
       push({
         kind: 'program-first-use',
         frame,
@@ -261,6 +388,13 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
         stage,
         programCountBefore: before,
         programCountAfter: after,
+        vertexShaderHash: hashes.vertexShaderHash,
+        fragmentShaderHash: hashes.fragmentShaderHash,
+        materialUuid: attr?.materialUuid,
+        materialName: attr?.materialName,
+        materialBucket: attr?.bucket,
+        defines: attr?.defines,
+        flags: attr?.flags,
       })
     })
   }
@@ -392,6 +526,133 @@ export function createProgramCensus(renderer: WebGLRenderer, scene: Scene, enabl
       seenPrograms = new WeakSet<object>()
     },
   }
+}
+
+/** Groups `program-first-use` events by frame and formats one readable
+ *  report for `console.log` at the end of a benchmark run. The frame with
+ *  the most new programs — the "largest transition" (e.g. the `43 → 54`
+ *  first-use hitch from the 2026-09-01 census, `docs/performance/audits/
+ *  2026-09-01--program-census.md`) — gets full per-program detail plus a
+ *  same-materialType diff, since that's the concrete "why did these end up
+ *  as separate cache entries" question the census alone could only gesture
+ *  at. Read-only over `census.dumpProgramFirstUse()`/`summarize()`; does not
+ *  itself touch the renderer or scene. */
+export function formatProgramCensusReport(census: ProgramCensus): string {
+  if (!census.enabled) return '[Seedvale Program Census] disabled'
+  const dump = census.dumpProgramFirstUse()
+  if (dump.length === 0) return '[Seedvale Program Census]\n\nNo new programs were created during this run.'
+
+  const byFrame = new Map<number, ProgramCensusFirstUseEvent[]>()
+  for (const ev of dump) {
+    const list = byFrame.get(ev.frame) ?? []
+    list.push(ev)
+    byFrame.set(ev.frame, list)
+  }
+  const frames = [...byFrame.keys()].sort((a, b) => a - b)
+  let largestFrame = frames[0]!
+  for (const f of frames) {
+    if (byFrame.get(f)!.length > byFrame.get(largestFrame)!.length) largestFrame = f
+  }
+  const largestGroup = byFrame.get(largestFrame)!
+
+  const byFrameLines = frames.map((f) => {
+    const n = byFrame.get(f)!.length
+    return `  frame ${f}   +${n} program${n === 1 ? '' : 's'}${f === largestFrame ? '   <== largest transition' : ''}`
+  })
+
+  const detailLines = largestGroup.map(formatProgramFirstUseLine)
+
+  const byType = new Map<string, ProgramCensusFirstUseEvent[]>()
+  for (const ev of largestGroup) {
+    const key = ev.materialType ?? 'unknown'
+    const list = byType.get(key) ?? []
+    list.push(ev)
+    byType.set(key, list)
+  }
+  const diffLines: string[] = []
+  for (const [type, group] of byType) {
+    diffLines.push(`  ${type} (${group.length} program${group.length === 1 ? '' : 's'}):`)
+    if (group.length < 2) {
+      diffLines.push('    (only one program of this type in this frame — nothing to diff)')
+      continue
+    }
+    const lines = diffProgramGroup(group)
+    diffLines.push(...(lines.length > 0
+      ? lines
+      : ['    (no define/flag/shader-hash differences found — check cacheKey/material inputs directly)']))
+  }
+
+  const summary = census.summarize()
+  return [
+    '[Seedvale Program Census]',
+    '',
+    `Programs created: ${dump.length}`,
+    `Program count: final=${summary.programCountFinal} max=${summary.programCountMax}`,
+    '',
+    'By frame:',
+    ...byFrameLines,
+    '',
+    `Largest transition — frame ${largestFrame} (+${largestGroup.length} programs):`,
+    ...detailLines,
+    '',
+    `Differences within frame ${largestFrame} (grouped by material type):`,
+    ...diffLines,
+  ].join('\n')
+}
+
+function formatProgramFirstUseLine(ev: ProgramCensusFirstUseEvent): string {
+  const head = [
+    `  #${ev.programId}`,
+    `type=${ev.materialType ?? 'unknown'}`,
+    `name='${ev.name}'`,
+    ev.materialBucket ? `bucket=${ev.materialBucket}` : null,
+    `cacheKey=${ev.cacheKey.slice(0, 24)}${ev.cacheKey.length > 24 ? '…' : ''}`,
+    ev.vertexShaderHash ? `vHash=${ev.vertexShaderHash}` : null,
+    ev.fragmentShaderHash ? `fHash=${ev.fragmentShaderHash}` : null,
+    ev.stage ? `stage=${ev.stage}` : null,
+  ].filter((p): p is string => p !== null).join(' ')
+  const lines = [head]
+  if (ev.defines && Object.keys(ev.defines).length > 0) lines.push(`      defines=${JSON.stringify(ev.defines)}`)
+  if (ev.flags) lines.push(`      flags=${JSON.stringify(ev.flags)}`)
+  if (ev.materialUuid) lines.push(`      material=${ev.materialUuid}${ev.materialName ? ` (${ev.materialName})` : ''}`)
+  return lines.join('\n')
+}
+
+/** Pairwise-over-the-whole-group diff of the fields most likely to explain a
+ *  separate `cacheKey`: shader hashes, scene bucket, `defines`, and the
+ *  curated flag set — one line per field that isn't identical across every
+ *  program in `group`. */
+function diffProgramGroup(group: ProgramCensusFirstUseEvent[]): string[] {
+  const lines: string[] = []
+  const ids = (i: number) => `#${group[i]!.programId}`
+
+  const vHashes = group.map((e) => e.vertexShaderHash ?? '(unknown)')
+  if (new Set(vHashes).size > 1) lines.push(`    vertexShaderHash differs: ${vHashes.map((v, i) => `${ids(i)}=${v}`).join(', ')}`)
+
+  const fHashes = group.map((e) => e.fragmentShaderHash ?? '(unknown)')
+  if (new Set(fHashes).size > 1) lines.push(`    fragmentShaderHash differs: ${fHashes.map((v, i) => `${ids(i)}=${v}`).join(', ')}`)
+
+  const buckets = group.map((e) => e.materialBucket ?? '(unknown)')
+  if (new Set(buckets).size > 1) lines.push(`    bucket differs: ${buckets.map((v, i) => `${ids(i)}=${v}`).join(', ')}`)
+
+  const defineKeys = new Set<string>()
+  for (const e of group) if (e.defines) for (const k of Object.keys(e.defines)) defineKeys.add(k)
+  for (const key of [...defineKeys].sort()) {
+    const values = group.map((e) => String(e.defines?.[key] ?? '(unset)'))
+    if (!values.every((v) => v === values[0])) {
+      lines.push(`    define ${key} differs: ${values.map((v, i) => `${ids(i)}=${v}`).join(', ')}`)
+    }
+  }
+
+  const flagKeys = new Set<string>()
+  for (const e of group) if (e.flags) for (const k of Object.keys(e.flags)) flagKeys.add(k)
+  for (const key of [...flagKeys].sort()) {
+    const values = group.map((e) => e.flags?.[key] ?? '(unknown)')
+    if (!values.every((v) => v === values[0])) {
+      lines.push(`    flag ${key} differs: ${values.map((v, i) => `${ids(i)}=${v}`).join(', ')}`)
+    }
+  }
+  return lines
 }
 
 export function withProgramCensusStage(census: ProgramCensus, kind: ProgramCensusStageKind, fn: () => void): void {

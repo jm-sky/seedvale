@@ -16,6 +16,7 @@ export {
 export { createPerfMonitor, withCategory } from './monitor'
 export {
   createProgramCensus,
+  formatProgramCensusReport,
   getProgramCensus,
   setActiveProgramCensus,
   withProgramCensusStage,
@@ -23,6 +24,7 @@ export {
 export type {
   ProgramCensus,
   ProgramCensusEvent,
+  ProgramCensusFirstUseEvent,
   ProgramCensusStageKind,
   ProgramCensusSummary,
 } from './programCensus'

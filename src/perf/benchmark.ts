@@ -7,6 +7,7 @@ import type { PerfMonitor } from './monitor'
 import type { PerfReportJson } from './types'
 import { worldToChunk } from '../terrain/chunkGrid'
 import { runIsolationProbes } from './isolationProbe'
+import { formatProgramCensusReport, getProgramCensus } from './programCensus'
 import { buildReport, formatReport } from './report'
 import { censusScene } from './sceneCensus'
 
@@ -224,6 +225,13 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         })
         console.log(formatReport(report))
         console.log(report)
+        // Plan 149 Phase 0 program-census diagnostic (docs/performance/audits/
+        // 2026-09-01--program-census.md) — the census (`?programCensus=1` or
+        // `?benchmark=stream`, see `src/perf/flags.ts`) accumulates for the
+        // whole app session, not just this call's measured window, matching
+        // how that census's dumps were produced.
+        const programCensus = getProgramCensus()
+        if (programCensus.enabled) console.log(formatProgramCensusReport(programCensus))
         if (typeof window !== 'undefined') {
           window.__seedvalePerfLastReport = report
           const previous = window.__seedvalePerfReports ?? []

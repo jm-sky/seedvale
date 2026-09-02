@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HouseDefinition } from '../../assets/houseDefinitionExample'
+import type { HouseDefinition } from '../../assets/houseDefinitionExampleConfig'
 
 defineProps<{
   houses: readonly HouseDefinition[]

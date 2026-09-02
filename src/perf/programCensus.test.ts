@@ -1,6 +1,6 @@
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Scene, type WebGLRenderer } from 'three'
 import { describe, expect, it } from 'vitest'
-import { createProgramCensus, withProgramCensusStage } from './programCensus'
+import { createProgramCensus, formatProgramCensusReport, withProgramCensusStage } from './programCensus'
 
 function fakeRenderer(programs: unknown[]): WebGLRenderer {
   return { info: { programs } } as unknown as WebGLRenderer
@@ -138,5 +138,70 @@ describe('createProgramCensus enabled', () => {
     expect(summary.chunkAttachEvents).toBe(1)
     expect(summary.stageGrowth).toEqual([{ kind: 'mirror-render', events: 1, totalDelta: 1, maxDurationMs: expect.any(Number) }])
     expect(summary.slowestStages).toHaveLength(2)
+  })
+
+  it('attributes a first-use program to its material (defines/flags/shader hashes) via renderer.properties + gl.getShaderSource', () => {
+    const scene = new Scene()
+    const mesh = namedMesh('chunk')
+    const material = mesh.material as MeshBasicMaterial & { defines?: Record<string, unknown> }
+    material.defines = { USE_FOG: '1' }
+    material.transparent = true
+    scene.add(mesh)
+
+    const program = fakeProgram({ id: 1, cacheKey: 'k', type: 'ShaderMaterial' }) as { vertexShader: unknown, fragmentShader: unknown }
+    program.vertexShader = { tag: 'vs' }
+    program.fragmentShader = { tag: 'fs' }
+    const programs: unknown[] = [program]
+
+    const renderer = {
+      info: { programs },
+      properties: { get: (o: unknown) => (o === material ? { currentProgram: program } : {}) },
+      getContext: () => ({
+        getShaderSource: (shader: unknown) => (shader === program.vertexShader ? 'VS SOURCE' : 'FS SOURCE'),
+      }),
+    } as unknown as WebGLRenderer
+
+    const census = createProgramCensus(renderer, scene, true)
+    census.tickFrame()
+
+    const [event] = census.dumpProgramFirstUse()
+    expect(event).toMatchObject({
+      materialUuid: material.uuid,
+      defines: { USE_FOG: '1' },
+      flags: expect.objectContaining({ transparent: 'true' }),
+      vertexShaderHash: expect.any(String),
+      fragmentShaderHash: expect.any(String),
+    })
+    expect(event!.vertexShaderHash).not.toBe(event!.fragmentShaderHash)
+  })
+})
+
+describe('formatProgramCensusReport', () => {
+  it('flags the frame with the most first-use programs as the largest transition and diffs same-type programs within it', () => {
+    const programs: unknown[] = [
+      fakeProgram({ id: 1, cacheKey: 'a', type: 'MeshStandardMaterial' }),
+    ]
+    const census = createProgramCensus(fakeRenderer(programs), new Scene(), true)
+    census.tickFrame() // frame 1: +1
+
+    programs.push(
+      fakeProgram({ id: 2, cacheKey: 'b', type: 'MeshStandardMaterial' }),
+      fakeProgram({ id: 3, cacheKey: 'c', type: 'MeshStandardMaterial' }),
+    )
+    census.tickFrame() // frame 2: +2 — the largest transition
+
+    const report = formatProgramCensusReport(census)
+    expect(report).toContain('Programs created: 3')
+    expect(report).toContain('frame 1   +1 program')
+    expect(report).toContain('frame 2   +2 programs   <== largest transition')
+    expect(report).toContain('Largest transition — frame 2 (+2 programs):')
+    expect(report).toContain('#2')
+    expect(report).toContain('#3')
+  })
+
+  it('reports disabled/empty census without throwing', () => {
+    expect(formatProgramCensusReport(createProgramCensus(fakeRenderer([]), new Scene(), false))).toBe('[Seedvale Program Census] disabled')
+    expect(formatProgramCensusReport(createProgramCensus(fakeRenderer([]), new Scene(), true)))
+      .toBe('[Seedvale Program Census]\n\nNo new programs were created during this run.')
   })
 })

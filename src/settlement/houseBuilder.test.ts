@@ -1,5 +1,6 @@
 import { BoxGeometry, Group, InstancedMesh, Mesh, MeshStandardMaterial, Object3D, Scene } from 'three'
 import { describe, expect, it, vi } from 'vitest'
+import type { HouseDefinition } from '../assets/houseDefinitionExampleConfig'
 import { buildConstructionCatalog } from '../assets/constructionCatalog'
 import {
   COTTAGE_4X4_A,
@@ -11,12 +12,11 @@ import {
   HOUSE_6X6_B,
   HOUSE_8X6_A,
   HOUSE_8X6_B,
-  HOUSE_MODULE_M,
-  type HouseDefinition,
   pickHouseDefinition,
   TEST_HOUSE_01,
   TEST_HOUSE_02,
 } from '../assets/houseDefinitionExample'
+import { HOUSE_MODULE_M } from '../assets/houseDefinitionExampleConfig'
 import { disposeObject3D } from '../assets/loadGltf'
 import { type Collider, colliderContainsPoint, resolvePosition } from '../world/collision'
 import {
