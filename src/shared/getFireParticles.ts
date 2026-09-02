@@ -1,16 +1,20 @@
 import * as THREE from 'three'
 
+const fireAtlas = new THREE.TextureLoader().load('/images/flame/fire_atlas.png')
+fireAtlas.colorSpace = THREE.SRGBColorSpace
+
 type PoolParticle = {
   position: THREE.Vector3
   velocity: THREE.Vector3
   age: number
   lifetime: number
+  atlasIndex: number
 }
 
 export type ParticlePool = {
   points: THREE.Points
   geometry: THREE.BufferGeometry
-  material: THREE.PointsMaterial
+  material: THREE.ShaderMaterial | THREE.PointsMaterial
   update: (delta: number) => void
 }
 
@@ -49,6 +53,7 @@ function spawnParticle(tuning: PoolTuning, scale: number): PoolParticle {
     ),
     age: 0,
     lifetime: randRange(tuning.lifetime),
+    atlasIndex: Math.random() < 0.5 ? 0 : 1,
   }
 }
 
@@ -78,8 +83,11 @@ function createParticlePool(
   const geometry = new THREE.BufferGeometry()
   const positionAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count * 3), 3)
   const colorAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count * 3), 3)
+  const atlasAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
+
   geometry.setAttribute('position', positionAttribute)
   geometry.setAttribute('color', colorAttribute)
+  geometry.setAttribute('atlasIndex', atlasAttribute)
 
   const material = new THREE.PointsMaterial({
     color: tuning.color,
@@ -112,11 +120,13 @@ function createParticlePool(
       const current = particles[i]!
       const t = THREE.MathUtils.clamp(current.age / current.lifetime, 0, 1)
       const fade = 1 - t * t
+      atlasAttribute.setX(i, current.atlasIndex)
       positionAttribute.setXYZ(i, current.position.x, current.position.y, current.position.z)
       colorAttribute.setXYZ(i, fade, fade, fade)
     }
     positionAttribute.needsUpdate = true
     colorAttribute.needsUpdate = true
+    atlasAttribute.needsUpdate = true
   }
 
   return { points: new THREE.Points(geometry, material), geometry, material, update, particles }
@@ -142,7 +152,7 @@ export function createSparks(scale: number): ParticlePool {
 }
 
 const EMBER_TUNING: PoolTuning = {
-  count: 5,
+  count: 10,
   color: 0xff5522,
   size: 0.045,
   spawnRadius: 0.14,
@@ -162,11 +172,11 @@ export function createEmbers(scale: number): ParticlePool {
 }
 
 const TORCH_SPARK_TUNING: PoolTuning = {
-  count: 4,
+  count: 12,
   color: 0xffb347,
   size: 0.045,
   spawnRadius: 0.09,
-  upSpeed: [0.55, 1.0],
+  upSpeed: [0.45, 0.9],
   lateralSpeed: 0.22,
   gravity: 0.2,
   drag: 0.1,
@@ -183,7 +193,7 @@ export function createTorchSparks(scale: number): ParticlePool {
 }
 
 const IGNITE_BURST_TUNING: PoolTuning = {
-  count: 10,
+  count: 12,
   color: 0xffffff,
   size: 0.06,
   spawnRadius: 0.05,

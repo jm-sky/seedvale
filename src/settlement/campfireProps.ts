@@ -245,6 +245,7 @@ export function createCampfireFlame(
   const meshBaseScale = 1
   let restY = 0
   let riseFromBase = false
+
   if (flameMesh) {
     const glFlame = flameMesh.clone(true)
     muteObjectLights(glFlame)
@@ -290,6 +291,8 @@ export function createCampfireFlame(
 
   let sizeFactor = 1
   let igniteRamp = 1
+  let lightTime = Math.random() * Math.PI * 2
+  let flicker = 1
 
   function applyVisual() {
     const clampedSize = THREE.MathUtils.clamp(sizeFactor, FLAME_MIN_SIZE, FLAME_MAX_SIZE)
@@ -306,7 +309,7 @@ export function createCampfireFlame(
     } else {
       meshVisual.scale.setScalar(Math.max(0.05, eased) * meshBaseScale)
     }
-    light.intensity = baseIntensity * clampedSize * eased
+    light.intensity = baseIntensity * clampedSize * eased * flicker
     light.distance = baseDistance * clampedSize
     sparks.material.opacity = eased
   }
@@ -315,13 +318,17 @@ export function createCampfireFlame(
     sizeFactor = factor
     applyVisual()
   }
+
   function setIntensity(t: number) {
     igniteRamp = THREE.MathUtils.clamp(t, 0, 1)
     applyVisual()
   }
+
   setSize(1)
 
   function update(dt: number) {
+    lightTime += dt * 4
+    flicker = 0.9 + (Math.sin(lightTime) * 0.5 + 0.5) * 0.2
     sparks.update(dt)
     embers.update(dt)
     burst.update(dt)

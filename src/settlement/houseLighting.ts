@@ -242,6 +242,7 @@ export function createVillageTorchLight(
     if (child.material.name !== 'Fire') return
 
     child.castShadow = false
+    child.material.emissiveIntensity = 0.8
     fireMesh = child
     // Unlit by default — `setLit` drives visibility from here on.
     child.visible = false
@@ -276,6 +277,7 @@ export function createVillageTorchLight(
   group.add(light)
 
   let lit = false
+  let lightTime = Math.random() * Math.PI * 2
 
   return {
     object: group,
@@ -289,7 +291,13 @@ export function createVillageTorchLight(
       light.visible = on
     },
     update(dt) {
-      if (lit) flameUpdate(dt)
+      if (!lit) return
+
+      flameUpdate(dt)
+
+      lightTime += dt * 4
+      const flicker = 0.9 + (Math.sin(lightTime) * 0.5 + 0.5) * 0.2
+      light.intensity = 6 * flicker
     },
   }
 }
