@@ -43,6 +43,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `items-player-012-player-gathering-and-fire-cooking-polish.md`      | -       | 🟡 | M      | ~~106~~ ~~122~~ ~~159~~ |
+| ◼️ `items-player-014-rope-pullable-resource-transport.md`              | Rope-pull transport for inventory-overflow items | 🟡 | M | ~~155~~ ~~122~~ |
 | 💡 `persistence-001-full-simulation-persistence.md`                    | -       | 🔴 | L      | -       |
 | 💡 `npc-009-combat-feedback-and-death-consequences.md`                 | -       | 🔴 | L      | ~~177~~ ~~179~~ ~~007~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
