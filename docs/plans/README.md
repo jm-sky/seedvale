@@ -56,6 +56,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
+| ◼️ `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`   | -       | 🔴 | M      | -      |
 
 ---
 
@@ -157,7 +158,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `008`
 - ui-input: `007`
 - world: `010`
-- world-terrain: `004`
+- world-terrain: `005`
 
 This ids section is maintained automatically from the plan files.
 
