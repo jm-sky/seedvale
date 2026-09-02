@@ -104,6 +104,13 @@ export type Interactable =
    *  `SettlementEconomy`, same "presentation, not owner" contract as
    *  `householdStorage`. */
   | { kind: 'settlementStorage', position: { x: number, z: number }, promptLabel: string, economy: SettlementEconomy }
+  /** Physical wood stockpile (plan settlements-npcs-012) — a single physical
+   *  storage destination, distinct from the aggregated `settlementStorage`
+   *  crate. Read-only view over `storageVisuals.ts`'s
+   *  `physicalWoodStockpileQuantity(households, economy)`, the same live
+   *  total the stockpile's own visual renders from — carries stable live
+   *  references, never a cached quantity. */
+  | { kind: 'woodStorage', position: { x: number, z: number }, promptLabel: string, households: readonly Household[], economy: SettlementEconomy }
   /** Player-placed drying rack (plan 159 §8) — `[E]` starts a process when
    *  idle, collects the output when complete, or shows a "still drying"
    *  toast otherwise; single-action like `campfire`/`trap`. */

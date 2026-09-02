@@ -1,5 +1,7 @@
 import * as THREE from 'three'
+import type { SettlementEconomy } from '../economy/settlementEconomy'
 import type { Inventory } from '../items/Inventory'
+import type { Household } from './household'
 import { disposeObject3D } from '../assets/loadGltf'
 import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { createItemMesh, type ItemKind } from '../items/items'
@@ -45,6 +47,20 @@ export const WOOD_PILE_EXTRA_OFFSETS: readonly { dx: number, dz: number }[] = [
   { dx: -2.0, dz: 2.7 },
   { dx: 0.6, dz: 2.9 },
 ]
+
+/** Single physical wood-stockpile quantity (plan settlements-npcs-012) — the
+ *  same live total the wood-pile visual renders from below. Wood is
+ *  physically deposited at the one shared village stockpile by both
+ *  households and the settlement economy (plan settlements-npcs-009), so
+ *  physical-storage inspection must sum both sources too, or the displayed
+ *  number would diverge from what the pile visually represents.
+ *
+ * @domain settlements-npcs
+ * @role Resolves the single authoritative quantity the physical wood stockpile represents, shared by its visual and its inspection.
+ */
+export function physicalWoodStockpileQuantity(households: readonly Household[], economy: SettlementEconomy): number {
+  return households.reduce((sum, h) => sum + h.stock.query('wood'), 0) + economy.query('wood')
+}
 
 export type WoodPileVisualState = {
   visible: boolean

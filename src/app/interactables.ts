@@ -634,6 +634,22 @@ export function buildInteractables(
       })
     }
 
+    // Plan settlements-npcs-012 — the single physical wood stockpile, distinct
+    // from the aggregated `settlementStorage` crate above. Only the primary
+    // `landmarks.stockpile` is targetable: `stockpileSecondary` (LG/XL) and
+    // the extra piles `createWoodPileVisual()` reveals past the top band are
+    // both still representations of this same one physical destination, not
+    // independent storage.
+    if (withinRange(settlement.landmarks.stockpile.x, settlement.landmarks.stockpile.z, playerPos, GAZE_RANGE)) {
+      list.push({
+        kind: 'woodStorage',
+        position: { x: settlement.landmarks.stockpile.x, z: settlement.landmarks.stockpile.z },
+        promptLabel: '[E] Zbadaj stertę drewna',
+        households: settlement.households,
+        economy: settlement.economy,
+      })
+    }
+
     for (const plot of settlement.landmarks.landPlots) {
       if (!withinRange(plot.position.x, plot.position.z, playerPos, GAZE_RANGE)) continue
       if (landOwnership?.isOwned(settlement.id, plot.plotId)) continue

@@ -1,17 +1,27 @@
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
+import { createSettlementEconomy } from '../economy/settlementEconomy'
 import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
+import { createHousehold, type Household } from './household'
 import {
   createFoodStorageVisual,
   createWoodPileVisual,
   FOOD_STORAGE_MAX_SLOTS,
+  physicalWoodStockpileQuantity,
   selectFoodStorageSlots,
   WOOD_PILE_MAX_EXTRA,
   woodPileVisualState,
 } from './storageVisuals'
 
 const sampleHeight = () => 0
+
+function householdWithWood(id: string, wood: number): Household {
+  const household = createHousehold(id, 's', `${id}:home`)
+  household.stock.remove('wood', household.stock.query('wood'))
+  household.stock.add('wood', wood)
+  return household
+}
 
 describe('woodPileVisualState', () => {
   it('produces no pile at zero', () => {
@@ -82,6 +92,42 @@ describe('selectFoodStorageSlots', () => {
     const a = new Inventory({ carrot: 2, fish: 1 })
     const b = new Inventory({ carrot: 2, fish: 1 })
     expect(selectFoodStorageSlots(a)).toEqual(selectFoodStorageSlots(b))
+  })
+})
+
+describe('physicalWoodStockpileQuantity', () => {
+  it('is zero with no wood anywhere', () => {
+    const economy = createSettlementEconomy('s', { wood: 0 }, [])
+    expect(physicalWoodStockpileQuantity([], economy)).toBe(0)
+  })
+
+  it('sums a small quantity from a single household', () => {
+    const economy = createSettlementEconomy('s', { wood: 0 }, [])
+    const household = householdWithWood('h1', 2)
+    expect(physicalWoodStockpileQuantity([household], economy)).toBe(2)
+  })
+
+  it('aggregates both household and settlement-economy wood', () => {
+    const economy = createSettlementEconomy('s', { wood: 30 }, [])
+    const households = [householdWithWood('h1', 10), householdWithWood('h2', 5)]
+    expect(physicalWoodStockpileQuantity(households, economy)).toBe(45)
+  })
+
+  it('reflects the current authoritative quantity after it changes', () => {
+    const economy = createSettlementEconomy('s', { wood: 5 }, [])
+    const household = householdWithWood('h1', 1)
+    expect(physicalWoodStockpileQuantity([household], economy)).toBe(6)
+    economy.add('wood', 10)
+    household.stock.add('wood', 4)
+    expect(physicalWoodStockpileQuantity([household], economy)).toBe(20)
+  })
+
+  it('never mutates household or economy state — read-only', () => {
+    const economy = createSettlementEconomy('s', { wood: 5 }, [])
+    const household = householdWithWood('h1', 3)
+    physicalWoodStockpileQuantity([household], economy)
+    expect(household.stock.query('wood')).toBe(3)
+    expect(economy.query('wood')).toBe(5)
   })
 })
 

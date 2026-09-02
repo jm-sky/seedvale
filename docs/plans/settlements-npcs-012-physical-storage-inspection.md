@@ -1,7 +1,7 @@
 # Plan: Physical Storage Inspection
 
 **Created:** 2026-08-31
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~settlements-npcs-009~~ ~~settlements-npcs-010~~
 **Domain:** `settlements-npcs`

@@ -69,6 +69,7 @@ import {
 } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
 import { settlementPropColliders } from './settlementPropColliders'
+import { physicalWoodStockpileQuantity } from './storageVisuals'
 import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {
   buildWellInteractionQueueConfig,
@@ -811,8 +812,7 @@ export async function createSettlement(
       // physically deposited at the same `landmarks.stockpile` destination
       // (plan settlements-npcs-009). Food is per-storage-location, so each
       // household's crate reflects only that household's own `items`.
-      const totalWood = households.reduce((sum, h) => sum + h.stock.query('wood'), 0) + economy.query('wood')
-      storageVisual.wood.sync(totalWood)
+      storageVisual.wood.sync(physicalWoodStockpileQuantity(households, economy))
       storageVisual.settlementFood.sync(economy.items)
       if (storageVisual.householdFood.length > 0) {
         for (let i = 0; i < householdStorages.length; i++) {
