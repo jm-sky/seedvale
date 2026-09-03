@@ -5,6 +5,7 @@
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `world`
+**Roadmap:** `player-construction`  
 
 ## Cel
 
