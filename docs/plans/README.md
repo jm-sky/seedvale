@@ -57,7 +57,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| ◼️ `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
+| 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
 
 ---
 
