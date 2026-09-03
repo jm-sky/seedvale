@@ -35,8 +35,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-| 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
-| 💡 `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | 💡 `npc-015-work-contracts-npc-work-and-construction.md`               | -       | 🟡 | L      | npc-014 |
 | 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`        | -       | 🟡 | M      | npc-015 |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                          | -       | 🟡 | M      | ~~npc-015~~ |
@@ -49,11 +47,12 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | ◼️ `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `npc-002-npc-healing.md`                                            | -       | 🟡 | M      | ~~177~~ |
+| 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
+| 💡 `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | -       | 🟡 | M      | ~~127~~ |
 | 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
 | 💡 `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
 | 💡 `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
-| 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
 | 💡 `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
 | 💡 `world-terrain-007-underground-caves.md`                            | -       | 🟡 | L      | ~~097~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
@@ -71,6 +70,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | File | Check |
 |------|-------|
+| `world-011-water-types-and-drinking.md` | Drink at a river bank restores thirst with no illness warning; drink/fill at an ocean shoreline is refused with the salty-water message and doesn't touch Inventory; lake keeps the existing unsafe-warning drink; well drink/fill unaffected; fishing prompt/action at river and ocean shorelines unaffected |
 | `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | Skim the regenerated `docs/plans/README.md`/`PLANNING.md`/`PLAN-METADATA.md` sections for sense; spot-check `pnpm plans:migrate-metadata` and `pnpm plans:cleanup-metadata` dry-run output is sane on the real plan set (no proposed changes expected — migration already applied) |
 | `world-008-player-world-placement-foundation.md` | Place/cancel a tent and a chest, preview validity matches actual placement result, open/carry/pick-up/put-down a chest, save/load restores both |
 | `items-player-003-player-physical-effort-stamina-vigor.md` | idle/sprint/work Stamina behaviour, work/sprint/heavy-work Vigor drain, well/terrain-prep sessions leave Stamina reduced but not 0 with Vigor visibly lower, post-work recovery pacing, wolf-after-work combat with reduced capacity, sleep still restoring Vigor, fishing/light interactions staying uncosted |
