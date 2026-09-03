@@ -60,7 +60,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
 | 💡 `world-012-world-locations-discovery-and-map-navigation.md`         | -       | 🟡 | M      | -      |
-| ◼️ `fauna-009-wolf-howling-and-rooster-vocalization.md`                | -       | 🟡 | M      | -      |
+| 💡 `fauna-009-wolf-howling-and-rooster-vocalization.md`                | -       | 🟡 | M      | -      |
 
 ---
 
