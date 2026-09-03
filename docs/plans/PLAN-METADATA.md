@@ -60,7 +60,7 @@ Optional metadata:
 | `Domain` | yes | canonical domain list | Primary ownership/navigation | `plans-sync.ts`; filename convention; planning docs |
 | `Subdomains` | no | recommended per-domain values; extensible | More precise navigation/preflight hints | Planning/preflight context |
 | `Tags` | no | recommended global values; extensible | Cross-cutting classification/navigation | Planning/preflight context |
-| `Roadmap` | no | filename in `docs/roadmap/` | Links plan to roadmap item | Documentation/preflight context |
+| `Roadmap` | no | roadmap filename in `docs/roadmap/` | Strategic direction and grouping | Documentation/preflight context |
 | `Implemented at` | no | `YYYY-MM-DD HH:mm` | Explicit implementation completion timestamp | Not yet consumed |
 
 ### Classification model
@@ -70,9 +70,10 @@ Type        = what kind of work is this?
 Domain      = where does it primarily belong?
 Subdomains  = which more specific areas does it concern?
 Tags        = which cross-cutting concepts apply?
+Roadmap     = which higher-level development direction does it support?
 ```
 
-Do not use Tags as a replacement for Type or Domain.
+Do not use Tags as a replacement for Type, Domain, or Roadmap.
 
 Do not turn derived concepts such as readiness, unlock potential, or quick-win status into manually maintained metadata.
 
@@ -229,7 +230,7 @@ This is currently the strongest structural input to recommendation scoring.
 - `world`
 - `world-terrain`
 
-Domain is the primary ownership classification.
+Domain is the primary ownership classification and a canonical grouping/filtering dimension.
 
 New plans use:
 
@@ -313,6 +314,7 @@ Avoid tags that merely duplicate:
 - Status
 - Priority
 - Effort
+- Roadmap
 
 ---
 
@@ -324,15 +326,28 @@ Example:
 **Roadmap:** `npc-ai.md`
 ```
 
+Roadmap is **optional**.
+
 The value points to a file in `docs/roadmap/`.
 
-Purpose:
+### Semantics
 
-- connect implementation planning to higher-level roadmap intent;
-- provide context to AI agents;
-- avoid copying roadmap text into individual plans.
+Roadmap identifies the higher-level development direction or initiative to which the plan contributes.
 
-It is not another priority system.
+It is also a useful **grouping/filtering dimension**:
+
+- one Roadmap can contain plans from multiple Domains;
+- one Domain can contain plans belonging to multiple Roadmaps;
+- a plan should normally reference at most one Roadmap.
+
+This creates two independent grouping axes:
+
+```
+Domain  = architectural/system area
+Roadmap = strategic development direction
+```
+
+Roadmap is not another priority system.
 
 ---
 
@@ -503,8 +518,9 @@ Do not add manual fields for concepts that can be calculated:
 4. `research` is intentionally not a Type.
 5. `Subdomains` should have recommended values per Domain, but remain extensible.
 6. `Tags` should have a global recommended vocabulary, but remain extensible.
-7. `Implemented at` should be an optional explicit timestamp.
-8. Recommendation categories should be derived from metadata and dependency graph rather than stored as fields.
+7. `Roadmap` is optional and should be treated as a strategic grouping/filtering dimension.
+8. `Implemented at` should be an optional explicit timestamp.
+9. Recommendation categories should be derived from metadata and dependency graph rather than stored as fields.
 
 A future `plans-recommended-order.ts` can expose profiles such as:
 
@@ -515,6 +531,8 @@ A future `plans-recommended-order.ts` can expose profiles such as:
 - Performance
 - Polish
 - Foundation / Unlockers
+- Per Domain
+- Per Roadmap
 
 ---
 
