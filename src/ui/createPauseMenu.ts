@@ -1,4 +1,4 @@
-import type { LightActionResult } from '../app/userActions'
+import type { ActionResult } from '../app/actions/actionContracts'
 import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
 import { getMountedVueUi } from '../ui-vue/mount'
 
@@ -13,11 +13,11 @@ export type PauseMenuHandlers = {
   onLoadSave?: (id: string) => void
   onListSaves?: () => Promise<SaveSlotInfo[]>
   onRefresh?: () => void
-  onBuildSimpleFire?: () => LightActionResult
-  onBuildFirePit?: () => boolean
-  onBuildGrate?: () => boolean
-  onLightBranch?: () => LightActionResult
-  onLightWoodenTorch?: () => LightActionResult
+  onBuildSimpleFire?: () => ActionResult
+  onBuildFirePit?: () => ActionResult
+  onBuildGrate?: () => ActionResult
+  onLightBranch?: () => ActionResult
+  onLightWoodenTorch?: () => ActionResult
   onNewGame?: (name: string) => void
   onQuestLog?: () => void
   onVillagers?: () => void

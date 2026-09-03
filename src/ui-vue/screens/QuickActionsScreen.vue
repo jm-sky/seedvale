@@ -6,13 +6,12 @@ import type { PlacementPreviewKind } from '../../app/actions/placementPreviewAct
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TrapKind } from '../../world/animalTraps'
 import type { CropId } from '../../world/cropLifecycle'
-import { FIRE_PIT_STONE_COST, SIMPLE_FIRE_BRANCH_COST } from '../../app/userActions'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import QuickActionsButton from '../components/QuickActionsButton.vue'
 import SkillsHudButton from '../components/SkillsHudButton.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { visibleFireActions } from '../playerQuickActions'
+import { FIRE_COST_ITEMS, formatCostItems, visibleFireActions } from '../playerQuickActions'
 import {
   backToQuickActionsCategories,
   closeQuickActions,
@@ -187,11 +186,11 @@ const buildActions = computed<Action[]>(() => {
   if (ui.quickActions.hasTent) {
     list.push({ label: 'Rozstaw namiot', cost: '1× namiot', onClick: () => startPlacementPreview('tent') })
   }
-  if (ui.quickActions.fireAvailability.buildSimpleFire) {
-    list.push({ label: 'Zbuduj ognisko', cost: `${SIMPLE_FIRE_BRANCH_COST}× gałąź`, onClick: () => startPlacementPreview('fireSimple') })
+  if (ui.quickActions.fireAvailability.buildSimpleFire.available) {
+    list.push({ label: 'Zbuduj ognisko', cost: formatCostItems(FIRE_COST_ITEMS.buildSimpleFire), onClick: () => startPlacementPreview('fireSimple') })
   }
-  if (ui.quickActions.fireAvailability.buildFirePit) {
-    list.push({ label: 'Zbuduj palenisko', cost: `${FIRE_PIT_STONE_COST}× kamień`, onClick: () => startPlacementPreview('firePit') })
+  if (ui.quickActions.fireAvailability.buildFirePit.available) {
+    list.push({ label: 'Zbuduj palenisko', cost: formatCostItems(FIRE_COST_ITEMS.buildFirePit), onClick: () => startPlacementPreview('firePit') })
   }
   if (ui.quickActions.hasWoodenTorch) {
     list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch') })
@@ -361,6 +360,7 @@ const categories = computed(() => (
           :key="action.id"
           :label="action.label"
           :cost="action.cost"
+          :disabled="!action.available"
           @click="runFireAction(action.run)"
         />
       </QuickActionsGroup>

@@ -30,6 +30,7 @@ function runAction(run: () => { ok: boolean; toast: string; kind: 'info' | 'erro
       v-for="action in actions"
       :key="action.id"
       class="mb-2 w-full"
+      :disabled="!action.available"
       @click="runAction(action.run)"
     >
       {{ action.label }} ({{ action.cost }})

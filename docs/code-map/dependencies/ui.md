@@ -126,7 +126,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `app/userActions.ts`
+- `app/actions/actionContracts.ts`
 - `persistence/saveDb.ts`
 - `ui-vue/mount.ts`
 
@@ -153,8 +153,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `app/actions/actionContracts.ts`
 - `app/actions/placementPreviewActions.ts`
-- `app/userActions.ts`
 - `ui-vue/mount.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`

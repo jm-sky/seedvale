@@ -1,7 +1,7 @@
 # Plan: Player Action Contracts & Quick Actions Availability
 
 **Created:** 2026-09-03
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** refactor
 **Priority:** medium · **Effort:** M
 **Depends on:** -

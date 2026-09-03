@@ -1,4 +1,4 @@
-import type { LightActionResult } from '../userActions'
+import type { ActionResult } from './actionContracts'
 import type { ContainerActions } from './containerActions'
 import type { PlacementActions, PlacementPreviewResult } from './placementActions'
 import type { WorkContractActions } from './workContractActions'
@@ -56,8 +56,8 @@ export type PlacementPreviewActionDeps = {
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
   workContract: Pick<WorkContractActions, 'previewContractPlacement' | 'confirmContractPlacementAtAim'>
   previewFire: () => PlacementPreviewResult
-  buildSimpleFire: () => LightActionResult
-  buildFirePit: () => boolean
+  buildSimpleFire: () => ActionResult
+  buildFirePit: () => ActionResult
   showPreview: (view: PlacementPreviewUiView) => void
   hidePreview: () => void
   /** Mutual exclusion with `Przygotuj teren`'s own preview mode (plan §9) —

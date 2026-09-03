@@ -1,7 +1,7 @@
 import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
+import type { ActionAvailability, ActionResult } from '../app/actions/actionContracts'
 import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
-import type { LightActionResult } from '../app/userActions'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
@@ -83,8 +83,8 @@ type PauseMenuState = {
   onSave: (() => void) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
   onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
   onRefresh: (() => void) | null
-  onBuildSimpleFire: (() => LightActionResult) | null; onBuildFirePit: (() => boolean) | null; onBuildGrate: (() => boolean) | null
-  onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
+  onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
+  onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
   onNewGame: ((name: string) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string
 }
@@ -105,21 +105,18 @@ type FlavorDialogState = {
    *  empty for the plain flavor-text case, which renders exactly as before. */
   actions: readonly InteractionPanelAction[]
 }
-/** Whether each fire action's resource/state guard currently passes (review
- *  007 C4) — kept live by `createApp.ts`'s `syncQuickActionAvailability`, not
- *  recomputed here (Quick Actions / Pause→Akcje are presentation only). */
-export type QuickActionsFireAvailability = {
-  buildSimpleFire: boolean
-  buildFirePit: boolean
-  /** Plan 175 — a qualifying player-built fire is within `GRATE_BUILD_RANGE`
-   *  and the player carries the full `GRATE_COST`. Position-dependent (unlike
-   *  the other three flags here), so it's only trustworthy re-resolved at
-   *  popup-open time — see `createApp.ts`'s `onOpen`, same convention as
-   *  `nearTown` below. */
-  buildGrate: boolean
-  lightBranch: boolean
-  lightWoodenTorch: boolean
-}
+export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire' | 'buildGrate'
+
+/** Each fire action's structural `ActionAvailability` (plan `ui-input-007`)
+ *  — kept live by `createApp.ts`'s `syncQuickActionAvailability`, derived
+ *  from `userActions.ts`'s `availableX()` functions (the same checks
+ *  `execute()` re-runs), not recomputed here (Quick Actions / Pause→Akcje
+ *  are presentation only). */
+export type QuickActionsFireAvailability = Record<FireActionId, ActionAvailability>
+
+/** Pre-first-sync placeholder — unavailable with nothing missing to report,
+ *  since a real check hasn't run yet. */
+const NOT_YET_AVAILABLE: ActionAvailability = { available: false, missing: [] }
 /** Quick Actions top-level category (plan `ui-input-004` §3) — a presentation
  *  grouping over the same existing actions/availability below, not a second
  *  action registry. `null` at the panel root; selecting a category drills
@@ -148,9 +145,16 @@ type QuickActionsState = {
   hasDiggingTool: boolean
   nearTown: boolean
   fireAvailability: QuickActionsFireAvailability
-  onBuildGrate: (() => boolean) | null
-  onLightBranch: (() => LightActionResult) | null
-  onLightWoodenTorch: (() => LightActionResult) | null
+  /** "Zbuduj ognisko" instant entry (Ogień category) — the same `buildSimpleFire`
+   *  action as "Budowa"'s placement-preview entry, just a second entry point
+   *  (plan items-player-012). `onBuildFirePit` is wired for the same
+   *  `FireActionHandlers` contract even though its catalog row is filtered
+   *  out of the Ogień category here (it's Budowa-only). */
+  onBuildSimpleFire: (() => ActionResult) | null
+  onBuildFirePit: (() => ActionResult) | null
+  onBuildGrate: (() => ActionResult) | null
+  onLightBranch: (() => ActionResult) | null
+  onLightWoodenTorch: (() => ActionResult) | null
   onWait: ((hours: number) => void) | null
   onRest: ((variant: RestVariant) => RestOutcome) | null
   onDig: (() => void) | null
@@ -445,8 +449,14 @@ export const ui = reactive({
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
     hasPalisadeMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
     traps: { simple: false, good: false },
-    fireAvailability: { buildSimpleFire: false, buildFirePit: false, buildGrate: false, lightBranch: false, lightWoodenTorch: false },
-    onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
+    fireAvailability: {
+      buildSimpleFire: NOT_YET_AVAILABLE,
+      buildFirePit: NOT_YET_AVAILABLE,
+      buildGrate: NOT_YET_AVAILABLE,
+      lightBranch: NOT_YET_AVAILABLE,
+      lightWoodenTorch: NOT_YET_AVAILABLE,
+    },
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null,
     onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onStartPlacementPreview: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,

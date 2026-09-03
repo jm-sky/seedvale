@@ -7,6 +7,7 @@ const props = defineProps<{
   cost?: string
   icon?: Component
   class?: HTMLAttributes['class']
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -17,8 +18,9 @@ const emit = defineEmits<{
 <template>
   <button
     type="button"
+    :disabled="disabled"
     :class="cn(
-      'inline-flex w-auto min-w-fit max-w-50 flex-1 cursor-pointer items-center justify-between flex-wrap gap-2 rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/50 hover:border-white/50 hover:backdrop-blur-md',
+      'inline-flex w-auto min-w-fit max-w-50 flex-1 cursor-pointer items-center justify-between flex-wrap gap-2 rounded-lg border border-white/20 bg-panel px-3.5 py-2.5 text-left text-sm text-ink shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:bg-panel/50 hover:border-white/50 hover:backdrop-blur-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-panel disabled:hover:border-white/20 disabled:hover:backdrop-blur-none',
       props.class)"
     @click="emit('click')"
   >

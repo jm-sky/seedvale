@@ -39,6 +39,24 @@ Generated from TypeScript imports.
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`
 
+## `app/actions/actionContracts.ts`
+
+**Imports**
+
+- `items/itemCatalog.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/placementPreviewActions.ts`
+- `app/actions/survivalActions.ts`
+- `app/userActions.ts`
+- `ui-vue/playerQuickActions.test.ts`
+- `ui-vue/playerQuickActions.ts`
+- `ui-vue/store.ts`
+- `ui/createPauseMenu.ts`
+- `ui/createQuickActions.ts`
+
 ## `app/actions/containerActions.ts`
 
 **Imports**
@@ -185,10 +203,10 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `app/actions/actionContracts.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/workContractActions.ts`
-- `app/userActions.ts`
 - `world/placementPreview.ts`
 
 **Imported by**
@@ -226,6 +244,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `app/actions/actionContracts.ts`
 - `audio/actionSounds.ts`
 - `audio/animalSounds.ts`
 - `audio/inventorySounds.ts`
@@ -771,10 +790,21 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/userActions.test.ts`
+
+**Imports**
+
+- `app/userActions.ts`
+- `app/worldBundle.ts`
+- `items/HeldTool.ts`
+- `items/Inventory.ts`
+- `settlement/PlacedFires.ts`
+
 ## `app/userActions.ts`
 
 **Imports**
 
+- `app/actions/actionContracts.ts`
 - `app/actions/placementActions.ts`
 - `app/worldBundle.ts`
 - `input/MouseLook.ts`
@@ -783,16 +813,14 @@ Generated from TypeScript imports.
 - `items/tentPlacement.ts`
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
+- `settlement/PlacedFires.ts`
 - `ui/createHud.ts`
 
 **Imported by**
 
-- `app/actions/placementPreviewActions.ts`
 - `app/createApp.ts`
+- `app/userActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
-- `ui-vue/store.ts`
-- `ui/createPauseMenu.ts`
-- `ui/createQuickActions.ts`
 
 ## `app/worldBundle.ts`
 
@@ -868,6 +896,7 @@ Generated from TypeScript imports.
 - `app/graphicsSettings.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
+- `app/userActions.test.ts`
 - `app/userActions.ts`
 - `debug/faunaInspector.ts`
 - `debug/npcDebugApi.test.ts`

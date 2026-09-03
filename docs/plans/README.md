@@ -29,7 +29,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | -       | 🟡 | M      | -      |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | 💡 `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -97,6 +96,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-005-distance-based-terrain-detail-lod.md` | Grass: baseline vs `grassFillerCoverage` (0/0.35/0.6/1) near camera and along a distant road, watching triangle/instance count and draw calls; Road: baseline (`surfaceDetailEnabled` off) vs on at a few `rutDepth`/`microBumpStrength` values close-up on a road segment, confirm no chunk-boundary seams and paths stay flatter than roads; combined on/off matrix per plan §7 |
 | `persistence-001-full-simulation-persistence.md` | Adjust an NPC's needs/HP, give it a helper assignment/active plan, change household stock/items, nudge an NPC↔NPC relationship, move/injure/kill house livestock (some mid-production, one already removed via corpse lifecycle) — Save → Load and confirm every value round-trips, no duplicate/resurrected livestock, and old pre-persistence-001 saves still load with fresh deterministic NPC/household/livestock state |
 | `persistence-003-save-schema-versioning-and-migrations.md` | Continue/New Game/manual Save+Load still round-trip an ordinary v1 save exactly as before (no version-related regression); the migration pipeline itself (version detection, chain-walking, invalid/migration-failed/unsupported-version distinction, write-guard refusal) has full automated coverage since no real v2 schema exists yet to exercise manually |
+| `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | Open Quick Actions → Ogień with a fresh inventory: all 5 fire actions are visible but disabled/50% opacity; carry firestarter+branches and confirm those rows become enabled and move above the still-disabled ones, and building/lighting actually works; Pause → Akcje shows the same list/states; a disabled row can't be clicked; reopening after an inventory change updates availability |
 
 ---
 

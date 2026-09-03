@@ -546,11 +546,11 @@ export async function createApp(
       good: inventory.countInstances(TRAP_DEFS.good.itemKind) > 0,
     })
     vueUi.setQuickActionsFireAvailability({
-      buildSimpleFire: canBuildSimpleFire(),
-      buildFirePit: canBuildFirePit(),
-      buildGrate: canBuildGrate(),
-      lightBranch: canLightBranch(),
-      lightWoodenTorch: canLightWoodenTorch(),
+      buildSimpleFire: availableSimpleFire(),
+      buildFirePit: availableFirePit(),
+      buildGrate: availableGrate(),
+      lightBranch: availableLightBranch(),
+      lightWoodenTorch: availableLightWoodenTorch(),
     })
     vueUi.setQuickActionsHasCarriedContainer(bundle.placedContainers.hasCarried())
     vueUi.setQuickActionsHasTreeSeed(inventory.has('tree_seed', 1))
@@ -1190,7 +1190,7 @@ export async function createApp(
 
   const {
     previewFirePlacement, buildSimpleFire, buildFirePit, buildGrate, lightBranch, lightWoodenTorch,
-    canBuildSimpleFire, canBuildFirePit, canBuildGrate, canLightBranch, canLightWoodenTorch,
+    availableSimpleFire, availableFirePit, availableGrate, availableLightBranch, availableLightWoodenTorch,
   } = getUserActions(
     inventory,
     bundle,
@@ -1256,6 +1256,8 @@ export async function createApp(
       restorePointerLockAfterQuickActions = false
       requestGamePointerLock(renderer.domElement)
     },
+    onBuildSimpleFire: buildSimpleFire,
+    onBuildFirePit: buildFirePit,
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,

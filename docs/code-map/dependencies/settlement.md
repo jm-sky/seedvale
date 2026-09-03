@@ -23,6 +23,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/interactables.ts`
+- `app/userActions.test.ts`
+- `app/userActions.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
 - `settlement/PlacedFires.test.ts`

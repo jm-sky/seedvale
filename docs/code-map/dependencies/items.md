@@ -28,6 +28,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
+- `app/userActions.test.ts`
 - `app/userActions.ts`
 - `fauna/faunaCombat.ts`
 - `items/HeldTool.test.ts`
@@ -83,6 +84,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
+- `app/userActions.test.ts`
 - `app/userActions.ts`
 - `economy/production.test.ts`
 - `economy/production.ts`
@@ -418,6 +420,7 @@ Generated from TypeScript imports.
 - `ai/npcAssistance.ts`
 - `ai/npcCombat.test.ts`
 - `ai/npcCombat.ts`
+- `app/actions/actionContracts.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
@@ -524,6 +527,7 @@ Generated from TypeScript imports.
 - `ai/npcCombat.ts`
 - `ai/npcLoadout.ts`
 - `app/actions/actionContext.ts`
+- `app/actions/actionContracts.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
@@ -586,6 +590,7 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/gripEdit.ts`
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`
+- `ui-vue/playerQuickActions.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
 - `world/animalTraps.ts`

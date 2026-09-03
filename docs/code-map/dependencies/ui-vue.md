@@ -96,13 +96,27 @@ Generated from TypeScript imports.
 - `ui/createTimeSkipOverlay.ts`
 - `ui/createToast.ts`
 
+## `ui-vue/playerQuickActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContracts.ts`
+- `ui-vue/playerQuickActions.ts`
+- `ui-vue/store.ts`
+
 ## `ui-vue/playerQuickActions.ts`
 
 **Imports**
 
+- `app/actions/actionContracts.ts`
 - `app/userActions.ts`
 - `items/itemCatalog.ts`
+- `items/items.ts`
 - `ui-vue/store.ts`
+
+**Imported by**
+
+- `ui-vue/playerQuickActions.test.ts`
 
 ## `ui-vue/store.ts`
 
@@ -110,8 +124,8 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcVoiceLines.ts`
+- `app/actions/actionContracts.ts`
 - `app/actions/placementPreviewActions.ts`
-- `app/userActions.ts`
 - `audio/audioSettings.ts`
 - `audio/createWorldAudio.ts`
 - `audio/uiSounds.ts`
@@ -139,5 +153,6 @@ Generated from TypeScript imports.
 - `app/dialogueTimeControl.ts`
 - `ui-vue/composables/useOverlayScreen.ts`
 - `ui-vue/mount.ts`
+- `ui-vue/playerQuickActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui/createHud.ts`

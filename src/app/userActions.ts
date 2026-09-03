@@ -3,10 +3,13 @@ import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
+import type { PlacedFireEntry } from '../settlement/PlacedFires'
 import type { Hud } from '../ui/createHud'
+import type { ActionAvailability, ActionRequirement, ActionResult } from './actions/actionContracts'
 import type { PlacementBlocker, PlacementPreviewResult } from './actions/placementActions'
 import type { WorldBundle } from './worldBundle'
 import { evaluateGroundPlacement } from '../items/tentPlacement'
+import { capabilityRequirement, itemRequirement, targetRequirement, toAvailability, toResult } from './actions/actionContracts'
 
 
 /** Resource costs for the fire-building/lighting quick actions
@@ -39,8 +42,6 @@ export const GRATE_COST = { branch: 2, stone: 2, iron_rod: 2 } as const
  *  (`app/interactables.ts`), since this is the same "standing at the fire"
  *  gesture, just resolved as a nearest-in-range query instead of gaze/E. */
 export const GRATE_BUILD_RANGE = 2.5
-
-export type LightActionResult = 'ok' | 'already-lit' | 'missing' | 'missing-capability' | 'need-hold' | 'wrong-placement' | 'unknown-error'
 
 const getUserActions = (
   inventory: Inventory,
@@ -100,103 +101,127 @@ const getUserActions = (
     }
   }
 
-  const buildSimpleFire = (): LightActionResult => {
-    if (!inventory.hasCapability('fire_starting')) return 'missing-capability'
-    if (!inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return 'missing'
+  const simpleFireRequirements = (aim: { x: number, z: number }): (ActionRequirement | null)[] => [
+    capabilityRequirement(inventory.hasCapability('fire_starting'), 'fire_starting'),
+    itemRequirement(inventory.count('branch'), SIMPLE_FIRE_BRANCH_COST, 'branch'),
+    targetRequirement(evaluateFirePlacement(aim.x, aim.z), 'firePlacement'),
+  ]
 
+  const availableSimpleFire = (): ActionAvailability => toAvailability(simpleFireRequirements(fireAimPoint()))
+
+  const buildSimpleFire = (): ActionResult => {
     const aim = fireAimPoint()
-
-    if (!evaluateFirePlacement(aim.x, aim.z)) return 'wrong-placement'
+    const result = toResult(simpleFireRequirements(aim))
+    if (!result.ok) return result
 
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
     bundle.placedFires.place(aim.x, aim.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
 
-    return 'ok'
+    return { ok: true }
   }
 
-  const buildFirePit = (): boolean => {
-    if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
+  // `buildFirePit` intentionally has no `fire_starting` capability
+  // requirement — a cold fire pit is lit later via the existing `[E]`
+  // campfire interaction, which is where that gate belongs (see the module
+  // doc comment above).
+  const firePitRequirements = (aim: { x: number, z: number }): (ActionRequirement | null)[] => [
+    itemRequirement(inventory.count('stone'), FIRE_PIT_STONE_COST, 'stone'),
+    targetRequirement(evaluateFirePlacement(aim.x, aim.z), 'firePlacement'),
+  ]
+
+  const availableFirePit = (): ActionAvailability => toAvailability(firePitRequirements(fireAimPoint()))
+
+  const buildFirePit = (): ActionResult => {
     const aim = fireAimPoint()
-    if (!evaluateFirePlacement(aim.x, aim.z)) return false
+    const result = toResult(firePitRequirements(aim))
+    if (!result.ok) return result
+
     inventory.remove('stone', FIRE_PIT_STONE_COST)
     bundle.placedFires.place(aim.x, aim.z, 'pit')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    return true
+    return { ok: true }
   }
 
-  /** Grate upgrade for the nearest qualifying player-built fire (plan 175 §3)
-   *  — re-resolves the target fresh (not a captured id) so a stale quick-
-   *  actions popup can never build against a fire that has since despawned,
-   *  moved out of range, or already been upgraded by an earlier press.
-   *  Materials are only spent once `PlacedFires.buildGrate` actually flips
+  /** Nearest qualifying player-built fire (plan 175 §3) — resolved fresh on
+   *  every call (never cached across an availability check and a later
+   *  `buildGrate()`) so a stale quick-actions popup can never build against a
+   *  fire that has since despawned, moved out of range, or already been
+   *  upgraded by an earlier press. */
+  const resolveGrateTarget = (): PlacedFireEntry | null =>
+    bundle.placedFires.nearestBuildable(player.mesh.position.x, player.mesh.position.z, GRATE_BUILD_RANGE)
+
+  const grateRequirements = (target: PlacedFireEntry | null): (ActionRequirement | null)[] => [
+    targetRequirement(target !== null, 'grateTarget'),
+    itemRequirement(inventory.count('branch'), GRATE_COST.branch, 'branch'),
+    itemRequirement(inventory.count('stone'), GRATE_COST.stone, 'stone'),
+    itemRequirement(inventory.count('iron_rod'), GRATE_COST.iron_rod, 'iron_rod'),
+  ]
+
+  const availableGrate = (): ActionAvailability => toAvailability(grateRequirements(resolveGrateTarget()))
+
+  /** Materials are only spent once `PlacedFires.buildGrate` actually flips
    *  the flag (it refuses a fire that already has one), so this can't be
    *  used to pay twice for the same fire. */
-  const buildGrate = (): boolean => {
-    const target = bundle.placedFires.nearestBuildable(
-      player.mesh.position.x,
-      player.mesh.position.z,
-      GRATE_BUILD_RANGE,
-    )
-    if (!target) return false
-    if (!inventory.has('branch', GRATE_COST.branch) ||
-      !inventory.has('stone', GRATE_COST.stone) ||
-      !inventory.has('iron_rod', GRATE_COST.iron_rod)) return false
-    if (!bundle.placedFires.buildGrate(target.id)) return false
+  const buildGrate = (): ActionResult => {
+    const target = resolveGrateTarget()
+    const result = toResult(grateRequirements(target))
+    if (!result.ok) return result
+    if (!bundle.placedFires.buildGrate(target!.id)) return toResult([targetRequirement(false, 'grateTarget')])
+
     inventory.remove('branch', GRATE_COST.branch)
     inventory.remove('stone', GRATE_COST.stone)
     inventory.remove('iron_rod', GRATE_COST.iron_rod)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    return true
+    return { ok: true }
   }
 
+  const lightBranchRequirements = (): (ActionRequirement | null)[] => [
+    targetRequirement(!playerTorch.isLit(), 'torchNotLit'),
+    capabilityRequirement(inventory.hasCapability('fire_starting'), 'fire_starting'),
+    itemRequirement(inventory.count('branch'), TORCH_BRANCH_COST, 'branch'),
+  ]
+
+  const availableLightBranch = (): ActionAvailability => toAvailability(lightBranchRequirements())
+
   /** Lit branch occupies the right hand — unequip any tool first. */
-  const lightBranch = (): LightActionResult => {
-    if (playerTorch.isLit()) return 'already-lit'
-    if (!inventory.hasCapability('fire_starting')) return 'missing-capability'
-    if (!inventory.has('branch', TORCH_BRANCH_COST)) return 'missing'
+  const lightBranch = (): ActionResult => {
+    const result = toResult(lightBranchRequirements())
+    if (!result.ok) return result
 
     inventory.remove('branch', TORCH_BRANCH_COST)
     heldTool.unequip()
     syncHeldHud()
     void playerTorch.light('branch').then(() => syncHeldHud())
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    return 'ok'
+    return { ok: true }
   }
 
-  /** Wooden torch must be held; firestarter required; item is not consumed. */
-  const lightWoodenTorch = (): LightActionResult => {
-    if (playerTorch.isLit()) return 'already-lit'
-    if (!inventory.hasCapability('fire_starting')) return 'missing-capability'
+  /** Wooden torch must be held; firestarter required; item is not consumed.
+   *  Available either already held, or with a free hand and one carried —
+   *  `freeHand`/`wooden_torch` are only relevant in the latter case. */
+  const lightWoodenTorchRequirements = (): (ActionRequirement | null)[] => {
+    const alreadyHeld = heldTool.held() === 'wooden_torch'
+    return [
+      targetRequirement(!playerTorch.isLit(), 'torchNotLit'),
+      capabilityRequirement(inventory.hasCapability('fire_starting'), 'fire_starting'),
+      alreadyHeld ? null : targetRequirement(heldTool.held() === null, 'freeHand'),
+      alreadyHeld ? null : itemRequirement(inventory.count('wooden_torch'), 1, 'wooden_torch'),
+    ]
+  }
+
+  const availableLightWoodenTorch = (): ActionAvailability => toAvailability(lightWoodenTorchRequirements())
+
+  const lightWoodenTorch = (): ActionResult => {
+    const result = toResult(lightWoodenTorchRequirements())
+    if (!result.ok) return result
+
     if (heldTool.held() !== 'wooden_torch') {
-      if (!inventory.has('wooden_torch', 1)) return 'missing'
-      // Auto-equip when hand is free; refuse if another tool is held.
-      if (heldTool.held() !== null) return 'need-hold'
-      if (!heldTool.equip('wooden_torch')) return 'need-hold'
+      if (!heldTool.equip('wooden_torch')) return toResult([targetRequirement(false, 'freeHand')])
       syncHeldHud()
     }
     void playerTorch.light('wooden_torch').then(() => syncHeldHud())
-    return 'ok'
-  }
-
-  // Availability predicates (review 007 C4) — read-only mirrors of the guard
-  // clauses above, so Quick Actions / Pause→Akcje can hide an action instead
-  // of always offering it and reporting failure after the click.
-  const canBuildSimpleFire = (): boolean =>
-    inventory.hasCapability('fire_starting') && inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)
-  const canBuildFirePit = (): boolean => inventory.has('stone', FIRE_PIT_STONE_COST)
-  const canBuildGrate = (): boolean =>
-    bundle.placedFires.nearestBuildable(player.mesh.position.x, player.mesh.position.z, GRATE_BUILD_RANGE) !== null &&
-    inventory.has('branch', GRATE_COST.branch) &&
-    inventory.has('stone', GRATE_COST.stone) &&
-    inventory.has('iron_rod', GRATE_COST.iron_rod)
-  const canLightBranch = (): boolean =>
-    !playerTorch.isLit() && inventory.hasCapability('fire_starting') && inventory.has('branch', TORCH_BRANCH_COST)
-  const canLightWoodenTorch = (): boolean => {
-    if (playerTorch.isLit()) return false
-    if (!inventory.hasCapability('fire_starting')) return false
-    if (heldTool.held() === 'wooden_torch') return true
-    return heldTool.held() === null && inventory.has('wooden_torch', 1)
+    return { ok: true }
   }
 
   return {
@@ -206,11 +231,11 @@ const getUserActions = (
     buildGrate,
     lightBranch,
     lightWoodenTorch,
-    canBuildSimpleFire,
-    canBuildFirePit,
-    canBuildGrate,
-    canLightBranch,
-    canLightWoodenTorch,
+    availableSimpleFire,
+    availableFirePit,
+    availableGrate,
+    availableLightBranch,
+    availableLightWoodenTorch,
   }
 }
 

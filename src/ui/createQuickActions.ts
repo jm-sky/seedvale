@@ -1,5 +1,5 @@
+import type { ActionResult } from '../app/actions/actionContracts'
 import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
-import type { LightActionResult } from '../app/userActions'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import { getMountedVueUi } from '../ui-vue/mount'
@@ -27,10 +27,14 @@ export type RestVariant = 'camp' | 'town'
 export type RestOutcome = 'ok' | 'too-far' | 'no-blanket' | 'no-lodging' | 'choose'
 
 export type QuickActionsHandlers = {
+  /** "Zbuduj ognisko" instant entry in the Ogień category — same action as
+   *  "Budowa"'s placement-preview entry (plan items-player-012). */
+  onBuildSimpleFire?: () => ActionResult
+  onBuildFirePit?: () => ActionResult
   /** Grate upgrade for the nearest qualifying player-built fire (plan 175). */
-  onBuildGrate?: () => boolean
-  onLightBranch?: () => LightActionResult
-  onLightWoodenTorch?: () => LightActionResult
+  onBuildGrate?: () => ActionResult
+  onLightBranch?: () => ActionResult
+  onLightWoodenTorch?: () => ActionResult
   /** Starts a "wait" time skip (1/3/6h, visible fast-forward) — see
    *  `world/timeSkip.ts`. */
   onWait?: (hours: number) => void

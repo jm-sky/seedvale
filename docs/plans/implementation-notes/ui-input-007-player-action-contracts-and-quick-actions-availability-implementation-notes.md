@@ -1,5 +1,130 @@
 # Implementation Notes: Player Action Contracts & Quick Actions Availability
 
+## Implementation summary (2026-09-03)
+
+Shared contract lives in **`src/app/actions/actionContracts.ts`** (new,
+app-layer, no ui-vue dependency): `ActionRequirement` (`item` with
+`required`/`actual`, `capability` with the concrete `ItemCapability`, `target`
+with a small string `id`), `ActionAvailability`
+(`{available:true}`/`{available:false,missing}`), `ActionResult`
+(`{ok:true}`/`{ok:false,missing}`), and pure builders `itemRequirement`/
+`capabilityRequirement`/`targetRequirement`/`toAvailability`/`toResult`.
+
+**`src/app/userActions.ts`** — each fire action now has one
+`xRequirements()` function (pure, called with live state) consumed by both
+`availableX()` and `executeX()`, so the two can never drift. `LightActionResult`
+and the five `canX()` mirrors are gone, replaced by `availableSimpleFire`/
+`availableFirePit`/`availableGrate`/`availableLightBranch`/
+`availableLightWoodenTorch` returning `ActionAvailability`, and the five build/
+light functions returning `ActionResult`. `buildGrate` resolves
+`nearestBuildable()` fresh in both `availableGrate()` and `buildGrate()` itself
+(never shares a captured `PlacedFireEntry`). `lightWoodenTorch`'s "held OR
+free hand + carried" disjunction is expressed as two independent
+`target`/`item` requirements, both reported when the hand is occupied and
+empty-handed with no spare torch.
+
+**`src/ui-vue/store.ts`** — `QuickActionsFireAvailability` is now
+`Record<FireActionId, ActionAvailability>` (was 5 booleans); `FireActionId`
+moved here (single definition, `playerQuickActions.ts` imports+re-exports it
+— avoids a circular type import between the two modules). Still populated by
+`createApp.ts`'s `syncQuickActionAvailability()` the same way as before — the
+plan's "don't build a second reactive gameplay-state object" was satisfied by
+deepening the *existing* snapshot's type rather than removing it: Vue's
+`computed()` reactivity needs a reactive field to key off, a plain closure
+call wouldn't retrigger the popup's `fireActions` computed on inventory
+change.
+
+**`src/ui-vue/playerQuickActions.ts`** — `visibleFireActions()` now always
+returns the full 5-action catalog (no filtering), stably sorted
+available-first (`Array.sort` is spec-stable since ES2019, so catalog order
+within each group is preserved without a manual stable-sort shim). Each row
+carries `available`/`missing`. `FireActionHandlers` handlers stay nullable at
+the type level (matches the store's existing null-until-wired convention for
+every other Quick Actions handler) but `requireHandler()` throws synchronously
+if `run()` is ever called with a null handler, instead of the old
+`?.() ?? false` which silently reported "unavailable" for a wiring bug.
+`describeMissing()`/`TARGET_REQUIREMENT_LABEL` turn a failed `ActionResult`'s
+`missing[]` into the toast string — this is the only place `target` id
+strings (`firePlacement`, `grateTarget`, `torchNotLit`, `freeHand`) get
+Polish labels. `FIRE_COST_ITEMS`/`formatCostItems()` are the single source
+for a cost string; `QuickActionsScreen.vue`'s "Budowa" category rows for
+ognisko/palenisko now call `formatCostItems(FIRE_COST_ITEMS.x)` instead of
+hand-formatting `${CONST}× kamień` themselves.
+
+**`QuickActionsButton.vue`** gained a `disabled` prop (native `disabled` +
+`disabled:opacity-50`, matching `UiButton.vue`'s existing pattern) — it had
+none before since every row used to be pre-filtered to "available only".
+`PauseMenuEntriesActions.vue` passes `:disabled="!action.available"` to the
+existing `UiButton`, which already had `disabled:opacity-50` built in.
+
+Ripple typing-only changes (no logic): `placementPreviewActions.ts`,
+`ui/createQuickActions.ts`, `ui/createPauseMenu.ts` — `LightActionResult`/
+`boolean` fire-handler signatures → `ActionResult`. `createApp.ts` only
+needed its `getUserActions()` destructure renamed (`canX` → `availableX`) and
+`syncQuickActionAvailability()`'s object literal updated to call the new
+`availableX()` functions instead of `canX()`.
+
+**`src/app/actions/survivalActions.ts`** (§7) — applied the same
+`ActionResult` contract to all 9 exported actions (`startBuryCorpse`,
+`startHarvestMeat`, `startIgniteFire`, `startCookAt`, `startDestroySpawner`,
+`drinkFromWaterSource`, `fillWaterskin`, `startMilkAnimal`, `consumeItem`).
+This did **not** require touching `gameLoop.ts`'s callback types
+(`SurvivalActionHandlers` stays `=> void`) — TypeScript accepts any return
+type where `=> void` is expected, so `gameLoop.ts`/`createApp.ts` call sites
+were untouched. Every existing toast call and every guard's *gating* behaviour
+is unchanged (mechanical wrap: each `return`/`return { ok: false }`/no-op
+became `return toResult([...])` or `return { ok: false, missing: [] }`, each
+success path got a trailing `return { ok: true }`); the busy-channel
+`initial validation → busy.start() → final validation → mutation → result`
+shape and every `isActionBlocked`/`isChannelBusy` early-exit are byte-for-byte
+the same as before. `startBuryCorpse`'s two independent guards (capability +
+corpse state) are now aggregated via `toResult([...])` instead of a single
+`&&`-chained early return — this is a behavior improvement (both reported)
+with identical gating. Blocked-by-busy early exits return
+`{ ok: false, missing: [] }` (no requirement to name — it's a concurrency
+guard, not a gameplay requirement; no toast, matching prior silent behaviour).
+
+**Tests added:** `src/app/userActions.test.ts` (10 cases — availability
+shape/multi-requirement reporting, execute re-validation against changed
+state without mutating, grate's live target re-resolution) and
+`src/ui-vue/playerQuickActions.test.ts` (5 cases — full catalog always
+returned, stable available-first sort preserving catalog order, missing[]
+exposed on a row, toast text built from missing[], `requireHandler` throws on
+a null handler). No pre-existing tests covered either module.
+
+**Bug found and fixed along the way:** making `FireActionHandlers`' fields
+required (§5) surfaced — via `vue-tsc`, not plain `tsc --noEmit`, which
+doesn't fully type-check `.vue` templates in this project — that
+`ui.quickActions` never actually had `onBuildSimpleFire`/`onBuildFirePit`
+handlers wired (`QuickActionsState` never declared them, `createApp.ts`'s
+`createQuickActions(...)` call never passed them). Quick Actions → Ogień →
+"Zbuduj ognisko" is rendered there on purpose (see the existing comment in
+`QuickActionsScreen.vue`, plan items-player-012 — it's a second entry point
+onto the same `buildSimpleFire` action `Budowa` uses via placement-preview),
+but clicking it always hit the old `handlers.onBuildSimpleFire?.() ?? 'unknown-error'`
+fallback and silently toasted "Wystąpił nieznany błąd" — exactly the
+"missing handler masked as failure" failure mode §5 warns about, just not in
+the code this plan set out to touch. Fixed by adding both handlers to
+`QuickActionsState`/`QuickActionsHandlers` (`store.ts`, `ui/createQuickActions.ts`)
+and wiring `buildSimpleFire`/`buildFirePit` into `createQuickActions()`'s
+config in `createApp.ts` (`onBuildFirePit` structurally required by the
+shared contract even though its catalog row stays filtered out of the Ogień
+category here — it's Budowa-only, unchanged). Always run `pnpm run build`
+(`vue-tsc`), not just `npx tsc --noEmit`, when changing a type consumed from
+a `.vue` file — this class of gap doesn't surface otherwise.
+
+**Verification:** `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` (full
+suite) all pass — the one failing snapshot (`grassPlacement.test.ts`) is
+pre-existing/unrelated (confirmed via `git status`/`git log` — no file this
+plan touched is anywhere near `src/terrain/`). **Not yet browser-verified**:
+no project-specific browser-run skill exists for this repo and headless
+Chromium automation wasn't available in this environment, so the manual
+checklist in the plan's "Browser/manual" section (Quick Actions "Ogień"
+category showing all 5 actions with disabled/50%-opacity rows, sorted
+available-first, Pause→Akcje matching, a click on a disabled row being a
+true no-op, availability updating live after inventory changes at popup-open)
+still needs a human pass in-game.
+
 ## Recon snapshot
 
 Current code already partially implements the intended C4/C8 direction, but the contract is still boolean/string based:

@@ -8,6 +8,17 @@ Generated from exported TypeScript symbols.
 - `isChannelBusy` — function — line 81
 - `PlayerActionContext` — type — line 30
 
+## `app/actions/actionContracts.ts`
+
+- `ActionAvailability` — type — line 21
+- `ActionRequirement` — type — line 9
+- `ActionResult` — type — line 25
+- `capabilityRequirement` — function — line 34
+- `itemRequirement` — function — line 30
+- `targetRequirement` — function — line 38
+- `toAvailability` — function — line 46
+- `toResult` — function — line 51
+
 ## `app/actions/containerActions.ts`
 
 - `ContainerActionDeps` — type — line 36
@@ -63,9 +74,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 83
-- `hasCarriedMilkContainer` — function — line 77
-- `SurvivalActions` — type — line 51
+- `createSurvivalActions` — function — line 84
+- `hasCarriedMilkContainer` — function — line 78
+- `SurvivalActions` — type — line 52
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -191,15 +202,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/userActions.ts`
 
-- `FIRE_FOOTPRINT_RADIUS` — const — line 28
-- `FIRE_PIT_STONE_COST` — const — line 20
-- `FIRE_PLACE_REACH` — const — line 27
-- `FIRE_SEPARATION` — const — line 29
-- `GRATE_BUILD_RANGE` — const — line 41
-- `GRATE_COST` — const — line 35
-- `LightActionResult` — type — line 43
-- `SIMPLE_FIRE_BRANCH_COST` — const — line 19
-- `TORCH_BRANCH_COST` — const — line 21
+- `FIRE_FOOTPRINT_RADIUS` — const — line 31
+- `FIRE_PIT_STONE_COST` — const — line 23
+- `FIRE_PLACE_REACH` — const — line 30
+- `FIRE_SEPARATION` — const — line 32
+- `GRATE_BUILD_RANGE` — const — line 44
+- `GRATE_COST` — const — line 38
+- `SIMPLE_FIRE_BRANCH_COST` — const — line 22
+- `TORCH_BRANCH_COST` — const — line 24
 
 ## `app/worldBundle.ts`
 

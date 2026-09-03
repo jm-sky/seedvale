@@ -42,6 +42,7 @@ import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFi
 import { healHealth } from '../../shared/HealthState'
 import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING } from '../../world/WaterSource'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
+import { type ActionResult, capabilityRequirement, itemRequirement, targetRequirement, toResult } from './actionContracts'
 
 /** Survival-loop actions on the world around the player: butchering/burying a
  *  corpse, lighting and cooking at a campfire, destroying a depleted habitat,
@@ -49,17 +50,17 @@ import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './acti
  *  read the same `PlayerNeeds`/`HealthState`/`PlayerSkills` state the HUD
  *  shows — none of them introduces a parallel need or damage system. */
 export type SurvivalActions = {
-  startBuryCorpse: (animal: AnimalAgent) => void
-  startHarvestMeat: (animal: AnimalAgent) => void
-  startIgniteFire: (fire: VillageFire) => void
-  startCookAt: (fire: VillageFire) => void
-  startDestroySpawner: (spawner: PreySpawner) => void
-  drinkFromWaterSource: (source: WaterSource) => void
-  fillWaterskin: () => void
-  consumeItem: (kind: ItemKind) => void
+  startBuryCorpse: (animal: AnimalAgent) => ActionResult
+  startHarvestMeat: (animal: AnimalAgent) => ActionResult
+  startIgniteFire: (fire: VillageFire) => ActionResult
+  startCookAt: (fire: VillageFire) => ActionResult
+  startDestroySpawner: (spawner: PreySpawner) => ActionResult
+  drinkFromWaterSource: (source: WaterSource) => ActionResult
+  fillWaterskin: () => ActionResult
+  consumeItem: (kind: ItemKind) => ActionResult
   /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan
    *  fauna-002 §3/§4). */
-  startMilkAnimal: (animal: AnimalAgent) => void
+  startMilkAnimal: (animal: AnimalAgent) => ActionResult
 }
 
 /** Real-time seconds per litre of milk drawn — the shared rate behind
@@ -83,38 +84,43 @@ export function hasCarriedMilkContainer(inventory: Inventory): boolean {
 export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, worldAudio } = ctx
 
-  const startBuryCorpse = (animal: AnimalAgent): void => {
-    if (!hasItemCapability(heldTool.held(), 'soil_digging') || isChannelBusy(ctx)) return
-    if (!animal.isDead() || animal.readyToRemove()) return
+  const startBuryCorpse = (animal: AnimalAgent): ActionResult => {
+    if (isChannelBusy(ctx)) return { ok: false, missing: [] }
+    const result = toResult([
+      capabilityRequirement(hasItemCapability(heldTool.held(), 'soil_digging'), 'soil_digging'),
+      targetRequirement(animal.isDead() && !animal.readyToRemove(), 'corpseAvailable'),
+    ])
+    if (!result.ok) return result
     playActionDig(worldAudio.playOnce)
     busy.start(BURY_DURATION_SEC, 'Zakopywanie…', () => {
       if (!animal.isDead() || animal.readyToRemove()) return
       animal.bury()
       toast.show('Zwłoki zakopane.')
     })
+    return { ok: true }
   }
 
   /** Knife-harvest meat from a corpse (plan 106; species-specific kind +
    *  hide byproduct added in plan 134) — same shape as `startBuryCorpse`,
    *  just knife-gated and yielding item(s) instead of disposing the corpse. */
-  const startHarvestMeat = (animal: AnimalAgent): void => {
-    if (isActionBlocked(ctx)) return
+  const startHarvestMeat = (animal: AnimalAgent): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     if (!hasItemCapability(heldTool.held(), 'meat_harvesting')) {
       // Auto-equip from inventory (plan 153) — same pattern as
       // `lightWoodenTorch` in `userActions.ts`: only when the hand is free,
       // never displacing another held tool. `findWithCapability` returns the
       // best carried harvest tool, so a damascus knife still wins over a
       // plain one (plan 160).
-      if (heldTool.held() !== null) return
+      if (heldTool.held() !== null) return toResult([targetRequirement(false, 'freeHand')])
       const knifeKind = inventory.findWithCapability('meat_harvesting')
-      if (!knifeKind || !heldTool.equip(knifeKind)) return
+      if (!knifeKind || !heldTool.equip(knifeKind)) return toResult([capabilityRequirement(false, 'meat_harvesting')])
       ctx.syncHeldHud()
     }
-    if (!animal.canHarvestMeat()) return
+    if (!animal.canHarvestMeat()) return toResult([targetRequirement(false, 'corpseAvailable')])
     const meatKind = meatKindForAnimal(animal.def.kind)
     if (!inventory.canAdd(meatKind, 1)) {
       toast.show(inventoryFullToastText(inventory, meatKind, 1), 'error')
-      return
+      return toResult([targetRequirement(false, 'inventoryFull')])
     }
     animal.holdCorpse()
     busy.start(HARVEST_MEAT_DURATION_SEC, 'Wycinanie mięsa…', () => {
@@ -131,20 +137,21 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         animal.releaseCorpseHold()
       }
     }, { blurred: true, onCancel: () => animal.releaseCorpseHold() })
+    return { ok: true }
   }
 
   /** Lights an unlit campfire (busy channel, blurred) — "dołóż gałąź" on an
    *  already-lit fire stays instant/inline in `gameLoop.ts`, not routed
    *  through here. */
-  const startIgniteFire = (fire: VillageFire): void => {
-    if (isActionBlocked(ctx)) return
+  const startIgniteFire = (fire: VillageFire): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     if (!inventory.hasCapability('fire_starting')) {
       toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
-      return
+      return toResult([capabilityRequirement(false, 'fire_starting')])
     }
     if (!FIRE_FUEL_KINDS.some((kind) => inventory.has(kind, 1))) {
       toast.show('Potrzebujesz gałęzi lub belki, żeby je zapalić.', 'error')
-      return
+      return toResult([targetRequirement(false, 'fireFuel')])
     }
     // Survival is read once, when the channel starts — a running channel is
     // never retimed (plan 128 §3.1).
@@ -165,16 +172,18 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.igniteFire)
       toast.show('Ognisko zapłonęło.')
     }, { blurred: true })
+    return { ok: true }
   }
 
   /** `[E] Zniszcz` on a `depleted` spawn point (plan 137) — busy channel with
    *  progress bar; branches are spent only on complete (Esc is a no-op). */
-  const startDestroySpawner = (spawner: PreySpawner): void => {
-    if (isActionBlocked(ctx)) return
-    if (spawner.state !== 'depleted') return
-    if (!inventory.has('branch', SPAWNER_DESTROY_BRANCH_COST)) {
+  const startDestroySpawner = (spawner: PreySpawner): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
+    if (spawner.state !== 'depleted') return toResult([targetRequirement(false, 'spawnerDepleted')])
+    const result = toResult([itemRequirement(inventory.count('branch'), SPAWNER_DESTROY_BRANCH_COST, 'branch')])
+    if (!result.ok) {
       toast.show('Potrzebujesz 4 gałęzi.', 'error')
-      return
+      return result
     }
     busy.start(DESTROY_SPAWNER_DURATION_SEC, spawnerDestroyBusyLabel(spawner.type), () => {
       if (spawner.state !== 'depleted') {
@@ -201,6 +210,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       ctx.onInventoryChanged()
       toast.show('Siedlisko zniszczone.', 'pickup')
     }, { blurred: true })
+    return { ok: true }
   }
 
   /** Cooks the first held recipe's input at a lit campfire, up to the
@@ -209,23 +219,23 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  `resolveCookingCapacity`/`findCookingBatch`). Still one busy channel
    *  producing `batch × recipe.count` of the output at once, not N separate
    *  cooking actions. */
-  const startCookAt = (fire: VillageFire): void => {
-    if (isActionBlocked(ctx)) return
+  const startCookAt = (fire: VillageFire): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     if (!fire.isLit()) {
       toast.show('Ognisko musi się palić.', 'error')
-      return
+      return toResult([targetRequirement(false, 'fireLit')])
     }
     const capacity = resolveCookingCapacity(fire, inventory)
     const found = findCookingBatch(inventory, capacity)
     if (!found) {
       toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
-      return
+      return toResult([targetRequirement(false, 'cookableFood')])
     }
     const { recipe } = found
     const outputFor = (batch: number): number => batch * recipe.count
     if (!inventory.canAdd(recipe.output, outputFor(found.batch))) {
       toast.show(inventoryFullToastText(inventory, recipe.output, outputFor(found.batch)), 'error')
-      return
+      return toResult([targetRequirement(false, 'inventoryFull')])
     }
     // `recipe.output` alone tells us what's on the fire — no separate
     // "is this a fish recipe" flag to keep in sync with `COOKING_RECIPES`.
@@ -255,15 +265,17 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
       toast.show(`+${outputCount} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
     }, { blurred: true })
+    return { ok: true }
   }
 
   /** Instant drink at a well/lake (plan 106 §4) — no busy channel, matching
    *  other instant world actions (item pickup). */
-  const drinkFromWaterSource = (source: WaterSource): void => {
-    if (isActionBlocked(ctx)) return
+  const drinkFromWaterSource = (source: WaterSource): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
     playActionWell(worldAudio.playAt, player.mesh.position)
     toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
+    return { ok: true }
   }
 
   /** All carried liquid-container instances (waterskins and buckets, plan
@@ -281,8 +293,8 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  buckets by plan settlements-npcs-001): tops up the smallest carried
    *  container instance that isn't already full of water, in one instant
    *  action — no separate empty/full `ItemKind` swap any more. */
-  const fillWaterskin = (): void => {
-    if (isActionBlocked(ctx)) return
+  const fillWaterskin = (): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     const carried = carriedWaterContainers()
     const target = carried.find((inst) => canFillLiquidContainer(inst, 'water'))
     if (target) {
@@ -291,9 +303,10 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Napełniono pojemnik.', 'pickup')
-      return
+      return { ok: true }
     }
     toast.show(carried.length > 0 ? 'Pojemnik jest już pełny.' : 'Potrzebujesz pojemnika na wodę.', 'error')
+    return toResult([targetRequirement(false, carried.length > 0 ? 'containerFull' : 'waterContainer')])
   }
 
   /** Carried liquid-container instances that could hold at least some milk
@@ -314,14 +327,16 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  finishes faster than a cow's. Esc-cancelling the channel (existing busy
    *  cancel path) grants no milk at all, same "no partial credit" shape as
    *  `startHarvestMeat`/`startIgniteFire`. */
-  const startMilkAnimal = (animal: AnimalAgent): void => {
-    if (isActionBlocked(ctx)) return
+  const startMilkAnimal = (animal: AnimalAgent): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     const production = animal.def.production
-    if (!production || production.product !== 'milk' || !animal.canBeMilked(dayNight.elapsedDays)) return
+    if (!production || production.product !== 'milk' || !animal.canBeMilked(dayNight.elapsedDays)) {
+      return toResult([targetRequirement(false, 'animalMilkable')])
+    }
     const target = carriedMilkContainers()[0]
     if (!target) {
       toast.show('Potrzebujesz pustego wiadra.', 'error')
-      return
+      return toResult([targetRequirement(false, 'milkContainer')])
     }
     const label = ANIMAL_LABELS[animal.def.kind]
     busy.start(production.amount * MILK_SECONDS_PER_LITRE, `Dojenie: ${label}…`, () => {
@@ -346,14 +361,15 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       ctx.onInventoryChanged()
       toast.show(`+${poured} l mleka`, 'pickup')
     }, { blurred: true })
+    return { ok: true }
   }
 
   /** Inventory-screen "Zjedz"/"Wypij" (plan 106) — driven by
    *  `ITEM_CATALOG[kind].consumable`, the same catalog entry the well/lake/
    *  cooking paths' relief amounts come from. */
-  const consumeItem = (kind: ItemKind): void => {
+  const consumeItem = (kind: ItemKind): ActionResult => {
     const entry = ITEM_CATALOG[kind].consumable
-    if (!entry || !inventory.holdsAny(kind)) return
+    if (!entry || !inventory.holdsAny(kind)) return toResult([itemRequirement(0, 1, kind)])
     // Plan items-player-001 — a waterskin drinks one portion off a concrete
     // `LiquidContainerItemInstance` (`items/liquidContainer.ts`), not a
     // whole-item remove/resultKind swap: the same carried instance stays
@@ -362,7 +378,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       const target = inventory.getInstances(kind).filter(isLiquidContainerInstance).find((inst) => canDrinkFromLiquidContainer(inst))
       if (!target) {
         toast.show('Bukłak jest pusty.', 'error')
-        return
+        return toResult([targetRequirement(false, 'containerNotEmpty')])
       }
       inventory.updateInstance(target.id, (inst) => drinkFromLiquidContainer(inst as LiquidContainerItemInstance)!)
       drinkWaterNeeds(player.needs, entry.relief)
@@ -370,7 +386,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       ctx.onInventoryChanged()
       ctx.refreshInventoryScreen()
       toast.show('Wypito.', 'pickup')
-      return
+      return { ok: true }
     }
     // Plan 159 §3/§5 — spoiled food is non-consumable rather than acting
     // like fresh food; checked against the batch that would actually be
@@ -378,9 +394,9 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     const acquiredAtDays = inventory.oldestAcquiredAtDays(kind)
     if (acquiredAtDays != null && getFreshnessStage(kind, acquiredAtDays, dayNight.elapsedDays) === 'spoiled') {
       toast.show('To jedzenie się zepsuło.', 'error')
-      return
+      return toResult([targetRequirement(false, 'notSpoiled')])
     }
-    if (!inventory.remove(kind, 1)) return
+    if (!inventory.remove(kind, 1)) return toResult([itemRequirement(0, 1, kind)])
     if (entry.resultKind) inventory.add(entry.resultKind, 1)
     // Plan 128 §4 — Survival makes the *same* `roasted_meat` more nourishing;
     // no roasted variants, no skill-dependent recipes.
@@ -394,6 +410,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     ctx.onInventoryChanged()
     ctx.refreshInventoryScreen()
     toast.show(entry.need === 'hunger' ? 'Zjedzono.' : entry.need === 'thirst' ? 'Wypito.' : 'Opatrzono rany.', 'pickup')
+    return { ok: true }
   }
 
   return {
