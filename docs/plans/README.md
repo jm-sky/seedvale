@@ -61,7 +61,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| ◼️ `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
+| 💡 `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
 
 ---
 
