@@ -25,7 +25,7 @@ import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
-import { type Collider, resolvePosition } from '../world/collision'
+import { type Collider, colliderActiveAtY, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
 import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
@@ -149,6 +149,14 @@ export type HeightSampler = (x: number, z: number) => number
 /** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
  *  instead of importing `ChunkManager` here, same reasoning as `HeightSampler`. */
 export type ColliderSource = (x: number, z: number) => readonly Collider[]
+/** `Caves.contains`/`sampleFloor`/`sampleCeiling` (plan world-terrain-007),
+ *  collapsed into one query keyed by the entity's own (previous-frame) Y —
+ *  the only way to tell "standing on the hillside above a cave" apart from
+ *  "standing in the cave below it" at the same X/Z (contract §14). Returns
+ *  `null` outside any cave, in which case the caller falls back to
+ *  `HeightSampler`. Kept as its own alias instead of importing `Caves` here,
+ *  same reasoning as `HeightSampler`/`ColliderSource`. */
+export type CaveGroundQuery = (x: number, y: number, z: number) => { floorY: number, ceilingY: number } | null
 
 /**
  * @domain items-player
@@ -175,6 +183,7 @@ export class PlayerController {
   private sampleFloor: HeightSampler
   private waterLevel: number
   private collidersNear: ColliderSource
+  private caveGround: CaveGroundQuery
   private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
@@ -266,6 +275,7 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    caveGround: CaveGroundQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ) {
     this.camera = camera
@@ -275,6 +285,7 @@ export class PlayerController {
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
+    this.caveGround = caveGround
     this.sampleFootstepSurface = sampleFootstepSurface
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
@@ -334,6 +345,7 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    caveGround: CaveGroundQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
@@ -351,6 +363,7 @@ export class PlayerController {
         sampleFloor,
         waterLevel,
         collidersNear,
+        caveGround,
         sampleFootstepSurface,
       )
     } catch (err) {
@@ -363,6 +376,7 @@ export class PlayerController {
         sampleFloor,
         waterLevel,
         collidersNear,
+        caveGround,
         sampleFootstepSurface,
       )
     }
@@ -376,6 +390,7 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    caveGround: CaveGroundQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): PlayerController {
     const body = new THREE.Mesh(
@@ -398,6 +413,7 @@ export class PlayerController {
       sampleFloor,
       waterLevel,
       collidersNear,
+      caveGround,
       sampleFootstepSurface,
     )
   }
@@ -408,12 +424,14 @@ export class PlayerController {
     sampleFloor: HeightSampler,
     waterLevel: number,
     collidersNear: ColliderSource,
+    caveGround: CaveGroundQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): void {
     this.sampleHeight = sampleHeight
     this.sampleFloor = sampleFloor
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
+    this.caveGround = caveGround
     this.sampleFootstepSurface = sampleFootstepSurface
     this.snapToGround()
   }
@@ -624,7 +642,7 @@ export class PlayerController {
       candidateX,
       candidateZ,
       PLAYER_COLLISION_RADIUS,
-      this.collidersNear(candidateX, candidateZ),
+      this.collidersNearAtHeight(candidateX, candidateZ),
     )
     this.mesh.position.x = resolved.x
     this.mesh.position.z = resolved.z
@@ -811,7 +829,7 @@ export class PlayerController {
         candidateX,
         candidateZ,
         PLAYER_COLLISION_RADIUS,
-        this.collidersNear(candidateX, candidateZ),
+        this.collidersNearAtHeight(candidateX, candidateZ),
       )
       this.mesh.position.x = resolved.x
       this.mesh.position.z = resolved.z
@@ -885,12 +903,31 @@ export class PlayerController {
     this.playAction(moveAction ?? this.idleAction)
   }
 
+  /** Cave-aware floor/ceiling at `(x, z)`, disambiguated from the surface
+   *  above/below it by the player's own current Y (contract §14 — same X/Z
+   *  can be a cave floor or the hillside above it; only the entity's actual
+   *  Y tells them apart). Falls back to surface `sampleHeight` outside any
+   *  cave. */
+  private groundAt(x: number, z: number): { height: number, ceiling: number | null } {
+    const cave = this.caveGround(x, this.mesh.position.y, z)
+    if (cave) return { height: cave.floorY, ceiling: cave.ceilingY }
+    return { height: this.sampleHeight(x, z), ceiling: null }
+  }
+
+  /** `collidersNear`, filtered to whatever's actually active at the
+   *  player's current Y (cave walls carry a vertical envelope — plan
+   *  world-terrain-007; everything else is unaffected). */
+  private collidersNearAtHeight(x: number, z: number): readonly Collider[] {
+    const y = this.mesh.position.y
+    return this.collidersNear(x, z).filter((collider) => colliderActiveAtY(collider, y))
+  }
+
   /** Teleport case (construction, `setPosition`, `setGround`) — snaps straight
    *  to ground/water and clears any in-flight jump/fall state. Per-frame
    *  movement uses `updateVerticalMotion` instead. */
   private snapToGround(): void {
     const { x, z } = this.mesh.position
-    const groundY = this.sampleHeight(x, z)
+    const groundY = this.groundAt(x, z).height
     if (groundY <= this.waterLevel) {
       // Underwater: sink toward the real seabed instead of the flattened-to-waterLevel
       // mesh, capped so deep water still leaves the head above the surface.
@@ -912,7 +949,8 @@ export class PlayerController {
    *  keeps the existing swim behaviour and blocks jumping/falling. */
   private updateVerticalMotion(dt: number): void {
     const { x, z } = this.mesh.position
-    const groundY = this.sampleHeight(x, z)
+    const ground = this.groundAt(x, z)
+    const groundY = ground.height
     if (groundY <= this.waterLevel) {
       if (!this.wasInWater && this.playAt) {
         playWaterLap(this.playAt, { x, y: this.waterLevel, z })
@@ -936,6 +974,7 @@ export class PlayerController {
       groundY,
       dt,
       jumpRequested: this.jumpRequested,
+      maxY: ground.ceiling != null ? ground.ceiling - PLAYER_HEIGHT : undefined,
     })
     this.jumpRequested = false
     this.mesh.position.y = next.y
@@ -1020,8 +1059,10 @@ export class PlayerController {
       camX: desiredX,
       camY: desiredY,
       camZ: desiredZ,
-      sampleHeight: this.sampleHeight,
-      colliders: this.collidersNear(originX, originZ),
+      // Cave-aware: inside a cave, the boom must clip against the cave floor,
+      // not the surface heightfield far above (plan world-terrain-007 §20).
+      sampleHeight: (x, z) => this.groundAt(x, z).height,
+      colliders: this.collidersNearAtHeight(originX, originZ),
     })
     this.camera.position.set(resolved.x, resolved.y, resolved.z)
     this.camera.lookAt(originX, targetY, originZ)

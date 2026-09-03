@@ -18,6 +18,10 @@ export type VerticalMotionInput = {
   groundY: number
   dt: number
   jumpRequested: boolean
+  /** Max root Y (cave ceiling minus player height) — `undefined` outside a
+   *  cave, where there's nothing overhead to clamp against (plan
+   *  world-terrain-007 §19). */
+  maxY?: number
 }
 
 export type VerticalMotionResult = {
@@ -26,6 +30,11 @@ export type VerticalMotionResult = {
   grounded: boolean
   tookOff: boolean
   landed: boolean
+}
+
+function clampToCeiling(result: VerticalMotionResult, maxY: number | undefined): VerticalMotionResult {
+  if (maxY == null || result.y <= maxY) return result
+  return { ...result, y: maxY, verticalVelocity: Math.min(result.verticalVelocity, 0) }
 }
 
 /** One frame of dry-land gravity / jump / slope-stick (plan 158). Water
@@ -45,11 +54,11 @@ export function integrateVerticalMotion(input: VerticalMotionInput): VerticalMot
 
   if (grounded) {
     if (groundY >= y - STEP_DOWN_MAX) {
-      return { y: groundY, verticalVelocity: 0, grounded: true, tookOff, landed: false }
+      return clampToCeiling({ y: groundY, verticalVelocity: 0, grounded: true, tookOff, landed: false }, input.maxY)
     }
   }
 
-  return { ...applyGravity(y, verticalVelocity, groundY, dt), tookOff }
+  return clampToCeiling({ ...applyGravity(y, verticalVelocity, groundY, dt), tookOff }, input.maxY)
 }
 
 function applyGravity(

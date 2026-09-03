@@ -59,7 +59,7 @@ import {
   listSaves,
   setActiveSaveId,
 } from '../persistence/saveDb'
-import { PlayerController } from '../player/PlayerController'
+import { type CaveGroundQuery, PlayerController } from '../player/PlayerController'
 import {
   resetPlayerNeeds,
   restorePersistedNeeds,
@@ -567,6 +567,18 @@ export async function createApp(
   const keyboard = createKeyboard()
   const mouseLook = createMouseLook(renderer.domElement, keyboard.state)
 
+  // Reads `bundle.caves` fresh on every call (never captures it up front) —
+  // same "stable container, live field reads" contract `WorldBundle`'s own
+  // doc comment requires, so this stays correct across `rebuildWorldBundle`
+  // without needing to be re-passed to `player.setGround()` below.
+  const caveGroundQuery: CaveGroundQuery = (x, y, z) => {
+    if (!bundle.caves.contains(x, y, z)) return null
+    const floorY = bundle.caves.sampleFloor(x, z)
+    const ceilingY = bundle.caves.sampleCeiling(x, z)
+    if (floorY == null || ceilingY == null) return null
+    return { floorY, ceilingY }
+  }
+
   bootMark('PlayerController.create')
   const player = await PlayerController.create(
     camera,
@@ -576,6 +588,7 @@ export async function createApp(
     bundle.chunkManager.sampleFloor,
     bundle.chunkManager.waterLevel,
     bundle.chunkManager.collidersNear,
+    caveGroundQuery,
     (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
   )
   bootMarkEnd('PlayerController.create')
@@ -1021,6 +1034,7 @@ export async function createApp(
         bundle.chunkManager.sampleFloor,
         bundle.chunkManager.waterLevel,
         bundle.chunkManager.collidersNear,
+        caveGroundQuery,
         (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
       )
       // Only a genuinely new world (new seed / New Game) relocates the player
