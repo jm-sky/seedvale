@@ -135,11 +135,11 @@ Update the four plan documents to reflect the new contract:
 - `docs/plans/README.md`;
 - `docs/plans/PLANNING.md`;
 - `docs/plans/PLAN-METADATA.md`;
-- `docs/plans/DEPENDENCIES.md`.
+- `docs/plans/RECOMMENDED-ORDER.md`.
 
 README and PLANNING must remain compact enough for agents to consume directly without reading the full metadata reference.
 
-DEPENDENCIES remains a generated recommendation/dependency output. It should not become a second metadata source of truth. Only make changes needed to accommodate the expanded recommendation/documentation contract.
+RECOMMENDED-ORDER remains a generated recommendation/dependency output. It should not become a second metadata source of truth. Only make changes needed to accommodate the expanded recommendation/documentation contract.
 
 ## 6. Plan metadata cleanup and migration tooling
 

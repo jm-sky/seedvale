@@ -13,8 +13,8 @@ import {
   PLAN_FILE_RE,
   PLAN_PRIORITY_RE,
   PLAN_STATUS_RE,
-  PLANS_DEPENDENCIES_PATH,
   PLANS_PATH,
+  PLANS_RECOMMENDED_ORDER_PATH,
   type Priority,
   PRIORITY_ICONS,
   type Status,
@@ -330,7 +330,7 @@ const main = async (): Promise<void> => {
 
   output.push('\x60\x60\x60')
 
-  await writeFile(PLANS_DEPENDENCIES_PATH, output.join('\n') + '\n', 'utf8')
+  await writeFile(PLANS_RECOMMENDED_ORDER_PATH, output.join('\n') + '\n', 'utf8')
 }
 
 main().catch(error => {

@@ -13,114 +13,101 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 M · **Score:**  55  
    → **unlocks:** 1/2
 
-3. `npc-014` - **Work Contracts — Foundation & Physical Posting**  
-  🟡 M · **Score:**  51  
-   → **unlocks:** 1/3
-
-4. `settlements-npcs-016` - **First Processing Chain and Blacksmith Production**  
+3. `settlements-npcs-016` - **First Processing Chain and Blacksmith Production**  
   🔴 M · **Score:**  47  
    → **unlocks:** 1/1
 
-5. `npc-015` - **Work Contracts — NPC Work & Construction**  
+4. `npc-015` - **Work Contracts — NPC Work & Construction**  
   🟡 L · **Score:**  44  
    → **unlocks:** 2/2
 
-6. `fauna-004` - **Sheep wool cycle and shepherd**  
+5. `fauna-004` - **Sheep wool cycle and shepherd**  
   🟡 L · **Score:**  38  
    → **unlocks:** 1/2
 
-7. `npc-009` - **NPC Combat Feedback**  
+6. `settlements-npcs-017` - **Production Demand and Economic Pressures**  
   🔴 M · **Score:**  35  
    → **unlocks:** 0/0
 
-8. `settlements-npcs-017` - **Production Demand and Economic Pressures**  
-  🔴 M · **Score:**  35  
-   → **unlocks:** 0/0
-
-9. `settlements-npcs-006` - **Wool to material**  
+7. `settlements-npcs-006` - **Wool to material**  
   🟡 M · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `items-player-002` - **Food provenance, freshness and storage**  
+8. `items-player-002` - **Food provenance, freshness and storage**  
   🟡 M · **Score:**  29  
    → **unlocks:** 0/0
 
-11. `items-player-012` - **Player Gathering and Fire Cooking Polish**  
-  🟡 M · **Score:**  29  
+9. `items-player-014` - **Rope-pullable resource transport**  
+  🟡 M · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-013` - **Hierarchical Domain History**  
+10. `tools-005` - **Seedvale Character Preparation Panel**  
   🔴 M · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` - **Seedvale Character Preparation Panel**  
-  🔴 M · **Score:**  27  
-   → **unlocks:** 0/0
-
-14. `npc-002` - **NPC Healing**  
+11. `npc-002` - **NPC Healing**  
   🟡 M · **Score:**  25  
    → **unlocks:** 0/0
 
-15. `npc-013` - **NPC night campfire gathering**  
-  🟡 S · **Score:**  25  
-   → **unlocks:** 0/0
-
-16. `persistence-001` - **Full Simulation Persistence**  
+12. `tools-007` - **MPFB2 NPC / Hero Character Pipeline**  
   🔴 L · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `tools-007` - **MPFB2 NPC / Hero Character Pipeline**  
+13. `tools-009` - **plan metadata contract, migration and documentation generation**  
   🔴 L · **Score:**  24  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-012` - **Physical Storage Inspection**  
-  🟡 S · **Score:**  23  
-   → **unlocks:** 0/0
-
-19. `world-004` - **Well Depth, Groundwater & Well Protection**  
+14. `world-004` - **Well Depth, Groundwater & Well Protection**  
   🟡 M · **Score:**  23  
    → **unlocks:** 0/0
 
-20. `npc-010` - **NPC Death & Corpse Lifecycle**  
+15. `npc-010` - **NPC Death & Corpse Lifecycle**  
   🟡 L · **Score:**  22  
    → **unlocks:** 0/0
 
-21. `items-player-013` - **Player-Built Sleeping Utilities**  
+16. `fauna-008` - **Riding Skill Effects**  
+  🟡 S · **Score:**  21  
+   → **unlocks:** 0/0
+
+17. `npc-016` - **Work Contracts — Payment & Employer Interaction**  
   🟡 M · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `npc-012` - **NPC weather reaction & shelter**  
+18. `npc-017` - **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 M · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `npc-016` - **Work Contracts — Payment & Employer Interaction**  
+19. `settlements-npcs-007` - **Bandages and herbal medicine**  
   🟡 M · **Score:**  21  
    → **unlocks:** 0/0
 
-24. `npc-017` - **Work Contracts — Food & Drink for Hired NPCs**  
-  🟡 M · **Score:**  21  
-   → **unlocks:** 0/0
-
-25. `settlements-npcs-007` - **Bandages and herbal medicine**  
-  🟡 M · **Score:**  21  
-   → **unlocks:** 0/0
-
-26. `fauna-005` - **Animal Corpse and Bone Feeding**  
+20. `tools-000` - **Weapon Browser — Observatory/Admin**  
   🟡 M · **Score:**  17  
    → **unlocks:** 0/0
 
-27. `tools-000` - **Weapon Browser — Observatory/Admin**  
+21. `ui-input-007` - **Player Action Contracts & Quick Actions Availability**  
   🟡 M · **Score:**  17  
    → **unlocks:** 0/0
 
-28. `npc-011` - **NPC Burial & Graves**  
+22. `fauna-007` - **Animal leading and cart harness**  
   🟡 L · **Score:**  16  
+   → **unlocks:** 0/0
+
+23. `npc-011` - **NPC Burial & Graves**  
+  🟡 L · **Score:**  16  
+   → **unlocks:** 0/0
+
+24. `npc-004` - **Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie**  
+  ⚪ S · **Score:**   9  
+   → **unlocks:** 0/0
+
+25. `tools-006` - **tools-006--world-observatory.md**  
+  ⚪ XL · **Score:**   0  
    → **unlocks:** 0/0
 
 
 Initially blocked
 =================
-- npc-015: npc-014
 - npc-016: npc-015
 - npc-017: npc-015
 - settlements-npcs-006: fauna-004
@@ -150,6 +137,12 @@ graph TD
   fauna_003["fauna-003"]
   fauna_004["fauna-004"]
   fauna_005["fauna-005"]
+  fauna_006["fauna-006"]
+  fauna_007["fauna-007"]
+  014 --> fauna_007
+  006 --> fauna_007
+  fauna_008["fauna-008"]
+  003 --> fauna_008
   items_player_001["items-player-001"]
   items_player_002["items-player-002"]
   155 --> items_player_002
@@ -170,9 +163,13 @@ graph TD
   items_player_013["items-player-013"]
   items_player_009 --> items_player_013
   items_player_010 --> items_player_013
+  items_player_014["items-player-014"]
+  155 --> items_player_014
+  122 --> items_player_014
   npc_001["npc-001"]
   npc_002["npc-002"]
   177 --> npc_002
+  npc_004["npc-004"]
   npc_005["npc-005"]
   177 --> npc_005
   179 --> npc_005
@@ -182,6 +179,8 @@ graph TD
   npc_008["npc-008"]
   npc_009["npc-009"]
   177 --> npc_009
+  179 --> npc_009
+  007 --> npc_009
   npc_010["npc-010"]
   177 --> npc_010
   npc_011["npc-011"]
@@ -198,6 +197,9 @@ graph TD
   npc_017["npc-017"]
   npc_015 --> npc_017
   persistence_001["persistence-001"]
+  persistence_002["persistence-002"]
+  persistence_003["persistence-003"]
+  002 --> persistence_003
   settlements_001["settlements-001"]
   111 --> settlements_001
   settlements_002["settlements-002"]
@@ -254,7 +256,9 @@ graph TD
   111 --> tools_003
   tools_004["tools-004"]
   tools_005["tools-005"]
+  tools_006["tools-006"]
   tools_007["tools-007"]
+  tools_009["tools-009"]
   ui_input_001["ui-input-001"]
   ui_input_002["ui-input-002"]
   ui_input_003["ui-input-003"]
@@ -263,6 +267,7 @@ graph TD
   ui_input_006["ui-input-006"]
   159 --> ui_input_006
   184 --> ui_input_006
+  ui_input_007["ui-input-007"]
   world_001["world-001"]
   192 --> world_001
   world_003["world-003"]
@@ -277,4 +282,7 @@ graph TD
   world_terrain_002["world-terrain-002"]
   world_terrain_003["world-terrain-003"]
   133 --> world_terrain_003
+  world_terrain_004["world-terrain-004"]
+  world_terrain_005["world-terrain-005"]
+  004 --> world_terrain_005
 ```
