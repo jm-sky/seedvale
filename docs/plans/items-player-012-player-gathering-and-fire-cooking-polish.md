@@ -6,7 +6,6 @@
 **Depends on:** ~~106~~ ~~122~~ ~~159~~
 **Domain:** `items-player`
 **Tags:** `cooking` `gathering` `quick-actions` `tree` `branches`
-**Roadmap:** `player-systems`
 
 ## Goal
 

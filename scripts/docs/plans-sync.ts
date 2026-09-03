@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_DOMAIN_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
+import { AVAILABLE_DOMAINS, LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_DOMAIN_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
+import { formatValidationIssues, listRoadmapFiles, parsePlanHeader, validatePlanHeader, type ValidationIssue } from './plan-metadata.js'
 
 const README_PATH = resolve(PLANS_PATH, 'README.md')
 const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
@@ -8,7 +9,6 @@ const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
 const UPDATED_REVIEW_SUFFIX = '--updated-review.md'
 const REVIEW_SUFFIX = '-review.md'
 
-const PLANNED_STATUS_MARKER = '**Status:** `planned` 📋'
 const PLANNED_HEADING = '## Planned'
 const PLAN_TITLE_PAD_END_SIZE = 70
 const TABLE_HEADER = '| File                                                                   | Summary | Pri | Effort | Depends |'
@@ -22,20 +22,7 @@ const PRIORITY_EMOJI: Record<string, string> = {
   low: '⚪',
 }
 
-const CANONICAL_DOMAINS = new Set([
-  'ai',
-  'fauna',
-  'items-player',
-  'npc',
-  'persistence',
-  'quests-progression',
-  'settlements',
-  'settlements-npcs',
-  'tools',
-  'ui-input',
-  'world',
-  'world-terrain',
-])
+const CANONICAL_DOMAINS = new Set(Object.keys(AVAILABLE_DOMAINS))
 
 type PlanInfo = {
   file: string
@@ -111,7 +98,7 @@ const buildRow = (
   hasNotes: boolean,
 ): string => {
   const headerBlock = extractHeaderBlock(content)
-  const isPlanned = content.includes(PLANNED_STATUS_MARKER)
+  const isPlanned = headerBlock.match(PLAN_STATUS_RE)?.[1]?.trim() === 'planned'
 
   const priorityWord = matchOne(
     headerBlock,
@@ -271,7 +258,12 @@ const getPlannedFiles = async (
       'utf8',
     )
 
-    if (content.includes(PLANNED_STATUS_MARKER)) {
+    // Derived from the parsed Status field rather than the literal
+    // "`planned` 📋" marker string — a plan missing the emoji (e.g. a typo)
+    // must still be recognized as planned, not silently dropped from sync.
+    const status = content.match(PLAN_STATUS_RE)?.[1]?.trim()
+
+    if (status === 'planned') {
       plannedFiles.push(plan.file)
     }
   }
@@ -279,6 +271,43 @@ const getPlannedFiles = async (
   plannedFiles.sort()
 
   return plannedFiles
+}
+
+/**
+ * Validate every current (non-legacy) plan against the plan metadata
+ * contract (`docs/plans/PLAN-METADATA.md`), collecting every issue rather
+ * than failing on the first one so a single sync run surfaces the complete
+ * cleanup list.
+ *
+ * Legacy date-ID plans (`LEGACY_PLAN_FILE_RE`) predate the contract and are
+ * excluded here the same way the rest of this script already treats them —
+ * see the "Ignoring N legacy plan file(s)" log in `main()`.
+ *
+ * @domain tools
+ */
+const validateMetadataContract = async (
+  plans: PlanInfo[],
+): Promise<void> => {
+  const roadmapFiles = await listRoadmapFiles()
+  const issues: ValidationIssue[] = []
+
+  for (const plan of plans) {
+    const content = await readFile(resolve(PLANS_PATH, plan.file), 'utf8')
+    const header = parsePlanHeader(plan.file, content)
+
+    issues.push(
+      ...validatePlanHeader(header, {
+        domainFromFilename: plan.domain,
+        roadmapFiles,
+      }),
+    )
+  }
+
+  if (issues.length > 0) {
+    throw new Error(
+      `Plan metadata contract violations (${issues.length}):\n${formatValidationIssues(issues)}`,
+    )
+  }
 }
 
 const getExistingFiles = (
@@ -506,6 +535,7 @@ const main = async () => {
   }
 
   await validatePlans(plans)
+  await validateMetadataContract(plans)
 
   const plannedFiles: string[] =
     await getPlannedFiles(plans)

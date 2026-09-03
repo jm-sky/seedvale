@@ -2,6 +2,7 @@
 
 **Created:** 2026-09-03  
 **Status:** `planned` 📋  
+**Type:** polish  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~003~~  
 **Domain:** `fauna`

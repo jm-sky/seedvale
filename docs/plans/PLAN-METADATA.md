@@ -260,18 +260,18 @@ Examples:
 
 | Domain | Suggested Subdomains |
 |---|---|
-| `npc` | `behavior`, `needs`, `goals`, `decision-making`, `relationships`, `memory`, `lifecycle`, `work`, `combat`, `dialogue` |
+| `ai` | `dialogue`, `characterisation`, `generation`, `agents` |
 | `fauna` | `predation`, `prey`, `habitat`, `reproduction`, `migration`, `lifecycle`, `population`, `domestication` |
+| `items-player` | `inventory`, `items`, `tools`, `interaction`, `player-needs` |
+| `npc` | `behavior`, `needs`, `goals`, `decision-making`, `relationships`, `memory`, `lifecycle`, `work`, `combat`, `dialogue` |
+| `persistence` | `save-data`, `serialization`, `storage`, `migration` |
+| `quests-progression` | `quests`, `relationships`, `progression`, `rewards` |
 | `settlements` | `buildings`, `population`, `resources`, `development`, `economy` |
 | `settlements-npcs` | `household`, `schedules`, `economy`, `logistics`, `social` |
+| `tools` | `debug`, `development`, `diagnostics`, `automation` |
+| `ui-input` | `hud`, `menus`, `input`, `interaction`, `feedback` |
 | `world` | `resources`, `places`, `time`, `weather`, `events`, `simulation` |
 | `world-terrain` | `terrain`, `chunks`, `vegetation`, `roads`, `landmarks`, `rendering` |
-| `items-player` | `inventory`, `items`, `tools`, `interaction`, `player-needs` |
-| `quests-progression` | `quests`, `relationships`, `progression`, `rewards` |
-| `persistence` | `save-data`, `serialization`, `storage`, `migration` |
-| `ui-input` | `hud`, `menus`, `input`, `interaction`, `feedback` |
-| `tools` | `debug`, `development`, `diagnostics`, `automation` |
-| `ai` | `dialogue`, `characterisation`, `generation`, `agents` |
 
 These are starting recommendations, not a closed schema.
 
@@ -290,7 +290,6 @@ Tags are **global recommended vocabulary with an extensible/open model**.
 Recommended tags include:
 
 - `gameplay`
-- `bug`
 - `combat`
 - `economy`
 - `persistence`
@@ -348,6 +347,19 @@ Roadmap = strategic development direction
 ```
 
 Roadmap is not another priority system.
+
+### Currently available roadmaps
+
+- `domain-debug-and-simulation-observability`
+- `economy-goods-flow`
+- `economy-production`
+- `horse-and-riding`
+- `npc-ai`
+- `npc-professions-households-and-age`
+- `physical-resource-storage-and-logistics`
+- `player-construction`
+- `textiles-and-herbal-medicine`
+- `workforce-for-hire`
 
 ---
 

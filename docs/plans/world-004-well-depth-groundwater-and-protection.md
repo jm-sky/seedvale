@@ -6,7 +6,7 @@
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~127~~  
 **Domain:** `world`
-**Tags:** `items-player`, `settlements-npcs`
+**Tags:** `items-player` `settlements-npcs`
 
 ## Cel
 

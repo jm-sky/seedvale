@@ -1,6 +1,6 @@
 # Plan — World Observatory
 
-**Status:** `planned`
+**Status:** `planned` 📋
 **Type:** infrastructure
 **Created:** 2026-08-11
 **Priority:** ⚪ low · **Effort:** XL · **Depends on:** ~~071~~, ~~069~~  

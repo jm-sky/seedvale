@@ -5,7 +5,7 @@
 **Priority:** high · **Effort:** M
 **Depends on:** ~~156~~ ~~002~~
 **Domain:** `settlements-npcs`
-**Roadmap:** [economy-production.md](../roadmap/economy-production.md)
+**Roadmap:** `economy-production`
 
 ## Goal
 

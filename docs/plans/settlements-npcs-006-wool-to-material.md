@@ -6,7 +6,7 @@
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~fauna-004~~  
 **Domain:** settlements-npcs  
-**Tags:** items-player, fauna  
+**Tags:** `items-player` `fauna`
 **Roadmap:** textiles-and-herbal-medicine.md
 
 ## Cel

@@ -44,6 +44,11 @@ export const NOTES_SUFFIX = '-implementation-notes.md'
 export const REVIEWS_DIR = 'reviews'
 export const REVIEWS_PATH = resolve(PLANS_PATH, REVIEWS_DIR)
 
+export const ROADMAP_DIR = 'docs/roadmap'
+export const ROADMAP_PATH = resolve(ROOT_DIR, ROADMAP_DIR)
+export const PLAN_METADATA_PATH = resolve(PLANS_DIR, 'PLAN-METADATA.md')
+export const PLANNING_PATH = resolve(PLANS_DIR, 'PLANNING.md')
+
 export const ASSETS_DIR = resolve(ROOT_DIR, '_temp')
 export const SRC_DIR = resolve(ROOT_DIR, 'src')
 export const DOCS_DIR = resolve(ROOT_DIR, 'docs')
@@ -54,6 +59,7 @@ export const PLAN_ID_RE = /^([a-z0-9-]+)-(\d{3})-/
 export const LEGACY_PLAN_FILE_RE = /^\d{4}-\d{2}-\d{2}--\d{3}--.+\.md$/
 export const LEGACY_PLAN_ID_RE = /^\d{4}-\d{2}-\d{2}--(\d{3})--/
 
+export const PLAN_CREATED_RE = /^\*\*Created:\*\*\s*(.+)$/im
 export const PLAN_STATUS_RE = /^\*\*Status:\*\*\s*`([^`]+)`/im
 export const PLAN_PRIORITY_RE = /\*\*Priority:\*\*\s*[^\w]*([A-Za-z]+)/i
 export const PLAN_EFFORT_RE = /\*\*Effort:\*\*\s*`?([A-Za-z]{1,3})`?/i
@@ -64,6 +70,10 @@ export const PLAN_SUBDOMAINS_RE = /^\*\*Subdomains:\*\*\s*(.+)$/im
 export const PLAN_TAGS_RE = /^\*\*Tags:\*\*\s*(.+)$/im
 export const PLAN_ROADMAP_RE = /^\*\*Roadmap:\*\*\s*`?([^`\s]+)`?\s*$/im
 export const PLAN_IMPLEMENTED_AT_RE = /^\*\*Implemented at:\*\*\s*(.+)$/im
+export const PLAN_TITLE_RE = /^#\s*Plan:?\s*(.+)$/im
+
+export const CREATED_DATE_FORMAT_RE = /^\d{4}-\d{2}-\d{2}$/
+export const IMPLEMENTED_AT_FORMAT_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/
 
 export const AVAILABLE_STATUSES: Status[] = ['draft', 'done', 'in progress', 'planned', 'verification needed']
 export const COMPLETED_STATUSES: Set<Status> = new Set(['done', 'verification needed'])
@@ -71,6 +81,47 @@ export const PRIORITY_ICONS: Record<Priority, string> = {
   high: '🔴',
   medium: '🟡',
   low: '⚪',
+}
+
+/** Lifecycle display order (Created → planned → in progress → verification needed → done), draft first. */
+export const STATUS_DISPLAY_ORDER: Status[] = ['draft', 'planned', 'in progress', 'verification needed', 'done']
+
+export const STATUS_ICONS: Record<Status, string> = {
+  draft: '📝',
+  planned: '📋',
+  'in progress': '🔄',
+  'verification needed': '🔍',
+  done: '✅',
+}
+
+export const STATUS_DESCRIPTIONS: Record<Status, string> = {
+  draft: 'Plan exists but is not yet committed to the implementation backlog',
+  planned: 'Ready for implementation; participates in planned ordering',
+  'in progress': 'Implementation currently underway',
+  'verification needed': 'Implementation is complete enough to require meaningful browser/manual verification',
+  done: 'Implementation and required verification are complete',
+}
+
+export const PRIORITY_WEIGHTS: Record<Priority, number> = {
+  high: 30,
+  medium: 20,
+  low: 10,
+}
+
+export const EFFORT_PENALTIES: Record<Effort, number> = {
+  XS: 0,
+  S: 1,
+  M: 3,
+  L: 6,
+  XL: 10,
+}
+
+export const EFFORT_DESCRIPTIONS: Record<Effort, string> = {
+  XS: 'minutes',
+  S: '~15–30 min',
+  M: '~30–90 min',
+  L: '~1–3 h',
+  XL: 'several sessions',
 }
 
 export const AVAILABLE_TYPES: PlanType[] = [
@@ -82,6 +133,34 @@ export const AVAILABLE_TYPES: PlanType[] = [
   'refactor',
   'infrastructure',
 ]
+
+export const TYPE_DESCRIPTIONS: Record<PlanType, string> = {
+  feature: 'New functionality, capability, or world/system behaviour',
+  bug: 'Correction of behaviour that is objectively incorrect or broken',
+  fix: 'Deliberate correction/improvement of an existing implementation that is not necessarily a bug',
+  polish: 'Quality improvement such as UX, visual presentation, animation, audio, feedback, or feel',
+  optimization: 'Performance/scalability/resource-cost improvement',
+  refactor: 'Internal restructuring without intended behavioural change',
+  infrastructure: 'Tooling, build, development infrastructure, scripts, CI, or other supporting infrastructure',
+}
+
+/** Field labels as they appear in a plan header, e.g. `**Created:**`. */
+export const REQUIRED_PLAN_FIELDS = [
+  'Created',
+  'Status',
+  'Type',
+  'Priority',
+  'Effort',
+  'Depends on',
+  'Domain',
+] as const
+
+export const OPTIONAL_PLAN_FIELDS = [
+  'Subdomains',
+  'Tags',
+  'Roadmap',
+  'Implemented at',
+] as const
 
 export const AVAILABLE_DOMAINS: Record<
   Domain,
@@ -183,3 +262,21 @@ export const AVAILABLE_TAGS = [
   'polish',
   'tooling',
 ] as const
+
+/**
+ * Split a `Subdomains`/`Tags` field value into individual tokens.
+ *
+ * Plan headers have used a few interchangeable separator styles historically
+ * (`` `a` `b` ``, `a, b`, `[a]`) — this normalizes all of them for parsing.
+ * It does not enforce a canonical style; use it for reading, not writing.
+ *
+ * @domain tools
+ */
+export const parseTokenList = (raw: string | undefined): string[] => {
+  if (!raw) return []
+
+  return raw
+    .split(/[`,[\]]+/)
+    .map(value => value.trim())
+    .filter(Boolean)
+}

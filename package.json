@@ -16,6 +16,8 @@
     "plans:sync": "tsx scripts/docs/plans-sync.ts",
     "plans:done": "tsx scripts/docs/plans-done.ts",
     "plans:recommended-order": "tsx scripts/docs/plans-recommended-order.ts",
+    "plans:migrate-metadata": "tsx scripts/docs/migrate-plan-metadata.ts",
+    "plans:cleanup-metadata": "tsx scripts/docs/cleanup-plan-metadata.ts",
     "assets:report": "tsx scripts/docs/generate-local-assets-report.ts",
     "docs:map-audit": "tsx scripts/docs/docs-map-audit.ts",
     "docs:navigation-candidates": "tsx scripts/docs/docs-navigation-candidates.ts",
@@ -23,7 +25,8 @@
     "docs:symbol-index": "tsx scripts/docs/docs-symbol-index.ts",
     "docs:dependency-map": "tsx scripts/docs/docs-dependency-map.ts",
     "docs:code-index": "tsx scripts/docs/docs-code-index.ts",
-    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/planned-plans-without-notes.ts && tsx scripts/docs/docs-readme-index.ts && tsx scripts/docs/docs-symbol-index.ts && tsx scripts/docs/docs-dependency-map.ts && tsx scripts/docs/docs-code-index.ts && tsx scripts/docs/plans-done.ts",
+    "docs:generate-plan-docs": "tsx scripts/docs/generate-plan-docs.ts",
+    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/generate-plan-docs.ts && tsx scripts/docs/planned-plans-without-notes.ts && tsx scripts/docs/docs-readme-index.ts && tsx scripts/docs/docs-symbol-index.ts && tsx scripts/docs/docs-dependency-map.ts && tsx scripts/docs/docs-code-index.ts && tsx scripts/docs/plans-done.ts",
     "claude:preflight": "tsx scripts/claude/pre-implementation.ts"
   },
   "dependencies": {

@@ -6,7 +6,7 @@
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `tools`  
-**Tags:** [items-player]
+**Tags:** `items-player`
 
 ## Goal
 

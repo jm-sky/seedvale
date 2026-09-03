@@ -26,20 +26,20 @@ This ids section is maintained automatically from the plan files.
 
 ## Domains
 
-| Domain | Covers |
-|---|---|
-| `ai` | AI-assisted dialogue and characterisation |
-| `fauna` | Wildlife and ecosystem simulation |
-| `items-player` | Inventory, tools, player items and needs |
-| `npc` | NPC behaviour, needs, goals, decisions and actions |
-| `persistence` | SaveData and persistence |
-| `quests-progression` | Quests, relationships, EXP and progression |
-| `settlements` | Settlements, buildings, population and development |
-| `settlements-npcs` | Households, schedules, economy and NPC-settlement integration |
-| `tools` | Development and debugging tools |
-| `ui-input` | UI, HUD, input and player interaction |
-| `world` | World state, resources, places, time and weather |
-| `world-terrain` | Terrain, chunks, ocean and environment |
+| Domain | Covers | Subdomains |
+|---|---|---|
+| `ai` | AI-assisted dialogue, characterisation and related AI systems | `dialogue`, `characterisation`, `generation`, `agents` |
+| `fauna` | Wildlife, predators/prey and ecosystem simulation | `predation`, `prey`, `habitat`, `reproduction`, `migration`, `lifecycle`, `population`, `domestication` |
+| `items-player` | Player inventory, items, tools and item interaction | `inventory`, `items`, `tools`, `interaction`, `player-needs` |
+| `npc` | NPC behaviour, needs, goals, traits, decisions and actions | `behavior`, `needs`, `goals`, `decision-making`, `relationships`, `memory`, `lifecycle`, `work`, `combat`, `dialogue` |
+| `persistence` | Save data, storage, serialization and migrations | `save-data`, `serialization`, `storage`, `migration` |
+| `quests-progression` | Quests, relationships, progression and rewards | `quests`, `relationships`, `progression`, `rewards` |
+| `settlements` | Settlements, buildings, population, resources and development | `buildings`, `population`, `resources`, `development`, `economy` |
+| `settlements-npcs` | Households, schedules, settlement NPCs and local economy | `household`, `schedules`, `economy`, `logistics`, `social` |
+| `tools` | Development tools, diagnostics and automation | `debug`, `development`, `diagnostics`, `automation` |
+| `ui-input` | UI, HUD, input and player interaction | `hud`, `menus`, `input`, `interaction`, `feedback` |
+| `world` | World state, resources, places, time, weather and simulation | `resources`, `places`, `time`, `weather`, `events`, `simulation` |
+| `world-terrain` | Terrain, chunks, vegetation, roads and world rendering | `terrain`, `chunks`, `vegetation`, `roads`, `landmarks`, `rendering` |
 
 Use the existing domain that best owns the work. Do not create a new domain for a single plan.
 
@@ -52,12 +52,13 @@ Every plan starts with:
 
 **Created:** YYYY-MM-DD
 **Status:** `planned` 📋
+**Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~005~~ ~~008~~
 **Domain:** `npc`
 ```
 
-Required fields: `Created`, `Status`, `Priority`, `Effort`, `Depends on`, `Domain`.
+Required fields: `Created`, `Status`, `Type`, `Priority`, `Effort`, `Depends on`, `Domain`.
 
 Optional metadata may help AI preflight:
 
@@ -67,8 +68,12 @@ Optional metadata may help AI preflight:
 **Roadmap:** `npc-ai.md`
 ```
 
+Optional fields: `Subdomains`, `Tags`, `Roadmap`, `Implemented at`.
+
+Closed vocabularies — Status: `draft`, `planned`, `in progress`, `verification needed`, `done`; Type: `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure`; Priority: `high`, `medium`, `low`; Effort: `XS`, `S`, `M`, `L`, `XL`.
+
 Keep `Subdomains` and `Tags` short and relevant. They are hints for navigation/preflight, not a replacement for code recon.
-Optional `Roadmap` should point to a file in `docs/roadmap` folder. 
+Optional `Roadmap` should point to a file in `docs/roadmap` folder. See `docs/plans/PLAN-METADATA.md` for the full contract, including per-field semantics and consumers.
 
 ## Creating a Plan
 

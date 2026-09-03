@@ -1,14 +1,14 @@
 # Plan: plan metadata contract, migration and documentation generation
 
 **Created:** 2026-09-03
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** infrastructure
 **Priority:** high · **Effort:** L
 **Depends on:** -
 **Domain:** `tools`
 **Subdomains:** `development` `automation` `diagnostics`
 **Tags:** `tooling` `documentation`
-**Roadmap:** `tools.md`
+**Implemented at:** 2026-09-03 13:45
 
 ## Goal
 

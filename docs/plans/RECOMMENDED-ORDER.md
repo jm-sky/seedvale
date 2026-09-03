@@ -85,23 +85,19 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 M · **Score:**  17  
    → **unlocks:** 0/0
 
-21. `ui-input-007` - **Player Action Contracts & Quick Actions Availability**  
-  🟡 M · **Score:**  17  
-   → **unlocks:** 0/0
-
-22. `fauna-007` - **Animal leading and cart harness**  
+21. `fauna-007` - **Animal leading and cart harness**  
   🟡 L · **Score:**  16  
    → **unlocks:** 0/0
 
-23. `npc-011` - **NPC Burial & Graves**  
+22. `npc-011` - **NPC Burial & Graves**  
   🟡 L · **Score:**  16  
    → **unlocks:** 0/0
 
-24. `npc-004` - **Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie**  
+23. `npc-004` - **Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie**  
   ⚪ S · **Score:**   9  
    → **unlocks:** 0/0
 
-25. `tools-006` - **tools-006--world-observatory.md**  
+24. `tools-006` - **tools-006--world-observatory.md**  
   ⚪ XL · **Score:**   0  
    → **unlocks:** 0/0
 

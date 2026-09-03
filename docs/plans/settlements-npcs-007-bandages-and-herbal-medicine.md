@@ -6,7 +6,7 @@
 **Priority:** medium · **Effort:** M  
 **Depends on:** settlements-npcs-006  
 **Domain:** settlements-npcs  
-**Tags:** items-player, npc  
+**Tags:** `items-player` `npc`
 **Roadmap:** `textiles-and-herbal-medicine`
 
 ## Cel

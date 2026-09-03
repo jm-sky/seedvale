@@ -2,9 +2,14 @@
 
 Current planning map for implementation plans: backlog, dependencies, active threads and verification queue. Detailed implementation lives in the plan files; implementation notes and reviews live in their dedicated folders; history lives in [archive/](./archive/README.md).
 
-Status: `in progress` 🔄 · `verification needed` 🔍 · `planned` 📋 · `done` ✅
+## Metadata reference
+
+Generated from `scripts/docs/config.ts` by `pnpm docs:generate-plan-docs` — see `docs/plans/PLAN-METADATA.md` for the full contract.
+
+Status: `draft` 📝 · `planned` 📋 · `in progress` 🔄 · `verification needed` 🔍 · `done` ✅
 Priority: 🔴 high · 🟡 medium · ⚪ low
 Effort: `XS` minutes · `S` ~15–30 min · `M` ~30–90 min · `L` ~1–3 h · `XL` several sessions
+Type: `feature` · `bug` · `fix` · `polish` · `optimization` · `refactor` · `infrastructure`
 
 Unless noted otherwise, `verification needed` means implementation has passed automated checks but still needs browser/manual verification.
 
@@ -48,7 +53,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | -       | 🟡 | M      | ~~127~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
-| ◼️ `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | -       | 🔴 | L      | -      |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
@@ -63,6 +67,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | File | Check |
 |------|-------|
+| `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | Skim the regenerated `docs/plans/README.md`/`PLANNING.md`/`PLAN-METADATA.md` sections for sense; spot-check `pnpm plans:migrate-metadata` and `pnpm plans:cleanup-metadata` dry-run output is sane on the real plan set (no proposed changes expected — migration already applied) |
 | `world-008-player-world-placement-foundation.md` | Place/cancel a tent and a chest, preview validity matches actual placement result, open/carry/pick-up/put-down a chest, save/load restores both |
 | `items-player-003-player-physical-effort-stamina-vigor.md` | idle/sprint/work Stamina behaviour, work/sprint/heavy-work Vigor drain, well/terrain-prep sessions leave Stamina reduced but not 0 with Vigor visibly lower, post-work recovery pacing, wolf-after-work combat with reduced capacity, sleep still restoring Vigor, fishing/light interactions staying uncosted |
 | `npc-006-shared-npc-animal-pathfinding.md` | NPCs and wolves navigate around obstacles without getting stuck; no obvious performance regression |
@@ -134,22 +139,22 @@ Existing legacy plans keep their current date/global-ID names and are not rename
 
 New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only for genuinely secondary domains.
 
-| Domain | Covers |
-|--------|--------|
-| `ai` | AI-assisted dialogue, characterisation and related AI systems |
-| `fauna` | Wildlife, predators/prey, herds, ecosystem simulation |
-| `items-player` | Inventory, tools, player needs, world items |
-| `npc` | NPC behaviour, needs, goals, traits, decisions and actions |
-| `persistence` | SaveData, IndexedDB, persistence |
-| `quests-progression` | Quests, relationships, EXP and progression |
-| `settlements` | Settlements, buildings, population, resources and development |
-| `settlements-npcs` | Settlements + NPCs, households, schedules, economy, dialogue |
-| `tools` | Development/debugging tools and utilities |
-| `ui-input` | UI, HUD, input and player interaction |
-| `world` | World state, resources, places, time, weather and global systems |
-| `world-terrain` | Terrain, chunks, ocean, environment and landmarks |
+| Domain | Summary | Subdomains |
+|---|---|---|
+| `ai` | AI-assisted dialogue, characterisation and related AI systems | `dialogue`, `characterisation`, `generation`, `agents` |
+| `fauna` | Wildlife, predators/prey and ecosystem simulation | `predation`, `prey`, `habitat`, `reproduction`, `migration`, `lifecycle`, `population`, `domestication` |
+| `items-player` | Player inventory, items, tools and item interaction | `inventory`, `items`, `tools`, `interaction`, `player-needs` |
+| `npc` | NPC behaviour, needs, goals, traits, decisions and actions | `behavior`, `needs`, `goals`, `decision-making`, `relationships`, `memory`, `lifecycle`, `work`, `combat`, `dialogue` |
+| `persistence` | Save data, storage, serialization and migrations | `save-data`, `serialization`, `storage`, `migration` |
+| `quests-progression` | Quests, relationships, progression and rewards | `quests`, `relationships`, `progression`, `rewards` |
+| `settlements` | Settlements, buildings, population, resources and development | `buildings`, `population`, `resources`, `development`, `economy` |
+| `settlements-npcs` | Households, schedules, settlement NPCs and local economy | `household`, `schedules`, `economy`, `logistics`, `social` |
+| `tools` | Development tools, diagnostics and automation | `debug`, `development`, `diagnostics`, `automation` |
+| `ui-input` | UI, HUD, input and player interaction | `hud`, `menus`, `input`, `interaction`, `feedback` |
+| `world` | World state, resources, places, time, weather and simulation | `resources`, `places`, `time`, `weather`, `events`, `simulation` |
+| `world-terrain` | Terrain, chunks, vegetation, roads and world rendering | `terrain`, `chunks`, `vegetation`, `roads`, `landmarks`, `rendering` |
 
-`Ddomain` means "where to look first". Use `Tags` sparingly.
+`Domain` means "where to look first". Use `Tags` sparingly.
 
 `Roadmap` is optional, and should point to a file in `docs/roadmap` folder.
 
