@@ -52,6 +52,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
+| ◼️ `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | -       | 🔴 | L      | -      |
 
 ---
 
@@ -160,7 +161,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `001`
 - settlements: `003`
 - settlements-npcs: `018`
-- tools: `008`
+- tools: `010`
 - ui-input: `007`
 - world: `010`
 - world-terrain: `006`

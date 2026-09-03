@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-03 00:55:22  
+> Date: 2026-09-03 07:57:19  
 
 ## PLANS
 
@@ -10,6 +10,7 @@
 - `tools-000-weapon-browser-observatory.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `tools-007--mpfb2-npc-hero-character-pipeline.md`
+- `tools-009-plan-metadata-contract-migration-and-documentation-generation.md`
 
 --------------------------------
 ## PROMPTS
@@ -154,6 +155,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `tools-009-plan-metadata-contract-migration-and-documentation-generation.md`
+
+Prompt:
+
+```
+Zrób review planu `tools-009-plan-metadata-contract-migration-and-documentation-generation.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/tools-009-plan-metadata-contract-migration-and-documentation-generation.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/tools-009-plan-metadata-contract-migration-and-documentation-generation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
