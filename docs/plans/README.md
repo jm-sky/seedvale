@@ -29,6 +29,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
+| 💡 `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | -       | 🟡 | M      | -      |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                              | -       | 🟡 | L      | -       |
 | 💡 `settlements-npcs-006-wool-to-material.md`                          | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`              | -       | 🟡 | M      | settlements-npcs-006 |
@@ -47,13 +48,12 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-015-work-contracts-npc-work-and-construction.md`               | -       | 🟡 | L      | npc-014 |
 | 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`        | -       | 🟡 | M      | npc-015 |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                          | -       | 🟡 | M      | ~~npc-015~~ |
+| 💡 `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
+| ◼️ `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | -       | 🔴 | L      | -      |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| 💡 `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
-| ◼️ `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | -       | 🔴 | L      | -      |
-| 💡 `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | -       | 🟡 | M      | -      |
 
 ---
 
