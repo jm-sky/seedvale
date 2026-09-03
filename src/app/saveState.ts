@@ -13,6 +13,8 @@ import type { VueUi } from '../ui-vue/mount'
 import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { FishingBaitState } from '../world/fishing'
+import type { LocationKnowledge } from '../world/locations/locationKnowledge'
+import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { TreeLifecycle } from '../world/treeLifecycle'
@@ -48,6 +50,11 @@ export type SaveStateDeps = {
   questManager: QuestManager
   dayNight: DayNightState
   mapDiscovery: MapDiscovery
+  /** World Locations discovery/navigation state (plan world-012) — persisted
+   *  alongside `mapDiscovery` in `SaveData.map`, but as its own independent
+   *  layer (see `world/locations/locationKnowledge.ts`'s doc). */
+  locationKnowledge: LocationKnowledge
+  navigationTargets: NavigationTargets
   landOwnership: LandOwnershipRegistry
   vueUi: VueUi
   worldFlags: { guardSwordGifted: boolean, hiddenTreasureFound: boolean }
@@ -88,7 +95,7 @@ export type SaveStateDeps = {
 export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, playerTorch,
-    questManager, dayNight, mapDiscovery, landOwnership, vueUi, worldFlags, fishingBait,
+    questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
     resolvedHiddenFindSpotIds, badges,
   } = deps
 
@@ -137,7 +144,11 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     worldFlags: { ...worldFlags },
     resolvedHiddenFindSpotIds: [...resolvedHiddenFindSpotIds],
     badges: badges.exportState(),
-    map: { discoveredCells: mapDiscovery.serialize() },
+    map: {
+      discoveredCells: mapDiscovery.serialize(),
+      discoveredLocations: locationKnowledge.serialize(),
+      targets: navigationTargets.serialize(),
+    },
     settlementEconomies: bundle.settlementsManager.snapshotEconomies(),
     playerNeeds: {
       hunger: player.needs.hunger.current,

@@ -4,6 +4,8 @@ import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementCell, SettlementDef } from '../settlement/settlementGenerator'
 import type { SettlementsManager } from '../settlement/SettlementsManager'
+import type { LocationKnowledge } from '../world/locations/locationKnowledge'
+import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldContext } from '../world/worldContext'
 import { installNpcDebugApi } from './npcDebugApi'
 
@@ -91,7 +93,11 @@ function install(
   const teleport = opts.teleport ?? vi.fn(async () => {})
   const getPlayerPosition = opts.getPlayerPosition ?? (() => ({ x: 0, z: 0 }))
   const worldFlags = { hiddenTreasureFound: false }
-  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags)
+  const worldLocations = {
+    catalog: { getById: () => null, nearestSettlements: () => [], landmarksWithin: () => [], invalidateScanCache: () => {} } as unknown as WorldLocationCatalog,
+    knowledge: { get: () => undefined, has: () => false, reveal: () => false, list: () => [], serialize: () => [], restore: () => {}, clear: () => {} } as unknown as LocationKnowledge,
+  }
+  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags, worldLocations)
   return { teleport, api: typeof window === 'undefined' ? undefined : window.seedvale?.debug }
 }
 

@@ -1,4 +1,5 @@
-import type { MapViewport } from '../../world/map/mapTypes'
+import type { MapKnownLocation, MapViewport } from '../../world/map/mapTypes'
+import { getActiveNavigationTargets } from '../../world/locations/navigationTargets'
 import {
   MAP_CELL_SIZE,
   MAP_EXTENT_HALF,
@@ -8,7 +9,7 @@ import {
 } from '../../world/map/mapConfig'
 import { getActiveMapData } from '../../world/map/mapData'
 import { mapCellBounds } from '../../world/map/mapProjection'
-import { MAP_FOG_FILL, MAP_UNAVAILABLE_FILL, mapCellFillStyle } from './mapColors'
+import { MAP_FOG_FILL, MAP_UNAVAILABLE_FILL, mapCellFillStyle, targetSlotColor } from './mapColors'
 
 export type WorldMapView = {
   viewX: number
@@ -110,13 +111,27 @@ export function drawWorldMapFrame(
       ctx.fillRect(x, y, cellPx + 0.6, cellPx + 0.6)
     }
 
+    const targetSlotById = new Map((getActiveNavigationTargets()?.list() ?? []).map((t) => [t.id, t.slot]))
+
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
     for (const location of mapData.knownLocations(viewport)) {
       const { x, y } = worldToCanvas(location.x, location.z, view, width, height)
-      ctx.fillStyle = '#e0b34a'
-      ctx.fillRect(x - 5, y - 5, 10, 10)
+      const targetSlot = targetSlotById.get(location.id)
+      ctx.fillStyle = targetSlot != null ? targetSlotColor(targetSlot) : '#e0b34a'
+      // `estimated`/`discovered`/`confirmed` read as outline / translucent /
+      // solid (plan §16/§22 — visually distinguishable without extra UI).
+      if (location.state === 'estimated') {
+        ctx.globalAlpha = 1
+        ctx.strokeStyle = ctx.fillStyle
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(x - 5, y - 5, 10, 10)
+      } else {
+        ctx.globalAlpha = location.state === 'discovered' ? 0.65 : 1
+        ctx.fillRect(x - 5, y - 5, 10, 10)
+        ctx.globalAlpha = 1
+      }
       if (location.label) {
         ctx.fillStyle = 'rgba(20, 24, 28, 0.85)'
         ctx.fillText(location.label, x + 1, y + 9)
@@ -142,4 +157,38 @@ export function drawWorldMapFrame(
   ctx.fillText('N', width / 2 + 1, 16)
   ctx.fillStyle = '#f2f6fa'
   ctx.fillText('N', width / 2, 15)
+}
+
+/** Nearest known location to a canvas click, within `maxCanvasPx` (plan §12
+ *  "Kliknięcie lokacji na mapie otwiera informacje o niej" — a hit-test
+ *  against world data, never canvas pixel colour, and never a discovery
+ *  side effect). `null` when nothing known is close enough. */
+export function findLocationAtCanvasPoint(
+  view: WorldMapView,
+  width: number,
+  height: number,
+  canvasX: number,
+  canvasY: number,
+  maxCanvasPx = 10,
+): MapKnownLocation | null {
+  const mapData = getActiveMapData()
+  if (!mapData) return null
+  const { x: worldX, z: worldZ } = canvasToWorld(canvasX, canvasY, view, width, height)
+  const maxWorldDist = maxCanvasPx / view.zoom
+  const viewport = {
+    minX: worldX - maxWorldDist,
+    maxX: worldX + maxWorldDist,
+    minZ: worldZ - maxWorldDist,
+    maxZ: worldZ + maxWorldDist,
+  }
+  let nearest: MapKnownLocation | null = null
+  let nearestDist = Infinity
+  for (const location of mapData.knownLocations(viewport)) {
+    const dist = Math.hypot(location.x - worldX, location.z - worldZ)
+    if (dist <= maxWorldDist && dist < nearestDist) {
+      nearest = location
+      nearestDist = dist
+    }
+  }
+  return nearest
 }

@@ -476,6 +476,9 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/dryingRacks.ts`
 - `world/fishing.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/navigationTargets.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`
@@ -704,6 +707,10 @@ Generated from TypeScript imports.
 - `ui-vue/mount.ts`
 - `ui/createHud.ts`
 - `ui/createToast.ts`
+- `world/locations/locationConfig.ts`
+- `world/locations/locationDiscovery.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
 
 **Imported by**
 
@@ -797,6 +804,8 @@ Generated from TypeScript imports.
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
 - `world/fishing.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/navigationTargets.ts`
 - `world/map/mapDiscovery.ts`
 - `world/plantedTrees.ts`
 - `world/treeLifecycle.ts`

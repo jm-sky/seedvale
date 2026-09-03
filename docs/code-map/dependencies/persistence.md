@@ -32,6 +32,7 @@ Generated from TypeScript imports.
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
+- `world/map/mapTypes.ts`
 - `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
 - `world/treeLifecycle.ts`

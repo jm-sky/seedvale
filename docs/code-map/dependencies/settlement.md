@@ -802,6 +802,7 @@ Generated from TypeScript imports.
 - `world/hiddenFinds.test.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaveVisual.ts`
+- `world/locations/worldLocationNames.ts`
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
 
@@ -882,7 +883,8 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.ts`
-- `world/map/mapData.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
 
 ## `settlement/settlementPalisade.ts`
 

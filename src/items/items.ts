@@ -90,6 +90,8 @@ export type ItemKind =
   | 'seed_carrot'
   | 'seed_potato'
   | 'seed_cabbage'
+  | 'map_near'
+  | 'map_far'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -929,6 +931,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0x7ba85a,
     description: 'Nasiona kapusty. Zasadź je w ogródku, by po pewnym czasie zebrać plon.'
   },
+  map_near: {
+    kind: 'map_near',
+    label: 'mapa okolicy',
+    categories: ['utility'],
+    weight: 0.05,
+    size: 'XS',
+    color: 0xd8c79a,
+    description: 'Naszkicowana mapa bliskiej okolicy. Odsłania mapę świata natychmiast po zakupie — sprzedanie jej nie cofa tej wiedzy.'
+  },
+  map_far: {
+    kind: 'map_far',
+    label: 'mapa dalekich stron',
+    categories: ['utility'],
+    weight: 0.05,
+    size: 'XS',
+    color: 0xb99f6b,
+    description: 'Mapa dalekich, rzadko odwiedzanych terenów. Odsłania mapę świata natychmiast po zakupie — sprzedanie jej nie cofa tej wiedzy.'
+  },
 }
 
 const _itemShadowBox = new THREE.Box3()
@@ -1624,6 +1644,18 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS.whetstone.color, flatShading: true }),
     )
     mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'map_near' || kind === 'map_far') {
+    // Rolled parchment — a short cylinder reads as "a map" without a
+    // dedicated GLB (plan world-012).
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.22, 8),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    mesh.rotation.z = Math.PI / 2
+    mesh.position.y = 0.04
     mesh.castShadow = true
     return mesh
   }

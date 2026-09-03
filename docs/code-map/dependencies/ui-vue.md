@@ -35,6 +35,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ui-vue/lib/mapColors.ts`
+- `world/locations/navigationTargets.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.ts`
@@ -46,6 +47,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ui-vue/lib/mapColors.ts`
+- `world/locations/navigationTargets.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.ts`

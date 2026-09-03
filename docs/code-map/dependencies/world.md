@@ -164,6 +164,7 @@ Generated from TypeScript imports.
 - `world/caveMesh.ts`
 - `world/caveVolume.test.ts`
 - `world/createCaves.ts`
+- `world/locations/worldLocationCatalog.test.ts`
 
 ## `world/clouds.test.ts`
 
@@ -265,6 +266,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/worldBundle.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
 
 ## `world/createDryingRacks.ts`
 
@@ -745,6 +748,141 @@ Generated from TypeScript imports.
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.test.ts`
 
+## `world/locations/locationConfig.ts`
+
+**Imported by**
+
+- `app/inventoryWiring.ts`
+- `debug/npcDebugApi.ts`
+- `world/locations/locationDiscovery.test.ts`
+- `world/locations/locationDiscovery.ts`
+- `world/locations/worldLocationCatalog.ts`
+
+## `world/locations/locationDiscovery.test.ts`
+
+**Imports**
+
+- `world/locations/locationConfig.ts`
+- `world/locations/locationDiscovery.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
+
+## `world/locations/locationDiscovery.ts`
+
+**Imports**
+
+- `world/locations/locationConfig.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
+
+**Imported by**
+
+- `app/inventoryWiring.ts`
+- `world/locations/locationDiscovery.test.ts`
+
+## `world/locations/locationKnowledge.test.ts`
+
+**Imports**
+
+- `world/locations/locationKnowledge.ts`
+
+## `world/locations/locationKnowledge.ts`
+
+**Imports**
+
+- `world/map/mapTypes.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `app/saveState.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
+- `world/locations/locationKnowledge.test.ts`
+- `world/map/mapData.ts`
+- `world/map/mapProjection.test.ts`
+
+## `world/locations/navigationTargets.test.ts`
+
+**Imports**
+
+- `world/locations/navigationTargets.ts`
+
+## `world/locations/navigationTargets.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/saveState.ts`
+- `ui-vue/lib/drawMap.ts`
+- `ui-vue/lib/drawMinimap.ts`
+- `world/locations/navigationTargets.test.ts`
+
+## `world/locations/worldLocationCatalog.test.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkManager.ts`
+- `world/caveVolume.ts`
+- `world/createCaves.ts`
+- `world/locations/worldLocationCatalog.ts`
+
+## `world/locations/worldLocationCatalog.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/chunkManager.ts`
+- `world/createCaves.ts`
+- `world/locations/locationConfig.ts`
+- `world/locations/worldLocationNames.ts`
+- `world/locations/worldLocationTypes.ts`
+- `world/map/mapProjection.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
+- `world/locations/locationDiscovery.test.ts`
+- `world/locations/locationDiscovery.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/map/mapData.ts`
+
+## `world/locations/worldLocationNames.test.ts`
+
+**Imports**
+
+- `world/locations/worldLocationNames.ts`
+
+## `world/locations/worldLocationNames.ts`
+
+**Imports**
+
+- `settlement/props.ts`
+- `world/locations/worldLocationTypes.ts`
+
+**Imported by**
+
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationNames.test.ts`
+
+## `world/locations/worldLocationTypes.ts`
+
+**Imported by**
+
+- `debug/npcDebugApi.ts`
+- `world/locations/locationDiscovery.test.ts`
+- `world/locations/locationDiscovery.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationNames.ts`
+- `world/map/mapProjection.test.ts`
+
 ## `world/map/mapConfig.ts`
 
 **Imported by**
@@ -760,7 +898,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `settlement/settlementGenerator.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`
@@ -794,6 +933,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `terrain/chunkHeightmap.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationTypes.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
@@ -816,6 +957,7 @@ Generated from TypeScript imports.
 - `debug/locationQueries.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.test.ts`
@@ -824,8 +966,10 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `persistence/saveData.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/mapColors.ts`
+- `world/locations/locationKnowledge.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`

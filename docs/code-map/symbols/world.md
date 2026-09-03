@@ -85,8 +85,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/caveGenerator.ts`
 
-- `CaveGeneratorInput` — type — line 59
-- `generateCaveDefinitions` — function — line 230
+- `CAVE_MOUTH_DEPTH` — const — line 36
+- `CaveGeneratorInput` — type — line 80
+- `generateCaveDefinitions` — function — line 266
 
 ## `world/caveMesh.ts`
 
@@ -140,8 +141,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 36
-- `createCaves` — function — line 80
+- `Caves` — type — line 38
+- `createCaves` — function — line 82
   - system: caves
   - role: Owns cave definitions, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
   - owns: Caves
@@ -349,6 +350,71 @@ Generated from exported TypeScript symbols.
 - `createLargeCaveVisual` — function — line 13
 - `placeLargeCaveVisual` — function — line 63
 
+## `world/locations/locationConfig.ts`
+
+- `CEMETERY_SEARCH_CHUNK_RADIUS` — const — line 45
+- `FAR_RANGE_KM` — const — line 32
+- `GUARD_LANDMARK_POOL_SIZE` — const — line 61
+- `GUARD_REVEAL_MAX` — const — line 63
+- `GUARD_REVEAL_MIN` — const — line 62
+- `KM_PER_DAY` — const — line 15
+- `kmToDays` — function — line 25
+- `kmToWorldUnits` — function — line 21
+- `LOCATION_SCAN_STEP` — const — line 39
+- `MAX_CEMETERY_SETTLEMENTS_SEARCHED` — const — line 53
+- `MEDIUM_RANGE_KM` — const — line 31
+- `MERCHANT_MAP_LANDMARK_POOL_SIZE` — const — line 66
+- `MIN_LAKE_CELLS` — const — line 57
+- `NEAR_RANGE_KM` — const — line 30
+- `WORLD_UNITS_PER_KM` — const — line 11
+- `worldUnitsToKm` — function — line 17
+
+## `world/locations/locationDiscovery.ts`
+
+- `classifyRange` — function — line 5
+- `formatDistance` — function — line 21
+- `isWithinRange` — function — line 11
+- `landmarksInBand` — function — line 64
+- `pickRandomReveal` — function — line 51
+- `pickRandomSubset` — function — line 40
+- `settlementsInBand` — function — line 74
+- `weightedTopN` — function — line 30
+
+## `world/locations/locationKnowledge.ts`
+
+- `createLocationKnowledge` — function — line 35
+- `getActiveLocationKnowledge` — function — line 83
+- `LocationKnowledge` — type — line 19
+- `LocationKnowledgeEntry` — type — line 3
+- `setActiveLocationKnowledge` — function — line 79
+
+## `world/locations/navigationTargets.ts`
+
+- `createNavigationTargets` — function — line 35
+- `getActiveNavigationTargets` — function — line 94
+- `MAX_NAVIGATION_TARGETS` — const — line 1
+- `NavigationTargetEntry` — type — line 3
+- `NavigationTargets` — type — line 21
+- `setActiveNavigationTargets` — function — line 90
+- `SetTargetResult` — type — line 12
+
+## `world/locations/worldLocationCatalog.ts`
+
+- `createWorldLocationCatalog` — function — line 74
+- `settlementLocationId` — function — line 340
+- `WorldLocationCatalog` — type — line 41
+- `WorldLocationCatalogDeps` — type — line 18
+
+## `world/locations/worldLocationNames.ts`
+
+- `landmarkName` — function — line 67
+
+## `world/locations/worldLocationTypes.ts`
+
+- `DiscoveryRange` — type — line 27
+- `WorldLocation` — type — line 14
+- `WorldLocationKind` — type — line 1
+
 ## `world/map/mapConfig.ts`
 
 - `MAP_CELL_SIZE` — const — line 2
@@ -363,10 +429,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/map/mapData.ts`
 
-- `createMapData` — function — line 20
-- `getActiveMapData` — function — line 86
-- `MapData` — type — line 12
-- `setActiveMapData` — function — line 82
+- `createMapData` — function — line 44
+- `getActiveMapData` — function — line 112
+- `MapData` — type — line 13
+- `setActiveMapData` — function — line 108
 
 ## `world/map/mapDiscovery.ts`
 
@@ -394,7 +460,6 @@ Generated from exported TypeScript symbols.
 - `MapConfidence` — type — line 28
 - `MapKnownLocation` — type — line 32
 - `MapLocationKind` — type — line 30
-- `MapSettlementLookup` — type — line 52
 - `MapSource` — type — line 25
 - `MapTerrainKind` — type — line 4
 - `MapViewport` — type — line 43

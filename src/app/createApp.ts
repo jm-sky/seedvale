@@ -99,6 +99,9 @@ import { createClouds } from '../world/clouds'
 import { createDayNightState, parseTimeOfDayFromUrl, resetDayNightForNewGame } from '../world/dayNight'
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
+import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
+import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
+import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -482,14 +485,28 @@ export async function createApp(
 
   const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
   const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
+  const lookupSettlementCell = (cell: { gx: number, gz: number }) => bundle.settlementsManager.peekDef(cell)
+  const worldLocationCatalog = createWorldLocationCatalog({
+    getSeed: () => config.seed,
+    getCaves: () => bundle.caves,
+    getChunkManager: () => bundle.chunkManager,
+    lookupSettlement: lookupSettlementCell,
+    getSampleParams: () => rawSampleParamsFromWorld(config),
+    getChunkSize: () => config.terrain.chunkSize,
+  })
+  const locationKnowledge = createLocationKnowledge(initialSave?.map.discoveredLocations)
+  setActiveLocationKnowledge(locationKnowledge)
+  const navigationTargets = createNavigationTargets()
+  navigationTargets.restore(
+    initialSave?.map.targets ?? [],
+    (id) => locationKnowledge.has(id) && worldLocationCatalog.getById(id) != null,
+  )
+  setActiveNavigationTargets(navigationTargets)
   const mapData = createMapData({
     projection: mapProjection,
     discovery: mapDiscovery,
-    lookupSettlement: (gx, gz) => {
-      const def = bundle.settlementsManager.peekDef({ gx, gz })
-      if (!def) return null
-      return { id: def.id, x: def.x, z: def.z, name: def.name }
-    },
+    catalog: worldLocationCatalog,
+    knowledge: locationKnowledge,
   })
   setActiveMapData(mapData)
 
@@ -796,6 +813,8 @@ export async function createApp(
     syncHeldHud: () => syncHeldHud(),
     syncQuickActionAvailability,
     refreshInventoryScreen: () => refreshInventoryScreen(),
+    locationCatalog: worldLocationCatalog,
+    locationKnowledge,
   })
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
@@ -921,6 +940,8 @@ export async function createApp(
     questManager,
     dayNight,
     mapDiscovery,
+    locationKnowledge,
+    navigationTargets,
     landOwnership,
     vueUi,
     worldFlags,
@@ -994,6 +1015,7 @@ export async function createApp(
         () => worldGeneration !== thisRebuildGeneration,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
+      worldLocationCatalog.invalidateScanCache()
 
       // Plan 199 — a same-seed rebuild recreates fauna with fresh per-kind
       // id counters; `reset()` below already clears `animalTargets` on a
@@ -1007,6 +1029,8 @@ export async function createApp(
         heldTool.unequip()
         questManager.reset()
         mapDiscovery.clear()
+        locationKnowledge.clear()
+        navigationTargets.clear()
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
         worldFlags.hiddenTreasureFound = false
@@ -1170,6 +1194,7 @@ export async function createApp(
       player.setPosition(x, z)
     },
     worldFlags,
+    { catalog: worldLocationCatalog, knowledge: locationKnowledge },
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {
@@ -1594,6 +1619,8 @@ export async function createApp(
     toast.dispose()
     minimap.dispose()
     setActiveMapData(null)
+    setActiveLocationKnowledge(null)
+    setActiveNavigationTargets(null)
     keyboard.dispose()
     mouseLook.dispose()
     touchControls?.dispose()

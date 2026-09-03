@@ -6,7 +6,7 @@ import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } fro
 import { useOverlayScreen } from './composables/useOverlayScreen'
 import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, ui } from './store'
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater'
+type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea'
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
 useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
@@ -17,9 +17,11 @@ const isHomeGuard = computed(() => state.npc?.role === 'guard' && state.settleme
 const swordLine = ref('')
 const foodLine = ref('')
 const waterLine = ref('')
+const areaLine = ref('')
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
   switch (topic.value) {
+    case 'aboutArea': return areaLine.value
     case 'aboutSelf': return aboutSelfLine(state.npc.displayName, state.npc.role, state.npc.familyMembers, archetype.value)
     case 'aboutVillage': return state.settlement ? aboutVillageLine(state.settlement.name, state.settlement.size, state.settlement.terrain, state.settlement.foodSourceType, state.settlement.dominantResource, archetype.value) : ''
     case 'askSword': return swordLine.value
@@ -31,7 +33,7 @@ const responseText = computed(() => {
     default: return ''
   }
 })
-function resetMenu(): void { topic.value = null; swordLine.value = ''; foodLine.value = ''; waterLine.value = '' }
+function resetMenu(): void { topic.value = null; swordLine.value = ''; foodLine.value = ''; waterLine.value = ''; areaLine.value = '' }
 function backToTopics(): void { emitUiClick(); resetMenu() }
 function selectTopic(next: Topic): void { emitUiClick(); topic.value = next }
 function askSword(): void {
@@ -51,6 +53,11 @@ function requestWater(): void {
   const npc = state.npc as NpcAgent | null
   if (npc) waterLine.value = state.onRequestWater?.(npc) ?? ''
   topic.value = 'requestWater'
+}
+function askAboutArea(): void {
+  emitUiClick()
+  areaLine.value = state.onAskAboutArea?.() ?? ''
+  topic.value = 'aboutArea'
 }
 function openTrade(): void {
   emitUiClick()
@@ -93,6 +100,14 @@ watch(() => state.open, (open) => { if (open) resetMenu() })
           @click="askSword"
         >
           Poproś o miecz
+        </button>
+        <button
+          v-if="isHomeGuard"
+          type="button"
+          class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          @click="askAboutArea"
+        >
+          Opowiedz mi coś o okolicy.
         </button>
         <button
           type="button"

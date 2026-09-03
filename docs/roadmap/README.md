@@ -23,6 +23,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 | `economy-goods-flow.md` |
 | `economy-production.md` |
 | `horse-and-riding.md` |
+| `locations.md` |
 | `npc-ai.md` |
 | `npc-professions-households-and-age.md` |
 | `physical-resource-storage-and-logistics.md` |

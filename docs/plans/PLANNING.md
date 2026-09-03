@@ -17,7 +17,7 @@ Rules for AI agents creating Seedvale plans and implementation notes.
 - settlements-npcs: `018`
 - tools: `012`
 - ui-input: `008`
-- world: `012`
+- world: `013`
 - world-terrain: `008`
 
 This ids section is maintained automatically from the plan files.

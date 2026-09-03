@@ -48,8 +48,3 @@ export type MapViewport = {
   /** Sample every Nth cell (1 = full resolution). */
   lodStep?: number
 }
-
-export type MapSettlementLookup = (
-  gx: number,
-  gz: number,
-) => { id: string, x: number, z: number, name: string } | null

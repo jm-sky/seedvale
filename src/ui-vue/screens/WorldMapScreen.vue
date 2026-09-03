@@ -1,17 +1,29 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import type { MapKnownLocation } from '../../world/map/mapTypes'
 import { isTouchDevice } from '../../input/isTouchDevice'
+import { worldUnitsToKm } from '../../world/locations/locationConfig'
+import { formatDistance } from '../../world/locations/locationDiscovery'
+import { getActiveNavigationTargets, MAX_NAVIGATION_TARGETS } from '../../world/locations/navigationTargets'
 import {
   MAP_WORLD_ZOOM_DEFAULT,
 } from '../../world/map/mapConfig'
+import { getActiveMapData } from '../../world/map/mapData'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import {
   canvasToWorld,
   clampWorldMapZoom,
   drawWorldMapFrame,
+  findLocationAtCanvasPoint,
   type WorldMapView,
 } from '../lib/drawMap'
+import { targetSlotColor } from '../lib/mapColors'
 import { closeWorldMap, isWorldMapOpen, ui } from '../store'
+
+const LOCATION_KIND_LABEL: Record<MapKnownLocation['kind'], string> = {
+  settlement: 'Osada',
+  landmark: 'Miejsce',
+}
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const shellRef = ref<HTMLElement | null>(null)
@@ -27,6 +39,28 @@ const view: WorldMapView = {
 
 useOverlayScreen('world-map', isWorldMapOpen, closeWorldMap)
 
+// Navigation targets live in `NavigationTargets` (not Vue-reactive, same
+// imperative-singleton pattern as `mapData`/`mapDiscovery`) — this counter
+// forces the target list/popover to re-render after a mutation.
+const targetsVersion = ref(0)
+const selected = ref<MapKnownLocation | null>(null)
+
+const targetList = computed(() => {
+  targetsVersion.value // eslint-disable-line @typescript-eslint/no-unused-expressions
+  const mapData = getActiveMapData()
+  return (getActiveNavigationTargets()?.list() ?? [])
+    .map((t) => ({ slot: t.slot, location: mapData?.resolveKnown(t.id) ?? null }))
+    .filter((t): t is { slot: number, location: MapKnownLocation } => t.location != null)
+    .sort((a, b) => a.slot - b.slot)
+})
+
+const selectedDistanceKm = computed(() => {
+  if (!selected.value) return 0
+  return worldUnitsToKm(Math.hypot(selected.value.x - ui.worldMap.playerX, selected.value.z - ui.worldMap.playerZ))
+})
+
+const selectedIsTarget = computed(() => !!selected.value && (getActiveNavigationTargets()?.has(selected.value.id) ?? false))
+
 function paint(): void {
   if (!ctx || cssWidth <= 0 || cssHeight <= 0) return
   drawWorldMapFrame(
@@ -35,6 +69,33 @@ function paint(): void {
     ui.worldMap.playerX,
     ui.worldMap.playerZ,
   )
+}
+
+function setTarget(): void {
+  if (!selected.value) return
+  getActiveNavigationTargets()?.set(selected.value.id)
+  targetsVersion.value++
+  paint()
+}
+function removeTarget(id: string): void {
+  getActiveNavigationTargets()?.remove(id)
+  targetsVersion.value++
+  paint()
+}
+function clearTargets(): void {
+  getActiveNavigationTargets()?.clear()
+  targetsVersion.value++
+  paint()
+}
+function focusTarget(location: MapKnownLocation): void {
+  view.viewX = location.x
+  view.viewZ = location.z
+  paint()
+}
+function centerOnPlayer(): void {
+  view.viewX = ui.worldMap.playerX
+  view.viewZ = ui.worldMap.playerZ
+  paint()
 }
 
 function setupCanvas(): void {
@@ -58,6 +119,7 @@ watch(() => ui.worldMap.open, async (open) => {
   view.viewX = ui.worldMap.playerX
   view.viewZ = ui.worldMap.playerZ
   view.zoom = MAP_WORLD_ZOOM_DEFAULT
+  selected.value = null
   await nextTick()
   setupCanvas()
 })
@@ -65,9 +127,16 @@ watch(() => ui.worldMap.open, async (open) => {
 let dragging = false
 let lastPointerX = 0
 let lastPointerY = 0
+let downX = 0
+let downY = 0
 const pointers = new Map<number, { x: number, y: number }>()
 let pinchStartDist = 0
 let pinchStartZoom = MAP_WORLD_ZOOM_DEFAULT
+
+/** Below this total pointer travel, a pointerdown→pointerup pair counts as a
+ *  click (plan §12), not a pan — same touch-friendly slack a typical tap
+ *  target uses. */
+const CLICK_DRAG_THRESHOLD_PX = 6
 
 function onPointerDown(event: PointerEvent): void {
   canvasRef.value?.setPointerCapture(event.pointerId)
@@ -82,6 +151,8 @@ function onPointerDown(event: PointerEvent): void {
   dragging = true
   lastPointerX = event.clientX
   lastPointerY = event.clientY
+  downX = event.clientX
+  downY = event.clientY
 }
 
 function onPointerMove(event: PointerEvent): void {
@@ -107,9 +178,14 @@ function onPointerMove(event: PointerEvent): void {
 }
 
 function onPointerUp(event: PointerEvent): void {
+  const wasClick = dragging && pointers.size === 1 && Math.hypot(event.clientX - downX, event.clientY - downY) < CLICK_DRAG_THRESHOLD_PX
   pointers.delete(event.pointerId)
   if (pointers.size < 2) pinchStartDist = 0
   if (pointers.size === 0) dragging = false
+  if (!wasClick) return
+  const rect = canvasRef.value?.getBoundingClientRect()
+  if (!rect) return
+  selected.value = findLocationAtCanvasPoint(view, cssWidth, cssHeight, event.clientX - rect.left, event.clientY - rect.top)
 }
 
 function onWheel(event: WheelEvent): void {
@@ -151,13 +227,22 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
         <h1 class="text-lg font-semibold tracking-wide">
           Mapa
         </h1>
-        <button
-          type="button"
-          class="cursor-pointer rounded-md border border-white/15 bg-transparent px-3 py-1.5 text-sm hover:bg-white/10"
-          @click="closeWorldMap"
-        >
-          Zamknij
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/15 bg-transparent px-3 py-1.5 text-sm hover:bg-white/10"
+            @click="centerOnPlayer"
+          >
+            Wyśrodkuj na graczu
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-md border border-white/15 bg-transparent px-3 py-1.5 text-sm hover:bg-white/10"
+            @click="closeWorldMap"
+          >
+            Zamknij
+          </button>
+        </div>
       </div>
       <div
         ref="shellRef"
@@ -172,9 +257,90 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
           @pointercancel="onPointerUp"
           @wheel="onWheel"
         />
+
+        <div
+          v-if="targetList.length > 0"
+          class="pointer-events-auto absolute left-3 top-3 flex max-w-[220px] flex-col gap-1.5 rounded-md bg-panel/90 p-2.5 text-xs shadow-lg"
+        >
+          <div class="mb-0.5 flex items-center justify-between gap-2 opacity-70">
+            <span>Cele ({{ targetList.length }}/{{ MAX_NAVIGATION_TARGETS }})</span>
+            <button
+              type="button"
+              class="cursor-pointer underline hover:opacity-80"
+              @click="clearTargets"
+            >
+              Wyczyść
+            </button>
+          </div>
+          <div
+            v-for="t in targetList"
+            :key="t.location.id"
+            class="flex items-center gap-2"
+          >
+            <span
+              class="h-2.5 w-2.5 shrink-0 rounded-sm"
+              :style="{ backgroundColor: targetSlotColor(t.slot) }"
+            />
+            <button
+              type="button"
+              class="flex-1 cursor-pointer truncate text-left hover:underline"
+              @click="focusTarget(t.location)"
+            >
+              {{ t.location.label ?? LOCATION_KIND_LABEL[t.location.kind] }}
+            </button>
+            <button
+              type="button"
+              class="cursor-pointer opacity-70 hover:opacity-100"
+              @click="removeTarget(t.location.id)"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="selected"
+          class="pointer-events-auto absolute bottom-3 left-1/2 flex w-[min(280px,90%)] -translate-x-1/2 flex-col gap-1.5 rounded-md bg-panel/95 p-3 text-sm shadow-lg"
+        >
+          <div class="font-semibold">
+            {{ selected.label ?? LOCATION_KIND_LABEL[selected.kind] }}
+          </div>
+          <div class="text-xs opacity-70">
+            {{ LOCATION_KIND_LABEL[selected.kind] }}
+          </div>
+          <div class="text-xs opacity-90">
+            {{ formatDistance(selectedDistanceKm) }}
+          </div>
+          <div class="mt-1 flex gap-2">
+            <button
+              v-if="!selectedIsTarget"
+              type="button"
+              class="flex-1 cursor-pointer rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="targetList.length >= MAX_NAVIGATION_TARGETS"
+              @click="setTarget"
+            >
+              Wyznacz cel
+            </button>
+            <button
+              v-else
+              type="button"
+              class="flex-1 cursor-pointer rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/20"
+              @click="removeTarget(selected.id)"
+            >
+              Usuń cel
+            </button>
+            <button
+              type="button"
+              class="cursor-pointer rounded-md bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10"
+              @click="selected = null"
+            >
+              Zamknij
+            </button>
+          </div>
+        </div>
       </div>
       <div class="px-4 py-2 text-[11px] opacity-60">
-        {{ touch ? 'Przeciągnij — przesuń · uszczypnij — zoom · zamknij' : 'Przeciągnij — przesuń · kółko — zoom · Esc / M — zamknij' }}
+        {{ touch ? 'Przeciągnij — przesuń · uszczypnij — zoom · dotknij lokacji — informacje · zamknij' : 'Przeciągnij — przesuń · kółko — zoom · kliknij lokację — informacje · Esc / M — zamknij' }}
       </div>
     </div>
   </div>

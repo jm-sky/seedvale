@@ -4,11 +4,15 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
+import type { LocationKnowledge } from '../world/locations/locationKnowledge'
+import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
+import type { WorldLocation } from '../world/locations/worldLocationTypes'
 import type { WorldContext } from '../world/worldContext'
 import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
+import { FAR_RANGE_KM } from '../world/locations/locationConfig'
 import { isAdminMode, isDebugMode } from './debugMode'
 import { type HistoryFilter } from './domainHistory'
 import { getCurrentFrenzyWolf, getFrenzyWolves, getNextFrenzyWolf } from './faunaInspector'
@@ -109,6 +113,25 @@ export type TeleportToDebugApi = {
   oceanNearest: () => Promise<boolean>
 }
 
+/** `debug.worldLocations` (plan world-012 §19) — inspects/mutates
+ *  `LocationKnowledge` directly, never `MapDiscovery`'s cell Fog of War
+ *  (notes §19: "Reveal" powinno mutować wyłącznie location knowledge). All
+ *  queries are bounded to `FAR_RANGE_KM` around the player — there is no
+ *  bounded "every location in an infinite world" query. */
+export type WorldLocationDebugEntry = WorldLocation & { discovered: boolean }
+export type WorldLocationsDebugApi = {
+  /** Every cave/cemetery/lake/mountainPeak/settlement within `FAR_RANGE_KM`
+   *  of the player, each flagged with whether it's currently known. */
+  list: () => WorldLocationDebugEntry[]
+  listUndiscovered: () => WorldLocationDebugEntry[]
+  /** Marks one location `confirmed`/`exploration` — a no-op (returns
+   *  `false`) if `id` doesn't resolve to a real location. */
+  reveal: (id: string) => boolean
+  /** Reveals everything `list()` currently returns; returns how many were
+   *  newly revealed. */
+  revealAll: () => number
+}
+
 export type HiddenTreasureDebugApi = {
   /** The 3 flower/dig-marker positions for the home settlement's hidden
    *  treasure (quick task, `settlement/hiddenTreasure.ts`) — `null` while the
@@ -152,6 +175,9 @@ export type SeedvaleDebugApi = {
   teleportTo: TeleportToDebugApi
   /** Hidden-treasure dig markers (quick task) — inspect/teleport for testing. */
   hiddenTreasure: HiddenTreasureDebugApi
+  /** World Locations discovery (plan world-012) — bounded to `FAR_RANGE_KM`
+   *  of the player, see `WorldLocationsDebugApi`'s doc. */
+  worldLocations: WorldLocationsDebugApi
   /** Lightweight `navigation/navigationStats.ts` counters (plan npc-006) —
    *  path requests/successes/failures, search time, visited nodes,
    *  waypoints, repaths and currently-active routes, session-wide across
@@ -191,6 +217,7 @@ const HELP_TEXT = [
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
   'setFrenzyWolf() — debug combat trigger',
   'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
+  'worldLocations.list() / .listUndiscovered() — cave/cemetery/lake/mountainPeak/settlement locations within 200km of the player, each flagged {discovered}; worldLocations.reveal(id) / .revealAll() — mark as confirmed/exploration (mutates location knowledge only, never map Fog of War)',
   'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
   'getFrenzyWolves() / getCurrentFrenzyWolf() / getNextFrenzyWolf() — frenzied-wolf DevTools selection; each returned wolf has showDebug()/hideDebug()/toggleDebug()/getDebugInfo()',
 ].join('\n')
@@ -215,6 +242,7 @@ export function installNpcDebugApi(
   /** Same persisted one-shot bag `groundActions.ts` reads/writes — lets
    *  `hiddenTreasure.found()` reflect the real state. */
   worldFlags: { hiddenTreasureFound: boolean },
+  worldLocations: { catalog: WorldLocationCatalog, knowledge: LocationKnowledge },
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
 
@@ -270,6 +298,24 @@ export function installNpcDebugApi(
     }
   }
 
+  const worldLocationsDebug: WorldLocationsDebugApi = {
+    list: () => {
+      const { x, z } = getPlayerPosition()
+      const all = [
+        ...worldLocations.catalog.landmarksWithin(x, z, FAR_RANGE_KM),
+        ...worldLocations.catalog.nearestSettlements(x, z, FAR_RANGE_KM),
+      ]
+      return all.map((location) => ({ ...location, discovered: worldLocations.knowledge.has(location.id) }))
+    },
+    listUndiscovered: () => worldLocationsDebug.list().filter((location) => !location.discovered),
+    reveal: (id) => {
+      const location = worldLocations.catalog.getById(id)
+      if (!location) return false
+      return worldLocations.knowledge.reveal(id, 'confirmed', 'exploration')
+    },
+    revealAll: () => worldLocationsDebug.list().filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
+  }
+
   const api: SeedvaleDebugApi = {
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null
@@ -308,6 +354,7 @@ export function installNpcDebugApi(
         return true
       },
     },
+    worldLocations: worldLocationsDebug,
     navigation: () => getNavigationStats(),
     getFrenzyWolves: () => getFrenzyWolves(bundle),
     getCurrentFrenzyWolf: () => getCurrentFrenzyWolf(bundle),

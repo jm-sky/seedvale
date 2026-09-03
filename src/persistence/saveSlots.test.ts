@@ -27,8 +27,8 @@ const config = {
   settlements: {},
 } as SaveConfig
 
-const v1 = {
-  version: 1 as const,
+const currentSave = {
+  version: 2 as const,
   config,
   player: { x: 1, z: 2, yaw: 0, pitch: 0 },
   savedAt: 100,
@@ -48,7 +48,7 @@ const v1 = {
   worldFlags: {},
   resolvedHiddenFindSpotIds: [],
   badges: { earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 },
-  map: { discoveredCells: [] },
+  map: { discoveredCells: [], discoveredLocations: [], targets: [] },
   settlementEconomies: {},
   playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 0, dehydrationDuration: 0 },
   ownedLandPlots: [],
@@ -83,7 +83,7 @@ const v1 = {
 
 function loaded(extra?: Partial<{ savedAt: number, seed: number, playerName: string, elapsedDays: number }>): SaveData {
   const data = loadSaveData({
-    ...v1,
+    ...currentSave,
     savedAt: extra?.savedAt ?? 100,
     config: {
       ...config,
@@ -113,17 +113,26 @@ describe('saveSlots', () => {
   })
 
   it('parses a legacy raw SaveData under current using the player name', () => {
-    const parsed = parseStoredSave('current', v1)
+    const parsed = parseStoredSave('current', currentSave)
     expect(parsed).not.toBeNull()
     expect(parsed?.id).toBe('current')
     expect(parsed?.name).toBe('Anna')
-    expect(parsed?.data.version).toBe(1)
+    expect(parsed?.data.version).toBe(2)
     expect(parsed?.data.config.seed).toBe(7)
+  })
+
+  it('migrates a legacy raw v1 SaveData under current through the pipeline (plan world-012)', () => {
+    const { discoveredLocations: _discoveredLocations, targets: _targets, ...v1Map } = currentSave.map
+    const legacyV1 = { ...currentSave, version: 1, map: v1Map }
+    const parsed = parseStoredSave('current', legacyV1)
+    expect(parsed).not.toBeNull()
+    expect(parsed?.data.version).toBe(2)
+    expect(parsed?.data.map).toEqual({ ...v1Map, discoveredLocations: [], targets: [] })
   })
 
   it('falls back to Zapis when the legacy player name is blank', () => {
     const parsed = parseStoredSave('current', {
-      ...v1,
+      ...currentSave,
       config: { ...config, player: { name: '   ' } },
     })
     expect(parsed?.name).toBe('Zapis')

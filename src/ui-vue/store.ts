@@ -54,6 +54,10 @@ type NpcDialogueMenuState = {
    *  against the currently-open `npc`, same shape as `onAskSword`. */
   onRequestFood: ((npc: NpcAgent) => string) | null
   onRequestWater: ((npc: NpcAgent) => string) | null
+  /** "Opowiedz mi coś o okolicy" (plan world-012 §7) — home guard only, same
+   *  "no args, resolved against whatever NPC/settlement is open" shape as
+   *  `onAskSword`. */
+  onAskAboutArea: (() => string) | null
 }
 type InventoryState = {
   open: boolean
@@ -437,7 +441,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
@@ -675,12 +679,14 @@ export function configureNpcDialogueMenu(handlers: {
   getCanAskSword: () => boolean
   onRequestFood: (npc: NpcAgent) => string
   onRequestWater: (npc: NpcAgent) => string
+  onAskAboutArea: () => string
 }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
   ui.npcDialogueMenu.getCanAskSword = handlers.getCanAskSword
   ui.npcDialogueMenu.onRequestFood = handlers.onRequestFood
   ui.npcDialogueMenu.onRequestWater = handlers.onRequestWater
+  ui.npcDialogueMenu.onAskAboutArea = handlers.onAskAboutArea
 }
 
 export function openInventory(

@@ -19,7 +19,7 @@ const config = {
 } as SaveConfig
 
 const validSave: SaveData = {
-  version: 1,
+  version: 2,
   config,
   player: { x: 3, z: 4, yaw: 0.1, pitch: 0.2 },
   savedAt: 100,
@@ -39,7 +39,11 @@ const validSave: SaveData = {
   worldFlags: {},
   resolvedHiddenFindSpotIds: ['cemetery:0:0:0:1:0', 'stoneCircle:2:1:0:1'],
   badges: { earned: ['grave_robber'], gravesDisturbed: 1, hiddenFindsFound: 0 },
-  map: { discoveredCells: ['0,0', '1,0'] },
+  map: {
+    discoveredCells: ['0,0', '1,0'],
+    discoveredLocations: [{ id: 'cave:home-cave-0', state: 'confirmed', source: 'exploration' }],
+    targets: ['cave:home-cave-0'],
+  },
   settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [] } } },
   playerNeeds: { hunger: 12, thirst: 8, vigor: 40, starvationDuration: 5400, dehydrationDuration: 900 },
   ownedLandPlots: ['0_0:plot-sale-0'],
@@ -114,18 +118,24 @@ describe('loadSaveData v1 contract', () => {
     expect(isSaveData(loaded)).toBe(true)
   })
 
-  it('rejects a non-v1 version', () => {
-    expect(loadSaveData({ ...validSave, version: 2 })).toBeNull()
+  it('rejects a non-current version', () => {
+    expect(loadSaveData({ ...validSave, version: 1 })).toBeNull()
     expect(loadSaveData({ ...validSave, version: 27 })).toBeNull()
   })
 
   it('rejects a save missing required fields (no migration path)', () => {
     expect(loadSaveData({
-      version: 1,
+      version: 2,
       config,
       player: { x: 0, z: 0, yaw: 0, pitch: 0 },
       savedAt: 1,
     })).toBeNull()
+  })
+
+  it('rejects a malformed location-knowledge or targets field (plan world-012)', () => {
+    expect(loadSaveData({ ...validSave, map: { ...validSave.map, discoveredLocations: [{ id: 'x', state: 'bogus', source: 'npc' }] } })).toBeNull()
+    expect(loadSaveData({ ...validSave, map: { ...validSave.map, discoveredLocations: 'nope' } })).toBeNull()
+    expect(loadSaveData({ ...validSave, map: { ...validSave.map, targets: [1] } })).toBeNull()
   })
 
   it('rejects a config missing settlements', () => {
@@ -322,12 +332,18 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave(future)).toEqual({ status: 'unsupported-version', version: CURRENT_SAVE_VERSION + 1 })
   })
 
-  it('reports an older version with no registered migration as migration-failed, not invalid', () => {
-    // No real migration exists yet (v1 is both the floor and the current
-    // version) — a hypothetical older record demonstrates the real pipeline
-    // fails closed rather than silently passing an unmigrated shape through.
-    const olderThanFloor = { ...validSave, version: CURRENT_SAVE_VERSION - 1 }
-    expect(loadStoredSave(olderThanFloor)).toEqual({ status: 'migration-failed', version: CURRENT_SAVE_VERSION - 1 })
+  it('reports a version older than the migration floor (v1) as migration-failed, not invalid', () => {
+    const olderThanFloor = { ...validSave, version: CURRENT_SAVE_VERSION - 2 }
+    expect(loadStoredSave(olderThanFloor)).toEqual({ status: 'migration-failed', version: CURRENT_SAVE_VERSION - 2 })
+  })
+
+  it('migrates a real v1 save (plan world-012) into v2, adding empty location-knowledge/targets and preserving discoveredCells', () => {
+    const { discoveredLocations: _discoveredLocations, targets: _targets, ...v1Map } = validSave.map
+    const v1Save = { ...validSave, version: 1, map: v1Map }
+    expect(loadStoredSave(v1Save)).toEqual({
+      status: 'ok',
+      data: { ...validSave, map: { ...v1Map, discoveredLocations: [], targets: [] } },
+    })
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

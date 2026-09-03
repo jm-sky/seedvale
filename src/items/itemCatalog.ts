@@ -1034,6 +1034,24 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 126 — Kupiec stock. Consumed by "Zasadź: kapusta"; plants a `cabbage` `CropLifecycle` (plan 172) entity in a settlement garden.',
   },
+  map_near: {
+    kind: 'map_near',
+    label: 'mapa okolicy',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan world-012 — Kupiec stock. A knowledge-delivery token: purchase reveals nearby (0-20 km) landmarks/settlements into `LocationKnowledge` immediately; the item itself has no other effect.',
+  },
+  map_far: {
+    kind: 'map_far',
+    label: 'mapa dalekich stron',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan world-012 — Kupiec stock. A knowledge-delivery token: purchase reveals distant (60-200 km) landmarks/settlements into `LocationKnowledge` immediately; the item itself has no other effect.',
+  },
 }
 
 /** Flat per-arrow-kind damage delta applied on top of the bow's own

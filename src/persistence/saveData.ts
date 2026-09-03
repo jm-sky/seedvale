@@ -15,6 +15,7 @@ import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { PreparationSize } from '../terrain/terrainPreparation'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
+import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { WellStage } from '../world/playerWell'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
 import type { TreeSizeClass } from '../world/treeLifecycle'
@@ -86,7 +87,22 @@ export type SaveWorldFlags = {
   hiddenTreasureFound?: boolean
 }
 
-export type SaveMap = { discoveredCells: string[] }
+/** Player knowledge of a concrete `WorldLocation` (plan world-012 §3/§20) —
+ *  sparse, keyed by the location's own stable id. Only `state`/`source` are
+ *  persisted; position/name/weight are re-derived from `(world seed,
+ *  location id)` by `world/locations/worldLocationCatalog.ts`, never stored. */
+export type SaveLocationKnowledge = { id: string, state: MapConfidence, source: MapSource }
+
+export type SaveMap = {
+  discoveredCells: string[]
+  /** Location-knowledge layer (plan world-012) — independent of
+   *  `discoveredCells`'s terrain Fog of War (persistence-003 v1→v2). */
+  discoveredLocations: SaveLocationKnowledge[]
+  /** Active navigation target `WorldLocation` ids (plan world-012 §13),
+   *  max 3 — re-validated against current knowledge on load, never trusted
+   *  blindly (see `world/locations/navigationTargets.ts`'s `restore`). */
+  targets: string[]
+}
 
 /** Reputation Badges / Achievements (plan world-007 §10) — `gravesDisturbed`/
  *  `hiddenFindsFound` are the counters `badges/badges.ts`'s `BadgeManager`
@@ -372,7 +388,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 1
+export const CURRENT_SAVE_VERSION = 2
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -572,11 +588,26 @@ function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
   return true
 }
 
+const MAP_CONFIDENCE_VALUES: ReadonlySet<string> = new Set<MapConfidence>(['confirmed', 'discovered', 'estimated'])
+const MAP_SOURCE_VALUES: ReadonlySet<string> = new Set<MapSource>(['book', 'exploration', 'map', 'npc'])
+
+function isSaveLocationKnowledgeField(value: unknown): value is SaveLocationKnowledge[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const e = entry as Record<string, unknown>
+    return typeof e.id === 'string' && MAP_CONFIDENCE_VALUES.has(e.state as string) && MAP_SOURCE_VALUES.has(e.source as string)
+  })
+}
+
 function isSaveMap(value: unknown): value is SaveMap {
   if (!value || typeof value !== 'object') return false
   const map = value as Record<string, unknown>
   if (!Array.isArray(map.discoveredCells)) return false
-  return map.discoveredCells.every((cell) => typeof cell === 'string')
+  if (!map.discoveredCells.every((cell) => typeof cell === 'string')) return false
+  if (!isSaveLocationKnowledgeField(map.discoveredLocations)) return false
+  if (!Array.isArray(map.targets) || !map.targets.every((id) => typeof id === 'string')) return false
+  return true
 }
 
 function isResolvedHiddenFindSpotIdsField(value: unknown): value is string[] {
@@ -1295,18 +1326,30 @@ export function loadSaveData(value: unknown): SaveData | null {
  *  translates persisted representation. */
 export type SaveMigration = (data: unknown) => unknown
 
+/** v1 → v2 (plan world-012): adds the location-knowledge/navigation-targets
+ *  layer to `SaveData.map`. Every other field is untouched — `settleTarget`/
+ *  navigation state simply starts empty, same "new save-shaped field always
+ *  writes, older data defaults to empty" contract other sparse fields use. */
+function migrateSaveV1ToV2(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const map = (v.map ?? {}) as Record<string, unknown>
+  return {
+    ...v,
+    version: 2,
+    map: {
+      discoveredCells: Array.isArray(map.discoveredCells) ? map.discoveredCells : [],
+      discoveredLocations: [],
+      targets: [],
+    },
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
- *  Empty today — v1 is both the historical floor (plan 201's hard cut) and
- *  `CURRENT_SAVE_VERSION`, so no migration exists yet. The first future
- *  schema change registers its step here, e.g.:
- *
- *      const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
- *        1: migrateSaveV1ToV2,
- *      }
- *
- *  Avoid a single monolithic function covering every historical step —
- *  one entry per exact source version, chained by `migrateStoredSave()`. */
-const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {}
+ *  One entry per exact source version, chained by `migrateStoredSave()` —
+ *  avoid a single monolithic function covering every historical step. */
+const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
+  1: migrateSaveV1ToV2,
+}
 
 function detectStoredVersion(value: unknown): number | null {
   if (!value || typeof value !== 'object') return null

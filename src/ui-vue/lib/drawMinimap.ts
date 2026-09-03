@@ -1,8 +1,9 @@
 import type { NpcAgent } from '../../ai/NpcAgent'
+import { getActiveNavigationTargets } from '../../world/locations/navigationTargets'
 import { MAP_MINIMAP_ZOOM_MAX, MAP_MINIMAP_ZOOM_MIN } from '../../world/map/mapConfig'
 import { getActiveMapData } from '../../world/map/mapData'
 import { mapCellBounds } from '../../world/map/mapProjection'
-import { MAP_FOG_FILL, mapCellFillStyle } from './mapColors'
+import { MAP_FOG_FILL, mapCellFillStyle, targetSlotColor } from './mapColors'
 import type { Vector3 } from 'three'
 
 export type MinimapSettlement = {
@@ -135,14 +136,20 @@ export function drawMinimapFrame(
     }
   }
 
-  const known = mapData?.knownLocations(viewport) ?? []
-  for (const location of known) {
+  // Minimap shows only the 1-3 active navigation targets (plan world-012
+  // §14) — never the full `knownLocations()` list; that stays the full
+  // world map's job.
+  const targets = getActiveNavigationTargets()?.list() ?? []
+  for (const target of targets) {
+    const location = mapData?.resolveKnown(target.id)
+    if (!location) continue
+    const color = targetSlotColor(target.slot)
     const dx = location.x - playerPos.x
     const dz = location.z - playerPos.z
     const dist = Math.hypot(dx, dz)
     if (dist <= halfRange) {
       const { x, y } = toMap(location.x, location.z)
-      ctx.fillStyle = '#e0b34a'
+      ctx.fillStyle = color
       ctx.fillRect(x - 4, y - 4, 8, 8)
       if (location.label) {
         ctx.font = '10px sans-serif'
@@ -157,7 +164,7 @@ export function drawMinimapFrame(
       const len = Math.hypot(rotated.x, rotated.y)
       const dirX = rotated.x / len
       const dirY = rotated.y / len
-      ctx.fillStyle = '#e0b34a'
+      ctx.fillStyle = color
       drawArrow(ctx, centerX + dirX * arrowRadius, centerY + dirY * arrowRadius, dirX, dirY)
     }
   }

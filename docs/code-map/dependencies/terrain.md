@@ -211,6 +211,8 @@ Generated from TypeScript imports.
 - `terrain/riverTileCache.ts`
 - `terrain/terrainPreparation.ts`
 - `world/largeCaves.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/map/mapProjection.test.ts`
 - `world/map/mapProjection.ts`
 - `world/worldContext.ts`
@@ -333,6 +335,8 @@ Generated from TypeScript imports.
 - `world/createCaves.ts`
 - `world/createTerrainPreparations.ts`
 - `world/foodSources.ts`
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/worldContext.ts`
 
 ## `terrain/chunkMeshCache.test.ts`

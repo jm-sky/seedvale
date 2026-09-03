@@ -12,8 +12,10 @@ import type { QuestManager } from '../quests/QuestManager'
 import type { VueUi } from '../ui-vue/mount'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
+import type { LocationKnowledge } from '../world/locations/locationKnowledge'
+import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
-import { requestAssistanceLine } from '../ai/dialogueTemplates'
+import { aboutAreaLine, requestAssistanceLine } from '../ai/dialogueTemplates'
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
@@ -22,6 +24,26 @@ import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
 import { sellInstancesForCoins, settleTransaction } from '../items/trade'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
+import {
+  FAR_RANGE_KM,
+  GUARD_LANDMARK_POOL_SIZE,
+  GUARD_REVEAL_MAX,
+  GUARD_REVEAL_MIN,
+  MEDIUM_RANGE_KM,
+  MERCHANT_MAP_LANDMARK_POOL_SIZE,
+  NEAR_RANGE_KM,
+} from '../world/locations/locationConfig'
+import {
+  landmarksInBand,
+  pickRandomReveal,
+  settlementsInBand,
+  weightedTopN,
+} from '../world/locations/locationDiscovery'
+import { settlementLocationId } from '../world/locations/worldLocationCatalog'
+
+/** Nearest settlements the home guard always mentions each conversation
+ *  (plan §8 — no pool/scarcity mechanic, unlike landmarks). */
+const GUARD_SETTLEMENT_REVEAL_COUNT = 3
 
 export type MerchantInventoryView = {
   counts: Partial<Record<ItemKind, number>>
@@ -75,12 +97,17 @@ export type InventoryWiringDeps = {
   syncHeldHud: () => void
   syncQuickActionAvailability: () => void
   refreshInventoryScreen: () => void
+  /** World Locations catalog/knowledge (plan world-012) — the guard's
+   *  "Opowiedz mi coś o okolicy" topic and the merchant's Near/Far map
+   *  purchases both reveal into the same player-wide `LocationKnowledge`. */
+  locationCatalog: WorldLocationCatalog
+  locationKnowledge: LocationKnowledge
 }
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, primaryWeapons, playerTorch, hud, toast, vueUi,
-    questManager, worldFlags, playOnce, grantItem,
+    questManager, worldFlags, playOnce, grantItem, locationCatalog, locationKnowledge,
   } = deps
 
   const merchantInventoryView = () => ({
@@ -194,12 +221,36 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     vueUi.refreshMerchant(view.counts, view.groups)
   }
 
+  /** Applies a purchased Near/Far map's knowledge immediately (plan §9/§10)
+   *  — the item itself is just a knowledge-delivery token; keeping or
+   *  selling it afterwards never revokes what it already revealed. Origin
+   *  is wherever the player is standing (the home trader), matching the
+   *  guard's own "wherever this conversation is happening" reference point. */
+  const applyLocationMap = (range: 'map_near' | 'map_far'): number => {
+    const originX = player.mesh.position.x
+    const originZ = player.mesh.position.z
+    const landmarks = range === 'map_near'
+      ? landmarksInBand(locationCatalog, originX, originZ, 0, NEAR_RANGE_KM)
+      : landmarksInBand(locationCatalog, originX, originZ, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const settlements = range === 'map_near'
+      ? settlementsInBand(locationCatalog, originX, originZ, 0, NEAR_RANGE_KM)
+      : settlementsInBand(locationCatalog, originX, originZ, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    let newly = 0
+    for (const location of [...weightedTopN(landmarks, MERCHANT_MAP_LANDMARK_POOL_SIZE), ...settlements]) {
+      if (locationKnowledge.reveal(location.id, 'discovered', 'map')) newly++
+    }
+    return newly
+  }
+
   vueUi.configureMerchant({
     onSettleTransaction: (purchases, offer) => {
       const result = settleTransaction(inventory, purchases, offer)
       if (result === 'ok') {
         afterTrade()
-        toast.show('Transakcja zakończona.', 'pickup')
+        let newlyDiscovered = 0
+        if ((purchases.map_near ?? 0) > 0) newlyDiscovered += applyLocationMap('map_near')
+        if ((purchases.map_far ?? 0) > 0) newlyDiscovered += applyLocationMap('map_far')
+        toast.show(newlyDiscovered > 0 ? `Odkryto ${newlyDiscovered} nowych miejsc.` : 'Transakcja zakończona.', 'pickup')
       }
       return result
     },
@@ -246,6 +297,22 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     },
     onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
     onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),
+    onAskAboutArea: () => {
+      const originX = player.mesh.position.x
+      const originZ = player.mesh.position.z
+      const homeId = bundle.settlementsManager.home ? settlementLocationId(bundle.settlementsManager.home) : null
+
+      const pool = weightedTopN(locationCatalog.landmarksWithin(originX, originZ, MEDIUM_RANGE_KM), GUARD_LANDMARK_POOL_SIZE)
+      const revealedLandmarks = pickRandomReveal(pool, GUARD_REVEAL_MIN, GUARD_REVEAL_MAX, Math.random)
+        .filter((location) => locationKnowledge.reveal(location.id, 'discovered', 'npc'))
+
+      const nearbySettlements = locationCatalog.nearestSettlements(originX, originZ, MEDIUM_RANGE_KM)
+        .filter((location) => location.id !== homeId)
+        .slice(0, GUARD_SETTLEMENT_REVEAL_COUNT)
+      const revealedSettlements = nearbySettlements.filter((location) => locationKnowledge.reveal(location.id, 'discovered', 'npc'))
+
+      return aboutAreaLine([...revealedLandmarks, ...revealedSettlements].map((location) => location.name))
+    },
   })
 
   return {

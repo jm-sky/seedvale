@@ -21,6 +21,14 @@ const BIOME_FILL: Record<MapBiomeKind, string | null> = {
   meadow: '#4f9a3e',
 }
 
+/** Stable per-slot colour (plan world-012 §13 "Każdy cel ma osobny
+ *  kolor/slot") — index 0 unused, slots are 1-3 (`NavigationTargetEntry.slot`). */
+export const TARGET_SLOT_COLORS: readonly string[] = ['', '#e0b34a', '#4ac8e0', '#e0578a']
+
+export function targetSlotColor(slot: number): string {
+  return TARGET_SLOT_COLORS[slot] ?? TARGET_SLOT_COLORS[1]!
+}
+
 export function mapCellFillStyle(cell: MapCellData): string {
   if (cell.water) return TERRAIN_FILL[cell.terrain]
   if (cell.terrain === 'mountain') return TERRAIN_FILL.mountain

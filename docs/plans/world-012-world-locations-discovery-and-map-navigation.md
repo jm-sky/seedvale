@@ -1,7 +1,7 @@
 # Plan: World Locations, Discovery and Map Navigation
 
 **Created:** 2026-09-03
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `world`
@@ -454,5 +454,29 @@ Sprawdzić manualnie:
 16. Persistence zachowuje location knowledge.
 17. Debug pozwala znaleźć wszystkie lokacje/jaskinie.
 18. Istniejące odkrywanie komórek mapy nadal działa niezależnie.
+
+## 25. Implementation status
+
+Zaimplementowano całą architekturę (§1-17, §19-22) w `src/world/locations/`:
+`WorldLocation` catalog (settlement/cave/cemetery reużywają istniejące generatory 1:1 —
+cmentarz przez `ChunkManager.findLandmarkNear`, więc katalog i fizyczny landmark
+zawsze się zgadzają; lake/mountainPeak to nowy, celowo przybliżony skan
+`mapProjection`-owych komórek terenu, udokumentowany w kodzie), `LocationKnowledge`,
+`NavigationTargets`, persistence v1→v2, `MapData` przepięty na location knowledge
+(usunięty automatyczny settlement reveal), guard dialogue ("Opowiedz mi coś o
+okolicy"), merchant Near/Far map (`map_near`/`map_far`), pełna mapa (popover,
+cele, centrowanie, kolory slotów, estimated/discovered/confirmed jako
+outline/translucent/solid), minimap (tylko aktywne cele), debug
+(`window.seedvale.debug.worldLocations`).
+
+Świadomie odłożone/uproszczone w tej implementacji:
+- §18 fizyczny landmark szczytu (kamień/tablica) — plan sam to opisuje jako
+  „docelowo”; `mountainPeak` istnieje jako `WorldLocation`, bez fizycznego obiektu.
+- §22 filtrowanie kategorii na pełnej mapie — plan mówi „może filtrować”
+  (opcjonalne); nie zaimplementowane.
+- Lake/mountainPeak nie mają pełnej fizycznej wierności (nie są prawdziwą
+  globalną hydrologią/orografią) — to świadomy, udokumentowany kompromis
+  (patrz `worldLocationCatalog.ts`'s `scanLakesAndPeaks`), bo pełna wierność
+  wymagałaby nowego systemu globalnej analizy terenu poza zakresem tego planu.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**

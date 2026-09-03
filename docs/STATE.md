@@ -96,6 +96,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `QuestManager` — quest progress, EXP and relations.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
 - `MapData` / `MapDiscovery` — map projection + Fog of War (`src/world/map/`).
+- `WorldLocationCatalog` / `LocationKnowledge` / `NavigationTargets` — concrete named world locations (settlement/cave/cemetery/lake/mountainPeak), player discovery state and active travel targets (`src/world/locations/`, plan world-012). Separate from `MapDiscovery`'s terrain Fog of War; `MapData.knownLocations()` projects `WorldLocation + LocationKnowledge` rather than auto-revealing settlements from explored cells.
 - `Place` / schedule-related NPC work — foundation for daily routines.
 - **Asset anchors** — `src/assets/assetAnchors.ts`; convention in [docs/assets/ANCHORS.md](./assets/ANCHORS.md).
 

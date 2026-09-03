@@ -32,12 +32,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/dialogueTemplates.ts`
 
+- `aboutAreaLine` — function — line 206
 - `aboutSelfLine` — function — line 68
 - `aboutVillageLine` — function — line 162
 - `currentActivityLine` — function — line 109
 - `familyPhrase` — function — line 63
 - `goodbyeLine` — function — line 195
-- `requestAssistanceLine` — function — line 206
+- `requestAssistanceLine` — function — line 220
 
 ## `ai/helperAssignment.ts`
 

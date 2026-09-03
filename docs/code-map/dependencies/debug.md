@@ -182,6 +182,8 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/settlementGenerator.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
 - `world/worldContext.ts`
 
 ## `debug/npcDebugApi.ts`
@@ -204,6 +206,10 @@ Generated from TypeScript imports.
 - `navigation/navigationStats.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `world/locations/locationConfig.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
 - `world/worldContext.ts`
 
 **Imported by**

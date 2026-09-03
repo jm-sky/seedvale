@@ -196,6 +196,20 @@ export function goodbyeLine(archetype: Personality): string {
   return pick(GOODBYE[archetype])
 }
 
+// --- "Opowiedz mi coś o okolicy." (plan world-012 §7) ---
+
+/** `newlyDiscoveredNames` are already-resolved `WorldLocation.name`s — this
+ *  module stays pure/data-in (see file doc), so the caller (dialogue
+ *  wiring) owns the actual discovery/reveal side effect and just hands the
+ *  names it decided to reveal this conversation. Flat text regardless of
+ *  archetype, same simplicity as `requestAssistanceLine`. */
+export function aboutAreaLine(newlyDiscoveredNames: readonly string[]): string {
+  if (newlyDiscoveredNames.length === 0) {
+    return 'Chwilowo nie przypominam sobie niczego nowego. Zapytaj mnie innym razem.'
+  }
+  return ['Nowe miejsca odkryte:', ...newlyDiscoveredNames].join('\n')
+}
+
 // --- "Poproś o jedzenie/picie" (plan 152) ---
 
 /** `outcome`'s shape is written out inline rather than importing

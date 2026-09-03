@@ -22,7 +22,7 @@ const config = {
 
 function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDays'>>): SaveData {
   return {
-    version: 1,
+    version: 2,
     config,
     player: { x: 1, z: 2, yaw: 0, pitch: 0 },
     savedAt: overrides?.savedAt ?? 100,
@@ -42,7 +42,7 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
     worldFlags: {},
     resolvedHiddenFindSpotIds: [],
     badges: { earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 },
-    map: { discoveredCells: [] },
+    map: { discoveredCells: [], discoveredLocations: [], targets: [] },
     settlementEconomies: {},
     playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 0, dehydrationDuration: 0 },
     ownedLandPlots: [],

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
+import type { WorldLocation } from '../locations/worldLocationTypes'
+import { createLocationKnowledge } from '../locations/locationKnowledge'
 import { MAP_CELL_SIZE, MAP_DISCOVERY_RADIUS } from './mapConfig'
 import { createMapData } from './mapData'
 import { cellsInDiscoveryRadius, createMapDiscovery } from './mapDiscovery'
@@ -184,18 +186,27 @@ describe('map discovery', () => {
 })
 
 describe('map data filtering', () => {
-  it('returns only discovered cells and known settlements', () => {
+  /** Minimal fake `WorldLocationCatalog` (plan world-012) — `mapData.ts`
+   *  only ever resolves ids handed back by `LocationKnowledge`, so tests
+   *  here don't need the real settlement/cave/lake/peak generators. */
+  function fakeCatalog(locations: readonly WorldLocation[]) {
+    return {
+      getById: (id: string) => locations.find((l) => l.id === id) ?? null,
+      nearestSettlements: () => [],
+      landmarksWithin: () => [],
+      invalidateScanCache: () => {},
+    }
+  }
+
+  it('returns only discovered cells, and only locations the player knows about', () => {
     const projection = createMapProjection(rawParams())
     const discovery = createMapDiscovery()
     discovery.update(0, 0)
-    const mapData = createMapData({
-      projection,
-      discovery,
-      lookupSettlement: (gx, gz) => {
-        if (gx === 0 && gz === 0) return { id: 'home', x: 2, z: 2, name: 'Home' }
-        return null
-      },
-    })
+    const catalog = fakeCatalog([
+      { id: 'settlement:home', kind: 'settlement', x: 2, z: 2, name: 'Home', discoveryWeight: 0 },
+    ])
+    const knowledge = createLocationKnowledge([{ id: 'settlement:home', state: 'confirmed', source: 'exploration' }])
+    const mapData = createMapData({ projection, discovery, catalog, knowledge })
     const cells = mapData.queryCells({ minX: -40, maxX: 40, minZ: -40, maxZ: 40 })
     expect(cells.length).toBeGreaterThan(0)
     expect(cells.every((cell) => discovery.isDiscovered(cell.key))).toBe(true)
@@ -206,16 +217,37 @@ describe('map data filtering', () => {
     expect(known[0]?.source).toBe('exploration')
   })
 
-  it('hides a settlement whose centre cell is undiscovered', () => {
+  it('hides a location outside the requested viewport', () => {
+    const projection = createMapProjection(rawParams())
+    const discovery = createMapDiscovery()
+    const catalog = fakeCatalog([
+      { id: 'cave:far', kind: 'cave', x: 400, z: 400, name: 'Far', discoveryWeight: 0.5 },
+    ])
+    const knowledge = createLocationKnowledge([{ id: 'cave:far', state: 'discovered', source: 'npc' }])
+    const mapData = createMapData({ projection, discovery, catalog, knowledge })
+    expect(mapData.knownLocations({ minX: -40, maxX: 40, minZ: -40, maxZ: 40 })).toEqual([])
+    expect(mapData.knownLocations({ minX: -500, maxX: 500, minZ: -500, maxZ: 500 })).toHaveLength(1)
+  })
+
+  it('does not auto-reveal a settlement just because its cell is explored (plan §11)', () => {
     const projection = createMapProjection(rawParams())
     const discovery = createMapDiscovery()
     discovery.update(0, 0)
-    const mapData = createMapData({
-      projection,
-      discovery,
-      lookupSettlement: () => ({ id: 'far', x: 400, z: 400, name: 'Far' }),
-    })
-    const known = mapData.knownLocations({ minX: -500, maxX: 500, minZ: -500, maxZ: 500 })
-    expect(known).toEqual([])
+    // Catalog can resolve it, but the player has no knowledge entry for it.
+    const catalog = fakeCatalog([
+      { id: 'settlement:home', kind: 'settlement', x: 2, z: 2, name: 'Home', discoveryWeight: 0 },
+    ])
+    const knowledge = createLocationKnowledge()
+    const mapData = createMapData({ projection, discovery, catalog, knowledge })
+    expect(mapData.knownLocations({ minX: -40, maxX: 40, minZ: -40, maxZ: 40 })).toEqual([])
+  })
+
+  it('drops a known id the catalog can no longer resolve', () => {
+    const projection = createMapProjection(rawParams())
+    const discovery = createMapDiscovery()
+    const catalog = fakeCatalog([])
+    const knowledge = createLocationKnowledge([{ id: 'cave:gone', state: 'confirmed', source: 'exploration' }])
+    const mapData = createMapData({ projection, discovery, catalog, knowledge })
+    expect(mapData.knownLocations({ minX: -500, maxX: 500, minZ: -500, maxZ: 500 })).toEqual([])
   })
 })

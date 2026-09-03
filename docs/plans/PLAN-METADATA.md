@@ -354,6 +354,7 @@ Roadmap is not another priority system.
 - `economy-goods-flow`
 - `economy-production`
 - `horse-and-riding`
+- `locations`
 - `npc-ai`
 - `npc-professions-households-and-age`
 - `physical-resource-storage-and-logistics`

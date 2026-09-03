@@ -53,6 +53,9 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   seed_carrot: 4,
   seed_potato: 4,
   seed_cabbage: 4,
+  // Plan world-012 — knowledge-delivery tokens (§9/§10), priced by range.
+  map_near: 15,
+  map_far: 35,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -101,6 +104,8 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'seed_carrot',
   'seed_potato',
   'seed_cabbage',
+  'map_near',
+  'map_far',
 ]
 
 /** Fallback coin-equivalent for items the merchant does not stock. */
