@@ -1,4 +1,4 @@
-# Plan: NPC Professions, Households & Age Activity
+# NPC Professions, Households & Age Activity
 
 **Created:** 2026-08-24
 

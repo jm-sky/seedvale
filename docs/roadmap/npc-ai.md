@@ -1,6 +1,6 @@
 # NPC AI Roadmap
 
-**Status:** planned
+**Status:** concept / roadmap
 
 This roadmap defines the evolution from the current need-driven NPC behaviour toward the first useful version of the NPC decision and planning model described in [`../vision/npc-ai.md`](../vision/npc-ai.md).
 
