@@ -16,15 +16,15 @@ Generated from exported TypeScript symbols.
 
 ## `shared/getFireParticles.ts`
 
-- `createEmberParticles` — function — line 333
-- `createFireSparks` — function — line 323
-- `createFireVisual` — function — line 415
-- `createFlameParticles` — function — line 307
-- `createIgniteBurst` — function — line 355
-- `FIRE_SIZE_CLAMP` — const — line 391
-- `fireFlicker` — function — line 381
-- `FireVisual` — type — line 393
-- `ParticleLayerOptions` — type — line 301
+- `createEmberParticles` — function — line 356
+- `createFireSparks` — function — line 346
+- `createFireVisual` — function — line 438
+- `createFlameParticles` — function — line 330
+- `createIgniteBurst` — function — line 378
+- `FIRE_SIZE_CLAMP` — const — line 414
+- `fireFlicker` — function — line 404
+- `FireVisual` — type — line 416
+- `ParticleLayerOptions` — type — line 324
 
 ## `shared/HealthState.ts`
 

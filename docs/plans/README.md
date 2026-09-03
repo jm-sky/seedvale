@@ -50,17 +50,17 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `npc-002-npc-healing.md`                                            | -       | 🟡 | M      | ~~177~~ |
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | -       | 🟡 | M      | ~~127~~ |
+| 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
+| 💡 `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
+| ◼️ `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
+| 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
+| ◼️ `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
-| 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
-| 💡 `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
-| ◼️ `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
-| 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
-| ◼️ `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
 | ◼️ `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
 
 ---
