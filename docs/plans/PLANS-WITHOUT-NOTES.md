@@ -1,54 +1,22 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-03 12:02:41  
+> Date: 2026-09-03 12:26:42  
 
 ## PLANS
 
-- `items-player-015-firewood-wood-piles-and-scalable-fire.md`
 - `npc-004-npc-genealogy-lineages.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
 - `tools-000-weapon-browser-observatory.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `tools-007--mpfb2-npc-hero-character-pipeline.md`
+- `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md`
 - `world-010-environmental-placement-consequences.md`
-- `world-011-water-types-and-drinking.md`
 - `world-terrain-006-world-generation-placement-correctness.md`
 
 --------------------------------
 ## PROMPTS
-
-### `items-player-015-firewood-wood-piles-and-scalable-fire.md`
-
-Prompt:
-
-```
-Zrób review planu `items-player-015-firewood-wood-piles-and-scalable-fire.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-015-firewood-wood-piles-and-scalable-fire.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-015-firewood-wood-piles-and-scalable-fire-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `npc-004-npc-genealogy-lineages.md`
 
@@ -236,6 +204,37 @@ Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywisty
 Plik dodaj na branch `main` w repozytorium.
 ```
 
+### `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md`
+
+Prompt:
+
+```
+Zrób review planu `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/tools-010--recommended-order-rankings-and-actionable-plan-dashboard-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
 ### `world-010-environmental-placement-consequences.md`
 
 Prompt:
@@ -252,37 +251,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/world-010-environmental-placement-consequences-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `world-011-water-types-and-drinking.md`
-
-Prompt:
-
-```
-Zrób review planu `world-011-water-types-and-drinking.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/world-011-water-types-and-drinking.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/world-011-water-types-and-drinking-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

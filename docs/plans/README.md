@@ -57,10 +57,11 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
-| ◼️ `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
+| 💡 `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
 | ◼️ `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
-| ◼️ `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
+| 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
 | ◼️ `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
+| ◼️ `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
 
 ---
 
@@ -172,7 +173,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - quests-progression: `001`
 - settlements: `003`
 - settlements-npcs: `018`
-- tools: `010`
+- tools: `011`
 - ui-input: `008`
 - world: `012`
 - world-terrain: `007`
