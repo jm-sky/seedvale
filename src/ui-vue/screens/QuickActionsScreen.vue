@@ -204,6 +204,10 @@ const buildActions = computed<Action[]>(() => {
   if (ui.quickActions.hasPlatformMaterial) {
     list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform') })
   }
+
+  list.push({ label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell })
+  list.push({ label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden })
+
   // "Zleć budowę" (plan npc-014) — always available, no material cost; the
   // reward is chosen after the target is placed, not spent up front.
   list.push({ label: 'Zleć budowę', cost: '', onClick: () => startPlacementPreview('workContract') })
