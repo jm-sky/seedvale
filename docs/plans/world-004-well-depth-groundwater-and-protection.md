@@ -4,7 +4,8 @@
 **Status:** `planned` 📋  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~127~~  
-**domain:** `world-terrain` · `items-player` · `settlements-npcs`
+**Domain:** `world`
+**Tags:** `items-player`, `settlements-npcs`
 
 ## Cel
 

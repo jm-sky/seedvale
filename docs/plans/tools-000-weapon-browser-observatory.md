@@ -4,9 +4,8 @@
 **Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
 **Depends on:** none
-
-domain: ui-input
-tags: [items-player]
+**Domain:** `tools`  
+**Tags:** [items-player]
 
 ## Goal
 

@@ -4,6 +4,7 @@
 **Status:** `done` ✅
 **Priority:** high · **Effort:** M
 **Depends on:** -
+**Domain:** `tools`  
 
 ## Cel
 

@@ -4,16 +4,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/campfireProps.ts`
 
-- `CampfireBodyKind` — type — line 14
-- `CampfireFlame` — type — line 182
-- `createCampfire` — function — line 158
-- `createCampfireBody` — function — line 151
-- `createCampfireFlame` — function — line 238
-- `createGrateVisual` — function — line 357
-- `createLitCampfireVisual` — function — line 341
-- `createSimpleFireBase` — function — line 165
-- `peekCampfireFlameTemplate` — function — line 77
-- `preloadCampfireTemplates` — function — line 53
+- `CampfireBodyKind` — type — line 8
+- `CampfireFlame` — type — line 155
+- `createCampfire` — function — line 139
+- `createCampfireBody` — function — line 132
+- `createCampfireFlame` — function — line 170
+- `createGrateVisual` — function — line 230
+- `createLitCampfireVisual` — function — line 214
+- `createSimpleFireBase` — function — line 146
+- `preloadCampfireTemplates` — function — line 48
 
 ## `settlement/createSettlement.ts`
 

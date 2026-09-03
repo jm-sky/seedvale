@@ -8,12 +8,18 @@ Generated from exported TypeScript symbols.
 
 ## `shared/getFireParticles.ts`
 
-- `BurstPool` — type — line 40
-- `createEmbers` — function — line 236
-- `createIgniteBurst` — function — line 278
-- `createSparks` — function — line 216
-- `createTorchSparks` — function — line 257
-- `ParticlePool` — type — line 30
+- `BurstPool` — type — line 56
+- `createEmberParticles` — function — line 368
+- `createFireSparks` — function — line 346
+- `createFireVisual` — function — line 460
+- `createFlameParticles` — function — line 325
+- `createIgniteBurst` — function — line 390
+- `FIRE_SIZE_CLAMP` — const — line 426
+- `fireFlicker` — function — line 416
+- `FireVisual` — type — line 438
+- `FireVisualOptions` — type — line 428
+- `ParticleLayerOptions` — type — line 305
+- `ParticlePool` — type — line 43
 
 ## `shared/HealthState.ts`
 

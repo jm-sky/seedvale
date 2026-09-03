@@ -4,7 +4,7 @@
 **Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~ai-001~~ ~~ai-002~~  
-**Domain:** NPC AI / Decision Making
+**Domain:** `ai`
 
 ## Cel
 

@@ -4,6 +4,7 @@
 **Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** L  
 **Depends on:** none
+**Domain:** `world-terrain`
 
 ## Goal
 
