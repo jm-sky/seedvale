@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `badges/badges.ts`
 - `config/worldConfig.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
@@ -24,6 +25,10 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `quests/quests.ts`
 - `settlement/PlacedFires.ts`
+- `settlement/household.ts`
+- `settlement/livestock.ts`
+- `settlement/npcRelationships.ts`
+- `settlement/npcState.ts`
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`

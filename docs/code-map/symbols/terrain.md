@@ -118,22 +118,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 638
+- `applyModificationToTile` — function — line 646
 - `ChunkManager` — type — line 396
 - `ChunkManagerConfig` — type — line 247
-- `createChunkManager` — function — line 777
+- `createChunkManager` — function — line 785
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 766
-- `drainByBudget` — function — line 756
+- `CropHarvestOutcome` — type — line 774
+- `drainByBudget` — function — line 764
 - `FinalizeStage` — type — line 336
-- `pickNearestQueuedKey` — function — line 716
-- `pickNextFinalizeKey` — function — line 734
+- `pickNearestQueuedKey` — function — line 724
+- `pickNextFinalizeKey` — function — line 742
 - `ringChunkOffsets` — function — line 206
-- `TerrainModification` — type — line 595
+- `TerrainModification` — type — line 603
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -239,8 +239,8 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/grass.ts`
 
-- `createGrassSystem` — function — line 414
-- `GrassSystem` — type — line 38
+- `createGrassSystem` — function — line 432
+- `GrassSystem` — type — line 44
 - `WorldGrassChunk` — type — line 13
 
 ## `terrain/grassPlacement.ts`

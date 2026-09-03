@@ -47,11 +47,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 84
-- `PlacementPreviewActionDeps` — type — line 40
-- `PlacementPreviewActions` — type — line 67
-- `PlacementPreviewKind` — type — line 20
-- `PlacementPreviewUiView` — type — line 22
+- `createPlacementPreviewActions` — function — line 85
+- `PlacementPreviewActionDeps` — type — line 41
+- `PlacementPreviewActions` — type — line 68
+- `PlacementPreviewKind` — type — line 21
+- `PlacementPreviewUiView` — type — line 23
 
 ## `app/actions/restActions.ts`
 
@@ -128,9 +128,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/graphicsSettings.ts`
 
-- `createGraphicsSettings` — function — line 50
+- `createGraphicsSettings` — function — line 54
 - `GraphicsSettings` — type — line 19
-- `GraphicsSettingsDeps` — type — line 37
+- `GraphicsSettingsDeps` — type — line 41
 
 ## `app/interactables.ts`
 
@@ -180,14 +180,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 93
+- `createSaveState` — function — line 88
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 35
-- `SaveStateDeps` — type — line 45
+- `SaveState` — type — line 30
+- `SaveStateDeps` — type — line 40
 
 ## `app/userActions.ts`
 
@@ -203,13 +203,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 506
-- `createWorldBundle` — function — line 825
-- `disposeWorldBundle` — function — line 1148
-- `HOME_RADIUS` — const — line 83
-- `homeChunks` — function — line 94
-- `rebuildWorldBundle` — function — line 976
-- `WorldBundle` — type — line 117
+- `BuiltWorldSystems` — type — line 524
+- `createWorldBundle` — function — line 846
+- `disposeWorldBundle` — function — line 1193
+- `HOME_RADIUS` — const — line 85
+- `homeChunks` — function — line 96
+- `rebuildWorldBundle` — function — line 1014
+- `WorldBundle` — type — line 119
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

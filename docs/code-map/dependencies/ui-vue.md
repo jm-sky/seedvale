@@ -101,6 +101,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/userActions.ts`
+- `items/itemCatalog.ts`
 - `ui-vue/store.ts`
 
 ## `ui-vue/store.ts`

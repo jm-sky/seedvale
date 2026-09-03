@@ -203,10 +203,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `disposeLivestock` — function — line 268
-- `LIVESTOCK_KINDS` — const — line 38
-- `LIVESTOCK_URLS` — const — line 27
-- `spawnLivestock` — function — line 180
+- `createLivestockRegistry` — function — line 110
+- `disposeLivestock` — function — line 420
+- `LIVESTOCK_KINDS` — const — line 39
+- `LIVESTOCK_URLS` — const — line 28
+- `LivestockPersistence` — type — line 58
+- `LivestockRegistry` — type — line 80
+- `LivestockSaveRecord` — type — line 47
+- `spawnLivestock` — function — line 312
 
 ## `settlement/lodging.ts`
 
@@ -268,8 +272,9 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcRelationships.ts`
 
-- `createNpcRelationships` — function — line 30
-- `NpcRelationships` — type — line 16
+- `createNpcRelationships` — function — line 32
+- `NpcRelationshipEntry` — type — line 26
+- `NpcRelationships` — type — line 15
 
 ## `settlement/npcState.ts`
 
@@ -432,13 +437,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 155
+- `createSettlementsManager` — function — line 163
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 61
+- `SettlementsManager` — type — line 62
 
 ## `settlement/settlementStructures.ts`
 

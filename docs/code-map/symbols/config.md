@@ -33,18 +33,18 @@ Generated from exported TypeScript symbols.
 ## `config/worldConfig.ts`
 
 - `AoQuality` — type — line 13
-- `applyStoredPlayer` — function — line 468
-- `applyStoredPostProcessing` — function — line 492
-- `applyStoredQuality` — function — line 477
-- `applyStoredSettlements` — function — line 358
-- `applyStoredSky` — function — line 460
-- `applyStoredTerrain` — function — line 373
-- `createBenchmarkWorldConfig` — function — line 575
-- `createWorldConfig` — function — line 519
-- `defaultTerrainConfig` — function — line 512
+- `applyStoredPlayer` — function — line 473
+- `applyStoredPostProcessing` — function — line 497
+- `applyStoredQuality` — function — line 482
+- `applyStoredSettlements` — function — line 363
+- `applyStoredSky` — function — line 465
+- `applyStoredTerrain` — function — line 378
+- `createBenchmarkWorldConfig` — function — line 580
+- `createWorldConfig` — function — line 524
+- `defaultTerrainConfig` — function — line 517
 - `DetailNormalConfig` — type — line 21
 - `HomeVillageSize` — type — line 10
-- `triangleCount` — function — line 587
+- `triangleCount` — function — line 592
 - `WorldConfig` — type — line 49
   - domain: world
   - system: world-config

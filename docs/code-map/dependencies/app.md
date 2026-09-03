@@ -188,6 +188,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/workContractActions.ts`
+- `app/userActions.ts`
 - `world/placementPreview.ts`
 
 **Imported by**
@@ -786,6 +787,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/placementPreviewActions.ts`
 - `app/createApp.ts`
 - `ui-vue/playerQuickActions.ts`
 - `ui-vue/store.ts`
@@ -813,6 +815,8 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `settlement/livestock.ts`
+- `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`

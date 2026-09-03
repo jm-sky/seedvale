@@ -21,8 +21,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createDebugGui.ts`
 
-- `createDebugGui` — function — line 56
-- `DebugGuiHandle` — type — line 43
+- `createDebugGui` — function — line 61
+- `DebugGuiHandle` — type — line 48
 - `DebugGuiHandlers` — type — line 20
 
 ## `ui/createHud.ts`

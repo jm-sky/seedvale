@@ -70,11 +70,13 @@ Generated from TypeScript imports.
 - `fauna/villageAvoidance.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `persistence/saveData.ts`
 - `player/playerCombat.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
 - `world/animalTraps.ts`
 - `world/createPlacedTraps.ts`

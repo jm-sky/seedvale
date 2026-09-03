@@ -77,11 +77,11 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/playerQuickActions.ts`
 
-- `FIRE_QUICK_ACTIONS` — const — line 55
-- `FireActionHandlers` — type — line 18
-- `FireActionId` — type — line 16
-- `VisibleFireAction` — type — line 26
-- `visibleFireActions` — function — line 108
+- `FIRE_QUICK_ACTIONS` — const — line 65
+- `FireActionHandlers` — type — line 19
+- `FireActionId` — type — line 17
+- `VisibleFireAction` — type — line 27
+- `visibleFireActions` — function — line 116
 
 ## `ui-vue/store.ts`
 

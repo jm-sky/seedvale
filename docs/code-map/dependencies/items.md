@@ -448,6 +448,7 @@ Generated from TypeScript imports.
 - `player/playerRanged.test.ts`
 - `player/playerRanged.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`
+- `ui-vue/playerQuickActions.ts`
 - `world/foodSources.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`

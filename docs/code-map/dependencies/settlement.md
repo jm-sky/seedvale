@@ -44,6 +44,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
 - `settlement/household.ts`
+- `settlement/livestock.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/props.ts`
@@ -396,6 +397,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/household.test.ts`
@@ -477,6 +479,13 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `settlement/landPurchase.test.ts`
 
+## `settlement/livestock.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `settlement/livestock.ts`
+
 ## `settlement/livestock.ts`
 
 **Imports**
@@ -493,9 +502,13 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/worldBundle.ts`
 - `assets/assetIndex.ts`
+- `persistence/saveData.ts`
 - `quests/QuestManager.ts`
+- `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/livestock.test.ts`
 
 ## `settlement/lodging.test.ts`
 
@@ -595,6 +608,8 @@ Generated from TypeScript imports.
 
 - `ai/socialBehaviour.test.ts`
 - `ai/socialBehaviour.ts`
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcRelationships.test.ts`
@@ -622,6 +637,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `app/worldBundle.ts`
+- `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcState.test.ts`
