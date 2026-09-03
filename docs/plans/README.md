@@ -54,7 +54,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
 | ◼️ `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
 | 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
-| ◼️ `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
+| 💡 `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
