@@ -4,6 +4,7 @@ import {
   assertCanCreateSave,
   type CreateSaveError,
   generateSaveId,
+  inspectStoredSave,
   LEGACY_SAVE_KEY,
   nextDefaultSaveName,
   parseStoredSave,
@@ -41,7 +42,7 @@ export type WriteSaveResult =
 
 let pendingNewSaveName: string | null = null
 
-type SaveDiagnosticKind = 'missing' | 'invalid' | 'read-error' | 'write-error'
+type SaveDiagnosticKind = 'missing' | 'invalid' | 'migration-failed' | 'unsupported-version' | 'read-error' | 'write-error'
 
 /** Dev-console-only breadcrumb for a persistence anomaly. Never pass the
  *  `SaveData`/envelope value itself — `context` should be an operation +
@@ -142,40 +143,55 @@ export function beginNewSave(name: string): void {
   setPendingNewSaveName(name)
 }
 
-function parseRow(key: IDBValidKey, value: unknown): ReturnType<typeof parseStoredSave> {
-  if (typeof key !== 'string') return null
-  return parseStoredSave(key, value)
-}
-
-async function readAllSlots(db: IDBDatabase): Promise<NonNullable<ReturnType<typeof parseStoredSave>>[]> {
+/** One pass over every stored row, split into normally-loadable slots and
+ *  whether any row present in the store could not be read as-is
+ *  (persistence-003) — an older version with no migration path, a newer
+ *  unsupported version, or genuinely malformed data. Never mutates or
+ *  removes anything; a problem row stays in IndexedDB untouched. */
+async function scanRows(db: IDBDatabase): Promise<{ ok: { id: string, name: string, data: SaveData }[], hasProblems: boolean }> {
   const rows = await storeGetAll(db)
-  const slots: NonNullable<ReturnType<typeof parseStoredSave>>[] = []
+  const ok: { id: string, name: string, data: SaveData }[] = []
+  let hasProblems = false
   for (const row of rows) {
-    const parsed = parseRow(row.key, row.value)
-    if (parsed) {
-      slots.push(parsed)
-    } else if (typeof row.key === 'string' && row.key !== LEGACY_SAVE_KEY) {
+    if (typeof row.key !== 'string') continue
+    const result = inspectStoredSave(row.key, row.value)
+    if (result.status === 'ok') {
+      ok.push({ id: result.id, name: result.name, data: result.data })
+    } else if (row.key !== LEGACY_SAVE_KEY) {
       // Present but unreadable — kept out of the list (it can't be sorted/
       // shown as a normal slot) but never dropped from the store itself.
-      logSaveDiagnostic('invalid', `listSaves:${row.key}`)
+      hasProblems = true
+      logSaveDiagnostic(result.status, `listSaves:${row.key}`)
     }
   }
-  return slots
+  return { ok, hasProblems }
 }
 
-/** Promote a leftover key `'current'` (raw `SaveData` or envelope) to a named slot. */
+async function readAllSlots(db: IDBDatabase): Promise<{ id: string, name: string, data: SaveData }[]> {
+  return (await scanRows(db)).ok
+}
+
+/** Promote a leftover key `'current'` (raw `SaveData` or envelope) to a named
+ *  slot. A schema-migration failure or an unsupported future version must
+ *  not delete this row (persistence-003 §6/§8) — only data that is
+ *  genuinely malformed (not a save this or any known-older schema produced)
+ *  is discarded here. */
 async function migrateLegacyIfNeeded(): Promise<void> {
   const db = await openDb()
   try {
     const raw = await storeGet(db, LEGACY_SAVE_KEY)
     if (raw == null) return
-    const parsed = parseStoredSave(LEGACY_SAVE_KEY, raw)
-    if (!parsed) {
-      await storeDelete(db, LEGACY_SAVE_KEY)
+    const result = inspectStoredSave(LEGACY_SAVE_KEY, raw)
+    if (result.status !== 'ok') {
+      if (result.status === 'invalid') {
+        await storeDelete(db, LEGACY_SAVE_KEY)
+      } else {
+        logSaveDiagnostic(result.status, `migrateLegacyIfNeeded:${LEGACY_SAVE_KEY}`)
+      }
       return
     }
     const id = generateSaveId()
-    await storePut(db, wrapSave(parsed.name, parsed.data), id)
+    await storePut(db, wrapSave(result.name, result.data), id)
     await storeDelete(db, LEGACY_SAVE_KEY)
     if (!getActiveSaveId()) setActiveSaveId(id)
   } finally {
@@ -204,6 +220,27 @@ export async function listSaves(): Promise<SaveSlotInfo[]> {
   }
 }
 
+/** Whether the store holds any row that exists but cannot currently be read
+ *  as a normal slot (persistence-003 §9) — an older version with no
+ *  migration path, a newer unsupported version, or malformed data. Boot uses
+ *  this to tell "genuinely zero saves" apart from "saves exist but none are
+ *  loadable right now", so the latter is never silently treated as though no
+ *  save exists (see `main.ts`). */
+export async function hasUnreadableSaves(): Promise<boolean> {
+  try {
+    await migrateLegacyIfNeeded()
+    const db = await openDb()
+    try {
+      return (await scanRows(db)).hasProblems
+    } finally {
+      db.close()
+    }
+  } catch (err) {
+    logSaveDiagnostic('read-error', 'hasUnreadableSaves', err)
+    return false
+  }
+}
+
 export async function readSave(id?: string): Promise<SaveData | null> {
   try {
     await migrateLegacyIfNeeded()
@@ -220,13 +257,13 @@ export async function readSave(id?: string): Promise<SaveData | null> {
         logSaveDiagnostic('missing', `readSave:${targetId}`)
         return null
       }
-      const parsed = parseRow(targetId, raw)
-      if (!parsed) {
-        logSaveDiagnostic('invalid', `readSave:${targetId}`)
+      const result = inspectStoredSave(targetId, raw)
+      if (result.status !== 'ok') {
+        logSaveDiagnostic(result.status, `readSave:${targetId}`)
         return null
       }
       if (!id) setActiveSaveId(targetId)
-      return parsed.data
+      return result.data
     } finally {
       db.close()
     }
@@ -240,7 +277,9 @@ export async function readSave(id?: string): Promise<SaveData | null> {
  * @domain persistence
  * @role Writes `data` into the active (or given) named slot.
  * @integration Never overwrites a slot whose existing record is present but
- *  fails to parse — see `docs/plans/persistence-002-save-integrity-guard.md`.
+ *  fails to parse, has no known migration path, or is a newer unsupported
+ *  version — see `docs/plans/persistence-002-save-integrity-guard.md` and
+ *  `docs/plans/persistence-003-save-schema-versioning-and-migrations.md`.
  *  A slot with no existing record still gets created normally.
  */
 export async function writeSave(data: SaveData, id?: string): Promise<WriteSaveResult> {
@@ -259,16 +298,17 @@ export async function writeSave(data: SaveData, id?: string): Promise<WriteSaveR
     try {
       const raw = await storeGet(db, targetId)
       if (raw !== undefined) {
-        const parsed = parseRow(targetId, raw)
-        if (!parsed) {
-          // The slot exists but the current code can't read it (e.g. it
-          // predates a schema change). Overwriting it here would silently
-          // destroy the only copy of that record — refuse instead and let
-          // the caller decide (autosave just fails safely for this slot).
-          logSaveDiagnostic('invalid', `writeSave:${targetId}`)
+        const result = inspectStoredSave(targetId, raw)
+        if (result.status !== 'ok') {
+          // The slot exists but the current code can't read it as-is (e.g.
+          // it predates a schema change, has no migration path, or is from a
+          // newer app version). Overwriting it here would silently destroy
+          // the only copy of that record — refuse instead and let the caller
+          // decide (autosave just fails safely for this slot).
+          logSaveDiagnostic(result.status, `writeSave:${targetId}`)
           return { ok: false, error: 'invalid-existing-slot' }
         }
-        await storePut(db, wrapSave(parsed.name, data), targetId)
+        await storePut(db, wrapSave(result.name, data), targetId)
         setActiveSaveId(targetId)
         return { ok: true }
       }

@@ -1,7 +1,7 @@
 # Plan: save schema versioning and future migrations
 
 **Created:** 2026-09-03  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** 002  
 **Domain:** `persistence`

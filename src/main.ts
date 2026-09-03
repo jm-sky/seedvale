@@ -7,6 +7,7 @@ import {
   beginNewSave,
   deleteSave,
   getActiveSaveId,
+  hasUnreadableSaves,
   listSaves,
   readSave,
   setActiveSaveId,
@@ -44,6 +45,18 @@ async function boot(container: HTMLElement): Promise<void> {
   }
 
   if (slots.length === 0) {
+    // A slot can exist in IndexedDB but not be listed (a newer app's save,
+    // or one whose migration failed) — that must never be silently treated
+    // as "no save exists" (persistence-003 §9). The record itself is never
+    // at risk (writeSave()'s guard refuses to overwrite it either way), but
+    // the player should know why their save didn't appear before a new
+    // world starts.
+    if (await hasUnreadableSaves()) {
+      window.alert(
+        'Znaleziono zapis gry, którego nie można wczytać w tej wersji (nowsza wersja zapisu lub nieudana migracja). '
+        + 'Zapis pozostaje nienaruszony, ale nie zostanie teraz wczytany.',
+      )
+    }
     void createApp(container)
     return
   }
@@ -59,6 +72,12 @@ async function boot(container: HTMLElement): Promise<void> {
       await deleteSave(choice.id)
       currentSlots = await listSaves()
       if (currentSlots.length === 0) {
+        if (await hasUnreadableSaves()) {
+          window.alert(
+            'Znaleziono zapis gry, którego nie można wczytać w tej wersji (nowsza wersja zapisu lub nieudana migracja). '
+            + 'Zapis pozostaje nienaruszony, ale nie zostanie teraz wczytany.',
+          )
+        }
         void createApp(container, undefined, { newGame: true })
         return
       }

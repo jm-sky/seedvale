@@ -366,9 +366,18 @@ export type SaveWorkContract = {
   postedAt: number | null
 }
 
-/** Canonical (and, for now, only) save contract. Versioning/migration can be
- *  reintroduced later if the format changes again — this module intentionally
- *  carries no history of prior schemas.
+/** Single source of truth for the current persisted schema version
+ *  (persistence-003). Bump this and add a `CURRENT_SAVE_VERSION - 1 →
+ *  CURRENT_SAVE_VERSION` entry to `SAVE_MIGRATIONS` whenever the persisted
+ *  representation or semantics of `SaveData` change — see the plan's
+ *  "Future schema-change workflow". Never duplicate this number elsewhere;
+ *  `saveState.ts` imports it instead of declaring its own constant. */
+export const CURRENT_SAVE_VERSION = 1
+
+/** Canonical save contract for the current schema version. This module
+ *  intentionally carries no history of schemas from before the v1 hard cut
+ *  (plan 201) — the migration pipeline below only ever walks forward from
+ *  v1.
  *
  * @domain persistence
  * @system save-schema
@@ -376,7 +385,7 @@ export type SaveWorkContract = {
  * @owns SaveData
  */
 export type SaveData = {
-  version: 1
+  version: typeof CURRENT_SAVE_VERSION
   config: SaveConfig
   player: SavePlayer
   savedAt: number
@@ -1212,7 +1221,7 @@ function isRemovedLivestockIdsField(value: unknown): value is string[] {
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
-  if (v.version !== 1) return false
+  if (v.version !== CURRENT_SAVE_VERSION) return false
   if (!isSaveConfig(v.config)) return false
   if (!isSavePlayer(v.player)) return false
   if (typeof v.savedAt !== 'number') return false
@@ -1265,13 +1274,102 @@ export function isSaveData(value: unknown): value is SaveData {
   return true
 }
 
-/** Accepts a stored save and returns it in the canonical v1 shape, or `null`
- *  if it doesn't match. No migration: a save from a prior schema (this
- *  module's history before the v1 hard cut) simply fails to load. */
+/** Accepts a stored save and returns it only if it already matches the
+ *  current schema exactly, or `null` otherwise. Performs no migration and no
+ *  version inspection — use `loadStoredSave()` at the persistence boundary
+ *  (raw IndexedDB value → runtime), which distinguishes malformed data from
+ *  an older version with a migration path from a newer, unsupported one. */
 export function loadSaveData(value: unknown): SaveData | null {
   try {
     return isSaveData(value) ? value : null
   } catch {
     return null
+  }
+}
+
+/** A single schema-migration step (persistence-003 §4): accepts exactly the
+ *  previous persisted contract and returns exactly the next one. Must be
+ *  deterministic, side-effect free, and must not mutate its input — the
+ *  pipeline below always calls it with a fresh `structuredClone`. Domain
+ *  hydration/defaulting is not a migration's job; a migration only
+ *  translates persisted representation. */
+export type SaveMigration = (data: unknown) => unknown
+
+/** Registry of migrations, keyed by the version each one accepts as input.
+ *  Empty today — v1 is both the historical floor (plan 201's hard cut) and
+ *  `CURRENT_SAVE_VERSION`, so no migration exists yet. The first future
+ *  schema change registers its step here, e.g.:
+ *
+ *      const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
+ *        1: migrateSaveV1ToV2,
+ *      }
+ *
+ *  Avoid a single monolithic function covering every historical step —
+ *  one entry per exact source version, chained by `migrateStoredSave()`. */
+const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {}
+
+function detectStoredVersion(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null
+  const version = (value as Record<string, unknown>).version
+  return typeof version === 'number' ? version : null
+}
+
+/** Walks `migrations` from `fromVersion` up to `toVersion`, one exact step
+ *  at a time. Pure and side-effect free: never mutates `value` (each step
+ *  runs against a fresh `structuredClone`), and fails closed — a missing
+ *  step or a step that throws stops the chain rather than skipping ahead.
+ *  Exported so the chain-walking mechanism itself (determinism, input
+ *  immutability, exact source/target versions, rejection of a missing step)
+ *  can be tested independently of the real `SAVE_MIGRATIONS` registry. */
+export function migrateStoredSave(
+  value: unknown,
+  fromVersion: number,
+  toVersion: number,
+  migrations: Readonly<Record<number, SaveMigration>>,
+): { ok: true, data: unknown } | { ok: false } {
+  let migrated = value
+  for (let from = fromVersion; from < toVersion; from++) {
+    const migrate = migrations[from]
+    if (!migrate) return { ok: false }
+    try {
+      migrated = migrate(structuredClone(migrated))
+    } catch {
+      return { ok: false }
+    }
+  }
+  return { ok: true, data: migrated }
+}
+
+/** Result of loading a raw stored value through the full migration pipeline
+ *  (persistence-003 §3/§9). `'invalid'` covers structurally malformed data,
+ *  including a current-version record that fails schema validation.
+ *  `'migration-failed'` covers an older, known version whose migration chain
+ *  is missing a step, throws, or produces something that still fails
+ *  current-schema validation. `'unsupported-version'` covers a version newer
+ *  than this build knows about. Only `'ok'` may ever reach runtime. */
+export type StoredSaveResult =
+  | { status: 'ok', data: SaveData }
+  | { status: 'invalid' }
+  | { status: 'migration-failed', version: number }
+  | { status: 'unsupported-version', version: number }
+
+/** Central migration pipeline entry point (persistence-003 §3). Detects the
+ *  persisted version, migrates in memory up to `CURRENT_SAVE_VERSION`, then
+ *  validates against the current schema — never touches storage itself, and
+ *  never persists the migrated representation (persistence-003 §7: that only
+ *  happens through an ordinary later save). */
+export function loadStoredSave(value: unknown): StoredSaveResult {
+  try {
+    const version = detectStoredVersion(value)
+    if (version === null) return { status: 'invalid' }
+    if (version > CURRENT_SAVE_VERSION) return { status: 'unsupported-version', version }
+
+    const migration = migrateStoredSave(value, version, CURRENT_SAVE_VERSION, SAVE_MIGRATIONS)
+    if (!migration.ok) return { status: 'migration-failed', version }
+
+    if (isSaveData(migration.data)) return { status: 'ok', data: migration.data }
+    return version === CURRENT_SAVE_VERSION ? { status: 'invalid' } : { status: 'migration-failed', version }
+  } catch {
+    return { status: 'invalid' }
   }
 }

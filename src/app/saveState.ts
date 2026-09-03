@@ -3,7 +3,6 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { createMouseLook } from '../input/MouseLook'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
-import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
@@ -19,13 +18,9 @@ import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
+import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification } from '../persistence/saveData'
 import { getActiveSaveId, listSaves, writeSave } from '../persistence/saveDb'
 import { pickActiveSaveId } from '../persistence/saveSlots'
-
-/** Current canonical save schema version. The field list lives in
- *  `src/persistence/saveData.ts` and `docs/STATE.md` — this module only
- *  assembles the runtime state into that shape. */
-const SAVE_VERSION = 1
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
  *  written. The split from `src/persistence/` is unchanged by this extraction:
@@ -104,7 +99,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     // settlement unload on its own).
     const livestockSnapshot = bundle.settlementsManager.snapshotLivestock()
     return {
-      version: SAVE_VERSION,
+      version: CURRENT_SAVE_VERSION,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),

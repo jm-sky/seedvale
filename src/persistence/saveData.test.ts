@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { isSaveData, loadSaveData, type SaveConfig, type SaveData } from './saveData'
+import {
+  CURRENT_SAVE_VERSION,
+  isSaveData,
+  loadSaveData,
+  loadStoredSave,
+  migrateStoredSave,
+  type SaveConfig,
+  type SaveData,
+  type SaveMigration,
+} from './saveData'
 
 const config = {
   seed: 1,
@@ -284,5 +293,82 @@ describe('loadSaveData v1 contract', () => {
     })).toBeNull()
     expect(loadSaveData({ ...validSave, livestock: 'nope' })).toBeNull()
     expect(loadSaveData({ ...validSave, removedLivestockIds: [1] })).toBeNull()
+  })
+})
+
+describe('schema versioning and migration pipeline (persistence-003)', () => {
+  it('CURRENT_SAVE_VERSION is the single source of truth for the current schema', () => {
+    expect(validSave.version).toBe(CURRENT_SAVE_VERSION)
+    expect(isSaveData({ ...validSave, version: 999 })).toBe(false)
+  })
+
+  it('loads a native current-version save through the pipeline without invoking any migration', () => {
+    const result = loadStoredSave(validSave)
+    expect(result).toEqual({ status: 'ok', data: validSave })
+  })
+
+  it('rejects a current-version record that fails schema validation as invalid, not migration-failed', () => {
+    expect(loadStoredSave({ ...validSave, inventory: 'nope' })).toEqual({ status: 'invalid' })
+  })
+
+  it('rejects values with no detectable version as invalid', () => {
+    expect(loadStoredSave(null)).toEqual({ status: 'invalid' })
+    expect(loadStoredSave({})).toEqual({ status: 'invalid' })
+    expect(loadStoredSave({ version: 'one' })).toEqual({ status: 'invalid' })
+  })
+
+  it('rejects a version newer than CURRENT_SAVE_VERSION as unsupported, and never invents a migration for it', () => {
+    const future = { ...validSave, version: CURRENT_SAVE_VERSION + 1 }
+    expect(loadStoredSave(future)).toEqual({ status: 'unsupported-version', version: CURRENT_SAVE_VERSION + 1 })
+  })
+
+  it('reports an older version with no registered migration as migration-failed, not invalid', () => {
+    // No real migration exists yet (v1 is both the floor and the current
+    // version) — a hypothetical older record demonstrates the real pipeline
+    // fails closed rather than silently passing an unmigrated shape through.
+    const olderThanFloor = { ...validSave, version: CURRENT_SAVE_VERSION - 1 }
+    expect(loadStoredSave(olderThanFloor)).toEqual({ status: 'migration-failed', version: CURRENT_SAVE_VERSION - 1 })
+  })
+
+  describe('migrateStoredSave() chain mechanism', () => {
+    const addGreeting: SaveMigration = (data) => ({ ...(data as Record<string, unknown>), greeting: 'hi' })
+    const bumpToThree: SaveMigration = (data) => ({ ...(data as Record<string, unknown>), version: 3 })
+
+    it('walks multiple steps deterministically to the exact target version', () => {
+      const migrations: Record<number, SaveMigration> = { 1: addGreeting, 2: bumpToThree }
+      const result = migrateStoredSave({ version: 1 }, 1, 3, migrations)
+      expect(result).toEqual({ ok: true, data: { version: 3, greeting: 'hi' } })
+    })
+
+    it('is a no-op when fromVersion already equals toVersion', () => {
+      const input = { version: 1, marker: true }
+      const result = migrateStoredSave(input, 1, 1, {})
+      expect(result).toEqual({ ok: true, data: input })
+    })
+
+    it('never mutates its input, even across multiple steps', () => {
+      const input = { version: 1, nested: { count: 1 } }
+      const frozenSnapshot = structuredClone(input)
+      migrateStoredSave(input, 1, 3, { 1: addGreeting, 2: bumpToThree })
+      expect(input).toEqual(frozenSnapshot)
+    })
+
+    it('is deterministic for the same input', () => {
+      const migrations: Record<number, SaveMigration> = { 1: addGreeting, 2: bumpToThree }
+      const a = migrateStoredSave({ version: 1 }, 1, 3, migrations)
+      const b = migrateStoredSave({ version: 1 }, 1, 3, migrations)
+      expect(a).toEqual(b)
+    })
+
+    it('fails closed when a required step is missing from the registry', () => {
+      const result = migrateStoredSave({ version: 1 }, 1, 3, { 1: addGreeting })
+      expect(result).toEqual({ ok: false })
+    })
+
+    it('fails closed when a step throws', () => {
+      const throwing: SaveMigration = () => { throw new Error('boom') }
+      const result = migrateStoredSave({ version: 1 }, 1, 2, { 1: throwing })
+      expect(result).toEqual({ ok: false })
+    })
   })
 })

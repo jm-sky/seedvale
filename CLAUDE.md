@@ -222,7 +222,7 @@ Important invariants:
 * Authoritative state is not duplicated into Three.js objects.
 * Entity identity survives runtime lifecycle changes.
 * Time-skip follows the same simulation semantics as normal progression.
-* Persistence currently uses save v1; do not add migration/version compatibility unless explicitly required.
+* Persistence uses `CURRENT_SAVE_VERSION` (`src/persistence/saveData.ts`, currently `1`) with a real migration pipeline (plan persistence-003); no pre-v1 history was restored. Bump the version and add a migration only when the persisted representation or semantics actually change — see the plan's "Future schema-change workflow".
 * Split files by ownership boundaries, not by line count alone.
 
 ---

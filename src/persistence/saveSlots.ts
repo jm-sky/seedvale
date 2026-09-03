@@ -1,4 +1,4 @@
-import { loadSaveData, type SaveData } from './saveData'
+import { loadStoredSave, type SaveData } from './saveData'
 
 export const MAX_SAVES = 8
 export const SAVE_NAME_MAX_LENGTH = 40
@@ -46,16 +46,31 @@ export function legacyNameFromSave(data: SaveData): string {
   return name || LEGACY_DEFAULT_SAVE_NAME
 }
 
-export function parseStoredSave(key: string, value: unknown): { id: string, name: string, data: SaveData } | null {
-  if (isSaveSlotEnvelope(value)) {
-    const data = loadSaveData(value.data)
-    if (!data) return null
-    const name = value.name.trim() || legacyNameFromSave(data)
-    return { id: key, name, data }
+/** Status-aware counterpart of `parseStoredSave()` (persistence-003) — same
+ *  raw-value → slot boundary, but keeps a failure's status/detected version
+ *  instead of collapsing every non-`'ok'` case into `null`. Preserves the
+ *  existing envelope model unchanged: only `data` ever carries a schema
+ *  version, `name` stays outside it. */
+export type InspectedSaveSlot =
+  | { status: 'ok', id: string, name: string, data: SaveData }
+  | { status: 'invalid', id: string }
+  | { status: 'migration-failed', id: string, version: number }
+  | { status: 'unsupported-version', id: string, version: number }
+
+export function inspectStoredSave(key: string, value: unknown): InspectedSaveSlot {
+  const envelope = isSaveSlotEnvelope(value)
+  const result = loadStoredSave(envelope ? value.data : value)
+  if (result.status === 'ok') {
+    const name = envelope ? (value.name.trim() || legacyNameFromSave(result.data)) : legacyNameFromSave(result.data)
+    return { status: 'ok', id: key, name, data: result.data }
   }
-  const data = loadSaveData(value)
-  if (!data) return null
-  return { id: key, name: legacyNameFromSave(data), data }
+  if (result.status === 'invalid') return { status: 'invalid', id: key }
+  return { status: result.status, id: key, version: result.version }
+}
+
+export function parseStoredSave(key: string, value: unknown): { id: string, name: string, data: SaveData } | null {
+  const result = inspectStoredSave(key, value)
+  return result.status === 'ok' ? { id: result.id, name: result.name, data: result.data } : null
 }
 
 export function toSaveSlotInfo(slot: { id: string, name: string, data: SaveData }): SaveSlotInfo {
