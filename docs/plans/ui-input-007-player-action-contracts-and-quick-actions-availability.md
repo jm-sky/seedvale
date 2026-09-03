@@ -2,6 +2,7 @@
 
 **Created:** 2026-09-03
 **Status:** `planned` 📋
+**Type:** refactor
 **Priority:** medium · **Effort:** M
 **Depends on:** -
 **Domain:** `ui-input`

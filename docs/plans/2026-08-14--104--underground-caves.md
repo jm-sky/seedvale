@@ -2,6 +2,7 @@
 
 **Created:** 2026-08-14  
 **Status:** `planned` 📋  
+**Type:** feature  
 **Priority:** high · **Effort:** XL  
 **Depends on:** ~~097~~ ~~125~~
 

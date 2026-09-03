@@ -2,6 +2,7 @@
 
 **Created:** 2026-08-31  
 **Status:** `planned` 📋  
+**Type:** feature  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~155~~ ~~159~~ ~~164~~ ~~184~~  
 **Domain:** `items-player`

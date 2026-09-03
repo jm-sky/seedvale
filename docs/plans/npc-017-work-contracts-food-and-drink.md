@@ -2,6 +2,7 @@
 
 **Created:** 2026-09-01
 **Status:** `planned` 📋
+**Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-015~~
 **Domain:** `npc`

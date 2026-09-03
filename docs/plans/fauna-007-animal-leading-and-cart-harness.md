@@ -2,6 +2,7 @@
 
 **Created:** 2026-09-02
 **Status:** `planned` 📋
+**Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** ~~014~~ ~~006~~
 **Domain:** `fauna`

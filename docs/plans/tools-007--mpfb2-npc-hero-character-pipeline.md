@@ -2,6 +2,7 @@
 
 **Created:** 2026-08-24  
 **Status:** `planned` 📋  
+**Type:** infrastructure  
 **Priority:** high · **Effort:** L  
 **Depends on:** none  
 **Domain:** `tools`

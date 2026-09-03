@@ -2,6 +2,7 @@
 
 **Created:** 2026-09-01  
 **Status:** `planned` 📋  
+**Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** settlements-npcs-016  
 **Domain:** `settlements-npcs`  
