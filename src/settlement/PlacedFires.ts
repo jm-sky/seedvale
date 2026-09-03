@@ -10,8 +10,34 @@ import { createVillageFire, type VillageFire } from './VillageFire'
 /** `'pit'` — built from 4x stone (`createCampfireBody('pit')` stone ring), same
  *  fuel-per-branch as a settlement fire (longer burn). `'simple'` — built
  *  directly from 2x branch (`createCampfireBody('simple')`, wood only), shorter
- *  burn. See `docs/plans/archive/2026-08-09--050`. */
-export type PlacedFireKind = 'simple' | 'pit'
+ *  burn. See `docs/plans/archive/2026-08-09--050`. `'pile'` — built from
+ *  beams (`createCampfireBody('pile')`, plan items-player-015), starts cold
+ *  like `'pit'` and grows its whole visual up to `WOOD_PILE_MAX_BODY_SCALE`
+ *  as it's refuelled — the "scalable bonfire". */
+export type PlacedFireKind = 'simple' | 'pit' | 'pile'
+
+/** Beam cost of building a wood pile — see `app/userActions.ts`'s
+ *  `WOOD_PILE_BEAM_COST` (the single source of truth for the build action's
+ *  requirement); kept here too only as the doc anchor for the visual-growth
+ *  constants below. */
+const WOOD_PILE_MAX_BODY_SCALE = 3
+/** Fuel ratio (units of one branch/beam, `VillageFire.getFuelRatio()`) at
+ *  which the pile's body visual reaches `WOOD_PILE_MAX_BODY_SCALE` — chosen
+ *  so a handful of refuels visibly builds it into a "bonfire" without
+ *  requiring an unreasonable stockpile. Below a ratio of 1 the body stays at
+ *  its base scale, same "first branch doesn't already bulk it up" dead zone
+ *  `VillageFire.ts`'s `fuelRatioToSizeFactor` uses for the flame. */
+const WOOD_PILE_GROWTH_RATIO = 6
+
+/** Whole-visual scale for a wood pile's body+flame+light group (plan
+ *  items-player-015) — deliberately separate from `CampfireFlame.setSize`'s
+ *  own flame-only factor (clamped by the shared `FIRE_SIZE_CLAMP`, reused by
+ *  every other fire/torch): scaling the *group* here only affects this one
+ *  player-built kind, never the shared clamp other fires depend on. */
+export function pileBodyScale(fuelRatio: number): number {
+  const growth = Math.min(1, Math.max(0, (fuelRatio - 1) / (WOOD_PILE_GROWTH_RATIO - 1)))
+  return 1 + growth * (WOOD_PILE_MAX_BODY_SCALE - 1)
+}
 
 /** Seconds of burn time one branch adds for a `kind: 'simple'` fire — shorter
  *  than a fire pit's default (`VillageFire.ts`'s `FUEL_PER_BRANCH`, 75s),
@@ -125,7 +151,7 @@ export function createPlacedFires(
   void preloadCampfireTemplates()
 
   const spawn = (pf: PlacedFire & { habitatBurn?: boolean }): void => {
-    const { group, flame } = createLitCampfireVisual(pf.kind === 'simple' ? 'simple' : 'pit')
+    const { group, flame } = createLitCampfireVisual(pf.kind)
     if (pf.grate) group.add(createGrateVisual())
     placeOnGround(group, pf.x, pf.z, sampleHeight)
     scene.add(group)
@@ -218,6 +244,7 @@ export function createPlacedFires(
       // next entry if we walked the live array while removing from it.
       for (const entry of [...fires]) {
         entry.fire.update(dt)
+        if (entry.kind === 'pile') meshes.get(entry.id)?.scale.setScalar(pileBodyScale(entry.fire.getFuelRatio()))
         if (entry.fire.isLit()) {
           entry.everLit = true
           entry.unlitSeconds = 0

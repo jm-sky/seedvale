@@ -4,8 +4,11 @@ import { createFireVisual, FIRE_SIZE_CLAMP } from '../shared/getFireParticles'
 import { CAMPFIRE_FIT_MAX, CAMPFIRE_UNLIT_URL } from './propSpecs'
 
 /** `'pit'` — stone ring + stacked wood. `'simple'` — wood only (stones hidden
- *  on the GLB, or a bare ash+branch pile on the procedural fallback). */
-export type CampfireBodyKind = 'pit' | 'simple'
+ *  on the GLB, or a bare ash+branch pile on the procedural fallback). `'pile'`
+ *  — a bigger criss-crossed stack of beams (plan items-player-015's
+ *  player-built wood pile/bonfire), always procedural — no GLB variant
+ *  exists for it. */
+export type CampfireBodyKind = 'pit' | 'simple' | 'pile'
 
 type CampfireLayer = 'stone' | 'wood'
 
@@ -129,7 +132,45 @@ function createProceduralSimpleFireBase(scale: number): THREE.Group {
   return fire
 }
 
+/** `'pile'` reuses the `beam` item's own box-log look (`items/items.ts`'s
+ *  ground mesh) rather than the branch cylinders the other two bases use —
+ *  no per-beam physics, just a fixed criss-cross arrangement (plan
+ *  items-player-015 implementation notes §2: "no dedicated asset required"). */
+function createProceduralWoodPileBase(scale: number): THREE.Group {
+  const fire = new THREE.Group()
+  const ashMat = new THREE.MeshStandardMaterial({ color: 0x2b2724, flatShading: true, roughness: 1 })
+  const beamMat = new THREE.MeshStandardMaterial({ color: 0x5a3f26, flatShading: true })
+
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.7 * scale, 12), ashMat)
+  ash.rotation.x = -Math.PI / 2
+  ash.position.y = 0.02
+  ash.receiveShadow = true
+  fire.add(ash)
+
+  // Log-cabin criss-cross: alternating perpendicular layers, each shorter
+  // than the last, tapering the stack toward the top.
+  const layerCount = 4
+  const beamsPerLayer = 3
+  const beamSpacing = 0.16
+  for (let layer = 0; layer < layerCount; layer++) {
+    const y = (0.06 + layer * 0.11) * scale
+    const length = (1.1 - layer * 0.15) * scale
+    const horizontal = layer % 2 === 0
+    for (let i = 0; i < beamsPerLayer; i++) {
+      const offset = (i - (beamsPerLayer - 1) / 2) * beamSpacing * scale
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.09 * scale, length), beamMat)
+      beam.position.set(horizontal ? offset : 0, y, horizontal ? 0 : offset)
+      beam.rotation.y = horizontal ? 0 : Math.PI / 2
+      beam.castShadow = true
+      fire.add(beam)
+    }
+  }
+
+  return fire
+}
+
 export function createCampfireBody(kind: CampfireBodyKind, scale = 1): THREE.Group {
+  if (kind === 'pile') return createProceduralWoodPileBase(scale)
   if (campfireBodyTemplate) return cloneCampfireBodyFromTemplate(scale, kind)
   return kind === 'simple' ? createProceduralSimpleFireBase(scale) : createProceduralCampfirePit(scale)
 }

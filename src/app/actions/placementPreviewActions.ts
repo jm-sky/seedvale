@@ -18,7 +18,7 @@ import type { Scene } from 'three'
  * confirm time (implementation notes §2: never trust a cached preview result
  * for the final mutation).
  */
-export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'standingTorch' | 'palisade' | 'bedroll' | 'platform' | 'workContract'
+export type PlacementPreviewKind = 'chest' | 'tent' | 'fireSimple' | 'firePit' | 'firePile' | 'standingTorch' | 'palisade' | 'bedroll' | 'platform' | 'workContract'
 
 export type PlacementPreviewUiView = {
   label: string
@@ -31,6 +31,7 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   tent: 'Namiot',
   fireSimple: 'Ognisko',
   firePit: 'Palenisko',
+  firePile: 'Stos drewna',
   standingTorch: 'Pochodnia',
   palisade: 'Palisada',
   bedroll: 'Posłanie',
@@ -58,6 +59,7 @@ export type PlacementPreviewActionDeps = {
   previewFire: () => PlacementPreviewResult
   buildSimpleFire: () => ActionResult
   buildFirePit: () => ActionResult
+  buildWoodPile: () => ActionResult
   showPreview: (view: PlacementPreviewUiView) => void
   hidePreview: () => void
   /** Mutual exclusion with `Przygotuj teren`'s own preview mode (plan §9) —
@@ -87,7 +89,7 @@ export function createPlacementPreviewActions(
   deps: PlacementPreviewActionDeps,
 ): PlacementPreviewActions {
   const { bundle, mouseLook, keyboard } = ctx
-  const { scene, placement, containers, workContract, previewFire, buildSimpleFire, buildFirePit, showPreview, hidePreview, isOtherPreviewActive } = deps
+  const { scene, placement, containers, workContract, previewFire, buildSimpleFire, buildFirePit, buildWoodPile, showPreview, hidePreview, isOtherPreviewActive } = deps
 
   const ghost: PlacementPreviewGhost = createPlacementPreviewGhost()
   let active: PlacementPreviewKind | null = null
@@ -97,6 +99,7 @@ export function createPlacementPreviewActions(
     switch (kind) {
       case 'bedroll': return placement.previewBedrollPlacement()
       case 'chest': return containers.previewContainerPlacement()
+      case 'firePile':
       case 'firePit':
       case 'fireSimple':
         return previewFire()
@@ -112,6 +115,7 @@ export function createPlacementPreviewActions(
     switch (kind) {
       case 'bedroll': placement.placeBedrollAtAim(); return
       case 'chest': containers.placeContainerAtAim(); return
+      case 'firePile': buildWoodPile(); return
       case 'firePit': buildFirePit(); return
       case 'fireSimple': buildSimpleFire(); return
       case 'palisade': placement.placePalisadeAtAim(); return

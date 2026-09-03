@@ -75,6 +75,13 @@ Generated from TypeScript imports.
 - `debug/villageInspector.test.ts`
 - `debug/villageInspector.ts`
 
+## `settlement/VillageFire.test.ts`
+
+**Imports**
+
+- `settlement/VillageFire.ts`
+- `settlement/props.ts`
+
 ## `settlement/VillageFire.ts`
 
 **Imports**
@@ -91,6 +98,7 @@ Generated from TypeScript imports.
 - `items/campfireCooking.test.ts`
 - `items/campfireCooking.ts`
 - `settlement/PlacedFires.ts`
+- `settlement/VillageFire.test.ts`
 - `settlement/createSettlement.ts`
 
 ## `settlement/campfireBody.test.ts`
@@ -767,6 +775,7 @@ Generated from TypeScript imports.
 - `render/instancedProps.test.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/VillageFire.test.ts`
 - `settlement/VillageFire.ts`
 - `settlement/campfireBody.test.ts`
 - `settlement/createSettlement.ts`

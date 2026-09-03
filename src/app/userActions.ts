@@ -22,6 +22,10 @@ import { capabilityRequirement, itemRequirement, targetRequirement, toAvailabili
 export const SIMPLE_FIRE_BRANCH_COST = 2
 export const FIRE_PIT_STONE_COST = 4
 export const TORCH_BRANCH_COST = 1
+/** Beam cost for the player-built wood pile (plan items-player-015) — starts
+ *  cold like a fire pit; refuelling it (existing `[E]`/`FIRE_FUEL_KINDS` flow)
+ *  is what grows its visual toward `PlacedFires.ts`'s `WOOD_PILE_MAX_BODY_SCALE`. */
+export const WOOD_PILE_BEAM_COST = 3
 
 /** Ground-suitability constants for placing a new fire (plan `ui-input-004`
  *  §2/§5) — same shape as `world/playerWell.ts`'s well constants: how far
@@ -143,6 +147,27 @@ const getUserActions = (
     return { ok: true }
   }
 
+  // `buildWoodPile` intentionally has no `fire_starting` capability
+  // requirement, same reasoning as `buildFirePit` — a cold pile is lit later
+  // via the existing `[E]` campfire interaction.
+  const woodPileRequirements = (aim: { x: number, z: number }): (ActionRequirement | null)[] => [
+    itemRequirement(inventory.count('beam'), WOOD_PILE_BEAM_COST, 'beam'),
+    targetRequirement(evaluateFirePlacement(aim.x, aim.z), 'firePlacement'),
+  ]
+
+  const availableWoodPile = (): ActionAvailability => toAvailability(woodPileRequirements(fireAimPoint()))
+
+  const buildWoodPile = (): ActionResult => {
+    const aim = fireAimPoint()
+    const result = toResult(woodPileRequirements(aim))
+    if (!result.ok) return result
+
+    inventory.remove('beam', WOOD_PILE_BEAM_COST)
+    bundle.placedFires.place(aim.x, aim.z, 'pile')
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    return { ok: true }
+  }
+
   /** Nearest qualifying player-built fire (plan 175 §3) — resolved fresh on
    *  every call (never cached across an availability check and a later
    *  `buildGrate()`) so a stale quick-actions popup can never build against a
@@ -228,11 +253,13 @@ const getUserActions = (
     previewFirePlacement,
     buildSimpleFire,
     buildFirePit,
+    buildWoodPile,
     buildGrate,
     lightBranch,
     lightWoodenTorch,
     availableSimpleFire,
     availableFirePit,
+    availableWoodPile,
     availableGrate,
     availableLightBranch,
     availableLightWoodenTorch,

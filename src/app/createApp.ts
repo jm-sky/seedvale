@@ -548,6 +548,7 @@ export async function createApp(
     vueUi.setQuickActionsFireAvailability({
       buildSimpleFire: availableSimpleFire(),
       buildFirePit: availableFirePit(),
+      buildWoodPile: availableWoodPile(),
       buildGrate: availableGrate(),
       lightBranch: availableLightBranch(),
       lightWoodenTorch: availableLightWoodenTorch(),
@@ -1189,8 +1190,8 @@ export async function createApp(
   }
 
   const {
-    previewFirePlacement, buildSimpleFire, buildFirePit, buildGrate, lightBranch, lightWoodenTorch,
-    availableSimpleFire, availableFirePit, availableGrate, availableLightBranch, availableLightWoodenTorch,
+    previewFirePlacement, buildSimpleFire, buildFirePit, buildWoodPile, buildGrate, lightBranch, lightWoodenTorch,
+    availableSimpleFire, availableFirePit, availableWoodPile, availableGrate, availableLightBranch, availableLightWoodenTorch,
   } = getUserActions(
     inventory,
     bundle,
@@ -1211,6 +1212,7 @@ export async function createApp(
     previewFire: previewFirePlacement,
     buildSimpleFire,
     buildFirePit,
+    buildWoodPile,
     showPreview: (view) => vueUi.showPlacementPreview(view),
     hidePreview: () => vueUi.hidePlacementPreview(),
     isOtherPreviewActive: () => terrainPrep.isPreviewActive(),
@@ -1258,6 +1260,7 @@ export async function createApp(
     },
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
+    onBuildWoodPile: buildWoodPile,
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
@@ -1375,6 +1378,7 @@ export async function createApp(
     onRefresh: () => window.location.reload(),
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
+    onBuildWoodPile: buildWoodPile,
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,

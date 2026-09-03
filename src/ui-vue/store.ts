@@ -83,7 +83,7 @@ type PauseMenuState = {
   onSave: (() => void) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
   onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
   onRefresh: (() => void) | null
-  onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
+  onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildWoodPile: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
   onNewGame: ((name: string) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string
@@ -105,7 +105,7 @@ type FlavorDialogState = {
    *  empty for the plain flavor-text case, which renders exactly as before. */
   actions: readonly InteractionPanelAction[]
 }
-export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire' | 'buildGrate'
+export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire' | 'buildWoodPile' | 'buildGrate'
 
 /** Each fire action's structural `ActionAvailability` (plan `ui-input-007`)
  *  — kept live by `createApp.ts`'s `syncQuickActionAvailability`, derived
@@ -152,6 +152,10 @@ type QuickActionsState = {
    *  out of the Ogień category here (it's Budowa-only). */
   onBuildSimpleFire: (() => ActionResult) | null
   onBuildFirePit: (() => ActionResult) | null
+  /** "Zbuduj stos drewna" (plan items-player-015) — Budowa-only placement
+   *  preview, same "wired for the `FireActionHandlers` contract, filtered
+   *  out of Ogień" shape as `onBuildFirePit` above. */
+  onBuildWoodPile: (() => ActionResult) | null
   onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null
   onLightWoodenTorch: (() => ActionResult) | null
@@ -439,7 +443,7 @@ export const ui = reactive({
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
-    onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
     saveStatus: '',
   } as PauseMenuState,
@@ -452,11 +456,12 @@ export const ui = reactive({
     fireAvailability: {
       buildSimpleFire: NOT_YET_AVAILABLE,
       buildFirePit: NOT_YET_AVAILABLE,
+      buildWoodPile: NOT_YET_AVAILABLE,
       buildGrate: NOT_YET_AVAILABLE,
       lightBranch: NOT_YET_AVAILABLE,
       lightWoodenTorch: NOT_YET_AVAILABLE,
     },
-    onBuildSimpleFire: null, onBuildFirePit: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
+    onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null,
     onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onStartPlacementPreview: null, onPlaceTrap: null, onOpen: null, onClose: null,
     hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,

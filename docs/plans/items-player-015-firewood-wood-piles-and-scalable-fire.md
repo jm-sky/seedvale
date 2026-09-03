@@ -1,7 +1,7 @@
 # Plan: Firewood, Wood Piles and Scalable Fire
 
 **Created:** 2026-09-03
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~009~~ ~~122~~

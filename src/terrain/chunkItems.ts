@@ -91,7 +91,7 @@ function hashChunk(cx: number, cz: number): number {
  * by `chunkManager.ts`). Shells land in the coastal band (continentalness
  * between `oceanThreshold`/`coastThreshold` *and* close to `waterLevel` in
  * local height, where waves would actually wash them up); stones land on
- * strong mountain-ridge terrain; branch/mushroom/flower/cone/herb land per
+ * strong mountain-ridge terrain; branch/mushroom/flower/cone/herb/beam land per
  * `biomeWeightsAt`/tree-proximity preference (see `FLORA_*` constants above);
  * coins (issue 035) are a third independent pool — rare dry-land finds with
  * their own salt and `c<i>` id prefix so they never collide with existing
@@ -196,8 +196,12 @@ export function computeChunkItems(
     // like mushroom's, since both read as "forest floor" finds).
     const berriesWeight = (biome.forest * 0.4 + biome.swamp * 0.3) * (treeClose ? 1.1 : 0.7)
     const nutsWeight = biome.forest * 0.3 * (treeClose ? 1.2 : 0.5) * (pineClose ? 1.1 : 1)
+    // Fallen beam-sized deadwood (plan items-player-015) — rarer than a
+    // branch and only found right next to a tree, reflecting that it's a
+    // whole fallen limb, not a twig. No open-ground weight, unlike branch.
+    const beamWeight = treeClose ? 0.18 : 0
 
-    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight + nutsWeight
+    const total = mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight + nutsWeight + beamWeight
     if (total <= 0) continue
     if (floraRandom() > Math.min(1, total) * FLORA_KEEP_SCALE) continue
 
@@ -209,7 +213,8 @@ export function computeChunkItems(
     else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight) kind = 'cone'
     else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight) kind = 'herb'
     else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight) kind = 'berries'
-    else kind = 'nuts'
+    else if (roll < mushroomWeight + flowerWeight + branchWeight + coneWeight + herbWeight + berriesWeight + nutsWeight) kind = 'nuts'
+    else kind = 'beam'
 
     placements.push({ id: `${coord.cx}:${coord.cz}:f${i}`, x: wx, z: wz, kind })
   }

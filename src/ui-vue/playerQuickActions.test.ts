@@ -12,6 +12,7 @@ function fullyAvailable(): QuickActionsFireAvailability {
     lightWoodenTorch: OK,
     buildFirePit: OK,
     buildSimpleFire: OK,
+    buildWoodPile: OK,
     buildGrate: OK,
   }
 }
@@ -22,6 +23,7 @@ function noopHandlers(): FireActionHandlers {
     onLightWoodenTorch: () => ({ ok: true }),
     onBuildFirePit: () => ({ ok: true }),
     onBuildSimpleFire: () => ({ ok: true }),
+    onBuildWoodPile: () => ({ ok: true }),
     onBuildGrate: () => ({ ok: true }),
   }
 }
@@ -45,16 +47,17 @@ describe('visibleFireActions', () => {
       lightWoodenTorch: OK,
       buildFirePit: NOT_OK('firePlacement'),
       buildSimpleFire: OK,
+      buildWoodPile: NOT_OK('firePlacement'),
       buildGrate: NOT_OK('grateTarget'),
     }
-    // Catalog order is: lightBranch, lightWoodenTorch, buildFirePit, buildSimpleFire, buildGrate.
+    // Catalog order is: lightBranch, lightWoodenTorch, buildFirePit, buildSimpleFire, buildWoodPile, buildGrate.
     // Available subset in catalog order: lightWoodenTorch, buildSimpleFire.
-    // Unavailable subset in catalog order: lightBranch, buildFirePit, buildGrate.
+    // Unavailable subset in catalog order: lightBranch, buildFirePit, buildWoodPile, buildGrate.
 
     const rows = visibleFireActions(avail, noopHandlers())
 
-    expect(rows.map((r) => r.id)).toEqual(['lightWoodenTorch', 'buildSimpleFire', 'lightBranch', 'buildFirePit', 'buildGrate'])
-    expect(rows.map((r) => r.available)).toEqual([true, true, false, false, false])
+    expect(rows.map((r) => r.id)).toEqual(['lightWoodenTorch', 'buildSimpleFire', 'lightBranch', 'buildFirePit', 'buildWoodPile', 'buildGrate'])
+    expect(rows.map((r) => r.available)).toEqual([true, true, false, false, false, false])
   })
 
   it('exposes the structural missing requirements for an unavailable row', () => {

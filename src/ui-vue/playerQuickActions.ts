@@ -1,6 +1,6 @@
 import type { ActionRequirement, ActionResult } from '../app/actions/actionContracts'
 import type { FireActionId, QuickActionsFireAvailability } from './store'
-import { FIRE_PIT_STONE_COST, GRATE_COST, SIMPLE_FIRE_BRANCH_COST, TORCH_BRANCH_COST } from '../app/userActions'
+import { FIRE_PIT_STONE_COST, GRATE_COST, SIMPLE_FIRE_BRANCH_COST, TORCH_BRANCH_COST, WOOD_PILE_BEAM_COST } from '../app/userActions'
 import { CAPABILITY_NEED_LABEL } from '../items/itemCatalog'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 
@@ -22,6 +22,7 @@ export type FireActionHandlers = {
   onLightWoodenTorch: (() => ActionResult) | null
   onBuildFirePit: (() => ActionResult) | null
   onBuildSimpleFire: (() => ActionResult) | null
+  onBuildWoodPile: (() => ActionResult) | null
   onBuildGrate: (() => ActionResult) | null
 }
 
@@ -94,6 +95,7 @@ export const FIRE_COST_ITEMS: Record<FireActionId, readonly { item: ItemKind; co
   lightWoodenTorch: [],
   buildFirePit: [{ item: 'stone', count: FIRE_PIT_STONE_COST }],
   buildSimpleFire: [{ item: 'branch', count: SIMPLE_FIRE_BRANCH_COST }],
+  buildWoodPile: [{ item: 'beam', count: WOOD_PILE_BEAM_COST }],
   buildGrate: [
     { item: 'branch', count: GRATE_COST.branch },
     { item: 'stone', count: GRATE_COST.stone },
@@ -125,6 +127,12 @@ export const FIRE_QUICK_ACTIONS: readonly FireActionDef[] = [
     label: 'Zbuduj ognisko',
     costItems: FIRE_COST_ITEMS.buildSimpleFire,
     run: (handlers) => runResult(requireHandler(handlers.onBuildSimpleFire, 'buildSimpleFire')(), 'Zbudowano ognisko!'),
+  },
+  {
+    id: 'buildWoodPile',
+    label: 'Zbuduj stos drewna',
+    costItems: FIRE_COST_ITEMS.buildWoodPile,
+    run: (handlers) => runResult(requireHandler(handlers.onBuildWoodPile, 'buildWoodPile')(), 'Zbudowano stos drewna!'),
   },
   {
     id: 'buildGrate',

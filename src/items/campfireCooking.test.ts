@@ -11,6 +11,7 @@ function fakeFire(hasGrate: boolean): VillageFire {
     isLit: () => true,
     isIgniting: () => false,
     getIgniteProgress: () => 1,
+    getFuelRatio: () => 1,
     light: () => {},
     addFuel: () => {},
     hasGrate: () => hasGrate,

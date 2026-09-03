@@ -31,6 +31,9 @@ export type QuickActionsHandlers = {
    *  "Budowa"'s placement-preview entry (plan items-player-012). */
   onBuildSimpleFire?: () => ActionResult
   onBuildFirePit?: () => ActionResult
+  /** Cold-start wood-pile bonfire (plan items-player-015) — same shape as
+   *  `onBuildFirePit`. */
+  onBuildWoodPile?: () => ActionResult
   /** Grate upgrade for the nearest qualifying player-built fire (plan 175). */
   onBuildGrate?: () => ActionResult
   onLightBranch?: () => ActionResult

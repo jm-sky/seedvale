@@ -37,15 +37,16 @@ const restStatusText: Record<Exclude<RestOutcome, 'ok' | 'choose'>, string> = {
   'no-lodging': 'Nie znaleziono noclegu',
 }
 
-// "Zbuduj palenisko" moved under "Budowa" only, as a placement-preview
-// action (plan `ui-input-004` §2/§3) — Pause → Akcje keeps both as instant
-// actions via its own separate `ui.pauseMenu` handlers/list. "Zbuduj
-// ognisko" stays in both Budowa (placement preview) and Ogień (this instant
-// entry) per plan items-player-012 — same `buildSimpleFire` action/cost
-// either way, just two different entry points into it.
+// "Zbuduj palenisko"/"Zbuduj stos drewna" moved under "Budowa" only, as
+// placement-preview actions (plan `ui-input-004` §2/§3, wood pile added by
+// plan items-player-015) — Pause → Akcje keeps all as instant actions via
+// its own separate `ui.pauseMenu` handlers/list. "Zbuduj ognisko" stays in
+// both Budowa (placement preview) and Ogień (this instant entry) per plan
+// items-player-012 — same `buildSimpleFire` action/cost either way, just two
+// different entry points into it.
 const fireActions = computed(() =>
   visibleFireActions(ui.quickActions.fireAvailability, ui.quickActions)
-    .filter((action) => action.id !== 'buildFirePit'),
+    .filter((action) => action.id !== 'buildFirePit' && action.id !== 'buildWoodPile'),
 )
 
 function startPlacementPreview(kind: PlacementPreviewKind): void {
@@ -175,9 +176,10 @@ const terrainActions: Action[] = [
   { label: 'Przygotuj teren', cost: 'łopata', onClick: prepareTerrain },
 ]
 
-// "Postaw skrzynię"/"Rozstaw namiot"/"Zbuduj ognisko"/"Zbuduj palenisko" —
-// the shared placement-preview actions grouped under "Budowa" (plan
-// `ui-input-004` §2/§3/§7).
+// "Postaw skrzynię"/"Rozstaw namiot"/"Zbuduj ognisko"/"Zbuduj palenisko"/
+// "Zbuduj stos drewna" — the shared placement-preview actions grouped under
+// "Budowa" (plan `ui-input-004` §2/§3/§7, wood pile added by plan
+// items-player-015).
 const buildActions = computed<Action[]>(() => {
   const list: Action[] = []
   if (ui.quickActions.hasChest) {
@@ -191,6 +193,9 @@ const buildActions = computed<Action[]>(() => {
   }
   if (ui.quickActions.fireAvailability.buildFirePit.available) {
     list.push({ label: 'Zbuduj palenisko', cost: formatCostItems(FIRE_COST_ITEMS.buildFirePit), onClick: () => startPlacementPreview('firePit') })
+  }
+  if (ui.quickActions.fireAvailability.buildWoodPile.available) {
+    list.push({ label: 'Zbuduj stos drewna', cost: formatCostItems(FIRE_COST_ITEMS.buildWoodPile), onClick: () => startPlacementPreview('firePile') })
   }
   if (ui.quickActions.hasWoodenTorch) {
     list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch') })

@@ -58,9 +58,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 85
-- `PlacementPreviewActionDeps` — type — line 41
-- `PlacementPreviewActions` — type — line 68
+- `createPlacementPreviewActions` — function — line 87
+- `PlacementPreviewActionDeps` — type — line 42
+- `PlacementPreviewActions` — type — line 70
 - `PlacementPreviewKind` — type — line 21
 - `PlacementPreviewUiView` — type — line 23
 
@@ -145,10 +145,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 874
-- `buildDigTarget` — function — line 821
+- `buildCombatTarget` — function — line 876
+- `buildDigTarget` — function — line 823
 - `buildInteractables` — function — line 320
-- `collectItem` — function — line 921
+- `collectItem` — function — line 923
 - `COMBAT_TARGET_CONE_DOT` — const — line 76
 - `COMBAT_TARGET_RANGE` — const — line 61
 - `CombatAimMode` — type — line 66
@@ -202,14 +202,15 @@ Generated from exported TypeScript symbols.
 
 ## `app/userActions.ts`
 
-- `FIRE_FOOTPRINT_RADIUS` — const — line 31
+- `FIRE_FOOTPRINT_RADIUS` — const — line 35
 - `FIRE_PIT_STONE_COST` — const — line 23
-- `FIRE_PLACE_REACH` — const — line 30
-- `FIRE_SEPARATION` — const — line 32
-- `GRATE_BUILD_RANGE` — const — line 44
-- `GRATE_COST` — const — line 38
+- `FIRE_PLACE_REACH` — const — line 34
+- `FIRE_SEPARATION` — const — line 36
+- `GRATE_BUILD_RANGE` — const — line 48
+- `GRATE_COST` — const — line 42
 - `SIMPLE_FIRE_BRANCH_COST` — const — line 22
 - `TORCH_BRANCH_COST` — const — line 24
+- `WOOD_PILE_BEAM_COST` — const — line 28
 
 ## `app/worldBundle.ts`
 

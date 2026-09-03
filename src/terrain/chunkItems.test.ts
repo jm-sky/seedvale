@@ -130,3 +130,49 @@ describe('computeChunkItems — coin pool (issue 035)', () => {
     expect(computeChunkItems(coord, tile, p, [])).toEqual(computeChunkItems(coord, tile, p, []))
   })
 })
+
+describe('computeChunkItems — beam (loose wood, plan items-player-015)', () => {
+  const tile = dryLandTile(19)
+
+  /** A dense grid covering the whole chunk (`FLORA_TREE_PROXIMITY` is only 7
+   *  world units) so every flora candidate in `coord`'s chunk counts as
+   *  "near a tree", regardless of where the seeded RNG happens to place it. */
+  const denseTreeGrid = (coord: { cx: number, cz: number }) => {
+    const trees: { kind: 'tree', x: number, z: number, speciesIndex: number, scale: number, rotationY: number }[] = []
+    for (let gx = -32; gx <= 32; gx += 8) {
+      for (let gz = -32; gz <= 32; gz += 8) {
+        trees.push({ kind: 'tree', x: coord.cx * 64 + gx, z: coord.cz * 64 + gz, speciesIndex: 0, scale: 1, rotationY: 0 })
+      }
+    }
+    return trees
+  }
+
+  it('only ever appears near a tree, never on open ground', () => {
+    let sawBeam = false
+    for (let i = 0; i < 200; i++) {
+      const coord = { cx: i, cz: -i }
+      const items = computeChunkItems(coord, tile, params({ cx: coord.cx, cz: coord.cz, seed: 11 + i }), [])
+      if (items.some((item) => item.kind === 'beam')) sawBeam = true
+    }
+    expect(sawBeam).toBe(false)
+  })
+
+  it('can appear near a tree, using the same flora id/collision scheme as branch', () => {
+    let sawBeam = false
+    for (let i = 0; i < 200; i++) {
+      const coord = { cx: i, cz: -i }
+      const items = computeChunkItems(
+        coord,
+        tile,
+        params({ cx: coord.cx, cz: coord.cz, seed: 11 + i }),
+        denseTreeGrid(coord),
+      )
+      for (const item of items) {
+        if (item.kind !== 'beam') continue
+        sawBeam = true
+        expect(item.id).toMatch(new RegExp(`^${coord.cx}:${coord.cz}:f\\d$`))
+      }
+    }
+    expect(sawBeam).toBe(true)
+  })
+})

@@ -4,15 +4,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/campfireProps.ts`
 
-- `CampfireBodyKind` — type — line 8
-- `CampfireFlame` — type — line 155
-- `createCampfire` — function — line 139
-- `createCampfireBody` — function — line 132
-- `createCampfireFlame` — function — line 170
-- `createGrateVisual` — function — line 230
-- `createLitCampfireVisual` — function — line 214
-- `createSimpleFireBase` — function — line 146
-- `preloadCampfireTemplates` — function — line 48
+- `CampfireBodyKind` — type — line 11
+- `CampfireFlame` — type — line 196
+- `createCampfire` — function — line 180
+- `createCampfireBody` — function — line 172
+- `createCampfireFlame` — function — line 211
+- `createGrateVisual` — function — line 271
+- `createLitCampfireVisual` — function — line 255
+- `createSimpleFireBase` — function — line 187
+- `preloadCampfireTemplates` — function — line 51
 
 ## `settlement/createSettlement.ts`
 
@@ -295,14 +295,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/PlacedFires.ts`
 
-- `createPlacedFires` — function — line 112
-- `HABITAT_BURN_DESPAWN_DELAY` — const — line 35
-- `isPlayerPlacedFire` — function — line 45
-- `PlacedFire` — type — line 61
-- `PlacedFireEntry` — type — line 63
-- `PlacedFireKind` — type — line 14
-- `PlacedFires` — type — line 75
-- `PlaceFireOpts` — type — line 37
+- `createPlacedFires` — function — line 138
+- `HABITAT_BURN_DESPAWN_DELAY` — const — line 61
+- `isPlayerPlacedFire` — function — line 71
+- `pileBodyScale` — function — line 37
+- `PlacedFire` — type — line 87
+- `PlacedFireEntry` — type — line 89
+- `PlacedFireKind` — type — line 17
+- `PlacedFires` — type — line 101
+- `PlaceFireOpts` — type — line 63
 
 ## `settlement/places.ts`
 
@@ -508,7 +509,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/VillageFire.ts`
 
-- `createVillageFire` — function — line 93
+- `createVillageFire` — function — line 100
 - `FIRE_FUEL_KINDS` — const — line 10
 - `FireLightSource` — type — line 41
 - `FUEL_PER_BRANCH` — const — line 16

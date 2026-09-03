@@ -56,6 +56,13 @@ export type VillageFire = {
   /** `0` at the start of `light()`, `1` once the flame has fully grown in.
    *  Stays `1` whenever not currently igniting. */
   getIgniteProgress: () => number
+  /** Fuel remaining in units of one branch (`fuelRemaining / fuelPerBranch`),
+   *  `0` while unlit — the same ratio `applyVisual` feeds into
+   *  `fuelRatioToSizeFactor`. Read-only escape hatch for a caller that needs
+   *  its own size curve off the same authoritative number (plan
+   *  items-player-015's wood-pile body scale) instead of duplicating a fuel
+   *  counter. */
+  getFuelRatio: () => number
   /** Ignites from cold — caller is responsible for checking/consuming the
    *  branch first (see `app/createApp.ts`'s campfire interact handling).
    *  Defaults to `'player'`, the common case (interactive ignite, building a
@@ -111,6 +118,7 @@ export function createVillageFire(
     isLit: () => lit,
     isIgniting: () => lit && igniteRemaining > 0,
     getIgniteProgress: () => (igniteRemaining > 0 ? 1 - igniteRemaining / IGNITE_DURATION_SEC : 1),
+    getFuelRatio: () => (lit ? fuelRemaining / fuelPerBranch : 0),
     light(source = 'player') {
       const wasLit = lit
       lit = true

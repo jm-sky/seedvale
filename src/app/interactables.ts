@@ -378,7 +378,9 @@ export function buildInteractables(
       position: { x: pf.x, z: pf.z },
       promptLabel: pf.fire.isLit()
         ? CAMPFIRE_LIT_PROMPT
-        : pf.kind === 'pit' ? 'Zapal ognisko w palenisku' : 'Zapal ognisko',
+        : pf.kind === 'pit' ? 'Zapal ognisko w palenisku'
+        : pf.kind === 'pile' ? 'Zapal stos drewna'
+        : 'Zapal ognisko',
       fire: pf.fire,
     })
   }
