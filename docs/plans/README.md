@@ -60,6 +60,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
 | 💡 `world-012-world-locations-discovery-and-map-navigation.md`         | -       | 🟡 | M      | -      |
+| ◼️ `fauna-009-wolf-howling-and-rooster-vocalization.md`                | -       | 🟡 | M      | -      |
 
 ---
 
@@ -166,7 +167,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `009`
+- fauna: `010`
 - items-player: `016`
 - npc: `018`
 - persistence: `004`
