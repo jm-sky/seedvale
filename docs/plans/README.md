@@ -52,7 +52,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | -       | 🟡 | M      | ~~127~~ |
 | 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
 | 💡 `items-player-015-firewood-wood-piles-and-scalable-fire.md`         | -       | 🟡 | M      | ~~009~~ ~~122~~ |
-| ◼️ `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
+| 💡 `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
 | 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
 | 💡 `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
