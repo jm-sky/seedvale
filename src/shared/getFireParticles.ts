@@ -39,7 +39,7 @@ const SPARK_TUNING: PoolTuning = {
   lateralSpeed: 0.12,
   gravity: 0.35,
   drag: 0.15,
-  lifetime: [0.7, 1.5],
+  lifetime: [1, 1.8],
 }
 
 /** Textured flame tongues — layered close to the fire base. */
@@ -48,12 +48,12 @@ const FLAME_TUNING: PoolTuning = {
   color: 0xff8a3c,
   size: 1,
   sizeJitter: [0.65, 1.35],
-  spawnRadius: 0.10,
-  upSpeed: [-0.01, 0.025],
+  spawnRadius: 0.04,
+  upSpeed: [0.01, 0.5],
   lateralSpeed: 0.018,
   gravity: 0,
-  drag: 2.0,
-  lifetime: [0.45, 0.75],
+  drag: 1.0,
+  lifetime: [0.45, 0.7],
   driftAmplitude: 0.012,
   rotationSpeed: [-0.06, 0.06],
   rotation: [-0.08, 0.08],
@@ -63,9 +63,9 @@ const FLAME_TUNING: PoolTuning = {
 const EMBER_TUNING: PoolTuning = {
   count: 16,
   color: 0xee4411,
-  size: 0.25,
-  spawnRadius: 0.14,
-  upSpeed: [0.04, 0.20],
+  size: 0.2,
+  spawnRadius: 0.1,
+  upSpeed: [0.01, 0.10],
   lateralSpeed: 0.035,
   gravity: 0.08,
   drag: 0.05,
@@ -147,13 +147,18 @@ function createParticlePool(
   let atlasAttribute: THREE.BufferAttribute | null = null
   let sizeAttribute: THREE.BufferAttribute | null = null
   let rotationAttribute: THREE.BufferAttribute | null = null
+  let ageAttribute: THREE.BufferAttribute | null = null
+
   if (options.textured) {
     atlasAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
     sizeAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
     rotationAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
+    ageAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
+
     geometry.setAttribute('atlasIndex', atlasAttribute)
     geometry.setAttribute('sizeMul', sizeAttribute)
     geometry.setAttribute('rotation', rotationAttribute)
+    geometry.setAttribute('ageFactor', ageAttribute)
   }
 
   const material = new THREE.ShaderMaterial({
@@ -168,10 +173,12 @@ function createParticlePool(
         attribute float atlasIndex;
         attribute float sizeMul;
         attribute float rotation;
+        attribute float ageFactor;
         attribute vec3 color;
 
         varying float vAtlasIndex;
         varying float vRotation;
+        varying float vAge;
         varying vec3 vColor;
 
         uniform float pointSize;
@@ -179,6 +186,7 @@ function createParticlePool(
         void main() {
           vAtlasIndex = atlasIndex;
           vRotation = rotation;
+          vAge = ageFactor;
           vColor = color;
 
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -207,6 +215,7 @@ function createParticlePool(
 
         varying float vAtlasIndex;
         varying float vRotation;
+        varying float vAge;
         varying vec3 vColor;
 
         void main() {
@@ -226,7 +235,18 @@ function createParticlePool(
           vec4 texel = texture2D(map, uv);
           if (texel.a < 0.01) discard;
 
-          gl_FragColor = vec4(texel.rgb * vColor * intensity, texel.a * vColor.r * intensity);
+          // Gradient temperatury:
+          // vAge ~ 0.0: Jasny, gorący rdzeń (biel/żółć > 1.0 dla efektu gow/bloom)
+          // vAge ~ 0.3: Klasyczny ciepły pomarańcz
+          // vAge ~ 1.0: Ciemna czerwień na szczycie płomienia
+          vec3 hotColor = mix(vec3(1.3, 1.2, 0.8), vec3(1.0, 0.4, 0.05), smoothstep(0.0, 0.3, vAge));
+          vec3 coolColor = mix(vec3(1.0, 0.4, 0.05), vec3(0.4, 0.05, 0.01), smoothstep(0.3, 1.0, vAge));
+          vec3 flameColor = mix(hotColor, coolColor, step(0.3, vAge));
+
+          // Przenikanie: szybkie wygaszanie na samej górze
+          float alphaFade = 1.0 - vAge * vAge;
+
+          gl_FragColor = vec4(texel.rgb * flameColor * intensity, texel.a * alphaFade * intensity);
         }
       `
       : `
@@ -276,6 +296,8 @@ function createParticlePool(
       if (atlasAttribute) atlasAttribute.setX(i, current.atlasIndex)
       if (sizeAttribute) sizeAttribute.setX(i, current.sizeMul)
       if (rotationAttribute) rotationAttribute.setX(i, current.rotation)
+      if (ageAttribute) ageAttribute.setX(i, t)
+
       positionAttribute.setXYZ(i, current.position.x + drift, current.position.y, current.position.z + drift * 0.6)
       colorAttribute.setXYZ(i, baseColor.r * fade, baseColor.g * fade, baseColor.b * fade)
     }
@@ -284,6 +306,7 @@ function createParticlePool(
     if (atlasAttribute) atlasAttribute.needsUpdate = true
     if (sizeAttribute) sizeAttribute.needsUpdate = true
     if (rotationAttribute) rotationAttribute.needsUpdate = true
+    if (ageAttribute) ageAttribute.needsUpdate = true
   }
 
   return {
