@@ -59,7 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
-| ◼️ `world-012-world-locations-discovery-and-map-navigation.md`         | -       | 🟡 | M      | -      |
+| 💡 `world-012-world-locations-discovery-and-map-navigation.md`         | -       | 🟡 | M      | -      |
 
 ---
 
