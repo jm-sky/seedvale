@@ -141,7 +141,88 @@ README and PLANNING must remain compact enough for agents to consume directly wi
 
 DEPENDENCIES remains a generated recommendation/dependency output. It should not become a second metadata source of truth. Only make changes needed to accommodate the expanded recommendation/documentation contract.
 
-### 6. Verification and integration
+## 6. Plan metadata cleanup and migration tooling
+
+The documentation tooling should include a dedicated cleanup/migration script for correcting plan metadata inconsistencies that cannot be safely handled by the normal synchronization flow.
+
+### Duplicate plan IDs
+
+The cleanup script must detect duplicate plan IDs within the same domain.
+
+When a duplicate is found:
+
+* preserve the ID of the existing/older canonical plan,
+* assign the next available ID from the same domain to the duplicate plan,
+* rename the plan file accordingly,
+* update the plan's metadata if the ID is represented there,
+* update references to the renamed plan where they are part of the managed documentation,
+* preserve the original plan content apart from the required ID/path changes,
+* never silently overwrite an existing plan.
+
+The script must determine the replacement ID from the actual plan files rather than relying only on `docs/plans/README.md`.
+
+The operation should be deterministic and should report every rename, for example:
+
+```text
+Duplicate ID detected: fauna-003
+  existing: fauna-003-wolf-settlement-entry.md
+  duplicate: fauna-003-horse-riding.md
+  reassigned: fauna-004-horse-riding.md
+```
+
+If the script cannot determine which file should retain the original ID safely, it must fail rather than make an arbitrary choice.
+
+### Implementation-notes path normalization
+
+Implementation notes belong exclusively in:
+
+```text
+docs/plans/implementation-notes/
+```
+
+The cleanup script must detect implementation-notes files incorrectly placed directly in:
+
+```text
+docs/plans/
+```
+
+and move them to the canonical directory.
+
+For example:
+
+```text
+docs/plans/fauna-003-horse-riding-implementation-notes.md
+```
+
+must become:
+
+```text
+docs/plans/implementation-notes/fauna-003-horse-riding-implementation-notes.md
+```
+
+The script must:
+
+* detect misplaced implementation-notes files,
+* create the canonical directory if necessary,
+* move the file without modifying its contents,
+* refuse to overwrite an existing file with the same destination path,
+* report every migration,
+* ensure subsequent documentation-generation scripts use only the canonical location.
+
+### Safety and idempotency
+
+The cleanup script must be safe to run repeatedly.
+
+After a successful run:
+
+* no duplicate plan IDs remain within a domain,
+* no implementation-notes files remain directly under `docs/plans/`,
+* running the script again produces no further changes,
+* conflicts cause an explicit failure instead of destructive behaviour.
+
+The cleanup operation should be separate from the normal README synchronization so that metadata repair is an explicit maintenance operation rather than an implicit side effect of documentation generation.
+
+### 7. Verification and integration
 
 Add/update tests or script-level checks for:
 
