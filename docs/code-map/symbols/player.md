@@ -147,11 +147,11 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerTorch.ts`
 
-- `createPlayerTorch` — function — line 184
-- `PlayerTorch` — type — line 34
-- `TORCH_FUEL_BRANCH` — const — line 21
-- `TORCH_FUEL_WOODEN` — const — line 23
-- `TorchSource` — type — line 32
+- `createPlayerTorch` — function — line 111
+- `PlayerTorch` — type — line 26
+- `TORCH_FUEL_BRANCH` — const — line 20
+- `TORCH_FUEL_WOODEN` — const — line 22
+- `TorchSource` — type — line 24
 
 ## `player/ridingStability.ts`
 

@@ -182,10 +182,10 @@ Generated from exported TypeScript symbols.
 
 - `createHouseLight` — function — line 167
 - `createProceduralTorchPost` — function — line 202
-- `createVillageTorchLight` — function — line 223
+- `createVillageTorchLight` — function — line 228
 - `HouseLight` — type — line 22
-- `ResolvedHouseLampMount` — type — line 388
-- `resolveHouseLampMount` — function — line 430
+- `ResolvedHouseLampMount` — type — line 369
+- `resolveHouseLampMount` — function — line 411
 - `VillageTorch` — type — line 28
 
 ## `settlement/landOwnership.ts`
@@ -315,8 +315,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 620
-- `disposeSettlementGroup` — function — line 1723
+- `buildSettlementProps` — function — line 619
+- `disposeSettlementGroup` — function — line 1722
 - `SettlementHouseBed` — type — line 130
 - `SettlementHouseLandmark` — type — line 101
 - `SettlementLandmarks` — type — line 137
@@ -329,12 +329,10 @@ Generated from exported TypeScript symbols.
 - `BUSH_SPECS` — const — line 17
 - `CACTUS_SPECS` — const — line 31
 - `CAMPFIRE_FIT_MAX` — const — line 96
-- `CAMPFIRE_FLAME_FIT_MAX` — const — line 100
-- `CAMPFIRE_FLAME_Y` — const — line 102
 - `CAMPFIRE_UNLIT_URL` — const — line 94
 - `CEMETERY_SPECS` — const — line 56
-- `COBBLE_FIT_MAX` — const — line 107
-- `COBBLE_URL` — const — line 104
+- `COBBLE_FIT_MAX` — const — line 101
+- `COBBLE_URL` — const — line 98
 - `CROPS_FIT_MAX` — const — line 79
 - `CROPS_URL` — const — line 77
 - `DOCK_SPECS` — const — line 40
@@ -342,25 +340,25 @@ Generated from exported TypeScript symbols.
 - `FARM_HEIGHT` — const — line 75
 - `FARM_URL` — const — line 72
 - `FERN_SPECS` — const — line 27
-- `FIRE_FX_URL` — const — line 117
+- `FIRE_FX_URL` — const — line 111
 - `GRAVE_SPECS` — const — line 60
-- `LANTERN_FLOOR_MAX` — const — line 118
-- `LANTERN_URL` — const — line 115
-- `LANTERN_WALL_MAX` — const — line 121
+- `LANTERN_FLOOR_MAX` — const — line 112
+- `LANTERN_URL` — const — line 109
+- `LANTERN_WALL_MAX` — const — line 115
 - `REED_SPECS` — const — line 36
 - `RESOURCE_GOLD_SPECS` — const — line 64
 - `RESOURCE_ROCK_SPECS` — const — line 68
 - `ROCK_CLUSTER_SPECS` — const — line 48
 - `ROCK_SPECS` — const — line 44
-- `TABLE_LAMP_FIT_MAX` — const — line 130
-- `TABLE_LAMP_URL` — const — line 129
+- `TABLE_LAMP_FIT_MAX` — const — line 124
+- `TABLE_LAMP_URL` — const — line 123
 - `TREE_SPECS` — const — line 5
-- `TREE_STUMP_HEIGHT` — const — line 112
-- `TREE_STUMP_URL` — const — line 109
+- `TREE_STUMP_HEIGHT` — const — line 106
+- `TREE_STUMP_URL` — const — line 103
 - `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 92
-- `VILLAGE_TORCH_HEIGHT` — const — line 122
-- `VILLAGE_TORCH_URL` — const — line 116
-- `WALL_URL` — const — line 114
+- `VILLAGE_TORCH_HEIGHT` — const — line 116
+- `VILLAGE_TORCH_URL` — const — line 110
+- `WALL_URL` — const — line 108
 - `WELL_HEIGHT` — const — line 83
 - `WELL_URL` — const — line 81
 - `WOOD_PILE_COLLISION_RADIUS` — const — line 90

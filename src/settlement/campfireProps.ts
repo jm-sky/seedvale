@@ -1,13 +1,7 @@
 import * as THREE from 'three'
 import { loadGltf, preparePropFitMax } from '../assets/loadGltf'
-import { createEmbers, createIgniteBurst, createSparks } from '../shared/getFireParticles'
-import {
-  CAMPFIRE_FIT_MAX,
-  CAMPFIRE_FLAME_FIT_MAX,
-  CAMPFIRE_FLAME_Y,
-  CAMPFIRE_UNLIT_URL,
-  FIRE_FX_URL,
-} from './propSpecs'
+import { createFireVisual, FIRE_SIZE_CLAMP } from '../shared/getFireParticles'
+import { CAMPFIRE_FIT_MAX, CAMPFIRE_UNLIT_URL } from './propSpecs'
 
 /** `'pit'` — stone ring + stacked wood. `'simple'` — wood only (stones hidden
  *  on the GLB, or a bare ash+branch pile on the procedural fallback). */
@@ -16,7 +10,6 @@ export type CampfireBodyKind = 'pit' | 'simple'
 type CampfireLayer = 'stone' | 'wood'
 
 let campfireBodyTemplate: THREE.Object3D | null = null
-let campfireFlameTemplate: THREE.Object3D | null = null
 let campfireTemplatesPromise: Promise<void> | null = null
 
 function meshMaterialNames(mesh: THREE.Mesh): string {
@@ -49,7 +42,9 @@ function asGroup(object: THREE.Object3D): THREE.Group {
 }
 
 /** Starts GLB parse off the `PlacedFires.place()` / chunk-finalize path.
- *  Safe to call repeatedly — one in-flight promise. */
+ *  Safe to call repeatedly — one in-flight promise. Flame is a shared
+ *  particle VFX (`shared/getFireParticles.ts`), not a GLB — only the body
+ *  needs preloading here. */
 export function preloadCampfireTemplates(): Promise<void> {
   campfireTemplatesPromise ??= (async () => {
     try {
@@ -60,22 +55,8 @@ export function preloadCampfireTemplates(): Promise<void> {
     } catch (err) {
       console.warn('[campfire] campfire_unlit.glb unavailable — procedural body', err)
     }
-    try {
-      const fire = await loadGltf(FIRE_FX_URL)
-      preparePropFitMax(fire, CAMPFIRE_FLAME_FIT_MAX)
-      // Same orientation as village torch posts — authored +Y up. Do not copy
-      // PlayerTorch's extra π/2 (that aligns a stick tip to +Z and dumps the
-      // billboard on its side in world space).
-      campfireFlameTemplate = fire
-    } catch (err) {
-      console.warn('[campfire] fire.glb unavailable — procedural cone flame', err)
-    }
   })()
   return campfireTemplatesPromise
-}
-
-export function peekCampfireFlameTemplate(): THREE.Object3D | null {
-  return campfireFlameTemplate
 }
 
 function cloneCampfireBodyFromTemplate(scale: number, kind: CampfireBodyKind): THREE.Group {
@@ -166,111 +147,31 @@ export function createSimpleFireBase(scale = 1): THREE.Group {
   return createCampfireBody('simple', scale)
 }
 
-/** How small a near-spent fire shrinks to and how large a freshly-stacked
- *  one grows to, relative to `setSize(1)`'s normal single-branch look — see
- *  `CampfireFlame.setSize`. */
-const FLAME_MIN_SIZE = 0.55
-const FLAME_MAX_SIZE = 1.8
-
 /** The lightable/toggleable fire visual for a settlement's own campfire —
  *  separate from `createCampfire()`'s static stone-ring/wood body (world
- *  remains in `terrain/chunkEnvironment.ts` stay unlit). `object` bundles
- *  an optional `fire.glb` (else an emissive cone) + a low-range point light
- *  + rising spark/ember particles (`shared/getFireParticles.ts`). `update`
- *  must be called each frame while lit. Pass `flameMesh` for the GLB tip;
- *  omit it for the procedural cone (`PlayerTorch` / village-torch fallback). */
+ *  remains in `terrain/chunkEnvironment.ts` stay unlit). `object` bundles the
+ *  shared flame/spark/ember particle VFX (`shared/getFireParticles.ts`) + a
+ *  low-range point light. `update` must be called each frame while lit. */
 export type CampfireFlame = {
   object: THREE.Group
   update: (dt: number) => void
   setSize: (factor: number) => void
-  /** `0` = only embers, no cone/light/sparks yet; `1` = fully grown-in flame
+  /** `0` = only embers, no flame/light/sparks yet; `1` = fully grown-in flame
    *  — driven by `VillageFire`'s ignition ramp (`IGNITE_DURATION_SEC`).
-   *  Defaults to `1`, so callers that never call this (village torches
-   *  reusing this same flame, `createVillageTorchLight`) keep the previous
-   *  instant-full-flame look. */
+   *  Defaults to `1`, so callers that never call this (village torches, which
+   *  build their own bundle directly via `createFireVisual`) keep the
+   *  previous instant-full-flame look. */
   setIntensity: (t: number) => void
   /** One-shot white flint-strike spark burst — call once at the start of an
    *  actual player ignition action, not for autonomous/night lighting. */
   igniteBurst: () => void
 }
 
-function muteObjectLights(root: THREE.Object3D): void {
-  root.traverse((obj) => {
-    if ('isLight' in obj && (obj as { isLight?: boolean }).isLight) {
-      const light = obj as THREE.PointLight
-      light.intensity = 0
-      // Plan 157 §3.2 — a permanently-muted embedded light (e.g. one authored
-      // into a GLB flame model) should never count toward NUM_POINT_LIGHTS.
-      light.visible = false
-    }
-  })
-}
-
-/** Unlit clone of fire.glb materials — Standard + 0.75 opacity made the
- *  inner faces (lit by the campfire PointLight) glow while outward walls
- *  shaded dark. Basic + full opacity keeps the whole billboard emissive. */
-function makeUnlitFlameMaterials(root: THREE.Object3D): void {
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh
-    if (!mesh.isMesh) return
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    const converted = mats.map((mat) => {
-      const src = mat as THREE.MeshStandardMaterial
-      const color = src.emissive && src.emissive.getHex() !== 0
-        ? src.color.clone().lerp(src.emissive, 0.55)
-        : (src.color?.clone() ?? new THREE.Color(0xff9a3c))
-      return new THREE.MeshBasicMaterial({
-        color,
-        map: src.map ?? null,
-        alphaMap: src.alphaMap ?? null,
-        transparent: false,
-        opacity: 1,
-        depthWrite: true,
-        side: THREE.DoubleSide,
-        fog: true,
-        toneMapped: false,
-      })
-    })
-    mesh.material = converted.length === 1 ? converted[0]! : converted
-  })
-}
-
-export function createCampfireFlame(
-  scale = 1,
-  flameMesh: THREE.Object3D | null = null,
-): CampfireFlame {
+export function createCampfireFlame(scale = 1): CampfireFlame {
   const flame = new THREE.Group()
 
-  let meshVisual: THREE.Object3D
-  const meshBaseScale = 1
-  let restY = 0
-  let riseFromBase = false
-
-  if (flameMesh) {
-    const glFlame = flameMesh.clone(true)
-    muteObjectLights(glFlame)
-    makeUnlitFlameMaterials(glFlame)
-    // Keep preparePropFitMax foot alignment on the mesh. Scale/rise the pivot
-    // so ignition grows up from the coals instead of puffing in XYZ mid-air.
-    const pivot = new THREE.Group()
-    pivot.add(glFlame)
-    restY = CAMPFIRE_FLAME_Y * scale
-    pivot.position.y = restY
-    flame.add(pivot)
-    meshVisual = pivot
-    riseFromBase = true
-  } else {
-    const flameMat = new THREE.MeshStandardMaterial({
-      color: 0xff9a3c,
-      emissive: 0xff6a1a,
-      emissiveIntensity: 1.4,
-      flatShading: true,
-    })
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28 * scale, 0.6 * scale, 6), flameMat)
-    cone.position.y = 0.3 * scale
-    flame.add(cone)
-    meshVisual = cone
-  }
+  const fireVisual = createFireVisual({ size: scale })
+  flame.add(fireVisual.object)
 
   const baseIntensity = 6
   const baseDistance = 16 * scale
@@ -278,63 +179,35 @@ export function createCampfireFlame(
   light.position.y = 0.35 * scale
   flame.add(light)
 
-  const sparks = createSparks(scale)
-  flame.add(sparks.points)
-
-  const embers = createEmbers(scale)
-  flame.add(embers.points)
-
-  const burst = createIgniteBurst(scale)
-  flame.add(burst.points)
-
   flame.visible = false
 
   let sizeFactor = 1
-  let igniteRamp = 1
-  let lightTime = Math.random() * Math.PI * 2
-  let flicker = 1
 
-  function applyVisual() {
-    const clampedSize = THREE.MathUtils.clamp(sizeFactor, FLAME_MIN_SIZE, FLAME_MAX_SIZE)
-    // Smoothstep so the flame eases in/out of full size instead of growing
-    // at a constant linear rate (plan 130 §4).
-    const eased = igniteRamp * igniteRamp * (3 - 2 * igniteRamp)
-    flame.scale.setScalar(clampedSize)
-    meshVisual.visible = eased > 0.08
-    if (riseFromBase) {
-      // Only Y grows — XZ stays at rest width so the flame doesn't peak
-      // oversized then settle. Pivot origin is the coals.
-      meshVisual.scale.set(1, Math.max(0.08, eased), 1)
-      meshVisual.position.y = restY
-    } else {
-      meshVisual.scale.setScalar(Math.max(0.05, eased) * meshBaseScale)
-    }
-    light.intensity = baseIntensity * clampedSize * eased * flicker
+  function applyLight() {
+    const clampedSize = THREE.MathUtils.clamp(sizeFactor, FIRE_SIZE_CLAMP[0], FIRE_SIZE_CLAMP[1])
+    light.intensity = baseIntensity * clampedSize * fireVisual.rampFactor() * fireVisual.flicker()
     light.distance = baseDistance * clampedSize
-    sparks.material.opacity = eased
   }
 
   function setSize(factor: number) {
     sizeFactor = factor
-    applyVisual()
+    fireVisual.setSize(factor)
+    applyLight()
   }
 
   function setIntensity(t: number) {
-    igniteRamp = THREE.MathUtils.clamp(t, 0, 1)
-    applyVisual()
+    fireVisual.setIntensity(t)
+    applyLight()
   }
 
   setSize(1)
 
   function update(dt: number) {
-    lightTime += dt * 4
-    flicker = 0.9 + (Math.sin(lightTime) * 0.5 + 0.5) * 0.2
-    sparks.update(dt)
-    embers.update(dt)
-    burst.update(dt)
+    fireVisual.update(dt)
+    applyLight()
   }
 
-  return { object: flame, update, setSize, setIntensity, igniteBurst: () => burst.trigger() }
+  return { object: flame, update, setSize, setIntensity, igniteBurst: () => fireVisual.igniteBurst() }
 }
 
 /** Body + toggleable flame for settlement / player-built fires. */
@@ -343,7 +216,7 @@ export function createLitCampfireVisual(
   scale = 1,
 ): { group: THREE.Group, flame: CampfireFlame } {
   const group = createCampfireBody(kind, scale)
-  const flame = createCampfireFlame(scale, peekCampfireFlameTemplate())
+  const flame = createCampfireFlame(scale)
   group.add(flame.object)
   return { group, flame }
 }

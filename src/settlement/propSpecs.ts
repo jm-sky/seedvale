@@ -94,12 +94,6 @@ export const VILLAGE_CAMPFIRE_COLLISION_RADIUS = 0.6
 export const CAMPFIRE_UNLIT_URL = '/models/settlement/campfire_unlit.glb'
 /** Longest-axis fit ≈ procedural stone-ring diameter (`createCampfire` radius 0.6 × 2). */
 export const CAMPFIRE_FIT_MAX = 1.2
-/** Campfire flame mesh — a bit larger than the village-torch tip (`0.28`).
- *  World +Y like the plaza torch, not the handheld `+Z` tip (that `π/2` laid
- *  the billboard on its side). */
-export const CAMPFIRE_FLAME_FIT_MAX = 0.179
-/** Local Y of the flame mesh above the unlit body origin (meters at scale 1). */
-export const CAMPFIRE_FLAME_Y = 0.04
 
 export const COBBLE_URL = '/models/nature/rock_path_round_wide.glb'
 /** Longest-axis fit for one plaza cobble plate (plan 140) — a loose patch of

@@ -148,7 +148,6 @@ Generated from TypeScript imports.
 - `items/heldToolVisual.ts`
 - `items/items.ts`
 - `player/torchLightPresets.ts`
-- `settlement/props.ts`
 - `shared/getFireParticles.ts`
 - `world/pointLightBudget.ts`
 

@@ -761,7 +761,6 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`
-- `player/PlayerTorch.ts`
 - `render/instancedProps.test.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`

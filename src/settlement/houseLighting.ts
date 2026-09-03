@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { discoverGlbAnchors, resolveAssetAnchors } from '../assets/anchorResolve'
 import { anchorsForAsset } from '../assets/assetAnchorData'
 import { mergeAnchorDefs } from '../assets/assetAnchors'
-import { createTorchSparks } from '../shared/getFireParticles'
+import { createFireVisual } from '../shared/getFireParticles'
+import { TORCH_DEFAULT_FIRE_VISUAL } from '../shared/torchConfig'
 import {
   HOUSE_FLOOR_LAMP_Y,
   HOUSE_LAMP_MAX_LOCAL_Y,
@@ -218,8 +219,8 @@ export function createProceduralTorchPost(): THREE.Object3D {
   return group
 }
 
-/** Freestanding village torch — GLB post with its own `Fire` mesh + a small
- *  ember particle pool, toggled at dusk/dawn. */
+/** Freestanding village torch — GLB post + the shared particle flame VFX
+ *  (`shared/getFireParticles.ts`), toggled at dusk/dawn. */
 export function createVillageTorchLight(
   post: THREE.Object3D,
 ): VillageTorch {
@@ -227,42 +228,23 @@ export function createVillageTorchLight(
   group.add(post)
 
   // torch.glb ships two primitives on one `Torch` node — `DarkMetal`
-  // (Torch_1, the fixture itself) and `Fire` (Torch_2, the model's own
-  // flame mesh, roughly local Y 0.86–1.55 on the fitted 1.55m-tall post).
-  // The Fire material is authored (in the GLB itself, not patched here at
-  // runtime) as `alphaMode: BLEND`, `baseColorFactor` alpha 0.4, and an
-  // `emissiveFactor` glow, double-sided — a same-value JS-side `transparent`/
-  // `opacity` override here previously read as visually indistinguishable
-  // from opaque against a dark night background; baking it into the asset
-  // is the reliable fix. Only DarkMetal keeps its normal opaque shading/shadow.
-  let fireMesh: THREE.Mesh | null = null
+  // (Torch_1, the fixture itself) and `Fire` (Torch_2, the model's own baked
+  // flame mesh). The fire visual is now the shared particle VFX below, so
+  // the model's own Fire mesh is permanently hidden rather than toggled.
   post.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return
     if (!(child.material instanceof THREE.MeshStandardMaterial)) return
     if (child.material.name !== 'Fire') return
-
-    child.castShadow = false
-    child.material.emissiveIntensity = 0.8
-    fireMesh = child
-    // Unlit by default — `setLit` drives visibility from here on.
     child.visible = false
   })
 
-  // A handful of larger, faster-rising sparks instead of the full campfire
-  // particle rig (cone + 8 sparks + 5 embers + 10-point ignite burst = 4
-  // draw calls) — one cheap `THREE.Points` pool (4 points) is plenty for a
-  // wall/post torch seen from a few meters away. `createEmbers`'s tuning
-  // (built for a ground-level campfire base) read as too small/too slow up
-  // here — `createTorchSparks` is sized and paced for this instead. Anchored
-  // near the top of the Fire mesh (~y 1.3, not the post's base) so they
-  // visibly climb up off the flame instead of floating in empty air below it.
-  const sparks = createTorchSparks(1)
-  const flameObj: THREE.Object3D = sparks.points
-  const flameUpdate = sparks.update
-  flameObj.position.set(0, 1.3, 0)
-  // Unlit by default, same as `fireMesh` above — `setLit` turns it on.
-  flameObj.visible = false
-  group.add(flameObj)
+  // Anchored near the top of the post (~y 0.95, not the post's base) so the
+  // flame visibly sits at the torch head instead of floating near the ground.
+  const fireVisual = createFireVisual({ ...TORCH_DEFAULT_FIRE_VISUAL })
+  fireVisual.object.position.set(0.0, 0.95, 0.15)
+  // Unlit by default — `setLit` drives visibility from here on.
+  fireVisual.object.visible = false
+  group.add(fireVisual.object)
 
   // `distance` (the 3rd ctor arg) is only a hard falloff cutoff — with
   // `decay: 2` (physically-based inverse-square, matches every other point
@@ -277,27 +259,22 @@ export function createVillageTorchLight(
   group.add(light)
 
   let lit = false
-  let lightTime = Math.random() * Math.PI * 2
+  const baseIntensity = 6
 
   return {
     object: group,
     setLit(on) {
       lit = on
-      flameObj.visible = on
-      if (fireMesh) fireMesh.visible = on
-      light.intensity = on ? 6 : 0
+      fireVisual.object.visible = on
+      light.intensity = on ? baseIntensity * fireVisual.flicker() : 0
       // Plan 157 §3.2 — same visibility fix as `createHouseLight` above; an
       // extinguished torch's light previously stayed `visible = true`.
       light.visible = on
     },
     update(dt) {
       if (!lit) return
-
-      flameUpdate(dt)
-
-      lightTime += dt * 4
-      const flicker = 0.9 + (Math.sin(lightTime) * 0.5 + 0.5) * 0.2
-      light.intensity = 6 * flicker
+      fireVisual.update(dt)
+      light.intensity = baseIntensity * fireVisual.flicker()
     },
   }
 }

@@ -256,7 +256,6 @@ export {
   createGrateVisual,
   createLitCampfireVisual,
   createSimpleFireBase,
-  peekCampfireFlameTemplate,
   preloadCampfireTemplates,
 } from './campfireProps'
 

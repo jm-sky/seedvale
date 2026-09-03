@@ -49,7 +49,7 @@ If the feature needs no new model, do nothing to this file.
 | M19 | Held shovel / axe / knife GLB | Drop + hand attach (`heldToolVisual`) | `wired` | `items/shovel.glb`, `axe.glb`, `knife.glb` |
 | M20 | Wooden torch (held) | Holdable item; longer/brighter than lit branch | `wired` | [plan 085](../plans/archive/2026-08-12--085--handheld-lights-and-village-torches.md) |
 | M21 | Branch GLB | Ground + lit-hand mesh | `wired` | plan 085 |
-| M22 | Fire tip FX | Handheld + village torch flame | `wired` | plan 085 (`fx/fire.glb`, CC-BY) |
+| M22 | Fire tip FX | Superseded by the shared particle flame VFX (`shared/getFireParticles.ts`, fire-vfx overhaul) — every campfire/torch/handheld flame is now `THREE.Points`-based, no GLB. Asset kept for the Asset Browser only (`assetIndex.ts`'s `fx:fire` entry) | `in repo` | plan 085 (`fx/fire.glb`, CC-BY); superseded by fire-vfx overhaul |
 | M23 | House lantern GLB | Replaces procedural lamp body | `wired` | plan 085 |
 | M25 | Garden crop beds | Vegetable plots (tomato/pumpkin/lettuce) for all village gardens | `wired` | [plan 099](../plans/archive/2026-08-13--099--wheat-field-glb.md) (`settlement/crops.glb`) |
 | M26 | Mushroom | Forest-floor pickup mesh (`ITEM_GLB_SPECS.mushroom`); procedural fallback kept | `wired` | [plan 101](../plans/archive/2026-08-13--101--cactus-reed-well-woodpile.md) (`nature/mushroom_a.glb`), plan 140 |

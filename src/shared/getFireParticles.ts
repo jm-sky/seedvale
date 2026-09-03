@@ -1,65 +1,98 @@
 import * as THREE from 'three'
+import type { BurstPool, FireVisualOptions, ParticlePool, PoolParticle, PoolTuning } from './fireParticles.type'
 
 /**
- * Fire rendering update:
- * - Torch sparks now use textured PNG particles from `/images/flame/fire_atlas.png`.
- * - A single atlas contains multiple spark/flame variants; `atlasIndex` selects
- *   the variant per particle, avoiding separate textures/materials/draw calls.
- * - Particles use a custom ShaderMaterial with additive blending, per-particle
- *   color and lifetime fade.
- * - Torch sparks are intentionally implemented as one shared THREE.Points pool,
- *   keeping the effect cheap even with dozens of particles.
+ * Shared fire VFX (plan fire-vfx overhaul) — the single particle system behind
+ * every flame in the game: settlement campfire, village/standing torches and
+ * the player's handheld branch/torch. `createFireVisual()` is the entry point
+ * most callers want (flame + sparks + embers, one ignite burst); the
+ * individual `createFlameParticles`/`createFireSparks`/`createEmberParticles`
+ * factories exist for callers that only need a single layer.
  *
- * The same textured-particle approach can also be used for the torch flame
- * itself: a denser pool of overlapping flame sprites can replace the current
- * single/static flame representation while keeping rendering cost low.
+ * Flame particles sample a 2x2 variant atlas (`/images/flame/fire_atlas.png`)
+ * — narrow/vertical tongues in the top row, wider/irregular blobs in the
+ * bottom row (`FLAME_ATLAS_COLUMNS`/`FLAME_ATLAS_ROWS`, not the file itself).
+ * Sparks/embers/the ignite burst are untextured point sprites (a soft
+ * circular falloff computed in the fragment shader) — no PNG, no extra
+ * draw call/material per particle. Everything renders through `THREE.Points`
+ * with a custom `ShaderMaterial`, particles are mutated in place every frame
+ * (no per-frame allocation), and one `FireVisual` bundle costs exactly three
+ * `THREE.Points` draw calls total (flame/sparks/embers) regardless of
+ * particle count.
  */
+
+const FLAME_ATLAS_COLUMNS = 2
+const FLAME_ATLAS_ROWS = 2
 
 const fireAtlas =
   typeof window !== 'undefined' ? new THREE.TextureLoader().load('/images/flame/fire_atlas.png') : undefined
 if (fireAtlas) fireAtlas.colorSpace = THREE.SRGBColorSpace
 
-type PoolParticle = {
-  position: THREE.Vector3
-  velocity: THREE.Vector3
-  age: number
-  lifetime: number
-  atlasIndex: number
+
+/** Fast-rising bright points — visible sparks above the flame. */
+const SPARK_TUNING: PoolTuning = {
+  count: 7,
+  color: 0xffb347,
+  size: 0.075,
+  spawnRadius: 0.09,
+  upSpeed: [0.55, 1.05],
+  lateralSpeed: 0.12,
+  gravity: 0.35,
+  drag: 0.15,
+  lifetime: [0.7, 1.5],
 }
 
-export type ParticlePool = {
-  points: THREE.Points
-  geometry: THREE.BufferGeometry
-  material: THREE.ShaderMaterial | THREE.PointsMaterial
-  update: (delta: number) => void
+/** Textured flame tongues — layered close to the fire base. */
+const FLAME_TUNING: PoolTuning = {
+  count: 11,
+  color: 0xff8a3c,
+  size: 1,
+  sizeJitter: [0.65, 1.35],
+  spawnRadius: 0.10,
+  upSpeed: [-0.01, 0.025],
+  lateralSpeed: 0.018,
+  gravity: 0,
+  drag: 2.0,
+  lifetime: [0.45, 0.75],
+  driftAmplitude: 0.012,
+  rotationSpeed: [-0.06, 0.06],
+  rotation: [-0.08, 0.08],
 }
 
-/** One-shot variant of `ParticlePool` for the flint ignition burst — dormant
- *  (fully faded, no per-frame respawn) until `trigger()` resets every
- *  particle to a fresh, forceful spawn at once. */
-export type BurstPool = ParticlePool & { trigger: () => void }
-
-type PoolTuning = {
-  count: number
-  color: number
-  size: number
-  /** Random spawn offset from the pool's local origin (the flame base). */
-  spawnRadius: number
-  upSpeed: readonly [number, number]
-  lateralSpeed: number
-  gravity: number
-  /** Fraction of lateral velocity removed per second. */
-  drag: number
-  lifetime: readonly [number, number]
+/** Slow glowing points near the fire base — subtle ember layer. */
+const EMBER_TUNING: PoolTuning = {
+  count: 16,
+  color: 0xee4411,
+  size: 0.25,
+  spawnRadius: 0.14,
+  upSpeed: [0.04, 0.20],
+  lateralSpeed: 0.035,
+  gravity: 0.08,
+  drag: 0.05,
+  lifetime: [1.4, 2.0],
 }
+
 
 function randRange([lo, hi]: readonly [number, number]): number {
   return lo + Math.random() * (hi - lo)
 }
 
-function spawnParticle(tuning: PoolTuning, scale: number): PoolParticle {
+/** Weighted atlas pick for flame particles — biases toward the narrow/
+ *  vertical top-row variants (0, 1) so they dominate and naturally build the
+ *  flame's vertical tongues, with the wide/irregular bottom-row variants
+ *  (2, 3) filling in its base. */
+function pickFlameVariant(): number {
+  const narrow = Math.random() < 0.65
+  return (narrow ? 0 : 2) + (Math.random() < 0.5 ? 0 : 1)
+}
+
+const PLAIN_VARIANT: () => number = () => 0
+
+function spawnParticle(tuning: PoolTuning, scale: number, pickVariant: () => number): PoolParticle {
   const angle = Math.random() * Math.PI * 2
   const radius = Math.random() * tuning.spawnRadius * scale
+  const [sizeLo, sizeHi] = tuning.sizeJitter ?? [1, 1]
+  const [rotLo, rotHi] = tuning.rotationSpeed ?? [0, 0]
   return {
     position: new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius),
     velocity: new THREE.Vector3(
@@ -69,28 +102,36 @@ function spawnParticle(tuning: PoolTuning, scale: number): PoolParticle {
     ),
     age: 0,
     lifetime: randRange(tuning.lifetime),
-    atlasIndex: Math.random() < 0.5 ? 0 : 1,
+    atlasIndex: pickVariant(),
+    sizeMul: sizeLo + Math.random() * (sizeHi - sizeLo),
+    rotation: randRange(tuning.rotation ?? [0, 0]),
+    rotationSpeed: randRange([rotLo, rotHi]),
+    driftPhase: Math.random() * Math.PI * 2,
+    driftFreq: 1.4 + Math.random() * 1.6,
   }
 }
 
-/** Shared fixed-size particle pool backing sparks/embers/ignite bursts — one
- *  `THREE.Points` per pool, particles are mutated in place every frame, no
- *  allocation in `update()`. Per-particle fade near end of life is a vertex
- *  `color` attribute (darkened toward black) combined with additive
- *  blending, so it reads as fading out without a custom shader —
- *  `PointsMaterial.opacity` alone can't vary per particle.
+/** Shared fixed-size particle pool backing flame/sparks/embers/ignite bursts
+ *  — one `THREE.Points` per pool, particles are mutated in place every frame,
+ *  no allocation in `update()`. Per-particle fade near end of life is a
+ *  vertex `color` attribute (darkened toward black) combined with additive
+ *  blending, so it reads as fading out without extra blending passes.
+ *
+ *  `textured: true` (flame only) samples the 2x2 fire atlas at a per-particle
+ *  `atlasIndex`/`rotation`/`sizeMul`; `textured: false` (sparks/embers/burst)
+ *  renders a plain soft-circular point sprite — no texture sample, no PNG.
  *
  *  `continuous: true` respawns a particle in place as soon as it dies (a
- *  steady rising shower — sparks/embers). `continuous: false` freezes dead
- *  particles invisible until something external re-triggers them (the flint
- *  burst, see `createIgniteBurst`). */
+ *  steady rising shower/flame). `continuous: false` freezes dead particles
+ *  invisible until something external re-triggers them (the flint burst). */
 function createParticlePool(
   tuning: PoolTuning,
   scale: number,
-  options: { continuous: boolean },
+  options: { continuous: boolean, textured: boolean },
 ): ParticlePool & { particles: PoolParticle[] } {
+  const pickVariant = options.textured ? pickFlameVariant : PLAIN_VARIANT
   const particles = Array.from({ length: tuning.count }, () => {
-    const particle = spawnParticle(tuning, scale)
+    const particle = spawnParticle(tuning, scale, pickVariant)
     if (options.continuous) particle.age = Math.random() * particle.lifetime
     else particle.age = particle.lifetime // start dormant
     return particle
@@ -100,59 +141,105 @@ function createParticlePool(
   const baseColor = new THREE.Color(tuning.color)
   const positionAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count * 3), 3)
   const colorAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count * 3), 3)
-  const atlasAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
-
   geometry.setAttribute('position', positionAttribute)
   geometry.setAttribute('color', colorAttribute)
-  geometry.setAttribute('atlasIndex', atlasAttribute)
+
+  let atlasAttribute: THREE.BufferAttribute | null = null
+  let sizeAttribute: THREE.BufferAttribute | null = null
+  let rotationAttribute: THREE.BufferAttribute | null = null
+  if (options.textured) {
+    atlasAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
+    sizeAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
+    rotationAttribute = new THREE.BufferAttribute(new Float32Array(tuning.count), 1)
+    geometry.setAttribute('atlasIndex', atlasAttribute)
+    geometry.setAttribute('sizeMul', sizeAttribute)
+    geometry.setAttribute('rotation', rotationAttribute)
+  }
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
       map: { value: fireAtlas },
       pointSize: { value: tuning.size * scale },
+      intensity: { value: 1 },
     },
 
-    vertexShader: `
-      attribute float atlasIndex;
-      attribute vec3 color;
+    vertexShader: options.textured
+      ? `
+        attribute float atlasIndex;
+        attribute float sizeMul;
+        attribute float rotation;
+        attribute vec3 color;
 
-      varying float vAtlasIndex;
-      varying vec3 vColor;
+        varying float vAtlasIndex;
+        varying float vRotation;
+        varying vec3 vColor;
 
-      uniform float pointSize;
+        uniform float pointSize;
 
-      void main() {
-        vAtlasIndex = atlasIndex;
-        vColor = color;
+        void main() {
+          vAtlasIndex = atlasIndex;
+          vRotation = rotation;
+          vColor = color;
 
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = pointSize * sizeMul * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `
+      : `
+        attribute vec3 color;
+        varying vec3 vColor;
 
-        gl_PointSize = pointSize * (300.0 / -mvPosition.z);
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `,
+        uniform float pointSize;
 
-    fragmentShader: `
-      uniform sampler2D map;
+        void main() {
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = pointSize * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
 
-      varying float vAtlasIndex;
-      varying vec3 vColor;
+    fragmentShader: options.textured
+      ? `
+        uniform sampler2D map;
+        uniform float intensity;
 
-      void main() {
-        vec2 uv = gl_PointCoord;
+        varying float vAtlasIndex;
+        varying float vRotation;
+        varying vec3 vColor;
 
-        uv.x = (uv.x + vAtlasIndex) * 0.5;
+        void main() {
+          vec2 pc = gl_PointCoord - 0.5;
+          float s = sin(vRotation);
+          float c = cos(vRotation);
+          pc = vec2(c * pc.x - s * pc.y, s * pc.x + c * pc.y) + 0.5;
 
-        vec4 texel = texture2D(map, uv);
+          float col = mod(vAtlasIndex, ${FLAME_ATLAS_COLUMNS.toFixed(1)});
+          float row = floor(vAtlasIndex / ${FLAME_ATLAS_COLUMNS.toFixed(1)});
+          float rowFromBottom = ${(FLAME_ATLAS_ROWS - 1).toFixed(1)} - row;
+          vec2 uv = vec2(
+            (col + pc.x) / ${FLAME_ATLAS_COLUMNS.toFixed(1)},
+            (rowFromBottom + (1.0 - pc.y)) / ${FLAME_ATLAS_ROWS.toFixed(1)}
+          );
 
-        if (texel.a < 0.01) discard;
+          vec4 texel = texture2D(map, uv);
+          if (texel.a < 0.01) discard;
 
-        gl_FragColor = vec4(
-          texel.rgb * vColor,
-          texel.a * vColor.r
-        );
-      }
-    `,
+          gl_FragColor = vec4(texel.rgb * vColor * intensity, texel.a * vColor.r * intensity);
+        }
+      `
+      : `
+        uniform float intensity;
+        varying vec3 vColor;
+
+        void main() {
+          vec2 pc = gl_PointCoord - 0.5;
+          float falloff = smoothstep(0.5, 0.05, length(pc));
+          if (falloff <= 0.001) discard;
+          gl_FragColor = vec4(vColor * intensity, falloff * intensity);
+        }
+      `,
 
     transparent: true,
     depthWrite: false,
@@ -160,6 +247,7 @@ function createParticlePool(
   })
 
   function update(delta: number) {
+    const driftAmp = tuning.driftAmplitude ?? 0
     for (let i = 0; i < particles.length; i++) {
       const particle = particles[i]!
       particle.age += delta
@@ -169,94 +257,84 @@ function createParticlePool(
           colorAttribute.setXYZ(i, 0, 0, 0)
           continue
         }
-        particles[i] = spawnParticle(tuning, scale)
+        particles[i] = spawnParticle(tuning, scale, pickVariant)
       } else {
         particle.velocity.y -= tuning.gravity * delta
         const damp = Math.max(0, 1 - tuning.drag * delta)
         particle.velocity.x *= damp
         particle.velocity.z *= damp
         particle.position.addScaledVector(particle.velocity, delta)
+        particle.rotation += particle.rotationSpeed * delta
       }
 
       const current = particles[i]!
       const t = THREE.MathUtils.clamp(current.age / current.lifetime, 0, 1)
       const fade = 1 - t * t
-      atlasAttribute.setX(i, current.atlasIndex)
-      positionAttribute.setXYZ(i, current.position.x, current.position.y, current.position.z)
+      const drift =
+        driftAmp === 0 ? 0 : Math.sin(current.age * current.driftFreq + current.driftPhase) * driftAmp * scale
 
-      colorAttribute.setXYZ(
-        i,
-        baseColor.r * fade,
-        baseColor.g * fade,
-        baseColor.b * fade,
-      )
+      if (atlasAttribute) atlasAttribute.setX(i, current.atlasIndex)
+      if (sizeAttribute) sizeAttribute.setX(i, current.sizeMul)
+      if (rotationAttribute) rotationAttribute.setX(i, current.rotation)
+      positionAttribute.setXYZ(i, current.position.x + drift, current.position.y, current.position.z + drift * 0.6)
+      colorAttribute.setXYZ(i, baseColor.r * fade, baseColor.g * fade, baseColor.b * fade)
     }
     positionAttribute.needsUpdate = true
     colorAttribute.needsUpdate = true
-    atlasAttribute.needsUpdate = true
+    if (atlasAttribute) atlasAttribute.needsUpdate = true
+    if (sizeAttribute) sizeAttribute.needsUpdate = true
+    if (rotationAttribute) rotationAttribute.needsUpdate = true
   }
 
-  return { points: new THREE.Points(geometry, material), geometry, material, update, particles }
+  return {
+    points: new THREE.Points(geometry, material),
+    geometry,
+    material,
+    update,
+    setIntensity(t: number) {
+      material.uniforms.intensity!.value = t
+    },
+    particles,
+  }
 }
 
-const SPARK_TUNING: PoolTuning = {
-  count: 8,
-  color: 0xffb347,
-  size: 0.3,
-  spawnRadius: 0.08,
-  upSpeed: [0.7, 1.2],
-  lateralSpeed: 0.35,
-  gravity: 0.6,
-  drag: 0.15,
-  lifetime: [0.7, 1.3],
+export type ParticleLayerOptions = { scale?: number, count?: number }
+
+
+/** The flame itself — 10-12 overlapping textured particles, each an
+ *  independently-scaled/timed/positioned pick from the 2x2 fire atlas.
+ *  Narrow variants build the vertical tongues, wide variants the base. */
+export function createFlameParticles(options: ParticleLayerOptions = {}): ParticlePool {
+  const scale = options.scale ?? 1
+  const tuning: PoolTuning = options.count ? { ...FLAME_TUNING, count: options.count } : FLAME_TUNING
+  const pool = createParticlePool(tuning, scale, { continuous: true, textured: true })
+  return {
+    points: pool.points,
+    geometry: pool.geometry,
+    material: pool.material,
+    update: pool.update,
+    setIntensity: pool.setIntensity
+  }
 }
 
-/** Normal fire sparks — small count, warm colour, continuous cheap shower
- *  rising from the flame base with gravity pulling them back down. */
-export function createSparks(scale: number): ParticlePool {
-  const pool = createParticlePool(SPARK_TUNING, scale, { continuous: true })
-  return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update }
+
+/** Fire sparks — plain bright points (no texture), a small count, rising
+ *  mostly straight up with a little lateral drift and fade-out. */
+export function createFireSparks(options: ParticleLayerOptions = {}): ParticlePool {
+  const scale = options.scale ?? 1
+  const tuning: PoolTuning = options.count ? { ...SPARK_TUNING, count: options.count } : SPARK_TUNING
+  const pool = createParticlePool(tuning, scale, { continuous: true, textured: false })
+  return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update, setIntensity: pool.setIntensity }
 }
 
-const EMBER_TUNING: PoolTuning = {
-  count: 10,
-  color: 0xff5522,
-  size: 0.25,
-  spawnRadius: 0.14,
-  upSpeed: [0.08, 0.22],
-  lateralSpeed: 0.08,
-  gravity: 0.05,
-  drag: 0.05,
-  lifetime: [1.4, 2.4],
-}
-
-/** Glowing embers at the flame base — a handful of slow-drifting emissive
- *  points, visible even while the flame itself is still just ramping up
- *  from ignition. */
-export function createEmbers(scale: number): ParticlePool {
-  const pool = createParticlePool(EMBER_TUNING, scale, { continuous: true })
-  return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update }
-}
-
-const TORCH_SPARK_TUNING: PoolTuning = {
-  count: 12,
-  color: 0xffb347,
-  size: 0.3, // Maybe tuning is needed for this
-  spawnRadius: 0.09,
-  upSpeed: [0.45, 0.9],
-  lateralSpeed: 0.22,
-  gravity: 0.2,
-  drag: 0.1,
-  lifetime: [0.9, 1.6],
-}
-
-/** A handful of larger, faster-rising sparks for a post-mounted torch, seen
- *  from a few meters away — unlike `createEmbers`' subtle near-ground drift
- *  (tuned for a campfire's base), these visibly climb a meter-plus above
- *  the flame before fading. */
-export function createTorchSparks(scale: number): ParticlePool {
-  const pool = createParticlePool(TORCH_SPARK_TUNING, scale, { continuous: true })
-  return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update }
+/** Glowing embers at the flame base — small, slow-drifting, less visible
+ *  than the flame itself; visible even while the flame is still ramping up
+ *  from ignition (see `createFireVisual`). */
+export function createEmberParticles(options: ParticleLayerOptions = {}): ParticlePool {
+  const scale = options.scale ?? 1
+  const tuning: PoolTuning = options.count ? { ...EMBER_TUNING, count: options.count } : EMBER_TUNING
+  const pool = createParticlePool(tuning, scale, { continuous: true, textured: false })
+  return { points: pool.points, geometry: pool.geometry, material: pool.material, update: pool.update, setIntensity: pool.setIntensity }
 }
 
 const IGNITE_BURST_TUNING: PoolTuning = {
@@ -272,25 +350,122 @@ const IGNITE_BURST_TUNING: PoolTuning = {
 }
 
 /** One-shot white flint-strike burst — dormant until `trigger()`, which
- *  resets every particle to a fresh, forceful spawn at once. Reuses the same
- *  pool machinery as `createSparks`/`createEmbers` instead of spinning up a
- *  second particle system. */
+ *  resets every particle to a fresh, forceful spawn at once. Plain points,
+ *  same rendering as `createFireSparks`. */
 export function createIgniteBurst(scale: number): BurstPool {
-  const pool = createParticlePool(IGNITE_BURST_TUNING, scale, { continuous: false })
+  const pool = createParticlePool(IGNITE_BURST_TUNING, scale, { continuous: false, textured: false })
   pool.update(0)
   return {
     points: pool.points,
     geometry: pool.geometry,
     material: pool.material,
     update: pool.update,
+    setIntensity: pool.setIntensity,
     trigger() {
       for (const particle of pool.particles) {
-        const fresh = spawnParticle(IGNITE_BURST_TUNING, scale)
+        const fresh = spawnParticle(IGNITE_BURST_TUNING, scale, PLAIN_VARIANT)
         particle.position.copy(fresh.position)
         particle.velocity.copy(fresh.velocity)
         particle.age = 0
         particle.lifetime = fresh.lifetime
       }
     },
+  }
+}
+
+/** Cheap deterministic flicker — a sum of two incommensurate sines seeded
+ *  per-fire (`seed`, generated once at fire creation) so many fires on
+ *  screen don't pulse in lockstep, and reads less mechanically regular than
+ *  a single sinusoid — without `Math.random()` in the per-frame path or a
+ *  noise library. Returns roughly [0.9, 1.1]. */
+export function fireFlicker(time: number, seed: number): number {
+  const a = Math.sin(time * 3.7 + seed)
+  const b = Math.sin(time * 1.3 + seed * 2.1)
+  return 1 + (a * 0.6 + b * 0.4) * 0.1
+}
+
+/** How small a near-spent fire shrinks to and how large a freshly-stacked
+ *  one grows to, relative to `setSize(1)`'s normal look — shared so a
+ *  caller's own `PointLight` scaling (which `createFireVisual` doesn't own)
+ *  can clamp to the same range as the visual. */
+export const FIRE_SIZE_CLAMP: readonly [number, number] = [0.55, 1.8]
+
+export type FireVisual = {
+  object: THREE.Group
+  update: (dt: number) => void
+  setSize: (factor: number) => void
+  setIntensity: (t: number) => void
+  igniteBurst: () => void
+  /** Current per-fire flicker (see `fireFlicker`) — callers reuse it for
+   *  their own `PointLight` intensity so the light stays in phase with the
+   *  visible flame. */
+  flicker: () => number
+  /** Current smoothstep-eased ignition ramp (`setIntensity`'s `t`, eased) —
+   *  callers' own `PointLight` fades in with this the same way the flame/
+   *  spark layers do. */
+  rampFactor: () => number
+}
+
+/**
+ * Combined flame + sparks + embers bundle — the shared fire VFX used by
+ * settlement campfires, village/standing torches and the player's handheld
+ * flame. Does not own a `PointLight`; callers keep their own (different
+ * fires have different intensity/falloff/`pointLightBudget` needs).
+ */
+export function createFireVisual(options: FireVisualOptions = {}): FireVisual {
+  const baseSize = options.size ?? 1
+  const flame = createFlameParticles({ scale: baseSize, count: options.flameCount })
+  const sparks = createFireSparks({ scale: baseSize, count: options.sparkCount })
+  const embers = createEmberParticles({ scale: baseSize, count: options.emberCount })
+  const burst = createIgniteBurst(baseSize)
+
+  // Embers sit outside the flicker/ignite-ramp group — glowing coals stay
+  // visible even before the flame itself has caught (ramp 0).
+  const flameGroup = new THREE.Group()
+  flameGroup.add(flame.points, sparks.points, burst.points)
+  const object = new THREE.Group()
+  object.add(flameGroup, embers.points)
+
+  const seed = Math.random() * 1000
+  let time = seed
+  let sizeFactor = 1
+  let igniteRamp = 1
+  let lastFlick = 1
+  let lastEased = 1
+
+  function applyVisual() {
+    const clampedSize = THREE.MathUtils.clamp(sizeFactor, FIRE_SIZE_CLAMP[0], FIRE_SIZE_CLAMP[1])
+    lastEased = igniteRamp * igniteRamp * (3 - 2 * igniteRamp)
+    const widthWobble = 1 + (lastFlick - 1) * 0.5
+    flameGroup.scale.set(clampedSize * widthWobble, clampedSize * lastFlick, clampedSize * widthWobble)
+    flameGroup.position.x = 0
+    flame.setIntensity(Math.max(0.05, lastEased))
+    sparks.setIntensity(lastEased)
+  }
+
+  applyVisual()
+
+  return {
+    object,
+    update(dt: number) {
+      time += dt * 4
+      lastFlick = fireFlicker(time, seed)
+      applyVisual()
+      flame.update(dt)
+      sparks.update(dt)
+      embers.update(dt)
+      burst.update(dt)
+    },
+    setSize(factor: number) {
+      sizeFactor = factor
+      applyVisual()
+    },
+    setIntensity(t: number) {
+      igniteRamp = THREE.MathUtils.clamp(t, 0, 1)
+      applyVisual()
+    },
+    igniteBurst: () => burst.trigger(),
+    flicker: () => lastFlick,
+    rampFactor: () => lastEased,
   }
 }
