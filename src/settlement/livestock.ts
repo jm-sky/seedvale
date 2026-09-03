@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
+import type { AnimalSaveState } from '../fauna/AnimalAgent'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from './household'
 import {
@@ -36,6 +37,137 @@ export const LIVESTOCK_URLS: Record<LivestockKind, string> = {
  *  reload" — livestock respawns deterministically per settlement/house seed,
  *  wild fauna does not (plan 110, `QuestManager`'s restore loop). */
 export const LIVESTOCK_KINDS: ReadonlySet<AnimalKind> = new Set(Object.keys(LIVESTOCK_URLS) as AnimalKind[])
+
+/** One persisted livestock/merchant-horse individual (plan persistence-001) —
+ *  `AnimalAgent.snapshot()`'s authoritative fields plus the identity needed
+ *  to reconnect it to the right settlement/house on load. `kind`/
+ *  `ownerHouseId` are validated against the deterministically-recomputed
+ *  identity at hydration time (`spawnLivestock`'s per-individual kind/owner
+ *  check below), never trusted blindly. */
+export type LivestockSaveRecord = AnimalSaveState & {
+  settlementId: string
+  animalId: string
+  kind: AnimalKind
+  ownerHouseId?: string
+}
+
+/** Narrow view `spawnLivestock()`/`createSettlement.ts` need over the
+ *  per-manager livestock persistence store (see `createLivestockRegistry`
+ *  below) — deliberately excludes `capture`/`serialize`, which only
+ *  `SettlementsManager` calls. */
+export type LivestockPersistence = {
+  /** This settlement's saved individuals, keyed by `animalId` — `undefined`
+   *  when nothing was ever saved for it (a fresh settlement, or an old save
+   *  predating this collection). */
+  getSaved: (settlementId: string) => ReadonlyMap<string, LivestockSaveRecord> | undefined
+  /** `animalId`s whose corpse/removal lifecycle already completed before
+   *  save — deterministic spawning must never recreate them. */
+  getRemoved: (settlementId: string) => ReadonlySet<string> | undefined
+  /** Called once, the instant `Settlement.update()` disposes an animal whose
+   *  `readyToRemove()` became true — records the tombstone immediately so a
+   *  later stream-out/stream-in (or a save right after) can't resurrect it. */
+  markRemoved: (settlementId: string, animalId: string) => void
+}
+
+/** Per-`SettlementsManager` livestock persistence store (plan
+ *  persistence-001) — mirrors `HouseholdRegistry`/`NpcStateRegistry`'s
+ *  "same-manager-lifetime registry, `capture`/`serialize` at save time"
+ *  shape, applied to livestock: unlike households/NPC state, an
+ *  `AnimalAgent` has no live object that survives a settlement unload today,
+ *  so `capture()` must snapshot the currently-loaded array explicitly
+ *  (`SettlementsManager.unload()`/`snapshotLivestock()`) rather than reading
+ *  a state object that outlives the agent. */
+export type LivestockRegistry = LivestockPersistence & {
+  /** Overwrites this settlement's saved individuals with a fresh snapshot of
+   *  its currently-live `AnimalAgent`s — called right before disposing a
+   *  streamed-out settlement, and again (to refresh loaded settlements) right
+   *  before a save. Removed/tombstoned animals are absent from `animals`
+   *  already (`Settlement.update()`'s own array splice), so this never
+   *  resurrects one dropped via `markRemoved`. */
+  capture: (settlementId: string, animals: readonly AnimalAgent[]) => void
+  /** Flat `SaveData`-shaped snapshot of everything captured so far. */
+  serialize: () => { entries: LivestockSaveRecord[], removedIds: string[] }
+  clear: () => void
+}
+
+function livestockToSaveRecord(settlementId: string, animal: AnimalAgent): LivestockSaveRecord {
+  return {
+    settlementId,
+    animalId: animal.animalId,
+    kind: animal.def.kind,
+    ownerHouseId: animal.ownerHouseId,
+    ...animal.snapshot(),
+  }
+}
+
+/** `removedLivestockIds` composite key — `animalId` alone collides across
+ *  settlements (see `LivestockSaveRecord`'s doc), so every persisted
+ *  removed-id is namespaced the same way. */
+function removedKey(settlementId: string, animalId: string): string {
+  return `${settlementId}:${animalId}`
+}
+
+export function createLivestockRegistry(initial?: {
+  entries: readonly LivestockSaveRecord[]
+  removedIds: readonly string[]
+}): LivestockRegistry {
+  const bySettlement = new Map<string, Map<string, LivestockSaveRecord>>()
+  const removedBySettlement = new Map<string, Set<string>>()
+
+  function savedFor(settlementId: string): Map<string, LivestockSaveRecord> {
+    let m = bySettlement.get(settlementId)
+    if (!m) {
+      m = new Map()
+      bySettlement.set(settlementId, m)
+    }
+    return m
+  }
+
+  for (const entry of initial?.entries ?? []) savedFor(entry.settlementId).set(entry.animalId, entry)
+  for (const composite of initial?.removedIds ?? []) {
+    const sep = composite.indexOf(':')
+    if (sep < 0) continue
+    const settlementId = composite.slice(0, sep)
+    const animalId = composite.slice(sep + 1)
+    let s = removedBySettlement.get(settlementId)
+    if (!s) {
+      s = new Set()
+      removedBySettlement.set(settlementId, s)
+    }
+    s.add(animalId)
+  }
+
+  return {
+    capture(settlementId, animals) {
+      const m = savedFor(settlementId)
+      for (const animal of animals) m.set(animal.animalId, livestockToSaveRecord(settlementId, animal))
+    },
+    markRemoved(settlementId, animalId) {
+      bySettlement.get(settlementId)?.delete(animalId)
+      let s = removedBySettlement.get(settlementId)
+      if (!s) {
+        s = new Set()
+        removedBySettlement.set(settlementId, s)
+      }
+      s.add(animalId)
+    },
+    getSaved: (settlementId) => bySettlement.get(settlementId),
+    getRemoved: (settlementId) => removedBySettlement.get(settlementId),
+    serialize() {
+      const entries: LivestockSaveRecord[] = []
+      for (const m of bySettlement.values()) entries.push(...m.values())
+      const removedIds: string[] = []
+      for (const [settlementId, ids] of removedBySettlement) {
+        for (const animalId of ids) removedIds.push(removedKey(settlementId, animalId))
+      }
+      return { entries, removedIds }
+    },
+    clear() {
+      bySettlement.clear()
+      removedBySettlement.clear()
+    },
+  }
+}
 
 const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
   horse: createHorseModel,
@@ -203,9 +335,15 @@ export async function spawnLivestock(
    *  needs/lifecycle, just like any house-owned horse. Not tied to a house
    *  (`ownerHouseId`/`household` stay unset, same as wild fauna). */
   merchantHorseSpawn?: { x: number, z: number, yaw: number },
+  /** Saved livestock state + tombstones for this settlement (plan
+   *  persistence-001) — `undefined` for a settlement with nothing saved yet
+   *  (fresh world, or an old save predating this collection). */
+  persistence?: LivestockPersistence,
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
+  const saved = persistence?.getSaved(settlementId)
+  const removed = persistence?.getRemoved(settlementId)
   const agents: AnimalAgent[] = []
   homes.forEach((home, i) => {
     const random = createSeededRandom(houseSeed(settlementSeed, i))
@@ -216,9 +354,13 @@ export async function spawnLivestock(
     const ownerHouseId = homePlaceId(settlementId, i)
     const household = householdByHomeId?.get(ownerHouseId)
     for (const kind of kindsForHouse(size, random)) {
+      // Position/yaw rolls always happen, even for a tombstoned individual —
+      // deterministic spawning must stay in sync for any later kind rolled
+      // at this same house (plan persistence-001 §7).
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
-      const { visual, animations } = visualFor(kind)
       const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
+      if (removed?.has(animalId)) continue
+      const { visual, animations } = visualFor(kind)
       const agent = new AnimalAgent(
         ANIMAL_DEFS[kind],
         animalId,
@@ -238,27 +380,37 @@ export async function spawnLivestock(
         undefined,
         household,
       )
+      // Persisted state is authoritative for an existing individual — a
+      // kind/owner mismatch (e.g. a stale save from before a species-weight
+      // change) is never trusted, and this deterministic spawn wins instead.
+      const record = saved?.get(animalId)
+      if (record && record.kind === kind && record.ownerHouseId === ownerHouseId) agent.hydrate(record)
       scene.add(agent.mesh)
       agents.push(agent)
     }
   })
   if (merchantHorseSpawn) {
-    const { visual, animations } = visualFor('horse')
-    const agent = new AnimalAgent(
-      ANIMAL_DEFS.horse,
-      `merchant-horse-${settlementId}`,
-      sampleHeight,
-      waterLevel,
-      collidersNear,
-      merchantHorseSpawn.x,
-      merchantHorseSpawn.z,
-      visual,
-      animations,
-      LIVESTOCK_WANDER_RADIUS,
-    )
-    agent.mesh.rotation.y = merchantHorseSpawn.yaw
-    scene.add(agent.mesh)
-    agents.push(agent)
+    const animalId = `merchant-horse-${settlementId}`
+    if (!removed?.has(animalId)) {
+      const { visual, animations } = visualFor('horse')
+      const agent = new AnimalAgent(
+        ANIMAL_DEFS.horse,
+        animalId,
+        sampleHeight,
+        waterLevel,
+        collidersNear,
+        merchantHorseSpawn.x,
+        merchantHorseSpawn.z,
+        visual,
+        animations,
+        LIVESTOCK_WANDER_RADIUS,
+      )
+      agent.mesh.rotation.y = merchantHorseSpawn.yaw
+      const record = saved?.get(animalId)
+      if (record && record.kind === 'horse') agent.hydrate(record)
+      scene.add(agent.mesh)
+      agents.push(agent)
+    }
   }
   return agents
 }

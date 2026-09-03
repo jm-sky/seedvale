@@ -453,6 +453,27 @@ export type AnimalAgentDebugInfo = {
   }
 }
 
+/** Plain-data persistence contract for one livestock/mount individual (plan
+ *  persistence-001) — authoritative fields only. Navigation/targets/
+ *  animation/FX/corpse-decay-phase are deliberately excluded: `hydrate()`
+ *  re-derives them (phase from `timeSinceDeath` on the next `update()` tick,
+ *  presentation immediately in `hydrate()` itself). `x`/`z`/`yaw` are the
+ *  meaningful world position; terrain-derived `y` is never persisted, always
+ *  resolved fresh via `snapY()`. */
+export type AnimalSaveState = {
+  x: number
+  z: number
+  yaw: number
+  health: { current: number, max: number, dead: boolean }
+  life: { hunger: number, thirst: number, stamina: number }
+  productionReadyAtDays: number | null
+  eggPending: boolean
+  /** Set only while `health.dead` — `null` for a live animal. Lets a dead
+   *  individual's corpse lifecycle (linger threshold, harvested-remains vs.
+   *  natural-decay presentation) resume exactly where it left off. */
+  corpse: { timeSinceDeath: number, meatHarvested: boolean } | null
+}
+
 /** A real-world food/water destination an animal is pursuing (plan 094) —
  *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
  *  claim on cancel/completion. */
@@ -1789,6 +1810,65 @@ export class AnimalAgent {
         hasHurtClip: this.hurtAction != null,
         hasDeathClip: this.deathAction != null,
       },
+    }
+  }
+
+  /** Plain-data snapshot of this individual's authoritative state (plan
+   *  persistence-001) — see `AnimalSaveState`'s doc. `livestock.ts` pairs
+   *  this with `animalId`/`kind`/`ownerHouseId` for `SaveData`. */
+  snapshot(): AnimalSaveState {
+    return {
+      x: this.mesh.position.x,
+      z: this.mesh.position.z,
+      yaw: this.mesh.rotation.y,
+      health: { current: this.health.currentHp, max: this.health.maxHp, dead: this.health.dead },
+      life: { hunger: this.life.hunger, thirst: this.life.thirst, stamina: this.life.stamina.current },
+      productionReadyAtDays: this.productionReadyAtDays,
+      eggPending: this.eggPending,
+      corpse: this.health.dead ? { timeSinceDeath: this.timeSinceDeath, meatHarvested: this.meatHarvested } : null,
+    }
+  }
+
+  /** Restores authoritative state from a save (plan persistence-001) — call
+   *  once, immediately after construction and before this agent's first real
+   *  `update()` tick, so no default/random state (`Math.random()`-seeded
+   *  `life`/production stagger) can influence simulation first. Position/yaw
+   *  override the deterministic spawn point; `y` is still resolved from live
+   *  terrain (`snapY()`), never persisted. A dead individual's presentation
+   *  (tipped pose, or hidden + harvested-remains mesh) is re-derived directly
+   *  here; natural corpse-decay presentation (tint/bones) self-corrects on
+   *  the next `update()` tick from the restored `timeSinceDeath` — see
+   *  `advanceCorpseDecay()`. Never reports `onDeath` — that already fired,
+   *  before this save was taken. */
+  hydrate(state: AnimalSaveState): void {
+    this.mesh.position.x = state.x
+    this.mesh.position.z = state.z
+    this.mesh.rotation.y = state.yaw
+    this.snapY()
+    this.health.currentHp = state.health.current
+    this.health.maxHp = state.health.max
+    this.health.dead = state.health.dead
+    this.life.hunger = state.life.hunger
+    this.life.thirst = state.life.thirst
+    this.life.stamina.current = state.life.stamina
+    this.productionReadyAtDays = state.productionReadyAtDays
+    this.eggPending = state.eggPending
+    if (state.corpse) {
+      this.timeSinceDeath = state.corpse.timeSinceDeath
+      this.meatHarvested = state.corpse.meatHarvested
+      this.mixer?.stopAllAction()
+      if (this.meatHarvested) {
+        this.hideLivingVisual()
+        void this.spawnHarvestedRemains()
+        this.labelEl.style.display = 'none'
+      } else {
+        const side = Math.random() < 0.5 ? 1 : -1
+        this.mesh.rotation.z = side * (Math.PI / 2)
+        this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
+      }
+      this.lastHpPercent = 0
+      this.hpFillEl.style.width = '0%'
+      this.labelBarsEl.style.display = 'none'
     }
   }
 

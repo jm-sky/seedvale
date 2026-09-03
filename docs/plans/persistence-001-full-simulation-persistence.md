@@ -1,7 +1,7 @@
 # Plan: Full Simulation Persistence
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** L
 **Depends on:** none
 **Domain:** `persistence`

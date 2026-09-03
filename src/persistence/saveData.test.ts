@@ -217,4 +217,72 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 'nope', dehydrationDuration: 0 } })).toBeNull()
     expect(loadSaveData({ ...validSave, playerNeeds: { hunger: 100, thirst: 100, vigor: 100, dehydrationDuration: 0 } })).toBeNull()
   })
+
+  // Plan persistence-001 — NPC/household/relationship/livestock persistence
+  // is optional so an old v1 save (like `validSave` above, which omits every
+  // field below) keeps loading unchanged; see the "round-trips a fully-formed
+  // native save" test above for that backward-compat case.
+  it('accepts a save with the full persistence-001 collections populated', () => {
+    const withPersistence: SaveData = {
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 80, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 90, max: 100 },
+          needs: { thirst: 0.1, woodDuty: 0.2, waterDuty: 0.1, hunger: 0.3 },
+          helperAssignment: { targetContainerId: 'chest:1', resourceKind: 'food', enabled: true },
+          activePlan: { goal: 'obtainWood', strategy: null, state: 'active', progress: { amount: 1 }, currentStep: 'findNextTarget' },
+        },
+      },
+      households: {
+        'home:household:0': { stock: { wood: 3 }, water: 2, items: { counts: { bread: 2 }, instances: [] } },
+      },
+      npcRelationships: [{ a: 'home:npc:0', b: 'home:npc:1', value: 4 }],
+      livestock: [{
+        settlementId: 'home',
+        animalId: 'chicken-house0-0',
+        kind: 'chicken',
+        ownerHouseId: 'home:home:0',
+        x: 1,
+        z: 2,
+        yaw: 0.5,
+        health: { current: 10, max: 10, dead: false },
+        life: { hunger: 0.2, thirst: 0.1, stamina: 1 },
+        productionReadyAtDays: 3.5,
+        eggPending: false,
+        corpse: null,
+      }],
+      removedLivestockIds: ['home:chicken-house1-0'],
+    }
+    expect(loadSaveData(withPersistence)).toEqual(withPersistence)
+  })
+
+  it('rejects a malformed npcStates record', () => {
+    expect(loadSaveData({
+      ...validSave,
+      npcStates: { 'home:npc:0': { health: { current: 1, max: 1, dead: false } } },
+    })).toBeNull()
+    expect(loadSaveData({ ...validSave, npcStates: 'nope' })).toBeNull()
+  })
+
+  it('rejects a malformed households record', () => {
+    expect(loadSaveData({ ...validSave, households: { h: { water: 'nope' } } })).toBeNull()
+    expect(loadSaveData({ ...validSave, households: 'nope' })).toBeNull()
+  })
+
+  it('rejects malformed npcRelationships/livestock/removedLivestockIds fields', () => {
+    expect(loadSaveData({ ...validSave, npcRelationships: [{ a: 'x' }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, npcRelationships: 'nope' })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      livestock: [{
+        settlementId: 'home', animalId: 'x', kind: 'dragon', x: 0, z: 0, yaw: 0,
+        health: { current: 1, max: 1, dead: false }, life: { hunger: 0, thirst: 0, stamina: 1 },
+        productionReadyAtDays: null, eggPending: false, corpse: null,
+      }],
+    })).toBeNull()
+    expect(loadSaveData({ ...validSave, livestock: 'nope' })).toBeNull()
+    expect(loadSaveData({ ...validSave, removedLivestockIds: [1] })).toBeNull()
+  })
 })

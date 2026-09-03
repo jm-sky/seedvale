@@ -25,7 +25,8 @@ import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createSettlement, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
-import { createNpcRelationships } from './npcRelationships'
+import { createLivestockRegistry, type LivestockSaveRecord } from './livestock'
+import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost, placeOnGround } from './props'
 import {
@@ -142,6 +143,13 @@ export type SettlementsManager = {
   /** Snapshot of every NPC's authoritative state created so far — see
    *  `NpcStateRegistry.serialize` (plan 197 §7). */
   snapshotNpcStates: () => Record<NpcId, NpcStateSnapshot>
+  /** Plain-data snapshot of every non-zero NPC↔NPC relation pair so far —
+   *  see `NpcRelationships.snapshot` (plan persistence-001). */
+  snapshotRelationships: () => NpcRelationshipEntry[]
+  /** Flat livestock persistence snapshot — refreshes every currently-loaded
+   *  settlement's saved state first, then serializes the whole registry (plan
+   *  persistence-001) — see `LivestockRegistry.serialize`. */
+  snapshotLivestock: () => { entries: LivestockSaveRecord[], removedIds: string[] }
   dispose: () => void
 }
 
@@ -219,6 +227,17 @@ export async function createSettlementsManager(
    *  `Container`s (plan 167) — forwarded into every `createSettlement` call
    *  the same way `foodSources`/`hunting` are above. */
   helperDelivery?: HelperDeliveryHooks,
+  /** Carried across an in-session `WorldBundle` rebuild and, since plan
+   *  persistence-001, part of `SaveData` too — same "same-manager-lifetime
+   *  registry, `initial*`/`snapshot*` idiom" contract as `initialHouseholds`/
+   *  `initialNpcStates` above, applied to `NpcRelationships`. */
+  initialNpcRelationships?: readonly NpcRelationshipEntry[],
+  /** Saved livestock individuals + removed-id tombstones (plan
+   *  persistence-001) — seeds the manager-lifetime `LivestockRegistry` below,
+   *  consulted by every `createSettlement`/`spawnLivestock` call, home and
+   *  streamed-in alike. */
+  initialLivestock?: readonly LivestockSaveRecord[],
+  initialRemovedLivestockIds?: readonly string[],
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -269,9 +288,18 @@ export async function createSettlementsManager(
   // Symmetric NPC↔NPC relation store (plan 151) — one instance for the
   // world's lifetime, same reasoning as `households`/`npcStates` above
   // (a settlement that streams out and back in must keep its NPCs'
-  // relations, not reset them). Not part of `SaveData` yet, same confirmed
-  // gap as `Household` — see `npcRelationships.ts`.
-  const npcRelationships = createNpcRelationships()
+  // relations, not reset them). Part of `SaveData` since plan persistence-001
+  // — see `npcRelationships.ts`.
+  const npcRelationships = createNpcRelationships(initialNpcRelationships)
+
+  // Livestock persistence store (plan persistence-001) — see
+  // `livestock.ts`'s `LivestockRegistry` doc for why this exists (unlike
+  // households/NPC state, an `AnimalAgent` has no live object surviving a
+  // settlement unload today, so state must be captured explicitly).
+  const livestock = createLivestockRegistry({
+    entries: initialLivestock ?? [],
+    removedIds: initialRemovedLivestockIds ?? [],
+  })
 
   const entries = new Map<string, Entry>()
 
@@ -330,6 +358,7 @@ export async function createSettlementsManager(
     hunting,
     helperDelivery,
     npcRelationships,
+    livestock,
   ).then((settlement) => {
     if (disposed) {
       settlement.dispose()
@@ -462,6 +491,7 @@ export async function createSettlementsManager(
         hunting,
         helperDelivery,
         npcRelationships,
+        livestock,
       ))
       .then((settlement) => {
         const cur = entries.get(def.id)
@@ -491,6 +521,10 @@ export async function createSettlementsManager(
   }
 
   function unload(id: string, entry: Entry): void {
+    // Capture livestock state before `dispose()` throws the live `AnimalAgent`s
+    // away (plan persistence-001) — unlike households/NPC state, they have no
+    // registry-owned object that outlives the settlement on its own.
+    if (entry.settlement) livestock.capture(id, entry.settlement.livestock)
     entry.settlement?.dispose()
     entries.delete(id)
     syncMidpoints()
@@ -574,6 +608,13 @@ export async function createSettlementsManager(
     snapshotEconomies: () => economies.serialize(),
     snapshotHouseholds: () => households.serialize(),
     snapshotNpcStates: () => npcStates.serialize(),
+    snapshotRelationships: () => npcRelationships.snapshot(),
+    snapshotLivestock: () => {
+      for (const entry of entries.values()) {
+        if (entry.settlement) livestock.capture(entry.def.id, entry.settlement.livestock)
+      }
+      return livestock.serialize()
+    },
     dispose() {
       disposed = true
       for (const entry of entries.values()) entry.settlement?.dispose()
@@ -585,6 +626,7 @@ export async function createSettlementsManager(
       economies.clear()
       households.clear()
       npcStates.clear()
+      livestock.clear()
     },
   }
 }

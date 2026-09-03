@@ -97,8 +97,14 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     resolvedHiddenFindSpotIds, badges,
   } = deps
 
-  const buildSaveData = (): SaveData => ({
-    version: SAVE_VERSION,
+  const buildSaveData = (): SaveData => {
+    // One combined capture-then-serialize pass (plan persistence-001) — see
+    // `SettlementsManager.snapshotLivestock`'s doc for why livestock needs an
+    // explicit refresh unlike households/NPC state (no live object survives a
+    // settlement unload on its own).
+    const livestockSnapshot = bundle.settlementsManager.snapshotLivestock()
+    return {
+      version: SAVE_VERSION,
     config: {
       seed: config.seed,
       terrain: structuredClone(config.terrain),
@@ -198,7 +204,13 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
     workContracts: bundle.workContracts.nodes().map((c) => ({ ...c, target: { ...c.target } })),
-  })
+      npcStates: bundle.settlementsManager.snapshotNpcStates(),
+      households: bundle.settlementsManager.snapshotHouseholds(),
+      npcRelationships: bundle.settlementsManager.snapshotRelationships(),
+      livestock: livestockSnapshot.entries,
+      removedLivestockIds: livestockSnapshot.removedIds,
+    }
+  }
 
   // `writeSave()`'s result is diagnostic-only here — a rejected write (an
   // unreadable existing slot, plan persistence-002) must fail safely rather

@@ -42,7 +42,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`              | Rope-pull transport for inventory-overflow items | 🟡 | M | ~~155~~ ~~122~~ |
-| 💡 `persistence-001-full-simulation-persistence.md`                    | -       | 🔴 | L      | -       |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
 | 💡 `npc-015-work-contracts-npc-work-and-construction.md`               | -       | 🟡 | L      | npc-014 |
@@ -94,6 +93,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `npc-014-work-contracts-foundation-and-physical-posting.md` | Create a construction contract (Quick Actions → Budowa → Zleć budowę, pick a reward) and confirm a flag appears at the target, state is `available`/not advertised; visit a settlement's notice board (`[E]`) and post the contract, confirm it becomes `advertised`; save/load before and after posting preserves contract/flag/board state; cancel a contract before and after posting via Quick Actions → Zlecenia, confirm the flag/advertisement are removed and it can't be posted again |
 | `fauna-006-wolf-settlement-entry.md` | An ordinary (non-frenzied) wolf selects and enters a settlement to reach an NPC or fleeing prey it was already chasing; the chase isn't dropped just because the target crossed into the village avoidance radius; a frenzied wolf still reaches the village as before; fox/deer/other wild fauna still avoid the village for both wander and hunting; a wolf still doesn't wander into the village without an active target; building colliders still block actual movement |
 | `world-terrain-005-distance-based-terrain-detail-lod.md` | Grass: baseline vs `grassFillerCoverage` (0/0.35/0.6/1) near camera and along a distant road, watching triangle/instance count and draw calls; Road: baseline (`surfaceDetailEnabled` off) vs on at a few `rutDepth`/`microBumpStrength` values close-up on a road segment, confirm no chunk-boundary seams and paths stay flatter than roads; combined on/off matrix per plan §7 |
+| `persistence-001-full-simulation-persistence.md` | Adjust an NPC's needs/HP, give it a helper assignment/active plan, change household stock/items, nudge an NPC↔NPC relationship, move/injure/kill house livestock (some mid-production, one already removed via corpse lifecycle) — Save → Load and confirm every value round-trips, no duplicate/resurrected livestock, and old pre-persistence-001 saves still load with fresh deterministic NPC/household/livestock state |
 
 ---
 

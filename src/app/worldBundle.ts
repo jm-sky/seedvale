@@ -6,6 +6,8 @@ import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { Settlement } from '../settlement/createSettlement'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
+import type { LivestockSaveRecord } from '../settlement/livestock'
+import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { SettlementDef } from '../settlement/settlementGenerator'
 import type { ChunkCoord } from '../terrain/chunkGrid'
@@ -248,6 +250,11 @@ function buildSettlementsManager(
    *  `Container`s (plan 167) — forwarded into every `createSettlement` call
    *  → every `NpcAgent`, the same way `foodSources`/`hunting` are above. */
   helperDelivery?: HelperDeliveryHooks,
+  /** Plan persistence-001 — forwarded into `createSettlementsManager` the
+   *  same way `initialHouseholds`/`initialNpcStates` are above. */
+  initialNpcRelationships?: readonly NpcRelationshipEntry[],
+  initialLivestock?: readonly LivestockSaveRecord[],
+  initialRemovedLivestockIds?: readonly string[],
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -280,6 +287,9 @@ function buildSettlementsManager(
     initialHouseholds,
     initialNpcStates,
     helperDelivery,
+    initialNpcRelationships,
+    initialLivestock,
+    initialRemovedLivestockIds,
   )
 }
 
@@ -431,6 +441,14 @@ type WorldSystemsSeed = {
   economies?: Record<string, SettlementEconomySnapshot>
   households?: Record<HouseholdId, HouseholdSnapshot>
   npcStates?: Record<NpcId, NpcStateSnapshot>
+  /** Plan persistence-001 — seeds `NpcRelationships`, same "carried across
+   *  rebuild, sourced from `SaveData` on a fresh boot" contract as
+   *  `households`/`npcStates` above. */
+  npcRelationships?: readonly NpcRelationshipEntry[]
+  /** Plan persistence-001 — seeds the manager-lifetime `LivestockRegistry`,
+   *  same contract as `npcRelationships` above. */
+  livestock?: readonly LivestockSaveRecord[]
+  removedLivestockIds?: readonly string[]
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
   resourceDepletion: ResourceDepletionState
   onAnimalDeath?: (animalId: string) => void
@@ -556,6 +574,9 @@ async function buildWorldSystems(
     economies: initialEconomies,
     households: initialHouseholds,
     npcStates: initialNpcStates,
+    npcRelationships: initialNpcRelationships,
+    livestock: initialLivestock,
+    removedLivestockIds: initialRemovedLivestockIds,
     spawnerState: initialSpawnerState,
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
@@ -662,7 +683,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
 
@@ -933,6 +954,18 @@ export async function createWorldBundle(
    *  across rebuild, reset only on a genuinely new world" contract as
    *  `initialStandingTorches`/`initialPalisades` above. */
   initialWorkContracts: readonly WorkContractRecord[] = [],
+  /** Plan persistence-001 — NPC authoritative state/households/relationships/
+   *  livestock, sourced from `SaveData` on a fresh boot (`createApp.ts`).
+   *  Previously only threaded through `rebuildWorldBundle`'s in-session carry
+   *  (see that function's `carriedHouseholds`/`carriedNpcStates`) — a real
+   *  save/load never restored these before this plan; same "carried across
+   *  rebuild, reset only on a genuinely new world" contract as
+   *  `initialEconomies` above, just also sourced from `SaveData` now. */
+  initialHouseholds?: Record<HouseholdId, HouseholdSnapshot>,
+  initialNpcStates?: Record<NpcId, NpcStateSnapshot>,
+  initialNpcRelationships?: readonly NpcRelationshipEntry[],
+  initialLivestock?: readonly LivestockSaveRecord[],
+  initialRemovedLivestockIds?: readonly string[],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -954,6 +987,11 @@ export async function createWorldBundle(
     hives: initialHives,
     workContracts: initialWorkContracts,
     economies: initialEconomies,
+    households: initialHouseholds,
+    npcStates: initialNpcStates,
+    npcRelationships: initialNpcRelationships,
+    livestock: initialLivestock,
+    removedLivestockIds: initialRemovedLivestockIds,
     spawnerState: initialSpawnerState,
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
@@ -1089,6 +1127,10 @@ export async function rebuildWorldBundle(
   // reset to fresh on a genuinely new world, reused on an in-session rebuild.
   const carriedHouseholds = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotHouseholds()
   const carriedNpcStates = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotNpcStates()
+  // Same same-seed-only carry contract as `carriedEconomies`/`carriedHouseholds`
+  // above, applied to NPC relationships/livestock (plan persistence-001).
+  const carriedNpcRelationships = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotRelationships()
+  const carriedLivestock = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotLivestock()
   bundle.largeCaves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
@@ -1127,6 +1169,9 @@ export async function rebuildWorldBundle(
     economies: carriedEconomies,
     households: carriedHouseholds,
     npcStates: carriedNpcStates,
+    npcRelationships: carriedNpcRelationships,
+    livestock: carriedLivestock?.entries,
+    removedLivestockIds: carriedLivestock?.removedIds,
     spawnerState: carriedSpawnerState,
     resourceDepletion,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,

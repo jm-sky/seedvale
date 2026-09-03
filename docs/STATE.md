@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-09-02
+**Last verified:** 2026-09-03
 
 ## Read this first
 
@@ -43,7 +43,7 @@ Work Contracts foundation (plan npc-014, "Workforce for Hire" Phase 1) adds the 
 
 - Generation, streaming, economy, households, NPC daily life, standing decisions: [SETTLEMENTS.md](./state/settlements.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)
-- Still not implemented: inter-settlement trade, full NPC simulation persistence, Social Places beyond a settlement's own campfire, conversation partner ranking by personality/traits/role/relationship.
+- Still not implemented: inter-settlement trade, Social Places beyond a settlement's own campfire, conversation partner ranking by personality/traits/role/relationship.
 - Movement/pathfinding (plan npc-006): `NpcAgent.steerTo`/`AnimalAgent.steerToward` still do straight-line steering plus a per-frame single-obstacle skirt every frame — no path search on normal follow. A shared `navigation/navigation.ts` (bounded local-grid A* + waypoint simplification, `NavigationQuery`/`AgentProfile`, `navigation/navigationStats.ts` counters) only ever runs on a genuine stuck/blocked condition: `NpcAgent`'s existing `npcMovementWatchdog`-triggered repath now tries a real route before its old blind random-hop fallback, and `AnimalAgent`'s predator chase/flee reuse the same watchdog module (two independent instances, `chaseNav`/`fleeNav`) the same way. Repath never changes the destination/committed target (npc-005's prey commitment included). No global navmesh, no worker, no path caching — see the plan for why.
 
 ### Fauna
@@ -71,7 +71,7 @@ Predator/prey roles with chase/flee behaviour, player-awareness (probabilistic d
 
 ### Persistence
 
-IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v1** — a hard cut (plan 201) with no migration/compatibility story for older saves. Current persistence includes player gardens, resource-depletion state, player terrain modifications and fauna spawn-point lifecycle state in addition to the older player/world/quest/settlement data. The exact field list is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema), not here. NPC runtime state is **not** a full simulation snapshot (needs/AI/vigor are not persisted; tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`) — `Continue` is not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state. `saveDb.ts`'s `writeSave()` is a save integrity guard (plan persistence-002): before overwriting an existing named slot it re-reads and re-parses that slot's current record, and refuses the write (returning a typed `WriteSaveResult`, original bytes untouched) if that record is present but fails to parse — this is what stops an autosave from silently destroying a save that predates a schema change while its slot id is still active. A slot with no existing row is still created normally. `listSaves()`/`readSave()` distinguish a missing record, an unparseable one and a genuine IndexedDB failure only via dev-console diagnostics (`logSaveDiagnostic`, never logs full `SaveData`) — their public return shape (`[]`/`null`) is unchanged, since `writeSave()`'s own re-check on every write is the actual safety net regardless of how boot got there.
+IndexedDB-backed (`src/persistence/`), named save slots (up to 8). Canonical save schema is **v1** — a hard cut (plan 201) with no migration/compatibility story for older saves. Current persistence includes player gardens, resource-depletion state, player terrain modifications and fauna spawn-point lifecycle state in addition to the older player/world/quest/settlement data. Since plan persistence-001, `SaveData` also carries NPC authoritative state (health/needs/stamina/vigor/helper assignment/active plan, via `NpcStateRegistry.serialize()`), household state (stock/water/items, via `HouseholdRegistry.serialize()`), NPC↔NPC relationships (`NpcRelationships.snapshot()`) and house-owned livestock + the merchant horse (`settlement/livestock.ts`'s `LivestockRegistry` — position/yaw/health/needs/production anchor/corpse lifecycle, reconciled against deterministic spawn identity on load; a `removedLivestockIds` tombstone set stops deterministic spawning from resurrecting an individual whose corpse/removal lifecycle already completed). All five collections are optional in the schema (missing means empty/default, no version bump) so pre-persistence-001 saves still load with fresh deterministic state. The exact field list is in [ARCHITECTURE.md](./architecture/ARCHITECTURE.md#save-schema), not here. Still not a full simulation snapshot — wild individual fauna, NPC/animal navigation/pending-action/pathfinding state, and full offline simulation replay remain out of scope (tree lifecycle uses sparse overrides + lazy growth from `elapsedDays`); `Continue` is closer to but still not equivalent to serializing the complete living world. `localStorage` is split by device-preference domain (graphics/player/world/audio), independent of the chosen save slot's world state. `saveDb.ts`'s `writeSave()` is a save integrity guard (plan persistence-002): before overwriting an existing named slot it re-reads and re-parses that slot's current record, and refuses the write (returning a typed `WriteSaveResult`, original bytes untouched) if that record is present but fails to parse — this is what stops an autosave from silently destroying a save that predates a schema change while its slot id is still active. A slot with no existing row is still created normally. `listSaves()`/`readSave()` distinguish a missing record, an unparseable one and a genuine IndexedDB failure only via dev-console diagnostics (`logSaveDiagnostic`, never logs full `SaveData`) — their public return shape (`[]`/`null`) is unchanged, since `writeSave()`'s own re-check on every write is the actual safety net regardless of how boot got there.
 
 ### UI / input
 
@@ -174,7 +174,7 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 
 ## Not implemented / intentionally deferred
 
-- Full NPC simulation persistence across saves.
+- Individual wild fauna persistence, and NPC/animal navigation/pending-action/pathfinding persistence (plan persistence-001 scoped these out; see the Persistence section above for what NPCs/households/livestock now do persist).
 - Social Places beyond a settlement's own campfire; conversation partner selection/ranking by personality/traits/role/relationship; group conversations; social interaction memory entries.
 - LLM/AI-generated quests.
 - Inter-settlement trade and player crafting.

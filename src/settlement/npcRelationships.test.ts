@@ -28,4 +28,17 @@ describe('createNpcRelationships', () => {
     expect(relations.get('a', 'c')).toBe(0)
     expect(relations.get('b', 'c')).toBe(0)
   })
+
+  it('snapshot omits never-interacted pairs and round-trips through the initial arg', () => {
+    const relations = createNpcRelationships()
+    relations.adjust('a', 'b', 3)
+    relations.get('a', 'c')
+    const snapshot = relations.snapshot()
+    expect(snapshot).toHaveLength(1)
+    expect(snapshot[0]!.value).toBe(3)
+
+    const restored = createNpcRelationships(snapshot)
+    expect(restored.get('a', 'b')).toBe(3)
+    expect(restored.get(snapshot[0]!.b, snapshot[0]!.a)).toBe(3)
+  })
 })

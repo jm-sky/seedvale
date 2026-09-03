@@ -43,7 +43,7 @@ import { applyTreeStageVisual } from '../world/treeVisuals'
 import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
-import { disposeLivestock, spawnLivestock } from './livestock'
+import { disposeLivestock, type LivestockPersistence, spawnLivestock } from './livestock'
 import { minorLocationsFor } from './minorLocations'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
 import { createNpcRelationships, type NpcRelationships } from './npcRelationships'
@@ -304,6 +304,12 @@ export async function createSettlement(
    *  below). Defaults to a fresh, isolated store for callers/tests that
    *  don't pass one in. */
   relations: NpcRelationships = createNpcRelationships(),
+  /** Saved livestock state + tombstones (plan persistence-001) — same "one
+   *  registry owned by `SettlementsManager`, threaded through" pattern as
+   *  `households`/`npcStateRegistry` above. Forwarded into `spawnLivestock`
+   *  below, and consulted again in `update()`'s corpse-removal loop so a
+   *  newly-completed removal is tombstoned immediately. */
+  livestockPersistence?: LivestockPersistence,
 ): Promise<Settlement> {
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
 
@@ -478,6 +484,7 @@ export async function createSettlement(
       onAnimalDeath,
       householdByHomeId,
       landmarks.merchantHorseSpawn,
+      livestockPersistence,
     )
   } finally {
     bootMarkEnd('spawnLivestock')
@@ -807,6 +814,7 @@ export async function createSettlement(
         const kept: AnimalAgent[] = []
         for (const animal of livestock) {
           if (animal.readyToRemove()) {
+            livestockPersistence?.markRemoved(def.id, animal.animalId)
             animal.dispose()
             animal.mesh.removeFromParent()
             disposeObject3D(animal.mesh)

@@ -441,6 +441,11 @@ export async function createApp(
     initialSave?.bedrolls ?? [],
     initialSave?.platforms ?? [],
     initialSave?.workContracts ?? [],
+    initialSave?.households,
+    initialSave?.npcStates,
+    initialSave?.npcRelationships,
+    initialSave?.livestock,
+    initialSave?.removedLivestockIds,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do

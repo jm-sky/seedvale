@@ -1,11 +1,16 @@
 import type { BadgeId } from '../badges/badges'
 import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
+import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
+import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
+import type { LivestockSaveRecord } from '../settlement/livestock'
+import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
+import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { PreparationSize } from '../terrain/terrainPreparation'
 import type { TrapKind, TrapState } from '../world/animalTraps'
@@ -450,6 +455,34 @@ export type SaveData = {
    *  (deterministic initial from richness); `0` means depleted. */
   resourceDeposits: Record<string, number>
   workContracts: SaveWorkContract[]
+  /** NPC authoritative state (health/needs/stamina/vigor/helper assignment/
+   *  active plan), keyed by stable npc id (plan persistence-001) — see
+   *  `settlement/npcState.ts`'s `NpcStateSnapshot`. Sparse: an id absent here
+   *  falls back to normal deterministic NPC creation (older v1 saves, or an
+   *  NPC never yet constructed this session). Optional — same "existing v1
+   *  slots predate this collection, missing means empty" contract as every
+   *  field below (plan persistence-001 §15: no version bump/migration
+   *  framework for this; every new save always writes it). */
+  npcStates?: Record<NpcId, NpcStateSnapshot>
+  /** Household authoritative state (stock/water/items), keyed by stable
+   *  household id (plan persistence-001) — see `settlement/household.ts`'s
+   *  `HouseholdSnapshot`. Same sparse/fallback/optional contract as `npcStates`. */
+  households?: Record<HouseholdId, HouseholdSnapshot>
+  /** Non-zero NPC↔NPC relationship pairs (plan persistence-001) — see
+   *  `settlement/npcRelationships.ts`'s `NpcRelationshipEntry`. Optional, same
+   *  contract as `npcStates`. */
+  npcRelationships?: NpcRelationshipEntry[]
+  /** House-owned livestock + merchant-horse authoritative state (plan
+   *  persistence-001) — see `settlement/livestock.ts`'s `LivestockSaveRecord`.
+   *  Individual wild fauna is intentionally not part of this (see
+   *  `spawnPoints` above for what wild fauna does persist). Optional, same
+   *  contract as `npcStates`. */
+  livestock?: LivestockSaveRecord[]
+  /** `${settlementId}:${animalId}` tombstones (plan persistence-001) — a
+   *  livestock individual whose corpse/removal lifecycle completed before
+   *  save must not be recreated by deterministic spawning on load. Optional,
+   *  same contract as `npcStates`. */
+  removedLivestockIds?: string[]
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -1014,6 +1047,168 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
   })
 }
 
+function isCurrentMaxNumbers(value: unknown): value is { current: number, max: number } {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return typeof v.current === 'number' && typeof v.max === 'number'
+}
+
+function isNpcHealth(value: unknown): value is { current: number, max: number, dead: boolean } {
+  return isCurrentMaxNumbers(value) && typeof (value as Record<string, unknown>).dead === 'boolean'
+}
+
+function isNpcNeeds(value: unknown): value is { thirst: number, woodDuty: number, waterDuty: number, hunger: number } {
+  if (!value || typeof value !== 'object') return false
+  const n = value as Record<string, unknown>
+  return (
+    typeof n.thirst === 'number' &&
+    typeof n.woodDuty === 'number' &&
+    typeof n.waterDuty === 'number' &&
+    typeof n.hunger === 'number'
+  )
+}
+
+const HELPER_RESOURCE_KINDS: ReadonlySet<string> = new Set(['food'])
+
+function isHelperAssignment(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object') return false
+  const h = value as Record<string, unknown>
+  return (
+    typeof h.targetContainerId === 'string' &&
+    typeof h.resourceKind === 'string' && HELPER_RESOURCE_KINDS.has(h.resourceKind) &&
+    typeof h.enabled === 'boolean'
+  )
+}
+
+const NPC_GOAL_IDS: ReadonlySet<string> = new Set(['fulfilWorkDuty', 'obtainWood', 'secureFood', 'secureWater'])
+const NPC_PLAN_STATES: ReadonlySet<string> = new Set([
+  'active', 'blocked', 'completed', 'interrupted', 'obsolete', 'partially_completed',
+])
+const NPC_STRATEGY_IDS: ReadonlySet<string> = new Set([
+  'chopDeposit', 'economyWithdraw', 'fetchDeposit', 'gardenGather', 'householdExchange',
+  'householdFood', 'householdWater', 'hunt', 'nearbyFoodSource', 'playerStorageDelivery', 'well',
+])
+
+function isNpcPlan(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object') return false
+  const p = value as Record<string, unknown>
+  const progress = p.progress as Record<string, unknown> | undefined
+  return (
+    typeof p.goal === 'string' && NPC_GOAL_IDS.has(p.goal) &&
+    (p.strategy === null || (typeof p.strategy === 'string' && NPC_STRATEGY_IDS.has(p.strategy))) &&
+    typeof p.state === 'string' && NPC_PLAN_STATES.has(p.state) &&
+    !!progress && typeof progress.amount === 'number' &&
+    typeof p.currentStep === 'string'
+  )
+}
+
+/** Validates one `NpcStateSnapshot` (plan persistence-001) — mirrors
+ *  `settlement/npcState.ts`'s own shape; `helperAssignment`/`activePlan` are
+ *  optional (absent means `null`, same as a fresh in-session snapshot). */
+function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
+  if (!value || typeof value !== 'object') return false
+  const s = value as Record<string, unknown>
+  if (!isNpcHealth(s.health)) return false
+  if (!isCurrentMaxNumbers(s.stamina)) return false
+  if (!isCurrentMaxNumbers(s.vigor)) return false
+  if (!isNpcNeeds(s.needs)) return false
+  if (s.helperAssignment !== undefined && s.helperAssignment !== null && !isHelperAssignment(s.helperAssignment)) return false
+  if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
+  return true
+}
+
+function isNpcStatesField(value: unknown): value is Record<NpcId, NpcStateSnapshot> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every(isNpcStateSnapshot)
+}
+
+/** Validates one `HouseholdSnapshot` (plan persistence-001) — `stock`/`items
+ *  .counts` reuse the same loose "object of numbers" check `stock` already
+ *  uses elsewhere in this file (`isSettlementEconomySnapshot`); `items` is
+ *  optional (absent restores as an empty `Inventory`). */
+function isHouseholdSnapshot(value: unknown): value is HouseholdSnapshot {
+  if (!value || typeof value !== 'object') return false
+  const h = value as Record<string, unknown>
+  if (!h.stock || typeof h.stock !== 'object' || Array.isArray(h.stock)) return false
+  for (const amount of Object.values(h.stock as Record<string, unknown>)) {
+    if (typeof amount !== 'number') return false
+  }
+  if (typeof h.water !== 'number') return false
+  if (h.items !== undefined) {
+    if (!h.items || typeof h.items !== 'object') return false
+    const items = h.items as Record<string, unknown>
+    if (!items.counts || typeof items.counts !== 'object' || Array.isArray(items.counts)) return false
+    for (const amount of Object.values(items.counts as Record<string, unknown>)) {
+      if (typeof amount !== 'number') return false
+    }
+    if (!isSaveItemInstancesField(items.instances)) return false
+  }
+  return true
+}
+
+function isHouseholdsField(value: unknown): value is Record<HouseholdId, HouseholdSnapshot> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every(isHouseholdSnapshot)
+}
+
+function isNpcRelationshipsField(value: unknown): value is NpcRelationshipEntry[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const e = entry as Record<string, unknown>
+    return typeof e.a === 'string' && typeof e.b === 'string' && typeof e.value === 'number'
+  })
+}
+
+const ANIMAL_KINDS: ReadonlySet<string> = new Set<AnimalKind>([
+  'bear', 'boar', 'chicken', 'cow', 'deer', 'donkey', 'duck', 'fox', 'horse', 'rabbit', 'sheep', 'stag', 'wolf',
+])
+
+function isLivestockLife(value: unknown): value is { hunger: number, thirst: number, stamina: number } {
+  if (!value || typeof value !== 'object') return false
+  const l = value as Record<string, unknown>
+  return typeof l.hunger === 'number' && typeof l.thirst === 'number' && typeof l.stamina === 'number'
+}
+
+function isLivestockCorpse(value: unknown): value is { timeSinceDeath: number, meatHarvested: boolean } | null {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const c = value as Record<string, unknown>
+  return typeof c.timeSinceDeath === 'number' && typeof c.meatHarvested === 'boolean'
+}
+
+/** Validates one `LivestockSaveRecord` (plan persistence-001) — `kind` is
+ *  validated against the full `AnimalKind` set (not just `LIVESTOCK_KINDS`)
+ *  since a merchant horse is a plain `'horse'` too; `livestock.ts`'s own
+ *  kind/owner cross-check at hydration time is what actually gates which
+ *  saved records get applied to which deterministic individual. */
+function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
+  if (!value || typeof value !== 'object') return false
+  const r = value as Record<string, unknown>
+  return (
+    typeof r.settlementId === 'string' &&
+    typeof r.animalId === 'string' &&
+    typeof r.kind === 'string' && ANIMAL_KINDS.has(r.kind) &&
+    (r.ownerHouseId === undefined || typeof r.ownerHouseId === 'string') &&
+    typeof r.x === 'number' &&
+    typeof r.z === 'number' &&
+    typeof r.yaw === 'number' &&
+    isNpcHealth(r.health) &&
+    isLivestockLife(r.life) &&
+    (r.productionReadyAtDays === null || typeof r.productionReadyAtDays === 'number') &&
+    typeof r.eggPending === 'boolean' &&
+    isLivestockCorpse(r.corpse)
+  )
+}
+
+function isLivestockField(value: unknown): value is LivestockSaveRecord[] {
+  return Array.isArray(value) && value.every(isLivestockSaveRecord)
+}
+
+function isRemovedLivestockIdsField(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string')
+}
+
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -1062,6 +1257,11 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlatformsField(v.platforms)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
   if (!isWorkContractsField(v.workContracts)) return false
+  if (v.npcStates !== undefined && !isNpcStatesField(v.npcStates)) return false
+  if (v.households !== undefined && !isHouseholdsField(v.households)) return false
+  if (v.npcRelationships !== undefined && !isNpcRelationshipsField(v.npcRelationships)) return false
+  if (v.livestock !== undefined && !isLivestockField(v.livestock)) return false
+  if (v.removedLivestockIds !== undefined && !isRemovedLivestockIdsField(v.removedLivestockIds)) return false
   return true
 }
 

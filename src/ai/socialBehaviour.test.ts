@@ -102,6 +102,7 @@ function makeRelations(): NpcRelationships & { adjustCalls: [string, string, num
       adjustCalls.push([a, b, delta])
       store.set(`${a}|${b}`, (store.get(`${a}|${b}`) ?? store.get(`${b}|${a}`) ?? 0) + delta)
     },
+    snapshot: () => [],
   }
 }
 
