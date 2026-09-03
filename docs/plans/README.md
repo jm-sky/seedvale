@@ -52,7 +52,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
-| ◼️ `persistence-003-save-schema-versioning-and-migrations.md`          | -       | 🟡 | M      | 002    |
+| 💡 `persistence-003-save-schema-versioning-and-migrations.md`          | -       | 🟡 | M      | 002    |
 
 ---
 
