@@ -56,8 +56,8 @@ import {
 } from '../terrain/resourceDeposits'
 import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
 import { type Beehives, createBeehives } from '../world/createBeehives'
+import { type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
-import { createLargeCaves, type LargeCaves } from '../world/createLargeCaves'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createPalisades, type Palisades } from '../world/createPalisades'
 import {
@@ -135,7 +135,7 @@ export type WorldBundle = {
   palisades: Palisades
   sleepingUtilities: SleepingUtilities
   terrainPreparations: TerrainPreparations
-  largeCaves: LargeCaves
+  caves: Caves
   dryingRacks: DryingRacks
   hives: Beehives
   workContracts: WorkContracts
@@ -733,15 +733,15 @@ async function buildWorldSystems(
   // on the critical path rather than deferred, unlike `itemSpawners`/
   // `dryingRacks`/`hives` below, which need the home settlement's built
   // `landmarks` and so must wait for `homeReady` regardless.
-  bootMark('createLargeCaves')
-  const largeCaves = createLargeCaves(
+  bootMark('createCaves')
+  const caves = createCaves(
     scene,
     chunkManager,
     config.seed,
     villageSizeConfig(homeDef.size).footprintRadius,
     config.terrain.region.coastThreshold,
   )
-  bootMarkEnd('createLargeCaves')
+  bootMarkEnd('createCaves')
 
   const bundle: WorldBundle = {
     chunkManager,
@@ -762,7 +762,7 @@ async function buildWorldSystems(
     palisades,
     sleepingUtilities,
     terrainPreparations,
-    largeCaves,
+    caves,
     dryingRacks: createEmptyDryingRacks(),
     hives: createEmptyBeehives(),
     workContracts,
@@ -1131,7 +1131,7 @@ export async function rebuildWorldBundle(
   // above, applied to NPC relationships/livestock (plan persistence-001).
   const carriedNpcRelationships = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotRelationships()
   const carriedLivestock = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotLivestock()
-  bundle.largeCaves.dispose()
+  bundle.caves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()
@@ -1205,7 +1205,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.palisades.dispose()
   bundle.sleepingUtilities.dispose()
   bundle.terrainPreparations.dispose()
-  bundle.largeCaves.dispose()
+  bundle.caves.dispose()
   bundle.dryingRacks.dispose()
   bundle.hives.dispose()
   bundle.workContracts.dispose()

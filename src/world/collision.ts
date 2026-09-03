@@ -6,7 +6,22 @@
  *  chunk). See the plans for why this is enough and a rigid-body library
  *  isn't. */
 
-export type CircleCollider = {
+/** Optional vertical envelope (world Y) a collider is active within — absent
+ *  on every pre-cave collider (houses, rocks, wells, ...), which stay active
+ *  at any Y exactly as before. Plan world-terrain-007's cave walls are the
+ *  first colliders that need one: the registry's spatial index is XZ-only,
+ *  so without this a surface entity walking the hillside directly above a
+ *  cave tunnel would collide with that tunnel's (invisible, far-below)
+ *  walls. `colliderActiveAtY` is the query-side half of this — callers that
+ *  care (currently only `PlayerController`) filter with it before
+ *  `resolvePosition`; callers that don't pass a Y keep seeing every
+ *  collider, unchanged. */
+export type VerticalExtent = {
+  minY?: number
+  maxY?: number
+}
+
+export type CircleCollider = VerticalExtent & {
   type: 'circle'
   x: number
   z: number
@@ -18,7 +33,7 @@ export type CircleCollider = {
  *  uses everywhere else (world = local rotated by yaw, `x*cos - z*sin` /
  *  `x*sin + z*cos`). Used for house wall segments and closed door leaves,
  *  which need real rectangular footprints, not oversized circles. */
-export type ObbCollider = {
+export type ObbCollider = VerticalExtent & {
   type: 'obb'
   x: number
   z: number
@@ -28,6 +43,16 @@ export type ObbCollider = {
 }
 
 export type Collider = CircleCollider | ObbCollider
+
+/** `true` if `collider` has no vertical envelope (every collider before
+ *  world-terrain-007) or `y` falls inside it. Filter a `query()`/
+ *  `collidersNear()` result through this (with the entity's own Y) before
+ *  `resolvePosition` wherever a collider set might include cave walls. */
+export function colliderActiveAtY(collider: Collider, y: number): boolean {
+  if (collider.minY != null && y < collider.minY) return false
+  if (collider.maxY != null && y > collider.maxY) return false
+  return true
+}
 
 const DEGENERATE_EPSILON = 1e-4
 

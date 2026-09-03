@@ -1816,6 +1816,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       withCategory(monitor, 'TERRAIN', () => {
         bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       })
+      bundle.caves.update(player.mesh.position.x, player.mesh.position.z)
       lights.follow(player.mesh.position.x, player.mesh.position.z)
       bundle.ocean.follow(player.mesh.position.x, player.mesh.position.z)
       colliderDebugView?.update(player.mesh.position.x, player.mesh.position.z, bundle.chunkManager.collidersNear)
