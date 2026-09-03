@@ -7,6 +7,9 @@
 **Depends on:** ~~097~~ ~~125~~
 **Domain:** `world-terrain`
 
+> Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-implementation-notes.md`
+> Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-contract.md`
+
 ## 1. Cel
 
 Wprowadzić deterministyczny system podziemnych jaskiń jako rzeczywistych, walk-in przestrzeni świata, z wejściami w zboczach, własnym floor/ceiling, kolizją, streamingiem i docelową integracją z fauną, lootem, questami i persistence.
