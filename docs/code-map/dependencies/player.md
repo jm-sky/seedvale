@@ -149,6 +149,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `player/torchLightPresets.ts`
 - `shared/getFireParticles.ts`
+- `shared/torchConfig.ts`
 - `world/pointLightBudget.ts`
 
 **Imported by**

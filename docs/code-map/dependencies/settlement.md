@@ -357,6 +357,7 @@ Generated from TypeScript imports.
 - `settlement/houseCatalog.ts`
 - `settlement/propSpecs.ts`
 - `shared/getFireParticles.ts`
+- `shared/torchConfig.ts`
 
 **Imported by**
 

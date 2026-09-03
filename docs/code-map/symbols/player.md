@@ -147,11 +147,11 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerTorch.ts`
 
-- `createPlayerTorch` — function — line 111
-- `PlayerTorch` — type — line 26
-- `TORCH_FUEL_BRANCH` — const — line 20
-- `TORCH_FUEL_WOODEN` — const — line 22
-- `TorchSource` — type — line 24
+- `createPlayerTorch` — function — line 112
+- `PlayerTorch` — type — line 27
+- `TORCH_FUEL_BRANCH` — const — line 21
+- `TORCH_FUEL_WOODEN` — const — line 23
+- `TorchSource` — type — line 25
 
 ## `player/ridingStability.ts`
 
@@ -162,12 +162,12 @@ Generated from exported TypeScript symbols.
 
 ## `player/torchLightPresets.ts`
 
-- `BRANCH_HELD_MAX` — const — line 11
-- `BRANCH_URL` — const — line 10
+- `BRANCH_HELD_MAX` — const — line 13
+- `BRANCH_URL` — const — line 12
+- `TORCH_FLAME_OFFSET_WOODEN` — const — line 10
 - `TORCH_LIGHT_BRANCH` — const — line 1
 - `TORCH_LIGHT_DECAY` — const — line 3
 - `TORCH_LIGHT_WOODEN` — const — line 2
-- `TORCH_SPARK_OFFSET_WOODEN` — const — line 8
 - `TORCH_TIP_OFFSET_BRANCH` — const — line 5
 - `TORCH_TIP_OFFSET_WOODEN` — const — line 6
 

@@ -180,13 +180,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/houseLighting.ts`
 
-- `createHouseLight` — function — line 167
-- `createProceduralTorchPost` — function — line 202
-- `createVillageTorchLight` — function — line 228
-- `HouseLight` — type — line 22
-- `ResolvedHouseLampMount` — type — line 369
-- `resolveHouseLampMount` — function — line 411
-- `VillageTorch` — type — line 28
+- `createHouseLight` — function — line 168
+- `createProceduralTorchPost` — function — line 203
+- `createVillageTorchLight` — function — line 224
+- `HouseLight` — type — line 23
+- `ResolvedHouseLampMount` — type — line 365
+- `resolveHouseLampMount` — function — line 407
+- `VillageTorch` — type — line 29
 
 ## `settlement/landOwnership.ts`
 

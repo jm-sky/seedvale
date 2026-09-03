@@ -127,10 +127,32 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `settlement/createSettlement.ts`
 
+## `shared/fireParticles.type.ts`
+
+**Imported by**
+
+- `shared/getFireParticles.ts`
+- `shared/torchConfig.ts`
+
 ## `shared/getFireParticles.ts`
+
+**Imports**
+
+- `shared/fireParticles.type.ts`
 
 **Imported by**
 
 - `player/PlayerTorch.ts`
 - `settlement/campfireProps.ts`
+- `settlement/houseLighting.ts`
+
+## `shared/torchConfig.ts`
+
+**Imports**
+
+- `shared/fireParticles.type.ts`
+
+**Imported by**
+
+- `player/PlayerTorch.ts`
 - `settlement/houseLighting.ts`

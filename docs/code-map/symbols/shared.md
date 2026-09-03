@@ -6,20 +6,25 @@ Generated from exported TypeScript symbols.
 
 - `useBootMark` — const — line 11
 
+## `shared/fireParticles.type.ts`
+
+- `BurstPool` — type — line 29
+- `FireVisualOptions` — type — line 54
+- `ParticlePool` — type — line 16
+- `PoolParticle` — type — line 3
+- `PoolTuning` — type — line 31
+
 ## `shared/getFireParticles.ts`
 
-- `BurstPool` — type — line 56
-- `createEmberParticles` — function — line 368
-- `createFireSparks` — function — line 346
-- `createFireVisual` — function — line 460
-- `createFlameParticles` — function — line 325
-- `createIgniteBurst` — function — line 390
-- `FIRE_SIZE_CLAMP` — const — line 426
-- `fireFlicker` — function — line 416
-- `FireVisual` — type — line 438
-- `FireVisualOptions` — type — line 428
-- `ParticleLayerOptions` — type — line 305
-- `ParticlePool` — type — line 43
+- `createEmberParticles` — function — line 333
+- `createFireSparks` — function — line 323
+- `createFireVisual` — function — line 415
+- `createFlameParticles` — function — line 307
+- `createIgniteBurst` — function — line 355
+- `FIRE_SIZE_CLAMP` — const — line 391
+- `fireFlicker` — function — line 381
+- `FireVisual` — type — line 393
+- `ParticleLayerOptions` — type — line 301
 
 ## `shared/HealthState.ts`
 
@@ -70,6 +75,10 @@ Generated from exported TypeScript symbols.
 - `restoreThirst` — function — line 24
 - `THIRST_DEHYDRATED_THRESHOLD` — const — line 13
 - `ThirstState` — type — line 3
+
+## `shared/torchConfig.ts`
+
+- `TORCH_DEFAULT_FIRE_VISUAL` — const — line 3
 
 ## `shared/VigorState.ts`
 
