@@ -235,8 +235,8 @@ Generated from TypeScript imports.
 - `tools/assetBrowser/viewer/mountHeldPreview.ts`
 - `world/containerProp.ts`
 - `world/createBeehives.ts`
+- `world/createCaves.ts`
 - `world/createDryingRacks.ts`
-- `world/createLargeCaves.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
 - `world/createStandingTorches.ts`

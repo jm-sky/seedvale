@@ -36,7 +36,7 @@ WorldBundle
 ├── PlacedContainers      player storage, placed or carried (plan 164)
 ├── PlayerWells           player-built wells (plan 127)
 ├── PlayerGardens         player-built garden plots (plan 174)
-├── LargeCaves
+├── Caves                 walk-in cave definitions/presentation/collision (plan world-terrain-007)
 ├── DryingRacks           settlement-landmark preservation (plan 159)
 └── Beehives              settlement-landmark wild hives (plan 159)
 ```
@@ -63,7 +63,7 @@ Application
     │       ├── World items / dropped items
     │       ├── Player-placed objects (fires, tents, traps, containers, wells)
     │       ├── Settlement landmarks with state (drying racks, hives)
-    │       └── Large caves
+    │       └── Walk-in caves (definitions, streamed presentation, wall collision)
     ├── Player
     │   ├── PlayerController
     │   ├── Inventory

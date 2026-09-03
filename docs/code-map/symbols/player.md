@@ -32,11 +32,12 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
+- `CaveGroundQuery` — type — line 159
 - `ColliderSource` — type — line 151
 - `HeightSampler` — type — line 148
 - `PLAYER_HEIGHT` — const — line 53
 - `PLAYER_MODEL_URL` — const — line 146
-- `PlayerController` — class — line 159
+- `PlayerController` — class — line 167
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
@@ -174,10 +175,10 @@ Generated from exported TypeScript symbols.
 ## `player/verticalMotion.ts`
 
 - `GRAVITY` — const — line 3
-- `integrateVerticalMotion` — function — line 35
+- `integrateVerticalMotion` — function — line 44
 - `JUMP_HEIGHT` — const — line 5
 - `JUMP_SPEED` — const — line 6
 - `LAND_MIN_SPEED` — const — line 12
 - `STEP_DOWN_MAX` — const — line 9
 - `VerticalMotionInput` — type — line 14
-- `VerticalMotionResult` — type — line 23
+- `VerticalMotionResult` — type — line 27

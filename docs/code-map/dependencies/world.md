@@ -93,6 +93,78 @@ Generated from TypeScript imports.
 - `player/playerDamage.ts`
 - `world/bloodTraces.test.ts`
 
+## `world/caveColliders.test.ts`
+
+**Imports**
+
+- `world/caveColliders.ts`
+- `world/caveVolume.ts`
+- `world/collision.ts`
+
+## `world/caveColliders.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/collision.ts`
+
+**Imported by**
+
+- `world/caveColliders.test.ts`
+- `world/createCaves.ts`
+
+## `world/caveGenerator.test.ts`
+
+**Imports**
+
+- `world/caveGenerator.ts`
+- `world/caveVolume.ts`
+
+## `world/caveGenerator.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/largeCaves.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `world/caveGenerator.test.ts`
+- `world/createCaves.ts`
+
+## `world/caveMesh.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+
+**Imported by**
+
+- `world/createCaves.ts`
+
+## `world/caveVolume.test.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+
+## `world/caveVolume.ts`
+
+**Imports**
+
+- `math/segment.ts`
+
+**Imported by**
+
+- `world/caveColliders.test.ts`
+- `world/caveColliders.ts`
+- `world/caveGenerator.test.ts`
+- `world/caveGenerator.ts`
+- `world/caveMesh.ts`
+- `world/caveVolume.test.ts`
+- `world/createCaves.ts`
+
 ## `world/clouds.test.ts`
 
 **Imports**
@@ -141,6 +213,8 @@ Generated from TypeScript imports.
 - `settlement/houseBuilder.ts`
 - `settlement/settlementPropColliders.ts`
 - `terrain/chunkManager.ts`
+- `world/caveColliders.test.ts`
+- `world/caveColliders.ts`
 - `world/collision.test.ts`
 - `world/createPalisades.ts`
 - `world/createPlayerGardens.ts`
@@ -173,6 +247,25 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createCaves.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+- `terrain/chunkManager.ts`
+- `world/caveColliders.ts`
+- `world/caveGenerator.ts`
+- `world/caveMesh.ts`
+- `world/caveVolume.ts`
+- `world/largeCaveVisual.ts`
+- `world/largeCaves.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+
 ## `world/createDryingRacks.ts`
 
 **Imports**
@@ -186,21 +279,6 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/interactables.ts`
-- `app/worldBundle.ts`
-
-## `world/createLargeCaves.ts`
-
-**Imports**
-
-- `assets/loadGltf.ts`
-- `settlement/families.ts`
-- `settlement/settlementGenerator.ts`
-- `terrain/chunkManager.ts`
-- `world/largeCaveVisual.ts`
-- `world/largeCaves.ts`
-
-**Imported by**
-
 - `app/worldBundle.ts`
 
 ## `world/createLights.ts`
@@ -642,7 +720,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `world/createLargeCaves.ts`
+- `world/createCaves.ts`
 
 ## `world/largeCaves.test.ts`
 
@@ -662,7 +740,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `world/createLargeCaves.ts`
+- `world/caveGenerator.ts`
+- `world/createCaves.ts`
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.test.ts`
 
@@ -824,6 +903,7 @@ Generated from TypeScript imports.
 - `terrain/resourceDeposits.ts`
 - `terrain/riverNetwork.ts`
 - `terrain/terrainDetailNormalMap.ts`
+- `world/caveGenerator.ts`
 - `world/createBeehives.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`

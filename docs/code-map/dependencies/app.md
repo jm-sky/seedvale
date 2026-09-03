@@ -873,8 +873,8 @@ Generated from TypeScript imports.
 - `world/beehives.ts`
 - `world/bloodTraces.ts`
 - `world/createBeehives.ts`
+- `world/createCaves.ts`
 - `world/createDryingRacks.ts`
-- `world/createLargeCaves.ts`
 - `world/createOcean.ts`
 - `world/createPalisades.ts`
 - `world/createPlacedContainers.ts`

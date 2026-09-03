@@ -23,6 +23,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
+| `world-terrain-007-underground-caves.md`                  | Faza 0-3 done (domain/generator/lifecycle/presentation/movement/collision); Faza 4 fauna/loot/persistence deferred — see plan's "Implementation status" | 🔴  | L      | ~~097~~ ~~125~~ |
 
 - `settlements-001-house-collision-geometry.md`
 
@@ -53,7 +54,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
 | 💡 `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
 | 💡 `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
-| 💡 `world-terrain-007-underground-caves.md`                            | -       | 🟡 | L      | ~~097~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |

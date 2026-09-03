@@ -1,7 +1,7 @@
 # Plan: Underground Caves
 
 **Created:** 2026-08-14  
-**Status:** `planned` 📋  
+**Status:** `in progress` 🔄  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
 **Depends on:** ~~097~~ ~~125~~
@@ -9,6 +9,77 @@
 
 > Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-implementation-notes.md`
 > Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-contract.md`
+
+## Implementation status (2026-09-03)
+
+**Implemented + technically verified** (`npx tsc --noEmit`, `npm run lint`,
+`npm run build`, `npm run test` all pass): Faza 0-3 — `CaveDefinition`/
+`CaveVolume` domain + generator (§4-5, `caveVolume.ts`/`caveGenerator.ts`),
+`WorldBundle` lifecycle (`caves: Caves` replaces `largeCaves`, §3/§6,
+`createCaves.ts`), streamed procedural interior presentation + mouth rock
+framing reuse (§7, `caveMesh.ts`), player floor/ceiling/collision
+integration (§8, `PlayerController.ts`/`verticalMotion.ts`), and cave-wall
+collision via the existing `ColliderRegistry` extended with an optional
+vertical envelope (`collision.ts`'s `minY`/`maxY`, `caveColliders.ts`).
+`largeCaves.ts`/`largeCaveVisual.ts` are kept and reused (site placement,
+mouth rock framing); `createLargeCaves.ts` (trench-carve + immediate
+visual) is removed, fully superseded.
+
+**Not implemented** — Faza 4 (§9): fauna/loot/persistence integration.
+Deliberately deferred rather than rushed — see rationale below. Not a
+silent gap: nothing in Faza 0-3 depends on it, and the plan's own
+acceptance list (§12) items 1-11 (generator density, entrance placement,
+surface continuity, movement, collision, lighting) are all addressed by
+this pass; items 12-13 (cave fauna/loot) are not.
+
+**Browser/gameplay-verified:** not yet — pending manual verification
+(items §12.1-11) per the task's workflow.
+
+### Divergences from the implementation notes/contract (code was authoritative)
+
+- The contract's §13/§40 claim that `PlayerController` "already separates
+  `sampleHeight`/`sampleFloor`" and that seam could be reused directly for
+  cave floor turned out to be wrong: `sampleFloor` is the underwater seabed
+  sampler (swim depth), not a general surface/floor split. A new
+  `CaveGroundQuery` seam was added instead (disambiguated by the entity's
+  own current Y, per contract §14), used only by `PlayerController` for now.
+- The shared `ColliderRegistry` (`collision.ts`) is XZ-only with no
+  vertical extent. Registering cave-wall colliders unmodified would have
+  let them leak onto a surface entity standing above a tunnel. `Collider`
+  gained an optional `minY`/`maxY` (default: active at every Y, matching
+  every pre-existing collider unchanged) plus `colliderActiveAtY()`;
+  `PlayerController` filters by it before `resolvePosition`. `AnimalAgent`/
+  `NpcAgent` do not filter yet — harmless today (no cave-bound fauna), and
+  the same reason Faza 4 fauna integration is deferred rather than bolted
+  on against a wall model that hasn't been used by a second consumer yet.
+
+### Why Faza 4 was deferred instead of implemented under time pressure
+
+- The plan's own fauna/loot/persistence boundary (§9-10, contract §29/§36)
+  requires integrating with `PreySpawner`/`AnimalAgent`'s existing
+  cave/wolfDen habitat-spawner concept in `fauna/createFauna.ts` — which,
+  on inspection, is a *different*, pre-existing, surface-only mechanism
+  (decorative mouth prop near a settlement, animals spawn at surface
+  `sampleHeight`) unrelated to `largeCaves.ts`'s world-scattered walk-in
+  caves this plan targets. Rebinding it to real cave volumes is a
+  meaningfully separate change with its own risk (three-thousand-line
+  `AnimalAgent.ts`), not a small extension of what Faza 0-3 built.
+  Persistence (§14, sparse discovered/cleared/looted state) has no
+  consumer yet without Faza 4 fauna/loot, so there's nothing concrete to
+  persist yet either.
+- Recorded here rather than silently expanding scope or rushing a
+  half-verified fauna change into this pass, per the repo's "no
+  half-finished implementations" / "smallest correct change" rules.
+
+### Suggested follow-up
+
+A separate plan (or a Faza 4 continuation of this one) should: (1) decide
+whether the existing `cave`/`wolfDen` habitat-spawner concept in
+`fauna/createFauna.ts` should be repointed at real `CaveDefinition`s from
+this plan, or kept as its own (renamed) surface-only concept to avoid the
+naming collision; (2) extend `AnimalAgent`'s ground/collision queries with
+the same `CaveGroundQuery`/`colliderActiveAtY` seams added here; (3) add
+the sparse persistence fields once there's actual state to persist.
 
 ## 1. Cel
 

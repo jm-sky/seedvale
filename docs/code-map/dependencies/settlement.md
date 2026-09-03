@@ -244,7 +244,7 @@ Generated from TypeScript imports.
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
-- `world/createLargeCaves.ts`
+- `world/createCaves.ts`
 - `world/hiddenFinds.ts`
 
 ## `settlement/findSettlementSite.test.ts`
@@ -881,7 +881,7 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementPlanCache.ts`
 - `ui-vue/store.ts`
-- `world/createLargeCaves.ts`
+- `world/createCaves.ts`
 - `world/map/mapData.ts`
 
 ## `settlement/settlementPalisade.ts`

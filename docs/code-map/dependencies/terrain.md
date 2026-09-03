@@ -327,7 +327,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `terrain/footstepSurface.test.ts`
 - `terrain/footstepSurface.ts`
-- `world/createLargeCaves.ts`
+- `world/createCaves.ts`
 - `world/createTerrainPreparations.ts`
 - `world/foodSources.ts`
 - `world/worldContext.ts`

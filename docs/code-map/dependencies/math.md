@@ -19,4 +19,5 @@ Generated from TypeScript imports.
 - `settlement/villagePlanner.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverNetwork.ts`
+- `world/caveVolume.ts`
 - `world/largeCaves.ts`

@@ -79,6 +79,31 @@ Generated from exported TypeScript symbols.
 - `recordBloodTrace` — function — line 162
 - `setBloodTraceSink` — function — line 228
 
+## `world/caveColliders.ts`
+
+- `buildCaveWallColliders` — function — line 102
+
+## `world/caveGenerator.ts`
+
+- `CaveGeneratorInput` — type — line 59
+- `generateCaveDefinitions` — function — line 230
+
+## `world/caveMesh.ts`
+
+- `createCaveInteriorMesh` — function — line 117
+
+## `world/caveVolume.ts`
+
+- `CaveBounds` — type — line 41
+- `CaveDefinition` — type — line 50
+- `CaveEntrance` — type — line 30
+- `CaveNode` — type — line 10
+- `CaveNodeKind` — type — line 8
+- `CaveTunnel` — type — line 20
+- `CaveVolume` — type — line 105
+- `computeCaveBounds` — function — line 178
+- `createCaveVolume` — function — line 126
+
 ## `world/clouds.ts`
 
 - `CloudAppearance` — type — line 59
@@ -88,17 +113,19 @@ Generated from exported TypeScript symbols.
 
 ## `world/collision.ts`
 
-- `CircleCollider` — type — line 9
-- `closestBoundaryPoint` — function — line 87
-- `Collider` — type — line 30
-- `colliderContainsPoint` — function — line 71
-- `ColliderRegistry` — type — line 219
-- `colliderRimPoint` — function — line 116
-- `colliderSignedDistance` — function — line 60
-- `createColliderRegistry` — function — line 235
-- `isInsideAnyCollider` — function — line 75
-- `ObbCollider` — type — line 21
-- `resolvePosition` — function — line 198
+- `CircleCollider` — type — line 24
+- `closestBoundaryPoint` — function — line 112
+- `Collider` — type — line 45
+- `colliderActiveAtY` — function — line 51
+- `colliderContainsPoint` — function — line 96
+- `ColliderRegistry` — type — line 244
+- `colliderRimPoint` — function — line 141
+- `colliderSignedDistance` — function — line 85
+- `createColliderRegistry` — function — line 260
+- `isInsideAnyCollider` — function — line 100
+- `ObbCollider` — type — line 36
+- `resolvePosition` — function — line 223
+- `VerticalExtent` — type — line 19
 
 ## `world/containerProp.ts`
 
@@ -111,16 +138,20 @@ Generated from exported TypeScript symbols.
 - `Beehives` — type — line 15
 - `createBeehives` — function — line 63
 
+## `world/createCaves.ts`
+
+- `Caves` — type — line 36
+- `createCaves` — function — line 80
+  - system: caves
+  - role: Owns cave definitions, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
+  - owns: Caves
+  - lifecycle: rebuild
+
 ## `world/createDryingRacks.ts`
 
 - `createDryingRacks` — function — line 48
 - `DryingRackEntry` — type — line 9
 - `DryingRacks` — type — line 11
-
-## `world/createLargeCaves.ts`
-
-- `createLargeCaves` — function — line 72
-- `LargeCaves` — type — line 15
 
 ## `world/createLights.ts`
 
