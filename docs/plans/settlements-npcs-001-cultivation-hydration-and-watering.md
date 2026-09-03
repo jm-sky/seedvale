@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~174~~ ~~126~~ ~~176~~  
 **domain:** `settlements-npcs`  
-**Tags:** [items-player, world-terrain, weather]
+**Tags:** `items-player` `world-terrain` `weather`
 
 ## Cel
 

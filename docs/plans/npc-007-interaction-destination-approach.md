@@ -3,7 +3,7 @@
 **Created:** 2026-09-01
 **Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
-**Depends on:** ~~006~~
+**Depends on:** ~~npc-006~~
 **Domain:** `npc`
 **Subdomains:** `navigation` `movement` `interaction`
 **Tags:** `pathfinding` `collider` `interaction-queue` `well`

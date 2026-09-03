@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** ~~014~~ ~~006~~
+**Depends on:** ~~014~~ ~~fauna-006~~
 **Domain:** `fauna`
 **Tags:** `leading` `harness` `cart` `transport`
 **Roadmap:** `horse-and-riding`  

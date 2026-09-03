@@ -197,6 +197,8 @@ const buildPlanningMetadataContract = (): string[] => [
   '',
   'Keep `Subdomains` and `Tags` short and relevant. They are hints for navigation/preflight, not a replacement for code recon.',
   'Optional `Roadmap` should point to a file in `docs/roadmap` folder. See `docs/plans/PLAN-METADATA.md` for the full contract, including per-field semantics and consumers.',
+  '',
+  'Write complete, correct metadata — don\'t rely on repair. `pnpm plans:sync` (and `pnpm docs:sync`) best-effort repairs missing/malformed/conflicting metadata in place (e.g. a filename-implied `Domain`, a `Depends on: 001` local ID resolved against the current domain) rather than failing the pipeline; see `docs/plans/PLAN-METADATA.md` §18 for exactly what it infers, defaults, or leaves as a warning.',
 ]
 
 const buildTypeSection = (): string[] => [

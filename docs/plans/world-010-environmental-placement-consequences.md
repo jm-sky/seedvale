@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** fix
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~008~~
+**Depends on:** ~~world-008~~
 **Domain:** `world`
 **Subdomains:** `simulation` `weather`
 **Tags:** `placement` `environment` `wetness`

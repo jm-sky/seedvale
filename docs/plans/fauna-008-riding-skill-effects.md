@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** polish  
 **Priority:** medium · **Effort:** S  
-**Depends on:** ~~003~~  
+**Depends on:** ~~fauna-003~~
 **Domain:** `fauna`
 **Roadmap:** `horse-and-riding`  
 

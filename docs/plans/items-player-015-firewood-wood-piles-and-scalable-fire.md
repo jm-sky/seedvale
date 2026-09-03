@@ -4,7 +4,7 @@
 **Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~009~~ ~~122~~
+**Depends on:** ~~items-player-009~~ ~~122~~
 **Domain:** `items-player`
 **Subdomains:** `items` `interaction`
 **Tags:** `wood` `fire` `bonfire`

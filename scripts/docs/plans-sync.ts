@@ -1,7 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { AVAILABLE_DOMAINS, LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_DOMAIN_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
-import { formatValidationIssues, listRoadmapFiles, parsePlanHeader, validatePlanHeader, type ValidationIssue } from './plan-metadata.js'
+import { AVAILABLE_DOMAINS, LEGACY_PLAN_FILE_RE, NOTES_PATH, NOTES_SUFFIX, PLAN_DEPENDS_RE, PLAN_EFFORT_RE, PLAN_FILE_RE, PLAN_PRIORITY_RE, PLAN_STATUS_RE, PLANS_PATH } from './config.js'
+import { listRoadmapFiles, repairPlanMetadata } from './plan-metadata.js'
 
 const README_PATH = resolve(PLANS_PATH, 'README.md')
 const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
@@ -134,29 +134,6 @@ const buildRow = (
   return `| ${title} | -       | ${priorityEmoji} | ${effort.padEnd(6)} | ${depends.padEnd(6)} |`
 }
 
-const validatePlan = async (plan: PlanInfo): Promise<void> => {
-  const content = await readFile(resolve(PLANS_PATH, plan.file), 'utf8')
-
-  const match = content.match(PLAN_DOMAIN_RE)
-
-  if (!match) {
-    console.warn(
-      `Warning: missing "domain:" in \`${plan.file}\`; ` +
-      `using filename domain "${plan.domain}"`,
-    )
-    return
-  }
-
-  const domain = match[1].trim()
-
-  if (domain !== plan.domain) {
-    throw new Error(
-      `Domain mismatch in ${plan.file}: ` +
-      `filename says "${plan.domain}", frontmatter says "${domain}"`,
-    )
-  }
-}
-
 const validateUniqueIds = (plans: PlanInfo[]): void => {
   const seen = new Map<string, string>()
 
@@ -274,10 +251,12 @@ const getPlannedFiles = async (
 }
 
 /**
- * Validate every current (non-legacy) plan against the plan metadata
- * contract (`docs/plans/PLAN-METADATA.md`), collecting every issue rather
- * than failing on the first one so a single sync run surfaces the complete
- * cleanup list.
+ * Repair every current (non-legacy) plan's metadata in place before any
+ * other generator consumes it — see the plan's "Repair before sync" design
+ * principle. Missing/invalid/conflicting metadata is a data-quality issue,
+ * not a pipeline error: this never throws for it, it fixes what it safely
+ * can and logs the rest as warnings (`repairPlanMetadata()` in
+ * `plan-metadata.ts` owns the actual repair logic).
  *
  * Legacy date-ID plans (`LEGACY_PLAN_FILE_RE`) predate the contract and are
  * excluded here the same way the rest of this script already treats them —
@@ -285,28 +264,52 @@ const getPlannedFiles = async (
  *
  * @domain tools
  */
-const validateMetadataContract = async (
+const repairPlans = async (
   plans: PlanInfo[],
 ): Promise<void> => {
   const roadmapFiles = await listRoadmapFiles()
-  const issues: ValidationIssue[] = []
+
+  // Bare numeric `Depends on` IDs are ambiguous with pre-domain legacy
+  // global IDs (see `RepairPlanMetadataOptions.existingPlanIds`) — only
+  // expand one to `<domain>-<id>` when that plan actually exists.
+  const existingPlanIds = new Set(
+    plans.map(plan => `${plan.domain}-${String(plan.id).padStart(3, '0')}`),
+  )
+
+  const warnings: string[] = []
+  let repairedCount = 0
 
   for (const plan of plans) {
-    const content = await readFile(resolve(PLANS_PATH, plan.file), 'utf8')
-    const header = parsePlanHeader(plan.file, content)
+    const path = resolve(PLANS_PATH, plan.file)
+    const content = await readFile(path, 'utf8')
 
-    issues.push(
-      ...validatePlanHeader(header, {
-        domainFromFilename: plan.domain,
-        roadmapFiles,
-      }),
-    )
+    const { content: repairedContent, repair } = repairPlanMetadata(plan.file, content, {
+      domainFromFilename: plan.domain,
+      roadmapFiles,
+      existingPlanIds,
+    })
+
+    if (repair.changed) {
+      await writeFile(path, repairedContent)
+      repairedCount += 1
+
+      console.log(`[plan-repair] ${plan.file}`)
+      for (const change of repair.changes) {
+        console.log(`  ${change.field}: ${change.from ?? 'missing'} → ${change.to} [${change.source}]`)
+      }
+    }
+
+    for (const warning of repair.warnings) {
+      warnings.push(`${plan.file}: ${warning}`)
+    }
   }
 
-  if (issues.length > 0) {
-    throw new Error(
-      `Plan metadata contract violations (${issues.length}):\n${formatValidationIssues(issues)}`,
-    )
+  if (repairedCount > 0) {
+    console.log(`Repaired metadata in ${repairedCount} plan(s).`)
+  }
+
+  if (warnings.length > 0) {
+    console.warn(`Plan metadata warnings (${warnings.length}) — not fixed automatically, review manually:\n${warnings.join('\n')}`)
   }
 }
 
@@ -433,16 +436,6 @@ const removeCompletedPlansFromPlannedSection = async (
   return lines
 }
 
-const validatePlans = async (
-  plans: PlanInfo[],
-): Promise<void> => {
-  validateUniqueIds(plans)
-
-  for (const plan of plans) {
-    await validatePlan(plan)
-  }
-}
-
 const updateNextPlanIds = (
   lines: string[],
   plans: PlanInfo[],
@@ -534,8 +527,8 @@ const main = async () => {
     )
   }
 
-  await validatePlans(plans)
-  await validateMetadataContract(plans)
+  validateUniqueIds(plans)
+  await repairPlans(plans)
 
   const plannedFiles: string[] =
     await getPlannedFiles(plans)

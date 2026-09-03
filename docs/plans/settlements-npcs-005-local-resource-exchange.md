@@ -3,7 +3,7 @@
 **Created:** 2026-08-28
 **Status:** `verification needed` 🔍
 **Priority:** high · **Effort:** M
-**Depends on:** ~~156~~ ~~002~~
+**Depends on:** ~~156~~ ~~settlements-npcs-002~~
 **Domain:** `settlements-npcs`
 **Roadmap:** `economy-production`
 

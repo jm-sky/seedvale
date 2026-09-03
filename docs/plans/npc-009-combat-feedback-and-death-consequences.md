@@ -3,7 +3,7 @@
 **Created:** 2026-09-01
 **Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test all green). Browser/manual gameplay verification not yet performed — see the Verification section below.
 **Priority:** high · **Effort:** M
-**Depends on:** 177 179 007
+**Depends on:** 177 179 npc-007
 **Domain:** `npc`
 
 ## Cel

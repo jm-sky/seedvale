@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** 010
+**Depends on:** npc-010
 **Domain:** `npc`
 **Roadmap:** `npc-professions-households-and-age`  
 

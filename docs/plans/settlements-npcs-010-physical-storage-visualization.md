@@ -3,7 +3,7 @@
 **Created:** 2026-08-30
 **Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** L
-**Depends on:** ~~009~~
+**Depends on:** ~~settlements-npcs-009~~
 **Domain:** `settlements-npcs`
 **Roadmap:** [Physical Resource Storage & Logistics](../roadmap/physical-resource-storage-and-logistics.md)
 

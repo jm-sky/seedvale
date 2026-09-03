@@ -3,7 +3,7 @@
 **Created:** 2026-08-31  
 **Status:** `verification needed` 🔍  
 **Priority:** high · **Effort:** M  
-**Depends on:** ~~001~~ ~~002~~ ~~003~~  
+**Depends on:** ~~ai-001~~ ~~ai-002~~ ~~ai-003~~
 **Domain:** `ai`
 
 ## Cel

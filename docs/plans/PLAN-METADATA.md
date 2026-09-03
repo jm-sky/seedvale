@@ -548,7 +548,41 @@ A future `plans-recommended-order.ts` can expose profiles such as:
 
 ---
 
-## 18. Maintenance rule
+## 18. Metadata repair (self-healing)
+
+**Status:** `implemented` (tools-011)
+
+Missing, unnormalized or conflicting metadata is a data-quality problem, not a pipeline error — a plan generated with incomplete metadata (for example by ChatGPT) does not fail `pnpm plans:sync` / `pnpm docs:sync`. `repairPlanMetadata()` in `scripts/docs/plan-metadata.ts` is the single repair implementation, shared by `plans-sync.ts` (runs before any other metadata consumer) and `migrate-plan-metadata.ts` (`pnpm plans:migrate-metadata`, scoped to `Status: planned` plans, `--write` to apply). It parses the header, repairs in memory, writes the whole file back as one change when anything changed, and re-parses the result — never independent per-field writes.
+
+It is deterministic and idempotent (`repair(repair(x)) === repair(x)`) and never throws for a metadata-quality issue — it fixes what it safely can and reports the rest via `repair.warnings` (kept as warnings on `console.warn`, not `console.error`/an exception). It only throws for an actual technical failure (a file read/write error, a generator bug) — that distinction is the point of this design.
+
+Inference hierarchy for a missing value: explicit metadata → filename → title → safe default. Body content is never used as a signal — no semantic classifier.
+
+| Field | Missing | Invalid/conflicting |
+|---|---|---|
+| `Domain` | inferred from filename (`<domain>-<id>-...md`) when the filename resolves to a canonical domain; otherwise left unset + warning | filename wins over a conflicting value; an invalid value with no filename signal is left unchanged + warning |
+| `Type` | inferred from a narrow keyword list against title/filename (`fix`, `bug`fix, `optimization`/`performance`, `refactor`, `polish`, `infrastructure`), then the `tools` domain defaults to `infrastructure`, else `feature` — but only for a `planned` plan; a non-`planned` plan missing `Type` is left alone (matches `validatePlanHeader`, which doesn't require it there either) | replaced using the same inference, with a warning |
+| `Status` | defaulted to `planned` + warning | unrecognized value (not a known status modulo case/whitespace) falls back to `planned` + warning; the icon after the value is fixed in place (missing, stale, or a similar-but-wrong emoji) without touching any trailing prose on the line |
+| `Priority` | defaulted to `medium`, unless the plan is `done`/`verification needed` (matches `validatePlanHeader`) | case normalized silently; an unrecognized value defaults to `medium` + warning |
+| `Effort` | defaulted to `S`, unless the plan is `done`/`verification needed` | case normalized silently; an unrecognized value defaults to `S` + warning |
+| `Depends on` | defaulted to `-` + warning | see local dependency IDs below |
+| `Created` / `Implemented at` | **never fabricated** — a missing `Created` is left unset + warning; an invalid format on either field is left unchanged + warning | same |
+| `Roadmap` | not inferred | a value that doesn't match a file in `docs/roadmap/` is left unchanged + warning (checked only when the caller supplies `roadmapFiles`) |
+| `Subdomains` / `Tags` | not inferred | reformatted to the canonical `` `a` `b` `` form when the current formatting (comma-separated, bracketed, ...) differs |
+
+### Local dependency IDs
+
+A plan's own domain (from its filename) makes `Depends on` IDs local: `Depends on: 001` on `npc-018-....md` means `npc-001`. `~~001~~`/`` `001` `` (struck-through/backtick-wrapped, i.e. already-satisfied) expand the same way; an explicit `npc-001` or `fauna-003` is left untouched; mixed lists normalize just the bare tokens.
+
+This is deliberately conservative: the repository also has pre-domain legacy plans identified by a bare **global** numeric ID (e.g. `177`, resolved by `plans-recommended-order.ts` against `docs/plans/archive/`), so a bare 3-digit token is ambiguous between "local to this domain" and "legacy global ID" — nothing in the token itself disambiguates it. A bare ID is therefore only expanded when `<current-domain>-<id>` is an actual existing plan (`RepairPlanMetadataOptions.existingPlanIds`, built from every current non-legacy plan file); otherwise it's left exactly as written. Expanding an unresolved bare ID would silently point a real plan at a nonexistent one and break `plans-recommended-order.ts`'s dependency graph — this was caught during this feature's own real-repository verification pass, where several existing plans turned out to depend on legacy IDs, not local ones.
+
+### What's a warning vs. a real error
+
+A warning (`repair.warnings`, printed via `console.warn`) means: something couldn't be safely repaired or inferred, so it was left as-is — review it manually, but the pipeline still succeeds. A real error (an uncaught exception, `process.exitCode = 1`) means an actual technical failure: a file couldn't be read/written, or a generator hit a bug. Repair must never blur this line by swallowing a real error into a warning, or by throwing for a metadata-quality issue.
+
+---
+
+## 19. Maintenance rule
 
 When adding or changing plan metadata:
 

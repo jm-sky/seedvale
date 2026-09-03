@@ -4,7 +4,7 @@
 **Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test); browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-014-local-goods-circulation-implementation-notes.md).  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
-**Depends on:** ~~008~~ ~~009~~ ~~010~~  
+**Depends on:** ~~settlements-npcs-008~~ ~~settlements-npcs-009~~ ~~settlements-npcs-010~~
 **Domain:** `settlements-npcs`
 **Roadmap:** `economy-goods-flow`  
 

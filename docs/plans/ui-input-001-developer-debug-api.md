@@ -6,7 +6,7 @@
 **Depends on:** none
 
 **domain:** `ui-input`
-**tags:** [world-terrain, settlements-npcs]
+**Tags:** `world-terrain` `settlements-npcs`
 
 ## Cel
 

@@ -3,7 +3,7 @@
 **Created:** 2026-09-02
 **Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
-**Depends on:** ~~004~~
+**Depends on:** ~~world-terrain-004~~
 **Domain:** `world-terrain`
 **Subdomains:** `grass` `roads` `lod` `graphics`
 **Tags:** `vegetation` `road-detail` `performance`

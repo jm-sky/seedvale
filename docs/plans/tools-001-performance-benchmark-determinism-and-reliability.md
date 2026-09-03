@@ -5,7 +5,7 @@
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `tools`
-**Tags:** `performance`, `benchmarking`, `rendering`, `streaming`
+**Tags:** `performance` `benchmarking` `rendering` `streaming`
 
 ## Cel
 

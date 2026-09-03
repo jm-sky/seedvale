@@ -3,7 +3,7 @@
 **Created:** 2026-09-03  
 **Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
-**Depends on:** 002  
+**Depends on:** persistence-002
 **Domain:** `persistence`
 
 ## Goal

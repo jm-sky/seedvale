@@ -5,7 +5,7 @@
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **domain:** `world`  
-**tags:** [world-terrain, settlements-npcs, fauna, items-player]
+**Tags:** `world-terrain` `settlements-npcs` `fauna` `items-player`
 
 ## Goal
 
