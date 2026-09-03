@@ -53,7 +53,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                      | -       | 🟡 | L      | ~~014~~ ~~006~~ |
 | ◼️ `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | -       | 🔴 | L      | -      |
-| ◼️ `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | -       | 🟡 | M      | -      |
+| 💡 `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | -       | 🟡 | M      | -      |
 
 ---
 
