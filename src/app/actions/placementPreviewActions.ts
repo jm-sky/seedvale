@@ -1,3 +1,4 @@
+import type { LightActionResult } from '../userActions'
 import type { ContainerActions } from './containerActions'
 import type { PlacementActions, PlacementPreviewResult } from './placementActions'
 import type { WorkContractActions } from './workContractActions'
@@ -55,7 +56,7 @@ export type PlacementPreviewActionDeps = {
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
   workContract: Pick<WorkContractActions, 'previewContractPlacement' | 'confirmContractPlacementAtAim'>
   previewFire: () => PlacementPreviewResult
-  buildSimpleFire: () => boolean
+  buildSimpleFire: () => LightActionResult
   buildFirePit: () => boolean
   showPreview: (view: PlacementPreviewUiView) => void
   hidePreview: () => void

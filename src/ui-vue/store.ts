@@ -83,7 +83,7 @@ type PauseMenuState = {
   onSave: (() => void) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
   onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
   onRefresh: (() => void) | null
-  onBuildSimpleFire: (() => boolean) | null; onBuildFirePit: (() => boolean) | null; onBuildGrate: (() => boolean) | null
+  onBuildSimpleFire: (() => LightActionResult) | null; onBuildFirePit: (() => boolean) | null; onBuildGrate: (() => boolean) | null
   onLightBranch: (() => LightActionResult) | null; onLightWoodenTorch: (() => LightActionResult) | null
   onNewGame: ((name: string) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string

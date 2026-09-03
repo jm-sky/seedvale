@@ -6,6 +6,7 @@ import {
   SIMPLE_FIRE_BRANCH_COST,
   TORCH_BRANCH_COST,
 } from '../app/userActions'
+import { CAPABILITY_NEED_LABEL } from '../items/itemCatalog'
 
 /** Shared fire-action catalog for Quick Actions and Pauza → Akcje (review 007 C8).
  *  `buildGrate` (plan 175) is Quick-Actions-only, not duplicated into
@@ -19,7 +20,7 @@ export type FireActionHandlers = {
   onLightBranch?: (() => LightActionResult) | null
   onLightWoodenTorch?: (() => LightActionResult) | null
   onBuildFirePit?: (() => boolean) | null
-  onBuildSimpleFire?: (() => boolean) | null
+  onBuildSimpleFire?: (() => LightActionResult) | null
   onBuildGrate?: (() => boolean) | null
 }
 
@@ -38,16 +39,25 @@ type FireActionDef = {
   run: (handlers: FireActionHandlers) => { ok: boolean; toast: string; kind: 'info' | 'error' }
 }
 
+type LightResult = {
+  ok: boolean;
+  toast: string;
+  kind: 'info' | 'error'
+}
+
 const LIGHT_FAIL: Record<Exclude<LightActionResult, 'ok'>, string> = {
   'already-lit': 'Już płonie',
   missing: 'Brakuje surowców',
+  'missing-capability': `Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`,
+  'wrong-placement': 'Nie można zapalić ognia w tym miejscu',
   'need-hold': 'Weź pochodnię w rękę',
+  'unknown-error': 'Wystąpił nieznany błąd',
 }
 
 function lightResult(
   result: LightActionResult,
   success: string,
-): { ok: boolean; toast: string; kind: 'info' | 'error' } {
+): LightResult {
   if (result === 'ok') return { ok: true, toast: success, kind: 'info' }
   return { ok: false, toast: LIGHT_FAIL[result], kind: 'error' }
 }
@@ -85,10 +95,8 @@ export const FIRE_QUICK_ACTIONS: readonly FireActionDef[] = [
     cost: `${SIMPLE_FIRE_BRANCH_COST}× gałąź`,
     availableKey: 'buildSimpleFire',
     run: (handlers) => {
-      const built = handlers.onBuildSimpleFire?.() ?? false
-      return built
-        ? { ok: true, toast: 'Zbudowano ognisko!', kind: 'info' }
-        : { ok: false, toast: 'Brakuje surowców', kind: 'error' }
+      const built = handlers.onBuildSimpleFire?.() ?? 'unknown-error'
+      return lightResult(built, 'Zbudowano ognisko!')
     },
   },
   {

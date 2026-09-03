@@ -17,7 +17,7 @@ import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
 import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../../items/campfireCooking'
 import { getFreshnessStage } from '../../items/foodFreshness'
 import { type Inventory, inventoryFullToastText } from '../../items/Inventory'
-import { hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
+import { CAPABILITY_NEED_LABEL, hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
 import { isLiquidContainerInstance, isLiquidContainerKind, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import {
@@ -139,7 +139,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
   const startIgniteFire = (fire: VillageFire): void => {
     if (isActionBlocked(ctx)) return
     if (!inventory.hasCapability('fire_starting')) {
-      toast.show('Potrzebujesz krzesiwa, żeby rozpalić ogień.', 'error')
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
       return
     }
     if (!FIRE_FUEL_KINDS.some((kind) => inventory.has(kind, 1))) {

@@ -40,7 +40,7 @@ export const GRATE_COST = { branch: 2, stone: 2, iron_rod: 2 } as const
  *  gesture, just resolved as a nearest-in-range query instead of gaze/E. */
 export const GRATE_BUILD_RANGE = 2.5
 
-export type LightActionResult = 'ok' | 'already-lit' | 'missing' | 'need-hold'
+export type LightActionResult = 'ok' | 'already-lit' | 'missing' | 'missing-capability' | 'need-hold' | 'wrong-placement' | 'unknown-error'
 
 const getUserActions = (
   inventory: Inventory,
@@ -100,15 +100,21 @@ const getUserActions = (
     }
   }
 
-  const buildSimpleFire = (): boolean => {
-    if (!inventory.hasCapability('fire_starting') || !inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return false
+  const buildSimpleFire = (): LightActionResult => {
+    if (!inventory.hasCapability('fire_starting')) return 'missing-capability'
+    if (!inventory.has('branch', SIMPLE_FIRE_BRANCH_COST)) return 'missing'
+
     const aim = fireAimPoint()
-    if (!evaluateFirePlacement(aim.x, aim.z)) return false
+
+    if (!evaluateFirePlacement(aim.x, aim.z)) return 'wrong-placement'
+
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
     bundle.placedFires.place(aim.x, aim.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-    return true
+
+    return 'ok'
   }
+
   const buildFirePit = (): boolean => {
     if (!inventory.has('stone', FIRE_PIT_STONE_COST)) return false
     const aim = fireAimPoint()
@@ -147,7 +153,9 @@ const getUserActions = (
   /** Lit branch occupies the right hand — unequip any tool first. */
   const lightBranch = (): LightActionResult => {
     if (playerTorch.isLit()) return 'already-lit'
-    if (!inventory.hasCapability('fire_starting') || !inventory.has('branch', TORCH_BRANCH_COST)) return 'missing'
+    if (!inventory.hasCapability('fire_starting')) return 'missing-capability'
+    if (!inventory.has('branch', TORCH_BRANCH_COST)) return 'missing'
+
     inventory.remove('branch', TORCH_BRANCH_COST)
     heldTool.unequip()
     syncHeldHud()
@@ -159,7 +167,7 @@ const getUserActions = (
   /** Wooden torch must be held; firestarter required; item is not consumed. */
   const lightWoodenTorch = (): LightActionResult => {
     if (playerTorch.isLit()) return 'already-lit'
-    if (!inventory.hasCapability('fire_starting')) return 'missing'
+    if (!inventory.hasCapability('fire_starting')) return 'missing-capability'
     if (heldTool.held() !== 'wooden_torch') {
       if (!inventory.has('wooden_torch', 1)) return 'missing'
       // Auto-equip when hand is free; refuse if another tool is held.
