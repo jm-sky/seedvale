@@ -22,6 +22,7 @@ import {
   sampleApronGrid,
   type VegetationKind,
 } from './chunkHeightmap'
+import { isInsideRiverChannel } from './riverNetwork'
 
 export type VegetationPlacement = {
   x: number
@@ -52,8 +53,12 @@ const SLOPE_SAMPLE_STEP = 1.5
 /** Reject candidates on slopes steeper than this (roughly matches where
  *  `applySlopeRock` starts taking over visually). */
 const SLOPE_REJECT = 0.9
-/** Treeline — fraction of `heightScale` above `waterLevel` above which nothing grows. */
-const TREELINE_ALTITUDE = 0.6
+/** Treeline — fraction of `heightScale` above `waterLevel` above which nothing
+ *  grows. Raised from 0.6 (world-terrain-006) alongside `biomeRegions.ts`'s
+ *  `forestDensityAt` altitude fade so the hard cutoff sits past where density
+ *  has actually tapered to near-zero, instead of chopping off a still-tapering
+ *  slope. Ridge crests stay bare via `MOUNTAIN_RIDGE_REJECT` regardless. */
+const TREELINE_ALTITUDE = 0.66
 /** Reject candidates sitting on a strong mountain ridge crest, regardless of altitude. */
 const MOUNTAIN_RIDGE_REJECT = 0.35
 /** Reject candidates sitting on a road/path corridor (`tile.roadTint`, `chunkHeightmap.ts`). */
@@ -214,6 +219,7 @@ export function computeChunkVegetation(
     const wz = coord.cz * chunkSize + localZ
 
     const h = sample(tile.heights, wx, wz)
+    if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, wx, wz)) continue // river channel
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     const moistureRegion = sample(tile.moistureRegion, wx, wz)
     const continentalness = sample(tile.continentalness, wx, wz)
@@ -405,6 +411,7 @@ function flowerMeadowPatches(
 
     const h = sample(tile.heights, cx, cz)
     if (h <= waterLevel + 0.5) continue
+    if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, cx, cz)) continue
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     if (altitude > MEADOW_ALTITUDE_LIMIT) continue
 
@@ -435,6 +442,7 @@ function flowerMeadowPatches(
       const fh = sample(tile.heights, fx, fz)
       if (fh <= waterLevel + 0.4) continue
       if (sample(tile.roadTint, fx, fz) > ROAD_TINT_REJECT) continue
+      if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, fx, fz)) continue
 
       out.push({
         x: fx,
@@ -497,6 +505,7 @@ function fernPatches(
 
     const h = sample(tile.heights, cx, cz)
     if (h <= waterLevel + 0.3) continue // underwater/shoreline
+    if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, cx, cz)) continue
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     if (altitude > TREELINE_ALTITUDE) continue // above treeline
 
@@ -532,6 +541,7 @@ function fernPatches(
       const fh = sample(tile.heights, fx, fz)
       if (fh <= waterLevel + 0.2) continue
       if (sample(tile.roadTint, fx, fz) > ROAD_TINT_REJECT) continue
+      if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, fx, fz)) continue
 
       out.push({
         x: fx,

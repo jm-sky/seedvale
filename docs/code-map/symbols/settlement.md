@@ -22,26 +22,26 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/decorProps.ts`
 
-- `cemeteryGraveLayout` — function — line 473
-- `CemeterySize` — type — line 446
-- `CemeteryTemplates` — type — line 438
+- `cemeteryGraveLayout` — function — line 549
+- `CemeterySize` — type — line 517
+- `CemeteryTemplates` — type — line 509
 - `createBush` — function — line 103
 - `createCactus` — function — line 144
-- `createCaveMouth` — function — line 578
-- `createCemetery` — function — line 511
-- `createCemeteryPlot` — function — line 423
+- `createCaveMouth` — function — line 658
+- `createCemetery` — function — line 587
+- `createCemeteryPlot` — function — line 494
 - `createCobblePlate` — function — line 178
 - `createFallenLog` — function — line 260
 - `createFelledTree` — function — line 90
 - `createFern` — function — line 163
-- `createGraveStone` — function — line 405
+- `createGraveStone` — function — line 476
 - `createLargeRock` — function — line 211
 - `createLimbedTree` — function — line 61
-- `createMonolith` — function — line 278
+- `createMonolith` — function — line 293
 - `createReed` — function — line 191
 - `createRockCluster` — function — line 234
-- `createSmallRuins` — function — line 362
-- `createStoneCircle` — function — line 324
+- `createSmallRuins` — function — line 401
+- `createStoneCircle` — function — line 356
 - `createThicket` — function — line 121
 - `createTree` — function — line 18
 - `createTreeStump` — function — line 40

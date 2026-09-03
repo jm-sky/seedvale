@@ -5,9 +5,11 @@ import {
   computeChunkTile,
   type RawSampleParams,
   type RegionParams,
+  type RiverChannelSegment,
   sampleApronGrid,
 } from './chunkHeightmap'
 import { computeChunkVegetation } from './chunkVegetation'
+import { isInsideRiverChannel } from './riverNetwork'
 
 /** Same base terrain as `grassPlacement.test.ts`'s `tileParams` — `region`
  *  thresholds are overridden per test to force a specific biome so fern
@@ -112,6 +114,66 @@ function fernCountAcross(params: ChunkTileParams, chunkCount: number): number {
   }
   return total
 }
+
+describe('computeChunkVegetation — river channel exclusion (world-terrain-006)', () => {
+  it('never places vegetation inside a river channel, even where the carved bed stays above waterLevel (mountain stream)', () => {
+    const waterLevel = 0.45
+    // A wide, straight channel along z=0 whose bed sits well above
+    // waterLevel — the heights clamp alone would not reject candidates here
+    // (unlike a sea-level river); only the explicit channel geometry should.
+    const riverSegments: RiverChannelSegment[] = [
+      {
+        ax: -500,
+        az: 0,
+        aBedH: waterLevel + 3,
+        aHalfWidth: 20,
+        aBankWidth: 2,
+        bx: 500,
+        bz: 0,
+        bBedH: waterLevel + 3,
+        bHalfWidth: 20,
+        bBankWidth: 2,
+      },
+    ]
+
+    let totalVegetation = 0
+    for (let cx = -3; cx <= 8; cx++) {
+      const coord = { cx, cz: 0 }
+      const params = tileParams({ cx, cz: 0, seed: 100 + cx, riverSegments })
+      const tile = computeChunkTile(params)
+      const vegetation = computeChunkVegetation(coord, tile, params)
+      totalVegetation += vegetation.length
+      for (const v of vegetation) {
+        expect(isInsideRiverChannel(riverSegments, v.x, v.z)).toBe(false)
+      }
+    }
+    // Sanity: the channel doesn't span the whole chunk, so placements still
+    // happen outside it — an empty result would make the assertion above
+    // vacuous.
+    expect(totalVegetation).toBeGreaterThan(0)
+  })
+
+  it('leaves the river bank (just outside the channel) eligible as ordinary dry land', () => {
+    const waterLevel = 0.45
+    const riverSegments: RiverChannelSegment[] = [
+      {
+        ax: -500,
+        az: 0,
+        aBedH: waterLevel + 3,
+        aHalfWidth: 4,
+        aBankWidth: 1,
+        bx: 500,
+        bz: 0,
+        bBedH: waterLevel + 3,
+        bHalfWidth: 4,
+        bBankWidth: 1,
+      },
+    ]
+    // Just outside the channel's water half-width (4m) but still close to it.
+    expect(isInsideRiverChannel(riverSegments, 0, 4.5)).toBe(false)
+    expect(isInsideRiverChannel(riverSegments, 0, 2)).toBe(true)
+  })
+})
 
 describe('computeChunkVegetation — fern (plan 140)', () => {
   it('never spawns ferns on forced-desert terrain', () => {

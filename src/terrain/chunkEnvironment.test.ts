@@ -1,13 +1,30 @@
 import { describe, expect, it } from 'vitest'
+import type { RoadCorridorSegment } from './chunkHeightmap'
 import { createSeededRandom } from '../world/parseSeed'
 import {
   cemeteryFitsVillageFringe,
+  cemeteryFootprintClearsRoads,
   deriveLandmarkId,
   LANDMARK_BIAS_MAX,
   LANDMARK_BIAS_MIN,
   landmarkChanceBias,
   rollCemeterySize,
 } from './chunkEnvironment'
+
+function roadSegment(overrides: Partial<RoadCorridorSegment> = {}): RoadCorridorSegment {
+  return {
+    ax: -50,
+    az: 0,
+    ah: 0,
+    bx: 50,
+    bz: 0,
+    bh: 0,
+    halfWidth: 5,
+    heightStrength: 0.85,
+    tintStrength: 0.8,
+    ...overrides,
+  }
+}
 
 const PLAINS = {
   mountainRidge: 0,
@@ -79,6 +96,39 @@ describe('cemeteryFitsVillageFringe', () => {
   it('rejects inside the inner band and past the outer band', () => {
     expect(cemeteryFitsVillageFringe(10, 0, [village], [])).toBe(false)
     expect(cemeteryFitsVillageFringe(50, 0, [village], [])).toBe(false)
+  })
+})
+
+describe('cemeteryFootprintClearsRoads (world-terrain-006)', () => {
+  it('accepts a cemetery with no nearby road', () => {
+    expect(cemeteryFootprintClearsRoads(0, 0, 'SM', 1, [])).toBe(true)
+  })
+
+  it('rejects a cemetery whose center sits on the road, for every size', () => {
+    const segments = [roadSegment()]
+    for (const size of ['SM', 'MD', 'LG'] as const) {
+      expect(cemeteryFootprintClearsRoads(0, 3, size, 1, segments)).toBe(false)
+    }
+  })
+
+  it('rejects an LG cemetery whose grave-grid footprint reaches a road even though its center point clears it', () => {
+    const segments = [roadSegment({ halfWidth: 3 })]
+    // Far enough that the road-tint center-point check alone would pass —
+    // an LG cemetery's wider grid still reaches this road.
+    const y = 12
+    expect(cemeteryFootprintClearsRoads(0, y, 'LG', 1, segments)).toBe(false)
+  })
+
+  it('accepts a cemetery whose footprint clears the road with the safety margin', () => {
+    const segments = [roadSegment({ halfWidth: 3 })]
+    expect(cemeteryFootprintClearsRoads(0, 40, 'LG', 1, segments)).toBe(true)
+  })
+
+  it('scales the rejected footprint with `scale`', () => {
+    const segments = [roadSegment({ halfWidth: 3 })]
+    const y = 15
+    expect(cemeteryFootprintClearsRoads(0, y, 'SM', 1, segments)).toBe(true)
+    expect(cemeteryFootprintClearsRoads(0, y, 'SM', 3, segments)).toBe(false)
   })
 })
 

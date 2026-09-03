@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { RawSampleParams } from './chunkHeightmap'
+import * as chunkHeightmap from './chunkHeightmap'
 import { sampleContinentalnessAt, sampleMountainRidgeAt } from './chunkHeightmap'
 import {
   computeHydrologyRegion,
@@ -179,15 +180,46 @@ describe('hydrology D8 prototype', () => {
     expect(terminalAccumulationSum(region)).toBe(SIZE * SIZE)
   })
 
-  it('flags a boundary-exit cell as an ocean outlet only when the outside neighbour is underwater', () => {
+  it('flags OCEAN_OUTLET only on a terminal cell (sink or boundary-exit) whose own drainage point is underwater', () => {
     const params = rawParams(5)
     const regionParams: HydrologyRegionParams = { originX: 0, originZ: 0, size: SIZE, cellStep: CELL_STEP }
     const region = computeHydrologyRegion(regionParams, params)
     for (let i = 0; i < region.flags.length; i++) {
       const flag = region.flags[i]!
       if ((flag & HydrologyFlag.OCEAN_OUTLET) !== 0) {
-        expect((flag & HydrologyFlag.BOUNDARY_EXIT) !== 0).toBe(true)
+        expect((flag & (HydrologyFlag.SINK | HydrologyFlag.BOUNDARY_EXIT)) !== 0).toBe(true)
       }
+    }
+  })
+
+  it('flags a sink as OCEAN_OUTLET only when its own elevation is at/below waterLevel', () => {
+    const waterLevel = 0.45
+    const params = rawParams(1, { waterLevel })
+    const size = 12
+    const cellStep = 4
+    const regionParams: HydrologyRegionParams = { originX: -1000, originZ: -1000, size, cellStep }
+    const cix = Math.floor(size / 2)
+    const ciz = Math.floor(size / 2)
+    const centerX = regionParams.originX + cix * cellStep
+    const centerZ = regionParams.originZ + ciz * cellStep
+
+    for (const bottom of [waterLevel - 0.2, waterLevel + 0.5]) {
+      const floorAtSpy = vi
+        .spyOn(chunkHeightmap, 'sampleFloorAt')
+        .mockImplementation((wx: number, wz: number) => bottom + Math.hypot(wx - centerX, wz - centerZ) * 0.3)
+      const heightAtSpy = vi
+        .spyOn(chunkHeightmap, 'sampleHeightAt')
+        .mockImplementation((wx: number, wz: number) =>
+          Math.max(bottom + Math.hypot(wx - centerX, wz - centerZ) * 0.3, waterLevel),
+        )
+
+      const region = computeHydrologyRegion(regionParams, params)
+      const idx = ciz * size + cix
+      expect(region.flags[idx]! & HydrologyFlag.SINK).toBeTruthy()
+      expect((region.flags[idx]! & HydrologyFlag.OCEAN_OUTLET) !== 0).toBe(bottom <= waterLevel)
+
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
     }
   })
 

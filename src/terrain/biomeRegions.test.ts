@@ -106,6 +106,27 @@ describe('forestDensityAt', () => {
     expect(open).toBeLessThan(0.35)
   })
 
+  it('keeps some density well up-mountain instead of hitting zero before the placement treeline (world-terrain-006)', () => {
+    // 0.58 sat past the old fade end (0.55) — forestDensity used to hit
+    // exactly 0 there, well below the placement treeline (0.66), leaving a
+    // band with only baseline scattered trees and no continuous habitat.
+    const upperSlope = forestDensityAt(0.55, 0.58, LAND, NO_RIDGE, REGION)
+    expect(upperSlope).toBeGreaterThan(0)
+  })
+
+  it('still fades to zero well before the placement treeline on a bare, non-ridge slope', () => {
+    expect(forestDensityAt(0.55, 1.0, LAND, NO_RIDGE, REGION)).toBe(0)
+  })
+
+  it('decreases monotonically with altitude on the upper-mountain slope', () => {
+    let prev = forestDensityAt(0.55, 0.3, LAND, NO_RIDGE, REGION)
+    for (let alt = 0.35; alt <= 0.7; alt += 0.05) {
+      const d = forestDensityAt(0.55, alt, LAND, NO_RIDGE, REGION)
+      expect(d).toBeLessThanOrEqual(prev + 1e-9)
+      prev = d
+    }
+  })
+
   it('is reduced on high ridges and highlands', () => {
     const valley = forestDensityAt(0.55, LOWLAND, LAND, NO_RIDGE, REGION)
     const ridge = forestDensityAt(0.55, LOWLAND, LAND, 0.35, REGION)

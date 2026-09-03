@@ -53,7 +53,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-004-well-depth-groundwater-and-protection.md`                | -       | 🟡 | M      | ~~127~~ |
 | 💡 `fauna-008-riding-skill-effects.md`                                 | -       | 🟡 | S      | ~~003~~ |
 | 💡 `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
-| 💡 `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
@@ -106,6 +105,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `persistence-001-full-simulation-persistence.md` | Adjust an NPC's needs/HP, give it a helper assignment/active plan, change household stock/items, nudge an NPC↔NPC relationship, move/injure/kill house livestock (some mid-production, one already removed via corpse lifecycle) — Save → Load and confirm every value round-trips, no duplicate/resurrected livestock, and old pre-persistence-001 saves still load with fresh deterministic NPC/household/livestock state |
 | `persistence-003-save-schema-versioning-and-migrations.md` | Continue/New Game/manual Save+Load still round-trip an ordinary v1 save exactly as before (no version-related regression); the migration pipeline itself (version detection, chain-walking, invalid/migration-failed/unsupported-version distinction, write-guard refusal) has full automated coverage since no real v2 schema exists yet to exercise manually |
 | `ui-input-007-player-action-contracts-and-quick-actions-availability.md` | Open Quick Actions → Ogień with a fresh inventory: all 5 fire actions are visible but disabled/50% opacity; carry firestarter+branches and confirm those rows become enabled and move above the still-disabled ones, and building/lighting actually works; Pause → Akcje shows the same list/states; a disabled row can't be clicked; reopening after an inventory change updates availability |
+| `world-terrain-006-world-generation-placement-correctness.md` | Inspect a seed with several rivers and follow each to its visible terminal (no dead-ending on dry land); inspect river banks (including a mountain stream) for grass/tree intrusions; inspect cemetery edges against roads including larger cemeteries; inspect stone circles/ruins/monoliths on slopes; inspect mountain slopes from lowland through the upper vegetation band for continuity; confirm no chunk streaming/seam regressions |
 
 ---
 

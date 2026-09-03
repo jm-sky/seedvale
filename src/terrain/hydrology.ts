@@ -27,11 +27,19 @@ export const D8_DIRECTIONS: readonly { dx: number; dz: number; cost: number }[] 
 export const HydrologyFlag = {
   SINK: 1 << 0,
   BOUNDARY_EXIT: 1 << 1,
+  /** A terminal cell (`SINK` or `BOUNDARY_EXIT`) whose own drainage point sits
+   *  at/below `waterLevel` — a genuine water body (ocean or inland lake) per
+   *  the existing heights-clamp model (`heights = max(floorH, waterLevel)`,
+   *  `waterBodies.ts`'s flood fill), as opposed to a dry closed depression or
+   *  a dry boundary crossing. The name predates inland-lake coverage; kept for
+   *  compatibility with existing call sites checking for a valid receiver. */
   OCEAN_OUTLET: 1 << 2,
 } as const
 
 /** No in-grid neighbour is strictly lower — a local minimum/closed depression. */
 export const FLOW_DIR_SINK = -1
+
+const WATER_EPS = 1e-4
 
 export type HydrologyRegionParams = {
   /** World-space origin (corner, not center) of the analysis grid. */
@@ -129,11 +137,17 @@ export function computeHydrologyRegion(
       flowDir[idx] = bestDir
       if (bestDir === FLOW_DIR_SINK) {
         flags[idx]! |= HydrologyFlag.SINK
+        // A closed depression whose own floor already sits at/below waterLevel
+        // is a genuine lake bottom (the heights clamp already renders it as
+        // water), not a dry pit a river should appear to vanish into.
+        if (elev <= sampleParams.waterLevel + WATER_EPS) {
+          flags[idx]! |= HydrologyFlag.OCEAN_OUTLET
+        }
       } else if (bestExitsGrid) {
         flags[idx]! |= HydrologyFlag.BOUNDARY_EXIT
         const dir = D8_DIRECTIONS[bestDir]!
         const { wx, wz } = cellWorldPos({ originX, originZ, cellStep }, ix + dir.dx, iz + dir.dz)
-        if (sampleHeightAt(wx, wz, sampleParams) <= sampleParams.waterLevel + 1e-4) {
+        if (sampleHeightAt(wx, wz, sampleParams) <= sampleParams.waterLevel + WATER_EPS) {
           flags[idx]! |= HydrologyFlag.OCEAN_OUTLET
         }
       }

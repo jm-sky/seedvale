@@ -1087,6 +1087,9 @@ export function createChunkManager(
       seed: config.seed,
       candidatesPerChunk: config.grass.density,
       region: config.region,
+      riverSegments: record.riverChains
+        ? riverChannelSegmentsNear(record.riverChains, x, z, config.chunkSize)
+        : [],
       grids: {
         heights: tile.heights,
         biomes: tile.biomes,
@@ -1659,10 +1662,11 @@ export function createChunkManager(
     const envT0 = performance.now()
     const proceduralEnvPlacements = tile.environment.filter((p) => !GLB_ENV_KINDS.has(p.kind))
     rec.environment = buildPlacementGroup('chunk-environment', proceduralEnvPlacements, (placement) => {
-      // stoneCircle/cemetery bake `rotationY` into each element's offset
-      // themselves (plan 173) — their individual stones/graves need their
-      // true world position to sample terrain correctly, so the yaw can't be
-      // left as a `prop.rotation.y` applied on the whole group afterward.
+      // stoneCircle/cemetery/monolith/smallRuins bake `rotationY` into each
+      // element's offset themselves (plan 173, extended world-terrain-006) —
+      // their individual stones/graves/rubble need their true world position
+      // to sample terrain correctly, so the yaw can't be left as a
+      // `prop.rotation.y` applied on the whole group afterward.
       if (placement.kind === 'cemetery') {
         const prop = createCemetery(
           placement.scale,
@@ -1681,6 +1685,20 @@ export function createChunkManager(
           rotationY: placement.rotationY,
           sampleHeight: sampleTileHeight,
         })
+        placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
+        return prop
+      }
+      if (placement.kind === 'monolith' || placement.kind === 'smallRuins') {
+        const terrain = {
+          worldX: placement.x,
+          worldZ: placement.z,
+          rotationY: placement.rotationY,
+          sampleHeight: sampleTileHeight,
+        }
+        const prop =
+          placement.kind === 'monolith'
+            ? createMonolith(placement.scale, placement.variant, terrain)
+            : createSmallRuins(placement.scale, placement.variant, terrain)
         placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
         return prop
       }

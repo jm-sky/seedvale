@@ -275,9 +275,25 @@ export function createFallenLog(scale = 1, length = 2.4): THREE.Group {
  *  a tapered low-poly pillar with a slight lean plus a couple of grounding
  *  rubble pebbles at its base. `variant` (0..1) drives height, lean and
  *  rubble placement so no two monoliths look identical. */
-export function createMonolith(scale = 1, variant = 0.5): THREE.Group {
+/** Terrain-aware element placement (plan world-terrain-006) — same
+ *  finite-difference step/lean-clamp shape as `STONE_CIRCLE_TILT_STEP`/
+ *  `STONE_CIRCLE_MAX_TILT_RAD`, tuned down slightly: monolith rubble sits
+ *  close to the ground and shouldn't tilt as visibly as a tall stone-circle
+ *  pillar. */
+const MONOLITH_TILT_STEP = 0.5
+const MONOLITH_MAX_TILT_RAD = THREE.MathUtils.degToRad(12)
+
+/** Rare "częste" tier landmark (plans/2026-08-09--049) — a single leaning
+ *  monolith with a scatter of rubble at its base. `terrain` (plan
+ *  world-terrain-006), when given, grounds/tilts the main stone and each
+ *  rubble piece at its own exact world position (same `applyTerrainTilt`
+ *  pattern as `createStoneCircle`/`createCemetery`) instead of leaving only
+ *  the landmark's root grounded by the caller's `placeOnGround` — on an
+ *  accepted slope that left rubble floating/intersecting the terrain. */
+export function createMonolith(scale = 1, variant = 0.5, terrain?: TerrainPlacementContext): THREE.Group {
   const group = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: 0x726d64, flatShading: true, roughness: 1 })
+  const baseY = terrain ? terrain.sampleHeight(terrain.worldX, terrain.worldZ) : 0
 
   const height = (3 + variant * 2.4) * scale
   const stone = new THREE.Mesh(
@@ -287,6 +303,12 @@ export function createMonolith(scale = 1, variant = 0.5): THREE.Group {
   stone.rotation.y = variant * Math.PI * 2
   stone.rotation.z = (variant - 0.5) * 0.18 // slight deliberate lean
   stone.position.y = height / 2
+  if (terrain) {
+    const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX, terrain.worldZ, MONOLITH_TILT_STEP)
+    stone.position.y = sample.height - baseY + height / 2
+    stone.rotation.y += terrain.rotationY
+    applyTerrainTilt(stone, sample.normal, MONOLITH_MAX_TILT_RAD)
+  }
   stone.castShadow = true
   stone.receiveShadow = true
   group.add(stone)
@@ -296,8 +318,18 @@ export function createMonolith(scale = 1, variant = 0.5): THREE.Group {
     const a = variant * Math.PI * 2 + i * 2.3
     const r = 0.5 * scale + ((variant * (i + 4)) % 1) * 0.3 * scale
     const rubble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 * scale, 0), mat)
-    rubble.position.set(Math.cos(a) * r, 0.1 * scale, Math.sin(a) * r)
-    rubble.rotation.set(a, a * 1.4, 0)
+    const localX = Math.cos(a) * r
+    const localZ = Math.sin(a) * r
+    if (terrain) {
+      const { x: rx, z: rz } = rotateOffsetY(localX, localZ, terrain.rotationY)
+      const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX + rx, terrain.worldZ + rz, MONOLITH_TILT_STEP)
+      rubble.position.set(rx, sample.height - baseY + 0.1 * scale, rz)
+      rubble.rotation.set(a, a * 1.4, 0)
+      applyTerrainTilt(rubble, sample.normal, MONOLITH_MAX_TILT_RAD)
+    } else {
+      rubble.position.set(localX, 0.1 * scale, localZ)
+      rubble.rotation.set(a, a * 1.4, 0)
+    }
     rubble.castShadow = true
     group.add(rubble)
   }
@@ -359,19 +391,39 @@ export function createStoneCircle(scale = 1, variant = 0.5, terrain?: TerrainPla
  *  tier) — a low foundation slab with two intersecting wall stubs of uneven,
  *  broken height, reading as the corner of a long-gone building rather than
  *  a random pile of boxes. `variant` (0..1) drives wall height/damage. */
-export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
+/** Same tilt-step/clamp shape as `MONOLITH_TILT_STEP`/`MONOLITH_MAX_TILT_RAD`
+ *  (plan world-terrain-006) — walls are thin, so a small tilt already reads
+ *  clearly; kept modest so a "broken corner" doesn't look like it's
+ *  toppling. */
+const RUINS_TILT_STEP = 0.4
+const RUINS_MAX_TILT_RAD = THREE.MathUtils.degToRad(10)
+
+export function createSmallRuins(scale = 1, variant = 0.5, terrain?: TerrainPlacementContext): THREE.Group {
   const group = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color: 0x8a8478, flatShading: true, roughness: 1 })
+  const baseY = terrain ? terrain.sampleHeight(terrain.worldX, terrain.worldZ) : 0
 
   const size = 3.2 * scale
   const foundation = new THREE.Mesh(new THREE.BoxGeometry(size, 0.15 * scale, size), mat)
   foundation.position.y = 0.075 * scale
+  // Kept flat/rigid (no per-vertex conforming) — only re-yawed to stay
+  // visually aligned with the walls below, which do get per-element grounding.
+  if (terrain) foundation.rotation.y = terrain.rotationY
   foundation.receiveShadow = true
   group.add(foundation)
 
   const wallHeight = (1.1 + variant * 0.7) * scale
   const wall1 = new THREE.Mesh(new THREE.BoxGeometry(size, wallHeight, 0.28 * scale), mat)
-  wall1.position.set(0, wallHeight / 2, -size / 2 + 0.14 * scale)
+  const wall1LocalX = 0
+  const wall1LocalZ = -size / 2 + 0.14 * scale
+  wall1.position.set(wall1LocalX, wallHeight / 2, wall1LocalZ)
+  if (terrain) {
+    const { x: rx, z: rz } = rotateOffsetY(wall1LocalX, wall1LocalZ, terrain.rotationY)
+    const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX + rx, terrain.worldZ + rz, RUINS_TILT_STEP)
+    wall1.position.set(rx, sample.height - baseY + wallHeight / 2, rz)
+    wall1.rotation.y = terrain.rotationY
+    applyTerrainTilt(wall1, sample.normal, RUINS_MAX_TILT_RAD)
+  }
   wall1.castShadow = true
   wall1.receiveShadow = true
   group.add(wall1)
@@ -380,7 +432,16 @@ export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
   // clearly as a ruin rather than an intact room.
   const wall2Height = wallHeight * (0.45 + variant * 0.35)
   const wall2 = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, wall2Height, size), mat)
-  wall2.position.set(-size / 2 + 0.14 * scale, wall2Height / 2, 0)
+  const wall2LocalX = -size / 2 + 0.14 * scale
+  const wall2LocalZ = 0
+  wall2.position.set(wall2LocalX, wall2Height / 2, wall2LocalZ)
+  if (terrain) {
+    const { x: rx, z: rz } = rotateOffsetY(wall2LocalX, wall2LocalZ, terrain.rotationY)
+    const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX + rx, terrain.worldZ + rz, RUINS_TILT_STEP)
+    wall2.position.set(rx, sample.height - baseY + wall2Height / 2, rz)
+    wall2.rotation.y = terrain.rotationY
+    applyTerrainTilt(wall2, sample.normal, RUINS_MAX_TILT_RAD)
+  }
   wall2.castShadow = true
   wall2.receiveShadow = true
   group.add(wall2)
@@ -390,8 +451,18 @@ export function createSmallRuins(scale = 1, variant = 0.5): THREE.Group {
     const a = variant * Math.PI * 2 + i * 1.9
     const r = size * 0.3 + ((variant * (i + 5)) % 1) * size * 0.25
     const rubble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22 * scale, 0), mat)
-    rubble.position.set(Math.cos(a) * r, 0.11 * scale, Math.sin(a) * r)
-    rubble.rotation.set(a, a * 1.2, 0)
+    const localX = Math.cos(a) * r
+    const localZ = Math.sin(a) * r
+    if (terrain) {
+      const { x: rx, z: rz } = rotateOffsetY(localX, localZ, terrain.rotationY)
+      const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX + rx, terrain.worldZ + rz, RUINS_TILT_STEP)
+      rubble.position.set(rx, sample.height - baseY + 0.11 * scale, rz)
+      rubble.rotation.set(a, a * 1.2, 0)
+      applyTerrainTilt(rubble, sample.normal, RUINS_MAX_TILT_RAD)
+    } else {
+      rubble.position.set(localX, 0.11 * scale, localZ)
+      rubble.rotation.set(a, a * 1.2, 0)
+    }
     rubble.castShadow = true
     group.add(rubble)
   }
@@ -458,10 +529,15 @@ type CemeteryLayoutSpec = {
   frontOffset: number
 }
 
+// Spacing widened (world-terrain-006, was 1/1/1.1) — at the old ~1 m
+// row/column spacing, adjacent grave stones (createGraveStone's ~0.5 m base
+// footprint) left barely half a meter of clear ground, reading as an
+// unnaturally packed grid. Aisle widths grow alongside so blocks stay
+// visually separated at the new, wider column pitch.
 const CEMETERY_LAYOUTS: Record<CemeterySize, CemeteryLayoutSpec> = {
-  SM: { blocks: 1, columns: 3, rows: 3, colSpacing: 1, rowSpacing: 1, aisleWidth: 0, frontOffset: 1.2 },
-  MD: { blocks: 2, columns: 3, rows: 3, colSpacing: 1, rowSpacing: 1, aisleWidth: 1.8, frontOffset: 1.3 },
-  LG: { blocks: 3, columns: 4, rows: 3, colSpacing: 1, rowSpacing: 1.1, aisleWidth: 2, frontOffset: 1.4 },
+  SM: { blocks: 1, columns: 3, rows: 3, colSpacing: 1.6, rowSpacing: 1.5, aisleWidth: 0, frontOffset: 1.2 },
+  MD: { blocks: 2, columns: 3, rows: 3, colSpacing: 1.6, rowSpacing: 1.5, aisleWidth: 2.2, frontOffset: 1.3 },
+  LG: { blocks: 3, columns: 4, rows: 3, colSpacing: 1.6, rowSpacing: 1.7, aisleWidth: 2.4, frontOffset: 1.4 },
 }
 
 /** Deterministic local grave positions for one cemetery `size` (plan 173) —
@@ -548,8 +624,12 @@ export function createCemetery(
   const graves = templates?.graves
   for (let i = 0; i < layout.length; i++) {
     const spot = layout[i]!
-    const jitterX = ((variant * (i + 3)) % 1 - 0.5) * 0.25 * scale
-    const jitterZ = ((variant * (i + 7)) % 1 - 0.5) * 0.2 * scale
+    // Jitter amplitude grew alongside the wider grid spacing above (still well
+    // short of the ~1 m clear gap between neighbouring spots, so adjacent
+    // graves never overlap) — the old, tighter jitter read as too regular a
+    // grid once the base spacing itself was no longer cramped.
+    const jitterX = ((variant * (i + 3)) % 1 - 0.5) * 0.35 * scale
+    const jitterZ = ((variant * (i + 7)) % 1 - 0.5) * 0.28 * scale
     const yaw = ((variant * (i + 2)) % 1 - 0.5) * 0.18
     const graveScale = scale * (0.85 + ((variant * (i + 5)) % 1) * 0.25)
     let stone: THREE.Object3D

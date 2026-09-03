@@ -67,9 +67,16 @@ const FOREST_CANOPY_END = 0.72
  *  terrain still supports isolated trees / weak habitat — never "no trees". */
 const FOREST_OPEN_BASELINE = 0.10
 
-/** Altitude suitability fade (fraction of heightScale above water). */
+/** Altitude suitability fade (fraction of heightScale above water). End
+ *  raised (world-terrain-006, was 0.55) closer to the placement treeline
+ *  (`chunkVegetation.ts`'s `TREELINE_ALTITUDE`, 0.66) — the old, tighter fade
+ *  reached exactly 0 well below the hard treeline cutoff, leaving a band of
+ *  upper-mountain slope where only `OPEN_TREE_BASELINE` scattered trees grew
+ *  instead of a continuously thinning forest. Ridge-crest rejection
+ *  (`FOREST_RIDGE_FADE_*` below, `MOUNTAIN_RIDGE_REJECT`) is unchanged — bare
+ *  rock/snow ridges still stay bare regardless of this altitude band. */
 const FOREST_ALTITUDE_FADE_START = 0.32
-const FOREST_ALTITUDE_FADE_END = 0.55
+const FOREST_ALTITUDE_FADE_END = 0.62
 
 /** Mountain-ridge suitability fade — placement still hard-rejects strong
  *  crests; this softens habitat/density approaching them. */

@@ -3,8 +3,9 @@ import * as THREE from 'three'
 import { createSeededRandom } from '../world/parseSeed'
 import { ROCK_SLOPE_FULL, sandBandAt } from './biomeColors'
 import { biomeWeightsAt } from './biomeRegions'
-import { apronOriginWorld, type RegionParams, sampleApronGrid } from './chunkHeightmap'
+import { apronOriginWorld, type RegionParams, type RiverChannelSegment, sampleApronGrid } from './chunkHeightmap'
 import { fbm01, type FbmParams } from './fbm'
+import { isInsideRiverChannel } from './riverNetwork'
 
 /**
  * Pure, worker-safe grass placement generation — split out of `grass.ts`
@@ -42,6 +43,10 @@ export type GrassComputeParams = {
    *  the GUI-exposed "density" knob (`config.terrain.grass.density`). */
   candidatesPerChunk: number
   region: RegionParams
+  /** River channel carving segments near this chunk — same source/shape as
+   *  `ChunkTileParams.riverSegments` — used to reject candidates that fall
+   *  inside a river's actual water channel (world-terrain-006). */
+  riverSegments: RiverChannelSegment[]
 }
 
 export type GrassBucketData = {
@@ -57,8 +62,11 @@ export type GrassChunkData = Partial<Record<GrassSpeciesId, GrassBucketData>>
 
 const SLOPE_SAMPLE_STEP = 1.2
 /** Altitude (fraction of `heightScale` above `waterLevel`) above which grass stops —
- *  lower than vegetation's treeline since grass reads oddly climbing into bare rock. */
-const TREELINE_ALTITUDE = 0.5
+ *  lower than vegetation's treeline (`chunkVegetation.ts`, 0.66) since grass
+ *  reads oddly climbing into bare rock, but raised from 0.5 (world-terrain-006)
+ *  to close most of the old gap where trees still grew with no grass under
+ *  them. */
+const TREELINE_ALTITUDE = 0.58
 /** Fade grass out over the last 40% below the treeline instead of a hard cutoff. */
 const TREELINE_FADE_START = TREELINE_ALTITUDE * 0.6
 /** Mountain ridge where foothill grass starts thinning (smoothstep low). */
@@ -270,7 +278,8 @@ function speciesNoiseFor(seed: number): ReturnType<typeof createNoise2D> {
  *  on the main thread or inside a worker. Bit-for-bit identical to the
  *  generation this replaced in `grass.ts` (see `grassPlacement.test.ts`). */
 export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGrids): GrassChunkData {
-  const { cx, cz, chunkSize, resolution, waterLevel, heightScale, seed, candidatesPerChunk, region } = params
+  const { cx, cz, chunkSize, resolution, waterLevel, heightScale, seed, candidatesPerChunk, region, riverSegments } =
+    params
   const o = apronOriginWorld(cx, cz, chunkSize, resolution)
   const sample = (grid: Float32Array, x: number, z: number) =>
     sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
@@ -300,6 +309,7 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
     const h = sample(grids.heights, wx, wz)
     const sandBand = sandBandAt(wx, wz, seed)
     if (h <= waterLevel + sandBand) continue // underwater/shoreline sand
+    if (riverSegments.length > 0 && isInsideRiverChannel(riverSegments, wx, wz)) continue // river channel
 
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     if (altitude > TREELINE_ALTITUDE) continue // above treeline
@@ -385,6 +395,7 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
     const h = sample(grids.heights, wx, wz)
     const sandBand = sandBandAt(wx, wz, seed)
     if (h <= waterLevel + sandBand) continue
+    if (riverSegments.length > 0 && isInsideRiverChannel(riverSegments, wx, wz)) continue // river channel
 
     const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
     if (altitude > TREELINE_ALTITUDE) continue

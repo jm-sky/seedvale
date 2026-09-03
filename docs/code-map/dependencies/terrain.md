@@ -98,12 +98,14 @@ Generated from TypeScript imports.
 **Imports**
 
 - `terrain/chunkEnvironment.ts`
+- `terrain/chunkHeightmap.ts`
 - `world/parseSeed.ts`
 
 ## `terrain/chunkEnvironment.ts`
 
 **Imports**
 
+- `math/segment.ts`
 - `settlement/props.ts`
 - `terrain/biomeRegions.ts`
 - `terrain/chunkGrid.ts`
@@ -182,6 +184,7 @@ Generated from TypeScript imports.
 - `terrain/biomeRegions.test.ts`
 - `terrain/biomeRegions.ts`
 - `terrain/chunkCrops.ts`
+- `terrain/chunkEnvironment.test.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkHeightmap.test.ts`
 - `terrain/chunkHeightmap.worker.ts`
@@ -382,6 +385,7 @@ Generated from TypeScript imports.
 
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkVegetation.ts`
+- `terrain/riverNetwork.ts`
 
 ## `terrain/chunkVegetation.ts`
 
@@ -390,6 +394,7 @@ Generated from TypeScript imports.
 - `terrain/biomeRegions.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
 - `world/parseSeed.ts`
 - `world/treeLifecycle.ts`
 
@@ -566,6 +571,7 @@ Generated from TypeScript imports.
 
 - `terrain/chunkHeightmap.ts`
 - `terrain/grassPlacement.ts`
+- `terrain/riverNetwork.ts`
 
 ## `terrain/grassPlacement.ts`
 
@@ -575,6 +581,7 @@ Generated from TypeScript imports.
 - `terrain/biomeRegions.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/fbm.ts`
+- `terrain/riverNetwork.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -675,6 +682,10 @@ Generated from TypeScript imports.
 - `debug/locationQueries.test.ts`
 - `debug/locationQueries.ts`
 - `terrain/chunkManager.ts`
+- `terrain/chunkVegetation.test.ts`
+- `terrain/chunkVegetation.ts`
+- `terrain/grassPlacement.test.ts`
+- `terrain/grassPlacement.ts`
 - `terrain/riverNetwork.test.ts`
 - `terrain/riverTileCache.ts`
 - `world/createRiverWater.ts`

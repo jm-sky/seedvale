@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import type { ChunkCoord } from './chunkGrid'
-import type { ChunkTileData, RegionParams } from './chunkHeightmap'
+import type { ChunkTileData, RegionParams, RiverChannelSegment } from './chunkHeightmap'
 import type { GrassGeometryLodTier } from './distanceLod'
 import { REFLECTION_SKIPPED_LAYER } from '../world/waterMirror'
 import {
@@ -56,6 +56,7 @@ export type GrassSystem = {
      *  the GUI-exposed "density" knob (`config.terrain.grass.density`). */
     candidatesPerChunk: number,
     region: RegionParams,
+    riverSegments: RiverChannelSegment[],
   ) => WorldGrassChunk | null
   /** Turns a placement result (`computeChunkGrass`, `grassPlacement.ts`) into
    *  `InstancedMesh`es — the half of `createChunkGrass` that doesn't need the
@@ -615,9 +616,21 @@ export function createGrassSystem(): GrassSystem {
     seed: number,
     candidatesPerChunk: number,
     region: RegionParams,
+    riverSegments: RiverChannelSegment[],
   ): WorldGrassChunk | null {
     const data = computeChunkGrass(
-      { cx: coord.cx, cz: coord.cz, chunkSize, resolution, waterLevel, heightScale, seed, candidatesPerChunk, region },
+      {
+        cx: coord.cx,
+        cz: coord.cz,
+        chunkSize,
+        resolution,
+        waterLevel,
+        heightScale,
+        seed,
+        candidatesPerChunk,
+        region,
+        riverSegments,
+      },
       {
         heights: tile.heights,
         biomes: tile.biomes,

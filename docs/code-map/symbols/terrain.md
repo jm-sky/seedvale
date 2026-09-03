@@ -23,9 +23,9 @@ Generated from exported TypeScript symbols.
 
 - `BiomeWeights` — type — line 4
 - `biomeWeightsAt` — function — line 28
-- `ForestBiome` — type — line 132
-- `forestBiomeAt` — function — line 150
-- `forestDensityAt` — function — line 95
+- `ForestBiome` — type — line 139
+- `forestBiomeAt` — function — line 157
+- `forestDensityAt` — function — line 102
 
 ## `terrain/bloodOverlay.ts`
 
@@ -46,23 +46,24 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkEnvironment.ts`
 
-- `CEMETERY_CLEARING_PAD` — const — line 100
-- `CEMETERY_INNER_FRAC` — const — line 98
-- `CEMETERY_OUTER_FRAC` — const — line 99
-- `cemeteryFitsVillageFringe` — function — line 167
-- `computeChunkEnvironment` — function — line 241
-- `deriveLandmarkId` — function — line 221
-- `EnvironmentKind` — type — line 13
-- `EnvironmentPlacement` — type — line 23
-- `LANDMARK_BIAS_MAX` — const — line 102
-- `LANDMARK_BIAS_MIN` — const — line 101
-- `LANDMARK_LABELS` — const — line 112
-- `LandmarkBiasInput` — type — line 119
-- `LandmarkBiasKind` — type — line 104
-- `landmarkChanceBias` — function — line 140
-- `LandmarkKind` — type — line 108
-- `rollCemeterySize` — function — line 198
-- `VillageDisk` — type — line 128
+- `CEMETERY_CLEARING_PAD` — const — line 102
+- `CEMETERY_INNER_FRAC` — const — line 100
+- `CEMETERY_OUTER_FRAC` — const — line 101
+- `cemeteryFitsVillageFringe` — function — line 169
+- `cemeteryFootprintClearsRoads` — function — line 230
+- `computeChunkEnvironment` — function — line 291
+- `deriveLandmarkId` — function — line 271
+- `EnvironmentKind` — type — line 15
+- `EnvironmentPlacement` — type — line 25
+- `LANDMARK_BIAS_MAX` — const — line 104
+- `LANDMARK_BIAS_MIN` — const — line 103
+- `LANDMARK_LABELS` — const — line 114
+- `LandmarkBiasInput` — type — line 121
+- `LandmarkBiasKind` — type — line 106
+- `landmarkChanceBias` — function — line 142
+- `LandmarkKind` — type — line 110
+- `rollCemeterySize` — function — line 248
+- `VillageDisk` — type — line 130
 
 ## `terrain/chunkGrid.ts`
 
@@ -153,8 +154,8 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkVegetation.ts`
 
-- `computeChunkVegetation` — function — line 175
-- `VegetationPlacement` — type — line 26
+- `computeChunkVegetation` — function — line 180
+- `VegetationPlacement` — type — line 27
 
 ## `terrain/chunkWorkerPool.ts`
 
@@ -239,35 +240,35 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/grass.ts`
 
-- `createGrassSystem` — function — line 432
+- `createGrassSystem` — function — line 433
 - `GrassSystem` — type — line 44
 - `WorldGrassChunk` — type — line 13
 
 ## `terrain/grassPlacement.ts`
 
-- `computeChunkGrass` — function — line 272
-- `GRASS_SPECIES_ORDER` — const — line 21
-- `GrassBucketData` — type — line 47
-- `GrassChunkData` — type — line 56
-- `GrassComputeParams` — type — line 33
-- `GrassSpeciesId` — type — line 17
-- `GrassTileGrids` — type — line 25
+- `computeChunkGrass` — function — line 280
+- `GRASS_SPECIES_ORDER` — const — line 22
+- `GrassBucketData` — type — line 52
+- `GrassChunkData` — type — line 61
+- `GrassComputeParams` — type — line 34
+- `GrassSpeciesId` — type — line 18
+- `GrassTileGrids` — type — line 26
 
 ## `terrain/hydrology.ts`
 
-- `classifyStreams` — function — line 174
-- `computeHydrologyRegion` — function — line 77
+- `classifyStreams` — function — line 188
+- `computeHydrologyRegion` — function — line 85
 - `D8_DIRECTIONS` — const — line 16
-- `DEFAULT_STREAM_THRESHOLDS` — const — line 167
-- `findSourceCandidates` — function — line 221
-- `FLOW_DIR_SINK` — const — line 34
+- `DEFAULT_STREAM_THRESHOLDS` — const — line 181
+- `findSourceCandidates` — function — line 235
+- `FLOW_DIR_SINK` — const — line 40
 - `HydrologyFlag` — const — line 27
-- `HydrologyRegion` — type — line 46
-- `HydrologyRegionParams` — type — line 36
-- `SourceCandidateOptions` — type — line 187
-- `StreamClass` — type — line 159
-- `StreamThresholds` — type — line 161
-- `traceDownstreamPath` — function — line 271
+- `HydrologyRegion` — type — line 54
+- `HydrologyRegionParams` — type — line 44
+- `SourceCandidateOptions` — type — line 201
+- `StreamClass` — type — line 173
+- `StreamThresholds` — type — line 175
+- `traceDownstreamPath` — function — line 285
 
 ## `terrain/naturalResources.ts`
 
@@ -292,12 +293,13 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/riverNetwork.ts`
 
-- `computeRiverTile` — function — line 480
+- `computeRiverTile` — function — line 507
 - `DEFAULT_RIVER_THRESHOLDS` — const — line 54
 - `depthFromAccumulation` — function — line 155
 - `flowFactor` — function — line 123
+- `isInsideRiverChannel` — function — line 265
 - `nearestRiverBankDistance` — function — line 242
-- `nearestRiverBankPoint` — function — line 264
+- `nearestRiverBankPoint` — function — line 277
 - `overlappingRiverTiles` — function — line 81
 - `RIVER_CELL_STEP` — const — line 37
 - `RIVER_TILE_HALO` — const — line 36

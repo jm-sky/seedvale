@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { type ChunkTileParams, computeChunkTile, type RawSampleParams } from './chunkHeightmap'
+import {
+  type ChunkTileParams,
+  computeChunkTile,
+  type RawSampleParams,
+  type RiverChannelSegment,
+} from './chunkHeightmap'
 import { computeChunkGrass, GRASS_SPECIES_ORDER, type GrassChunkData } from './grassPlacement'
+import { isInsideRiverChannel } from './riverNetwork'
 
 /** Defaults aligned with `worldConfig` base terrain (same values as
  *  `chunkHeightmap.test.ts`'s `rawParams`, extended to a full `ChunkTileParams`). */
@@ -135,6 +141,7 @@ describe('computeChunkGrass', () => {
           seed: params.seed,
           candidatesPerChunk: 4000,
           region: params.region,
+          riverSegments: params.riverSegments,
         },
         {
           heights: tile.heights,
@@ -168,6 +175,7 @@ describe('computeChunkGrass', () => {
       seed: params.seed,
       candidatesPerChunk: 2000,
       region: params.region,
+      riverSegments: params.riverSegments,
     }
 
     const a = computeChunkGrass(computeParams, grids)
@@ -197,6 +205,7 @@ describe('computeChunkGrass', () => {
         seed: params.seed,
         candidatesPerChunk: 4000,
         region: params.region,
+        riverSegments: params.riverSegments,
       },
       {
         heights: tile.heights,
@@ -213,5 +222,67 @@ describe('computeChunkGrass', () => {
       const bucket = data[id]
       if (bucket) expect(bucket.matrices.length).toBe(bucket.count * 16)
     }
+  })
+
+  it('never places a blade inside a river channel, even where the carved bed stays above waterLevel (world-terrain-006)', () => {
+    const waterLevel = 0.45
+    // Wide channel along z=0 whose bed sits well above waterLevel — the
+    // heights clamp alone would not reject candidates here (unlike a
+    // sea-level river); only the explicit channel geometry should.
+    const riverSegments: RiverChannelSegment[] = [
+      {
+        ax: -500,
+        az: 0,
+        aBedH: waterLevel + 3,
+        aHalfWidth: 20,
+        aBankWidth: 2,
+        bx: 500,
+        bz: 0,
+        bBedH: waterLevel + 3,
+        bHalfWidth: 20,
+        bBankWidth: 2,
+      },
+    ]
+
+    let totalCount = 0
+    for (let cx = -3; cx <= 8; cx++) {
+      const params = tileParams({ cx, cz: 0, riverSegments })
+      const tile = computeChunkTile(params)
+      const data = computeChunkGrass(
+        {
+          cx,
+          cz: 0,
+          chunkSize: params.chunkSize,
+          resolution: params.resolution,
+          waterLevel: params.waterLevel,
+          heightScale: params.heightScale,
+          seed: params.seed,
+          candidatesPerChunk: 4000,
+          region: params.region,
+          riverSegments,
+        },
+        {
+          heights: tile.heights,
+          biomes: tile.biomes,
+          roadTint: tile.roadTint,
+          mountainRidge: tile.mountainRidge,
+          moistureRegion: tile.moistureRegion,
+        },
+      )
+      const originX = cx * params.chunkSize
+      for (const id of GRASS_SPECIES_ORDER) {
+        const bucket = data[id]
+        if (!bucket) continue
+        totalCount += bucket.count
+        for (let i = 0; i < bucket.count; i++) {
+          const localX = bucket.matrices[i * 16 + 12]!
+          const localZ = bucket.matrices[i * 16 + 14]!
+          expect(isInsideRiverChannel(riverSegments, originX + localX, localZ)).toBe(false)
+        }
+      }
+    }
+    // Sanity: the channel doesn't span the whole chunk, so blades still spawn
+    // outside it — an empty result would make the assertion above vacuous.
+    expect(totalCount).toBeGreaterThan(0)
   })
 })

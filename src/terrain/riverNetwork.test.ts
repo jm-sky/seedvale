@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { RawSampleParams } from './chunkHeightmap'
+import * as chunkHeightmap from './chunkHeightmap'
 import {
   computeRiverTile,
   depthFromAccumulation,
   nearestRiverBankDistance,
   nearestRiverBankPoint,
   overlappingRiverTiles,
+  RIVER_CELL_STEP,
   RIVER_TILE_SIZE,
   type RiverChain,
   riverChannelSegmentsNear,
@@ -166,6 +168,103 @@ describe('computeRiverTile', () => {
       }
     }
     expect(totalChains).toBeGreaterThan(0)
+  })
+})
+
+describe('river terminal receiver correctness (world-terrain-006)', () => {
+  it('every rendered chain either continues into the neighbouring tile (ends near the core edge) or reaches a genuine water receiver (elevation at/below waterLevel)', () => {
+    const edgeMargin = RIVER_CELL_STEP * 1.5 // just past one diagonal D8 step
+    for (const seed of [1, 5, 7, 42, 999, 1337]) {
+      const params = rawParams(seed)
+      for (const tile of [
+        { tx: 0, tz: 0 },
+        { tx: 2, tz: -1 },
+        { tx: -3, tz: 4 },
+        { tx: 5, tz: 5 },
+        { tx: -8, tz: -8 },
+      ]) {
+        const rect = riverTileCoreRect(tile)
+        const chains = computeRiverTile(tile, params)
+        for (const chain of chains) {
+          const last = chain.points[chain.points.length - 1]!
+          const distToEdge = Math.min(
+            last.x - rect.minX,
+            rect.maxX - last.x,
+            last.z - rect.minZ,
+            rect.maxZ - last.z,
+          )
+          if (distToEdge > edgeMargin) {
+            expect(last.elevation).toBeLessThanOrEqual(params.waterLevel + 1e-2)
+          }
+        }
+      }
+    }
+  })
+
+  it('drops a chain that would dead-end at a dry closed depression (sink above waterLevel)', () => {
+    const waterLevel = 0.45
+    const params = rawParams(3, { waterLevel })
+    const tile = { tx: 0, tz: 0 }
+
+    // Build a monotonic ramp descending toward the tile's core center, so
+    // every core cell drains toward one dry local minimum well above
+    // waterLevel — every classified chain heading there must be dropped.
+    const rect = riverTileCoreRect(tile)
+    const centerX = (rect.minX + rect.maxX) / 2
+    const centerZ = (rect.minZ + rect.maxZ) / 2
+    const dryBottom = waterLevel + 3
+
+    const floorAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleFloorAt')
+      .mockImplementation((wx: number, wz: number) => dryBottom + Math.hypot(wx - centerX, wz - centerZ) * 0.05)
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number, wz: number) =>
+        Math.max(dryBottom + Math.hypot(wx - centerX, wz - centerZ) * 0.05, waterLevel),
+      )
+
+    try {
+      // Every classified cell in this synthetic terrain drains radially
+      // inward toward the dry center — there is no other receiver, so any
+      // chain heading there must be dropped entirely rather than rendered as
+      // a river ending on dry land.
+      const chains = computeRiverTile(tile, params)
+      expect(chains).toHaveLength(0)
+    } finally {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
+  })
+
+  it('keeps a chain that dead-ends at a genuine inland water receiver (sink at/below waterLevel)', () => {
+    const waterLevel = 0.45
+    const params = rawParams(3, { waterLevel })
+    const tile = { tx: 0, tz: 0 }
+
+    const rect = riverTileCoreRect(tile)
+    const centerX = (rect.minX + rect.maxX) / 2
+    const centerZ = (rect.minZ + rect.maxZ) / 2
+    const wetBottom = waterLevel - 1
+
+    const floorAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleFloorAt')
+      .mockImplementation((wx: number, wz: number) => wetBottom + Math.hypot(wx - centerX, wz - centerZ) * 0.05)
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number, wz: number) =>
+        Math.max(wetBottom + Math.hypot(wx - centerX, wz - centerZ) * 0.05, waterLevel),
+      )
+
+    try {
+      const chains = computeRiverTile(tile, params)
+      const reachesCenter = chains.some((chain) =>
+        chain.points.some((p) => Math.hypot(p.x - centerX, p.z - centerZ) < RIVER_CELL_STEP),
+      )
+      expect(reachesCenter).toBe(true)
+    } finally {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
   })
 })
 

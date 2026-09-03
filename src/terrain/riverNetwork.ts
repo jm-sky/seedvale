@@ -254,6 +254,19 @@ export function nearestRiverBankDistance(
   return best
 }
 
+/** True when `(x, z)` sits inside a river's actual water channel (out to its
+ *  bank edge, i.e. `nearestRiverBankDistance < 0`) — the single geometric
+ *  predicate procedural placement (`chunkVegetation.ts`, `grassPlacement.ts`)
+ *  rejects candidates on, so trees/grass never land inside a carved channel
+ *  even where the channel's bed sits above the world's global `waterLevel`
+ *  (e.g. a mountain stream) and the heights clamp alone can't catch it
+ *  (world-terrain-006). The bank slope beyond the water edge stays eligible
+ *  as ordinary dry land — same as `nearestRiverBankDistance`'s own contract. */
+export function isInsideRiverChannel(segments: readonly RiverChannelSegment[], x: number, z: number): boolean {
+  const dist = nearestRiverBankDistance(segments, x, z)
+  return dist !== null && dist < 0
+}
+
 /** The actual point on `segments`' nearest bank edge to `(x, z)` — same
  *  segment/half-width selection as `nearestRiverBankDistance`, but returning
  *  a real world point (centerline pushed out to the bank along the ray
@@ -391,6 +404,12 @@ function buildChains(
       const points: RiverPoint[] = []
       const visited = new Set<number>()
       let curIdx = headIdx
+      // A river reaching a dry closed depression (SINK) or a dry off-window
+      // crossing (BOUNDARY_EXIT) — neither backed by `OCEAN_OUTLET`, i.e. not
+      // a genuine water body per the heights-clamp model — has no valid
+      // receiver. Exiting the tile core without hitting either flag is a
+      // normal, valid continuation into the neighbouring tile, not a terminal.
+      let reachedInvalidReceiver = false
       for (;;) {
         const cix = curIdx % size
         const ciz = Math.floor(curIdx / size)
@@ -406,7 +425,13 @@ function buildChains(
           accumulation: region.accumulation[curIdx]!,
         })
 
-        if ((region.flags[curIdx]! & (HydrologyFlag.SINK | HydrologyFlag.BOUNDARY_EXIT)) !== 0) break
+        const terminalFlags = region.flags[curIdx]! & (HydrologyFlag.SINK | HydrologyFlag.BOUNDARY_EXIT)
+        if (terminalFlags !== 0) {
+          if ((region.flags[curIdx]! & HydrologyFlag.OCEAN_OUTLET) === 0) {
+            reachedInvalidReceiver = true
+          }
+          break
+        }
         const dir = D8_DIRECTIONS[region.flowDir[curIdx]!]!
         const nx = cix + dir.dx
         const nz = ciz + dir.dz
@@ -418,7 +443,9 @@ function buildChains(
       // (real terrain wrinkles briefly crossing the accumulation threshold).
       // Filtering short chains is a rendering-worthiness cutoff, not a
       // hydrology correctness change — it doesn't affect direction/accumulation.
-      if (points.length >= MIN_CHAIN_POINTS) {
+      // A chain that dead-ends at a dry, non-water receiver is dropped
+      // entirely rather than rendered as a river that vanishes on dry land.
+      if (points.length >= MIN_CHAIN_POINTS && !reachedInvalidReceiver) {
         const smoothed = smoothChainPoints(points)
         chains.push({ points: meanderChainPoints(smoothed, coreRect, meanderNoise) })
       }

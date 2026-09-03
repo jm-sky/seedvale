@@ -1,5 +1,18 @@
 # Implementation Notes: World Generation & Placement Correctness
 
+## Implemented (2026-09-03)
+
+All six items from "Suggested implementation order" below are implemented and technically verified (`tsc`, `lint`, `build`, `vitest`). See the plan file's "Implementation status" section for the summary and what still needs browser verification.
+
+Notable deviations from this review's exact wording, decided during implementation:
+
+1. **River terminals** — rather than trimming just the final dry point off a chain (which would barely change the visible cutoff, since D8 flow strictly descends into the sink), a chain whose only in-core terminal is a dry `SINK`/`BOUNDARY_EXIT` (not backed by the extended `OCEAN_OUTLET` flag) is dropped **entirely** rather than partially rendered. `OCEAN_OUTLET` itself was generalized (kept its name for minimal footprint) to also fire on a `SINK` cell whose own elevation is at/below `waterLevel` — i.e. any genuine water body (ocean or inland lake), not only a boundary crossing into one. A chain that exits the tile core without hitting either flag is unaffected (normal continuation into the next tile).
+2. **River-channel vegetation exclusion** — reused `riverNetwork.ts`'s existing `nearestRiverBankDistance` rather than writing a new predicate; only wrapped it as `isInsideRiverChannel` (`dist < 0`) for callsite clarity, per the review's "one shared geometric predicate" instruction. Wired into `chunkVegetation.ts`'s main tree/bush/reed pass, `flowerMeadowPatches`, and `fernPatches` (the review named trees/grass explicitly, but the same channel-interior check needed to be added everywhere `params.riverSegments` was already in scope to avoid the same bug in meadow/fern candidates) plus `grassPlacement.ts`'s main and filler passes. `grassPlacement.ts`'s `GrassComputeParams` didn't carry `riverSegments` before this — added it, and threaded `record.riverChains` through `chunkManager.ts`'s `ensureGrass` via the same `riverChannelSegmentsNear` call the tile-request path already uses.
+3. **Cemetery-vs-road footprint** — implemented as a rotation-invariant circular bound (farthest grave from center, from `cemeteryGraveLayout`, plus a clearance constant) rather than the exact rotated rectangle, since the cemetery's `rotationY` was previously rolled only *after* acceptance (inside the RNG stream). Rolling `scale` earlier (before the accept-check, so the footprint check can size itself correctly) changes the RNG consumption order for cemetery placement — verified no test locked the previous exact output (no test file calls `computeChunkEnvironment` at all), so this is safe.
+4. **Terrain-aware monolith/ruins** — implemented exactly as scoped: bounded per-element tilt via `applyTerrainTilt`, foundation/plot kept rigid, no mesh conforming.
+5. **Grave spacing** — widened `CEMETERY_LAYOUTS` spacing/aisle values and jitter amplitude in `cemeteryGraveLayout`'s spec + `createCemetery`'s per-grave jitter; `world/hiddenFinds.ts` (the only other consumer) re-derives positions from the same function, so it automatically follows.
+6. **Mountain vegetation continuity** — tuned three existing constants (`forestDensityAt`'s altitude fade end, tree treeline, grass treeline) rather than adding new ones; verified against the existing `biomeRegions.test.ts` altitude/ridge tests to keep enough margin that no existing assertion needed loosening.
+
 ## Review result
 
 The plan is still relevant, but the current code already implements a large part of its intended groundwork. Do not reimplement plan 173/181/189-style terrain-aware placement or river carving.

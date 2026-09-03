@@ -17,6 +17,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/villagePlanner.ts`
+- `terrain/chunkEnvironment.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/riverNetwork.ts`
 - `world/caveVolume.ts`

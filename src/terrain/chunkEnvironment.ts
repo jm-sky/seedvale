@@ -1,12 +1,14 @@
-import type { CemeterySize } from '../settlement/props'
 import type { ChunkCoord } from './chunkGrid'
 import type { VegetationPlacement } from './chunkVegetation'
+import { distanceToSegment } from '../math/segment'
+import { cemeteryGraveLayout, type CemeterySize } from '../settlement/props'
 import { createSeededRandom } from '../world/parseSeed'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import {
   apronOriginWorld,
   type ChunkTileData,
   type ChunkTileParams,
+  type RoadCorridorSegment,
   sampleApronGrid,
 } from './chunkHeightmap'
 
@@ -188,6 +190,54 @@ export function cemeteryFitsVillageFringe(
     if (Math.hypot(x - clearing.x, z - clearing.z) <= clearing.radius + CEMETERY_CLEARING_PAD) {
       return false
     }
+  }
+  return true
+}
+
+/** Upper bound on a grave's own offset from `cemeteryGraveLayout`'s spot
+ *  (plan world-terrain-006): `createCemetery`'s deterministic jitter
+ *  (`jitterX`/`jitterZ`, up to ~0.125/0.1 × `scale`) plus the grave stone's
+ *  own half-footprint (`createGraveStone`'s base box, ~0.25 × `scale`),
+ *  rounded up to a round, safely conservative constant. */
+const CEMETERY_GRAVE_CLEARANCE = 0.6
+/** Extra clearance beyond a road/path corridor's own half-width before a
+ *  cemetery footprint is accepted — a visible buffer, not just "doesn't
+ *  overlap" (plan world-terrain-006). */
+const CEMETERY_ROAD_SAFETY_MARGIN = 2
+
+/** Farthest any grave (including its own jitter/footprint) can sit from the
+ *  cemetery's placement point, for a given `size`/`scale` — a rotation-
+ *  invariant (circular) upper bound on the real grave-grid footprint. Cheap
+ *  to check against road segments without needing the landmark's rotation,
+ *  which (unlike position/size/scale) is only rolled once a cemetery is
+ *  already accepted. */
+function cemeteryFootprintRadius(size: CemeterySize, scale: number): number {
+  const layout = cemeteryGraveLayout(size, scale)
+  let maxDist = 0
+  for (const p of layout) {
+    const d = Math.hypot(p.x, p.z)
+    if (d > maxDist) maxDist = d
+  }
+  return maxDist + CEMETERY_GRAVE_CLEARANCE * scale
+}
+
+/** True when a cemetery's whole grave-grid footprint — not just its center
+ *  point — clears every nearby road/path corridor by
+ *  `CEMETERY_ROAD_SAFETY_MARGIN` (plan world-terrain-006). The plain
+ *  `roadTint` sample `computeChunkEnvironment` already rejects on only tests
+ *  the placement point; a wider MD/LG cemetery's grave grid can still extend
+ *  across a road that misses that single point. */
+export function cemeteryFootprintClearsRoads(
+  x: number,
+  z: number,
+  size: CemeterySize,
+  scale: number,
+  roadSegments: readonly RoadCorridorSegment[],
+): boolean {
+  const radius = cemeteryFootprintRadius(size, scale)
+  for (const seg of roadSegments) {
+    const dist = distanceToSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
+    if (dist < radius + seg.halfWidth + CEMETERY_ROAD_SAFETY_MARGIN) return false
   }
   return true
 }
@@ -445,19 +495,23 @@ export function computeChunkEnvironment(
     const margin = CEMETERY_MARGIN_BY_SIZE[cemeterySize]
     const wx = coord.cx * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
     const wz = coord.cz * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
+    // Rolled here (not at push time) so the footprint check below can size
+    // itself off the real scale, not a placeholder.
+    const cemeteryScale = 0.9 + cemeteryRandom() * 0.3
     const h = sample(tile.heights, wx, wz)
     if (
       h > waterLevel + 0.3 &&
       sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
       slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
       cemeteryFitsVillageFringe(wx, wz, params.regional, params.clearings) &&
+      cemeteryFootprintClearsRoads(wx, wz, cemeterySize, cemeteryScale, params.roadSegments) &&
       cemeteryRandom() <= CEMETERY_CHANCE
     ) {
       placements.push({
         x: wx,
         z: wz,
         kind: 'cemetery',
-        scale: 0.9 + cemeteryRandom() * 0.3,
+        scale: cemeteryScale,
         rotationY: cemeteryRandom() * Math.PI * 2,
         variant: cemeteryRandom(),
         cemeterySize,
