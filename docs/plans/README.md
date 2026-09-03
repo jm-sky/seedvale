@@ -34,7 +34,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                   | Summary | Pri | Effort | Depends |
 | ---------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `settlements-npcs-014-local-goods-circulation.md`                   | -       | 🔴 | M      | ~~settlements-npcs-008~~ ~~settlements-npcs-009~~ ~~settlements-npcs-010~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`         | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                             | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                  | -       | 🟡 | L      | 010    |
@@ -79,6 +78,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-npcs-005-local-resource-exchange.md` | Household ↔ household and settlement ↔ household exchange works with real shortages/surpluses and physical NPC movement |
 | `settlements-npcs-008-household-and-settlement-food-storage-model.md` | NPC eating, gathering and food exchange work correctly |
 | `settlements-npcs-009-physical-storage-destinations-and-resource-delivery.md` | NPCs deliver wood and food to the correct physical storage |
+| `settlements-npcs-014-local-goods-circulation.md` | In a settlement with a Hunter, a Trader and at least one other household: let the Hunter hunt so meat lands in its household as surplus, observe the Trader physically walk there, collect it and deliver it to the settlement storage crate, then observe another household draw it via existing acquisition and an NPC eat it — all without player intervention; confirm no item duplication/loss and that the Trader doesn't continuously drain the producer household |
 | `2026-08-20--177--npc-combat.md` | NPC combat behaves correctly in an actual encounter |
 | `npc-009-combat-feedback-and-death-consequences.md` | NPC attack/hurt/death animation+audio plays correctly for NPC↔animal, animal↔NPC and NPC↔NPC combat; death pre-empts attack/hurt with no lingering attack loop; a dead NPC reconstructed on settlement reload shows the settled dead pose immediately, not a replayed collapse |
 | `npc-008-agent-decision-architecture-refactor.md` | Frenzied wolf still reaches a settlement and attacks via `npc-attack-frenzied` (regression check); a non-frenzied predator can now `npc-attack`/`npc-flee`/`npc-ignore` a nearby NPC and the reaction reads as sensible (not jittery); a non-frenzied predator does not chase an NPC into a settlement; a predator near a lit campfire with an NPC nearby resolves to one coherent reaction instead of oscillating between fire-avoid and npc-flee |

@@ -166,23 +166,30 @@ export class Inventory {
   /** Removes `n` units from `kind`'s batches, oldest (most spoiled) first —
    *  matches the "use it before it spoils" intuition and keeps whichever
    *  batch a consumer just read (e.g. `oldestAcquiredAtDays`) consistent with
-   *  what actually gets removed next. */
-  private removeFoodBatch(kind: ItemKind, n: number): void {
+   *  what actually gets removed next. Returns the exact chunks consumed
+   *  (oldest first) — `remove()` ignores this, but `removeWithFreshness()`
+   *  hands it on so a transfer can replay the same `acquiredAtDays` on the
+   *  receiving side instead of losing it at `add()`'s day-0 default. */
+  private removeFoodBatch(kind: ItemKind, n: number): FoodBatch[] {
+    const consumed: FoodBatch[] = []
     const batches = this.foodBatches.get(kind)
-    if (!batches || batches.length === 0) return
+    if (!batches || batches.length === 0) return consumed
     batches.sort((a, b) => a.acquiredAtDays - b.acquiredAtDays)
     let remaining = n
     while (remaining > 0 && batches.length > 0) {
       const first = batches[0]!
       if (first.count <= remaining) {
+        consumed.push({ count: first.count, acquiredAtDays: first.acquiredAtDays })
         remaining -= first.count
         batches.shift()
       } else {
+        consumed.push({ count: remaining, acquiredAtDays: first.acquiredAtDays })
         first.count -= remaining
         remaining = 0
       }
     }
     if (batches.length === 0) this.foodBatches.delete(kind)
+    return consumed
   }
 
   /** Read-only snapshot of `kind`'s freshness batches, oldest first. Empty
@@ -260,6 +267,32 @@ export class Inventory {
     this.counts.set(kind, this.count(kind) + n)
     if (isFoodPerishable(kind)) this.addFoodBatch(kind, n, acquiredAtDays ?? 0)
     return true
+  }
+
+  /** Like `add()`, but replays `batches`' original `acquiredAtDays` instead
+   *  of the day-0 default — the receiving half of a claim/carry/deposit
+   *  transfer that must not silently "refresh" a perishable item just
+   *  because it changed hands (plan settlements-npcs-014 implementation
+   *  notes §11). Falls back to plain `add()` when `batches` is empty (a
+   *  non-perishable kind, or a caller with no batch info to preserve). */
+  addWithFreshness(kind: ItemKind, n: number, batches: readonly FoodBatch[]): boolean {
+    if (batches.length === 0) return this.add(kind, n)
+    if (!this.canAdd(kind, n)) return false
+    this.counts.set(kind, this.count(kind) + n)
+    if (isFoodPerishable(kind)) for (const batch of batches) this.addFoodBatch(kind, batch.count, batch.acquiredAtDays)
+    return true
+  }
+
+  /** Like `remove()`, but also returns the exact freshness batches consumed
+   *  (oldest first, see `removeFoodBatch`) — the claiming half of a
+   *  claim/carry/deposit transfer, paired with `addWithFreshness()` on the
+   *  receiving end. `null` (no-op) when there isn't `n` held; `[]` for a
+   *  non-perishable kind (nothing to track). */
+  removeWithFreshness(kind: ItemKind, n: number): readonly FoodBatch[] | null {
+    const current = this.count(kind)
+    if (current < n) return null
+    this.counts.set(kind, current - n)
+    return isFoodPerishable(kind) ? this.removeFoodBatch(kind, n) : []
   }
 
   addInstance(instance: ItemInstance): boolean {

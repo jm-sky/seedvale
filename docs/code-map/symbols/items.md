@@ -72,9 +72,12 @@ Generated from exported TypeScript symbols.
 
 ## `items/foodItems.ts`
 
-- `claimFoodItems` — function — line 45
-- `depositFoodItems` — function — line 64
+- `carryFoodClaim` — function — line 90
+- `claimFoodItems` — function — line 52
+- `deliverCarriedFoodClaim` — function — line 102
+- `depositFoodItems` — function — line 73
 - `FOOD_ITEM_KINDS` — const — line 18
+- `FoodItemClaim` — type — line 45
 - `foodItemCount` — function — line 24
 - `takeOneFoodItem` — function — line 33
 
@@ -119,7 +122,7 @@ Generated from exported TypeScript symbols.
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `inventoryFullToastText` — function — line 449
+- `inventoryFullToastText` — function — line 482
 - `ItemAmount` — type — line 38
 - `SaveItemInstance` — type — line 40
 - `toSaveItemInstance` — function — line 56

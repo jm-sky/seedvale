@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claimFoodItems, depositFoodItems, FOOD_ITEM_KINDS, foodItemCount, takeOneFoodItem } from './foodItems'
+import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, depositFoodItems, FOOD_ITEM_KINDS, foodItemCount, takeOneFoodItem } from './foodItems'
 import { Inventory } from './Inventory'
 
 describe('FOOD_ITEM_KINDS', () => {
@@ -75,7 +75,7 @@ describe('claimFoodItems', () => {
     const inv = new Inventory()
     inv.add('carrot', 5)
     const claimed = claimFoodItems(inv, 3)
-    expect(claimed).toEqual([{ kind: 'carrot', amount: 3 }])
+    expect(claimed).toEqual([{ kind: 'carrot', amount: 3, batches: [{ count: 3, acquiredAtDays: 0 }] }])
     expect(inv.count('carrot')).toBe(2)
   })
 
@@ -107,5 +107,45 @@ describe('depositFoodItems', () => {
     const destination = new Inventory()
     depositFoodItems(destination, claimed)
     expect(foodItemCount(destination)).toBe(3)
+  })
+
+  it('preserves the claimed batch acquiredAtDays instead of resetting freshness to day 0', () => {
+    const source = new Inventory()
+    source.add('fish', 2, 4)
+    const claimed = claimFoodItems(source, 2)
+    const destination = new Inventory()
+    depositFoodItems(destination, claimed)
+    expect(destination.getFoodBatches('fish')).toEqual([{ count: 2, acquiredAtDays: 4 }])
+  })
+})
+
+describe('carryFoodClaim / deliverCarriedFoodClaim', () => {
+  it('moves a claim into the carrier and on to the destination, freshness intact', () => {
+    const source = new Inventory()
+    source.add('fish', 3, 2)
+    const carrier = new Inventory()
+    const destination = new Inventory()
+
+    const claimed = claimFoodItems(source, 3)
+    const carried = carryFoodClaim(carrier, claimed, source)
+    expect(foodItemCount(carrier)).toBe(3)
+    expect(foodItemCount(source)).toBe(0)
+
+    deliverCarriedFoodClaim(carrier, carried, destination)
+    expect(foodItemCount(carrier)).toBe(0)
+    expect(foodItemCount(destination)).toBe(3)
+    expect(destination.getFoodBatches('fish')).toEqual([{ count: 3, acquiredAtDays: 2 }])
+  })
+
+  it('refunds whatever does not fit in the carrier straight back to the source', () => {
+    const source = new Inventory()
+    source.add('fish', 3)
+    const tinyCarrier = new Inventory(undefined, 0.01)
+
+    const claimed = claimFoodItems(source, 3)
+    const carried = carryFoodClaim(tinyCarrier, claimed, source)
+    expect(carried).toEqual([])
+    expect(foodItemCount(tinyCarrier)).toBe(0)
+    expect(foodItemCount(source)).toBe(3)
   })
 })

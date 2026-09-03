@@ -181,4 +181,26 @@ End-to-end:
 
 Kod jest źródłem prawdy. Nie cofać obecnej architektury do starszego modelu tylko po to, aby literalnie odpowiadała treści planu.
 
+## 18. Implementation summary (2026-09-03)
+
+- **`items/Inventory.ts`** — `removeFoodBatch` now returns the exact freshness batches it consumed instead of discarding them. New `removeWithFreshness`/`addWithFreshness` pair: the claim/deposit primitive a transfer must use so a perishable item's `acquiredAtDays` survives changing hands instead of resetting to day 0 (§11's flagged pitfall) — `remove()`/`add()` keep their old day-0-default behaviour for every other caller, untouched.
+- **`items/foodItems.ts`** — `claimFoodItems`/`depositFoodItems` now carry a `FoodItemClaim` (`ItemAmount & { batches }`) instead of a bare `ItemAmount`, freshness-preserving end to end. Added `carryFoodClaim`/`deliverCarriedFoodClaim` — the physical-carry counterpart that loads a claim into an NPC's `carried` cargo `Inventory` between the pickup and delivery legs (refunding straight back to the source if it doesn't fit, rather than losing it).
+- **`economy/settlementEconomy.ts`** — `depositFood` gained an optional `batches` param (backward compatible; production call sites keep omitting it); `withdrawFood` now returns `FoodItemClaim[]`.
+- **`ai/NpcAgent.ts`**:
+  - Fixed the ownership gap from §3: `beginEconomyWithdraw`'s and `beginHouseholdExchange`'s `food` branches now route the claim through `this.carried` between the two legs (`carryFoodClaim`/`deliverCarriedFoodClaim`) instead of a local closure variable, so `source + carried + destination` stays constant even across an interruption — same accepted "goods sit in cargo until a later trip" semantics `beginOreGathering`'s mine→deposit chain already has, not a new lifecycle.
+  - `beginTraderWork`'s existing own-household → economy path (regression baseline) is preserved as-is, now passing `batches` through to `economy.depositFood` for freshness.
+  - New `beginTraderCollection(household, economy)` — the plan's main new capability. Called as `beginTraderWork`'s fallback when this trader's own household has nothing to bring: finds a same-settlement household's real food surplus via the existing `HouseholdExchangeHooks.findSurplusSource` (never this trader's own household, nearest-first, deterministic id tie-break — reused unmodified, already covered by `householdExchange.test.ts`), claims a bounded amount (`HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food`), physically walks there, carries it, and delivers it into `SettlementEconomy` via the settlement's storage destination (`storageDestinations.ts`) — no shortage precondition, matching the plan's "stock ahead of demand" model. No `TraderInventory`/`MarketInventory`/second settlement stock was introduced; `trade.ts`/`tradeCatalog.ts` untouched.
+
+### Tests added
+
+- `items/Inventory.test.ts` — `removeWithFreshness`/`addWithFreshness`: insufficient-stock no-op, oldest-first consumed batches, non-perishable pass-through, freshness replay, day-0 fallback with no batches, capacity refusal, round-trip.
+- `items/foodItems.test.ts` — updated `claimFoodItems` expectation for the new `batches` field; added a freshness-preservation case for `depositFoodItems`; new `carryFoodClaim`/`deliverCarriedFoodClaim` suite (carry-then-deliver conservation + freshness, and the capacity-refund path).
+- `economy/localExchange.test.ts` — `depositFood` replays a claim's batches instead of resetting to day 0.
+
+Trader-selection properties the plan's test list asks for (own-household exclusion, same-settlement-only, nearest/deterministic tie-break, live revalidation) are exercised already by the pre-existing `selectHouseholdSurplusSource`/`householdExchange.test.ts`, which `beginTraderCollection` calls unmodified — not re-tested at the `NpcAgent` level.
+
+### Known gap — no `NpcAgent`-level test harness
+
+This codebase has no existing test that constructs a real `NpcAgent` and steps it through `goTo`/`execute`/`next` phases (confirmed: zero `NpcAgent.create(`/`new NpcAgent(` call sites under any `*.test.ts`). `beginTraderWork`/`beginTraderCollection`/`beginEconomyWithdraw`/`beginHouseholdExchange` are private methods on that class, composed almost entirely from primitives that *are* unit-tested above. Building a first-of-its-kind full-agent tick harness to directly exercise "physically walks to the source household," "does not duplicate goods across an interrupted trip," and the Hunter→meat→Trader→settlement→household→consumption end-to-end scenario was judged out of proportion to this plan's scope and the codebase's existing testing conventions, and was not attempted. Per this repo's `CLAUDE.md` Verification section, this is the "technically verified, not browser/gameplay verified" gap — the plan's own Runtime Verification section already expects manual confirmation of this exact scenario.
+
 **Zrób git commit i push do main, rebase jeżeli trzeba**

@@ -59,8 +59,8 @@ import {
   tryAdvanceDevelopment,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
-import { claimFoodItems, depositFoodItems } from '../items/foodItems'
-import { Inventory, type ItemAmount } from '../items/Inventory'
+import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, type FoodItemClaim } from '../items/foodItems'
+import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
@@ -3536,21 +3536,29 @@ export class NpcAgent {
     if (kind === 'food') {
       const requested = Math.min(economy.surplus('food'), maxTransfer)
       if (requested <= 0) return false
-      let claimed: readonly ItemAmount[] = []
+      // Claim → `this.carried` → deposit (plan settlements-npcs-014
+      // implementation notes §3): a claim used to live only in this closure,
+      // an implicit and losable "in transit" state between the two legs.
+      // Routing it through the NPC's own cargo `Inventory` instead means an
+      // interruption after claim no longer silently drops the goods — they
+      // stay physically carried until a later trip delivers them, same
+      // accepted semantics as `beginOreGathering`'s mine→deposit chain.
+      let carriedClaim: readonly FoodItemClaim[] = []
       this.startAction({
         kind: 'exchange',
         destination: copyVec3(settlementStorageDestination('food', this.landmarks.stockpile, this.landmarks.settlementStorage)),
         durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => {
-          claimed = economy.withdrawFood(requested, this.simClock)
+          const claimed = economy.withdrawFood(requested, this.simClock)
+          carriedClaim = carryFoodClaim(this.carried, claimed, economy.items)
         },
         next: {
           kind: 'deposit',
           destination: copyVec3(this.home),
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
-            if (claimed.length === 0) return
-            depositFoodItems(household.items, claimed)
+            if (carriedClaim.length === 0) return
+            deliverCarriedFoodClaim(this.carried, carriedClaim, household.items)
             this.satisfyHouseholdResourceNeed(household, 'food')
           },
         },
@@ -3606,21 +3614,24 @@ export class NpcAgent {
     if (kind === 'food') {
       const requested = Math.min(sourceHousehold.surplus('food'), maxTransfer)
       if (requested <= 0) return false
-      let claimed: readonly ItemAmount[] = []
+      // Claim → `this.carried` → deposit, same ownership fix as
+      // `beginEconomyWithdraw` above.
+      let carriedClaim: readonly FoodItemClaim[] = []
       this.startAction({
         kind: 'exchange',
         destination,
         durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => {
-          claimed = claimFoodItems(sourceHousehold.items, requested)
+          const claimed = claimFoodItems(sourceHousehold.items, requested)
+          carriedClaim = carryFoodClaim(this.carried, claimed, sourceHousehold.items)
         },
         next: {
           kind: 'deposit',
           destination: copyVec3(this.home),
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
-            if (claimed.length === 0) return
-            depositFoodItems(household.items, claimed)
+            if (carriedClaim.length === 0) return
+            deliverCarriedFoodClaim(this.carried, carriedClaim, household.items)
             this.satisfyHouseholdResourceNeed(household, 'food')
           },
         },
@@ -4066,13 +4077,18 @@ export class NpcAgent {
    * `GlobalMarketManager` — both sides are the existing authoritative stock
    * objects, mutated directly at completion, re-validated against the
    * household's *current* surplus (not the amount read at decision time) so
-   * a stale read never over-withdraws. */
+   * a stale read never over-withdraws.
+   *
+   * Preserved as-is (plan settlements-npcs-014 implementation notes §6/§16
+   * — regression baseline) as the trader's first choice; when this trader's
+   * own household has nothing to bring, `beginTraderCollection` below is the
+   * plan's new capability: a physical pickup from *another* household. */
   private beginTraderWork(): boolean {
     const household = this.household
     const economy = this.economy
     if (!household || !economy || !this.workplace) return false
     const kind = TRADER_TRANSFER_KINDS.find((k) => household.surplus(k) > 0 && economy.hasShortage(k))
-    if (!kind) return false
+    if (!kind) return this.beginTraderCollection(household, economy)
     this.startAction({
       kind: 'work',
       destination: copyVec3(this.workplace.position),
@@ -4081,9 +4097,11 @@ export class NpcAgent {
         if (kind === 'food') {
           // Concrete-item counterpart of the wood claim below (plan
           // settlements-npcs-008) — this trader's full surplus is the
-          // requested amount, so the cap is a no-op in practice.
+          // requested amount, so the cap is a no-op in practice. `batches`
+          // (plan settlements-npcs-014) keeps this claim's freshness intact
+          // across the transfer instead of resetting it to day 0.
           const claimed = claimFoodItems(household.items, household.surplus('food'))
-          for (const { kind: itemKind, amount } of claimed) economy.depositFood(itemKind, amount, this.simClock)
+          for (const { kind: itemKind, amount, batches } of claimed) economy.depositFood(itemKind, amount, this.simClock, batches)
           return
         }
         // Reuses the same atomic claim seam local exchange uses
@@ -4094,6 +4112,60 @@ export class NpcAgent {
         if (amount <= 0) return
         economy.add(kind, amount, this.simClock)
         tryAdvanceDevelopment(economy)
+      },
+    })
+    return true
+  }
+
+  /**
+   * Trader cross-household collection (plan settlements-npcs-014) — the
+   * plan's main new capability: a bounded, same-settlement pickup of
+   * *another* household's real food surplus, physically carried to the
+   * settlement's storage. Reuses `HouseholdExchangeHooks.findSurplusSource`
+   * — the same nearest-first, id-tie-break lookup `beginHouseholdExchange`
+   * already uses for shortage-driven exchange — but never requires this
+   * settlement to already be short of food: the plan's "Model" section
+   * wants the storage buffer stocked ahead of demand, not only drained
+   * reactively after a shortage appears. Never selects this trader's own
+   * household (`excludeHouseholdId`). Claim → `this.carried` → deposit, same
+   * conservation invariant as `beginEconomyWithdraw`/`beginHouseholdExchange`
+   * above — this trader is a consumer of that same local-goods-flow
+   * mechanism, not the owner of a second one (plan §3).
+   */
+  private beginTraderCollection(household: Household, economy: SettlementEconomy): boolean {
+    const hooks = this.householdExchange
+    if (!hooks) return false
+    const source = hooks.findSurplusSource(household.id, 'food', this.home)
+    if (!source) return false
+    const sourceHousehold = source.household
+    const requested = Math.min(sourceHousehold.surplus('food'), HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food)
+    if (requested <= 0) return false
+    const pickupDestination = copyVec3({
+      x: source.position.x,
+      y: this.sampleHeight(source.position.x, source.position.z),
+      z: source.position.z,
+    })
+    let carriedClaim: readonly FoodItemClaim[] = []
+    this.startAction({
+      kind: 'work',
+      destination: pickupDestination,
+      durationSec: 1.2 * this.waitMultiplier,
+      onComplete: () => {
+        const claimed = claimFoodItems(sourceHousehold.items, requested)
+        carriedClaim = carryFoodClaim(this.carried, claimed, sourceHousehold.items)
+      },
+      next: {
+        kind: 'deposit',
+        destination: copyVec3(settlementStorageDestination('food', this.landmarks.stockpile, this.landmarks.settlementStorage)),
+        durationSec: 0.8 * this.waitMultiplier,
+        onComplete: () => {
+          if (carriedClaim.length === 0) return
+          for (const claim of carriedClaim) {
+            this.carried.remove(claim.kind, claim.amount)
+            economy.depositFood(claim.kind, claim.amount, this.simClock, claim.batches)
+          }
+          tryAdvanceDevelopment(economy)
+        },
       },
     })
     return true

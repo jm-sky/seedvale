@@ -6,8 +6,8 @@ import type { EconomicKind } from './kinds'
 import type { ProductionDef } from './production'
 import { createSequenceAllocator } from '../debug/domainHistory'
 import { createSettlementHistoryBuffer } from '../debug/settlementHistory'
-import { claimFoodItems, foodItemCount } from '../items/foodItems'
-import { Inventory, type ItemAmount } from '../items/Inventory'
+import { claimFoodItems, type FoodItemClaim, foodItemCount } from '../items/foodItems'
+import { type FoodBatch, Inventory } from '../items/Inventory'
 import { EconomicStock, type StockAmount } from './stock'
 
 export type SettlementDemand = {
@@ -64,12 +64,15 @@ export type SettlementEconomy = {
   hasShortage: (kind: EconomicKind) => boolean
   hasSurplus: (kind: EconomicKind) => boolean
   /** Concrete-food deposit — the mutation entry point every food producer/
-   *  transfer must use instead of `add('food', amount)`. */
-  depositFood: (kind: ItemKind, amount: number, simTime?: number) => void
+   *  transfer must use instead of `add('food', amount)`. `batches` (plan
+   *  settlements-npcs-014) replays a claim's original freshness instead of
+   *  `Inventory.add()`'s day-0 default — omit it for genuinely new food
+   *  (production), pass a claim's `batches` for a transfer. */
+  depositFood: (kind: ItemKind, amount: number, simTime?: number, batches?: readonly FoodBatch[]) => void
   /** Claims up to `amount` food units, deterministic kind order (may span
    *  multiple kinds) — the settlement-storage half of a food transfer,
    *  mirroring `economy/localExchange.ts`'s claim seam for bulk goods. */
-  withdrawFood: (amount: number, simTime?: number) => readonly ItemAmount[]
+  withdrawFood: (amount: number, simTime?: number) => readonly FoodItemClaim[]
   developmentStatus: (id: string) => DevelopmentStatus
   reserveDevelopment: (def: DevelopmentDef) => boolean
   payDevelopment: (def: DevelopmentDef) => boolean
@@ -160,9 +163,9 @@ export function createSettlementEconomy(
     hasSurplus(kind) {
       return this.surplus(kind) > 0
     },
-    depositFood(kind, amount, simTime = 0) {
+    depositFood(kind, amount, simTime = 0, batches) {
       if (amount > 0) {
-        items.add(kind, amount)
+        items.addWithFreshness(kind, amount, batches ?? [])
         historyBuf.record({ simTime, seq: seq.next(), type: 'food.deposited', kind, amount })
       }
     },

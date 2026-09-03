@@ -1,7 +1,7 @@
 # Plan: Local Goods Circulation
 
 **Created:** 2026-09-01  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test); browser/gameplay not yet verified. See [implementation notes](./implementation-notes/settlements-npcs-014-local-goods-circulation-implementation-notes.md).  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~008~~ ~~009~~ ~~010~~  

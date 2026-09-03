@@ -112,6 +112,18 @@ describe('SettlementEconomy.withdrawFood / depositFood', () => {
     expect(claimed.reduce((n, c) => n + c.amount, 0)).toBe(2)
     expect(economy.query('food')).toBe(0)
   })
+
+  it('depositFood replays a claim\'s original batches instead of resetting freshness to day 0 (plan settlements-npcs-014)', () => {
+    const economy = createSettlementEconomy('s', {}, [])
+    // Seeds a batch acquired on day 5 directly (`depositFood` alone has no
+    // way to backdate genuinely new food — this simulates a fish already a
+    // few days old when the transfer below claims it).
+    economy.items.add('fish', 2, 5)
+    const claimed = economy.withdrawFood(2)
+    const receiving = createSettlementEconomy('other', {}, [])
+    for (const { kind, amount, batches } of claimed) receiving.depositFood(kind, amount, 0, batches)
+    expect(receiving.items.getFoodBatches('fish')).toEqual([{ count: 2, acquiredAtDays: 5 }])
+  })
 })
 
 describe('claimFoodItems (items/foodItems.ts)', () => {

@@ -1,4 +1,4 @@
-import type { Inventory, ItemAmount } from './Inventory'
+import type { FoodBatch, Inventory, ItemAmount } from './Inventory'
 import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from './items'
 
 /**
@@ -37,22 +37,30 @@ export function takeOneFoodItem(items: Inventory): ItemKind | null {
   return null
 }
 
+/** A `claimFoodItems()` result for one kind — `ItemAmount` plus the exact
+ *  freshness batches consumed (oldest first; empty for a non-perishable
+ *  kind), so a transfer can restore `acquiredAtDays` on deposit instead of
+ *  losing it to `Inventory.add()`'s day-0 default (plan settlements-npcs-014
+ *  implementation notes §11). */
+export type FoodItemClaim = ItemAmount & { batches: readonly FoodBatch[] }
+
 /** Claims up to `amount` food units from `items`, deterministic kind order,
  *  spanning multiple kinds when one alone doesn't cover `amount`. Atomic per
- *  kind (each `remove()` either fully succeeds or is skipped); returns the
- *  kinds/amounts actually removed, which may sum to less than `amount` when
- *  less food is held. */
-export function claimFoodItems(items: Inventory, amount: number): ItemAmount[] {
+ *  kind (each `removeWithFreshness()` either fully succeeds or is skipped);
+ *  returns the kinds/amounts actually removed, which may sum to less than
+ *  `amount` when less food is held. */
+export function claimFoodItems(items: Inventory, amount: number): FoodItemClaim[] {
   if (amount <= 0) return []
-  const claimed: ItemAmount[] = []
+  const claimed: FoodItemClaim[] = []
   let remaining = amount
   for (const kind of FOOD_ITEM_KINDS) {
     if (remaining <= 0) break
     const available = items.count(kind)
     if (available <= 0) continue
     const take = Math.min(available, remaining)
-    if (items.remove(kind, take)) {
-      claimed.push({ kind, amount: take })
+    const batches = items.removeWithFreshness(kind, take)
+    if (batches) {
+      claimed.push({ kind, amount: take, batches })
       remaining -= take
     }
   }
@@ -60,7 +68,40 @@ export function claimFoodItems(items: Inventory, amount: number): ItemAmount[] {
 }
 
 /** Deposits a previously-`claimFoodItems`-claimed set into `items` — the
- *  receiving half of a food transfer between two carriers/owners. */
-export function depositFoodItems(items: Inventory, claimed: readonly ItemAmount[]): void {
-  for (const { kind, amount } of claimed) items.add(kind, amount)
+ *  receiving half of a food transfer between two carriers/owners, freshness
+ *  intact (`Inventory.addWithFreshness`). */
+export function depositFoodItems(items: Inventory, claimed: readonly FoodItemClaim[]): void {
+  for (const { kind, amount, batches } of claimed) items.addWithFreshness(kind, amount, batches)
+}
+
+/** Physical-carry counterpart of `claimFoodItems`/`depositFoodItems` (plan
+ *  settlements-npcs-014) — moves an already-claimed set into `carrier` (an
+ *  NPC's `carried` cargo `Inventory`) instead of depositing it straight into
+ *  the final destination, so a two-leg pickup→delivery trip has an explicit
+ *  owner for the goods between claim and deposit: `source + carrier +
+ *  destination` stays constant even if the trip is interrupted afterwards
+ *  (implementation notes §3 — before this, a claim lived only in a local
+ *  closure variable, an implicit and losable "in transit" state). Capacity
+ *  is rare to actually exceed (carry weight limit vs a few food units) but a
+ *  claim that doesn't fit is refunded straight back to `refundTo` — the
+ *  inventory it was just claimed from — rather than silently lost. Returns
+ *  only the portion that actually made it into `carrier`, ready for
+ *  `deliverCarriedFoodClaim()` to walk on the next leg. */
+export function carryFoodClaim(carrier: Inventory, claimed: readonly FoodItemClaim[], refundTo: Inventory): FoodItemClaim[] {
+  const carried: FoodItemClaim[] = []
+  for (const claim of claimed) {
+    if (carrier.addWithFreshness(claim.kind, claim.amount, claim.batches)) carried.push(claim)
+    else refundTo.addWithFreshness(claim.kind, claim.amount, claim.batches)
+  }
+  return carried
+}
+
+/** Delivers a `carryFoodClaim()`-loaded set out of `carrier` into
+ *  `destination`, freshness intact — the completing leg of the claim→carry→
+ *  deposit chain. */
+export function deliverCarriedFoodClaim(carrier: Inventory, claimed: readonly FoodItemClaim[], destination: Inventory): void {
+  for (const { kind, amount, batches } of claimed) {
+    carrier.remove(kind, amount)
+    destination.addWithFreshness(kind, amount, batches)
+  }
 }

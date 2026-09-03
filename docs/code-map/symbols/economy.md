@@ -53,7 +53,7 @@ Generated from exported TypeScript symbols.
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 82
+- `createSettlementEconomy` — function — line 85
 - `SettlementDemand` — type — line 13
 - `SettlementEconomy` — type — line 42
   - domain: settlements

@@ -222,6 +222,65 @@ describe('Inventory food batches (plan 159)', () => {
   })
 })
 
+/** removeWithFreshness/addWithFreshness (plan settlements-npcs-014) — the
+ *  claim/deposit primitive a physical transfer must use instead of plain
+ *  remove()/add() so a claimed batch's acquiredAtDays survives changing
+ *  hands (implementation notes §11: add()'s day-0 default otherwise makes a
+ *  transferred item look instantly stale/ancient). */
+describe('Inventory.removeWithFreshness / addWithFreshness (plan settlements-npcs-014)', () => {
+  it('returns null without mutating when there is not enough held', () => {
+    const inv = new Inventory()
+    inv.add('berries', 1, 0)
+    expect(inv.removeWithFreshness('berries', 2)).toBeNull()
+    expect(inv.count('berries')).toBe(1)
+  })
+
+  it('returns the exact consumed batches, oldest first, for a perishable kind', () => {
+    const inv = new Inventory()
+    inv.add('berries', 1, 0)
+    inv.add('berries', 1, 10)
+    const consumed = inv.removeWithFreshness('berries', 2)
+    expect(consumed).toEqual([{ count: 1, acquiredAtDays: 0 }, { count: 1, acquiredAtDays: 10 }])
+    expect(inv.count('berries')).toBe(0)
+  })
+
+  it('returns an empty batch list for a non-perishable kind, still removing the count', () => {
+    const inv = new Inventory()
+    inv.add('stone', 3)
+    expect(inv.removeWithFreshness('stone', 2)).toEqual([])
+    expect(inv.count('stone')).toBe(1)
+  })
+
+  it('addWithFreshness replays the given batches instead of stamping day 0', () => {
+    const inv = new Inventory()
+    expect(inv.addWithFreshness('berries', 2, [{ count: 2, acquiredAtDays: 7 }])).toBe(true)
+    expect(inv.count('berries')).toBe(2)
+    expect(inv.getFoodBatches('berries')).toEqual([{ count: 2, acquiredAtDays: 7 }])
+  })
+
+  it('addWithFreshness falls back to add()\'s default when given no batches', () => {
+    const inv = new Inventory()
+    expect(inv.addWithFreshness('berries', 2, [])).toBe(true)
+    expect(inv.getFoodBatches('berries')).toEqual([{ count: 2, acquiredAtDays: 0 }])
+  })
+
+  it('addWithFreshness respects capacity, refusing (and not partially applying) when it does not fit', () => {
+    const inv = new Inventory(undefined, 0.01)
+    expect(inv.addWithFreshness('berries', 5, [{ count: 5, acquiredAtDays: 3 }])).toBe(false)
+    expect(inv.count('berries')).toBe(0)
+  })
+
+  it('round-trips a claim between two inventories with freshness intact', () => {
+    const source = new Inventory()
+    source.add('berries', 3, 4)
+    const consumed = source.removeWithFreshness('berries', 3)
+    expect(consumed).not.toBeNull()
+    const destination = new Inventory()
+    destination.addWithFreshness('berries', 3, consumed!)
+    expect(destination.getFoodBatches('berries')).toEqual([{ count: 3, acquiredAtDays: 4 }])
+  })
+})
+
 describe('Inventory gabarite capacity (plan 164)', () => {
   it('defaults maxSize to Infinity — no size gate unless a caller opts in', () => {
     const inv = new Inventory({}, 1000)
