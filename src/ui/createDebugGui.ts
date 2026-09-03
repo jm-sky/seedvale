@@ -36,6 +36,11 @@ export type DebugGuiHandlers = {
   onShadowMapSizeChange: () => void
   onLodScaleChange: () => void
   onGrassFillerCoverageChange: () => void
+  /** Dev-only hard show/hide for the detailed (tri/grain/herb) and filler
+   *  grass buckets independently — for isolating one from the other while
+   *  testing (world-terrain-005 verification). Not persisted. */
+  onDetailedGrassDebugVisibleChange: (visible: boolean) => void
+  onFillerGrassDebugVisibleChange: (visible: boolean) => void
   onPerfTimingsToggle: (enabled: boolean) => void
   onRunBenchmark: (id: BenchmarkScenarioId) => void
 }
@@ -458,7 +463,7 @@ export function createDebugGui(
   )
   terrainControllers.push(
     roads
-      .add(config.terrain.region.roadNetwork, 'rutDepth', 0, 0.2, 0.005)
+      .add(config.terrain.region.roadNetwork, 'rutDepth', 0, 0.6, 0.005)
       .name('Rut depth')
       .onFinishChange(handlers.onTerrainChange),
   )
@@ -476,7 +481,7 @@ export function createDebugGui(
   )
   terrainControllers.push(
     roads
-      .add(config.terrain.region.roadNetwork, 'microBumpStrength', 0, 0.1, 0.002)
+      .add(config.terrain.region.roadNetwork, 'microBumpStrength', 0, 0.3, 0.002)
       .name('Micro bump/dip strength')
       .onFinishChange(handlers.onTerrainChange),
   )
@@ -687,6 +692,19 @@ export function createDebugGui(
     .add(config.quality, 'grassFillerCoverage', 0, 1, 0.05)
     .name('Grass filler coverage')
     .onFinishChange(handlers.onGrassFillerCoverageChange)
+  // Dev-only hard visibility toggles (not part of `WorldConfig`/persisted
+  // quality knobs) — isolate detailed vs. filler grass for testing
+  // (world-terrain-005 verification). Local state object since lil-gui binds
+  // a checkbox to an object property.
+  const grassDebugVisibility = { detailedGrass: true, fillerGrass: true }
+  postFx
+    .add(grassDebugVisibility, 'detailedGrass')
+    .name('Detailed grass (debug)')
+    .onChange(handlers.onDetailedGrassDebugVisibleChange)
+  postFx
+    .add(grassDebugVisibility, 'fillerGrass')
+    .name('Filler grass (debug)')
+    .onChange(handlers.onFillerGrassDebugVisibleChange)
 
   terrainControllers.push(
     gui.add({ rebuild: handlers.onTerrainChange }, 'rebuild').name('Rebuild world'),

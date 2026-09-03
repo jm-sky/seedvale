@@ -28,6 +28,10 @@ export type GraphicsSettings = {
   updateShadowMapFromGui: () => void
   updateLodScaleFromGui: () => void
   updateGrassFillerCoverageFromGui: () => void
+  /** Dev-only hard show/hide for detailed vs. filler grass, independent of
+   *  each other — not persisted, no `WorldConfig` field. */
+  setDetailedGrassDebugVisible: (visible: boolean) => void
+  setFillerGrassDebugVisible: (visible: boolean) => void
   applyNamedQualityPreset: (preset: Exclude<QualityPreset, 'Custom'>) => void
   onQualityPresetChange: (preset: QualityPreset) => void
   /** Day/night toggle — re-syncs sky/light/fog immediately when re-enabled. */
@@ -123,6 +127,16 @@ export function createGraphicsSettings(deps: GraphicsSettingsDeps): GraphicsSett
     saveGraphics(config)
   }
 
+  // Dev-only hard visibility toggles — not `WorldConfig` fields, so no
+  // `saveGraphics`/quality-label sync; purely session-local, isolating
+  // detailed vs. filler grass for testing (plan world-terrain-005 verification).
+  const setDetailedGrassDebugVisible = (visible: boolean) => {
+    bundle.chunkManager.setDetailedGrassDebugVisible(visible)
+  }
+  const setFillerGrassDebugVisible = (visible: boolean) => {
+    bundle.chunkManager.setFillerGrassDebugVisible(visible)
+  }
+
   const applyNamedQualityPreset = (preset: Exclude<QualityPreset, 'Custom'>) => {
     applyQualityPreset(config, preset)
     applyLiveGraphics()
@@ -151,6 +165,8 @@ export function createGraphicsSettings(deps: GraphicsSettingsDeps): GraphicsSett
     updateShadowMapFromGui,
     updateLodScaleFromGui,
     updateGrassFillerCoverageFromGui,
+    setDetailedGrassDebugVisible,
+    setFillerGrassDebugVisible,
     applyNamedQualityPreset,
     onQualityPresetChange,
     onDayNightChange,

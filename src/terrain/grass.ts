@@ -32,6 +32,12 @@ export type WorldGrassChunk = {
    *  which only changes how many instances of the *current* geometry draw.
    *  No-op on the filler bucket, which stays a single cheap near-only shape. */
   setGeometryLod: (tier: GrassGeometryLodTier) => void
+  /** Dev-only hard visibility switch, independent of `setLodFraction` — a
+   *  hidden bucket's `InstancedMesh.visible` is set `false` outright rather
+   *  than drawing 0 instances, since the main-bucket branch of
+   *  `setLodFraction` floors at 1 instance (far chunks never fully vanish),
+   *  which would otherwise leave a stray blade rendered per chunk. */
+  setDebugVisible: (mainVisible: boolean, fillerVisible: boolean) => void
   dispose: () => void
 }
 
@@ -196,9 +202,17 @@ const GRAIN_FINS: FinSpec[] = [
   },
 ]
 
-/** Near-field filler — 2 thin fins, few segments (cheap tris). Only drawn
- *  close to the camera via `setLodFraction(..., fillerFraction)`. */
-const FILLER_FINS: FinSpec[] = radialFins(2, {
+/** Near-field filler — 2 thin fins, few segments (cheap tris). Explicit
+ *  perpendicular yaws (0, π/2) rather than `radialFins(2, ...)`: that helper
+ *  spaces yaw by `2π/count`, which for an even count puts both fins on the
+ *  *same* plane (see `radialFins`'s own doc comment) — a near-invisible sliver
+ *  from any camera angle close to edge-on, which is a real fraction of
+ *  instances given each gets an independent random Y rotation
+ *  (`grassPlacement.ts`'s filler pass). A true perpendicular cross, the same
+ *  technique `GRAIN_FINS`'s stem already uses, keeps some width visible from
+ *  every direction instead. Only drawn close to the camera via
+ *  `setLodFraction(..., fillerFraction)`. */
+const FILLER_FIN_SHAPE = {
   originT: 0,
   heightT: 1,
   peakHalfWidth: 0.35,
@@ -207,7 +221,11 @@ const FILLER_FINS: FinSpec[] = radialFins(2, {
   curveStrength: 0.7,
   curveShape: QUADRATIC_CURVE,
   segments: 3,
-})
+} as const
+const FILLER_FINS: FinSpec[] = [
+  { ...FILLER_FIN_SHAPE, yaw: 0 },
+  { ...FILLER_FIN_SHAPE, yaw: Math.PI / 2 },
+]
 
 const HERB_PEAK_HALF_WIDTH = 0.7
 const HERB_TIP_HALF_WIDTH = 0.32
@@ -565,6 +583,9 @@ export function createGrassSystem(): GrassSystem {
           const next = sub.geometryForTier(tier)
           if (sub.mesh.geometry !== next) sub.mesh.geometry = next
         }
+      },
+      setDebugVisible(mainVisible, fillerVisible) {
+        for (const sub of subMeshes) sub.mesh.visible = sub.filler ? fillerVisible : mainVisible
       },
       dispose: () => {
         group.removeFromParent()

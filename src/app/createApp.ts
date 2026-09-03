@@ -1118,6 +1118,8 @@ export async function createApp(
     onShadowMapSizeChange: graphics.updateShadowMapFromGui,
     onLodScaleChange: graphics.updateLodScaleFromGui,
     onGrassFillerCoverageChange: graphics.updateGrassFillerCoverageFromGui,
+    onDetailedGrassDebugVisibleChange: graphics.setDetailedGrassDebugVisible,
+    onFillerGrassDebugVisibleChange: graphics.setFillerGrassDebugVisible,
     onPerfTimingsToggle: (enabled) => { perfMonitor.setSource('gui', enabled) },
     onRunBenchmark: (id) => { void benchmark.run(id) },
   })

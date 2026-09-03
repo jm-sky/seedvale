@@ -579,6 +579,14 @@ export type ChunkManager = {
    *  `setLodFraction` on already-loaded chunks; no rebuild (filler instances
    *  already exist for every grass chunk, only their draw fraction changes). */
   setGrassFillerCoverage: (coverage: number) => void
+  /** Dev-only toggle (default visible) — hides/shows the detailed species
+   *  buckets (`tri`/`grain`/`herb`) independently of the filler bucket, so the
+   *  two can be isolated in the debug GUI. Session-local, not persisted. */
+  setDetailedGrassDebugVisible: (visible: boolean) => void
+  /** Dev-only toggle (default visible) — hides/shows the filler bucket
+   *  independently of the detailed species buckets. Session-local, not
+   *  persisted. */
+  setFillerGrassDebugVisible: (visible: boolean) => void
   /** Collision colliders (plan 097 §2.2) near (x, z) — terrain-chunk
    *  environment/vegetation plus anything registered via `registerColliders`
    *  (settlements, the well). Feed straight into `world/collision.ts`'s
@@ -987,6 +995,15 @@ export function createChunkManager(
    *  original near-only radius (1 chunk); 1 extends filler across the whole
    *  grass ring. See `grassFillerLodFraction`. */
   let grassFillerCoverage = Math.min(1, Math.max(0, config.grassFillerCoverage ?? 0))
+  /** Dev-only overrides (default on), applied as a hard `mesh.visible` toggle
+   *  (see `WorldGrassChunk.setDebugVisible`) rather than folded into
+   *  `mainFrac`/`fillerFrac` — those feed `setLodFraction`, whose main-bucket
+   *  branch floors at 1 instance so far chunks never fully vanish, which would
+   *  keep a stray blade rendered per chunk even with "OFF" selected. Session-
+   *  local, not persisted — see `ChunkManager.setDetailedGrassDebugVisible`/
+   *  `setFillerGrassDebugVisible`. */
+  let detailedGrassDebugVisible = true
+  let fillerGrassDebugVisible = true
 
   /** Cheap distance LOD: render fewer blades in farther chunks. Near stays
    *  full density; far drops to ~8% (plan 113 P2) instead of the old ~25%
@@ -1005,6 +1022,14 @@ export function createChunkManager(
       // existing density curve).
       geometryTier: grassGeometryLodTier(dist, effectiveGrassRadius),
     }
+  }
+
+  /** Applies the dev-only detailed/filler visibility overrides to one chunk's
+   *  grass — called from every place that already re-syncs `setLodFraction`
+   *  (`ensureGrass`'s worker callback, `syncGrassForRecord`, `setLodScale`,
+   *  `setGrassFillerCoverage`) plus the two debug setters below. */
+  function applyGrassDebugVisibility(grass: WorldGrassChunk): void {
+    grass.setDebugVisible(detailedGrassDebugVisible, fillerGrassDebugVisible)
   }
 
   /** Same prefix-`count` curve as grass, scaled to `loadRadius` because
@@ -1087,6 +1112,7 @@ export function createChunkManager(
           const { mainFrac, fillerFrac, geometryTier } = grassLodForDistance(dist)
           grass.setLodFraction(mainFrac, fillerFrac)
           grass.setGeometryLod(geometryTier)
+          applyGrassDebugVisibility(grass)
         }
       })
       .catch((err: unknown) => {
@@ -1119,6 +1145,7 @@ export function createChunkManager(
       const { mainFrac, fillerFrac, geometryTier } = grassLodForDistance(dist)
       record.grass?.setLodFraction(mainFrac, fillerFrac)
       record.grass?.setGeometryLod(geometryTier)
+      if (record.grass) applyGrassDebugVisibility(record.grass)
     } else if (dist > grassUnloadRadius && (record.grass !== undefined || record.grassPending)) {
       removeGrass(record)
     }
@@ -2393,6 +2420,18 @@ export function createChunkManager(
         const dist = chebyshevDistance(record.coord, lastPlayerChunk)
         const { mainFrac, fillerFrac } = grassLodForDistance(dist)
         record.grass.setLodFraction(mainFrac, fillerFrac)
+      }
+    },
+    setDetailedGrassDebugVisible(visible) {
+      detailedGrassDebugVisible = visible
+      for (const record of chunks.values()) {
+        if (record.grass) applyGrassDebugVisibility(record.grass)
+      }
+    },
+    setFillerGrassDebugVisible(visible) {
+      fillerGrassDebugVisible = visible
+      for (const record of chunks.values()) {
+        if (record.grass) applyGrassDebugVisibility(record.grass)
       }
     },
     collidersNear: (x, z) => colliderRegistry.query(x, z),

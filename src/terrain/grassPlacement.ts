@@ -73,9 +73,9 @@ const ROAD_TINT_FADE_END = 0.38
 /** Extra short ground-cover blades (near-camera only via LOD). Fraction of the
  *  main `candidatesPerChunk` budget — processed once at chunk build, drawn
  *  only when the player is close (issue 023). */
-const FILLER_CANDIDATE_RATIO = 0.28
-const FILLER_HEIGHT_MIN = 0.045
-const FILLER_HEIGHT_MAX = 0.13
+const FILLER_CANDIDATE_RATIO = 2
+const FILLER_HEIGHT_MIN = 0.05
+const FILLER_HEIGHT_MAX = 0.18
 const FILLER_WIDTH_MIN = 0.04
 const FILLER_WIDTH_MAX = 0.09
 const FILLER_WIND_FACTOR = 0.35

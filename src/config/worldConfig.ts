@@ -245,10 +245,15 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
           meanderAmplitude: 2,
           meanderScale: 0.04,
           surfaceDetailEnabled: true,
-          rutDepth: 0.05,
+          // Deliberately extreme (diagnostic/tuning pass, plan world-terrain-005
+          // verification) — deep, obvious wheel ruts and strong continuous
+          // micro-roughness, recognisable at normal gameplay camera distance.
+          // Not tuned for realism; narrower `rutWidthFraction` than before so
+          // the two grooves read as distinct ruts rather than one wide dip.
+          rutDepth: 0.15,
           rutOffsetFraction: 0.42,
-          rutWidthFraction: 0.16,
-          microBumpStrength: 0.025,
+          rutWidthFraction: 0.1,
+          microBumpStrength: 0.2,
           microBumpScale: 0.6,
         },
         village: {
