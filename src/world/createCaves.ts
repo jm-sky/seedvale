@@ -4,7 +4,7 @@ import { disposeObject3D } from '../assets/loadGltf'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { buildCaveWallColliders } from './caveColliders'
-import { generateCaveDefinitions } from './caveGenerator'
+import { CAVE_MOUTH_DEPTH, generateCaveDefinitions } from './caveGenerator'
 import { createCaveInteriorMesh } from './caveMesh'
 import { type CaveBounds, type CaveDefinition, type CaveVolume, createCaveVolume } from './caveVolume'
 import { openingDirection } from './largeCaves'
@@ -18,7 +18,9 @@ import type { Scene } from 'three'
 const APPROACH_RADIUS = 3.2
 const APPROACH_DEPTH = 1.35
 const MOUTH_RADIUS = 1.65
-const MOUTH_DEPTH = 2.4
+/** Same depth `caveGenerator.ts` starts the interior at — the mouth node's
+ *  floor is the bottom of this recess, so the two must never drift apart. */
+const MOUTH_DEPTH = CAVE_MOUTH_DEPTH
 
 /** Short synthetic "site" length fed to the existing `largeCaveVisual.ts`
  *  rock-framing helper — just enough for a convincing mouth cluster; the

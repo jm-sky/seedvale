@@ -35,6 +35,32 @@ this pass; items 12-13 (cave fauna/loot) are not.
 **Browser/gameplay-verified:** not yet — pending manual verification
 (items §12.1-11) per the task's workflow.
 
+### Regression fix (2026-09-03) — cave interior sat one mouth-depth too high
+
+Reported after the first pass: two overlapping ground surfaces on a slope
+(grass + a bare, rock-coloured one), the player able to walk "under" the
+terrain with the head still poking above it.
+
+Root cause: `caveGenerator.ts` started the whole graph at the *raw* surface
+height at the site (`sampleHeight(site.x, site.z)`), while `createCaves.ts`
+carves a `MOUTH_DEPTH` (2.4 m) recess there. The interior therefore sat 2.4 m
+too high: the first metres of the tunnel arch (2.6 m tall) stood *above* the
+terrain — the second, rock-coloured "surface" — and the cave's vertical
+envelope kept overlapping the surface several metres past the mouth, so
+`Caves.contains()` classified a player merely walking over the tunnel as being
+inside it and switched their ground to the cave floor under the (uncarved)
+terrain. The overburden check could not catch this: it deliberately skipped the
+leading 35% of the tunnel, which is exactly where the geometry broke through.
+
+Fix (both in `caveGenerator.ts`): the interior starts at the carved recess
+floor (`CAVE_MOUTH_DEPTH`, now the single constant `createCaves.ts` carves
+with), and the previously exempt leading section is held to a thin but positive
+`MOUTH_ROOF_MIN` roof instead of being unchecked. Measured over 40 seeds
+(analytic `sampleHeightAt`): no tunnel roof above the surface past the carved
+mouth (min roof 0.42 m, was −2.35 m), surface-capture area beyond the mouth
+down from ~4 m² per cave to ~0.06 m², and accepted caves up from ~0.1 to ~2 per
+world. Regression tests: `caveGenerator.test.ts`.
+
 ### Divergences from the implementation notes/contract (code was authoritative)
 
 - The contract's §13/§40 claim that `PlayerController` "already separates

@@ -24,6 +24,16 @@ import {
 import { createSeededRandom } from './parseSeed'
 
 const MOUTH_RADIUS = LARGE_CAVE_MOUTH_WIDTH * 0.55
+/** Depth of the deterministic mouth recess `createCaves.ts` carves into the
+ *  surface heightmap (`chunkManager.modifyTerrain`). The interior starts at
+ *  the *bottom* of that recess, never at the raw surface height: otherwise
+ *  the whole graph sits `CAVE_MOUTH_DEPTH` too high, so the first metres of
+ *  tunnel roof stand above the terrain (visible rock arch cutting through the
+ *  meadow) and the cave's vertical envelope keeps overlapping the surface far
+ *  past the mouth, capturing the ground query of an entity that is merely
+ *  walking over the tunnel (contract §14). Shared with `createCaves.ts` so
+ *  the carve and the geometry can't drift apart. */
+export const CAVE_MOUTH_DEPTH = 2.4
 const ENTRANCE_HEIGHT = 2.6
 const TUNNEL_RADIUS = 1.7
 const TUNNEL_CEILING_HEIGHT = 2.6
@@ -51,10 +61,21 @@ const MAX_DESCENT = 8
 const MIN_OVERBURDEN = 1.4
 /** How many points along a tunnel span get overburden-checked. */
 const OVERBURDEN_SAMPLES = 4
-/** Skip this leading fraction of a tunnel — it's a continuation of the
- *  entrance opening itself (same shallow-roof carve as the mouth), not the
- *  "roof must not break through farther inside" interior the check guards. */
+/** Fraction of a tunnel the strict `MIN_OVERBURDEN` check starts at — the
+ *  leading section is the entrance opening's own shallow-roof continuation,
+ *  held to `MOUTH_ROOF_MIN` instead (see below). */
 const OVERBURDEN_MOUTH_SKIP = 0.35
+/** Minimum roof thickness over that leading section. Far thinner than
+ *  `MIN_OVERBURDEN` (this is the mouth's own shallow roof) but necessarily
+ *  positive: the plan's surface contract (§7) allows a visible opening *only*
+ *  at the mouth, so no interior geometry may stand above the terrain past it.
+ *  The leading section used to be exempt entirely, which is what let the
+ *  tunnel arch break through the meadow past the carved mouth. */
+const MOUTH_ROOF_MIN = 0.35
+/** Where the leading-section check starts, measured from the tunnel's own
+ *  start: just past the carved mouth footprint, which *is* the opening and so
+ *  is legitimately roofless. */
+const MOUTH_FOOTPRINT_MARGIN = MOUTH_RADIUS + 0.35
 
 export type CaveGeneratorInput = LargeCavePlacementInput
 
@@ -100,12 +121,25 @@ function tunnelOverburdenOk(
   floorEndY: number,
   ceilingHeight: number,
 ): boolean {
-  for (let i = 1; i <= OVERBURDEN_SAMPLES; i++) {
-    const t = OVERBURDEN_MOUTH_SKIP + (i / OVERBURDEN_SAMPLES) * (1 - OVERBURDEN_MOUTH_SKIP)
+  const roofAt = (t: number): number => {
     const x = ax + (bx - ax) * t
     const z = az + (bz - az) * t
     const floorY = floorStartY + (floorEndY - floorStartY) * t
-    if (!overburdenOk(sampleHeight, x, z, floorY + ceilingHeight)) return false
+    return sampleHeight(x, z) - (floorY + ceilingHeight)
+  }
+  for (let i = 1; i <= OVERBURDEN_SAMPLES; i++) {
+    const t = OVERBURDEN_MOUTH_SKIP + (i / OVERBURDEN_SAMPLES) * (1 - OVERBURDEN_MOUTH_SKIP)
+    if (roofAt(t) < MIN_OVERBURDEN) return false
+  }
+  // Leading section: thin roof allowed, no roof isn't.
+  const length = Math.hypot(bx - ax, bz - az)
+  if (length > MOUTH_FOOTPRINT_MARGIN) {
+    const tStart = MOUTH_FOOTPRINT_MARGIN / length
+    for (let i = 0; i < OVERBURDEN_SAMPLES; i++) {
+      const t = tStart + (i / OVERBURDEN_SAMPLES) * (OVERBURDEN_MOUTH_SKIP - tStart)
+      if (t >= OVERBURDEN_MOUTH_SKIP) break
+      if (roofAt(t) < MOUTH_ROOF_MIN) return false
+    }
   }
   return true
 }
@@ -120,11 +154,13 @@ function buildCaveFromSite(
 ): CaveDefinition | null {
   const random = createSeededRandom((seed ^ 0x51ed270b ^ Math.round(site.x * 97) ^ Math.round(site.z * 131)) >>> 0)
   const into = tunnelDirection(site.yaw)
-  const groundY = sampleHeight(site.x, site.z)
+  // Floor of the carved mouth recess, not the untouched surface — see
+  // `CAVE_MOUTH_DEPTH`.
+  const mouthFloorY = sampleHeight(site.x, site.z) - CAVE_MOUTH_DEPTH
 
   const entrance: CaveEntrance = {
     x: site.x,
-    y: groundY,
+    y: mouthFloorY,
     z: site.z,
     yaw: site.yaw,
     width: LARGE_CAVE_MOUTH_WIDTH,
@@ -134,15 +170,15 @@ function buildCaveFromSite(
   const mouthNode: CaveNode = {
     id: 'mouth',
     kind: 'mouth',
-    center: { x: site.x, y: groundY, z: site.z },
+    center: { x: site.x, y: mouthFloorY, z: site.z },
     radius: MOUTH_RADIUS,
-    floorY: groundY,
-    ceilingY: groundY + ENTRANCE_HEIGHT,
+    floorY: mouthFloorY,
+    ceilingY: mouthFloorY + ENTRANCE_HEIGHT,
   }
 
   const chamber1X = site.x + into.dx * site.length
   const chamber1Z = site.z + into.dz * site.length
-  const chamber1FloorY = floorAtDistance(groundY, site.length)
+  const chamber1FloorY = floorAtDistance(mouthFloorY, site.length)
   const chamber1: CaveNode = {
     id: 'chamber1',
     kind: 'chamber',
@@ -157,12 +193,12 @@ function buildCaveFromSite(
     from: 'mouth',
     to: 'chamber1',
     radius: TUNNEL_RADIUS,
-    floorStartY: groundY,
+    floorStartY: mouthFloorY,
     floorEndY: chamber1FloorY,
     ceilingHeight: TUNNEL_CEILING_HEIGHT,
   }
 
-  if (!tunnelOverburdenOk(sampleHeight, site.x, site.z, chamber1X, chamber1Z, groundY, chamber1FloorY, TUNNEL_CEILING_HEIGHT)) {
+  if (!tunnelOverburdenOk(sampleHeight, site.x, site.z, chamber1X, chamber1Z, mouthFloorY, chamber1FloorY, TUNNEL_CEILING_HEIGHT)) {
     return null
   }
   if (!overburdenOk(sampleHeight, chamber1X, chamber1Z, chamber1.ceilingY)) return null
@@ -181,7 +217,7 @@ function buildCaveFromSite(
     const length2 = BRANCH_LENGTH_MIN + random() * BRANCH_LENGTH_RANGE
     const chamber2X = chamber1X + dir2.dx * length2
     const chamber2Z = chamber1Z + dir2.dz * length2
-    const chamber2FloorY = floorAtDistance(groundY, site.length + length2)
+    const chamber2FloorY = floorAtDistance(mouthFloorY, site.length + length2)
     const chamber2: CaveNode = {
       id: 'chamber2',
       kind: 'chamber',

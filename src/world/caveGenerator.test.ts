@@ -63,6 +63,55 @@ describe('generateCaveDefinitions (plan world-terrain-007)', () => {
     expect(caves).toEqual([])
   })
 
+  // The mouth itself is the one legitimately open, roofless spot; everything
+  // past its carved footprint must stay buried.
+  const MOUTH_FOOTPRINT = 2
+
+  it('never lifts a tunnel roof above the surface past the carved mouth', () => {
+    const caves = generateCaveDefinitions(baseInput())
+    expect(caves.length).toBeGreaterThan(0)
+    for (const cave of caves) {
+      for (const tunnel of cave.tunnels) {
+        const from = cave.nodes.find((n) => n.id === tunnel.from)!
+        const to = cave.nodes.find((n) => n.id === tunnel.to)!
+        const length = Math.hypot(to.center.x - from.center.x, to.center.z - from.center.z)
+        for (let i = 0; i <= 20; i++) {
+          const t = i / 20
+          if (t * length < MOUTH_FOOTPRINT) continue
+          const x = from.center.x + (to.center.x - from.center.x) * t
+          const z = from.center.z + (to.center.z - from.center.z) * t
+          const ceilingY = tunnel.floorStartY + (tunnel.floorEndY - tunnel.floorStartY) * t + tunnel.ceilingHeight
+          expect(hill(x, z)).toBeGreaterThan(ceilingY)
+        }
+      }
+    }
+  })
+
+  it('does not treat an entity standing on the surface past the mouth as inside the cave', () => {
+    const caves = generateCaveDefinitions(baseInput())
+    expect(caves.length).toBeGreaterThan(0)
+    for (const cave of caves) {
+      const volume = createCaveVolume(cave)
+      for (const node of cave.nodes) {
+        if (node.kind === 'mouth') continue
+        const { x, z } = node.center
+        expect(volume.contains(x, hill(x, z), z)).toBe(false)
+      }
+      for (const tunnel of cave.tunnels) {
+        const from = cave.nodes.find((n) => n.id === tunnel.from)!
+        const to = cave.nodes.find((n) => n.id === tunnel.to)!
+        const length = Math.hypot(to.center.x - from.center.x, to.center.z - from.center.z)
+        for (let i = 0; i <= 20; i++) {
+          const t = i / 20
+          if (t * length < MOUTH_FOOTPRINT) continue
+          const x = from.center.x + (to.center.x - from.center.x) * t
+          const z = from.center.z + (to.center.z - from.center.z) * t
+          expect(volume.contains(x, hill(x, z), z)).toBe(false)
+        }
+      }
+    }
+  })
+
   it('all cave geometry lies within its own bounds', () => {
     const caves = generateCaveDefinitions(baseInput())
     for (const cave of caves) {
