@@ -16,12 +16,16 @@ export type AudioLoopHandle = {
 /** World XZ (optional Y) for distance-attenuated one-shots. */
 export type WorldSoundPosition = { x: number; y?: number; z: number }
 
-/** Fire-and-forget clip at a world position — volume falls off with distance. */
+/** Fire-and-forget clip at a world position — volume falls off with distance.
+ *  `maxDistance` overrides the default falloff range (`DISTANCE_MAX`) for a
+ *  clip that should carry farther than a standard one-shot (plan fauna-009
+ *  §1 wolf howl) — `undefined` keeps the default. */
 export type PlayAt = (
   url: string,
   position: WorldSoundPosition,
   volume?: number,
   bus?: AudioBusId,
+  maxDistance?: number,
 ) => void
 
 /** A one-shot clip's stop handle — no-op once the clip has already ended. */
@@ -35,6 +39,7 @@ export type PlayAtCancelable = (
   position: WorldSoundPosition,
   volume?: number,
   bus?: AudioBusId,
+  maxDistance?: number,
 ) => ActiveSound
 
 export type WorldAudio = {
@@ -216,8 +221,9 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     position: WorldSoundPosition,
     volume = 1,
     bus: AudioBusId = 'sfx',
+    maxDistance?: number,
   ): void {
-    playAtCancelable(url, position, volume, bus)
+    playAtCancelable(url, position, volume, bus, maxDistance)
   }
 
   function playAtCancelable(
@@ -225,6 +231,7 @@ export function createWorldAudio(camera: Camera): WorldAudio {
     position: WorldSoundPosition,
     volume = 1,
     bus: AudioBusId = 'sfx',
+    maxDistance = DISTANCE_MAX,
   ): ActiveSound {
     listener.getWorldPosition(listenerPos)
     const y = position.y ?? listenerPos.y
@@ -233,7 +240,7 @@ export function createWorldAudio(camera: Camera): WorldAudio {
       y - listenerPos.y,
       position.z - listenerPos.z,
     )
-    const gain = clamp01(volume) * distanceGain(distance)
+    const gain = clamp01(volume) * distanceGain(distance, DISTANCE_REF, maxDistance)
     if (gain < DISTANCE_GAIN_EPS) return NO_OP_SOUND
     return playOnceCancelable(url, gain, bus)
   }

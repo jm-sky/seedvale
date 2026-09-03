@@ -55,6 +55,10 @@ const ANIMAL_FLAVOR_LINES: Record<AnimalKind, string[]> = {
     'Kura gdacze i grzebie w ziemi w poszukiwaniu ziaren.',
     'Odbiega parę kroków, po czym zaraz wraca do dziobania.',
   ],
+  rooster: [
+    'Kogut prostuje się dumnie, mierząc Cię czujnym spojrzeniem.',
+    'Grzebień koguta drży, gdy ptak przechadza się po podwórzu.',
+  ],
 }
 
 export function pickAnimalFlavorLine(kind: AnimalKind): string {

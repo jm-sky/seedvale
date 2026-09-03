@@ -59,7 +59,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                   | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                   | -       | 🔴 | L      | -       |
 | 💡 `tools-010--recommended-order-rankings-and-actionable-plan-dashboard.md` | -       | 🟡 | M      | -      |
-| 💡 `fauna-009-wolf-howling-and-rooster-vocalization.md`                | -       | 🟡 | M      | -      |
 
 ---
 
@@ -69,6 +68,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | File | Check |
 |------|-------|
+| `fauna-009-wolf-howling-and-rooster-vocalization.md` | Wolf howl fires mostly at night with reduced dusk/dawn activity and none by day, never during an active chase/attack/flee, wolf visibly stops briefly (no howl clip) rather than fighting its own movement, audible from farther than a normal one-shot; a rooster spawns as livestock (chicken-owning houses only, ~50% companion chance), has basic movement/idle, crows mostly at dawn with occasional daytime crows and no night spam; multiple wolves/roosters don't audio-spam (existing concurrency cap) |
 | `world-012-world-locations-discovery-and-map-navigation.md` | New game shows no settlements on the map; talk to the home guard ("Opowiedz mi coś o okolicy") and confirm 1-3 landmarks reveal with feedback, repeat conversations reveal more from the pool, and nearby settlements always reveal; buy a Near map and a Far map from the trader and confirm they reveal different, non-overlapping locations and the knowledge survives selling the map item; open the world map (`M`), click a discovered location for the popover, set/remove up to 3 targets (stable slot colours), clear targets, center on player; confirm the minimap shows only active targets (marker in-range, arrow out-of-range); confirm a deep cave shows its entrance; save/load round-trips discovered locations and targets |
 | `world-011-water-types-and-drinking.md` | Drink at a river bank restores thirst with no illness warning; drink/fill at an ocean shoreline is refused with the salty-water message and doesn't touch Inventory; lake keeps the existing unsafe-warning drink; well drink/fill unaffected; fishing prompt/action at river and ocean shorelines unaffected |
 | `tools-009-plan-metadata-contract-migration-and-documentation-generation.md` | Skim the regenerated `docs/plans/README.md`/`PLANNING.md`/`PLAN-METADATA.md` sections for sense; spot-check `pnpm plans:migrate-metadata` and `pnpm plans:cleanup-metadata` dry-run output is sane on the real plan set (no proposed changes expected — migration already applied) |

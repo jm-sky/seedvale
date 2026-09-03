@@ -237,3 +237,50 @@ export function createChickenModel(): THREE.Group {
   root.add(legs(beakMat, 2, 0, 0.02, 0.02, 0.16))
   return root
 }
+
+/** Rooster placeholder (plan fauna-009 §3) — same feet-rooted primitive
+ *  pipeline as `createChickenModel`, distinguished by a darker plumage color,
+ *  a taller comb/wattle and an upright tail plume. Swappable for a real GLB
+ *  later (`livestock.ts`'s `LIVESTOCK_URLS.rooster`) without any behaviour
+ *  change, same as every other livestock fallback here. */
+export function createRoosterModel(): THREE.Group {
+  const root = new THREE.Group()
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, flatShading: true })
+  const combMat = new THREE.MeshStandardMaterial({ color: 0xc23b3b, flatShading: true })
+  const beakMat = new THREE.MeshStandardMaterial({ color: 0xd9a02a, flatShading: true })
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 5), bodyMat)
+  body.scale.set(1, 1.15, 1.25)
+  body.position.y = 0.19
+  body.castShadow = true
+  root.add(body)
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.075, 5, 4), bodyMat)
+  head.position.set(0, 0.35, 0.11)
+  head.castShadow = true
+  root.add(head)
+
+  const comb = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.09, 4), combMat)
+  comb.position.set(0, 0.45, 0.1)
+  root.add(comb)
+
+  const wattle = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 4), combMat)
+  wattle.position.set(0, 0.31, 0.16)
+  wattle.rotation.x = Math.PI
+  root.add(wattle)
+
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.027, 0.09, 4), beakMat)
+  beak.rotation.x = Math.PI / 2
+  beak.position.set(0, 0.34, 0.2)
+  root.add(beak)
+
+  // Upright plume, unlike the chicken's low trailing tail — the visible
+  // "this is the rooster" cue at a glance.
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.28, 5), bodyMat)
+  tail.position.set(0, 0.42, -0.15)
+  tail.rotation.x = 0.7
+  root.add(tail)
+
+  root.add(legs(beakMat, 2, 0, 0.02, 0.022, 0.18))
+  return root
+}

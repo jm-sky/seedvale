@@ -86,6 +86,13 @@ export type Fauna = {
      *  `AnimalAgent.update()`, fired once per predator on the rising edge of
      *  committing to a human chase (see `AnimalAgent`'s own doc). */
     onAnimalAggro?: (kind: AnimalKind, x: number, z: number) => void,
+    /** Spontaneous ambient vocalization hook (plan fauna-009 §1) — forwarded
+     *  to each `AnimalAgent.update()`'s spontaneous cooldown roll, same as
+     *  livestock's own `onAnimalVocalize` (`createSettlement.ts`). Wild
+     *  fauna's only currently-configured spontaneous vocalizer is `wolf`
+     *  (howl); every other wild kind has no `SPONTANEOUS_VOCALIZE_CONFIG`
+     *  entry and this stays a no-op for it. */
+    onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
   ) => void
   dispose: () => void
   /** Deterministic time-skip catch-up (plan 196) — called once by
@@ -843,6 +850,7 @@ export async function createFauna(
       nearbyNpcs,
       onNpcHit,
       onAnimalAggro,
+      onAnimalVocalize,
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
@@ -861,11 +869,12 @@ export async function createFauna(
           nearbyNpcs,
           onNpcHit,
           onAnimalAggro,
-          // Wild-only spawner: cow/sheep/chicken (the only configured
-          // spontaneous-vocalization kinds) never spawn here, only via
-          // `settlement/livestock.ts` — see `createSettlement.ts`.
-          undefined,
+          // Wild fauna's only spontaneous-vocalization kind is `wolf` (howl,
+          // plan fauna-009) — cow/sheep/chicken/rooster never spawn here,
+          // only via `settlement/livestock.ts` (`createSettlement.ts`).
+          onAnimalVocalize,
           worldDays,
+          timeOfDay,
         )
       }
 

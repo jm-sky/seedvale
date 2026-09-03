@@ -20,14 +20,15 @@ export const MAX_HP: Record<AnimalKind, number> = {
   cow: 70,
   sheep: 22,
   chicken: 6,
+  rooster: 7,
 }
 
 /** Predator kind -> prey kind -> damage per attack. */
 const DAMAGE_TABLE: Partial<Record<AnimalKind, Partial<Record<AnimalKind, number>>>> = {
-  wolf: { deer: 15, stag: 12, boar: 10, sheep: 14, donkey: 14, chicken: 20 },
-  fox: { deer: 10, stag: 6, rabbit: 20, duck: 18, chicken: 20 },
+  wolf: { deer: 15, stag: 12, boar: 10, sheep: 14, donkey: 14, chicken: 20, rooster: 20 },
+  fox: { deer: 10, stag: 6, rabbit: 20, duck: 18, chicken: 20, rooster: 20 },
   // Large omnivorous predator — hits harder than wolf across the board (plan 188).
-  bear: { deer: 26, stag: 22, boar: 20, sheep: 24, donkey: 22, cow: 20, chicken: 28 },
+  bear: { deer: 26, stag: 22, boar: 20, sheep: 24, donkey: 22, cow: 20, chicken: 28, rooster: 28 },
 }
 
 const DEFAULT_DAMAGE = 8

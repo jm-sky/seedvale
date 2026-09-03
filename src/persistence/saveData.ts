@@ -1201,7 +1201,8 @@ function isNpcRelationshipsField(value: unknown): value is NpcRelationshipEntry[
 }
 
 const ANIMAL_KINDS: ReadonlySet<string> = new Set<AnimalKind>([
-  'bear', 'boar', 'chicken', 'cow', 'deer', 'donkey', 'duck', 'fox', 'horse', 'rabbit', 'sheep', 'stag', 'wolf',
+  'bear', 'boar', 'chicken', 'cow', 'deer', 'donkey', 'duck', 'fox', 'horse', 'rabbit',
+  'rooster', 'sheep', 'stag', 'wolf',
 ])
 
 function isLivestockLife(value: unknown): value is { hunger: number, thirst: number, stamina: number } {

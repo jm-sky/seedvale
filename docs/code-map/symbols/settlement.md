@@ -202,14 +202,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 110
-- `disposeLivestock` — function — line 420
-- `LIVESTOCK_KINDS` — const — line 39
-- `LIVESTOCK_URLS` — const — line 28
-- `LivestockPersistence` — type — line 58
-- `LivestockRegistry` — type — line 80
-- `LivestockSaveRecord` — type — line 47
-- `spawnLivestock` — function — line 312
+- `createLivestockRegistry` — function — line 115
+- `disposeLivestock` — function — line 437
+- `LIVESTOCK_KINDS` — const — line 44
+- `LIVESTOCK_URLS` — const — line 29
+- `LivestockPersistence` — type — line 63
+- `LivestockRegistry` — type — line 85
+- `LivestockSaveRecord` — type — line 52
+- `spawnLivestock` — function — line 329
 
 ## `settlement/lodging.ts`
 

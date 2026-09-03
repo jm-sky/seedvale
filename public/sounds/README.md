@@ -58,6 +58,8 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | animal-cow-01.ogg | 513565__spurioustransients__cow-moo-8.wav | https://freesound.org/people/spurioustransients/sounds/513565/ | Cow moo |
 | animal-wolf-01.ogg | 338674__newagesoup__wolf-growl.wav | https://freesound.org/people/newagesoup/sounds/338674/ | Wolf growl |
 | animal-dog-01.ogg | ANMLDog_Dog Barks, Multiple, Indoors…_344 Audio_Dog Vocalisations_02.wav | Sonniss GDC 2026 — 344 Audio Dog Vocalisations | **not wired**; village dog; not deer/fox (S10 still open) |
+| fauna-wolf-howl-1.ogg | fauna-wolf-howl-1.wav | not recorded (staged directly as WAV, no upstream link kept) | Plan fauna-009 spontaneous howl, distinct from `animal-wolf-01.ogg`'s growl; source WAV was a ~55 s multi-take recording, manually trimmed to one ~8 s take before conversion |
+| fauna-rooster-crow-1.ogg | fauna-rooster-crow-1.wav | not recorded (staged directly as WAV, no upstream link kept) | Plan fauna-009 spontaneous rooster crow |
 
 ## Ambient / background
 

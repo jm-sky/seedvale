@@ -16,6 +16,7 @@ import {
   createCowModel,
   createDonkeyModel,
   createHorseModel,
+  createRoosterModel,
   createSheepModel,
 } from '../fauna/proceduralAnimals'
 import { createSeededRandom } from '../world/parseSeed'
@@ -23,7 +24,7 @@ import { type VillageSize, villageSizeConfig } from './families'
 import { homePlaceId } from './places'
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
-type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken'
+type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken' | 'rooster'
 
 export const LIVESTOCK_URLS: Record<LivestockKind, string> = {
   horse: '/models/fauna/horse.glb',
@@ -31,6 +32,10 @@ export const LIVESTOCK_URLS: Record<LivestockKind, string> = {
   cow: '/models/fauna/cow.glb',
   sheep: '/models/fauna/sheep.glb',
   chicken: '/models/fauna/chicken.glb',
+  // No dedicated GLB yet (plan fauna-009 §3) — `ensureLivestockTemplates`'s
+  // existing load-failure fallback resolves this to `createRoosterModel()`
+  // until one is dropped in here; no logic change needed when it is.
+  rooster: '/models/fauna/rooster.glb',
 }
 
 /** Single source of truth for "is this kind's `animalId` trustworthy after a
@@ -175,6 +180,7 @@ const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
   cow: createCowModel,
   sheep: createSheepModel,
   chicken: createChickenModel,
+  rooster: createRoosterModel,
 }
 
 /** Given ownership, chance of 2 animals instead of 1. */
@@ -283,6 +289,16 @@ function findSpotNearHouse(
   return { x: home.x, z: home.z }
 }
 
+/** Chance a house that rolled at least one chicken also gets a companion
+ *  rooster (plan fauna-009 §2) — a separate deterministic draw appended
+ *  *after* the existing species-count/species-pick rolls above, so it never
+ *  perturbs their sequence: the persisted `animalId` of any existing
+ *  chicken/sheep/cow/donkey/horse individual is built from `kind` +
+ *  `houseAnimalIndex`, both already fixed by the time this roll runs
+ *  (fauna-009 implementation notes — must not change existing species-roll
+ *  outcomes for an existing save). */
+const ROOSTER_COMPANION_CHANCE = 0.5
+
 function kindsForHouse(size: VillageSize, random: () => number): LivestockKind[] {
   const ownershipChance = villageSizeConfig(size).livestockOwnershipChance
   if (size === 'OUTPOST') {
@@ -292,6 +308,7 @@ function kindsForHouse(size: VillageSize, random: () => number): LivestockKind[]
   const count = random() < LIVESTOCK_TWO_CHANCE ? 2 : 1
   const kinds: LivestockKind[] = []
   for (let i = 0; i < count; i++) kinds.push(pickSpecies(random))
+  if (kinds.includes('chicken') && random() < ROOSTER_COMPANION_CHANCE) kinds.push('rooster')
   return kinds
 }
 

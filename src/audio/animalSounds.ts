@@ -76,6 +76,84 @@ const SPONTANEOUS_VOCALIZE_CONFIG: Partial<Record<AnimalKind, SpontaneousVocaliz
   sheep: { cooldownMinSec: 20 * 60, cooldownMaxSec: 40 * 60, chance: 0.12 },
   // Somewhat shorter cooldown per plan §1 ("kura może mieć nieco krótszy cooldown").
   chicken: { cooldownMinSec: 10 * 60, cooldownMaxSec: 20 * 60, chance: 0.15 },
+  // Base chance before `spontaneousVocalizeTimeWeight` scales it toward 0
+  // outside each species' active window (plan fauna-009 §1/§4) — tuned
+  // higher than cow/sheep/chicken's flat chance since it's rarely at full
+  // weight.
+  wolf: { cooldownMinSec: 6 * 60, cooldownMaxSec: 14 * 60, chance: 0.3 },
+  rooster: { cooldownMinSec: 12 * 60, cooldownMaxSec: 25 * 60, chance: 0.25 },
+}
+
+/** Dawn/dusk anchors (`dayNight.ts`'s `timeOfDay` convention: 0 = midnight,
+ *  0.25 ≈ dawn, 0.5 = noon, 0.75 ≈ dusk) — kept local here rather than
+ *  imported, same convention/reasoning as `createAmbientAudio.ts`'s own
+ *  `DUSK`/night-phase constants (this module stays independent of
+ *  `world/dayNight.ts`). */
+const DAWN_TIME = 0.25
+const DUSK_TIME = 0.75
+
+/** Circular distance between two `timeOfDay` values in `[0, 0.5]`. */
+function circularTimeDistance(a: number, b: number): number {
+  const d = Math.abs(a - b) % 1
+  return Math.min(d, 1 - d)
+}
+
+/** How far into the night half (in `timeOfDay` units, past the dawn/dusk
+ *  boundary) `wolfHowlWeight` keeps ramping from `WOLF_TWILIGHT_WEIGHT` up
+ *  to full weight — night's deepest point (midnight) is `0.25` from either
+ *  boundary, so this stays well inside that. */
+const WOLF_TWILIGHT_WIDTH = 0.15
+const WOLF_TWILIGHT_WEIGHT = 0.35
+const WOLF_DAY_WEIGHT = 0
+
+/** Wolf howl time-of-day weighting (plan fauna-009 §1) — multiplies
+ *  `SPONTANEOUS_VOCALIZE_CONFIG.wolf.chance`: full weight through the core
+ *  of the night, ramping down to `WOLF_TWILIGHT_WEIGHT` right at dusk/dawn,
+ *  `0` through the day. Pure/exported so it's unit-testable without an
+ *  `AnimalAgent`. */
+export function wolfHowlWeight(timeOfDay: number): number {
+  if (timeOfDay > DAWN_TIME && timeOfDay < DUSK_TIME) return WOLF_DAY_WEIGHT
+  const distFromBoundary = Math.min(
+    circularTimeDistance(timeOfDay, DAWN_TIME),
+    circularTimeDistance(timeOfDay, DUSK_TIME),
+  )
+  if (distFromBoundary >= WOLF_TWILIGHT_WIDTH) return 1
+  return WOLF_TWILIGHT_WEIGHT + (1 - WOLF_TWILIGHT_WEIGHT) * (distFromBoundary / WOLF_TWILIGHT_WIDTH)
+}
+
+/** How close to dawn (`DAWN_TIME`), in `timeOfDay` units, the crow weight
+ *  ramps down from its dawn peak to the flat daytime baseline. */
+const ROOSTER_DAWN_WINDOW = 0.08
+const ROOSTER_DAY_WEIGHT = 0.12
+const ROOSTER_NIGHT_WEIGHT = 0
+
+/** Rooster crow time-of-day weighting (plan fauna-009 §4) — multiplies
+ *  `SPONTANEOUS_VOCALIZE_CONFIG.rooster.chance`: peaks at dawn, a low but
+ *  non-zero baseline through the rest of the day, `0` at night. Needs the
+ *  raw `timeOfDay` (not `dayFactor`) since dawn and dusk otherwise share the
+ *  same `dayFactor`/elevation value. Pure/exported, same reason as
+ *  `wolfHowlWeight`. */
+export function roosterCrowWeight(timeOfDay: number): number {
+  const distFromDawn = circularTimeDistance(timeOfDay, DAWN_TIME)
+  if (distFromDawn < ROOSTER_DAWN_WINDOW) {
+    return 1 - (1 - ROOSTER_DAY_WEIGHT) * (distFromDawn / ROOSTER_DAWN_WINDOW)
+  }
+  const isDay = timeOfDay > DAWN_TIME && timeOfDay < DUSK_TIME
+  return isDay ? ROOSTER_DAY_WEIGHT : ROOSTER_NIGHT_WEIGHT
+}
+
+const SPONTANEOUS_VOCALIZE_WEIGHT: Partial<Record<AnimalKind, (timeOfDay: number) => number>> = {
+  wolf: wolfHowlWeight,
+  rooster: roosterCrowWeight,
+}
+
+/** `tickSpontaneousVocalizeCooldown`'s time-of-day `chanceMultiplier` for
+ *  `kind` — `1` (no-op) for any kind without a configured weighting
+ *  function, so cow/sheep/chicken's existing flat-chance behaviour is
+ *  unaffected. `AnimalAgent.update()` is the sole caller, since it's the one
+ *  place both `kind` and the world clock are already in scope. */
+export function spontaneousVocalizeTimeWeight(kind: AnimalKind, timeOfDay: number): number {
+  return SPONTANEOUS_VOCALIZE_WEIGHT[kind]?.(timeOfDay) ?? 1
 }
 
 /** Once the cooldown clears without a successful roll, how soon to retry —
@@ -108,12 +186,17 @@ export function tickSpontaneousVocalizeCooldown(
   dt: number,
   cooldownSec: number,
   rng: () => number = Math.random,
+  /** Extra multiplier folded into `config.chance` before the roll (plan
+   *  fauna-009) — `spontaneousVocalizeTimeWeight()`'s dawn/night weighting
+   *  for wolf howl / rooster crow. `1` (no-op) for every existing call site
+   *  and every kind without a configured weighting function. */
+  chanceMultiplier = 1,
 ): { cooldownSec: number, fire: boolean } {
   const config = SPONTANEOUS_VOCALIZE_CONFIG[kind]
   if (!config) return { cooldownSec, fire: false }
   const remaining = cooldownSec - dt
   if (remaining > 0) return { cooldownSec: remaining, fire: false }
-  if (rng() < config.chance) {
+  if (rng() < config.chance * chanceMultiplier) {
     const fresh = config.cooldownMinSec + rng() * (config.cooldownMaxSec - config.cooldownMinSec)
     return { cooldownSec: fresh, fire: true }
   }
@@ -129,6 +212,32 @@ export function tickSpontaneousVocalizeCooldown(
 const MAX_CONCURRENT_SPONTANEOUS = 3
 const CONCURRENT_WINDOW_SEC = 6
 let recentSpontaneousPlaysAt: number[] = []
+
+/** Spontaneous-vocalization clip override (plan fauna-009) — species whose
+ *  ambient spontaneous vocalization uses a different clip than the
+ *  `[E]`-interact one-shot (`ANIMAL_SOUND_URLS`): wolf howl is a distinct
+ *  clip from the interact growl, and rooster has no interact clip at all.
+ *  `playSpontaneousAnimalSound` falls back to `ANIMAL_SOUND_URLS` for any
+ *  kind without an entry here, so cow/sheep/chicken keep sharing their
+ *  existing clip between both triggers. */
+const SPONTANEOUS_VOCALIZE_SOUND_URLS: Partial<Record<AnimalKind, string[]>> = {
+  wolf: ['/sounds/fauna-wolf-howl-1.ogg'],
+  rooster: ['/sounds/fauna-rooster-crow-1.ogg'],
+}
+
+const SPONTANEOUS_VOCALIZE_VOLUME: Partial<Record<AnimalKind, number>> = {
+  wolf: 0.55,
+  rooster: 0.3,
+}
+
+/** Per-kind override for `playAt`'s distance falloff (plan fauna-009 §1:
+ *  "howl słyszalny z większej odległości niż standardowa wokalizacja") —
+ *  extends the existing spatial-audio falloff (`createWorldAudio.ts`'s
+ *  `distanceGain`/`DISTANCE_MAX`) instead of a second playback path.
+ *  `undefined` for any kind not listed here uses `playAt`'s own default. */
+const SPONTANEOUS_VOCALIZE_MAX_DISTANCE: Partial<Record<AnimalKind, number>> = {
+  wolf: 60,
+}
 
 /** Plays a spontaneous vocalization for `kind` unless the concurrent-play
  *  cap is already saturated. Separate from `playAnimalSound()`'s direct
@@ -146,5 +255,18 @@ export function playSpontaneousAnimalSound(
   recentSpontaneousPlaysAt = recentSpontaneousPlaysAt.filter((t) => nowSec - t < CONCURRENT_WINDOW_SEC)
   if (recentSpontaneousPlaysAt.length >= MAX_CONCURRENT_SPONTANEOUS) return
   recentSpontaneousPlaysAt.push(nowSec)
-  playAnimalSound(kind, playAt, position)
+  const overrideUrls = SPONTANEOUS_VOCALIZE_SOUND_URLS[kind]
+  if (!overrideUrls) {
+    playAnimalSound(kind, playAt, position)
+    return
+  }
+  const url = overrideUrls[Math.floor(Math.random() * overrideUrls.length)]
+  if (!url) return
+  playAt(
+    url,
+    position,
+    SPONTANEOUS_VOCALIZE_VOLUME[kind] ?? DEFAULT_ANIMAL_SFX_VOLUME,
+    undefined,
+    SPONTANEOUS_VOCALIZE_MAX_DISTANCE[kind],
+  )
 }

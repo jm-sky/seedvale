@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-08-27 (plan settlements-npcs-002 — NPC profession work integration)
+**Last updated:** 2026-09-03 (plan fauna-009 — rooster placeholder)
 
 ## How to use
 
@@ -98,6 +98,7 @@ If the feature needs no new model, do nothing to this file.
 | M69 | Buckets (`wooden_bucket`/`copper_bucket`) | Pickup/inventory mesh; procedural cylinder+handle fallback in place and functional, tinted per material. `_temp/Models/packs/fantasy-props-megakit/glTF/Bucket_Wooden_1.gltf` + `Bucket_Metal.gltf` are plausible sources, not yet converted/wired | `needed` | plan items-player-001 |
 | M70 | Saddlebags (`saddlebags`) | Inert carried item (no equip mechanic yet); default procedural fallback mesh (same catch-all box `chest`/`tent`/`backpack` use). `_temp/Models/packs/fantasy-props-megakit/glTF/Pouch_Large.gltf` is a plausible source, not yet converted/wired | `needed` | plan items-player-001 |
 | M71 | Copper ore / copper (`copper_ore`/`copper`) | Pickup/inventory mesh; `copper_ore` reuses the existing ore-dodecahedron fallback (tinted, same as iron/coal/gold), `copper` a small procedural ingot box, no GLB yet | `needed` | plan items-player-001 |
+| M72 | Rooster | New livestock `AnimalKind`; `livestock.ts`'s `LIVESTOCK_URLS.rooster` points at `models/fauna/rooster.glb` (not present — `_temp/` had no suitable model), procedural fallback (`fauna/proceduralAnimals.ts`'s `createRoosterModel`, darker chicken variant + upright tail plume) in place and functional | `needed` | plan fauna-009 |
 
 ## Wired (reference — do not treat as open work)
 
@@ -106,7 +107,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Area | Examples |
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
-| Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey |
+| Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey; rooster (procedural placeholder, see M72) |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork) |

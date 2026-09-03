@@ -1950,6 +1950,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               }
             },
             (kind, x, z) => playAnimalAggroSound(kind, worldAudio.playAt, { x, z }),
+            (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
           )
         })
         // Traps run inside the fauna pass's own cadence (plan 141 §11): the

@@ -9,6 +9,7 @@ import {
 } from '../ai/npcMovementWatchdog'
 import {
   initialSpontaneousVocalizeCooldownSec,
+  spontaneousVocalizeTimeWeight,
   tickSpontaneousVocalizeCooldown,
 } from '../audio/animalSounds'
 import { isNpcCombatDebugMode } from '../debug/debugMode'
@@ -116,6 +117,12 @@ const CONTACT_RANGE = 0.8
 /** Minimum seconds between bites from the same predator, so contact doesn't
  *  melt prey HP in a single frame. */
 const ATTACK_COOLDOWN = 0.6
+/** How long a wolf stands still (idle animation, `steerToward` no-ops) after
+ *  a successful howl roll (plan fauna-009 §1) — the fallback presentation
+ *  for a species with no dedicated howl clip. Does not touch `pendingAction`/
+ *  wander target/nav-rescue state, so movement resumes toward the same
+ *  destination once the pause elapses. */
+const HOWL_PAUSE_SECONDS = 2.5
 /** Rabies bite-transmission chance (plan fauna-001) — one roll per landed
  *  bite (`attack()`), never per-tick, so the outcome can't be farmed by
  *  camping at a low frame rate. Set below the corpse-contact chance: a
@@ -677,6 +684,7 @@ export type AnimalKind =
   | 'cow'
   | 'sheep'
   | 'chicken'
+  | 'rooster'
 
 export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   wolf: 'wilk',
@@ -692,6 +700,7 @@ export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   cow: 'krowa',
   sheep: 'owca',
   chicken: 'kura',
+  rooster: 'kogut',
 }
 
 export type AnimalDef = {
@@ -974,6 +983,23 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 0,
     production: { product: 'egg', amount: 1, intervalDays: 1 },
   },
+  // Plan fauna-009 §2: a distinct AnimalKind for crow vocalization/presence,
+  // reusing the chicken's stats — no `production` block (rooster doesn't
+  // lay eggs/breed in this plan).
+  rooster: {
+    kind: 'rooster',
+    role: 'prey',
+    sociability: 'domestic',
+    color: 0x8a3a2a,
+    scale: 0.38,
+    modelHeight: 0.44,
+    walkSpeed: 1.8,
+    sprintSpeed: 4.8,
+    detectRange: 0,
+    fleeRange: 10,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
+  },
 }
 
 /** A nearby NPC candidate for predator human-targeting (plan 179 §5/§7) —
@@ -1139,6 +1165,11 @@ export class AnimalAgent {
    *  the other cooldown-style timers. */
   private attackAnimTimer = 0
   private hurtAnimTimer = 0
+  /** Countdown while `steerToward()` should no-op for a howling wolf with no
+   *  dedicated howl clip (plan fauna-009 §1, `HOWL_PAUSE_SECONDS`) — set on a
+   *  successful howl roll in `update()`, decremented alongside the other
+   *  timers. Only ever set for `kind === 'wolf'`. */
+  private howlPauseTimer = 0
   /** Bounds how long a dead animal's `update()` keeps ticking its own mixer
    *  (plan npc-009) so the one-shot `deathAction` actually plays out — `null`
    *  when there was no `deathAction` to play (manual tip fallback, no mixer
@@ -2243,10 +2274,10 @@ export class AnimalAgent {
     /** Aggression/alert audio hook (plan 188 §11) — fired once on the rising
      *  edge of this predator committing to a human chase, not every frame. */
     onAggro?: (kind: AnimalKind, x: number, z: number) => void,
-    /** Spontaneous ambient vocalization hook (plan settlements-npcs-004 §1) —
-     *  fired at most once per tick, on the frame `tickSpontaneousVocalizeCooldown`
-     *  rolls a success. No-op for any kind without a configured vocalization
-     *  (currently cow/sheep/chicken only). */
+    /** Spontaneous ambient vocalization hook (plan settlements-npcs-004 §1,
+     *  extended fauna-009 §1/§4) — fired at most once per tick, on the frame
+     *  `tickSpontaneousVocalizeCooldown` rolls a success. No-op for any kind
+     *  without a configured vocalization (cow/sheep/chicken/wolf/rooster). */
     onVocalize?: (kind: AnimalKind, x: number, z: number) => void,
     /** `dayNight.elapsedDays` (plan fauna-002) — only meaningful for a
      *  livestock kind with `def.production`; drives the day-anchor
@@ -2254,6 +2285,13 @@ export class AnimalAgent {
      *  Defaults to 0 so existing wild-fauna/test callers that never touch
      *  production are unaffected. */
     nowDays = 0,
+    /** `dayNight.timeOfDay` (plan fauna-009 §1/§4) — the raw world clock (not
+     *  just `dayFactor`), needed to weight wolf howl toward night/twilight and
+     *  rooster crow toward dawn (`spontaneousVocalizeTimeWeight`); `dayFactor`
+     *  alone can't tell dawn from dusk. Defaults to noon (full "day" weight)
+     *  so existing wild-fauna/test callers that don't pass it keep prior
+     *  behaviour for every kind without time-of-day weighting. */
+    timeOfDay = 0.5,
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) {
@@ -2286,9 +2324,30 @@ export class AnimalAgent {
     if (this.alertTimer > 0) this.alertTimer -= dt
     if (this.provokedTimer > 0) this.provokedTimer -= dt
     if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
-    const vocalizeTick = tickSpontaneousVocalizeCooldown(this.def.kind, dt, this.spontaneousVocalizeCooldownSec)
+    if (this.howlPauseTimer > 0) this.howlPauseTimer -= dt
+    const vocalizeTick = tickSpontaneousVocalizeCooldown(
+      this.def.kind,
+      dt,
+      this.spontaneousVocalizeCooldownSec,
+      undefined,
+      spontaneousVocalizeTimeWeight(this.def.kind, timeOfDay),
+    )
     this.spontaneousVocalizeCooldownSec = vocalizeTick.cooldownSec
-    if (vocalizeTick.fire) onVocalize?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
+    // A howling wolf must not interrupt a chase/attack/flee already under way
+    // (plan fauna-009 §1) — `pendingAction` still holds the previous tick's
+    // resolved intent here, since this tick's own decision hasn't run yet.
+    // A "denied" roll simply forfeits this window; the cooldown it already
+    // redrew still stands, so the wolf gets another chance next cycle.
+    const pursuitKind = this.pendingAction?.kind
+    const wolfBusy = this.def.kind === 'wolf'
+      && (pursuitKind === 'attack' || pursuitKind === 'chase' || pursuitKind === 'flee')
+    if (vocalizeTick.fire && !wolfBusy) {
+      onVocalize?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
+      // No dedicated howl clip (plan fauna-009 non-goal) — fall back to a
+      // brief `steerToward()` no-op instead, so the wolf visibly stops
+      // instead of walking through its own howl.
+      if (this.def.kind === 'wolf') this.howlPauseTimer = HOWL_PAUSE_SECONDS
+    }
     this.isNight = dayFactor <= 0
     this.moving = false
     this.sprinting = false
@@ -3535,6 +3594,12 @@ export class AnimalAgent {
   }
 
   private steerToward(dest: THREE.Vector3, speed: number, dt: number): void {
+    // Howl presentation pause (plan fauna-009 §1) — the single choke point
+    // shared by wander/chase/flee/nav-rescue/village-beeline movement, so a
+    // howling wolf stands still without any of those callers needing their
+    // own gate or new decision state (`this.moving` stays `false` for the
+    // tick, same as the `dist < 0.4` "arrived" early-out below).
+    if (this.howlPauseTimer > 0) return
     this.tmp.set(dest.x - this.mesh.position.x, 0, dest.z - this.mesh.position.z)
     const dist = this.tmp.length()
     if (dist < 0.4) return

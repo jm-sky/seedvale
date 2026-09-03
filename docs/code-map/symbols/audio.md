@@ -42,11 +42,14 @@ Generated from exported TypeScript symbols.
 
 - `ANIMAL_AGGRO_SOUND_URLS` — const — line 40
 - `ANIMAL_SOUND_URLS` — const — line 6
-- `initialSpontaneousVocalizeCooldownSec` — function — line 92
+- `initialSpontaneousVocalizeCooldownSec` — function — line 170
 - `playAnimalAggroSound` — function — line 50
 - `playAnimalSound` — function — line 24
-- `playSpontaneousAnimalSound` — function — line 140
-- `tickSpontaneousVocalizeCooldown` — function — line 106
+- `playSpontaneousAnimalSound` — function — line 249
+- `roosterCrowWeight` — function — line 136
+- `spontaneousVocalizeTimeWeight` — function — line 155
+- `tickSpontaneousVocalizeCooldown` — function — line 184
+- `wolfHowlWeight` — function — line 114
 
 ## `audio/audioSettings.ts`
 
@@ -69,17 +72,17 @@ Generated from exported TypeScript symbols.
 
 ## `audio/createWorldAudio.ts`
 
-- `ActiveSound` — type — line 28
+- `ActiveSound` — type — line 32
 - `AudioBusId` — type — line 7
 - `AudioLoopHandle` — type — line 9
-- `createWorldAudio` — function — line 104
-- `DISTANCE_GAIN_EPS` — const — line 66
-- `DISTANCE_MAX` — const — line 64
-- `DISTANCE_REF` — const — line 62
-- `distanceGain` — function — line 91
-- `PlayAt` — type — line 20
-- `PlayAtCancelable` — type — line 33
-- `WorldAudio` — type — line 40
+- `createWorldAudio` — function — line 109
+- `DISTANCE_GAIN_EPS` — const — line 71
+- `DISTANCE_MAX` — const — line 69
+- `DISTANCE_REF` — const — line 67
+- `distanceGain` — function — line 96
+- `PlayAt` — type — line 23
+- `PlayAtCancelable` — type — line 37
+- `WorldAudio` — type — line 45
 - `WorldSoundPosition` — type — line 17
 
 ## `audio/doorSounds.ts`

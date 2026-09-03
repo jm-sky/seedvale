@@ -796,6 +796,7 @@ export async function createSettlement(
         animal.update(
           dt, livestock, observerPos, dayFactor, 0, litFires, villages,
           undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
+          timeOfDay,
         )
         // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item
         // the instant its cycle completes, at wherever it's currently
