@@ -8,6 +8,7 @@
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `npc`  
 **Tags:** `production` `demand` `pressure` `shortage`
+**Roadmap:** `economy-production`  
 
 ## Goal
 

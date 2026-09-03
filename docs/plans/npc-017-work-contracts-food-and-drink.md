@@ -5,7 +5,8 @@
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-015~~
-**Domain:** `npc`
+**Domain:** `npc`  
+**Roadmap:** `workforce-for-hire`  
 
 ## Goal
 

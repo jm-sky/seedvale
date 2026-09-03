@@ -5,7 +5,7 @@
 **Priority:** medium · **Effort:** M
 **Depends on:** `items-player-009` `items-player-010`
 **Domain:** `items-player`
-**Roadmap:** `docs/roadmap/player-construction.md`
+**Roadmap:** `player-construction`  
 
 ## Goal
 

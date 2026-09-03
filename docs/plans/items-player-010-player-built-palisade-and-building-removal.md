@@ -5,6 +5,7 @@
 **Priority:** medium · **Effort:** M
 **Depends on:** 008
 **Domain:** `items-player`
+**Roadmap:** `player-construction`  
 
 ## Cel
 

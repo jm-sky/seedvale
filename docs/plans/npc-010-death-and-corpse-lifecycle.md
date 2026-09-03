@@ -6,6 +6,7 @@
 **Priority:** medium · **Effort:** L
 **Depends on:** 177
 **Domain:** `npc`
+**Roadmap:** `npc-professions-households-and-age`  
 
 ## Cel
 

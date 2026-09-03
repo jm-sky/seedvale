@@ -5,6 +5,7 @@
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~003~~  
 **Domain:** `fauna`
+**Roadmap:** `horse-and-riding`  
 
 ## Goal
 

@@ -8,6 +8,7 @@
 **Domain:** `settlements-npcs`
 **Subdomains:** `economy` `production` `blacksmith`
 **Tags:** `processing` `production-chain` `ore` `coal`
+**Roadmap:** `economy-production`  
 
 ## Goal
 

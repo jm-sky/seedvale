@@ -6,6 +6,7 @@
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~155~~ ~~159~~ ~~164~~ ~~184~~  
 **Domain:** `items-player`
+**Roadmap:** `physical-resource-storage-and-logistics`  
 
 ## Cel
 

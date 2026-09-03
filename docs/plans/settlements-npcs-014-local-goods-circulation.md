@@ -6,6 +6,7 @@
 **Priority:** high · **Effort:** M  
 **Depends on:** ~~008~~ ~~009~~ ~~010~~  
 **Domain:** `settlements-npcs`
+**Roadmap:** `economy-goods-flow`  
 
 ## Cel
 

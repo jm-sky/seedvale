@@ -8,6 +8,7 @@
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `production`  
 **Tags:** `production` `inventory` `economic-stock`
+**Roadmap:** `economy-production`  
 
 ## Goal
 

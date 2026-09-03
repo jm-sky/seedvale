@@ -5,6 +5,7 @@
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~151~~  
 **Domain:** `settlements-npcs`
+**Roadmap:** `textiles-and-herbal-medicine`
 
 ## Cel
 

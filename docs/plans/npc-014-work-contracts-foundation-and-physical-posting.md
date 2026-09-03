@@ -4,8 +4,8 @@
 **Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** M
 **Depends on:** none
-**Domain:** `npc`
-**Roadmap:** `workforce-for-hire.md`
+**Domain:** `npc`  
+**Roadmap:** `workforce-for-hire`  
 
 ## Goal
 

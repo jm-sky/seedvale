@@ -5,8 +5,8 @@
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** npc-015
-**Domain:** `npc`
-**Roadmap:** `workforce-for-hire.md`
+**Domain:** `npc`  
+**Roadmap:** `workforce-for-hire`  
 
 ## Goal
 
