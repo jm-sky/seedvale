@@ -1,11 +1,11 @@
 # Plan: Player Gathering and Fire Cooking Polish
 
 **Created:** 2026-09-01
-**Status:** `verification needed` 🔍 — implemented and tested (`npx tsc --noEmit`, `vue-tsc --noEmit`, `eslint`, full `vitest` suite all green); browser/gameplay verification pending (see Verification section below).
+**Status:** `verification needed` 🔍 — existing fish/Quick Actions work is implemented; browser/gameplay verification pending. Tree branch gathering changes described below are pending.
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~106~~ ~~122~~ ~~159~~
 **Domain:** `items-player`
-**Tags:** `cooking` `gathering` `quick-actions`
+**Tags:** `cooking` `gathering` `quick-actions` `tree` `branches`
 **Roadmap:** `player-systems.md`
 
 ## Goal
@@ -45,27 +45,67 @@ Reuse the existing multi-category mechanism if one already exists. If the action
 
 The same action must remain a single action definition/instance; it must not execute twice or behave differently depending on which category exposed it.
 
-### 3. Tree branch regeneration
+**Important:** the separate inconsistency involving the `fire_starting` capability check is **out of scope for this plan**. Do not refactor campfire requirements, capability validation or action result contracts here. That cleanup will be handled separately.
 
-Use the existing `TreeLifecycle` / tree harvesting lifecycle as the owner of branch availability.
+### 3. Tree branches — interaction vs axe gathering
 
-Branch harvesting must no longer be unlimited. A successful branch harvest puts that tree into a regeneration/cooldown state. Further branch harvesting during that period must produce no branches and must not reset or extend the regeneration state.
+Use the existing `TreeLifecycle` / tree resource lifecycle as the owner of branch availability.
 
-Prefer deriving availability from existing world time/lifecycle state instead of introducing a standalone timer system.
+The existing tree-size-dependent branch pool is correct and must be preserved:
 
-Initial gameplay yield targets:
-
-| Tree size | Branches per successful harvest |
+| Tree size | Branch pool per regeneration cycle |
 |---|---:|
 | small | 1–3 |
 | medium | 2–4 |
 | large | 3–6 |
 
-Treat these as easily adjustable gameplay constants.
+The pool must be rolled once for a tree's regeneration cycle using the existing deterministic/randomness conventions.
 
-The yield should be rolled only on a successful harvest and should use the existing deterministic/randomness conventions where available.
+#### `[E]` tree interaction
 
-The tree's size must reuse an existing tree-size/type classification if one already exists. Do not introduce a second parallel size taxonomy.
+The existing tree interaction currently harvests the whole branch yield. Change it so that a successful `[E]` interaction provides **exactly 1× branch**, provided at least one branch remains available in the current cycle.
+
+`[E]` must not:
+- grant the complete tree yield,
+- roll a new yield,
+- start regeneration while branches remain,
+- grant branches after the tree's current branch pool has been exhausted.
+
+The interaction remains an immediate loot interaction. Do **not** turn it into a separate inspect-only interaction in this plan.
+
+#### Axe gathering
+
+The existing axe-based gathering/chopping mechanism should collect the **remaining available branch quantity** from the tree.
+
+Example:
+
+`large tree → rolled pool 5`
+
+`[E] → 1 branch`
+
+`axe gathering → remaining 4 branches`
+
+Total collected from that regeneration cycle must never exceed 5.
+
+Reuse the existing axe/gathering action and item/inventory mechanisms. Do not create a parallel branch-gathering system.
+
+If the existing axe action has a different semantic name or entry point, adapt the implementation to the actual current code rather than introducing a duplicate action solely for branches.
+
+#### Branch lifecycle
+
+Branch availability must be represented as state belonging to the existing tree lifecycle.
+
+The implementation must distinguish at least conceptually between:
+- total branch pool rolled for the current cycle,
+- branches already collected,
+- branches remaining,
+- regeneration/depleted state.
+
+Do not re-roll the full 1–3 / 2–4 / 3–6 yield after `[E]`.
+
+When the remaining branch quantity reaches zero, use the existing regeneration/cooldown mechanism. Further branch collection before regeneration must produce no branches and must not reset, extend or otherwise manipulate the regeneration time.
+
+Do not introduce a generic resource-regeneration framework.
 
 ### Persistence and lifecycle
 
@@ -83,6 +123,11 @@ Do not broaden persistence into a general simulation snapshot.
 - A separate fish-cooking system.
 - Reworking the entire cooking system.
 - Reworking Quick Actions UI.
+- Separate inspect-only tree interaction.
+- New tree size/type taxonomy.
+- Changing the existing small/medium/large branch pool ranges.
+- Campfire capability/requirements refactor.
+- Campfire action result/validation architecture cleanup.
 - A generic regeneration framework for every natural resource.
 - Changes to tree chopping/cutting lifecycle beyond what is required for branches.
 - NPC branch gathering.
