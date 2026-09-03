@@ -4,7 +4,7 @@
 **Created:** 2026-08-13
 **Updated:** 2026-08-14
 **Brief:** [2026-08-13--008--real-caves-in-three-js--brief.md](2026-08-13--008--real-caves-in-three-js--brief.md)
-**Plan (wstępny, 2026-08-14):** [104 — underground caves](../plans/2026-08-14--104--underground-caves.md)
+**Plan (wstępny, 2026-08-14):** [104 — underground caves](../plans/world-terrain-007-underground-caves.md)
 **Zakres:** research, **nie implementacja**. Nic w kodzie nie zostało zmienione, żaden plan nie został oznaczony jako done.
 
 Legenda statusu wiedzy: ✅ potwierdzone w kodzie (z `file:line`) · 🟡 założenie / wnioskowanie · ❓ pytanie otwarte (do użytkownika).

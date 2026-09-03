@@ -2,8 +2,8 @@
 
 **Reviewed:** 2026-08-19
 **Status:** `updated-review`
-**Plan:** `2026-08-14--104--underground-caves.md`
-**Implementation notes:** `2026-08-14--104--underground-caves-implementation-notes.md`
+**Plan:** `world-terrain-007-underground-caves.md`
+**Implementation notes:** `world-terrain-007-underground-caves-implementation-notes.md`
 **Decision:** `update`
 
 ## 1. Status

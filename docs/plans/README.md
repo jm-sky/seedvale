@@ -55,7 +55,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-010-environmental-placement-consequences.md`                 | -       | 🟡 | M      | ~~008~~ |
 | 💡 `world-011-water-types-and-drinking.md`                             | -       | 🟡 | S      | ~~122~~ |
 | 💡 `world-terrain-006-world-generation-placement-correctness.md`       | -       | 🟡 | M      | ~~191~~ |
-| 💡 `2026-08-14--104--underground-caves.md`                             | -       | 🟡 | XL     | ~~097~~ |
+| 💡 `world-terrain-007-underground-caves.md`                            | -       | 🟡 | L      | ~~097~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                 | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | ◼️ `tools-000-weapon-browser-observatory.md`                           | -       | 🟡 | M      | -       |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                 | -       | 🔴 | M      | -       |
@@ -176,7 +176,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `011`
 - ui-input: `008`
 - world: `012`
-- world-terrain: `007`
+- world-terrain: `008`
 
 This ids section is maintained automatically from the plan files.
 

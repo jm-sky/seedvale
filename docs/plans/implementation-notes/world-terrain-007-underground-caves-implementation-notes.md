@@ -2,6 +2,8 @@
 
 > Review against the current repository. These notes make the plan implementation-oriented; repository code is the source of truth over `--updated-review.md`.
 
+> Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-contract.md`
+
 ## 1. Architecture
 
 The target is a cave interior system integrated into the existing world, not a second terrain/simulation stack.

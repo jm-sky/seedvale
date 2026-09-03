@@ -3,8 +3,9 @@
 **Created:** 2026-08-14  
 **Status:** `planned` 📋  
 **Type:** feature  
-**Priority:** high · **Effort:** XL  
+**Priority:** high · **Effort:** L  
 **Depends on:** ~~097~~ ~~125~~
+**Domain:** `world-terrain`
 
 ## 1. Cel
 

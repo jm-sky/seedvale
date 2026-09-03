@@ -8,9 +8,9 @@ Generated from exported TypeScript symbols.
 - `CampfireFlame` — type — line 155
 - `createCampfire` — function — line 139
 - `createCampfireBody` — function — line 132
-- `createCampfireFlame` — function — line 170
-- `createGrateVisual` — function — line 230
-- `createLitCampfireVisual` — function — line 214
+- `createCampfireFlame` — function — line 216
+- `createGrateVisual` — function — line 287
+- `createLitCampfireVisual` — function — line 271
 - `createSimpleFireBase` — function — line 146
 - `preloadCampfireTemplates` — function — line 48
 
