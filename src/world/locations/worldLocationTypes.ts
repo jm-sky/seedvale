@@ -25,3 +25,20 @@ export type WorldLocation = {
 }
 
 export type DiscoveryRange = 'near' | 'medium' | 'far'
+
+const WORLD_LOCATION_KINDS: readonly WorldLocationKind[] = ['settlement', 'cave', 'cemetery', 'lake', 'mountainPeak']
+
+/**
+ * Reads the `WorldLocationKind` encoded in a `WorldLocation.id`'s
+ * `<kind>:...` prefix (see the `id` doc above). For callers that only need
+ * the kind and want to avoid a full `WorldLocationCatalog.getById()` resolve
+ * — e.g. per-frame world-map marker colouring, where `getById` can mean an
+ * array scan (caves) or a chunk lookup (cemeteries) per visible marker.
+ * `null` for a malformed id.
+ */
+export function worldLocationKindFromId(id: string): WorldLocationKind | null {
+  const sep = id.indexOf(':')
+  if (sep < 0) return null
+  const candidate = id.slice(0, sep)
+  return (WORLD_LOCATION_KINDS as readonly string[]).includes(candidate) ? (candidate as WorldLocationKind) : null
+}

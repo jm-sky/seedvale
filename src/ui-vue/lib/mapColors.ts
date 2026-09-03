@@ -1,3 +1,4 @@
+import type { WorldLocationKind } from '../../world/locations/worldLocationTypes'
 import type { MapBiomeKind, MapCellData, MapTerrainKind } from '../../world/map/mapTypes'
 
 /** Fog / unknown terrain — do not reveal biome underneath. */
@@ -27,6 +28,40 @@ export const TARGET_SLOT_COLORS: readonly string[] = ['', '#e0b34a', '#4ac8e0', 
 
 export function targetSlotColor(slot: number): string {
   return TARGET_SLOT_COLORS[slot] ?? TARGET_SLOT_COLORS[1]!
+}
+
+/** Per-kind marker colour (world-012 map-markers follow-up) — shared by the
+ *  canvas marker fill (`drawMap.ts`) and the DOM kind badge
+ *  (`WorldMapScreen.vue`) so a kind reads the same colour everywhere on the
+ *  map. Distinct from `TARGET_SLOT_COLORS`, which marks *navigation target*
+ *  slot, not location kind — a target overrides this colour on the canvas. */
+export const LOCATION_KIND_COLOR: Record<WorldLocationKind, string> = {
+  settlement: '#e0b34a',
+  cave: '#9b7fd4',
+  cemetery: '#9a9a9a',
+  lake: '#3f9fd1',
+  mountainPeak: '#6f8f52',
+}
+
+/** Fallback for a marker whose kind can't be resolved from its id (should
+ *  not happen for a real `WorldLocation`, see `worldLocationKindFromId`). */
+export const LOCATION_KIND_COLOR_FALLBACK = '#e0b34a'
+
+export function locationKindColor(kind: WorldLocationKind | null): string {
+  return kind ? LOCATION_KIND_COLOR[kind] : LOCATION_KIND_COLOR_FALLBACK
+}
+
+/** Small glyph drawn on the canvas marker itself (plain text via
+ *  `ctx.fillText`, not an `<img>`/SVG — canvas can't render the Lucide
+ *  components used for the same kinds in `worldLocationDisplay.ts`). Native
+ *  emoji colour gives markers a second, colour-independent cue (avoid
+ *  relying on fill colour alone). */
+export const LOCATION_KIND_EMOJI: Record<WorldLocationKind, string> = {
+  settlement: '🏘️',
+  cave: '🕳️',
+  cemetery: '⚰️',
+  lake: '💧',
+  mountainPeak: '⛰️',
 }
 
 export function mapCellFillStyle(cell: MapCellData): string {

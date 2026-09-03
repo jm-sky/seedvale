@@ -5,6 +5,7 @@ import { isTouchDevice } from '../../input/isTouchDevice'
 import { worldUnitsToKm } from '../../world/locations/locationConfig'
 import { formatDistance } from '../../world/locations/locationDiscovery'
 import { getActiveNavigationTargets, MAX_NAVIGATION_TARGETS } from '../../world/locations/navigationTargets'
+import { worldLocationKindFromId } from '../../world/locations/worldLocationTypes'
 import {
   MAP_WORLD_ZOOM_DEFAULT,
 } from '../../world/map/mapConfig'
@@ -17,12 +18,25 @@ import {
   findLocationAtCanvasPoint,
   type WorldMapView,
 } from '../lib/drawMap'
-import { targetSlotColor } from '../lib/mapColors'
+import { locationKindColor, targetSlotColor } from '../lib/mapColors'
+import { locationKindIcon, locationKindLabel } from '../lib/worldLocationDisplay'
 import { closeWorldMap, isWorldMapOpen, ui } from '../store'
 
-const LOCATION_KIND_LABEL: Record<MapKnownLocation['kind'], string> = {
-  settlement: 'Osada',
-  landmark: 'Miejsce',
+/** Real `WorldLocationKind` label/icon/colour for a known location — the
+ *  map's own `MapKnownLocation.kind` is only `settlement`/`landmark`
+ *  (`mapData.ts`'s deliberate coarsening), which used to make every cave,
+ *  cemetery, lake and peak show as generic "Miejsce" here. */
+function kindOf(location: MapKnownLocation) {
+  return worldLocationKindFromId(location.id)
+}
+function kindLabel(location: MapKnownLocation): string {
+  return locationKindLabel(kindOf(location))
+}
+function kindIcon(location: MapKnownLocation) {
+  return locationKindIcon(kindOf(location))
+}
+function kindColor(location: MapKnownLocation): string {
+  return locationKindColor(kindOf(location))
 }
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -281,12 +295,17 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
               class="h-2.5 w-2.5 shrink-0 rounded-sm"
               :style="{ backgroundColor: targetSlotColor(t.slot) }"
             />
+            <component
+              :is="kindIcon(t.location)"
+              class="h-3 w-3 shrink-0 opacity-80"
+              :style="{ color: kindColor(t.location) }"
+            />
             <button
               type="button"
               class="flex-1 cursor-pointer truncate text-left hover:underline"
               @click="focusTarget(t.location)"
             >
-              {{ t.location.label ?? LOCATION_KIND_LABEL[t.location.kind] }}
+              {{ t.location.label ?? kindLabel(t.location) }}
             </button>
             <button
               type="button"
@@ -302,11 +321,27 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
           v-if="selected"
           class="pointer-events-auto absolute bottom-3 left-1/2 flex w-[min(280px,90%)] -translate-x-1/2 flex-col gap-1.5 rounded-md bg-panel/95 p-3 text-sm shadow-lg"
         >
-          <div class="font-semibold">
-            {{ selected.label ?? LOCATION_KIND_LABEL[selected.kind] }}
-          </div>
-          <div class="text-xs opacity-70">
-            {{ LOCATION_KIND_LABEL[selected.kind] }}
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+              :style="{ backgroundColor: `${kindColor(selected)}26`, color: kindColor(selected) }"
+            >
+              <component
+                :is="kindIcon(selected)"
+                class="h-3.5 w-3.5"
+              />
+            </span>
+            <div class="min-w-0">
+              <div class="truncate font-semibold">
+                {{ selected.label ?? kindLabel(selected) }}
+              </div>
+              <div
+                class="text-xs font-medium"
+                :style="{ color: kindColor(selected) }"
+              >
+                {{ kindLabel(selected) }}
+              </div>
+            </div>
           </div>
           <div class="text-xs opacity-90">
             {{ formatDistance(selectedDistanceKm) }}

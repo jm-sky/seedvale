@@ -1,5 +1,6 @@
 import type { MapKnownLocation, MapViewport } from '../../world/map/mapTypes'
 import { getActiveNavigationTargets } from '../../world/locations/navigationTargets'
+import { worldLocationKindFromId } from '../../world/locations/worldLocationTypes'
 import {
   MAP_CELL_SIZE,
   MAP_EXTENT_HALF,
@@ -9,7 +10,7 @@ import {
 } from '../../world/map/mapConfig'
 import { getActiveMapData } from '../../world/map/mapData'
 import { mapCellBounds } from '../../world/map/mapProjection'
-import { MAP_FOG_FILL, MAP_UNAVAILABLE_FILL, mapCellFillStyle, targetSlotColor } from './mapColors'
+import { LOCATION_KIND_EMOJI, locationKindColor, MAP_FOG_FILL, MAP_UNAVAILABLE_FILL, mapCellFillStyle, targetSlotColor } from './mapColors'
 
 export type WorldMapView = {
   viewX: number
@@ -119,7 +120,12 @@ export function drawWorldMapFrame(
     for (const location of mapData.knownLocations(viewport)) {
       const { x, y } = worldToCanvas(location.x, location.z, view, width, height)
       const targetSlot = targetSlotById.get(location.id)
-      ctx.fillStyle = targetSlot != null ? targetSlotColor(targetSlot) : '#e0b34a'
+      // Kind read from the id prefix, not `location.kind` — the latter is
+      // the map's coarse `settlement`/`landmark` split (`mapData.ts`), while
+      // the id encodes the real `WorldLocationKind` (see
+      // `worldLocationKindFromId`).
+      const kind = worldLocationKindFromId(location.id)
+      ctx.fillStyle = targetSlot != null ? targetSlotColor(targetSlot) : locationKindColor(kind)
       // `estimated`/`discovered`/`confirmed` read as outline / translucent /
       // solid (plan §16/§22 — visually distinguishable without extra UI).
       if (location.state === 'estimated') {
@@ -131,6 +137,12 @@ export function drawWorldMapFrame(
         ctx.globalAlpha = location.state === 'discovered' ? 0.65 : 1
         ctx.fillRect(x - 5, y - 5, 10, 10)
         ctx.globalAlpha = 1
+      }
+      // Native-colour emoji glyph — a colour-independent cue for kind,
+      // alongside (never instead of) the marker fill colour.
+      if (kind) {
+        ctx.globalAlpha = 1
+        ctx.fillText(LOCATION_KIND_EMOJI[kind], x, y - 13)
       }
       if (location.label) {
         ctx.fillStyle = 'rgba(20, 24, 28, 0.85)'
