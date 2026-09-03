@@ -129,12 +129,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 509
+- `createGameLoop` — function — line 512
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 477
+- `GameLoop` — type — line 480
 - `GameLoopDeps` — type — line 261
 
 ## `app/graphicsSettings.ts`
@@ -145,10 +145,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 867
-- `buildDigTarget` — function — line 814
-- `buildInteractables` — function — line 314
-- `collectItem` — function — line 914
+- `buildCombatTarget` — function — line 874
+- `buildDigTarget` — function — line 821
+- `buildInteractables` — function — line 320
+- `collectItem` — function — line 921
 - `COMBAT_TARGET_CONE_DOT` — const — line 76
 - `COMBAT_TARGET_RANGE` — const — line 61
 - `CombatAimMode` — type — line 66
@@ -156,8 +156,8 @@ Generated from exported TypeScript symbols.
 - `GAZE_RANGE` — const — line 51
 - `INTERACT_MIN_DOT` — const — line 48
 - `INTERACT_RANGE` — const — line 45
-- `resolveHaySpot` — function — line 227
-- `resolveWaterBodyKind` — function — line 261
+- `resolveHaySpot` — function — line 233
+- `resolveWaterBodyKind` — function — line 267
 
 ## `app/inventoryWiring.ts`
 

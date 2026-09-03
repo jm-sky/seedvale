@@ -105,6 +105,7 @@ Generated from TypeScript imports.
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/createApp.ts`

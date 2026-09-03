@@ -78,6 +78,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -474,6 +475,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`

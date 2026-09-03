@@ -2,15 +2,23 @@
 
 Generated from TypeScript imports.
 
+## `world/WaterSource.test.ts`
+
+**Imports**
+
+- `world/WaterSource.ts`
+
 ## `world/WaterSource.ts`
 
 **Imported by**
 
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
+- `world/WaterSource.test.ts`
 
 ## `world/animalTraps.test.ts`
 

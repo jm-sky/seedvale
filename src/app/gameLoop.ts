@@ -341,10 +341,13 @@ export type GameLoopDeps = {
   /** Light an unlit campfire (busy channel, blurred). Adding fuel to an
    *  already-lit fire stays instant/inline — not routed through this. */
   startIgniteFire?: (fire: VillageFire) => void
-  /** Instant drink from a well/lake `WaterSource` — restores thirst (plan 106 §4). */
+  /** Instant drink from a well/lake/river/ocean `WaterSource` — restores
+   *  thirst, or refuses outright for an undrinkable source (plan 106 §4,
+   *  plan world-011). */
   drinkFromWaterSource?: (source: WaterSource) => void
-  /** Instant fill of a carried empty waterskin at a well/lake (plan 106 §4). */
-  fillWaterskin?: () => void
+  /** Instant fill of a carried empty waterskin at a well/lake/river — refused
+   *  for an undrinkable source (plan 106 §4, plan world-011). */
+  fillWaterskin?: (source: WaterSource) => void
   /** Consumes an item already in inventory (eat/drink/use) — reused by the
    *  world `[R]` quick-action so pickup+use is one keypress (plan 153). */
   consumeItem?: (kind: ItemKind) => void
@@ -1401,14 +1404,14 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
           drinkFromWaterSource?.(createWaterSource('well'))
         }
-        if (altInteractPressed) fillWaterskin?.()
+        if (altInteractPressed) fillWaterskin?.(createWaterSource('well'))
       } else if (target?.kind === 'waterEdge') {
         if (hasItemCapability(heldTool.held(), 'fishing')) {
           if (interactPressed) startFishing?.(target.position.x, target.position.z)
           if (altInteractPressed) applyFishingBait?.(target.position.x, target.position.z)
         } else {
           if (interactPressed) drinkFromWaterSource?.(target.source)
-          if (altInteractPressed) fillWaterskin?.()
+          if (altInteractPressed) fillWaterskin?.(target.source)
         }
       } else if (target?.kind === 'dryingRack') {
         if (interactPressed) interactDryingRack?.(target.id)

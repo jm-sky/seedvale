@@ -84,6 +84,12 @@ export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
  *  as `campfire`'s "Dołóż gałąź" prompt not checking for a branch first) —
  *  `gameLoop.ts` toasts an error if `[R]` is pressed without one. */
 const WATER_SOURCE_PROMPT = '[E] Napij się · [R] Napełnij bukłak'
+/** Plan world-011 — shown instead of `WATER_SOURCE_PROMPT` at an ocean
+ *  shoreline (`createWaterSource('ocean').quality === 'undrinkable'`): salt
+ *  water can't be drunk or bottled, so neither `[E]` nor `[R]` is offered as
+ *  a real action. Still built for a fishing rod holder — `FISHING_PROMPT`
+ *  wins over this the same way it wins over `WATER_SOURCE_PROMPT`. */
+const OCEAN_WATER_PROMPT = 'Słona woda — niezdatna do picia'
 /** Plan 159 §9-10 — shown instead of `WATER_SOURCE_PROMPT` while a fishing
  *  rod is held, since `[E]`/`[R]` are only two keys and fishing needs both
  *  (cast, apply bait). Drinking is unavailable while the rod is equipped —
@@ -784,10 +790,11 @@ export function buildInteractables(
 
   const waterBody = resolveWaterBodyShore(playerPos, chunkManager)
   if (waterBody) {
+    const fishingHeld = hasItemCapability(heldTool, 'fishing')
     list.push({
       kind: 'waterEdge',
       position: waterBody.position,
-      promptLabel: hasItemCapability(heldTool, 'fishing') ? FISHING_PROMPT : WATER_SOURCE_PROMPT,
+      promptLabel: fishingHeld ? FISHING_PROMPT : waterBody.kind === 'ocean' ? OCEAN_WATER_PROMPT : WATER_SOURCE_PROMPT,
       source: createWaterSource(waterBody.kind),
     })
   }

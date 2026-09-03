@@ -40,7 +40,7 @@ import {
 } from '../../player/PlayerSkills'
 import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
 import { healHealth } from '../../shared/HealthState'
-import { DRINK_THIRST_RELIEF, UNSAFE_WATER_WARNING } from '../../world/WaterSource'
+import { DRINK_THIRST_RELIEF, UNDRINKABLE_WATER_WARNING, UNSAFE_WATER_WARNING } from '../../world/WaterSource'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 import { type ActionResult, capabilityRequirement, itemRequirement, targetRequirement, toResult } from './actionContracts'
 
@@ -56,7 +56,7 @@ export type SurvivalActions = {
   startCookAt: (fire: VillageFire) => ActionResult
   startDestroySpawner: (spawner: PreySpawner) => ActionResult
   drinkFromWaterSource: (source: WaterSource) => ActionResult
-  fillWaterskin: () => ActionResult
+  fillWaterskin: (source: WaterSource) => ActionResult
   consumeItem: (kind: ItemKind) => ActionResult
   /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan
    *  fauna-002 §3/§4). */
@@ -268,10 +268,16 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     return { ok: true }
   }
 
-  /** Instant drink at a well/lake (plan 106 §4) — no busy channel, matching
-   *  other instant world actions (item pickup). */
+  /** Instant drink at a well/lake/river/ocean (plan 106 §4, source-aware
+   *  drinkability by plan world-011) — no busy channel, matching other
+   *  instant world actions (item pickup). `undrinkable` (ocean) is refused
+   *  outright: thirst is left unchanged and no drink sound plays. */
   const drinkFromWaterSource = (source: WaterSource): ActionResult => {
     if (isActionBlocked(ctx)) return { ok: false, missing: [] }
+    if (source.quality === 'undrinkable') {
+      toast.show(UNDRINKABLE_WATER_WARNING, 'error')
+      return toResult([targetRequirement(false, 'drinkableWater')])
+    }
     drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
     playActionWell(worldAudio.playAt, player.mesh.position)
     toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
@@ -288,13 +294,20 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       .sort((a, b) => liquidContainerCapacity(a.kind) - liquidContainerCapacity(b.kind))
   }
 
-  /** Instant fill of a carried waterskin/bucket at a well/lake (plan 106 §4,
-   *  updated by plan items-player-001 for partial content, extended to
-   *  buckets by plan settlements-npcs-001): tops up the smallest carried
+  /** Instant fill of a carried waterskin/bucket at a well/lake/river (plan
+   *  106 §4, updated by plan items-player-001 for partial content, extended
+   *  to buckets by plan settlements-npcs-001): tops up the smallest carried
    *  container instance that isn't already full of water, in one instant
-   *  action — no separate empty/full `ItemKind` swap any more. */
-  const fillWaterskin = (): ActionResult => {
+   *  action — no separate empty/full `ItemKind` swap any more. Source-aware
+   *  as of plan world-011: an `undrinkable` source (ocean) is refused before
+   *  touching `Inventory` at all, since a filled container can't later be
+   *  told apart from ordinary fresh water. */
+  const fillWaterskin = (source: WaterSource): ActionResult => {
     if (isActionBlocked(ctx)) return { ok: false, missing: [] }
+    if (source.quality === 'undrinkable') {
+      toast.show(UNDRINKABLE_WATER_WARNING, 'error')
+      return toResult([targetRequirement(false, 'drinkableWater')])
+    }
     const carried = carriedWaterContainers()
     const target = carried.find((inst) => canFillLiquidContainer(inst, 'water'))
     if (target) {

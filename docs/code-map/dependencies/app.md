@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
@@ -239,6 +240,18 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/actions/survivalActions.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/survivalActions.ts`
+- `app/busyAction.ts`
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `player/PlayerNeeds.ts`
+- `world/WaterSource.ts`
+
 ## `app/actions/survivalActions.ts`
 
 **Imports**
@@ -268,6 +281,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/survivalActions.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 
@@ -330,6 +344,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `app/actions/groundActions.test.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/busyAction.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
