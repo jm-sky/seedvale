@@ -39,6 +39,7 @@ Generated from TypeScript imports.
 - `assets/assetIndex.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
+- `fauna/mountedSpeed.test.ts`
 - `fauna/playerAwareness.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
@@ -136,6 +137,7 @@ Generated from TypeScript imports.
 - `app/campRest.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `fauna/mountedSpeed.test.ts`
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.test.ts`

@@ -5,6 +5,8 @@ import {
   awardSkillXp,
   createPlayerSkills,
   restorePersistedSkills,
+  ridingSpeedMultiplier,
+  ridingStaminaDrainMultiplier,
   SKILL_MIN_VALUE,
   SKILL_XP_AWARD,
   SNEAK_LEGACY_VALUE,
@@ -190,5 +192,46 @@ describe('survivalFoodMultiplier', () => {
     expect(survivalFoodMultiplier(0.5)).toBeGreaterThan(1)
     expect(survivalFoodMultiplier(1)).toBeGreaterThan(survivalFoodMultiplier(0.5))
     expect(survivalFoodMultiplier(1)).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('ridingSpeedMultiplier (plan fauna-008)', () => {
+  it('is exactly 1 at minimum Riding — the unmodified rideable-species baseline', () => {
+    expect(ridingSpeedMultiplier(SKILL_MIN_VALUE)).toBe(1)
+  })
+
+  it('increases monotonically with skill', () => {
+    let previous = ridingSpeedMultiplier(SKILL_MIN_VALUE)
+    for (const value of [0.4, 0.6, 0.8, 1]) {
+      const multiplier = ridingSpeedMultiplier(value)
+      expect(multiplier).toBeGreaterThan(previous)
+      previous = multiplier
+    }
+  })
+
+  it('clamps out-of-range input to the same domain as the other skill-effect helpers', () => {
+    expect(ridingSpeedMultiplier(-99)).toBe(ridingSpeedMultiplier(SKILL_MIN_VALUE))
+    expect(ridingSpeedMultiplier(99)).toBe(ridingSpeedMultiplier(1))
+  })
+})
+
+describe('ridingStaminaDrainMultiplier (plan fauna-008)', () => {
+  it('is exactly 1 at minimum Riding — preserves the existing 3/s baseline', () => {
+    expect(ridingStaminaDrainMultiplier(SKILL_MIN_VALUE)).toBe(1)
+  })
+
+  it('decreases monotonically with skill, never reaching zero', () => {
+    let previous = ridingStaminaDrainMultiplier(SKILL_MIN_VALUE)
+    for (const value of [0.4, 0.6, 0.8, 1]) {
+      const multiplier = ridingStaminaDrainMultiplier(value)
+      expect(multiplier).toBeLessThan(previous)
+      expect(multiplier).toBeGreaterThan(0)
+      previous = multiplier
+    }
+  })
+
+  it('clamps out-of-range input to the same domain as the other skill-effect helpers', () => {
+    expect(ridingStaminaDrainMultiplier(-99)).toBe(ridingStaminaDrainMultiplier(SKILL_MIN_VALUE))
+    expect(ridingStaminaDrainMultiplier(99)).toBe(ridingStaminaDrainMultiplier(1))
   })
 })

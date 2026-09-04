@@ -1,7 +1,7 @@
 # Plan: Riding Skill Effects
 
 **Created:** 2026-09-03  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** polish  
 **Priority:** medium · **Effort:** S  
 **Depends on:** ~~fauna-003~~
@@ -195,17 +195,17 @@ Do not assume these are the only relevant files.
 
 ## Completion criteria
 
-- [ ] Authoritative human/horse movement values identified.
-- [ ] Minimum-skill horse walk > human walk.
-- [ ] Minimum-skill horse sprint > human sprint.
-- [ ] All rideable horse variants satisfy the invariant.
-- [ ] Riding skill increases mounted speed.
-- [ ] Speed modifier is monotonic and tunable.
-- [ ] Minimum Riding preserves 3/s stamina drain.
-- [ ] Higher Riding reduces stamina drain.
-- [ ] Existing Riding XP/stability/fall behaviour unchanged.
-- [ ] Focused tests pass.
-- [ ] Typecheck/lint pass.
+- [x] Authoritative human/horse movement values identified.
+- [x] Minimum-skill horse walk > human walk.
+- [x] Minimum-skill horse sprint > human sprint.
+- [x] All rideable horse variants satisfy the invariant.
+- [x] Riding skill increases mounted speed.
+- [x] Speed modifier is monotonic and tunable.
+- [x] Minimum Riding preserves 3/s stamina drain.
+- [x] Higher Riding reduces stamina drain.
+- [x] Existing Riding XP/stability/fall behaviour unchanged.
+- [x] Focused tests pass.
+- [x] Typecheck/lint pass.
 - [ ] Browser/manual verification completed by the player.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**

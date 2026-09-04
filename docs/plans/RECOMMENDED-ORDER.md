@@ -41,9 +41,7 @@
 
 ### Polish
 
-1. `fauna-008` — **Riding Skill Effects**  
-   🟡 `S` · ✅ ready · unlocks 0/0
-2. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -129,39 +127,35 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-14. `fauna-008` — **Riding Skill Effects**  
-  🟡 `S` · **Score:**  21  
-   → **unlocks:** 0/0
-
-15. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+14. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-16. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+15. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-17. `settlements-npcs-007` — **Bandages and herbal medicine**  
+16. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `world-010` — **Environmental Placement Consequences**  
+17. `world-010` — **Environmental Placement Consequences**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
-19. `tools-000` — **Weapon Browser — Observatory/Admin**  
+18. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-20. `fauna-007` — **Animal leading and cart harness**  
+19. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-21. `npc-004` — **Drzewo genealogiczne NPC**  
+20. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-22. `tools-006` — **tools-006--world-observatory.md**  
+21. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

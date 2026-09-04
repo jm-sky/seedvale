@@ -38,11 +38,14 @@ import { integrateVerticalMotion } from './verticalMotion'
  *  (plan 124 §4, `fauna/playerAwareness.ts`) to scale Sneak's benefit. */
 export type PlayerMovementState = 'stationary' | 'moving' | 'sprinting'
 
-const MOVE_SPEED = 8
+/** Exported so other systems (e.g. mounted speed's horse > human invariant,
+ *  plan fauna-008) can compare against the authoritative player speed
+ *  instead of duplicating these numbers. */
+export const MOVE_SPEED = 8
 /** Matches the capsule fallback's `CapsuleGeometry` radius (plan 097 §2.2) —
  *  the GLB model has no measured collision shape, so this stands in for both. */
 const PLAYER_COLLISION_RADIUS = 0.35
-const SPRINT_MULTIPLIER = 1.8
+export const SPRINT_MULTIPLIER = 1.8
 /** Airborne lean (radians) — no jump clip on the rig (plan 097 §4 pyt. 5), so
  *  this reuses the `crouch()`/`lieDown()` trick of rotating `modelRoot` only. */
 const JUMP_TILT_MAX = 0.25

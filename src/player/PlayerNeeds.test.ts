@@ -19,6 +19,7 @@ import {
   tickPlayerMovementVigor,
   tickPlayerNeeds,
   tickPlayerStamina,
+  tickRidingStamina,
 } from './PlayerNeeds'
 
 const DAY_LENGTH_SEC = 480
@@ -311,6 +312,34 @@ describe('physical effort profile (plan items-player-003 §4)', () => {
     applyRepresentedPhysicalEffortVigor(needs.vigor, 'heavy', 0)
     applyRepresentedPhysicalEffortVigor(needs.vigor, 'heavy', -1)
     expect(needs.vigor.current).toBe(needs.vigor.max)
+  })
+})
+
+describe('tickRidingStamina (plan fauna-008 — Riding-derived drain)', () => {
+  it('drains at exactly the 3/s baseline when the multiplier is left at its default (minimum Riding)', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 50
+    tickRidingStamina(needs.stamina, 1, true)
+    expect(needs.stamina.current).toBeCloseTo(47)
+  })
+
+  it('a lower multiplier drains less stamina, and the reduction is monotonic', () => {
+    // Higher multiplier -> more drain -> less stamina left after the tick.
+    let previousRemaining = -Infinity
+    for (const multiplier of [1, 0.85, 0.7, 0.5]) {
+      const needs = createPlayerNeeds()
+      needs.stamina.current = 50
+      tickRidingStamina(needs.stamina, 1, true, multiplier)
+      expect(needs.stamina.current).toBeGreaterThan(previousRemaining)
+      previousRemaining = needs.stamina.current
+    }
+  })
+
+  it('stationary riding still regenerates at the normal rate regardless of the multiplier', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 50
+    tickRidingStamina(needs.stamina, 1, false, 0.5)
+    expect(needs.stamina.current).toBeCloseTo(62)
   })
 })
 

@@ -32,17 +32,19 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveGroundQuery` — type — line 159
-- `ColliderSource` — type — line 151
-- `HeightSampler` — type — line 148
-- `PLAYER_HEIGHT` — const — line 53
-- `PLAYER_MODEL_URL` — const — line 146
-- `PlayerController` — class — line 167
+- `CaveGroundQuery` — type — line 162
+- `ColliderSource` — type — line 154
+- `HeightSampler` — type — line 151
+- `MOVE_SPEED` — const — line 44
+- `PLAYER_HEIGHT` — const — line 56
+- `PLAYER_MODEL_URL` — const — line 149
+- `PlayerController` — class — line 170
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
 - `PlayerMovementState` — type — line 39
+- `SPRINT_MULTIPLIER` — const — line 48
 
 ## `player/playerDamage.ts`
 
@@ -81,10 +83,10 @@ Generated from exported TypeScript symbols.
 - `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 81
 - `createPlayerNeeds` — function — line 208
 - `DEHYDRATION_HP_PER_SEC` — const — line 181
-- `drinkWater` — function — line 345
-- `eatFood` — function — line 341
+- `drinkWater` — function — line 352
+- `eatFood` — function — line 348
 - `hungerSevereDurationSec` — function — line 167
-- `isTakingDeprivationDamage` — function — line 353
+- `isTakingDeprivationDamage` — function — line 360
 - `physicalEffortBusyOptions` — function — line 131
 - `PhysicalEffortIntensity` — type — line 89
 - `physicalEffortStaminaCostPerSec` — function — line 117
@@ -101,15 +103,15 @@ Generated from exported TypeScript symbols.
   - uses: StaminaState, VigorState
   - simulation: tick
 - `resetPlayerNeeds` — function — line 220
-- `restoreNeedsFromSleep` — function — line 335
+- `restoreNeedsFromSleep` — function — line 342
 - `restorePersistedNeeds` — function — line 241
 - `STARVATION_HP_PER_SEC` — const — line 180
 - `thirstSevereDurationSec` — function — line 170
-- `tickHealthRegen` — function — line 362
-- `tickPlayerMovementVigor` — function — line 313
+- `tickHealthRegen` — function — line 369
+- `tickPlayerMovementVigor` — function — line 320
 - `tickPlayerNeeds` — function — line 266
 - `tickPlayerStamina` — function — line 293
-- `tickRidingStamina` — function — line 304
+- `tickRidingStamina` — function — line 311
 
 ## `player/playerRanged.ts`
 
@@ -127,6 +129,8 @@ Generated from exported TypeScript symbols.
 - `PlayerSkills` — type — line 25
 - `restorePersistedSkills` — function — line 92
 - `RIDING_XP_DISTANCE_M` — const — line 158
+- `ridingSpeedMultiplier` — function — line 224
+- `ridingStaminaDrainMultiplier` — function — line 238
 - `SKILL_MIN_VALUE` — const — line 31
 - `SKILL_XP_AWARD` — const — line 111
 - `SKILL_XP_HALF_VALUE` — const — line 36
@@ -141,7 +145,7 @@ Generated from exported TypeScript symbols.
 - `SNEAK_SPEED_MULTIPLIER` — const — line 181
 - `SNEAK_XP_DISTANCE_M` — const — line 134
 - `survivalDurationMultiplier` — function — line 197
-- `survivalFoodMultiplier` — function — line 207
+- `survivalFoodMultiplier` — function — line 247
 - `toggleSneak` — function — line 105
 - `xpForSkillValue` — function — line 49
 - `xpToSkillValue` — function — line 40

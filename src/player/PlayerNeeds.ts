@@ -301,8 +301,15 @@ export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: 
  *  movement while the mount isn't actually going anywhere. */
 const RIDING_STAMINA_DRAIN_PER_SEC = 3
 
-export function tickRidingStamina(stamina: StaminaState, dt: number, mountMoving: boolean): void {
-  if (mountMoving) drainStamina(stamina, RIDING_STAMINA_DRAIN_PER_SEC * dt)
+/** `drainMultiplier` (plan fauna-008, default 1) is the rider's Riding-derived
+ *  effect — `mountActions.ts` resolves it from `PlayerSkills.ts`'s
+ *  `ridingStaminaDrainMultiplier` and passes it in; `1` at minimum Riding
+ *  preserves the exact `RIDING_STAMINA_DRAIN_PER_SEC` baseline. Only scales
+ *  the moving/drain branch — the stationary regeneration branch is
+ *  untouched, so a mounted-but-idle player still recovers at the normal
+ *  rate regardless of skill. */
+export function tickRidingStamina(stamina: StaminaState, dt: number, mountMoving: boolean, drainMultiplier = 1): void {
+  if (mountMoving) drainStamina(stamina, RIDING_STAMINA_DRAIN_PER_SEC * drainMultiplier * dt)
   else restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
 }
 

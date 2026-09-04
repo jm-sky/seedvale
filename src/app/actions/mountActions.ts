@@ -1,7 +1,7 @@
 import { ANIMAL_LABELS, type AnimalAgent } from '../../fauna/AnimalAgent'
 import { applyPlayerDamage } from '../../player/playerDamage'
 import { tickRidingStamina } from '../../player/PlayerNeeds'
-import { accumulateRidingUse } from '../../player/PlayerSkills'
+import { accumulateRidingUse, ridingSpeedMultiplier, ridingStaminaDrainMultiplier } from '../../player/PlayerSkills'
 import { fallDamage, rollFall } from '../../player/ridingStability'
 import { getStaminaRatio } from '../../shared/StaminaState'
 import { sampleSlope, SLOPE_MAX_WALKABLE_DEG } from '../../terrain/slopeConstraint'
@@ -162,7 +162,8 @@ export function createMountActions(
     if (isActionBlocked(ctx)) return
 
     const { wishX, wishZ, sprintRequested } = driveInput()
-    mount.driveMounted(dt, wishX, wishZ, sprintRequested)
+    const ridingValue = player.skills.riding.value
+    mount.driveMounted(dt, wishX, wishZ, sprintRequested, ridingSpeedMultiplier(ridingValue))
 
     const dx = mount.mesh.position.x - lastMountX
     const dz = mount.mesh.position.z - lastMountZ
@@ -175,7 +176,7 @@ export function createMountActions(
     if (seat) player.setMountedTransform(seat.x, seat.y, seat.z, seat.yaw)
 
     const moving = moved > 1e-5
-    tickRidingStamina(player.needs.stamina, dt, moving)
+    tickRidingStamina(player.needs.stamina, dt, moving, ridingStaminaDrainMultiplier(ridingValue))
 
     checkStability(dt, mount, moving, mount.isSprinting())
   }

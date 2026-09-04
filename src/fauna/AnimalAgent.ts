@@ -915,8 +915,12 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     color: 0x6b4423,
     scale: 1.3,
     modelHeight: 1.55,
-    walkSpeed: 2.6,
-    sprintSpeed: 6.0,
+    // Plan fauna-008: raised above the pre-existing 2.6/6.0 so the mounted
+    // baseline clears `MOVE_SPEED`/`MOVE_SPEED * SPRINT_MULTIPLIER` (8/14.4)
+    // on its own, independent of the player's Riding skill — see
+    // `ridingSpeedMultiplier` in `PlayerSkills.ts`.
+    walkSpeed: 10.5,
+    sprintSpeed: 17.5,
     detectRange: 0,
     fleeRange: 10,
     playerNoticeRange: 0,
@@ -930,8 +934,10 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     color: 0x7a6a58,
     scale: 1.05,
     modelHeight: 1.15,
-    walkSpeed: 2.4,
-    sprintSpeed: 5.4,
+    // Plan fauna-008: the slowest rideable species — still raised above the
+    // human baseline (see `horse` above) even though it stays under horse.
+    walkSpeed: 9.5,
+    sprintSpeed: 16.0,
     detectRange: 0,
     fleeRange: 9,
     playerNoticeRange: 0,
@@ -1620,8 +1626,12 @@ export class AnimalAgent {
    *  wherever the player takes it, not stay within its home wander radius.
    *  `wishX`/`wishZ` is the player's raw (not necessarily normalized)
    *  movement intent in world space, same convention as `PlayerController`'s
-   *  own `wish` vector. */
-  driveMounted(dt: number, wishX: number, wishZ: number, sprintRequested: boolean): void {
+   *  own `wish` vector. `speedMultiplier` (plan fauna-008, default 1) scales
+   *  only this player-driven path — the caller resolves it from the rider's
+   *  Riding skill (`PlayerSkills.ts`'s `ridingSpeedMultiplier`); `AnimalAgent`
+   *  itself stays unaware of player skills and free-roaming AI movement
+   *  (`walkSpeedNow()`/`sprintSpeedNow()` call sites elsewhere) is unaffected. */
+  driveMounted(dt: number, wishX: number, wishZ: number, sprintRequested: boolean, speedMultiplier = 1): void {
     if (this.health.dead) return
     const distSq = wishX * wishX + wishZ * wishZ
     this.moving = distSq > 1e-6
@@ -1631,7 +1641,7 @@ export class AnimalAgent {
       const dirX = wishX / dist
       const dirZ = wishZ / dist
       this.mesh.rotation.y = Math.atan2(dirX, dirZ)
-      const speed = this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()
+      const speed = (this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()) * speedMultiplier
       const result = stepWithSlopeAndCollision({
         x: this.mesh.position.x,
         z: this.mesh.position.z,

@@ -199,6 +199,46 @@ export function survivalDurationMultiplier(value: number): number {
   return 1 - SURVIVAL_MAX_DURATION_CUT * v
 }
 
+/** [0,1] progress from `SKILL_MIN_VALUE` (a brand-new rider) to mastery
+ *  (value 1) — unlike `survivalDurationMultiplier`/`survivalFoodMultiplier`
+ *  (which already have some effect right at the floor), Riding's mounted
+ *  speed/stamina mappings must be an exact no-op at minimum skill (plan
+ *  fauna-008: "Every rideable horse must always be faster than the human
+ *  player, even at minimum Riding skill" — the base `AnimalDef` speeds alone
+ *  carry that invariant, so skill can only ever add on top, never subtract). */
+function ridingSkillProgress(value: number): number {
+  const v = Math.max(SKILL_MIN_VALUE, Math.min(1, value))
+  return (v - SKILL_MIN_VALUE) / (1 - SKILL_MIN_VALUE)
+}
+
+/** Strongest mounted speed-up Riding can give at value 1 (plan fauna-008) —
+ *  a moderate on-top bonus; the horse-over-human ordering itself comes from
+ *  the rideable species' base speed, not from this. */
+const RIDING_MAX_SPEED_BONUS = 0.15
+
+/** Multiplier applied to the mount's effective walk/sprint speed while
+ *  player-driven (`mountActions.ts` resolves this and passes it into
+ *  `AnimalAgent.driveMounted()`). `1` at `SKILL_MIN_VALUE` (unmodified
+ *  species baseline), monotonically increasing to `1 + RIDING_MAX_SPEED_BONUS`
+ *  at mastery. Never applied to free-roaming AI movement. */
+export function ridingSpeedMultiplier(value: number): number {
+  return 1 + RIDING_MAX_SPEED_BONUS * ridingSkillProgress(value)
+}
+
+/** Largest fraction of the baseline riding stamina drain Riding can cut at
+ *  value 1 (plan fauna-008) — halves it at mastery, never eliminates it
+ *  (riding stays an effective but non-free way to travel). */
+const RIDING_MAX_STAMINA_DRAIN_CUT = 0.5
+
+/** Multiplier applied to `PlayerNeeds.ts`'s `RIDING_STAMINA_DRAIN_PER_SEC`
+ *  while the mount is actually moving. `1` at `SKILL_MIN_VALUE` (preserves
+ *  the existing 3/s baseline exactly), monotonically decreasing to
+ *  `1 - RIDING_MAX_STAMINA_DRAIN_CUT` at mastery. Stationary regeneration is
+ *  untouched — this only scales the drain branch. */
+export function ridingStaminaDrainMultiplier(value: number): number {
+  return 1 - RIDING_MAX_STAMINA_DRAIN_CUT * ridingSkillProgress(value)
+}
+
 /** Extra nutrition an experienced survivalist gets out of the same
  *  `roasted_meat` at value 1 (plan 128 §4 — one item, better handling). */
 const SURVIVAL_MAX_FOOD_BONUS = 0.5
