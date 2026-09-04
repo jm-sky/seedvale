@@ -26,6 +26,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 | `locations.md` |
 | `npc-ai.md` |
 | `npc-professions-households-and-age.md` |
+| `physical-goods-transport.md` |
 | `physical-resource-storage-and-logistics.md` |
 | `player-construction.md` |
 | `textiles-and-herbal-medicine.md` |

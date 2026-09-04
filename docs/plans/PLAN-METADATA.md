@@ -357,6 +357,7 @@ Roadmap is not another priority system.
 - `locations`
 - `npc-ai`
 - `npc-professions-households-and-age`
+- `physical-goods-transport`
 - `physical-resource-storage-and-logistics`
 - `player-construction`
 - `textiles-and-herbal-medicine`
