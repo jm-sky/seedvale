@@ -286,6 +286,29 @@ Illnesses should exist independently of combat so that disease can spread or ari
 
 The model should eventually support duration, severity, recovery and treatment, and potentially contagious conditions where appropriate.
 
+### Water quality and water-borne illness
+
+Drinking water should eventually carry its own quality/safety dimension, independent of thirst relief:
+
+```text
+water source
+    ↓
+quality / contamination
+    ↓
+consumption
+    ↓
+illness risk
+```
+
+Target model, none of it implemented yet:
+
+- water sources vary in safety (clean groundwater, stagnant/open water, contaminated sources),
+- protection/treatment (a covered well, boiling, filtering) should reduce or remove the risk,
+- consequences should range from a mild, transient penalty to an actual illness (see above) for a sustained bad source,
+- NPCs should eventually weigh water safety against distance/thirst/personality when choosing a source (see the settlements-npcs domain's needs → pressures → decision model).
+
+This should stay a property of the water source/consumption event, not a parallel "well health system" or a per-source special case in NPC or player code.
+
 ## Conditions and modifiers
 
 Injuries and illnesses should be represented as conditions that modify the effective physical state rather than permanently rewriting the NPC's base profile.
@@ -512,6 +535,8 @@ However, the current model does not yet provide a complete biological/physical p
 The current NPC character definition contains sex, role, personality and traits, while age and full physical phenotype are not yet first-class simulation properties.
 
 Children currently use family relation plus a smaller visual scale rather than a complete age/development model.
+
+Plan world-004 implements the first narrow, concrete instance of "water quality and water-borne illness" above: an uncovered player-built well's drawn water carries a generic `WaterSource.consumptionRisk` (`world/WaterSource.ts`) that, on direct drink, has a 50% chance of `-1..2 HP` and `-5 Vigor` through the existing `HealthState`/`VigorState` primitives — a roofed well carries no such risk. This is deliberately not the full illness/contamination/treatment model described above (no duration, no NPC water-source choice yet); it exists only to give the player's well-protection decision a concrete consequence.
 
 This document defines the target model without claiming those planned systems are implemented.
 

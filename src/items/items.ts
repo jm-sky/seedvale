@@ -92,6 +92,7 @@ export type ItemKind =
   | 'seed_cabbage'
   | 'map_near'
   | 'map_far'
+  | 'rope'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -948,6 +949,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XS',
     color: 0xb99f6b,
     description: 'Mapa dalekich, rzadko odwiedzanych terenów. Odsłania mapę świata natychmiast po zakupie — sprzedanie jej nie cofa tej wiedzy.'
+  },
+  rope: {
+    kind: 'rope',
+    label: 'lina',
+    categories: ['utility'],
+    weight: 1.5,
+    size: 'SM',
+    color: 0x9c8a5e,
+    description: 'Solidna konopna lina. Potrzebna, by czerpać wodę z głębokiej studni.'
   },
 }
 

@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-08-28 (plan fauna-002 — new `egg` item; buckets wired to milking a cow/sheep)
+**Last updated:** 2026-09-04 (plan world-004 — new `rope` item; well groundwater depth/protection)
 
 ## Quick rules
 
@@ -127,6 +127,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | seed_carrot | nasiona marchwi | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: marchew" — plants a `carrot` `CropLifecycle` entity in a settlement garden |
 | seed_potato | sadzeniaki ziemniaka | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: ziemniak" — plants a `potato` `CropLifecycle` entity in a settlement garden |
 | seed_cabbage | nasiona kapusty | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: kapustę" — plants a `cabbage` `CropLifecycle` entity in a settlement garden |
+| rope | lina | — | — | none (Kupiec) | procedural | plan world-004; ordinary carried item (not a capability) — carrying ≥1 is required to draw water from a deep player-built well (drink/fill), never consumed |
 
 ## Roadmap (not done)
 

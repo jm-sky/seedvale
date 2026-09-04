@@ -19,6 +19,7 @@ Generated from TypeScript imports.
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
 - `world/WaterSource.test.ts`
+- `world/playerWell.ts`
 
 ## `world/animalTraps.test.ts`
 
@@ -390,6 +391,7 @@ Generated from TypeScript imports.
 
 - `world/createPlayerWells.ts`
 - `world/playerWell.ts`
+- `world/wellGroundwater.ts`
 
 ## `world/createPlayerWells.ts`
 
@@ -401,6 +403,7 @@ Generated from TypeScript imports.
 - `world/collision.ts`
 - `world/playerWell.ts`
 - `world/playerWellProp.ts`
+- `world/wellGroundwater.ts`
 
 **Imported by**
 
@@ -1068,6 +1071,7 @@ Generated from TypeScript imports.
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
 - `world/treeLifecycle.ts`
+- `world/wellGroundwater.ts`
 
 ## `world/placementPreview.ts`
 
@@ -1152,6 +1156,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `world/playerWell.ts`
+- `world/wellGroundwater.ts`
 
 ## `world/playerWell.ts`
 
@@ -1159,6 +1164,8 @@ Generated from TypeScript imports.
 
 - `items/itemCatalog.ts`
 - `items/tentPlacement.ts`
+- `world/WaterSource.ts`
+- `world/wellGroundwater.ts`
 
 **Imported by**
 
@@ -1535,6 +1542,27 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `world/weatherVisuals.test.ts`
+
+## `world/wellGroundwater.test.ts`
+
+**Imports**
+
+- `world/wellGroundwater.ts`
+
+## `world/wellGroundwater.ts`
+
+**Imports**
+
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `persistence/saveData.ts`
+- `world/createPlayerWells.test.ts`
+- `world/createPlayerWells.ts`
+- `world/playerWell.test.ts`
+- `world/playerWell.ts`
+- `world/wellGroundwater.test.ts`
 
 ## `world/workContract.test.ts`
 

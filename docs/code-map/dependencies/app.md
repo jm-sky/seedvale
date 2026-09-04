@@ -250,6 +250,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/itemInstances.ts`
 - `player/PlayerNeeds.ts`
+- `shared/HealthState.ts`
 - `world/WaterSource.ts`
 
 ## `app/actions/survivalActions.ts`
@@ -277,6 +278,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `settlement/VillageFire.ts`
 - `shared/HealthState.ts`
+- `shared/VigorState.ts`
 - `world/WaterSource.ts`
 
 **Imported by**

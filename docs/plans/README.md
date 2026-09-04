@@ -53,7 +53,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-002-npc-healing.md`                                                 | -       | 🟡 | M      | ~~177~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                                  | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | 010    |
-| 💡 `world-004-well-depth-groundwater-and-protection.md`                     | -       | 🟡 | M      | ~~127~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | L      | ~~022~~ ~~031~~ |
 | 💡 `world-terrain-008-underground-caves-v2.md`                              | -       | 🟡 | XL     | -      |
 | ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -       |

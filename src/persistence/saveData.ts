@@ -19,6 +19,7 @@ import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { WellStage } from '../world/playerWell'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
 import type { TreeSizeClass } from '../world/treeLifecycle'
+import type { WellWaterKind } from '../world/wellGroundwater'
 import { isToolKind } from '../items/HeldTool'
 import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
@@ -228,10 +229,13 @@ export type SaveCarriedContainer = {
 }
 
 /** Persistent player-built well — mirrors `world/playerWell.ts`'s
- *  `PlayerWellRecord`; the completed `WaterSource` itself is never saved,
- *  only re-derived once `stage === 'roof'` and its work requirement is met.
+ *  `PlayerWellRecord`; the drawn `WaterSource` itself is never saved, only
+ *  re-derived from `stage`/`workProgress`/`waterDepth`/`waterKind`.
  *  `workProgress` is hours of *active* player work toward the current stage —
- *  a stage cannot finish just because time passed. */
+ *  a stage cannot finish just because time passed. `waterDepth`/`waterKind`
+ *  are the groundwater result resolved once at placement (plan world-004
+ *  §1/§9/§11, `world/wellGroundwater.ts`'s `resolveWellWater`) — never
+ *  recomputed on load. */
 export type SavePlayerWell = {
   id: string
   x: number
@@ -239,6 +243,8 @@ export type SavePlayerWell = {
   yaw: number
   stage: WellStage
   workProgress: number
+  waterDepth: number
+  waterKind: WellWaterKind
 }
 
 /** Persistent runtime terrain deformation (plan `world-terrain-save`) —
@@ -395,7 +401,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 3
+export const CURRENT_SAVE_VERSION = 4
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -871,6 +877,7 @@ function isCarriedContainerField(value: unknown): value is SaveCarriedContainer 
 }
 
 const WELL_STAGES: ReadonlySet<string> = new Set<WellStage>(['pit', 'roof', 'well'])
+const WELL_WATER_KINDS: ReadonlySet<string> = new Set<WellWaterKind>(['groundwater', 'reservoir', 'underground_stream'])
 
 function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
   if (!Array.isArray(value)) return false
@@ -883,7 +890,9 @@ function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
       typeof w.z === 'number' &&
       typeof w.yaw === 'number' &&
       typeof w.stage === 'string' && WELL_STAGES.has(w.stage) &&
-      typeof w.workProgress === 'number'
+      typeof w.workProgress === 'number' &&
+      typeof w.waterDepth === 'number' &&
+      typeof w.waterKind === 'string' && WELL_WATER_KINDS.has(w.waterKind)
     )
   })
 }
@@ -1375,12 +1384,34 @@ function migrateSaveV2ToV3(data: unknown): unknown {
   }
 }
 
+/** v3 → v4 (plan world-004): adds the resolved groundwater result to every
+ *  persisted `SavePlayerWell` — a well built before this plan had no
+ *  depth/kind concept at all, so it defaults to an ordinary, safely-shallow
+ *  `groundwater` reading (5, below `wellGroundwater.ts`'s
+ *  `DEEP_WELL_DEPTH_THRESHOLD` of 7) that reproduces its old rope-free/no-
+ *  extra-capability behaviour rather than retroactively making an existing
+ *  well "deep". Every other field, including wells with no `playerWells`
+ *  array at all yet, is left untouched. */
+function migrateSaveV3ToV4(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const playerWells = Array.isArray(v.playerWells) ? v.playerWells : []
+  return {
+    ...v,
+    version: 4,
+    playerWells: playerWells.map((entry) => {
+      const w = entry as Record<string, unknown>
+      return { ...w, waterDepth: typeof w.waterDepth === 'number' ? w.waterDepth : 5, waterKind: w.waterKind ?? 'groundwater' }
+    }),
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
+  3: migrateSaveV3ToV4,
 }
 
 function detectStoredVersion(value: unknown): number | null {

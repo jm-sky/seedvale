@@ -74,9 +74,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 84
-- `hasCarriedMilkContainer` — function — line 78
-- `SurvivalActions` — type — line 52
+- `createSurvivalActions` — function — line 91
+- `hasCarriedMilkContainer` — function — line 85
+- `SurvivalActions` — type — line 59
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -129,13 +129,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 512
+- `createGameLoop` — function — line 511
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 480
-- `GameLoopDeps` — type — line 261
+- `GameLoop` — type — line 479
+- `GameLoopDeps` — type — line 260
 
 ## `app/graphicsSettings.ts`
 
@@ -145,10 +145,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 876
-- `buildDigTarget` — function — line 823
+- `buildCombatTarget` — function — line 879
+- `buildDigTarget` — function — line 826
 - `buildInteractables` — function — line 320
-- `collectItem` — function — line 923
+- `collectItem` — function — line 926
 - `COMBAT_TARGET_CONE_DOT` — const — line 76
 - `COMBAT_TARGET_RANGE` — const — line 61
 - `CombatAimMode` — type — line 66
@@ -215,11 +215,11 @@ Generated from exported TypeScript symbols.
 ## `app/worldBundle.ts`
 
 - `BuiltWorldSystems` — type — line 534
-- `createWorldBundle` — function — line 864
-- `disposeWorldBundle` — function — line 1211
+- `createWorldBundle` — function — line 866
+- `disposeWorldBundle` — function — line 1213
 - `HOME_RADIUS` — const — line 85
 - `homeChunks` — function — line 96
-- `rebuildWorldBundle` — function — line 1032
+- `rebuildWorldBundle` — function — line 1034
 - `WorldBundle` — type — line 119
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).

@@ -195,9 +195,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlayerWells.ts`
 
-- `createPlayerWells` — function — line 52
-- `PlayerWellEntry` — type — line 15
-- `PlayerWells` — type — line 17
+- `createPlayerWells` — function — line 56
+- `PlayerWellEntry` — type — line 16
+- `PlayerWells` — type — line 18
 
 ## `world/createRiverWater.ts`
 
@@ -575,28 +575,33 @@ Generated from exported TypeScript symbols.
 
 ## `world/playerWell.ts`
 
-- `activeWellStage` — function — line 96
-- `isWellCompleted` — function — line 87
-- `isWellStageWorkComplete` — function — line 81
-- `NearbyPlayerWellLookup` — type — line 173
-- `nextWellStage` — function — line 76
-- `PlayerWellRecord` — type — line 23
-- `WELL_FOOTPRINT_RADIUS` — const — line 113
-- `WELL_PLACE_DURATION_SEC` — const — line 119
-- `WELL_PLACE_REACH` — const — line 116
-- `WELL_PLACEMENT_MESSAGE` — const — line 103
-- `WELL_SEPARATION` — const — line 114
-- `WELL_STAGE_CAPABILITY` — const — line 64
-- `WELL_STAGE_COST` — const — line 52
-- `WELL_STAGE_START_PROMPT` — const — line 137
-- `WELL_STAGE_WORK_HOURS` — const — line 40
-- `WELL_WORK_LABEL` — const — line 144
-- `WELL_WORK_SESSION_HOURS` — const — line 134
-- `WELL_WORK_SESSION_SEC` — const — line 125
-- `WellMaterialCost` — type — line 46
-- `WellPlacementReason` — type — line 101
-- `wellPromptLabel` — function — line 158
-- `WellStage` — type — line 18
+- `activeWellStage` — function — line 175
+- `getWellPitWorkHours` — function — line 69
+- `isWellCompleted` — function — line 143
+- `isWellStageWorkComplete` — function — line 135
+- `isWellWaterAvailable` — function — line 152
+- `NearbyPlayerWellLookup` — type — line 259
+- `nextWellStage` — function — line 130
+- `PlayerWellRecord` — type — line 25
+- `WELL_FOOTPRINT_RADIUS` — const — line 192
+- `WELL_PLACE_DURATION_SEC` — const — line 198
+- `WELL_PLACE_REACH` — const — line 195
+- `WELL_PLACEMENT_MESSAGE` — const — line 182
+- `WELL_SEPARATION` — const — line 193
+- `WELL_STAGE_CAPABILITY` — const — line 104
+- `WELL_STAGE_COST` — const — line 92
+- `WELL_STAGE_START_PROMPT` — const — line 216
+- `WELL_STAGE_WORK_HOURS` — const — line 55
+- `WELL_WORK_LABEL` — const — line 223
+- `WELL_WORK_SESSION_HOURS` — const — line 213
+- `WELL_WORK_SESSION_SEC` — const — line 204
+- `WellMaterialCost` — type — line 86
+- `WellPlacementReason` — type — line 180
+- `wellPromptLabel` — function — line 241
+- `WellStage` — type — line 20
+- `wellStageCapabilities` — function — line 117
+- `wellStageWorkHours` — function — line 82
+- `wellWaterSource` — function — line 161
 
 ## `world/playerWellProp.ts`
 
@@ -829,16 +834,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/WaterSource.ts`
 
-- `createWaterSource` — function — line 50
-- `DRINK_THIRST_RELIEF` — const — line 35
-- `UNDRINKABLE_WATER_WARNING` — const — line 45
-- `UNSAFE_WATER_WARNING` — const — line 40
+- `createWaterSource` — function — line 88
+- `DRINK_THIRST_RELIEF` — const — line 73
+- `UNCOVERED_WELL_CONSUMPTION_RISK` — const — line 57
+- `UNCOVERED_WELL_WARNING` — const — line 65
+- `UNDRINKABLE_WATER_WARNING` — const — line 83
+- `UNSAFE_WATER_WARNING` — const — line 78
 - `WaterBodyKind` — type — line 25
+- `WaterConsumptionRisk` — type — line 37
 - `WaterQuality` — type — line 18
   - domain: world
   - system: water-source
   - role: Shared well/lake/river/ocean drink/fill abstraction; future polluted/treated sources should reuse it.
-- `WaterSource` — type — line 27
+- `WaterSource` — type — line 45
+- `WELL_ROPE_REQUIRED_WARNING` — const — line 68
 
 ## `world/weather.ts`
 
@@ -875,6 +884,19 @@ Generated from exported TypeScript symbols.
 
 - `applyWeatherOverlay` — function — line 39
 - `WeatherVisualOverlay` — type — line 11
+
+## `world/wellGroundwater.ts`
+
+- `DEEP_WELL_DEPTH_THRESHOLD` — const — line 52
+- `isDeepWellDepth` — function — line 54
+- `resolveWellWater` — function — line 91
+- `WELL_WATER_DEPTH_MAX` — const — line 31
+- `WELL_WATER_DEPTH_MIN` — const — line 30
+- `WellWaterKind` — type — line 18
+  - domain: world
+  - system: well-groundwater
+  - role: Pure placement-time depth/water-kind resolution for player-built wells.
+- `WellWaterResult` — type — line 20
 
 ## `world/workContract.ts`
 

@@ -1,7 +1,7 @@
 # Plan: Well Depth, Groundwater & Well Protection
 
 **Created:** 2026-08-22  
-**Status:** `planned` 📋  
+**Status:** `done` ✅ — implemented + technically verified (`tsc`/lint/build/test all green). Browser/manual verification not performed — see the implementation notes file for the review this plan followed.  
 **Type:** feature  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~127~~  

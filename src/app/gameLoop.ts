@@ -127,7 +127,6 @@ import { getThirstRatio } from '../shared/ThirstState'
 import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
-import { createWaterSource } from '../world/WaterSource'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
 import { hasCarriedMilkContainer } from './actions/survivalActions'
@@ -1402,9 +1401,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const outcome = resolveInteraction(target, questManager)
           playActionWell(worldAudio.playAt, target.position)
           npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
-          drinkFromWaterSource?.(createWaterSource('well'))
+          drinkFromWaterSource?.(target.source)
         }
-        if (altInteractPressed) fillWaterskin?.(createWaterSource('well'))
+        if (altInteractPressed) fillWaterskin?.(target.source)
       } else if (target?.kind === 'waterEdge') {
         if (hasItemCapability(heldTool.held(), 'fishing')) {
           if (interactPressed) startFishing?.(target.position.x, target.position.z)
@@ -1437,9 +1436,23 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const wellId = target.id
           const view = describeWellWork?.(wellId)
           if (view) {
-            vueUi.openFlavorDialog(view.title, view.description, [
+            const actions = [
               { label: view.title, enabled: view.canWork, reasonLabel: view.reasonLabel, run: () => workOnWell?.(wellId) },
-            ])
+            ]
+            // Plan world-004 §5 — the well's body already makes it a usable
+            // `WaterSource` before its roof (construction) is finished, so
+            // the same requirements panel also offers drawing water; missing
+            // rope (deep well) or the uncovered-well risk are surfaced by
+            // `drinkFromWaterSource`/`fillWaterskin` themselves, same as the
+            // plain `well` candidate.
+            const source = target.waterSource
+            if (source) {
+              actions.push(
+                { label: 'Napij się', enabled: true, reasonLabel: '', run: () => drinkFromWaterSource?.(source) },
+                { label: 'Napełnij pojemnik', enabled: true, reasonLabel: '', run: () => fillWaterskin?.(source) },
+              )
+            }
+            vueUi.openFlavorDialog(view.title, view.description, actions)
           }
         }
       } else if (target?.kind === 'standingTorch') {

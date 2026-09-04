@@ -68,7 +68,7 @@ const validSave: SaveData = {
     { id: 'chest:1', kind: 'chest', x: 5, z: -3, yaw: 0.4, counts: { stone: 2 }, instances: [] },
   ],
   carriedContainer: { id: 'chest:2', kind: 'chest', counts: {}, instances: [] },
-  playerWells: [{ id: 'well:1', x: 5, z: -3, yaw: 0.4, stage: 'well', workProgress: 1.25 }],
+  playerWells: [{ id: 'well:1', x: 5, z: -3, yaw: 0.4, stage: 'well', workProgress: 1.25, waterDepth: 5, waterKind: 'groundwater' }],
   terrainPreparations: [{
     id: 'terrainPrep:1',
     x: 2,
@@ -355,6 +355,12 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     const { workerNpcId: _w, acceptedAt: _a, workStartedAt: _s, ...v2Contract } = validSave.workContracts[0]!
     const v2Save = { ...validSave, version: 2, workContracts: [v2Contract] }
     expect(loadStoredSave(v2Save)).toEqual({ status: 'ok', data: validSave })
+  })
+
+  it('migrates a real v3 save (plan world-004) into v4, defaulting the new well groundwater fields', () => {
+    const { waterDepth: _d, waterKind: _k, ...v3Well } = validSave.playerWells[0]!
+    const v3Save = { ...validSave, version: 3, playerWells: [v3Well] }
+    expect(loadStoredSave(v3Save)).toEqual({ status: 'ok', data: validSave })
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 - `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
 - `world/treeLifecycle.ts`
+- `world/wellGroundwater.ts`
 
 **Imported by**
 

@@ -4,13 +4,14 @@ import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
 import {
-  isWellCompleted,
+  isWellWaterAvailable,
   type NearbyPlayerWellLookup,
   type PlayerWellRecord,
   WELL_FOOTPRINT_RADIUS,
   type WellStage,
 } from './playerWell'
 import { createPlayerWellStageProp } from './playerWellProp'
+import { resolveWellWater } from './wellGroundwater'
 
 export type PlayerWellEntry = PlayerWellRecord & { mesh: Object3D }
 
@@ -19,7 +20,9 @@ export type PlayerWells = {
   nodes: () => readonly PlayerWellRecord[]
   /** Places a new well at `(x, z)` in the `pit` stage with no work done yet —
    *  the plan's "[E] Wykop dół" starts as soon as the player works it
-   *  (implementation notes §11: same ownership pattern as `PlacedTents`). */
+   *  (implementation notes §11: same ownership pattern as `PlacedTents`).
+   *  Resolves and persists this well's `waterDepth`/`waterKind` right here,
+   *  exactly once (plan world-004 §1/§11/§12) via `resolveWellWater`. */
   place: (x: number, z: number, yaw: number) => PlayerWellRecord
   /** Adds `hoursDelta` (clamped ≥ 0) of active-work progress to `id`'s
    *  current stage. Pure bookkeeping only — never changes `stage`, the mesh
@@ -30,9 +33,10 @@ export type PlayerWells = {
    *  caller must already have validated/consumed `nextStage`'s tool/material
    *  cost). False if the well is unknown. */
   transitionTo: (id: string, nextStage: WellStage) => boolean
-  /** Nearest *completed* well to `(x, z)` within `maxDistance`, or null — the
-   *  `NearbyPlayerWellLookup` `NpcAgent` uses for water-fetch destination
-   *  resolution (plan 127 §10). */
+  /** Nearest well within `maxDistance` that's already usable as a
+   *  `WaterSource` (`isWellWaterAvailable` — plan world-004 §5/§10, the roof
+   *  need not be finished), or null — the `NearbyPlayerWellLookup`
+   *  `NpcAgent` uses for water-fetch destination resolution (plan 127 §10). */
   nearestCompleted: NearbyPlayerWellLookup
   dispose: () => void
 }
@@ -55,6 +59,12 @@ export function createPlayerWells(
   registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void,
   clearColliders: (ownerKey: string) => void,
   initial: readonly PlayerWellRecord[] = [],
+  /** World seed + local sea level (plan world-004 §1) — fed into
+   *  `resolveWellWater` only by `place()`, exactly once per new well; a
+   *  restored `initial` record's `waterDepth`/`waterKind` are never
+   *  recomputed (plan §11/§12). */
+  seed = 0,
+  waterLevel = 0,
 ): PlayerWells {
   const wells: PlayerWellEntry[] = []
 
@@ -84,12 +94,15 @@ export function createPlayerWells(
     yaw: entry.yaw,
     stage: entry.stage,
     workProgress: entry.workProgress,
+    waterDepth: entry.waterDepth,
+    waterKind: entry.waterKind,
   })
 
   return {
     list: () => wells,
     nodes: () => wells.map(toRecord),
     place(x, z, yaw) {
+      const water = resolveWellWater(seed, x, z, sampleHeight(x, z), waterLevel)
       const record: PlayerWellRecord = {
         id: `well:${Date.now()}:${nextWellId++}`,
         x,
@@ -97,6 +110,8 @@ export function createPlayerWells(
         yaw,
         stage: 'pit',
         workProgress: 0,
+        waterDepth: water.depth,
+        waterKind: water.kind,
       }
       spawn(record)
       return record
@@ -127,7 +142,7 @@ export function createPlayerWells(
       let best: PlayerWellEntry | null = null
       let bestDistSq = maxDistance * maxDistance
       for (const entry of wells) {
-        if (!isWellCompleted(entry)) continue
+        if (!isWellWaterAvailable(entry)) continue
         const dx = entry.x - x
         const dz = entry.z - z
         const distSq = dx * dx + dz * dz

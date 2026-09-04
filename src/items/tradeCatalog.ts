@@ -56,6 +56,8 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   // Plan world-012 — knowledge-delivery tokens (§9/§10), priced by range.
   map_near: 15,
   map_far: 35,
+  // Plan world-004 — needed to use (not build) a deep player-built well.
+  rope: 10,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -106,6 +108,7 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'seed_cabbage',
   'map_near',
   'map_far',
+  'rope',
 ]
 
 /** Fallback coin-equivalent for items the merchant does not stock. */

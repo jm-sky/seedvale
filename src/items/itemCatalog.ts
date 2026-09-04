@@ -1052,6 +1052,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan world-012 — Kupiec stock. A knowledge-delivery token: purchase reveals distant (60-200 km) landmarks/settlements into `LocationKnowledge` immediately; the item itself has no other effect.',
   },
+  rope: {
+    kind: 'rope',
+    label: 'lina',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan world-004 — Kupiec stock. Ordinary carried item, not a `HeldTool`/capability: simply carrying at least one lets a deep player-built well be drawn from (drink/fill), never consumed. See `world/wellGroundwater.ts`\'s `DEEP_WELL_DEPTH_THRESHOLD`.',
+  },
 }
 
 /** Flat per-arrow-kind damage delta applied on top of the bow's own

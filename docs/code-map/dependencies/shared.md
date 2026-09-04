@@ -16,6 +16,7 @@ Generated from TypeScript imports.
 - `ai/npcStamina.test.ts`
 - `ai/npcVigor.test.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaCombat.ts`
@@ -103,6 +104,7 @@ Generated from TypeScript imports.
 - `ai/npcVigor.test.ts`
 - `ai/npcVigor.ts`
 - `app/actions/restActions.ts`
+- `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `player/PlayerNeeds.test.ts`

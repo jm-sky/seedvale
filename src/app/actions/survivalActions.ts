@@ -39,8 +39,15 @@ import {
   survivalFoodMultiplier,
 } from '../../player/PlayerSkills'
 import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
-import { healHealth } from '../../shared/HealthState'
-import { DRINK_THIRST_RELIEF, UNDRINKABLE_WATER_WARNING, UNSAFE_WATER_WARNING } from '../../world/WaterSource'
+import { damageHealth, healHealth } from '../../shared/HealthState'
+import { drainVigor } from '../../shared/VigorState'
+import {
+  DRINK_THIRST_RELIEF,
+  UNCOVERED_WELL_WARNING,
+  UNDRINKABLE_WATER_WARNING,
+  UNSAFE_WATER_WARNING,
+  WELL_ROPE_REQUIRED_WARNING,
+} from '../../world/WaterSource'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 import { type ActionResult, capabilityRequirement, itemRequirement, targetRequirement, toResult } from './actionContracts'
 
@@ -268,19 +275,45 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     return { ok: true }
   }
 
+  /** A deep player-built well's `requiresRope` gates *drawing* its water at
+   *  all (plan world-004 §4) — an ordinary carried-item check (never
+   *  consumed), shared by `drinkFromWaterSource` and `fillWaterskin` so
+   *  neither path can bypass it. */
+  const hasRopeIfRequired = (source: WaterSource): boolean => {
+    if (!source.requiresRope) return true
+    if (inventory.count('rope') > 0) return true
+    toast.show(WELL_ROPE_REQUIRED_WARNING, 'error')
+    return false
+  }
+
   /** Instant drink at a well/lake/river/ocean (plan 106 §4, source-aware
    *  drinkability by plan world-011) — no busy channel, matching other
    *  instant world actions (item pickup). `undrinkable` (ocean) is refused
-   *  outright: thirst is left unchanged and no drink sound plays. */
+   *  outright: thirst is left unchanged and no drink sound plays.
+   *  `consumptionRisk` (plan world-004 §6 — currently only an uncovered
+   *  player-built well) is rolled here, at the moment of direct
+   *  consumption, never at collection/build time; filling a container
+   *  (`fillWaterskin`) doesn't carry the risk forward — same "can't mark a
+   *  filled instance as risky later" limitation `UNDRINKABLE_WATER_WARNING`
+   *  already accepts for salt water. */
   const drinkFromWaterSource = (source: WaterSource): ActionResult => {
     if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     if (source.quality === 'undrinkable') {
       toast.show(UNDRINKABLE_WATER_WARNING, 'error')
       return toResult([targetRequirement(false, 'drinkableWater')])
     }
+    if (!hasRopeIfRequired(source)) return toResult([itemRequirement(0, 1, 'rope')])
     drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
     playActionWell(worldAudio.playAt, player.mesh.position)
-    toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
+    const risk = source.consumptionRisk
+    if (risk && Math.random() < risk.chance) {
+      const hpDamage = Math.round(risk.hpDamageMin + Math.random() * (risk.hpDamageMax - risk.hpDamageMin))
+      damageHealth(player.health, hpDamage)
+      drainVigor(player.needs.vigor, risk.vigorLoss)
+      toast.show(UNCOVERED_WELL_WARNING, 'error')
+    } else {
+      toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
+    }
     return { ok: true }
   }
 
@@ -308,6 +341,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       toast.show(UNDRINKABLE_WATER_WARNING, 'error')
       return toResult([targetRequirement(false, 'drinkableWater')])
     }
+    if (!hasRopeIfRequired(source)) return toResult([itemRequirement(0, 1, 'rope')])
     const carried = carriedWaterContainers()
     const target = carried.find((inst) => canFillLiquidContainer(inst, 'water'))
     if (target) {

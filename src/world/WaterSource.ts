@@ -24,10 +24,48 @@ export type WaterQuality = 'safe' | 'unsafe' | 'undrinkable'
  *  a fishing spot. */
 export type WaterBodyKind = 'lake' | 'river' | 'ocean'
 
+/** Generic consumption-time health risk (plan world-004 §6) — deliberately
+ *  distinct from `WaterQuality`'s existing safe/unsafe/undrinkable warning
+ *  text so a future full water-quality/illness system doesn't have to unwind
+ *  an overloaded meaning. Currently only set for an uncovered player-built
+ *  well (`world/playerWell.ts`'s `wellWaterSource`); a roofed well and every
+ *  natural water body carry no risk. Rolled once per direct drink action
+ *  (`app/actions/survivalActions.ts`'s `drinkFromWaterSource`) — filling a
+ *  container severs the association instead of tainting the carried water,
+ *  the same "can't mark a filled instance as risky later" limitation
+ *  `UNDRINKABLE_WATER_WARNING` already accepts for salt water. */
+export type WaterConsumptionRisk = {
+  /** Probability `[0,1]` this risk triggers on one direct drink. */
+  chance: number
+  hpDamageMin: number
+  hpDamageMax: number
+  vigorLoss: number
+}
+
 export type WaterSource = {
   kind: 'well' | WaterBodyKind
   quality: WaterQuality
+  /** Deep player-built well only (plan world-004 §4) — `rope` must be
+   *  carried (never consumed) to draw water, whether drinking directly or
+   *  filling a container. Absent/false for every other source. */
+  requiresRope?: boolean
+  consumptionRisk?: WaterConsumptionRisk
 }
+
+/** Plan world-004 §6 — the plan's own chosen numbers for an uncovered
+ *  player-built well's direct-drink risk. */
+export const UNCOVERED_WELL_CONSUMPTION_RISK: WaterConsumptionRisk = {
+  chance: 0.5,
+  hpDamageMin: 1,
+  hpDamageMax: 2,
+  vigorLoss: 5,
+}
+
+/** Shown when `UNCOVERED_WELL_CONSUMPTION_RISK` actually triggers. */
+export const UNCOVERED_WELL_WARNING = 'Ta woda ze studni bez daszka Ci zaszkodziła.'
+
+/** Shown when a deep well's `requiresRope` is unmet (plan world-004 §4). */
+export const WELL_ROPE_REQUIRED_WARNING = 'Potrzebujesz liny, żeby czerpać wodę z tak głębokiej studni.'
 
 /** Thirst restored by one drink action, direct or via a full waterskin —
  *  one flat amount keeps the well/lake/river/ocean/waterskin paths

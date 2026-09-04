@@ -700,6 +700,8 @@ async function buildWorldSystems(
     chunkManager.registerColliders,
     chunkManager.clearColliders,
     initialPlayerWells,
+    config.seed,
+    config.terrain.waterLevel,
   )
   const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
   bootMarkEnd('droppedItems+wells+workContracts')

@@ -138,39 +138,35 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `world-004` — **Well Depth, Groundwater & Well Protection**  
-  🟡 `M` · **Score:**  23  
-   → **unlocks:** 0/0
-
-18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+17. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+18. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `settlements-npcs-007` — **Bandages and herbal medicine**  
+19. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `tools-000` — **Weapon Browser — Observatory/Admin**  
+20. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-22. `fauna-007` — **Animal leading and cart harness**  
+21. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-23. `world-terrain-008` — **Underground Caves V2**  
+22. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-24. `npc-004` — **Drzewo genealogiczne NPC**  
+23. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-25. `tools-006` — **tools-006--world-observatory.md**  
+24. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

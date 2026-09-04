@@ -35,7 +35,7 @@ import { honeyAvailable } from '../world/beehives'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
 import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
-import { isWellCompleted, wellPromptLabel } from '../world/playerWell'
+import { isWellCompleted, isWellWaterAvailable, wellPromptLabel, wellWaterSource } from '../world/playerWell'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind } from '../world/WaterSource'
 import type { Vector3 } from 'three'
@@ -459,6 +459,7 @@ export function buildInteractables(
         kind: 'well',
         position: { x: well.x, z: well.z },
         promptLabel: WATER_SOURCE_PROMPT,
+        source: wellWaterSource(well),
       })
       continue
     }
@@ -468,6 +469,7 @@ export function buildInteractables(
       promptLabel: wellPromptLabel(well),
       id: well.id,
       stage: well.stage,
+      waterSource: isWellWaterAvailable(well) ? wellWaterSource(well) : null,
     })
   }
 
@@ -564,6 +566,7 @@ export function buildInteractables(
         kind: 'well',
         position: settlement.landmarks.well,
         promptLabel: WATER_SOURCE_PROMPT,
+        source: createWaterSource('well'),
       })
     }
 

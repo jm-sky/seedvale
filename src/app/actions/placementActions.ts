@@ -84,12 +84,12 @@ import {
   WELL_PLACE_REACH,
   WELL_PLACEMENT_MESSAGE,
   WELL_SEPARATION,
-  WELL_STAGE_CAPABILITY,
   WELL_STAGE_COST,
-  WELL_STAGE_WORK_HOURS,
   WELL_WORK_LABEL,
   WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
+  wellStageCapabilities,
+  wellStageWorkHours,
 } from '../../world/playerWell'
 import {
   BEDROLL_FOOTPRINT_RADIUS,
@@ -458,9 +458,9 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (!well) return
     const stage = activeWellStage(well)
     if (!stage) return
-    const capability = WELL_STAGE_CAPABILITY[stage]
-    if (capability && !inventory.hasCapability(capability)) {
-      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[capability]}.`, 'error')
+    const missingCapability = wellStageCapabilities(stage, well.waterDepth).find((c) => !inventory.hasCapability(c))
+    if (missingCapability) {
+      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[missingCapability]}.`, 'error')
       return
     }
     const startingNewStage = stage !== well.stage
@@ -491,7 +491,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       bundle.playerWells.transitionTo(id, stage)
     }
     const workedSoFar = startingNewStage ? 0 : well.workProgress
-    const remainingHours = Math.max(0, WELL_STAGE_WORK_HOURS[stage] - workedSoFar)
+    const remainingHours = Math.max(0, wellStageWorkHours(stage, well.waterDepth) - workedSoFar)
     const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
     const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
     const startedAt = performance.now()
@@ -526,9 +526,9 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     const stage = activeWellStage(well)
     if (!stage) return null
     const title = WELL_WORK_LABEL[stage]
-    const capability = WELL_STAGE_CAPABILITY[stage]
-    if (capability && !inventory.hasCapability(capability)) {
-      return { title, description: '', canWork: false, reasonLabel: `Potrzebujesz ${CAPABILITY_NEED_LABEL[capability]}.` }
+    const missingCapability = wellStageCapabilities(stage, well.waterDepth).find((c) => !inventory.hasCapability(c))
+    if (missingCapability) {
+      return { title, description: '', canWork: false, reasonLabel: `Potrzebujesz ${CAPABILITY_NEED_LABEL[missingCapability]}.` }
     }
     const startingNewStage = stage !== well.stage
     if (startingNewStage) {
@@ -552,7 +552,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       }
       return { title, description, canWork: true, reasonLabel: '' }
     }
-    const remainingHours = Math.max(0, WELL_STAGE_WORK_HOURS[stage] - well.workProgress)
+    const remainingHours = Math.max(0, wellStageWorkHours(stage, well.waterDepth) - well.workProgress)
     return { title, description: `Pozostało: ${remainingHours.toFixed(1)} h pracy.`, canWork: true, reasonLabel: '' }
   }
 
