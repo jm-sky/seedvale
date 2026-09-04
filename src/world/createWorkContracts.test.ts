@@ -89,4 +89,65 @@ describe('createWorkContracts', () => {
     contracts.dispose()
     expect(contracts.nodes()).toEqual([])
   })
+
+  it('create accepts an explicit targetId (plan npc-015 — the real buildable object placed alongside it)', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create('player', 0, 0, 10, 1, 'well:123')
+    expect(record.target).toEqual({ kind: 'construction', targetId: 'well:123' })
+  })
+})
+
+describe('createWorkContracts NPC commitment lifecycle (plan npc-015)', () => {
+  it('discoverableAt only returns still-open (advertised) contracts at that board', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create('player', 0, 0, 10, 1)
+    expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    expect(contracts.discoverableAt('noticeBoard:home')).toEqual([contracts.find(record.id)])
+    contracts.accept(record.id, 'npc:1', 3)
+    // Accepted — still posted, but no longer offered to anyone else.
+    expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
+    expect(contracts.postedAt('noticeBoard:home')).toEqual([contracts.find(record.id)])
+  })
+
+  it('accept/beginTravel/beginWork/completeWork drive one contract end to end', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create('player', 0, 0, 10, 1)
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    expect(contracts.accept(record.id, 'npc:1', 3)?.state).toBe('accepted')
+    expect(contracts.findByWorker('npc:1')?.id).toBe(record.id)
+    expect(contracts.beginTravel(record.id, 'npc:1')?.state).toBe('travelling')
+    expect(contracts.beginWork(record.id, 'npc:1', 9)?.state).toBe('working')
+    expect(contracts.completeWork(record.id, 'npc:1')?.state).toBe('payment_due')
+    // payment_due is still findable by worker (npc-016's own lookup) — just
+    // no longer something NpcAgent actively pursues.
+    expect(contracts.findByWorker('npc:1')?.state).toBe('payment_due')
+  })
+
+  it('accept rejects a second worker once one is already assigned', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create('player', 0, 0, 10, 1)
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    expect(contracts.accept(record.id, 'npc:2', 4)).toBeNull()
+  })
+
+  it('release returns the contract to advertised and findByWorker stops returning it', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create('player', 0, 0, 10, 1)
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    expect(contracts.release(record.id, 'npc:1')).toBe(true)
+    expect(contracts.findByWorker('npc:1')).toBeUndefined()
+    expect(contracts.discoverableAt('noticeBoard:home')).toEqual([contracts.find(record.id)])
+  })
+
+  it('accept/beginTravel/beginWork/completeWork/release on an unknown id are no-ops', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    expect(contracts.accept('nope', 'npc:1', 1)).toBeNull()
+    expect(contracts.beginTravel('nope', 'npc:1')).toBeNull()
+    expect(contracts.beginWork('nope', 'npc:1', 1)).toBeNull()
+    expect(contracts.completeWork('nope', 'npc:1')).toBeNull()
+    expect(contracts.release('nope', 'npc:1')).toBe(false)
+  })
 })

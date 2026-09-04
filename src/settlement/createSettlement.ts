@@ -8,11 +8,14 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
+import type { DroppedItems } from '../items/createDroppedItems'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
+import type { PlayerWells } from '../world/createPlayerWells'
+import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
@@ -274,6 +277,19 @@ export type CreateSettlementDeps = {
   /** Reports any of this settlement's livestock deaths (any cause) by
    *  `animalId` — forwarded into `spawnLivestock` (plan 110). */
   onAnimalDeath?: (animalId: string) => void
+  /** Authoritative Work Contract lifecycle (plan npc-015) — forwarded into
+   *  every `NpcAgent.create` call the same way `mining`/`foodSources` are
+   *  above. World-global (not settlement-scoped): an NPC resolves its own
+   *  settlement's notice board from its own `household.settlementId`. */
+  workContracts?: WorkContracts
+  /** Player-built wells (plan 127/npc-015) — the construction target NPC
+   *  Work Contract execution advances, forwarded the same way. */
+  playerWells?: PlayerWells
+  /** World-dropped items — lets NPC construction work draw nearby materials
+   *  the same bounded way the player's own construction already does
+   *  (plan npc-015 §9's material-provisioning analogue), forwarded the same
+   *  way as `workContracts`/`playerWells`. */
+  droppedItems?: DroppedItems
 }
 
 export async function createSettlement(
@@ -306,6 +322,9 @@ export async function createSettlement(
     helperDelivery,
     relations = createNpcRelationships(),
     livestockPersistence,
+    workContracts,
+    playerWells,
+    droppedItems,
   } = deps
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
@@ -598,6 +617,9 @@ export async function createSettlement(
         hunting,
         helperDelivery,
         householdExchange,
+        workContracts,
+        playerWells,
+        droppedItems,
       )
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

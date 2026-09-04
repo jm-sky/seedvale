@@ -1,7 +1,7 @@
 # Plan: Work Contracts — NPC Work & Construction
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** npc-014

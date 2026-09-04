@@ -255,6 +255,13 @@ function buildSettlementsManager(
   initialNpcRelationships?: readonly NpcRelationshipEntry[],
   initialLivestock?: readonly LivestockSaveRecord[],
   initialRemovedLivestockIds?: readonly string[],
+  /** Forwarded into every `createSettlement` call → every `NpcAgent` the
+   *  same way `helperDelivery`/`hunting` are above (plan npc-015). Unlike
+   *  `hunting`, these are built *before* `SettlementsManager` (see
+   *  `buildWorldSystems`), so they're passed directly rather than late-bound. */
+  workContracts?: WorkContracts,
+  playerWells?: PlayerWells,
+  droppedItems?: DroppedItems,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -290,6 +297,9 @@ function buildSettlementsManager(
     initialNpcRelationships,
     initialLivestock,
     initialRemovedLivestockIds,
+    workContracts,
+    playerWells,
+    droppedItems,
   )
 }
 
@@ -677,18 +687,34 @@ async function buildWorldSystems(
   bootMarkEnd('createPlacedContainers')
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
+  // Built ahead of `SettlementsManager` (plan npc-015) — unlike
+  // `hunting`/`Fauna`, none of these three depend on anything settlements
+  // produce, and `NpcAgent`'s own Work Contract decision/construction
+  // integration needs live instances forwarded in, not a late-bound
+  // accessor.
+  bootMark('droppedItems+wells+workContracts')
+  const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
+  const playerWells = createPlayerWells(
+    scene,
+    chunkManager.sampleHeight,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
+    initialPlayerWells,
+  )
+  const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
+  bootMarkEnd('droppedItems+wells+workContracts')
+
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size
   // — a pure function of seed+terrain) is resolved and the home settlement's
   // own full build (houses/NPCs/livestock) has been kicked off in the
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
 
-  bootMark('droppedItems+placed+wells+terrainPrep')
-  const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
+  bootMark('placed+terrainPrep')
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
   const placedTraps = createPlacedTraps(
@@ -697,13 +723,6 @@ async function buildWorldSystems(
     config.seed,
     { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     initialPlacedTraps,
-  )
-  const playerWells = createPlayerWells(
-    scene,
-    chunkManager.sampleHeight,
-    chunkManager.registerColliders,
-    chunkManager.clearColliders,
-    initialPlayerWells,
   )
   const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
   const palisades = createPalisades(
@@ -726,8 +745,7 @@ async function buildWorldSystems(
     chunkManager.sampleHeight,
     initialTerrainPreparations,
   )
-  const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
-  bootMarkEnd('droppedItems+placed+wells+terrainPrep')
+  bootMarkEnd('placed+terrainPrep')
 
   // Only needs `homeDef.size` (sync, see §4's `buildFauna` doc above) — kept
   // on the critical path rather than deferred, unlike `itemSpawners`/

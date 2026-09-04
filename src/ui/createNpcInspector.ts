@@ -106,6 +106,15 @@ function buildInspectorText(
     lines.push('  -')
   }
 
+  lines.push('', 'Work Contract')
+  if (snapshot.contract) {
+    lines.push(`  id: ${snapshot.contract.id}`)
+    lines.push(`  state: ${snapshot.contract.state}`)
+    lines.push(`  reward: ${snapshot.contract.rewardCoins}`)
+  } else {
+    lines.push('  -')
+  }
+
   lines.push('', 'Current action')
   if (snapshot.action) {
     lines.push(`  kind: ${snapshot.action.kind}`)
@@ -165,6 +174,10 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'combat.ended': return `${t}s combat.ended (${event.outcome})`
     case 'combat.hit': return `${t}s combat.hit → ${event.targetId}`
     case 'combat.started': return `${t}s combat.started → ${event.targetId}`
+    case 'contract.accepted': return `${t}s contract.accepted → ${event.contractId} (score ${event.score.toFixed(1)})`
+    case 'contract.evaluated': return `${t}s contract.evaluated → ${event.candidates.map((c) => `${c.contractId}:${c.score.toFixed(1)}`).join(', ') || '-'}`
+    case 'contract.invalidated': return `${t}s contract.invalidated → ${event.contractId} (${event.reason})`
+    case 'contract.workCompleted': return `${t}s contract.workCompleted → ${event.contractId}`
     case 'debug.freeze': return `${t}s debug.freeze`
     case 'debug.reevaluate': return `${t}s debug.reevaluate`
     case 'debug.unfreeze': return `${t}s debug.unfreeze`

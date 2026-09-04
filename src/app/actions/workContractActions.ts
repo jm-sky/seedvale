@@ -1,5 +1,6 @@
 import type { VueUi } from '../../ui-vue/mount'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
+import { WELL_FOOTPRINT_RADIUS, WELL_SEPARATION } from '../../world/playerWell'
 import { canPostContract, isContractTerminal, noticeBoardId } from '../../world/workContract'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import {
@@ -23,8 +24,14 @@ const CONTRACT_EMPLOYER = 'player'
 const CONTRACT_REWARD_PRESETS = [10, 25, 50, 100] as const
 
 const CONTRACT_TARGET_PLACE_REACH = 2
-const CONTRACT_TARGET_FOOTPRINT_RADIUS = 0.4
-const CONTRACT_TARGET_SEPARATION = 2
+/** A construction contract's target is a real `PlayerWellRecord` (plan
+ *  npc-015 §7 — the only construction the existing world-object domain can
+ *  already represent incrementally), placed together with the contract, so
+ *  placement validity reuses the well's own footprint/separation rather than
+ *  a smaller ad hoc one that could let the flag land somewhere the well
+ *  itself wouldn't fit. */
+const CONTRACT_TARGET_FOOTPRINT_RADIUS = WELL_FOOTPRINT_RADIUS
+const CONTRACT_TARGET_SEPARATION = WELL_SEPARATION
 
 const CONTRACT_TARGET_PLACEMENT_MESSAGE: Record<Exclude<GroundPlacementReason, 'ok'>, string> = {
   water: 'Tu jest za mokro na zlecenie budowy.',
@@ -87,7 +94,12 @@ export function createWorkContractActions(
       sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
       waterLevel: bundle.chunkManager.waterLevel,
       blockers: tentBlockers(site.x, site.z),
-      peers: bundle.workContracts.nodes().filter((c) => !isContractTerminal(c.state)),
+      // A contract's flag/well must not overlap an unrelated existing well
+      // or another pending contract's own future well.
+      peers: [
+        ...bundle.playerWells.nodes(),
+        ...bundle.workContracts.nodes().filter((c) => !isContractTerminal(c.state)),
+      ],
       footprintRadius: CONTRACT_TARGET_FOOTPRINT_RADIUS,
       separation: CONTRACT_TARGET_SEPARATION,
     }),
@@ -114,7 +126,14 @@ export function createWorkContractActions(
         enabled: true,
         reasonLabel: '',
         run: () => {
-          bundle.workContracts.create(CONTRACT_EMPLOYER, x, z, reward, dayNight.elapsedDays)
+          // The buildable itself (plan npc-015 §7) — placed once, up front,
+          // so the contract's target is always a real, incrementally
+          // workable object rather than a bare location. No tool/capability
+          // is required here: unlike the player's own `[E]`-driven well
+          // (`placeWellAtAim`), digging is the hired worker's job, not the
+          // employer's.
+          const well = bundle.playerWells.place(x, z, site.yaw)
+          bundle.workContracts.create(CONTRACT_EMPLOYER, x, z, reward, dayNight.elapsedDays, well.id)
           ctx.syncQuickActionAvailability()
           toast.show('Utworzono zlecenie budowy. Zanieś ogłoszenie do tablicy w osadzie.')
         },

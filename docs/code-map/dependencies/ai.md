@@ -52,6 +52,7 @@ Generated from TypeScript imports.
 - `ai/npcStrategies.ts`
 - `ai/npcVigor.ts`
 - `ai/npcVoiceLines.ts`
+- `ai/npcWorkContract.ts`
 - `ai/reactionChance.ts`
 - `ai/schedule.ts`
 - `ai/socialBehaviour.ts`
@@ -71,6 +72,8 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `fauna/huntingHooks.ts`
 - `items/Inventory.ts`
+- `items/constructionMaterials.ts`
+- `items/createDroppedItems.ts`
 - `items/foodItems.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
@@ -97,6 +100,8 @@ Generated from TypeScript imports.
 - `ui/labelDistance.ts`
 - `world/bloodTraces.ts`
 - `world/collision.ts`
+- `world/createPlayerWells.ts`
+- `world/createWorkContracts.ts`
 - `world/cropLifecycle.ts`
 - `world/fishing.ts`
 - `world/foodSources.ts`
@@ -109,6 +114,7 @@ Generated from TypeScript imports.
 - `world/treeHarvest.ts`
 - `world/waterMirror.ts`
 - `world/weather.ts`
+- `world/workContract.ts`
 
 **Imported by**
 
@@ -155,6 +161,7 @@ Generated from TypeScript imports.
 - `ai/nameCultures.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcVoiceLines.ts`
+- `ai/npcWorkContract.ts`
 - `ai/reactionChance.ts`
 - `ai/schedule.test.ts`
 - `ai/schedule.ts`
@@ -504,6 +511,28 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 
+## `ai/npcWorkContract.test.ts`
+
+**Imports**
+
+- `ai/npcWorkContract.ts`
+- `world/workContract.ts`
+
+## `ai/npcWorkContract.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/schedule.ts`
+- `world/playerWell.ts`
+- `world/timeConversion.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcWorkContract.test.ts`
+
 ## `ai/reactionChance.test.ts`
 
 **Imports**
@@ -546,6 +575,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcWorkContract.ts`
 - `ai/schedule.test.ts`
 
 ## `ai/socialBehaviour.test.ts`

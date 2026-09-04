@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SaveConfig, SaveData } from './saveData'
-import { loadSaveData } from './saveData'
+import { CURRENT_SAVE_VERSION, loadSaveData } from './saveData'
 import {
   assertCanCreateSave,
   formatSaveDay,
@@ -28,7 +28,7 @@ const config = {
 } as SaveConfig
 
 const currentSave = {
-  version: 2 as const,
+  version: CURRENT_SAVE_VERSION,
   config,
   player: { x: 1, z: 2, yaw: 0, pitch: 0 },
   savedAt: 100,
@@ -117,7 +117,7 @@ describe('saveSlots', () => {
     expect(parsed).not.toBeNull()
     expect(parsed?.id).toBe('current')
     expect(parsed?.name).toBe('Anna')
-    expect(parsed?.data.version).toBe(2)
+    expect(parsed?.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(parsed?.data.config.seed).toBe(7)
   })
 
@@ -126,7 +126,7 @@ describe('saveSlots', () => {
     const legacyV1 = { ...currentSave, version: 1, map: v1Map }
     const parsed = parseStoredSave('current', legacyV1)
     expect(parsed).not.toBeNull()
-    expect(parsed?.data.version).toBe(2)
+    expect(parsed?.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(parsed?.data.map).toEqual({ ...v1Map, discoveredLocations: [], targets: [] })
   })
 

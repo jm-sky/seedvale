@@ -1,6 +1,6 @@
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SaveConfig, SaveData } from './saveData'
+import { CURRENT_SAVE_VERSION, type SaveConfig, type SaveData } from './saveData'
 import {
   createSave,
   deleteSave,
@@ -22,7 +22,7 @@ const config = {
 
 function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDays'>>): SaveData {
   return {
-    version: 2,
+    version: CURRENT_SAVE_VERSION,
     config,
     player: { x: 1, z: 2, yaw: 0, pitch: 0 },
     savedAt: overrides?.savedAt ?? 100,

@@ -18,6 +18,7 @@ function baseSnapshot(overrides: Partial<NpcInspectionSnapshot> = {}): NpcInspec
     strategyCandidates: [],
     selectedStrategy: null,
     plan: null,
+    contract: null,
     action: null,
     queue: null,
     watchdog: { rescueStage: 'none', lowProgressStrikes: 0, recentRescueCount: 0 },

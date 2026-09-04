@@ -73,6 +73,17 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'plan.stateChanged'; goal: NpcGoalId; from: NpcPlanState; to: NpcPlanState }
   | { simTime: number; type: 'plan.progressed'; goal: NpcGoalId; amount: number; total: number }
   | { simTime: number; type: 'plan.completed'; goal: NpcGoalId }
+  /** Work Contract commitment diagnostics (plan npc-015 §14) — a deliberate
+   *  commitment/opportunity, never a Plan/Goal (no `work` `NpcGoalId`), so it
+   *  gets its own small event family instead of reusing `plan.*`.
+   *  `evaluated` fires once per settlement-board evaluation pass (every
+   *  candidate + its score, not one event per candidate) whenever this NPC
+   *  has no active commitment and its board has something posted —
+   *  deterministic and plain-data, per plan §3/§14. */
+  | { simTime: number; type: 'contract.evaluated'; candidates: readonly { contractId: string; score: number }[] }
+  | { simTime: number; type: 'contract.accepted'; contractId: string; score: number }
+  | { simTime: number; type: 'contract.invalidated'; contractId: string; reason: 'missingTarget' }
+  | { simTime: number; type: 'contract.workCompleted'; contractId: string }
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 

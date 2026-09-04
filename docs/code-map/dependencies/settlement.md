@@ -42,6 +42,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
+- `items/createDroppedItems.ts`
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
 - `settlement/household.ts`
@@ -58,6 +59,8 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
 - `world/collision.ts`
+- `world/createPlayerWells.ts`
+- `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/playerWell.ts`
@@ -136,6 +139,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
+- `items/createDroppedItems.ts`
 - `player/PlayerController.ts`
 - `settlement/VillageFire.ts`
 - `settlement/families.ts`
@@ -162,6 +166,8 @@ Generated from TypeScript imports.
 - `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
 - `world/collision.ts`
+- `world/createPlayerWells.ts`
+- `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/playerWell.ts`

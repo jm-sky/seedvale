@@ -196,6 +196,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/actions/placementActions.ts`
 - `items/constructionMaterials.test.ts`
 - `world/palisade.test.ts`
@@ -243,11 +244,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `items/constructionMaterials.test.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
 - `terrain/digAction.ts`
 
 ## `items/createItemSpawners.ts`

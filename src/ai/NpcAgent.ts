@@ -5,6 +5,7 @@ import type { ResolvedDefense } from '../combat/defenseResolver'
 import type { Projectile } from '../combat/projectile'
 import type { RangedAttackLifecycle } from '../combat/rangedLifecycle'
 import type { HuntTarget, SettlementHuntingHooks } from '../fauna/huntingHooks'
+import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
@@ -15,10 +16,11 @@ import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { PlayerWells } from '../world/createPlayerWells'
+import type { WorkContracts } from '../world/createWorkContracts'
 import type { CropId } from '../world/cropLifecycle'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
-import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
 import type { HelperAssignment } from './helperAssignment'
@@ -59,6 +61,7 @@ import {
   tryAdvanceDevelopment,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
+import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../items/constructionMaterials'
 import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, type FoodItemClaim } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
@@ -108,9 +111,19 @@ import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from 
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { CROP_SEED_ITEM } from '../world/plantedCrops'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
+import {
+  activeWellStage,
+  isWellCompleted,
+  type NearbyPlayerWellLookup,
+  type PlayerWellRecord,
+  WELL_STAGE_COST,
+  WELL_WORK_SESSION_HOURS,
+  WELL_WORK_SESSION_SEC,
+} from '../world/playerWell'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
+import { noticeBoardId, type WorkContractRecord, type WorkContractState } from '../world/workContract'
 import {
   type CharacterDef,
   genderForName,
@@ -218,6 +231,7 @@ import {
   REACTION_SOUND_VOLUME,
   voiceActorForIndex,
 } from './npcVoiceLines'
+import { selectBestWorkContract } from './npcWorkContract'
 import {
   computeReactionChance,
   type PlayerSocialLookup,
@@ -451,6 +465,10 @@ export type NpcInspectionSnapshot = {
     progress: number
     currentStep: string
   } | null
+  /** This NPC's outstanding Work Contract commitment (plan npc-015 §14), or
+   *  `null` when it has none — resolved fresh from `WorkContracts` every
+   *  snapshot, never a second copy of the authoritative state. */
+  contract: { id: string, state: WorkContractState, rewardCoins: number } | null
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -1164,6 +1182,28 @@ export class NpcAgent {
    *  `household`) — the miner role then falls back to the pre-131 idle
    *  workplace stand instead of gathering. */
   private readonly mining: SettlementMiningHooks | null
+  /** Authoritative work-contract lifecycle (plan npc-015) — the single world
+   *  system this NPC's own commitment is always resolved from
+   *  (`workContracts.findByWorker(this.id)`), never a second copy on
+   *  `NpcAuthoritativeState`. Null in isolated fallbacks, same as `mining`. */
+  private readonly workContracts: WorkContracts | null
+  /** The one construction target kind a work contract can reference today
+   *  (plan npc-015 §7) — NPC construction execution advances this same
+   *  world-owned record the player's own `[E]` well-work would, through the
+   *  same `addWork`/`transitionTo` seam. Null in isolated fallbacks. */
+  private readonly playerWells: PlayerWells | null
+  /** World-dropped items (plan npc-015 §9's material-provisioning analogue)
+   *  — lets NPC construction work draw stone/branch left near the site
+   *  through the exact same bounded `hasMaterial`/`consumeMaterial` radius
+   *  search the player's own well-work already uses, instead of inventing a
+   *  worker supply chain. Null in isolated fallbacks; a stage requiring
+   *  materials then simply stays blocked (see `runContractWorkBout`). */
+  private readonly droppedItems: DroppedItems | null
+  /** Cached from `update()`'s own parameter (plan npc-015) — Work Contract
+   *  travel-time estimation needs the real-seconds↔game-hours ratio, but
+   *  isn't itself called from `update()`, so it's stashed here rather than
+   *  threaded through every idle-dispatch signature. */
+  private dayLengthSec = 600
   /** Generic item carrier reused from the player's own `Inventory` (plan
    *  131) — an NPC's brief hold between extracting a world resource (ore) and
    *  delivering it, not a persistent belongings system. Small capacity: one
@@ -1241,6 +1281,9 @@ export class NpcAgent {
     hunting?: SettlementHuntingHooks,
     helperDelivery?: HelperDeliveryHooks,
     householdExchange?: HouseholdExchangeHooks,
+    workContracts?: WorkContracts | null,
+    playerWells?: PlayerWells | null,
+    droppedItems?: DroppedItems | null,
   ) {
     this.playAt = playAt
     this.forest = forest
@@ -1251,6 +1294,9 @@ export class NpcAgent {
     this.household = household
     this.npcState = npcState
     this.mining = mining
+    this.workContracts = workContracts ?? null
+    this.playerWells = playerWells ?? null
+    this.droppedItems = droppedItems ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
@@ -1401,6 +1447,9 @@ export class NpcAgent {
     hunting?: SettlementHuntingHooks,
     helperDelivery?: HelperDeliveryHooks,
     householdExchange?: HouseholdExchangeHooks,
+    workContracts?: WorkContracts | null,
+    playerWells?: PlayerWells | null,
+    droppedItems?: DroppedItems | null,
   ): Promise<NpcAgent> {
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
@@ -1432,6 +1481,9 @@ export class NpcAgent {
         hunting,
         helperDelivery,
         householdExchange,
+        workContracts,
+        playerWells,
+        droppedItems,
       )
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
@@ -1461,6 +1513,9 @@ export class NpcAgent {
         hunting,
         helperDelivery,
         householdExchange,
+        workContracts,
+        playerWells,
+        droppedItems,
       )
     }
   }
@@ -1491,6 +1546,9 @@ export class NpcAgent {
     hunting?: SettlementHuntingHooks,
     helperDelivery?: HelperDeliveryHooks,
     householdExchange?: HouseholdExchangeHooks,
+    workContracts?: WorkContracts | null,
+    playerWells?: PlayerWells | null,
+    droppedItems?: DroppedItems | null,
   ): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
@@ -1531,6 +1589,9 @@ export class NpcAgent {
       hunting,
       helperDelivery,
       householdExchange,
+      workContracts,
+      playerWells,
+      droppedItems,
     )
   }
 
@@ -1589,6 +1650,10 @@ export class NpcAgent {
             currentStep: this.npcState.activePlan.currentStep,
           }
         : null,
+      contract: (() => {
+        const mine = this.workContracts?.findByWorker(this.id)
+        return mine ? { id: mine.id, state: mine.state, rewardCoins: mine.rewardCoins } : null
+      })(),
       action: this.pendingAction
         ? {
             kind: this.pendingAction.kind,
@@ -2238,6 +2303,12 @@ export class NpcAgent {
    *  the collapse animation from the start, so a stream-in/reload never
    *  replays a death that already happened. */
   private die(alreadySettled = false): void {
+    // A dead worker can no longer fulfil an outstanding commitment (plan
+    // npc-015 §12) — release it back to the board rather than leaving the
+    // contract stuck in `travelling`/`working` forever with an assigned
+    // worker that will never move again.
+    const mine = this.workContracts?.findByWorker(this.id)
+    if (mine) this.workContracts!.release(mine.id, this.id)
     this.releaseConversationIfAny()
     this.leaveActiveQueue()
     this.pendingAction = null
@@ -2316,6 +2387,7 @@ export class NpcAgent {
     weather?: WeatherState,
   ): void {
     this.simClock += dt
+    this.dayLengthSec = dayLengthSec
     if (this.frozen) return
     if (this.health.dead) {
       // Keep the mixer advancing only long enough for the one-shot death
@@ -4243,6 +4315,14 @@ export class NpcAgent {
    *  also falls back to home. Ordinary schedule changes do not interrupt an
    *  action already in flight — this runs only from `choose`. */
   private beginIdle(scheduledActivity: ScheduleActivity): void {
+    // A Work Contract commitment (plan npc-015) sits at the same priority
+    // tier as the ordinary schedule's own `work` block — pursued whenever no
+    // real need/weather pressure won `choose()`'s arbitration, ahead of the
+    // schedule's `eat`/`social`/`home` flavour activities. It is never a
+    // pressure candidate itself (no `work` NeedId — implementation notes
+    // "Decision integration"), so a genuinely urgent need already pre-empted
+    // it before `beginIdle` was ever called.
+    if (this.tryPursueWorkContract(scheduledActivity)) return
     if (this.settledIdleActivity !== null && this.settledIdleActivity !== scheduledActivity) {
       this.settledIdleActivity = null
     }
@@ -4306,6 +4386,173 @@ export class NpcAgent {
       return
     }
     this.beginUnscheduledIdle()
+  }
+
+  /**
+   * Work Contract commitment entry point (plan npc-015 §5-§11), called only
+   * from `beginIdle()` — resumes an already-accepted contract, or otherwise
+   * looks for a new one to accept from this NPC's own settlement notice
+   * board. Returns `true` when it claimed this idle slot (whether or not it
+   * actually managed to start a fresh action this tick), `false` to let
+   * `beginIdle` fall through to its ordinary schedule dispatch.
+   *
+   * Deliberately stateless on the NPC side: the commitment itself is never
+   * cached here, always re-read from `workContracts.findByWorker(this.id)`
+   * (implementation notes "Recommended contract ownership") — so an
+   * interruption (`tickCriticalInterrupt`), a settlement unload/reload, or a
+   * save/load round-trip all resume the exact same contract for free, with
+   * no NPC-side persistence of its own.
+   *
+   * @domain npc
+   */
+  private tryPursueWorkContract(scheduledActivity: ScheduleActivity): boolean {
+    const contracts = this.workContracts
+    if (!contracts) return false
+    const mine = contracts.findByWorker(this.id)
+    if (mine) return this.pursueAcceptedContract(mine)
+    return this.tryAcceptWorkContractOpportunity(contracts, scheduledActivity)
+  }
+
+  /** No existing commitment — evaluate this NPC's own settlement notice
+   *  board for a new one to accept (plan §2/§3/§4). Bounded to contracts
+   *  actually posted at *this* NPC's settlement (never a global scan, plan
+   *  §2); an NPC with no household (isolated fallback) never sees any. */
+  private tryAcceptWorkContractOpportunity(contracts: WorkContracts, scheduledActivity: ScheduleActivity): boolean {
+    const settlementId = this.household?.settlementId
+    if (!settlementId) return false
+    const candidates = contracts.discoverableAt(noticeBoardId(settlementId))
+    if (candidates.length === 0) return false
+    const { best, scored } = selectBestWorkContract(candidates, {
+      npcX: this.mesh.position.x,
+      npcZ: this.mesh.position.z,
+      role: this.role,
+      scheduledActivity,
+      hasWorkplace: this.workplace != null,
+      dayLengthSec: this.dayLengthSec,
+      walkSpeed: WALK_SPEED,
+    })
+    this.trace.record({ simTime: this.simClock, type: 'contract.evaluated', candidates: scored.map((s) => ({ contractId: s.contract.id, score: s.score })) })
+    if (!best) return false
+    const accepted = contracts.accept(best.contract.id, this.id, this.simClock)
+    if (!accepted) return false
+    this.trace.record({ simTime: this.simClock, type: 'contract.accepted', contractId: accepted.id, score: best.score })
+    return this.pursueAcceptedContract(accepted)
+  }
+
+  /** Drives one step of an already-`accepted`/`travelling`/`working`
+   *  contract's commitment (plan §6/§7/§10/§12) — always resolves the
+   *  target fresh from `record.target.targetId` rather than any cached
+   *  position (plan §6: "the destination must derive from the authoritative
+   *  contract target/flag"). Returns `true` once this idle slot has been
+   *  claimed (even when the outcome this tick was an invalidation, not real
+   *  progress) — `beginIdle` should not also start a schedule activity. */
+  private pursueAcceptedContract(record: WorkContractRecord): boolean {
+    const contracts = this.workContracts
+    if (!contracts) return false
+    // Only `construction`/`WorkContractRecord.target.kind` exists today
+    // (plan §2) — this guard is future-proofing for a later work type this
+    // phase never introduces, not dead code.
+    if (record.target.kind !== 'construction') return false
+    if (record.state === 'payment_due') return false // nothing left to actively do — npc-016's turn.
+    const well = this.findContractWell(record.target.targetId)
+    if (!well) {
+      // Target disappeared/became invalid (plan §12) — never leave the
+      // contract stuck; hand it back to a terminal state instead.
+      contracts.invalidateTarget(record.id)
+      this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
+      return true
+    }
+    if (isWellCompleted(well)) {
+      contracts.completeWork(record.id, this.id)
+      this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
+      return true
+    }
+    const destination = { x: well.x, y: this.sampleHeight(well.x, well.z), z: well.z }
+    if (record.state === 'accepted' || record.state === 'travelling') {
+      if (record.state === 'accepted') contracts.beginTravel(record.id, this.id)
+      const contractId = record.id
+      this.startAction({
+        kind: 'work',
+        destination,
+        durationSec: 1.0 * this.waitMultiplier,
+        onComplete: () => {
+          const fresh = contracts.find(contractId)
+          if (fresh?.state === 'travelling' && fresh.workerNpcId === this.id) {
+            contracts.beginWork(contractId, this.id, this.simClock)
+          }
+        },
+      })
+      return true
+    }
+    // record.state === 'working'
+    this.runContractWorkBout(record.id, well, destination)
+    return true
+  }
+
+  private findContractWell(targetId: string): PlayerWellRecord | undefined {
+    return this.playerWells?.nodes().find((w) => w.id === targetId)
+  }
+
+  /** Runs one active-work bout of NPC construction on `well` (plan §7) —
+   *  the same `WELL_STAGE_COST`/`WELL_WORK_SESSION_HOURS` shape as the
+   *  player's own `workOnWell` (`app/actions/placementActions.ts`), but
+   *  through the actor-neutral `PlayerWells.addWork`/`transitionTo` seam
+   *  instead of the player-only busy channel. No tool/capability check
+   *  (unlike the player's own well-work): hiring is the point of a work
+   *  contract, and there is no NPC-side tool-ownership model to gate on
+   *  (documented simplification, plan §7/non-goals "advanced worker
+   *  provisioning"). Materials, when a stage needs them, are drawn from this
+   *  NPC's carried inventory plus anything dropped near the well within
+   *  `CONSTRUCTION_MATERIAL_RADIUS` — the same bounded world-item lookup the
+   *  player's own construction already uses (plan §9's material-supply
+   *  analogue); a stage that can't currently be paid for simply stays
+   *  blocked (retried next bout) rather than abandoning the contract. */
+  private runContractWorkBout(
+    contractId: string,
+    well: PlayerWellRecord,
+    destination: { x: number, y: number, z: number },
+  ): void {
+    const contracts = this.workContracts!
+    const wells = this.playerWells!
+    this.startAction({
+      kind: 'work',
+      destination,
+      durationSec: WELL_WORK_SESSION_SEC * this.waitMultiplier,
+      onComplete: () => {
+        const freshContract = contracts.find(contractId)
+        if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
+        const freshWell = this.findContractWell(well.id)
+        if (!freshWell) {
+          contracts.invalidateTarget(contractId)
+          return
+        }
+        const stage = activeWellStage(freshWell)
+        if (!stage) {
+          contracts.completeWork(contractId, this.id)
+          return
+        }
+        if (stage !== freshWell.stage) {
+          const cost = WELL_STAGE_COST[stage]
+          const requirements: MaterialRequirement[] = []
+          if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
+          if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
+          const dropped = this.droppedItems
+          const missing = dropped
+            ? requirements.filter((r) => !hasMaterial(this.carried, dropped, freshWell.x, freshWell.z, CONSTRUCTION_MATERIAL_RADIUS, r))
+            : requirements.filter((r) => this.carried.count(r.kind) < r.count)
+          if (missing.length > 0) return // blocked on materials — commitment stays intact, retried next bout.
+          if (dropped) {
+            for (const r of requirements) consumeMaterial(this.carried, dropped, freshWell.x, freshWell.z, CONSTRUCTION_MATERIAL_RADIUS, r)
+          } else {
+            for (const r of requirements) this.carried.remove(r.kind, r.count)
+          }
+          wells.transitionTo(freshWell.id, stage)
+        }
+        wells.addWork(freshWell.id, WELL_WORK_SESSION_HOURS)
+        const updated = this.findContractWell(freshWell.id)
+        if (updated && isWellCompleted(updated)) contracts.completeWork(contractId, this.id)
+      },
+    })
   }
 
   /**

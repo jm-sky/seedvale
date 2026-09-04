@@ -64,6 +64,16 @@ export type WorkContractRecord = {
   postedBoardId: string | null
   createdAt: number
   postedAt: number | null
+  /** The NPC currently committed to this contract (plan npc-015 §5), or
+   *  `null` when unassigned. This is the *sole* authority for the
+   *  assignment — an `NpcAgent` never keeps a second copy of its own
+   *  commitment, it resolves it by querying contracts for
+   *  `workerNpcId === this.id` (implementation notes "Recommended contract
+   *  ownership"). Only ever set by `acceptWorkContract`, cleared by
+   *  `releaseWorkContract`/`cancelWorkContract`/`invalidateWorkContract`. */
+  workerNpcId: string | null
+  acceptedAt: number | null
+  workStartedAt: number | null
 }
 
 const TERMINAL_STATES: ReadonlySet<WorkContractState> = new Set(['cancelled', 'completed', 'invalidated'])
@@ -116,6 +126,9 @@ export function createWorkContractRecord(params: {
     postedBoardId: null,
     createdAt: params.now,
     postedAt: null,
+    workerNpcId: null,
+    acceptedAt: null,
+    workStartedAt: null,
   }
 }
 
@@ -134,7 +147,7 @@ export function postWorkContract(
  *  change (plan §10). Returns `null` (no-op) if already terminal. */
 export function cancelWorkContract(record: WorkContractRecord): WorkContractRecord | null {
   if (isContractTerminal(record.state)) return null
-  return { ...record, state: 'cancelled', advertisement: 'not_posted', postedBoardId: null }
+  return { ...record, state: 'cancelled', advertisement: 'not_posted', postedBoardId: null, workerNpcId: null }
 }
 
 /** Invalidates `record`'s target — same atomic publication cleanup as
@@ -142,5 +155,59 @@ export function cancelWorkContract(record: WorkContractRecord): WorkContractReco
  *  (no-op) if already terminal. */
 export function invalidateWorkContract(record: WorkContractRecord): WorkContractRecord | null {
   if (isContractTerminal(record.state)) return null
-  return { ...record, state: 'invalidated', advertisement: 'not_posted', postedBoardId: null }
+  return { ...record, state: 'invalidated', advertisement: 'not_posted', postedBoardId: null, workerNpcId: null }
+}
+
+/** Only an `advertised`, unassigned contract can be accepted (plan npc-015
+ *  §5) — mirrors `canPostContract`'s "reject rather than silently no-op"
+ *  shape so `WorkContracts.accept` can distinguish "unknown id" from
+ *  "already taken". */
+export function canAcceptContract(record: WorkContractRecord): boolean {
+  return record.state === 'advertised' && record.workerNpcId === null
+}
+
+/** NPC accepts a discovered, still-open contract (plan §5) — assigns the
+ *  worker and starts its commitment. `null` if `canAcceptContract` rejects
+ *  it (already taken, cancelled, not yet posted, ...). */
+export function acceptWorkContract(record: WorkContractRecord, npcId: string, now: number): WorkContractRecord | null {
+  if (!canAcceptContract(record)) return null
+  return { ...record, state: 'accepted', workerNpcId: npcId, acceptedAt: now }
+}
+
+/** `accepted` → `travelling` (plan §6) — only the assigned worker can drive
+ *  its own contract's lifecycle. */
+export function beginContractTravel(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+  if (record.state !== 'accepted' || record.workerNpcId !== npcId) return null
+  return { ...record, state: 'travelling' }
+}
+
+/** `travelling` → `working` (plan §7), once the worker has reached the
+ *  target. */
+export function beginContractWork(record: WorkContractRecord, npcId: string, now: number): WorkContractRecord | null {
+  if (record.state !== 'travelling' || record.workerNpcId !== npcId) return null
+  return { ...record, state: 'working', workStartedAt: now }
+}
+
+/** `working` → `payment_due` (plan §7/§11) once the existing construction
+ *  pipeline confirms the target is finished. Never pays — that is
+ *  `npc-016`'s job (plan §11's explicit non-goal). */
+export function completeContractWork(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+  if (record.state !== 'working' || record.workerNpcId !== npcId) return null
+  return { ...record, state: 'payment_due' }
+}
+
+/** Releases `npcId`'s commitment back to `advertised` (plan §10/§12) —
+ *  temporary interruption is never abandonment (handled entirely by
+ *  `NpcAgent` simply resuming the same non-terminal contract on its next
+ *  decision), so this is only ever called for a *genuine* abandonment: the
+ *  worker died or otherwise can no longer fulfil the commitment while the
+ *  target itself is still valid. Keeps the existing posting (`postedAt`/
+ *  `postedBoardId` untouched) so the contract re-enters the same board's
+ *  candidate pool for another NPC (or the same one, later) instead of
+ *  requiring the player to re-post it. Use `invalidateWorkContract` instead
+ *  when the target itself is the problem. */
+export function releaseWorkContract(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+  if (record.state !== 'accepted' && record.state !== 'travelling' && record.state !== 'working') return null
+  if (record.workerNpcId !== npcId) return null
+  return { ...record, state: 'advertised', workerNpcId: null, acceptedAt: null, workStartedAt: null }
 }

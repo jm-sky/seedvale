@@ -87,10 +87,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/workContractActions.ts`
 
-- `createWorkContractActions` — function — line 64
-- `WorkContractActionDeps` — type — line 58
-- `WorkContractActions` — type — line 38
-- `WorkContractQuickActionEntry` — type — line 36
+- `createWorkContractActions` — function — line 71
+- `WorkContractActionDeps` — type — line 65
+- `WorkContractActions` — type — line 45
+- `WorkContractQuickActionEntry` — type — line 43
 
 ## `app/appRenderLoop.ts`
 
@@ -214,12 +214,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 524
-- `createWorldBundle` — function — line 846
-- `disposeWorldBundle` — function — line 1193
+- `BuiltWorldSystems` — type — line 534
+- `createWorldBundle` — function — line 864
+- `disposeWorldBundle` — function — line 1211
 - `HOME_RADIUS` — const — line 85
 - `homeChunks` — function — line 96
-- `rebuildWorldBundle` — function — line 1014
+- `rebuildWorldBundle` — function — line 1032
 - `WorldBundle` — type — line 119
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).

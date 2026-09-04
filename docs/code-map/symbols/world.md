@@ -238,9 +238,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createWorkContracts.ts`
 
-- `createWorkContracts` — function — line 73
+- `createWorkContracts` — function — line 110
   - domain: npc
-- `WorkContracts` — type — line 15
+- `WorkContracts` — type — line 20
 
 ## `world/cropLifecycle.ts`
 
@@ -878,16 +878,22 @@ Generated from exported TypeScript symbols.
 
 ## `world/workContract.ts`
 
-- `cancelWorkContract` — function — line 135
-- `canPostContract` — function — line 85
+- `acceptWorkContract` — function — line 172
+- `beginContractTravel` — function — line 179
+- `beginContractWork` — function — line 186
+- `canAcceptContract` — function — line 165
+- `cancelWorkContract` — function — line 148
+- `canPostContract` — function — line 95
+- `completeContractWork` — function — line 194
 - `ConstructionContractTarget` — type — line 40
-- `contractHasActiveTarget` — function — line 77
+- `contractHasActiveTarget` — function — line 87
 - `ContractTarget` — type — line 47
-- `createWorkContractRecord` — function — line 97
-- `invalidateWorkContract` — function — line 143
-- `isContractTerminal` — function — line 71
-- `noticeBoardId` — function — line 93
-- `postWorkContract` — function — line 124
+- `createWorkContractRecord` — function — line 107
+- `invalidateWorkContract` — function — line 156
+- `isContractTerminal` — function — line 81
+- `noticeBoardId` — function — line 103
+- `postWorkContract` — function — line 137
+- `releaseWorkContract` — function — line 209
 - `WorkContractAdvertisement` — type — line 29
 - `WorkContractRecord` — type — line 49
 - `WorkContractState` — type — line 18

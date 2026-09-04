@@ -74,27 +74,27 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 353
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 652
-- `classifyPendingActivity` — function — line 507
-- `CurrentActivity` — type — line 407
-- `CurrentActivityKind` — type — line 405
-- `findWeaponNeedingMaintenance` — function — line 760
-- `NPC_HEIGHT` — const — line 251
-- `NPC_MODEL_URLS` — const — line 306
-- `NPC_SHADOW_DISTANCE` — const — line 256
-- `NpcAgent` — class — line 865
+- `ActionId` — type — line 367
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 670
+- `classifyPendingActivity` — function — line 525
+- `CurrentActivity` — type — line 421
+- `CurrentActivityKind` — type — line 419
+- `findWeaponNeedingMaintenance` — function — line 778
+- `NPC_HEIGHT` — const — line 265
+- `NPC_MODEL_URLS` — const — line 320
+- `NPC_SHADOW_DISTANCE` — const — line 270
+- `NpcAgent` — class — line 883
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 422
-- `NpcWhy` — type — line 482
-- `Phase` — type — line 333
-- `projectNpcWhy` — function — line 538
-- `promoteChainKind` — function — line 499
+- `NpcInspectionSnapshot` — type — line 436
+- `NpcWhy` — type — line 500
+- `Phase` — type — line 347
+- `projectNpcWhy` — function — line 556
+- `promoteChainKind` — function — line 517
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -244,6 +244,14 @@ Generated from exported TypeScript symbols.
 - `pickNpcGreetingSound` — function — line 85
 - `REACTION_SOUND_VOLUME` — const — line 121
 - `voiceActorForIndex` — function — line 25
+
+## `ai/npcWorkContract.ts`
+
+- `CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS` — const — line 58
+- `ScoredWorkContract` — type — line 105
+- `scoreWorkContractOpportunity` — function — line 84
+- `selectBestWorkContract` — function — line 112
+- `WorkContractEvaluationInput` — type — line 61
 
 ## `ai/reactionChance.ts`
 

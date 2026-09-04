@@ -311,6 +311,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `items/tentPlacement.ts`
 - `ui-vue/mount.ts`
+- `world/playerWell.ts`
 - `world/workContract.ts`
 
 **Imported by**

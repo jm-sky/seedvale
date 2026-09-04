@@ -19,7 +19,7 @@ const config = {
 } as SaveConfig
 
 const validSave: SaveData = {
-  version: 2,
+  version: CURRENT_SAVE_VERSION,
   config,
   player: { x: 3, z: 4, yaw: 0.1, pitch: 0.2 },
   savedAt: 100,
@@ -108,6 +108,9 @@ const validSave: SaveData = {
     postedBoardId: 'noticeBoard:home',
     createdAt: 2,
     postedAt: 2.1,
+    workerNpcId: null,
+    acceptedAt: null,
+    workStartedAt: null,
   }],
 }
 
@@ -125,7 +128,7 @@ describe('loadSaveData v1 contract', () => {
 
   it('rejects a save missing required fields (no migration path)', () => {
     expect(loadSaveData({
-      version: 2,
+      version: CURRENT_SAVE_VERSION,
       config,
       player: { x: 0, z: 0, yaw: 0, pitch: 0 },
       savedAt: 1,
@@ -333,8 +336,10 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
   })
 
   it('reports a version older than the migration floor (v1) as migration-failed, not invalid', () => {
-    const olderThanFloor = { ...validSave, version: CURRENT_SAVE_VERSION - 2 }
-    expect(loadStoredSave(olderThanFloor)).toEqual({ status: 'migration-failed', version: CURRENT_SAVE_VERSION - 2 })
+    // 0 — one below the lowest version any registered migration step accepts
+    // (`SAVE_MIGRATIONS[1]`) — regardless of how many steps exist above it.
+    const olderThanFloor = { ...validSave, version: 0 }
+    expect(loadStoredSave(olderThanFloor)).toEqual({ status: 'migration-failed', version: 0 })
   })
 
   it('migrates a real v1 save (plan world-012) into v2, adding empty location-knowledge/targets and preserving discoveredCells', () => {
@@ -344,6 +349,12 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       status: 'ok',
       data: { ...validSave, map: { ...v1Map, discoveredLocations: [], targets: [] } },
     })
+  })
+
+  it('migrates a real v2 save (plan npc-015) into v3, defaulting the new work-contract worker fields to null', () => {
+    const { workerNpcId: _w, acceptedAt: _a, workStartedAt: _s, ...v2Contract } = validSave.workContracts[0]!
+    const v2Save = { ...validSave, version: 2, workContracts: [v2Contract] }
+    expect(loadStoredSave(v2Save)).toEqual({ status: 'ok', data: validSave })
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

@@ -380,6 +380,13 @@ export type SaveWorkContract = {
   postedBoardId: string | null
   createdAt: number
   postedAt: number | null
+  /** NPC worker commitment (plan npc-015 §5/§13) — `null` while unassigned;
+   *  the sole persisted record of "which NPC is doing this", never
+   *  duplicated onto NPC-side save state (see `world/workContract.ts`'s
+   *  `WorkContractRecord.workerNpcId`). */
+  workerNpcId: string | null
+  acceptedAt: number | null
+  workStartedAt: number | null
 }
 
 /** Single source of truth for the current persisted schema version
@@ -388,7 +395,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 2
+export const CURRENT_SAVE_VERSION = 3
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1082,7 +1089,10 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
       (c.advertisement === 'not_posted' || c.advertisement === 'posted') &&
       (c.postedBoardId === null || typeof c.postedBoardId === 'string') &&
       typeof c.createdAt === 'number' &&
-      (c.postedAt === null || typeof c.postedAt === 'number')
+      (c.postedAt === null || typeof c.postedAt === 'number') &&
+      (c.workerNpcId === null || typeof c.workerNpcId === 'string') &&
+      (c.acceptedAt === null || typeof c.acceptedAt === 'number') &&
+      (c.workStartedAt === null || typeof c.workStartedAt === 'number')
     )
   })
 }
@@ -1345,11 +1355,32 @@ function migrateSaveV1ToV2(data: unknown): unknown {
   }
 }
 
+/** v2 → v3 (plan npc-015): adds the NPC worker-commitment fields to every
+ *  persisted `SaveWorkContract` — every contract created before this plan
+ *  landed had no worker assigned, so `workerNpcId`/`acceptedAt`/
+ *  `workStartedAt` simply default to `null`, same "new field defaults to
+ *  empty" contract `migrateSaveV1ToV2` already used for `map`. Every other
+ *  field, including contracts with no `workContracts` array at all yet, is
+ *  left untouched. */
+function migrateSaveV2ToV3(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const workContracts = Array.isArray(v.workContracts) ? v.workContracts : []
+  return {
+    ...v,
+    version: 3,
+    workContracts: workContracts.map((entry) => {
+      const c = entry as Record<string, unknown>
+      return { ...c, workerNpcId: c.workerNpcId ?? null, acceptedAt: c.acceptedAt ?? null, workStartedAt: c.workStartedAt ?? null }
+    }),
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
+  2: migrateSaveV2ToV3,
 }
 
 function detectStoredVersion(value: unknown): number | null {

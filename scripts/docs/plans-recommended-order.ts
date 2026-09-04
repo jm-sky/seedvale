@@ -546,8 +546,10 @@ const main = async (): Promise<void> => {
     .forEach(plan => {
       const blockers = plan.dependencies
         .filter(dep => !COMPLETED.has(byId.get(dep)?.status ?? 'planned'))
-        .join(', ')
-      output.push('- ' + plan.id + ': ' + blockers)
+        .map(dep => `  - \`${dep}\``)
+      output.push(`- Plan \`${plan.file}\`  `)
+      output.push('  is blocked by:')
+      output.push(...blockers)
     })
 
   output.push('')

@@ -10,10 +10,10 @@
    🔴 M · blocked · unlocks 1/1
 3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 M · blocked · unlocks 0/0
-4. `npc-015` — **Work Contracts — NPC Work & Construction**  
-   🟡 L · ready · unlocks 2/2
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
+4. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 L · ready · unlocks 1/2
+5. `npc-010` — **NPC Death & Corpse Lifecycle**  
+   🟡 L · ready · unlocks 1/1
 
 ---
 
@@ -25,10 +25,10 @@
    🔴 M · blocked · unlocks 1/1 · roadmap: economy-production
 3. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 M · blocked · unlocks 0/0 · roadmap: economy-production
-4. `npc-015` — **Work Contracts — NPC Work & Construction**  
-   🟡 L · ready · unlocks 2/2 · roadmap: workforce-for-hire
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
+4. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 L · ready · unlocks 1/2 · roadmap: textiles-and-herbal-medicine
+5. `npc-010` — **NPC Death & Corpse Lifecycle**  
+   🟡 L · ready · unlocks 1/1 · roadmap: npc-professions-households-and-age
 
 ---
 
@@ -52,13 +52,13 @@
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 M · ready · unlocks 1/2
-2. `npc-015` — **Work Contracts — NPC Work & Construction**  
-   🟡 L · ready · unlocks 2/2
-3. `fauna-004` — **Sheep wool cycle and shepherd**  
+2. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 L · ready · unlocks 1/2
-4. `npc-010` — **NPC Death & Corpse Lifecycle**  
+3. `npc-010` — **NPC Death & Corpse Lifecycle**  
    🟡 L · ready · unlocks 1/1
-5. `items-player-002` — **Food provenance, freshness and storage**  
+4. `items-player-002` — **Food provenance, freshness and storage**  
+   🟡 M · ready · unlocks 0/0
+5. `items-player-014` — **Rope-pullable resource transport**  
    🟡 M · ready · unlocks 0/0
 
 ---
@@ -89,83 +89,79 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 M · **Score:**  57  
    → **unlocks:** 0/0
 
-4. `npc-015` — **Work Contracts — NPC Work & Construction**  
-  🟡 L · **Score:**  44  
-   → **unlocks:** 2/2
-
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
+4. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 L · **Score:**  38  
    → **unlocks:** 1/2
 
-6. `npc-010` — **NPC Death & Corpse Lifecycle**  
+5. `npc-010` — **NPC Death & Corpse Lifecycle**  
   🟡 L · **Score:**  36  
    → **unlocks:** 1/1
 
-7. `settlements-npcs-006` — **Wool to material**  
+6. `settlements-npcs-006` — **Wool to material**  
   🟡 M · **Score:**  33  
    → **unlocks:** 1/1
 
-8. `items-player-002` — **Food provenance, freshness and storage**  
+7. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 M · **Score:**  29  
    → **unlocks:** 0/0
 
-9. `items-player-014` — **Rope-pullable resource transport**  
+8. `items-player-014` — **Rope-pullable resource transport**  
   🟡 M · **Score:**  27  
    → **unlocks:** 0/0
 
-10. `tools-005` — **Seedvale Character Preparation Panel**  
+9. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 M · **Score:**  27  
    → **unlocks:** 0/0
 
-11. `npc-002` — **NPC Healing**  
+10. `npc-002` — **NPC Healing**  
   🟡 M · **Score:**  25  
    → **unlocks:** 0/0
 
-12. `npc-011` — **NPC Burial & Graves**  
+11. `npc-011` — **NPC Burial & Graves**  
   🟡 L · **Score:**  24  
    → **unlocks:** 0/0
 
-13. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+12. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 L · **Score:**  24  
    → **unlocks:** 0/0
 
-14. `world-004` — **Well Depth, Groundwater & Well Protection**  
+13. `world-004` — **Well Depth, Groundwater & Well Protection**  
   🟡 M · **Score:**  23  
    → **unlocks:** 0/0
 
-15. `fauna-008` — **Riding Skill Effects**  
+14. `fauna-008` — **Riding Skill Effects**  
   🟡 S · **Score:**  21  
    → **unlocks:** 0/0
 
-16. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+15. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 M · **Score:**  21  
    → **unlocks:** 0/0
 
-17. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+16. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 M · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-007` — **Bandages and herbal medicine**  
+17. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 M · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `world-010` — **Environmental Placement Consequences**  
+18. `world-010` — **Environmental Placement Consequences**  
   🟡 M · **Score:**  19  
    → **unlocks:** 0/0
 
-20. `tools-000` — **Weapon Browser — Observatory/Admin**  
+19. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 M · **Score:**  17  
    → **unlocks:** 0/0
 
-21. `fauna-007` — **Animal leading and cart harness**  
+20. `fauna-007` — **Animal leading and cart harness**  
   🟡 L · **Score:**  16  
    → **unlocks:** 0/0
 
-22. `npc-004` — **Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie**  
+21. `npc-004` — **Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie**  
   ⚪ S · **Score:**   9  
    → **unlocks:** 0/0
 
-23. `tools-006` — **tools-006--world-observatory.md**  
+22. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ XL · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -173,13 +169,21 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
-- npc-011: npc-010
-- npc-016: npc-015
-- npc-017: npc-015
-- settlements-npcs-006: fauna-004
-- settlements-npcs-007: settlements-npcs-006
-- settlements-npcs-016: settlements-npcs-015
-- settlements-npcs-017: settlements-npcs-016
+- Plan `npc-011-npc-burial-and-graves.md`  
+  is blocked by:
+  - `npc-010`
+- Plan `settlements-npcs-006-wool-to-material.md`  
+  is blocked by:
+  - `fauna-004`
+- Plan `settlements-npcs-007-bandages-and-herbal-medicine.md`  
+  is blocked by:
+  - `settlements-npcs-006`
+- Plan `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  
+  is blocked by:
+  - `settlements-npcs-015`
+- Plan `settlements-npcs-017-production-demand-and-economic-pressures.md`  
+  is blocked by:
+  - `settlements-npcs-016`
 
 ---
 
