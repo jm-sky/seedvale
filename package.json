@@ -26,7 +26,7 @@
     "docs:dependency-map": "tsx scripts/docs/docs-dependency-map.ts",
     "docs:code-index": "tsx scripts/docs/docs-code-index.ts",
     "docs:generate-plan-docs": "tsx scripts/docs/generate-plan-docs.ts",
-    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/generate-plan-docs.ts && tsx scripts/docs/planned-plans-without-notes.ts && tsx scripts/docs/docs-readme-index.ts && tsx scripts/docs/docs-symbol-index.ts && tsx scripts/docs/docs-dependency-map.ts && tsx scripts/docs/docs-code-index.ts && tsx scripts/docs/plans-done.ts",
+    "docs:sync": "tsx scripts/docs/plans-sync.ts && tsx scripts/docs/generate-plan-docs.ts && tsx scripts/docs/planned-plans-without-notes.ts && tsx scripts/docs/docs-readme-index.ts && tsx scripts/docs/docs-symbol-index.ts && tsx scripts/docs/docs-dependency-map.ts && tsx scripts/docs/docs-code-index.ts && tsx scripts/docs/plans-done.ts && tsx scripts/docs/plans-recommended-order.ts",
     "claude:preflight": "tsx scripts/claude/pre-implementation.ts"
   },
   "dependencies": {
