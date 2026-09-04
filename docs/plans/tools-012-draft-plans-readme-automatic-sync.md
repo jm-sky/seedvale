@@ -1,7 +1,7 @@
 # Plan: Draft plans README automatic sync
 
 **Created:** 2026-09-04
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** infrastructure
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~tools-011~~
