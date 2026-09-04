@@ -1738,18 +1738,13 @@ export class NpcAgent {
       if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
     }
 
-    this.leaveActiveQueue()
-    this.pendingAction = null
-    this.pathWaypoints = []
-    this.pathIndex = 0
-    this.wait = 0
-    this.clearRepath()
     this.previousPhase = null
-    this.sleepReason = null
-    resetMovementWatchdog(this.watchdog)
     // A wolf attack (plan ai-004 §8 example) pre-empts whatever Goal this
     // NPC was pursuing — preserve it, interrupted, instead of discarding it.
-    this.markPlanInterrupted()
+    // Also releases a conversation partner (D1 fix, review §3/§8 step 10) —
+    // this used to leave `conversationPartnerId` dangling, permanently
+    // blocking `socialCandidate()` for this NPC.
+    this.resetInFlightAction({ lifecycle: 'none', clearSleepReason: true, markPlanInterrupted: true })
 
     this.combatIntent = intent
     this.combatMeleeWeapon = meleeWeapon
@@ -2029,16 +2024,11 @@ export class NpcAgent {
    *  to `choose` on arrival, same as any other wander). Not a new
    *  `AnimalFleeSystem`. */
   private fleeFromThreat(threatX: number, threatZ: number): void {
-    failActionLifecycle(this.actionLifecycle)
-    this.leaveActiveQueue()
-    this.pendingAction = null
-    this.pathWaypoints = []
-    this.pathIndex = 0
-    this.wait = 0
-    this.clearRepath()
     this.previousPhase = null
-    this.sleepReason = null
-    resetMovementWatchdog(this.watchdog)
+    // D1 fix: releases a conversation partner (used to leave it dangling —
+    // see `beginCombat`). D2 fix: marks the Plan interrupted instead of
+    // silently leaving it `active` under a destroyed concrete action.
+    this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: true, markPlanInterrupted: true })
 
     const dx = this.mesh.position.x - threatX
     const dz = this.mesh.position.z - threatZ
@@ -2102,16 +2092,18 @@ export class NpcAgent {
     // worker that will never move again.
     const mine = this.workContracts?.findByWorker(this.id)
     if (mine) this.workContracts!.release(mine.id, this.id)
-    this.releaseConversationIfAny()
-    this.leaveActiveQueue()
-    this.pendingAction = null
+    // No D1/D2 gap here — already released the conversation, already
+    // failed the lifecycle unconditionally-safe (`failActionLifecycle`
+    // no-ops unless `status === 'active'`, same effect as the old explicit
+    // check); never marked the Plan interrupted before this refactor and
+    // still doesn't (a dead NPC's Plan is moot).
+    this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: false, markPlanInterrupted: false })
     this.combatIntent = null
     this.combatMeleeWeapon = null
     this.combatRangedWeapon = null
     this.combatAttack.reset()
     this.combatRangedAttack.reset()
     this.combatProjectile = null
-    if (this.actionLifecycle.status === 'active') failActionLifecycle(this.actionLifecycle)
     if (this.anim.has('death') && alreadySettled) {
       // Reconstructed from already-dead state — jump straight to the clip's
       // settled end pose with no fade/blend against whatever the fresh-alive
@@ -2808,13 +2800,12 @@ export class NpcAgent {
    * rather than a second FSM. Walk home when nearby; otherwise sleep here.
    */
   private beginCollapseSleep(): void {
+    // D1 fix: releases a conversation partner — the same dangling-
+    // `conversationPartnerId` gap D1 found in `beginCombat`/`fleeFromThreat`
+    // applies here too (collapse can hit an NPC mid-conversation exactly
+    // like an animal threat can). D2 fix: marks the Plan interrupted.
+    this.resetInFlightAction({ lifecycle: 'none', clearSleepReason: false, markPlanInterrupted: true })
     this.sleepReason = 'collapse'
-    this.leaveActiveQueue()
-    this.pendingAction = null
-    this.wait = 0
-    this.pathWaypoints = []
-    resetMovementWatchdog(this.watchdog)
-    this.clearRepath()
     const dist = Math.hypot(
       this.mesh.position.x - this.home.x,
       this.mesh.position.z - this.home.z,
@@ -2921,6 +2912,48 @@ export class NpcAgent {
     const plan = this.npcState.activePlan
     if (!plan || plan.state === 'completed' || plan.state === 'obsolete' || plan.state === 'interrupted') return
     this.transitionPlan(plan, interruptPlan(plan))
+  }
+
+  /**
+   * Unifies the in-flight-action cleanup that used to be six independently
+   * hand-maintained copies (review 2026-09-03 §3 D1/D2, §8 step 10) —
+   * `beginCombat`, `fleeFromThreat`, `beginCollapseSleep`, `die`,
+   * `interruptCurrentAction`, `abandonStuckAction`. Always releases a
+   * conversation partner (fixes D1 — `beginCombat`/`fleeFromThreat` used to
+   * skip this, permanently stranding the other NPC's `conversationPartnerId`;
+   * `beginCollapseSleep` had the same gap and gets the same fix here, beyond
+   * the two sites D1 named) and always resets the movement watchdog; the
+   * remaining three fields are per-caller options because the six bodies
+   * genuinely differ there:
+   * - `lifecycle: 'fail'` calls `failActionLifecycle` (itself a no-op unless
+   *   `status === 'active'`, so this is safe to call unconditionally — same
+   *   effect as `die()`'s old explicit status check); `'none'` leaves the
+   *   lifecycle untouched (`beginCombat` replaces it separately right after;
+   *   `beginCollapseSleep` never touched it and still doesn't).
+   * - `clearSleepReason` sets `sleepReason = null` for a site that doesn't
+   *   own a more specific value of its own (`beginCollapseSleep` sets
+   *   `'collapse'` itself, before/after this call, never through here).
+   * - `markPlanInterrupted` fixes D2 for `fleeFromThreat`/`beginCollapseSleep`
+   *   (previously silent about an active Plan while destroying its concrete
+   *   action) and preserves the existing behavior for the other four
+   *   (already called it, or — `die()` — never did and still doesn't).
+   */
+  private resetInFlightAction(opts: {
+    lifecycle: 'fail' | 'none'
+    clearSleepReason: boolean
+    markPlanInterrupted: boolean
+  }): void {
+    this.releaseConversationIfAny()
+    if (opts.lifecycle === 'fail') failActionLifecycle(this.actionLifecycle)
+    this.leaveActiveQueue()
+    this.pendingAction = null
+    this.pathWaypoints = []
+    this.pathIndex = 0
+    this.wait = 0
+    this.clearRepath()
+    resetMovementWatchdog(this.watchdog)
+    if (opts.clearSleepReason) this.sleepReason = null
+    if (opts.markPlanInterrupted) this.markPlanInterrupted()
   }
 
   /** Candidate strategies → selection (plan ai-003) — the explicit seam
@@ -4175,21 +4208,13 @@ export class NpcAgent {
    *  minus the stuck-specific abandoned-destination/escalation bookkeeping,
    *  which doesn't apply to a healthy NPC that's simply needed elsewhere. */
   private interruptCurrentAction(): void {
-    this.releaseConversationIfAny()
     const actionKind = this.pendingAction?.kind ?? null
-    failActionLifecycle(this.actionLifecycle)
-    this.leaveActiveQueue()
-    this.pendingAction = null
-    this.pathWaypoints = []
-    this.pathIndex = 0
-    this.wait = 0
-    this.clearRepath()
-    this.phase = 'choose'
     // The concrete action is gone, but the Goal it was pursuing may still be
     // meaningful (plan ai-004 §8) — mark the Plan interrupted, never clear
     // it; `ensurePlanForNeed()` resumes it once `choose()` re-derives the
     // same need.
-    this.markPlanInterrupted()
+    this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: false, markPlanInterrupted: true })
+    this.phase = 'choose'
     this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'interrupt' })
   }
 
@@ -4310,7 +4335,6 @@ export class NpcAgent {
    *  safety net, not a new mechanism). Escalates to an emergency teleport
    *  when this has happened repeatedly within `RECENT_RESCUE_WINDOW_SEC`. */
   private abandonStuckAction(): void {
-    this.releaseConversationIfAny()
     const actionKind = this.pendingAction?.kind ?? null
     const dest = this.pendingAction?.destination
     if (dest) {
@@ -4329,22 +4353,15 @@ export class NpcAgent {
       this.hasAbandonedDest = false
     }
     this.abandonCooldown = ABANDON_RETRY_COOLDOWN_SEC
-    failActionLifecycle(this.actionLifecycle)
-    this.leaveActiveQueue()
-    this.pendingAction = null
-    this.pathWaypoints = []
-    this.pathIndex = 0
-    this.wait = 0
-    this.sleepReason = null
-    this.clearRepath()
+    // `registerAbandon` must read/mutate the watchdog's recent-rescue count
+    // before it gets reset below (same order as before this refactor).
     const escalate = registerAbandon(this.watchdog)
-    resetMovementWatchdog(this.watchdog)
-    if (escalate) this.emergencyTeleport()
-    this.phase = 'choose'
     // Same principle as `interruptCurrentAction()` — the concrete action
     // failed, but the Goal survives if it's still meaningful (plan
     // ai-004 §8); the movement watchdog itself stays independent of Plan.
-    this.markPlanInterrupted()
+    this.resetInFlightAction({ lifecycle: 'fail', clearSleepReason: true, markPlanInterrupted: true })
+    if (escalate) this.emergencyTeleport()
+    this.phase = 'choose'
     this.trace.record({ simTime: this.simClock, type: 'action.failed', action: actionKind, reason: 'abandon' })
   }
 
