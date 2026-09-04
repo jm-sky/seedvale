@@ -9,6 +9,14 @@
 > the task explicitly requested (same as the `createSettlement` review); renumber to
 > `2026-09-03--027--...` when the sequence matters.
 
+> **Amended 2026-09-04**, after plan world-004 landed (`e4403cd4 feat(world): well groundwater depth
+> and uncovered-well protection risk`). That commit was uncommitted work-in-progress while this review
+> was written and is the reason P6 was originally deferred. It is now in `main`, so **P6 is
+> unblocked**, the duplication it describes turned out to be three copies rather than two, and the
+> deep-well capability gate it introduced created a new NPC/player divergence (see P6). Affected
+> sections: §3 P6, §5 E9, §6, §7, §8 (step 9 inserted, later steps renumbered), §10 R4, §11, §12,
+> Verdict.
+
 ---
 
 ## 1. Executive summary
@@ -68,9 +76,9 @@ The five genuine architectural problems, in order of value:
 Everything above is fixable **without changing NPC behaviour**, except D1/D2, which are bug fixes this
 review recommends landing deliberately and with tests.
 
-Recommendation: **REFACTOR**, in two phases. Phase 1 (steps 1–10) moves ~1 250 lines into six
-modules — four of which are *existing owners being given back their responsibility* — and fixes two
-defects. Phase 2 (step 11, optional, gated on browser verification of npc-009/npc-015) moves the
+Recommendation: **REFACTOR**, in two phases. Phase 1 (steps 1–11) moves ~1 310 lines into ten
+modules — five of them *existing owners being given back their responsibility*, five of them new
+because the domain has 2–3 duplicate implementations and no owner — and fixes two defects. Phase 2 (step 12, optional, gated on browser verification of npc-009/npc-015) moves the
 combat tick into the existing `ai/npcCombat.ts`. Target size after Phase 1 ≈ 3 900 lines; after both
 ≈ 3 500. **That is the intended end state** — `NpcAgent` genuinely coordinates needs, schedule,
 movement, combat, social, contracts and presentation for one entity, and shrinking it below that
@@ -274,7 +282,7 @@ instance.
 ### P6 — NPC well construction re-implements the player's `workOnWell` (medium)
 
 `runContractWorkBout` (`:4510`) rebuilds, by hand, the same sequence as
-`app/actions/placementActions.ts:455`–`:498`:
+`app/actions/placementActions.ts:456`–`:498`:
 
 ```
 activeWellStage → if (stage !== well.stage) → build MaterialRequirement[] from WELL_STAGE_COST
@@ -282,14 +290,30 @@ activeWellStage → if (stage !== well.stage) → build MaterialRequirement[] fr
   → transitionTo(stage) → addWork(WELL_WORK_SESSION_HOURS) → isWellCompleted
 ```
 
-Two copies of a construction rule that lives in neither of them. The differences are legitimate (no
-capability gate, no toast, no busy channel, no partial-credit) but they are *policy*, not a reason to
-re-derive the requirement list. `world/playerWell.ts` is the owner.
+The `WELL_STAGE_COST[stage] → MaterialRequirement[]` build exists in **three** places, none of which
+owns it: `workOnWell` (`placementActions.ts:468`), `describeWellWork` (`:535`, the read-only preflight)
+and `runContractWorkBout` (`NpcAgent.ts:4535`). The other differences are legitimate *policy* (no
+toast, no busy channel, no partial credit for the NPC) but that is not a reason to re-derive the
+requirement list. `world/playerWell.ts` is the owner.
 
-**Constraint:** `playerWell.ts`, `createPlayerWells.ts` and `placementActions.ts` all have uncommitted
-changes in the working tree right now (plan world-004, `world/wellGroundwater.ts` is untracked, and
-`WELL_STAGE_COST`/`wellStageWorkHours` gain a `waterDepth` argument). **This step must be sequenced
-last, after that work lands.** See §10 R4.
+**New divergence introduced by plan world-004 (`e4403cd4`).** `wellStageCapabilities(stage,
+waterDepth)` (`playerWell.ts:117`) now returns `['soil_digging', 'rock_mining']` for a `pit` on a deep
+well (`isDeepWellDepth`). The player is gated on it in both `workOnWell` (`:460`) and
+`describeWellWork` (`:529`); `NpcAgent` never imports the function at all (`NpcAgent.ts:114`–`:121`)
+because npc-015 documented "no tool/capability check for NPC work" as a simplification. That
+simplification was written when every well pit was the same — now a hired NPC can dig a deep pit the
+player would need a pickaxe for. The function's own JSDoc calls itself "the single source every call
+site reads" and then enumerates only the two player call sites, which is precisely what an unowned
+rule looks like.
+
+Whether the NPC *should* be gated is a design question for npc-016/017, not for this refactor. What
+the refactor must do is make the difference **explicit and visible in one place** instead of implicit
+in which module forgot to import what.
+
+**Status:** originally deferred because `playerWell.ts`/`createPlayerWells.ts`/`placementActions.ts`
+had uncommitted world-004 changes. That work is now committed and the signatures
+(`wellStageWorkHours(stage, waterDepth)`, `wellStageCapabilities(stage, waterDepth)`,
+`WELL_STAGE_COST` unchanged) are stable, so this is a normal step — see §8 step 9 and §10 R4.
 
 ### P7 — Pure collider geometry inlined in the agent (medium)
 
@@ -374,7 +398,7 @@ Do not extract any of these. They are the coordination the class exists for.
 2. **`startAction` / `pendingAction` / `actionLifecycle` / queue membership** (`:3035`–`:3067`). The
    single point where a planned action becomes the active one.
 3. **`choose()`'s call sequence** — pressures → modifiers → weather → arbitration → Plan → strategy →
-   `beginNeed`/`beginIdle`. The *ordering table* becomes data (P9/step 9), the sequencing stays.
+   `beginNeed`/`beginIdle`. The *ordering table* becomes data (P9/step 6), the sequencing stays.
 4. **Plan lifecycle plumbing** (`transitionPlan`, `ensurePlanForNeed`, `reevaluatePlanCompletion`,
    `progressActivePlan`, `markPlanInterrupted`, `:3141`–`:3231`). `npcPlan.ts` already owns the pure
    transitions; these five are the agent applying them to its own `npcState`.
@@ -398,8 +422,17 @@ Do not extract any of these. They are the coordination the class exists for.
 
 ## 5. What should actually be extracted
 
-Six modules. Four hand a responsibility back to a module that already owns the domain; two are new
-because the domain has three duplicate implementations and no owner.
+Ten modules, in two groups.
+
+**Five existing owners get their responsibility back:** `ai/Needs.ts` (E5, need relief),
+`ai/npcStrategies.ts` (P1/step 5, its output becomes authoritative), `ai/npcColliderRim.ts` (E7,
+collider geometry), `ui/agentStatusLabel.ts` (E6, label controller), `world/playerWell.ts` (E9, well
+construction).
+
+**Five new modules**, each because a domain has 2–3 duplicate implementations and no owner at all:
+`ai/npcAction.ts` (E1), `ai/npcProfessionWork.ts` (E2), `ai/npcLogistics.ts` (E3),
+`ai/npcDecision.ts` (E4), `shared/agentAnimationSet.ts` (E6). `ai/npcCombat.ts` (E8) is a sixth
+existing owner, in Phase 2 only.
 
 ### E1 — `src/ai/npcAction.ts` (new, tiny, unblocks everything else)
 
@@ -569,6 +602,34 @@ export function sampleNearbyExteriorPoint(originX: number, originZ: number,
 `NpcAgent` keeps the water-level check and the callback wiring. ~100 lines moved into a module that
 already has tests.
 
+### E9 — `advanceWellConstruction` in `src/world/playerWell.ts` (existing owner)
+
+One actor-neutral seam owning the stage/material/transition rule all three current copies re-derive:
+
+```ts
+export function wellStageRequirements(stage: WellStage): readonly MaterialRequirement[]
+
+export type WellWorkOutcome =
+  | { status: 'blocked', missing: readonly MaterialRequirement[] }
+  | { status: 'advanced', enteredStage: WellStage | null, completed: boolean }
+
+/** `capabilities: null` = caller does not gate on tools (the documented
+ *  npc-015 simplification, now stated at the seam instead of by omission). */
+export function advanceWellConstruction(params: {
+  record: PlayerWellRecord
+  wells: PlayerWells
+  hasMaterial: (r: MaterialRequirement) => boolean
+  consumeMaterial: (r: MaterialRequirement) => boolean
+  capabilities: { has: (c: ItemCapability) => boolean } | null
+  workHours: number
+}): WellWorkOutcome
+```
+
+`workOnWell` keeps its toast/busy-channel/partial-credit policy, `describeWellWork` reuses
+`wellStageRequirements` for its preflight, and `runContractWorkBout` becomes ~20 lines that supply the
+NPC's own `carried` + `droppedItems` material lookup and pass `capabilities: null`. ~60 lines moved
+into a module that already has `playerWell.test.ts`.
+
 ### E8 (Phase 2, optional) — move the combat tick into `src/ai/npcCombat.ts` (existing owner)
 
 `npcCombat.ts` currently owns weapon resolution and hit application; the ~370-line attack loop lives in
@@ -621,7 +682,7 @@ export function createNpcCombatRuntime(): NpcCombatRuntime
 | "Where does this kind go" | `settlement/storageDestinations.ts` | already the resolver — keep using it |
 | Bounded neighbour lookup | `settlement/householdExchange.ts` | `findSurplusSource`; never a world scan |
 | Construction materials | `items/constructionMaterials.ts` | `hasMaterial`/`consumeMaterial` |
-| Well stages/costs/work | `world/playerWell.ts` | P6 owner — **blocked by in-flight world-004 work** |
+| Well stages/costs/work/capabilities | `world/playerWell.ts` | P6/E9 owner — unblocked since `e4403cd4`; `wellStageCapabilities` is the gate `NpcAgent` deliberately does not use |
 | Food/crop/garden queries | `world/foodSources.ts` | full hooks surface already exists |
 | Fishing catch rule | `world/fishing.ts` | `fishingSpotId`, `rollFishingCatch` |
 | Tree harvest | `world/treeHarvest.ts`, `world/settlementForestHooks.ts` | keep |
@@ -653,19 +714,19 @@ src/shared/
 src/ui/
   agentStatusLabel.ts      +90        createAgentStatusLabelController
 src/world/
-  playerWell.ts            +60        advanceWellConstruction (actor-neutral) — LAST
+  playerWell.ts            +60        wellStageRequirements + advanceWellConstruction (actor-neutral)
 ```
 
 New/changed test files: `npcDecision.test.ts`, `npcProfessionWork.test.ts` (**exists — extend**),
 `npcLogistics.test.ts`, `npcColliderRim.test.ts` (extend), `Needs.test.ts` (extend),
-`agentAnimationSet.test.ts`.
+`agentAnimationSet.test.ts`, `playerWell.test.ts` (extend).
 
 ---
 
 ## 8. Implementation steps, in order
 
-Each step is a separate commit. Steps 1–8 must be **observationally identical**; step 9 is the only
-intentional behaviour change (two bug fixes) and gets its own tests; steps 10–11 are structural.
+Each step is a separate commit. Steps 1–9 must be **observationally identical**; step 10 is the only
+intentional behaviour change (two bug fixes) and gets its own tests; steps 11–12 are structural.
 
 **Step 1 — `npcAction.ts` (mechanical, no risk).**
 Move `Phase` (`:347`), `ActionId` (`:367`), `NpcPlannedAction` (`:399`) into `src/ai/npcAction.ts`.
@@ -732,7 +793,17 @@ Do **not** touch `AnimalAgent`/`PlayerController` here — record in `LOOSE-ENDS
 Move `isWalkable`'s penetration rule, `resolveSteerTarget`'s bypass, and the two sampling loops into
 `npcColliderRim.ts`. Extend `npcColliderRim.test.ts`.
 
-**Step 9 — unify action cancellation + fix D1/D2 (intentional behaviour change).**
+**Step 9 — `advanceWellConstruction` (E9 / P6).**
+Add `wellStageRequirements` + `advanceWellConstruction` to `world/playerWell.ts`. Rewire all three
+current copies: `workOnWell` (`placementActions.ts:456`), `describeWellWork` (`:526`) and
+`runContractWorkBout` (`NpcAgent.ts:4510`). The player keeps its capability gate by passing a real
+`capabilities` object; the NPC passes `capabilities: null`, which turns npc-015's silent omission into
+a stated policy at the seam. Do **not** change whether the NPC is gated — that is an npc-016/017
+design decision, and this step must be observationally identical. Extend `playerWell.test.ts`:
+requirements per stage, blocked-on-materials leaves stage/progress untouched, `capabilities: null`
+skips the gate, a deep `pit` reports `rock_mining` as missing for a caller that does gate.
+
+**Step 10 — unify action cancellation + fix D1/D2 (intentional behaviour change).**
 Add one private helper:
 
 ```ts
@@ -751,14 +822,14 @@ Call it from all six sites (`beginCombat`, `fleeFromThreat`, `beginCollapseSleep
 `fleeFromThreat`/`beginCollapseSleep` now mark the Plan interrupted (D2).
 This is the one step whose diff must be reviewed line by line against the six current bodies.
 
-**Step 10 — `NpcAgentDeps` (P4).**
+**Step 11 — `NpcAgentDeps` (P4).**
 Define `NpcAgentDeps` mirroring `CreateSettlementDeps` (`createSettlement.ts:204`). Collapse the three
 30-parameter lists to `(root, animations, deps)` / `(deps)`. Update the single call site
 (`createSettlement.ts:592`) and drop the `undefined` placeholder. Land **last** in Phase 1 — it is the
 step with the widest blast radius and the least semantic content, so it should sit on top of a
 verified tree.
 
-**Step 11 (Phase 2, optional) — `NpcCombatRuntime` (E8).**
+**Step 12 (Phase 2, optional) — `NpcCombatRuntime` (E8).**
 Only after npc-009 and npc-015 have passed browser verification. Move `beginCombat`'s weapon
 resolution, `tickMeleeCombat`, `tickRangedCombat`, `isCombatCycleIdle` and the projectile state into
 `npcCombat.ts`; move the `isNpcCombatDebugMode()` console blocks into `debug/` behind a small
@@ -785,7 +856,7 @@ resolution, `tickMeleeCombat`, `tickRangedCombat`, `isCombatCycleIdle` and the p
 
 | File | Change | Step |
 |---|---|---|
-| `src/ai/NpcAgent.ts` | −~1 250 lines; 93 → ~62 fields; 80 → ~55 imports | 1–10 |
+| `src/ai/NpcAgent.ts` | −~1 250 lines; 93 → ~62 fields; 80 → ~55 imports | 1–11 |
 | `src/ai/Needs.ts` | +`relieveNeed`, `needValue`, `NEED_SATISFY_AMOUNT` | 2 |
 | `src/ai/Needs.test.ts` | + relief cases | 2 |
 | `src/ai/npcStrategies.test.ts` | + reachability case | 5 |
@@ -793,11 +864,14 @@ resolution, `tickMeleeCombat`, `tickRangedCombat`, `isCombatCycleIdle` and the p
 | `src/ai/npcColliderRim.ts` | +3 pure functions | 8 |
 | `src/ai/npcColliderRim.test.ts` | + cases | 8 |
 | `src/ui/agentStatusLabel.ts` | +controller | 7a |
-| `src/settlement/createSettlement.ts` | 30 positional args → `NpcAgentDeps` object | 10 |
-| `src/ai/npcCombat.ts` | +`NpcCombatRuntime` | 11 |
-| `docs/STATE.md` | Settlements/NPCs section: note the new `ai/` module boundaries | after 10 |
-| `docs/CODE_INDEX.md` | manual routing rows for the new modules, then `pnpm docs:sync` | after 10 |
-| `docs/plans/LOOSE-ENDS.md` | P10 determinism, `AnimalAgent`/`PlayerController` adoption of E6, P12 items | after 10 |
+| `src/world/playerWell.ts` | +`wellStageRequirements`, +`advanceWellConstruction` | 9 |
+| `src/world/playerWell.test.ts` | + requirements / blocked / capability cases | 9 |
+| `src/app/actions/placementActions.ts` | `workOnWell` + `describeWellWork` use the shared seam | 9 |
+| `src/settlement/createSettlement.ts` | 30 positional args → `NpcAgentDeps` object | 11 |
+| `src/ai/npcCombat.ts` | +`NpcCombatRuntime` | 12 |
+| `docs/STATE.md` | Settlements/NPCs section: note the new `ai/` module boundaries | after 11 |
+| `docs/CODE_INDEX.md` | manual routing rows for the new modules, then `pnpm docs:sync` | after 11 |
+| `docs/plans/LOOSE-ENDS.md` | P10 determinism, `AnimalAgent`/`PlayerController` adoption of E6, P12 items, NPC well capability gate | after 11 |
 
 ### Do not touch
 
@@ -817,7 +891,7 @@ write the current `beginNeed` order out per need as a comment and diff it agains
 than "fixing" it inside a refactor. Then confirm in-game via `?debug=1` that the inspector's
 `← selected` line matches the action the NPC actually starts.
 
-**R2 — Step 9 changes behaviour on purpose.**
+**R2 — Step 10 changes behaviour on purpose.**
 Two fixes ride in one commit. Mitigation: land them as a single, clearly-labelled commit with the six
 before/after bodies in the message, plus a browser check (§11) that specifically drives an NPC out of a
 conversation with a wolf and confirms it can converse again afterwards.
@@ -828,15 +902,21 @@ completion time, not plan time). When moving them into a context object, **read 
 same moment**: pass `simTime` as a getter (`() => number`), not a captured number, wherever the
 current code reads `this.simClock` inside `onComplete`. Audit every moved closure for this.
 
-**R4 — Step P6 (well construction) collides with uncommitted work.**
-`src/world/playerWell.ts`, `createPlayerWells.ts`, `placementActions.ts`, `saveData.ts` and
-`worldBundle.ts` are all modified in the working tree right now, and `src/world/wellGroundwater.ts` is
-untracked (plan world-004: per-well `waterDepth`, deep-well gates). `WELL_STAGE_COST` and
-`wellStageWorkHours` are gaining a `waterDepth` parameter. **Do not attempt P6 in this refactor.**
-Record it in `LOOSE-ENDS.md` and revisit once world-004 is committed and verified; the extraction is
-then a much smaller diff against a stable signature.
+**R4 — Step 9 (well construction) touches player-facing code, not just NPC code.**
+Resolved risk: this step was originally deferred because plan world-004 was uncommitted. It landed as
+`e4403cd4`, so the signatures are stable (`WELL_STAGE_COST` unchanged; `wellStageWorkHours` and
+`wellStageCapabilities` both take `waterDepth`). The remaining risk is that step 9 is the **only** step
+in this refactor that edits a player action path (`placementActions.ts`). Mitigations:
+(a) `describeWellWork` and `workOnWell` must keep producing byte-identical toast/panel strings — the
+seam returns `MaterialRequirement[]`, the label formatting stays at the call site;
+(b) do not change the NPC's capability policy while moving it (`capabilities: null` reproduces today's
+behaviour exactly) — record the "should a hired NPC need a pickaxe for a deep pit?" question in
+`LOOSE-ENDS.md` for npc-016/017 instead;
+(c) verify in-browser with the player's own well (§11 check 10) *and* an NPC contract well (check 8);
+(d) world-004 is itself `verification needed` — if its browser pass has not happened yet, land step 9
+after it, so a well regression is attributable to one change and not two.
 
-**R5 — `NpcAgentDeps` (step 10) is a wide, semantically empty diff.**
+**R5 — `NpcAgentDeps` (step 11) is a wide, semantically empty diff.**
 Mitigation: land it last, as its own commit, with `npx tsc --noEmit` + `pnpm run build` as the gate.
 Because it is positional → named, the compiler catches every real mistake **except** two same-typed
 adjacent hooks; hand-check `foodSources`/`hunting`/`helperDelivery`/`householdExchange` and
@@ -884,6 +964,7 @@ Targeted suites: `src/ai/*.test.ts`, `src/debug/npcInspector.test.ts`,
 | `Needs.test.ts` | `relieveNeed` clamps at 0 and is a no-op for `idle`; `needValue` returns `null` for `idle` |
 | `npcColliderRim.test.ts` | approach-buffer/core-fraction rule; segment bypass returns a rim point; exterior sampling rejects interior points |
 | `agentAnimationSet.test.ts` | `play` fades every other clip; `playOnce` clamps; `settleAtEnd` produces no blend |
+| `playerWell.test.ts` | `wellStageRequirements` per stage; blocked-on-materials leaves stage/progress untouched; `capabilities: null` skips the gate; a deep `pit` reports `rock_mining` missing when the caller does gate |
 
 ### Browser / manual (required — none of the above proves in-game correctness)
 
@@ -901,18 +982,26 @@ Run with `?debug=1`, open the NPC inspector on a settlement NPC:
 4. **Logistics conserved (step 3).** Trigger a household food shortage; confirm withdraw/exchange
    trips leave `source + carried + destination` conserved, and that interrupting mid-trip leaves the
    goods physically carried rather than vanished.
-5. **D1 fix (step 9).** At night, get two NPCs into a campfire conversation, then let a wolf approach
+5. **D1 fix (step 10).** At night, get two NPCs into a campfire conversation, then let a wolf approach
    one of them. Confirm the interrupted NPC (a) leaves combat normally and (b) **starts another
    conversation later that night**. Before the fix it never will.
-6. **D2 fix (step 9).** Trigger an animal flee mid-`wood` Goal; confirm the inspector shows the Plan as
+6. **D2 fix (step 10).** Trigger an animal flee mid-`wood` Goal; confirm the inspector shows the Plan as
    `interrupted`, then `partially_completed`/`active` when resumed.
 7. **Presentation (step 7).** Walk toward/away from an NPC: name, HP/stamina/vigor bars, gaze fade and
    the `?debug=1` line all behave as before. Attack one: hurt clip plays, then death clip plays once.
    Reload a save with a dead NPC: it presents the settled end pose with no replayed collapse.
-8. **Contracts (unchanged, regression only).** Post a construction contract; confirm an NPC accepts,
-   travels, works the well through its stages and reaches `payment_due`.
+8. **Contracts + NPC well work (step 9 regression).** Post a construction contract; confirm an NPC
+   accepts, travels, works the well through `pit`→`well`→`roof` (drop stone/branch near the well for
+   the paid stages) and reaches `payment_due`. Confirm a stage the NPC cannot pay for stays blocked
+   and is retried, rather than abandoning the contract. Include one **deep** well (world-004
+   `isDeepWellDepth`) and confirm the NPC still digs it with no capability gate — unchanged behaviour,
+   now stated explicitly at the seam.
 9. **Time-skip.** Skip 8 h; confirm NPCs land at schedule-appropriate places with plausible
    needs/stamina/vigor and no stuck conversation reservations.
+10. **Player well work (step 9 regression).** Build a well yourself through all three stages: the
+    `[R]` requirements panel text, the missing-material and missing-tool toasts, per-stage material
+    consumption, and Escape-mid-bout partial credit must all be identical to before. Repeat on a deep
+    well and confirm the `rock_mining` gate still fires.
 
 ### Non-regression check
 
@@ -923,12 +1012,14 @@ file means scope leaked.
 
 ## 12. Out of scope
 
-- **Changing any NPC behaviour** other than D1/D2 in step 9. Satisfy amounts, search radii, profession
+- **Changing any NPC behaviour** other than D1/D2 in step 10. Satisfy amounts, search radii, profession
   priorities, strategy order, patrol points, conversation cooldowns, watchdog thresholds and
   reaction chances must all come out numerically identical.
 - **P10 — making the garden-maintenance/watering rolls deterministic.** It mutates persisted state and
   is a real behaviour change; it deserves its own `npc-###` plan. Record in `LOOSE-ENDS.md`.
-- **P6 — the shared well-construction seam.** Blocked by uncommitted plan world-004 work (R4).
+- **Changing whether a hired NPC needs tools/capabilities for well work.** Step 9 makes npc-015's
+  "no capability check" explicit at the seam; deciding whether that is still the right rule now that
+  deep wells exist belongs to npc-016/017. Record in `LOOSE-ENDS.md`.
 - **`AnimalAgent` (3 822 lines).** A separate review; only `agentAnimationSet.ts`/
   `agentStatusLabelController` are *designed* for its later adoption, and adopting them there is
   explicitly not part of this work.
@@ -956,8 +1047,9 @@ this is a "the file is long" argument: every extraction removes a duplication, g
 back to its owner, or makes currently-unreachable logic testable — and the class deliberately stays
 large.
 
-**Effort: L** — Phase 1 is 8 new files (4 source, 4 test) + 10 modified, ~1 250 lines moved and
-~250 rewritten, across 10 commits, with one deliberate behaviour change (step 9) and one wide
-mechanical change (step 10). Phase 2 (step 11, `NpcCombatRuntime`) adds ~370 more lines moved and is
+**Effort: L** — Phase 1 is 8 new files (4 source, 4 test) + 13 modified, ~1 310 lines moved and
+~250 rewritten, across 11 commits, with one deliberate behaviour change (step 10) and one wide
+mechanical change (step 11). Phase 2 (step 12, `NpcCombatRuntime`) adds ~370 more lines moved and is
 gated on browser verification of npc-009/npc-015. Steps 1, 2, 7 and 8 are low-risk and can land
-immediately; steps 3–6 need the browser checks in §11; step 10 lands last.
+immediately; steps 3–6 need the browser checks in §11; step 9 is the only one that touches a player
+action path and should follow world-004's own browser pass; step 11 lands last.
