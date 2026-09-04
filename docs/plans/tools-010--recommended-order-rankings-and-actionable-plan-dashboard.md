@@ -1,7 +1,7 @@
 # Plan: Recommended Order Rankings and Actionable Plan Dashboard
 
 **Created:** 2026-09-03  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** infrastructure  
 **Priority:** medium · **Effort:** M  
 **Depends on:** none  

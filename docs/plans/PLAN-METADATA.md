@@ -53,14 +53,14 @@ Optional metadata:
 |---|---|---|---|---|
 | `Created` | yes | `YYYY-MM-DD` | Plan creation date | Documentation-level in audited generators |
 | `Status` | yes | `draft`, `planned`, `in progress`, `verification needed`, `done` | Lifecycle | `plans-sync.ts`, `plans-recommended-order.ts`, `plans-done.ts`, `planned-plans-without-notes.ts` |
-| `Type` | yes | `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure` | Kind of work | Planned future recommendation/filtering input |
+| `Type` | yes | `feature`, `bug`, `fix`, `polish`, `optimization`, `refactor`, `infrastructure` | Kind of work | `plans-recommended-order.ts` (Bug Fixes / Polish perspectives) |
 | `Priority` | yes | `high`, `medium`, `low` | Relative planning priority | `plans-sync.ts`, `plans-recommended-order.ts` |
 | `Effort` | yes | `XS`, `S`, `M`, `L`, `XL` | Approximate implementation cost | `plans-sync.ts`, `plans-recommended-order.ts` |
 | `Depends on` | yes | plan IDs, `-` / `none` | Implementation prerequisites | `plans-sync.ts`, `plans-recommended-order.ts`, dependency graph |
 | `Domain` | yes | canonical domain list | Primary ownership/navigation | `plans-sync.ts`; filename convention; planning docs |
 | `Subdomains` | no | recommended per-domain values; extensible | More precise navigation/preflight hints | Planning/preflight context |
 | `Tags` | no | recommended global values; extensible | Cross-cutting classification/navigation | Planning/preflight context |
-| `Roadmap` | no | roadmap filename in `docs/roadmap/` | Strategic direction and grouping | Documentation/preflight context |
+| `Roadmap` | no | roadmap filename in `docs/roadmap/` | Strategic direction and grouping | `plans-recommended-order.ts` (Roadmap Focus perspective); documentation/preflight context |
 | `Implemented at` | no | `YYYY-MM-DD HH:mm` | Explicit implementation completion timestamp | Not yet consumed |
 
 ### Classification model
@@ -478,16 +478,23 @@ Uses:
 - Priority
 - Effort
 - Depends on
+- Type
+- Roadmap
 
-Current score combines:
+Generates two distinct sections of `docs/plans/RECOMMENDED-ORDER.md`:
 
-- priority;
-- direct dependents;
-- transitive dependents;
-- dependency depth;
-- effort penalty.
+- **Top 5 dashboard** — five independent perspectives (Overall, Roadmap Focus,
+  Bug Fixes, Polish, Ready Now) over one shared metric model (priority weight,
+  effort penalty, direct/transitive dependents, dependency depth, readiness,
+  Type, Roadmap). Each perspective is a qualification predicate plus a small
+  weighting over the same metrics, not a bespoke scoring function.
+- **Recommended Execution Order** — the original dependency-aware greedy
+  ordering of `planned` plans, unchanged: priority + direct dependents\*4 +
+  transitive dependents\*10 + dependency depth\*2 - effort penalty.
 
-This is the natural foundation for future recommendation profiles.
+The dashboard and the execution order are deliberately separate: the former
+helps pick what to look at, the latter is a single prerequisite-respecting
+schedule.
 
 ### `scripts/docs/plans-done.ts`
 
@@ -535,16 +542,13 @@ Do not add manual fields for concepts that can be calculated:
 8. `Implemented at` should be an optional explicit timestamp.
 9. Recommendation categories should be derived from metadata and dependency graph rather than stored as fields.
 
-A future `plans-recommended-order.ts` can expose profiles such as:
-
-- Overall
-- Quick Wins
-- Gameplay
-- Bugs / Fixes
-- Performance
-- Polish
-- Foundation / Unlockers
-- Per Domain
+`plans-recommended-order.ts` implements this as a Top 5 dashboard with five
+profiles over one shared metric model: Overall, Roadmap Focus, Bug Fixes
+(`Type: bug`/`fix`), Polish (`Type: polish`), and Ready Now (dependency-ready
+`planned` plans — the "Quick Win" concept, without a dedicated metadata
+field). Further profiles (per-Domain, Foundation/Unlockers) can be added the
+same way: a qualification predicate plus a weighting over the existing
+metrics, without a new scoring mechanism per profile.
 - Per Roadmap
 
 ---
