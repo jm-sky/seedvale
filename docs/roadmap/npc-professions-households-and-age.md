@@ -411,3 +411,190 @@ Rozszerzyć istniejący `SCHEDULE_TEMPLATES` i `work` decision path:
 - osobny profession AI/scheduler/FSM;
 - LLM-driven simulation;
 - przebudowa Huntera poza integracją wynikającą z 178.
+
+## 14. Recon 2026-09-04 — aktualny kierunek i kolejne etapy
+
+Ponowny recon roadmap ekonomii oraz nowszych planów zmienia interpretację kolejności prac. Roadmapa profesji nie powinna być traktowana jako jeden duży pakiet implementacyjny. Część jej pierwotnego zakresu została już zrealizowana przez nowsze plany i istniejące systemy.
+
+### 14.1. Stan po nowszych planach
+
+`settlements-npcs-002-npc-professions-complete-profession-work-integration.md` domknął technicznie podstawowe pętle pracy profesji: Farmer, Fisher, Miner, Guard, Trader i Blacksmith v1, z Woodcutterem i Hunterem jako istniejącymi punktami odniesienia. Plan pozostaje w `verification needed`, ale jego implementacja nie powinna być projektowana ponownie.
+
+`settlements-npcs-003-hunter-arrow-production.md` pokazał właściwy wzorzec dla produkcji profesji: rozszerzać generyczny `ProductionDef` i `Inventory`, a wynik przechowywać w realnym `Household.items`. Hunter nie dostał osobnego systemu craftingu.
+
+`settlements-npcs-014-local-goods-circulation.md` rozwija wspólny przepływ dóbr pomiędzy gospodarstwami, Traderem i settlement storage. Oznacza to, że profesje nie powinny otrzymywać własnego równoległego systemu wymiany lub magazynowania.
+
+W efekcie dalszy rozwój tego roadmapu należy rozdzielić na trzy osie:
+
+```text
+profession behaviour
+    → co NPC faktycznie robi podczas pracy
+
+household + demography
+    → kto pracuje, kto pomaga, jak wpływa wiek i rodzina
+
+economic specialization
+    → dlaczego osada potrzebuje danej profesji i gdzie trafiają jej dobra
+```
+
+Pierwsza oś ma już mocne fundamenty i nie jest obecnie największą luką. Największa luka znajduje się w household/demography oraz w powiązaniu obsady profesji z realnymi potrzebami osady.
+
+### 14.2. Etap A — household labour + age participation
+
+To powinien być następny dedykowany etap tego roadmapu.
+
+Cel:
+
+```text
+household member
+    + age
+    + household profession/work
+    + schedule
+    + current needs/pressures
+        ↓
+allowed participation + work intensity
+        ↓
+existing decision / PlannedAction flow
+```
+
+Zakres powinien objąć przede wszystkim:
+
+- współdzielenie pracy gospodarstwa przez małżonków tam, gdzie ma to sens;
+- starsze dzieci pomagające w ograniczonym zakresie;
+- małe dzieci bez pracy zawodowej;
+- normalny udział dorosłych;
+- zmniejszoną intensywność i bezpieczniejszy wybór czynności u starszych NPC;
+- lekką/okazjonalną pomoc bardzo starych NPC;
+- wykorzystanie istniejącego `FamilyMember.age`, schedule i decision flow zamiast `ChildAI`, `ElderAI` albo osobnego household scheduler.
+
+Nie należy modelować wieku wyłącznie jako mnożnika wydajności produkcji. Powinien wpływać przede wszystkim na dostępność i częstotliwość realnych działań NPC, dzięki czemu zmiana demografii ma widoczne konsekwencje w świecie.
+
+### 14.3. Etap B — profession staffing + settlement composition
+
+Po household labour należy uporządkować generowanie i obsadę profesji.
+
+Docelowa zależność:
+
+```text
+settlement size + population
+        + environment/resources
+        + existing profession coverage
+        + local economic needs
+            ↓
+profession requirements / targets
+            ↓
+households + NPC roles
+```
+
+Nie chodzi o sztywną tabelę `village size → exact professions`. System powinien rozróżniać:
+
+- profesje wymagane lub bardzo pożądane dla podstawowego funkcjonowania;
+- profesje wynikające z lokalnych zasobów;
+- specjalistów uzasadnionych skalą osady;
+- nadmiarową obsadę wynikającą z większej populacji lub zapotrzebowania.
+
+Przykładowe sygnały:
+
+```text
+forest / timber access → Woodcutter, opcjonalnie Hunter
+water / fishing access → Fisher
+ore deposits           → Miner
+food demand / farmland → Farmer
+larger population      → Trader / Guard / Blacksmith
+```
+
+Przed zmianą limitów rodzin dla SM/MD należy policzyć faktyczną populację generowaną przez istniejący family model. Nie zwiększać populacji tylko po to, aby zmieścić komplet profesji — nie każda osada ma posiadać wszystkich specjalistów.
+
+Brak lokalnej profesji powinien docelowo móc prowadzić do shortage/problem/pressure i wymiany z inną osadą, zamiast być zawsze naprawiany podczas world generation.
+
+### 14.4. Etap C — profession lifecycle + inheritance
+
+Dziedziczenie profesji powinno być późniejszym etapem niż age participation i staffing.
+
+Nie stosować prostego:
+
+```text
+parent.role → child.role
+```
+
+Docelowo wybór profesji przy wejściu w dorosłość powinien móc uwzględniać:
+
+```text
+household / parents
+    + experience from helping
+    + settlement profession demand
+    + available resources/workplaces
+    + traits / abilities
+        ↓
+profession selection
+```
+
+Dziedziczenie profesji rodzica może być silnym sygnałem, ale nie jedynym. Pozwala to zachować rodzinne tradycje bez zamrażania struktury zawodowej osady na kolejne pokolenia.
+
+Ten etap powinien wykorzystywać istniejący lifecycle/family model i trwałą zmianę `CharacterDef.role`; nie tworzyć osobnego systemu genealogii zawodowej.
+
+### 14.5. Economic specialization należy rozwijać przez istniejące roadmapy
+
+Rozwój produkcyjnej strony profesji nie powinien być kolejnym dużym planem w tym roadmapie. Jest już rozpisany w roadmapach ekonomii.
+
+Najważniejsza ścieżka:
+
+```text
+local goods circulation
+    ↓
+settlements-npcs-015 — economic production and transactional input integration
+    ↓
+settlements-npcs-016 — first complete processing chain and Blacksmith production
+    ↓
+settlements-npcs-017 — production demand and economic pressures
+```
+
+To tam należy rozwijać m.in. pełniejszego Blacksmitha, przetwarzanie surowców oraz zapotrzebowanie produkcyjne. Roadmapa profesji powinna jedynie dostarczać role, household participation i decyzje NPC korzystające z tych mechanizmów.
+
+Analogicznie rozwój nowych specjalizacji z tekstyliów i medycyny powinien pozostać w istniejącej ścieżce:
+
+```text
+fauna-004 — sheep, wool and Shepherd
+    ↓
+settlements-npcs-006 — wool-to-material / Textile Worker
+    ↓
+settlements-npcs-007 — bandages, Herbalist and herbal medicine
+```
+
+`settlements-npcs-007` powinien rozszerzać wspólne `ItemKind`, production recipes, NPC work, Household storage i settlement economy. Nie tworzyć osobnych systemów `HerbalismSystem`, `BandageSystem` czy `DressingSystem`.
+
+### 14.6. Rekomendowana kolejność dalszych planów
+
+Dalsze plany wynikające bezpośrednio z tego roadmapu powinny być przygotowywane w następującej kolejności:
+
+1. **Household labour and age participation** — wspólna praca rodziny i wpływ wieku na realne działania NPC.
+2. **Profession staffing and settlement composition** — obsada profesji wynikająca z populacji, środowiska, zasobów i potrzeb osady.
+3. **Profession lifecycle and inheritance** — wybór/zmiana profesji przy dorastaniu i długoterminowa ciągłość gospodarstw.
+
+Nie przypisywać tutaj numerów planów z wyprzedzeniem. Przed utworzeniem każdego planu sprawdzić aktualne `docs/plans/README.md` oraz zasady z `docs/plans/PLANNING.md`.
+
+Równolegle mogą być realizowane istniejące plany ekonomii i tekstyliów, o ile ich zależności są spełnione. Nie należy jednak tworzyć kolejnego ogólnego planu „add professions” — podstawowe profession behaviour zostało już w dużej mierze domknięte przez `settlements-npcs-002`.
+
+### 14.7. Docelowy efekt
+
+Po wykonaniu powyższych etapów profesja powinna przestać być tylko etykietą określającą `work` action, a stać się częścią trwałej struktury społeczno-ekonomicznej świata:
+
+```text
+world resources + settlement conditions
+        ↓
+profession demand
+        ↓
+households + inhabitants + age structure
+        ↓
+work participation + profession decisions
+        ↓
+production / services / goods
+        ↓
+household and settlement economy
+        ↓
+shortages / surplus / problems / pressures
+        ↓
+future staffing, trade and lifecycle decisions
+```
+
+To zachowuje kluczową zasadę Seedvale: profesje istnieją dlatego, że świat i społeczność ich potrzebują, a nie dlatego, że gracz znajduje się w pobliżu.
