@@ -3056,46 +3056,53 @@ export class NpcAgent {
       // `food` branch below. Otherwise fall back to the well (queued when
       // this settlement has one), same as before households owned water.
       const household = this.household
-      this.selectAndTraceStrategy('water', getWaterStrategyCandidates({
+      const selected = this.selectAndTraceStrategy('water', getWaterStrategyCandidates({
         householdHasWater: household?.water.has(WATER_DRINK_FROM_STOCK_AMOUNT) ?? false,
       }))
-      if (household?.water.has(WATER_DRINK_FROM_STOCK_AMOUNT)) {
-        this.startAction({
-          kind: 'drink',
-          destination: copyVec3(this.home),
-          durationSec: 1.2 * this.waitMultiplier,
-          onComplete: () => {
-            household.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
-            relieveNeed(this.needs, 'water')
-          },
-        })
-        return
+      switch (selected) {
+        case 'householdWater': {
+          if (!household) break
+          this.startAction({
+            kind: 'drink',
+            destination: copyVec3(this.home),
+            durationSec: 1.2 * this.waitMultiplier,
+            onComplete: () => {
+              household.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
+              relieveNeed(this.needs, 'water')
+            },
+          })
+          return
+        }
+        case 'well': {
+          const wellTarget = this.resolveWaterWellTarget()
+          const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
+          if (queue && this.wellQueueId) {
+            // Leave any prior queue before joining so an agent is never in two.
+            this.leaveActiveQueue()
+            queue.join(this.id)
+            this.startAction({
+              kind: 'drink',
+              destination: queue.worldDestination(this.id),
+              durationSec: 1.2 * this.waitMultiplier,
+              queueId: this.wellQueueId,
+              onComplete: () => {
+                relieveNeed(this.needs, 'water')
+              },
+            })
+            return
+          }
+          this.startAction({
+            kind: 'drink',
+            destination: copyVec3(wellTarget.position),
+            durationSec: 1.2 * this.waitMultiplier,
+            onComplete: () => {
+              relieveNeed(this.needs, 'water')
+            },
+          })
+          return
+        }
       }
-      const wellTarget = this.resolveWaterWellTarget()
-      const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
-      if (queue && this.wellQueueId) {
-        // Leave any prior queue before joining so an agent is never in two.
-        this.leaveActiveQueue()
-        queue.join(this.id)
-        this.startAction({
-          kind: 'drink',
-          destination: queue.worldDestination(this.id),
-          durationSec: 1.2 * this.waitMultiplier,
-          queueId: this.wellQueueId,
-          onComplete: () => {
-            relieveNeed(this.needs, 'water')
-          },
-        })
-        return
-      }
-      this.startAction({
-        kind: 'drink',
-        destination: copyVec3(wellTarget.position),
-        durationSec: 1.2 * this.waitMultiplier,
-        onComplete: () => {
-          relieveNeed(this.needs, 'water')
-        },
-      })
+      this.beginUnscheduledIdle()
       return
     }
     if (need === 'waterDuty' && this.household) {
@@ -3106,7 +3113,11 @@ export class NpcAgent {
       // Reuses `kind: 'drink'` for the well leg so it gets the same
       // face-well rotation + draw SFX as a real drink (see `execute`/`goTo`).
       const household = this.household
-      this.selectAndTraceStrategy('waterDuty', getWaterDutyStrategyCandidates())
+      const selected = this.selectAndTraceStrategy('waterDuty', getWaterDutyStrategyCandidates())
+      if (selected !== 'fetchDeposit') {
+        this.beginUnscheduledIdle()
+        return
+      }
       const wellTarget = this.resolveWaterWellTarget()
       const queue = wellTarget.isVillageWell && this.wellQueueId ? this.queues.get(this.wellQueueId) : undefined
       const fetchStep = (destination: ReturnType<typeof copyVec3>, queueId?: string): NpcPlannedAction => ({
@@ -3140,140 +3151,164 @@ export class NpcAgent {
       // any (quick, at home); otherwise walk to the garden, gather a little
       // food into the household, and eat from that.
       const household = this.household
-      this.selectAndTraceStrategy('food', this.computeFoodStrategyCandidates(household))
-      // Helper resource delivery (plan 167) — tried first, but only ever
-      // available (see `computeDeliveryAvailable`) when this NPC isn't
-      // genuinely hungry, so real hunger always keeps priority over
-      // donating surplus (plan §9). Falls through to normal eating/gathering
-      // below when there's no active assignment, no surplus, or no room in
-      // the target container.
-      if (this.beginPlayerStorageDelivery()) return
-      if (household?.has('food', 1)) {
-        this.startAction({
-          kind: 'eat',
-          destination: copyVec3(this.home),
-          durationSec: 1.2 * this.waitMultiplier,
-          onComplete: () => {
-            household.takeFood(this.simClock)
-            relieveNeed(this.needs, 'food')
-            this.progressActivePlan('secureFood', 1)
-          },
-        })
-        return
+      const selected = this.selectAndTraceStrategy('food', this.computeFoodStrategyCandidates(household))
+      switch (selected) {
+        // Local resource exchange (plan settlements-npcs-005) — a real
+        // shortage tries the settlement's own village storage, then a
+        // same-settlement neighbour's surplus, before a fresh hunt/gather
+        // trip.
+        case 'economyWithdraw':
+          this.beginEconomyWithdraw('food')
+          return
+        case 'gardenGather':
+          this.startAction({
+            kind: 'eat',
+            destination: copyVec3(this.landmarks.garden),
+            durationSec: 1.4 * this.waitMultiplier,
+            onComplete: () => {
+              depositFoodHarvest(household, this.economy, this.simClock)
+              household?.takeFood(this.simClock)
+              relieveNeed(this.needs, 'food')
+              this.progressActivePlan('secureFood', 1)
+            },
+          })
+          return
+        case 'householdExchange':
+          this.beginHouseholdExchange('food')
+          return
+        case 'householdFood': {
+          if (!household) break
+          this.startAction({
+            kind: 'eat',
+            destination: copyVec3(this.home),
+            durationSec: 1.2 * this.waitMultiplier,
+            onComplete: () => {
+              household.takeFood(this.simClock)
+              relieveNeed(this.needs, 'food')
+              this.progressActivePlan('secureFood', 1)
+            },
+          })
+          return
+        }
+        // Plan 174 — a real, closer hunger source (natural berries/nuts/
+        // etc., or a mature crop — wild, player-planted near a settlement
+        // garden, or on a player garden plot, all indistinguishable to this
+        // query) takes priority over the abstract settlement-garden gather
+        // below.
+        case 'hunt':
+          this.beginHuntExpedition(household)
+          return
+        case 'nearbyFoodSource':
+          this.beginRealFoodGathering(household)
+          return
+        // Helper resource delivery (plan 167) — only ever selected (see
+        // `computeDeliveryAvailable`) when this NPC isn't genuinely hungry,
+        // so real hunger always keeps priority over donating surplus
+        // (plan §9).
+        case 'playerStorageDelivery':
+          this.beginPlayerStorageDelivery()
+          return
       }
-      // Local resource exchange (plan settlements-npcs-005) — a real
-      // shortage tries the settlement's own village storage, then a
-      // same-settlement neighbour's surplus, before a fresh hunt/gather trip.
-      if (this.beginEconomyWithdraw('food')) return
-      if (this.beginHouseholdExchange('food')) return
-      // Plan 174 — a real, closer hunger source (natural berries/nuts/etc.,
-      // or a mature crop — wild, player-planted near a settlement garden, or
-      // on a player garden plot, all indistinguishable to this query) takes
-      // priority over the abstract settlement-garden gather below. Falls
-      // through to it when none is in range, exactly like a miner NPC with
-      // no loaded ore falls back to `beginUnscheduledIdle`.
-      if (this.role === 'hunter' && this.beginHuntExpedition(household)) return
-      if (this.beginRealFoodGathering(household)) return
-      this.startAction({
-        kind: 'eat',
-        destination: copyVec3(this.landmarks.garden),
-        durationSec: 1.4 * this.waitMultiplier,
-        onComplete: () => {
-          depositFoodHarvest(household, this.economy, this.simClock)
-          household?.takeFood(this.simClock)
-          relieveNeed(this.needs, 'food')
-          this.progressActivePlan('secureFood', 1)
-        },
-      })
+      this.beginUnscheduledIdle()
       return
     }
     if (need === 'wood') {
-      this.selectAndTraceStrategy('wood', getWoodStrategyCandidates({
+      const selected = this.selectAndTraceStrategy('wood', getWoodStrategyCandidates({
         available: this.role !== 'trader' && this.landmarks.trees.length > 0,
         economyWithdrawAvailable: this.computeEconomyWithdrawAvailable('wood'),
         householdExchangeAvailable: this.computeHouseholdExchangeAvailable('wood'),
       }))
-      // Local resource exchange (plan settlements-npcs-005) — tried before
-      // sending someone to fell a tree, same priority as `food`'s branch.
-      if (this.beginEconomyWithdraw('wood')) return
-      if (this.beginHouseholdExchange('wood')) return
-    }
-    if (need === 'wood' && this.role !== 'trader' && this.landmarks.trees.length > 0) {
-      const forest = this.forest
-      let landmark = this.landmarks.trees[this.treeIndex]!
-      this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
+      switch (selected) {
+        case 'chopDeposit': {
+          const forest = this.forest
+          let landmark = this.landmarks.trees[this.treeIndex]!
+          this.treeIndex = (this.treeIndex + 1) % this.landmarks.trees.length
 
-      if (forest) {
-        const found = forest.lifecycle.findHarvestableNear(
-          this.mesh.position.x,
-          this.mesh.position.z,
-          80,
-          forest.getWorldDays(),
-          forest.sampleEnv,
-        )
-        if (found) {
-          const match = this.landmarks.trees.find((t) => t.id === found.id)
-          if (match) landmark = match
-        }
-      }
-
-      // Harvest success/failure decides the deposit amount (plan 131) —
-      // another NPC/the player may have felled `landmark` first between this
-      // chop starting and completing; the chained deposit step must not
-      // still mint wood when that happens.
-      let harvestedWood = 0
-      // `harvestWorldTreeFully` collapses every remaining chop step (up to a
-      // full felling) into one call — unlike the player's per-step chop,
-      // there's no separate "the tree just fell" transition to hook. Capture
-      // whether the tree was still standing (not yet felled) *before* the
-      // call, so the falling SFX only plays when this action actually caused
-      // that transition.
-      let wasStandingBeforeChop = false
-      if (forest) {
-        const presenceBeforeChop = forest.lifecycle.getPresence(landmark.id)
-        if (presenceBeforeChop) {
-          const stageBeforeChop = forest.lifecycle.resolve(
-            presenceBeforeChop,
-            forest.sampleEnv(landmark.position.x, landmark.position.z),
-            forest.getWorldDays(),
-          ).stage
-          wasStandingBeforeChop = stageBeforeChop === 'mature' || stageBeforeChop === 'old'
-            || stageBeforeChop === 'limbed'
-        }
-      }
-      this.startAction({
-        kind: 'chop',
-        destination: copyVec3(landmark.position),
-        durationSec: 1.6 * this.waitMultiplier,
-        onComplete: () => {
-          if (!forest) return
-          const result = harvestWorldTreeFully(
-            forest.lifecycle,
-            landmark.id,
-            forest.getWorldDays(),
-            forest.sampleEnv(landmark.position.x, landmark.position.z),
-            { landmark },
-          )
-          if (result.ok) {
-            harvestedWood = WOOD_HARVEST_AMOUNT
-            if (wasStandingBeforeChop) playActionTreeFall(this.playAt, landmark.position)
+          if (forest) {
+            const found = forest.lifecycle.findHarvestableNear(
+              this.mesh.position.x,
+              this.mesh.position.z,
+              80,
+              forest.getWorldDays(),
+              forest.sampleEnv,
+            )
+            if (found) {
+              const match = this.landmarks.trees.find((t) => t.id === found.id)
+              if (match) landmark = match
+            }
           }
-        },
-        next: {
-          kind: 'deposit',
-          destination: copyVec3(householdStorageDestination('wood', this.home, this.landmarks.stockpile)),
-          durationSec: 0.8 * this.waitMultiplier,
-          onComplete: () => {
-            relieveNeed(this.needs, 'wood')
-            depositWoodHarvest(this.household, this.economy, harvestedWood, this.simClock)
-            this.progressActivePlan('obtainWood', harvestedWood)
-          },
-        },
-      })
+
+          // Harvest success/failure decides the deposit amount (plan 131) —
+          // another NPC/the player may have felled `landmark` first between
+          // this chop starting and completing; the chained deposit step
+          // must not still mint wood when that happens.
+          let harvestedWood = 0
+          // `harvestWorldTreeFully` collapses every remaining chop step (up
+          // to a full felling) into one call — unlike the player's per-step
+          // chop, there's no separate "the tree just fell" transition to
+          // hook. Capture whether the tree was still standing (not yet
+          // felled) *before* the call, so the falling SFX only plays when
+          // this action actually caused that transition.
+          let wasStandingBeforeChop = false
+          if (forest) {
+            const presenceBeforeChop = forest.lifecycle.getPresence(landmark.id)
+            if (presenceBeforeChop) {
+              const stageBeforeChop = forest.lifecycle.resolve(
+                presenceBeforeChop,
+                forest.sampleEnv(landmark.position.x, landmark.position.z),
+                forest.getWorldDays(),
+              ).stage
+              wasStandingBeforeChop = stageBeforeChop === 'mature' || stageBeforeChop === 'old'
+                || stageBeforeChop === 'limbed'
+            }
+          }
+          this.startAction({
+            kind: 'chop',
+            destination: copyVec3(landmark.position),
+            durationSec: 1.6 * this.waitMultiplier,
+            onComplete: () => {
+              if (!forest) return
+              const result = harvestWorldTreeFully(
+                forest.lifecycle,
+                landmark.id,
+                forest.getWorldDays(),
+                forest.sampleEnv(landmark.position.x, landmark.position.z),
+                { landmark },
+              )
+              if (result.ok) {
+                harvestedWood = WOOD_HARVEST_AMOUNT
+                if (wasStandingBeforeChop) playActionTreeFall(this.playAt, landmark.position)
+              }
+            },
+            next: {
+              kind: 'deposit',
+              destination: copyVec3(householdStorageDestination('wood', this.home, this.landmarks.stockpile)),
+              durationSec: 0.8 * this.waitMultiplier,
+              onComplete: () => {
+                relieveNeed(this.needs, 'wood')
+                depositWoodHarvest(this.household, this.economy, harvestedWood, this.simClock)
+                this.progressActivePlan('obtainWood', harvestedWood)
+              },
+            },
+          })
+          return
+        }
+        // Local resource exchange (plan settlements-npcs-005) — tried
+        // before sending someone to fell a tree, same priority as `food`'s
+        // branch.
+        case 'economyWithdraw':
+          this.beginEconomyWithdraw('wood')
+          return
+        case 'householdExchange':
+          this.beginHouseholdExchange('wood')
+          return
+      }
+      // No strategy available (no trees loaded, no local exchange source)
+      // — same unscheduled idle fallback as a moment with no workplace
+      // (not 'work').
+      this.beginUnscheduledIdle()
       return
     }
-    // 'wood' need but this settlement has no trees yet — same unscheduled
-    // idle fallback as a moment with no workplace (not 'work').
     this.beginUnscheduledIdle()
   }
 

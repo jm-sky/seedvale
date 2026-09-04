@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { NpcStrategyId } from './npcStrategies'
 import {
   getFoodStrategyCandidates,
   getWaterDutyStrategyCandidates,
@@ -238,5 +239,41 @@ describe('getWoodStrategyCandidates', () => {
       economyWithdrawAvailable: false,
       householdExchangeAvailable: true,
     }))).toBe('householdExchange')
+  })
+})
+
+/** Guards against an orphaned `NpcStrategyId` (review 2026-09-03 §8 step 5)
+ *  — since `beginNeed()` now switches on `selectAndTraceStrategy()`'s
+ *  return value with no catch-all re-dispatch, an id no candidate builder
+ *  can ever produce would silently fall through to `beginUnscheduledIdle`
+ *  forever. Every id in the union must be reachable from at least one
+ *  candidate-builder call with every relevant flag set to its most
+ *  permissive value. */
+describe('NpcStrategyId reachability', () => {
+  it('every strategy id is producible by at least one candidate builder', () => {
+    const reachable = new Set<NpcStrategyId>()
+    for (const c of getFoodStrategyCandidates({
+      householdHasFood: true,
+      isHunter: true,
+      huntTargetAvailable: true,
+      nearbyFoodSourceAvailable: true,
+      deliveryAvailable: true,
+      economyWithdrawAvailable: true,
+      householdExchangeAvailable: true,
+    })) reachable.add(c.id)
+    for (const c of getWaterStrategyCandidates({ householdHasWater: true })) reachable.add(c.id)
+    for (const c of getWaterDutyStrategyCandidates()) reachable.add(c.id)
+    for (const c of getWoodStrategyCandidates({
+      available: true,
+      economyWithdrawAvailable: true,
+      householdExchangeAvailable: true,
+    })) reachable.add(c.id)
+
+    const allIds: readonly NpcStrategyId[] = [
+      'householdFood', 'economyWithdraw', 'householdExchange', 'hunt', 'nearbyFoodSource',
+      'gardenGather', 'playerStorageDelivery', 'householdWater', 'well', 'fetchDeposit', 'chopDeposit',
+    ]
+    for (const id of allIds) expect(reachable.has(id)).toBe(true)
+    expect(reachable.size).toBe(allIds.length)
   })
 })
