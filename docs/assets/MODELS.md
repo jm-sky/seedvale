@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-03 (plan fauna-009 — rooster placeholder)
+**Last updated:** 2026-09-04 (2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
 
 ## How to use
 
@@ -58,13 +58,13 @@ If the feature needs no new model, do nothing to this file.
 | M29 | Campfire unlit body | Stones + stacked wood, no baked flame — `VillageFire` / `PlacedFires` / world remains; `simple` hides stone materials | `wired` | plan 101 parked, plan 135 (`settlement/campfire_unlit.glb`) |
 | M30 | Campfire burning (Quaternius) | Baked flame in mesh — not usable with fuel toggle | `in repo` | plan 101 (`campfire_burning_q.glb`) |
 | M31 | Campfire burning (Poly) | Higher-quality baked flame; CC-BY | `in repo` | plan 101 (`campfire_burning_poly.glb`) |
-| M53 | Storage chest | Player-placed container (`items.chest`); procedural box+lid fallback (`world/containerProp.ts`) wired now. Plan 169 reuses this same procedural chest for house-interior chest furniture (all 11 village house definitions) — no second chest asset | `wired` (procedural) | [plan 164](../plans/2026-08-19--164--player-storage-and-container-system.md), [plan 169](../plans/2026-08-19--169--house-interior-furniture-and-bed-anchors.md) |
+| M53 | Storage chest | Player-placed container (`items.chest`); Quaternius `Chest Closed` GLB wired via `ITEM_GLB_SPECS.chest` (`items/itemModels.ts`), procedural box+lid kept as load-failure fallback (`world/containerProp.ts`). Plan 169 reuses the same ground pickup mesh for house-interior chest furniture (all 11 village house definitions) — no second chest asset | `wired` | [plan 164](../plans/2026-08-19--164--player-storage-and-container-system.md), [plan 169](../plans/2026-08-19--169--house-interior-furniture-and-bed-anchors.md) |
 | M54 | Player-built well — pit / in-progress body | `pit`/`well` construction stages (`world/playerWellProp.ts`); procedural dirt hole + roofless stone ring, no GLB planned. `roof` (completed) stage reuses wired `well.glb`/`createWell` (M32) directly | `wired` (procedural) | [plan 127](../plans/2026-08-16--127--player-built-well.md) |
 | M32 | Village well GLB | Replaces procedural `createWell` (fallback kept) | `wired` | plan 101 (`settlement/well.glb`) |
 | M33 | Wood pile stockpile | Stacked beams; replaces wired `logs.glb` | `wired` | plan 101 (`settlement/wood_pile.glb`, CC-BY) |
 | M34 | Fantasy RTS logs | Former stockpile mesh | `in repo` | `settlement/logs.glb` |
 | M35 | Cemetery / gravestones | Village-fringe landmark (`cemetery`); Poly plot + extra stones | `wired` | plan 049 (`nature/cemetery.glb`, `nature/grave_a.glb`) |
-| M36 | Food items (tomato/raw_meat/roasted_meat/bread + plan 134 species meats/hide/cheese/dried_meat) | Pickup/inventory meshes; procedural fallback in place and functional | `needed` | plan 106, plan 134 (`items/items.ts`'s `createItemMesh`) |
+| M36 | Food items (tomato/raw_meat/roasted_meat/bread + plan 134 species meats/hide/cheese/dried_meat) | Pickup/inventory meshes. `tomato` (Quaternius `Tomato`), `roasted_meat`/`beef` (Quaternius `Steak`) and `fish` (Quaternius `Fish Mackerel`) now wired via `ITEM_GLB_SPECS` (`items/itemModels.ts`); remaining kinds (`raw_meat`, `bread`, plan 134 species meats besides `beef`, `hide`, `cheese`, `dried_meat`) still procedural | `wired` (partial) | plan 106, plan 134 (`items/items.ts`'s `createItemMesh`) |
 | M37 | Animal trough | Household `AnimalTrough` prop; procedural-only fallback in place and functional (`props.ts`'s `createTrough`), no GLB yet | `needed` | plan 122 |
 | M38 | Spear / short sword | Held melee weapons (Kupiec stock). Quaternius Medieval Weapons `Spear` + `Sword` (plain steel) | `wired` | plan 134 (`items/spear.glb`, `items/short_sword.glb`) |
 | M39 | Harvested animal remains (bones / hide) | After knife harvest: `bones_pile` + 1–2 `large_bone` + `animal_hide` + 2–4 procedural meat scraps (`fauna/harvestedRemains.ts`). Procedural cylinder+hide fallback if GLB fails. Per-species carcass GLB still out of scope | `wired` | plan 137, plan 138 (`fx/bones_pile.glb`, `fx/large_bone.glb`, `fx/animal_hide.glb`) |
@@ -81,10 +81,10 @@ If the feature needs no new model, do nothing to this file.
 | M50 | Bows (`short_bow`/`hunting_bow`/`long_bow`) | Held ranged weapons; Kupiec stock. Quaternius `Bow_Wooden`/`Bow_Wooden2`/`Bow_Golden` (Medieval Weapons Pack) wired ground + held; grip TRS in `HELD_ATTACH` reused from the procedural-fallback placeholder and not yet manually verified in-hand in the browser | `wired` | plan 162 (`items/short_bow.glb`, `hunting_bow.glb`, `long_bow.glb`) |
 | M51 | Arrows (`arrow`/`broadhead_arrow`/`war_arrow`) | Stackable ammo pickup/inventory mesh; not holdable. Quaternius `Arrow` (Medieval Weapons Pack), one shared GLB for all three arrow kinds (no visual damage-tier distinction in v1) | `wired` | plan 162 (`items/arrow.glb`) |
 | M52 | Whetstone | Stackable maintenance item; procedural box fallback in place and functional, no GLB yet | `needed` | plan 161 |
-| M55 | Backpack | Carried capacity item (`items.backpack`); default procedural fallback mesh (same catch-all box `chest`/`tent` already use), functional but not backpack-shaped | `needed` | plan 186 |
+| M55 | Backpack | Carried capacity item (`items.backpack`); Quaternius `Backpack` GLB wired via `ITEM_GLB_SPECS.backpack`, procedural catch-all box kept as load-failure fallback | `wired` | plan 186 |
 | M56 | Seed pouch(es) (`tree_seed`/`seed_carrot`/`seed_potato`/`seed_cabbage`) | Small inventory pickup; procedural flattened-dodecahedron fallback in place and functional, no GLB yet | `needed` | plan 126 |
 | M57 | Beam (`items.beam`) | Structural-wood pickup; procedural elongated-box fallback in place and functional, no GLB yet | `needed` | plan 187 (`items/items.ts`'s `createItemMesh`) |
-| M58 | Pan (`pan`) | Inventory item that raises cooking capacity to 2; procedural cylinder+handle fallback in place and functional, no GLB yet | `needed` | plan 175 |
+| M58 | Pan (`pan`) | Inventory item that raises cooking capacity to 2; Quaternius `Pan` GLB wired via `ITEM_GLB_SPECS.pan`, procedural cylinder+handle kept as load-failure fallback | `wired` | plan 175 |
 | M59 | Cooking grate | Built, one-time upgrade attached to a player-built fire; procedural iron-frame fallback in place and functional (`settlement/campfireProps.ts`'s `createGrateVisual`), no GLB yet | `needed` | plan 175 |
 | M60 | Iron rod (`iron_rod`) | Small stackable construction material (grate cost); procedural rod fallback in place and functional, no GLB yet | `needed` | plan 175 |
 | M61 | Bear (fauna) | Cave predator species wired through the same `FAUNA_URLS`/GLTF pipeline as wolf/fox/deer/stag; capsule fallback in place and functional until the GLB lands | `needed` | plan 188 (`fauna/bear.glb`) |
@@ -96,7 +96,7 @@ If the feature needs no new model, do nothing to this file.
 | M67 | Grind workbench | Blacksmith workplace prop next to the anvil; procedural bench+grindstone fallback in place and functional if the GLB fails to load | `wired` | plan settlements-npcs-002 (`public/models/parked/workbench-grind.glb`) |
 | M68 | Waterskins (`waterskin_small`/`waterskin_medium`/`waterskin_large`) | Pickup/inventory mesh, one shared shape scaled per size; procedural sphere+neck fallback in place and functional, no GLB yet. Replaces the old binary `waterskin_empty`/`waterskin_full` pair (M36) | `needed` | plan items-player-001 (`items/items.ts`'s `createItemMesh`) |
 | M69 | Buckets (`wooden_bucket`/`copper_bucket`) | Pickup/inventory mesh; procedural cylinder+handle fallback in place and functional, tinted per material. `_temp/Models/packs/fantasy-props-megakit/glTF/Bucket_Wooden_1.gltf` + `Bucket_Metal.gltf` are plausible sources, not yet converted/wired | `needed` | plan items-player-001 |
-| M70 | Saddlebags (`saddlebags`) | Inert carried item (no equip mechanic yet); default procedural fallback mesh (same catch-all box `chest`/`tent`/`backpack` use). `_temp/Models/packs/fantasy-props-megakit/glTF/Pouch_Large.gltf` is a plausible source, not yet converted/wired | `needed` | plan items-player-001 |
+| M70 | Saddlebags (`saddlebags`) | Inert carried item (no equip mechanic yet); Quaternius `Bags` GLB wired via `ITEM_GLB_SPECS.saddlebags`, procedural catch-all box kept as load-failure fallback | `wired` | plan items-player-001 |
 | M71 | Copper ore / copper (`copper_ore`/`copper`) | Pickup/inventory mesh; `copper_ore` reuses the existing ore-dodecahedron fallback (tinted, same as iron/coal/gold), `copper` a small procedural ingot box, no GLB yet | `needed` | plan items-player-001 |
 | M72 | Rooster | New livestock `AnimalKind`; `livestock.ts`'s `LIVESTOCK_URLS.rooster` points at `models/fauna/rooster.glb` (not present — `_temp/` had no suitable model), procedural fallback (`fauna/proceduralAnimals.ts`'s `createRoosterModel`, darker chicken variant + upright tail plume) in place and functional | `needed` | plan fauna-009 |
 
@@ -110,7 +110,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey; rooster (procedural placeholder, see M72) |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
-| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork) |
+| Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork); backpack, saddlebags, pan, rope, chest, coin, tomato, roasted_meat/beef, fish (2026-09-04 asset drop) |
 | Settlement lights | house lantern GLB; plaza/gate torch posts |
 | FX | fire tip (handheld, village torch, campfire flame); blood splat (animal death); harvested remains (pile / large bone / hide) |
 

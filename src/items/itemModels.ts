@@ -101,6 +101,17 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
   arrow: { url: '/models/items/arrow.glb', maxSize: 0.6 },
   broadhead_arrow: { url: '/models/items/arrow.glb', maxSize: 0.6 },
   war_arrow: { url: '/models/items/arrow.glb', maxSize: 0.6 },
+  // Quaternius Fantasy/Farm/Nature packs — 2026-09-04 asset drop, see
+  // docs/tmp/2026-09-04--new-3d-assets.md.
+  backpack: { url: '/models/items/backpack.glb', maxSize: 0.5 },
+  pan: { url: '/models/items/pan.glb', maxSize: 0.35 },
+  rope: { url: '/models/items/rope.glb', maxSize: 0.4 },
+  chest: { url: '/models/items/chest.glb', maxSize: 0.85 },
+  tomato: { url: '/models/items/tomato.glb', maxSize: 0.1 },
+  // coin: { url: '/models/items/coin.glb', maxSize: 0.2 },
+  roasted_meat: { url: '/models/items/steak.glb', maxSize: 0.25 },
+  beef: { url: '/models/items/steak.glb', maxSize: 0.25 },
+  fish: { url: '/models/items/fish.glb', maxSize: 0.35 },
 }
 
 const prepared = new Map<ItemKind, Group>()

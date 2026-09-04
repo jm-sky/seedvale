@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-04 (plan world-004 — new `rope` item; well groundwater depth/protection)
+**Last updated:** 2026-09-04 (2026-09-04 asset drop — GLBs wired for backpack, saddlebags, chest, tomato, coin, roasted_meat/beef, fish, rope)
 
 ## Quick rules
 
@@ -74,28 +74,28 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | gold | złoto | — | — | pickaxe yield | procedural | plan 090 |
 | copper_ore | ruda miedzi | — | — | pickaxe yield | procedural (M71 needed) | plan items-player-001; same `terrain/resourceDeposits.ts` pipeline as iron/coal/gold; settlement economy stock `copper_ore` |
 | copper | miedź | — | — | none | procedural (M71 needed) | plan items-player-001 §5.2/§11; future `copper_ore` smelting output — deliberately unobtainable (not Kupiec stock, unlike `iron_rod`) until that processing exists |
-| tomato | pomidor | — | — | renewable garden | procedural | plan 106; Zjedz (+12 hunger) |
+| tomato | pomidor | — | — | renewable garden | `items/tomato.glb` | plan 106; Zjedz (+12 hunger) |
 | raw_meat | surowe mięso | — | — | corpse harvest (knife) | procedural | plan 106; Zjedz (+15 hunger, less than roasted) |
-| roasted_meat | pieczone mięso | — | — | campfire cooking | procedural | plan 106; Zjedz (+35 hunger) |
+| roasted_meat | pieczone mięso | — | — | campfire cooking | `items/steak.glb` | plan 106; Zjedz (+35 hunger) |
 | bread | chleb | — | — | none (Kupiec) | procedural | plan 106; Zjedz (+30 hunger) |
 | waterskin_small | mały bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 2 l capacity; `[R]` at well/lake fills to full, Wypij drinks 1 l — replaces plan 106's binary waterskin_empty/waterskin_full |
 | waterskin_medium | średni bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 5 l capacity; same fill/drink as waterskin_small |
 | waterskin_large | duży bukłak | — | — | none (Kupiec) | procedural (M68 needed) | plan items-player-001; leather, 10 l capacity; same fill/drink as waterskin_small |
 | wooden_bucket | drewniane wiadro | — | — | none (Kupiec, no recipe) | procedural (M69 needed) | plan items-player-001; wood, 10 l, holds water or milk; fills at well/lake, waters a garden plot (plan settlements-npcs-001), and now takes a cow/sheep's milking yield (plan fauna-002) — drink-from-bucket still deferred |
 | copper_bucket | miedziane wiadro | — | — | none | procedural (M69 needed) | plan items-player-001 §11; copper, 10 l, holds water or milk; future blacksmith smithing/crafting output — not Kupiec stock yet (unlike wooden_bucket); same fill/watering/milking wiring as wooden_bucket, same deferred drink |
-| saddlebags | juki | — | — | none (Kupiec) | procedural (M70 needed) | plan items-player-001 §4.2; leather; inert carried item — animal-equip/transport-capacity mechanic is future work |
+| saddlebags | juki | — | — | none (Kupiec) | `items/saddlebags.glb` (M70) | plan items-player-001 §4.2; leather; inert carried item — animal-equip/transport-capacity mechanic is future work |
 | spear | dzida | yes | 20 | none (Kupiec) | `items/spear.glb` (M38) | plan 134; longest range, narrow thrust arc |
 | short_sword | krótki miecz | yes | 18 | none (Kupiec) | `items/short_sword.glb` (M38) | plan 134; lighter/faster than long_sword |
 | deer_meat | mięso sarny | — | — | corpse harvest (knife, sarna) | procedural | plan 134; Zjedz (+16 hunger); cooks to roasted_meat |
 | wolf_meat | mięso wilka | — | — | corpse harvest (knife, wilk) | procedural | plan 134; Zjedz (+12 hunger); cooks to roasted_meat |
 | boar_meat | mięso dzika | — | — | corpse harvest (knife, dzik) | procedural | plan 134; Zjedz (+17 hunger); cooks to roasted_meat |
 | rabbit_meat | mięso królika | — | — | corpse harvest (knife, królik) | procedural | plan 134; Zjedz (+10 hunger); cooks to roasted_meat |
-| beef | wołowina | — | — | corpse harvest (knife, krowa) | procedural | plan 134; Zjedz (+20 hunger); cooks to roasted_meat |
+| beef | wołowina | — | — | corpse harvest (knife, krowa) | `items/steak.glb` | plan 134; Zjedz (+20 hunger); cooks to roasted_meat |
 | egg | jajko | — | — | none — laid by a live chicken, dropped in the world | procedural | plan fauna-002; Zjedz raw (+12 hunger); spoils like other food (3 days); no cooking/processing |
 | hide | skóra | — | — | corpse harvest byproduct (any species) | procedural | plan 134; sellable via barter or to Kupiec at `sellPrice` (`tradeValue` / 2) |
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
-| coin | moneta | — | — | world chunk (rare) | procedural | plan 129 / issue 035; near-zero weight (0.001 kg); Kupiec buy/sell currency + quest reward + land-plot price; shells stay barter-only |
+| coin | moneta | — | — | world chunk (rare) | `items/coin.glb` | plan 129 / issue 035; near-zero weight (0.001 kg); Kupiec buy/sell currency + quest reward + land-plot price; shells stay barter-only |
 | herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153; Opatrz (+8 health) — free but scarce (half mushroom's weight) |
 | bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153; Opatrz (+35 health) — reliable, purchasable healing |
 | damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | `items/damascus_knife.glb` (M44) | plan 160; teal/silver damascus, not gray; harvests corpses like knife |
@@ -111,7 +111,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | carrot | marchew | — | — | renewable garden + wild natural crop | procedural | plan 159; Zjedz (+10 hunger); freshens 3 days, plant bait. Plan 172: also a wild natural crop (`terrain/chunkCrops.ts`), young/mature/spoiled lifecycle |
 | potato | ziemniak | — | — | renewable garden + wild natural crop | procedural | plan 159; Zjedz (+12 hunger); freshens 4 days, plant bait. Plan 172: also a wild natural crop (`terrain/chunkCrops.ts`), young/mature/spoiled lifecycle |
 | cabbage | kapusta | — | — | renewable garden + wild natural crop | procedural | plan 159; Zjedz (+10 hunger); freshens 2 days. Plan 172: also a wild natural crop (`terrain/chunkCrops.ts`), young/mature/spoiled lifecycle |
-| fish | ryba | — | — | fishing_rod catch | procedural | plan 159; Zjedz (+12 hunger); freshens fastest (0.75 day) |
+| fish | ryba | — | — | fishing_rod catch | `items/fish.glb` | plan 159; Zjedz (+12 hunger); freshens fastest (0.75 day) |
 | dried_fish | suszona ryba | — | — | drying rack (fish) | procedural | plan 159; Zjedz (+22 hunger); light, long-lasting like dried_meat |
 | fishing_rod | wędka | yes | — | none (Kupiec) | procedural | plan 159; `[E]` cast at lake shore, `[R]` apply bait |
 | whetstone | osełka | — | — | none (Kupiec) | procedural (M52 needed) | plan 161; stackable, consumed 1:1 by `sharpenWeapon()` |
@@ -121,13 +121,13 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | arrow | strzała | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; base ammo for every bow |
 | broadhead_arrow | strzała łowiecka | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +4 damage over `arrow` |
 | war_arrow | strzała bojowa | — | — | none (Kupiec) | procedural (M51 needed) | plan 162; +8 damage over `arrow`, heaviest |
-| chest | skrzynia | — | — | none (Kupiec) | procedural (M53 needed) | plan 164; generic player storage container — place with Inventory „Postaw”, `[E]` open transfer screen / `[R]` pick up (with contents) on the world prop, Quick Actions → „Odłóż skrzynię” while carrying |
-| backpack | plecak | — | — | none (Kupiec) | procedural (M55 needed) | plan 186; ordinary carried item — simply holding it in `Inventory` raises `Inventory.maxWeight` by `ITEM_CATALOG.backpack.carryCapacityBonus` (+15 kg, stacks); must fit under the pre-bonus capacity to buy/pick up; no equip/backpack-slot system |
+| chest | skrzynia | — | — | none (Kupiec) | `items/chest.glb` (M53) | plan 164; generic player storage container — place with Inventory „Postaw”, `[E]` open transfer screen / `[R]` pick up (with contents) on the world prop, Quick Actions → „Odłóż skrzynię” while carrying |
+| backpack | plecak | — | — | none (Kupiec) | `items/backpack.glb` (M55) | plan 186; ordinary carried item — simply holding it in `Inventory` raises `Inventory.maxWeight` by `ITEM_CATALOG.backpack.carryCapacityBonus` (+15 kg, stacks); must fit under the pre-bonus capacity to buy/pick up; no equip/backpack-slot system |
 | tree_seed | nasiono drzewa | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź drzewo" — species picked from local habitat suitability, not a per-species item |
 | seed_carrot | nasiona marchwi | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: marchew" — plants a `carrot` `CropLifecycle` entity in a settlement garden |
 | seed_potato | sadzeniaki ziemniaka | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: ziemniak" — plants a `potato` `CropLifecycle` entity in a settlement garden |
 | seed_cabbage | nasiona kapusty | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: kapustę" — plants a `cabbage` `CropLifecycle` entity in a settlement garden |
-| rope | lina | — | — | none (Kupiec) | procedural | plan world-004; ordinary carried item (not a capability) — carrying ≥1 is required to draw water from a deep player-built well (drink/fill), never consumed |
+| rope | lina | — | — | none (Kupiec) | `items/rope.glb` | plan world-004; ordinary carried item (not a capability) — carrying ≥1 is required to draw water from a deep player-built well (drink/fill), never consumed |
 
 ## Roadmap (not done)
 
