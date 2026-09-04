@@ -96,7 +96,7 @@ export function weatherAmbientFactor(weather: WeatherState): WeatherAmbientFacto
  *  equivalent, a single global timer since there's no entity behind it.
  *  Source/license: public/sounds/README.md. */
 const OWL_SOUND_URL = '/sounds/ambient-owl-at-night.ogg'
-const OWL_SFX_VOLUME = 0.4
+const OWL_SFX_VOLUME = 1
 const OWL_COOLDOWN_MIN_SEC = 5 * 60
 const OWL_COOLDOWN_MAX_SEC = 12 * 60
 /** Chance per recheck once the cooldown has elapsed. */
