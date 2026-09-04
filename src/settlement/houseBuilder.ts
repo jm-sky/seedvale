@@ -597,8 +597,9 @@ export function transformHouseCollidersToWorld(
   return localColliders.map((collider): Collider => {
     const lx = collider.x * scale
     const lz = collider.z * scale
-    const x = worldX + lx * cos - lz * sin
-    const z = worldZ + lx * sin + lz * cos
+    const x = worldX + lx * cos + lz * sin
+    const z = worldZ - lx * sin + lz * cos
+
     if (collider.type === 'circle') {
       return { type: 'circle', x, z, radius: collider.radius * scale }
     }

@@ -1019,9 +1019,9 @@ export async function buildSettlementProps(
       const sx = local.x * hut.scale.x
       const sz = local.z * hut.scale.z
       return {
-        x: hut.position.x + sx * cos - sz * sin,
+        x: hut.position.x + sx * cos + sz * sin,
+        z: hut.position.z - sx * sin + sz * cos,
         y: hut.position.y + local.y * hut.scale.y,
-        z: hut.position.z + sx * sin + sz * cos,
       }
     }
     let bed: SettlementHouseBed | null = null

@@ -99,14 +99,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/houseBuilder.ts`
 
-- `buildAssemblyCollidersWorld` — function — line 632
-- `buildHouse` — function — line 694
-- `buildHouseCollidersWorld` — function — line 617
+- `buildAssemblyCollidersWorld` — function — line 633
+- `buildHouse` — function — line 695
+- `buildHouseCollidersWorld` — function — line 618
 - `buildHouseDoorCollidersLocal` — function — line 570
 - `buildHouseWallCollidersLocal` — function — line 536
 - `censusAssembly` — function — line 403
 - `cornerLocalPosition` — function — line 214
-- `createHouseStaticBatch` — function — line 833
+- `createHouseStaticBatch` — function — line 834
 - `DOOR_1_FLAT_HINGE_OFFSET_X` — const — line 39
 - `DOOR_ANIM_SPEED` — const — line 41
 - `DOOR_OPEN_ANGLE` — const — line 40

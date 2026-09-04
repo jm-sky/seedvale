@@ -25,8 +25,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 | `world-terrain-007-underground-caves.md`                  | Faza 0-3 done (domain/generator/lifecycle/presentation/movement/collision); Faza 4 fauna/loot/persistence deferred — see plan's "Implementation status" | 🔴  | L      | ~~097~~ ~~125~~ |
 
-- `settlements-001-house-collision-geometry.md`
-
 ---
 
 ## Planned

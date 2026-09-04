@@ -163,3 +163,18 @@ That last point is the interesting one: since the door leaf is *also* an OBB, bu
 4. Double check `HouseAssembly`'s `root.rotation.y`/`root.position` actually match the *visual* wall mesh placement used by `buildHouse()` at the moment `buildAssemblyCollidersWorld(assembly)` reads them (async GLTF loading — is it possible colliders are captured from the root's transform *before* the settlement/village placement code finishes positioning the house, i.e. a snapshot-timing issue independent of the door-registration retrigger on open/close?).
 
 Do not re-derive the wall/opening geometry constants (`HOUSE_WALL_LENGTH_M`/`HOUSE_WALL_THICKNESS_M`/`HOUSE_DOOR_OPENING_HALF_WIDTH_M` in `houseBuilder.ts`) without new evidence — those were measured directly from the real GLB vertex data (see the constants' doc comments) and are not implicated by the symptom above.
+
+## Update 2026-09-04 13:48
+
+Podczas weryfikacji `?debugColliders=1` wykryto, że collidery domów były poprawne w House Browserze, ale przesunięte względem modeli w settlementach obróconych o niezerowy `yaw`.
+
+Przyczyną była błędna konwencja rotacji XZ podczas transformacji house-local → world: znaki `sin(yaw)` były odwrotne względem `Three.js Object3D.rotation.y`. House Browser maskował problem, ponieważ prezentował dom z `yaw = 0`.
+
+Poprawiono transformację w:
+
+* `src/settlement/houseBuilder.ts` — `transformHouseCollidersToWorld()`,
+* `src/settlement/props.ts` — lokalne przeliczanie `toWorld()` dla house-local interaction/furniture positions.
+
+Po zmianie collidery ścian i drzwi pokrywają się z obróconymi modelami domów w świecie, a collider zamkniętego skrzydła poprawnie znika po otwarciu drzwi.
+
+Follow-up: warto utrwalić poprawną konwencję testem transformacji dla niezerowego `yaw`, np. `Math.PI / 2`, ponieważ przypadek `yaw = 0` nie wykrywa tego typu regresji.

@@ -1,7 +1,7 @@
 # Plan: House Collision Geometry
 
 **Created:** 2026-08-25
-**Status:** `in progress` 🔄 — browser verification failed 2026-08-25 (wall still passable, see [implementation notes §13](./implementation-notes/settlements-001-house-collision-geometry-implementation-notes.md#13-browser-verification-result-2026-08-25--failed-not-fixed-yet))
+**Status:** `done` ✅ - fixed & verified at 2026-09-04 (see [implementation notes §13](./implementation-notes/settlements-001-house-collision-geometry-implementation-notes.md#13-browser-verification-result-2026-08-25--failed-not-fixed-yet))
 **Priority:** high · **Effort:** M
 **Depends on:** 111
 **Domain:** `settlements`
