@@ -14,11 +14,31 @@ This document deliberately avoids committing to a specific generation technique.
 The earlier cave research established the intended product scale:
 
 - caves are **rare underground exploration landmarks**, not a cave biome;
-- the long-term target is **L2**: roughly 3–4 passages with a larger chamber, potentially multiple entrances, and later room for treasure, fauna and quests;
-- the first milestone may be smaller, but it must use the same conceptual model rather than creating a one-off tunnel implementation;
+- the first playable milestone can be a **single 20–30 m long cave**;
+- the first milestone must still use the same conceptual model that can later grow into substantially more complex caves rather than becoming a one-off tunnel implementation;
+- the long-term target is **L2**: multiple passages with larger chambers, potentially multiple entrances, and later room for treasure, fauna and quests;
 - L3 — caves as a general geographic/biome feature requiring a 3D terrain system — is out of scope.
 
 The cave must remain a real part of the continuous Seedvale world rather than becoming a separate interior scene or portal-based world.
+
+### Future topology target
+
+Longer-term caves may have a topology comparable in complexity to large MMO caves such as those seen in WoW. The system should eventually be capable of representing:
+
+- several entrances to the surface;
+- multiple interconnected tunnels;
+- loops and circular/round-trip tunnel routes;
+- several chambers within one cave system;
+- branches and dead ends;
+- multiple routes between the same areas;
+- meaningful vertical differences between routes;
+- ramps and sloped passages;
+- platforms, shelves and ledges inside large chambers;
+- spatially distinct upper and lower routes that reach the same chamber at different elevations.
+
+For example, one passage may split into a lower route that continues downward toward the floor of a large chamber and an upper route that forms a ramp and reaches a platform on the chamber wall. These are two physical routes through the same continuous cave volume, not separate rooms or scenes.
+
+This future topology is an **architectural capability**, not an L1 implementation requirement. The first 20–30 m cave does not need multiple entrances, loops, multiple chambers or multi-level routes.
 
 ## Current Problem
 
@@ -31,7 +51,7 @@ Observed gameplay failures:
 - visible seams/gaps can appear between cave sections;
 - cave surfaces are excessively smooth;
 - entrances are too narrow and small;
-- the overall cave experience does not yet meet the intended quality bar.
+- the overall cave experience does not yet meet the required quality bar.
 
 These observations are evidence about the required result, not evidence for a particular technical solution.
 
@@ -58,6 +78,8 @@ The earlier research identified an important architectural principle:
 > The cave layout/topology should be the source of truth for gameplay space; the render mesh should be a presentation derived from that representation.
 
 In particular, movement collision should not depend on raycasting or BVH against the rendered cave mesh as the primary representation. The same underlying layout/volume should be usable for floor queries, containment, collision and future navigation.
+
+The representation must not assume that future cave topology is only a flat graph in X/Z. It should be able to represent genuinely spatial relationships, including different routes through the same cave at different elevations.
 
 ### Terrain relationship
 
@@ -109,17 +131,32 @@ large chamber
 branch / continuation / dead end
 ```
 
+For L1, this is intentionally simplified to a single compact cave of approximately **20–30 m total length**. A possible L1 layout is:
+
+```text
+entrance
+   ↓
+wide transition
+   ↓
+walk-in tunnel
+   ↓
+small/medium chamber or widened end
+   ↓
+dead end / short continuation
+```
+
+The L1 cave is a **vertical slice**, not a final topology target. Its purpose is to prove that a small cave can feel like a convincing underground space before complexity is increased.
+
 The intended progression is:
 
 - entrance integrated with a steep rock face or cliff;
 - wide/high transition suitable for third-person gameplay;
 - gradual natural descent rather than stairs or an abrupt drop;
 - passages large enough for comfortable traversal;
-- chambers clearly larger than corridors;
-- optional branches and dead ends as part of the same cave topology;
+- chambers clearly larger than corridors where a chamber exists;
 - sufficient underground depth to avoid accidental surface exposure.
 
-A first playable milestone can still use a single passage, provided it is an instance of the same underlying cave model that can later support the L2 topology.
+Future L2+ layouts may add branches, loops, several chambers and multiple entrances without changing the underlying cave concept.
 
 ## Target Experience
 
@@ -154,7 +191,8 @@ The following are already established requirements. New requirements should be a
 - real enclosed floor/wall/ceiling volume;
 - walk-in passages;
 - larger chambers;
-- branches and/or dead ends at the target L2 scale;
+- future support for branches, loops, multiple chambers and multiple entrances at L2+;
+- future support for routes at different elevations within the same cave volume;
 - natural transitions between passages and chambers;
 - no visible seams between independently generated sections;
 - no accidental openings through the surface;
@@ -217,6 +255,7 @@ These are starting targets, not yet final geometry specifications.
 - The cave system must coexist with the existing heightmap surface rather than silently turning Seedvale into a volumetric terrain engine.
 - Surface vegetation, water and other surface systems must not incorrectly treat underground cave space as ordinary surface space.
 - The player must not become the owner of cave simulation.
+- The representation must leave room for future genuinely three-dimensional cave topology, including different routes at different elevations.
 
 ## Known Integration Risks
 
@@ -259,6 +298,7 @@ Before architecture is selected, we should be able to answer:
 10. What degree of visual authoring versus procedural generation is acceptable for rare landmark caves?
 11. How should surface/cave transitions behave visually and physically?
 12. What future gameplay interactions must the cave representation support from day one?
+13. Which future 3D topologies must remain possible even if L1 is only a single 20–30 m cave?
 
 ## Discussion Notes
 
