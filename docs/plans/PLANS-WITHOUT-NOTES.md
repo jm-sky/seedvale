@@ -1,12 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-04 21:43:37  
+> Date: 2026-09-04 22:20:09  
 
 ## PLANS
 
 - `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`
 - `npc-004-npc-genealogy-lineages.md`
+- `persistence-004-save-integrity-and-world-lifecycle.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
@@ -66,6 +67,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-004-npc-genealogy-lineages-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `persistence-004-save-integrity-and-world-lifecycle.md`
+
+Prompt:
+
+```
+Zrób review planu `persistence-004-save-integrity-and-world-lifecycle.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/persistence-004-save-integrity-and-world-lifecycle.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/persistence-004-save-integrity-and-world-lifecycle-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,

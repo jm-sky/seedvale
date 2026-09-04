@@ -72,6 +72,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | ◼️ `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`         | -       | 🟡 | M      | fauna-010 |
 | 💡 `ui-input-008-river-debug-location-quality.md`                           | -       | 🟡 | S      | ui-input-001 |
+| ◼️ `persistence-004-save-integrity-and-world-lifecycle.md`                  | -       | 🔴 | M      | ~~persistence-002~~ persistence-003 |
 
 ---
 
@@ -161,7 +162,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - fauna: `015`
 - items-player: `017`
 - npc: `018`
-- persistence: `004`
+- persistence: `005`
 - quests-progression: `001`
 - settlements: `003`
 - settlements-npcs: `024`
