@@ -177,3 +177,7 @@ Keep the existing river-chain continuity and terminal-receiver tests as regressi
 7. Tune assets/densities and only then consider shader polish.
 
 This order keeps the highest-risk shared data-contract change separate from asset/density tuning and makes regressions easier to localize.
+
+## Update
+
+Added `public/models/nature/reed_cluster_a.glb` and `public/models/nature/seaweed_cluster_a.glb`
