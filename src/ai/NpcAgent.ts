@@ -63,6 +63,7 @@ import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from 
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
+import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import {
   drainStamina,
@@ -86,15 +87,7 @@ import {
   type ScoredAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
-import {
-  applyBarPercent,
-  computeBarPercent,
-  createAgentLabel,
-  createLabelBar,
-  INITIAL_LABEL_DISTANCE_STATE,
-  type LabelDistanceState,
-  updateAgentLabelDistanceState,
-} from '../ui/agentStatusLabel'
+import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from '../world/collision'
@@ -263,6 +256,15 @@ function randRange([min, max]: [number, number]): number {
 const WALK_SPEED = 2.4
 const ARRIVE = 0.55
 export const NPC_HEIGHT = 1.75
+/** Need-marker sphere geometry (review 2026-09-03 §5 E6 / §8 step 7c) —
+ *  identical for every NPC, so it's shared at module scope instead of one
+ *  allocation per NPC constructed; only the material (per-NPC color state)
+ *  stays per-instance. `sharedGpu` tells `disposeObject3D` (called from
+ *  every NPC's own `dispose()`) never to free it — same convention
+ *  `loadGltf.ts`'s cache and `settlement/houseBuilder.ts`'s template cache
+ *  already use for GPU resources shared across many instances. */
+const NEED_MARKER_GEOMETRY = new THREE.SphereGeometry(0.12, 8, 8)
+NEED_MARKER_GEOMETRY.userData.sharedGpu = true
 /** Skip the shadow pass for NPCs beyond this distance — they still draw, but
  *  ~9 skinned submeshes × shadow map was a large submit cost (plan 113 P2).
  *  Exported so `shadowBudget.ts` can reuse the same radius to decide whether
@@ -344,6 +346,11 @@ export type { ActionId, NpcPlannedAction, Phase } from './npcAction'
  *  (`getCurrentActivity()` below), so callers outside this class never see
  *  `Phase`/`PlannedAction` themselves (`docs/plans/archive/2026-08-09--048...`). */
 export type CurrentActivityKind = 'combat' | 'eat' | 'idle' | 'need' | 'sleep' | 'talking' | 'wander' | 'work'
+
+/** This NPC's `AgentAnimationSet` clip keys (review 2026-09-03 §5 E6) —
+ *  the semantic mapping every `anim.resolve()`/`play()`/`playOnce()`/
+ *  `settleAtEnd()` call site uses instead of a raw clip name. */
+type NpcAnimClip = 'attackMelee' | 'attackRanged' | 'death' | 'hurt' | 'idle' | 'interact' | 'walk'
 
 export type CurrentActivity = {
   kind: CurrentActivityKind
@@ -732,32 +739,32 @@ export class NpcAgent {
   private readonly landmarks: SettlementLandmarks
   private readonly needs: NeedState
   private readonly home: THREE.Vector3
-  private readonly mixer: THREE.AnimationMixer
-  private readonly idleAction: THREE.AnimationAction | null
-  private readonly walkAction: THREE.AnimationAction | null
-  private readonly interactAction: THREE.AnimationAction | null
-  /** Combat/death presentation clips (plan npc-009) — semantic mapping over
-   *  whatever the loaded GLB actually exports (`findAction`'s existing
-   *  name-list fallback), never a hard-coded clip name in combat logic. `null`
-   *  is a safe, silent fallback (existing Idle/Walk keep playing, no crash) —
-   *  every model in `NPC_MODEL_URLS` today carries all four, but a future
+  /** Clip resolve/crossfade/one-shot/settle owner (review 2026-09-03 §5 E6)
+   *  — replaces 7 separate `THREE.AnimationAction | null` fields (idle/
+   *  walk/interact/attackMelee/attackRanged/hurt/death) plus the mixer
+   *  itself. Combat/death presentation clips (plan npc-009) are a semantic
+   *  mapping over whatever the loaded GLB actually exports (`resolve()`'s
+   *  existing name-list fallback), never a hard-coded clip name in combat
+   *  logic — a key with no matching clip is a safe, silent fallback
+   *  (existing Idle/Walk keep playing, no crash); every model in
+   *  `NPC_MODEL_URLS` today carries all four combat clips, but a future
    *  pool entry might not. */
-  private readonly attackMeleeAction: THREE.AnimationAction | null
-  private readonly attackRangedAction: THREE.AnimationAction | null
-  private readonly hurtAction: THREE.AnimationAction | null
-  private readonly deathAction: THREE.AnimationAction | null
-  /** Counts down while the one-shot `hurtAction` should keep pre-empting
+  private readonly anim: AgentAnimationSet<NpcAnimClip>
+  /** Counts down while the one-shot `hurt` clip should keep pre-empting
    *  `syncAnimation()`'s normal idle/walk/interact crossfade (plan npc-009) —
    *  `0` outside a hurt reaction. Set from `takeDamage()`, decremented in
    *  `update()` alongside the other cooldown-style timers. */
   private hurtAnimTimer = 0
-  /** `simClock` at which the one-shot `deathAction` finishes playing (plan
+  /** `simClock` at which the one-shot `death` clip finishes playing (plan
    *  npc-009) — bounds how long a dead NPC's `update()` keeps ticking its own
-   *  mixer (see the `health.dead` branch there) instead of forever. `null`
-   *  when there is no `deathAction` to play (fallback tip-pose, no mixer
-   *  ticking needed). */
+   *  `anim` mixer (see the `health.dead` branch there) instead of forever.
+   *  `null` when there is no `death` clip to play (fallback tip-pose, no
+   *  mixer ticking needed). */
   private deathAnimSettleAtSimClock: number | null = null
   private readonly needMarker: THREE.Mesh
+  /** Guards the marker's `setHex` writes (review §8 step 7c) — `null` never
+   *  matches a real `NeedId`, so the first frame always writes once. */
+  private lastNeedMarkerNeed: NeedId | null = null
   private phase: Phase = 'choose'
   private activeNeed: NeedId = 'idle'
   /** Pressures generated for the last `choose()` arbitration (plan ai-001)
@@ -941,16 +948,14 @@ export class NpcAgent {
   private criticalInterruptCooldown = 0
   private readonly tmp = new THREE.Vector3()
   private readonly tmpAvoid = new THREE.Vector3()
-  private readonly labelEl: HTMLDivElement
-  private readonly labelNameEl: HTMLDivElement
-  private readonly labelBarsEl: HTMLDivElement
-  private readonly hpFillEl: HTMLDivElement
-  private readonly staminaFillEl: HTMLDivElement
-  private readonly vigorFillEl: HTMLDivElement
-  private labelDistanceState: LabelDistanceState = INITIAL_LABEL_DISTANCE_STATE
-  /** Debug-only diagnostic line (`?debug=1`) — phase/action/stamina/rescue
-   *  state, per the movement-resilience plan's instrumentation requirement. */
-  private readonly debugEl: HTMLDivElement
+  /** Presentation controller (review 2026-09-03 §5 E6) — name/bars/debug-
+   *  line/distance-fade state that used to be 13 separate fields
+   *  (`labelEl`/`labelNameEl`/`labelBarsEl`/`hpFillEl`/`staminaFillEl`/
+   *  `vigorFillEl`/`debugEl`/`lastLabelText`/`lastHpPercent`/
+   *  `lastStaminaPercent`/`lastVigorPercent`/`lastDebugText`/
+   *  `labelDistanceState`). `ui/agentStatusLabel.ts` owns the guarded-write
+   *  presentation logic; this only ever drives it. */
+  private readonly labelController: AgentStatusLabelController
   /** Why the NPC is currently in `goSleep`/`sleep`. `null` when awake. */
   private sleepReason: SleepReason | null = null
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
@@ -1050,13 +1055,6 @@ export class NpcAgent {
    *  etc. below) so `helperAssignment` reads/writes go straight to the one
    *  object every reconstruction of this npc id shares, no second copy. */
   private readonly npcState: NpcAuthoritativeState
-  /** Last text/opacity/bar widths written to the label DOM — writes invalidate
-   *  CSS2D label layout, so skip them when nothing changed. */
-  private lastLabelText = ''
-  private lastHpPercent = -1
-  private lastStaminaPercent = -1
-  private lastVigorPercent = -1
-  private lastDebugText = ''
 
   private constructor(
     root: THREE.Object3D,
@@ -1159,47 +1157,37 @@ export class NpcAgent {
     this.mesh.position.copy(home.position)
     this.mesh.position.y = sampleHeight(home.position.x, home.position.z)
 
-    this.mixer = new THREE.AnimationMixer(root)
-    this.idleAction = this.findAction(animations, ['Idle', 'Idle_Neutral'])
-    this.walkAction = this.findAction(animations, ['Walk', 'Run'])
-    this.interactAction = this.findAction(animations, ['Interact', 'Wave'])
+    this.anim = createAgentAnimationSet<NpcAnimClip>(root, animations)
     // Quaternius Modular Men/Women (`NPC_MODEL_URLS`) export `Sword_Slash`/
-    // `Gun_Shoot`/`HitRecieve`/`Death` today; `findAction`'s name-list already
+    // `Gun_Shoot`/`HitRecieve`/`Death` today; `resolve()`'s name-list already
     // falls back to `null` for any future pool entry without them.
-    this.attackMeleeAction = this.findAction(animations, ['Sword_Slash'])
-    this.attackRangedAction = this.findAction(animations, ['Gun_Shoot', 'Idle_Gun_Shoot'])
-    this.hurtAction = this.findAction(animations, ['HitRecieve', 'HitRecieve_2'])
-    this.deathAction = this.findAction(animations, ['Death'])
-    this.idleAction?.play()
+    this.anim.resolve({
+      idle: ['Idle', 'Idle_Neutral'],
+      walk: ['Walk', 'Run'],
+      interact: ['Interact', 'Wave'],
+      attackMelee: ['Sword_Slash'],
+      attackRanged: ['Gun_Shoot', 'Idle_Gun_Shoot'],
+      hurt: ['HitRecieve', 'HitRecieve_2'],
+      death: ['Death'],
+    })
+    this.anim.playImmediate('idle')
 
-    const markerGeo = new THREE.SphereGeometry(0.12, 8, 8)
     const markerMat = new THREE.MeshStandardMaterial({
       color: needColor('idle'),
       emissive: needColor('idle'),
       emissiveIntensity: 0.45,
       flatShading: true,
     })
-    this.needMarker = new THREE.Mesh(markerGeo, markerMat)
+    this.needMarker = new THREE.Mesh(NEED_MARKER_GEOMETRY, markerMat)
     this.needMarker.position.set(0, NPC_HEIGHT + 0.25, 0)
     this.mesh.add(this.needMarker)
 
-    this.lastLabelText = this.displayName
-    const hpBar = createLabelBar('hp')
-    const staminaBar = createLabelBar('stamina')
-    const vigorBar = createLabelBar('vigor')
-    this.hpFillEl = hpBar.fill
-    this.staminaFillEl = staminaBar.fill
-    this.vigorFillEl = vigorBar.fill
-    const labelDom = createAgentLabel(this.displayName, [hpBar, staminaBar, vigorBar], NPC_HEIGHT + 0.55)
-    this.labelEl = labelDom.el
-    this.labelNameEl = labelDom.nameEl
-    this.labelBarsEl = labelDom.barsEl
-    this.label = labelDom.label
-
-    this.debugEl = document.createElement('div')
-    this.debugEl.className = 'npc-label__debug'
-    this.debugEl.style.display = 'none'
-    this.labelEl.append(this.debugEl)
+    this.labelController = createAgentStatusLabelController(
+      this.displayName,
+      ['hp', 'stamina', 'vigor'],
+      NPC_HEIGHT + 0.55,
+    )
+    this.label = this.labelController.label
 
     this.mesh.add(this.label)
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
@@ -1603,7 +1591,7 @@ export class NpcAgent {
   setHighlighted(active: boolean): void {
     if (this.highlighted === active) return
     this.highlighted = active
-    this.labelEl.classList.toggle('npc-label--highlighted', active)
+    this.labelController.el.classList.toggle('npc-label--highlighted', active)
   }
 
   /**
@@ -1625,7 +1613,7 @@ export class NpcAgent {
       // Hurt presentation lives on the seam right after real damage is
       // resolved (plan npc-009) — never from attack intent/defense alone, so
       // a blocked/missed attack never triggers a flinch.
-      this.hurtAnimTimer = this.playCombatOneShot(this.hurtAction)
+      this.hurtAnimTimer = this.anim.playOnce('hurt')
     }
   }
 
@@ -1714,10 +1702,10 @@ export class NpcAgent {
           ? 'hurt'
           : this.phase === 'combat' && !this.isCombatCycleIdle() ? 'attack' : null,
         dead: this.health.dead,
-        hasAttackMeleeClip: this.attackMeleeAction != null,
-        hasAttackRangedClip: this.attackRangedAction != null,
-        hasHurtClip: this.hurtAction != null,
-        hasDeathClip: this.deathAction != null,
+        hasAttackMeleeClip: this.anim.has('attackMelee'),
+        hasAttackRangedClip: this.anim.has('attackRanged'),
+        hasHurtClip: this.anim.has('hurt'),
+        hasDeathClip: this.anim.has('death'),
       },
     }
   }
@@ -1852,7 +1840,7 @@ export class NpcAgent {
       if (this.stamina.current >= weapon.melee.staminaCost) {
         drainStamina(this.stamina, weapon.melee.staminaCost)
         this.combatAttack.start(weapon.melee)
-        this.playCombatOneShot(this.attackMeleeAction)
+        this.anim.playOnce('attackMelee')
       } else if (isNpcCombatDebugMode() && this.simClock - this.lastStaminaSkipLogSec > 1) {
         this.lastStaminaSkipLogSec = this.simClock
         console.log(
@@ -1931,7 +1919,7 @@ export class NpcAgent {
           attackKey: `ranged:${ammoKind}`,
           attempt: this.combatAttackAttempt,
         }
-        this.playCombatOneShot(this.attackRangedAction)
+        this.anim.playOnce('attackRanged')
         playActionBowRelease(this.playAt, this.mesh.position)
       }
     }
@@ -2122,37 +2110,25 @@ export class NpcAgent {
     this.combatRangedAttack.reset()
     this.combatProjectile = null
     if (this.actionLifecycle.status === 'active') failActionLifecycle(this.actionLifecycle)
-    if (this.deathAction && alreadySettled) {
+    if (this.anim.has('death') && alreadySettled) {
       // Reconstructed from already-dead state — jump straight to the clip's
       // settled end pose with no fade/blend against whatever the fresh-alive
       // constructor path already started playing (plan npc-009 hydration
-      // case), rather than `playCombatOneShot()`'s normal fade-in (which
-      // would briefly blend a live idle pose with a near-zero-weight death
-      // pose at `dt=0`).
-      for (const action of [
-        this.idleAction, this.walkAction, this.interactAction,
-        this.attackMeleeAction, this.attackRangedAction, this.hurtAction,
-      ]) action?.stop()
-      this.deathAction.reset()
-      this.deathAction.setLoop(THREE.LoopOnce, 1)
-      this.deathAction.clampWhenFinished = true
-      this.deathAction.setEffectiveWeight(1)
-      this.deathAction.play()
-      this.deathAction.time = this.deathAction.getClip().duration
-      this.mixer.update(0)
+      // case), rather than `playOnce()`'s normal fade-in (which would
+      // briefly blend a live idle pose with a near-zero-weight death pose
+      // at `dt=0`).
+      this.anim.settleAtEnd('death')
       this.deathAnimSettleAtSimClock = null
-    } else if (this.deathAction) {
+    } else if (this.anim.has('death')) {
       // Real death clip — let it actually play instead of the manual tip
       // fallback below (plan npc-009). `update()`'s `health.dead` branch
       // keeps ticking the mixer only until `deathAnimSettleAtSimClock`.
-      this.deathAnimSettleAtSimClock = this.simClock + this.playCombatOneShot(this.deathAction)
+      this.deathAnimSettleAtSimClock = this.simClock + this.anim.playOnce('death')
     } else {
-      this.mixer.stopAllAction()
+      this.anim.stopAll()
       this.mesh.rotation.z = Math.PI / 2
     }
-    this.lastHpPercent = 0
-    this.hpFillEl.style.width = '0%'
-    this.labelBarsEl.style.display = 'none'
+    this.labelController.settleAtZeroHp()
     this.trace.record({ simTime: this.simClock, type: 'combat.died' })
   }
 
@@ -2199,7 +2175,7 @@ export class NpcAgent {
       // (manual tip fallback, no mixer work needed) so a permanently dead NPC
       // never costs a per-frame mixer update for the rest of the session.
       if (this.deathAnimSettleAtSimClock != null && this.simClock < this.deathAnimSettleAtSimClock) {
-        this.mixer.update(dt)
+        this.anim.update(dt)
       }
       return
     }
@@ -2571,49 +2547,36 @@ export class NpcAgent {
       this.mesh.position.z,
     )
     this.syncAnimation()
-    ;(this.needMarker.material as THREE.MeshStandardMaterial).color.setHex(
-      needColor(this.activeNeed),
-    )
-    ;(this.needMarker.material as THREE.MeshStandardMaterial).emissive.setHex(
-      needColor(this.activeNeed),
-    )
-    const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
-    const labelText = `${this.displayName}${questSuffix}`
-    if (labelText !== this.lastLabelText) {
-      this.lastLabelText = labelText
-      this.labelNameEl.textContent = labelText
+    // Guarded the same way the label text write beside it is (review 2026-
+    // 09-03 §5 E6 / §8 step 7c) — `activeNeed` only actually changes on a
+    // `choose()` tick, not every frame.
+    if (this.activeNeed !== this.lastNeedMarkerNeed) {
+      this.lastNeedMarkerNeed = this.activeNeed
+      const color = needColor(this.activeNeed)
+      const material = this.needMarker.material as THREE.MeshStandardMaterial
+      material.color.setHex(color)
+      material.emissive.setHex(color)
     }
-    this.lastHpPercent = applyBarPercent(
-      this.hpFillEl,
-      computeBarPercent(this.health.currentHp, this.health.maxHp),
-      this.lastHpPercent,
-    )
-    this.lastStaminaPercent = applyBarPercent(
-      this.staminaFillEl,
-      computeBarPercent(this.stamina.current, this.stamina.max),
-      this.lastStaminaPercent,
-    )
-    this.lastVigorPercent = applyBarPercent(
-      this.vigorFillEl,
-      computeBarPercent(this.vigor.current, this.vigor.max),
-      this.lastVigorPercent,
-    )
+    const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
+    this.labelController.setName(`${this.displayName}${questSuffix}`)
     this.updateDebugLabel()
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
       this.mesh.position.z - observerPos.z,
       observerYaw,
     )
-    this.labelDistanceState = updateAgentLabelDistanceState(
-      this.labelEl,
-      this.labelBarsEl,
+    this.labelController.sync(
+      {
+        hp: { current: this.health.currentHp, max: this.health.maxHp },
+        stamina: { current: this.stamina.current, max: this.stamina.max },
+        vigor: { current: this.vigor.current, max: this.vigor.max },
+      },
       this.mesh,
       this.mesh.position.distanceTo(observerPos),
       NPC_SHADOW_DISTANCE,
-      this.labelDistanceState,
       gaze,
     )
-    this.mixer.update(dt)
+    this.anim.update(dt)
   }
 
   /** Replays a `timeSkip.ts` "rest"/"wait" period in `TIME_SKIP_SAMPLE_HOURS`
@@ -2701,21 +2664,9 @@ export class NpcAgent {
 
   dispose(): void {
     this.leaveActiveQueue()
-    this.label.removeFromParent()
-    this.labelEl.remove()
-    this.mixer.stopAllAction()
+    this.labelController.dispose()
+    this.anim.stopAll()
     disposeObject3D(this.mesh)
-  }
-
-  private findAction(
-    animations: THREE.AnimationClip[],
-    names: string[],
-  ): THREE.AnimationAction | null {
-    for (const name of names) {
-      const clip = animations.find((c) => c.name === name)
-      if (clip) return this.mixer.clipAction(clip)
-    }
-    return null
   }
 
   private syncAnimation(): void {
@@ -2729,36 +2680,13 @@ export class NpcAgent {
     if (this.phase === 'combat' && !this.isCombatCycleIdle()) return
     // Busy actions (drink / eat / talk) must not keep Walk — prioritize
     // Interact over locomotion even if `moving` somehow stayed true.
-    if (this.isBusyPhase() && this.interactAction) {
-      this.crossfade(this.interactAction)
-    } else if (this.moving && this.walkAction) {
-      this.crossfade(this.walkAction)
-    } else if (this.idleAction) {
-      this.crossfade(this.idleAction)
+    if (this.isBusyPhase() && this.anim.has('interact')) {
+      this.anim.play('interact')
+    } else if (this.moving && this.anim.has('walk')) {
+      this.anim.play('walk')
+    } else if (this.anim.has('idle')) {
+      this.anim.play('idle')
     }
-  }
-
-  /** Plays a one-shot combat/death clip (attack/hurt/death — plan npc-009):
-   *  clamps on its last frame instead of looping, and fades out every other
-   *  known action the same way `crossfade()` does, so it's safe to call from
-   *  a combat tick or `takeDamage()`/`die()` without fighting the normal
-   *  idle/walk/interact cycle. `null` is a safe no-op (missing clip — see the
-   *  action fields' own doc comment). Returns the clip's duration (`0` for a
-   *  no-op) so a caller that needs to gate `syncAnimation()` for the clip's
-   *  length (`hurtAnimTimer`) can do so without a second clip lookup. */
-  private playCombatOneShot(action: THREE.AnimationAction | null): number {
-    if (!action) return 0
-    action.reset()
-    action.setLoop(THREE.LoopOnce, 1)
-    action.clampWhenFinished = true
-    for (const other of [
-      this.idleAction, this.walkAction, this.interactAction,
-      this.attackMeleeAction, this.attackRangedAction, this.hurtAction, this.deathAction,
-    ]) {
-      if (other && other !== action) other.fadeOut(0.15)
-    }
-    action.setEffectiveWeight(1).fadeIn(0.1).play()
-    return action.getClip().duration
   }
 
   /** Impact-or-death sound at the exact moment an attack of this NPC's own
@@ -2788,10 +2716,9 @@ export class NpcAgent {
    *  Hidden (and left unwritten) outside debug mode. */
   private updateDebugLabel(): void {
     if (!isDebugMode()) {
-      if (this.debugEl.style.display !== 'none') this.debugEl.style.display = 'none'
+      this.labelController.setDebugLine(null)
       return
     }
-    if (this.debugEl.style.display === 'none') this.debugEl.style.display = ''
     const dest = this.pendingAction?.destination
     const distText = dest
       ? Math.hypot(dest.x - this.mesh.position.x, dest.z - this.mesh.position.z).toFixed(1)
@@ -2812,21 +2739,7 @@ export class NpcAgent {
       : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
       + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}`
-    if (text !== this.lastDebugText) {
-      this.lastDebugText = text
-      this.debugEl.textContent = text
-    }
-  }
-
-  private crossfade(next: THREE.AnimationAction): void {
-    if (next.isRunning() && next.getEffectiveWeight() > 0.9) return
-    next.reset().fadeIn(0.2).play()
-    for (const action of [
-      this.idleAction, this.walkAction, this.interactAction,
-      this.attackMeleeAction, this.attackRangedAction, this.hurtAction, this.deathAction,
-    ]) {
-      if (action && action !== next) action.fadeOut(0.2)
-    }
+    this.labelController.setDebugLine(text)
   }
 
   /** Kicks off a `goTo` → `execute` step — the generic replacement for the

@@ -100,6 +100,117 @@ export const INITIAL_LABEL_DISTANCE_STATE: LabelDistanceState = {
   opacity: -1,
 }
 
+/**
+ * Full label controller (review 2026-09-03 §5 E6) — the constructor-time
+ * wiring + per-frame `sync()` guard logic both `NpcAgent` and `AnimalAgent`
+ * hand-roll today, collapsed into one object. Owns name text, an arbitrary
+ * set of percent-fill bars, the distance-based visibility/opacity rules
+ * above, and (optionally) a debug line — everything below `createAgentLabel`
+ * in the shared shape. A caller with presentation state beyond this (e.g.
+ * `NpcAgent`'s highlight glow) still reaches `el`/`label` directly.
+ */
+export type AgentStatusLabelController = {
+  label: CSS2DObject
+  el: HTMLDivElement
+  /** Guarded against the last-written text — a no-op DOM write when
+   *  unchanged, same as every other field here. */
+  setName: (text: string) => void
+  /** `null` hides the debug line (and skips the text guard/write); a string
+   *  shows it, guarded against the last-written text. Callers own deciding
+   *  *when* a debug line applies (e.g. `isDebugMode()`) — this only ever
+   *  renders what it's given. */
+  setDebugLine: (text: string | null) => void
+  /** One frame's worth of presentation updates — bar percents (only the
+   *  kinds passed are touched; a controller built with fewer bar kinds than
+   *  `bars` here simply ignores the extras), then the shared distance/
+   *  opacity/shadow rule. `gazeFactor` defaults to `1` (fauna's case; NPCs
+   *  pass their own gaze-highlight factor). */
+  sync: (
+    bars: Partial<Record<LabelBarKind, { current: number, max: number }>>,
+    mesh: THREE.Object3D,
+    distance: number,
+    shadowDistance: number,
+    gazeFactor?: number,
+  ) => void
+  /** Resets the bars-hidden/hp-zeroed presentation a death/despawn wants
+   *  (mirrors `NpcAgent`'s pre-202 die() label reset) — `hp` alone, since
+   *  that's the only bar every caller zeroes on death. */
+  settleAtZeroHp: () => void
+  dispose: () => void
+}
+
+/** Builds the full label (`createAgentLabel` + one `createLabelBar` per
+ *  requested kind) and wraps it with the guarded `setName`/`setDebugLine`/
+ *  `sync` behavior above. `bars` order is display order, matching
+ *  `createAgentLabel`'s existing contract. */
+export function createAgentStatusLabelController(
+  name: string,
+  bars: readonly LabelBarKind[],
+  height: number,
+): AgentStatusLabelController {
+  const builtBars = bars.map((kind) => ({ kind, ...createLabelBar(kind) }))
+  const labelDom = createAgentLabel(name, builtBars, height)
+  const fillByKind = new Map<LabelBarKind, HTMLDivElement>(builtBars.map((b) => [b.kind, b.fill]))
+  const lastPercentByKind = new Map<LabelBarKind, number>(builtBars.map((b) => [b.kind, -1]))
+
+  const debugEl = document.createElement('div')
+  debugEl.className = 'npc-label__debug'
+  debugEl.style.display = 'none'
+  labelDom.el.append(debugEl)
+
+  let lastName = name
+  let lastDebugText = ''
+  let distanceState = INITIAL_LABEL_DISTANCE_STATE
+
+  return {
+    label: labelDom.label,
+    el: labelDom.el,
+    setName: (text) => {
+      if (text === lastName) return
+      lastName = text
+      labelDom.nameEl.textContent = text
+    },
+    setDebugLine: (text) => {
+      if (text === null) {
+        if (debugEl.style.display !== 'none') debugEl.style.display = 'none'
+        return
+      }
+      if (debugEl.style.display === 'none') debugEl.style.display = ''
+      if (text !== lastDebugText) {
+        lastDebugText = text
+        debugEl.textContent = text
+      }
+    },
+    sync: (barValues, mesh, distance, shadowDistance, gazeFactor = 1) => {
+      for (const [kind, fill] of fillByKind) {
+        const value = barValues[kind]
+        if (!value) continue
+        const percent = computeBarPercent(value.current, value.max)
+        lastPercentByKind.set(kind, applyBarPercent(fill, percent, lastPercentByKind.get(kind) ?? -1))
+      }
+      distanceState = updateAgentLabelDistanceState(
+        labelDom.el,
+        labelDom.barsEl,
+        mesh,
+        distance,
+        shadowDistance,
+        distanceState,
+        gazeFactor,
+      )
+    },
+    settleAtZeroHp: () => {
+      lastPercentByKind.set('hp', 0)
+      const hpFill = fillByKind.get('hp')
+      if (hpFill) hpFill.style.width = '0%'
+      labelDom.barsEl.style.display = 'none'
+    },
+    dispose: () => {
+      labelDom.label.removeFromParent()
+      labelDom.el.remove()
+    },
+  }
+}
+
 /** Applies the shared distance-based presentation rules (bars hidden past
  *  `labelDistance.ts`'s fade-near radius, mesh shadow-casting gated by
  *  `shadowDistance`, name/bars opacity fading to 0 by the fade-far radius —
