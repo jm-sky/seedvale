@@ -11,11 +11,12 @@
 
 ## Problem
 
-Three user-visible failures point at the same missing lifecycle guarantees around persistence and world identity:
+Four user-visible failures point at the same missing lifecycle guarantees around persistence and world identity:
 
 1. save slots can disappear during an active game;
-2. state from the previous world can survive `New Game` — observed as an old navigation target/marker remaining after switching to a new seed where that location does not exist;
-3. an explicit `?seed=1234` cannot currently be used to start a new deterministic world because the start flow either loads the selected save's seed or replaces the URL seed with `randomSeed()`.
+2. unreadable/corrupted saves can remain in IndexedDB while disappearing from the normal save list, leaving the player unable to inspect their status or delete them without DevTools;
+3. state from the previous world can survive `New Game` — observed as an old navigation target/marker remaining after switching to a new seed where that location does not exist;
+4. an explicit `?seed=1234` cannot currently be used to start a new deterministic world because the start flow either loads the selected save's seed or replaces the URL seed with `randomSeed()`.
 
 The current integrity guard from `persistence-002` protects an existing slot that is already unreadable, but it does not establish that the newly assembled `SaveData` is valid before replacing a previously valid record. `listSaves()` also filters unreadable records out of the normal slot list, so a record that becomes invalid can appear to have vanished even when the IndexedDB row still exists.
 
@@ -29,6 +30,7 @@ After this plan:
 
 - invalid outgoing snapshots never replace the last valid save;
 - storage/read failures are not presented as "there are no saves";
+- unreadable/corrupted save rows remain visible to the player as unhealthy slots and can be explicitly deleted without DevTools;
 - manual save failures are visible to the player and autosave failures are diagnosable;
 - `New Game` starts from clean world-scoped/player-world state rather than inheriting state from the previous world;
 - seed ownership follows one explicit rule for load, new game and URL-driven deterministic starts;
@@ -110,7 +112,33 @@ Do not blank the active-save UI merely because refreshing save metadata failed.
 
 Keep unreadable rows preserved unless the player explicitly deletes them or a separately designed recovery/migration path safely replaces them.
 
-## 5. Surface save failures according to intent
+## 5. Keep unreadable saves visible and manageable in UI
+
+Unreadable rows must not become invisible orphan records that require DevTools to manage.
+
+Extend the save-list/read boundary so the UI can represent both healthy and unhealthy stored rows. An unhealthy entry should expose only safe metadata that can be recovered without pretending the payload is valid, for example:
+
+- slot id;
+- stored/display name when the envelope still allows it to be recovered safely;
+- persisted schema version when detectable;
+- save timestamp/seed only when they can be read without accepting invalid `SaveData` as valid;
+- explicit status such as `invalid`, `migration-failed` or `unsupported-version`.
+
+If metadata cannot be recovered, the row should still be visible as an identifiable damaged save rather than disappearing entirely.
+
+The UI must:
+
+- visually distinguish healthy saves from unreadable/corrupted saves;
+- prevent Load for a slot that cannot be safely loaded;
+- allow the player to explicitly delete that stored row through the normal save-management UI;
+- require the same deliberate confirmation expected for destructive save deletion;
+- never auto-delete, auto-repair or overwrite the unreadable row merely because it is displayed.
+
+Deletion should reuse the existing IndexedDB slot deletion mechanism. Do not create a separate cleanup store or hidden corruption registry.
+
+This is management/diagnostic UI, not save recovery. The plan does not require parsing arbitrary damaged payload contents or reconstructing lost gameplay state.
+
+## 6. Surface save failures according to intent
 
 `saveNow()` currently allows write failures to be effectively diagnostic-only.
 
@@ -122,7 +150,7 @@ Separate caller intent where necessary:
 
 Reuse existing toast/pause-menu feedback mechanisms rather than adding a persistence-specific notification framework.
 
-## 6. Define an explicit world-transition contract
+## 7. Define an explicit world-transition contract
 
 Treat changing from one world identity to another as a deliberate lifecycle boundary.
 
@@ -146,7 +174,7 @@ The transition should be reason-aware enough to distinguish:
 - genuine `New Game` / different world identity;
 - loading an existing save.
 
-## 7. Fix navigation-target leakage across New Game
+## 8. Fix navigation-target leakage across New Game
 
 The observed regression is:
 
@@ -164,7 +192,7 @@ Trace why the current `New Game` path can still display the previous target afte
 
 Do not solve this only by hiding an unresolved marker. World B must genuinely have zero inherited navigation targets unless restored from its own save.
 
-## 8. Establish seed-source precedence
+## 9. Establish seed-source precedence
 
 Define one explicit policy for determining world seed:
 
@@ -195,7 +223,7 @@ Generate `randomSeed()` as today, then synchronize that selected seed into the U
 
 Do not confuse the parser's fallback value with an explicitly supplied URL seed; the lifecycle must know whether the user actually provided `seed`.
 
-## 9. Seed and save identity remain separate concepts
+## 10. Seed and save identity remain separate concepts
 
 A seed identifies deterministic world generation input, not a save slot.
 
@@ -205,7 +233,7 @@ Do not use the seed as a save ID and do not infer that matching seeds mean the s
 
 When loading a save, persisted world history remains authoritative even if the URL previously described another seed.
 
-## 10. Save-operation ordering
+## 11. Save-operation ordering
 
 Audit concurrent write entrypoints:
 
@@ -220,7 +248,7 @@ Guarantee that overlapping writes cannot let an older or invalid snapshot win af
 
 Prefer the smallest existing-compatible serialization/coalescing mechanism if ordering is currently unsafe. Do not move persistence to a worker merely for this plan.
 
-## 11. Diagnostics
+## 12. Diagnostics
 
 Add bounded development diagnostics for at least:
 
@@ -236,7 +264,7 @@ Diagnostics should answer:
 
 Do not dump complete inventory, NPC state, relationships or other potentially large save contents.
 
-## 12. Verification
+## 13. Verification
 
 Add focused automated regression coverage for persistence and lifecycle behavior.
 
@@ -250,10 +278,15 @@ Add focused automated regression coverage for persistence and lifecycle behavior
 
 Use an invalid field already rejected by the current runtime validator rather than adding a test-only validation rule.
 
-### Read/list semantics
+### Read/list semantics and unhealthy slots
 
 - IndexedDB list failure is distinguishable from a valid empty database;
 - unreadable slot remains preserved;
+- unreadable slot is represented in the save-management result with an explicit unhealthy status;
+- metadata is exposed only when safely recoverable;
+- unhealthy slot cannot be loaded;
+- explicit deletion removes the unreadable row without requiring successful SaveData parsing;
+- deleting one unreadable row does not affect healthy slots;
 - active-save metadata is not silently cleared because of a transient read failure.
 
 ### New Game isolation
@@ -286,6 +319,9 @@ If multiple save requests can overlap, add a regression test proving the chosen 
 - Invalid Save As data cannot create a slot that immediately disappears from the save list.
 - The previous valid slot remains loadable after a rejected manual/autosave attempt.
 - Read/list failures are not represented as an ordinary empty save database.
+- Unreadable/corrupted rows remain visible in save management with an explicit status instead of disappearing.
+- The player can explicitly delete an unreadable save from normal UI without DevTools or successful payload parsing.
+- Unreadable saves are never automatically deleted, repaired or overwritten.
 - Manual save failure is visible to the player; autosave failure is safely diagnosable without destructive fallback.
 - The concrete invalid-snapshot producer is fixed when reproducible, or sufficient bounded diagnostics remain to identify it on the next reproduction.
 - `New Game` does not inherit navigation targets or other audited world-scoped state from the previous world.
@@ -298,7 +334,8 @@ If multiple save requests can overlap, add a regression test proving the chosen 
 
 ## Non-goals
 
-- Save export/import or recovery UI.
+- Save export/import or automatic save recovery/repair.
+- Parsing or exposing arbitrary corrupted SaveData contents.
 - Cloud saves.
 - Multiplayer persistence.
 - Restoring pre-hard-cut historical save formats.
