@@ -18,9 +18,13 @@ To nie jest błąd hydrologii. River network poprawnie może kończyć ciek w pr
 
 Problem leży w semantyce debugowego wyboru lokalizacji: obecny kod uznaje każdy `RiverChain.points[]` za równoważny kandydat i wybiera najbliższy punkt z pierwszego tile/ringu, w którym istnieje rzeka. Nie ma kryterium mówiącego, że teleport testowy powinien trafić na reprezentatywny, lądowy odcinek rzeki z dala od ujścia lub zalanego fragmentu.
 
+Dodatkowo obecne API nie daje wygodnego sposobu przechodzenia między różnymi rzekami podczas manualnego testowania.
+
 ## Cel
 
 Sprawić, aby debugowy lookup rzeki zwracał punkt przydatny do manualnego testowania rzek: rzeczywisty odcinek cieku na lądzie, a nie punkt w jeziorze/morzu albo bezpośrednio przy ujściu.
+
+Dodać wygodny, deterministyczny sposób przechodzenia do kolejnych różnych rzek bez ręcznego manipulowania pozycją gracza.
 
 Nie zmieniać generacji, topologii ani hydrologii rzek.
 
@@ -50,27 +54,63 @@ Jeżeli pierwszy tile zawiera wyłącznie niekwalifikujące się punkty przy zbi
 
 Nie zmieniać ogólnego kontraktu `searchNearest()` dla pozostałych location queries, jeśli problem można rozwiązać przez lepszy `probe` w `riverNearest()`.
 
-### 3. Przygotować API pod testowanie wielu rzek
+### 3. Wyszukiwanie wielu różnych rzek
 
-Nie rozbudowywać jeszcze publicznego API o pełną listę rzek, ale wydzielić selekcję kandydata tak, aby kolejny mały krok mógł dodać np. `riversNearby()` / wybór następnej rzeki bez kopiowania logiki kwalifikacji.
+Dodać mały, bounded mechanizm zwracający kilka kwalifikujących się kandydatów reprezentujących **różne rzeki**, a nie kilka punktów tego samego cieku.
 
-Nie dodawać teraz indeksu trwałych rzek ani globalnego registry.
+Preferowane API:
 
-### 4. Teleport bez zmian ownership
+```ts
+debug.locations.riversNearby()
+```
+
+Wyniki powinny:
+
+- używać tej samej logiki kwalifikacji punktu co `riverNearest()`;
+- być deterministycznie uporządkowane;
+- mieć ograniczony koszt i zasięg;
+- deduplikować fragmenty tego samego cieku przecinające wiele river tiles;
+- nie tworzyć trwałego globalnego registry rzek.
+
+Sposób identyfikacji „tej samej rzeki” ma bazować na istniejącej topologii/ciągłości chainów lub lekkim deterministycznym kluczu wyprowadzonym z aktualnych danych. Nie wprowadzać równoległego modelu hydrologii tylko na potrzeby debug API.
+
+### 4. `teleportTo.nextRiver()`
+
+Rozszerzyć `TeleportToDebugApi` o:
+
+```ts
+await debug.teleportTo.nextRiver()
+```
+
+Semantyka:
+
+- pierwsze wywołanie wybiera pierwszą kwalifikującą się rzekę z deterministycznej listy;
+- kolejne wywołania przechodzą do następnej **różnej rzeki**;
+- po końcu listy następuje deterministyczne zawinięcie do początku;
+- stan kursora należy wyłącznie do warstwy debugowej i nie może wpływać na symulację świata;
+- po rebuildzie świata lub zmianie seed/config cursor musi zostać bezpiecznie zresetowany albo ponownie związany z aktualną listą;
+- teleport nadal korzysta z tego samego wąskiego callbacku i mechanizmu ładowania chunków co istniejące `teleportTo.*`.
+
+Nie duplikować wyszukiwania w teleport API — `nextRiver()` ma korzystać ze wspólnej logiki candidate/list selection.
+
+### 5. Teleport bez zmian ownership
 
 `debug.teleportTo.riverNearest()` ma nadal delegować do `debug.locations.riverNearest()` i istniejącego callbacku teleportu.
 
-Nie dodawać osobnej logiki wyboru punktu do teleport API.
+Nie dodawać osobnej logiki wyboru punktu do teleport API poza lekkim debugowym cursorem wymaganym przez `nextRiver()`.
 
 ## Testy
 
-Rozszerzyć `src/debug/locationQueries.test.ts` o przypadki:
+Rozszerzyć `src/debug/locationQueries.test.ts` oraz testy debug API o przypadki:
 
 - chain zawiera punkt przy/poniżej `waterLevel` oraz poprawny punkt lądowy — wybierany jest lądowy;
 - tile zawiera wyłącznie punkty niekwalifikujące się — search przechodzi dalej;
 - preferowany jest punkt wewnętrzny chaina zamiast terminala, jeżeli oba są poprawne;
 - wynik pozostaje deterministyczny;
-- `null`, gdy w całym bounded search nie ma kwalifikującego odcinka.
+- `null`, gdy w całym bounded search nie ma kwalifikującego odcinka;
+- `riversNearby()` nie zwraca wielu fragmentów tej samej rzeki jako osobnych kandydatów;
+- `nextRiver()` przechodzi po różnych rzekach w stabilnej kolejności i zawija do początku;
+- cursor `nextRiver()` nie przecieka do symulacji i zachowuje się poprawnie po rebuildzie/world change.
 
 Utrzymać istniejące testy debug API i teleport delegation.
 
@@ -82,10 +122,18 @@ W przeglądarce z `?debug=1` sprawdzić wielokrotnie z różnych pozycji:
 
 ```ts
 seedvale.debug.locations.riverNearest()
+seedvale.debug.locations.riversNearby()
 await seedvale.debug.teleportTo.riverNearest()
+await seedvale.debug.teleportTo.nextRiver()
+await seedvale.debug.teleportTo.nextRiver()
+await seedvale.debug.teleportTo.nextRiver()
 ```
 
-Zweryfikować, że teleport prowadzi do czytelnego odcinka rzeki na lądzie, a nie do jeziora/morza ani bezpośrednio do ujścia.
+Zweryfikować, że:
+
+- teleport prowadzi do czytelnego odcinka rzeki na lądzie, a nie do jeziora/morza ani bezpośrednio do ujścia;
+- kolejne `nextRiver()` faktycznie prowadzą do różnych rzek, a nie kolejnych fragmentów tego samego cieku;
+- kolejność jest stabilna dla tego samego świata.
 
 Manualna weryfikacja należy do gracza.
 
@@ -97,11 +145,12 @@ Manualna weryfikacja należy do gracza.
 - renderowanie rzek;
 - poprawki channel carving;
 - nowe globalne registry lokalizacji;
-- pełne API do listowania wszystkich rzek.
+- trwałe ID wszystkich rzek w świecie;
+- nieograniczone listowanie wszystkich rzek proceduralnego świata.
 
 ## Kryterium sukcesu
 
-`debug.teleportTo.riverNearest()` jest wiarygodnym narzędziem do manualnego testowania rzek: wybiera deterministyczny, reprezentatywny odcinek rzeki na lądzie w ograniczonym obszarze wyszukiwania, bez wpływania na właściwą symulację lub hydrologię świata.
+`debug.teleportTo.riverNearest()` jest wiarygodnym narzędziem do manualnego testowania rzek, a `debug.teleportTo.nextRiver()` pozwala szybko przechodzić między różnymi, reprezentatywnymi rzekami w deterministycznym, bounded search bez wpływania na właściwą symulację lub hydrologię świata.
 
 Przy implementacji dodać/utrzymać JSDoc przy publicznych lub architektonicznie istotnych helperach selekcji; użyć `@domain ui-input` tam, gdzie pomaga to preflightowi.
 
