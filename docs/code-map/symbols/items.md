@@ -188,9 +188,9 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemModels.ts`
 
-- `cloneItemGlb` — function — line 134
+- `cloneItemGlb` — function — line 145
 - `ITEM_GLB_SPECS` — const — line 15
-- `preloadItemGlbModels` — function — line 109
+- `preloadItemGlbModels` — function — line 120
 
 ## `items/items.ts`
 

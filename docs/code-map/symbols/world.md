@@ -727,63 +727,63 @@ Generated from exported TypeScript symbols.
 
 ## `world/treeLifecycle.ts`
 
-- `advanceStage` — function — line 409
-- `bonusYieldForChopStage` — function — line 210
-- `BRANCH_REGENERATION_DAYS` — const — line 165
-- `BRANCH_YIELD_BY_SIZE` — const — line 170
-- `BranchHarvestResult` — type — line 176
-- `canopyGrowthFactor` — function — line 390
-- `canReachOld` — function — line 195
-- `CHOP_SCALE_MULT` — const — line 129
-- `CHOP_YIELDS` — const — line 143
-- `clamp01` — function — line 260
-- `coastalFactor` — function — line 348
-- `createTreeLifecycle` — function — line 547
-- `envGrowthFactor` — function — line 358
-- `FELLING_BEAM_YIELD` — const — line 160
-- `HARVEST_YIELD` — const — line 151
-- `HarvestYield` — type — line 138
-- `HEIGHT_RANGE_M` — const — line 91
-- `isCanopyStage` — function — line 191
-- `isChoppableStage` — function — line 187
-- `lerp` — function — line 264
-- `livingHeightM` — function — line 274
-- `makeTreeId` — function — line 536
-- `OLD_SPAWN_CHANCE` — const — line 116
-- `parseTreeOverrides` — function — line 903
-- `PINE_SPECIES_INDICES` — const — line 126
-- `quantizeTreeCoord` — function — line 528
-- `ResolvedTreeState` — type — line 251
-- `rollLivingAge` — function — line 321
-- `rollSizeClass` — function — line 310
-- `SIZE_CLASS_T` — const — line 99
-- `SIZE_CLASS_WEIGHTS` — const — line 106
-- `SIZE_JITTER_HALF` — const — line 113
-- `sizeT` — function — line 269
-- `speciesPrefs` — function — line 336
-- `STAGE_DURATION_DAYS` — const — line 81
-- `templateHeightM` — function — line 283
-- `TREE_SPECIES_PREFS` — const — line 227
-- `TREE_TEMPLATE_HEIGHT_M` — const — line 122
-- `TreeEnvSample` — type — line 47
+- `advanceStage` — function — line 416
+- `bonusYieldForChopStage` — function — line 217
+- `BRANCH_REGENERATION_DAYS` — const — line 172
+- `BRANCH_YIELD_BY_SIZE` — const — line 177
+- `BranchHarvestResult` — type — line 183
+- `canopyGrowthFactor` — function — line 397
+- `canReachOld` — function — line 202
+- `CHOP_SCALE_MULT` — const — line 136
+- `CHOP_YIELDS` — const — line 150
+- `clamp01` — function — line 267
+- `coastalFactor` — function — line 355
+- `createTreeLifecycle` — function — line 558
+- `envGrowthFactor` — function — line 365
+- `FELLING_BEAM_YIELD` — const — line 167
+- `HARVEST_YIELD` — const — line 158
+- `HarvestYield` — type — line 145
+- `HEIGHT_RANGE_M` — const — line 98
+- `isCanopyStage` — function — line 198
+- `isChoppableStage` — function — line 194
+- `lerp` — function — line 271
+- `livingHeightM` — function — line 281
+- `makeTreeId` — function — line 547
+- `OLD_SPAWN_CHANCE` — const — line 123
+- `parseTreeOverrides` — function — line 964
+- `PINE_SPECIES_INDICES` — const — line 133
+- `quantizeTreeCoord` — function — line 539
+- `ResolvedTreeState` — type — line 258
+- `rollLivingAge` — function — line 328
+- `rollSizeClass` — function — line 317
+- `SIZE_CLASS_T` — const — line 106
+- `SIZE_CLASS_WEIGHTS` — const — line 113
+- `SIZE_JITTER_HALF` — const — line 120
+- `sizeT` — function — line 276
+- `speciesPrefs` — function — line 343
+- `STAGE_DURATION_DAYS` — const — line 88
+- `templateHeightM` — function — line 290
+- `TREE_SPECIES_PREFS` — const — line 234
+- `TREE_TEMPLATE_HEIGHT_M` — const — line 129
+- `TreeEnvSample` — type — line 54
 - `TreeGrowthStage` — type — line 14
   - domain: world-terrain
   - system: tree-lifecycle
   - role: Owns tree growth stage progression and multi-stage chop state.
   - simulation: tick
   - lifecycle: growth
-- `TreeHarvestStepResult` — type — line 452
+- `TreeHarvestStepResult` — type — line 459
 - `TreeId` — type — line 32
-- `TreeLifecycle` — type — line 456
+- `TreeLifecycle` — type — line 463
 - `TreeLivingAge` — type — line 24
-- `TreePresence` — type — line 239
+- `TreePresence` — type — line 246
 - `TreeSizeClass` — type — line 27
-- `TreeSpeciesPrefs` — type — line 67
+- `TreeSpeciesPrefs` — type — line 74
 - `TreeStateOverride` — type — line 36
-- `treeVisualKind` — function — line 214
+- `treeVisualKind` — function — line 221
 - `TreeVisualKind` — type — line 30
-- `visualScaleForTree` — function — line 291
-- `yieldForChopStage` — function — line 199
+- `visualScaleForTree` — function — line 298
+- `yieldForChopStage` — function — line 206
 
 ## `world/treeVisuals.ts`
 

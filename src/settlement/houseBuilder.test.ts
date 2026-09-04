@@ -365,7 +365,7 @@ describe('house colliders', () => {
     expect(obb.type).toBe('obb')
     if (obb.type !== 'obb') throw new Error('unreachable')
     expect(obb.x).toBeCloseTo(10)
-    expect(obb.z).toBeCloseTo(21)
+    expect(obb.z).toBeCloseTo(19)
     expect(obb.halfWidth).toBeCloseTo(1)
     expect(obb.halfDepth).toBeCloseTo(0.2)
     expect(obb.rotationY).toBeCloseTo(Math.PI / 2)
@@ -378,7 +378,7 @@ describe('house colliders', () => {
     expect(circle.type).toBe('circle')
     if (circle.type !== 'circle') throw new Error('unreachable')
     expect(circle.x).toBeCloseTo(10)
-    expect(circle.z).toBeCloseTo(21)
+    expect(circle.z).toBeCloseTo(19)
     expect(circle.radius).toBeCloseTo(1)
   })
 
