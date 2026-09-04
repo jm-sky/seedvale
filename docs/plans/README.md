@@ -59,7 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`    | -       | 🟡 | M      | -      |
 | 💡 `fauna-011-domestic-dogs-and-household-guarding.md`                      | -       | 🟡 | M      | fauna-010 |
-| ◼️ `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
+| 💡 `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
 | ◼️ `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 
 ---
