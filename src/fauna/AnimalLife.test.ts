@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import {
   ANIMAL_STAMINA_MAX,
+  type AnimalMetabolismConfig,
   consumeFood,
   createAnimalLifeState,
+  DEFAULT_ANIMAL_METABOLISM,
   drinkWater,
   FOOD_RELIEF,
   NEED_ELEVATED_THRESHOLD,
@@ -110,5 +112,43 @@ describe('AnimalLife', () => {
     drinkWater(life)
     expect(life.hunger).toBeLessThan(NEED_ELEVATED_THRESHOLD - 0.1)
     expect(life.thirst).toBeLessThan(NEED_ELEVATED_THRESHOLD - 0.1)
+  })
+})
+
+describe('per-species metabolism (plan fauna-010 §1)', () => {
+  const rabbitMetabolism: AnimalMetabolismConfig = {
+    hungerRate: 0.06,
+    thirstRate: 0.06,
+    staminaCapacity: 0.6,
+    staminaDrainRate: 0.3,
+    staminaRegenRate: 0.1,
+  }
+
+  it('createAnimalLifeState uses the species stamina capacity as max', () => {
+    const life = createAnimalLifeState(0, rabbitMetabolism)
+    expect(life.stamina.max).toBe(rabbitMetabolism.staminaCapacity)
+    expect(life.stamina.current).toBe(rabbitMetabolism.staminaCapacity)
+  })
+
+  it('falls back to DEFAULT_ANIMAL_METABOLISM when no config is passed', () => {
+    const life = createAnimalLifeState(0)
+    expect(life.stamina.max).toBe(DEFAULT_ANIMAL_METABOLISM.staminaCapacity)
+  })
+
+  it('tickAnimalLife uses the species hunger/thirst rate, not the shared default', () => {
+    const fast = createAnimalLifeState(0, rabbitMetabolism)
+    const slow = createAnimalLifeState(0)
+    fast.hunger = 0
+    slow.hunger = 0
+    tickAnimalLife(fast, 10, false, {}, rabbitMetabolism)
+    tickAnimalLife(slow, 10, false, {}, DEFAULT_ANIMAL_METABOLISM)
+    expect(fast.hunger).toBeGreaterThan(slow.hunger)
+  })
+
+  it('tickAnimalLife drains/regens stamina against the species capacity, not a shared 0–1 scale', () => {
+    const life = createAnimalLifeState(0, rabbitMetabolism)
+    tickAnimalLife(life, 1, true, {}, rabbitMetabolism)
+    expect(life.stamina.current).toBeLessThan(rabbitMetabolism.staminaCapacity)
+    expect(life.stamina.current).toBeGreaterThanOrEqual(0)
   })
 })

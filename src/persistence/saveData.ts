@@ -525,6 +525,13 @@ export type SaveData = {
    *  save must not be recreated by deterministic spawning on load. Optional,
    *  same contract as `npcStates`. */
   removedLivestockIds?: string[]
+  /** Sparse grass forage patch depletion overrides (plan fauna-010 §3/§4) —
+   *  `patchId -> availableAtDays`, see `world/grassForage.ts`'s
+   *  `GrassForageOverrides`. Patch *placement* is deterministic and never
+   *  persisted, only which ids are currently depleted. Optional, same
+   *  sparse/fallback contract as `npcStates`/`households` above — an absent
+   *  save restores every patch as available. */
+  grassForagePatches?: Record<string, number>
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -1327,6 +1334,8 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.npcRelationships !== undefined && !isNpcRelationshipsField(v.npcRelationships)) return false
   if (v.livestock !== undefined && !isLivestockField(v.livestock)) return false
   if (v.removedLivestockIds !== undefined && !isRemovedLivestockIdsField(v.removedLivestockIds)) return false
+  // Same sparse "object of numbers" shape as `resourceDeposits` above.
+  if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
   return true
 }
 

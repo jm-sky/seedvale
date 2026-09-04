@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Inventory } from '../items/Inventory'
 import {
   ANIMAL_DEFS,
   carcassCandidateScore,
@@ -6,6 +7,7 @@ import {
   forageEdgeScore,
   isCarcassEdible,
   nearestShoreProbePoint,
+  selectDietFeedKind,
   shoreProbeHits,
 } from './AnimalAgent'
 
@@ -206,5 +208,68 @@ describe('carcassCandidateScore (plan fauna-005)', () => {
   it('a positive riskPenalty lowers the score without changing the ranking rule', () => {
     const base = carcassCandidateScore(0.4, 3)
     expect(carcassCandidateScore(0.4, 3, 5)).toBeLessThan(base)
+  })
+})
+
+describe('ANIMAL_DEFS herbivore diet/metabolism (plan fauna-010)', () => {
+  const herbivores = ['horse', 'donkey', 'cow', 'sheep', 'deer', 'stag', 'rabbit'] as const
+
+  it('every planned herbivore has a diet with grass and household-feed items', () => {
+    for (const kind of herbivores) {
+      const diet = ANIMAL_DEFS[kind].diet
+      expect(diet).toBeDefined()
+      expect(diet!.grass).toBeGreaterThan(0)
+      expect(diet!.items?.hay).toBeGreaterThan(0)
+    }
+  })
+
+  it('predators and out-of-scope prey have no diet (unchanged abstract forage)', () => {
+    expect(ANIMAL_DEFS.wolf.diet).toBeUndefined()
+    expect(ANIMAL_DEFS.fox.diet).toBeUndefined()
+    expect(ANIMAL_DEFS.bear.diet).toBeUndefined()
+    expect(ANIMAL_DEFS.duck.diet).toBeUndefined()
+    expect(ANIMAL_DEFS.boar.diet).toBeUndefined()
+  })
+
+  it('every species declares a metabolism block', () => {
+    for (const kind of Object.keys(ANIMAL_DEFS) as (keyof typeof ANIMAL_DEFS)[]) {
+      const metabolism = ANIMAL_DEFS[kind].metabolism
+      expect(metabolism.hungerRate).toBeGreaterThan(0)
+      expect(metabolism.thirstRate).toBeGreaterThan(0)
+      expect(metabolism.staminaCapacity).toBeGreaterThan(0)
+      expect(metabolism.staminaDrainRate).toBeGreaterThan(0)
+      expect(metabolism.staminaRegenRate).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('selectDietFeedKind (plan fauna-010 §3/§7)', () => {
+  const dietItems = { hay: 0.9, apple: 0.6, carrot: 0.5 }
+
+  it('returns null when the household holds none of the diet items', () => {
+    const items = new Inventory({}, Infinity)
+    expect(selectDietFeedKind(items, dietItems)).toBeNull()
+  })
+
+  it('picks the first diet-item kind (declaration order) actually present', () => {
+    const items = new Inventory({}, Infinity)
+    items.add('carrot', 1)
+    items.add('apple', 1)
+    // `hay` is first in `dietItems` but absent — `apple` is the first
+    // present kind in declaration order.
+    expect(selectDietFeedKind(items, dietItems)).toBe('apple')
+  })
+
+  it('prefers hay when it is present, matching dietItems declaration order', () => {
+    const items = new Inventory({}, Infinity)
+    items.add('hay', 1)
+    items.add('apple', 1)
+    expect(selectDietFeedKind(items, dietItems)).toBe('hay')
+  })
+
+  it('ignores an item kind not present in the household even if diet-eligible', () => {
+    const items = new Inventory({}, Infinity)
+    items.add('bread', 5)
+    expect(selectDietFeedKind(items, dietItems)).toBeNull()
   })
 })

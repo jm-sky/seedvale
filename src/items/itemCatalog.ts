@@ -1061,6 +1061,15 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan world-004 — Kupiec stock. Ordinary carried item, not a `HeldTool`/capability: simply carrying at least one lets a deep player-built well be drawn from (drink/fill), never consumed. See `world/wellGroundwater.ts`\'s `DEEP_WELL_DEPTH_THRESHOLD`.',
   },
+  hay: {
+    kind: 'hay',
+    label: 'siano',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan fauna-010 — livestock feed, not human food/`HeldTool`. Trickles into a household\'s `items` from a temporary lazy hay source (`settlement/household.ts`\'s `resolveHayForage`); an `AnimalDef.diet` decides which herbivore species may eat it.',
+  },
 }
 
 /** Flat per-arrow-kind damage delta applied on top of the bow's own

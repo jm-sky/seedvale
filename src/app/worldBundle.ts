@@ -19,6 +19,7 @@ import type { CropPlacement } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { DryingRackRecord } from '../world/dryingRacks'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
+import type { GrassForageOverrides } from '../world/grassForage'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { PalisadeSegmentRecord } from '../world/palisade'
 import type { PlantedTreeRecord } from '../world/plantedTrees'
@@ -58,6 +59,7 @@ import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '
 import { type Beehives, createBeehives } from '../world/createBeehives'
 import { type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
+import { createGrassForagePatches, type GrassForageService } from '../world/createGrassForagePatches'
 import { createOcean, type WorldOcean } from '../world/createOcean'
 import { createPalisades, type Palisades } from '../world/createPalisades'
 import {
@@ -139,6 +141,9 @@ export type WorldBundle = {
   dryingRacks: DryingRacks
   hives: Beehives
   workContracts: WorkContracts
+  /** Plan fauna-010 §3/§4 — world-owned deterministic grass forage patches,
+   *  shared by wild herbivores (`fauna`) and settlement livestock alike. */
+  grassForage: GrassForageService
 }
 
 function buildChunkManager(
@@ -262,6 +267,9 @@ function buildSettlementsManager(
   workContracts?: WorkContracts,
   playerWells?: PlayerWells,
   droppedItems?: DroppedItems,
+  /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
+   *  forwarded into `createSettlementsManager`. */
+  grassForage?: GrassForageService,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -300,6 +308,7 @@ function buildSettlementsManager(
     workContracts,
     playerWells,
     droppedItems,
+    grassForage,
   )
 }
 
@@ -321,6 +330,9 @@ function buildFauna(
   /** Saved spawn-point lifecycle (plan 125 persistence follow-up) — see
    *  `createFauna`'s `initialSpawnerState` doc. */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
+  /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
+   *  forwarded unchanged into `createFauna`. */
+  grassForage?: GrassForageService,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -369,6 +381,7 @@ function buildFauna(
     },
     onAnimalDeath,
     initialSpawnerState,
+    grassForage,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -475,6 +488,12 @@ type WorldSystemsSeed = {
    *  world starts with no traces); only `rebuildWorldBundle` snapshots and
    *  forwards it. */
   bloodTraces?: readonly BloodTrace[]
+  /** Sparse grass forage patch depletion overrides (plan fauna-010 §3/§4) —
+   *  mutated in place by the constructed `GrassForageService`, same
+   *  "caller-owned, mutated in place, carried across rebuild" contract as
+   *  `resourceDepletion` above (patch *placement* is never persisted, only
+   *  which ids are currently depleted — see `world/grassForage.ts`). */
+  grassForageOverrides: GrassForageOverrides
 }
 
 /** Inert stand-ins for the `WorldBundle` members deferred off the critical
@@ -589,6 +608,7 @@ async function buildWorldSystems(
     removedLivestockIds: initialRemovedLivestockIds,
     spawnerState: initialSpawnerState,
     resourceDepletion,
+    grassForageOverrides,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: initialBloodTraces,
@@ -635,6 +655,24 @@ async function buildWorldSystems(
   bootMark('buildOcean')
   const ocean = buildOcean(scene, config, waterMirror)
   bootMarkEnd('buildOcean')
+
+  // World-owned, not settlement-scoped (plan fauna-010 §3/§4) — built once
+  // here, ahead of both `buildFauna` (wild herbivores) and
+  // `buildSettlementsManager` (livestock), and forwarded unchanged into
+  // both so a deer near one settlement and a cow at another read the same
+  // deterministic patch grid. `isOpenGround` gates deterministic placement
+  // by terrain only (openness), never dynamic colliders — see
+  // `grassPatchCandidatesNear`'s doc.
+  bootMark('createGrassForagePatches')
+  const grassForage = createGrassForagePatches(
+    scene,
+    worldContext.sampleHeight,
+    worldContext.waterLevel,
+    config.seed,
+    (x, z) => worldContext.sampleForestFactor(x, z) < 0.5,
+    grassForageOverrides,
+  )
+  bootMarkEnd('createGrassForagePatches')
 
   bootMark('buildResourceDeposits')
   const resourceDeposits = buildResourceDeposits(scene, worldContext, config.seed, resourceDepletion)
@@ -712,7 +750,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
 
@@ -786,6 +824,7 @@ async function buildWorldSystems(
     dryingRacks: createEmptyDryingRacks(),
     hives: createEmptyBeehives(),
     workContracts,
+    grassForage,
   }
 
   // Deferred: fauna (§4), item preloads (§5), item spawners/drying racks/
@@ -804,7 +843,7 @@ async function buildWorldSystems(
         (async () => {
           bootMark('background:buildFauna')
           try {
-            return await buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState)
+            return await buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState, grassForage)
           } finally {
             bootMarkEnd('background:buildFauna')
           }
@@ -986,6 +1025,11 @@ export async function createWorldBundle(
   initialNpcRelationships?: readonly NpcRelationshipEntry[],
   initialLivestock?: readonly LivestockSaveRecord[],
   initialRemovedLivestockIds?: readonly string[],
+  /** Plan fauna-010 §3/§4 — sparse grass forage depletion overrides, same
+   *  "long-lived object owned by `createApp.ts`, mutated in place, threaded
+   *  through both `createWorldBundle` and `rebuildWorldBundle`" contract as
+   *  `resourceDepletion` above. */
+  grassForageOverrides: GrassForageOverrides = {},
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1014,6 +1058,7 @@ export async function createWorldBundle(
     removedLivestockIds: initialRemovedLivestockIds,
     spawnerState: initialSpawnerState,
     resourceDepletion,
+    grassForageOverrides,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
   }, isStale)
@@ -1077,6 +1122,10 @@ export async function rebuildWorldBundle(
    *  dangling background result left over from a rebuild the way there can
    *  be from the initial `createWorldBundle`. */
   isStale?: () => boolean,
+  /** Same contract as `createWorldBundle`'s own `grassForageOverrides`
+   *  (plan fauna-010 §3/§4) — the same long-lived object `createApp.ts`
+   *  owns and threads through both. */
+  grassForageOverrides: GrassForageOverrides = {},
 ): Promise<void> {
   // Snapshot before dispose() — a same-session rebuild (config change, not a
   // new seed) recreates `Fauna` from scratch just like every other bundle
@@ -1153,6 +1202,7 @@ export async function rebuildWorldBundle(
   const carriedLivestock = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotLivestock()
   bundle.caves.dispose()
   bundle.resourceDeposits.dispose()
+  bundle.grassForage.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()
   bundle.chunkManager.dispose()
@@ -1194,6 +1244,7 @@ export async function rebuildWorldBundle(
     removedLivestockIds: carriedLivestock?.removedIds,
     spawnerState: carriedSpawnerState,
     resourceDepletion,
+    grassForageOverrides,
     onAnimalDeath, getPlayerSocial, isLandPlotOwned, onTrapCapture, onTrapBaitReturned,
     pointLightBudget, getNearbyPlayerWell,
     bloodTraces: carriedBloodTraces,
@@ -1230,6 +1281,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.hives.dispose()
   bundle.workContracts.dispose()
   bundle.resourceDeposits.dispose()
+  bundle.grassForage.dispose()
   bundle.settlementsManager.dispose()
   bundle.ocean.dispose()
   bundle.chunkManager.dispose()

@@ -209,6 +209,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     bedrolls: bundle.sleepingUtilities.bedrolls.nodes().map((b) => ({ ...b })),
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
+    grassForagePatches: bundle.grassForage.serialize(),
     workContracts: bundle.workContracts.nodes().map((c) => ({ ...c, target: { ...c.target } })),
       npcStates: bundle.settlementsManager.snapshotNpcStates(),
       households: bundle.settlementsManager.snapshotHouseholds(),

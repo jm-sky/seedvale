@@ -14,6 +14,7 @@ import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
+import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
@@ -290,6 +291,10 @@ export type CreateSettlementDeps = {
    *  (plan npc-015 §9's material-provisioning analogue), forwarded the same
    *  way as `workContracts`/`playerWells`. */
   droppedItems?: DroppedItems
+  /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
+   *  forwarded into `tickSettlementLivestock` the same way as `hunting`/
+   *  `foodSources` above. */
+  grassForage?: GrassForageService
 }
 
 export async function createSettlement(
@@ -325,6 +330,7 @@ export async function createSettlement(
     workContracts,
     playerWells,
     droppedItems,
+    grassForage,
   } = deps
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
@@ -701,6 +707,7 @@ export async function createSettlement(
         dropLivestockProduct,
         onAnimalVocalize,
         persistence: livestockPersistence,
+        grassForage,
       })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived

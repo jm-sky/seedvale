@@ -12,6 +12,7 @@ import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Collider } from '../world/collision'
+import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
@@ -248,6 +249,12 @@ export async function createSettlementsManager(
   /** World-dropped items — forwarded the same way, for NPC construction
    *  material discovery (plan npc-015 §9's analogue). */
   droppedItems?: DroppedItems,
+  /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
+   *  forwarded into every `createSettlement` call the same way `mining`/
+   *  `foodSources` are above. Built ahead of `SettlementsManager` (world-
+   *  global, not derived from any settlement), so passed directly rather
+   *  than late-bound like `hunting`. */
+  grassForage?: GrassForageService,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -343,6 +350,7 @@ export async function createSettlementsManager(
     workContracts,
     playerWells,
     droppedItems,
+    grassForage,
   }
 
   const entries = new Map<string, Entry>()

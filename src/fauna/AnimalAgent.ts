@@ -1,6 +1,9 @@
 import * as THREE from 'three'
+import type { Inventory } from '../items/Inventory'
+import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
+import type { GrassForageService } from '../world/createGrassForagePatches'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -43,9 +46,11 @@ import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import { type AnimalDebugVisual, createAnimalDebugVisual } from './animalDebugVisual'
 import {
   type AnimalLifeState,
+  type AnimalMetabolismConfig,
   BIAS_STRENGTH,
   consumeFood,
   createAnimalLifeState,
+  DEFAULT_ANIMAL_METABOLISM,
   drinkWater,
   NEED_ELEVATED_THRESHOLD,
   SLEEP_HUNGER_THIRST_RATE,
@@ -484,7 +489,7 @@ export type AnimalSaveState = {
 /** A real-world food/water destination an animal is pursuing (plan 094) —
  *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
  *  claim on cancel/completion. */
-type SourceTargetKind = 'water' | 'forage' | 'carcass'
+type SourceTargetKind = 'water' | 'forage' | 'carcass' | 'feed' | 'grassPatch'
 type SourceTarget = {
   kind: SourceTargetKind
   x: number
@@ -501,6 +506,16 @@ type SourceTarget = {
   corpsePhase?: CorpsePhase
   foodValue?: number
   score?: number
+  /** Set only for `kind: 'feed'` (plan fauna-010 §7) — the diet-eligible
+   *  `ItemKind` selected from the owning household's `items` at search time.
+   *  `performSourceAction` re-checks/removes this exact kind on completion,
+   *  never a re-derived one, so a completed eat always matches what was
+   *  actually offered. */
+  feedItemKind?: ItemKind
+  /** Set only for `kind: 'grassPatch'` (plan fauna-010 §3/§4) — the stable
+   *  `GrassForagePatch` id this target resolves through `grassForage` for
+   *  live availability checks and final atomic consumption. */
+  patchId?: string
 }
 
 /** One trough visit's draw against the household water reserve — same order
@@ -549,6 +564,23 @@ export function nearestShoreProbePoint(
  *  unit-testable without instantiating `AnimalAgent`/Three.js. */
 export function forageEdgeScore(forestFactor: number): number {
   return Math.max(0, 1 - Math.abs(forestFactor - 0.45) * 2)
+}
+
+/** First `dietItems` kind actually present in `items` (plan fauna-010 §3/§7)
+ *  — declaration order of the species' own `AnimalDietConfig.items` object,
+ *  the same "small literal, stable insertion order" convention diet configs
+ *  are authored with (not `FOOD_ITEM_KINDS`' catalog order, since diet items
+ *  are per-species and deliberately short). Deterministic: the same
+ *  household contents always select the same kind. `null` when the
+ *  household holds none of this species' diet items. */
+export function selectDietFeedKind(
+  items: Inventory,
+  dietItems: Partial<Record<ItemKind, number>>,
+): ItemKind | null {
+  for (const kind of Object.keys(dietItems) as ItemKind[]) {
+    if (items.has(kind, 1)) return kind
+  }
+  return null
 }
 
 /** Whether a corpse can feed this eater (plan 094). `consumed` is set once
@@ -746,6 +778,33 @@ export type AnimalDef = {
    *  once hungry enough — see `carcassFoodValue()`. Absent for every
    *  `AnimalKind` but wolf initially. */
   scavenging?: ScavengingConfig
+  /** Basic physiology (plan fauna-010 §1) — hunger/thirst rates and stamina
+   *  capacity/drain/regen for this species. `AnimalLife.ts` owns the
+   *  runtime `hunger`/`thirst`/`stamina` state and its create/tick
+   *  operations; this is only the per-species input to them. Required so
+   *  every species is explicit, but every kind currently uses
+   *  `DEFAULT_ANIMAL_METABOLISM` unless noted otherwise. */
+  metabolism: AnimalMetabolismConfig
+  /** Presence of this field IS the herbivore-diet capability (plan
+   *  fauna-010 §2) — same "no separate boolean, no per-species branch" shape
+   *  as `mount`/`production`/`scavenging` above. Absent for every
+   *  predator/omnivore kind out of this plan's scope (wolf/fox/bear/duck/
+   *  boar); `findFoodTarget()` falls back to the old abstract forage spot
+   *  for those. Does not change the existing predator → prey/carcass path. */
+  diet?: AnimalDietConfig
+}
+
+/** Declarative per-species diet (plan fauna-010 §2/§3) — answers both "is
+ *  this source/item edible for this species" and "what relief scale should
+ *  `consumeFood()` receive", read by `findDietTarget()`/`performSourceAction()`
+ *  instead of deriving herbivore diet from `AnimalRole`. `grass` gates and
+ *  scales a `GrassForagePatch` (`world/grassForage.ts`); `items` gates and
+ *  scales a household-feed item (plan fauna-010 §7) — both relief scales are
+ *  relative to `FOOD_RELIEF`'s full-meal baseline of 1, same convention as
+ *  `ScavengingConfig`'s values. */
+export type AnimalDietConfig = {
+  grass?: number
+  items?: Partial<Record<ItemKind, number>>
 }
 
 /** Per-species scavenging preference (plan fauna-005) — the single config
@@ -793,6 +852,17 @@ export type LivestockProductionConfig = {
   intervalDays: number
 }
 
+/** Shared diet shape for this plan's herbivore scope (plan fauna-010 §2) —
+ *  horse/donkey/cow/sheep/deer/stag/rabbit. Grass forage is a full meal
+ *  (relief 1, same as the old abstract forage baseline); hay/fruit/
+ *  vegetable are real but slightly lower-quality household feed, so a
+ *  well-stocked household still reads as better than foraging without
+ *  making forage pointless. */
+const HERBIVORE_DIET: AnimalDietConfig = {
+  grass: 1,
+  items: { hay: 0.9, apple: 0.6, carrot: 0.5 },
+}
+
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   wolf: {
     kind: 'wolf',
@@ -811,6 +881,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // species — rotting is a meaningful but clearly worse fallback, bones a
     // low-priority last resort.
     scavenging: { rottingValue: 0.4, bonesValue: 0.15 },
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
   fox: {
     kind: 'fox',
@@ -825,6 +896,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 0,
     playerNoticeRange: 9,
     playerPanicRange: 3,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
   deer: {
     kind: 'deer',
@@ -839,6 +911,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 14,
     playerNoticeRange: 18,
     playerPanicRange: 4,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   stag: {
     kind: 'stag',
@@ -853,6 +927,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 15,
     playerNoticeRange: 16,
     playerPanicRange: 4,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   rabbit: {
     kind: 'rabbit',
@@ -867,6 +943,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 11,
     playerNoticeRange: 14,
     playerPanicRange: 3,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   duck: {
     kind: 'duck',
@@ -881,6 +959,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 9,
     playerNoticeRange: 12,
     playerPanicRange: 3,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
   boar: {
     kind: 'boar',
@@ -895,6 +974,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 12,
     playerNoticeRange: 13,
     playerPanicRange: 4,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
   bear: {
     kind: 'bear',
@@ -909,6 +989,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 0,
     playerNoticeRange: 13,
     playerPanicRange: 5,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
   horse: {
     kind: 'horse',
@@ -933,6 +1014,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
       walkSpeed: 10.5,
       sprintSpeed: 17.5,
     },
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   donkey: {
     kind: 'donkey',
@@ -955,6 +1038,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
       walkSpeed: 9.0,
       sprintSpeed: 15.5,
     },
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   cow: {
     kind: 'cow',
@@ -970,6 +1055,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 0,
     playerPanicRange: 0,
     production: { product: 'milk', amount: 5, intervalDays: 0.5 },
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   sheep: {
     kind: 'sheep',
@@ -985,6 +1072,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 0,
     playerPanicRange: 0,
     production: { product: 'milk', amount: 2, intervalDays: 0.35 },
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: HERBIVORE_DIET,
   },
   chicken: {
     kind: 'chicken',
@@ -1000,6 +1089,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 0,
     playerPanicRange: 0,
     production: { product: 'egg', amount: 1, intervalDays: 1 },
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
   // Plan fauna-009 §2: a distinct AnimalKind for crow vocalization/presence,
   // reusing the chicken's stats — no `production` block (rooster doesn't
@@ -1017,6 +1107,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     fleeRange: 10,
     playerNoticeRange: 0,
     playerPanicRange: 0,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
 }
 
@@ -1412,6 +1503,15 @@ export class AnimalAgent {
    *  threading it through `wander()`'s call sites (same technique as
    *  `currentVillages` above, plan 118). */
   private currentOthers: AnimalAgent[] = []
+  /** This frame's `nowDays`/`grassForage`, cached the same way as
+   *  `currentOthers` above (plan fauna-010) — `findDietTarget`/
+   *  `isSourceTargetValid`/`performSourceAction` need both, but threading
+   *  them as extra params through the whole `pursueNeeds` call chain would
+   *  duplicate what `update()` already receives. `tickGrassForage` is
+   *  `undefined` for any caller that doesn't pass one (tests, a species with
+   *  no `def.diet`), in which case grass-patch selection is simply skipped. */
+  private tickNowDays = 0
+  private tickGrassForage: GrassForageService | undefined
   /** Spontaneous ambient vocalization timer (plan settlements-npcs-004 §1) —
    *  seeded per-instance in the constructor, ticked in `update()` via
    *  `tickSpontaneousVocalizeCooldown`. `Infinity` (and never fires) for any
@@ -1454,7 +1554,7 @@ export class AnimalAgent {
     this.home.set(x, 0, z)
     this.wanderRadius = wanderRadius
     this.health = createHealthState(MAX_HP[def.kind])
-    this.life = createAnimalLifeState(Math.random())
+    this.life = createAnimalLifeState(Math.random(), def.metabolism)
     this.spontaneousVocalizeCooldownSec = initialSpontaneousVocalizeCooldownSec(def.kind)
 
     if (visual) {
@@ -1677,7 +1777,7 @@ export class AnimalAgent {
 
     this.snapY()
     this.updateAnim()
-    tickAnimalLife(this.life, dt, this.sprinting)
+    tickAnimalLife(this.life, dt, this.sprinting, {}, this.def.metabolism)
 
     this.lastHpPercent = applyBarPercent(
       this.hpFillEl,
@@ -1884,7 +1984,12 @@ export class AnimalAgent {
       z: this.mesh.position.z,
       yaw: this.mesh.rotation.y,
       health: { current: this.health.currentHp, max: this.health.maxHp, dead: this.health.dead },
-      life: { hunger: this.life.hunger, thirst: this.life.thirst, stamina: this.life.stamina.current },
+      // Persisted as a ratio, not the raw scalar (plan fauna-010 §2) — species
+      // now have different `staminaCapacity`, so the raw current value alone
+      // can't round-trip correctly across a species whose capacity changed
+      // between save and load. Every pre-existing save's max was exactly 1,
+      // so its stored value already *was* this ratio — see `hydrate()`.
+      life: { hunger: this.life.hunger, thirst: this.life.thirst, stamina: getStaminaRatio(this.life.stamina) },
       productionReadyAtDays: this.productionReadyAtDays,
       eggPending: this.eggPending,
       corpse: this.health.dead ? { timeSinceDeath: this.timeSinceDeath, meatHarvested: this.meatHarvested } : null,
@@ -1912,7 +2017,9 @@ export class AnimalAgent {
     this.health.dead = state.health.dead
     this.life.hunger = state.life.hunger
     this.life.thirst = state.life.thirst
-    this.life.stamina.current = state.life.stamina
+    // `state.life.stamina` is a ratio (see `snapshot()`'s doc) — scale by
+    // this individual's own species capacity, not assign as a raw scalar.
+    this.life.stamina.current = state.life.stamina * this.life.stamina.max
     this.productionReadyAtDays = state.productionReadyAtDays
     this.eggPending = state.eggPending
     if (state.corpse) {
@@ -1958,7 +2065,7 @@ export class AnimalAgent {
       if (!this.corpseHeld) this.timeSinceDeath += elapsedSeconds
       return
     }
-    tickAnimalLife(this.life, elapsedSeconds, false)
+    tickAnimalLife(this.life, elapsedSeconds, false, {}, this.def.metabolism)
   }
 
   /** Player shovel-bury: mark corpse for disposal on the next fauna/settlement
@@ -2323,6 +2430,13 @@ export class AnimalAgent {
      *  so existing wild-fauna/test callers that don't pass it keep prior
      *  behaviour for every kind without time-of-day weighting. */
     timeOfDay = 0.5,
+    /** Shared world-owned forage service (plan fauna-010 §3/§4) — queried by
+     *  `findDietTarget()` for a species with `def.diet.grass`, consumed
+     *  atomically on a completed eat action. `undefined` for any caller that
+     *  doesn't wire one (tests, a species without `def.diet`); grass-patch
+     *  selection is then simply skipped, same "capability absent → branch
+     *  never taken" convention as `def.diet` itself. */
+    grassForage?: GrassForageService,
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) {
@@ -2388,6 +2502,8 @@ export class AnimalAgent {
     const debugPrevZ = this.mesh.position.z
     this.currentVillages = villages
     this.currentOthers = others
+    this.tickNowDays = nowDays
+    this.tickGrassForage = grassForage
     this.tickMaturity(dt)
     this.tickProduction(nowDays)
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
@@ -2603,7 +2719,7 @@ export class AnimalAgent {
     this.updateAnim()
     tickAnimalLife(this.life, dt, this.sprinting, {
       hungerThirstRate: this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
-    })
+    }, this.def.metabolism)
     this.lastHpPercent = applyBarPercent(
       this.hpFillEl,
       computeBarPercent(this.health.currentHp, this.health.maxHp),
@@ -3249,7 +3365,56 @@ export class AnimalAgent {
   }
 
   private findFoodTarget(others: readonly AnimalAgent[]): SourceTarget | null {
-    return this.def.role === 'predator' ? this.findCarcassTarget(others) : this.findForageTarget()
+    return this.def.role === 'predator' ? this.findCarcassTarget(others) : this.findDietTarget()
+  }
+
+  /** Diet-aware herbivore food search (plan fauna-010 §2/§3/§4/§7) — replaces
+   *  the old abstract "any suitable terrain point" forage for every species
+   *  with `def.diet`: prefers an eligible item already sitting in the owning
+   *  household's `items` (mirrors `findTroughTarget`'s "prefer local stored
+   *  resource" hierarchy), then falls back to a real `GrassForagePatch`.
+   *  A species without `def.diet` (out of this plan's scope — duck/boar) or
+   *  with no `grassForage` service wired in keeps the old abstract
+   *  `findForageTarget()` behaviour unchanged. */
+  private findDietTarget(): SourceTarget | null {
+    const diet = this.def.diet
+    if (!diet) return this.findForageTarget()
+    if (this.household && diet.items) {
+      // Lazy hay top-up (plan fauna-010 §6) — resolved right before reading
+      // eligibility, not on a schedule; see `Household.resolveHayForage`'s doc.
+      this.household.resolveHayForage(this.tickNowDays)
+      const feedItemKind = selectDietFeedKind(this.household.items, diet.items)
+      if (feedItemKind) return { kind: 'feed', x: this.home.x, z: this.home.z, feedItemKind }
+    }
+    if (diet.grass != null && this.tickGrassForage) {
+      return this.findGrassPatchTarget(this.tickGrassForage)
+    }
+    return null
+  }
+
+  /** Best-scoring reachable `GrassForagePatch` within `FOOD_SEARCH_RADIUS`
+   *  (plan fauna-010 §3/§4) — same walkable/village/roam-radius filtering and
+   *  closer-is-better scoring idiom as `findForageTarget`, applied to the
+   *  candidate set `grassForage.queryNear()` returns instead of random
+   *  terrain points. No claim is taken here: two animals may target the same
+   *  patch, and the race resolves atomically at `performSourceAction` time
+   *  (`grassForage.consume()`'s first-wins contract) — the loser's
+   *  `isSourceTargetValid` check then simply fails and it replans. */
+  private findGrassPatchTarget(grassForage: GrassForageService): SourceTarget | null {
+    let best: SourceTarget | null = null
+    let bestScore = -Infinity
+    for (const candidate of grassForage.queryNear(this.mesh.position.x, this.mesh.position.z, FOOD_SEARCH_RADIUS, this.tickNowDays)) {
+      if (!this.isWalkable(candidate.x, candidate.z)) continue
+      if (this.def.sociability === 'wild' && this.isNearVillage(candidate)) continue
+      if (Math.hypot(candidate.x - this.home.x, candidate.z - this.home.z) > ROAM_RADIUS) continue
+      const d = Math.hypot(candidate.x - this.mesh.position.x, candidate.z - this.mesh.position.z)
+      const score = -d
+      if (score > bestScore) {
+        bestScore = score
+        best = { kind: 'grassPatch', x: candidate.x, z: candidate.z, patchId: candidate.id }
+      }
+    }
+    return best
   }
 
   private isSourceTargetValid(target: SourceTarget): boolean {
@@ -3271,6 +3436,17 @@ export class AnimalAgent {
       // trusting the phase cached on `target` at selection time.
       if (carcassFoodValue(phase, this.def.scavenging, this.life.hunger) == null) return false
       return corpse.foodClaimedBy === this
+    }
+    if (target.kind === 'feed') {
+      // Re-checked live, not cached — another animal/NPC may have taken the
+      // last unit while this one was approaching (plan fauna-010 §7, same
+      // "no free relief on a raced source" contract as the trough above).
+      return !!target.feedItemKind && !!this.household?.items.has(target.feedItemKind, 1)
+    }
+    if (target.kind === 'grassPatch') {
+      if (!target.patchId || !this.tickGrassForage?.isAvailable(target.patchId, this.tickNowDays)) return false
+      if (!this.isWalkable(target.x, target.z)) return false
+      return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
     }
     if (!this.isWalkable(target.x, target.z)) return false
     return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
@@ -3339,6 +3515,22 @@ export class AnimalAgent {
       if (value != null) {
         consumeFood(this.life, value)
         corpse.markFoodConsumed(phase)
+      }
+    } else if (target.kind === 'feed' && target.feedItemKind) {
+      // Re-checked/removed by the exact kind selected at search time, not a
+      // re-derived one (plan fauna-010 §7) — mirrors the trough's live
+      // `household.water.has`/`.remove` re-check above. A failed `remove`
+      // (another consumer took the last unit first) grants no relief; the
+      // next search replans through the existing retry/cooldown path.
+      if (this.household?.items.remove(target.feedItemKind, 1)) {
+        consumeFood(this.life, this.def.diet?.items?.[target.feedItemKind] ?? 1)
+      }
+    } else if (target.kind === 'grassPatch' && target.patchId) {
+      // Atomic first-wins consumption (plan fauna-010 §3/§4) — a losing
+      // competitor for the same patch gets no relief and replans through the
+      // same retry/cooldown path as every other invalidated source.
+      if (this.tickGrassForage?.consume(target.patchId, this.tickNowDays)) {
+        consumeFood(this.life, this.def.diet?.grass ?? 1)
       }
     } else {
       consumeFood(this.life)

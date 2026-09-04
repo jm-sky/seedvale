@@ -1,7 +1,7 @@
 # Plan: Species metabolism, herbivore diet and renewable forage
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none

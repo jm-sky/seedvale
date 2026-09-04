@@ -8,12 +8,42 @@ import {
 
 export { SLEEP_HUNGER_THIRST_RATE }
 
-/** Units/sec — same order of magnitude as NPC `Needs.ts` (0.028–0.04/sec). */
+/** Per-species basic physiology (plan fauna-010 §1) — the values every
+ *  `AnimalDef` supplies and `createAnimalLifeState`/`tickAnimalLife` consume,
+ *  replacing the single hardcoded rate/capacity set every species used to
+ *  share. Units/scale match the pre-existing global constants this replaces
+ *  (units/sec for the rates, the pre-existing 0–1 stamina scale for
+ *  capacity) so a species using the old defaults behaves identically. */
+export type AnimalMetabolismConfig = {
+  hungerRate: number
+  thirstRate: number
+  staminaCapacity: number
+  staminaDrainRate: number
+  staminaRegenRate: number
+}
+
+/** Units/sec — same order of magnitude as NPC `Needs.ts` (0.028–0.04/sec).
+ *  Kept as the fallback `AnimalMetabolismConfig` for callers/tests that
+ *  construct life state without a species definition (plan fauna-010). */
 const HUNGER_RATE = 0.03
 const THIRST_RATE = 0.032
 /** Faster than regen so a sustained chase/flee visibly costs stamina. */
 const STAMINA_DRAIN_RATE = 0.18
 const STAMINA_REGEN_RATE = 0.06
+/** Full stamina capacity for animals — preserves the previous 0–1 energy scale. */
+export const ANIMAL_STAMINA_MAX = 1
+
+/** Fallback metabolism (plan fauna-010) — identical to every species'
+ *  pre-existing shared rate/capacity, so `AnimalDef`s that don't (yet) tune
+ *  their own `metabolism` behave exactly as before. */
+export const DEFAULT_ANIMAL_METABOLISM: AnimalMetabolismConfig = {
+  hungerRate: HUNGER_RATE,
+  thirstRate: THIRST_RATE,
+  staminaCapacity: ANIMAL_STAMINA_MAX,
+  staminaDrainRate: STAMINA_DRAIN_RATE,
+  staminaRegenRate: STAMINA_REGEN_RATE,
+}
+
 /** Below this ratio, `AnimalAgent.wander()` has a chance to extend idle instead of
  *  picking a new wander target. */
 export const STAMINA_REST_THRESHOLD = 0.35
@@ -30,8 +60,6 @@ export const FOOD_RELIEF = 0.5
 /** Flat amount subtracted from thirst by `drinkWater()` on a completed
  *  drink action. */
 export const WATER_RELIEF = 0.5
-/** Full stamina capacity for animals — preserves the previous 0–1 energy scale. */
-export const ANIMAL_STAMINA_MAX = 1
 
 export type AnimalLifeState = {
   hunger: number
@@ -41,12 +69,17 @@ export type AnimalLifeState = {
 
 /** `offset` (0–1, per-instance) staggers hunger/thirst phase like
  *  `createNeedState`'s offset for NPC — without it, every animal of a kind
- *  would tick in lockstep. */
-export function createAnimalLifeState(offset = 0): AnimalLifeState {
+ *  would tick in lockstep. `metabolism` (plan fauna-010) supplies this
+ *  individual's stamina capacity; defaults to `DEFAULT_ANIMAL_METABOLISM`
+ *  for callers/tests that don't pass a species definition. */
+export function createAnimalLifeState(
+  offset = 0,
+  metabolism: AnimalMetabolismConfig = DEFAULT_ANIMAL_METABOLISM,
+): AnimalLifeState {
   return {
     hunger: 0.2 + offset * 0.3,
     thirst: 0.2 + ((offset + 0.4) % 1) * 0.3,
-    stamina: createStaminaState(ANIMAL_STAMINA_MAX),
+    stamina: createStaminaState(metabolism.staminaCapacity),
   }
 }
 
@@ -55,14 +88,15 @@ export function tickAnimalLife(
   dt: number,
   sprinting: boolean,
   options: TickNeedsOptions = {},
+  metabolism: AnimalMetabolismConfig = DEFAULT_ANIMAL_METABOLISM,
 ): void {
   const hungerThirstRate = options.hungerThirstRate ?? 1
-  life.hunger = Math.min(1, life.hunger + dt * HUNGER_RATE * hungerThirstRate)
-  life.thirst = Math.min(1, life.thirst + dt * THIRST_RATE * hungerThirstRate)
+  life.hunger = Math.min(1, life.hunger + dt * metabolism.hungerRate * hungerThirstRate)
+  life.thirst = Math.min(1, life.thirst + dt * metabolism.thirstRate * hungerThirstRate)
   if (sprinting) {
-    drainStamina(life.stamina, dt * STAMINA_DRAIN_RATE)
+    drainStamina(life.stamina, dt * metabolism.staminaDrainRate)
   } else {
-    restoreStamina(life.stamina, dt * STAMINA_REGEN_RATE)
+    restoreStamina(life.stamina, dt * metabolism.staminaRegenRate)
   }
 }
 
@@ -70,8 +104,9 @@ export function tickAnimalLife(
  *  `AnimalAgent` is responsible for only calling this after the animal has
  *  actually reached and finished eating at a source (plan 094).
  *  `reliefScale` (default 1, full `FOOD_RELIEF`) lets a lower-quality food
- *  source — a decaying corpse or bones (plan fauna-005) — grant proportionally
- *  less relief than a fresh kill or forage spot. */
+ *  source — a decaying corpse or bones (plan fauna-005), or a less-preferred
+ *  diet item/grass patch (plan fauna-010) — grant proportionally less relief
+ *  than a fresh kill or a fully preferred food source. */
 export function consumeFood(life: AnimalLifeState, reliefScale = 1): void {
   life.hunger = Math.max(0, life.hunger - FOOD_RELIEF * reliefScale)
 }

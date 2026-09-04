@@ -3,6 +3,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { AnimalSaveState, VillageInfo } from '../fauna/AnimalAgent'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
+import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { Household } from './household'
 import {
   disposeObject3D,
@@ -470,9 +471,13 @@ export function tickSettlementLivestock(
     dropLivestockProduct?: DropLivestockProductHook
     onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void
     persistence?: LivestockPersistence
+    /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
+     *  forwarded unchanged into every `AnimalAgent.update()` call below, same
+     *  contract as `createFauna.ts`'s wild-fauna loop. */
+    grassForage?: GrassForageService
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -481,7 +486,7 @@ export function tickSettlementLivestock(
     animal.update(
       dt, livestock, observerPos, dayFactor, 0, litFires, villages,
       undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
-      timeOfDay,
+      timeOfDay, grassForage,
     )
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the

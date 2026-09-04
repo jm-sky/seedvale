@@ -91,6 +91,55 @@ const HOUSEHOLD_POLICY: Record<HouseholdResourceKind, HouseholdPolicy> = {
  *  not duplicated quantities. */
 const WATER_POLICY: HouseholdPolicy = { minimum: 1, target: 3, capacity: 7 }
 
+/** Temporary renewable hay source (plan fauna-010 §6) — a placeholder for
+ *  the eventual `grass/crop → cutting → drying → hay` pipeline, kept as a
+ *  small per-household lazy trickle so herbivore diet/household-feed (§7)
+ *  has something real to consume today without any NPC labor (explicitly
+ *  out of scope for this plan) or new player-interaction plumbing. Resolved
+ *  lazily against `nowDays` whenever a hungry herbivore's `findDietTarget()`
+ *  checks its household's pantry (`AnimalAgent.ts`) — never a per-frame
+ *  timer — so it survives streaming/reload/time-skip for free, the same
+ *  "resolve on next query" idiom as `livestockProduction.ts`. Swapping this
+ *  out later for real cutting/drying only ever touches this constant/
+ *  function pair, never `hay` itself, animal diet, or the consumption path. */
+const HAY_SOURCE_MAX_PORTIONS_PER_DAY = 4
+/** In-game days between one portion becoming available and the next — small
+ *  enough that a full day's 4 portions actually spread out instead of all
+ *  landing on the very first query of the day. */
+const HAY_SOURCE_PORTION_INTERVAL_DAYS = 0.2
+const HAY_SOURCE_ITEM_KIND: ItemKind = 'hay'
+
+export type HayForageState = {
+  /** Absolute `elapsedDays` anchor the next portion becomes available at. */
+  nextPortionAtDays: number
+  /** Portions already granted since `dayAnchor`'s calendar day. */
+  portionsToday: number
+  /** `elapsedDays` the current day's count started counting from — reset
+   *  (with `portionsToday`) whenever `nowDays` crosses into a new day. */
+  dayAnchor: number
+}
+
+/** Pure resolver (plan fauna-010 §6) — given the current state and
+ *  `nowDays`, returns the advanced state plus how many hay portions became
+ *  newly available. Unit-testable without a `Household` instance, same
+ *  technique as `livestockProduction.ts`'s pure day-anchor math. A day
+ *  rollover resets the daily counter before granting; grants are capped at
+ *  `HAY_SOURCE_MAX_PORTIONS_PER_DAY` even after a very large time skip. */
+export function resolveHayForage(state: HayForageState, nowDays: number): { state: HayForageState, portionsGranted: number } {
+  let { nextPortionAtDays, portionsToday, dayAnchor } = state
+  if (Math.floor(nowDays) !== Math.floor(dayAnchor)) {
+    portionsToday = 0
+    dayAnchor = nowDays
+  }
+  let portionsGranted = 0
+  while (portionsToday < HAY_SOURCE_MAX_PORTIONS_PER_DAY && nowDays >= nextPortionAtDays) {
+    portionsToday += 1
+    portionsGranted += 1
+    nextPortionAtDays += HAY_SOURCE_PORTION_INTERVAL_DAYS
+  }
+  return { state: { nextPortionAtDays, portionsToday, dayAnchor }, portionsGranted }
+}
+
 export type WaterReserve = {
   readonly current: number
   readonly capacity: number
@@ -136,6 +185,11 @@ export type HouseholdSnapshot = {
    *  scalar food/wood economic counters. Optional so older in-session
    *  snapshots without it still hydrate (a fresh empty `Inventory`). */
   items?: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] }
+  /** Temporary hay-source lazy anchor (plan fauna-010 §6) — optional so an
+   *  older in-session snapshot without it still hydrates (a fresh source
+   *  starting from day 0, same "missing means default" contract `items`
+   *  above already uses). */
+  hayForage?: HayForageState
 }
 
 /** Household starting supply (plan 178 §11) — only ever seeded once, on a
@@ -194,6 +248,12 @@ export type Household = {
   /** Total concrete food-item units currently held — the authoritative
    *  replacement for the old `stock.query('food')`. */
   foodCount: () => number
+  /** Lazily resolves the temporary hay source (plan fauna-010 §6) and
+   *  deposits any newly-available portions straight into `items` — call
+   *  with the live `nowDays` right before reading household feed
+   *  eligibility (`AnimalAgent.findDietTarget`); a no-op call costs one
+   *  cheap pure comparison. */
+  resolveHayForage: (nowDays: number) => void
   snapshot: () => HouseholdSnapshot
   /** Bounded household-level mutation history (plan settlements-npcs-013) —
    *  see `debug/householdHistory.ts`. Distinct from the NPC trace: this is
@@ -259,6 +319,7 @@ export function createHousehold(
     initial?.items ? Inventory.instancesFromJSON(initial.items.instances) : undefined,
   )
   if (!initial && hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
+  let hayForage: HayForageState = initial?.hayForage ?? { nextPortionAtDays: 0, portionsToday: 0, dayAnchor: 0 }
 
   // Domain history (plan settlements-npcs-013) — bounded ring + local
   // sequence counter, recorded only at this household's own mutation
@@ -329,10 +390,16 @@ export function createHousehold(
       return kind
     },
     foodCount: () => foodItemCount(items),
+    resolveHayForage: (nowDays) => {
+      const result = resolveHayForage(hayForage, nowDays)
+      hayForage = result.state
+      if (result.portionsGranted > 0) items.add(HAY_SOURCE_ITEM_KIND, result.portionsGranted)
+    },
     snapshot: () => ({
       stock: stock.toJSON(),
       water: water.current,
       items: { counts: items.toJSON(), instances: items.instancesToJSON() },
+      hayForage,
     }),
     history: () => historyBuf.history(),
   }

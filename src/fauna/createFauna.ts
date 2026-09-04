@@ -2,6 +2,7 @@ import { Group, type Object3D, type Scene, type Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerStealthState } from './playerAwareness'
 import {
   disposeObject3D,
@@ -408,6 +409,12 @@ export async function createFauna(
    *  change, not a new seed). Absent/missing entries mean "fresh spawn
    *  point" (defaults already set by the constructor below). */
   initialSpawnerState?: ReadonlyMap<string, SavedSpawnPointState>,
+  /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
+   *  forwarded unchanged into every `AnimalAgent.update()` call below and
+   *  ticked once per frame for patch-visual streaming near the observer.
+   *  Optional so existing tests that don't model it keep prior behaviour
+   *  (herbivores simply fall back to the old abstract forage spot). */
+  grassForage?: GrassForageService,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -875,8 +882,10 @@ export async function createFauna(
           onAnimalVocalize,
           worldDays,
           timeOfDay,
+          grassForage,
         )
       }
+      grassForage?.tickVisuals(dt, observerPos.x, observerPos.z, worldDays)
 
       if (agents.some((a) => a.readyToRemove())) {
         const alive: AnimalAgent[] = []

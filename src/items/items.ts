@@ -93,6 +93,7 @@ export type ItemKind =
   | 'map_near'
   | 'map_far'
   | 'rope'
+  | 'hay'
 
 export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
 
@@ -959,6 +960,19 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0x9c8a5e,
     description: 'Solidna konopna lina. Potrzebna, by czerpać wodę z głębokiej studni.'
   },
+  hay: {
+    kind: 'hay',
+    label: 'siano',
+    // Deliberately not `food` (plan fauna-010 §5) — hay is livestock feed,
+    // not human food, and must not enter `foodItems.ts`'s `FOOD_ITEM_KINDS`/
+    // `Household.foodCount()`/shortage flows. Only an `AnimalDef.diet` says
+    // whether it's edible.
+    categories: ['resource'],
+    weight: 0.3,
+    size: 'SM',
+    color: 0xd9c26a,
+    description: 'Wiązka suszonego siana. Pasza dla zwierząt gospodarskich — ludzie jej nie jedzą.'
+  },
 }
 
 const _itemShadowBox = new THREE.Box3()
@@ -1666,6 +1680,16 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     )
     mesh.rotation.z = Math.PI / 2
     mesh.position.y = 0.04
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'hay') {
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.hay.color, flatShading: true }),
+    )
+    mesh.rotation.z = Math.PI / 2
+    mesh.position.y = 0.1
     mesh.castShadow = true
     return mesh
   }

@@ -4,6 +4,7 @@ import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
+import type { GrassForageOverrides } from '../world/grassForage'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
@@ -351,6 +352,11 @@ export async function createApp(
   // only on a genuinely new world" contract as the ids/arrays above, and
   // persisted the same way (`SaveData.resourceDeposits`).
   let resourceDepletion: ResourceDepletionState = new Map(Object.entries(initialSave?.resourceDeposits ?? {}))
+  // Plan fauna-010 §3/§4 — sparse grass forage patch depletion overrides,
+  // same "long-lived object owned here, mutated in place by the live
+  // service, carried across `rebuildWorldBundle`" contract as
+  // `resourceDepletion` above (patch *placement* is never persisted).
+  let grassForageOverrides: GrassForageOverrides = { ...(initialSave?.grassForagePatches ?? {}) }
   // Persistent player land ownership (plan 129) — sparse, doesn't need the
   // `bundle`-rebuild indirection `onAnimalDeath`/`getPlayerSocial` use below
   // (it never depends on `questManager`), so it's threaded straight through.
@@ -449,6 +455,7 @@ export async function createApp(
     initialSave?.npcRelationships,
     initialSave?.livestock,
     initialSave?.removedLivestockIds,
+    grassForageOverrides,
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -980,6 +987,7 @@ export async function createApp(
         plantedCrops = []
         modifications = []
         resourceDepletion = new Map()
+        grassForageOverrides = {}
         resetDayNightForNewGame(dayNight)
         treeLifecycle = createTreeLifecycle(config.seed, {})
         landOwnership.clear()
@@ -1013,6 +1021,7 @@ export async function createApp(
         getNearbyPlayerWell,
         resourceDepletion,
         () => worldGeneration !== thisRebuildGeneration,
+        grassForageOverrides,
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()

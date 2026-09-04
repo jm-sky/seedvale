@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createSettlementEconomy } from '../economy/settlementEconomy'
-import { createHousehold, createHouseholdRegistry, householdIdFor } from './household'
+import { createHousehold, createHouseholdRegistry, type HayForageState, householdIdFor, resolveHayForage } from './household'
 
 describe('createHousehold', () => {
   it('starts with a small deterministic reserve', () => {
@@ -380,5 +380,73 @@ describe('createHouseholdRegistry', () => {
     registry.getOrCreate(id, '0_0', '0_0:home:0', false)
     const again = registry.getOrCreate(id, '0_0', '0_0:home:0', true)
     expect(again.items.count('bandage')).toBe(0)
+  })
+})
+
+describe('resolveHayForage (plan fauna-010 §6)', () => {
+  const fresh: HayForageState = { nextPortionAtDays: 0, portionsToday: 0, dayAnchor: 0 }
+
+  it('grants no portions before the first anchor is reached', () => {
+    const result = resolveHayForage(fresh, -1)
+    expect(result.portionsGranted).toBe(0)
+  })
+
+  it('grants a portion once nowDays reaches the anchor', () => {
+    const result = resolveHayForage(fresh, 0)
+    expect(result.portionsGranted).toBe(1)
+    expect(result.state.portionsToday).toBe(1)
+  })
+
+  it('caps grants at 4 per day even after a very large time skip', () => {
+    const result = resolveHayForage(fresh, 100)
+    expect(result.portionsGranted).toBe(4)
+    expect(result.state.portionsToday).toBe(4)
+  })
+
+  it('does not grant a 5th portion the same day even if queried again', () => {
+    const first = resolveHayForage(fresh, 100)
+    const second = resolveHayForage(first.state, 100.01)
+    expect(second.portionsGranted).toBe(0)
+  })
+
+  it('resets the daily count on a new calendar day', () => {
+    const first = resolveHayForage(fresh, 100)
+    expect(first.portionsGranted).toBe(4)
+    const nextDay = resolveHayForage(first.state, 101)
+    expect(nextDay.portionsGranted).toBeGreaterThan(0)
+  })
+})
+
+describe('Household.resolveHayForage (plan fauna-010 §6)', () => {
+  it('deposits granted hay portions straight into items', () => {
+    const household = createHousehold('h', 's', 'home')
+    const before = household.items.count('hay')
+    household.resolveHayForage(0)
+    expect(household.items.count('hay')).toBeGreaterThan(before)
+  })
+
+  it('a fresh household never starts with hay before any resolve call', () => {
+    const household = createHousehold('h', 's', 'home')
+    expect(household.items.count('hay')).toBe(0)
+  })
+
+  it('never exceeds 4 hay portions from one very large time-skip resolve', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.resolveHayForage(500)
+    expect(household.items.count('hay')).toBeLessThanOrEqual(4)
+  })
+
+  it('round-trips the hay-forage anchor through snapshot/hydrate', () => {
+    const household = createHousehold('h', 's', 'home')
+    household.resolveHayForage(10)
+    const countBefore = household.items.count('hay')
+    const snapshot = household.snapshot()
+    const registry = createHouseholdRegistry({ h: snapshot })
+    const hydrated = registry.getOrCreate('h', 's', 'home')
+    expect(hydrated.items.count('hay')).toBe(countBefore)
+    // Re-resolving at the same `nowDays` grants nothing more — the restored
+    // anchor, not a fresh day-0 one, is what's consulted.
+    hydrated.resolveHayForage(10)
+    expect(hydrated.items.count('hay')).toBe(countBefore)
   })
 })
