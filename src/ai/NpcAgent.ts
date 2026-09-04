@@ -78,12 +78,12 @@ import {
   completeActionLifecycle,
   copyVec3,
   createActionLifecycle,
-  type DecisionContext,
   failActionLifecycle,
   finishActionLifecycle,
   type InteractionQueue,
   pickActionKind,
   replaceActionLifecycle,
+  type ScoredAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import {
@@ -165,6 +165,7 @@ import {
   resolveNpcMeleeWeapon,
   resolveNpcRangedWeapon,
 } from './npcCombat'
+import { decideNpcAction, type NpcDecisionKind, scoreNpcDecisions, shouldInterruptAction } from './npcDecision'
 import { ensureKnifeCarried, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
 import {
   canDeliverToPlayerStorage,
@@ -252,11 +253,7 @@ import {
   type ScheduleTemplate,
 } from './schedule'
 import { conversationAttemptCooldownSec } from './socialBehaviour'
-import {
-  type NpcDecisionTarget,
-  WEATHER_SEVERE_SHELTER_THRESHOLD,
-  weatherShelterPressure,
-} from './weatherPressure'
+import { type NpcDecisionTarget, weatherShelterPressure } from './weatherPressure'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 function randRange([min, max]: [number, number]): number {
@@ -381,6 +378,12 @@ export type NpcInspectionSnapshot = {
    *  Optional so older synthetic snapshots (tests) stay valid; always
    *  populated by `createInspectionSnapshot()`. */
   candidates?: readonly ScoredNeedCandidate[]
+  /** Top-level `choose()` outcome candidates (review 2026-09-03 §5 E4) —
+   *  `scoreNpcDecisions()`'s materialized ordering, mirroring
+   *  `AnimalAgent`'s `getDebugInfo().behaviourCandidates`. Optional for the
+   *  same reason as `candidates` above; always populated by
+   *  `createInspectionSnapshot()`. */
+  decisionScores?: readonly ScoredAction<NpcDecisionKind>[]
   /** Candidate ways to satisfy `activeNeed` and which one was picked (plan
    *  ai-003) — the same values `beginNeed()` used, never recomputed here. */
   strategyCandidates: readonly NpcStrategyCandidate[]
@@ -765,6 +768,12 @@ export class NpcAgent {
    *  (plan ai-002) — the exact base/modifier/final breakdown `choose()` used
    *  to pick `activeNeed`, for diagnostics only. See `scoreNeedCandidates`. */
   private lastDecisionCandidates: readonly ScoredNeedCandidate[] = []
+  /** Top-level `choose()` outcome candidates (review 2026-09-03 §5 E4) —
+   *  `scoreNpcDecisions()`'s materialized ordering (collapseSleep /
+   *  seekShelter / need / scheduledSleep / idle), diagnostics only, same
+   *  status as `lastPressures`/`lastDecisionCandidates`. Empty until the
+   *  first `choose()` tick. */
+  private lastDecisionScores: readonly ScoredAction<NpcDecisionKind>[] = []
   /** Candidate ways to satisfy the selected `activeNeed` (plan ai-003) — the
    *  explicit seam between need arbitration and `beginNeed()`'s existing
    *  execution branches. Diagnostics only, same as `lastPressures`/
@@ -1438,6 +1447,7 @@ export class NpcAgent {
       activeNeed: this.activeNeed,
       pressures: this.lastPressures,
       candidates: this.lastDecisionCandidates,
+      decisionScores: this.lastDecisionScores,
       strategyCandidates: this.lastStrategyCandidates,
       selectedStrategy: this.selectedStrategy,
       plan: this.npcState.activePlan
@@ -2312,8 +2322,8 @@ export class NpcAgent {
           break
         }
         // Pressure layer (plan ai-001) — pure, deterministic scores over the
-        // current needs/shortage inputs; `lastPressures` feeds both the
-        // shared DecisionContext snapshot (plan 055) and diagnostics.
+        // current needs/shortage inputs; `lastPressures` feeds diagnostics
+        // (`createInspectionSnapshot`).
         const pressures = generateNeedPressures(this.needs, this.needPickOptions())
         // Personality/role preference layer (plan ai-002) — re-scores the
         // same candidates `generateNeedPressures` produced; it cannot add or
@@ -2341,7 +2351,12 @@ export class NpcAgent {
         // satisfied, regardless of which strategy/action count achieved it.
         this.reevaluatePlanCompletion(pressures)
         if (decision !== 'seekShelter') this.shelterSettled = false
-        if (decision === 'seekShelter') {
+        // Top-level sequencing (review 2026-09-03 §5 E4) — the ordering
+        // table now lives in npcDecision.ts; this call sequence stays here.
+        const decisionInput = { collapsing: false, wonNeed: decision, scheduleActivity: scheduledActivity }
+        const outcome = decideNpcAction(decisionInput)
+        this.lastDecisionScores = scoreNpcDecisions(decisionInput)
+        if (outcome === 'seekShelter') {
           // Weather is a pressure source, not a Need (plan npc-012 §1) —
           // never sets `activeNeed`, so the existing Plan/Strategy/critical-
           // interrupt machinery stays completely untouched by sheltering.
@@ -2350,16 +2365,15 @@ export class NpcAgent {
           this.beginSeekShelter()
           break
         }
-        const need = decision
+        const need = outcome === 'need' ? (decision as NeedId) : 'idle'
         this.activeNeed = need
         this.trace.record({ simTime: this.simClock, type: 'need.selected', need, pressures, candidates })
-        const decisionContext = this.buildDecisionContext(scheduledActivity, nearbyNpcCount)
-        if (need !== 'idle') {
+        if (outcome === 'need') {
           this.ensurePlanForNeed(need)
           this.beginNeed(need)
           break
         }
-        if (decisionContext.scheduleActivity === 'sleep') {
+        if (outcome === 'scheduledSleep') {
           this.sleepReason = 'schedule'
           this.beginGoSleep()
           break
@@ -2871,23 +2885,6 @@ export class NpcAgent {
       // once `food` is actually selected, never here.
       helperDeliveryAvailable: (this.household != null) && (this.helperDelivery != null)
         && (this.npcState.helperAssignment?.enabled ?? false),
-    }
-  }
-
-  private buildDecisionContext(
-    scheduleActivity: ScheduleActivity,
-    nearbyNpcCount: number,
-  ): DecisionContext {
-    return {
-      needs: {
-        thirst: this.needs.thirst,
-        woodDuty: this.needs.woodDuty,
-        waterDuty: this.needs.waterDuty,
-        hunger: this.needs.hunger,
-      },
-      pressures: this.lastPressures,
-      scheduleActivity,
-      nearbyHumanCount: nearbyNpcCount,
     }
   }
 
@@ -4268,18 +4265,16 @@ export class NpcAgent {
     this.criticalInterruptCooldown -= dt
     if (this.criticalInterruptCooldown > 0) return
     this.criticalInterruptCooldown = CRITICAL_INTERRUPT_CHECK_INTERVAL_SEC
-    if (shouldCollapseSleep(this.vigor)) {
-      this.interruptCurrentAction()
-      return
-    }
-    if (this.activeNeed !== 'idle') return
-    const need = pickNeed(this.needs, { ...this.needPickOptions(), critical: true })
-    if (need !== 'idle') {
-      this.interruptCurrentAction()
-      return
-    }
+    const criticalNeed = pickNeed(this.needs, { ...this.needPickOptions(), critical: true })
     const weatherPressure = this.currentWeather ? weatherShelterPressure(this.currentWeather) : 0
-    if (weatherPressure >= WEATHER_SEVERE_SHELTER_THRESHOLD) this.interruptCurrentAction()
+    if (shouldInterruptAction({
+      collapsing: shouldCollapseSleep(this.vigor),
+      activeNeed: this.activeNeed,
+      criticalNeed,
+      weatherPressure,
+    })) {
+      this.interruptCurrentAction()
+    }
   }
 
   /** Cancels the in-flight `pendingAction` for a genuinely urgent reason
