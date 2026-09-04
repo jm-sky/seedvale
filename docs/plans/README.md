@@ -68,7 +68,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
-| ◼️ `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
+| 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `items-player-016-books-and-skill-learning.md`                           | -       | 🟡 | M      | ~~world-012~~ |
 | 💡 `world-013-world-location-catalog-performance-optimization.md`           | -       | 🔴 | M      | ~~world-012~~ |
 | 💡 `world-terrain-010-waterways-and-vegetation.md`                          | -       | 🟡 | M      | -      |
