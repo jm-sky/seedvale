@@ -28,6 +28,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`

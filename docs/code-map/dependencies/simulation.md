@@ -54,6 +54,9 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
+- `ai/npcAction.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `ai/weatherPressure.test.ts`
 - `combat/combatIntent.ts`
 - `fauna/AnimalAgent.ts`
@@ -94,6 +97,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/npcAnimalThreat.ts`
+- `ai/npcDecision.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/predatorHumanDecision.ts`
 - `simulation/index.ts`

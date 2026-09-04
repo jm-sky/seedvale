@@ -33,6 +33,10 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.test.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 

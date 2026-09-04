@@ -327,7 +327,6 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
 - `ai/npcColliderRim.test.ts`
 - `ai/npcColliderRim.ts`
 - `debug/colliderDebugView.ts`
@@ -670,7 +669,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/placementActions.ts`
 - `app/gameLoop.ts`
@@ -767,7 +766,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/gatheringActions.ts`
 - `app/createApp.ts`
 - `app/saveState.ts`
@@ -810,6 +809,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -831,6 +831,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -1233,7 +1234,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/placementActions.ts`
 - `app/createApp.ts`
 - `terrain/chunkManager.ts`
@@ -1300,6 +1301,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/constructionMaterials.ts`
 - `items/itemCatalog.ts`
 - `items/tentPlacement.ts`
 - `world/WaterSource.ts`

@@ -426,6 +426,10 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.test.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
 - `app/worldBundle.ts`
 - `debug/householdHistory.ts`
 - `debug/npcDebugApi.ts`
@@ -464,6 +468,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `settlement/createSettlement.ts`
 - `settlement/householdExchange.test.ts`
 
@@ -714,6 +720,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.ts`
 - `settlement/lodgingResolver.ts`
@@ -797,6 +804,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `items/createDroppedItems.ts`
@@ -1068,6 +1077,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `settlement/storageDestinations.test.ts`
 
 ## `settlement/storageVisuals.test.ts`

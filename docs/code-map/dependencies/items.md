@@ -71,7 +71,10 @@ Generated from TypeScript imports.
 - `ai/npcCombat.ts`
 - `ai/npcLoadout.test.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcLogistics.test.ts`
+- `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
@@ -201,6 +204,7 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.test.ts`
 - `world/palisade.test.ts`
 - `world/palisade.ts`
+- `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 
@@ -320,7 +324,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `economy/localExchange.test.ts`
 - `economy/settlementEconomy.ts`
 - `items/foodItems.test.ts`
@@ -475,8 +480,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.test.ts`
@@ -532,6 +537,8 @@ Generated from TypeScript imports.
 - `ai/npcAssistance.ts`
 - `ai/npcCombat.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/actionContracts.ts`
 - `app/actions/gatheringActions.ts`
@@ -831,9 +838,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`

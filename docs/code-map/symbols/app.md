@@ -45,16 +45,16 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 291
-- `evaluatePlacementSite` — function — line 170
-- `GroundPlacementDefinition` — type — line 162
+- `createPlacementActions` — function — line 292
+- `evaluatePlacementSite` — function — line 171
+- `GroundPlacementDefinition` — type — line 163
   - domain: world
-- `GroundPlacementSite` — type — line 146
-- `PlacementActions` — type — line 202
-- `PlacementBlocker` — type — line 126
-- `PlacementPreviewResult` — type — line 134
-- `previewGroundPlacement` — function — line 180
-- `WellWorkView` — type — line 195
+- `GroundPlacementSite` — type — line 147
+- `PlacementActions` — type — line 203
+- `PlacementBlocker` — type — line 127
+- `PlacementPreviewResult` — type — line 135
+- `previewGroundPlacement` — function — line 181
+- `WellWorkView` — type — line 196
 
 ## `app/actions/placementPreviewActions.ts`
 

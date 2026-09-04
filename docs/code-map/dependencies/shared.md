@@ -116,6 +116,19 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `shared/VigorState.test.ts`
 
+## `shared/agentAnimationSet.test.ts`
+
+**Imports**
+
+- `shared/agentAnimationSet.ts`
+
+## `shared/agentAnimationSet.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `shared/agentAnimationSet.test.ts`
+
 ## `shared/bootMark.ts`
 
 **Imports**

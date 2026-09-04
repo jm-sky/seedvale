@@ -456,7 +456,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `app/interactables.ts`
@@ -660,6 +660,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`

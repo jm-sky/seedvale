@@ -2,6 +2,11 @@
 
 Generated from exported TypeScript symbols.
 
+## `shared/agentAnimationSet.ts`
+
+- `AgentAnimationSet` — type — line 17
+- `createAgentAnimationSet` — function — line 55
+
 ## `shared/bootMark.ts`
 
 - `useBootMark` — const — line 11

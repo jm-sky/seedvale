@@ -23,6 +23,9 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
 - `ai/dialogueTemplates.ts`
+- `ai/npcDecision.ts`
+- `ai/npcLogistics.test.ts`
+- `ai/npcLogistics.ts`
 - `ai/npcPlan.ts`
 - `ai/npcVigor.test.ts`
 - `ai/weatherPressure.test.ts`
@@ -42,13 +45,17 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
 - `ai/helperAssignment.ts`
+- `ai/npcAction.ts`
 - `ai/npcAnimalThreat.ts`
 - `ai/npcAssistance.ts`
 - `ai/npcColliderRim.ts`
 - `ai/npcCombat.ts`
+- `ai/npcDecision.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcLogistics.ts`
 - `ai/npcMovementWatchdog.ts`
 - `ai/npcPlan.ts`
+- `ai/npcProfessionWork.ts`
 - `ai/npcStrategies.ts`
 - `ai/npcVigor.ts`
 - `ai/npcVoiceLines.ts`
@@ -74,10 +81,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
-- `items/foodItems.ts`
-- `items/itemInstances.ts`
 - `items/items.ts`
-- `items/weaponMaintenance.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
@@ -92,21 +96,17 @@ Generated from TypeScript imports.
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
+- `shared/agentAnimationSet.ts`
 - `simulation/index.ts`
-- `terrain/depositMining.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/slopeConstraint.ts`
 - `ui/agentStatusLabel.ts`
 - `ui/labelDistance.ts`
 - `world/bloodTraces.ts`
-- `world/collision.ts`
 - `world/createPlayerWells.ts`
 - `world/createWorkContracts.ts`
-- `world/cropLifecycle.ts`
-- `world/fishing.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
-- `world/plantedCrops.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/settlementForestHooks.ts`
@@ -120,7 +120,6 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.ts`
 - `ai/npcCurrentActivity.test.ts`
-- `ai/npcProfessionWork.test.ts`
 - `ai/npcWhy.test.ts`
 - `app/dialogueTimeControl.ts`
 - `app/gameLoop.ts`
@@ -160,6 +159,7 @@ Generated from TypeScript imports.
 - `ai/nameCultures.test.ts`
 - `ai/nameCultures.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcProfessionWork.ts`
 - `ai/npcVoiceLines.ts`
 - `ai/npcWorkContract.ts`
 - `ai/reactionChance.ts`
@@ -251,6 +251,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
 - `settlement/npcState.ts`
 
 ## `ai/nameCultures.test.ts`
@@ -273,6 +274,18 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/villagePlan.ts`
+
+## `ai/npcAction.ts`
+
+**Imports**
+
+- `simulation/index.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcLogistics.ts`
+- `ai/npcProfessionWork.ts`
 
 ## `ai/npcAnimalThreat.test.ts`
 
@@ -384,6 +397,27 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 
+## `ai/npcDecision.test.ts`
+
+**Imports**
+
+- `ai/npcDecision.ts`
+- `ai/weatherPressure.ts`
+
+## `ai/npcDecision.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/schedule.ts`
+- `ai/weatherPressure.ts`
+- `simulation/scoreActions.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcDecision.test.ts`
+
 ## `ai/npcLoadout.test.ts`
 
 **Imports**
@@ -406,6 +440,41 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLoadout.test.ts`
+
+## `ai/npcLogistics.test.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/npcLogistics.ts`
+- `economy/index.ts`
+- `items/Inventory.ts`
+- `settlement/household.ts`
+
+## `ai/npcLogistics.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/helperAssignment.ts`
+- `ai/npcAction.ts`
+- `economy/index.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/items.ts`
+- `player/PlayerController.ts`
+- `settlement/household.ts`
+- `settlement/householdExchange.ts`
+- `settlement/props.ts`
+- `settlement/storageDestinations.ts`
+- `simulation/index.ts`
+- `world/helperDeliveryHooks.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcLogistics.test.ts`
+- `ai/npcProfessionWork.ts`
 
 ## `ai/npcMovementWatchdog.test.ts`
 
@@ -445,9 +514,43 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.ts`
+- `economy/index.ts`
 - `items/Inventory.ts`
 - `items/weaponMaintenance.ts`
+- `settlement/household.ts`
+
+## `ai/npcProfessionWork.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/npcAction.ts`
+- `ai/npcLogistics.ts`
+- `economy/index.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/weaponMaintenance.ts`
+- `player/PlayerController.ts`
+- `settlement/household.ts`
+- `settlement/householdExchange.ts`
+- `settlement/places.ts`
+- `settlement/props.ts`
+- `settlement/storageDestinations.ts`
+- `simulation/index.ts`
+- `terrain/depositMining.ts`
+- `terrain/resourceDeposits.ts`
+- `world/cropLifecycle.ts`
+- `world/fishing.ts`
+- `world/foodSources.ts`
+- `world/plantedCrops.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcProfessionWork.test.ts`
 
 ## `ai/npcStamina.test.ts`
 
@@ -575,6 +678,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcDecision.ts`
 - `ai/npcWorkContract.ts`
 - `ai/schedule.test.ts`
 
@@ -618,4 +722,6 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcDecision.test.ts`
+- `ai/npcDecision.ts`
 - `ai/weatherPressure.test.ts`

@@ -635,33 +635,36 @@ Generated from exported TypeScript symbols.
 
 ## `world/playerWell.ts`
 
-- `activeWellStage` — function — line 175
-- `getWellPitWorkHours` — function — line 69
-- `isWellCompleted` — function — line 143
-- `isWellStageWorkComplete` — function — line 135
-- `isWellWaterAvailable` — function — line 152
-- `NearbyPlayerWellLookup` — type — line 259
-- `nextWellStage` — function — line 130
-- `PlayerWellRecord` — type — line 25
-- `WELL_FOOTPRINT_RADIUS` — const — line 192
-- `WELL_PLACE_DURATION_SEC` — const — line 198
-- `WELL_PLACE_REACH` — const — line 195
-- `WELL_PLACEMENT_MESSAGE` — const — line 182
-- `WELL_SEPARATION` — const — line 193
-- `WELL_STAGE_CAPABILITY` — const — line 104
-- `WELL_STAGE_COST` — const — line 92
-- `WELL_STAGE_START_PROMPT` — const — line 216
-- `WELL_STAGE_WORK_HOURS` — const — line 55
-- `WELL_WORK_LABEL` — const — line 223
-- `WELL_WORK_SESSION_HOURS` — const — line 213
-- `WELL_WORK_SESSION_SEC` — const — line 204
-- `WellMaterialCost` — type — line 86
-- `WellPlacementReason` — type — line 180
-- `wellPromptLabel` — function — line 241
-- `WellStage` — type — line 20
-- `wellStageCapabilities` — function — line 117
-- `wellStageWorkHours` — function — line 82
-- `wellWaterSource` — function — line 161
+- `activeWellStage` — function — line 242
+- `advanceWellConstruction` — function — line 164
+- `getWellPitWorkHours` — function — line 70
+- `isWellCompleted` — function — line 210
+- `isWellStageWorkComplete` — function — line 202
+- `isWellWaterAvailable` — function — line 219
+- `NearbyPlayerWellLookup` — type — line 326
+- `nextWellStage` — function — line 197
+- `PlayerWellRecord` — type — line 26
+- `WELL_FOOTPRINT_RADIUS` — const — line 259
+- `WELL_PLACE_DURATION_SEC` — const — line 265
+- `WELL_PLACE_REACH` — const — line 262
+- `WELL_PLACEMENT_MESSAGE` — const — line 249
+- `WELL_SEPARATION` — const — line 260
+- `WELL_STAGE_CAPABILITY` — const — line 105
+- `WELL_STAGE_COST` — const — line 93
+- `WELL_STAGE_START_PROMPT` — const — line 283
+- `WELL_STAGE_WORK_HOURS` — const — line 56
+- `WELL_WORK_LABEL` — const — line 290
+- `WELL_WORK_SESSION_HOURS` — const — line 280
+- `WELL_WORK_SESSION_SEC` — const — line 271
+- `WellMaterialCost` — type — line 87
+- `WellPlacementReason` — type — line 247
+- `wellPromptLabel` — function — line 308
+- `WellStage` — type — line 21
+- `wellStageCapabilities` — function — line 118
+- `wellStageRequirements` — function — line 130
+- `wellStageWorkHours` — function — line 83
+- `wellWaterSource` — function — line 228
+- `WellWorkOutcome` — type — line 151
 
 ## `world/playerWellProp.ts`
 

@@ -65,6 +65,20 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Save storage](../src/persistence/saveDb.ts) — IndexedDB slots and the active-save id.
 - [Config persistence](../src/config/persistConfig.ts) — the localStorage graphics / player / world domains (device preferences, not save data).
 
+## NPC AI internals
+
+`NpcAgent.ts` is the coordination core (FSM, action pipeline, `choose()` sequencing) and stays the entry point for NPC behaviour; the modules below own the domain logic it delegates to (`docs/reviews/2026-09-03--NpcAgent-refactor-review.md`).
+
+- [NpcAgent](../src/ai/NpcAgent.ts) — per-NPC FSM/action pipeline, `choose()` decision sequencing, movement execution, combat entry seams, public API.
+- [NPC action types](../src/ai/npcAction.ts) — `Phase`/`ActionId`/`NpcPlannedAction`, re-exported from `NpcAgent.ts`.
+- [NPC logistics](../src/ai/npcLogistics.ts) — the claim→carry→deposit two-leg transfer builder and the economy-withdraw/household-exchange/player-storage-delivery flows built on it.
+- [NPC profession work](../src/ai/npcProfessionWork.ts) — the eight profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith) as pure functions.
+- [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.
+- [NPC decision](../src/ai/npcDecision.ts) — the top-level `choose()`/`tickCriticalInterrupt()` priority tables, fauna-style.
+- [NPC collider rim](../src/ai/npcColliderRim.ts) — pure collider geometry (walkability, segment bypass, rim points, exterior sampling) shared by movement/rescue.
+- [Agent animation set](../src/shared/agentAnimationSet.ts) — clip resolve/crossfade/one-shot/settle owner over an `AnimationMixer`.
+- [Agent status label](../src/ui/agentStatusLabel.ts) — the shared floating name/bars/debug-line CSS2D label and its controller.
+
 <!-- AI_NAVIGATION_INDEX_START -->
 
 ### ai

@@ -60,41 +60,47 @@ Generated from exported TypeScript symbols.
 - `createNeedState` — function — line 16
 - `FOOD_THRESHOLD_NORMAL` — const — line 95
 - `generateNeedPressures` — function — line 120
-- `needColor` — function — line 161
+- `NEED_SATISFY_AMOUNT` — const — line 165
+- `needColor` — function — line 205
 - `NeedId` — type — line 4
-- `needLabel` — function — line 176
+- `needLabel` — function — line 220
 - `NeedState` — type — line 6
+- `needValue` — function — line 195
 - `NpcPressure` — type — line 103
 - `pickFromPressures` — function — line 150
 - `pickNeed` — function — line 157
 - `PickNeedOptions` — type — line 52
+- `relieveNeed` — function — line 174
 - `SLEEP_HUNGER_THIRST_RATE` — const — line 27
 - `tickNeeds` — function — line 42
 - `TickNeedsOptions` — type — line 36
 
+## `ai/npcAction.ts`
+
+- `ActionId` — type — line 30
+- `NpcPlannedAction` — type — line 62
+- `Phase` — type — line 10
+
 ## `ai/NpcAgent.ts`
 
-- `ActionId` — type — line 367
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 670
-- `classifyPendingActivity` — function — line 525
-- `CurrentActivity` — type — line 421
-- `CurrentActivityKind` — type — line 419
-- `findWeaponNeedingMaintenance` — function — line 778
-- `NPC_HEIGHT` — const — line 265
-- `NPC_MODEL_URLS` — const — line 320
-- `NPC_SHADOW_DISTANCE` — const — line 270
-- `NpcAgent` — class — line 883
+- `classifyPendingActivity` — function — line 467
+- `CurrentActivity` — type — line 357
+- `CurrentActivityKind` — type — line 350
+- `NPC_HEIGHT` — const — line 260
+- `NPC_MODEL_URLS` — const — line 324
+- `NPC_SHADOW_DISTANCE` — const — line 274
+- `NpcAgent` — class — line 747
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcInspectionSnapshot` — type — line 436
-- `NpcWhy` — type — line 500
-- `Phase` — type — line 347
-- `projectNpcWhy` — function — line 556
-- `promoteChainKind` — function — line 517
+- `NpcAgentDeps` — type — line 693
+- `NpcInspectionSnapshot` — type — line 372
+- `NpcWhy` — type — line 442
+- `projectNpcWhy` — function — line 498
+- `promoteChainKind` — function — line 459
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -120,15 +126,19 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcColliderRim.ts`
 
+- `bypassPointForSegment` — function — line 165
 - `COLLIDER_RIM_MARGIN` — const — line 27
 - `destinationOnColliderRim` — function — line 57
 - `isExteriorPoint` — function — line 37
+- `isPointWalkableForNpc` — function — line 132
 - `localEscapeRadii` — function — line 76
 - `navigationApproachTarget` — function — line 108
-- `pickEmergencyTeleportPoint` — function — line 127
+- `pickEmergencyTeleportPoint` — function — line 259
 - `Point2` — type — line 22
 - `pointInsideCollider` — function — line 29
 - `rimPointFacing` — function — line 43
+- `sampleNearbyExteriorPoint` — function — line 204
+- `sampleRandomExteriorPoint` — function — line 234
 
 ## `ai/npcCombat.ts`
 
@@ -154,12 +164,43 @@ Generated from exported TypeScript symbols.
 - `NpcCrowdAgent` — type — line 28
 - `NpcCrowdResult` — type — line 33
 
+## `ai/npcDecision.ts`
+
+- `decideNpcAction` — function — line 73
+- `NPC_DECISION_PRIORITY` — const — line 40
+- `NpcDecisionInput` — type — line 26
+- `NpcDecisionKind` — type — line 24
+- `NpcInterruptInput` — type — line 93
+- `scoreNpcDecisions` — function — line 85
+- `shouldInterruptAction` — function — line 115
+
 ## `ai/npcLoadout.ts`
 
 - `defaultWeaponForRole` — function — line 22
 - `ensureKnifeCarried` — function — line 46
 - `seedDefaultRoleWeapon` — function — line 32
 - `seedHunterSupplies` — function — line 61
+
+## `ai/npcLogistics.ts`
+
+- `buildTransferAction` — function — line 160
+- `canDeliverToPlayerStorage` — function — line 338
+- `canExchangeWithHousehold` — function — line 196
+- `canWithdrawFromEconomy` — function — line 182
+- `depositCarriedItems` — function — line 123
+- `depositFoodHarvest` — function — line 111
+- `depositWoodHarvest` — function — line 92
+- `HELPER_DELIVERY_ITEM_KIND` — const — line 50
+- `HELPER_DELIVERY_MAX_CARRY` — const — line 51
+- `HOUSEHOLD_EXCHANGE_MAX_TRANSFER` — const — line 39
+- `HUNT_YIELD_KINDS` — const — line 55
+- `NpcLogisticsCtx` — type — line 69
+- `planDeliverHuntYieldHome` — function — line 400
+- `planEconomyWithdraw` — function — line 213
+- `planHouseholdExchange` — function — line 272
+- `planPlayerStorageDelivery` — function — line 361
+- `ResourceTransferPlan` — type — line 152
+- `satisfyHouseholdResourceNeed` — function — line 139
 
 ## `ai/npcMovementWatchdog.ts`
 
@@ -194,6 +235,13 @@ Generated from exported TypeScript symbols.
 - `progressPlan` — function — line 126
 - `resumePlan` — function — line 97
 - `setPlanStrategy` — function — line 81
+
+## `ai/npcProfessionWork.ts`
+
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 43
+- `findWeaponNeedingMaintenance` — function — line 69
+- `NpcWorkContext` — type — line 89
+- `planProfessionWork` — function — line 428
 
 ## `ai/npcStrategies.ts`
 
