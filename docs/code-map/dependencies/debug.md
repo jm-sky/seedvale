@@ -186,6 +186,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/settlementGenerator.ts`
+- `terrain/riverNetwork.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/worldContext.ts`

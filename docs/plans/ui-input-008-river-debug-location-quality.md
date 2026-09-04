@@ -1,7 +1,7 @@
 # Plan: River debug location quality
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** bug
 **Priority:** medium · **Effort:** S
 **Depends on:** ui-input-001
@@ -118,23 +118,6 @@ Uruchomić `tsc`, lint, testy i build.
 
 ## Manual verification
 
-W przeglądarce z `?debug=1` sprawdzić wielokrotnie z różnych pozycji:
-
-```ts
-seedvale.debug.locations.riverNearest()
-seedvale.debug.locations.riversNearby()
-await seedvale.debug.teleportTo.riverNearest()
-await seedvale.debug.teleportTo.nextRiver()
-await seedvale.debug.teleportTo.nextRiver()
-await seedvale.debug.teleportTo.nextRiver()
-```
-
-Zweryfikować, że:
-
-- teleport prowadzi do czytelnego odcinka rzeki na lądzie, a nie do jeziora/morza ani bezpośrednio do ujścia;
-- kolejne `nextRiver()` faktycznie prowadzą do różnych rzek, a nie kolejnych fragmentów tego samego cieku;
-- kolejność jest stabilna dla tego samego świata.
-
 Manualna weryfikacja należy do gracza.
 
 ## Poza zakresem
@@ -147,6 +130,7 @@ Manualna weryfikacja należy do gracza.
 - nowe globalne registry lokalizacji;
 - trwałe ID wszystkich rzek w świecie;
 - nieograniczone listowanie wszystkich rzek proceduralnego świata.
+- agent Ai nie robi weryfikacji w browser
 
 ## Kryterium sukcesu
 

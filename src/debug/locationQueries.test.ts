@@ -3,10 +3,11 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { SettlementCell, SettlementDef } from '../settlement/settlementGenerator'
 import type { SettlementsManager } from '../settlement/SettlementsManager'
 import type { ForestBiome } from '../terrain/biomeRegions'
+import type { RiverPoint } from '../terrain/riverNetwork'
 import type { WorldContext } from '../world/worldContext'
 import { SETTLEMENT_GRID_STEP, worldToCell } from '../settlement/settlementGenerator'
 import { computeRiverTile, RIVER_TILE_SIZE, riverTileCoordOf } from '../terrain/riverNetwork'
-import { deepForestNearest, mountainNearest, oceanNearest, riverNearest, villageNearest } from './locationQueries'
+import { deepForestNearest, mountainNearest, oceanNearest, riverNearest, riversNearby, villageNearest } from './locationQueries'
 
 vi.mock('../terrain/riverNetwork', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../terrain/riverNetwork')>()
@@ -100,12 +101,22 @@ const FAKE_CONFIG = {
   },
 } as unknown as WorldConfig
 
+// FAKE_CONFIG.terrain.waterLevel is 0.45; the debug land margin is 0.5, so
+// anything at or below elevation 0.95 reads as "too close to water" and
+// anything above qualifies as land.
+const SUBMERGED_ELEVATION = 0.5
+const LAND_ELEVATION = 5
+
+function riverPoint(x: number, z: number, elevation: number, accumulation = 100): RiverPoint {
+  return { x, z, elevation, accumulation }
+}
+
 describe('riverNearest', () => {
   it('returns the nearest chain point in the first tile ring that has a river', () => {
     const origin = { x: 0, z: 0 }
     const originTile = riverTileCoordOf(origin.x, origin.z)
     const targetTile = { tx: originTile.tx + 1, tz: originTile.tz }
-    const chainPoint = { x: origin.x + RIVER_TILE_SIZE, z: origin.z + 5, elevation: 0, accumulation: 100 }
+    const chainPoint = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z + 5, LAND_ELEVATION)
     vi.mocked(computeRiverTile).mockImplementation((tile) =>
       tile.tx === targetTile.tx && tile.tz === targetTile.tz ? [{ points: [chainPoint] }] : [])
 
@@ -119,6 +130,114 @@ describe('riverNearest', () => {
   it('returns null when no tile within the search radius has a river', () => {
     vi.mocked(computeRiverTile).mockReturnValue([])
     expect(riverNearest({ x: 0, z: 0 }, FAKE_CONFIG)).toBeNull()
+  })
+
+  it('picks the land point over a submerged/terminal point in the same chain', () => {
+    const origin = { x: 0, z: 0 }
+    const originTile = riverTileCoordOf(origin.x, origin.z)
+    const targetTile = { tx: originTile.tx + 1, tz: originTile.tz }
+    const submerged = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z, SUBMERGED_ELEVATION)
+    const land = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z + 20, LAND_ELEVATION)
+    vi.mocked(computeRiverTile).mockImplementation((tile) =>
+      tile.tx === targetTile.tx && tile.tz === targetTile.tz ? [{ points: [submerged, land] }] : [])
+
+    const result = riverNearest(origin, FAKE_CONFIG)
+    expect(result?.position).toEqual({ x: land.x, z: land.z })
+  })
+
+  it('continues the bounded tile-ring search when a non-empty tile has only disqualified points', () => {
+    const origin = { x: 0, z: 0 }
+    const originTile = riverTileCoordOf(origin.x, origin.z)
+    const badTile = { tx: originTile.tx + 1, tz: originTile.tz }
+    const goodTile = { tx: originTile.tx + 2, tz: originTile.tz }
+    const land = riverPoint(origin.x + RIVER_TILE_SIZE * 2, origin.z, LAND_ELEVATION)
+    vi.mocked(computeRiverTile).mockImplementation((tile) => {
+      if (tile.tx === badTile.tx && tile.tz === badTile.tz) {
+        return [{ points: [riverPoint(origin.x + RIVER_TILE_SIZE, origin.z, SUBMERGED_ELEVATION)] }]
+      }
+      if (tile.tx === goodTile.tx && tile.tz === goodTile.tz) return [{ points: [land] }]
+      return []
+    })
+
+    const result = riverNearest(origin, FAKE_CONFIG)
+    expect(result?.position).toEqual({ x: land.x, z: land.z })
+  })
+
+  it('prefers a chain-interior land point over a nearer chain terminal', () => {
+    const origin = { x: 0, z: 0 }
+    const originTile = riverTileCoordOf(origin.x, origin.z)
+    const targetTile = { tx: originTile.tx + 1, tz: originTile.tz }
+    const nearTerminal = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z, LAND_ELEVATION)
+    const fartherInterior = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z + 100, LAND_ELEVATION)
+    const farTerminal = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z + 200, LAND_ELEVATION)
+    vi.mocked(computeRiverTile).mockImplementation((tile) =>
+      tile.tx === targetTile.tx && tile.tz === targetTile.tz
+        ? [{ points: [nearTerminal, fartherInterior, farTerminal] }]
+        : [])
+
+    const result = riverNearest(origin, FAKE_CONFIG)
+    expect(result?.position).toEqual({ x: fartherInterior.x, z: fartherInterior.z })
+  })
+
+  it('returns null when no chain in the entire bounded search has a qualifying point', () => {
+    vi.mocked(computeRiverTile).mockReturnValue([{ points: [riverPoint(50, 50, SUBMERGED_ELEVATION)] }])
+    expect(riverNearest({ x: 0, z: 0 }, FAKE_CONFIG)).toBeNull()
+  })
+
+  it('is deterministic across repeated calls with the same data', () => {
+    const origin = { x: 0, z: 0 }
+    const originTile = riverTileCoordOf(origin.x, origin.z)
+    const targetTile = { tx: originTile.tx + 1, tz: originTile.tz }
+    const land = riverPoint(origin.x + RIVER_TILE_SIZE, origin.z, LAND_ELEVATION)
+    vi.mocked(computeRiverTile).mockImplementation((tile) =>
+      tile.tx === targetTile.tx && tile.tz === targetTile.tz ? [{ points: [land] }] : [])
+
+    const first = riverNearest(origin, FAKE_CONFIG)
+    const second = riverNearest(origin, FAKE_CONFIG)
+    expect(first).toEqual(second)
+  })
+})
+
+describe('riversNearby', () => {
+  it('merges chain fragments of the same river split across a tile boundary into one candidate', () => {
+    const origin = { x: 0, z: 0 }
+    const originTile = riverTileCoordOf(origin.x, origin.z)
+    const tileA = { tx: originTile.tx + 1, tz: originTile.tz }
+    const tileB = { tx: originTile.tx + 2, tz: originTile.tz }
+    // tileA's chain ends right where tileB's chain begins (same accumulation,
+    // a few world units apart) — a continuation of one physical river, not
+    // two different ones.
+    const tail = riverPoint(RIVER_TILE_SIZE, 0, LAND_ELEVATION, 100)
+    const head = riverPoint(RIVER_TILE_SIZE + 8, 4, LAND_ELEVATION, 102)
+    const continuedLand = riverPoint(RIVER_TILE_SIZE * 2, 0, LAND_ELEVATION, 105)
+    vi.mocked(computeRiverTile).mockImplementation((tile) => {
+      if (tile.tx === tileA.tx && tile.tz === tileA.tz) return [{ points: [riverPoint(0, 0, LAND_ELEVATION, 90), tail] }]
+      if (tile.tx === tileB.tx && tile.tz === tileB.tz) return [{ points: [head, continuedLand] }]
+      return []
+    })
+
+    const results = riversNearby(origin, FAKE_CONFIG)
+    expect(results).toHaveLength(1)
+  })
+
+  it('reports separate, non-continuous rivers as separate candidates', () => {
+    const origin = { x: 0, z: 0 }
+    const originTile = riverTileCoordOf(origin.x, origin.z)
+    const tileA = { tx: originTile.tx + 1, tz: originTile.tz }
+    const tileB = { tx: originTile.tx - 1, tz: originTile.tz }
+    vi.mocked(computeRiverTile).mockImplementation((tile) => {
+      if (tile.tx === tileA.tx && tile.tz === tileA.tz) return [{ points: [riverPoint(RIVER_TILE_SIZE, 0, LAND_ELEVATION, 20)] }]
+      if (tile.tx === tileB.tx && tile.tz === tileB.tz) return [{ points: [riverPoint(-RIVER_TILE_SIZE, 0, LAND_ELEVATION, 500)] }]
+      return []
+    })
+
+    const results = riversNearby(origin, FAKE_CONFIG)
+    expect(results).toHaveLength(2)
+  })
+
+  it('returns [] when nothing in the bounded search qualifies', () => {
+    vi.mocked(computeRiverTile).mockReturnValue([])
+    expect(riversNearby({ x: 0, z: 0 }, FAKE_CONFIG)).toEqual([])
   })
 })
 

@@ -687,6 +687,7 @@ Generated from TypeScript imports.
 
 - `debug/locationQueries.test.ts`
 - `debug/locationQueries.ts`
+- `debug/npcDebugApi.test.ts`
 - `terrain/chunkManager.ts`
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkVegetation.ts`

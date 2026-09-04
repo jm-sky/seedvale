@@ -8,10 +8,17 @@ import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldContext } from '../world/worldContext'
 import { createPlayerSkills } from '../player/PlayerSkills'
+import { computeRiverTile, riverTileCoordOf } from '../terrain/riverNetwork'
 import { installNpcDebugApi } from './npcDebugApi'
+
+vi.mock('../terrain/riverNetwork', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../terrain/riverNetwork')>()
+  return { ...actual, computeRiverTile: vi.fn() }
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.mocked(computeRiverTile).mockReset()
 })
 
 function stubWindow(search: string): void {
@@ -88,10 +95,11 @@ function install(
   opts: {
     getPlayerPosition?: () => { x: number, z: number }
     teleport?: (x: number, z: number) => Promise<void>
+    config?: WorldConfig
   } = {},
 ) {
   const worldContext = {} as unknown as WorldContext
-  const config = {} as unknown as WorldConfig
+  const config = opts.config ?? ({} as unknown as WorldConfig)
   const teleport = opts.teleport ?? vi.fn(async () => {})
   const getPlayerPosition = opts.getPlayerPosition ?? (() => ({ x: 0, z: 0 }))
   const worldFlags = { hiddenTreasureFound: false }
@@ -389,5 +397,87 @@ describe('teleportTo', () => {
     const result = await api!.teleportTo.villageNearest()
     expect(result).toBe(false)
     expect(teleport).not.toHaveBeenCalled()
+  })
+})
+
+function fakeRiverConfig(seed = 1): WorldConfig {
+  return {
+    seed,
+    terrain: {
+      heightScale: 18,
+      waterLevel: 0.45,
+      noiseScale: 105,
+      detailAmplitude: 0.65,
+      hillsScale: 420,
+      hillsAmplitude: 0.34,
+      hillsFbm: { octaves: 3, persistence: 0.55, lacunarity: 2, exponentiation: 1.15 },
+      fbm: { octaves: 4, persistence: 0.65, lacunarity: 2, exponentiation: 1.35 },
+      biome: { noiseScale: 96, fbm: { octaves: 3, persistence: 0.5, lacunarity: 2, exponentiation: 1 } },
+      region: { oceanThreshold: 0.32, coastThreshold: 0.45 },
+    },
+  } as unknown as WorldConfig
+}
+
+function riverPoint(x: number, z: number, elevation: number, accumulation = 100) {
+  return { x, z, elevation, accumulation }
+}
+
+describe('teleportTo.nextRiver() (plan ui-input-008)', () => {
+  it('cycles through different qualifying rivers in a stable order and wraps at the end', async () => {
+    stubWindow('?debug=1')
+    const config = fakeRiverConfig(1)
+    const originTile = riverTileCoordOf(0, 0)
+    const riverA = riverPoint(-256, 0, 5, 10)
+    const riverB = riverPoint(256, 0, 5, 500)
+    vi.mocked(computeRiverTile).mockImplementation((tile) => {
+      if (tile.tx === originTile.tx - 1 && tile.tz === originTile.tz) return [{ points: [riverA] }]
+      if (tile.tx === originTile.tx + 1 && tile.tz === originTile.tz) return [{ points: [riverB] }]
+      return []
+    })
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const teleport = vi.fn(async () => {})
+    const { api } = install(bundle, { teleport, config })
+
+    expect(await api!.teleportTo.nextRiver()).toBe(true)
+    expect(teleport).toHaveBeenNthCalledWith(1, riverA.x, riverA.z)
+    expect(await api!.teleportTo.nextRiver()).toBe(true)
+    expect(teleport).toHaveBeenNthCalledWith(2, riverB.x, riverB.z)
+    expect(await api!.teleportTo.nextRiver()).toBe(true)
+    expect(teleport).toHaveBeenNthCalledWith(3, riverA.x, riverA.z)
+  })
+
+  it('resolves false and never calls teleport when no river qualifies', async () => {
+    stubWindow('?debug=1')
+    const config = fakeRiverConfig(1)
+    vi.mocked(computeRiverTile).mockReturnValue([])
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const teleport = vi.fn(async () => {})
+    const { api } = install(bundle, { teleport, config })
+
+    expect(await api!.teleportTo.nextRiver()).toBe(false)
+    expect(teleport).not.toHaveBeenCalled()
+  })
+
+  it('resets the cursor to a fresh list when config.seed changes (world rebuild/reseed)', async () => {
+    stubWindow('?debug=1')
+    const config = fakeRiverConfig(1)
+    const originTile = riverTileCoordOf(0, 0)
+    const riverA = riverPoint(-256, 0, 5, 10)
+    const riverC = riverPoint(0, 256, 5, 20)
+    vi.mocked(computeRiverTile).mockImplementation((tile) =>
+      tile.tx === originTile.tx - 1 && tile.tz === originTile.tz ? [{ points: [riverA] }] : [])
+    const bundle = { settlementsManager: fakeSettlementsManager({}).manager } as unknown as WorldBundle
+    const teleport = vi.fn(async () => {})
+    const { api } = install(bundle, { teleport, config })
+
+    expect(await api!.teleportTo.nextRiver()).toBe(true)
+    expect(teleport).toHaveBeenNthCalledWith(1, riverA.x, riverA.z)
+
+    config.seed = 2
+    vi.mocked(computeRiverTile).mockImplementation((tile) =>
+      tile.tx === originTile.tx && tile.tz === originTile.tz + 1 ? [{ points: [riverC] }] : [])
+
+    expect(await api!.teleportTo.nextRiver()).toBe(true)
+    expect(teleport).toHaveBeenNthCalledWith(2, riverC.x, riverC.z)
   })
 })

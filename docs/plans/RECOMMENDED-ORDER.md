@@ -36,8 +36,6 @@
 
 1. `persistence-004` — **Save Integrity and World Lifecycle**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: bug
-2. `ui-input-008` — **River debug location quality**  
-   🟡 `S` · ✅ ready · unlocks 0/0 · type: bug
 
 ---
 
@@ -169,27 +167,23 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-24. `ui-input-008` — **River debug location quality**  
-  🟡 `S` · **Score:**  21  
-   → **unlocks:** 0/0
-
-25. `fauna-007` — **Animal leading and cart harness**  
+24. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-26. `tools-000` — **Weapon Browser — Observatory/Admin**  
+25. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-27. `world-terrain-008` — **Underground Caves V2**  
+26. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-28. `npc-004` — **Drzewo genealogiczne NPC**  
+27. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-29. `tools-006` — **tools-006--world-observatory.md**  
+28. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

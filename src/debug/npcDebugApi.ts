@@ -23,6 +23,7 @@ import {
   mountainNearest,
   oceanNearest,
   riverNearest,
+  riversNearby,
   villageNearest,
 } from './locationQueries'
 import {
@@ -101,6 +102,10 @@ export type LocationsDebugApi = {
   mountainNearest: () => LocationResult | null
   deepForestNearest: () => LocationResult | null
   riverNearest: () => LocationResult | null
+  /** Plan `ui-input-008` — several *different* qualifying rivers near the
+   *  player, bounded and deduplicated; see `locationQueries.ts`'s
+   *  `riversNearby` doc. */
+  riversNearby: () => LocationResult[]
   villageNearest: () => LocationResult | null
   oceanNearest: () => LocationResult | null
 }
@@ -110,6 +115,13 @@ export type TeleportToDebugApi = {
   mountainNearest: () => Promise<boolean>
   deepForestNearest: () => Promise<boolean>
   riverNearest: () => Promise<boolean>
+  /** Plan `ui-input-008` — cycles to the next *different* qualifying river
+   *  (`locations.riversNearby()`) on each call, wrapping back to the first
+   *  past the end. The cursor lives only in this debug closure — it never
+   *  touches world/simulation state — and resets whenever `config.seed`
+   *  changes (world rebuild / new seed), re-binding to a fresh list from the
+   *  player's current position. */
+  nextRiver: () => Promise<boolean>
   villageNearest: () => Promise<boolean>
   oceanNearest: () => Promise<boolean>
 }
@@ -232,7 +244,9 @@ const HELP_TEXT = [
   'villages() — lists currently loaded villages only',
   'village(id).houses() / villages()[i].houses() — per-house definitionId + hasBed; null while unloaded',
   'locations.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — bounded deterministic nearest-feature search from the player; null if none found within budget',
+  'locations.riversNearby() — several different qualifying rivers near the player, bounded and deduplicated (never multiple fragments of the same river)',
   'teleportTo(locationResult) / teleportTo.{mountainNearest,deepForestNearest,riverNearest,villageNearest,oceanNearest}() — teleport to a location query result; awaits terrain load first, resolves false if no such location exists',
+  'teleportTo.nextRiver() — cycles to the next different qualifying river on each call, wrapping at the end; cursor is debug-only and resets on world rebuild/reseed',
   'setFrenzyWolf() — debug combat trigger',
   'hiddenTreasure.markers() / .found() / .teleport(index?) — hidden-treasure flower/dig-marker positions, one-shot found flag, teleport to marker index (default 0)',
   'worldLocations.list() / .listUndiscovered() — cave/cemetery/lake/mountainPeak/settlement locations within 200km of the player, each flagged {discovered}; worldLocations.reveal(id) / .revealAll() — mark as confirmed/exploration (mutates location knowledge only, never map Fog of War)',
@@ -279,8 +293,27 @@ export function installNpcDebugApi(
     mountainNearest: () => mountainNearest(getPlayerPosition(), worldContext),
     deepForestNearest: () => deepForestNearest(getPlayerPosition(), worldContext),
     riverNearest: () => riverNearest(getPlayerPosition(), config),
+    riversNearby: () => riversNearby(getPlayerPosition(), config),
     villageNearest: () => villageNearest(getPlayerPosition(), bundle.settlementsManager),
     oceanNearest: () => oceanNearest(getPlayerPosition(), worldContext),
+  }
+
+  /** `teleportTo.nextRiver()` cursor (plan `ui-input-008`) — debug-layer-only
+   *  state, never read by the simulation. Recomputed from the player's
+   *  current position the first time it's needed and whenever `config.seed`
+   *  changes (the live signal `rebuildWorld()` already updates in place —
+   *  see `gameLoop.ts`'s `getSeed` doc for the same convention), so a world
+   *  rebuild/reseed can't leave the cursor pointing at a stale candidate
+   *  list. */
+  let riverCursor: { seed: number, candidates: LocationResult[], index: number } | null = null
+
+  async function nextRiver(): Promise<boolean> {
+    if (!riverCursor || riverCursor.seed !== config.seed) {
+      riverCursor = { seed: config.seed, candidates: locations.riversNearby(), index: -1 }
+    }
+    if (riverCursor.candidates.length === 0) return false
+    riverCursor.index = (riverCursor.index + 1) % riverCursor.candidates.length
+    return teleportToLocation(riverCursor.candidates[riverCursor.index] ?? null)
   }
 
   const teleportTo = Object.assign(
@@ -289,6 +322,7 @@ export function installNpcDebugApi(
       mountainNearest: () => teleportToLocation(locations.mountainNearest()),
       deepForestNearest: () => teleportToLocation(locations.deepForestNearest()),
       riverNearest: () => teleportToLocation(locations.riverNearest()),
+      nextRiver,
       villageNearest: () => teleportToLocation(locations.villageNearest()),
       oceanNearest: () => teleportToLocation(locations.oceanNearest()),
     },

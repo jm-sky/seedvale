@@ -75,8 +75,10 @@ Generated from exported TypeScript symbols.
 - `LocationResult` — type — line 26
 - `mountainNearest` — function — line 45
 - `oceanNearest` — function — line 73
-- `riverNearest` — function — line 104
-- `villageNearest` — function — line 123
+- `riverNearest` — function — line 135
+- `riversNearby` — function — line 230
+  - domain: ui-input
+- `villageNearest` — function — line 260
 
 ## `debug/locationSearch.ts`
 
@@ -88,18 +90,18 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `HiddenTreasureDebugApi` — type — line 136
-- `HouseholdDebugHandle` — type — line 68
-- `installNpcDebugApi` — function — line 254
-- `LocationsDebugApi` — type — line 100
-- `NpcDebugHandle` — type — line 53
-- `SeedvaleDebugApi` — type — line 164
-- `SettlementHistoryDebugHandle` — type — line 76
-- `SkillsDebugApi` — type — line 154
-- `TeleportToDebugApi` — type — line 108
-- `VillageDebugHandle` — type — line 83
-- `WorldLocationDebugEntry` — type — line 122
-- `WorldLocationsDebugApi` — type — line 123
+- `HiddenTreasureDebugApi` — type — line 148
+- `HouseholdDebugHandle` — type — line 69
+- `installNpcDebugApi` — function — line 268
+- `LocationsDebugApi` — type — line 101
+- `NpcDebugHandle` — type — line 54
+- `SeedvaleDebugApi` — type — line 176
+- `SettlementHistoryDebugHandle` — type — line 77
+- `SkillsDebugApi` — type — line 166
+- `TeleportToDebugApi` — type — line 113
+- `VillageDebugHandle` — type — line 84
+- `WorldLocationDebugEntry` — type — line 134
+- `WorldLocationsDebugApi` — type — line 135
 
 ## `debug/npcInspector.ts`
 
