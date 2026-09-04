@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { type CircleCollider, colliderContainsPoint } from '../world/collision'
+import { type CircleCollider, colliderContainsPoint, type ObbCollider } from '../world/collision'
 import {
+  bypassPointForSegment,
   COLLIDER_RIM_MARGIN,
   destinationOnColliderRim,
   isExteriorPoint,
+  isPointWalkableForNpc,
   localEscapeRadii,
   navigationApproachTarget,
   pickEmergencyTeleportPoint,
   rimPointFacing,
+  sampleNearbyExteriorPoint,
+  sampleRandomExteriorPoint,
 } from './npcColliderRim'
 
 /**
@@ -130,5 +134,117 @@ describe('emergency teleport does not pick home center', () => {
       alwaysWalkable,
     )
     expect(picked).toBeNull()
+  })
+})
+
+/** Review 2026-09-03 §5 E7 / §8 step 8 — `isWalkable`'s penetration rule
+ *  extracted as pure geometry (water-level check stays with the caller). */
+describe('isPointWalkableForNpc', () => {
+  const approachBuffer = 0.4
+  const coreFraction = 0.55
+
+  it('is walkable outside every collider', () => {
+    expect(isPointWalkableForNpc(8, 8, [house], 5, 5, null, approachBuffer, coreFraction)).toBe(true)
+  })
+
+  it('blocks entering a foreign collider with no nearby destination', () => {
+    expect(isPointWalkableForNpc(0, 0, [house], 5, 5, null, approachBuffer, coreFraction)).toBe(false)
+  })
+
+  it('lets the agent leave a collider it already stands in', () => {
+    expect(isPointWalkableForNpc(0.5, 0, [house], 0, 0, null, approachBuffer, coreFraction)).toBe(true)
+  })
+
+  it('allows a shallow graze toward a destination near the collider, blocks past the core fraction', () => {
+    const destination = { x: house.radius + 0.1, z: 0 }
+    // Just past the rim — within the shallow allowance.
+    expect(isPointWalkableForNpc(house.radius - 0.05, 0, [house], 5, 5, destination, approachBuffer, coreFraction))
+      .toBe(true)
+    // Deep in the core — beyond `coreFraction` even with a nearby destination.
+    expect(isPointWalkableForNpc(0, 0, [house], 5, 5, destination, approachBuffer, coreFraction)).toBe(false)
+  })
+
+  it('an OBB collider has no soft approach zone — any penetration blocks', () => {
+    const wall: ObbCollider = { type: 'obb', x: 0, z: 0, halfWidth: 2, halfDepth: 0.3, rotationY: 0 }
+    const destination = { x: 0, z: 0.35 }
+    expect(isPointWalkableForNpc(0, 0.1, [wall], 5, 5, destination, approachBuffer, coreFraction)).toBe(false)
+  })
+})
+
+describe('bypassPointForSegment', () => {
+  it('returns null when the straight segment does not cross any collider', () => {
+    expect(bypassPointForSegment(5, 5, { x: 8, z: 8 }, [house], 0.4)).toBeNull()
+  })
+
+  it('returns a rim point when the segment cuts through a collider disk', () => {
+    const bypass = bypassPointForSegment(-5, 0, { x: 5, z: 0 }, [house], 0.4)
+    expect(bypass).not.toBeNull()
+    expect(colliderContainsPoint(house, bypass!.x, bypass!.z)).toBe(false)
+  })
+
+  it('skips a collider the agent already stands in', () => {
+    expect(bypassPointForSegment(0.5, 0, { x: 5, z: 0 }, [house], 0.4)).toBeNull()
+  })
+
+  it('skips a collider the destination is already allowed to approach', () => {
+    const destination = { x: house.radius + 0.1, z: 0 }
+    expect(bypassPointForSegment(-5, 0, destination, [house], 0.4)).toBeNull()
+  })
+})
+
+describe('sampleNearbyExteriorPoint (deterministic ring)', () => {
+  it('rejects interior points and returns the first exterior ring point', () => {
+    const isExterior = (x: number, z: number) => isExteriorPoint(x, z, [house])
+    const found = sampleNearbyExteriorPoint(0, 0, [house.radius + 1], 8, isExterior)
+    expect(found).not.toBeNull()
+    expect(isExteriorPoint(found!.x, found!.z, [house])).toBe(true)
+  })
+
+  it('is deterministic — the same inputs always produce the same point', () => {
+    const isExterior = (x: number, z: number) => isExteriorPoint(x, z, [house])
+    const a = sampleNearbyExteriorPoint(0, 0, [house.radius + 1, house.radius + 2], 8, isExterior)
+    const b = sampleNearbyExteriorPoint(0, 0, [house.radius + 1, house.radius + 2], 8, isExterior)
+    expect(a).toEqual(b)
+  })
+
+  it('returns null when no radius yields an exterior point', () => {
+    const neverExterior = () => false
+    expect(sampleNearbyExteriorPoint(0, 0, [1, 2], 8, neverExterior)).toBeNull()
+  })
+
+  it('tries radii in order, returning the first ring with a hit', () => {
+    // Only the second radius (a much bigger ring, clear of the house) has
+    // any exterior point.
+    const isExterior = (x: number, z: number) => Math.hypot(x, z) > 5
+    const found = sampleNearbyExteriorPoint(0, 0, [1, 6], 4, isExterior)
+    expect(found).not.toBeNull()
+    expect(Math.hypot(found!.x, found!.z)).toBeCloseTo(6)
+  })
+})
+
+describe('sampleRandomExteriorPoint (random annulus)', () => {
+  it('rejects interior points and returns an exterior point within the annulus', () => {
+    const isExterior = (x: number, z: number) => isExteriorPoint(x, z, [house])
+    const found = sampleRandomExteriorPoint(0, 0, house.radius, 3, 6, isExterior, Math.random)
+    expect(found).not.toBeNull()
+    const dist = Math.hypot(found!.x, found!.z)
+    expect(dist).toBeGreaterThanOrEqual(house.radius)
+    expect(dist).toBeLessThanOrEqual(house.radius + 3 + 1e-9)
+  })
+
+  it('is deterministic given an injected deterministic "random" source', () => {
+    let calls = 0
+    const seq = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+    const fakeRandom = () => seq[calls++ % seq.length]!
+    const isExterior = (x: number, z: number) => isExteriorPoint(x, z, [house])
+    const a = sampleRandomExteriorPoint(0, 0, house.radius, 3, 6, isExterior, fakeRandom)
+    calls = 0
+    const b = sampleRandomExteriorPoint(0, 0, house.radius, 3, 6, isExterior, fakeRandom)
+    expect(a).toEqual(b)
+  })
+
+  it('returns null when every attempt lands on an interior point', () => {
+    const neverExterior = () => false
+    expect(sampleRandomExteriorPoint(0, 0, 1, 1, 4, neverExterior, () => 0.5)).toBeNull()
   })
 })

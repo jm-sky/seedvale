@@ -90,7 +90,6 @@ import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
-import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from '../world/collision'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import {
   activeWellStage,
@@ -142,11 +141,15 @@ import {
 } from './npcAnimalThreat'
 import { type AssistanceRequestKind, type AssistanceResult, resolveNpcAssistance } from './npcAssistance'
 import {
+  bypassPointForSegment,
   destinationOnColliderRim,
   isExteriorPoint,
+  isPointWalkableForNpc,
   localEscapeRadii,
   navigationApproachTarget,
   pickEmergencyTeleportPoint,
+  sampleNearbyExteriorPoint,
+  sampleRandomExteriorPoint,
 } from './npcColliderRim'
 import {
   applyNpcMeleeHit,
@@ -3958,26 +3961,16 @@ export class NpcAgent {
 
   private isWalkable(x: number, z: number): boolean {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
-    const dest = this.pendingAction?.destination
-    for (const collider of this.collidersNear(x, z)) {
-      if (!colliderContainsPoint(collider, x, z)) continue
-      // Already inside this collider (e.g. spawned at home, home == collider
-      // center) — let it leave instead of trapping it; blocking only applies
-      // to entering from outside.
-      if (colliderContainsPoint(collider, this.mesh.position.x, this.mesh.position.z)) continue
-      const destNearCollider =
-        !!dest
-        && colliderSignedDistance(collider, dest.x, dest.z) <= NPC_COLLIDER_APPROACH_BUFFER
-      // Final approach to a destination right next to this collider (well
-      // serving stand, a workplace) may clip its outer ring; never its core.
-      // House wall/door OBBs (plan settlements-001) have no such soft
-      // approach zone — any penetration blocks, they're a hard barrier.
-      if (!destNearCollider) return false
-      const depth = -colliderSignedDistance(collider, x, z)
-      const coreDepth = collider.type === 'circle' ? collider.radius * (1 - NPC_COLLIDER_CORE_FRACTION) : 0
-      if (depth > coreDepth) return false
-    }
-    return true
+    return isPointWalkableForNpc(
+      x,
+      z,
+      this.collidersNear(x, z),
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.pendingAction?.destination ?? null,
+      NPC_COLLIDER_APPROACH_BUFFER,
+      NPC_COLLIDER_CORE_FRACTION,
+    )
   }
 
   /** Rescue/wander probe: no 097 occupied-exit exception — a point inside
@@ -4031,29 +4024,10 @@ export class NpcAgent {
   private resolveSteerTarget(dest: THREE.Vector3): THREE.Vector3 {
     const px = this.mesh.position.x
     const pz = this.mesh.position.z
-    for (const collider of this.collidersNear(px, pz)) {
-      if (colliderContainsPoint(collider, px, pz)) continue
-      if (colliderSignedDistance(collider, dest.x, dest.z) <= NPC_COLLIDER_APPROACH_BUFFER) continue
-
-      const abx = dest.x - px
-      const abz = dest.z - pz
-      const abLen2 = abx * abx + abz * abz
-      if (abLen2 < 1e-8) continue
-
-      const apx = collider.x - px
-      const apz = collider.z - pz
-      let t = (apx * abx + apz * abz) / abLen2
-      t = Math.max(0, Math.min(1, t))
-      const cx = px + abx * t
-      const cz = pz + abz * t
-      if (!colliderContainsPoint(collider, cx, cz)) continue
-
-      const extent = collider.type === 'circle' ? collider.radius : Math.max(collider.halfWidth, collider.halfDepth)
-      const rim = colliderRimPoint(collider, cx, cz, extent * 0.2)
-      this.tmpAvoid.set(rim.x, dest.y, rim.z)
-      return this.tmpAvoid
-    }
-    return dest
+    const bypass = bypassPointForSegment(px, pz, dest, this.collidersNear(px, pz), NPC_COLLIDER_APPROACH_BUFFER)
+    if (!bypass) return dest
+    this.tmpAvoid.set(bypass.x, dest.y, bypass.z)
+    return this.tmpAvoid
   }
 
   /** 1 above HP_SLOW_THRESHOLD, tapering toward a floor as currentHp drops
@@ -4292,17 +4266,19 @@ export class NpcAgent {
     const radii = localEscapeRadii(this.mesh.position, occupied)
     const minR = radii[0] ?? 2
     const span = 1.5
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const angle = Math.random() * Math.PI * 2
-      const radius = minR + Math.random() * span
-      const x = this.mesh.position.x + Math.cos(angle) * radius
-      const z = this.mesh.position.z + Math.sin(angle) * radius
-      if (this.isWalkableExterior(x, z)) {
-        this.repathTarget.set(x, 0, z)
-        this.repathActive = true
-        this.repathIsNavRoute = false
-        return
-      }
+    const found = sampleRandomExteriorPoint(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      minR,
+      span,
+      6,
+      (x, z) => this.isWalkableExterior(x, z),
+      Math.random,
+    )
+    if (found) {
+      this.repathTarget.set(found.x, 0, found.z)
+      this.repathActive = true
+      this.repathIsNavRoute = false
     }
   }
 
@@ -4312,19 +4288,18 @@ export class NpcAgent {
   private attemptLocalEscape(): void {
     const occupied = this.collidersNear(this.mesh.position.x, this.mesh.position.z)
     const radii = localEscapeRadii(this.mesh.position, occupied)
-    for (const radius of radii) {
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2
-        const x = this.mesh.position.x + Math.cos(angle) * radius
-        const z = this.mesh.position.z + Math.sin(angle) * radius
-        if (this.isWalkableExterior(x, z)) {
-          this.mesh.position.x = x
-          this.mesh.position.z = z
-          this.clearRepath()
-          if (isDebugMode()) console.warn('[npc:rescue] local escape', this.name, { x, z })
-          return
-        }
-      }
+    const found = sampleNearbyExteriorPoint(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      radii,
+      8,
+      (x, z) => this.isWalkableExterior(x, z),
+    )
+    if (found) {
+      this.mesh.position.x = found.x
+      this.mesh.position.z = found.z
+      this.clearRepath()
+      if (isDebugMode()) console.warn('[npc:rescue] local escape', this.name, found)
     }
   }
 
