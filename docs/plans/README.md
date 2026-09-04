@@ -58,7 +58,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | ◼️ `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`    | -       | 🟡 | M      | -      |
-| ◼️ `fauna-011-domestic-dogs-and-household-guarding.md`                      | -       | 🟡 | M      | fauna-010 |
+| 💡 `fauna-011-domestic-dogs-and-household-guarding.md`                      | -       | 🟡 | M      | fauna-010 |
 
 ---
 
