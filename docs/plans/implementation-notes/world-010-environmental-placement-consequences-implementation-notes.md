@@ -1,125 +1,347 @@
 # Implementation Notes: Environmental Placement Consequences
 
 **Plan:** world-010-environmental-placement-consequences.md
-**Reviewed:** 2026-09-03
+**Reviewed:** 2026-09-04
 **Status:** planned
 
-## 1. Najważniejsza korekta względem planu
+## 1. Current ownership
 
-Obecny evaluateGroundPlacement() nie sprawdza ogólnej „mokrości” terenu wynikającej z pogody. Warunek water oznacza:
+The hard ground-placement validation is currently owned by:
 
+`src/items/tentPlacement.ts`
+
+The central pure validator is:
+
+```ts
+evaluateGroundPlacement(input: GroundPlacementInput): GroundPlacementReason
+```
+
+It currently evaluates, in order:
+
+1. water,
+2. slope,
+3. separation from same-family peers,
+4. blockers/objects,
+5. `ok`.
+
+The validator is deliberately free of Three.js/runtime scene state.
+
+`evaluateTentPlacement()` is a thin object-specific wrapper around the shared validator.
+
+## 2. Current water restriction
+
+`tentPlacement.ts` currently defines:
+
+```ts
+export const WATER_MARGIN = 0.8
+```
+
+and `evaluateGroundPlacement()` rejects the site when:
+
+```ts
 sampleHeight(x, z) <= waterLevel + WATER_MARGIN
+```
 
-gdzie WATER_MARGIN = 0.8 w src/items/tentPlacement.ts.
+This is a **water/terrain geometry restriction**, not weather wetness.
 
-To jest geometryczna/wodna dostępność miejsca, a nie world/weather.ts → computeSurfaceWeather().wetness.
+Do not reinterpret this condition as `SurfaceWeatherState.wetness`.
 
-Nie należy więc po prostu zamienić water → ok. Mogłoby to dopuścić placement w wodzie / przy brzegu, wbrew ograniczeniu zachowania rzeczywistych ograniczeń geometrycznych.
+## 3. Important shared use of WATER_MARGIN
 
-Jeżeli zgłoszony problem dotyczy deszczem mokrej powierzchni, obecny validator nie jest jego źródłem. Najpierw ustalić, czy problem dotyczy waterLevel + WATER_MARGIN, czy oczekiwanej reakcji na SurfaceWeatherState.wetness.
+`src/terrain/terrainPreparation.ts` imports:
 
-## 2. Istniejący placement contract
+```ts
+import { WATER_MARGIN } from '../items/tentPlacement'
+```
 
-src/app/actions/placementActions.ts ma już fundament z world-008:
-- GroundPlacementDefinition
-- evaluatePlacementSite()
-- previewGroundPlacement()
-- PlacementPreviewResult
+and uses the same `WATER_MARGIN` when validating every affected terrain sample.
 
-Preview i final placement korzystają z tego samego aim + evaluate, ale finalna akcja rewaliduje miejsce przy confirm/completion. Nie tworzyć drugiego placement systemu.
+Therefore the existing `WATER_MARGIN = 0.8` currently has at least two consumers:
 
-## 3. Wspólna walidacja jest szeroko używana
+* player ground placement,
+* terrain preparation.
 
-src/items/tentPlacement.ts zawiera GroundPlacementReason, GroundPlacementInput, evaluateGroundPlacement() i WATER_MARGIN.
+The implementation must not simply reduce `WATER_MARGIN` globally.
 
-evaluateGroundPlacement() jest współdzielone przez placement m.in. namiotu, pułapki, studni, skrzyni, grządki, pochodni, palisady, bedroll i platformy.
+The existing terrain-preparation behaviour must retain its current shoreline clearance.
 
-Zmiana semantyki water ma więc efekt globalny. Szczegółowe reason-y są nadal mapowane lokalnie przez poszczególne obiekty i nie należy ich przenosić do wspólnego systemu.
+The cleanest minimal direction is to preserve `WATER_MARGIN` for its existing terrain use and introduce a separate placement-specific value for `evaluateGroundPlacement()`.
 
-## 4. Preview vs consequence
+## 4. Shared placement contract
 
-src/app/actions/placementPreviewActions.ts odpowiada tylko za prezentację i dispatch. resolvePreview() pobiera read-only wynik, a confirm wywołuje prawdziwą akcję.
+`src/app/actions/placementActions.ts` already provides the shared placement seam:
 
-Jeżeli środowisko wpływa tylko na jakość/dalsze działanie obiektu, nie powinno zmieniać PlacementPreviewResult.valid. Czerwony ghost oznacza obecnie fizycznie niedozwolony placement, nie gorsze warunki.
+```ts
+GroundPlacementDefinition
+evaluatePlacementSite()
+previewGroundPlacement()
+```
 
-Nie cache'ować environmental state jako podstawy finalnego placementu.
+`previewGroundPlacement()` resolves the current aim and calls the supplied `evaluate()` function.
 
-## 5. Istniejąca pogoda
+Final placement actions resolve and validate again at confirmation/completion rather than trusting preview state.
 
-src/world/weather.ts jest deterministyczne: computeWeather(seed, elapsedDays, season) daje WeatherState, a computeSurfaceWeather(seed, elapsedDays) daje globalne wetness/snowAmount.
+Do not create another placement-validation system.
 
-Nie tworzyć per-object weather tickera.
+The water-margin change belongs at the existing `evaluateGroundPlacement()` boundary so all callers using that validator receive the same rule.
 
-Obecny wzorzec weather-dependent state jest lazy: PlayerGardenRecord → resolveGardenHydration() oraz BedrollRecord/PlatformRecord → resolveSleepingUtilityCondition(). Oba wykorzystują anchor czasu i bounded lookback zamiast aktualizacji per frame.
+## 5. Scope of shared ground placement
 
-## 6. Visual wetness nie jest obecnie gameplayowym environmental state
+`evaluateGroundPlacement()` is shared by multiple placement families, including the currently implemented tent, trap, well, chest, garden/crop, standing torch, palisade, bedroll and platform paths through their existing wrappers/definitions.
 
-computeSurfaceWeather().wetness jest opisane jako globalny/shared stan prezentacyjny powierzchni. Nie jest to soil simulation ani per-object state.
+The exact current call sites should be verified during implementation rather than copied into new architecture.
 
-Nie tworzyć automatycznie ogólnego EnvironmentalState tylko po to, aby rozwiązać jeden przypadek. Jeśli modifier będzie potrzebny dla kilku rzeczywistych konsumentów, powinien być małym pure/read-only mechanizmem.
+A single shared placement water margin is intentional for V1.
 
-## 7. Właściwy podział odpowiedzialności
+Do not introduce per-object water margins unless current code proves that an object bypasses the shared validator or has an explicit gameplay requirement that cannot use the common rule.
 
-Preferować:
+## 6. Critical footprint finding
 
-placement suitability → evaluateGroundPlacement() / object-specific wrapper
-environmental condition → mały pure resolver/modifier, jeśli rzeczywiście potrzebny
-object consequence → właściciel konkretnego world object
+The current validator does **not** perform a footprint-aware water test.
 
-Nie umieszczać np. logiki trwałości ogniska w tentPlacement.ts.
+The current water check samples only:
 
-## 8. Istniejące wzorce konsekwencji
+```ts
+sampleHeight(x, z)
+```
 
-Player garden w src/world/playerGarden.ts ma hydration, lastHydrationUpdateAtDays i droughtStressDays oraz resolveGardenHydration().
+at the placement centre.
 
-Sleeping utilities w src/world/sleepingUtilities.ts mają condition, lastConditionUpdateAtDays, rain/snow exposure i resolveSleepingUtilityCondition().
+The `footprintRadius` input is currently used for blocker clearance:
 
-To są dobre wzorce dla deterministycznej, lazy degradacji. Nie kopiować ich jednak mechanicznie bez potwierdzenia, że dany obiekt faktycznie potrzebuje persisted condition/time anchor.
+```ts
+distance < blocker.radius + footprintRadius
+```
 
-## 9. Nie zmieniać water restriction w ciemno
+but it is not used by the water check.
 
-Jeśli decyzja będzie taka, że część obecnego water restriction ma zniknąć, najpierw rozdzielić:
-- faktyczne wejście w wodę / geometryczną niedostępność,
-- shoreline clearance,
-- mokry, ale fizycznie poprawny teren.
+This is important for implementation:
 
-WATER_MARGIN jest również współdzielone przez terrain preparation jako shoreline clearance. Nie zmieniać tej stałej tylko dla player placement.
+> A smaller shoreline margin must not accidentally allow a large object to have its centre on land while part of its physical footprint enters water.
 
-## 10. Atomicity
+If the final implementation requires footprint-aware water protection, extend/reuse the existing placement geometry mechanism rather than introducing a second independent placement system.
 
-Obecne placement actions mają właściwy wzorzec: walidacja przed busy channel, koszt dopiero przy completion i brak zużycia materiałów przy odrzuconym placement.
+Do not duplicate footprint semantics in a separate water validator.
 
-Environmental modifier nie może wprowadzić częściowego zużycia materiałów ani mutować świata podczas preview.
+The exact sampling/geometry method should be chosen from the existing terrain/placement abstractions after checking their available capabilities.
 
-## 11. Zakres powinien pozostać mały
+## 7. Slope remains independent
 
-Po recon nie ma podstaw do budowania:
-- EnvironmentalEffectRegistry,
-- WeatherEffectsManager,
-- per-object weather tick,
-- soil moisture simulation,
-- nowego PlayerConstructionManager.
+The current slope check is:
 
-Najpierw naprawić konkretną granicę pomiędzy hard placement restriction a environmental consequence. Wspólny modifier wyciągać dopiero, gdy istnieją co najmniej dwa realne konsumenty.
+```ts
+maxSlopeDelta(x, z, sampleHeight) > SLOPE_MAX_DELTA
+```
 
-## 12. Sugerowana kolejność implementacji
+with:
 
-1. Potwierdzić, który aktualny warunek powoduje obserwowaną odmowę.
-2. Rozdzielić geometryczne water od faktycznego environmental wetness, jeśli oba są mieszane w wymaganiu.
-3. Zachować evaluateGroundPlacement() jako źródło hard physical restrictions.
-4. Pozostawić PlacementPreviewResult.valid semantycznie jako „fizycznie można postawić”.
-5. Jeśli potrzebny jest modifier, wprowadzić go jako pure/read-only input do konkretnego object lifecycle.
-6. Final placement nadal rewaliduje site; preview nie jest źródłem prawdy.
-7. Dopiero potem dodać obserwowalną konsekwencję, jeśli istnieje już odpowiedni lifecycle.
+```ts
+const SLOPE_SAMPLE = 1.6
+const SLOPE_MAX_DELTA = 0.75
+```
 
-## 13. Discrepancy względem planu
+The shoreline change must not modify these values or their semantics.
 
-Plan zakłada problem „mokrego terenu” i sugeruje usunięcie twardej odmowy. Aktualny codebase ma już placement contract z world-008 i weather-aware object states, ale nie ma jednego ogólnego gameplayowego environmental modifier mechanism.
+Expected distinction:
 
-Co ważniejsze: obecny water rejection nie jest równoważny z weather wetness. Implementacja nie powinna udawać, że jest inaczej.
+```text
+near shoreline + acceptable slope
+    → potentially valid
 
-Jeżeli problem dotyczy wyłącznie wody/shoreline, plan należy zawęzić do rozdzielenia geometrycznego restriction od łagodniejszego environmental condition. Jeżeli chodzi o rain wetness, zakres planu wymaga korekty, bo obecny validator nie odrzuca terenu tylko dlatego, że padał deszcz.
+near shoreline + excessive slope
+    → slope
 
-## 14. Dokumentacja
+water / forbidden shoreline area
+    → water
+```
 
-Jeżeli implementacja zmieni semantykę GroundPlacementReason, WATER_MARGIN albo computeSurfaceWeather().wetness, zaktualizować odpowiednią dokumentację stanu. Szczegóły implementacyjne pozostawić w implementation notes.
+Water and slope are separate physical restrictions.
+
+## 8. Blockers and separation remain unchanged
+
+The existing validator separately checks:
+
+* same-family peer separation,
+* blockers,
+* blocker radius,
+* object footprint radius.
+
+`placementActions.ts` supplies blockers such as nearby trees, settlement wells and houses for the relevant placement definitions.
+
+Do not change these distances or blocker semantics as part of this fix.
+
+## 9. Preview/final placement
+
+The shared placement contract in `placementActions.ts` is already the correct integration point.
+
+Preview:
+
+```text
+aim
+ ↓
+evaluatePlacementSite()
+ ↓
+evaluateGroundPlacement() / object wrapper
+ ↓
+PlacementPreviewResult
+```
+
+Final placement re-resolves the site and validates again.
+
+The new placement water margin must therefore live in the shared evaluation path, not in preview-only code.
+
+Do not cache preview environmental/terrain validation as authoritative state.
+
+## 10. Current test coverage
+
+`src/items/tentPlacement.test.ts` already tests the shared tent wrapper for:
+
+* valid flat ground,
+* water/shoreline rejection,
+* steep slope rejection,
+* road placement,
+* tent separation,
+* blocker collision.
+
+The existing shoreline test uses:
+
+```ts
+sampleHeight: () => 0.2
+waterLevel: 0
+```
+
+and expects `water`.
+
+Extend this test area to cover the new boundary rather than creating a separate test suite for a parallel validator.
+
+Tests should establish both sides of the new placement margin:
+
+```text
+inside placement water margin
+    → water
+
+outside placement water margin
+    → potentially ok
+```
+
+with slope/blocker conditions controlled so the result is testing water semantics only.
+
+Also add coverage for the footprint-water case if the implementation changes the validator to enforce it.
+
+## 11. Minimal implementation direction
+
+Recommended implementation order:
+
+1. Confirm all current `WATER_MARGIN` consumers.
+2. Preserve `WATER_MARGIN = 0.8` for existing terrain-preparation semantics.
+3. Introduce a separate placement-specific water margin following existing project naming conventions.
+4. Make `evaluateGroundPlacement()` use the placement-specific margin.
+5. Verify every existing shared ground-placement caller automatically receives the new rule.
+6. Address footprint-vs-water protection using the existing placement/terrain geometry mechanisms; do not create a second validator.
+7. Leave slope, peer separation and blockers untouched.
+8. Update/add focused unit tests around the new water boundary and footprint behaviour.
+9. Verify preview and final placement remain driven by the same evaluation path.
+
+## 12. Choosing the new value
+
+Do not blindly choose a value only because it is numerically smaller than `0.8`.
+
+The new margin should be a **small physical clearance above the water boundary**, not a broad shoreline exclusion zone.
+
+Use existing world units and the actual placement footprint sizes when selecting it.
+
+The implementation should make the constant easy to retune without changing validation structure.
+
+## 13. Weather is not involved
+
+`src/world/weather.ts` and `SurfaceWeatherState.wetness` are not part of this fix.
+
+Do not:
+
+* add weather checks to `evaluateGroundPlacement()`,
+* add a per-object weather ticker,
+* create a generic environmental-effects manager,
+* introduce soil moisture simulation,
+* turn rain wetness into a placement restriction.
+
+The observed problem is the current `waterLevel + WATER_MARGIN` geometry check.
+
+## 14. Architectural constraints
+
+Do not introduce:
+
+* a new placement manager,
+* a second ground-placement validator,
+* per-object water validation copies,
+* per-object shoreline margins in V1,
+* a weather-placement subsystem,
+* duplicated footprint calculations.
+
+Reuse the existing pure placement validator and the existing `GroundPlacementDefinition` / `evaluatePlacementSite()` contract.
+
+## 15. Documentation
+
+If the implementation changes the meaning or ownership of `WATER_MARGIN`, update its JSDoc.
+
+The current JSDoc explicitly says that `WATER_MARGIN` is the shoreline clearance shared with terrain preparation, so it will become inaccurate if the constant's role changes.
+
+Any new placement-specific constant should have concise JSDoc explaining that it is the physical water-clearance rule for player ground placement.
+
+For important architectural/public functions changed or introduced by the implementation, add JSDoc when useful for preflight discovery and prefer `@domain` where appropriate.
+
+## 16. Verification focus
+
+The most important regression cases are:
+
+```text
+old 0.8 zone + outside new placement margin
+    → placement can become valid
+
+inside new placement margin
+    → water
+
+actual water / forbidden area
+    → water
+
+large footprint crossing water
+    → rejected
+
+near water + steep terrain
+    → slope
+
+near water + blocker
+    → object
+
+preview result
+    ==
+final placement validation
+```
+
+Also verify that terrain preparation still behaves exactly as before with its existing `WATER_MARGIN`.
+
+## 17. Recon conclusion
+
+The original plan was incorrectly framed around environmental wetness.
+
+The current code shows that the concrete gameplay issue is a **shared geometric shoreline-clearance rule**.
+
+The smallest coherent implementation is therefore:
+
+```text
+terrain WATER_MARGIN = existing 0.8
+                 │
+                 └── terrain preparation keeps current behaviour
+
+player placement
+                 │
+                 └── new smaller shared placement water margin
+                         │
+                         ├── slope unchanged
+                         ├── blockers unchanged
+                         ├── separation unchanged
+                         └── footprint must not enter forbidden water
+```
+
+No broader environmental-system work is justified by the current code.
+
+**Zrób git commit i push do main, rebase jeżeli trzeba**

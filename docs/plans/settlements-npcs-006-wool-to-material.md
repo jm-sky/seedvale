@@ -7,7 +7,7 @@
 **Depends on:** ~~fauna-004~~  
 **Domain:** settlements-npcs  
 **Tags:** `items-player` `fauna`
-**Roadmap:** textiles-and-herbal-medicine.md
+**Roadmap:** `textiles-and-herbal-medicine`
 
 ## Cel
 
