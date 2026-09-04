@@ -50,6 +50,31 @@ Do not preserve these conflations when touching the API. Introduce the smallest 
 
 It needs a distinct outgoing-snapshot failure (name can be chosen during implementation).
 
+## Unreadable rows are currently orphaned from normal UI
+
+`scanRows()` deliberately keeps invalid/migration-failed/unsupported rows in IndexedDB, but returns only `ok` rows through `readAllSlots()` / `listSaves()`.
+
+That is safe against destructive overwrite, but it creates an operational dead end: the player cannot see or delete the preserved row through normal save management because the UI only receives healthy `SaveSlotInfo` entries.
+
+Do not solve this by making invalid payloads pass normal `SaveData` parsing. Instead expose a storage-level slot summary/status that can represent both readable and unreadable rows.
+
+Useful distinction:
+
+```text
+stored row
+→ inspectStoredSave()
+   ├─ ok                  → normal SaveSlotInfo + load allowed
+   ├─ invalid             → unhealthy slot summary + load disabled
+   ├─ migration-failed    → unhealthy slot summary + load disabled
+   └─ unsupported-version → unhealthy slot summary + load disabled
+```
+
+For unhealthy rows, recover only metadata that can be obtained safely from the key/envelope/version prefix without treating the payload as valid. At minimum the row key/slot id must remain available so existing `deleteSave(id)` can remove it without parsing the payload.
+
+The save-management UI should show an explicit unhealthy status and allow deliberate deletion. Do not add automatic cleanup, repair, salvage, or a second corruption registry.
+
+Check whether existing delete confirmation UI can be reused unchanged. If deletion currently depends on locating the slot in `listSaves()`, adjust that assumption so an unreadable row can still be deleted by known slot id.
+
 ## `saveState.ts` failure propagation
 
 `createSaveState()` currently exposes:
@@ -229,6 +254,17 @@ valid existing slot
 
 Also cover invalid `createSave()` input.
 
+Add unreadable-row management coverage:
+
+```text
+corrupt/unreadable stored row
+→ list management entries
+→ row is visible with unhealthy status
+→ load is unavailable/rejected
+→ explicit delete by slot id succeeds
+→ healthy sibling slots remain intact
+```
+
 For an invalid runtime value, use an existing field that current schema validation rejects (prefer a non-finite numeric value) and cast only at the test boundary if necessary.
 
 Then add focused lifecycle/seed tests at the nearest existing application/world test seam rather than attempting to instantiate the complete renderer.
@@ -243,13 +279,14 @@ A useful low-risk order is:
 2. expose/reuse canonical current SaveData validation;
 3. reject invalid incoming snapshots in `writeSave()` and `createSave()`;
 4. make storage/list/create errors distinguishable;
-5. propagate save result through `saveState.ts` and manual UI feedback;
-6. serialize/coalesce save operations if recon confirms overlap is unsafe;
-7. make New Game/Load transition ordering explicit;
-8. fix the concrete navigation-target leakage source;
-9. implement explicit seed-intent precedence and URL synchronization;
-10. add lifecycle/seed regression tests;
-11. run normal unit/type/build verification, leaving browser verification to the user.
+5. expose unreadable rows as unhealthy save-management entries and allow explicit deletion;
+6. propagate save result through `saveState.ts` and manual UI feedback;
+7. serialize/coalesce save operations if recon confirms overlap is unsafe;
+8. make New Game/Load transition ordering explicit;
+9. fix the concrete navigation-target leakage source;
+10. implement explicit seed-intent precedence and URL synchronization;
+11. add lifecycle/seed regression tests;
+12. run normal unit/type/build verification, leaving browser verification to the user.
 
 ## Related plans
 
