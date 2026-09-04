@@ -23,13 +23,15 @@ This is a lightweight historical ledger, not a replacement for implementation pl
 
 ## Completed refactors
 
-| Date | File / area | What changed | Commit | Review / Plan |
-|------|-------------|--------------|--------|---------------|
-| 2026-09-01 | `src/fauna/AnimalAgent.ts` | Threat-evaluation logic simplified/extracted as part of the fauna decision flow. | `0fb2f7b81aadc4e47740c4f7f9e207cb82ec2183` | fauna decision refactor history |
-| 2026-09-02 | `src/fauna/AnimalAgent.ts` | Behaviour arbitration extracted into data-driven `faunaDecision.ts`; intent throttling partially extracted; tests added. | `d84e62ca9deac1f76d6af8a61f0f2d9ba570967d` | fauna decision refactor history |
-| 2026-08-23 | `src/fauna/AnimalAgent.ts`, `src/ai/NpcAgent.ts` | Shared movement helper extracted/reused. | `dcbde607b7346eb4a1193321de95dcb7393f50d6` | shared agent infrastructure |
-| 2026-08-23 | `src/fauna/AnimalAgent.ts`, `src/ai/NpcAgent.ts` | Shared status-label helper extracted/reused. | `1dfe769bec6ca79129557abe4a1696c24dc95986` | shared agent infrastructure |
-| 2026-09-04 | — | Initial refactoring ledger created. | `305490fe057b7136be8243fe6131f88ce50f26d3` | `docs/REFACTORING.md` |
+| Date       | File / area                           | Commit     | Review / Plan                                     | What changed |
+|------------|---------------------------------------|------------|---------------------------------------------------|--------------|
+| 2026-09-04 | `src/settlement/createSettlement.ts`  | `e6c9fce1` | `2026-09-03--createSettlement-refactor-review.md` | -            |
+| 2026-09-02 | `src/fauna/AnimalAgent.ts`            | `d84e62ca` | fauna decision refactor history                   | Behaviour arbitration extracted into data-driven `faunaDecision.ts`; intent throttling partially extracted; tests added. |
+| 2026-09-01 | `src/fauna/AnimalAgent.ts`            | `0fb2f7b8` | fauna decision refactor history                   | Threat-evaluation logic simplified/extracted as part of the fauna decision flow. |
+| 2026-08-23 | `src/fauna/AnimalAgent.ts`            | `dcbde607` | shared agent infrastructure                       | Shared movement helper extracted/reused. |
+| 2026-08-23 | `src/ai/NpcAgent.ts`                  | `dcbde607` | shared agent infrastructure                       | Shared movement helper extracted/reused. |
+| 2026-08-23 | `src/fauna/AnimalAgent.ts`            | `1dfe769b` | shared agent infrastructure                       | Shared status-label helper extracted/reused. |
+| 2026-08-23 | `src/ai/NpcAgent.ts`                  | `1dfe769b` | shared agent infrastructure                       | Shared status-label helper extracted/reused. |
 
 ### AnimalAgent refactoring history
 
@@ -41,12 +43,11 @@ Known areas previously identified for further work include the NPC interaction b
 
 These are findings from code/architecture reviews or pending review requests that have not yet been implemented.
 
-| Priority | File / area | Finding / reason | Suggested direction | Source | Status |
-|----------|-------------|------------------|---------------------|--------|--------|
-| 🔴 High | `src/settlement/createSettlement.ts` | 933-line orchestrator; 26-parameter positional constructor duplicated at two `SettlementsManager` call sites; multiple runtime subsystems are inlined in `update()` / `setDayNight()`; signpost/CSS2D-label idiom duplicated 4×; per-frame allocations in `update()`. | Extract cohesive runtime subsystems, replace the positional constructor with a structured dependency object, centralize repeated signpost/label creation, and remove avoidable per-frame allocations while preserving orchestration ownership. | `docs/reviews/` architectural review, 2026-09-04 | `planned` |
-| 🔴 High | `src/ai/NpcAgent.ts` | Deep architectural review requested to determine whether the agent implements logic that belongs to existing NPC/world systems rather than coordinating them. | Review ownership, AI/decision/action logic, needs, movement, routines, household/social, interactions, presentation, lifecycle, config/helpers and cross-domain coupling before deciding what to extract. | `docs/prompts/2026-09-03--011--NpcAgent-refactor-review.md` | `review requested` |
-| 🔴 High | `src/fauna/AnimalAgent.ts` | Deep architectural review requested despite previous incremental refactors. Remaining responsibilities must be distinguished from already-extracted behaviour arbitration and shared helpers. | Review state/lifecycle, movement, needs, predator/prey, combat, livestock, production, corpse/death, mounting, vocalization, presentation, player interaction and cross-domain coupling; do not duplicate previous refactors. | `docs/prompts/2026-09-03--012--AnimalAgent-refactor-review.md` | `review requested` |
-| 🟠 Medium | `src/settlement/createSettlement.ts` | Review requested independently of the existing candidate entry so the final implementation scope can be based on current code rather than file size alone. | Validate orchestration vs monolith, ownership, initialization/cleanup, dependencies and existing reusable mechanisms. | `docs/prompts/2026-09-03--010--createSettlement-refactor-review.md` | `review requested` |
+| Priority    | File / area                           | Status              | Finding / reason | Suggested direction | Source |
+|-------------|---------------------------------------|---------------------|------------------|---------------------|--------|
+| 🔴 High     | `src/ai/NpcAgent.ts`                  | `review requested`  | Deep architectural review requested to determine whether the agent implements logic that belongs to existing NPC/world systems rather than coordinating them. | Review ownership, AI/decision/action logic, needs, movement, routines, household/social, interactions, presentation, lifecycle, config/helpers and cross-domain coupling before deciding what to extract. | `docs/prompts/2026-09-03--011--NpcAgent-refactor-review.md` |
+| 🔴 High     | `src/fauna/AnimalAgent.ts`            | `review requested`  | Deep architectural review requested despite previous incremental refactors. Remaining responsibilities must be distinguished from already-extracted behaviour arbitration and shared helpers. | Review state/lifecycle, movement, needs, predator/prey, combat, livestock, production, corpse/death, mounting, vocalization, presentation, player interaction and cross-domain coupling; do not duplicate previous refactors. | `docs/prompts/2026-09-03--012--AnimalAgent-refactor-review.md` |
+| 🟠 Medium   | `src/settlement/createSettlement.ts`  | `review requested`  | Review requested independently of the existing candidate entry so the final implementation scope can be based on current code rather than file size alone. | Validate orchestration vs monolith, ownership, initialization/cleanup, dependencies and existing reusable mechanisms. | `docs/prompts/2026-09-03--010--createSettlement-refactor-review.md` |
 
 ## Review → refactoring workflow
 
@@ -61,7 +62,7 @@ When an architectural/code review identifies a refactoring opportunity:
 
 ## Commit convention
 
-Use the full commit SHA when recording history, for example:
+Use the short commit SHA when recording history, for example:
 
 `d6df6e3d12caffdce04c84fc1eeafb8a13b69c20`
 
