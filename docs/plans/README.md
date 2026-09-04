@@ -57,6 +57,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
+| ◼️ `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`    | -       | 🟡 | M      | -      |
 
 ---
 
@@ -141,7 +142,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `010`
+- fauna: `011`
 - items-player: `016`
 - npc: `018`
 - persistence: `004`

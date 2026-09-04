@@ -1,10 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-04 09:57:25  
+> Date: 2026-09-04 13:57:44  
 
 ## PLANS
 
+- `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`
 - `npc-004-npc-genealogy-lineages.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
@@ -17,6 +18,37 @@
 
 --------------------------------
 ## PROMPTS
+
+### `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`
+
+Prompt:
+
+```
+Zrób review planu `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/fauna-010-species-metabolism-herbivore-diet-and-renewable-forage-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
 
 ### `npc-004-npc-genealogy-lineages.md`
 
