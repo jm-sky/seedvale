@@ -12,7 +12,7 @@ import type { Collider } from '../world/collision'
 
 const RADIAL_SEGMENTS = 16
 const DEFAULT_MAX_INSTANCES = 1024
-const DEFAULT_HEIGHT = 2.4
+const DEFAULT_HEIGHT = 2.4 * 10 // To be above the ground
 
 export type ColliderInstancedVisualOptions = {
   maxInstances?: number
@@ -94,7 +94,7 @@ export function createColliderInstancedVisual(
           circleMesh.setMatrixAt(circleCount++, _matrix)
         } else {
           if (obbCount >= maxInstances) continue
-          _pos.set(collider.x, height / 2, collider.z)
+          _pos.set(collider.x, 0, collider.z)
           _quat.setFromAxisAngle(_yAxis, collider.rotationY)
           _scale.set(collider.halfWidth * 2, 1, collider.halfDepth * 2)
           _matrix.compose(_pos, _quat, _scale)
