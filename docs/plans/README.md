@@ -56,6 +56,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | ◼️ `settlements-npcs-018-physical-goods-transport-foundation.md`            | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
+| ◼️ `world-terrain-008-underground-caves-v2.md`                              | -       | 🟡 | XL     | -      |
 
 ---
 
@@ -177,7 +178,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `012`
 - ui-input: `008`
 - world: `013`
-- world-terrain: `008`
+- world-terrain: `009`
 
 This ids section is maintained automatically from the plan files.
 
