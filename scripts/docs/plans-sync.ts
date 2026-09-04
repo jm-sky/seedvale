@@ -10,7 +10,7 @@ const UPDATED_REVIEW_SUFFIX = '--updated-review.md'
 const REVIEW_SUFFIX = '-review.md'
 
 const PLANNED_HEADING = '## Planned'
-const PLAN_TITLE_PAD_END_SIZE = 70
+const PLAN_TITLE_PAD_END_SIZE = 75
 const TABLE_HEADER = '| File                                                                   | Summary | Pri | Effort | Depends |'
 const NEXT_PLAN_ID_HEADING = '## Next plan IDs'
 const NEXT_PLAN_ID_END_TAG = 'This ids section is maintained automatically from the plan files.'
