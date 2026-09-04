@@ -4,9 +4,9 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `ANIMAL_DEFS` — const — line 794
+- `ANIMAL_DEFS` — const — line 796
 - `ANIMAL_LABELS` — const — line 689
-- `AnimalAgent` — class — line 1106
+- `AnimalAgent` — class — line 1118
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -32,23 +32,23 @@ Generated from exported TypeScript symbols.
 - `FaunaNavRescueDebugInfo` — type — line 379
 - `forageEdgeScore` — function — line 550
 - `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 277
-- `FrenzyWolfCandidate` — type — line 1022
+- `FrenzyWolfCandidate` — type — line 1034
 - `HARVEST_MEAT_DURATION_SEC` — const — line 220
 - `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 143
 - `isCarcassEdible` — function — line 559
-- `isRabiesCorpseContact` — function — line 1064
+- `isRabiesCorpseContact` — function — line 1076
 - `isWithinVillageRadius` — function — line 625
-- `LivestockProductionConfig` — type — line 788
-- `LivestockProductKind` — type — line 775
+- `LivestockProductionConfig` — type — line 790
+- `LivestockProductKind` — type — line 777
 - `MountPointConfig` — type — line 768
-- `NearbyNpcCandidate` — type — line 1017
+- `NearbyNpcCandidate` — type — line 1029
 - `nearestShoreProbePoint` — function — line 534
-- `pickNearestEligibleWolf` — function — line 1031
-- `pickRabidTarget` — function — line 1078
+- `pickNearestEligibleWolf` — function — line 1043
+- `pickRabidTarget` — function — line 1090
 - `RABIES_BITE_INFECTION_CHANCE` — const — line 132
 - `RABIES_CORPSE_CONTACT_RADIUS` — const — line 171
 - `RABIES_CORPSE_INFECTION_CHANCE` — const — line 174
-- `rollsRabiesInfection` — function — line 1055
+- `rollsRabiesInfection` — function — line 1067
 - `rotFxRelevant` — function — line 191
 - `ScavengingConfig` — type — line 755
 - `shoreProbeHits` — function — line 514

@@ -51,12 +51,12 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/3
 2. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 1/2
-3. `fauna-004` — **Sheep wool cycle and shepherd**  
+3. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 0/0
+4. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `npc-010` — **NPC Death & Corpse Lifecycle**  
+5. `npc-010` — **NPC Death & Corpse Lifecycle**  
    🟡 `L` · ✅ ready · unlocks 1/1
-5. `items-player-002` — **Food provenance, freshness and storage**  
-   🟡 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -94,75 +94,83 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  57  
    → **unlocks:** 0/0
 
-6. `fauna-004` — **Sheep wool cycle and shepherd**  
+6. `settlements-npcs-022` — **Household help and age-based work participation**  
+  🔴 `M` · **Score:**  43  
+   → **unlocks:** 0/0
+
+7. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  38  
    → **unlocks:** 1/2
 
-7. `npc-010` — **NPC Death & Corpse Lifecycle**  
+8. `npc-010` — **NPC Death & Corpse Lifecycle**  
   🟡 `L` · **Score:**  36  
    → **unlocks:** 1/1
 
-8. `settlements-npcs-006` — **Wool to material**  
+9. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-9. `items-player-002` — **Food provenance, freshness and storage**  
+10. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-10. `items-player-014` — **Rope-pullable resource transport**  
+11. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-11. `tools-005` — **Seedvale Character Preparation Panel**  
+12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `npc-002` — **NPC Healing**  
+13. `tools-005` — **Seedvale Character Preparation Panel**  
+  🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+14. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-13. `npc-011` — **NPC Burial & Graves**  
+15. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-14. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-15. `world-004` — **Well Depth, Groundwater & Well Protection**  
+17. `world-004` — **Well Depth, Groundwater & Well Protection**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-16. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-17. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `settlements-npcs-007` — **Bandages and herbal medicine**  
+20. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `tools-000` — **Weapon Browser — Observatory/Admin**  
+21. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-20. `fauna-007` — **Animal leading and cart harness**  
+22. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-21. `world-terrain-008` — **Underground Caves V2**  
+23. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-22. `npc-004` — **Drzewo genealogiczne NPC**  
+24. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-23. `tools-006` — **tools-006--world-observatory.md**  
+25. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -289,6 +297,8 @@ graph TD
   settlements_npcs_019["settlements-npcs-019 — Persistent & Off-screen Transport"]
   settlements_npcs_020["settlements-npcs-020 — Economy-driven Transport Demand Integration"]
   settlements_npcs_021["settlements-npcs-021 — Remote Production Site Logistics"]
+  settlements_npcs_022["settlements-npcs-022 — Household help and age-based work participation"]
+  settlements_npcs_023["settlements-npcs-023 — Profession staffing and settlement composition"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -394,6 +404,7 @@ graph TD
   npc_015 --> npc_017
   persistence_002 --> persistence_003
   settlements_npcs_002 --> settlements_npcs_005
+  settlements_npcs_002 --> settlements_npcs_022
   settlements_npcs_005 --> settlements_npcs_008
   settlements_npcs_005 --> settlements_npcs_009
   settlements_npcs_006 --> settlements_npcs_007
