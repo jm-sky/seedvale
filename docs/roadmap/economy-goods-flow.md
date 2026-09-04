@@ -220,6 +220,8 @@ Exact recipes and currently implemented transformations must be confirmed from c
 
 **Purpose:** make distance a real economic constraint.
 
+Detailed architectural direction: [`physical-goods-transport.md`](./physical-goods-transport.md).
+
 ### Target
 
 ```text
