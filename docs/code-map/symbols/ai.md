@@ -142,6 +142,18 @@ Generated from exported TypeScript symbols.
 - `resolveNpcMeleeWeapon` — function — line 37
 - `resolveNpcRangedWeapon` — function — line 51
 
+## `ai/npcCrowd.ts`
+
+- `createNpcCrowdPass` — function — line 44
+- `GROUP_REACTION_RADIUS` — const — line 18
+  - domain: ai
+  - system: npc-crowd
+  - role: Owns the settlement-wide NPC proximity/separation pass and its reusable output buffers.
+- `NPC_SEPARATION_RADIUS` — const — line 23
+- `NPC_SEPARATION_SPEED` — const — line 25
+- `NpcCrowdAgent` — type — line 28
+- `NpcCrowdResult` — type — line 33
+
 ## `ai/npcLoadout.ts`
 
 - `defaultWeaponForRole` — function — line 22

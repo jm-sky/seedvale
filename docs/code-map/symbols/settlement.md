@@ -16,9 +16,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 242
-- `Settlement` — type — line 144
-- `settlementSpawnPoint` — function — line 234
+- `createSettlement` — function — line 279
+- `CreateSettlementDeps` — type — line 201
+- `Settlement` — type — line 99
+- `settlementSpawnPoint` — function — line 189
 
 ## `settlement/decorProps.ts`
 
@@ -148,6 +149,17 @@ Generated from exported TypeScript symbols.
 - `pickHomeHouse` — function — line 233
 - `resolveHouseHeight` — function — line 207
 
+## `settlement/houseDoors.ts`
+
+- `createHouseDoorController` — function — line 57
+- `HOUSE_DOOR_CLOSE_DISTANCE` — const — line 18
+- `HOUSE_DOOR_OPEN_DISTANCE` — const — line 17
+  - domain: settlements
+  - system: house-doors
+  - role: Owns per-house door proximity hysteresis and change detection.
+- `HouseDoorController` — type — line 37
+- `shouldOpenHouseDoors` — function — line 23
+
 ## `settlement/household.ts`
 
 - `createHousehold` — function — line 239
@@ -202,14 +214,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 115
-- `disposeLivestock` — function — line 437
-- `LIVESTOCK_KINDS` — const — line 44
-- `LIVESTOCK_URLS` — const — line 29
-- `LivestockPersistence` — type — line 63
-- `LivestockRegistry` — type — line 85
-- `LivestockSaveRecord` — type — line 52
-- `spawnLivestock` — function — line 329
+- `createLivestockRegistry` — function — line 116
+- `disposeLivestock` — function — line 438
+- `LIVESTOCK_KINDS` — const — line 45
+- `LIVESTOCK_URLS` — const — line 30
+- `LivestockPersistence` — type — line 64
+- `LivestockRegistry` — type — line 86
+- `LivestockSaveRecord` — type — line 53
+- `spawnLivestock` — function — line 330
+- `tickSettlementLivestock` — function — line 455
 
 ## `settlement/lodging.ts`
 
@@ -414,6 +427,17 @@ Generated from exported TypeScript symbols.
 - `SettlementDef` — type — line 70
 - `worldToCell` — function — line 123
 
+## `settlement/settlementNightCycle.ts`
+
+- `createSettlementNightCycle` — function — line 51
+- `NIGHT_FIRE_IGNITE_CHANCE` — const — line 27
+- `NIGHT_FIRE_THRESHOLD` — const — line 24
+  - domain: settlements
+  - system: settlement-night-cycle
+  - role: Owns the dusk/dawn threshold crossing that drives fire autolight, torches and house-light intensity.
+- `SettlementNightCycle` — type — line 49
+- `shouldAutoLightNightFire` — function — line 38
+
 ## `settlement/settlementPalisade.ts`
 
 - `PALISADE_GATE_HALF_ANGLE` — const — line 17
@@ -433,15 +457,27 @@ Generated from exported TypeScript symbols.
 - `SettlementPropColliderLandmarks` — type — line 18
 - `settlementPropColliders` — function — line 25
 
+## `settlement/settlementSignposts.ts`
+
+- `createLabeledProp` — function — line 51
+- `createSettlementSignposts` — function — line 111
+- `disposeLabeledProp` — function — line 95
+- `LabeledProp` — type — line 37
+  - domain: settlements
+  - system: settlement-signposts
+  - role: Owns build/update/dispose for every settlement prop that pairs a ground-placed mesh with a distance-faded CSS2D label.
+- `SettlementSignposts` — type — line 106
+- `updateLabelOpacity` — function — line 84
+
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 163
+- `createSettlementsManager` — function — line 161
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 62
+- `SettlementsManager` — type — line 60
 
 ## `settlement/settlementStructures.ts`
 

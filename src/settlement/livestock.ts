@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
-import type { AnimalSaveState } from '../fauna/AnimalAgent'
+import type { AnimalSaveState, VillageInfo } from '../fauna/AnimalAgent'
+import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from './household'
 import {
@@ -439,5 +440,75 @@ export function disposeLivestock(agents: readonly AnimalAgent[]): void {
     agent.dispose()
     agent.mesh.removeFromParent()
     disposeObject3D(agent.mesh)
+  }
+}
+
+/**
+ * Per-frame livestock tick for one settlement (createSettlement refactor
+ * review, E5) — moved out of `createSettlement.ts`'s `update()` verbatim so
+ * it lives next to `spawnLivestock`/`disposeLivestock`/`LivestockRegistry`,
+ * the persistence contract the corpse-removal tombstoning belongs to.
+ * `livestock` is mutated in place (corpses spliced out) — `Settlement
+ * .livestock` and `LivestockRegistry.capture` both hold that same array
+ * reference, so this must never replace it with a new array.
+ */
+export function tickSettlementLivestock(
+  livestock: AnimalAgent[],
+  ctx: {
+    dt: number
+    settlementId: string
+    observerPos: THREE.Vector3
+    dayFactor: number
+    timeOfDay: number
+    nowDays: number
+    litFires: readonly { x: number, z: number }[]
+    villages: readonly VillageInfo[]
+    /** Reads the *latest* `nowDays` at collection time, not lay time — a
+     *  chicken's egg can be collected an arbitrary number of frames/days
+     *  after it was laid, so a frozen `nowDays` from lay time would be wrong. */
+    getNowDays: () => number
+    dropLivestockProduct?: DropLivestockProductHook
+    onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void
+    persistence?: LivestockPersistence
+  },
+): void {
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence } = ctx
+  // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
+  // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
+  // branch of `isPlayerNoticed()` is structurally unreachable for these
+  // kinds regardless of the value passed.
+  for (const animal of livestock) {
+    animal.update(
+      dt, livestock, observerPos, dayFactor, 0, litFires, villages,
+      undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
+      timeOfDay,
+    )
+    // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
+    // instant its cycle completes, at wherever it's currently standing; the
+    // animal only learns it was collected via the `onCollected` hook, never
+    // by polling.
+    if (animal.readyToLayEgg(nowDays) && dropLivestockProduct) {
+      dropLivestockProduct('egg', animal.mesh.position.x, animal.mesh.position.z, () => animal.notifyEggCollected(getNowDays()))
+      animal.markEggLaid()
+      // Contextual vocalization (plan settlements-npcs-004 §2) — reuses the
+      // same throttled hook as the spontaneous roll above rather than a
+      // second UI/simulation trigger for the same clip.
+      onAnimalVocalize?.(animal.def.kind, animal.mesh.position.x, animal.mesh.position.z)
+    }
+  }
+  if (livestock.some((a) => a.readyToRemove())) {
+    const kept: AnimalAgent[] = []
+    for (const animal of livestock) {
+      if (animal.readyToRemove()) {
+        persistence?.markRemoved(settlementId, animal.animalId)
+        animal.dispose()
+        animal.mesh.removeFromParent()
+        disposeObject3D(animal.mesh)
+      } else {
+        kept.push(animal)
+      }
+    }
+    livestock.length = 0
+    livestock.push(...kept)
   }
 }

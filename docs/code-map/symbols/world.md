@@ -414,6 +414,7 @@ Generated from exported TypeScript symbols.
 - `DiscoveryRange` — type — line 27
 - `WorldLocation` — type — line 14
 - `WorldLocationKind` — type — line 1
+- `worldLocationKindFromId` — function — line 39
 
 ## `world/map/mapConfig.ts`
 

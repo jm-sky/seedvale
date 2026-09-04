@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { SettlementCell, SettlementDef } from '../../settlement/settlementGenerator'
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
-import type { Caves } from '../createCaves'
 import type { ChunkManager } from '../../terrain/chunkManager'
 import type { CaveDefinition } from '../caveVolume'
-import type { SettlementCell, SettlementDef } from '../../settlement/settlementGenerator'
+import type { Caves } from '../createCaves'
 import { cellKey } from '../../settlement/settlementGenerator'
 import { createWorldLocationCatalog, settlementLocationId } from './worldLocationCatalog'
 

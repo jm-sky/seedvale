@@ -159,6 +159,7 @@ Generated from TypeScript imports.
 - `house-browser/houseBrowserScene.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
+- `settlement/houseDoors.test.ts`
 - `settlement/props.ts`
 
 ## `assets/houseDefinitionExample.ts`
@@ -175,6 +176,7 @@ Generated from TypeScript imports.
 - `assets/constructionCatalog.test.ts`
 - `house-browser/houseBrowserScene.ts`
 - `settlement/houseBuilder.test.ts`
+- `settlement/houseDoors.test.ts`
 - `settlement/props.ts`
 
 ## `assets/houseDefinitionExampleConfig.ts`
@@ -220,14 +222,13 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
 - `settlement/PlacedFires.ts`
-- `settlement/SettlementsManager.ts`
 - `settlement/campfireProps.ts`
-- `settlement/createSettlement.ts`
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/livestock.ts`
 - `settlement/propUtils.ts`
 - `settlement/props.ts`
+- `settlement/settlementSignposts.ts`
 - `settlement/storageVisuals.ts`
 - `terrain/chunkManager.ts`
 - `terrain/resourceDeposits.ts`

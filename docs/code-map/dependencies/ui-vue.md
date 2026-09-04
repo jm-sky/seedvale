@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 
 - `ui-vue/lib/mapColors.ts`
 - `world/locations/navigationTargets.ts`
+- `world/locations/worldLocationTypes.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.ts`
@@ -62,6 +63,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `world/locations/worldLocationTypes.ts`
 - `world/map/mapTypes.ts`
 
 **Imported by**
@@ -70,6 +72,12 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 
 ## `ui-vue/lib/utils.ts`
+
+## `ui-vue/lib/worldLocationDisplay.ts`
+
+**Imports**
+
+- `world/locations/worldLocationTypes.ts`
 
 ## `ui-vue/mount.ts`
 

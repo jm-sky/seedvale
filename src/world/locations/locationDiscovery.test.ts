@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import type { WorldLocationCatalog } from './worldLocationCatalog'
+import type { WorldLocation } from './worldLocationTypes'
 import { FAR_RANGE_KM, MEDIUM_RANGE_KM, NEAR_RANGE_KM, WORLD_UNITS_PER_KM } from './locationConfig'
 import {
   classifyRange,
@@ -9,8 +11,6 @@ import {
   settlementsInBand,
   weightedTopN,
 } from './locationDiscovery'
-import type { WorldLocationCatalog } from './worldLocationCatalog'
-import type { WorldLocation } from './worldLocationTypes'
 
 function loc(id: string, km: number, discoveryWeight = 0): WorldLocation {
   return { id, kind: 'cave', x: km * WORLD_UNITS_PER_KM, z: 0, name: id, discoveryWeight }

@@ -1,9 +1,7 @@
 import {
-  type Group,
   type Scene,
   Vector3,
 } from 'three'
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
@@ -24,8 +22,8 @@ import type { VillageSize } from './families'
 import type { NpcStateRegistry } from './npcState'
 import type { FoodSourceType, SettlementDef } from './settlementGenerator'
 import { NpcAgent } from '../ai/NpcAgent'
+import { createNpcCrowdPass } from '../ai/npcCrowd'
 import { advanceSocialPairing } from '../ai/socialBehaviour'
-import { disposeObject3D } from '../assets/loadGltf'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { isSystemEnabled } from '../debug/debugMode'
 import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
@@ -36,40 +34,28 @@ import {
   type InteractionQueue,
   wellQueueId,
 } from '../simulation'
-import { labelOpacityForDistance } from '../ui/labelDistance'
-import { createSeededRandom } from '../world/parseSeed'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { applyTreeStageVisual } from '../world/treeVisuals'
 import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
+import { createHouseDoorController } from './houseDoors'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
-import { disposeLivestock, type LivestockPersistence, spawnLivestock } from './livestock'
-import { minorLocationsFor } from './minorLocations'
+import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettlementLivestock } from './livestock'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
 import { createNpcRelationships, type NpcRelationships } from './npcRelationships'
 import { homePlaceId, type Place, socialPlaceFor, workplaceFor } from './places'
 import {
   buildSettlementProps,
-  cloneProp,
-  createDock,
-  createSignpost,
   createStockpile,
-  createVillageNamepost,
   disposeSettlementGroup,
-  DOCK_SPECS,
-  loadPropTemplates,
   placeOnGround,
   type SettlementLandmarks,
-  VILLAGE_NAMEPOST_BOARD_CENTER_Y,
 } from './props'
-import {
-  type RoadNetworkContext,
-  routeToMinorLocation,
-  segmentsNear,
-  signpostsForSettlement,
-} from './roadNetwork'
+import { type RoadNetworkContext, segmentsNear } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
+import { createSettlementNightCycle } from './settlementNightCycle'
 import { settlementPropColliders } from './settlementPropColliders'
+import { createSettlementSignposts } from './settlementSignposts'
 import { physicalWoodStockpileQuantity } from './storageVisuals'
 import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {
@@ -87,37 +73,6 @@ export type { SettlementForestHooks }
  * queued drinks never need the blocked disk.
  */
 const WELL_COLLISION_RADIUS = 0.9
-
-/** `setDayNight`'s `t` (0 day .. 1 full night) above this triggers the
- *  settlement fire's dusk-ignition roll (see `nightIndex`/`setDayNight`
- *  below). NPC sleep timing moved to `NpcAgent`'s own `schedule` (v2 stage
- *  2, `docs/plans/archive/2026-08-07--020...`) — this threshold is now fire-only. */
-const NIGHT_FIRE_THRESHOLD = 0.6
-/** Per-size chance the settlement fire is already lit at dusk (villagers keep
- *  it going — no player branch). OUTPOST/SM have no campfire prop. */
-const NIGHT_FIRE_IGNITE_CHANCE: Record<VillageSize, number> = {
-  OUTPOST: 0,
-  SM: 0,
-  MD: 0.75,
-  LG: 0.85,
-  XL: 1,
-}
-
-/** How close (world units) another NPC must be to count toward
- *  `nearbyNpcCount` for `NpcAgent`'s group reaction-chance dampening (issue
- *  010). */
-const GROUP_REACTION_RADIUS = 6
-/** Below this center-to-center distance, two NPCs push apart (plan 153) —
- *  roughly two adult body widths, small enough to never fight a real
- *  destination (well serving stand, queue slot) but large enough that a
- *  crowd converging on one point visibly spreads out instead of stacking. */
-const NPC_SEPARATION_RADIUS = 0.5
-/** Push speed (m/s per meter of overlap) applied by `applySeparation`. */
-const NPC_SEPARATION_SPEED = 1.5
-/** How close the observer must be to a house entrance before the door swings open. */
-const HOUSE_DOOR_OPEN_DISTANCE = 2.6
-const HOUSE_DOOR_CLOSE_DISTANCE = 3.4
-const _entranceWorld = new Vector3()
 
 function settlementHouseColliders(
   houses: SettlementLandmarks['houses'],
@@ -239,78 +194,120 @@ export function settlementSpawnPoint(def: SettlementDef, sampleHeight: HeightSam
   )
 }
 
-export async function createSettlement(
-  scene: Scene,
-  sampleHeight: HeightSampler,
-  waterLevel: number,
-  localRadius: number,
-  seed: number,
-  def: SettlementDef,
-  economy: SettlementEconomy,
-  householdRegistry: HouseholdRegistry,
+/** Everything `createSettlement` needs besides `def`/`economy` (createSettlement
+ *  refactor review, P1) — was a 26-parameter positional signature duplicated
+ *  verbatim across `SettlementsManager.ts`'s two call sites. Build one of
+ *  these per manager (after its registries exist) and pass it at both. */
+export type CreateSettlementDeps = {
+  // world
+  scene: Scene
+  sampleHeight: HeightSampler
+  waterLevel: number
+  localRadius: number
+  seed: number
+  // registries (owned by SettlementsManager, shared across stream-out/in)
+  /** Household stock registry — same instance across a settlement's
+   *  unload/reload so stream-out/stream-in reuses it. */
+  householdRegistry: HouseholdRegistry
   /** Authoritative NPC state (health/needs/stamina/vigor), keyed by stable
    *  npc id (plan 197) — lives on `SettlementsManager`, not this settlement,
    *  for the same reuse-across-stream-out/in reason as `householdRegistry`. */
-  npcStateRegistry: NpcStateRegistry,
-  collidersNear: ColliderSource,
-  /** Registers this settlement's static colliders (well + houses +
-   *  stockpile/wagon/horse/village fire) under `def.id` so they participate
-   *  in the shared `ColliderRegistry` (plan 097 §2.2, issue 036). Cleared
-   *  again in `dispose()` below. */
-  registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void,
-  clearColliders: (ownerKey: string) => void,
-  playAt: PlayAt = () => {},
-  roadCtx?: RoadNetworkContext,
-  forest?: SettlementForestHooks,
-  /** Reports any of this settlement's livestock deaths (any cause) by
-   *  `animalId` — forwarded into `spawnLivestock` (plan 110). */
-  onAnimalDeath?: (animalId: string) => void,
-  /** Resolves an NPC's relation level + general player standing by name —
-   *  forwarded into every `NpcAgent.create` call below (plan 117). */
-  getPlayerSocial?: PlayerSocialLookup,
-  /** NPC ore-mining hooks over `ResourceDeposits` (plan 131) — forwarded into
-   *  every `NpcAgent.create` call below the same way as `forest` above. */
-  mining?: SettlementMiningHooks,
-  /** Persistent land-plot ownership query (plan 129) — a "for sale" sign is
-   *  only materialized for a plot this returns `false` for at build time; a
-   *  purchase made later while the settlement stays loaded is picked up live
-   *  by `update()` below instead, same pattern as `placeWoodshedIfComplete`. */
-  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean,
-  /** Plan 157 — registers this settlement's house lamps/village torches/
-   *  campfire (`group`, once built) so production `NUM_POINT_LIGHTS`
-   *  stabilization (`src/world/pointLightBudget.ts`) sees them for as long
-   *  as the settlement stays loaded. Defaults to a no-op. */
-  pointLightBudget: PointLightBudget = createNullPointLightBudget(),
-  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
-   *  — forwarded into every `NpcAgent.create` call below the same way
-   *  `getPlayerSocial` is above. */
-  getNearbyPlayerWell?: NearbyPlayerWellLookup,
-  /** NPC hunger-source discovery hooks over natural world items + crops
-   *  (plan 174) — forwarded into every `NpcAgent.create` call below the same
-   *  way `mining` is above. */
-  foodSources?: SettlementFoodSourceHooks,
-  /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
-   *  — forwarded into every `NpcAgent.create` call below the same way
-   *  `mining`/`foodSources` are above. */
-  hunting?: SettlementHuntingHooks,
-  /** Helper resource-delivery target hooks over the player's placed
-   *  `Container`s (plan 167) — forwarded into every `NpcAgent.create` call
-   *  below the same way `foodSources`/`hunting` are above. */
-  helperDelivery?: HelperDeliveryHooks,
+  npcStateRegistry: NpcStateRegistry
   /** Symmetric NPC↔NPC relation store (plan 151) — same "one registry owned
-   *  by `SettlementsManager`, threaded through" pattern as `households`/
+   *  by `SettlementsManager`, threaded through" pattern as `householdRegistry`/
    *  `npcStateRegistry` above, not a per-`NpcAgent.create` hook (only this
    *  settlement's own `update()` needs it, for the social-pairing pass
    *  below). Defaults to a fresh, isolated store for callers/tests that
    *  don't pass one in. */
-  relations: NpcRelationships = createNpcRelationships(),
+  relations?: NpcRelationships
   /** Saved livestock state + tombstones (plan persistence-001) — same "one
    *  registry owned by `SettlementsManager`, threaded through" pattern as
-   *  `households`/`npcStateRegistry` above. Forwarded into `spawnLivestock`
-   *  below, and consulted again in `update()`'s corpse-removal loop so a
-   *  newly-completed removal is tombstoned immediately. */
-  livestockPersistence?: LivestockPersistence,
+   *  `householdRegistry`/`npcStateRegistry` above. Forwarded into
+   *  `spawnLivestock`, and consulted again in `update()`'s corpse-removal
+   *  loop so a newly-completed removal is tombstoned immediately. */
+  livestockPersistence?: LivestockPersistence
+  // collision
+  collidersNear: ColliderSource
+  /** Registers this settlement's static colliders (well + houses +
+   *  stockpile/wagon/horse/village fire) under `def.id` so they participate
+   *  in the shared `ColliderRegistry` (plan 097 §2.2, issue 036). Cleared
+   *  again in `dispose()`. */
+  registerColliders: (ownerKey: string, colliders: readonly Collider[]) => void
+  clearColliders: (ownerKey: string) => void
+  // presentation
+  playAt?: PlayAt
+  /** Plan 157 — registers this settlement's house lamps/village torches/
+   *  campfire (`group`, once built) so production `NUM_POINT_LIGHTS`
+   *  stabilization (`src/world/pointLightBudget.ts`) sees them for as long
+   *  as the settlement stays loaded. Defaults to a no-op. */
+  pointLightBudget?: PointLightBudget
+  roadCtx?: RoadNetworkContext
+  // world-system hooks forwarded into NpcAgent / livestock
+  forest?: SettlementForestHooks
+  /** NPC ore-mining hooks over `ResourceDeposits` (plan 131) — forwarded into
+   *  every `NpcAgent.create` call the same way as `forest` above. */
+  mining?: SettlementMiningHooks
+  /** NPC hunger-source discovery hooks over natural world items + crops
+   *  (plan 174) — forwarded into every `NpcAgent.create` call the same way
+   *  `mining` is above. */
+  foodSources?: SettlementFoodSourceHooks
+  /** Hunter target discovery + harvest hooks over the live `Fauna` (plan 178)
+   *  — forwarded into every `NpcAgent.create` call the same way
+   *  `mining`/`foodSources` are above. */
+  hunting?: SettlementHuntingHooks
+  /** Helper resource-delivery target hooks over the player's placed
+   *  `Container`s (plan 167) — forwarded into every `NpcAgent.create` call
+   *  the same way `foodSources`/`hunting` are above. */
+  helperDelivery?: HelperDeliveryHooks
+  /** Resolves an NPC's relation level + general player standing by name —
+   *  forwarded into every `NpcAgent.create` call below (plan 117). */
+  getPlayerSocial?: PlayerSocialLookup
+  /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
+   *  — forwarded into every `NpcAgent.create` call the same way
+   *  `getPlayerSocial` is above. */
+  getNearbyPlayerWell?: NearbyPlayerWellLookup
+  /** Persistent land-plot ownership query (plan 129) — a "for sale" sign is
+   *  only materialized for a plot this returns `false` for at build time; a
+   *  purchase made later while the settlement stays loaded is picked up live
+   *  by `update()` instead, same pattern as `placeWoodshedIfComplete`. */
+  isLandPlotOwned?: (settlementId: string, plotId: string) => boolean
+  /** Reports any of this settlement's livestock deaths (any cause) by
+   *  `animalId` — forwarded into `spawnLivestock` (plan 110). */
+  onAnimalDeath?: (animalId: string) => void
+}
+
+export async function createSettlement(
+  def: SettlementDef,
+  economy: SettlementEconomy,
+  deps: CreateSettlementDeps,
 ): Promise<Settlement> {
+  const {
+    scene,
+    sampleHeight,
+    waterLevel,
+    localRadius,
+    seed,
+    householdRegistry,
+    npcStateRegistry,
+    collidersNear,
+    registerColliders,
+    clearColliders,
+    playAt = () => {},
+    roadCtx,
+    forest,
+    onAnimalDeath,
+    getPlayerSocial,
+    mining,
+    isLandPlotOwned,
+    pointLightBudget = createNullPointLightBudget(),
+    getNearbyPlayerWell,
+    foodSources,
+    hunting,
+    helperDelivery,
+    relations = createNpcRelationships(),
+    livestockPersistence,
+  } = deps
+
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
 
   const site = { x: def.x, z: def.z, y: def.y }
@@ -369,9 +366,7 @@ export async function createSettlement(
     ])
   }
   registerSettlementColliders()
-  let doorColliderSignature = houseAssemblies
-    .map((a) => a.doors.map((d) => (d.isOpen() ? '1' : '0')).join(''))
-    .join('|')
+  const houseDoors = createHouseDoorController(houseAssemblies)
 
   if (forest) {
     const worldDays = forest.getWorldDays()
@@ -490,102 +485,17 @@ export async function createSettlement(
     bootMarkEnd('spawnLivestock')
   }
 
-  type SignpostInstance = { labelEl: HTMLDivElement, label: CSS2DObject, position: Vector3 }
-  const signposts: SignpostInstance[] = []
-  // Sale-plot "NA SPRZEDAŻ" signs (plan 129) — one per unowned `landmarks
-  // .landPlots` entry, same signpost prop + CSS2D label idiom as the
-  // namepost/directional signs below. Skipped entirely for an already-owned
-  // plot so it never comes back after a stream-out/stream-in (plan 129 §14.1).
-  type LandPlotSignInstance = SignpostInstance & { plotId: string, prop: Group }
-  const landPlotSigns: LandPlotSignInstance[] = []
-
   bootMark('signposts')
+  let signposts: Awaited<ReturnType<typeof createSettlementSignposts>>
   try {
-  // Name plaque by the well — reuses signpost label fade/dispose path.
-  {
-    const nameX = landmarks.well.x + 1.35
-    const nameZ = landmarks.well.z + 1.05
-    const prop = createVillageNamepost()
-    placeOnGround(prop, nameX, nameZ, sampleHeight)
-    group.add(prop)
-
-    const labelEl = document.createElement('div')
-    labelEl.className = 'npc-label'
-    labelEl.textContent = def.name
-    const label = new CSS2DObject(labelEl)
-    label.position.set(0, VILLAGE_NAMEPOST_BOARD_CENTER_Y, 0)
-    prop.add(label)
-
-    signposts.push({
-      labelEl,
-      label,
-      position: new Vector3(nameX, sampleHeight(nameX, nameZ), nameZ),
-    })
-  }
-
-  if (roadCtx) {
-    const [dock] = minorLocationsFor(
+    signposts = await createSettlementSignposts({
       def,
-      roadCtx.sampleHeight,
-      roadCtx.terrainSamplers.sampleContinentalness,
-      roadCtx.region,
-      roadCtx.region.roadNetwork.dockSearchRadius,
-    )
-    if (dock) {
-      const dockTemplates = await loadPropTemplates(DOCK_SPECS, () => createDock())
-      const dockProp = cloneProp(dockTemplates, 0, 1)
-      dockProp.rotation.y = dock.angle
-      placeOnGround(dockProp, dock.x, dock.z, sampleHeight)
-      group.add(dockProp)
-      landmarks.dock = new Vector3(dock.x, dock.y, dock.z)
-
-      const route = routeToMinorLocation(def, 'dock', roadCtx)
-      landmarks.dockRoute = route.map((p) => new Vector3(p.x, sampleHeight(p.x, p.z), p.z))
-    }
-
-    for (const sp of signpostsForSettlement(def, roadCtx)) {
-      const prop = createSignpost()
-      prop.rotation.y = sp.angle
-      placeOnGround(prop, sp.position.x, sp.position.z, sampleHeight)
-      group.add(prop)
-
-      const labelEl = document.createElement('div')
-      labelEl.className = 'npc-label'
-      labelEl.textContent = sp.targetName
-      const label = new CSS2DObject(labelEl)
-      label.position.set(0, 2.5, 0)
-      prop.add(label)
-
-      signposts.push({
-        labelEl,
-        label,
-        position: new Vector3(sp.position.x, sampleHeight(sp.position.x, sp.position.z), sp.position.z),
-      })
-    }
-  }
-
-  for (const plot of landmarks.landPlots) {
-    if (isLandPlotOwned?.(def.id, plot.plotId)) continue
-    const prop = createSignpost()
-    prop.rotation.y = plot.rotation
-    placeOnGround(prop, plot.position.x, plot.position.z, sampleHeight)
-    group.add(prop)
-
-    const labelEl = document.createElement('div')
-    labelEl.className = 'npc-label'
-    labelEl.innerHTML = `NA SPRZEDAŻ<br>${plot.price} monet`
-    const label = new CSS2DObject(labelEl)
-    label.position.set(0, 2.5, 0)
-    prop.add(label)
-
-    landPlotSigns.push({
-      plotId: plot.plotId,
-      prop,
-      labelEl,
-      label,
-      position: plot.position.clone(),
+      group,
+      landmarks,
+      sampleHeight,
+      roadCtx,
+      isLandPlotOwned,
     })
-  }
   } finally {
     bootMarkEnd('signposts')
   }
@@ -698,22 +608,21 @@ export async function createSettlement(
   }
 
   const spawn = settlementSpawnPoint(def, sampleHeight)
+  const npcCrowd = createNpcCrowdPass()
+  const nightCycle = createSettlementNightCycle({
+    settlementSeed,
+    size: def.size,
+    fire,
+    villageTorches,
+    houseLights,
+  })
 
   /** Most recent `update()` call's `nowDays` — read by a chicken's
    *  `onCollected` closure (plan fauna-002), which can fire an arbitrary
    *  number of frames/days after the egg was laid (whenever the player
    *  actually picks it up), so it can't capture a frozen `nowDays` value
-   *  from lay time. Mutable-outer-variable-in-closure, same idiom as
-   *  `nightFactor` below. */
+   *  from lay time. Mutable-outer-variable-in-closure. */
   let currentNowDays = 0
-  let nightFactor = 0
-  /** Bumped each time `nightFactor` crosses `NIGHT_FIRE_THRESHOLD` upward —
-   *  feeds the ignition roll's seed so the same night (even across a
-   *  stream-out/stream-in of this settlement) always resolves the same way,
-   *  while a later night gets an independent roll. See `settlementGenerator
-   *  .ts`'s `cellSeed` for why this settlement's own seed is `def.gx/def.gz`
-   *  combined with the world seed rather than a hash of `def.id`. */
-  let nightIndex = 0
   let woodshedPlaced = false
 
   function placeWoodshedIfComplete(): void {
@@ -748,84 +657,30 @@ export async function createSettlement(
     fire,
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather) {
       currentNowDays = nowDays
-      const nearbyNpcCounts = new Array<number>(agents.length).fill(0)
-      const pushX = new Array<number>(agents.length).fill(0)
-      const pushZ = new Array<number>(agents.length).fill(0)
-      for (let i = 0; i < agents.length; i++) {
-        const ai = agents[i]!
-        for (let j = i + 1; j < agents.length; j++) {
-          const aj = agents[j]!
-          const dx = ai.mesh.position.x - aj.mesh.position.x
-          const dz = ai.mesh.position.z - aj.mesh.position.z
-          const dist = Math.hypot(dx, dz)
-          if (dist <= GROUP_REACTION_RADIUS) {
-            nearbyNpcCounts[i]!++
-            nearbyNpcCounts[j]!++
-          }
-          // A dead NPC now stays in `agents` for the settlement's whole
-          // lifetime (plan 197 — death is authoritative, not erased by the
-          // next stream-out/reload) rather than vanishing within a few
-          // frames as it effectively used to; exclude it from the physical
-          // push so a corpse doesn't shove living NPCs around or get shoved.
-          if (dist < NPC_SEPARATION_RADIUS && !ai.health.dead && !aj.health.dead) {
-            const overlap = NPC_SEPARATION_RADIUS - dist
-            const nx = dist > 1e-4 ? dx / dist : 1
-            const nz = dist > 1e-4 ? dz / dist : 0
-            const push = overlap * NPC_SEPARATION_SPEED * dt
-            pushX[i]! += nx * push
-            pushZ[i]! += nz * push
-            pushX[j]! -= nx * push
-            pushZ[j]! -= nz * push
-          }
-        }
-      }
+      const crowd = npcCrowd.run(agents, dt)
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        agent.update(dt, observerPos, observerYaw, timeOfDay, nearbyNpcCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather)
-        if (pushX[i] !== 0 || pushZ[i] !== 0) agent.applySeparation(pushX[i]!, pushZ[i]!)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather)
+        if (crowd.pushX[i] !== 0 || crowd.pushZ[i] !== 0) agent.applySeparation(crowd.pushX[i]!, crowd.pushZ[i]!)
       }
       // Social Place conversation pairing (plan 151) — reuses this
       // settlement's own already-updated `agents` list (no global registry);
       // a no-op pass when nobody is currently settled at the campfire.
       advanceSocialPairing(agents, relations, dayLengthSec)
-      // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef`
-      // has `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-
-      // modified branch of `isPlayerNoticed()` is structurally unreachable
-      // for these kinds regardless of the value passed.
-      for (const animal of livestock) {
-        animal.update(
-          dt, livestock, observerPos, dayFactor, 0, litFires, villages,
-          undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
-          timeOfDay,
-        )
-        // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item
-        // the instant its cycle completes, at wherever it's currently
-        // standing; the animal only learns it was collected via the
-        // `onCollected` hook, never by polling.
-        if (animal.readyToLayEgg(nowDays) && dropLivestockProduct) {
-          dropLivestockProduct('egg', animal.mesh.position.x, animal.mesh.position.z, () => animal.notifyEggCollected(currentNowDays))
-          animal.markEggLaid()
-          // Contextual vocalization (plan settlements-npcs-004 §2) — reuses
-          // the same throttled hook as the spontaneous roll above rather
-          // than a second UI/simulation trigger for the same clip.
-          onAnimalVocalize?.(animal.def.kind, animal.mesh.position.x, animal.mesh.position.z)
-        }
-      }
-      if (livestock.some((a) => a.readyToRemove())) {
-        const kept: AnimalAgent[] = []
-        for (const animal of livestock) {
-          if (animal.readyToRemove()) {
-            livestockPersistence?.markRemoved(def.id, animal.animalId)
-            animal.dispose()
-            animal.mesh.removeFromParent()
-            disposeObject3D(animal.mesh)
-          } else {
-            kept.push(animal)
-          }
-        }
-        livestock.length = 0
-        livestock.push(...kept)
-      }
+      tickSettlementLivestock(livestock, {
+        dt,
+        settlementId: def.id,
+        observerPos,
+        dayFactor,
+        timeOfDay,
+        nowDays,
+        litFires,
+        villages,
+        getNowDays: () => currentNowDays,
+        dropLivestockProduct,
+        onAnimalVocalize,
+        persistence: livestockPersistence,
+      })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived
       // sync every tick; each controller no-ops unless its own visual state
@@ -843,66 +698,11 @@ export async function createSettlement(
         }
       }
       for (const torch of villageTorches) torch.update(dt)
-      for (const assembly of houseAssemblies) {
-        let wantOpen = false
-        for (const point of assembly.interactionPoints) {
-          if (point.kind !== 'entrance' && point.kind !== 'door') continue
-          _entranceWorld.set(point.position.x, point.position.y, point.position.z)
-          assembly.root.localToWorld(_entranceWorld)
-          const dist = Math.hypot(
-            observerPos.x - _entranceWorld.x,
-            observerPos.z - _entranceWorld.z,
-          )
-          const threshold = assembly.doors.some((d) => d.isOpen())
-            ? HOUSE_DOOR_CLOSE_DISTANCE
-            : HOUSE_DOOR_OPEN_DISTANCE
-          if (dist <= threshold) wantOpen = true
-        }
-        for (const door of assembly.doors) door.setOpen(wantOpen)
-        assembly.update(dt)
-      }
-      const doorSignature = houseAssemblies
-        .map((a) => a.doors.map((d) => (d.isOpen() ? '1' : '0')).join(''))
-        .join('|')
-      if (doorSignature !== doorColliderSignature) {
-        doorColliderSignature = doorSignature
-        registerSettlementColliders()
-      }
-      for (const sp of signposts) {
-        sp.labelEl.style.opacity = String(labelOpacityForDistance(sp.position.distanceTo(observerPos)))
-      }
-      // Drop a sale sign the moment its plot is bought (same session — a
-      // purchase doesn't tear the settlement down), mirroring
-      // `placeWoodshedIfComplete`'s live world-state → prop sync above.
-      for (let i = landPlotSigns.length - 1; i >= 0; i--) {
-        const sign = landPlotSigns[i]!
-        if (!isLandPlotOwned?.(def.id, sign.plotId)) {
-          sign.labelEl.style.opacity = String(labelOpacityForDistance(sign.position.distanceTo(observerPos)))
-          continue
-        }
-        sign.label.removeFromParent()
-        sign.labelEl.remove()
-        disposeObject3D(sign.prop)
-        sign.prop.removeFromParent()
-        landPlotSigns.splice(i, 1)
-      }
+      if (houseDoors.update(dt, observerPos)) registerSettlementColliders()
+      signposts.update(observerPos)
     },
     setDayNight(t) {
-      if (fire && !fire.isLit() && nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
-        nightIndex++
-        const random = createSeededRandom(
-          settlementSeed ^ Math.imul(nightIndex, 0x9e3779b1) ^ 0x4e494748,
-        )
-        if (random() < (NIGHT_FIRE_IGNITE_CHANCE[def.size] ?? 0.75)) fire.light('night')
-      }
-      // Village torches: always light at dusk, extinguish at dawn (plan 085).
-      if (nightFactor <= NIGHT_FIRE_THRESHOLD && t > NIGHT_FIRE_THRESHOLD) {
-        for (const torch of villageTorches) torch.setLit(true)
-      } else if (nightFactor > NIGHT_FIRE_THRESHOLD && t <= NIGHT_FIRE_THRESHOLD) {
-        for (const torch of villageTorches) torch.setLit(false)
-      }
-      nightFactor = t
-      for (const light of houseLights) light.setNightIntensity(t)
+      nightCycle.apply(t)
     },
     tickFire(dt) {
       fire?.update(dt)
@@ -918,14 +718,7 @@ export async function createSettlement(
         agent.mesh.removeFromParent()
       }
       disposeLivestock(livestock)
-      for (const sp of signposts) {
-        sp.label.removeFromParent()
-        sp.labelEl.remove()
-      }
-      for (const sign of landPlotSigns) {
-        sign.label.removeFromParent()
-        sign.labelEl.remove()
-      }
+      signposts.dispose()
       disposeSettlementGroup(group)
       group.removeFromParent()
     },

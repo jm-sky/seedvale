@@ -358,6 +358,19 @@ Generated from TypeScript imports.
 - `ai/npcCombat.test.ts`
 - `ai/npcLoadout.test.ts`
 
+## `ai/npcCrowd.test.ts`
+
+**Imports**
+
+- `ai/npcCrowd.ts`
+
+## `ai/npcCrowd.ts`
+
+**Imported by**
+
+- `ai/npcCrowd.test.ts`
+- `settlement/createSettlement.ts`
+
 ## `ai/npcCurrentActivity.test.ts`
 
 **Imports**

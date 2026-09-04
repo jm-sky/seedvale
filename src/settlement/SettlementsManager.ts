@@ -1,5 +1,4 @@
-import { type Object3D, type Scene, Vector3 } from 'three'
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import { type Scene, Vector3 } from 'three'
 import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
@@ -18,17 +17,15 @@ import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
 import type { TerrainSamplers } from './settlementTerrain'
-import { disposeObject3D } from '../assets/loadGltf'
 import { createEconomyRegistry } from '../economy'
 import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
-import { labelOpacityForDistance } from '../ui/labelDistance'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
-import { createSettlement, type Settlement } from './createSettlement'
+import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import { createLivestockRegistry, type LivestockSaveRecord } from './livestock'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
-import { createSignpost, placeOnGround } from './props'
+import { createSignpost } from './props'
 import {
   type MidpointSignpost,
   midpointSignpostsFor,
@@ -43,6 +40,7 @@ import {
   worldToCell,
 } from './settlementGenerator'
 import { settlementDefFor } from './settlementPlanCache'
+import { createLabeledProp, disposeLabeledProp, type LabeledProp, updateLabelOpacity } from './settlementSignposts'
 
 type Entry = {
   def: SettlementDef
@@ -301,6 +299,37 @@ export async function createSettlementsManager(
     removedIds: initialRemovedLivestockIds ?? [],
   })
 
+  // One shared deps object for every `createSettlement` call (createSettlement
+  // refactor review, P1) — was a 26-argument positional call duplicated
+  // verbatim at both call sites below; `def`/`economy` stay per-call since
+  // they differ between the home settlement and every streamed-in neighbor.
+  const settlementDeps: CreateSettlementDeps = {
+    scene,
+    sampleHeight,
+    waterLevel,
+    localRadius,
+    seed,
+    householdRegistry: households,
+    npcStateRegistry: npcStates,
+    relations: npcRelationships,
+    livestockPersistence: livestock,
+    collidersNear,
+    registerColliders,
+    clearColliders,
+    playAt,
+    pointLightBudget,
+    roadCtx,
+    forest,
+    mining,
+    foodSources,
+    hunting,
+    helperDelivery,
+    getPlayerSocial,
+    getNearbyPlayerWell,
+    isLandPlotOwned,
+    onAnimalDeath,
+  }
+
   const entries = new Map<string, Entry>()
 
   // Remembered so a settlement that streams in later (or finishes its async
@@ -333,32 +362,9 @@ export async function createSettlementsManager(
   // reading `home` directly.
   let homeSettlement: Settlement | null = null
   const homeReadyPromise: Promise<Settlement> = createSettlement(
-    scene,
-    sampleHeight,
-    waterLevel,
-    localRadius,
-    seed,
     homeDef,
     economyFor(homeDef),
-    households,
-    npcStates,
-    collidersNear,
-    registerColliders,
-    clearColliders,
-    playAt,
-    roadCtx,
-    forest,
-    onAnimalDeath,
-    getPlayerSocial,
-    mining,
-    isLandPlotOwned,
-    pointLightBudget,
-    getNearbyPlayerWell,
-    foodSources,
-    hunting,
-    helperDelivery,
-    npcRelationships,
-    livestock,
+    settlementDeps,
   ).then((settlement) => {
     if (disposed) {
       settlement.dispose()
@@ -388,49 +394,32 @@ export async function createSettlementsManager(
   // rather than inside `createSettlement`. `midpointSignpostsFor` only reads
   // each side's `SettlementDef` (cheap/deterministic), so this doesn't have
   // to wait for either settlement's async build to finish.
-  type MidpointInstance = {
-    prop: Object3D
-    labelEl: HTMLDivElement
-    label: CSS2DObject
-    position: Vector3
-    /** Last opacity written to `labelEl` — guards the DOM write like
-     *  `NpcAgent`/`AnimalAgent` do, quantized so it actually catches repeats
-     *  while the player is in continuous motion. */
-    lastOpacity: number
-  }
-  const midpoints = new Map<string, MidpointInstance[]>()
+  const midpoints = new Map<string, LabeledProp[]>()
 
   function midpointPairKey(a: string, b: string): string {
     return a < b ? `${a}|${b}` : `${b}|${a}`
   }
 
-  function buildMidpointInstance(sp: MidpointSignpost): MidpointInstance {
+  function buildMidpointInstance(sp: MidpointSignpost): LabeledProp {
     const prop = createSignpost()
-    prop.rotation.y = sp.angle
-    placeOnGround(prop, sp.position.x, sp.position.z, sampleHeight)
+    const inst = createLabeledProp(prop, {
+      x: sp.position.x,
+      z: sp.position.z,
+      rotationY: sp.angle,
+      labelHeight: 2.5,
+      text: sp.targetName,
+      sampleHeight,
+    })
     scene.add(prop)
-
-    const labelEl = document.createElement('div')
-    labelEl.className = 'npc-label'
-    labelEl.textContent = sp.targetName
-    const label = new CSS2DObject(labelEl)
-    label.position.set(0, 2.5, 0)
-    prop.add(label)
-
-    return {
-      prop,
-      labelEl,
-      label,
-      position: new Vector3(sp.position.x, sampleHeight(sp.position.x, sp.position.z), sp.position.z),
-      lastOpacity: -1,
-    }
+    return inst
   }
 
-  function disposeMidpointInstance(inst: MidpointInstance): void {
-    inst.label.removeFromParent()
-    inst.labelEl.remove()
-    disposeObject3D(inst.prop)
-    inst.prop.removeFromParent()
+  // A midpoint prop belongs to neither settlement's own `group` (it can
+  // outlive either side's build/lifecycle), so it's a scene-level object and
+  // must free its own GPU resources here — unlike `settlementSignposts.ts`'s
+  // own signs, which are freed by `disposeSettlementGroup`.
+  function disposeMidpointInstance(inst: LabeledProp): void {
+    disposeLabeledProp(inst, { disposeProp: true })
   }
 
   function syncMidpoints(): void {
@@ -465,34 +454,7 @@ export async function createSettlementsManager(
     entries.set(def.id, entry)
     syncMidpoints()
     entry.pendingPromise = waitForChunks(chunksNear(def.x, def.z, chunkSize))
-      .then(() => createSettlement(
-        scene,
-        sampleHeight,
-        waterLevel,
-        localRadius,
-        seed,
-        def,
-        economyFor(def),
-        households,
-        npcStates,
-        collidersNear,
-        registerColliders,
-        clearColliders,
-        playAt,
-        roadCtx,
-        forest,
-        onAnimalDeath,
-        getPlayerSocial,
-        mining,
-        isLandPlotOwned,
-        pointLightBudget,
-        getNearbyPlayerWell,
-        foodSources,
-        hunting,
-        helperDelivery,
-        npcRelationships,
-        livestock,
-      ))
+      .then(() => createSettlement(def, economyFor(def), settlementDeps))
       .then((settlement) => {
         const cur = entries.get(def.id)
         if (!cur) {
@@ -585,13 +547,7 @@ export async function createSettlementsManager(
         )
       }
       for (const instances of midpoints.values()) {
-        for (const inst of instances) {
-          const opacity = Math.round(labelOpacityForDistance(inst.position.distanceTo(playerPos)) * 32) / 32
-          if (opacity !== inst.lastOpacity) {
-            inst.lastOpacity = opacity
-            inst.labelEl.style.opacity = String(opacity)
-          }
-        }
+        for (const inst of instances) updateLabelOpacity(inst, playerPos)
       }
     },
     getLoaded() {

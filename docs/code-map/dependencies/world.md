@@ -872,15 +872,25 @@ Generated from TypeScript imports.
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationNames.test.ts`
 
+## `world/locations/worldLocationTypes.test.ts`
+
+**Imports**
+
+- `world/locations/worldLocationTypes.ts`
+
 ## `world/locations/worldLocationTypes.ts`
 
 **Imported by**
 
 - `debug/npcDebugApi.ts`
+- `ui-vue/lib/drawMap.ts`
+- `ui-vue/lib/mapColors.ts`
+- `ui-vue/lib/worldLocationDisplay.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationNames.ts`
+- `world/locations/worldLocationTypes.test.ts`
 - `world/map/mapProjection.test.ts`
 
 ## `world/map/mapConfig.ts`
@@ -1023,7 +1033,6 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `items/createItemSpawners.ts`
 - `items/villageTools.test.ts`
-- `settlement/createSettlement.ts`
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/houseCatalog.ts`
@@ -1032,6 +1041,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementNightCycle.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
 - `shared/SettlementName.ts`

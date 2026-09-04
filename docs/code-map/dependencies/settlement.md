@@ -35,7 +35,6 @@ Generated from TypeScript imports.
 
 - `ai/npcAnimalThreat.ts`
 - `ai/reactionChance.ts`
-- `assets/loadGltf.ts`
 - `audio/createWorldAudio.ts`
 - `config/worldConfig.ts`
 - `economy/index.ts`
@@ -53,11 +52,11 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementSignposts.ts`
 - `settlement/settlementTerrain.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
-- `ui/labelDistance.ts`
 - `world/collision.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
@@ -100,6 +99,7 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/VillageFire.test.ts`
 - `settlement/createSettlement.ts`
+- `settlement/settlementNightCycle.ts`
 
 ## `settlement/campfireBody.test.ts`
 
@@ -126,9 +126,9 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcAnimalThreat.ts`
+- `ai/npcCrowd.ts`
 - `ai/reactionChance.ts`
 - `ai/socialBehaviour.ts`
-- `assets/loadGltf.ts`
 - `audio/createWorldAudio.ts`
 - `audio/fireSounds.ts`
 - `debug/debugMode.ts`
@@ -140,10 +140,10 @@ Generated from TypeScript imports.
 - `settlement/VillageFire.ts`
 - `settlement/families.ts`
 - `settlement/houseBuilder.ts`
+- `settlement/houseDoors.ts`
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
-- `settlement/minorLocations.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
@@ -151,7 +151,9 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementNightCycle.ts`
 - `settlement/settlementPropColliders.ts`
+- `settlement/settlementSignposts.ts`
 - `settlement/storageVisuals.ts`
 - `settlement/wellInteractionQueue.ts`
 - `shared/SettlementName.ts`
@@ -159,11 +161,9 @@ Generated from TypeScript imports.
 - `simulation/index.ts`
 - `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
-- `ui/labelDistance.ts`
 - `world/collision.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
-- `world/parseSeed.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
 - `world/settlementForestHooks.ts`
@@ -238,6 +238,7 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementNightCycle.ts`
 - `settlement/settlementPalisade.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
@@ -331,6 +332,8 @@ Generated from TypeScript imports.
 - `house-browser/houseBrowserTypes.ts`
 - `settlement/createSettlement.ts`
 - `settlement/houseBuilder.test.ts`
+- `settlement/houseDoors.test.ts`
+- `settlement/houseDoors.ts`
 - `settlement/props.ts`
 
 ## `settlement/houseCatalog.test.ts`
@@ -356,6 +359,26 @@ Generated from TypeScript imports.
 - `settlement/householdYard.ts`
 - `settlement/props.lampMount.test.ts`
 - `settlement/props.ts`
+
+## `settlement/houseDoors.test.ts`
+
+**Imports**
+
+- `assets/constructionCatalog.ts`
+- `assets/houseDefinitionExample.ts`
+- `settlement/houseBuilder.ts`
+- `settlement/houseDoors.ts`
+
+## `settlement/houseDoors.ts`
+
+**Imports**
+
+- `settlement/houseBuilder.ts`
+
+**Imported by**
+
+- `settlement/createSettlement.ts`
+- `settlement/houseDoors.test.ts`
 
 ## `settlement/houseLighting.ts`
 
@@ -504,6 +527,7 @@ Generated from TypeScript imports.
 - `assets/loadGltf.ts`
 - `debug/debugMode.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/livestockProduction.ts`
 - `fauna/proceduralAnimals.ts`
 - `player/PlayerController.ts`
 - `settlement/families.ts`
@@ -584,9 +608,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `settlement/createSettlement.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementSignposts.ts`
 
 ## `settlement/npcPhysicalProfile.test.ts`
 
@@ -784,6 +808,9 @@ Generated from TypeScript imports.
 - `settlement/places.test.ts`
 - `settlement/places.ts`
 - `settlement/props.lampMount.test.ts`
+- `settlement/settlementNightCycle.ts`
+- `settlement/settlementSignposts.test.ts`
+- `settlement/settlementSignposts.ts`
 - `settlement/wellInteractionQueue.test.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
@@ -834,6 +861,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/roadNetwork.test.ts`
 - `settlement/settlementPalisade.ts`
+- `settlement/settlementSignposts.ts`
 - `terrain/chunkManager.ts`
 
 ## `settlement/settlementGenerator.test.ts`
@@ -881,10 +909,32 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementSignposts.test.ts`
+- `settlement/settlementSignposts.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
+
+## `settlement/settlementNightCycle.test.ts`
+
+**Imports**
+
+- `settlement/settlementNightCycle.ts`
+
+## `settlement/settlementNightCycle.ts`
+
+**Imports**
+
+- `settlement/VillageFire.ts`
+- `settlement/families.ts`
+- `settlement/props.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/createSettlement.ts`
+- `settlement/settlementNightCycle.test.ts`
 
 ## `settlement/settlementPalisade.ts`
 
@@ -940,6 +990,32 @@ Generated from TypeScript imports.
 
 - `settlement/createSettlement.ts`
 - `settlement/settlementPropColliders.test.ts`
+
+## `settlement/settlementSignposts.test.ts`
+
+**Imports**
+
+- `settlement/props.ts`
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementSignposts.ts`
+
+## `settlement/settlementSignposts.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `player/PlayerController.ts`
+- `settlement/minorLocations.ts`
+- `settlement/props.ts`
+- `settlement/roadNetwork.ts`
+- `settlement/settlementGenerator.ts`
+- `ui/labelDistance.ts`
+
+**Imported by**
+
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/settlementSignposts.test.ts`
 
 ## `settlement/settlementStructures.ts`
 

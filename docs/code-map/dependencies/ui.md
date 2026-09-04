@@ -218,8 +218,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `fauna/createFauna.ts`
 - `items/createItemSpawners.ts`
-- `settlement/SettlementsManager.ts`
-- `settlement/createSettlement.ts`
+- `settlement/settlementSignposts.ts`
 - `terrain/resourceDeposits.ts`
 - `ui/agentStatusLabel.ts`
 - `ui/labelDistance.test.ts`

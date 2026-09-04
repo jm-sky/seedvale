@@ -382,6 +382,7 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/livestock.ts`
 
 ## `fauna/measureSlope.test.ts`
 

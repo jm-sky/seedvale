@@ -32,15 +32,15 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/lib/drawMap.ts`
 
-- `canvasToWorld` — function — line 43
-- `clampWorldMapZoom` — function — line 26
-- `drawWorldMapFrame` — function — line 88
-- `findLocationAtCanvasPoint` — function — line 166
-- `lodStepFor` — function — line 73
-- `viewportFor` — function — line 56
-- `WorldMapDrawContext` — type — line 20
-- `WorldMapView` — type — line 14
-- `worldToCanvas` — function — line 30
+- `canvasToWorld` — function — line 44
+- `clampWorldMapZoom` — function — line 27
+- `drawWorldMapFrame` — function — line 89
+- `findLocationAtCanvasPoint` — function — line 178
+- `lodStepFor` — function — line 74
+- `viewportFor` — function — line 57
+- `WorldMapDrawContext` — type — line 21
+- `WorldMapView` — type — line 15
+- `worldToCanvas` — function — line 31
 
 ## `ui-vue/lib/drawMinimap.ts`
 
@@ -62,15 +62,28 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/lib/mapColors.ts`
 
-- `MAP_FOG_FILL` — const — line 4
-- `MAP_UNAVAILABLE_FILL` — const — line 5
-- `mapCellFillStyle` — function — line 32
-- `TARGET_SLOT_COLORS` — const — line 26
-- `targetSlotColor` — function — line 28
+- `LOCATION_KIND_COLOR` — const — line 38
+- `LOCATION_KIND_COLOR_FALLBACK` — const — line 48
+- `LOCATION_KIND_EMOJI` — const — line 59
+- `locationKindColor` — function — line 50
+- `MAP_FOG_FILL` — const — line 5
+- `MAP_UNAVAILABLE_FILL` — const — line 6
+- `mapCellFillStyle` — function — line 67
+- `TARGET_SLOT_COLORS` — const — line 27
+- `targetSlotColor` — function — line 29
 
 ## `ui-vue/lib/utils.ts`
 
 - `cn` — function — line 5
+
+## `ui-vue/lib/worldLocationDisplay.ts`
+
+- `LOCATION_KIND_ICON` — const — line 22
+- `LOCATION_KIND_ICON_FALLBACK` — const — line 30
+- `LOCATION_KIND_LABEL` — const — line 12
+- `LOCATION_KIND_LABEL_FALLBACK` — const — line 20
+- `locationKindIcon` — function — line 36
+- `locationKindLabel` — function — line 32
 
 ## `ui-vue/mount.ts`
 
