@@ -4,31 +4,31 @@
 
 ### Overall
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/3
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · 🔒 blocked · unlocks 2/2
+3. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 1/2
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/1
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 1/1
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
-   🔴 `M` · 🔒 blocked · unlocks 0/0
-5. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 0/0
 
 ---
 
 ### Roadmap Focus
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/3 · roadmap: `physical-goods-transport`
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · 🔒 blocked · unlocks 2/2 · roadmap: `physical-goods-transport`
+3. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 1/2 · roadmap: `economy-production`
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `economy-production`
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 1/1 · roadmap: `docs/roadmap/physical-goods-transport`
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
    🔴 `M` · 🔒 blocked · unlocks 0/0 · roadmap: `economy-production`
-5. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · 🔒 blocked · unlocks 0/0 · roadmap: `docs/roadmap/physical-goods-transport`
 
 ---
 
@@ -47,10 +47,10 @@ _No qualifying plans._
 
 ### Ready Now
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/3
+2. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 1/2
-2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 1/1
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
 4. `npc-010` — **NPC Death & Corpse Lifecycle**  
@@ -74,24 +74,24 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+  🔴 `M` · **Score:**  95  
+   → **unlocks:** 3/3
+
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+  🔴 `M` · **Score:**  83  
+   → **unlocks:** 2/2
+
+3. `settlements-npcs-015` — **Economic Production and Input Integration**  
   🔴 `M` · **Score:**  77  
    → **unlocks:** 1/2
 
-2. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  69  
    → **unlocks:** 1/1
 
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-  🔴 `M` · **Score:**  67  
-   → **unlocks:** 1/1
-
-4. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  57  
-   → **unlocks:** 0/0
-
-5. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-  🔴 `M` · **Score:**  55  
    → **unlocks:** 0/0
 
 6. `fauna-004` — **Sheep wool cycle and shepherd**  
@@ -287,6 +287,8 @@ graph TD
   settlements_npcs_017["settlements-npcs-017 — Production Demand and Economic Pressures"]
   settlements_npcs_018["settlements-npcs-018 — Physical Goods Transport Foundation"]
   settlements_npcs_019["settlements-npcs-019 — Persistent & Off-screen Transport"]
+  settlements_npcs_020["settlements-npcs-020 — Economy-driven Transport Demand Integration"]
+  settlements_npcs_021["settlements-npcs-021 — Remote Production Site Logistics"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -407,6 +409,11 @@ graph TD
   settlements_npcs_015 --> settlements_npcs_016
   settlements_npcs_016 --> settlements_npcs_017
   settlements_npcs_018 --> settlements_npcs_019
+  settlements_npcs_018 --> settlements_npcs_020
+  settlements_npcs_018 --> settlements_npcs_021
+  settlements_npcs_019 --> settlements_npcs_020
+  settlements_npcs_019 --> settlements_npcs_021
+  settlements_npcs_020 --> settlements_npcs_021
   tools_010 --> tools_011
   world_008 --> items_player_009
   world_terrain_004 --> world_terrain_005

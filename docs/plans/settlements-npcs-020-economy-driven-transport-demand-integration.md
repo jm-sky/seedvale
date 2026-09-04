@@ -8,7 +8,7 @@
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `logistics`  
 **Tags:** `transport` `shortage` `surplus` `trader`  
-**Roadmap:** `docs/roadmap/physical-goods-transport.md`  
+**Roadmap:** `physical-goods-transport`  
 
 ## Status Note
 

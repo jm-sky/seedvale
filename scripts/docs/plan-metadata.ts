@@ -83,6 +83,7 @@ const extractHeaderBlock = (content: string): string => {
 
 export const parsePlanHeader = (file: string, content: string): PlanHeader => {
   const header = extractHeaderBlock(content)
+  const roadmap = header.match(PLAN_ROADMAP_RE)?.[1]?.trim()
 
   return {
     file,
@@ -96,7 +97,7 @@ export const parsePlanHeader = (file: string, content: string): PlanHeader => {
     domain: header.match(PLAN_DOMAIN_RE)?.[1]?.trim(),
     subdomains: parseTokenList(header.match(PLAN_SUBDOMAINS_RE)?.[1]),
     tags: parseTokenList(header.match(PLAN_TAGS_RE)?.[1]),
-    roadmap: header.match(PLAN_ROADMAP_RE)?.[1]?.trim(),
+    roadmap: ['', '-', 'none'].includes(roadmap ?? '') ? undefined : roadmap,
     implementedAt: header.match(PLAN_IMPLEMENTED_AT_RE)?.[1]?.trim(),
   }
 }

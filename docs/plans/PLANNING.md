@@ -14,7 +14,7 @@ Rules for AI agents creating Seedvale plans and implementation notes.
 - persistence: `004`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `020`
+- settlements-npcs: `022`
 - tools: `012`
 - ui-input: `008`
 - world: `013`

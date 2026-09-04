@@ -6,7 +6,7 @@
 **Depends on:** ~~settlements-npcs-014~~
 **Domain:** `settlements-npcs`
 **Type:** `feature`
-**Roadmap:** `docs/roadmap/physical-goods-transport.md`
+**Roadmap:** `physical-goods-transport`
 
 ## Goal
 
