@@ -9,6 +9,7 @@ const PLANNING_PATH = resolve(PLANS_PATH, 'PLANNING.md')
 const UPDATED_REVIEW_SUFFIX = '--updated-review.md'
 const REVIEW_SUFFIX = '-review.md'
 
+const DRAFT_HEADING = '## Drafts'
 const PLANNED_HEADING = '## Planned'
 const PLAN_TITLE_PAD_END_SIZE = 75
 const TABLE_HEADER = '| File                                                                        | Summary | Pri | Effort | Depends |'
@@ -89,7 +90,7 @@ const matchOne = (
 }
 
 const getNotesMarker = (isPlanned: boolean, hasNotes: boolean): string => !isPlanned ? '' : hasNotes ? '💡' : '◼️'
-const getPlanTitle = (marker: string, file: string): string => `${marker} \`${file}\``
+const getPlanTitle = (marker: string, file: string): string => marker ? `${marker} \`${file}\`` : `\`${file}\``
 const getPaddedPlanTitle = (marker: string, file: string): string => getPlanTitle(marker, file).padEnd(PLAN_TITLE_PAD_END_SIZE)
 
 const buildRow = (
@@ -173,22 +174,32 @@ const computeNextPlanIds = (
   )
 }
 
-const findPlannedTableRange = (
+/**
+ * Locate a status section's table body (the row range between its `| --- |`
+ * separator and its last data row) inside the README lines, bounded by the
+ * next `##` heading. Shared by every generated status section (`Draft`,
+ * `Planned`) so the table-parsing contract has exactly one implementation —
+ * see the plan's "Generic status-section synchronization" design.
+ *
+ * @domain tools
+ */
+const findStatusTableRange = (
   lines: string[],
+  heading: string,
 ): { separatorIdx: number; lastRowIdx: number } => {
-  const plannedHeadingIdx = lines.findIndex(
-    line => line.trim() === PLANNED_HEADING,
+  const headingIdx = lines.findIndex(
+    line => line.trim() === heading,
   )
 
-  if (plannedHeadingIdx === -1) {
+  if (headingIdx === -1) {
     throw new Error(
-      `"${PLANNED_HEADING}" section not found in README`,
+      `"${heading}" section not found in README`,
     )
   }
 
   let sectionEndIdx = lines.length
 
-  for (let i = plannedHeadingIdx + 1; i < lines.length; i++) {
+  for (let i = headingIdx + 1; i < lines.length; i++) {
     if (/^##\s/.test(lines[i])) {
       sectionEndIdx = i
       break
@@ -197,13 +208,13 @@ const findPlannedTableRange = (
 
   const headerIdx = lines.findIndex(
     (line, i) =>
-      i > plannedHeadingIdx &&
+      i > headingIdx &&
       i < sectionEndIdx &&
       line.trim() === TABLE_HEADER,
   )
 
   if (headerIdx === -1) {
-    throw new Error('Planned table header not found in README')
+    throw new Error(`Table header not found in README section "${heading}"`)
   }
 
   const separatorIdx = headerIdx + 1
@@ -224,10 +235,16 @@ const findPlannedTableRange = (
   }
 }
 
-const getPlannedFiles = async (
+const findPlannedTableRange = (
+  lines: string[],
+): { separatorIdx: number; lastRowIdx: number } =>
+  findStatusTableRange(lines, PLANNED_HEADING)
+
+const getFilesByStatus = async (
   plans: PlanInfo[],
+  status: string,
 ): Promise<string[]> => {
-  const plannedFiles: string[] = []
+  const files: string[] = []
 
   for (const plan of plans) {
     const content = await readFile(
@@ -235,19 +252,62 @@ const getPlannedFiles = async (
       'utf8',
     )
 
-    // Derived from the parsed Status field rather than the literal
-    // "`planned` 📋" marker string — a plan missing the emoji (e.g. a typo)
-    // must still be recognized as planned, not silently dropped from sync.
-    const status = content.match(PLAN_STATUS_RE)?.[1]?.trim()
+    // Derived from the parsed Status field rather than the literal status
+    // marker string — a plan missing the emoji (e.g. a typo) must still be
+    // recognized by status, not silently dropped from sync.
+    const planStatus = content.match(PLAN_STATUS_RE)?.[1]?.trim()
 
-    if (status === 'planned') {
-      plannedFiles.push(plan.file)
+    if (planStatus === status) {
+      files.push(plan.file)
     }
   }
 
-  plannedFiles.sort()
+  files.sort()
 
-  return plannedFiles
+  return files
+}
+
+const getPlannedFiles = (
+  plans: PlanInfo[],
+): Promise<string[]> => getFilesByStatus(plans, 'planned')
+
+/**
+ * Fully rebuild a generated status section's table rows from the current
+ * set of rows, replacing whatever data rows are currently present between
+ * the table separator and the next heading. Used for sections (`Draft`)
+ * that are entirely derived and have no incremental/manual state to
+ * preserve — see the plan's "Generated section ownership" design.
+ *
+ * @domain tools
+ */
+const rebuildStatusSection = (
+  lines: string[],
+  heading: string,
+  rows: string[],
+): string[] => {
+  const { separatorIdx, lastRowIdx } = findStatusTableRange(lines, heading)
+  const existingRowCount = lastRowIdx - separatorIdx
+
+  lines.splice(separatorIdx + 1, existingRowCount, ...rows)
+
+  return lines
+}
+
+const getDraftRows = async (
+  files: string[],
+): Promise<string[]> => {
+  const rows: string[] = []
+
+  for (const file of files) {
+    const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
+
+    // Draft plans never carry an implementation-notes marker (buildRow's
+    // marker is derived from the plan's own `planned` status, so `hasNotes`
+    // has no effect here).
+    rows.push(buildRow(file, content, false))
+  }
+
+  return rows
 }
 
 /**
@@ -533,12 +593,22 @@ const main = async () => {
   const plannedFiles: string[] =
     await getPlannedFiles(plans)
 
+  const draftFiles: string[] =
+    await getFilesByStatus(plans, 'draft')
+
   // README.md — existing human-facing synchronization.
   const readmeContent = await readFile(
     README_PATH,
     'utf8',
   )
   let readmeLines = readmeContent.split('\n')
+
+  const draftRows = await getDraftRows(draftFiles)
+  readmeLines = rebuildStatusSection(
+    readmeLines,
+    DRAFT_HEADING,
+    draftRows,
+  )
 
   const {
     lastRowIdx,
@@ -583,7 +653,7 @@ const main = async () => {
   if (nextReadmeContent !== readmeContent) {
     await writeFile(README_PATH, nextReadmeContent)
     console.log(
-      `Updated ${README_PATH}: +${missing.length} planned row(s)`,
+      `Updated ${README_PATH}: +${missing.length} planned row(s), ${draftFiles.length} draft row(s)`,
     )
   } else {
     console.log(`${README_PATH} already up to date`)

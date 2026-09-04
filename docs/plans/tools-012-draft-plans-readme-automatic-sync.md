@@ -1,7 +1,7 @@
 # Plan: Draft plans README automatic sync
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** infrastructure
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~tools-011~~
@@ -10,7 +10,7 @@
 
 ## Goal
 
-Rozszerzyć istniejący pipeline synchronizacji planów tak, aby wszystkie aktualne plany ze statusem `draft` były automatycznie widoczne na górze `docs/plans/README.md` w dedykowanej sekcji `## Draft`.
+Rozszerzyć istniejący pipeline synchronizacji planów tak, aby wszystkie aktualne plany ze statusem `draft` były automatycznie widoczne na górze `docs/plans/README.md` w dedykowanej sekcji `## Drafts`.
 
 Sekcja ma być w pełni generowana z metadata planów i nie wymagać ręcznego dopisywania ani usuwania wpisów.
 
