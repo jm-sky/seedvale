@@ -1,7 +1,7 @@
 # Plan: World Location Catalog performance optimization
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** optimization
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-012~~
@@ -468,5 +468,31 @@ Plan jest zakończony, gdy:
 - zakup mapy nie powoduje obserwowanego 3–5 sekundowego freeze,
 - pomiary before/after dokumentują redukcję kosztu i proceduralnych sampli,
 - nie dodano Web Workera; ewentualny Worker wymaga osobnego planu popartego pomiarem pozostałego hotspotu.
+
+## Implementation status
+
+Implemented in full inside the existing `WorldLocationCatalog` (`src/world/locations/worldLocationCatalog.ts`), no new system/Worker added.
+
+- Shared pure terrain-classification rules extracted to `src/terrain/terrainClassification.ts` (`isWetFloor`/`isOceanMix`/`isMountainRidge`), reused by both `mapProjection.projectCellAt()` and the new lightweight coarse-cell classifier — the two can no longer silently drift apart.
+- Lightweight classifier samples only `sampleFloorAt → (wet: sampleContinentalnessAt) / (land: sampleMountainRidgeAt → mountain: sampleHeightAt once)` — no `projectCellAt()`, no moisture/biome-weights/forest-density, no duplicate height sample.
+- Old per-query `scanCache` (keyed by `(x, z, maxKm)`) replaced with a lazily-materialized coarse tile cache (`LOCATION_TILE_CELLS`² `Uint8Array`/`Float32Array` tiles keyed by stable `(tileX, tileZ)`), shared across every Near/Guard/Far query. A cell is sampled at most once for the cache's lifetime.
+- New `landmarksInRange(x, z, minKm, maxKm)` on the catalog; `landmarksWithin` is its `minKm = 0` wrapper. `locationDiscovery.landmarksInBand()` now delegates straight to it instead of generating `0..maxKm` and filtering afterwards. Caves/cemeteries apply `(minKm, maxKm]` directly (cemetery's settlement search itself is still bounded only by `maxKm + margin`, unchanged, per notes §5).
+- Coarse terrain sampling is bounded to the circular annulus `[minKm − halo, maxKm + halo]` (never the enclosing square, never a full re-scan), with `PEAK_SCAN_HALO_CELLS` boundary margin so a peak/lake right at a query boundary is still evaluated with its true neighborhood/full connected component. Lake flood-fill expands past the query's own candidate window on demand (via the shared tile cache) until each component actually closes, so a lake's id/centroid no longer depends on which query/range found it first (this also fixes a latent boundary bug in the old code, which treated any neighbor outside its scan rectangle as "not water"/"not mountain").
+- Cemetery lookup results are cached per settlement id (`cemeteryForSettlement`, notes §12) — `ChunkManager.findLandmarkNear()` is only paid once per settlement across Near/Guard/Far.
+- Opt-in, zero-cost-when-unread diagnostics counters (`WorldLocationCatalog.getScanDiagnostics()`): sampled/cache-hit cells, per-sampler call counts, water/mountain cell counts, and per-phase timings. Reset by `invalidateScanCache()`.
+- New tests in `worldLocationCatalog.test.ts`: classifier/`projectCellAt()` parity on a grid, cold==warm, Near→Guard→Far order independence, `invalidateScanCache()` forces resampling, overlapping-query reuse (via diagnostics), `landmarksWithin(max) == landmarksInRange(0, max)`, Far band never returns inner-range locations, and a split-bands-union-equals-one-wide-query check (exercises lake/peak boundary correctness against the real procedural noise for a fixed seed).
+
+### Measured (Node, `tsx`, seed 42, empty caves/cemeteries — isolates the terrain-scan portion only; see caveat below)
+
+| Query | Before (equivalent full `projectCellAt()` square scan) | After — cold | After — warm (repeat) |
+| --- | --- | --- | --- |
+| Near 0–20 km | – | ~12 ms | – |
+| Guard 0–60 km | – | ~16 ms (cold) / ~10 ms (repeat) | – |
+| Far 60–200 km (after warm Guard) | – | +69 ms incremental | ~7 ms |
+| Far 0–200 km, single cold catalog | **176 ms** classification-only (28 224 cells via `projectCellAt()`, 1 678 duplicate `sampleHeightAt()` calls) | **~81 ms** total (`landmarksWithin`), 23 796 sampled cells | ~7 ms (0 new samples) |
+
+Cold Far lands under the plan's 100 ms diagnostic target (not quite the "preferred" 50 ms); warm/overlapping queries are single-digit ms as targeted. This benchmark isolates coarse terrain sampling — it does not include real settlement/cemetery chunk-generation cost, browser JIT warm-up, or main-thread contention with the rest of the running game, all of which contributed to the originally reported 3–5 s freeze. **Browser Performance-trace / manual verification (buying Near/Far Map, guard conversation) is still open** — this is why the plan is marked `verification needed` rather than `done`.
+
+No Web Worker added (§15 gate not reached — no remaining long task identified without a browser trace).
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

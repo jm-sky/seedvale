@@ -939,6 +939,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
+- `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 
 ## `world/locations/locationDiscovery.test.ts`
@@ -1009,9 +1010,13 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
+- `terrain/terrainClassification.ts`
 - `world/caveVolume.ts`
 - `world/createCaves.ts`
+- `world/locations/locationConfig.ts`
 - `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationTypes.ts`
+- `world/map/mapProjection.ts`
 
 ## `world/locations/worldLocationCatalog.ts`
 
@@ -1020,11 +1025,11 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
+- `terrain/terrainClassification.ts`
 - `world/createCaves.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/worldLocationNames.ts`
 - `world/locations/worldLocationTypes.ts`
-- `world/map/mapProjection.ts`
 
 **Imported by**
 
@@ -1071,6 +1076,7 @@ Generated from TypeScript imports.
 - `ui-vue/lib/worldLocationDisplay.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
+- `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/locations/worldLocationNames.ts`
 - `world/locations/worldLocationTypes.test.ts`
@@ -1140,7 +1146,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `terrain/biomeRegions.ts`
 - `terrain/chunkHeightmap.ts`
-- `terrain/waterBodies.ts`
+- `terrain/terrainClassification.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapTypes.ts`
 
@@ -1150,7 +1156,7 @@ Generated from TypeScript imports.
 - `debug/locationQueries.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
-- `world/locations/worldLocationCatalog.ts`
+- `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.test.ts`

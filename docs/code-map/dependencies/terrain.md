@@ -736,6 +736,18 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `terrain/slopeConstraint.test.ts`
 
+## `terrain/terrainClassification.ts`
+
+**Imports**
+
+- `terrain/waterBodies.ts`
+
+**Imported by**
+
+- `world/locations/worldLocationCatalog.test.ts`
+- `world/locations/worldLocationCatalog.ts`
+- `world/map/mapProjection.ts`
+
 ## `terrain/terrainDetailNormalMap.ts`
 
 **Imports**
@@ -803,8 +815,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkVegetation.test.ts`
+- `terrain/terrainClassification.ts`
 - `terrain/waterBodies.test.ts`
-- `world/map/mapProjection.ts`
 
 ## `terrain/worleyNoise.ts`
 

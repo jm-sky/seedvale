@@ -333,6 +333,14 @@ Generated from exported TypeScript symbols.
 - `SlopeSample` — interface — line 31
 - `stepWithSlopeAndCollision` — function — line 104
 
+## `terrain/terrainClassification.ts`
+
+- `isMountainRidge` — function — line 25
+- `isOceanMix` — function — line 21
+- `isWetFloor` — function — line 17
+- `MOUNTAIN_RIDGE_THRESHOLD` — const — line 13
+- `OCEAN_MIX_GATE` — const — line 15
+
 ## `terrain/terrainDetailNormalMap.ts`
 
 - `createTerrainNormalMap` — function — line 27

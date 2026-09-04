@@ -92,11 +92,27 @@ describe('pickRandomSubset / pickRandomReveal', () => {
 
 describe('landmarksInBand / settlementsInBand', () => {
   function fakeCatalog(all: readonly WorldLocation[]): WorldLocationCatalog {
+    const kmOf = (x: number, z: number, l: WorldLocation) => Math.hypot(l.x - x, l.z - z) / WORLD_UNITS_PER_KM
     return {
       getById: (id) => all.find((l) => l.id === id) ?? null,
-      nearestSettlements: (x, z, maxKm) => all.filter((l) => Math.hypot(l.x - x, l.z - z) / WORLD_UNITS_PER_KM <= maxKm),
-      landmarksWithin: (x, z, maxKm) => all.filter((l) => Math.hypot(l.x - x, l.z - z) / WORLD_UNITS_PER_KM <= maxKm),
+      nearestSettlements: (x, z, maxKm) => all.filter((l) => kmOf(x, z, l) <= maxKm),
+      landmarksWithin: (x, z, maxKm) => all.filter((l) => kmOf(x, z, l) <= maxKm),
+      landmarksInRange: (x, z, minKm, maxKm) => all.filter((l) => kmOf(x, z, l) > minKm && kmOf(x, z, l) <= maxKm),
       invalidateScanCache: () => {},
+      getScanDiagnostics: () => ({
+        sampledCells: 0,
+        cacheHitCells: 0,
+        sampleFloorCalls: 0,
+        sampleContinentalnessCalls: 0,
+        sampleRidgeCalls: 0,
+        sampleHeightCalls: 0,
+        waterCells: 0,
+        mountainCells: 0,
+        classificationMs: 0,
+        lakeExtractionMs: 0,
+        peakExtractionMs: 0,
+        cemeteryMs: 0,
+      }),
     }
   }
 

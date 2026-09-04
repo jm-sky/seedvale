@@ -9,16 +9,13 @@ import {
   sampleMoistureRegionAt,
   sampleMountainRidgeAt,
 } from '../../terrain/chunkHeightmap'
-import { oceanMixAt } from '../../terrain/waterBodies'
+import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
 import { MAP_CELL_SIZE, MAP_EXTENT_HALF } from './mapConfig'
 
-/** Same ridge bar `settlementTerrain` uses so foothills still read as mountain. */
-const MOUNTAIN_RIDGE_THRESHOLD = 0.15
 /** Altitude fraction (of heightScale above water) where lowland becomes highland. */
 const HIGHLAND_ALTITUDE = 0.45
 /** Shore band above waterLevel, matching the sand-band scale (~0.6–3). */
 const SHORE_BAND = 2.4
-const OCEAN_MIX_GATE = 0.5
 const BIOME_DOMINANT = 0.35
 const FOREST_CANOPY = 0.4
 
@@ -86,10 +83,9 @@ export function projectCellAt(
   const height = sampleHeightAt(worldX, worldZ, params)
   const continentalness = sampleContinentalnessAt(worldX, worldZ, params)
   const { waterLevel, heightScale, region } = params
-  const wet = floorH < waterLevel - 1e-4
+  const wet = isWetFloor(floorH, waterLevel)
   if (wet) {
-    const oceanMix = oceanMixAt(continentalness, region.oceanThreshold, region.coastThreshold)
-    const terrain: MapTerrainKind = oceanMix > OCEAN_MIX_GATE ? 'ocean' : 'inland_water'
+    const terrain: MapTerrainKind = isOceanMix(continentalness, region.oceanThreshold, region.coastThreshold) ? 'ocean' : 'inland_water'
     return { terrain, biome: 'none', water: true }
   }
 
@@ -100,7 +96,7 @@ export function projectCellAt(
   const forest = forestDensityAt(moistureRegion, altitude01, continentalness, ridge, region)
 
   let terrain: MapTerrainKind
-  if (ridge > MOUNTAIN_RIDGE_THRESHOLD) terrain = 'mountain'
+  if (isMountainRidge(ridge)) terrain = 'mountain'
   else if (height - waterLevel < SHORE_BAND) terrain = 'shore'
   else if (altitude01 >= HIGHLAND_ALTITUDE) terrain = 'highland'
   else terrain = 'lowland'

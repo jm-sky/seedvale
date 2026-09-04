@@ -4,7 +4,12 @@ import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { ChunkManager } from '../../terrain/chunkManager'
 import type { CaveDefinition } from '../caveVolume'
 import type { Caves } from '../createCaves'
+import type { WorldLocation } from './worldLocationTypes'
 import { cellKey } from '../../settlement/settlementGenerator'
+import { sampleContinentalnessAt, sampleFloorAt, sampleMountainRidgeAt } from '../../terrain/chunkHeightmap'
+import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
+import { projectCellAt } from '../map/mapProjection'
+import { FAR_RANGE_KM, LOCATION_SCAN_STEP, MEDIUM_RANGE_KM, NEAR_RANGE_KM } from './locationConfig'
 import { createWorldLocationCatalog, settlementLocationId } from './worldLocationCatalog'
 
 function rawParams(overrides: Partial<RawSampleParams> = {}): RawSampleParams {
@@ -229,5 +234,127 @@ describe('createWorldLocationCatalog', () => {
     const landmarks = catalog.landmarksWithin(0, 0, 1)
     expect(landmarks.some((l) => l.kind === 'settlement')).toBe(false)
     expect(landmarks.some((l) => l.id === 'cave:cave-1')).toBe(true)
+  })
+})
+
+describe('coarse terrain scan (plan world-013)', () => {
+  function scanOnlyCatalog(seed: number, params: RawSampleParams = rawParams()) {
+    return createWorldLocationCatalog({
+      getSeed: () => seed,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => params,
+      getChunkSize: () => 64,
+    })
+  }
+
+  function byId(locations: readonly WorldLocation[]): WorldLocation[] {
+    return [...locations].sort((a, b) => a.id.localeCompare(b.id))
+  }
+
+  it('the lightweight classifier agrees with projectCellAt() on inland_water/mountain for a grid of points', () => {
+    const params = rawParams()
+    for (let gz = -6; gz <= 6; gz++) {
+      for (let gx = -6; gx <= 6; gx++) {
+        const wx = (gx + 0.5) * LOCATION_SCAN_STEP
+        const wz = (gz + 0.5) * LOCATION_SCAN_STEP
+        const projected = projectCellAt(wx, wz, params)
+        const floorH = sampleFloorAt(wx, wz, params)
+        if (isWetFloor(floorH, params.waterLevel)) {
+          const continentalness = sampleContinentalnessAt(wx, wz, params)
+          const expected = isOceanMix(continentalness, params.region.oceanThreshold, params.region.coastThreshold) ? 'ocean' : 'inland_water'
+          expect(projected.terrain).toBe(expected)
+        } else {
+          const ridge = sampleMountainRidgeAt(wx, wz, params)
+          expect(projected.terrain === 'mountain').toBe(isMountainRidge(ridge))
+        }
+      }
+    }
+  })
+
+  it('cold query equals warm query (repeated call on the same catalog)', () => {
+    const catalog = scanOnlyCatalog(42)
+    const first = byId(catalog.landmarksWithin(0, 0, FAR_RANGE_KM))
+    const second = byId(catalog.landmarksWithin(0, 0, FAR_RANGE_KM))
+    expect(second).toEqual(first)
+  })
+
+  it('Near -> Guard -> Far order gives the same results as Far -> Guard -> Near', () => {
+    const forward = scanOnlyCatalog(42)
+    const near1 = byId(forward.landmarksInRange(0, 0, 0, NEAR_RANGE_KM))
+    const guard1 = byId(forward.landmarksInRange(0, 0, 0, MEDIUM_RANGE_KM))
+    const far1 = byId(forward.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM))
+
+    const backward = scanOnlyCatalog(42)
+    const far2 = byId(backward.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM))
+    const guard2 = byId(backward.landmarksInRange(0, 0, 0, MEDIUM_RANGE_KM))
+    const near2 = byId(backward.landmarksInRange(0, 0, 0, NEAR_RANGE_KM))
+
+    expect(near2).toEqual(near1)
+    expect(guard2).toEqual(guard1)
+    expect(far2).toEqual(far1)
+  })
+
+  it('invalidateScanCache forces resampling instead of silently reusing stale terrain data', () => {
+    const catalog = scanOnlyCatalog(42)
+    catalog.landmarksWithin(0, 0, MEDIUM_RANGE_KM)
+    const firstSampled = catalog.getScanDiagnostics().sampledCells
+    expect(firstSampled).toBeGreaterThan(0)
+
+    catalog.invalidateScanCache()
+    expect(catalog.getScanDiagnostics().sampledCells).toBe(0)
+
+    catalog.landmarksWithin(0, 0, MEDIUM_RANGE_KM)
+    expect(catalog.getScanDiagnostics().sampledCells).toBe(firstSampled)
+  })
+
+  it('an overlapping query reuses already-classified cells instead of resampling them', () => {
+    const shared = scanOnlyCatalog(42)
+    shared.landmarksInRange(0, 0, 0, MEDIUM_RANGE_KM)
+    const afterGuard = shared.getScanDiagnostics().sampledCells
+    shared.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const afterFarOnTopOfGuard = shared.getScanDiagnostics().sampledCells - afterGuard
+    expect(shared.getScanDiagnostics().cacheHitCells).toBeGreaterThan(0)
+
+    const coldFar = scanOnlyCatalog(42)
+    coldFar.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const coldFarSampled = coldFar.getScanDiagnostics().sampledCells
+
+    expect(afterFarOnTopOfGuard).toBeLessThanOrEqual(coldFarSampled)
+  })
+
+  it('landmarksWithin(maxKm) is equivalent to landmarksInRange(0, maxKm)', () => {
+    const a = scanOnlyCatalog(42)
+    const b = scanOnlyCatalog(42)
+    expect(byId(a.landmarksWithin(0, 0, FAR_RANGE_KM))).toEqual(byId(b.landmarksInRange(0, 0, 0, FAR_RANGE_KM)))
+  })
+
+  it('a Far-band query never returns a location from inside its own inner bound', () => {
+    const catalog = scanOnlyCatalog(42)
+    const far = catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    for (const loc of far) {
+      const km = Math.hypot(loc.x, loc.z) / 20
+      expect(km).toBeGreaterThan(MEDIUM_RANGE_KM)
+    }
+  })
+
+  it('splitting a wide query into adjacent bands and unioning gives the same set as one wide query (boundary-safe lake/peak extraction)', () => {
+    const whole = scanOnlyCatalog(42)
+    const wholeResult = byId(whole.landmarksWithin(0, 0, FAR_RANGE_KM))
+
+    const split = scanOnlyCatalog(42)
+    const near = split.landmarksInRange(0, 0, 0, NEAR_RANGE_KM)
+    const medium = split.landmarksInRange(0, 0, NEAR_RANGE_KM, MEDIUM_RANGE_KM)
+    const far = split.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const splitResult = byId([...near, ...medium, ...far])
+
+    expect(splitResult).toEqual(wholeResult)
+  })
+
+  it('a different seed/config can change results (sanity check the fixture isn\'t trivially empty everywhere)', () => {
+    const a = scanOnlyCatalog(1).landmarksWithin(0, 0, FAR_RANGE_KM)
+    const b = scanOnlyCatalog(2).landmarksWithin(0, 0, FAR_RANGE_KM)
+    expect(byId(a)).not.toEqual(byId(b))
   })
 })

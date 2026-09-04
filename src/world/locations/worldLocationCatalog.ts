@@ -1,16 +1,21 @@
 import type { SettlementCell, SettlementDef } from '../../settlement/settlementGenerator'
+import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { ChunkManager } from '../../terrain/chunkManager'
 import type { Caves } from '../createCaves'
 import type { WorldLocation, WorldLocationKind } from './worldLocationTypes'
 import { cellFromId, cellsWithinRadius, SETTLEMENT_GRID_STEP, worldToCell } from '../../settlement/settlementGenerator'
-import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightmap'
-import { projectCellAt } from '../map/mapProjection'
+import { sampleContinentalnessAt, sampleFloorAt, sampleHeightAt, sampleMountainRidgeAt } from '../../terrain/chunkHeightmap'
+import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
 import {
   CEMETERY_SEARCH_CHUNK_RADIUS,
   kmToWorldUnits,
+  LAKE_FLOOD_FILL_SAFETY_CAP,
   LOCATION_SCAN_STEP,
+  LOCATION_TILE_CELLS,
   MAX_CEMETERY_SETTLEMENTS_SEARCHED,
   MIN_LAKE_CELLS,
+  PEAK_MERGE_RADIUS_CELLS,
+  PEAK_SCAN_HALO_CELLS,
   worldUnitsToKm,
 } from './locationConfig'
 import { landmarkName } from './worldLocationNames'
@@ -38,6 +43,45 @@ export type WorldLocationCatalogDeps = {
   getChunkSize: () => number
 }
 
+/** Cheap running totals for the coarse terrain scan (plan world-013 §1) — no
+ *  console/log side effects, just counters a debug/perf tool can read via
+ *  `WorldLocationCatalog.getScanDiagnostics()`. Reset whenever the scan cache
+ *  itself is invalidated, since counts from a previous world/terrain config
+ *  are meaningless afterwards. */
+export type LocationScanDiagnostics = {
+  /** Coarse cells that required an actual procedural sample this session. */
+  sampledCells: number
+  /** Coarse cells served from the tile cache instead of resampled. */
+  cacheHitCells: number
+  sampleFloorCalls: number
+  sampleContinentalnessCalls: number
+  sampleRidgeCalls: number
+  sampleHeightCalls: number
+  waterCells: number
+  mountainCells: number
+  classificationMs: number
+  lakeExtractionMs: number
+  peakExtractionMs: number
+  cemeteryMs: number
+}
+
+function emptyDiagnostics(): LocationScanDiagnostics {
+  return {
+    sampledCells: 0,
+    cacheHitCells: 0,
+    sampleFloorCalls: 0,
+    sampleContinentalnessCalls: 0,
+    sampleRidgeCalls: 0,
+    sampleHeightCalls: 0,
+    waterCells: 0,
+    mountainCells: 0,
+    classificationMs: 0,
+    lakeExtractionMs: 0,
+    peakExtractionMs: 0,
+    cemeteryMs: 0,
+  }
+}
+
 export type WorldLocationCatalog = {
   /** Resolves a stable `WorldLocation.id` back to its (deterministic)
    *  position/name — works for any valid id, even one discovered in a
@@ -48,12 +92,23 @@ export type WorldLocationCatalog = {
   nearestSettlements(x: number, z: number, maxKm: number): WorldLocation[]
   /** cave + cemetery + lake + mountainPeak candidates within `maxKm` of
    *  `(x, z)` — unsorted; callers apply the distance-filter → weighted-pick
-   *  pipeline themselves (`locationDiscovery.ts`). */
+   *  pipeline themselves (`locationDiscovery.ts`). Equivalent to
+   *  `landmarksInRange(x, z, 0, maxKm)`. */
   landmarksWithin(x: number, z: number, maxKm: number): WorldLocation[]
-  /** Drops the internal lake/peak scan cache — call after a world rebuild
-   *  (new seed/terrain params), same "must not silently reuse stale terrain
-   *  data across a rebuild" reasoning as `MapProjection.invalidateCache()`. */
+  /** Same candidates as `landmarksWithin`, narrowed to `(minKm, maxKm]`
+   *  up front (plan world-013 §8) — the expensive coarse terrain sampling
+   *  itself is bounded to that band (plus a small boundary halo), instead of
+   *  generating `0..maxKm` and filtering afterwards. `landmarksWithin` is the
+   *  `minKm = 0` case of this. */
+  landmarksInRange(x: number, z: number, minKm: number, maxKm: number): WorldLocation[]
+  /** Drops the internal coarse-terrain tile cache and cemetery-lookup cache
+   *  (and resets `getScanDiagnostics()`) — call after a world rebuild (new
+   *  seed/terrain params), same "must not silently reuse stale terrain data
+   *  across a rebuild" reasoning as `MapProjection.invalidateCache()`. */
   invalidateScanCache(): void
+  /** See `LocationScanDiagnostics` — a live reference, not a snapshot copy;
+   *  read its fields after a query to see that query's contribution. */
+  getScanDiagnostics(): LocationScanDiagnostics
 }
 
 function distanceKm(ax: number, az: number, bx: number, bz: number): number {
@@ -71,8 +126,35 @@ function weightOf(seed: number, id: string): number {
   return hashLocationId(seed, id) / 0xffffffff
 }
 
+/** Coarse-cell classification result — only what World Locations needs to
+ *  tell `lake` / `mountainPeak` candidates apart (plan world-013 §2), never
+ *  `projectCellAt()`'s full biome/moisture/forest-density projection. */
+const CELL_UNKNOWN = 0
+const CELL_NONE = 1
+const CELL_WATER = 2
+const CELL_MOUNTAIN = 3
+
+/** Coarse `(gx, gz)` key encoding for flood-fill visited/queue tracking —
+ *  a single safe integer instead of a `[gx, gz]` tuple or template-string key,
+ *  so the lake BFS (plan world-013 §10) allocates one `Set`/array of numbers
+ *  per query, not one array/string per cell. `KEY_OFFSET` only needs to
+ *  exceed the largest plausible coarse-grid coordinate magnitude. */
+const KEY_OFFSET = 1 << 20
+const KEY_SPAN = KEY_OFFSET * 2
+function cellKeyOf(gx: number, gz: number): number {
+  return (gx + KEY_OFFSET) * KEY_SPAN + (gz + KEY_OFFSET)
+}
+function decodeCellKey(key: number): { gx: number, gz: number } {
+  const gxEnc = Math.floor(key / KEY_SPAN)
+  return { gx: gxEnc - KEY_OFFSET, gz: key - gxEnc * KEY_SPAN - KEY_OFFSET }
+}
+
+const NEIGHBOR4: readonly (readonly [number, number])[] = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+
 export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): WorldLocationCatalog {
   const { getSeed, getCaves, getChunkManager, lookupSettlement, getSampleParams, getChunkSize } = deps
+
+  let diagnostics = emptyDiagnostics()
 
   function settlementLocation(def: SettlementDef): WorldLocation {
     return { id: `settlement:${def.id}`, kind: 'settlement', x: def.x, z: def.z, name: def.name, discoveryWeight: 0 }
@@ -156,10 +238,31 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     return out
   }
 
-  function cemeteryCandidates(x: number, z: number, maxKm: number): WorldLocation[] {
+  /** Cemetery-per-settlement result cache (plan world-013 §12), including a
+   *  cached "no cemetery found" — `ChunkManager.findLandmarkNear()` is real
+   *  chunk-generation work, so a settlement checked by Guard should not pay
+   *  that cost again for Near/Far. Cleared by `invalidateScanCache()`. */
+  const cemeteryCache = new Map<string, WorldLocation | null>()
+
+  function cemeteryForSettlement(def: SettlementDef): WorldLocation | null {
+    if (cemeteryCache.has(def.id)) return cemeteryCache.get(def.id) ?? null
+    const found = getChunkManager().findLandmarkNear('cemetery', def.x, def.z, CEMETERY_SEARCH_CHUNK_RADIUS)
+    const seed = getSeed()
+    const loc: WorldLocation | null = found
+      ? { id: found.id, kind: 'cemetery', x: found.x, z: found.z, name: landmarkName(seed, 'cemetery', found.id), discoveryWeight: weightOf(seed, found.id) }
+      : null
+    cemeteryCache.set(def.id, loc)
+    return loc
+  }
+
+  function cemeteryCandidates(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
     // Cemeteries only ever spawn on a settlement's own fringe — search the
     // nearest settlements (bounded — this is real chunk-generation work,
-    // see locationConfig.ts) rather than scanning the world.
+    // see locationConfig.ts) rather than scanning the world. `minKm` is
+    // applied only to the resolved cemetery location below, never to which
+    // settlements get searched — narrowing the settlement search itself
+    // would make Far Map search different settlements than
+    // `landmarksWithin(200) -> filter(60)` used to (notes §5).
     const center = worldToCell(x, z)
     const searchMarginKm = 5
     const radiusCells = Math.ceil(kmToWorldUnits(maxKm + searchMarginKm) / SETTLEMENT_GRID_STEP) + 1
@@ -169,167 +272,256 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       .sort((a, b) => distanceKm(x, z, a.x, a.z) - distanceKm(x, z, b.x, b.z))
       .slice(0, MAX_CEMETERY_SETTLEMENTS_SEARCHED)
 
-    const chunkManager = getChunkManager()
-    const seed = getSeed()
     const out: WorldLocation[] = []
     for (const def of settlements) {
-      const found = chunkManager.findLandmarkNear('cemetery', def.x, def.z, CEMETERY_SEARCH_CHUNK_RADIUS)
-      if (!found) continue
-      if (distanceKm(x, z, found.x, found.z) > maxKm) continue
-      out.push({
-        id: found.id,
-        kind: 'cemetery',
-        x: found.x,
-        z: found.z,
-        name: landmarkName(seed, 'cemetery', found.id),
-        discoveryWeight: weightOf(seed, found.id),
-      })
+      const loc = cemeteryForSettlement(def)
+      if (!loc) continue
+      const km = distanceKm(x, z, loc.x, loc.z)
+      if (km > maxKm || km <= minKm) continue
+      out.push(loc)
     }
     return out
   }
 
-  function caveCandidates(x: number, z: number, maxKm: number): WorldLocation[] {
+  function caveCandidates(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
     const seed = getSeed()
     const out: WorldLocation[] = []
     for (const def of getCaves().definitions()) {
-      if (distanceKm(x, z, def.entrance.x, def.entrance.z) > maxKm) continue
+      const km = distanceKm(x, z, def.entrance.x, def.entrance.z)
+      if (km > maxKm || km <= minKm) continue
       const id = `cave:${def.caveId}`
       out.push({ id, kind: 'cave', x: def.entrance.x, z: def.entrance.z, name: landmarkName(seed, 'cave', id), discoveryWeight: weightOf(seed, id) })
     }
     return out
   }
 
-  /** One-off deterministic scan cache: repeated queries from roughly the
-   *  same origin (guard/merchant are always at a fixed settlement) hit this
-   *  instead of re-sampling terrain (notes §7 warns this needs a real
-   *  bounded generator, not a per-call world scan). */
-  const scanCache = new Map<string, WorldLocation[]>()
-
-  /** Scans a `LOCATION_SCAN_STEP` grid around `(x, z)` out to `maxKm`,
-   *  flood-filling `inland_water` cells into lakes (≥ `MIN_LAKE_CELLS`) and
-   *  finding local-maxima `mountain` cells as peaks. Coarse and approximate
-   *  by design (notes §7/§22 pitfalls) — a gameplay discovery aid, not a
-   *  cartography-grade hydrology/orography system. */
-  function scanLakesAndPeaks(x: number, z: number, maxKm: number): WorldLocation[] {
-    const key = `${Math.round(x)},${Math.round(z)},${Math.round(maxKm)}`
-    const cached = scanCache.get(key)
-    if (cached) return cached
-
-    const sampleParams = getSampleParams()
-    const halfWorld = kmToWorldUnits(maxKm)
-    const minCx = Math.floor((x - halfWorld) / LOCATION_SCAN_STEP)
-    const maxCx = Math.floor((x + halfWorld) / LOCATION_SCAN_STEP)
-    const minCz = Math.floor((z - halfWorld) / LOCATION_SCAN_STEP)
-    const maxCz = Math.floor((z + halfWorld) / LOCATION_SCAN_STEP)
-
-    const width = maxCx - minCx + 1
-    const height = maxCz - minCz + 1
-    const isWater = new Uint8Array(width * height)
-    const isMountain = new Uint8Array(width * height)
-    const heights = new Float32Array(width * height)
-    const idx = (gx: number, gz: number) => (gz - minCz) * width + (gx - minCx)
-
-    for (let gz = minCz; gz <= maxCz; gz++) {
-      for (let gx = minCx; gx <= maxCx; gx++) {
-        const wx = (gx + 0.5) * LOCATION_SCAN_STEP
-        const wz = (gz + 0.5) * LOCATION_SCAN_STEP
-        const cell = projectCellAt(wx, wz, sampleParams)
-        const i = idx(gx, gz)
-        if (cell.terrain === 'inland_water') isWater[i] = 1
-        if (cell.terrain === 'mountain') {
-          isMountain[i] = 1
-          heights[i] = sampleHeightAt(wx, wz, sampleParams)
-        }
+  /** Minimal classification path for one coarse cell (plan world-013 §2) —
+   *  `sampleFloorAt` first; only wet cells pay for `sampleContinentalnessAt`
+   *  (ocean/inland-water split), only land cells pay for
+   *  `sampleMountainRidgeAt`, and only ridge cells pay for `sampleHeightAt`
+   *  (exactly once, unlike the old `projectCellAt()` + duplicate
+   *  `sampleHeightAt()` path). Never computes moisture region, biome
+   *  weights or forest density — those are map-only concerns. */
+  function classifyCoarseCell(wx: number, wz: number, params: RawSampleParams): { kind: number, height: number } {
+    diagnostics.sampleFloorCalls++
+    const floorH = sampleFloorAt(wx, wz, params)
+    if (isWetFloor(floorH, params.waterLevel)) {
+      diagnostics.sampleContinentalnessCalls++
+      const continentalness = sampleContinentalnessAt(wx, wz, params)
+      if (isOceanMix(continentalness, params.region.oceanThreshold, params.region.coastThreshold)) {
+        return { kind: CELL_NONE, height: 0 }
       }
+      return { kind: CELL_WATER, height: 0 }
     }
+    diagnostics.sampleRidgeCalls++
+    const ridge = sampleMountainRidgeAt(wx, wz, params)
+    if (isMountainRidge(ridge)) {
+      diagnostics.sampleHeightCalls++
+      const height = sampleHeightAt(wx, wz, params)
+      return { kind: CELL_MOUNTAIN, height }
+    }
+    return { kind: CELL_NONE, height: 0 }
+  }
 
+  /** Lazily-materialized `LOCATION_TILE_CELLS`² tiles of coarse-cell state,
+   *  keyed by stable tile identity (plan world-013 §3/§4) — shared across
+   *  every Near/Guard/Far query touching a tile, instead of one cache entry
+   *  per exact `(x, z, maxKm)` query. A cell is sampled at most once for the
+   *  life of the cache; overlapping queries reuse already-classified cells. */
+  const tiles = new Map<string, { state: Uint8Array, height: Float32Array }>()
+
+  function getTile(tx: number, tz: number) {
+    const key = `${tx},${tz}`
+    let tile = tiles.get(key)
+    if (!tile) {
+      tile = { state: new Uint8Array(LOCATION_TILE_CELLS * LOCATION_TILE_CELLS), height: new Float32Array(LOCATION_TILE_CELLS * LOCATION_TILE_CELLS) }
+      tiles.set(key, tile)
+    }
+    return tile
+  }
+
+  /** Classifies (or reuses the cached classification of) coarse cell `(gx,
+   *  gz)`. The single seam every scan/flood-fill/peak-check reads through —
+   *  callers never need to know whether a given `(gx, gz)` was already
+   *  sampled by an earlier, differently-shaped query. */
+  function coarseCellAt(gx: number, gz: number, params: RawSampleParams): { kind: number, height: number } {
+    const tx = Math.floor(gx / LOCATION_TILE_CELLS)
+    const tz = Math.floor(gz / LOCATION_TILE_CELLS)
+    const tile = getTile(tx, tz)
+    const lx = gx - tx * LOCATION_TILE_CELLS
+    const lz = gz - tz * LOCATION_TILE_CELLS
+    const li = lz * LOCATION_TILE_CELLS + lx
+    const cached = tile.state[li]
+    if (cached !== CELL_UNKNOWN) {
+      diagnostics.cacheHitCells++
+      return { kind: cached, height: tile.height[li] ?? 0 }
+    }
+    const wx = (gx + 0.5) * LOCATION_SCAN_STEP
+    const wz = (gz + 0.5) * LOCATION_SCAN_STEP
+    const classified = classifyCoarseCell(wx, wz, params)
+    tile.state[li] = classified.kind
+    if (classified.kind === CELL_MOUNTAIN) tile.height[li] = classified.height
+    diagnostics.sampledCells++
+    if (classified.kind === CELL_WATER) diagnostics.waterCells++
+    if (classified.kind === CELL_MOUNTAIN) diagnostics.mountainCells++
+    return classified
+  }
+
+  function cellCenterKm(x: number, z: number, gx: number, gz: number): number {
+    return distanceKm(x, z, (gx + 0.5) * LOCATION_SCAN_STEP, (gz + 0.5) * LOCATION_SCAN_STEP)
+  }
+
+  /** Flood-fills connected `inland_water` coarse cells starting from
+   *  `seeds`, expanding beyond the query's own candidate window whenever a
+   *  component reaches its edge (plan world-013 §4/§9) — every neighbor
+   *  lookup goes through the shared `coarseCellAt` cache, so this only ever
+   *  pays for genuinely new samples. A component's representative/centroid
+   *  therefore depends only on the real connected component, never on which
+   *  query happened to discover it first — the determinism guarantee notes
+   *  §9 requires (Guard → Near → Far must equal Far → Guard → Near). */
+  function floodFillLakes(x: number, z: number, minKm: number, maxKm: number, seeds: Set<number>, params: RawSampleParams): WorldLocation[] {
+    const visited = new Set<number>()
     const out: WorldLocation[] = []
-
-    // --- Lakes: flood-fill connected inland_water cells ---
-    const visited = new Uint8Array(width * height)
-    for (let gz = minCz; gz <= maxCz; gz++) {
-      for (let gx = minCx; gx <= maxCx; gx++) {
-        const start = idx(gx, gz)
-        if (!isWater[start] || visited[start]) continue
-        const stack = [[gx, gz]]
-        visited[start] = 1
-        let count = 0
-        let sumGx = 0
-        let sumGz = 0
-        while (stack.length > 0) {
-          const [cx, cz] = stack.pop()!
-          count++
-          sumGx += cx
-          sumGz += cz
-          for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-            const nx = cx + dx
-            const nz = cz + dz
-            if (nx < minCx || nx > maxCx || nz < minCz || nz > maxCz) continue
-            const ni = idx(nx, nz)
-            if (!isWater[ni] || visited[ni]) continue
-            visited[ni] = 1
-            stack.push([nx, nz])
-          }
+    for (const seedKey of seeds) {
+      if (visited.has(seedKey)) continue
+      const stack: number[] = [seedKey]
+      visited.add(seedKey)
+      let count = 0
+      let sumGx = 0
+      let sumGz = 0
+      while (stack.length > 0) {
+        const key = stack.pop()!
+        const { gx, gz } = decodeCellKey(key)
+        count++
+        sumGx += gx
+        sumGz += gz
+        if (count >= LAKE_FLOOD_FILL_SAFETY_CAP) break
+        for (const [dx, dz] of NEIGHBOR4) {
+          const ngx = gx + dx
+          const ngz = gz + dz
+          const nkey = cellKeyOf(ngx, ngz)
+          if (visited.has(nkey)) continue
+          visited.add(nkey)
+          if (coarseCellAt(ngx, ngz, params).kind !== CELL_WATER) continue
+          stack.push(nkey)
         }
-        if (count < MIN_LAKE_CELLS) continue
-        const repGx = Math.round(sumGx / count)
-        const repGz = Math.round(sumGz / count)
-        const loc = scanGridLocation('lake', repGx, repGz)
-        if (distanceKm(x, z, loc.x, loc.z) <= maxKm) out.push(loc)
       }
+      if (count < MIN_LAKE_CELLS) continue
+      const repGx = Math.round(sumGx / count)
+      const repGz = Math.round(sumGz / count)
+      const loc = scanGridLocation('lake', repGx, repGz)
+      const km = distanceKm(x, z, loc.x, loc.z)
+      if (km > minKm && km <= maxKm) out.push(loc)
     }
-
-    // --- Peaks: local maxima among mountain cells (8-neighborhood) ---
-    const peakCandidates: { gx: number, gz: number, h: number }[] = []
-    for (let gz = minCz; gz <= maxCz; gz++) {
-      for (let gx = minCx; gx <= maxCx; gx++) {
-        const i = idx(gx, gz)
-        if (!isMountain[i]) continue
-        const h = heights[i]!
-        let isMax = true
-        for (let dz = -1; dz <= 1 && isMax; dz++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            if (dx === 0 && dz === 0) continue
-            const nx = gx + dx
-            const nz = gz + dz
-            if (nx < minCx || nx > maxCx || nz < minCz || nz > maxCz) continue
-            const ni = idx(nx, nz)
-            if (isMountain[ni] && heights[ni]! > h) { isMax = false; break }
-          }
-        }
-        if (isMax) peakCandidates.push({ gx, gz, h })
-      }
-    }
-    // Merge near-duplicate maxima (coarse grid can produce a small plateau
-    // of "locally highest" cells) — keep the tallest within a small radius.
-    const mergeRadiusCells = 2
-    const kept: typeof peakCandidates = []
-    for (const cand of peakCandidates.sort((a, b) => b.h - a.h)) {
-      const tooClose = kept.some((k) => Math.hypot(k.gx - cand.gx, k.gz - cand.gz) <= mergeRadiusCells)
-      if (!tooClose) kept.push(cand)
-    }
-    for (const peak of kept) {
-      const loc = scanGridLocation('mountainPeak', peak.gx, peak.gz)
-      if (distanceKm(x, z, loc.x, loc.z) <= maxKm) out.push(loc)
-    }
-
-    scanCache.set(key, out)
     return out
   }
 
-  function landmarksWithin(x: number, z: number, maxKm: number): WorldLocation[] {
+  /** Local-maxima (8-neighborhood) mountain cells, merged to drop
+   *  near-duplicate maxima on the same coarse-grid massif (plan world-013
+   *  §9/§11) — `candidates` already includes the `PEAK_SCAN_HALO_CELLS`
+   *  boundary margin so a peak/maximum right at the query edge is still
+   *  evaluated against its true neighbors instead of an implicit "not
+   *  mountain" outside a scan rectangle (the old code's boundary bug). */
+  function extractPeaks(x: number, z: number, minKm: number, maxKm: number, candidates: { gx: number, gz: number, h: number }[], params: RawSampleParams): WorldLocation[] {
+    const peakCandidates: { gx: number, gz: number, h: number }[] = []
+    for (const cand of candidates) {
+      let isMax = true
+      for (let dz = -1; dz <= 1 && isMax; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dz === 0) continue
+          const neighbor = coarseCellAt(cand.gx + dx, cand.gz + dz, params)
+          if (neighbor.kind === CELL_MOUNTAIN && neighbor.height > cand.h) { isMax = false; break }
+        }
+      }
+      if (isMax) peakCandidates.push(cand)
+    }
+
+    const kept: typeof peakCandidates = []
+    for (const cand of peakCandidates.sort((a, b) => b.h - a.h)) {
+      const tooClose = kept.some((k) => Math.hypot(k.gx - cand.gx, k.gz - cand.gz) <= PEAK_MERGE_RADIUS_CELLS)
+      if (!tooClose) kept.push(cand)
+    }
+
+    const out: WorldLocation[] = []
+    for (const peak of kept) {
+      const loc = scanGridLocation('mountainPeak', peak.gx, peak.gz)
+      const km = distanceKm(x, z, loc.x, loc.z)
+      if (km > minKm && km <= maxKm) out.push(loc)
+    }
+    return out
+  }
+
+  /** Coarse-terrain scan for `lake`/`mountainPeak` candidates in
+   *  `(minKm, maxKm]` of `(x, z)` (plan world-013 §7/§8) — classifies only
+   *  the circular annulus `[minKm - halo, maxKm + halo]` (never the whole
+   *  enclosing square, never a full `0..maxKm` re-scan), through the shared
+   *  `coarseCellAt` tile cache so overlapping Near/Guard/Far queries reuse
+   *  each other's work. Coarse and approximate by design (notes §7/§22
+   *  pitfalls) — a gameplay discovery aid, not a cartography-grade
+   *  hydrology/orography system. */
+  function scanLakesAndPeaks(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
+    const params = getSampleParams()
+    const haloKm = worldUnitsToKm(PEAK_SCAN_HALO_CELLS * LOCATION_SCAN_STEP)
+    const outerKm = maxKm + haloKm
+    const innerKm = Math.max(0, minKm - haloKm)
+    const outerWorld = kmToWorldUnits(outerKm)
+
+    const minCx = Math.floor((x - outerWorld) / LOCATION_SCAN_STEP)
+    const maxCx = Math.floor((x + outerWorld) / LOCATION_SCAN_STEP)
+    const minCz = Math.floor((z - outerWorld) / LOCATION_SCAN_STEP)
+    const maxCz = Math.floor((z + outerWorld) / LOCATION_SCAN_STEP)
+
+    const classifyStart = performance.now()
+    const waterSeeds = new Set<number>()
+    const mountainCandidates: { gx: number, gz: number, h: number }[] = []
+    for (let gz = minCz; gz <= maxCz; gz++) {
+      for (let gx = minCx; gx <= maxCx; gx++) {
+        const km = cellCenterKm(x, z, gx, gz)
+        if (km > outerKm || km < innerKm) continue
+        const cell = coarseCellAt(gx, gz, params)
+        if (cell.kind === CELL_WATER) waterSeeds.add(cellKeyOf(gx, gz))
+        else if (cell.kind === CELL_MOUNTAIN) mountainCandidates.push({ gx, gz, h: cell.height })
+      }
+    }
+    diagnostics.classificationMs += performance.now() - classifyStart
+
+    const lakeStart = performance.now()
+    const lakes = floodFillLakes(x, z, minKm, maxKm, waterSeeds, params)
+    diagnostics.lakeExtractionMs += performance.now() - lakeStart
+
+    const peakStart = performance.now()
+    const peaks = extractPeaks(x, z, minKm, maxKm, mountainCandidates, params)
+    diagnostics.peakExtractionMs += performance.now() - peakStart
+
+    return [...lakes, ...peaks]
+  }
+
+  function landmarksInRange(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
+    const cemeteryStart = performance.now()
+    const cemeteries = cemeteryCandidates(x, z, minKm, maxKm)
+    diagnostics.cemeteryMs += performance.now() - cemeteryStart
     return [
-      ...caveCandidates(x, z, maxKm),
-      ...cemeteryCandidates(x, z, maxKm),
-      ...scanLakesAndPeaks(x, z, maxKm),
+      ...caveCandidates(x, z, minKm, maxKm),
+      ...cemeteries,
+      ...scanLakesAndPeaks(x, z, minKm, maxKm),
     ]
+  }
+
+  function landmarksWithin(x: number, z: number, maxKm: number): WorldLocation[] {
+    return landmarksInRange(x, z, 0, maxKm)
   }
 
   return {
     getById,
     nearestSettlements,
     landmarksWithin,
-    invalidateScanCache: () => scanCache.clear(),
+    landmarksInRange,
+    invalidateScanCache: () => {
+      tiles.clear()
+      cemeteryCache.clear()
+      diagnostics = emptyDiagnostics()
+    },
+    getScanDiagnostics: () => diagnostics,
   }
 }
 

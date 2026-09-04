@@ -56,6 +56,28 @@ export const MAX_CEMETERY_SETTLEMENTS_SEARCHED = 12
  *  "lake" worth naming, rather than a puddle-sized noise artifact. */
 export const MIN_LAKE_CELLS = 3
 
+/** Coarse terrain cache tile edge, in `LOCATION_SCAN_STEP` cells (plan
+ *  world-013 §4) — one tile is a small `Uint8Array`/`Float32Array` pair,
+ *  materialized lazily per cell, shared across every Near/Guard/Far query
+ *  that touches it instead of one result cache per exact `(x, z, maxKm)`. */
+export const LOCATION_TILE_CELLS = 16
+
+/** Peak neighbourhood/near-duplicate-merge halo, in `LOCATION_SCAN_STEP`
+ *  cells (plan world-013 §9) — a range-aware query's candidate window
+ *  extends this far past `minKm`/`maxKm` so a peak sitting right at the
+ *  query boundary is still evaluated with its full 8-neighbourhood and
+ *  merge radius, the same as if the scan had reached further. */
+export const PEAK_NEIGHBOR_MARGIN_CELLS = 1
+export const PEAK_MERGE_RADIUS_CELLS = 2
+export const PEAK_SCAN_HALO_CELLS = PEAK_NEIGHBOR_MARGIN_CELLS + PEAK_MERGE_RADIUS_CELLS
+
+/** Defensive cap on one lake flood-fill component (plan world-013 §4 "expand
+ *  only toward closing the component") — real procedurally-generated inland
+ *  water bodies never approach this size; this only guards a pathological
+ *  terrain-config edge case from turning boundary-closing flood-fill into an
+ *  unbounded scan. */
+export const LAKE_FLOOD_FILL_SAFETY_CAP = 20000
+
 /** Guard's "Opowiedz mi coś o okolicy" — near+medium landmark pool (plan §6),
  *  top-N by `discoveryWeight` before the 1-3 reveal roll. */
 export const GUARD_LANDMARK_POOL_SIZE = 5

@@ -135,3 +135,18 @@ Rozszerzyć `worldLocationCatalog.test.ts` przede wszystkim o:
 6. Sprawdzić browser Performance trace dla cold Far. Worker tylko jako osobny follow-up, jeśli po tych zmianach nadal pozostaje realny long task.
 
 Nie zmieniać `LOCATION_SCAN_STEP`, `WorldLocation` shape, `LocationKnowledge`, merchant/guard reveal semantics ani rebuild lifecycle w ramach tego planu.
+
+## Implemented (2026-09-04)
+
+Zaimplementowano zgodnie z powyższą kolejnością — zobacz plan's "Implementation status" section for the full summary and measured before/after numbers.
+
+Key deviations/clarifications versus the review above:
+
+- §2 shared rules landed in a new `src/terrain/terrainClassification.ts` (not inline in `mapProjection.ts`/`worldLocationCatalog.ts`) — both callers import the same `isWetFloor`/`isOceanMix`/`isMountainRidge`.
+- §3 tile size: `LOCATION_TILE_CELLS = 16` (in `locationConfig.ts`), lazily materialized per cell as described.
+- §4 lake boundary fix implemented as: BFS flood-fill has no min/max bound at all during traversal (only the initial seed-candidate scan is annulus-bounded); every neighbor lookup goes through the same tile cache, so a component keeps expanding — potentially past the query's own candidate window — until it actually closes. Guarded by `LAKE_FLOOD_FILL_SAFETY_CAP` (20 000 cells) as a defensive-only cap; never expected to trigger for real terrain.
+- §9 peak boundary fix: peak-candidate gathering is bounded to `[minKm − halo, maxKm + halo]` (not `[minKm, maxKm]`), and each 8-neighborhood/merge-radius lookup goes through the shared cache regardless of whether the neighbor cell was part of the original candidate set — this also fixes a latent old-code bug where a boundary peak's out-of-rectangle neighbors were implicitly treated as "not mountain".
+- §12 cemetery cache implemented (not deferred) — it's a simple `Map<settlementId, WorldLocation | null>`, low risk, and directly removes a real re-lookup cost across Near/Guard/Far without needing browser-trace confirmation first.
+- §11 peak-merge micro-optimization **not** done — candidate counts per query are small (dozens, not thousands) even for the Far band, so the existing O(n²) `kept.some(...)` merge is not a measurable hotspot; left as-is per "don't optimize speculatively".
+- §1 diagnostics: added `WorldLocationCatalog.getScanDiagnostics()` (cumulative counters, reset by `invalidateScanCache()`) instead of a separate global perf-mechanism flag — no console/log output, zero cost when not read.
+- Browser Performance-trace verification (real merchant/guard flow, actual settlement/cemetery data) was **not** performed in this pass — only a Node-level (`tsx`) synthetic benchmark against the real catalog with empty caves/settlements, isolating the terrain-scan portion. Plan is marked `verification needed`, not `done`, until that manual step happens.

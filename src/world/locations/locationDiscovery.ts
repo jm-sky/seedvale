@@ -57,10 +57,12 @@ function locationDistanceKm(loc: WorldLocation, x: number, z: number): number {
   return worldUnitsToKm(Math.hypot(loc.x - x, loc.z - z))
 }
 
-/** `catalog.landmarksWithin` is always "everything up to `maxKm`" — this
- *  narrows that to a `(minKm, maxKm]` band, e.g. the merchant's Far Map
- *  (plan §9), which must draw only from its own `far` bucket (60-200 km)
- *  so it never repeats what the Near Map (0-20 km) already reveals. */
+/** A `(minKm, maxKm]` band, e.g. the merchant's Far Map (plan §9), which
+ *  must draw only from its own `far` bucket (60-200 km) so it never repeats
+ *  what the Near Map (0-20 km) already reveals. Delegates straight to
+ *  `catalog.landmarksInRange` (plan world-013 §8) instead of generating
+ *  `0..maxKm` and filtering afterwards, so the expensive coarse terrain scan
+ *  itself is bounded to the requested band. */
 export function landmarksInBand(
   catalog: WorldLocationCatalog,
   x: number,
@@ -68,7 +70,7 @@ export function landmarksInBand(
   minKm: number,
   maxKm: number,
 ): WorldLocation[] {
-  return catalog.landmarksWithin(x, z, maxKm).filter((loc) => locationDistanceKm(loc, x, z) > minKm)
+  return catalog.landmarksInRange(x, z, minKm, maxKm)
 }
 
 export function settlementsInBand(

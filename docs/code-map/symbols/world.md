@@ -439,18 +439,23 @@ Generated from exported TypeScript symbols.
 
 - `CEMETERY_SEARCH_CHUNK_RADIUS` — const — line 45
 - `FAR_RANGE_KM` — const — line 32
-- `GUARD_LANDMARK_POOL_SIZE` — const — line 61
-- `GUARD_REVEAL_MAX` — const — line 63
-- `GUARD_REVEAL_MIN` — const — line 62
+- `GUARD_LANDMARK_POOL_SIZE` — const — line 83
+- `GUARD_REVEAL_MAX` — const — line 85
+- `GUARD_REVEAL_MIN` — const — line 84
 - `KM_PER_DAY` — const — line 15
 - `kmToDays` — function — line 25
 - `kmToWorldUnits` — function — line 21
+- `LAKE_FLOOD_FILL_SAFETY_CAP` — const — line 79
 - `LOCATION_SCAN_STEP` — const — line 39
+- `LOCATION_TILE_CELLS` — const — line 63
 - `MAX_CEMETERY_SETTLEMENTS_SEARCHED` — const — line 53
 - `MEDIUM_RANGE_KM` — const — line 31
-- `MERCHANT_MAP_LANDMARK_POOL_SIZE` — const — line 66
+- `MERCHANT_MAP_LANDMARK_POOL_SIZE` — const — line 88
 - `MIN_LAKE_CELLS` — const — line 57
 - `NEAR_RANGE_KM` — const — line 30
+- `PEAK_MERGE_RADIUS_CELLS` — const — line 71
+- `PEAK_NEIGHBOR_MARGIN_CELLS` — const — line 70
+- `PEAK_SCAN_HALO_CELLS` — const — line 72
 - `WORLD_UNITS_PER_KM` — const — line 11
 - `worldUnitsToKm` — function — line 17
 
@@ -459,10 +464,10 @@ Generated from exported TypeScript symbols.
 - `classifyRange` — function — line 5
 - `formatDistance` — function — line 21
 - `isWithinRange` — function — line 11
-- `landmarksInBand` — function — line 64
+- `landmarksInBand` — function — line 66
 - `pickRandomReveal` — function — line 51
 - `pickRandomSubset` — function — line 40
-- `settlementsInBand` — function — line 74
+- `settlementsInBand` — function — line 76
 - `weightedTopN` — function — line 30
 
 ## `world/locations/locationKnowledge.ts`
@@ -485,10 +490,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `createWorldLocationCatalog` — function — line 74
-- `settlementLocationId` — function — line 340
-- `WorldLocationCatalog` — type — line 41
-- `WorldLocationCatalogDeps` — type — line 18
+- `createWorldLocationCatalog` — function — line 154
+- `LocationScanDiagnostics` — type — line 51
+- `settlementLocationId` — function — line 532
+- `WorldLocationCatalog` — type — line 85
+- `WorldLocationCatalogDeps` — type — line 23
 
 ## `world/locations/worldLocationNames.ts`
 
@@ -528,15 +534,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/map/mapProjection.ts`
 
-- `createMapProjection` — function — line 129
-- `mapCellBounds` — function — line 43
-- `mapCellCenter` — function — line 36
-- `mapCellKey` — function — line 25
-- `MapProjection` — type — line 122
-- `parseMapCellKey` — function — line 57
-- `projectCellAt` — function — line 82
-- `rawSampleParamsFromWorld` — function — line 66
-- `worldToMapCell` — function — line 29
+- `createMapProjection` — function — line 125
+- `mapCellBounds` — function — line 40
+- `mapCellCenter` — function — line 33
+- `mapCellKey` — function — line 22
+- `MapProjection` — type — line 118
+- `parseMapCellKey` — function — line 54
+- `projectCellAt` — function — line 79
+- `rawSampleParamsFromWorld` — function — line 63
+- `worldToMapCell` — function — line 26
 
 ## `world/map/mapTypes.ts`
 

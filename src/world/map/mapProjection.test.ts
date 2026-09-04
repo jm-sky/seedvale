@@ -194,7 +194,22 @@ describe('map data filtering', () => {
       getById: (id: string) => locations.find((l) => l.id === id) ?? null,
       nearestSettlements: () => [],
       landmarksWithin: () => [],
+      landmarksInRange: () => [],
       invalidateScanCache: () => {},
+      getScanDiagnostics: () => ({
+        sampledCells: 0,
+        cacheHitCells: 0,
+        sampleFloorCalls: 0,
+        sampleContinentalnessCalls: 0,
+        sampleRidgeCalls: 0,
+        sampleHeightCalls: 0,
+        waterCells: 0,
+        mountainCells: 0,
+        classificationMs: 0,
+        lakeExtractionMs: 0,
+        peakExtractionMs: 0,
+        cemeteryMs: 0,
+      }),
     }
   }
 
