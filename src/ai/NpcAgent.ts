@@ -679,6 +679,63 @@ function applySociableBoost(
 }
 
 /**
+ * `NpcAgent.create`/`createCapsuleFallback`/the private constructor's shared
+ * input (review 2026-09-03 §5 P4 / §8 step 11) — collapses three 30-
+ * positional-parameter lists (one per method, all forwarding the same
+ * values in the same order) into one deps object, mirroring
+ * `createSettlement.ts`'s `CreateSettlementDeps`. `create()` resolves only
+ * `modelUrl` before constructing (the one field the constructor itself
+ * never reads — it exists purely to pick which GLB `loadGltfAnimated`
+ * fetches); every other default is applied inside the constructor exactly
+ * as it was before this refactor, just read from `deps.x` instead of a
+ * positional parameter.
+ */
+export type NpcAgentDeps = {
+  sampleHeight: HeightSampler
+  waterLevel: number
+  collidersNear: ColliderSource
+  landmarks: SettlementLandmarks
+  home: Place
+  workplace: Place | null
+  socialPlace: Place | null
+  treeIndex: number
+  /** Only consulted when `npcState` isn't already given (a genuinely new
+   *  npc id) — see `npcState`'s own doc comment. */
+  needOffset: number
+  member: FamilyMember
+  familyMembers: readonly FamilyMemberRef[]
+  playAt?: PlayAt
+  /** Which GLB to load — defaults to `modelUrlFor(member.character.gender,
+   *  treeIndex)`. The one field only `create()` reads; the constructor
+   *  itself already has `root`/`animations` loaded from it by then. */
+  modelUrl?: string
+  forest?: SettlementForestHooks
+  npcId?: string
+  queues?: ReadonlyMap<string, InteractionQueue>
+  wellQueueId?: string | null
+  economy?: SettlementEconomy | null
+  household?: Household | null
+  /** Authoritative HP/needs/stamina/vigor (plan 197) — the same object
+   *  every reconstruction of this npc id hydrates from; see
+   *  `settlement/npcState.ts`. Defaults to a fresh state for callers with
+   *  no `SettlementsManager`-backed registry to hand in (same "isolated
+   *  fallback" idiom as `economy`/`household` defaulting to `null`) —
+   *  still derives real per-member maxima from `member`'s own sex/age
+   *  (plan npc-001) rather than a hidden flat 100/100/100. */
+  npcState?: NpcAuthoritativeState
+  getPlayerSocial?: PlayerSocialLookup
+  mining?: SettlementMiningHooks | null
+  getNearbyPlayerWell?: NearbyPlayerWellLookup
+  foodSources?: SettlementFoodSourceHooks
+  hunting?: SettlementHuntingHooks
+  helperDelivery?: HelperDeliveryHooks
+  householdExchange?: HouseholdExchangeHooks
+  workContracts?: WorkContracts | null
+  playerWells?: PlayerWells | null
+  droppedItems?: DroppedItems | null
+}
+
+/**
  * @domain settlements-npcs
  * @system npc-agent
  * @role Central per-NPC behaviour integration point: needs, FSM/schedule,
@@ -1061,38 +1118,50 @@ export class NpcAgent {
   private constructor(
     root: THREE.Object3D,
     animations: THREE.AnimationClip[],
-    sampleHeight: HeightSampler,
-    waterLevel: number,
-    collidersNear: ColliderSource,
-    landmarks: SettlementLandmarks,
-    home: Place,
-    workplace: Place | null,
-    socialPlace: Place | null,
-    treeIndex: number,
-    member: FamilyMember,
-    familyMembers: readonly FamilyMemberRef[],
-    playAt: PlayAt,
-    forest: SettlementForestHooks | undefined,
-    npcId: string,
-    queues: ReadonlyMap<string, InteractionQueue>,
-    wellQueueId: string | null,
-    economy: SettlementEconomy | null,
-    household: Household | null,
-    /** Authoritative HP/needs/stamina/vigor (plan 197) — the same object
-     *  every reconstruction of this npc id hydrates from; see
-     *  `settlement/npcState.ts`. */
-    npcState: NpcAuthoritativeState,
-    getPlayerSocial: PlayerSocialLookup,
-    mining: SettlementMiningHooks | null,
-    getNearbyPlayerWell?: NearbyPlayerWellLookup,
-    foodSources?: SettlementFoodSourceHooks,
-    hunting?: SettlementHuntingHooks,
-    helperDelivery?: HelperDeliveryHooks,
-    householdExchange?: HouseholdExchangeHooks,
-    workContracts?: WorkContracts | null,
-    playerWells?: PlayerWells | null,
-    droppedItems?: DroppedItems | null,
+    deps: NpcAgentDeps,
   ) {
+    const {
+      sampleHeight,
+      waterLevel,
+      collidersNear,
+      landmarks,
+      home,
+      workplace,
+      socialPlace,
+      treeIndex,
+      member,
+      familyMembers,
+      forest,
+      getNearbyPlayerWell,
+      foodSources,
+      hunting,
+      helperDelivery,
+      householdExchange,
+      workContracts,
+      playerWells,
+      droppedItems,
+    } = deps
+    const playAt = deps.playAt ?? (() => {})
+    const npcId = deps.npcId ?? ''
+    const queues = deps.queues ?? new Map()
+    const wellQueueId = deps.wellQueueId ?? null
+    const economy = deps.economy ?? null
+    const household = deps.household ?? null
+    // Authoritative HP/needs/stamina/vigor (plan 197) — the same object
+    // every reconstruction of this npc id hydrates from; see
+    // `settlement/npcState.ts`. Defaults to a fresh state for callers with
+    // no `SettlementsManager`-backed registry to hand in (same "isolated
+    // fallback" idiom as `economy`/`household` defaulting to `null`) —
+    // still derives real per-member maxima from `member`'s own sex/age
+    // (plan npc-001) rather than a hidden flat 100/100/100. `treeIndex`
+    // stands in for the settlement seed this isolated path doesn't have.
+    const npcState = deps.npcState ?? createNpcAuthoritativeState(
+      npcId,
+      deps.needOffset,
+      generatePhysicalProfile(treeIndex, member.character.gender, member.age),
+    )
+    const getPlayerSocial = deps.getPlayerSocial ?? (() => ({ relationLevel: 'stranger', standing: 0 }))
+    const mining = deps.mining ?? null
     this.playAt = playAt
     this.forest = forest
     this.id = npcId
@@ -1206,148 +1275,18 @@ export class NpcAgent {
     if (this.health.dead) this.die(true)
   }
 
-  static async create(
-    sampleHeight: HeightSampler,
-    waterLevel: number,
-    collidersNear: ColliderSource,
-    landmarks: SettlementLandmarks,
-    home: Place,
-    workplace: Place | null,
-    socialPlace: Place | null,
-    treeIndex: number,
-    needOffset: number,
-    member: FamilyMember,
-    familyMembers: readonly FamilyMemberRef[],
-    playAt: PlayAt = () => {},
-    modelUrl = modelUrlFor(member.character.gender, treeIndex),
-    forest?: SettlementForestHooks,
-    npcId = '',
-    queues: ReadonlyMap<string, InteractionQueue> = new Map(),
-    wellQueueId: string | null = null,
-    economy: SettlementEconomy | null = null,
-    household: Household | null = null,
-    /** Authoritative HP/needs/stamina/vigor (plan 197). Defaults to a fresh
-     *  state for callers with no `SettlementsManager`-backed registry to
-     *  hand in — same "isolated fallback" idiom as `economy`/`household`
-     *  defaulting to `null`. Still derives real per-member maxima from
-     *  `member`'s own sex/age (plan npc-001) rather than a hidden flat
-     *  100/100/100 — `treeIndex` stands in for the settlement seed this
-     *  isolated path doesn't have. */
-    npcState: NpcAuthoritativeState = createNpcAuthoritativeState(
-      npcId,
-      needOffset,
-      generatePhysicalProfile(treeIndex, member.character.gender, member.age),
-    ),
-    getPlayerSocial: PlayerSocialLookup = () => ({ relationLevel: 'stranger', standing: 0 }),
-    mining: SettlementMiningHooks | null = null,
-    getNearbyPlayerWell?: NearbyPlayerWellLookup,
-    foodSources?: SettlementFoodSourceHooks,
-    hunting?: SettlementHuntingHooks,
-    helperDelivery?: HelperDeliveryHooks,
-    householdExchange?: HouseholdExchangeHooks,
-    workContracts?: WorkContracts | null,
-    playerWells?: PlayerWells | null,
-    droppedItems?: DroppedItems | null,
-  ): Promise<NpcAgent> {
+  static async create(deps: NpcAgentDeps): Promise<NpcAgent> {
+    const modelUrl = deps.modelUrl ?? modelUrlFor(deps.member.character.gender, deps.treeIndex)
     try {
       const { scene, animations } = await loadGltfAnimated(modelUrl)
-      return new NpcAgent(
-        scene,
-        animations,
-        sampleHeight,
-        waterLevel,
-        collidersNear,
-        landmarks,
-        home,
-        workplace,
-        socialPlace,
-        treeIndex,
-        member,
-        familyMembers,
-        playAt,
-        forest,
-        npcId,
-        queues,
-        wellQueueId,
-        economy,
-        household,
-        npcState,
-        getPlayerSocial,
-        mining,
-        getNearbyPlayerWell,
-        foodSources,
-        hunting,
-        helperDelivery,
-        householdExchange,
-        workContracts,
-        playerWells,
-        droppedItems,
-      )
+      return new NpcAgent(scene, animations, deps)
     } catch (err) {
       console.warn(`[npc] failed to load ${modelUrl}, using capsule`, err)
-      return NpcAgent.createCapsuleFallback(
-        sampleHeight,
-        waterLevel,
-        collidersNear,
-        landmarks,
-        home,
-        workplace,
-        socialPlace,
-        treeIndex,
-        member,
-        familyMembers,
-        playAt,
-        forest,
-        npcId,
-        queues,
-        wellQueueId,
-        economy,
-        household,
-        npcState,
-        getPlayerSocial,
-        mining,
-        getNearbyPlayerWell,
-        foodSources,
-        hunting,
-        helperDelivery,
-        householdExchange,
-        workContracts,
-        playerWells,
-        droppedItems,
-      )
+      return NpcAgent.createCapsuleFallback(deps)
     }
   }
 
-  private static createCapsuleFallback(
-    sampleHeight: HeightSampler,
-    waterLevel: number,
-    collidersNear: ColliderSource,
-    landmarks: SettlementLandmarks,
-    home: Place,
-    workplace: Place | null,
-    socialPlace: Place | null,
-    treeIndex: number,
-    member: FamilyMember,
-    familyMembers: readonly FamilyMemberRef[],
-    playAt: PlayAt,
-    forest: SettlementForestHooks | undefined,
-    npcId: string,
-    queues: ReadonlyMap<string, InteractionQueue>,
-    wellQueueId: string | null,
-    economy: SettlementEconomy | null,
-    household: Household | null,
-    npcState: NpcAuthoritativeState,
-    getPlayerSocial: PlayerSocialLookup,
-    mining: SettlementMiningHooks | null,
-    getNearbyPlayerWell?: NearbyPlayerWellLookup,
-    foodSources?: SettlementFoodSourceHooks,
-    hunting?: SettlementHuntingHooks,
-    helperDelivery?: HelperDeliveryHooks,
-    householdExchange?: HouseholdExchangeHooks,
-    workContracts?: WorkContracts | null,
-    playerWells?: PlayerWells | null,
-    droppedItems?: DroppedItems | null,
-  ): NpcAgent {
+  private static createCapsuleFallback(deps: NpcAgentDeps): NpcAgent {
     const capsule = new THREE.Group()
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.28, 0.7, 3, 6),
@@ -1359,38 +1298,7 @@ export class NpcAgent {
     body.position.y = 0.75
     body.castShadow = true
     capsule.add(body)
-    return new NpcAgent(
-      capsule,
-      [],
-      sampleHeight,
-      waterLevel,
-      collidersNear,
-      landmarks,
-      home,
-      workplace,
-      socialPlace,
-      treeIndex,
-      member,
-      familyMembers,
-      playAt,
-      forest,
-      npcId,
-      queues,
-      wellQueueId,
-      economy,
-      household,
-      npcState,
-      getPlayerSocial,
-      mining,
-      getNearbyPlayerWell,
-      foodSources,
-      hunting,
-      helperDelivery,
-      householdExchange,
-      workContracts,
-      playerWells,
-      droppedItems,
-    )
+    return new NpcAgent(capsule, [], deps)
   }
 
   getActiveNeed(): NeedId {

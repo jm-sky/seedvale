@@ -589,7 +589,7 @@ export async function createSettlement(
       // unload/reload) — a genuinely new id gets the usual fresh state
       // (plan 197), seeded with this NPC's generated maxima.
       const npcState = npcStateRegistry.getOrCreate(npcId, needOffset, physicalProfile)
-      const agent = await NpcAgent.create(
+      const agent = await NpcAgent.create({
         sampleHeight,
         waterLevel,
         collidersNear,
@@ -597,16 +597,15 @@ export async function createSettlement(
         home,
         workplace,
         socialPlace,
-        i,
+        treeIndex: i,
         needOffset,
         member,
         familyMembers,
         playAt,
-        undefined,
         forest,
         npcId,
         queues,
-        wellQid,
+        wellQueueId: wellQid,
         economy,
         household,
         npcState,
@@ -620,7 +619,7 @@ export async function createSettlement(
         workContracts,
         playerWells,
         droppedItems,
-      )
+      })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
     }),
