@@ -104,7 +104,7 @@ export function isNpcCombatDebugMode(): boolean {
  *  perf/mobile/isolation testing (issue 032 diagnostic follow-up) — visual
  *  only, simulation state keeps running underneath. One name added here per
  *  future need, not a new query param per system. */
-export type DebugSystemName = 'grass' | 'trees' | 'animals' | 'npcs' | 'playerModel' | 'weather'
+export type DebugSystemName = 'grass' | 'trees' | 'animals' | 'npcs' | 'playerModel' | 'weather' | 'caveDetail'
 
 /** `?debugDisableSystems=grass,trees` — central, comma-separated switch for
  *  the systems above. Absent (or a name not listed) means "enabled" — normal
@@ -119,4 +119,14 @@ export function isSystemEnabled(name: DebugSystemName): boolean {
   } catch {
     return true
   }
+}
+
+/** `?caveSpike=sweep|sdf` — plan world-terrain-008 Milestone A comparison
+ *  harness selector. Absent (or any other value) means "off": pure V1 cave
+ *  behaviour, unchanged. One exported reader, deleted (along with the
+ *  `createCaves.ts` branch it feeds) after the architecture decision gate —
+ *  it must never become production architecture. */
+export function caveSpikeVariant(): 'sweep' | 'sdf' | null {
+  const raw = urlParamValue('caveSpike')
+  return raw === 'sweep' || raw === 'sdf' ? raw : null
 }

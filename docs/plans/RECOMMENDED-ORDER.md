@@ -51,12 +51,12 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/3
 2. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 1/2
-3. `settlements-npcs-022` — **Household help and age-based work participation**  
+3. `fauna-010` — **Species metabolism, herbivore diet and renewable forage**  
+   🟡 `M` · ✅ ready · unlocks 2/2
+4. `settlements-npcs-022` — **Household help and age-based work participation**  
    🔴 `M` · ✅ ready · unlocks 0/0
-4. `fauna-004` — **Sheep wool cycle and shepherd**  
+5. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-5. `npc-010` — **NPC Death & Corpse Lifecycle**  
-   🟡 `L` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -94,79 +94,91 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  57  
    → **unlocks:** 0/0
 
-6. `settlements-npcs-022` — **Household help and age-based work participation**  
+6. `fauna-010` — **Species metabolism, herbivore diet and renewable forage**  
+  🟡 `M` · **Score:**  45  
+   → **unlocks:** 2/2
+
+7. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-7. `fauna-004` — **Sheep wool cycle and shepherd**  
+8. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  38  
    → **unlocks:** 1/2
 
-8. `npc-010` — **NPC Death & Corpse Lifecycle**  
+9. `npc-010` — **NPC Death & Corpse Lifecycle**  
   🟡 `L` · **Score:**  36  
    → **unlocks:** 1/1
 
-9. `settlements-npcs-006` — **Wool to material**  
+10. `fauna-011` — **Domestic dogs and household guarding**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `items-player-002` — **Food provenance, freshness and storage**  
+11. `settlements-npcs-006` — **Wool to material**  
+  🟡 `M` · **Score:**  33  
+   → **unlocks:** 1/1
+
+12. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-11. `items-player-014` — **Rope-pullable resource transport**  
+13. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` — **Seedvale Character Preparation Panel**  
+15. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `npc-002` — **NPC Healing**  
+16. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-15. `npc-011` — **NPC Burial & Graves**  
+17. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+18. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+19. `fauna-012` — **Animal threat perception and vocalization responses**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `settlements-npcs-007` — **Bandages and herbal medicine**  
+21. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `tools-000` — **Weapon Browser — Observatory/Admin**  
+22. `settlements-npcs-007` — **Bandages and herbal medicine**  
+  🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
+23. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-21. `fauna-007` — **Animal leading and cart harness**  
+24. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-22. `world-terrain-008` — **Underground Caves V2**  
+25. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-23. `npc-004` — **Drzewo genealogiczne NPC**  
+26. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-24. `tools-006` — **tools-006--world-observatory.md**  
+27. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -174,6 +186,13 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
+- [`fauna-011-domestic-dogs-and-household-guarding.md`](fauna-011-domestic-dogs-and-household-guarding.md)  
+  is blocked by:
+  - [`fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`](fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md)
+- [`fauna-012-animal-threat-perception-and-vocalization-responses.md`](fauna-012-animal-threat-perception-and-vocalization-responses.md)  
+  is blocked by:
+  - [`fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`](fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md)
+  - [`fauna-011-domestic-dogs-and-household-guarding.md`](fauna-011-domestic-dogs-and-household-guarding.md)
 - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)  
   is blocked by:
   - [`npc-010-death-and-corpse-lifecycle.md`](npc-010-death-and-corpse-lifecycle.md)
@@ -241,6 +260,9 @@ graph TD
   fauna_007["fauna-007 — Animal leading and cart harness"]
   fauna_008["fauna-008 — Riding Skill Effects"]
   fauna_009["fauna-009 — Wolf Howling and Rooster Vocalization"]
+  fauna_010["fauna-010 — Species metabolism, herbivore diet and renewable forage"]
+  fauna_011["fauna-011 — Domestic dogs and household guarding"]
+  fauna_012["fauna-012 — Animal threat perception and vocalization responses"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -388,6 +410,9 @@ graph TD
   fauna_003 --> fauna_008
   fauna_004 --> settlements_npcs_006
   fauna_006 --> fauna_007
+  fauna_010 --> fauna_011
+  fauna_010 --> fauna_012
+  fauna_011 --> fauna_012
   items_player_001 --> fauna_002
   items_player_009 --> items_player_013
   items_player_009 --> items_player_015

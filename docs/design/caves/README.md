@@ -23,18 +23,18 @@ This checklist is the operational source of truth for the current Cave V2 workfl
 - [x] Research cave generation/representation techniques — `02-generation-techniques-research.md`.
 - [x] Compare Advanced Sweep vs Graph + SDF/Volume and define the shared spike — `03-advanced-sweep-vs-sdf-spike-research.md`.
 - [x] Create the Cave V2 implementation plan — `docs/plans/world-terrain-008-underground-caves-v2.md`.
-- [ ] Architecture/recon agent: perform focused current-code recon and create `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md`.
+- [x] Architecture/recon agent: perform focused current-code recon and create `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md`.
 
 ### B. Milestone A — representation decision
 
-- [ ] Implementation agent: introduce the shared `CaveTopology` required by the comparison spike.
-- [ ] Implementation agent: implement the Generalized Sweep spike.
-- [ ] Implementation agent: implement the local SDF/Volume spike.
-- [ ] Implementation agent: provide one shared comparison/debug harness using the same topology, seed, lighting, material and camera.
-- [ ] Implementation agent: add targeted tests and comparable performance/geometry metrics.
-- [ ] Implementation agent: complete technical verification and stop before the architecture decision gate.
+- [x] Implementation agent: introduce the shared `CaveTopology` required by the comparison spike.
+- [x] Implementation agent: implement the Generalized Sweep spike.
+- [x] Implementation agent: implement the local SDF/Volume spike.
+- [x] Implementation agent: provide one shared comparison/debug harness using the same topology, seed, lighting, material and camera.
+- [x] Implementation agent: add targeted tests and comparable performance/geometry metrics.
+- [x] Implementation agent: complete technical verification and stop before the architecture decision gate.
 - [ ] Player: manually compare Sweep and SDF/Volume in the browser, including geometry quality, movement and third-person camera behaviour.
-- [ ] Record technical results and player observations in `04-sweep-vs-sdf-spike-results.md`.
+- [x] Record technical results (player observations still pending) in `04-sweep-vs-sdf-spike-results.md`.
 - [ ] Make and record the architecture decision: Sweep, SDF/Volume, or neither/hybrid.
 - [ ] Update `world-terrain-008-underground-caves-v2.md` with the selected representation and remove obsolete conditionality.
 
@@ -124,9 +124,9 @@ V1 cleanup + Cave V2 completion
 | `01-problem-and-requirements.md` | Cave V2 problem, target experience, requirements and future topology constraints. | `done for current planning` |
 | `02-generation-techniques-research.md` | Research and comparison of cave geometry/representation techniques. | `done` |
 | `03-advanced-sweep-vs-sdf-spike-research.md` | Seedvale-focused Sweep vs SDF comparison and shared spike definition. | `done` |
-| `04-sweep-vs-sdf-spike-results.md` | Technical measurements, player observations and architecture decision from Milestone A. | `planned` |
-| `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `planned` |
-| `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md` | Exact current-code integration map for implementation agents. | `planned` |
+| `04-sweep-vs-sdf-spike-results.md` | Technical measurements, player observations and architecture decision from Milestone A. | `technical comparison complete, manual comparison required` |
+| `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `Milestone A implemented, awaiting player decision` |
+| `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md` | Exact current-code integration map for implementation agents. | `done` |
 
 ## Rules
 

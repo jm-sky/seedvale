@@ -93,6 +93,66 @@ Generated from exported TypeScript symbols.
 
 - `createCaveInteriorMesh` — function — line 117
 
+## `world/caves/caveSpikeMaterial.ts`
+
+- `createCaveSpikeMaterial` — function — line 12
+
+## `world/caves/caveSpikeMetrics.ts`
+
+- `CaveSpikeMetrics` — type — line 11
+- `CaveSpikeVariant` — type — line 9
+  - domain: world-terrain
+- `reportCaveSpikeMetrics` — function — line 48
+- `runMedianOfN` — function — line 28
+
+## `world/caves/caveTopology.ts`
+
+- `CaveTopology` — type — line 64
+  - domain: world-terrain
+- `CaveTopologyFeature` — type — line 48
+- `CaveTopologyFeatureKind` — type — line 19
+- `CaveTopologyNode` — type — line 27
+- `CaveTopologyNodeKind` — type — line 17
+- `CaveTopologyPoint` — type — line 21
+- `CaveTopologySegment` — type — line 39
+
+## `world/caves/sdfCaveMesh.ts`
+
+- `AccidentalUnionStressConfig` — type — line 416
+- `buildAccidentalUnionStressMesh` — function — line 431
+  - domain: world-terrain
+- `buildSdfCaveMesh` — function — line 357
+  - domain: world-terrain
+- `countConnectedComponents` — function — line 454
+- `DEFAULT_SDF_PARAMS` — const — line 37
+- `SdfCaveParams` — type — line 24
+- `SdfCaveResult` — type — line 347
+
+## `world/caves/spikeNoise.ts`
+
+- `createMultiScaleNoise1D` — function — line 40
+- `createValueNoise1D` — function — line 25
+- `NoiseOctave` — type — line 35
+
+## `world/caves/spikeTestCave.ts`
+
+- `buildSpikeTestTopology` — function — line 53
+  - domain: world-terrain
+- `SpikeTestCaveOptions` — type — line 40
+
+## `world/caves/sweepCaveMesh.ts`
+
+- `buildSweepCaveMesh` — function — line 257
+  - domain: world-terrain
+- `DEFAULT_SWEEP_PARAMS` — const — line 39
+- `SweepCaveParams` — type — line 24
+- `SweepCaveResult` — type — line 249
+
+## `world/caves/topologyAdapter.ts`
+
+- `topologyToCaveDefinition` — function — line 34
+  - domain: world-terrain
+
 ## `world/caveVolume.ts`
 
 - `CaveBounds` — type — line 41
@@ -141,8 +201,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 38
-- `createCaves` — function — line 82
+- `Caves` — type — line 46
+- `createCaves` — function — line 90
   - system: caves
   - role: Owns cave definitions, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
   - owns: Caves

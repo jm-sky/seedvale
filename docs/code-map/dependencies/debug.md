@@ -72,7 +72,10 @@ Generated from TypeScript imports.
 - `shared/bootMark.ts`
 - `terrain/chunkManager.ts`
 - `terrain/vegetationRegionBatcher.ts`
+- `world/caves/sdfCaveMesh.ts`
+- `world/caves/sweepCaveMesh.ts`
 - `world/clouds.ts`
+- `world/createCaves.ts`
 - `world/weatherParticles.ts`
 
 ## `debug/domainHistory.test.ts`

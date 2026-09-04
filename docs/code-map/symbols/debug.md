@@ -25,6 +25,7 @@ Generated from exported TypeScript symbols.
 
 ## `debug/debugMode.ts`
 
+- `caveSpikeVariant` — function — line 129
 - `DebugSystemName` — type — line 107
 - `isAdminMode` — function — line 43
 - `isBootMarkMode` — function — line 33

@@ -1,11 +1,19 @@
 import * as THREE from 'three'
 import type { ChunkManager } from '../terrain/chunkManager'
+import type { CaveTopology } from './caves/caveTopology'
 import { disposeObject3D } from '../assets/loadGltf'
+import { caveSpikeVariant } from '../debug/debugMode'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { buildCaveWallColliders } from './caveColliders'
 import { CAVE_MOUTH_DEPTH, generateCaveDefinitions } from './caveGenerator'
 import { createCaveInteriorMesh } from './caveMesh'
+import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
+import { reportCaveSpikeMetrics, runMedianOfN } from './caves/caveSpikeMetrics'
+import { buildSdfCaveMesh } from './caves/sdfCaveMesh'
+import { buildSpikeTestTopology } from './caves/spikeTestCave'
+import { buildSweepCaveMesh } from './caves/sweepCaveMesh'
+import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition, type CaveVolume, createCaveVolume } from './caveVolume'
 import { openingDirection } from './largeCaves'
 import { createLargeCaveVisual, placeLargeCaveVisual } from './largeCaveVisual'
@@ -103,7 +111,32 @@ export function createCaves(
     roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
     villages,
   })
-  const volumes: readonly CaveVolume[] = definitions.map(createCaveVolume)
+  // Plan world-terrain-008 Milestone A comparison harness — off by default,
+  // one cave only, deleted (along with `caveSpikeVariant()`) after the
+  // architecture decision gate. See implementation notes "Shared Comparison
+  // Harness".
+  const spikeVariant = caveSpikeVariant()
+  const spikeTarget = spikeVariant ? definitions[0] : undefined
+  let spikeTopology: CaveTopology | undefined
+  let spikeDef: CaveDefinition | undefined
+  if (spikeVariant && !spikeTarget) {
+    console.warn('[caveSpike] no cave definitions accepted for this seed — try a different ?seed=')
+  } else if (spikeVariant && spikeTarget) {
+    spikeTopology = buildSpikeTestTopology(seed, spikeTarget.entrance)
+    spikeDef = topologyToCaveDefinition(spikeTopology)
+    console.log(
+      `[caveSpike] variant=${spikeVariant} caveId=${spikeTarget.caveId} entrance=(${spikeTarget.entrance.x.toFixed(1)}, ${spikeTarget.entrance.z.toFixed(1)})`,
+    )
+    const build = (): ReturnType<typeof buildSweepCaveMesh> | ReturnType<typeof buildSdfCaveMesh> =>
+      spikeVariant === 'sweep' ? buildSweepCaveMesh(spikeTopology!) : buildSdfCaveMesh(spikeTopology!)
+    const sample = runMedianOfN(build, 5)
+    sample.geometry.dispose()
+    reportCaveSpikeMetrics(sample.metrics)
+  }
+
+  const volumes: readonly CaveVolume[] = definitions.map((def) =>
+    createCaveVolume(spikeTarget && spikeDef && def.caveId === spikeTarget.caveId ? spikeDef : def),
+  )
 
   // Local entrance recess only — deterministic from `definition.entrance`,
   // redone from scratch on every world build, never persisted (same
@@ -136,15 +169,27 @@ export function createCaves(
 
   function activate(def: CaveDefinition): void {
     if (active.has(def.caveId)) return
+    const isSpikeTarget = Boolean(spikeVariant && spikeTarget && spikeTopology && def.caveId === spikeTarget.caveId)
     const group = new THREE.Group()
     group.name = `cave:${def.caveId}`
-    group.add(createCaveInteriorMesh(def))
+    if (isSpikeTarget) {
+      // Built fresh on every activation (not cached) — `deactivate()` disposes
+      // the group's geometry, so a shared/cached spike mesh would render
+      // nothing (or throw) on the next activation.
+      const built = spikeVariant === 'sweep' ? buildSweepCaveMesh(spikeTopology!) : buildSdfCaveMesh(spikeTopology!)
+      const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial())
+      mesh.name = `cave-interior-spike:${def.caveId}`
+      mesh.receiveShadow = true
+      group.add(mesh)
+    } else {
+      group.add(createCaveInteriorMesh(def))
+    }
     const framingSite = { x: def.entrance.x, z: def.entrance.z, yaw: def.entrance.yaw, length: MOUTH_FRAMING_LENGTH, variant: def.variant }
     const framing = createLargeCaveVisual(framingSite)
     placeLargeCaveVisual(framing, framingSite, (x, z) => chunkManager.sampleBaseHeight(x, z))
     group.add(framing)
     scene.add(group)
-    chunkManager.registerColliders(colliderOwnerKey(def.caveId), buildCaveWallColliders(def))
+    chunkManager.registerColliders(colliderOwnerKey(def.caveId), buildCaveWallColliders(isSpikeTarget && spikeDef ? spikeDef : def))
     active.set(def.caveId, group)
   }
 
