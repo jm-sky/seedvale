@@ -122,7 +122,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 215
+- `createApp` — function — line 217
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
@@ -193,14 +193,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 95
+- `createSaveState` — function — line 106
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
 - `SaveState` — type — line 32
-- `SaveStateDeps` — type — line 42
+- `SaveStateDeps` — type — line 53
 
 ## `app/userActions.ts`
 

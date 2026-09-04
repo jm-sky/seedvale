@@ -71,7 +71,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`         | -       | 🟡 | M      | fauna-010 |
-| 💡 `persistence-004-save-integrity-and-world-lifecycle.md`                  | -       | 🔴 | M      | ~~persistence-002~~ persistence-003 |
 
 ---
 

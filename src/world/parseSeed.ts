@@ -26,6 +26,17 @@ export function randomSeed(): number {
   return Math.floor(Math.random() * 0xffffffff)
 }
 
+/** Whether `?seed=` was actually present and parseable, as opposed to
+ *  `parseSeedFromUrl()`'s `fallback` being used because the param is missing
+ *  or malformed (plan persistence-004 §9) — the two must not be confused:
+ *  only an explicit URL seed should ever override a fresh New Game's own
+ *  `randomSeed()`. */
+export function hasExplicitUrlSeed(search = window.location.search): boolean {
+  const raw = new URLSearchParams(search).get('seed')
+  if (raw == null || raw === '') return false
+  return Number.isFinite(Number(raw))
+}
+
 /** Set or replace a query param without reload. */
 export function setUrlSearchParam(key: string, value: string): void {
   const url = new URL(window.location.href)

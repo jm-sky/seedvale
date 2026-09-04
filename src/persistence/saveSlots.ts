@@ -21,7 +21,7 @@ export type SaveSlotInfo = {
   elapsedDays: number
 }
 
-export type CreateSaveError = 'empty' | 'too-long' | 'duplicate' | 'limit'
+export type CreateSaveError = 'empty' | 'too-long' | 'duplicate' | 'limit' | 'invalid'
 
 export type NameValidation =
   | { ok: true, name: string }
@@ -50,12 +50,14 @@ export function legacyNameFromSave(data: SaveData): string {
  *  raw-value → slot boundary, but keeps a failure's status/detected version
  *  instead of collapsing every non-`'ok'` case into `null`. Preserves the
  *  existing envelope model unchanged: only `data` ever carries a schema
- *  version, `name` stays outside it. */
+ *  version, `name` stays outside it. `name` on an unhealthy result is
+ *  recovered only when the envelope itself still parses (plan
+ *  persistence-004 §5) — the payload is never trusted to produce it. */
 export type InspectedSaveSlot =
   | { status: 'ok', id: string, name: string, data: SaveData }
-  | { status: 'invalid', id: string }
-  | { status: 'migration-failed', id: string, version: number }
-  | { status: 'unsupported-version', id: string, version: number }
+  | { status: 'invalid', id: string, name?: string }
+  | { status: 'migration-failed', id: string, version: number, name?: string }
+  | { status: 'unsupported-version', id: string, version: number, name?: string }
 
 export function inspectStoredSave(key: string, value: unknown): InspectedSaveSlot {
   const envelope = isSaveSlotEnvelope(value)
@@ -64,8 +66,37 @@ export function inspectStoredSave(key: string, value: unknown): InspectedSaveSlo
     const name = envelope ? (value.name.trim() || legacyNameFromSave(result.data)) : legacyNameFromSave(result.data)
     return { status: 'ok', id: key, name, data: result.data }
   }
-  if (result.status === 'invalid') return { status: 'invalid', id: key }
-  return { status: result.status, id: key, version: result.version }
+  const recoveredName = envelope ? value.name.trim() || undefined : undefined
+  if (result.status === 'invalid') return { status: 'invalid', id: key, name: recoveredName }
+  return { status: result.status, id: key, version: result.version, name: recoveredName }
+}
+
+/** Every status a stored row's own `id` can be shown/managed under, whether
+ *  or not the payload could be read as a normal save (plan persistence-004
+ *  §5) — the counterpart to `SaveSlotInfo` for a row that isn't loadable. */
+export type UnhealthySaveStatus = 'invalid' | 'migration-failed' | 'unsupported-version'
+
+export type SaveManagementEntry =
+  | (SaveSlotInfo & { status: 'ok' })
+  | { status: UnhealthySaveStatus, id: string, name?: string, version?: number }
+
+export function toSaveManagementEntry(slot: InspectedSaveSlot): SaveManagementEntry {
+  if (slot.status === 'ok') return { status: 'ok', ...toSaveSlotInfo(slot) }
+  return { status: slot.status, id: slot.id, name: slot.name, version: 'version' in slot ? slot.version : undefined }
+}
+
+/** Healthy entries first (existing recency order), unhealthy ones after —
+ *  there's no meaningful "recency" for a row whose `savedAt` can't be read. */
+export function sortSaveManagementEntries(entries: readonly SaveManagementEntry[]): SaveManagementEntry[] {
+  const healthy = entries.filter((e): e is SaveSlotInfo & { status: 'ok' } => e.status === 'ok')
+  const unhealthy = entries.filter((e) => e.status !== 'ok')
+  return [...sortSavesByRecency(healthy).map((s): SaveManagementEntry => ({ status: 'ok', ...s })), ...unhealthy]
+}
+
+export function unhealthySaveStatusLabel(status: UnhealthySaveStatus): string {
+  if (status === 'invalid') return 'Uszkodzony'
+  if (status === 'migration-failed') return 'Nieudana migracja'
+  return 'Nieobsługiwana wersja'
 }
 
 export function parseStoredSave(key: string, value: unknown): { id: string, name: string, data: SaveData } | null {
@@ -140,5 +171,6 @@ export function saveErrorMessage(error: CreateSaveError): string {
   if (error === 'empty') return 'Podaj nazwę zapisu.'
   if (error === 'too-long') return 'Nazwa może mieć najwyżej 40 znaków.'
   if (error === 'duplicate') return 'Zapis o tej nazwie już istnieje.'
+  if (error === 'invalid') return 'Nie można zapisać — dane gry są uszkodzone.'
   return 'Można mieć najwyżej 8 zapisów.'
 }

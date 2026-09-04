@@ -57,6 +57,8 @@ import {
 import {
   beginNewSave,
   createSave,
+  deleteSave,
+  listSaveManagementEntries,
   listSaves,
   setActiveSaveId,
 } from '../persistence/saveDb'
@@ -107,7 +109,7 @@ import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { PALISADE_MATERIAL_REQUIREMENTS } from '../world/palisade'
-import { randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
+import { hasExplicitUrlSeed, randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
 import { BEDROLL_MATERIAL_REQUIREMENTS, PLATFORM_MATERIAL_REQUIREMENTS } from '../world/sleepingUtilities'
@@ -250,11 +252,19 @@ export async function createApp(
   const perfMonitor = createPerfMonitor()
   setActiveMonitor(perfMonitor)
   if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
-  if (!initialSave && !fixture && options?.newGame) {
+  // Seed-source precedence (plan persistence-004 §9): an explicit `?seed=`
+  // survives into a fresh New Game (deterministic reproduction for
+  // development/shared seeds) — `createWorldConfig()` already resolved
+  // `config.seed` to it above. Only the *fallback* case (no explicit param,
+  // or an unparseable one) gets a fresh `randomSeed()`; a stale localStorage-
+  // remembered seed must not leak into a genuinely new world either.
+  if (!initialSave && !fixture && options?.newGame && !hasExplicitUrlSeed()) {
     config.seed = randomSeed()
-    syncSeedInUrl(config.seed)
   }
   if (initialSave) {
+    // A loaded save's own seed is always authoritative — it must win over
+    // any `?seed=` left over in the URL from a previous session (plan
+    // persistence-004 §9/§10).
     config.seed = initialSave.config.seed
     // Merge field-by-field rather than replacing `config.terrain` wholesale —
     // an older save can predate `RegionParams` fields added since (e.g.
@@ -277,6 +287,11 @@ export async function createApp(
   // A benchmark fixture must not mutate the user's saved world/graphics
   // preferences (plan tools-001 trap #14).
   if (!fixture) saveAllDomains(config)
+  // The URL must always reflect the seed of the actually active world (plan
+  // persistence-004 §9) — a Load, a resolved New Game seed, or the plain
+  // boot seed all land here once `config.seed` is final. Benchmarks
+  // deliberately bypass the URL entirely (see `createBenchmarkWorldConfig`).
+  if (!fixture) syncSeedInUrl(config.seed)
 
   const timeOverride = parseTimeOfDayFromUrl()
   const dayNight = createDayNightState(
@@ -936,7 +951,7 @@ export async function createApp(
     confirm: terrainPrep.confirmPreview,
   })
 
-  const { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave } = createSaveState({
+  const { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave, runExclusive } = createSaveState({
     config,
     bundle,
     player,
@@ -1410,21 +1425,37 @@ export async function createApp(
       config.player.name = name
       savePlayer(config)
     },
-    onSave: saveNow,
+    // Manual Save's failure must reach the player (plan persistence-004 §6) —
+    // the pause menu awaits this and toasts on `!result.ok` instead of the
+    // old fire-and-forget `saveNow` that always showed "Zapisano".
+    onSave: () => saveNow('manual'),
     onSaveAs: async (name) => {
-      await saveNow()
+      const protect = await saveNow('save-as')
+      if (!protect.ok) {
+        vueUi.showToast('Nie udało się zaktualizować bieżącego zapisu.', 'error')
+      }
       const result = await createSave(name, buildSaveData())
       if (result.ok) vueUi.setPauseActiveSaveName(result.name)
       return result
     },
+    // Wrapped in `runExclusive` (plan persistence-004 §7/§11): once
+    // `setActiveSaveId(id)` switches the target slot, a background autosave
+    // (`visibilitychange`/`pagehide`, which the reload below itself triggers)
+    // must not fire and overwrite it with the *old* world's state — it's
+    // suspended for the rest of this page's lifetime, which ends at reload.
     onLoadSave: (id) => {
-      void (async () => {
-        await saveNow()
+      void runExclusive(async () => {
+        const protect = await saveNow('load-transition')
+        if (!protect.ok) {
+          vueUi.showToast('Nie udało się zapisać bieżącej gry przed wczytaniem innego zapisu.', 'error')
+        }
         setActiveSaveId(id)
         window.location.reload()
-      })()
+      })
     },
     onListSaves: () => listSaves(),
+    onListSaveManagement: () => listSaveManagementEntries(),
+    onDeleteSave: (id) => deleteSave(id),
     onRefresh: () => window.location.reload(),
     onBuildSimpleFire: buildSimpleFire,
     onBuildFirePit: buildFirePit,
@@ -1432,15 +1463,34 @@ export async function createApp(
     onBuildGrate: buildGrate,
     onLightBranch: lightBranch,
     onLightWoodenTorch: lightWoodenTorch,
+    // Wrapped in `runExclusive` for the same reason as `onLoadSave` — the
+    // world-transition contract (plan persistence-004 §7) must not let an
+    // autosave capture the old world under `beginNewSave`'s pending name/the
+    // new seed while `rebuildWorld(true)` is still resetting world-scoped
+    // state. Unlike `onLoadSave` this doesn't reload, so autosave resumes
+    // normally once the transition finishes.
     onNewGame: (name) => {
-      void (async () => {
-        await saveNow()
+      void runExclusive(async () => {
+        const protect = await saveNow('new-game-transition')
+        if (!protect.ok) {
+          vueUi.showToast('Nie udało się zapisać bieżącej gry przed rozpoczęciem nowej.', 'error')
+        }
         beginNewSave(name)
+        // Always a fresh random seed here, deliberately not gated on
+        // `hasExplicitUrlSeed()` — that seed-intent precedence (plan
+        // persistence-004 §9) applies to the boot-time New Game flow
+        // (`createApp`'s own `options?.newGame` branch above); an in-session
+        // pause-menu New Game reusing whatever `?seed=` happened to still be
+        // in the address bar from the original boot would be surprising, not
+        // deterministic-on-purpose.
         config.seed = randomSeed()
         await rebuildWorld(true)
-        await saveNow()
+        const created = await saveNow('new-game-transition')
+        if (!created.ok) {
+          vueUi.showToast('Nie udało się zapisać nowej gry.', 'error')
+        }
         await refreshActiveSaveName()
-      })()
+      })
     },
   }, () => vueUi.isNpcDialogueMenuOpen())
   void refreshActiveSaveName()

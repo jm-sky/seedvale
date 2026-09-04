@@ -8,12 +8,14 @@ import {
   nextDefaultSaveName,
   SAVE_NAME_MAX_LENGTH,
   saveErrorMessage,
+  type SaveManagementEntry,
   type SaveSlotInfo,
+  unhealthySaveStatusLabel,
   validateSaveName,
 } from '../../persistence/saveSlots'
 
 const props = defineProps<{
-  slots: readonly SaveSlotInfo[]
+  entries: readonly SaveManagementEntry[]
   activeId: string | null
 }>()
 
@@ -26,11 +28,16 @@ const emit = defineEmits<{
   ]
 }>()
 
+// The 8-slot limit and name-collision checks only ever count healthy slots —
+// same contract `persistence/saveDb.ts`'s `createSave()` already uses
+// (`listSaves()`, not the unhealthy-inclusive management list).
+const healthySlots = computed(() => props.entries.filter((e): e is SaveSlotInfo & { status: 'ok' } => e.status === 'ok'))
+
 const showNewGame = ref(false)
-const name = ref(nextDefaultSaveName(props.slots.map((slot) => slot.name)))
+const name = ref(nextDefaultSaveName(healthySlots.value.map((slot) => slot.name)))
 const error = ref('')
 const nameInput = ref<HTMLInputElement | null>(null)
-const atLimit = computed(() => props.slots.length >= MAX_SAVES)
+const atLimit = computed(() => healthySlots.value.length >= MAX_SAVES)
 const appVersion = __APP_VERSION__
 const gitCommit = __GIT_COMMIT__
 const buildDate = __BUILD_DATE__
@@ -39,13 +46,17 @@ function formatMeta(slot: SaveSlotInfo): string {
   return `${formatSaveDay(slot.elapsedDays)} · ${new Date(slot.savedAt).toLocaleString()} · seed ${slot.seed}`
 }
 
-function loadSlot(id: string): void {
-  emit('choose', { type: 'load', id })
+function loadSlot(entry: SaveManagementEntry): void {
+  // Unhealthy rows are display/delete-only (plan persistence-004 §5) — the
+  // template already omits their Load click target, this is defense in depth.
+  if (entry.status !== 'ok') return
+  emit('choose', { type: 'load', id: entry.id })
 }
 
-function removeSlot(slot: SaveSlotInfo): void {
-  if (!window.confirm(`Usunąć zapis „${slot.name}”?`)) return
-  emit('choose', { type: 'delete', id: slot.id })
+function removeEntry(entry: SaveManagementEntry): void {
+  const label = entry.status === 'ok' ? entry.name : (entry.name ?? `uszkodzony zapis (${entry.id.slice(0, 8)})`)
+  if (!window.confirm(`Usunąć zapis „${label}”?`)) return
+  emit('choose', { type: 'delete', id: entry.id })
 }
 
 async function openNewGame(): Promise<void> {
@@ -61,7 +72,7 @@ function submitNew(): void {
     error.value = saveErrorMessage('limit')
     return
   }
-  const check = validateSaveName(name.value, props.slots.map((slot) => slot.name))
+  const check = validateSaveName(name.value, healthySlots.value.map((slot) => slot.name))
   if (!check.ok) {
     error.value = saveErrorMessage(check.error)
     return
@@ -82,23 +93,31 @@ function submitNew(): void {
 
       <div class="mb-3.5 flex flex-col gap-2">
         <div
-          v-for="slot in slots"
-          :key="slot.id"
+          v-for="entry in entries"
+          :key="entry.id"
           class="flex items-stretch overflow-hidden rounded-md border border-white/15 bg-white/5"
-          :class="slot.id === activeId ? 'border-blue-400/70 bg-blue-500/20' : ''"
+          :class="entry.status === 'ok' && entry.id === activeId ? 'border-blue-400/70 bg-blue-500/20' : ''"
         >
           <button
+            v-if="entry.status === 'ok'"
             type="button"
             class="cursor-pointer min-w-0 flex-1 px-3 py-2.5 text-left text-sm hover:bg-white/10"
-            @click="loadSlot(slot.id)"
+            @click="loadSlot(entry)"
           >
-            <span class="block font-semibold">{{ slot.name }}</span>
-            <span class="mt-0.5 block text-[11px] opacity-70">{{ formatMeta(slot) }}</span>
+            <span class="block font-semibold">{{ entry.name }}</span>
+            <span class="mt-0.5 block text-[11px] opacity-70">{{ formatMeta(entry) }}</span>
           </button>
+          <div
+            v-else
+            class="min-w-0 flex-1 px-3 py-2.5 text-left text-sm opacity-70"
+          >
+            <span class="block font-semibold">{{ entry.name ?? 'Zapis' }}</span>
+            <span class="mt-0.5 block text-[11px] text-red-300">{{ unhealthySaveStatusLabel(entry.status) }} — nie można wczytać</span>
+          </div>
           <button
             type="button"
             class="cursor-pointer w-11 shrink-0 border-l border-white/12 text-xs text-red-300 hover:bg-red-400/10"
-            @click="removeSlot(slot)"
+            @click="removeEntry(entry)"
           >
             Usuń
           </button>
@@ -108,7 +127,7 @@ function submitNew(): void {
       <UiButton
         variant="primary"
         class="mb-2 w-full"
-        :disabled="slots.length === 0"
+        :disabled="healthySlots.length === 0"
         @click="emit('choose', { type: 'continue' })"
       >
         Kontynuuj

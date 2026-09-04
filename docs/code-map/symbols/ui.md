@@ -62,8 +62,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createPauseMenu.ts`
 
-- `createPauseMenu` — function — line 30
-- `PauseMenu` — type — line 28
+- `createPauseMenu` — function — line 35
+- `PauseMenu` — type — line 33
 - `PauseMenuHandlers` — type — line 5
 
 ## `ui/createQuestLog.ts`
@@ -85,7 +85,7 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createStartScreen.ts`
 
-- `createStartScreen` — function — line 18
+- `createStartScreen` — function — line 20
 - `StartScreen` — type — line 10
 - `StartScreenChoice` — type — line 4
 

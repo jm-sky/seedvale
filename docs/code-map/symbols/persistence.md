@@ -5,10 +5,10 @@ Generated from exported TypeScript symbols.
 ## `persistence/saveData.ts`
 
 - `CURRENT_SAVE_VERSION` — const — line 408
-- `isSaveData` — function — line 1284
-- `loadSaveData` — function — line 1347
-- `loadStoredSave` — function — line 1481
-- `migrateStoredSave` — function — line 1444
+- `isSaveData` — function — line 1289
+- `loadSaveData` — function — line 1352
+- `loadStoredSave` — function — line 1486
+- `migrateStoredSave` — function — line 1449
 - `QuestProgressEntry` — type — line 49
 - `SaveBadges` — type — line 117
 - `SaveBedroll` — type — line 326
@@ -27,7 +27,7 @@ Generated from exported TypeScript symbols.
 - `SaveHive` — type — line 196
 - `SaveLocationKnowledge` — type — line 99
 - `SaveMap` — type — line 101
-- `SaveMigration` — type — line 1361
+- `SaveMigration` — type — line 1366
 - `SavePalisadeSegment` — type — line 320
 - `SavePlacedContainer` — type — line 216
 - `SavePlacedFire` — type — line 63
@@ -54,53 +54,64 @@ Generated from exported TypeScript symbols.
 - `SaveWorkContractAdvertisement` — type — line 378
 - `SaveWorkContractState` — type — line 368
 - `SaveWorldFlags` — type — line 86
-- `StoredSaveResult` — type — line 1470
+- `StoredSaveResult` — type — line 1475
 
 ## `persistence/saveDb.ts`
 
-- `beginNewSave` — function — line 141
-- `createSave` — function — line 332
-- `CreateSaveResult` — type — line 30
-- `deleteSave` — function — line 376
-- `getActiveSaveId` — function — line 114
-- `getPendingNewSaveName` — function — line 132
-- `hasUnreadableSaves` — function — line 229
-- `listSaves` — function — line 202
-- `readSave` — function — line 244
-- `renameSave` — function — line 353
-- `setActiveSaveId` — function — line 123
-- `setPendingNewSaveName` — function — line 136
-- `writeSave` — function — line 285
+- `beginNewSave` — function — line 154
+- `createSave` — function — line 380
+  - role: Creates a brand-new named slot from `data`.
+  - integration: Same outgoing-validation guard as `writeSave()` (plan persistence-004 §1) — an invalid `data` must not be allowed to create a slot that would immediately be excluded from `listSaves()` again.
+- `CreateSaveResult` — type — line 33
+- `deleteSave` — function — line 428
+- `getActiveSaveId` — function — line 127
+- `getPendingNewSaveName` — function — line 145
+- `listSaveManagementEntries` — function — line 255
+- `listSaves` — function — line 242
+- `listSavesResult` — function — line 216
+- `ListSavesResult` — type — line 212
+- `readSave` — function — line 276
+- `renameSave` — function — line 405
+- `SaveManagementResult` — type — line 251
+- `SaveReason` — type — line 52
+- `setActiveSaveId` — function — line 136
+- `setPendingNewSaveName` — function — line 149
+- `writeSave` — function — line 321
   - domain: persistence
   - role: Writes `data` into the active (or given) named slot.
-  - integration: Never overwrites a slot whose existing record is present but fails to parse, has no known migration path, or is a newer unsupported version — see `docs/plans/persistence-002-save-integrity-guard.md` and `docs/plans/persistence-003-save-schema-versioning-and-migrations.md`. A slot with no existing record still gets created normally.
-- `WriteSaveError` — type — line 38
-- `WriteSaveResult` — type — line 39
+  - integration: Never overwrites a slot whose existing record is present but fails to parse, has no known migration path, or is a newer unsupported version — see `docs/plans/persistence-002-save-integrity-guard.md` and `docs/plans/persistence-003-save-schema-versioning-and-migrations.md`. A slot with no existing record still gets created normally. Also refuses an outgoing `data` that fails current-schema validation before any destructive `storePut()` (plan persistence-004 §1) — a TypeScript `SaveData` type alone doesn't rule out a runtime-invalid value (e.g. an enum-like field outside its validated set) reaching persistence.
+- `WriteSaveError` — type — line 44
+- `WriteSaveResult` — type — line 45
 
 ## `persistence/saveSlots.ts`
 
 - `ACTIVE_SAVE_ID_KEY` — const — line 6
-- `assertCanCreateSave` — function — line 126
+- `assertCanCreateSave` — function — line 157
 - `CreateSaveError` — type — line 24
 - `DEFAULT_SAVE_NAME_PREFIX` — const — line 8
-- `formatSaveDay` — function — line 135
+- `formatSaveDay` — function — line 166
 - `generateSaveId` — function — line 30
-- `InspectedSaveSlot` — type — line 54
-- `inspectStoredSave` — function — line 60
+- `InspectedSaveSlot` — type — line 56
+- `inspectStoredSave` — function — line 62
 - `isSaveSlotEnvelope` — function — line 34
 - `LEGACY_DEFAULT_SAVE_NAME` — const — line 7
 - `LEGACY_SAVE_KEY` — const — line 5
 - `legacyNameFromSave` — function — line 44
 - `MAX_SAVES` — const — line 3
 - `NameValidation` — type — line 26
-- `nextDefaultSaveName` — function — line 118
-- `parseStoredSave` — function — line 71
-- `pickActiveSaveId` — function — line 91
+- `nextDefaultSaveName` — function — line 149
+- `parseStoredSave` — function — line 102
+- `pickActiveSaveId` — function — line 122
 - `SAVE_NAME_MAX_LENGTH` — const — line 4
-- `saveErrorMessage` — function — line 139
+- `saveErrorMessage` — function — line 170
+- `SaveManagementEntry` — type — line 79
 - `SaveSlotEnvelope` — type — line 10
 - `SaveSlotInfo` — type — line 15
-- `sortSavesByRecency` — function — line 87
-- `toSaveSlotInfo` — function — line 76
-- `validateSaveName` — function — line 101
+- `sortSaveManagementEntries` — function — line 90
+- `sortSavesByRecency` — function — line 118
+- `toSaveManagementEntry` — function — line 83
+- `toSaveSlotInfo` — function — line 107
+- `UnhealthySaveStatus` — type — line 77
+- `unhealthySaveStatusLabel` — function — line 96
+- `validateSaveName` — function — line 132
 - `wrapSave` — function — line 40

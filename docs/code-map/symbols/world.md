@@ -583,10 +583,11 @@ Generated from exported TypeScript symbols.
 ## `world/parseSeed.ts`
 
 - `createSeededRandom` — function — line 2
+- `hasExplicitUrlSeed` — function — line 34
 - `parseSeedFromUrl` — function — line 14
 - `randomSeed` — function — line 25
-- `setUrlSearchParam` — function — line 30
-- `syncSeedInUrl` — function — line 37
+- `setUrlSearchParam` — function — line 41
+- `syncSeedInUrl` — function — line 48
 
 ## `world/placementPreview.ts`
 

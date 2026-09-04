@@ -1,5 +1,5 @@
 import type { ActionResult } from '../app/actions/actionContracts'
-import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
+import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type PauseMenuHandlers = {
@@ -8,10 +8,15 @@ export type PauseMenuHandlers = {
   onToggleGui?: () => void
   onNameChange?: (name: string) => void
   onNameCommit?: (name: string) => void
-  onSave?: () => void
+  onSave?: () => Promise<WriteSaveResult>
   onSaveAs?: (name: string) => Promise<CreateSaveResult>
   onLoadSave?: (id: string) => void
   onListSaves?: () => Promise<SaveSlotInfo[]>
+  /** Every stored row, healthy or not (plan persistence-004 §5) — the Load
+   *  list's data source, distinct from `onListSaves` (which only ever
+   *  populates a name-collision check for Save As / New Game). */
+  onListSaveManagement?: () => Promise<SaveManagementResult>
+  onDeleteSave?: (id: string) => Promise<void>
   onRefresh?: () => void
   onBuildSimpleFire?: () => ActionResult
   onBuildFirePit?: () => ActionResult

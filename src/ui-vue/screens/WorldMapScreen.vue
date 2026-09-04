@@ -57,6 +57,15 @@ useOverlayScreen('world-map', isWorldMapOpen, closeWorldMap)
 // imperative-singleton pattern as `mapData`/`mapDiscovery`) — this counter
 // forces the target list/popover to re-render after a mutation.
 const targetsVersion = ref(0)
+// A world-transition (New Game/Load, plan persistence-004 §8) clears/
+// restores `NavigationTargets` programmatically while this screen is closed,
+// which never bumps `targetsVersion` on its own — Vue's `computed` below
+// would then keep serving its last-open-session's cached result forever
+// (nothing it depends on changed). Bumping on every re-open forces a fresh
+// read of the live singleton instead of a stale one from the previous world.
+watch(isWorldMapOpen, (open) => {
+  if (open) targetsVersion.value++
+})
 const selected = ref<MapKnownLocation | null>(null)
 
 const targetList = computed(() => {

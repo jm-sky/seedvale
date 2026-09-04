@@ -1,4 +1,4 @@
-import type { SaveSlotInfo } from '../persistence/saveSlots'
+import type { SaveManagementEntry } from '../persistence/saveSlots'
 import type { App } from 'vue'
 
 export type StartScreenChoice =
@@ -14,10 +14,12 @@ export type StartScreen = {
 }
 
 /** Boot save picker. Vue is mounted here as a short-lived app — the in-game
- *  overlay (`mountVueUi` / `App.vue`) is not up yet. */
+ *  overlay (`mountVueUi` / `App.vue`) is not up yet. `entries` includes
+ *  unhealthy rows (plan persistence-004 §5) so a corrupted save is visible/
+ *  deletable at boot instead of silently missing from the list. */
 export function createStartScreen(
   parent: HTMLElement,
-  slots: readonly SaveSlotInfo[],
+  entries: readonly SaveManagementEntry[],
   activeId: string | null,
 ): StartScreen {
   const root = document.createElement('div')
@@ -46,7 +48,7 @@ export function createStartScreen(
   ]).then(([{ createApp }, { default: StartScreen }]) => {
     if (disposed) return
     app = createApp(StartScreen, {
-      slots,
+      entries,
       activeId,
       onChoose: settle,
     })

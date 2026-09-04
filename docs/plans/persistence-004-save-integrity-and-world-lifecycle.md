@@ -1,13 +1,30 @@
 # Plan: Save Integrity and World Lifecycle
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** bug
 **Priority:** high · **Effort:** M
 **Depends on:** ~~persistence-002~~ persistence-003
 **Domain:** `persistence`
 **Subdomains:** `save-data` `storage`
 **Tags:** `autosave` `new-game` `seed` `world-reset`
+
+## Implementation status (2026-09-05)
+
+**Implemented + technically verified** (`tsc`/`vue-tsc` --noEmit, `eslint`, `vitest run` — 3041 tests, `vite build` all clean): all 13 sections.
+
+- **§1/§3 (validate outgoing snapshot, preserve last valid save):** `writeSave()`/`createSave()` (`src/persistence/saveDb.ts`) now reject via `isSaveData()` (reused, not duplicated) before any `storePut()`, returning `invalid-outgoing-snapshot` / `invalid` without touching the previous stored row.
+- **§2 (concrete invalid-snapshot producer):** found and fixed — `ANIMAL_KINDS` in `src/persistence/saveData.ts` was missing `'dog'`, a real `LivestockKind` (`settlement/livestock.ts`'s guard-dog roll, ~35% chance per house). Any settlement that ever gained a dog produced a save `isSaveData()` rejected outright on every subsequent load/write. Fixed by adding `'dog'` to the validated set — a schema-owner bugfix, not a sanitization shim.
+- **§4 (empty vs. storage-failure):** new `listSavesResult()`/`listSaveManagementEntries()` (`saveDb.ts`) return a typed `{ ok, ... }`/`{ ok: false, error: 'db-error' }` shape; `listSaves()` stays as a convenience wrapper for callers that only render a list. `saveState.ts`'s `refreshActiveSaveName()` now leaves the pause menu's label untouched on a transient read failure instead of blanking it.
+- **§5 (unhealthy rows visible/manageable):** `saveSlots.ts`'s `SaveManagementEntry`/`toSaveManagementEntry`/`unhealthySaveStatusLabel`; `saveDb.ts`'s `listSaveManagementEntries()`. Wired into both save-management surfaces: the boot `StartScreen.vue` (via `main.ts`) and the pause menu's `PauseMenuEntriesSaves.vue` Load screen (new `onListSaveManagement`/`onDeleteSave` pause-menu handlers) — an unhealthy row shows its status, can't be loaded, and can be explicitly deleted (existing `deleteSave(id)`, no new store).
+- **§6 (surface failures per intent):** `saveNow()` now returns `WriteSaveResult`; manual Save (`PauseMenuEntriesMain.vue`) and Save As/New Game/Load transitions toast on failure via the existing `showToast` mechanism instead of always claiming success.
+- **§7/§8 (world-transition contract, navigation-target leak):** `saveState.ts`'s new `runExclusive()` suspends the autosave triggers (interval/visibilitychange/pagehide/beforeunload) for the duration of a New Game / Load Save transition, closing the race where a background autosave could capture the old world under the new seed/slot while `rebuildWorld(true)` was still resetting world-scoped state. Traced the navigation-marker leak to `WorldMapScreen.vue`'s `targetsVersion` Vue-cache never being bumped by a programmatic `navigationTargets.clear()` while the map was closed — fixed by bumping it on every map re-open, forcing a fresh read of the live singleton instead of serving a stale computed result from before the transition. `NavigationTargets.clear()`/`restore()` themselves were already correct (see existing `navigationTargets.test.ts`).
+- **§9/§10 (seed precedence, seed ≠ save identity):** new `hasExplicitUrlSeed()` (`parseSeed.ts`) distinguishes an explicit `?seed=` from `parseSeedFromUrl()`'s fallback. `createApp.ts`'s boot-time New Game branch only generates `randomSeed()` when no explicit URL seed was given; a loaded save's seed remains authoritative regardless of the URL; the URL is synced to the actually-active seed once resolved, for every boot path (Load/New Game/plain continue), not just New Game. The in-session pause-menu New Game deliberately keeps its own unconditional `randomSeed()` (documented inline) — the URL-seed-intent precedence is a boot-time concept.
+- **§11 (write ordering):** `saveState.ts`'s `saveNow()` chains overlapping calls through a promise queue — each call's `buildSaveData()` only runs once its turn arrives, so writes land in call order and always reflect state no older than the previous write. No worker/job system added.
+- **§12 (diagnostics):** new `'invalid-outgoing'` diagnostic kind and a `SaveReason` (`manual`/`autosave`/`save-as`/`new-game-transition`/`load-transition`) threaded into `writeSave()`'s dev-console context string. Never logs full payloads.
+- **§13 (verification):** extended `src/persistence/saveDb.test.ts` (outgoing-snapshot integrity, `listSavesResult` read-failure-vs-empty, unhealthy-row management/deletion) and added `src/world/parseSeed.test.ts` (explicit-vs-fallback seed intent). New Game isolation itself relies on the pre-existing `navigationTargets.test.ts` unit coverage (the reset call sites in `createApp.ts` were not changed, only the presentation-cache and transition-ordering bugs around them) — no dedicated `saveState.ts` write-ordering unit test was added (its `SaveStateDeps` has ~20 live-system dependencies with no existing mock seam; the queue itself is a straightforward 3-line chain).
+
+**Browser/gameplay-verified:** not yet — the player performs this per the plan's own "Non-goals" (browser verification by the AI agent is explicitly out of scope). Worth checking manually: unhealthy-save rows in both the boot screen and pause-menu Load screen, a rejected manual Save's toast, and the `?seed=` + New Game flow.
 
 ## Problem
 

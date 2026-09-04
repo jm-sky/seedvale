@@ -21,7 +21,7 @@ import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
 import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification } from '../persistence/saveData'
-import { getActiveSaveId, listSaves, writeSave } from '../persistence/saveDb'
+import { getActiveSaveId, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
 import { pickActiveSaveId } from '../persistence/saveSlots'
 
 /** Assembles the live runtime state into a `SaveData` and owns *when* it gets
@@ -31,12 +31,23 @@ import { pickActiveSaveId } from '../persistence/saveSlots'
  *  half that used to sit inline in `createApp.ts`. */
 export type SaveState = {
   buildSaveData: () => SaveData
-  /** Writes the current state into the active save slot. */
-  saveNow: () => Promise<void>
+  /** Writes the current state into the active save slot. Overlapping calls
+   *  are serialized (plan persistence-004 §11) — each call's `buildSaveData()`
+   *  only runs once it's this call's turn, so it always captures state no
+   *  older than the previous write, and writes land in call order. */
+  saveNow: (reason?: SaveReason) => Promise<WriteSaveResult>
   /** Re-reads the active slot's name into the pause menu. */
   refreshActiveSaveName: () => Promise<void>
   /** Registers the page-lifecycle + interval autosaves; returns their remover. */
   installAutoSave: () => () => void
+  /** Runs `fn` with autosave/lifecycle-triggered saves suspended (plan
+   *  persistence-004 §7/§11) — a world-transition (New Game / Load Save) that
+   *  mutates seed/active-slot-id across several `await`s must not let a
+   *  background autosave capture the old world under the new identity, or
+   *  target the slot the transition just switched to. Explicit `saveNow()`
+   *  calls made *inside* `fn` are unaffected — only the automatic triggers
+   *  installed by `installAutoSave()` are skipped while `fn` runs. */
+  runExclusive: <T>(fn: () => Promise<T>) => Promise<T>
 }
 
 export type SaveStateDeps = {
@@ -219,18 +230,45 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     }
   }
 
-  // `writeSave()`'s result is diagnostic-only here — a rejected write (an
-  // unreadable existing slot, plan persistence-002) must fail safely rather
-  // than surface a UI error; the dev-console diagnostic already happened
-  // inside `writeSave()`.
-  const saveNow = async (): Promise<void> => {
-    await writeSave(buildSaveData())
+  // A rejected write (an unreadable existing slot, an invalid outgoing
+  // snapshot, plan persistence-002/persistence-004 §1) must fail safely — the
+  // dev-console diagnostic already happened inside `writeSave()`; callers
+  // that need to surface it to the player (manual Save, Save As) inspect the
+  // returned `WriteSaveResult` themselves.
+  //
+  // Overlapping calls are chained through `saveQueue` (plan persistence-004
+  // §11) rather than left to race: each call's `buildSaveData()` only runs
+  // once every earlier-queued write has finished, so it always captures state
+  // at least as fresh as what just got written, and the underlying
+  // `writeSave()` calls land strictly in call order.
+  let saveQueue: Promise<unknown> = Promise.resolve()
+  const saveNow = (reason: SaveReason = 'autosave'): Promise<WriteSaveResult> => {
+    const run = saveQueue.then(() => writeSave(buildSaveData(), undefined, reason))
+    saveQueue = run.catch(() => {})
+    return run
+  }
+
+  // See `SaveState.runExclusive`'s doc comment — only the *automatic*
+  // triggers below check this; explicit `saveNow()` calls from within the
+  // guarded `fn` still run.
+  let transitionDepth = 0
+  const runExclusive = async <T>(fn: () => Promise<T>): Promise<T> => {
+    transitionDepth++
+    try {
+      return await fn()
+    } finally {
+      transitionDepth--
+    }
   }
 
   const refreshActiveSaveName = async (): Promise<void> => {
-    const slots = await listSaves()
-    const id = pickActiveSaveId(getActiveSaveId(), slots)
-    const active = slots.find((slot) => slot.id === id)
+    // A transient read failure must not blank an already-known active-save
+    // label (plan persistence-004 §4) — leave the pause menu's current text
+    // alone rather than treating the failure as "no active save".
+    const result = await listSavesResult()
+    if (!result.ok) return
+    const id = pickActiveSaveId(getActiveSaveId(), result.slots)
+    const active = result.slots.find((slot) => slot.id === id)
     vueUi.setPauseActiveSaveName(active?.name ?? '')
   }
 
@@ -243,24 +281,28 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
   // `pagehide` covers navigation/bfcache cases visibilitychange can miss.
   // `beforeunload` stays too — free extra coverage on desktop.
   const installAutoSave = (): (() => void) => {
-    const onSave = () => { void saveNow() }
-    const onVisibilityChange = () => {
-      if (document.hidden) void saveNow()
+    const onAutoSave = () => {
+      // Suspended during a New Game / Load transition (`runExclusive`) — see
+      // `SaveState.runExclusive`'s doc comment for why.
+      if (transitionDepth === 0) void saveNow('autosave')
     }
-    window.addEventListener('beforeunload', onSave)
+    const onVisibilityChange = () => {
+      if (document.hidden) onAutoSave()
+    }
+    window.addEventListener('beforeunload', onAutoSave)
     document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('pagehide', onSave)
+    window.addEventListener('pagehide', onAutoSave)
     // Defense in depth in case the app is killed with no lifecycle event at
     // all (rare, but seen on some Android OEMs) — bounds how much progress a
     // worst-case loss can cost.
-    const autoSaveInterval = window.setInterval(onSave, 60_000)
+    const autoSaveInterval = window.setInterval(onAutoSave, 60_000)
     return () => {
-      window.removeEventListener('beforeunload', onSave)
+      window.removeEventListener('beforeunload', onAutoSave)
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('pagehide', onSave)
+      window.removeEventListener('pagehide', onAutoSave)
       window.clearInterval(autoSaveInterval)
     }
   }
 
-  return { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave }
+  return { buildSaveData, saveNow, refreshActiveSaveName, installAutoSave, runExclusive }
 }

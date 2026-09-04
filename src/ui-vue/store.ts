@@ -10,7 +10,7 @@ import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
 import type { SharpenResult } from '../items/weaponMaintenance'
-import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
+import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
@@ -87,8 +87,9 @@ type PauseMenuState = {
   open: boolean; seed: number; playerName: string; activeSaveName: string
   onPause: (() => void) | null; onResume: (() => void) | null; onToggleGui: (() => void) | null
   onNameChange: ((name: string) => void) | null; onNameCommit: ((name: string) => void) | null
-  onSave: (() => void) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
+  onSave: (() => Promise<WriteSaveResult>) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
   onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
+  onListSaveManagement: (() => Promise<SaveManagementResult>) | null; onDeleteSave: ((id: string) => Promise<void>) | null
   onRefresh: (() => void) | null
   onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildWoodPile: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
@@ -449,7 +450,8 @@ export const ui = reactive({
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
-    onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
+    onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
+    onListSaveManagement: null, onDeleteSave: null, onRefresh: null,
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
     saveStatus: '',

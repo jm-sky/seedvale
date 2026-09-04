@@ -1231,8 +1231,13 @@ function isNpcRelationshipsField(value: unknown): value is NpcRelationshipEntry[
   })
 }
 
+// Plan persistence-004 §2 — `'dog'` was missing here even though it's a real
+// `LivestockKind` (`settlement/livestock.ts`'s `kindsForHouse` rolls a guard
+// dog per house at `DOG_OWNERSHIP_CHANCE`), so a save from any settlement
+// that ever gained a dog failed `isSaveData()` outright and could never be
+// read back — the concrete invalid-snapshot producer this plan traced.
 const ANIMAL_KINDS: ReadonlySet<string> = new Set<AnimalKind>([
-  'bear', 'boar', 'chicken', 'cow', 'deer', 'donkey', 'duck', 'fox', 'horse', 'rabbit',
+  'bear', 'boar', 'chicken', 'cow', 'deer', 'dog', 'donkey', 'duck', 'fox', 'horse', 'rabbit',
   'rooster', 'sheep', 'stag', 'wolf',
 ])
 

@@ -4,7 +4,7 @@ import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
-import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, openSkillsScreen, setPauseSaveStatus, ui } from '../store'
+import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, openSkillsScreen, setPauseSaveStatus, showToast, ui } from '../store'
 
 const name = ref(ui.pauseMenu.playerName)
 const saveTimer = ref<number | null>(null)
@@ -24,9 +24,15 @@ const emit = defineEmits<{
 useOverlayScreen('pause-menu', isPauseMenuOpen, closePauseMenu)
 watch(() => ui.pauseMenu.playerName, (value) => { name.value = value })
 
-function save(): void {
+async function save(): Promise<void> {
   emitUiClick()
-  ui.pauseMenu.onSave?.()
+  const result = await ui.pauseMenu.onSave?.()
+  // A rejected write (plan persistence-004 §6) must not claim success — the
+  // old code showed "Zapisano" unconditionally regardless of the outcome.
+  if (result && !result.ok) {
+    showToast('Nie udało się zapisać gry.', 'error')
+    return
+  }
   const label = ui.pauseMenu.activeSaveName ? `Zapisano · ${ui.pauseMenu.activeSaveName}` : 'Zapisano'
   setPauseSaveStatus(label)
   if (saveTimer.value !== null) window.clearTimeout(saveTimer.value)
