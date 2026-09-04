@@ -324,8 +324,8 @@ type Reason = (plan: Plan, metrics: PlanMetrics) => string
 
 const baseReason: Reason = (plan, metrics) =>
   [
-    getPriorityLabel(plan.priority) + ' ' + plan.effort,
-    metrics.ready ? 'ready' : 'blocked',
+    getPriorityLabel(plan.priority) + ' `' + plan.effort + '`',
+    metrics.ready ? '✅ ready' : '🔒 blocked',
     `unlocks ${metrics.direct}/${metrics.transitive}`,
   ].join(' · ')
 
@@ -350,7 +350,7 @@ export const PROFILES: Profile[] = [
     qualifies: plan => plan.status === 'planned',
     rank: (plan, metrics) => metrics.overallScore + (plan.roadmap ? ROADMAP_BONUS : 0),
     reason: (plan, metrics) =>
-      [baseReason(plan, metrics), plan.roadmap ? `roadmap: ${plan.roadmap}` : 'no roadmap'].join(' · '),
+      [baseReason(plan, metrics), plan.roadmap ? `roadmap: \`${plan.roadmap}\`` : 'no roadmap'].join(' · '),
     limit: 5,
   },
   {
@@ -521,7 +521,7 @@ const main = async (): Promise<void> => {
       String(index + 1) +
       '. ' + `\`${plan.id}\` — **${plan.title}**  \n` +
 
-      ''.padStart(2) + getPriorityLabel(plan.priority) + ' ' + plan.effort + ' · ' +
+      ''.padStart(2) + getPriorityLabel(plan.priority) + ' `' + plan.effort + '` · ' +
       '**Score:** ' + String(m.overallScore).padStart(3) + '  \n' +
 
       ''.padStart(2) + ' → **unlocks:** ' + m.direct + '/' + m.transitive,
@@ -546,8 +546,9 @@ const main = async (): Promise<void> => {
     .forEach(plan => {
       const blockers = plan.dependencies
         .filter(dep => !COMPLETED.has(byId.get(dep)?.status ?? 'planned'))
-        .map(dep => `  - \`${dep}\``)
-      output.push(`- Plan \`${plan.file}\`  `)
+        .map(dep => plans.find(p => p.id === dep)?.file ?? dep)
+        .map(dep => `  - [\`${dep}\`](${dep})`)
+      output.push(`- [\`${plan.file}\`](${plan.file})  `)
       output.push('  is blocked by:')
       output.push(...blockers)
     })

@@ -1,4 +1,4 @@
-# Plan: Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie
+# Plan: Drzewo genealogiczne NPC
 
 **Status:** `planned` 📋
 **Type:** polish
