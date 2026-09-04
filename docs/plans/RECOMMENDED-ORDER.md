@@ -34,8 +34,7 @@
 
 ### Bug Fixes
 
-1. `world-010` — **Environmental Placement Consequences**  
-   🟡 `M` · ✅ ready · unlocks 0/0 · type: fix
+_No qualifying plans._
 
 ---
 
@@ -139,23 +138,19 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-17. `world-010` — **Environmental Placement Consequences**  
-  🟡 `M` · **Score:**  19  
-   → **unlocks:** 0/0
-
-18. `tools-000` — **Weapon Browser — Observatory/Admin**  
+17. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-19. `fauna-007` — **Animal leading and cart harness**  
+18. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-20. `npc-004` — **Drzewo genealogiczne NPC**  
+19. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-21. `tools-006` — **tools-006--world-observatory.md**  
+20. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -394,6 +389,5 @@ graph TD
   settlements_npcs_016 --> settlements_npcs_017
   tools_010 --> tools_011
   world_008 --> items_player_009
-  world_008 --> world_010
   world_terrain_004 --> world_terrain_005
 ```

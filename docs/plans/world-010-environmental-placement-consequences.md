@@ -1,7 +1,7 @@
 # Plan: Environmental Placement Consequences
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** `none`
 **Domain:** `world`
@@ -210,6 +210,16 @@ Dodać również test zabezpieczający przed przypadkowym użyciem terrain `WATE
 Jeżeli gameplay testing wykaże, że różne typy obiektów wymagają różnych clearance values, wspólny margin może zostać później rozszerzony do per-object configuration.
 
 Nie komplikować V1 bez potwierdzonej potrzeby gameplayowej.
+
+## Implementation status
+
+Implemented in `src/items/tentPlacement.ts`:
+
+- `WATER_MARGIN` (0.8) is unchanged and stays owned by `terrain/terrainPreparation.ts`.
+- New `PLACEMENT_WATER_MARGIN` (0.3) is used only by `evaluateGroundPlacement()`, so every player-placeable family sharing that validator gets the smaller clearance automatically.
+- The water check is now footprint-aware (`footprintTouchesWater`): it samples the centre plus 8 points around the object's `footprintRadius`, so a large footprint's edge can't rest in water even when its centre clears the margin.
+- Slope, peer separation and blocker checks are untouched.
+- `npx tsc --noEmit`, `pnpm run lint:fix` and the full `vitest` suite pass. Not yet browser/manual verified in-game.
 
 ## Repository / implementation notes
 

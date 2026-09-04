@@ -35,9 +35,20 @@ export type TentPlacementInput = Omit<
 }
 
 /** Exported for `terrain/terrainPreparation.ts`'s per-sample water rejection
- *  (plan `world-terrain-002`) — the same shoreline clearance every other
- *  ground placement already uses, not a second water-margin constant. */
+ *  (plan `world-terrain-002`) — terrain preparation's own shoreline
+ *  clearance. Player ground placement no longer uses this value directly;
+ *  see `PLACEMENT_WATER_MARGIN` (plan `world-010`). */
 export const WATER_MARGIN = 0.8
+/** Physical water clearance for player-placed ground objects (plan
+ *  `world-010`) — deliberately much smaller than terrain preparation's
+ *  `WATER_MARGIN`: just enough buffer that a footprint edge doesn't end up
+ *  wet, not a wide exclusion zone from the visual shoreline. Matches the
+ *  water-avoidance margin `ai/NpcAgent.ts`/`fauna/AnimalAgent.ts` already
+ *  use for the same kind of close-to-shore clearance. */
+export const PLACEMENT_WATER_MARGIN = 0.3
+/** How many points around a footprint's edge `footprintTouchesWater` samples,
+ *  in addition to its centre. */
+const FOOTPRINT_WATER_SAMPLES = 8
 const SLOPE_SAMPLE = 1.6
 const SLOPE_MAX_DELTA = 0.75 // .45 -> .75 after browser manual test
 const TENT_SEPARATION = TENT_FOOTPRINT_RADIUS * 2.2
@@ -57,12 +68,34 @@ function maxSlopeDelta(
   )
 }
 
+/** True when the centre or any of `FOOTPRINT_WATER_SAMPLES` points around a
+ *  `footprintRadius` circle sits at/below the placement shoreline clearance
+ *  — keeps a large object's edge from resting in water even when its centre
+ *  clears `PLACEMENT_WATER_MARGIN` (plan `world-010` §4). */
+function footprintTouchesWater(
+  x: number,
+  z: number,
+  footprintRadius: number,
+  sampleHeight: (x: number, z: number) => number,
+  waterLevel: number,
+): boolean {
+  const limit = waterLevel + PLACEMENT_WATER_MARGIN
+  if (sampleHeight(x, z) <= limit) return true
+  for (let i = 0; i < FOOTPRINT_WATER_SAMPLES; i++) {
+    const angle = (i / FOOTPRINT_WATER_SAMPLES) * Math.PI * 2
+    const ex = x + Math.cos(angle) * footprintRadius
+    const ez = z + Math.sin(angle) * footprintRadius
+    if (sampleHeight(ex, ez) <= limit) return true
+  }
+  return false
+}
+
 /** Suitability for setting a ground object down at (x, z). Pure — no Three.js.
  *  Shared by tents and animal traps (plan 141 §3 / issue 035): dry, flat enough,
  *  clear of props and of its own kind. Roads are allowed. */
 export function evaluateGroundPlacement(input: GroundPlacementInput): GroundPlacementReason {
   const { x, z, sampleHeight, waterLevel } = input
-  if (sampleHeight(x, z) <= waterLevel + WATER_MARGIN) return 'water'
+  if (footprintTouchesWater(x, z, input.footprintRadius, sampleHeight, waterLevel)) return 'water'
   if (maxSlopeDelta(x, z, sampleHeight) > SLOPE_MAX_DELTA) return 'slope'
   for (const peer of input.peers) {
     if (Math.hypot(peer.x - x, peer.z - z) < input.separation) return 'occupied'
