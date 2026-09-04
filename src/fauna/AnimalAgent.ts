@@ -770,6 +770,8 @@ export type MountPointConfig = {
   seatHeight: number
   /** Seat offset (m) along the animal's forward facing, + toward the head. */
   seatForwardOffset: number
+  walkSpeed: number
+  sprintSpeed: number
 }
 
 export type LivestockProductKind = 'egg' | 'milk'
@@ -919,13 +921,18 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // baseline clears `MOVE_SPEED`/`MOVE_SPEED * SPRINT_MULTIPLIER` (8/14.4)
     // on its own, independent of the player's Riding skill — see
     // `ridingSpeedMultiplier` in `PlayerSkills.ts`.
-    walkSpeed: 10.5,
-    sprintSpeed: 17.5,
+    walkSpeed: 2.6,
+    sprintSpeed: 6.0,
     detectRange: 0,
     fleeRange: 10,
     playerNoticeRange: 0,
     playerPanicRange: 0,
-    mount: { seatHeight: 0.5, seatForwardOffset: 0.05 },
+    mount: {
+      seatHeight: 0.28,
+      seatForwardOffset: -0.01,
+      walkSpeed: 10.5,
+      sprintSpeed: 17.5,
+    },
   },
   donkey: {
     kind: 'donkey',
@@ -936,13 +943,18 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     modelHeight: 1.15,
     // Plan fauna-008: the slowest rideable species — still raised above the
     // human baseline (see `horse` above) even though it stays under horse.
-    walkSpeed: 9.5,
-    sprintSpeed: 16.0,
+    walkSpeed: 2.4,
+    sprintSpeed: 5.4,
     detectRange: 0,
     fleeRange: 9,
     playerNoticeRange: 0,
     playerPanicRange: 0,
-    mount: { seatHeight: 0.3, seatForwardOffset: 0.02 },
+    mount: {
+      seatHeight: 0.3,
+      seatForwardOffset: 0.02,
+      walkSpeed: 9.0,
+      sprintSpeed: 15.5,
+    },
   },
   cow: {
     kind: 'cow',
@@ -1633,15 +1645,22 @@ export class AnimalAgent {
    *  (`walkSpeedNow()`/`sprintSpeedNow()` call sites elsewhere) is unaffected. */
   driveMounted(dt: number, wishX: number, wishZ: number, sprintRequested: boolean, speedMultiplier = 1): void {
     if (this.health.dead) return
+
     const distSq = wishX * wishX + wishZ * wishZ
     this.moving = distSq > 1e-6
     this.sprinting = this.moving && sprintRequested && !isExhausted(this.life.stamina)
+
     if (this.moving) {
       const dist = Math.sqrt(distSq)
       const dirX = wishX / dist
       const dirZ = wishZ / dist
       this.mesh.rotation.y = Math.atan2(dirX, dirZ)
-      const speed = (this.sprinting ? this.sprintSpeedNow() : this.walkSpeedNow()) * speedMultiplier
+
+      const mount = this.def.mount
+      if (!mount) return
+
+      const speed = (this.sprinting ? mount.sprintSpeed : mount.walkSpeed) * speedMultiplier
+
       const result = stepWithSlopeAndCollision({
         x: this.mesh.position.x,
         z: this.mesh.position.z,
@@ -1655,9 +1674,11 @@ export class AnimalAgent {
       this.mesh.position.x = result.x
       this.mesh.position.z = result.z
     }
+
     this.snapY()
     this.updateAnim()
     tickAnimalLife(this.life, dt, this.sprinting)
+
     this.lastHpPercent = applyBarPercent(
       this.hpFillEl,
       computeBarPercent(this.health.currentHp, this.health.maxHp),

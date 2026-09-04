@@ -22,16 +22,16 @@ describe('rideable species vs. human speed invariant', () => {
   it('every rideable species walk/sprint baseline beats the human, even at minimum Riding', () => {
     const minMultiplier = ridingSpeedMultiplier(SKILL_MIN_VALUE)
     for (const def of RIDEABLE_KINDS) {
-      expect(def.walkSpeed * minMultiplier).toBeGreaterThan(HUMAN_WALK_SPEED)
-      expect(def.sprintSpeed * minMultiplier).toBeGreaterThan(HUMAN_SPRINT_SPEED)
+      expect(def.mount!.walkSpeed * minMultiplier).toBeGreaterThan(HUMAN_WALK_SPEED)
+      expect(def.mount!.sprintSpeed * minMultiplier).toBeGreaterThan(HUMAN_SPRINT_SPEED)
     }
   })
 
   it('the slowest rideable species (donkey) still clears both thresholds', () => {
     const donkey = ANIMAL_DEFS.donkey
     const minMultiplier = ridingSpeedMultiplier(SKILL_MIN_VALUE)
-    expect(donkey.walkSpeed * minMultiplier).toBeGreaterThan(HUMAN_WALK_SPEED)
-    expect(donkey.sprintSpeed * minMultiplier).toBeGreaterThan(HUMAN_SPRINT_SPEED)
+    expect(donkey.mount!.walkSpeed * minMultiplier).toBeGreaterThan(HUMAN_WALK_SPEED)
+    expect(donkey.mount!.sprintSpeed * minMultiplier).toBeGreaterThan(HUMAN_SPRINT_SPEED)
   })
 
   it('the invariant only strengthens as Riding skill increases (multiplier is >= 1)', () => {
