@@ -122,6 +122,8 @@ If the required resources are unavailable locally, this becomes a logistics prob
 
 Solve movement of resources between distant production sites and the settlement.
 
+Detailed architectural direction: [`physical-goods-transport.md`](./physical-goods-transport.md).
+
 Example:
 
 ```text
