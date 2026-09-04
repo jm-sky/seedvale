@@ -393,10 +393,10 @@ Compare representative performance counters before/after and tune density/asset 
 
 ## Implementation Notes
 
-Create:
-
-`docs/plans/implementation-notes/world-terrain-010-waterways-and-vegetation-implementation-notes.md`
+Use: `docs/plans/implementation-notes/world-terrain-010-waterways-and-vegetation-implementation-notes.md`
 
 Record implementation-relevant findings from the current codebase, especially canonical river-data ownership, cross-chunk continuity, vegetation placement/batching integration points, performance constraints and asset/template reuse. Do not duplicate this plan.
+
+Check also: `public/models/parked/README.md` for parked models (lily)
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

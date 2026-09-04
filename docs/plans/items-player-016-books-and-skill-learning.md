@@ -34,6 +34,8 @@ Nie tworzyć globalnego `KnowledgeManager`, osobnego `BookInventory` ani równol
 
 ## Istniejąca architektura do zachowania
 
+Check also: `public/models/parked/README.md` for parked models (`public/models/parked/books`)
+
 ### PlayerSkills
 
 Istniejące umiejętności gracza:

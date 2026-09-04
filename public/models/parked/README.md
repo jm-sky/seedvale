@@ -42,3 +42,8 @@ pet/companion-animal system exists; nearest neighbor is wild `fox`/`wolf`
 fauna, not a tameable companion. Left in `fauna/` (matches the folder's
 existing convention of holding parked species, e.g. `chicken.glb` per M07)
 pending a future companion-animal concept.
+
+## New
+
+- `Lilypad-01.glb`
+- `public/models/parked/books` - books

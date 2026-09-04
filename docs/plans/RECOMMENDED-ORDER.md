@@ -40,7 +40,9 @@ _No qualifying plans._
 
 ### Polish
 
-1. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `world-terrain-010` — **Waterways and Vegetation**  
+   🟡 `M` · ✅ ready · unlocks 0/0
+2. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -114,67 +116,79 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-11. `items-player-014` — **Rope-pullable resource transport**  
+11. `world-013` — **World Location Catalog performance optimization**  
+  🔴 `M` · **Score:**  29  
+   → **unlocks:** 0/0
+
+12. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` — **Seedvale Character Preparation Panel**  
+14. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `npc-002` — **NPC Healing**  
+15. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-15. `npc-011` — **NPC Burial & Graves**  
+16. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `fauna-012` — **Animal threat perception and vocalization responses**  
+18. `fauna-012` — **Animal threat perception and vocalization responses**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `fauna-013` — **Animal hand-feeding and human affinity**  
+19. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+21. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-007` — **Bandages and herbal medicine**  
+22. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `tools-000` — **Weapon Browser — Observatory/Admin**  
+23. `items-player-016` — **Books and Skill Learning**  
+  🟡 `M` · **Score:**  19  
+   → **unlocks:** 0/0
+
+24. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-23. `fauna-007` — **Animal leading and cart harness**  
+25. `world-terrain-010` — **Waterways and Vegetation**  
+  🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+26. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-24. `world-terrain-008` — **Underground Caves V2**  
+27. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-25. `npc-004` — **Drzewo genealogiczne NPC**  
+28. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-26. `tools-006` — **tools-006--world-observatory.md**  
+29. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -263,6 +277,7 @@ graph TD
   items_player_013["items-player-013 — Player-Built Sleeping Utilities"]
   items_player_014["items-player-014 — Rope-pullable resource transport"]
   items_player_015["items-player-015 — Firewood, Wood Piles and Scalable Fire"]
+  items_player_016["items-player-016 — Books and Skill Learning"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -337,6 +352,7 @@ graph TD
   world_010["world-010 — Environmental Placement Consequences"]
   world_011["world-011 — Water Types and Drinking"]
   world_012["world-012 — World Locations, Discovery and Map Navigation"]
+  world_013["world-013 — World Location Catalog performance optimization"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -346,6 +362,7 @@ graph TD
   world_terrain_007["world-terrain-007 — Underground Caves"]
   world_terrain_008["world-terrain-008 — Underground Caves V2"]
   world_terrain_009["world-terrain-009 — Seasonal ground and grass appearance"]
+  world_terrain_010["world-terrain-010 — Waterways and Vegetation"]
   008 --> items_player_010
   014 --> fauna_007
   040 --> npc_012
@@ -443,5 +460,7 @@ graph TD
   tools_010 --> tools_011
   tools_011 --> tools_012
   world_008 --> items_player_009
+  world_012 --> items_player_016
+  world_012 --> world_013
   world_terrain_004 --> world_terrain_005
 ```
