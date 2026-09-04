@@ -3,8 +3,8 @@
 **Created:** 2026-08-14  
 **Status:** `in progress` 🔄  
 **Type:** feature  
-**Priority:** high · **Effort:** L  
-**Depends on:** ~~097~~ ~~125~~
+**Priority:** low · **Effort:** L  
+**Depends on:** ~~097~~ ~~125~~  
 **Domain:** `world-terrain`
 
 > Check: `docs/plans/implementation-notes/world-terrain-007-underground-caves-implementation-notes.md`
@@ -12,117 +12,45 @@
 
 ## Implementation status (2026-09-03)
 
-**Implemented + technically verified** (`npx tsc --noEmit`, `npm run lint`,
-`npm run build`, `npm run test` all pass): Faza 0-3 — `CaveDefinition`/
-`CaveVolume` domain + generator (§4-5, `caveVolume.ts`/`caveGenerator.ts`),
-`WorldBundle` lifecycle (`caves: Caves` replaces `largeCaves`, §3/§6,
-`createCaves.ts`), streamed procedural interior presentation + mouth rock
-framing reuse (§7, `caveMesh.ts`), player floor/ceiling/collision
-integration (§8, `PlayerController.ts`/`verticalMotion.ts`), and cave-wall
-collision via the existing `ColliderRegistry` extended with an optional
-vertical envelope (`collision.ts`'s `minY`/`maxY`, `caveColliders.ts`).
-`largeCaves.ts`/`largeCaveVisual.ts` are kept and reused (site placement,
-mouth rock framing); `createLargeCaves.ts` (trench-carve + immediate
-visual) is removed, fully superseded.
+**Implemented + technically verified:** Faza 0-3 — `CaveDefinition`/`CaveVolume` domain + generator, `WorldBundle` lifecycle, streamed procedural interior presentation, mouth rock framing reuse, player floor/ceiling/collision integration, and cave-wall collision via the existing `ColliderRegistry` with optional vertical envelope (`minY`/`maxY`).
 
-**Not implemented** — Faza 4 (§9): fauna/loot/persistence integration.
-Deliberately deferred rather than rushed — see rationale below. Not a
-silent gap: nothing in Faza 0-3 depends on it, and the plan's own
-acceptance list (§12) items 1-11 (generator density, entrance placement,
-surface continuity, movement, collision, lighting) are all addressed by
-this pass; items 12-13 (cave fauna/loot) are not.
+**Not implemented:** Faza 4 — fauna/loot/persistence integration. This remains deferred until the cave spatial model is gameplay-ready.
 
-**Browser/gameplay-verified:** not yet — pending manual verification
-(items §12.1-11) per the task's workflow.
+**Browser/gameplay-verified:** not yet.
 
 ### Regression fix (2026-09-03) — cave interior sat one mouth-depth too high
 
-Reported after the first pass: two overlapping ground surfaces on a slope
-(grass + a bare, rock-coloured one), the player able to walk "under" the
-terrain with the head still poking above it.
+The first implementation started the cave graph at raw surface height while `createCaves.ts` carved a `MOUTH_DEPTH` recess. The leading tunnel therefore intersected the surface. The overburden check also skipped the leading 35% of the tunnel, so it could not catch this failure.
 
-Root cause: `caveGenerator.ts` started the whole graph at the *raw* surface
-height at the site (`sampleHeight(site.x, site.z)`), while `createCaves.ts`
-carves a `MOUTH_DEPTH` (2.4 m) recess there. The interior therefore sat 2.4 m
-too high: the first metres of the tunnel arch (2.6 m tall) stood *above* the
-terrain — the second, rock-coloured "surface" — and the cave's vertical
-envelope kept overlapping the surface several metres past the mouth, so
-`Caves.contains()` classified a player merely walking over the tunnel as being
-inside it and switched their ground to the cave floor under the (uncarved)
-terrain. The overburden check could not catch this: it deliberately skipped the
-leading 35% of the tunnel, which is exactly where the geometry broke through.
+The fix starts the interior at the carved recess floor and keeps a positive `MOUTH_ROOF_MIN` roof in the leading section. Regression coverage was added to `caveGenerator.test.ts`.
 
-Fix (both in `caveGenerator.ts`): the interior starts at the carved recess
-floor (`CAVE_MOUTH_DEPTH`, now the single constant `createCaves.ts` carves
-with), and the previously exempt leading section is held to a thin but positive
-`MOUTH_ROOF_MIN` roof instead of being unchecked. Measured over 40 seeds
-(analytic `sampleHeightAt`): no tunnel roof above the surface past the carved
-mouth (min roof 0.42 m, was −2.35 m), surface-capture area beyond the mouth
-down from ~4 m² per cave to ~0.06 m², and accepted caves up from ~0.1 to ~2 per
-world. Regression tests: `caveGenerator.test.ts`.
+### Divergences from implementation notes/contract
 
-### Divergences from the implementation notes/contract (code was authoritative)
+- The contract's `sampleHeight`/`sampleFloor` assumption was incorrect: `sampleFloor` is the underwater seabed sampler. A dedicated `CaveGroundQuery` seam was therefore added for `PlayerController`.
+- The shared `ColliderRegistry` originally had no vertical extent. Cave colliders gained optional `minY`/`maxY` and `colliderActiveAtY()` so cave walls do not leak onto the surface above a tunnel. `PlayerController` uses this filtering; fauna integration remains deferred.
 
-- The contract's §13/§40 claim that `PlayerController` "already separates
-  `sampleHeight`/`sampleFloor`" and that seam could be reused directly for
-  cave floor turned out to be wrong: `sampleFloor` is the underwater seabed
-  sampler (swim depth), not a general surface/floor split. A new
-  `CaveGroundQuery` seam was added instead (disambiguated by the entity's
-  own current Y, per contract §14), used only by `PlayerController` for now.
-- The shared `ColliderRegistry` (`collision.ts`) is XZ-only with no
-  vertical extent. Registering cave-wall colliders unmodified would have
-  let them leak onto a surface entity standing above a tunnel. `Collider`
-  gained an optional `minY`/`maxY` (default: active at every Y, matching
-  every pre-existing collider unchanged) plus `colliderActiveAtY()`;
-  `PlayerController` filters by it before `resolvePosition`. `AnimalAgent`/
-  `NpcAgent` do not filter yet — harmless today (no cave-bound fauna), and
-  the same reason Faza 4 fauna integration is deferred rather than bolted
-  on against a wall model that hasn't been used by a second consumer yet.
+### Why Faza 4 is deferred
 
-### Why Faza 4 was deferred instead of implemented under time pressure
+The existing `cave`/`wolfDen` habitat-spawner concept in `fauna/createFauna.ts` is a different, surface-oriented mechanism. Rebinding it to real `CaveDefinition`s is a separate integration task. Persistence likewise has no useful cave-specific state consumer until fauna/loot/progression exists.
 
-- The plan's own fauna/loot/persistence boundary (§9-10, contract §29/§36)
-  requires integrating with `PreySpawner`/`AnimalAgent`'s existing
-  cave/wolfDen habitat-spawner concept in `fauna/createFauna.ts` — which,
-  on inspection, is a *different*, pre-existing, surface-only mechanism
-  (decorative mouth prop near a settlement, animals spawn at surface
-  `sampleHeight`) unrelated to `largeCaves.ts`'s world-scattered walk-in
-  caves this plan targets. Rebinding it to real cave volumes is a
-  meaningfully separate change with its own risk (three-thousand-line
-  `AnimalAgent.ts`), not a small extension of what Faza 0-3 built.
-  Persistence (§14, sparse discovered/cleared/looted state) has no
-  consumer yet without Faza 4 fauna/loot, so there's nothing concrete to
-  persist yet either.
-- Recorded here rather than silently expanding scope or rushing a
-  half-verified fauna change into this pass, per the repo's "no
-  half-finished implementations" / "smallest correct change" rules.
-
-### Suggested follow-up
-
-A separate plan (or a Faza 4 continuation of this one) should: (1) decide
-whether the existing `cave`/`wolfDen` habitat-spawner concept in
-`fauna/createFauna.ts` should be repointed at real `CaveDefinition`s from
-this plan, or kept as its own (renamed) surface-only concept to avoid the
-naming collision; (2) extend `AnimalAgent`'s ground/collision queries with the
-same `CaveGroundQuery`/`colliderActiveAtY` seams added here; (3) add the sparse
-persistence fields once there's actual state to persist.
+---
 
 ## 1. Cel
 
 Wprowadzić deterministyczny system podziemnych jaskiń jako rzeczywistych, walk-in przestrzeni świata, z wejściami w zboczach, własnym floor/ceiling, kolizją, streamingiem i docelową integracją z fauną, lootem, questami i persistence.
 
-Jaskinia nie jest osobnym światem ani drugim systemem terenu. Jest częścią tego samego świata i ma korzystać z istniejących mechanizmów tam, gdzie są odpowiednie.
+Jaskinia jest częścią tego samego świata, a nie osobnym światem ani drugim systemem terenu.
 
 ### Zasady
 
 - świat pozostaje niezależny od gracza;
-- layout jaskiń jest deterministyczny z seeda;
-- `CaveDefinition` nie zależy od Three.js, ChunkManagera, save ani runtime entities;
-- runtime caves mają ten sam lifecycle co `WorldBundle`;
-- nie tworzyć równoległego systemu collision, fauna, persistence ani inventory;
+- layout jest deterministyczny z seeda;
+- `CaveDefinition` nie zależy od Three.js, save ani runtime entities;
+- cave runtime ma lifecycle `WorldBundle`;
+- nie tworzyć równoległego collision/fauna/persistence/inventory systemu;
 - surface nad jaskinią pozostaje surface — samo `x/z` nie przenosi encji pod ziemię;
-- cave presentation jest streamowana, a nie bezwarunkowo tworzona dla całego świata;
-- geometry, mesh i runtime state są pochodnymi danych świata i nie są zapisywane jako save state.
+- presentation jest streamowana;
+- geometry, mesh i runtime state są pochodne danych świata.
 
 ---
 
@@ -140,11 +68,11 @@ CaveDefinition
   ├─ bounds
   └─ gameplay metadata
         ↓
-CaveRuntime / cave subsystem
-  ├─ streamed visual representation
+CaveRuntime
+  ├─ streamed presentation
   ├─ cave collision
   ├─ cave floor queries
-  └─ cave integrations
+  └─ integrations
         ↓
 existing world systems
   ├─ ChunkManager / terrain
@@ -154,95 +82,95 @@ existing world systems
   └─ SaveData
 ```
 
-`CaveDefinition` jest czystą definicją przestrzeni. Nie posiada sceny, meshów, colliderów ani referencji do runtime entities.
-
-`CaveRuntime` zarządza tylko runtime/lifecycle potrzebnym do prezentacji i integracji aktualnie istotnych caves.
+`CaveDefinition` pozostaje czystą definicją przestrzeni. Nie posiada sceny, meshów, colliderów ani runtime entities.
 
 ---
 
 ## 3. Stan istniejącego kodu i migracja
 
-Obecny `createLargeCaves()` jest world-scale mechanizmem tworzonym z `createWorldBundle()`. Wybiera `LargeCaveSite`, modyfikuje terrain przez `ChunkManager.modifyTerrain()` i od razu tworzy wizualizację. To rozwiązanie należy zastąpić nowym subsystemem, a nie utrzymywać równolegle.
-
-`WorldBundle` jest właścicielem lifecycle systemów świata. Cave subsystem musi być tworzony, dispose'owany i odbudowywany razem z bundle:
+Cave subsystem zastępuje dawne `createLargeCaves()` jako mechanizm walk-in underground. `WorldBundle` jest właścicielem lifecycle:
 
 ```text
-createWorldBundle()
-  → create caves
-
-rebuildWorldBundle()
-  → dispose old caves
-  → create new caves
-
-disposeWorldBundle()
-  → dispose caves
+createWorldBundle() → create caves
+rebuildWorldBundle() → dispose old caves → create new caves
+disposeWorldBundle() → dispose caves
 ```
 
-Nie wolno przechowywać starego `ChunkManager`, starego `WorldContext` ani starych runtime references po rebuildzie.
-
-Docelowo:
-
-- `largeCaves` zostaje zastąpione przez `caves`;
-- `largeCaves.ts`, `createLargeCaves.ts` i `largeCaveVisual.ts` są usuwane lub redukowane do zgodnych helperów tylko wtedy, gdy nadal są potrzebne;
-- nie pozostawiać dwóch niezależnych mechanizmów jaskiń.
+Nie pozostawiać dwóch niezależnych mechanizmów jaskiń ani starych runtime references po rebuildzie.
 
 ---
 
 ## 4. Cave identity i deterministyczny generator
 
-Każda jaskinia musi mieć stabilne `caveId`, wynikające deterministycznie z seeda i world/grid coordinate. Nie używać indeksu w tablicy jako tożsamości.
+Każda jaskinia ma stabilne `caveId` wynikające z seeda i world/grid coordinate.
 
-Generator powinien działać w większej siatce world-scale, niezależnej od gridu chunków. Kandydaci są odrzucani m.in. na podstawie:
+Kandydaci są filtrowani m.in. przez wodę/coast, wysokość i nadkład, nachylenie/mountain ridge, settlement footprint, road corridors oraz istniejące world samplers.
 
-- wody / coast;
-- wysokości i nadkładu;
-- mountain ridge / nachylenia;
-- settlement footprint;
-- road corridors;
-- innych istniejących world samplers dostępnych przez `ChunkManager`.
-
-V1 generatora:
+V1:
 
 ```text
-entrance → tunnel → 1–2 chambers → dead end / small branch
+large cliff-side entrance
+        ↓
+wide transition
+        ↓
+walk-in tunnel
+        ↓
+large chamber
+        ↓
+branch / continuation / dead end
 ```
 
-Model danych powinien jednak umożliwiać późniejsze junctions, większe branching i różne typy caves bez zmiany podstawowego kontraktu.
+Nie projektować pełnego proceduralnego dungeon generatora.
 
-### Ważne
+### Krytyczna zasada wysokości tunelu
 
-Nie projektować pełnego proceduralnego systemu dungeonów. Najpierw stabilna przestrzeń walk-in i deterministyczne placement.
+**Jaskinia powinna po wejściu stopniowo schodzić w dół.** Nie chodzi o gwałtowne zejście ani schody. Floor powinien mieć łagodny, naturalny gradient w dół przez początkowy odcinek tunelu.
+
+To zwiększa nadkład: wraz z oddalaniem się od wejścia floor znajduje się coraz niżej względem surface, więc późniejsze przebicie ceiling przez powierzchnię staje się mniej prawdopodobne.
+
+Generator musi kontrolować relację:
+
+```text
+surface height
+      ↓
+entrance floor
+      ↓  gentle descent
+lower tunnel floor
+      ↓
+large chamber floor
+```
+
+Nie wystarczy średni `overburden`, endpoint check ani globalna wartość głębokości. Dla całej długości tunelu należy sprawdzać lokalny minimalny nadkład między ceiling a odpowiadającą mu surface height.
+
+Początkowy odcinek jest wyjątkiem tylko w zakresie potrzebnym do połączenia z wycięciem wejścia. Dalej roof musi mieć dodatni, bezpieczny margines.
 
 ---
 
 ## 5. Faza 0 — generator spike
 
-Przed implementacją wizualizacji przygotować tani spike/statystyki generatora.
-
-Sprawdzać co najmniej:
+Przed ciężką prezentacją sprawdzać na kilku seedach:
 
 ```text
 candidate cells
-mountain candidates
+mountain / cliff candidates
 lowland candidates
 accepted after overburden
 accepted after water/coast
 accepted after settlement exclusion
 accepted after road exclusion
 mean nearest-cave distance
+entrance slope / cliff suitability
+minimum roof thickness along every tunnel sample
+initial tunnel descent
 ```
 
-Spike powinien działać na kilku seedach i pozwolić skalibrować gęstość bez tworzenia meshów.
-
-V1 ma preferować wejścia w zboczach. Nie generować wejścia jako zwykłej dziury na płaskiej łące.
+Spike ma pozwolić skalibrować gęstość i geometrię bez tworzenia meshów.
 
 ---
 
 ## 6. Faza 1 — CaveDefinition + WorldBundle lifecycle
 
-Wprowadzić czyste typy definicji jaskini i generator.
-
-Minimalny kontrakt powinien umożliwiać:
+Minimalny kontrakt:
 
 ```ts
 caveId
@@ -253,37 +181,28 @@ sampleFloor(x, z)
 contains(x, y, z)
 ```
 
-`sampleFloor()` i `contains()` dotyczą przestrzeni jaskini, a nie surface heightmap.
-
-Wpiąć subsystem w `WorldBundle` zgodnie z istniejącym lifecycle.
-
-Nie tworzyć `CaveChunkManager`.
+`sampleFloor()` i `contains()` dotyczą przestrzeni jaskini, nie surface heightmap. Nie tworzyć `CaveChunkManager`.
 
 ---
 
 ## 7. Faza 2 — Cave presentation i streaming
 
-Zastąpić obecne terrain-carving-only podejście rzeczywistą przestrzenią underground.
-
 ### Surface
 
-Surface terrain pozostaje ciągły nad tunelem. Poza wejściem jaskinia nie może być wycinana z heightmapy w sposób tworzący widoczną dziurę.
+Surface pozostaje ciągły nad tunelem. Poza wejściem nie tworzyć widocznej dziury w heightmapie. Wejście jest normalnym połączeniem surface ↔ cave.
 
-```text
-surface heightmap
-────────────────────────
-       █████████
-       █  cave  █
-       █████████
-```
+### Entrance
 
-Wejście jest jedynym normalnym połączeniem surface ↔ cave.
+Wejście ma być:
+
+- szerokie i wysokie;
+- umieszczone w przybliżeniu pionowej ścianie skalnej / cliffie;
+- osadzone w lokalnej depresji terenu;
+- połączone z szerokim transition zamiast małego otworu w ziemi.
+
+Nie akceptować wejść wyglądających jak dziura w płaskiej łące.
 
 ### Streaming
-
-Deterministyczne metadata caves mogą istnieć globalnie, ale ciężka prezentacja powinna być tworzona tylko dla caves wymagających runtime.
-
-Nie wykonywać globalnego skanu wszystkich caves co frame. Wykorzystać world/grid indexing:
 
 ```text
 player position
@@ -293,51 +212,40 @@ player position
   → activate/deactivate presentation
 ```
 
+Nie skanować wszystkich caves co frame.
+
 ### Wizualizacja
 
-- proceduralny mesh wnętrza;
-- mouth może reuse istniejących rock assets;
+- proceduralny mesh interioru;
+- reuse istniejących rock assets przy mouth;
+- własny floor i ceiling;
 - brak nowego GLB dla całego interioru;
-- surface vegetation przy wejściu musi być kompatybilna z nową geometrią;
-- wnętrze powinno mieć własny floor i ceiling.
+- surface vegetation kompatybilna z nową geometrią.
 
 ---
 
-## 8. Faza 3 — Movement, ground i collision
+## 8. Faza 3 — Movement, ground, collision i camera
 
-Player movement musi rozróżniać surface i cave.
+Player movement rozróżnia surface i cave:
 
 ```text
 surface → existing sampleHeight
 cave    → CaveVolume.sampleFloor
 ```
 
-Samo `x/z` nad jaskinią nie wystarcza do zmiany ground provider. Encja znajdująca się na powierzchni nad tunelem nadal korzysta z surface.
+Samo `x/z` nie może przełączać encji z surface na cave.
 
 ### Collision
 
-Rozszerzyć istniejący `world/collision.ts`. Nie tworzyć drugiego collision registry.
+Rozszerzać istniejący `world/collision.ts`, bez drugiego collision registry.
 
-Obecny collider jest prostym obiektem indeksowanym spatialnie według pozycji/radius. Długie lub wieloczęściowe cave constraints nie mogą być naiwnie reprezentowane jednym punktem środka, jeśli przez to zapytanie ominie część bounds.
+Cave collision musi blokować ściany, umożliwiać ruch wewnątrz, respektować cały cave bounds, używać stabilnego `ownerKey` i respektować pionowy envelope (`minY`/`maxY`). Nie wymagać mesh/BVH jako podstawowego movement collision.
 
-Implementacja musi:
+### Camera
 
-- blokować wyjście przez ściany;
-- umożliwiać ruch wewnątrz cave;
-- poprawnie obsługiwać cały bounds constraint;
-- mieć stabilny `ownerKey`;
-- nie wymagać mesh/BVH jako podstawowego movement collision;
-- pozostawać zgodna z istniejącym collision query/index.
+Obecna cave-aware integracja PlayerController nie gwarantuje poprawnej trzecioosobowej kamery. Geometria musi zapewniać realny clearance dla gracza **i kamery**, a istniejący camera obstruction/boom mechanism należy rozszerzyć tam, gdzie to konieczne.
 
-Dokładny prymityw (`InteriorCapsule`, segmenty, bounds query lub inne rozwiązanie) pozostaje decyzją implementacji, o ile spełnia powyższy kontrakt.
-
-### Acceptance
-
-- wejście w zbocze działa;
-- ściany blokują ruch;
-- gracz nie przebija ceiling;
-- kamera nie może wyjść nad surface;
-- surface nad cave pozostaje nieprzechodnim sufitem od strony wnętrza poza wejściem.
+Kamera nie może przebić ściany/ceiling, wyjść nad surface, pokazać surface grass/terrain z wnętrza ani nienaturalnie skracać dystansu w normalnym szerokim tunelu. Poza cave zachowanie kamery pozostaje bez zmian.
 
 ---
 
@@ -345,54 +253,15 @@ Dokładny prymityw (`InteriorCapsule`, segmenty, bounds query lub inne rozwiąza
 
 ### Fauna
 
-Reuse istniejącego `PreySpawner` / `AnimalAgent` i spawn-point lifecycle.
-
-Cave nie dostaje własnego fauna managera ani własnego lifecycle.
-
-Istniejące pojęcia pozostają właścicielem stanu:
-
-```text
-PreySpawner
-  id
-  type = wolfDen
-  lifecycle
-  saved state
-
-AnimalAgent
-  runtime animal
-
-CaveVolume
-  physical space / floor query
-```
-
-Istniejący stabilny `wolfDen` identity/quest contract pozostaje używany.
-
-Cave-bound animals muszą korzystać z cave floor/nav danych zamiast surface `sampleHeight`.
+Reuse `PreySpawner` / `AnimalAgent` i istniejącego lifecycle. Cave-bound animals muszą korzystać z cave floor/nav danych, nie surface `sampleHeight`. Nie tworzyć cave-specific fauna managera.
 
 ### Loot
 
-Reuse istniejących `ItemKind`, `ItemInstance` i mechanizmów persistence. Nie tworzyć cave-specific inventory.
-
-Jeżeli loot wymaga kontenera, można zintegrować istniejący/przyszły container mechanism, ale nie robić z niego dependency Planu 104.
+Reuse `ItemKind`, `ItemInstance` i istniejące mechanizmy persistence. Nie tworzyć cave-specific inventory.
 
 ### Persistence
 
-Rozszerzać aktualny `SaveData` i jego migracje, a nie tworzyć osobny cave save.
-
-Zapisywać tylko stan, którego nie da się odtworzyć z seeda, np.:
-
-- odkrycie / progres cave;
-- cleared/looted state, jeśli gameplay tego wymaga;
-- niederywowalne item instances;
-- istniejący spawn-point lifecycle.
-
-Nie zapisywać:
-
-- proceduralnego layoutu;
-- meshów;
-- colliderów;
-- stream state;
-- runtime animal state.
+Rozszerzać `SaveData`, zapisując tylko niederywowalny stan, np. discovery/progress/cleared/looted state i wymagane item instances. Nie zapisywać layoutu, meshów, colliderów ani stream state.
 
 ---
 
@@ -405,31 +274,29 @@ Nie zapisywać:
 | cave placement inputs | istniejące world samplers / `ChunkManager` |
 | collision | `world/collision.ts` |
 | fauna lifecycle | `PreySpawner` / `AnimalAgent` |
-| spawn persistence | istniejący `SaveData` spawn-point state |
+| spawn persistence | istniejący `SaveData` |
 | item identity/state | `ItemKind` / `ItemInstance` |
 | world lifecycle | `WorldBundle` |
 | streaming | istniejący world/chunk lifecycle |
 
-**Nie tworzyć równoległego mechanizmu dla żadnej pozycji z tej tabeli.**
+Nie tworzyć równoległych mechanizmów dla tych odpowiedzialności.
 
 ---
 
 ## 11. Assety
 
-- mesh interioru: proceduralny;
-- mouth: reuse istniejących rock assets;
-- fauna: istniejące gatunki, bez nowego niedźwiedzia w tym planie;
+- interior: proceduralny;
+- mouth: istniejące rock assets;
+- fauna: istniejące gatunki;
 - loot: istniejące itemy;
-- SFX: opcjonalne, nie blocker v1;
-- nie dodawać wpisów do MODELS/SOUNDS bez faktycznie nowych assetów.
+- SFX: opcjonalne;
+- bez nowych asset registry entries bez faktycznie nowych assetów.
 
 ---
 
 ## 12. Weryfikacja
 
 ### Techniczna
-
-Po odpowiednich fazach:
 
 ```text
 npx tsc --noEmit
@@ -441,35 +308,45 @@ npm run test
 ### Browser / manual
 
 1. Generator daje wiarygodną gęstość na kilku seedach.
-2. Wejścia znajdują się na zboczach, nie jako dziury na łąkach.
-3. Przejście nad cave nie pokazuje dziury ani wnętrza.
-4. Surface vegetation nad tunelem pozostaje surface vegetation.
-5. Wejście działa jako surface ↔ cave transition.
-6. 20–30 m pod dachem potrzebne jest światło/pochodnia.
-7. Dzień za wejściem nie oświetla całej sali.
-8. Kolizja ścian działa.
-9. Gracz nie przebija ceiling ani nie wychodzi nad teren.
-10. Save/reload daje identyczną geometrię z seeda.
-11. Rebuild world nie pozostawia starego cave runtime.
-12. Cave fauna porusza się po cave floor, a fauna surface nad tunelem pozostaje na surface.
-13. Loot/progres przetrwa save/reload zgodnie z wymaganym stanem.
-14. Duża cave może zawierać branch/chamber bez specjalnego systemu dungeonów.
+2. Wejścia są na stromych zboczach / cliffach, nie na płaskich łąkach.
+3. Wejście jest wystarczająco szerokie i wysokie dla third-person gameplay.
+4. Przejście nad cave nie pokazuje dziury ani wnętrza.
+5. Surface vegetation nad tunelem pozostaje surface vegetation.
+6. Wejście działa jako surface ↔ cave transition.
+7. Tunnel po wejściu stopniowo schodzi w dół.
+8. Floor nie ma gwałtownych spadków utrudniających ruch.
+9. Cave ceiling zachowuje bezpieczny nadkład względem surface na całej długości tunelu.
+10. 20–30 m pod dachem potrzebne jest światło/pochodnia.
+11. Dzień za wejściem nie oświetla całej sali.
+12. Kolizja ścian działa.
+13. Gracz nie przebija ceiling ani nie wychodzi nad teren.
+14. Kamera pozostaje wewnątrz cave podczas normalnego third-person movement.
+15. Surface grass/terrain nie jest widoczne z wnętrza przez camera escape.
+16. Tunel nie wygląda jak zestaw połączonych rur.
+17. Nie są widoczne oczywiste seams między segmentami.
+18. Walls/ceiling/floor mają kontrolowaną nieregularność.
+19. Micro bumps są rzędu ~`0.5 × 0.5 × 0.5` m.
+20. Większe wall/ceiling bumps są rzędu ~`2 × 2 × 1` m, gdzie trzeci wymiar oznacza głębokość protrusion.
+21. Chambers są wyraźnie większe od corridorów.
+22. Kamera ma wystarczający clearance w całej generowanej przestrzeni.
+23. Zachowanie surface camera pozostaje bez zmian poza cave.
+24. Save/reload daje identyczną geometrię z seeda.
+25. Rebuild world nie pozostawia starego cave runtime.
+26. Cave fauna porusza się po cave floor, a fauna surface nad tunelem pozostaje na surface.
+27. Loot/progres przetrwa save/reload zgodnie z wymaganym stanem.
+28. Duża cave może zawierać branch/chamber bez specjalnego systemu dungeonów.
 
-Rozdzielać statusy:
-
-- implemented;
-- technically verified;
-- browser-verified.
+Statusy rozdzielać na implemented / technically verified / browser-verified.
 
 ---
 
 ## 13. Zakres poza planem
 
-Nie włączać do tego planu:
+Nie włączać:
 
 - pełnego dungeon generatora;
 - multiplayer synchronization;
-- nowego systemu inventory/container;
+- nowego inventory/container system;
 - nowego fauna lifecycle;
 - nowego persistence framework;
 - nowego collision engine;
@@ -479,173 +356,120 @@ Nie włączać do tego planu:
 
 ## 14. Pliki
 
-### Główne nowe / zmieniane
+### Główne
 
 - `src/world/caveVolume.ts`
 - `src/world/caveGenerator.ts`
 - `src/world/caveMesh.ts`
 - `src/world/createCaves.ts`
 - `src/app/worldBundle.ts`
-- `src/terrain/chunkManager.ts` — tylko jeśli wymagane do integracji/queries/streamingu
-- `src/world/collision.ts` — rozszerzenie istniejącego mechanizmu
+- `src/terrain/chunkManager.ts` — tylko jeśli wymagane
+- `src/world/collision.ts`
 - `src/player/PlayerController.ts`
-- `src/fauna/AnimalAgent.ts` / `src/fauna/createFauna.ts` — cave floor/nav integration
-- `src/persistence/saveData.ts` — tylko wymagane rozszerzenie istniejącego schematu/migracji
+- `src/fauna/AnimalAgent.ts` / `src/fauna/createFauna.ts` — Faza 4
+- `src/persistence/saveData.ts` — Faza 4
 
 ### Testy
 
 - `src/world/caveVolume.test.ts`
 - `src/world/caveGenerator.test.ts`
-- dodatkowe testy istniejących systemów tylko tam, gdzie kontrakt caves je rozszerza.
+- dodatkowe testy tylko tam, gdzie kontrakt caves rozszerza istniejące systemy.
 
 ---
 
 ## 15. Gameplay observations — 2026-09-04
 
-Manual gameplay revealed that the current cave implementation is not yet acceptable from a third-person gameplay perspective.
+Manual gameplay revealed that the current implementation is not yet acceptable from a third-person gameplay perspective.
 
 ### Observations
 
-- The camera frequently escapes the cave and reveals the surface grass from inside the cave.
-- The tunnel looks like a set of connected pipes: seams between sections are visible and the surfaces are too smooth.
-- The entrance is too narrow and too small.
-- Overall, the current cave experience is poor and needs another geometry/presentation pass before the feature can be considered gameplay-ready.
+- Camera frequently escapes the cave and reveals surface grass.
+- Tunnel looks like connected pipes; seams are visible and surfaces are too smooth.
+- Entrance is too narrow and too small.
+- Overall cave experience is poor despite technical implementation being present.
 
-### Reference / design reflection
+### Design reference
 
-A useful reference point is the cave design used in *World of Warcraft*. Its caves are designed around the fact that the player is viewed in third person: corridors and chambers are sufficiently large to accommodate both the character and the camera. Entrances are typically large openings in roughly vertical rock faces, followed by tunnels that gradually rise and fall rather than immediately becoming cramped horizontal pipes.
+*World of Warcraft* is a useful reference for the **scale principle**: caves intended for third-person play need corridors/chambers large enough for both character and camera. Entrances are large openings in rock faces, followed by passages that can gently rise/fall.
 
-The important lesson for Seedvale is not to reproduce a specific game's geometry, but to treat **camera clearance and third-person readability as first-class constraints of cave generation**.
+The goal is not to copy WoW geometry, but to make camera clearance and third-person readability first-class cave-generation constraints.
 
 ---
 
-## 16. Gameplay-driven conclusions and suggested improvements
-
-The current implementation should be improved rather than merely cosmetically patched. The cave generator and presentation need to produce a larger, more open spatial structure suitable for a third-person camera.
+## 16. Gameplay-driven conclusions and required improvements
 
 ### 16.1 Entrance geometry
 
-- Cave entrances must be significantly larger in both width and height.
-- Entrances should preferably be placed in approximately vertical terrain faces / cliff-like slopes rather than in shallow terrain depressions.
-- Cave placement should explicitly reserve a terrain area where the surface drops into a depression and one side forms a sufficiently steep cliff/rock face.
-- The entrance should be carved as a wide, high opening in that face.
-- The transition from surface into the cave should feel like entering a real opening in rock, not descending through a small hole.
+Entrance dimensions must increase substantially. Placement should target a roughly vertical cliff/rock face with a local depression and a gradual transition into the cave.
 
-Conceptually:
+The cave mouth should be a large opening in the cliff, not a small hole cut into a shallow slope.
 
-```text
-          higher terrain
-       █████████████
-     ███           ███
-    ██               ██
-   ██   LARGE MOUTH   ███
-  ██                   ███
-  █                     █
-  █        cave →       █
-  █_____________________█
-        lower ground
-```
+### 16.2 Cave scale
 
-The exact terrain shaping mechanism should be determined from the existing terrain generation/modification system; do not introduce a parallel terrain system just for caves.
+The cave must be designed as a playable volume first and natural rock second.
 
-### 16.2 Cave scale and camera clearance
+Corridors and chambers need explicit margins beyond the player collision envelope. Tight passages that leave insufficient camera clearance should be rejected or widened during generation.
 
-The tunnel dimensions need to be designed around the actual third-person camera, not merely around player-body clearance.
+### 16.3 Tunnel topology
 
-- Corridors and chambers must be substantially wider and higher than the minimum player collision envelope.
-- The generator should maintain a deliberate clearance margin around the player and camera view volume.
-- Tight passages where the camera can intersect the ceiling/walls should be rejected or widened during generation.
-- Chambers should provide enough lateral and vertical space for the camera to frame the player without revealing the surface.
+The current straight, constant-radius tube model is too primitive for the desired result.
 
-The target should be a cave that feels **walk-in for both the player and the camera**, not merely technically traversable by the player.
-
-### 16.3 Tunnel topology and shape
-
-The current pipe-like construction should be replaced or substantially improved.
-
-- Avoid visually obvious joins between tunnel segments.
-- Generate continuous geometry across neighbouring tunnel sections instead of treating each section as an independent tube where possible.
-- Allow tunnels to gradually rise and fall.
-- Introduce meaningful variation in width, height and cross-section.
-- Chambers should be larger than connecting corridors and provide spatial landmarks.
-- Avoid long, perfectly smooth cylindrical surfaces.
-
-The generator should remain deterministic and lightweight; this does not require a full voxel/dungeon system.
-
-### 16.4 Surface irregularity
-
-Tunnel walls, ceiling and floor need controlled small-scale irregularity.
-
-Use two levels of deformation:
-
-- **micro bump:** approximately `0.5 × 0.5 × 0.5` m for small rock irregularities;
-- **larger bump:** approximately `2 × 2 × 1` m on walls and ceiling, where the third value represents deformation depth.
-
-These values are design targets, not necessarily literal mesh-grid dimensions. The implementation should use the existing procedural geometry approach or a suitable deterministic noise/deformation mechanism to achieve this visual scale without creating excessive geometry.
-
-The floor should remain traversable and avoid random deformation that produces problematic collision, while walls and ceiling can receive stronger variation.
-
-### 16.5 Camera containment
-
-Camera behaviour needs a dedicated correction pass.
-
-The camera must remain visually and physically consistent with the cave space when the player is underground:
-
-- prevent the third-person camera from clipping through cave walls/ceiling into the surface;
-- prevent surface grass/terrain from becoming visible through the camera position or camera ray when the player is inside;
-- account for cave geometry when resolving camera distance/position;
-- preserve the existing surface camera behaviour outside caves;
-- avoid a cave-specific camera system if the existing camera collision/obstruction mechanism can be extended.
-
-This should be treated as a camera-obstruction/clearance problem, not solved by simply hiding surface terrain globally.
-
-### 16.6 Generator changes
-
-The cave generation mechanism likely needs a structural improvement rather than only larger constants.
-
-Before implementation, inspect the current `caveGenerator.ts` and `caveMesh.ts` together and determine whether the present tunnel representation inherently produces the visible pipe/seam problem. If necessary, change the representation so that tunnel segments are blended into a continuous volume/mesh.
-
-The generator should explicitly model at least:
+The next pass should produce:
 
 ```text
-entrance
+large mouth
   ↓
 wide transition
   ↓
 large walk-in corridor
-  ↘ gradual elevation changes
-  ↓
+  ↓  gentle descent
 large chamber
   ↓
 branch / continuation / dead end
 ```
 
-Generation constraints should include minimum width, minimum height, camera clearance, entrance dimensions, slope/vertical-face suitability and sufficient surface overburden.
+Tunnel elevation should vary gradually. In particular, the initial tunnel floor should descend rather than remain flat or rise into the terrain.
 
-### 16.7 Acceptance additions
+### 16.4 Surface safety / overburden
 
-The existing verification list should be extended with gameplay-specific checks:
+A critical generator invariant is:
 
-15. The player can enter the cave without crouching-scale geometry or camera compression.
-16. The entrance is visibly large and placed in a steep/approximately vertical rock face.
-17. The third-person camera remains inside the cave when following the player through normal movement.
-18. Surface grass/terrain is not visible from the cave because of camera escape or insufficient cave geometry.
-19. Tunnel walls, ceiling and floor do not look like smooth connected pipes.
-20. No obvious seams are visible between tunnel sections from normal gameplay camera positions.
-21. Tunnels contain gradual vertical variation rather than remaining flat.
-22. Chambers provide substantially more space than corridors.
-23. Walls and ceiling have visible multi-scale rock irregularity without excessive visual noise.
-24. Camera clearance is preserved throughout generated tunnels and chambers across several seeds.
-25. Existing surface camera behaviour remains unchanged outside caves.
+```text
+for every tunnel sample after the mouth transition:
+    surfaceY(x,z) - ceilingY(x,z) >= minimumRoofThickness
+```
 
-These gameplay criteria should be treated as blockers for marking the cave feature browser/gameplay-verified.
+The initial tunnel descent should make this condition increasingly safe as the cave progresses underground. A later rise may be allowed only if the generator re-checks local overburden and never violates the minimum roof thickness.
+
+Do not rely only on average cave depth, endpoint checks or a single global overburden value.
+
+### 16.5 Surface irregularity
+
+Use controlled multi-scale deformation:
+
+- micro: approximately `0.5 × 0.5 × 0.5` m;
+- larger: approximately `2 × 2 × 1` m on walls/ceiling, with the third value representing protrusion depth.
+
+These are visual targets, not literal mesh dimensions. Floor deformation must remain traversable and compatible with collision/ground queries.
+
+### 16.6 Camera containment
+
+Extend the existing camera obstruction/boom logic where possible instead of creating a cave-specific camera system.
+
+The camera must respect cave geometry and maintain a useful third-person view without clipping into surface terrain.
+
+### 16.7 Structural change vs parameter tuning
+
+Do not assume this can be fixed by simply increasing radius/height constants.
+
+Before implementation, inspect `caveGenerator.ts`, `caveVolume.ts`, `caveMesh.ts` and the camera/PlayerController integration together. Determine whether the straight constant-radius tunnel representation itself causes the pipe/seam problem. If so, change the representation to a continuous or blended volume/mesh rather than stacking visually independent tubes.
 
 ---
 
 ## 17. Scope / implementation note
 
-The gameplay findings indicate that the current Faza 2-3 result should **not** be considered final merely because the technical contracts and automated tests pass. The next implementation pass should focus first on cave spatial design, procedural geometry and camera containment, then repeat browser verification before proceeding with Faza 4 fauna/loot/persistence.
+The 2026-09-04 gameplay findings mean that the technically verified Faza 2-3 implementation is **not gameplay-final**. The next cave pass should prioritize spatial scale, entrance geometry, gradual initial descent, local overburden safety, procedural rock irregularity and camera containment.
 
-Do not implement fauna/loot/persistence on top of cave geometry that is still fundamentally unsuitable for third-person gameplay.
+Faza 4 fauna/loot/persistence should remain deferred until the cave geometry is browser-verified as a robust third-person playable space.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
