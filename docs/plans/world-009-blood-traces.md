@@ -1,7 +1,7 @@
 # Plan: Blood Traces
 
 **Created:** 2026-09-01
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `world`

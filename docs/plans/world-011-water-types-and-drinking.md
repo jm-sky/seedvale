@@ -1,7 +1,7 @@
 # Plan: Water Types and Drinking
 
 **Created:** 2026-09-03
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅
 **Type:** fix
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~122~~

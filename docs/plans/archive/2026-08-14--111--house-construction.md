@@ -1,6 +1,6 @@
 # Plan 111: House Construction / House Builder
 
-**Status:** `verification needed` 🔍 — playtest 2026-08-18: **niektóre domki źle złożone**; wymaga poprawy assembly  
+**Status:** `done` 🔍 — playtest 2026-09-04
 **Created:** 2026-08-14  
 **Priority:** 🔴 high  
 **Effort:** `XL`  

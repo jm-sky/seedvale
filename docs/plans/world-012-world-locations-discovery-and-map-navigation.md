@@ -1,7 +1,7 @@
 # Plan: World Locations, Discovery and Map Navigation
 
 **Created:** 2026-09-03
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅
 **Priority:** medium · **Effort:** M
 **Depends on:** none
 **Domain:** `world`

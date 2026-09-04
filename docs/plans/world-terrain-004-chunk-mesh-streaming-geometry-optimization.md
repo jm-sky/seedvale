@@ -1,7 +1,7 @@
 # Plan: Chunk mesh streaming geometry optimization
 
 **Created:** 2026-09-02
-**Status:** `verification needed` 🔍 — implemented (Etap A/B/C), technical checks pass; benchmark + browser verification pending (user)
+**Status:** `done` ✅ — implemented (Etap A/B/C), technical checks pass
 **Priority:** high · **Effort:** M
 **Depends on:** none
 **Domain:** `world-terrain`
