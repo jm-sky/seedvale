@@ -70,7 +70,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
-| ◼️ `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`         | -       | 🟡 | M      | fauna-010 |
+| 💡 `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`         | -       | 🟡 | M      | fauna-010 |
 | 💡 `persistence-004-save-integrity-and-world-lifecycle.md`                  | -       | 🔴 | M      | ~~persistence-002~~ persistence-003 |
 
 ---
@@ -99,6 +99,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-006-world-generation-placement-correctness.md` | Rzeki, brzegi, góry, roślinność, placement obiektów i seamy chunków |
 | `fauna-011-domestic-dogs-and-household-guarding.md` | Psy: warianty modeli/animacje, dieta bez huntingu, karmienie, szczekanie kontekstowe, obrona household przed wilkiem, powrót do domu po zagrożeniu |
 | `world-013-world-location-catalog-performance-optimization.md` | Zakup Near/Far Map u handlarza i rozmowa ze strażnikiem nie powodują widocznego freeze; feedback pokazuje prawidłową liczbę nowych miejsc |
+| `ui-input-008-river-debug-location-quality.md` | `teleportTo.riverNearest()`/`nextRiver()` prowadzą do czytelnego odcinka rzeki na lądzie (nie do jeziora/morza/ujścia); kolejne `nextRiver()` dają różne rzeki w stabilnej kolejności |
 
 ---
 
