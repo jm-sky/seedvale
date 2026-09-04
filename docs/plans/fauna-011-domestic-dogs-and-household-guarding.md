@@ -1,7 +1,7 @@
 # Plan: Domestic dogs and household guarding
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-010
@@ -418,5 +418,18 @@ W przeglądarce sprawdzić co najmniej:
 Po implementacji zaktualizować dokumentację assets/fauna tak, aby oba modele psów były oznaczone jako rzeczywiście wired.
 
 Dodać JSDoc z `@domain fauna` dla nowych ważnych publicznych granic odpowiedzialności, szczególnie jeśli powstaną współdzielone kontrakty perception/threat/vocalization wykorzystywane poza pojedynczym zachowaniem psa.
+
+## Implementation status
+
+Implemented against the post-fauna-010 diet/role contract, reusing existing mechanisms throughout — no `DogAgent`/`DogSystem`/`DogNeeds`/`DogCombatSystem`/`DogSaveData`, no second combat/food/water/interaction pipeline:
+
+- `dog` added to `AnimalKind`/`ANIMAL_DEFS` (`src/fauna/AnimalAgent.ts`): `role: 'livestock'` (not `'predator'`, so no hunting; not `'prey'`, `fleeRange: 0` so no fleeing wolves either) + `DOG_DIET` (`raw_meat`/`deer_meat`/`wolf_meat`/`boar_meat`/`rabbit_meat`/`beef`, no `grass`, no `scavenging`). Local home wander/idle already came free from `prey-normal`'s existing home-anchored `wander()`/`pursueNeeds()` fallback — no new patrol/idle system.
+- Household ownership/spawn/persistence reuse `settlement/livestock.ts` unchanged in shape: `LivestockKind`/`LIVESTOCK_URLS` extended for `dog` with two visual variants (`dog_husky.glb`/`dog_shiba.glb`, real GLB clip names verified — already match `AnimalAgent`'s existing semantic `findAction()` candidates, no animation-mapping change needed); `visualFor()` picks a variant deterministically per `animalId` (FNV-1a hash, not persisted). Independent per-house `DOG_OWNERSHIP_CHANCE` roll appended after every existing species roll, so no existing save's roll sequence shifts.
+- Guard/combat: new pure `src/fauna/dogGuard.ts` (`resolveDogGuardTarget`/`resolveDogBarkStimulus`, unit-tested directly) encodes the full priority order (own household > nearby foreign household > nothing) and the three bark tiers; `AnimalAgent.ts` adapters map live wolves/NPCs into its narrow candidate shapes and reuse the existing `attack()`/`chaseNav` combat/movement seam unchanged. A new `faunaDecision.ts` rank (`dog-guard`, between `frenzy-beeline` and `predator-normal`) integrates guard priority into the existing central arbitration — no second decision loop. Disengagement is not a decay timer: the guard target is recomputed fresh every tick, so a dead/retargeted wolf or one that walked outside its tier's radius just stops being returned.
+- Wolf howl → dog alert reuses the existing `onVocalize` hook's sim-state side (new `vocalizeAlertRemainingSec`/`recentVocalizeAlert`, decays like any other timer) instead of a new event bus; dog bark reuses the same hook/`playSpontaneousAnimalSound` presentation path (`ANIMAL_SOUND_URLS.dog` → `public/sounds/animal-dog-01.ogg`, in repo) gated by its own stimulus+cooldown, not the spontaneous-random mechanism cow/sheep/chicken/wolf use.
+- Player feeding: new `feedAnimal()`/`FeedableAnimal` in `app/actions/survivalActions.ts`, wired into the existing `Interactable.kind === 'animal'` dispatch (`gameLoop.ts`) after mount/milk, and into `interactables.ts`'s existing prompt-label function via a precomputed resolver (same "stay inventory-agnostic" convention as `hasMilkContainer`). Reuses `selectDietFeedKind`/`Inventory.remove()` — generic for any `def.diet.items` species, not `feedDog()`.
+- Debug: `AnimalAgentDebugInfo` gained `ownerHouseId`/`dogGuard`/`dogVocalizeStimulus`, populated in the existing `getDebugInfo()` — no separate dog debug panel.
+- Not implemented (deliberately deferred, all listed in "Poza zakresem" or judged out of the §7 minimal-contract scope): a distinct "wolf merely nearby, not attacking, not howling" bark tier — only an active guard target, a recent wolf howl, or a nearby stranger NPC currently trigger a bark; a silently-present non-howling wolf does not. Add it later only if playtesting shows it's needed — the seam (`dogGuard.ts`) already supports a fourth tier cheaply.
+- `npx tsc --noEmit`, `pnpm lint:fix` and the full `vitest` suite (2980 tests) pass. Not yet browser/manual verified in-game — see "Manual verification" above.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

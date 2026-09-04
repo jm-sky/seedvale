@@ -59,6 +59,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
 - `world/collision.ts`
+- `world/createGrassForagePatches.ts`
 - `world/createPlayerWells.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
@@ -166,6 +167,7 @@ Generated from TypeScript imports.
 - `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
 - `world/collision.ts`
+- `world/createGrassForagePatches.ts`
 - `world/createPlayerWells.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
@@ -545,6 +547,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `settlement/places.ts`
+- `world/createGrassForagePatches.ts`
 - `world/parseSeed.ts`
 
 **Imported by**

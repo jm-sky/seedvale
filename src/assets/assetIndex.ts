@@ -371,18 +371,24 @@ export function buildAssetIndex(): AssetIndexEntry[] {
   }
 
   const faunaSeen = new Set(out.filter((e) => e.group === 'fauna').map((e) => e.id))
-  for (const [kind, url] of Object.entries(LIVESTOCK_URLS)) {
-    const id = `fauna:${kind}`
-    if (faunaSeen.has(id)) continue
+  for (const [kind, urls] of Object.entries(LIVESTOCK_URLS)) {
     const def = ANIMAL_DEFS[kind as keyof typeof ANIMAL_DEFS]
-    out.push({
-      id,
-      url,
-      label: kind,
-      group: 'fauna',
-      prepare: { mode: 'height', value: def.modelHeight },
-      skinned: true,
-      anchors: anchorsForAsset(id),
+    // Plan fauna-011 §1: `dog` has two visual variants (Husky/Shiba) at one
+    // simulation kind — index each URL separately (`fauna:dog#0`/`#1`)
+    // instead of dropping every kind-but-first variant. Every other kind
+    // still has exactly one URL, so its id stays plain `fauna:${kind}`.
+    urls.forEach((url, i) => {
+      const id = urls.length > 1 ? `fauna:${kind}#${i}` : `fauna:${kind}`
+      if (faunaSeen.has(id)) return
+      out.push({
+        id,
+        url,
+        label: kind,
+        group: 'fauna',
+        prepare: { mode: 'height', value: def.modelHeight },
+        skinned: true,
+        anchors: anchorsForAsset(id),
+      })
     })
   }
 

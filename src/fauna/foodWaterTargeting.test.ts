@@ -243,6 +243,43 @@ describe('ANIMAL_DEFS herbivore diet/metabolism (plan fauna-010)', () => {
   })
 })
 
+describe('ANIMAL_DEFS.dog diet (plan fauna-011 §3/§4)', () => {
+  it('eats meat: diet.items lists the raw/bait-tagged meat kinds', () => {
+    const diet = ANIMAL_DEFS.dog.diet
+    expect(diet).toBeDefined()
+    expect(diet!.items?.raw_meat).toBeGreaterThan(0)
+    expect(diet!.items?.deer_meat).toBeGreaterThan(0)
+    expect(diet!.items?.wolf_meat).toBeGreaterThan(0)
+    expect(diet!.items?.boar_meat).toBeGreaterThan(0)
+    expect(diet!.items?.rabbit_meat).toBeGreaterThan(0)
+    expect(diet!.items?.beef).toBeGreaterThan(0)
+  })
+
+  it('does not forage like a herbivore: no grass in its diet', () => {
+    expect(ANIMAL_DEFS.dog.diet!.grass).toBeUndefined()
+  })
+
+  it('does not automatically hunt prey: role is livestock, not predator', () => {
+    expect(ANIMAL_DEFS.dog.role).not.toBe('predator')
+  })
+
+  it('does not scavenge a carcass on its own: no scavenging config', () => {
+    expect(ANIMAL_DEFS.dog.scavenging).toBeUndefined()
+  })
+
+  it('selectDietFeedKind resolves a compatible meat item from a player/household inventory', () => {
+    const items = new Inventory({}, Infinity)
+    items.add('raw_meat', 1)
+    expect(selectDietFeedKind(items, ANIMAL_DEFS.dog.diet!.items!)).toBe('raw_meat')
+  })
+
+  it('selectDietFeedKind ignores a herbivore-only feed item the dog does not eat', () => {
+    const items = new Inventory({}, Infinity)
+    items.add('hay', 5)
+    expect(selectDietFeedKind(items, ANIMAL_DEFS.dog.diet!.items!)).toBeNull()
+  })
+})
+
 describe('selectDietFeedKind (plan fauna-010 §3/§7)', () => {
   const dietItems = { hay: 0.9, apple: 0.6, carrot: 0.5 }
 

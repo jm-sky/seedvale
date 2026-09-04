@@ -66,7 +66,7 @@ Generated from exported TypeScript symbols.
 ## `assets/assetIndex.ts`
 
 - `assetEntryMatchesQuery` — function — line 162
-- `assetIndexById` — function — line 460
+- `assetIndexById` — function — line 466
 - `AssetIndexEntry` — type — line 66
 - `AssetIndexGroup` — type — line 52
 - `AssetIndexStatus` — type — line 64
@@ -74,9 +74,9 @@ Generated from exported TypeScript symbols.
 - `basenameFromUrl` — function — line 109
 - `buildAssetIndex` — function — line 329
 - `customUrlEntry` — function — line 184
-- `entryFromUrl` — function — line 474
+- `entryFromUrl` — function — line 480
 - `filterAssetIndex` — function — line 175
-- `findAssetEntry` — function — line 466
+- `findAssetEntry` — function — line 472
 - `formatAssetLabel` — function — line 157
 - `groupFromModelUrl` — function — line 131
 - `kindFromBasename` — function — line 123

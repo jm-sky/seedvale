@@ -4,56 +4,58 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `ANIMAL_DEFS` — const — line 796
-- `ANIMAL_LABELS` — const — line 689
-- `AnimalAgent` — class — line 1118
+- `ANIMAL_DEFS` — const — line 933
+- `ANIMAL_LABELS` — const — line 734
+- `AnimalAgent` — class — line 1304
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 395
-- `AnimalDef` — type — line 706
-- `AnimalKind` — type — line 673
-- `AnimalLifeStage` — type — line 670
-- `AnimalRole` — type — line 662
-- `AnimalSaveState` — type — line 470
-- `AnimalSociability` — type — line 666
-- `BURY_DURATION_SEC` — const — line 217
-- `canHarvestMeatFrom` — function — line 201
-- `canPredatorPursueIntoVillage` — function — line 644
-- `carcassCandidateScore` — function — line 603
-- `carcassFoodValue` — function — line 585
-- `corpseLingerSeconds` — function — line 145
-- `CorpsePhase` — type — line 153
-- `corpsePhaseFromElapsed` — function — line 182
-- `FAUNA_SHADOW_DISTANCE` — const — line 114
-- `FaunaAiBranch` — type — line 374
-- `FaunaNavRescueDebugInfo` — type — line 379
-- `forageEdgeScore` — function — line 550
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 277
-- `FrenzyWolfCandidate` — type — line 1034
-- `HARVEST_MEAT_DURATION_SEC` — const — line 220
-- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 143
-- `isCarcassEdible` — function — line 559
-- `isRabiesCorpseContact` — function — line 1076
-- `isWithinVillageRadius` — function — line 625
-- `LivestockProductionConfig` — type — line 790
-- `LivestockProductKind` — type — line 777
-- `MountPointConfig` — type — line 768
-- `NearbyNpcCandidate` — type — line 1029
-- `nearestShoreProbePoint` — function — line 534
-- `pickNearestEligibleWolf` — function — line 1043
-- `pickRabidTarget` — function — line 1090
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 132
-- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 171
-- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 174
-- `rollsRabiesInfection` — function — line 1067
-- `rotFxRelevant` — function — line 191
-- `ScavengingConfig` — type — line 755
-- `shoreProbeHits` — function — line 514
-- `villageFleeBiasFalloff` — function — line 652
-- `VillageInfo` — type — line 619
+- `AnimalAgentDebugInfo` — type — line 401
+- `AnimalDef` — type — line 752
+- `AnimalDietConfig` — type — line 819
+- `AnimalKind` — type — line 717
+- `AnimalLifeStage` — type — line 714
+- `AnimalRole` — type — line 706
+- `AnimalSaveState` — type — line 487
+- `AnimalSociability` — type — line 710
+- `BURY_DURATION_SEC` — const — line 223
+- `canHarvestMeatFrom` — function — line 207
+- `canPredatorPursueIntoVillage` — function — line 688
+- `carcassCandidateScore` — function — line 647
+- `carcassFoodValue` — function — line 629
+- `corpseLingerSeconds` — function — line 151
+- `CorpsePhase` — type — line 159
+- `corpsePhaseFromElapsed` — function — line 188
+- `FAUNA_SHADOW_DISTANCE` — const — line 120
+- `FaunaAiBranch` — type — line 380
+- `FaunaNavRescueDebugInfo` — type — line 385
+- `forageEdgeScore` — function — line 577
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 283
+- `FrenzyWolfCandidate` — type — line 1220
+- `HARVEST_MEAT_DURATION_SEC` — const — line 226
+- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 149
+- `isCarcassEdible` — function — line 603
+- `isRabiesCorpseContact` — function — line 1262
+- `isWithinVillageRadius` — function — line 669
+- `LivestockProductionConfig` — type — line 863
+- `LivestockProductKind` — type — line 850
+- `MountPointConfig` — type — line 841
+- `NearbyNpcCandidate` — type — line 1215
+- `nearestShoreProbePoint` — function — line 561
+- `pickNearestEligibleWolf` — function — line 1229
+- `pickRabidTarget` — function — line 1276
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 138
+- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 177
+- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 180
+- `rollsRabiesInfection` — function — line 1253
+- `rotFxRelevant` — function — line 197
+- `ScavengingConfig` — type — line 828
+- `selectDietFeedKind` — function — line 588
+- `shoreProbeHits` — function — line 541
+- `villageFleeBiasFalloff` — function — line 696
+- `VillageInfo` — type — line 663
 
 ## `fauna/animalDebugVisual.ts`
 
@@ -63,7 +65,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalDialogue.ts`
 
-- `pickAnimalFlavorLine` — function — line 64
+- `pickAnimalFlavorLine` — function — line 68
 
 ## `fauna/animalHarvest.ts`
 
@@ -73,16 +75,18 @@ Generated from exported TypeScript symbols.
 ## `fauna/AnimalLife.ts`
 
 - `ANIMAL_STAMINA_MAX` — const — line 34
-- `AnimalLifeState` — type — line 36
-- `BIAS_STRENGTH` — const — line 22
-- `consumeFood` — function — line 75
-- `createAnimalLifeState` — function — line 45
-- `drinkWater` — function — line 81
-- `FOOD_RELIEF` — const — line 29
-- `NEED_ELEVATED_THRESHOLD` — const — line 26
-- `STAMINA_REST_THRESHOLD` — const — line 19
-- `tickAnimalLife` — function — line 53
-- `WATER_RELIEF` — const — line 32
+- `AnimalLifeState` — type — line 64
+- `AnimalMetabolismConfig` — type — line 17
+- `BIAS_STRENGTH` — const — line 52
+- `consumeFood` — function — line 110
+- `createAnimalLifeState` — function — line 75
+- `DEFAULT_ANIMAL_METABOLISM` — const — line 39
+- `drinkWater` — function — line 116
+- `FOOD_RELIEF` — const — line 59
+- `NEED_ELEVATED_THRESHOLD` — const — line 56
+- `STAMINA_REST_THRESHOLD` — const — line 49
+- `tickAnimalLife` — function — line 86
+- `WATER_RELIEF` — const — line 62
 
 ## `fauna/animalMeat.ts`
 
@@ -123,36 +127,46 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `createFauna` — function — line 377
-- `Fauna` — type — line 55
-- `FAUNA_URLS` — const — line 301
-- `measureSlope` — function — line 213
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 277
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 285
-- `SPAWNER_LABELS` — const — line 269
-- `SPAWNER_RING_OFFSET` — const — line 167
-- `SPAWNER_SPECS` — const — line 247
-- `spawnerDestroyBusyLabel` — function — line 296
-- `spawnerDestroyPromptLabel` — function — line 292
-- `spawnerId` — function — line 265
+- `createFauna` — function — line 378
+- `Fauna` — type — line 56
+- `FAUNA_URLS` — const — line 302
+- `measureSlope` — function — line 214
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 278
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 286
+- `SPAWNER_LABELS` — const — line 270
+- `SPAWNER_RING_OFFSET` — const — line 168
+- `SPAWNER_SPECS` — const — line 248
+- `spawnerDestroyBusyLabel` — function — line 297
+- `spawnerDestroyPromptLabel` — function — line 293
+- `spawnerId` — function — line 266
+
+## `fauna/dogGuard.ts`
+
+- `DogBarkStimulus` — type — line 65
+- `DogGuardTargetResolved` — type — line 21
+- `DogGuardWolfCandidate` — type — line 13
+- `RecentVocalizeCandidate` — type — line 72
+- `resolveDogBarkStimulus` — function — line 83
+- `resolveDogGuardTarget` — function — line 39
+- `StrangerNpcCandidate` — type — line 74
 
 ## `fauna/faunaCombat.ts`
 
-- `combatTargetForAnimal` — function — line 84
-- `damageFor` — function — line 72
-- `damageVsHuman` — function — line 76
-- `isMeleeTool` — function — line 68
+- `combatTargetForAnimal` — function — line 85
+- `damageFor` — function — line 73
+- `damageVsHuman` — function — line 77
+- `isMeleeTool` — function — line 69
 - `MAX_HP` — const — line 9
-- `MeleeToolKind` — type — line 47
+- `MeleeToolKind` — type — line 48
 
 ## `fauna/faunaDecision.ts`
 
-- `decideFaunaBehaviour` — function — line 126
-- `FAUNA_BEHAVIOUR_PRIORITY` — const — line 64
+- `decideFaunaBehaviour` — function — line 136
+- `FAUNA_BEHAVIOUR_PRIORITY` — const — line 71
 - `FaunaBehaviourKind` — type — line 23
 - `FaunaDecisionGate` — type — line 18
-- `FaunaDecisionInput` — type — line 37
-- `scoreFaunaBehaviours` — function — line 137
+- `FaunaDecisionInput` — type — line 38
+- `scoreFaunaBehaviours` — function — line 147
 
 ## `fauna/harvestedRemains.ts`
 
@@ -224,6 +238,7 @@ Generated from exported TypeScript symbols.
 - `createBoarModel` — function — line 80
 - `createChickenModel` — function — line 206
 - `createCowModel` — function — line 161
+- `createDogModel` — function — line 291
 - `createDonkeyModel` — function — line 148
 - `createDuckModel` — function — line 55
 - `createHorseModel` — function — line 108

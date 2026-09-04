@@ -4,7 +4,7 @@ import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { SettlementEconomy, SettlementEconomySnapshot } from '../economy/settlementEconomy'
-import type { AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
+import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { DroppedItems } from '../items/createDroppedItems'
@@ -108,6 +108,10 @@ export type SettlementsManager = {
      *  each loaded `Settlement.update`/`NpcAgent.update`. `undefined` for
      *  any caller/test that doesn't pass one. */
     weather?: WeatherState,
+    /** Bounded/local live wild predators (plan fauna-011 §9/§10/§11) —
+     *  forwarded straight to each loaded `Settlement.update`. Only
+     *  meaningful for a settlement with an owned `dog`. */
+    nearbyPredators?: readonly AnimalAgent[],
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -548,7 +552,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
@@ -567,6 +571,7 @@ export async function createSettlementsManager(
           nowDays,
           onAnimalVocalize,
           weather,
+          nearbyPredators,
         )
       }
       for (const instances of midpoints.values()) {

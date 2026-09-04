@@ -136,28 +136,28 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1069
-- `CAPABILITY_KINDS` — const — line 1100
+- `ARROW_DAMAGE_BONUS` — const — line 1078
+- `CAPABILITY_KINDS` — const — line 1109
 - `CAPABILITY_NEED_LABEL` — const — line 108
 - `ConsumableNeed` — type — line 120
 - `consumeNeedNoun` — function — line 189
 - `consumeVerbLabel` — function — line 180
 - `DefenseConfig` — type — line 40
-- `hasItemCapability` — function — line 1125
-- `HOLDABLE_KINDS` — const — line 1091
-- `isMeleeToolKind` — function — line 1084
-- `isRangedTool` — function — line 1076
+- `hasItemCapability` — function — line 1134
+- `HOLDABLE_KINDS` — const — line 1100
+- `isMeleeToolKind` — function — line 1093
+- `isRangedTool` — function — line 1085
 - `ITEM_CATALOG` — const — line 203
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1130
+- `ITEM_SYSTEM_ROADMAP` — const — line 1139
 - `ItemCapability` — type — line 87
 - `ItemCatalogEntry` — type — line 127
 - `ItemSpawnKind` — type — line 12
 - `MeleeConfig` — type — line 23
-- `NON_ITEM_PROPS` — const — line 1136
+- `NON_ITEM_PROPS` — const — line 1145
 - `RangedConfig` — type — line 51
 
 ## `items/itemInstances.ts`
@@ -194,22 +194,22 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 183
-- `canCancelRestProgress` — function — line 154
-- `createItemMesh` — function — line 976
-- `hasItemCategory` — function — line 133
-- `hasItemKindCategory` — function — line 137
-- `ITEM_DEFS` — const — line 187
-- `ITEM_SIZE_UNITS` — const — line 106
-- `ItemCategory` — type — line 97
-- `ItemDef` — type — line 119
+- `canCancelRestNow` — function — line 184
+- `canCancelRestProgress` — function — line 155
+- `createItemMesh` — function — line 990
+- `hasItemCategory` — function — line 134
+- `hasItemKindCategory` — function — line 138
+- `ITEM_DEFS` — const — line 188
+- `ITEM_SIZE_UNITS` — const — line 107
+- `ItemCategory` — type — line 98
+- `ItemDef` — type — line 120
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 102
-- `itemSizeUnits` — function — line 115
-- `primaryItemCategory` — function — line 144
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 152
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 164
-- `restCancelAllowedByStartVigor` — function — line 171
+- `ItemSize` — type — line 103
+- `itemSizeUnits` — function — line 116
+- `primaryItemCategory` — function — line 145
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 153
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 165
+- `restCancelAllowedByStartVigor` — function — line 172
 
 ## `items/ItemSpawner.ts`
 

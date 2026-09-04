@@ -68,7 +68,7 @@ import {
 import { createColliderDebugView } from '../debug/colliderDebugView'
 import { isCameraMeshDebugMode, isColliderDebugMode, isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { setCameraMeshHit } from '../debug/renderStateDebug'
-import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE } from '../fauna/AnimalAgent'
+import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE, selectDietFeedKind } from '../fauna/AnimalAgent'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { combatTargetForAnimal, isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
@@ -129,7 +129,7 @@ import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
-import { hasCarriedMilkContainer } from './actions/survivalActions'
+import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import {
   buildCombatTarget,
   buildDigTarget,
@@ -893,6 +893,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         inventory.hasCapability('meat_harvesting'),
         (kind) => questManager.activeSpotAnimalRange(kind),
         hasMilkContainer,
+        (animal) => (animal.def.diet?.items ? selectDietFeedKind(inventory, animal.def.diet.items) : null),
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1586,6 +1587,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             mount.tryMount(target.animal)
           } else if (target.animal.canBeMilked(dayNight.elapsedDays) && hasMilkContainer) {
             startMilkAnimal?.(target.animal)
+          } else if (feedAnimal(target.animal, inventory)) {
+            playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
           } else {
             const outcome = resolveInteraction(target, questManager)
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
@@ -1883,6 +1886,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         const threateningAnimals = bundle.fauna.getAgents()
           .filter((a) => a.isThreateningHuman())
           .map((a) => ({ animalId: a.animalId, kind: a.def.kind, x: a.mesh.position.x, z: a.mesh.position.z, target: combatTargetForAnimal(a) }))
+        // Plan fauna-011 §9/§10/§11: bounded/local live wolves, forwarded to
+        // every settlement's owned dogs for guard-target/bark-stimulus
+        // perception — a per-frame filter over the already-loaded wild-fauna
+        // array, never a per-dog scan (see `AnimalAgent.update()`'s
+        // `nearbyPredators` param doc).
+        const nearbyWolves = bundle.fauna.getAgents().filter((a) => a.def.kind === 'wolf' && !a.isDead())
         withCategory(monitor, 'NPC', () => {
           bundle.settlementsManager.update(
             dt,
@@ -1898,6 +1907,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             dayNight.elapsedDays,
             (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
             climate.weather,
+            nearbyWolves,
           )
         })
         withCategory(monitor, 'FAUNA', () => {

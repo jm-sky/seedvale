@@ -21,6 +21,7 @@ const base: FaunaDecisionInput = {
   fireNearby: false,
   hasStrategicVillage: false,
   arrivedAtStrategicVillage: false,
+  guardActive: false,
 }
 
 /** One row per implementation-notes §2.1 priority table entry (#2-#9). */
@@ -74,6 +75,10 @@ describe('decideFaunaBehaviour — priority table (implementation notes §2.1)',
     expect(decideFaunaBehaviour({
       ...base, role: 'predator', frenzied: true, hasStrategicVillage: true, arrivedAtStrategicVillage: false,
     })).toBe('frenzy-beeline')
+  })
+
+  it('#7.5 dog-guard: guardActive wins over the livestock catch-all (plan fauna-011 §11)', () => {
+    expect(decideFaunaBehaviour({ ...base, role: 'livestock', guardActive: true })).toBe('dog-guard')
   })
 
   it('#8 predator-normal: predator with no higher-priority candidate valid', () => {
@@ -155,6 +160,17 @@ describe('decideFaunaBehaviour — ordering pairs that matter (implementation no
     })).toBe('frenzy-beeline')
   })
 
+  it('fire beats dog-guard: a dog does not chase a wolf through a lit fire (plan fauna-011)', () => {
+    expect(decideFaunaBehaviour({
+      ...base, role: 'livestock', guardActive: true, fireNearby: true,
+    })).toBe('fire-avoid')
+  })
+
+  it('dog-guard beats the livestock prey-normal fallback', () => {
+    expect(decideFaunaBehaviour({ ...base, role: 'livestock', guardActive: false })).toBe('prey-normal')
+    expect(decideFaunaBehaviour({ ...base, role: 'livestock', guardActive: true })).toBe('dog-guard')
+  })
+
   it('npcThreat beats fire for a frenzied predator', () => {
     expect(decideFaunaBehaviour({
       ...base, role: 'predator', frenzied: true, npcThreat: true, fireNearby: true,
@@ -209,7 +225,7 @@ describe('FAUNA_BEHAVIOUR_PRIORITY', () => {
     const kinds: FaunaBehaviourKind[] = [
       'player-attack', 'player-ignore', 'player-flee', 'player-flee-prey',
       'npc-attack-frenzied', 'npc-attack', 'npc-ignore', 'npc-flee',
-      'fire-avoid', 'frenzy-beeline', 'predator-normal', 'prey-normal',
+      'fire-avoid', 'frenzy-beeline', 'dog-guard', 'predator-normal', 'prey-normal',
     ]
     for (const kind of kinds) {
       expect(typeof FAUNA_BEHAVIOUR_PRIORITY[kind]).toBe('number')

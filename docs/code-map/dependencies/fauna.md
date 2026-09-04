@@ -13,6 +13,7 @@ Generated from TypeScript imports.
 - `fauna/animalDebugVisual.ts`
 - `fauna/bloodSplat.ts`
 - `fauna/corpseDecayFx.ts`
+- `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/harvestedRemains.ts`
@@ -20,6 +21,8 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
@@ -32,6 +35,7 @@ Generated from TypeScript imports.
 - `ui/agentStatusLabel.ts`
 - `world/bloodTraces.ts`
 - `world/collision.ts`
+- `world/createGrassForagePatches.ts`
 - `world/waterMirror.ts`
 
 **Imported by**
@@ -219,6 +223,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/coastPlacement.ts`
 - `ui/labelDistance.ts`
+- `world/createGrassForagePatches.ts`
 - `world/dayNight.ts`
 - `world/parseSeed.ts`
 - `world/timeConversion.ts`
@@ -236,6 +241,19 @@ Generated from TypeScript imports.
 - `interaction/resolveInteraction.ts`
 - `player/playerCombat.ts`
 - `world/largeCaves.ts`
+
+## `fauna/dogGuard.test.ts`
+
+**Imports**
+
+- `fauna/dogGuard.ts`
+
+## `fauna/dogGuard.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/dogGuard.test.ts`
 
 ## `fauna/faunaCombat.test.ts`
 
@@ -288,6 +306,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `items/Inventory.ts`
 
 ## `fauna/frenzyWolf.test.ts`
 

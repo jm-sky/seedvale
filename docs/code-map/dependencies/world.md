@@ -421,6 +421,23 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createGrassForagePatches.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `player/PlayerController.ts`
+- `world/grassForage.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/createFauna.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/livestock.ts`
+
 ## `world/createLights.ts`
 
 **Imports**
@@ -821,6 +838,25 @@ Generated from TypeScript imports.
 
 - `world/createPlayerGardens.ts`
 
+## `world/grassForage.test.ts`
+
+**Imports**
+
+- `world/grassForage.ts`
+
+## `world/grassForage.ts`
+
+**Imports**
+
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `world/createGrassForagePatches.ts`
+- `world/grassForage.test.ts`
+
 ## `world/helperDeliveryHooks.ts`
 
 **Imports**
@@ -1207,6 +1243,7 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/createBeehives.ts`
+- `world/grassForage.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
 - `world/treeLifecycle.ts`

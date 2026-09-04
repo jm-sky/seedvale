@@ -284,3 +284,37 @@ export function createRoosterModel(): THREE.Group {
   root.add(legs(beakMat, 2, 0, 0.02, 0.022, 0.18))
   return root
 }
+
+/** Plan fauna-011 §1 load-failure fallback — `dog_husky.glb`/`dog_shiba.glb`
+ *  are the real visuals; this only covers the (unexpected) case where
+ *  neither loads. */
+export function createDogModel(): THREE.Group {
+  const root = new THREE.Group()
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xc8a878, flatShading: true })
+  const earMat = new THREE.MeshStandardMaterial({ color: 0x8a6a48, flatShading: true })
+
+  const legHeight = 0.24
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.5), bodyMat)
+  body.position.y = legHeight + 0.13
+  body.castShadow = true
+  root.add(body)
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.2), bodyMat)
+  head.position.set(0, legHeight + 0.24, 0.32)
+  head.castShadow = true
+  root.add(head)
+
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.09, 4), earMat)
+    ear.position.set(side * 0.06, legHeight + 0.33, 0.32)
+    root.add(ear)
+  }
+
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.22, 5), bodyMat)
+  tail.position.set(0, legHeight + 0.2, -0.28)
+  tail.rotation.x = -0.6
+  root.add(tail)
+
+  root.add(legs(earMat, 4, 0.08, 0.18, 0.035, legHeight))
+  return root
+}

@@ -93,7 +93,9 @@ Generated from TypeScript imports.
 - `economy/production.test.ts`
 - `economy/production.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/animalHarvest.ts`
+- `fauna/foodWaterTargeting.test.ts`
 - `fauna/huntingHooks.ts`
 - `items/HeldTool.test.ts`
 - `items/HeldTool.ts`
@@ -556,6 +558,7 @@ Generated from TypeScript imports.
 - `debug/settlementHistory.ts`
 - `economy/initial.ts`
 - `economy/settlementEconomy.ts`
+- `fauna/AnimalAgent.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
 - `fauna/harvestedRemains.ts`

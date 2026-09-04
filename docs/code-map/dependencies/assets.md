@@ -238,6 +238,7 @@ Generated from TypeScript imports.
 - `world/createBeehives.ts`
 - `world/createCaves.ts`
 - `world/createDryingRacks.ts`
+- `world/createGrassForagePatches.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
 - `world/createStandingTorches.ts`

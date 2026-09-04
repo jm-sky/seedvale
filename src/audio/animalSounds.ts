@@ -9,6 +9,12 @@ export const ANIMAL_SOUND_URLS: Partial<Record<AnimalKind, string[]>> = {
   wolf: ['/sounds/animal-wolf-01.ogg'],
   horse: ['/sounds/animal-horse-01.ogg'],
   sheep: ['/sounds/animal-sheep-01.ogg'],
+  // Plan fauna-011 — same clip doubles as the contextual guard/alert bark
+  // (`AnimalAgent.updateDogVocalization()`'s `onVocalize`), same convention
+  // as cow/sheep/chicken sharing one clip between both triggers (see
+  // `SPONTANEOUS_VOCALIZE_SOUND_URLS`'s doc below). A second sample can be
+  // appended here once recorded — the array already supports more than one.
+  dog: ['/sounds/animal-dog-01.ogg'],
 }
 
 /** Quiet enough under dialogue/ambient; chicken bed is long so keep it softer. */

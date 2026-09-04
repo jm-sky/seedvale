@@ -6,7 +6,7 @@ import type { WaterSource } from '../../world/WaterSource'
 import { playActionDig, playActionWell } from '../../audio/actionSounds'
 import { playAnimalSound } from '../../audio/animalSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
-import { ANIMAL_LABELS, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC } from '../../fauna/AnimalAgent'
+import { ANIMAL_LABELS, BURY_DURATION_SEC, HARVEST_MEAT_DURATION_SEC, selectDietFeedKind } from '../../fauna/AnimalAgent'
 import { harvestAnimalIntoInventory } from '../../fauna/animalHarvest'
 import { meatKindForAnimal } from '../../fauna/animalMeat'
 import {
@@ -86,6 +86,32 @@ export function hasCarriedMilkContainer(inventory: Inventory): boolean {
   return LIQUID_CONTAINER_KIND_LIST.some((kind) =>
     inventory.getInstances(kind).some((inst) => isLiquidContainerInstance(inst) && canFillLiquidContainer(inst, 'milk')),
   )
+}
+
+/** Narrow view of `AnimalAgent` `feedAnimal()` actually needs — every real
+ *  `AnimalAgent` satisfies this structurally, so callers pass one unchanged;
+ *  narrowed only so `feedAnimal.test.ts` can exercise the "consume only on
+ *  success" contract without constructing a full agent/mesh. */
+export type FeedableAnimal = {
+  def: { diet?: { items?: Partial<Record<ItemKind, number>> } }
+  feedByPlayer: (itemKind: ItemKind) => boolean
+}
+
+/** Player -> animal feeding (plan fauna-011 §6) — a generic seam for any
+ *  species with `def.diet.items`, not a species-specific `feedDog()`.
+ *  Reuses the exact contract autonomous household feeding already uses
+ *  (`selectDietFeedKind`/`AnimalAgent.feedByPlayer`); `Inventory.remove()`
+ *  only runs after `feedByPlayer` actually applied hunger relief, so an
+ *  interrupted/invalid feed never consumes the item. Returns `false` (no-op)
+ *  for an animal with no configured diet, or when the player carries nothing
+ *  compatible. */
+export function feedAnimal(animal: FeedableAnimal, inventory: Inventory): boolean {
+  const dietItems = animal.def.diet?.items
+  if (!dietItems) return false
+  const feedKind = selectDietFeedKind(inventory, dietItems)
+  if (!feedKind || !animal.feedByPlayer(feedKind)) return false
+  inventory.remove(feedKind, 1)
+  return true
 }
 
 export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions {

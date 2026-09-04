@@ -59,6 +59,10 @@ const ANIMAL_FLAVOR_LINES: Record<AnimalKind, string[]> = {
     'Kogut prostuje się dumnie, mierząc Cię czujnym spojrzeniem.',
     'Grzebień koguta drży, gdy ptak przechadza się po podwórzu.',
   ],
+  dog: [
+    'Pies merda ogonem, rozpoznając Cię jako swojego.',
+    'Krąży czujnie wokół zagrody, węsząc w powietrzu.',
+  ],
 }
 
 export function pickAnimalFlavorLine(kind: AnimalKind): string {

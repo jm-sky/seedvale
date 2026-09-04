@@ -59,6 +59,7 @@ import {
 } from './AnimalLife'
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { animateCorpseRotFx, createCorpseRotFx, disposeCorpseRotFx } from './corpseDecayFx'
+import { resolveDogBarkStimulus, resolveDogGuardTarget } from './dogGuard'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
   decideFaunaBehaviour,
@@ -448,6 +449,17 @@ export type AnimalAgentDebugInfo = {
   strategicDestWalkable: boolean | null
   chaseNav: FaunaNavRescueDebugInfo
   fleeNav: FaunaNavRescueDebugInfo
+  /** Owning household's home `Place.id` (plan fauna-011 §2/§15) — `null` for
+   *  wild fauna/unowned livestock. Same value as `ownerHouseId`. */
+  ownerHouseId: string | null
+  /** This tick's resolved guard target (plan fauna-011 §9/§10/§15) — `null`
+   *  for any non-dog kind, or a dog with nothing to defend against right
+   *  now. Not persisted (`AnimalAgent`'s own field doc). */
+  dogGuard: { protectedNpcId: string, ownHousehold: boolean } | null
+  /** Most recent contextual bark trigger (plan fauna-011 §7/§15) — `null`
+   *  for any non-dog kind, or before this dog has ever barked. Transient,
+   *  not persisted. */
+  dogVocalizeStimulus: 'guard' | 'wolf-howl' | 'stranger' | null
   /** Current carcass food-target diagnostics (plan fauna-005) — `null` when
    *  not currently pursuing a carcass. `riskPenalty` is always 0 today: the
    *  `carcassCandidateScore` disease/food-safety seam has no consumer yet. */
@@ -717,6 +729,7 @@ export type AnimalKind =
   | 'sheep'
   | 'chicken'
   | 'rooster'
+  | 'dog'
 
 export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   wolf: 'wilk',
@@ -733,6 +746,7 @@ export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   sheep: 'owca',
   chicken: 'kura',
   rooster: 'kogut',
+  dog: 'pies',
 }
 
 export type AnimalDef = {
@@ -862,6 +876,59 @@ const HERBIVORE_DIET: AnimalDietConfig = {
   grass: 1,
   items: { hay: 0.9, apple: 0.6, carrot: 0.5 },
 }
+
+/** Dog diet (plan fauna-011 §3/§4) — no `grass` (dog never forages like a
+ *  herbivore) and no `scavenging` block (dog never seeks a carcass on its
+ *  own). `items` lists every raw/bait-tagged meat `ItemKind`
+ *  (`itemCatalog.ts`'s `food.bait === 'meat'`) at a relief scale slightly
+ *  below a fresh kill's implicit 1, matching `HERBIVORE_DIET`'s convention —
+ *  household-stored meat is real food, just not quite as good as what a
+ *  predator eats fresh. This is the sole "eats meat but doesn't hunt" seam:
+ *  `role: 'livestock'` (not `'predator'`) already keeps `findFoodTarget()`
+ *  off the carcass-seeking branch and `resolveNpcTarget()` from ever running
+ *  for this kind — see `AnimalDef.role`'s doc. */
+const DOG_DIET: AnimalDietConfig = {
+  items: { raw_meat: 0.8, deer_meat: 0.8, wolf_meat: 0.8, boar_meat: 0.8, rabbit_meat: 0.6, beef: 0.8 },
+}
+
+/** Dog guard target (plan fauna-011 §9/§10/§13) — the `AnimalAgent` (a live
+ *  predator) to chase/fight plus who it's defending, resolved fresh every
+ *  tick by `resolveGuardTarget()`. Never itself persisted or cached across
+ *  ticks beyond `dogGuardTarget` (a diagnostic/same-tick convenience, not a
+ *  sticky commitment) — see that field's doc. */
+type DogGuardTarget = { wolf: AnimalAgent, protectedNpcId: string, ownHousehold: boolean }
+
+/** Max distance (m) from a dog's own home a wolf attacking *this dog's own
+ *  household* is still worth chasing (plan fauna-011 §10/§13: own-household
+ *  defense gets the most latitude, but a dog must still "pozostać lokalnym
+ *  obrońcą", never a settlement-wide police). Bigger than
+ *  `DOG_GUARD_ASSIST_RADIUS` below on purpose. */
+const DOG_GUARD_OWN_RADIUS = 40
+/** Max distance (m) from a dog's own home a wolf attacking a *different*
+ *  household's NPC is still worth assisting (plan fauna-011 §10) — tighter
+ *  than `DOG_GUARD_OWN_RADIUS` so helping a stranger never pulls a dog far
+ *  from its own home/family. */
+const DOG_GUARD_ASSIST_RADIUS = 20
+/** Radius (m) from a dog's own home within which a recent wolf howl
+ *  (`recentVocalizeAlert`) is "relevant" enough to trigger an alert bark
+ *  (plan fauna-011 §7/§8) — deliberately generous next to the guard radii
+ *  above, since this only ever produces a bark, never a chase ("odległy wilk
+ *  może wywołać jedynie alert"). */
+const DOG_BARK_HOWL_RADIUS = 45
+/** Radius (m) from a dog's own home within which an unfamiliar (different-
+ *  household) settlement NPC triggers an observational bark (plan
+ *  fauna-011 §7) — tight, since this is "a stranger right by the house", not
+ *  general awareness of the whole settlement. */
+const DOG_BARK_STRANGER_RADIUS = 10
+/** Shared cooldown between every dog bark trigger (plan fauna-011 §7) — the
+ *  actual anti-spam gate; keeps a settlement's dogs from cascading into a
+ *  continuous chorus over one lingering stimulus. */
+const DOG_BARK_COOLDOWN_SEC = 10
+/** How long a vocalization stays "recent" for `recentVocalizeAlert` readers
+ *  (plan fauna-011 §8) — short and spatially local by construction (readers
+ *  compare against the vocalizing animal's own position), matching the
+ *  plan's "transient, spatially bounded" stimulus requirement. */
+const VOCALIZE_ALERT_DURATION_SEC = 6
 
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   wolf: {
@@ -1109,6 +1176,29 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 0,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
   },
+  // Plan fauna-011: household dog. `role: 'livestock'` (not `'predator'`)
+  // keeps it off the hunting/carcass-seeking path; `fleeRange: 0` (not
+  // `'prey'` either) means it never flees a wolf via the default
+  // `prey-normal` fallback — guarding is a dedicated higher-priority branch
+  // (`faunaDecision.ts`'s `dog-guard`) instead. `playerNoticeRange`/
+  // `playerPanicRange: 0` mirror every other domestic kind: a dog never
+  // treats the player as a threat.
+  dog: {
+    kind: 'dog',
+    role: 'livestock',
+    sociability: 'domestic',
+    color: 0xc8a878,
+    scale: 0.55,
+    modelHeight: 0.55,
+    walkSpeed: 3.0,
+    sprintSpeed: 6.8,
+    detectRange: 0,
+    fleeRange: 0,
+    playerNoticeRange: 0,
+    playerPanicRange: 0,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+    diet: DOG_DIET,
+  },
 }
 
 /** A nearby NPC candidate for predator human-targeting (plan 179 §5/§7) —
@@ -1116,8 +1206,13 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
  *  stable `id` so a chosen target can be reported back to the caller
  *  (`Fauna.update`'s `onNpcHit`) without `AnimalAgent` holding an `NpcAgent`
  *  reference. Caller-supplied and bounded (loaded settlements' NPCs only) —
- *  see `Fauna`'s own doc comment. */
-export type NearbyNpcCandidate = { id: string, x: number, z: number }
+ *  see `Fauna`'s own doc comment.
+ *
+ *  `homeId` (plan fauna-011 §9/§10) is this NPC's `Household.homeId`, when
+ *  known — lets a wolf's committed attack target (`npcAttackTarget`) answer
+ *  "is this my own household's dog's owner" without a second household
+ *  lookup. Optional so every pre-fauna-011 caller/test keeps working. */
+export type NearbyNpcCandidate = { id: string, x: number, z: number, homeId?: string }
 
 /** Minimal per-wolf shape `setFrenzyWolf()` needs to pick a target (plan 179
  *  §3/§4) — deliberately not `AnimalAgent` itself, so `pickNearestEligibleWolf`
@@ -1409,6 +1504,26 @@ export class AnimalAgent {
    *  caller-bounded `nearbyNpcs` list (dead or its settlement unloaded) —
    *  see `resolveNpcTarget()`. */
   private npcTarget: NearbyNpcCandidate | null = null
+  /** Dog-only guard state (plan fauna-011 §9/§10/§13) — recomputed fresh
+   *  every `update()` tick from live world state (see `resolveGuardTarget`),
+   *  never itself the source of truth; only cached here for
+   *  `getDebugInfo()`/`updateDogGuard()` to read within the same tick.
+   *  `null` for every non-dog kind. */
+  private dogGuardTarget: DogGuardTarget | null = null
+  /** Dog-only contextual bark cooldown (plan fauna-011 §7), same "own
+   *  per-instance timer" convention as `attackCooldown`/`alertTimer` —
+   *  advanced/reset by `updateDogVocalization()`, never persisted (plan
+   *  fauna-011 §14). */
+  private barkCooldownSec = 0
+  /** Diagnostic-only record of the last stimulus that actually fired a bark
+   *  (plan fauna-011 §15) — not itself read by any decision logic. */
+  private lastBarkStimulus: 'guard' | 'wolf-howl' | 'stranger' | null = null
+  /** Seconds remaining since this animal last vocalized (any kind) — the
+   *  "wolf howled recently" stimulus a nearby dog's `resolveBarkStimulus()`
+   *  reads via `recentVocalizeAlert`, instead of depending on WebAudio/
+   *  camera/player presence (plan fauna-011 §8). Sim-state only, decays like
+   *  any other timer, never persisted. */
+  private vocalizeAlertRemainingSec = 0
   /** Locked-in live-hunt target for a predator (plan npc-005) — once set,
    *  `resolvePreyTarget()` keeps chasing this exact prey animal instead of
    *  re-picking `nearest(others, 'prey', ...)` every tick, which switched
@@ -1855,6 +1970,42 @@ export class AnimalAgent {
     return this.threateningHuman
   }
 
+  /** Read-only view of this predator's currently-committed NPC attack target
+   *  (plan fauna-011 §9) — lets guard/threat-perception logic (a household
+   *  dog's `resolveGuardTarget()`) identify *who* a wolf is attacking without
+   *  inferring an attack from proximity alone, and without duplicating
+   *  `npcTarget` itself. `null` for a non-predator, or a predator with no
+   *  currently-committed NPC target (attacking the player instead, or
+   *  nothing at all). */
+  get npcAttackTarget(): { npcId: string, homeId?: string } | null {
+    return this.npcTarget ? { npcId: this.npcTarget.id, homeId: this.npcTarget.homeId } : null
+  }
+
+  /** Read-only "did this animal vocalize recently, and from where" (plan
+   *  fauna-011 §8) — the wolf-howl stimulus a nearby dog's
+   *  `resolveBarkStimulus()` reads directly off `others`/`nearbyPredators`,
+   *  independent of WebAudio/camera/player presence. `null` once
+   *  `vocalizeAlertRemainingSec` has decayed. */
+  get recentVocalizeAlert(): { x: number, z: number } | null {
+    return this.vocalizeAlertRemainingSec > 0
+      ? { x: this.mesh.position.x, z: this.mesh.position.z }
+      : null
+  }
+
+  /** Player-fed compatible diet item (plan fauna-011 §6) — generic seam for
+   *  any species with `def.diet.items`, not dog-specific (`findFoodTarget()`/
+   *  `performSourceAction()` already gate their own autonomous feeding the
+   *  same way). Applies hunger relief at the item's configured diet scale;
+   *  does not touch inventory — `gameLoop.ts` calls `Inventory.remove()`
+   *  itself only after this returns `true`, so an incompatible item is never
+   *  consumed. */
+  feedByPlayer(itemKind: ItemKind): boolean {
+    const relief = this.def.diet?.items?.[itemKind]
+    if (relief == null) return false
+    consumeFood(this.life, relief)
+    return true
+  }
+
   /** Toggles the gaze-highlight glow on this animal's label. Idempotent — no
    *  redundant DOM writes if the state doesn't actually change. */
   setHighlighted(active: boolean): void {
@@ -1955,6 +2106,11 @@ export class AnimalAgent {
         : null,
       chaseNav: this.navDebugInfo(this.chaseNav),
       fleeNav: this.navDebugInfo(this.fleeNav),
+      ownerHouseId: this.ownerHouseId ?? null,
+      dogGuard: this.dogGuardTarget
+        ? { protectedNpcId: this.dogGuardTarget.protectedNpcId, ownHousehold: this.dogGuardTarget.ownHousehold }
+        : null,
+      dogVocalizeStimulus: this.lastBarkStimulus,
       foodTarget: this.sourceTarget?.kind === 'carcass'
           && this.sourceTarget.corpsePhase != null
           && this.sourceTarget.foodValue != null
@@ -2437,6 +2593,20 @@ export class AnimalAgent {
      *  selection is then simply skipped, same "capability absent → branch
      *  never taken" convention as `def.diet` itself. */
     grassForage?: GrassForageService,
+    /** Bounded/local live predators (plan fauna-011 §9/§10/§11) — only
+     *  consulted by a `dog` (`resolveGuardTarget`/`resolveBarkStimulus`);
+     *  every other kind never reads this. Caller-bounded the same way as
+     *  `nearbyNpcs` — `tickSettlementLivestock`'s per-frame wolf filter, not
+     *  a per-dog scan (see that call site's doc). Defaults to none so every
+     *  existing caller/test keeps prior behaviour. */
+    nearbyPredators: readonly AnimalAgent[] = [],
+    /** Bounded/local same-settlement NPCs (plan fauna-011 §7) — only
+     *  consulted by a `dog`'s stranger-bark check
+     *  (`resolveBarkStimulus`), deliberately the settlement's own
+     *  already-updated `agents` list (cheap, already in scope at the call
+     *  site) rather than the global cross-settlement `nearbyNpcs` wolves use.
+     *  Defaults to none so every existing caller/test keeps prior behaviour. */
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[] = [],
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) {
@@ -2470,6 +2640,7 @@ export class AnimalAgent {
     if (this.provokedTimer > 0) this.provokedTimer -= dt
     if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
     if (this.howlPauseTimer > 0) this.howlPauseTimer -= dt
+    if (this.vocalizeAlertRemainingSec > 0) this.vocalizeAlertRemainingSec -= dt
     const vocalizeTick = tickSpontaneousVocalizeCooldown(
       this.def.kind,
       dt,
@@ -2492,6 +2663,10 @@ export class AnimalAgent {
       // brief `steerToward()` no-op instead, so the wolf visibly stops
       // instead of walking through its own howl.
       if (this.def.kind === 'wolf') this.howlPauseTimer = HOWL_PAUSE_SECONDS
+      // Sim-state howl stimulus (plan fauna-011 §8) — independent of the
+      // `onVocalize` presentation hook above, read by a nearby dog via
+      // `recentVocalizeAlert`.
+      this.vocalizeAlertRemainingSec = VOCALIZE_ALERT_DURATION_SEC
     }
     this.isNight = dayFactor <= 0
     this.moving = false
@@ -2515,6 +2690,11 @@ export class AnimalAgent {
     const npcThreat = this.def.role === 'predator'
       ? this.resolveNpcTarget(nearbyNpcs)
       : null
+    // Dog-only guard perception (plan fauna-011 §9/§10) — a no-op read for
+    // every other kind, computed once here so both the decision branch and
+    // this tick's bark check (below) share the same resolved target.
+    const guardTarget = this.def.kind === 'dog' ? this.resolveGuardTarget(nearbyPredators) : null
+    this.dogGuardTarget = guardTarget
 
     if (this.rabid) {
       // Rabies bypasses normal predator/prey AI entirely, including
@@ -2551,11 +2731,20 @@ export class AnimalAgent {
         fireNearby: sense.nearestFire !== null,
         hasStrategicVillage: this.strategicVillage !== null,
         arrivedAtStrategicVillage: this.arrivedAtStrategicVillage(),
+        guardActive: guardTarget !== null,
       }
       this.lastFaunaDecisionInput = decisionInput
       const branch = decideFaunaBehaviour(decisionInput)
       this.debugBranch = branch
       switch (branch) {
+        case 'dog-guard': {
+          this.threateningHuman = false
+          this.humanDecisionTimer = 0
+          this.npcDecisionTimer = 0
+          this.provokedTimer = 0
+          this.updateDogGuard(dt, guardTarget!)
+          break
+        }
         case 'fire-avoid': {
           // `!this.frenzied` (enforced by `isBehaviourValid`): FIRE_AVOID_RADIUS
           // (11) is bigger than a wolf's NPC-notice radius (playerNoticeRange,
@@ -2707,6 +2896,9 @@ export class AnimalAgent {
           || branch === 'player-flee' || branch === 'player-flee-prey')
       ) {
         this.threateningHuman = true
+      }
+      if (this.def.kind === 'dog') {
+        this.updateDogVocalization(dt, guardTarget, nearbyPredators, nearbySettlementNpcs, onVocalize)
       }
     }
     if (this.threateningHuman && !this.wasThreateningHuman) {
@@ -3307,6 +3499,93 @@ export class AnimalAgent {
     if (this.pursueNeeds(dt, others)) return
     this.setIntent('wander')
     this.wander(dt)
+  }
+
+  /** Dog guard-target resolution (plan fauna-011 §9/§10/§13) — thin adapter
+   *  over the pure `resolveDogGuardTarget()` (`dogGuard.ts`, unit-tested
+   *  directly): maps live `nearbyPredators` (caller-bounded, see `update()`'s
+   *  param doc) into that function's narrow candidate shape, then resolves
+   *  the winning wolf id back to its live `AnimalAgent` reference (needed by
+   *  `updateDogGuard()`'s movement/`attack()` call, which the pure function
+   *  deliberately never touches). Disengagement (§13) falls out for free:
+   *  this is recomputed fresh every tick from live state, never a sticky
+   *  commitment, so a dead/retargeted wolf or a target that walked outside
+   *  its tier's radius simply stops being returned — no decay timer needed. */
+  private resolveGuardTarget(nearbyPredators: readonly AnimalAgent[]): DogGuardTarget | null {
+    const resolved = resolveDogGuardTarget(
+      this.home,
+      this.ownerHouseId,
+      nearbyPredators.map((wolf) => ({
+        id: wolf.animalId,
+        x: wolf.mesh.position.x,
+        z: wolf.mesh.position.z,
+        dead: wolf.health.dead,
+        npcTarget: wolf.npcAttackTarget,
+      })),
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
+    )
+    if (!resolved) return null
+    const wolf = nearbyPredators.find((a) => a.animalId === resolved.wolfId)
+    if (!wolf) return null
+    return { wolf, protectedNpcId: resolved.protectedNpcId, ownHousehold: resolved.ownHousehold }
+  }
+
+  /** Dog guard combat/movement (plan fauna-011 §12) — mirrors
+   *  `updatePredator()`'s chase-then-bite block exactly, reusing the same
+   *  `chaseNav`/`attack()` seam instead of a second combat system; `wolf` is
+   *  a live `AnimalAgent`, so this is genuinely animal-vs-animal combat
+   *  (cooldown/stamina/animation/damage/`takeDamage()`), not a scripted
+   *  effect. No stamina-exhaustion fallback to `pursueNeeds()` like
+   *  `updatePredator()` has — a guarding dog keeps closing distance even
+   *  while tired; only `resolveGuardTarget()`'s own radius/liveness checks
+   *  ever end the engagement (§13). */
+  private updateDogGuard(dt: number, guardTarget: DogGuardTarget): void {
+    this.cancelSourceTarget()
+    const wolf = guardTarget.wolf
+    this.setIntent('attack', copyVec3(wolf.mesh.position))
+    const dist = Math.hypot(wolf.mesh.position.x - this.mesh.position.x, wolf.mesh.position.z - this.mesh.position.z)
+    if (dist < CONTACT_RANGE) {
+      this.attack(wolf)
+    } else {
+      this.sprinting = true
+      this.stepNavRescue(this.chaseNav, wolf.mesh.position, this.sprintSpeedNow(), dt)
+    }
+  }
+
+  /** Dog contextual bark (plan fauna-011 §7/§8) — thin adapter over the pure
+   *  `resolveDogBarkStimulus()` (`dogGuard.ts`, unit-tested directly), gated
+   *  behind one shared `barkCooldownSec` (the actual anti-spam/anti-cascade
+   *  guard: a settled guard state or a lingering howl/stranger keeps
+   *  re-qualifying every tick, the cooldown is what turns that into one
+   *  bark, not a chorus). Never triggered by hearing another dog bark —
+   *  `nearbyPredators` only ever contains wolves (caller contract, see
+   *  `update()`'s param doc), so a dog's own bark is structurally invisible
+   *  to this scan. */
+  private updateDogVocalization(
+    dt: number,
+    guardTarget: DogGuardTarget | null,
+    nearbyPredators: readonly AnimalAgent[],
+    nearbySettlementNpcs: readonly NearbyNpcCandidate[],
+    onVocalize?: (kind: AnimalKind, x: number, z: number) => void,
+  ): void {
+    if (this.barkCooldownSec > 0) this.barkCooldownSec -= dt
+    if (this.barkCooldownSec > 0) return
+    const stimulus = resolveDogBarkStimulus(
+      this.home,
+      this.ownerHouseId,
+      guardTarget !== null,
+      nearbyPredators
+        .filter((wolf) => !wolf.health.dead && wolf.recentVocalizeAlert)
+        .map((wolf) => wolf.recentVocalizeAlert!),
+      DOG_BARK_HOWL_RADIUS,
+      nearbySettlementNpcs,
+      DOG_BARK_STRANGER_RADIUS,
+    )
+    if (!stimulus) return
+    this.barkCooldownSec = DOG_BARK_COOLDOWN_SEC
+    this.lastBarkStimulus = stimulus
+    onVocalize?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
   }
 
   /** Rabies overrides normal predator/prey/human-fear behavior entirely

@@ -105,7 +105,17 @@ const CAMPFIRE_LIT_PROMPT = '[E] Dołóż gałąź · [R] Upiecz mięso'
  *  bucket with room for milk" check — only meaningful for a `cow`/`sheep`
  *  whose own milking cooldown (`animal.canBeMilked(nowDays)`) has cleared;
  *  every other combination falls through to the existing prompts unchanged. */
-function animalPromptLabel(animal: AnimalAgent, heldTool: ToolKind | null, canMilk: boolean, nowDays: number): string {
+/** `feedItemKind` (plan fauna-011 §6) is the caller's precomputed "player
+ *  carries an item this animal's `def.diet.items` accepts" check
+ *  (`selectDietFeedKind(inventory, animal.def.diet.items)`) — same
+ *  "precompute, stay inventory-agnostic" convention as `canMilk` above. */
+function animalPromptLabel(
+  animal: AnimalAgent,
+  heldTool: ToolKind | null,
+  canMilk: boolean,
+  nowDays: number,
+  feedItemKind: ItemKind | null,
+): string {
   const kind = animal.def.kind
   const label = ANIMAL_LABELS[kind]
   if (isMeleeTool(heldTool) || isRangedTool(heldTool)) return `Atakuj: ${label}`
@@ -114,6 +124,7 @@ function animalPromptLabel(animal: AnimalAgent, heldTool: ToolKind | null, canMi
   // weapon is held.
   if (ANIMAL_DEFS[kind].mount) return `Dosiądź: ${label}`
   if (canMilk && animal.canBeMilked(nowDays)) return `Wydój: ${label}`
+  if (feedItemKind) return `Nakarm: ${label}`
   return `Obserwuj: ${label}`
 }
 
@@ -362,6 +373,13 @@ export function buildInteractables(
    *  this module stays inventory-agnostic. Defaults to false for existing
    *  callers/tests. */
   hasMilkContainer = false,
+  /** Player-feeding resolver (plan fauna-011 §6) — precomputed the same way
+   *  `hasMilkContainer`/`inventoryHasFreeKnife` are, so this module stays
+   *  inventory-agnostic. Returns the first inventory item compatible with
+   *  `animal`'s diet, or `null`. Optional/defaulted so existing callers/
+   *  tests that don't model inventory contents keep prior behaviour (no
+   *  "Nakarm" prompt ever offered). */
+  feedItemKindFor?: (animal: AnimalAgent) => ItemKind | null,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -555,7 +573,7 @@ export function buildInteractables(
       list.push({
         kind: 'animal',
         position: animal.mesh.position,
-        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays),
+        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null),
         animal,
         interactRange: rangeOverride ?? undefined,
       })
@@ -726,7 +744,7 @@ export function buildInteractables(
     list.push({
       kind: 'animal',
       position: animal.mesh.position,
-      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays),
+      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null),
       animal,
       interactRange: rangeOverride ?? undefined,
     })
@@ -915,7 +933,7 @@ export function buildCombatTarget(
   return {
     kind: 'animal',
     position: animal.mesh.position,
-    promptLabel: animalPromptLabel(animal, heldTool, false, 0),
+    promptLabel: animalPromptLabel(animal, heldTool, false, 0, null),
     animal,
   }
 }

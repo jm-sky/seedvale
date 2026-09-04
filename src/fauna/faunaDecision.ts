@@ -31,6 +31,7 @@ export type FaunaBehaviourKind =
   | 'npc-flee'
   | 'fire-avoid'
   | 'frenzy-beeline'
+  | 'dog-guard'
   | 'predator-normal'
   | 'prey-normal'
 
@@ -55,6 +56,12 @@ export type FaunaDecisionInput = {
   fireNearby: boolean
   hasStrategicVillage: boolean
   arrivedAtStrategicVillage: boolean
+  /** Whether this tick's `AnimalAgent.resolveGuardTarget()` resolved a real
+   *  guard target (plan fauna-011 §9/§10/§11) — always `false` for any kind
+   *  but `dog` (computed only for that kind, see `update()`'s call site).
+   *  Optional so every pre-fauna-011 caller/test keeps constructing
+   *  `FaunaDecisionInput` without it. */
+  guardActive?: boolean
 }
 
 /** Priority ranks — encode today's `if / else if` order 1:1 (higher wins,
@@ -72,6 +79,7 @@ export const FAUNA_BEHAVIOUR_PRIORITY: Record<FaunaBehaviourKind, number> = {
   'npc-flee': 60,
   'fire-avoid': 50,
   'frenzy-beeline': 40,
+  'dog-guard': 35,
   'predator-normal': 30,
   'prey-normal': 20,
 }
@@ -90,6 +98,8 @@ const BEHAVIOUR_ORDER: readonly FaunaBehaviourKind[] = (
  *  so only one candidate per priority group is ever valid at once. */
 function isBehaviourValid(kind: FaunaBehaviourKind, input: FaunaDecisionInput): boolean {
   switch (kind) {
+    case 'dog-guard':
+      return input.guardActive === true
     case 'fire-avoid':
       return input.fireNearby && !input.frenzied
     case 'frenzy-beeline':

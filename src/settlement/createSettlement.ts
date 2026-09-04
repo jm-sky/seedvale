@@ -5,7 +5,7 @@ import {
 import type { ThreateningAnimalCandidate } from '../ai/npcAnimalThreat'
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { PlayAt } from '../audio/createWorldAudio'
-import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
+import type { AnimalAgent, AnimalKind, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { DroppedItems } from '../items/createDroppedItems'
@@ -169,6 +169,11 @@ export type Settlement = {
      *  never recomputed here). `undefined` for any caller/test that doesn't
      *  pass one; weather then contributes no shelter pressure. */
     weather?: WeatherState,
+    /** Bounded/local live wild predators (plan fauna-011 §9/§10/§11) —
+     *  forwarded straight to `tickSettlementLivestock`; only meaningful for
+     *  an owned `dog`. Caller (`SettlementsManager.update`) keeps this small
+     *  (a per-frame filter over `Fauna.getAgents()`, not a scan per dog). */
+    nearbyPredators?: readonly AnimalAgent[],
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -682,7 +687,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators) {
       currentNowDays = nowDays
       const crowd = npcCrowd.run(agents, dt)
       for (let i = 0; i < agents.length; i++) {
@@ -694,6 +699,12 @@ export async function createSettlement(
       // settlement's own already-updated `agents` list (no global registry);
       // a no-op pass when nobody is currently settled at the campfire.
       advanceSocialPairing(agents, relations, dayLengthSec)
+      // Plan fauna-011 §7: an owned dog's stranger-bark check reuses this
+      // settlement's own already-updated `agents` list — cheap and already
+      // in scope, no separate global candidate collection needed.
+      const nearbySettlementNpcs: NearbyNpcCandidate[] = agents
+        .filter((a) => !a.health.dead)
+        .map((a) => ({ id: a.id, x: a.mesh.position.x, z: a.mesh.position.z, homeId: a.household?.homeId }))
       tickSettlementLivestock(livestock, {
         dt,
         settlementId: def.id,
@@ -708,6 +719,8 @@ export async function createSettlement(
         onAnimalVocalize,
         persistence: livestockPersistence,
         grassForage,
+        nearbyPredators,
+        nearbySettlementNpcs,
       })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived

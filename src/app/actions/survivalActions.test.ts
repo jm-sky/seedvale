@@ -6,7 +6,7 @@ import { createPlayerNeeds } from '../../player/PlayerNeeds'
 import { createHealthState } from '../../shared/HealthState'
 import { createWaterSource, type WaterSource } from '../../world/WaterSource'
 import { createBusyAction } from '../busyAction'
-import { createSurvivalActions } from './survivalActions'
+import { createSurvivalActions, type FeedableAnimal, feedAnimal } from './survivalActions'
 
 function setup() {
   const emptyWaterskin: LiquidContainerItemInstance = { id: 'test-waterskin', kind: 'waterskin_medium', liquid: null, amountLitres: 0 }
@@ -183,5 +183,62 @@ describe('drinkFromWaterSource — uncovered player-well consumption risk (plan 
     actions.drinkFromWaterSource(createWaterSource('well'))
 
     expect(health.currentHp).toBe(startingHp)
+  })
+})
+
+describe('feedAnimal (plan fauna-011 §6)', () => {
+  function fakeAnimal(dietItems: Partial<Record<string, number>> | undefined, feedByPlayerResult = true): FeedableAnimal & { feedByPlayer: ReturnType<typeof vi.fn> } {
+    return {
+      def: { diet: dietItems ? { items: dietItems } : undefined },
+      feedByPlayer: vi.fn(() => feedByPlayerResult),
+    }
+  }
+
+  it('successful feeding consumes exactly one compatible item and relieves hunger', () => {
+    const inventory = new Inventory({}, Infinity)
+    inventory.add('raw_meat', 3)
+    const animal = fakeAnimal({ raw_meat: 0.8 })
+
+    const fed = feedAnimal(animal, inventory)
+
+    expect(fed).toBe(true)
+    expect(animal.feedByPlayer).toHaveBeenCalledWith('raw_meat')
+    expect(animal.feedByPlayer).toHaveBeenCalledTimes(1)
+    expect(inventory.has('raw_meat', 1)).toBe(true)
+    expect(inventory.has('raw_meat', 3)).toBe(false)
+  })
+
+  it('no compatible item in inventory: no-op, feedByPlayer never called, nothing consumed', () => {
+    const inventory = new Inventory({}, Infinity)
+    inventory.add('hay', 5)
+    const animal = fakeAnimal({ raw_meat: 0.8 })
+
+    const fed = feedAnimal(animal, inventory)
+
+    expect(fed).toBe(false)
+    expect(animal.feedByPlayer).not.toHaveBeenCalled()
+    expect(inventory.has('hay', 5)).toBe(true)
+  })
+
+  it('an animal with no configured diet is never fed', () => {
+    const inventory = new Inventory({}, Infinity)
+    inventory.add('raw_meat', 1)
+    const animal = fakeAnimal(undefined)
+
+    expect(feedAnimal(animal, inventory)).toBe(false)
+    expect(animal.feedByPlayer).not.toHaveBeenCalled()
+    expect(inventory.has('raw_meat', 1)).toBe(true)
+  })
+
+  it('interrupted/invalid feeding (feedByPlayer rejects) does not consume the item', () => {
+    const inventory = new Inventory({}, Infinity)
+    inventory.add('raw_meat', 1)
+    const animal = fakeAnimal({ raw_meat: 0.8 }, false)
+
+    const fed = feedAnimal(animal, inventory)
+
+    expect(fed).toBe(false)
+    expect(animal.feedByPlayer).toHaveBeenCalledWith('raw_meat')
+    expect(inventory.has('raw_meat', 1)).toBe(true)
   })
 })

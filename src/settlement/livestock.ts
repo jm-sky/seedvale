@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
-import type { AnimalSaveState, VillageInfo } from '../fauna/AnimalAgent'
+import type { AnimalSaveState, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { GrassForageService } from '../world/createGrassForagePatches'
@@ -16,6 +16,7 @@ import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import {
   createChickenModel,
   createCowModel,
+  createDogModel,
   createDonkeyModel,
   createHorseModel,
   createRoosterModel,
@@ -26,18 +27,24 @@ import { type VillageSize, villageSizeConfig } from './families'
 import { homePlaceId } from './places'
 
 /** Owned farm animal kinds — the only `AnimalKind`s this module ever spawns. */
-type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken' | 'rooster'
+type LivestockKind = 'horse' | 'donkey' | 'cow' | 'sheep' | 'chicken' | 'rooster' | 'dog'
 
-export const LIVESTOCK_URLS: Record<LivestockKind, string> = {
-  horse: '/models/fauna/horse.glb',
-  donkey: '/models/fauna/donkey.glb',
-  cow: '/models/fauna/cow.glb',
-  sheep: '/models/fauna/sheep.glb',
-  chicken: '/models/fauna/chicken.glb',
+/** One or more visual variants per kind — every `LivestockKind` but `dog`
+ *  has exactly one (kept as a 1-element array so `ensureLivestockTemplates`/
+ *  `visualFor` don't need a special case). `dog` has two (Husky/Shiba, plan
+ *  fauna-011 §1) — same simulation kind/behaviour, `visualFor` just picks a
+ *  deterministic variant per `animalId`, never a second `AnimalKind`. */
+export const LIVESTOCK_URLS: Record<LivestockKind, readonly string[]> = {
+  horse: ['/models/fauna/horse.glb'],
+  donkey: ['/models/fauna/donkey.glb'],
+  cow: ['/models/fauna/cow.glb'],
+  sheep: ['/models/fauna/sheep.glb'],
+  chicken: ['/models/fauna/chicken.glb'],
   // No dedicated GLB yet (plan fauna-009 §3) — `ensureLivestockTemplates`'s
   // existing load-failure fallback resolves this to `createRoosterModel()`
   // until one is dropped in here; no logic change needed when it is.
-  rooster: '/models/fauna/rooster.glb',
+  rooster: ['/models/fauna/rooster.glb'],
+  dog: ['/models/fauna/dog_husky.glb', '/models/fauna/dog_shiba.glb'],
 }
 
 /** Single source of truth for "is this kind's `animalId` trustworthy after a
@@ -183,7 +190,17 @@ const MODEL_BUILDERS: Record<LivestockKind, () => THREE.Object3D> = {
   sheep: createSheepModel,
   chicken: createChickenModel,
   rooster: createRoosterModel,
+  dog: createDogModel,
 }
+
+/** Independent per-house chance of a guard dog (plan fauna-011 §2) — a
+ *  separate deterministic draw appended *after* every existing species-
+ *  count/species-pick/rooster-companion roll for this house, same "never
+ *  perturbs an existing save's roll sequence" reasoning as
+ *  `ROOSTER_COMPANION_CHANCE` above. Not conditioned on owning other
+ *  livestock — applies to every house, including an `OUTPOST`'s single
+ *  cabin. */
+const DOG_OWNERSHIP_CHANCE = 0.35
 
 /** Given ownership, chance of 2 animals instead of 1. */
 const LIVESTOCK_TWO_CHANCE = 0.4
@@ -210,7 +227,11 @@ const LIVESTOCK_WANDER_RADIUS: readonly [number, number] = [3, 6]
  *  not literally standing in the doorway. */
 const SPAWN_OFFSET_RANGE: readonly [number, number] = [1.5, 4]
 
-const livestockTemplates: Partial<Record<LivestockKind, GltfAsset>> = {}
+/** One entry per successfully-loaded URL in `LIVESTOCK_URLS[kind]`, same
+ *  order — `visualFor()` picks an index deterministically per `animalId`.
+ *  A kind whose only URL failed to load has no entry here at all (falls
+ *  through to `MODEL_BUILDERS`), same as before this became an array. */
+const livestockTemplates: Partial<Record<LivestockKind, GltfAsset[]>> = {}
 let livestockTemplatesPromise: Promise<void> | null = null
 
 function wrapModel(model: THREE.Object3D): THREE.Group {
@@ -226,30 +247,44 @@ async function ensureLivestockTemplates(): Promise<void> {
   }
   livestockTemplatesPromise = (async () => {
     const entries = await Promise.all(
-      (Object.entries(LIVESTOCK_URLS) as [LivestockKind, string][]).map(async ([kind, url]) => {
-        try {
-          const asset = await loadGltfAsset(url)
-          // Clone before prepareProp so the shared GLTF cache stays unscaled
-          // (merchant horse.glb also clones from that cache).
-          const prepared = asset.clone()
-          prepareProp(prepared, ANIMAL_DEFS[kind].modelHeight)
-          const wrapped: GltfAsset = {
-            root: prepared,
-            animations: asset.animations,
-            clone: () => cloneSkinned(prepared) as THREE.Group,
+      (Object.entries(LIVESTOCK_URLS) as [LivestockKind, readonly string[]][]).flatMap(([kind, urls]) =>
+        urls.map(async (url) => {
+          try {
+            const asset = await loadGltfAsset(url)
+            // Clone before prepareProp so the shared GLTF cache stays unscaled
+            // (merchant horse.glb also clones from that cache).
+            const prepared = asset.clone()
+            prepareProp(prepared, ANIMAL_DEFS[kind].modelHeight)
+            const wrapped: GltfAsset = {
+              root: prepared,
+              animations: asset.animations,
+              clone: () => cloneSkinned(prepared) as THREE.Group,
+            }
+            return [kind, wrapped] as const
+          } catch (err) {
+            console.warn(`[livestock] failed to load ${url}, procedural fallback`, err)
+            return [kind, null] as const
           }
-          return [kind, wrapped] as const
-        } catch (err) {
-          console.warn(`[livestock] failed to load ${url}, procedural fallback`, err)
-          return [kind, null] as const
-        }
-      }),
+        }),
+      ),
     )
     for (const [kind, asset] of entries) {
-      if (asset) livestockTemplates[kind] = asset
+      if (asset) (livestockTemplates[kind] ??= []).push(asset)
     }
   })()
   await livestockTemplatesPromise
+}
+
+/** Deterministic string hash (FNV-1a) — picks a stable visual variant per
+ *  `animalId` (plan fauna-011 §1) so the same individual always renders as
+ *  the same Husky/Shiba across a reload, without persisting a variant index. */
+function hashAnimalId(id: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return h >>> 0
 }
 
 /** Deterministic per-house seed, same xor/imul idiom as `families.ts`'s
@@ -303,20 +338,30 @@ const ROOSTER_COMPANION_CHANCE = 0.5
 
 function kindsForHouse(size: VillageSize, random: () => number): LivestockKind[] {
   const ownershipChance = villageSizeConfig(size).livestockOwnershipChance
+  let kinds: LivestockKind[]
   if (size === 'OUTPOST') {
-    return random() < ownershipChance ? ['chicken'] : []
+    kinds = random() < ownershipChance ? ['chicken'] : []
+  } else if (random() >= ownershipChance) {
+    kinds = []
+  } else {
+    const count = random() < LIVESTOCK_TWO_CHANCE ? 2 : 1
+    kinds = []
+    for (let i = 0; i < count; i++) kinds.push(pickSpecies(random))
+    if (kinds.includes('chicken') && random() < ROOSTER_COMPANION_CHANCE) kinds.push('rooster')
   }
-  if (random() >= ownershipChance) return []
-  const count = random() < LIVESTOCK_TWO_CHANCE ? 2 : 1
-  const kinds: LivestockKind[] = []
-  for (let i = 0; i < count; i++) kinds.push(pickSpecies(random))
-  if (kinds.includes('chicken') && random() < ROOSTER_COMPANION_CHANCE) kinds.push('rooster')
+  // Plan fauna-011 §2: always the last draw for this house, in every branch
+  // above (including `OUTPOST`) — see `DOG_OWNERSHIP_CHANCE`'s doc.
+  if (random() < DOG_OWNERSHIP_CHANCE) kinds.push('dog')
   return kinds
 }
 
-function visualFor(kind: LivestockKind): { visual: THREE.Object3D, animations: THREE.AnimationClip[] } {
-  const tpl = livestockTemplates[kind]
-  if (tpl) {
+/** `animalId` picks which loaded variant this individual renders as (plan
+ *  fauna-011 §1) — deterministic and stable across a reload (no variant
+ *  index needs persisting), a no-op for every kind with a single URL. */
+function visualFor(kind: LivestockKind, animalId: string): { visual: THREE.Object3D, animations: THREE.AnimationClip[] } {
+  const variants = livestockTemplates[kind]
+  if (variants && variants.length > 0) {
+    const tpl = variants[hashAnimalId(animalId) % variants.length]!
     return { visual: wrapModel(tpl.clone()), animations: tpl.animations }
   }
   return { visual: MODEL_BUILDERS[kind](), animations: [] }
@@ -379,7 +424,7 @@ export async function spawnLivestock(
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
       if (removed?.has(animalId)) continue
-      const { visual, animations } = visualFor(kind)
+      const { visual, animations } = visualFor(kind, animalId)
       const agent = new AnimalAgent(
         ANIMAL_DEFS[kind],
         animalId,
@@ -411,7 +456,7 @@ export async function spawnLivestock(
   if (merchantHorseSpawn) {
     const animalId = `merchant-horse-${settlementId}`
     if (!removed?.has(animalId)) {
-      const { visual, animations } = visualFor('horse')
+      const { visual, animations } = visualFor('horse', animalId)
       const agent = new AnimalAgent(
         ANIMAL_DEFS.horse,
         animalId,
@@ -475,9 +520,21 @@ export function tickSettlementLivestock(
      *  forwarded unchanged into every `AnimalAgent.update()` call below, same
      *  contract as `createFauna.ts`'s wild-fauna loop. */
     grassForage?: GrassForageService
+    /** Bounded/local live wild predators (plan fauna-011 §9/§10/§11) — only
+     *  meaningful for an owned `dog` (`AnimalAgent.resolveGuardTarget()`);
+     *  every other livestock kind never reads this. The caller
+     *  (`createSettlement.ts`) is responsible for keeping this small (a
+     *  per-frame filter over `Fauna.getAgents()`, not a scan per dog). */
+    nearbyPredators?: readonly AnimalAgent[]
+    /** This settlement's own live NPCs, as bounded bark-perception
+     *  candidates (plan fauna-011 §7) — only meaningful for an owned `dog`'s
+     *  stranger-bark check (`resolveBarkStimulus`). Cheaper than the global
+     *  cross-settlement `nearbyNpcs` wolves use: a dog only cares about
+     *  strangers right by its own house. */
+    nearbySettlementNpcs?: readonly NearbyNpcCandidate[]
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -486,7 +543,7 @@ export function tickSettlementLivestock(
     animal.update(
       dt, livestock, observerPos, dayFactor, 0, litFires, villages,
       undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
-      timeOfDay, grassForage,
+      timeOfDay, grassForage, nearbyPredators, nearbySettlementNpcs,
     )
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the

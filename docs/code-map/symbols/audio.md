@@ -40,16 +40,16 @@ Generated from exported TypeScript symbols.
 
 ## `audio/animalSounds.ts`
 
-- `ANIMAL_AGGRO_SOUND_URLS` — const — line 40
+- `ANIMAL_AGGRO_SOUND_URLS` — const — line 46
 - `ANIMAL_SOUND_URLS` — const — line 6
-- `initialSpontaneousVocalizeCooldownSec` — function — line 170
-- `playAnimalAggroSound` — function — line 50
-- `playAnimalSound` — function — line 24
-- `playSpontaneousAnimalSound` — function — line 249
-- `roosterCrowWeight` — function — line 136
-- `spontaneousVocalizeTimeWeight` — function — line 155
-- `tickSpontaneousVocalizeCooldown` — function — line 184
-- `wolfHowlWeight` — function — line 114
+- `initialSpontaneousVocalizeCooldownSec` — function — line 176
+- `playAnimalAggroSound` — function — line 56
+- `playAnimalSound` — function — line 30
+- `playSpontaneousAnimalSound` — function — line 255
+- `roosterCrowWeight` — function — line 142
+- `spontaneousVocalizeTimeWeight` — function — line 161
+- `tickSpontaneousVocalizeCooldown` — function — line 190
+- `wolfHowlWeight` — function — line 120
 
 ## `audio/audioSettings.ts`
 

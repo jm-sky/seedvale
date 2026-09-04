@@ -71,6 +71,7 @@ Generated from TypeScript imports.
 - `world/bloodTraces.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
+- `world/createGrassForagePatches.ts`
 - `world/createPalisades.ts`
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`

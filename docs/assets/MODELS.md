@@ -99,6 +99,7 @@ If the feature needs no new model, do nothing to this file.
 | M70 | Saddlebags (`saddlebags`) | Inert carried item (no equip mechanic yet); Quaternius `Bags` GLB wired via `ITEM_GLB_SPECS.saddlebags`, procedural catch-all box kept as load-failure fallback | `wired` | plan items-player-001 |
 | M71 | Copper ore / copper (`copper_ore`/`copper`) | Pickup/inventory mesh; `copper_ore` reuses the existing ore-dodecahedron fallback (tinted, same as iron/coal/gold), `copper` a small procedural ingot box, no GLB yet | `needed` | plan items-player-001 |
 | M72 | Rooster | New livestock `AnimalKind`; `livestock.ts`'s `LIVESTOCK_URLS.rooster` points at `models/fauna/rooster.glb` (not present — `_temp/` had no suitable model), procedural fallback (`fauna/proceduralAnimals.ts`'s `createRoosterModel`, darker chicken variant + upright tail plume) in place and functional | `needed` | plan fauna-009 |
+| M73 | Dog (Husky/Shiba) | Household `dog` `AnimalKind` (single simulation kind, two visual variants); `livestock.ts`'s `LIVESTOCK_URLS.dog` wires both `models/fauna/dog_husky.glb`/`dog_shiba.glb`, `visualFor()` picks a deterministic variant per `animalId`; both GLBs' real clip names (`Idle`/`Idle_2`/`Walk`/`Gallop`/`Attack`/`Idle_HitReact_Left`/`Death`) already match `AnimalAgent`'s existing semantic `findAction()` candidates, no animation-mapping change needed; `createDogModel` procedural fallback in place | `wired` | plan fauna-011 |
 
 ## Wired (reference — do not treat as open work)
 
@@ -107,7 +108,7 @@ Keep this section short. Prefer CREDITS for the full credited set.
 | Area | Examples |
 |------|----------|
 | Characters | Modular men/women NPCs, Adventurer player |
-| Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey; rooster (procedural placeholder, see M72) |
+| Fauna | wolf, fox, deer, stag; livestock chicken/sheep/cow/horse/donkey/dog (Husky+Shiba, see M73); rooster (procedural placeholder, see M72) |
 | Nature (active) | trees/bushes/pines, fern undergrowth, cactus/reed, rock/log, ore piles, cemetery / gravestones |
 | Settlement (active) | MegaKit assembled homes (`HouseBuilder`), huts/towerhouse (catalog fallback + Asset Browser), wall stubs, dock, crate/barrel, garden/crops/storage, wood pile, hay, wheat field (`farm.glb`), well GLB, plaza cobble clutter (MD+), interior furniture bed/table/lamp (all 11 village house definitions, plan 169), blacksmith anvil + grind workbench (plan settlements-npcs-002) |
 | Items (active) | pitchfork, sickle (hold + melee); wooden torch; branch GLB; pickaxe; long sword; spear; short sword; plan 160 HQ set (damascus knife/short/long, obsidian, battle axe, masterwork); backpack, saddlebags, pan, rope, chest, coin, tomato, roasted_meat/beef, fish (2026-09-04 asset drop) |

@@ -479,6 +479,7 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/dryingRacks.ts`
 - `world/fishing.ts`
+- `world/grassForage.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/navigationTargets.ts`
 - `world/locations/worldLocationCatalog.ts`
@@ -887,6 +888,7 @@ Generated from TypeScript imports.
 - `world/createBeehives.ts`
 - `world/createCaves.ts`
 - `world/createDryingRacks.ts`
+- `world/createGrassForagePatches.ts`
 - `world/createOcean.ts`
 - `world/createPalisades.ts`
 - `world/createPlacedContainers.ts`
@@ -901,6 +903,7 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/dryingRacks.ts`
 - `world/foodSources.ts`
+- `world/grassForage.ts`
 - `world/helperDeliveryHooks.ts`
 - `world/palisade.ts`
 - `world/plantedTrees.ts`

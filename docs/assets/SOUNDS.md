@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-09-03
+**Last updated:** 2026-09-04
 
 ## How to use
 
@@ -29,7 +29,7 @@ If the feature needs no new sound, do nothing to this file.
 | Category | Files | Notes |
 |----------|-------|-------|
 | NPC | hmm / thank-you / greeting / farewell / confirmation (M/F, per-actor voice) | Dialogue reactions + Super Dialogue Audio Pack v1 (plan 116) — greeting on dialogue open, farewell on close, confirmation on offer accept, extra hmm/thank-you variety |
-| Animals | chicken, cow, wolf, horse, sheep, rooster | `[E]` on animal (donkey/rooster still silent on `[E]`, no clip). Cow/sheep/chicken also: spontaneous per-animal ambient vocalization with cooldown + concurrent-play cap (plan settlements-npcs-004 §1), milking completion (§2), chicken egg-laid (§2) — all reuse this same `[E]` clip/volume via `animalSounds.ts`'s `playSpontaneousAnimalSound`/`playAnimalSound`. Wolf howl / rooster crow (plan fauna-009) are a separate spontaneous-vocalization clip pair (`fauna-wolf-howl-1.ogg`/`fauna-rooster-crow-1.ogg`, distinct from the `[E]` growl), dawn/night-weighted via `spontaneousVocalizeTimeWeight` — howl also carries farther (`playAt`'s `maxDistance` override) and suppresses while the wolf is chasing/attacking/fleeing |
+| Animals | chicken, cow, wolf, horse, sheep, rooster, dog | `[E]` on animal (donkey/rooster still silent on `[E]`, no clip). Cow/sheep/chicken also: spontaneous per-animal ambient vocalization with cooldown + concurrent-play cap (plan settlements-npcs-004 §1), milking completion (§2), chicken egg-laid (§2) — all reuse this same `[E]` clip/volume via `animalSounds.ts`'s `playSpontaneousAnimalSound`/`playAnimalSound`. Wolf howl / rooster crow (plan fauna-009) are a separate spontaneous-vocalization clip pair (`fauna-wolf-howl-1.ogg`/`fauna-rooster-crow-1.ogg`, distinct from the `[E]` growl), dawn/night-weighted via `spontaneousVocalizeTimeWeight` — howl also carries farther (`playAt`'s `maxDistance` override) and suppresses while the wolf is chasing/attacking/fleeing. Dog bark (plan fauna-011 §7) reuses the same `[E]`/`animal-dog-01` clip for its contextual guard/wolf-howl/stranger alert, gated by `AnimalAgent.updateDogVocalization()`'s own stimulus+cooldown check (`dogGuard.ts`), never a spontaneous random roll |
 | Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop, owl one-shot | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006); owl is a random one-shot (not a loop) — cooldown-gated on night + forest weight in `audio/createAmbientAudio.ts` |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
@@ -56,7 +56,7 @@ If the feature needs no new sound, do nothing to this file.
 | S07 | Rain | Weather = `rain` (plan 040 Etap 1, `audio/weatherSounds.ts`) | `wired` | `ambient-rain-loop-01` |
 | S08 | Well / draw water | NPC or player at well | `wired` | `action-well-01` |
 | S09 | Door / enter house | Optional on house proximity | `wired` | `door-open-01` / `door-close-01` + latch/creak |
-| S10 | Fauna: deer / fox / stag one-shot | Today only chicken/cow/wolf SFX | `needed` | `animal-dog-01` in repo (village dog — does not close deer/fox) |
+| S10 | Fauna: deer / fox / stag one-shot | Today only chicken/cow/wolf/dog SFX | `needed` | `animal-dog-01` now wired for `dog` (plan fauna-011) — deer/fox/stag still open |
 | S11 | Wolf distant (bark/howl) vs contact growl | Distinguish threat distance | `wired` | Plan fauna-009 — `fauna-wolf-howl-1.ogg`, spontaneous (dawn/night-weighted, longer `playAt` range), distinct from `animal-wolf-01`'s `[E]` growl |
 
 ### P2 — settlement / economy
@@ -78,6 +78,7 @@ If the feature needs no new sound, do nothing to this file.
 | S24 | Bear growl (aggro) | Plays once a bear commits to chasing a human (`animalSounds.ts`'s `playAnimalAggroSound`, wired through `Fauna`'s `onAnimalAggro`) | `needed` | plan 188 (`sounds/bear-growl.ogg`), silent until the clip is wired in |
 | S25 | NPC friendly-talk murmur | Short, non-verbal chatter when a Social Place `conversation` actually begins (plan settlements-npcs-004 §3) | `needed` | Plumbing wired (`ai/npcVoiceLines.ts`'s `NPC_FRIENDLY_TALK_SOUND_URLS`/`pickNpcFriendlyTalkSound`, called from `NpcAgent.beginConversation()`), pools left empty — silent no-op until clips are added. Suggested naming once acquired: `/sounds/npc-talk-{gender}-{NN}.ogg` (male/female pools, no per-actor split) |
 | S26 | Melee attack swing (whoosh/grunt) + animal death vocal | Melee attack-start presentation for NPC/animal combat; a species-agnostic animal death sound (plan npc-009) | `needed` | No swing/whoosh asset exists — melee attack start is animation-only (ranged reuses `bow-draw`/`bow-release` via `playCombatBowDraw`/`playActionBowRelease`). No dedicated animal death/whimper clip exists either — `AnimalAgent.collapse()`'s death sound (`playAnimalCombatDeath`, `src/audio/actionSounds.ts`) deliberately reuses the vocal-free `action-melee-hit-01` impact clip instead of the human moan+fall `action-melee-kill-01` (NPC-only, via `playNpcCombatDeath`) |
+| S27 | Dog bark, second sample | A 2nd bark clip to vary `ANIMAL_SOUND_URLS.dog` (currently a single-clip array, shared by `[E]`-interact and the contextual guard/wolf-howl/stranger bark) | `needed` | plan fauna-011 §1/§7 — append the path to `animalSounds.ts`'s `ANIMAL_SOUND_URLS.dog` once recorded; user-provided |
 
 ## Acquisition rules
 

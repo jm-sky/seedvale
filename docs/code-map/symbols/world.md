@@ -214,6 +214,11 @@ Generated from exported TypeScript symbols.
 - `DryingRackEntry` — type — line 9
 - `DryingRacks` — type — line 11
 
+## `world/createGrassForagePatches.ts`
+
+- `createGrassForagePatches` — function — line 62
+- `GrassForageService` — type — line 22
+
 ## `world/createLights.ts`
 
 - `createLights` — function — line 24
@@ -376,6 +381,26 @@ Generated from exported TypeScript symbols.
 ## `world/gardenPlotProp.ts`
 
 - `createGardenPlotProp` — function — line 9
+
+## `world/grassForage.ts`
+
+- `depleteGrassPatch` — function — line 105
+- `GRASS_PATCH_CELL_SIZE` — const — line 22
+  - domain: fauna
+  - system: grass-forage
+  - role: Owns deterministic patch placement and depletion/regrowth state.
+  - owns: GrassForageOverrides
+- `GRASS_PATCH_EXISTS_CHANCE` — const — line 26
+- `GRASS_PATCH_JITTER` — const — line 27
+- `GRASS_REGROWTH_DAYS` — const — line 30
+- `GrassForageOverrides` — type — line 94
+- `grassPatchCandidate` — function — line 51
+- `GrassPatchCandidate` — type — line 32
+- `grassPatchCandidatesNear` — function — line 69
+- `grassPatchCellCoord` — function — line 40
+- `grassPatchId` — function — line 44
+- `isGrassPatchAvailable` — function — line 96
+- `pruneGrassForageOverrides` — function — line 113
 
 ## `world/helperDeliveryHooks.ts`
 
