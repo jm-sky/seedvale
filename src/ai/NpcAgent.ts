@@ -145,9 +145,11 @@ import {
   needColor,
   type NeedId,
   type NeedState,
+  needValue,
   type NpcPressure,
   pickNeed,
   type PickNeedOptions,
+  relieveNeed,
   SLEEP_HUNGER_THIRST_RATE,
   tickNeeds,
 } from './Needs'
@@ -509,14 +511,6 @@ const REST_PHASES: ReadonlySet<Phase> = new Set(['exhausted', 'followPath', 'goS
  *  `choose`, `sleep`, `lookAtPlayer`, `exhausted` are deliberately stationary
  *  and must never be flagged as stuck. */
 const WATCHDOG_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'goTo', 'wander'])
-
-/** Need reduction applied on satisfying water/food/wood — shared by
- *  `beginNeed`'s `onComplete` effects and `resolveTimeSkip`'s catch-up steps
- *  so both apply the same "how satisfied does one visit make you" amount. */
-const WATER_SATISFY_AMOUNT = 0.65
-const FOOD_SATISFY_AMOUNT = 0.6
-const WOOD_SATISFY_AMOUNT = 0.55
-const WATER_DUTY_SATISFY_AMOUNT = 0.55
 
 /** Household resource flow (plan 069). `WOOD_HARVEST_AMOUNT` mirrors
  *  `WOODCUTTING_PRODUCTION`'s existing settlement yield — a chop still
@@ -1623,13 +1617,7 @@ export class NpcAgent {
   }
 
   private needValueFor(need: NeedId): number | null {
-    switch (need) {
-      case 'food': return this.needs.hunger
-      case 'water': return this.needs.thirst
-      case 'waterDuty': return this.needs.waterDuty
-      case 'wood': return this.needs.woodDuty
-      default: return null
-    }
+    return needValue(this.needs, need)
   }
 
   /** Debug-only: pause/resume this NPC's simulation (plan 170 §6) — see the
@@ -2780,13 +2768,13 @@ export class NpcAgent {
         const need = pickNeed(this.needs, this.needPickOptions())
         if (need === 'water') {
           this.household?.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
-          this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+          relieveNeed(this.needs, 'water')
         } else if (need === 'waterDuty' && this.household) {
-          this.needs.waterDuty = Math.max(0, this.needs.waterDuty - WATER_DUTY_SATISFY_AMOUNT)
+          relieveNeed(this.needs, 'waterDuty')
           this.household.water.add(WATER_FETCH_AMOUNT)
-        } else if (need === 'food') this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+        } else if (need === 'food') relieveNeed(this.needs, 'food')
         else if (need === 'wood' && this.landmarks.trees.length > 0) {
-          this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
+          relieveNeed(this.needs, 'wood')
         }
       }
       finalActivity = activity
@@ -3200,7 +3188,7 @@ export class NpcAgent {
           durationSec: 1.2 * this.waitMultiplier,
           onComplete: () => {
             household.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
-            this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+            relieveNeed(this.needs, 'water')
           },
         })
         return
@@ -3217,7 +3205,7 @@ export class NpcAgent {
           durationSec: 1.2 * this.waitMultiplier,
           queueId: this.wellQueueId,
           onComplete: () => {
-            this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+            relieveNeed(this.needs, 'water')
           },
         })
         return
@@ -3227,7 +3215,7 @@ export class NpcAgent {
         destination: copyVec3(wellTarget.position),
         durationSec: 1.2 * this.waitMultiplier,
         onComplete: () => {
-          this.needs.thirst = Math.max(0, this.needs.thirst - WATER_SATISFY_AMOUNT)
+          relieveNeed(this.needs, 'water')
         },
       })
       return
@@ -3254,7 +3242,7 @@ export class NpcAgent {
           destination: copyVec3(this.home),
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
-            this.needs.waterDuty = Math.max(0, this.needs.waterDuty - WATER_DUTY_SATISFY_AMOUNT)
+            relieveNeed(this.needs, 'waterDuty')
             household.water.add(WATER_FETCH_AMOUNT)
             this.progressActivePlan('fulfilWorkDuty', WATER_FETCH_AMOUNT)
           },
@@ -3289,7 +3277,7 @@ export class NpcAgent {
           durationSec: 1.2 * this.waitMultiplier,
           onComplete: () => {
             household.takeFood(this.simClock)
-            this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+            relieveNeed(this.needs, 'food')
             this.progressActivePlan('secureFood', 1)
           },
         })
@@ -3315,7 +3303,7 @@ export class NpcAgent {
         onComplete: () => {
           depositFoodHarvest(household, this.economy, this.simClock)
           household?.takeFood(this.simClock)
-          this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+          relieveNeed(this.needs, 'food')
           this.progressActivePlan('secureFood', 1)
         },
       })
@@ -3399,7 +3387,7 @@ export class NpcAgent {
           destination: copyVec3(householdStorageDestination('wood', this.home, this.landmarks.stockpile)),
           durationSec: 0.8 * this.waitMultiplier,
           onComplete: () => {
-            this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
+            relieveNeed(this.needs, 'wood')
             depositWoodHarvest(this.household, this.economy, harvestedWood, this.simClock)
             this.progressActivePlan('obtainWood', harvestedWood)
           },
@@ -3673,9 +3661,9 @@ export class NpcAgent {
   private satisfyHouseholdResourceNeed(household: Household, kind: HouseholdResourceKind): void {
     if (kind === 'food') {
       household.takeFood(this.simClock)
-      this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+      relieveNeed(this.needs, 'food')
     } else {
-      this.needs.woodDuty = Math.max(0, this.needs.woodDuty - WOOD_SATISFY_AMOUNT)
+      relieveNeed(this.needs, 'wood')
     }
   }
 
@@ -3794,7 +3782,7 @@ export class NpcAgent {
         if (result.count <= 0) return
         household?.depositFood(result.kind, result.count, this.economy, this.simClock)
         household?.takeFood(this.simClock)
-        this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+        relieveNeed(this.needs, 'food')
       },
     })
     return true
@@ -3862,7 +3850,7 @@ export class NpcAgent {
   private onHuntKill(target: HuntTarget, household: Household | null): void {
     const result = this.hunting?.harvest(target, this.carried) ?? null
     if (result) {
-      this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+      relieveNeed(this.needs, 'food')
       this.huntKillsThisTrip += 1
     }
     if (result && this.huntKillsThisTrip < HUNT_MAX_KILLS_PER_TRIP && this.attemptHuntKill(household)) return
@@ -4281,7 +4269,7 @@ export class NpcAgent {
           onComplete: () => {
             depositFoodHarvest(this.household, this.economy, this.simClock)
             this.household?.takeFood(this.simClock)
-            this.needs.hunger = Math.max(0, this.needs.hunger - FOOD_SATISFY_AMOUNT)
+            relieveNeed(this.needs, 'food')
             this.settledIdleActivity = 'eat'
           },
         })

@@ -158,6 +158,50 @@ export function pickNeed(needs: NeedState, options: PickNeedOptions = {}): NeedI
   return pickFromPressures(generateNeedPressures(needs, options))
 }
 
+/** Amount a completed need-driven action relieves its meter by (plan ai-003
+ *  onward moved these out of `NpcAgent`, review 2026-09-03 §5 E5) — the
+ *  counterpart to `tickNeeds`'s upward drift. `idle` has no meter of its own
+ *  and is intentionally absent; `relieveNeed`/`needValue` no-op for it. */
+export const NEED_SATISFY_AMOUNT: Record<Exclude<NeedId, 'idle'>, number> = {
+  water: 0.65,
+  food: 0.6,
+  wood: 0.55,
+  waterDuty: 0.55,
+}
+
+/** Relieves `need`'s meter by `amount` (default `NEED_SATISFY_AMOUNT[need]`),
+ *  clamped at 0. No-op for `idle`, which has no backing meter. */
+export function relieveNeed(needs: NeedState, need: NeedId, amount?: number): void {
+  if (need === 'idle') return
+  const delta = amount ?? NEED_SATISFY_AMOUNT[need]
+  switch (need) {
+    case 'food':
+      needs.hunger = Math.max(0, needs.hunger - delta)
+      return
+    case 'water':
+      needs.thirst = Math.max(0, needs.thirst - delta)
+      return
+    case 'waterDuty':
+      needs.waterDuty = Math.max(0, needs.waterDuty - delta)
+      return
+    case 'wood':
+      needs.woodDuty = Math.max(0, needs.woodDuty - delta)
+      return
+  }
+}
+
+/** Reads `need`'s current meter value. `null` for `idle`, which has no
+ *  backing meter (mirrors `relieveNeed`'s no-op). */
+export function needValue(needs: NeedState, need: NeedId): number | null {
+  switch (need) {
+    case 'food': return needs.hunger
+    case 'water': return needs.thirst
+    case 'waterDuty': return needs.waterDuty
+    case 'wood': return needs.woodDuty
+    default: return null
+  }
+}
+
 export function needColor(need: NeedId): number {
   switch (need) {
     case 'food':

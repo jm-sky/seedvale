@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { createNeedState, generateNeedPressures, pickNeed, SLEEP_HUNGER_THIRST_RATE, tickNeeds } from './Needs'
+import {
+  createNeedState,
+  generateNeedPressures,
+  NEED_SATISFY_AMOUNT,
+  needValue,
+  pickNeed,
+  relieveNeed,
+  SLEEP_HUNGER_THIRST_RATE,
+  tickNeeds,
+} from './Needs'
 
 const DAY_LENGTH_SEC = 480
 
@@ -134,6 +143,53 @@ describe('generateNeedPressures', () => {
     const pressures = generateNeedPressures(needs)
     const best = pressures.reduce((a, b) => (b.value > a.value ? b : a))
     expect(best.target).toBe(pickNeed(needs))
+  })
+})
+
+describe('relieveNeed', () => {
+  it('clamps at 0 when the amount exceeds the current value', () => {
+    const needs = { thirst: 0.1, woodDuty: 0.1, waterDuty: 0.1, hunger: 0.1 }
+    relieveNeed(needs, 'water')
+    expect(needs.thirst).toBe(0)
+  })
+
+  it('reduces the matching meter by NEED_SATISFY_AMOUNT by default', () => {
+    const needs = { thirst: 1, woodDuty: 1, waterDuty: 1, hunger: 1 }
+    relieveNeed(needs, 'water')
+    relieveNeed(needs, 'wood')
+    relieveNeed(needs, 'waterDuty')
+    relieveNeed(needs, 'food')
+    expect(needs.thirst).toBeCloseTo(1 - NEED_SATISFY_AMOUNT.water)
+    expect(needs.woodDuty).toBeCloseTo(1 - NEED_SATISFY_AMOUNT.wood)
+    expect(needs.waterDuty).toBeCloseTo(1 - NEED_SATISFY_AMOUNT.waterDuty)
+    expect(needs.hunger).toBeCloseTo(1 - NEED_SATISFY_AMOUNT.food)
+  })
+
+  it('accepts an explicit amount overriding the default', () => {
+    const needs = { thirst: 1, woodDuty: 0, waterDuty: 0, hunger: 0 }
+    relieveNeed(needs, 'water', 0.2)
+    expect(needs.thirst).toBeCloseTo(0.8)
+  })
+
+  it('is a no-op for idle, which has no backing meter', () => {
+    const needs = { thirst: 0.5, woodDuty: 0.5, waterDuty: 0.5, hunger: 0.5 }
+    relieveNeed(needs, 'idle')
+    expect(needs).toEqual({ thirst: 0.5, woodDuty: 0.5, waterDuty: 0.5, hunger: 0.5 })
+  })
+})
+
+describe('needValue', () => {
+  it('reads the meter backing each need', () => {
+    const needs = { thirst: 0.1, woodDuty: 0.2, waterDuty: 0.3, hunger: 0.4 }
+    expect(needValue(needs, 'water')).toBe(0.1)
+    expect(needValue(needs, 'wood')).toBe(0.2)
+    expect(needValue(needs, 'waterDuty')).toBe(0.3)
+    expect(needValue(needs, 'food')).toBe(0.4)
+  })
+
+  it('returns null for idle', () => {
+    const needs = { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 }
+    expect(needValue(needs, 'idle')).toBeNull()
   })
 })
 
