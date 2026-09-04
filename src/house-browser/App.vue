@@ -26,16 +26,20 @@ function getInitialHouseId(): string {
   return houses[0]?.id ?? ''
 }
 
+function boolean(param: string | null): boolean {
+  return ['1', 'true', 'y', 'yes'].includes(param?.toLowerCase() ?? '') ?? false
+}
+
 function getInitialColliderVisibility(): boolean {
   const url = new URL(window.location.href)
   const param = url.searchParams.get('showColliders')
-  return param ? Boolean(param) : DEFAULT_HOUSE_BROWSER_CONFIG.showColliders
+  return param ? boolean(param) : DEFAULT_HOUSE_BROWSER_CONFIG.showColliders
 }
 
 function getInitialDoorsOpen(): boolean {
   const url = new URL(window.location.href)
   const param = url.searchParams.get('doorsOpen')
-  return param ? Boolean(param) : DEFAULT_HOUSE_BROWSER_CONFIG.doorsOpen
+  return param ? boolean(param) : DEFAULT_HOUSE_BROWSER_CONFIG.doorsOpen
 }
 
 const viewport = ref<HTMLElement | null>(null)

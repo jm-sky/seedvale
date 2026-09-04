@@ -90,6 +90,13 @@ export function createHouseBrowserScene(
     return catalog
   }
 
+  function refreshColliders(): void {
+    if (!assembly) return
+
+    const colliders = buildAssemblyCollidersWorld(assembly)
+    colliderPreview.setColliders(colliders)
+  }
+
   function applyConfigToScene(): void {
     ground.visible = config.showGround
     grid.visible = config.showGrid
@@ -98,7 +105,9 @@ export function createHouseBrowserScene(
     colliderPreview.setVisible(config.showColliders)
     colliderPreview.setPadding(config.colliderPadding)
     for (const door of assembly?.doors ?? []) door.setOpen(config.doorsOpen)
+    refreshColliders()
   }
+
   applyConfigToScene()
 
   function fitCameraToBounds(bounds: Box3): void {
@@ -205,6 +214,7 @@ export function createHouseBrowserScene(
     camera.updateProjectionMatrix()
     renderer.setSize(container.clientWidth, container.clientHeight)
   }
+
   window.addEventListener('resize', onResize)
 
   let running = true
@@ -216,6 +226,7 @@ export function createHouseBrowserScene(
     renderer.render(scene, camera)
     requestAnimationFrame(tick)
   }
+
   requestAnimationFrame(tick)
 
   function dispose(): void {
