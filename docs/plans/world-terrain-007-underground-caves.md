@@ -103,9 +103,9 @@ A separate plan (or a Faza 4 continuation of this one) should: (1) decide
 whether the existing `cave`/`wolfDen` habitat-spawner concept in
 `fauna/createFauna.ts` should be repointed at real `CaveDefinition`s from
 this plan, or kept as its own (renamed) surface-only concept to avoid the
-naming collision; (2) extend `AnimalAgent`'s ground/collision queries with
-the same `CaveGroundQuery`/`colliderActiveAtY` seams added here; (3) add
-the sparse persistence fields once there's actual state to persist.
+naming collision; (2) extend `AnimalAgent`'s ground/collision queries with the
+same `CaveGroundQuery`/`colliderActiveAtY` seams added here; (3) add the sparse
+persistence fields once there's actual state to persist.
 
 ## 1. Cel
 
@@ -498,24 +498,154 @@ Nie włączać do tego planu:
 - `src/world/caveGenerator.test.ts`
 - dodatkowe testy istniejących systemów tylko tam, gdzie kontrakt caves je rozszerza.
 
-### Migracja
+---
 
-Do usunięcia lub redukcji po udanej migracji:
+## 15. Gameplay observations — 2026-09-04
 
-- `largeCaves.ts`
-- `createLargeCaves.ts`
-- `largeCaveVisual.ts`
+Manual gameplay revealed that the current cave implementation is not yet acceptable from a third-person gameplay perspective.
 
-Nie usuwać starych plików przed pełnym zastąpieniem ich użycia.
+### Observations
+
+- The camera frequently escapes the cave and reveals the surface grass from inside the cave.
+- The tunnel looks like a set of connected pipes: seams between sections are visible and the surfaces are too smooth.
+- The entrance is too narrow and too small.
+- Overall, the current cave experience is poor and needs another geometry/presentation pass before the feature can be considered gameplay-ready.
+
+### Reference / design reflection
+
+A useful reference point is the cave design used in *World of Warcraft*. Its caves are designed around the fact that the player is viewed in third person: corridors and chambers are sufficiently large to accommodate both the character and the camera. Entrances are typically large openings in roughly vertical rock faces, followed by tunnels that gradually rise and fall rather than immediately becoming cramped horizontal pipes.
+
+The important lesson for Seedvale is not to reproduce a specific game's geometry, but to treat **camera clearance and third-person readability as first-class constraints of cave generation**.
 
 ---
 
-## 15. Instrukcja implementacji
+## 16. Gameplay-driven conclusions and suggested improvements
 
-Przed implementacją ponownie zweryfikować aktualne sygnatury i kontrakty w repozytorium. `updated-review.md` jest materiałem pomocniczym; jeśli różni się od kodu, kod jest źródłem prawdy.
+The current implementation should be improved rather than merely cosmetically patched. The cave generator and presentation need to produce a larger, more open spatial structure suitable for a third-person camera.
 
-Implementować inkrementalnie od generatora i danych, przez lifecycle/streaming, następnie movement/collision i dopiero fauna/loot/persistence.
+### 16.1 Entrance geometry
 
-Nie implementować równoległych systemów tylko dlatego, że obecny mechanizm ma ograniczenia. Najpierw rozszerzyć istniejący mechanizm, jeśli jego ownership nadal pasuje.
+- Cave entrances must be significantly larger in both width and height.
+- Entrances should preferably be placed in approximately vertical terrain faces / cliff-like slopes rather than in shallow terrain depressions.
+- Cave placement should explicitly reserve a terrain area where the surface drops into a depression and one side forms a sufficiently steep cliff/rock face.
+- The entrance should be carved as a wide, high opening in that face.
+- The transition from surface into the cave should feel like entering a real opening in rock, not descending through a small hole.
 
-> **Zrób git commit i push do main, rebase jeżeli trzeba**
+Conceptually:
+
+```text
+          higher terrain
+       █████████████
+     ███           ███
+    ██               ██
+   ██   LARGE MOUTH   ███
+  ██                   ███
+  █                     █
+  █        cave →       █
+  █_____________________█
+        lower ground
+```
+
+The exact terrain shaping mechanism should be determined from the existing terrain generation/modification system; do not introduce a parallel terrain system just for caves.
+
+### 16.2 Cave scale and camera clearance
+
+The tunnel dimensions need to be designed around the actual third-person camera, not merely around player-body clearance.
+
+- Corridors and chambers must be substantially wider and higher than the minimum player collision envelope.
+- The generator should maintain a deliberate clearance margin around the player and camera view volume.
+- Tight passages where the camera can intersect the ceiling/walls should be rejected or widened during generation.
+- Chambers should provide enough lateral and vertical space for the camera to frame the player without revealing the surface.
+
+The target should be a cave that feels **walk-in for both the player and the camera**, not merely technically traversable by the player.
+
+### 16.3 Tunnel topology and shape
+
+The current pipe-like construction should be replaced or substantially improved.
+
+- Avoid visually obvious joins between tunnel segments.
+- Generate continuous geometry across neighbouring tunnel sections instead of treating each section as an independent tube where possible.
+- Allow tunnels to gradually rise and fall.
+- Introduce meaningful variation in width, height and cross-section.
+- Chambers should be larger than connecting corridors and provide spatial landmarks.
+- Avoid long, perfectly smooth cylindrical surfaces.
+
+The generator should remain deterministic and lightweight; this does not require a full voxel/dungeon system.
+
+### 16.4 Surface irregularity
+
+Tunnel walls, ceiling and floor need controlled small-scale irregularity.
+
+Use two levels of deformation:
+
+- **micro bump:** approximately `0.5 × 0.5 × 0.5` m for small rock irregularities;
+- **larger bump:** approximately `2 × 2 × 1` m on walls and ceiling, where the third value represents deformation depth.
+
+These values are design targets, not necessarily literal mesh-grid dimensions. The implementation should use the existing procedural geometry approach or a suitable deterministic noise/deformation mechanism to achieve this visual scale without creating excessive geometry.
+
+The floor should remain traversable and avoid random deformation that produces problematic collision, while walls and ceiling can receive stronger variation.
+
+### 16.5 Camera containment
+
+Camera behaviour needs a dedicated correction pass.
+
+The camera must remain visually and physically consistent with the cave space when the player is underground:
+
+- prevent the third-person camera from clipping through cave walls/ceiling into the surface;
+- prevent surface grass/terrain from becoming visible through the camera position or camera ray when the player is inside;
+- account for cave geometry when resolving camera distance/position;
+- preserve the existing surface camera behaviour outside caves;
+- avoid a cave-specific camera system if the existing camera collision/obstruction mechanism can be extended.
+
+This should be treated as a camera-obstruction/clearance problem, not solved by simply hiding surface terrain globally.
+
+### 16.6 Generator changes
+
+The cave generation mechanism likely needs a structural improvement rather than only larger constants.
+
+Before implementation, inspect the current `caveGenerator.ts` and `caveMesh.ts` together and determine whether the present tunnel representation inherently produces the visible pipe/seam problem. If necessary, change the representation so that tunnel segments are blended into a continuous volume/mesh.
+
+The generator should explicitly model at least:
+
+```text
+entrance
+  ↓
+wide transition
+  ↓
+large walk-in corridor
+  ↘ gradual elevation changes
+  ↓
+large chamber
+  ↓
+branch / continuation / dead end
+```
+
+Generation constraints should include minimum width, minimum height, camera clearance, entrance dimensions, slope/vertical-face suitability and sufficient surface overburden.
+
+### 16.7 Acceptance additions
+
+The existing verification list should be extended with gameplay-specific checks:
+
+15. The player can enter the cave without crouching-scale geometry or camera compression.
+16. The entrance is visibly large and placed in a steep/approximately vertical rock face.
+17. The third-person camera remains inside the cave when following the player through normal movement.
+18. Surface grass/terrain is not visible from the cave because of camera escape or insufficient cave geometry.
+19. Tunnel walls, ceiling and floor do not look like smooth connected pipes.
+20. No obvious seams are visible between tunnel sections from normal gameplay camera positions.
+21. Tunnels contain gradual vertical variation rather than remaining flat.
+22. Chambers provide substantially more space than corridors.
+23. Walls and ceiling have visible multi-scale rock irregularity without excessive visual noise.
+24. Camera clearance is preserved throughout generated tunnels and chambers across several seeds.
+25. Existing surface camera behaviour remains unchanged outside caves.
+
+These gameplay criteria should be treated as blockers for marking the cave feature browser/gameplay-verified.
+
+---
+
+## 17. Scope / implementation note
+
+The gameplay findings indicate that the current Faza 2-3 result should **not** be considered final merely because the technical contracts and automated tests pass. The next implementation pass should focus first on cave spatial design, procedural geometry and camera containment, then repeat browser verification before proceeding with Faza 4 fauna/loot/persistence.
+
+Do not implement fauna/loot/persistence on top of cave geometry that is still fundamentally unsuitable for third-person gameplay.
+
+**Zrób git commit i push do main, rebase jeżeli trzeba**
