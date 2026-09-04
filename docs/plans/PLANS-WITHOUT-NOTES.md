@@ -1,12 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-04 14:19:44  
+> Date: 2026-09-04 14:33:59  
 
 ## PLANS
 
 - `fauna-010-species-metabolism-herbivore-diet-and-renewable-forage.md`
 - `fauna-012-animal-threat-perception-and-vocalization-responses.md`
+- `fauna-013-animal-hand-feeding-and-human-affinity.md`
 - `npc-004-npc-genealogy-lineages.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
@@ -67,6 +68,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/fauna-012-animal-threat-perception-and-vocalization-responses-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `fauna-013-animal-hand-feeding-and-human-affinity.md`
+
+Prompt:
+
+```
+Zrób review planu `fauna-013-animal-hand-feeding-and-human-affinity.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/fauna-013-animal-hand-feeding-and-human-affinity.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/fauna-013-animal-hand-feeding-and-human-affinity-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
