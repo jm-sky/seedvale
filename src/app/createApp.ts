@@ -1556,7 +1556,10 @@ export async function createApp(
     camera,
     scene,
     sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
-    onTick: () => gameLoop.tick(),
+    onTick: () => {
+      gameLoop.tick()
+      mouseLook.commitFrame()
+    },
   })
 
   renderLoop.start()

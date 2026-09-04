@@ -66,6 +66,7 @@ export function requestGamePointerLock(target: HTMLElement): void {
 
 export function createMouseLook(target: HTMLElement, keys: KeyState): {
   state: LookState
+  commitFrame: () => void
   dispose: () => void
 } {
   const state: LookState = {
@@ -73,6 +74,15 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
     pitch: 0.35,
     distance: CAMERA_DISTANCE_DEFAULT,
     zoomLocked: false,
+  }
+
+  // PoC: last look state that completed a rendered frame.
+  let stableYaw = state.yaw
+  let stablePitch = state.pitch
+
+  const commitFrame = () => {
+    stableYaw = state.yaw
+    stablePitch = state.pitch
   }
 
   const onClick = () => {
@@ -114,8 +124,23 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
       keys.interact = true
     }
   }
+
   const onMouseUp = (event: MouseEvent) => {
     if (event.button === 0) keys.interactReleased = true
+  }
+
+  const onPointerLockChange = () => {
+    if (document.pointerLockElement !== target) {
+      console.log('[Camera PoC] rollback on pointer unlock', {
+        fromYaw: state.yaw,
+        fromPitch: state.pitch,
+        toYaw: stableYaw,
+        toPitch: stablePitch,
+      })
+
+      state.yaw = stableYaw
+      state.pitch = stablePitch
+    }
   }
 
   // Touch devices drive yaw/pitch/distance from createTouchControls instead —
@@ -129,17 +154,20 @@ export function createMouseLook(target: HTMLElement, keys: KeyState): {
     // and be released after the (invisible, pointer-locked) cursor has
     // conceptually moved off it — same asymmetry as `mousemove` above.
     window.addEventListener('mouseup', onMouseUp)
+    window.addEventListener('pointerlockchange', onPointerLockChange)
   }
   target.addEventListener('wheel', onWheel, { passive: false })
 
   return {
     state,
+    commitFrame,
     dispose: () => {
       if (!touch) {
         target.removeEventListener('click', onClick)
         document.removeEventListener('mousemove', onMouseMove)
         target.removeEventListener('mousedown', onMouseDown)
         window.removeEventListener('mouseup', onMouseUp)
+        window.removeEventListener('pointerlockchange', onPointerLockChange)
       }
       target.removeEventListener('wheel', onWheel)
       exitGamePointerLock(target)
