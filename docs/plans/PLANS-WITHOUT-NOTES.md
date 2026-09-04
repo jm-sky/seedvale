@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-04 09:31:05  
+> Date: 2026-09-04 09:57:25  
 
 ## PLANS
 
 - `npc-004-npc-genealogy-lineages.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
-- `settlements-npcs-018-physical-goods-transport-foundation.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
 - `settlements-npcs-022-household-help-and-age-based-work-participation.md`
 - `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
@@ -97,37 +96,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-017-production-demand-and-economic-pressures-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-018-physical-goods-transport-foundation.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-018-physical-goods-transport-foundation.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-018-physical-goods-transport-foundation.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-018-physical-goods-transport-foundation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
