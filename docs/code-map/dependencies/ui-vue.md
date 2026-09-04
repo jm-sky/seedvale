@@ -148,6 +148,7 @@ Generated from TypeScript imports.
 - `items/trade.ts`
 - `items/weaponMaintenance.ts`
 - `persistence/saveDb.ts`
+- `player/PlayerSkills.ts`
 - `quests/QuestManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/settlementGenerator.ts`

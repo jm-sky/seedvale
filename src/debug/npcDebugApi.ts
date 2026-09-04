@@ -12,6 +12,7 @@ import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
+import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'
 import { FAR_RANGE_KM } from '../world/locations/locationConfig'
 import { isAdminMode, isDebugMode } from './debugMode'
 import { type HistoryFilter } from './domainHistory'
@@ -145,6 +146,21 @@ export type HiddenTreasureDebugApi = {
   teleport: (index?: number) => Promise<boolean>
 }
 
+/** Plan items-player-016 — dev-console access to `PlayerSkills`, needed to
+ *  set up test states like "riding = 0.39" (just below a book's 40%
+ *  requirement) without hours of real play. Every mutation goes through a
+ *  public `PlayerSkills` operation (`awardSkillXp`/`setSkillValueForDebug`),
+ *  never a direct `xp`/`value` write. */
+export type SkillsDebugApi = {
+  /** Read-only snapshot of every skill's current value/xp. */
+  getSkills: () => Record<SkillId, { value: number, xp: number }>
+  /** Dev-only direct set via `setSkillValueForDebug` — unlike real gameplay,
+   *  this can also *lower* a skill. Clamped to `[SKILL_MIN_VALUE, 1]`. */
+  setSkillValue: (id: SkillId, value: number) => void
+  /** Awards raw XP through the same public `awardSkillXp` real actions use. */
+  addSkillXp: (id: SkillId, xp: number) => void
+}
+
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
@@ -195,6 +211,8 @@ export type SeedvaleDebugApi = {
    *  the previous selection's highlight and setting the new one's — wraps
    *  back to the first past the end, `null` when none is loaded. */
   getNextFrenzyWolf: () => AnimalAgent | null
+  /** Plan items-player-016 — see `SkillsDebugApi`'s doc. */
+  skills: SkillsDebugApi
   help: () => string
 }
 
@@ -220,6 +238,7 @@ const HELP_TEXT = [
   'worldLocations.list() / .listUndiscovered() — cave/cemetery/lake/mountainPeak/settlement locations within 200km of the player, each flagged {discovered}; worldLocations.reveal(id) / .revealAll() — mark as confirmed/exploration (mutates location knowledge only, never map Fog of War)',
   'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
   'getFrenzyWolves() / getCurrentFrenzyWolf() / getNextFrenzyWolf() — frenzied-wolf DevTools selection; each returned wolf has showDebug()/hideDebug()/toggleDebug()/getDebugInfo()',
+  'skills.getSkills() — every skill\'s current {value, xp}; skills.setSkillValue(id, value) — dev-only direct set (can lower, unlike real gameplay); skills.addSkillXp(id, xp) — award raw XP through the normal path',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -243,6 +262,10 @@ export function installNpcDebugApi(
    *  `hiddenTreasure.found()` reflect the real state. */
   worldFlags: { hiddenTreasureFound: boolean },
   worldLocations: { catalog: WorldLocationCatalog, knowledge: LocationKnowledge },
+  /** Live accessor, same convention as `getPlayerPosition` — reflects the
+   *  current player without re-installing after a rebuild (plan
+   *  items-player-016). */
+  getPlayerSkills: () => PlayerSkills,
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
 
@@ -316,6 +339,17 @@ export function installNpcDebugApi(
     revealAll: () => worldLocationsDebug.list().filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
   }
 
+  const skillsDebug: SkillsDebugApi = {
+    getSkills: () => {
+      const skills = getPlayerSkills()
+      const out = {} as Record<SkillId, { value: number, xp: number }>
+      for (const id of Object.keys(skills) as SkillId[]) out[id] = { value: skills[id].value, xp: skills[id].xp }
+      return out
+    },
+    setSkillValue: (id, value) => setSkillValueForDebug(getPlayerSkills(), id, value),
+    addSkillXp: (id, xp) => awardSkillXp(getPlayerSkills(), id, xp),
+  }
+
   const api: SeedvaleDebugApi = {
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null
@@ -359,6 +393,7 @@ export function installNpcDebugApi(
     getFrenzyWolves: () => getFrenzyWolves(bundle),
     getCurrentFrenzyWolf: () => getCurrentFrenzyWolf(bundle),
     getNextFrenzyWolf: () => getNextFrenzyWolf(bundle),
+    skills: skillsDebug,
     help: () => HELP_TEXT,
   }
   window.seedvale = { ...window.seedvale, debug: api }

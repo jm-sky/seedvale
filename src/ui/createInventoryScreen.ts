@@ -11,6 +11,8 @@ export type InventoryScreenHandlers = {
   onUnequip?: () => void
   /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
   onConsume?: (kind: ItemKind) => void
+  /** "Czytaj" (plan items-player-016) — only offered for `ITEM_CATALOG[kind].book` items. */
+  onRead?: (kind: ItemKind) => void
   onPlaceTrap?: (kind: TrapKind) => void
   onSellInstances?: (instanceIds: readonly string[]) => TradeResult
   /** Sharpen one weapon instance with a `whetstone` from inventory (plan 161). */
@@ -68,6 +70,7 @@ export function createInventoryScreen(
       (kind) => handlers.onEquip?.(kind),
       () => handlers.onUnequip?.(),
       (kind) => handlers.onConsume?.(kind),
+      (kind) => handlers.onRead?.(kind),
       (kind) => handlers.onPlaceTrap?.(kind),
       (ids) => handlers.onSellInstances?.(ids) ?? 'invalid_offer',
       (id) => handlers.onSharpen?.(id) ?? 'invalid',

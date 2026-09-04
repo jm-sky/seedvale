@@ -43,10 +43,6 @@ fauna, not a tameable companion. Left in `fauna/` (matches the folder's
 existing convention of holding parked species, e.g. `chicken.glb` per M07)
 pending a future companion-animal concept.
 
-## New
-
-- `public/models/parked/books` - books
-
 ## Wired despite living under `parked/`
 
 - `Lilypad-01.glb` — shallow-water lily pad (`LILY_SPECS`, `VegetationKind: 'lily'`,
@@ -54,3 +50,10 @@ pending a future companion-animal concept.
   since nothing else in `parked/` has been relocated on wiring either — the
   folder name is a historical label, not a live "not wired" guarantee; see
   [MODELS.md](../../../docs/assets/MODELS.md) M74.
+- `books/Closed-book-blue.glb`, `books/Closed-book-belt-golden.glb`,
+  `books/Closed-book-simple-golden.glb` — shared world pickup/drop mesh for
+  all 18 skill-book `ItemKind`s (`ITEM_GLB_SPECS`, plan items-player-016), same
+  "folder name is historical" reasoning as the lily pad; see
+  [MODELS.md](../../../docs/assets/MODELS.md) M75. The 4 open-book variants
+  (`Open-book*.glb`) remain genuinely unwired, reserved for a possible future
+  reading presentation.

@@ -47,7 +47,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [PlayerController](../src/player/PlayerController.ts) — player movement, animation and runtime state.
 - [Slope movement constraint](../src/terrain/slopeConstraint.ts) — shared uphill speed falloff/block used by `PlayerController`, `NpcAgent` and `AnimalAgent`.
 - [PlayerNeeds](../src/player/PlayerNeeds.ts) — stamina / vigor / hunger / thirst pools.
-- [PlayerSkills](../src/player/PlayerSkills.ts) — the five skills, their XP curve and the single award path.
+- [PlayerSkills](../src/player/PlayerSkills.ts) — the six skills, their XP curve and the single award path.
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).

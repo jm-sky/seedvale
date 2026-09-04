@@ -11,6 +11,7 @@ import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveSlotInfo } from '../persistence/saveDb'
+import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
@@ -73,6 +74,8 @@ type InventoryState = {
   onUnequip: (() => void) | null
   /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
   onConsume: ((kind: ItemKind) => void) | null
+  /** "Czytaj" (plan items-player-016) — only offered for `ITEM_CATALOG[kind].book` items. */
+  onRead: ((kind: ItemKind) => void) | null
   onPlaceTrap: ((kind: TrapKind) => void) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
   onSharpen: ((instanceId: string) => SharpenResult) | null
@@ -443,7 +446,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null, onRefresh: null,
@@ -701,6 +704,7 @@ export function openInventory(
   onEquip: (kind: ItemKind) => void,
   onUnequip: () => void,
   onConsume: (kind: ItemKind) => void,
+  onRead: (kind: ItemKind) => void,
   onPlaceTrap: (kind: TrapKind) => void,
   onSellInstances: (instanceIds: readonly string[]) => TradeResult,
   onSharpen: (instanceId: string) => SharpenResult,
@@ -717,6 +721,7 @@ export function openInventory(
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
   ui.inventory.onConsume = onConsume
+  ui.inventory.onRead = onRead
   ui.inventory.onPlaceTrap = onPlaceTrap
   ui.inventory.onSellInstances = onSellInstances
   ui.inventory.onSharpen = onSharpen
@@ -1172,6 +1177,41 @@ export function setSkillsState(
   s.archeryXp = archeryXp
   s.ridingValue = ridingValue
   s.ridingXp = ridingXp
+}
+
+/** Forwards a live `PlayerSkills` snapshot into `ui.skillsScreen` — the same
+ *  push `gameLoop.ts` does once/frame, exposed as a named helper so a
+ *  UI-mutation site that runs *while the tick is gated off* (plan
+ *  items-player-016's "Czytaj" — the inventory modal freezes simulation, see
+ *  `gameLoop.ts`'s `!inventoryScreen.isOpen()` gate) can still resync it
+ *  immediately after mutating `PlayerSkills`, instead of leaving the reader
+ *  looking at a stale value until the modal closes. */
+export function pushSkillsState(skills: PlayerSkills): void {
+  setSkillsState(
+    skills.sneak.value, skills.sneak.active, skills.sneak.xp,
+    skills.survival.value, skills.survival.xp,
+    skills.traps.value, skills.traps.xp,
+    skills.defense.value, skills.defense.xp,
+    skills.archery.value, skills.archery.xp,
+    skills.riding.value, skills.riding.xp,
+  )
+}
+
+const SKILL_VALUE_FIELD: Record<SkillId, keyof SkillsScreenState> = {
+  sneak: 'sneakValue',
+  survival: 'survivalValue',
+  traps: 'trapsValue',
+  defense: 'defenseValue',
+  archery: 'archeryValue',
+  riding: 'ridingValue',
+}
+
+/** Reads one skill's current value out of `ui.skillsScreen` — the same
+ *  mirrored `PlayerSkills` state the Skills screen renders, reused here so
+ *  book UI (inventory details / merchant details) never needs its own
+ *  "current skill value" plumbing. */
+export function getSkillValue(id: SkillId): number {
+  return ui.skillsScreen[SKILL_VALUE_FIELD[id]] as number
 }
 
 export function setHudFps(fps: number): void {

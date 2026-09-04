@@ -1,7 +1,7 @@
 # Plan: Books and Skill Learning
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~world-012~~

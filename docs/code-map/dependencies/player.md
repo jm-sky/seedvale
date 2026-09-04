@@ -140,11 +140,18 @@ Generated from TypeScript imports.
 - `app/campRest.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `app/inventoryWiring.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
 - `fauna/mountedSpeed.test.ts`
+- `items/books.test.ts`
+- `items/books.ts`
+- `items/itemCatalog.ts`
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.test.ts`
 - `player/playerDamage.ts`
+- `ui-vue/store.ts`
 - `world/animalTraps.test.ts`
 
 ## `player/PlayerTorch.ts`

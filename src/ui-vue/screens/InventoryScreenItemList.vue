@@ -16,7 +16,7 @@ const { categoryLabel } = useItemCategoryLabels()
 type CategoryFilter = 'all' | ItemCategory
 type SortMode = 'category' | 'name' | 'qty'
 
-const CATEGORY_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'food', 'utility', 'resource']
+const CATEGORY_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'knowledge', 'food', 'utility', 'resource']
 const SORT_LABEL: Record<SortMode, string> = { category: 'Kategoria', name: 'Nazwa', qty: 'Ilość' }
 
 const filter = ref<CategoryFilter>('all')
@@ -29,6 +29,7 @@ const allItems = computed(() => ui.inventory.groups.map((group) => ({
   condition: group.condition,
   uniformConditionPercent: group.uniformConditionPercent,
   consumable: ITEM_CATALOG[group.kind].consumable ?? null,
+  book: ITEM_CATALOG[group.kind].book ?? null,
 })))
 
 const availableCategories = computed(() => CATEGORY_ORDER.filter((cat) => allItems.value.some((item) => hasItemCategory(item.def, cat))))
@@ -68,6 +69,7 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
+function onRead(kind: ItemKind): void { ui.inventory.onRead?.(kind) }
 function onPlaceTrap(kind: ItemKind): void {
   const trapKind = trapKindForItem(kind)
   if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
@@ -170,6 +172,12 @@ function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
               class="min-h-0 py-1"
               :label="consumeLabel(item.consumable.need)"
               @click="onConsume(item.kind)"
+            />
+            <ItemsScreenItemButton
+              v-if="item.book"
+              class="min-h-0 py-1"
+              label="Czytaj"
+              @click="onRead(item.kind)"
             />
             <ItemsScreenItemButton
               v-if="trapKindForItem(item.kind)"

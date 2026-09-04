@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import UiPanel from '@/components/UiPanel.vue'
+import { SKILL_LABEL } from '../../player/PlayerSkills'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { closeSkillsScreen, emitUiClick, isSkillsScreenOpen, ui } from '../store'
 
@@ -40,7 +41,7 @@ const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
         @click="toggleSneak"
       >
         <span class="flex items-center justify-between">
-          <span class="text-sm font-medium">Skradanie się · {{ sneakLevel }}</span>
+          <span class="text-sm font-medium">{{ SKILL_LABEL.sneak }} · {{ sneakLevel }}</span>
           <span
             class="ml-3 shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide"
             :class="ui.skillsScreen.sneakActive ? 'bg-emerald-400 text-black' : 'bg-white/15 text-ink/70'"
@@ -64,7 +65,7 @@ const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
 
       <div class="mt-3 rounded-md border border-white/15 px-3.5 py-3">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium">Sztuka przetrwania · {{ survivalLevel }}</span>
+          <span class="text-sm font-medium">{{ SKILL_LABEL.survival }} · {{ survivalLevel }}</span>
           <span class="ml-3 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70">
             Pasywne
           </span>
@@ -88,7 +89,7 @@ const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
 
       <div class="mt-3 rounded-md border border-white/15 px-3.5 py-3">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium">Pułapki · {{ trapsLevel }}</span>
+          <span class="text-sm font-medium">{{ SKILL_LABEL.traps }} · {{ trapsLevel }}</span>
           <span class="ml-3 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70">
             Pasywne
           </span>
@@ -110,7 +111,7 @@ const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
 
       <div class="mt-3 rounded-md border border-white/15 px-3.5 py-3">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium">Obrona · {{ defenseLevel }}</span>
+          <span class="text-sm font-medium">{{ SKILL_LABEL.defense }} · {{ defenseLevel }}</span>
           <span class="ml-3 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70">
             Pasywne
           </span>
@@ -132,7 +133,7 @@ const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
 
       <div class="mt-3 rounded-md border border-white/15 px-3.5 py-3">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium">Łucznictwo · {{ archeryLevel }}</span>
+          <span class="text-sm font-medium">{{ SKILL_LABEL.archery }} · {{ archeryLevel }}</span>
           <span class="ml-3 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70">
             Pasywne
           </span>
@@ -153,7 +154,7 @@ const ridingLevel = computed(() => percent(ui.skillsScreen.ridingValue))
 
       <div class="mt-3 rounded-md border border-white/15 px-3.5 py-3">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium">Jeździectwo · {{ ridingLevel }}</span>
+          <span class="text-sm font-medium">{{ SKILL_LABEL.riding }} · {{ ridingLevel }}</span>
           <span class="ml-3 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ink/70">
             Pasywne
           </span>

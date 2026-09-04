@@ -34,7 +34,8 @@
 
 ### Bug Fixes
 
-_No qualifying plans._
+1. `ui-input-008` — **River debug location quality**  
+   🟡 `S` · ✅ ready · unlocks 0/0 · type: bug
 
 ---
 
@@ -106,79 +107,83 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  36  
    → **unlocks:** 1/1
 
-9. `settlements-npcs-006` — **Wool to material**  
+9. `fauna-014` — **Animal traps — bait attraction and species coverage**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `items-player-002` — **Food provenance, freshness and storage**  
+10. `settlements-npcs-006` — **Wool to material**  
+  🟡 `M` · **Score:**  33  
+   → **unlocks:** 1/1
+
+11. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-11. `items-player-014` — **Rope-pullable resource transport**  
+12. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` — **Seedvale Character Preparation Panel**  
+14. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `npc-002` — **NPC Healing**  
+15. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-15. `npc-011` — **NPC Burial & Graves**  
+16. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `fauna-012` — **Animal threat perception and vocalization responses**  
+18. `fauna-012` — **Animal threat perception and vocalization responses**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `fauna-013` — **Animal hand-feeding and human affinity**  
+19. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+21. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-007` — **Bandages and herbal medicine**  
+22. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `items-player-016` — **Books and Skill Learning**  
-  🟡 `M` · **Score:**  19  
-   → **unlocks:** 0/0
-
-23. `tools-000` — **Weapon Browser — Observatory/Admin**  
-  🟡 `M` · **Score:**  17  
+23. `ui-input-008` — **River debug location quality**  
+  🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
 24. `fauna-007` — **Animal leading and cart harness**  
-  🟡 `L` · **Score:**  16  
+  🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-25. `world-terrain-008` — **Underground Caves V2**  
+25. `tools-000` — **Weapon Browser — Observatory/Admin**  
+  🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+26. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-26. `npc-004` — **Drzewo genealogiczne NPC**  
+27. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-27. `tools-006` — **tools-006--world-observatory.md**  
+28. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -186,6 +191,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
+- [`fauna-007-animal-leading-and-cart-harness.md`](fauna-007-animal-leading-and-cart-harness.md)  
+  is blocked by:
+  - [`fauna-014-animal-traps-bait-attraction-and-species-coverage.md`](fauna-014-animal-traps-bait-attraction-and-species-coverage.md)
 - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)  
   is blocked by:
   - [`npc-010-death-and-corpse-lifecycle.md`](npc-010-death-and-corpse-lifecycle.md)
@@ -214,7 +222,6 @@ Planned plans and their dependencies.
 ```mermaid
 graph TD
   008["008 — Trawa (instanced ground cover)"]
-  014["014 — Dźwięki reakcji NPC"]
   040["040 — Pory roku i pogoda"]
   069["069 — 2026-08-11--069--npc-household-resources.md"]
   097["097 — Fizyka — opadanie przedmiotów, kolizje, skok"]
@@ -257,6 +264,7 @@ graph TD
   fauna_011["fauna-011 — Domestic dogs and household guarding"]
   fauna_012["fauna-012 — Animal threat perception and vocalization responses"]
   fauna_013["fauna-013 — Animal hand-feeding and human affinity"]
+  fauna_014["fauna-014 — Animal traps — bait attraction and species coverage"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -331,6 +339,7 @@ graph TD
   ui_input_005["ui-input-005 — Lodging Navigation Recovery and Cancellation"]
   ui_input_006["ui-input-006 — Fishing UX and Water Support"]
   ui_input_007["ui-input-007 — Player Action Contracts & Quick Actions Availability"]
+  ui_input_008["ui-input-008 — River debug location quality"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -354,7 +363,6 @@ graph TD
   world_terrain_009["world-terrain-009 — Seasonal ground and grass appearance"]
   world_terrain_010["world-terrain-010 — Waterways and Vegetation"]
   008 --> items_player_010
-  014 --> fauna_007
   040 --> npc_012
   069 --> settlements_npcs_008
   097 --> world_terrain_007
@@ -412,8 +420,10 @@ graph TD
   fauna_010 --> fauna_011
   fauna_010 --> fauna_012
   fauna_010 --> fauna_013
+  fauna_010 --> fauna_014
   fauna_011 --> fauna_012
   fauna_011 --> fauna_013
+  fauna_014 --> fauna_007
   items_player_001 --> fauna_002
   items_player_009 --> items_player_013
   items_player_009 --> items_player_015
@@ -449,6 +459,7 @@ graph TD
   settlements_npcs_020 --> settlements_npcs_021
   tools_010 --> tools_011
   tools_011 --> tools_012
+  ui_input_001 --> ui_input_008
   world_008 --> items_player_009
   world_012 --> items_player_016
   world_012 --> world_013

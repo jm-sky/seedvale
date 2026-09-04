@@ -4,9 +4,11 @@ import {
   applySneakSpeedModifier,
   awardSkillXp,
   createPlayerSkills,
+  raiseSkillToValue,
   restorePersistedSkills,
   ridingSpeedMultiplier,
   ridingStaminaDrainMultiplier,
+  setSkillValueForDebug,
   SKILL_MIN_VALUE,
   SKILL_XP_AWARD,
   SNEAK_LEGACY_VALUE,
@@ -212,6 +214,79 @@ describe('ridingSpeedMultiplier (plan fauna-008)', () => {
   it('clamps out-of-range input to the same domain as the other skill-effect helpers', () => {
     expect(ridingSpeedMultiplier(-99)).toBe(ridingSpeedMultiplier(SKILL_MIN_VALUE))
     expect(ridingSpeedMultiplier(99)).toBe(ridingSpeedMultiplier(1))
+  })
+})
+
+describe('raiseSkillToValue (plan items-player-016)', () => {
+  it('raises a skill to exactly the target value', () => {
+    const skills = createPlayerSkills()
+    setSkillValueForDebug(skills, 'riding', 0.23)
+    const result = raiseSkillToValue(skills, 'riding', 0.40)
+    expect(result.changed).toBe(true)
+    expect(result.previousValue).toBeCloseTo(0.23, 5)
+    expect(result.value).toBeCloseTo(0.40, 5)
+    expect(skills.riding.value).toBeCloseTo(0.40, 5)
+  })
+
+  it('is a no-op when the current value already meets the target', () => {
+    const skills = createPlayerSkills()
+    setSkillValueForDebug(skills, 'riding', 0.40)
+    const xpBefore = skills.riding.xp
+    const result = raiseSkillToValue(skills, 'riding', 0.40)
+    expect(result.changed).toBe(false)
+    expect(skills.riding.xp).toBe(xpBefore)
+  })
+
+  it('never lowers xp or value', () => {
+    const skills = createPlayerSkills()
+    setSkillValueForDebug(skills, 'riding', 0.55)
+    const xpBefore = skills.riding.xp
+    const result = raiseSkillToValue(skills, 'riding', 0.40)
+    expect(result.changed).toBe(false)
+    expect(skills.riding.xp).toBe(xpBefore)
+    expect(skills.riding.value).toBeCloseTo(0.55, 5)
+  })
+
+  it('reading the same target twice does not farm additional xp', () => {
+    const skills = createPlayerSkills()
+    setSkillValueForDebug(skills, 'riding', 0.23)
+    raiseSkillToValue(skills, 'riding', 0.40)
+    const xpAfterFirst = skills.riding.xp
+    const second = raiseSkillToValue(skills, 'riding', 0.40)
+    expect(second.changed).toBe(false)
+    expect(skills.riding.xp).toBe(xpAfterFirst)
+  })
+
+  it('leaves other skills untouched', () => {
+    const skills = createPlayerSkills()
+    raiseSkillToValue(skills, 'riding', 0.6)
+    expect(skills.archery.xp).toBe(0)
+  })
+
+  it('practice (awardSkillXp) after a book can still exceed the book target', () => {
+    const skills = createPlayerSkills()
+    raiseSkillToValue(skills, 'riding', 0.80)
+    for (let i = 0; i < 50; i++) awardSkillXp(skills, 'riding', 50)
+    expect(skills.riding.value).toBeGreaterThan(0.80)
+  })
+})
+
+describe('setSkillValueForDebug', () => {
+  it('sets a skill to the requested value, including lowering it', () => {
+    const skills = createPlayerSkills()
+    setSkillValueForDebug(skills, 'riding', 0.7)
+    expect(skills.riding.value).toBeCloseTo(0.7, 5)
+    setSkillValueForDebug(skills, 'riding', 0.39)
+    expect(skills.riding.value).toBeCloseTo(0.39, 5)
+  })
+
+  it('clamps to [SKILL_MIN_VALUE, 1]', () => {
+    const skills = createPlayerSkills()
+    setSkillValueForDebug(skills, 'riding', -5)
+    expect(skills.riding.value).toBe(SKILL_MIN_VALUE)
+    setSkillValueForDebug(skills, 'riding', 5)
+    expect(skills.riding.value).toBeCloseTo(1, 6)
+    expect(Number.isFinite(skills.riding.xp)).toBe(true)
   })
 })
 

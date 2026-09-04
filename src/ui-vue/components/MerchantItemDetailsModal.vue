@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { Apple, Package, Sword, Wheat } from 'lucide-vue-next'
+import { Apple, BookOpen, Package, Sword, Wheat } from 'lucide-vue-next'
 import { type Component, computed, ref } from 'vue'
 import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
-import { consumeNeedNoun, ITEM_CATALOG } from '../../items/itemCatalog'
+import { type BookTier, consumeNeedNoun, ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
 import { merchantPrice, tradeValue } from '../../items/tradeCatalog'
+import { SKILL_LABEL } from '../../player/PlayerSkills'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { ui } from '../store'
+import { getSkillValue, ui } from '../store'
+
+const BOOK_TIER_LABEL: Record<BookTier, string> = {
+  basic: 'podstawowy',
+  intermediate: 'średniozaawansowany',
+  advanced: 'zaawansowany',
+}
 
 const props = defineProps<{
   kind: ItemKind | null
@@ -28,6 +35,7 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
   resource: Wheat,
   utility: Package,
   food: Apple,
+  knowledge: BookOpen,
 }
 
 const item = computed(() => props.kind ? ITEM_DEFS[props.kind] : null)
@@ -38,6 +46,9 @@ const melee = computed(() => catalogEntry.value?.melee ?? null)
 const ranged = computed(() => catalogEntry.value?.ranged ?? null)
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const capabilities = computed(() => catalogEntry.value?.capabilities ?? [])
+const book = computed(() => catalogEntry.value?.book ?? null)
+const bookSkillValue = computed<number | null>(() => book.value ? getSkillValue(book.value.skill) : null)
+function percent(value: number): string { return `${Math.round(value * 100)}%` }
 const buyPrice = computed<number | null>(() => props.kind ? merchantPrice(props.kind) : null)
 const barterValue = computed<number>(() => props.kind ? tradeValue(props.kind) : 0)
 const itemCategoryText = computed(() => item.value ? item.value.categories.map((cat) => categoryLabel[cat]).join(' · ') : '')
@@ -141,6 +152,26 @@ function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
           v-if="capabilities.length > 0"
           label="Zdolności"
           :value="capabilities.join(', ')"
+        />
+        <InventoryScreenSection
+          v-if="book"
+          label="Umiejętność"
+          :value="`${SKILL_LABEL[book.skill]} · ${BOOK_TIER_LABEL[book.tier]}`"
+        />
+        <InventoryScreenSection
+          v-if="book"
+          label="Wymagane"
+          :value="percent(book.requiredSkillValue)"
+        />
+        <InventoryScreenSection
+          v-if="book && bookSkillValue != null"
+          label="Twój poziom"
+          :value="percent(bookSkillValue)"
+        />
+        <InventoryScreenSection
+          v-if="book"
+          label="Nauka do"
+          :value="percent(book.targetSkillValue)"
         />
       </div>
 

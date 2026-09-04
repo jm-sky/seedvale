@@ -183,6 +183,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `config/worldConfig.ts`
 - `debug/npcDebugApi.ts`
+- `player/PlayerSkills.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/settlementGenerator.ts`
 - `world/locations/locationKnowledge.ts`
@@ -207,6 +208,7 @@ Generated from TypeScript imports.
 - `debug/villageInspector.ts`
 - `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
+- `player/PlayerSkills.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `world/locations/locationConfig.ts`

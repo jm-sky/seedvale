@@ -141,6 +141,29 @@ Generated from TypeScript imports.
 
 - `items/createItemSpawners.ts`
 
+## `items/books.test.ts`
+
+**Imports**
+
+- `items/books.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `items/tradeCatalog.ts`
+- `player/PlayerSkills.ts`
+
+## `items/books.ts`
+
+**Imports**
+
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `player/PlayerSkills.ts`
+
+**Imported by**
+
+- `app/inventoryWiring.ts`
+- `items/books.test.ts`
+
 ## `items/campBlanketProp.ts`
 
 **Imports**
@@ -425,6 +448,7 @@ Generated from TypeScript imports.
 
 - `items/itemInstances.ts`
 - `items/items.ts`
+- `player/PlayerSkills.ts`
 - `world/WaterSource.ts`
 
 **Imported by**
@@ -450,6 +474,8 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/books.test.ts`
+- `items/books.ts`
 - `items/coin.test.ts`
 - `items/foodFreshness.ts`
 - `items/highQualityWeapons.test.ts`
@@ -568,6 +594,8 @@ Generated from TypeScript imports.
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`
 - `items/ItemSpawner.ts`
+- `items/books.test.ts`
+- `items/books.ts`
 - `items/campBlanketProp.ts`
 - `items/campfireCooking.ts`
 - `items/coin.test.ts`
@@ -778,6 +806,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `items/books.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryView.ts`
 - `items/trade.test.ts`

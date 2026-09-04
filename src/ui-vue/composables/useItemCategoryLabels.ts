@@ -6,6 +6,7 @@ export const useItemCategoryLabels = () => {
       utility: 'Użytkowe',
       food: 'Jedzenie',
       weapon: 'Broń',
+      knowledge: 'Wiedza',
     },
   }
 }

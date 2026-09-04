@@ -163,10 +163,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 107
-- `InventoryWiring` — type — line 61
-- `InventoryWiringDeps` — type — line 78
-- `MerchantInventoryView` — type — line 48
+- `createInventoryWiring` — function — line 113
+- `InventoryWiring` — type — line 63
+- `InventoryWiringDeps` — type — line 84
+- `MerchantInventoryView` — type — line 50
 
 ## `app/modalState.ts`
 

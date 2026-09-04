@@ -409,12 +409,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/hiddenFinds.ts`
 
-- `findHiddenFindSpot` — function — line 167
+- `findHiddenFindSpot` — function — line 171
 - `HIDDEN_FIND_SEARCH_RADIUS` — const — line 49
 - `HiddenFindLandmark` — type — line 51
 - `HiddenFindLoot` — type — line 61
-- `HiddenFindMatch` — type — line 157
-- `resolveHiddenFindLoot` — function — line 194
+- `HiddenFindMatch` — type — line 161
+- `resolveHiddenFindLoot` — function — line 198
 
 ## `world/largeCaves.ts`
 

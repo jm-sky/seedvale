@@ -17,6 +17,7 @@ import type { WorldLocationCatalog } from '../world/locations/worldLocationCatal
 import type { WorldBundle } from './worldBundle'
 import { aboutAreaLine, requestAssistanceLine } from '../ai/dialogueTemplates'
 import { playInventoryDrop } from '../audio/inventorySounds'
+import { readBook } from '../items/books'
 import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
@@ -24,6 +25,7 @@ import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
 import { sellInstancesForCoins, settleTransaction } from '../items/trade'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
+import { SKILL_LABEL } from '../player/PlayerSkills'
 import {
   FAR_RANGE_KM,
   GUARD_LANDMARK_POOL_SIZE,
@@ -65,6 +67,10 @@ export type InventoryWiring = {
   syncMerchantIfOpen: () => void
   sellInventoryInstances: (instanceIds: readonly string[]) => TradeResult
   sharpenInventoryWeapon: (instanceId: string) => SharpenResult
+  /** "Czytaj" (plan items-player-016) — interprets `kind` against
+   *  `ITEM_CATALOG[kind].book` + `player.skills`, then resyncs the Skills
+   *  screen state and shows the outcome via the existing toast pipeline. */
+  readBookItem: (kind: ItemKind) => void
   /** Drops the whole carried stack of `kind` back into the world. */
   dropItemStack: (kind: ItemKind) => void
   equipTool: (kind: ItemKind) => void
@@ -145,6 +151,34 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       toast.show('Naostrzono broń.', 'pickup')
     }
     return result
+  }
+
+  const percent = (value: number): string => `${Math.round(value * 100)}%`
+
+  /** "Czytaj" (plan items-player-016). The book is never consumed — only
+   *  `player.skills` (via `readBook`'s `raiseSkillToValue`) and the UI can
+   *  change. Inventory stays open (no `close()` call, unlike `onPlaceTrap`/
+   *  `onPlaceContainer`), so this pushes its own resyncs instead of waiting
+   *  for the next gated `gameLoop.ts` frame. */
+  const readBookItem = (kind: ItemKind): void => {
+    const result = readBook(player.skills, kind)
+    if (result.outcome === 'not_a_book' || !result.skill) return
+    const label = SKILL_LABEL[result.skill]
+    if (result.outcome === 'learned') {
+      vueUi.pushSkillsState(player.skills)
+      toast.show(
+        `„${ITEM_DEFS[kind].label}” — ${label} ${percent(result.previousValue!)} → ${percent(result.value!)}`,
+        'pickup',
+      )
+    } else if (result.outcome === 'too_low') {
+      toast.show(
+        `Ta książka jest dla ciebie zbyt zaawansowana. Wymagane: ${label} ${percent(result.requiredValue!)}, masz ${percent(result.previousValue!)}`,
+        'error',
+      )
+    } else {
+      toast.show(`Nie dowiadujesz się z tej książki niczego nowego. ${label}: ${percent(result.previousValue!)}`, 'info')
+    }
+    deps.refreshInventoryScreen()
   }
 
   /** Drops the whole carried stack of `kind` back into the world at the
@@ -320,6 +354,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     syncMerchantIfOpen,
     sellInventoryInstances,
     sharpenInventoryWeapon,
+    readBookItem,
     dropItemStack,
     equipTool,
     unequipTool,

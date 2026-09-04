@@ -34,8 +34,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createInventoryScreen.ts`
 
-- `createInventoryScreen` — function — line 41
-- `InventoryScreen` — type — line 23
+- `createInventoryScreen` — function — line 43
+- `InventoryScreen` — type — line 25
 - `InventoryScreenHandlers` — type — line 8
 
 ## `ui/createLoadingScreen.ts`

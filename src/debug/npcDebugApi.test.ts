@@ -7,6 +7,7 @@ import type { SettlementsManager } from '../settlement/SettlementsManager'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldContext } from '../world/worldContext'
+import { createPlayerSkills } from '../player/PlayerSkills'
 import { installNpcDebugApi } from './npcDebugApi'
 
 afterEach(() => {
@@ -98,7 +99,7 @@ function install(
     catalog: { getById: () => null, nearestSettlements: () => [], landmarksWithin: () => [], invalidateScanCache: () => {} } as unknown as WorldLocationCatalog,
     knowledge: { get: () => undefined, has: () => false, reveal: () => false, list: () => [], serialize: () => [], restore: () => {}, clear: () => {} } as unknown as LocationKnowledge,
   }
-  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags, worldLocations)
+  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags, worldLocations, () => createPlayerSkills())
   return { teleport, api: typeof window === 'undefined' ? undefined : window.seedvale?.debug }
 }
 

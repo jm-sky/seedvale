@@ -33,6 +33,7 @@ const categoryChips: { id: CategoryFilter, label: string }[] = [
   { id: 'tool', label: categoryLabel.tool },
   { id: 'utility', label: categoryLabel.utility },
   { id: 'food', label: categoryLabel.food },
+  { id: 'knowledge', label: categoryLabel.knowledge },
 ]
 
 const capabilityChips = computed(() => [

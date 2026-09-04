@@ -94,8 +94,33 @@ export type ItemKind =
   | 'map_far'
   | 'rope'
   | 'hay'
+  // Plan items-player-016 — 18 skill-book kinds (6 `SkillId`s × 3 tiers).
+  // Names are stable and independent of the displayed title (`ITEM_DEFS.label`);
+  // the mechanical tier metadata lives on `ITEM_CATALOG[kind].book`, not here.
+  | 'book_riding_basic'
+  | 'book_riding_intermediate'
+  | 'book_riding_advanced'
+  | 'book_archery_basic'
+  | 'book_archery_intermediate'
+  | 'book_archery_advanced'
+  | 'book_survival_basic'
+  | 'book_survival_intermediate'
+  | 'book_survival_advanced'
+  | 'book_traps_basic'
+  | 'book_traps_intermediate'
+  | 'book_traps_advanced'
+  | 'book_sneak_basic'
+  | 'book_sneak_intermediate'
+  | 'book_sneak_advanced'
+  | 'book_defense_basic'
+  | 'book_defense_intermediate'
+  | 'book_defense_advanced'
 
-export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon'
+/** `knowledge` (plan items-player-016) covers both books (→ `PlayerSkills`)
+ *  and `map_near`/`map_far` (→ `LocationKnowledge`) — a shared item
+ *  *category*, not a shared gameplay system; each knowledge item still
+ *  drives its own domain. */
+export type ItemCategory = 'resource' | 'tool' | 'utility' | 'food' | 'weapon' | 'knowledge'
 
 /** Item gabarite (plan 164) — deliberately independent of `weight`. Governs
  *  container/inventory *size* capacity only; a small heavy item and a large
@@ -139,7 +164,7 @@ export function hasItemKindCategory(kind: ItemKind, category: ItemCategory): boo
   return hasItemCategory(ITEM_DEFS[kind], category)
 }
 
-const CATEGORY_SORT_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'food', 'utility', 'resource']
+const CATEGORY_SORT_ORDER: readonly ItemCategory[] = ['weapon', 'tool', 'knowledge', 'food', 'utility', 'resource']
 
 /** Deterministic primary category for sorting — first match in CATEGORY_SORT_ORDER. */
 export function primaryItemCategory(def: Pick<ItemDef, 'categories'>): ItemCategory {
@@ -936,7 +961,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   map_near: {
     kind: 'map_near',
     label: 'mapa okolicy',
-    categories: ['utility'],
+    categories: ['knowledge'],
     weight: 0.05,
     size: 'XS',
     color: 0xd8c79a,
@@ -945,7 +970,7 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
   map_far: {
     kind: 'map_far',
     label: 'mapa dalekich stron',
-    categories: ['utility'],
+    categories: ['knowledge'],
     weight: 0.05,
     size: 'XS',
     color: 0xb99f6b,
@@ -972,6 +997,168 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'SM',
     color: 0xd9c26a,
     description: 'Wiązka suszonego siana. Pasza dla zwierząt gospodarskich — ludzie jej nie jedzą.'
+  },
+  book_riding_basic: {
+    kind: 'book_riding_basic',
+    label: 'Pierwsze kroki w siodle',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Podstawy dosiadania i prowadzenia wierzchowca, spisane z myślą o zupełnie początkujących jeźdźcach.'
+  },
+  book_riding_intermediate: {
+    kind: 'book_riding_intermediate',
+    label: 'Pewna ręka, spokojny koń',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'O tym, jak utrzymać konia w spokoju i pewnie nim kierować w trudniejszym terenie.'
+  },
+  book_riding_advanced: {
+    kind: 'book_riding_advanced',
+    label: 'Sztuka doskonałego jeźdźca',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Zaawansowane techniki jeździeckie, jakich uczy się tylko od najlepszych.'
+  },
+  book_archery_basic: {
+    kind: 'book_archery_basic',
+    label: 'Łuk i strzała — pierwsze lekcje',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Jak prawidłowo trzymać łuk, naciągać cięciwę i celować — dla tych, którzy nigdy wcześniej nie strzelali.'
+  },
+  book_archery_intermediate: {
+    kind: 'book_archery_intermediate',
+    label: 'O pewnym oku i celnej strzale',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Ćwiczenia i porady dla łuczników, którzy chcą trafiać częściej i z większej odległości.'
+  },
+  book_archery_advanced: {
+    kind: 'book_archery_advanced',
+    label: 'O łuku, wietrze i doskonałym strzale',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Mistrzowska wiedza o łucznictwie — czytanie wiatru, oddechu i chwili wypuszczenia strzały.'
+  },
+  book_survival_basic: {
+    kind: 'book_survival_basic',
+    label: 'Jak przetrwać z dala od domu',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Podstawowe zasady przetrwania z dala od osady — ogień, schronienie, woda.'
+  },
+  book_survival_intermediate: {
+    kind: 'book_survival_intermediate',
+    label: 'Las, góry i mokradła — poradnik wędrowca',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Praktyczny poradnik radzenia sobie w różnych terenach na dłuższych wyprawach.'
+  },
+  book_survival_advanced: {
+    kind: 'book_survival_advanced',
+    label: 'Wiedza dzikich ostępów',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Zaawansowana wiedza tych, którzy spędzili poza domem więcej czasu niż w nim.'
+  },
+  book_traps_basic: {
+    kind: 'book_traps_basic',
+    label: 'Sidła i proste pułapki',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Jak zastawić proste sidła na drobną zwierzynę — dla początkujących traperów.'
+  },
+  book_traps_intermediate: {
+    kind: 'book_traps_intermediate',
+    label: 'Ślad, przynęta, pułapka',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'O czytaniu tropów zwierząt i dobieraniu przynęty do skutecznej pułapki.'
+  },
+  book_traps_advanced: {
+    kind: 'book_traps_advanced',
+    label: 'Kunszt starego trapera',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Zaawansowany kunszt trapera — spisany przez kogoś, kto pułapkom poświęcił całe życie.'
+  },
+  book_sneak_basic: {
+    kind: 'book_sneak_basic',
+    label: 'Jak stąpać cicho',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Podstawy cichego poruszania się, by nie płoszyć zwierzyny ani nie zwracać na siebie uwagi.'
+  },
+  book_sneak_intermediate: {
+    kind: 'book_sneak_intermediate',
+    label: 'Tam, gdzie nie sięga wzrok',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Jak wykorzystać cień, teren i moment, by pozostać niezauważonym.'
+  },
+  book_sneak_advanced: {
+    kind: 'book_sneak_advanced',
+    label: 'Bez śladu i bez dźwięku',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Mistrzowska sztuka skradania się — dla tych, którzy chcą stać się niemal niewidzialni.'
+  },
+  book_defense_basic: {
+    kind: 'book_defense_basic',
+    label: 'Nie daj się trafić!',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Podstawy obrony trzymanym przedmiotem — jak blokować i unikać najprostszych ciosów.'
+  },
+  book_defense_intermediate: {
+    kind: 'book_defense_intermediate',
+    label: 'Garda, unik i riposta',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'O prawidłowej gardzie, unikach i wykorzystaniu chwili słabości przeciwnika.'
+  },
+  book_defense_advanced: {
+    kind: 'book_defense_advanced',
+    label: 'O sztuce przetrwania w pojedynku',
+    categories: ['knowledge'],
+    weight: 0.5,
+    size: 'SM',
+    color: 0x7a5230,
+    description: 'Zaawansowana sztuka obrony, spisana przez kogoś, kto przeżył niejeden pojedynek.'
   },
 }
 
@@ -1680,6 +1867,19 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     )
     mesh.rotation.z = Math.PI / 2
     mesh.position.y = 0.04
+    mesh.castShadow = true
+    return mesh
+  }
+  // Any remaining `knowledge` item at this point is a book — `map_near`/
+  // `map_far` (also `knowledge`) already returned their own rolled-parchment
+  // mesh above. Plain closed-book box; real GLBs (`ITEM_GLB_SPECS`) cover
+  // this once warmed, this is only the load-failure/pre-warm fallback.
+  if (hasItemKindCategory(kind, 'knowledge')) {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 0.04, 0.22),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS[kind].color, flatShading: true }),
+    )
+    mesh.position.y = 0.02
     mesh.castShadow = true
     return mesh
   }

@@ -12,6 +12,19 @@
  */
 export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense' | 'archery' | 'riding'
 
+/** Shared Polish display name per skill — single source for the Skills
+ *  screen and any other UI naming a skill (plan items-player-016's book
+ *  details/toasts), so a skill's display name never has to be duplicated
+ *  per screen. */
+export const SKILL_LABEL: Record<SkillId, string> = {
+  sneak: 'Skradanie się',
+  survival: 'Sztuka przetrwania',
+  traps: 'Pułapki',
+  defense: 'Obrona',
+  archery: 'Łucznictwo',
+  riding: 'Jeździectwo',
+}
+
 export type SkillState = {
   /** [0,1] — derived from `xp`, never assigned independently. */
   value: number
@@ -45,12 +58,16 @@ export function xpToSkillValue(xp: number): number {
 
 /** Inverse of `xpToSkillValue` — only used to express a target *value* as the
  *  XP that produces it (e.g. the legacy fixed Sneak level in a migrated
- *  save). Returns 0 for anything at or below the floor. */
+ *  save, or a book's `raiseSkillToValue` target). Returns 0 for anything at
+ *  or below the floor. `value` is capped just short of 1 before inverting —
+ *  the curve is asymptotic, so exact mastery has no finite XP; returning
+ *  `Infinity` here would poison `xpToSkillValue` (`!Number.isFinite` back to
+ *  the floor) for any caller that clamps a target up to 1. */
 export function xpForSkillValue(value: number): number {
   const above = (value - SKILL_MIN_VALUE) / (1 - SKILL_MIN_VALUE)
   if (!Number.isFinite(above) || above <= 0) return 0
-  if (above >= 1) return Number.POSITIVE_INFINITY
-  return (SKILL_XP_HALF_VALUE * above) / (1 - above)
+  const capped = Math.min(above, 1 - 1e-9)
+  return (SKILL_XP_HALF_VALUE * capped) / (1 - capped)
 }
 
 /** Plan 124 shipped Sneak as a flat 0.5. Saves written before progression
@@ -83,6 +100,43 @@ export function awardSkillXp(skills: PlayerSkills, id: SkillId, amount: number):
   if (!Number.isFinite(amount) || amount <= 0) return
   const state = skills[id]
   state.xp += amount
+  state.value = xpToSkillValue(state.xp)
+}
+
+export type RaiseSkillResult = { changed: boolean, previousValue: number, value: number }
+
+/**
+ * The single write path for a *knowledge-driven* skill increase (plan
+ * items-player-016 — books): raises `id` straight to `targetValue` through
+ * the existing XP curve rather than awarding a flat amount like
+ * `awardSkillXp`. A no-op whenever `targetValue` is not strictly above the
+ * skill's current value, and never lowers XP even if rounding through
+ * `xpForSkillValue`/`xpToSkillValue` would otherwise nudge it down — a book
+ * read below its own target, or read again afterwards, can only ever leave
+ * the skill unchanged.
+ */
+export function raiseSkillToValue(skills: PlayerSkills, id: SkillId, targetValue: number): RaiseSkillResult {
+  const state = skills[id]
+  const previousValue = state.value
+  if (!Number.isFinite(targetValue) || targetValue <= previousValue) {
+    return { changed: false, previousValue, value: previousValue }
+  }
+  const targetXp = xpForSkillValue(Math.min(targetValue, 1))
+  if (targetXp <= state.xp) return { changed: false, previousValue, value: previousValue }
+  state.xp = targetXp
+  state.value = xpToSkillValue(state.xp)
+  return { changed: true, previousValue, value: state.value }
+}
+
+/** Dev-console-only direct set (plan items-player-016's Debug API) — unlike
+ *  `raiseSkillToValue`, this *can* lower a skill, so a test can arrange a
+ *  state like "riding = 0.39" below a book's requirement. Never used by real
+ *  gameplay; `debug/npcDebugApi.ts`'s `skills.setSkillValue` is the only
+ *  caller, kept here so it never has to poke `xp`/`value` directly. */
+export function setSkillValueForDebug(skills: PlayerSkills, id: SkillId, value: number): void {
+  const clamped = Math.max(SKILL_MIN_VALUE, Math.min(1, value))
+  const state = skills[id]
+  state.xp = xpForSkillValue(clamped)
   state.value = xpToSkillValue(state.xp)
 }
 

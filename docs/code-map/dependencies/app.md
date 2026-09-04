@@ -698,6 +698,7 @@ Generated from TypeScript imports.
 - `audio/inventorySounds.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/books.ts`
 - `items/guardSword.ts`
 - `items/inventoryView.ts`
 - `items/itemInstances.ts`
@@ -706,6 +707,7 @@ Generated from TypeScript imports.
 - `items/trade.ts`
 - `items/weaponMaintenance.ts`
 - `player/PlayerController.ts`
+- `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
 - `ui-vue/mount.ts`

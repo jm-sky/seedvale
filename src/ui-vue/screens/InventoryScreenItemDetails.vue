@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { Apple, Package, Sword, Wheat } from 'lucide-vue-next'
+import { Apple, BookOpen, Package, Sword, Wheat } from 'lucide-vue-next'
 import { type Component, computed, ref } from 'vue'
 import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
-import { consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { type BookTier, consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
+import { SKILL_LABEL } from '../../player/PlayerSkills'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { showToast, ui } from '../store'
+import { getSkillValue, showToast, ui } from '../store'
+
+const BOOK_TIER_LABEL: Record<BookTier, string> = {
+  basic: 'podstawowy',
+  intermediate: 'średniozaawansowany',
+  advanced: 'zaawansowany',
+}
 
 const props = defineProps<{
   selectedItem: ItemKind | null
@@ -30,6 +37,7 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
   resource: Wheat,
   utility: Package,
   food: Apple,
+  knowledge: BookOpen,
 }
 
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
@@ -50,6 +58,25 @@ const meleeSpeed = computed<string | null>(() => {
 const ranged = computed(() => catalogEntry.value?.ranged ?? null)
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
+const book = computed(() => catalogEntry.value?.book ?? null)
+/** Live current value of the book's skill — `ui.skillsScreen` is pushed
+ *  explicitly by `readBookItem` right after a successful read (plan
+ *  items-player-016), so this stays fresh even while the inventory modal
+ *  freezes the normal per-frame push. */
+const bookSkillValue = computed<number | null>(() => book.value ? getSkillValue(book.value.skill) : null)
+const bookState = computed<'learnable' | 'too_low' | 'known' | null>(() => {
+  const b = book.value
+  const value = bookSkillValue.value
+  if (!b || value == null) return null
+  if (value < b.requiredSkillValue) return 'too_low'
+  if (value >= b.targetSkillValue) return 'known'
+  return 'learnable'
+})
+const BOOK_STATE_LABEL: Record<'learnable' | 'too_low' | 'known', string> = {
+  learnable: 'Możesz się nauczyć',
+  too_low: 'Zbyt trudna',
+  known: 'Znana wiedza',
+}
 const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
 const itemCategoryText = computed(() => item.value ? item.value.categories.map((cat) => categoryLabel[cat]).join(' · ') : '')
 const itemCategoryIcon = computed(() => item.value ? CATEGORY_ICON[primaryItemCategory(item.value)] : Sword)
@@ -87,6 +114,8 @@ function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
+function onRead(kind: ItemKind): void { ui.inventory.onRead?.(kind) }
+function percent(value: number): string { return `${Math.round(value * 100)}%` }
 function onPlaceTrap(kind: ItemKind): void {
   const trapKind = trapKindForItem(kind)
   if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
@@ -208,6 +237,36 @@ function sharpenInstance(id: string): void {
         label="Efekt"
         :value="`+${consumable.relief} ${consumeNeedNoun(consumable.need)}`"
       />
+
+      <InventoryScreenSection
+        v-if="book"
+        label="Umiejętność"
+        :value="`${SKILL_LABEL[book.skill]} · ${BOOK_TIER_LABEL[book.tier]}`"
+      />
+
+      <InventoryScreenSection
+        v-if="book"
+        label="Wymagane"
+        :value="percent(book.requiredSkillValue)"
+      />
+
+      <InventoryScreenSection
+        v-if="book && bookSkillValue != null"
+        label="Twój poziom"
+        :value="percent(bookSkillValue)"
+      />
+
+      <InventoryScreenSection
+        v-if="book"
+        label="Nauka do"
+        :value="percent(book.targetSkillValue)"
+      />
+
+      <InventoryScreenSection
+        v-if="book && bookState"
+        label="Stan"
+        :value="BOOK_STATE_LABEL[bookState]"
+      />
     </div>
 
     <div
@@ -258,6 +317,11 @@ function sharpenInstance(id: string): void {
         v-if="consumable"
         :label="consumeLabel"
         @click="onConsume(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="book"
+        label="Czytaj"
+        @click="onRead(item.kind)"
       />
       <ItemsScreenItemButton
         v-if="trapKindForItem(item.kind)"

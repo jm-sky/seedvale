@@ -88,17 +88,18 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `HiddenTreasureDebugApi` — type — line 135
-- `HouseholdDebugHandle` — type — line 67
-- `installNpcDebugApi` — function — line 235
-- `LocationsDebugApi` — type — line 99
-- `NpcDebugHandle` — type — line 52
-- `SeedvaleDebugApi` — type — line 148
-- `SettlementHistoryDebugHandle` — type — line 75
-- `TeleportToDebugApi` — type — line 107
-- `VillageDebugHandle` — type — line 82
-- `WorldLocationDebugEntry` — type — line 121
-- `WorldLocationsDebugApi` — type — line 122
+- `HiddenTreasureDebugApi` — type — line 136
+- `HouseholdDebugHandle` — type — line 68
+- `installNpcDebugApi` — function — line 254
+- `LocationsDebugApi` — type — line 100
+- `NpcDebugHandle` — type — line 53
+- `SeedvaleDebugApi` — type — line 164
+- `SettlementHistoryDebugHandle` — type — line 76
+- `SkillsDebugApi` — type — line 154
+- `TeleportToDebugApi` — type — line 108
+- `VillageDebugHandle` — type — line 83
+- `WorldLocationDebugEntry` — type — line 122
+- `WorldLocationsDebugApi` — type — line 123
 
 ## `debug/npcInspector.ts`
 

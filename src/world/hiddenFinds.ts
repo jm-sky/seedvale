@@ -95,7 +95,11 @@ const CEMETERY_LOOT_BY_SETTLEMENT_SIZE: Record<VillageSize, LootProfile> = {
   SM: { coinWeight: 3, coinMin: 5, coinMax: 14, items: [{ weight: 0.5, item: 'iron' }] },
   MD: { coinWeight: 4, coinMin: 10, coinMax: 28, items: [{ weight: 1, item: 'copper' }, { weight: 0.5, item: 'whetstone' }] },
   LG: { coinWeight: 5, coinMin: 20, coinMax: 45, items: [{ weight: 1, item: 'gold' }, { weight: 0.3, item: 'damascus_knife', rare: true }] },
-  XL: { coinWeight: 5, coinMin: 30, coinMax: 65, items: [{ weight: 1, item: 'gold' }, { weight: 0.4, item: 'masterwork_sword', rare: true }] },
+  // Plan items-player-016 — a concrete `ItemKind` book as a Hidden Find
+  // reward, same seeded/deterministic roll as every other loot entry; a
+  // player can find an advanced book here before meeting its own
+  // `requiredSkillValue` to read it, which is fine (a purchase can too).
+  XL: { coinWeight: 5, coinMin: 30, coinMax: 65, items: [{ weight: 1, item: 'gold' }, { weight: 0.4, item: 'masterwork_sword', rare: true }, { weight: 0.3, item: 'book_archery_advanced', rare: true }] },
 }
 
 /** Economic cap (plan world-007 §3) — how many of a cemetery's candidate grave

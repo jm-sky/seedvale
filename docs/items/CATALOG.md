@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-04 (2026-09-04 asset drop — GLBs wired for backpack, saddlebags, chest, tomato, coin, roasted_meat/beef, fish, rope)
+**Last updated:** 2026-09-04 (plan items-player-016 — `knowledge` category + 18 skill books)
 
 ## Quick rules
 
@@ -26,7 +26,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Wood model (plan 187) | `branch` (hand-gathered / axe bonus, torch-capable) vs `beam` (axe-felling bonus yield only, construction + fuel, never a torch) — `world/treeLifecycle.ts`'s `bonusYieldForChopStage`/`FELLING_BEAM_YIELD` fires once, on the authoritative felled→harvested bucking step |
 | Campfire fuel (plan 187) | `settlement/VillageFire.ts`'s `FIRE_FUEL_KINDS` (`branch`, `beam`) — `startIgniteFire`/the "dołóż" world action try each kind in order; every unit grants the same `FUEL_PER_BRANCH` seconds regardless of kind |
 | Construction materials from the ground (plan 187) | `items/constructionMaterials.ts`'s `hasMaterial`/`consumeMaterial` — resolves a `{ kind, count }` requirement from `Inventory` first, then nearby `DroppedItems` within `CONSTRUCTION_MATERIAL_RADIUS` (3m), closest stack first; atomic (nothing consumed unless the total is sufficient). Wired into `app/actions/placementActions.ts`'s `workOnWell`; kind-agnostic, so a future construction can reuse it without a new storage system |
-| Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility` |
+| Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` / `knowledge` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility`. `knowledge` (plan items-player-016) covers `map_near`/`map_far` (→ `LocationKnowledge`) and the 18 skill books (→ `PlayerSkills`) — a shared item category, not a shared gameplay system |
+| Skill books (plan items-player-016) | `ITEM_CATALOG[kind].book` (`{ skill, requiredSkillValue, targetSkillValue, tier }`) — the single source of truth for inventory/merchant presentation and the "Czytaj" action (`items/books.ts`'s `readBook`). Reading raises the named `SkillId` straight to `targetSkillValue` via `PlayerSkills.ts`'s `raiseSkillToValue` (never lowers XP, no-op once already met); requires the current skill to be `>= requiredSkillValue` first. No parallel book-progression state — the book itself is never consumed. |
 | Consumable (Zjedz/Wypij/Opatrz) | `ITEM_CATALOG[kind].consumable` (plan 106, 153) — `{ need: 'hunger'\|'thirst'\|'health', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`), world drink/cook actions, or the world `[R]` quick-action on a pickupable item (`interactables.ts`'s `itemPromptLabel`) |
 | Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` (HP first, then the four needs — issue 034) |
 | Passive HP regen | `player/PlayerNeeds.ts`'s `tickHealthRegen` (plan 153) — slow, suppressed while starving/dehydrated; herb/bandage heal faster |
@@ -128,6 +129,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | seed_potato | sadzeniaki ziemniaka | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: ziemniak" — plants a `potato` `CropLifecycle` entity in a settlement garden |
 | seed_cabbage | nasiona kapusty | — | — | none (Kupiec) | procedural | plan 126; Quick Actions "Zasadź: kapustę" — plants a `cabbage` `CropLifecycle` entity in a settlement garden |
 | rope | lina | — | — | none (Kupiec) | `items/rope.glb` | plan world-004; ordinary carried item (not a capability) — carrying ≥1 is required to draw water from a deep player-built well (drink/fill), never consumed |
+| book_* (18 kinds: `riding`/`archery`/`survival`/`traps`/`sneak`/`defense` × `basic`/`intermediate`/`advanced`) | see plan for titles | — | — | none (Kupiec + one `HiddenFindLoot` entry) | `parked/books/Closed-*.glb` (3 files shared across all 18, decorrelated from tier) | plan items-player-016; `knowledge` category; Inventory "Czytaj" raises `ITEM_CATALOG[kind].book.skill` to `.targetSkillValue` (20→40/40→60/60→80%) if current skill is within `[requiredSkillValue, targetSkillValue)`; book is never consumed |
 
 ## Roadmap (not done)
 

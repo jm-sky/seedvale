@@ -29,7 +29,7 @@ const FORWARDED_FNS = [
   'setHudFps', 'setHudTime', 'setHudExp', 'setHudInventoryWeight', 'setHudHeldTool', 'setHudPlayerNeeds', 'setHudAiming',
   'setHudPrimaryWeapons', 'configurePrimaryWeaponShortcuts', 'setHudMounted',
   'setCharacterStats', 'setCharacterBadges', 'openCharacterScreen', 'closeCharacterScreen', 'isCharacterScreenOpen', 'toggleCharacterScreen',
-  'configureSkillsScreen', 'setSkillsState', 'openSkillsScreen', 'closeSkillsScreen', 'isSkillsScreenOpen', 'toggleSkillsScreen',
+  'configureSkillsScreen', 'setSkillsState', 'pushSkillsState', 'openSkillsScreen', 'closeSkillsScreen', 'isSkillsScreenOpen', 'toggleSkillsScreen',
   'toggleMinimap', 'setMinimapCollapsed', 'isMinimapCollapsed',
   'showToast', 'clearToasts',
   'configureTouchChrome', 'setTouchInputEnabled', 'setCycleTargetAvailable', 'clearTouchChrome',

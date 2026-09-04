@@ -1,3 +1,4 @@
+import type { SkillId } from '../player/PlayerSkills'
 import type { LiquidContent } from './itemInstances'
 import type { ItemKind } from './items'
 /**
@@ -124,6 +125,10 @@ export type ConsumableNeed = 'hunger' | 'thirst' | 'health'
  *  the existing overload thresholds (`player/playerEncumbrance.ts`). */
 const BACKPACK_CAPACITY_BONUS_KG = 15
 
+/** Presentation-only book tier (plan items-player-016) — reading never
+ *  depends on having read a lower tier first, this only labels the entry. */
+export type BookTier = 'basic' | 'intermediate' | 'advanced'
+
 export type ItemCatalogEntry = {
   kind: ItemKind
   /** Polish label — mirrors ITEM_DEFS. */
@@ -173,6 +178,19 @@ export type ItemCatalogEntry = {
    *  `LiquidContainerItemInstance`, not here — this is only the static
    *  per-kind definition (`items/liquidContainer.ts` reads it). */
   container?: { capacityLiters: number, allowedContents: readonly LiquidContent[] }
+  /** Plan items-player-016 — declarative skill-book metadata, the single
+   *  source of truth for inventory/merchant presentation *and* the "Czytaj"
+   *  interaction: `skill` names which `PlayerSkills` entry the book teaches,
+   *  `requiredSkillValue` gates reading (too advanced below it),
+   *  `targetSkillValue` is what `raiseSkillToValue` raises the skill to (a
+   *  no-op once the skill already meets it). `tier` is presentation-only —
+   *  reading never depends on having read a lower tier first. */
+  book?: {
+    skill: SkillId
+    requiredSkillValue: number
+    targetSkillValue: number
+    tier: BookTier
+  }
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -1069,6 +1087,186 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan fauna-010 — livestock feed, not human food/`HeldTool`. Trickles into a household\'s `items` from a temporary lazy hay source (`settlement/household.ts`\'s `resolveHayForage`); an `AnimalDef.diet` decides which herbivore species may eat it.',
+  },
+  book_riding_basic: {
+    kind: 'book_riding_basic',
+    label: 'Pierwsze kroki w siodle',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-blue.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `riding` from 20% to 40% on read.',
+    book: { skill: 'riding', requiredSkillValue: 0.20, targetSkillValue: 0.40, tier: 'basic' },
+  },
+  book_riding_intermediate: {
+    kind: 'book_riding_intermediate',
+    label: 'Pewna ręka, spokojny koń',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-simple-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `riding` from 40% to 60% on read.',
+    book: { skill: 'riding', requiredSkillValue: 0.40, targetSkillValue: 0.60, tier: 'intermediate' },
+  },
+  book_riding_advanced: {
+    kind: 'book_riding_advanced',
+    label: 'Sztuka doskonałego jeźdźca',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-belt-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `riding` from 60% to 80% on read.',
+    book: { skill: 'riding', requiredSkillValue: 0.60, targetSkillValue: 0.80, tier: 'advanced' },
+  },
+  book_archery_basic: {
+    kind: 'book_archery_basic',
+    label: 'Łuk i strzała — pierwsze lekcje',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-belt-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `archery` from 20% to 40% on read.',
+    book: { skill: 'archery', requiredSkillValue: 0.20, targetSkillValue: 0.40, tier: 'basic' },
+  },
+  book_archery_intermediate: {
+    kind: 'book_archery_intermediate',
+    label: 'O pewnym oku i celnej strzale',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-blue.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `archery` from 40% to 60% on read.',
+    book: { skill: 'archery', requiredSkillValue: 0.40, targetSkillValue: 0.60, tier: 'intermediate' },
+  },
+  book_archery_advanced: {
+    kind: 'book_archery_advanced',
+    label: 'O łuku, wietrze i doskonałym strzale',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-simple-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `archery` from 60% to 80% on read.',
+    book: { skill: 'archery', requiredSkillValue: 0.60, targetSkillValue: 0.80, tier: 'advanced' },
+  },
+  book_survival_basic: {
+    kind: 'book_survival_basic',
+    label: 'Jak przetrwać z dala od domu',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-simple-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `survival` from 20% to 40% on read.',
+    book: { skill: 'survival', requiredSkillValue: 0.20, targetSkillValue: 0.40, tier: 'basic' },
+  },
+  book_survival_intermediate: {
+    kind: 'book_survival_intermediate',
+    label: 'Las, góry i mokradła — poradnik wędrowca',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-belt-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `survival` from 40% to 60% on read.',
+    book: { skill: 'survival', requiredSkillValue: 0.40, targetSkillValue: 0.60, tier: 'intermediate' },
+  },
+  book_survival_advanced: {
+    kind: 'book_survival_advanced',
+    label: 'Wiedza dzikich ostępów',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-blue.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `survival` from 60% to 80% on read.',
+    book: { skill: 'survival', requiredSkillValue: 0.60, targetSkillValue: 0.80, tier: 'advanced' },
+  },
+  book_traps_basic: {
+    kind: 'book_traps_basic',
+    label: 'Sidła i proste pułapki',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-blue.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `traps` from 20% to 40% on read.',
+    book: { skill: 'traps', requiredSkillValue: 0.20, targetSkillValue: 0.40, tier: 'basic' },
+  },
+  book_traps_intermediate: {
+    kind: 'book_traps_intermediate',
+    label: 'Ślad, przynęta, pułapka',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-belt-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `traps` from 40% to 60% on read.',
+    book: { skill: 'traps', requiredSkillValue: 0.40, targetSkillValue: 0.60, tier: 'intermediate' },
+  },
+  book_traps_advanced: {
+    kind: 'book_traps_advanced',
+    label: 'Kunszt starego trapera',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-simple-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `traps` from 60% to 80% on read.',
+    book: { skill: 'traps', requiredSkillValue: 0.60, targetSkillValue: 0.80, tier: 'advanced' },
+  },
+  book_sneak_basic: {
+    kind: 'book_sneak_basic',
+    label: 'Jak stąpać cicho',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-belt-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `sneak` from 20% to 40% on read.',
+    book: { skill: 'sneak', requiredSkillValue: 0.20, targetSkillValue: 0.40, tier: 'basic' },
+  },
+  book_sneak_intermediate: {
+    kind: 'book_sneak_intermediate',
+    label: 'Tam, gdzie nie sięga wzrok',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-simple-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `sneak` from 40% to 60% on read.',
+    book: { skill: 'sneak', requiredSkillValue: 0.40, targetSkillValue: 0.60, tier: 'intermediate' },
+  },
+  book_sneak_advanced: {
+    kind: 'book_sneak_advanced',
+    label: 'Bez śladu i bez dźwięku',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-blue.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `sneak` from 60% to 80% on read.',
+    book: { skill: 'sneak', requiredSkillValue: 0.60, targetSkillValue: 0.80, tier: 'advanced' },
+  },
+  book_defense_basic: {
+    kind: 'book_defense_basic',
+    label: 'Nie daj się trafić!',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-simple-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `defense` from 20% to 40% on read.',
+    book: { skill: 'defense', requiredSkillValue: 0.20, targetSkillValue: 0.40, tier: 'basic' },
+  },
+  book_defense_intermediate: {
+    kind: 'book_defense_intermediate',
+    label: 'Garda, unik i riposta',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-blue.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `defense` from 40% to 60% on read.',
+    book: { skill: 'defense', requiredSkillValue: 0.40, targetSkillValue: 0.60, tier: 'intermediate' },
+  },
+  book_defense_advanced: {
+    kind: 'book_defense_advanced',
+    label: 'O sztuce przetrwania w pojedynku',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: '/models/parked/books/Closed-book-belt-golden.glb',
+    notes: 'Plan items-player-016 — Kupiec stock. Raises `defense` from 60% to 80% on read.',
+    book: { skill: 'defense', requiredSkillValue: 0.60, targetSkillValue: 0.80, tier: 'advanced' },
   },
 }
 

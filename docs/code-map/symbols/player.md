@@ -121,34 +121,38 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateRidingUse` — function — line 164
-- `accumulateSneakUse` — function — line 142
-- `applySneakSpeedModifier` — function — line 183
-- `awardSkillXp` — function — line 82
-- `createPlayerSkills` — function — line 66
-- `PlayerSkills` — type — line 25
-- `restorePersistedSkills` — function — line 92
-- `RIDING_XP_DISTANCE_M` — const — line 158
-- `ridingSpeedMultiplier` — function — line 224
-- `ridingStaminaDrainMultiplier` — function — line 238
-- `SKILL_MIN_VALUE` — const — line 31
-- `SKILL_XP_AWARD` — const — line 111
-- `SKILL_XP_HALF_VALUE` — const — line 36
+- `accumulateRidingUse` — function — line 218
+- `accumulateSneakUse` — function — line 196
+- `applySneakSpeedModifier` — function — line 237
+- `awardSkillXp` — function — line 99
+- `createPlayerSkills` — function — line 83
+- `PlayerSkills` — type — line 38
+- `RaiseSkillResult` — type — line 106
+- `raiseSkillToValue` — function — line 118
+- `restorePersistedSkills` — function — line 146
+- `RIDING_XP_DISTANCE_M` — const — line 212
+- `ridingSpeedMultiplier` — function — line 278
+- `ridingStaminaDrainMultiplier` — function — line 292
+- `setSkillValueForDebug` — function — line 136
+- `SKILL_LABEL` — const — line 19
+- `SKILL_MIN_VALUE` — const — line 44
+- `SKILL_XP_AWARD` — const — line 165
+- `SKILL_XP_HALF_VALUE` — const — line 49
 - `SkillId` — type — line 13
   - domain: items-player
   - system: player-skills
   - role: Owns the player's skill XP curve and the single award path.
   - owns: PlayerSkills
-- `SkillState` — type — line 15
-- `SNEAK_LEGACY_VALUE` — const — line 59
-- `SNEAK_LEGACY_XP` — const — line 60
-- `SNEAK_SPEED_MULTIPLIER` — const — line 181
-- `SNEAK_XP_DISTANCE_M` — const — line 134
-- `survivalDurationMultiplier` — function — line 197
-- `survivalFoodMultiplier` — function — line 247
-- `toggleSneak` — function — line 105
-- `xpForSkillValue` — function — line 49
-- `xpToSkillValue` — function — line 40
+- `SkillState` — type — line 28
+- `SNEAK_LEGACY_VALUE` — const — line 76
+- `SNEAK_LEGACY_XP` — const — line 77
+- `SNEAK_SPEED_MULTIPLIER` — const — line 235
+- `SNEAK_XP_DISTANCE_M` — const — line 188
+- `survivalDurationMultiplier` — function — line 251
+- `survivalFoodMultiplier` — function — line 301
+- `toggleSneak` — function — line 159
+- `xpForSkillValue` — function — line 66
+- `xpToSkillValue` — function — line 53
 
 ## `player/PlayerTorch.ts`
 

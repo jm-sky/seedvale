@@ -1800,21 +1800,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // toggle (rest auto-deactivates it, `PlayerController.crouch`/
       // `lieDown`) — pushed every frame with the same cheap-bail convention
       // as the stats above so the UI never goes stale.
-      vueUi.setSkillsState(
-        player.skills.sneak.value,
-        player.skills.sneak.active,
-        player.skills.sneak.xp,
-        player.skills.survival.value,
-        player.skills.survival.xp,
-        player.skills.traps.value,
-        player.skills.traps.xp,
-        player.skills.defense.value,
-        player.skills.defense.xp,
-        player.skills.archery.value,
-        player.skills.archery.xp,
-        player.skills.riding.value,
-        player.skills.riding.xp,
-      )
+      vueUi.pushSkillsState(player.skills)
       houseDoors.update(
         player.mesh.position.x,
         player.mesh.position.z,

@@ -58,6 +58,26 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   map_far: 35,
   // Plan world-004 — needed to use (not build) a deep player-built well.
   rope: 10,
+  // Plan items-player-016 — skill books, priced by tier (30/60/120 riding,
+  // 25/55/110 archery/defense, 20/50/100 survival/traps/sneak per the plan).
+  book_riding_basic: 30,
+  book_riding_intermediate: 60,
+  book_riding_advanced: 120,
+  book_archery_basic: 25,
+  book_archery_intermediate: 55,
+  book_archery_advanced: 110,
+  book_survival_basic: 20,
+  book_survival_intermediate: 50,
+  book_survival_advanced: 100,
+  book_traps_basic: 20,
+  book_traps_intermediate: 50,
+  book_traps_advanced: 100,
+  book_sneak_basic: 20,
+  book_sneak_intermediate: 50,
+  book_sneak_advanced: 100,
+  book_defense_basic: 25,
+  book_defense_intermediate: 55,
+  book_defense_advanced: 110,
 }
 
 /** Display order for the trade screen — matches the plan 090 mockup. */
@@ -109,6 +129,24 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'map_near',
   'map_far',
   'rope',
+  'book_riding_basic',
+  'book_riding_intermediate',
+  'book_riding_advanced',
+  'book_archery_basic',
+  'book_archery_intermediate',
+  'book_archery_advanced',
+  'book_survival_basic',
+  'book_survival_intermediate',
+  'book_survival_advanced',
+  'book_traps_basic',
+  'book_traps_intermediate',
+  'book_traps_advanced',
+  'book_sneak_basic',
+  'book_sneak_intermediate',
+  'book_sneak_advanced',
+  'book_defense_basic',
+  'book_defense_intermediate',
+  'book_defense_advanced',
 ]
 
 /** Fallback coin-equivalent for items the merchant does not stock. */

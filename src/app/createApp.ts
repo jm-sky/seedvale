@@ -1204,6 +1204,7 @@ export async function createApp(
     },
     worldFlags,
     { catalog: worldLocationCatalog, knowledge: locationKnowledge },
+    () => player.skills,
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {
@@ -1211,6 +1212,7 @@ export async function createApp(
     onEquip: inventoryWiring.equipTool,
     onUnequip: inventoryWiring.unequipTool,
     onConsume: (kind) => survival.consumeItem(kind),
+    onRead: inventoryWiring.readBookItem,
     onSellInstances: inventoryWiring.sellInventoryInstances,
     onSharpen: inventoryWiring.sharpenInventoryWeapon,
     onPlaceTrap: (kind) => {

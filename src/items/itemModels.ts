@@ -112,6 +112,30 @@ export const ITEM_GLB_SPECS: Partial<Record<ItemKind, GroundGlbSpec>> = {
   roasted_meat: { url: '/models/items/steak.glb', maxSize: 0.25 },
   beef: { url: '/models/items/steak.glb', maxSize: 0.25 },
   fish: { url: '/models/items/fish.glb', maxSize: 0.35 },
+  // Plan items-player-016 — Quaternius closed-book GLBs (`public/models/
+  // parked/books/`, see that folder's README). The closed model is the
+  // world pickup/drop representation for every book; deliberately spread
+  // across all 3 files independent of skill/tier so appearance never encodes
+  // a book's level (open variants are reserved for a possible future reading
+  // presentation, not wired here).
+  book_riding_basic: { url: '/models/parked/books/Closed-book-blue.glb', maxSize: 0.28 },
+  book_riding_intermediate: { url: '/models/parked/books/Closed-book-simple-golden.glb', maxSize: 0.28 },
+  book_riding_advanced: { url: '/models/parked/books/Closed-book-belt-golden.glb', maxSize: 0.28 },
+  book_archery_basic: { url: '/models/parked/books/Closed-book-belt-golden.glb', maxSize: 0.28 },
+  book_archery_intermediate: { url: '/models/parked/books/Closed-book-blue.glb', maxSize: 0.28 },
+  book_archery_advanced: { url: '/models/parked/books/Closed-book-simple-golden.glb', maxSize: 0.28 },
+  book_survival_basic: { url: '/models/parked/books/Closed-book-simple-golden.glb', maxSize: 0.28 },
+  book_survival_intermediate: { url: '/models/parked/books/Closed-book-belt-golden.glb', maxSize: 0.28 },
+  book_survival_advanced: { url: '/models/parked/books/Closed-book-blue.glb', maxSize: 0.28 },
+  book_traps_basic: { url: '/models/parked/books/Closed-book-blue.glb', maxSize: 0.28 },
+  book_traps_intermediate: { url: '/models/parked/books/Closed-book-belt-golden.glb', maxSize: 0.28 },
+  book_traps_advanced: { url: '/models/parked/books/Closed-book-simple-golden.glb', maxSize: 0.28 },
+  book_sneak_basic: { url: '/models/parked/books/Closed-book-belt-golden.glb', maxSize: 0.28 },
+  book_sneak_intermediate: { url: '/models/parked/books/Closed-book-simple-golden.glb', maxSize: 0.28 },
+  book_sneak_advanced: { url: '/models/parked/books/Closed-book-blue.glb', maxSize: 0.28 },
+  book_defense_basic: { url: '/models/parked/books/Closed-book-simple-golden.glb', maxSize: 0.28 },
+  book_defense_intermediate: { url: '/models/parked/books/Closed-book-blue.glb', maxSize: 0.28 },
+  book_defense_advanced: { url: '/models/parked/books/Closed-book-belt-golden.glb', maxSize: 0.28 },
 }
 
 const prepared = new Map<ItemKind, Group>()
