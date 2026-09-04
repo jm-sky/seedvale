@@ -44,6 +44,7 @@ Tematy wymagające **głębszej analizy** (nie quick fix w tej samej sesji): pli
 | Plan 149 PointLight variant axis | Diagnostic pin/pad `NUM_POINT_LIGHTS=16` vs baseline, real GPU ×3+3 — unique keys 210→62, streaming hitch bursts gone; RENDER/p95 worse. Hypothesis **PASS**, pad is not the shippable fix | `done` | [2026-08-18--023--plan-149-pointlight-variant-axis.md](./2026-08-18--023--plan-149-pointlight-variant-axis.md) |
 | Plan 149 PointLight budget 8/12/16 | Cheap pin (no `traverseVisible`) ×3+3+3+3 on Intel Arc 140V — 8/12/16 all collapse to 62 programs; 8/12 cull lights; 16 is the only visual-safe budget; traverse was most of the 023 RENDER tax. **C for next plan, D for shipping today** | `done` | [2026-08-18--024--plan-149-pointlight-budget-curve.md](./2026-08-18--024--plan-149-pointlight-budget-curve.md) |
 | Plan 149 Phase 1 A `compileAsync` prewarm | Loading-window staging + `compileAsync` on Intel Arc 140V ×3 — streaming first-use after frame 0 **65–99.5 ms** (was 316–382); `glError` 0; program count 65–68. Phase C leftover: `Green` / glass / `Wood` | `done` | [2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md](./2026-08-19--025--plan-149-phase-1a-compileasync-prewarm.md) |
+| createSettlement refactor | Deep architectural review of `src/settlement/createSettlement.ts` — responsibilities, ownership, lifecycle/dispose, coupling; verdict **REFACTOR / M** with an ordered implementation plan | `done` | [2026-09-03--createSettlement-refactor-review.md](./2026-09-03--createSettlement-refactor-review.md) |
 
 ## After each run
 
