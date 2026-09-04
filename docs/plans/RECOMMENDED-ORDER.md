@@ -34,7 +34,9 @@
 
 ### Bug Fixes
 
-1. `ui-input-008` — **River debug location quality**  
+1. `persistence-004` — **Save Integrity and World Lifecycle**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: bug
+2. `ui-input-008` — **River debug location quality**  
    🟡 `S` · ✅ ready · unlocks 0/0 · type: bug
 
 ---
@@ -115,75 +117,79 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-11. `items-player-002` — **Food provenance, freshness and storage**  
+11. `persistence-004` — **Save Integrity and World Lifecycle**  
+  🔴 `M` · **Score:**  31  
+   → **unlocks:** 0/0
+
+12. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-12. `items-player-014` — **Rope-pullable resource transport**  
+13. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `tools-005` — **Seedvale Character Preparation Panel**  
+15. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `npc-002` — **NPC Healing**  
+16. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-16. `npc-011` — **NPC Burial & Graves**  
+17. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+18. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-18. `fauna-012` — **Animal threat perception and vocalization responses**  
+19. `fauna-012` — **Animal threat perception and vocalization responses**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `fauna-013` — **Animal hand-feeding and human affinity**  
+20. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+21. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+22. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-007` — **Bandages and herbal medicine**  
+23. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `ui-input-008` — **River debug location quality**  
+24. `ui-input-008` — **River debug location quality**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-24. `fauna-007` — **Animal leading and cart harness**  
+25. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-25. `tools-000` — **Weapon Browser — Observatory/Admin**  
+26. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-26. `world-terrain-008` — **Underground Caves V2**  
+27. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-27. `npc-004` — **Drzewo genealogiczne NPC**  
+28. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-28. `tools-006` — **tools-006--world-observatory.md**  
+29. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -295,6 +301,7 @@ graph TD
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
+  persistence_004["persistence-004 — Save Integrity and World Lifecycle"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
@@ -435,6 +442,8 @@ graph TD
   npc_015 --> npc_016
   npc_015 --> npc_017
   persistence_002 --> persistence_003
+  persistence_002 --> persistence_004
+  persistence_003 --> persistence_004
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
   settlements_npcs_005 --> settlements_npcs_008
