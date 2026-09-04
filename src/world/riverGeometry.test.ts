@@ -50,10 +50,9 @@ describe('clipChainToRect', () => {
 
 describe('buildRiverRibbonGeometry', () => {
   it('returns null when no run has at least 2 points', () => {
-    const flatY = () => 0
-    expect(buildRiverRibbonGeometry([], 0, 0, flatY)).toBeNull()
+    expect(buildRiverRibbonGeometry([], 0, 0)).toBeNull()
     expect(
-      buildRiverRibbonGeometry([[{ x: 0, z: 0, elevation: 1, accumulation: 20 }]], 0, 0, flatY),
+      buildRiverRibbonGeometry([[{ x: 0, z: 0, elevation: 1, accumulation: 20 }]], 0, 0),
     ).toBeNull()
   })
 
@@ -63,7 +62,7 @@ describe('buildRiverRibbonGeometry', () => {
       { x: 8, z: 0, elevation: 0.9, accumulation: 25 },
       { x: 16, z: 0, elevation: 0.8, accumulation: 30 },
     ]
-    const geometry = buildRiverRibbonGeometry([run], 0, 0, () => 0)
+    const geometry = buildRiverRibbonGeometry([run], 0, 0)
     expect(geometry).not.toBeNull()
     expect(geometry!.getAttribute('position').count).toBe(run.length * 2)
     expect(geometry!.getIndex()!.count).toBe((run.length - 1) * 6)
@@ -75,7 +74,7 @@ describe('buildRiverRibbonGeometry', () => {
       { x: 8, z: 0, elevation: 9.9, accumulation: 20 },
       { x: 16, z: 0, elevation: 9.8, accumulation: 20 },
     ]
-    const geometry = buildRiverRibbonGeometry([run], 0, 0, () => 0)
+    const geometry = buildRiverRibbonGeometry([run], 0, 0)
     const aFall = geometry!.getAttribute('aFall')
     for (let i = 0; i < aFall.count; i++) expect(aFall.getX(i)).toBe(0)
   })
@@ -85,7 +84,7 @@ describe('buildRiverRibbonGeometry', () => {
       { x: 0, z: 0, elevation: 20, accumulation: 20 },
       { x: 8, z: 0, elevation: 5, accumulation: 20 }, // ~1.9 rise/run — well past the threshold
     ]
-    const geometry = buildRiverRibbonGeometry([run], 0, 0, () => 0)
+    const geometry = buildRiverRibbonGeometry([run], 0, 0)
     const aFall = geometry!.getAttribute('aFall')
     // Each point contributes 2 vertices (ribbon edges). The first point in the
     // run has no predecessor to compare against, so its pair stays 0.
@@ -93,5 +92,16 @@ describe('buildRiverRibbonGeometry', () => {
     expect(aFall.getX(1)).toBe(0)
     expect(aFall.getX(2)).toBe(1)
     expect(aFall.getX(3)).toBe(1)
+  })
+
+  it('water Y sits below each point\'s own elevation (canonical cross-section)', () => {
+    const run = [
+      { x: 0, z: 0, elevation: 10, accumulation: 300 },
+      { x: 8, z: 0, elevation: 9, accumulation: 300 },
+    ]
+    const geometry = buildRiverRibbonGeometry([run], 0, 0)
+    const position = geometry!.getAttribute('position')
+    expect(position.getY(0)).toBeLessThan(10)
+    expect(position.getY(2)).toBeLessThan(9)
   })
 })

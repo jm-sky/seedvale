@@ -709,9 +709,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/riverGeometry.ts`
 
-- `buildRiverRibbonGeometry` — function — line 133
-- `clipChainToRect` — function — line 63
-- `RIVER_SURFACE_OFFSET` — const — line 13
+- `buildRiverRibbonGeometry` — function — line 134
+- `clipChainToRect` — function — line 62
+- `RIVER_SURFACE_OFFSET` — const — line 12
 
 ## `world/riverWaterMaterial.ts`
 

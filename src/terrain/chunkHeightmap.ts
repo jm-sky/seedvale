@@ -7,7 +7,9 @@ import { fbm01, type FbmParams } from './fbm'
 import { computeBodyScale, detectWaterBodies } from './waterBodies'
 import { worleyRidge } from './worleyNoise'
 
-export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed' | 'fern'
+/** `lily` (plan world-terrain-010) is shallow-water-only surface vegetation —
+ *  see `chunkVegetation.ts`'s dedicated riparian/aquatic pass. */
+export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed' | 'fern' | 'lily'
 
 export type RegionParams = {
   /** Very-low-frequency noise scale (world units) classifying ocean → coast →
@@ -177,24 +179,36 @@ export type ClearingSegment = {
  *  reasoning. Built by `riverNetwork.ts`'s `riverChannelSegmentsNear` from the
  *  same canonical, already-meandered/smoothed chain the water ribbon clips
  *  and renders (`riverGeometry.ts`) — terrain and water always agree on
- *  shape/position by construction, never a second path. `aBedH`/`bBedH` are
- *  each endpoint's own D8 chain elevation minus a flow-scaled depth
- *  (`depthFromAccumulation`); since D8 chain elevation strictly decreases and
- *  flow accumulation never decreases along a flow path, bed height is
- *  guaranteed to strictly decrease downstream too — no separate monotonic-
- *  correction pass is needed to satisfy the "continuous downhill slope"
- *  requirement (plan 189). */
+ *  shape/position by construction, never a second path.
+ *
+ *  Canonical cross-section (plan world-terrain-010) — always
+ *  `aBedH < aWaterH < (natural terrain)` and `aWaterHalfWidth < aChannelHalfWidth`:
+ *  - `aBedH`/`bBedH` — visible streambed elevation.
+ *  - `aWaterH`/`bWaterH` — water-surface elevation (`riverGeometry.ts` reads
+ *    this directly for ribbon Y, replacing the old rendered-terrain sample).
+ *  - `aWaterHalfWidth`/`bWaterHalfWidth` — water-surface half-width; also the
+ *    "water edge" gameplay/shoreline queries (`nearestRiverBankDistance`) use.
+ *  - `aChannelHalfWidth`/`bChannelHalfWidth` — wider bank-top half-width; the
+ *    band between the two half-widths is the exposed bank, deliberate space
+ *    for readable bank geometry and shoreline vegetation.
+ *
+ *  Since D8 chain elevation strictly decreases and flow accumulation never
+ *  decreases along a flow path, bed/water height are guaranteed to strictly
+ *  decrease downstream too — no separate monotonic-correction pass is needed
+ *  to satisfy the "continuous downhill slope" requirement (plan 189). */
 export type RiverChannelSegment = {
   ax: number
   az: number
   aBedH: number
-  aHalfWidth: number
-  aBankWidth: number
+  aWaterH: number
+  aWaterHalfWidth: number
+  aChannelHalfWidth: number
   bx: number
   bz: number
   bBedH: number
-  bHalfWidth: number
-  bBankWidth: number
+  bWaterH: number
+  bWaterHalfWidth: number
+  bChannelHalfWidth: number
 }
 
 /** A whole village's gentle, wide-radius height-only smoothing pass — pulls
@@ -895,52 +909,73 @@ function applyRegionalSmoothing(
   return MathUtils.lerp(floorH, bestTargetH, bestFalloff * bestHeightStrength)
 }
 
-/** Fraction of a channel's half-width that stays flat streambed before the
- *  bank starts rising — a much larger flat fraction than roads
- *  (`CORRIDOR_INNER_FRACTION`) because a riverbed should read as a shallow
- *  trough, not a capsule with hard shoulders (plan 189 "naturalny profil
- *  poprzeczny"). */
+/** Fraction of the *water* half-width that stays flat streambed before the
+ *  submerged slope starts rising toward the water surface — a much larger
+ *  flat fraction than roads (`CORRIDOR_INNER_FRACTION`) because a riverbed
+ *  should read as a shallow trough, not a capsule with hard shoulders (plan
+ *  189 "naturalny profil poprzeczny"). */
 const RIVER_CHANNEL_INNER_FRACTION = 0.5
 
+/**
+ * Canonical river cross-section (plan world-terrain-010), piecewise in
+ * lateral distance `dist` from the centerline:
+ *
+ *     [0, bedFlatRadius]              -> flat at bedH (streambed)
+ *     (bedFlatRadius, waterHalfWidth] -> bedH -> waterH (submerged slope)
+ *     (waterHalfWidth, channelHalfWidth] -> waterH -> floorH (exposed bank)
+ *     beyond channelHalfWidth         -> floorH (no candidate; untouched)
+ *
+ * Reads this exact texel's own (already road/clearing-modified) `floorH` as
+ * the outer anchor instead of a separately-tracked "natural terrain" field,
+ * so the carved profile always ties into whatever the ambient terrain here
+ * already is — including next to a road corridor — with zero slope at the
+ * seam (both ends of each `smoothstep` span are flat). Returns `null` beyond
+ * the channel's bank-top edge, where carving has no effect at all. */
 function riverChannelCandidate(
   wx: number,
   wz: number,
+  floorH: number,
   seg: RiverChannelSegment,
-): { falloff: number, targetH: number } | null {
+): number | null {
   const { distSq, t } = projectOntoSegment(wx, wz, seg.ax, seg.az, seg.bx, seg.bz)
-  const halfWidth = MathUtils.lerp(seg.aHalfWidth, seg.bHalfWidth, t)
-  const bankWidth = MathUtils.lerp(seg.aBankWidth, seg.bBankWidth, t)
-  const reach = halfWidth + bankWidth
-  if (distSq >= reach * reach) return null
+  const channelHalfWidth = MathUtils.lerp(seg.aChannelHalfWidth, seg.bChannelHalfWidth, t)
+  if (distSq >= channelHalfWidth * channelHalfWidth) return null
   const dist = Math.sqrt(distSq)
-  const falloff = 1 - MathUtils.smoothstep(dist, halfWidth * RIVER_CHANNEL_INNER_FRACTION, reach)
-  return { falloff, targetH: MathUtils.lerp(seg.aBedH, seg.bBedH, t) }
+
+  const waterHalfWidth = MathUtils.lerp(seg.aWaterHalfWidth, seg.bWaterHalfWidth, t)
+  const bedH = MathUtils.lerp(seg.aBedH, seg.bBedH, t)
+  const waterH = MathUtils.lerp(seg.aWaterH, seg.bWaterH, t)
+  const bedFlatRadius = waterHalfWidth * RIVER_CHANNEL_INNER_FRACTION
+
+  if (dist <= bedFlatRadius) return bedH
+  if (dist <= waterHalfWidth) {
+    const u = (dist - bedFlatRadius) / Math.max(1e-6, waterHalfWidth - bedFlatRadius)
+    return MathUtils.lerp(bedH, waterH, MathUtils.smoothstep(u, 0, 1))
+  }
+  const u = (dist - waterHalfWidth) / Math.max(1e-6, channelHalfWidth - waterHalfWidth)
+  return MathUtils.lerp(waterH, floorH, MathUtils.smoothstep(u, 0, 1))
 }
 
-/** Blends a texel's `floorH` toward the nearest/strongest river channel's bed
- *  height. Carving only ever lowers terrain (`Math.min` below), never raises
- *  it — a channel segment whose bed sits above a texel's already-lower
- *  natural terrain (a local dip the coarse hydrology grid didn't sample at
- *  this exact lateral offset) leaves that terrain untouched instead of
- *  building an artificial levee. */
+/** Blends a texel's `floorH` toward the deepest overlapping river channel
+ *  candidate (`riverChannelCandidate`). Carving only ever lowers terrain
+ *  (`Math.min` below), never raises it — a channel segment whose profile
+ *  sits above a texel's already-lower natural terrain (a local dip the
+ *  coarse hydrology grid didn't sample at this exact lateral offset) leaves
+ *  that terrain untouched instead of building an artificial levee. */
 function applyRiverChannel(
   wx: number,
   wz: number,
   floorH: number,
   segments: readonly RiverChannelSegment[],
 ): number {
-  let bestFalloff = 0
-  let bestTargetH = 0
+  let best: number | null = null
   for (const seg of segments) {
-    const candidate = riverChannelCandidate(wx, wz, seg)
-    if (!candidate) continue
-    if (candidate.falloff > bestFalloff) {
-      bestFalloff = candidate.falloff
-      bestTargetH = candidate.targetH
-    }
+    const candidate = riverChannelCandidate(wx, wz, floorH, seg)
+    if (candidate === null) continue
+    if (best === null || candidate < best) best = candidate
   }
-  if (bestFalloff <= 0) return floorH
-  return MathUtils.lerp(floorH, Math.min(bestTargetH, floorH), bestFalloff)
+  if (best === null) return floorH
+  return Math.min(best, floorH)
 }
 
 /**

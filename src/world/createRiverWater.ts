@@ -25,14 +25,9 @@ export function createChunkRiver(
   chunkRect: WorldRect,
   chunkOriginX: number,
   chunkOriginZ: number,
-  /** Samples this chunk's *actual* rendered terrain height (road/clearing-modified,
-   *  same data the terrain mesh itself is built from) at a world point — used for
-   *  ribbon Y instead of the chain's cached (road-agnostic) hydrology elevation, so
-   *  the river never floats above or gets hidden under the real rendered ground. */
-  sampleTerrainY: (worldX: number, worldZ: number) => number,
 ): WorldRiver | null {
   const runs = chains.flatMap((chain) => clipChainToRect(chain, chunkRect))
-  const geometry = buildRiverRibbonGeometry(runs, chunkOriginX, chunkOriginZ, sampleTerrainY)
+  const geometry = buildRiverRibbonGeometry(runs, chunkOriginX, chunkOriginZ)
   if (!geometry) return null
 
   const material = createRiverWaterMaterial()

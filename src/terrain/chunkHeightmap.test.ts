@@ -158,7 +158,7 @@ describe('chunkHeightmap seams', () => {
       chunkSize,
       resolution,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [],
       clearings: [],
       regional: [],
@@ -171,7 +171,7 @@ describe('chunkHeightmap seams', () => {
       chunkSize,
       resolution,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [],
       clearings: [],
       regional: [],
@@ -211,7 +211,7 @@ describe('chunkHeightmap seams', () => {
       chunkSize: 64,
       resolution: 17,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [] as const,
       clearings: [] as const,
       regional: [] as const,
@@ -257,7 +257,7 @@ describe('chunkHeightmap road irregularity', () => {
       chunkSize: 64,
       resolution: 17,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [roadSeg],
       clearings: [],
       regional: [],
@@ -283,7 +283,7 @@ describe('chunkHeightmap road irregularity', () => {
         chunkSize: 64,
         resolution: 33,
         isHomeChunk: false,
-        vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+        vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
         roadSegments: [roadSeg],
         clearings: [],
         regional: [],
@@ -321,7 +321,7 @@ describe('chunkHeightmap road irregularity', () => {
       chunkSize: 64,
       resolution: 17,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [] as RoadCorridorSegment[],
       clearings: [clearing],
       regional: [] as RegionalSmoothingSegment[],
@@ -364,7 +364,7 @@ describe('chunkHeightmap road irregularity', () => {
       chunkSize: 64,
       resolution: 17,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [roadSeg],
       clearings: [],
       regional: [],
@@ -380,13 +380,15 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
     ax: -20,
     az: 0,
     aBedH: 1,
-    aHalfWidth: 3,
-    aBankWidth: 2,
+    aWaterH: 1.8,
+    aWaterHalfWidth: 3,
+    aChannelHalfWidth: 5,
     bx: 20,
     bz: 0,
     bBedH: -2,
-    bHalfWidth: 4,
-    bBankWidth: 2.5,
+    bWaterH: -1.2,
+    bWaterHalfWidth: 4,
+    bChannelHalfWidth: 6.5,
   }
 
   function tileWithRiver(riverSegments: RiverChannelSegment[], seed = 42) {
@@ -398,7 +400,7 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
       chunkSize: 64,
       resolution: 33,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [],
       clearings: [],
       regional: [],
@@ -428,7 +430,7 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
     const withRiver = tileWithRiver([riverSeg])
     const withoutRiver = tileWithRiver([])
     const origin = apronOriginWorld(0, 0, 64, 33)
-    // Far corner of the chunk — well beyond the segment's ~6.5-unit max reach from z=0.
+    // Far corner of the chunk — well beyond the segment's channel/bank-top reach from z=0.
     const idx = 0 * origin.apronRes + 0
     expect(withRiver.floorHeights[idx]).toBeCloseTo(withoutRiver.floorHeights[idx]!, 5)
   })
@@ -444,13 +446,15 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
       ax: -50,
       az: 0,
       aBedH: -3,
-      aHalfWidth: 5,
-      aBankWidth: 3,
+      aWaterH: -2.2,
+      aWaterHalfWidth: 5,
+      aChannelHalfWidth: 8,
       bx: 50,
       bz: 0,
       bBedH: -6,
-      bHalfWidth: 5,
-      bBankWidth: 3,
+      bWaterH: -5.2,
+      bWaterHalfWidth: 5,
+      bChannelHalfWidth: 8,
     }
     const params = rawParams({ seed: 5 })
     const chunkSize = 64
@@ -460,7 +464,7 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
       chunkSize,
       resolution,
       isHomeChunk: false,
-      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1 },
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1 },
       roadSegments: [],
       clearings: [],
       regional: [],

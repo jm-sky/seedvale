@@ -45,5 +45,12 @@ pending a future companion-animal concept.
 
 ## New
 
-- `Lilypad-01.glb`
 - `public/models/parked/books` - books
+
+## Wired despite living under `parked/`
+
+- `Lilypad-01.glb` — shallow-water lily pad (`LILY_SPECS`, `VegetationKind: 'lily'`,
+  plan world-terrain-010). Left in this folder rather than moved to `nature/`
+  since nothing else in `parked/` has been relocated on wiring either — the
+  folder name is a historical label, not a live "not wired" guarantee; see
+  [MODELS.md](../../../docs/assets/MODELS.md) M74.

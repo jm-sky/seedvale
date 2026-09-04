@@ -34,6 +34,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 | `world-terrain-007-underground-caves.md`                  | Faza 0-3 done (domain/generator/lifecycle/presentation/movement/collision); Faza 4 fauna/loot/persistence deferred — see plan's "Implementation status" | 🔴  | L      | ~~097~~ ~~125~~ |
+| 💡 `world-terrain-010-waterways-and-vegetation.md`         | Phases 1/3/4/6 done (canonical river cross-section, riparian + lily vegetation); Phases 2/5/7/8/9 deferred (no new assets authored) — see plan's "Implementation status" | 🟡  | M      | -               |
 
 ---
 
@@ -71,7 +72,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `items-player-016-books-and-skill-learning.md`                           | -       | 🟡 | M      | ~~world-012~~ |
 | 💡 `world-013-world-location-catalog-performance-optimization.md`           | -       | 🔴 | M      | ~~world-012~~ |
-| 💡 `world-terrain-010-waterways-and-vegetation.md`                          | -       | 🟡 | M      | -      |
 
 ---
 

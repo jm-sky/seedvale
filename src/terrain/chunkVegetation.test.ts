@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   apronOriginWorld,
+  type ChunkTileData,
   type ChunkTileParams,
   computeChunkTile,
   type RawSampleParams,
@@ -9,7 +10,8 @@ import {
   sampleApronGrid,
 } from './chunkHeightmap'
 import { computeChunkVegetation } from './chunkVegetation'
-import { isInsideRiverChannel } from './riverNetwork'
+import { isInsideRiverChannel, nearestRiverBankDistance } from './riverNetwork'
+import { computeBodyScale, detectWaterBodies } from './waterBodies'
 
 /** Same base terrain as `grassPlacement.test.ts`'s `tileParams` — `region`
  *  thresholds are overridden per test to force a specific biome so fern
@@ -90,7 +92,7 @@ function tileParams(
     chunkSize: 64,
     resolution: 65,
     isHomeChunk: false,
-    vegetationSpeciesCount: { tree: 9, bush: 5, cactus: 2, reed: 1, fern: 1 },
+    vegetationSpeciesCount: { tree: 9, bush: 5, cactus: 2, reed: 1, fern: 1, lily: 1 },
     roadSegments: [],
     clearings: [],
     regional: [],
@@ -125,14 +127,16 @@ describe('computeChunkVegetation — river channel exclusion (world-terrain-006)
       {
         ax: -500,
         az: 0,
-        aBedH: waterLevel + 3,
-        aHalfWidth: 20,
-        aBankWidth: 2,
+        aBedH: waterLevel + 2,
+        aWaterH: waterLevel + 3,
+        aWaterHalfWidth: 20,
+        aChannelHalfWidth: 22,
         bx: 500,
         bz: 0,
-        bBedH: waterLevel + 3,
-        bHalfWidth: 20,
-        bBankWidth: 2,
+        bBedH: waterLevel + 2,
+        bWaterH: waterLevel + 3,
+        bWaterHalfWidth: 20,
+        bChannelHalfWidth: 22,
       },
     ]
 
@@ -159,14 +163,16 @@ describe('computeChunkVegetation — river channel exclusion (world-terrain-006)
       {
         ax: -500,
         az: 0,
-        aBedH: waterLevel + 3,
-        aHalfWidth: 4,
-        aBankWidth: 1,
+        aBedH: waterLevel + 2,
+        aWaterH: waterLevel + 3,
+        aWaterHalfWidth: 4,
+        aChannelHalfWidth: 5,
         bx: 500,
         bz: 0,
-        bBedH: waterLevel + 3,
-        bHalfWidth: 4,
-        bBankWidth: 1,
+        bBedH: waterLevel + 2,
+        bWaterH: waterLevel + 3,
+        bWaterHalfWidth: 4,
+        bChannelHalfWidth: 5,
       },
     ]
     // Just outside the channel's water half-width (4m) but still close to it.
@@ -315,5 +321,155 @@ describe('computeChunkVegetation — Deep Forest tuning (plan 182)', () => {
       expect(sample(tile.heights, p.x, p.z)).toBeGreaterThan(params.waterLevel)
       expect(sample(tile.roadTint, p.x, p.z)).toBeLessThanOrEqual(0.15)
     }
+  })
+})
+
+describe('computeChunkVegetation — riparian pass (plan world-terrain-010)', () => {
+  const waterLevel = 0.45
+  const riverSegments: RiverChannelSegment[] = [
+    {
+      ax: -500,
+      az: 0,
+      aBedH: waterLevel - 1,
+      aWaterH: waterLevel - 0.2,
+      aWaterHalfWidth: 3,
+      aChannelHalfWidth: 5,
+      bx: 500,
+      bz: 0,
+      bBedH: waterLevel - 1,
+      bWaterH: waterLevel - 0.2,
+      bWaterHalfWidth: 3,
+      bChannelHalfWidth: 5,
+    },
+  ]
+
+  it('never places any vegetation inside the channel, and produces reeds within the riparian band near the river', () => {
+    // Force swamp-biome probability to zero so every 'reed' placement can
+    // only come from the dedicated riparian pass, not the unrelated
+    // swamp-biome branch in the ordinary candidate loop.
+    const noSwamp = { region: { swampThreshold: 5, swampThresholdWidth: 0.1 } }
+    let reedCount = 0
+    for (let cx = -2; cx <= 2; cx++) {
+      const coord = { cx, cz: 0 }
+      const params = tileParams({ cx, cz: 0, seed: 200 + cx, riverSegments, ...noSwamp })
+      const tile = computeChunkTile(params)
+      const vegetation = computeChunkVegetation(coord, tile, params)
+      for (const v of vegetation) {
+        expect(isInsideRiverChannel(riverSegments, v.x, v.z)).toBe(false)
+        if (v.kind !== 'reed') continue
+        reedCount++
+        const d = nearestRiverBankDistance(riverSegments, v.x, v.z)!
+        expect(d).toBeGreaterThanOrEqual(0)
+        expect(d).toBeLessThan(6)
+      }
+    }
+    // Sanity: the river actually produced riparian reeds somewhere in this
+    // span — an empty result would make the band assertion above vacuous.
+    expect(reedCount).toBeGreaterThan(0)
+  })
+
+  it('is deterministic and keeps a bounded per-chunk placement budget', () => {
+    const params = tileParams({ riverSegments })
+    const coord = { cx: 0, cz: 0 }
+    const tile = computeChunkTile(params)
+    const a = computeChunkVegetation(coord, tile, params)
+    const b = computeChunkVegetation(coord, tile, params)
+    expect(a).toEqual(b)
+    // Generous upper bound (ordinary + meadow + fern + riparian + lily passes
+    // combined) — guards a future change multiplying a budget instead of
+    // tuning acceptance.
+    expect(a.length).toBeLessThan(180)
+  })
+})
+
+describe('computeChunkVegetation — lily pads (plan world-terrain-010, Phase 6)', () => {
+  const waterLevel = 0.45
+  const chunkSize = 64
+  const resolution = 20
+
+  /** Synthetic tile with a real inland-lake `bodyScale` (via the same
+   *  `detectWaterBodies`/`computeBodyScale` pipeline `computeChunkTile` uses)
+   *  instead of depending on procedural terrain happening to carve a lake —
+   *  a round lake centered at the chunk origin, land beyond it. */
+  function lakeTile(): { tile: ChunkTileData, o: ReturnType<typeof apronOriginWorld> } {
+    const o = apronOriginWorld(0, 0, chunkSize, resolution)
+    const n = o.apronRes * o.apronRes
+    const heights = new Float32Array(n)
+    const floorHeights = new Float32Array(n)
+    const continentalness = new Float32Array(n).fill(0.6) // inland, not ocean
+    for (let iz = 0; iz < o.apronRes; iz++) {
+      for (let ix = 0; ix < o.apronRes; ix++) {
+        const wx = o.x + ix * o.step
+        const wz = o.z + iz * o.step
+        const idx = iz * o.apronRes + ix
+        const floorH = Math.hypot(wx, wz) < 14 ? waterLevel - 0.3 : waterLevel + 1
+        floorHeights[idx] = floorH
+        heights[idx] = Math.max(floorH, waterLevel)
+      }
+    }
+    const bodies = detectWaterBodies(heights, o.apronRes, waterLevel, o.step)
+    const bodyScale = computeBodyScale(bodies, { continentalness, oceanThreshold: 0.32, coastThreshold: 0.45 })
+    const tile: ChunkTileData = {
+      heights,
+      floorHeights,
+      biomes: new Float32Array(n).fill(0.6),
+      bodyScale,
+      continentalness,
+      mountainRidge: new Float32Array(n),
+      moistureRegion: new Float32Array(n).fill(0.5),
+      roadTint: new Float32Array(n),
+    }
+    return { tile, o }
+  }
+
+  it('places lily pads only on shallow inland water, never on dry land', () => {
+    const { tile, o } = lakeTile()
+    const coord = { cx: 0, cz: 0 }
+    const params = tileParams({ cx: 0, cz: 0, chunkSize, resolution })
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
+
+    let lilyCount = 0
+    for (let seed = 0; seed < 12; seed++) {
+      const p = { ...params, seed: 300 + seed }
+      const vegetation = computeChunkVegetation(coord, tile, p)
+      for (const v of vegetation.filter((x) => x.kind === 'lily')) {
+        lilyCount++
+        expect(sample(tile.bodyScale, v.x, v.z)).toBeGreaterThan(0)
+        expect(sample(tile.bodyScale, v.x, v.z)).toBeLessThan(0.9)
+        expect(sample(tile.heights, v.x, v.z)).toBeLessThanOrEqual(waterLevel + 1e-6)
+      }
+    }
+    expect(lilyCount).toBeGreaterThan(0)
+  })
+
+  it('never accepts a lily pad well inside solid ocean water', () => {
+    const { tile, o } = lakeTile()
+    // Force every wet texel to read as ocean (bodyScale saturates to 1).
+    tile.continentalness.fill(0.1)
+    const oceanBodyScale = computeBodyScale(
+      detectWaterBodies(tile.heights, o.apronRes, waterLevel, o.step),
+      { continentalness: tile.continentalness, oceanThreshold: 0.32, coastThreshold: 0.45 },
+    )
+    const oceanTile: ChunkTileData = { ...tile, bodyScale: oceanBodyScale }
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
+    // Sanity: the fixture really reads as ocean at the lake's own center —
+    // otherwise the assertion below would be vacuous.
+    expect(sample(oceanTile.bodyScale, 0, 0)).toBeGreaterThanOrEqual(0.9)
+
+    const coord = { cx: 0, cz: 0 }
+    const params = tileParams({ cx: 0, cz: 0, chunkSize, resolution })
+
+    let deepOceanLilyCount = 0
+    for (let seed = 0; seed < 12; seed++) {
+      const p = { ...params, seed: 400 + seed }
+      for (const v of computeChunkVegetation(coord, oceanTile, p).filter((x) => x.kind === 'lily')) {
+        // Margin inside the lake's radius-14 shoreline (>1 grid step), away
+        // from the bilinear land/water boundary interpolation band.
+        if (Math.hypot(v.x, v.z) < 10) deepOceanLilyCount++
+      }
+    }
+    expect(deepOceanLilyCount).toBe(0)
   })
 })

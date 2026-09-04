@@ -1,7 +1,7 @@
 # Plan: Waterways and Vegetation
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄
 **Type:** polish
 **Priority:** medium · **Effort:** M
 **Depends on:** none
@@ -9,6 +9,32 @@
 **Subdomains:** `terrain` `vegetation` `rendering`
 **Tags:** `water` `rivers` `streams` `shorelines` `aquatic-vegetation`
 **Roadmap:** -
+
+## Implementation status (2026-09-04)
+
+**Implemented + technically verified:** Phases 1, 3, 4, 6.
+
+- **Phase 1 (canonical river cross-section):** `RiverChannelSegment` now carries `bedH`/`waterH`/`waterHalfWidth`/`channelHalfWidth` per endpoint instead of one `halfWidth`/`bankWidth` pair. `exposedBankFromFlow`/`submergedDepthFromFlow` (`riverNetwork.ts`) are two independent flow-scaled budgets, so `bedY < waterY < bankTopY` and `waterWidth < channelWidth` hold unconditionally, including for the smallest stream. `chunkHeightmap.ts`'s `riverChannelCandidate` carves an explicit piecewise cross-section (flat bed → submerged slope → exposed bank → ambient terrain) instead of a single bed height blended by one falloff. River-ribbon Y (`riverGeometry.ts`) now comes from the new pure `canonicalWaterHeight(point)`, not `sampleTerrainY(...) + 0.2` — that flat offset used to *be* a small stream's entire effective depth, which is the root cause of the "blue ribbon over terrain" symptom. `RIVER_SURFACE_OFFSET` is now a `0.02` z-fighting epsilon only. Shoreline queries (`nearestRiverBankDistance`/`Point`/`isInsideRiverChannel`) keep their existing "water edge" contract and gameplay callers unchanged.
+- **Phase 3 (natural small streams):** falls out of Phase 1's fix directly — every stream now has a guaranteed-positive exposed bank and submerged depth, so it reads as recessed with a visible bed regardless of flow strength. No separate stream-specific code path was added, per the plan's "keep the existing continuous river-chain representation."
+- **Phase 4 (riparian vegetation placement):** `chunkVegetation.ts`'s new `riparianPatches()` is a dedicated, bounded patch pass (mirrors `fernPatches`'s shape) along the river water-edge band and the existing lake "wet shoreline" altitude band, replacing the old in-loop `nearWaterline` reed-probability bump. Produces the water → reed → fern/wet-bush → riparian-tree → open-shoreline transition using **existing** species only (no new riparian tree/bush assets — see below).
+- **Phase 6 (lake surface vegetation):** new `VegetationKind: 'lily'` / `LILY_SPECS`, wired through the full existing pipeline (`vegetationRegionBatcher`, `buildInstancedProps`, distance LOD, reflection visibility). `chunkVegetation.ts`'s `lilyPatches()` places bounded, patch-based clusters restricted to shallow inland water (`bodyScale` strictly between 0 and 0.9, i.e. never ocean) and never inside a flowing river channel. Uses the previously-parked `public/models/parked/Lilypad-01.glb`, fit via `preparePropFitMax` (a new `fit` option on `loadPropTemplates`/`loadPropOrFallback`) since it is flat/wide, not tall.
+
+**Not implemented (no new 3D assets were authored or sourced this pass):**
+
+- **Phase 2 (variable/asymmetric bank profiles):** left as symmetric (no per-side left/right divergence, no low-frequency width/bank-margin noise). The canonical cross-section from Phase 1 is a prerequisite this builds on cleanly later; adding it now would have required doubling the segment's carving fields (signed lateral distance, independent left/right profiles) on top of an already-large data-contract change in one pass.
+- **Phase 5 (dense reed clusters):** no `reed_cluster_a/b/c` merged-mesh assets exist. Reeds still use the single existing `nature/reed_a.glb` through the (now dedicated, Phase 4) placement pass — denser *placement* only, not denser *geometry per instance*.
+- **Phase 7 (shallow coastal seaweed):** no seaweed asset exists; not added.
+- **Phase 8 (riparian trees/bushes):** `riparianPatches()` reuses existing tree/bush/fern species (habitat-weighted via the existing `pickTreeSpecies`/`envGrowthFactor`), per the plan's explicit "reuse existing species initially" allowance. No dedicated willow/alder/wet-shrub assets were added.
+- **Phase 9 (water material polish):** not evaluated — geometry/vegetation changes should be browser-verified first, per the plan's own suggested order.
+
+**Browser/gameplay-verified:** not yet — the player performs this per the plan's own verification section.
+
+### Divergences from implementation notes
+
+- The implementation notes suggested a possible new "anchor kind" (terrain/floor/water-surface) for aquatic placement vertical attachment (§8). This was not needed: `tile.heights` is already clamped to `waterLevel` underwater, so the existing `sampleTileHeight` → `groundY` path in `attachChunkContent` already anchors lily pads to the water surface correctly with no changes.
+- Shoreline query semantics (`nearestRiverBankDistance` etc.) were **not** split into separate "water edge" vs "channel/bank-top edge" public functions as the notes discussed (§4). The existing water-edge contract already matches what gameplay (drinking/filling/interactables) needs; `channelHalfWidth` (the new bank-top concept) is used internally by carving and by `riparianPatches()`'s own distance math, without a new public query surface. This kept the gameplay-facing contract change-free.
+
+---
 
 ## Goal
 
@@ -383,12 +409,12 @@ Compare representative performance counters before/after and tune density/asset 
 2. Update terrain carving, river water elevation and shoreline queries to consume it.
 3. Add deterministic variable/asymmetric bank profiles.
 4. Tune small-stream geometry and presentation.
-5. Perform browser verification of river/channel behaviour.
+5. ~~Perform browser verification of river/channel behaviour.~~ (User does this)
 6. Add dedicated riparian/aquatic vegetation placement.
 7. Add efficient reed clusters and tune density/LOD.
 8. Add riparian tree/bush habitat weighting and assets where needed.
 9. Add lily-pad and shallow coastal seaweed clusters.
-10. Perform browser and performance verification.
+10. ~~Perform browser and performance verification.~~ (User does this)
 11. Apply optional cheap water-material polish only if still needed.
 
 ## Implementation Notes

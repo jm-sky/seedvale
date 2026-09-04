@@ -390,6 +390,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/riverNetwork.ts`
+- `terrain/waterBodies.ts`
 
 ## `terrain/chunkVegetation.ts`
 
@@ -801,6 +802,7 @@ Generated from TypeScript imports.
 
 - `app/interactables.ts`
 - `terrain/chunkHeightmap.ts`
+- `terrain/chunkVegetation.test.ts`
 - `terrain/waterBodies.test.ts`
 - `world/map/mapProjection.ts`
 

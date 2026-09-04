@@ -1,16 +1,15 @@
 import { BufferAttribute, BufferGeometry } from 'three'
 import type { RiverChain, RiverPoint, WorldRect } from '../terrain/riverNetwork'
-import { flowFactor, widthFromAccumulation } from '../terrain/riverNetwork'
+import { canonicalWaterHeight, flowFactor, widthFromAccumulation } from '../terrain/riverNetwork'
 
-/** Water surface sits slightly above the sampled river-bed elevation — same
- *  idea as `createWater.ts`'s `waterLevel + 0.07`, just relative to the
- *  per-point bed height instead of a flat water level. Larger than that flat
- *  offset on purpose: `sampleTerrainY` (bilinear over the apron grid) and the
- *  actually-rendered mesh surface (per-triangle-split, not a true bilinear
- *  patch) can differ by a couple centimeters on rough/steep ground, so this
- *  needs headroom beyond pure z-fighting avoidance or the ribbon can dip
- *  under the visible terrain there. */
-export const RIVER_SURFACE_OFFSET = 0.2
+/** Tiny rendering-only epsilon to avoid z-fighting where the ribbon's edge
+ *  meets carved terrain at (by construction) almost exactly the same height
+ *  — NOT physical water depth (plan world-terrain-010; the old
+ *  `sampleTerrainY(...) + 0.2` here used to *be* the small-stream's entire
+ *  effective depth, which is what made shallow water read as a blue ribbon
+ *  laid over terrain — see implementation notes §2). Water elevation itself
+ *  now comes from `canonicalWaterHeight`, not rendered-terrain sampling. */
+export const RIVER_SURFACE_OFFSET = 0.02
 
 function lerpRiverPoint(a: RiverPoint, b: RiverPoint, t: number): RiverPoint {
   return {
@@ -126,17 +125,16 @@ function waterfallFactor(prev: RiverPoint | null, p: RiverPoint): number {
 /**
  * Builds a simple extruded ribbon (perpendicular offset by flow-derived
  * half-width) from already-clipped, chunk-local runs. Y comes from each
- * point's already-sampled `elevation` (no duplicate terrain sampling) plus
- * `RIVER_SURFACE_OFFSET`. Positions are relative to `(chunkOriginX,
- * chunkOriginZ)` so the resulting geometry can be attached at that origin.
+ * point's canonical `canonicalWaterHeight` (pure function of its own
+ * hydrology data — see that function's doc comment) plus the tiny
+ * `RIVER_SURFACE_OFFSET` z-fighting epsilon. Positions are relative to
+ * `(chunkOriginX, chunkOriginZ)` so the resulting geometry can be attached at
+ * that origin.
  */
 export function buildRiverRibbonGeometry(
   runs: RiverPoint[][],
   chunkOriginX: number,
   chunkOriginZ: number,
-  /** Actual rendered terrain height at a world point (see `createRiverWater.ts`) —
-   *  used for Y instead of each point's cached hydrology `elevation`. */
-  sampleTerrainY: (worldX: number, worldZ: number) => number,
 ): BufferGeometry | null {
   const usableRuns = runs.filter((run) => run.length >= 2)
   if (usableRuns.length === 0) return null
@@ -166,7 +164,7 @@ export function buildRiverRibbonGeometry(
 
       const x = p.x - chunkOriginX
       const z = p.z - chunkOriginZ
-      const y = sampleTerrainY(p.x, p.z) + RIVER_SURFACE_OFFSET
+      const y = canonicalWaterHeight(p) + RIVER_SURFACE_OFFSET
 
       positions.push(x - px * halfWidth, y, z - pz * halfWidth)
       positions.push(x + px * halfWidth, y, z + pz * halfWidth)

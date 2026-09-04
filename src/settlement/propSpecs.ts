@@ -37,6 +37,14 @@ export const REED_SPECS = [
   { url: '/models/nature/reed_a.glb', height: 1.1 },
 ] as const
 
+/** Shallow-water surface vegetation (plan world-terrain-010). Flat/wide, not
+ *  tall — loaded with `preparePropFitMax` (longest-axis fit), not the height
+ *  fit every other `*_SPECS` table here uses; `height` is reused as that
+ *  fit-max target (pad diameter, not vertical height). */
+export const LILY_SPECS = [
+  { url: '/models/parked/Lilypad-01.glb', height: 0.55 },
+] as const
+
 export const DOCK_SPECS = [
   { url: '/models/settlement/dock_a.glb', height: 1.0 },
 ] as const

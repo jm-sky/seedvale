@@ -92,7 +92,7 @@ function params(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
     chunkSize: 64,
     resolution: 17,
     isHomeChunk: false,
-    vegetationSpeciesCount: { tree: 9, bush: 5, cactus: 2, reed: 1, fern: 1 },
+    vegetationSpeciesCount: { tree: 9, bush: 5, cactus: 2, reed: 1, fern: 1, lily: 1 },
     roadSegments: [],
     clearings: [],
     regional: [],

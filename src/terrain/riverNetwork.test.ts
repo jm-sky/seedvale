@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { RawSampleParams } from './chunkHeightmap'
 import * as chunkHeightmap from './chunkHeightmap'
 import {
+  canonicalWaterHeight,
   computeRiverTile,
   depthFromAccumulation,
+  exposedBankFromFlow,
   nearestRiverBankDistance,
   nearestRiverBankPoint,
   overlappingRiverTiles,
@@ -275,7 +277,26 @@ describe('depthFromAccumulation', () => {
     const big = depthFromAccumulation(1000)
     expect(small).toBeGreaterThan(0)
     expect(big).toBeGreaterThan(small)
-    expect(big).toBeLessThanOrEqual(2.4)
+    expect(big).toBeLessThanOrEqual(2.4 + 1e-9)
+  })
+})
+
+describe('canonicalWaterHeight (plan world-terrain-010)', () => {
+  it('always sits below the point\'s own natural elevation, even for a barely-classified stream', () => {
+    const barelyStream = point(0, 0, 10, 16) // just past DEFAULT_RIVER_THRESHOLDS.stream (15)
+    expect(canonicalWaterHeight(barelyStream)).toBeLessThan(barelyStream.elevation)
+    const bigRiver = point(0, 0, 10, 5000)
+    expect(canonicalWaterHeight(bigRiver)).toBeLessThan(bigRiver.elevation)
+  })
+
+  it('is deterministic and grows the exposed-bank gap with flow strength', () => {
+    const p = point(0, 0, 10, 300)
+    expect(canonicalWaterHeight(p)).toBe(canonicalWaterHeight(p))
+    const small = 10 - canonicalWaterHeight(point(0, 0, 10, 16))
+    const big = 10 - canonicalWaterHeight(point(0, 0, 10, 5000))
+    expect(big).toBeGreaterThan(small)
+    expect(exposedBankFromFlow(0)).toBeCloseTo(0.15, 5)
+    expect(exposedBankFromFlow(1)).toBeCloseTo(0.8, 5)
   })
 })
 
@@ -302,12 +323,26 @@ describe('riverChannelSegmentsNear (plan 189)', () => {
     expect(segments[1]!.bBedH).toBeLessThan(segments[1]!.aBedH)
   })
 
-  it('width and depth both grow with accumulation, never independently', () => {
+  it('width and channel margin both grow with accumulation, never independently', () => {
     const chain: RiverChain = { points: [point(0, 0, 100, 20), point(8, 0, 99, 1000)] }
     const [seg] = riverChannelSegmentsNear([chain], 4, 0, 64)
-    expect(seg!.bHalfWidth).toBeGreaterThan(seg!.aHalfWidth)
-    expect(seg!.aBankWidth).toBeGreaterThan(0)
-    expect(seg!.bBankWidth).toBeGreaterThanOrEqual(seg!.aBankWidth)
+    expect(seg!.bWaterHalfWidth).toBeGreaterThan(seg!.aWaterHalfWidth)
+    expect(seg!.aChannelHalfWidth).toBeGreaterThan(seg!.aWaterHalfWidth)
+    expect(seg!.bChannelHalfWidth).toBeGreaterThan(seg!.bWaterHalfWidth)
+  })
+
+  it('canonical cross-section invariants hold: bedY < waterY < bankTopY, waterWidth < channelWidth', () => {
+    for (const [elevation, accumulation] of [[100, 20], [100, 300], [50, 2000]] as const) {
+      const chain: RiverChain = { points: [point(0, 0, elevation, accumulation), point(8, 0, elevation - 1, accumulation)] }
+      const [seg] = riverChannelSegmentsNear([chain], 4, 0, 64)
+      if (!seg) continue // below the stream threshold — no channel at all
+      expect(seg.aBedH).toBeLessThan(seg.aWaterH)
+      expect(seg.aWaterH).toBeLessThan(chain.points[0]!.elevation)
+      expect(seg.bBedH).toBeLessThan(seg.bWaterH)
+      expect(seg.bWaterH).toBeLessThan(chain.points[1]!.elevation)
+      expect(seg.aWaterHalfWidth).toBeLessThan(seg.aChannelHalfWidth)
+      expect(seg.bWaterHalfWidth).toBeLessThan(seg.bChannelHalfWidth)
+    }
   })
 
   it('is deterministic for the same chains and chunk position', () => {

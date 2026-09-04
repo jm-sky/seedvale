@@ -143,32 +143,73 @@ export function widthFromAccumulation(
   return MIN_RIVER_WIDTH + t * (MAX_RIVER_WIDTH - MIN_RIVER_WIDTH)
 }
 
-// River channel carving (plan 189) — depth/bank bounds, same eased-flow
-// reasoning as width above: never a hardcoded depth independent of flow,
-// never unbounded either.
-const MIN_CHANNEL_DEPTH = 0.15
-const MAX_CHANNEL_DEPTH = 2.4
+// Canonical river cross-section (world-terrain-010) — replaces the old single
+// "depth" concept with two independent, flow-scaled budgets so the invariant
+// `bedY < waterY < bankTopY` holds unconditionally, even for the smallest
+// stream. Before this, a barely-classified stream's water sat only
+// `MIN_CHANNEL_DEPTH` (0.15) below natural terrain while the *renderer*
+// floated the ribbon `RIVER_SURFACE_OFFSET` (0.2) above carved terrain —
+// together those could put the water surface at or above the surrounding
+// uncarved ground (implementation notes §2, "blue ribbon over terrain").
+/** How far the water surface sits below natural/bank-top terrain — grows
+ *  with flow strength (small stream ~0.15-0.3m .. major river ~0.4-0.8m per
+ *  the plan's tuning table). Always positive, so a stream can never read as
+ *  water laid flush with (or above) its own banks. */
+const EXPOSED_BANK_MIN = 0.15
+const EXPOSED_BANK_MAX = 0.8
+/** How far the visible bed sits below the water surface — an independent
+ *  budget from the exposed-bank one above, so a big river reads as both a
+ *  taller bank *and* a deeper water column, never just one or the other. */
+const SUBMERGED_DEPTH_MIN = 0.12
+const SUBMERGED_DEPTH_MAX = 1.6
 
-/** Bounded, smoothly-growing channel depth from flow accumulation — the same
- *  `flowFactor` curve `widthFromAccumulation` builds on, so a bigger river is
- *  always both wider and deeper, never independently either. */
+/** See `EXPOSED_BANK_MIN`/`MAX` above. Pure function of normalized flow
+ *  strength (`flowFactor`), same eased curve every other flow-scaled channel
+ *  quantity here builds on. */
+export function exposedBankFromFlow(flow: number): number {
+  return EXPOSED_BANK_MIN + clamp01(flow) * (EXPOSED_BANK_MAX - EXPOSED_BANK_MIN)
+}
+
+/** See `SUBMERGED_DEPTH_MIN`/`MAX` above. */
+export function submergedDepthFromFlow(flow: number): number {
+  return SUBMERGED_DEPTH_MIN + clamp01(flow) * (SUBMERGED_DEPTH_MAX - SUBMERGED_DEPTH_MIN)
+}
+
+/** Total bank-top-to-bed depth (`exposedBank + submergedDepth`) — kept as its
+ *  own named quantity since `riverChannelSegmentsNear`'s bank-margin sizing
+ *  (`channelBankMargin`) reasons about the whole carved depth, not either
+ *  budget alone. Bounded/zero exactly like the old single-depth model this
+ *  replaces (same public contract/tests), just composed from two budgets. */
 export function depthFromAccumulation(
   accumulation: number,
   thresholds: StreamThresholds = DEFAULT_RIVER_THRESHOLDS,
 ): number {
   if (accumulation < thresholds.stream) return 0
-  const t = flowFactor(accumulation, thresholds)
-  return MIN_CHANNEL_DEPTH + t * (MAX_CHANNEL_DEPTH - MIN_CHANNEL_DEPTH)
+  const flow = flowFactor(accumulation, thresholds)
+  return exposedBankFromFlow(flow) + submergedDepthFromFlow(flow)
+}
+
+/** Canonical water-surface elevation at a chain point — the single source of
+ *  truth for river ribbon Y (`riverGeometry.ts`), replacing the old "sample
+ *  rendered terrain + flat offset" approach that caused the small-stream bug
+ *  above. Pure function of the point's own hydrology data (`elevation`,
+ *  `accumulation`), so it is deterministic and cross-chunk continuous by
+ *  construction, exactly like `elevation`/`accumulation` themselves — no
+ *  dependency on road/clearing-modified rendered terrain. */
+export function canonicalWaterHeight(p: RiverPoint): number {
+  return p.elevation - exposedBankFromFlow(flowFactor(p.accumulation))
 }
 
 const CHANNEL_BANK_MIN_WIDTH = 1.5
-/** Desired max additional rise-per-run beyond the channel's half-width before
+/** Desired max additional rise-per-run beyond the water's half-width before
  *  terrain returns to its natural, uncarved height — keeps a deep channel's
- *  bank from reading as a cliff (plan 189 "łagodny profil"). */
+ *  bank from reading as a cliff (plan 189 "łagodny profil"), and doubles as
+ *  the "exposed channel" width the design calls out as deliberate space for
+ *  readable bank geometry and shoreline vegetation (plan world-terrain-010). */
 const CHANNEL_BANK_SLOPE = 0.45
 
-function channelBankWidth(depth: number): number {
-  return Math.max(CHANNEL_BANK_MIN_WIDTH, depth / CHANNEL_BANK_SLOPE)
+function channelBankMargin(totalDepth: number): number {
+  return Math.max(CHANNEL_BANK_MIN_WIDTH, totalDepth / CHANNEL_BANK_SLOPE)
 }
 
 /**
@@ -177,9 +218,10 @@ function channelBankWidth(depth: number): number {
  * (`riverGeometry.ts`) — carving and water shape always agree, no second
  * path. Unlike `clipChainToRect` (which trims chain *points* to a rect for
  * rendering), this keeps whole point-to-point segments and rejects by each
- * segment's own carve reach (half-width + bank), so a segment whose points
- * sit just outside the chunk but whose bank still overlaps it is not dropped
- * — needed for carving continuity across chunk boundaries (plan 189).
+ * segment's own carve reach (channel half-width, itself water half-width
+ * plus bank margin), so a segment whose points sit just outside the chunk
+ * but whose bank still overlaps it is not dropped — needed for carving
+ * continuity across chunk boundaries (plan 189).
  */
 export function riverChannelSegmentsNear(
   chains: RiverChain[],
@@ -199,14 +241,26 @@ export function riverChannelSegmentsNear(
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i]!
       const b = pts[i + 1]!
-      const aHalfWidth = widthFromAccumulation(a.accumulation) / 2
-      const bHalfWidth = widthFromAccumulation(b.accumulation) / 2
-      if (aHalfWidth <= 0 && bHalfWidth <= 0) continue
-      const aDepth = depthFromAccumulation(a.accumulation)
-      const bDepth = depthFromAccumulation(b.accumulation)
-      const aBankWidth = channelBankWidth(aDepth)
-      const bBankWidth = channelBankWidth(bDepth)
-      const reach = Math.max(aHalfWidth + aBankWidth, bHalfWidth + bBankWidth)
+      const aWaterHalfWidth = widthFromAccumulation(a.accumulation) / 2
+      const bWaterHalfWidth = widthFromAccumulation(b.accumulation) / 2
+      if (aWaterHalfWidth <= 0 && bWaterHalfWidth <= 0) continue
+
+      const aFlow = flowFactor(a.accumulation)
+      const bFlow = flowFactor(b.accumulation)
+      const aExposedBank = exposedBankFromFlow(aFlow)
+      const bExposedBank = exposedBankFromFlow(bFlow)
+      const aSubmerged = submergedDepthFromFlow(aFlow)
+      const bSubmerged = submergedDepthFromFlow(bFlow)
+      // bedY < waterY < bankTopY (≈ a.elevation/b.elevation) by construction:
+      // both budgets above are strictly positive.
+      const aWaterH = a.elevation - aExposedBank
+      const bWaterH = b.elevation - bExposedBank
+      const aBedH = aWaterH - aSubmerged
+      const bBedH = bWaterH - bSubmerged
+      // waterWidth < channelWidth by construction: the margin is strictly positive.
+      const aChannelHalfWidth = aWaterHalfWidth + channelBankMargin(aExposedBank + aSubmerged)
+      const bChannelHalfWidth = bWaterHalfWidth + channelBankMargin(bExposedBank + bSubmerged)
+      const reach = Math.max(aChannelHalfWidth, bChannelHalfWidth)
 
       const segMinX = Math.min(a.x, b.x) - reach
       const segMaxX = Math.max(a.x, b.x) + reach
@@ -217,28 +271,33 @@ export function riverChannelSegmentsNear(
       segments.push({
         ax: a.x,
         az: a.z,
-        aBedH: a.elevation - aDepth,
-        aHalfWidth,
-        aBankWidth,
+        aBedH,
+        aWaterH,
+        aWaterHalfWidth,
+        aChannelHalfWidth,
         bx: b.x,
         bz: b.z,
-        bBedH: b.elevation - bDepth,
-        bHalfWidth,
-        bBankWidth,
+        bBedH,
+        bWaterH,
+        bWaterHalfWidth,
+        bChannelHalfWidth,
       })
     }
   }
   return segments
 }
 
-/** Signed distance from `(x, z)` to the nearest of `segments`' own bank edge —
- *  negative while inside the channel (down to `-halfWidth` at the centerline),
- *  0 exactly at the bank, positive on dry land beyond it. Uses the same
- *  per-segment interpolated half-width and `projectOntoSegment` point-to-
- *  segment math `chunkHeightmap.ts`'s `applyRiverChannel` carving pass reads,
- *  so a "standing at the river's edge" gameplay check
- *  (`app/interactables.ts`'s shoreline resolver) always agrees with where the
- *  carved terrain actually puts the bank. `null` when `segments` is empty. */
+/** Signed distance from `(x, z)` to the nearest of `segments`' own *water*
+ *  edge (`aWaterHalfWidth`/`bWaterHalfWidth` — narrower than the full carved
+ *  channel/bank-top extent, see `RiverChannelSegment`) — negative while
+ *  inside the water (down to `-waterHalfWidth` at the centerline), 0 exactly
+ *  at the water's edge, positive beyond it (across the exposed bank, then dry
+ *  land). Uses the same per-segment interpolated half-width and
+ *  `projectOntoSegment` point-to-segment math `chunkHeightmap.ts`'s
+ *  `applyRiverChannel` carving pass reads, so a "standing at the river's
+ *  edge" gameplay check (`app/interactables.ts`'s shoreline resolver) always
+ *  agrees with where the carved terrain actually puts the water. `null` when
+ *  `segments` is empty. */
 export function nearestRiverBankDistance(
   segments: readonly RiverChannelSegment[],
   x: number,
@@ -247,29 +306,30 @@ export function nearestRiverBankDistance(
   let best: number | null = null
   for (const seg of segments) {
     const { distSq, t } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
-    const halfWidth = seg.aHalfWidth + (seg.bHalfWidth - seg.aHalfWidth) * t
+    const halfWidth = seg.aWaterHalfWidth + (seg.bWaterHalfWidth - seg.aWaterHalfWidth) * t
     const dist = Math.sqrt(distSq) - halfWidth
     if (best === null || dist < best) best = dist
   }
   return best
 }
 
-/** True when `(x, z)` sits inside a river's actual water channel (out to its
- *  bank edge, i.e. `nearestRiverBankDistance < 0`) — the single geometric
+/** True when `(x, z)` sits inside a river's actual water (out to its water
+ *  edge, i.e. `nearestRiverBankDistance < 0`) — the single geometric
  *  predicate procedural placement (`chunkVegetation.ts`, `grassPlacement.ts`)
- *  rejects candidates on, so trees/grass never land inside a carved channel
- *  even where the channel's bed sits above the world's global `waterLevel`
- *  (e.g. a mountain stream) and the heights clamp alone can't catch it
- *  (world-terrain-006). The bank slope beyond the water edge stays eligible
- *  as ordinary dry land — same as `nearestRiverBankDistance`'s own contract. */
+ *  rejects candidates on, so trees/grass never land inside the water even
+ *  where the channel's bed sits above the world's global `waterLevel` (e.g. a
+ *  mountain stream) and the heights clamp alone can't catch it
+ *  (world-terrain-006). The exposed bank beyond the water edge stays
+ *  eligible as ordinary dry land — same as `nearestRiverBankDistance`'s own
+ *  contract. */
 export function isInsideRiverChannel(segments: readonly RiverChannelSegment[], x: number, z: number): boolean {
   const dist = nearestRiverBankDistance(segments, x, z)
   return dist !== null && dist < 0
 }
 
-/** The actual point on `segments`' nearest bank edge to `(x, z)` — same
+/** The actual point on `segments`' nearest water edge to `(x, z)` — same
  *  segment/half-width selection as `nearestRiverBankDistance`, but returning
- *  a real world point (centerline pushed out to the bank along the ray
+ *  a real world point (centerline pushed out to the water edge along the ray
  *  toward the query point) instead of a scalar distance, for callers that
  *  need a concrete interaction position rather than just a proximity check
  *  (`app/interactables.ts`'s `waterEdge` candidate). `null` when `segments`
@@ -283,7 +343,7 @@ export function nearestRiverBankPoint(
   let bestPoint: { x: number, z: number } | null = null
   for (const seg of segments) {
     const { distSq, t } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
-    const halfWidth = seg.aHalfWidth + (seg.bHalfWidth - seg.aHalfWidth) * t
+    const halfWidth = seg.aWaterHalfWidth + (seg.bWaterHalfWidth - seg.aWaterHalfWidth) * t
     const dist = Math.sqrt(distSq) - halfWidth
     if (best !== null && dist >= best) continue
     best = dist

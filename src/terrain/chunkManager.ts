@@ -25,6 +25,7 @@ import {
   createFern,
   createGraveStone,
   createLargeRock,
+  createLilyPad,
   createMonolith,
   createReed,
   createRockCluster,
@@ -34,6 +35,7 @@ import {
   FALLEN_LOG_SPECS,
   FERN_SPECS,
   GRAVE_SPECS,
+  LILY_SPECS,
   loadPropTemplates,
   placeOnGround,
   preloadCampfireTemplates,
@@ -122,12 +124,13 @@ type TemplateCache = {
 function memoTemplates(
   specs: Parameters<typeof loadPropTemplates>[0],
   fallback: () => THREE.Object3D,
+  fit?: Parameters<typeof loadPropTemplates>[2],
 ): TemplateCache {
   let promise: Promise<THREE.Object3D[]> | null = null
   let value: THREE.Object3D[] | null = null
   return {
     start() {
-      promise ??= loadPropTemplates(specs, fallback).then(
+      promise ??= loadPropTemplates(specs, fallback, fit).then(
         (templates) => {
           value = templates
           return templates
@@ -148,6 +151,7 @@ const getBushTemplates = memoTemplates(BUSH_SPECS, () => createBush(1))
 const getCactusTemplates = memoTemplates(CACTUS_SPECS, () => createCactus(1))
 const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1))
 const getFernTemplates = memoTemplates(FERN_SPECS, () => createFern(1))
+const getLilyTemplates = memoTemplates(LILY_SPECS, () => createLilyPad(1), 'max')
 const getRockTemplates = memoTemplates(ROCK_SPECS, () => createLargeRock(1))
 const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRockCluster(1))
 const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
@@ -160,6 +164,7 @@ function preloadPropTemplates(): void {
   void getCactusTemplates.start()
   void getReedTemplates.start()
   void getFernTemplates.start()
+  void getLilyTemplates.start()
   void getRockTemplates.start()
   void getRockClusterTemplates.start()
   void getFallenLogTemplates.start()
@@ -976,6 +981,7 @@ export function createChunkManager(
         cactus: CACTUS_SPECS.length,
         reed: REED_SPECS.length,
         fern: FERN_SPECS.length,
+        lily: LILY_SPECS.length,
       },
       roadSegments: [...segmentsNear(x, z, config.chunkSize, roadCtx), ...village.paths],
       clearings: village.clearings,
@@ -1277,6 +1283,7 @@ export function createChunkManager(
         || !getCactusTemplates.peek()
         || !getReedTemplates.peek()
         || !getFernTemplates.peek()
+        || !getLilyTemplates.peek()
       ) {
         return false
       }
@@ -1462,16 +1469,11 @@ export function createChunkManager(
     // of terrain generation), and released once in `unload`. Reused here
     // rather than retained again to keep the ref count balanced 1:1.
     const riverChains = rec.riverChains ?? []
-    // River Y must follow this chunk's *actual* rendered terrain (tile.floorHeights,
-    // already road/clearing-modified — see computeChunkTile), not the road-agnostic
-    // elevation the hydrology tile cached at compute time. Otherwise a road/village
-    // height modifier (or any curvature between the hydrology grid's own sample
-    // points and the terrain mesh's vertex grid) can leave the terrain mesh sitting
-    // above the ribbon, making it look like the river vanishes/ends early.
-    const apron = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
-    const sampleTerrainY = (wx: number, wz: number) =>
-      sampleApronGrid(tile.floorHeights, apronRes, apron.x, apron.z, apron.step, wx, wz)
-    rec.river = createChunkRiver(riverChains, chunkRect, x, z, sampleTerrainY)
+    // River Y now comes from each point's canonical `canonicalWaterHeight`
+    // (world-terrain-010) — a pure function of the chain's own hydrology
+    // data, not a sample of this chunk's rendered terrain — so it no longer
+    // needs `tile.floorHeights` here at all.
+    rec.river = createChunkRiver(riverChains, chunkRect, x, z)
     if (rec.river) scene.add(rec.river.mesh)
     getMonitor().recordHitch('WATER', performance.now() - riverT0, 'chunk river')
 
@@ -1513,6 +1515,7 @@ export function createChunkManager(
       const cactusTemplates = getCactusTemplates.peek() ?? []
       const reedTemplates = getReedTemplates.peek() ?? []
       const fernTemplates = getFernTemplates.peek() ?? []
+      const lilyTemplates = getLilyTemplates.peek() ?? []
 
       const vegT0 = performance.now()
       const treeIds: string[] = []
@@ -1598,8 +1601,9 @@ export function createChunkManager(
         cactus: cactusTemplates,
         reed: reedTemplates,
         fern: fernTemplates,
+        lily: lilyTemplates,
       }
-      for (const kind of ['bush', 'cactus', 'reed', 'fern'] as const) {
+      for (const kind of ['bush', 'cactus', 'reed', 'fern', 'lily'] as const) {
         const placements = tile.vegetation.filter((p) => p.kind === kind)
         if (placements.length === 0) continue
         const propPlacements: PropPlacement[] = placements.map((p) => ({

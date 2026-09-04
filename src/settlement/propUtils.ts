@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { loadGltf, prepareProp } from '../assets/loadGltf'
+import { loadGltf, prepareProp, preparePropFitMax } from '../assets/loadGltf'
 
 /**
  * Recolor a cloned prop without mutating shared GLTF materials
@@ -106,10 +106,16 @@ export async function loadPropOrFallback(
   url: string,
   targetHeight: number,
   fallback: () => THREE.Object3D,
+  /** `'height'` (default) fits the model's Y extent — right for anything
+   *  authored taller than wide. `'max'` fits the longest bbox axis instead
+   *  (`preparePropFitMax`) — right for flat/wide props like a lily pad, where
+   *  height-fitting would inflate a near-zero Y extent absurdly. */
+  fit: 'height' | 'max' = 'height',
 ): Promise<THREE.Object3D> {
   try {
     const model = await loadGltf(url)
-    prepareProp(model, targetHeight)
+    if (fit === 'max') preparePropFitMax(model, targetHeight)
+    else prepareProp(model, targetHeight)
     return model
   } catch (err) {
     console.warn(`[settlement] failed to load ${url}, using fallback`, err)
@@ -120,9 +126,10 @@ export async function loadPropOrFallback(
 export async function loadPropTemplates(
   specs: ReadonlyArray<{ url: string, height: number }>,
   fallback: () => THREE.Object3D,
+  fit: 'height' | 'max' = 'height',
 ): Promise<THREE.Object3D[]> {
   return Promise.all(
-    specs.map((spec) => loadPropOrFallback(spec.url, spec.height, fallback)),
+    specs.map((spec) => loadPropOrFallback(spec.url, spec.height, fallback, fit)),
   )
 }
 

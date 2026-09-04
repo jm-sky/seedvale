@@ -40,9 +40,7 @@ _No qualifying plans._
 
 ### Polish
 
-1. `world-terrain-010` — **Waterways and Vegetation**  
-   🟡 `M` · ✅ ready · unlocks 0/0
-2. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -172,23 +170,19 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-25. `world-terrain-010` — **Waterways and Vegetation**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-26. `fauna-007` — **Animal leading and cart harness**  
+25. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  16  
    → **unlocks:** 0/0
 
-27. `world-terrain-008` — **Underground Caves V2**  
+26. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-28. `npc-004` — **Drzewo genealogiczne NPC**  
+27. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-29. `tools-006` — **tools-006--world-observatory.md**  
+28. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

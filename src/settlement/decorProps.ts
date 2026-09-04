@@ -204,6 +204,20 @@ export function createReed(scale = 1): THREE.Group {
   return reed
 }
 
+/** Shallow-water lily pad fallback (plan world-terrain-010) — flat disc, no
+ *  shadow (same "drobne propsy" reasoning as `createReed`). */
+export function createLilyPad(scale = 1): THREE.Group {
+  const lily = new THREE.Group()
+  const pad = new THREE.Mesh(
+    new THREE.CircleGeometry(0.28 * scale, 8),
+    new THREE.MeshStandardMaterial({ color: 0x2f6b3a, flatShading: true, side: THREE.DoubleSide }),
+  )
+  pad.rotation.x = -Math.PI / 2
+  pad.castShadow = false
+  lily.add(pad)
+  return lily
+}
+
 /** Irregular boulder — `IcosahedronGeometry` squashed/stretched per axis from
  *  `variant` (deterministic, no `Math.random()`: the caller already rolled a
  *  seeded `variant` in `chunkEnvironment.ts`, so re-rolling here would break

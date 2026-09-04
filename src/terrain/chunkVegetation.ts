@@ -22,7 +22,7 @@ import {
   sampleApronGrid,
   type VegetationKind,
 } from './chunkHeightmap'
-import { isInsideRiverChannel } from './riverNetwork'
+import { isInsideRiverChannel, nearestRiverBankDistance } from './riverNetwork'
 
 export type VegetationPlacement = {
   x: number
@@ -285,19 +285,16 @@ export function computeChunkVegetation(
 
     if (random() > Math.min(1, density)) continue
 
-    // Wet shoreline band just above the underwater/shore cutoff — any lake
-    // edge, not only swamp biome (plan 140). Gated on moisture so it doesn't
-    // spill onto a dry, sandy ocean beach that happens to sit this close to
-    // water (implementation notes: "nie kłaść cattaili na suchym piasku").
-    const nearWaterline = altitude < WATERLINE_ALTITUDE_BAND
-
+    // Shoreline reeds near ordinary (non-swamp) lake/river water are now the
+    // dedicated `riparianPatches()` pass below (plan world-terrain-010) —
+    // coherent patches instead of competing per-candidate here. Swamp biome
+    // keeps its own reed weighting since that is a biome-wide condition, not
+    // a shoreline-proximity one.
     let kind: VegetationPlacement['kind']
     if (biome.desert > 0.5 && random() < biome.desert) {
       kind = random() < 0.75 ? 'cactus' : 'bush'
     } else if (biome.swamp > 0.5 && random() < biome.swamp) {
       kind = random() < 0.8 ? 'reed' : 'tree'
-    } else if (nearWaterline && biome.desert < 0.35 && moisture > 0.35 && random() < 0.55) {
-      kind = 'reed'
     } else {
       // Deep forest prefers trees; open temperate keeps more bushes.
       const bushChance = (0.15 + (1 - moisture) * 0.35) * (1 - forestDensity * 0.85)
@@ -363,6 +360,8 @@ export function computeChunkVegetation(
   placements.push(
     ...fernPatches(coord, tile, params, sample, placements.filter((p) => p.kind === 'tree')),
   )
+  placements.push(...riparianPatches(coord, tile, params, sample, clumpNoise))
+  placements.push(...lilyPatches(coord, tile, params, sample))
 
   return placements
 }
@@ -550,6 +549,230 @@ function fernPatches(
         speciesIndex: Math.floor(fernRandom() * fernSpeciesCount),
         scale: 0.6 + fernRandom() * 0.5,
         rotationY: fernRandom() * Math.PI * 2,
+      })
+    }
+  }
+
+  return out
+}
+
+const RIPARIAN_CANDIDATES_PER_CHUNK = 3
+const RIPARIAN_PATCH_MIN_COUNT = 3
+const RIPARIAN_PATCH_MAX_EXTRA = 4
+const RIPARIAN_PATCH_RADIUS = 2.4
+/** Max lateral distance from a river's water edge (or the lake-shoreline
+ *  band below) treated as riparian habitat — the plan's water -> reeds ->
+ *  ferns/wet shrubs -> riparian trees -> ordinary vegetation transition
+ *  unfolds across this band (plan world-terrain-010). */
+const RIPARIAN_BAND = 6
+const RIPARIAN_REED_BAND = 1.6
+const RIPARIAN_FERN_BAND = 3.4
+/** Fraction of otherwise-eligible outer-band candidates left as open
+ *  shoreline instead of a tree — "long sections of relatively open
+ *  shoreline must remain possible" (plan world-terrain-010, Phase 4). */
+const RIPARIAN_OPEN_SHORE_CHANCE = 0.25
+
+/** Riparian distance for `(x, z)`: the nearest river's water-edge distance
+ *  when a river is close by, or an equivalent distance derived from the
+ *  existing lake "wet shoreline" altitude band (`WATERLINE_ALTITUDE_BAND`,
+ *  gated the same way the old in-loop reed branch was — moist, non-desert —
+ *  so a dry sandy ocean beach still doesn't qualify) otherwise. `null` when
+ *  neither habitat is nearby. Purely a local per-point read — never
+ *  persists/derives a cross-chunk lake identity (implementation notes §7). */
+function riparianDistanceAt(
+  params: ChunkTileParams,
+  x: number,
+  z: number,
+  altitude: number,
+  moisture: number,
+  biomeDesert: number,
+): number | null {
+  if (params.riverSegments.length > 0) {
+    const d = nearestRiverBankDistance(params.riverSegments, x, z)
+    if (d !== null && d >= 0 && d <= RIPARIAN_BAND) return d
+  }
+  if (altitude >= 0 && altitude < WATERLINE_ALTITUDE_BAND && biomeDesert < 0.35 && moisture > 0.35) {
+    return (altitude / WATERLINE_ALTITUDE_BAND) * RIPARIAN_BAND
+  }
+  return null
+}
+
+/**
+ * Dedicated riparian/aquatic vegetation pass (plan world-terrain-010) —
+ * coherent patches of shoreline plants along rivers/streams and lake edges,
+ * replacing the old in-loop "bump reed probability near water" heuristic
+ * (see the removed `nearWaterline` branch above). Mirrors `fernPatches`'s
+ * patch-center-then-scatter shape; each scattered point independently
+ * re-checks its own distance-from-water so one patch can span the
+ * water -> reed -> fern/wet-shrub -> riparian-tree transition instead of
+ * committing a whole patch to one kind. Bounded budget, independent of
+ * shoreline length/ocean area (per-chunk candidate count is fixed).
+ */
+function riparianPatches(
+  coord: ChunkCoord,
+  tile: ChunkTileData,
+  params: ChunkTileParams,
+  sample: (grid: Float32Array, x: number, z: number) => number,
+  clumpNoise: NoiseFunction2D,
+): VegetationPlacement[] {
+  const { chunkSize, waterLevel, heightScale, region } = params
+  const half = chunkSize / 2
+  const riparianRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz) ^ 0x4e1d7a)
+  const out: VegetationPlacement[] = []
+
+  const place = (x: number, z: number): void => {
+    const h = sample(tile.heights, x, z)
+    if (h <= waterLevel + 0.05) return // still underwater
+    if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, x, z)) return
+    if (sample(tile.roadTint, x, z) > ROAD_TINT_REJECT) return
+
+    const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const moistureRegion = sample(tile.moistureRegion, x, z)
+    const moisture = sample(tile.biomes, x, z)
+    const biome = biomeWeightsAt(moistureRegion, altitude, region)
+    const dist = riparianDistanceAt(params, x, z, altitude, moisture, biome.desert)
+    if (dist === null) return
+
+    if (dist < RIPARIAN_REED_BAND) {
+      out.push({
+        x,
+        z,
+        kind: 'reed',
+        speciesIndex: Math.floor(riparianRandom() * Math.max(1, params.vegetationSpeciesCount.reed)),
+        scale: 0.7 + riparianRandom() * 0.6,
+        rotationY: riparianRandom() * Math.PI * 2,
+      })
+      return
+    }
+    if (dist < RIPARIAN_FERN_BAND) {
+      const kind: VegetationPlacement['kind'] = riparianRandom() < 0.6 ? 'fern' : 'bush'
+      out.push({
+        x,
+        z,
+        kind,
+        speciesIndex: Math.floor(riparianRandom() * Math.max(1, params.vegetationSpeciesCount[kind])),
+        scale: 0.6 + riparianRandom() * 0.5,
+        rotationY: riparianRandom() * Math.PI * 2,
+      })
+      return
+    }
+
+    const ridge = sample(tile.mountainRidge, x, z)
+    if (altitude > TREELINE_ALTITUDE || ridge > MOUNTAIN_RIDGE_REJECT) return
+    if (riparianRandom() < RIPARIAN_OPEN_SHORE_CHANCE) return
+
+    const continentalness = sample(tile.continentalness, x, z)
+    const clumpValue = fieldAt(clumpNoise, x, z, 0.015)
+    const speciesIndex = pickTreeSpecies(
+      {
+        biome,
+        moisture,
+        altitude01: altitude,
+        mountainRidge: ridge,
+        coastal: coastalFactor(continentalness, region.coastThreshold),
+      },
+      Math.max(1, params.vegetationSpeciesCount.tree),
+      clumpValue,
+      riparianRandom,
+    )
+    const sizeJitter = 0.4 + riparianRandom() * 0.4
+    out.push({
+      x,
+      z,
+      kind: 'tree',
+      speciesIndex,
+      scale: sizeJitter,
+      rotationY: riparianRandom() * Math.PI * 2,
+      growthStage: 'mature',
+      sizeClass: 'medium',
+      sizeJitter,
+    })
+  }
+
+  for (let i = 0; i < RIPARIAN_CANDIDATES_PER_CHUNK; i++) {
+    const cx = coord.cx * chunkSize + (riparianRandom() * 2 - 1) * half
+    const cz = coord.cz * chunkSize + (riparianRandom() * 2 - 1) * half
+
+    const h = sample(tile.heights, cx, cz)
+    if (h <= waterLevel + 0.05) continue
+    const altitude = (h - waterLevel) / Math.max(heightScale, 0.001)
+    const moistureRegion = sample(tile.moistureRegion, cx, cz)
+    const moisture = sample(tile.biomes, cx, cz)
+    const biome = biomeWeightsAt(moistureRegion, altitude, region)
+    if (riparianDistanceAt(params, cx, cz, altitude, moisture, biome.desert) === null) continue
+
+    place(cx, cz)
+    const count = RIPARIAN_PATCH_MIN_COUNT + Math.floor(riparianRandom() * RIPARIAN_PATCH_MAX_EXTRA)
+    for (let j = 0; j < count; j++) {
+      const a = riparianRandom() * Math.PI * 2
+      const r = Math.sqrt(riparianRandom()) * RIPARIAN_PATCH_RADIUS
+      place(cx + Math.cos(a) * r, cz + Math.sin(a) * r)
+    }
+  }
+
+  return out
+}
+
+const LILY_CANDIDATES_PER_CHUNK = 2
+const LILY_PATCH_MIN_COUNT = 2
+const LILY_PATCH_MAX_EXTRA = 4
+const LILY_PATCH_RADIUS = 2.2
+/** Inland lake only — excludes ocean, matching `waterBodies.ts`'s own
+ *  "< 0.9 reads as lake, 1 reads as ocean" convention (implementation
+ *  notes §7). */
+const LILY_MAX_BODY_SCALE = 0.9
+/** Shallow-water bias (world units of depth below `waterLevel`) — avoids
+ *  carpeting a lake's open deep water (plan world-terrain-010, Phase 6). */
+const LILY_MAX_DEPTH = 1.0
+
+/**
+ * Lightweight lily-pad clusters for suitable inland water (plan
+ * world-terrain-010, Phase 6). Patch-based and explicitly bounded per chunk,
+ * same shape as `fernPatches`/`riparianPatches`. Rejects ocean (`bodyScale`),
+ * deep water and any river channel (fast-flowing water) by construction —
+ * lily pads only ever land on genuinely still, shallow inland water.
+ */
+function lilyPatches(
+  coord: ChunkCoord,
+  tile: ChunkTileData,
+  params: ChunkTileParams,
+  sample: (grid: Float32Array, x: number, z: number) => number,
+): VegetationPlacement[] {
+  const { chunkSize, waterLevel } = params
+  const half = chunkSize / 2
+  const lilyRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz) ^ 0x1a2f6e)
+  const speciesCount = Math.max(1, params.vegetationSpeciesCount.lily)
+  const out: VegetationPlacement[] = []
+
+  const eligible = (x: number, z: number): boolean => {
+    const bodyScale = sample(tile.bodyScale, x, z)
+    if (bodyScale <= 0 || bodyScale >= LILY_MAX_BODY_SCALE) return false // land or ocean
+    const depth = waterLevel - sample(tile.floorHeights, x, z)
+    if (depth <= 0 || depth > LILY_MAX_DEPTH) return false
+    if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, x, z)) return false
+    return true
+  }
+
+  for (let i = 0; i < LILY_CANDIDATES_PER_CHUNK; i++) {
+    const cx = coord.cx * chunkSize + (lilyRandom() * 2 - 1) * half
+    const cz = coord.cz * chunkSize + (lilyRandom() * 2 - 1) * half
+    if (!eligible(cx, cz)) continue
+
+    const count = LILY_PATCH_MIN_COUNT + Math.floor(lilyRandom() * LILY_PATCH_MAX_EXTRA)
+    for (let j = 0; j < count; j++) {
+      const a = lilyRandom() * Math.PI * 2
+      const r = Math.sqrt(lilyRandom()) * LILY_PATCH_RADIUS
+      const fx = cx + Math.cos(a) * r
+      const fz = cz + Math.sin(a) * r
+      if (!eligible(fx, fz)) continue
+
+      out.push({
+        x: fx,
+        z: fz,
+        kind: 'lily',
+        speciesIndex: Math.floor(lilyRandom() * speciesCount),
+        scale: 0.7 + lilyRandom() * 0.6,
+        rotationY: lilyRandom() * Math.PI * 2,
       })
     }
   }
