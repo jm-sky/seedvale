@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   activeWellStage,
+  advanceWellConstruction,
   getWellPitWorkHours,
   isWellCompleted,
   isWellStageWorkComplete,
@@ -12,6 +13,7 @@ import {
   WELL_STAGE_WORK_HOURS,
   wellPromptLabel,
   wellStageCapabilities,
+  wellStageRequirements,
   wellStageWorkHours,
   wellWaterSource,
 } from './playerWell'
@@ -222,5 +224,136 @@ describe('playerWell prompt label', () => {
   it('shows no water hint before the body is finished', () => {
     expect(wellPromptLabel(record({ stage: 'pit', workProgress: 0 }))).not.toContain('woda dostępna')
     expect(wellPromptLabel(record({ stage: 'well', workProgress: 0 }))).not.toContain('woda dostępna')
+  })
+})
+
+/** Review 2026-09-03 §5 E9 / §8 step 9 — the shared stage/material/
+ *  transition seam `workOnWell`/`describeWellWork`/
+ *  `NpcAgent.runContractWorkBout` all rewire onto. */
+describe('wellStageRequirements', () => {
+  it('builds a MaterialRequirement per nonzero-cost kind, per stage', () => {
+    expect(wellStageRequirements('pit')).toEqual([])
+    expect(wellStageRequirements('well')).toEqual([
+      { kind: 'stone', count: WELL_STAGE_COST.well.stone },
+      { kind: 'branch', count: WELL_STAGE_COST.well.branch },
+    ])
+    expect(wellStageRequirements('roof')).toEqual([
+      { kind: 'branch', count: WELL_STAGE_COST.roof.branch },
+    ])
+  })
+})
+
+describe('advanceWellConstruction', () => {
+  function fakeWells() {
+    const transitioned: { id: string, stage: string }[] = []
+    return {
+      transitioned,
+      wells: {
+        transitionTo: (id: string, nextStage: string) => {
+          transitioned.push({ id, stage: nextStage })
+          return true
+        },
+      },
+    }
+  }
+
+  it('reports "completed" once the well has no active stage left (roof done)', () => {
+    const { wells } = fakeWells()
+    const well = record({ stage: 'roof', workProgress: WELL_STAGE_WORK_HOURS.roof })
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => true,
+      consumeMaterial: () => {},
+      capabilities: null,
+    })
+    expect(outcome).toEqual({ status: 'completed' })
+  })
+
+  it('blocks on missing materials and leaves stage/progress untouched (no transitionTo call)', () => {
+    const { transitioned, wells } = fakeWells()
+    const well = record({ stage: 'pit', workProgress: PIT_HOURS })
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => false,
+      consumeMaterial: () => { throw new Error('must not consume when blocked') },
+      capabilities: null,
+    })
+    expect(outcome.status).toBe('blocked')
+    expect(outcome).toMatchObject({ missing: wellStageRequirements('well') })
+    expect(transitioned).toEqual([])
+    expect(well.stage).toBe('pit')
+    expect(well.workProgress).toBe(PIT_HOURS)
+  })
+
+  it('consumes materials and transitions on entering a new stage with everything available', () => {
+    const { transitioned, wells } = fakeWells()
+    const well = record({ stage: 'pit', workProgress: PIT_HOURS })
+    const consumed: unknown[] = []
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => true,
+      consumeMaterial: (r) => { consumed.push(r) },
+      capabilities: null,
+    })
+    expect(outcome).toEqual({ status: 'advanced', stage: 'well', enteredNewStage: true })
+    expect(transitioned).toEqual([{ id: well.id, stage: 'well' }])
+    expect(consumed).toEqual(wellStageRequirements('well'))
+  })
+
+  it('does not re-consume materials or re-transition when resuming the current (already-entered) stage', () => {
+    const { transitioned, wells } = fakeWells()
+    const well = record({ stage: 'well', workProgress: 0.1 })
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => { throw new Error('must not check materials when resuming') },
+      consumeMaterial: () => { throw new Error('must not consume when resuming') },
+      capabilities: null,
+    })
+    expect(outcome).toEqual({ status: 'advanced', stage: 'well', enteredNewStage: false })
+    expect(transitioned).toEqual([])
+  })
+
+  it('capabilities: null skips the capability gate entirely, even for a deep pit', () => {
+    const { wells } = fakeWells()
+    const well = record({ stage: 'pit', workProgress: 0, waterDepth: DEEP_WELL_DEPTH_THRESHOLD + 1 })
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => true,
+      consumeMaterial: () => {},
+      capabilities: null,
+    })
+    expect(outcome.status).not.toBe('blocked')
+  })
+
+  it('a deep pit reports rock_mining as missing for a caller that does gate on capabilities', () => {
+    const { wells } = fakeWells()
+    const well = record({ stage: 'pit', workProgress: 0, waterDepth: DEEP_WELL_DEPTH_THRESHOLD + 1 })
+    expect(wellStageCapabilities('pit', well.waterDepth)).toContain('rock_mining')
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => true,
+      consumeMaterial: () => {},
+      capabilities: { has: (c) => c !== 'rock_mining' },
+    })
+    expect(outcome).toEqual({ status: 'blocked', missingCapability: 'rock_mining', missing: [] })
+  })
+
+  it('a shallow pit never gates on rock_mining even when capabilities are checked', () => {
+    const { wells } = fakeWells()
+    const well = record({ stage: 'pit', workProgress: 0, waterDepth: SHALLOW_DEPTH })
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells,
+      hasMaterial: () => true,
+      consumeMaterial: () => {},
+      capabilities: { has: (c) => c !== 'rock_mining' },
+    })
+    expect(outcome.status).not.toBe('blocked')
   })
 })

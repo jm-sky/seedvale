@@ -1,3 +1,4 @@
+import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { ItemCapability } from '../items/itemCatalog'
 import type { GroundPlacementReason } from '../items/tentPlacement'
 import { createWaterSource, UNCOVERED_WELL_CONSUMPTION_RISK, type WaterSource } from './WaterSource'
@@ -119,6 +120,72 @@ export function wellStageCapabilities(stage: WellStage, waterDepth: number): rea
   const required = base ? [base] : []
   if (stage === 'pit' && isDeepWellDepth(waterDepth)) return [...required, 'rock_mining']
   return required
+}
+
+/** `WELL_STAGE_COST[stage] → MaterialRequirement[]` (review 2026-09-03 §5
+ *  E9 / §8 step 9) — the single owner of this build, previously re-derived
+ *  in three places (`workOnWell`'s cost build, `describeWellWork`'s
+ *  read-only preflight, `NpcAgent.runContractWorkBout`). Omits a kind whose
+ *  cost is 0, same as every existing call site already did by hand. */
+export function wellStageRequirements(stage: WellStage): readonly MaterialRequirement[] {
+  const cost = WELL_STAGE_COST[stage]
+  const requirements: MaterialRequirement[] = []
+  if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
+  if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
+  return requirements
+}
+
+/** Outcome of one `advanceWellConstruction` call. `'completed'` — no active
+ *  stage left (`activeWellStage` returned `null`); the caller decides what
+ *  that means for it (a no-op for the player, `completeWork` for an NPC's
+ *  work contract). `'blocked'` — a capability or material requirement isn't
+ *  met yet; nothing was consumed or transitioned. `'advanced'` — the gate
+ *  passed; `enteredNewStage` is `true` only when this call is what
+ *  transitioned `record` into `stage` (materials were just consumed),
+ *  `false` when `stage` was already `record.stage` (a resume). Crediting
+ *  actual work hours (`PlayerWells.addWork`) is deliberately **not** part
+ *  of this seam — the player's timed busy-channel partial-credit-on-cancel
+ *  policy and the NPC's flat per-bout credit are real policy differences,
+ *  not duplicated logic; each caller still calls `addWork` itself with its
+ *  own amount, same as before this refactor. */
+export type WellWorkOutcome =
+  | { status: 'advanced', stage: WellStage, enteredNewStage: boolean }
+  | { status: 'blocked', missingCapability: ItemCapability | null, missing: readonly MaterialRequirement[] }
+  | { status: 'completed' }
+
+/**
+ * The stage/material/transition rule all three current copies (`workOnWell`,
+ * `describeWellWork`'s preflight, `NpcAgent.runContractWorkBout`) re-derive
+ * by hand (review §3 P6 / §5 E9) — actor-neutral: `capabilities: null` is
+ * the documented npc-015 simplification ("no tool/capability check for NPC
+ * work") now stated explicitly at the seam instead of by omission, rather
+ * than a change to who gets gated.
+ */
+export function advanceWellConstruction(params: {
+  record: PlayerWellRecord
+  wells: { transitionTo: (id: string, nextStage: WellStage) => boolean }
+  hasMaterial: (requirement: MaterialRequirement) => boolean
+  consumeMaterial: (requirement: MaterialRequirement) => void
+  capabilities: { has: (capability: ItemCapability) => boolean } | null
+}): WellWorkOutcome {
+  const { capabilities, consumeMaterial, hasMaterial, record, wells } = params
+  const stage = activeWellStage(record)
+  if (!stage) return { status: 'completed' }
+
+  if (capabilities) {
+    const missingCapability = wellStageCapabilities(stage, record.waterDepth).find((c) => !capabilities.has(c))
+    if (missingCapability) return { status: 'blocked', missingCapability, missing: [] }
+  }
+
+  const enteredNewStage = stage !== record.stage
+  if (enteredNewStage) {
+    const requirements = wellStageRequirements(stage)
+    const missing = requirements.filter((r) => !hasMaterial(r))
+    if (missing.length > 0) return { status: 'blocked', missingCapability: null, missing }
+    for (const requirement of requirements) consumeMaterial(requirement)
+    wells.transitionTo(record.id, stage)
+  }
+  return { status: 'advanced', stage, enteredNewStage }
 }
 
 const WELL_NEXT_STAGE: Record<WellStage, WellStage | null> = {

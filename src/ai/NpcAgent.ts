@@ -56,7 +56,7 @@ import {
   type SettlementEconomy,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
-import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../items/constructionMaterials'
+import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
 import { Inventory } from '../items/Inventory'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
@@ -92,11 +92,10 @@ import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import {
-  activeWellStage,
+  advanceWellConstruction,
   isWellCompleted,
   type NearbyPlayerWellLookup,
   type PlayerWellRecord,
-  WELL_STAGE_COST,
   WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
 } from '../world/playerWell'
@@ -3734,10 +3733,11 @@ export class NpcAgent {
   }
 
   /** Runs one active-work bout of NPC construction on `well` (plan §7) —
-   *  the same `WELL_STAGE_COST`/`WELL_WORK_SESSION_HOURS` shape as the
-   *  player's own `workOnWell` (`app/actions/placementActions.ts`), but
-   *  through the actor-neutral `PlayerWells.addWork`/`transitionTo` seam
-   *  instead of the player-only busy channel. No tool/capability check
+   *  shares `world/playerWell.ts`'s `advanceWellConstruction` seam with the
+   *  player's own `workOnWell` (`app/actions/placementActions.ts`) for the
+   *  stage/material/transition rule, but credits `WELL_WORK_SESSION_HOURS`
+   *  through the actor-neutral `PlayerWells.addWork` instead of the
+   *  player-only timed busy channel. No tool/capability check
    *  (unlike the player's own well-work): hiring is the point of a work
    *  contract, and there is no NPC-side tool-ownership model to gate on
    *  (documented simplification, plan §7/non-goals "advanced worker
@@ -3766,28 +3766,29 @@ export class NpcAgent {
           contracts.invalidateTarget(contractId)
           return
         }
-        const stage = activeWellStage(freshWell)
-        if (!stage) {
+        const dropped = this.droppedItems
+        // `capabilities: null` — no tool/capability check (unlike the
+        // player's own well-work): hiring is the point of a work contract,
+        // and there is no NPC-side tool-ownership model to gate on
+        // (documented npc-015 simplification, now stated explicitly at the
+        // seam instead of by omission — review 2026-09-03 §5 E9 / §8 step 9).
+        const outcome = advanceWellConstruction({
+          record: freshWell,
+          wells,
+          hasMaterial: (r) => dropped
+            ? hasMaterial(this.carried, dropped, freshWell.x, freshWell.z, CONSTRUCTION_MATERIAL_RADIUS, r)
+            : this.carried.count(r.kind) >= r.count,
+          consumeMaterial: (r) => {
+            if (dropped) consumeMaterial(this.carried, dropped, freshWell.x, freshWell.z, CONSTRUCTION_MATERIAL_RADIUS, r)
+            else this.carried.remove(r.kind, r.count)
+          },
+          capabilities: null,
+        })
+        if (outcome.status === 'completed') {
           contracts.completeWork(contractId, this.id)
           return
         }
-        if (stage !== freshWell.stage) {
-          const cost = WELL_STAGE_COST[stage]
-          const requirements: MaterialRequirement[] = []
-          if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
-          if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
-          const dropped = this.droppedItems
-          const missing = dropped
-            ? requirements.filter((r) => !hasMaterial(this.carried, dropped, freshWell.x, freshWell.z, CONSTRUCTION_MATERIAL_RADIUS, r))
-            : requirements.filter((r) => this.carried.count(r.kind) < r.count)
-          if (missing.length > 0) return // blocked on materials — commitment stays intact, retried next bout.
-          if (dropped) {
-            for (const r of requirements) consumeMaterial(this.carried, dropped, freshWell.x, freshWell.z, CONSTRUCTION_MATERIAL_RADIUS, r)
-          } else {
-            for (const r of requirements) this.carried.remove(r.kind, r.count)
-          }
-          wells.transitionTo(freshWell.id, stage)
-        }
+        if (outcome.status === 'blocked') return // blocked on materials — commitment stays intact, retried next bout.
         wells.addWork(freshWell.id, WELL_WORK_SESSION_HOURS)
         const updated = this.findContractWell(freshWell.id)
         if (updated && isWellCompleted(updated)) contracts.completeWork(contractId, this.id)

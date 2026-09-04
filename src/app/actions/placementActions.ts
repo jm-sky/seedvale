@@ -79,16 +79,17 @@ import {
 } from '../../world/playerGarden'
 import {
   activeWellStage,
+  advanceWellConstruction,
   WELL_FOOTPRINT_RADIUS,
   WELL_PLACE_DURATION_SEC,
   WELL_PLACE_REACH,
   WELL_PLACEMENT_MESSAGE,
   WELL_SEPARATION,
-  WELL_STAGE_COST,
   WELL_WORK_LABEL,
   WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
   wellStageCapabilities,
+  wellStageRequirements,
   wellStageWorkHours,
 } from '../../world/playerWell'
 import {
@@ -456,41 +457,33 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     if (isActionBlocked(ctx)) return
     const well = bundle.playerWells.list().find((entry) => entry.id === id)
     if (!well) return
-    const stage = activeWellStage(well)
-    if (!stage) return
-    const missingCapability = wellStageCapabilities(stage, well.waterDepth).find((c) => !inventory.hasCapability(c))
-    if (missingCapability) {
-      toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[missingCapability]}.`, 'error')
-      return
-    }
-    const startingNewStage = stage !== well.stage
-    if (startingNewStage) {
-      const cost = WELL_STAGE_COST[stage]
-      // Materials may be carried or lying nearby the well itself (plan 187
-      // §4/§5) — same small bounded radius, no teleport into inventory.
-      const requirements: MaterialRequirement[] = []
-      if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
-      if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
-      const missing = requirements.filter(
-        (r) => !hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
-      )
-      if (missing.length > 0) {
+    // Materials may be carried or lying nearby the well itself (plan 187
+    // §4/§5) — same small bounded radius, no teleport into inventory.
+    const outcome = advanceWellConstruction({
+      record: well,
+      wells: bundle.playerWells,
+      hasMaterial: (r) => hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      consumeMaterial: (r) => consumeMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      capabilities: { has: (c) => inventory.hasCapability(c) },
+    })
+    if (outcome.status === 'completed') return
+    if (outcome.status === 'blocked') {
+      if (outcome.missingCapability) {
+        toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[outcome.missingCapability]}.`, 'error')
+      } else {
         toast.show(
-          `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+          `Potrzebujesz: ${outcome.missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
           'error',
         )
-        return
       }
-      for (const r of requirements) {
-        consumeMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r)
-      }
-      if (requirements.length > 0) {
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        ctx.onInventoryChanged()
-      }
-      bundle.playerWells.transitionTo(id, stage)
+      return
     }
-    const workedSoFar = startingNewStage ? 0 : well.workProgress
+    const { enteredNewStage, stage } = outcome
+    if (enteredNewStage && wellStageRequirements(stage).length > 0) {
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+    }
+    const workedSoFar = enteredNewStage ? 0 : well.workProgress
     const remainingHours = Math.max(0, wellStageWorkHours(stage, well.waterDepth) - workedSoFar)
     const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
     const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
@@ -532,10 +525,10 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     const startingNewStage = stage !== well.stage
     if (startingNewStage) {
-      const cost = WELL_STAGE_COST[stage]
-      const requirements: MaterialRequirement[] = []
-      if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
-      if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
+      // Read-only preflight (`workOnWell` is the only place that actually
+      // spends materials) — reuses `wellStageRequirements` for the same
+      // cost build, never `advanceWellConstruction` (which mutates).
+      const requirements = wellStageRequirements(stage)
       const description = requirements.length > 0
         ? `Wymagane surowce: ${requirements.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
         : ''
