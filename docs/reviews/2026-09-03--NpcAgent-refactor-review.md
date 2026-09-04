@@ -152,7 +152,7 @@ idle NPCs at a lit campfire at night):
 
 1. A and B are in a `conversation` action (`beginConversation`, `:4624`); both have
    `conversationPartnerId` set.
-2. A wolf is sensed. `update()`'s threat block (`:2500`-ish) calls `reactToAnimalThreat` →
+2. A wolf is sensed. `update()`'s threat block calls `reactToAnimalThreat` (`:2512`) →
    `beginCombat` (or `fleeFromThreat`).
 3. A's `pendingAction` is nulled. `conversationPartnerId` and `onConversationEarlyExit` are **not**
    cleared, and can no longer be cleared: `releaseConversationIfAny()` early-returns on
@@ -269,12 +269,17 @@ instance.
   `crossfade` (`:3014`), plus `die`'s manual clip settling (`:2330`-ish). The 7-element action array
   `[idleAction, walkAction, interactAction, attackMeleeAction, attackRangedAction, hurtAction,
   deathAction]` is written out **three times**; a future clip that misses one copy stacks weights
-  silently. `AnimalAgent` (`:3768`, `:3784`, `:3799`) and `PlayerController` each hand-roll their own
-  variant — three implementations, no owner.
+  silently.
+  Three agents hand-roll this, and **`NpcAgent` has the worst of the three variants**:
+  `AnimalAgent` (`findAction` `:3768`, `:3784`, `:3799`) and `PlayerController` (`findAction` `:877`,
+  `playAction` `:889`, one-shots `:524`/`:553`/`:578`) both keep a single `currentAction` pointer and
+  fade out only the previous clip; `NpcAgent` alone re-enumerates every clip by hand on every
+  transition. The target shape for E6 therefore already exists twice in the codebase — this is
+  consolidation, not invention.
 - **Label:** 6 DOM fields, 4 `lastXPercent` fields, `LabelDistanceState`, and a ~45-line block at the
   end of `update()`. `ui/agentStatusLabel.ts` already owns the pieces but not the controller, so
   `AnimalAgent` duplicates the same wiring (`:1524`, `:2607`–`:2636`).
-- **Need marker:** two `setHex` writes *per NPC per frame* (`:2790`-ish) with no change guard, unlike
+- **Need marker:** two `setHex` writes *per NPC per frame* (`:2767`, `:2770`) with no change guard, unlike
   the label text right beside them which does have one. Each NPC also allocates its own
   `SphereGeometry(0.12, 8, 8)` in the constructor (`:1367`) — geometry is identical for every NPC and
   could be module-level; the material must stay per-NPC.
@@ -282,7 +287,7 @@ instance.
 ### P6 — NPC well construction re-implements the player's `workOnWell` (medium)
 
 `runContractWorkBout` (`:4510`) rebuilds, by hand, the same sequence as
-`app/actions/placementActions.ts:456`–`:498`:
+`app/actions/placementActions.ts:455`–`:498`:
 
 ```
 activeWellStage → if (stage !== well.stage) → build MaterialRequirement[] from WELL_STAGE_COST
@@ -291,15 +296,16 @@ activeWellStage → if (stage !== well.stage) → build MaterialRequirement[] fr
 ```
 
 The `WELL_STAGE_COST[stage] → MaterialRequirement[]` build exists in **three** places, none of which
-owns it: `workOnWell` (`placementActions.ts:468`), `describeWellWork` (`:535`, the read-only preflight)
+owns it: `workOnWell` (`placementActions.ts:455`, cost build at `:468`), `describeWellWork` (`:523`, cost
+build at `:535` — the read-only preflight)
 and `runContractWorkBout` (`NpcAgent.ts:4535`). The other differences are legitimate *policy* (no
 toast, no busy channel, no partial credit for the NPC) but that is not a reason to re-derive the
 requirement list. `world/playerWell.ts` is the owner.
 
 **New divergence introduced by plan world-004 (`e4403cd4`).** `wellStageCapabilities(stage,
 waterDepth)` (`playerWell.ts:117`) now returns `['soil_digging', 'rock_mining']` for a `pit` on a deep
-well (`isDeepWellDepth`). The player is gated on it in both `workOnWell` (`:460`) and
-`describeWellWork` (`:529`); `NpcAgent` never imports the function at all (`NpcAgent.ts:114`–`:121`)
+well (`isDeepWellDepth`). The player is gated on it in both `workOnWell` (`:461`) and
+`describeWellWork` (`:529`); `NpcAgent` never imports the function at all (`NpcAgent.ts:114`–`:122`)
 because npc-015 documented "no tool/capability check for NPC work" as a simplification. That
 simplification was written when every well pit was the same — now a hired NPC can dig a deep pit the
 player would need a pickaxe for. The function's own JSDoc calls itself "the single source every call
@@ -377,14 +383,14 @@ a new idea.
 ### P12 — Minor ownership smells (low)
 
 - `treeIndex` (`:1097`) means two things: the NPC's index within the settlement (used for model pool
-  and voice actor in the constructor) and a mutable "next tree to chop" cursor (`:3406`).
+  and voice actor in the constructor, `:1340`) and a mutable "next tree to chop" cursor (`:3412`).
 - `settledIdleActivity` (`:988`) and `shelterSettled` (`:1002`) are two parallel "already arrived, stop
   replanning" flags with the same purpose and different lifetimes.
 - `maybeMaintainNearbyGarden` and `maybeWaterNearbyGarden` (`:3998`, `:4016`) have byte-identical
   bodies except `care`/`CARE_MAINTAINED_THRESHOLD` vs `hydration`/`HYDRATION_DROUGHT_THRESHOLD`.
 - The well SFX/facing branches in `update()`'s `execute`/`goTo` cases hard-code `landmarks.well`
-  (`:2600`-ish, `:2700`-ish), so a drink at a nearby *player-built* well (`resolveWaterWellTarget`,
-  `:3127`) silently gets neither the facing rotation nor the draw sound.
+  (`:2613`, `:2724`), so a drink at a nearby *player-built* well (`resolveWaterWellTarget`, `:3127`)
+  silently gets neither the facing rotation nor the draw sound.
 
 ---
 
@@ -414,7 +420,7 @@ Do not extract any of these. They are the coordination the class exists for.
    settlement-wide pairing pass (`socialBehaviour.ts`) already owns the matching half.
 9. **The public API** — `createInspectionSnapshot`, `why`, `getCurrentActivity`,
    `resolveAssistanceRequest`, `setHelperAssignment`, `setQuestMarker`, `setHighlighted`,
-   `setFrozen`, `history`. 18 files import from `NpcAgent`; none of these should move.
+   `setFrozen`, `history`. 21 files import from `NpcAgent`; none of these should move.
 10. **Ownership of `NpcAuthoritativeState`.** Direct mutation of the shared object is the documented
     plan-197 contract. Do not introduce a snapshot/copy step.
 
@@ -795,7 +801,7 @@ Move `isWalkable`'s penetration rule, `resolveSteerTarget`'s bypass, and the two
 
 **Step 9 — `advanceWellConstruction` (E9 / P6).**
 Add `wellStageRequirements` + `advanceWellConstruction` to `world/playerWell.ts`. Rewire all three
-current copies: `workOnWell` (`placementActions.ts:456`), `describeWellWork` (`:526`) and
+current copies: `workOnWell` (`placementActions.ts:455`), `describeWellWork` (`:523`) and
 `runContractWorkBout` (`NpcAgent.ts:4510`). The player keeps its capability gate by passing a real
 `capabilities` object; the NPC passes `capabilities: null`, which turns npc-015's silent omission into
 a stated policy at the seam. Do **not** change whether the NPC is gated — that is an npc-016/017
