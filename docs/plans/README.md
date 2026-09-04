@@ -59,6 +59,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-008-underground-caves-v2.md`                              | -       | 🟡 | XL     | -      |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`            | -       | 🔴 | M      | settlements-npcs-018 |
 | ◼️ `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
+| ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | -       | 🔴 | M      | -      |
 
 ---
 
@@ -176,7 +177,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `004`
 - quests-progression: `001`
 - settlements: `003`
-- settlements-npcs: `023`
+- settlements-npcs: `024`
 - tools: `012`
 - ui-input: `008`
 - world: `013`
