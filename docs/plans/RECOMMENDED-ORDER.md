@@ -15,6 +15,8 @@
 5. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 L · ready · unlocks 1/2
 
+---
+
 ### Roadmap Focus
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
@@ -28,10 +30,14 @@
 5. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 L · ready · unlocks 1/2 · roadmap: textiles-and-herbal-medicine
 
+---
+
 ### Bug Fixes
 
 1. `world-010` — **Environmental Placement Consequences**  
    🟡 M · ready · unlocks 0/0 · type: fix
+
+---
 
 ### Polish
 
@@ -39,6 +45,8 @@
    🟡 S · ready · unlocks 0/0
 2. `npc-004` — **Drzewo genealogiczne NPC (rody Sema/Chama/Jafeta) + kompas „N" na minimapie**  
    ⚪ S · ready · unlocks 0/0
+
+---
 
 ### Ready Now
 
@@ -53,11 +61,15 @@
 5. `items-player-002` — **Food provenance, freshness and storage**  
    🟡 M · ready · unlocks 0/0
 
+---
+
 ## How to read this
 
 The Top 5 sections above are independent perspectives on the same plan set — each answers "what is worth looking at now" from a different angle. They are not alternative execution orders and may overlap or disagree with each other.
 
 The Recommended Execution Order below is the single dependency-aware schedule: it is the order in which `planned` plans can actually be implemented, respecting prerequisites. Use the Top 5 to decide what to prioritize; use the execution order to see what is unblocked next.
+
+---
 
 ## Recommended Execution Order
 
@@ -157,6 +169,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   ⚪ XL · **Score:**   0  
    → **unlocks:** 0/0
 
+---
+
 ## Initially Blocked
 
 - npc-011: npc-010
@@ -166,6 +180,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - settlements-npcs-007: settlements-npcs-006
 - settlements-npcs-016: settlements-npcs-015
 - settlements-npcs-017: settlements-npcs-016
+
+---
 
 ## Dependency Graph
 

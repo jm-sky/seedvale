@@ -404,6 +404,8 @@ const renderTop5 = (plans: Plan[], metrics: Map<string, PlanMetrics>): string[] 
     if (!ranked.length) {
       output.push('_No qualifying plans._')
       output.push('')
+      output.push('---')
+      output.push('')
       continue
     }
 
@@ -413,6 +415,8 @@ const renderTop5 = (plans: Plan[], metrics: Map<string, PlanMetrics>): string[] 
       output.push(`   ${profile.reason(plan, m)}`)
     })
 
+    output.push('')
+    output.push('---')
     output.push('')
   }
 
@@ -501,6 +505,8 @@ const main = async (): Promise<void> => {
   )
   output.push('')
 
+  output.push('---')
+  output.push('')
   output.push('## Recommended Execution Order')
   output.push('')
   output.push('Only planned plans are ranked.  ')
@@ -529,6 +535,8 @@ const main = async (): Promise<void> => {
       .map(plan => plan.id),
   )
 
+  output.push('---')
+  output.push('')
   output.push('## Initially Blocked')
   output.push('')
 
@@ -542,6 +550,8 @@ const main = async (): Promise<void> => {
       output.push('- ' + plan.id + ': ' + blockers)
     })
 
+  output.push('')
+  output.push('---')
   output.push('')
 
   output.push(...renderDependencyGraph(plans, byId))
