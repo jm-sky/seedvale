@@ -53,17 +53,15 @@ import { createRangedAttackLifecycle } from '../combat/rangedLifecycle'
 import { isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
-  claimEconomySurplus,
   claimHouseholdSurplus,
   commitHunterArrowProduction,
   commitRoleWork,
-  commitWoodcutterDeposit,
   type SettlementEconomy,
   tryAdvanceDevelopment,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../items/constructionMaterials'
-import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, type FoodItemClaim } from '../items/foodItems'
+import { carryFoodClaim, claimFoodItems, type FoodItemClaim } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
@@ -140,7 +138,6 @@ import {
   pickDialogueLine,
 } from './dialogue'
 import {
-  FOOD_THRESHOLD_NORMAL,
   generateNeedPressures,
   needColor,
   type NeedId,
@@ -179,6 +176,21 @@ import {
   resolveNpcRangedWeapon,
 } from './npcCombat'
 import { ensureKnifeCarried, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
+import {
+  canDeliverToPlayerStorage,
+  canExchangeWithHousehold,
+  canWithdrawFromEconomy,
+  depositCarriedItems,
+  depositFoodHarvest,
+  depositWoodHarvest,
+  HOUSEHOLD_EXCHANGE_MAX_TRANSFER,
+  HUNT_YIELD_KINDS,
+  type NpcLogisticsCtx,
+  planDeliverHuntYieldHome,
+  planEconomyWithdraw,
+  planHouseholdExchange,
+  planPlayerStorageDelivery,
+} from './npcLogistics'
 import {
   createMovementWatchdog,
   type MovementWatchdog,
@@ -520,10 +532,10 @@ const WATCHDOG_PHASES: ReadonlySet<Phase> = new Set(['followPath', 'goSleep', 'g
  *  small constant — there is no real farming yield to reuse yet (071). */
 const WOOD_HARVEST_AMOUNT =
   WOODCUTTING_PRODUCTION.outputs.find((o) => o.kind === 'wood')?.amount ?? 2
-const FOOD_GATHER_AMOUNT = 2
 /** Water logistics (plan 122) — one well trip fills this much of the
  *  household's `WaterBarrel`/`AnimalTrough` reserve. Same order of
- *  magnitude as `FOOD_GATHER_AMOUNT` against `WATER_POLICY`'s capacity 5. */
+ *  magnitude as `npcLogistics.ts`'s `FOOD_GATHER_AMOUNT` (moved there,
+ *  review 2026-09-03 §8 step 3) against `WATER_POLICY`'s capacity 5. */
 const WATER_FETCH_AMOUNT = 2
 /** How much stored household water one drink-at-home visit consumes. */
 const WATER_DRINK_FROM_STOCK_AMOUNT = 1
@@ -576,31 +588,10 @@ const FISH_YIELD_KINDS: readonly ItemKind[] = ['fish']
  *  only reserve (plan 122), so `food`/`wood` are the only eligible pair. */
 const TRADER_TRANSFER_KINDS: readonly HouseholdResourceKind[] = ['food', 'wood']
 
-/** Local resource exchange (plan settlements-npcs-005) — how much a single
- *  shortage-resupply trip tries to bring home in one go, whether the source
- *  is `SettlementEconomy` village storage or another household's surplus.
- *  Same order of magnitude as each kind's own `target` in `household.ts`'s
- *  `HOUSEHOLD_POLICY` (not exported) — a resupply tops the household up
- *  toward its usual comfortable level, not a full village/neighbour drain in
- *  one visit. */
-const HOUSEHOLD_EXCHANGE_MAX_TRANSFER: Record<HouseholdResourceKind, number> = { food: 3, wood: 3 }
-
 /** Blacksmith work (plan settlements-npcs-002 §8) — a weapon instance below
  *  this sharpness genuinely "requires maintenance"; at/above it, sharpening
  *  would be busywork for negligible gain. */
 export const BLACKSMITH_SHARPEN_THRESHOLD = 0.9
-
-/** Helper resource delivery (plan 167) — the concrete `ItemKind` a
- *  household's real (mixed-kind, since plan settlements-npcs-008) food
- *  surplus is presented as while carried/deposited into a player `Container`,
- *  rather than the exact mixed kinds actually claimed. `bread` already exists
- *  as a plain, non-species-specific staple (catalog notes: "prepared for
- *  future/emergency use"), so this reuses it rather than widening
- *  `HelperDeliveryHooks.deposit` to a per-kind list. One trip moves at most
- *  `HELPER_DELIVERY_MAX_CARRY` units — comfortably under
- *  `NPC_CARRY_MAX_WEIGHT` alongside this NPC's role weapon. */
-const HELPER_DELIVERY_ITEM_KIND: ItemKind = 'bread'
-const HELPER_DELIVERY_MAX_CARRY = 3
 
 /** Hunting expedition (plan 178) — search radius reaches beyond the
  *  settlement footprint into `AnimalSpawner`'s ring of habitat spawn points,
@@ -618,11 +609,6 @@ const HUNT_RESUPPLY_ARROW_TARGET = 8
  *  `harvestAnimalIntoInventory`'s own `canAdd` gate; this is the explicit
  *  hard ceiling the plan asks for regardless of carry room. */
 const HUNT_MAX_KILLS_PER_TRIP = 3
-/** Household item kinds a completed hunt delivers home (plan §6/§7) — meat +
- *  hide only; equipment (bow/arrows/knife) stays with the hunter. */
-const HUNT_YIELD_KINDS: readonly ItemKind[] = [
-  'raw_meat', 'deer_meat', 'wolf_meat', 'boar_meat', 'rabbit_meat', 'beef', 'hide',
-]
 /** Arrow crafting (settlements-npcs-003, completing plan 178 §9) — the
  *  recipe itself (branch/beam → arrow, priority order) lives in
  *  `economy/production.ts`'s `HUNTER_ARROW_PRODUCTIONS`; this cap is only
@@ -642,54 +628,6 @@ const NPC_GARDEN_MAINTENANCE_CHANCE = 0.35
 /** Same gates/chance as garden maintenance (plan settlements-npcs-001 §13),
  *  just checking hydration instead of care. */
 const NPC_GARDEN_WATERING_CHANCE = 0.35
-
-/** Chop → deposit completion, household-aware. A household caps how much of
- *  the harvest it keeps (see `Household.deposit`); anything over that still
- *  reaches the settlement economy, so `tryAdvanceDevelopment` (woodshed)
- *  keeps working the same way it did before households existed. No
- *  household (isolated fallback) reproduces the old settlement-only path.
- *  `amount` is 0 when the chop step's `harvestWorldTreeFully` call failed
- *  (tree already harvested by someone else, etc., plan 131) — a no-op guard
- *  so a failed harvest never still mints wood at deposit time. */
-function depositWoodHarvest(household: Household | null, economy: SettlementEconomy | null, amount: number, simTime: number): void {
-  if (amount <= 0) return
-  if (household) {
-    household.deposit('wood', amount, economy, simTime)
-    if (economy) tryAdvanceDevelopment(economy)
-  } else if (economy) {
-    commitWoodcutterDeposit(economy)
-  }
-}
-
-/** Garden visit gathers a small amount of food into the household (capped,
- *  overflow to the settlement economy) before the NPC eats from it — the
- *  personal-need equivalent of `depositWoodHarvest`. No-op without a
- *  household (isolated fallback) — matches the pre-069 behaviour where
- *  eating did not touch any resource pool. The abstract garden gather has no
- *  producer-known `ItemKind` (plan settlements-npcs-008 §5 — this is
- *  deliberately *not* a real crop/hunt/fish yield), so it reuses
- *  `HELPER_DELIVERY_ITEM_KIND`'s existing "abstract food, no specific
- *  producer kind" convention rather than inventing a new mapping. */
-function depositFoodHarvest(household: Household | null, economy: SettlementEconomy | null, simTime: number): void {
-  household?.depositFood(HELPER_DELIVERY_ITEM_KIND, FOOD_GATHER_AMOUNT, economy, simTime)
-}
-
-/** Generic carried-item → household-item-storage delivery (plan 178 §6/§7,
- *  generalized for settlements-npcs-002 §12 rather than adding a
- *  per-profession `depositFish()`/`depositTraderGoods()`): moves every one of
- *  `kinds` from `carried` into the household's generic item storage. Unlike
- *  `depositWoodHarvest`/`depositFoodHarvest` there's no capacity cap/economy
- *  overflow here: `Household.items` (an `Inventory`, not `EconomicStock`) is
- *  unbounded, same as any other physical storage building. Used by the
- *  hunter's meat/hide delivery and the fisher's fish delivery alike. */
-function depositCarriedItems(carried: Inventory, household: Household, kinds: readonly ItemKind[]): void {
-  for (const kind of kinds) {
-    const n = carried.count(kind)
-    if (n <= 0) continue
-    carried.remove(kind, n)
-    household.items.add(kind, n)
-  }
-}
 
 /** Blacksmith work (plan settlements-npcs-002 §8/§10) — the first (stable,
  *  lowest-id) `WeaponItemInstance` across every `WEAPON_MAINTENANCE_KIND_LIST`
@@ -3269,7 +3207,7 @@ export class NpcAgent {
       // donating surplus (plan §9). Falls through to normal eating/gathering
       // below when there's no active assignment, no surplus, or no room in
       // the target container.
-      if (this.beginPlayerStorageDelivery(household)) return
+      if (this.beginPlayerStorageDelivery()) return
       if (household?.has('food', 1)) {
         this.startAction({
           kind: 'eat',
@@ -3286,8 +3224,8 @@ export class NpcAgent {
       // Local resource exchange (plan settlements-npcs-005) — a real
       // shortage tries the settlement's own village storage, then a
       // same-settlement neighbour's surplus, before a fresh hunt/gather trip.
-      if (this.beginEconomyWithdraw(household, 'food')) return
-      if (this.beginHouseholdExchange(household, 'food')) return
+      if (this.beginEconomyWithdraw('food')) return
+      if (this.beginHouseholdExchange('food')) return
       // Plan 174 — a real, closer hunger source (natural berries/nuts/etc.,
       // or a mature crop — wild, player-planted near a settlement garden, or
       // on a player garden plot, all indistinguishable to this query) takes
@@ -3310,16 +3248,15 @@ export class NpcAgent {
       return
     }
     if (need === 'wood') {
-      const household = this.household
       this.selectAndTraceStrategy('wood', getWoodStrategyCandidates({
         available: this.role !== 'trader' && this.landmarks.trees.length > 0,
-        economyWithdrawAvailable: this.computeEconomyWithdrawAvailable(household, 'wood'),
-        householdExchangeAvailable: this.computeHouseholdExchangeAvailable(household, 'wood'),
+        economyWithdrawAvailable: this.computeEconomyWithdrawAvailable('wood'),
+        householdExchangeAvailable: this.computeHouseholdExchangeAvailable('wood'),
       }))
       // Local resource exchange (plan settlements-npcs-005) — tried before
       // sending someone to fell a tree, same priority as `food`'s branch.
-      if (this.beginEconomyWithdraw(household, 'wood')) return
-      if (this.beginHouseholdExchange(household, 'wood')) return
+      if (this.beginEconomyWithdraw('wood')) return
+      if (this.beginHouseholdExchange('wood')) return
     }
     if (need === 'wood' && this.role !== 'trader' && this.landmarks.trees.length > 0) {
       const forest = this.forest
@@ -3471,273 +3408,64 @@ export class NpcAgent {
       isHunter,
       huntTargetAvailable,
       nearbyFoodSourceAvailable,
-      deliveryAvailable: this.computeDeliveryAvailable(household),
-      economyWithdrawAvailable: this.computeEconomyWithdrawAvailable(household, 'food'),
-      householdExchangeAvailable: this.computeHouseholdExchangeAvailable(household, 'food'),
+      deliveryAvailable: this.computeDeliveryAvailable(),
+      economyWithdrawAvailable: this.computeEconomyWithdrawAvailable('food'),
+      householdExchangeAvailable: this.computeHouseholdExchangeAvailable('food'),
     })
   }
 
-  /**
-   * Local resource exchange (plan settlements-npcs-005) — this household's
-   * `SettlementEconomy` village storage currently has real surplus of `kind`
-   * while this household has a real shortage (existing
-   * `Household.shortage`/`SettlementEconomy.surplus`, no new need model).
-   * Read-only; `beginEconomyWithdraw` re-validates live at claim time.
-   */
-  private computeEconomyWithdrawAvailable(household: Household | null, kind: HouseholdResourceKind): boolean {
-    if (!household || !this.economy) return false
-    if (household.shortage(kind) <= 0) return false
-    return this.economy.hasSurplus(kind)
-  }
-
-  /**
-   * Local resource exchange — a same-settlement household currently has real
-   * surplus of `kind` this household's real shortage can claim
-   * (`HouseholdExchangeHooks`, built once per settlement from its own
-   * `households` array — never a world-wide scan). Read-only;
-   * `beginHouseholdExchange` re-validates live at claim time since another
-   * NPC/actor may consume the source's surplus first.
-   */
-  private computeHouseholdExchangeAvailable(household: Household | null, kind: HouseholdResourceKind): boolean {
-    if (!household || !this.householdExchange) return false
-    if (household.shortage(kind) <= 0) return false
-    return this.householdExchange.findSurplusSource(household.id, kind, this.home) != null
-  }
-
-  /**
-   * Village-storage withdrawal (plan settlements-npcs-005) — visits the
-   * settlement's stockpile, claims the settlement economy's current surplus
-   * of `kind` (atomic, revalidated against the economy's *current* surplus,
-   * never the value read at decision time), then carries the claim home and
-   * deposits it. Mirrors `beginPlayerStorageDelivery`'s two-leg
-   * `goTo`/`execute`/`next` chain: a claim made but not yet deposited (this
-   * NPC cancelled/killed mid-trip) is lost rather than duplicated — the same
-   * accepted tradeoff `beginNeed`'s existing chop→deposit/mine→deposit
-   * chains already make for the brief window between their own two legs.
-   */
-  private beginEconomyWithdraw(household: Household | null, kind: HouseholdResourceKind): boolean {
-    const economy = this.economy
-    if (!household || !economy) return false
-    if (household.shortage(kind) <= 0) return false
-    const maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER[kind]
-    if (kind === 'food') {
-      const requested = Math.min(economy.surplus('food'), maxTransfer)
-      if (requested <= 0) return false
-      // Claim → `this.carried` → deposit (plan settlements-npcs-014
-      // implementation notes §3): a claim used to live only in this closure,
-      // an implicit and losable "in transit" state between the two legs.
-      // Routing it through the NPC's own cargo `Inventory` instead means an
-      // interruption after claim no longer silently drops the goods — they
-      // stay physically carried until a later trip delivers them, same
-      // accepted semantics as `beginOreGathering`'s mine→deposit chain.
-      let carriedClaim: readonly FoodItemClaim[] = []
-      this.startAction({
-        kind: 'exchange',
-        destination: copyVec3(settlementStorageDestination('food', this.landmarks.stockpile, this.landmarks.settlementStorage)),
-        durationSec: 1.2 * this.waitMultiplier,
-        onComplete: () => {
-          const claimed = economy.withdrawFood(requested, this.simClock)
-          carriedClaim = carryFoodClaim(this.carried, claimed, economy.items)
-        },
-        next: {
-          kind: 'deposit',
-          destination: copyVec3(this.home),
-          durationSec: 0.8 * this.waitMultiplier,
-          onComplete: () => {
-            if (carriedClaim.length === 0) return
-            deliverCarriedFoodClaim(this.carried, carriedClaim, household.items)
-            this.satisfyHouseholdResourceNeed(household, 'food')
-          },
-        },
-      })
-      return true
+  /** Builds the shared input `npcLogistics.ts`'s planners read (review
+   *  2026-09-03 §5 E3) — `simTime` is a getter so an `onComplete` closure
+   *  that runs later reads this NPC's *current* sim clock, not the value at
+   *  plan-build time (§10 R3). Called fresh right before each planner call,
+   *  never cached. */
+  private logisticsContext(): NpcLogisticsCtx {
+    return {
+      household: this.household,
+      economy: this.economy,
+      householdExchange: this.householdExchange,
+      helperDelivery: this.helperDelivery,
+      helperAssignment: this.npcState.helperAssignment,
+      needs: this.needs,
+      home: this.home,
+      landmarks: this.landmarks,
+      carried: this.carried,
+      waitMultiplier: this.waitMultiplier,
+      simTime: () => this.simClock,
+      sampleHeight: this.sampleHeight,
     }
-    const requested = Math.min(economy.surplus(kind), maxTransfer)
-    if (requested <= 0) return false
+  }
 
-    let claimed = 0
-    this.startAction({
-      kind: 'exchange',
-      destination: copyVec3(settlementStorageDestination(kind, this.landmarks.stockpile, this.landmarks.settlementStorage)),
-      durationSec: 1.2 * this.waitMultiplier,
-      onComplete: () => {
-        claimed = claimEconomySurplus(economy, kind, requested, this.simClock)
-      },
-      next: {
-        kind: 'deposit',
-        destination: copyVec3(this.home),
-        durationSec: 0.8 * this.waitMultiplier,
-        onComplete: () => {
-          if (claimed <= 0) return
-          household.deposit(kind, claimed, economy, this.simClock)
-          this.satisfyHouseholdResourceNeed(household, kind)
-        },
-      },
-    })
+  private computeEconomyWithdrawAvailable(kind: HouseholdResourceKind): boolean {
+    return canWithdrawFromEconomy(this.logisticsContext(), kind)
+  }
+
+  private computeHouseholdExchangeAvailable(kind: HouseholdResourceKind): boolean {
+    return canExchangeWithHousehold(this.logisticsContext(), kind)
+  }
+
+  private beginEconomyWithdraw(kind: HouseholdResourceKind): boolean {
+    const work = planEconomyWithdraw(this.logisticsContext(), kind)
+    if (!work) return false
+    this.startAction(work)
     return true
   }
 
-  /**
-   * Household ↔ household local exchange (plan settlements-npcs-005) — the
-   * main new flow: this household's shortage pulls from a same-settlement
-   * household's real surplus, found by `HouseholdExchangeHooks` (nearest
-   * first, household id as a deterministic tie-break — never
-   * `Math.random()`). Same two-leg chain / claim-then-deposit tradeoff as
-   * `beginEconomyWithdraw` above.
-   */
-  private beginHouseholdExchange(household: Household | null, kind: HouseholdResourceKind): boolean {
-    const hooks = this.householdExchange
-    if (!household || !hooks) return false
-    if (household.shortage(kind) <= 0) return false
-    const source = hooks.findSurplusSource(household.id, kind, this.home)
-    if (!source) return false
-    const maxTransfer = HOUSEHOLD_EXCHANGE_MAX_TRANSFER[kind]
-    const sourceHousehold = source.household
-    const destination = copyVec3({
-      x: source.position.x,
-      y: this.sampleHeight(source.position.x, source.position.z),
-      z: source.position.z,
-    })
-    if (kind === 'food') {
-      const requested = Math.min(sourceHousehold.surplus('food'), maxTransfer)
-      if (requested <= 0) return false
-      // Claim → `this.carried` → deposit, same ownership fix as
-      // `beginEconomyWithdraw` above.
-      let carriedClaim: readonly FoodItemClaim[] = []
-      this.startAction({
-        kind: 'exchange',
-        destination,
-        durationSec: 1.2 * this.waitMultiplier,
-        onComplete: () => {
-          const claimed = claimFoodItems(sourceHousehold.items, requested)
-          carriedClaim = carryFoodClaim(this.carried, claimed, sourceHousehold.items)
-        },
-        next: {
-          kind: 'deposit',
-          destination: copyVec3(this.home),
-          durationSec: 0.8 * this.waitMultiplier,
-          onComplete: () => {
-            if (carriedClaim.length === 0) return
-            deliverCarriedFoodClaim(this.carried, carriedClaim, household.items)
-            this.satisfyHouseholdResourceNeed(household, 'food')
-          },
-        },
-      })
-      return true
-    }
-    const requested = Math.min(sourceHousehold.surplus(kind), maxTransfer)
-    if (requested <= 0) return false
-
-    const economy = this.economy
-    let claimed = 0
-    this.startAction({
-      kind: 'exchange',
-      destination,
-      durationSec: 1.2 * this.waitMultiplier,
-      onComplete: () => {
-        claimed = claimHouseholdSurplus(sourceHousehold, kind, requested)
-      },
-      next: {
-        kind: 'deposit',
-        destination: copyVec3(this.home),
-        durationSec: 0.8 * this.waitMultiplier,
-        onComplete: () => {
-          if (claimed <= 0) return
-          household.deposit(kind, claimed, economy, this.simClock)
-          this.satisfyHouseholdResourceNeed(household, kind)
-        },
-      },
-    })
+  private beginHouseholdExchange(kind: HouseholdResourceKind): boolean {
+    const work = planHouseholdExchange(this.logisticsContext(), kind)
+    if (!work) return false
+    this.startAction(work)
     return true
   }
 
-  /** Applies the same per-kind need relief `beginNeed`'s existing branches
-   *  already use on a successful local-exchange resupply (plan
-   *  settlements-npcs-005) — `food` also consumes one unit right away (the
-   *  NPC eats from what it just brought home, mirroring
-   *  `beginRealFoodGathering`/the abstract garden-gather fallback); `wood`'s
-   *  `woodDuty` is a household chore, not personal consumption, so only the
-   *  duty pressure itself eases. */
-  private satisfyHouseholdResourceNeed(household: Household, kind: HouseholdResourceKind): void {
-    if (kind === 'food') {
-      household.takeFood(this.simClock)
-      relieveNeed(this.needs, 'food')
-    } else {
-      relieveNeed(this.needs, 'wood')
-    }
+  private computeDeliveryAvailable(): boolean {
+    return canDeliverToPlayerStorage(this.logisticsContext())
   }
 
-  /**
-   * Helper resource delivery availability (plan 167) — read-only, mirrors
-   * `computeFoodStrategyCandidates`'s hunt/nearbyFoodSource checks above:
-   * an active/enabled assignment, this NPC not genuinely hungry right now
-   * (own real hunger stays authoritative, plan §9 — `FOOD_THRESHOLD_NORMAL`
-   * is the same bar `generateNeedPressures` uses for "worth eating over"
-   * absent any shortage/duty bias), real household surplus to give away
-   * (plan §6/§7 — never the household's own reserve), and a target
-   * `Container` that currently exists and has room. Never mutates world
-   * state; `beginPlayerStorageDelivery` re-validates for real when it runs.
-   */
-  private computeDeliveryAvailable(household: Household | null): boolean {
-    const helperDelivery = this.helperDelivery
-    const assignment = this.npcState.helperAssignment
-    if (!helperDelivery || !household || !assignment?.enabled) return false
-    if (this.needs.hunger > FOOD_THRESHOLD_NORMAL) return false
-    if (household.surplus('food') <= 0) return false
-    if (!helperDelivery.findTarget(assignment.targetContainerId)) return false
-    return helperDelivery.hasRoom(assignment.targetContainerId, HELPER_DELIVERY_ITEM_KIND)
-  }
-
-  /**
-   * Helper resource delivery (plan 167) — the `food` need's highest-priority
-   * strategy when `computeDeliveryAvailable` says so. Reuses the existing
-   * `goTo → execute → next` chain exactly like `wood`'s chop→deposit and
-   * `waterDuty`'s fetch→deposit above: gather the household's real surplus
-   * at home (converting the abstract `EconomicStock` amount into concrete
-   * `HELPER_DELIVERY_ITEM_KIND` units carried in `this.carried`, plan §6),
-   * then walk to the target `Container` and deposit. Both steps re-validate
-   * at completion time (another actor may have consumed the surplus, picked
-   * up the container, or filled it in the meantime) so a stale "available"
-   * read never grants a free transfer. A partial/zero accept at deposit time
-   * leaves the untransferred amount with this NPC (plan §8) — the next
-   * decision cycle re-evaluates from scratch, never a retry loop here.
-   */
-  private beginPlayerStorageDelivery(household: Household | null): boolean {
-    if (!this.computeDeliveryAvailable(household)) return false
-    const helperDelivery = this.helperDelivery
-    const assignment = this.npcState.helperAssignment
-    if (!helperDelivery || !household || !assignment) return false
-    const target = helperDelivery.findTarget(assignment.targetContainerId)
-    if (!target) return false
-    const containerId = assignment.targetContainerId
-    const requested = Math.min(household.surplus('food'), HELPER_DELIVERY_MAX_CARRY)
-    if (requested <= 0 || !this.carried.canAdd(HELPER_DELIVERY_ITEM_KIND, requested)) return false
-
-    let gathered = 0
-    this.startAction({
-      kind: 'eat',
-      destination: copyVec3(this.home),
-      durationSec: 1.2 * this.waitMultiplier,
-      onComplete: () => {
-        const take = Math.min(household.surplus('food'), requested)
-        if (take <= 0) return
-        const removed = claimFoodItems(household.items, take)
-        const removedTotal = removed.reduce((n, r) => n + r.amount, 0)
-        if (removedTotal > 0 && this.carried.add(HELPER_DELIVERY_ITEM_KIND, removedTotal)) gathered = removedTotal
-      },
-      next: {
-        kind: 'deposit',
-        destination: copyVec3({ x: target.x, y: this.sampleHeight(target.x, target.z), z: target.z }),
-        durationSec: 0.8 * this.waitMultiplier,
-        onComplete: () => {
-          if (gathered <= 0) return
-          const carriedAmount = this.carried.count(HELPER_DELIVERY_ITEM_KIND)
-          if (carriedAmount <= 0) return
-          const accepted = helperDelivery.deposit(containerId, HELPER_DELIVERY_ITEM_KIND, carriedAmount)
-          if (accepted > 0) this.carried.remove(HELPER_DELIVERY_ITEM_KIND, accepted)
-        },
-      },
-    })
+  private beginPlayerStorageDelivery(): boolean {
+    const work = planPlayerStorageDelivery(this.logisticsContext())
+    if (!work) return false
+    this.startAction(work)
     return true
   }
 
@@ -3865,13 +3593,8 @@ export class NpcAgent {
    * when there's nothing to deliver.
    */
   private deliverHuntYieldHome(household: Household | null): void {
-    if (!household || !HUNT_YIELD_KINDS.some((kind) => this.carried.count(kind) > 0)) return
-    this.startAction({
-      kind: 'deposit',
-      destination: copyVec3(this.home),
-      durationSec: 1.0 * this.waitMultiplier,
-      onComplete: () => depositCarriedItems(this.carried, household, HUNT_YIELD_KINDS),
-    })
+    const work = planDeliverHuntYieldHome(this.carried, household, this.home, this.waitMultiplier)
+    if (work) this.startAction(work)
   }
 
   /**
