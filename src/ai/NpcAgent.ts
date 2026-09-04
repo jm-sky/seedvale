@@ -18,7 +18,6 @@ import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { WorkContracts } from '../world/createWorkContracts'
-import type { CropId } from '../world/cropLifecycle'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
@@ -53,23 +52,17 @@ import { createRangedAttackLifecycle } from '../combat/rangedLifecycle'
 import { isDebugMode, isNpcCombatDebugMode } from '../debug/debugMode'
 import { createNpcTraceBuffer, type NpcTraceBuffer, type NpcTraceEvent } from '../debug/npcTrace'
 import {
-  claimHouseholdSurplus,
-  commitHunterArrowProduction,
   commitRoleWork,
   type SettlementEconomy,
-  tryAdvanceDevelopment,
   WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial, type MaterialRequirement } from '../items/constructionMaterials'
-import { carryFoodClaim, claimFoodItems, type FoodItemClaim } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
-import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
-import { sharpenWeapon } from '../items/weaponMaintenance'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
-import { householdStorageDestination, settlementStorageDestination } from '../settlement/storageDestinations'
+import { householdStorageDestination } from '../settlement/storageDestinations'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import {
   drainStamina,
@@ -92,7 +85,6 @@ import {
   pickActionKind,
   replaceActionLifecycle,
 } from '../simulation'
-import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import {
   applyBarPercent,
@@ -106,8 +98,6 @@ import {
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint, colliderRimPoint, colliderSignedDistance } from '../world/collision'
-import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
-import { CROP_SEED_ITEM } from '../world/plantedCrops'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import {
   activeWellStage,
@@ -180,10 +170,8 @@ import {
   canDeliverToPlayerStorage,
   canExchangeWithHousehold,
   canWithdrawFromEconomy,
-  depositCarriedItems,
   depositFoodHarvest,
   depositWoodHarvest,
-  HOUSEHOLD_EXCHANGE_MAX_TRANSFER,
   HUNT_YIELD_KINDS,
   type NpcLogisticsCtx,
   planDeliverHuntYieldHome,
@@ -214,6 +202,7 @@ import {
   resumePlan,
   setPlanStrategy,
 } from './npcPlan'
+import { type NpcWorkContext, planProfessionWork } from './npcProfessionWork'
 import {
   getFoodStrategyCandidates,
   getWaterDutyStrategyCandidates,
@@ -545,19 +534,15 @@ const WATER_DRINK_FROM_STOCK_AMOUNT = 1
  *  not a world-wide search. See `resolveWaterWellTarget`. */
 const PLAYER_WELL_WATER_SEARCH_RADIUS = 60
 
-/** Ore gathering (plan 131) — `miner`'s `work` schedule block tries a real
- *  `ResourceDeposits` extraction before falling back to the pre-131 idle
- *  stand. Search radius mirrors `findHarvestableNear`'s 80 above (same order
- *  of magnitude as a settlement's local interest range). NPC carry capacity
- *  only ever needs to hold one extraction's yield (weight ~1) at a time —
- *  a small fraction of the player's `DEFAULT_MAX_WEIGHT` is ample headroom. */
-const ORE_SEARCH_RADIUS = 80
+/** NPC carry capacity — only ever needs to hold a handful of profession
+ *  yields (weight ~1 each) at a time, a small fraction of the player's
+ *  `DEFAULT_MAX_WEIGHT`. */
 const NPC_CARRY_MAX_WEIGHT = 5
 
 /** Real hunger-source discovery radius (plan 174) — same order of magnitude
- *  as `ORE_SEARCH_RADIUS`/wood's 80, chosen (not derived) so a hungry NPC
- *  checks its immediate surroundings before falling back to the abstract
- *  settlement-garden gather. */
+ *  as `npcProfessionWork.ts`'s `ORE_SEARCH_RADIUS`/wood's 80, chosen (not
+ *  derived) so a hungry NPC checks its immediate surroundings before
+ *  falling back to the abstract settlement-garden gather. */
 const FOOD_SOURCE_SEARCH_RADIUS = 60
 
 /** Night campfire opportunity (plan npc-013) — a maximum willingness-to-
@@ -567,56 +552,23 @@ const FOOD_SOURCE_SEARCH_RADIUS = 60
  *  magnitude as the other settlement-local radii above. */
 const NIGHT_CAMPFIRE_MAX_TRAVEL_DISTANCE = 45
 
-/** Farmer work (plan settlements-npcs-002 §3) — search radii around
- *  `landmarks.garden`, same order of magnitude as the other profession
- *  search radii above. `FARM_PLANT_SEARCH_RADIUS` only needs to cover
- *  `FARM_PLANT_OFFSETS`' widest ring (`foodSources.ts`). */
-const FARM_WORK_RADIUS = 20
-const FARM_PLANT_SEARCH_RADIUS = 3
-/** Deterministic seed priority (mirrors `HUNTER_ARROW_PRODUCTIONS`' branch-
- *  before-beam priority) — a farmer plants whichever of these it already has
- *  a seed for, checked in this fixed order. */
-const FARM_SEED_PRIORITY: readonly CropId[] = ['carrot', 'potato', 'cabbage']
-
-/** Fisher work (plan settlements-npcs-002 §4) — the fish yield delivered
- *  home, same shape as `HUNT_YIELD_KINDS`. */
-const FISH_YIELD_KINDS: readonly ItemKind[] = ['fish']
-
-/** Trader work (plan settlements-npcs-002 §7) — a trader only ever moves
- *  kinds both `Household` and `SettlementEconomy` actually share; `iron`/
- *  `coal`/`gold` stay settlement-only (plan 131), water stays a `Household`-
- *  only reserve (plan 122), so `food`/`wood` are the only eligible pair. */
-const TRADER_TRANSFER_KINDS: readonly HouseholdResourceKind[] = ['food', 'wood']
-
-/** Blacksmith work (plan settlements-npcs-002 §8) — a weapon instance below
- *  this sharpness genuinely "requires maintenance"; at/above it, sharpening
- *  would be busywork for negligible gain. */
-export const BLACKSMITH_SHARPEN_THRESHOLD = 0.9
-
 /** Hunting expedition (plan 178) — search radius reaches beyond the
  *  settlement footprint into `AnimalSpawner`'s ring of habitat spawn points,
  *  a larger order of magnitude than `FOOD_SOURCE_SEARCH_RADIUS`/
- *  `ORE_SEARCH_RADIUS` (chosen, not derived — those search *within* the
- *  settlement, this searches the wilds around it). */
+ *  `npcProfessionWork.ts`'s `ORE_SEARCH_RADIUS` (chosen, not derived —
+ *  those search *within* the settlement, this searches the wilds around
+ *  it). */
 const HUNT_SEARCH_RADIUS = 140
 /** A hunt attempt tops carried arrows up to this many from the household's
- *  own crafted stock (`beginArrowCrafting`) before checking whether it can
- *  actually fire — bounded so one resupply can't strip the whole household
- *  stock into a single carry trip. */
+ *  own crafted stock (arrow crafting, `npcProfessionWork.ts`) before
+ *  checking whether it can actually fire — bounded so one resupply can't
+ *  strip the whole household stock into a single carry trip. */
 const HUNT_RESUPPLY_ARROW_TARGET = 8
 /** One expedition yields at most this many kills (plan §2) — carry weight
  *  (`NPC_CARRY_MAX_WEIGHT`) already caps it in practice most of the time via
  *  `harvestAnimalIntoInventory`'s own `canAdd` gate; this is the explicit
  *  hard ceiling the plan asks for regardless of carry room. */
 const HUNT_MAX_KILLS_PER_TRIP = 3
-/** Arrow crafting (settlements-npcs-003, completing plan 178 §9) — the
- *  recipe itself (branch/beam → arrow, priority order) lives in
- *  `economy/production.ts`'s `HUNTER_ARROW_PRODUCTIONS`; this cap is only
- *  the *threshold to start* another production cycle, not a hard output
- *  limit — a single recipe may legitimately push the stock above it
- *  (§7: `1 beam → 8 arrows` can take `9/24` to `17/24`). Beyond the cap, the
- *  household's arrow count is itself the sellable surplus (plan 178 §9/§10). */
-const HUNTER_ARROW_STOCK_CAP = 24
 
 /** Plan 176 §6.1 gates — an NPC only considers tidying a garden plot it has
  *  already arrived at for its own hunger, and only when its own critical
@@ -628,22 +580,6 @@ const NPC_GARDEN_MAINTENANCE_CHANCE = 0.35
 /** Same gates/chance as garden maintenance (plan settlements-npcs-001 §13),
  *  just checking hydration instead of care. */
 const NPC_GARDEN_WATERING_CHANCE = 0.35
-
-/** Blacksmith work (plan settlements-npcs-002 §8/§10) — the first (stable,
- *  lowest-id) `WeaponItemInstance` across every `WEAPON_MAINTENANCE_KIND_LIST`
- *  kind whose sharpness is below `BLACKSMITH_SHARPEN_THRESHOLD`, or `null`
- *  when nothing in `inventory` needs it. Pure/deterministic — never a random
- *  pick, mirrors `selectInstancesToSell`'s stable-id tie-break. */
-export function findWeaponNeedingMaintenance(inventory: Inventory): WeaponItemInstance | null {
-  let best: WeaponItemInstance | null = null
-  for (const kind of WEAPON_MAINTENANCE_KIND_LIST) {
-    for (const instance of inventory.getInstances(kind)) {
-      if (!isWeaponItemInstance(instance) || instance.sharpness >= BLACKSMITH_SHARPEN_THRESHOLD) continue
-      if (!best || instance.id < best.id) best = instance
-    }
-  }
-  return best
-}
 
 /** Game-time step used by `resolveTimeSkip` to replay a `timeSkip.ts`
  *  period in coarse increments instead of one big end-of-skip jump — close
@@ -939,12 +875,16 @@ export class NpcAgent {
    *  a fresh count next time `beginHuntExpedition()` runs. */
   private huntKillsThisTrip = 0
   /** Per-spot cast counter feeding `rollFishingCatch`'s deterministic
-   *  `(spot, attempt)` roll (`beginFishingWork`) — this NPC's own count, not
-   *  shared with the player's `fishingAttempts` map (plan settlements-npcs-002
-   *  §6: a generic reusable rule, not the exact same bait/attempt state). */
+   *  `(spot, attempt)` roll (`npcProfessionWork.ts`'s fishing planner) —
+   *  this NPC's own count, not shared with the player's `fishingAttempts`
+   *  map (plan settlements-npcs-002 §6: a generic reusable rule, not the
+   *  exact same bait/attempt state). Written back only through
+   *  `professionContext()`'s `nextFishAttempt`. */
   private fishAttempt = 0
   /** Round-robin index into `guard`'s deterministic patrol points
-   *  (`beginGuardPatrol`) — same cycling idiom as `treeIndex`. */
+   *  (`npcProfessionWork.ts`'s guard planner) — same cycling idiom as
+   *  `treeIndex`. Written back only through `professionContext()`'s
+   *  `advanceGuardPatrol`. */
   private guardPatrolIndex = 0
   /** Destination for the `wander` phase only — resource/work destinations
    *  now live in `pendingAction.destination` instead. */
@@ -3338,55 +3278,6 @@ export class NpcAgent {
   }
 
   /**
-   * Miner's `work` schedule block tries a real ore extraction before falling
-   * back to the idle workplace stand (plan 131) — reuses the same
-   * `ResourceDeposits` the player's pickaxe mines (via the injected `mining`
-   * hooks), so extraction/depletion keeps one owner; no NPC-only ore
-   * registry. Ore is settlement-level raw stock (implementation notes §3),
-   * not household — `Household` stays a family food/wood pantry. Returns
-   * false when there's no mining hooks, no loaded deposit nearby, or no
-   * carry room, so the caller falls back to the pre-131 idle-work stand
-   * (plan 131 §7: profession is a preference, not the only way to act).
-   */
-  private beginOreGathering(): boolean {
-    const mining = this.mining
-    const economy = this.economy
-    if (!mining || !economy) return false
-    const target = mining.queryNearest(this.mesh.position.x, this.mesh.position.z, ORE_SEARCH_RADIUS)
-    if (!target) return false
-    const itemKind = ORE_ITEM[target.type]
-    if (!this.carried.canAdd(itemKind, 1)) return false
-
-    // Set by the `mine` step's onComplete, consumed by the chained `deposit`
-    // step's onComplete — mirrors the wood chop→deposit atomicity fix above:
-    // depletion (another NPC/the player got there first) must not still
-    // credit the settlement economy.
-    let minedCount = 0
-    this.startAction({
-      kind: 'mine',
-      destination: copyVec3({ x: target.x, y: this.sampleHeight(target.x, target.z), z: target.z }),
-      durationSec: MINE_DURATION_SEC * this.waitMultiplier,
-      onComplete: () => {
-        const result = mining.mine(target.id)
-        if (result.ok && this.carried.add(result.yield.kind, result.yield.count)) {
-          minedCount = result.yield.count
-        }
-      },
-      next: {
-        kind: 'deposit',
-        destination: copyVec3(this.landmarks.stockpile),
-        durationSec: 0.8 * this.waitMultiplier,
-        onComplete: () => {
-          if (minedCount <= 0) return
-          this.carried.remove(itemKind, minedCount)
-          economy.add(oreEconomicKind(target.type), minedCount, this.simClock)
-        },
-      },
-    })
-    return true
-  }
-
-  /**
    * Builds `food`'s candidate strategy list (plan ai-003) — read-only checks
    * against the same hooks/conditions `beginNeed`'s `food` branch and
    * `beginHuntExpedition`/`beginRealFoodGathering` already gate on
@@ -3540,8 +3431,8 @@ export class NpcAgent {
    * whether to hunt again or head home. Returns `false` without starting
    * anything when there's no weapon/ammo/target — the caller falls back to
    * the next existing food source, same "profession is a preference" pattern
-   * as `beginOreGathering` (plan §4: "no target/ammo → existing decision flow
-   * resumes", not a stuck NPC).
+   * as `npcProfessionWork.ts`'s ore-gathering planner (plan §4: "no
+   * target/ammo → existing decision flow resumes", not a stuck NPC).
    */
   private attemptHuntKill(household: Household | null): boolean {
     const hunting = this.hunting
@@ -3598,33 +3489,6 @@ export class NpcAgent {
   }
 
   /**
-   * Arrow production (settlements-npcs-003, completing plan 178 §9) —
-   * `hunter`'s `work` schedule block tries this before falling back to the
-   * idle workplace stand, mirroring `beginOreGathering`'s "real work before
-   * idle stand" shape exactly. A thin adapter to the generic item-recipe
-   * mechanism (`commitHunterArrowProduction`/`HUNTER_ARROW_PRODUCTIONS`) —
-   * this method holds no recipe details itself. Returns `false` (idle stand
-   * instead) when the household is already at `HUNTER_ARROW_STOCK_CAP` or
-   * has neither `branch` nor `beam` to spend, so a hunter never crafts
-   * forever nor starts a work action that can't produce anything.
-   */
-  private beginArrowCrafting(): boolean {
-    const household = this.household
-    if (!household || !this.workplace) return false
-    if (household.items.count('arrow') >= HUNTER_ARROW_STOCK_CAP) return false
-    if (!household.items.has('branch', 1) && !household.items.has('beam', 1)) return false
-    this.startAction({
-      kind: 'work',
-      destination: copyVec3(this.workplace.position),
-      durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-      onComplete: () => {
-        commitHunterArrowProduction(household)
-      },
-    })
-    return true
-  }
-
-  /**
    * Plan 176 §6/§6.1/§15 — a chance to tidy a neglected garden plot, only
    * ever evaluated right after this NPC already arrived at a crop it was
    * harvesting for its own hunger (never an independent search for
@@ -3663,251 +3527,43 @@ export class NpcAgent {
     foodSources.waterGarden(garden.id)
   }
 
-  /**
-   * Farmer's `work` schedule block (plan settlements-npcs-002 §3) — tries a
-   * real crop harvest before falling back to the pre-plan idle stand, same
-   * "real work before idle stand" shape as `beginOreGathering`. Priority
-   * matches the plan: a harvestable crop near the settlement garden always
-   * wins over planting (an empty/plantable spot is only interesting once
-   * there's nothing ready to bring in). Planting only ever runs when the
-   * household already holds a real seed item (`FARM_SEED_PRIORITY`) — never
-   * mints one. No watering step: the crop lifecycle this settlement's
-   * gardens actually use (`world/cropLifecycle.ts`, plan 172) is a pure
-   * `(seed, worldDays)` function with no hydration state to relieve (plan
-   * settlements-npcs-001, a separate not-yet-implemented plan) — the plan
-   * text's "dry → water" branch does not apply to the current crop model.
-   */
-  private beginFarmWork(): boolean {
-    const foodSources = this.foodSources
-    if (!foodSources) return false
-    const garden = this.landmarks.garden
-    const target = foodSources.queryHarvestableCrop(garden.x, garden.z, FARM_WORK_RADIUS)
-    if (target) {
-      const household = this.household
-      const economy = this.economy
-      this.startAction({
-        kind: 'harvest',
-        destination: copyVec3({ x: target.x, y: this.sampleHeight(target.x, target.z), z: target.z }),
-        durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-        onComplete: () => {
-          const result = foodSources.harvest(target)
-          if (result && result.count > 0) household?.depositFood(result.kind, result.count, economy, this.simClock)
-        },
-      })
-      return true
-    }
-    const household = this.household
-    if (!household) return false
-    const seedCropId = FARM_SEED_PRIORITY.find((id) => household.items.has(CROP_SEED_ITEM[id], 1))
-    if (!seedCropId) return false
-    const spot = foodSources.findPlantSpot(garden.x, garden.z, FARM_PLANT_SEARCH_RADIUS)
-    if (!spot) return false
-    const seedKind = CROP_SEED_ITEM[seedCropId]
-    this.startAction({
-      kind: 'plant',
-      destination: copyVec3({ x: spot.x, y: this.sampleHeight(spot.x, spot.z), z: spot.z }),
-      durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-      onComplete: () => {
-        if (!household.items.remove(seedKind, 1)) return
-        if (!foodSources.plant(spot.x, spot.z, seedCropId)) household.items.add(seedKind, 1)
+  /** Builds the shared input `npcProfessionWork.ts`'s planners read (review
+   *  2026-09-03 §5 E2) — same staleness discipline as `logisticsContext()`:
+   *  `simTime` is a getter and `rollWorkDurationSec` a callback, not
+   *  captured values, and `advanceGuardPatrol`/`nextFishAttempt` write this
+   *  NPC's real counters back rather than returning a tuple. Called fresh
+   *  right before each `planProfessionWork` call, never cached. */
+  private professionContext(): NpcWorkContext {
+    return {
+      role: this.role,
+      x: this.mesh.position.x,
+      z: this.mesh.position.z,
+      waitMultiplier: this.waitMultiplier,
+      simTime: () => this.simClock,
+      rollWorkDurationSec: () => randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
+      home: this.home,
+      landmarks: this.landmarks,
+      workplace: this.workplace,
+      household: this.household,
+      economy: this.economy,
+      carried: this.carried,
+      guardPatrolIndex: this.guardPatrolIndex,
+      // `% 3` mirrors `npcProfessionWork.ts`'s own fixed 3-point patrol
+      // (home/well/market) — both sides know that shape by construction,
+      // same as before extraction.
+      advanceGuardPatrol: () => {
+        this.guardPatrolIndex = (this.guardPatrolIndex + 1) % 3
       },
-    })
-    return true
-  }
-
-  /**
-   * Fisher's `work` schedule block (plan settlements-npcs-002 §4) — casts at
-   * the settlement's real dock (`landmarks.dock`) using the same
-   * deterministic `(spot, attempt)` catch rule `world/fishing.ts` already
-   * defines for the player, never the player's own busy-channel action code.
-   * `landmarks.dock` only exists for near-coast settlements (`workplaceFor`
-   * falls back to the well otherwise) — that fallback is deliberately *not*
-   * a valid fishing target (plan §6/§14: "never fish at a well"), so this
-   * returns `false` and the caller falls back to the normal idle work stand
-   * instead of inventing a water source. */
-  private beginFishingWork(): boolean {
-    const dock = this.landmarks.dock
-    if (!dock) return false
-    if (!this.carried.canAdd('fish', 1)) return false
-    const spotId = fishingSpotId(dock.x, dock.z)
-    this.startAction({
-      kind: 'fish',
-      destination: copyVec3(dock),
-      durationSec: FISHING_CAST_DURATION_SEC * this.waitMultiplier,
-      onComplete: () => {
+      fishAttempt: this.fishAttempt,
+      nextFishAttempt: () => {
         this.fishAttempt += 1
-        if (rollFishingCatch(spotId, this.fishAttempt, false) && this.carried.canAdd('fish', 1)) {
-          this.carried.add('fish', 1)
-        }
+        return this.fishAttempt
       },
-      next: {
-        kind: 'deposit',
-        destination: copyVec3(householdStorageDestination('food', this.home, this.landmarks.stockpile)),
-        durationSec: 0.8 * this.waitMultiplier,
-        onComplete: () => {
-          if (this.household) depositCarriedItems(this.carried, this.household, FISH_YIELD_KINDS)
-        },
-      },
-    })
-    return true
-  }
-
-  /**
-   * Guard's `work` schedule block (plan settlements-npcs-002 §6) — cycles
-   * through a small deterministic set of patrol points (home, the settlement
-   * well as its centre, the market as a second landmark) instead of standing
-   * still at one workplace anchor. Threat detection/response is unchanged:
-   * the existing `senseImmediateAnimalThreat`/`decideAnimalThreatResponse`
-   * interrupt (`tickCriticalInterrupt`) already applies to every NPC
-   * regardless of role, so a patrolling guard still transitions into the
-   * existing combat path exactly like it would from a stationary stand — no
-   * `GuardCombatAI`, no separate patrol-route object. Always succeeds (the
-   * three points always exist), so a guard never falls back to the old
-   * static well stand. */
-  private beginGuardPatrol(): boolean {
-    const points = [this.home, this.landmarks.well, this.landmarks.market]
-    const point = points[this.guardPatrolIndex % points.length]!
-    this.guardPatrolIndex = (this.guardPatrolIndex + 1) % points.length
-    this.startAction({
-      kind: 'work',
-      destination: copyVec3(point),
-      durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-      onComplete: () => {},
-    })
-    return true
-  }
-
-  /**
-   * Trader's `work` schedule block (plan settlements-npcs-002 §7) — a
-   * bounded, local economic effect instead of a full market simulation: when
-   * this trader's own household has real surplus (`Household.surplus`,
-   * never its own reserve) in a kind the settlement's shared economy
-   * actually has a shortage in, the trader carries that surplus to market
-   * and deposits it into `SettlementEconomy`. No `TraderInventory`/
-   * `GlobalMarketManager` — both sides are the existing authoritative stock
-   * objects, mutated directly at completion, re-validated against the
-   * household's *current* surplus (not the amount read at decision time) so
-   * a stale read never over-withdraws.
-   *
-   * Preserved as-is (plan settlements-npcs-014 implementation notes §6/§16
-   * — regression baseline) as the trader's first choice; when this trader's
-   * own household has nothing to bring, `beginTraderCollection` below is the
-   * plan's new capability: a physical pickup from *another* household. */
-  private beginTraderWork(): boolean {
-    const household = this.household
-    const economy = this.economy
-    if (!household || !economy || !this.workplace) return false
-    const kind = TRADER_TRANSFER_KINDS.find((k) => household.surplus(k) > 0 && economy.hasShortage(k))
-    if (!kind) return this.beginTraderCollection(household, economy)
-    this.startAction({
-      kind: 'work',
-      destination: copyVec3(this.workplace.position),
-      durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-      onComplete: () => {
-        if (kind === 'food') {
-          // Concrete-item counterpart of the wood claim below (plan
-          // settlements-npcs-008) — this trader's full surplus is the
-          // requested amount, so the cap is a no-op in practice. `batches`
-          // (plan settlements-npcs-014) keeps this claim's freshness intact
-          // across the transfer instead of resetting it to day 0.
-          const claimed = claimFoodItems(household.items, household.surplus('food'))
-          for (const { kind: itemKind, amount, batches } of claimed) economy.depositFood(itemKind, amount, this.simClock, batches)
-          return
-        }
-        // Reuses the same atomic claim seam local exchange uses
-        // (`economy/localExchange.ts`) — this trader's full surplus is the
-        // requested amount, so the cap is a no-op in practice, just a shared
-        // claim path.
-        const amount = claimHouseholdSurplus(household, kind, household.surplus(kind))
-        if (amount <= 0) return
-        economy.add(kind, amount, this.simClock)
-        tryAdvanceDevelopment(economy)
-      },
-    })
-    return true
-  }
-
-  /**
-   * Trader cross-household collection (plan settlements-npcs-014) — the
-   * plan's main new capability: a bounded, same-settlement pickup of
-   * *another* household's real food surplus, physically carried to the
-   * settlement's storage. Reuses `HouseholdExchangeHooks.findSurplusSource`
-   * — the same nearest-first, id-tie-break lookup `beginHouseholdExchange`
-   * already uses for shortage-driven exchange — but never requires this
-   * settlement to already be short of food: the plan's "Model" section
-   * wants the storage buffer stocked ahead of demand, not only drained
-   * reactively after a shortage appears. Never selects this trader's own
-   * household (`excludeHouseholdId`). Claim → `this.carried` → deposit, same
-   * conservation invariant as `beginEconomyWithdraw`/`beginHouseholdExchange`
-   * above — this trader is a consumer of that same local-goods-flow
-   * mechanism, not the owner of a second one (plan §3).
-   */
-  private beginTraderCollection(household: Household, economy: SettlementEconomy): boolean {
-    const hooks = this.householdExchange
-    if (!hooks) return false
-    const source = hooks.findSurplusSource(household.id, 'food', this.home)
-    if (!source) return false
-    const sourceHousehold = source.household
-    const requested = Math.min(sourceHousehold.surplus('food'), HOUSEHOLD_EXCHANGE_MAX_TRANSFER.food)
-    if (requested <= 0) return false
-    const pickupDestination = copyVec3({
-      x: source.position.x,
-      y: this.sampleHeight(source.position.x, source.position.z),
-      z: source.position.z,
-    })
-    let carriedClaim: readonly FoodItemClaim[] = []
-    this.startAction({
-      kind: 'work',
-      destination: pickupDestination,
-      durationSec: 1.2 * this.waitMultiplier,
-      onComplete: () => {
-        const claimed = claimFoodItems(sourceHousehold.items, requested)
-        carriedClaim = carryFoodClaim(this.carried, claimed, sourceHousehold.items)
-      },
-      next: {
-        kind: 'deposit',
-        destination: copyVec3(settlementStorageDestination('food', this.landmarks.stockpile, this.landmarks.settlementStorage)),
-        durationSec: 0.8 * this.waitMultiplier,
-        onComplete: () => {
-          if (carriedClaim.length === 0) return
-          for (const claim of carriedClaim) {
-            this.carried.remove(claim.kind, claim.amount)
-            economy.depositFood(claim.kind, claim.amount, this.simClock, claim.batches)
-          }
-          tryAdvanceDevelopment(economy)
-        },
-      },
-    })
-    return true
-  }
-
-  /**
-   * Blacksmith's `work` schedule block (plan settlements-npcs-002 §8/§10) —
-   * the generic `sharpenWeapon()` maintenance operation is the single source
-   * of truth for the mutation; this only finds a target and a whetstone,
-   * never reproduces sharpening math. Scoped to this blacksmith's own
-   * household item storage (`Household.items`) — there is no existing cross-
-   * household weapon-repair-drop-off flow to reach other NPCs' carried
-   * weapons, and no generic whetstone supply into a household today (both
-   * are player-tradeable-only items, plan §10 note), so this frequently
-   * finds nothing and falls back to the normal idle work stand — a
-   * deliberate "keep the work action unavailable until the generic
-   * dependency exists" outcome, not a bug. */
-  private beginBlacksmithWork(): boolean {
-    const household = this.household
-    if (!household || !this.workplace) return false
-    if (!household.items.has('whetstone', 1)) return false
-    const target = findWeaponNeedingMaintenance(household.items)
-    if (!target) return false
-    this.startAction({
-      kind: 'sharpen',
-      destination: copyVec3(this.workplace.position),
-      durationSec: randRange(WORK_DURATION_RANGE) * this.waitMultiplier,
-      onComplete: () => {
-        sharpenWeapon(household.items, target.id, 'whetstone')
-      },
-    })
-    return true
+      sampleHeight: this.sampleHeight,
+      mining: this.mining,
+      foodSources: this.foodSources,
+      householdExchange: this.householdExchange,
+    }
   }
 
   /**
@@ -3966,13 +3622,11 @@ export class NpcAgent {
     }
     const intent = idleIntentFor(scheduledActivity)
     if (intent === 'work' && this.workplace) {
-      if (this.role === 'miner' && this.beginOreGathering()) return
-      if (this.role === 'hunter' && this.beginArrowCrafting()) return
-      if (this.role === 'farmer' && this.beginFarmWork()) return
-      if (this.role === 'fisher' && this.beginFishingWork()) return
-      if (this.role === 'guard' && this.beginGuardPatrol()) return
-      if (this.role === 'trader' && this.beginTraderWork()) return
-      if (this.role === 'blacksmith' && this.beginBlacksmithWork()) return
+      const work = planProfessionWork(this.professionContext())
+      if (work) {
+        this.startAction(work)
+        return
+      }
       this.startAction({
         kind: 'work',
         destination: copyVec3(this.workplace.position),
