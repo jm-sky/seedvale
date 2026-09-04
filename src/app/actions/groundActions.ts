@@ -319,11 +319,18 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       }
       // `ctx.grantItem` — never `inventory.add` directly — so overflow spills
       // to `droppedItems` instead of being silently lost (plan 199's contract).
-      ctx.grantItem(result.yield.kind, result.yield.count)
-      let message = `+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`
+      // Plan items-player-012 — the mature/old delimb step's branch count now
+      // draws from the tree's shared branch pool and can be 0 (already spent
+      // by a prior `[E]`/axe pick this cycle), so only grant/report it when
+      // there's actually something to collect.
+      let message = ''
+      if (result.yield.count > 0) {
+        ctx.grantItem(result.yield.kind, result.yield.count)
+        message = `+${result.yield.count} ${ITEM_DEFS[result.yield.kind].label}`
+      }
       if (result.bonusYield) {
         ctx.grantItem(result.bonusYield.kind, result.bonusYield.count)
-        message += `, +${result.bonusYield.count} ${ITEM_DEFS[result.bonusYield.kind].label}`
+        message += `${message ? ', ' : ''}+${result.bonusYield.count} ${ITEM_DEFS[result.bonusYield.kind].label}`
       }
       // `target.stage` is the pre-chop stage captured above — identifies
       // which transition this completed step is, for the two stage-specific
@@ -333,8 +340,10 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       } else if (target.stage === 'limbed') {
         playActionTreeFall(worldAudio.playAt, { x, z })
       }
-      playInventoryPickUp(worldAudio.playOnce)
-      toast.show(message, 'pickup')
+      if (message) {
+        playInventoryPickUp(worldAudio.playOnce)
+        toast.show(message, 'pickup')
+      }
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
 

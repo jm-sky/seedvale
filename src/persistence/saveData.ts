@@ -68,6 +68,10 @@ export type SaveTreeOverride = {
   /** Plan items-player-012 — game-day a branch harvest becomes available
    *  again; absent means available now. */
   branchRegeneratesAt?: number
+  /** Plan items-player-012 — branches left in the current regeneration
+   *  cycle's rolled pool once partially collected; absent means not yet
+   *  rolled this cycle. */
+  branchPoolRemaining?: number
 }
 
 /** Portable hand light mid-burn (`player/PlayerTorch.ts`). */
@@ -570,6 +574,7 @@ function isTreeOverridesField(value: unknown): value is Record<string, SaveTreeO
     }
     if (typeof rec.stageStartedAt !== 'number') return false
     if (rec.branchRegeneratesAt !== undefined && typeof rec.branchRegeneratesAt !== 'number') return false
+    if (rec.branchPoolRemaining !== undefined && typeof rec.branchPoolRemaining !== 'number') return false
   }
   return true
 }

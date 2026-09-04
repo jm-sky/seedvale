@@ -42,6 +42,13 @@ export type TreeStateOverride = {
    *  same sparse override as `stage` rather than a second per-tree map, and
    *  survives independently of chop-stage pruning (see `resolvePresence`). */
   branchRegeneratesAt?: number
+  /** Plan items-player-012 — branches left in the current cycle's rolled
+   *  pool once it has been partially collected (by `[E]` and/or axe
+   *  gathering); absent means "not yet rolled this cycle" — the next
+   *  consumer rolls fresh. Always > 0 while present: hitting 0 clears this
+   *  and sets `branchRegeneratesAt` instead. Mutually informative with
+   *  `branchRegeneratesAt`, never meaningfully set alongside an active one. */
+  branchPoolRemaining?: number
 }
 
 export type TreeEnvSample = {
@@ -485,11 +492,15 @@ export type TreeLifecycle = {
     worldDays: number,
     env: TreeEnvSample,
   ) => TreeHarvestStepResult
-  /** Plan items-player-012 — the branch-picking counterpart of
-   *  `advanceHarvest`/`harvestFully`: never changes chop stage, only rolls a
-   *  size-based branch count and starts that tree's regeneration cooldown.
-   *  Refuses (without rolling or mutating anything) while the tree has no
-   *  living crown or its cooldown hasn't elapsed. */
+  /** Plan items-player-012 — the `[E]` branch-picking counterpart of
+   *  `advanceHarvest`/`harvestFully`: never changes chop stage, and grants
+   *  exactly one branch from the tree's current regeneration-cycle pool
+   *  (rolling the size-based pool the first time either this or the
+   *  mature/old step of `advanceHarvest` touches it). Starts the
+   *  regeneration cooldown once the pool reaches 0 — shared state, so axe
+   *  gathering on the same tree/cycle only ever collects what's left. Refuses
+   *  (without rolling or mutating anything) while the tree has no living
+   *  crown or its cooldown hasn't elapsed. */
   harvestBranch: (id: TreeId, worldDays: number, env: TreeEnvSample) => BranchHarvestResult
   findHarvestableNear: (
     x: number,
@@ -688,20 +699,28 @@ export function createTreeLifecycle(
       stage = advanced.stage
       const procedural = advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld)
       const branchRegeneratesAt = override.branchRegeneratesAt
-      const branchActive = branchRegeneratesAt !== undefined && worldDays < branchRegeneratesAt
+      const branchPoolRemaining = override.branchPoolRemaining
+      const branchActive =
+        (branchRegeneratesAt !== undefined && worldDays < branchRegeneratesAt) ||
+        branchPoolRemaining !== undefined
       // Prune sparse override once fully grown again and procedural growth
       // matches (harvest scar no longer needed) — unless an active branch
-      // regeneration cooldown still needs the override to live in (plan
-      // items-player-012): collapse to the procedural anchor instead of
-      // discarding the timestamp.
+      // regeneration cooldown or a partially-collected pool still needs the
+      // override to live in (plan items-player-012): collapse to the
+      // procedural anchor instead of discarding that branch state.
       if (isCanopyStage(stage) && stage === procedural.stage) {
         if (branchActive) {
-          overrides.set(presence.id, { stage: procedural.stage, stageStartedAt: procedural.stageStartedAt, branchRegeneratesAt })
+          overrides.set(presence.id, {
+            stage: procedural.stage,
+            stageStartedAt: procedural.stageStartedAt,
+            branchRegeneratesAt,
+            branchPoolRemaining,
+          })
         } else {
           overrides.delete(presence.id)
         }
       } else if (stage !== override.stage || advanced.stageStartedAt !== override.stageStartedAt) {
-        overrides.set(presence.id, { stage, stageStartedAt: advanced.stageStartedAt, branchRegeneratesAt })
+        overrides.set(presence.id, { stage, stageStartedAt: advanced.stageStartedAt, branchRegeneratesAt, branchPoolRemaining })
       }
     } else {
       stage = advanceStage(presence.initialStage, 0, worldDays, growthRate, allowOld).stage
@@ -735,12 +754,27 @@ export function createTreeLifecycle(
     }
     const from = current.stage as ChoppableLiving | 'limbed' | 'felled'
     const next = CHOP_NEXT[from]
-    const yieldAmt = CHOP_YIELDS[from]
     const bonus = bonusYieldForChopStage(from)
-    overrides.set(id, { stage: next, stageStartedAt: worldDays })
+
+    let yieldAmt: HarvestYield
+    let branchOverride: Pick<TreeStateOverride, 'branchRegeneratesAt'> = {}
+    if (from === 'mature' || from === 'old') {
+      // Plan items-player-012 — delimbing a living tree (axe gathering) draws
+      // from the same size-based pool `[E]` picks from, one branch at a time,
+      // rather than a flat per-step count: whichever action reaches the tree
+      // first, the other only ever gets what's left in the cycle.
+      const pool = branchPoolStateFor(id, presence, worldDays)
+      yieldAmt = { kind: 'branch', count: pool.remaining }
+      branchOverride = pool.regenerating
+        ? { branchRegeneratesAt: pool.regeneratesAt }
+        : { branchRegeneratesAt: worldDays + BRANCH_REGENERATION_DAYS }
+    } else {
+      yieldAmt = { ...CHOP_YIELDS[from] }
+    }
+    overrides.set(id, { stage: next, stageStartedAt: worldDays, ...branchOverride })
     return bonus
-      ? { ok: true, yield: { ...yieldAmt }, bonusYield: bonus, stage: next }
-      : { ok: true, yield: { ...yieldAmt }, stage: next }
+      ? { ok: true, yield: yieldAmt, bonusYield: bonus, stage: next }
+      : { ok: true, yield: yieldAmt, stage: next }
   }
 
   function harvestFully(
@@ -773,6 +807,37 @@ export function createTreeLifecycle(
       : { ok: true, yield: { kind: 'branch', count: total }, stage: lastStage }
   }
 
+  /** Deterministic per-(tree, cycle-start-day) pool roll — same hash+seed
+   *  convention as `world/fishing.ts`/`world/animalTraps.ts`, keyed on a
+   *  stable tree id and the world-day the cycle's pool is first touched
+   *  instead of `Math.random()`. Called at most once per regeneration cycle
+   *  (`branchPoolStateFor` only calls it when nothing is stored yet), so a
+   *  later re-resolve can never re-roll the full yield (plan items-player-012). */
+  function rollBranchPoolCount(id: TreeId, worldDays: number, sizeClass: TreeSizeClass): number {
+    const roll = createSeededRandom(hashString(`${id}@${worldDays}`))()
+    const range = BRANCH_YIELD_BY_SIZE[sizeClass]
+    const span = range.max - range.min + 1
+    return range.min + Math.min(span - 1, Math.floor(roll * span))
+  }
+
+  /** Current branch-pool state for a living tree, without mutating anything
+   *  — shared by `[E]` (`harvestBranch`) and axe gathering (`advanceHarvest`'s
+   *  mature/old step) so both draw from one pool per regeneration cycle. */
+  function branchPoolStateFor(
+    id: TreeId,
+    presence: TreePresence,
+    worldDays: number,
+  ): { remaining: number, regenerating: boolean, regeneratesAt?: number } {
+    const existing = overrides.get(id)
+    if (existing?.branchRegeneratesAt !== undefined && worldDays < existing.branchRegeneratesAt) {
+      return { remaining: 0, regenerating: true, regeneratesAt: existing.branchRegeneratesAt }
+    }
+    if (existing?.branchPoolRemaining !== undefined) {
+      return { remaining: existing.branchPoolRemaining, regenerating: false }
+    }
+    return { remaining: rollBranchPoolCount(id, worldDays, presence.sizeClass), regenerating: false }
+  }
+
   function harvestBranch(id: TreeId, worldDays: number, env: TreeEnvSample): BranchHarvestResult {
     const presence = byId.get(id)
     if (!presence) return { ok: false, reason: 'unknown-tree' }
@@ -780,24 +845,18 @@ export function createTreeLifecycle(
     // override, same lazy-update contract every other read goes through.
     const resolved = resolvePresence(presence, env, worldDays)
     if (resolved.visual !== 'living') return { ok: false, reason: 'not-available' }
-    const existing = overrides.get(id)
-    if (existing?.branchRegeneratesAt !== undefined && worldDays < existing.branchRegeneratesAt) {
-      return { ok: false, reason: 'regenerating' }
-    }
-    // Deterministic per-(tree, harvest-day) roll — same hash+seed convention
-    // as `world/fishing.ts`/`world/animalTraps.ts`, keyed on a stable tree id
-    // and the harvest's own world-day anchor instead of `Math.random()`.
-    const roll = createSeededRandom(hashString(`${id}@${worldDays}`))()
-    const range = BRANCH_YIELD_BY_SIZE[presence.sizeClass]
-    const span = range.max - range.min + 1
-    const count = range.min + Math.min(span - 1, Math.floor(roll * span))
+    const pool = branchPoolStateFor(id, presence, worldDays)
+    if (pool.regenerating) return { ok: false, reason: 'regenerating' }
+    const remainingAfter = pool.remaining - 1
     const anchor = currentStageAnchor(presence, env, worldDays)
     overrides.set(id, {
       stage: anchor.stage,
       stageStartedAt: anchor.stageStartedAt,
-      branchRegeneratesAt: worldDays + BRANCH_REGENERATION_DAYS,
+      ...(remainingAfter > 0
+        ? { branchPoolRemaining: remainingAfter }
+        : { branchRegeneratesAt: worldDays + BRANCH_REGENERATION_DAYS }),
     })
-    return { ok: true, yield: { kind: 'branch', count } }
+    return { ok: true, yield: { kind: 'branch', count: 1 } }
   }
 
   function registerPresence(presence: TreePresence): void {
@@ -866,6 +925,7 @@ export function createTreeLifecycle(
         stage: override.stage,
         stageStartedAt: override.stageStartedAt,
         branchRegeneratesAt: override.branchRegeneratesAt,
+        branchPoolRemaining: override.branchPoolRemaining,
       })
     },
     serializeOverrides() {
@@ -880,6 +940,7 @@ export function createTreeLifecycle(
           stage: value.stage,
           stageStartedAt: value.stageStartedAt,
           branchRegeneratesAt: value.branchRegeneratesAt,
+          branchPoolRemaining: value.branchPoolRemaining,
         })
       }
     },
@@ -913,6 +974,9 @@ export function parseTreeOverrides(value: unknown): Record<TreeId, TreeStateOver
     const entry: TreeStateOverride = { stage: stage as TreeGrowthStage, stageStartedAt: rec.stageStartedAt }
     if (typeof rec.branchRegeneratesAt === 'number' && Number.isFinite(rec.branchRegeneratesAt)) {
       entry.branchRegeneratesAt = rec.branchRegeneratesAt
+    }
+    if (typeof rec.branchPoolRemaining === 'number' && Number.isFinite(rec.branchPoolRemaining)) {
+      entry.branchPoolRemaining = rec.branchPoolRemaining
     }
     out[id] = entry
   }

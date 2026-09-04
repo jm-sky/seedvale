@@ -55,6 +55,23 @@ function presence(partial: Partial<TreePresence> & Pick<TreePresence, 'id'>): Tr
   }
 }
 
+/** Repeatedly picks `[E]`-style single branches until the pool is exhausted
+ *  (`harvestBranch` returns `ok: false`), returning the cycle's total. */
+function exhaustBranchPool(
+  life: ReturnType<typeof createTreeLifecycle>,
+  id: string,
+  worldDays: number,
+  env: TreeEnvSample,
+): number {
+  let total = 0
+  for (let i = 0; i < 10; i++) {
+    const result = life.harvestBranch(id, worldDays, env)
+    if (!result.ok) break
+    total += result.yield.count
+  }
+  return total
+}
+
 describe('makeTreeId', () => {
   it('is stable for quantized position + species', () => {
     expect(makeTreeId(42, 1.04, 2.06, 3)).toBe(makeTreeId(42, 1.0, 2.1, 3))
@@ -255,7 +272,7 @@ describe('createTreeLifecycle', () => {
     expect(later.stage).toBe('old')
   })
 
-  it('advances harvest in three steps with branch yields', () => {
+  it('advances harvest in three steps, drawing the mature step from the branch pool', () => {
     const life = createTreeLifecycle(7)
     const p = presence({
       id: life.makeId(0, 0, 0),
@@ -263,12 +280,18 @@ describe('createTreeLifecycle', () => {
     })
     life.registerPresence(p)
 
+    // Plan items-player-012 — the mature/old delimb step now draws from the
+    // size-based branch pool (a fresh roll, since nothing collected it yet)
+    // instead of a flat `CHOP_YIELDS.mature` count.
+    const range = BRANCH_YIELD_BY_SIZE[p.sizeClass]
     const step1 = life.advanceHarvest(p.id, 2, goodEnv)
-    expect(step1).toEqual({
-      ok: true,
-      yield: CHOP_YIELDS.mature,
-      stage: 'limbed',
-    })
+    expect(step1.ok).toBe(true)
+    if (step1.ok) {
+      expect(step1.yield.kind).toBe('branch')
+      expect(step1.yield.count).toBeGreaterThanOrEqual(range.min)
+      expect(step1.yield.count).toBeLessThanOrEqual(range.max)
+      expect(step1.stage).toBe('limbed')
+    }
     expect(life.resolve(p, goodEnv, 2).visual).toBe('limbed')
 
     const step2 = life.advanceHarvest(p.id, 2, goodEnv)
@@ -295,12 +318,19 @@ describe('createTreeLifecycle', () => {
     expect(life.advanceHarvest(p.id, 2, goodEnv).ok).toBe(false)
   })
 
-  it('chops old trees like mature', () => {
+  it('chops old trees like mature, drawing branches from the pool', () => {
     const life = createTreeLifecycle(7)
     const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'old', sizeClass: 'large' })
     life.registerPresence(p)
+    const range = BRANCH_YIELD_BY_SIZE.large
     const step = life.advanceHarvest(p.id, 1, goodEnv)
-    expect(step).toEqual({ ok: true, yield: CHOP_YIELDS.old, stage: 'limbed' })
+    expect(step.ok).toBe(true)
+    if (step.ok) {
+      expect(step.yield.kind).toBe('branch')
+      expect(step.yield.count).toBeGreaterThanOrEqual(range.min)
+      expect(step.yield.count).toBeLessThanOrEqual(range.max)
+      expect(step.stage).toBe('limbed')
+    }
   })
 
   it('harvestFully collapses remaining steps into one total yield', () => {
@@ -308,13 +338,14 @@ describe('createTreeLifecycle', () => {
     const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature' })
     life.registerPresence(p)
 
+    const range = BRANCH_YIELD_BY_SIZE[p.sizeClass]
+    const structuralCount = CHOP_YIELDS.limbed.count + CHOP_YIELDS.felled.count
     const result = life.harvestFully(p.id, 1, goodEnv)
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.stage).toBe('harvested')
-      expect(result.yield.count).toBe(
-        CHOP_YIELDS.mature.count + CHOP_YIELDS.limbed.count + CHOP_YIELDS.felled.count,
-      )
+      expect(result.yield.count).toBeGreaterThanOrEqual(range.min + structuralCount)
+      expect(result.yield.count).toBeLessThanOrEqual(range.max + structuralCount)
       expect(result.bonusYield).toEqual(FELLING_BEAM_YIELD)
     }
   })
@@ -426,7 +457,15 @@ describe('createTreeLifecycle', () => {
 })
 
 describe('harvestBranch (plan items-player-012)', () => {
-  it('rolls a count within the size-based range on every successful harvest', () => {
+  it('grants exactly one branch per successful [E] pick', () => {
+    const life = createTreeLifecycle(1)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'large' })
+    life.registerPresence(p)
+    const result = life.harvestBranch(p.id, 0, goodEnv)
+    expect(result).toEqual({ ok: true, yield: { kind: 'branch', count: 1 } })
+  })
+
+  it('never yields more than the size-based pool across a full cycle, for every size', () => {
     const life = createTreeLifecycle(1)
     let x = 0
     for (const size of ['small', 'medium', 'large'] as const) {
@@ -434,26 +473,100 @@ describe('harvestBranch (plan items-player-012)', () => {
       for (let i = 0; i < 20; i++) {
         const p = presence({ id: life.makeId(x, 0, 0), x, z: 0, initialStage: 'mature', sizeClass: size })
         life.registerPresence(p)
-        const result = life.harvestBranch(p.id, i, goodEnv)
-        expect(result.ok).toBe(true)
-        if (result.ok) {
-          expect(result.yield.kind).toBe('branch')
-          expect(result.yield.count).toBeGreaterThanOrEqual(range.min)
-          expect(result.yield.count).toBeLessThanOrEqual(range.max)
-        }
+        const total = exhaustBranchPool(life, p.id, i, goodEnv)
+        expect(total).toBeGreaterThanOrEqual(range.min)
+        expect(total).toBeLessThanOrEqual(range.max)
         x += 1
       }
     }
   })
 
-  it('starts a regeneration cooldown on success and blocks further harvests until it elapses', () => {
+  it('multiple [E] picks each take exactly one until the pool is empty', () => {
     const life = createTreeLifecycle(2)
     const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
     life.registerPresence(p)
 
+    const range = BRANCH_YIELD_BY_SIZE.medium
+    const picks: number[] = []
+    for (let i = 0; i < range.max; i++) {
+      const result = life.harvestBranch(p.id, 0, goodEnv)
+      if (!result.ok) break
+      picks.push(result.yield.count)
+    }
+    expect(picks.length).toBeGreaterThanOrEqual(range.min)
+    expect(picks.length).toBeLessThanOrEqual(range.max)
+    expect(picks.every((count) => count === 1)).toBe(true)
+    expect(life.harvestBranch(p.id, 0, goodEnv)).toEqual({ ok: false, reason: 'regenerating' })
+  })
+
+  it('axe gathering after a partial [E] pick collects only what remains, never exceeding the rolled pool', () => {
+    const life = createTreeLifecycle(3)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'large' })
+    life.registerPresence(p)
+
     const first = life.harvestBranch(p.id, 0, goodEnv)
-    expect(first.ok).toBe(true)
-    expect(life.getOverride(p.id)?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
+    expect(first).toEqual({ ok: true, yield: { kind: 'branch', count: 1 } })
+
+    const axeStep = life.advanceHarvest(p.id, 0, goodEnv)
+    expect(axeStep.ok).toBe(true)
+    if (axeStep.ok) {
+      const range = BRANCH_YIELD_BY_SIZE.large
+      expect(axeStep.yield.kind).toBe('branch')
+      expect(axeStep.yield.count).toBeGreaterThanOrEqual(range.min - 1)
+      expect(axeStep.yield.count).toBeLessThanOrEqual(range.max - 1)
+      expect(axeStep.stage).toBe('limbed')
+    }
+
+    // The tree no longer has a living crown — a further [E]-style pick can't
+    // reach it at all (distinct from 'regenerating').
+    expect(life.harvestBranch(p.id, 0, goodEnv)).toEqual({ ok: false, reason: 'not-available' })
+  })
+
+  it('axe gathering alone (no prior [E]) collects the entire freshly-rolled pool', () => {
+    const life = createTreeLifecycle(3)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'small' })
+    life.registerPresence(p)
+    const range = BRANCH_YIELD_BY_SIZE.small
+    const step = life.advanceHarvest(p.id, 0, goodEnv)
+    expect(step.ok).toBe(true)
+    if (step.ok) {
+      expect(step.yield.count).toBeGreaterThanOrEqual(range.min)
+      expect(step.yield.count).toBeLessThanOrEqual(range.max)
+    }
+  })
+
+  it('axe gathering on an already-exhausted pool yields zero branches without disturbing the regen timer', () => {
+    const life = createTreeLifecycle(6)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'small' })
+    life.registerPresence(p)
+    exhaustBranchPool(life, p.id, 0, goodEnv)
+    const regeneratesAt = life.getOverride(p.id)?.branchRegeneratesAt
+    expect(regeneratesAt).toBeDefined()
+
+    const step = life.advanceHarvest(p.id, 0.1, goodEnv)
+    expect(step).toEqual({ ok: true, yield: { kind: 'branch', count: 0 }, stage: 'limbed' })
+    expect(life.getOverride(p.id)?.branchRegeneratesAt).toBe(regeneratesAt)
+  })
+
+  it('starts a regeneration cooldown only once the pool is fully collected, and does not extend it on failed attempts', () => {
+    const life = createTreeLifecycle(2)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
+    life.registerPresence(p)
+
+    expect(life.getOverride(p.id)?.branchRegeneratesAt).toBeUndefined()
+    const range = BRANCH_YIELD_BY_SIZE.medium
+    let picks = 0
+    let regeneratesAt: number | undefined
+    while (picks < range.max) {
+      const result = life.harvestBranch(p.id, 0, goodEnv)
+      if (!result.ok) break
+      picks += 1
+      regeneratesAt = life.getOverride(p.id)?.branchRegeneratesAt
+      if (picks < range.min) {
+        expect(regeneratesAt).toBeUndefined()
+      }
+    }
+    expect(regeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
 
     // Repeated attempts during the cooldown must yield nothing and must not
     // move or extend the regeneration timestamp.
@@ -467,6 +580,22 @@ describe('harvestBranch (plan items-player-012)', () => {
     expect(life.harvestBranch(p.id, BRANCH_REGENERATION_DAYS + 0.01, goodEnv).ok).toBe(true)
   })
 
+  it('re-rolls a fresh pool for a new cycle only after regeneration elapses', () => {
+    const life = createTreeLifecycle(8)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'small' })
+    life.registerPresence(p)
+    const range = BRANCH_YIELD_BY_SIZE.small
+
+    const firstCycleTotal = exhaustBranchPool(life, p.id, 0, goodEnv)
+    expect(firstCycleTotal).toBeGreaterThanOrEqual(range.min)
+    expect(firstCycleTotal).toBeLessThanOrEqual(range.max)
+    expect(life.harvestBranch(p.id, 0.5, goodEnv)).toEqual({ ok: false, reason: 'regenerating' })
+
+    const secondCycleTotal = exhaustBranchPool(life, p.id, BRANCH_REGENERATION_DAYS + 0.01, goodEnv)
+    expect(secondCycleTotal).toBeGreaterThanOrEqual(range.min)
+    expect(secondCycleTotal).toBeLessThanOrEqual(range.max)
+  })
+
   it('refuses without mutating state on a non-living tree, or an unregistered id', () => {
     const life = createTreeLifecycle(4)
     const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'felled', sizeClass: 'medium' })
@@ -476,7 +605,7 @@ describe('harvestBranch (plan items-player-012)', () => {
     expect(life.harvestBranch('no-such-id', 0, goodEnv)).toEqual({ ok: false, reason: 'unknown-tree' })
   })
 
-  it('rolls a deterministic count for the same stable tree id + harvest day', () => {
+  it('rolls a deterministic pool total for the same stable tree id + first-touch day', () => {
     const lifeA = createTreeLifecycle(5)
     const pA = presence({ id: lifeA.makeId(3, 4, 0), x: 3, z: 4, initialStage: 'mature', sizeClass: 'large' })
     lifeA.registerPresence(pA)
@@ -485,14 +614,14 @@ describe('harvestBranch (plan items-player-012)', () => {
     const pB = presence({ id: lifeB.makeId(3, 4, 0), x: 3, z: 4, initialStage: 'mature', sizeClass: 'large' })
     lifeB.registerPresence(pB)
 
-    expect(lifeA.harvestBranch(pA.id, 10, goodEnv)).toEqual(lifeB.harvestBranch(pB.id, 10, goodEnv))
+    expect(exhaustBranchPool(lifeA, pA.id, 10, goodEnv)).toBe(exhaustBranchPool(lifeB, pB.id, 10, goodEnv))
   })
 
-  it('round-trips an active cooldown through serialize/replaceOverrides', () => {
+  it('round-trips an active regeneration cooldown through serialize/replaceOverrides', () => {
     const life = createTreeLifecycle(9)
     const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
     life.registerPresence(p)
-    life.harvestBranch(p.id, 0, goodEnv)
+    exhaustBranchPool(life, p.id, 0, goodEnv)
     const serialized = life.serializeOverrides()
     expect(serialized[p.id]?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
 
@@ -503,21 +632,55 @@ describe('harvestBranch (plan items-player-012)', () => {
     expect(restored.harvestBranch(p.id, 0.5, goodEnv)).toEqual({ ok: false, reason: 'regenerating' })
   })
 
+  it('round-trips a partially-collected pool through serialize/replaceOverrides (save/reload)', () => {
+    const life = createTreeLifecycle(2)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'large' })
+    life.registerPresence(p)
+    // A single pick on a large tree (pool 3-6) can never exhaust it in one go.
+    life.harvestBranch(p.id, 0, goodEnv)
+    const remaining = life.getOverride(p.id)?.branchPoolRemaining
+    expect(remaining).toBeGreaterThanOrEqual(BRANCH_YIELD_BY_SIZE.large.min - 1)
+
+    const restored = createTreeLifecycle(2)
+    restored.registerPresence(p)
+    restored.replaceOverrides(life.serializeOverrides())
+    expect(restored.getOverride(p.id)?.branchPoolRemaining).toBe(remaining)
+
+    // Axe gathering on the reloaded tree collects exactly the persisted
+    // remainder, not a freshly re-rolled full pool.
+    const axeStep = restored.advanceHarvest(p.id, 0.1, goodEnv)
+    expect(axeStep.ok).toBe(true)
+    if (axeStep.ok) expect(axeStep.yield.count).toBe(remaining)
+  })
+
   it('keeps a canopy-equivalent override alive instead of pruning away an active cooldown', () => {
     const life = createTreeLifecycle(3)
     const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'medium' })
     life.registerPresence(p)
-    life.harvestBranch(p.id, 0, goodEnv)
+    exhaustBranchPool(life, p.id, 0, goodEnv)
     expect(life.getOverride(p.id)).toBeDefined()
 
-    // A plain resolve (what the renderer calls every frame) would previously
-    // prune any override once growth stage caught back up to procedural —
-    // it must not discard a still-active branch cooldown while doing so.
+    // A plain resolve (what the renderer calls every frame, and what an
+    // in-session WorldBundle rebuild triggers) would previously prune any
+    // override once growth stage caught back up to procedural — it must not
+    // discard a still-active branch cooldown while doing so.
     life.resolve(p, goodEnv, 0.1)
     expect(life.getOverride(p.id)?.branchRegeneratesAt).toBe(BRANCH_REGENERATION_DAYS)
 
     life.resolve(p, goodEnv, BRANCH_REGENERATION_DAYS + 1)
     expect(life.getOverride(p.id)).toBeUndefined()
+  })
+
+  it('keeps a partially-collected pool alive across a resolve (in-session WorldBundle rebuild)', () => {
+    const life = createTreeLifecycle(3)
+    const p = presence({ id: life.makeId(0, 0, 0), initialStage: 'mature', sizeClass: 'large' })
+    life.registerPresence(p)
+    life.harvestBranch(p.id, 0, goodEnv)
+    const remaining = life.getOverride(p.id)?.branchPoolRemaining
+    expect(remaining).toBeDefined()
+
+    life.resolve(p, goodEnv, 0.1)
+    expect(life.getOverride(p.id)?.branchPoolRemaining).toBe(remaining)
   })
 })
 
@@ -547,6 +710,18 @@ describe('parseTreeOverrides', () => {
       good: { stage: 'harvested', stageStartedAt: 1 },
       limbed: { stage: 'limbed', stageStartedAt: 2 },
       old: { stage: 'old', stageStartedAt: 3 },
+    })
+  })
+
+  it('parses a valid branchPoolRemaining and drops a malformed one', () => {
+    expect(
+      parseTreeOverrides({
+        mid: { stage: 'mature', stageStartedAt: 1, branchPoolRemaining: 3 },
+        malformed: { stage: 'mature', stageStartedAt: 1, branchPoolRemaining: 'three' },
+      }),
+    ).toEqual({
+      mid: { stage: 'mature', stageStartedAt: 1, branchPoolRemaining: 3 },
+      malformed: { stage: 'mature', stageStartedAt: 1 },
     })
   })
 })
