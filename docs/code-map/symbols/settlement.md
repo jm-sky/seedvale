@@ -16,34 +16,35 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 305
-- `CreateSettlementDeps` — type — line 210
-- `Settlement` — type — line 103
-- `settlementSpawnPoint` — function — line 198
+- `createSettlement` — function — line 310
+- `CreateSettlementDeps` — type — line 211
+- `Settlement` — type — line 104
+- `settlementSpawnPoint` — function — line 199
 
 ## `settlement/decorProps.ts`
 
-- `cemeteryGraveLayout` — function — line 563
-- `CemeterySize` — type — line 531
-- `CemeteryTemplates` — type — line 523
+- `cemeteryGraveLayout` — function — line 579
+- `CemeterySize` — type — line 547
+- `CemeteryTemplates` — type — line 539
 - `createBush` — function — line 103
 - `createCactus` — function — line 144
-- `createCaveMouth` — function — line 672
-- `createCemetery` — function — line 601
-- `createCemeteryPlot` — function — line 508
+- `createCaveMouth` — function — line 688
+- `createCemetery` — function — line 617
+- `createCemeteryPlot` — function — line 524
 - `createCobblePlate` — function — line 178
-- `createFallenLog` — function — line 274
+- `createFallenLog` — function — line 290
 - `createFelledTree` — function — line 90
 - `createFern` — function — line 163
-- `createGraveStone` — function — line 490
-- `createLargeRock` — function — line 225
+- `createGraveStone` — function — line 506
+- `createLargeRock` — function — line 241
 - `createLilyPad` — function — line 209
 - `createLimbedTree` — function — line 61
-- `createMonolith` — function — line 307
+- `createMonolith` — function — line 323
 - `createReed` — function — line 191
-- `createRockCluster` — function — line 248
-- `createSmallRuins` — function — line 415
-- `createStoneCircle` — function — line 370
+- `createRockCluster` — function — line 264
+- `createSeaweed` — function — line 224
+- `createSmallRuins` — function — line 431
+- `createStoneCircle` — function — line 386
 - `createThicket` — function — line 121
 - `createTree` — function — line 18
 - `createTreeStump` — function — line 40
@@ -217,15 +218,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 124
-- `disposeLivestock` — function — line 484
-- `LIVESTOCK_KINDS` — const — line 53
-- `LIVESTOCK_URLS` — const — line 37
-- `LivestockPersistence` — type — line 72
-- `LivestockRegistry` — type — line 94
-- `LivestockSaveRecord` — type — line 61
-- `spawnLivestock` — function — line 376
-- `tickSettlementLivestock` — function — line 501
+- `createLivestockRegistry` — function — line 125
+- `disposeLivestock` — function — line 488
+- `LIVESTOCK_KINDS` — const — line 54
+- `LIVESTOCK_URLS` — const — line 38
+- `LivestockPersistence` — type — line 73
+- `LivestockRegistry` — type — line 95
+- `LivestockSaveRecord` — type — line 62
+- `spawnLivestock` — function — line 377
+- `tickSettlementLivestock` — function — line 505
 
 ## `settlement/lodging.ts`
 
@@ -332,8 +333,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 621
-- `disposeSettlementGroup` — function — line 1724
+- `buildSettlementProps` — function — line 623
+- `disposeSettlementGroup` — function — line 1726
 - `SettlementHouseBed` — type — line 130
 - `SettlementHouseLandmark` — type — line 101
 - `SettlementLandmarks` — type — line 137
@@ -345,51 +346,52 @@ Generated from exported TypeScript symbols.
 
 - `BUSH_SPECS` — const — line 17
 - `CACTUS_SPECS` — const — line 31
-- `CAMPFIRE_FIT_MAX` — const — line 104
-- `CAMPFIRE_UNLIT_URL` — const — line 102
-- `CEMETERY_SPECS` — const — line 64
-- `COBBLE_FIT_MAX` — const — line 109
-- `COBBLE_URL` — const — line 106
-- `CROPS_FIT_MAX` — const — line 87
-- `CROPS_URL` — const — line 85
-- `DOCK_SPECS` — const — line 48
-- `FALLEN_LOG_SPECS` — const — line 60
-- `FARM_HEIGHT` — const — line 83
-- `FARM_URL` — const — line 80
+- `CAMPFIRE_FIT_MAX` — const — line 120
+- `CAMPFIRE_UNLIT_URL` — const — line 118
+- `CEMETERY_SPECS` — const — line 80
+- `COBBLE_FIT_MAX` — const — line 125
+- `COBBLE_URL` — const — line 122
+- `CROPS_FIT_MAX` — const — line 103
+- `CROPS_URL` — const — line 101
+- `DOCK_SPECS` — const — line 64
+- `FALLEN_LOG_SPECS` — const — line 76
+- `FARM_HEIGHT` — const — line 99
+- `FARM_URL` — const — line 96
 - `FERN_SPECS` — const — line 27
-- `FIRE_FX_URL` — const — line 119
-- `GRAVE_SPECS` — const — line 68
-- `LANTERN_FLOOR_MAX` — const — line 120
-- `LANTERN_URL` — const — line 117
-- `LANTERN_WALL_MAX` — const — line 123
-- `LILY_SPECS` — const — line 44
-- `REED_SPECS` — const — line 36
-- `RESOURCE_GOLD_SPECS` — const — line 72
-- `RESOURCE_ROCK_SPECS` — const — line 76
-- `ROCK_CLUSTER_SPECS` — const — line 56
-- `ROCK_SPECS` — const — line 52
-- `TABLE_LAMP_FIT_MAX` — const — line 132
-- `TABLE_LAMP_URL` — const — line 131
+- `FIRE_FX_URL` — const — line 135
+- `GRAVE_SPECS` — const — line 84
+- `LANTERN_FLOOR_MAX` — const — line 136
+- `LANTERN_URL` — const — line 133
+- `LANTERN_WALL_MAX` — const — line 139
+- `LILY_SPECS` — const — line 51
+- `REED_SPECS` — const — line 42
+- `RESOURCE_GOLD_SPECS` — const — line 88
+- `RESOURCE_ROCK_SPECS` — const — line 92
+- `ROCK_CLUSTER_SPECS` — const — line 72
+- `ROCK_SPECS` — const — line 68
+- `SEAWEED_SPECS` — const — line 60
+- `TABLE_LAMP_FIT_MAX` — const — line 148
+- `TABLE_LAMP_URL` — const — line 147
 - `TREE_SPECS` — const — line 5
-- `TREE_STUMP_HEIGHT` — const — line 114
-- `TREE_STUMP_URL` — const — line 111
-- `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 100
-- `VILLAGE_TORCH_HEIGHT` — const — line 124
-- `VILLAGE_TORCH_URL` — const — line 118
-- `WALL_URL` — const — line 116
-- `WELL_HEIGHT` — const — line 91
-- `WELL_URL` — const — line 89
-- `WOOD_PILE_COLLISION_RADIUS` — const — line 98
-- `WOOD_PILE_HEIGHT` — const — line 95
-- `WOOD_PILE_URL` — const — line 93
+- `TREE_STUMP_HEIGHT` — const — line 130
+- `TREE_STUMP_URL` — const — line 127
+- `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 116
+- `VILLAGE_TORCH_HEIGHT` — const — line 140
+- `VILLAGE_TORCH_URL` — const — line 134
+- `WALL_URL` — const — line 132
+- `WELL_HEIGHT` — const — line 107
+- `WELL_URL` — const — line 105
+- `WOOD_PILE_COLLISION_RADIUS` — const — line 114
+- `WOOD_PILE_HEIGHT` — const — line 111
+- `WOOD_PILE_URL` — const — line 109
 
 ## `settlement/propUtils.ts`
 
 - `applyTerrainTilt` — function — line 65
-- `cloneProp` — function — line 136
-- `clonePropWithYaw` — function — line 150
-- `loadPropOrFallback` — function — line 105
-- `loadPropTemplates` — function — line 126
+- `cloneProp` — function — line 154
+- `clonePropWithYaw` — function — line 168
+- `loadPropOrFallback` — function — line 119
+- `loadPropTemplates` — function — line 143
 - `LocalTerrainSample` — type — line 38
 - `placeOnGround` — function — line 87
 - `rotateOffsetY` — function — line 81
@@ -475,13 +477,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 169
+- `createSettlementsManager` — function — line 170
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 64
+- `SettlementsManager` — type — line 65
 
 ## `settlement/settlementStructures.ts`
 

@@ -81,6 +81,8 @@ zmiany geometrii/animacji/tekstur, tylko formatu zapisu (perf review
 | `public/models/nature/cactus_a.glb` | Quaternius | [poly.pizza/m/HsEJgRLQWX](https://poly.pizza/m/HsEJgRLQWX) | CC0 1.0 | `Cactus` — chunk vegetation (pustynia) |
 | `public/models/nature/cactus_b.glb` | Quaternius | [poly.pizza/m/Da39rzd54k](https://poly.pizza/m/Da39rzd54k) | CC0 1.0 | `Cactus Flowers` — chunk vegetation (pustynia) |
 | `public/models/nature/reed_a.glb` | Poly by Google | [poly.pizza/m/9uT74BMpRrl](https://poly.pizza/m/9uT74BMpRrl) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Cattail` — chunk vegetation (bagno); wymagana atrybucja |
+| `public/models/nature/reed_cluster_a.glb` | ? | ? | **needs license confirmation** | Dodane 2026-09-05 (commit `ff55ac25`) bez metadanych źródła — denser reed cluster, `REED_SPECS[1]` (plan world-terrain-010 Phase 5) |
+| `public/models/nature/seaweed_cluster_a.glb` | ? | ? | **needs license confirmation** | Dodane 2026-09-05 (commit `ff55ac25`) bez metadanych źródła — shallow coastal seaweed, `SEAWEED_SPECS` (plan world-terrain-010 Phase 7) |
 | `public/models/settlement/well.glb` | Quaternius | [poly.pizza/m/QlqncKYxXb](https://poly.pizza/m/QlqncKYxXb) | CC0 1.0 | `Well` — studnia wioski; fallback `createWell` (plan 101) |
 | `public/models/settlement/wood_pile.glb` | K H (Kash) | [poly.pizza/m/8ueXsvnRjC1](https://poly.pizza/m/8ueXsvnRjC1) | **[CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)** | `Wood Pile` — skład wioski; wymagana atrybucja (plan 101) |
 | `public/models/nature/mushroom_a.glb` | Quaternius | [poly.pizza/m/aOW08oSrd4](https://poly.pizza/m/aOW08oSrd4) | CC0 1.0 | `Mushroom` — **parked**; textury 1024→512 WebP |

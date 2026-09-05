@@ -22,6 +22,7 @@ Generated from TypeScript imports.
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
 - `fauna/preyAlertPerception.ts`
+- `fauna/waterTraversal.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
 - `navigation/navigation.ts`
@@ -33,6 +34,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `simulation/index.ts`
 - `terrain/slopeConstraint.ts`
+- `terrain/waterSample.ts`
 - `ui/agentStatusLabel.ts`
 - `world/animalTraps.ts`
 - `world/bloodTraces.ts`
@@ -226,6 +228,7 @@ Generated from TypeScript imports.
 - `shared/bootMark.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/coastPlacement.ts`
+- `terrain/waterSample.ts`
 - `ui/labelDistance.ts`
 - `world/animalTraps.ts`
 - `world/createGrassForagePatches.ts`
@@ -508,3 +511,16 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+
+## `fauna/waterTraversal.test.ts`
+
+**Imports**
+
+- `fauna/waterTraversal.ts`
+
+## `fauna/waterTraversal.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/waterTraversal.test.ts`

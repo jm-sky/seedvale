@@ -362,6 +362,7 @@ export function computeChunkVegetation(
   )
   placements.push(...riparianPatches(coord, tile, params, sample, clumpNoise))
   placements.push(...lilyPatches(coord, tile, params, sample))
+  placements.push(...seaweedPatches(coord, tile, params, sample))
 
   return placements
 }
@@ -567,6 +568,13 @@ const RIPARIAN_PATCH_RADIUS = 2.4
 const RIPARIAN_BAND = 6
 const RIPARIAN_REED_BAND = 1.6
 const RIPARIAN_FERN_BAND = 3.4
+/** Chance a riparian reed candidate picks the merged multi-stalk cluster
+ *  (`REED_SPECS[1]`, plan world-terrain-010 Phase 5) over a single reed —
+ *  denser visual reed beds along the water edge without more placements/
+ *  instances. Only applies when a cluster variant actually exists
+ *  (`vegetationSpeciesCount.reed > 1`), so test fixtures with one reed spec
+ *  degrade to the old uniform pick. */
+const REED_CLUSTER_BIAS = 0.65
 /** Fraction of otherwise-eligible outer-band candidates left as open
  *  shoreline instead of a tree — "long sections of relatively open
  *  shoreline must remain possible" (plan world-terrain-010, Phase 4). */
@@ -634,11 +642,16 @@ function riparianPatches(
     if (dist === null) return
 
     if (dist < RIPARIAN_REED_BAND) {
+      const reedSpeciesCount = Math.max(1, params.vegetationSpeciesCount.reed)
+      const speciesIndex =
+        reedSpeciesCount > 1 && riparianRandom() < REED_CLUSTER_BIAS
+          ? 1
+          : Math.floor(riparianRandom() * reedSpeciesCount)
       out.push({
         x,
         z,
         kind: 'reed',
-        speciesIndex: Math.floor(riparianRandom() * Math.max(1, params.vegetationSpeciesCount.reed)),
+        speciesIndex,
         scale: 0.7 + riparianRandom() * 0.6,
         rotationY: riparianRandom() * Math.PI * 2,
       })
@@ -773,6 +786,79 @@ function lilyPatches(
         speciesIndex: Math.floor(lilyRandom() * speciesCount),
         scale: 0.7 + lilyRandom() * 0.6,
         rotationY: lilyRandom() * Math.PI * 2,
+      })
+    }
+  }
+
+  return out
+}
+
+const SEAWEED_CANDIDATES_PER_CHUNK = 2
+const SEAWEED_PATCH_MIN_COUNT = 2
+const SEAWEED_PATCH_MAX_EXTRA = 3
+const SEAWEED_PATCH_RADIUS = 1.8
+/** Unambiguously-ocean `bodyScale` gate (mirrors `waterBodies.ts`'s own
+ *  `OCEAN_BODY_SCALE_DISCARD` — `computeBodyScale` saturates ocean texels to
+ *  `1` and caps inland-lake texels at `0.85`, so `>= 0.9` cleanly separates
+ *  the two without importing `waterBodies.ts` into this worker-safe module). */
+const SEAWEED_MIN_BODY_SCALE = 0.9
+/** Shallow-coastal depth bias (world units of seabed below `waterLevel`,
+ *  read from `floorHeights` — never the water-clamped `heights`) — keeps
+ *  seaweed off the general open-ocean floor (plan world-terrain-010, Phase 7:
+ *  "do not populate the general ocean floor"). */
+const SEAWEED_MAX_DEPTH = 2.0
+
+/**
+ * Lightweight seaweed clusters for shallow coastal ocean water only (plan
+ * world-terrain-010, Phase 7). Same patch-based shape as `lilyPatches`, but
+ * gated on `bodyScale` reading unambiguously ocean (never inland lake) and a
+ * shallower depth bias — coastal shelf, not the open sea floor. Vertical
+ * anchoring for this kind reads `tile.floorHeights` (seabed), not the
+ * water-surface-clamped `tile.heights` every other vegetation kind uses (see
+ * `chunkManager.ts`'s `attachChunkContent`), since lily's "clamped heights
+ * already equal the water surface" trick does not hold at the seabed.
+ */
+function seaweedPatches(
+  coord: ChunkCoord,
+  tile: ChunkTileData,
+  params: ChunkTileParams,
+  sample: (grid: Float32Array, x: number, z: number) => number,
+): VegetationPlacement[] {
+  const { chunkSize, waterLevel } = params
+  const half = chunkSize / 2
+  const seaweedRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz) ^ 0x7c30e1)
+  const speciesCount = Math.max(1, params.vegetationSpeciesCount.seaweed)
+  const out: VegetationPlacement[] = []
+
+  const eligible = (x: number, z: number): boolean => {
+    const bodyScale = sample(tile.bodyScale, x, z)
+    if (bodyScale < SEAWEED_MIN_BODY_SCALE) return false // land or inland lake
+    const depth = waterLevel - sample(tile.floorHeights, x, z)
+    if (depth <= 0 || depth > SEAWEED_MAX_DEPTH) return false
+    if (params.riverSegments.length > 0 && isInsideRiverChannel(params.riverSegments, x, z)) return false
+    return true
+  }
+
+  for (let i = 0; i < SEAWEED_CANDIDATES_PER_CHUNK; i++) {
+    const cx = coord.cx * chunkSize + (seaweedRandom() * 2 - 1) * half
+    const cz = coord.cz * chunkSize + (seaweedRandom() * 2 - 1) * half
+    if (!eligible(cx, cz)) continue
+
+    const count = SEAWEED_PATCH_MIN_COUNT + Math.floor(seaweedRandom() * SEAWEED_PATCH_MAX_EXTRA)
+    for (let j = 0; j < count; j++) {
+      const a = seaweedRandom() * Math.PI * 2
+      const r = Math.sqrt(seaweedRandom()) * SEAWEED_PATCH_RADIUS
+      const fx = cx + Math.cos(a) * r
+      const fz = cz + Math.sin(a) * r
+      if (!eligible(fx, fz)) continue
+
+      out.push({
+        x: fx,
+        z: fz,
+        kind: 'seaweed',
+        speciesIndex: Math.floor(seaweedRandom() * speciesCount),
+        scale: 0.7 + seaweedRandom() * 0.6,
+        rotationY: seaweedRandom() * Math.PI * 2,
       })
     }
   }

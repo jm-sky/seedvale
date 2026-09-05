@@ -8,8 +8,11 @@ import { computeBodyScale, detectWaterBodies } from './waterBodies'
 import { worleyRidge } from './worleyNoise'
 
 /** `lily` (plan world-terrain-010) is shallow-water-only surface vegetation —
- *  see `chunkVegetation.ts`'s dedicated riparian/aquatic pass. */
-export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed' | 'fern' | 'lily'
+ *  see `chunkVegetation.ts`'s dedicated riparian/aquatic pass. `seaweed`
+ *  (same plan, Phase 7) is shallow-coastal-ocean-only and anchors to the
+ *  seabed (`floorHeights`) rather than the water surface — see
+ *  `chunkManager.ts`'s `attachChunkContent`. */
+export type VegetationKind = 'tree' | 'bush' | 'cactus' | 'reed' | 'fern' | 'lily' | 'seaweed'
 
 export type RegionParams = {
   /** Very-low-frequency noise scale (world units) classifying ocean → coast →

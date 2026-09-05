@@ -34,7 +34,8 @@
 
 ### Bug Fixes
 
-_No qualifying plans._
+1. `world-014` — **World location landmark lookup main-thread freeze**  
+   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -112,52 +113,52 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `items-player-002` — **Food provenance, freshness and storage**  
+10. `world-014` — **World location landmark lookup main-thread freeze**  
+  🔴 `M` · **Score:**  31  
+   → **unlocks:** 0/0
+
+11. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-11. `items-player-014` — **Rope-pullable resource transport**  
+12. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` — **Seedvale Character Preparation Panel**  
+14. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `npc-002` — **NPC Healing**  
+15. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-15. `npc-011` — **NPC Burial & Graves**  
+16. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `fauna-013` — **Animal hand-feeding and human affinity**  
+18. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `settlements-npcs-007` — **Bandages and herbal medicine**  
+21. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-21. `fauna-015` — **Animal water traversal, wading, swimming and drowning**  
-  🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
 22. `ui-input-009` — **Merchant item ownership and semantic item labels**  
@@ -349,6 +350,7 @@ graph TD
   world_011["world-011 — Water Types and Drinking"]
   world_012["world-012 — World Locations, Discovery and Map Navigation"]
   world_013["world-013 — World Location Catalog performance optimization"]
+  world_014["world-014 — World location landmark lookup main-thread freeze"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -464,6 +466,7 @@ graph TD
   world_008 --> items_player_009
   world_012 --> items_player_016
   world_012 --> world_013
+  world_013 --> world_014
   world_terrain_004 --> world_terrain_005
   world_terrain_010 --> world_terrain_011
 ```

@@ -33,8 +33,15 @@ export const CACTUS_SPECS = [
   { url: '/models/nature/cactus_b.glb', height: 2.0 },
 ] as const
 
+/** Index 1 is the denser cluster variant (plan world-terrain-010 Phase 5,
+ *  `reed_cluster_a.glb` — a merged multi-stalk mesh, ~2.6 m authored height)
+ *  — appended, not interleaved, so existing `speciesIndex` 0 stays a single
+ *  reed. Both cast no shadow (`noShadow`, `chunkManager.ts`'s
+ *  `getReedTemplates`) — a fraction of a shadow-map texel either way, and the
+ *  cluster's authored bbox diagonal is well past `SMALL_MESH_SHADOW_THRESHOLD`. */
 export const REED_SPECS = [
   { url: '/models/nature/reed_a.glb', height: 1.1 },
+  { url: '/models/nature/reed_cluster_a.glb', height: 1.3 },
 ] as const
 
 /** Shallow-water surface vegetation (plan world-terrain-010). Flat/wide, not
@@ -43,6 +50,15 @@ export const REED_SPECS = [
  *  fit-max target (pad diameter, not vertical height). */
 export const LILY_SPECS = [
   { url: '/models/parked/Lilypad-01.glb', height: 0.55 },
+] as const
+
+/** Shallow coastal-ocean rooted vegetation (plan world-terrain-010 Phase 7)
+ *  — its own `VegetationKind`, anchored to the seabed (`floorHeights`), not
+ *  the water-surface-clamped `heights` every other vegetation kind uses (see
+ *  `chunkManager.ts`'s `attachChunkContent`). Casts no shadow, same reasoning
+ *  as `REED_SPECS`'s cluster variant. */
+export const SEAWEED_SPECS = [
+  { url: '/models/nature/seaweed_cluster_a.glb', height: 0.5 },
 ] as const
 
 export const DOCK_SPECS = [

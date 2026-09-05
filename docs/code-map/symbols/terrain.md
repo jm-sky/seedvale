@@ -80,30 +80,30 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmap.ts`
 
-- `apronGridWeights` — function — line 656
-- `ApronGridWeights` — type — line 647
-- `apronOriginWorld` — function — line 627
-- `ChunkTileData` — type — line 311
-- `ChunkTileParams` — type — line 231
-- `ClearingSegment` — type — line 163
-- `computeChunkTile` — function — line 988
-- `extractCoreGrid` — function — line 711
-- `RawSampleParams` — type — line 297
-- `RegionalSmoothingSegment` — type — line 223
-- `RegionParams` — type — line 14
-- `RiverChannelSegment` — type — line 199
-- `RoadCorridorSegment` — type — line 145
-- `RoadNetworkParams` — type — line 82
-- `sampleApronGrid` — function — line 694
-- `sampleApronGridWeighted` — function — line 679
-- `sampleBiomeAt` — function — line 598
-- `sampleContinentalnessAt` — function — line 602
-- `sampleFloorAt` — function — line 594
-- `sampleHeightAt` — function — line 590
-- `sampleMoistureRegionAt` — function — line 610
-- `sampleMountainRidgeAt` — function — line 618
-- `VegetationKind` — type — line 12
-- `VillageClearingParams` — type — line 63
+- `apronGridWeights` — function — line 659
+- `ApronGridWeights` — type — line 650
+- `apronOriginWorld` — function — line 630
+- `ChunkTileData` — type — line 314
+- `ChunkTileParams` — type — line 234
+- `ClearingSegment` — type — line 166
+- `computeChunkTile` — function — line 991
+- `extractCoreGrid` — function — line 714
+- `RawSampleParams` — type — line 300
+- `RegionalSmoothingSegment` — type — line 226
+- `RegionParams` — type — line 17
+- `RiverChannelSegment` — type — line 202
+- `RoadCorridorSegment` — type — line 148
+- `RoadNetworkParams` — type — line 85
+- `sampleApronGrid` — function — line 697
+- `sampleApronGridWeighted` — function — line 682
+- `sampleBiomeAt` — function — line 601
+- `sampleContinentalnessAt` — function — line 605
+- `sampleFloorAt` — function — line 597
+- `sampleHeightAt` — function — line 593
+- `sampleMoistureRegionAt` — function — line 613
+- `sampleMountainRidgeAt` — function — line 621
+- `VegetationKind` — type — line 15
+- `VillageClearingParams` — type — line 66
 
 ## `terrain/chunkHeightmapProtocol.ts`
 
@@ -119,22 +119,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 651
-- `ChunkManager` — type — line 401
-- `ChunkManagerConfig` — type — line 252
-- `createChunkManager` — function — line 790
+- `applyModificationToTile` — function — line 665
+- `ChunkManager` — type — line 407
+- `ChunkManagerConfig` — type — line 258
+- `createChunkManager` — function — line 804
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 779
-- `drainByBudget` — function — line 769
-- `FinalizeStage` — type — line 341
-- `pickNearestQueuedKey` — function — line 729
-- `pickNextFinalizeKey` — function — line 747
-- `ringChunkOffsets` — function — line 211
-- `TerrainModification` — type — line 608
+- `CropHarvestOutcome` — type — line 793
+- `drainByBudget` — function — line 783
+- `FinalizeStage` — type — line 347
+- `pickNearestQueuedKey` — function — line 743
+- `pickNextFinalizeKey` — function — line 761
+- `ringChunkOffsets` — function — line 217
+- `TerrainModification` — type — line 622
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -296,14 +296,14 @@ Generated from exported TypeScript symbols.
 ## `terrain/riverNetwork.ts`
 
 - `canonicalWaterHeight` — function — line 200
-- `computeRiverTile` — function — line 573
+- `computeRiverTile` — function — line 602
 - `DEFAULT_RIVER_THRESHOLDS` — const — line 55
 - `depthFromAccumulation` — function — line 184
 - `exposedBankFromFlow` — function — line 170
 - `flowFactor` — function — line 124
-- `isInsideRiverChannel` — function — line 326
-- `nearestRiverBankDistance` — function — line 302
-- `nearestRiverBankPoint` — function — line 338
+- `isInsideRiverChannel` — function — line 355
+- `nearestRiverBankDistance` — function — line 338
+- `nearestRiverBankPoint` — function — line 367
 - `overlappingRiverTiles` — function — line 82
 - `RIVER_CELL_STEP` — const — line 38
 - `RIVER_TILE_HALO` — const — line 37
@@ -315,6 +315,8 @@ Generated from exported TypeScript symbols.
 - `riverTileCoordOf` — function — line 63
 - `riverTileCoreRect` — function — line 74
 - `riverTileKey` — function — line 67
+- `RiverWaterSample` — type — line 295
+- `riverWaterSampleAt` — function — line 306
 - `submergedDepthFromFlow` — function — line 175
 - `widthFromAccumulation` — function — line 138
 - `WorldRect` — type — line 71
@@ -371,10 +373,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/vegetationRegionBatcher.ts`
 
-- `createVegetationRegionBatcher` — function — line 123
-- `REGION_CHUNKS` — const — line 44
+- `createVegetationRegionBatcher` — function — line 125
+- `REGION_CHUNKS` — const — line 46
 - `VegetationKind` — type — line 9
-- `VegetationRegionBatcher` — type — line 69
+- `VegetationRegionBatcher` — type — line 71
 
 ## `terrain/waterBodies.ts`
 
@@ -387,6 +389,15 @@ Generated from exported TypeScript symbols.
 - `oceanMixAt` — function — line 94
 - `WaterBody` — type — line 3
 - `WaterBodyDetection` — type — line 9
+
+## `terrain/waterSample.ts`
+
+- `DRY_WATER_SAMPLE` — const — line 23
+- `LocalWaterSample` — type — line 19
+  - domain: terrain
+  - system: water
+  - role: Single physical "what water, if any, is at this point" answer (plan fauna-015) — the one thing world/terrain owns so fauna (and, later, any other gameplay consumer) never re-derives lake/ocean vs. river depth logic itself. Pure/allocation-light so it's safe to call from a hot per-agent movement path; `ChunkManager.sampleLocalWater` is the only wiring that turns real chunk/river data into these inputs.
+- `sampleLocalWater` — function — line 40
 
 ## `terrain/worleyNoise.ts`
 

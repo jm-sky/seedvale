@@ -181,3 +181,34 @@ This order keeps the highest-risk shared data-contract change separate from asse
 ## Update
 
 Added `public/models/nature/reed_cluster_a.glb` and `public/models/nature/seaweed_cluster_a.glb`
+
+## Update 2 (2026-09-05) — Phases 5/7 wired using the assets above
+
+Both GLBs are authored well above in-game scale (raw bbox diagonal ~3.6 m for
+the reed cluster, ~0.62 m for the seaweed cluster) — both exceed
+`loadGltf.ts`'s `SMALL_MESH_SHADOW_THRESHOLD` (0.5 m) at native scale, so
+relying on that heuristic alone would have given them shadows the plan
+explicitly forbids. Added an explicit `noShadow` option to
+`loadPropOrFallback`/`loadPropTemplates` (forces `castShadow = false` on every
+mesh after fit) instead, applied to reed/lily/seaweed templates in
+`chunkManager.ts`.
+
+Seaweed needed the anchor-kind concern from §8 addressed for real (lily
+pads didn't, since the water-clamped `tile.heights` already equals the water
+surface underwater). `attachChunkContent()`'s per-kind vegetation loop now
+special-cases `'seaweed'` to sample `tile.floorHeights` (true bathymetry)
+instead of `tile.heights` for `groundY` — no new anchor-kind enum was needed,
+just a per-kind sampler choice at the one call site that builds
+`PropPlacement.groundY`.
+
+Reed cluster went in as `REED_SPECS[1]`, picked with a 65% bias in
+`riparianPatches()`'s existing reed band (`REED_CLUSTER_BIAS`) rather than a
+uniform species roll — the plan's "prefer cluster instances over increasing
+individual placement count" is a deliberate weighting decision, not something
+that falls out of just adding a second spec entry.
+
+Seaweed's ocean-vs-lake gate reuses `bodyScale`'s existing saturate-to-1 vs
+cap-at-0.85 behavior (`computeBodyScale`) rather than importing
+`waterBodies.ts`'s `oceanMixAt`/`OCEAN_BODY_SCALE_DISCARD` into
+`chunkVegetation.ts` — `bodyScale >= 0.9` already cleanly separates the two,
+so no new cross-module dependency was needed.

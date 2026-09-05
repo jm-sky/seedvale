@@ -210,6 +210,8 @@ Generated from TypeScript imports.
 - `terrain/riverNetwork.ts`
 - `terrain/riverTileCache.ts`
 - `terrain/terrainPreparation.ts`
+- `terrain/waterSample.test.ts`
+- `terrain/waterSample.ts`
 - `world/largeCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
@@ -311,6 +313,7 @@ Generated from TypeScript imports.
 - `terrain/riverNetwork.ts`
 - `terrain/riverTileCache.ts`
 - `terrain/vegetationRegionBatcher.ts`
+- `terrain/waterSample.ts`
 - `world/collision.ts`
 - `world/createRiverWater.ts`
 - `world/createWater.ts`
@@ -695,6 +698,7 @@ Generated from TypeScript imports.
 - `terrain/grassPlacement.ts`
 - `terrain/riverNetwork.test.ts`
 - `terrain/riverTileCache.ts`
+- `terrain/waterSample.ts`
 - `world/createRiverWater.ts`
 - `world/riverGeometry.test.ts`
 - `world/riverGeometry.ts`
@@ -818,6 +822,30 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.test.ts`
 - `terrain/terrainClassification.ts`
 - `terrain/waterBodies.test.ts`
+
+## `terrain/waterSample.test.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/waterSample.ts`
+
+## `terrain/waterSample.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/createFauna.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `settlement/livestock.ts`
+- `terrain/chunkManager.ts`
+- `terrain/waterSample.test.ts`
 
 ## `terrain/worleyNoise.ts`
 

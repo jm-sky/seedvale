@@ -218,6 +218,22 @@ export function createLilyPad(scale = 1): THREE.Group {
   return lily
 }
 
+/** Shallow coastal seaweed fallback (plan world-terrain-010, Phase 7) — a
+ *  loose cluster of thin blades rooted at the seabed, no shadow (same
+ *  "drobne propsy" reasoning as `createReed`/`createLilyPad`). */
+export function createSeaweed(scale = 1): THREE.Group {
+  const seaweed = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x2f6b4a, flatShading: true, side: THREE.DoubleSide })
+  for (let i = 0; i < 4; i++) {
+    const height = (0.35 + Math.random() * 0.25) * scale
+    const blade = new THREE.Mesh(new THREE.ConeGeometry(0.05 * scale, height, 4), mat)
+    blade.position.set((Math.random() - 0.5) * 0.2 * scale, height / 2, (Math.random() - 0.5) * 0.2 * scale)
+    blade.castShadow = false
+    seaweed.add(blade)
+  }
+  return seaweed
+}
+
 /** Irregular boulder — `IcosahedronGeometry` squashed/stretched per axis from
  *  `variant` (deterministic, no `Math.random()`: the caller already rolled a
  *  seeded `variant` in `chunkEnvironment.ts`, so re-rolling here would break

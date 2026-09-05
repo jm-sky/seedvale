@@ -92,7 +92,7 @@ function tileParams(
     chunkSize: 64,
     resolution: 65,
     isHomeChunk: false,
-    vegetationSpeciesCount: { tree: 9, bush: 5, cactus: 2, reed: 1, fern: 1, lily: 1 },
+    vegetationSpeciesCount: { tree: 9, bush: 5, cactus: 2, reed: 1, fern: 1, lily: 1, seaweed: 1 },
     roadSegments: [],
     clearings: [],
     regional: [],
@@ -471,5 +471,112 @@ describe('computeChunkVegetation — lily pads (plan world-terrain-010, Phase 6)
       }
     }
     expect(deepOceanLilyCount).toBe(0)
+  })
+})
+
+describe('computeChunkVegetation — shallow coastal seaweed (plan world-terrain-010, Phase 7)', () => {
+  const waterLevel = 0.45
+  const chunkSize = 64
+  const resolution = 20
+
+  /** Same round "water body centered at chunk origin" shape as the lily
+   *  fixture above, parameterized by seabed depth and continentalness so one
+   *  helper covers shallow-coastal, inland-lake and deep-open-ocean cases. */
+  function waterTile(
+    depthBelowWaterLevel: number,
+    continentalnessValue: number,
+  ): { tile: ChunkTileData, o: ReturnType<typeof apronOriginWorld> } {
+    const o = apronOriginWorld(0, 0, chunkSize, resolution)
+    const n = o.apronRes * o.apronRes
+    const heights = new Float32Array(n)
+    const floorHeights = new Float32Array(n)
+    const continentalness = new Float32Array(n).fill(continentalnessValue)
+    for (let iz = 0; iz < o.apronRes; iz++) {
+      for (let ix = 0; ix < o.apronRes; ix++) {
+        const wx = o.x + ix * o.step
+        const wz = o.z + iz * o.step
+        const idx = iz * o.apronRes + ix
+        const floorH = Math.hypot(wx, wz) < 14 ? waterLevel - depthBelowWaterLevel : waterLevel + 1
+        floorHeights[idx] = floorH
+        heights[idx] = Math.max(floorH, waterLevel)
+      }
+    }
+    const bodies = detectWaterBodies(heights, o.apronRes, waterLevel, o.step)
+    const bodyScale = computeBodyScale(bodies, { continentalness, oceanThreshold: 0.32, coastThreshold: 0.45 })
+    const tile: ChunkTileData = {
+      heights,
+      floorHeights,
+      biomes: new Float32Array(n).fill(0.6),
+      bodyScale,
+      continentalness,
+      mountainRidge: new Float32Array(n),
+      moistureRegion: new Float32Array(n).fill(0.5),
+      roadTint: new Float32Array(n),
+    }
+    return { tile, o }
+  }
+
+  it('places seaweed only on shallow coastal ocean water, never on dry land', () => {
+    // continentalness 0.1 (<= oceanThreshold 0.32) saturates bodyScale to 1
+    // (unambiguously ocean, not an inland lake); shallow 0.6 m seabed depth
+    // keeps it well inside SEAWEED_MAX_DEPTH.
+    const { tile, o } = waterTile(0.6, 0.1)
+    const coord = { cx: 0, cz: 0 }
+    const params = tileParams({ cx: 0, cz: 0, chunkSize, resolution })
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
+
+    let seaweedCount = 0
+    for (let seed = 0; seed < 12; seed++) {
+      const p = { ...params, seed: 500 + seed }
+      const vegetation = computeChunkVegetation(coord, tile, p)
+      for (const v of vegetation.filter((x) => x.kind === 'seaweed')) {
+        seaweedCount++
+        expect(sample(tile.bodyScale, v.x, v.z)).toBeGreaterThanOrEqual(0.9)
+        expect(sample(tile.heights, v.x, v.z)).toBeLessThanOrEqual(waterLevel + 1e-6) // underwater, not dry land
+        const depth = waterLevel - sample(tile.floorHeights, v.x, v.z)
+        expect(depth).toBeGreaterThan(0)
+        expect(depth).toBeLessThanOrEqual(2.0 + 1e-6) // SEAWEED_MAX_DEPTH
+      }
+    }
+    expect(seaweedCount).toBeGreaterThan(0)
+  })
+
+  it('never accepts seaweed on inland lake water (bodyScale below the ocean gate)', () => {
+    // continentalness 0.6 (inland) caps bodyScale at LAKE_SCALE_MAX (0.85) —
+    // shallow enough depth-wise that only the ocean gate can be rejecting it.
+    const { tile } = waterTile(0.6, 0.6)
+    const coord = { cx: 0, cz: 0 }
+    const params = tileParams({ cx: 0, cz: 0, chunkSize, resolution })
+
+    let seaweedCount = 0
+    for (let seed = 0; seed < 12; seed++) {
+      const p = { ...params, seed: 600 + seed }
+      seaweedCount += computeChunkVegetation(coord, tile, p).filter((x) => x.kind === 'seaweed').length
+    }
+    expect(seaweedCount).toBe(0)
+  })
+
+  it('never accepts seaweed on the deep open ocean floor beyond the shallow bias', () => {
+    // continentalness 0.1 keeps this unambiguously ocean; a 5 m seabed depth
+    // is well past SEAWEED_MAX_DEPTH.
+    const { tile, o } = waterTile(5, 0.1)
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
+    expect(sample(tile.bodyScale, 0, 0)).toBeGreaterThanOrEqual(0.9) // sanity: reads as ocean
+
+    const coord = { cx: 0, cz: 0 }
+    const params = tileParams({ cx: 0, cz: 0, chunkSize, resolution })
+
+    let deepOceanSeaweedCount = 0
+    for (let seed = 0; seed < 12; seed++) {
+      const p = { ...params, seed: 700 + seed }
+      for (const v of computeChunkVegetation(coord, tile, p).filter((x) => x.kind === 'seaweed')) {
+        // Margin inside the body's radius-14 shoreline, away from the
+        // bilinear land/water boundary interpolation band.
+        if (Math.hypot(v.x, v.z) < 10) deepOceanSeaweedCount++
+      }
+    }
+    expect(deepOceanSeaweedCount).toBe(0)
   })
 })

@@ -29,6 +29,7 @@ import {
   createMonolith,
   createReed,
   createRockCluster,
+  createSeaweed,
   createSmallRuins,
   createStoneCircle,
   createTree,
@@ -42,6 +43,7 @@ import {
   REED_SPECS,
   ROCK_CLUSTER_SPECS,
   ROCK_SPECS,
+  SEAWEED_SPECS,
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
@@ -126,12 +128,13 @@ function memoTemplates(
   specs: Parameters<typeof loadPropTemplates>[0],
   fallback: () => THREE.Object3D,
   fit?: Parameters<typeof loadPropTemplates>[2],
+  noShadow?: Parameters<typeof loadPropTemplates>[3],
 ): TemplateCache {
   let promise: Promise<THREE.Object3D[]> | null = null
   let value: THREE.Object3D[] | null = null
   return {
     start() {
-      promise ??= loadPropTemplates(specs, fallback, fit).then(
+      promise ??= loadPropTemplates(specs, fallback, fit, noShadow).then(
         (templates) => {
           value = templates
           return templates
@@ -150,9 +153,10 @@ function memoTemplates(
 const getTreeTemplates = memoTemplates(TREE_SPECS, () => createTree(1))
 const getBushTemplates = memoTemplates(BUSH_SPECS, () => createBush(1))
 const getCactusTemplates = memoTemplates(CACTUS_SPECS, () => createCactus(1))
-const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1))
+const getReedTemplates = memoTemplates(REED_SPECS, () => createReed(1), 'height', true)
 const getFernTemplates = memoTemplates(FERN_SPECS, () => createFern(1))
-const getLilyTemplates = memoTemplates(LILY_SPECS, () => createLilyPad(1), 'max')
+const getLilyTemplates = memoTemplates(LILY_SPECS, () => createLilyPad(1), 'max', true)
+const getSeaweedTemplates = memoTemplates(SEAWEED_SPECS, () => createSeaweed(1), 'height', true)
 const getRockTemplates = memoTemplates(ROCK_SPECS, () => createLargeRock(1))
 const getRockClusterTemplates = memoTemplates(ROCK_CLUSTER_SPECS, () => createRockCluster(1))
 const getFallenLogTemplates = memoTemplates(FALLEN_LOG_SPECS, () => createFallenLog(1))
@@ -166,6 +170,7 @@ function preloadPropTemplates(): void {
   void getReedTemplates.start()
   void getFernTemplates.start()
   void getLilyTemplates.start()
+  void getSeaweedTemplates.start()
   void getRockTemplates.start()
   void getRockClusterTemplates.start()
   void getFallenLogTemplates.start()
@@ -991,6 +996,7 @@ export function createChunkManager(
         reed: REED_SPECS.length,
         fern: FERN_SPECS.length,
         lily: LILY_SPECS.length,
+        seaweed: SEAWEED_SPECS.length,
       },
       roadSegments: [...segmentsNear(x, z, config.chunkSize, roadCtx), ...village.paths],
       clearings: village.clearings,
@@ -1293,6 +1299,7 @@ export function createChunkManager(
         || !getReedTemplates.peek()
         || !getFernTemplates.peek()
         || !getLilyTemplates.peek()
+        || !getSeaweedTemplates.peek()
       ) {
         return false
       }
@@ -1516,6 +1523,12 @@ export function createChunkManager(
     const o = apronOriginWorld(coord.cx, coord.cz, config.chunkSize, config.resolution)
     const sampleTileHeight: HeightSampler = (sx, sz) =>
       sampleApronGrid(tile.heights, o.apronRes, o.x, o.z, o.step, sx, sz)
+    // Seaweed roots at the seabed, not the water surface: `tile.heights` is
+    // clamped to `waterLevel` underwater (right for lily pads, which float on
+    // the surface), but `tile.floorHeights` is true bathymetry (world-terrain-010
+    // Phase 7 / implementation notes §8).
+    const sampleTileFloor: HeightSampler = (sx, sz) =>
+      sampleApronGrid(tile.floorHeights, o.apronRes, o.x, o.z, o.step, sx, sz)
 
     const plantedTreesHere = plantedTreesForChunk(coord)
     if (tile.vegetation.length > 0 || plantedTreesHere.length > 0) {
@@ -1605,21 +1618,24 @@ export function createChunkManager(
         vegetationRegionBatcher.setChunkPlacements(coord, 'tree-living', treeTemplates, livingTreePlacements)
       }
 
+      const seaweedTemplates = getSeaweedTemplates.peek() ?? []
       const instancedTemplatesByKind = {
         bush: bushTemplates,
         cactus: cactusTemplates,
         reed: reedTemplates,
         fern: fernTemplates,
         lily: lilyTemplates,
+        seaweed: seaweedTemplates,
       }
-      for (const kind of ['bush', 'cactus', 'reed', 'fern', 'lily'] as const) {
+      for (const kind of ['bush', 'cactus', 'reed', 'fern', 'lily', 'seaweed'] as const) {
         const placements = tile.vegetation.filter((p) => p.kind === kind)
         if (placements.length === 0) continue
+        const sampleGroundY = kind === 'seaweed' ? sampleTileFloor : sampleTileHeight
         const propPlacements: PropPlacement[] = placements.map((p) => ({
           speciesIndex: p.speciesIndex,
           x: p.x,
           z: p.z,
-          groundY: sampleTileHeight(p.x, p.z),
+          groundY: sampleGroundY(p.x, p.z),
           rotationY: p.rotationY,
           scale: p.scale,
         }))

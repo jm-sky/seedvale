@@ -102,6 +102,20 @@ export function placeOnGround(
   )
 }
 
+/** Forces every mesh under `object` to skip the shadow pass, overriding
+ *  `loadGltf.ts`'s `SMALL_MESH_SHADOW_THRESHOLD` bbox-diagonal heuristic —
+ *  needed for props whose *authored* (pre-fit) geometry is large enough to
+ *  read as shadow-casting even though the in-game (post-fit) prop is a small,
+ *  decorative reed/lily/seaweed clump (plan world-terrain-010's "reeds, lily
+ *  pads and seaweed cast no shadows by default" hard constraint). */
+function disableCastShadow(object: THREE.Object3D): THREE.Object3D {
+  object.traverse((node) => {
+    const mesh = node as THREE.Mesh
+    if (mesh.isMesh) mesh.castShadow = false
+  })
+  return object
+}
+
 export async function loadPropOrFallback(
   url: string,
   targetHeight: number,
@@ -111,11 +125,14 @@ export async function loadPropOrFallback(
    *  (`preparePropFitMax`) — right for flat/wide props like a lily pad, where
    *  height-fitting would inflate a near-zero Y extent absurdly. */
   fit: 'height' | 'max' = 'height',
+  /** See {@link disableCastShadow}. */
+  noShadow = false,
 ): Promise<THREE.Object3D> {
   try {
     const model = await loadGltf(url)
     if (fit === 'max') preparePropFitMax(model, targetHeight)
     else prepareProp(model, targetHeight)
+    if (noShadow) disableCastShadow(model)
     return model
   } catch (err) {
     console.warn(`[settlement] failed to load ${url}, using fallback`, err)
@@ -127,9 +144,10 @@ export async function loadPropTemplates(
   specs: ReadonlyArray<{ url: string, height: number }>,
   fallback: () => THREE.Object3D,
   fit: 'height' | 'max' = 'height',
+  noShadow = false,
 ): Promise<THREE.Object3D[]> {
   return Promise.all(
-    specs.map((spec) => loadPropOrFallback(spec.url, spec.height, fallback, fit)),
+    specs.map((spec) => loadPropOrFallback(spec.url, spec.height, fallback, fit, noShadow)),
   )
 }
 
