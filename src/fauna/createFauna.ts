@@ -330,22 +330,28 @@ async function loadFaunaTemplates(): Promise<
   Partial<Record<AnimalKind, FaunaTemplate>>
 > {
   const { bootMark, bootMarkEnd } = useBootMark('loadFaunaTemplates')
-  const entries = await Promise.all(
-    (Object.entries(FAUNA_URLS) as [AnimalKind, string][]).map(async ([kind, url]) => {
-      try {
-        bootMark(`loadGltfAsset:${url}`)
-        const asset = await loadGltfAsset(url)
-        bootMarkEnd(`loadGltfAsset:${url}`)
-        bootMark(`prepareProp:${url}`)
-        prepareProp(asset.root, ANIMAL_DEFS[kind].modelHeight)
-        bootMarkEnd(`prepareProp:${url}`)
-        return [kind, asset] as const
-      } catch (err) {
-        console.warn(`[fauna] failed to load ${url}, capsule fallback`, err)
-        return [kind, null] as const
-      }
-    }),
-  )
+  // DIAGNOSTIC EXPERIMENT (world-003, GLTF loading contention discovery) —
+  // temporarily sequential (one `await` per URL) instead of `Promise.all`,
+  // to A/B whether concurrent `loadGltfAsset` calls contend with each other
+  // (and with the concurrent preload/settlement GLTF traffic kicked off
+  // alongside `buildFauna`) or whether the ~25s cost is inherent per asset
+  // regardless of concurrency. Not a real fix — revert to `Promise.all` once
+  // the experiment's data is read.
+  const entries: (readonly [AnimalKind, FaunaTemplate | null])[] = []
+  for (const [kind, url] of Object.entries(FAUNA_URLS) as [AnimalKind, string][]) {
+    try {
+      bootMark(`loadGltfAsset:${url}`)
+      const asset = await loadGltfAsset(url)
+      bootMarkEnd(`loadGltfAsset:${url}`)
+      bootMark(`prepareProp:${url}`)
+      prepareProp(asset.root, ANIMAL_DEFS[kind].modelHeight)
+      bootMarkEnd(`prepareProp:${url}`)
+      entries.push([kind, asset] as const)
+    } catch (err) {
+      console.warn(`[fauna] failed to load ${url}, capsule fallback`, err)
+      entries.push([kind, null] as const)
+    }
+  }
   const out: Partial<Record<AnimalKind, FaunaTemplate>> = {}
   for (const [kind, asset] of entries) {
     if (asset) out[kind] = asset

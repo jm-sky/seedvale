@@ -11,10 +11,102 @@ import {
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { useBootMark } from '../shared/bootMark'
 import { patchFoliageWindOnObject } from '../world/foliageWind'
 
+const { bootMark, bootMarkEnd } = useBootMark('loadGltf')
+
 const loader = new GLTFLoader()
-loader.setMeshoptDecoder(MeshoptDecoder)
+
+// ---------------------------------------------------------------------------
+// DIAGNOSTIC EXPERIMENT ONLY (world-003, "GLTF 25s loading stall" — deeper
+// diagnostic). Everything in this block is temporary, additive instrumentation
+// that does not change loader/cache/decode behavior — it only wraps existing
+// extension points (`LoadingManager.itemStart`/`itemEnd`, which every
+// three.js sub-loader already calls; `MeshoptDecoder.decodeGltfBufferAsync`,
+// which `GLTFLoader`'s meshopt extension already calls) to emit `bootMark`
+// timings around them. Revert by deleting this block and restoring the plain
+// `loader.setMeshoptDecoder(MeshoptDecoder)` call below once the experiment's
+// data is read.
+//
+// Stage coverage (see `loadCached()` below for the loadAsync/postprocess
+// split already added):
+//   HTTP/file request      -> `manager:<url>` (main .glb AND any per-texture
+//                              blob: URL — every sub-resource fetch the
+//                              shared `loader`/`ImageBitmapLoader` issues)
+//   Meshopt decoding        -> `meshoptDecoder:decodeGltfBufferAsync:<n>:<mode>`
+//   WASM instantiation      -> `meshoptDecoder:ready` (once, module lifetime)
+// GLTFParser/buffer-loading/final-scene-resolution have no dedicated hook to
+// wrap without touching vendored code — they show up as the *unaccounted-for*
+// gaps between the checkpoints above and `loadAsync:start`/`loadAsync:resolved`
+// (see `loadCached()`).
+const manager = loader.manager
+const originalItemStart = manager.itemStart.bind(manager)
+const originalItemEnd = manager.itemEnd.bind(manager)
+const originalItemError = manager.itemError.bind(manager)
+manager.itemStart = (url: string) => {
+  bootMark(`manager:${url}`)
+  originalItemStart(url)
+}
+manager.itemEnd = (url: string) => {
+  bootMarkEnd(`manager:${url}`)
+  originalItemEnd(url)
+}
+manager.itemError = (url: string) => {
+  bootMarkEnd(`manager:${url}`)
+  originalItemError(url)
+}
+
+bootMark('meshoptDecoder:ready')
+void MeshoptDecoder.ready.then(() => bootMarkEnd('meshoptDecoder:ready'))
+
+let meshoptDecodeCallSeq = 0
+const instrumentedMeshoptDecoder: typeof MeshoptDecoder = Object.assign(Object.create(MeshoptDecoder), {
+  decodeGltfBufferAsync(
+    count: number,
+    size: number,
+    source: Uint8Array,
+    mode: string,
+    filter?: string,
+  ): Promise<Uint8Array> {
+    const id = `meshoptDecoder:decodeGltfBufferAsync:${meshoptDecodeCallSeq++}:${mode}`
+    bootMark(id)
+    return MeshoptDecoder.decodeGltfBufferAsync(count, size, source, mode, filter).finally(() => bootMarkEnd(id))
+  },
+})
+loader.setMeshoptDecoder(instrumentedMeshoptDecoder)
+
+// `manager:<url>` above actually fires twice per file: once from
+// `GLTFLoader.load()`'s own `itemStart`/`itemEnd` (which brackets fetch+parse
+// together — its `itemEnd` only fires from `scope.parse()`'s `onLoad`), and
+// once from the internal `FileLoader` it delegates the raw fetch to (whose
+// own `itemEnd` fires right after the fetch resolves, before parse is even
+// called). Since `bootMarkEnd` matches the *first* pushed mark with that name
+// (see `shared/bootMark.ts`), the FIRST `manager:<url>` console line is pure
+// fetch time; the SECOND is fetch+parse together (redundant with
+// `loadAsync:start`/`loadAsync:resolved`). That still leaves "how long was
+// parse alone" only derivable by subtraction. `loader.parse` is a plain
+// instance method (not touching node_modules) — wrapping it here brackets
+// `GLTFParser` directly, with zero overlap with the fetch stage, so it can be
+// read straight off the console instead of subtracted by hand.
+const originalParse = loader.parse.bind(loader)
+let gltfParseCallSeq = 0
+loader.parse = (
+  data: ArrayBuffer | string,
+  path: string,
+  onLoad: (gltf: Awaited<ReturnType<typeof loader.parseAsync>>) => void,
+  onError?: (event: ErrorEvent) => void,
+) => {
+  const id = `gltfParser:parse:${gltfParseCallSeq++}`
+  bootMark(id)
+  originalParse(
+    data,
+    path,
+    (gltf) => { bootMarkEnd(id); onLoad(gltf) },
+    (event) => { bootMarkEnd(id); onError?.(event) },
+  )
+}
+// --------------------------------- end diagnostic block ---------------------------------
 
 /** Meshes whose local-space bounding-box diagonal is below this (meters,
  *  measured before any later `prepareProp`/`preparePropFitMax` scale) skip
@@ -43,10 +135,27 @@ export type GltfAsset = {
   clone: () => Group
 }
 
+/** world-003 "GLTF loading contention discovery" — diagnostic-only timing
+ *  around the `GLTFLoader.loadAsync()` boundary, split from the traverse/
+ *  `patchFoliageWindOnObject` postprocessing that follows it, to tell apart
+ *  loader wait time from postprocessing time. `loadAsync:start:<url>`/
+ *  `loadAsync:postprocess-start:<url>` each pair with their own
+ *  `bootMarkEnd` (real elapsed durations); `loadAsync:resolved:<url>`/
+ *  `loadAsync:postprocess-end:<url>` are raw checkpoints (visible via
+ *  `bootMarksSummary()`) marking the exact moment `loadAsync` resolves and
+ *  the exact moment postprocessing finishes, respectively — no behavior
+ *  change, `.then()` converted to an equivalent `async` IIFE so each stage
+ *  boundary is addressable. */
 function loadCached(url: string): Promise<CachedGltf> {
   let pending = cache.get(url)
   if (!pending) {
-    pending = loader.loadAsync(url).then((gltf) => {
+    pending = (async () => {
+      bootMark(`loadAsync:start:${url}`)
+      const gltf = await loader.loadAsync(url)
+      bootMarkEnd(`loadAsync:start:${url}`)
+      bootMark(`loadAsync:resolved:${url}`)
+
+      bootMark(`loadAsync:postprocess-start:${url}`)
       const root = gltf.scene
       // Perf diagnostics only (`programCensus.ts`'s program→object→asset
       // attribution): survives `Object3D.clone()`/`SkeletonUtils.clone()` on
@@ -75,8 +184,11 @@ function loadCached(url: string): Promise<CachedGltf> {
       // shared across every clone of this URL, so patching the cache root once
       // covers chunk + settlement trees/bushes.
       patchFoliageWindOnObject(root)
+      bootMarkEnd(`loadAsync:postprocess-start:${url}`)
+      bootMark(`loadAsync:postprocess-end:${url}`)
+
       return { root, animations: gltf.animations ?? [] }
-    })
+    })()
     cache.set(url, pending)
   }
   return pending
