@@ -21,6 +21,7 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
+- `fauna/preyAlertPerception.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
 - `navigation/navigation.ts`
@@ -72,6 +73,7 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.test.ts`
 - `fauna/mountedSpeed.test.ts`
+- `fauna/preyAlertPerception.ts`
 - `fauna/rabies.test.ts`
 - `fauna/trapLure.test.ts`
 - `fauna/villageAvoidance.test.ts`
@@ -457,6 +459,23 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/predatorHumanDecision.test.ts`
+
+## `fauna/preyAlertPerception.test.ts`
+
+**Imports**
+
+- `fauna/preyAlertPerception.ts`
+
+## `fauna/preyAlertPerception.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/preyAlertPerception.test.ts`
 
 ## `fauna/proceduralAnimals.ts`
 

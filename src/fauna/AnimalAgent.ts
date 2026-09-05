@@ -93,6 +93,7 @@ import {
   type PredatorHumanIntent,
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
+import { type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
@@ -466,6 +467,13 @@ export type AnimalAgentDebugInfo = {
    *  for any non-dog kind, or before this dog has ever barked. Transient,
    *  not persisted. */
   dogVocalizeStimulus: 'guard' | 'wolf-howl' | 'stranger' | null
+  /** This tick's resolved threat-alert source, if any (plan fauna-012 §6/§9/
+   *  §14) — answers "why did this animal just flee" when it wasn't an
+   *  immediate spatial threat: a nearby predator howl, a dog's alert bark,
+   *  or a predator currently hunting something live nearby. `null` for a
+   *  predator kind (never computed), a `dog` (`fleeRange: 0`, excluded), or
+   *  any tick with nothing relevant in range. Not persisted. */
+  preyAlertThreat: { x: number, z: number } | null
   /** Current carcass food-target diagnostics (plan fauna-005) — `null` when
    *  not currently pursuing a carcass. `riskPenalty` is always 0 today: the
    *  `carcassCandidateScore` disease/food-safety seam has no consumer yet. */
@@ -991,6 +999,17 @@ const DOG_BARK_COOLDOWN_SEC = 10
  *  compare against the vocalizing animal's own position), matching the
  *  plan's "transient, spatially bounded" stimulus requirement. */
 const VOCALIZE_ALERT_DURATION_SEC = 6
+/** Flat bonus (m) added on top of a prey/domestic species' own `fleeRange`
+ *  to get its threat-alert radius (plan fauna-012 §6/§9/§11) — a relevant
+ *  recent predator howl or live predator-hunting-something signal within
+ *  this wider radius raises flee relevance even with no immediate spatial
+ *  threat in `fleeRange`. Reuses `fleeRange` itself as the per-species
+ *  differentiation (a skittish `rabbit` already has a bigger `fleeRange`
+ *  than a placid `cow`) rather than a second per-species config field —
+ *  `resolveAlertThreat()`'s `this.def.fleeRange > 0` gate is what excludes
+ *  `dog` (`fleeRange: 0`, guard/bark already covers its own threat
+ *  response) with no kind-specific branch needed. */
+const PREY_ALERT_RANGE_BONUS = 20
 
 export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
   wolf: {
@@ -1594,6 +1613,20 @@ export class AnimalAgent {
    *  camera/player presence (plan fauna-011 §8). Sim-state only, decays like
    *  any other timer, never persisted. */
   private vocalizeAlertRemainingSec = 0
+  /** Semantic context of the vocalization currently backing
+   *  `vocalizeAlertRemainingSec` (plan fauna-012 §4/§7) — `'ambient'` for
+   *  every existing spontaneous call (howl/crow/moo/cluck/bleat, all set at
+   *  the same `onVocalize` site below) and `'alert'` only for a dog's own
+   *  contextual bark (`updateDogVocalization`, guard/wolf-howl/stranger).
+   *  Meaningless while `vocalizeAlertRemainingSec <= 0`; read alongside it,
+   *  never alone. */
+  private vocalizeAlertContext: 'ambient' | 'alert' = 'ambient'
+  /** Diagnostic-only cache of the last resolved threat-alert source (plan
+   *  fauna-012 §14) — `null` for a predator kind (never read) or any
+   *  non-predator tick with nothing relevant in range. Not read by any
+   *  decision logic; `updatePrey()` recomputes the real check fresh every
+   *  tick regardless of this cached copy. */
+  private lastPreyAlertThreat: { x: number, z: number } | null = null
   /** Locked-in live-hunt target for a predator (plan npc-005) — once set,
    *  `resolvePreyTarget()` keeps chasing this exact prey animal instead of
    *  re-picking `nearest(others, 'prey', ...)` every tick, which switched
@@ -2059,14 +2092,26 @@ export class AnimalAgent {
     return this.npcTarget ? { npcId: this.npcTarget.id, homeId: this.npcTarget.homeId } : null
   }
 
+  /** Read-only "is this predator currently committed to a live attack
+   *  target" — either an animal (`preyTarget`) or an NPC (`npcTarget`),
+   *  whichever this predator actually has right now (plan fauna-012 §6/§8:
+   *  the combat/threat-perception input nearby prey/domestic animals read,
+   *  reusing these two pre-existing live-target fields rather than a second
+   *  combat-target store). Always `false` for a non-predator. */
+  get isHuntingLive(): boolean {
+    return this.preyTarget !== null || this.npcTarget !== null
+  }
+
   /** Read-only "did this animal vocalize recently, and from where" (plan
-   *  fauna-011 §8) — the wolf-howl stimulus a nearby dog's
-   *  `resolveBarkStimulus()` reads directly off `others`/`nearbyPredators`,
-   *  independent of WebAudio/camera/player presence. `null` once
+   *  fauna-011 §8, generalized in fauna-012 §4/§7 with a `context` tag) —
+   *  the stimulus a nearby dog's `resolveBarkStimulus()` (wolf howls) and a
+   *  nearby prey/domestic animal's `resolveAlertThreat()` (howls and alert
+   *  barks) both read directly off `others`/`nearbyPredators`, independent
+   *  of WebAudio/camera/player presence. `null` once
    *  `vocalizeAlertRemainingSec` has decayed. */
-  get recentVocalizeAlert(): { x: number, z: number } | null {
+  get recentVocalizeAlert(): { x: number, z: number, kind: AnimalKind, context: 'ambient' | 'alert' } | null {
     return this.vocalizeAlertRemainingSec > 0
-      ? { x: this.mesh.position.x, z: this.mesh.position.z }
+      ? { x: this.mesh.position.x, z: this.mesh.position.z, kind: this.def.kind, context: this.vocalizeAlertContext }
       : null
   }
 
@@ -2189,6 +2234,7 @@ export class AnimalAgent {
         ? { protectedNpcId: this.dogGuardTarget.protectedNpcId, ownHousehold: this.dogGuardTarget.ownHousehold }
         : null,
       dogVocalizeStimulus: this.lastBarkStimulus,
+      preyAlertThreat: this.lastPreyAlertThreat,
       foodTarget: this.sourceTarget?.kind === 'carcass'
           && this.sourceTarget.corpsePhase != null
           && this.sourceTarget.foodValue != null
@@ -2750,10 +2796,12 @@ export class AnimalAgent {
       // brief `steerToward()` no-op instead, so the wolf visibly stops
       // instead of walking through its own howl.
       if (this.def.kind === 'wolf') this.howlPauseTimer = HOWL_PAUSE_SECONDS
-      // Sim-state howl stimulus (plan fauna-011 §8) — independent of the
-      // `onVocalize` presentation hook above, read by a nearby dog via
-      // `recentVocalizeAlert`.
+      // Sim-state howl/crow/moo/cluck stimulus (plan fauna-011 §8, `ambient`
+      // context per fauna-012 §4/§7) — independent of the `onVocalize`
+      // presentation hook above, read by a nearby dog/prey/domestic animal
+      // via `recentVocalizeAlert`.
       this.vocalizeAlertRemainingSec = VOCALIZE_ALERT_DURATION_SEC
+      this.vocalizeAlertContext = 'ambient'
     }
     this.isNight = dayFactor <= 0
     this.moving = false
@@ -2969,7 +3017,7 @@ export class AnimalAgent {
           this.humanDecisionTimer = 0
           this.npcDecisionTimer = 0
           this.provokedTimer = 0
-          this.updatePrey(dt, others, lures)
+          this.updatePrey(dt, others, lures, nearbyPredators)
           break
         }
       }
@@ -3576,18 +3624,79 @@ export class AnimalAgent {
     if (rollsRabiesInfection(RABIES_BITE_INFECTION_CHANCE, Math.random())) target.infectWithRabies()
   }
 
-  private updatePrey(dt: number, others: AnimalAgent[], lures: readonly TrapLureDescriptor[]): void {
+  private updatePrey(
+    dt: number,
+    others: AnimalAgent[],
+    lures: readonly TrapLureDescriptor[],
+    nearbyPredators: readonly AnimalAgent[],
+  ): void {
     const threat = this.nearest(others, 'predator', this.def.fleeRange)
     if (threat) {
+      this.lastPreyAlertThreat = null
       this.cancelSourceTarget()
       this.setIntent('flee', copyVec3(threat.mesh.position))
       this.fleeFrom(threat.mesh.position.x, threat.mesh.position.z, dt)
+      return
+    }
+    const alert = this.resolveAlertThreat(others, nearbyPredators)
+    this.lastPreyAlertThreat = alert
+    if (alert) {
+      this.cancelSourceTarget()
+      this.setIntent('flee', { x: alert.x, z: alert.z })
+      this.fleeFrom(alert.x, alert.z, dt)
       return
     }
     if (this.pursueNeeds(dt, others)) return
     if (this.pursueLure(dt, lures)) return
     this.setIntent('wander')
     this.wander(dt)
+  }
+
+  /** Threat-alert perception beyond immediate spatial `fleeRange` (plan
+   *  fauna-012 §6/§9/§11) — thin adapter over the pure
+   *  `resolvePreyAlertThreat()` (`preyAlertPerception.ts`, unit-tested
+   *  directly), only ever reached once `updatePrey()`'s own spatial
+   *  `nearest()` check already found nothing this tick (a real immediate
+   *  threat always wins — see that call site). `others` covers same-array
+   *  candidates (wild fauna's own wolves, or a settlement's own dog);
+   *  `nearbyPredators` adds the cross-boundary wolves a settlement's
+   *  livestock otherwise never sees (empty for wild fauna, which already has
+   *  wolves in `others`). `this.def.fleeRange > 0` is what excludes `dog`
+   *  (`fleeRange: 0`) with no kind-specific branch — see
+   *  `PREY_ALERT_RANGE_BONUS`'s doc. */
+  private resolveAlertThreat(
+    others: readonly AnimalAgent[],
+    nearbyPredators: readonly AnimalAgent[],
+  ): { x: number, z: number } | null {
+    if (this.def.fleeRange <= 0) return null
+    const candidates: PreyAlertCandidate[] = []
+    for (const a of others) {
+      if (a === this) continue
+      candidates.push({
+        x: a.mesh.position.x,
+        z: a.mesh.position.z,
+        dead: a.health.dead,
+        role: a.def.role,
+        recentVocalizeAlert: a.recentVocalizeAlert,
+        huntingLiveTarget: a.isHuntingLive,
+      })
+    }
+    for (const a of nearbyPredators) {
+      candidates.push({
+        x: a.mesh.position.x,
+        z: a.mesh.position.z,
+        dead: a.health.dead,
+        role: a.def.role,
+        recentVocalizeAlert: a.recentVocalizeAlert,
+        huntingLiveTarget: a.isHuntingLive,
+      })
+    }
+    return resolvePreyAlertThreat(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      candidates,
+      this.def.fleeRange + PREY_ALERT_RANGE_BONUS,
+    )
   }
 
   /** Trap-bait lure pursuit (plan fauna-014 §3/§4/§11) — only reached once
@@ -3705,6 +3814,15 @@ export class AnimalAgent {
     if (!stimulus) return
     this.barkCooldownSec = DOG_BARK_COOLDOWN_SEC
     this.lastBarkStimulus = stimulus
+    // `alert` context (plan fauna-012 §4/§7/§12) — makes this bark itself a
+    // perceivable stimulus for nearby fauna (`recentVocalizeAlert`), not just
+    // an audio cue, so a wolf threat can propagate: dog reacts → alert bark
+    // → nearby prey/domestic animal perceives the bark. Never triggers
+    // another bark by itself (`updateDogVocalization` only ever reads
+    // `nearbyPredators`/wolves for its own howl tier, never other dogs), and
+    // decays the same 6s window as any other vocalization.
+    this.vocalizeAlertRemainingSec = VOCALIZE_ALERT_DURATION_SEC
+    this.vocalizeAlertContext = 'alert'
     onVocalize?.(this.def.kind, this.mesh.position.x, this.mesh.position.z)
   }
 

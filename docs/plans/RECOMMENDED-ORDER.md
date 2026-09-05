@@ -140,51 +140,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `fauna-012` — **Animal threat perception and vocalization responses**  
+17. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `fauna-013` — **Animal hand-feeding and human affinity**  
+18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+20. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-007` — **Bandages and herbal medicine**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-22. `fauna-015` — **Animal water traversal, wading, swimming and drowning**  
+21. `fauna-015` — **Animal water traversal, wading, swimming and drowning**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
-23. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+22. `ui-input-009` — **Merchant item ownership and semantic item labels**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-24. `fauna-007` — **Animal leading and cart harness**  
+23. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-25. `tools-000` — **Weapon Browser — Observatory/Admin**  
+24. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-26. `world-terrain-008` — **Underground Caves V2**  
+25. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-27. `npc-004` — **Drzewo genealogiczne NPC**  
+26. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-28. `tools-006` — **tools-006--world-observatory.md**  
+27. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

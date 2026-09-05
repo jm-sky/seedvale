@@ -68,7 +68,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
-| 💡 `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-015-animal-water-traversal-wading-swimming-and-drowning.md`       | -       | 🟡 | M      | fauna-010 |
 | 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
@@ -98,6 +97,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-005-distance-based-terrain-detail-lod.md` | Jakość i wydajność grass/road LOD z różnych odległości |
 | `world-terrain-006-world-generation-placement-correctness.md` | Rzeki, brzegi, góry, roślinność, placement obiektów i seamy chunków |
 | `fauna-011-domestic-dogs-and-household-guarding.md` | Psy: warianty modeli/animacje, dieta bez huntingu, karmienie, szczekanie kontekstowe, obrona household przed wilkiem, powrót do domu po zagrożeniu |
+| `fauna-012-animal-threat-perception-and-vocalization-responses.md` | Wycie wilka i alert bark psa realnie zwiększają flee u pobliskiego prey/livestock poza spatial `fleeRange` (bez paniki na odległe/nieaktualne zdarzenia); kilka psów nie tworzy kaskady szczekania; brak zauważalnego regresu frame time przy większej liczbie zwierząt |
 | `world-013-world-location-catalog-performance-optimization.md` | Zakup Near/Far Map u handlarza i rozmowa ze strażnikiem nie powodują widocznego freeze; feedback pokazuje prawidłową liczbę nowych miejsc |
 | `ui-input-008-river-debug-location-quality.md` | `teleportTo.riverNearest()`/`nextRiver()` prowadzą do czytelnego odcinka rzeki na lądzie (nie do jeziora/morza/ujścia); kolejne `nextRiver()` dają różne rzeki w stabilnej kolejności |
 | `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | Śródlądowe rzeki na kilku seedach (równiny, doliny, drenaż górski, szwy tile'i, małe strumienie vs duże rzeki) nie kończą się na suchym lądzie; naprawione ujścia wyglądają wiarygodnie (bez sztucznych kanionów), wyrównanie koryta/wody po naprawie |

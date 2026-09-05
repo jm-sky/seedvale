@@ -1,7 +1,7 @@
 # Plan: Animal threat perception and vocalization responses
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-010, fauna-011
