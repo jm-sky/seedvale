@@ -71,6 +71,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
 | 💡 `world-terrain-012-macro-meadow-variation.md`                            | -       | 🟡 | S      | -      |
+| ◼️ `world-016-ambient-soundscape-events-and-lake-frogs.md`                  | -       | 🟡 | M      | ~~world-006~~, ~~ui-input-006~~ |
 
 ---
 
@@ -169,7 +170,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `024`
 - tools: `013`
 - ui-input: `010`
-- world: `016`
+- world: `017`
 - world-terrain: `013`
 
 This ids section is maintained automatically from the plan files.
