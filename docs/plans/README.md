@@ -70,7 +70,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
-| 💡 `world-016-ambient-soundscape-events-and-lake-frogs.md`                  | -       | 🟡 | M      | ~~world-006~~, ~~ui-input-006~~ |
 | ◼️ `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md`   | -       | 🟡 | L      | fauna-015 |
 
 ---
