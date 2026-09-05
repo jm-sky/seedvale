@@ -73,6 +73,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-012-macro-meadow-variation.md`                            | -       | 🟡 | S      | -      |
 | ◼️ `world-016-ambient-soundscape-events-and-lake-frogs.md`                  | -       | 🟡 | M      | ~~world-006~~, ~~ui-input-006~~ |
 | ◼️ `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md`   | -       | 🟡 | L      | fauna-015 |
+| ◼️ `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md`  | -       | 🔴 | M      | world-terrain-011 |
 
 ---
 
@@ -172,7 +173,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `013`
 - ui-input: `010`
 - world: `017`
-- world-terrain: `013`
+- world-terrain: `014`
 
 This ids section is maintained automatically from the plan files.
 
