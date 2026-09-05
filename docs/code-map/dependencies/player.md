@@ -81,6 +81,7 @@ Generated from TypeScript imports.
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
+- `world/groundFog.ts`
 - `world/worldContext.ts`
 
 ## `player/PlayerNeeds.test.ts`

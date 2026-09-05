@@ -34,8 +34,7 @@
 
 ### Bug Fixes
 
-1. `world-terrain-013` — **River Drainage Continuity and Terrain Adaptation**  
-   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+_No qualifying plans._
 
 ---
 
@@ -117,83 +116,79 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-11. `world-terrain-013` — **River Drainage Continuity and Terrain Adaptation**  
-  🔴 `M` · **Score:**  31  
-   → **unlocks:** 0/0
-
-12. `items-player-002` — **Food provenance, freshness and storage**  
+11. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-13. `items-player-014` — **Rope-pullable resource transport**  
+12. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `tools-005` — **Seedvale Character Preparation Panel**  
+14. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `npc-002` — **NPC Healing**  
+15. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-17. `npc-011` — **NPC Burial & Graves**  
+16. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-18. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-19. `fauna-013` — **Animal hand-feeding and human affinity**  
+18. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-007` — **Bandages and herbal medicine**  
+21. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+22. `ui-input-009` — **Merchant item ownership and semantic item labels**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-24. `world-terrain-012` — **Macro meadow variation**  
+23. `world-terrain-012` — **Macro meadow variation**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-25. `fauna-007` — **Animal leading and cart harness**  
+24. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-26. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
+25. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-27. `tools-000` — **Weapon Browser — Observatory/Admin**  
+26. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-28. `world-terrain-008` — **Underground Caves V2**  
+27. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-29. `npc-004` — **Drzewo genealogiczne NPC**  
+28. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-30. `tools-006` — **tools-006--world-observatory.md**  
+29. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -381,6 +376,7 @@ graph TD
   world_terrain_011["world-terrain-011 — River Sink Resolution and Inland Drainage Recovery"]
   world_terrain_012["world-terrain-012 — Macro meadow variation"]
   world_terrain_013["world-terrain-013 — River Drainage Continuity and Terrain Adaptation"]
+  world_terrain_014["world-terrain-014 — Weather-Driven Cloud Variety and Ground Fog"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -492,6 +488,7 @@ graph TD
   world_012 --> world_013
   world_013 --> world_014
   world_013 --> world_015
+  world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_010 --> world_terrain_011
   world_terrain_011 --> world_terrain_013

@@ -214,6 +214,7 @@ Generated from TypeScript imports.
 - `terrain/terrainPreparation.ts`
 - `terrain/waterSample.test.ts`
 - `terrain/waterSample.ts`
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/largeCaves.ts`
 - `world/locations/locationsCoarseCache.test.ts`
 - `world/locations/locationsCoarseCache.ts`

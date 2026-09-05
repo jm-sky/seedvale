@@ -146,7 +146,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/spikeTestCave.ts`
 
-- `buildSpikeTestTopology` — function — line 179
+- `buildSpikeTestTopology` — function — line 192
+  - domain: world-terrain
+- `spikeOverburdenRequirement` — function — line 105
   - domain: world-terrain
 - `SpikeTestCaveOptions` — type — line 55
 
@@ -161,7 +163,7 @@ Generated from exported TypeScript symbols.
 ## `world/caves/topologyAdapter.ts`
 
 - `PROXY_MARGIN` — const — line 20
-- `topologyToCaveDefinition` — function — line 34
+- `topologyToCaveDefinition` — function — line 52
   - domain: world-terrain
 
 ## `world/caveVolume.ts`
@@ -172,16 +174,19 @@ Generated from exported TypeScript symbols.
 - `CaveNode` — type — line 10
 - `CaveNodeKind` — type — line 8
 - `CaveTunnel` — type — line 20
-- `CaveVolume` — type — line 126
-- `computeCaveBounds` — function — line 208
-- `createCaveVolume` — function — line 147
+- `CaveVolume` — type — line 129
+- `computeCaveBounds` — function — line 211
+- `createCaveVolume` — function — line 150
 
 ## `world/clouds.ts`
 
-- `CloudAppearance` — type — line 59
-- `cloudAppearanceFor` — function — line 99
-- `CloudSystem` — type — line 129
-- `createClouds` — function — line 135
+- `CloudAppearance` — type — line 129
+- `cloudAppearanceFor` — function — line 169
+- `CloudCategory` — type — line 22
+- `CloudCategoryWeights` — type — line 85
+- `cloudCategoryWeightsFor` — function — line 92
+- `CloudSystem` — type — line 227
+- `createClouds` — function — line 259
 
 ## `world/collision.ts`
 
@@ -413,6 +418,11 @@ Generated from exported TypeScript symbols.
 - `grassPatchId` — function — line 44
 - `isGrassPatchAvailable` — function — line 96
 - `pruneGrassForageOverrides` — function — line 113
+
+## `world/groundFog.ts`
+
+- `createGroundFog` — function — line 67
+- `GroundFogSystem` — type — line 61
 
 ## `world/helperDeliveryHooks.ts`
 

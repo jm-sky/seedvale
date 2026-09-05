@@ -263,21 +263,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/hydrology.ts`
 
-- `classifyStreams` — function — line 482
-- `computeHydrologyRegion` — function — line 449
-- `D8_DIRECTIONS` — const — line 21
-- `DEFAULT_DEPRESSION_REPAIR_OPTIONS` — const — line 116
-- `DEFAULT_STREAM_THRESHOLDS` — const — line 83
-- `DepressionRepairOptions` — type — line 99
-- `findSourceCandidates` — function — line 529
-- `FLOW_DIR_SINK` — const — line 45
-- `HydrologyFlag` — const — line 32
-- `HydrologyRegion` — type — line 59
-- `HydrologyRegionParams` — type — line 49
-- `SourceCandidateOptions` — type — line 495
-- `StreamClass` — type — line 479
-- `StreamThresholds` — type — line 77
-- `traceDownstreamPath` — function — line 579
+- `classifyStreams` — function — line 698
+- `computeHydrologyRegion` — function — line 658
+- `D8_DIRECTIONS` — const — line 28
+- `DEFAULT_DEPRESSION_REPAIR_OPTIONS` — const — line 203
+- `DEFAULT_DOWNSTREAM_PROBE_STEPS` — const — line 124
+- `DEFAULT_STREAM_THRESHOLDS` — const — line 90
+- `DepressionRepairOptions` — type — line 179
+- `DownstreamProbe` — type — line 113
+- `DownstreamProbeOutcome` — type — line 100
+- `findSourceCandidates` — function — line 745
+- `FLOW_DIR_SINK` — const — line 52
+- `HydrologyFlag` — const — line 39
+- `HydrologyRegion` — type — line 66
+- `HydrologyRegionParams` — type — line 56
+- `probeDownstreamTerminal` — function — line 161
+  - domain: world-terrain
+- `SourceCandidateOptions` — type — line 711
+- `StreamClass` — type — line 695
+- `StreamThresholds` — type — line 84
+- `traceDownstreamPath` — function — line 795
 
 ## `terrain/naturalResources.ts`
 
@@ -302,31 +307,36 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/riverNetwork.ts`
 
-- `canonicalWaterHeight` — function — line 200
-- `computeRiverTile` — function — line 602
-- `DEFAULT_RIVER_THRESHOLDS` — const — line 55
-- `depthFromAccumulation` — function — line 184
-- `exposedBankFromFlow` — function — line 170
-- `flowFactor` — function — line 124
-- `isInsideRiverChannel` — function — line 355
-- `nearestRiverBankDistance` — function — line 338
-- `nearestRiverBankPoint` — function — line 367
-- `overlappingRiverTiles` — function — line 82
-- `RIVER_CELL_STEP` — const — line 38
-- `RIVER_TILE_HALO` — const — line 37
-- `RIVER_TILE_SIZE` — const — line 31
-- `RiverChain` — type — line 96
-- `riverChannelSegmentsNear` — function — line 227
-- `RiverPoint` — type — line 95
-- `RiverTileCoord` — type — line 61
-- `riverTileCoordOf` — function — line 63
-- `riverTileCoreRect` — function — line 74
-- `riverTileKey` — function — line 67
-- `RiverWaterSample` — type — line 295
-- `riverWaterSampleAt` — function — line 306
-- `submergedDepthFromFlow` — function — line 175
-- `widthFromAccumulation` — function — line 138
-- `WorldRect` — type — line 71
+- `canonicalWaterHeight` — function — line 213
+- `computeRiverTile` — function — line 718
+- `computeRiverTileDiagnostics` — function — line 734
+  - domain: world-terrain
+- `DEFAULT_RIVER_THRESHOLDS` — const — line 57
+- `depthFromAccumulation` — function — line 197
+- `exposedBankFromFlow` — function — line 183
+- `flowFactor` — function — line 137
+- `isInsideRiverChannel` — function — line 368
+- `nearestRiverBankDistance` — function — line 351
+- `nearestRiverBankPoint` — function — line 380
+- `overlappingRiverTiles` — function — line 84
+- `RIVER_CELL_STEP` — const — line 40
+- `RIVER_TILE_HALO` — const — line 39
+- `RIVER_TILE_SIZE` — const — line 33
+- `RiverChain` — type — line 98
+- `RiverChainDiagnostic` — type — line 504
+- `RiverChainRejection` — type — line 495
+- `RiverChainTerminal` — type — line 474
+- `riverChannelSegmentsNear` — function — line 240
+- `RiverPoint` — type — line 97
+- `RiverTileCoord` — type — line 63
+- `riverTileCoordOf` — function — line 65
+- `riverTileCoreRect` — function — line 76
+- `riverTileKey` — function — line 69
+- `RiverWaterSample` — type — line 308
+- `riverWaterSampleAt` — function — line 319
+- `submergedDepthFromFlow` — function — line 188
+- `widthFromAccumulation` — function — line 151
+- `WorldRect` — type — line 73
 
 ## `terrain/riverTileCache.ts`
 

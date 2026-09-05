@@ -135,6 +135,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caveGenerator.test.ts`
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/createCaves.ts`
 
@@ -168,6 +169,7 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caveMesh.ts`
 - `world/caveVolume.test.ts`
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTopology.test.ts`
 - `world/caves/caveTopology.ts`
 - `world/caves/sdfCaveMesh.test.ts`
@@ -191,6 +193,20 @@ Generated from TypeScript imports.
 - `world/caves/sdfCaveMesh.ts`
 - `world/caves/sweepCaveMesh.ts`
 - `world/createCaves.ts`
+
+## `world/caves/caveSurfaceIntegration.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `fauna/createFauna.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/caveGenerator.ts`
+- `world/caveVolume.ts`
+- `world/caves/sdfCaveMesh.ts`
+- `world/caves/spikeTestCave.ts`
+- `world/caves/topologyAdapter.ts`
+- `world/largeCaves.ts`
 
 ## `world/caves/caveTopology.test.ts`
 
@@ -241,6 +257,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/sdfCaveMesh.test.ts`
 - `world/createCaves.ts`
 
@@ -264,6 +281,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTopology.test.ts`
 - `world/caves/sdfCaveMesh.test.ts`
 - `world/caves/sweepCaveMesh.test.ts`
@@ -310,6 +328,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/caves/topologyAdapter.test.ts`
 - `world/createCaves.ts`
@@ -901,6 +920,20 @@ Generated from TypeScript imports.
 - `world/createGrassForagePatches.ts`
 - `world/grassForage.test.ts`
 
+## `world/groundFog.ts`
+
+**Imports**
+
+- `assets/loadTexture.ts`
+- `debug/debugMode.ts`
+- `player/PlayerController.ts`
+- `world/weather.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+
 ## `world/helperDeliveryHooks.ts`
 
 **Imports**
@@ -971,6 +1004,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caveGenerator.ts`
+- `world/caves/caveSurfaceIntegration.test.ts`
 - `world/createCaves.ts`
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.test.ts`
@@ -1836,6 +1870,7 @@ Generated from TypeScript imports.
 - `world/bloodTraces.ts`
 - `world/clouds.test.ts`
 - `world/clouds.ts`
+- `world/groundFog.ts`
 - `world/playerGarden.ts`
 - `world/sleepingUtilities.ts`
 - `world/weather.test.ts`

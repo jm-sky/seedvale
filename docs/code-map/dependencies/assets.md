@@ -254,6 +254,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/clouds.ts`
+- `world/groundFog.ts`
 
 ## `assets/mountByAnchorPair.test.ts`
 
