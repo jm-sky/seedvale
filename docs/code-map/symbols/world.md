@@ -88,6 +88,9 @@ Generated from exported TypeScript symbols.
 - `CAVE_MOUTH_DEPTH` — const — line 36
 - `CaveGeneratorInput` — type — line 80
 - `generateCaveDefinitions` — function — line 266
+- `MIN_OVERBURDEN` — const — line 61
+- `MOUTH_FOOTPRINT_MARGIN` — const — line 78
+- `MOUTH_ROOF_MIN` — const — line 74
 
 ## `world/caveMesh.ts`
 
@@ -116,17 +119,24 @@ Generated from exported TypeScript symbols.
 - `CaveTopologyPoint` — type — line 21
 - `CaveTopologySegment` — type — line 39
 
+## `world/caves/clipBelowSurface.ts`
+
+- `clipTrianglesBelowSurface` — function — line 35
+  - domain: world-terrain
+- `SurfaceHeightSampler` — type — line 27
+  - domain: world-terrain
+
 ## `world/caves/sdfCaveMesh.ts`
 
-- `AccidentalUnionStressConfig` — type — line 416
-- `buildAccidentalUnionStressMesh` — function — line 431
+- `AccidentalUnionStressConfig` — type — line 436
+- `buildAccidentalUnionStressMesh` — function — line 451
   - domain: world-terrain
-- `buildSdfCaveMesh` — function — line 357
+- `buildSdfCaveMesh` — function — line 370
   - domain: world-terrain
-- `countConnectedComponents` — function — line 454
-- `DEFAULT_SDF_PARAMS` — const — line 37
-- `SdfCaveParams` — type — line 24
-- `SdfCaveResult` — type — line 347
+- `countConnectedComponents` — function — line 474
+- `DEFAULT_SDF_PARAMS` — const — line 38
+- `SdfCaveParams` — type — line 25
+- `SdfCaveResult` — type — line 360
 
 ## `world/caves/spikeNoise.ts`
 
@@ -136,20 +146,21 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/spikeTestCave.ts`
 
-- `buildSpikeTestTopology` — function — line 53
+- `buildSpikeTestTopology` — function — line 179
   - domain: world-terrain
-- `SpikeTestCaveOptions` — type — line 40
+- `SpikeTestCaveOptions` — type — line 55
 
 ## `world/caves/sweepCaveMesh.ts`
 
-- `buildSweepCaveMesh` — function — line 257
+- `buildSweepCaveMesh` — function — line 258
   - domain: world-terrain
-- `DEFAULT_SWEEP_PARAMS` — const — line 39
-- `SweepCaveParams` — type — line 24
-- `SweepCaveResult` — type — line 249
+- `DEFAULT_SWEEP_PARAMS` — const — line 40
+- `SweepCaveParams` — type — line 25
+- `SweepCaveResult` — type — line 250
 
 ## `world/caves/topologyAdapter.ts`
 
+- `PROXY_MARGIN` — const — line 20
 - `topologyToCaveDefinition` — function — line 34
   - domain: world-terrain
 
@@ -161,9 +172,9 @@ Generated from exported TypeScript symbols.
 - `CaveNode` — type — line 10
 - `CaveNodeKind` — type — line 8
 - `CaveTunnel` — type — line 20
-- `CaveVolume` — type — line 105
-- `computeCaveBounds` — function — line 178
-- `createCaveVolume` — function — line 126
+- `CaveVolume` — type — line 126
+- `computeCaveBounds` — function — line 208
+- `createCaveVolume` — function — line 147
 
 ## `world/clouds.ts`
 

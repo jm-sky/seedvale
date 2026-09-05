@@ -135,6 +135,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caveGenerator.test.ts`
+- `world/caves/spikeTestCave.ts`
 - `world/createCaves.ts`
 
 ## `world/caveMesh.ts`
@@ -212,6 +213,14 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.ts`
 - `world/createCaves.ts`
 
+## `world/caves/clipBelowSurface.ts`
+
+**Imported by**
+
+- `world/caves/sdfCaveMesh.ts`
+- `world/caves/spikeTestCave.ts`
+- `world/caves/sweepCaveMesh.ts`
+
 ## `world/caves/sdfCaveMesh.test.ts`
 
 **Imports**
@@ -227,6 +236,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `world/caves/caveSpikeMetrics.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/clipBelowSurface.ts`
 - `world/caves/spikeNoise.ts`
 
 **Imported by**
@@ -245,8 +255,11 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `world/caveGenerator.ts`
 - `world/caveVolume.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/clipBelowSurface.ts`
+- `world/caves/topologyAdapter.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -272,6 +285,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `world/caves/caveSpikeMetrics.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/clipBelowSurface.ts`
 - `world/caves/spikeNoise.ts`
 
 **Imported by**
@@ -296,6 +310,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/spikeTestCave.ts`
 - `world/caves/topologyAdapter.test.ts`
 - `world/createCaves.ts`
 
