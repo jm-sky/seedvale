@@ -143,6 +143,8 @@ export type WorldLocationsDebugApi = {
   /** Reveals everything `list()` currently returns; returns how many were
    *  newly revealed. */
   revealAll: () => number
+  listCaves: () => WorldLocationDebugEntry[]
+  teleportToFirstCave: () => Promise<boolean>
 }
 
 export type HiddenTreasureDebugApi = {
@@ -371,6 +373,21 @@ export function installNpcDebugApi(
       return worldLocations.knowledge.reveal(id, 'confirmed', 'exploration')
     },
     revealAll: () => worldLocationsDebug.list().filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
+    listCaves: () => worldLocationsDebug.list().filter(l => l.kind === 'cave'),
+    teleportToFirstCave: async () => {
+      console.log('Searching for caves...')
+      const cave = worldLocationsDebug.listCaves().at(0)
+      if (!cave) {
+        console.log('No caves found')
+        return false
+      }
+      console.log('Teleporting to cave', cave)
+      return teleportToLocation({
+        kind: 'village',
+        position: { x: cave.x, z: cave.z },
+        distance: 0
+      })
+    },
   }
 
   const skillsDebug: SkillsDebugApi = {
