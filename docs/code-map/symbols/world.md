@@ -231,10 +231,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPalisades.ts`
 
-- `createPalisades` — function — line 43
+- `createPalisades` — function — line 74
   - domain: items-player
-- `Palisades` — type — line 10
-- `PalisadeSegmentEntry` — type — line 8
+- `Palisades` — type — line 30
+- `PalisadeSegmentEntry` — type — line 28
 
 ## `world/createPlacedContainers.ts`
 
@@ -285,14 +285,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/createStandingTorches.ts`
 
-- `createStandingTorches` — function — line 41
+- `createStandingTorches` — function — line 64
   - domain: items-player
-- `StandingTorchEntry` — type — line 10
-- `StandingTorches` — type — line 12
+- `StandingTorchEntry` — type — line 15
+- `StandingTorches` — type — line 29
 
 ## `world/createTerrainPreparations.ts`
 
-- `createTerrainPreparations` — function — line 40
+- `createTerrainPreparations` — function — line 58
 - `TerrainPreparationEntry` — type — line 9
 - `TerrainPreparations` — type — line 11
 
@@ -303,9 +303,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createWorkContracts.ts`
 
-- `createWorkContracts` — function — line 110
+- `CreateWorkContractParams` — type — line 23
+- `createWorkContracts` — function — line 144
   - domain: npc
-- `WorkContracts` — type — line 20
+- `WorkContracts` — type — line 38
 
 ## `world/cropLifecycle.ts`
 
@@ -478,6 +479,20 @@ Generated from exported TypeScript symbols.
 - `LocationKnowledgeEntry` — type — line 3
 - `setActiveLocationKnowledge` — function — line 79
 
+## `world/locations/locationsCoarseCache.ts`
+
+- `CoarseCachePersistence` — type — line 73
+- `CoarseTilePayload` — type — line 26
+- `createCoarseCachePersistence` — function — line 91
+- `LOCATIONS_COARSE_NAMESPACE` — const — line 20
+  - domain: world
+  - system: worldgen-cache
+  - role: Persistent-cache integration for `WorldLocationCatalog`'s coarse terrain tiles (plan world-015 §7/§11/§15) — reuses the exact tile shape `worldLocationCatalog.ts` already keeps in memory (`Uint8Array` state + `Float32Array` height per 16×16 tile), never a second coarse-terrain representation.
+  - integration: The catalog stays fully synchronous; this module owns the async IndexedDB side (hydrate-on-activate, debounced dirty-tile upsert) behind a synchronous `hydrateTile`/`onTileDirty` seam the catalog calls through its `WorldLocationCatalogDeps`. A hydrate miss or write failure always falls back to normal procedural sampling — this is an optimization layer, never a correctness dependency.
+- `LOCATIONS_COARSE_VERSION` — const — line 24
+- `locationsCoarseFingerprint` — function — line 63
+- `tileSubKey` — function — line 28
+
 ## `world/locations/navigationTargets.ts`
 
 - `createNavigationTargets` — function — line 35
@@ -488,12 +503,18 @@ Generated from exported TypeScript symbols.
 - `setActiveNavigationTargets` — function — line 90
 - `SetTargetResult` — type — line 12
 
+## `world/locations/seedProfile.ts`
+
+- `generateSeedName` — function — line 82
+- `sampleStartupTerrainProfile` — function — line 36
+- `SeedTerrainProfile` — type — line 23
+
 ## `world/locations/worldLocationCatalog.ts`
 
-- `createWorldLocationCatalog` — function — line 154
-- `LocationScanDiagnostics` — type — line 51
-- `settlementLocationId` — function — line 532
-- `WorldLocationCatalog` — type — line 85
+- `createWorldLocationCatalog` — function — line 166
+- `LocationScanDiagnostics` — type — line 63
+- `settlementLocationId` — function — line 557
+- `WorldLocationCatalog` — type — line 97
 - `WorldLocationCatalogDeps` — type — line 23
 
 ## `world/locations/worldLocationNames.ts`
@@ -558,22 +579,28 @@ Generated from exported TypeScript symbols.
 
 ## `world/palisade.ts`
 
-- `nearestPalisadeConnection` — function — line 86
-- `PALISADE_FOOTPRINT_RADIUS` — const — line 24
-- `PALISADE_HALF_LENGTH` — const — line 23
-- `PALISADE_LENGTH` — const — line 22
-- `PALISADE_MATERIAL_REQUIREMENTS` — const — line 56
-- `PALISADE_PLACE_DURATION_SEC` — const — line 39
-- `PALISADE_PLACE_REACH` — const — line 33
-- `PALISADE_PLACEMENT_MESSAGE` — const — line 43
-- `PALISADE_RECOVERY_RATE` — const — line 63
-- `PALISADE_SEPARATION` — const — line 30
-- `PALISADE_SNAP_RADIUS` — const — line 37
-- `palisadeEndpoints` — function — line 70
-- `PalisadePlacementReason` — type — line 41
-- `PalisadeSegmentRecord` — type — line 17
+- `isPalisadeConstructionComplete` — function — line 117
+- `nearestPalisadeConnection` — function — line 151
+- `PALISADE_FOOTPRINT_RADIUS` — const — line 46
+- `PALISADE_HALF_LENGTH` — const — line 45
+- `PALISADE_LENGTH` — const — line 44
+- `PALISADE_MATERIAL_REQUIREMENTS` — const — line 82
+- `PALISADE_PLACE_DURATION_SEC` — const — line 61
+- `PALISADE_PLACE_REACH` — const — line 55
+- `PALISADE_PLACEMENT_MESSAGE` — const — line 69
+- `PALISADE_RECOVERY_RATE` — const — line 89
+- `PALISADE_REQUIRED_WORK` — const — line 95
+- `PALISADE_SEPARATION` — const — line 52
+- `PALISADE_SNAP_RADIUS` — const — line 59
+- `PALISADE_WORK_SESSION_HOURS` — const — line 103
+- `PALISADE_WORK_SESSION_SEC` — const — line 98
+- `palisadeEndpoints` — function — line 135
+- `PalisadePlacementReason` — type — line 63
+- `palisadePromptLabel` — function — line 125
+- `palisadeRemainingWork` — function — line 109
+- `PalisadeSegmentRecord` — type — line 28
   - domain: items-player
-- `resolvePalisadeSite` — function — line 120
+- `resolvePalisadeSite` — function — line 185
 
 ## `world/palisadeProp.ts`
 
@@ -667,35 +694,37 @@ Generated from exported TypeScript symbols.
 
 ## `world/playerWell.ts`
 
-- `activeWellStage` — function — line 242
+- `activeWellStage` — function — line 259
 - `advanceWellConstruction` — function — line 164
+- `formatHours` — function — line 316
 - `getWellPitWorkHours` — function — line 70
-- `isWellCompleted` — function — line 210
-- `isWellStageWorkComplete` — function — line 202
-- `isWellWaterAvailable` — function — line 219
-- `NearbyPlayerWellLookup` — type — line 326
-- `nextWellStage` — function — line 197
+- `isWellCompleted` — function — line 227
+- `isWellStageWorkComplete` — function — line 219
+- `isWellWaterAvailable` — function — line 236
+- `NearbyPlayerWellLookup` — type — line 346
+- `nextWellStage` — function — line 214
 - `PlayerWellRecord` — type — line 26
-- `WELL_FOOTPRINT_RADIUS` — const — line 259
-- `WELL_PLACE_DURATION_SEC` — const — line 265
-- `WELL_PLACE_REACH` — const — line 262
-- `WELL_PLACEMENT_MESSAGE` — const — line 249
-- `WELL_SEPARATION` — const — line 260
+- `WELL_FOOTPRINT_RADIUS` — const — line 276
+- `WELL_PLACE_DURATION_SEC` — const — line 282
+- `WELL_PLACE_REACH` — const — line 279
+- `WELL_PLACEMENT_MESSAGE` — const — line 266
+- `WELL_SEPARATION` — const — line 277
 - `WELL_STAGE_CAPABILITY` — const — line 105
 - `WELL_STAGE_COST` — const — line 93
-- `WELL_STAGE_START_PROMPT` — const — line 283
+- `WELL_STAGE_START_PROMPT` — const — line 300
 - `WELL_STAGE_WORK_HOURS` — const — line 56
-- `WELL_WORK_LABEL` — const — line 290
-- `WELL_WORK_SESSION_HOURS` — const — line 280
-- `WELL_WORK_SESSION_SEC` — const — line 271
+- `WELL_WORK_LABEL` — const — line 307
+- `WELL_WORK_SESSION_HOURS` — const — line 297
+- `WELL_WORK_SESSION_SEC` — const — line 288
 - `WellMaterialCost` — type — line 87
-- `WellPlacementReason` — type — line 247
-- `wellPromptLabel` — function — line 308
+- `WellPlacementReason` — type — line 264
+- `wellPromptLabel` — function — line 328
+- `wellRemainingWork` — function — line 199
 - `WellStage` — type — line 21
 - `wellStageCapabilities` — function — line 118
 - `wellStageRequirements` — function — line 130
 - `wellStageWorkHours` — function — line 83
-- `wellWaterSource` — function — line 228
+- `wellWaterSource` — function — line 245
 - `WellWorkOutcome` — type — line 151
 
 ## `world/playerWellProp.ts`
@@ -723,6 +752,22 @@ Generated from exported TypeScript symbols.
 ## `world/riverWaterMaterial.ts`
 
 - `createRiverWaterMaterial` — function — line 117
+
+## `world/seedLibrary.ts`
+
+- `clearSeedCache` — function — line 96
+- `DeleteSeedError` — type — line 78
+- `deleteSeedGuarded` — function — line 84
+- `DeleteSeedResult` — type — line 79
+- `ensureSeedRecordsForSeeds` — function — line 68
+- `isSeedInLibrary` — function — line 23
+- `resolveInitialSeedChoice` — function — line 35
+- `resolveNewGameSeed` — function — line 54
+- `SeedChoice` — type — line 18
+  - domain: world
+  - system: seed-library
+  - role: New Game seed-intent resolution + lifecycle orchestration (plan world-015 §3/§10/§13) — the single seam both New Game entrypoints (boot `StartScreen`, in-app pause menu) go through, so "reuse an existing seed" can never quietly fall back to `randomSeed()`.
+  - uses: SeedRecord
 
 ## `world/settlementForestHooks.ts`
 
@@ -765,15 +810,21 @@ Generated from exported TypeScript symbols.
 
 ## `world/standingTorch.ts`
 
-- `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 22
-- `STANDING_TORCH_MATERIAL_REQUIREMENTS` — const — line 50
-- `STANDING_TORCH_PLACE_DURATION_SEC` — const — line 29
-- `STANDING_TORCH_PLACE_REACH` — const — line 26
-- `STANDING_TORCH_PLACEMENT_MESSAGE` — const — line 33
-- `STANDING_TORCH_SEPARATION` — const — line 23
-- `StandingTorchPlacementReason` — type — line 31
-- `StandingTorchRecord` — type — line 18
+- `isStandingTorchConstructionComplete` — function — line 98
+- `STANDING_TORCH_FOOTPRINT_RADIUS` — const — line 41
+- `STANDING_TORCH_MATERIAL_REQUIREMENTS` — const — line 72
+- `STANDING_TORCH_PLACE_DURATION_SEC` — const — line 48
+- `STANDING_TORCH_PLACE_REACH` — const — line 45
+- `STANDING_TORCH_PLACEMENT_MESSAGE` — const — line 55
+- `STANDING_TORCH_REQUIRED_WORK` — const — line 81
+- `STANDING_TORCH_SEPARATION` — const — line 42
+- `STANDING_TORCH_WORK_SESSION_HOURS` — const — line 87
+- `STANDING_TORCH_WORK_SESSION_SEC` — const — line 84
+- `StandingTorchPlacementReason` — type — line 50
+- `standingTorchPromptLabel` — function — line 106
+- `StandingTorchRecord` — type — line 27
   - domain: items-player
+- `standingTorchRemainingWork` — function — line 91
 
 ## `world/standingTorchProp.ts`
 
@@ -995,27 +1046,34 @@ Generated from exported TypeScript symbols.
 
 ## `world/workContract.ts`
 
-- `acceptWorkContract` — function — line 172
-- `beginContractTravel` — function — line 179
-- `beginContractWork` — function — line 186
-- `canAcceptContract` — function — line 165
-- `cancelWorkContract` — function — line 148
-- `canPostContract` — function — line 95
-- `completeContractWork` — function — line 194
-- `ConstructionContractTarget` — type — line 40
-- `contractHasActiveTarget` — function — line 87
-- `ContractTarget` — type — line 47
-- `createWorkContractRecord` — function — line 107
-- `invalidateWorkContract` — function — line 156
-- `isContractTerminal` — function — line 81
-- `noticeBoardId` — function — line 103
-- `postWorkContract` — function — line 137
-- `releaseWorkContract` — function — line 209
-- `WorkContractAdvertisement` — type — line 29
-- `WorkContractRecord` — type — line 49
-- `WorkContractState` — type — line 18
+- `acceptWorkContract` — function — line 248
+- `beginContractTravel` — function — line 255
+- `beginContractWork` — function — line 262
+- `canAcceptContract` — function — line 241
+- `cancelWorkContract` — function — line 224
+- `canPostContract` — function — line 155
+- `completeContractWork` — function — line 270
+- `ConstructionContractTarget` — type — line 47
+- `contractHasActiveTarget` — function — line 147
+- `ContractTarget` — type — line 79
+- `createWorkContractRecord` — function — line 171
+- `invalidateWorkContract` — function — line 232
+- `isContractTerminal` — function — line 141
+- `isNpcCommitmentFulfilled` — function — line 295
+- `noticeBoardId` — function — line 163
+- `PalisadeContractTarget` — type — line 65
+- `postWorkContract` — function — line 213
+- `recordNpcWorkContribution` — function — line 303
+- `releaseWorkContract` — function — line 285
+- `sameContractTarget` — function — line 311
+- `StandingTorchContractTarget` — type — line 72
+- `TerrainPreparationContractTarget` — type — line 56
+- `WORK_SHARE_PRESETS` — const — line 169
+- `WorkContractAdvertisement` — type — line 35
+- `WorkContractRecord` — type — line 85
+- `WorkContractState` — type — line 24
   - domain: npc
-- `WorkType` — type — line 32
+- `WorkType` — type — line 39
 
 ## `world/worldContext.ts`
 

@@ -83,24 +83,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 467
-- `CurrentActivity` — type — line 357
-- `CurrentActivityKind` — type — line 350
-- `NPC_HEIGHT` — const — line 260
-- `NPC_MODEL_URLS` — const — line 324
-- `NPC_SHADOW_DISTANCE` — const — line 274
-- `NpcAgent` — class — line 747
+- `classifyPendingActivity` — function — line 503
+- `CurrentActivity` — type — line 379
+- `CurrentActivityKind` — type — line 372
+- `NPC_HEIGHT` — const — line 282
+- `NPC_MODEL_URLS` — const — line 346
+- `NPC_SHADOW_DISTANCE` — const — line 296
+- `NpcAgent` — class — line 793
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 693
-- `NpcInspectionSnapshot` — type — line 372
-- `NpcWhy` — type — line 442
-- `projectNpcWhy` — function — line 498
-- `promoteChainKind` — function — line 459
+- `NpcAgentDeps` — type — line 729
+- `NpcInspectionSnapshot` — type — line 394
+- `NpcWhy` — type — line 478
+- `projectNpcWhy` — function — line 534
+- `promoteChainKind` — function — line 495
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -295,11 +295,10 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcWorkContract.ts`
 
-- `CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS` — const — line 58
-- `ScoredWorkContract` — type — line 105
-- `scoreWorkContractOpportunity` — function — line 84
-- `selectBestWorkContract` — function — line 112
-- `WorkContractEvaluationInput` — type — line 61
+- `ScoredWorkContract` — type — line 96
+- `scoreWorkContractOpportunity` — function — line 75
+- `selectBestWorkContract` — function — line 103
+- `WorkContractEvaluationInput` — type — line 52
 
 ## `ai/reactionChance.ts`
 

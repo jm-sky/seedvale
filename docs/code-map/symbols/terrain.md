@@ -51,7 +51,8 @@ Generated from exported TypeScript symbols.
 - `CEMETERY_OUTER_FRAC` — const — line 101
 - `cemeteryFitsVillageFringe` — function — line 169
 - `cemeteryFootprintClearsRoads` — function — line 230
-- `computeChunkEnvironment` — function — line 291
+- `CemeteryTerrainSampler` — type — line 290
+- `computeChunkEnvironment` — function — line 362
 - `deriveLandmarkId` — function — line 271
 - `EnvironmentKind` — type — line 15
 - `EnvironmentPlacement` — type — line 25
@@ -62,6 +63,8 @@ Generated from exported TypeScript symbols.
 - `LandmarkBiasKind` — type — line 106
 - `landmarkChanceBias` — function — line 142
 - `LandmarkKind` — type — line 110
+- `resolveCemeteryPlacement` — function — line 310
+  - domain: world-terrain
 - `rollCemeterySize` — function — line 248
 - `VillageDisk` — type — line 130
 
@@ -80,30 +83,32 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmap.ts`
 
-- `apronGridWeights` — function — line 659
-- `ApronGridWeights` — type — line 650
-- `apronOriginWorld` — function — line 630
-- `ChunkTileData` — type — line 314
-- `ChunkTileParams` — type — line 234
-- `ClearingSegment` — type — line 166
-- `computeChunkTile` — function — line 991
-- `extractCoreGrid` — function — line 714
-- `RawSampleParams` — type — line 300
-- `RegionalSmoothingSegment` — type — line 226
-- `RegionParams` — type — line 17
-- `RiverChannelSegment` — type — line 202
-- `RoadCorridorSegment` — type — line 148
-- `RoadNetworkParams` — type — line 85
-- `sampleApronGrid` — function — line 697
-- `sampleApronGridWeighted` — function — line 682
-- `sampleBiomeAt` — function — line 601
-- `sampleContinentalnessAt` — function — line 605
-- `sampleFloorAt` — function — line 597
-- `sampleHeightAt` — function — line 593
-- `sampleMoistureRegionAt` — function — line 613
-- `sampleMountainRidgeAt` — function — line 621
-- `VegetationKind` — type — line 15
-- `VillageClearingParams` — type — line 66
+- `apronGridWeights` — function — line 660
+- `ApronGridWeights` — type — line 651
+- `apronOriginWorld` — function — line 631
+- `ChunkTileData` — type — line 315
+- `ChunkTileParams` — type — line 235
+- `ClearingSegment` — type — line 167
+- `computeChunkTile` — function — line 1061
+- `createLocalTerrainSampler` — function — line 1136
+  - domain: world-terrain
+- `extractCoreGrid` — function — line 715
+- `RawSampleParams` — type — line 301
+- `RegionalSmoothingSegment` — type — line 227
+- `RegionParams` — type — line 18
+- `RiverChannelSegment` — type — line 203
+- `RoadCorridorSegment` — type — line 149
+- `RoadNetworkParams` — type — line 86
+- `sampleApronGrid` — function — line 698
+- `sampleApronGridWeighted` — function — line 683
+- `sampleBiomeAt` — function — line 602
+- `sampleContinentalnessAt` — function — line 606
+- `sampleFloorAt` — function — line 598
+- `sampleHeightAt` — function — line 594
+- `sampleMoistureRegionAt` — function — line 614
+- `sampleMountainRidgeAt` — function — line 622
+- `VegetationKind` — type — line 16
+- `VillageClearingParams` — type — line 67
 
 ## `terrain/chunkHeightmapProtocol.ts`
 
@@ -119,22 +124,24 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 665
-- `ChunkManager` — type — line 407
-- `ChunkManagerConfig` — type — line 258
-- `createChunkManager` — function — line 804
+- `applyModificationToTile` — function — line 707
+- `ChunkManager` — type — line 449
+- `ChunkManagerConfig` — type — line 300
+- `createChunkManager` — function — line 846
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 793
-- `drainByBudget` — function — line 783
-- `FinalizeStage` — type — line 347
-- `pickNearestQueuedKey` — function — line 743
-- `pickNextFinalizeKey` — function — line 761
-- `ringChunkOffsets` — function — line 217
-- `TerrainModification` — type — line 622
+- `CropHarvestOutcome` — type — line 835
+- `drainByBudget` — function — line 825
+- `FinalizeStage` — type — line 389
+- `pickNearestQueuedKey` — function — line 785
+- `pickNextFinalizeKey` — function — line 803
+- `resolveUnloadedLandmark` — function — line 258
+  - domain: world-terrain
+- `ringChunkOffsets` — function — line 218
+- `TerrainModification` — type — line 664
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -351,10 +358,10 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/terrainPreparation.ts`
 
-- `averageAbsHeightDelta` — function — line 157
+- `averageAbsHeightDelta` — function — line 177
 - `computeRequiredWork` — function — line 153
 - `exceedsMaxDeformation` — function — line 136
-- `formatHeightDelta` — function — line 218
+- `formatHeightDelta` — function — line 238
 - `GridSample` — type — line 22
 - `HeightSample` — type — line 23
 - `MAX_PREPARATION_DELTA` — const — line 131
@@ -362,14 +369,17 @@ Generated from exported TypeScript symbols.
 - `nearestGridPoint` — function — line 61
 - `preparationSamplesPerSide` — function — line 89
 - `PreparationSize` — type — line 20
-- `PreparationValidationResult` — type — line 193
-- `progressiveHeight` — function — line 180
-- `progressiveHeights` — function — line 185
+- `PreparationValidationResult` — type — line 213
+- `progressiveHeight` — function — line 200
+- `progressiveHeights` — function — line 205
 - `resolveLevelSamples` — function — line 72
 - `resolvePreparationSamples` — function — line 105
+- `TERRAIN_PREP_NPC_WORK_SESSION_HOURS` — const — line 175
+- `TERRAIN_PREP_NPC_WORK_SESSION_SEC` — const — line 168
 - `TerrainPreparationRecord` — type — line 36
-- `toolSpeedMultiplier` — function — line 168
-- `validatePreparationSamples` — function — line 205
+- `terrainPreparationRemainingWork` — function — line 160
+- `toolSpeedMultiplier` — function — line 188
+- `validatePreparationSamples` — function — line 225
 
 ## `terrain/vegetationRegionBatcher.ts`
 

@@ -71,6 +71,7 @@ Generated from TypeScript imports.
 - `debug/locationQueries.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+- `main.ts`
 - `perf/benchmark.ts`
 - `persistence/saveData.ts`
 - `render/createPostProcessing.ts`

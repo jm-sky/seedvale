@@ -100,16 +100,22 @@ Generated from TypeScript imports.
 - `simulation/index.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/slopeConstraint.ts`
+- `terrain/terrainPreparation.ts`
 - `ui/agentStatusLabel.ts`
 - `ui/labelDistance.ts`
 - `world/bloodTraces.ts`
+- `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
+- `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/settlementForestHooks.ts`
+- `world/standingTorch.ts`
 - `world/timeConversion.ts`
 - `world/treeHarvest.ts`
 - `world/waterMirror.ts`
@@ -627,7 +633,6 @@ Generated from TypeScript imports.
 
 - `ai/characters.ts`
 - `ai/schedule.ts`
-- `world/playerWell.ts`
 - `world/timeConversion.ts`
 - `world/workContract.ts`
 

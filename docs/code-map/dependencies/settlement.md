@@ -61,7 +61,10 @@ Generated from TypeScript imports.
 - `terrain/waterSample.ts`
 - `world/collision.ts`
 - `world/createGrassForagePatches.ts`
+- `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
+- `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
@@ -170,7 +173,10 @@ Generated from TypeScript imports.
 - `terrain/waterSample.ts`
 - `world/collision.ts`
 - `world/createGrassForagePatches.ts`
+- `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
+- `world/createStandingTorches.ts`
+- `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`

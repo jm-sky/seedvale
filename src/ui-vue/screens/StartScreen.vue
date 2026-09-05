@@ -3,7 +3,7 @@ import { computed, nextTick, ref } from 'vue'
 import SeedPicker from '@/components/SeedPicker.vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
-import type { SeedChoice, SeedRecord } from '../../world/seedLibrary'
+import { resolveInitialSeedChoice, type SeedChoice, type SeedRecord } from '../../world/seedLibrary'
 import {
   formatSaveDay,
   MAX_SAVES,
@@ -24,6 +24,9 @@ const props = defineProps<{
    *  mounting this screen — rendering it here never itself reads IndexedDB
    *  or triggers worldgen/location scan. */
   seeds: readonly SeedRecord[]
+  /** Explicit `?seed=` detected at boot (plan persistence-004 §9 follow-up),
+   *  `null` when the URL carries none. */
+  urlSeed: number | null
 }>()
 
 const emit = defineEmits<{
@@ -50,11 +53,10 @@ const appVersion = __APP_VERSION__
 const gitCommit = __GIT_COMMIT__
 const buildDate = __BUILD_DATE__
 
-// Default pick: the most recently used seed, if the library isn't empty —
-// otherwise a fresh seed (plan §3 "przy pustej Seed Library pierwsza gra
-// może automatycznie utworzyć pierwszy seed").
-const mostRecentSeed = computed(() => [...props.seeds].sort((a, b) => b.lastUsedAt - a.lastUsedAt)[0] ?? null)
-const seedChoice = ref<SeedChoice>(mostRecentSeed.value ? { kind: 'existing', seed: mostRecentSeed.value.seed } : { kind: 'generate' })
+// Default pick, in priority order: an explicit URL seed, then the most
+// recently used library seed, then a fresh seed (plan §3 "przy pustej Seed
+// Library pierwsza gra może automatycznie utworzyć pierwszy seed").
+const seedChoice = ref<SeedChoice>(resolveInitialSeedChoice(props.urlSeed, props.seeds))
 
 const saveCountsBySeed = computed<Record<number, number>>(() => {
   const counts: Record<number, number> = {}
@@ -192,6 +194,7 @@ function useSeedFromLibrary(seed: number): void {
           id="seedvale-seed-picker"
           v-model="seedChoice"
           :seeds="seeds"
+          :url-seed="urlSeed"
           class="mb-2.5"
         />
         <label

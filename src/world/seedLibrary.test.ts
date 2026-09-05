@@ -8,6 +8,8 @@ import {
   clearSeedCache,
   deleteSeedGuarded,
   ensureSeedRecordsForSeeds,
+  isSeedInLibrary,
+  resolveInitialSeedChoice,
   resolveNewGameSeed,
 } from './seedLibrary'
 
@@ -134,5 +136,40 @@ describe('clearSeedCache (plan world-015 §9/§10)', () => {
     await putSeedRecord(record)
     await clearSeedCache(7)
     expect(await getSeedRecord(7)).toEqual(record)
+  })
+})
+
+describe('isSeedInLibrary (plan persistence-004 §9 follow-up)', () => {
+  it('is true when the seed already has a library entry', () => {
+    expect(isSeedInLibrary(7, [minimalSeedRecord(7, 'X', 1)])).toBe(true)
+  })
+
+  it('is false for a seed with no library entry', () => {
+    expect(isSeedInLibrary(123, [minimalSeedRecord(7, 'X', 1)])).toBe(false)
+  })
+
+  it('is false against an empty library', () => {
+    expect(isSeedInLibrary(123, [])).toBe(false)
+  })
+})
+
+describe('resolveInitialSeedChoice (plan persistence-004 §9 follow-up)', () => {
+  it('picks an explicit URL seed over the most-recently-used library seed', () => {
+    const seeds = [minimalSeedRecord(7, 'Stary', 1000), minimalSeedRecord(9, 'Nowszy', 2000)]
+    expect(resolveInitialSeedChoice(123, seeds)).toEqual({ kind: 'existing', seed: 123 })
+  })
+
+  it('picks the URL seed even when it already matches a library entry, without duplicating it', () => {
+    const seeds = [minimalSeedRecord(7, 'X', 1000)]
+    expect(resolveInitialSeedChoice(7, seeds)).toEqual({ kind: 'existing', seed: 7 })
+  })
+
+  it('falls back to the most recently used seed when there is no URL seed', () => {
+    const seeds = [minimalSeedRecord(7, 'Stary', 1000), minimalSeedRecord(9, 'Nowszy', 2000)]
+    expect(resolveInitialSeedChoice(null, seeds)).toEqual({ kind: 'existing', seed: 9 })
+  })
+
+  it('falls back to "generate" when there is no URL seed and the library is empty', () => {
+    expect(resolveInitialSeedChoice(null, [])).toEqual({ kind: 'generate' })
   })
 })

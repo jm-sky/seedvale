@@ -129,6 +129,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContracts.ts`
 - `persistence/saveDb.ts`
 - `ui-vue/mount.ts`
+- `world/seedLibrary.ts`
 
 **Imported by**
 
@@ -172,6 +173,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `persistence/saveSlots.ts`
+- `world/seedLibrary.ts`
 
 **Imported by**
 

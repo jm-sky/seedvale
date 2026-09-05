@@ -19,12 +19,16 @@ export type StartScreen = {
  *  unhealthy rows (plan persistence-004 §5) so a corrupted save is visible/
  *  deletable at boot instead of silently missing from the list. `seeds` is
  *  the Seed Library listing (plan world-015 §4), loaded by `main.ts` before
- *  this screen mounts — rendering it here never itself reads IndexedDB. */
+ *  this screen mounts — rendering it here never itself reads IndexedDB.
+ *  `urlSeed` is an explicit `?seed=` detected by `main.ts` via
+ *  `hasExplicitUrlSeed()`/`parseSeedFromUrl()` (plan persistence-004 §9
+ *  follow-up), `null` when the URL carries none. */
 export function createStartScreen(
   parent: HTMLElement,
   entries: readonly SaveManagementEntry[],
   activeId: string | null,
   seeds: readonly SeedRecord[],
+  urlSeed: number | null,
 ): StartScreen {
   const root = document.createElement('div')
   parent.appendChild(root)
@@ -55,6 +59,7 @@ export function createStartScreen(
       entries,
       activeId,
       seeds,
+      urlSeed,
       onChoose: settle,
     })
     app.mount(root)

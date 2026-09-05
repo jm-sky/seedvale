@@ -2,11 +2,29 @@
 
 Generated from TypeScript imports.
 
+## `persistence/db.test.ts`
+
+**Imports**
+
+- `persistence/db.ts`
+
+## `persistence/db.ts`
+
+**Imported by**
+
+- `persistence/db.test.ts`
+- `persistence/saveDb.test.ts`
+- `persistence/saveDb.ts`
+- `persistence/seedDb.ts`
+- `persistence/worldgenCacheDb.ts`
+
 ## `persistence/saveData.test.ts`
 
 **Imports**
 
 - `persistence/saveData.ts`
+- `world/palisade.ts`
+- `world/standingTorch.ts`
 
 ## `persistence/saveData.ts`
 
@@ -33,8 +51,10 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
 - `world/map/mapTypes.ts`
+- `world/palisade.ts`
 - `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
+- `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 - `world/wellGroundwater.ts`
 
@@ -52,6 +72,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `persistence/db.ts`
 - `persistence/saveData.ts`
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.ts`
@@ -60,6 +81,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `persistence/db.ts`
 - `persistence/saveData.ts`
 - `persistence/saveSlots.ts`
 
@@ -93,3 +115,52 @@ Generated from TypeScript imports.
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.test.ts`
 - `ui/createStartScreen.ts`
+
+## `persistence/seedDb.test.ts`
+
+**Imports**
+
+- `persistence/seedDb.ts`
+- `persistence/seedRecord.ts`
+
+## `persistence/seedDb.ts`
+
+**Imports**
+
+- `persistence/db.ts`
+- `persistence/seedRecord.ts`
+
+**Imported by**
+
+- `persistence/seedDb.test.ts`
+- `world/seedLibrary.test.ts`
+- `world/seedLibrary.ts`
+
+## `persistence/seedRecord.ts`
+
+**Imported by**
+
+- `persistence/seedDb.test.ts`
+- `persistence/seedDb.ts`
+- `world/seedLibrary.test.ts`
+- `world/seedLibrary.ts`
+
+## `persistence/worldgenCacheDb.test.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+
+## `persistence/worldgenCacheDb.ts`
+
+**Imports**
+
+- `persistence/db.ts`
+
+**Imported by**
+
+- `persistence/worldgenCacheDb.test.ts`
+- `world/locations/locationsCoarseCache.test.ts`
+- `world/locations/locationsCoarseCache.ts`
+- `world/seedLibrary.test.ts`
+- `world/seedLibrary.ts`

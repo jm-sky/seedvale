@@ -142,6 +142,7 @@ Generated from TypeScript imports.
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkGrid.test.ts`
+- `terrain/chunkHeightmap.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
 - `terrain/chunkVegetation.ts`
@@ -160,6 +161,7 @@ Generated from TypeScript imports.
 
 - `math/linearSpline.ts`
 - `math/segment.ts`
+- `terrain/chunkGrid.ts`
 - `terrain/fbm.ts`
 - `terrain/waterBodies.ts`
 - `terrain/worleyNoise.ts`
@@ -213,10 +215,16 @@ Generated from TypeScript imports.
 - `terrain/waterSample.test.ts`
 - `terrain/waterSample.ts`
 - `world/largeCaves.ts`
+- `world/locations/locationsCoarseCache.test.ts`
+- `world/locations/locationsCoarseCache.ts`
+- `world/locations/seedProfile.test.ts`
+- `world/locations/seedProfile.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/map/mapProjection.test.ts`
 - `world/map/mapProjection.ts`
+- `world/seedLibrary.test.ts`
+- `world/seedLibrary.ts`
 - `world/worldContext.ts`
 
 ## `terrain/chunkHeightmap.worker.ts`
@@ -336,6 +344,7 @@ Generated from TypeScript imports.
 - `terrain/footstepSurface.test.ts`
 - `terrain/footstepSurface.ts`
 - `world/createCaves.ts`
+- `world/createTerrainPreparations.test.ts`
 - `world/createTerrainPreparations.ts`
 - `world/foodSources.ts`
 - `world/locations/worldLocationCatalog.test.ts`
@@ -749,6 +758,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/locations/seedProfile.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 - `world/map/mapProjection.ts`
@@ -779,11 +789,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/actions/terrainPreparationActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
 - `terrain/digAction.ts`
 - `terrain/terrainPreparation.test.ts`
+- `world/createTerrainPreparations.test.ts`
 - `world/createTerrainPreparations.ts`
 
 ## `terrain/vegetationRegionBatcher.test.ts`

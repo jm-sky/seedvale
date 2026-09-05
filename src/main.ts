@@ -16,6 +16,7 @@ import {
 import { pickActiveSaveId, type SaveSlotInfo } from './persistence/saveSlots'
 import { createStartScreen } from './ui/createStartScreen'
 import { rawSampleParamsFromWorld } from './world/map/mapProjection'
+import { hasExplicitUrlSeed, parseSeedFromUrl } from './world/parseSeed'
 import { ensureSeedRecordsForSeeds, listSeedRecords, resolveNewGameSeed, touchSeedLastUsed } from './world/seedLibrary'
 
 /** Healthy subset of a save-management listing — the only rows `Continue`/
@@ -82,6 +83,12 @@ async function boot(container: HTMLElement): Promise<void> {
   await ensureSeedRecordsForSeeds(healthyEntries(initialManagement.entries).map((slot) => slot.seed))
   const seeds = await listSeedRecords()
 
+  // An explicit `?seed=` (plan persistence-004 §9) should default the New
+  // Game form to that seed, not the most-recently-used one — surfaced to
+  // `StartScreen`/`SeedPicker` as a temporary form option, never written to
+  // the Seed Library just for being in the URL.
+  const urlSeed = hasExplicitUrlSeed() ? parseSeedFromUrl() : null
+
   // A slot can exist in IndexedDB but not be listed among healthy ones (a
   // newer app's save, one whose migration failed, or genuinely malformed
   // data) — that must never be silently treated as "no save exists"
@@ -91,7 +98,7 @@ async function boot(container: HTMLElement): Promise<void> {
   let currentEntries = initialManagement.entries
   for (;;) {
     const activeId = pickActiveSaveId(getActiveSaveId(), healthyEntries(currentEntries))
-    const startScreen = createStartScreen(container, currentEntries, activeId, seeds)
+    const startScreen = createStartScreen(container, currentEntries, activeId, seeds, urlSeed)
     const choice = await startScreen.choose()
     startScreen.dispose()
 

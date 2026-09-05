@@ -477,8 +477,11 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
 
 ## `world/createPlacedContainers.ts`
 
@@ -629,8 +632,19 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+
+## `world/createTerrainPreparations.test.ts`
+
+**Imports**
+
+- `terrain/chunkManager.ts`
+- `terrain/terrainPreparation.ts`
+- `world/createTerrainPreparations.ts`
 
 ## `world/createTerrainPreparations.ts`
 
@@ -645,8 +659,12 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `world/createTerrainPreparations.test.ts`
 
 ## `world/createWater.ts`
 
@@ -950,6 +968,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
+- `world/locations/seedProfile.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 
@@ -998,6 +1017,26 @@ Generated from TypeScript imports.
 - `world/map/mapData.ts`
 - `world/map/mapProjection.test.ts`
 
+## `world/locations/locationsCoarseCache.test.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/locations/locationsCoarseCache.ts`
+
+## `world/locations/locationsCoarseCache.ts`
+
+**Imports**
+
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `world/locations/locationsCoarseCache.test.ts`
+
 ## `world/locations/navigationTargets.test.ts`
 
 **Imports**
@@ -1013,6 +1052,27 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
 - `world/locations/navigationTargets.test.ts`
+
+## `world/locations/seedProfile.test.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `world/locations/seedProfile.ts`
+
+## `world/locations/seedProfile.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/terrainClassification.ts`
+- `world/locations/locationConfig.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `world/locations/seedProfile.test.ts`
+- `world/seedLibrary.ts`
 
 ## `world/locations/worldLocationCatalog.test.ts`
 
@@ -1165,6 +1225,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `debug/locationQueries.ts`
+- `main.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
 - `world/locations/worldLocationCatalog.test.ts`
@@ -1197,13 +1258,19 @@ Generated from TypeScript imports.
 
 - `items/constructionMaterials.ts`
 - `items/tentPlacement.ts`
+- `world/playerWell.ts`
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/workContractActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/createApp.ts`
+- `app/interactables.ts`
 - `app/worldBundle.ts`
+- `persistence/saveData.test.ts`
+- `persistence/saveData.ts`
 - `world/createPalisades.ts`
 - `world/palisade.test.ts`
 - `world/palisadeProp.ts`
@@ -1239,6 +1306,7 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `items/createItemSpawners.ts`
 - `items/villageTools.test.ts`
+- `main.ts`
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/houseCatalog.ts`
@@ -1269,7 +1337,9 @@ Generated from TypeScript imports.
 - `world/grassForage.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
+- `world/locations/seedProfile.ts`
 - `world/parseSeed.test.ts`
+- `world/seedLibrary.ts`
 - `world/treeLifecycle.ts`
 - `world/wellGroundwater.ts`
 
@@ -1371,7 +1441,6 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
-- `ai/npcWorkContract.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/busyChannelDurations.test.ts`
@@ -1384,8 +1453,10 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `world/createPlayerWells.test.ts`
 - `world/createPlayerWells.ts`
+- `world/palisade.ts`
 - `world/playerWell.test.ts`
 - `world/playerWellProp.ts`
+- `world/standingTorch.ts`
 
 ## `world/playerWellProp.ts`
 
@@ -1451,6 +1522,36 @@ Generated from TypeScript imports.
 
 - `world/createRiverWater.ts`
 
+## `world/seedLibrary.test.ts`
+
+**Imports**
+
+- `persistence/seedDb.ts`
+- `persistence/seedRecord.ts`
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/seedLibrary.ts`
+
+## `world/seedLibrary.ts`
+
+**Imports**
+
+- `persistence/seedDb.ts`
+- `persistence/seedRecord.ts`
+- `persistence/worldgenCacheDb.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/locations/seedProfile.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `main.ts`
+- `ui-vue/store.ts`
+- `ui/createPauseMenu.ts`
+- `ui/createStartScreen.ts`
+- `world/seedLibrary.test.ts`
+
 ## `world/settlementForestHooks.ts`
 
 **Imports**
@@ -1498,18 +1599,31 @@ Generated from TypeScript imports.
 
 - `world/createSleepingUtilities.ts`
 
+## `world/standingTorch.test.ts`
+
+**Imports**
+
+- `world/standingTorch.ts`
+
 ## `world/standingTorch.ts`
 
 **Imports**
 
 - `items/constructionMaterials.ts`
 - `items/tentPlacement.ts`
+- `world/playerWell.ts`
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/workContractActions.ts`
+- `app/interactables.ts`
 - `app/worldBundle.ts`
+- `persistence/saveData.test.ts`
+- `persistence/saveData.ts`
 - `world/createStandingTorches.ts`
+- `world/standingTorch.test.ts`
 
 ## `world/standingTorchProp.ts`
 

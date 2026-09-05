@@ -57,14 +57,14 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createNpcInspector.ts`
 
-- `createNpcInspector` — function — line 198
+- `createNpcInspector` — function — line 202
 - `NpcInspector` — type — line 15
 
 ## `ui/createPauseMenu.ts`
 
-- `createPauseMenu` — function — line 35
-- `PauseMenu` — type — line 33
-- `PauseMenuHandlers` — type — line 5
+- `createPauseMenu` — function — line 42
+- `PauseMenu` — type — line 40
+- `PauseMenuHandlers` — type — line 6
 
 ## `ui/createQuestLog.ts`
 
@@ -74,8 +74,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createQuickActions.ts`
 
-- `createQuickActions` — function — line 136
-- `QuickActions` — type — line 127
+- `createQuickActions` — function — line 140
+- `QuickActions` — type — line 131
 - `QuickActionsCropSeeds` — type — line 13
 - `QuickActionsHandlers` — type — line 29
 - `QuickActionsTraps` — type — line 9
@@ -85,9 +85,9 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createStartScreen.ts`
 
-- `createStartScreen` — function — line 20
-- `StartScreen` — type — line 10
-- `StartScreenChoice` — type — line 4
+- `createStartScreen` — function — line 26
+- `StartScreen` — type — line 11
+- `StartScreenChoice` — type — line 5
 
 ## `ui/createTimeSkipOverlay.ts`
 

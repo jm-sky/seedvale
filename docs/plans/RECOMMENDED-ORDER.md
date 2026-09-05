@@ -34,8 +34,7 @@
 
 ### Bug Fixes
 
-1. `world-014` — **World location landmark lookup main-thread freeze**  
-   🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
+_No qualifying plans._
 
 ---
 
@@ -113,75 +112,71 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `world-014` — **World location landmark lookup main-thread freeze**  
-  🔴 `M` · **Score:**  31  
-   → **unlocks:** 0/0
-
-11. `items-player-002` — **Food provenance, freshness and storage**  
+10. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-12. `items-player-014` — **Rope-pullable resource transport**  
+11. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `tools-005` — **Seedvale Character Preparation Panel**  
+13. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `npc-002` — **NPC Healing**  
+14. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-16. `npc-011` — **NPC Burial & Graves**  
+15. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-18. `fauna-013` — **Animal hand-feeding and human affinity**  
+17. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-007` — **Bandages and herbal medicine**  
+20. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+21. `ui-input-009` — **Merchant item ownership and semantic item labels**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-23. `fauna-007` — **Animal leading and cart harness**  
+22. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-24. `tools-000` — **Weapon Browser — Observatory/Admin**  
+23. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-25. `world-terrain-008` — **Underground Caves V2**  
+24. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-26. `npc-004` — **Drzewo genealogiczne NPC**  
+25. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-27. `tools-006` — **tools-006--world-observatory.md**  
+26. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -272,6 +267,7 @@ graph TD
   items_player_014["items-player-014 — Rope-pullable resource transport"]
   items_player_015["items-player-015 — Firewood, Wood Piles and Scalable Fire"]
   items_player_016["items-player-016 — Books and Skill Learning"]
+  items_player_017["items-player-017 — Incremental Construction for Player Buildables"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -288,6 +284,7 @@ graph TD
   npc_015["npc-015 — Work Contracts — NPC Work & Construction"]
   npc_016["npc-016 — Work Contracts — Payment & Employer Interaction"]
   npc_017["npc-017 — Work Contracts — Food & Drink for Hired NPCs"]
+  npc_018["npc-018 — Work Contracts — Shared Work"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -351,6 +348,7 @@ graph TD
   world_012["world-012 — World Locations, Discovery and Map Navigation"]
   world_013["world-013 — World Location Catalog performance optimization"]
   world_014["world-014 — World location landmark lookup main-thread freeze"]
+  world_015["world-015 — Seed Library and persistent worldgen cache"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -435,6 +433,8 @@ graph TD
   npc_014 --> npc_015
   npc_015 --> npc_016
   npc_015 --> npc_017
+  npc_015 --> npc_018
+  npc_018 --> items_player_017
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
@@ -467,6 +467,7 @@ graph TD
   world_012 --> items_player_016
   world_012 --> world_013
   world_013 --> world_014
+  world_013 --> world_015
   world_terrain_004 --> world_terrain_005
   world_terrain_010 --> world_terrain_011
 ```

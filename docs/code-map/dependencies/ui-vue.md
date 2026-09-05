@@ -158,6 +158,7 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
 - `world/dayNight.ts`
+- `world/seedLibrary.ts`
 
 **Imported by**
 

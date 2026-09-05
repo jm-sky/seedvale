@@ -17,6 +17,27 @@ import { randomSeed } from './parseSeed'
 
 export type SeedChoice = { kind: 'existing', seed: number } | { kind: 'generate' }
 
+/** Whether `seed` already has a `SeedRecord` — the New Game form's temporary
+ *  "z query param" option (plan persistence-004 §9 follow-up) must never
+ *  duplicate an entry that's already in the library. */
+export function isSeedInLibrary(seed: number, seeds: readonly SeedRecord[]): boolean {
+  return seeds.some((s) => s.seed === seed)
+}
+
+/** New Game form's initial `SeedChoice`, in priority order: an explicit URL
+ *  seed (`urlSeed`, from `hasExplicitUrlSeed()`/`parseSeedFromUrl()` at boot)
+ *  beats the most-recently-used library seed, which beats a fresh
+ *  `'generate'`. Picking the URL seed here never itself writes a
+ *  `SeedRecord` — `resolveNewGameSeed`'s existing `'existing'` branch already
+ *  no-ops `touchSeedLastUsed` when no record exists, so a query-param seed
+ *  stays out of the persistent library until something else creates a
+ *  record for it (e.g. the usual lazy backfill once a save references it). */
+export function resolveInitialSeedChoice(urlSeed: number | null, seeds: readonly SeedRecord[]): SeedChoice {
+  if (urlSeed != null) return { kind: 'existing', seed: urlSeed }
+  const mostRecentSeed = [...seeds].sort((a, b) => b.lastUsedAt - a.lastUsedAt)[0]
+  return mostRecentSeed ? { kind: 'existing', seed: mostRecentSeed.seed } : { kind: 'generate' }
+}
+
 async function createSeedRecordForNewSeed(seed: number, buildSampleParams: (seed: number) => RawSampleParams): Promise<void> {
   // Cheap startup-area profile only (plan §5) — a handful of direct terrain
   // samples at fixed offsets, never `WorldLocationCatalog.landmarksInRange()`

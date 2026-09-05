@@ -8,9 +8,13 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
+- `config/worldConfig.ts`
 - `debug/debugMode.ts`
 - `perf/benchmarkFixture.ts`
 - `perf/flags.ts`
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.ts`
 - `ui/createStartScreen.ts`
+- `world/map/mapProjection.ts`
+- `world/parseSeed.ts`
+- `world/seedLibrary.ts`
