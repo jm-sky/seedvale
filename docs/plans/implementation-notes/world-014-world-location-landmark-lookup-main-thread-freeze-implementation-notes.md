@@ -228,3 +228,18 @@ If a shared cemetery resolver or local final-terrain sampler is exported, docume
 The key invariant to state in code is:
 
 > unloaded landmark lookup and normal streamed environment generation must consume the same deterministic placement rules and terrain semantics without requiring full chunk materialization on the main thread.
+
+## Implemented (2026-09-05)
+
+Implemented following the recommended extraction boundary (§3) and the suggested implementation order (§9) closely — see the plan's "Implementation status" section for the full file-by-file summary.
+
+Deviations/clarifications versus the review above:
+
+- §3's `resolveCemeteryPlacement(coord, params, terrainSampler)` shape landed almost verbatim; the sampler interface is named `CemeteryTerrainSampler` (`heightAt`/`roadTintAt`) and lives in `chunkEnvironment.ts` next to the resolver.
+- §4's "small pure per-texel/final-terrain evaluation seam reused by both `computeChunkTile()` and the lightweight lookup" landed as `computeChunkTexel()` (module-private to `chunkHeightmap.ts`) — the exact former loop body of `computeChunkTile()`, now called once per grid texel there and on-demand (cached per texel index) by the new `createLocalTerrainSampler()`. Grid interpolation reuses the existing `apronGridWeights`/bilinear math exactly (no second continuous formula), addressing the "parity trap" directly.
+- §5 (`paramsFor()` ownership) — unchanged: `ChunkManager.findLandmarkNear()`'s unloaded branch still calls `paramsFor(coord, [])` itself and passes the resulting `ChunkTileParams` down; `WorldLocationCatalog` and the new resolver never rebuild village/road inputs themselves.
+- §6 (river discrepancy) — resolved by **keeping** the existing `paramsFor(coord, [])` behavior for the unloaded fallback (option matching "smallest change that preserves current gameplay data... without smuggling hydrology cost back onto the purchase path") and documenting it explicitly in `resolveUnloadedLandmark`'s JSDoc as a pre-existing, deliberately unchanged tradeoff, not something newly introduced or newly hidden.
+- §7 diagnostics — implemented via the existing `getMonitor().recordHitch('PROPS', ms, label)` mechanism (already used elsewhere in `chunkManager.ts`) rather than a new counters object on `ChunkManager` or `WorldLocationCatalog`. Distinguishes loaded / unloaded-lightweight-cemetery / unloaded-full-fallback / miss by label; zero cost when the perf monitor is disabled.
+- §8 tests — added in `chunkHeightmap.test.ts`, `chunkEnvironment.test.ts`, and `chunkManager.test.ts` per the outline; the `ChunkManager` lookup test uses the new pure `resolveUnloadedLandmark()` export with `vi.spyOn` on `computeChunkTile` (dependency-injection-free, no full Three.js `ChunkManager` needed) rather than an injected observer.
+- Monolith/stoneCircle/smallRuins were **not** touched — `findLandmarkNear()`'s unloaded fallback for those kinds still calls `computeChunkTile()` + `computeChunkEnvironment()` in full, exactly as before, per the plan's explicit scope boundary.
+- Browser Performance-trace verification (real merchant Near Map purchase, Guard/Far Map regression) was **not** performed in this pass — left to the user, per the plan's "Performance verification" section. Plan is marked `verification needed`, not `done`, until that manual step happens.

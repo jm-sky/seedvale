@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import type { ChunkTileParams } from './chunkHeightmap'
 import {
+  apronGridWeights,
   apronOriginWorld,
   computeChunkTile,
+  createLocalTerrainSampler,
   type RawSampleParams,
   type RegionalSmoothingSegment,
   type RiverChannelSegment,
   type RoadCorridorSegment,
+  sampleApronGridWeighted,
   sampleContinentalnessAt,
   sampleFloorAt,
   sampleHeightAt,
@@ -482,5 +486,103 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
       const ri = iz * rightOrigin.apronRes + rx
       expect(left.floorHeights[li]).toBeCloseTo(right.floorHeights[ri]!, 5)
     }
+  })
+})
+
+/** world-014 — the lightweight point-only reader `ChunkManager.findLandmarkNear`'s
+ *  unloaded-chunk cemetery lookup uses instead of a full `computeChunkTile()`. */
+describe('createLocalTerrainSampler (plan world-014)', () => {
+  const CHUNK_SIZE = 64
+  const RESOLUTION = 33
+
+  function tileParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
+    return {
+      ...rawParams(),
+      cx: 0,
+      cz: 0,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [],
+      clearings: [],
+      regional: [],
+      riverSegments: [],
+      ...overrides,
+    }
+  }
+
+  /** Reference reader against a fully materialized tile — same bilinear math
+   *  `computeChunkEnvironment`'s own `sample()` closure uses. */
+  function referenceSampler(params: ChunkTileParams) {
+    const tile = computeChunkTile(params)
+    const o = apronOriginWorld(params.cx, params.cz, params.chunkSize, params.resolution)
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGridWeighted(grid, o.apronRes, apronGridWeights(o.apronRes, o.x, o.z, o.step, x, z))
+    return {
+      heightAt: (x: number, z: number) => sample(tile.heights, x, z),
+      roadTintAt: (x: number, z: number) => sample(tile.roadTint, x, z),
+    }
+  }
+
+  const probePoints: readonly [number, number][] = [
+    [0, 0],
+    [3.7, -12.4],
+    [-20, 20],
+    [28, -28],
+    [10, 10.5],
+  ]
+
+  it('matches full-tile bilinear sampling on flat/plain terrain', () => {
+    const params = tileParams()
+    const reference = referenceSampler(params)
+    const lightweight = createLocalTerrainSampler({ cx: params.cx, cz: params.cz }, params)
+    for (const [x, z] of probePoints) {
+      expect(lightweight.heightAt(x, z)).toBeCloseTo(reference.heightAt(x, z), 6)
+      expect(lightweight.roadTintAt(x, z)).toBeCloseTo(reference.roadTintAt(x, z), 6)
+    }
+  })
+
+  it('matches full-tile bilinear sampling with road corridors present', () => {
+    const params = tileParams({
+      roadSegments: [
+        { ax: -30, az: 0, ah: 0, bx: 30, bz: 0, bh: 0, halfWidth: 5, heightStrength: 0.85, tintStrength: 0.8 },
+      ],
+    })
+    const reference = referenceSampler(params)
+    const lightweight = createLocalTerrainSampler({ cx: params.cx, cz: params.cz }, params)
+    for (const [x, z] of probePoints) {
+      expect(lightweight.heightAt(x, z)).toBeCloseTo(reference.heightAt(x, z), 6)
+      expect(lightweight.roadTintAt(x, z)).toBeCloseTo(reference.roadTintAt(x, z), 6)
+    }
+  })
+
+  it('matches full-tile bilinear sampling with village clearings + regional smoothing present', () => {
+    const params = tileParams({
+      clearings: [{ x: 0, z: 0, radius: 10, targetH: 2, heightStrength: 0.8, tintStrength: 0.75 }],
+      regional: [{ x: 0, z: 0, radius: 25, targetH: 2, heightStrength: 0.3 }],
+    })
+    const reference = referenceSampler(params)
+    const lightweight = createLocalTerrainSampler({ cx: params.cx, cz: params.cz }, params)
+    for (const [x, z] of probePoints) {
+      expect(lightweight.heightAt(x, z)).toBeCloseTo(reference.heightAt(x, z), 6)
+      expect(lightweight.roadTintAt(x, z)).toBeCloseTo(reference.roadTintAt(x, z), 6)
+    }
+  })
+
+  it('is independent of query order (per-texel cache never leaks stale values)', () => {
+    const params = tileParams({
+      roadSegments: [
+        { ax: -30, az: 0, ah: 0, bx: 30, bz: 0, bh: 0, halfWidth: 5, heightStrength: 0.85, tintStrength: 0.8 },
+      ],
+    })
+    const forward = createLocalTerrainSampler({ cx: 0, cz: 0 }, params)
+    const forwardResults = probePoints.map(([x, z]) => forward.heightAt(x, z))
+
+    const backward = createLocalTerrainSampler({ cx: 0, cz: 0 }, params)
+    const backwardResults = [...probePoints].reverse().map(([x, z]) => backward.heightAt(x, z))
+    backwardResults.reverse()
+
+    expect(backwardResults).toEqual(forwardResults)
   })
 })

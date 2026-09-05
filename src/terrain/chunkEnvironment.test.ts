@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import type { RoadCorridorSegment } from './chunkHeightmap'
+import type { ChunkTileParams, RoadCorridorSegment } from './chunkHeightmap'
 import { createSeededRandom } from '../world/parseSeed'
 import {
   cemeteryFitsVillageFringe,
   cemeteryFootprintClearsRoads,
+  computeChunkEnvironment,
   deriveLandmarkId,
   LANDMARK_BIAS_MAX,
   LANDMARK_BIAS_MIN,
   landmarkChanceBias,
+  resolveCemeteryPlacement,
   rollCemeterySize,
 } from './chunkEnvironment'
+import {
+  apronGridWeights,
+  apronOriginWorld,
+  computeChunkTile,
+  createLocalTerrainSampler,
+  sampleApronGridWeighted,
+} from './chunkHeightmap'
 
 function roadSegment(overrides: Partial<RoadCorridorSegment> = {}): RoadCorridorSegment {
   return {
@@ -169,5 +178,150 @@ describe('rollCemeterySize', () => {
       seen.add(size)
     }
     expect(seen).toEqual(new Set(['LG', 'MD', 'SM']))
+  })
+})
+
+/** world-014 — `resolveCemeteryPlacement` is the shared resolver both
+ *  `computeChunkEnvironment` (full generation) and `ChunkManager`'s unloaded
+ *  lightweight lookup must agree with, for the same `(coord, params)`. */
+describe('resolveCemeteryPlacement (plan world-014)', () => {
+  const CHUNK_SIZE = 64
+  const RESOLUTION = 17
+
+  function tileParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
+    return {
+      cx: 0,
+      cz: 0,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      seed: 1,
+      heightScale: 18,
+      waterLevel: 0.45,
+      noiseScale: 120,
+      detailAmplitude: 0.55,
+      hillsScale: 420,
+      hillsAmplitude: 0.28,
+      hillsFbm: { octaves: 3, persistence: 0.55, lacunarity: 2.0, exponentiation: 1.15 },
+      fbm: { octaves: 4, persistence: 0.65, lacunarity: 2.0, exponentiation: 1.35 },
+      biome: {
+        noiseScale: 96,
+        fbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+      },
+      region: {
+        continentScale: 2200,
+        continentFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        mountainScale: 1800,
+        mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
+        mountainThreshold: 0.62,
+        mountainThresholdWidth: 0.14,
+        worleyCellSize: 260,
+        ridgeSharpness: 2.0,
+        mountainGain: 0.8,
+        oceanThreshold: 0.32,
+        coastThreshold: 0.45,
+        oceanDetailWeight: 0.25,
+        moistureRegionScale: 2000,
+        moistureRegionFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        desertThreshold: 0.35,
+        desertThresholdWidth: 0.12,
+        swampThreshold: 0.72,
+        swampThresholdWidth: 0.15,
+        roadNetwork: {
+          roadHalfWidth: 5,
+          roadHeightStrength: 0.85,
+          roadTintStrength: 0.8,
+          pathHalfWidth: 1.5,
+          pathHeightStrength: 0.2,
+          pathTintStrength: 0.4,
+          smoothingWindow: 10,
+          maxNeighborRoads: 3,
+          dockSearchRadius: 140,
+          edgeWobbleAmplitude: 0.15,
+          edgeWobbleScale: 0.06,
+          potholeDepth: 0.12,
+          potholeThreshold: 0.72,
+          meanderAmplitude: 2,
+          meanderScale: 0.04,
+          surfaceDetailEnabled: true,
+          rutDepth: 0.05,
+          rutOffsetFraction: 0.42,
+          rutWidthFraction: 0.16,
+          microBumpStrength: 0.025,
+          microBumpScale: 0.6,
+        },
+        village: {
+          coreRadius: 9,
+          houseRadius: 4.5,
+          heightStrength: 0.8,
+          tintStrength: 0.75,
+          regionalHeightStrengthFlat: 0.3,
+          regionalHeightStrengthMountain: 0.15,
+        },
+      },
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [],
+      clearings: [],
+      // A wide village-fringe disk centered on the chunk so a meaningful
+      // fraction of cemetery candidate rolls land in the accepted band —
+      // makes the "found" branch of the parity check exercised, not just
+      // "both agree it's null".
+      regional: [{ x: 0, z: 0, radius: 30, targetH: 1, heightStrength: 0.2 }],
+      riverSegments: [],
+      ...overrides,
+    }
+  }
+
+  /** Reference terrain view against a fully materialized tile — same
+   *  bilinear math `computeChunkEnvironment`'s own `sample()` closure uses. */
+  function referenceSampler(params: ChunkTileParams) {
+    const tile = computeChunkTile(params)
+    const o = apronOriginWorld(params.cx, params.cz, params.chunkSize, params.resolution)
+    const sample = (grid: Float32Array, x: number, z: number) =>
+      sampleApronGridWeighted(grid, o.apronRes, apronGridWeights(o.apronRes, o.x, o.z, o.step, x, z))
+    return {
+      heightAt: (x: number, z: number) => sample(tile.heights, x, z),
+      roadTintAt: (x: number, z: number) => sample(tile.roadTint, x, z),
+    }
+  }
+
+  it('agrees with a full-tile-backed sampler across many seeds, including both acceptance and rejection', () => {
+    let foundCount = 0
+    let nullCount = 0
+    for (let seed = 0; seed < 200; seed++) {
+      const params = tileParams({ seed })
+      const viaFullTile = resolveCemeteryPlacement({ cx: 0, cz: 0 }, params, referenceSampler(params))
+      const viaLightweight = resolveCemeteryPlacement(
+        { cx: 0, cz: 0 },
+        params,
+        createLocalTerrainSampler({ cx: 0, cz: 0 }, params),
+      )
+      expect(viaLightweight).toEqual(viaFullTile)
+      if (viaFullTile) foundCount++
+      else nullCount++
+    }
+    // Sanity: the seed sweep must actually exercise both outcomes, or the
+    // equality check above would trivially pass on null/null every time.
+    expect(foundCount).toBeGreaterThan(0)
+    expect(nullCount).toBeGreaterThan(0)
+  })
+
+  it('matches computeChunkEnvironment’s own cemetery result exactly (id/x/z/scale/rotation/variant/size)', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      const params = tileParams({ seed })
+      const tile = computeChunkTile(params)
+      const o = apronOriginWorld(params.cx, params.cz, params.chunkSize, params.resolution)
+      const sample = (grid: Float32Array, x: number, z: number) =>
+        sampleApronGridWeighted(grid, o.apronRes, apronGridWeights(o.apronRes, o.x, o.z, o.step, x, z))
+      const viaResolver = resolveCemeteryPlacement({ cx: 0, cz: 0 }, params, {
+        heightAt: (x, z) => sample(tile.heights, x, z),
+        roadTintAt: (x, z) => sample(tile.roadTint, x, z),
+      })
+
+      const viaFullGeneration = computeChunkEnvironment({ cx: 0, cz: 0 }, tile, params, [])
+        .find((p) => p.kind === 'cemetery') ?? null
+
+      expect(viaResolver).toEqual(viaFullGeneration)
+    }
   })
 })

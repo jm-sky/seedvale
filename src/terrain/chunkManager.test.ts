@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { ChunkTileParams } from './chunkHeightmap'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
+import * as chunkHeightmap from './chunkHeightmap'
 import { apronOriginWorld } from './chunkHeightmap'
 import {
   applyModificationToTile,
   drainByBudget,
   pickNearestQueuedKey,
   pickNextFinalizeKey,
+  resolveUnloadedLandmark,
   ringChunkOffsets,
   type TerrainModification,
 } from './chunkManager'
@@ -325,5 +328,108 @@ describe('drainByBudget', () => {
       clock.now,
     )
     expect(calls).toBe(1)
+  })
+})
+
+/** world-014 — `findLandmarkNear`'s unloaded-chunk fallback, factored out as
+ *  `resolveUnloadedLandmark` specifically so this doesn't need a full
+ *  Three.js `ChunkManager` to test. */
+describe('resolveUnloadedLandmark (plan world-014)', () => {
+  function tileParams(overrides: Partial<ChunkTileParams> = {}): ChunkTileParams {
+    return {
+      cx: 0,
+      cz: 0,
+      chunkSize: 64,
+      resolution: 17,
+      seed: 1,
+      heightScale: 18,
+      waterLevel: 0.45,
+      noiseScale: 120,
+      detailAmplitude: 0.55,
+      hillsScale: 420,
+      hillsAmplitude: 0.28,
+      hillsFbm: { octaves: 3, persistence: 0.55, lacunarity: 2.0, exponentiation: 1.15 },
+      fbm: { octaves: 4, persistence: 0.65, lacunarity: 2.0, exponentiation: 1.35 },
+      biome: { noiseScale: 96, fbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 } },
+      region: {
+        continentScale: 2200,
+        continentFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        mountainScale: 1800,
+        mountainFbm: { octaves: 2, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.2 },
+        mountainThreshold: 0.62,
+        mountainThresholdWidth: 0.14,
+        worleyCellSize: 260,
+        ridgeSharpness: 2.0,
+        mountainGain: 0.8,
+        oceanThreshold: 0.32,
+        coastThreshold: 0.45,
+        oceanDetailWeight: 0.25,
+        moistureRegionScale: 2000,
+        moistureRegionFbm: { octaves: 3, persistence: 0.5, lacunarity: 2.0, exponentiation: 1.0 },
+        desertThreshold: 0.35,
+        desertThresholdWidth: 0.12,
+        swampThreshold: 0.72,
+        swampThresholdWidth: 0.15,
+        roadNetwork: {
+          roadHalfWidth: 5, roadHeightStrength: 0.85, roadTintStrength: 0.8, pathHalfWidth: 1.5,
+          pathHeightStrength: 0.2, pathTintStrength: 0.4, smoothingWindow: 10, maxNeighborRoads: 3,
+          dockSearchRadius: 140, edgeWobbleAmplitude: 0.15, edgeWobbleScale: 0.06, potholeDepth: 0.12,
+          potholeThreshold: 0.72, meanderAmplitude: 2, meanderScale: 0.04, surfaceDetailEnabled: true,
+          rutDepth: 0.05, rutOffsetFraction: 0.42, rutWidthFraction: 0.16, microBumpStrength: 0.025, microBumpScale: 0.6,
+        },
+        village: { coreRadius: 9, houseRadius: 4.5, heightStrength: 0.8, tintStrength: 0.75, regionalHeightStrengthFlat: 0.3, regionalHeightStrengthMountain: 0.15 },
+      },
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [],
+      clearings: [],
+      // Wide village-fringe disk so cemetery candidates have a real chance
+      // to be accepted across seeds, not just rejected outright.
+      regional: [{ x: 0, z: 0, radius: 30, targetH: 1, heightStrength: 0.2 }],
+      riverSegments: [],
+      ...overrides,
+    }
+  }
+
+  it('resolves a cemetery without calling full computeChunkTile()', () => {
+    const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
+    try {
+      // Sweep a few seeds so at least one produces an actual cemetery hit,
+      // not just a null result on every attempt.
+      let sawHit = false
+      for (let seed = 0; seed < 30; seed++) {
+        const found = resolveUnloadedLandmark('cemetery', { cx: 0, cz: 0 }, tileParams({ seed }))
+        if (found) sawHit = true
+      }
+      expect(sawHit).toBe(true)
+      expect(spy).not.toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('still uses full generation for the other landmark kinds (out of world-014 scope)', () => {
+    const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
+    try {
+      resolveUnloadedLandmark('monolith', { cx: 0, cz: 0 }, tileParams())
+      expect(spy).toHaveBeenCalledTimes(1)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('cemetery result is deterministic and independent of call order across chunks', () => {
+    const a = tileParams({ seed: 7, cx: 2, cz: -1 })
+    const b = tileParams({ seed: 7, cx: 5, cz: 3 })
+    const firstOrder = [
+      resolveUnloadedLandmark('cemetery', { cx: a.cx, cz: a.cz }, a),
+      resolveUnloadedLandmark('cemetery', { cx: b.cx, cz: b.cz }, b),
+    ]
+    const secondOrder = [
+      resolveUnloadedLandmark('cemetery', { cx: b.cx, cz: b.cz }, b),
+      resolveUnloadedLandmark('cemetery', { cx: a.cx, cz: a.cz }, a),
+    ]
+    expect(firstOrder[0]).toEqual(secondOrder[1])
+    expect(firstOrder[1]).toEqual(secondOrder[0])
   })
 })

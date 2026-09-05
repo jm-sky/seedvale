@@ -279,6 +279,77 @@ function nearTree(vegetation: readonly VegetationPlacement[], x: number, z: numb
   return false
 }
 
+/** Minimal terrain view `resolveCemeteryPlacement` needs — cemetery
+ *  acceptance never reads vegetation/biome/moisture/continentalness, only
+ *  local height and road tint (see the function's own doc comment). Backed
+ *  by `computeChunkEnvironment`'s own apron-grid `sample()` for a loaded/
+ *  full-generation tile, or by `chunkHeightmap.ts`'s
+ *  `createLocalTerrainSampler` for an unloaded-chunk lookup — both resolve
+ *  through the same underlying per-texel math, which is what keeps the two
+ *  callers in parity. */
+export type CemeteryTerrainSampler = {
+  heightAt: (wx: number, wz: number) => number
+  roadTintAt: (wx: number, wz: number) => number
+}
+
+/** Cemetery-only extraction (plan world-014) of the cemetery block below —
+ *  pure and worker-safe given any `CemeteryTerrainSampler`, so it is the one
+ *  place that owns the cemetery RNG stream/gates/identity for both a fully
+ *  generated chunk (`computeChunkEnvironment`) and a lightweight unloaded
+ *  lookup (`ChunkManager.findLandmarkNear`'s cold-path fallback). Not
+ *  extended to monolith/stoneCircle/smallRuins — those are not on the World
+ *  Location cold path this plan fixes.
+ *
+ *  Determinism/parity contract: for the same `(coord, params)`, this must
+ *  return the same result whether `terrain` is backed by a full generated
+ *  tile or the lightweight sampler — same RNG draws (nothing here reads
+ *  `terrain` before the RNG stream itself is exhausted in the same order),
+ *  same acceptance gates, same `EnvironmentPlacement` (including `null`).
+ * @domain world-terrain
+ */
+export function resolveCemeteryPlacement(
+  coord: ChunkCoord,
+  params: ChunkTileParams,
+  terrain: CemeteryTerrainSampler,
+): EnvironmentPlacement | null {
+  const { chunkSize } = params
+  const half = chunkSize / 2
+  const cemeteryRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 7) ^ 0x6a18d)
+  const cemeterySize = rollCemeterySize(cemeteryRandom)
+  const margin = CEMETERY_MARGIN_BY_SIZE[cemeterySize]
+  const wx = coord.cx * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
+  const wz = coord.cz * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
+  // Rolled here (not at push time) so the footprint check below can size
+  // itself off the real scale, not a placeholder.
+  const cemeteryScale = 0.9 + cemeteryRandom() * 0.3
+  const h = terrain.heightAt(wx, wz)
+  const d = SLOPE_SAMPLE_STEP
+  const slope =
+    (Math.abs(terrain.heightAt(wx + d, wz) - terrain.heightAt(wx - d, wz)) +
+      Math.abs(terrain.heightAt(wx, wz + d) - terrain.heightAt(wx, wz - d))) /
+    (2 * d)
+  if (
+    h > params.waterLevel + 0.3 &&
+    terrain.roadTintAt(wx, wz) <= ROAD_TINT_REJECT &&
+    slope <= SLOPE_REJECT_LANDMARK &&
+    cemeteryFitsVillageFringe(wx, wz, params.regional, params.clearings) &&
+    cemeteryFootprintClearsRoads(wx, wz, cemeterySize, cemeteryScale, params.roadSegments) &&
+    cemeteryRandom() <= CEMETERY_CHANCE
+  ) {
+    return {
+      x: wx,
+      z: wz,
+      kind: 'cemetery',
+      scale: cemeteryScale,
+      rotationY: cemeteryRandom() * Math.PI * 2,
+      variant: cemeteryRandom(),
+      cemeterySize,
+      id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'cemetery', 0),
+    }
+  }
+  return null
+}
+
 /**
  * Deterministic, worker-safe per-chunk decorative object placement — pure
  * data only, instantiated into procedural (no-GLB) meshes on the main thread
@@ -489,36 +560,14 @@ export function computeChunkEnvironment(
   }
 
   // --- Cemetery: rare village-fringe landmark (plan 049), SM/MD/LG (plan 173) ---
-  const cemeteryRandom = createSeededRandom(params.seed ^ hashChunk(coord.cx, coord.cz, 7) ^ 0x6a18d)
-  {
-    const cemeterySize = rollCemeterySize(cemeteryRandom)
-    const margin = CEMETERY_MARGIN_BY_SIZE[cemeterySize]
-    const wx = coord.cx * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
-    const wz = coord.cz * chunkSize + (cemeteryRandom() * 2 - 1) * (half - margin)
-    // Rolled here (not at push time) so the footprint check below can size
-    // itself off the real scale, not a placeholder.
-    const cemeteryScale = 0.9 + cemeteryRandom() * 0.3
-    const h = sample(tile.heights, wx, wz)
-    if (
-      h > waterLevel + 0.3 &&
-      sample(tile.roadTint, wx, wz) <= ROAD_TINT_REJECT &&
-      slopeAt(wx, wz) <= SLOPE_REJECT_LANDMARK &&
-      cemeteryFitsVillageFringe(wx, wz, params.regional, params.clearings) &&
-      cemeteryFootprintClearsRoads(wx, wz, cemeterySize, cemeteryScale, params.roadSegments) &&
-      cemeteryRandom() <= CEMETERY_CHANCE
-    ) {
-      placements.push({
-        x: wx,
-        z: wz,
-        kind: 'cemetery',
-        scale: cemeteryScale,
-        rotationY: cemeteryRandom() * Math.PI * 2,
-        variant: cemeteryRandom(),
-        cemeterySize,
-        id: deriveLandmarkId(params.seed, coord.cx, coord.cz, 'cemetery', 0),
-      })
-    }
-  }
+  // Extracted to `resolveCemeteryPlacement` (plan world-014) so the same
+  // RNG/gating/identity logic backs both this full generation path and the
+  // unloaded-chunk lightweight lookup in `ChunkManager.findLandmarkNear`.
+  const cemeteryPlacement = resolveCemeteryPlacement(coord, params, {
+    heightAt: (wx, wz) => sample(tile.heights, wx, wz),
+    roadTintAt: (wx, wz) => sample(tile.roadTint, wx, wz),
+  })
+  if (cemeteryPlacement) placements.push(cemeteryPlacement)
 
   return placements
 }

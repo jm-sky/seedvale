@@ -1,5 +1,6 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import { MathUtils } from 'three'
+import type { ChunkCoord } from './chunkGrid'
 import { LinearSpline } from '../math/linearSpline'
 import { projectOntoSegment } from '../math/segment'
 import { createSeededRandom } from '../world/parseSeed'
@@ -981,6 +982,75 @@ function applyRiverChannel(
   return Math.min(best, floorH)
 }
 
+type ChunkTexel = {
+  h: number
+  floorH: number
+  m: number
+  continentalness: number
+  mountainRidge: number
+  moistureRegion: number
+  roadTint: number
+}
+
+/** One fully-shaped grid texel — `sampleRawTexel` plus the regional-smoothing /
+ *  road-corridor / river-carving stages `computeChunkTile` layers on top
+ *  (same `base -> regional -> corridor -> river` ordering, see its stage
+ *  comments). The shared seam between full apron-grid tile generation and
+ *  `createLocalTerrainSampler`'s point-only lookup — both must resolve a
+ *  texel through this exact function so an unloaded-chunk landmark query and
+ *  the later streamed tile agree bit-for-bit at every shared world point. */
+function computeChunkTexel(
+  wx: number,
+  wz: number,
+  noise: NoiseHandles,
+  params: ChunkTileParams,
+): ChunkTexel {
+  const sample = sampleRawTexel(wx, wz, noise, params)
+  let floorH = sample.floorH
+  let tint = 0
+  // Stage 1: broad, weak village-wide leveling (see `applyRegionalSmoothing`'s
+  // doc comment for why this runs first instead of joining the corridor
+  // "strongest segment wins" competition below).
+  if (params.regional.length > 0) {
+    floorH = applyRegionalSmoothing(wx, wz, floorH, params.regional)
+  }
+  // Stage 2: sharp road/path/clearing blend on top of the (now gently
+  // leveled) base.
+  if (params.roadSegments.length > 0 || params.clearings.length > 0) {
+    const corridor = applyTerrainCorridors(
+      wx,
+      wz,
+      floorH,
+      params.roadSegments,
+      params.clearings,
+      noise.roadDetail,
+      params.region.roadNetwork,
+    )
+    floorH = corridor.floorH
+    tint = corridor.tint
+  }
+  // Stage 3: river channel carving (plan 189) — locally deepens terrain
+  // along the same canonical, already-meandered chain the water ribbon
+  // renders, so terrain and water agree by construction. Runs after
+  // roads/clearings per the plan's `base -> modifiers -> river channel ->
+  // final` ordering; a road crossing a river is not special-cased (rare,
+  // and the river simply wins under it, same as a real ford would dip).
+  if (params.riverSegments.length > 0) {
+    floorH = applyRiverChannel(wx, wz, floorH, params.riverSegments)
+  }
+
+  return {
+    // Visual mesh uses `floorHeights` (bathtub). This clamp is the walk/mask lid.
+    h: floorH < params.waterLevel ? params.waterLevel : floorH,
+    floorH,
+    m: sample.m,
+    continentalness: sample.continentalness,
+    mountainRidge: sample.mountainRidge,
+    moistureRegion: sample.moistureRegion,
+    roadTint: tint,
+  }
+}
+
 /**
  * Computes one chunk's apron-inclusive heightmap tile. Pure, environment-agnostic —
  * safe on the main thread or inside a worker. No map-edge concept (no guaranteed
@@ -1010,50 +1080,16 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
     for (let ix = 0; ix < apronRes; ix++) {
       const wx = originX + ix * step
       const wz = originZ + iz * step
-      const sample = sampleRawTexel(wx, wz, noise, params)
+      const texel = computeChunkTexel(wx, wz, noise, params)
       const idx = iz * apronRes + ix
 
-      let floorH = sample.floorH
-      let tint = 0
-      // Stage 1: broad, weak village-wide leveling (see `applyRegionalSmoothing`'s
-      // doc comment for why this runs first instead of joining the corridor
-      // "strongest segment wins" competition below).
-      if (params.regional.length > 0) {
-        floorH = applyRegionalSmoothing(wx, wz, floorH, params.regional)
-      }
-      // Stage 2: sharp road/path/clearing blend on top of the (now gently
-      // leveled) base.
-      if (params.roadSegments.length > 0 || params.clearings.length > 0) {
-        const corridor = applyTerrainCorridors(
-          wx,
-          wz,
-          floorH,
-          params.roadSegments,
-          params.clearings,
-          noise.roadDetail,
-          params.region.roadNetwork,
-        )
-        floorH = corridor.floorH
-        tint = corridor.tint
-      }
-      // Stage 3: river channel carving (plan 189) — locally deepens terrain
-      // along the same canonical, already-meandered chain the water ribbon
-      // renders, so terrain and water agree by construction. Runs after
-      // roads/clearings per the plan's `base -> modifiers -> river channel ->
-      // final` ordering; a road crossing a river is not special-cased (rare,
-      // and the river simply wins under it, same as a real ford would dip).
-      if (params.riverSegments.length > 0) {
-        floorH = applyRiverChannel(wx, wz, floorH, params.riverSegments)
-      }
-
-      // Visual mesh uses `floorHeights` (bathtub). This clamp is the walk/mask lid.
-      heights[idx] = floorH < waterLevel ? waterLevel : floorH
-      floorHeights[idx] = floorH
-      biomes[idx] = sample.m
-      continentalness[idx] = sample.continentalness
-      mountainRidge[idx] = sample.mountainRidge
-      moistureRegion[idx] = sample.moistureRegion
-      roadTint[idx] = tint
+      heights[idx] = texel.h
+      floorHeights[idx] = texel.floorH
+      biomes[idx] = texel.m
+      continentalness[idx] = texel.continentalness
+      mountainRidge[idx] = texel.mountainRidge
+      moistureRegion[idx] = texel.moistureRegion
+      roadTint[idx] = texel.roadTint
     }
   }
 
@@ -1073,5 +1109,61 @@ export function computeChunkTile(params: ChunkTileParams): ChunkTileData {
     mountainRidge,
     moistureRegion,
     roadTint,
+  }
+}
+
+/** Point-only terrain reader for landmark lookup on an unloaded chunk (plan
+ *  world-014) — resolves `heights`/`roadTint` at a handful of arbitrary
+ *  world points through the exact same per-texel math and apron-grid bilinear
+ *  interpolation `computeChunkTile` + `sampleApronGrid` use, without
+ *  allocating a full `(resolution + 2)²` grid or the vegetation/environment
+ *  data a real chunk load also produces. Every underlying texel is computed
+ *  at most once (`texelCache`), so a handful of nearby queries (e.g. a
+ *  landmark's center point plus its four slope-sample offsets) costs a
+ *  handful of `computeChunkTexel` calls, not a whole chunk's worth.
+ *
+ *  Determinism contract: for the same `(coord, params)`, `heightAt`/
+ *  `roadTintAt` return exactly what `sampleApronGrid(tile.heights, ...)` /
+ *  `sampleApronGrid(tile.roadTint, ...)` would return against a real
+ *  `computeChunkTile(params)` tile — this is what lets an unloaded landmark
+ *  query agree with the landmark the normal streamed pipeline later
+ *  generates for the same chunk. Only exposes the two fields cemetery
+ *  placement needs (`chunkEnvironment.ts`'s `resolveCemeteryPlacement`); add
+ *  more accessors here rather than falling back to full tile generation if a
+ *  future lightweight lookup needs another field.
+ * @domain world-terrain
+ */
+export function createLocalTerrainSampler(
+  coord: ChunkCoord,
+  params: ChunkTileParams,
+): { heightAt: (wx: number, wz: number) => number, roadTintAt: (wx: number, wz: number) => number } {
+  const noise = noiseHandlesFor(params.seed)
+  const o = apronOriginWorld(coord.cx, coord.cz, params.chunkSize, params.resolution)
+  const texelCache = new Map<number, ChunkTexel>()
+
+  const texelAt = (ix: number, iz: number): ChunkTexel => {
+    const key = iz * o.apronRes + ix
+    let texel = texelCache.get(key)
+    if (!texel) {
+      texel = computeChunkTexel(o.x + ix * o.step, o.z + iz * o.step, noise, params)
+      texelCache.set(key, texel)
+    }
+    return texel
+  }
+
+  const sampleField = (x: number, z: number, field: (t: ChunkTexel) => number): number => {
+    const w = apronGridWeights(o.apronRes, o.x, o.z, o.step, x, z)
+    const h00 = field(texelAt(w.x0, w.z0))
+    const h10 = field(texelAt(w.x1, w.z0))
+    const h01 = field(texelAt(w.x0, w.z1))
+    const h11 = field(texelAt(w.x1, w.z1))
+    const hx0 = h00 * (1 - w.tx) + h10 * w.tx
+    const hx1 = h01 * (1 - w.tx) + h11 * w.tx
+    return hx0 * (1 - w.tz) + hx1 * w.tz
+  }
+
+  return {
+    heightAt: (x, z) => sampleField(x, z, (t) => t.h),
+    roadTintAt: (x, z) => sampleField(x, z, (t) => t.roadTint),
   }
 }

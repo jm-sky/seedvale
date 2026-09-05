@@ -1,7 +1,7 @@
 # Plan: World location landmark lookup main-thread freeze
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-013~~
@@ -207,6 +207,19 @@ Use an appropriate `@domain` tag where it improves preflight discovery.
 - general chunk-streaming rewrite,
 - map UI changes,
 - additional lake/peak optimization without profiling evidence.
+
+## Implementation status
+
+Implemented as scoped: cemetery-only extraction, no worker, no new cache/system.
+
+- `src/terrain/chunkEnvironment.ts`: cemetery RNG/gating/identity extracted verbatim into `resolveCemeteryPlacement(coord, params, terrain: CemeteryTerrainSampler)` — a pure function taking only the two terrain accessors cemetery acceptance actually needs (`heightAt`/`roadTintAt`). `computeChunkEnvironment()` now calls it with a `CemeteryTerrainSampler` backed by its own apron-grid `sample()`; identical RNG draw order, so no behavior change for the full-generation path (covered by existing + new parity tests).
+- `src/terrain/chunkHeightmap.ts`: `computeChunkTile()`'s per-texel loop body (raw sample + regional smoothing + road/clearing corridor + river carving) extracted into `computeChunkTexel()`. New `createLocalTerrainSampler(coord, params)` resolves `heightAt`/`roadTintAt` at arbitrary world points by evaluating only the handful of apron-grid texels a query's bilinear interpolation actually touches (cached per texel index), instead of allocating a full `(resolution + 2)²` grid.
+- `src/terrain/chunkManager.ts`: `findLandmarkNear()`'s unloaded-chunk fallback extracted into pure, exported `resolveUnloadedLandmark(kind, coord, params)`. For `kind === 'cemetery'` it calls `createLocalTerrainSampler` + `resolveCemeteryPlacement` — no `computeChunkTile()`/`computeChunkEnvironment()` call, no vegetation/full-environment generation. Every other landmark kind (`monolith`/`stoneCircle`/`smallRuins`) keeps the original full-generation fallback unchanged — out of scope per the plan (not on this cold path today).
+- River segments: unchanged, pre-existing behavior — both the loaded and unloaded paths still resolve via `paramsFor(coord, [])` (no river carving) for the unloaded fallback, same as before this plan. Documented explicitly in `resolveUnloadedLandmark`'s doc comment as a deliberate, unchanged tradeoff (real hydrology on the query path would reintroduce the cost this plan removes).
+- Diagnostics: reused the existing `getMonitor().recordHitch('PROPS', ms, label)` mechanism (already used elsewhere in `chunkManager.ts` for chunk-generation phases) instead of adding a new counters/diagnostics subsystem — zero cost when the perf monitor is disabled (the common case), and distinguishes loaded / unloaded-lightweight / unloaded-full-fallback / miss in the existing perf tooling by label.
+- Tests added: `chunkHeightmap.test.ts` (`createLocalTerrainSampler` parity against a full `computeChunkTile()`-backed sampler — plain terrain, roads, clearings/regional, and query-order independence), `chunkEnvironment.test.ts` (`resolveCemeteryPlacement` parity across many seeds — both full-tile-backed and lightweight-sampler-backed — asserting both acceptance and rejection outcomes actually occur, plus exact-field parity against `computeChunkEnvironment`'s own cemetery result), `chunkManager.test.ts` (`resolveUnloadedLandmark` — a `vi.spyOn(chunkHeightmap, 'computeChunkTile')` proves the cemetery path never calls it while the monolith path still does; determinism/order-independence across chunks).
+- `pnpm test`, `npx tsc --noEmit`, `pnpm run lint:fix`, and `pnpm run build` all pass.
+- Not done (left to the user per the plan): browser Performance trace before/after on a cold Near Map purchase, and the Guard/Far Map regression pass.
 
 ## Verification
 

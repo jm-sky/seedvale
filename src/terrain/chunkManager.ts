@@ -66,7 +66,7 @@ import { createTreeStageMesh, preloadTreeStumpTemplate, tagTreeMesh } from '../w
 import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
 import { biomeWeightsAt, type ForestBiome, forestBiomeAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
-import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind } from './chunkEnvironment'
+import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind, resolveCemeteryPlacement } from './chunkEnvironment'
 import {
   chebyshevDistance,
   chunkCenter,
@@ -78,6 +78,7 @@ import {
   apronOriginWorld,
   type ChunkTileParams,
   computeChunkTile,
+  createLocalTerrainSampler,
   extractCoreGrid,
   type RawSampleParams,
   type RegionParams,
@@ -225,6 +226,47 @@ export function ringChunkOffsets(maxRadius: number): { dx: number, dz: number }[
     }
   }
   return offsets
+}
+
+/** `findLandmarkNear`'s unloaded-chunk resolver (plan world-014) — pure given
+ *  `(kind, coord, params)`, factored out of the `ChunkManager` closure so it
+ *  is directly unit-testable without constructing a full Three.js
+ *  `ChunkManager`.
+ *
+ *  Cemetery gets the lightweight path: `createLocalTerrainSampler` +
+ *  `resolveCemeteryPlacement` resolve just the local height/road-tint
+ *  samples cemetery placement needs, instead of materializing a whole
+ *  apron-inclusive `ChunkTileData` plus vegetation/environment for every
+ *  other placement family. This is what removes the multi-second Near Map
+ *  purchase freeze (recon: `WorldLocationCatalog.cemeteryForSettlement()` is
+ *  the only production caller that walks many unloaded chunks per query).
+ *
+ *  Every other landmark kind (monolith/stoneCircle/smallRuins) keeps the
+ *  original full-generation fallback — they are not on that cold path today,
+ *  and plan world-014 deliberately scopes the fix to cemetery only rather
+ *  than extracting all environment generation.
+ *
+ *  No river segments are passed to `paramsFor` for either path here (both
+ *  call sites pass `[]`) — a pre-existing discrepancy from before this plan,
+ *  not something this change introduces or hides: a cemetery whose candidate
+ *  point sits under a river may accept/reject slightly differently than the
+ *  eventual streamed tile. Resolving that would need real hydrology work on
+ *  the query path, which is exactly the synchronous cost this plan removes;
+ *  see the plan's "river discrepancy" note.
+ * @domain world-terrain
+ */
+export function resolveUnloadedLandmark(
+  kind: LandmarkKind,
+  coord: ChunkCoord,
+  params: ChunkTileParams,
+): { id: string, x: number, z: number } | undefined {
+  if (kind === 'cemetery') {
+    const placement = resolveCemeteryPlacement(coord, params, createLocalTerrainSampler(coord, params))
+    return placement?.id ? { id: placement.id, x: placement.x, z: placement.z } : undefined
+  }
+  const environment = computeChunkEnvironment(coord, computeChunkTile(params), params, [])
+  const found = environment.find((p) => p.kind === kind && p.id)
+  return found?.id ? { id: found.id, x: found.x, z: found.z } : undefined
 }
 
 /** Decorative prop for landmark kinds that stay individual Object3Ds.
@@ -2257,22 +2299,35 @@ export function createChunkManager(
     },
     findLandmarkNear(kind, worldX, worldZ, maxChunkRadius) {
       const center = worldToChunk(worldX, worldZ, config.chunkSize)
+      const t0 = performance.now()
       for (const { dx, dz } of ringChunkOffsets(maxChunkRadius)) {
         const coord: ChunkCoord = { cx: center.cx + dx, cz: center.cz + dz }
         const rec = chunks.get(chunkKey(coord))
-        const environment = rec?.tile
-          ? rec.tile.environment
-          : (() => {
-              // Ad-hoc/unloaded-chunk fallback, outside the normal chunk
-              // lifecycle — no river tile to retain/release here, so river
-              // channel carving is skipped (landmark placement doesn't
-              // depend on carved height accuracy).
-              const params = paramsFor(coord, [])
-              return computeChunkEnvironment(coord, computeChunkTile(params), params, [])
-            })()
-        const found = environment.find((p) => p.kind === kind && p.id)
-        if (found?.id) return { id: found.id, x: found.x, z: found.z }
+        if (rec?.tile) {
+          const found = rec.tile.environment.find((p) => p.kind === kind && p.id)
+          if (found?.id) {
+            getMonitor().recordHitch('PROPS', performance.now() - t0, `findLandmarkNear:${kind} (loaded)`)
+            return { id: found.id, x: found.x, z: found.z }
+          }
+          continue
+        }
+        // Ad-hoc/unloaded-chunk fallback, outside the normal chunk
+        // lifecycle — no river tile to retain/release here, so river
+        // channel carving is skipped (landmark placement doesn't depend on
+        // carved height accuracy; see `resolveUnloadedLandmark`'s doc
+        // comment for why this is a pre-existing, deliberately unchanged
+        // discrepancy, not something new here).
+        const found = resolveUnloadedLandmark(kind, coord, paramsFor(coord, []))
+        if (found) {
+          getMonitor().recordHitch(
+            'PROPS',
+            performance.now() - t0,
+            kind === 'cemetery' ? 'findLandmarkNear:cemetery (unloaded, lightweight)' : `findLandmarkNear:${kind} (unloaded, full)`,
+          )
+          return found
+        }
       }
+      getMonitor().recordHitch('PROPS', performance.now() - t0, `findLandmarkNear:${kind} (miss)`)
       return undefined
     },
     collectItem(id) {
