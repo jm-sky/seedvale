@@ -71,6 +71,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
 | 💡 `world-015-seed-library-and-persistent-worldgen-cache.md`                | -       | 🔴 | L      | world-013 |
+| 💡 `npc-018-work-contracts-shared-work.md`                                  | -       | 🟡 | M      | npc-016 |
 
 ---
 
@@ -162,7 +163,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `016`
 - items-player: `017`
-- npc: `018`
+- npc: `019`
 - persistence: `005`
 - quests-progression: `001`
 - settlements: `003`
