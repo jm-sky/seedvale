@@ -71,6 +71,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-012-animal-threat-perception-and-vocalization-responses.md`       | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`         | -       | 🟡 | M      | fauna-010 |
+| ◼️ `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | -       | 🔴 | M      | world-terrain-010 |
 
 ---
 
@@ -168,7 +169,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - tools: `013`
 - ui-input: `009`
 - world: `014`
-- world-terrain: `011`
+- world-terrain: `012`
 
 This ids section is maintained automatically from the plan files.
 
