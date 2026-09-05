@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** npc-016
+**Depends on:** npc-015
 **Domain:** `npc`
 **Subdomains:** `work`
 **Tags:** `work-contracts` `shared-work` `construction` `terrain-preparation`
