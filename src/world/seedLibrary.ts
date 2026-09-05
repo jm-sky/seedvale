@@ -1,6 +1,6 @@
 import type { RawSampleParams } from '../terrain/chunkHeightmap'
 import { deleteSeedRecord, getSeedRecord, putSeedRecord, touchSeedLastUsed } from '../persistence/seedDb'
-import { minimalSeedRecord } from '../persistence/seedRecord'
+import { minimalSeedRecord, type SeedRecord } from '../persistence/seedRecord'
 import { deleteCacheForSeed } from '../persistence/worldgenCacheDb'
 import { generateSeedName, sampleStartupTerrainProfile } from './locations/seedProfile'
 import { randomSeed } from './parseSeed'
