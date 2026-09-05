@@ -112,75 +112,83 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `items-player-002` — **Food provenance, freshness and storage**  
+10. `world-016` — **Ambient Soundscape Events and Lake Frogs**  
+  🟡 `M` · **Score:**  31  
+   → **unlocks:** 0/0
+
+11. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-11. `items-player-014` — **Rope-pullable resource transport**  
+12. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `tools-005` — **Seedvale Character Preparation Panel**  
+14. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `npc-002` — **NPC Healing**  
+15. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-15. `npc-011` — **NPC Burial & Graves**  
+16. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `fauna-013` — **Animal hand-feeding and human affinity**  
+18. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `settlements-npcs-007` — **Bandages and herbal medicine**  
+21. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+22. `ui-input-009` — **Merchant item ownership and semantic item labels**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-22. `world-terrain-012` — **Macro meadow variation**  
+23. `world-terrain-012` — **Macro meadow variation**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-23. `fauna-007` — **Animal leading and cart harness**  
+24. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-24. `tools-000` — **Weapon Browser — Observatory/Admin**  
+25. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
+  🟡 `L` · **Score:**  18  
+   → **unlocks:** 0/0
+
+26. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-25. `world-terrain-008` — **Underground Caves V2**  
+27. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-26. `npc-004` — **Drzewo genealogiczne NPC**  
+28. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-27. `tools-006` — **tools-006--world-observatory.md**  
+29. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -260,6 +268,7 @@ graph TD
   fauna_013["fauna-013 — Animal hand-feeding and human affinity"]
   fauna_014["fauna-014 — Animal traps — bait attraction and species coverage"]
   fauna_015["fauna-015 — Animal water traversal, wading, swimming and drowning"]
+  fauna_016["fauna-016 — Animal habitats, roaming, water trips and settlement rats"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -353,6 +362,7 @@ graph TD
   world_013["world-013 — World Location Catalog performance optimization"]
   world_014["world-014 — World location landmark lookup main-thread freeze"]
   world_015["world-015 — Seed Library and persistent worldgen cache"]
+  world_016["world-016 — Ambient Soundscape Events and Lake Frogs"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -428,6 +438,7 @@ graph TD
   fauna_011 --> fauna_012
   fauna_011 --> fauna_013
   fauna_014 --> fauna_007
+  fauna_015 --> fauna_016
   items_player_001 --> fauna_002
   items_player_009 --> items_player_013
   items_player_009 --> items_player_015
@@ -468,6 +479,8 @@ graph TD
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008
+  ui_input_006 --> world_016
+  world_006 --> world_016
   world_008 --> items_player_009
   world_012 --> items_player_016
   world_012 --> world_013
