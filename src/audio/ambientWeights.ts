@@ -5,9 +5,12 @@ import { biomeWeightsAt } from '../terrain/biomeRegions'
 export type AmbientWeights = { ocean: number, forest: number, mountain: number }
 
 /** Subset of what `ChunkManager` (`src/terrain/chunkManager.ts`) already
- *  exposes — pass it straight through from there, don't duplicate a sampler. */
+ *  exposes — pass it straight through from there, don't duplicate a sampler.
+ *  `sampleHeight` (plan world-016) also feeds `terrain/waterBodyKind.ts`'s
+ *  `lakeProximityAt` for lake-frog local ambience. */
 export type AmbientSamplers = {
   sampleFloor: (x: number, z: number) => number
+  sampleHeight: (x: number, z: number) => number
   sampleContinentalness: (x: number, z: number) => number
   sampleMountainRidge: (x: number, z: number) => number
   sampleMoistureRegion: (x: number, z: number) => number

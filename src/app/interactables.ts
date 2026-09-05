@@ -19,7 +19,7 @@ import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
-import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind, nearestShoreProbePoint } from '../fauna/AnimalAgent'
+import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
 import { consumeVerbLabel, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -30,6 +30,7 @@ import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { ORE_YIELD_LABEL } from '../terrain/depositMining'
 import { getDigProfileAt, getRockDigProfileAt } from '../terrain/dig'
 import { oceanMixAt } from '../terrain/waterBodies'
+import { nearestShoreProbePoint, resolveWaterBodyKind } from '../terrain/waterBodyKind'
 import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
@@ -262,29 +263,6 @@ export function resolveHaySpot(
     }
   }
   return best
-}
-
-/** How close (world units) to a river's own bank edge counts as "at the
- *  shore" — same order of magnitude as `SHORE_PROBE_OFFSETS`' 1.5-unit probe
- *  radius (`fauna/AnimalAgent.ts`) so lake/river/ocean shorelines all read as
- *  similarly generous, and true whether the player is standing right on the
- *  bank or already a step into the shallows. */
-const RIVER_SHORE_MARGIN = 1.5
-
-/** Pure lake-vs-river-vs-ocean decision from already-resolved probe/distance
- *  inputs (plan `ui-input-006`) — split out from `resolveWaterBodyKind` below
- *  purely so it's unit-testable without a `ChunkManager`. `hasShoreProbeHit`
- *  is `shoreProbeHits(...) > 0` (fauna's own lake/ocean shoreline probe,
- *  plan 094); `oceanMix` is `oceanMixAt(...)` at the same point;
- *  `riverBankDistance` is `ChunkManager.riverShoreDistance(...)`. */
-export function resolveWaterBodyKind(
-  hasShoreProbeHit: boolean,
-  oceanMix: number,
-  riverBankDistance: number | null,
-): WaterBodyKind | null {
-  if (hasShoreProbeHit) return oceanMix > 0.5 ? 'ocean' : 'lake'
-  if (riverBankDistance !== null && riverBankDistance <= RIVER_SHORE_MARGIN) return 'river'
-  return null
 }
 
 /** Unified lake/river/ocean shoreline resolver — replaces the old lake-only

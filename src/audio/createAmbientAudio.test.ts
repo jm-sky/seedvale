@@ -31,15 +31,15 @@ describe('cricketsTimeFactor', () => {
 describe('weatherAmbientFactor', () => {
   it('is full volume in clear weather', () => {
     expect(weatherAmbientFactor({ type: 'clear', intensity: 0, temperature: 0, startedAt: 0, endsAt: 1 }))
-      .toEqual({ birds: 1, crickets: 1 })
+      .toEqual({ birds: 1, crickets: 1, frogs: 1 })
   })
 
-  it('silences both under snow', () => {
+  it('silences all three under snow', () => {
     expect(weatherAmbientFactor({ type: 'snow', intensity: 0.8, temperature: -5, startedAt: 0, endsAt: 1 }))
-      .toEqual({ birds: 0, crickets: 0 })
+      .toEqual({ birds: 0, crickets: 0, frogs: 0 })
   })
 
-  it('reduces birds more than crickets under light rain, and silences both under a downpour', () => {
+  it('reduces birds more than crickets/frogs under light rain, and silences birds/crickets under a downpour', () => {
     const light = weatherAmbientFactor({ type: 'rain', intensity: 0.4, temperature: 10, startedAt: 0, endsAt: 1 })
     expect(light.birds).toBeLessThan(light.crickets)
     expect(light.birds).toBeGreaterThan(0)
@@ -47,5 +47,6 @@ describe('weatherAmbientFactor', () => {
     const heavy = weatherAmbientFactor({ type: 'rain', intensity: 1, temperature: 10, startedAt: 0, endsAt: 1 })
     expect(heavy.birds).toBeLessThanOrEqual(0)
     expect(heavy.crickets).toBeLessThanOrEqual(0)
+    expect(heavy.frogs).toBeGreaterThan(0)
   })
 })

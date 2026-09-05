@@ -2,7 +2,11 @@ import { MathUtils } from 'three'
 import type { WeatherState, WeatherType } from '../world/weather'
 import type { AmbientSamplers } from './ambientWeights'
 import type { AudioLoopHandle, WorldAudio } from './createWorldAudio'
+import { lakeProximityAt } from '../terrain/waterBodyKind'
+import { type AmbientEventDefinition, createAmbientEventRuntime } from './ambientEvents'
 import { ambientWeightsAt } from './ambientWeights'
+import { frogsTimeFactor } from './frogAmbience'
+import { nightPhase } from './nightPhase'
 
 /** Night ambience (crickets) — active through the night, crossfaded out over
  *  a tunable window instead of a hard on/off switch at a fixed clock time.
@@ -33,25 +37,11 @@ const BIRDS_LOOP_URL = '/sounds/meadowsinging-birds-1.ogg'
 const BIRDS_FOREST_MAX_VOLUME = 0.3
 const BIRDS_MEADOW_MAX_VOLUME = 0.18
 
-/** Clock points (`dayNight.ts`'s `timeOfDay`, plan world-006 §2) bounding the
- *  night half of the cycle — matches `skyParamsFromTime`'s `elev` zero-
- *  crossings (`0.25` dawn, `0.75` dusk), so this stays in step with the
- *  visual day/night without re-deriving it from `dayFactor` (which is flat
- *  0 for the *entire* night half, too coarse for a late-night taper). */
-const DUSK = 0.75
-const NIGHT_LENGTH = 0.5
 /** Fractions of the night's length (dusk → dawn) bounding the cricket
  *  profile's rise / sustained peak / taper phases — tunable per plan §2. */
 const CRICKET_RISE_END = 0.15
 const CRICKET_PEAK_END = 0.65
 const CRICKET_TAPER_END = 0.85
-
-/** `timeOfDay` → [0, 1) progress from dusk to the next dawn, or `null`
- *  during the day half. Pure, unit-testable in isolation from `dayFactor`. */
-function nightPhase(timeOfDay: number): number | null {
-  const sinceDusk = (((timeOfDay - DUSK) % 1) + 1) % 1
-  return sinceDusk < NIGHT_LENGTH ? sinceDusk / NIGHT_LENGTH : null
-}
 
 /** Cricket time-of-day profile (plan world-006 §2): silent by day, rising at
  *  dusk, active through most of the night, then a smooth taper into a quiet
@@ -66,20 +56,21 @@ export function cricketsTimeFactor(timeOfDay: number): number {
   return 0
 }
 
-/** Weather → ambient multiplier for birds/crickets (plan world-006 §3) —
- *  independent of the time-of-day/biome factors so each stays separately
- *  tunable (plan §5). Rain scales continuously with `weather.intensity`
- *  instead of a hard light/heavy split, so a strengthening storm reads as
- *  one continuous change rather than a step. Not wired to `fog` in the
- *  plan's table — treated close to `cloudy` (thick fog muffles birds a
- *  little more than plain cloud cover, crickets barely care). */
-export type WeatherAmbientFactor = { birds: number, crickets: number }
+/** Weather → ambient multiplier for birds/crickets/frogs (plan world-006 §3,
+ *  frogs added by plan world-016) — independent of the time-of-day/biome
+ *  factors so each stays separately tunable (plan §5). Rain scales
+ *  continuously with `weather.intensity` instead of a hard light/heavy
+ *  split, so a strengthening storm reads as one continuous change rather
+ *  than a step. Not wired to `fog` in the plan's table — treated close to
+ *  `cloudy` (thick fog muffles birds a little more than plain cloud cover,
+ *  crickets/frogs barely care). */
+export type WeatherAmbientFactor = { birds: number, crickets: number, frogs: number }
 
 const WEATHER_AMBIENT_FACTOR: Record<Exclude<WeatherType, 'rain'>, WeatherAmbientFactor> = {
-  clear: { birds: 1, crickets: 1 },
-  cloudy: { birds: 0.7, crickets: 0.85 },
-  fog: { birds: 0.5, crickets: 0.8 },
-  snow: { birds: 0, crickets: 0 },
+  clear: { birds: 1, crickets: 1, frogs: 1 },
+  cloudy: { birds: 0.7, crickets: 0.85, frogs: 0.9 },
+  fog: { birds: 0.5, crickets: 0.8, frogs: 0.85 },
+  snow: { birds: 0, crickets: 0, frogs: 0 },
 }
 
 export function weatherAmbientFactor(weather: WeatherState): WeatherAmbientFactor {
@@ -87,6 +78,7 @@ export function weatherAmbientFactor(weather: WeatherState): WeatherAmbientFacto
   return {
     birds: 1 - weather.intensity * 1.8,
     crickets: 1 - weather.intensity,
+    frogs: 1 - weather.intensity * 0.6,
   }
 }
 
@@ -111,6 +103,28 @@ const OWL_MIN_FOREST_WEIGHT = 0.3
 const OWL_OFFSET_MIN_M = 8
 const OWL_OFFSET_MAX_M = 22
 
+/** Owl migrated onto the shared `ambientEvents.ts` runtime (plan world-016)
+ *  — same tuning/semantics as the previous dedicated timer, just expressed
+ *  as data + an eligibility predicate instead of its own cooldown state. */
+const OWL_EVENT: AmbientEventDefinition = {
+  id: 'owl',
+  sounds: [OWL_SOUND_URL],
+  volume: OWL_SFX_VOLUME,
+  offset: { min: OWL_OFFSET_MIN_M, max: OWL_OFFSET_MAX_M },
+  cooldown: { min: OWL_COOLDOWN_MIN_SEC, max: OWL_COOLDOWN_MAX_SEC },
+  recheckSec: OWL_RECHECK_SEC,
+  chance: OWL_CHANCE,
+  isEligible: (ctx) => ctx.nightPhase !== null && ctx.forestWeight >= OWL_MIN_FOREST_WEIGHT,
+}
+
+/** Lake frogs — local environmental ambience (plan world-016 §5/§6), not a
+ *  fauna species: gain is driven by `lakeProximityAt()` × the frog day/night
+ *  profile × weather, using the same lazy single-loop pattern as
+ *  coast/wind/meadow/birds rather than positional per-lake sources.
+ *  Source/license: public/sounds/README.md. */
+const FROG_LOOP_URL = '/sounds/ambient-lake-frogs-loop-01.ogg'
+const FROG_MAX_VOLUME = 0.32
+
 /** Terrain samplers are cheap but not free (a few `smoothstep`s) — resample
  *  the player's area weights on a throttle instead of every frame; gain
  *  still lerps smoothly every frame via `WorldAudio.update()`. */
@@ -127,8 +141,9 @@ export type AmbientAudio = {
    *  (forest/meadow/birds) day/night crossfade; `timeOfDay` (`dayNight.ts`,
    *  0-1) drives the crickets' dusk/night/pre-dawn profile, which needs
    *  finer resolution than `dayFactor` gives across the night half;
-   *  `weather` scales birds/crickets (plan world-006 §3); `playerX`/`playerZ`
-   *  drive the area (forest/coast) crossfade. */
+   *  `weather` scales birds/crickets/frogs (plan world-006 §3, world-016);
+   *  `playerX`/`playerZ` drive the area (forest/coast) crossfade and the
+   *  lake-frog proximity sampler. */
   update: (
     dt: number,
     dayFactor: number,
@@ -152,14 +167,13 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
   let windLoop: AudioLoopHandle | null = null
   let meadowLoop: AudioLoopHandle | null = null
   let birdsLoop: AudioLoopHandle | null = null
+  let frogLoop: AudioLoopHandle | null = null
   let sampleAccum = 0
-  // Owl one-shot state — `lastForestWeight` is refreshed only inside the
-  // throttled `sampleAccum` block below (same staleness the area loops
-  // already tolerate); the cooldown itself ticks every frame, same as the
-  // crickets gain. Starts partway through a cooldown draw so a fresh session
-  // doesn't stay silent for a full cooldown before the first possible hoot.
+  // `lastForestWeight` is refreshed only inside the throttled `sampleAccum`
+  // block below (same staleness the area loops already tolerate) and feeds
+  // the owl event's eligibility check every frame via `ambientEvents`.
   let lastForestWeight = 0
-  let owlCooldownSec = Math.random() * OWL_COOLDOWN_MAX_SEC
+  const ambientEvents = createAmbientEventRuntime(worldAudio, [OWL_EVENT])
 
   function update(
     dt: number,
@@ -175,25 +189,12 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     }
     nightLoop?.setTargetGain(cricketsTimeFactor(timeOfDay) * weatherFactor.crickets * NIGHT_MAX_VOLUME)
 
-    owlCooldownSec -= dt
-    if (owlCooldownSec <= 0) {
-      if (nightPhase(timeOfDay) !== null && lastForestWeight >= OWL_MIN_FOREST_WEIGHT) {
-        if (Math.random() < OWL_CHANCE) {
-          const angle = Math.random() * Math.PI * 2
-          const radius = OWL_OFFSET_MIN_M + Math.random() * (OWL_OFFSET_MAX_M - OWL_OFFSET_MIN_M)
-          worldAudio.playAt(
-            OWL_SOUND_URL,
-            { x: playerX + Math.cos(angle) * radius, z: playerZ + Math.sin(angle) * radius },
-            OWL_SFX_VOLUME,
-          )
-          owlCooldownSec = OWL_COOLDOWN_MIN_SEC + Math.random() * (OWL_COOLDOWN_MAX_SEC - OWL_COOLDOWN_MIN_SEC)
-        } else {
-          owlCooldownSec = OWL_RECHECK_SEC
-        }
-      } else {
-        owlCooldownSec = OWL_RECHECK_SEC
-      }
-    }
+    ambientEvents.update(dt, {
+      nightPhase: nightPhase(timeOfDay),
+      forestWeight: lastForestWeight,
+      playerX,
+      playerZ,
+    })
 
     sampleAccum += dt
     if (sampleAccum < SAMPLE_INTERVAL) return
@@ -225,6 +226,12 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     birdsLoop?.setTargetGain(
       (w.forest * BIRDS_FOREST_MAX_VOLUME + meadow * BIRDS_MEADOW_MAX_VOLUME) * dayFactor * weatherFactor.birds,
     )
+
+    const lakeProximity = lakeProximityAt(playerX, playerZ, samplers)
+    if (!frogLoop && lakeProximity > 0) {
+      frogLoop = worldAudio.createLoop(FROG_LOOP_URL)
+    }
+    frogLoop?.setTargetGain(lakeProximity * frogsTimeFactor(timeOfDay) * weatherFactor.frogs * FROG_MAX_VOLUME)
   }
 
   function dispose(): void {
@@ -235,6 +242,7 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     windLoop?.dispose()
     meadowLoop?.dispose()
     birdsLoop?.dispose()
+    frogLoop?.dispose()
   }
 
   return { update, dispose }

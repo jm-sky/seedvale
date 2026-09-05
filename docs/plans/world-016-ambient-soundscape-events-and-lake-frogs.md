@@ -1,7 +1,8 @@
 # Plan: Ambient Soundscape Events and Lake Frogs
 
 **Created:** 2026-09-05  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
+**Implemented at:** 2026-09-05 20:40  
 **Type:** feature  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~world-006~~, ~~ui-input-006~~  
@@ -9,6 +10,18 @@
 **Subdomains:** `events` `places`  
 **Tags:** `audio` `ambient` `soundscape` `lake` `frogs`  
 **Roadmap:** -
+
+## Implementation status (2026-09-05)
+
+**Implemented + technically verified** (`tsc --noEmit`, `eslint`, `vitest run` — 3248 tests, `vite build` all clean): all sections.
+
+- **§1/§2/§3 (categories + ambient event runtime + owl migration):** new `audio/ambientEvents.ts` — `AmbientEventDefinition` (data: sounds/volume/bus/offset/cooldown/recheckSec/chance/`isEligible` predicate) + `createAmbientEventRuntime()` (cooldown/recheck/chance/variant-selection/placement/playback, injectable `rng`). The owl hoot moved onto it unchanged (`OWL_EVENT` in `createAmbientAudio.ts`, same tuning constants/semantics/timing, still on the `sfx` bus like before — deliberately not switched to `ambient`, per the implementation notes' "avoid silently changing existing owl mix during migration" caution). Continuous layers (forest/meadow/wind/coast/birds/crickets) untouched.
+- **§4/§7 (shared local-water context):** extracted the pure lake/ocean shoreline probe (`shoreProbeHits`/`nearestShoreProbePoint`, previously fauna-only) and the lake/river/ocean decision helper (`resolveWaterBodyKind`, previously in `app/interactables.ts`) into a new `terrain/waterBodyKind.ts` — the one shared water-body-kind primitive both `app/interactables.ts`'s shoreline resolver and ambient audio's frog gain now consume, instead of audio depending on `fauna/AnimalAgent.ts` or `app/interactables.ts`. Added `lakeProximityAt()`: a bounded radial probe (5 ring radii × 8 directions around the listener, one `oceanMixAt` check at the listener's own position) yielding a continuous `[0,1]` lake-shore proximity — ocean rejected outright, rivers rejected by construction (a river's own water surface can sit above `waterLevel`, so it never satisfies the same height-threshold probe lake/ocean shorelines do). `AmbientSamplers` gained `sampleHeight` (already present on the `WorldContext` passed in at the call site, so no call-site change was needed).
+- **§5/§6/§8 (frogs):** new `audio/nightPhase.ts` (moved `nightPhase()` out of `createAmbientAudio.ts` so both crickets and frogs share one primitive without a circular import) + `audio/frogAmbience.ts` (`frogsTimeFactor()`, its own dusk/night/pre-dawn tuning independent of crickets). `weatherAmbientFactor()` extended with a `frogs` field. One lazy `WorldAudio.createLoop()` bed (`ambient-lake-frogs-loop-01.ogg`), gain = lake proximity × frog time factor × frog weather factor, sampled inside the existing 0.25s throttle alongside forest/coast/wind/meadow/birds — no new timer, no positional per-lake sources, no `AnimalAgent` dependency.
+- **Asset:** the staged `frogs-night-1.ogg` (repo root, ~5.6 min field recording) was trimmed to its busiest ~26s chorus stretch, short fade in/out to avoid a loop-seam click, and converted to OGG Vorbis (ffmpeg's native encoder, run through a local PyAV venv — no `libvorbis` available in this environment, so the output bitrate is higher than the other loops' — ~238 kbps vs. their ~85-112 kbps; still a reasonable size for a lazily-loaded bed). Placed at `public/sounds/ambient-lake-frogs-loop-01.ogg`; `public/sounds/README.md` and `docs/assets/SOUNDS.md` updated. Provenance beyond the staged filename not recorded (same "TBD" status as the existing owl clip).
+- **Tests:** `audio/ambientEvents.test.ts` (ineligible skips the roll without consuming `rng`, cooldown blocks re-firing, a failed chance roll uses the recheck interval, a successful roll's variant/placement/next-cooldown are all deterministic under an injected queued `rng`), `audio/frogAmbience.test.ts`, `terrain/waterBodyKind.test.ts` (moved `shoreProbeHits`/`nearestShoreProbePoint`/`resolveWaterBodyKind` coverage + new `lakeProximityAt` cases: no water nearby, at/inside the shore, approaching, ocean rejection).
+
+**Browser/gameplay-verified:** not yet — per this session's instructions, left to the user (see "Weryfikacja" below for the manual checklist).
 
 ## Cel
 

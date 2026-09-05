@@ -78,6 +78,7 @@ Christian). `NN` is our curated sequence, not the pack's original line number
 | meadowsinging-birds-2.ogg | — | **TODO: source/license not recorded** | **not wired**; staged for a future random-variant crossfade (plan world-006 "poza zakresem") |
 | meadowsinging-birds-3.ogg | — | **TODO: source/license not recorded** | **not wired**; staged for a future random-variant crossfade (plan world-006 "poza zakresem") |
 | ambient-owl-at-night.ogg | — | — (TBD — provided directly in `public/sounds/`, source/license not yet recorded) | Random one-shot (not a loop) — night + forest-weight-gated cooldown timer in `audio/createAmbientAudio.ts` |
+| ambient-lake-frogs-loop-01.ogg | frogs-night-1.ogg (~5.6 min field recording, staged at repo root) | — (TBD — provided directly, source/license not yet recorded) | Plan world-016 lake-frog local ambience; ~26 s loopable segment trimmed from the busiest chorus stretch of the original recording, short fade in/out to avoid a click at the loop seam |
 
 ## Items / Inventory
 

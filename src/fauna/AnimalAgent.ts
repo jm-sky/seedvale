@@ -32,6 +32,7 @@ import {
   type ScoredAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
+import { shoreProbeHits } from '../terrain/waterBodyKind'
 import {
   applyBarPercent,
   computeBarPercent,
@@ -122,8 +123,6 @@ function createNavRescue(): NavRescue {
  *  threshold (meters) — see that method's doc. */
 const STALE_NAV_ROUTE_DIST = 6
 
-/** Minimum clearance above waterLevel an animal will walk into or wander toward. */
-const WATER_MARGIN = 0.3
 /** HP/sec drained by `tickDrowning()` while `swimming` and stamina-exhausted
  *  (plan fauna-015 §7) — same order of magnitude as a real attack (see
  *  `faunaCombat.ts`'s `MAX_HP`/damage tables), so a swimmer that runs out of
@@ -380,13 +379,6 @@ const SOURCE_TARGET_TIMEOUT_SEC = 20
  *  low-frequency search over a small array, same throttling idiom as
  *  `SOURCE_SEARCH_COOLDOWN_SEC`. */
 const LURE_SEARCH_COOLDOWN_SEC = 2
-/** Offsets (world units) probed around a water-search candidate to confirm
- *  it's actually at the edge of a water body, not just dry land somewhere
- *  within `WATER_SEARCH_RADIUS`. */
-const SHORE_PROBE_OFFSETS: readonly [number, number][] = [
-  [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5],
-]
-
 type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat' | 'lure'
 
 /** Diagnostic-only label for the mutually-exclusive branch `update()` took
@@ -564,42 +556,6 @@ type SourceTarget = {
 /** One trough visit's draw against the household water reserve — same order
  *  of magnitude as `NpcAgent`'s `WATER_DRINK_FROM_STOCK_AMOUNT`. */
 const TROUGH_DRINK_AMOUNT = 1
-
-/** Count of `SHORE_PROBE_OFFSETS` around (x, z) that dip at/below the water
- *  threshold — a lightweight "is this the edge of a water body" signal for
- *  the thirsty-animal shoreline search. Pure so it's unit-testable without
- *  instantiating `AnimalAgent`/Three.js. */
-export function shoreProbeHits(
-  x: number,
-  z: number,
-  sampleHeight: HeightSampler,
-  waterLevel: number,
-): number {
-  let hits = 0
-  for (const [dx, dz] of SHORE_PROBE_OFFSETS) {
-    if (sampleHeight(x + dx, z + dz) <= waterLevel + WATER_MARGIN) hits++
-  }
-  return hits
-}
-
-/** First `SHORE_PROBE_OFFSETS` point around (x, z) that is actually water —
- *  the same signal as `shoreProbeHits`, but returning a real, distinct world
- *  point instead of a count (plan `ui-input-006` fishing-on-ocean fix:
- *  `app/interactables.ts`'s `waterEdge` candidate used to sit exactly on the
- *  player's own position, which `pickInGaze`'s `dist < 1e-4` guard then
- *  always rejected). `null` when `shoreProbeHits` would be 0. Deterministic
- *  (fixed offset order), pure so it's unit-testable without `AnimalAgent`. */
-export function nearestShoreProbePoint(
-  x: number,
-  z: number,
-  sampleHeight: HeightSampler,
-  waterLevel: number,
-): { x: number, z: number } | null {
-  for (const [dx, dz] of SHORE_PROBE_OFFSETS) {
-    if (sampleHeight(x + dx, z + dz) <= waterLevel + WATER_MARGIN) return { x: x + dx, z: z + dz }
-  }
-  return null
-}
 
 /** Forage habitat suitability from a `sampleForestFactor` reading — peaks at
  *  forest-edge density (~0.45) rather than open meadow or deep forest,
