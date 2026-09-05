@@ -9,6 +9,7 @@ import { createNullPointLightBudget, type PointLightBudget } from '../world/poin
 import {
   BRANCH_HELD_MAX,
   BRANCH_URL,
+  resolveTorchLight,
   TORCH_FLAME_OFFSET_WOODEN,
   TORCH_LIGHT_BRANCH,
   TORCH_LIGHT_DECAY,
@@ -50,6 +51,11 @@ type HandAccess = {
   onChange?: () => void
   onIgnite?: () => void
   onExtinguish?: () => void
+  /** True while the player is currently inside a cave (world-terrain-008
+   *  Milestone A test-environment patch) — brightens/extends only this
+   *  torch's own `PointLight`; defaults to `false` for callers that don't
+   *  wire cave awareness through. */
+  isInCave?: () => boolean
 }
 
 type FlameVisual = {
@@ -166,10 +172,11 @@ export function createPlayerTorch(
       const ratio = fuelRemaining / fuelMax
 
       const params = source === 'wooden_torch' ? TORCH_LIGHT_WOODEN : TORCH_LIGHT_BRANCH
+      const resolvedLight = resolveTorchLight(params, ratio, hand.isInCave?.() ?? false)
       pointLight = new PointLight(
         params.color,
-        params.intensity * ratio,
-        params.distance,
+        resolvedLight.intensity,
+        resolvedLight.distance,
         TORCH_LIGHT_DECAY,
       )
       const tipOffset = source === 'wooden_torch' ? TORCH_TIP_OFFSET_WOODEN : TORCH_TIP_OFFSET_BRANCH
@@ -253,8 +260,10 @@ export function createPlayerTorch(
         const ratio = fuelRemaining / fuelMax
         flameSetSize?.(ratio)
         if (pointLight) {
-          const base = current === 'wooden_torch' ? TORCH_LIGHT_WOODEN.intensity : TORCH_LIGHT_BRANCH.intensity
-          pointLight.intensity = base * ratio
+          const base = current === 'wooden_torch' ? TORCH_LIGHT_WOODEN : TORCH_LIGHT_BRANCH
+          const resolvedLight = resolveTorchLight(base, ratio, hand.isInCave?.() ?? false)
+          pointLight.intensity = resolvedLight.intensity
+          pointLight.distance = resolvedLight.distance
         }
       }
     },

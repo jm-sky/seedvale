@@ -68,6 +68,45 @@ seedvale.debug.teleportTo({ kind: 'village', position: { x, z }, distance: 0 })
 
 ---
 
+## 1a. Manual-test-environment ergonomics patch (2026-09-05)
+
+Manual comparison is still open, but SDF is the current visual candidate, so a
+small patch improved manual-testing ergonomics before the architecture
+decision gate. Scope: test-environment only — no topology/mesh/collision
+changes, no Milestone B work.
+
+- **Camera stays in the cave.** `PlayerController.syncCamera()` now checks
+  whether the player's own origin is currently inside a cave (via the
+  existing `CaveGroundQuery`) and, if so, wraps the boom's `sampleHeight`
+  callback (`cameraBoom.ts`'s new `withCaveFloorFallback()`) so an
+  out-of-footprint boom sample falls back to the origin's own known cave
+  floor instead of the surface heightfield high above. Previously a boom
+  sample landing outside the (narrow) cave's XZ footprint read the real
+  surface, which could deny the boom against a phantom "wall" or lift/hold it
+  near that surface height. Outside a cave this is the identity wrapper — no
+  behaviour change. Ceiling occlusion and undersized cave-wall colliders
+  remain unfixed (Milestone B, plan §22), as before.
+- **Torch is brighter and reaches farther in caves.** `PlayerTorch` accepts an
+  optional `isInCave` callback (wired in `createApp.ts` from the same
+  `bundle.caves.contains(...)` query `caveGroundQuery` already uses). A pure
+  `resolveTorchLight()` (`torchLightPresets.ts`) applies a ×1.6 intensity /
+  ×2.2 distance multiplier to the player's own torch `PointLight` only, on
+  top of the existing fuel-ratio scaling, in both `light()` and `update()` so
+  it isn't overwritten a frame after ignite. Surface presets, fuel duration,
+  flame visuals, village/standing torches and the point-light budget are all
+  unchanged.
+- **SDF spike material reads as slightly damp stone.** `createCaveSpikeMaterial()`
+  (`caveSpikeMaterial.ts`) now takes a `'sweep' | 'sdf'` variant and lowers
+  roughness to `0.7` (from `1`) for `sdf` only, for a subtle torch highlight
+  that reads the SDF surface's irregularity better. `metalness` stays `0`.
+  Sweep is unchanged (not the manual-comparison candidate; needs no polish).
+
+None of this changes topology, either spike's geometry/mesh generation, the
+walkable/collision proxy, or the manual-comparison rubric below — it only
+makes the existing SDF candidate easier to evaluate in-browser.
+
+---
+
 ## 2. Technical results
 
 Both variants ran against the shared test topology (seed 42, a representative

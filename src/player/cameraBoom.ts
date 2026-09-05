@@ -190,3 +190,21 @@ function segmentCircleOverlapT(
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
+
+/**
+ * Wraps a boom `sampleHeight` so that, while the boom's origin sits inside a
+ * cave, a query point that falls outside the cave's own footprint reports
+ * the origin's own cave floor instead of the surface heightfield high above
+ * (world-terrain-008 Milestone A test-environment fix — `groundAt()`-style
+ * cave lookups are Y-independent per-point, so a boom sample a few metres to
+ * the side of a narrow tunnel can miss the cave and read the real surface).
+ * Outside a cave (`originCaveFloorY` is `null`) this is the identity wrapper.
+ */
+export function withCaveFloorFallback(
+  sampleHeight: (x: number, z: number) => number,
+  sampleCaveFloor: (x: number, z: number) => number | null,
+  originCaveFloorY: number | null,
+): (x: number, z: number) => number {
+  if (originCaveFloorY == null) return sampleHeight
+  return (x, z) => sampleCaveFloor(x, z) ?? originCaveFloorY
+}

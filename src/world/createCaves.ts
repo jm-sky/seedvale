@@ -177,7 +177,7 @@ export function createCaves(
       // the group's geometry, so a shared/cached spike mesh would render
       // nothing (or throw) on the next activation.
       const built = spikeVariant === 'sweep' ? buildSweepCaveMesh(spikeTopology!) : buildSdfCaveMesh(spikeTopology!)
-      const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial())
+      const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial(spikeVariant ?? 'sweep'))
       mesh.name = `cave-interior-spike:${def.caveId}`
       mesh.receiveShadow = true
       group.add(mesh)

@@ -26,7 +26,7 @@ import { isExhausted } from '../shared/StaminaState'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
 import { type Collider, colliderActiveAtY, resolvePosition } from '../world/collision'
-import { resolveCameraBoom } from './cameraBoom'
+import { resolveCameraBoom, withCaveFloorFallback } from './cameraBoom'
 import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
@@ -1055,6 +1055,12 @@ export class PlayerController {
     const desiredX = originX + this.camOffset.x
     const desiredY = targetY + this.camOffset.y
     const desiredZ = originZ + this.camOffset.z
+    const playerY = this.mesh.position.y
+    // Player's own current cave floor, if any — used as the fallback ground
+    // for boom sample points that fall outside the (narrow) cave footprint,
+    // so the boom clamp can't mistake the surface high above a cave for its
+    // ground (world-terrain-008 Milestone A test-environment fix).
+    const originCave = this.caveGround(originX, playerY, originZ)
     const resolved = resolveCameraBoom({
       originX,
       originY: targetY,
@@ -1064,7 +1070,11 @@ export class PlayerController {
       camZ: desiredZ,
       // Cave-aware: inside a cave, the boom must clip against the cave floor,
       // not the surface heightfield far above (plan world-terrain-007 §20).
-      sampleHeight: (x, z) => this.groundAt(x, z).height,
+      sampleHeight: withCaveFloorFallback(
+        (x, z) => this.groundAt(x, z).height,
+        (x, z) => this.caveGround(x, playerY, z)?.floorY ?? null,
+        originCave?.floorY ?? null,
+      ),
       colliders: this.collidersNearAtHeight(originX, originZ),
     })
     this.camera.position.set(resolved.x, resolved.y, resolved.z)

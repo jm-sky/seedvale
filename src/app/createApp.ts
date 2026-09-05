@@ -668,6 +668,13 @@ export async function createApp(
     onChange: () => syncHeldHud(),
     onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
     onExtinguish: () => playActionFireExtinguish(worldAudio.playAt, player.mesh.position),
+    // Same reused cave query as `caveGroundQuery` above (world-terrain-008
+    // Milestone A test-environment patch) — brightens only this torch.
+    isInCave: () => bundle.caves.contains(
+      player.mesh.position.x,
+      player.mesh.position.y,
+      player.mesh.position.z,
+    ),
   }, pointLightBudget)
 
   syncHeldHud = (): void => {

@@ -4,6 +4,7 @@ import {
   CAMERA_GROUND_CLEARANCE,
   CAMERA_OCCLUDER_HEIGHT,
   resolveCameraBoom,
+  withCaveFloorFallback,
 } from './cameraBoom'
 
 const flat = (_x: number, _z: number) => 0
@@ -129,5 +130,77 @@ describe('resolveCameraBoom', () => {
     const along = Math.hypot(result.x, result.y - 1, result.z)
     expect(result.t).toBeGreaterThanOrEqual(Math.min(CAMERA_BOOM_MIN_DISTANCE / dist, 0.5) - 1e-6)
     expect(along).toBeGreaterThanOrEqual(CAMERA_BOOM_MIN_DISTANCE - 0.05)
+  })
+
+  it('regression (world-terrain-008): an underground origin is not lifted to a much higher surface height', () => {
+    // Player stands on a cave floor 6 m below a surface that reads 40 m up.
+    // Looking up steeply at a shelf/overhang (a real cave-exploration pose),
+    // the boom's own XZ reach (2 m) exits the narrow ~1.7 m cave footprint
+    // late in the march, and — without the fallback — the naive per-point
+    // ground query reads the surface far above instead of the cave the
+    // player is still standing in, so the boom is denied and held hovering
+    // just below that surface reading instead of reaching its real target.
+    const caveFloorY = -6
+    const surfaceY = 40
+    const footprintRadius = 1.7
+    const desiredCamY = 45
+    const boomInput = {
+      originX: 0,
+      originY: caveFloorY + 1.5,
+      originZ: 0,
+      camX: 0,
+      camY: desiredCamY,
+      camZ: 2,
+      colliders: [],
+    }
+    const naiveSampleHeight = (x: number, z: number) =>
+      Math.hypot(x, z) <= footprintRadius ? caveFloorY : surfaceY
+
+    // Old behaviour: the naive query mistakes the distant surface for solid
+    // ground and denies the boom, leaving the camera stuck near that surface
+    // reading instead of the player's actual (underground) surroundings.
+    const buggy = resolveCameraBoom({ ...boomInput, sampleHeight: naiveSampleHeight })
+    expect(buggy.t).toBeLessThan(1)
+    expect(buggy.y).toBeGreaterThan(surfaceY - 5)
+    expect(buggy.y).toBeLessThan(surfaceY + 1)
+
+    // Fixed behaviour: PlayerController wraps the same per-point cave lookup
+    // with the origin's own known cave floor as the out-of-footprint
+    // fallback, so the surface is never read while still underground and the
+    // boom resolves exactly as it would with no obstruction at all.
+    const fixedSampleHeight = withCaveFloorFallback(
+      naiveSampleHeight,
+      (x, z) => (Math.hypot(x, z) <= footprintRadius ? caveFloorY : null),
+      caveFloorY,
+    )
+    const fixed = resolveCameraBoom({ ...boomInput, sampleHeight: fixedSampleHeight })
+    expect(fixed.t).toBe(1)
+    expect(fixed.y).toBeCloseTo(desiredCamY)
+  })
+})
+
+describe('withCaveFloorFallback', () => {
+  it('is the identity wrapper when the origin is not in a cave', () => {
+    const surface = (_x: number, _z: number) => 12
+    const wrapped = withCaveFloorFallback(surface, () => null, null)
+    expect(wrapped(3, 4)).toBe(12)
+  })
+
+  it('uses the per-point cave floor when the query point is inside the footprint', () => {
+    const wrapped = withCaveFloorFallback(
+      () => 999,
+      (x, z) => (Math.hypot(x, z) < 2 ? -5 : null),
+      -5,
+    )
+    expect(wrapped(0, 0)).toBe(-5)
+  })
+
+  it('falls back to the origin cave floor — not the surface — outside the footprint', () => {
+    const wrapped = withCaveFloorFallback(
+      () => 999,
+      (x, z) => (Math.hypot(x, z) < 2 ? -5 : null),
+      -5,
+    )
+    expect(wrapped(10, 10)).toBe(-5)
   })
 })
