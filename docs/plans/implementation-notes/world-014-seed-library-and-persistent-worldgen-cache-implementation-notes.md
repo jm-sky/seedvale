@@ -12,6 +12,8 @@ Plan pasuje do aktualnej architektury, ale są dwa istotne fakty z code recon:
 
 Najważniejsza granica implementacyjna: Seed Library metadata, save state i persistent derived cache to trzy różne ownershipy.
 
+Persistent cache ma być **inkrementalny i narastający wraz z normalnym używaniem świata**. Nie ograniczać go do initial state/startowego regionu. Jeżeli gameplay, mapa kupiona u handlarza albo inne prawidłowe query naturalnie policzy dalszą deterministyczną geografię lub landmarki, wynik powinien móc zostać zapisany do persistent cache i użyty w kolejnych sesjach/save'ach tego samego seeda. Sam persistence layer nigdy nie może jednak inicjować dodatkowego world scan tylko po to, aby zapełnić cache.
+
 ## 1. Persistence: obecna baza jest save-specific
 
 `src/persistence/saveDb.ts` obecnie posiada:
@@ -130,19 +132,22 @@ Map<"tx,tz", {
 
 `LOCATION_TILE_CELLS = 16`; komórki są materializowane lazy. `CELL_UNKNOWN = 0`, a `coarseCellAt()` jest jedynym seamem, który klasyfikuje/cache'uje coarse cell.
 
-To jest właściwa reprezentacja do persistent integration. Nie serializować całego `WorldLocation[]` query result i nie tworzyć osobnego per-cell object cache.
+To jest właściwa reprezentacja do persistent integration. Nie tworzyć osobnego per-cell object cache.
 
-Najczystszy integration point jest przy lifecycle tile/cache, nie przy `landmarksInRange()`:
+Najczystszy integration point jest przy lifecycle tile/cache:
 
 ```text
 get tile
 → hydrate persisted tile state if available
 → coarseCellAt reads hydrated bytes
 → newly sampled cells mark tile dirty
-→ async persistence outside critical scan path
+→ debounce/batch dirty tiles
+→ async upsert outside critical scan path
 ```
 
-Trzeba jednak zachować lazy-cell semantics: tile może być częściowo unknown. Persistent payload musi round-tripować `CELL_UNKNOWN`, `state` i mountain `height` bez udawania, że cały 16×16 tile został policzony.
+Trzeba zachować lazy-cell semantics: tile może być częściowo unknown. Persistent payload musi round-tripować `CELL_UNKNOWN`, `state` i mountain `height` bez udawania, że cały 16×16 tile został policzony.
+
+To oznacza również, że persistent cache nie jest snapshotem initial state. Jeżeli początkowo tile zawiera 20 policzonych komórek, a późniejszy gameplay policzy następnych 30, ten sam persistent record powinien zostać zaktualizowany do bogatszego partial tile. Nie zapisywać po każdej komórce; markować tile jako dirty i batchować/debounce'ować upsert.
 
 ## 8. Persistent cache key musi uwzględnić terrain inputs, nie tylko seed
 
@@ -158,6 +163,8 @@ Jeżeli `WorldConfig.terrain` zawiera ustawienia wpływające na `RawSampleParam
 
 Nie używać `JSON.stringify(config)` bez jawnego kontraktu. Zdefiniować mały stabilny fingerprint dokładnie z inputs, które wpływają na ten namespace, i versionować namespace przy zmianie algorytmu/shape.
 
+Ta sama zasada dotyczy późniejszych namespaces dla deterministycznych landmarków: cache może być współdzielony między save'ami tylko wtedy, gdy klucz obejmuje wszystkie inputs wpływające na ich identity/position/type/name.
+
 ## 9. Async IndexedDB vs synchroniczny katalog — główna integracyjna pułapka
 
 `WorldLocationCatalog.landmarksInRange()` jest synchroniczne. IndexedDB jest asynchroniczne.
@@ -171,12 +178,15 @@ world/seed activation
 → async hydrate known relevant persisted cache into runtime catalog
 → normal synchronous catalog queries
 → misses still sample synchronously as today
-→ dirty tiles scheduled for async persistence
+→ newly computed deterministic data marks tile/record dirty
+→ dirty records scheduled for batched async persistence
 ```
 
 Hydration nie może blokować first paint ani New Game tylko po to, aby mieć cache. Jeżeli cache nie jest gotowy, correctness fallback to obecny procedural sampling.
 
 Unikać race, w którym spóźniony hydrate starego seeda zapisze dane do katalogu już po `rebuildWorld()` na nowy seed. Każdy async load/write musi być związany z world/cache identity (seed + fingerprint + namespace version) i przed apply potwierdzić, że identity nadal jest aktywne.
+
+Zapis cache ma być session-accumulating: dane policzone później w tej samej sesji lub w kolejnych sesjach powinny wzbogacać persistent cache. Persistence nie może jednak wymuszać policzenia brakujących komórek/regionów.
 
 ## 10. `invalidateScanCache()` zmienia znaczenie przy persistence
 
@@ -192,15 +202,48 @@ clear persistent cache requested by user/version cleanup
 
 Zachować istniejące `invalidateScanCache()` jako tani lifecycle reset katalogu. Seed management `Clear cache` powinien iść przez osobne persistence API i — jeśli czyszczony seed jest aktualnie aktywny — również jawnie invalidować jego runtime cache.
 
-## 11. Cemetery cache nie jest dobrym pierwszym persistent payloadem
+## 11. Deterministyczne landmarks jako persistent derived data
+
+Landmarki wyliczone przez normalne gameplay/map queries są kandydatem do persistent cache, jeżeli ich identity jest w pełni deterministyczne z seeda i jawnie fingerprintowanych worldgen inputs.
+
+Istotny przypadek:
+
+```text
+merchant map purchase
+→ applyLocationMap / normal location query
+→ policzenie brakującej geografii/coarse cells/landmarks
+→ wynik użyty do discovery w bieżącym save
+→ deterministic derived result trafia do runtime cache
+→ async persistence dla seeda
+```
+
+Przy kolejnym save na tym samym seedzie lub kolejnej sesji deterministic result może zostać hydrated/reuse'owany bez ponownego kosztownego liczenia.
+
+Twarda granica ownership:
+
+```text
+deterministic landmark existence / id / position / type / deterministic name
+    = seed/worldgen derived cache, możliwy do współdzielenia
+
+LocationKnowledge / MapDiscovery / revealed state / navigation target
+    = mutable per-save player state, nigdy nie współdzielić
+```
+
+Persistent landmark cache nie oznacza, że landmark jest odkryty przez gracza. Save B może użyć cached geometry/location result z Save A, ale dopóki jego własny gameplay/map purchase nie wykona odpowiedniego reveal, `LocationKnowledge` pozostaje niezmienione.
+
+Nie wykonywać proactive landmark scan w celu zapełnienia cache. Cache landmarków powstaje wyłącznie jako efekt query, które normalny gameplay i tak musiał wykonać.
+
+Nie zakładać jednego monolitycznego `WorldLocation[]` cache dla wszystkich query. Podczas implementacji wybrać stabilną reprezentację/namespace zgodną z faktycznym ownership `WorldLocationCatalog`; jeżeli coarse cells wystarczają do taniego odtworzenia landmarków, nie duplikować danych. Osobny landmark namespace ma sens tylko dla wyników, których ponowne wyprowadzenie z coarse cache nadal jest mierzalnie kosztowne albo których stabilna reprezentacja jest niezależna.
+
+## 12. Cemetery cache nie jest dobrym pierwszym persistent payloadem
 
 `world-013` ma również `cemeteryCache: Map<settlementId, WorldLocation | null>`. Nie persistować go automatycznie razem z coarse terrain w pierwszej iteracji.
 
-Cemetery lookup zależy od `ChunkManager.findLandmarkNear()` i settlement/chunk-generation identity, a jego invalidation fingerprint jest szerszy niż prostego coarse classifiera. Plan mówi, aby persistence dodawać tam, gdzie istnieje stabilna reprezentacja i zmierzony koszt — zacząć od coarse tiles.
+Cemetery lookup zależy od `ChunkManager.findLandmarkNear()` i settlement/chunk-generation identity, a jego invalidation fingerprint jest szerszy niż prostego coarse classifiera. Plan mówi, aby persistence dodawać tam, gdzie istnieje stabilna reprezentacja i zmierzony koszt — zacząć od coarse tiles oraz deterministycznych location results faktycznie potrzebnych przez map queries.
 
 Można rozszerzyć namespace później osobno, z własną wersją/fingerprintiem.
 
-## 12. SeedRecord validation i backward compatibility
+## 13. SeedRecord validation i backward compatibility
 
 Nie wkładać do IndexedDB surowych niezwalidowanych obiektów UI. Dodać mały parser/type guard dla `SeedRecord`, podobnie jak persistence warstwa chroni `SaveData`/save envelopes.
 
@@ -213,7 +256,7 @@ Przy uszkodzonym SeedRecord:
 
 Dla istniejących save'ów Seed Library powinna wykrywać unikalne `SaveSlotInfo.seed` i lazy zapewniać rekordy. Nie robić jednorazowego world generation migration.
 
-## 13. Seed deletion
+## 14. Seed deletion
 
 Ponieważ save przechowuje własny `config.seed`, technicznie usunięcie SeedRecord nie niszczy danych save'a, ale semantycznie biblioteka powinna chronić referencjonowane rekordy.
 
@@ -223,7 +266,7 @@ Guard powinien być liczony z aktualnych save slots przy operacji delete, nie z 
 
 `Delete seed` dla nieużywanego seeda powinien usuwać SeedRecord i jego persistent cache namespaces. Nie usuwać save'ów kaskadowo.
 
-## 14. Cache cleanup
+## 15. Cache cleanup
 
 Nie budować pełnego quota managera. W persistence record cache warto jednak od początku mieć wystarczające metadata do bounded cleanup, np. namespace/key, seed/fingerprint, `lastAccessedAt` i payload byte estimate jeśli tani do policzenia.
 
@@ -231,13 +274,19 @@ Cleanup musi działać po cache records, nie po SeedRecord. Seed metadata są ma
 
 Nie aktualizować `lastAccessedAt` synchronously przy każdym coarse-cell hit — to zamieni tani runtime cache hit w storage churn. Aktualizować co najwyżej per hydrate/tile persistence/session w sposób batchowany.
 
-## 15. Tests — gdzie je osadzić
+Ponieważ cache rośnie wraz z naturalnym eksplorowaniem/liczeniem dalszej geografii, bounded cleanup jest ważniejszy niż przy cache ograniczonym do initial state. Nadal nie budować skomplikowanego quota managera bez pomiarów.
+
+## 16. Tests — gdzie je osadzić
 
 Istniejące testy `src/world/locations/worldLocationCatalog.test.ts` są właściwym miejscem dla:
 
 - hydration payload == cold sampled result,
 - partial tile z `CELL_UNKNOWN`,
+- późniejsze sampling wzbogaca istniejący partial tile zamiast zastępować/psuć dane,
+- dirty tile persistence jest batchowana i nie wymaga zapisu per cell,
 - persistent/warm/cold parity,
+- deterministic landmark result parity po hydrate,
+- cached landmark nie zmienia `LocationKnowledge` ani `MapDiscovery`,
 - no-materialize read seam dla profilu,
 - stale async hydration ignored after world identity change.
 
@@ -248,11 +297,24 @@ Dla nowego seed persistence dodać osobne testy obok persistence modułu:
 - lazy backfill z istniejących save seedów,
 - clear cache nie dotyka seed metadata/save rows,
 - delete guard oparty o realne save references,
-- namespace/version/fingerprint isolation.
+- namespace/version/fingerprint isolation,
+- cache seeda A nie trafia do seeda B,
+- cache zapisany przez Save A na wspólnym seedzie może być reuse'owany przez Save B bez przenoszenia mutable discovery state.
+
+Dodać scenariusz integracyjny odpowiadający realnemu problemowi mapy:
+
+```text
+cold seed
+→ merchant map query materializuje dalsze deterministic locations
+→ cache write
+→ nowa sesja/save na tym samym seedzie
+→ hydrate
+→ ten sam map/location query zwraca identyczny wynik z mniejszym kosztem
+```
 
 `StartScreen.vue`/start-flow testy powinny sprawdzić przede wszystkim przekazanie wybranego seeda do New Game intent; nie testować worldgen przez komponent Vue.
 
-## 16. Zalecana kolejność implementacji
+## 17. Zalecana kolejność implementacji
 
 1. Wydzielić shared IndexedDB open/upgrade seam i dodać `seeds` + `worldgenCache`, zachowując obecne save API i dane.
 2. Dodać `SeedRecord` persistence/validation oraz lazy backfill z istniejących healthy saves.
@@ -260,9 +322,11 @@ Dla nowego seed persistence dodać osobne testy obok persistence modułu:
 4. Dodać Seed Library management UI pracujące wyłącznie na metadata/persistence.
 5. Dodać tani generated profile/name z jednoznaczną zasadą "no new sampling"; w razie potrzeby dodać read-only non-materializing seam do istniejącego runtime cache.
 6. Zdefiniować `locations-coarse` persistent payload, namespace version i terrain-input fingerprint.
-7. Dodać async hydrate/dirty-write lifecycle wokół istniejących 16×16 coarse tiles, z generation/identity guard przeciw stale async apply.
-8. Dodać `Clear cache` i prosty bounded cleanup.
-9. Zebrać browser measurements: first seed, repeated New Game on same seed, cold/warm map query i IndexedDB payload/write cost.
+7. Dodać async hydrate + inkrementalny dirty-write lifecycle wokół istniejących 16×16 coarse tiles, z partial-tile semantics, batching/debounce i generation/identity guard przeciw stale async apply.
+8. Podłączyć naturalne dalsze materializowanie geografii do tego samego dirty-write lifecycle; nie ograniczać persistence do initial/startup state.
+9. Zweryfikować map/merchant query path i persistować deterministyczne landmark results tylko tam, gdzie nie dubluje to wystarczającego coarse cache; zachować `LocationKnowledge`/`MapDiscovery` wyłącznie per-save.
+10. Dodać `Clear cache` i prosty bounded cleanup.
+11. Zebrać browser measurements: first seed, repeated New Game on same seed, cold/warm merchant map query, cold/warm location query oraz IndexedDB payload/write cost.
 
 Nie uruchamiać `pnpm docs:sync` ręcznie — synchronizacja dokumentacji działa w GitHub workflow.
 
