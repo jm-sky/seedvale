@@ -19,6 +19,7 @@ import * as THREE from 'three'
 import type { CaveSpikeMetrics } from './caveSpikeMetrics'
 import type { CaveTopology, CaveTopologyPoint } from './caveTopology'
 import { isSystemEnabled } from '../../debug/debugMode'
+import { clipTrianglesBelowSurface, type SurfaceHeightSampler } from './clipBelowSurface'
 import { createMultiScaleNoise1D, type NoiseOctave } from './spikeNoise'
 
 export type SdfCaveParams = {
@@ -275,8 +276,17 @@ function computeCellVertex(grid: SampledGrid, i: number, j: number, k: number): 
 /**
  * Naive Surface Nets extraction: one vertex per cell straddling the
  * iso-surface, quads stitched along every sign-changing grid edge (no
- * marching-cubes case table). Winding is not tracked per-quad — the shared
- * cave material is double-sided (matches V1), same as both spikes.
+ * marching-cubes case table).
+ *
+ * Winding **is** tracked per quad, from the sign of the crossed edge: the
+ * base corner order around each axis yields a face normal along `+axis`, so a
+ * quad whose edge goes rock→void (`va >= 0`) keeps it and one going
+ * void→rock (`va < 0`) is reversed, leaving every face pointing into the
+ * cave void. Emitting one fixed order regardless of sign (as this mesher
+ * originally did) leaves roughly half the surface back-facing, and since the
+ * shared cave material is `DoubleSide` + `flatShading` — where three.js
+ * flips the derived normal by `gl_FrontFacing` — those faces are lit from
+ * behind and render black. That is what made the mouth read as a black blob.
  */
 function extractSurfaceNets(grid: SampledGrid): { positions: number[], indices: number[] } {
   const { nx, ny, nz } = grid
@@ -300,41 +310,44 @@ function extractSurfaceNets(grid: SampledGrid): { positions: number[], indices: 
     if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return -1
     return cellVertexIndex[cellIndex(nx, ny, i, j, k)]!
   }
-  const emitQuad = (a: number, b: number, c: number, d: number): void => {
+  /** `flip` reverses the loop so the face normal points at the void side of
+   *  the crossed edge instead of along `+axis`. */
+  const emitQuad = (a: number, b: number, c: number, d: number, flip: boolean): void => {
     if (a < 0 || b < 0 || c < 0 || d < 0) return
-    indices.push(a, b, c, a, c, d)
+    if (flip) indices.push(a, c, b, a, d, c)
+    else indices.push(a, b, c, a, c, d)
   }
 
-  // x-direction edges: fixed (j, k), varying i -> i+1.
+  // x-direction edges: fixed (j, k), varying i -> i+1. Corner loop normal +x.
   for (let k = 1; k < nz; k++) {
     for (let j = 1; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
         const va = gridValue(grid, i, j, k)
         const vb = gridValue(grid, i + 1, j, k)
         if (va < 0 === vb < 0) continue
-        emitQuad(cellAt(i, j - 1, k - 1), cellAt(i, j, k - 1), cellAt(i, j, k), cellAt(i, j - 1, k))
+        emitQuad(cellAt(i, j - 1, k - 1), cellAt(i, j, k - 1), cellAt(i, j, k), cellAt(i, j - 1, k), va < 0)
       }
     }
   }
-  // y-direction edges: fixed (i, k), varying j -> j+1.
+  // y-direction edges: fixed (i, k), varying j -> j+1. Corner loop normal -y.
   for (let k = 1; k < nz; k++) {
     for (let i = 1; i < nx; i++) {
       for (let j = 0; j < ny; j++) {
         const va = gridValue(grid, i, j, k)
         const vb = gridValue(grid, i, j + 1, k)
         if (va < 0 === vb < 0) continue
-        emitQuad(cellAt(i - 1, j, k - 1), cellAt(i, j, k - 1), cellAt(i, j, k), cellAt(i - 1, j, k))
+        emitQuad(cellAt(i - 1, j, k - 1), cellAt(i, j, k - 1), cellAt(i, j, k), cellAt(i - 1, j, k), va >= 0)
       }
     }
   }
-  // z-direction edges: fixed (i, j), varying k -> k+1.
+  // z-direction edges: fixed (i, j), varying k -> k+1. Corner loop normal +z.
   for (let j = 1; j < ny; j++) {
     for (let i = 1; i < nx; i++) {
       for (let k = 0; k < nz; k++) {
         const va = gridValue(grid, i, j, k)
         const vb = gridValue(grid, i, j, k + 1)
         if (va < 0 === vb < 0) continue
-        emitQuad(cellAt(i - 1, j - 1, k), cellAt(i, j - 1, k), cellAt(i, j, k), cellAt(i - 1, j, k))
+        emitQuad(cellAt(i - 1, j - 1, k), cellAt(i, j - 1, k), cellAt(i, j, k), cellAt(i - 1, j, k), va < 0)
       }
     }
   }
@@ -358,6 +371,7 @@ export function buildSdfCaveMesh(
   topology: CaveTopology,
   params: SdfCaveParams = DEFAULT_SDF_PARAMS,
   includeBranch = false,
+  surfaceHeightAt?: SurfaceHeightSampler,
 ): SdfCaveResult {
   const seedBase = topology.seed
   const noiseX = createMultiScaleNoise1D(seedBase ^ 0x11223344, [params.detail.micro, params.detail.medium])
@@ -378,7 +392,13 @@ export function buildSdfCaveMesh(
 
   const grid = sampleGrid(bounds, params.cellSize, field)
 
-  const { positions, indices } = extractSurfaceNets(grid)
+  const extracted = extractSurfaceNets(grid)
+  // The iso-surface is closed, so without this the entrance ellipsoid is
+  // capped into a sealed dome standing proud of the meadow instead of an
+  // open portal — see `clipBelowSurface.ts`.
+  const { positions, indices } = surfaceHeightAt
+    ? clipTrianglesBelowSurface(extracted.positions, extracted.indices, surfaceHeightAt)
+    : extracted
   const t3 = now()
 
   const geometry = new THREE.BufferGeometry()

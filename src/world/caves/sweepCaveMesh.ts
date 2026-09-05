@@ -19,6 +19,7 @@ import * as THREE from 'three'
 import type { CaveSpikeMetrics } from './caveSpikeMetrics'
 import type { CaveTopology, CaveTopologyPoint } from './caveTopology'
 import { isSystemEnabled } from '../../debug/debugMode'
+import { clipTrianglesBelowSurface, type SurfaceHeightSampler } from './clipBelowSurface'
 import { createMultiScaleNoise1D, createValueNoise1D, type NoiseOctave } from './spikeNoise'
 
 export type SweepCaveParams = {
@@ -258,6 +259,7 @@ export function buildSweepCaveMesh(
   topology: CaveTopology,
   params: SweepCaveParams = DEFAULT_SWEEP_PARAMS,
   includeBranch = false,
+  surfaceHeightAt?: SurfaceHeightSampler,
 ): SweepCaveResult {
   const seedBase = topology.seed
   const noises: NoiseStreams = {
@@ -288,15 +290,20 @@ export function buildSweepCaveMesh(
     buildTube(builder, branchSamples, params, floorSegments, archSegments, detailEnabled, noises, false, true)
   }
 
+  // Same surface invariant both spikes must honour — see `clipBelowSurface.ts`.
+  const clipped = surfaceHeightAt
+    ? clipTrianglesBelowSurface(builder.positions, builder.indices, surfaceHeightAt)
+    : builder
+
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(builder.positions, 3))
-  geometry.setIndex(builder.indices)
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(clipped.positions, 3))
+  geometry.setIndex(clipped.indices)
   geometry.computeVertexNormals()
   geometry.computeBoundingBox()
   const t3 = now()
 
-  const vertices = builder.positions.length / 3
-  const triangles = builder.indices.length / 3
+  const vertices = clipped.positions.length / 3
+  const triangles = clipped.indices.length / 3
   const bb = geometry.boundingBox!
 
   const metrics: CaveSpikeMetrics = {
@@ -306,7 +313,7 @@ export function buildSweepCaveMesh(
     meshBuildMs: t3 - t1,
     vertices,
     triangles,
-    geometryBytes: builder.positions.length * 4 + builder.indices.length * 4 + vertices * 3 * 4,
+    geometryBytes: clipped.positions.length * 4 + clipped.indices.length * 4 + vertices * 3 * 4,
     peakTempBytes: null,
     bounds: { min: [bb.min.x, bb.min.y, bb.min.z], max: [bb.max.x, bb.max.y, bb.max.z] },
     params,

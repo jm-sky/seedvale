@@ -17,10 +17,14 @@ import { type CaveBounds, type CaveDefinition, type CaveNode, type CaveTunnel, c
 /** Extra radius/height margin added beyond each node/waypoint's intended
  *  width/height so the proxy generously covers the spike mesh's silhouette,
  *  including its surface-detail bulges. */
-const PROXY_MARGIN = 0.9
+export const PROXY_MARGIN = 0.9
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t
+}
+
+function corridorRadius(width: number): number {
+  return width / 2 + PROXY_MARGIN
 }
 
 /**
@@ -29,19 +33,38 @@ function lerp(a: number, b: number, t: number): number {
  * waypoint, chained together with `CaveTunnel`s so `createCaveVolume` sees a
  * generously-covered corridor that tracks the topology's actual bends.
  *
+ * Only genuinely room-like nodes (the entrance and chambers) get a **disc**
+ * footprint of their own; pass-through waypoints contribute their radius to
+ * the tunnels around them but no disc. A `CaveNode` disc has one flat floor
+ * across its whole radius, so a disc sitting on a descending corridor reports
+ * a floor up to `radius x slope` below the corridor's actual floor a few
+ * metres uphill of it — and since `CaveVolume.sampleFloor` collapses
+ * overlapping primitives to their *minimum*, that flat floor wins and drops
+ * the player through the visible floor (measured: up to 1.4 m on the
+ * entrance ramp) right before ejecting them at the disc rim. Tunnels
+ * interpolate their floor, so a corridor built from tunnels alone stays
+ * floor-consistent. The entrance disc is harmless (it is the highest floor in
+ * the cave, so the minimum never picks it) and a chamber genuinely *is* a
+ * flat room.
+ *
  * @domain world-terrain
  */
 export function topologyToCaveDefinition(topology: CaveTopology): CaveDefinition {
   const topoNodeById = new Map(topology.nodes.map((n) => [n.id, n]))
   const nodes: CaveNode[] = []
   const tunnels: CaveTunnel[] = []
+  /** Intended corridor radius per emitted node — tunnel sizing reads this
+   *  rather than `CaveNode.radius`, which is 0 for pass-through waypoints. */
+  const radiusById = new Map<string, number>()
 
   for (const n of topology.nodes) {
+    const isRoom = n.kind === 'entrance' || n.kind === 'chamber'
+    radiusById.set(n.id, corridorRadius(n.targetWidth))
     nodes.push({
       id: n.id,
-      kind: n.kind === 'entrance' ? 'mouth' : 'chamber',
+      kind: n.kind === 'chamber' ? 'chamber' : 'mouth',
       center: { x: n.position.x, y: n.position.y, z: n.position.z },
-      radius: n.targetWidth / 2 + PROXY_MARGIN,
+      radius: isRoom ? corridorRadius(n.targetWidth) : 0,
       floorY: n.position.y,
       ceilingY: n.position.y + n.targetHeight,
     })
@@ -60,11 +83,12 @@ export function topologyToCaveDefinition(topology: CaveTopology): CaveDefinition
       const width = lerp(fromTopo.targetWidth, toTopo.targetWidth, t)
       const height = lerp(fromTopo.targetHeight, toTopo.targetHeight, t)
       const id = `${seg.id}:wp${i}`
+      radiusById.set(id, corridorRadius(width))
       nodes.push({
         id,
-        kind: 'chamber',
+        kind: 'mouth',
         center: { x: p.x, y: p.y, z: p.z },
-        radius: width / 2 + PROXY_MARGIN,
+        radius: 0,
         floorY: p.y,
         ceilingY: p.y + height,
       })
@@ -79,7 +103,7 @@ export function topologyToCaveDefinition(topology: CaveTopology): CaveDefinition
         id: `${seg.id}:tunnel${tunnelCounter++}`,
         from: a.id,
         to: b.id,
-        radius: Math.min(a.radius, b.radius),
+        radius: Math.min(radiusById.get(a.id)!, radiusById.get(b.id)!),
         floorStartY: a.floorY,
         floorEndY: b.floorY,
         ceilingHeight: Math.min(a.ceilingY - a.floorY, b.ceilingY - b.floorY),

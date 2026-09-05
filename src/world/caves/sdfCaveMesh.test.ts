@@ -84,6 +84,48 @@ describe('buildSdfCaveMesh (plan world-terrain-008 Variant B)', () => {
     expect(components).toBeLessThanOrEqual(2)
   })
 
+  // Regression (2026-09-05 repro): the surface-net mesher emitted every quad
+  // in one fixed corner order regardless of which end of the crossed edge was
+  // the void, so ~half the faces were back-facing. With the shared
+  // `DoubleSide` + `flatShading` cave material — three.js flips the derived
+  // normal by `gl_FrontFacing` — those faces are lit from behind and render
+  // black, which is what made the cave mouth read as a black blob.
+  it('winds every face toward the void, so normals are consistent', () => {
+    const sphere = buildAccidentalUnionStressMesh({
+      clusterA: { center: { x: 0, y: 0, z: 0 }, radius: 2 },
+      clusterB: { center: { x: 40, y: 0, z: 0 }, radius: 2 },
+      cellSize: 0.25,
+      smoothK: 0,
+    })
+    const at = (i: number): [number, number, number] => [
+      sphere.positions[i * 3]!,
+      sphere.positions[i * 3 + 1]!,
+      sphere.positions[i * 3 + 2]!,
+    ]
+    let inward = 0
+    let outward = 0
+    for (let i = 0; i < sphere.indices.length; i += 3) {
+      const [ax, ay, az] = at(sphere.indices[i]!)
+      const [bx, by, bz] = at(sphere.indices[i + 1]!)
+      const [cx, cy, cz] = at(sphere.indices[i + 2]!)
+      const ux = bx - ax, uy = by - ay, uz = bz - az
+      const vx = cx - ax, vy = cy - ay, vz = cz - az
+      const nx = uy * vz - uz * vy
+      const ny = uz * vx - ux * vz
+      const nz = ux * vy - uy * vx
+      // Centroid relative to its own cluster centre — a void sphere's faces
+      // must all point back at that centre.
+      const gx = (ax + bx + cx) / 3
+      const gy = (ay + by + cy) / 3
+      const gz = (az + bz + cz) / 3
+      const centreX = gx < 20 ? 0 : 40
+      if (nx * (gx - centreX) + ny * gy + nz * gz < 0) inward++
+      else outward++
+    }
+    expect(inward).toBeGreaterThan(0)
+    expect(outward).toBe(0)
+  })
+
   it('far-apart clusters never bridge regardless of smoothK', () => {
     const stressed = buildAccidentalUnionStressMesh({
       clusterA: { center: { x: 0, y: 0, z: 0 }, radius: 1.5 },

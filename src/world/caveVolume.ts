@@ -102,6 +102,30 @@ function samplesAt(definition: CaveDefinition, x: number, z: number): Array<{ fl
   return out
 }
 
+/** How far *below* the reported floor an entity still counts as inside the
+ *  cave.
+ *
+ *  `sampleFloor` collapses every primitive overlapping `(x, z)` to their
+ *  **minimum** floor while `contains` used to require `y >= floorY` of one
+ *  single primitive. Those two rules disagree wherever a flat-floored node
+ *  disc — or a tunnel's flat end cap, `projectOntoSegment` clamping `t` —
+ *  overlaps a sloping tunnel: the query itself puts the entity on the flat
+ *  (lower) floor, and one step later, where only the sloping tunnel applies,
+ *  that same Y is below the tunnel's local floor, so `contains` returned
+ *  `false`, `PlayerController.groundAt()` fell back to `sampleHeight` and
+ *  `integrateVerticalMotion`'s grounded branch teleported the player onto the
+ *  meadow metres above.
+ *
+ *  Loosening the *lower* bound is safe: everything below a cave floor is
+ *  inside solid rock — the surface sits at least `ceilingHeight` (>= 2.4 m)
+ *  plus `MOUTH_ROOF_MIN` above the floor even in the thin-roofed mouth
+ *  transition, and `MIN_OVERBURDEN` above the ceiling past it, so no surface
+ *  entity is ever within this grace of a cave floor. The ceiling bound, which
+ *  is what actually separates "in the cave" from "on the hillside above it",
+ *  is unchanged. Measured worst floor step for the Milestone A spike proxy:
+ *  1.36 m. */
+const FLOOR_GRACE = 2
+
 export type CaveVolume = {
   definition: CaveDefinition
   /** `true` iff `(x, z)` falls inside any primitive's horizontal footprint,
@@ -130,10 +154,19 @@ export function createCaveVolume(definition: CaveDefinition): CaveVolume {
       return samplesAt(definition, x, z).length > 0
     },
     contains(x, y, z) {
-      for (const sample of samplesAt(definition, x, z)) {
-        if (y >= sample.floorY && y <= sample.ceilingY) return true
+      const samples = samplesAt(definition, x, z)
+      if (samples.length === 0) return false
+      // One vertical span per `(x, z)`, matching what `sampleFloor` /
+      // `sampleCeiling` already report — never per-primitive, or an entity
+      // standing on the collapsed (lowest) floor is rejected by the primitive
+      // it just stepped into. See `FLOOR_GRACE`.
+      let floorY = Infinity
+      let ceilingY = -Infinity
+      for (const sample of samples) {
+        floorY = Math.min(floorY, sample.floorY)
+        ceilingY = Math.max(ceilingY, sample.ceilingY)
       }
-      return false
+      return y >= floorY - FLOOR_GRACE && y <= ceilingY
     },
     sampleFloor(x, z) {
       const samples = samplesAt(definition, x, z)

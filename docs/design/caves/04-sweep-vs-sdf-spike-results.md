@@ -107,11 +107,148 @@ makes the existing SDF candidate easier to evaluate in-browser.
 
 ---
 
+## 1b. Surface-integration and containment fixes (2026-09-05 repro)
+
+Deterministic repro reported from a manual SDF pass:
+
+```text
+?seed=1922931019&caveSpike=sdf&debug=1
+cave:641d64fc   entrance x = -425.1383787947449  z = 153.05214273497208
+```
+
+Two symptoms — a **black sphere half-emerging from the meadow** at the
+entrance, showing the untouched hillside inside it, and the player
+**popping out onto the surface** partway down the tunnel. They turned out to
+have *four independent causes*, three of them in Milestone A code and one a
+latent V1 sharp edge. All were reproduced analytically (`sampleHeightAt` with
+`ChunkManager`'s own `RawSampleParams`, no browser) and are now covered by
+`src/world/caves/caveSurfaceIntegration.test.ts`.
+
+### Cause 1 — the surface-net mesher never tracked quad winding
+
+`extractSurfaceNets` emitted every quad in one fixed corner order regardless
+of which end of the crossed grid edge was the void, so roughly **half the
+faces were back-facing**. The shared cave material is `DoubleSide` +
+`flatShading`, and three.js flips the derived flat normal by
+`gl_FrontFacing` — so those faces are lit from behind and render black. This
+is what made the mouth (and patches of the interior) read as a black blob.
+
+Fixed by winding each quad from the sign of the crossed edge; verified on a
+sphere void: **100 % of faces now point into the void** (test: *winds every
+face toward the void*).
+
+### Cause 2 — the SDF iso-surface is closed, so the mouth was a sealed dome
+
+Unlike V1 (`caveMesh.ts` leaves its tunnel arch open-ended) and unlike Sweep
+(`buildTube(..., capStart: false)`), an implicit field extracts a *closed*
+surface: the entrance ellipsoid was capped into a rock shell over the mouth.
+It also stood proud of the terrain by construction — every variant places the
+entrance primitive a full `entrance.height` (2.6 m) above the carved recess
+floor, which is only `CAVE_MOUTH_DEPTH` (2.4 m) below the surface, so ~0.2 m
++ noise pokes through the meadow for **every seed**. Measured on the repro
+cave: 48 vertices above the raw terrain, max +0.37 m, all within 4 m of the
+mouth.
+
+Fixed with `src/world/caves/clipBelowSurface.ts`: both spikes now take the
+deterministic analytic surface (`ChunkManager.sampleBaseHeight`, never a
+chunk-tile read — the mesh is built on streaming activation) and drop every
+triangle with a vertex above it. The cave now terminates *at* the ground with
+a real boundary loop instead of a dome. The test asserts both halves: no
+vertex above the terrain, and boundary edges near the mouth where the
+unclipped mesh has none.
+
+### Cause 3 — the shared topology was terrain-blind
+
+`buildSpikeTestTopology` only ever saw `seed` + `entrance`; it never sampled
+terrain. V1's own acceptance path (`tunnelOverburdenOk`, `MIN_OVERBURDEN`,
+`MOUTH_ROOF_MIN`) validates *V1's* straight tunnel, not the spike's longer,
+bent, taller route — so the spike inherited an accepted entrance and then
+walked wherever it liked. Surveyed over 12 seeds, **8 had the spike cave's
+ceiling above the surface** past the mouth footprint, typically at 4–6 m
+(the 4.4 m-wide × 3.0 m-tall "wide transition", which sits only 0.3 m below
+the entrance floor).
+
+Fixed by `sinkUnderTerrain()`: with a surface sampler the whole interior is
+lowered by one uniform drop (shape-preserving, so the comparison input stays
+identical for both spikes) computed over the **full walkable cross-section**
+— every 0.5 m along every centerline, sampling a 16 × 3 probe disc of the
+proxy's own footprint radius — against V1's own mouth contract (opening
+exempt, leading 4 m held to `MOUTH_ROOF_MIN`, everything past it to
+`MIN_OVERBURDEN`). Repro cave: 1.61 m of extra descent; all 12 surveyed
+seeds now clear the requirement.
+
+### Cause 4 — `CaveVolume.contains` and `sampleFloor` disagreed (the pop-out)
+
+`sampleFloor` collapses every primitive overlapping `(x, z)` to their
+**minimum** floor, while `contains` required `y >= floorY` of one *single*
+primitive. Wherever a flat-floored primitive overlaps a sloping tunnel — a
+node disc, or a tunnel's flat end cap (`projectOntoSegment` clamps `t`) — the
+query itself puts the player on the flat, lower floor, and one step later,
+where only the sloping tunnel applies, that same Y is below the local floor.
+`contains` returned `false`, `PlayerController.groundAt()` fell back to
+`sampleHeight`, and `integrateVerticalMotion`'s grounded branch
+(`groundY >= y - STEP_DOWN_MAX`, no upper bound) **teleported the player onto
+the meadow ~8 m above**. Measured on the repro cave before the fix: **9 909
+such cells**, spread across every distance ring — an off-centerline walk hit
+one almost immediately.
+
+Fixed in two places:
+
+- `caveVolume.ts`: `contains` now tests one vertical span per `(x, z)` —
+  `[min floor - FLOOR_GRACE, max ceiling]` — matching what `sampleFloor` /
+  `sampleCeiling` already report. Only the *lower* bound is loosened;
+  everything below a cave floor is solid rock, and the surface sits at least
+  `ceilingHeight + MOUTH_ROOF_MIN` above the floor even in the thin-roofed
+  mouth transition, so the ceiling test that separates "in the cave" from "on
+  the hillside above it" is untouched. This is a latent V1 bug too, not only a
+  spike one.
+- `topologyAdapter.ts`: only genuinely room-like nodes (entrance, chambers)
+  get a disc footprint; pass-through waypoints contribute their radius to the
+  surrounding tunnels but no flat disc of their own. Tunnels interpolate their
+  floor, so a corridor built from tunnels stays floor-consistent. The entrance
+  disc is harmless (it is the highest floor in the cave, so the minimum never
+  picks it); a chamber genuinely *is* a flat room.
+
+Repro cave after both: **0 containment leaks**.
+
+### Render mesh vs gameplay proxy (verified, as asked)
+
+They are *not* the same shape and were never meant to be: over 42 centerline
+probes the SDF mesh floor sits on average 0.17 m (worst 0.46 m) **above** the
+proxy floor the player actually stands on, because the proxy is a
+`PROXY_MARGIN`-inflated analytic corridor and the mesh is a noise-displaced
+iso-surface. That remains a deliberate Milestone A simplification (plan §21 —
+collision fidelity is explicitly not under evaluation here); it is a visual
+sink, not a fall-through.
+
+### Known residual (not fixed — bounded, documented)
+
+Because the entrance is a fixed anchor and the sink is uniform, the whole
+extra descent lands on the 4 m first segment. On steep hillsides needing a
+large sink (2 of 12 surveyed seeds: 555 → 3.7 m, 7 → 2.8 m) that ramp gets
+steep enough that the flat end cap at its bottom sits more than `FLOOR_GRACE`
+below the corridor, so those seeds keep a small pop-out patch near the mouth.
+The repro seed and the other 10 are clean. The real fix is the Milestone B
+question the plan already defers (§17): a Y-aware floor query returning an
+interval set instead of `Math.min`. Recorded in `docs/plans/LOOSE-ENDS.md`.
+
+None of this changes the representation comparison itself: causes 1 and 2 are
+SDF-specific presentation bugs, cause 3 is in the shared topology (identical
+for both variants), cause 4 is in the shared walkable proxy.
+
+---
+
 ## 2. Technical results
 
 Both variants ran against the shared test topology (seed 42, a representative
 accepted entrance, ~24.5 m route length by construction — within the plan's
 20–30 m band).
+
+> These numbers predate the 2026-09-05 fixes in §1b. The terrain sink does not
+> change geometry size, and the below-surface clip removes only the handful of
+> triangles that stood above the meadow (~1 % of the SDF mesh: 7 948 → 7 861
+> triangles on the repro cave). The Sweep/SDF ratios below are unaffected;
+> they were not re-benchmarked.
 
 | | Sweep | SDF |
 |---|---|---|

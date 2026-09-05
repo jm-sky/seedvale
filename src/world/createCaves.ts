@@ -115,6 +115,10 @@ export function createCaves(
   // one cave only, deleted (along with `caveSpikeVariant()`) after the
   // architecture decision gate. See implementation notes "Shared Comparison
   // Harness".
+  // Deterministic analytic surface — `sampleHeight` reads the chunk tile once
+  // a chunk is resident, so the spike geometry would otherwise depend on
+  // streaming order (it is built on activation, not at world build).
+  const spikeSurfaceHeight = (x: number, z: number): number => chunkManager.sampleBaseHeight(x, z)
   const spikeVariant = caveSpikeVariant()
   const spikeTarget = spikeVariant ? definitions[0] : undefined
   let spikeTopology: CaveTopology | undefined
@@ -122,13 +126,15 @@ export function createCaves(
   if (spikeVariant && !spikeTarget) {
     console.warn('[caveSpike] no cave definitions accepted for this seed — try a different ?seed=')
   } else if (spikeVariant && spikeTarget) {
-    spikeTopology = buildSpikeTestTopology(seed, spikeTarget.entrance)
+    spikeTopology = buildSpikeTestTopology(seed, spikeTarget.entrance, { surfaceHeightAt: spikeSurfaceHeight })
     spikeDef = topologyToCaveDefinition(spikeTopology)
     console.log(
       `[caveSpike] variant=${spikeVariant} caveId=${spikeTarget.caveId} entrance=(${spikeTarget.entrance.x.toFixed(1)}, ${spikeTarget.entrance.z.toFixed(1)})`,
     )
     const build = (): ReturnType<typeof buildSweepCaveMesh> | ReturnType<typeof buildSdfCaveMesh> =>
-      spikeVariant === 'sweep' ? buildSweepCaveMesh(spikeTopology!) : buildSdfCaveMesh(spikeTopology!)
+      spikeVariant === 'sweep'
+        ? buildSweepCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
+        : buildSdfCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
     const sample = runMedianOfN(build, 5)
     sample.geometry.dispose()
     reportCaveSpikeMetrics(sample.metrics)
@@ -176,7 +182,9 @@ export function createCaves(
       // Built fresh on every activation (not cached) — `deactivate()` disposes
       // the group's geometry, so a shared/cached spike mesh would render
       // nothing (or throw) on the next activation.
-      const built = spikeVariant === 'sweep' ? buildSweepCaveMesh(spikeTopology!) : buildSdfCaveMesh(spikeTopology!)
+      const built = spikeVariant === 'sweep'
+        ? buildSweepCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
+        : buildSdfCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
       const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial(spikeVariant ?? 'sweep'))
       mesh.name = `cave-interior-spike:${def.caveId}`
       mesh.receiveShadow = true

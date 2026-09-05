@@ -58,7 +58,7 @@ const MAX_DESCENT = 8
 
 /** Minimum surface-to-ceiling clearance (metres) required to accept a
  *  candidate point; the entrance node itself is exempt (that's the opening). */
-const MIN_OVERBURDEN = 1.4
+export const MIN_OVERBURDEN = 1.4
 /** How many points along a tunnel span get overburden-checked. */
 const OVERBURDEN_SAMPLES = 4
 /** Fraction of a tunnel the strict `MIN_OVERBURDEN` check starts at — the
@@ -71,11 +71,11 @@ const OVERBURDEN_MOUTH_SKIP = 0.35
  *  at the mouth, so no interior geometry may stand above the terrain past it.
  *  The leading section used to be exempt entirely, which is what let the
  *  tunnel arch break through the meadow past the carved mouth. */
-const MOUTH_ROOF_MIN = 0.35
+export const MOUTH_ROOF_MIN = 0.35
 /** Where the leading-section check starts, measured from the tunnel's own
  *  start: just past the carved mouth footprint, which *is* the opening and so
  *  is legitimately roofless. */
-const MOUTH_FOOTPRINT_MARGIN = MOUTH_RADIUS + 0.35
+export const MOUTH_FOOTPRINT_MARGIN = MOUTH_RADIUS + 0.35
 
 export type CaveGeneratorInput = LargeCavePlacementInput
 

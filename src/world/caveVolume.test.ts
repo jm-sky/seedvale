@@ -75,6 +75,28 @@ describe('createCaveVolume', () => {
     expect(volume.contains(0, 40, 6)).toBe(false)
   })
 
+  // Regression (plan world-terrain-008, 2026-09-05 repro): `sampleFloor`
+  // collapses overlapping primitives to their minimum, so an entity standing
+  // on the floor this very query reported can end up below the *local*
+  // primitive's floor one step later. `contains` used to reject it, which made
+  // `PlayerController.groundAt()` fall back to the surface heightfield and
+  // teleport the player out of the cave onto the hillside.
+  it('keeps an entity standing on the reported floor contained at every adjacent point', () => {
+    const definition = buildSimpleCave()
+    const volume = createCaveVolume(definition)
+    const step = 0.1
+    for (let x = -6; x <= 6; x += step) {
+      for (let z = -3; z <= 18; z += step) {
+        const floor = volume.sampleFloor(x, z)
+        if (floor === null) continue
+        for (const [dx, dz] of [[step, 0], [-step, 0], [0, step], [0, -step]] as const) {
+          if (volume.sampleFloor(x + dx, z + dz) === null) continue
+          expect(volume.contains(x + dx, floor, z + dz)).toBe(true)
+        }
+      }
+    }
+  })
+
   it('floor sampling is deterministic', () => {
     const a = volume.sampleFloor(0, 6)
     const b = volume.sampleFloor(0, 6)

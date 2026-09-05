@@ -1008,6 +1008,60 @@ Additional facts the plan does not state:
 
 ---
 
+## Post-Spike Findings (2026-09-05 SDF repro)
+
+Recorded after a focused recon on `?seed=1922931019&caveSpike=sdf`, cave
+`cave:641d64fc` (entrance x = -425.1383787947449, z = 153.05214273497208).
+Full write-up, measurements and fixes: `docs/design/caves/04-sweep-vs-sdf-spike-results.md` §1b.
+Corrections to what these notes assumed:
+
+- **"Do not change `CaveVolume` at all" no longer holds.** `contains` was
+  asymmetric with `sampleFloor`: the accessors collapse overlapping primitives
+  to the *minimum* floor, `contains` gated on one primitive's own floor, so an
+  entity standing on the floor the query itself reported was rejected one step
+  later and `PlayerController.groundAt()` handed it the surface (9 909 such
+  cells on the repro cave). `contains` now tests one span per `(x, z)` —
+  `[min floor - FLOOR_GRACE, max ceiling]`. This is a **V1 bug as well**, not a
+  spike artefact; the "One trap worth knowing" section above describes the
+  symptom (surface snap) but attributed it only to walking *outside* the proxy.
+- **Flat primitives on a descending corridor are the mechanism.** Both a
+  `CaveNode` disc and a `CaveTunnel`'s end cap (`projectOntoSegment` clamps
+  `t`, so tunnels are stadiums with flat-floored round caps) report one floor
+  across their whole radius. `topologyToCaveDefinition` now gives a disc only
+  to the entrance and to real chambers; pass-through waypoints size the
+  tunnels around them but contribute no disc.
+- **`buildSpikeTestTopology` was terrain-blind**, and V1's acceptance path does
+  not cover it: `tunnelOverburdenOk` validates V1's own straight tunnel, not
+  the spike's longer bent route, so 8 of 12 surveyed seeds had spike ceiling
+  above the surface past the mouth footprint. It now takes an optional
+  `surfaceHeightAt` and sinks the interior uniformly, checked over the full
+  walkable cross-section (not the centerline) at 0.5 m intervals.
+  `MIN_OVERBURDEN` / `MOUTH_ROOF_MIN` / `MOUTH_FOOTPRINT_MARGIN` are exported
+  from `caveGenerator.ts` for this; `spikeOverburdenRequirement()` is the one
+  place that rule lives.
+- **An implicit field has no free portal.** V1 (`caveMesh.ts`) and Sweep
+  (`capStart: false`) leave the mouth arch open; the SDF iso-surface is closed
+  and capped the entrance into a dome. Fixed by clipping presentation geometry
+  at the deterministic analytic surface (`clipBelowSurface.ts`, fed
+  `chunkManager.sampleBaseHeight` — **never `sampleHeight`**, which reads a
+  chunk tile once resident and would make activation-time geometry depend on
+  streaming order).
+- **`extractSurfaceNets` did not track quad winding**, leaving ~half the faces
+  back-facing; with `DoubleSide` + `flatShading` three.js flips the derived
+  normal by `gl_FrontFacing`, so those faces render black. This is the "black
+  sphere", not a lighting or camera problem.
+- **The 2026-09-05 camera patch is unrelated to all of the above** and was
+  correctly scoped: none of these four causes is a camera issue.
+- **Spike file count grew to eight** (`clipBelowSurface.ts` +
+  `caveSurfaceIntegration.test.ts`). Still all under `src/world/caves/` except
+  the two sanctioned touch points, plus the now-justified `caveVolume.ts` fix
+  and three constant exports in `caveGenerator.ts`.
+- **New test entry point:** `src/world/caves/caveSurfaceIntegration.test.ts`
+  reproduces the world's terrain analytically (`createBenchmarkWorldConfig` +
+  `sampleHeightAt` with `ChunkManager`'s own `RawSampleParams`) — the pattern
+  to copy for any future deterministic seed-specific cave regression, no
+  `ChunkManager` and no browser needed.
+
 ## Open Decisions After Spike
 
 Deliberately left open — record them in
