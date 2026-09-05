@@ -72,6 +72,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `fauna-014-animal-traps-bait-attraction-and-species-coverage.md`         | -       | 🟡 | M      | fauna-010 |
 | 💡 `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | -       | 🔴 | M      | world-terrain-010 |
+| ◼️ `fauna-015-animal-water-traversal-wading-swimming-and-drowning.md`       | -       | 🟡 | M      | fauna-010 |
 
 ---
 
@@ -159,7 +160,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `015`
+- fauna: `016`
 - items-player: `017`
 - npc: `018`
 - persistence: `005`
