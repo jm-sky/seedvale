@@ -71,7 +71,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
 | 💡 `world-terrain-012-macro-meadow-variation.md`                            | -       | 🟡 | S      | -      |
-| ◼️ `world-016-ambient-soundscape-events-and-lake-frogs.md`                  | -       | 🟡 | M      | ~~world-006~~, ~~ui-input-006~~ |
+| 💡 `world-016-ambient-soundscape-events-and-lake-frogs.md`                  | -       | 🟡 | M      | ~~world-006~~, ~~ui-input-006~~ |
 | ◼️ `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md`   | -       | 🟡 | L      | fauna-015 |
 | 💡 `world-terrain-014-weather-driven-cloud-variety-and-ground-fog.md`       | -       | 🟡 | M      | ~~world-terrain-001~~ |
 
