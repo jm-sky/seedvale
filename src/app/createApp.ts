@@ -1673,6 +1673,7 @@ export async function createApp(
     seed: config.seed,
     terrainResolution: config.terrain.resolution,
     loadRadius: config.terrain.loadRadius,
+    grassMacroVariation: config.terrain.grass.macroVariationEnabled,
     geometries: renderer.info.memory.geometries,
     textures: renderer.info.memory.textures,
     // Reproducibility fields (plan tools-001 §4) — only meaningful/populated

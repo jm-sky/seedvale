@@ -73,7 +73,7 @@ function terrainWithRoadDefaults(): WorldConfig['terrain'] {
         regionalHeightStrengthMountain: 0.15,
       },
     },
-    grass: { enabled: true, radius: 2, density: 120000 },
+    grass: { enabled: true, radius: 2, density: 120000, macroVariationEnabled: true },
     detailNormal: {
       enabled: true,
       strength: 3,
@@ -112,6 +112,19 @@ describe('applyStoredTerrain', () => {
     expect(rn.potholeThreshold).toBe(0.72)
     expect(rn.meanderAmplitude).toBe(2)
     expect(rn.meanderScale).toBe(0.04)
+  })
+
+  it('keeps the macroVariationEnabled default when stored grass config predates world-terrain-012', () => {
+    const terrain = terrainWithRoadDefaults()
+
+    applyStoredTerrain(terrain, {
+      grass: { enabled: true, radius: 2, density: 90000 } as NonNullable<
+        Parameters<typeof applyStoredTerrain>[1]
+      >['grass'],
+    })
+
+    expect(terrain.grass.density).toBe(90000)
+    expect(terrain.grass.macroVariationEnabled).toBe(true)
   })
 })
 

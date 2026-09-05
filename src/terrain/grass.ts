@@ -55,6 +55,8 @@ export type GrassSystem = {
     /** Raw position candidates rolled before eligibility/density rejection —
      *  the GUI-exposed "density" knob (`config.terrain.grass.density`). */
     candidatesPerChunk: number,
+    /** `config.terrain.grass.macroVariationEnabled` (world-terrain-012). */
+    macroVariationEnabled: boolean,
     region: RegionParams,
     riverSegments: RiverChannelSegment[],
   ) => WorldGrassChunk | null
@@ -615,6 +617,7 @@ export function createGrassSystem(): GrassSystem {
     heightScale: number,
     seed: number,
     candidatesPerChunk: number,
+    macroVariationEnabled: boolean,
     region: RegionParams,
     riverSegments: RiverChannelSegment[],
   ): WorldGrassChunk | null {
@@ -628,6 +631,7 @@ export function createGrassSystem(): GrassSystem {
         heightScale,
         seed,
         candidatesPerChunk,
+        macroVariationEnabled,
         region,
         riverSegments,
       },

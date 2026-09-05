@@ -364,6 +364,9 @@ export type ChunkManagerConfig = {
     /** Raw position candidates rolled per chunk before eligibility/density
      *  rejection — the GUI "density" knob. */
     density: number
+    /** Deterministic macro meadow colour variation (world-terrain-012) —
+     *  threaded straight into `GrassRequestParams.macroVariationEnabled`. */
+    macroVariationEnabled: boolean
   }
   /** Close-up surface grain on the chunk material (`buildChunkGeometry.ts`). */
   detailNormal: DetailNormalConfig
@@ -1149,6 +1152,7 @@ export function createChunkManager(
       heightScale: config.heightScale,
       seed: config.seed,
       candidatesPerChunk: config.grass.density,
+      macroVariationEnabled: config.grass.macroVariationEnabled,
       region: config.region,
       riverSegments: record.riverChains
         ? riverChannelSegmentsNear(record.riverChains, x, z, config.chunkSize)

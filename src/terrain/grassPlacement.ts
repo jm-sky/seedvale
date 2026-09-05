@@ -42,6 +42,12 @@ export type GrassComputeParams = {
   /** Raw position candidates rolled before eligibility/density rejection —
    *  the GUI-exposed "density" knob (`config.terrain.grass.density`). */
   candidatesPerChunk: number
+  /** Deterministic macro (~30-80 m) meadow colour variation (world-terrain-012,
+   *  `config.terrain.grass.macroVariationEnabled`) — `false` skips sampling
+   *  `macroMeadowWeightAt()` entirely (not just multiplies it by zero) so the
+   *  benchmark toggle measures the real incremental generation cost, and
+   *  reproduces the pre-012 tint path exactly. */
+  macroVariationEnabled: boolean
   region: RegionParams
   /** River channel carving segments near this chunk — same source/shape as
    *  `ChunkTileParams.riverSegments` — used to reject candidates that fall
@@ -101,6 +107,10 @@ const ARID_GRASS = new THREE.Color(0x8a8848)
 const HUMID_GRASS = new THREE.Color(0x4a8a38)
 /** Swamp tint — darker, more olive than even `HUMID_GRASS`. */
 const SWAMP_GRASS = new THREE.Color(0x3f5230)
+/** Dry/yellow macro meadow tint (world-terrain-012) — blended toward by
+ *  `macroMeadowWeightAt()`, independent of the arid/humid/swamp biome lerp
+ *  above so a humid, well-watered spot can still roll a dry-looking patch. */
+const DRY_MEADOW_GRASS = new THREE.Color(0xb0a24a)
 
 /** Per-vertex gradient along a blade: base stays shaded, tip only slightly
  *  brighter than the tint (not a glowing highlight). */
@@ -118,6 +128,13 @@ const SPECIES_PATCH_FBM: FbmParams = { octaves: 2, persistence: 0.5, lacunarity:
 const SPECIES_BAND_HALF_WIDTH = 0.12
 /** Species A sub-mix: tri-cluster vs. grain stalk, "proporcje 3:1". */
 const GRAIN_RATIO = 0.25
+
+/** World-terrain-012 macro meadow signal — deliberately lower frequency than
+ *  `SPECIES_PATCH_SCALE` and salted independently (`macroMeadowNoiseFor()`) so
+ *  meadow-colour regions don't align with species patches. Targets the
+ *  ~30-80 m organic-region scale called for by the plan. */
+const MACRO_MEADOW_SCALE = 0.09
+const MACRO_MEADOW_FBM: FbmParams = { octaves: 2, persistence: 0.5, lacunarity: 2, exponentiation: 1 }
 
 // Short — herb sits low, close to the ground, rather than standing up like
 // the grass blades (see also HERB_CURVE_STRENGTH's outward droop, `grass.ts`).
@@ -274,18 +291,58 @@ function speciesNoiseFor(seed: number): ReturnType<typeof createNoise2D> {
   return noise
 }
 
+// Own per-seed noise handle for the macro meadow signal (world-terrain-012) —
+// a distinct salt from `speciesNoiseFor` so meadow colour regions don't
+// correlate with tri/grain/herb patch placement.
+const macroMeadowNoiseCache = new Map<number, ReturnType<typeof createNoise2D>>()
+/** Exported for `grassPlacement.test.ts` alongside `macroMeadowWeightAt` —
+ *  not otherwise called outside this module. */
+export function macroMeadowNoiseFor(seed: number): ReturnType<typeof createNoise2D> {
+  let noise = macroMeadowNoiseCache.get(seed)
+  if (!noise) {
+    noise = createNoise2D(createSeededRandom(seed ^ 0xbb67ae85))
+    macroMeadowNoiseCache.set(seed, noise)
+  }
+  return noise
+}
+
+/** Deterministic macro meadow blend weight in `[0, 1]` for world position
+ *  `(wx, wz)` — one low-frequency FBM sample, continuous across chunk
+ *  boundaries since it's evaluated in world space. `0` reads as the existing
+ *  green appearance, `1` as fully dry/yellow; callers lerp `tintColor` by
+ *  this weight so the boundary blends continuously instead of a hard edge.
+ * @domain world-terrain
+ */
+export function macroMeadowWeightAt(wx: number, wz: number, noise: ReturnType<typeof createNoise2D>): number {
+  return fbm01(noise, wx * MACRO_MEADOW_SCALE, wz * MACRO_MEADOW_SCALE, MACRO_MEADOW_FBM)
+}
+
 /** Deterministic from `(seed, cx, cz)` + the passed-in grids — safe to call
  *  on the main thread or inside a worker. Bit-for-bit identical to the
  *  generation this replaced in `grass.ts` (see `grassPlacement.test.ts`). */
 export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGrids): GrassChunkData {
-  const { cx, cz, chunkSize, resolution, waterLevel, heightScale, seed, candidatesPerChunk, region, riverSegments } =
-    params
+  const {
+    cx,
+    cz,
+    chunkSize,
+    resolution,
+    waterLevel,
+    heightScale,
+    seed,
+    candidatesPerChunk,
+    macroVariationEnabled,
+    region,
+    riverSegments,
+  } = params
   const o = apronOriginWorld(cx, cz, chunkSize, resolution)
   const sample = (grid: Float32Array, x: number, z: number) =>
     sampleApronGrid(grid, o.apronRes, o.x, o.z, o.step, x, z)
 
   const random = createSeededRandom(seed ^ hashChunk(cx, cz) ^ 0x9f2c3b)
   const speciesNoise = speciesNoiseFor(seed)
+  // Only resolved when the flag is on — the disabled benchmark baseline must
+  // not pay for a noise handle/sample it never uses (world-terrain-012).
+  const macroNoise = macroVariationEnabled ? macroMeadowNoiseFor(seed) : null
   const half = chunkSize / 2
 
   // Start small (`createBucket`'s `BUCKET_INITIAL_FRACTION`) and grow on
@@ -357,6 +414,11 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
 
     tmpColor.copy(ARID_GRASS).lerp(HUMID_GRASS, moisture)
     if (biome.swamp > 0) tmpColor.lerp(SWAMP_GRASS, biome.swamp)
+    // Macro meadow tint (world-terrain-012) — before the per-instance HSL
+    // jitter in `pushInstance()` so the broad region reads clearly while
+    // individual blades still vary; doesn't consume `random()`, so this has
+    // no effect on which candidates survive or their blade params below.
+    if (macroNoise) tmpColor.lerp(DRY_MEADOW_GRASS, macroMeadowWeightAt(wx, wz, macroNoise))
 
     // Large-scale patch roll: which species does this candidate belong to?
     // Independent of the density roll above so patch shape doesn't correlate
@@ -429,6 +491,9 @@ export function computeChunkGrass(params: GrassComputeParams, grids: GrassTileGr
 
     tmpColor.copy(ARID_GRASS).lerp(HUMID_GRASS, moisture)
     if (biome.swamp > 0) tmpColor.lerp(SWAMP_GRASS, biome.swamp)
+    // Same macro meadow tint as the main pass, so filler blades don't read as
+    // a different colour than the detailed grass around them at a boundary.
+    if (macroNoise) tmpColor.lerp(DRY_MEADOW_GRASS, macroMeadowWeightAt(wx, wz, macroNoise))
     tmpColor.multiplyScalar(FILLER_DARKEN)
 
     pushInstance(

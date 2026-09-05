@@ -162,6 +162,7 @@ export function formatReport(report: PerfReportJson): string {
     ctx.weather ? `  weather: ${ctx.weather}` : null,
     ctx.terrainResolution != null ? `  terrainResolution: ${ctx.terrainResolution}` : null,
     ctx.loadRadius != null ? `  loadRadius: ${ctx.loadRadius}` : null,
+    ctx.grassMacroVariation != null ? `  grassMacroVariation: ${ctx.grassMacroVariation ? 'ON' : 'OFF'}` : null,
     ctx.viewportWidth != null && ctx.viewportHeight != null ? `  viewport: ${ctx.viewportWidth}x${ctx.viewportHeight}` : null,
     ctx.scenarioAnchor ? `  anchor: (${round1(ctx.scenarioAnchor.x)}, ${round1(ctx.scenarioAnchor.z)})` : null,
     ctx.route ? `  route: start=(${round1(ctx.route.startX)}, ${round1(ctx.route.startZ)}) speed=${ctx.route.speedMps} m/s duration=${ctx.route.durationSec}s` : null,

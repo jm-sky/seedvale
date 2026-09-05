@@ -92,6 +92,11 @@ export type PerfContext = {
   viewportHeight?: number
   scenarioAnchor?: ScenarioAnchor
   route?: ScenarioRoute
+  /** `config.terrain.grass.macroVariationEnabled` (world-terrain-012) — recorded
+   *  so an A/B benchmark export self-identifies which side of the comparison
+   *  it captured, per the plan's requirement that OFF/ON captures can't be
+   *  confused later. */
+  grassMacroVariation?: boolean
 }
 
 export type HitchReportRow = {

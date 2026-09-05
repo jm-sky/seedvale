@@ -1,7 +1,7 @@
 # Plan: Macro meadow variation
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Priority:** medium · **Effort:** S
 **Depends on:** none
 **Domain:** `world-terrain`

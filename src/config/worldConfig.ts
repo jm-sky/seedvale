@@ -84,6 +84,12 @@ export type WorldConfig = {
       /** Raw position candidates rolled per chunk before eligibility/density
        *  rejection — higher reads as thicker grass. */
       density: number
+      /** Deterministic macro (~30-80 m) meadow colour variation (world-terrain-012)
+       *  — blends the existing grass tint toward a drier/yellower meadow
+       *  appearance over broad world-space regions. `false` reproduces the
+       *  pre-012 placement/colour path exactly and is the A/B benchmark
+       *  baseline; does not affect density, positions or draw calls. */
+      macroVariationEnabled: boolean
     }
     /** Close-up surface grain on the terrain — a tileable detail normal map
      *  (`terrain/terrainDetailNormalMap.ts`), no displacement. */
@@ -274,6 +280,7 @@ function baseConfig(seed: number, resolution: number): WorldConfig {
         // High visual density is intentional (sparse grass looks wrong); the
         // cost is controlled by `radius` + distance LOD, not by starving this.
         density: 120000,
+        macroVariationEnabled: true,
       },
       detailNormal: {
         enabled: true,
@@ -441,6 +448,9 @@ export function applyStoredTerrain(
     if (typeof t.grass.enabled === 'boolean') target.grass.enabled = t.grass.enabled
     if (typeof t.grass.radius === 'number') target.grass.radius = t.grass.radius
     if (typeof t.grass.density === 'number') target.grass.density = t.grass.density
+    if (typeof t.grass.macroVariationEnabled === 'boolean') {
+      target.grass.macroVariationEnabled = t.grass.macroVariationEnabled
+    }
   }
   // Values ≥ loadRadius are a dead knob (chunks don't exist beyond it) and
   // accidentally put grass on every loaded chunk with no hysteresis. Leave one

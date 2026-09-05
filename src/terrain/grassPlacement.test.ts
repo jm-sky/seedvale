@@ -5,7 +5,13 @@ import {
   type RawSampleParams,
   type RiverChannelSegment,
 } from './chunkHeightmap'
-import { computeChunkGrass, GRASS_SPECIES_ORDER, type GrassChunkData } from './grassPlacement'
+import {
+  computeChunkGrass,
+  GRASS_SPECIES_ORDER,
+  type GrassChunkData,
+  macroMeadowNoiseFor,
+  macroMeadowWeightAt,
+} from './grassPlacement'
 import { isInsideRiverChannel } from './riverNetwork'
 
 /** Defaults aligned with `worldConfig` base terrain (same values as
@@ -140,6 +146,7 @@ describe('computeChunkGrass', () => {
           heightScale: params.heightScale,
           seed: params.seed,
           candidatesPerChunk: 4000,
+          macroVariationEnabled: false,
           region: params.region,
           riverSegments: params.riverSegments,
         },
@@ -174,6 +181,7 @@ describe('computeChunkGrass', () => {
       heightScale: params.heightScale,
       seed: params.seed,
       candidatesPerChunk: 2000,
+      macroVariationEnabled: false,
       region: params.region,
       riverSegments: params.riverSegments,
     }
@@ -204,6 +212,7 @@ describe('computeChunkGrass', () => {
         heightScale: params.heightScale,
         seed: params.seed,
         candidatesPerChunk: 4000,
+        macroVariationEnabled: false,
         region: params.region,
         riverSegments: params.riverSegments,
       },
@@ -260,6 +269,7 @@ describe('computeChunkGrass', () => {
           heightScale: params.heightScale,
           seed: params.seed,
           candidatesPerChunk: 4000,
+          macroVariationEnabled: false,
           region: params.region,
           riverSegments,
         },
@@ -286,5 +296,69 @@ describe('computeChunkGrass', () => {
     // Sanity: the channel doesn't span the whole chunk, so blades still spawn
     // outside it — an empty result would make the assertion above vacuous.
     expect(totalCount).toBeGreaterThan(0)
+  })
+})
+
+describe('macro meadow variation (world-terrain-012)', () => {
+  it('macroMeadowWeightAt is a pure, bounded function of (seed, wx, wz)', () => {
+    const noise = macroMeadowNoiseFor(42)
+    expect(macroMeadowNoiseFor(42)).toBe(noise) // per-seed handle is cached/reused
+
+    for (const [wx, wz] of [[0, 0], [123.4, -87.6], [-500, 320]] as const) {
+      const a = macroMeadowWeightAt(wx, wz, noise)
+      const b = macroMeadowWeightAt(wx, wz, noise)
+      expect(a).toBe(b)
+      expect(a).toBeGreaterThanOrEqual(0)
+      expect(a).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('samples continuously across a chunk boundary — no seam at the tile edge', () => {
+    const noise = macroMeadowNoiseFor(42)
+    const edgeX = 3 * 64 // boundary between chunk cx=2 and cx=3 (chunkSize 64)
+    const left = macroMeadowWeightAt(edgeX - 0.05, 10, noise)
+    const right = macroMeadowWeightAt(edgeX + 0.05, 10, noise)
+    expect(Math.abs(right - left)).toBeLessThan(0.01)
+  })
+
+  it('leaves placement (positions/rotation/scale/counts) unchanged and only affects colour', () => {
+    const params = tileParams({ cx: 0, cz: 0 })
+    const tile = computeChunkTile(params)
+    const grids = {
+      heights: tile.heights,
+      biomes: tile.biomes,
+      roadTint: tile.roadTint,
+      mountainRidge: tile.mountainRidge,
+      moistureRegion: tile.moistureRegion,
+    }
+    const computeParams = (macroVariationEnabled: boolean) => ({
+      cx: 0,
+      cz: 0,
+      chunkSize: params.chunkSize,
+      resolution: params.resolution,
+      waterLevel: params.waterLevel,
+      heightScale: params.heightScale,
+      seed: params.seed,
+      candidatesPerChunk: 4000,
+      macroVariationEnabled,
+      region: params.region,
+      riverSegments: params.riverSegments,
+    })
+
+    const off = computeChunkGrass(computeParams(false), grids)
+    const on = computeChunkGrass(computeParams(true), grids)
+
+    let colorsDiffer = false
+    for (const id of GRASS_SPECIES_ORDER) {
+      const a = off[id]
+      const b = on[id]
+      expect(a?.count).toBe(b?.count)
+      if (!a || !b) continue
+      expect(Array.from(a.matrices)).toEqual(Array.from(b.matrices))
+      if (!colorsDiffer) {
+        colorsDiffer = Array.from(a.baseColors).some((v, i) => v !== b.baseColors[i])
+      }
+    }
+    expect(colorsDiffer).toBe(true)
   })
 })

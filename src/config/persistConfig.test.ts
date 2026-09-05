@@ -121,7 +121,7 @@ function minimalConfig(): WorldConfig {
           regionalHeightStrengthMountain: 0.15,
         },
       },
-      grass: { enabled: true, radius: 2, density: 120000 },
+      grass: { enabled: true, radius: 2, density: 120000, macroVariationEnabled: true },
       detailNormal: { enabled: true, strength: 3, tilesGrass: 4, tilesBare: 12 },
     },
     sky: { inclination: 0.36, azimuth: 0.25, turbidity: 2.2, rayleigh: 2.4 },

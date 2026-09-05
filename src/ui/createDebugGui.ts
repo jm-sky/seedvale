@@ -560,6 +560,12 @@ export function createDebugGui(
       .name('Density (candidates/chunk)')
       .onFinishChange(handlers.onTerrainChange),
   )
+  terrainControllers.push(
+    grass
+      .add(config.terrain.grass, 'macroVariationEnabled')
+      .name('Macro meadow variation')
+      .onFinishChange(handlers.onTerrainChange),
+  )
 
   // Surface grain (detail normal map). Exposed as sliders on purpose: this
   // effect was previously tuned by editing constants and reloading, which made

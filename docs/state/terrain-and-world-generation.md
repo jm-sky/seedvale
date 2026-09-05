@@ -32,6 +32,7 @@ When this file and the code disagree, the code wins — update this file.
 - Settlement palisade/bushes/barrels/hay are instanced directly via `instancedProps.ts` with no chunk boundaries, so they were explicitly left out of region batching (plan 143). Harvestable settlement trees stay individual (plan 113).
 - Chunk rocks/logs and visible iron/coal/gold deposits use GLB templates with procedural fallbacks.
 - Grass (`src/terrain/grass.ts`/`grassPlacement.ts`) is per-chunk, not region-batched. Each grass chunk carries a cheap "filler" bucket (short, few-fin blades, no per-species geometry LOD) alongside the detailed species buckets; `ChunkManager`'s `grassFillerLodFraction`/`grassFillerCoverage` quality knob (plan world-terrain-005, live, no rebuild) controls how far across the grass ring that filler bucket draws — extending visual grass coverage without raising detailed-species instance count.
+- Macro meadow colour variation (plan world-terrain-012): `computeChunkGrass()` blends the existing biome-lerped grass tint toward a drier/yellower appearance using one low-frequency, world-space FBM sample per candidate (`grassPlacement.ts`'s `macroMeadowWeightAt()`, own noise salt independent of the species-patch signal), applied before the per-instance HSL jitter. Gated by `WorldConfig.terrain.grass.macroVariationEnabled` (GUI: Grass folder) — `false` skips the sample entirely and reproduces the pre-012 colour path exactly; positions/counts/draw calls are unaffected either way.
 
 ## Trees
 
