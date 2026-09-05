@@ -113,6 +113,11 @@ function buildGarden(): void {
   ui.quickActions.onBuildGarden?.()
 }
 
+function hireHelp(): void {
+  closeQuickActions()
+  ui.quickActions.onHireHelp?.()
+}
+
 function plantTree(): void {
   closeQuickActions()
   ui.quickActions.onPlantTree?.()
@@ -216,6 +221,11 @@ const buildActions = computed<Action[]>(() => {
   // "Zleć budowę" (plan npc-014) — always available, no material cost; the
   // reward is chosen after the target is placed, not spent up front.
   list.push({ label: 'Zleć budowę', cost: '', onClick: () => startPlacementPreview('workContract') })
+  // "Zleć pomoc" (plan npc-018 §20) — hires help for an already-existing
+  // unfinished target instead of placing a new one; always visible, same
+  // "no cost up front" shape as "Zleć budowę" — `openHireHelp` itself tells
+  // the player when there is nothing eligible to hire help for.
+  list.push({ label: 'Zleć pomoc', cost: '', onClick: hireHelp })
   return list
 })
 

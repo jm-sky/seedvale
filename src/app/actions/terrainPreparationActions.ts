@@ -13,7 +13,6 @@ import {
   MAX_PREPARATION_DELTA,
   preparationSamplesPerSide,
   type PreparationSize,
-  progressiveHeights,
   resolvePreparationSamples,
   type TerrainPreparationRecord,
   toolSpeedMultiplier,
@@ -338,8 +337,6 @@ export function createTerrainPreparationActions(
     const completedWork = work.completedWorkAtStart + (work.requiredWork - work.completedWorkAtStart) * clamped
     applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', Math.max(0, completedWork - previousCompletedWork))
     bundle.terrainPreparations.setCompletedWork(work.id, completedWork)
-    const heights = progressiveHeights(entry.originalHeights, entry.targetHeight, completedWork / entry.requiredWork)
-    bundle.chunkManager.applyExactHeights(work.id, heights)
   }
 
   const stopActiveWork = (): void => {

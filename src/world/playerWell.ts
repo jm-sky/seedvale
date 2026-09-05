@@ -188,6 +188,23 @@ export function advanceWellConstruction(params: {
   return { status: 'advanced', stage, enteredNewStage }
 }
 
+const WELL_STAGE_ORDER: readonly WellStage[] = ['pit', 'well', 'roof']
+
+/** All useful construction work still required to finish `record` — not
+ *  just the unfinished work of its current stage (plan npc-018 §12). The
+ *  single authority a Work Contract's remaining-work snapshot reads;
+ *  `wellStageWorkHours` (this module's own stage-requirement authority)
+ *  stays the source for every stage's cost, so this can never drift from
+ *  the player's/NPC's own progress rules. */
+export function wellRemainingWork(record: PlayerWellRecord): number {
+  const currentIndex = WELL_STAGE_ORDER.indexOf(record.stage)
+  let remaining = Math.max(0, wellStageWorkHours(record.stage, record.waterDepth) - record.workProgress)
+  for (let i = currentIndex + 1; i < WELL_STAGE_ORDER.length; i++) {
+    remaining += wellStageWorkHours(WELL_STAGE_ORDER[i]!, record.waterDepth)
+  }
+  return remaining
+}
+
 const WELL_NEXT_STAGE: Record<WellStage, WellStage | null> = {
   pit: 'well',
   well: 'roof',
@@ -293,7 +310,10 @@ export const WELL_WORK_LABEL: Record<WellStage, string> = {
   roof: 'Budowa daszku w toku…',
 }
 
-function formatHours(hours: number): string {
+/** Generic active-work-hours formatter — whole numbers print bare, anything
+ *  else to one decimal. Shared with Work Contract UI (plan npc-018 §20),
+ *  not well-specific despite living here first. */
+export function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
 }
 

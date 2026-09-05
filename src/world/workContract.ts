@@ -13,6 +13,12 @@
  * keeps `postedBoardId` on the contract itself, and a board's "what's posted
  * here" view is a query over contracts by that field.
  *
+ * Since plan npc-018, a contract owns only the NPC's work *commitment*
+ * (`requestedWorkShare`/`remainingWorkAtCreation`/`committedWork`/
+ * `npcWorkCompleted`) against an existing `ContractTarget` — the target
+ * itself (`PlayerWellRecord`/`TerrainPreparationRecord`) remains the sole
+ * owner of actual progress; player and NPC contribute to the same target.
+ *
  * @domain npc
  */
 export type WorkContractState =
@@ -28,8 +34,8 @@ export type WorkContractState =
 
 export type WorkContractAdvertisement = 'not_posted' | 'posted'
 
-/** First (and for now only) work type — see plan §2. */
-export type WorkType = 'construction'
+/** One entry per `ContractTarget` variant (plan npc-018 §10). */
+export type WorkType = 'construction' | 'terrain_preparation'
 
 /** A concrete, recoverable world target a contract describes work at — never
  *  a display string like "build a well" (plan §3). `targetId` is the stable
@@ -42,9 +48,18 @@ export type ConstructionContractTarget = {
   targetId: string
 }
 
-/** Union of every contract-target shape — one variant per `WorkType`. Only
- *  `ConstructionContractTarget` exists today. */
-export type ContractTarget = ConstructionContractTarget
+/** References an active `TerrainPreparationRecord` (plan npc-018 §14) — same
+ *  "stable id, no display string" shape as `ConstructionContractTarget`.
+ *  `targetId` is the preparation's own `id`; `TerrainPreparationRecord`
+ *  remains the sole owner of its progress/terrain state. */
+export type TerrainPreparationContractTarget = {
+  kind: 'terrain_preparation'
+  targetId: string
+}
+
+/** Union of every contract-target shape — one variant per `WorkType` (plan
+ *  npc-018 §10). */
+export type ContractTarget = ConstructionContractTarget | TerrainPreparationContractTarget
 
 export type WorkContractRecord = {
   id: string
@@ -74,6 +89,30 @@ export type WorkContractRecord = {
   workerNpcId: string | null
   acceptedAt: number | null
   workStartedAt: number | null
+  /** Fraction (0–1] of the target's remaining useful work the NPC was asked
+   *  to perform, chosen at contract creation (plan npc-018 §4/§5). Presets
+   *  are 25/50/75/100% — never renegotiated afterward (plan §5's explicit
+   *  non-goal). */
+  requestedWorkShare: number
+  /** Snapshot of the target's remaining useful work at the moment this
+   *  contract was created (plan §5) — resolved by the target-specific
+   *  remaining-work rule (`wellRemainingWork`/`terrainPreparationRemainingWork`).
+   *  Immutable for the contract's lifetime: never recalculated as the player
+   *  or NPC contribute more work, the target changes stage, or the contract
+   *  is saved/loaded. */
+  remainingWorkAtCreation: number
+  /** `remainingWorkAtCreation * requestedWorkShare` (plan §5) — computed
+   *  exactly once at creation, then frozen for the same reason as
+   *  `remainingWorkAtCreation`. The NPC's work agreement is fulfilled once
+   *  `npcWorkCompleted >= committedWork` (plan §7), independent of whether
+   *  the underlying target itself is finished. */
+  committedWork: number
+  /** Useful work actually accepted by the target from this contract's NPC
+   *  (plan §6) — never inferred from a delta in the target's own total
+   *  progress (the player may also be contributing between NPC bouts).
+   *  Distinct from `remainingWorkAtCreation`/`committedWork`: this is the
+   *  only field that changes after creation. */
+  npcWorkCompleted: number
 }
 
 const TERMINAL_STATES: ReadonlySet<WorkContractState> = new Set(['cancelled', 'completed', 'invalidated'])
@@ -104,20 +143,32 @@ export function noticeBoardId(settlementId: string): string {
   return `noticeBoard:${settlementId}`
 }
 
+/** Work-share presets offered at contract creation (plan §4/§20) — of the
+ *  target's remaining useful work at that moment, never of its total work. */
+export const WORK_SHARE_PRESETS: readonly number[] = [0.25, 0.5, 0.75, 1]
+
 export function createWorkContractRecord(params: {
   id: string
   employer: string
-  targetId: string
+  target: ContractTarget
   x: number
   z: number
   rewardCoins: number
+  /** Fraction (0–1] of `remainingWorkAtCreation` the NPC commits to — see
+   *  `WORK_SHARE_PRESETS`. */
+  requestedWorkShare: number
+  /** The target's remaining useful work *right now*, resolved by the
+   *  caller's target-specific rule (plan §5) — never recomputed here later. */
+  remainingWorkAtCreation: number
   now: number
 }): WorkContractRecord {
+  const requestedWorkShare = Math.max(0, Math.min(1, params.requestedWorkShare))
+  const remainingWorkAtCreation = Math.max(0, params.remainingWorkAtCreation)
   return {
     id: params.id,
     employer: params.employer,
-    workType: 'construction',
-    target: { kind: 'construction', targetId: params.targetId },
+    workType: params.target.kind,
+    target: params.target,
     x: params.x,
     z: params.z,
     rewardCoins: params.rewardCoins,
@@ -129,6 +180,10 @@ export function createWorkContractRecord(params: {
     workerNpcId: null,
     acceptedAt: null,
     workStartedAt: null,
+    requestedWorkShare,
+    remainingWorkAtCreation,
+    committedWork: remainingWorkAtCreation * requestedWorkShare,
+    npcWorkCompleted: 0,
   }
 }
 
@@ -210,4 +265,28 @@ export function releaseWorkContract(record: WorkContractRecord, npcId: string): 
   if (record.state !== 'accepted' && record.state !== 'travelling' && record.state !== 'working') return null
   if (record.workerNpcId !== npcId) return null
   return { ...record, state: 'advertised', workerNpcId: null, acceptedAt: null, workStartedAt: null }
+}
+
+/** True once `record`'s assigned NPC has performed its full agreed share
+ *  (plan §7) — independent of whether the underlying target itself is
+ *  finished. The caller (`NpcAgent`) still separately checks target
+ *  completion (plan §8); either condition ends the contractual work phase. */
+export function isNpcCommitmentFulfilled(record: WorkContractRecord): boolean {
+  return record.npcWorkCompleted >= record.committedWork
+}
+
+/** Credits `workAmount` of useful work actually accepted by the target from
+ *  `record`'s NPC (plan §6/§17) — the only mutation of `npcWorkCompleted`.
+ *  A non-positive amount is a no-op (nothing was actually accepted this
+ *  bout, e.g. the target was already complete). */
+export function recordNpcWorkContribution(record: WorkContractRecord, workAmount: number): WorkContractRecord {
+  if (workAmount <= 0) return record
+  return { ...record, npcWorkCompleted: record.npcWorkCompleted + workAmount }
+}
+
+/** Whether `a`/`b` name the same concrete world target — the one-active-
+ *  contract-per-target check (plan §9) compares against this rather than
+ *  reference equality. */
+export function sameContractTarget(a: ContractTarget, b: ContractTarget): boolean {
+  return a.kind === b.kind && a.targetId === b.targetId
 }

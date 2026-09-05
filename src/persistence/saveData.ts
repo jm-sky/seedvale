@@ -377,11 +377,15 @@ export type SaveWorkContractState =
   | 'invalidated'
 export type SaveWorkContractAdvertisement = 'not_posted' | 'posted'
 export type SaveConstructionContractTarget = { kind: 'construction', targetId: string }
+/** Mirrors `world/workContract.ts`'s `TerrainPreparationContractTarget`
+ *  (plan npc-018 §14). */
+export type SaveTerrainPreparationContractTarget = { kind: 'terrain_preparation', targetId: string }
+export type SaveContractTarget = SaveConstructionContractTarget | SaveTerrainPreparationContractTarget
 export type SaveWorkContract = {
   id: string
   employer: string
-  workType: 'construction'
-  target: SaveConstructionContractTarget
+  workType: 'construction' | 'terrain_preparation'
+  target: SaveContractTarget
   x: number
   z: number
   rewardCoins: number
@@ -397,6 +401,14 @@ export type SaveWorkContract = {
   workerNpcId: string | null
   acceptedAt: number | null
   workStartedAt: number | null
+  /** Shared-work commitment snapshot (plan npc-018 §23) — mirrors
+   *  `world/workContract.ts`'s `WorkContractRecord` fields of the same name.
+   *  Frozen at creation except `npcWorkCompleted`, which only ever grows
+   *  from accepted NPC work bouts. */
+  requestedWorkShare: number
+  remainingWorkAtCreation: number
+  committedWork: number
+  npcWorkCompleted: number
 }
 
 /** Single source of truth for the current persisted schema version
@@ -405,7 +417,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 4
+export const CURRENT_SAVE_VERSION = 5
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1090,6 +1102,8 @@ const WORK_CONTRACT_STATES: ReadonlySet<string> = new Set([
   'accepted', 'advertised', 'available', 'cancelled', 'completed', 'invalidated', 'payment_due', 'travelling', 'working',
 ])
 
+const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set(['construction', 'terrain_preparation'])
+
 function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
   if (!Array.isArray(value)) return false
   return value.every((entry) => {
@@ -1099,9 +1113,9 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
     return (
       typeof c.id === 'string' &&
       typeof c.employer === 'string' &&
-      c.workType === 'construction' &&
+      typeof c.workType === 'string' && WORK_CONTRACT_TARGET_KINDS.has(c.workType) &&
       !!target && typeof target === 'object' &&
-      target.kind === 'construction' &&
+      typeof target.kind === 'string' && WORK_CONTRACT_TARGET_KINDS.has(target.kind) &&
       typeof target.targetId === 'string' &&
       typeof c.x === 'number' &&
       typeof c.z === 'number' &&
@@ -1113,7 +1127,11 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
       (c.postedAt === null || typeof c.postedAt === 'number') &&
       (c.workerNpcId === null || typeof c.workerNpcId === 'string') &&
       (c.acceptedAt === null || typeof c.acceptedAt === 'number') &&
-      (c.workStartedAt === null || typeof c.workStartedAt === 'number')
+      (c.workStartedAt === null || typeof c.workStartedAt === 'number') &&
+      typeof c.requestedWorkShare === 'number' &&
+      typeof c.remainingWorkAtCreation === 'number' &&
+      typeof c.committedWork === 'number' &&
+      typeof c.npcWorkCompleted === 'number'
     )
   })
 }
@@ -1424,6 +1442,36 @@ function migrateSaveV3ToV4(data: unknown): unknown {
   }
 }
 
+/** v4 → v5 (plan npc-018): adds the shared-work commitment snapshot to every
+ *  persisted `SaveWorkContract`. A contract created before this plan had no
+ *  work-share concept at all — the NPC always worked toward the target's
+ *  full completion, never stopping early on its own commitment — so it
+ *  defaults to `requestedWorkShare: 1` with a sentinel-large
+ *  `remainingWorkAtCreation`/`committedWork` that reproduces that exact old
+ *  behaviour (the commitment can never be "fulfilled" before the real
+ *  target completes) rather than guessing a real remaining-work number this
+ *  migration has no way to recompute. `npcWorkCompleted` starts at 0 — pre-
+ *  npc-018 saves never tracked it. Every other field, including contracts
+ *  with no `workContracts` array at all yet, is left untouched. */
+function migrateSaveV4ToV5(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const workContracts = Array.isArray(v.workContracts) ? v.workContracts : []
+  return {
+    ...v,
+    version: 5,
+    workContracts: workContracts.map((entry) => {
+      const c = entry as Record<string, unknown>
+      return {
+        ...c,
+        requestedWorkShare: typeof c.requestedWorkShare === 'number' ? c.requestedWorkShare : 1,
+        remainingWorkAtCreation: typeof c.remainingWorkAtCreation === 'number' ? c.remainingWorkAtCreation : Number.MAX_SAFE_INTEGER,
+        committedWork: typeof c.committedWork === 'number' ? c.committedWork : Number.MAX_SAFE_INTEGER,
+        npcWorkCompleted: typeof c.npcWorkCompleted === 'number' ? c.npcWorkCompleted : 0,
+      }
+    }),
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
@@ -1431,6 +1479,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
   3: migrateSaveV3ToV4,
+  4: migrateSaveV4ToV5,
 }
 
 function detectStoredVersion(value: unknown): number | null {

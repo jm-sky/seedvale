@@ -111,6 +111,10 @@ const validSave: SaveData = {
     workerNpcId: null,
     acceptedAt: null,
     workStartedAt: null,
+    requestedWorkShare: 0.5,
+    remainingWorkAtCreation: 6,
+    committedWork: 3,
+    npcWorkCompleted: 1,
   }],
 }
 
@@ -361,6 +365,30 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     const { waterDepth: _d, waterKind: _k, ...v3Well } = validSave.playerWells[0]!
     const v3Save = { ...validSave, version: 3, playerWells: [v3Well] }
     expect(loadStoredSave(v3Save)).toEqual({ status: 'ok', data: validSave })
+  })
+
+  it('migrates a real v4 save (plan npc-018) into v5, defaulting the new shared-work commitment fields to full-share/never-fulfilled', () => {
+    const {
+      requestedWorkShare: _rs,
+      remainingWorkAtCreation: _rw,
+      committedWork: _cw,
+      npcWorkCompleted: _nc,
+      ...v4Contract
+    } = validSave.workContracts[0]!
+    const v4Save = { ...validSave, version: 4, workContracts: [v4Contract] }
+    expect(loadStoredSave(v4Save)).toEqual({
+      status: 'ok',
+      data: {
+        ...validSave,
+        workContracts: [{
+          ...v4Contract,
+          requestedWorkShare: 1,
+          remainingWorkAtCreation: Number.MAX_SAFE_INTEGER,
+          committedWork: Number.MAX_SAFE_INTEGER,
+          npcWorkCompleted: 0,
+        }],
+      },
+    })
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

@@ -9,26 +9,48 @@ import {
   cancelWorkContract,
   completeContractWork,
   contractHasActiveTarget,
+  type ContractTarget,
   createWorkContractRecord,
   invalidateWorkContract,
   isContractTerminal,
   postWorkContract,
+  recordNpcWorkContribution,
   releaseWorkContract,
+  sameContractTarget,
   type WorkContractRecord,
 } from './workContract'
+
+export type CreateWorkContractParams = {
+  employer: string
+  target: ContractTarget
+  x: number
+  z: number
+  rewardCoins: number
+  /** See `createWorkContractRecord` — a `WORK_SHARE_PRESETS` fraction. */
+  requestedWorkShare: number
+  /** The target's remaining useful work at this exact moment (plan §5) —
+   *  the caller resolves this via the target's own remaining-work rule
+   *  (`wellRemainingWork`/`terrainPreparationRemainingWork`) before calling. */
+  remainingWorkAtCreation: number
+  now: number
+}
 
 export type WorkContracts = {
   list: () => readonly WorkContractRecord[]
   nodes: () => readonly WorkContractRecord[]
   find: (id: string) => WorkContractRecord | undefined
-  /** Creates a new `available`/`not_posted` construction contract at (x, z)
-   *  and spawns its target flag (plan npc-014 §4/§5) — never advertises it,
-   *  never assigns anyone. `targetId` should be the id of the real buildable
-   *  object the caller placed at the same spot (plan npc-015 §7 — today
-   *  always a `PlayerWellRecord`, the "existing world-object domain" NPC
-   *  construction execution resolves against); a caller with no such object
-   *  yet (e.g. a unit test) may omit it and get a synthetic placeholder id. */
-  create: (employer: string, x: number, z: number, rewardCoins: number, now: number, targetId?: string) => WorkContractRecord
+  /** True if `target` already has a non-terminal contract (plan §9) — at
+   *  most one active contract per target; callers use this to gate contract
+   *  creation before ever calling `create`. */
+  hasActiveContract: (target: ContractTarget) => boolean
+  /** Creates a new `available`/`not_posted` contract referencing `params.target`
+   *  and spawns its target flag (plan npc-014 §4/§5, extended by npc-018 §2/§4)
+   *  — never advertises it, never assigns anyone. `params.target` must already
+   *  be a real, independently-existing world object (a `PlayerWellRecord` or
+   *  `TerrainPreparationRecord`) placed by the caller, never a placeholder.
+   *  Returns `null` if `target` already has a non-terminal contract
+   *  (plan §9's one-active-contract-per-target invariant). */
+  create: (params: CreateWorkContractParams) => WorkContractRecord | null
   /** Posts `id` at `boardId` — returns the updated record, or `null` if
    *  `id` is unknown or `canPostContract` rejects it (plan §8/§9). */
   post: (id: string, boardId: string, now: number) => WorkContractRecord | null
@@ -65,6 +87,12 @@ export type WorkContracts = {
   beginWork: (id: string, npcId: string, now: number) => WorkContractRecord | null
   /** `working` → `payment_due` (plan §7/§11). Same guards as `beginTravel`. */
   completeWork: (id: string, npcId: string) => WorkContractRecord | null
+  /** Credits `workAmount` of useful work `npcId` actually got accepted by the
+   *  target (plan §6/§17) — the only mutation of `npcWorkCompleted`. `null`
+   *  if `id` is unknown, not currently `working`, or `npcId` isn't its
+   *  assigned worker; a non-positive `workAmount` is a no-op that still
+   *  returns the current record. */
+  creditNpcWork: (id: string, npcId: string, workAmount: number) => WorkContractRecord | null
   /** Releases `npcId`'s commitment back to `advertised` without touching the
    *  posting (plan §10/§12) — genuine abandonment (the worker died, or can
    *  no longer fulfil it), never a temporary interruption. `false` if `id`
@@ -74,7 +102,6 @@ export type WorkContracts = {
 }
 
 let nextWorkContractId = 0
-let nextConstructionTargetId = 0
 
 /** A simple pole + flag marker — no dedicated notice/quest-marker asset
  *  exists yet (`docs/assets/MODELS.md` convention: procedural until one is
@@ -141,15 +168,23 @@ export function createWorkContracts(
     list: () => records,
     nodes: () => records,
     find: (id) => records.find((r) => r.id === id),
-    create(employer, x, z, rewardCoins, now, targetId) {
+    hasActiveContract: (target) =>
+      records.some((r) => !isContractTerminal(r.state) && sameContractTarget(r.target, target)),
+    create(params) {
+      const alreadyActive = records.some(
+        (r) => !isContractTerminal(r.state) && sameContractTarget(r.target, params.target),
+      )
+      if (alreadyActive) return null
       const record = createWorkContractRecord({
         id: `workContract:${Date.now()}:${nextWorkContractId++}`,
-        employer,
-        targetId: targetId ?? `contractTarget:${Date.now()}:${nextConstructionTargetId++}`,
-        x,
-        z,
-        rewardCoins,
-        now,
+        employer: params.employer,
+        target: params.target,
+        x: params.x,
+        z: params.z,
+        rewardCoins: params.rewardCoins,
+        requestedWorkShare: params.requestedWorkShare,
+        remainingWorkAtCreation: params.remainingWorkAtCreation,
+        now: params.now,
       })
       records.push(record)
       spawnFlag(record)
@@ -225,6 +260,15 @@ export function createWorkContracts(
       if (!updated) return false
       records[index] = updated
       return true
+    },
+    creditNpcWork(id, npcId, workAmount) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      const record = records[index]!
+      if (record.state !== 'working' || record.workerNpcId !== npcId) return null
+      const updated = recordNpcWorkContribution(record, workAmount)
+      records[index] = updated
+      return updated
     },
     dispose() {
       for (const flag of flags.values()) {

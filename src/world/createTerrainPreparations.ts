@@ -16,11 +16,25 @@ export type TerrainPreparations = {
    *  terrain overlay (plan §4/§8) — the caller has already validated and
    *  computed the full record. */
   place: (record: TerrainPreparationRecord) => TerrainPreparationEntry
-  /** Pure bookkeeping — never changes the mesh/marker. The caller is
-   *  responsible for pushing the matching progressive heights into
-   *  `chunkManager` itself (`app/actions/terrainPreparationActions.ts`
-   *  ticks both together every frame). */
+  /** Sets absolute `completedWork` and pushes the matching progressive
+   *  heights into `chunkManager` in the same step (plan npc-018 §15 folded
+   *  this in — every caller immediately re-derived and pushed heights
+   *  anyway, so this is no longer split across two calls). Never changes
+   *  the mesh/marker. */
   setCompletedWork: (id: string, completedWork: number) => boolean
+  /** Actor-neutral work contribution (plan npc-018 §15) — clamps `workAmount`
+   *  to the target's actual remaining work, applies it through
+   *  `setCompletedWork`, and reports what was actually accepted plus whether
+   *  this call finished the preparation. `null` if `id` is unknown. The
+   *  caller (a Work Contract's NPC execution) credits only the returned
+   *  `acceptedWork`, never the requested amount. */
+  contributeWork: (id: string, workAmount: number) => { acceptedWork: number, completed: boolean } | null
+  /** True once `id` has reached `requiredWork`, even after its record was
+   *  since removed (plan npc-018 §16) — the only way to distinguish
+   *  "completed, so no longer active" from "invalidated/never existed" once
+   *  `find(id)` returns `undefined`. Session-lifetime only, never persisted:
+   *  a save only ever contains still-active preparations. */
+  wasCompleted: (id: string) => boolean
   /** Removes the marker (completion or, in principle, abandonment) — does
    *  *not* touch the terrain heights already written into `chunkManager`;
    *  the caller decides whether to bake final heights first. */
@@ -35,7 +49,11 @@ export type TerrainPreparations = {
  * only the temporary marker prop; the terrain shaping itself lives in
  * `ChunkManager`'s own exact-height overlay (`applyExactHeights`), reapplied
  * here on construction so a chunk that streams in later (or a restored save)
- * shows the preparation's current progress immediately.
+ * shows the preparation's current progress immediately. `contributeWork` is
+ * the actor-neutral seam (plan npc-018 §15) an NPC's Work Contract execution
+ * shares with the player's own progress push — both ultimately route through
+ * `applyProgress` so `completedWork`/heights/`wasCompleted` can never drift
+ * between the two callers.
  */
 export function createTerrainPreparations(
   scene: Scene,
@@ -44,6 +62,14 @@ export function createTerrainPreparations(
   initial: readonly TerrainPreparationRecord[] = [],
 ): TerrainPreparations {
   const entries: TerrainPreparationEntry[] = []
+  const completedIds = new Set<string>()
+
+  const applyProgress = (entry: TerrainPreparationEntry, completedWork: number): void => {
+    entry.completedWork = Math.max(0, completedWork)
+    const progress = entry.requiredWork > 0 ? entry.completedWork / entry.requiredWork : 1
+    chunkManager.applyExactHeights(entry.id, progressiveHeights(entry.originalHeights, entry.targetHeight, progress))
+    if (entry.completedWork >= entry.requiredWork) completedIds.add(entry.id)
+  }
 
   const spawn = (record: TerrainPreparationRecord): TerrainPreparationEntry => {
     const mesh = createTerrainPreparationMarker()
@@ -55,9 +81,7 @@ export function createTerrainPreparations(
   }
 
   for (const record of initial) {
-    spawn(record)
-    const progress = record.requiredWork > 0 ? record.completedWork / record.requiredWork : 1
-    chunkManager.applyExactHeights(record.id, progressiveHeights(record.originalHeights, record.targetHeight, progress))
+    applyProgress(spawn(record), record.completedWork)
   }
 
   const find = (id: string): TerrainPreparationEntry | undefined => entries.find((e) => e.id === id)
@@ -81,9 +105,18 @@ export function createTerrainPreparations(
     setCompletedWork(id, completedWork) {
       const entry = find(id)
       if (!entry) return false
-      entry.completedWork = Math.max(0, completedWork)
+      applyProgress(entry, completedWork)
       return true
     },
+    contributeWork(id, workAmount) {
+      const entry = find(id)
+      if (!entry) return null
+      const remaining = Math.max(0, entry.requiredWork - entry.completedWork)
+      const acceptedWork = Math.max(0, Math.min(workAmount, remaining))
+      if (acceptedWork > 0) applyProgress(entry, entry.completedWork + acceptedWork)
+      return { acceptedWork, completed: entry.completedWork >= entry.requiredWork }
+    },
+    wasCompleted: (id) => completedIds.has(id),
     remove(id) {
       const index = entries.findIndex((e) => e.id === id)
       if (index < 0) return false

@@ -1380,6 +1380,7 @@ export async function createApp(
     onPlantCrop: placement.plantCropAtAim,
     onEquipFishingRod: () => inventoryWiring.equipTool('fishing_rod'),
     onCancelWorkContract: contracts.cancelContract,
+    onHireHelp: contracts.openHireHelp,
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()

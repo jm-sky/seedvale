@@ -270,6 +270,10 @@ function buildSettlementsManager(
   /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
    *  forwarded into `createSettlementsManager`. */
   grassForage?: GrassForageService,
+  /** Active terrain-preparation work sites (plan npc-018) — forwarded into
+   *  every `createSettlement` call → every `NpcAgent`, built ahead of
+   *  `SettlementsManager` the same way as `workContracts`/`playerWells`. */
+  terrainPreparations?: TerrainPreparations,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -310,6 +314,7 @@ function buildSettlementsManager(
     playerWells,
     droppedItems,
     grassForage,
+    terrainPreparations,
   )
 }
 
@@ -727,12 +732,12 @@ async function buildWorldSystems(
   bootMarkEnd('createPlacedContainers')
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
-  // Built ahead of `SettlementsManager` (plan npc-015) — unlike
-  // `hunting`/`Fauna`, none of these three depend on anything settlements
-  // produce, and `NpcAgent`'s own Work Contract decision/construction
-  // integration needs live instances forwarded in, not a late-bound
-  // accessor.
-  bootMark('droppedItems+wells+workContracts')
+  // Built ahead of `SettlementsManager` (plan npc-015, extended npc-018) —
+  // unlike `hunting`/`Fauna`, none of these four depend on anything
+  // settlements produce, and `NpcAgent`'s own Work Contract decision/
+  // construction/terrain-preparation integration needs live instances
+  // forwarded in, not a late-bound accessor.
+  bootMark('droppedItems+wells+workContracts+terrainPrep')
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const playerWells = createPlayerWells(
     scene,
@@ -744,7 +749,13 @@ async function buildWorldSystems(
     config.terrain.waterLevel,
   )
   const workContracts = createWorkContracts(scene, chunkManager.sampleHeight, initialWorkContracts)
-  bootMarkEnd('droppedItems+wells+workContracts')
+  const terrainPreparations = createTerrainPreparations(
+    scene,
+    chunkManager,
+    chunkManager.sampleHeight,
+    initialTerrainPreparations,
+  )
+  bootMarkEnd('droppedItems+wells+workContracts+terrainPrep')
 
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size
   // — a pure function of seed+terrain) is resolved and the home settlement's
@@ -752,11 +763,11 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage, terrainPreparations)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
 
-  bootMark('placed+terrainPrep')
+  bootMark('placed')
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
   const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
   const placedTraps = createPlacedTraps(
@@ -781,13 +792,7 @@ async function buildWorldSystems(
     initialSleepingUtilityPlatforms,
     config.seed,
   )
-  const terrainPreparations = createTerrainPreparations(
-    scene,
-    chunkManager,
-    chunkManager.sampleHeight,
-    initialTerrainPreparations,
-  )
-  bootMarkEnd('placed+terrainPrep')
+  bootMarkEnd('placed')
 
   // Only needs `homeDef.size` (sync, see §4's `buildFauna` doc above) — kept
   // on the critical path rather than deferred, unlike `itemSpawners`/

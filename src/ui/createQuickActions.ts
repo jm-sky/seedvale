@@ -86,6 +86,10 @@ export type QuickActionsHandlers = {
   /** Cancels one work contract from the "Zlecenia" list (plan npc-014 §10) —
    *  removes its flag/advertisement; no-op if already terminal. */
   onCancelWorkContract?: (id: string) => void
+  /** "Zleć pomoc" (plan npc-018 §20) — opens the picker for hiring help on an
+   *  already-existing unfinished target, distinct from `onStartPlacementPreview`
+   *  with kind `'workContract'` (a brand-new target). */
+  onHireHelp?: () => void
   /** Initial digging-capability ownership for showing dig/level buttons. */
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */

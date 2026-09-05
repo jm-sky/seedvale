@@ -11,6 +11,7 @@ import {
   progressiveHeights,
   resolveLevelSamples,
   resolvePreparationSamples,
+  terrainPreparationRemainingWork,
   toolSpeedMultiplier,
   validatePreparationSamples,
 } from './terrainPreparation'
@@ -79,6 +80,20 @@ describe('computeRequiredWork', () => {
     const small = computeRequiredWork(4, 2)
     const large = computeRequiredWork(16, 2)
     expect(large).toBeGreaterThan(small)
+  })
+})
+
+describe('terrainPreparationRemainingWork (plan npc-018 §15)', () => {
+  it('is the full requiredWork when nothing has been done', () => {
+    expect(terrainPreparationRemainingWork({ requiredWork: 4, completedWork: 0 })).toBe(4)
+  })
+
+  it('subtracts completedWork', () => {
+    expect(terrainPreparationRemainingWork({ requiredWork: 4, completedWork: 1.5 })).toBeCloseTo(2.5)
+  })
+
+  it('never goes negative once completedWork exceeds requiredWork', () => {
+    expect(terrainPreparationRemainingWork({ requiredWork: 4, completedWork: 10 })).toBe(0)
   })
 })
 

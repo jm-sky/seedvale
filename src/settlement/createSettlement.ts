@@ -17,6 +17,7 @@ import type { LocalWaterSample } from '../terrain/waterSample'
 import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -305,6 +306,10 @@ export type CreateSettlementDeps = {
    *  forwarded into `tickSettlementLivestock` the same way as `hunting`/
    *  `foodSources` above. */
   grassForage?: GrassForageService
+  /** Active terrain-preparation work sites (plan npc-018) — the second
+   *  construction-like Work Contract target, forwarded into every
+   *  `NpcAgent.create` call the same way as `workContracts`/`playerWells`. */
+  terrainPreparations?: TerrainPreparations
 }
 
 export async function createSettlement(
@@ -342,6 +347,7 @@ export async function createSettlement(
     playerWells,
     droppedItems,
     grassForage,
+    terrainPreparations,
   } = deps
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
@@ -637,6 +643,7 @@ export async function createSettlement(
         workContracts,
         playerWells,
         droppedItems,
+        terrainPreparations,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

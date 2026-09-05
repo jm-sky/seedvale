@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { createWorkContractRecord, type WorkContractRecord } from '../world/workContract'
-import {
-  CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS,
-  scoreWorkContractOpportunity,
-  selectBestWorkContract,
-  type WorkContractEvaluationInput,
-} from './npcWorkContract'
+import { scoreWorkContractOpportunity, selectBestWorkContract, type WorkContractEvaluationInput } from './npcWorkContract'
+
+/** `remainingWorkAtCreation` matches the plan's worked example (10h) so
+ *  `committedWork` (with the default 100% share) is a stable, non-zero
+ *  constant every test below can reason about. */
+const COMMITTED_WORK_HOURS = 10
 
 function makeContract(rewardCoins: number, x = 0, z = 0): WorkContractRecord {
-  return createWorkContractRecord({ id: 'workContract:1', employer: 'player', targetId: 'well:1', x, z, rewardCoins, now: 1 })
+  return createWorkContractRecord({
+    id: 'workContract:1',
+    employer: 'player',
+    target: { kind: 'construction', targetId: 'well:1' },
+    x,
+    z,
+    rewardCoins,
+    requestedWorkShare: 1,
+    remainingWorkAtCreation: COMMITTED_WORK_HOURS,
+    now: 1,
+  })
 }
 
 function baseInput(overrides: Partial<WorkContractEvaluationInput> = {}): WorkContractEvaluationInput {
@@ -67,15 +77,39 @@ describe('scoreWorkContractOpportunity', () => {
     expect(woodcutter).toBeGreaterThan(guard)
   })
 
-  it('always charges the full construction-duration cost regardless of contract state', () => {
+  it('charges the contract\'s own committedWork, not a fixed full-target estimate (plan npc-018 §22)', () => {
     const contract = makeContract(50)
-    // A fresh, never-accepted contract always represents the full estimate
-    // — construction has not started (plan §4: contracts are created with a
-    // brand new pit-stage well).
-    expect(CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS).toBeGreaterThan(0)
+    expect(contract.committedWork).toBe(COMMITTED_WORK_HOURS)
     // baseInput's role is 'woodcutter' (+5 suitability, see CONTRACT_SUITABILITY_BY_ROLE).
     const score = scoreWorkContractOpportunity(contract, baseInput({ hasWorkplace: false }))
-    expect(score).toBe(50 + 5 - CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS * 3)
+    expect(score).toBe(50 + 5 - contract.committedWork * 3)
+  })
+
+  it('a smaller work share (a smaller committedWork) scores higher than a full one, all else equal', () => {
+    const full = createWorkContractRecord({
+      id: 'workContract:full',
+      employer: 'player',
+      target: { kind: 'construction', targetId: 'well:1' },
+      x: 0,
+      z: 0,
+      rewardCoins: 50,
+      requestedWorkShare: 1,
+      remainingWorkAtCreation: COMMITTED_WORK_HOURS,
+      now: 1,
+    })
+    const half = createWorkContractRecord({
+      id: 'workContract:half',
+      employer: 'player',
+      target: { kind: 'construction', targetId: 'well:1' },
+      x: 0,
+      z: 0,
+      rewardCoins: 50,
+      requestedWorkShare: 0.5,
+      remainingWorkAtCreation: COMMITTED_WORK_HOURS,
+      now: 1,
+    })
+    const input = baseInput({ hasWorkplace: false })
+    expect(scoreWorkContractOpportunity(half, input)).toBeGreaterThan(scoreWorkContractOpportunity(full, input))
   })
 })
 

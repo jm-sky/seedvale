@@ -17,6 +17,7 @@ import type { SettlementLandmarks } from '../settlement/props'
 import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -87,6 +88,12 @@ import {
   type ScoredAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
+import {
+  TERRAIN_PREP_NPC_WORK_SESSION_HOURS,
+  TERRAIN_PREP_NPC_WORK_SESSION_SEC,
+  type TerrainPreparationRecord,
+  terrainPreparationRemainingWork,
+} from '../terrain/terrainPreparation'
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
@@ -98,11 +105,18 @@ import {
   type PlayerWellRecord,
   WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
+  wellRemainingWork,
 } from '../world/playerWell'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
-import { noticeBoardId, type WorkContractRecord, type WorkContractState } from '../world/workContract'
+import {
+  type ContractTarget,
+  isNpcCommitmentFulfilled,
+  noticeBoardId,
+  type WorkContractRecord,
+  type WorkContractState,
+} from '../world/workContract'
 import {
   type CharacterDef,
   genderForName,
@@ -407,10 +421,24 @@ export type NpcInspectionSnapshot = {
     progress: number
     currentStep: string
   } | null
-  /** This NPC's outstanding Work Contract commitment (plan npc-015 §14), or
-   *  `null` when it has none — resolved fresh from `WorkContracts` every
-   *  snapshot, never a second copy of the authoritative state. */
-  contract: { id: string, state: WorkContractState, rewardCoins: number } | null
+  /** This NPC's outstanding Work Contract commitment (plan npc-015 §14,
+   *  extended by npc-018 §25), or `null` when it has none — resolved fresh
+   *  from `WorkContracts`/the target itself every snapshot, never a second
+   *  copy of the authoritative state. `targetRemainingWork` is `null` only
+   *  when the target can't currently be resolved (about to be invalidated/
+   *  completed). */
+  contract: {
+    id: string
+    state: WorkContractState
+    rewardCoins: number
+    targetKind: ContractTarget['kind']
+    targetId: string
+    requestedWorkShare: number
+    remainingWorkAtCreation: number
+    committedWork: number
+    npcWorkCompleted: number
+    targetRemainingWork: number | null
+  } | null
   action: {
     kind: ActionId
     destination: { x: number, y: number, z: number }
@@ -732,6 +760,9 @@ export type NpcAgentDeps = {
   householdExchange?: HouseholdExchangeHooks
   workContracts?: WorkContracts | null
   playerWells?: PlayerWells | null
+  /** Active terrain-preparation work sites (plan npc-018) — the second Work
+   *  Contract target kind, alongside `playerWells`. */
+  terrainPreparations?: TerrainPreparations | null
   droppedItems?: DroppedItems | null
 }
 
@@ -1064,6 +1095,11 @@ export class NpcAgent {
    *  world-owned record the player's own `[E]` well-work would, through the
    *  same `addWork`/`transitionTo` seam. Null in isolated fallbacks. */
   private readonly playerWells: PlayerWells | null
+  /** The second Work Contract target kind (plan npc-018) — active terrain-
+   *  preparation work sites NPC execution can travel to/contribute work at,
+   *  through the same actor-neutral `contributeWork` seam the player's own
+   *  progress push uses. Null in isolated fallbacks, same as `playerWells`. */
+  private readonly terrainPreparations: TerrainPreparations | null
   /** World-dropped items (plan npc-015 §9's material-provisioning analogue)
    *  — lets NPC construction work draw stone/branch left near the site
    *  through the exact same bounded `hasMaterial`/`consumeMaterial` radius
@@ -1139,6 +1175,7 @@ export class NpcAgent {
       householdExchange,
       workContracts,
       playerWells,
+      terrainPreparations,
       droppedItems,
     } = deps
     const playAt = deps.playAt ?? (() => {})
@@ -1173,6 +1210,7 @@ export class NpcAgent {
     this.mining = mining
     this.workContracts = workContracts ?? null
     this.playerWells = playerWells ?? null
+    this.terrainPreparations = terrainPreparations ?? null
     this.droppedItems = droppedItems ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
@@ -1359,7 +1397,28 @@ export class NpcAgent {
         : null,
       contract: (() => {
         const mine = this.workContracts?.findByWorker(this.id)
-        return mine ? { id: mine.id, state: mine.state, rewardCoins: mine.rewardCoins } : null
+        if (!mine) return null
+        const targetRemainingWork = mine.target.kind === 'construction'
+          ? (() => {
+              const well = this.findContractWell(mine.target.targetId)
+              return well ? wellRemainingWork(well) : null
+            })()
+          : (() => {
+              const prep = this.terrainPreparations?.find(mine.target.targetId)
+              return prep ? terrainPreparationRemainingWork(prep) : null
+            })()
+        return {
+          id: mine.id,
+          state: mine.state,
+          rewardCoins: mine.rewardCoins,
+          targetKind: mine.target.kind,
+          targetId: mine.target.targetId,
+          requestedWorkShare: mine.requestedWorkShare,
+          remainingWorkAtCreation: mine.remainingWorkAtCreation,
+          committedWork: mine.committedWork,
+          npcWorkCompleted: mine.npcWorkCompleted,
+          targetRemainingWork,
+        }
       })(),
       action: this.pendingAction
         ? {
@@ -3620,20 +3679,22 @@ export class NpcAgent {
   }
 
   /** Drives one step of an already-`accepted`/`travelling`/`working`
-   *  contract's commitment (plan §6/§7/§10/§12) — always resolves the
-   *  target fresh from `record.target.targetId` rather than any cached
-   *  position (plan §6: "the destination must derive from the authoritative
-   *  contract target/flag"). Returns `true` once this idle slot has been
-   *  claimed (even when the outcome this tick was an invalidation, not real
+   *  contract's commitment (plan §6/§7/§10/§12, extended to
+   *  `terrain_preparation` by plan npc-018) — always resolves the target
+   *  fresh from `record.target.targetId` rather than any cached position
+   *  (plan §6: "the destination must derive from the authoritative contract
+   *  target/flag"). Returns `true` once this idle slot has been claimed
+   *  (even when the outcome this tick was an invalidation, not real
    *  progress) — `beginIdle` should not also start a schedule activity. */
   private pursueAcceptedContract(record: WorkContractRecord): boolean {
     const contracts = this.workContracts
     if (!contracts) return false
-    // Only `construction`/`WorkContractRecord.target.kind` exists today
-    // (plan §2) — this guard is future-proofing for a later work type this
-    // phase never introduces, not dead code.
-    if (record.target.kind !== 'construction') return false
     if (record.state === 'payment_due') return false // nothing left to actively do — npc-016's turn.
+    if (record.target.kind === 'construction') return this.pursueConstructionContract(record, contracts)
+    return this.pursueTerrainContract(record, contracts)
+  }
+
+  private pursueConstructionContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
     const well = this.findContractWell(record.target.targetId)
     if (!well) {
       // Target disappeared/became invalid (plan §12) — never leave the
@@ -3643,6 +3704,8 @@ export class NpcAgent {
       return true
     }
     if (isWellCompleted(well)) {
+      // Target itself finished (plan §8) — ends the work phase regardless
+      // of whether the NPC's own `committedWork` was ever reached.
       contracts.completeWork(record.id, this.id)
       this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
       return true
@@ -3671,6 +3734,47 @@ export class NpcAgent {
 
   private findContractWell(targetId: string): PlayerWellRecord | undefined {
     return this.playerWells?.nodes().find((w) => w.id === targetId)
+  }
+
+  /** Terrain-preparation counterpart of `pursueConstructionContract` (plan
+   *  npc-018 §14/§16/§17) — same shape, but must distinguish "target
+   *  completed" from "target invalidated" once `find` returns nothing
+   *  (`TerrainPreparations.wasCompleted`, since a completed preparation is
+   *  removed from the active registry, plan §16). */
+  private pursueTerrainContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
+    const terrainPreparations = this.terrainPreparations
+    if (!terrainPreparations) return false
+    const prep = terrainPreparations.find(record.target.targetId)
+    if (!prep) {
+      if (terrainPreparations.wasCompleted(record.target.targetId)) {
+        contracts.completeWork(record.id, this.id)
+        this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
+      } else {
+        contracts.invalidateTarget(record.id)
+        this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
+      }
+      return true
+    }
+    const destination = { x: prep.center.x, y: this.sampleHeight(prep.center.x, prep.center.z), z: prep.center.z }
+    if (record.state === 'accepted' || record.state === 'travelling') {
+      if (record.state === 'accepted') contracts.beginTravel(record.id, this.id)
+      const contractId = record.id
+      this.startAction({
+        kind: 'work',
+        destination,
+        durationSec: 1.0 * this.waitMultiplier,
+        onComplete: () => {
+          const fresh = contracts.find(contractId)
+          if (fresh?.state === 'travelling' && fresh.workerNpcId === this.id) {
+            contracts.beginWork(contractId, this.id, this.simClock)
+          }
+        },
+      })
+      return true
+    }
+    // record.state === 'working'
+    this.runTerrainContractWorkBout(record.id, prep, destination)
+    return true
   }
 
   /** Runs one active-work bout of NPC construction on `well` (plan §7) —
@@ -3731,8 +3835,50 @@ export class NpcAgent {
         }
         if (outcome.status === 'blocked') return // blocked on materials — commitment stays intact, retried next bout.
         wells.addWork(freshWell.id, WELL_WORK_SESSION_HOURS)
-        const updated = this.findContractWell(freshWell.id)
-        if (updated && isWellCompleted(updated)) contracts.completeWork(contractId, this.id)
+        // Two independent stop conditions (plan §7/§8): the NPC's own
+        // commitment is fulfilled, or the real target finished. Either ends
+        // the contractual work phase — never both required, never neither.
+        const creditedContract = contracts.creditNpcWork(contractId, this.id, WELL_WORK_SESSION_HOURS)
+        const updatedWell = this.findContractWell(freshWell.id)
+        const targetCompleted = updatedWell != null && isWellCompleted(updatedWell)
+        const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
+        if (targetCompleted || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+      },
+    })
+  }
+
+  /** Terrain-preparation counterpart of `runContractWorkBout` (plan npc-018
+   *  §15/§17) — routes the actual work amount through
+   *  `TerrainPreparations.contributeWork` (the same actor-neutral seam the
+   *  player's own progress push uses) instead of a well-specific
+   *  stage/material rule, and credits only the *accepted* amount it reports
+   *  back, never the requested `TERRAIN_PREP_NPC_WORK_SESSION_HOURS` itself
+   *  (plan §6: never infer contribution from a target-progress delta the
+   *  player might have also caused). */
+  private runTerrainContractWorkBout(
+    contractId: string,
+    prep: TerrainPreparationRecord,
+    destination: { x: number, y: number, z: number },
+  ): void {
+    const contracts = this.workContracts!
+    const terrainPreparations = this.terrainPreparations!
+    this.startAction({
+      kind: 'work',
+      destination,
+      durationSec: TERRAIN_PREP_NPC_WORK_SESSION_SEC * this.waitMultiplier,
+      onComplete: () => {
+        const freshContract = contracts.find(contractId)
+        if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
+        const result = terrainPreparations.contributeWork(prep.id, TERRAIN_PREP_NPC_WORK_SESSION_HOURS)
+        if (!result) {
+          contracts.invalidateTarget(contractId)
+          return
+        }
+        const creditedContract = result.acceptedWork > 0
+          ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
+          : contracts.find(contractId)
+        const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
+        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
       },
     })
   }

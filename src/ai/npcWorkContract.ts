@@ -1,7 +1,6 @@
 import type { WorkContractRecord } from '../world/workContract'
 import type { Role } from './characters'
 import type { ScheduleActivity } from './schedule'
-import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { realSecondsToGameHours } from '../world/timeConversion'
 import { idleIntentFor } from './schedule'
 
@@ -50,14 +49,6 @@ const CONTRACT_SUITABILITY_BY_ROLE: Partial<Record<Role, number>> = {
   guard: -10,
 }
 
-/** Total active-work hours a fresh (never-started) construction contract's
- *  well represents — the "estimated construction duration" half of plan
- *  §4's minimum time estimate. Contracts are always created with a brand
- *  new `pit`-stage well (see `app/actions/workContractActions.ts`), so this
- *  is exact at evaluation time, before any work has actually started. */
-export const CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS =
-  WELL_STAGE_WORK_HOURS.pit + WELL_STAGE_WORK_HOURS.well + WELL_STAGE_WORK_HOURS.roof
-
 export type WorkContractEvaluationInput = {
   npcX: number
   npcZ: number
@@ -97,7 +88,7 @@ export function scoreWorkContractOpportunity(
     contract.rewardCoins
     + suitability
     - travelHours * CONTRACT_TRAVEL_HOUR_COST
-    - CONTRACT_TOTAL_CONSTRUCTION_WORK_HOURS * CONTRACT_WORK_HOUR_COST
+    - contract.committedWork * CONTRACT_WORK_HOUR_COST
     - scheduleConflict
   )
 }

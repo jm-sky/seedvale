@@ -11,19 +11,24 @@ import {
   createWorkContractRecord,
   invalidateWorkContract,
   isContractTerminal,
+  isNpcCommitmentFulfilled,
   noticeBoardId,
   postWorkContract,
+  recordNpcWorkContribution,
   releaseWorkContract,
+  sameContractTarget,
 } from './workContract'
 
-function makeRecord() {
+function makeRecord(overrides: { requestedWorkShare?: number, remainingWorkAtCreation?: number } = {}) {
   return createWorkContractRecord({
     id: 'workContract:1',
     employer: 'player',
-    targetId: 'contractTarget:1',
+    target: { kind: 'construction', targetId: 'contractTarget:1' },
     x: 5,
     z: -3,
     rewardCoins: 25,
+    requestedWorkShare: overrides.requestedWorkShare ?? 1,
+    remainingWorkAtCreation: overrides.remainingWorkAtCreation ?? 6,
     now: 1,
   })
 }
@@ -43,6 +48,21 @@ describe('createWorkContractRecord', () => {
     expect(record.workerNpcId).toBeNull()
     expect(record.acceptedAt).toBeNull()
     expect(record.workStartedAt).toBeNull()
+  })
+
+  it('snapshots the work commitment exactly once (plan npc-018 §5)', () => {
+    const record = makeRecord({ requestedWorkShare: 0.5, remainingWorkAtCreation: 6 })
+    expect(record.requestedWorkShare).toBe(0.5)
+    expect(record.remainingWorkAtCreation).toBe(6)
+    expect(record.committedWork).toBe(3)
+    expect(record.npcWorkCompleted).toBe(0)
+  })
+
+  it('clamps requestedWorkShare to [0, 1] and remainingWorkAtCreation to ≥ 0', () => {
+    const over = makeRecord({ requestedWorkShare: 1.5, remainingWorkAtCreation: -4 })
+    expect(over.requestedWorkShare).toBe(1)
+    expect(over.remainingWorkAtCreation).toBe(0)
+    expect(over.committedWork).toBe(0)
   })
 })
 
@@ -201,5 +221,35 @@ describe('NPC commitment lifecycle (plan npc-015)', () => {
     const accepted = acceptWorkContract(makeAdvertised(), 'npc:1', 5)!
     expect(cancelWorkContract(accepted)!.workerNpcId).toBeNull()
     expect(invalidateWorkContract(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!)!.workerNpcId).toBeNull()
+  })
+})
+
+describe('shared-work commitment accounting (plan npc-018)', () => {
+  it('recordNpcWorkContribution adds to npcWorkCompleted without mutating the input', () => {
+    const record = makeRecord()
+    const credited = recordNpcWorkContribution(record, 2)
+    expect(credited.npcWorkCompleted).toBe(2)
+    expect(record.npcWorkCompleted).toBe(0)
+    expect(recordNpcWorkContribution(credited, 1.5).npcWorkCompleted).toBe(3.5)
+  })
+
+  it('recordNpcWorkContribution is a no-op for a non-positive amount', () => {
+    const record = makeRecord()
+    expect(recordNpcWorkContribution(record, 0)).toBe(record)
+    expect(recordNpcWorkContribution(record, -1)).toBe(record)
+  })
+
+  it('isNpcCommitmentFulfilled compares npcWorkCompleted against committedWork, not the target\'s total work', () => {
+    const record = makeRecord({ requestedWorkShare: 0.5, remainingWorkAtCreation: 6 }) // committedWork = 3
+    expect(isNpcCommitmentFulfilled(record)).toBe(false)
+    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(record, 2))).toBe(false)
+    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(record, 3))).toBe(true)
+    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(record, 10))).toBe(true) // overshoot still fulfilled
+  })
+
+  it('sameContractTarget compares kind + targetId, not object identity', () => {
+    expect(sameContractTarget({ kind: 'construction', targetId: 'a' }, { kind: 'construction', targetId: 'a' })).toBe(true)
+    expect(sameContractTarget({ kind: 'construction', targetId: 'a' }, { kind: 'construction', targetId: 'b' })).toBe(false)
+    expect(sameContractTarget({ kind: 'construction', targetId: 'a' }, { kind: 'terrain_preparation', targetId: 'a' })).toBe(false)
   })
 })

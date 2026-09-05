@@ -15,6 +15,7 @@ import type { LocalWaterSample } from '../terrain/waterSample'
 import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
@@ -264,6 +265,11 @@ export async function createSettlementsManager(
    *  global, not derived from any settlement), so passed directly rather
    *  than late-bound like `hunting`. */
   grassForage?: GrassForageService,
+  /** Active terrain-preparation work sites (plan npc-018) — forwarded into
+   *  every `createSettlement` call the same way `workContracts`/`playerWells`
+   *  are above, so NPC Work Contract execution can travel to/contribute work
+   *  at an existing `TerrainPreparationRecord`. */
+  terrainPreparations?: TerrainPreparations,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -361,6 +367,7 @@ export async function createSettlementsManager(
     playerWells,
     droppedItems,
     grassForage,
+    terrainPreparations,
   }
 
   const entries = new Map<string, Entry>()

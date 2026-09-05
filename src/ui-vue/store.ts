@@ -236,6 +236,11 @@ type QuickActionsState = {
    *  contract the player currently holds, view/cancel only. */
   workContracts: QuickActionsWorkContract[]
   onCancelWorkContract: ((id: string) => void) | null
+  /** "Zleć pomoc" (plan npc-018 §20) — opens the target picker for an
+   *  existing unfinished construction/terrain-preparation target with no
+   *  active contract yet. Distinct from "Zleć budowę" (`onStartPlacementPreview`
+   *  with kind `'workContract'`), which places a brand-new target. */
+  onHireHelp: (() => void) | null
 }
 type MerchantState = {
   open: boolean
@@ -475,7 +480,7 @@ export const ui = reactive({
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onWait: null, onRest: null,
     onDig: null, onLevel: null, onMound: null, onPrepareTerrain: null, onStartPlacementPreview: null, onPlaceTrap: null, onOpen: null, onClose: null,
-    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null,
+    hasCarriedContainer: false, onPutDownContainer: null, onBuildWell: null, onBuildGarden: null, onHireHelp: null,
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
     hasFishingRod: false, onEquipFishingRod: null,

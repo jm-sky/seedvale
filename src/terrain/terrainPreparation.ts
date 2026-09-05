@@ -154,6 +154,26 @@ export function computeRequiredWork(area: number, averageAbsHeightDelta: number)
   return Math.max(MINIMUM_PREPARATION_WORK_HOURS, area * averageAbsHeightDelta * WORK_SCALE)
 }
 
+/** All useful work still required to finish `record` (plan npc-018 §15) —
+ *  the remaining-work authority a Work Contract's snapshot reads, mirroring
+ *  `world/playerWell.ts`'s `wellRemainingWork`. */
+export function terrainPreparationRemainingWork(
+  record: Pick<TerrainPreparationRecord, 'requiredWork' | 'completedWork'>,
+): number {
+  return Math.max(0, record.requiredWork - record.completedWork)
+}
+
+/** Real-seconds length of one NPC terrain-work bout — same "flat per-bout
+ *  credit" shape as `world/playerWell.ts`'s `WELL_WORK_SESSION_SEC`. */
+export const TERRAIN_PREP_NPC_WORK_SESSION_SEC = 8
+
+/** Active-work hours one full NPC terrain-work bout contributes (plan
+ *  npc-018 §17) — deliberately smaller than a well's `WELL_WORK_SESSION_HOURS`
+ *  since a typical preparation's whole `requiredWork` is often only a few
+ *  hours (`MINIMUM_PREPARATION_WORK_HOURS`), so a bout should never
+ *  overshoot a small commitment by much. */
+export const TERRAIN_PREP_NPC_WORK_SESSION_HOURS = 1
+
 export function averageAbsHeightDelta(originalHeights: readonly HeightSample[], targetHeight: number): number {
   if (originalHeights.length === 0) return 0
   const total = originalHeights.reduce((sum, s) => sum + Math.abs(targetHeight - s.height), 0)

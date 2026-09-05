@@ -1,7 +1,14 @@
 import type { VueUi } from '../../ui-vue/mount'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
-import { WELL_FOOTPRINT_RADIUS, WELL_SEPARATION } from '../../world/playerWell'
-import { canPostContract, isContractTerminal, noticeBoardId } from '../../world/workContract'
+import { terrainPreparationRemainingWork } from '../../terrain/terrainPreparation'
+import { formatHours, isWellCompleted, WELL_FOOTPRINT_RADIUS, WELL_SEPARATION, wellRemainingWork } from '../../world/playerWell'
+import {
+  canPostContract,
+  type ContractTarget,
+  isContractTerminal,
+  noticeBoardId,
+  WORK_SHARE_PRESETS,
+} from '../../world/workContract'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import {
   evaluatePlacementSite,
@@ -40,6 +47,14 @@ const CONTRACT_TARGET_PLACEMENT_MESSAGE: Record<Exclude<GroundPlacementReason, '
   occupied: 'Tu już jest zgłoszone inne zlecenie.',
 }
 
+/** Display label per `ContractTarget['kind']` (plan npc-018 §10/§14) — the
+ *  single place every contract-listing UI (notice board, Quick Actions
+ *  "Zlecenia") reads instead of re-deriving it. */
+const WORK_TYPE_LABEL: Record<'construction' | 'terrain_preparation', string> = {
+  construction: 'budowa',
+  terrain_preparation: 'przygotowanie terenu',
+}
+
 export type WorkContractQuickActionEntry = { id: string, label: string, cost: string }
 
 export type WorkContractActions = {
@@ -49,8 +64,9 @@ export type WorkContractActions = {
   previewContractPlacement: () => PlacementPreviewResult
   /** Confirm step of the placement-preview flow — re-resolves and
    *  re-validates the site fresh (never trusts the cached preview), then
-   *  opens the reward-picker panel. Creating the contract itself (on a
-   *  preset pick) never advertises it (plan §4). */
+   *  walks the work-share → reward picker chain (`beginContractCreation`,
+   *  plan §21). Creating the contract itself (on a preset pick) never
+   *  advertises it (plan §4). */
   confirmContractPlacementAtAim: () => void
   /** `[E]` on a settlement notice board (plan §7/§9) — opens a panel listing
    *  the player's own postable contracts; picking one posts it. */
@@ -60,6 +76,12 @@ export type WorkContractActions = {
   /** Quick Actions "Zlecenia" list (view/cancel only) — every non-terminal
    *  contract the player currently holds. */
   quickActionsList: () => WorkContractQuickActionEntry[]
+  /** Quick Actions "Zleć pomoc" (plan npc-018 §2/§20) — lists the player's
+   *  own unfinished construction/terrain-preparation targets that don't
+   *  already have a non-terminal contract, and walks the same work-share →
+   *  reward → create flow `confirmContractPlacementAtAim` uses for a
+   *  brand-new target. */
+  openHireHelp: () => void
 }
 
 export type WorkContractActionDeps = {
@@ -110,6 +132,56 @@ export function createWorkContractActions(
   const previewContractPlacement = (): PlacementPreviewResult =>
     previewGroundPlacement(contractPlacementDefinition())
 
+  /** Second step of every contract-creation flow (plan npc-018 §4/§20) —
+   *  the same work-share → reward → create chain whether `target` is a
+   *  brand-new placement or an already-existing unfinished one. Never
+   *  advertises the created contract (plan §3's "target must exist
+   *  independently of the contract" — posting stays the separate physical
+   *  notice-board action). */
+  const beginContractCreation = (
+    dialogTitle: string,
+    target: ContractTarget,
+    x: number,
+    z: number,
+    remainingWorkAtCreation: number,
+  ): void => {
+    vueUi.openFlavorDialog(
+      dialogTitle,
+      `Jaki procent pozostałej pracy (${formatHours(remainingWorkAtCreation)} h) ma wykonać najemnik?`,
+      WORK_SHARE_PRESETS.map((share) => ({
+        label: `${Math.round(share * 100)}%`,
+        enabled: true,
+        reasonLabel: '',
+        run: () => vueUi.openFlavorDialog(
+          dialogTitle,
+          'Wybierz wynagrodzenie za wykonanie prac. Zlecenie nie zostanie jeszcze ogłoszone — trzeba będzie zanieść ogłoszenie na tablicę w osadzie.',
+          CONTRACT_REWARD_PRESETS.map((reward) => ({
+            label: `${reward} monet`,
+            enabled: true,
+            reasonLabel: '',
+            run: () => {
+              const created = bundle.workContracts.create({
+                employer: CONTRACT_EMPLOYER,
+                target,
+                x,
+                z,
+                rewardCoins: reward,
+                requestedWorkShare: share,
+                remainingWorkAtCreation,
+                now: dayNight.elapsedDays,
+              })
+              ctx.syncQuickActionAvailability()
+              toast.show(
+                created ? 'Utworzono zlecenie. Zanieś ogłoszenie do tablicy w osadzie.' : 'Ten cel ma już aktywne zlecenie.',
+                created ? 'info' : 'error',
+              )
+            },
+          })),
+        ),
+      })),
+    )
+  }
+
   const confirmContractPlacementAtAim = (): void => {
     if (isActionBlocked(ctx)) return
     const { site, reason } = evaluatePlacementSite(contractPlacementDefinition())
@@ -118,25 +190,54 @@ export function createWorkContractActions(
       return
     }
     const { x, z } = site
+    // The buildable itself (plan npc-015 §7) — placed once, up front, so
+    // the contract's target is always a real, incrementally workable object
+    // rather than a bare location. No tool/capability is required here:
+    // unlike the player's own `[E]`-driven well (`placeWellAtAim`), digging
+    // is the hired worker's job, not the employer's.
+    const well = bundle.playerWells.place(x, z, site.yaw)
+    beginContractCreation('Nowe zlecenie budowy', { kind: 'construction', targetId: well.id }, x, z, wellRemainingWork(well))
+  }
+
+  /** Every unfinished target the player could hire help for right now (plan
+   *  npc-018 §2/§9/§20) — an unfinished well or active terrain preparation
+   *  with no non-terminal contract of its own yet. */
+  const hireHelpCandidates = (): { target: ContractTarget, x: number, z: number, remainingWork: number, label: string }[] => {
+    const wells = bundle.playerWells.nodes()
+      .filter((w) => !isWellCompleted(w))
+      .map((w) => ({
+        target: { kind: 'construction' as const, targetId: w.id },
+        x: w.x,
+        z: w.z,
+        remainingWork: wellRemainingWork(w),
+        label: 'Studnia',
+      }))
+    const preparations = bundle.terrainPreparations.nodes()
+      .filter((p) => terrainPreparationRemainingWork(p) > 0)
+      .map((p) => ({
+        target: { kind: 'terrain_preparation' as const, targetId: p.id },
+        x: p.center.x,
+        z: p.center.z,
+        remainingWork: terrainPreparationRemainingWork(p),
+        label: 'Przygotowanie terenu',
+      }))
+    return [...wells, ...preparations].filter((candidate) => !bundle.workContracts.hasActiveContract(candidate.target))
+  }
+
+  const openHireHelp = (): void => {
+    const candidates = hireHelpCandidates()
+    if (candidates.length === 0) {
+      vueUi.openFlavorDialog('Zleć pomoc', 'Nie masz żadnych niedokończonych prac do zlecenia.', [])
+      return
+    }
     vueUi.openFlavorDialog(
-      'Nowe zlecenie budowy',
-      'Wybierz wynagrodzenie za wykonanie prac budowlanych w tym miejscu. Zlecenie nie zostanie jeszcze ogłoszone — trzeba będzie zanieść ogłoszenie na tablicę w osadzie.',
-      CONTRACT_REWARD_PRESETS.map((reward) => ({
-        label: `${reward} monet`,
+      'Zleć pomoc',
+      'Wybierz niedokończoną pracę, do której chcesz zatrudnić pomoc.',
+      candidates.map((candidate) => ({
+        label: `${candidate.label} — pozostało ${formatHours(candidate.remainingWork)} h`,
         enabled: true,
         reasonLabel: '',
-        run: () => {
-          // The buildable itself (plan npc-015 §7) — placed once, up front,
-          // so the contract's target is always a real, incrementally
-          // workable object rather than a bare location. No tool/capability
-          // is required here: unlike the player's own `[E]`-driven well
-          // (`placeWellAtAim`), digging is the hired worker's job, not the
-          // employer's.
-          const well = bundle.playerWells.place(x, z, site.yaw)
-          bundle.workContracts.create(CONTRACT_EMPLOYER, x, z, reward, dayNight.elapsedDays, well.id)
-          ctx.syncQuickActionAvailability()
-          toast.show('Utworzono zlecenie budowy. Zanieś ogłoszenie do tablicy w osadzie.')
-        },
+        run: () => beginContractCreation('Zleć pomoc', candidate.target, candidate.x, candidate.z, candidate.remainingWork),
       })),
     )
   }
@@ -152,7 +253,7 @@ export function createWorkContractActions(
       'Tablica ogłoszeń',
       'Wybierz zlecenie do ogłoszenia.',
       postable.map((contract) => ({
-        label: `Zlecenie budowy — ${contract.rewardCoins} monet`,
+        label: `Zlecenie: ${WORK_TYPE_LABEL[contract.target.kind]} — ${contract.rewardCoins} monet`,
         enabled: true,
         reasonLabel: '',
         run: () => {
@@ -175,9 +276,16 @@ export function createWorkContractActions(
       .filter((c) => c.employer === CONTRACT_EMPLOYER && !isContractTerminal(c.state))
       .map((c) => ({
         id: c.id,
-        label: `Anuluj: budowa — ${c.rewardCoins} monet`,
+        label: `Anuluj: ${WORK_TYPE_LABEL[c.target.kind]} — ${c.rewardCoins} monet`,
         cost: c.advertisement === 'posted' ? 'ogłoszone' : 'nieogłoszone',
       }))
 
-  return { previewContractPlacement, confirmContractPlacementAtAim, openNoticeBoard, cancelContract, quickActionsList }
+  return {
+    previewContractPlacement,
+    confirmContractPlacementAtAim,
+    openNoticeBoard,
+    cancelContract,
+    quickActionsList,
+    openHireHelp,
+  }
 }

@@ -111,6 +111,10 @@ function buildInspectorText(
     lines.push(`  id: ${snapshot.contract.id}`)
     lines.push(`  state: ${snapshot.contract.state}`)
     lines.push(`  reward: ${snapshot.contract.rewardCoins}`)
+    lines.push(`  target: ${snapshot.contract.targetKind}:${snapshot.contract.targetId}`)
+    lines.push(`  work share: ${Math.round(snapshot.contract.requestedWorkShare * 100)}% of ${snapshot.contract.remainingWorkAtCreation.toFixed(1)}h at creation`)
+    lines.push(`  committed: ${snapshot.contract.npcWorkCompleted.toFixed(1)} / ${snapshot.contract.committedWork.toFixed(1)}h`)
+    lines.push(`  target remaining: ${snapshot.contract.targetRemainingWork?.toFixed(1) ?? '-'}h`)
   } else {
     lines.push('  -')
   }

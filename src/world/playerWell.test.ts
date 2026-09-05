@@ -12,6 +12,7 @@ import {
   WELL_STAGE_COST,
   WELL_STAGE_WORK_HOURS,
   wellPromptLabel,
+  wellRemainingWork,
   wellStageCapabilities,
   wellStageRequirements,
   wellStageWorkHours,
@@ -93,6 +94,31 @@ describe('playerWell active-work stage transitions', () => {
 
   it('activeWellStage is null once the whole well is completed', () => {
     expect(activeWellStage(record({ stage: 'roof', workProgress: WELL_STAGE_WORK_HOURS.roof }))).toBeNull()
+  })
+})
+
+describe('wellRemainingWork (plan npc-018 §12)', () => {
+  it('covers every remaining stage, not only the current one', () => {
+    const fresh = record({ stage: 'pit', workProgress: 0 })
+    const expected = PIT_HOURS + WELL_STAGE_WORK_HOURS.well + WELL_STAGE_WORK_HOURS.roof
+    expect(wellRemainingWork(fresh)).toBeCloseTo(expected)
+  })
+
+  it('subtracts partial progress on the current stage only', () => {
+    const half = PIT_HOURS / 2
+    const well = record({ stage: 'pit', workProgress: half })
+    const expected = (PIT_HOURS - half) + WELL_STAGE_WORK_HOURS.well + WELL_STAGE_WORK_HOURS.roof
+    expect(wellRemainingWork(well)).toBeCloseTo(expected)
+  })
+
+  it('only counts the final stage once the earlier stages are behind', () => {
+    const well = record({ stage: 'roof', workProgress: 0 })
+    expect(wellRemainingWork(well)).toBeCloseTo(WELL_STAGE_WORK_HOURS.roof)
+  })
+
+  it('is zero once the well is fully completed', () => {
+    const done = record({ stage: 'roof', workProgress: WELL_STAGE_WORK_HOURS.roof })
+    expect(wellRemainingWork(done)).toBe(0)
   })
 })
 

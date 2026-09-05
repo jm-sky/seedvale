@@ -20,7 +20,7 @@ import type { PlantedTreeRecord } from '../world/plantedTrees'
 import type { TreeLifecycle } from '../world/treeLifecycle'
 import type { WorldBundle } from './worldBundle'
 import { snapshotSpawnPointState } from '../fauna/AnimalSpawner'
-import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification } from '../persistence/saveData'
+import { CURRENT_SAVE_VERSION, type SaveData, type SaveTerrainModification, type SaveWorkContract } from '../persistence/saveData'
 import { getActiveSaveId, listSavesResult, type SaveReason, writeSave, type WriteSaveResult } from '../persistence/saveDb'
 import { pickActiveSaveId } from '../persistence/saveSlots'
 
@@ -221,7 +221,10 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
     grassForagePatches: bundle.grassForage.serialize(),
-    workContracts: bundle.workContracts.nodes().map((c) => ({ ...c, target: { ...c.target } })),
+    workContracts: bundle.workContracts.nodes().map((c): SaveWorkContract =>
+      c.target.kind === 'construction'
+        ? { ...c, target: { kind: 'construction', targetId: c.target.targetId } }
+        : { ...c, target: { kind: 'terrain_preparation', targetId: c.target.targetId } }),
       npcStates: bundle.settlementsManager.snapshotNpcStates(),
       households: bundle.settlementsManager.snapshotHouseholds(),
       npcRelationships: bundle.settlementsManager.snapshotRelationships(),
