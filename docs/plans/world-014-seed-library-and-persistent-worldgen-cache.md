@@ -27,6 +27,7 @@ Wprowadzić trwałą bibliotekę seedów, która pozwala:
 - nadawać seedom własną nazwę, opis i tagi,
 - pokazywać tani deterministyczny profil/nazwę świata bez wymuszania nowych obliczeń terenu,
 - współdzielić między save'ami wyłącznie kosztowne deterministyczne cache,
+- inkrementalnie utrwalać deterministyczne wyniki policzone później przez normalny gameplay/discovery,
 - zachować pełną niezależność dynamicznego stanu każdego save'a.
 
 Koncepcyjnie:
@@ -276,6 +277,8 @@ Pierwszym kandydatem jest coarse terrain/location cache rozwijany przez `world-0
 
 Seed Library nie może tworzyć własnej konkurencyjnej reprezentacji coarse terrain.
 
+Persistent cache nie jest tylko snapshotem initial state. Ma rosnąć inkrementalnie wraz z deterministycznymi obliczeniami wykonywanymi później przez normalny lifecycle świata.
+
 ## 12. Cache namespaces and versioning
 
 Nie używać jednego monolitycznego blobu ani zakładać, że samo `seed` wystarcza jako klucz.
@@ -290,6 +293,7 @@ Przykładowo:
 
 ```text
 123 / locations-coarse / v2 / tile:10:14
+123 / landmarks / v1 / region:3:7
 123 / river-analysis / v1 / region:3:7
 ```
 
@@ -297,7 +301,72 @@ Preferować versioning per cache namespace, aby zmiana jednego generatora nie in
 
 Cache jest disposable derived data. Niekompatybilna wersja powoduje cache miss, a nie próbę migracji za wszelką cenę.
 
-## 13. Reuse world-013 runtime cache
+## 13. Incremental cache population
+
+Cache ma być **session-accumulating i inkrementalny**.
+
+Initial world setup może utworzyć lub hydrate'ować pierwsze rekordy cache, ale późniejsze deterministyczne obliczenia wykonane z uzasadnionej potrzeby gameplay powinny również rozszerzać istniejący persistent cache.
+
+Przykładowy lifecycle:
+
+```text
+start świata
+→ hydrate persistent cache
+→ normalne liczenie brakujących danych
+→ runtime cache
+→ dirty records
+→ async persistent upsert
+
+późniejszy gameplay / map discovery / world query
+→ liczenie brakujących regionów/cells/landmarks
+→ runtime cache
+→ dirty records
+→ async persistent upsert
+```
+
+Persistent cache **nigdy nie może sam inicjować obliczania brakującej geografii**. Zapis jest efektem obliczeń, które i tak zostały wywołane przez normalny world/gameplay lifecycle.
+
+Nie zapisywać po każdej pojedynczej coarse cell. Preferować dirty tile/region + debounce/batching i bounded async upsert.
+
+Partial records są poprawnym stanem. Jeżeli tile zawiera jeszcze `CELL_UNKNOWN`, persistence powinno zachować tę informację; późniejsze obliczenia mogą zaktualizować ten sam rekord bez konieczności ponownego liczenia już znanych cells.
+
+## 14. Deterministic landmarks as persistent derived data
+
+Deterministyczne landmarki są poprawnym kandydatem do persistent cache, jeżeli ich identity/position/type/name zależą wyłącznie od:
+
+- seeda,
+- jawnie fingerprintowanych parametrów worldgen,
+- stabilnej wersji generatora/resolvera.
+
+W szczególności dotyczy to wyników policzonych przy normalnych zapytaniach map/location discovery, np. po zakupie mapy u handlarza.
+
+Przykład:
+
+```text
+merchant map purchase
+→ normalny location/map query
+→ obliczenie brakujących deterministic landmarks
+→ runtime result/cache
+→ async persistent cache update
+```
+
+Kolejny save lub kolejna sesja na tym samym seedzie i tym samym fingerprint może reuse'ować te dane bez powtarzania kosztownego resolvera.
+
+Twarda granica ownership:
+
+```text
+deterministic landmark existence / position / type / deterministic name
+≠
+player knowledge that landmark is discovered
+```
+
+Pierwsza strona może być współdzielona przez save'y jako cache seeda. `LocationKnowledge`, `MapDiscovery`, reveal state i navigation targets pozostają własnością konkretnego save'a.
+
+Persistent cache landmarków nie może sam wywoływać discovery ani odsłaniać graczowi danych. Sam fakt, że inny save na tym seedzie policzył i zapisał landmark, nie oznacza, że bieżący save go zna.
+
+Nie persistować automatycznie każdego rodzaju `WorldLocation` bez sprawdzenia jego deterministycznego ownership/fingerprint. W pierwszej kolejności objąć te wyniki, które są częścią mierzonego kosztu map/location query.
+
+## 15. Reuse world-013 runtime cache
 
 `world-013` pozostaje właścicielem reprezentacji coarse terrain potrzebnej przez `WorldLocationCatalog`.
 
@@ -313,9 +382,11 @@ persistent worldgen cache
 
 Cold query może hydrate'ować istniejące dane persistent. Persistent miss wykonuje normalny procedural sampling i może później zapisać derived result.
 
+Dalsze query w trakcie sesji mogą materializować kolejne cells/tiles i inkrementalnie aktualizować persistence.
+
 Wynik query musi być identyczny niezależnie od tego, czy pochodzi z cold generation, runtime cache czy persistent cache.
 
-## 14. Cache writes must not create new hitches
+## 16. Cache writes must not create new hitches
 
 Persistent cache jest wyłącznie optymalizacją.
 
@@ -324,6 +395,7 @@ Nie zastępować freeze podczas worldgen freeze'em podczas serializacji lub zapi
 Preferować:
 
 - stabilną region/tile granularity,
+- dirty marking + debounce/batching,
 - bounded payloads,
 - asynchronous IndexedDB writes,
 - brak wielkich monolitycznych snapshotów,
@@ -331,9 +403,9 @@ Preferować:
 
 Runtime correctness nie może zależeć od powodzenia zapisu cache.
 
-## 15. Cache size and cleanup
+## 17. Cache size and cleanup
 
-Persistent cache nie może rosnąć bez ograniczeń wraz z liczbą seedów i odwiedzonych regionów.
+Persistent cache nie może rosnąć bez ograniczeń wraz z liczbą seedów i odwiedzonych/policzonych regionów.
 
 Przewidzieć metadata potrzebne do bezpiecznego cleanup, np. `lastAccessedAt` i przybliżony rozmiar, jeżeli są uzasadnione implementacyjnie.
 
@@ -343,7 +415,7 @@ Cleanup może usuwać wyłącznie derived cache. Nigdy automatycznie nie usuwać
 
 Nie implementować skomplikowanego quota managera bez zmierzonej potrzeby.
 
-## 16. Save independence and New Game reset
+## 18. Save independence and New Game reset
 
 Reuse seeda nie oznacza reuse stanu startowego poprzedniego save'a.
 
@@ -351,7 +423,7 @@ New Game na istniejącym seedzie musi przejść przez ten sam poprawny reset/orc
 
 Nie przenosić pomiędzy save'ami żadnego mutable state tylko dlatego, że współdzielą seed.
 
-## 17. Tests
+## 19. Tests
 
 Dodać testy obejmujące co najmniej:
 
@@ -372,9 +444,15 @@ Dodać testy obejmujące co najmniej:
 15. późniejsze wzbogacenie traits używa tylko danych policzonych przez normalny world lifecycle,
 16. seed profiling nie zmienia `LocationKnowledge` ani `MapDiscovery`,
 17. dwa save'y na jednym seedzie zachowują niezależny dynamiczny state,
-18. usunięcie cache nie usuwa ani nie modyfikuje save'ów.
+18. usunięcie cache nie usuwa ani nie modyfikuje save'ów,
+19. partial coarse tile round-trip zachowuje unknown cells i późniejszy upsert rozszerza rekord bez utraty wcześniej policzonych cells,
+20. policzenie dalszej geografii w normalnym gameplay powoduje dirty/upsert persistent cache bez proactive scan,
+21. map purchase może zapisać deterministyczne landmark results do cache,
+22. cache landmarków z innego save'a przy tym samym seedzie nie zmienia `LocationKnowledge` ani `MapDiscovery`,
+23. ten sam landmark query daje identyczny rezultat cold/warm/persistent,
+24. landmark cache jest izolowany przez seed + generator/fingerprint/version.
 
-## 18. Performance verification
+## 20. Performance verification
 
 Zmierz co najmniej:
 
@@ -382,20 +460,24 @@ Zmierz co najmniej:
 - cold first use nowego seeda,
 - warm start nowego save'a na istniejącym seedzie,
 - cold/warm `WorldLocationCatalog` query po integracji persistent cache,
+- cold/warm merchant map query obejmujący deterministic landmarks,
 - czas hydrate cache z IndexedDB,
-- rozmiar persistent cache,
-- koszt i rozmiar zapisów cache.
+- rozmiar persistent cache po initial state i po późniejszym rozszerzeniu geografii,
+- koszt i rozmiar batchowanych insert/update cache,
+- czy zapis dirty tiles/landmarks nie powoduje frame hitch.
 
 Samo tworzenie/nazywanie seeda i otwarcie Seed Library nie powinno powodować zauważalnego frame hitch ani inicjować broad terrain scan.
 
-Celem persistent cache jest rzeczywiste zmniejszenie CPU worldgen, a nie tylko przeniesienie kosztu między etapami.
+Celem persistent cache jest rzeczywiste zmniejszenie CPU worldgen i kolejnych deterministic world queries, a nie tylko przeniesienie kosztu między etapami.
 
 Browser/gameplay verification wykonuje użytkownik.
 
 ## Non-goals
 
 - współdzielenie dynamicznej symulacji między save'ami,
+- współdzielenie player discovery/knowledge między save'ami,
 - cache całego świata z góry,
+- proactive scan geografii w celu zapełnienia cache,
 - generowanie pełnego świata przy tworzeniu `SeedRecord`,
 - odkrywanie terenu/lokacji tylko po to, aby wygenerować dokładniejszą nazwę,
 - Web Worker bez zmierzonej potrzeby,
@@ -415,11 +497,15 @@ Przed implementacją przygotować implementation notes na podstawie aktualnego k
 - `src/world/parseSeed.ts`,
 - `src/world/worldContext.ts`,
 - `src/world/locations/worldLocationCatalog.ts`,
+- `src/world/locations/locationDiscovery.ts`,
+- map purchase / map reveal integration points,
 - lightweight discovery/map-location seams,
 - cache zaimplementowany przez `world-013`,
 - aktualne Vue main-menu/save-management components.
 
 Zweryfikować aktualne ownership/lifecycle przed kodowaniem; kod jest źródłem prawdy. Nie zakładać, że `world-013` został zaimplementowany dokładnie według planu.
+
+Implementation notes muszą wskazać, które konkretne landmark results są faktycznie deterministic i bezpieczne do persistence oraz jaki fingerprint unieważnia każdy namespace.
 
 Dla nowych ważnych publicznych/lifecycle API dodać JSDoc tam, gdzie pomaga preflight discovery; użyć `@domain` dla istotnych entrypointów.
 
