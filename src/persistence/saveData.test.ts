@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { PALISADE_REQUIRED_WORK } from '../world/palisade'
+import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 import {
   CURRENT_SAVE_VERSION,
   isSaveData,
@@ -90,8 +92,8 @@ const validSave: SaveData = {
     id: 'garden:1', x: 7, z: 8, yaw: 0.4, care: 82, lastMaintainedAtDays: 3.5,
     hydration: 60, lastHydrationUpdateAtDays: 3.5, droughtStressDays: 0,
   }],
-  standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true }],
-  palisades: [{ id: 'palisade:1', x: 11, z: -2, yaw: 0.4 }],
+  standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true, completedWork: 1 }],
+  palisades: [{ id: 'palisade:1', x: 11, z: -2, yaw: 0.4, completedWork: 1.5 }],
   bedrolls: [{ id: 'bedroll:1', x: 12, z: -3, yaw: 0.4, variant: 'leather', condition: 90, lastConditionUpdateAtDays: 3.5 }],
   platforms: [{ id: 'platform:1', x: 13, z: -4, yaw: 0.4, condition: 95, lastConditionUpdateAtDays: 3.5 }],
   resourceDeposits: { 'resource_1_2': 0, 'resource_3_4': 5 },
@@ -387,6 +389,20 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
           committedWork: Number.MAX_SAFE_INTEGER,
           npcWorkCompleted: 0,
         }],
+      },
+    })
+  })
+
+  it('migrates a real v5 save (plan items-player-017) into v6, defaulting missing construction progress to already-complete', () => {
+    const { completedWork: _tcw, ...v5Torch } = validSave.standingTorches[0]!
+    const { completedWork: _pcw, ...v5Palisade } = validSave.palisades[0]!
+    const v5Save = { ...validSave, version: 5, standingTorches: [v5Torch], palisades: [v5Palisade] }
+    expect(loadStoredSave(v5Save)).toEqual({
+      status: 'ok',
+      data: {
+        ...validSave,
+        standingTorches: [{ ...v5Torch, completedWork: STANDING_TORCH_REQUIRED_WORK }],
+        palisades: [{ ...v5Palisade, completedWork: PALISADE_REQUIRED_WORK }],
       },
     })
   })

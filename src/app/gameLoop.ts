@@ -406,6 +406,12 @@ export type GameLoopDeps = {
    *  `fire_starting`, flips its authoritative `lit`, and updates its runtime
    *  flame/light. No-op (including re-checking `lit`) if already lit. */
   igniteStandingTorch?: (id: string) => void
+  /** `[E]` on an unfinished standing torch (plan items-player-017 §11) — runs
+   *  one active-work bout through the actor-neutral construction seam. */
+  workOnStandingTorch?: (id: string) => void
+  /** `[E]` on an unfinished palisade segment (plan items-player-017 §10) —
+   *  same shape as `workOnStandingTorch`. */
+  workOnPalisade?: (id: string) => void
   /** `[R]` removes one gazed-at palisade segment (plan items-player-010 §5) —
    *  the generic player-built removal/recovery seam applied to a palisade:
    *  preflights inventory capacity for the recovered materials, then removes
@@ -521,7 +527,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, removePalisadeSegment, openNoticeBoard,
+    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
   } = deps
@@ -1459,8 +1465,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           }
         }
       } else if (target?.kind === 'standingTorch') {
-        if (interactPressed && !target.lit) igniteStandingTorch?.(target.id)
+        // Unfinished (plan items-player-017 §11) — `[E]` runs a construction
+        // bout instead, and ignition is never offered until it completes.
+        if (interactPressed) {
+          if (!target.complete) workOnStandingTorch?.(target.id)
+          else if (!target.lit) igniteStandingTorch?.(target.id)
+        }
       } else if (target?.kind === 'palisade') {
+        // Unfinished (plan items-player-017 §10/§17) — `[E]` runs a
+        // construction bout; `[R]` removal stays available either way.
+        if (interactPressed && !target.complete) workOnPalisade?.(target.id)
         if (altInteractPressed) removePalisadeSegment?.(target.id)
       } else if (target?.kind === 'noticeBoard') {
         if (interactPressed) openNoticeBoard?.(target.settlementId)

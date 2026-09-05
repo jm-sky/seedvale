@@ -1,13 +1,16 @@
 import type { VueUi } from '../../ui-vue/mount'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
 import { terrainPreparationRemainingWork } from '../../terrain/terrainPreparation'
+import { isPalisadeConstructionComplete, palisadeRemainingWork } from '../../world/palisade'
 import { formatHours, isWellCompleted, WELL_FOOTPRINT_RADIUS, WELL_SEPARATION, wellRemainingWork } from '../../world/playerWell'
+import { isStandingTorchConstructionComplete, standingTorchRemainingWork } from '../../world/standingTorch'
 import {
   canPostContract,
   type ContractTarget,
   isContractTerminal,
   noticeBoardId,
   WORK_SHARE_PRESETS,
+  type WorkType,
 } from '../../world/workContract'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import {
@@ -47,12 +50,14 @@ const CONTRACT_TARGET_PLACEMENT_MESSAGE: Record<Exclude<GroundPlacementReason, '
   occupied: 'Tu już jest zgłoszone inne zlecenie.',
 }
 
-/** Display label per `ContractTarget['kind']` (plan npc-018 §10/§14) — the
- *  single place every contract-listing UI (notice board, Quick Actions
- *  "Zlecenia") reads instead of re-deriving it. */
-const WORK_TYPE_LABEL: Record<'construction' | 'terrain_preparation', string> = {
+/** Display label per `ContractTarget['kind']` (plan npc-018 §10/§14, extended
+ *  by items-player-017 §16) — the single place every contract-listing UI
+ *  (notice board, Quick Actions "Zlecenia") reads instead of re-deriving it. */
+const WORK_TYPE_LABEL: Record<WorkType, string> = {
   construction: 'budowa',
   terrain_preparation: 'przygotowanie terenu',
+  palisade: 'segment palisady',
+  standing_torch: 'pochodnia',
 }
 
 export type WorkContractQuickActionEntry = { id: string, label: string, cost: string }
@@ -221,7 +226,26 @@ export function createWorkContractActions(
         remainingWork: terrainPreparationRemainingWork(p),
         label: 'Przygotowanie terenu',
       }))
-    return [...wells, ...preparations].filter((candidate) => !bundle.workContracts.hasActiveContract(candidate.target))
+    const palisades = bundle.palisades.nodes()
+      .filter((p) => !isPalisadeConstructionComplete(p))
+      .map((p) => ({
+        target: { kind: 'palisade' as const, targetId: p.id },
+        x: p.x,
+        z: p.z,
+        remainingWork: palisadeRemainingWork(p),
+        label: 'Segment palisady',
+      }))
+    const standingTorches = bundle.standingTorches.nodes()
+      .filter((t) => !isStandingTorchConstructionComplete(t))
+      .map((t) => ({
+        target: { kind: 'standing_torch' as const, targetId: t.id },
+        x: t.x,
+        z: t.z,
+        remainingWork: standingTorchRemainingWork(t),
+        label: 'Pochodnia',
+      }))
+    return [...wells, ...preparations, ...palisades, ...standingTorches]
+      .filter((candidate) => !bundle.workContracts.hasActiveContract(candidate.target))
   }
 
   const openHireHelp = (): void => {

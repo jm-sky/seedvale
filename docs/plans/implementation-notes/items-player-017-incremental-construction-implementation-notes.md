@@ -3,6 +3,66 @@
 **Plan:** items-player-017-incremental-construction.md  
 **Last reviewed:** 2026-09-05
 
+## Implementation summary (2026-09-05)
+
+Implemented after `npc-018` landed (`WorkContracts`/`ContractTarget`/shared-work
+API recon'd from actual `src/world/workContract.ts`/`createWorkContracts.ts`,
+not the plan text). Both buildables use the "requiredWork constant +
+`completedWork` on the record" shape suggested below, not a per-record
+`requiredWork` (unlike terrain preparation, every segment/torch costs the
+same, so the constant lives on the domain module):
+
+- `world/palisade.ts` / `world/standingTorch.ts`: `completedWork` added to
+  the record; `PALISADE_REQUIRED_WORK` (1.5h) / `STANDING_TORCH_REQUIRED_WORK`
+  (1h) constants, `is*ConstructionComplete`/`*RemainingWork`/`*PromptLabel`
+  helpers.
+- `world/createPalisades.ts` / `world/createStandingTorches.ts`: `contributeWork(id, amount)`
+  mirrors `TerrainPreparations.contributeWork` exactly (clamp/accept/report).
+  Palisade collider registration and both buildables' visual height
+  (`Object3D.scale.y`, min 0.35/0.4 → 1) gate on completion; standing-torch
+  `ignite()` now also gates on completion.
+- `world/workContract.ts`: `ContractTarget`/`WorkType` gained `palisade`/
+  `standing_torch` variants. `createWorkContracts.ts` gained `findByTarget`
+  (contract lookup by world-target, used by palisade removal to invalidate).
+- `ai/NpcAgent.ts`: one shared `pursueBuildableContract`/
+  `runBuildableContractWorkBout` pair (not two duplicate methods, since both
+  targets share the identical `contributeWork`-based seam) dispatches on
+  `target.kind`. `Palisades`/`StandingTorches` threaded through
+  `NpcAgentDeps` → `createSettlement.ts` → `SettlementsManager.ts` →
+  `worldBundle.ts`'s `buildSettlementsManager`, with `standingTorches`/
+  `palisades` construction moved earlier (next to `terrainPreparations`) so
+  they exist before `buildSettlementsManager` runs.
+- `app/actions/placementActions.ts`: `placeStandingTorchAtAim`/
+  `placePalisadeAtAim` unchanged except toast wording (now "Rozpoczęto
+  budowę…"); new `workOnStandingTorch`/`workOnPalisade` run one active-work
+  busy-channel bout each (`light`/`moderate` represented-vigor cost),
+  partial-credit-on-cancel like `workOnWell`. `removePalisadeSegment` now
+  also invalidates any active Work Contract on that segment via the new
+  `findByTarget`.
+- `app/interactables.ts` / `interaction/Interactable.ts` / `app/gameLoop.ts`:
+  `standingTorch`/`palisade` interactables gained `complete: boolean`;
+  `[E]` runs construction work while incomplete, ignition/removal behave
+  exactly as before once complete (`[R]` removal stays available either way).
+- `app/actions/workContractActions.ts`: `openHireHelp()`'s candidate list
+  extended with unfinished palisades/standing torches; `WORK_TYPE_LABEL`
+  covers all four `WorkType`s.
+- Terrain-preparation-before-construction (plan §5): placement still never
+  auto-flattens anything; a `slope` rejection's toast now points at the
+  existing "Przygotuj teren" Quick Action instead of silently failing —
+  deliberately not an automatic launch-and-resume flow (kept out of scope
+  as the smallest change satisfying "requires... rather than silently
+  flattening").
+- Persistence: `SaveData` v5→v6 (`saveData.ts`), `completedWork` on
+  `SaveStandingTorch`/`SavePalisadeSegment`, missing → the buildable's own
+  required-work constant (already complete), never 0.
+
+Not implemented (deliberately out of scope for this pass, no plan
+requirement forced it): a dedicated construction debug UI (plan explicitly
+excludes one; existing `?debug=1` NPC contract snapshot already resolves
+`targetRemainingWork` for all four kinds).
+
+## Current-state discrepancies
+
 ## Current-state discrepancies
 
 - `npc-018` is still `planned`; the shared-work API described by this plan does not exist on current `main`. Implement this plan only after `npc-018`, then recon its actual target/contribution API and extend that implementation rather than coding to the plan text or these notes.

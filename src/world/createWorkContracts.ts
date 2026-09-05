@@ -44,10 +44,12 @@ export type WorkContracts = {
    *  creation before ever calling `create`. */
   hasActiveContract: (target: ContractTarget) => boolean
   /** Creates a new `available`/`not_posted` contract referencing `params.target`
-   *  and spawns its target flag (plan npc-014 §4/§5, extended by npc-018 §2/§4)
-   *  — never advertises it, never assigns anyone. `params.target` must already
-   *  be a real, independently-existing world object (a `PlayerWellRecord` or
-   *  `TerrainPreparationRecord`) placed by the caller, never a placeholder.
+   *  and spawns its target flag (plan npc-014 §4/§5, extended by npc-018 §2/§4
+   *  and items-player-017 §16) — never advertises it, never assigns anyone.
+   *  `params.target` must already be a real, independently-existing world
+   *  object (a `PlayerWellRecord`, `TerrainPreparationRecord`,
+   *  `PalisadeSegmentRecord` or `StandingTorchRecord`) placed by the caller,
+   *  never a placeholder.
    *  Returns `null` if `target` already has a non-terminal contract
    *  (plan §9's one-active-contract-per-target invariant). */
   create: (params: CreateWorkContractParams) => WorkContractRecord | null
@@ -75,6 +77,11 @@ export type WorkContracts = {
    *  notes call for ("Recommended contract ownership"). Rebuilt from
    *  `records` on every call; never persisted itself. */
   findByWorker: (npcId: string) => WorkContractRecord | undefined
+  /** The one active (non-terminal) contract referencing `target`, or
+   *  `undefined` (plan items-player-017 §17) — used to invalidate a
+   *  buildable's own contract when the player removes it, since
+   *  `invalidateTarget` itself takes a contract id, not a world-target id. */
+  findByTarget: (target: ContractTarget) => WorkContractRecord | undefined
   /** Assigns `npcId` to `id` (plan §5) — `advertised` → `accepted`. `null`
    *  if `id` is unknown or `canAcceptContract` rejects it (already taken,
    *  not currently offered, ...). */
@@ -221,6 +228,7 @@ export function createWorkContracts(
     ),
     discoverableAt: (boardId) => records.filter((r) => r.postedBoardId === boardId && r.state === 'advertised'),
     findByWorker: (npcId) => records.find((r) => r.workerNpcId === npcId && !isContractTerminal(r.state)),
+    findByTarget: (target) => records.find((r) => !isContractTerminal(r.state) && sameContractTarget(r.target, target)),
     accept(id, npcId, now) {
       const index = indexOf(id)
       if (index === -1) return null

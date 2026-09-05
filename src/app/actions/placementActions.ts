@@ -38,6 +38,7 @@ import {
   type TrapKind,
 } from '../../world/animalTraps'
 import {
+  isPalisadeConstructionComplete,
   PALISADE_FOOTPRINT_RADIUS,
   PALISADE_MATERIAL_REQUIREMENTS,
   PALISADE_PLACE_DURATION_SEC,
@@ -45,7 +46,10 @@ import {
   PALISADE_PLACEMENT_MESSAGE,
   PALISADE_RECOVERY_RATE,
   PALISADE_SEPARATION,
+  PALISADE_WORK_SESSION_HOURS,
+  PALISADE_WORK_SESSION_SEC,
   type PalisadePlacementReason,
+  palisadeRemainingWork,
   resolvePalisadeSite,
 } from '../../world/palisade'
 import {
@@ -109,13 +113,17 @@ import {
   type PlatformPlacementReason,
 } from '../../world/sleepingUtilities'
 import {
+  isStandingTorchConstructionComplete,
   STANDING_TORCH_FOOTPRINT_RADIUS,
   STANDING_TORCH_MATERIAL_REQUIREMENTS,
   STANDING_TORCH_PLACE_DURATION_SEC,
   STANDING_TORCH_PLACE_REACH,
   STANDING_TORCH_PLACEMENT_MESSAGE,
   STANDING_TORCH_SEPARATION,
+  STANDING_TORCH_WORK_SESSION_HOURS,
+  STANDING_TORCH_WORK_SESSION_SEC,
   type StandingTorchPlacementReason,
+  standingTorchRemainingWork,
 } from '../../world/standingTorch'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -253,6 +261,12 @@ export type PlacementActions = {
    *  requires `fire_starting`; no-op (including re-checking `lit`) if `id` is
    *  unknown or already lit. Instant, no busy channel or material cost. */
   igniteStandingTorch: (id: string) => void
+  /** `[E]` on an unfinished standing torch (plan items-player-017 §11) — runs
+   *  one active-work bout through the actor-neutral `contributeWork` seam,
+   *  crediting a `light`-effort represented-vigor cost per hour actually
+   *  applied, same "measured wall-clock fraction on cancel" contract as
+   *  `workOnWell`. No-op if `id` is unknown or already complete. */
+  workOnStandingTorch: (id: string) => void
   /** Read-only preview of palisade-segment placement at the player's current
    *  aim (plan items-player-010 §1/§3/§4) — already snapped to a nearby
    *  segment endpoint when one is in range; backs the shared
@@ -264,13 +278,19 @@ export type PlacementActions = {
    *  segment within reach, then consumes `PALISADE_MATERIAL_REQUIREMENTS`
    *  atomically on completion, nothing on a rejected/cancelled placement. */
   placePalisadeAtAim: () => void
+  /** `[E]` on an unfinished palisade segment (plan items-player-017 §10) —
+   *  same shape as `workOnStandingTorch`, `moderate`-effort represented
+   *  vigor cost. No-op if `id` is unknown or already complete. */
+  workOnPalisade: (id: string) => void
   /** `[R]` removes one palisade segment by id (plan items-player-010 §5/§6/
-   *  §7) — the generic player-built removal/recovery seam
-   *  (`items/constructionMaterials.ts`) applied to a palisade segment:
-   *  preflights inventory capacity for the recovered materials before
-   *  removing anything, then removes the authoritative segment + runtime
-   *  representation and adds the recovery. No-op if `id` is unknown or the
-   *  recovered materials wouldn't fit. */
+   *  §7, extended by items-player-017 §17) — the generic player-built
+   *  removal/recovery seam (`items/constructionMaterials.ts`) applied to a
+   *  palisade segment: preflights inventory capacity for the recovered
+   *  materials before removing anything, then removes the authoritative
+   *  segment + runtime representation, adds the recovery and invalidates any
+   *  active Work Contract still referencing this segment (so a committed NPC
+   *  is never left travelling/working toward a missing target). No-op if
+   *  `id` is unknown or the recovered materials wouldn't fit. */
   removePalisadeSegment: (id: string) => void
   /** Read-only preview of bedroll placement at the player's current aim
    *  (plan items-player-013) — same shape as `previewStandingTorchPlacement`;
@@ -803,13 +823,15 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       bundle.standingTorches.place(site.x, site.z, site.yaw)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      toast.show('Postawiono pochodnię.')
+      toast.show('Rozpoczęto budowę pochodni.')
     })
   }
 
-  /** `[E]` ignites an unlit standing torch (plan items-player-009 §4) — the
-   *  same "re-resolve by id, check capability, mutate" shape the plan
-   *  requires; `fire_starting` is only needed here, never for placement. */
+  /** `[E]` ignites an unlit, *completed* standing torch (plan items-player-009
+   *  §4, gated on construction by items-player-017 §11) — the same
+   *  "re-resolve by id, check capability, mutate" shape the plan requires;
+   *  `fire_starting` is only needed here, never for placement.
+   *  `StandingTorches.ignite` itself is the authoritative completion gate. */
   const igniteStandingTorch = (id: string): void => {
     if (isActionBlocked(ctx)) return
     if (!inventory.hasCapability('fire_starting')) {
@@ -817,6 +839,34 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return
     }
     if (bundle.standingTorches.ignite(id)) toast.show('Zapalono pochodnię.')
+  }
+
+  /** Runs one active-work bout on an unfinished standing torch (plan
+   *  items-player-017 §11) — same "measured wall-clock fraction credited on
+   *  cancel" shape as `workOnWell`, through the actor-neutral `contributeWork`
+   *  seam shared with NPC contract execution. No-op if `id` is unknown or
+   *  already complete. */
+  const workOnStandingTorch = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const torch = bundle.standingTorches.list().find((entry) => entry.id === id)
+    if (!torch || isStandingTorchConstructionComplete(torch)) return
+    const sessionHours = Math.min(STANDING_TORCH_WORK_SESSION_HOURS, standingTorchRemainingWork(torch))
+    const sessionSec = (sessionHours / STANDING_TORCH_WORK_SESSION_HOURS) * STANDING_TORCH_WORK_SESSION_SEC
+    const startedAt = performance.now()
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      const creditedHours = sessionHours * fraction
+      bundle.standingTorches.contributeWork(id, creditedHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'light', creditedHours)
+    }
+    busy.start(sessionSec, 'Budowa pochodni w toku…', () => {
+      bundle.standingTorches.contributeWork(id, sessionHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'light', sessionHours)
+    }, {
+      onCancel: creditPartial,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec('light'),
+    })
   }
 
   /** Shared placement contract for a palisade segment (plan items-player-010
@@ -884,14 +934,43 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       bundle.palisades.place(site.x, site.z, site.yaw)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      toast.show('Postawiono segment palisady.')
+      toast.show('Rozpoczęto budowę segmentu palisady.')
     })
   }
 
-  /** `[R]` removes one palisade segment (plan items-player-010 §5/§6/§7) —
-   *  the generic removal/recovery seam: preflight `canReceiveRecovery`
-   *  before touching any authoritative state, remove the segment, then add
-   *  the recovered materials — never the reverse, and never partial. */
+  /** Runs one active-work bout on an unfinished palisade segment (plan
+   *  items-player-017 §10) — same shape as `workOnStandingTorch`. No-op if
+   *  `id` is unknown or already complete. */
+  const workOnPalisade = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const segment = bundle.palisades.list().find((entry) => entry.id === id)
+    if (!segment || isPalisadeConstructionComplete(segment)) return
+    const sessionHours = Math.min(PALISADE_WORK_SESSION_HOURS, palisadeRemainingWork(segment))
+    const sessionSec = (sessionHours / PALISADE_WORK_SESSION_HOURS) * PALISADE_WORK_SESSION_SEC
+    const startedAt = performance.now()
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      const creditedHours = sessionHours * fraction
+      bundle.palisades.contributeWork(id, creditedHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', creditedHours)
+    }
+    busy.start(sessionSec, 'Budowa segmentu palisady w toku…', () => {
+      bundle.palisades.contributeWork(id, sessionHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours)
+    }, {
+      onCancel: creditPartial,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
+    })
+  }
+
+  /** `[R]` removes one palisade segment (plan items-player-010 §5/§6/§7,
+   *  extended by items-player-017 §17) — the generic removal/recovery seam:
+   *  preflight `canReceiveRecovery` before touching any authoritative state,
+   *  remove the segment, then add the recovered materials — never the
+   *  reverse, and never partial. Any active Work Contract still referencing
+   *  this segment is invalidated in the same step, so a committed NPC never
+   *  keeps travelling/working toward a now-missing target. */
   const removePalisadeSegment = (id: string): void => {
     if (isActionBlocked(ctx)) return
     if (!bundle.palisades.list().some((entry) => entry.id === id)) return
@@ -904,6 +983,8 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return
     }
     if (!bundle.palisades.remove(id)) return
+    const contract = bundle.workContracts.findByTarget({ kind: 'palisade', targetId: id })
+    if (contract) bundle.workContracts.invalidateTarget(contract.id)
     applyRecovery(inventory, recovered)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
@@ -1048,8 +1129,10 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     previewStandingTorchPlacement,
     placeStandingTorchAtAim,
     igniteStandingTorch,
+    workOnStandingTorch,
     previewPalisadePlacement,
     placePalisadeAtAim,
+    workOnPalisade,
     removePalisadeSegment,
     previewBedrollPlacement,
     placeBedrollAtAim,

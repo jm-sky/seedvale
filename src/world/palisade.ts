@@ -1,5 +1,6 @@
 import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { GroundPlacementReason } from '../items/tentPlacement'
+import { formatHours } from './playerWell'
 
 /**
  * Player-built palisade segment — pure domain logic (plan items-player-010).
@@ -12,9 +13,30 @@ import type { GroundPlacementReason } from '../items/tentPlacement'
  * below), never persisted as a graph — there is no `PalisadeManager` and no
  * per-frame neighbour bookkeeping.
  *
+ * Since plan items-player-017, placement creates a real but unfinished
+ * segment (`completedWork` starts at 0) — the same persistent-identity
+ * record gains progress through Player and/or NPC work
+ * (`world/createPalisades.ts`'s `contributeWork`, the same actor-neutral
+ * seam `TerrainPreparations.contributeWork` established) until it reaches
+ * `PALISADE_REQUIRED_WORK` and becomes a normal functional segment. A
+ * pre-plan save has no `completedWork` field at all — the migration in
+ * `persistence/saveData.ts` defaults that to `PALISADE_REQUIRED_WORK`
+ * (already complete), never to 0.
+ *
  * @domain items-player
  */
-export type PalisadeSegmentRecord = { id: string, x: number, z: number, yaw: number }
+export type PalisadeSegmentRecord = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  /** Hours of active work applied so far (plan items-player-017 §3) — the
+   *  only construction-progress field; `PALISADE_REQUIRED_WORK` (a fixed
+   *  constant, not a per-record field, since every segment costs the same)
+   *  is the single requirement authority every reader
+   *  (`isPalisadeConstructionComplete`/`palisadeRemainingWork`) reads. */
+  completedWork: number
+}
 
 /** World-space length of one segment (post to post) and its clearance radius
  *  against unrelated blockers (trees/houses/wells) — smaller than a tent/well,
@@ -40,9 +62,13 @@ export const PALISADE_PLACE_DURATION_SEC = 3
 
 export type PalisadePlacementReason = GroundPlacementReason | 'palisade'
 
+/** `slope`'s message points at the existing terrain-preparation tool rather
+ *  than silently flattening anything here (plan items-player-017 §5) —
+ *  placement itself never modifies terrain; the player must run
+ *  "Przygotuj teren" (Szybkie akcje) first, then retry. */
 export const PALISADE_PLACEMENT_MESSAGE: Record<Exclude<PalisadePlacementReason, 'ok'>, string> = {
   water: 'Tu jest za mokro na palisadę.',
-  slope: 'Teren jest zbyt stromy.',
+  slope: 'Teren jest zbyt stromy. Najpierw przygotuj teren (Szybkie akcje → Przygotuj teren).',
   object: 'Za mało miejsca — coś stoi w pobliżu.',
   occupied: 'Tu już stoi segment palisady.',
   palisade: 'Tu już stoi segment palisady.',
@@ -61,6 +87,45 @@ export const PALISADE_MATERIAL_REQUIREMENTS: readonly MaterialRequirement[] = [
  *  §6) — within the plan's typical 30–75% band. Attached to the palisade
  *  segment type itself, not a generic removal rule. */
 export const PALISADE_RECOVERY_RATE = 0.5
+
+/** Active-work hours required to finish a segment (plan items-player-017 §3/
+ *  §4) — small and fixed (no stages, unlike `playerWell.ts`), so a fence
+ *  panel stays practical to build manually while still leaving room for two
+ *  work bouts (Player alone, or Player + a hired NPC, plan §9). */
+export const PALISADE_REQUIRED_WORK = 1.5
+/** Real-seconds length of one active-work bout — same busy-channel-cap
+ *  reasoning as `world/playerWell.ts`'s `WELL_WORK_SESSION_SEC`. */
+export const PALISADE_WORK_SESSION_SEC = 4
+/** Active-work hours credited by one full-length bout (plan §3) — shared by
+ *  the player's own work action and NPC contract execution, same "flat
+ *  per-bout credit" shape as `WELL_WORK_SESSION_HOURS`/
+ *  `TERRAIN_PREP_NPC_WORK_SESSION_HOURS`. */
+export const PALISADE_WORK_SESSION_HOURS = 1
+
+/** All useful work still required to finish `record` (plan items-player-017
+ *  §16) — the remaining-work authority a Work Contract's snapshot reads,
+ *  mirroring `world/playerWell.ts`'s `wellRemainingWork`/
+ *  `terrain/terrainPreparation.ts`'s `terrainPreparationRemainingWork`. */
+export function palisadeRemainingWork(record: Pick<PalisadeSegmentRecord, 'completedWork'>): number {
+  return Math.max(0, PALISADE_REQUIRED_WORK - record.completedWork)
+}
+
+/** True once `record` has accumulated `PALISADE_REQUIRED_WORK` of active
+ *  work (plan §12) — the single completion authority every system
+ *  (collision, Work Contracts, interaction/HUD) reads instead of comparing
+ *  `completedWork` directly. */
+export function isPalisadeConstructionComplete(record: Pick<PalisadeSegmentRecord, 'completedWork'>): boolean {
+  return record.completedWork >= PALISADE_REQUIRED_WORK
+}
+
+/** Gaze prompt for a segment (plan items-player-017 §15) — an unfinished
+ *  segment offers `[E]` construction work alongside the existing `[R]`
+ *  removal (plan §17: removal must stay available mid-construction); a
+ *  completed segment keeps exactly its pre-plan removal-only prompt. */
+export function palisadePromptLabel(record: Pick<PalisadeSegmentRecord, 'completedWork'>): string {
+  if (isPalisadeConstructionComplete(record)) return '[R] Usuń segment palisady'
+  return `[E] Buduj segment palisady (${formatHours(record.completedWork)}/${formatHours(PALISADE_REQUIRED_WORK)} h) · [R] Usuń`
+}
 
 /** World-space (x, z) of a segment's two ends — `back` is the end a new
  *  segment snaps *onto*, `front` the end it extends *from* when this segment

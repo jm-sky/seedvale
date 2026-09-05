@@ -4,11 +4,14 @@ import {
   type MaterialRecoveryPolicy,
 } from '../items/constructionMaterials'
 import {
+  isPalisadeConstructionComplete,
   nearestPalisadeConnection,
   PALISADE_LENGTH,
   PALISADE_MATERIAL_REQUIREMENTS,
   PALISADE_RECOVERY_RATE,
+  PALISADE_REQUIRED_WORK,
   palisadeEndpoints,
+  palisadeRemainingWork,
   type PalisadeSegmentRecord,
   resolvePalisadeSite,
 } from './palisade'
@@ -33,8 +36,8 @@ describe('palisadeEndpoints', () => {
 
 describe('nearestPalisadeConnection', () => {
   const segments: PalisadeSegmentRecord[] = [
-    { id: 'a', x: 0, z: 0, yaw: 0 },
-    { id: 'b', x: 0, z: 10, yaw: 0 },
+    { id: 'a', x: 0, z: 0, yaw: 0, completedWork: 0 },
+    { id: 'b', x: 0, z: 10, yaw: 0, completedWork: 0 },
   ]
 
   it('finds the nearest endpoint within radius', () => {
@@ -50,8 +53,8 @@ describe('nearestPalisadeConnection', () => {
   it('breaks ties deterministically by segment id then endpoint (back before front)', () => {
     // Two segments placed so one endpoint of each coincides exactly.
     const tied: PalisadeSegmentRecord[] = [
-      { id: 'z', x: 0, z: PALISADE_LENGTH / 2, yaw: 0 }, // back at (0,0)
-      { id: 'a', x: 0, z: -PALISADE_LENGTH / 2, yaw: 0 }, // front at (0,0)
+      { id: 'z', x: 0, z: PALISADE_LENGTH / 2, yaw: 0, completedWork: 0 }, // back at (0,0)
+      { id: 'a', x: 0, z: -PALISADE_LENGTH / 2, yaw: 0, completedWork: 0 }, // front at (0,0)
     ]
     const connection = nearestPalisadeConnection({ x: 0, z: 0 }, tied, 1.5)
     // Both endpoints are exactly at (0,0) — tie-break picks the lower segment
@@ -61,7 +64,7 @@ describe('nearestPalisadeConnection', () => {
 })
 
 describe('resolvePalisadeSite', () => {
-  const existing: PalisadeSegmentRecord[] = [{ id: 'a', x: 0, z: 0, yaw: 0 }]
+  const existing: PalisadeSegmentRecord[] = [{ id: 'a', x: 0, z: 0, yaw: 0, completedWork: 0 }]
 
   it('snaps a straight continuation onto the nearest endpoint', () => {
     const front = palisadeEndpoints(existing[0]!).front
@@ -108,5 +111,25 @@ describe('computeMaterialRecovery (palisade recipe)', () => {
   it('omits materials that round down to zero', () => {
     const policy: MaterialRecoveryPolicy = { requirements: [{ kind: 'beam', count: 1 }], recoveryRate: 0.3 }
     expect(computeMaterialRecovery(policy)).toEqual([])
+  })
+})
+
+describe('palisade construction progress (plan items-player-017)', () => {
+  it('is incomplete and reports full remaining work at 0 progress', () => {
+    const record = { completedWork: 0 }
+    expect(isPalisadeConstructionComplete(record)).toBe(false)
+    expect(palisadeRemainingWork(record)).toBe(PALISADE_REQUIRED_WORK)
+  })
+
+  it('is complete exactly at the required-work threshold, with zero remaining', () => {
+    const record = { completedWork: PALISADE_REQUIRED_WORK }
+    expect(isPalisadeConstructionComplete(record)).toBe(true)
+    expect(palisadeRemainingWork(record)).toBe(0)
+  })
+
+  it('never reports negative remaining work past the threshold', () => {
+    const record = { completedWork: PALISADE_REQUIRED_WORK + 5 }
+    expect(isPalisadeConstructionComplete(record)).toBe(true)
+    expect(palisadeRemainingWork(record)).toBe(0)
   })
 })

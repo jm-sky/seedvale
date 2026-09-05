@@ -16,7 +16,9 @@ import type { Place } from '../settlement/places'
 import type { SettlementLandmarks } from '../settlement/props'
 import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { Palisades } from '../world/createPalisades'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
@@ -97,6 +99,7 @@ import {
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
+import { PALISADE_WORK_SESSION_HOURS, PALISADE_WORK_SESSION_SEC, palisadeRemainingWork } from '../world/palisade'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import {
   advanceWellConstruction,
@@ -107,6 +110,11 @@ import {
   WELL_WORK_SESSION_SEC,
   wellRemainingWork,
 } from '../world/playerWell'
+import {
+  STANDING_TORCH_WORK_SESSION_HOURS,
+  STANDING_TORCH_WORK_SESSION_SEC,
+  standingTorchRemainingWork,
+} from '../world/standingTorch'
 import { gameHoursToRealSeconds } from '../world/timeConversion'
 import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
@@ -763,6 +771,13 @@ export type NpcAgentDeps = {
   /** Active terrain-preparation work sites (plan npc-018) — the second Work
    *  Contract target kind, alongside `playerWells`. */
   terrainPreparations?: TerrainPreparations | null
+  /** Player-built palisade segments (plan items-player-017) — the third Work
+   *  Contract target kind, forwarded the same way as `playerWells`/
+   *  `terrainPreparations`. */
+  palisades?: Palisades | null
+  /** Player-built standing torches (plan items-player-017) — the fourth Work
+   *  Contract target kind, forwarded the same way as `palisades`. */
+  standingTorches?: StandingTorches | null
   droppedItems?: DroppedItems | null
 }
 
@@ -1100,6 +1115,14 @@ export class NpcAgent {
    *  through the same actor-neutral `contributeWork` seam the player's own
    *  progress push uses. Null in isolated fallbacks, same as `playerWells`. */
   private readonly terrainPreparations: TerrainPreparations | null
+  /** The third Work Contract target kind (plan items-player-017) — player-
+   *  built palisade segments NPC execution can travel to/contribute work at,
+   *  through the same actor-neutral `contributeWork` seam. Null in isolated
+   *  fallbacks, same as `terrainPreparations`. */
+  private readonly palisades: Palisades | null
+  /** The fourth Work Contract target kind (plan items-player-017) — player-
+   *  built standing torches, same shape as `palisades`. */
+  private readonly standingTorches: StandingTorches | null
   /** World-dropped items (plan npc-015 §9's material-provisioning analogue)
    *  — lets NPC construction work draw stone/branch left near the site
    *  through the exact same bounded `hasMaterial`/`consumeMaterial` radius
@@ -1176,6 +1199,8 @@ export class NpcAgent {
       workContracts,
       playerWells,
       terrainPreparations,
+      palisades,
+      standingTorches,
       droppedItems,
     } = deps
     const playAt = deps.playAt ?? (() => {})
@@ -1211,6 +1236,8 @@ export class NpcAgent {
     this.workContracts = workContracts ?? null
     this.playerWells = playerWells ?? null
     this.terrainPreparations = terrainPreparations ?? null
+    this.palisades = palisades ?? null
+    this.standingTorches = standingTorches ?? null
     this.droppedItems = droppedItems ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
@@ -1398,15 +1425,22 @@ export class NpcAgent {
       contract: (() => {
         const mine = this.workContracts?.findByWorker(this.id)
         if (!mine) return null
-        const targetRemainingWork = mine.target.kind === 'construction'
-          ? (() => {
-              const well = this.findContractWell(mine.target.targetId)
-              return well ? wellRemainingWork(well) : null
-            })()
-          : (() => {
-              const prep = this.terrainPreparations?.find(mine.target.targetId)
-              return prep ? terrainPreparationRemainingWork(prep) : null
-            })()
+        const targetRemainingWork = (() => {
+          if (mine.target.kind === 'construction') {
+            const well = this.findContractWell(mine.target.targetId)
+            return well ? wellRemainingWork(well) : null
+          }
+          if (mine.target.kind === 'terrain_preparation') {
+            const prep = this.terrainPreparations?.find(mine.target.targetId)
+            return prep ? terrainPreparationRemainingWork(prep) : null
+          }
+          if (mine.target.kind === 'palisade') {
+            const segment = this.palisades?.list().find((e) => e.id === mine.target.targetId)
+            return segment ? palisadeRemainingWork(segment) : null
+          }
+          const torch = this.standingTorches?.list().find((e) => e.id === mine.target.targetId)
+          return torch ? standingTorchRemainingWork(torch) : null
+        })()
         return {
           id: mine.id,
           state: mine.state,
@@ -3691,7 +3725,8 @@ export class NpcAgent {
     if (!contracts) return false
     if (record.state === 'payment_due') return false // nothing left to actively do — npc-016's turn.
     if (record.target.kind === 'construction') return this.pursueConstructionContract(record, contracts)
-    return this.pursueTerrainContract(record, contracts)
+    if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, contracts)
+    return this.pursueBuildableContract(record, contracts)
   }
 
   private pursueConstructionContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
@@ -3870,6 +3905,82 @@ export class NpcAgent {
         const freshContract = contracts.find(contractId)
         if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
         const result = terrainPreparations.contributeWork(prep.id, TERRAIN_PREP_NPC_WORK_SESSION_HOURS)
+        if (!result) {
+          contracts.invalidateTarget(contractId)
+          return
+        }
+        const creditedContract = result.acceptedWork > 0
+          ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
+          : contracts.find(contractId)
+        const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
+        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+      },
+    })
+  }
+
+  /** Plan items-player-017 §16/§17 counterpart of `pursueConstructionContract`/
+   *  `pursueTerrainContract` for the two simple buildable targets (palisade
+   *  segment, standing torch) — both share the identical "contributeWork,
+   *  clamp to remaining, credit only what was accepted" seam, so one method
+   *  resolves the right runtime by `record.target.kind` instead of branching
+   *  NPC behavior per buildable throughout the class (plan §16: "extend the
+   *  target resolution instead of adding palisade/torch branches throughout
+   *  NPC behavior"). Neither buildable removes its record on completion
+   *  (unlike terrain preparation), so "missing" always means genuinely
+   *  removed/invalidated — no `wasCompleted` bookkeeping needed. */
+  private pursueBuildableContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
+    const kind = record.target.kind as 'palisade' | 'standing_torch'
+    const runtime = kind === 'palisade' ? this.palisades : this.standingTorches
+    if (!runtime) return false
+    const entry = runtime.list().find((e) => e.id === record.target.targetId)
+    if (!entry) {
+      contracts.invalidateTarget(record.id)
+      this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
+      return true
+    }
+    const destination = { x: entry.x, y: this.sampleHeight(entry.x, entry.z), z: entry.z }
+    if (record.state === 'accepted' || record.state === 'travelling') {
+      if (record.state === 'accepted') contracts.beginTravel(record.id, this.id)
+      const contractId = record.id
+      this.startAction({
+        kind: 'work',
+        destination,
+        durationSec: 1.0 * this.waitMultiplier,
+        onComplete: () => {
+          const fresh = contracts.find(contractId)
+          if (fresh?.state === 'travelling' && fresh.workerNpcId === this.id) {
+            contracts.beginWork(contractId, this.id, this.simClock)
+          }
+        },
+      })
+      return true
+    }
+    // record.state === 'working'
+    this.runBuildableContractWorkBout(record.id, kind, record.target.targetId, destination)
+    return true
+  }
+
+  /** Shared work bout for both buildable kinds (plan items-player-017 §16) —
+   *  same "credit only the accepted amount, either stop condition ends the
+   *  work phase" shape as `runTerrainContractWorkBout`. */
+  private runBuildableContractWorkBout(
+    contractId: string,
+    kind: 'palisade' | 'standing_torch',
+    targetId: string,
+    destination: { x: number, y: number, z: number },
+  ): void {
+    const contracts = this.workContracts!
+    const runtime = (kind === 'palisade' ? this.palisades : this.standingTorches)!
+    const sessionSec = kind === 'palisade' ? PALISADE_WORK_SESSION_SEC : STANDING_TORCH_WORK_SESSION_SEC
+    const sessionHours = kind === 'palisade' ? PALISADE_WORK_SESSION_HOURS : STANDING_TORCH_WORK_SESSION_HOURS
+    this.startAction({
+      kind: 'work',
+      destination,
+      durationSec: sessionSec * this.waitMultiplier,
+      onComplete: () => {
+        const freshContract = contracts.find(contractId)
+        if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
+        const result = runtime.contributeWork(targetId, sessionHours)
         if (!result) {
           contracts.invalidateTarget(contractId)
           return

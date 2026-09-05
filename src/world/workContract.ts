@@ -34,8 +34,9 @@ export type WorkContractState =
 
 export type WorkContractAdvertisement = 'not_posted' | 'posted'
 
-/** One entry per `ContractTarget` variant (plan npc-018 §10). */
-export type WorkType = 'construction' | 'terrain_preparation'
+/** One entry per `ContractTarget` variant (plan npc-018 §10, extended by
+ *  plan items-player-017 §2/§16 with the two simple buildable targets). */
+export type WorkType = 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch'
 
 /** A concrete, recoverable world target a contract describes work at — never
  *  a display string like "build a well" (plan §3). `targetId` is the stable
@@ -57,9 +58,29 @@ export type TerrainPreparationContractTarget = {
   targetId: string
 }
 
+/** References an unfinished `PalisadeSegmentRecord` (plan items-player-017
+ *  §2/§10/§16) — same "stable id, no display string" shape as the other
+ *  variants. `targetId` is the segment's own `id`; `Palisades` remains the
+ *  sole owner of its construction progress. */
+export type PalisadeContractTarget = {
+  kind: 'palisade'
+  targetId: string
+}
+
+/** References an unfinished `StandingTorchRecord` (plan items-player-017
+ *  §2/§11/§16) — same shape as `PalisadeContractTarget`. */
+export type StandingTorchContractTarget = {
+  kind: 'standing_torch'
+  targetId: string
+}
+
 /** Union of every contract-target shape — one variant per `WorkType` (plan
- *  npc-018 §10). */
-export type ContractTarget = ConstructionContractTarget | TerrainPreparationContractTarget
+ *  npc-018 §10, extended by plan items-player-017). */
+export type ContractTarget =
+  | ConstructionContractTarget
+  | TerrainPreparationContractTarget
+  | PalisadeContractTarget
+  | StandingTorchContractTarget
 
 export type WorkContractRecord = {
   id: string

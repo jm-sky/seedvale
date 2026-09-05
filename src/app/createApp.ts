@@ -1612,6 +1612,8 @@ export async function createApp(
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
     igniteStandingTorch: placement.igniteStandingTorch,
+    workOnStandingTorch: placement.workOnStandingTorch,
+    workOnPalisade: placement.workOnPalisade,
     removePalisadeSegment: placement.removePalisadeSegment,
     openNoticeBoard: contracts.openNoticeBoard,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,

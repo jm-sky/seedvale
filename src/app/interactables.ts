@@ -34,8 +34,10 @@ import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
+import { isPalisadeConstructionComplete, palisadePromptLabel } from '../world/palisade'
 import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
 import { isWellCompleted, isWellWaterAvailable, wellPromptLabel, wellWaterSource } from '../world/playerWell'
+import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind } from '../world/WaterSource'
 import type { Vector3 } from 'three'
@@ -505,28 +507,34 @@ export function buildInteractables(
     })
   }
 
-  // Plan items-player-009 — player-built standing torches; `[E]` ignites an
-  // unlit one, an already-lit one is flavor-only (no action to offer).
+  // Plan items-player-009 — player-built standing torches; `[E]` ignites a
+  // completed unlit one, an already-lit one is flavor-only (no action to
+  // offer). Since plan items-player-017, an unfinished torch instead offers
+  // `[E]` construction work and can never be ignited.
   for (const torch of standingTorches.list()) {
     if (!withinRange(torch.x, torch.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'standingTorch',
       position: { x: torch.x, z: torch.z },
-      promptLabel: torch.lit ? 'Zapalona pochodnia' : '[E] Zapal pochodnię',
+      promptLabel: standingTorchPromptLabel(torch),
       id: torch.id,
       lit: torch.lit,
+      complete: isStandingTorchConstructionComplete(torch),
     })
   }
 
   // Plan items-player-010 — player-built palisade segments; `[R]` removes
-  // the one segment gazed at, with partial material recovery.
+  // the one segment gazed at, with partial material recovery. Since plan
+  // items-player-017, an unfinished segment also offers `[E]` construction
+  // work alongside the existing removal.
   for (const segment of palisades.list()) {
     if (!withinRange(segment.x, segment.z, playerPos, GAZE_RANGE)) continue
     list.push({
       kind: 'palisade',
       position: { x: segment.x, z: segment.z },
-      promptLabel: '[R] Usuń segment palisady',
+      promptLabel: palisadePromptLabel(segment),
       id: segment.id,
+      complete: isPalisadeConstructionComplete(segment),
     })
   }
 

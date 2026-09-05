@@ -14,7 +14,9 @@ import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { LocalWaterSample } from '../terrain/waterSample'
 import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
+import type { Palisades } from '../world/createPalisades'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
 import type { SettlementFoodSourceHooks } from '../world/foodSources'
@@ -270,6 +272,13 @@ export async function createSettlementsManager(
    *  are above, so NPC Work Contract execution can travel to/contribute work
    *  at an existing `TerrainPreparationRecord`. */
   terrainPreparations?: TerrainPreparations,
+  /** Player-built palisade segments (plan items-player-017) — forwarded into
+   *  every `createSettlement` call the same way `terrainPreparations` is
+   *  above. */
+  palisades?: Palisades,
+  /** Player-built standing torches (plan items-player-017) — forwarded the
+   *  same way as `palisades`. */
+  standingTorches?: StandingTorches,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -368,6 +377,8 @@ export async function createSettlementsManager(
     droppedItems,
     grassForage,
     terrainPreparations,
+    palisades,
+    standingTorches,
   }
 
   const entries = new Map<string, Entry>()

@@ -23,6 +23,8 @@ import type { WellWaterKind } from '../world/wellGroundwater'
 import { isToolKind } from '../items/HeldTool'
 import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
+import { PALISADE_REQUIRED_WORK } from '../world/palisade'
+import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -310,14 +312,20 @@ export type SavePlantedCrop = {
 /** Persistent player-built standing torch — mirrors `world/standingTorch.ts`'s
  *  `StandingTorchRecord`. `lit` is the only authoritative ignition state; the
  *  runtime flame/light is always re-derived from it on load, never saved
- *  directly (plan items-player-009). */
-export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number, lit: boolean }
+ *  directly (plan items-player-009). `completedWork` is the construction-
+ *  progress field added by plan items-player-017 — a pre-plan save has no
+ *  such field at all, so the v5→v6 migration defaults it to
+ *  `STANDING_TORCH_REQUIRED_WORK` (already complete), never to 0. */
+export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number, lit: boolean, completedWork: number }
 
 /** Persistent player-built palisade segment — mirrors `world/palisade.ts`'s
  *  `PalisadeSegmentRecord`. Each segment round-trips independently; no
  *  neighbour/connection data is persisted — connection is always re-derived
- *  from each segment's own transform on load (plan items-player-010 §9). */
-export type SavePalisadeSegment = { id: string, x: number, z: number, yaw: number }
+ *  from each segment's own transform on load (plan items-player-010 §9).
+ *  `completedWork` is the construction-progress field added by plan
+ *  items-player-017 — same "missing means already complete" migration
+ *  contract as `SaveStandingTorch.completedWork`. */
+export type SavePalisadeSegment = { id: string, x: number, z: number, yaw: number, completedWork: number }
 
 /** Persistent player-built bedroll — mirrors `world/sleepingUtilities.ts`'s
  *  `BedrollRecord`. `condition`/`lastConditionUpdateAtDays` round-trip the
@@ -380,11 +388,19 @@ export type SaveConstructionContractTarget = { kind: 'construction', targetId: s
 /** Mirrors `world/workContract.ts`'s `TerrainPreparationContractTarget`
  *  (plan npc-018 §14). */
 export type SaveTerrainPreparationContractTarget = { kind: 'terrain_preparation', targetId: string }
-export type SaveContractTarget = SaveConstructionContractTarget | SaveTerrainPreparationContractTarget
+/** Mirrors `world/workContract.ts`'s `PalisadeContractTarget`/
+ *  `StandingTorchContractTarget` (plan items-player-017 §16). */
+export type SavePalisadeContractTarget = { kind: 'palisade', targetId: string }
+export type SaveStandingTorchContractTarget = { kind: 'standing_torch', targetId: string }
+export type SaveContractTarget =
+  | SaveConstructionContractTarget
+  | SaveTerrainPreparationContractTarget
+  | SavePalisadeContractTarget
+  | SaveStandingTorchContractTarget
 export type SaveWorkContract = {
   id: string
   employer: string
-  workType: 'construction' | 'terrain_preparation'
+  workType: 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch'
   target: SaveContractTarget
   x: number
   z: number
@@ -417,7 +433,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 5
+export const CURRENT_SAVE_VERSION = 6
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1046,7 +1062,8 @@ function isStandingTorchesField(value: unknown): value is SaveStandingTorch[] {
       typeof t.x === 'number' &&
       typeof t.z === 'number' &&
       typeof t.yaw === 'number' &&
-      typeof t.lit === 'boolean'
+      typeof t.lit === 'boolean' &&
+      typeof t.completedWork === 'number'
     )
   })
 }
@@ -1060,7 +1077,8 @@ function isPalisadesField(value: unknown): value is SavePalisadeSegment[] {
       typeof p.id === 'string' &&
       typeof p.x === 'number' &&
       typeof p.z === 'number' &&
-      typeof p.yaw === 'number'
+      typeof p.yaw === 'number' &&
+      typeof p.completedWork === 'number'
     )
   })
 }
@@ -1102,7 +1120,9 @@ const WORK_CONTRACT_STATES: ReadonlySet<string> = new Set([
   'accepted', 'advertised', 'available', 'cancelled', 'completed', 'invalidated', 'payment_due', 'travelling', 'working',
 ])
 
-const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set(['construction', 'terrain_preparation'])
+const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set([
+  'construction', 'palisade', 'standing_torch', 'terrain_preparation',
+])
 
 function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
   if (!Array.isArray(value)) return false
@@ -1472,6 +1492,33 @@ function migrateSaveV4ToV5(data: unknown): unknown {
   }
 }
 
+/** v5 → v6 (plan items-player-017): adds construction-progress
+ *  (`completedWork`) to every persisted `SaveStandingTorch`/
+ *  `SavePalisadeSegment`. A torch/segment built before this plan had no
+ *  construction-progress concept at all — it was already a normal
+ *  functional object — so it defaults to its own buildable's
+ *  `..._REQUIRED_WORK` constant (already complete) rather than 0, per this
+ *  plan's explicit "existing saves restore as completed structures, never
+ *  retroactively unfinished" rule. Every other field, including arrays not
+ *  present at all yet, is left untouched. */
+function migrateSaveV5ToV6(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const standingTorches = Array.isArray(v.standingTorches) ? v.standingTorches : []
+  const palisades = Array.isArray(v.palisades) ? v.palisades : []
+  return {
+    ...v,
+    version: 6,
+    standingTorches: standingTorches.map((entry) => {
+      const t = entry as Record<string, unknown>
+      return { ...t, completedWork: typeof t.completedWork === 'number' ? t.completedWork : STANDING_TORCH_REQUIRED_WORK }
+    }),
+    palisades: palisades.map((entry) => {
+      const p = entry as Record<string, unknown>
+      return { ...p, completedWork: typeof p.completedWork === 'number' ? p.completedWork : PALISADE_REQUIRED_WORK }
+    }),
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
@@ -1480,6 +1527,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   2: migrateSaveV2ToV3,
   3: migrateSaveV3ToV4,
   4: migrateSaveV4ToV5,
+  5: migrateSaveV5ToV6,
 }
 
 function detectStoredVersion(value: unknown): number | null {

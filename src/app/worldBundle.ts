@@ -274,6 +274,13 @@ function buildSettlementsManager(
    *  every `createSettlement` call → every `NpcAgent`, built ahead of
    *  `SettlementsManager` the same way as `workContracts`/`playerWells`. */
   terrainPreparations?: TerrainPreparations,
+  /** Player-built palisade segments (plan items-player-017) — forwarded the
+   *  same way as `terrainPreparations`, also built ahead of
+   *  `SettlementsManager` (see this function's call site). */
+  palisades?: Palisades,
+  /** Player-built standing torches (plan items-player-017) — forwarded the
+   *  same way as `palisades`. */
+  standingTorches?: StandingTorches,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -315,6 +322,8 @@ function buildSettlementsManager(
     droppedItems,
     grassForage,
     terrainPreparations,
+    palisades,
+    standingTorches,
   )
 }
 
@@ -732,12 +741,12 @@ async function buildWorldSystems(
   bootMarkEnd('createPlacedContainers')
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
-  // Built ahead of `SettlementsManager` (plan npc-015, extended npc-018) —
-  // unlike `hunting`/`Fauna`, none of these four depend on anything
-  // settlements produce, and `NpcAgent`'s own Work Contract decision/
-  // construction/terrain-preparation integration needs live instances
-  // forwarded in, not a late-bound accessor.
-  bootMark('droppedItems+wells+workContracts+terrainPrep')
+  // Built ahead of `SettlementsManager` (plan npc-015, extended npc-018/
+  // items-player-017) — unlike `hunting`/`Fauna`, none of these six depend on
+  // anything settlements produce, and `NpcAgent`'s own Work Contract
+  // decision/construction/terrain-preparation/buildable integration needs
+  // live instances forwarded in, not a late-bound accessor.
+  bootMark('droppedItems+wells+workContracts+terrainPrep+buildables')
   const droppedItems = createDroppedItems(scene, chunkManager.sampleHeight, initialDroppedItems)
   const playerWells = createPlayerWells(
     scene,
@@ -755,7 +764,15 @@ async function buildWorldSystems(
     chunkManager.sampleHeight,
     initialTerrainPreparations,
   )
-  bootMarkEnd('droppedItems+wells+workContracts+terrainPrep')
+  const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
+  const palisades = createPalisades(
+    scene,
+    chunkManager.sampleHeight,
+    chunkManager.registerColliders,
+    chunkManager.clearColliders,
+    initialPalisades,
+  )
+  bootMarkEnd('droppedItems+wells+workContracts+terrainPrep+buildables')
 
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size
   // — a pure function of seed+terrain) is resolved and the home settlement's
@@ -763,7 +780,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage, terrainPreparations)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
 
@@ -776,14 +793,6 @@ async function buildWorldSystems(
     config.seed,
     { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     initialPlacedTraps,
-  )
-  const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
-  const palisades = createPalisades(
-    scene,
-    chunkManager.sampleHeight,
-    chunkManager.registerColliders,
-    chunkManager.clearColliders,
-    initialPalisades,
   )
   const sleepingUtilities = createSleepingUtilities(
     scene,

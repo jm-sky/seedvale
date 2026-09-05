@@ -1,7 +1,7 @@
 # Plan: Incremental Construction for Player Buildables
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** npc-018

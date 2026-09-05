@@ -149,19 +149,26 @@ export type Interactable =
    *  §8) — `[E]` starts/resumes its work session. Removed once the
    *  preparation reaches 100% (no permanent `PreparedTerrain` marker). */
   | { kind: 'terrainPreparation', position: { x: number, z: number }, promptLabel: string, id: string }
-  /** Player-built standing torch (plan items-player-009) — `[E]` ignites it
-   *  once, gated on the `fire_starting` capability; an already-lit torch
-   *  shows a flavor-only prompt (no `[E]` action). `lit` is a per-frame
-   *  resolved snapshot for the prompt only — the ignite action re-resolves
-   *  the record and re-checks `lit` itself before mutating anything. */
-  | { kind: 'standingTorch', position: { x: number, z: number }, promptLabel: string, id: string, lit: boolean }
-  /** Player-built palisade segment (plan items-player-010) — `[R]` removes
-   *  this one segment via the generic player-built removal/recovery seam
+  /** Player-built standing torch (plan items-player-009, incremental
+   *  construction added by plan items-player-017) — `[E]` ignites it once
+   *  construction is complete, gated on the `fire_starting` capability; an
+   *  already-lit torch shows a flavor-only prompt (no `[E]` action); while
+   *  `!complete`, `[E]` instead runs one construction-work bout and ignition
+   *  is not offered at all. `lit`/`complete` are per-frame resolved
+   *  snapshots for the prompt/dispatch only — the ignite/work actions
+   *  re-resolve the record and re-check both themselves before mutating
+   *  anything. */
+  | { kind: 'standingTorch', position: { x: number, z: number }, promptLabel: string, id: string, lit: boolean, complete: boolean }
+  /** Player-built palisade segment (plan items-player-010, incremental
+   *  construction added by plan items-player-017) — `[R]` removes this one
+   *  segment via the generic player-built removal/recovery seam
    *  (`items/constructionMaterials.ts`'s `computeMaterialRecovery`/
    *  `canReceiveRecovery`/`applyRecovery`), returning part of its material
-   *  cost. Only stable references; the record itself is re-resolved by id at
-   *  interact time, never trusted from this per-frame snapshot. */
-  | { kind: 'palisade', position: { x: number, z: number }, promptLabel: string, id: string }
+   *  cost, available whether or not construction is finished. While
+   *  `!complete`, `[E]` also runs one construction-work bout. Only stable
+   *  references; the record itself is re-resolved by id at interact time,
+   *  never trusted from this per-frame snapshot. */
+  | { kind: 'palisade', position: { x: number, z: number }, promptLabel: string, id: string, complete: boolean }
   /** Settlement notice board (plan npc-014) — `[E]` opens the physical-
    *  posting panel listing the player's own `available`/`not_posted` work
    *  contracts. `settlementId` resolves the board's stable id
