@@ -40,6 +40,7 @@ import {
   type LabelDistanceState,
   updateAgentLabelDistanceState,
 } from '../ui/agentStatusLabel'
+import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
@@ -360,6 +361,11 @@ const SOURCE_SEARCH_COOLDOWN_SEC = 3
  *  is effectively unreachable (e.g. boxed in by terrain `steerToward` can't
  *  route around). */
 const SOURCE_TARGET_TIMEOUT_SEC = 20
+/** Seconds to wait before re-scanning `lures` for a new candidate once the
+ *  current search/target came up empty (plan fauna-014 §11/§12) — a bounded
+ *  low-frequency search over a small array, same throttling idiom as
+ *  `SOURCE_SEARCH_COOLDOWN_SEC`. */
+const LURE_SEARCH_COOLDOWN_SEC = 2
 /** Offsets (world units) probed around a water-search candidate to confirm
  *  it's actually at the edge of a water body, not just dry land somewhere
  *  within `WATER_SEARCH_RADIUS`. */
@@ -367,7 +373,7 @@ const SHORE_PROBE_OFFSETS: readonly [number, number][] = [
   [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5],
 ]
 
-type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat'
+type FaunaActionKind = 'attack' | 'chase' | 'flee' | 'wander' | 'forage' | 'drink' | 'eat' | 'lure'
 
 /** Diagnostic-only label for the mutually-exclusive branch `update()` took
  *  this tick (fauna debug tooling — `AnimalAgent.getDebugInfo()`'s
@@ -464,6 +470,10 @@ export type AnimalAgentDebugInfo = {
    *  not currently pursuing a carcass. `riskPenalty` is always 0 today: the
    *  `carcassCandidateScore` disease/food-safety seam has no consumer yet. */
   foodTarget: { corpsePhase: CorpsePhase, foodValue: number, score: number, riskPenalty: number } | null
+  /** Current trap-bait lure pursuit (plan fauna-014 §13) — `null` when no
+   *  compatible active lure is currently in range/being pursued. Answers
+   *  "why is this animal ignoring/approaching that trap". */
+  lureTarget: { trapId: string, x: number, z: number, baitKind: ItemKind } | null
   /** Combat/death presentation state (plan npc-009) — which one-shot clip is
    *  currently pre-empting normal locomotion (if any), and which semantic
    *  clips this species/pack actually resolved (`false` marks a missing-clip
@@ -799,12 +809,14 @@ export type AnimalDef = {
    *  every species is explicit, but every kind currently uses
    *  `DEFAULT_ANIMAL_METABOLISM` unless noted otherwise. */
   metabolism: AnimalMetabolismConfig
-  /** Presence of this field IS the herbivore-diet capability (plan
+  /** Presence of this field IS the herbivore/meat-diet capability (plan
    *  fauna-010 §2) — same "no separate boolean, no per-species branch" shape
-   *  as `mount`/`production`/`scavenging` above. Absent for every
-   *  predator/omnivore kind out of this plan's scope (wolf/fox/bear/duck/
-   *  boar); `findFoodTarget()` falls back to the old abstract forage spot
-   *  for those. Does not change the existing predator → prey/carcass path. */
+   *  as `mount`/`production`/`scavenging` above. `findFoodTarget()` still
+   *  falls back to the old abstract forage/carcass path for any species
+   *  without one (`bear`/`duck`); a `role: 'predator'` kind with a `diet`
+   *  (`wolf`/`fox`, plan fauna-014 §2) never has it read for hunger either —
+   *  `findFoodTarget()`'s carcass branch always wins for predators — only
+   *  `dietAcceptsItem()` (trap-bait attraction) reads it there. */
   diet?: AnimalDietConfig
 }
 
@@ -877,18 +889,68 @@ const HERBIVORE_DIET: AnimalDietConfig = {
   items: { hay: 0.9, apple: 0.6, carrot: 0.5 },
 }
 
-/** Dog diet (plan fauna-011 §3/§4) — no `grass` (dog never forages like a
- *  herbivore) and no `scavenging` block (dog never seeks a carcass on its
- *  own). `items` lists every raw/bait-tagged meat `ItemKind`
- *  (`itemCatalog.ts`'s `food.bait === 'meat'`) at a relief scale slightly
- *  below a fresh kill's implicit 1, matching `HERBIVORE_DIET`'s convention —
- *  household-stored meat is real food, just not quite as good as what a
- *  predator eats fresh. This is the sole "eats meat but doesn't hunt" seam:
- *  `role: 'livestock'` (not `'predator'`) already keeps `findFoodTarget()`
- *  off the carcass-seeking branch and `resolveNpcTarget()` from ever running
- *  for this kind — see `AnimalDef.role`'s doc. */
-const DOG_DIET: AnimalDietConfig = {
+/** Shared meat diet (plan fauna-011 §3/§4, reused by wolf/fox in plan
+ *  fauna-014 §2) — no `grass` and no `scavenging` block; `items` lists every
+ *  raw/bait-tagged meat `ItemKind` (`itemCatalog.ts`'s `food.bait ===
+ *  'meat'`) at a relief scale slightly below a fresh kill's implicit 1,
+ *  matching `HERBIVORE_DIET`'s convention. For `dog` (`role: 'livestock'`)
+ *  this is real hunger relief: household-stored meat, just not quite as good
+ *  as what a predator eats fresh — the sole "eats meat but doesn't hunt"
+ *  seam (`role !== 'predator'` already keeps `findFoodTarget()` off the
+ *  carcass-seeking branch and `resolveNpcTarget()` from ever running for
+ *  this kind, see `AnimalDef.role`'s doc). For `wolf`/`fox` (`role:
+ *  'predator'`) `findFoodTarget()` always takes the carcass branch instead
+ *  (see its own doc), so this diet is never read for hunger there — its only
+ *  live consumer for those two kinds is `dietAcceptsItem()`, answering "is
+ *  this bait item attractive to this species" for trap lures without a
+ *  second trapping-only bait table. */
+const MEAT_DIET: AnimalDietConfig = {
   items: { raw_meat: 0.8, deer_meat: 0.8, wolf_meat: 0.8, boar_meat: 0.8, rabbit_meat: 0.6, beef: 0.8 },
+}
+
+/** Whether `itemKind` is something this diet would eat (plan fauna-014 §2) —
+ *  the single authority `resolveLureTarget()` uses to decide if a trap's
+ *  bait actually attracts a species, instead of a parallel trap-only bait
+ *  table. Absent `diet` (a species with no herbivore/meat diet configured,
+ *  e.g. `boar`/`duck`/`bear`) never matches — same "capability absent →
+ *  never taken" convention as every other `AnimalDef.diet` consumer. */
+export function dietAcceptsItem(diet: AnimalDietConfig | undefined, itemKind: ItemKind): boolean {
+  return diet?.items?.[itemKind] != null
+}
+
+/**
+ * Deterministic best-candidate lure resolution (plan fauna-014 §3/§4/§11) —
+ * filters `lures` (already "active + baited", see `PlacedTraps.activeLures()`)
+ * down to trap-kind-species-compatible (`isSpeciesTrappable`), diet-compatible
+ * (`dietAcceptsItem`) candidates within that trap kind's `lureRadius`, then
+ * picks the nearest one. Ties (equal squared distance) break on `trapId` so
+ * the result never depends on `lures`' iteration order. Pure and
+ * allocation-free — safe to call from a throttled per-animal check without a
+ * second candidate-array pass (implementation notes' "avoid allocations in
+ * the per-tick path").
+ */
+export function resolveLureTarget(
+  lures: readonly TrapLureDescriptor[],
+  def: AnimalDef,
+  x: number,
+  z: number,
+): TrapLureDescriptor | null {
+  let best: TrapLureDescriptor | null = null
+  let bestDistSq = Infinity
+  for (const lure of lures) {
+    if (!isSpeciesTrappable(lure.kind, def.kind)) continue
+    if (!dietAcceptsItem(def.diet, lure.baitKind)) continue
+    const dx = lure.x - x
+    const dz = lure.z - z
+    const distSq = dx * dx + dz * dz
+    const radius = TRAP_DEFS[lure.kind].lureRadius
+    if (distSq > radius * radius) continue
+    if (distSq < bestDistSq || (distSq === bestDistSq && (!best || lure.trapId < best.trapId))) {
+      best = lure
+      bestDistSq = distSq
+    }
+  }
+  return best
 }
 
 /** Dog guard target (plan fauna-011 §9/§10/§13) — the `AnimalAgent` (a live
@@ -949,6 +1011,11 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // low-priority last resort.
     scavenging: { rottingValue: 0.4, bonesValue: 0.15 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    // Plan fauna-014 §2: inert for hunger (predator `findFoodTarget()` always
+    // takes the carcass branch, never `findDietTarget()`) — the sole live
+    // reader is `dietAcceptsItem()`, so a `good` trap's meat bait can attract
+    // a wolf without a second trapping-only compatibility table.
+    diet: MEAT_DIET,
   },
   fox: {
     kind: 'fox',
@@ -964,6 +1031,9 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 9,
     playerPanicRange: 3,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    // Same as `wolf` above — inert for hunger, only read by
+    // `dietAcceptsItem()` for trap-bait attraction (plan fauna-014 §2).
+    diet: MEAT_DIET,
   },
   deer: {
     kind: 'deer',
@@ -1197,7 +1267,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 0,
     playerPanicRange: 0,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
-    diet: DOG_DIET,
+    diet: MEAT_DIET,
   },
 }
 
@@ -1583,6 +1653,14 @@ export class AnimalAgent {
   private actionTimer = 0
   /** Scratch vector for `steerToward` calls toward `sourceTarget`. */
   private readonly sourceDest = new THREE.Vector3()
+  /** Cached trap-bait lure destination (plan fauna-014 §3/§4) — re-validated
+   *  against the current tick's `lures` every time `pursueLure()` runs (never
+   *  trusted stale), so only `trapId`/position/kind/bait need to survive
+   *  between ticks. Never persisted (implementation notes' "no lure caches"). */
+  private lureTarget: TrapLureDescriptor | null = null
+  /** Seconds remaining before the next failed lure search retries, same
+   *  throttling convention as `sourceSearchCooldown`. */
+  private lureSearchCooldown = 0
   /** Set on a dead prey's `AnimalAgent` by the predator currently eating it
    *  — guards against two predators completing an eat action on the same
    *  corpse (plan 094). */
@@ -2122,6 +2200,9 @@ export class AnimalAgent {
             riskPenalty: 0,
           }
         : null,
+      lureTarget: this.lureTarget
+        ? { trapId: this.lureTarget.trapId, x: this.lureTarget.x, z: this.lureTarget.z, baitKind: this.lureTarget.baitKind }
+        : null,
       presentation: {
         current: this.hurtAnimTimer > 0 ? 'hurt' : this.attackAnimTimer > 0 ? 'attack' : null,
         hasAttackClip: this.attackAction != null,
@@ -2607,6 +2688,12 @@ export class AnimalAgent {
      *  site) rather than the global cross-settlement `nearbyNpcs` wolves use.
      *  Defaults to none so every existing caller/test keeps prior behaviour. */
     nearbySettlementNpcs: readonly NearbyNpcCandidate[] = [],
+    /** Currently active+baited traps (plan fauna-014 §3/§4) — a small,
+     *  world/fauna-owned snapshot (`PlacedTraps.activeLures()`), not a
+     *  per-animal query. Consulted only by `updatePredator`/`updatePrey`'s
+     *  own `pursueLure()`, below any threat/needs response. Defaults to none
+     *  so existing callers/tests keep prior behaviour. */
+    lures: readonly TrapLureDescriptor[] = [],
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) {
@@ -2874,7 +2961,7 @@ export class AnimalAgent {
           this.humanDecisionTimer = 0
           this.npcDecisionTimer = 0
           this.provokedTimer = 0
-          this.updatePredator(dt, others)
+          this.updatePredator(dt, others, lures)
           break
         }
         case 'prey-normal': {
@@ -2882,7 +2969,7 @@ export class AnimalAgent {
           this.humanDecisionTimer = 0
           this.npcDecisionTimer = 0
           this.provokedTimer = 0
-          this.updatePrey(dt, others)
+          this.updatePrey(dt, others, lures)
           break
         }
       }
@@ -3428,7 +3515,7 @@ export class AnimalAgent {
     return canPredatorPursueIntoVillage(this.def.kind, this.frenzied)
   }
 
-  private updatePredator(dt: number, others: AnimalAgent[]): void {
+  private updatePredator(dt: number, others: AnimalAgent[], lures: readonly TrapLureDescriptor[]): void {
     const prey = this.resolvePreyTarget(others)
     if (prey && !this.canPursueIntoVillage() && this.isNearVillage(prey.mesh.position)) {
       // Live prey inside the village is not huntable; still allow drink/eat.
@@ -3461,6 +3548,7 @@ export class AnimalAgent {
       return
     }
     if (this.pursueNeeds(dt, others)) return
+    if (this.pursueLure(dt, lures)) return
     this.setIntent('wander')
     this.wander(dt)
   }
@@ -3488,7 +3576,7 @@ export class AnimalAgent {
     if (rollsRabiesInfection(RABIES_BITE_INFECTION_CHANCE, Math.random())) target.infectWithRabies()
   }
 
-  private updatePrey(dt: number, others: AnimalAgent[]): void {
+  private updatePrey(dt: number, others: AnimalAgent[], lures: readonly TrapLureDescriptor[]): void {
     const threat = this.nearest(others, 'predator', this.def.fleeRange)
     if (threat) {
       this.cancelSourceTarget()
@@ -3497,8 +3585,40 @@ export class AnimalAgent {
       return
     }
     if (this.pursueNeeds(dt, others)) return
+    if (this.pursueLure(dt, lures)) return
     this.setIntent('wander')
     this.wander(dt)
+  }
+
+  /** Trap-bait lure pursuit (plan fauna-014 §3/§4/§11) — only reached once
+   *  `updatePredator`/`updatePrey` already ruled out flee/threat/chase and
+   *  real hunger/thirst pursuit above, so it can never pre-empt any of those
+   *  (implementation notes' priority invariants). Re-validates any cached
+   *  `lureTarget` against this tick's live `lures` (never trusts a stale
+   *  snapshot) before falling back to a fresh throttled search. Movement
+   *  reuses `steerToward`, which already stops on arrival — the actual
+   *  detection/capture roll stays entirely `createPlacedTraps.ts`'s, this
+   *  only ever gets the animal close enough to enter that trap's own
+   *  `triggerRadius`. Returns `false` (caller falls back to `wander`) with no
+   *  candidate in range. */
+  private pursueLure(dt: number, lures: readonly TrapLureDescriptor[]): boolean {
+    if (this.lureTarget) {
+      const current = lures.find((l) => l.trapId === this.lureTarget!.trapId)
+      this.lureTarget = current && dietAcceptsItem(this.def.diet, current.baitKind)
+        && isSpeciesTrappable(current.kind, this.def.kind)
+        ? current
+        : null
+    }
+    if (this.lureSearchCooldown > 0) this.lureSearchCooldown -= dt
+    if (!this.lureTarget && this.lureSearchCooldown <= 0) {
+      this.lureTarget = resolveLureTarget(lures, this.def, this.mesh.position.x, this.mesh.position.z)
+      if (!this.lureTarget) this.lureSearchCooldown = LURE_SEARCH_COOLDOWN_SEC
+    }
+    if (!this.lureTarget) return false
+    this.setIntent('lure', { x: this.lureTarget.x, z: this.lureTarget.z })
+    this.sourceDest.set(this.lureTarget.x, 0, this.lureTarget.z)
+    this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    return true
   }
 
   /** Dog guard-target resolution (plan fauna-011 §9/§10/§13) — thin adapter

@@ -6,8 +6,8 @@ import {
 } from '../player/PlayerSkills'
 import {
   accumulateTrapWeatherWear,
+  isSpeciesTrappable,
   isTrapCooldownActive,
-  isTrappableSpecies,
   rollTrapDetection,
   spendTrapDurability,
   startTrapCooldown,
@@ -46,18 +46,39 @@ describe('trap definitions', () => {
   })
 })
 
-describe('trappable species', () => {
-  it('accepts only the explicitly listed small/medium prey', () => {
-    expect(isTrappableSpecies('rabbit')).toBe(true)
-    expect(isTrappableSpecies('boar')).toBe(true)
-    expect(isTrappableSpecies('deer')).toBe(true)
+describe('trap-kind species compatibility', () => {
+  it('lets a simple trap catch small/medium prey', () => {
+    expect(isSpeciesTrappable('simple', 'rabbit')).toBe(true)
+    expect(isSpeciesTrappable('simple', 'fox')).toBe(true)
+    expect(isSpeciesTrappable('simple', 'deer')).toBe(true)
+    expect(isSpeciesTrappable('simple', 'boar')).toBe(true)
   })
 
-  it('rejects predators, big game and livestock', () => {
-    expect(isTrappableSpecies('wolf')).toBe(false)
-    expect(isTrappableSpecies('fox')).toBe(false)
-    expect(isTrappableSpecies('stag')).toBe(false)
-    expect(isTrappableSpecies('cow')).toBe(false)
+  it('keeps stag and wolf out of a simple trap', () => {
+    expect(isSpeciesTrappable('simple', 'stag')).toBe(false)
+    expect(isSpeciesTrappable('simple', 'wolf')).toBe(false)
+  })
+
+  it('lets a good trap additionally catch stag and wolf', () => {
+    expect(isSpeciesTrappable('good', 'stag')).toBe(true)
+    expect(isSpeciesTrappable('good', 'wolf')).toBe(true)
+    expect(isSpeciesTrappable('good', 'rabbit')).toBe(true)
+    expect(isSpeciesTrappable('good', 'fox')).toBe(true)
+    expect(isSpeciesTrappable('good', 'deer')).toBe(true)
+    expect(isSpeciesTrappable('good', 'boar')).toBe(true)
+  })
+
+  it('rejects bear and livestock/domestic animals from either trap kind', () => {
+    for (const kind of ['simple', 'good'] as const) {
+      expect(isSpeciesTrappable(kind, 'bear')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'cow')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'sheep')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'horse')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'donkey')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'dog')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'chicken')).toBe(false)
+      expect(isSpeciesTrappable(kind, 'rooster')).toBe(false)
+    }
   })
 })
 

@@ -2,6 +2,7 @@ import { Group, type Object3D, type Scene, type Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type { TrapLureDescriptor } from '../world/animalTraps'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerStealthState } from './playerAwareness'
 import {
@@ -94,6 +95,12 @@ export type Fauna = {
      *  (howl); every other wild kind has no `SPONTANEOUS_VOCALIZE_CONFIG`
      *  entry and this stays a no-op for it. */
     onAnimalVocalize?: (kind: AnimalKind, x: number, z: number) => void,
+    /** Currently active+baited traps (plan fauna-014 §3/§11) —
+     *  `PlacedTraps.activeLures()`, computed once by the caller (`gameLoop.ts`)
+     *  and forwarded unchanged into every `AnimalAgent.update()` call below,
+     *  never a per-animal query. Defaults to none so existing callers/tests
+     *  keep prior behaviour. */
+    lures?: readonly TrapLureDescriptor[],
   ) => void
   dispose: () => void
   /** Deterministic time-skip catch-up (plan 196) — called once by
@@ -858,6 +865,7 @@ export async function createFauna(
       onNpcHit,
       onAnimalAggro,
       onAnimalVocalize,
+      lures = [],
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       for (const a of agents) {
@@ -883,6 +891,9 @@ export async function createFauna(
           worldDays,
           timeOfDay,
           grassForage,
+          undefined,
+          undefined,
+          lures,
         )
       }
       grassForage?.tickVisuals(dt, observerPos.x, observerPos.z, worldDays)

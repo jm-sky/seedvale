@@ -6,8 +6,8 @@ import type { HeightSampler } from '../player/PlayerController'
 import { placeOnGround } from '../settlement/props'
 import {
   accumulateTrapWeatherWear,
+  isSpeciesTrappable,
   isTrapCooldownActive,
-  isTrappableSpecies,
   type PlacedTrapRecord,
   rollTrapDetection,
   spendTrapDurability,
@@ -18,6 +18,7 @@ import {
   trapDetectionChance,
   trapDetectionRoll,
   type TrapKind,
+  type TrapLureDescriptor,
 } from './animalTraps'
 import { createTrapProp, disposeTrapProp, setTrapPropState } from './trapProp'
 
@@ -46,6 +47,11 @@ export type PlacedTrapsHooks = {
 export type PlacedTraps = {
   list: () => readonly PlacedTrapEntry[]
   nodes: () => readonly PlacedTrapRecord[]
+  /** Plan fauna-014 §3/§11 — cheap snapshot of every currently active+baited
+   *  trap, world/fauna-owned (not player/camera-gated) so a future off-screen
+   *  simulation can reuse the same source. Called at most once per fauna
+   *  update pass (`gameLoop.ts`), never per animal. */
+  activeLures: () => readonly TrapLureDescriptor[]
   place: (
     source: TrapItemInstance,
     x: number,
@@ -198,6 +204,14 @@ export function createPlacedTraps(
   return {
     list: () => traps,
     nodes: () => traps.map(toRecord),
+    activeLures() {
+      const lures: TrapLureDescriptor[] = []
+      for (const entry of traps) {
+        if (entry.state !== 'active' || entry.baitKind == null) continue
+        lures.push({ trapId: entry.id, kind: entry.kind, x: entry.x, z: entry.z, baitKind: entry.baitKind })
+      }
+      return lures
+    },
     place(source, x, z, yaw) {
       const trapKind = source.kind === 'trap_good' ? 'good' : 'simple'
       const record: PlacedTrapRecord = {
@@ -269,7 +283,7 @@ export function createPlacedTraps(
         const radiusSq = radius * radius
         const byAnimal = cooldowns.get(entry.id)
         for (const animal of animals) {
-          if (animal.isDead() || !isTrappableSpecies(animal.def.kind)) continue
+          if (animal.isDead() || !isSpeciesTrappable(entry.kind, animal.def.kind)) continue
           const dx = animal.mesh.position.x - entry.x
           const dz = animal.mesh.position.z - entry.z
           if (dx * dx + dz * dz > radiusSq) continue

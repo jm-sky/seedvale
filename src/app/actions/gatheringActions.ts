@@ -1,4 +1,5 @@
 import type { ItemKind } from '../../items/items'
+import type { VueUi } from '../../ui-vue/mount'
 import type { TrapCaptureEvent } from '../../world/createPlacedTraps'
 import type { CropGrowthStage, CropId } from '../../world/cropLifecycle'
 import type { FishingBaitState } from '../../world/fishing'
@@ -32,7 +33,11 @@ import { isActionBlocked, type PlayerActionContext } from './actionContext'
  *  Placing a trap belongs to `placementActions.ts`; this module owns what
  *  happens *afterwards*. */
 export type GatheringActions = {
-  armTrap: (id: string) => void
+  /** `[E]` on a `placed` (disarmed) trap (plan fauna-014 §6) — opens the
+   *  arm-without-bait / arm-with-bait… / collect choice panel. Bait choice
+   *  only mutates inventory once the player picks a concrete item and the
+   *  trap accepts it (see `armTrapWithBait`'s own doc). */
+  openTrapArmDialog: (id: string) => void
   disarmTrap: (id: string) => void
   collectTrap: (id: string) => void
   /** A trap caught something — the single owner of a capture's player-facing
@@ -49,6 +54,10 @@ export type GatheringActions = {
 }
 
 export type GatheringActionDeps = {
+  /** FlavorDialog host (plan fauna-014 §6) — reused for the trap arm/bait
+   *  choice panel instead of a dedicated trap modal, same as
+   *  `workContractActions.ts`. */
+  vueUi: VueUi
   /** Persistent per-spot fishing bait (plan 159 §10, `SaveData.fishingBait`). */
   fishingBait: Map<string, FishingBaitState>
   /** Runtime-only per-spot cast counter feeding the deterministic catch roll. */
@@ -60,27 +69,91 @@ export function createGatheringActions(
   deps: GatheringActionDeps,
 ): GatheringActions {
   const { bundle, player, inventory, playerTorch, hud, toast, busy, dayNight, worldAudio } = ctx
-  const { fishingBait, fishingAttempts } = deps
+  const { vueUi, fishingBait, fishingAttempts } = deps
 
-  const armTrap = (id: string): void => {
+  /** Arms a `placed` trap with no bait (plan fauna-014 §6/§7) — never touches
+   *  inventory. */
+  const armTrapPlain = (id: string): void => {
     if (isActionBlocked(ctx)) return
     // The Traps value is snapshotted here, once — the trap then works on its
     // own, with no reference back to the player (implementation notes §2).
     if (!bundle.placedTraps.activate(id, player.skills.traps.value, dayNight.elapsedDays)) return
-    // Plan 159 §12 — auto-bait from whatever bait-capable food the player
-    // already carries (cheapest first), atomically: remove one unit, then
-    // attach it. No separate "load bait" UI action in this pass.
-    const baitKind = BAIT_ITEM_PRIORITY.find((kind) => inventory.has(kind, 1))
-    if (baitKind && inventory.remove(baitKind, 1)) {
-      if (bundle.placedTraps.attachBait(id, baitKind)) {
-        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-        ctx.onInventoryChanged()
-        toast.show(`Pułapka uzbrojona i zanęcona (${ITEM_DEFS[baitKind].label}).`)
-        return
-      }
-      inventory.add(baitKind, 1, dayNight.elapsedDays)
+    toast.show('Pułapka uzbrojona bez przynęty.')
+  }
+
+  /** Arms a `placed` trap with a player-chosen bait item (plan fauna-014
+   *  §6/§7) — replaces the old auto-selected-from-`BAIT_ITEM_PRIORITY` bait.
+   *  Inventory is mutated *last*, only once the trap is armed and has
+   *  accepted the bait, so a failure never needs a compensating inventory
+   *  add-back (implementation notes' transaction-ordering invariant). */
+  const armTrapWithBait = (id: string, baitKind: ItemKind): void => {
+    if (isActionBlocked(ctx)) return
+    if (!inventory.has(baitKind, 1)) return
+    if (!bundle.placedTraps.activate(id, player.skills.traps.value, dayNight.elapsedDays)) return
+    if (!bundle.placedTraps.attachBait(id, baitKind)) {
+      toast.show('Pułapka uzbrojona bez przynęty.')
+      return
     }
-    toast.show('Pułapka uzbrojona.')
+    inventory.remove(baitKind, 1)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show(`Pułapka uzbrojona — przynęta: ${ITEM_DEFS[baitKind].label}.`)
+  }
+
+  /** Sub-panel listing every bait-capable item the player actually carries
+   *  (plan fauna-014 §6) — reopens the same `FlavorDialog` action-list
+   *  mechanism the top-level trap panel uses, no dedicated inventory
+   *  selector. Empty inventory shows a plain message instead of an empty
+   *  panel. */
+  const openTrapBaitSelection = (id: string): void => {
+    const trap = bundle.placedTraps.list().find((entry) => entry.id === id)
+    if (!trap || trap.state !== 'placed') return
+    const label = TRAP_DEFS[trap.kind].label
+    const carried = BAIT_ITEM_PRIORITY.filter((kind) => inventory.has(kind, 1))
+    if (carried.length === 0) {
+      vueUi.openFlavorDialog(label, 'Brak przynęty w ekwipunku.', [
+        { label: 'Wstecz', enabled: true, reasonLabel: '', run: () => openTrapArmDialog(id) },
+      ])
+      return
+    }
+    vueUi.openFlavorDialog(
+      label,
+      'Wybierz przynętę.',
+      [
+        ...carried.map((kind) => ({
+          label: `${ITEM_DEFS[kind].label} (${inventory.count(kind)})`,
+          enabled: true,
+          reasonLabel: '',
+          run: () => armTrapWithBait(id, kind),
+        })),
+        { label: 'Wstecz', enabled: true, reasonLabel: '', run: () => openTrapArmDialog(id) },
+      ],
+    )
+  }
+
+  /** `[E]` on a `placed` trap (plan fauna-014 §6) — lets the player decide
+   *  whether/what to bait instead of auto-consuming the first bait-capable
+   *  item in inventory. Description derives durability from the
+   *  authoritative `PlacedTrapEntry`, never a cached value. */
+  const openTrapArmDialog = (id: string): void => {
+    const trap = bundle.placedTraps.list().find((entry) => entry.id === id)
+    if (!trap || trap.state !== 'placed') return
+    const def = TRAP_DEFS[trap.kind]
+    const hasBait = BAIT_ITEM_PRIORITY.some((kind) => inventory.has(kind, 1))
+    vueUi.openFlavorDialog(
+      def.label,
+      `Wytrzymałość: ${Math.ceil(trap.durability)}/${def.maxDurability}.`,
+      [
+        { label: 'Uzbrój bez przynęty', enabled: true, reasonLabel: '', run: () => armTrapPlain(id) },
+        {
+          label: 'Uzbrój z przynętą…',
+          enabled: hasBait,
+          reasonLabel: 'Brak przynęty w ekwipunku.',
+          run: () => openTrapBaitSelection(id),
+        },
+        { label: 'Zabierz pułapkę', enabled: true, reasonLabel: '', run: () => collectTrap(id) },
+      ],
+    )
   }
 
   const disarmTrap = (id: string): void => {
@@ -318,7 +391,7 @@ export function createGatheringActions(
   }
 
   return {
-    armTrap,
+    openTrapArmDialog,
     disarmTrap,
     collectTrap,
     onTrapCapture,

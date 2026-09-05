@@ -356,8 +356,10 @@ export type GameLoopDeps = {
    *  the same lodging commit path "Nocuj w mieście" uses, skipping Quick
    *  Actions entirely. */
   sleepInHay?: (settlementId: string) => void
-  /** Arm / disarm / pick up a placed animal trap (plan 141 §9). */
-  armTrap: (id: string) => void
+  /** `[E]` on a `placed` (disarmed) trap (plan 141 §9, plan fauna-014 §6) —
+   *  opens the arm-without-bait / arm-with-bait / collect choice panel
+   *  instead of arming directly. */
+  openTrapArmDialog: (id: string) => void
   disarmTrap: (id: string) => void
   collectTrap: (id: string) => void
   /** Cast at a lake shore with `fishing_rod` held (busy channel, plan 159 §9). */
@@ -517,7 +519,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, armTrap, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, removePalisadeSegment, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
@@ -1375,7 +1377,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'trap') {
         if (interactPressed) {
           if (target.state === 'active') disarmTrap(target.id)
-          else if (target.state === 'placed') armTrap(target.id)
+          else if (target.state === 'placed') openTrapArmDialog(target.id)
           else toast.show('Ta pułapka jest zniszczona.', 'error')
         }
         if (altInteractPressed && target.state !== 'active') collectTrap(target.id)
@@ -1960,6 +1962,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             },
             (kind, x, z) => playAnimalAggroSound(kind, worldAudio.playAt, { x, z }),
             (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
+            // Plan fauna-014 §3/§11 — computed once per pass, not per animal,
+            // and forwarded straight into every `AnimalAgent.update()` call.
+            bundle.placedTraps.activeLures(),
           )
         })
         // Traps run inside the fauna pass's own cadence (plan 141 §11): the

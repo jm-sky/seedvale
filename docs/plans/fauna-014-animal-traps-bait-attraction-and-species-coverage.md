@@ -1,7 +1,7 @@
 # Plan: Animal traps — bait attraction and species coverage
 
 **Created:** 2026-09-04
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-010

@@ -921,7 +921,7 @@ export async function createApp(
     vueUi,
     tentBlockers: placement.tentBlockers,
   })
-  const gathering = createGatheringActions(actionCtx, { fishingBait, fishingAttempts })
+  const gathering = createGatheringActions(actionCtx, { vueUi, fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
   const ground = createGroundActions(actionCtx, { worldFlags, badges, resolvedHiddenFindSpotIds })
   const rest = createRestActions(actionCtx, {
@@ -1573,7 +1573,7 @@ export async function createApp(
     startTentRest: rest.startTentRest,
     packTent: rest.packTent,
     sleepInHay: rest.sleepInHay,
-    armTrap: gathering.armTrap,
+    openTrapArmDialog: gathering.openTrapArmDialog,
     disarmTrap: gathering.disarmTrap,
     collectTrap: gathering.collectTrap,
     startFishing: gathering.startFishing,

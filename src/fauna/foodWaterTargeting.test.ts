@@ -223,12 +223,20 @@ describe('ANIMAL_DEFS herbivore diet/metabolism (plan fauna-010)', () => {
     }
   })
 
-  it('predators and out-of-scope prey have no diet (unchanged abstract forage)', () => {
-    expect(ANIMAL_DEFS.wolf.diet).toBeUndefined()
-    expect(ANIMAL_DEFS.fox.diet).toBeUndefined()
+  it('out-of-scope predators/prey have no diet (unchanged abstract forage)', () => {
     expect(ANIMAL_DEFS.bear.diet).toBeUndefined()
     expect(ANIMAL_DEFS.duck.diet).toBeUndefined()
     expect(ANIMAL_DEFS.boar.diet).toBeUndefined()
+  })
+
+  it('wolf/fox carry a meat diet (plan fauna-014 §2) but findFoodTarget still takes the carcass branch', () => {
+    // `diet` is set only for `dietAcceptsItem()` (trap-bait attraction) — a
+    // predator's own hunger search never reads it (`findFoodTarget()`'s
+    // `role === 'predator'` branch always resolves via `findCarcassTarget`).
+    expect(ANIMAL_DEFS.wolf.diet?.items?.raw_meat).toBeGreaterThan(0)
+    expect(ANIMAL_DEFS.wolf.diet?.grass).toBeUndefined()
+    expect(ANIMAL_DEFS.fox.diet?.items?.raw_meat).toBeGreaterThan(0)
+    expect(ANIMAL_DEFS.fox.diet?.grass).toBeUndefined()
   })
 
   it('every species declares a metabolism block', () => {

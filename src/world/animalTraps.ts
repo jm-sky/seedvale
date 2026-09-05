@@ -36,6 +36,12 @@ export type TrapDef = {
   weatherWearMultiplier: number
   /** XZ radius (m) an animal must enter before a detection roll happens. */
   triggerRadius: number
+  /** XZ radius (m, plan fauna-014 §4) within which an active+baited trap
+   *  becomes a lure candidate for a compatible, diet-matching animal —
+   *  deliberately bigger than `triggerRadius`: attraction only *draws the
+   *  animal closer*, the smaller `triggerRadius` above still gates the
+   *  actual detection/capture roll (`createPlacedTraps.ts`'s `update()`). */
+  lureRadius: number
   /** Runtime GLB when one exists; `null` keeps the procedural prop
    *  (`trapProp.ts`) — same loader/fallback convention as other props. */
   modelUrl: string | null
@@ -50,6 +56,7 @@ export const TRAP_DEFS: Record<TrapKind, TrapDef> = {
     baseDetectionChance: 0.5,
     weatherWearMultiplier: 1,
     triggerRadius: 1.2,
+    lureRadius: 6,
     modelUrl: null,
   },
   good: {
@@ -60,6 +67,7 @@ export const TRAP_DEFS: Record<TrapKind, TrapDef> = {
     baseDetectionChance: 0.3,
     weatherWearMultiplier: 0.25,
     triggerRadius: 1.4,
+    lureRadius: 8,
     modelUrl: null,
   },
 }
@@ -73,18 +81,20 @@ export function trapKindForItem(kind: ItemKind): TrapKind | null {
   return TRAP_KIND_BY_ITEM[kind] ?? null
 }
 
-/** Explicit compatibility table (plan 141 §5, implementation notes §9) — not
- *  a `kind !== 'wolf'` negation. Small/medium prey only: `stag` is
- *  deliberately out (too large for a v1 trap), and no predators. Names are
- *  real `AnimalDef.kind` values (`deer` is the sarna). */
-export const TRAPPABLE_SPECIES: ReadonlySet<AnimalKind> = new Set<AnimalKind>([
-  'boar',
-  'deer',
-  'rabbit',
-])
+/** Explicit trap-kind × species compatibility (plan fauna-014 §1) — not a
+ *  `kind !== 'wolf'` runtime special case. `simple` stays the original V1
+ *  small/medium-prey set (plan 141 §5); `good` additionally reaches `stag`
+ *  (too large for `simple`) and `wolf` (a strong predator, needs the sturdier
+ *  trap). `bear` and every domestic/livestock kind are deliberately absent
+ *  from both — out of scope for the player trap system entirely. Names are
+ *  real `AnimalDef.kind` values (`deer` is the sarna, `stag` the jeleń). */
+const TRAP_SPECIES_COMPAT: Record<TrapKind, ReadonlySet<AnimalKind>> = {
+  simple: new Set<AnimalKind>(['boar', 'deer', 'fox', 'rabbit']),
+  good: new Set<AnimalKind>(['boar', 'deer', 'fox', 'rabbit', 'stag', 'wolf']),
+}
 
-export function isTrappableSpecies(kind: AnimalKind): boolean {
-  return TRAPPABLE_SPECIES.has(kind)
+export function isSpeciesTrappable(trapKind: TrapKind, kind: AnimalKind): boolean {
+  return TRAP_SPECIES_COMPAT[trapKind].has(kind)
 }
 
 /** Detection can never be certain in either direction — a master trapper's
@@ -97,9 +107,9 @@ export const TRAP_SKILL_DETECTION_CUT = 0.6
 
 /** Plan 159 §12 — extra detection cut while the trap carries bait, on top of
  *  the skill-driven cut above. Flat regardless of `'meat' | 'plant'` bait
- *  category — `TRAPPABLE_SPECIES` are all herbivores/omnivores, so a
- *  species-vs-bait-type matrix would add complexity without a real gameplay
- *  distinction in this plan's scope. */
+ *  category or trapped species — bait's main job is *attraction* (plan
+ *  fauna-014 §5, `resolveLureTarget`), so a species-vs-bait-type detection
+ *  matrix would add complexity without a real gameplay distinction. */
 export const TRAP_BAIT_DETECTION_CUT = 0.2
 
 /**
@@ -270,6 +280,19 @@ export type PlacedTrapRecord = {
    *  `attachBait`); returned to inventory on disarm/collect before a catch,
    *  consumed on a successful capture. */
   baitKind: ItemKind | null
+}
+
+/** Cheap read-only lure snapshot for one active+baited trap (plan fauna-014
+ *  §3/§4) — everything `AnimalAgent`'s throttled lure search needs and
+ *  nothing else; deliberately never the Three.js mesh or the trap's own
+ *  `PlacedTrapEntry`. Built fresh from live trap state
+ *  (`PlacedTraps.activeLures()`), never cached/persisted itself. */
+export type TrapLureDescriptor = {
+  trapId: string
+  kind: TrapKind
+  x: number
+  z: number
+  baitKind: ItemKind
 }
 
 export type TrapPlacementReason = 'ok' | 'water' | 'slope' | 'object' | 'trap'
