@@ -832,6 +832,35 @@ export function drainByBudget(step: () => boolean, budgetMs: number, now: () => 
   } while (now() - start < budgetMs)
 }
 
+type TickableWaterSurface = { update: (dt: number) => void }
+type DayNightWaterSurface = { setDayNight: (dayFactor: number, sunDirection: THREE.Vector3) => void }
+
+/** Advances both the flat-water plane and the river ribbon for every loaded
+ *  chunk — extracted purely so `ChunkManager.tickWater` is testable without a
+ *  full `createChunkManager` (scene + worker config). */
+export function tickChunkWaterSurfaces(
+  records: Iterable<{ water?: TickableWaterSurface | null, river?: TickableWaterSurface | null }>,
+  dt: number,
+): void {
+  for (const rec of records) {
+    rec.water?.update(dt)
+    rec.river?.update(dt)
+  }
+}
+
+/** Applies day/night colour to both the flat-water plane and the river ribbon
+ *  for every loaded chunk — same rationale as `tickChunkWaterSurfaces`. */
+export function applyChunkWaterDayNight(
+  records: Iterable<{ water?: DayNightWaterSurface | null, river?: DayNightWaterSurface | null }>,
+  dayFactor: number,
+  sunDirection: THREE.Vector3,
+): void {
+  for (const rec of records) {
+    rec.water?.setDayNight(dayFactor, sunDirection)
+    rec.river?.setDayNight(dayFactor, sunDirection)
+  }
+}
+
 /** Plan 172 — `harvestCrop`'s result. `'no-yield'` covers both an unripe
  *  (`young`) crop and a `spoiled` one with no `spoiledItem`; either way the
  *  crop is left in place rather than removed. */
@@ -2132,10 +2161,10 @@ export function createChunkManager(
   return {
     update,
     tickWater(dt) {
-      for (const rec of chunks.values()) rec.water?.update(dt)
+      tickChunkWaterSurfaces(chunks.values(), dt)
     },
     setWaterDayNight(dayFactor, sunDirection) {
-      for (const rec of chunks.values()) rec.water?.setDayNight(dayFactor, sunDirection)
+      applyChunkWaterDayNight(chunks.values(), dayFactor, sunDirection)
     },
     setWaterReflections(enabled) {
       config.waterMirror.setEnabled(enabled)

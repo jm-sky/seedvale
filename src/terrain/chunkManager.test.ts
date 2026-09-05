@@ -1,9 +1,11 @@
+import { Vector3 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { ChunkTileParams } from './chunkHeightmap'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
 import * as chunkHeightmap from './chunkHeightmap'
 import { apronOriginWorld } from './chunkHeightmap'
 import {
+  applyChunkWaterDayNight,
   applyModificationToTile,
   drainByBudget,
   pickNearestQueuedKey,
@@ -11,6 +13,7 @@ import {
   resolveUnloadedLandmark,
   ringChunkOffsets,
   type TerrainModification,
+  tickChunkWaterSurfaces,
 } from './chunkManager'
 
 // Small grid so texel math is easy to reason about by hand: resolution 5,
@@ -328,6 +331,33 @@ describe('drainByBudget', () => {
       clock.now,
     )
     expect(calls).toBe(1)
+  })
+})
+
+/** Regression: `ChunkManager.tickWater`/`setWaterDayNight` must animate river
+ *  ribbons the same as the flat-water plane — they were only ever updating
+ *  `rec.water`, leaving river flow/day-night stuck. */
+describe('tickChunkWaterSurfaces / applyChunkWaterDayNight', () => {
+  it('ticks both water and river on every record', () => {
+    const water = { update: vi.fn() }
+    const river = { update: vi.fn() }
+    tickChunkWaterSurfaces([{ water, river }], 0.5)
+    expect(water.update).toHaveBeenCalledWith(0.5)
+    expect(river.update).toHaveBeenCalledWith(0.5)
+  })
+
+  it('applies day/night to both water and river on every record', () => {
+    const water = { setDayNight: vi.fn() }
+    const river = { setDayNight: vi.fn() }
+    const sunDirection = new Vector3(0, 1, 0)
+    applyChunkWaterDayNight([{ water, river }], 0.7, sunDirection)
+    expect(water.setDayNight).toHaveBeenCalledWith(0.7, sunDirection)
+    expect(river.setDayNight).toHaveBeenCalledWith(0.7, sunDirection)
+  })
+
+  it('tolerates records with no water/river (chunk with neither)', () => {
+    expect(() => tickChunkWaterSurfaces([{}], 0.1)).not.toThrow()
+    expect(() => applyChunkWaterDayNight([{}], 0.1, new Vector3(0, 1, 0))).not.toThrow()
   })
 })
 
