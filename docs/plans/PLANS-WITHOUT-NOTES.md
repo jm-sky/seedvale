@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-05 16:18:35  
+> Date: 2026-09-05 17:11:30  
 
 ## PLANS
 
@@ -16,7 +16,6 @@
 - `tools-005-seedvale-character-preparation-panel.md`
 - `tools-007--mpfb2-npc-hero-character-pipeline.md`
 - `world-016-ambient-soundscape-events-and-lake-frogs.md`
-- `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md`
 - `world-terrain-014-weather-driven-cloud-variety-and-ground-fog.md`
 
 --------------------------------
@@ -348,37 +347,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/world-016-ambient-soundscape-events-and-lake-frogs-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md`
-
-Prompt:
-
-```
-Zrób review planu `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/world-terrain-013-river-drainage-continuity-and-terrain-adaptation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
