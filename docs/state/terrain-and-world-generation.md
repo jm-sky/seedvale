@@ -50,6 +50,8 @@ When this file and the code disagree, the code wins — update this file.
   - `computeClimate` composes both into `WorldClimateState`.
 - `ClimateState`/`tickClimate` is a small mutable runtime cache around those pure functions (mirrors `DayNightState`'s shape): it only recomputes `weather` when `elapsedDays` crosses into a new cycle, plus a debug-only `forced` override (lil-gui) that is never persisted.
 - Visuals: `world/weatherVisuals.ts` dims sun/ambient/hemi and adjusts fog on top of day/night. `world/weatherParticles.ts` renders rain/snow as GPU-driven `THREE.Points` (per-particle fall/drift computed in a shared shader from a fixed-at-creation attribute + `uTime`; JS only updates a few uniforms) — density follows weather intensity and the `quality.lodScale` graphics preset. The rain/snow shape contract (thin vertical streak vs. full sprite) is [GRAPHICS.md](../architecture/GRAPHICS.md) G13, not restated here. Weather → NPC/fauna/resource coupling is not implemented.
+- `world/clouds.ts` (plan world-terrain-001, cloud variety per plan world-terrain-014) is a bounded/recycled pool (`CLOUD_COUNT = 28`) of `THREE.Sprite` billboards, player-XZ-following, sky-level and independent of `WorldBundle`. Each sprite belongs to a rendering-only `light`/`dense` category (its own texture list + height/scale/drift-speed ranges); `cloudCategoryWeightsFor(weather, season?)` is a pure weighted-selection function used only when a sprite is first assigned or recycled (never a global reassignment on weather change), so a weather transition reads as a gradual population shift. `cloudAppearanceFor(weather, elev)` separately drives coverage (`sprite.visible` threshold) and a shared-material tint/day-night multiply — unaffected by category selection.
+- `world/groundFog.ts` (plan world-terrain-014) is a small fixed pool (5) of flattened, mostly-horizontal `PlaneGeometry` cards using `/images/fog/fog-01.png`, sharing the same player-local, `WorldBundle`-independent lifecycle as `clouds.ts`. Object lifetime never changes with weather; only for `weather.type === 'fog'` does `weather.intensity` drive shared-material opacity and the visible-pool fraction. Patches drift within a small area centered on the player and are recycled (new position/scale/rotation, terrain height resampled via a `HeightSampler` callback) only when they leave it — never every frame. Supplements, does not replace, `weatherVisuals.ts`'s global `THREE.Fog`.
 
 ## Surface weather effects (wetness/snow)
 
@@ -74,6 +76,8 @@ src/world/treeLifecycle.ts
 src/world/weather.ts
 src/world/weatherVisuals.ts
 src/world/weatherParticles.ts
+src/world/clouds.ts
+src/world/groundFog.ts
 src/config/worldConfig.ts
 ```
 

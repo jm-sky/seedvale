@@ -2,7 +2,7 @@
 
 **Plan:** `world-terrain-014-weather-driven-cloud-variety-and-ground-fog.md`
 **Reviewed:** 2026-09-05
-**Status:** planned 📋
+**Status:** `verification needed` 🔍 — implemented per §19 below, technical checks pass; browser/manual verification pending.
 
 ## Recon verdict
 
@@ -168,5 +168,31 @@ Do not unit-test Three.js sprite/card rendering details.
 4. Add `groundFog.ts` with a 4–6 element fixed pool and `/images/fog/fog-01.png`.
 5. Wire it beside clouds in `createApp.ts`/`gameLoop.ts`; inject dynamic runtime terrain sampling only if the chosen card placement needs it.
 6. Add focused pure tests, then typecheck/lint/tests/build. Browser visual verification remains user-owned.
+
+## §19 Implementation summary
+
+Implemented as designed above, following the suggested order.
+
+**Clouds (`src/world/clouds.ts`)** — extended in place, same `CLOUD_COUNT = 28` bounded/recycled sprite pool:
+
+- `CloudCategory = 'light' | 'dense'`, each with its own `textures`/`heightRange`/`scaleRange`/`driftSpeedRange` (`CLOUD_CATEGORIES`). First tuning pass: `light` = `cloud1.png`/`cloud2.png`, `dense` = `cloud3.png`/`cloud4.png` — the `FX_CloudAlpha*` candidates stay unclassified.
+- `cloudCategoryWeightsFor(weather, season?)` — pure, exported, tested — blends a neutral clear-sky mix toward each weather type's target mix by `weather.intensity`, then applies a small optional seasonal bias, and defensively re-normalizes.
+- `randomize()` now picks a category via `pickCategory()` (weighted, but falls back to whichever category actually has loaded materials) only at sprite creation/recycle — no global reassignment on weather change, matching plan §3.
+- Per-sprite `speed` (from the category's `driftSpeedRange`) replaces the old single `WIND_SPEED` constant so `light`/`dense` drift at different rates.
+- Textures load per-category via `Promise.allSettled` so one missing candidate PNG can't disable the whole system.
+- `CloudSystem.update()` gained an optional trailing `season?: Season` argument; `gameLoop.ts` passes `climate.season`.
+- Did **not** add the "bounded periodic correction" mentioned in §3 as a fallback — natural recycle-based convergence is what's shipped; add it only if manual verification shows population convergence is too slow after a weather change.
+
+**Ground fog (`src/world/groundFog.ts`)** — new module, same `addTo`/`update`/`dispose` shape as `clouds.ts`:
+
+- Fixed pool of 5 (`FOG_COUNT`) flattened, mostly-horizontal `PlaneGeometry` cards (`rotation.x = -Math.PI / 2`) rather than upright sprites, sharing one geometry and one `MeshBasicMaterial` per loaded texture (`/images/fog/fog-01.png` only, so far).
+- Created once after texture load; for `weather.type !== 'fog'` the whole group is hidden (`group.visible`) — object lifetime never changes.
+- For `weather.type === 'fog'`, `weather.intensity` linearly drives both the shared material opacity and the visible-pool fraction (same fixed per-patch `visibilityThreshold` trick as clouds), so density changes need no add/remove.
+- Patches drift locally within a `±45` unit square centered on the player (`AREA_HALF_EXTENT`) and recycle (new offset + new texture/scale/rotation) when they leave it; terrain height is sampled via the `sampleHeight: HeightSampler` argument passed into `update()` only at spawn/recycle, never per frame — `gameLoop.ts` passes `bundle.chunkManager.sampleHeight` fresh every call, so a `WorldBundle` rebuild can never leave a stale `ChunkManager` captured.
+- Instantiated/disposed in `createApp.ts` beside `clouds`, updated in `gameLoop.ts` right after `clouds.update(...)`. Not added to `WorldBundle` or terrain chunks.
+
+**Tests** — added `describe('cloudCategoryWeightsFor', ...)` to `clouds.test.ts` covering the profile-per-weather-type table, intensity scaling, normalization, and the seasonal bias, per this doc's "Testing targets". No new tests for `groundFog.ts`'s three.js object wiring, consistent with "Do not unit-test Three.js sprite/card rendering details."
+
+**Verified:** `npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run test` (full suite), `pnpm run build` all pass. Browser/manual verification (the checklist in the plan's "Verification" section) is user-owned and still pending.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

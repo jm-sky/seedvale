@@ -33,7 +33,7 @@ Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lif
 - Generation/streaming/vegetation/mountains/weather: [state/terrain-and-world-generation.md](./state/terrain-and-world-generation.md)
 - Ocean, lakes and rivers: [WATER.md](./state/water.md)
 - Visual/shader contracts (why something renders the way it does): [GRAPHICS.md](./architecture/GRAPHICS.md)
-- Still not implemented: full river/lake shader parity, hydrology worker offload, clouds and distant background mountains, cube-sphere/spherical world.
+- Still not implemented: full river/lake shader parity, hydrology worker offload, distant background mountains, cube-sphere/spherical world.
 
 ### Settlements / NPCs
 
@@ -171,7 +171,7 @@ src/ui-vue/
 
 ## Current architectural seams / active refactors
 
-- **World visual overhaul** — plants done in part; sky/clouds and distant mountains remain.
+- **World visual overhaul** — plants done in part; clouds (with weather-driven `light`/`dense` variety and local ground fog, plan world-terrain-014) and sky are implemented; distant mountains remain.
 - **UI** — Vue Fazy 0–4 implemented, browser verification pending across most of it. A new Character screen (HP/hunger/thirst/vigor) exists. Do not assume every future UI belongs in Vue; extend the existing facade + store pattern when migrating.
 - **NPC daily routine** — Place + executable schedule + vigor are implemented; household resource layer is implemented (see [SETTLEMENTS.md](./state/settlements.md)). Vigor collapse and a critical need interrupt a schedule-driven action already in flight; ordinary schedule/time-of-day changes still do not. The settlement campfire is now a Social Place (plan 151), and a lit campfire is a night-time low-pressure opportunity for any idle NPC, not just `sociable` ones (plan npc-013); other Social Place kinds remain an intentional gap. NPC runtime continuity across an ordinary settlement unload/reload remains incomplete; do not treat in-session rebuild continuity as full persistence.
 
@@ -190,7 +190,7 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 - Full combat system for the player — see [state/combat.md](./state/combat.md) for exactly what exists vs. what's missing.
 - Weapon repair/broken lifecycle, general tool durability (shovel/pickaxe), bow durability/sharpness, arrow recovery, 3D projectile visuals.
 - Cube-sphere / fully spherical world architecture.
-- Clouds and distant background mountains.
+- Distant background mountains.
 - Full Vue migration of all existing UI.
 
 Plan status belongs in [plans/README.md](./plans/README.md), not here.

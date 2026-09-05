@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WeatherState } from './weather'
-import { cloudAppearanceFor } from './clouds'
+import { cloudAppearanceFor, cloudCategoryWeightsFor } from './clouds'
 
 function weather(overrides: Partial<WeatherState>): WeatherState {
   return { type: 'clear', intensity: 0, temperature: 12, startedAt: 0, endsAt: 0.3, ...overrides }
@@ -71,5 +71,51 @@ describe('cloudAppearanceFor', () => {
     const nightRain = cloudAppearanceFor(weather({ type: 'rain', intensity: 1 }), -1)
     expect(nightRain.tint).toBeLessThan(dayRain.tint)
     expect(nightRain.tint).toBeGreaterThan(0)
+  })
+})
+
+describe('cloudCategoryWeightsFor', () => {
+  it('is strongly light for clear weather', () => {
+    const weights = cloudCategoryWeightsFor(weather({ type: 'clear', intensity: 0 }))
+    expect(weights.light).toBeGreaterThan(weights.dense)
+  })
+
+  it('is mixed but dense-biased for cloudy weather at full intensity', () => {
+    const weights = cloudCategoryWeightsFor(weather({ type: 'cloudy', intensity: 1 }))
+    expect(weights.dense).toBeGreaterThan(weights.light)
+    expect(weights.light).toBeGreaterThan(0.1)
+  })
+
+  it('becomes increasingly dense for rain as intensity rises', () => {
+    const low = cloudCategoryWeightsFor(weather({ type: 'rain', intensity: 0.2 }))
+    const high = cloudCategoryWeightsFor(weather({ type: 'rain', intensity: 1 }))
+    expect(high.dense).toBeGreaterThan(low.dense)
+  })
+
+  it('is dense-biased for snow', () => {
+    const weights = cloudCategoryWeightsFor(weather({ type: 'snow', intensity: 1 }))
+    expect(weights.dense).toBeGreaterThan(weights.light)
+  })
+
+  it('keeps the low-coverage fog profile light-biased like clear', () => {
+    const fog = cloudCategoryWeightsFor(weather({ type: 'fog', intensity: 1 }))
+    const clear = cloudCategoryWeightsFor(weather({ type: 'clear', intensity: 0 }))
+    expect(fog.light).toBeCloseTo(clear.light)
+  })
+
+  it('always normalizes to sum to 1', () => {
+    for (const type of ['clear', 'cloudy', 'rain', 'fog', 'snow'] as const) {
+      for (const intensity of [0, 0.3, 0.7, 1]) {
+        const weights = cloudCategoryWeightsFor(weather({ type, intensity }))
+        expect(weights.light + weights.dense).toBeCloseTo(1)
+      }
+    }
+  })
+
+  it('applies a small seasonal bias without flipping weather as the primary signal', () => {
+    const summer = cloudCategoryWeightsFor(weather({ type: 'clear', intensity: 0 }), 'summer')
+    const winter = cloudCategoryWeightsFor(weather({ type: 'clear', intensity: 0 }), 'winter')
+    expect(summer.light).toBeGreaterThan(winter.light)
+    expect(winter.light).toBeGreaterThan(winter.dense)
   })
 })

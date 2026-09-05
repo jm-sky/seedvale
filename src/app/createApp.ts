@@ -102,6 +102,7 @@ import { createClouds } from '../world/clouds'
 import { createDayNightState, parseTimeOfDayFromUrl, resetDayNightForNewGame } from '../world/dayNight'
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
+import { createGroundFog } from '../world/groundFog'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
@@ -510,6 +511,8 @@ export async function createApp(
   weatherParticles.addTo(scene)
   const clouds = createClouds()
   clouds.addTo(scene)
+  const groundFog = createGroundFog()
+  groundFog.addTo(scene)
   const houseDoors = createHouseDoorTracker()
   configureUiSounds(worldAudio.playOnce)
   configureNpcVoiceSounds(worldAudio.playAt)
@@ -1570,7 +1573,7 @@ export async function createApp(
   bootMark('createGameLoop')
   const gameLoop = createGameLoop({
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
-    climate, clouds, weatherParticles, weatherAudio, getSeed: () => config.seed,
+    climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
@@ -1726,6 +1729,7 @@ export async function createApp(
     weatherAudio.dispose()
     weatherParticles.dispose()
     clouds.dispose()
+    groundFog.dispose()
     configureUiSounds(null)
     configureNpcVoiceSounds(null)
     configureAudioVolumes(worldAudio.getVolumes(), null)

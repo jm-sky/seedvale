@@ -36,6 +36,7 @@ import type { WorldLights } from '../world/createLights'
 import type { WorldSky } from '../world/createSky'
 import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
+import type { GroundFogSystem } from '../world/groundFog'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
@@ -270,6 +271,7 @@ export type GameLoopDeps = {
   dayNight: DayNightState
   climate: ClimateState
   clouds: CloudSystem
+  groundFog: GroundFogSystem
   weatherParticles: WeatherParticles
   weatherAudio: WeatherAudio
   /** Current world seed — weather is a pure function of `(seed, elapsedDays)`
@@ -519,7 +521,7 @@ export type GameLoop = {
 export function createGameLoop(deps: GameLoopDeps): GameLoop {
   const {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
-    climate, clouds, weatherParticles, weatherAudio, getSeed,
+    climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
@@ -1759,7 +1761,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         dt, climate.weather, player.mesh.position.x, player.mesh.position.y, player.mesh.position.z,
         camera.fov, renderer.domElement.clientHeight,
       )
-      clouds.update(dt, climate.weather, cachedSky.elev, player.mesh.position.x, player.mesh.position.z)
+      clouds.update(dt, climate.weather, cachedSky.elev, player.mesh.position.x, player.mesh.position.z, climate.season)
+      groundFog.update(dt, climate.weather, player.mesh.position.x, player.mesh.position.z, bundle.chunkManager.sampleHeight)
       weatherAudio.update(climate.weather)
       ambientAudio.update(
         dt,

@@ -1,7 +1,7 @@
 # Plan: Weather-Driven Cloud Variety and Ground Fog
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, technical checks pass; browser/manual verification pending. See [implementation notes](./implementation-notes/world-terrain-014-weather-driven-cloud-variety-and-ground-fog-implementation-notes.md#implementation-summary).
 **Type:** polish
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~world-terrain-001~~
