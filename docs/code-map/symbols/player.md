@@ -13,6 +13,7 @@ Generated from exported TypeScript symbols.
 - `CameraBoomInput` — type — line 27
 - `CameraBoomResult` — type — line 38
 - `resolveCameraBoom` — function — line 52
+- `withCaveFloorFallback` — function — line 203
 
 ## `player/playerCombat.ts`
 
@@ -156,11 +157,11 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerTorch.ts`
 
-- `createPlayerTorch` — function — line 112
-- `PlayerTorch` — type — line 27
-- `TORCH_FUEL_BRANCH` — const — line 21
-- `TORCH_FUEL_WOODEN` — const — line 23
-- `TorchSource` — type — line 25
+- `createPlayerTorch` — function — line 118
+- `PlayerTorch` — type — line 28
+- `TORCH_FUEL_BRANCH` — const — line 22
+- `TORCH_FUEL_WOODEN` — const — line 24
+- `TorchSource` — type — line 26
 
 ## `player/ridingStability.ts`
 
@@ -171,14 +172,17 @@ Generated from exported TypeScript symbols.
 
 ## `player/torchLightPresets.ts`
 
-- `BRANCH_HELD_MAX` — const — line 13
-- `BRANCH_URL` — const — line 12
-- `TORCH_FLAME_OFFSET_WOODEN` — const — line 10
+- `BRANCH_HELD_MAX` — const — line 38
+- `BRANCH_URL` — const — line 37
+- `resolveTorchLight` — function — line 17
+- `TORCH_CAVE_DISTANCE_MULTIPLIER` — const — line 10
+- `TORCH_CAVE_INTENSITY_MULTIPLIER` — const — line 9
+- `TORCH_FLAME_OFFSET_WOODEN` — const — line 35
 - `TORCH_LIGHT_BRANCH` — const — line 1
 - `TORCH_LIGHT_DECAY` — const — line 3
 - `TORCH_LIGHT_WOODEN` — const — line 2
-- `TORCH_TIP_OFFSET_BRANCH` — const — line 5
-- `TORCH_TIP_OFFSET_WOODEN` — const — line 6
+- `TORCH_TIP_OFFSET_BRANCH` — const — line 30
+- `TORCH_TIP_OFFSET_WOODEN` — const — line 31
 
 ## `player/verticalMotion.ts`
 

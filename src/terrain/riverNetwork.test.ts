@@ -203,14 +203,17 @@ describe('river terminal receiver correctness (world-terrain-006)', () => {
     }
   })
 
-  it('drops a chain that would dead-end at a dry closed depression (sink above waterLevel)', () => {
+  it('drops a chain that would dead-end at an unrepairable dry closed depression (sink above waterLevel, no escape anywhere in the window)', () => {
     const waterLevel = 0.45
     const params = rawParams(3, { waterLevel })
     const tile = { tx: 0, tz: 0 }
 
     // Build a monotonic ramp descending toward the tile's core center, so
     // every core cell drains toward one dry local minimum well above
-    // waterLevel — every classified chain heading there must be dropped.
+    // waterLevel, with no lower cell anywhere else in the whole analysis
+    // window — world-terrain-011's bounded repair search can find no escape
+    // (there isn't one) and correctly leaves it unresolved, so every
+    // classified chain heading there must still be dropped.
     const rect = riverTileCoreRect(tile)
     const centerX = (rect.minX + rect.maxX) / 2
     const centerZ = (rect.minZ + rect.maxZ) / 2
@@ -232,6 +235,95 @@ describe('river terminal receiver correctness (world-terrain-006)', () => {
       // a river ending on dry land.
       const chains = computeRiverTile(tile, params)
       expect(chains).toHaveLength(0)
+    } finally {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
+  })
+
+  it('preserves a chain through a meaningful shallow depression by routing it through the repaired outlet', () => {
+    const waterLevel = 0.45
+    const params = rawParams(3, { waterLevel })
+    const tile = { tx: 0, tz: 0 }
+
+    // A shallow radial depression centered on the tile core: a low rim (well
+    // under the repair's cut-depth budget) with a genuinely lower escape just
+    // beyond it. Unlike the unrepairable case above, this should now survive
+    // as a normal chain routed through the conditioned outlet rather than
+    // being dropped outright (world-terrain-011).
+    const rect = riverTileCoreRect(tile)
+    const centerX = (rect.minX + rect.maxX) / 2
+    const centerZ = (rect.minZ + rect.maxZ) / 2
+    const pitBottom = waterLevel + 3
+    const rimRadius = 40
+    const riseSlope = 0.01
+    const outerFallSlope = 1.0
+
+    const floorAt = (wx: number, wz: number): number => {
+      const d = Math.hypot(wx - centerX, wz - centerZ)
+      if (d <= rimRadius) return pitBottom + d * riseSlope
+      const rimTop = pitBottom + rimRadius * riseSlope
+      return rimTop - (d - rimRadius) * outerFallSlope
+    }
+
+    const floorAtSpy = vi.spyOn(chunkHeightmap, 'sampleFloorAt').mockImplementation(floorAt)
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number, wz: number) => Math.max(floorAt(wx, wz), waterLevel))
+
+    try {
+      const chains = computeRiverTile(tile, params)
+      const reachesCenter = chains.some((chain) =>
+        chain.points.some((p) => Math.hypot(p.x - centerX, p.z - centerZ) < RIVER_CELL_STEP * 2),
+      )
+      expect(reachesCenter).toBe(true)
+      // The repaired outlet is a normal continuation, not a dry dead end —
+      // every chain must still satisfy the same terminal-receiver contract
+      // as world-terrain-006 (core-edge continuation or genuine water).
+      for (const chain of chains) {
+        const last = chain.points[chain.points.length - 1]!
+        const distToEdge = Math.min(last.x - rect.minX, rect.maxX - last.x, last.z - rect.minZ, rect.maxZ - last.z)
+        if (distToEdge > RIVER_CELL_STEP * 1.5) {
+          expect(last.elevation).toBeLessThanOrEqual(waterLevel + 1e-2)
+        }
+      }
+    } finally {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
+  })
+
+  it('leaves a meaningful but too-deep/large depression unresolved rather than forcing a dry chain through it', () => {
+    const waterLevel = 0.45
+    const params = rawParams(3, { waterLevel })
+    const tile = { tx: 0, tz: 0 }
+
+    const rect = riverTileCoreRect(tile)
+    const centerX = (rect.minX + rect.maxX) / 2
+    const centerZ = (rect.minZ + rect.maxZ) / 2
+    const pitBottom = waterLevel + 3
+    const rimRadius = 40
+    const riseSlope = 0.2 // rim rises ~8m above the pit — well past the repair's cut-depth budget
+    const outerFallSlope = 1.0
+
+    const floorAt = (wx: number, wz: number): number => {
+      const d = Math.hypot(wx - centerX, wz - centerZ)
+      if (d <= rimRadius) return pitBottom + d * riseSlope
+      const rimTop = pitBottom + rimRadius * riseSlope
+      return rimTop - (d - rimRadius) * outerFallSlope
+    }
+
+    const floorAtSpy = vi.spyOn(chunkHeightmap, 'sampleFloorAt').mockImplementation(floorAt)
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number, wz: number) => Math.max(floorAt(wx, wz), waterLevel))
+
+    try {
+      const chains = computeRiverTile(tile, params)
+      const reachesCenter = chains.some((chain) =>
+        chain.points.some((p) => Math.hypot(p.x - centerX, p.z - centerZ) < RIVER_CELL_STEP * 2),
+      )
+      expect(reachesCenter).toBe(false)
     } finally {
       floorAtSpy.mockRestore()
       heightAtSpy.mockRestore()
@@ -267,6 +359,36 @@ describe('river terminal receiver correctness (world-terrain-006)', () => {
       floorAtSpy.mockRestore()
       heightAtSpy.mockRestore()
     }
+  })
+})
+
+describe('inland river coverage regression (world-terrain-011)', () => {
+  it('keeps meaningful inland river coverage across representative seeds/tiles, not just coastal ribbons', () => {
+    const waterLevel = 0.45
+    let inlandPointCount = 0
+    for (const seed of [1, 5, 7, 42, 999, 1337]) {
+      const params = rawParams(seed, { waterLevel })
+      for (const tile of [
+        { tx: 0, tz: 0 },
+        { tx: 2, tz: -1 },
+        { tx: -3, tz: 4 },
+        { tx: 5, tz: 5 },
+        { tx: -8, tz: -8 },
+      ]) {
+        const chains = computeRiverTile(tile, params)
+        for (const chain of chains) {
+          for (const p of chain.points) {
+            if (p.elevation > waterLevel + 1) inlandPointCount++
+          }
+        }
+      }
+    }
+    // A future terminal-policy regression that silently drops most inland
+    // drainage (leaving only ocean/coastal ribbons) should fail this long
+    // before anyone notices missing rivers in play. The bound is generous
+    // and aggregate on purpose — it guards against wholesale loss, not exact
+    // river placement, which legitimately shifts with harmless terrain tuning.
+    expect(inlandPointCount).toBeGreaterThan(200)
   })
 })
 

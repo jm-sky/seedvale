@@ -162,23 +162,27 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `fauna-007` — **Animal leading and cart harness**  
+23. `fauna-015` — **Animal water traversal, wading, swimming and drowning**  
+  🟡 `M` · **Score:**  19  
+   → **unlocks:** 0/0
+
+24. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-24. `tools-000` — **Weapon Browser — Observatory/Admin**  
+25. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-25. `world-terrain-008` — **Underground Caves V2**  
+26. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-26. `npc-004` — **Drzewo genealogiczne NPC**  
+27. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-27. `tools-006` — **tools-006--world-observatory.md**  
+28. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -260,6 +264,7 @@ graph TD
   fauna_012["fauna-012 — Animal threat perception and vocalization responses"]
   fauna_013["fauna-013 — Animal hand-feeding and human affinity"]
   fauna_014["fauna-014 — Animal traps — bait attraction and species coverage"]
+  fauna_015["fauna-015 — Animal water traversal, wading, swimming and drowning"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -358,6 +363,7 @@ graph TD
   world_terrain_008["world-terrain-008 — Underground Caves V2"]
   world_terrain_009["world-terrain-009 — Seasonal ground and grass appearance"]
   world_terrain_010["world-terrain-010 — Waterways and Vegetation"]
+  world_terrain_011["world-terrain-011 — River Sink Resolution and Inland Drainage Recovery"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -417,6 +423,7 @@ graph TD
   fauna_010 --> fauna_012
   fauna_010 --> fauna_013
   fauna_010 --> fauna_014
+  fauna_010 --> fauna_015
   fauna_011 --> fauna_012
   fauna_011 --> fauna_013
   fauna_014 --> fauna_007
@@ -462,4 +469,5 @@ graph TD
   world_012 --> items_player_016
   world_012 --> world_013
   world_terrain_004 --> world_terrain_005
+  world_terrain_010 --> world_terrain_011
 ```

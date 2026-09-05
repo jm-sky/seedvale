@@ -315,12 +315,19 @@ Generated from TypeScript imports.
 
 - `app/actions/mountActions.ts`
 
+## `player/torchLightPresets.test.ts`
+
+**Imports**
+
+- `player/torchLightPresets.ts`
+
 ## `player/torchLightPresets.ts`
 
 **Imported by**
 
 - `assets/assetIndex.ts`
 - `player/PlayerTorch.ts`
+- `player/torchLightPresets.test.ts`
 - `tools/assetBrowser/viewer/createViewerScene.ts`
 
 ## `player/verticalMotion.test.ts`

@@ -6,6 +6,7 @@ import {
   classifyStreams,
   computeHydrologyRegion,
   D8_DIRECTIONS,
+  DEFAULT_DEPRESSION_REPAIR_OPTIONS,
   HydrologyFlag,
   type HydrologyRegion,
   type StreamThresholds,
@@ -469,6 +470,11 @@ function buildChains(
       // a genuine water body per the heights-clamp model — has no valid
       // receiver. Exiting the tile core without hitting either flag is a
       // normal, valid continuation into the neighbouring tile, not a terminal.
+      // world-terrain-011: a SINK meaningful enough to matter has already had
+      // its chance at bounded repair in `computeHydrologyRegion` — by the
+      // time chains are built here, a resolved former sink is no longer
+      // flagged SINK at all. This remains only the final defensive guard for
+      // whatever repair left unresolved (weak, or too deep/large).
       let reachedInvalidReceiver = false
       for (;;) {
         const cix = curIdx % size
@@ -574,6 +580,10 @@ export function computeRiverTile(
   const region = computeHydrologyRegion(
     { originX, originZ, size: WINDOW_CELLS, cellStep: RIVER_CELL_STEP },
     sampleParams,
+    // Dry-sink repair eligibility (world-terrain-011) tracks this tile's own
+    // stream-scale threshold, not hydrology.ts's unrelated internal default —
+    // a sink below actual stream-classification scale is noise regardless.
+    { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: thresholds.stream },
   )
   const classes = classifyStreams(region, thresholds)
   const coreRect = riverTileCoreRect(tile)

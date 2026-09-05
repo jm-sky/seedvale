@@ -256,19 +256,21 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/hydrology.ts`
 
-- `classifyStreams` — function — line 188
-- `computeHydrologyRegion` — function — line 85
-- `D8_DIRECTIONS` — const — line 16
-- `DEFAULT_STREAM_THRESHOLDS` — const — line 181
-- `findSourceCandidates` — function — line 235
-- `FLOW_DIR_SINK` — const — line 40
-- `HydrologyFlag` — const — line 27
-- `HydrologyRegion` — type — line 54
-- `HydrologyRegionParams` — type — line 44
-- `SourceCandidateOptions` — type — line 201
-- `StreamClass` — type — line 173
-- `StreamThresholds` — type — line 175
-- `traceDownstreamPath` — function — line 285
+- `classifyStreams` — function — line 482
+- `computeHydrologyRegion` — function — line 449
+- `D8_DIRECTIONS` — const — line 21
+- `DEFAULT_DEPRESSION_REPAIR_OPTIONS` — const — line 116
+- `DEFAULT_STREAM_THRESHOLDS` — const — line 83
+- `DepressionRepairOptions` — type — line 99
+- `findSourceCandidates` — function — line 529
+- `FLOW_DIR_SINK` — const — line 45
+- `HydrologyFlag` — const — line 32
+- `HydrologyRegion` — type — line 59
+- `HydrologyRegionParams` — type — line 49
+- `SourceCandidateOptions` — type — line 495
+- `StreamClass` — type — line 479
+- `StreamThresholds` — type — line 77
+- `traceDownstreamPath` — function — line 579
 
 ## `terrain/naturalResources.ts`
 
@@ -293,29 +295,29 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/riverNetwork.ts`
 
-- `canonicalWaterHeight` — function — line 199
-- `computeRiverTile` — function — line 567
-- `DEFAULT_RIVER_THRESHOLDS` — const — line 54
-- `depthFromAccumulation` — function — line 183
-- `exposedBankFromFlow` — function — line 169
-- `flowFactor` — function — line 123
-- `isInsideRiverChannel` — function — line 325
-- `nearestRiverBankDistance` — function — line 301
-- `nearestRiverBankPoint` — function — line 337
-- `overlappingRiverTiles` — function — line 81
-- `RIVER_CELL_STEP` — const — line 37
-- `RIVER_TILE_HALO` — const — line 36
-- `RIVER_TILE_SIZE` — const — line 30
-- `RiverChain` — type — line 95
-- `riverChannelSegmentsNear` — function — line 226
-- `RiverPoint` — type — line 94
-- `RiverTileCoord` — type — line 60
-- `riverTileCoordOf` — function — line 62
-- `riverTileCoreRect` — function — line 73
-- `riverTileKey` — function — line 66
-- `submergedDepthFromFlow` — function — line 174
-- `widthFromAccumulation` — function — line 137
-- `WorldRect` — type — line 70
+- `canonicalWaterHeight` — function — line 200
+- `computeRiverTile` — function — line 573
+- `DEFAULT_RIVER_THRESHOLDS` — const — line 55
+- `depthFromAccumulation` — function — line 184
+- `exposedBankFromFlow` — function — line 170
+- `flowFactor` — function — line 124
+- `isInsideRiverChannel` — function — line 326
+- `nearestRiverBankDistance` — function — line 302
+- `nearestRiverBankPoint` — function — line 338
+- `overlappingRiverTiles` — function — line 82
+- `RIVER_CELL_STEP` — const — line 38
+- `RIVER_TILE_HALO` — const — line 37
+- `RIVER_TILE_SIZE` — const — line 31
+- `RiverChain` — type — line 96
+- `riverChannelSegmentsNear` — function — line 227
+- `RiverPoint` — type — line 95
+- `RiverTileCoord` — type — line 61
+- `riverTileCoordOf` — function — line 63
+- `riverTileCoreRect` — function — line 74
+- `riverTileKey` — function — line 67
+- `submergedDepthFromFlow` — function — line 175
+- `widthFromAccumulation` — function — line 138
+- `WorldRect` — type — line 71
 
 ## `terrain/riverTileCache.ts`
 

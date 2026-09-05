@@ -95,7 +95,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSpikeMaterial.ts`
 
-- `createCaveSpikeMaterial` — function — line 12
+- `createCaveSpikeMaterial` — function — line 21
 
 ## `world/caves/caveSpikeMetrics.ts`
 

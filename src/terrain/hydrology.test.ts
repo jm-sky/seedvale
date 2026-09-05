@@ -5,6 +5,8 @@ import { sampleContinentalnessAt, sampleMountainRidgeAt } from './chunkHeightmap
 import {
   computeHydrologyRegion,
   D8_DIRECTIONS,
+  DEFAULT_DEPRESSION_REPAIR_OPTIONS,
+  type DepressionRepairOptions,
   findSourceCandidates,
   FLOW_DIR_SINK,
   HydrologyFlag,
@@ -254,6 +256,150 @@ describe('hydrology D8 prototype', () => {
     for (let i = 0; i < region.flowDir.length; i++) {
       const isSinkFlag = (region.flags[i]! & HydrologyFlag.SINK) !== 0
       expect(isSinkFlag).toBe(region.flowDir[i] === FLOW_DIR_SINK)
+    }
+  })
+})
+
+type RadialDepressionSpec = {
+  pitBottom: number
+  rimRadius: number
+  riseSlope: number
+  outerFallSlope: number
+}
+
+/** Radially symmetric synthetic terrain, centered at world (0,0): a cone
+ *  rising from `pitBottom` out to a `rimRadius` "rim", then falling away
+ *  steeply beyond it — a closed depression with a controllable rim height
+ *  (`rimRadius * riseSlope`) and a genuine, comfortably-lower escape just
+ *  past the rim (`outerFallSlope` deliberately steep so the escape cell sits
+ *  well below `pitBottom`, not merely just under it). */
+function radialDepressionFloorAt(spec: RadialDepressionSpec) {
+  return (wx: number, wz: number): number => {
+    const d = Math.hypot(wx, wz)
+    if (d <= spec.rimRadius) return spec.pitBottom + d * spec.riseSlope
+    const rimTop = spec.pitBottom + spec.rimRadius * spec.riseSlope
+    return rimTop - (d - spec.rimRadius) * spec.outerFallSlope
+  }
+}
+
+describe('bounded dry-sink repair (world-terrain-011)', () => {
+  const waterLevel = 0.45
+  const pitBottom = 5
+  const region: HydrologyRegionParams = { originX: -120, originZ: -120, size: 40, cellStep: 6 }
+  const sinkIdx = 20 * region.size + 20 // world (0,0) exactly, given this origin/cellStep
+
+  function mockRadialTerrain(spec: RadialDepressionSpec): () => void {
+    const floorAt = radialDepressionFloorAt(spec)
+    const floorAtSpy = vi.spyOn(chunkHeightmap, 'sampleFloorAt').mockImplementation(floorAt)
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number, wz: number) => Math.max(floorAt(wx, wz), waterLevel))
+    return () => {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
+  }
+
+  const shallowSpec: RadialDepressionSpec = { pitBottom, rimRadius: 24, riseSlope: 0.02, outerFallSlope: 1.0 }
+  const deepSpec: RadialDepressionSpec = { pitBottom, rimRadius: 24, riseSlope: 0.15, outerFallSlope: 1.0 }
+
+  it('leaves a weak dry sink unresolved when its accumulation is below the repair threshold', () => {
+    const restore = mockRadialTerrain(shallowSpec)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const disabled = computeHydrologyRegion(region, params, {
+        ...DEFAULT_DEPRESSION_REPAIR_OPTIONS,
+        minAccumulationForRepair: Number.MAX_SAFE_INTEGER,
+      })
+      const rawCatchment = disabled.accumulation[sinkIdx]!
+      expect(rawCatchment).toBeGreaterThan(1) // sanity: this sink does receive real upstream drainage
+
+      const options: DepressionRepairOptions = {
+        ...DEFAULT_DEPRESSION_REPAIR_OPTIONS,
+        minAccumulationForRepair: rawCatchment + 1,
+      }
+      const result = computeHydrologyRegion(region, params, options)
+      expect(result.flags[sinkIdx]! & HydrologyFlag.SINK).toBeTruthy()
+      expect(result.elevation[sinkIdx]).toBeCloseTo(pitBottom, 5)
+    } finally {
+      restore()
+    }
+  })
+
+  it('repairs a meaningful shallow depression with a low rim, giving the former sink a valid downstream route', () => {
+    const restore = mockRadialTerrain(shallowSpec)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const options: DepressionRepairOptions = { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: 1 }
+      const result = computeHydrologyRegion(region, params, options)
+      expect(result.flags[sinkIdx]! & HydrologyFlag.SINK).toBeFalsy()
+      expect(result.flowDir[sinkIdx]).not.toBe(FLOW_DIR_SINK)
+      expect(result.elevation[sinkIdx]).toBeCloseTo(pitBottom, 5) // the sink's own elevation is never modified
+    } finally {
+      restore()
+    }
+  })
+
+  it('leaves a deep/large depression unresolved rather than producing an artificial deep cut', () => {
+    const restore = mockRadialTerrain(deepSpec)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const options: DepressionRepairOptions = { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: 1 }
+      const result = computeHydrologyRegion(region, params, options)
+      expect(result.flags[sinkIdx]! & HydrologyFlag.SINK).toBeTruthy()
+      expect(result.elevation[sinkIdx]).toBeCloseTo(pitBottom, 5)
+    } finally {
+      restore()
+    }
+  })
+
+  it('is deterministic for the same synthetic depression', () => {
+    const restore = mockRadialTerrain(shallowSpec)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const options: DepressionRepairOptions = { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: 1 }
+      const a = computeHydrologyRegion(region, params, options)
+      const b = computeHydrologyRegion(region, params, options)
+      expect(a.elevation).toEqual(b.elevation)
+      expect(a.flowDir).toEqual(b.flowDir)
+      expect(a.accumulation).toEqual(b.accumulation)
+      expect(a.flags).toEqual(b.flags)
+    } finally {
+      restore()
+    }
+  })
+
+  it('conserves mass and keeps every non-terminal edge strictly descending after repair', () => {
+    const restore = mockRadialTerrain(shallowSpec)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const options: DepressionRepairOptions = { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: 1 }
+      const repaired = computeHydrologyRegion(region, params, options)
+      expect(terminalAccumulationSum(repaired)).toBe(region.size * region.size)
+      for (let i = 0; i < repaired.flowDir.length; i++) {
+        const flag = repaired.flags[i]!
+        if ((flag & (HydrologyFlag.SINK | HydrologyFlag.BOUNDARY_EXIT)) !== 0) continue
+        const dir = D8_DIRECTIONS[repaired.flowDir[i]!]!
+        const ix = i % region.size
+        const iz = Math.floor(i / region.size)
+        const downstream = (iz + dir.dz) * region.size + (ix + dir.dx)
+        expect(repaired.elevation[downstream]!).toBeLessThan(repaired.elevation[i]!)
+      }
+    } finally {
+      restore()
+    }
+  })
+
+  it('does not breach a wet sink (already a valid OCEAN_OUTLET)', () => {
+    const restore = mockRadialTerrain({ ...shallowSpec, pitBottom: waterLevel - 1 })
+    try {
+      const params = rawParams(11, { waterLevel })
+      const result = computeHydrologyRegion(region, params)
+      expect(result.flags[sinkIdx]! & HydrologyFlag.SINK).toBeTruthy()
+      expect(result.flags[sinkIdx]! & HydrologyFlag.OCEAN_OUTLET).toBeTruthy()
+      expect(result.elevation[sinkIdx]).toBeCloseTo(waterLevel - 1, 5)
+    } finally {
+      restore()
     }
   })
 })

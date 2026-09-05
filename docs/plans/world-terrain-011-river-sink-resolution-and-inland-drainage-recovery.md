@@ -1,7 +1,7 @@
 # Plan: River Sink Resolution and Inland Drainage Recovery
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** world-terrain-010
@@ -9,6 +9,14 @@
 **Subdomains:** `terrain`
 **Tags:** `rivers` `hydrology` `drainage` `sinks`
 **Roadmap:** -
+
+## Implementation status (2026-09-05)
+
+**Implemented + technically verified.** `computeHydrologyRegion()` (`src/terrain/hydrology.ts`) now runs raw D8/accumulation, then `resolveMeaningfulDrySinks()` probes dry `SINK` (non-`OCEAN_OUTLET`) cells whose raw accumulation reaches `DepressionRepairOptions.minAccumulationForRepair` for a bounded, deterministic shallow-breach repair (`findBreachPath()` — priority-queue minimax search for the cheapest downhill escape, strictly-descending working-elevation profile, hard `maxSearchCells`/`maxPathCells`/`maxCutDepth`/`maxTotalCut` limits). If any breach is accepted, D8 + accumulation are recomputed exactly once over the conditioned elevation; the returned region's `elevation` is that conditioned array, so `RiverPoint.elevation`/channel carving see the repaired chain coherently. `computeRiverTile()` (`src/terrain/riverNetwork.ts`) passes its own `thresholds.stream` as the eligibility gate rather than `hydrology.ts`'s unrelated internal default. `buildChains()`'s `reachedInvalidReceiver` is unchanged in behaviour and now only fires as the final defensive guard for whatever repair left unresolved (weak, or too deep/large) — no `riverNetwork.ts` chain-building/smoothing/meandering/cross-section logic was touched, per the plan's architecture constraints.
+
+Regression coverage: `hydrology.test.ts` adds a synthetic-terrain suite (weak/insufficient-accumulation reject, shallow-repair accept, deep/large-basin reject, determinism, mass conservation + strict descent after repair, wet-sink-untouched) using a radially symmetric depression with a controllable rim height/escape margin. `riverNetwork.test.ts` splits the old all-or-nothing dry-sink test into an unrepairable case (kept, unchanged expectation) plus new shallow-repaired and too-deep-unresolved cases, and adds a generous aggregate inland-coverage regression across six seeds/five tiles. Full existing suite (3058 tests), lint and `vue-tsc --noEmit` all pass unchanged elsewhere.
+
+**Not yet done:** browser/gameplay verification (several seeds, inland plains/valleys, mountain drainage, tile boundaries, small streams vs. large rivers, previously ocean-only ribbons, channel/water alignment after repair) — left to the player per this plan's own verification section. No lake/basin descriptor was added; genuinely closed basins beyond the shallow-breach budget remain unresolved dry sinks (no arbitrary dry-ending river is rendered), consistent with the plan's "lakes are a follow-up" scope.
 
 ## Goal
 
