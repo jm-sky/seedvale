@@ -3,7 +3,6 @@ import { computed, nextTick, ref } from 'vue'
 import SeedPicker from '@/components/SeedPicker.vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
-import { resolveInitialSeedChoice, type SeedChoice, type SeedRecord } from '../../world/seedLibrary'
 import {
   formatSaveDay,
   MAX_SAVES,
@@ -15,6 +14,7 @@ import {
   unhealthySaveStatusLabel,
   validateSaveName,
 } from '../../persistence/saveSlots'
+import { resolveInitialSeedChoice, type SeedChoice, type SeedRecord } from '../../world/seedLibrary'
 import SeedLibrary from './SeedLibrary.vue'
 
 const props = defineProps<{
