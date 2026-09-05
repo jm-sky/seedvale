@@ -19,6 +19,7 @@ import type { QuickActionsCropSeeds, QuickActionsTraps, QuickActionsWorkContract
 import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
+import type { SeedChoice, SeedRecord } from '../world/seedLibrary'
 import { pickNpcConfirmationSound, pickNpcFarewellSound, pickNpcGreetingSound } from '../ai/npcVoiceLines'
 import {
   type AudioVolumeKey,
@@ -90,10 +91,11 @@ type PauseMenuState = {
   onSave: (() => Promise<WriteSaveResult>) | null; onSaveAs: ((name: string) => Promise<CreateSaveResult>) | null
   onLoadSave: ((id: string) => void) | null; onListSaves: (() => Promise<SaveSlotInfo[]>) | null
   onListSaveManagement: (() => Promise<SaveManagementResult>) | null; onDeleteSave: ((id: string) => Promise<void>) | null
+  onListSeeds: (() => Promise<SeedRecord[]>) | null
   onRefresh: (() => void) | null
   onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildWoodPile: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
-  onNewGame: ((name: string) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
+  onNewGame: ((name: string, seedChoice: SeedChoice) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
   saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
@@ -451,7 +453,7 @@ export const ui = reactive({
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
-    onListSaveManagement: null, onDeleteSave: null, onRefresh: null,
+    onListSaveManagement: null, onDeleteSave: null, onListSeeds: null, onRefresh: null,
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
     saveStatus: '',

@@ -1,7 +1,7 @@
 # Plan: Seed Library and persistent worldgen cache
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄
 **Type:** optimization
 **Priority:** high · **Effort:** L
 **Depends on:** world-013
@@ -9,6 +9,39 @@
 **Subdomains:** `simulation` `places`
 **Tags:** `seed` `worldgen` `cache` `persistence`
 **Roadmap:** -
+
+## Implementation status
+
+Sections 1–13 and 15–18 implemented: `SeedRecord` persistence + validation +
+lazy backfill (`src/persistence/seedDb.ts`, `seedRecord.ts`), shared
+IndexedDB v1→v2 upgrade seam adding `seeds`/`worldgenCache` stores
+(`src/persistence/db.ts`), explicit New Game seed selection at both
+entrypoints (boot `StartScreen.vue` + in-app pause menu, via
+`world/seedLibrary.ts`'s `resolveNewGameSeed`/`SeedChoice`), a Seed Library
+management screen reachable from the boot main menu
+(`ui-vue/screens/SeedLibrary.vue`: rename/description/tags/use-for-New-Game/
+clear-cache/guarded-delete), a no-scan cheap generated name/profile
+(`world/locations/seedProfile.ts`), and a persistent `locations-coarse`
+worldgen cache namespace wired directly into `world-013`'s existing runtime
+tile cache (`world/locations/locationsCoarseCache.ts`, `worldLocationCatalog.ts`'s
+`hydrateTile`/`onTileDirty` deps) — async hydrate-on-activate, debounced
+dirty-tile batched upsert, partial-tile round-trip, terrain-fingerprint
+isolation, and a bounded per-seed cleanup cap.
+
+Section 14 (deterministic landmark results — e.g. merchant map purchase — as
+a second persistent-cache namespace) is deliberately **not implemented** in
+this pass: the plan's own recommended order places it after the coarse-tile
+persistence lifecycle is solid, and it needs its own fingerprint/ownership
+analysis per landmark kind. See `docs/plans/LOOSE-ENDS.md` (2026-09-05).
+
+Section 20 (browser performance measurement) is left to manual verification
+per this task's instructions — not run in this pass.
+
+Section 8's "Seed management screen" is reachable from the boot `StartScreen`
+only (not duplicated into the in-app pause menu) — a deliberate scope cut,
+since `Clear cache` on the *currently active* seed from inside a running
+world would additionally need to invalidate that world's live runtime
+catalog, which the boot-time screen never has to deal with.
 
 ## Problem
 

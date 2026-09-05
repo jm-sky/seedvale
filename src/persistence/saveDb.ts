@@ -1,3 +1,4 @@
+import { openSeedvaleDb, SAVES_STORE } from './db'
 import { isSaveData, type SaveData } from './saveData'
 import {
   ACTIVE_SAVE_ID_KEY,
@@ -25,9 +26,7 @@ import {
  * @role Owns IndexedDB save slots and the active-save id.
  * @uses SaveData
  */
-const DB_NAME = 'seedvale'
-const DB_VERSION = 1
-const STORE_NAME = 'saves'
+const STORE_NAME = SAVES_STORE
 
 export type { CreateSaveError, SaveManagementEntry, SaveSlotInfo }
 export type CreateSaveResult =
@@ -65,18 +64,7 @@ function logSaveDiagnostic(kind: SaveDiagnosticKind, context: string, detail?: u
   console.warn(`[persistence] ${kind}: ${context}`, detail ?? '')
 }
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE_NAME)) {
-        req.result.createObjectStore(STORE_NAME)
-      }
-    }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-}
+const openDb = openSeedvaleDb
 
 function storeGet(db: IDBDatabase, key: string): Promise<unknown> {
   return new Promise((resolve, reject) => {

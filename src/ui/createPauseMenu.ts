@@ -1,5 +1,6 @@
 import type { ActionResult } from '../app/actions/actionContracts'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
+import type { SeedChoice, SeedRecord } from '../world/seedLibrary'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type PauseMenuHandlers = {
@@ -17,6 +18,9 @@ export type PauseMenuHandlers = {
    *  populates a name-collision check for Save As / New Game). */
   onListSaveManagement?: () => Promise<SaveManagementResult>
   onDeleteSave?: (id: string) => Promise<void>
+  /** Seed Library listing (plan world-015 §3/§8) — used only to populate the
+   *  New Game seed picker; never triggers worldgen/location scan itself. */
+  onListSeeds?: () => Promise<SeedRecord[]>
   onRefresh?: () => void
   onBuildSimpleFire?: () => ActionResult
   onBuildFirePit?: () => ActionResult
@@ -24,7 +28,10 @@ export type PauseMenuHandlers = {
   onBuildGrate?: () => ActionResult
   onLightBranch?: () => ActionResult
   onLightWoodenTorch?: () => ActionResult
-  onNewGame?: (name: string) => void
+  /** `seedChoice` resolves through `world/seedLibrary.ts`'s
+   *  `resolveNewGameSeed()` (plan world-015 §3) — reusing an existing seed
+   *  must never fall back to a fresh `randomSeed()`. */
+  onNewGame?: (name: string, seedChoice: SeedChoice) => void
   onQuestLog?: () => void
   onVillagers?: () => void
   onInventory?: () => void

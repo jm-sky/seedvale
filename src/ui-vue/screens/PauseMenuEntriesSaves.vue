@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import SeedPicker from '@/components/SeedPicker.vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import type { SaveSlotInfo } from '../../persistence/saveDb'
+import type { SeedChoice, SeedRecord } from '../../world/seedLibrary'
 import {
   formatSaveDay,
   MAX_SAVES,
@@ -31,6 +33,11 @@ const name = ref('')
 const error = ref('')
 const busy = ref(false)
 
+// New Game seed picker (plan world-015 §3) — always shows the currently
+// active world's seed as the default pick, never a silent `randomSeed()`.
+const seeds = ref<SeedRecord[]>([])
+const seedChoice = ref<SeedChoice>({ kind: 'existing', seed: ui.pauseMenu.seed })
+
 onMounted(() => {
   void refresh()
 })
@@ -44,6 +51,12 @@ async function refresh(): Promise<void> {
     // A transient read failure keeps whatever was already shown (plan
     // persistence-004 §4) rather than blanking the list to "no saves".
     if (result?.ok) entries.value = result.entries
+  }
+  if (props.mode === 'new-game') {
+    seeds.value = await ui.pauseMenu.onListSeeds?.() ?? []
+    if (!seeds.value.some((seed) => seed.seed === ui.pauseMenu.seed)) {
+      seedChoice.value = { kind: 'generate' }
+    }
   }
 }
 
@@ -107,7 +120,7 @@ function startNewGame(): void {
     error.value = saveErrorMessage(check.error)
     return
   }
-  ui.pauseMenu.onNewGame?.(check.name)
+  ui.pauseMenu.onNewGame?.(check.name, seedChoice.value)
   emit('close-saves')
 }
 
@@ -144,6 +157,20 @@ const titles = {
       >
         Bieżąca gra zostanie zapisana jako „{{ ui.pauseMenu.activeSaveName }}”.
       </p>
+      <template v-if="mode === 'new-game'">
+        <label
+          class="mb-1 block text-left text-xs opacity-75"
+          for="seedvale-pause-seed-picker"
+        >
+          Świat
+        </label>
+        <SeedPicker
+          id="seedvale-pause-seed-picker"
+          v-model="seedChoice"
+          :seeds="seeds"
+          class="mb-2"
+        />
+      </template>
       <label
         class="mb-1 block text-left text-xs opacity-75"
         for="seedvale-pause-save-name"

@@ -41,6 +41,18 @@ export type WorldLocationCatalogDeps = {
    *  via `ChunkManager.findLandmarkNear`, instead of a second placement
    *  algorithm). */
   getChunkSize: () => number
+  /** Persistent-cache read seam (plan world-015 §15) — synchronous lookup for
+   *  a coarse tile not yet materialized this session. Returning `null` (no
+   *  dep provided, cold, or hydrate still in flight) always falls back to
+   *  normal procedural sampling; this must never be allowed to block or
+   *  itself trigger materialization. */
+  hydrateTile?: (tx: number, tz: number) => { state: Uint8Array, height: Float32Array } | null
+  /** Persistent-cache write seam (plan world-015 §13) — called whenever a
+   *  previously-`CELL_UNKNOWN` cell in tile `(tx, tz)` gets classified,
+   *  handing back the tile's own live typed arrays (never a copy) for the
+   *  caller to batch/debounce into IndexedDB. Best-effort only — must never
+   *  affect catalog correctness. */
+  onTileDirty?: (tx: number, tz: number, tile: { state: Uint8Array, height: Float32Array }) => void
 }
 
 /** Cheap running totals for the coarse terrain scan (plan world-013 §1) — no
@@ -152,7 +164,7 @@ function decodeCellKey(key: number): { gx: number, gz: number } {
 const NEIGHBOR4: readonly (readonly [number, number])[] = [[1, 0], [-1, 0], [0, 1], [0, -1]]
 
 export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): WorldLocationCatalog {
-  const { getSeed, getCaves, getChunkManager, lookupSettlement, getSampleParams, getChunkSize } = deps
+  const { getSeed, getCaves, getChunkManager, lookupSettlement, getSampleParams, getChunkSize, hydrateTile, onTileDirty } = deps
 
   let diagnostics = emptyDiagnostics()
 
@@ -334,7 +346,14 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     const key = `${tx},${tz}`
     let tile = tiles.get(key)
     if (!tile) {
-      tile = { state: new Uint8Array(LOCATION_TILE_CELLS * LOCATION_TILE_CELLS), height: new Float32Array(LOCATION_TILE_CELLS * LOCATION_TILE_CELLS) }
+      // Partial-tile semantics survive a hydrate (plan world-015 §7): a
+      // persisted tile may still carry `CELL_UNKNOWN` cells the original
+      // session never sampled — those fall through to `classifyCoarseCell`
+      // exactly as a cold tile would, they just start from richer data.
+      tile = hydrateTile?.(tx, tz) ?? {
+        state: new Uint8Array(LOCATION_TILE_CELLS * LOCATION_TILE_CELLS),
+        height: new Float32Array(LOCATION_TILE_CELLS * LOCATION_TILE_CELLS),
+      }
       tiles.set(key, tile)
     }
     return tile
@@ -364,6 +383,12 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     diagnostics.sampledCells++
     if (classified.kind === CELL_WATER) diagnostics.waterCells++
     if (classified.kind === CELL_MOUNTAIN) diagnostics.mountainCells++
+    // Session-accumulating persistence (plan world-015 §13): every newly-
+    // classified cell marks its whole tile dirty for a later debounced
+    // upsert, whether this happened during initial world setup or much later
+    // gameplay/map-query-driven sampling — the persistence layer decides
+    // batching, not this call site.
+    onTileDirty?.(tx, tz, tile)
     return classified
   }
 

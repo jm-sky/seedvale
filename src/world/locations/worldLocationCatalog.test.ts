@@ -358,3 +358,99 @@ describe('coarse terrain scan (plan world-013)', () => {
     expect(byId(a)).not.toEqual(byId(b))
   })
 })
+
+describe('persistent worldgen cache hooks (plan world-015 §11/§13/§15)', () => {
+  // Mirrors worldLocationCatalog.ts's private tile layout/constants — there's
+  // no public export for these since only this module owns the coarse-tile
+  // representation; a persistence controller (`locationsCoarseCache.ts`)
+  // only ever receives/returns whole tile objects, never cell constants.
+  const TILE_CELLS = 16
+  const CELL_UNKNOWN = 0
+  const CELL_NONE = 1
+
+  // A query fully inside tile (0, 0)'s own bounds, including the halo margin
+  // `scanLakesAndPeaks` adds around minKm/maxKm — centered on cell (5, 5) with
+  // a near-zero radius so the scanned rectangle (roughly grid cells 2..8 on
+  // each axis) never crosses into a neighboring, unhydrated tile.
+  const TILE_LOCAL_CELL = 5
+  const QUERY_CENTER = (TILE_LOCAL_CELL + 0.5) * LOCATION_SCAN_STEP
+  const QUERY_MAX_KM = 0.05
+
+  function fullyKnownTile(unknownIndex?: number): { state: Uint8Array, height: Float32Array } {
+    const state = new Uint8Array(TILE_CELLS * TILE_CELLS).fill(CELL_NONE)
+    if (unknownIndex !== undefined) state[unknownIndex] = CELL_UNKNOWN
+    return { state, height: new Float32Array(TILE_CELLS * TILE_CELLS) }
+  }
+
+  it('hydrateTile is consulted at most once for a given tile (materialized tile is cached, not re-hydrated)', () => {
+    const hydrateCallsForOrigin: number[] = []
+    const tile = fullyKnownTile()
+    const catalog = createWorldLocationCatalog({
+      getSeed: () => 1,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams(),
+      getChunkSize: () => 64,
+      hydrateTile: (tx, tz) => {
+        if (tx === 0 && tz === 0) hydrateCallsForOrigin.push(1)
+        return tx === 0 && tz === 0 ? tile : null
+      },
+    })
+    catalog.landmarksWithin(QUERY_CENTER, QUERY_CENTER, QUERY_MAX_KM)
+    catalog.landmarksWithin(QUERY_CENTER, QUERY_CENTER, QUERY_MAX_KM)
+    expect(hydrateCallsForOrigin.length).toBe(1)
+  })
+
+  it('a hydrated partial tile keeps its already-known cells and only classifies the still-unknown one', () => {
+    const unknownIndex = TILE_LOCAL_CELL * TILE_CELLS + TILE_LOCAL_CELL
+    const tile = fullyKnownTile(unknownIndex)
+    const dirtyEvents: { tx: number, tz: number, tile: { state: Uint8Array, height: Float32Array } }[] = []
+    const catalog = createWorldLocationCatalog({
+      getSeed: () => 1,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams(),
+      getChunkSize: () => 64,
+      hydrateTile: (tx, tz) => (tx === 0 && tz === 0 ? tile : null),
+      onTileDirty: (tx, tz, dirtyTile) => dirtyEvents.push({ tx, tz, tile: dirtyTile }),
+    })
+
+    expect(tile.state[unknownIndex]).toBe(CELL_UNKNOWN)
+    catalog.landmarksWithin(QUERY_CENTER, QUERY_CENTER, QUERY_MAX_KM)
+
+    // The one previously-unknown cell got classified in place — the tile
+    // object handed back by `hydrateTile` is the exact one the catalog keeps
+    // mutating, never a copy.
+    expect(tile.state[unknownIndex]).not.toBe(CELL_UNKNOWN)
+    // Every other cell in the supplied tile was already known and must be
+    // left untouched by this query.
+    expect(tile.state.filter((v) => v === CELL_UNKNOWN).length).toBe(0)
+
+    // Dirty-marking fires only for the tile whose previously-unknown cell was
+    // just classified, never for a cell that was already known.
+    expect(dirtyEvents.length).toBeGreaterThan(0)
+    expect(dirtyEvents.every((e) => e.tx === 0 && e.tz === 0)).toBe(true)
+    expect(dirtyEvents.every((e) => e.tile.state === tile.state)).toBe(true)
+
+    // A second, identical query touches only already-known cells now — no
+    // further dirty-marking for this tile.
+    dirtyEvents.length = 0
+    catalog.landmarksWithin(QUERY_CENTER, QUERY_CENTER, QUERY_MAX_KM)
+    expect(dirtyEvents.length).toBe(0)
+  })
+
+  it('without a hydrateTile dep, a fresh empty tile is used and every cell starts unknown (no dependency on the persistence seam)', () => {
+    const catalog = createWorldLocationCatalog({
+      getSeed: () => 1,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams(),
+      getChunkSize: () => 64,
+    })
+    expect(() => catalog.landmarksWithin(QUERY_CENTER, QUERY_CENTER, QUERY_MAX_KM)).not.toThrow()
+    expect(catalog.getScanDiagnostics().sampledCells).toBeGreaterThan(0)
+  })
+})

@@ -1,10 +1,11 @@
 import type { SaveManagementEntry } from '../persistence/saveSlots'
+import type { SeedChoice, SeedRecord } from '../world/seedLibrary'
 import type { App } from 'vue'
 
 export type StartScreenChoice =
   | { type: 'continue' }
   | { type: 'load', id: string }
-  | { type: 'new', name: string }
+  | { type: 'new', name: string, seedChoice: SeedChoice }
   | { type: 'delete', id: string }
 
 export type StartScreen = {
@@ -16,11 +17,14 @@ export type StartScreen = {
 /** Boot save picker. Vue is mounted here as a short-lived app — the in-game
  *  overlay (`mountVueUi` / `App.vue`) is not up yet. `entries` includes
  *  unhealthy rows (plan persistence-004 §5) so a corrupted save is visible/
- *  deletable at boot instead of silently missing from the list. */
+ *  deletable at boot instead of silently missing from the list. `seeds` is
+ *  the Seed Library listing (plan world-015 §4), loaded by `main.ts` before
+ *  this screen mounts — rendering it here never itself reads IndexedDB. */
 export function createStartScreen(
   parent: HTMLElement,
   entries: readonly SaveManagementEntry[],
   activeId: string | null,
+  seeds: readonly SeedRecord[],
 ): StartScreen {
   const root = document.createElement('div')
   parent.appendChild(root)
@@ -50,6 +54,7 @@ export function createStartScreen(
     app = createApp(StartScreen, {
       entries,
       activeId,
+      seeds,
       onChoose: settle,
     })
     app.mount(root)

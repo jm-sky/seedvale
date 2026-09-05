@@ -1,5 +1,6 @@
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { DB_NAME, DB_VERSION } from './db'
 import { CURRENT_SAVE_VERSION, type SaveConfig, type SaveData } from './saveData'
 import {
   createSave,
@@ -133,7 +134,7 @@ describe('writeSave — save integrity guard', () => {
     // Directly corrupt the stored record, simulating a save written by a
     // schema the current code can no longer read.
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('seedvale', 1)
+      const req = indexedDB.open(DB_NAME, DB_VERSION)
       req.onsuccess = () => resolve(req.result)
       req.onerror = () => reject(req.error)
     })
@@ -156,7 +157,7 @@ describe('writeSave — save integrity guard', () => {
     // The original corrupted bytes must be untouched — not replaced by the
     // new (blank) autosave data.
     const stillCorrupted = await new Promise<unknown>((resolve, reject) => {
-      const readDb = indexedDB.open('seedvale', 1)
+      const readDb = indexedDB.open(DB_NAME, DB_VERSION)
       readDb.onsuccess = () => {
         const tx = readDb.result.transaction('saves', 'readonly')
         const req = tx.objectStore('saves').get(created.id)
@@ -204,7 +205,7 @@ describe('readSave / listSaves', () => {
     if (!created.ok) throw new Error('setup failed')
 
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('seedvale', 1)
+      const req = indexedDB.open(DB_NAME, DB_VERSION)
       req.onsuccess = () => resolve(req.result)
       req.onerror = () => reject(req.error)
     })
@@ -224,7 +225,7 @@ describe('readSave / listSaves', () => {
 
     // The row itself is still in the store (nothing deleted it).
     const raw = await new Promise<unknown>((resolve, reject) => {
-      const readDb = indexedDB.open('seedvale', 1)
+      const readDb = indexedDB.open(DB_NAME, DB_VERSION)
       readDb.onsuccess = () => {
         const tx = readDb.result.transaction('saves', 'readonly')
         const req = tx.objectStore('saves').get(created.id)
@@ -270,7 +271,7 @@ function makeInvalidSaveData(overrides?: Partial<Pick<SaveData, 'elapsedDays'>>)
 
 async function putRawRow(id: string, value: unknown): Promise<void> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open('seedvale', 1)
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
   })

@@ -103,6 +103,7 @@ import { createDayNightState, parseTimeOfDayFromUrl, resetDayNightForNewGame } f
 import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
+import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
 import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
@@ -112,6 +113,7 @@ import { PALISADE_MATERIAL_REQUIREMENTS } from '../world/palisade'
 import { hasExplicitUrlSeed, randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
+import { listSeedRecords, resolveNewGameSeed } from '../world/seedLibrary'
 import { BEDROLL_MATERIAL_REQUIREMENTS, PLATFORM_MATERIAL_REQUIREMENTS } from '../world/sleepingUtilities'
 import { createTimeSkip } from '../world/timeSkip'
 import { createTreeLifecycle, parseTreeOverrides } from '../world/treeLifecycle'
@@ -217,7 +219,7 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
 export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
-  options?: { newGame?: boolean, modelTest?: boolean, benchmarkFixture?: BenchmarkFixture },
+  options?: { newGame?: boolean, modelTest?: boolean, benchmarkFixture?: BenchmarkFixture, seed?: number },
 ): Promise<() => void> {
   const { bootMark, bootMarkEnd, bootMarksSummary } = useBootMark('createApp')
 
@@ -252,14 +254,21 @@ export async function createApp(
   const perfMonitor = createPerfMonitor()
   setActiveMonitor(perfMonitor)
   if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
-  // Seed-source precedence (plan persistence-004 §9): an explicit `?seed=`
-  // survives into a fresh New Game (deterministic reproduction for
-  // development/shared seeds) — `createWorldConfig()` already resolved
-  // `config.seed` to it above. Only the *fallback* case (no explicit param,
-  // or an unparseable one) gets a fresh `randomSeed()`; a stale localStorage-
-  // remembered seed must not leak into a genuinely new world either.
-  if (!initialSave && !fixture && options?.newGame && !hasExplicitUrlSeed()) {
-    config.seed = randomSeed()
+  // Seed-source precedence (plan persistence-004 §9, world-015 §3): a caller-
+  // resolved Seed Library choice (`options.seed`, boot `StartScreen`'s New
+  // Game) is always authoritative for a fresh New Game — it already went
+  // through `resolveNewGameSeed()`. Without one, an explicit `?seed=` still
+  // survives (deterministic reproduction for development/shared seeds,
+  // `createWorldConfig()` already resolved `config.seed` to it above); only
+  // the remaining fallback case (no explicit param, no resolved choice) gets
+  // a fresh `randomSeed()` — a stale localStorage-remembered seed must not
+  // leak into a genuinely new world either.
+  if (!initialSave && !fixture && options?.newGame) {
+    if (options.seed != null) {
+      config.seed = options.seed
+    } else if (!hasExplicitUrlSeed()) {
+      config.seed = randomSeed()
+    }
   }
   if (initialSave) {
     // A loaded save's own seed is always authoritative — it must win over
@@ -508,6 +517,10 @@ export async function createApp(
   const mapDiscovery = createMapDiscovery(initialSave?.map.discoveredCells)
   const mapProjection = createMapProjection(rawSampleParamsFromWorld(config))
   const lookupSettlementCell = (cell: { gx: number, gz: number }) => bundle.settlementsManager.peekDef(cell)
+  // Persistent worldgen cache for the coarse terrain tiles above (plan
+  // world-015 §11/§15) — the catalog stays fully synchronous; this owns the
+  // async IndexedDB hydrate/dirty-write side behind a sync seam.
+  const coarseCachePersistence = createCoarseCachePersistence()
   const worldLocationCatalog = createWorldLocationCatalog({
     getSeed: () => config.seed,
     getCaves: () => bundle.caves,
@@ -515,7 +528,10 @@ export async function createApp(
     lookupSettlement: lookupSettlementCell,
     getSampleParams: () => rawSampleParamsFromWorld(config),
     getChunkSize: () => config.terrain.chunkSize,
+    hydrateTile: (tx, tz) => coarseCachePersistence.hydrateTile(tx, tz),
+    onTileDirty: (tx, tz, tile) => coarseCachePersistence.onTileDirty(tx, tz, tile),
   })
+  coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
   const locationKnowledge = createLocationKnowledge(initialSave?.map.discoveredLocations)
   setActiveLocationKnowledge(locationKnowledge)
   const navigationTargets = createNavigationTargets()
@@ -1047,6 +1063,10 @@ export async function createApp(
       )
       mapProjection.setParams(rawSampleParamsFromWorld(config))
       worldLocationCatalog.invalidateScanCache()
+      // New seed and/or terrain params — re-activate the persistence
+      // controller so a late-arriving hydrate from the *old* identity never
+      // gets applied to the rebuilt catalog (plan world-015 §9).
+      coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
 
       // Plan 199 — a same-seed rebuild recreates fauna with fresh per-kind
       // id counters; `reset()` below already clears `animalTargets` on a
@@ -1462,6 +1482,7 @@ export async function createApp(
     },
     onListSaves: () => listSaves(),
     onListSaveManagement: () => listSaveManagementEntries(),
+    onListSeeds: () => listSeedRecords(),
     onDeleteSave: (id) => deleteSave(id),
     onRefresh: () => window.location.reload(),
     onBuildSimpleFire: buildSimpleFire,
@@ -1476,21 +1497,22 @@ export async function createApp(
     // new seed while `rebuildWorld(true)` is still resetting world-scoped
     // state. Unlike `onLoadSave` this doesn't reload, so autosave resumes
     // normally once the transition finishes.
-    onNewGame: (name) => {
+    onNewGame: (name, seedChoice) => {
       void runExclusive(async () => {
         const protect = await saveNow('new-game-transition')
         if (!protect.ok) {
           vueUi.showToast('Nie udało się zapisać bieżącej gry przed rozpoczęciem nowej.', 'error')
         }
         beginNewSave(name)
-        // Always a fresh random seed here, deliberately not gated on
-        // `hasExplicitUrlSeed()` — that seed-intent precedence (plan
-        // persistence-004 §9) applies to the boot-time New Game flow
-        // (`createApp`'s own `options?.newGame` branch above); an in-session
-        // pause-menu New Game reusing whatever `?seed=` happened to still be
-        // in the address bar from the original boot would be surprising, not
-        // deterministic-on-purpose.
-        config.seed = randomSeed()
+        // Seed Library intent (plan world-015 §3) resolves to either the
+        // chosen existing seed or a fresh `randomSeed()` — deliberately not
+        // gated on `hasExplicitUrlSeed()` either way; that URL precedence
+        // (plan persistence-004 §9) only applies to the boot-time New Game
+        // flow (`createApp`'s own `options?.newGame` branch above). An
+        // in-session pause-menu New Game reusing whatever `?seed=` happened
+        // to still be in the address bar from the original boot would be
+        // surprising, not deterministic-on-purpose.
+        config.seed = await resolveNewGameSeed(seedChoice, (seed) => rawSampleParamsFromWorld({ ...config, seed }))
         await rebuildWorld(true)
         const created = await saveNow('new-game-transition')
         if (!created.ok) {
@@ -1708,6 +1730,7 @@ export async function createApp(
     // Marks a still-in-flight initial-boot background phase stale before
     // tearing down — see this file's `worldGeneration` doc comment above.
     worldGeneration++
+    coarseCachePersistence.dispose()
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
     setActiveProgramCensus(null)

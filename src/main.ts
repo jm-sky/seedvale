@@ -1,5 +1,6 @@
 import './app/dialogueTimeControl'
 import { createApp } from './app/createApp'
+import { createWorldConfig } from './config/worldConfig'
 import { isModelTestMode } from './debug/debugMode'
 import { BENCHMARK_FIXTURE } from './perf/benchmarkFixture'
 import { benchmarkScenarioFromUrl, isPerfUrlEnabled } from './perf/flags'
@@ -14,6 +15,8 @@ import {
 } from './persistence/saveDb'
 import { pickActiveSaveId, type SaveSlotInfo } from './persistence/saveSlots'
 import { createStartScreen } from './ui/createStartScreen'
+import { rawSampleParamsFromWorld } from './world/map/mapProjection'
+import { ensureSeedRecordsForSeeds, listSeedRecords, resolveNewGameSeed, touchSeedLastUsed } from './world/seedLibrary'
 
 /** Healthy subset of a save-management listing — the only rows `Continue`/
  *  `pickActiveSaveId` can ever target (plan persistence-004 §5). */
@@ -63,9 +66,21 @@ async function boot(container: HTMLElement): Promise<void> {
   }
 
   if (initialManagement.entries.length === 0) {
+    // Totally fresh install, no save at all yet (plan world-015 §3/notes §4)
+    // — `createApp(container)` below resolves its own seed exactly the way
+    // `createWorldConfig()` does here (no `initialSave`, no `newGame`), so
+    // this backfills a minimal `SeedRecord` for that same number without
+    // opening any management UI or generating a world twice.
+    void ensureSeedRecordsForSeeds([createWorldConfig().seed])
     void createApp(container)
     return
   }
+
+  // Lazy backfill (plan §3/§13) for every healthy save's seed — a save
+  // written before the Seed Library existed gets a minimal record here,
+  // never a world scan; user metadata on an existing record is untouched.
+  await ensureSeedRecordsForSeeds(healthyEntries(initialManagement.entries).map((slot) => slot.seed))
+  const seeds = await listSeedRecords()
 
   // A slot can exist in IndexedDB but not be listed among healthy ones (a
   // newer app's save, one whose migration failed, or genuinely malformed
@@ -76,7 +91,7 @@ async function boot(container: HTMLElement): Promise<void> {
   let currentEntries = initialManagement.entries
   for (;;) {
     const activeId = pickActiveSaveId(getActiveSaveId(), healthyEntries(currentEntries))
-    const startScreen = createStartScreen(container, currentEntries, activeId)
+    const startScreen = createStartScreen(container, currentEntries, activeId, seeds)
     const choice = await startScreen.choose()
     startScreen.dispose()
 
@@ -93,7 +108,8 @@ async function boot(container: HTMLElement): Promise<void> {
 
     if (choice.type === 'new') {
       beginNewSave(choice.name)
-      void createApp(container, undefined, { newGame: true })
+      const seed = await resolveNewGameSeed(choice.seedChoice, (s) => rawSampleParamsFromWorld({ ...createWorldConfig(), seed: s }))
+      void createApp(container, undefined, { newGame: true, seed })
       return
     }
 
@@ -104,6 +120,7 @@ async function boot(container: HTMLElement): Promise<void> {
     }
     setActiveSaveId(loadId)
     const save = await readSave(loadId)
+    if (save) void touchSeedLastUsed(save.config.seed)
     void createApp(container, save ?? undefined)
     return
   }
