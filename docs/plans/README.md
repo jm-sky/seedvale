@@ -72,7 +72,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
 | 💡 `world-015-seed-library-and-persistent-worldgen-cache.md`                | -       | 🔴 | L      | world-013 |
 | 💡 `npc-018-work-contracts-shared-work.md`                                  | -       | 🟡 | M      | npc-016 |
-| ◼️ `items-player-017-incremental-construction.md`                           | -       | 🟡 | M      | npc-018 |
+| 💡 `items-player-017-incremental-construction.md`                           | -       | 🟡 | M      | npc-018 |
 
 ---
 
