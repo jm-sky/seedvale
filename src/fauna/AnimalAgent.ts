@@ -3,6 +3,7 @@ import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
+import type { LocalWaterSample } from '../terrain/waterSample'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import {
   createMovementWatchdog,
@@ -94,6 +95,13 @@ import {
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
 import { type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
+import {
+  type AnimalWaterCapability,
+  classifyWaterTraversal,
+  shouldApplyDrowningDamage,
+  swimStaminaExertion,
+  type WaterTraversalMode,
+} from './waterTraversal'
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
@@ -116,6 +124,11 @@ const STALE_NAV_ROUTE_DIST = 6
 
 /** Minimum clearance above waterLevel an animal will walk into or wander toward. */
 const WATER_MARGIN = 0.3
+/** HP/sec drained by `tickDrowning()` while `swimming` and stamina-exhausted
+ *  (plan fauna-015 §7) — same order of magnitude as a real attack (see
+ *  `faunaCombat.ts`'s `MAX_HP`/damage tables), so a swimmer that runs out of
+ *  stamina has a real window to reach shore before it actually dies. */
+const DROWNING_DAMAGE_PER_SEC = 5
 /** Skip the shadow pass for distant animals (plan 113 P2). Exported so
  *  `shadowBudget.ts` can reuse the same radius to decide whether any
  *  shadow-casting animal is currently in range (plan 145 R1). */
@@ -826,6 +839,13 @@ export type AnimalDef = {
    *  `findFoodTarget()`'s carcass branch always wins for predators — only
    *  `dietAcceptsItem()` (trap-bait attraction) reads it there. */
   diet?: AnimalDietConfig
+  /** Minimal declarative water-traversal distinction (plan fauna-015 §5) —
+   *  same "no separate boolean, no per-species branch" shape as `mount`/
+   *  `production`/`scavenging`/`diet` above. Absent means the default land
+   *  animal: can wade, can also swim (at the generic exertion cost) once
+   *  water is deeper than its own scale-derived wading depth — see
+   *  `waterTraversal.ts`'s `classifyWaterTraversal`/`wadeDepthFor`. */
+  water?: AnimalWaterCapability
 }
 
 /** Declarative per-species diet (plan fauna-010 §2/§3) — answers both "is
@@ -1116,6 +1136,10 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 12,
     playerPanicRange: 3,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    // Plan fauna-015 §5: the counterexample a land-animal-only water model
+    // can't express — surface swimming is ordinary locomotion for a duck,
+    // not an emergency effort.
+    water: { waterAdapted: true },
   },
   boar: {
     kind: 'boar',
@@ -1420,6 +1444,17 @@ export class AnimalAgent {
   private readonly onDeath?: (animalId: string) => void
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
+  /** Local physical water sample (plan fauna-015), forwarded unchanged from
+   *  `ChunkManager.sampleLocalWater` by the spawn site — the sole input
+   *  `isWalkable()`/`resolveWaterTraversal()` use to classify dry/wading/
+   *  swimming, so lake/ocean/river water depth is never re-derived here. */
+  private readonly sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  /** This tick's resolved traversal mode (plan fauna-015 §2/§7) — set once
+   *  per tick by `resolveWaterTraversal()` from the animal's actual
+   *  post-movement position, read by stamina exertion (`swimExertionNow`)
+   *  and drowning (`tickDrowning`). Not consulted by `isWalkable()` itself,
+   *  which re-derives ability fresh per candidate point instead. */
+  private waterMode: WaterTraversalMode = 'dry'
   private readonly collidersNear: ColliderSource
   /** Optional habitat sampler (plan 094) — only wild fauna's `createFauna.ts`
    *  passes one; livestock's spawn path omits it, and forage search falls
@@ -1749,6 +1784,7 @@ export class AnimalAgent {
     animalId: string,
     sampleHeight: HeightSampler,
     waterLevel: number,
+    sampleLocalWater: (x: number, z: number) => LocalWaterSample,
     collidersNear: ColliderSource,
     x: number,
     z: number,
@@ -1775,6 +1811,7 @@ export class AnimalAgent {
     this.onDeath = onDeath
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
+    this.sampleLocalWater = sampleLocalWater
     this.collidersNear = collidersNear
     this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
@@ -2003,7 +2040,9 @@ export class AnimalAgent {
 
     this.snapY()
     this.updateAnim()
-    tickAnimalLife(this.life, dt, this.sprinting, {}, this.def.metabolism)
+    this.resolveWaterTraversal()
+    this.tickDrowning(dt)
+    tickAnimalLife(this.life, dt, this.sprinting, {}, this.def.metabolism, this.swimExertionNow())
 
     this.lastHpPercent = applyBarPercent(
       this.hpFillEl,
@@ -3044,9 +3083,11 @@ export class AnimalAgent {
     this.snapY()
     this.debugLastStepDist = Math.hypot(this.mesh.position.x - debugPrevX, this.mesh.position.z - debugPrevZ)
     this.updateAnim()
+    this.resolveWaterTraversal()
+    this.tickDrowning(dt)
     tickAnimalLife(this.life, dt, this.sprinting, {
       hungerThirstRate: this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
-    }, this.def.metabolism)
+    }, this.def.metabolism, this.swimExertionNow())
     this.lastHpPercent = applyBarPercent(
       this.hpFillEl,
       computeBarPercent(this.health.currentHp, this.health.maxHp),
@@ -4284,12 +4325,59 @@ export class AnimalAgent {
     return false
   }
 
+  /** Physical ability, not route preference (plan fauna-015 §9) — a point
+   *  this species can wade or swim through is walkable exactly like dry
+   *  land; only water deeper than it can safely enter (or a collider) blocks
+   *  it. Autonomous steering/navigation and `driveMounted()` share this one
+   *  check, so a mounted animal's physical water traversability can never
+   *  diverge from its own autonomous behaviour (plan fauna-015 §8). */
   private isWalkable(x: number, z: number): boolean {
-    if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
+    const water = this.sampleLocalWater(x, z)
+    if (water.present && classifyWaterTraversal(water.depth, this.def.scale, this.def.water) === null) {
+      return false
+    }
     for (const collider of this.collidersNear(x, z)) {
       if (colliderContainsPoint(collider, x, z)) return false
     }
     return true
+  }
+
+  /** Resolves this tick's dry/wading/swimming traversal mode (plan
+   *  fauna-015 §2/§7) from the animal's actual, already-moved current
+   *  position — the stable per-tick answer `swimExertionNow()`/
+   *  `tickDrowning()` read, as opposed to `isWalkable()`'s per-candidate-point
+   *  check. `isWalkable()` already keeps the animal out of water it can't
+   *  physically enter, so a `null` classification here only means the
+   *  physical state changed out from under it (a hydrated save, or the
+   *  water/terrain itself changing) — treated defensively as `swimming`
+   *  rather than silently downgraded to a safer mode it isn't actually in. */
+  private resolveWaterTraversal(): void {
+    const water = this.sampleLocalWater(this.mesh.position.x, this.mesh.position.z)
+    if (!water.present) {
+      this.waterMode = 'dry'
+      return
+    }
+    this.waterMode = classifyWaterTraversal(water.depth, this.def.scale, this.def.water) ?? 'swimming'
+  }
+
+  /** `tickAnimalLife`'s swim-exertion argument for the current tick —
+   *  `undefined` outside `swimming` so sprint/rest bookkeeping is completely
+   *  unaffected (plan fauna-015 §6). Must be called after
+   *  `resolveWaterTraversal()` has set `waterMode` for this tick. */
+  private swimExertionNow(): number | undefined {
+    return this.waterMode === 'swimming' ? swimStaminaExertion(this.def.water) : undefined
+  }
+
+  /** Drowning damage (plan fauna-015 §7) — only while actually `swimming`
+   *  and stamina-exhausted; stops the instant `waterMode` leaves `swimming`
+   *  (wading/dry with 0 stamina never reach here). Reuses the same
+   *  `HealthState`/death lifecycle `takeDamage()` uses (`damageHealth()` +
+   *  `collapse()`), without that method's combat-only blood/provocation
+   *  side effects — the source here is environmental, not an attacker. */
+  private tickDrowning(dt: number): void {
+    if (this.health.dead || !shouldApplyDrowningDamage(this.waterMode, isExhausted(this.life.stamina))) return
+    damageHealth(this.health, DROWNING_DAMAGE_PER_SEC * dt)
+    if (this.health.dead) this.collapse()
   }
 
   /** Stable live-hunt target (plan npc-005 — see `preyTarget`'s doc). Keeps
@@ -4466,9 +4554,14 @@ export class AnimalAgent {
 
   private snapY(): void {
     let y = this.sampleHeight(this.mesh.position.x, this.mesh.position.z)
-    // Prefer not standing in deep water.
-    if (y <= this.waterLevel + 0.15) {
-      y = this.waterLevel + 0.2
+    // Prefer not sinking below the local water surface — reads the same
+    // canonical local sample `isWalkable()`/`resolveWaterTraversal()` use
+    // (plan fauna-015) rather than a bare `waterLevel` comparison, so a
+    // river point whose canonical surface sits above the global `waterLevel`
+    // (a mountain stream) is handled correctly too.
+    const water = this.sampleLocalWater(this.mesh.position.x, this.mesh.position.z)
+    if (water.present && y <= water.waterSurfaceHeight + 0.15) {
+      y = water.waterSurfaceHeight + 0.2
     }
     // Capsule is centered; GLB feet sit at local y=0 after prepareProp.
     this.mesh.position.y = this.isCapsule ? y + 0.45 * this.def.scale : y

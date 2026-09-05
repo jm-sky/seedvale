@@ -111,6 +111,7 @@ import {
 } from './riverNetwork'
 import { createRiverTileCache } from './riverTileCache'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
+import { type LocalWaterSample, sampleLocalWater as sampleLocalWaterPure } from './waterSample'
 
 // Loaded once and reused across every chunk (GLTF loader also caches by URL, but
 // this avoids rebuilding the template array + re-running `prepareProp` per chunk).
@@ -431,6 +432,14 @@ export type ChunkManager = {
    *  (`app/interactables.ts`'s `waterEdge` candidate, plan `ui-input-006`
    *  ocean/river fishing fix). `null` when no river tile is loaded nearby. */
   riverShorePoint: (worldX: number, worldZ: number) => { x: number, z: number } | null
+  /** Cheap, hot-path-safe physical water sample at `(worldX, worldZ)` (plan
+   *  fauna-015) — lake/ocean depth from `floorHeights` vs `waterLevel`, or a
+   *  loaded river's own canonical water/bed geometry when the point sits
+   *  inside that river's channel. Bounded to the point's own owning chunk's
+   *  cached river chains (one map lookup, no `riverShoreDistance`-style scan
+   *  over every loaded chunk) — safe to call every tick from fauna's
+   *  movement path, unlike `riverShoreDistance`/`riverShorePoint` above. */
+  sampleLocalWater: (worldX: number, worldZ: number) => LocalWaterSample
   /** 0 (open / poor forest habitat) – 1 (dense forest) continuous suitability
    *  at (x, z) via `forestDensityAt` (`biomeRegions.ts`) — same signal
    *  `chunkVegetation.ts` uses for tree-density modulation. Runtime bridge
@@ -2110,6 +2119,21 @@ export function createChunkManager(
         }
       }
       return bestPoint
+    },
+    sampleLocalWater(worldX, worldZ) {
+      const coord = worldToChunk(worldX, worldZ, config.chunkSize)
+      const rec = chunks.get(chunkKey(coord))
+      const riverSegments = rec?.riverChains && rec.riverChains.length > 0
+        ? riverChannelSegmentsNear(rec.riverChains, worldX, worldZ, RIVER_SHORE_QUERY_SIZE)
+        : []
+      return sampleLocalWaterPure(
+        readField('heights', worldX, worldZ),
+        readField('floorHeights', worldX, worldZ),
+        config.waterLevel,
+        riverSegments,
+        worldX,
+        worldZ,
+      )
     },
     sampleForestFactor: (x, z) => {
       const h = readField('heights', x, z)

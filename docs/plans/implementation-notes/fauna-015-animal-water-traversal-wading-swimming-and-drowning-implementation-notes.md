@@ -308,4 +308,48 @@ Do not build a new debug framework solely for this feature.
 
 After implementation, update the current-state water/fauna documentation through the normal generated/manual documentation flow as appropriate. Do not manually edit generated plan indexes; use the repository's `pnpm plans:sync` / docs sync workflow.
 
+## What was actually implemented
+
+Followed the "Expected implementation order" above closely; no deviation from the physical model, ownership boundaries or non-goals.
+
+### 1–2. Local water sample (terrain/world ownership)
+
+`src/terrain/waterSample.ts` — pure `sampleLocalWater(clampedHeight, floorHeight, waterLevel, riverSegments, x, z): LocalWaterSample` (`{ present: false } | { present: true, waterSurfaceHeight, floorHeight, depth }`). River channel data wins whenever `(x, z)` sits inside it (so a mountain stream whose bed sits above the global `waterLevel` still reports as water); otherwise falls back to the existing lake/ocean `heights <= waterLevel` / `floorHeights` signal. `riverNetwork.ts` gained `riverWaterSampleAt()` (interpolated `waterH`/`bedH` at the nearest segment, alongside the existing edge-distance); `nearestRiverBankDistance()` now delegates to it instead of duplicating the projection loop — same tested output, one caller-facing behaviour change: none.
+
+Wired into `ChunkManager.sampleLocalWater(worldX, worldZ)` — one `chunks.get(chunkKey(...))` lookup for the point's own owning chunk (same cost class as `sampleHeight`/`sampleFloor`'s `readField`), then `riverChannelSegmentsNear()` only on that chunk's own cached `riverChains` (empty array short-circuits for the common no-river-here case) — deliberately *not* the `riverShoreDistance`/`riverShorePoint` pattern above it, which scans every loaded chunk and is only ever called once per player interaction, not from a per-animal hot path.
+
+### 3–4. Species capability + pure classifier
+
+`src/fauna/waterTraversal.ts` (no Three.js/`AnimalAgent` import): `AnimalWaterCapability` (`{ canSwim?: boolean, waterAdapted?: boolean }`, both optional — absent means default land animal), `classifyWaterTraversal(depth, scale, capability): 'dry' | 'wading' | 'swimming' | null`, `wadeDepthFor(scale)`, `swimStaminaExertion(capability)`, `shouldApplyDrowningDamage(mode, staminaExhausted)`. Wading depth deliberately derives from the species' existing `AnimalDef.scale` (`wadeDepthFor`) instead of a new per-species `wadeDepth` field — the plan explicitly calls out not adding one. `AnimalDef` gained one optional field, `water?: AnimalWaterCapability`, following the existing `mount?`/`production?`/`scavenging?`/`diet?` "presence of field is the capability" convention. Only `duck` sets it (`{ waterAdapted: true }`); every other species relies on the default (can wade, can also swim at the generic exertion cost) — a `canSwim: false` species is exercised only in unit tests, not wired onto any current `AnimalKind`, since no species in the game today needed the restriction and the plan's requirement was that the contract support it, not that it be exercised by real content.
+
+### 5. `AnimalAgent` integration — single ownership seam
+
+`AnimalAgent`'s constructor gained one new required dependency, `sampleLocalWater`, threaded the same way as the pre-existing `sampleHeight`/`waterLevel` (positionally, from `createFauna.ts`/`settlement/livestock.ts`, ultimately `ChunkManager.sampleLocalWater`). `isWalkable(x, z)` replaced the old hard `sampleHeight(x, z) <= waterLevel + WATER_MARGIN` rejection with `classifyWaterTraversal(...) === null` — water physically too deep for the species is rejected exactly like a collider; wading/swimming water is walkable. This one method is shared by autonomous steering (`steerToward`), nav rescue/repath (`attemptNavRepath`'s `NavigationQuery.isWalkable`), and `driveMounted()`'s `stepWithSlopeAndCollision` call — mounted/autonomous parity (plan §8) falls out of there being exactly one `isWalkable()` implementation, not a separate integration test. `NavigationQuery`/shared A* were **not** touched — physically-traversable water reaching `findPath()` "for free" through the shared `isWalkable` callback was exactly the plan's §9 expectation.
+
+A new per-tick private state `waterMode: WaterTraversalMode` (default `'dry'`) is resolved once per tick, from the animal's actual post-movement position, by `resolveWaterTraversal()` — called from both `update()`'s tail and `driveMounted()` (not from `isWalkable()`, which re-derives ability fresh per candidate point and never reads/writes `waterMode`).
+
+### 6. Swimming stamina
+
+`AnimalLife.ts`'s `tickAnimalLife()` gained one new optional trailing parameter, `swimExertion?: number` — when set, stamina drains at `staminaDrainRate * swimExertion` regardless of the `sprinting` flag; when omitted (every pre-existing call site except the two `AnimalAgent` tails below), behaviour is byte-for-byte unchanged (verified by the existing `AnimalLife.test.ts` suite passing untouched). `AnimalAgent.swimExertionNow()` returns `swimStaminaExertion(this.def.water)` while `waterMode === 'swimming'`, `undefined` otherwise. No `swimEnergy`/second stamina pool; `AnimalLife.ts` still knows nothing about water/traversal, only "how much to drain this tick."
+
+### 7. Drowning
+
+`AnimalAgent.tickDrowning(dt)`: `shouldApplyDrowningDamage(this.waterMode, isExhausted(this.life.stamina))` gates a flat `DROWNING_DAMAGE_PER_SEC = 5` HP/sec applied through the existing `damageHealth()` + `collapse()` (the same death lifecycle `takeDamage()` uses), without `takeDamage()`'s combat-only blood-splat/provocation side effects — the source is environmental. Called from both `update()`'s tail and `driveMounted()`, right before `tickAnimalLife()`, so mounted and autonomous animals drown under identical rules. The dry/wading/swimming × exhausted invariant matrix is covered directly by `waterTraversal.test.ts` against the pure predicate rather than by instantiating a full `AnimalAgent` — no existing fauna test instantiates one (see below).
+
+### 8. Mounted parity
+
+No changes to `mountActions.ts`. `driveMounted()` calls the same `this.isWalkable`, `resolveWaterTraversal()`, `tickDrowning()`, `swimExertionNow()` as the autonomous tail — structurally one implementation, so parity can't drift by construction rather than by a maintained invariant test.
+
+### 12. Performance
+
+`sampleLocalWater` avoids the one real trap called out in the plan (`riverShoreDistance`-style global `chunks.values()` scan) by keying off the point's own owning chunk only. It does allocate a small discriminated-union return object and, on a river-carrying chunk, a `RiverChannelSegment[]` per call (`riverChannelSegmentsNear`'s existing contract) — not allocation-free, but bounded to loaded-chunk-local data and gated by an empty-array short-circuit for the (vast majority) of chunks with no river, consistent with the plan's "smallest coherent change" framing over a zero-allocation guarantee.
+
+### Tests
+
+`src/fauna/waterTraversal.test.ts` and `src/terrain/waterSample.test.ts` cover the pure classifier/predicate/sample logic directly (dry/wading/swimming/blocked classification, scale-scaled wading depth, `canSwim: false` rejection, `waterAdapted` swim behaviour, the full drowning invariant matrix, river-vs-global-waterLevel precedence). `AnimalLife.test.ts` gained `swimExertion` coverage. Mounted/autonomous parity and the duck "no `kind === 'duck'` branch" requirement are satisfied structurally (single shared `isWalkable()`/`AnimalDef.water` data path) rather than by a dedicated integration test — no existing fauna test constructs a full `AnimalAgent` (they all test extracted pure modules, e.g. `faunaDecision.ts`/`preyAlertPerception.ts`), and this plan follows that established convention rather than introducing the first one.
+
+### Verification
+
+`npx tsc --noEmit`, `npx eslint src/`, full `npx vitest run` (3111 tests) and `npm run build` all pass. Browser/manual verification (the plan's 13-item checklist) is the user's own next step, not performed here.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

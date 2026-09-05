@@ -11,6 +11,7 @@ import type { DroppedItems } from '../items/createDroppedItems'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { LocalWaterSample } from '../terrain/waterSample'
 import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerWells } from '../world/createPlayerWells'
@@ -170,6 +171,10 @@ export async function createSettlementsManager(
   scene: Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
+  /** Local physical water sample (plan fauna-015) — forwarded unchanged into
+   *  every `createSettlement` call's `CreateSettlementDeps.sampleLocalWater`,
+   *  the same water/floor/river seam wild fauna's `createFauna.ts` uses. */
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample,
   localRadius: number,
   seed: number,
   playAt: PlayAt,
@@ -330,6 +335,7 @@ export async function createSettlementsManager(
     scene,
     sampleHeight,
     waterLevel,
+    sampleLocalWater,
     localRadius,
     seed,
     householdRegistry: households,

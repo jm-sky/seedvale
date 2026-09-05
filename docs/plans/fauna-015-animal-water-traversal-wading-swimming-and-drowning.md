@@ -1,7 +1,7 @@
 # Plan: Animal water traversal, wading, swimming and drowning
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/build/test all green). Browser/manual verification not performed — see [implementation notes](./implementation-notes/fauna-015-animal-water-traversal-wading-swimming-and-drowning-implementation-notes.md)'s "What was actually implemented".
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-010

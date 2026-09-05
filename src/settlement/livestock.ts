@@ -3,6 +3,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { AnimalSaveState, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
+import type { LocalWaterSample } from '../terrain/waterSample'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { Household } from './household'
 import {
@@ -377,6 +378,7 @@ export async function spawnLivestock(
   scene: THREE.Scene,
   sampleHeight: HeightSampler,
   waterLevel: number,
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample,
   collidersNear: ColliderSource,
   homes: readonly THREE.Vector3[],
   size: VillageSize,
@@ -430,6 +432,7 @@ export async function spawnLivestock(
         animalId,
         sampleHeight,
         waterLevel,
+        sampleLocalWater,
         collidersNear,
         x,
         z,
@@ -462,6 +465,7 @@ export async function spawnLivestock(
         animalId,
         sampleHeight,
         waterLevel,
+        sampleLocalWater,
         collidersNear,
         merchantHorseSpawn.x,
         merchantHorseSpawn.z,

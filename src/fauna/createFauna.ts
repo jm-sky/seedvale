@@ -2,6 +2,7 @@ import { Group, type Object3D, type Scene, type Vector3 } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import type { LocalWaterSample } from '../terrain/waterSample'
 import type { TrapLureDescriptor } from '../world/animalTraps'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerStealthState } from './playerAwareness'
@@ -387,6 +388,7 @@ export async function createFauna(
   sampleHeight: HeightSampler,
   sampleForestFactor: (x: number, z: number) => number,
   waterLevel: number,
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample,
   collidersNear: ColliderSource,
   homeRadius: number,
   settlementCenter: Vector3,
@@ -580,6 +582,7 @@ export async function createFauna(
       animalId,
       sampleHeight,
       waterLevel,
+      sampleLocalWater,
       collidersNear,
       x,
       z,

@@ -288,6 +288,42 @@ export function riverChannelSegmentsNear(
   return segments
 }
 
+/** `riverWaterSampleAt`'s result at the nearest segment to a query point —
+ *  the water-edge distance plus that same point's interpolated canonical
+ *  `waterH`/`bedH` (plan fauna-015), so a caller needing physical water
+ *  depth (not just "am I inside the channel") doesn't re-walk `segments`. */
+export type RiverWaterSample = {
+  distanceToWaterEdge: number
+  waterH: number
+  bedH: number
+}
+
+/** Nearest-segment water sample at `(x, z)` — same per-segment
+ *  `projectOntoSegment` selection as `nearestRiverBankDistance` (picks the
+ *  segment whose water edge is closest, not just whichever centerline is
+ *  closest), extended to also interpolate that segment's own `waterH`/`bedH`
+ *  at the projected point. `null` when `segments` is empty. */
+export function riverWaterSampleAt(
+  segments: readonly RiverChannelSegment[],
+  x: number,
+  z: number,
+): RiverWaterSample | null {
+  let best: RiverWaterSample | null = null
+  for (const seg of segments) {
+    const { distSq, t } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
+    const halfWidth = seg.aWaterHalfWidth + (seg.bWaterHalfWidth - seg.aWaterHalfWidth) * t
+    const dist = Math.sqrt(distSq) - halfWidth
+    if (best === null || dist < best.distanceToWaterEdge) {
+      best = {
+        distanceToWaterEdge: dist,
+        waterH: seg.aWaterH + (seg.bWaterH - seg.aWaterH) * t,
+        bedH: seg.aBedH + (seg.bBedH - seg.aBedH) * t,
+      }
+    }
+  }
+  return best
+}
+
 /** Signed distance from `(x, z)` to the nearest of `segments`' own *water*
  *  edge (`aWaterHalfWidth`/`bWaterHalfWidth` — narrower than the full carved
  *  channel/bank-top extent, see `RiverChannelSegment`) — negative while
@@ -304,14 +340,7 @@ export function nearestRiverBankDistance(
   x: number,
   z: number,
 ): number | null {
-  let best: number | null = null
-  for (const seg of segments) {
-    const { distSq, t } = projectOntoSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz)
-    const halfWidth = seg.aWaterHalfWidth + (seg.bWaterHalfWidth - seg.aWaterHalfWidth) * t
-    const dist = Math.sqrt(distSq) - halfWidth
-    if (best === null || dist < best) best = dist
-  }
-  return best
+  return riverWaterSampleAt(segments, x, z)?.distanceToWaterEdge ?? null
 }
 
 /** True when `(x, z)` sits inside a river's actual water (out to its water

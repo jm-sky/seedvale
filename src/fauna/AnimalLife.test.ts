@@ -152,3 +152,29 @@ describe('per-species metabolism (plan fauna-010 §1)', () => {
     expect(life.stamina.current).toBeGreaterThanOrEqual(0)
   })
 })
+
+describe('swim exertion (plan fauna-015 §6)', () => {
+  it('drains stamina by swimExertion regardless of the sprinting flag', () => {
+    const notSprinting = createAnimalLifeState(0)
+    const sprinting = createAnimalLifeState(0)
+    tickAnimalLife(notSprinting, 1, false, {}, DEFAULT_ANIMAL_METABOLISM, 1)
+    tickAnimalLife(sprinting, 1, true, {}, DEFAULT_ANIMAL_METABOLISM, 1)
+    expect(notSprinting.stamina.current).toBeLessThan(ANIMAL_STAMINA_MAX)
+    expect(notSprinting.stamina.current).toBeCloseTo(sprinting.stamina.current, 10)
+  })
+
+  it('a lower swimExertion drains less than the default (duck-style water adaptation)', () => {
+    const adapted = createAnimalLifeState(0)
+    const generic = createAnimalLifeState(0)
+    tickAnimalLife(adapted, 1, false, {}, DEFAULT_ANIMAL_METABOLISM, 0.15)
+    tickAnimalLife(generic, 1, false, {}, DEFAULT_ANIMAL_METABOLISM, 1)
+    expect(adapted.stamina.current).toBeGreaterThan(generic.stamina.current)
+  })
+
+  it('leaves the pre-existing sprint/regen behaviour untouched when swimExertion is omitted', () => {
+    const life = createAnimalLifeState(0)
+    life.stamina.current = 0.5
+    tickAnimalLife(life, 1, false, {}, DEFAULT_ANIMAL_METABOLISM)
+    expect(life.stamina.current).toBeGreaterThan(0.5)
+  })
+})

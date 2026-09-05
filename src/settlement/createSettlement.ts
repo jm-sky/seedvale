@@ -13,6 +13,7 @@ import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
+import type { LocalWaterSample } from '../terrain/waterSample'
 import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { PlayerWells } from '../world/createPlayerWells'
@@ -212,6 +213,10 @@ export type CreateSettlementDeps = {
   scene: Scene
   sampleHeight: HeightSampler
   waterLevel: number
+  /** Local physical water sample (plan fauna-015) — forwarded unchanged into
+   *  `spawnLivestock` → every livestock `AnimalAgent`, the same water/floor/
+   *  river seam wild fauna's `createFauna.ts` uses. */
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample
   localRadius: number
   seed: number
   // registries (owned by SettlementsManager, shared across stream-out/in)
@@ -311,6 +316,7 @@ export async function createSettlement(
     scene,
     sampleHeight,
     waterLevel,
+    sampleLocalWater,
     localRadius,
     seed,
     householdRegistry,
@@ -501,6 +507,7 @@ export async function createSettlement(
       scene,
       sampleHeight,
       waterLevel,
+      sampleLocalWater,
       collidersNear,
       landmarks.homes,
       def.size,

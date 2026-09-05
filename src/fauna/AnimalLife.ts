@@ -83,17 +83,29 @@ export function createAnimalLifeState(
   }
 }
 
+/**
+ * `swimExertion` (plan fauna-015 §6) — when set, the animal is currently
+ * swimming and stamina drains at `staminaDrainRate * swimExertion` instead
+ * of following `sprinting`/regen; `undefined` (the default) leaves the
+ * pre-existing sprint-drains/otherwise-regens behaviour completely
+ * unchanged. Locomotion/traversal (`AnimalAgent`/`waterTraversal.ts`) owns
+ * *when* an animal is swimming — this only owns what that costs in the
+ * shared stamina resource, so swimming never needs a second energy pool.
+ */
 export function tickAnimalLife(
   life: AnimalLifeState,
   dt: number,
   sprinting: boolean,
   options: TickNeedsOptions = {},
   metabolism: AnimalMetabolismConfig = DEFAULT_ANIMAL_METABOLISM,
+  swimExertion?: number,
 ): void {
   const hungerThirstRate = options.hungerThirstRate ?? 1
   life.hunger = Math.min(1, life.hunger + dt * metabolism.hungerRate * hungerThirstRate)
   life.thirst = Math.min(1, life.thirst + dt * metabolism.thirstRate * hungerThirstRate)
-  if (sprinting) {
+  if (swimExertion !== undefined) {
+    drainStamina(life.stamina, dt * metabolism.staminaDrainRate * swimExertion)
+  } else if (sprinting) {
     drainStamina(life.stamina, dt * metabolism.staminaDrainRate)
   } else {
     restoreStamina(life.stamina, dt * metabolism.staminaRegenRate)

@@ -116,7 +116,7 @@ Ocean powstaje w `rebuildWorldBundle()`; rozmiar plane = `(unloadRadius * 2 + 4)
 | Toggle odbić | `WorldConfig.postProcessing.waterReflections`; Vue Pauza → Świat → Grafika; lil-gui Post-processing; `seedvale:graphics:v1` |
 | Mokry piasek | terrain fragment: przyciemnienie albedo w paśmie `waterLevel` .. `+0.4` |
 | Szwy chunków | mesh wody = `chunkSize` (bez overlap 1.02); faza fal wspólna (world-space) |
-| Gameplay | NPC/fauna/drogi/namiot/kopanie **odrzucają** wodę; gracz pływa (cap głębokości). Picie zwierząt = plan [094](../plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md), nie render |
+| Gameplay | NPC/drogi/namiot/kopanie **odrzucają** wodę; gracz pływa (cap głębokości). Fauna (plan [fauna-015](../plans/fauna-015-animal-water-traversal-wading-swimming-and-drowning.md)) już nie traktuje wody jako twardej ściany — `terrain/waterSample.ts`'s `sampleLocalWater()` (jezioro/ocean z `floorHeights`, rzeka z kanonicznych `waterH`/`bedH`) + `fauna/waterTraversal.ts`'s czysty klasyfikator dry/wading/swimming/blocked (głębokość skalowana z `AnimalDef.scale`, minimalna deklaratywna `AnimalDef.water` capability — kaczka pływa tanio, gatunek bez `canSwim` nie wchodzi w głęboką wodę) zasilają `AnimalAgent.isWalkable()`, dzielone 1:1 przez autonomiczny i dosiadany ruch. Pływanie zużywa istniejącą staminę (`tickAnimalLife`'s `swimExertion`); wyczerpanie podczas `swimming` (nie `wading`/`dry`) odbiera HP przez istniejący `damageHealth`/death lifecycle. Picie zwierząt = plan [094](../plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md), nie render |
 
 Wejścia kodu:
 
