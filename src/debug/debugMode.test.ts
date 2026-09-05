@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isModelTestMode } from './debugMode'
+import { caveSpikeVariant, isModelTestMode } from './debugMode'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -23,5 +23,22 @@ describe('isModelTestMode', () => {
   it('is not triggered by an unrelated query param', () => {
     stubWindow('?debug=1')
     expect(isModelTestMode()).toBe(false)
+  })
+})
+
+describe('caveSpikeVariant', () => {
+  it('defaults to sdf when the param is absent', () => {
+    stubWindow('')
+    expect(caveSpikeVariant()).toBe('sdf')
+  })
+
+  it('resolves sdf explicitly', () => {
+    stubWindow('?caveSpike=sdf')
+    expect(caveSpikeVariant()).toBe('sdf')
+  })
+
+  it('resolves sweep as an explicit override', () => {
+    stubWindow('?caveSpike=sweep')
+    expect(caveSpikeVariant()).toBe('sweep')
   })
 })

@@ -122,11 +122,12 @@ export function isSystemEnabled(name: DebugSystemName): boolean {
 }
 
 /** `?caveSpike=sweep|sdf` — plan world-terrain-008 Milestone A comparison
- *  harness selector. Absent (or any other value) means "off": pure V1 cave
- *  behaviour, unchanged. One exported reader, deleted (along with the
- *  `createCaves.ts` branch it feeds) after the architecture decision gate —
- *  it must never become production architecture. */
-export function caveSpikeVariant(): 'sweep' | 'sdf' | null {
+ *  harness selector. Cave V2 SDF is now the default representation, so an
+ *  absent (or unrecognised) value resolves to `'sdf'`; `?caveSpike=sweep`
+ *  remains an explicit comparison/debug override. One exported reader,
+ *  deleted (along with the `createCaves.ts` branch it feeds) after the
+ *  architecture decision gate. */
+export function caveSpikeVariant(): 'sweep' | 'sdf' {
   const raw = urlParamValue('caveSpike')
-  return raw === 'sweep' || raw === 'sdf' ? raw : null
+  return raw === 'sweep' ? 'sweep' : 'sdf'
 }

@@ -111,10 +111,10 @@ export function createCaves(
     roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
     villages,
   })
-  // Plan world-terrain-008 Milestone A comparison harness — off by default,
-  // one cave only, deleted (along with `caveSpikeVariant()`) after the
-  // architecture decision gate. See implementation notes "Shared Comparison
-  // Harness".
+  // Plan world-terrain-008 Milestone A comparison harness — SDF by default
+  // (`?caveSpike=sweep` is the explicit comparison override), one cave only,
+  // deleted (along with `caveSpikeVariant()`) after the architecture decision
+  // gate. See implementation notes "Shared Comparison Harness".
   // Deterministic analytic surface — `sampleHeight` reads the chunk tile once
   // a chunk is resident, so the spike geometry would otherwise depend on
   // streaming order (it is built on activation, not at world build).

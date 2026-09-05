@@ -105,6 +105,12 @@ None of this changes topology, either spike's geometry/mesh generation, the
 walkable/collision proxy, or the manual-comparison rubric below — it only
 makes the existing SDF candidate easier to evaluate in-browser.
 
+SDF is now the default Cave V2 representation. `?caveSpike=sweep` remains an
+explicit comparison/debug override (`?caveSpike=sdf` still works too, now
+redundant). `caveSpikeVariant()` (`src/debug/debugMode.ts`) resolves an
+absent/unrecognised `caveSpike` param to `'sdf'` instead of turning the spike
+harness off.
+
 ---
 
 ## 1b. Surface-integration and containment fixes (2026-09-05 repro)
