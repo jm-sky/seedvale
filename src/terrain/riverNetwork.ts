@@ -7,8 +7,10 @@ import {
   computeHydrologyRegion,
   D8_DIRECTIONS,
   DEFAULT_DEPRESSION_REPAIR_OPTIONS,
+  type DownstreamProbe,
   HydrologyFlag,
   type HydrologyRegion,
+  probeDownstreamTerminal,
   type StreamThresholds,
 } from './hydrology'
 
@@ -103,8 +105,19 @@ const MIN_RIVER_WIDTH = 0.4
 const MAX_RIVER_WIDTH = 11
 
 /** Drops short threshold-noise blips (see `buildChains`) — a rendering
- *  cutoff, not a hydrology-correctness threshold. */
+ *  cutoff, not a hydrology-correctness threshold. Applies only to a chain
+ *  that starts an *isolated* local drainage line; see
+ *  `MIN_CONTINUATION_CHAIN_POINTS`. */
 const MIN_CHAIN_POINTS = 8
+/** Cutoff for a chain whose head already receives classified drainage from
+ *  outside the tile core (world-terrain-013). Such a chain is by definition
+ *  the downstream continuation of a river a neighbouring tile owns upstream,
+ *  not a threshold-noise blip, so the isolated-source cutoff above must not
+ *  apply to it: a valid continuation reaching the sea (or any other receiver)
+ *  a handful of cells past the core edge used to be discarded outright,
+ *  showing up in play as a river drying out up to ~64 m short of its own
+ *  outlet. Two points is simply the minimum a renderable segment needs. */
+const MIN_CONTINUATION_CHAIN_POINTS = 2
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v
@@ -455,6 +468,57 @@ function meanderChainPoints(points: RiverPoint[], coreRect: WorldRect, noise: No
   })
 }
 
+/** Why a chain walk stopped — the observable terminal modes plan
+ *  world-terrain-013 asks to keep distinguishable. Diagnostic only: none of
+ *  this reaches the cached `RiverChain`. */
+export type RiverChainTerminal =
+  /** Left the tile core still draining normally — the neighbouring tile owns
+   *  the continuation (the expected, healthy hand-off). */
+  | 'core-exit'
+  /** Ended on a terminal backed by actual water (`OCEAN_OUTLET`). */
+  | 'water-receiver'
+  /** Ended in a dry closed depression the bounded repair left unresolved. */
+  | 'dry-sink'
+  /** Ended by leaving the hydrology window over dry terrain. */
+  | 'dry-boundary-exit'
+  /** Downstream cell fell below the classification threshold — impossible
+   *  within one coherent region (accumulation never decreases downstream), so
+   *  observing this means an ownership/recompute defect, not a normal case. */
+  | 'unclassified-downstream'
+  /** Downstream cell lay outside the analysis window without the flag that
+   *  should accompany it — defensive only. */
+  | 'window-exit'
+  /** Defensive cycle guard; D8 flow graphs are acyclic by construction. */
+  | 'cycle-guard'
+
+/** Why an otherwise complete chain was not rendered. */
+export type RiverChainRejection =
+  /** Below the applicable rendering cutoff (`MIN_CHAIN_POINTS` /
+   *  `MIN_CONTINUATION_CHAIN_POINTS`). */
+  | 'too-short'
+  /** Dead-ends on dry land — no valid water receiver anywhere downstream. */
+  | 'invalid-receiver'
+
+/** One chain candidate's terminal/filter outcome (world-terrain-013 §1).
+ *  Produced only via `computeRiverTileDiagnostics`. */
+export type RiverChainDiagnostic = {
+  /** World position of the chain's head cell. */
+  headX: number
+  headZ: number
+  /** Raw D8 cells walked, before smoothing/meandering multiply the count. */
+  cellCount: number
+  terminal: RiverChainTerminal
+  /** True when the head continues classified drainage arriving from outside
+   *  the tile core, i.e. this chain is a downstream continuation rather than
+   *  an isolated local source. */
+  continuation: boolean
+  /** Bounded downstream probe from the chain's last cell — what the existing
+   *  hydrology says lies below the visible endpoint (answers "is this
+   *  endpoint only an extraction artefact?" without generating a neighbour). */
+  downstream: DownstreamProbe
+  rejected: RiverChainRejection | null
+}
+
 function buildChains(
   region: HydrologyRegion,
   classes: Uint8Array,
@@ -462,17 +526,24 @@ function buildChains(
   coreMax: number,
   coreRect: WorldRect,
   meanderNoise: NoiseFunction2D,
+  diagnostics: RiverChainDiagnostic[] | null,
 ): RiverChain[] {
   const { size } = region
   const hasClassifiedUpstream = new Uint8Array(size * size)
+  // Classified inflow from anywhere in the window (core *or* halo). Unlike
+  // `hasClassifiedUpstream` this does not decide chain heads — it tells an
+  // isolated local source apart from the continuation of a drainage line that
+  // already arrives classified from a neighbouring tile's core, which is what
+  // the rendering cutoff below keys off (world-terrain-013).
+  const hasClassifiedInflow = new Uint8Array(size * size)
 
   // Only a classified *core* cell disqualifies its downstream neighbour from
   // being a chain head — a classified halo cell feeding into the core must
   // NOT disqualify it, or every core cell whose only upstream lies just
   // outside the core (extremely common near the core's own edge) would be
   // silently dropped instead of rendered as the start of an in-core chain.
-  for (let iz = coreMin; iz < coreMax; iz++) {
-    for (let ix = coreMin; ix < coreMax; ix++) {
+  for (let iz = 0; iz < size; iz++) {
+    for (let ix = 0; ix < size; ix++) {
       const idx = iz * size + ix
       if (classes[idx] === 0) continue
       if ((region.flags[idx]! & (HydrologyFlag.SINK | HydrologyFlag.BOUNDARY_EXIT)) !== 0) continue
@@ -480,7 +551,10 @@ function buildChains(
       const nx = ix + dir.dx
       const nz = iz + dir.dz
       if (nx < 0 || nx >= size || nz < 0 || nz >= size) continue
-      hasClassifiedUpstream[nz * size + nx] = 1
+      const downstreamIdx = nz * size + nx
+      hasClassifiedInflow[downstreamIdx] = 1
+      const inCore = ix >= coreMin && ix < coreMax && iz >= coreMin && iz < coreMax
+      if (inCore) hasClassifiedUpstream[downstreamIdx] = 1
     }
   }
 
@@ -493,6 +567,8 @@ function buildChains(
 
       const points: RiverPoint[] = []
       const visited = new Set<number>()
+      let terminal: RiverChainTerminal
+      let lastIdx = headIdx
       let curIdx = headIdx
       // A river reaching a dry closed depression (SINK) or a dry off-window
       // crossing (BOUNDARY_EXIT) — neither backed by `OCEAN_OUTLET`, i.e. not
@@ -508,10 +584,20 @@ function buildChains(
       for (;;) {
         const cix = curIdx % size
         const ciz = Math.floor(curIdx / size)
-        if (cix < coreMin || cix >= coreMax || ciz < coreMin || ciz >= coreMax) break
-        if (classes[curIdx] === 0) break
-        if (visited.has(curIdx)) break // defensive; D8 graphs are acyclic by construction
+        if (cix < coreMin || cix >= coreMax || ciz < coreMin || ciz >= coreMax) {
+          terminal = 'core-exit'
+          break
+        }
+        if (classes[curIdx] === 0) {
+          terminal = 'unclassified-downstream'
+          break
+        }
+        if (visited.has(curIdx)) {
+          terminal = 'cycle-guard'
+          break // defensive; D8 graphs are acyclic by construction
+        }
         visited.add(curIdx)
+        lastIdx = curIdx
 
         points.push({
           x: region.originX + cix * region.cellStep,
@@ -524,13 +610,19 @@ function buildChains(
         if (terminalFlags !== 0) {
           if ((region.flags[curIdx]! & HydrologyFlag.OCEAN_OUTLET) === 0) {
             reachedInvalidReceiver = true
+            terminal = (terminalFlags & HydrologyFlag.SINK) !== 0 ? 'dry-sink' : 'dry-boundary-exit'
+          } else {
+            terminal = 'water-receiver'
           }
           break
         }
         const dir = D8_DIRECTIONS[region.flowDir[curIdx]!]!
         const nx = cix + dir.dx
         const nz = ciz + dir.dz
-        if (nx < 0 || nx >= size || nz < 0 || nz >= size) break
+        if (nx < 0 || nx >= size || nz < 0 || nz >= size) {
+          terminal = 'window-exit'
+          break
+        }
         curIdx = nz * size + nx
       }
 
@@ -538,11 +630,35 @@ function buildChains(
       // (real terrain wrinkles briefly crossing the accumulation threshold).
       // Filtering short chains is a rendering-worthiness cutoff, not a
       // hydrology correctness change — it doesn't affect direction/accumulation.
-      // A chain that dead-ends at a dry, non-water receiver is dropped
+      // It applies only to an isolated local source though: a head already fed
+      // by classified drainage from outside the core is a continuation the
+      // neighbouring tile owns upstream, and dropping it leaves a visible dry
+      // gap short of the river's own outlet (world-terrain-013).
+      // A chain that dead-ends at a dry, non-water receiver is still dropped
       // entirely rather than rendered as a river that vanishes on dry land.
-      if (points.length >= MIN_CHAIN_POINTS && !reachedInvalidReceiver) {
+      const continuation = hasClassifiedInflow[headIdx] === 1
+      const minPoints = continuation ? MIN_CONTINUATION_CHAIN_POINTS : MIN_CHAIN_POINTS
+      const rejected: RiverChainRejection | null = reachedInvalidReceiver
+        ? 'invalid-receiver'
+        : points.length < minPoints
+          ? 'too-short'
+          : null
+
+      if (rejected === null) {
         const smoothed = smoothChainPoints(points)
         chains.push({ points: meanderChainPoints(smoothed, coreRect, meanderNoise) })
+      }
+
+      if (diagnostics) {
+        diagnostics.push({
+          headX: region.originX + (headIdx % size) * region.cellStep,
+          headZ: region.originZ + Math.floor(headIdx / size) * region.cellStep,
+          cellCount: points.length,
+          terminal,
+          continuation,
+          downstream: probeDownstreamTerminal(region, lastIdx),
+          rejected,
+        })
       }
     }
   }
@@ -604,6 +720,33 @@ export function computeRiverTile(
   sampleParams: RawSampleParams,
   thresholds: StreamThresholds = DEFAULT_RIVER_THRESHOLDS,
 ): RiverChain[] {
+  return computeTile(tile, sampleParams, thresholds, null)
+}
+
+/**
+ * Same computation as `computeRiverTile`, plus one `RiverChainDiagnostic` per
+ * chain candidate (world-terrain-013 §1). Diagnostic/test entry point only:
+ * the production path and `riverTileCache` keep caching compact
+ * `RiverChain[]` with no terminal metadata attached.
+ *
+ * @domain world-terrain
+ */
+export function computeRiverTileDiagnostics(
+  tile: RiverTileCoord,
+  sampleParams: RawSampleParams,
+  thresholds: StreamThresholds = DEFAULT_RIVER_THRESHOLDS,
+): { chains: RiverChain[]; diagnostics: RiverChainDiagnostic[] } {
+  const diagnostics: RiverChainDiagnostic[] = []
+  const chains = computeTile(tile, sampleParams, thresholds, diagnostics)
+  return { chains, diagnostics }
+}
+
+function computeTile(
+  tile: RiverTileCoord,
+  sampleParams: RawSampleParams,
+  thresholds: StreamThresholds,
+  diagnostics: RiverChainDiagnostic[] | null,
+): RiverChain[] {
   const originX = tile.tx * RIVER_TILE_SIZE - RIVER_TILE_HALO
   const originZ = tile.tz * RIVER_TILE_SIZE - RIVER_TILE_HALO
   const region = computeHydrologyRegion(
@@ -617,5 +760,5 @@ export function computeRiverTile(
   const classes = classifyStreams(region, thresholds)
   const coreRect = riverTileCoreRect(tile)
   const meanderNoise = createNoise2D(createSeededRandom(sampleParams.seed ^ MEANDER_NOISE_SEED_XOR))
-  return buildChains(region, classes, HALO_CELLS, HALO_CELLS + CORE_CELLS, coreRect, meanderNoise)
+  return buildChains(region, classes, HALO_CELLS, HALO_CELLS + CORE_CELLS, coreRect, meanderNoise, diagnostics)
 }

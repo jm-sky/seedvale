@@ -1,7 +1,7 @@
 # Plan: River Drainage Continuity and Terrain Adaptation
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** world-terrain-011
@@ -9,6 +9,24 @@
 **Subdomains:** `terrain`
 **Tags:** `rivers` `hydrology` `drainage` `erosion`
 **Roadmap:** -
+
+## Implementation status (2026-09-05)
+
+**Implemented + technically verified** (`npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, full `vitest run`). Browser verification — especially seed `3` — is left to the player.
+
+**Diagnosed cause of the visible dry gap (§1).** `buildChains()` applied the isolated-source rendering cutoff (`MIN_CHAIN_POINTS = 8`) to every tile-local fragment. Because a river entering a neighbouring 256 m core is deliberately treated as a new local head (`hasClassifiedUpstream` only looks at classified *core* cells), a perfectly valid continuation whose fragment from the core edge to its water receiver is shorter than 8 D8 cells (~64 m at `RIVER_CELL_STEP = 8`) was discarded outright — no dry sink involved, exactly the 50–100 m class of gap the plan describes. Confirmed by a deterministic synthetic coastline test (`riverNetwork.test.ts`, "keeps a short downstream continuation that reaches the sea just inside the core"), which fails when the new cutoff is reverted.
+
+**Extraction fix (§3).** `buildChains()` now also tracks `hasClassifiedInflow` over the whole window (core *and* halo). A head fed by classified drainage arriving from outside the core is a downstream continuation, not threshold noise, so it uses `MIN_CONTINUATION_CHAIN_POINTS = 2` (the minimum a renderable segment needs) instead of `MIN_CHAIN_POINTS`. Isolated local sources keep the original cutoff, so short noise blips are still filtered. No second river path, no snapping, no cross-tile state: ownership, halo semantics and `reachedInvalidReceiver` are unchanged.
+
+**Terminal diagnostics (§1).** `RiverChainTerminal` / `RiverChainRejection` / `RiverChainDiagnostic` and `computeRiverTileDiagnostics()` (`riverNetwork.ts`) make every terminal/filter mode observable — core exit, water receiver, dry sink, dry boundary exit, unclassified downstream, window exit, cycle guard, plus a bounded downstream probe from the chain's last cell. Diagnostic-only: `computeRiverTile()` and `riverTileCache` still produce/cache compact `RiverChain[]` with no terminal metadata attached.
+
+**Bounded downstream probe (§2).** `probeDownstreamTerminal()` (`hydrology.ts`, `DEFAULT_DOWNSTREAM_PROBE_STEPS = 48` ≈ the 384 m halo at the 8 m production cell step) follows existing D8 topology from a cell and reports `water-receiver` / `dry-sink` / `dry-boundary-exit` / `rerouted` / `budget-exceeded`. Pure, allocation-light, never samples terrain, never generates a neighbouring tile or chunk.
+
+**Receiver-aware, cost-based conditioning (§4).** `findBreachPath()` was evolved in place rather than duplicated: the frontier is now ordered by true *minimax* cost (the highest elevation the best known route to a cell must cross, with predecessor relaxation), it collects up to `maxEscapeCandidates` escapes instead of stopping at the first, and each is fully costed — max cut depth, total cut, interior path cells, receiver quality — through an explicit monotonic cost function weighted so a long shallow route beats a short deep one. An escape whose own existing downstream just resolves to another unresolved dry sink is rejected outright. Two new explicit budgets (`maxEscapeCandidates`, `receiverProbeSteps`) join the existing `DepressionRepairOptions`; `maxPathCells` now unambiguously counts the interior cells a breach would actually lower, matching its documented contract. A rejected candidate no longer aborts the search, so a sink behind a too-expensive rim can still be resolved through a costlier but affordable gate.
+
+**Unchanged by design.** One final `resolveFlowDirections()` + `computeAccumulation()` recompute after accepted conditioning; `OCEAN_OUTLET` semantics; the canonical chain → `riverChannelSegmentsNear()` → `applyRiverChannel()` carving path; smoothing/meandering; tile ownership and halo geometry. Genuinely closed basins and large barriers stay unresolved (future lake/spill semantics, §7).
+
+**Tests.** `hydrology.test.ts`: existing D8 route reported with zero conditioning, honest dry-sink/budget-exceeded probe outcomes, breach toward a genuine water receiver, rejection of an equally cheap escape into another dry sink, budget rejection despite nearby water, shallow-gate preference over a short deep one, and fallback to a costlier gate when the shallowest rim busts the cut budget. `riverNetwork.test.ts`: short continuation to the sea preserved, isolated short blip still filtered, core ownership/determinism across neighbouring tiles. Existing 011/010/006 invariants (strict descent, terminal mass conservation, determinism, truthful `OCEAN_OUTLET`, inland coverage) all still pass.
 
 ## Goal
 

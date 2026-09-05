@@ -12,6 +12,7 @@ import {
   HydrologyFlag,
   type HydrologyRegion,
   type HydrologyRegionParams,
+  probeDownstreamTerminal,
 } from './hydrology'
 
 /** Defaults aligned with `worldConfig` base terrain (plan 062/181). */
@@ -398,6 +399,226 @@ describe('bounded dry-sink repair (world-terrain-011)', () => {
       expect(result.flags[sinkIdx]! & HydrologyFlag.SINK).toBeTruthy()
       expect(result.flags[sinkIdx]! & HydrologyFlag.OCEAN_OUTLET).toBeTruthy()
       expect(result.elevation[sinkIdx]).toBeCloseTo(waterLevel - 1, 5)
+    } finally {
+      restore()
+    }
+  })
+})
+
+type FloorFn = (wx: number, wz: number) => number
+
+function mockTerrain(floorAt: FloorFn, waterLevel: number): () => void {
+  const floorAtSpy = vi.spyOn(chunkHeightmap, 'sampleFloorAt').mockImplementation(floorAt)
+  const heightAtSpy = vi
+    .spyOn(chunkHeightmap, 'sampleHeightAt')
+    .mockImplementation((wx: number, wz: number) => Math.max(floorAt(wx, wz), waterLevel))
+  return () => {
+    floorAtSpy.mockRestore()
+    heightAtSpy.mockRestore()
+  }
+}
+
+function rawElevationGrid(regionParams: HydrologyRegionParams, floorAt: FloorFn): Float32Array {
+  const { originX, originZ, size, cellStep } = regionParams
+  const out = new Float32Array(size * size)
+  for (let iz = 0; iz < size; iz++) {
+    for (let ix = 0; ix < size; ix++) {
+      out[iz * size + ix] = floorAt(originX + ix * cellStep, originZ + iz * cellStep)
+    }
+  }
+  return out
+}
+
+describe('bounded downstream terminal probe (world-terrain-013)', () => {
+  const waterLevel = 0.45
+  const regionParams: HydrologyRegionParams = { originX: -120, originZ: -120, size: 40, cellStep: 6 }
+  const coastX = 0
+  const oceanFloor = waterLevel - 1
+  /** Ramp descending eastwards into a flat sea — every land cell already has
+   *  a valid existing D8 route to real water, so nothing needs conditioning. */
+  const coastalRamp: FloorFn = (wx: number) => Math.max(oceanFloor, oceanFloor + (coastX - wx) * 0.2)
+
+  it('reports an existing D8 route to a real water receiver without any terrain conditioning', () => {
+    const restore = mockTerrain(coastalRamp, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params)
+      expect(region.elevation).toEqual(rawElevationGrid(regionParams, coastalRamp))
+
+      const inland = 20 * regionParams.size + 2 // well west of the coast
+      const probe = probeDownstreamTerminal(region, inland)
+      expect(probe.outcome).toBe('water-receiver')
+      expect(probe.steps).toBeGreaterThan(0)
+      expect(region.elevation[probe.endIndex]!).toBeLessThanOrEqual(waterLevel)
+    } finally {
+      restore()
+    }
+  })
+
+  it('reports a dry sink honestly instead of upgrading it to a receiver, and respects its step budget', () => {
+    const dryBowl: FloorFn = (wx: number, wz: number) => waterLevel + 3 + Math.hypot(wx, wz) * 0.05
+    const restore = mockTerrain(dryBowl, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params, {
+        ...DEFAULT_DEPRESSION_REPAIR_OPTIONS,
+        minAccumulationForRepair: Number.MAX_SAFE_INTEGER, // no repair: probe the raw topology
+      })
+      const corner = 2 * regionParams.size + 2
+      expect(probeDownstreamTerminal(region, corner).outcome).toBe('dry-sink')
+      expect(probeDownstreamTerminal(region, corner, 1).outcome).toBe('budget-exceeded')
+    } finally {
+      restore()
+    }
+  })
+})
+
+/**
+ * Pit → moat terrain: a shallow cone draining to a dry pit at world (0,0),
+ * a rim, then a flat annulus ("moat") comfortably below the pit bottom, and
+ * an outer wall rising back up. The moat is the only escape the bounded
+ * search can reach — so `moatFloor` alone decides whether that escape is a
+ * genuine water receiver or just a second closed depression.
+ */
+function pitAndMoatFloorAt(moatFloor: number, riseSlope: number): FloorFn {
+  const pitBottom = 5
+  const coneRadius = 24
+  const moatOuterRadius = 60
+  const rimTop = pitBottom + coneRadius * riseSlope
+  return (wx: number, wz: number): number => {
+    const d = Math.hypot(wx, wz)
+    if (d <= coneRadius) return pitBottom + d * riseSlope
+    if (d <= moatOuterRadius) return Math.max(moatFloor, rimTop - (d - coneRadius) * 0.5)
+    return moatFloor + (d - moatOuterRadius) // outer wall, draining back into the moat
+  }
+}
+
+describe('receiver-aware, cost-based breach selection (world-terrain-013)', () => {
+  const waterLevel = 0.45
+  const regionParams: HydrologyRegionParams = { originX: -120, originZ: -120, size: 40, cellStep: 6 }
+  const sinkIdx = 20 * regionParams.size + 20 // world (0,0)
+  // High enough that only the pit's own catchment qualifies, so flat moat/
+  // corridor cells never trigger repairs of their own and every conditioned
+  // cell in these tests belongs to the pit's accepted breach.
+  const options: DepressionRepairOptions = { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: 20 }
+
+  it('breaches a shallow rim toward a genuine water receiver', () => {
+    const floorAt = pitAndMoatFloorAt(waterLevel - 0.05, 0.02)
+    const restore = mockTerrain(floorAt, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params, options)
+      expect(region.flags[sinkIdx]! & HydrologyFlag.SINK).toBeFalsy()
+      expect(region.flowDir[sinkIdx]).not.toBe(FLOW_DIR_SINK)
+      expect(probeDownstreamTerminal(region, sinkIdx).outcome).toBe('water-receiver')
+    } finally {
+      restore()
+    }
+  })
+
+  it('rejects an equally cheap escape whose own downstream is just another unresolved dry sink', () => {
+    // Same geometry, same cut cost — only the moat's water status differs.
+    const floorAt = pitAndMoatFloorAt(waterLevel + 1.5, 0.02)
+    const restore = mockTerrain(floorAt, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params, options)
+      expect(region.flags[sinkIdx]! & HydrologyFlag.SINK).toBeTruthy()
+      expect(region.elevation).toEqual(rawElevationGrid(regionParams, floorAt)) // nothing was cut
+    } finally {
+      restore()
+    }
+  })
+
+  it('leaves a sink unresolved when reaching nearby water would need a cut past the budget', () => {
+    const floorAt = pitAndMoatFloorAt(waterLevel - 0.05, 0.15) // rim ~3.6 m above the pit
+    const restore = mockTerrain(floorAt, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params, options)
+      expect(region.flags[sinkIdx]! & HydrologyFlag.SINK).toBeTruthy()
+      expect(region.elevation).toEqual(rawElevationGrid(regionParams, floorAt))
+    } finally {
+      restore()
+    }
+  })
+})
+
+describe('cost-based outlet choice (world-terrain-013)', () => {
+  const waterLevel = 0.45
+  const regionParams: HydrologyRegionParams = { originX: -150, originZ: -150, size: 50, cellStep: 6 }
+  const sinkIdx = 25 * regionParams.size + 25 // world (0,0)
+
+  // A dry pit walled in except for two gates, one east and one west, each
+  // with its own sill height and corridor length — so a test can make the
+  // shorter route the expensive one and see which the policy picks.
+  const pitBottom = 5
+  const coneRadius = 24
+  const rimTop = pitBottom + coneRadius * 0.005
+  type GateSpec = { eastSill: number; eastLength: number; westSill: number; westLength: number }
+
+  function twoGateFloorAt(gates: GateSpec): FloorFn {
+    return (wx: number, wz: number): number => {
+      const d = Math.hypot(wx, wz)
+      if (d <= coneRadius) return pitBottom + d * 0.005
+      if (Math.abs(wz) > 6) return rimTop + 20 // flat wall; contributes no drainage of its own
+      // Gates are rectangular corridors (flat across the band, so no cell is
+      // cheaper just for sitting off the axis) that fall away beyond their end.
+      const east = wx > 0
+      const sill = east ? gates.eastSill : gates.westSill
+      const beyondGate = Math.abs(wx) - coneRadius - (east ? gates.eastLength : gates.westLength)
+      return beyondGate <= 0 ? rimTop + sill : rimTop + sill - beyondGate
+    }
+  }
+
+  /** Every cell the repair actually lowered, with its world x. */
+  function cutCells(region: HydrologyRegion, raw: Float32Array): { wx: number; cut: number }[] {
+    const out: { wx: number; cut: number }[] = []
+    for (let i = 0; i < raw.length; i++) {
+      const cut = raw[i]! - region.elevation[i]!
+      if (cut > 1e-6) out.push({ wx: regionParams.originX + (i % regionParams.size) * regionParams.cellStep, cut })
+    }
+    return out
+  }
+
+  const options: DepressionRepairOptions = { ...DEFAULT_DEPRESSION_REPAIR_OPTIONS, minAccumulationForRepair: 20 }
+
+  it('prefers the longer, much shallower gate over the short deep one', () => {
+    // Both routes fit every budget, so terrain cost alone decides.
+    const floorAt = twoGateFloorAt({ eastSill: 1.0, eastLength: 6, westSill: 0.15, westLength: 36 })
+    const restore = mockTerrain(floorAt, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params, options)
+      expect(region.flags[sinkIdx]! & HydrologyFlag.SINK).toBeFalsy()
+
+      const cuts = cutCells(region, rawElevationGrid(regionParams, floorAt))
+      expect(cuts.length).toBeGreaterThan(0)
+      // Every conditioned cell sits on the shallow western route ...
+      expect(cuts.every((c) => c.wx <= 0)).toBe(true)
+      // ... and the deepest cut stays far below what the eastern sill would cost.
+      expect(Math.max(...cuts.map((c) => c.cut))).toBeLessThan(0.9)
+    } finally {
+      restore()
+    }
+  })
+
+  it('falls back to a costlier gate when the shallowest rim leads to a route that busts the cut budget', () => {
+    // The western sill is still the lowest rim the search reaches first, but
+    // its corridor is so long that the summed cut exceeds `maxTotalCut` — the
+    // sink must be resolved through the eastern gate instead of abandoned.
+    const floorAt = twoGateFloorAt({ eastSill: 1.0, eastLength: 6, westSill: 0.15, westLength: 90 })
+    const restore = mockTerrain(floorAt, waterLevel)
+    try {
+      const params = rawParams(11, { waterLevel })
+      const region = computeHydrologyRegion(regionParams, params, options)
+      expect(region.flags[sinkIdx]! & HydrologyFlag.SINK).toBeFalsy()
+
+      const cuts = cutCells(region, rawElevationGrid(regionParams, floorAt))
+      expect(cuts.length).toBeGreaterThan(0)
+      expect(cuts.every((c) => c.wx >= 0)).toBe(true)
+      expect(Math.max(...cuts.map((c) => c.cut))).toBeLessThanOrEqual(options.maxCutDepth)
+      expect(cuts.reduce((sum, c) => sum + c.cut, 0)).toBeLessThanOrEqual(options.maxTotalCut)
     } finally {
       restore()
     }

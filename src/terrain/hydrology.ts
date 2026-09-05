@@ -15,6 +15,13 @@ import { type RawSampleParams, sampleFloorAt, sampleHeightAt } from './chunkHeig
  * `resolveMeaningfulDrySinks`) between the raw D8/accumulation pass and the
  * final `HydrologyRegion` this module returns — see that function's doc for
  * the two-pass shape.
+ *
+ * plan world-terrain-013 keeps that same two-pass shape but makes the repair
+ * *receiver-aware and cost-based*: `probeDownstreamTerminal` answers bounded
+ * "what does the existing D8 topology below this cell resolve to" questions
+ * from data already computed for the region, and `findBreachPath` ranks
+ * several escape candidates by an explicit terrain-cost function instead of
+ * accepting the first downhill cell it happens to reach.
  */
 
 /** Fixed neighbour order — determinism matters when two neighbours tie on slope. */
@@ -86,6 +93,79 @@ export const DEFAULT_STREAM_THRESHOLDS: StreamThresholds = {
   majorRiver: 80,
 }
 
+/** What a bounded downstream walk resolved to (world-terrain-013). Only
+ *  `water-receiver` is a genuine, existing water-backed terminal; the rest
+ *  are either an honest "no valid receiver here" or an honest "not knowable
+ *  from this workspace", never something to be optimistically upgraded. */
+export type DownstreamProbeOutcome =
+  /** Reached a terminal flagged `OCEAN_OUTLET` — an actual water body. */
+  | 'water-receiver'
+  /** Reached a dry closed depression (`SINK` without `OCEAN_OUTLET`). */
+  | 'dry-sink'
+  /** Left the analysis window over dry terrain — the answer lies outside. */
+  | 'dry-boundary-exit'
+  /** Reached a cell whose drainage was already re-routed by an accepted
+   *  breach, so the flow directions this probe walks are stale there. */
+  | 'rerouted'
+  /** Ran out of probe steps before reaching any terminal. */
+  | 'budget-exceeded'
+
+export type DownstreamProbe = {
+  outcome: DownstreamProbeOutcome
+  /** Last cell inspected — the terminal itself for a resolved outcome. */
+  endIndex: number
+  /** D8 steps walked from the start cell (`0` when it is already terminal). */
+  steps: number
+}
+
+/** 48 cells ≈ the 384 m river-tile halo at the production 8 m cell step
+ *  (`riverNetwork.ts`) — local downstream reasoning stays inside the window
+ *  a tile already analysed, never triggering a neighbouring tile/chunk. */
+export const DEFAULT_DOWNSTREAM_PROBE_STEPS = 48
+
+function probeDownstream(
+  flowDir: Int8Array,
+  flags: Uint8Array,
+  size: number,
+  startIndex: number,
+  maxSteps: number,
+  rerouted: Uint8Array | null,
+): DownstreamProbe {
+  let idx = startIndex
+  let steps = 0
+  for (;;) {
+    if (rerouted !== null && rerouted[idx] !== 0) return { outcome: 'rerouted', endIndex: idx, steps }
+    const f = flags[idx]!
+    if ((f & (HydrologyFlag.SINK | HydrologyFlag.BOUNDARY_EXIT)) !== 0) {
+      if ((f & HydrologyFlag.OCEAN_OUTLET) !== 0) return { outcome: 'water-receiver', endIndex: idx, steps }
+      const outcome: DownstreamProbeOutcome = (f & HydrologyFlag.SINK) !== 0 ? 'dry-sink' : 'dry-boundary-exit'
+      return { outcome, endIndex: idx, steps }
+    }
+    if (steps >= maxSteps) return { outcome: 'budget-exceeded', endIndex: idx, steps }
+    const dir = D8_DIRECTIONS[flowDir[idx]!]!
+    idx = cellIndex((idx % size) + dir.dx, Math.floor(idx / size) + dir.dz, size)
+    steps++
+  }
+}
+
+/**
+ * Bounded downstream terminal question over an already-computed region
+ * (world-terrain-013): follows existing D8 topology from `startIndex` for at
+ * most `maxSteps` and reports what it resolves to. Pure, allocation-light
+ * (one small result object), and strictly local — it never samples terrain,
+ * never searches geometrically for nearby water and never needs a
+ * neighbouring region/tile/chunk.
+ *
+ * @domain world-terrain
+ */
+export function probeDownstreamTerminal(
+  region: Pick<HydrologyRegion, 'flowDir' | 'flags' | 'size'>,
+  startIndex: number,
+  maxSteps: number = DEFAULT_DOWNSTREAM_PROBE_STEPS,
+): DownstreamProbe {
+  return probeDownstream(region.flowDir, region.flags, region.size, startIndex, maxSteps, null)
+}
+
 /**
  * Bounded, deterministic dry-sink repair policy (plan world-terrain-011).
  * `minAccumulationForRepair` is the eligibility gate — a dry sink below it is
@@ -111,6 +191,13 @@ export type DepressionRepairOptions = {
   maxCutDepth: number
   /** Hard cap on the summed cut depth across one accepted breach path. */
   maxTotalCut: number
+  /** How many distinct escape cells one sink's search may fully evaluate
+   *  before the cheapest is chosen (world-terrain-013) — the search stops
+   *  there, so this bounds cost-based ranking instead of widening it. */
+  maxEscapeCandidates: number
+  /** Hard cap on the bounded downstream probe used to judge what an escape
+   *  candidate actually drains into (see `probeDownstreamTerminal`). */
+  receiverProbeSteps: number
 }
 
 export const DEFAULT_DEPRESSION_REPAIR_OPTIONS: DepressionRepairOptions = {
@@ -119,6 +206,8 @@ export const DEFAULT_DEPRESSION_REPAIR_OPTIONS: DepressionRepairOptions = {
   maxPathCells: 28,
   maxCutDepth: 1.5,
   maxTotalCut: 6,
+  maxEscapeCandidates: 4,
+  receiverProbeSteps: DEFAULT_DOWNSTREAM_PROBE_STEPS,
 }
 
 /** Minimum elevation drop enforced between consecutive breach-path cells —
@@ -252,82 +341,63 @@ function computeAccumulation(elevation: Float32Array, flowDir: Int8Array, flags:
 
 type BreachPath = { pathIndices: number[]; pathElevations: number[] }
 
+type BreachCandidate = { path: BreachPath; cost: number; escapeIdx: number }
+
+/** Caller-owned scratch reused across every candidate sink of one region, so
+ *  a whole tile's repair pass stays O(cellCount) instead of allocating per
+ *  search. `touched` records the cells whose entries need resetting. */
+type BreachScratch = {
+  /** Settled (already popped) cells of the current search. */
+  visited: Uint8Array
+  predecessor: Int32Array
+  /** Minimax cost: the highest elevation the cheapest known route from the
+   *  sink to this cell has to cross — what actually decides cut depth. */
+  cost: Float32Array
+  touched: number[]
+}
+
+/** Raw D8 topology a breach candidate is judged against (world-terrain-013).
+ *  `rerouted` marks cells already conditioned by an accepted breach, whose
+ *  raw `flowDir` is therefore stale — a probe reaching one reports
+ *  `'rerouted'` rather than pretending to know where it now drains. */
+type BreachReceiverContext = {
+  flowDir: Int8Array
+  flags: Uint8Array
+  rerouted: Uint8Array
+  probeSteps: number
+}
+
+// Explicit, monotonic breach cost (world-terrain-013). Terrain cost dominates
+// geometry on purpose: the plan's own example — a 110 m route needing a
+// shallow 0.7 m cut beating a 60 m route through an 8 m ridge — must fall out
+// of these weights, so max cut depth outranks total cut, which outranks path
+// length. The receiver term is deliberately small (≈0.19 m of max cut): it
+// breaks ties between comparable routes toward real water and routes whose
+// downstream is merely unknown, and never buys a materially deeper cut.
+const BREACH_COST_MAX_CUT_WEIGHT = 4
+const BREACH_COST_TOTAL_CUT_WEIGHT = 1
+const BREACH_COST_PATH_CELL_WEIGHT = 0.02
+const BREACH_COST_UNKNOWN_RECEIVER_PENALTY = 0.75
+
 /**
- * Bounded priority-queue (minimax) search for a deterministic breach path out
- * of one dry sink, reusing caller-owned scratch arrays (`visited`,
- * `predecessor`) so a tile's whole repair pass stays O(cellCount) rather than
- * allocating per-candidate. `touched` records every cell visited so the
- * caller can reset just those entries between candidates.
- *
- * The search grows a frontier strictly inside the sampled window (never
- * samples beyond it — repair stays local to the already-analysed hydrology
- * workspace), always expanding the lowest-elevation unvisited frontier cell
- * next (deterministic tie-break: lower flat index). The first non-sink cell
- * popped whose *raw* elevation already sits below the sink's own elevation is
- * a genuine downhill escape — the path back to the sink (via `predecessor`)
- * is the route requiring the least maximum elevation crossed, i.e. the
- * cheapest rim to cut through.
- *
- * Returns `null` when no escape is found within `maxSearchCells`, the
- * resulting path exceeds `maxPathCells`, or the conditioned profile would
- * need to cut deeper than `maxCutDepth`/`maxTotalCut` allow — all reasons to
- * leave the sink unresolved rather than force a repair.
+ * Turns one discovered escape cell into a fully costed breach candidate, or
+ * rejects it. Rejection reasons are all "leave the sink unresolved" rather
+ * than "force a repair": path longer than `maxPathCells`, a conditioned
+ * profile that would no longer descend into the escape cell, a cut deeper
+ * than `maxCutDepth`, a total cut past `maxTotalCut` — and, per
+ * world-terrain-013, an escape whose own existing downstream topology just
+ * resolves to another dry sink (escaping into a second closed depression is
+ * not a repaired outlet, however cheap the cut).
  */
-function findBreachPath(
+function evaluateBreachCandidate(
   searchElevation: Float32Array,
   size: number,
   sinkIdx: number,
-  visited: Uint8Array,
+  escapeIdx: number,
   predecessor: Int32Array,
-  touched: number[],
   options: DepressionRepairOptions,
-): BreachPath | null {
-  const sinkElev = searchElevation[sinkIdx]!
-
-  const open: number[] = [sinkIdx]
-  visited[sinkIdx] = 1
-  predecessor[sinkIdx] = -1
-  touched.push(sinkIdx)
-
-  let escapeIdx = -1
-
-  while (open.length > 0) {
-    let bestPos = 0
-    for (let k = 1; k < open.length; k++) {
-      const a = open[k]!
-      const b = open[bestPos]!
-      const ea = searchElevation[a]!
-      const eb = searchElevation[b]!
-      if (ea < eb || (ea === eb && a < b)) bestPos = k
-    }
-    const cur = open[bestPos]!
-    open[bestPos] = open[open.length - 1]!
-    open.pop()
-
-    if (cur !== sinkIdx && searchElevation[cur]! < sinkElev) {
-      escapeIdx = cur
-      break
-    }
-
-    const cix = cur % size
-    const ciz = Math.floor(cur / size)
-    for (let d = 0; d < D8_DIRECTIONS.length; d++) {
-      const dir = D8_DIRECTIONS[d]!
-      const nx = cix + dir.dx
-      const nz = ciz + dir.dz
-      if (nx < 0 || nx >= size || nz < 0 || nz >= size) continue
-      const nIdx = cellIndex(nx, nz, size)
-      if (visited[nIdx]) continue
-      if (touched.length >= options.maxSearchCells) return null
-      visited[nIdx] = 1
-      predecessor[nIdx] = cur
-      touched.push(nIdx)
-      open.push(nIdx)
-    }
-  }
-
-  if (escapeIdx === -1) return null
-
+  receiver: BreachReceiverContext | null,
+): BreachCandidate | null {
   const reversePath: number[] = []
   let node = predecessor[escapeIdx]!
   while (node !== -1) {
@@ -335,9 +405,16 @@ function findBreachPath(
     node = predecessor[node]!
   }
   reversePath.reverse() // sink -> p1 -> ... -> pk, in downstream order (escapeIdx excluded, never modified)
+  if (reversePath.length === 0 || reversePath[0] !== sinkIdx) return null // defensive: not a route from this sink
 
-  if (reversePath.length > options.maxPathCells) return null
+  // `maxPathCells` counts the interior cells strictly between the sink and
+  // the escape cell — i.e. exactly the cells this breach would lower. The
+  // sink itself is in `pathIndices` (its own elevation is written back
+  // unchanged, so downstream profiles stay anchored to it) but is never cut.
+  const interiorCells = reversePath.length - 1
+  if (interiorCells > options.maxPathCells) return null
 
+  const sinkElev = searchElevation[sinkIdx]!
   const escapeElev = searchElevation[escapeIdx]!
   const pathElevations: number[] = [sinkElev]
   let prev = sinkElev
@@ -358,7 +435,122 @@ function findBreachPath(
   if (maxCut > options.maxCutDepth) return null
   if (totalCut > options.maxTotalCut) return null
 
-  return { pathIndices: reversePath, pathElevations }
+  let receiverPenalty = 0
+  if (receiver !== null) {
+    const probe = probeDownstream(
+      receiver.flowDir,
+      receiver.flags,
+      size,
+      escapeIdx,
+      receiver.probeSteps,
+      receiver.rerouted,
+    )
+    if (probe.outcome === 'dry-sink') return null
+    if (probe.outcome !== 'water-receiver') receiverPenalty = BREACH_COST_UNKNOWN_RECEIVER_PENALTY
+  }
+
+  const cost =
+    maxCut * BREACH_COST_MAX_CUT_WEIGHT +
+    totalCut * BREACH_COST_TOTAL_CUT_WEIGHT +
+    interiorCells * BREACH_COST_PATH_CELL_WEIGHT +
+    receiverPenalty
+  return { path: { pathIndices: reversePath, pathElevations }, cost, escapeIdx }
+}
+
+/**
+ * Bounded, deterministic minimax search for the cheapest breach path out of
+ * one dry sink.
+ *
+ * The frontier grows strictly inside the sampled window (never samples beyond
+ * it — repair stays local to the already-analysed hydrology workspace) and is
+ * ordered by *minimax* cost: a cell's cost is the highest elevation the best
+ * known route to it must cross, so the first route found to any cell is
+ * already the one needing the shallowest cut (deterministic tie-break: lower
+ * flat index). Any non-sink cell popped whose working elevation sits below
+ * the sink's own is a genuine downhill escape; it is costed by
+ * `evaluateBreachCandidate` and never expanded further (an escape is a
+ * destination, not a corridor).
+ *
+ * world-terrain-013: the search collects up to `maxEscapeCandidates` escapes
+ * instead of stopping at the first, then returns the cheapest by the explicit
+ * cost function above — so a longer but much shallower route beats a short
+ * deep cut, and a route into real water beats an equally cheap route into
+ * unknown terrain. Returns `null` when nothing qualifies within budget, which
+ * leaves the sink unresolved (a closed basin stays closed).
+ */
+function findBreachPath(
+  searchElevation: Float32Array,
+  size: number,
+  sinkIdx: number,
+  scratch: BreachScratch,
+  options: DepressionRepairOptions,
+  receiver: BreachReceiverContext | null,
+): BreachPath | null {
+  const { visited, predecessor, cost, touched } = scratch
+  const sinkElev = searchElevation[sinkIdx]!
+
+  cost[sinkIdx] = sinkElev
+  predecessor[sinkIdx] = -1
+  touched.push(sinkIdx)
+
+  const open: number[] = [sinkIdx]
+  const candidates: BreachCandidate[] = []
+
+  while (open.length > 0 && candidates.length < options.maxEscapeCandidates) {
+    let bestPos = 0
+    for (let k = 1; k < open.length; k++) {
+      const a = open[k]!
+      const b = open[bestPos]!
+      const ca = cost[a]!
+      const cb = cost[b]!
+      if (ca < cb || (ca === cb && a < b)) bestPos = k
+    }
+    const cur = open[bestPos]!
+    open[bestPos] = open[open.length - 1]!
+    open.pop()
+    if (visited[cur]) continue // stale queue entry from an earlier, costlier route
+    visited[cur] = 1
+
+    if (cur !== sinkIdx && searchElevation[cur]! < sinkElev) {
+      const candidate = evaluateBreachCandidate(searchElevation, size, sinkIdx, cur, predecessor, options, receiver)
+      if (candidate) candidates.push(candidate)
+      continue
+    }
+
+    const cix = cur % size
+    const ciz = Math.floor(cur / size)
+    const curCost = cost[cur]!
+    for (let d = 0; d < D8_DIRECTIONS.length; d++) {
+      const dir = D8_DIRECTIONS[d]!
+      const nx = cix + dir.dx
+      const nz = ciz + dir.dz
+      if (nx < 0 || nx >= size || nz < 0 || nz >= size) continue
+      const nIdx = cellIndex(nx, nz, size)
+      if (visited[nIdx]) continue
+      const nElev = searchElevation[nIdx]!
+      const nCost = nElev > curCost ? nElev : curCost
+      const known = cost[nIdx]! // `Infinity` until first discovered (the caller resets `touched` entries)
+      if (nCost >= known) continue // already reachable at least as cheaply
+      if (known === Infinity) {
+        if (touched.length >= options.maxSearchCells) {
+          open.length = 0 // search budget spent — rank whatever was already found
+          break
+        }
+        touched.push(nIdx)
+      }
+      cost[nIdx] = nCost
+      predecessor[nIdx] = cur
+      open.push(nIdx)
+    }
+  }
+
+  if (candidates.length === 0) return null
+  let best = candidates[0]!
+  for (let i = 1; i < candidates.length; i++) {
+    const c = candidates[i]!
+    if (c.cost < best.cost || (c.cost === best.cost && c.escapeIdx < best.escapeIdx)) best = c
+  }
+  return best.path
 }
 
 /**
@@ -380,11 +572,18 @@ function findBreachPath(
  * candidate — its flow direction is resolved for free once the caller
  * recomputes D8 over the conditioned elevation.
  *
+ * world-terrain-013 adds receiver awareness: a candidate escape is judged
+ * against the raw D8 topology below it (`probeDownstream`), so a breach that
+ * would only tip one closed depression into another is rejected, and the
+ * cheapest of several escapes wins by explicit terrain cost rather than by
+ * whichever the frontier happened to reach first.
+ *
  * Returns `null` when no candidate qualifies or none can be resolved within
  * budget — the caller then keeps the original raw region unchanged.
  */
 function resolveMeaningfulDrySinks(
   elevation: Float32Array,
+  flowDir: Int8Array,
   flags: Uint8Array,
   accumulation: Int32Array,
   size: number,
@@ -407,18 +606,28 @@ function resolveMeaningfulDrySinks(
 
   let working: Float32Array | null = null
   const claimed = new Uint8Array(cellCount)
-  const visited = new Uint8Array(cellCount)
-  const predecessor = new Int32Array(cellCount)
-  const touched: number[] = []
+  const scratch: BreachScratch = {
+    visited: new Uint8Array(cellCount),
+    predecessor: new Int32Array(cellCount).fill(-1),
+    cost: new Float32Array(cellCount).fill(Infinity),
+    touched: [],
+  }
+  const receiver: BreachReceiverContext = {
+    flowDir,
+    flags,
+    rerouted: claimed,
+    probeSteps: options.receiverProbeSteps,
+  }
 
   for (const sinkIdx of candidates) {
     if (claimed[sinkIdx]) continue // already absorbed into an earlier accepted breach
 
-    touched.length = 0
-    const breach = findBreachPath(working ?? elevation, size, sinkIdx, visited, predecessor, touched, options)
-    for (const idx of touched) {
-      visited[idx] = 0
-      predecessor[idx] = -1
+    scratch.touched.length = 0
+    const breach = findBreachPath(working ?? elevation, size, sinkIdx, scratch, options, receiver)
+    for (const idx of scratch.touched) {
+      scratch.visited[idx] = 0
+      scratch.predecessor[idx] = -1
+      scratch.cost[idx] = Infinity
     }
     if (!breach) continue
 
@@ -457,7 +666,14 @@ export function computeHydrologyRegion(
   const raw = resolveFlowDirections(elevation, size, cellStep, originX, originZ, sampleParams)
   const rawAccumulation = computeAccumulation(elevation, raw.flowDir, raw.flags, size)
 
-  const conditioned = resolveMeaningfulDrySinks(elevation, raw.flags, rawAccumulation, size, repairOptions)
+  const conditioned = resolveMeaningfulDrySinks(
+    elevation,
+    raw.flowDir,
+    raw.flags,
+    rawAccumulation,
+    size,
+    repairOptions,
+  )
   if (!conditioned) {
     return { size, cellStep, originX, originZ, elevation, flowDir: raw.flowDir, accumulation: rawAccumulation, flags: raw.flags }
   }

@@ -4,6 +4,7 @@ import * as chunkHeightmap from './chunkHeightmap'
 import {
   canonicalWaterHeight,
   computeRiverTile,
+  computeRiverTileDiagnostics,
   depthFromAccumulation,
   exposedBankFromFlow,
   nearestRiverBankDistance,
@@ -355,6 +356,114 @@ describe('river terminal receiver correctness (world-terrain-006)', () => {
         chain.points.some((p) => Math.hypot(p.x - centerX, p.z - centerZ) < RIVER_CELL_STEP),
       )
       expect(reachesCenter).toBe(true)
+    } finally {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
+  })
+})
+
+describe('river terminal continuity across tile ownership (world-terrain-013)', () => {
+  const waterLevel = 0.45
+  const oceanFloor = waterLevel - 1
+  /** Land ramp descending eastwards into a flat sea whose shoreline sits a
+   *  handful of cells inside tile {0,0}'s core: the drainage arrives already
+   *  classified from the tile to the west, so the fragment this tile owns is
+   *  a short continuation — the exact shape that used to be discarded by the
+   *  isolated-source cutoff and read in play as a river drying out just short
+   *  of the sea. */
+  const coastX = 32
+  const coastalRamp = (wx: number): number => Math.max(oceanFloor, oceanFloor + (coastX - wx) * 0.2)
+
+  function mockCoast(): () => void {
+    const floorAtSpy = vi.spyOn(chunkHeightmap, 'sampleFloorAt').mockImplementation((wx: number) => coastalRamp(wx))
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number) => Math.max(coastalRamp(wx), waterLevel))
+    return () => {
+      floorAtSpy.mockRestore()
+      heightAtSpy.mockRestore()
+    }
+  }
+
+  it('keeps a short downstream continuation that reaches the sea just inside the core', () => {
+    const restore = mockCoast()
+    try {
+      const params = rawParams(3, { waterLevel })
+      const { chains, diagnostics } = computeRiverTileDiagnostics({ tx: 0, tz: 0 }, params)
+
+      expect(chains.length).toBeGreaterThan(0)
+      for (const chain of chains) {
+        const last = chain.points[chain.points.length - 1]!
+        expect(last.x).toBeCloseTo(coastX, 5)
+        expect(last.elevation).toBeLessThanOrEqual(waterLevel)
+      }
+
+      // Every candidate here is a continuation ending on real water, and each
+      // is shorter than the isolated-source cutoff — the point of the fix.
+      expect(diagnostics.length).toBe(chains.length)
+      for (const d of diagnostics) {
+        expect(d.continuation).toBe(true)
+        expect(d.terminal).toBe('water-receiver')
+        expect(d.rejected).toBeNull()
+        expect(d.cellCount).toBeLessThan(8)
+        expect(d.downstream.outcome).toBe('water-receiver')
+      }
+    } finally {
+      restore()
+    }
+  })
+
+  it('keeps the upstream tile as the sole owner of its own core geometry', () => {
+    const restore = mockCoast()
+    try {
+      const params = rawParams(3, { waterLevel })
+      const upstream = { tx: -1, tz: 0 }
+      const coastal = { tx: 0, tz: 0 }
+      const upstreamChains = computeRiverTile(upstream, params)
+      const coastalChains = computeRiverTile(coastal, params)
+
+      expect(upstreamChains.length).toBeGreaterThan(0)
+      expect(chainsWithinCore(upstreamChains, riverTileCoreRect(upstream))).toBe(true)
+      expect(chainsWithinCore(coastalChains, riverTileCoreRect(coastal))).toBe(true)
+      // Same tile, same result regardless of which neighbour was computed first.
+      expect(computeRiverTile(coastal, params)).toEqual(coastalChains)
+    } finally {
+      restore()
+    }
+  })
+
+  it('still filters an isolated short blip that never continues existing drainage', () => {
+    const params = rawParams(3, { waterLevel })
+    const tile = { tx: 0, tz: 0 }
+    const rect = riverTileCoreRect(tile)
+    const centerX = (rect.minX + rect.maxX) / 2
+    const centerZ = (rect.minZ + rect.maxZ) / 2
+
+    // A dry plateau with one small cone draining to a tiny pond: accumulation
+    // only crosses the stream threshold in the last cell or two, so the chain
+    // is a genuine threshold-noise blip with no classified inflow at its head.
+    const plateau = waterLevel + 6
+    const pondBottom = waterLevel - 0.5
+    const coneRadius = 40
+    const floorAt = (wx: number, wz: number): number => {
+      const d = Math.hypot(wx - centerX, wz - centerZ)
+      if (d >= coneRadius) return plateau
+      return pondBottom + (d / coneRadius) * (plateau - pondBottom)
+    }
+    const floorAtSpy = vi.spyOn(chunkHeightmap, 'sampleFloorAt').mockImplementation(floorAt)
+    const heightAtSpy = vi
+      .spyOn(chunkHeightmap, 'sampleHeightAt')
+      .mockImplementation((wx: number, wz: number) => Math.max(floorAt(wx, wz), waterLevel))
+
+    try {
+      const { chains, diagnostics } = computeRiverTileDiagnostics(tile, params)
+      expect(chains).toHaveLength(0)
+      expect(diagnostics.length).toBeGreaterThan(0)
+      for (const d of diagnostics) {
+        expect(d.continuation).toBe(false)
+        expect(d.rejected).toBe('too-short')
+      }
     } finally {
       floorAtSpy.mockRestore()
       heightAtSpy.mockRestore()

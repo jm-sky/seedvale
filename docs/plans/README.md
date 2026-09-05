@@ -73,7 +73,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-012-macro-meadow-variation.md`                            | -       | 🟡 | S      | -      |
 | ◼️ `world-016-ambient-soundscape-events-and-lake-frogs.md`                  | -       | 🟡 | M      | ~~world-006~~, ~~ui-input-006~~ |
 | ◼️ `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md`   | -       | 🟡 | L      | fauna-015 |
-| 💡 `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md`  | -       | 🔴 | M      | world-terrain-011 |
 | 💡 `world-terrain-014-weather-driven-cloud-variety-and-ground-fog.md`       | -       | 🟡 | M      | ~~world-terrain-001~~ |
 
 ---
@@ -104,6 +103,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `fauna-012-animal-threat-perception-and-vocalization-responses.md` | Wycie wilka i alert bark psa realnie zwiększają flee u pobliskiego prey/livestock poza spatial `fleeRange` (bez paniki na odległe/nieaktualne zdarzenia); kilka psów nie tworzy kaskady szczekania; brak zauważalnego regresu frame time przy większej liczbie zwierząt |
 | `world-013-world-location-catalog-performance-optimization.md` | Zakup Near/Far Map u handlarza i rozmowa ze strażnikiem nie powodują widocznego freeze; feedback pokazuje prawidłową liczbę nowych miejsc |
 | `ui-input-008-river-debug-location-quality.md` | `teleportTo.riverNearest()`/`nextRiver()` prowadzą do czytelnego odcinka rzeki na lądzie (nie do jeziora/morza/ujścia); kolejne `nextRiver()` dają różne rzeki w stabilnej kolejności |
+| `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md` | Seed `3`: rzeka wcześniej urywająca się ~50–100 m przed morzem dochodzi teraz do odbiornika (albo okazuje się realnie zamkniętą nieckę); na kilku seedach sprawdź ujścia przy szwach tile'i, drenaż górski i śródlądowy, małe strumienie vs duże rzeki oraz spójność koryta/wody po naprawie (bez sztucznych kanałów do morza) |
 | `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | Śródlądowe rzeki na kilku seedach (równiny, doliny, drenaż górski, szwy tile'i, małe strumienie vs duże rzeki) nie kończą się na suchym lądzie; naprawione ujścia wyglądają wiarygodnie (bez sztucznych kanionów), wyrównanie koryta/wody po naprawie |
 
 ---
