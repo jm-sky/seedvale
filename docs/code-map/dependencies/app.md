@@ -90,6 +90,7 @@ Generated from TypeScript imports.
 - `items/trapItemInstances.ts`
 - `player/PlayerSkills.ts`
 - `shared/HealthState.ts`
+- `ui-vue/mount.ts`
 - `world/animalTraps.ts`
 - `world/beehives.ts`
 - `world/createPlacedTraps.ts`

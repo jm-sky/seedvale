@@ -4,58 +4,60 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `ANIMAL_DEFS` — const — line 933
-- `ANIMAL_LABELS` — const — line 734
-- `AnimalAgent` — class — line 1304
+- `ANIMAL_DEFS` — const — line 995
+- `ANIMAL_LABELS` — const — line 744
+- `AnimalAgent` — class — line 1374
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 401
-- `AnimalDef` — type — line 752
-- `AnimalDietConfig` — type — line 819
-- `AnimalKind` — type — line 717
-- `AnimalLifeStage` — type — line 714
-- `AnimalRole` — type — line 706
-- `AnimalSaveState` — type — line 487
-- `AnimalSociability` — type — line 710
-- `BURY_DURATION_SEC` — const — line 223
-- `canHarvestMeatFrom` — function — line 207
-- `canPredatorPursueIntoVillage` — function — line 688
-- `carcassCandidateScore` — function — line 647
-- `carcassFoodValue` — function — line 629
-- `corpseLingerSeconds` — function — line 151
-- `CorpsePhase` — type — line 159
-- `corpsePhaseFromElapsed` — function — line 188
-- `FAUNA_SHADOW_DISTANCE` — const — line 120
-- `FaunaAiBranch` — type — line 380
-- `FaunaNavRescueDebugInfo` — type — line 385
-- `forageEdgeScore` — function — line 577
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 283
-- `FrenzyWolfCandidate` — type — line 1220
-- `HARVEST_MEAT_DURATION_SEC` — const — line 226
-- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 149
-- `isCarcassEdible` — function — line 603
-- `isRabiesCorpseContact` — function — line 1262
-- `isWithinVillageRadius` — function — line 669
-- `LivestockProductionConfig` — type — line 863
-- `LivestockProductKind` — type — line 850
-- `MountPointConfig` — type — line 841
-- `NearbyNpcCandidate` — type — line 1215
-- `nearestShoreProbePoint` — function — line 561
-- `pickNearestEligibleWolf` — function — line 1229
-- `pickRabidTarget` — function — line 1276
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 138
-- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 177
-- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 180
-- `rollsRabiesInfection` — function — line 1253
-- `rotFxRelevant` — function — line 197
-- `ScavengingConfig` — type — line 828
-- `selectDietFeedKind` — function — line 588
-- `shoreProbeHits` — function — line 541
-- `villageFleeBiasFalloff` — function — line 696
-- `VillageInfo` — type — line 663
+- `AnimalAgentDebugInfo` — type — line 407
+- `AnimalDef` — type — line 762
+- `AnimalDietConfig` — type — line 831
+- `AnimalKind` — type — line 727
+- `AnimalLifeStage` — type — line 724
+- `AnimalRole` — type — line 716
+- `AnimalSaveState` — type — line 497
+- `AnimalSociability` — type — line 720
+- `BURY_DURATION_SEC` — const — line 224
+- `canHarvestMeatFrom` — function — line 208
+- `canPredatorPursueIntoVillage` — function — line 698
+- `carcassCandidateScore` — function — line 657
+- `carcassFoodValue` — function — line 639
+- `corpseLingerSeconds` — function — line 152
+- `CorpsePhase` — type — line 160
+- `corpsePhaseFromElapsed` — function — line 189
+- `dietAcceptsItem` — function — line 917
+- `FAUNA_SHADOW_DISTANCE` — const — line 121
+- `FaunaAiBranch` — type — line 386
+- `FaunaNavRescueDebugInfo` — type — line 391
+- `forageEdgeScore` — function — line 587
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 284
+- `FrenzyWolfCandidate` — type — line 1290
+- `HARVEST_MEAT_DURATION_SEC` — const — line 227
+- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 150
+- `isCarcassEdible` — function — line 613
+- `isRabiesCorpseContact` — function — line 1332
+- `isWithinVillageRadius` — function — line 679
+- `LivestockProductionConfig` — type — line 875
+- `LivestockProductKind` — type — line 862
+- `MountPointConfig` — type — line 853
+- `NearbyNpcCandidate` — type — line 1285
+- `nearestShoreProbePoint` — function — line 571
+- `pickNearestEligibleWolf` — function — line 1299
+- `pickRabidTarget` — function — line 1346
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 139
+- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 178
+- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 181
+- `resolveLureTarget` — function — line 932
+- `rollsRabiesInfection` — function — line 1323
+- `rotFxRelevant` — function — line 198
+- `ScavengingConfig` — type — line 840
+- `selectDietFeedKind` — function — line 598
+- `shoreProbeHits` — function — line 551
+- `villageFleeBiasFalloff` — function — line 706
+- `VillageInfo` — type — line 673
 
 ## `fauna/animalDebugVisual.ts`
 
@@ -127,18 +129,18 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/createFauna.ts`
 
-- `createFauna` — function — line 378
-- `Fauna` — type — line 56
-- `FAUNA_URLS` — const — line 302
-- `measureSlope` — function — line 214
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 278
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 286
-- `SPAWNER_LABELS` — const — line 270
-- `SPAWNER_RING_OFFSET` — const — line 168
-- `SPAWNER_SPECS` — const — line 248
-- `spawnerDestroyBusyLabel` — function — line 297
-- `spawnerDestroyPromptLabel` — function — line 293
-- `spawnerId` — function — line 266
+- `createFauna` — function — line 385
+- `Fauna` — type — line 57
+- `FAUNA_URLS` — const — line 309
+- `measureSlope` — function — line 221
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 285
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 293
+- `SPAWNER_LABELS` — const — line 277
+- `SPAWNER_RING_OFFSET` — const — line 175
+- `SPAWNER_SPECS` — const — line 255
+- `spawnerDestroyBusyLabel` — function — line 304
+- `spawnerDestroyPromptLabel` — function — line 300
+- `spawnerId` — function — line 273
 
 ## `fauna/dogGuard.ts`
 

@@ -27,9 +27,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/gatheringActions.ts`
 
-- `createGatheringActions` — function — line 58
-- `GatheringActionDeps` — type — line 51
-- `GatheringActions` — type — line 34
+- `createGatheringActions` — function — line 67
+- `GatheringActionDeps` — type — line 56
+- `GatheringActions` — type — line 35
 
 ## `app/actions/groundActions.ts`
 
@@ -131,12 +131,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 511
+- `createGameLoop` — function — line 513
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 479
+- `GameLoop` — type — line 481
 - `GameLoopDeps` — type — line 260
 
 ## `app/graphicsSettings.ts`

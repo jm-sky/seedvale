@@ -33,6 +33,7 @@ Generated from TypeScript imports.
 - `simulation/index.ts`
 - `terrain/slopeConstraint.ts`
 - `ui/agentStatusLabel.ts`
+- `world/animalTraps.ts`
 - `world/bloodTraces.ts`
 - `world/collision.ts`
 - `world/createGrassForagePatches.ts`
@@ -72,6 +73,7 @@ Generated from TypeScript imports.
 - `fauna/livestockProduction.test.ts`
 - `fauna/mountedSpeed.test.ts`
 - `fauna/rabies.test.ts`
+- `fauna/trapLure.test.ts`
 - `fauna/villageAvoidance.test.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
@@ -223,6 +225,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/coastPlacement.ts`
 - `ui/labelDistance.ts`
+- `world/animalTraps.ts`
 - `world/createGrassForagePatches.ts`
 - `world/dayNight.ts`
 - `world/parseSeed.ts`
@@ -473,6 +476,13 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/createFauna.ts`
+
+## `fauna/trapLure.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `world/animalTraps.ts`
 
 ## `fauna/villageAvoidance.test.ts`
 

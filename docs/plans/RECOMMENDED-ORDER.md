@@ -40,7 +40,9 @@ _No qualifying plans._
 
 ### Polish
 
-1. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+   🟡 `S` · ✅ ready · unlocks 0/0
+2. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -106,64 +108,64 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  36  
    → **unlocks:** 1/1
 
-9. `fauna-014` — **Animal traps — bait attraction and species coverage**  
+9. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `settlements-npcs-006` — **Wool to material**  
-  🟡 `M` · **Score:**  33  
-   → **unlocks:** 1/1
-
-11. `items-player-002` — **Food provenance, freshness and storage**  
+10. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-12. `items-player-014` — **Rope-pullable resource transport**  
+11. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `tools-005` — **Seedvale Character Preparation Panel**  
+13. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `npc-002` — **NPC Healing**  
+14. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-16. `npc-011` — **NPC Burial & Graves**  
+15. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-18. `fauna-012` — **Animal threat perception and vocalization responses**  
+17. `fauna-012` — **Animal threat perception and vocalization responses**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `fauna-013` — **Animal hand-feeding and human affinity**  
+18. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-007` — **Bandages and herbal medicine**  
+21. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `fauna-015` — **Animal water traversal, wading, swimming and drowning**  
+22. `fauna-015` — **Animal water traversal, wading, swimming and drowning**  
   🟡 `M` · **Score:**  19  
+   → **unlocks:** 0/0
+
+23. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+  🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
 24. `fauna-007` — **Animal leading and cart harness**  
@@ -190,9 +192,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
 ## Initially Blocked
 
-- [`fauna-007-animal-leading-and-cart-harness.md`](fauna-007-animal-leading-and-cart-harness.md)  
-  is blocked by:
-  - [`fauna-014-animal-traps-bait-attraction-and-species-coverage.md`](fauna-014-animal-traps-bait-attraction-and-species-coverage.md)
 - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)  
   is blocked by:
   - [`npc-010-death-and-corpse-lifecycle.md`](npc-010-death-and-corpse-lifecycle.md)
@@ -341,6 +340,7 @@ graph TD
   ui_input_006["ui-input-006 — Fishing UX and Water Support"]
   ui_input_007["ui-input-007 — Player Action Contracts & Quick Actions Availability"]
   ui_input_008["ui-input-008 — River debug location quality"]
+  ui_input_009["ui-input-009 — Merchant item ownership and semantic item labels"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]

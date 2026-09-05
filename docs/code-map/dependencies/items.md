@@ -535,6 +535,7 @@ Generated from TypeScript imports.
 - `items/weaponMaintenance.ts`
 - `persistence/saveData.ts`
 - `world/createPlacedContainers.ts`
+- `world/createPlacedTraps.test.ts`
 - `world/createPlacedTraps.ts`
 
 ## `items/itemModels.ts`

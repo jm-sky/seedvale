@@ -44,6 +44,9 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/createFauna.ts`
+- `fauna/trapLure.test.ts`
 - `interaction/Interactable.ts`
 - `items/trapItemInstances.ts`
 - `persistence/saveData.ts`
@@ -495,6 +498,13 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `world/helperDeliveryHooks.ts`
 
+## `world/createPlacedTraps.test.ts`
+
+**Imports**
+
+- `items/itemInstances.ts`
+- `world/createPlacedTraps.ts`
+
 ## `world/createPlacedTraps.ts`
 
 **Imports**
@@ -513,6 +523,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `world/createPlacedTraps.test.ts`
 
 ## `world/createPlayerGardens.test.ts`
 
