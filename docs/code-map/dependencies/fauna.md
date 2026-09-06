@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `simulation/index.ts`
 - `terrain/slopeConstraint.ts`
+- `terrain/waterBodyKind.ts`
 - `terrain/waterSample.ts`
 - `ui/agentStatusLabel.ts`
 - `world/animalTraps.ts`

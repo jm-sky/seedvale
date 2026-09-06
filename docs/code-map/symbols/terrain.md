@@ -124,24 +124,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyModificationToTile` — function — line 707
-- `ChunkManager` — type — line 449
+- `applyChunkWaterDayNight` — function — line 853
+- `applyModificationToTile` — function — line 710
+- `ChunkManager` — type — line 452
 - `ChunkManagerConfig` — type — line 300
-- `createChunkManager` — function — line 846
+- `createChunkManager` — function — line 878
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 835
-- `drainByBudget` — function — line 825
-- `FinalizeStage` — type — line 389
-- `pickNearestQueuedKey` — function — line 785
-- `pickNextFinalizeKey` — function — line 803
+- `CropHarvestOutcome` — type — line 867
+- `drainByBudget` — function — line 828
+- `FinalizeStage` — type — line 392
+- `pickNearestQueuedKey` — function — line 788
+- `pickNextFinalizeKey` — function — line 806
 - `resolveUnloadedLandmark` — function — line 258
   - domain: world-terrain
 - `ringChunkOffsets` — function — line 218
-- `TerrainModification` — type — line 664
+- `TerrainModification` — type — line 667
+- `tickChunkWaterSurfaces` — function — line 841
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -247,19 +249,22 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/grass.ts`
 
-- `createGrassSystem` — function — line 433
+- `createGrassSystem` — function — line 435
 - `GrassSystem` — type — line 44
 - `WorldGrassChunk` — type — line 13
 
 ## `terrain/grassPlacement.ts`
 
-- `computeChunkGrass` — function — line 280
+- `computeChunkGrass` — function — line 323
 - `GRASS_SPECIES_ORDER` — const — line 22
-- `GrassBucketData` — type — line 52
-- `GrassChunkData` — type — line 61
+- `GrassBucketData` — type — line 58
+- `GrassChunkData` — type — line 67
 - `GrassComputeParams` — type — line 34
 - `GrassSpeciesId` — type — line 18
 - `GrassTileGrids` — type — line 26
+- `macroMeadowNoiseFor` — function — line 300
+- `macroMeadowWeightAt` — function — line 316
+  - domain: world-terrain
 
 ## `terrain/hydrology.ts`
 
@@ -409,6 +414,14 @@ Generated from exported TypeScript symbols.
 - `oceanMixAt` — function — line 94
 - `WaterBody` — type — line 3
 - `WaterBodyDetection` — type — line 9
+
+## `terrain/waterBodyKind.ts`
+
+- `lakeProximityAt` — function — line 136
+- `LakeProximitySamplers` — type — line 83
+- `nearestShoreProbePoint` — function — line 49
+- `resolveWaterBodyKind` — function — line 71
+- `shoreProbeHits` — function — line 32
 
 ## `terrain/waterSample.ts`
 

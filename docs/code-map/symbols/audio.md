@@ -32,11 +32,21 @@ Generated from exported TypeScript symbols.
 - `playCombatHit` — function — line 118
 - `playNpcCombatDeath` — function — line 125
 
+## `audio/ambientEvents.ts`
+
+- `AmbientEventContext` — type — line 17
+  - domain: world
+  - system: ambient-audio
+  - role: Shared runtime for sporadic ambient one-shots (owl hoot; future distant wolf howl, single bird calls, etc. — plan world-016). A definition is data plus a pure eligibility predicate; this module owns cooldown/recheck/chance/variant-selection/placement/playback so adding another event needs a definition, not a new dedicated timer in `createAmbientAudio.ts`.
+- `AmbientEventDefinition` — type — line 27
+- `AmbientEventRuntime` — type — line 44
+- `createAmbientEventRuntime` — function — line 54
+
 ## `audio/ambientWeights.ts`
 
-- `AmbientSamplers` — type — line 9
+- `AmbientSamplers` — type — line 11
 - `AmbientWeights` — type — line 5
-- `ambientWeightsAt` — function — line 32
+- `ambientWeightsAt` — function — line 35
 
 ## `audio/animalSounds.ts`
 
@@ -64,11 +74,11 @@ Generated from exported TypeScript symbols.
 
 ## `audio/createAmbientAudio.ts`
 
-- `AmbientAudio` — type — line 124
-- `createAmbientAudio` — function — line 143
-- `cricketsTimeFactor` — function — line 60
-- `weatherAmbientFactor` — function — line 85
-- `WeatherAmbientFactor` — type — line 76
+- `AmbientAudio` — type — line 138
+- `createAmbientAudio` — function — line 158
+- `cricketsTimeFactor` — function — line 50
+- `weatherAmbientFactor` — function — line 76
+- `WeatherAmbientFactor` — type — line 67
 
 ## `audio/createWorldAudio.ts`
 
@@ -108,12 +118,20 @@ Generated from exported TypeScript symbols.
 - `playActionFireExtinguish` — function — line 18
 - `playActionFireIgnite` — function — line 14
 
+## `audio/frogAmbience.ts`
+
+- `frogsTimeFactor` — function — line 22
+
 ## `audio/inventorySounds.ts`
 
 - `INVENTORY_DROP_SOUND_URL` — const — line 10
 - `INVENTORY_PICK_UP_SOUND_URLS` — const — line 3
 - `playInventoryDrop` — function — line 23
 - `playInventoryPickUp` — function — line 17
+
+## `audio/nightPhase.ts`
+
+- `nightPhase` — function — line 19
 
 ## `audio/playerMoveSounds.ts`
 

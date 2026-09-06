@@ -112,83 +112,75 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-10. `world-016` — **Ambient Soundscape Events and Lake Frogs**  
-  🟡 `M` · **Score:**  31  
-   → **unlocks:** 0/0
-
-11. `items-player-002` — **Food provenance, freshness and storage**  
+10. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-12. `items-player-014` — **Rope-pullable resource transport**  
+11. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+12. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-14. `tools-005` — **Seedvale Character Preparation Panel**  
+13. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `npc-002` — **NPC Healing**  
+14. `npc-002` — **NPC Healing**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-16. `npc-011` — **NPC Burial & Graves**  
+15. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-17. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+16. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-18. `fauna-013` — **Animal hand-feeding and human affinity**  
+17. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+18. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-20. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+19. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `settlements-npcs-007` — **Bandages and herbal medicine**  
+20. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `ui-input-009` — **Merchant item ownership and semantic item labels**  
+21. `ui-input-009` — **Merchant item ownership and semantic item labels**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-23. `world-terrain-012` — **Macro meadow variation**  
-  🟡 `S` · **Score:**  19  
-   → **unlocks:** 0/0
-
-24. `fauna-007` — **Animal leading and cart harness**  
+22. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-25. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
+23. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-26. `tools-000` — **Weapon Browser — Observatory/Admin**  
+24. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-27. `world-terrain-008` — **Underground Caves V2**  
+25. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-28. `npc-004` — **Drzewo genealogiczne NPC**  
+26. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-29. `tools-006` — **tools-006--world-observatory.md**  
+27. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

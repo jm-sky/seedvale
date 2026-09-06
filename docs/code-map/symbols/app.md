@@ -147,19 +147,18 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 905
-- `buildDigTarget` — function — line 852
-- `buildInteractables` — function — line 333
-- `collectItem` — function — line 952
-- `COMBAT_TARGET_CONE_DOT` — const — line 78
-- `COMBAT_TARGET_RANGE` — const — line 63
-- `CombatAimMode` — type — line 68
-- `DIG_REACH` — const — line 57
-- `GAZE_RANGE` — const — line 53
-- `INTERACT_MIN_DOT` — const — line 50
-- `INTERACT_RANGE` — const — line 47
-- `resolveHaySpot` — function — line 246
-- `resolveWaterBodyKind` — function — line 280
+- `buildCombatTarget` — function — line 883
+- `buildDigTarget` — function — line 830
+- `buildInteractables` — function — line 311
+- `collectItem` — function — line 930
+- `COMBAT_TARGET_CONE_DOT` — const — line 79
+- `COMBAT_TARGET_RANGE` — const — line 64
+- `CombatAimMode` — type — line 69
+- `DIG_REACH` — const — line 58
+- `GAZE_RANGE` — const — line 54
+- `INTERACT_MIN_DOT` — const — line 51
+- `INTERACT_RANGE` — const — line 48
+- `resolveHaySpot` — function — line 247
 
 ## `app/inventoryWiring.ts`
 

@@ -836,6 +836,28 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.test.ts`
 - `terrain/terrainClassification.ts`
 - `terrain/waterBodies.test.ts`
+- `terrain/waterBodyKind.ts`
+
+## `terrain/waterBodyKind.test.ts`
+
+**Imports**
+
+- `terrain/waterBodyKind.ts`
+
+## `terrain/waterBodyKind.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `terrain/waterBodies.ts`
+- `world/WaterSource.ts`
+
+**Imported by**
+
+- `app/interactables.ts`
+- `audio/createAmbientAudio.ts`
+- `fauna/AnimalAgent.ts`
+- `terrain/waterBodyKind.test.ts`
 
 ## `terrain/waterSample.test.ts`
 

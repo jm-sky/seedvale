@@ -68,6 +68,7 @@ Generated from TypeScript imports.
 - `terrain/dig.ts`
 - `terrain/naturalResources.ts`
 - `terrain/slopeConstraint.ts`
+- `terrain/waterBodyKind.ts`
 - `world/bloodTraces.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`

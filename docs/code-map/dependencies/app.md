@@ -668,6 +668,7 @@ Generated from TypeScript imports.
 - `terrain/dig.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/waterBodies.ts`
+- `terrain/waterBodyKind.ts`
 - `world/WaterSource.ts`
 - `world/animalTraps.ts`
 - `world/beehives.ts`

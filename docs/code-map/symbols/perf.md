@@ -112,23 +112,23 @@ Generated from exported TypeScript symbols.
 
 ## `perf/types.ts`
 
-- `BudgetKind` — type — line 147
+- `BudgetKind` — type — line 152
 - `HitchEvent` — type — line 55
-- `HitchReportRow` — type — line 97
-- `IsolationProbeRow` — type — line 105
+- `HitchReportRow` — type — line 102
+- `IsolationProbeRow` — type — line 110
 - `PERF_CATEGORIES` — const — line 7
 - `PERF_CATEGORY_COUNT` — const — line 24
 - `PERF_CATEGORY_INDEX` — const — line 26
 - `PERF_SEVERITY_RANK` — const — line 43
-- `PerfAttribution` — type — line 177
+- `PerfAttribution` — type — line 182
 - `PerfCategory` — type — line 22
 - `PerfContext` — type — line 72
-- `PerfDetection` — type — line 155
+- `PerfDetection` — type — line 160
 - `PerfFilter` — type — line 50
-- `PerfLiveStats` — type — line 126
-- `PerfLogEvent` — type — line 164
-- `PerfReportJson` — type — line 183
+- `PerfLiveStats` — type — line 131
+- `PerfLogEvent` — type — line 169
+- `PerfReportJson` — type — line 188
 - `PerfSeverity` — type — line 41
-- `PerfSuspect` — type — line 149
+- `PerfSuspect` — type — line 154
 - `ScenarioAnchor` — type — line 62
 - `ScenarioRoute` — type — line 64

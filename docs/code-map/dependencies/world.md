@@ -18,6 +18,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
+- `terrain/waterBodyKind.ts`
 - `world/WaterSource.test.ts`
 - `world/playerWell.ts`
 

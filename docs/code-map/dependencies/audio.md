@@ -17,6 +17,23 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
 
+## `audio/ambientEvents.test.ts`
+
+**Imports**
+
+- `audio/ambientEvents.ts`
+
+## `audio/ambientEvents.ts`
+
+**Imports**
+
+- `audio/createWorldAudio.ts`
+
+**Imported by**
+
+- `audio/ambientEvents.test.ts`
+- `audio/createAmbientAudio.ts`
+
 ## `audio/ambientWeights.ts`
 
 **Imports**
@@ -72,8 +89,12 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `audio/ambientEvents.ts`
 - `audio/ambientWeights.ts`
 - `audio/createWorldAudio.ts`
+- `audio/frogAmbience.ts`
+- `audio/nightPhase.ts`
+- `terrain/waterBodyKind.ts`
 - `world/weather.ts`
 
 **Imported by**
@@ -97,6 +118,7 @@ Generated from TypeScript imports.
 - `app/inventoryWiring.ts`
 - `app/worldBundle.ts`
 - `audio/actionSounds.ts`
+- `audio/ambientEvents.ts`
 - `audio/animalSounds.ts`
 - `audio/createAmbientAudio.ts`
 - `audio/distanceGain.test.ts`
@@ -147,6 +169,23 @@ Generated from TypeScript imports.
 - `settlement/PlacedFires.ts`
 - `settlement/createSettlement.ts`
 
+## `audio/frogAmbience.test.ts`
+
+**Imports**
+
+- `audio/frogAmbience.ts`
+
+## `audio/frogAmbience.ts`
+
+**Imports**
+
+- `audio/nightPhase.ts`
+
+**Imported by**
+
+- `audio/createAmbientAudio.ts`
+- `audio/frogAmbience.test.ts`
+
 ## `audio/inventorySounds.ts`
 
 **Imported by**
@@ -157,6 +196,13 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
 - `terrain/digAction.ts`
+
+## `audio/nightPhase.ts`
+
+**Imported by**
+
+- `audio/createAmbientAudio.ts`
+- `audio/frogAmbience.ts`
 
 ## `audio/playerMoveSounds.test.ts`
 
