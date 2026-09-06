@@ -75,6 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 | ◼️ `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
 | ◼️ `quests-progression-002-quest-outcomes-rewards-and-consequences.md`      | -       | 🔴 | M      | quests-progression-001 |
+| ◼️ `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
 
 ---
 
@@ -169,7 +170,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `017`
-- items-player: `018`
+- items-player: `019`
 - npc: `020`
 - persistence: `005`
 - quests-progression: `003`
