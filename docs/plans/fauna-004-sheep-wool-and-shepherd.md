@@ -1,546 +1,386 @@
-
 # Plan: Sheep wool cycle and shepherd
 
 **Created:** 2026-08-29  
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** medium · **Effort:** L  
-**Depends on:** none  
+**Depends on:** npc-006, fauna-012, fauna-016, settlements-npcs-014  
 **Domain:** `fauna`  
-**Tags:** `settlements-npcs` `items-player`
+**Subdomains:** `domestication`  
+**Tags:** `settlements-npcs` `items-player` `work` `economy`  
 **Roadmap:** `textiles-and-herbal-medicine`
 
-## 1. Cel
+## Cel
 
-Etap 1 roadmapy tekstyliów: rzeczywista produkcja wełny przez istniejące owce oraz szeroka profesja **Pasterz**.
+Pierwszy etap tekstyliów: rzeczywista produkcja wełny przez istniejące owce oraz pasterz jako normalny uczestnik NPC work simulation.
 
 Zakres:
-- kalendarz 48 dni/rok i 12 dni/sezon,
+
+- wspólny kalendarz 48 dni/rok i 12 dni/sezon,
 - 24-dniowy cykl wzrostu wełny,
-- 2 strzyżenia/rok,
-- 4 jednostki wełny na strzyżenie,
-- item wool,
-- narzędzie/capability do strzyżenia,
-- akcja NPC strzyżenia,
-- podstawowy wypas i pilnowanie stada,
-- reakcja pasterza na zagrożenie stada,
-- dostarczenie wełny do istniejącego Household/Economy flow.
+- 4 wool na strzyżenie, czyli nominalnie 2 strzyżenia / 8 wool na rok,
+- normalny item `wool` i narzędzie z capability `shearing`,
+- shepherd jako `Role` korzystający z istniejącego schedule/work arbitration,
+- fizyczne strzyżenie własnych owiec,
+- opieka nad stadem oparta o aktualne fauna roaming/threat/navigation mechanisms,
+- dostarczenie wełny do istniejącego household goods flow.
 
-Poza zakresem: przędza, tkanina, len, bandaż, opatrunek, zioła i glina.
+Nie tworzyć osobnych systemów dla wełny, pasterza, pastwisk, pathfindingu ani ochrony stada.
 
-## 2. Stan obecny i punkty integracji
+## Aktualny fundament architektoniczny
 
-### AnimalAgent
+Plan powstał przed kilkoma późniejszymi zmianami. Implementacja ma traktować **aktualny kod** jako źródło prawdy i korzystać z nowych fundamentów zamiast realizować starsze uproszczenia planu.
 
-Istnieje AnimalAgent z:
-- AnimalKind sheep,
-- livestock ownership przez ownerHouseId,
-- Household,
-- needs, stamina, movement i herd cohesion,
-- threat/flee/combat,
-- livestock production anchor.
+### Fauna
 
-Nie tworzyć nowej klasy zwierzęcia.
+Owca jest normalnym `AnimalAgent` z istniejącym:
 
-### livestockProduction
+- `ownerHouseId` / household ownership,
+- livestock production,
+- species configuration,
+- herd/local movement,
+- threat/flee/combat arbitration,
+- shared navigation/pathfinding,
+- habitat/roaming/trip behaviour.
 
-src/fauna/livestockProduction.ts posiada generyczny model produkcji oparty o absolutne elapsedDays.
-
-Jest używany przez egg oraz milk.
-
-Wool ma rozszerzyć ten sam mechanizm. Nie tworzyć osobnego wool timer.
-
-### livestock spawning
-
-src/settlement/livestock.ts już losuje sheep, tworzy AnimalAgent i przypisuje ownerHouseId oraz Household.
-
-Nie tworzyć nowego spawnera.
+`fauna-012` rozwinęła semantic threat perception, a `fauna-016` species-specific roaming i celowe trips. Shepherd nie może omijać tych mechanizmów przez ręczne przesuwanie owiec lub równoległy herding FSM.
 
 ### NPC work
 
-NpcAgent ma role, schedules, work activity, PlannedAction, profession-specific dispatch, Household i carried inventory.
+`NpcAgent` ma normalny schedule, decision/arbitration, `PlannedAction`, movement/navigation, profession work i carried inventory. Work Contracts są osobnym, authoritative mechanizmem dla jawnych zobowiązań pracownik–pracodawca.
 
-Shepherd ma wejść w ten sam pipeline.
+Codzienna opieka pasterza nad własnym household livestock **nie jest WorkContract**. Shepherd pozostaje zwykłą profesją/schedule work. Nie tworzyć automatycznych kontraktów na strzyżenie własnych owiec.
 
-## 3. Kalendarz
+### Economy / goods
 
-Obecny weather.ts ma DAYS_PER_SEASON = 7.
+Aktualny obieg dóbr rozróżnia realne `Household.items`, carried inventory, settlement storage i kwalifikujące się local circulating goods. `settlements-npcs-014` nie oznacza, że każdy item automatycznie trafia do `SettlementEconomy`.
 
-Zmienić wspólny kalendarz na:
+W tym planie authoritative destination dla świeżo wyprodukowanej wełny to przede wszystkim:
 
-~~~
-1 rok       = 48 dni
-1 miesiąc   = 4 dni
-1 sezon     = 12 dni
-4 sezony    = 48 dni
-~~~
-
-~~~
-Wiosna = dni 0–11
-Lato   = dni 12–23
-Jesień = dni 24–35
-Zima   = dni 36–47
-~~~
-
-Przed zmianą sprawdzić wszystkie użycia DAYS_PER_SEASON/getSeason/getSeasonProgress oraz wpływ zmiany na weather/climate i systemy sezonowe.
-
-Nie tworzyć kalendarza tylko dla owiec.
-
-## 4. Wool cycle
-
-Minimalny model:
-
-~~~
+```text
 sheep
-  ↓
-wool growth
-  ↓
-ready for shearing
-  ↓
-shearing
-  ↓
-4 wool
-  ↓
-growth reset
-  ↺
-~~~
+→ shepherd carried inventory
+→ owner Household.items
+```
+
+Jeżeli aktualna klasyfikacja local circulating goods pozwala bezpiecznie włączyć `wool` jako surowiec produkcyjny, zrobić to przez ten wspólny mechanizm. Nie dodawać `EconomicKind.wool`, `WoolStorage`, specjalnego settlement stock ani teleportowanego transferu tylko po to, aby domknąć ten plan.
+
+## 1. Kalendarz
+
+Aktualny świat nadal używa krótszego sezonu. Zmiana jest globalna, nie sheep-local.
+
+Docelowo:
+
+```text
+1 rok     = 48 dni
+1 sezon   = 12 dni
+4 sezony  = 48 dni
+```
+
+Przed zmianą prześledzić aktualne użycia `DAYS_PER_SEASON`, `getSeason()`, `getSeasonProgress()` oraz hard-coded założenia długości sezonu/roku w weather, climate, fauna i testach.
+
+Nie tworzyć osobnego kalendarza dla wool cycle. Zachować pure/absolute-world-time semantics i poprawność przy time skip.
+
+## 2. Wool cycle
+
+Rozszerzyć istniejący wzorzec `livestockProduction.ts`, ale zachować osobny anchor od milk/egg production.
+
+Minimalny stan owcy:
+
+```ts
+woolReadyAtDays: number | null
+```
 
 Parametry:
 
-~~~
-YEAR_DAYS = 48
-SHEARINGS_PER_YEAR = 2
+```text
 WOOL_GROWTH_DAYS = 24
-WOOL_YIELD_PER_SHEARING = 4
-~~~
+WOOL_YIELD = 4
+```
 
-Jedna owca:
-- 4 wool na strzyżenie,
-- 2 strzyżenia/rok,
-- 8 wool/rok.
+Semantyka:
 
-Założenie ekonomiczne:
-- 1 wool ≈ 1 kg surowej wełny.
+- pierwszy anchor jest deterministycznie staggerowany zgodnie z istniejącym livestock production pattern,
+- `nowDays >= woolReadyAtDays` oznacza gotowość,
+- gotowość nie wygasa,
+- po udanym strzyżeniu `woolReadyAtDays = nowDays + 24`,
+- brak per-frame decrement i catch-up replay,
+- milk production anchor pozostaje niezależny.
 
 Nie implementować wpływu rasy, wieku, zdrowia, żywienia ani sezonu.
 
-## 5. Stan owcy
+## 3. Wool i shears
 
-Dodać stan cyklu wełny oparty o absolutne elapsedDays.
+Dodać `wool` jako zwykły stackowalny `ItemKind`, bez durability i `ItemInstance`.
 
-Preferowany stan:
-- woolReadyAtDays: number | null.
+Dodać narzędzie do strzyżenia przez istniejący item catalog/capability model. Preferowana capability: `shearing`.
 
-Semantyka:
-- null = cykl jeszcze nie został zainicjalizowany,
-- woolReadyAtDays = moment, od którego owca może być ostrzyżona.
+NPC sprawdza capability, nie konkretny `ItemKind`. Shears muszą być rzeczywiście dostępne pasterzowi przez istniejący NPC loadout/provisioning seam; samo dodanie capability do katalogu nie wystarcza.
 
-Pierwszy cykl:
-~~~
-woolReadyAtDays = nowDays + 24
-~~~
+Nie tworzyć `ShearsSystem` ani specjalnego inventory.
 
-Gotowość:
-~~~
-nowDays >= woolReadyAtDays
-~~~
+## 4. Shepherd role i assignment
 
-Po osiągnięciu gotowości owca pozostaje gotowa aż do strzyżenia.
+Dodać `shepherd` do istniejącego `Role` i exhaustive role-owned konfiguracji, w tym schedule.
 
-Nie używać per-frame decrement.
+Shepherd assignment musi być **livestock-aware**. Nie dodawać `shepherd` bezwarunkowo do random role pool, bo tworzyłoby to pasterzy bez owiec oraz sheep households bez opiekuna.
 
-Jeżeli istniejący livestock production mechanizm stosuje staggerowanie, zachować ten wzorzec, aby wszystkie owce nie stały się gotowe jednocześnie.
+Preferować najmniejszy istniejący settlement/family role-assignment seam, który widzi household/livestock composition. Assignment powinien być deterministyczny.
 
-## 6. Strzyżenie
+Nie tworzyć nowego `Profession` ani drugiego staffing systemu. Jeżeli aktualny staffing code ma już właściwy hook, rozszerzyć go.
 
-Strzyżenie jest rzeczywistą akcją NPC.
+## 5. Shepherd work arbitration
 
-Flow:
+Shepherd work jest normalną pracą profesji i musi współistnieć z aktualną NPC arbitration:
 
-~~~
-Pasterz
-  ↓
-znajduje własną owcę
-  ↓
-sprawdza ready
-  ↓
-podchodzi
-  ↓
-shearing action
-  ↓
-re-validacja
-  ↓
-4 wool
-  ↓
-reset cycle
-~~~
+```text
+critical needs / threat / higher priority interruption
+→ normal NPC arbitration
+→ shepherd work opportunity
+```
 
-Na zakończeniu PlannedAction ponownie zweryfikować:
-- sheep nadal żyje,
-- sheep nadal jest gotowa,
-- NPC nadal ma wymagane narzędzie,
-- output może zostać przyjęty.
+W ramach shepherd work priorytet:
 
-Yield nie może zostać usunięty przy rozpoczęciu akcji.
+```text
+owned sheep under immediate relevant threat
+→ ready owned sheep / shearing
+→ deposit carried wool
+→ flock care / grazing presence
+→ generic work fallback
+```
 
-Po sukcesie:
-~~~
-woolReadyAtDays = nowDays + 24
-~~~
+Nie tworzyć permanentnego shepherd mode. Akcje mają być bounded, interruptible i wybierane na istniejących decision/action boundaries, nie co frame.
 
-## 7. Narzędzie
+Work Contracts nie przejmują tej rutyny. Jeżeli w przyszłości gracz zatrudni pasterza przez contract system, kontrakt powinien być osobnym źródłem zobowiązania korzystającym z tych samych działań, a nie drugim shepherd implementation; to pozostaje poza zakresem.
 
-Dodać narzędzie do strzyżenia owiec.
+## 6. Owned flock selection
 
-Wykorzystać istniejący ItemKind + ITEM_CATALOG + ItemCapability.
+Shepherd działa tylko na sheep należących do właściwego household.
 
-Preferowana capability: shearing.
+Wykorzystać istniejące ownership (`ownerHouseId` / household relation) i bounded settlement-local lookup. Nie skanować całej fauny świata.
 
-Nie stosować specjalnego warunku typu inventory.has('shears'), jeśli wymaganie można wyrazić przez capability.
+Wybór celu:
 
-Narzędzie musi być sprawdzane przez istniejący system capability/tool requirements.
+- deterministyczny,
+- stabilny przez czas akcji,
+- preferuje owcę wymagającą konkretnej pracy,
+- po przerwaniu ponownie przechodzi przez normalną arbitration.
 
-Nie tworzyć ShearsSystem.
-
-## 8. Item wool
-
-Dodać stackowalny item wool.
-
-Minimalna definicja:
-- normalny ItemKind,
-- normalna waga i rozmiar zgodne z istniejącym modelem itemów,
-- brak ItemInstance,
-- brak durability,
-- ilość jest zwykłym stack count.
-
-MVP nie zawiera itemu yarn.
-
-Docelowy model, zachowany wyłącznie jako referencja:
-~~~
-1 kg wool
-→ ~200 yarn units
-→ ~3 m² wool cloth
-~~~
-
-Nie implementować tego przeliczenia w tym planie.
-
-## 9. Pasterz — role i schedule
-
-Dodać shepherd do istniejącego Role.
-
-Dodać shepherd do istniejącego SCHEDULE_TEMPLATES.
-
-Początkowy rytm może być taki jak farmer:
-~~~
-06:00 wake
-07:00 work
-12:00 eat
-13:00 work
-18:00 home
-22:00 sleep
-~~~
-
-Nie tworzyć nowego scheduler-a.
-
-Nie tworzyć typu Profession.
-
-## 10. Pasterz — wybór stada
-
-Pasterz obsługuje wyłącznie sheep należące do jego gospodarstwa.
-
-Wykorzystać:
-- AnimalAgent.ownerHouseId,
-- Household.homeId,
-- istniejące livestock ownership.
-
-Nie skanować wszystkich owiec świata.
-
-Jeżeli gospodarstwo ma kilka owiec:
-- traktować je jako jedno stado gospodarstwa,
-- wybór celu powinien być deterministyczny,
-- preferować owcę wymagającą konkretnej pracy,
-- nie zmieniać celu co klatkę.
-
-## 11. Pasterz — wypas
-
-MVP nie tworzy osobnej encji Pasture.
-
-Podczas work pasterz powinien:
-1. znaleźć swoje stado,
-2. wybrać deterministyczny, bezpieczny punkt wypasu w pobliżu gospodarstwa,
-3. udać się do stada/punktu,
-4. pozostać przez określony czas przy stadzie,
-5. ponownie sprawdzić stan stada.
-
-Wykorzystać istniejący movement + PlannedAction.
-
-Punkt wypasu powinien być wyznaczany z istniejącego terrain/placement API. Nie dodawać globalnego systemu pastwisk.
-
-Jeżeli nie da się znaleźć poprawnego punktu, shepherd wykonuje bezpieczny fallback do istniejącego work/home behaviour.
-
-## 12. Pasterz — pilnowanie
-
-Podczas pracy sprawdzać, czy należące do niego sheep pozostają w rozsądnym zasięgu stada.
-
-Jeżeli owca jest zbyt daleko:
-~~~
-sheep too far
- ↓
-shepherd selects sheep
- ↓
-move toward sheep
- ↓
-return toward flock/pasture
-~~~
-
-Nie tworzyć nowego globalnego herding AI.
-
-Nie teleportować owiec ani pasterza.
-
-Wykorzystać istniejący movement, collision i herd cohesion.
-
-## 13. Pasterz — priorytet strzyżenia
-
-Jeżeli własna owca jest gotowa do strzyżenia, strzyżenie powinno mieć pierwszeństwo przed zwykłym przemieszczaniem na pastwisko.
-
-Priorytet pracy:
-
-~~~
-ready sheep
-  ↓
-shearing
-  ↓
-deposit wool
-  ↓
-normal flock/pasture work
-~~~
-
-Jeżeli nie ma gotowej owcy:
-~~~
-flock/pasture/protection
-~~~
-
-Jeżeli nie ma własnych sheep:
-~~~
-existing generic work fallback
-~~~
-
-## 14. Ochrona stada
-
-Pasterz korzysta z istniejącego threat/combat system.
+## 7. Shearing jako transakcja PlannedAction
 
 Flow:
 
-~~~
-predator
- ↓
-sheep threatened
- ↓
-shepherd reacts
- ↓
-approach threat
- ↓
-existing NPC/animal combat or flee behaviour
-~~~
+```text
+select owned ready sheep
+→ validate tool + carry capacity
+→ normal goTo/navigation
+→ execute
+→ live revalidation
+→ add exactly 4 wool
+→ advance wool anchor
+→ later deposit
+```
 
-Nie tworzyć ShepherdCombatAI.
+Na completion ponownie sprawdzić:
 
-Jeżeli istniejący threat interrupt nie ma informacji pozwalającej odróżnić zagrożenie własnego stada od innych zwierząt, dodać minimalny hook wykorzystujący ownerHouseId/Household.
+- sheep żyje,
+- nadal należy do właściwego household,
+- nadal jest wool-ready,
+- shepherd nadal ma `shearing` capability,
+- carried inventory może przyjąć pełny yield.
 
-Nie zmieniać globalnej semantyki threat detection bez potrzeby.
+Dopiero po sukcesie utworzyć wool i przesunąć anchor. Interrupt/path failure nie może produkować ani kasować wełny.
 
-## 15. Delivery wool
+## 8. Navigation i interaction destination
 
-Po strzyżeniu:
-~~~
+Wszystkie dojścia pasterza do sheep/home/storage/punktu pracy korzystają z **shared NPC/animal Navigation** z `npc-006` oraz istniejącego watchdog/repath lifecycle.
+
+Nie implementować bezpośredniego ruchu po linii prostej jako shepherd-specific fallback i nie tworzyć drugiego pathfindera.
+
+Sheep może się poruszać podczas podejścia. Zachować target identity, a repath wykonywać przez istniejące reguły dla moving target / blocked path; repath nie oznacza ponownego wyboru innej owcy.
+
+## 9. Wypas i flock care po fauna-016
+
+Starsza wersja planu zakładała wybór osobnego `pasture point` i ręczne zawracanie oddalonej owcy. Po `fauna-016` należy tego nie traktować jako nowego movement subsystem.
+
+MVP:
+
+- sheep zachowują własne species/local roaming behaviour i `home`,
+- shepherd podczas work pozostaje w pobliżu owned flock / sensownego local work area,
+- shepherd może podejść do odseparowanej owned sheep jako bounded work action,
+- nie teleportuje ani nie steruje bezpośrednio pozycją owcy,
+- nie nadpisuje aktywnego flee/threat/trip behaviour owcy,
+- nie resetuje animal `home`/trip state tylko dlatego, że trwa shepherd work.
+
+Jeżeli potrzebne jest rzeczywiste kierowanie owcy z powrotem, dodać jedynie mały bodziec/intent przez istniejący fauna decision seam. Nie implementować `return toward flock` jako bezpośredniego movement override.
+
+Nie tworzyć `Pasture` entity w tym planie.
+
+## 10. Threat/flee i ochrona stada
+
+Ochrona ma wykorzystywać aktualne combat/threat ownership i semantic perception z `fauna-012`.
+
+Najbardziej wiarygodnym triggerem jest aktualne/świeże zagrożenie skierowane na owned sheep, np. predator attack/committed threat, a nie sama obecność drapieżnika gdzieś w osadzie.
+
+Flow:
+
+```text
+existing combat/threat state or semantic stimulus
+→ shepherd-owned-flock relevance
+→ normal NPC decision/interrupt
+→ existing NPC combat/navigation
+```
+
+Nie tworzyć `ShepherdCombatAI`, drugiego threat registry ani callbacku predator→shepherd. Flee owcy pozostaje własnością `AnimalAgent`; shepherd nie może wyłączać lub zastępować animal flee.
+
+Jeżeli NPC threat perception nadal nie konsumuje potrzebnej read-only informacji z fauna threat state, dodać najmniejszy reusable bridge/query. Nie kopiować combat target state do shepherd.
+
+## 11. Delivery i economy integration
+
+Po strzyżeniu wool jest realnym itemem w carried inventory. Następnie shepherd wykonuje fizyczny deposit przez istniejący household/storage action flow.
+
+Minimalny wymagany rezultat:
+
+```text
 4 wool
- ↓
-NpcAgent.carried
- ↓
-powrót
- ↓
-Household.items
- ↓
-SettlementEconomy zgodnie z istniejącym delivery flow
-~~~
+→ NpcAgent.carried
+→ physical return/deposit
+→ owner Household.items
+```
 
-Wykorzystać istniejące carried inventory i depositCarriedItems lub właściwy istniejący odpowiednik.
+Wool nie jest food i nie może używać food-only deposit/acquisition semantics.
 
-Nie tworzyć WoolStorage.
+Jeżeli `wool` zostanie zakwalifikowane jako local circulating production good, dalszy przepływ do settlement storage ma korzystać z istniejącego LocalGoodsFlow/physical transport. Ten plan nie ma tworzyć specjalnej automatycznej ścieżki `Household.items → SettlementEconomy`.
 
-Akcja musi uwzględniać capacity carried inventory przed usunięciem yield.
+Plan `settlements-npcs-006-wool-to-material.md` powinien później konsumować ten sam realny stock zamiast tworzyć abstrakcyjne wool units.
 
-## 16. Time skip / off-screen
+## 12. Time skip, off-screen i persistence
 
-Wool cycle musi działać poprawnie przy:
-- normalnym ticku,
-- time skip,
-- długim braku obserwacji settlementu,
-- stream-out/stream-in w ramach obecnych livestock guarantees.
+Wool readiness jest absolute-time state:
 
-Przykład:
-~~~
+```text
 readyAt = 24
-time skip
 now = 30
-→ sheep ready
-~~~
+→ ready
+```
 
-Nie replayować:
-~~~
-24 → 25 → 26 → 27 → 28 → 29 → 30
-~~~
+Nie replayować pominiętych dni ani kolejnych nieodebranych strzyżeń. Owca gotowa od dawna nadal reprezentuje jeden aktualny fleece/yield, nie automatycznie wiele zaległych zbiorów.
 
-Po strzyżeniu ustawić nowy absolutny anchor.
+Zachować aktualny kontrakt persistence fauny. Jeżeli runtime `AnimalAgent` nadal nie jest pełnym persistent snapshotem, nie dodawać partial persistence tylko dla wool. Wool ma być zgodne z istniejącym livestock production lifecycle.
 
-## 17. Persistence
+## 13. Performance i determinism
 
-Nie tworzyć specjalnego wyjątku persistence tylko dla wool cycle bez wcześniejszego sprawdzenia obecnego kontraktu fauna persistence.
+- brak globalnego `every shepherd × every sheep` per frame,
+- owned-flock lookup bounded i wykonywany w work/decision cadence,
+- threat relevance wykorzystuje istniejące bounded/recent threat information,
+- navigation request-based, nie per frame,
+- brak shepherd-driven ciągłego rescoringu habitat/roaming,
+- deterministyczne assignment, target selection i initial wool staggering,
+- zachować możliwość przyszłej hybrid/off-screen simulation.
 
-docs/STATE.md wskazuje, że runtime state zwierząt nie jest pełnym snapshotem SaveData.
+## 14. Testy
 
-Jeżeli aktualna architektura nadal nie persistuje runtime state AnimalAgent, wool powinien zachować tę samą semantykę co istniejąca livestock production.
+### Calendar / wool
 
-Nie dodawać częściowej persistence tylko dla wełny.
+- 12-day season boundaries i 48-day year,
+- wool before/at/after 24 days,
+- deterministic initial staggering,
+- reset tylko po udanym shearing,
+- long time skip daje jeden ready fleece, nie wielokrotny catch-up yield,
+- milk/egg production bez regresji.
 
-## 18. Existing sheep milk production
+### Assignment / ownership
 
-Sheep już posiada produkcję milk.
+- sheep household może deterministycznie otrzymać shepherd zgodnie z aktualnym staffing seam,
+- shepherd bez owned sheep nie jest tworzony przez bezwarunkowy random assignment,
+- shepherd targetuje tylko owned sheep.
 
-Nowy wool state musi być niezależny od milk production anchor.
+### Action / tool / inventory
 
-Zweryfikować:
-- milk nadal produkuje się według istniejącego modelu,
-- wool ma własny readyAt,
-- oba procesy mogą działać równolegle,
-- reset wool cycle nie resetuje milk cooldown.
+- brak `shearing` capability blokuje akcję,
+- capacity failure nie zmienia wool state,
+- interruption/path failure nie tworzy wool,
+- live revalidation chroni przed duplicate yield,
+- sukces daje dokładnie 4 wool i przesuwa anchor.
 
-Nie zmieniać milk recipe/cooldown w tym planie.
+### Fauna integration
 
-## 19. Rendering
+- shepherd work nie nadpisuje sheep flee,
+- active animal trip/threat state nie jest resetowany przez flock care,
+- moving sheep zachowuje target identity podczas NPC repath,
+- owned sheep threat może wejść do normalnego NPC protection/combat decision,
+- unrelated animal threat jest ignorowany.
 
-Nie wymagać nowego modelu owcy.
+### Economy
 
-Istnieją:
-- public/models/fauna/sheep.glb,
-- procedural sheep fallback.
+- wool trafia do realnego `Household.items`,
+- ilość jest zachowana przez carried/deposit flow,
+- wool nie używa food-only path,
+- ewentualny local circulation korzysta ze wspólnego goods flow.
 
-Nie implementować wizualnego wzrostu runa.
+## 15. Manual verification
 
-Stan ready-for-shearing może być niewidoczny w MVP.
+Manual verification wykonuje użytkownik w przeglądarce.
 
-## 20. Testy
+Sprawdzić co najmniej:
 
-### Calendar
-- season boundaries przy 12 dniach,
-- 48 dni tworzy pełny cykl roku,
-- weather/climate nadal używa poprawnej Season.
+1. Settlement z sheep otrzymuje sensownego shepherd przez livestock-aware assignment.
+2. Shepherd wykonuje normalny schedule i może zostać przerwany przez potrzeby/zagrożenie.
+3. Sheep nadal korzystają z własnego roaming/flee behaviour.
+4. Shepherd podchodzi do moving sheep przez shared navigation bez teleportacji i shepherd-specific pathingu.
+5. Ready sheep jest ostrzyżona dokładnie raz i daje 4 wool.
+6. Wool trafia fizycznie do household inventory.
+7. Po 24 dniach sheep ponownie staje się ready; time skip działa bez replay.
+8. Milk production tej samej sheep nadal działa niezależnie.
+9. Predator atakujący owned sheep może wywołać sensowną reakcję shepherd, a odległe/nieistotne zagrożenie nie.
+10. Kilka sheep/shepherds nie powoduje widocznego pathfinding/threat scan spam.
 
-### Wool timing
-- before 24 days = not ready,
-- at 24 = ready,
-- after 24 = ready,
-- reset = now + 24.
+## 16. Kryteria ukończenia
 
-### Yield
-- ready sheep → exactly 4 wool,
-- non-ready sheep → 0 wool,
-- dead sheep → 0 wool,
-- second shearing before reset → impossible.
-
-### Tool
-- missing shearing capability → action unavailable,
-- valid tool → action allowed.
-
-### Ownership
-- shepherd targets only owned sheep,
-- other household sheep are ignored.
-
-### Action
-- yield is created only on successful completion,
-- state is revalidated at completion,
-- successful shearing resets the cycle.
-
-### Existing livestock
-- sheep milk production unchanged,
-- chicken egg production unchanged,
-- other livestock production unchanged.
-
-## 21. Browser/gameplay verification
-
-1. Uruchomić settlement posiadające sheep.
-2. Znaleźć shepherd NPC.
-3. Obserwować jego work schedule.
-4. Sprawdzić, że pracuje ze swoim stadem.
-5. Ustawić/testować czas przed końcem 24-dniowego cyklu.
-6. Sprawdzić, że sheep staje się ready.
-7. Sprawdzić rzeczywiste strzyżenie przez shepherd.
-8. Sprawdzić 4 wool w Household/economy.
-9. Sprawdzić reset cyklu.
-10. Sprawdzić ponowną gotowość po kolejnych 24 dniach.
-11. Sprawdzić dwa strzyżenia w jednym 48-dniowym roku.
-12. Sprawdzić reakcję shepherd na predator threat.
-13. Sprawdzić, że sheep milk production nadal działa.
-14. Sprawdzić time skip przed i po readyAtDays.
-15. Sprawdzić brak działania na sheep należące do innego household.
-
-## 22. Kryteria ukończenia
-
-- [ ] kalendarz działa w modelu 48 dni/rok, 12 dni/sezon,
-- [ ] weather/climate nie ma regresji po zmianie kalendarza,
-- [ ] sheep ma 24-dniowy wool cycle,
-- [ ] sheep staje się gotowa do strzyżenia,
-- [ ] shearing daje dokładnie 4 wool,
-- [ ] shearing resetuje cycle,
-- [ ] sheep może być ostrzyżona 2×/rok,
-- [ ] istnieje item wool,
-- [ ] istnieje narzędzie/capability shearing,
-- [ ] shepherd jest normalnym Role,
-- [ ] shepherd ma normalny schedule,
-- [ ] shepherd obsługuje tylko własne sheep,
-- [ ] shepherd wykonuje podstawowy wypas/pilnowanie,
-- [ ] shepherd reaguje na zagrożenie stada,
-- [ ] shepherd wykonuje shearing przez PlannedAction,
-- [ ] wool trafia do istniejącego Household/Economy flow,
-- [ ] time skip nie wymaga catch-up replay,
-- [ ] sheep milk production działa bez regresji,
+- [ ] wspólny kalendarz działa w modelu 48 dni/rok, 12 dni/sezon bez regresji weather/climate,
+- [ ] sheep ma niezależny 24-dniowy wool cycle,
+- [ ] shearing daje dokładnie 4 wool i resetuje tylko wool anchor,
+- [ ] istnieją `wool`, shears i capability `shearing`,
+- [ ] shepherd jest normalnym `Role` z livestock-aware assignment i schedule,
+- [ ] shepherd korzysta z normalnej NPC work arbitration i `PlannedAction`,
+- [ ] shared Navigation obsługuje dojście/repath,
+- [ ] flock care nie omija fauna roaming/trip/flee ownership,
+- [ ] ochrona stada korzysta z istniejącego threat/combat information flow,
+- [ ] wool trafia do realnego household goods flow bez wool-specific economy,
+- [ ] time skip/off-screen nie wymaga catch-up replay,
 - [ ] automated checks przechodzą,
 - [ ] browser/gameplay verification przechodzi.
 
-## 23. Poza zakresem
+## Poza zakresem
 
-- yarn jako item,
-- spinning,
-- weaving,
-- wool cloth,
-- flax,
-- bandage,
-- dressing,
-- herbs,
-- clay,
-- pottery,
-- sheep breeds,
+- yarn, spinning, weaving i wool cloth,
+- flax, bandages, herbs, clay/pottery,
+- sheep breeds i wool quality,
 - age/health/nutrition/season effects on wool,
 - visual wool growth,
 - breeding,
 - dedicated Pasture entity/system,
-- advanced herd management,
+- advanced herding / flock commands,
 - shepherd-specific combat AI,
-- wool quality,
-- full fauna runtime persistence.
+- osobny fauna/NPC pathfinder,
+- pełna fauna runtime persistence,
+- automatyczne Work Contracts dla shepherd routine,
+- persistent shepherd wages/household payroll.
 
-## 24. Następny etap
+## Następny etap
 
-Po tym planie kolejny etap może rozszerzyć:
+`settlements-npcs-006-wool-to-material.md` może budować na realnym stocku:
 
-~~~
+```text
 wool
- ↓
-yarn
- ↓
-wool cloth
-~~~
+→ yarn
+→ wool cloth
+```
 
-Nie implementować kolejnego etapu tutaj.
+Nie implementować przetwarzania w tym planie.
 
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+## Implementation guidance
+
+Aktualizować `docs/plans/implementation-notes/fauna-004-sheep-wool-and-shepherd-implementation-notes.md` zgodnie z aktualnym codebase. Dla nowych ważnych publicznych granic dodać JSDoc tam, gdzie poprawia discovery; sugerowany `@domain fauna` / `@domain npc` zgodnie z ownership.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
