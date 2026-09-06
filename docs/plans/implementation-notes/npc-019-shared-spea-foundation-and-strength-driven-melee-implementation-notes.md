@@ -56,7 +56,9 @@ Avoid exposing a broadly named final `effectiveStrength()` API if it only knows 
 
 `src/player/PlayerController.ts` directly owns current Player physical/runtime concepts such as `health`, `needs` and `skills`.
 
-Add the shared physical-attribute primitive there rather than creating a Player-specific attribute subsystem. For this plan the Player values are all fixed at `0.5`.
+Add the shared physical-attribute primitive there rather than creating a Player-specific attribute subsystem. For this plan the Player values are all fixed at `0.6`.
+
+This is only a starting-profile choice. Keep `0.5` as the shared typical-adult/reference point and as the neutral point for consumer mappings.
 
 Do not modify `SavePlayer`/save schema for these constants. Current `src/persistence/saveData.ts` also has an unrelated Player-HP persistence gap; leave it untouched.
 
@@ -136,12 +138,14 @@ Use broad statistical assertions, not an exact sampled mean that couples tests t
 
 For Player, prefer testing the shared pure melee-strength rule rather than forcing a large `gameLoop.ts` integration harness solely for the arithmetic. Existing Player melee tests should remain focused on lifecycle/geometry unless there is already a clean damage seam to extend.
 
+Also protect the Player starting profile separately: all four starting attributes are `0.6`. Do not change the neutral melee assertion to `0.6`; the consumer rule remains neutral at `0.5`.
+
 ## Documentation boundaries
 
 After implementation update the canonical state docs that own these concepts, especially:
 
 - `docs/state/npc.md` for deterministic NPC physical-profile/SPEA ownership;
-- `docs/state/player-systems.md` for Player-owned neutral shared SPEA and the first melee consumer.
+- `docs/state/player-systems.md` for Player-owned starting SPEA (`0.6` in all four attributes) and the first melee consumer.
 
 Do not duplicate the biological/species tables. `docs/world/species-physical-reference.md` remains authoritative for species-relative SPEA semantics and `docs/world/human-strength-calibration.md` for human Strength calibration.
 
@@ -152,7 +156,7 @@ Add JSDoc to important new shared/public architectural symbols where it improves
 1. Add the shared physical-attribute type and only the minimal invariant/helper surface actually needed.
 2. Extend deterministic NPC physical-profile generation with four independent bell-shaped base rolls and focused tests.
 3. Add human Strength profile/development resolution and tests, keeping it separate from the generic capacity age multiplier.
-4. Give `PlayerController` neutral shared attributes.
+4. Give `PlayerController` starting shared attributes of `0.6` in Strength, Perception, Endurance and Agility.
 5. Add the small shared melee Strength rule and boundary tests.
 6. Thread Player Strength into the existing Player damage calculation before critical resolution.
 7. Thread NPC profiled Strength into `applyNpcMeleeHit(...)` before critical resolution.
@@ -165,7 +169,8 @@ Do not run `pnpm docs:sync` manually; the GitHub workflow handles derived docume
 
 - Do not create `PlayerAttributes`, `NpcAttributes` or fauna-specific parallel primitives.
 - Do not persist deterministic NPC base SPEA as a shortcut for an unstable generation path; fix/use a stable identity seed instead.
-- Do not persist the Player's four constant `0.5` values in this plan.
+- Do not persist the Player's four constant `0.6` values in this plan.
+- Do not move the shared neutral/reference point from `0.5` just because the Player starts at `0.6`.
 - Do not mutate base SPEA for age, injury, illness or fatigue.
 - Do not interpret raw SPEA as an absolute cross-species capability.
 - Do not reuse the generic HP/Stamina/Vigor age multiplier as the Strength curve.
