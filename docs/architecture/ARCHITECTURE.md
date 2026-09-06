@@ -2,13 +2,14 @@
 
 **Purpose:** describe the architecture that exists in the code today. This is an architectural map, not a product roadmap.
 
-**Last verified:** 2026-08-22
+**Last verified:** 2026-09-06
 
 ## Source of truth
 
 - `CLAUDE.md` — how agents should work.
 - `docs/STATE.md` — what is currently implemented.
 - `docs/state/settlements.md` — settlements and NPC life as implemented.
+- `docs/state/persistence.md` — current persistence model, domain classification and known persistence limitations.
 - `docs/ROADMAP.md` — product direction.
 - `docs/plans/README.md` — plan/status index.
 - Source code — authoritative when documentation conflicts with implementation.
@@ -163,28 +164,48 @@ Seedvale is single-player today; there is no multiplayer, netcode or WebSocket l
 Persistence is orchestrated from the app layer, but ownership is split by responsibility:
 
 - `src/app/saveState.ts` assembles the current runtime state into `SaveData` and owns *when* it is written (explicit save, page-lifecycle events, interval autosave). `createApp.ts` gives it the live systems to read from.
-- `src/persistence/saveData.ts` owns the `SaveData` schema and its validation/defaulting.
-- `src/persistence/saveDb.ts` owns the IndexedDB storage operations and the named save slots.
+- `src/persistence/saveData.ts` owns the `SaveData` schema, its validation/defaulting, and the version-migration pipeline.
+- `src/persistence/saveDb.ts` owns the IndexedDB storage operations, the named save slots and the write-time integrity guard.
+- `src/persistence/db.ts`/`seedDb.ts`/`seedRecord.ts`/`worldgenCacheDb.ts` share the same IndexedDB database but sit outside `SaveData` entirely — see "Worldgen cache" below.
 
-NPC authoritative state (health/needs/stamina/vigor/helper assignment/active plan), household state, NPC↔NPC relationships and house-owned livestock (+ the merchant horse) are persisted since plan `persistence-001-full-simulation-persistence.md` — see `src/settlement/npcState.ts`/`household.ts`/`npcRelationships.ts`/`livestock.ts`'s snapshot/registry types. Runtime-only state (phase, pending action, pathfinding, combat intent, animation) and individual wild fauna stay unpersisted by design, so a `Continue` is still not equivalent to serializing the complete living world.
+The architectural picture that matters here is not the field list (which changes) but the ownership split, which is stable:
 
-`SaveData` is a single-contract schema with **no** migration/compatibility story for older saves (plan `2026-08-22--201--arch--deferred-architecture-state-cleanup.md` — a deliberate hard cut). `loadSaveData` (`src/persistence/saveData.ts`) validates against the current shape only and returns `null` for anything that doesn't match; a save from before the hard cut simply fails to load, there is no `v0 → v1`-style migration path. Versioning/migration can be reintroduced later if the format changes again — do not preserve compatibility with a prior shape as a matter of course; that historical-compatibility burden is exactly what plan 201 removed. `src/persistence/saveData.ts` is authoritative for the exact field list; this section is a summary, not a restatement of it.
+- **Domain systems own their own runtime authoritative state** (an `Inventory`, `NpcStateRegistry`, `Household`, `SettlementEconomy`, a `WorldBundle` collection, …). No `SaveData` field has more than one live owner anywhere in the codebase.
+- **`SaveData` is a serialization boundary, not a runtime authority.** It has no behaviour and is never mutated in place by gameplay code. `buildSaveData()` reads each live owner once, at save time; nothing is assembled from more than one system.
+- **Restore is construction, not a two-phase load.** `createApp(container, initialSave)` reads each of `SaveData`'s fields exactly once, straight into the constructor of the one runtime system that owns it. No system is built empty and then walked/filled from a save afterward.
+- **In-session `WorldBundle` rebuild reuses the same mechanism a save does** — `rebuildWorldBundle()` carries live state forward through the same `snapshot*` methods `buildSaveData()` itself calls, into the same constructor parameters `createWorldBundle()` accepts. This is what structurally prevents "what survives a save" and "what survives a rebuild" from drifting apart: they are the same functions, not two independently-maintained paths.
+
+Runtime-only state (phase, pending action, pathfinding, combat intent, animation) and individual wild fauna stay unpersisted by design, so a `Continue` is still not equivalent to serializing the complete living world. See [`docs/state/persistence.md`](../state/persistence.md) for the current five-way persistence classification (persisted authoritative / persisted delta / deterministic reconstruction / runtime authoritative / derived-cache), the full domain-by-domain table, and known persistence gaps.
 
 ### Save schema
 
-Current schema version: **v1** — a reset, not "the first version ever": everything the game currently persists (config, player, inventory, quests, world objects, settlement/economy state, skills, etc.) is folded into this one contract with no prior-version baggage. The full field list lives in `src/persistence/saveData.ts`'s `SaveData` type; a few non-obvious points:
+`SaveData` is versioned and migrated forward on load: a stored save's version is detected, walked through one pure per-version migration step at a time, then validated against the current schema before any domain restore begins.
 
-- `QuestManager`'s `questId → animalId` binding is never persisted: on restore, an active `kill_target_animal`/`find_animal` quest re-derives its binding — livestock kinds (deterministic `animalId` per settlement/house seed) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter) become `invalidated` instead of silently retargeting a different individual, because *wild* fauna HP/death/corpse state is not persisted at all (a killed wild animal resurrects on reload). House-owned livestock (+ the merchant horse) is the exception since plan persistence-001 — `SaveData.livestock`/`removedLivestockIds` (`settlement/livestock.ts`) round-trip HP/death/corpse-lifecycle/position/needs/production state and prevent a removed individual from being recreated by deterministic spawning.
-- Weather/seasons (plan 040) deliberately add **no** save field — `Season`/`WeatherState` are pure functions of `(seed, elapsedDays)`, both already persisted.
-- `ResourceDeposits`' mining-hits-remaining (`SaveData.resourceDeposits`, plan 198/201) is a sparse `id → remaining` map — an absent id restores as untouched (deterministic initial from richness), `0` means depleted.
-- `SaveData.terrainModifications` (plan `world-terrain-save`) only ever holds player-caused `ChunkManager` terrain modifications (dig/scorch/prepare) — deterministic system-caused ones (cave carving, fauna spawn-point burn replay) are reproduced from scratch on every world build and are deliberately excluded, or their cumulative depth would double up on reload. `ChunkManager.modifyTerrain()`/`scorchTerrain()` require an explicit `source: 'player' | 'system'` at every call site for this reason.
-- `SaveData.resolvedHiddenFindSpotIds`/`badges` (plan world-007) — Hidden Finds (`src/world/hiddenFinds.ts`) generalize the old settlement-only "hidden treasure" easter egg to any procedural landmark (cemetery graves, stoneCircle/monolith); a spot's position/outcome is deterministic from `(landmark id, spot index)` and is never persisted, only the sparse "already resolved" id. `SaveData.badges` holds `badges/badges.ts`'s `BadgeManager` earned-badge set + progress counters, a persistent achievement record kept separate from `QuestManager`'s per-NPC relations.
+```text
+stored SaveData
+  → version detection
+  → sequential migrations (one pure step per source version, fails closed)
+  → schema validation
+  → domain restore (construction, not a second "apply" pass)
+```
+
+Each migration step defaults exactly one new field/collection to a value that reproduces the pre-migration behaviour, and the chain fails closed: a missing or throwing step rejects the load rather than guessing or skipping ahead. Validation runs on write as well as read, and a write-time integrity guard additionally refuses to overwrite an existing slot whose current record can't itself be read successfully. `src/persistence/saveData.ts` is authoritative for the exact field list and the current version constant (`CURRENT_SAVE_VERSION`); do not restate that number elsewhere — point here or at [`docs/state/persistence.md`](../state/persistence.md) instead, which is exactly how the two had previously drifted independently.
+
+A few non-obvious points about the schema itself:
+
+- `QuestManager`'s `questId → animalId` binding is never persisted: on restore, an active `kill_target_animal`/`find_animal` quest re-derives its binding — livestock kinds (deterministic `animalId` per settlement/house seed) rebind via the normal resolver; wild-fauna kinds (unseeded per-session `animalId` counter) become `invalidated` instead of silently retargeting a different individual, because *wild* fauna HP/death/corpse state is not persisted at all (a killed wild animal resurrects on reload). House-owned livestock (+ the merchant horse) is the exception — `SaveData.livestock`/`removedLivestockIds` (`settlement/livestock.ts`) round-trip HP/death/corpse-lifecycle/position/needs/production state and prevent a removed individual from being recreated by deterministic spawning.
+- Weather/seasons deliberately add **no** save field — `Season`/`WeatherState` are pure functions of `(seed, elapsedDays)`, both already persisted.
+- `ResourceDeposits`' mining-hits-remaining (`SaveData.resourceDeposits`) is a sparse `id → remaining` map — an absent id restores as untouched (deterministic initial from richness), `0` means depleted.
+- `SaveData.terrainModifications` only ever holds player-caused `ChunkManager` terrain modifications (dig/scorch/prepare) — deterministic system-caused ones (cave carving, fauna spawn-point burn replay) are reproduced from scratch on every world build and are deliberately excluded, or their cumulative depth would double up on reload. `ChunkManager.modifyTerrain()`/`scorchTerrain()` require an explicit `source: 'player' | 'system'` at every call site for this reason.
+- `SaveData.resolvedHiddenFindSpotIds`/`badges` — Hidden Finds (`src/world/hiddenFinds.ts`) generalize the old settlement-only "hidden treasure" easter egg to any procedural landmark (cemetery graves, stoneCircle/monolith); a spot's position/outcome is deterministic from `(landmark id, spot index)` and is never persisted, only the sparse "already resolved" id. `SaveData.badges` holds `badges/badges.ts`'s `BadgeManager` earned-badge set + progress counters, a persistent achievement record kept separate from `QuestManager`'s per-NPC relations.
 
 Named save slots (plan 166): the `saves` store holds `{ name, data: SaveData }` keyed by `slot_*` ids, not a single `'current'` — up to 8 named games, active id in localStorage. A leftover raw `SaveData` under `'current'` migrates on first list/read.
 
 `localStorage` is split by domain (`src/config/persistConfig.ts`): graphics / player / world device preferences, separate from `SaveData` itself; audio mix is its own localStorage key, not a `WorldConfig` field. Graphics/audio stay per-device; seed and world state come from the chosen save slot.
 
-Map discovery cells have their own, separately-versioned sub-schema inside `SaveData.map` (currently schema v11) — bumped independently of the top-level `SaveData` version above.
+### Worldgen cache
+
+The persistent worldgen cache is a separate, disposable `(seed, namespace, version, fingerprint) → payload` key-value store (`src/persistence/worldgenCacheDb.ts`) — structurally outside `SaveData` entirely, never referenced from its type or validator, and never required to load a save. A fingerprint mismatch is a cache miss (silently regenerate), never a migration. It shares the same IndexedDB database as save data but must not be confused with gameplay persistence — see [`docs/state/persistence.md`](../state/persistence.md) for its current namespace(s).
 
 ## Rebuild / lifetime invariants
 
@@ -204,7 +225,7 @@ Before adding a subsystem, answer:
 3. Does it need to survive a `WorldBundle` rebuild?
 4. If a replaceable world dependency changes, will this system be recreated or explicitly rebound?
 5. What existing environment/simulation API should it consume instead of duplicating logic?
-6. Does it need persistence? If yes, add the field directly to `SaveData` v1 — there is no old-save compatibility story to design around (see "Save schema" above).
+6. Does it need persistence? If yes, add the field to `SaveData` and bump `CURRENT_SAVE_VERSION` with a corresponding migration only if the change affects saves created under the prior version (see "Save schema" above).
 7. Does it belong to simulation, world generation, interaction, or presentation?
 8. Is its state representable independently of the client/renderer, so a future server-authoritative split wouldn't require a rewrite?
 
