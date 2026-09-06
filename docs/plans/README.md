@@ -73,6 +73,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
 | 💡 `npc-019-shared-spea-foundation-and-strength-driven-melee.md`            | -       | 🟡 | M      | ~~npc-001~~ |
 | ◼️ `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
+| ◼️ `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
 
 ---
 
@@ -170,7 +171,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `018`
 - npc: `020`
 - persistence: `005`
-- quests-progression: `001`
+- quests-progression: `002`
 - settlements: `003`
 - settlements-npcs: `025`
 - tools: `013`
