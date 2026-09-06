@@ -16,10 +16,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 323
-- `CreateSettlementDeps` — type — line 214
-- `Settlement` — type — line 107
-- `settlementSpawnPoint` — function — line 202
+- `createSettlement` — function — line 324
+- `CreateSettlementDeps` — type — line 215
+- `Settlement` — type — line 108
+- `settlementSpawnPoint` — function — line 203
 
 ## `settlement/decorProps.ts`
 
@@ -67,11 +67,12 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/findSettlementSite.ts`
 
-- `DEFAULT_SITE_SEARCH_MARGIN` — const — line 50
-- `findSettlementSite` — function — line 154
-- `SettlementFootprintHint` — type — line 13
-- `SettlementSite` — type — line 5
-- `SITE_SCORE_WEIGHTS` — const — line 26
+- `DEFAULT_SITE_SEARCH_MARGIN` — const — line 52
+- `findSettlementSite` — function — line 170
+- `SettlementFootprintHint` — type — line 15
+- `SettlementSite` — type — line 7
+- `SITE_RIVER_CLEARANCE` — const — line 60
+- `SITE_SCORE_WEIGHTS` — const — line 28
 
 ## `settlement/frameYield.ts`
 
@@ -294,15 +295,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 95
-- `createNpcStateRegistry` — function — line 131
+- `createNpcAuthoritativeState` — function — line 112
+- `createNpcStateRegistry` — function — line 149
 - `MAX_HP` — const — line 14
 - `MAX_STAMINA` — const — line 15
 - `NpcAuthoritativeState` — type — line 31
 - `NpcId` — type — line 9
-- `NpcPhysicalMaxima` — type — line 81
-- `NpcStateRegistry` — type — line 118
-- `NpcStateSnapshot` — type — line 56
+- `NpcPhysicalMaxima` — type — line 98
+- `NpcStateRegistry` — type — line 136
+- `NpcStateSnapshot` — type — line 68
 
 ## `settlement/pathDryness.ts`
 
@@ -399,6 +400,15 @@ Generated from exported TypeScript symbols.
 - `TerrainSampler` — type — line 29
 - `tintPropMaterials` — function — line 10
 
+## `settlement/rats.ts`
+
+- `createSettlementRats` — function — line 134
+- `RatFoodSite` — type — line 91
+- `ratPopulationTarget` — function — line 49
+- `RatPressureInputs` — type — line 36
+- `SettlementRats` — type — line 112
+- `SettlementRatsDeps` — type — line 93
+
 ## `settlement/roadNetwork.ts`
 
 - `clearRoadNetworkCaches` — function — line 72
@@ -422,16 +432,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 134
-- `cellKey` — function — line 119
-- `cellSeed` — function — line 162
-- `cellsWithinRadius` — function — line 146
-- `generateSettlementDef` — function — line 594
-- `generateVillagePlan` — function — line 534
-- `SETTLEMENT_GRID_STEP` — const — line 62
-- `SettlementCell` — type — line 68
-- `SettlementDef` — type — line 70
-- `worldToCell` — function — line 123
+- `cellFromId` — function — line 135
+- `cellKey` — function — line 120
+- `cellSeed` — function — line 163
+- `cellsWithinRadius` — function — line 147
+- `generateSettlementDef` — function — line 634
+- `generateVillagePlan` — function — line 572
+- `SETTLEMENT_GRID_STEP` — const — line 63
+- `SettlementCell` — type — line 69
+- `SettlementDef` — type — line 71
+- `worldToCell` — function — line 124
 
 ## `settlement/settlementNightCycle.ts`
 
@@ -453,10 +463,11 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementPlanCache.ts`
 
-- `cachedSettlementDefCount` — function — line 54
-- `clearSettlementDefCache` — function — line 29
-- `settlementDefFor` — function — line 33
-- `SettlementResolveContext` — type — line 15
+- `cachedSettlementDefCount` — function — line 75
+- `clearSettlementDefCache` — function — line 48
+- `setSettlementRiverQuery` — function — line 42
+- `settlementDefFor` — function — line 53
+- `SettlementResolveContext` — type — line 16
 
 ## `settlement/settlementPropColliders.ts`
 
@@ -584,14 +595,14 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/villagePlanner.ts`
 
-- `buildingsAndLandmarksFromPlots` — function — line 959
-- `chooseLayoutPattern` — function — line 123
-- `HOUSE_PLOT_RADIUS` — const — line 59
-- `pathPlansToCorridorData` — function — line 1324
-- `planLocalPathsAndEntrances` — function — line 1205
-- `planVillageLayout` — function — line 650
-- `PLOT_SCORE_WEIGHTS` — const — line 38
-- `VillageLayoutDraft` — type — line 92
+- `buildingsAndLandmarksFromPlots` — function — line 1040
+- `chooseLayoutPattern` — function — line 130
+- `HOUSE_PLOT_RADIUS` — const — line 66
+- `pathPlansToCorridorData` — function — line 1405
+- `planLocalPathsAndEntrances` — function — line 1286
+- `planVillageLayout` — function — line 720
+- `PLOT_SCORE_WEIGHTS` — const — line 40
+- `VillageLayoutDraft` — type — line 99
 
 ## `settlement/wellInteractionQueue.ts`
 

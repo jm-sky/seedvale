@@ -39,6 +39,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/rats.ts`
 
 ## `economy/initial.test.ts`
 

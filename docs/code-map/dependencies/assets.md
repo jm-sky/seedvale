@@ -228,6 +228,7 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/propUtils.ts`
 - `settlement/props.ts`
+- `settlement/rats.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/storageVisuals.ts`
 - `terrain/chunkManager.ts`

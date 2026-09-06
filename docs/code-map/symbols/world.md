@@ -217,12 +217,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 46
-- `createCaves` — function — line 90
+- `CaveRenderVariant` — type — line 45
+- `Caves` — type — line 68
+- `createCaves` — function — line 112
   - system: caves
   - role: Owns cave definitions, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
   - owns: Caves
   - lifecycle: rebuild
+- `resolveCaveRenderVariants` — function — line 58
+  - domain: world-terrain
 
 ## `world/createDryingRacks.ts`
 
@@ -772,7 +775,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/riverWaterMaterial.ts`
 
-- `createRiverWaterMaterial` — function — line 117
+- `createRiverWaterMaterial` — function — line 146
 
 ## `world/seedLibrary.ts`
 

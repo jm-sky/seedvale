@@ -57,6 +57,7 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/minorLocations.ts`
 - `settlement/pathDryness.ts`
+- `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`

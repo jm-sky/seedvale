@@ -130,7 +130,7 @@ Generated from exported TypeScript symbols.
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `inventoryFullToastText` — function — line 482
+- `inventoryFullToastText` — function — line 493
 - `ItemAmount` — type — line 38
 - `SaveItemInstance` — type — line 40
 - `toSaveItemInstance` — function — line 56
@@ -148,6 +148,7 @@ Generated from exported TypeScript symbols.
 - `BookTier` — type — line 130
 - `CAPABILITY_KINDS` — const — line 1307
 - `CAPABILITY_NEED_LABEL` — const — line 109
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1342
 - `ConsumableNeed` — type — line 121
 - `consumeNeedNoun` — function — line 207
 - `consumeVerbLabel` — function — line 198
@@ -161,12 +162,12 @@ Generated from exported TypeScript symbols.
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1337
+- `ITEM_SYSTEM_ROADMAP` — const — line 1360
 - `ItemCapability` — type — line 88
 - `ItemCatalogEntry` — type — line 132
 - `ItemSpawnKind` — type — line 13
 - `MeleeConfig` — type — line 24
-- `NON_ITEM_PROPS` — const — line 1343
+- `NON_ITEM_PROPS` — const — line 1366
 - `RangedConfig` — type — line 52
 
 ## `items/itemInstances.ts`

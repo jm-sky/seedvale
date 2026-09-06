@@ -158,6 +158,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/places.ts`
 - `settlement/props.ts`
+- `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`
@@ -271,6 +272,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/pathDryness.ts`
+- `terrain/chunkHeightmap.ts`
 
 ## `settlement/findSettlementSite.ts`
 
@@ -278,6 +280,8 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `settlement/pathDryness.ts`
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -458,6 +462,7 @@ Generated from TypeScript imports.
 - `settlement/householdExchange.test.ts`
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
+- `settlement/rats.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
@@ -860,6 +865,30 @@ Generated from TypeScript imports.
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
 
+## `settlement/rats.test.ts`
+
+**Imports**
+
+- `settlement/rats.ts`
+
+## `settlement/rats.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `economy/index.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/proceduralAnimals.ts`
+- `player/PlayerController.ts`
+- `settlement/household.ts`
+- `terrain/waterSample.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `settlement/createSettlement.ts`
+- `settlement/rats.test.ts`
+
 ## `settlement/roadNetwork.test.ts`
 
 **Imports**
@@ -918,6 +947,7 @@ Generated from TypeScript imports.
 - `shared/SettlementName.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/naturalResources.ts`
+- `terrain/riverQuery.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -991,11 +1021,13 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementTerrain.ts`
 - `terrain/chunkHeightmap.ts`
+- `terrain/riverQuery.ts`
 
 **Imported by**
 
 - `settlement/SettlementsManager.ts`
 - `settlement/roadNetwork.ts`
+- `terrain/chunkManager.ts`
 
 ## `settlement/settlementPropColliders.test.ts`
 
@@ -1192,6 +1224,7 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.ts`
+- `terrain/chunkHeightmap.ts`
 - `terrain/naturalResources.ts`
 
 ## `settlement/villagePlanner.ts`
@@ -1205,7 +1238,9 @@ Generated from TypeScript imports.
 - `settlement/pathDryness.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlan.ts`
+- `terrain/chunkHeightmap.ts`
 - `terrain/naturalResources.ts`
+- `terrain/riverNetwork.ts`
 - `world/parseSeed.ts`
 
 **Imported by**

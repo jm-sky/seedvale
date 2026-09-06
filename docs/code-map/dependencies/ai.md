@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
 - `ai/dialogueTemplates.ts`
+- `ai/healingPressure.test.ts`
 - `ai/npcDecision.ts`
 - `ai/npcLogistics.test.ts`
 - `ai/npcLogistics.ts`
@@ -44,6 +45,7 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
+- `ai/healingPressure.ts`
 - `ai/helperAssignment.ts`
 - `ai/npcAction.ts`
 - `ai/npcAnimalThreat.ts`
@@ -81,6 +83,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
+- `items/itemCatalog.ts`
 - `items/items.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
@@ -251,6 +254,22 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.test.ts`
 - `app/inventoryWiring.ts`
+
+## `ai/healingPressure.test.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `ai/healingPressure.ts`
+- `ai/weatherPressure.ts`
+- `simulation/index.ts`
+
+## `ai/healingPressure.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/healingPressure.test.ts`
 
 ## `ai/helperAssignment.ts`
 
@@ -727,6 +746,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/healingPressure.test.ts`
 - `ai/npcDecision.test.ts`
 - `ai/npcDecision.ts`
 - `ai/weatherPressure.test.ts`

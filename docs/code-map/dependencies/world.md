@@ -146,10 +146,6 @@ Generated from TypeScript imports.
 
 - `world/caveVolume.ts`
 
-**Imported by**
-
-- `world/createCaves.ts`
-
 ## `world/caveVolume.test.ts`
 
 **Imports**
@@ -415,6 +411,12 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createCaves.test.ts`
+
+**Imports**
+
+- `world/createCaves.ts`
+
 ## `world/createCaves.ts`
 
 **Imports**
@@ -426,7 +428,6 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/caveColliders.ts`
 - `world/caveGenerator.ts`
-- `world/caveMesh.ts`
 - `world/caveVolume.ts`
 - `world/caves/caveSpikeMaterial.ts`
 - `world/caves/caveSpikeMetrics.ts`
@@ -441,6 +442,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/worldBundle.ts`
+- `world/createCaves.test.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 
@@ -1363,6 +1365,7 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/props.ts`
+- `settlement/rats.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementNightCycle.ts`

@@ -112,6 +112,7 @@ Generated from TypeScript imports.
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
+- `items/itemConsumables.test.ts`
 - `items/liquidContainer.test.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
@@ -453,6 +454,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `ai/npcAssistance.ts`
 - `ai/npcCombat.test.ts`
 - `ai/npcCombat.ts`
@@ -480,6 +482,7 @@ Generated from TypeScript imports.
 - `items/foodFreshness.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/itemCapabilities.test.ts`
+- `items/itemConsumables.test.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `player/playerCombat.test.ts`
@@ -498,6 +501,14 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/items.ts`
+
+## `items/itemConsumables.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
 - `items/items.ts`
 
 ## `items/itemInstances.ts`
@@ -613,6 +624,7 @@ Generated from TypeScript imports.
 - `items/itemCapabilities.test.ts`
 - `items/itemCatalog.ts`
 - `items/itemCategories.test.ts`
+- `items/itemConsumables.test.ts`
 - `items/itemInstances.ts`
 - `items/itemModels.ts`
 - `items/primaryWeapons.ts`

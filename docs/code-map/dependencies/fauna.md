@@ -61,6 +61,7 @@ Generated from TypeScript imports.
 - `fauna/animalDialogue.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
+- `fauna/animalRoamingTrips.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/faunaCombat.test.ts`
@@ -90,6 +91,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
+- `settlement/rats.ts`
 - `world/animalTraps.ts`
 - `world/createPlacedTraps.ts`
 
@@ -182,6 +184,12 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.ts`
 - `fauna/harvestedRemains.ts`
 
+## `fauna/animalRoamingTrips.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
 ## `fauna/bloodSplat.ts`
 
 **Imports**
@@ -211,6 +219,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/createFauna.ts`
+- `terrain/chunkHeightmap.ts`
 
 ## `fauna/createFauna.ts`
 
@@ -488,6 +497,7 @@ Generated from TypeScript imports.
 
 - `fauna/createFauna.ts`
 - `settlement/livestock.ts`
+- `settlement/rats.ts`
 
 ## `fauna/rabies.test.ts`
 

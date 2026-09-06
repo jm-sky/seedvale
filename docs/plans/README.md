@@ -45,6 +45,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
+| 💡 `ui-input-011-new-game-setup-on-empty-save-state.md`                     | -       | 🔴 | S      | -      |
+| ◼️ `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                   | -       | 🟡 | M | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`      | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`            | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
@@ -53,6 +55,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`       | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                   | -       | 🟡 | L      | -       |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`              | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
+| ◼️ `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
+| ◼️ `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                               | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                   | -       | 🟡 | M      | settlements-npcs-006 |
 | ◼️ `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
@@ -72,17 +76,13 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
 | 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
 | 💡 `npc-019-shared-spea-foundation-and-strength-driven-melee.md`            | -       | 🟡 | M      | ~~npc-001~~ |
-| ◼️ `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
+| ◼️ `npc-020-strength-driven-physical-work-and-human-carrying.md`            | -       | 🟡 | M      | npc-019 |
+| ◼️ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | 🟡 | M      | npc-019 |
 | ◼️ `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
 | ◼️ `quests-progression-002-quest-outcomes-rewards-and-consequences.md`      | -       | 🔴 | M      | quests-progression-001 |
-| ◼️ `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
-| ◼️ `npc-020-strength-driven-physical-work-and-human-carrying.md`            | -       | 🟡 | M      | npc-019 |
 | ◼️ `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
 | ◼️ `quests-progression-004-quest-availability-and-prerequisites.md`         | -       | 🔴 | S      | quests-progression-002 |
 | ◼️ `quests-progression-005-authored-rpg-quests.md`                          | -       | 🔴 | L      | quests-progression-002, quests-progression-004 |
-| ◼️ `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
-| ◼️ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | 🟡 | M      | npc-019 |
-| 💡 `ui-input-011-new-game-setup-on-empty-save-state.md`                     | -       | 🔴 | S      | -      |
 
 ---
 

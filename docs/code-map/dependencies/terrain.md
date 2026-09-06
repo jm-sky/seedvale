@@ -163,6 +163,7 @@ Generated from TypeScript imports.
 - `math/segment.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/fbm.ts`
+- `terrain/riverFord.ts`
 - `terrain/waterBodies.ts`
 - `terrain/worleyNoise.ts`
 - `world/parseSeed.ts`
@@ -171,8 +172,11 @@ Generated from TypeScript imports.
 
 - `audio/ambientWeights.ts`
 - `config/worldConfig.ts`
+- `fauna/createFauna.test.ts`
 - `fauna/createFauna.ts`
 - `settlement/SettlementsManager.ts`
+- `settlement/findSettlementSite.test.ts`
+- `settlement/findSettlementSite.ts`
 - `settlement/minorLocations.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
@@ -183,6 +187,8 @@ Generated from TypeScript imports.
 - `settlement/settlementTerrain.ts`
 - `settlement/villageClearing.test.ts`
 - `settlement/villageClearing.ts`
+- `settlement/villagePlanner.test.ts`
+- `settlement/villagePlanner.ts`
 - `terrain/biomeRegions.test.ts`
 - `terrain/biomeRegions.ts`
 - `terrain/chunkCrops.ts`
@@ -210,6 +216,8 @@ Generated from TypeScript imports.
 - `terrain/naturalResources.ts`
 - `terrain/riverNetwork.test.ts`
 - `terrain/riverNetwork.ts`
+- `terrain/riverQuery.test.ts`
+- `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
 - `terrain/terrainPreparation.ts`
 - `terrain/waterSample.test.ts`
@@ -307,6 +315,7 @@ Generated from TypeScript imports.
 - `render/instancedProps.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
+- `settlement/settlementPlanCache.ts`
 - `terrain/biomeRegions.ts`
 - `terrain/buildChunkGeometry.ts`
 - `terrain/chunkEnvironment.ts`
@@ -320,6 +329,7 @@ Generated from TypeScript imports.
 - `terrain/fbm.ts`
 - `terrain/grass.ts`
 - `terrain/riverNetwork.ts`
+- `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
 - `terrain/vegetationRegionBatcher.ts`
 - `terrain/waterSample.ts`
@@ -680,6 +690,19 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 
+## `terrain/riverFord.test.ts`
+
+**Imports**
+
+- `terrain/riverFord.ts`
+
+## `terrain/riverFord.ts`
+
+**Imported by**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverFord.test.ts`
+
 ## `terrain/riverNetwork.test.ts`
 
 **Imports**
@@ -701,17 +724,43 @@ Generated from TypeScript imports.
 - `debug/locationQueries.test.ts`
 - `debug/locationQueries.ts`
 - `debug/npcDebugApi.test.ts`
+- `settlement/findSettlementSite.ts`
+- `settlement/villagePlanner.ts`
 - `terrain/chunkManager.ts`
 - `terrain/chunkVegetation.test.ts`
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.test.ts`
 - `terrain/grassPlacement.ts`
 - `terrain/riverNetwork.test.ts`
+- `terrain/riverQuery.test.ts`
+- `terrain/riverQuery.ts`
 - `terrain/riverTileCache.ts`
 - `terrain/waterSample.ts`
 - `world/createRiverWater.ts`
 - `world/riverGeometry.test.ts`
 - `world/riverGeometry.ts`
+
+## `terrain/riverQuery.test.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
+- `terrain/riverQuery.ts`
+
+## `terrain/riverQuery.ts`
+
+**Imports**
+
+- `terrain/chunkHeightmap.ts`
+- `terrain/riverNetwork.ts`
+
+**Imported by**
+
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementPlanCache.ts`
+- `terrain/chunkManager.ts`
+- `terrain/riverQuery.test.ts`
 
 ## `terrain/riverTileCache.ts`
 
@@ -880,6 +929,7 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.ts`
+- `settlement/rats.ts`
 - `terrain/chunkManager.ts`
 - `terrain/waterSample.test.ts`
 
