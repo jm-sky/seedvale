@@ -82,7 +82,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-005-authored-rpg-quests.md`                          | -       | 🔴 | L      | quests-progression-002, quests-progression-004 |
 | ◼️ `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
 | ◼️ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | 🟡 | M      | npc-019 |
-| ◼️ `ui-input-011-new-game-setup-on-empty-save-state.md`                     | -       | 🔴 | S      | -      |
+| 💡 `ui-input-011-new-game-setup-on-empty-save-state.md`                     | -       | 🔴 | S      | -      |
 
 ---
 
