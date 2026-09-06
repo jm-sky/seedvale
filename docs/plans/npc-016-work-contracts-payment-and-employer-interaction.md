@@ -4,381 +4,295 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** npc-015
+**Depends on:** ~~npc-015~~, ~~npc-018~~
 **Domain:** `npc`  
-**Roadmap:** `workforce-for-hire`  
+**Subdomains:** `work` `behavior` `dialogue`  
+**Roadmap:** `workforce-for-hire.md`  
 
 ## Goal
 
-Complete the first **Workforce for Hire** vertical slice by adding physical NPC → Player payment interaction.
+Complete the first **Workforce for Hire** vertical slice by making a finished NPC work commitment create a real, physical employer-payment interaction.
 
-After work is completed, the NPC enters `payment_due`. Payment is never automatic. The NPC continues living normally and, when it actually sees the employer/player, may decide to approach and request payment.
+The authoritative contract already reaches `payment_due` after the hired NPC fulfils its contractual commitment. Since `npc-018`, that commitment can be only a share of an existing target's remaining work, so `payment_due` means **the agreed NPC work is owed payment** — not necessarily that the underlying world object is fully completed.
 
-The NPC must not become a dedicated payment-seeking agent or block normal needs and routines while waiting.
+Payment is never automatic. The NPC continues normal life and may request payment only when the player is locally available. The player must explicitly choose to pay.
 
-If the player pays, the contract becomes `completed`. If the player does not pay, the NPC may retry approximately once per world hour when seeing the player, but eventually stops actively pursuing the payment. The unpaid obligation remains recorded for future consequences.
+If payment succeeds, the contract becomes `completed`. If the player does not pay for long enough, the contract becomes terminal `unpaid`; the obligation remains recorded for future consequences, but the NPC stops actively pursuing it.
 
-## Architectural principles
+## Architectural direction
 
-Do not create a separate payment AI, scheduler, interaction framework, or reputation system.
+Do not create a separate payment AI, scheduler, interaction framework, wallet system, or reputation model.
 
-Use:
+Extend the systems that already own the relevant state:
 
-```
-payment_due
+```text
+WorkContractRecord.payment_due
     +
-existing NPC needs / pressures / perception
+normal NPC arbitration / player-local reaction
     ↓
-existing decision system
+transient approach opportunity
     ↓
-approach opportunity
+existing NPC dialogue surface
     ↓
-existing NPC ↔ Player interaction
+explicit player Pay action
     ↓
-existing economy transaction
+player coin debit + authoritative contract transition
+    ↓
+completed
 ```
 
-`payment_due` is a problem/pressure affecting NPC decisions, not a permanent NPC activity mode.
+`payment_due` is a contract-backed problem/pressure affecting NPC decisions, not a permanent NPC mode or `NeedId`.
 
-The NPC must continue normal life while waiting for payment.
+## 1. Existing contract authority
 
-## 1. Recon existing mechanisms
+Reuse the implemented Work Contracts foundation:
 
-Before implementation, inspect and reuse:
+- `src/world/workContract.ts` owns `WorkContractRecord` and lifecycle rules,
+- `src/world/createWorkContracts.ts` owns the `WorldBundle` runtime and mutations,
+- `workerNpcId` is the authoritative worker assignment,
+- `employer` is already stored on the contract,
+- `rewardCoins` is already frozen on the contract,
+- `payment_due` is already persisted,
+- `NpcAgent` resolves its current commitment from `WorkContracts.findByWorker()` rather than duplicating contract state.
 
-- NPC ↔ Player interaction,
-- NPC player detection/perception,
-- navigation,
-- interaction initiation,
-- dialogue/action presentation,
-- economy transaction,
-- player coins/wallet,
-- relationship/sympathy,
-- reputation/standing,
-- world time,
-- NPC needs/pressures,
-- persistence,
-- existing failure/cancellation patterns.
+Do not add payment state directly to `NpcAgent` when it belongs on the contract.
 
-Do not introduce parallel mechanisms where existing systems can express the behaviour.
+## 2. Payment semantics after shared work
 
-## 2. Payment due state
+`npc-018` changed the meaning of work completion.
 
-Use the `payment_due` state produced by `npc-015`.
+A contract contains a frozen commitment snapshot:
 
-It means:
+- `requestedWorkShare`,
+- `remainingWorkAtCreation`,
+- `committedWork`,
+- `npcWorkCompleted`.
 
-- work was completed,
-- reward is owed,
-- worker is known,
-- employer is known,
-- payment has not happened,
-- contract is not completed.
+The NPC may therefore satisfy its contract while the player or another actor still has work left on the world target.
 
-No automatic transfer of coins occurs when entering `payment_due`.
+Payment must be based on the existing contract reward and `payment_due` lifecycle state. Do not re-evaluate target completion, remaining work, work share, or reward when payment is requested.
 
-## 3. Payment as an NPC problem/pressure
+## 3. Contract lifecycle extension
 
-The unpaid reward should be represented through the existing NPC decision/pressure system.
+Extend the existing lifecycle with one explicit terminal outcome:
 
-Do not implement:
-
-```
-if paymentDue:
-    findPlayer()
-    chasePlayer()
+```text
+payment_due → completed
+payment_due → unpaid
 ```
 
-Instead:
+`completed` means the agreed reward was successfully paid.
 
-```
-payment_due
-    ↓
-normal NPC simulation
-    ↓
-player becomes visible / available
-    ↓
-payment opportunity
-    ↓
-existing decision system
-    ↓
-approach player
-```
+`unpaid` means the NPC fulfilled its commitment but the employer failed to pay before patience expired.
 
-The NPC can therefore work, eat, drink, sleep, fulfil household duties, respond to other pressures, encounter the player, ask for payment, and return to normal activities.
+Do not overload:
 
-## 4. Player detection
+- `cancelled` — player abandoned a still-active contract,
+- `invalidated` — target ceased to be valid.
 
-The NPC may initiate a payment request only when the player is actually detectable through existing perception/detection mechanisms.
+Those states describe different causes and must remain distinct.
+
+Add lifecycle mutations through the existing `workContract.ts` / `WorkContracts` mutation seam. Do not let UI code mutate records directly.
+
+## 4. Payment as an NPC pressure/opportunity
+
+A `payment_due` contract should become a bounded NPC decision opportunity, not a new need or permanent phase.
+
+The worker must continue normal simulation while waiting:
+
+- hunger/thirst/sleep,
+- household duties,
+- schedule/profession work,
+- combat/threat response,
+- weather shelter,
+- social behaviour.
+
+Critical or higher-priority concerns can prevent or interrupt a payment attempt.
+
+Do not implement a global `findPlayer()`/`chasePlayer()` path.
+
+## 5. Local player availability
+
+`NpcAgent.update()` already receives the player's real position for local simulation/reaction purposes. That position must not become unconditional omniscient knowledge.
+
+Payment consideration must be gated by the same local/proximity/perception assumptions already used for NPC reaction to the player.
 
 The NPC must not:
 
-- teleport to the player,
-- know the player's position globally,
-- initiate interaction from arbitrary distance.
+- teleport,
+- navigate from arbitrary world distance toward a globally known player position,
+- initiate an interaction while streamed out,
+- request payment remotely.
 
-If the player is unavailable, the NPC continues normal simulation and may try again later.
+Loss of local eligibility cancels only the current approach attempt, not the contract obligation.
 
-## 5. Approach the player
+## 6. Approach interaction
 
-When the NPC decides to request payment, it should use existing navigation and interaction approach behaviour.
+There is currently no generic NPC-initiated approach-to-player interaction framework.
 
-Flow:
+Add only the smallest reusable extension needed to let an NPC with a selected local interaction opportunity approach the player through existing navigation/watchdog machinery.
 
-```
-payment opportunity
-    ↓
-approach player
-    ↓
-interaction range
-    ↓
-payment interaction
-```
+The payment-specific layer should supply intent/context; movement itself should remain generic enough to be reused by future NPC→Player interactions.
 
-If the player moves away, the path fails, or a higher-priority need appears, the attempt can be interrupted.
+The attempt must be transient and interruptible by:
 
-Do not create payment-specific movement.
+- critical needs,
+- combat/threats,
+- death,
+- path failure/watchdog,
+- player leaving local eligibility.
 
-## 6. Physical NPC ↔ Player interaction
+Do not add a permanent payment FSM mode.
 
-Payment must be a real NPC ↔ Player interaction.
+## 7. Physical dialogue surface
 
-Minimal interaction is sufficient:
+Reuse the existing Vue NPC dialogue surface opened through `openNpcDialogueMenu()` rather than creating a payment modal.
 
-```
-NPC
-"Payment due: 20 coins."
+The payment request should identify the contract and reward, for example:
 
-Player
-[Pay 20]
+```text
+NPC: "Za tę pracę należy mi się 20 monet."
+
+[Zapłać 20]
+[Jeszcze nie]
 ```
 
-Use the existing interaction/dialogue system where possible.
+The UI must keep only a contract id/reference and resolve the authoritative contract again when the player presses `Pay`.
 
-The important requirement is that **the player explicitly performs the payment action**.
+A stale dialog must not be able to pay an already resolved contract.
 
-No remote or automatic payment.
+## 8. Player coin debit
 
-## 7. Economy transaction
+Coins currently live in the player's normal inventory. There is no persistent NPC wallet or general actor-to-actor currency ledger.
 
-When the player selects `Pay`:
+For this plan, successful payment means:
 
-1. verify the contract is still `payment_due`,
-2. verify the player has sufficient coins,
-3. execute the existing economy transaction,
-4. only after successful transaction mark the contract completed.
+1. re-resolve the contract,
+2. verify `state === 'payment_due'`,
+3. verify the expected worker/employer and frozen `rewardCoins`,
+4. verify the player owns enough `coin`,
+5. remove exactly `rewardCoins` from player inventory,
+6. transition the contract to `completed` through one authoritative payment mutation.
 
-Flow:
+Do not route wages through merchant `settleTransaction()` unless the implementation intentionally turns this into a normal trade basket.
 
+Do not add a transient coin balance to `NpcAgent.carried`: carried inventory is runtime/transient and is not an authoritative persistent wealth model.
+
+Persistent worker/household money ownership is outside this slice. Until such an economy exists, the contract's `completed` outcome is the durable record that payment happened.
+
+## 9. Transaction safety / idempotency
+
+Payment must be exactly-once from the player's perspective.
+
+The payment mutation must own the full validation-and-transition operation; UI code must not independently remove coins and then separately mark the contract complete.
+
+Required invariant:
+
+```text
+payment_due + enough coins
+    → debit once
+    → completed
 ```
-payment_due
-    ↓
-player chooses Pay
-    ↓
-validate contract
-    ↓
-validate funds
-    ↓
-economy transaction
-    ↓
-success
-    ↓
-completed
-```
 
-Do not mark the contract completed before successful payment.
+Repeated clicks, stale dialogs, reloads, or duplicate callbacks must not debit the reward twice.
 
-## 8. Insufficient funds
+If a single existing seam cannot safely own both inventory debit and contract mutation, add one narrow app-level orchestration function that performs both synchronously and exposes one result to the UI.
+
+## 10. Insufficient funds / defer payment
 
 If the player cannot afford the reward:
 
-- no coins are transferred,
-- contract remains `payment_due`,
-- NPC remains unpaid,
-- interaction communicates the failure,
-- NPC may try again later.
+- remove no coins,
+- keep the contract `payment_due`,
+- report the failure through existing dialogue/toast feedback,
+- let the NPC try again later.
+
+Choosing `Jeszcze nie` has the same lifecycle result: the contract remains `payment_due`.
 
 Do not implement partial payment, barter, loans, instalments, or negotiation.
 
-## 9. Request throttling
+## 11. Request throttling
 
-The NPC must not repeatedly ask for payment every time it sees the player.
+NPC payment requests must be throttled in simulation world time, not render time.
 
-Use world time.
+Persist an absolute timing anchor such as:
 
-Minimum persistent timing information:
-
-```
+```text
 lastPaymentRequestAt
 ```
 
-A new request should normally be possible approximately **once per world hour**, provided the NPC sees the player and the existing decision system chooses the opportunity.
+A new active request should normally be eligible about once per world hour, provided the player is locally available and normal NPC arbitration selects the opportunity.
 
-The throttle limits payment requests, not player detection.
+The throttle limits requests, not player detection/reaction generally.
 
-## 10. Patience and unpaid outcome
+## 12. Patience and `unpaid`
 
-The NPC must not wait indefinitely.
+Store a deterministic absolute patience deadline/expiry on the authoritative contract rather than decrementing a timer every frame.
 
-After `payment_due`, allow a bounded period during which payment remains an active concern.
+Relationship/standing may influence the initial deadline using the existing `PlayerSocialLookup` signal. Do not create `ContractTrustScore` or another relationship model.
 
-Patience should be influenced by the NPC's existing relationship with the player where possible.
+When current world time passes the deadline while the contract is still `payment_due`:
 
-When patience is exhausted:
-
-```
-payment_due
-    ↓
-active payment attempts
-    ↓
-patience exhausted
-    ↓
-unpaid
+```text
+payment_due → unpaid
 ```
 
-`unpaid` means work was completed but the employer did not pay.
+After `unpaid`:
 
-It must not be treated as `completed`.
+- no further automatic payment requests are initiated,
+- no Pay action is offered for this contract,
+- the worker returns fully to normal life,
+- the record remains persistent for future reputation/dialogue/work-refusal systems.
 
-The NPC stops actively pursuing the payment and returns fully to normal life.
+Time skips should resolve expiry from absolute world time without replaying missed hourly requests.
 
-The unpaid obligation remains persistent for future systems.
+## 13. Persistence
 
-If an existing contract lifecycle already has an appropriate terminal failure state, reuse it rather than creating a redundant one.
+`SaveData.workContracts` already exists and Work Contracts already round-trip through save/load.
 
-## 11. Needs always have priority
+Extend that existing contract serialization with only the new authoritative payment fields required by this plan, for example:
 
-Payment seeking must not suspend normal NPC needs.
+- `lastPaymentRequestAt`,
+- patience deadline/expiry,
+- new `unpaid` lifecycle state.
 
-For example:
-
-```
-payment_due
-    ↓
-player seen
-    ↓
-NPC considers approaching
-    ↓
-critical hunger
-    ↓
-eat first
-    ↓
-payment opportunity later
-```
-
-Likewise, while travelling toward an interaction, a higher-priority need may interrupt the attempt.
-
-Do not create `PaymentPriorityManager` or another payment-specific priority system.
-
-## 12. Sympathy and reputation
-
-Do not create a new reputation or relationship system.
-
-Use existing sympathy/reputation/standing mechanisms.
-
-At minimum, where the current APIs support it:
-
-```
-higher sympathy / reputation
-    ↓
-longer patience
-
-lower sympathy / reputation
-    ↓
-shorter patience
-```
-
-This should be an extension of the existing relationship model, not a new `ContractTrustScore`.
-
-If an existing system is not yet capable of providing a meaningful signal, keep the integration small and document the limitation rather than implementing a parallel reputation model.
-
-Future consequences such as gossip, refusal of future work, or settlement-wide reputation are outside this plan.
-
-## 13. Completion
-
-Only after successful payment:
-
-```
-payment_due
-    ↓
-completed
-```
-
-After completion:
-
-- worker no longer has a payment obligation,
-- NPC returns to normal decision flow,
-- contract cannot be paid again,
-- relevant contract-world representations can be cleaned up using mechanisms from `npc-014`.
-
-Do not create a separate permanent `paid` contract state unless existing architecture requires it.
-
-## 14. Persistence
-
-Persist enough information to restore:
-
-- payment_due state,
-- worker/employer references,
-- last payment request time,
-- patience/deadline state,
-- unpaid state,
-- completed state.
-
-Verify payment_due, insufficient funds, unpaid, and completed states survive save/load.
+Use the repository's current save-version migration mechanism. Do not add a second persistence section or store payment runtime state on `NpcAgent`.
 
 After reload:
 
-- payment cannot be duplicated,
-- throttling remains valid,
-- unpaid contracts remain unpaid,
-- completed contracts remain completed.
+- `payment_due` remains payable,
+- throttle/deadline remain deterministic,
+- `completed` cannot be paid again,
+- `unpaid` remains terminal,
+- shared-work commitment fields remain unchanged.
 
-## 15. Transaction safety / idempotency
+## 14. Debuggability
 
-Payment must be performed exactly once.
+Extend existing Work Contract / NPC diagnostics rather than creating a payment inspector.
 
-Before payment:
+Expose where practical:
 
-```
-contract.state == payment_due
-```
-
-After successful payment:
-
-```
-contract.state == completed
-```
-
-A repeated interaction must not transfer the reward twice.
-
-Use existing transaction/idempotency mechanisms where available.
-
-## 16. Debuggability
-
-Extend existing debug tooling to expose, where practical:
-
-- payment_due,
-- worker,
-- employer,
+- contract id/state,
+- worker/employer,
 - reward,
-- last request time,
-- next eligible request time,
-- patience/deadline,
-- current payment-seeking decision,
+- `committedWork` / `npcWorkCompleted`,
+- last request / next eligible request,
+- patience deadline,
+- current payment approach intent,
 - interruption reason,
-- insufficient funds,
-- unpaid outcome,
-- completed payment.
+- insufficient-funds result,
+- `completed` / `unpaid` transition.
 
-Do not create a dedicated debug UI if existing diagnostics can be extended.
+Use existing NPC trace/debug seams for important transitions.
 
 ## Non-goals
 
 Do not implement:
 
-- Guard contracts,
-- Hunt contracts,
-- Companion/Escort contracts,
+- Guard/Hunt/Companion/Escort contract families,
+- worker-owned persistent wallet/wealth,
+- household currency economy,
+- escrow,
 - item rewards,
 - barter,
 - salary negotiation,
@@ -386,133 +300,81 @@ Do not implement:
 - loans/installments,
 - new reputation system,
 - gossip,
-- refusal-of-future-work behaviour,
+- refusal of future work,
 - settlement-wide reputation propagation,
-- NPC competition,
 - advanced workforce marketplace.
 
 ## Verification
 
-### Happy path
+Player performs browser verification; AI should not run browser verification.
 
-1. NPC completes construction.
-2. Contract becomes `payment_due`.
-3. No coins are transferred automatically.
-4. NPC continues normal simulation.
-5. NPC sees the player.
-6. Existing decision flow selects the payment opportunity.
-7. NPC approaches the player.
-8. Player receives the payment interaction.
+### Shared-work happy path
+
+1. Create a contract for less than 100% of an unfinished target's remaining work.
+2. NPC accepts and performs its frozen commitment.
+3. Contract reaches `payment_due` even if the target itself still has remaining work.
+4. No coins move automatically.
+5. NPC continues normal simulation.
+6. NPC locally encounters the player and selects a payment opportunity.
+7. NPC approaches using normal movement.
+8. Payment interaction opens only in physical/local context.
 9. Player chooses `Pay`.
-10. Economy transaction succeeds.
+10. Exactly `rewardCoins` are removed once.
 11. Contract becomes `completed`.
-12. NPC no longer has the payment obligation.
+12. Target progress and shared-work snapshot are unchanged by payment.
 
-### Physical interaction
+### Interruption / locality
 
-Verify:
+Verify that the NPC does not teleport or globally chase the player, and that critical need, combat, path failure or leaving local range can abort the current request without losing `payment_due`.
 
-- NPC cannot interact from arbitrary distance,
-- NPC does not teleport,
-- NPC cannot pay remotely,
-- player action is required.
+### Insufficient funds / defer
 
-### Insufficient funds
+Verify that insufficient coins and `Jeszcze nie` leave the contract `payment_due` with no debit.
 
-Verify:
+### Throttle / patience
 
-- insufficient coins do not complete the contract,
-- no coins are transferred,
-- NPC remains unpaid,
-- player can try again later.
+Verify one-world-hour request throttling, deterministic save/load/time-skip behaviour, relationship-influenced patience where supported, and eventual `payment_due → unpaid`.
 
-### Request throttling
+### Persistence / idempotency
 
-Verify:
-
-- NPC can make an initial request,
-- seeing the player again before one world hour does not create another request,
-- after approximately one world hour the NPC can request again if the decision system selects it.
-
-### Normal life
-
-Verify that `payment_due` does not prevent hunger handling, thirst handling, sleep/rest, household duties, or higher-priority decisions.
-
-### Patience
-
-Verify:
-
-- NPC does not wait forever,
-- NPC can stop actively pursuing payment,
-- NPC returns to normal simulation,
-- unpaid obligation remains persistent.
-
-### Sympathy / reputation
-
-Where existing systems support it, verify that different relationship/standing levels can influence patience without introducing a new reputation mechanism.
-
-### Persistence
-
-Verify payment_due, unpaid, paid, and completed states survive save/load.
-
-### Double payment
-
-Verify that the same contract cannot transfer its reward twice.
+Verify `payment_due`, `completed`, `unpaid`, request timing and patience survive save/load, and repeated/stale Pay callbacks cannot debit twice.
 
 ## Completion criteria
 
-The first complete Workforce for Hire vertical slice works:
+The implemented slice is:
 
-```
-create contract
-      ↓
-physically post announcement
-      ↓
-NPC discovers
-      ↓
-NPC evaluates
-      ↓
+```text
+post contract
+    ↓
 NPC accepts
-      ↓
-NPC travels
-      ↓
-NPC works
-      ↓
-NPC handles needs
-      ↓
+    ↓
+NPC performs committedWork
+    ↓
 payment_due
-      ↓
-NPC lives normally
-      ↓
-NPC sees employer
-      ↓
-NPC approaches
-      ↓
-player chooses Pay
-      ↓
-economy transaction
-      ↓
+    ↓
+NPC keeps living normally
+    ↓
+local encounter + bounded approach
+    ↓
+explicit Pay
+    ↓
+player coin debit exactly once
+    ↓
 completed
 ```
 
-If the player does not pay:
+or, when unpaid:
 
-```
+```text
 payment_due
-      ↓
-NPC continues normal life
-      ↓
-sees player
-      ↓
-request payment
-      ↓
-~1 world hour throttle
-      ↓
-eventual patience exhaustion
-      ↓
+    ↓
+normal life + occasional local requests
+    ↓
+patience deadline
+    ↓
 unpaid
 ```
 
-The result is a real physical NPC ↔ Player economic interaction and a complete first Work Contracts vertical slice.
+This completes the first physical employer/payment loop without inventing parallel AI, interaction, persistence, reputation, or economy systems.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
