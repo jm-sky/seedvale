@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-06 20:30:08  
+> Date: 2026-09-06 20:46:05  
 
 ## PLANS
 
@@ -11,6 +11,7 @@
 - `npc-020-strength-driven-physical-work-and-human-carrying.md`
 - `npc-021-endurance-driven-stamina-capacity-and-recovery.md`
 - `npc-022-agility-driven-melee-recovery.md`
+- `npc-023-perception-driven-observation-and-information-levels.md`
 - `quests-progression-001-reputation-and-renown-foundation.md`
 - `quests-progression-002-quest-outcomes-rewards-and-consequences.md`
 - `quests-progression-003-paid-quests-and-player-income.md`
@@ -201,6 +202,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-022-agility-driven-melee-recovery-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-023-perception-driven-observation-and-information-levels.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-023-perception-driven-observation-and-information-levels.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/npc-023-perception-driven-observation-and-information-levels.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/npc-023-perception-driven-observation-and-information-levels-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
