@@ -38,6 +38,7 @@ describe('faunaCombat (createHealthState re-exported from shared, MAX_HP/damageF
       chicken: 6,
       rooster: 7,
       dog: 40,
+      rat: 6,
     })
   })
 

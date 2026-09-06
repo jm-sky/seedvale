@@ -26,6 +26,7 @@ import {
   AnimalAgent,
   type AnimalKind,
   type AnimalLifeStage,
+  forageEdgeScore,
   type NearbyNpcCandidate,
   type VillageInfo,
 } from './AnimalAgent'
@@ -132,20 +133,22 @@ export type Fauna = {
 
 /** Where a species prefers to spawn relative to the home settlement (plan
  *  044 §2.1/§2.2's habitat preferences): `open` is the original ring used by
- *  wolf/fox/deer/stag (no habitat check beyond dry land), `meadow`/`forest`/
- *  `water` add a `sampleForestFactor`/shoreline check for the new wild
- *  species. Domestic livestock used to have a `farmstead` profile here —
- *  moved to `settlement/livestock.ts` (house-anchored, per-settlement, see
- *  the village livestock ownership plan) since a settlement-center ring
- *  can't express "belongs to this specific house". */
-type SpawnProfile = 'open' | 'meadow' | 'forest' | 'water'
+ *  wolf/fox (no habitat check beyond dry land), `meadow`/`forest`/`water` add
+ *  a `sampleForestFactor`/shoreline check for the new wild species. `edge`
+ *  (plan fauna-016 §1) is deer/stag's own transitional forest-edge band —
+ *  not a plain binary forest/meadow split, see `habitatFilterFor`'s `edge`
+ *  case. Domestic livestock used to have a `farmstead` profile here — moved
+ *  to `settlement/livestock.ts` (house-anchored, per-settlement, see the
+ *  village livestock ownership plan) since a settlement-center ring can't
+ *  express "belongs to this specific house". */
+type SpawnProfile = 'open' | 'meadow' | 'forest' | 'water' | 'edge'
 type SpawnSpec = { kind: AnimalKind, count: number, profile: SpawnProfile }
 
 const SPAWNS: SpawnSpec[] = [
   { kind: 'wolf', count: 2, profile: 'open' },
   { kind: 'fox', count: 2, profile: 'open' },
-  { kind: 'deer', count: 4, profile: 'open' },
-  { kind: 'stag', count: 2, profile: 'open' },
+  { kind: 'deer', count: 4, profile: 'edge' },
+  { kind: 'stag', count: 2, profile: 'edge' },
   { kind: 'rabbit', count: 3, profile: 'meadow' },
   { kind: 'duck', count: 2, profile: 'water' },
   { kind: 'boar', count: 2, profile: 'forest' },
@@ -159,12 +162,14 @@ const SPAWNS: SpawnSpec[] = [
  *  logic then refuses to path back into. Offset widths match the original
  *  flat-radius bands (18/18/21/20); only the anchor changed from a fixed
  *  guess (~20) to the settlement's real boundary, which ranges 22 (`OUTPOST`)
- *  to 72 (`XL`). */
+ *  to 72 (`XL`). `edge` (plan fauna-016 §1) reuses the old `open` band that
+ *  deer/stag were placed with before this plan. */
 const SPAWN_RING_OFFSET: Record<SpawnProfile, [number, number]> = {
   open: [6, 24],
   meadow: [6, 24],
   forest: [6, 27],
   water: [4, 24],
+  edge: [6, 24],
 }
 
 /** [minOffset, maxOffset] past the settlement's real footprint radius for
@@ -207,6 +212,34 @@ export function clearsRiverChannel(
   clearance: number,
 ): boolean {
   return distanceToWaterEdge == null || distanceToWaterEdge >= clearance
+}
+
+/** True when `(x, z)` sits within `clearance` of any road corridor's own
+ *  `halfWidth` (plan fauna-016 §2) — the same corridor-geometry check
+ *  `spawnerSiteOk()` already applies to cave/thicket/wolfDen placement,
+ *  pulled out as a pure/exported function so ordinary wild ring-spawn
+ *  candidates can share it instead of a second road representation. */
+export function isNearRoadCorridor(
+  x: number,
+  z: number,
+  roadSegments: readonly RoadCorridorSegment[],
+  clearance: number,
+): boolean {
+  for (const seg of roadSegments) {
+    if (distanceToSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz) < seg.halfWidth + clearance) return true
+  }
+  return false
+}
+
+/** Deer/stag forest-edge spawn-habitat acceptance (plan fauna-016 §1) —
+ *  reuses `AnimalAgent.ts`'s `forageEdgeScore` (same edge-density peak
+ *  already used for forage-target suitability) rather than a second
+ *  edge-scoring function, so "spawn habitat" and "forage suitability" can
+ *  never drift apart for the same forest reading. A transitional band
+ *  (neither open meadow nor deep forest), not a binary `forest > x`
+ *  threshold — see the plan's §1 "unikać prostego binarnego forest=true". */
+export function isDeerEdgeHabitat(forestFactor: number): boolean {
+  return forageEdgeScore(forestFactor) > 0.5
 }
 
 /** "Zniszcz" burn-site (plan 125 §7, enlarged in plan 137) — a wide, shallow
@@ -513,14 +546,8 @@ export async function createFauna(
   const clearOfRiver = (x: number, z: number, clearance: number): boolean =>
     clearsRiverChannel(riverShoreDistance?.(x, z), clearance)
 
-  const onRoad = (x: number, z: number): boolean => {
-    for (const seg of roadSegments) {
-      if (distanceToSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz) < seg.halfWidth + SPAWNER_ROAD_CLEARANCE) {
-        return true
-      }
-    }
-    return false
-  }
+  const onRoad = (x: number, z: number): boolean =>
+    isNearRoadCorridor(x, z, roadSegments, SPAWNER_ROAD_CLEARANCE)
 
   /** Random point within [minDist, maxDist] of (cx, cz), clear of water and
    *  a safety bound around (cx, cz) — `filter` adds a habitat preference
@@ -572,6 +599,8 @@ export async function createFauna(
 
   const habitatFilterFor = (profile: SpawnProfile): ((x: number, z: number) => boolean) | undefined => {
     switch (profile) {
+      case 'edge':
+        return (x, z) => isDeerEdgeHabitat(sampleForestFactor(x, z))
       case 'forest':
         return (x, z) => sampleForestFactor(x, z) > 0.45
       case 'meadow':
@@ -643,8 +672,13 @@ export async function createFauna(
   for (const spec of isSystemEnabled('animals') ? SPAWNS : []) {
     const [minOffset, maxOffset] = SPAWN_RING_OFFSET[spec.profile]
     const habitatFilter = habitatFilterFor(spec.profile)
+    // Plan fauna-016 §2: wild fauna no longer spawns on/right next to a road
+    // — reuses the same corridor geometry `spawnerSiteOk()` already applies
+    // to cave/thicket/wolfDen placement below (`onRoad`), not a second road
+    // representation. Avoiding it only at spawn time; nothing stops a live
+    // animal from crossing a road later.
     const filter = (x: number, z: number) =>
-      (!habitatFilter || habitatFilter(x, z)) && farFromOtherSpawns(x, z)
+      (!habitatFilter || habitatFilter(x, z)) && farFromOtherSpawns(x, z) && !onRoad(x, z)
     const herdTier = HERD_SPECIES[spec.kind]
     if (herdTier) {
       // Herd spawn (plan 118): one anchor point placed exactly like a

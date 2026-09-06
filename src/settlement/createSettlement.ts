@@ -59,6 +59,7 @@ import {
   placeOnGround,
   type SettlementLandmarks,
 } from './props'
+import { createSettlementRats } from './rats'
 import { type RoadNetworkContext, segmentsNear } from './roadNetwork'
 import { cellSeed } from './settlementGenerator'
 import { createSettlementNightCycle } from './settlementNightCycle'
@@ -538,6 +539,29 @@ export async function createSettlement(
     bootMarkEnd('spawnLivestock')
   }
 
+  // Settlement-local rat population (plan fauna-016 §7/§8) — own module
+  // (`rats.ts`), not `spawnLivestock`: rats are wild fauna whose habitat
+  // pressure is settlement-derived, never `ownerHouseId`-tagged livestock.
+  // Reuses the same household/home-position pairing as
+  // `householdExchangeCandidates` above for both spawn anchors and the
+  // nearest-household food-drain target.
+  const rats = createSettlementRats({
+    scene,
+    sampleHeight,
+    waterLevel,
+    sampleLocalWater,
+    collidersNear,
+    householdSites: householdExchangeCandidates.map(({ household, position }) => ({
+      household,
+      x: position.x,
+      z: position.z,
+    })),
+    economy,
+    settlementId: def.id,
+    settlementSeed,
+    onAnimalDeath,
+  })
+
   bootMark('signposts')
   let signposts: Awaited<ReturnType<typeof createSettlementSignposts>>
   try {
@@ -731,6 +755,19 @@ export async function createSettlement(
       const nearbySettlementNpcs: NearbyNpcCandidate[] = agents
         .filter((a) => !a.health.dead)
         .map((a) => ({ id: a.id, x: a.mesh.position.x, z: a.mesh.position.z, homeId: a.household?.homeId }))
+      // Plan fauna-016 §7/§9 — ticked ahead of `tickSettlementLivestock` so a
+      // dog's idle pest-chase (`nearbyRats` below) sees this frame's rat
+      // positions, not the previous one's.
+      rats.update({
+        dt,
+        observerPos,
+        dayFactor,
+        litFires,
+        villages,
+        nowDays,
+        timeOfDay,
+        dogCount: livestock.reduce((n, a) => n + (a.def.kind === 'dog' && !a.isDead() ? 1 : 0), 0),
+      })
       tickSettlementLivestock(livestock, {
         dt,
         settlementId: def.id,
@@ -747,6 +784,7 @@ export async function createSettlement(
         grassForage,
         nearbyPredators,
         nearbySettlementNpcs,
+        nearbyRats: rats.getAgents(),
       })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived
@@ -785,6 +823,7 @@ export async function createSettlement(
         agent.mesh.removeFromParent()
       }
       disposeLivestock(livestock)
+      rats.dispose()
       signposts.dispose()
       disposeSettlementGroup(group)
       group.removeFromParent()

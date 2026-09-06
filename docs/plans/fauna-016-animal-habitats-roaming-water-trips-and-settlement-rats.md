@@ -1,7 +1,7 @@
 # Plan: Animal habitats, roaming, water trips and settlement rats
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`tsc`/lint/test all green). Browser/manual verification not performed — see [implementation notes](./implementation-notes/fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats-implementation-notes.md)'s "What was actually implemented".
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** fauna-015

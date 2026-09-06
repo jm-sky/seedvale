@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   type DogGuardWolfCandidate,
+  type DogPestCandidate,
   resolveDogBarkStimulus,
   resolveDogGuardTarget,
+  resolveDogPestTarget,
 } from './dogGuard'
 
 const HOME = { x: 0, z: 0 }
@@ -133,5 +135,34 @@ describe('resolveDogBarkStimulus', () => {
       [{ x: 2, z: 0, homeId: 'house-1' }], STRANGER_RADIUS,
     )
     expect(stimulus).toBeNull()
+  })
+})
+
+function rat(overrides: Partial<DogPestCandidate>): DogPestCandidate {
+  return { id: 'rat-1', x: 5, z: 0, dead: false, ...overrides }
+}
+
+describe('resolveDogPestTarget (plan fauna-016 §9 — idle rat-chase, separate from wolf defense)', () => {
+  it('picks the nearest live rat within radius', () => {
+    const result = resolveDogPestTarget(
+      HOME,
+      [rat({ id: 'far', x: 9, z: 0 }), rat({ id: 'near', x: 3, z: 0 })],
+      10,
+    )
+    expect(result?.id).toBe('near')
+  })
+
+  it('ignores a dead rat', () => {
+    const result = resolveDogPestTarget(HOME, [rat({ dead: true })], 10)
+    expect(result).toBeNull()
+  })
+
+  it('never targets a rat beyond radius — home-bounded', () => {
+    const result = resolveDogPestTarget(HOME, [rat({ x: 20, z: 0 })], 10)
+    expect(result).toBeNull()
+  })
+
+  it('returns null with no nearby rats', () => {
+    expect(resolveDogPestTarget(HOME, [], 10)).toBeNull()
   })
 })

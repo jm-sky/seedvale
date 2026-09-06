@@ -536,9 +536,14 @@ export function tickSettlementLivestock(
      *  cross-settlement `nearbyNpcs` wolves use: a dog only cares about
      *  strangers right by its own house. */
     nearbySettlementNpcs?: readonly NearbyNpcCandidate[]
+    /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
+     *  for an owned `dog`'s idle pest-chase (`AnimalAgent.pursuePest`), same
+     *  "small caller-bounded population, not a scan" contract as
+     *  `nearbyPredators`/`nearbySettlementNpcs` above. */
+    nearbyRats?: readonly AnimalAgent[]
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs, nearbyRats } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -547,7 +552,7 @@ export function tickSettlementLivestock(
     animal.update(
       dt, livestock, observerPos, dayFactor, 0, litFires, villages,
       undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
-      timeOfDay, grassForage, nearbyPredators, nearbySettlementNpcs,
+      timeOfDay, grassForage, nearbyPredators, nearbySettlementNpcs, undefined, nearbyRats,
     )
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the

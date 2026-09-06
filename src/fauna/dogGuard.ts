@@ -62,6 +62,36 @@ export function resolveDogGuardTarget(
   return own ?? nearby
 }
 
+/** One live rat, as seen by a household dog's idle pest-chase check (plan
+ *  fauna-016 §9). */
+export type DogPestCandidate = { id: string, x: number, z: number, dead: boolean }
+
+/** Nearest live rat within `radius` of the dog's own `home` — deliberately
+ *  separate from `resolveDogGuardTarget`'s wolf-defense contract above: a rat
+ *  is nuisance vermin, never a household threat, so this is a plain nearest-
+ *  candidate search with no priority tiers of its own. The caller
+ *  (`AnimalAgent.pursuePest`) only consults this once guard/needs/lure has
+ *  already claimed nothing this tick, keeping it below real household
+ *  defense (implementation notes fauna-016 §9). Home-bounded so a dog never
+ *  leaves its own yard hunting rats. */
+export function resolveDogPestTarget(
+  home: { x: number, z: number },
+  nearbyRats: readonly DogPestCandidate[],
+  radius: number,
+): DogPestCandidate | null {
+  let best: DogPestCandidate | null = null
+  let bestD = radius
+  for (const rat of nearbyRats) {
+    if (rat.dead) continue
+    const d = Math.hypot(rat.x - home.x, rat.z - home.z)
+    if (d < bestD) {
+      bestD = d
+      best = rat
+    }
+  }
+  return best
+}
+
 export type DogBarkStimulus = 'guard' | 'wolf-howl' | 'stranger'
 
 /** A recent vocalization (any animal), as seen by a household dog —

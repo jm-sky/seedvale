@@ -22,6 +22,7 @@ export const MAX_HP: Record<AnimalKind, number> = {
   chicken: 6,
   rooster: 7,
   dog: 40,
+  rat: 6,
 }
 
 /** Predator kind -> prey kind -> damage per attack. */

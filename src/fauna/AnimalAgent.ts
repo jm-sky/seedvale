@@ -62,7 +62,7 @@ import {
 } from './AnimalLife'
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { animateCorpseRotFx, createCorpseRotFx, disposeCorpseRotFx } from './corpseDecayFx'
-import { resolveDogBarkStimulus, resolveDogGuardTarget } from './dogGuard'
+import { resolveDogBarkStimulus, resolveDogGuardTarget, resolveDogPestTarget } from './dogGuard'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
   decideFaunaBehaviour,
@@ -313,6 +313,28 @@ const VILLAGE_FLEE_BIAS_WEIGHT = 0.9
  *  constructor override, so `createFauna.ts`'s wild/wandering spawns are
  *  unaffected. */
 const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
+/** Species-specific roaming tiers (plan fauna-016 §3) — `AnimalDef.roaming`
+ *  values, small below the historic `DEFAULT_WANDER_RADIUS`, large above it.
+ *  Not an exhaustive tier system, just the two bands this plan's species
+ *  table (rabbit/duck small, deer/stag/wolf large) actually needs; a species
+ *  without a `roaming` override keeps `DEFAULT_WANDER_RADIUS`. */
+const SMALL_ROAMING_RANGE: readonly [number, number] = [4, 9]
+const LARGE_ROAMING_RANGE: readonly [number, number] = [10, 24]
+/** How close a trip's destination/return-to-home counts as "arrived" (plan
+ *  fauna-016 §5) — looser than `wander()`'s 1.2 since a shoreline point is
+ *  probe-selected, not a precise walkable target. */
+const TRIP_ARRIVAL_RADIUS = 2
+/** Bounded radial-probe attempt budget for a water-trip destination search
+ *  (plan fauna-016 §5/§10) — only spent once, when a trip actually starts,
+ *  same idiom as `WATER_SEARCH_ATTEMPTS` for the needs-driven search. */
+const WATER_TRIP_SEARCH_ATTEMPTS = 16
+/** Deer/stag water-trip policy (plan fauna-016 §5) — roughly every 2 in-game
+ *  days, a short stay, reaching well past `LARGE_ROAMING_RANGE`'s own max. */
+const DEER_WATER_TRIP: WaterTripConfig = { cooldownDays: 2, stayDurationSec: 25, searchRadius: 45 }
+/** Max distance (m) from a dog's own `home` it will chase a nearby rat (plan
+ *  fauna-016 §9) — tighter than any guard-target radius, since this is idle
+ *  yard behaviour, not household defense. */
+const DOG_PEST_RADIUS = 10
 /** Chance per expired wander timer, while stamina ratio is below
  *  `STAMINA_REST_THRESHOLD`, that the animal extends the timer and stays put
  *  instead of picking a new wander target — a tired animal rests more. */
@@ -553,6 +575,22 @@ type SourceTarget = {
   patchId?: string
 }
 
+/** A committed "trip" beyond normal local wander (plan fauna-016 §4) —
+ *  `destination` is chosen once (`maybeStartWaterTrip`) and retained for the
+ *  whole trip; `wander()`'s own per-tick retargeting never touches it.
+ *  `'water'` is the only trip kind so far, but the shape (destination + phase
+ *  + committed state) is meant to generalize to a later trip kind without a
+ *  second movement system. */
+type AnimalTripKind = 'water'
+type AnimalTripPhase = 'traveling' | 'staying' | 'returning'
+type AnimalTrip = {
+  kind: AnimalTripKind
+  destination: THREE.Vector3
+  phase: AnimalTripPhase
+  /** Countdown (sec) while `phase === 'staying'`; unused otherwise. */
+  stayRemainingSec: number
+}
+
 /** One trough visit's draw against the household water reserve — same order
  *  of magnitude as `NpcAgent`'s `WATER_DRINK_FROM_STOCK_AMOUNT`. */
 const TROUGH_DRINK_AMOUNT = 1
@@ -563,6 +601,31 @@ const TROUGH_DRINK_AMOUNT = 1
  *  unit-testable without instantiating `AnimalAgent`/Three.js. */
 export function forageEdgeScore(forestFactor: number): number {
   return Math.max(0, 1 - Math.abs(forestFactor - 0.45) * 2)
+}
+
+/** FNV-1a string hash — same local-per-module idiom as e.g.
+ *  `world/fishing.ts`'s `hashString` (deliberately duplicated rather than
+ *  shared, matching that convention). Used only to phase-offset a trip's day
+ *  bucket per animal below. */
+function hashString(value: string): number {
+  let h = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/** Deterministic day-bucket index for `animalId`'s next trip opportunity
+ *  (plan fauna-016 §5/§10) — advances once per `cooldownDays`, phase-offset
+ *  per animal (a stable hash of its own id) so a whole population doesn't
+ *  become "due" on the same day. Pure/testable; `AnimalAgent` only commits to
+ *  a new trip when this bucket differs from the last one it acted on
+ *  (`maybeStartWaterTrip`), never by rerolling every tick. */
+export function tripDayBucket(animalId: string, worldDays: number, cooldownDays: number): number {
+  if (cooldownDays <= 0) return 0
+  const phase = (hashString(animalId) % 1000) / 1000
+  return Math.floor(worldDays / cooldownDays + phase)
 }
 
 /** First `dietItems` kind actually present in `items` (plan fauna-010 §3/§7)
@@ -717,6 +780,11 @@ export type AnimalKind =
   | 'chicken'
   | 'rooster'
   | 'dog'
+  /** Settlement-habitat pest species (plan fauna-016 §7) — a plain
+   *  `AnimalAgent`, spawned/despawned by `settlement/rats.ts` toward a small
+   *  pressure-derived population, never `ownerHouseId`-tagged like real
+   *  livestock. */
+  | 'rat'
 
 export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   wolf: 'wilk',
@@ -734,6 +802,7 @@ export const ANIMAL_LABELS: Record<AnimalKind, string> = {
   chicken: 'kura',
   rooster: 'kogut',
   dog: 'pies',
+  rat: 'szczur',
 }
 
 export type AnimalDef = {
@@ -802,6 +871,34 @@ export type AnimalDef = {
    *  water is deeper than its own scale-derived wading depth — see
    *  `waterTraversal.ts`'s `classifyWaterTraversal`/`wadeDepthFor`. */
   water?: AnimalWaterCapability
+  /** Species-specific local wander band `[min,max]` (m) from `home` (plan
+   *  fauna-016 §3) — replaces the flat `DEFAULT_WANDER_RADIUS` fallback every
+   *  kind used before this plan. Absent keeps that historic default. The
+   *  constructor's own `wanderRadius` parameter (livestock's fixed
+   *  `LIVESTOCK_WANDER_RADIUS` override) still wins over this when supplied. */
+  roaming?: readonly [number, number]
+  /** Declarative periodic "trip" opportunities beyond normal local wander
+   *  (plan fauna-016 §4/§5) — currently only `water`. Absent species never
+   *  leave local wander/needs-driven movement for one of these. */
+  trips?: {
+    water?: WaterTripConfig
+  }
+}
+
+/** One species' water-trip policy (plan fauna-016 §5) — deliberately not a
+ *  wider "trip" bag: this is the only trip kind implemented so far, see
+ *  `AnimalTrip`'s doc for the generic runtime state this feeds. */
+export type WaterTripConfig = {
+  /** In-game days between opportunities to start a new trip — the animal's
+   *  own id phase-offsets this so a settlement's/region's population doesn't
+   *  all become "due" on the same day (see `tripDayBucket`). */
+  cooldownDays: number
+  /** How long (seconds) the animal lingers once it reaches the water. */
+  stayDurationSec: number
+  /** Max distance (m) from `home` the destination search will look —
+   *  deliberately allowed to exceed the species' own `roaming` band (plan
+   *  fauna-016 §6). */
+  searchRadius: number
 }
 
 /** Declarative per-species diet (plan fauna-010 §2/§3) — answers both "is
@@ -1011,6 +1108,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // reader is `dietAcceptsItem()`, so a `good` trap's meat bait can attract
     // a wolf without a second trapping-only compatibility table.
     diet: MEAT_DIET,
+    // Plan fauna-016 §3: a pack ranges further than the default band.
+    roaming: LARGE_ROAMING_RANGE,
   },
   fox: {
     kind: 'fox',
@@ -1045,6 +1144,10 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 4,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    // Plan fauna-016 §3/§5: ranges further than the default band and
+    // periodically makes a deliberate trip out to water.
+    roaming: LARGE_ROAMING_RANGE,
+    trips: { water: DEER_WATER_TRIP },
   },
   stag: {
     kind: 'stag',
@@ -1061,6 +1164,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 4,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    roaming: LARGE_ROAMING_RANGE,
+    trips: { water: DEER_WATER_TRIP },
   },
   rabbit: {
     kind: 'rabbit',
@@ -1077,6 +1182,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 3,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
+    // Plan fauna-016 §3: stays closer to its burrow than the default band.
+    roaming: SMALL_ROAMING_RANGE,
   },
   duck: {
     kind: 'duck',
@@ -1096,6 +1203,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     // can't express — surface swimming is ordinary locomotion for a duck,
     // not an emergency effort.
     water: { waterAdapted: true },
+    // Plan fauna-016 §3: already water-anchored, stays close to shore.
+    roaming: SMALL_ROAMING_RANGE,
   },
   boar: {
     kind: 'boar',
@@ -1111,6 +1220,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerNoticeRange: 13,
     playerPanicRange: 4,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
+    // Plan fauna-016 §3: ranges a bit further than the default band.
+    roaming: LARGE_ROAMING_RANGE,
   },
   bear: {
     kind: 'bear',
@@ -1268,6 +1379,28 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: MEAT_DIET,
   },
+  // Plan fauna-016 §7: settlement-habitat pest. `sociability: 'domestic'`
+  // (not `'wild'`) is deliberate, not a species-flavor accident — it's what
+  // lets it wander/forage *inside* the village instead of the wild
+  // village-avoidance every wild kind gets (`pickPointNear`/`findWaterTarget`/
+  // `findForageTarget`'s `sociability === 'wild'` checks). It's still a
+  // plain wild `AnimalAgent`, never `ownerHouseId`-tagged — spawned/despawned
+  // by `settlement/rats.ts`, not `settlement/livestock.ts`.
+  rat: {
+    kind: 'rat',
+    role: 'prey',
+    sociability: 'domestic',
+    color: 0x4a4640,
+    scale: 0.25,
+    modelHeight: 0.16,
+    walkSpeed: 2.4,
+    sprintSpeed: 5.6,
+    detectRange: 0,
+    fleeRange: 7,
+    playerNoticeRange: 9,
+    playerPanicRange: 2,
+    metabolism: DEFAULT_ANIMAL_METABOLISM,
+  },
 }
 
 /** A nearby NPC candidate for predator human-targeting (plan 179 §5/§7) —
@@ -1423,6 +1556,13 @@ export class AnimalAgent {
   private readonly tmp = new THREE.Vector3()
   private readonly home = new THREE.Vector3()
   private readonly wanderRadius: readonly [number, number]
+  /** Committed water/other trip (plan fauna-016 §4) — `null` when not on
+   *  one. Only ever read/written by `wander()`'s trip helpers. */
+  private trip: AnimalTrip | null = null
+  /** Last `tripDayBucket` this animal committed a water trip for (plan
+   *  fauna-016 §5) — `-1` so the very first bucket it ever sees always
+   *  counts as new. */
+  private lastWaterTripBucket = -1
   private moving = false
   private sprinting = false
   /** True while a player is riding this animal (plan fauna-003) — suppresses
@@ -1746,7 +1886,11 @@ export class AnimalAgent {
     z: number,
     visual?: THREE.Object3D,
     animations: THREE.AnimationClip[] = [],
-    wanderRadius: readonly [number, number] = DEFAULT_WANDER_RADIUS,
+    /** Explicit override (e.g. livestock's fixed `LIVESTOCK_WANDER_RADIUS`) —
+     *  wins over `def.roaming` when supplied (plan fauna-016 §3). `undefined`
+     *  (every wild ring-spawn caller) falls through to `def.roaming`, then to
+     *  `DEFAULT_WANDER_RADIUS`. */
+    wanderRadius?: readonly [number, number],
     sampleForestFactor?: (x: number, z: number) => number,
     ownerHouseId?: string,
     onDeath?: (animalId: string) => void,
@@ -1771,7 +1915,7 @@ export class AnimalAgent {
     this.collidersNear = collidersNear
     this.sampleForestFactor = sampleForestFactor
     this.home.set(x, 0, z)
-    this.wanderRadius = wanderRadius
+    this.wanderRadius = wanderRadius ?? def.roaming ?? DEFAULT_WANDER_RADIUS
     this.health = createHealthState(MAX_HP[def.kind])
     this.life = createAnimalLifeState(Math.random(), def.metabolism)
     this.spontaneousVocalizeCooldownSec = initialSpontaneousVocalizeCooldownSec(def.kind)
@@ -2735,6 +2879,12 @@ export class AnimalAgent {
      *  own `pursueLure()`, below any threat/needs response. Defaults to none
      *  so existing callers/tests keep prior behaviour. */
     lures: readonly TrapLureDescriptor[] = [],
+    /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
+     *  for an owned `dog`'s idle pest-chase (`pursuePest`); every other kind
+     *  never reads this. Caller-bounded the same way as `nearbySettlementNpcs`
+     *  (`settlement/rats.ts`'s own small population, not a world scan).
+     *  Defaults to none so existing callers/tests keep prior behaviour. */
+    nearbyRats: readonly AnimalAgent[] = [],
   ): void {
     if (this.health.dead) {
       if (!this.corpseHeld) {
@@ -3012,7 +3162,7 @@ export class AnimalAgent {
           this.humanDecisionTimer = 0
           this.npcDecisionTimer = 0
           this.provokedTimer = 0
-          this.updatePrey(dt, others, lures, nearbyPredators)
+          this.updatePrey(dt, others, lures, nearbyPredators, nearbyRats)
           break
         }
       }
@@ -3626,6 +3776,7 @@ export class AnimalAgent {
     others: AnimalAgent[],
     lures: readonly TrapLureDescriptor[],
     nearbyPredators: readonly AnimalAgent[],
+    nearbyRats: readonly AnimalAgent[] = [],
   ): void {
     const threat = this.nearest(others, 'predator', this.def.fleeRange)
     if (threat) {
@@ -3645,8 +3796,42 @@ export class AnimalAgent {
     }
     if (this.pursueNeeds(dt, others)) return
     if (this.pursueLure(dt, lures)) return
+    if (this.def.kind === 'dog' && this.pursuePest(dt, nearbyRats)) return
     this.setIntent('wander')
     this.wander(dt)
+  }
+
+  /** Idle pest-chase for a household dog (plan fauna-016 §9) — deliberately
+   *  separate from `dogGuard.ts`'s wolf-defense contract (`resolveDogGuardTarget`,
+   *  scored well above this at the top-level `decideFaunaBehaviour`): a rat
+   *  is nuisance vermin, never a household threat. Only reached once guard/
+   *  threat/needs/lure has already claimed nothing this tick, so it never
+   *  competes with real household defense. Returns `true` when it consumed
+   *  this tick's movement. */
+  private pursuePest(dt: number, nearbyRats: readonly AnimalAgent[]): boolean {
+    if (nearbyRats.length === 0) return false
+    const candidates = nearbyRats.map((rat) => ({
+      id: rat.animalId,
+      x: rat.mesh.position.x,
+      z: rat.mesh.position.z,
+      dead: rat.isDead(),
+    }))
+    const resolved = resolveDogPestTarget({ x: this.home.x, z: this.home.z }, candidates, DOG_PEST_RADIUS)
+    if (!resolved) return false
+    const rat = nearbyRats.find((r) => r.animalId === resolved.id)
+    if (!rat) return false
+    this.setIntent('chase', copyVec3(rat.mesh.position))
+    const dist = Math.hypot(
+      rat.mesh.position.x - this.mesh.position.x,
+      rat.mesh.position.z - this.mesh.position.z,
+    )
+    if (dist < CONTACT_RANGE) {
+      this.attack(rat)
+    } else {
+      this.sourceDest.copy(rat.mesh.position)
+      this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    }
+    return true
   }
 
   /** Threat-alert perception beyond immediate spatial `fleeRange` (plan
@@ -4188,6 +4373,11 @@ export class AnimalAgent {
   }
 
   private wander(dt: number): void {
+    // Trip continuation/opportunity (plan fauna-016 §4/§5) — the same
+    // low-priority tail every predator/prey/dog branch already falls back to
+    // (implementation notes §2.1), so a trip is transparently below any real
+    // threat/combat/fire/guarding response without a new priority tier.
+    if (this.tickTrip(dt)) return
     this.wanderTimer -= dt
     const timerExpired = this.wanderTimer <= 0
     if (timerExpired || this.arrived(this.target, 1.2)) {
@@ -4201,6 +4391,97 @@ export class AnimalAgent {
       }
     }
     this.steerToward(this.target, this.walkSpeedNow(), dt)
+  }
+
+  /** `wander()`'s single trip entry point (plan fauna-016 §4) — continues an
+   *  already-committed trip, or (species with `def.trips.water`) checks the
+   *  deterministic day-bucket opportunity and may commit to a new one.
+   *  Returns `true` when a trip consumed this tick's movement, so `wander()`
+   *  skips its own local-wander logic entirely for the tick. */
+  private tickTrip(dt: number): boolean {
+    if (this.trip) {
+      this.continueTrip(dt)
+      return true
+    }
+    return this.maybeStartWaterTrip()
+  }
+
+  /** Checks (at most once per bucket change) whether this animal should
+   *  start a new water trip, and commits to a destination if so. Cheap when
+   *  nothing is due — a hash + a couple of comparisons, no search — and the
+   *  actual destination probe only runs once a trip is actually starting
+   *  (plan fauna-016 §10). */
+  private maybeStartWaterTrip(): boolean {
+    const config = this.def.trips?.water
+    if (!config) return false
+    const bucket = tripDayBucket(this.animalId, this.tickNowDays, config.cooldownDays)
+    if (bucket === this.lastWaterTripBucket) return false
+    this.lastWaterTripBucket = bucket
+    const destination = this.findWaterTripDestination(config.searchRadius)
+    if (!destination) return false
+    this.trip = {
+      kind: 'water',
+      destination: new THREE.Vector3(destination.x, 0, destination.z),
+      phase: 'traveling',
+      stayRemainingSec: config.stayDurationSec,
+    }
+    return true
+  }
+
+  /** Advances the committed trip by one tick — travel to `destination`, stay
+   *  put for `stayRemainingSec`, then return to `home` and clear the trip.
+   *  The destination/phase are never recomputed mid-trip (implementation
+   *  notes: "interruption should not silently reroll a destination every
+   *  tick") — a threat/combat branch elsewhere in `update()` simply doesn't
+   *  call `wander()` for that tick, leaving this state untouched until it
+   *  does again. */
+  private continueTrip(dt: number): void {
+    const trip = this.trip
+    if (!trip) return
+    if (trip.phase === 'traveling') {
+      this.sourceDest.copy(trip.destination)
+      this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+      if (this.arrived(trip.destination, TRIP_ARRIVAL_RADIUS)) trip.phase = 'staying'
+      return
+    }
+    if (trip.phase === 'staying') {
+      trip.stayRemainingSec -= dt
+      if (trip.stayRemainingSec <= 0) trip.phase = 'returning'
+      return
+    }
+    // 'returning'
+    this.sourceDest.set(this.home.x, 0, this.home.z)
+    this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
+    if (this.arrived(this.sourceDest, TRIP_ARRIVAL_RADIUS)) this.trip = null
+  }
+
+  /** Bounded radial-probe search for a reachable water-trip destination
+   *  (plan fauna-016 §5/§6) — same shoreline-probe technique as
+   *  `findWaterTarget()`, but centered on `home` (stable regardless of where
+   *  the trip happens to start) and allowed out to `searchRadius`,
+   *  deliberately past `ROAM_RADIUS`/`wanderRadius`. Only ever called once,
+   *  when a trip is starting — never scans per-frame or across all loaded
+   *  water features. */
+  private findWaterTripDestination(searchRadius: number): { x: number, z: number } | null {
+    let best: { x: number, z: number } | null = null
+    let bestScore = -Infinity
+    for (let attempt = 0; attempt < WATER_TRIP_SEARCH_ATTEMPTS; attempt++) {
+      const angle = Math.random() * Math.PI * 2
+      const dist = Math.random() * searchRadius
+      const x = this.home.x + Math.cos(angle) * dist
+      const z = this.home.z + Math.sin(angle) * dist
+      if (!this.isWalkable(x, z)) continue
+      const hits = shoreProbeHits(x, z, this.sampleHeight, this.waterLevel)
+      if (hits === 0) continue
+      if (this.def.sociability === 'wild' && this.isNearVillage({ x, z })) continue
+      const d = Math.hypot(x - this.home.x, z - this.home.z)
+      const score = hits * 10 - d
+      if (score > bestScore) {
+        bestScore = score
+        best = { x, z }
+      }
+    }
+    return best
   }
 
   /** hunger/thirst above `NEED_ELEVATED_THRESHOLD` widen the wander radius

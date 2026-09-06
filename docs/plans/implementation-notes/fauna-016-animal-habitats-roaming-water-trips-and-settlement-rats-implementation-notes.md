@@ -103,3 +103,57 @@ Also extend existing `AnimalKind`/save-data tests for `rat` if the kind enters p
 5. Wire real food consumption, then dog/NPC combat integration.
 
 Keep `createFauna.ts` responsible for wild placement, `AnimalAgent` for per-animal behaviour/movement, terrain for physical water/forest/roads, and settlement/economy objects for their own food state. The implementation should connect these owners rather than move state between them.
+
+## What was actually implemented
+
+Followed the "Implementation order" above closely; no deviation from the ownership boundaries or non-goals.
+
+### 1. Habitat + road avoidance (`createFauna.ts`)
+
+Deer/stag moved from `profile: 'open'` to a new `'edge'` `SpawnProfile`. `habitatFilterFor('edge')` doesn't add a second edge-scoring function — it reuses `AnimalAgent.ts`'s existing `forageEdgeScore` (already peaking at ~0.45 forest-edge density for forage-target suitability) through a new pure `isDeerEdgeHabitat(forestFactor) = forageEdgeScore(forestFactor) > 0.5`, exported for direct unit testing. Spawn habitat and forage suitability now read the same forest-edge signal by construction.
+
+Road avoidance: the existing `onRoad()`/`SPAWNER_ROAD_CLEARANCE` corridor check (previously only reachable through `spawnerSiteOk()` for cave/thicket/wolfDen) was pulled into a pure exported `isNearRoadCorridor(x, z, roadSegments, clearance)`, and the ordinary ring-spawn candidate `filter` in the `SPAWNS` loop now also calls it. No new road representation; a live animal can still cross a road later — only spawn placement is affected.
+
+### 2. Species-specific roaming (`AnimalAgent.ts`)
+
+`AnimalDef` gained an optional `roaming?: readonly [number, number]` — two tiers, `SMALL_ROAMING_RANGE` ([4,9], rabbit/duck) and `LARGE_ROAMING_RANGE` ([10,24], deer/stag/wolf/boar); every other kind keeps the historic `DEFAULT_WANDER_RADIUS` ([6,16]) by omitting the field. The constructor's `wanderRadius` parameter lost its own default value and is now optional; the actual wander band is resolved once, in the constructor body, as `wanderRadius ?? def.roaming ?? DEFAULT_WANDER_RADIUS` — an explicit override (livestock's `LIVESTOCK_WANDER_RADIUS`) still wins, `undefined` (every wild ring-spawn caller) falls through to species config. No `kind === ...` branch anywhere in movement code.
+
+### 3–4. Trip state + water trips (`AnimalAgent.ts`)
+
+One small committed state, `AnimalTrip = { kind: 'water', destination, phase: 'traveling'|'staying'|'returning', stayRemainingSec }`, plus `trip: AnimalTrip | null` and `lastWaterTripBucket` fields. `wander()` gained a single new first line, `if (this.tickTrip(dt)) return` — since `wander()` is already the one low-priority tail every predator/prey/dog branch falls back to (`updatePredator`/`updatePrey`'s final `this.wander(dt)`, and the `player-ignore`/`npc-ignore` branches in `update()`), a trip is transparently below any real threat/combat/fire/guarding response without introducing a new priority tier in `faunaDecision.ts`.
+
+`tickTrip()` either continues an already-committed trip (`continueTrip()` — travel/stay-timer/return, `destination` never recomputed mid-trip) or, for a species with `def.trips.water`, checks a deterministic day-bucket opportunity (`tripDayBucket(animalId, worldDays, cooldownDays)` — a pure FNV-1a-hash-phase-offset function, exported and unit-tested) and, only on a bucket change, probes for a destination once (`findWaterTripDestination`, a bounded radial shoreline probe centered on `home`, explicitly allowed past `wanderRadius`/`ROAM_RADIUS`, same `shoreProbeHits` technique as the existing thirst-driven `findWaterTarget()`). `DEER_WATER_TRIP = { cooldownDays: 2, stayDurationSec: 25, searchRadius: 45 }` is wired onto `deer`/`stag` only; no other species has a water-trip policy in this pass (wolf/fox/rabbit/boar/duck are unaffected — duck is already water-anchored via `AnimalWaterCapability`, a separate fauna-015 mechanism).
+
+Interruption is structural, not a special case: any higher-priority branch (flee/chase/attack/guard/fire) simply doesn't call `wander()` for that tick, so a trip's `destination`/`phase` sit untouched until `wander()` is reached again — no reroll, no cancellation bookkeeping needed.
+
+### 5. Rat kind + settlement population (`AnimalAgent.ts`, `proceduralAnimals.ts`, `faunaCombat.ts`, `animalDialogue.ts`, new `settlement/rats.ts`)
+
+`rat` added to `AnimalKind` (+ `ANIMAL_LABELS`, `MAX_HP: 6`, dialogue lines, `createRatModel()` procedural fallback — no GLB). `ANIMAL_DEFS.rat`: `role: 'prey'`, `sociability: 'domestic'` — deliberate, not a species-flavor accident: `'domestic'` is what lets a rat wander/forage *inside* the settlement instead of the wild village-avoidance every `'wild'` kind gets in `pickPointNear`/`findWaterTarget`/`findForageTarget`. It's still a plain `AnimalAgent`, never `ownerHouseId`-tagged.
+
+New `src/settlement/rats.ts` (not a `RatManager` — a small module of pure/imperative functions, mirroring `livestock.ts`'s shape without any of its household-ownership semantics): pure exported `ratPopulationTarget({ householdFoodCount, settlementFoodCount, dogCount })` (food pressure minus dog suppression, clamped to `[0,5]`), and `createSettlementRats(deps)` returning `{ update, getAgents, dispose }`. Reconciliation (spawn/despawn one rat at a time toward the target, food-drain roll) runs at most once per `RAT_RECONCILE_INTERVAL_DAYS` (0.5 in-game days) — never per frame. A shrinking population despawns the live rat furthest from the observer (reads as "wandered off", not a visible pop-out).
+
+`createSettlement.ts` wires it: `householdSites` reuses the same `household + home-position` pairing already built for `householdExchangeCandidates` (both spawn anchors and the nearest-household food-drain target); `rats.update()` runs just before `tickSettlementLivestock` each frame, with `dogCount` recomputed from the settlement's own live `livestock`; `rats.dispose()` added to `Settlement.dispose()`.
+
+### 6. Real food loss (`settlement/rats.ts`)
+
+No `ratFoodDamage` counter. On a reconciliation tick, each live rat gets one deterministic hashed roll (`hash01(hashString(animalId), dayBucket, salt) < RAT_EAT_CHANCE` — same local FNV-1a idiom as `world/fishing.ts`, not `Math.random()`, so outcomes don't depend on frame timing); on a hit, it drains exactly one real food unit from its nearest household (`Household.takeFood()`) or, if that household has none, from the settlement store (`SettlementEconomy.withdrawFood(1)`) — both pre-existing atomic "remove one concrete food item" primitives, no new inventory/economy code.
+
+### 7. Dog vs. rat (`dogGuard.ts`, `AnimalAgent.ts`, `livestock.ts`, `createSettlement.ts`)
+
+New `resolveDogPestTarget(home, nearbyRats, radius)` in `dogGuard.ts` — deliberately separate from `resolveDogGuardTarget`'s wolf-defense contract (different candidate shape, no priority tiers, home-bounded via `DOG_PEST_RADIUS = 10`). `AnimalAgent.pursuePest()` is only consulted for `kind === 'dog'`, inside `updatePrey()`, *after* `pursueNeeds`/`pursueLure` have already found nothing — i.e. strictly below both real household defense (`dog-guard`, scored well above `prey-normal` in `faunaDecision.ts`) and the dog's own needs. `nearbyRats` threads through as a new optional trailing parameter on `AnimalAgent.update()`/`updatePrey()` and `tickSettlementLivestock`'s ctx (same "small caller-bounded population" pattern as the existing `nearbyPredators`/`nearbySettlementNpcs`), sourced from `rats.getAgents()`.
+
+### 8. NPC vs. rat — no new integration
+
+Not specially wired, per the plan's explicit "no settlement-wide scan/job" instruction: a rat is a normal `AnimalKind` with the normal health/death path, so the player's existing melee-vs-animal interaction and the dog pest-chase above already satisfy "killable by existing mechanisms". No generic NPC→animal combat/threat system reads `AnimalKind` today in a way that would pick up a `'prey'`-role rat as a target on its own, and adding one was explicitly out of scope.
+
+### 9. Persistence — deliberately none
+
+`rat` was **not** added to `persistence/saveData.ts`'s `ANIMAL_KINDS` set. Rats are reconciled fresh from live settlement state (`ratPopulationTarget`) every time a settlement loads/rebuilds, the same "not a general persistent population model" territory wild ring-spawn animals already occupy — adding per-rat save state was explicitly discouraged by the plan unless something already required it, and nothing does.
+
+### Tests
+
+New: `fauna/animalRoamingTrips.test.ts` (`AnimalDef.roaming`/`trips.water` species-config sanity, `tripDayBucket` determinism/cooldown-advance/phase-offset/non-positive-cooldown), `settlement/rats.test.ts` (`ratPopulationTarget` zero/growth/clamp/dog-suppression/never-negative/combined-sources). Extended: `createFauna.test.ts` (`isNearRoadCorridor` on/near/clear/no-segments, `isDeerEdgeHabitat` meadow/edge/forest), `dogGuard.test.ts` (`resolveDogPestTarget` nearest/dead/out-of-radius/none), `faunaCombat.test.ts` (`MAX_HP` now includes `rat`). No test instantiates a full `AnimalAgent`/`AnimalTrip` runtime — consistent with the pre-existing convention in this directory (every fauna test targets extracted pure functions), the trip/rat *runtime* wiring is exercised structurally (shared `wander()`/`update()` call paths) rather than via a dedicated integration test.
+
+### Verification
+
+`npx tsc --noEmit`, `npx eslint .`, and full `npx vitest run` (3317 tests) all pass. Browser/manual verification (the plan's 12-item checklist) is the user's own next step, not performed here.

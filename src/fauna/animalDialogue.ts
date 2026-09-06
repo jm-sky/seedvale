@@ -63,6 +63,10 @@ const ANIMAL_FLAVOR_LINES: Record<AnimalKind, string[]> = {
     'Pies merda ogonem, rozpoznając Cię jako swojego.',
     'Krąży czujnie wokół zagrody, węsząc w powietrzu.',
   ],
+  rat: [
+    'Szczur znika chyżo pod najbliższą ścianą.',
+    'Mały gryzoń obwąchuje ziemię przy spichlerzu.',
+  ],
 }
 
 export function pickAnimalFlavorLine(kind: AnimalKind): string {

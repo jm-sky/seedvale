@@ -318,3 +318,36 @@ export function createDogModel(): THREE.Group {
   root.add(legs(earMat, 4, 0.08, 0.18, 0.035, legHeight))
   return root
 }
+
+/** Settlement pest fallback (plan fauna-016 §7) — no GLB, small enough to
+ *  read as vermin scurrying near a house rather than a proper animal. */
+export function createRatModel(): THREE.Group {
+  const root = new THREE.Group()
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a4640, flatShading: true })
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0x6a6258, flatShading: true })
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), bodyMat)
+  body.scale.set(1, 0.85, 1.4)
+  body.position.y = 0.08
+  body.castShadow = true
+  root.add(body)
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.045, 5, 4), bodyMat)
+  head.position.set(0, 0.09, 0.1)
+  head.castShadow = true
+  root.add(head)
+
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.016, 4, 3), tailMat)
+    ear.position.set(side * 0.03, 0.12, 0.1)
+    root.add(ear)
+  }
+
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.16, 4), tailMat)
+  tail.rotation.x = Math.PI / 2 - 0.2
+  tail.position.set(0, 0.05, -0.14)
+  root.add(tail)
+
+  root.add(legs(bodyMat, 4, 0.035, 0.05, 0.012, 0.04))
+  return root
+}

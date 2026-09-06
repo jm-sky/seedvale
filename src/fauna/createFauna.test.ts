@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { clearsRiverChannel, FAUNA_URLS, SPAWNER_SPECS, spawnerId } from './createFauna'
+import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
+import {
+  clearsRiverChannel,
+  FAUNA_URLS,
+  isDeerEdgeHabitat,
+  isNearRoadCorridor,
+  SPAWNER_SPECS,
+  spawnerId,
+} from './createFauna'
+
+function segment(overrides: Partial<RoadCorridorSegment> = {}): RoadCorridorSegment {
+  return {
+    ax: 0, az: 0, ah: 0, bx: 10, bz: 0, bh: 0, halfWidth: 2, heightStrength: 1, tintStrength: 1,
+    ...overrides,
+  }
+}
 
 describe('SPAWNER_SPECS cave habitat (plan 188)', () => {
   it('has a cave entry that can produce bear, alongside the existing wolf cave', () => {
@@ -48,5 +63,38 @@ describe('clearsRiverChannel (wild spawn / habitat river clearance)', () => {
 
   it('accepts a position well clear of the channel', () => {
     expect(clearsRiverChannel(20, 6)).toBe(true)
+  })
+})
+
+describe('isNearRoadCorridor (plan fauna-016 §2 — wild spawn/road avoidance)', () => {
+  it('rejects a candidate on the road itself', () => {
+    expect(isNearRoadCorridor(5, 0, [segment()], 1)).toBe(true)
+  })
+
+  it('rejects a candidate within clearance of the road edge', () => {
+    // halfWidth 2 + clearance 1 = rejected up to 3 units from the centerline.
+    expect(isNearRoadCorridor(5, 2.9, [segment()], 1)).toBe(true)
+  })
+
+  it('accepts a candidate clear of the road', () => {
+    expect(isNearRoadCorridor(5, 4, [segment()], 1)).toBe(false)
+  })
+
+  it('accepts any candidate with no road segments nearby', () => {
+    expect(isNearRoadCorridor(5, 0, [], 1)).toBe(false)
+  })
+})
+
+describe('isDeerEdgeHabitat (plan fauna-016 §1 — deer/stag forest-edge spawn habitat)', () => {
+  it('rejects open meadow', () => {
+    expect(isDeerEdgeHabitat(0.05)).toBe(false)
+  })
+
+  it('accepts the forest-edge transition', () => {
+    expect(isDeerEdgeHabitat(0.45)).toBe(true)
+  })
+
+  it('rejects deep forest', () => {
+    expect(isDeerEdgeHabitat(0.95)).toBe(false)
   })
 })

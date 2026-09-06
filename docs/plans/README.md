@@ -70,7 +70,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
-| 💡 `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md`   | -       | 🟡 | L      | fauna-015 |
 
 ---
 
@@ -103,6 +102,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-013-river-drainage-continuity-and-terrain-adaptation.md` | Seed `3`: rzeka wcześniej urywająca się ~50–100 m przed morzem dochodzi teraz do odbiornika (albo okazuje się realnie zamkniętą nieckę); na kilku seedach sprawdź ujścia przy szwach tile'i, drenaż górski i śródlądowy, małe strumienie vs duże rzeki oraz spójność koryta/wody po naprawie (bez sztucznych kanałów do morza) |
 | `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | Śródlądowe rzeki na kilku seedach (równiny, doliny, drenaż górski, szwy tile'i, małe strumienie vs duże rzeki) nie kończą się na suchym lądzie; naprawione ujścia wyglądają wiarygodnie (bez sztucznych kanionów), wyrównanie koryta/wody po naprawie |
 | `world-terrain-012-macro-meadow-variation.md` | Widoczne szerokie zielone/suche łąki (~30-80 m) na otwartym terenie, płynne przejścia bez twardych linii i bez szwów chunków; drobna zmienność per-blade nadal widoczna w obrębie makro-regionu; wyłączenie `macroVariationEnabled` (GUI → Grass) przywraca poprzedni wygląd |
+| `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md` | Deer/stag habitat (las/skraj lasu), brak spawnu przy drogach, species-specific roaming, dalekie wyprawy do wody z powrotem do local behaviour, szczury jako mała populacja osadnicza (widoczne, zmniejszają zapasy, zabijalne przez psa/gracza) |
 
 ---
 
