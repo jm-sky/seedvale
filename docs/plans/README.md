@@ -83,6 +83,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
 | ◼️ `quests-progression-004-quest-availability-and-prerequisites.md`         | -       | 🔴 | S      | quests-progression-002 |
 | ◼️ `quests-progression-005-authored-rpg-quests.md`                          | -       | 🔴 | L      | quests-progression-002, quests-progression-004 |
+| ◼️ `npc-022-agility-driven-melee-recovery.md`                               | -       | 🟡 | S      | npc-019 |
 
 ---
 
@@ -178,7 +179,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `017`
 - items-player: `020`
-- npc: `022`
+- npc: `023`
 - persistence: `005`
 - quests-progression: `006`
 - settlements: `003`
