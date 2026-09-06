@@ -138,3 +138,5 @@ Manual browser verification wykonuje użytkownik, zgodnie z planem.
 4. Dodać compact responsive owned-count presentation przez container query/native CSS bez JS layout state.
 5. Przełączyć Merchant Details oraz Inventory list/details na helper w user-facing nazwach; zachować raw title tam, gdzie jest celowo cytowany lub użyty w zdaniu.
 6. Typecheck + odpowiednie testy; browser verification pozostawić użytkownikowi.
+
+> Partially done by user: items count with other UI/UX and RWD fixes.

@@ -13,6 +13,7 @@ const props = defineProps<{
   committedCount: number
   /** Upper bound for the stepper (owned count for OFFER); `null` = unbounded (BUY, capped only by coins). */
   maxCount: number | null
+  ownedCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -59,12 +60,16 @@ function clear(): void {
         <span
           v-if="committedCount > 0"
           class="mr-1 opacity-80"
-        >✓</span>
+        >
+          ✓
+        </span>
         <span class="font-medium capitalize">{{ label }}</span>
         <span
           v-if="committedCount > 0"
           class="ml-2 text-[12px] opacity-70"
-        >×{{ committedCount }}</span>
+        >
+          ×{{ committedCount }}
+        </span>
       </button>
       <span class="shrink-0 text-[12px] opacity-70 max-md:text-[11px]">{{ price }}{{ priceSuffix ? ` ${priceSuffix}` : '' }}</span>
       <button
@@ -96,7 +101,15 @@ function clear(): void {
       >
         −
       </button>
-      <span class="w-8 text-center text-xs">{{ pendingQty }}</span>
+      <span class="w-8 inline-flex items-center justify-center gap-1 text-center text-xs">
+        {{ pendingQty }}
+        <span
+          v-if="ownedCount != undefined"
+          class="opacity-70"
+        >
+          / {{ ownedCount }}
+        </span>
+      </span>
       <button
         type="button"
         class="cursor-pointer rounded bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"

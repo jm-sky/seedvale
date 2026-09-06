@@ -1,7 +1,7 @@
 # Plan: Merchant item ownership and semantic item labels
 
 **Created:** 2026-09-05
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Depends on:** none
@@ -138,3 +138,5 @@ Dla ważnych nowych współdzielonych funkcji prezentacyjnych dodać JSDoc, jeż
 Unikać unrelated refactors.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
+
+> Partially done by user: items count with other UI/UX and RWD fixes.

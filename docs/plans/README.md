@@ -34,7 +34,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
 | `world-terrain-007-underground-caves.md`                  | Faza 0-3 done (domain/generator/lifecycle/presentation/movement/collision); Faza 4 fauna/loot/persistence deferred — see plan's "Implementation status" | 🔴  | L      | ~~097~~ ~~125~~ |
-| 💡 `world-terrain-010-waterways-and-vegetation.md`         | Phases 1/3/4/5/6/7 done (canonical river cross-section, riparian + lily + reed-cluster + seaweed vegetation); Phases 2/8/9 deferred — see plan's "Implementation status" | 🟡  | M      | -               |
+| `world-terrain-010-waterways-and-vegetation.md`         | Phases 1/3/4/5/6/7 done (canonical river cross-section, riparian + lily + reed-cluster + seaweed vegetation); Phases 2/8/9 deferred — see plan's "Implementation status" | 🟡  | M      | -               |
+| `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | Added row count       | 🟡 | S      | -      |
 
 ---
 
@@ -69,7 +70,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
-| 💡 `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | -       | 🟡 | S      | -      |
 | 💡 `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md`   | -       | 🟡 | L      | fauna-015 |
 
 ---

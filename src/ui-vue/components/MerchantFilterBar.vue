@@ -58,15 +58,15 @@ function update(patch: Partial<TradeFilters>): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="flex flex-wrap lg:flex-col gap-1.5">
     <input
       type="text"
       placeholder="Szukaj..."
-      class="w-full rounded-md bg-white/5 px-2 py-1.5 text-xs outline-none placeholder:opacity-50 focus:bg-white/10"
+      class="min-w-1/4 lg:w-full rounded-md bg-white/5 px-2 py-1.5 text-xs outline-none placeholder:opacity-50 focus:bg-white/10"
       :value="modelValue.search"
       @input="update({ search: ($event.target as HTMLInputElement).value })"
     >
-    <div class="flex flex-wrap gap-1">
+    <div class="contents lg:flex lg:flex-wrap lg:gap-1">
       <button
         v-for="chip in categoryChips"
         :key="chip.id"
@@ -80,7 +80,7 @@ function update(patch: Partial<TradeFilters>): void {
     </div>
     <div
       v-if="capabilityChips.length > 1"
-      class="flex flex-wrap gap-1"
+      class="contents lg:flex lg:flex-wrap lg:gap-1"
     >
       <button
         v-for="chip in capabilityChips"
@@ -93,7 +93,8 @@ function update(patch: Partial<TradeFilters>): void {
         {{ chip.label }}
       </button>
     </div>
-    <div class="flex flex-wrap items-center gap-1">
+    <span class="mx-0.5 opacity-30 lg:hidden">|</span>
+    <div class="contents lg:flex lg:flex-wrap lg:gap-1">
       <button
         v-for="chip in priceChips"
         :key="chip.id"

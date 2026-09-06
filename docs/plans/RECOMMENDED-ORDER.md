@@ -40,9 +40,7 @@ _No qualifying plans._
 
 ### Polish
 
-1. `ui-input-009` — **Merchant item ownership and semantic item labels**  
-   🟡 `S` · ✅ ready · unlocks 0/0
-2. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -156,31 +154,27 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `ui-input-009` — **Merchant item ownership and semantic item labels**  
-  🟡 `S` · **Score:**  19  
-   → **unlocks:** 0/0
-
-22. `fauna-007` — **Animal leading and cart harness**  
+21. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-23. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
+22. `fauna-016` — **Animal habitats, roaming, water trips and settlement rats**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-24. `tools-000` — **Weapon Browser — Observatory/Admin**  
+23. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-25. `world-terrain-008` — **Underground Caves V2**  
+24. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-26. `npc-004` — **Drzewo genealogiczne NPC**  
+25. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-27. `tools-006` — **tools-006--world-observatory.md**  
+26. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

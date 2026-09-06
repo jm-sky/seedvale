@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import MerchantTabButton from '@/components/MerchantTabButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import { ITEM_CATALOG, type ItemCapability } from '../../items/itemCatalog'
 import { isInstanceBackedKind } from '../../items/itemInstances'
@@ -227,22 +228,16 @@ function openDetails(kind: ItemKind): void {
         v-if="isCompact"
         class="mb-2 flex shrink-0 gap-1"
       >
-        <button
-          type="button"
-          class="flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs"
-          :class="activeContext === 'buy' ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'"
+        <MerchantTabButton
+          label="BUY"
+          :active="activeContext === 'buy'"
           @click="activeContext = 'buy'"
-        >
-          BUY
-        </button>
-        <button
-          type="button"
-          class="flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs"
-          :class="activeContext === 'offer' ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'"
+        />
+        <MerchantTabButton
+          label="OFFER"
+          :active="activeContext === 'offer'"
           @click="activeContext = 'offer'"
-        >
-          OFFER
-        </button>
+        />
       </div>
 
       <div
@@ -258,7 +253,7 @@ function openDetails(kind: ItemKind): void {
             v-if="!isCompact || activeContext === 'buy'"
             class="flex min-w-0 flex-col gap-2 md:min-h-0"
           >
-            <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+            <h3 class="hidden lg:block shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
               BUY
             </h3>
             <MerchantFilterBar
@@ -294,7 +289,7 @@ function openDetails(kind: ItemKind): void {
             v-if="!isCompact || activeContext === 'offer'"
             class="flex min-w-0 flex-col gap-2 md:min-h-0"
           >
-            <h3 class="shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+            <h3 class="hidden lg:block shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
               OFFER
             </h3>
             <MerchantFilterBar
@@ -319,6 +314,7 @@ function openDetails(kind: ItemKind): void {
                 price-suffix="monet"
                 :committed-count="transaction.offer[row.kind] ?? 0"
                 :max-count="ownedCount(row.kind)"
+                :owned-count="ownedCount(row.kind)"
                 @commit="onCommitOffer"
                 @clear="onClearOffer"
                 @open-details="openDetails"

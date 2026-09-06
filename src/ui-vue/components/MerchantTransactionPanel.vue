@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { CheckIcon } from '@lucide/vue'
+import { LockIcon } from 'lucide-vue-next'
 import { ref } from 'vue'
 import UiButton from '@/components/UiButton.vue'
 import type { ItemKind } from '../../items/items'
@@ -112,7 +113,15 @@ function afterTrade(): number {
         :class="canTrade ? '' : 'opacity-50'"
         @click="emit('trade')"
       >
-        <CheckIcon class="size-4" />
+        <CheckIcon
+          v-if="canTrade"
+          class="size-4 mr-2"
+        />
+        <LockIcon
+          v-else
+          class="size-4 mr-2"
+        />
+        Handluj
       </UiButton>
     </div>
   </div>
