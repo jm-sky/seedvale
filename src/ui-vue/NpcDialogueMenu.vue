@@ -71,7 +71,7 @@ watch(() => state.open, (open) => { if (open) resetMenu() })
 <template>
   <div
     v-if="state.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+    class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
     @click.self="close"
   >
     <div

@@ -31,7 +31,7 @@ function withdrawInstance(id: string): void {
 <template>
   <div
     v-if="ui.containerScreen.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px] max-md:items-stretch max-md:p-2"
+    class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px] max-md:items-stretch max-md:p-2"
     @click.self="closeContainerScreen"
   >
     <UiPanel

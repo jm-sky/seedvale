@@ -96,7 +96,7 @@ function nextPage(): void {
 <template>
   <div
     v-if="state.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+    class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
     @click.self="closeVillagers"
   >
     <div

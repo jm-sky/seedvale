@@ -35,7 +35,7 @@ function matchesFilter(state: QuestState): boolean {
 <template>
   <div
     v-if="ui.questLog.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+    class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
     @click.self="closeQuestLog"
   >
     <div

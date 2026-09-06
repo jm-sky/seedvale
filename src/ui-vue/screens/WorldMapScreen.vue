@@ -239,7 +239,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 <template>
   <div
     v-if="ui.worldMap.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
+    class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
     @click.self="closeWorldMap"
   >
     <div

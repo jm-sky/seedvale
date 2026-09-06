@@ -191,7 +191,7 @@ function openDetails(kind: ItemKind): void {
 <template>
   <div
     v-if="ui.merchant.open"
-    class="pointer-events-auto fixed inset-0 z-10 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px] max-md:items-stretch max-md:p-2"
+    class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px] max-md:items-stretch max-md:p-2"
     @click.self="closeMerchant"
   >
     <UiPanel
