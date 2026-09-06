@@ -1,91 +1,138 @@
 # Implementation Notes: Work Contracts — Payment & Employer Interaction
 
-## Current-code discrepancies
+**Reviewed:** 2026-09-06
+**Plan:** npc-016-work-contracts-payment-and-employer-interaction.md
 
-- **npc-014 and npc-015 are still planned and there is no WorkContract implementation in current main.** There is no WorkContract, payment_due, contract registry, or contract persistence yet. Treat npc-015 as a hard prerequisite; do not implement payment state as ad-hoc fields on NpcAgent.
-- The plan's reference to an existing **NPC → Player interaction/approach system is not accurate**. Current NPC/player interaction is player-initiated: gameLoop.ts resolves a gazed NPC and opens vueUi.openNpcDialogueMenu(...); NpcAgent only has the existing lookAtPlayer reaction/pause. There is no existing NPC-initiated approach-to-player interaction.
-- There is **no player coin/economy transaction API**. Coins are ordinary ItemKind: coin inventory units. Merchant transactions use items/trade.ts settleTransaction(), which is atomic for player inventory but is not a general payer→recipient economy ledger. Do not invent a settlement-economy payment path just because the plan calls it an economy transaction.
+## Current contract foundation
 
-## Contract ownership / lifecycle
+- `npc-014`, `npc-015` and `npc-018` are implemented on current `main`. The old notes saying there is no Work Contract runtime/persistence are obsolete.
+- `src/world/workContract.ts` owns the authoritative `WorkContractRecord` and pure lifecycle mutations. Current states are `available | advertised | accepted | travelling | working | payment_due | completed | cancelled | invalidated`; `npc-016` needs to add terminal `unpaid` rather than reuse `cancelled`/`invalidated`.
+- `src/world/createWorkContracts.ts` owns the `WorldBundle` runtime and all mutations. It already exposes `find`, `findByWorker`, `findByTarget`, `accept`, `beginTravel`, `beginWork`, `completeWork`, `creditNpcWork`, `release`, etc. Add payment/unpaid transitions here instead of introducing another registry or mutating records from UI/NpcAgent.
+- `WorkContractRecord.workerNpcId` is already the sole worker assignment authority. `NpcAgent` resolves its outstanding commitment via `WorkContracts.findByWorker()`; do not duplicate payment state on the agent.
+- `employer`, `rewardCoins`, target identity and work-share metadata already live on the record and are persisted.
 
-- Keep the authoritative contract record separate from NpcAgent runtime state. A contract can outlive settlement stream-out/in and must reference stable worker/employer identities.
-- Prefer a small contract registry owned at the app/world-state level, with explicit carry across WorldBundle rebuilds if the registry is threaded through the bundle. Do not put the contract collection inside an individual Settlement or NpcAgent.
-- The worker reference should use the stable NPC id (${settlementId}:npc:${i}), not the NPC name. Names are currently dialogue/quest keys and are not unique enough for authoritative world identity.
-- The employer is the player in v1. Keep this explicit in the contract model rather than introducing a generic actor/entity abstraction.
-- Use one authoritative lifecycle reducer/mutation seam for state transitions. Payment must atomically validate payment_due, funds, worker/employer identity and reward, then transition to completed. Never expose remove coins and complete contract as unrelated callers.
+## Important npc-018 semantic change
 
-## NPC integration
+- `npc-018` changed a contract from "NPC owns completion of the whole construction" to a frozen work commitment against a shared existing target.
+- Authoritative fields are `requestedWorkShare`, `remainingWorkAtCreation`, `committedWork` and `npcWorkCompleted`.
+- The underlying world object remains the sole owner of actual progress; player and NPC can contribute independently.
+- `NpcAgent` ends contractual work when the NPC's commitment is fulfilled or the target is otherwise completed, and the contract can reach `payment_due` while the target still has useful work remaining.
+- Therefore payment must **not** re-check whether the well/preparation/palisade/torch itself is completed. `payment_due + rewardCoins` is already the contract authority for what is owed.
+- Current `ContractTarget` variants are `construction`, `terrain_preparation`, `palisade`, and `standing_torch`; payment code should be target-agnostic.
 
-- NpcAgent.choose() is the existing pressure arbitration point. Payment should enter as a bounded pressure/candidate, not as a new phase or permanent mode.
-- Existing need arbitration is already personality/role aware through Needs.ts + decisionModifiers.ts. Payment should be another pressure input/candidate and must remain below critical hunger/thirst/sleep/combat interruptions.
-- Do not add a payment need. The contract is a problem/pressure with explicit lifecycle state.
-- The existing NpcPlan system is the right place only if the payment approach needs resumable intent. Do not create a second payment-specific planner.
-- NpcAgent already receives the real player position in update(observerPos, ...), but that must not be treated as implicit global knowledge. Gate payment consideration through the existing player-reaction/perception conditions first. reactionChance.ts provides personal relation + general standing and is already injected into every NPC through PlayerSocialLookup.
-- Existing player-facing relationship data is in QuestManager: getRelation(), getRelationLevel() and getPlayerStanding(). Reuse the existing PlayerSocialLookup seam rather than importing QuestManager into NpcAgent.
+## NPC contract integration
 
-## NPC → Player approach: important architectural decision
+- `NpcAgent.pursueAcceptedContract()` explicitly returns `false` for `payment_due` today: the agent keeps normal life and there is no active payment behaviour yet. This is the intended integration point to extend indirectly through normal decision/arbitration, not by turning `payment_due` back into the construction execution path.
+- `NpcAgent.choose()` / existing arbitration remains the owner of competing pressures. Do not add a `NeedId` for wages and do not create a permanent payment FSM phase.
+- Critical hunger/thirst/sleep, combat/threat response and other higher-priority behaviour must be able to prevent/interrupt the payment opportunity.
+- Existing `NpcPlan`/movement/watchdog machinery should be reused only for the transient approach intent if needed; avoid a payment-specific planner.
 
-- Because there is currently no NPC-initiated physical interaction, add the **smallest extension of the existing movement/interaction seams**, not a new interaction framework.
-- Reuse NpcAgent's existing movement/navigation/watchdog machinery for the approach. The approach target should be a live player position snapshot captured when the payment opportunity is selected, then refreshed only while the player remains perceptible/eligible.
-- Reuse the existing interaction-range/facing conventions from src/app/interactables.ts / interaction/resolveInteraction.ts for the final physical interaction. Do not create a second range constant or teleport/rescue shortcut for payment.
-- A payment attempt must be transient: interruption by critical needs, death, failed navigation or loss of player visibility returns the NPC to normal decision flow. Do not add a permanent payment FSM phase.
-- The current lookAtPlayer phase is a useful precedent for player-facing behaviour, but it is **not sufficient** for this plan because it is only a pause/reaction and does not move the NPC.
+## Player locality / perception
 
-## Player payment interaction
+- `NpcAgent.update(observerPos, ...)` already receives the real player position for nearby simulation/reaction, so no new global player-position service is required.
+- That position is not permission for omniscient chasing. Gate payment consideration through the same local/proximity assumptions used by the existing player reaction path.
+- `src/ai/reactionChance.ts` already provides `PlayerSocialLookup`, carrying `{ relationLevel, standing }` from `QuestManager` without importing quests into `NpcAgent`. Reuse this seam for patience tuning and, if useful, opportunity weighting.
+- `reactionChance.ts` is a social probability model, not a line-of-sight/nav API. Do not treat a successful reaction chance as proof that an arbitrary world-space approach is valid.
 
-- The existing NPC dialogue surface is split: gameLoop.ts handles player-gazed NPC interaction, while vueUi.openNpcDialogueMenu() opens the current Vue NPC dialogue screen. Reuse that UI seam for the payment choice rather than creating another modal.
-- The payment UI should receive a contract id/reference and resolve the contract again at confirmation time. Do not trust a stale amount shown when the dialog opened.
-- Insufficient funds should leave the contract untouched and report failure through the existing toast/dialog feedback path.
-- Since the player owns the coins, payment v1 can be an atomic player-inventory transfer: validate inventory.has('coin', reward), remove coins, then transition the contract. If the design requires a worker-owned coin balance, that would be a **new economic ownership mechanism** and should be explicitly added to the plan instead of silently storing coins on NpcAgent.
-- Do not reuse settleTransaction() unless the payment is intentionally modelled as a normal trade basket; it currently models merchant purchase/barter, not employer→worker wages.
+## NPC → Player approach
 
-## Persistence
+- There is still no generic NPC-initiated physical interaction framework. Current player/NPC dialogue is player-initiated.
+- Add the smallest reusable approach seam needed for a locally eligible NPC interaction. The reusable concept should be "approach nearby player for interaction", with payment supplying context, rather than `goCollectPayment()` owning movement rules.
+- Reuse the existing NpcAgent navigation/goTo/watchdog patterns and existing interaction-distance conventions; do not teleport or add a payment-only range constant if an existing local interaction range can be reused.
+- The approach should hold transient intent only. Contract obligation remains authoritative on `WorkContractRecord` if the path fails, the player leaves, or a critical pressure interrupts.
+- No approach should be simulated for a streamed-out NPC; the contract remains `payment_due` until the worker is active and locally encounters the player.
 
-- Current SaveData is v1 and has no contract field. saveState.ts is the assembly point and persistence/saveData.ts owns the schema.
-- Add a dedicated workContracts save section rather than mixing contract data into quests, settlement economy or NPC runtime state.
-- Persist only authoritative contract state: stable id, worker/employer references, target reference, reward, lifecycle/advertisement state, payment-request timestamp, patience/deadline and any other state required to make the transition deterministic after reload.
-- Do not persist NpcAgent.phase, pendingAction, pathfinding or other transient runtime state. Current architecture intentionally keeps those transient while stable NPC state lives in NpcStateRegistry.
-- Current save schema is version 1 with no migration history. Follow the existing validation/defaulting conventions in persistence/saveData.ts; old saves must load with an empty contract collection.
-- Autosave is already centralized in app/saveState.ts; contract mutations therefore only need to participate in the existing SaveData snapshot.
+## Existing dialogue surface
 
-## WorldBundle / streaming
+- `src/app/gameLoop.ts` currently resolves a gazed NPC and calls `vueUi.openNpcDialogueMenu(...)` after releasing pointer lock.
+- `src/ui-vue/store.ts::openNpcDialogueMenu()` owns the Vue NPC dialogue state; it currently derives the normal help/quest line from `QuestManager.onInteract(npc.name)` / `npc.getDialogueLine()`.
+- `configureNpcDialogueMenu()` is the existing app→Vue callback seam for NPC actions such as trade/food/water/area questions. Prefer extending this surface/configuration rather than creating another payment modal.
+- NPC-initiated payment still needs an app-level way to open the same dialogue UI once the NPC reaches interaction range. Keep the UI entry point shared even if the initiator differs.
+- The UI should retain only a contract id/reference and re-resolve through `WorkContracts.find()` on confirmation; never trust a reward amount captured when the dialog first opened.
 
-- WorldBundle is rebuilt during certain world changes, while SettlementsManager deliberately carries settlement economies, households and authoritative NPC state across rebuilds.
-- A contract registry must follow the same ownership/lifetime reasoning. If placed in WorldBundle, explicitly carry it through rebuildWorldBundle; otherwise keep the registry outside the rebuild boundary and pass narrow hooks into NPC/settlement systems.
-- Worker NPCs can be in streamed-out settlements. Payment state must remain authoritative even when no NpcAgent instance currently exists.
+## Player coins / payment ownership
+
+- There is no general persistent actor-to-actor currency ledger and no dedicated player wallet. `coin` is a normal player inventory item.
+- Merchant `items/trade.ts::settleTransaction()` is a trade/barter operation; do not reuse it merely because both paths remove coins.
+- `NpcAgent.carried` is an `Inventory`, but current authoritative NPC state deliberately does **not** persist carried inventory across reconstruction/streaming. Do not credit wages into `NpcAgent.carried` as a fake persistent NPC wallet.
+- Household/settlement economy currently has no established persistent coin balance suitable for wages either.
+- For this plan, durable payment semantics should therefore be: remove `rewardCoins` from player inventory exactly once and transition the authoritative contract to `completed`. Persistent worker wealth can be introduced later by the economy owner without changing the already-recorded fact that the wage was paid.
+
+## Atomic payment seam
+
+- Do not expose a UI path that separately calls `inventory.remove(...)` and later `contracts.completePayment(...)` with no guard between them.
+- Add one narrow orchestration seam at the app/action layer (or another existing owner with both dependencies) that synchronously:
+  1. resolves contract by id,
+  2. validates `state === 'payment_due'`, expected employer/worker and `rewardCoins`,
+  3. validates player coin count,
+  4. removes exactly the reward,
+  5. performs the existing-registry lifecycle mutation to `completed`,
+  6. returns a typed result for UI feedback.
+- Re-resolve immediately before mutation so stale dialogs/repeated callbacks become no-op/invalid results.
+- If the inventory API cannot guarantee removal after the pre-check, structure the function so contract completion cannot occur on a failed debit.
+
+## Lifecycle additions
+
+- Add pure domain transitions in `src/world/workContract.ts`, then corresponding mutation methods in `src/world/createWorkContracts.ts`.
+- Recommended responsibilities:
+  - `completeContractPayment(record)` accepts only `payment_due` and returns `completed`.
+  - `markContractUnpaid(record, now)` or equivalent accepts only expired `payment_due` and returns `unpaid`.
+- Keep debit orchestration outside the pure domain module; `workContract.ts` should not import player inventory.
+- Add `unpaid` to terminal-state handling so contract flags/active-target queries behave consistently and no new active contract is blocked forever by an old unpaid one.
+- Decide flag cleanup by the existing terminal-state rule rather than special-casing payment UI. Since `contractHasActiveTarget()` derives from terminality, adding `unpaid` to `TERMINAL_STATES` should naturally remove/omit the marker when the registry mutation performs the same cleanup as other terminal transitions.
 
 ## Timing / patience
 
-- Use dayNight.elapsedDays / simulation world time for lastPaymentRequestAt and patience/deadline, not render seconds.
-- Reuse existing time conversion helpers only when converting a world-time duration to a real action duration; do not decrement a payment timer every frame.
-- A one-world-hour retry throttle should be represented as an absolute timestamp/anchor (for example nextPaymentRequestAt or lastPaymentRequestAt), allowing save/load and time skip to remain deterministic.
-- Patience should be stored as a deadline/absolute expiry, not a continuously decremented field.
-- Time skip handling matters: contract state must be resolved from current world time after a skip rather than replaying every missed request.
+- Use simulation world time (`elapsedDays`/the same `now` unit already stored on contracts) for payment request timing and patience.
+- Store absolute anchors on the contract, e.g. `lastPaymentRequestAt` plus `paymentPatienceUntil` (exact names can follow local conventions).
+- One world hour is `1 / 24` elapsed day; use an existing time helper if one already expresses this unit rather than introducing render-second conversion.
+- Patience should be initialized deterministically when the contract first reaches `payment_due`, not recomputed every frame from current relationship values.
+- `PlayerSocialLookup` may influence that initial duration. Freeze the resulting deadline so relation changes/reloads do not continuously move the expiry target.
+- On time skip/reload, compare current world time to the absolute deadline; do not replay every missed hourly request.
 
-## Transaction / idempotency pitfalls
+## Where to initialize payment metadata
 
-- The critical invariant is payment_due → completed only after the coin removal succeeds.
-- Re-check contract state and reward immediately before mutation. A second dialog, stale UI callback or repeated input must return a no-op/invalid result once state is no longer payment_due.
-- Do not infer completion from the player's current coin count or from the existence of an interaction dialog.
-- Keep unpaid terminal and distinct from completed; no future payment action should be offered once patience has expired unless a later plan explicitly reopens the contract.
+- `completeContractWork()` is the authoritative `working → payment_due` transition today. This is the cleanest place to initialize payment-related lifecycle metadata that must exist exactly once when wages become due.
+- Because patience may depend on player relation and pure `workContract.ts` should remain quest-agnostic, either:
+  - pass already-resolved deterministic payment metadata into the transition, or
+  - have the runtime/orchestration layer perform one guarded follow-up mutation immediately when entering `payment_due`.
+- Prefer one atomic runtime call if practical so a newly `payment_due` record is never externally visible without required deadline metadata.
 
-## Debugging
+## Persistence / migrations
 
-- The existing NPC inspector/debug path is preferable to a new debug UI. NpcAgent.createInspectionSnapshot() already exposes pressures, strategy, plan, action, queue and watchdog state.
-- Add contract/payment information to the same diagnostic surface or to a small world-level contract debug snapshot. Avoid a second payment-specific inspector.
-- Trace important transitions using the existing NpcTraceBuffer pattern: payment opportunity selected, approach started/interrupted, request shown, insufficient funds, successful payment and patience expiry.
+- `SaveData.workContracts` already exists. Do **not** add another payment persistence section.
+- Current save schema has real versioning/migrations and is now v6 after recent contract/buildable work. Follow `persistence/saveData.ts`'s `CURRENT_SAVE_VERSION` migration path rather than the obsolete v1/default-empty advice from the previous notes.
+- Extend the existing saved contract shape with the new payment timing fields and `unpaid` state.
+- Preserve all npc-018 shared-work snapshot fields unchanged through migration.
+- Old saves containing `payment_due` need deterministic defaults for any newly required timing metadata. Choose a migration rule that does not immediately and unexpectedly mark every legacy payable contract unpaid unless explicitly desired.
+- `app/saveState.ts` already serializes `workContracts`; extend that existing mapping only as needed.
+
+## WorldBundle / streaming
+
+- The contract runtime is already a `WorldBundle` field and is already carried/rebuilt as part of the existing Work Contracts implementation. No new ownership decision is needed.
+- Payment state must remain record-authoritative when the assigned worker is streamed out. Do not persist current approach/path/dialog state.
+- `findByWorker()` already gives a reconstructed NpcAgent access to its outstanding `payment_due` record once it streams back in.
+
+## Debugging / tests
+
+- Existing contract/NPC trace/inspection paths already expose contract information from npc-015. Extend those instead of adding a payment inspector.
+- Useful trace points: payment opportunity selected, approach started, approach interrupted, request shown, deferred, insufficient funds, paid, patience expired/unpaid.
+- Unit tests should cover pure lifecycle guards, terminal handling, payment metadata initialization, save migration/round-trip and exactly-once debit orchestration.
+- Add a regression test for npc-018 semantics: a partial-share contract can be paid from `payment_due` while the target itself remains unfinished.
 
 ## Suggested implementation order
 
-1. Land/verify npc-014 + npc-015 contract foundation and construction completion state.
-2. Add persistent contract registry + SaveData round-trip for lifecycle/payment metadata.
-3. Add the atomic player coin-payment mutation seam.
-4. Add the bounded NPC pressure/candidate for payment, using existing perception and relation lookup.
-5. Add transient NPC approach using existing navigation/watchdog.
-6. Reuse the Vue NPC dialogue interaction surface for the explicit Pay action.
-7. Add throttling/patience and terminal unpaid handling.
-8. Extend existing NPC diagnostics and test idempotency/persistence.
+1. Extend `WorkContractState`/record with `unpaid` + payment timing metadata and add guarded pure lifecycle transitions.
+2. Extend `WorkContracts` runtime mutations and persistence/migration/round-trip.
+3. Add exactly-once player coin-debit + contract-completion orchestration.
+4. Add payment opportunity selection to normal NPC arbitration, using `findByWorker()` and local player eligibility.
+5. Add the smallest reusable NPC→nearby-player approach seam through existing navigation/watchdog.
+6. Reuse/extend the existing Vue NPC dialogue surface for `Pay` / defer / insufficient-funds feedback.
+7. Add throttle/patience expiry and relation-based deadline initialization through `PlayerSocialLookup`.
+8. Extend diagnostics/tests, including shared-work and stale-dialog/idempotency regressions.
 
-## Review conclusion
+## Recon conclusion
 
-The plan's system direction is sound, but several reuse-existing statements refer to mechanisms that **do not currently exist**: NPC-initiated player approach and a general player→NPC economic transaction. The implementation should extend the existing NPC FSM/navigation, perception, Vue dialogue and player inventory seams minimally, while introducing only the genuinely missing contract registry/persistence/payment mutation primitives.
+The earlier notes were stale in the most important area: the Work Contract registry, lifecycle, persistence and NPC execution now all exist. The missing pieces are narrower: payment lifecycle metadata/transitions, exactly-once player coin debit, a bounded NPC payment pressure, and a reusable local NPC→Player approach/open-dialog seam.
+
+The biggest post-`npc-018` correction is semantic: **pay the contract when the NPC fulfils its frozen commitment; do not require the shared world target itself to be finished.**
