@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-09-02
+**Last verified:** 2026-09-06
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -18,7 +18,8 @@ Melee and ranged combat are each a single neutral state machine reused by every 
 - `src/combat/rangedLifecycle.ts` — draw → release → recovery timer with a single `fireReady` edge.
 - `player/playerMelee.ts` / `player/playerRanged.ts` wrap these for the player (add input, camera-facing, stamina gating); `NpcAgent`'s `combat` `Phase` (below) wraps them for NPCs. There is no second, parallel melee/ranged implementation for NPCs.
 - `src/combat/combatIntent.ts`'s `CombatTargetHandle` (`getPosition`/`isAlive`/`applyDamage`) is the small data-only seam an attack resolves against — `fauna/faunaCombat.ts`'s `combatTargetForAnimal()` builds one for an `AnimalAgent`; the player and NPCs use the same shape.
-- Damage entry points are unified: `HealthState` (`src/shared/HealthState.ts`) is shared by fauna, NPCs and the player; `NpcAgent.applyIncomingCombatDamage()` is the single path for animal→NPC, NPC→NPC and player→NPC damage.
+- Damage entry points are unified for every attacker's *incoming*-damage handling: `HealthState` (`src/shared/HealthState.ts`) is shared by fauna, NPCs and the player; `NpcAgent.applyIncomingCombatDamage()` is the single path for animal→NPC, NPC→NPC and player→NPC damage. This unification does not extend to fauna's own *outgoing* attacks — see below.
+- Combat's responsibility for an NPC target ends at the single-line `physicalInjury` write inside `applyIncomingCombatDamage()`/`takeDamage()`; combat never reads it back. See [npc.md](./npc.md#health-injury-and-healing) for what consumes it (healing pressure, `beginHeal()`).
 
 ## Melee
 
@@ -45,6 +46,10 @@ A shot that reaches `maxDistance` without a hit becomes an ordinary dropped-item
 `NpcAgent` gained a `combat` `Phase`, driven from its own `update()` cadence — there is no second `NpcCombatManager`/loop. `beginCombat(intent: CombatIntent)`/`cancelCombat()` starts/stops it; `NpcAgent` never picks its own target, reason to fight, or weapon mode — `CombatIntent { target, mode: 'melee' | 'ranged' }` is always supplied by an external decision system (below). `src/ai/npcCombat.ts` resolves the attacking/defending item and ammo straight from `NpcAgent.carried` — there is no separate NPC equipment system. Each `NpcAgent` owns at most one in-flight `Projectile` on itself for ranged attacks (mirrors `combatAttack` already being a per-agent field), so it needs no camera/player/gameLoop involvement and no shared world projectile registry.
 
 NPC role-based carried weapons (plan 185): `src/ai/npcLoadout.ts`'s `defaultWeaponForRole()` seeds `carried` once at `NpcAgent` construction — `woodcutter → axe`, `guard → long_sword`, `farmer → knife`; `trader`/`miner`/`fisher` stay unarmed (no existing item justifies a default for them). Before this plan, nothing ever put a weapon into `carried`, so the combat resolution above was reachable but never actually armed.
+
+## Fauna outgoing attacks
+
+`fauna/faunaCombat.ts`'s flat per-attacker-kind `DAMAGE_TABLE`/`HUMAN_DAMAGE` lookup (with a generic fallback) is a structurally separate, older mechanism from the melee/ranged/critical pipeline above — no critical roll, no defense resolution. It applies only to an animal's own *outgoing* attack (predator biting prey/human/NPC); incoming damage *to* an animal always goes through the shared critical-hit resolver first. Fauna has no `DefenseConfig` and carries no items, so the defense half of this asymmetry is principled; the critical-roll half is not obviously so — see [fauna.md](./fauna.md#combat).
 
 ## Animal attack & NPC defense (plan 179)
 

@@ -1,10 +1,10 @@
 # Seedvale — Woda
 
-**Purpose:** źródło prawdy dla wody (ocean + jeziora / cieki śródlądowe): stan techniczny i wizualny, decyzje, historia poprawek.
+**Purpose:** źródło prawdy dla wody (ocean + jeziora / cieki śródlądowe): stan techniczny i wizualny, standing decisions, hydrologia rzek.
 
 **Nie jest:** planem implementacji ([plans/](../plans/README.md)), logiem całej grafiki ([GRAPHICS.md](../architecture/GRAPHICS.md) — tam zostają kontrakty G4–G6), ani katalogiem assetów.
 
-**Last verified:** 2026-09-05 (rzeki: plany world-terrain-011/013 zaimplementowane + technicznie zweryfikowane, browser check jeszcze nie zrobiony; plany 181/189 z wodospadami też bez browser checku — reszta sekcji verified 2026-08-13, plan 098 fazy 1–3 + wanna mesha, browser ✅)
+**Last verified:** 2026-09-06 (rzeki: technicznie zweryfikowane, browser check rzek/wodospadów jeszcze nie zrobiony — zob. Otwarte)
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -14,7 +14,7 @@ Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy t
 
 1. Przed zmianą oceanu, jezior, brzegu, `waterLevel` albo `bodyScale` — przeczytaj **Standing decisions** i **Stan obecny**.
 2. Kontrakty renderu (depthWrite, mirror RT, foliage) zostają w [GRAPHICS.md](../architecture/GRAPHICS.md) G4–G6; szczegóły domeny wody są tutaj.
-3. Po decyzji użytkownika albo zweryfikowanym fixie — dopisz wpis w **Historii** (najnowszy na górze) i zaktualizuj stan / decyzje.
+3. Po decyzji użytkownika albo zweryfikowanym fixie — zaktualizuj stan / decyzje tutaj; szczegóły implementacji/historia zostają w planie/issue, nie tutaj.
 4. Issue/plan mogą szczegółować pracę; trwała reguła ląduje tutaj.
 
 Status wiedzy: `✅` potwierdzone w przeglądarce · `🔧` zaimplementowane, bez browser check · `📝` decyzja / kierunek · `❓` otwarte.
@@ -23,7 +23,7 @@ Status wiedzy: `✅` potwierdzone w przeglądarce · `🔧` zaimplementowane, be
 
 ## Standing decisions
 
-Trwałe reguły. Zmiana = nowy wpis w historii + aktualizacja tej tabeli.
+Trwałe reguły. Zmiana = aktualizacja tej tabeli (historia decyzji zostaje w planie/issue, nie tutaj).
 
 | ID | Decyzja | Skutek |
 |----|---------|--------|
@@ -179,158 +179,19 @@ src/terrain/riverQuery.ts          analityczny river lookup dla placementu
 src/terrain/chunkVegetation.ts     riparianPatches / lilyPatches (plan world-terrain-010)
 ```
 
-### Wizualny (2026-08-13)
-
-Screen (przed fazą 1): `refs/water-2026-08-13-inland-dual-material.png`
-
-To było śródlądowe jezioro rysowane dwoma systemami. **Plan 098 (browser ✅ 2026-08-13):** inland nigdy nie jest oceanem; jeden shader; depth fade / piana / mokry piasek; wspólne lustro 256² z toggle Vue. Issue [028](../issues/2026-08-13--028--inland-water-dual-material.md) / [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md) `done`.
-
-Przyczyna screenu (stan sprzed fazy 1):
-
-| Co widać | Przyczyna w kodzie |
-|----------|-------------------|
-| Jasnoniebieska, prawie płaska tafla wije się z terenem | Shader jeziora (`DAY_SHALLOW` 0x4fa3c8), maska `vCover` |
-| Ciemniejsza, falująca plama o twardych prostych krawędziach na środku | Ocean Water.js przebija tam, gdzie `vBodyScale > 0.9` (chunk sklasyfikował basen jako „duży”). Ocean **nie ma** maski brzegu — krawędź to przecięcie globalnego plane z terenem / granicą klasyfikacji |
-| Dwa materiały bez blendu | Palety rozjechane: ocean `0x0f3a52` vs jezioro `0x1a4d6b` / `0x4fa3c8`. Inny model fal i odbić |
-| Ostre, kanciaste styki woda–piasek | Jezioro: wąski `vCover` + płaski mesh. Ocean: sam depth-test vs teren (issue [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md)) |
-| Brak fade głębokości przy brzegu | Alpha jeziora = `uOpacity * vCover` (baza 0.78); brak samplowania `floorHeights`. Ocean nie fade'uje brzegu wcale |
-| Ciemne, „brudne” odbicia na falującej części | Mirror 256² + mix 55% w stronę ciemnego `waterColor`; aliasing terenu w lustrze (issue [009](../issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md)) |
-| Brak piany / mokrego piasku na styku | Foam z `abs(vWave)`, nie z brzegu. Terrain shader nie ciemnieje przy `waterLevel` |
-| Brak kierunku nurtu | Sine time, zero flow field |
-| Możliwe szwy między płatami | Per-chunk mesh × 1.02 + fale w przestrzeni lokalnej |
-
-Pas piasku terenu (issue 001, `sandBandAt` 0.6–3) jest w kodzie wygładzony; na tym ujęciu problemem nie są schodki koloru lądu, tylko **dwa shadery wody** i twardy clip plane'u.
+Implementacja P0–P1 (unifikacja materiału jezioro/ocean, depth fade, brzeg, fale, wspólne lustro) jest zakończona. Pełna implementation history (issue-by-issue fixes, phase completions, screenshot diagnoses) jest przeniesiona z tego dokumentu — zob. plan [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) oraz issues [001](../issues/2026-08-07--001--water-shore-color-banding.md)/[002](../issues/2026-08-07--002--water-daynight-integration.md)/[003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md)/[009](../issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md)/[022](../issues/2026-08-12--022--ocean-through-tree-foliage.md)/[028](../issues/2026-08-13--028--inland-water-dual-material.md). Jedyna wciąż aktualna, forward-looking pozycja: SSR/refrakcja/caustics/mirror > 256² — świadomie **nie**.
 
 ---
 
-## Kolejność implementacji (po decyzjach)
+## Physical water query & WaterSource
 
-Plan: [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) — `done` (fazy 1–3, browser ✅ 2026-08-13).
+`terrain/waterSample.ts`'s `sampleLocalWater()` jest jedyną, współdzieloną odpowiedzią "czy i jaka woda jest fizycznie w tym punkcie" (jezioro/ocean z `floorHeights`, rzeka z kanonicznych `waterH`/`bedH` — rzeka zawsze wygrywa gdy oba nakładają się). Główny konsument: `fauna/waterTraversal.ts`'s czysty klasyfikator dry/wading/swimming/blocked, dzielony 1:1 przez autonomiczny i dosiadany ruch fauny (zob. [fauna.md](./fauna.md#behaviour)).
 
-### P0 — jeden materiał na jednym zbiorniku (issue 028)
+`world/WaterSource.ts` to osobna, współdzielona abstrakcja drink/fill nad `well`/`lake`/`river`/`ocean` — nie ta sama warstwa co `sampleLocalWater()` (fizyczna obecność wody), tylko kontrakt "czy i jak można z tego pić/napełnić". Każde źródło niesie stały `WaterQuality` (`safe`/`unsafe`/`undrinkable`) i opcjonalny `consumptionRisk`: dziś rzeka jest **bezwarunkowo** `safe`, ocean **bezwarunkowo** `undrinkable` — kontekstowa jakość rzeki (zależna np. od pobliskiego skażenia) jest tylko planowana (`world-017`, nie rozpoczęty), nie zaimplementowana. Jedyny obecny `consumptionRisk` to nieprzykryta studnia gracza (zob. [player-systems.md](./player-systems.md#player-built-wells-plan-127-groundwaterprotection-by-plan-world-004)). Konsumenci: akcje gracza (`app/actions/survivalActions.ts`), `app/interactables.ts`, gospodarstwa (`Household.water` dla ludzi i zwierząt domowych, zob. [settlements.md](./settlements.md#gospodarstwa-plan-069)), `items/itemCatalog.ts`, oraz `persistence/saveData.ts` (tylko rekord studni gracza — sam `WaterSource` jest zawsze rekonstruowany, nigdy zapisywany wprost).
 
-1. W8: śródlądzie nigdy nie discarduje do oceanu. Ocean tylko tam, gdzie to naprawdę morze. **✅ faza 1**
-2. Geometria: jeziora per-chunk + ocean singleton (W2). Materiał oceanu = rodzina jezior (W1). **✅ faza 2** — bez Water.js; lustro w fazie 3.
+## Persistence
 
-### P1 — wygląd z decyzji
-
-3. Depth fade z `floorHeights` (W10). **✅ faza 2**
-4. Brzeg: fade + piana z maski + mokry piasek (W11). Issue 003. **✅ faza 2**
-5. Fale world-space; jezioro drobne, ocean swell (W12). **✅ faza 2**
-6. Wspólne lustro 256² + fallback sky/spec + toggle Vue/lil-gui (W9). Default on. **✅ faza 3**
-
-### P2 — później
-
-7. Nurt rzek — geometria/materiał rzeki i wodospady zaimplementowane (plany 181/189, zob. §Rzeki wyżej); pełna shader/rendering parity z jeziorem/oceanem zostaje odłożona.
-8. Mesh per basen (review 001 C) — osobna geometria jeziora. **Wanna w meshu terenu** (finding 2) jest zrobiona: `buildChunkGeometry` czyta `floorHeights`.
-9. SSR, refrakcja, caustics, mirror > 256² — **nie**.
-
----
-
-## Historia poprawek
-
-### 2026-08-25 — Rzeki: wodospady (plan 181, Etap 7 dokończenie) 🔧
-
-Per-vertex `aFall` attribute na istniejącej river ribbon (`riverGeometry.ts`'s `waterfallFactor()`, z już-cached point `elevation`, bez nowej geometrii/network data); `riverWaterMaterial.ts` miesza w stronę piany + szybszy "mgła" pattern przy stromym lokalnym spadku. Plan 181 zamknięty (`verification needed`). Pełny opis: §Rzeki (Stan obecny) wyżej.
-
-### 2026-08-21 — Rzeki: hydrologia, geometria, channel carving (plany 181/189) 🔧
-
-D8 flow/accumulation → deterministyczne 256 m river tiles → per-chunk wstążka wody (osobny lekki materiał, dzień/noc reużyty z `waterMaterial.ts` bez zmian) → world-space meandrowanie + `aFlow`-driven brzeg/foam. Plan 189 dodaje channel carving (osobny terrain-modifier stage, tylko obniża teren, nigdy nie podnosi). Pełny opis: §Rzeki (Stan obecny) wyżej. Waterfalls i pełna parytetowość z jeziorem/oceanem świadomie odłożone; browser/perf verification jeszcze nie zrobiony.
-
-Najnowsze na górze.
-
-### 2026-08-15 — Budżet lustra (plan 113) 🔧
-
-- RT pozostaje 128². Pass max 30 Hz. NPC/fauna na `AGENT_RENDER_LAYER`, lustro ich nie rysuje.
-- Browser: otwarte (porównanie z review 012 `?benchmark=water`).
-
-### 2026-08-13 — Wanna: mesh terenu z `floorHeights` ✅
-
-- Zielone kanciaste plamy na wodzie = płaski mesh przycięty do `waterLevel` (`SEABED` 0x2f5244), przez który gracz pływał (`sampleFloor`).
-- `buildChunkGeometry` bierze Y / normalne / kolor z `floorHeights`. Clamp `heights` zostaje dla `vCover`, trawy i `sampleHeight`.
-- Finding 2 review 001: shader głębokości był w 098; **wizualne dno mesha** dopiero tu.
-- Browser: użytkownik 2026-08-13.
-
-### 2026-08-13 — Faza 3 planu 098: wspólne lustro + Vue ✅
-
-- `waterMirror.ts`: jeden RT 256², kamera względem `y = waterLevel`, oblique clip, warstwa 1 na meshach wody (brak rekursji).
-- Shader: `mix` lustra z capem reflectance 0.4 i tint 0.55 w stronę koloru wody (jak patch Water.js). Off: `uReflections = 0`, pass nie startuje.
-- Vue: Pauza → Świat → Grafika → „Odbicia wody”; lil-gui Post-processing; persist `seedvale:graphics:v1`.
-- Browser: użytkownik 2026-08-13. Plan [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) → `done`.
-
-### 2026-08-13 — Faza 2 planu 098: jedna rodzina shadera + brzeg ✅
-
-- `waterMaterial.ts`: jezioro/ocean, fale `world.xz`, głębokość z `floorHeights`, piana z `vCover`.
-- `createOcean` bez Water.js; singleton radial-fade poza `loadRadius` (chunk water rysuje plażę).
-- Terrain: mokry piasek (`uWaterLevel`, pas ~0.4).
-- Fog uniforms (`UniformsLib.fog`) — bez nich `refreshFogUniforms` crashował.
-- Lustro sceny **nie** wraca — faza 3.
-- Browser: użytkownik 2026-08-13. Issue [003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md) / [028](../issues/2026-08-13--028--inland-water-dual-material.md) → `done`.
-
-### 2026-08-13 — Faza 1 planu 098: W8 inland ≠ ocean ✅
-
-- `computeBodyScale` bierze `continentalness`; `isLarge` / 35% chunka usunięte.
-- Jeziora cap 0.85; discard 0.9 zostaje, ale znaczy komórkę oceanu.
-- Testy: `src/terrain/waterBodies.test.ts`.
-- Issue [028](../issues/2026-08-13--028--inland-water-dual-material.md) → `done` (browser z fazą 2).
-
-### 2026-08-13 — Plan 098 (P0–P1) 📝
-
-- Plan: [098](../plans/archive/2026-08-13--098--water-unified-shader-shore-reflections.md) — faza 1 W8, faza 2 shader+brzeg, faza 3 lustro+Vue.
-- Kod **bez zmian**.
-
-### 2026-08-13 — Kierunek: jedna rodzina, W8, lustro z wyłącznikiem 📝
-
-- Użytkownik: pół-realistyczna, lekko przezroczysta, bez ciężkiego GPU; potem lustro sceny **tak**, z opcją off w Vue.
-- W8 zaakceptowane. W1 zmienione (docelowo bez Water.js). W9–W12 nowe.
-- Kod **bez zmian** — to decyzja, nie implementacja.
-
-### 2026-08-13 — SoT wody + diagnoza dual-material 📝
-
-- Screen śródlądzia: dwa materiały na jednym stawie (jezioro + ocean).
-- Diagnoza: `isLarge` per chunk (35% siatki) + `vBodyScale > 0.9` → discard jeziora → globalny Water.js bez maski.
-- Ten plik; issue [028](../issues/2026-08-13--028--inland-water-dual-material.md).
-- Kod wody **bez zmian**.
-
-### 2026-08-12 — Ocean przez drzewa + prawdziwa przezroczystość ✅
-
-- Liście: `hardenFoliageAlpha` (BLEND → `alphaTest`).
-- Ocean: `transparent`, `depthWrite: false`, alpha fresnel; mirror **512 → 256**.
-- Jeziora: `depthWrite: false`, niższe `uOpacity`.
-- Issue [022](../issues/2026-08-12--022--ocean-through-tree-foliage.md). Nie zamyka brzegu oceanu ([003](../issues/2026-08-07--003--ocean-shoreline-artifacts.md)).
-
-### 2026-08-10 — Blotches w lustrze oceanu 🔧
-
-- Cofnięto zagęszczenie detail normals terenu (alias w 512/256 RT). Amplituda zostawiona niższa.
-- Issue [009](../issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md) — `verification needed`.
-
-### 2026-08-07 — Architektura ocean vs jeziora 📝
-
-- Duże zbiorniki → singleton Water.js; małe → chunk water.
-- Review [001](../reviews/2026-08-07--001--water-quality.md) **odradzał** Water.js dla stawów (styl + koszt + i tak trzeba maski). Ocean i tak wszedł jako morze; wyciek na śródlądzie = dług z tej decyzji.
-
-### 2026-08-07 — Dzień/noc na jeziorach ✅
-
-- `dayFactor` → lerp palet `uDeep` / `uShallow` / `uFoam`.
-- Issue [002](../issues/2026-08-07--002--water-daynight-integration.md). Ocean dostał analogiczny lerp później (`setDayNight` + `sunDirection`).
-
-### 2026-08-07 — Schodki koloru brzegu terenu ✅
-
-- `biomeColors.ts`: hard `if` → `smoothstep` seabed↔sand↔ląd; potem `sandBandAt` 0.6–3.
-- Issue [001](../issues/2026-08-07--001--water-shore-color-banding.md). To kolor **lądu**, nie tafli wody.
-
-### Review 2026-08-07 — jakość wody (analiza)
-
-Nierozwiązane z [review 001](../reviews/2026-08-07--001--water-quality.md):
-
-| Finding | Status 2026-08-13 |
-|---------|-------------------|
-| 1 schodki koloru terenu | `done` (issue 001) |
-| 2 płaskie dno mesha (brak batymetrii wizualnej) | `done` (browser 2026-08-13) — mesh z `floorHeights` (shader depth był w 098) |
-| 3 rozdzielczość siatki wody vs teren | częściowo: `min(resolution-1, 256)` zamiast stałych 96 |
-| 4 dzień/noc | `done` (issue 002) |
-| 5 foam nie z brzegu | `done` faza 2 — piana z maski |
-| 6 z-fight | nie potwierdzony; marginesy 0.02 / 0.07 |
+Teren/hydrologia/geometria wody są deterministyczną rekonstrukcją `(seed, region params)` — nigdy nie persystowane. Persystowany jest tylko stan zbudowany przez gracza (rekord studni, `SaveData.playerWells`, z `waterDepth`/`waterKind` zamrożonym raz przy postawieniu). Cache'e wewnątrzsesyjne (`riverTileCache`, brak analogicznego cache'u dla jezior/oceanu) są zwykłymi, nietrwałymi cache'ami nad czystymi funkcjami — nigdy źródłem prawdy. Zob. [persistence.md](./persistence.md) po pełną klasyfikację.
 
 ---
 
@@ -340,7 +201,6 @@ Nierozwiązane z [review 001](../reviews/2026-08-07--001--water-quality.md):
 |-------|--------|------|
 | Blotches w lustrze oceanu | `verification needed` | issue [009](../issues/2026-08-10--009--ocean-normal-map-reflection-blotches.md) — pass 256² wrócił w fazie 3; nie zagęszczać detail normals |
 | Artefakty oceanu na telefonie | notatka | [plans/README.md](../plans/README.md) Quick notes; wyłączenie odbić (W9) |
-| Fauna pije wodę (symulacja) | `todo` | plan [094](../plans/archive/2026-08-13--094--fauna-food-water-for-satiety-hydration.md) |
 | Rzeki: browser/perf verification | `verification needed` | plany [181](../plans/archive/2026-08-21--181--natural-mountains-and-rivers.md) / [189](../plans/archive/2026-08-21--189--river-channel-carving.md) |
 | Rzeki: pełna parytetowość z jeziorem/oceanem, worker offload dla hydrologii | `todo`, świadomie odłożone bez pomiarowego uzasadnienia | [plans/LOOSE-ENDS.md](../plans/LOOSE-ENDS.md) |
 
@@ -349,7 +209,11 @@ Nierozwiązane z [review 001](../reviews/2026-08-07--001--water-quality.md):
 ## Powiązane
 
 - [GRAPHICS.md](../architecture/GRAPHICS.md) — G3–G6, log 2026-08-12
-- [state/terrain-and-world-generation.md](../state/terrain-and-world-generation.md) — teren/chunki/mountains (rzeki żyją tutaj, nie tam)
+- [state/terrain-and-world-generation.md](../state/terrain-and-world-generation.md) — teren/chunki/mountains (rzeki żyją tutaj, nie tam); terrain-side ownership seamów rzeki↔osada/droga/fauna
+- [fauna.md](./fauna.md) — konsumpcja `sampleLocalWater()` przez `waterTraversal.ts` (dry/wading/swimming/blocked)
+- [settlements.md](./settlements.md) — river placement rejection przy siting/plot; `household.water` jako konsument `WaterSource`
+- [player-systems.md](./player-systems.md) — studnie gracza, drink/fill akcje
+- [persistence.md](./persistence.md) — pełna klasyfikacja persystencji
 - [STATE.md](../STATE.md) — WorldBundle.ocean, skrót ocean/jeziora
 - [reviews/2026-08-07--001--water-quality.md](../reviews/2026-08-07--001--water-quality.md)
 - [architecture/performance-and-workers.md](../architecture/performance-and-workers.md)

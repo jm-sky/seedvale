@@ -4,7 +4,7 @@
 
 **Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../state/settlements.md)).
 
-**Last verified:** 2026-09-04
+**Last verified:** 2026-09-06
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -24,7 +24,9 @@ Food and water are ordinary `Inventory` items with a `consumable` catalog flag (
 
 ## Player skills
 
-`PlayerController.skills` (`src/player/PlayerSkills.ts`) has five skills: sneak, survival, traps, defense, archery. There are no levels/perks/points — `SkillState { value, xp, active }`, where `xp` is the only persisted progression state and `value` is always derived through one shared curve (`xpToSkillValue()`, floor 0.2, asymptotic to 1). `awardSkillXp()` is the single mutation path; XP comes only from completed actions, never per frame (e.g. traps only on a confirmed capture, sneak per actually-sneaked metres, survival on ignite/tent-setup/cooking/camp-rest).
+`PlayerController.skills` (`src/player/PlayerSkills.ts`) has six skills: sneak, survival, traps, defense, archery, riding. There are no levels/perks/points — `SkillState { value, xp, active }`, where `xp` is the only persisted progression state and `value` is always derived through one shared curve (`xpToSkillValue()`, floor 0.2, asymptotic to 1). `awardSkillXp()` is the single mutation path; XP comes only from completed actions, never per frame (e.g. traps only on a confirmed capture, sneak per actually-sneaked metres, survival on ignite/tent-setup/cooking/camp-rest).
+
+`riding` feeds `ridingSpeedMultiplier`/`ridingStaminaDrainMultiplier`, read by `app/actions/mountActions.ts` while the player is mounted (see [Riding](#riding) below).
 
 Sneak is toggled from the pause menu; active sneak slows movement and feeds `fauna/playerAwareness.ts`'s detection probability (no second detection system). Survival is passive: it shortens a few busy-channel durations and raises `roasted_meat`'s hunger relief, and reduces the camp-rest penalty below.
 
@@ -84,9 +86,25 @@ Quick Actions "Zasadź drzewo" consumes one generic `tree_seed` (species chosen 
 
 Natural food, fishing and preservation (plan 159, fishing UX/shorelines extended by plan `ui-input-006`) extend the existing consumable/spawner model rather than adding a parallel one: perishable food kinds track freshness via `Inventory`'s `FoodBatch[]` (see [CATALOG.md](../items/CATALOG.md) for the freshness/bait flags); Quick Actions "Łów ryby" equips a carried `fishing_rod` through the existing `HeldTool` mechanism, then a fishing rod casts at any lake, river or ocean shore (`app/interactables.ts`'s unified `resolveWaterBodyShore`/`WaterBodyKind` resolver — lake/ocean via the existing shoreline probe + continentalness mix, river via cached river-channel segments + point-to-segment distance) through a busy channel with a deterministic catch roll, still a single `fish` item regardless of body kind (no fish population/agents, no per-body catch table); a settlement-landmark drying rack and wild hive each run a generic persistent `TimedProcess` (`items/timedProcess.ts`), resolved lazily so they survive reload/time-skip without a per-frame ticker.
 
+## Work Contracts
+
+The player is the sole employer today (`employer: 'player'`, though the type is already a `string` rather than a literal, anticipating an NPC-employer phase). `world/workContract.ts`'s `WorkContractRecord` is the canonical commitment record — it holds only the employer, a `ContractTarget` (a tagged union pointing at one of the player's own buildables: a well, palisade segment, standing torch, or terrain preparation), the reward, and lifecycle state. It never owns the target's actual construction progress: `remainingWorkAtCreation`/`committedWork` are frozen at creation from the target's own remaining-work function and never recalculated.
+
+Lifecycle: `available → advertised → accepted → travelling → working → payment_due → completed`. Creating a contract (`bundle.workContracts.create()`, a work-share preset of 25/50/75/100% plus a reward preset) does not advertise it — the player must physically walk to a settlement's notice board and post it (`postWorkContract`) before any NPC can discover it.
+
+Both the player's own `[E]` work bouts and an accepted NPC's contract work bouts drive the *same* target through one actor-neutral `contributeWork(id, amount)` seam ("clamp to remaining, credit only accepted work") — never a duplicated per-actor progress field. This is what lets a hired NPC advance a well/torch/palisade the player is also free to work on directly. See [npc.md](./npc.md#work-and-routines) for the NPC-side discovery/evaluation/execution half (a pure scoring evaluator plus a discover→accept→travel→work-bout state machine) — that mechanism is not duplicated here.
+
+## Riding
+
+Any species whose `AnimalDef.mount` is set is ridable (today: horse, donkey) — the mount itself (`AnimalAgent`) stays fauna-owned and authoritative for HP/stamina/position; the player only stores a reference. `app/actions/mountActions.ts` resolves the mountable animal and applies player-side riding cost/benefit each frame via `PlayerSkills.ridingSpeedMultiplier`/`ridingStaminaDrainMultiplier`. The persisted reference is `SaveData.player.mountedAnimalId` — a livestock id specifically, since only livestock kinds have a deterministic id that survives a reload (`riding` above is the unrelated `SkillId`). See [fauna.md](./fauna.md#player--riding) for the fauna-side ownership.
+
+## Shared corpse/food mechanisms
+
+The player's own knife-harvest (`startHarvestMeat`) and corpse burial share the exact `harvestAnimalIntoInventory`/`meatKindForAnimal` path a Hunter NPC's post-kill harvest uses (`fauna/animalHarvest.ts`) — not a separate player-only pipeline. The player's own crop harvest (`app/actions/gatheringActions.ts`'s `harvestCrop`) calls `ChunkManager.harvestCrop`/`findNearestGarden` directly and duplicates only the yield-scaling math; NPC hunger-seeking instead goes through the generic `world/foodSources.ts` resolver (`nearestFoodSource`/`SettlementFoodSourceHooks`), which treats a wild crop, a settlement-garden crop, and a player-plot crop identically. The player's own search path is not currently unified with that resolver.
+
 ## Carry capacity (plan 186)
 
-`ItemCatalogEntry.carryCapacityBonus` (only `backpack` sets it today) is summed over currently-held matching counts into `Inventory.maxWeight`, which is a derived getter, not a stored/persisted field — the same "recompute after load" contract it already had. Feeds the existing overload/movement penalty (`player/playerEncumbrance.ts`) unchanged.
+`ItemCatalogEntry.carryCapacityBonus` (only `backpack` sets it today) is summed over currently-held matching counts into `Inventory.maxWeight`, which is a derived getter, not a stored/persisted field — the same "recompute after load" contract it already had. Feeds the existing overload/movement penalty (`player/playerEncumbrance.ts`) unchanged. A carried chest's own weight (`PlacedContainers.carriedWeightKg()`) also counts toward this overload calculation, alongside `Inventory.totalWeight()`.
 
 ## Entry points
 
@@ -102,6 +120,9 @@ src/app/actions/gatheringActions.ts
 src/app/actions/survivalActions.ts
 src/app/actions/groundActions.ts
 src/app/actions/terrainPreparationActions.ts
+src/app/actions/workContractActions.ts
+src/app/actions/mountActions.ts
+src/world/workContract.ts
 src/terrain/dig.ts
 src/terrain/digAction.ts
 src/terrain/terrainPreparation.ts
