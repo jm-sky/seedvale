@@ -524,3 +524,9 @@ Recommended sequence:
 The first implementation plan should use domain `npc` because its first authoritative profile integration and vertical slice are centred on the existing NPC physical-profile and human combat systems, while shared primitives remain reusable by Player and fauna.
 
 Exact plan IDs should be chosen after checking the current plan index and `docs/plans/PLANNING.md`. Each plan should verify the current code seams again before implementation because these systems are evolving quickly.
+
+## Plans
+
+- `npc-019-shared-spea-foundation-and-strength-driven-melee.md`
+- `npc-020-strength-driven-physical-work-and-human-carrying.md`
+- `npc-021-endurance-driven-stamina-capacity-and-recovery.md`
