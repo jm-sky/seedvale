@@ -1080,3 +1080,22 @@ Deliberately left open — record them in
   §5 anticipated and never got.
 - Whether a `generatorVersion` is warranted once cave-anchored persistent state
   exists.
+
+## Runtime Selection Update (2026-09-06)
+
+The "Shared Comparison Harness" section above (and its `definitions[0]` /
+`spikeTarget` wiring) describes the harness as originally built — it only put
+Cave V2 on one cave and left every other cave on V1. That is fixed:
+`src/world/createCaves.ts` now builds a Cave V2 topology
+(`buildSpikeTestTopology` → `topologyToCaveDefinition`) and SDF mesh for
+**every** accepted `CaveDefinition`; the gameplay proxy (`createCaveVolume`)
+and colliders (`buildCaveWallColliders`) always use that cave's own V2
+definition too. `?caveSpike=sweep` still exists as a diagnostic override, but
+it now only swaps the render/collider representation for the first
+deterministic cave (via `resolveCaveRenderVariants`) — it does not turn the
+rest of the world into Sweep, and it never routes a normal cave back through
+`createCaveInteriorMesh()` (`caveMesh.ts`). The legacy V1 renderer is no
+longer reachable from any normal runtime path; it stays in the tree only for
+tests/rollback until a Milestone B cleanup removes it. This does not settle
+any of the "Open Decisions" above — it only fixes which representation
+normal play actually sees.

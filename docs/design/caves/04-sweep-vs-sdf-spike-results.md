@@ -111,6 +111,14 @@ redundant). `caveSpikeVariant()` (`src/debug/debugMode.ts`) resolves an
 absent/unrecognised `caveSpike` param to `'sdf'` instead of turning the spike
 harness off.
 
+**Runtime selection now applies per-cave, not to a single spike target**
+(`src/world/createCaves.ts`, `resolveCaveRenderVariants`). Every accepted
+`CaveDefinition` gets its own Cave V2 topology/SDF mesh, gameplay proxy
+(`topologyToCaveDefinition`) and colliders — none of them fall back to the
+legacy V1 renderer (`caveMesh.ts`) any more. `?caveSpike=sweep` only turns the
+first deterministic cave into the Sweep comparison target; every other cave
+in the world still renders as SDF.
+
 ---
 
 ## 1b. Surface-integration and containment fixes (2026-09-05 repro)

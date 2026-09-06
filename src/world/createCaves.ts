@@ -7,7 +7,6 @@ import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { buildCaveWallColliders } from './caveColliders'
 import { CAVE_MOUTH_DEPTH, generateCaveDefinitions } from './caveGenerator'
-import { createCaveInteriorMesh } from './caveMesh'
 import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
 import { reportCaveSpikeMetrics, runMedianOfN } from './caves/caveSpikeMetrics'
 import { buildSdfCaveMesh } from './caves/sdfCaveMesh'
@@ -42,6 +41,29 @@ const ACTIVATE_DISTANCE = 55
 /** > ACTIVATE_DISTANCE — hysteresis ring avoiding activate/deactivate
  *  thrashing right at the boundary (same pattern as settlement streaming). */
 const DEACTIVATE_DISTANCE = 80
+
+export type CaveRenderVariant = 'sweep' | 'sdf'
+
+/**
+ * Plan world-terrain-008 Milestone A runtime selection policy — pure so it is
+ * testable without a Three.js/world harness. `caveIds` must be in
+ * deterministic definition order: with `spikeVariant === 'sweep'` the first
+ * id becomes the one Sweep-vs-SDF comparison target and every other cave
+ * still resolves to `'sdf'`; any other `spikeVariant` value resolves every
+ * cave to `'sdf'`. There is no runtime path back to the legacy V1 renderer —
+ * every accepted cave always gets a Cave V2 (Sweep or SDF) variant.
+ *
+ * @domain world-terrain
+ */
+export function resolveCaveRenderVariants(
+  caveIds: readonly string[],
+  spikeVariant: CaveRenderVariant,
+): ReadonlyMap<string, CaveRenderVariant> {
+  const comparisonTargetId = spikeVariant === 'sweep' ? caveIds[0] : undefined
+  const variants = new Map<string, CaveRenderVariant>()
+  for (const id of caveIds) variants.set(id, id === comparisonTargetId ? 'sweep' : 'sdf')
+  return variants
+}
 
 export type Caves = {
   definitions: () => readonly CaveDefinition[]
@@ -111,38 +133,42 @@ export function createCaves(
     roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
     villages,
   })
-  // Plan world-terrain-008 Milestone A comparison harness — SDF by default
-  // (`?caveSpike=sweep` is the explicit comparison override), one cave only,
-  // deleted (along with `caveSpikeVariant()`) after the architecture decision
-  // gate. See implementation notes "Shared Comparison Harness".
+  // Plan world-terrain-008 Milestone A — Cave V2 (SDF) is the runtime default
+  // for every accepted cave; `?caveSpike=sweep` is an explicit diagnostic
+  // override that turns exactly one deterministic cave into the Sweep
+  // comparison target, everything else stays SDF (see
+  // `resolveCaveRenderVariants`). No normal cave falls back to the legacy V1
+  // renderer. See implementation notes "Shared Comparison Harness".
   // Deterministic analytic surface — `sampleHeight` reads the chunk tile once
   // a chunk is resident, so the spike geometry would otherwise depend on
   // streaming order (it is built on activation, not at world build).
   const spikeSurfaceHeight = (x: number, z: number): number => chunkManager.sampleBaseHeight(x, z)
   const spikeVariant = caveSpikeVariant()
-  const spikeTarget = spikeVariant ? definitions[0] : undefined
-  let spikeTopology: CaveTopology | undefined
-  let spikeDef: CaveDefinition | undefined
-  if (spikeVariant && !spikeTarget) {
+  const renderVariants = resolveCaveRenderVariants(definitions.map((def) => def.caveId), spikeVariant)
+
+  // Topology/proxy precompute — lightweight deterministic data (no Three.js
+  // geometry), same "cheap, all computed up front" reasoning as `definitions`
+  // itself. Actual presentation geometry is still built lazily on activation.
+  const v2ByCaveId = new Map<string, { topology: CaveTopology, definition: CaveDefinition }>()
+  for (const def of definitions) {
+    const topology = buildSpikeTestTopology(seed, def.entrance, { surfaceHeightAt: spikeSurfaceHeight })
+    v2ByCaveId.set(def.caveId, { topology, definition: topologyToCaveDefinition(topology) })
+  }
+
+  if (spikeVariant === 'sweep' && definitions.length === 0) {
     console.warn('[caveSpike] no cave definitions accepted for this seed — try a different ?seed=')
-  } else if (spikeVariant && spikeTarget) {
-    spikeTopology = buildSpikeTestTopology(seed, spikeTarget.entrance, { surfaceHeightAt: spikeSurfaceHeight })
-    spikeDef = topologyToCaveDefinition(spikeTopology)
+  } else if (spikeVariant === 'sweep') {
+    const comparisonTarget = definitions[0]!
+    const comparisonTopology = v2ByCaveId.get(comparisonTarget.caveId)!.topology
     console.log(
-      `[caveSpike] variant=${spikeVariant} caveId=${spikeTarget.caveId} entrance=(${spikeTarget.entrance.x.toFixed(1)}, ${spikeTarget.entrance.z.toFixed(1)})`,
+      `[caveSpike] variant=sweep caveId=${comparisonTarget.caveId} entrance=(${comparisonTarget.entrance.x.toFixed(1)}, ${comparisonTarget.entrance.z.toFixed(1)})`,
     )
-    const build = (): ReturnType<typeof buildSweepCaveMesh> | ReturnType<typeof buildSdfCaveMesh> =>
-      spikeVariant === 'sweep'
-        ? buildSweepCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
-        : buildSdfCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
-    const sample = runMedianOfN(build, 5)
+    const sample = runMedianOfN(() => buildSweepCaveMesh(comparisonTopology, undefined, false, spikeSurfaceHeight), 5)
     sample.geometry.dispose()
     reportCaveSpikeMetrics(sample.metrics)
   }
 
-  const volumes: readonly CaveVolume[] = definitions.map((def) =>
-    createCaveVolume(spikeTarget && spikeDef && def.caveId === spikeTarget.caveId ? spikeDef : def),
-  )
+  const volumes: readonly CaveVolume[] = definitions.map((def) => createCaveVolume(v2ByCaveId.get(def.caveId)!.definition))
 
   // Local entrance recess only — deterministic from `definition.entrance`,
   // redone from scratch on every world build, never persisted (same
@@ -175,29 +201,26 @@ export function createCaves(
 
   function activate(def: CaveDefinition): void {
     if (active.has(def.caveId)) return
-    const isSpikeTarget = Boolean(spikeVariant && spikeTarget && spikeTopology && def.caveId === spikeTarget.caveId)
+    const v2 = v2ByCaveId.get(def.caveId)!
+    const variant = renderVariants.get(def.caveId) ?? 'sdf'
     const group = new THREE.Group()
     group.name = `cave:${def.caveId}`
-    if (isSpikeTarget) {
-      // Built fresh on every activation (not cached) — `deactivate()` disposes
-      // the group's geometry, so a shared/cached spike mesh would render
-      // nothing (or throw) on the next activation.
-      const built = spikeVariant === 'sweep'
-        ? buildSweepCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
-        : buildSdfCaveMesh(spikeTopology!, undefined, false, spikeSurfaceHeight)
-      const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial(spikeVariant ?? 'sweep'))
-      mesh.name = `cave-interior-spike:${def.caveId}`
-      mesh.receiveShadow = true
-      group.add(mesh)
-    } else {
-      group.add(createCaveInteriorMesh(def))
-    }
+    // Built fresh on every activation (not cached) — `deactivate()` disposes
+    // the group's geometry, so a shared/cached spike mesh would render
+    // nothing (or throw) on the next activation.
+    const built = variant === 'sweep'
+      ? buildSweepCaveMesh(v2.topology, undefined, false, spikeSurfaceHeight)
+      : buildSdfCaveMesh(v2.topology, undefined, false, spikeSurfaceHeight)
+    const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial(variant))
+    mesh.name = `cave-interior-spike:${def.caveId}`
+    mesh.receiveShadow = true
+    group.add(mesh)
     const framingSite = { x: def.entrance.x, z: def.entrance.z, yaw: def.entrance.yaw, length: MOUTH_FRAMING_LENGTH, variant: def.variant }
     const framing = createLargeCaveVisual(framingSite)
     placeLargeCaveVisual(framing, framingSite, (x, z) => chunkManager.sampleBaseHeight(x, z))
     group.add(framing)
     scene.add(group)
-    chunkManager.registerColliders(colliderOwnerKey(def.caveId), buildCaveWallColliders(isSpikeTarget && spikeDef ? spikeDef : def))
+    chunkManager.registerColliders(colliderOwnerKey(def.caveId), buildCaveWallColliders(v2.definition))
     active.set(def.caveId, group)
   }
 
