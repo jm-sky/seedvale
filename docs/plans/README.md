@@ -71,7 +71,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | ◼️ `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
-| ◼️ `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
+| 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
 
 ---
 
