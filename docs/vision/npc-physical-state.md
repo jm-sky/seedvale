@@ -1,12 +1,12 @@
 # NPC Physical State
 
-**Status:** planned
+**Status:** evolving
 
 ## Purpose
 
-Define the target physical-state model for NPCs: health, stamina, vigor, age, sex, physical differences, physical capabilities, injuries, illnesses and hereditary appearance/physical traits.
+Define the target physical-state model for NPCs: demographics, physical attributes and capabilities, health, stamina, vigor, injuries, illnesses, recovery, treatment and hereditary appearance/physical traits.
 
-This document describes the planned domain model, not the implementation or final numeric balance.
+This document describes the target domain model, not final numeric balance or implementation sequencing. Implementation direction and phases are tracked in `docs/roadmap/physical-attributes-health-and-medicine.md`.
 
 ## Domain boundary
 
@@ -26,7 +26,7 @@ The model should support:
 - family inheritance,
 - NPC decision making.
 
-The player, NPCs and fauna should reuse shared health/damage concepts where practical.
+Player, NPCs and fauna should reuse shared physical-state concepts where practical. Shared concepts do not require identical physiology: for example, fauna may use the same attributes, Health and Stamina while retaining its own animal-life/metabolism model instead of NPC/player Vigor.
 
 ## Core model
 
@@ -36,13 +36,16 @@ Separate relatively stable physical characteristics from changing runtime state.
 NPC
 ├── Demographics
 │   ├── sex
-│   └── age
+│   └── age / life stage
 │
 ├── Physical profile
 │   ├── height
 │   ├── build
-│   ├── strength
-│   ├── agility
+│   ├── SPEA attributes
+│   │   ├── Strength
+│   │   ├── Perception
+│   │   ├── Endurance
+│   │   └── Agility
 │   ├── physical traits
 │   └── inherited physical tendencies
 │
@@ -63,15 +66,99 @@ NPC
 
 The stable profile determines capabilities and limits; runtime state describes what is happening to the NPC now.
 
-The physical profile is intentionally extensible. `strength` and `agility` are the first planned explicit physical capabilities beyond the existing health/energy model. Additional capabilities may be introduced later if they are justified by simulation needs rather than as a generic RPG stat list.
+SPEA is intentionally a small capability set justified by concrete simulation needs. It is not intended to grow into a generic RPG stat list merely for completeness.
 
-## Physical capabilities
+## SPEA attributes
 
-Physical capabilities describe relatively stable individual differences in what an NPC can physically do. They are part of the physical profile, not runtime conditions.
+Attributes describe relatively stable individual differences in capability. They are part of the physical profile, not runtime conditions and not replacements for skills.
+
+```text
+Attributes = general inherent/physical capability
+Skills     = learned domain competence
+Conditions = temporary physical state/effects
+```
+
+For example, Medicine is a learned competence, not an attribute. A patient's Endurance can affect recovery while the healer's Medicine competence affects treatment quality.
+
+### Attribute scale
+
+SPEA uses a normalized `0..1` scale relative to a healthy adult reference population of the same species.
+
+```text
+0.0       exceptionally low capability
+0.25      clearly below species reference
+0.5       typical healthy adult of the species
+0.75      clearly above species reference
+0.9       exceptional individual
+1.0       practical upper end of the species scale
+```
+
+`0.5` is the central reference, not a 50% gameplay multiplier.
+
+Raw attribute values are meaningful for individual variation within a species, but are not absolute cross-species measurements:
+
+```text
+Human Strength 0.5 = typical healthy adult human
+Bear  Strength 0.5 = typical healthy adult bear
+```
+
+The bear can still be absolutely much stronger.
+
+### Species capability baselines
+
+Cross-species mechanics should resolve attributes through explicit species capability baselines/mappings rather than comparing raw SPEA values.
+
+```text
+species capability baseline
+          +
+individual attribute
+          +
+age / development / persistent traits
+          +
+temporary conditions
+          ↓
+effective world capability
+```
+
+For example, lifting/carrying can provide one Strength reference: a typical human and typical bear can both have Strength `0.5`, while their absolute reference capacities differ substantially.
+
+The exact reference numbers and curves are balance/design data. They should nevertheless be explicit and coherent so that later systems can compare humans, animals and other species without accumulating unexplained per-system multipliers.
+
+Different systems may map the same attribute differently. Strength may strongly influence lifting but only moderately influence melee damage. Agility should not become a universal movement-speed multiplier.
+
+### Base and effective attributes
+
+Stable/base attributes must remain separate from temporary effects.
+
+```text
+base SPEA
+   +
+persistent/profile modifiers
+   +
+injuries
+   +
+illnesses
+   +
+other temporary conditions
+   ↓
+effective SPEA
+```
+
+Effective values should be derived rather than independently persisted.
+
+Conditions may modify attributes where the semantics are appropriate. For example:
+
+```text
+base Strength       0.80
+poisoning modifier -0.15
+effective Strength  0.65
+```
+
+Systems consuming effective Strength then react naturally without Poisoning needing special knowledge of melee, work or carrying.
 
 ### Strength
 
-Strength represents an NPC's general physical force-producing capacity.
+Strength represents general force-producing capacity within the individual's species/body context.
 
 It may influence:
 
@@ -82,32 +169,95 @@ It may influence:
 - physical interactions with the environment,
 - other activities where force is a meaningful constraint.
 
-Strength should not be treated as a universal multiplier for every physical action. Relevant actions should explicitly decide whether and how strength matters.
+Strength should not be treated as a universal multiplier for every physical action. Relevant systems explicitly decide whether and how strongly Strength matters.
 
-### Agility
+### Perception
 
-Agility represents an NPC's coordination, mobility and ability to perform quick or precise physical actions.
+Perception represents general ability to notice, recognise and assess relevant information from the environment.
 
 It may influence:
 
-- movement and acceleration,
+- threat and animal detection,
+- recognising or assessing NPCs and animals,
+- hunting and tracking,
+- noticing wounds, illness or unusual states,
+- ranged targeting where observation is relevant,
+- resource/discovery awareness where justified.
+
+Player-facing NPC/animal labels and status bars are an initial useful consumer. The preferred model is reusable observation rather than simply increasing UI draw distance:
+
+```text
+observer + effective Perception + distance + visibility/context
+                              ↓
+                       observation level
+                              ↓
+       identity / species / HP / stamina / condition information
+```
+
+The same observation concept should be reusable by NPC/animal awareness and decision systems later. Species-specific senses such as exceptional smell or hearing remain separate biological inputs where needed; Perception should not flatten all sensory biology into one number.
+
+### Endurance
+
+Endurance represents ability to withstand and recover from sustained physical strain.
+
+It may influence:
+
+- maximum HP,
+- maximum Stamina,
+- Stamina recovery,
+- sustained-work tolerance,
+- Vigor drain/recovery where Vigor exists,
+- recovery/resilience characteristics for injuries and illnesses.
+
+Endurance remains distinct from Stamina and Vigor:
+
+```text
+Endurance = relatively stable capability
+Stamina   = short-term changing effort capacity
+Vigor     = longer-term changing energy/recovery state
+```
+
+A strong but low-Endurance individual can perform demanding physical actions effectively while tiring more quickly than a weaker but high-Endurance individual.
+
+### Agility
+
+Agility represents coordination, mobility and ability to perform quick or precise physical actions.
+
+It may influence:
+
+- selected movement and acceleration characteristics,
 - turning and evasive movement,
 - reaction-demanding actions,
+- Sneak movement/effectiveness,
 - precision-oriented physical work,
-- selected combat actions,
-- other activities where coordination or mobility is a meaningful constraint.
+- selected combat/action timing.
 
-Agility should not simply become a generic movement-speed multiplier. Relevant actions should explicitly decide whether and how agility matters.
+Agility should not simply become a generic walking-speed multiplier. Species locomotion and action-specific base properties remain authoritative; Agility represents individual variation within those systems.
 
-### Future capabilities
+## Derived physical capabilities
 
-The physical profile may later include additional capabilities when a real simulation system needs them. Candidate capabilities should be evaluated by whether they create meaningful differences in world behaviour, work, combat, survival or interaction rather than by completeness of a character-stat system.
+SPEA should feed small, explicit capability mappings rather than one monolithic stats system.
+
+Conceptually:
+
+```text
+physical profile
+      ↓
+     SPEA
+      ↓
+capability mappings
+      ↓
+HP / Stamina / Vigor characteristics
+work / combat / observation / movement
+```
+
+An action, weapon or species retains its own base properties. Attributes describe the individual's contribution to those mechanics.
 
 ## HP
 
-HP represents the NPC's current health/integrity and remains the primary immediate consequence of damage.
+HP represents current health/integrity and remains the primary immediate consequence of damage.
 
-The existing `HealthState` concept should remain the shared foundation for health and death.
+The existing shared `HealthState` remains the foundation for health and death.
 
 ```text
 max HP
@@ -115,7 +265,9 @@ current HP
 alive / dead
 ```
 
-HP should not be treated as a complete representation of physical condition. An NPC can recover HP while an injury or illness remains active.
+HP is not a complete representation of physical condition. An NPC can recover HP while an injury or illness remains active.
+
+Endurance is a natural input to maximum HP, but HP remains runtime state rather than an attribute.
 
 ## Stamina
 
@@ -128,15 +280,13 @@ It should influence activities such as:
 - combat actions,
 - other strenuous activities.
 
-Stamina has a maximum derived from the NPC's physical profile and can be temporarily reduced by age, injuries, illnesses and other conditions.
+The existing shared `StaminaState` remains the basic runtime primitive.
 
-The existing `StaminaState` remains the basic runtime primitive.
+Maximum Stamina and recovery characteristics can derive partly from Endurance and the physical profile. Injuries, illnesses and other conditions may temporarily reduce effective capability without rewriting the base profile.
 
 ## Vigor
 
-Vigor represents longer-term physical energy/recovery capacity and daily ability to sustain demanding activity.
-
-It should remain distinct from stamina:
+Vigor represents longer-term physical energy/recovery state and daily ability to sustain demanding activity.
 
 ```text
 Stamina = short-term effort capacity
@@ -144,50 +294,47 @@ Vigor   = longer-term energy / recovery state
 HP      = health / physical integrity
 ```
 
-The existing vigor mechanics already model work drain, sleep recovery, collapse and additional cost from damage. The future physical profile should determine the NPC's baseline maximum and recovery characteristics instead of assuming one universal maximum for every NPC.
+Endurance may affect Vigor efficiency and recovery, but Vigor is not itself an attribute.
 
-## Physical differences
+Vigor does not need to be universal across all species. Player/NPC systems may use it while fauna retains its existing animal-life/metabolism concepts where that better fits the simulation.
+
+## Physical differences and generation
 
 NPCs should not all have identical physical capabilities.
 
-The target model should derive physical capabilities from multiple factors:
+The target direction is:
 
 ```text
-age + sex + build + height + physical traits
-                         ↓
-                 physical profile
-                         ↓
-      strength / agility / HP / stamina / vigor
-              recovery / capacity
+species + age + sex + build + height + physical traits
+                           ↓
+                    physical profile
+                           ↓
+                          SPEA
+                           ↓
+                 derived capabilities
+                           ↓
+HP / stamina / vigor / work / combat / observation / movement
 ```
 
-The exact formulas and numerical modifiers should be calibrated during implementation rather than fixed in this vision document.
+SPEA should emerge from the coherent physical profile rather than four unrelated uniform random rolls. Age, sex, build, height, inherited tendencies and individual deterministic variation may contribute where biologically or simulation-wise appropriate.
 
-Strength and agility should therefore emerge from the complete physical profile rather than being simple independent rolls. Age, sex, build, height, inherited tendencies and individual traits may all contribute where biologically or simulation-wise appropriate.
+Most healthy adults should cluster around the species reference (`0.5`), with extreme values progressively rarer.
 
 ### Age
 
-Age should have meaningful physical consequences without turning age into a simple linear multiplier.
+Age has meaningful physical consequences without being a single linear multiplier.
 
-The model should support distinct life stages such as:
+The current NPC model already has explicit age and life stages. Development and ageing should affect attributes/capabilities appropriately rather than treating children as visually smaller adults.
 
-- child,
-- young adult,
-- adult,
-- older adult,
-- elderly.
-
-Children should not simply be smaller adult NPCs from the simulation perspective. Their physical capabilities, stamina, strength and vulnerability should be appropriate to their developmental stage.
-
-Older NPCs should generally have different physical capacity and recovery characteristics from younger adults, while individual traits can produce substantial variation.
+Children can differ substantially in Strength, Endurance and other capabilities from the healthy-adult reference. Older NPCs can decline in selected capabilities and recovery while retaining meaningful individual variation.
 
 ### Sex
 
-Sex should be available as part of the physical profile because biological differences can affect physical capability distributions.
+Sex is part of the physical profile because biological differences can affect physical capability distributions.
 
-The model should avoid reducing every individual to a fixed sex modifier. Individual build, traits, age and other characteristics should contribute to the final profile.
+The model should avoid reducing every individual to one fixed sex modifier. Individual build, attributes, age and traits contribute to the final profile.
 
-Sex-related differences should therefore influence probability/distribution and baseline characteristics rather than completely determining an NPC's capabilities.
+Sex-related differences should influence distributions/baselines where justified rather than completely determining an NPC's capabilities.
 
 ### Height
 
@@ -199,7 +346,7 @@ Target categories:
 - average,
 - tall.
 
-Implementation may use a continuous underlying value with these categories used for generation/presentation.
+Implementation may use a continuous underlying value with categories for generation/presentation.
 
 ### Build
 
@@ -216,11 +363,9 @@ Build is also a key input to character model selection and visual silhouette.
 
 ## Injuries
 
-Injuries are persistent or semi-persistent physical conditions that can result from combat, accidents or other world events.
+Injuries are persistent or semi-persistent physical conditions resulting from combat, accidents or other world events.
 
 They are **not equivalent to HP loss**.
-
-Example lifecycle:
 
 ```text
 combat / accident
@@ -229,36 +374,20 @@ combat / accident
       ↓
    HP loss
       ↓
-   injury may occur
+physical injury
       ↓
 physical impairment
       ↓
 recovery / treatment
 ```
 
-An injury may affect:
+The current NPC implementation already tracks authoritative `physicalInjury` separately from `HealthState`; future injury depth should extend that seam rather than derive injury by repeatedly comparing current/max HP.
 
-- stamina capacity,
-- vigor capacity or recovery,
-- movement,
-- work effectiveness,
-- combat capability,
-- action availability,
-- pain/fatigue,
-- NPC decision priorities.
+Injuries may affect effective attributes/capabilities, stamina, vigor/recovery, movement, work, combat, action availability and NPC decision priorities.
 
-An injury should be capable of persisting after HP has recovered.
+Severity should preferably derive from authoritative injury state rather than become an independent duplicated value that can drift.
 
-Examples of future injury categories may include:
-
-- minor wound,
-- severe wound,
-- sprain,
-- fracture,
-- impaired limb,
-- other localized injuries.
-
-The detailed injury taxonomy and body-location model should be defined separately when implementation requires it.
+Future localized categories such as sprains, fractures or impaired limbs can be added only when a body-location model provides enough simulation value.
 
 ## Illnesses and diseases
 
@@ -266,13 +395,14 @@ Illnesses are a separate source of physical impairment from injuries.
 
 ```text
 combat / accident → injury
-illness / disease  → illness
+exposure / disease → illness
                          ↓
                   physical state
 ```
 
 Illness may affect:
 
+- effective attributes,
 - HP,
 - stamina,
 - vigor,
@@ -282,58 +412,57 @@ Illness may affect:
 - needs and behaviour,
 - decision priorities.
 
-Illnesses should exist independently of combat so that disease can spread or arise naturally within the world.
+The model should support duration, severity, recovery and treatment as needed, and later contagious conditions where they create meaningful world behaviour.
 
-The model should eventually support duration, severity, recovery and treatment, and potentially contagious conditions where appropriate.
+The first intended complete disease/condition lifecycle is poisoning rather than a broad disease taxonomy.
 
 ### Water quality and water-borne illness
 
-Drinking water should eventually carry its own quality/safety dimension, independent of thirst relief:
+Water already has a quality/safety seam independent of thirst relief. Current sources distinguish safe, unsafe and undrinkable water; lake water is unsafe, and uncovered player-built wells already have a direct consumption risk with immediate HP/Vigor consequences.
+
+The target evolution is:
 
 ```text
 water source
     ↓
-quality / contamination
+quality / contamination / exposure risk
     ↓
 consumption
     ↓
-illness risk
+condition / illness risk
 ```
 
-Target model, none of it implemented yet:
+Poisoning should reuse this seam instead of creating a parallel water-health system.
 
-- water sources vary in safety (clean groundwater, stagnant/open water, contaminated sources),
-- protection/treatment (a covered well, boiling, filtering) should reduce or remove the risk,
-- consequences should range from a mild, transient penalty to an actual illness (see above) for a sustained bad source,
-- NPCs should eventually weigh water safety against distance/thirst/personality when choosing a source (see the settlements-npcs domain's needs → pressures → decision model).
+Future extensions can include boiling/filtering, richer contamination, source choice by NPCs and water carried in containers. Container provenance/risk should only be added when the liquid/item model can represent it coherently.
 
-This should stay a property of the water source/consumption event, not a parallel "well health system" or a per-source special case in NPC or player code.
+NPCs should eventually weigh water safety against distance, thirst, traits and current pressures through the normal needs → pressures → decision model.
 
 ## Conditions and modifiers
 
-Injuries and illnesses should be represented as conditions that modify the effective physical state rather than permanently rewriting the NPC's base profile.
-
-Conceptually:
+Injuries and illnesses should modify effective physical state rather than permanently rewriting the base profile.
 
 ```text
-Base Physical Profile
+Base Physical Profile / SPEA
         +
-Age / temporary modifiers
+Persistent profile effects
         +
 Injuries
         +
 Illnesses
         +
-other conditions
+other temporary conditions
         ↓
-Effective Physical State
+Effective SPEA / capabilities
 ```
 
-This keeps stable identity separate from temporary circumstances and makes recovery/replacement of conditions straightforward.
+Conditions should use shared mechanisms where practical. Avoid separate `PoisoningSystem`, `PlayerIllness`, `NpcDisease` or other parallel state machines for each consumer.
 
-## Recovery
+The first poisoning implementation can reduce selected effective attributes and recover through time/rest and appropriate treatment. Existing systems already integrated with those attributes then react automatically.
 
-Recovery should be part of the simulation rather than an instant reset.
+## Recovery and Medicine
+
+Recovery is part of simulation rather than an instant reset.
 
 Potential recovery inputs include:
 
@@ -345,38 +474,53 @@ Potential recovery inputs include:
 - medicine or consumables,
 - care from other NPCs,
 - severity of injury/illness,
-- age and physical profile.
+- age and physical profile/Endurance.
 
-Combat should leave the NPC in a condition that can be handled by normal NPC decision/action systems.
+Target injury progression:
 
-Target flow:
+```text
+minor injury
+→ rest / natural recovery
+
+serious injury
+→ bandage / dressing
+
+critical injury
+→ skilled medical assistance
+```
+
+Medicine is a learned competence/skill, not SPEA. NPCs with sufficient Medicine should eventually be able to treat the player and other NPCs through the same treatment mechanisms.
+
+Doctor/Herbalist are roles/professions that use those mechanisms rather than owning separate healing systems. Medical goods such as herbs, bandages and dressings should connect to the settlement production/economy described by `docs/roadmap/textiles-and-herbal-medicine.md`.
+
+Combat should leave the NPC in a state that can be handled by normal NPC decision/action systems:
 
 ```text
 combat
   ↓
 injured
   ↓
+problem / pressure
+  ↓
 NPC decision
   ↓
-rest / treatment / healing
+rest / obtain treatment / self-treatment
   ↓
 recovery
 ```
 
-There should be no separate player-centric healing loop for NPCs.
-
 ## Influence on NPC AI
 
-Physical state should feed the NPC decision model rather than directly controlling behaviour through special-case combat logic.
+Physical state feeds the NPC decision model rather than directly prescribing behaviour through combat-specific logic.
 
 ```text
-physical state
-      ↓
-needs / problems / pressures
-      ↓
-decision
-      ↓
-strategy / action
+physical state + effective capabilities
+                ↓
+       needs / problems / pressures
+                ↓
+             decision
+                ↓
+         strategy / action
 ```
 
 Examples:
@@ -384,17 +528,47 @@ Examples:
 - exhausted NPC chooses rest over heavy work,
 - injured NPC avoids dangerous work,
 - sick NPC seeks treatment or stays home,
-- weakened guard may change risk tolerance,
-- low stamina can influence whether an NPC continues a demanding task,
-- physical recovery can become a problem/pressure in its own right.
+- weakened guard changes risk tolerance,
+- low stamina influences whether demanding work continues,
+- high Strength makes some physical strategies more attractive,
+- high Perception lets an NPC detect relevant threats/information earlier,
+- physical recovery becomes a problem/pressure in its own right.
 
-Physical capabilities such as strength and agility should similarly be exposed as facts/modifiers to the decision/action systems. The AI decides what to do with those capabilities; the physical-state system does not prescribe behaviour.
+The AI decides what to do with capabilities; the physical-state system does not prescribe behaviour.
+
+## Player, NPC and fauna reuse
+
+The long-term direction is shared physical primitives with different owners/generators rather than separate incompatible models.
+
+```text
+shared SPEA representation / resolution
+shared HealthState
+shared StaminaState
+shared condition concepts where practical
+              │
+      ┌───────┼────────┐
+      ↓       ↓        ↓
+   Player    NPC     Fauna
+```
+
+The same SPEA value type can be generated differently:
+
+```text
+Player
+→ player physical profile / progression rules
+
+NPC
+→ deterministic demographics/profile/individual variation
+
+Animal
+→ species baseline + lifecycle + individual variation
+```
+
+Species biology remains authoritative for absolute capabilities. A weak bear can remain absolutely stronger than a strong human even though both use the same relative Strength scale.
 
 ## Appearance phenotype
 
-The NPC model-generation system should use a stable appearance phenotype so that characters are visually distinct and family resemblance is possible.
-
-Target characteristics include:
+The NPC model-generation system should use a stable appearance phenotype so characters are visually distinct and family resemblance is possible.
 
 ### Body
 
@@ -411,25 +585,25 @@ Target natural hair colours:
 - blond,
 - grey.
 
-Hair colour should be an explicit character-generation value rather than being randomly selected independently for every rendered NPC.
+Hair colour should be explicit character-generation data rather than randomly selected independently by rendering.
 
 ### Hairstyle
 
-Hairstyle should be a separate visual characteristic from hair colour. The future modular character system can combine hair models and colours dynamically.
+Hairstyle is a separate visual characteristic from hair colour. A modular character system can combine hair models and colours dynamically.
 
 ### Face
 
-Faces should eventually be part of the phenotype/appearance system, potentially using a controlled set of face variants and/or morph parameters.
+Faces should eventually be part of the phenotype/appearance system, potentially using controlled face variants and/or morph parameters.
 
 The exact face-generation technology is an implementation concern.
 
 ### Other appearance features
 
-The phenotype can later be extended with additional hereditary or visual characteristics without coupling them to the physical runtime state.
+The phenotype can later extend with additional hereditary or visual characteristics without coupling them to runtime physical state.
 
 ## Heredity and family resemblance
 
-Some appearance and physical characteristics should be hereditary and generated at the family level rather than independently per NPC.
+Some appearance and physical characteristics should be hereditary and generated at family level rather than independently per NPC.
 
 A family can have shared hereditary tendencies such as:
 
@@ -441,29 +615,23 @@ Family
 └── facial traits = shared tendency
 ```
 
-Children should inherit characteristics from their parents with controlled variation.
-
-Important rule: family resemblance should be visible and coherent. For example, a family may naturally have brown hair, so members should not independently roll completely unrelated hair colours.
-
-Inheritance does not mean every family member must be identical. Some traits should be inherited as tendencies/ranges rather than exact values.
-
-Conceptually:
+Children inherit characteristics from parents with controlled variation. Inheritance describes tendencies/ranges rather than requiring identical values.
 
 ```text
-parent phenotypes
-       ↓
-hereditary traits
-       ↓
-child phenotype
-       ↓
-individual variation
+parent phenotypes / physical tendencies
+               ↓
+        hereditary traits
+               ↓
+        child phenotype/profile
+               ↓
+       individual variation
 ```
 
-This should eventually support both visual family resemblance and selected inherited physical predispositions.
+This should eventually support visible family resemblance and selected inherited physical predispositions.
 
 ## Character generation and 3D models
 
-The planned 3D character system should consume the phenotype rather than generating visual properties independently inside rendering code.
+The 3D character system should consume the phenotype rather than generating visual properties independently inside rendering code.
 
 ```text
 NPC phenotype
@@ -477,15 +645,11 @@ character generator
       └── outfit / accessories
 ```
 
-The same phenotype can therefore be used by simulation and presentation while keeping rendering concerns separate from simulation state.
-
-Physical characteristics should influence the model where appropriate; purely cosmetic characteristics such as hairstyle should not affect simulation unless explicitly defined later.
+Physical characteristics influence the model where appropriate; purely cosmetic characteristics such as hairstyle do not affect simulation unless explicitly defined later.
 
 ## Relationship to combat
 
 Combat is one source of physical consequences, not the owner of physical state.
-
-Target flow:
 
 ```text
 combat intent
@@ -494,65 +658,103 @@ combat
     ↓
 damage
     ↓
-HealthState + possible injury
+HealthState + physical injury
     ↓
-physical state
+conditions / effective capabilities
     ↓
 NPC decision / recovery
 ```
 
-The shared combat system should continue to use the common health/damage concepts. Injury generation and recovery should remain reusable by other world systems such as accidents, wildlife interactions or future hazards.
+The shared combat system should continue to use common health/damage concepts. Injury generation and recovery should remain reusable by accidents, wildlife interactions and future hazards.
+
+Strength/Agility/Perception may contribute to selected combat mechanics, but combat remains responsible for deciding how each capability matters.
 
 ## Simulation and performance
 
-Physical state must remain cheap enough to support many NPCs.
+Physical state must remain cheap enough to support many NPCs and animals.
 
 Prefer:
 
-- compact state,
+- compact authoritative state,
+- deterministic base profiles,
 - deterministic modifiers,
-- cached base physical profiles,
-- recalculation only when relevant inputs change,
+- pure capability mappings,
+- recalculation of effective attributes only when relevant inputs change,
 - event-driven condition changes where practical,
-- lower-frequency recovery updates where high frequency is unnecessary.
+- lower-frequency recovery/disease updates where high frequency is unnecessary.
 
-Do not perform expensive physical-profile calculations every render frame.
+Do not regenerate physical profiles every render frame.
 
-Remote/off-screen NPCs should retain meaningful continuity while using the project's hybrid/adaptive simulation strategy.
+Remote/off-screen entities retain authoritative attributes and meaningful condition continuity while using the project's hybrid/adaptive simulation strategy.
 
 ## Relationship to current implementation
 
-Current implementation already provides reusable primitives for:
+The current implementation already provides important parts of this direction:
 
-- `HealthState`,
-- `StaminaState`,
-- `VigorState`,
+- shared `HealthState`,
+- shared `StaminaState`,
+- NPC `VigorState`,
+- explicit NPC age and life stages,
+- deterministic `npcPhysicalProfile.ts` generation from sex, age and individual seeded variation,
+- per-NPC max HP, max Stamina and max Vigor generated by that profile,
 - NPC combat damage/death,
-- NPC healing flow.
+- authoritative `physicalInjury` separate from HP,
+- NPC injury/healing pressure/decision/action flow,
+- catalog-driven health consumables,
+- water quality/safety through `WaterSource`, including unsafe lake water and uncovered-well consumption risk,
+- shared NPC/fauna status-label presentation seams that can later consume observation/Perception.
 
-However, the current model does not yet provide a complete biological/physical profile that derives maximum HP, stamina, vigor, strength and agility from age, sex, build, height and individual traits.
+The current physical-profile generator derives capacities directly:
 
-The current NPC character definition contains sex, role, personality and traits, while age and full physical phenotype are not yet first-class simulation properties.
+```text
+sex + age + deterministic variation
+              ↓
+max HP / max Stamina / max Vigor
+```
 
-Children currently use family relation plus a smaller visual scale rather than a complete age/development model.
+The target evolution is:
 
-Plan world-004 implements the first narrow, concrete instance of "water quality and water-borne illness" above: an uncovered player-built well's drawn water carries a generic `WaterSource.consumptionRisk` (`world/WaterSource.ts`) that, on direct drink, has a 50% chance of `-1..2 HP` and `-5 Vigor` through the existing `HealthState`/`VigorState` primitives — a roofed well carries no such risk. This is deliberately not the full illness/contamination/treatment model described above (no duration, no NPC water-source choice yet); it exists only to give the player's well-protection decision a concrete consequence.
+```text
+species + sex + age + deterministic variation + later build/traits
+              ↓
+             SPEA
+              ↓
+     derived physical capabilities
+              ↓
+HP / Stamina / Vigor / work / combat / observation / movement
+```
 
-This document defines the target model without claiming those planned systems are implemented.
+This should extend/migrate the existing deterministic profile mechanism rather than replace it with parallel random attribute rolls.
+
+Not yet implemented as a coherent shared model:
+
+- SPEA attributes,
+- species capability-baseline mappings,
+- base/effective attribute resolution,
+- Perception-driven observation,
+- general illness/condition lifecycle,
+- poisoning as a persistent condition,
+- Medicine competence and assisted treatment,
+- full fauna attribute integration.
+
+The existing uncovered-well consumption risk is an immediate HP/Vigor consequence, not yet the duration/recovery/treatment illness model described here.
 
 ## Open design questions
 
-These should be resolved before implementation:
+The following remain implementation/design questions rather than settled vision requirements:
 
-- exact age representation and life-stage boundaries,
+- exact SPEA generation distributions and correlations,
+- concrete species capability reference values and curves,
 - continuous versus categorical height/build representation,
-- exact influence of sex and age on physical distributions,
-- which traits affect physical capabilities,
-- exact formulas for max HP/stamina/vigor/strength/agility,
-- whether injuries use body locations,
-- injury severity and duration model,
-- illness taxonomy and transmission model,
-- treatment and medical-care model,
+- exact influence of sex, age, build and traits on SPEA distributions,
+- which persistent traits affect attributes/capabilities,
+- exact mappings from Endurance to HP/Stamina/Vigor characteristics,
+- exact mappings from Strength/Agility/Perception to their consumers,
+- whether later injuries justify body locations,
+- deeper illness taxonomy and transmission beyond initial poisoning,
+- detailed treatment/Medicine progression and thresholds,
 - inheritance rules and mutation/variation range,
 - face generation approach,
 - exact mapping from phenotype to 3D body variants/morphs.
+
+Implementation phases and current decisions are maintained in `docs/roadmap/physical-attributes-health-and-medicine.md`.
