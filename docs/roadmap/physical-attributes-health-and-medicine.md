@@ -13,7 +13,7 @@ The first explicit attribute set is **SPEA**:
 - **Endurance** — capacity to withstand and recover from sustained physical strain,
 - **Agility** — coordination, mobility and quick/precise physical action.
 
-This roadmap complements `docs/vision/npc-physical-state.md` and `docs/roadmap/textiles-and-herbal-medicine.md`. The latter provides medical goods and professions; this roadmap defines the physical-state and treatment systems that consume them.
+This roadmap complements `docs/vision/npc-physical-state.md`, `docs/world/species-physical-reference.md` and `docs/roadmap/textiles-and-herbal-medicine.md`. The species physical reference is authoritative for species baselines and SPEA reference semantics; the textile/herbal roadmap provides medical goods and professions; this roadmap defines the physical-state and treatment systems that consume them.
 
 ## Design Principles
 
@@ -27,6 +27,7 @@ This roadmap complements `docs/vision/npc-physical-state.md` and `docs/roadmap/t
 - Existing systems decide how strongly an attribute matters; attributes are not universal action multipliers.
 - Conditions should affect shared capabilities instead of scattering disease-specific checks through combat, movement, work and UI.
 - Keep the model cheap enough for many off-screen NPCs and animals.
+- Use `docs/world/species-physical-reference.md` as the authoritative source for species physical baselines and SPEA reference semantics; implementation plans must not invent alternative species values.
 
 ## Attribute Semantics
 
@@ -56,12 +57,12 @@ Raw attribute values must **not** be used to compare absolute capabilities acros
 
 ### Species capability baselines
 
-Cross-species comparison uses explicit physical capability baselines or mappings.
+Cross-species comparison uses explicit biological/reference data appropriate to the capability being resolved rather than one universal species multiplier.
 
 Conceptually:
 
 ```text
-species capability baseline
+species reference capabilities
           +
 individual attribute
           +
@@ -72,16 +73,17 @@ temporary conditions
 effective world capability
 ```
 
-For example, if lifting/carrying is used as a Strength reference:
+`docs/world/species-physical-reference.md` is authoritative for this boundary. It deliberately does **not** define fabricated universal values such as `absoluteStrength`, `bearLiftKg` or a generic `speciesStrengthMultiplier` where no biologically meaningful shared metric exists.
 
-```text
-Human Strength 0.5 → e.g. ~40 kg reference capacity
-Bear  Strength 0.5 → e.g. ~100 kg reference capacity
-```
+A consumer should resolve the smallest capability it actually needs from relevant species facts and individual state. For example:
 
-The exact numbers are balance/design data and should be calibrated during implementation. The important rule is that the mapping is explicit and shared, so future systems can compare humans, animals and other species coherently.
+- carrying can use body mass, load-bearing anatomy and Strength where a defensible load model exists;
+- melee can use weapon or attack anatomy plus an individual Strength contribution;
+- pushing/collision can use body mass, velocity, footing and force production;
+- detection can use an explicit sensory channel plus Perception and environment;
+- locomotion keeps species movement modes and speed envelopes separate from Agility.
 
-Different capabilities may use different curves. Strength may influence lifting strongly but melee damage more conservatively. Agility should not simply become a universal movement-speed multiplier.
+Different capabilities may use different curves. Strength may influence carrying strongly but melee damage more conservatively. Agility should not simply become a universal movement-speed multiplier.
 
 ### Base and effective attributes
 
@@ -257,9 +259,9 @@ HP / Stamina / Vigor / work / combat / observation / movement
 
 Do not discard the deterministic physical-profile mechanism. Extend/migrate it so attributes become part of the coherent physical profile rather than a parallel random stat roll.
 
-## Phase 1 — Shared Attributes Foundation
+## Phase 1 — Shared Attributes Foundation + Strength Melee Slice
 
-Introduce the smallest shared SPEA representation and resolution mechanism needed by real consumers.
+Introduce the smallest shared SPEA representation and resolution mechanism needed by one real consumer.
 
 Scope:
 
@@ -267,38 +269,43 @@ Scope:
 - `0..1`, species-relative semantics with `0.5` as healthy-adult species reference,
 - base/effective distinction,
 - deterministic modifier resolution,
-- explicit species capability-baseline boundary,
+- deterministic base generation semantics aligned with `docs/world/species-physical-reference.md`,
 - NPC physical-profile integration,
+- one narrow **human/player/NPC melee Strength** vertical slice,
 - persistence only for authoritative/base data where necessary,
-- tests for scale semantics, deterministic generation and modifier resolution.
+- tests for scale semantics, deterministic generation, modifier resolution and neutral melee behaviour at `Strength = 0.5`.
 
-Use one real vertical slice to validate the architecture before wiring every attribute everywhere. **Strength** is the preferred first slice because melee and heavy physical work already provide concrete consumers.
+Use `docs/world/species-physical-reference.md` as the authoritative source for reference semantics and species/profile rules. Do not invent species values in the implementation plan.
 
-## Phase 2 — Strength Integration
+Non-goals for this phase:
 
-Make Strength materially affect existing systems.
+- broad fauna SPEA integration,
+- heavy-work integration,
+- Endurance-derived HP/Stamina/Vigor,
+- Agility movement integration,
+- Perception/observation,
+- conditions or disease.
 
-Initial targets:
+The first slice should preserve current melee tuning at the neutral human reference (`Strength = 0.5`) and validate the architecture without forcing unrelated physical systems to migrate at the same time.
+
+## Phase 2 — Remaining Strength + Endurance Integration
+
+Expand Strength to physical work and connect Endurance to the existing physical-resource model.
+
+Initial Strength targets:
 
 ```text
 Strength
-├── melee force/damage contribution
 └── heavy physical work effectiveness
 ```
 
-Possible later additions in the same model:
+Possible later Strength additions in the same model:
 
-- carry/lift capacity,
+- carry/lift capacity where a real capability model exists,
 - pushing/pulling,
 - tool/action requirements.
 
-The implementation should define explicit capability curves around the neutral `0.5` reference rather than multiplying outcomes directly by the raw attribute.
-
-## Phase 3 — Endurance Integration
-
-Connect Endurance to the existing physical-resource model.
-
-Initial targets:
+Initial Endurance targets:
 
 ```text
 Endurance
@@ -310,9 +317,11 @@ Endurance
 
 This phase should reconcile the current NPC physical-profile maxima with the new attribute model rather than create a second set of maxima.
 
+Strength and Endurance consumers should define explicit capability curves around the neutral `0.5` reference rather than multiplying outcomes directly by the raw attribute.
+
 The exact Player/NPC/fauna consumers can differ while sharing the same attribute semantics.
 
-## Phase 4 — Agility Integration
+## Phase 3 — Agility Integration
 
 Connect Agility to existing movement/action seams without turning it into a universal speed multiplier.
 
@@ -325,7 +334,7 @@ Candidate targets:
 
 Keep species locomotion and action-specific base timing authoritative; Agility modifies individual capability within those systems.
 
-## Phase 5 — Perception & Observation
+## Phase 4 — Perception & Observation
 
 Introduce Perception through a reusable observation/information mechanism.
 
@@ -359,7 +368,7 @@ high observation
 
 The mechanism should be designed so NPCs and animals can later use compatible observation logic for threat awareness, hunting, social/medical assessment and world interaction.
 
-## Phase 6 — Conditions & First Disease
+## Phase 5 — Conditions & First Disease
 
 Add a shared condition model capable of representing temporary physical impairment without rewriting base attributes.
 
@@ -388,7 +397,7 @@ A first implementation does not need a broad disease taxonomy. One complete dise
 
 Rotting-corpse exposure should be deferred until corpse ageing/decay provides a real world-state seam rather than introducing decay solely for poisoning.
 
-## Phase 7 — Injuries, Medicine & Assisted Treatment
+## Phase 6 — Injuries, Medicine & Assisted Treatment
 
 Extend the existing injury/healing flow rather than replacing it.
 
@@ -423,7 +432,7 @@ Doctor/Herbalist are social/professional roles that use the same medical mechani
 
 The textile/herbal production roadmap can supply bandages, dressings and herbal products to this system, creating real settlement demand and shortages.
 
-## Phase 8 — Fauna Physical Individuality
+## Phase 7 — Fauna Physical Individuality
 
 Extend the same attribute semantics to animals without flattening species biology into SPEA.
 
@@ -448,22 +457,23 @@ Potential consumers:
 - injury/disease consequences,
 - future domestication/work-animal capability.
 
-A weak bear can still be absolutely stronger than a strong human because cross-species mechanics resolve through species capability baselines rather than comparing raw Strength values.
+A weak bear can still be absolutely stronger than a strong human because cross-species mechanics resolve through relevant species capabilities rather than comparing raw Strength values.
 
 ## Attribute Reference Data
 
-Before broad integration, maintain explicit design anchors for each attribute and important species. These anchors are part of world-mechanics coherence, not merely UI balance.
+`docs/world/species-physical-reference.md` is the authoritative source for:
 
-Example direction:
+- SPEA `0..1` semantics,
+- the meaning of the neutral `0.5` healthy-adult reference,
+- current species/reference profiles,
+- biological absolute-capability anchors,
+- separation of body mass, locomotion, sensory channels and attack anatomy from SPEA,
+- individual SPEA distribution guidance,
+- rules for future capability consumers.
 
-| Attribute | Human `0.5` reference | Cross-species comparison concept |
-|---|---|---|
-| Strength | typical healthy adult human | lifting/carrying/force capability |
-| Perception | typical human observation ability | detection/recognition capability plus species-specific senses |
-| Endurance | typical sustained-effort/recovery capacity | sustained work, stamina/recovery capability |
-| Agility | typical human coordination/mobility | action/mobility capability plus species locomotion baseline |
+Implementation plans should reference that document rather than restating or inventing species values. If later research improves an empirical anchor, update the reference document first and migrate affected consumers through a focused plan.
 
-Concrete reference values and curves should be documented alongside implementation as they become authoritative. Avoid unexplained per-system multipliers that make cross-species comparison impossible.
+Consumer-specific curves still belong to the systems that consume the capability. They should preserve the neutral `0.5` reference unless a plan explicitly changes existing gameplay balance, and they should avoid unexplained per-system species multipliers.
 
 ## Performance & Simulation
 
@@ -483,17 +493,17 @@ Remote/off-screen entities should retain the same authoritative attributes and m
 
 ## Documentation Follow-up
 
-`docs/vision/npc-physical-state.md` should be updated to reflect the decisions established here:
+`docs/vision/npc-physical-state.md` and `docs/world/species-physical-reference.md` should remain aligned with implementation as SPEA lands.
 
-- expand physical capabilities from Strength/Agility to SPEA,
-- document relative-within-species attribute semantics,
-- add species capability baselines for absolute comparison,
+In particular:
+
+- keep SPEA relative-within-species semantics stable,
+- keep species capability baselines/reference data outside raw SPEA,
 - distinguish base/effective attributes,
-- describe Perception/observation and Endurance explicitly,
-- align the current-implementation section with the implemented deterministic NPC age/physical-profile work,
-- clarify shared Player/NPC/fauna direction,
-- align illnesses/unsafe-water text with the current water-quality implementation,
-- keep Medicine as competence/skill rather than physical attribute.
+- preserve Perception as individual sensory effectiveness rather than a single species detection radius,
+- preserve Endurance as capability distinct from runtime Vigor/Stamina,
+- keep Medicine as competence/skill rather than physical attribute,
+- update authoritative reference data before introducing new species-specific capability assumptions in code.
 
 ## Planning Direction
 
@@ -502,8 +512,8 @@ Implementation should be split into focused plans rather than one large attribut
 Recommended sequence:
 
 ```text
-1. shared SPEA foundation + one Strength vertical slice
-2. remaining Strength / Endurance integration
+1. shared SPEA foundation + human/player/NPC Strength melee slice
+2. remaining Strength + Endurance integration
 3. Agility integration
 4. Perception + observation
 5. conditions + poisoning + herb recovery
@@ -511,4 +521,6 @@ Recommended sequence:
 7. fauna attribute integration / deeper ecosystem health
 ```
 
-Exact plan boundaries and IDs should be chosen after checking the current plan index and `docs/plans/PLANNING.md`. Each plan should verify the current code seams again before implementation because these systems are evolving quickly.
+The first implementation plan should use domain `npc` because its first authoritative profile integration and vertical slice are centred on the existing NPC physical-profile and human combat systems, while shared primitives remain reusable by Player and fauna.
+
+Exact plan IDs should be chosen after checking the current plan index and `docs/plans/PLANNING.md`. Each plan should verify the current code seams again before implementation because these systems are evolving quickly.
