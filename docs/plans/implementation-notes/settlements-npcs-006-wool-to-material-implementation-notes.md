@@ -2,156 +2,265 @@
 
 Plan: `docs/plans/settlements-npcs-006-wool-to-material.md`
 
+**Reviewed:** 2026-09-06  
+**Status:** `planned` 📋
+
 ## Review outcome
 
-The plan is **not currently implementable as written** without depending on the planned production foundation. The repository has `ProductionDef` and an atomic item-recipe primitive, but there is no unified production executor that can consume real inputs and create outputs across ownership boundaries. That is the purpose of planned `settlements-npcs-015`.
+Plan wymagał aktualizacji po późniejszych zmianach architektury.
 
-Therefore:
+Najważniejsze ustalenia z aktualnego `main`:
 
-- treat `settlements-npcs-015` as a real implementation dependency for this plan, or implement this plan only after 015;
-- do **not** create a wool-specific production executor/system as a workaround;
-- the plan's current `Depends on: fauna-004` is incomplete and should eventually include `settlements-npcs-015`.
+- `fauna-004` **nie jest jeszcze zaimplementowany** — nadal ma status `planned`; `settlements-npcs-006` nie może zakładać istniejącego runtime `wool`.
+- `settlements-npcs-014` local goods circulation został faktycznie zaimplementowany i ustanowił fizyczne `source → carried → destination` oraz conservation/freshness semantics dla concrete food, ale nie jest automatycznym obiegiem każdego `ItemKind`.
+- `settlements-npcs-015` production foundation nadal jest `planned`; aktualny kod nadal ma split między stock production i Hunter item production. To jest realna zależność 006.
+- physical storage/logistics już rozdziela ownership ilości od fizycznego destination. Nie tworzyć textile storage ani teleportowanego transferu.
+- Work Contracts są obecnie realnym, authoritative systemem jawnych zobowiązań worker–employer, ale zwykła household profession work nie jest kontraktem.
 
-## Existing mechanisms to reuse
+Plan został poprawiony tak, aby zależeć od `fauna-004` i `settlements-npcs-015`, a nie od nieistniejącego „już gotowego” production pipeline.
 
-### Production
+## 1. Production — obecny stan kodu
 
-`src/economy/production.ts` already defines `ProductionDef` with both `itemInputs/itemOutputs` and stock inputs/outputs. `produceFirstAvailableItemRecipe()` is currently the generic item-recipe selector used by Hunter, and `Inventory.applyRecipe()` is atomic for a **single Inventory**.
+`src/economy/production.ts` nadal definiuje `ProductionDef` oraz dwa execution styles:
 
-Wool material should become an ordinary item recipe:
+- stock recipes wykonywane przez `SettlementEconomy` / `EconomicStock`,
+- Hunter item recipes wykonywane przez `produceFirstAvailableItemRecipe()` → `Inventory.applyRecipe()`.
 
-`itemInputs: wool × N → itemOutputs: wool_material × M`
+Nie ma jeszcze `ProductionExecutor` z planu 015.
 
-The actual cross-owner/work execution should use the executor delivered by 015 once available. Do not duplicate Hunter's direct `Inventory.applyRecipe()` path for this feature.
+Dlatego wool processing nie powinien być implementowany przed 015 przez skopiowanie Hunter path. Docelowo recipe ma być zwykłym:
 
-### Item ownership
+```text
+itemInputs: wool × N
+itemOutputs: wool_material × M
+```
 
-`Household.items` is the correct owner for both raw wool and produced wool material. It is an unbounded generic `Inventory`, unlike `Household.stock`, which is now effectively wood-only.
+wykonywanym przez wspólny transactional execution path.
 
-Do not add:
+Istotne pliki po 015 trzeba ponownie zweryfikować, ponieważ jego implementacja może zmienić dokładne API:
+
+- `src/economy/production.ts`,
+- `src/economy/npcWork.ts`,
+- `src/economy/settlementEconomy.ts`,
+- `src/economy/stock.ts`,
+- `src/items/Inventory.ts`.
+
+## 2. Ownership wool/material
+
+Dla pierwszego slice właściwym ownerem jest `Household.items`.
+
+Nie dodawać:
 
 - `EconomicKind: wool`,
 - `SettlementEconomy.wool`,
-- a textile-specific storage,
-- a production inventory.
+- `WoolStorage`,
+- `TextileInventory`,
+- production inventory.
 
-This also means the plan's “Household/storage/economy flow” should be interpreted as existing concrete-item storage semantics; wool is not food and must not go through `depositFood()`.
+`Household.stock` nie jest generic concrete-item storage; po wcześniejszych migracjach jest praktycznie wood-only. Wool/material powinny pozostać `ItemKind`.
 
-### Livestock / wool input
+Produkcja może bezpośrednio używać znanego inventory ownera. Nie ma powodu przepuszczać wool przez settlement economy tylko po to, aby recipe mogło się wykonać.
 
-After `fauna-004`, sheep wool should already be represented as a normal `ItemKind` and produced into the owning household's concrete inventory. Use that state directly.
+## 3. Fauna-004 — poprawna granica odpowiedzialności
 
-Do not scan the world for wool. Production input resolution should use the known household owner/source, consistent with the production boundary from 015.
+Aktualny `fauna-004` planuje:
 
-### NPC work
+```text
+owned sheep
+→ Shepherd + shearing capability
+→ carried wool
+→ owner Household.items
+```
 
-`NpcAgent` already owns the normal scheduled work pipeline and uses `PlannedAction` for movement + execution. Textile Worker should be another role dispatch inside that pipeline, not a new scheduler/FSM.
+006 zaczyna się dopiero od istniejącego `Household.items: wool`.
 
-The important separation is:
+Poprzednie implementation notes błędnie sugerowały dodanie/provisioning `shearing` dla Textile Workera. To należy usunąć z implementacji 006:
 
-`NpcAgent` selects/executes work → production executor performs recipe transaction.
+- shears/capability są odpowiedzialnością Shepherda z fauna-004,
+- Textile Worker nie strzyże sheep,
+- 006 nie modyfikuje wool growth anchor ani livestock production,
+- 006 nie implementuje ponownie deposit wool.
 
-The NPC should not implement recipe consumption/output mutation itself.
+Po wylądowaniu fauna-004 należy reconfirmować finalny `ItemKind`/quantity semantics zamiast zakładać historyczny draft.
 
-### Tool capability
+## 4. Local goods circulation po settlements-npcs-014
 
-`src/items/itemCatalog.ts` is the single capability source of truth. Current capabilities include `wood_chopping`, `meat_harvesting`, `soil_digging`, `rock_mining`, `fire_starting` and `fishing`; `shearing` does not exist yet.
+014 zaimplementował ważny invariant dla fizycznych transferów:
 
-Add `shearing` there and gate the action through `Inventory.hasCapability()` / `findWithCapability()`, not `inventory.has('shears')`.
+```text
+source + NPC carried + destination = constant
+```
 
-The existing `npcLoadout.ts` centralizes role-specific carried tools/weapons. If Textile Worker needs shears autonomously, provision them through this existing loadout seam rather than a textile-specific inventory/workplace. Revalidate the capability at action completion.
+oraz live claim/revalidation i preservation freshness dla food.
 
-## Important architecture decisions
+Nie należy jednak wyciągać z tego wniosku, że wool automatycznie krąży lokalnie. Obecny concrete flow jest przede wszystkim food-specific, a `localExchange.ts` pozostaje bulk/wood-oriented.
 
-### Role assignment
+Dla 006 najprostszy i poprawny model to:
 
-Adding `textile_worker` to `Role` is an exhaustive-type change. At minimum inspect/update:
+```text
+known Household.items contains wool
+→ local production
+→ same Household.items receives wool_material
+```
+
+Jeśli wool znajduje się u innego ownera, production ma zwrócić blocked/missing input. Ewentualny transfer powinien zostać wykonany przez istniejący/future local-goods transport seam przed kolejną próbą produkcji.
+
+Nie rozszerzać 006 o generic non-food circulation tylko po to, aby Textile Worker zawsze znalazł surowiec.
+
+## 5. Physical storage / logistics
+
+Późniejsze storage plans ustanowiły rozdział:
+
+- authoritative quantity/ownership w inventory/economy,
+- fizyczny destination do którego NPC idzie,
+- carried inventory jako owner dóbr w ruchu tam, gdzie zachodzi transfer.
+
+006 nie potrzebuje fizycznego przenoszenia input/output, jeśli source i destination są tym samym `Household.items`.
+
+Jeżeli implementacja wybierze fizyczny textile workplace oddalony od owner storage, wtedy trzeba reuse'ować istniejący storage destination + carried action lifecycle. Nie wolno trzymać claimed wool wyłącznie w closure ani teleportować go do workplace.
+
+Nie dodawać workplace bez rzeczywistej potrzeby istniejącego work contract/API.
+
+## 6. NPC work integration
+
+Textile Worker powinien wejść w istniejący `NpcAgent` schedule/work arbitration, analogicznie do innych profesji.
+
+Granica odpowiedzialności:
+
+```text
+NpcAgent
+→ wybiera bounded work opportunity/action
+→ movement/work lifecycle
+→ on completion: shared production execution
+```
+
+NPC nie powinien sam mutować wool/output poza wspólnym production API.
+
+Revalidation na completion jest ważniejsza niż preview przy wyborze pracy: inny aktor może wcześniej zużyć wool.
+
+Nie tworzyć per-frame recipe scan ani drugiego production scheduler.
+
+## 7. Work Contracts po npc-018
+
+Aktualny codebase ma działający `WorkContract` i shared-work integration dla jawnych zleceń. `WorkContractRecord.workerNpcId`/contract state pozostają authority dla takiego zobowiązania.
+
+Nie używać WorkContract do rutynowej produkcji własnego household:
+
+```text
+normal profession work ≠ WorkContract
+```
+
+Textile Worker ma działać autonomicznie bez gracza/employera.
+
+Jeżeli w przyszłości production stanie się contract targetem, kontrakt powinien tylko skierować worker do tej samej production action/executor. Nie tworzyć contract-specific wool recipe ani drugiego ownership modelu.
+
+## 8. Role assignment
+
+Dodanie `textile_worker` nadal jest exhaustive `Role` change. Sprawdzić po aktualnym main co najmniej:
 
 - `src/ai/characters.ts`,
 - `src/ai/schedule.ts`,
-- role dispatch in `src/ai/NpcAgent.ts`,
-- role loadout mappings,
-- any exhaustive role tests/maps.
+- role dispatch w `src/ai/NpcAgent.ts`,
+- `src/ai/npcLoadout.ts` tylko jeśli rola faktycznie wymaga narzędzia,
+- exhaustive role maps/tests.
 
-Do not merely add the role to `RANDOM_ROLES` without considering fauna ownership. A random Textile Worker can otherwise appear in a household with no sheep and a sheep household can have nobody producing its wool.
+Nie dodawać roli bezwarunkowo do random pool.
 
-Prefer the existing deterministic character/family generation seams and make the assignment livestock-aware, analogous to the shepherd constraint documented in `fauna-004`. Do not introduce a second profession-assignment system.
+Lepszy warunek to realny dostęp household do wool/production opportunity. Nie wiązać jednak Textile Workera na stałe z ownership sheep — po rozwoju local goods circulation surowiec może pochodzić od innego gospodarstwa.
 
-### Production destination
+Assignment ma używać istniejącego staffing/character-generation seam; bez drugiego profession systemu.
 
-For the first implementation, produced wool material should remain in the Textile Worker's owning `Household.items`. There is no need to route it through `SettlementEconomy`.
+## 9. Item definition
 
-If 015's executor introduces explicit source/destination adapters, pass the existing household inventory as the destination; do not invent textile-specific delivery semantics.
+`wool_material` powinien być zwykłym stackowalnym `ItemKind` z istniejącym `ITEM_DEFS`/catalog metadata.
 
-### Physical workplace
+Nie ma obecnie uzasadnienia dla:
 
-The plan intentionally leaves a workplace optional. Current architecture does not have a textile workplace. Do not introduce a new building/landmark merely to make the recipe visible.
+- `ItemInstance`,
+- durability/quality,
+- yarn intermediate item,
+- textile-specific metadata system.
 
-If the production executor/work flow requires a workplace, use the smallest existing generic workplace contract. Otherwise Textile Worker can perform a normal work action without a new physical station.
+Recipe quantity ma być gameplayową dyskretną wartością w `ProductionDef`. Roadmapowe `1 kg wool → ~3 m² cloth` jest tylko punktem odniesienia i nie powinno tworzyć osobnego unit-conversion subsystem.
 
-## Production transaction / capacity
+## 10. Transaction boundary
 
-Raw wool is a concrete stack item, so the recipe must consume it atomically with the output. The existing `Inventory.applyRecipe()` protects single-inventory recipes, but the future production executor is needed if input and output ownership/transaction boundaries span different objects.
+Po 015 użyć jego finalnego production transaction contract.
 
-The safe sequence is:
+Wymagany outcome dla 006:
 
-1. preview availability during work selection;
-2. begin normal NPC work action;
-3. revalidate live input/capability at completion;
-4. atomically consume wool and create wool material;
-5. only report success after output is committed.
+1. preview input availability przy wyborze pracy,
+2. bounded normal NPC action,
+3. live revalidation na completion,
+4. atomic consume + output commit,
+5. success dopiero po skutecznym zapisaniu outputu.
 
-Do not remove wool when the action starts.
+Nie usuwać wool na starcie akcji.
 
-`NpcAgent.carried` is only 5 kg today. If the intended recipe consumes raw wool from the household and produces directly into `Household.items`, the worker does **not** need to carry the production input/output. Avoid adding unnecessary physical transport just for this plan.
+Nie polegać na starym `Inventory.applyRecipe()` jako nowym publicznym textile execution path — 015 ma rozwiązać m.in. validation, duplicate inputs, output capacity i wspólną transaction boundary.
 
-If the implementation instead chooses a carried-material interpretation, capacity must be checked against the actual `ITEM_DEFS.wool.weight`; do not hard-code the 1 kg assumption from the roadmap.
+## 11. Off-screen / time skip
 
-## Recipe definition
+Nie tworzyć textile-specific catch-up simulation.
 
-Keep the conversion quantity explicit in the recipe rather than introducing a yarn abstraction. The roadmap reference of 1 kg wool → ~200 yarn units → ~3 m² cloth is informational only.
+Produkcja ma korzystać z istniejącego NPC work lifecycle/fidelity. Jeżeli aktualny runtime nie symuluje dokładnego NPC action podczas dalekiego/off-screen stanu, 006 ma rozszerzyć wspólny mechanizm tylko wtedy, gdy jest to potrzebne i zgodne z aktualnym modelem — nie dodawać równoległego „offline textile production”.
 
-There should be exactly one broad Textile Worker role; do not create spinner/weaver/cloth-maker roles.
+Fauna wool readiness pozostaje osobną absolute-time odpowiedzialnością fauna-004.
 
-The resulting `wool_material` should be a normal stackable `ItemKind` with ordinary `ITEM_DEFS` and catalog metadata. No ItemInstance/durability is justified by the current design.
+## 12. Najważniejsze testy
 
-## Potential pitfalls
+Po implementacji 015 użyć jego production tests jako bazowego contractu i dodać textile-specific coverage:
 
-- **Dependency mismatch:** `settlements-npcs-006` currently depends only on `fauna-004`, while its “existing production pipeline” is not yet a complete execution system. This is the largest issue in the plan.
-- **Do not use `SettlementEconomy.produce()`:** it only applies stock-based recipes to `EconomicStock`, which is the wrong owner for wool/items.
-- **Do not generalize `SettlementEconomy` just for wool:** concrete item storage already exists.
-- **Do not use food helpers:** wool/material are non-food concrete items.
-- **Exhaustive Role changes:** adding Textile Worker will require all role maps/switches to compile.
-- **Tool provisioning:** adding the capability without putting a capable tool in an autonomous worker's carried inventory makes the profession permanently blocked.
-- **Role usefulness:** random assignment without sheep awareness produces idle Textile Workers and unmanaged sheep households.
-- **No per-frame production:** recipe discovery/execution belongs to work/decision boundaries.
-- **No partial transaction:** failed/revalidated production must leave both wool and output unchanged.
-- **Persistence:** follow current fauna/household runtime semantics; do not add special wool-cycle or production persistence unless the shared architecture requires it.
+- `wool → wool_material` happy path,
+- missing/insufficient wool = zero mutation,
+- exact input/output quantity,
+- stale input przed completion = blocked bez partial consume,
+- interruption = zero recipe mutation,
+- output created exactly once,
+- source/destination są prawidłowym `Household.items`,
+- brak automatycznego claimu z innego household,
+- Textile Worker work pozostaje normalnym profession work, bez WorkContract,
+- brak regresji Hunter/shared production,
+- fauna-004 wool deposit może być później skonsumowany przez recipe.
 
-## Recommended implementation order
+Jeżeli pojawi się fizyczny transfer do workplace, dodatkowo testować conservation przez `carried` i cancellation recovery.
 
-1. Land/verify `fauna-004` so sheep expose real wool and the owning household receives it.
-2. Land `settlements-npcs-015` production execution before implementing this plan.
-3. Add `wool_material` item definition/catalog entry and the concrete recipe.
-4. Add `textile_worker` role, schedule and livestock-aware assignment.
-5. Add/provision shearing/production tool capability only where required by the actual work contract.
-6. Integrate recipe selection/execution into the existing NPC work pipeline.
-7. Verify input consumption, output ownership, failure/revalidation and repeated/off-screen work.
-8. Keep browser verification manual as specified by project workflow.
+## 13. Zalecana kolejność
 
-## Relevant current files
+1. Wylądować/zweryfikować `fauna-004` — realny `wool` i household deposit.
+2. Wylądować `settlements-npcs-015` — shared transactional production execution.
+3. Ponownie zrobić mały recon finalnych API po obu dependencies.
+4. Dodać `wool_material` i recipe.
+5. Dodać `textile_worker` przez istniejące role/schedule/staffing seams.
+6. Dodać bounded profession work action wywołującą shared production executor na completion.
+7. Dodać targeted tests ownership/transaction/revalidation.
+8. Manual browser verification pozostawić użytkownikowi.
 
-- `src/economy/production.ts` — current `ProductionDef` and item-recipe helper; execution is still split.
-- `src/items/Inventory.ts` — atomic single-inventory `applyRecipe()` and capability lookup.
-- `src/items/itemCatalog.ts` — `ItemCapability` / `ITEM_CATALOG`.
+## 14. Relevant current files
+
+- `src/economy/production.ts` — `ProductionDef`; aktualnie split execution, 015 jeszcze nie wylądował.
+- `src/economy/npcWork.ts` — istniejący work → economy/production integration seam.
+- `src/items/Inventory.ts` — concrete item owner/primitives; nie robić z niego textile scheduler.
 - `src/items/items.ts` — authoritative `ItemKind` / `ITEM_DEFS`.
-- `src/ai/characters.ts` — exhaustive `Role` and random role selection.
-- `src/ai/schedule.ts` — role schedule templates.
-- `src/ai/NpcAgent.ts` — scheduled work, `PlannedAction`, carried inventory and existing production work.
-- `src/ai/npcLoadout.ts` — centralized role tool/weapon provisioning.
+- `src/items/itemCatalog.ts` — capabilities/catalog; shearing należy do fauna-004.
 - `src/settlement/household.ts` — authoritative `Household.items`.
-- `src/economy/settlementEconomy.ts` — settlement bulk stock; not the owner for wool.
-- `src/fauna/livestockProduction.ts` — existing absolute-day livestock production primitives.
-- `src/settlement/livestock.ts` / `src/settlement/createSettlement.ts` — livestock ownership and NPC/household construction seams.
+- `src/economy/localExchange.ts` — bulk local exchange seam; nie jest generic ItemKind circulation API.
+- `src/items/foodItems.ts` — concrete physical food transfer semantics z 014; wzorzec conservation, nie textile API.
+- `src/settlement/storageDestinations.ts` — physical destination resolution, jeśli produkcja faktycznie będzie wymagała transportu.
+- `src/ai/characters.ts` — `Role` i assignment seams.
+- `src/ai/schedule.ts` — role schedule.
+- `src/ai/NpcAgent.ts` — profession work, `PlannedAction`, carried inventory i WorkContract arbitration/integration.
+- `src/world/workContract.ts` — authoritative contract state; nie używać do rutynowej household production.
+- `src/ai/npcLoadout.ts` — role loadout tylko jeśli finalny textile work wymaga narzędzia.
+- `src/fauna/livestockProduction.ts`, `src/settlement/livestock.ts` — fauna-004 integration context; 006 nie powinien przejmować ich ownership.
+
+## 15. Najważniejsze różnice względem poprzednich notes
+
+- `fauna-004` nie jest done; wcześniejsze sformułowanie „After fauna-004” nie może być traktowane jako obecny stan kodu.
+- `settlements-npcs-015` nadal nie jest done i pozostaje blokującą zależnością.
+- usunięto błędne przypisanie `shearing`/shears do Textile Workera,
+- local goods circulation jest realnym fundamentem ownership/transport, ale nie daje jeszcze automatycznego generic wool circulation,
+- Work Contracts są realne, ale nie powinny przejąć normalnej profesyjnej produkcji,
+- storage/logistics należy reuse'ować tylko gdy zachodzi rzeczywisty transfer między ownerami; same-household recipe nie potrzebuje sztucznego transportu.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
