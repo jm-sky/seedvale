@@ -70,7 +70,7 @@ This is only a compatibility approximation and should not become the long-term r
 
 ## Target social model
 
-Keep three concepts distinct:
+Keep four concepts distinct:
 
 ### Relation
 
@@ -82,45 +82,107 @@ Examples:
 - Piotr dislikes the player,
 - Marek considers the player a friend.
 
+Relation is personal. It can disagree with public reputation: an NPC may dislike the player personally while still recognizing that the player is widely trusted, capable or respected.
+
 ### Reputation
 
-> What the player is publicly known for within a community or wider scope.
+> How a community evaluates the player's social qualities based on what is known about the player's actions.
 
-Reputation should be multidimensional rather than one global score.
+Reputation should describe perceived qualities rather than professions or activity counters. The initial target dimensions are:
 
-Initial conceptual dimensions may include:
+- `trust` — whether the player is considered dependable and likely to keep commitments,
+- `competence` — whether the player is considered capable, effective and able to handle difficult tasks,
+- `benevolence` — whether the player is considered helpful and willing to act for others rather than only for personal gain,
+- `courage` — whether the player is considered willing to face danger and risk when it matters,
+- `integrity` — whether the player is considered honest and likely to respect shared rules, property and social norms.
 
-- `worker` — reliability, useful work, deliveries, production and contracts,
-- `hero` — protection, rescue, defeating major threats and important public actions,
-- `hunter` — hunting, tracking, wildlife management and protection from dangerous animals,
-- `explorer` — discoveries, scouting, landmarks and notable finds.
+These dimensions are intentionally not professions such as `worker`, `hunter`, `explorer` or `hero`. Those concepts are better represented by concrete history, titles/badges, skills or other domain state.
 
-These names are provisional. Final dimensions should be chosen during the reputation implementation recon so they align with actual systems rather than speculative categories.
+Reputation dimensions should support both positive and negative values. A player can therefore be highly competent and courageous while being considered dishonest or untrustworthy.
 
-Reputation should support negative values where appropriate.
+The dimensions are a target model, not a requirement to make every NPC consume every dimension. NPC decisions should use only the signals relevant to the situation.
 
-### Badges / achievements
+Examples:
 
-> Persistent historical facts about what the player has done.
+- entrusting a valuable item may depend strongly on `trust` and `integrity`,
+- asking the player to confront a dangerous threat may depend on `competence` and `courage`,
+- a personal request may depend on relation together with `trust` or `benevolence`,
+- a formal job may care about `competence` and `trust` without changing personal relation.
 
-Badges do not replace reputation and do not need to directly affect NPC behavior.
+### Renown
+
+> How widely the player is known, independently from whether the reputation is good or bad.
+
+Renown is not another moral or competence dimension. It represents reach/visibility of the player's reputation.
+
+A player may be:
+
+- well regarded by a few people but largely unknown,
+- widely known and respected,
+- widely known and distrusted,
+- famous for a major event while still having mixed reputation dimensions.
+
+Renown should initially follow the same local/community scope as reputation. Wider regional or world renown can be introduced later for exceptional events if gameplay requires it.
+
+There should not be a single universal `fame` score that replaces reputation dimensions.
+
+### Known for / Badges
+
+> Concrete persistent facts about what the player has done or become known for.
+
+Examples include things conceptually like:
+
+- skilled hunter,
+- wolf slayer,
+- grave robber,
+- relic seeker.
+
+The existing `BadgeManager` is the natural starting point for persistent historical facts and should remain separate from reputation scores.
+
+A badge does not automatically imply a fixed reputation effect. Whether an action affects reputation depends on social knowledge, context and the systems consuming that information.
 
 ## Reputation scope
 
 Reputation should be contextual rather than purely global.
 
-The preferred foundation is settlement-scoped reputation, for example conceptually:
+The preferred foundation is settlement-scoped reputation, conceptually:
 
 ```ts
-reputation[settlementId].worker
-reputation[settlementId].hero
+reputation[settlementId].trust
+reputation[settlementId].competence
+reputation[settlementId].benevolence
+reputation[settlementId].courage
+reputation[settlementId].integrity
+renown[settlementId]
 ```
 
-This allows the player to be well known in one settlement and unknown elsewhere.
+This allows the player to be trusted and well known in one settlement while remaining an unknown outsider elsewhere.
 
-Future systems may add wider regional or world-level reputation for exceptional events, but this is not required for the first implementation.
+The first implementation does not need automatic propagation between settlements. Regional/world propagation should be introduced only when information travel or broader social systems justify it.
 
-A single universal `fame` score is not planned for the first version.
+## Social information model
+
+The systems answer different questions:
+
+```text
+Relation    = What does this specific NPC think of me?
+Reputation  = How does this community evaluate my qualities?
+Renown      = How widely am I known here?
+Known for   = What concrete deeds or identities am I known for?
+```
+
+They should interact without being collapsed into one score.
+
+For example, killing wolves threatening a settlement might produce some combination of:
+
+- increased local `competence`,
+- increased local `courage`,
+- possibly increased `benevolence` depending on context and motivation,
+- increased local renown,
+- a relevant persistent badge/history fact,
+- a separate relation change with a personally affected NPC.
+
+The exact effects should come from the event/context rather than a universal rule such as "every completed quest increases all positive reputation".
 
 ## Reputation sources
 
@@ -128,16 +190,36 @@ Reputation is not a quest-only reward system.
 
 It should be able to change through ordinary world events, for example:
 
-- completing paid work,
+- completing or failing commitments,
+- performing work effectively or poorly,
 - helping NPCs or households,
 - resolving settlement problems,
 - protecting inhabitants,
 - major combat or rescue events,
-- hunting or exploration achievements,
 - harmful public behavior,
-- failing or abandoning important responsibilities where meaningful.
+- theft, deception or property violations when socially known,
+- abandoning important responsibilities where meaningful.
 
 Quests are one source of reputation changes, not the owner of reputation.
+
+Changes should be tied to events that can reasonably become socially known. A private action should not magically alter settlement reputation merely because the simulation recorded it.
+
+## Reputation as decision input
+
+Reputation exists to participate in world behavior, not only to populate a character screen.
+
+NPCs and settlement systems may eventually use relevant reputation dimensions as decision inputs alongside:
+
+- personal relation,
+- current needs/problems/goals,
+- traits and personality,
+- social roles,
+- world state,
+- concrete known history/badges.
+
+Relation should remain the stronger signal for genuinely personal interactions. Reputation becomes more useful where an NPC has limited personal experience with the player or where the decision is social/formal in nature.
+
+Avoid reducing all reputation dimensions to an unweighted average. If a system needs a derived standing value, it should derive one from the dimensions relevant to that decision.
 
 ## Quest direction
 
@@ -231,7 +313,9 @@ Examples:
 Examples:
 
 - relation change,
-- reputation change,
+- reputation changes in one or more relevant dimensions,
+- renown change,
+- badge/known-history changes,
 - access or service unlock,
 - new quest availability,
 - world state change,
@@ -293,18 +377,20 @@ This should be introduced gradually rather than forcing timers or failure rules 
 
 ### Stage 1 — Reputation foundation
 
-Goal: establish reputation as a real shared social system distinct from relation and badges.
+Goal: establish reputation and renown as real shared social systems distinct from relation and badges.
 
 Expected scope:
 
-- confirm final reputation dimensions against current systems,
+- introduce the initial reputation dimensions: `trust`, `competence`, `benevolence`, `courage`, `integrity`,
 - settlement-scoped reputation storage,
-- positive and negative changes,
+- settlement-scoped renown,
+- positive and negative reputation changes,
 - persistence,
 - replace or retire the current relation-average pseudo-reputation path,
-- integrate reputation with at least one existing NPC/social behavior,
+- integrate relevant reputation dimensions with at least one existing NPC/social decision,
 - preserve relation as the stronger personal signal,
-- keep badges independent.
+- keep badges independent,
+- avoid magical reputation changes for actions that could not reasonably become socially known.
 
 ### Stage 2 — Quest foundations cleanup
 
@@ -315,7 +401,7 @@ Expected scope:
 - add proper quest titles and richer metadata,
 - model visible vs hidden rewards,
 - clean up rewards vs consequences,
-- allow explicit relation/reputation effects,
+- allow explicit relation/reputation/renown effects where appropriate,
 - remove automatic relation assumptions,
 - support simple prerequisites,
 - improve Quest Log presentation,
@@ -333,7 +419,7 @@ Expected scope:
 - establish a basic effort/risk/reward scale,
 - include both formal jobs and personal requests,
 - use coins through existing inventory/economy mechanisms,
-- apply relation/reputation only where justified,
+- apply relation/reputation/renown only where justified,
 - avoid creating a parallel job system.
 
 ### Stage 4 — RPG quest expansion
@@ -373,7 +459,7 @@ Potential scope:
 - persistent helpers/followers,
 - settlement privileges,
 - access to services or restricted places,
-- wider regional/world reputation for exceptional events.
+- wider regional/world reputation and renown for exceptional events.
 
 ## Planning rule
 
