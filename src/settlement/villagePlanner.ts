@@ -1,4 +1,5 @@
 import type { HeightSampler } from '../player/PlayerController'
+import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { FamilyDef, VillageSize } from './families'
 import type {
   VillageBoundary,
@@ -18,6 +19,7 @@ import type {
 } from './villagePlan'
 import { projectOntoSegment } from '../math/segment'
 import { RESOURCE_ROLE, SIGNIFICANT_RICHNESS } from '../terrain/naturalResources'
+import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
 import { villageSizeConfig } from './families'
 import {
@@ -51,6 +53,11 @@ export const PLOT_SCORE_WEIGHTS = {
 
 const LOCAL_SLOPE_STEP = 2.2
 const PLOT_CANDIDATE_ATTEMPTS = 10
+/** Extra clearance (world units) beyond a plot's own radius that must stay
+ *  out of a river's active channel — a building/field wants dry ground at
+ *  its edge, not a bank that starts exactly where the pad ends. Deliberately
+ *  small: a village is allowed to sit right beside a river. */
+const PLOT_RIVER_MARGIN = 1
 /** Reserved spacing radius for a house plot — must stay >= the household-
  *  yard clearance contract (`householdYard.ts`'s `householdYardRadius()`,
  *  plan 011) so the house's own storage/barrel/trough never spill past
@@ -396,9 +403,21 @@ function scorePlotCandidate(
   seedForCell: number,
   sampleHeight: HeightSampler,
   waterLevel: number,
+  riverSegments: readonly RiverChannelSegment[],
   minSpacing: number,
 ): number | null {
   if (y <= waterLevel + SETTLEMENT_WATER_MARGIN) return null
+
+  // Footprint, not just the centre point: a plot whose disc overlaps the
+  // active channel would put part of a house/field/storage pad in the water
+  // even though its centre reads as dry land. `sampleHeight + waterLevel`
+  // can't see a channel whose bed sits above the global water level at all.
+  if (
+    riverSegments.length > 0 &&
+    footprintOverlapsRiver(riverSegments, x, z, req.radius + PLOT_RIVER_MARGIN)
+  ) {
+    return null
+  }
 
   const slope = localSlope(x, z, y, sampleHeight)
   if (slope > 3.2) return null
@@ -462,6 +481,46 @@ function scorePlotCandidate(
   return score
 }
 
+/** How many outward steps the last-resort fallback may take to escape a river
+ *  channel before giving up and using its original position. Bounded so this
+ *  can never loop; a handful of plot radii comfortably clears the widest
+ *  channel the world generates. */
+const RIVER_FALLBACK_STEPS = 10
+
+/**
+ * `pickPlot`'s final fallback is unconditional by design — it must always
+ * return a plot, even when every scored candidate was rejected. A river
+ * channel is the one rejection that still has to hold there (a house pad in
+ * flowing water is worse than one slightly outside its zone), so the fallback
+ * position is stepped straight outward from the village centre until its
+ * footprint clears the channel. Returns the original position unchanged when
+ * there is no river, when it already clears, or when stepping never finds
+ * clear ground.
+ */
+function pushOutOfRiver(
+  x: number,
+  z: number,
+  center: VillageCenter,
+  radius: number,
+  riverSegments: readonly RiverChannelSegment[],
+): { x: number, z: number } {
+  const clearance = radius + PLOT_RIVER_MARGIN
+  if (riverSegments.length === 0 || !footprintOverlapsRiver(riverSegments, x, z, clearance)) {
+    return { x, z }
+  }
+  const dx = x - center.x
+  const dz = z - center.z
+  const len = Math.hypot(dx, dz)
+  if (len < 1e-6) return { x, z }
+  const step = Math.max(1, radius)
+  for (let i = 1; i <= RIVER_FALLBACK_STEPS; i++) {
+    const nx = x + (dx / len) * step * i
+    const nz = z + (dz / len) * step * i
+    if (!footprintOverlapsRiver(riverSegments, nx, nz, clearance)) return { x: nx, z: nz }
+  }
+  return { x, z }
+}
+
 function pickPlot(
   req: PlotPlacementRequest,
   center: VillageCenter,
@@ -471,6 +530,7 @@ function pickPlot(
   sampleHeight: HeightSampler,
   waterLevel: number,
   houseSpacing: number,
+  riverSegments: readonly RiverChannelSegment[],
 ): VillagePlot {
   if (req.forced) {
     const y = sampleHeight(req.forced.x, req.forced.z)
@@ -524,6 +584,7 @@ function pickPlot(
       seedForCell,
       sampleHeight,
       waterLevel,
+      riverSegments,
       minSpacing,
     )
     if (score === null) continue
@@ -589,6 +650,7 @@ function pickPlot(
           seedForCell,
           sampleHeight,
           waterLevel,
+          riverSegments,
           minSpacing,
         )
         if (score === null) continue
@@ -609,14 +671,15 @@ function pickPlot(
     }
   }
 
-  const fx =
+  const rawFx =
     req.role === 'house' && zone
       ? zone.x
       : center.x + Math.cos(baseAngle) * fallbackRing
-  const fz =
+  const rawFz =
     req.role === 'house' && zone
       ? zone.z
       : center.z + Math.sin(baseAngle) * fallbackRing
+  const { x: fx, z: fz } = pushOutOfRiver(rawFx, rawFz, center, req.radius, riverSegments)
   return {
     id: req.id,
     role: req.role,
@@ -646,6 +709,13 @@ function zoneByKind(zones: readonly VillageZone[], kind: VillageZoneKind): Villa
 /**
  * Boundary + center + pattern + zones + plots for one settlement (plan 047
  * steps 5–7). Buildings/landmarks/paths remain for later steps.
+ *
+ * `riverSegments` are the canonical river channel segments covering this
+ * village's footprint (resolved once per settlement by
+ * `settlementGenerator.ts` through `terrain/riverQuery.ts`) — every plot is
+ * scored against them footprint-first, so no house/field/storage pad ends up
+ * in an active channel. Empty means "no river anywhere near", which is the
+ * common case and short-circuits the check.
  */
 export function planVillageLayout(
   identity: VillageIdentity,
@@ -654,6 +724,7 @@ export function planVillageLayout(
   seedForCell: number,
   sampleHeight: HeightSampler,
   waterLevel: number,
+  riverSegments: readonly RiverChannelSegment[] = [],
 ): VillageLayoutDraft {
   const sizeCfg = villageSizeConfig(identity.size)
   const pattern = chooseLayoutPattern(identity, seedForCell)
@@ -693,6 +764,7 @@ export function planVillageLayout(
       sampleHeight,
       waterLevel,
       sizeCfg.houseSpacing,
+      riverSegments,
     ),
   )
 
@@ -720,6 +792,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   })
@@ -750,6 +823,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -784,6 +858,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -809,6 +884,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -832,6 +908,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -855,6 +932,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -879,6 +957,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -902,6 +981,7 @@ export function planVillageLayout(
         sampleHeight,
         waterLevel,
         sizeCfg.houseSpacing,
+        riverSegments,
       ),
     )
   }
@@ -930,6 +1010,7 @@ export function planVillageLayout(
       sampleHeight,
       waterLevel,
       sizeCfg.houseSpacing,
+      riverSegments,
     )
     plots.push({ ...plot, price: salePrice })
   }

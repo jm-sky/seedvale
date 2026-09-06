@@ -7,6 +7,7 @@ import {
   computeRiverTileDiagnostics,
   depthFromAccumulation,
   exposedBankFromFlow,
+  footprintOverlapsRiver,
   nearestRiverBankDistance,
   nearestRiverBankPoint,
   overlappingRiverTiles,
@@ -645,5 +646,44 @@ describe('nearestRiverBankPoint (plan ui-input-006 fishing-interaction fix)', ()
     expect(bank!.x).toBeCloseTo(32, 5)
     expect(bank!.z).toBeCloseTo(halfWidth, 5)
     expect(bank).not.toEqual({ x: 32, z: 5 })
+  })
+})
+
+describe('footprintOverlapsRiver', () => {
+  const seg = {
+    ax: -50,
+    az: 0,
+    aBedH: 0,
+    aWaterH: 1,
+    aWaterHalfWidth: 3,
+    aChannelHalfWidth: 6,
+    bx: 50,
+    bz: 0,
+    bBedH: 0,
+    bWaterH: 1,
+    bWaterHalfWidth: 3,
+    bChannelHalfWidth: 6,
+  }
+
+  it('reports no overlap with no segments', () => {
+    expect(footprintOverlapsRiver([], 0, 0, 10)).toBe(false)
+  })
+
+  it('matches isInsideRiverChannel at radius 0', () => {
+    for (const z of [0, 2, 3.5, 5, 12]) {
+      expect(footprintOverlapsRiver([seg], 0, z, 0)).toBe(
+        nearestRiverBankDistance([seg], 0, z)! < 0,
+      )
+    }
+  })
+
+  it('catches a footprint whose centre is dry but whose disc reaches the water', () => {
+    // Water edge is at |z| = 3; a radius-2 pad centred at z = 4 overlaps it.
+    expect(footprintOverlapsRiver([seg], 0, 4, 2)).toBe(true)
+    expect(footprintOverlapsRiver([seg], 0, 4, 0.5)).toBe(false)
+  })
+
+  it('leaves the exposed bank beyond the footprint eligible', () => {
+    expect(footprintOverlapsRiver([seg], 0, 10, 2)).toBe(false)
   })
 })

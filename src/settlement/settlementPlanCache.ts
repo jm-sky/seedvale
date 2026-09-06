@@ -1,6 +1,7 @@
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { RiverQuery } from '../terrain/riverQuery'
 import type { TerrainSamplers } from './settlementTerrain'
 import {
   cellKey,
@@ -24,10 +25,29 @@ export type SettlementResolveContext = {
   homeSize?: HomeVillageSize
 }
 
+/** The running world's canonical river geometry lookup (`terrain/riverQuery.ts`).
+ *  World-scoped rather than a `SettlementResolveContext` field on purpose: the
+ *  def cache below is itself world-scoped and "first resolver wins", so if one
+ *  caller (`SettlementsManager`) passed a query and another (`ChunkManager`'s
+ *  road context) did not, a village's layout would silently depend on which
+ *  one asked first. One registration point makes that impossible.
+ *  `null` (the default, and after `clearSettlementDefCache`) means settlements
+ *  generate river-agnostically, as they did before world-terrain river
+ *  integration — the behaviour unit tests and any hydrology-less caller get. */
+let activeRiverQuery: RiverQuery | null = null
+
+/** Registers the river query for the world being built. Call once per world
+ *  (`ChunkManager` construction), always *after* `clearSettlementDefCache()`
+ *  has dropped the previous world's defs. */
+export function setSettlementRiverQuery(query: RiverQuery | null): void {
+  activeRiverQuery = query
+}
+
 const defCache = new Map<string, SettlementDef | null>()
 
 export function clearSettlementDefCache(): void {
   defCache.clear()
+  activeRiverQuery = null
 }
 
 export function settlementDefFor(
@@ -46,6 +66,7 @@ export function settlementDefFor(
     ctx.heightScale,
     ctx.region,
     ctx.homeSize ?? 'auto',
+    activeRiverQuery ?? undefined,
   )
   defCache.set(key, def)
   return def

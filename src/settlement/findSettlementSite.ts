@@ -1,4 +1,6 @@
 import type { HeightSampler } from '../player/PlayerController'
+import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
+import { footprintOverlapsRiver } from '../terrain/riverNetwork'
 import { createSeededRandom } from '../world/parseSeed'
 import { pathIsDry, SETTLEMENT_WATER_MARGIN } from './pathDryness'
 
@@ -48,6 +50,14 @@ const FOOTPRINT_RING_DIRS = 8
 const SITE_CANDIDATE_ATTEMPTS = 80
 /** Default half-width of the site search box (world units). */
 export const DEFAULT_SITE_SEARCH_MARGIN = 24
+/** Radius (world units) around a candidate plaza that must stay clear of a
+ *  river's active channel — roughly a large plaza disk
+ *  (`villageClearing.ts`'s `plazaCoreRadius`), since the well/stockpile and
+ *  the settlement's densest props sit there. Only the plaza core is gated:
+ *  a village is explicitly allowed to sit *near* or *around* a river, and
+ *  individual plots enforce their own footprints separately
+ *  (`villagePlanner.ts`). */
+export const SITE_RIVER_CLEARANCE = 8
 
 type FootprintMetrics = {
   dryRatio: number
@@ -150,6 +160,12 @@ function scoreCandidate(
  * `footprint`, if given, adds plan 047 village-scale suitability (dry area,
  * height spread, slope, dry paths to the house ring) on top of the local
  * ±2.5 plaza probe.
+ *
+ * `riverSegments`, if given, are the canonical river channel segments around
+ * the search box (`terrain/riverQuery.ts`) — a candidate whose plaza core
+ * would sit in an active river channel is hard-rejected. `sampleHeight +
+ * waterLevel` alone cannot see this: a carved channel whose bed stays above
+ * the global `waterLevel` (any stream above sea level) reads as dry land.
  */
 export function findSettlementSite(
   sampleHeight: HeightSampler,
@@ -160,6 +176,7 @@ export function findSettlementSite(
   resourceAttraction?: (x: number, z: number) => number,
   footprint?: SettlementFootprintHint,
   searchMargin: number = DEFAULT_SITE_SEARCH_MARGIN,
+  riverSegments: readonly RiverChannelSegment[] = [],
 ): SettlementSite | null {
   const random = createSeededRandom(seed ^ 0xc0ffee)
   const margin =
@@ -174,6 +191,12 @@ export function findSettlementSite(
     const z = center.z + (random() * 2 - 1) * margin
     const y = sampleHeight(x, z)
     if (y <= waterLevel + SETTLEMENT_WATER_MARGIN) continue
+    if (
+      riverSegments.length > 0 &&
+      footprintOverlapsRiver(riverSegments, x, z, SITE_RIVER_CLEARANCE)
+    ) {
+      continue
+    }
 
     const samples = [
       sampleHeight(x + LOCAL_FLAT_STEP, z),

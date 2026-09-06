@@ -370,6 +370,24 @@ export function isInsideRiverChannel(segments: readonly RiverChannelSegment[], x
   return dist !== null && dist < 0
 }
 
+/** True when a disc of `radius` centred at `(x, z)` overlaps a river's actual
+ *  water — the footprint-aware generalization of `isInsideRiverChannel`
+ *  (which is exactly `radius === 0`). Placement that owns a real footprint
+ *  (a house pad, a field, a habitat prop) must test its whole radius, not
+ *  just its centre point: a 4.5 m house plot whose centre sits 2 m from the
+ *  water edge still puts half the building in the channel. Same signed
+ *  water-edge distance every other river query builds on, so "overlaps" here
+ *  always agrees with where the carved terrain actually puts the water. */
+export function footprintOverlapsRiver(
+  segments: readonly RiverChannelSegment[],
+  x: number,
+  z: number,
+  radius: number,
+): boolean {
+  const dist = nearestRiverBankDistance(segments, x, z)
+  return dist !== null && dist < radius
+}
+
 /** The actual point on `segments`' nearest water edge to `(x, z)` — same
  *  segment/half-width selection as `nearestRiverBankDistance`, but returning
  *  a real world point (centerline pushed out to the water edge along the ray

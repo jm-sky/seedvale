@@ -62,6 +62,24 @@ const FRAGMENT_SHADER = /* glsl */ `
   varying float vFlow;
   varying float vFall;
 
+  // Cheap 2D value noise (hash + bilinear smoothstep interpolation) — the
+  // irregularity source for the flow highlights below. Deliberately no
+  // texture/extra uniform: this material stays a lightweight variant.
+  float hash21(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
+  float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+  }
+
   void main() {
     // Ribbon is roughly horizontal — a fixed up-normal is a fine approximation
     // for a lightweight V1 fresnel term (no per-vertex normal attribute needed).
@@ -88,9 +106,20 @@ const FRAGMENT_SHADER = /* glsl */ `
     // ignored ambient light entirely, so the sparkle read as a night-time glow.
     // Small streams get a much fainter flow streak — visual "dominance" should
     // scale with actual flow, not read the same for a trickle and a river.
-    float flow = fract(vUv.y * 0.18 - uTime * 0.9);
-    float streak = smoothstep(0.85, 1.0, flow);
-    col += uLakeFoam * streak * 0.7 * mix(0.25, 1.0, vFlow);
+    //
+    // Two octaves of advected value noise rather than the old
+    // fract(vUv.y * k - t) ramp: that was constant across the ribbon's whole
+    // width, so it read as evenly spaced white bars marching across the river
+    // (segment seams, not water). Sampling at a much lower frequency along the
+    // flow axis (vUv.y, arc length in metres) than across it (vUv.x, 0..1)
+    // stretches each highlight along the current, so it reads as a drifting
+    // glint on moving water.
+    vec2 flowUv = vec2(vUv.x * 3.0, vUv.y * 0.45 - uTime * 0.55);
+    float streakField =
+      valueNoise(flowUv) * 0.65 +
+      valueNoise(vec2(flowUv.x * 2.3 + 11.7, flowUv.y * 2.7 - uTime * 0.35)) * 0.35;
+    float streak = smoothstep(0.62, 0.95, streakField);
+    col += uLakeFoam * streak * 0.35 * mix(0.2, 1.0, vFlow);
 
     float sunUp = step(0.0, uSunDirection.y);
     col += vec3(0.5, 0.65, 0.75) * fresnel * 0.25 * sunUp;

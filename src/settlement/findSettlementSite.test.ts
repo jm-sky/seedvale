@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import { villageSizeConfig } from './families'
-import { findSettlementSite, SITE_SCORE_WEIGHTS } from './findSettlementSite'
+import { findSettlementSite, SITE_RIVER_CLEARANCE, SITE_SCORE_WEIGHTS } from './findSettlementSite'
 import { SETTLEMENT_WATER_MARGIN } from './pathDryness'
 
 const WATER = 0
@@ -67,5 +68,47 @@ describe('findSettlementSite footprint scoring (plan 047 §6)', () => {
 
   it('returns null when the whole search box is underwater', () => {
     expect(findSettlementSite(() => WATER - 1, WATER, HALF, 1, { x: 0, z: 0 }, undefined, MD_FOOTPRINT)).toBeNull()
+  })
+})
+
+describe('findSettlementSite river channel avoidance', () => {
+  /** Channel running along world X through the search box. Its bed (11) is far
+   *  above `WATER`, so height sampling alone reads the whole box as dry land —
+   *  exactly the mountain-stream case `sampleHeight + waterLevel` cannot see. */
+  const riverSeg: RiverChannelSegment = {
+    ax: -200,
+    az: 0,
+    aBedH: 11,
+    aWaterH: 11.6,
+    aWaterHalfWidth: 3,
+    aChannelHalfWidth: 6,
+    bx: 200,
+    bz: 0,
+    bBedH: 11,
+    bWaterH: 11.6,
+    bWaterHalfWidth: 3,
+    bChannelHalfWidth: 6,
+  }
+  const flat = () => 12
+
+  it('keeps the plaza core clear of the channel', () => {
+    const site = requireSite(
+      flat, WATER, HALF, 4242, { x: 0, z: 0 }, undefined, MD_FOOTPRINT, undefined, [riverSeg],
+    )
+    expect(Math.abs(site.z) - riverSeg.aWaterHalfWidth).toBeGreaterThanOrEqual(SITE_RIVER_CLEARANCE)
+  })
+
+  it('would otherwise happily centre on the channel', () => {
+    const withRiver = requireSite(
+      flat, WATER, HALF, 4242, { x: 0, z: 0 }, undefined, MD_FOOTPRINT, undefined, [riverSeg],
+    )
+    const withoutRiver = requireSite(flat, WATER, HALF, 4242, { x: 0, z: 0 }, undefined, MD_FOOTPRINT)
+    expect(withRiver).not.toEqual(withoutRiver)
+  })
+
+  it('stays deterministic with river segments', () => {
+    const a = requireSite(flat, WATER, HALF, 77, { x: 0, z: 0 }, undefined, MD_FOOTPRINT, undefined, [riverSeg])
+    const b = requireSite(flat, WATER, HALF, 77, { x: 0, z: 0 }, undefined, MD_FOOTPRINT, undefined, [riverSeg])
+    expect(a).toEqual(b)
   })
 })

@@ -398,6 +398,7 @@ function buildFauna(
     onAnimalDeath,
     initialSpawnerState,
     grassForage,
+    chunkManager.riverShoreDistance,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 

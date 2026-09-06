@@ -184,6 +184,31 @@ export const SPAWNER_RING_OFFSET: [number, number] = [25, 45]
  *  spawner, not a new independent spawn point. */
 const MIN_SPAWN_SEPARATION = 10
 
+/** Clearance (world units) from a river's water edge for any wild spawn
+ *  position. `sampleHeight <= waterLevel` cannot see a river channel at all
+ *  when the channel's bed sits above the global water level (any stream above
+ *  sea level), so a spawn point could land in flowing water and read as dry
+ *  ground. Applies to every wild spawn, prey and predator alike. */
+const SPAWN_RIVER_CLEARANCE = 1.5
+/** Wider berth for a habitat spawn *point* — a cave mouth / thicket / den is a
+ *  physical prop with a footprint plus the pack that lives around it, so
+ *  "not in the water" is not enough; it must sit on real bank. Generic across
+ *  every `SPAWNER_SPECS` entry, never a per-species exception. */
+const SPAWNER_RIVER_CLEARANCE = 6
+
+/** Whether a candidate spawn position keeps `clearance` between itself and a
+ *  river's water edge, given `ChunkManager.riverShoreDistance`'s signed
+ *  distance there (negative inside the water, `null` with no river nearby,
+ *  `undefined` when the caller supplied no river lookup at all). Pure so the
+ *  "no river data means no restriction" contract is pinned by a test rather
+ *  than re-read off the call sites. */
+export function clearsRiverChannel(
+  distanceToWaterEdge: number | null | undefined,
+  clearance: number,
+): boolean {
+  return distanceToWaterEdge == null || distanceToWaterEdge >= clearance
+}
+
 /** "Zniszcz" burn-site (plan 125 §7, enlarged in plan 137) — a wide, shallow
  *  charcoal patch around the habitat prop, not a second walk-in pit. The
  *  lit fire + darkened prop + vertex-color scorch are the burnt-site read. */
@@ -424,6 +449,12 @@ export async function createFauna(
    *  Optional so existing tests that don't model it keep prior behaviour
    *  (herbivores simply fall back to the old abstract forage spot). */
   grassForage?: GrassForageService,
+  /** Signed distance from a point to the nearest loaded river's water edge
+   *  (`ChunkManager.riverShoreDistance`) — negative inside the water, `null`
+   *  when no river channel is near. Optional so callers/tests without
+   *  hydrology keep prior behaviour; when present, every wild spawn and
+   *  habitat spawn point keeps clear of the active channel. */
+  riverShoreDistance?: (x: number, z: number) => number | null,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -476,6 +507,12 @@ export async function createFauna(
     onAnimalDeath?.(animalId)
   }
 
+  /** True when `(x, z)` keeps at least `clearance` between itself and the
+   *  nearest river's water edge. Always true without a `riverShoreDistance`
+   *  or where no river is near. */
+  const clearOfRiver = (x: number, z: number, clearance: number): boolean =>
+    clearsRiverChannel(riverShoreDistance?.(x, z), clearance)
+
   const onRoad = (x: number, z: number): boolean => {
     for (const seg of roadSegments) {
       if (distanceToSegment(x, z, seg.ax, seg.az, seg.bx, seg.bz) < seg.halfWidth + SPAWNER_ROAD_CLEARANCE) {
@@ -509,6 +546,7 @@ export async function createFauna(
       const z = cz + Math.sin(angle) * dist
       if (Math.abs(x - cx) > clampRadius || Math.abs(z - cz) > clampRadius) continue
       if (sampleHeight(x, z) <= waterLevel + 0.6) continue
+      if (!clearOfRiver(x, z, SPAWN_RIVER_CLEARANCE)) continue
       if (filter && !filter(x, z)) continue
       return { x, z }
     }
@@ -682,9 +720,11 @@ export async function createFauna(
     lastOpacity: number
   }[] = []
   const offRoad = (x: number, z: number) => !onRoad(x, z)
-  /** Habitat spawners (esp. thicket) stay inland — not on beach / coastal band. */
+  /** Habitat spawners (esp. thicket) stay inland — not on beach / coastal
+   *  band, and not on top of a river channel (`SPAWNER_RIVER_CLEARANCE`). */
   const spawnerSiteOk = (x: number, z: number): boolean => {
     if (!offRoad(x, z)) return false
+    if (!clearOfRiver(x, z, SPAWNER_RIVER_CLEARANCE)) return false
     return !isCoastalPlacement(x, z, {
       sampleHeight,
       waterLevel,

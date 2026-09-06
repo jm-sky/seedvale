@@ -1,7 +1,8 @@
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { HeightSampler } from '../player/PlayerController'
-import type { RegionParams } from '../terrain/chunkHeightmap'
+import type { RegionParams, RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { NaturalResource } from '../terrain/naturalResources'
+import type { RiverQuery } from '../terrain/riverQuery'
 import { type NameCulture, pickNameCulture } from '../ai/nameCultures'
 import { generateSettlementName, type SettlementTerrain } from '../shared/SettlementName'
 import {
@@ -214,7 +215,18 @@ type SettlementGenContext = {
    * unless the final site becomes an OUTPOST. Never re-rolled after site.
    */
   provisionalSize: RolledVillageSize
+  /** Canonical river channel segments covering everywhere this settlement
+   *  could place anything (site search box + footprint) — resolved once here
+   *  and reused by site search and the layout planner, rather than each
+   *  re-querying hydrology. Empty when no `riverQuery` was supplied (tests /
+   *  callers that don't model rivers) or when no river is near. */
+  riverSegments: RiverChannelSegment[]
 }
+
+/** Slack (world units) added to the settlement's river-segment query box so a
+ *  channel just outside the footprint — whose bank still reaches into it —
+ *  is included. Comfortably past the widest channel's own carve reach. */
+const RIVER_QUERY_MARGIN = 24
 
 /** Step 1 of the plan 047 seam: cell + world seed → resource scan context. */
 function resolveSettlementContext(
@@ -227,6 +239,7 @@ function resolveSettlementContext(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
+  riverQuery?: RiverQuery,
 ): SettlementGenContext {
   const isHome = cell.gx === 0 && cell.gz === 0
   const seedForCell = cellSeed(seed, cell)
@@ -273,6 +286,17 @@ function resolveSettlementContext(
       ? homeSize
       : rollVillageSize(provisionalTerrain, seedForCell)
 
+  // One river query per settlement, sized to cover every position site search
+  // or the layout planner can reach: the widest site-search box this cell may
+  // use (home widens twice, see `HOME_SITE_EXPAND_MARGINS`) plus the village
+  // footprint around whatever site it lands on.
+  const searchReach = isHome
+    ? Math.max(localSearchRadius, ...HOME_SITE_EXPAND_MARGINS)
+    : localSearchRadius
+  const riverReach =
+    searchReach + villageSizeConfig(provisionalSize).footprintRadius + RIVER_QUERY_MARGIN
+  const riverSegments = riverQuery?.segmentsNear(center.x, center.z, riverReach * 2) ?? []
+
   return {
     cell,
     seed,
@@ -288,6 +312,7 @@ function resolveSettlementContext(
     heightScale,
     region,
     provisionalSize,
+    riverSegments,
   }
 }
 
@@ -312,6 +337,7 @@ function chooseSettlementSite(ctx: SettlementGenContext): { x: number, z: number
       ctx.resourceAttraction,
       footprint,
       searchMargin,
+      ctx.riverSegments,
     )
 
   const site = tryMargin(DEFAULT_SITE_SEARCH_MARGIN)
@@ -389,9 +415,18 @@ function createVillagePlan(
   seedForCell: number,
   sampleHeight: HeightSampler,
   waterLevel: number,
+  riverSegments: readonly RiverChannelSegment[],
 ): VillagePlan {
   const sizeCfg = villageSizeConfig(identity.size)
-  const layout = planVillageLayout(identity, site, families, seedForCell, sampleHeight, waterLevel)
+  const layout = planVillageLayout(
+    identity,
+    site,
+    families,
+    seedForCell,
+    sampleHeight,
+    waterLevel,
+    riverSegments,
+  )
   return {
     identity,
     site: { x: site.x, z: site.z, y: site.y, radius: sizeCfg.footprintRadius },
@@ -428,6 +463,7 @@ function generateSettlementCore(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
+  riverQuery?: RiverQuery,
 ): SettlementCore | null {
   const ctx = resolveSettlementContext(
     cell,
@@ -439,6 +475,7 @@ function generateSettlementCore(
     heightScale,
     region,
     homeSize,
+    riverQuery,
   )
   const site = chooseSettlementSite(ctx)
   if (!site) return null
@@ -458,6 +495,7 @@ function generateSettlementCore(
       ctx.seedForCell,
       ctx.sampleHeight,
       ctx.waterLevel,
+      ctx.riverSegments,
     ),
     {
       sampleHeight: ctx.sampleHeight,
@@ -541,6 +579,7 @@ export function generateVillagePlan(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
+  riverQuery?: RiverQuery,
 ): VillagePlan | null {
   return generateSettlementCore(
     cell,
@@ -552,6 +591,7 @@ export function generateVillagePlan(
     heightScale,
     region,
     homeSize,
+    riverQuery,
   )?.plan ?? null
 }
 
@@ -601,6 +641,7 @@ export function generateSettlementDef(
   heightScale: number,
   region: RegionParams,
   homeSize: HomeVillageSize = 'auto',
+  riverQuery?: RiverQuery,
 ): SettlementDef | null {
   const core = generateSettlementCore(
     cell,
@@ -612,6 +653,7 @@ export function generateSettlementDef(
     heightScale,
     region,
     homeSize,
+    riverQuery,
   )
   if (!core) return null
   const { plan, families, sampleHeight: height, waterLevel: water, region: reg } = core

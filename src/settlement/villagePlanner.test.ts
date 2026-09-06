@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { RiverChannelSegment } from '../terrain/chunkHeightmap'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { VillageIdentity } from './villagePlan'
 import { generateFamilies } from './families'
@@ -410,5 +411,71 @@ describe('household yard & settlement space (plan settlements-npcs-011)', () => 
         )
       }
     }
+  })
+})
+
+describe('planVillageLayout river channel avoidance', () => {
+  /** Straight 8 m-wide channel along the world X axis through the village
+   *  centre — flat terrain everywhere, so a river is the *only* thing that can
+   *  reject a plot (`sampleHeight + waterLevel` sees dry land: the bed at 11
+   *  is well above `WATER`). */
+  const riverSeg: RiverChannelSegment = {
+    ax: -200,
+    az: 0,
+    aBedH: 11,
+    aWaterH: 11.6,
+    aWaterHalfWidth: 4,
+    aChannelHalfWidth: 7,
+    bx: 200,
+    bz: 0,
+    bBedH: 11,
+    bWaterH: 11.6,
+    bWaterHalfWidth: 4,
+    bChannelHalfWidth: 7,
+  }
+
+  it('keeps every plot footprint out of the active channel', () => {
+    const id = identity({ id: 'r1', size: 'LG' })
+    const families = generateFamilies(31, 'LG', false, 'polish', null)
+    const layout = planVillageLayout(
+      id,
+      { x: 0, z: 0, y: 12 },
+      families,
+      31,
+      flatHeight,
+      WATER,
+      [riverSeg],
+    )
+    expect(layout.plots.length).toBeGreaterThan(1)
+    for (const plot of layout.plots) {
+      // Well is force-placed at the plaza centre (site choice guards that one,
+      // see `findSettlementSite`'s SITE_RIVER_CLEARANCE) — every *scored* plot
+      // must clear the water edge by its own radius.
+      if (plot.id === 'plot-infra-well') continue
+      const distToWaterEdge = Math.abs(plot.z) - riverSeg.aWaterHalfWidth
+      expect(distToWaterEdge).toBeGreaterThanOrEqual(plot.radius)
+    }
+  })
+
+  it('places plots in the channel when no river geometry is supplied', () => {
+    const id = identity({ id: 'r2', size: 'LG' })
+    const families = generateFamilies(31, 'LG', false, 'polish', null)
+    const withRiver = planVillageLayout(
+      id, { x: 0, z: 0, y: 12 }, families, 31, flatHeight, WATER, [riverSeg],
+    )
+    const withoutRiver = planVillageLayout(
+      id, { x: 0, z: 0, y: 12 }, families, 31, flatHeight, WATER,
+    )
+    // The river must actually change the layout — otherwise the assertion above
+    // would pass vacuously on a layout that never went near the channel.
+    expect(withRiver.plots).not.toEqual(withoutRiver.plots)
+  })
+
+  it('is deterministic with river segments', () => {
+    const id = identity({ id: 'r3', size: 'MD' })
+    const families = generateFamilies(8, 'MD', false, 'polish', null)
+    const a = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 8, flatHeight, WATER, [riverSeg])
+    const b = planVillageLayout(id, { x: 0, z: 0, y: 12 }, families, 8, flatHeight, WATER, [riverSeg])
+    expect(a.plots).toEqual(b.plots)
   })
 })

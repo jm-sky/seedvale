@@ -47,6 +47,7 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
+import { setSettlementRiverQuery } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkRiver, type WorldRiver } from '../world/createRiverWater'
 import { createChunkWater, type WorldWater } from '../world/createWater'
@@ -112,6 +113,7 @@ import {
   riverChannelSegmentsNear,
   type RiverTileCoord,
 } from './riverNetwork'
+import { createRiverQuery } from './riverQuery'
 import { createRiverTileCache } from './riverTileCache'
 import { createVegetationRegionBatcher } from './vegetationRegionBatcher'
 import { type LocalWaterSample, sampleLocalWater as sampleLocalWaterPure } from './waterSample'
@@ -1001,6 +1003,13 @@ export function createChunkManager(
     biome: config.biome,
     region: config.region,
   }
+
+  // Canonical river geometry for *placement* (settlement sites, village
+  // plots) — analytic and independent of chunk streaming, unlike the
+  // reference-counted `riverTileCache` above. Registered world-scoped so
+  // every settlement def resolves through the same one, whichever system
+  // asks first (see `settlementPlanCache.ts`).
+  setSettlementRiverQuery(createRiverQuery(fallbackParams))
 
   // Built once, referencing `readField` (defined further below — safe, `function`
   // declarations hoist) — used only to resolve nearby settlements'/routes' road

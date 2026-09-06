@@ -489,6 +489,146 @@ describe('chunkHeightmap river channel carving (plan 189)', () => {
   })
 })
 
+describe('chunkHeightmap road x river ford', () => {
+  const CHUNK_SIZE = 64
+  const RESOLUTION = 33
+  // Anchor the whole fixture to real terrain at the crossing, the way
+  // hydrology does: a channel's water surface sits `exposedBankFromFlow`
+  // (~0.3 for a small stream) below the ground it drains through, and a road's
+  // smoothed profile follows that same ground.
+  const groundH = sampleFloorAt(0, 0, rawParams({ seed: 42 }))
+  const waterH = groundH - 0.3
+  const bedH = waterH - 0.5
+
+  /** Small stream running west→east through the chunk centre — narrow enough
+   *  to ford (water width 2, well under `FORD_FULL_WATER_WIDTH`). */
+  const streamSeg: RiverChannelSegment = {
+    ax: -40,
+    az: 0,
+    aBedH: bedH,
+    aWaterH: waterH,
+    aWaterHalfWidth: 1,
+    aChannelHalfWidth: 4,
+    bx: 40,
+    bz: 0,
+    bBedH: bedH,
+    bWaterH: waterH,
+    bWaterHalfWidth: 1,
+    bChannelHalfWidth: 4,
+  }
+  /** A genuinely big river — a bridge case, never a ford. */
+  const bigRiverSeg: RiverChannelSegment = {
+    ...streamSeg,
+    aWaterHalfWidth: 5.5,
+    bWaterHalfWidth: 5.5,
+    aChannelHalfWidth: 11,
+    bChannelHalfWidth: 11,
+  }
+  /** Road running south→north straight across it. */
+  const roadSeg: RoadCorridorSegment = {
+    ax: 0,
+    az: -40,
+    ah: groundH,
+    bx: 0,
+    bz: 40,
+    bh: groundH,
+    halfWidth: 5,
+    heightStrength: 0.85,
+    tintStrength: 0.8,
+  }
+
+  function tile(riverSegments: RiverChannelSegment[], roadSegments: RoadCorridorSegment[]) {
+    const params = rawParams({ seed: 42 })
+    return computeChunkTile({
+      ...params,
+      cx: 0,
+      cz: 0,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments,
+      clearings: [],
+      regional: [],
+      riverSegments,
+    })
+  }
+
+  const origin = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+  const at = (grid: Float32Array, x: number, z: number): number => {
+    const ix = Math.round((x - origin.x) / origin.step)
+    const iz = Math.round((z - origin.z) / origin.step)
+    return grid[iz * origin.apronRes + ix]!
+  }
+
+  it('raises the streambed under a road crossing into a shallow ford', () => {
+    const withRoad = tile([streamSeg], [roadSeg])
+    const noRoad = tile([streamSeg], [])
+    expect(at(withRoad.floorHeights, 0, 0)).toBeGreaterThan(at(noRoad.floorHeights, 0, 0))
+  })
+
+  it('keeps the forded bed below the canonical water surface', () => {
+    const withRoad = tile([streamSeg], [roadSeg])
+    expect(at(withRoad.floorHeights, 0, 0)).toBeLessThan(waterH)
+  })
+
+  it('leaves the channel unforded away from the road corridor', () => {
+    const withRoad = tile([streamSeg], [roadSeg])
+    const noRoad = tile([streamSeg], [])
+    // 20 m along the stream — well outside the road's 5 m half-width.
+    expect(at(withRoad.floorHeights, 20, 0)).toBeCloseTo(at(noRoad.floorHeights, 20, 0), 5)
+  })
+
+  it('does not ford a big river, which needs a bridge rather than a raised bar', () => {
+    const withRoad = tile([bigRiverSeg], [roadSeg])
+    const noRoad = tile([bigRiverSeg], [])
+    expect(at(withRoad.floorHeights, 0, 0)).toBeCloseTo(at(noRoad.floorHeights, 0, 0), 5)
+  })
+
+  it('crosses without a lateral step: the ford is smoother than the raw channel', () => {
+    const maxStepAlong = (grid: Float32Array): number => {
+      let max = 0
+      for (let z = -12; z <= 12; z += origin.step) {
+        max = Math.max(max, Math.abs(at(grid, 0, z + origin.step) - at(grid, 0, z)))
+      }
+      return max
+    }
+    const forded = maxStepAlong(tile([streamSeg], [roadSeg]).floorHeights)
+    const unforded = maxStepAlong(tile([streamSeg], []).floorHeights)
+    expect(forded).toBeLessThan(unforded)
+    // And in absolute terms: no texel-to-texel step reads as a terrain edge.
+    expect(forded).toBeLessThan(0.5)
+  })
+
+  it('stays seam-free across two chunks sharing the crossing', () => {
+    const params = rawParams({ seed: 11 })
+    const shared = {
+      ...params,
+      chunkSize: CHUNK_SIZE,
+      resolution: RESOLUTION,
+      isHomeChunk: false,
+      vegetationSpeciesCount: { tree: 1, bush: 1, cactus: 1, reed: 1, fern: 1, lily: 1, seaweed: 1 },
+      roadSegments: [roadSeg],
+      clearings: [],
+      regional: [],
+      riverSegments: [streamSeg],
+    }
+    const south = computeChunkTile({ ...shared, cx: 0, cz: 0 })
+    const north = computeChunkTile({ ...shared, cx: 0, cz: 1 })
+    const southOrigin = apronOriginWorld(0, 0, CHUNK_SIZE, RESOLUTION)
+    const northOrigin = apronOriginWorld(0, 1, CHUNK_SIZE, RESOLUTION)
+    const seamZ = CHUNK_SIZE / 2
+    const sz = Math.round((seamZ - southOrigin.z) / southOrigin.step)
+    const nz = Math.round((seamZ - northOrigin.z) / northOrigin.step)
+    for (let ix = 0; ix < southOrigin.apronRes; ix++) {
+      expect(south.floorHeights[sz * southOrigin.apronRes + ix]).toBeCloseTo(
+        north.floorHeights[nz * northOrigin.apronRes + ix]!,
+        5,
+      )
+    }
+  })
+})
+
 /** world-014 — the lightweight point-only reader `ChunkManager.findLandmarkNear`'s
  *  unloaded-chunk cemetery lookup uses instead of a full `computeChunkTile()`. */
 describe('createLocalTerrainSampler (plan world-014)', () => {
