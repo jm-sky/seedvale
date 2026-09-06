@@ -8,12 +8,12 @@
    🔴 `M` · ✅ ready · unlocks 3/4
 2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/3
-3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
+   🟡 `M` · ✅ ready · unlocks 5/5
+4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · 🔒 blocked · unlocks 2/2
-4. `quests-progression-001` — **Reputation & Renown Foundation**  
+5. `quests-progression-001` — **Reputation & Renown Foundation**  
    🔴 `M` · ✅ ready · unlocks 1/4
-5. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
-   🔴 `M` · 🔒 blocked · unlocks 3/3
 
 ---
 
@@ -23,12 +23,12 @@
    🔴 `M` · ✅ ready · unlocks 3/4 · roadmap: `economy-production`
 2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/3 · roadmap: `physical-goods-transport`
-3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
+   🟡 `M` · ✅ ready · unlocks 5/5 · roadmap: `physical-attributes-health-and-medicine`
+4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · 🔒 blocked · unlocks 2/2 · roadmap: `physical-goods-transport`
-4. `quests-progression-001` — **Reputation & Renown Foundation**  
+5. `quests-progression-001` — **Reputation & Renown Foundation**  
    🔴 `M` · ✅ ready · unlocks 1/4 · roadmap: `quests-and-reputation`
-5. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
-   🔴 `M` · 🔒 blocked · unlocks 3/3 · roadmap: `quests-and-reputation`
 
 ---
 
@@ -54,12 +54,12 @@
    🔴 `M` · ✅ ready · unlocks 3/4
 2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/3
-3. `quests-progression-001` — **Reputation & Renown Foundation**  
+3. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
+   🟡 `M` · ✅ ready · unlocks 5/5
+4. `quests-progression-001` — **Reputation & Renown Foundation**  
    🔴 `M` · ✅ ready · unlocks 1/4
-4. `fauna-004` — **Sheep wool cycle and shepherd**  
+5. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-5. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
-   🟡 `M` · ✅ ready · unlocks 2/2
 
 ---
 
@@ -85,37 +85,37 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  95  
    → **unlocks:** 3/3
 
-3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
+  🟡 `M` · **Score:**  89  
+   → **unlocks:** 5/5
+
+4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
   🔴 `M` · **Score:**  83  
    → **unlocks:** 2/2
 
-4. `quests-progression-001` — **Reputation & Renown Foundation**  
+5. `quests-progression-001` — **Reputation & Renown Foundation**  
   🔴 `M` · **Score:**  71  
    → **unlocks:** 1/4
 
-5. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+6. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
   🔴 `M` · **Score:**  71  
    → **unlocks:** 3/3
 
-6. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+7. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  69  
    → **unlocks:** 1/1
 
-7. `fauna-004` — **Sheep wool cycle and shepherd**  
+8. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-8. `settlements-npcs-006` — **Wool to material**  
+9. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-9. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+10. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 0/0
-
-10. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
-  🟡 `M` · **Score:**  47  
-   → **unlocks:** 2/2
 
 11. `quests-progression-004` — **Quest Availability & Prerequisites**  
   🔴 `S` · **Score:**  47  
@@ -137,95 +137,107 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  41  
    → **unlocks:** 1/2
 
-16. `npc-010` — **NPC Death & Corpse Lifecycle**  
+16. `world-017` — **Contextual River Water Safety**  
+  🟡 `M` · **Score:**  37  
+   → **unlocks:** 1/1
+
+17. `npc-010` — **NPC Death & Corpse Lifecycle**  
   🟡 `L` · **Score:**  36  
    → **unlocks:** 1/1
 
-17. `quests-progression-003` — **Paid Quests & Player Income**  
+18. `quests-progression-003` — **Paid Quests & Player Income**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-18. `items-player-018` — **Camp inspection, condition and full camp setup**  
+19. `items-player-018` — **Camp inspection, condition and full camp setup**  
   🟡 `L` · **Score:**  30  
    → **unlocks:** 1/1
 
-19. `quests-progression-005` — **Authored RPG Quests**  
+20. `quests-progression-005` — **Authored RPG Quests**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-20. `items-player-002` — **Food provenance, freshness and storage**  
+21. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-21. `ui-input-011` — **New Game setup on empty save state**  
+22. `ui-input-011` — **New Game setup on empty save state**  
   🔴 `S` · **Score:**  29  
    → **unlocks:** 0/0
 
-22. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+24. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `npc-011` — **NPC Burial & Graves**  
+26. `npc-024` — **Temporary conditions and poisoning**  
+  🟡 `M` · **Score:**  25  
+   → **unlocks:** 0/0
+
+27. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-26. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+28. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-27. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+29. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-28. `world-017` — **Contextual River Water Safety**  
-  🟡 `M` · **Score:**  23  
+30. `npc-022` — **Agility-driven melee recovery**  
+  🟡 `S` · **Score:**  23  
    → **unlocks:** 0/0
 
-29. `fauna-013` — **Animal hand-feeding and human affinity**  
+31. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-30. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+32. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-31. `npc-020` — **Strength-driven physical work and human carrying**  
+33. `npc-020` — **Strength-driven physical work and human carrying**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-32. `npc-021` — **Endurance-driven stamina capacity and recovery**  
+34. `npc-021` — **Endurance-driven stamina capacity and recovery**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-33. `fauna-007` — **Animal leading and cart harness**  
+35. `npc-023` — **Perception-driven observation and information levels**  
+  🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
+36. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-34. `items-player-019` — **Player camp repair and sewing kit**  
+37. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-35. `tools-000` — **Weapon Browser — Observatory/Admin**  
+38. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-36. `world-terrain-008` — **Underground Caves V2**  
+39. `world-terrain-008` — **Underground Caves V2**  
   🟡 `XL` · **Score:**  10  
    → **unlocks:** 0/0
 
-37. `npc-004` — **Drzewo genealogiczne NPC**  
+40. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-38. `tools-006` — **tools-006--world-observatory.md**  
+41. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -248,6 +260,16 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`npc-021-endurance-driven-stamina-capacity-and-recovery.md`](npc-021-endurance-driven-stamina-capacity-and-recovery.md)  
   is blocked by:
   - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
+- [`npc-022-agility-driven-melee-recovery.md`](npc-022-agility-driven-melee-recovery.md)  
+  is blocked by:
+  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
+- [`npc-023-perception-driven-observation-and-information-levels.md`](npc-023-perception-driven-observation-and-information-levels.md)  
+  is blocked by:
+  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
+- [`npc-024-temporary-conditions-and-poisoning.md`](npc-024-temporary-conditions-and-poisoning.md)  
+  is blocked by:
+  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
+  - [`world-017-contextual-river-water-safety.md`](world-017-contextual-river-water-safety.md)
 - [`quests-progression-002-quest-outcomes-rewards-and-consequences.md`](quests-progression-002-quest-outcomes-rewards-and-consequences.md)  
   is blocked by:
   - [`quests-progression-001-reputation-and-renown-foundation.md`](quests-progression-001-reputation-and-renown-foundation.md)
@@ -333,6 +355,7 @@ graph TD
   fauna_014["fauna-014 — Animal traps — bait attraction and species coverage"]
   fauna_015["fauna-015 — Animal water traversal, wading, swimming and drowning"]
   fauna_016["fauna-016 — Animal habitats, roaming, water trips and settlement rats"]
+  fauna_017["fauna-017 — AnimalAgent refactor after architectural review"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -367,6 +390,9 @@ graph TD
   npc_019["npc-019 — Shared SPEA foundation and Strength-driven melee"]
   npc_020["npc-020 — Strength-driven physical work and human carrying"]
   npc_021["npc-021 — Endurance-driven stamina capacity and recovery"]
+  npc_022["npc-022 — Agility-driven melee recovery"]
+  npc_023["npc-023 — Perception-driven observation and information levels"]
+  npc_024["npc-024 — Temporary conditions and poisoning"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -539,6 +565,9 @@ graph TD
   npc_018 --> npc_016
   npc_019 --> npc_020
   npc_019 --> npc_021
+  npc_019 --> npc_022
+  npc_019 --> npc_023
+  npc_019 --> npc_024
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
   persistence_003 --> persistence_004
@@ -586,6 +615,7 @@ graph TD
   world_012 --> world_013
   world_013 --> world_014
   world_013 --> world_015
+  world_017 --> npc_024
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_010 --> world_terrain_011

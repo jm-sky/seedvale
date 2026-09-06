@@ -4,11 +4,13 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** npc-019, fauna-017
+**Depends on:** `npc-019`
 **Domain:** `npc`
 **Subdomains:** `behavior` `lifecycle`
 **Tags:** `spea` `perception` `observation`
 **Roadmap:** `physical-attributes-health-and-medicine`
+
+> Also depends on: `fauna-017`
 
 ## Goal
 
