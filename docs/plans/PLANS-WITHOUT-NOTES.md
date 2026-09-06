@@ -1,12 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-06 19:15:09  
+> Date: 2026-09-06 19:19:49  
 
 ## PLANS
 
 - `items-player-018-camp-inspection-condition-and-full-camp-setup.md`
 - `npc-004-npc-genealogy-lineages.md`
+- `npc-020-strength-driven-physical-work-and-human-carrying.md`
 - `quests-progression-001-reputation-and-renown-foundation.md`
 - `quests-progression-002-quest-outcomes-rewards-and-consequences.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
@@ -70,6 +71,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-004-npc-genealogy-lineages-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-020-strength-driven-physical-work-and-human-carrying.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-020-strength-driven-physical-work-and-human-carrying.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/npc-020-strength-driven-physical-work-and-human-carrying.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/npc-020-strength-driven-physical-work-and-human-carrying-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
