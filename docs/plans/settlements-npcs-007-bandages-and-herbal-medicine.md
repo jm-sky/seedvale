@@ -2,195 +2,294 @@
 
 **Created:** 2026-08-29  
 **Status:** `planned` 📋  
-**Type:** feature  
 **Priority:** medium · **Effort:** M  
-**Depends on:** settlements-npcs-006  
-**Domain:** settlements-npcs  
-**Tags:** `items-player` `npc`
-**Roadmap:** `textiles-and-herbal-medicine`
+**Depends on:** settlements-npcs-006, settlements-npcs-015  
+**Domain:** `settlements-npcs`  
+**Type:** `feature`  
+**Roadmap:** `textiles-and-herbal-medicine`  
 
 ## Cel
 
-Dodać podstawowy łańcuch medyczny:
+Dodać pierwszy spójny łańcuch tekstylno-medyczny wykorzystujący aktualne mechanizmy itemów, NPC work, produkcji, storage/logistics i catalog-driven healing:
 
-~~~~
-flax
- ↓
-linen material
- ↓
+```text
+wild flax
+  ↓ gathering
+Household.items: flax
+  ↓ Textile Worker
+linen_material
+  ↓ Textile Worker
 bandage
- +
-medicinal herbs
- ↓
-dressing
-~~~~
 
-oraz drugi produkt zielarski:
+world herb ───────────────┐
+                          ↓ Herbalist
+bandage + herb → dressing
 
-~~~~
-herbs
- ↓
-poisonous herbs
-~~~~
+world poisonous_herb → Herbalist gathering → Household.items
+```
+
+Plan nie tworzy osobnego systemu medycyny. Produkty medyczne są zwykłymi concrete items, a healing pozostaje konsumentem danych z katalogu.
+
+## Aktualny fundament
+
+Plan powstał przed późniejszym rozwojem health/combat, production/economy, storage/logistics i NPC work/contracts. Implementacja ma traktować aktualny kod jako źródło prawdy.
+
+### Istniejące `herb` i `bandage`
+
+Codebase już posiada:
+
+- `herb` — world-chunk collectible i health consumable,
+- `bandage` — concrete item i health consumable.
+
+Nie dodawać równoległego `medicinal_herbs` ani drugiego rodzaju bandage. W tym planie istniejący `herb` **jest medicinal herb**.
+
+Zachować istniejące semantyki i wartości `herb`/`bandage` w `ITEM_CATALOG`, chyba że aktualny kod podczas implementacji wymaga technicznej korekty niezwiązanej z balansem.
+
+### NPC healing / health / combat
+
+`npc-002` definiuje healing jako normalny autonomiczny flow:
+
+```text
+healable physical injury
+→ pressure / decision
+→ goTo / execute
+→ any ITEM_CATALOG consumable with need === 'health'
+→ heal
+```
+
+007 nie dodaje healing FSM, injury managera ani callbacków z combat. Jego odpowiedzialnością jest dostarczenie realnych medical items przez istniejącą gospodarkę.
+
+`dressing` powinien być zwykłym health consumable wykrywalnym przez ten sam catalog contract. Nie hardcodować go w NPC healing. Dokładny `relief` ustalić przy implementacji względem istniejących `herb` i `bandage`; powinien odzwierciedlać produkt wymagający obu inputów, bez zmiany istniejących wartości tych dwóch itemów.
+
+### Production — settlements-npcs-015
+
+`settlements-npcs-015` jest bezpośrednią zależnością: recipe mają korzystać ze wspólnego transactional production execution dla `ProductionDef`.
+
+Wymagane flow:
+
+```text
+known owner/source
+→ preview / validate
+→ bounded NPC work action
+→ live revalidation at completion
+→ shared production transaction
+→ exact consume + output
+```
+
+Nie tworzyć executora dla tekstyliów lub medycyny. Production nie wyszukuje brakujących dóbr w świecie i nie wykonuje logistyki.
+
+### Textile Worker — settlements-npcs-006
+
+`settlements-npcs-006` wprowadza szeroką rolę `textile_worker`, jej work integration i pierwszy recipe `wool → wool_material`. 007 rozszerza **ten sam** role/work/production path o flax i linen.
+
+006 celowo nie implementuje flax ani linen, więc należą one do 007.
+
+Nie dodawać drugiej roli ani drugiego textile work dispatch.
+
+### Storage / local goods / logistics
+
+Concrete goods należą do istniejących ownerów. Pierwszy slice produkuje z inputów już znajdujących się w owning `Household.items` i zapisuje output do tego samego inventory.
+
+```text
+world resource
+→ physical/off-screen gathering
+→ carried cargo where applicable
+→ Household.items
+→ production
+→ Household.items
+```
+
+Jeżeli input znajduje się u innego ownera, production jest blocked. Ewentualny transfer ma korzystać z istniejącego local-goods/storage/logistics flow; nie wolno teleportować flax/herb/bandage między householdami ani tworzyć `medicalStock`.
+
+### NPC work / Work Contracts
+
+Rutynowe zbieranie i produkcja Herbalista/Textile Workera są zwykłą pracą profesji w istniejącym schedule/work arbitration.
+
+Nie tworzyć automatycznego `WorkContract` dla każdego gathering/production task. Work Contracts pozostają mechanizmem jawnych zobowiązań worker–employer. Jeśli przyszły kontrakt wykorzysta herbal/textile work, ma reuse'ować te same action/production seams.
 
 ## Zakres
 
-Dodać itemy:
-- bandage,
-- medicinal herbs,
-- poisonous herbs,
-- dressing.
+### Itemy
 
-Dressing jest osobnym produktem, a nie stanem bandage.
+Dodać tylko brakujące concrete item kinds:
 
-## Tekstylia
+- `flax`,
+- `linen_material`,
+- `poisonous_herb`,
+- `dressing`.
 
-Plan zależy od settlements-npcs-006, ponieważ bandaż wykorzystuje **linen material**.
+Reuse:
 
-Etap rozszerza Textile Worker o:
+- istniejący `herb` jako medicinal herb,
+- istniejący `bandage`.
 
-~~~~
-flax → linen material
-~~~~
+Wszystkie nowe itemy mają używać istniejącego `ItemKind` / `ITEM_DEFS` / `ITEM_CATALOG` / `Inventory` modelu. Nie tworzyć osobnej listy medical/textile goods.
 
-Bez yarn.
+### Flax i linen
 
-## Herbalist
+Minimalny łańcuch:
 
-Dodać szeroką profesję **Herbalist**.
+```text
+wild flax
+→ gathering
+→ Household.items: flax
+→ Textile Worker / ProductionDef
+→ Household.items: linen_material
+```
 
-Odpowiada za:
-- pozyskiwanie/przetwarzanie ziół,
-- produkcję medicinal herbs,
-- produkcję poisonous herbs,
-- przygotowanie dressing.
+V1 może traktować flax jako naturalny, deterministyczny world resource/collectible. Nie dodawać pełnego systemu uprawy lnu tylko dla tego planu.
 
-Nie tworzyć osobnych profesji dla zbierania, suszenia ani przygotowania leków.
+Pozyskanie ma rozszerzyć najmniejszy istniejący seam natural-resource gathering. Nie tworzyć globalnego flora registry ani per-frame world scan.
 
-## Bandage
+### Bandage
 
-Minimalna receptura:
+Recipe:
 
-~~~~
-linen material
- ↓
-bandage
-~~~~
+```text
+linen_material → bandage
+```
 
-Bandaż jest prostym produktem tekstylnym i korzysta z istniejącego production/work pipeline.
+`bandage` już istnieje i zachowuje obecny catalog-driven health consumable contract. 007 dodaje jego realną ścieżkę produkcji, a nie nowy item.
 
-## Zioła lecznicze
+Produkcję wykonuje `textile_worker` przez wspólny `ProductionDef` execution.
 
-medicinal herbs są normalnym produktem ekonomicznym.
+### Herbalist
 
-Powinny być możliwe do:
-- pozyskania,
-- przechowywania,
-- transportu,
-- wykorzystania w produkcji dressing.
+Dodać jedną szeroką rolę `herbalist` obsługującą:
 
-Nie projektować jeszcze szczegółowej listy gatunków roślin.
+- gathering istniejącego `herb`,
+- gathering `poisonous_herb`,
+- gathering wild `flax`, jeżeli ten sam natural-resource seam jest właściwy,
+- produkcję `dressing`.
 
-## Zioła trujące
+Nie tworzyć osobnych gatherer/apothecary/dryer roles.
 
-poisonous herbs są osobnym produktem.
+Role assignment ma używać istniejącego deterministic staffing/character-generation seam. Nie wystarczy dopisać roli do random pool; zaktualizować wszystkie exhaustive role maps/switches, schedule/work dispatch i loadout/workplace mappings, które faktycznie wymagają nowej roli.
 
-W tym planie wystarczy:
-- pozyskanie przez Herbalist,
-- storage,
-- transport,
-- ekonomiczna dostępność.
+### Medicinal herb
 
-**Nie definiować jeszcze konkretnego zastosowania gameplayowego**, jeśli nie jest potrzebne.
+Nie dodawać `medicinal_herbs`.
 
-## Dressing
+Istniejący `herb` jest autorytatywnym medicinal resource i pozostaje health consumable. Herbalist ma potrafić pozyskać go z istniejącego world resource przez wspólny gathering/action flow i zdeponować jako realny item.
 
-Receptura:
+### Poisonous herb
 
-~~~~
-1+ bandage
-   +
-1+ medicinal herbs
-   ↓
-1 dressing
-~~~~
+`poisonous_herb` jest osobnym concrete resource, nie produktem otrzymywanym przez przetworzenie leczniczego `herb`.
 
-Dokładne ilości dopasować do istniejącego modelu recipe quantities i ekonomii.
+V1 obejmuje:
 
-Dressing jest produktem końcowym etapu.
+- deterministyczne występowanie/pozyskanie przez ten sam natural-resource seam,
+- carried/storage semantics,
+- możliwość uczestnictwa w istniejącej gospodarce, gdy aktualny goods flow ją obsługuje.
 
-Docelowo może być używany przez istniejący system leczenia NPC. Nie implementować ponownie całego healing behaviour.
+Nie dodawać poisoning, toxin effects ani alchemii.
 
-## Produkcja i storage
+### Dressing
 
-Wszystkie produkty korzystają z istniejących:
-- ItemKind/catalog,
-- recipe definitions,
-- NPC work,
-- carried inventory,
-- Household storage,
-- settlement economy,
-- resource delivery.
+Recipe:
 
-Nie tworzyć HerbalismSystem, BandageSystem, DressingSystem ani osobnego magazynu medycznego.
+```text
+bandage + herb → dressing
+```
+
+Dokładne dyskretne ilości zdefiniować w `ProductionDef`; nie używać niejawnego `1+`.
+
+`dressing`:
+
+- jest concrete item,
+- powstaje przez Herbalist work,
+- jest health consumable przez `ITEM_CATALOG[kind].consumable.need === 'health'`,
+- nie wymaga zmian w generic NPC healing poza tym, że istniejący catalog-driven lookup automatycznie go zobaczy.
+
+## Gathering vs production
+
+Granica pozostaje jawna:
+
+```text
+world resource → gathering/action/logistics → Household.items
+Household.items → ProductionDef → Household.items
+```
+
+Production nie może zbierać flax/herbs z terenu ani claimować obcego inventory. Gathering nie może mintować gotowego dressing/bandage.
+
+Dla observed i off-screen work zachować ten sam authoritative outcome i conservation. Nie uzależniać symulacji od renderowanych `Object3D` ani kamery.
+
+## Performance i determinism
+
+- brak per-frame flora/production scans,
+- bounded resource lookup na istniejących work/decision boundaries,
+- deterministyczny wybór resource/recipe tam, gdzie istniejący system tego wymaga,
+- brak player dependency,
+- production działa przez wspólny off-screen/time-skip work lifecycle,
+- off-screen gathering ma korzystać z istniejącej deterministic resource abstraction; jeżeli aktualny seam nie potrafi reprezentować zasobu bez aktywnego chunku, rozszerzyć go minimalnie zamiast tworzyć drugi globalny model świata.
 
 ## Testy
 
-- wszystkie cztery produkty istnieją w catalog,
-- poprawnie działają w inventory/storage,
-- brak linen material blokuje bandage,
-- poprawna ilość linen material jest pobierana,
-- powstają bandages,
-- Herbalist może pozyskać medicinal herbs,
-- Herbalist może pozyskać poisonous herbs,
-- oba produkty trafiają do storage,
-- brak bandage blokuje dressing,
-- brak medicinal herbs blokuje dressing,
-- poprawne inputy tworzą dressing,
-- inputy są pobierane atomowo,
-- Textile Worker obsługuje linen material,
-- Herbalist wykonuje produkcję,
-- produkcja działa off-screen/time-skip.
+### Items / catalog
+
+- `herb` pozostaje istniejącym health consumable,
+- `bandage` pozostaje istniejącym health consumable,
+- brak duplikatu `medicinal_herbs`,
+- `flax`, `linen_material`, `poisonous_herb`, `dressing` są poprawnymi concrete items,
+- `dressing` jest catalog-driven health consumable.
+
+### Gathering
+
+- Herbalist może pozyskać realny `herb`,
+- Herbalist może pozyskać realny `poisonous_herb`,
+- wild flax może trafić przez wspólny gathering/carry/deposit flow do `Household.items`,
+- interruption nie duplikuje ani nie teleportuje cargo,
+- resource lookup pozostaje bounded/deterministic.
+
+### Production
+
+- `flax → linen_material` konsumuje dokładne inputy,
+- `linen_material → bandage` konsumuje dokładne inputy,
+- `bandage + herb → dressing` wymaga obu inputów,
+- brak któregokolwiek inputu daje blocked/no mutation,
+- stale state jest revalidated na completion,
+- failed output commit nie pozostawia partial consume,
+- output powstaje dokładnie raz w prawidłowym `Household.items`.
+
+### NPC work / integration
+
+- 006 Textile Worker work pozostaje wspólną ścieżką dla wool i linen/bandage,
+- Herbalist korzysta z istniejącego schedule/work/action arbitration,
+- rutynowa praca nie tworzy automatycznego WorkContract,
+- existing NPC healing nie hardcoduje dressing i może go wykryć przez catalog contract,
+- combat/health flow nie ma regresji,
+- local goods/storage conservation nie ma regresji,
+- praca działa bez gracza oraz zgodnie z off-screen/time-skip lifecycle.
 
 ## Browser verification
 
-Zweryfikować pełny flow:
+Manual verification wykonuje użytkownik w przeglądarce.
 
-~~~~
-flax
- ↓
-linen material
- ↓
-bandage
- ↓
-+
-medicinal herbs
- ↓
-dressing
-~~~~
+Sprawdzić:
 
-oraz:
-
-~~~~
-herbs
- ↓
-poisonous herbs
-~~~~
-
-Sprawdzić Household/storage i dostępność produktów w istniejącej ekonomii.
+1. Herbalist pozyskuje realny herb/poisonous herb oraz, jeśli należy do tego samego gathering flow, wild flax.
+2. Textile Worker przetwarza `flax → linen_material → bandage` przez zwykłą pracę.
+3. Herbalist tworzy `dressing` tylko przy realnym `bandage + herb`.
+4. Brak inputu blokuje produkcję bez free output.
+5. Towary trafiają do prawidłowego ownera i nie teleportują się z obcego storage.
+6. `dressing` jest widoczny jako health consumable bez specjalnego healing code.
 
 ## Poza zakresem
 
-- glina,
-- ceramika,
-- cegły,
-- przędza,
-- szczegółowa produkcja yarn,
-- jakość materiału,
-- osobne profesje spinner/weaver,
-- gatunki ziół,
-- konkretne zastosowania poisonous herbs,
-- zaawansowana alchemia,
-- nowe systemy leczenia NPC.
+- nowe NPC healing/injury/combat systems,
+- poisoning i toxin effects,
+- alchemia,
+- szczegółowe gatunki ziół,
+- pełna uprawa flax,
+- yarn/spinning,
+- cloth quality/durability,
+- osobne profesje spinner/weaver/apothecary,
+- medical building/storage,
+- nowy local-goods/transport system,
+- automatyczne Work Contracts,
+- globalny herbalism/flora manager,
+- drugi production scheduler.
 
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+Implementation should add JSDoc with `@domain settlements-npcs` to important new public architectural functions/classes when needed for preflight discovery.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
