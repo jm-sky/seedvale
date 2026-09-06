@@ -72,6 +72,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
 | 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
 | 💡 `npc-019-shared-spea-foundation-and-strength-driven-melee.md`            | -       | 🟡 | M      | ~~npc-001~~ |
+| ◼️ `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 
 ---
 
@@ -173,7 +174,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `003`
 - settlements-npcs: `025`
 - tools: `013`
-- ui-input: `010`
+- ui-input: `011`
 - world: `018`
 - world-terrain: `015`
 
