@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-06 20:53:57  
+> Date: 2026-09-06 21:04:13  
 
 ## PLANS
 
@@ -13,6 +13,7 @@
 - `npc-022-agility-driven-melee-recovery.md`
 - `npc-023-perception-driven-observation-and-information-levels.md`
 - `npc-024-temporary-conditions-and-poisoning.md`
+- `npc-025-injury-severity-and-treatment-requirements.md`
 - `quests-progression-001-reputation-and-renown-foundation.md`
 - `quests-progression-002-quest-outcomes-rewards-and-consequences.md`
 - `quests-progression-003-paid-quests-and-player-income.md`
@@ -265,6 +266,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-024-temporary-conditions-and-poisoning-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-025-injury-severity-and-treatment-requirements.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-025-injury-severity-and-treatment-requirements.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/npc-025-injury-severity-and-treatment-requirements.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/npc-025-injury-severity-and-treatment-requirements-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
