@@ -161,16 +161,18 @@ Do not change or rebalance the existing HP/Stamina/Vigor sex/age maxima in this 
 
 Give the Player the same shared `PhysicalAttributes` primitive.
 
-The initial Player profile is neutral:
+The initial Player profile is slightly above the typical healthy-adult reference:
 
 ```ts
 {
-  strength: 0.5,
-  perception: 0.5,
-  endurance: 0.5,
-  agility: 0.5,
+  strength: 0.6,
+  perception: 0.6,
+  endurance: 0.6,
+  agility: 0.6,
 }
 ```
+
+This changes only the Player's starting attributes. It does not move the shared neutral/reference point: `0.5` still means a typical healthy adult and remains the neutral point for consumer mappings such as melee.
 
 Do not create `PlayerAttributes`, a separate Player-only attribute system or character creation/progression in this plan.
 
@@ -267,7 +269,7 @@ Add focused tests that protect the architectural and balance contracts rather th
 Cover at least:
 
 - shared attribute values remain within `0..1`;
-- neutral Player attributes are exactly `0.5`;
+- Player starting attributes are exactly `0.6`;
 - NPC SPEA is deterministic for the same generation inputs;
 - independent attribute streams do not collapse to one shared roll;
 - a broad deterministic sample remains centered around `0.5` and overwhelmingly inside the intended ordinary-adult range without requiring an unrealistically exact sample mean;
@@ -288,7 +290,7 @@ Update the relevant canonical state documentation after implementation so owners
 shared PhysicalAttributes
 NPC deterministic PhysicalProfile → base SPEA
 human profile/development resolution → melee-relevant Strength
-Player neutral SPEA
+Player starting SPEA = 0.6
 melee as the first SPEA consumer
 ```
 
@@ -342,7 +344,7 @@ Browser/manual verification is performed by the User, not the AI implementation 
 
 Manual checks should confirm that:
 
-- a neutral `0.5` Player keeps the previous melee balance;
+- the Player starts with `0.6` Strength and therefore receives the existing Strength consumer effect without changing the consumer curve itself;
 - temporarily varied Player Strength changes melee damage as expected;
 - NPCs with different resolved Strength values deal different damage with the same melee weapon;
 - melee targeting/range/timing remain unchanged;
@@ -355,7 +357,7 @@ The plan is complete when:
 - there is one shared SPEA physical-attribute primitive, with no Player/NPC parallel types;
 - NPC base SPEA is deterministic and belongs to the existing physical-profile boundary;
 - base individual attributes remain distinct from age/sex/development effects;
-- Player starts with neutral shared SPEA;
+- Player starts with `0.6` in all four shared SPEA attributes;
 - one shared Strength→melee rule is used by both Player and NPC;
 - `Strength = 0.5` preserves legacy melee damage;
 - existing melee lifecycle/hit testing remains attribute-agnostic;
