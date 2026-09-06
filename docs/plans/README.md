@@ -77,6 +77,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-002-quest-outcomes-rewards-and-consequences.md`      | -       | 🔴 | M      | quests-progression-001 |
 | ◼️ `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
 | ◼️ `npc-020-strength-driven-physical-work-and-human-carrying.md`            | -       | 🟡 | M      | npc-019 |
+| ◼️ `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
 
 ---
 
@@ -174,7 +175,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `019`
 - npc: `021`
 - persistence: `005`
-- quests-progression: `003`
+- quests-progression: `004`
 - settlements: `003`
 - settlements-npcs: `025`
 - tools: `013`
