@@ -34,6 +34,18 @@ export type NpcAuthoritativeState = {
   readonly stamina: StaminaState
   readonly vigor: VigorState
   readonly needs: NeedState
+  /** Outstanding healable-physical-injury HP loss (plan npc-002) — separate
+   *  from `health` itself (which stays combat/AI-agnostic): registered from
+   *  accepted physical damage, relieved by actual restored HP, never derived
+   *  from `health.maxHp - health.currentHp` (would conflate it with future
+   *  non-physical deprivation damage). Mutable in place, same "shared
+   *  object, no snapshot copy" pattern as `activePlan`. Round-trips the same
+   *  way `health` does: carried across an in-session `WorldBundle` rebuild
+   *  and `SaveData.npcStates` (plan persistence-001) via `NpcStateSnapshot`
+   *  below — despite this file's older per-field doc comments below, `health`/
+   *  `needs`/`stamina`/`vigor` (and, via the same snapshot, `helperAssignment`/
+   *  `activePlan`) are in fact persisted today; see `docs/plans/LOOSE-ENDS.md`. */
+  physicalInjury: number
   /** Helper resource-delivery assignment (plan 167) — `null` when this NPC
    *  has none. Mutable in place (assigned/cleared from the Villagers screen),
    *  the same "shared object, no snapshot copy" pattern as the other fields
@@ -58,6 +70,10 @@ export type NpcStateSnapshot = {
   stamina: { current: number, max: number }
   vigor: { current: number, max: number }
   needs: NeedState
+  /** Optional so an older in-session snapshot (pre-npc-002) still loads —
+   *  defaults to 0, same "no outstanding injury" starting point as a freshly
+   *  created state. */
+  physicalInjury?: number
   helperAssignment?: HelperAssignment | null
   activePlan?: NpcPlan | null
 }
@@ -69,6 +85,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeSt
     stamina: { max: snapshot.stamina.max, current: snapshot.stamina.current },
     vigor: { max: snapshot.vigor.max, current: snapshot.vigor.current },
     needs: { ...snapshot.needs },
+    physicalInjury: snapshot.physicalInjury ?? 0,
     helperAssignment: snapshot.helperAssignment ?? null,
     activePlan: snapshot.activePlan ?? null,
   }
@@ -103,6 +120,7 @@ export function createNpcAuthoritativeState(
     stamina: createStaminaState(maxima.maxStamina),
     vigor: createVigorState(maxima.maxVigor),
     needs: createNeedState(needOffset),
+    physicalInjury: 0,
     helperAssignment: null,
     activePlan: null,
   }
@@ -153,6 +171,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           stamina: { current: state.stamina.current, max: state.stamina.max },
           vigor: { current: state.vigor.current, max: state.vigor.max },
           needs: { ...state.needs },
+          physicalInjury: state.physicalInjury,
           helperAssignment: state.helperAssignment,
           activePlan: state.activePlan,
         }

@@ -1,5 +1,5 @@
 import { canMergeFoodBatches, isFoodPerishable } from './foodFreshness'
-import { CAPABILITY_KINDS, ITEM_CATALOG, type ItemCapability } from './itemCatalog'
+import { CAPABILITY_KINDS, CONSUMABLE_KINDS_BY_NEED, type ConsumableNeed, ITEM_CATALOG, type ItemCapability } from './itemCatalog'
 import {
   clamp01,
   cloneItemInstance,
@@ -340,6 +340,17 @@ export class Inventory {
   findWithCapability(capability: ItemCapability): ItemKind | null {
     for (const kind of CAPABILITY_KINDS[capability]) {
       if (this.holdsAny(kind)) return kind
+    }
+    return null
+  }
+
+  /** The best held item satisfying `need` (plan npc-002), or null — the
+   *  catalog-driven counterpart of `findWithCapability` for consumables, so
+   *  NPC healing never hardcodes a specific item kind. "Best" is
+   *  `CONSUMABLE_KINDS_BY_NEED`'s documented highest-relief-first order. */
+  findConsumableForNeed(need: ConsumableNeed): ItemKind | null {
+    for (const kind of CONSUMABLE_KINDS_BY_NEED[need]) {
+      if (this.count(kind) > 0) return kind
     }
     return null
   }

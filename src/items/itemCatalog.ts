@@ -1333,6 +1333,29 @@ export function hasItemCapability(kind: ItemKind | null | undefined, capability:
   return kind != null && (ITEM_CATALOG[kind].capabilities?.includes(capability) ?? false)
 }
 
+/** Kinds declaring a `consumable` effect for each `ConsumableNeed`, **best
+ *  first**: higher `relief` wins (`bandage`'s 35 over `herb`'s 8) — the same
+ *  "quality signal + deterministic catalog-order tiebreak" convention as
+ *  `CAPABILITY_KINDS`. `Inventory.findConsumableForNeed` (plan npc-002) uses
+ *  this so NPC healing — and any future consumable-need lookup — stays
+ *  catalog-driven instead of hardcoding a specific item kind. */
+export const CONSUMABLE_KINDS_BY_NEED: Record<ConsumableNeed, readonly ItemKind[]> = (() => {
+  const out: Record<ConsumableNeed, ItemKind[]> = { hunger: [], thirst: [], health: [] }
+  const order = Object.keys(ITEM_CATALOG) as ItemKind[]
+  for (const kind of order) {
+    const consumable = ITEM_CATALOG[kind].consumable
+    if (consumable) out[consumable.need].push(kind)
+  }
+  const rank = new Map(order.map((kind, index) => [kind, index]))
+  for (const list of Object.values(out)) {
+    list.sort((a, b) => {
+      const relief = (ITEM_CATALOG[b].consumable?.relief ?? 0) - (ITEM_CATALOG[a].consumable?.relief ?? 0)
+      return relief !== 0 ? relief : rank.get(a)! - rank.get(b)!
+    })
+  }
+  return out
+})()
+
 /** Cross-cutting item systems not tied to a single kind (roadmap only). */
 export const ITEM_SYSTEM_ROADMAP = [
   'Item durability / HP: tools and improvised weapons wear down with use (esp. combat); break or need repair when depleted.',

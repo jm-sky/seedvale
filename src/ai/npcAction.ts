@@ -41,6 +41,12 @@ export type ActionId =
   | 'exchange'
   | 'fish'
   | 'harvest'
+  /** Healable-physical-injury treatment response (plan npc-002) — a normal
+   *  `goTo`/`execute` step to a treatment destination (V1: this NPC's own
+   *  `home`), same "reads as idle to `classifyPendingActivity`, not a Need"
+   *  contract as `shelter`/`social`: `activeNeed` stays `'idle'` throughout,
+   *  since healing is a pressure reaction, not a `NeedId`. */
+  | 'heal'
   | 'mine'
   | 'plant'
   | 'sharpen'

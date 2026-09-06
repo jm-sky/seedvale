@@ -8,10 +8,13 @@ import type { NeedId } from './Needs'
  * `NpcDecisionTarget` is the small generic seam `NpcAgent.choose()` uses to
  * combine this with the existing need pressures in one arbitration, without
  * turning `weather` into a fake Need or building a second decision engine.
+ * `healingPressure.ts`'s `'heal'` target reuses the same seam for the same
+ * reason (plan npc-002) — this type is the shared decision-target union, not
+ * weather-specific.
  *
  * @domain npc
  */
-export type NpcDecisionTarget = NeedId | 'seekShelter'
+export type NpcDecisionTarget = NeedId | 'seekShelter' | 'heal'
 
 /** Below this rain intensity, rain reads as "light" — no shelter pressure at
  *  all, so a lightly rained-on NPC keeps doing whatever it was doing (plan

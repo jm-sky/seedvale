@@ -1,7 +1,7 @@
 # Plan: NPC Healing
 
 **Created:** 2026-08-21  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~177~~  
 **Domain:** `npc`  

@@ -47,6 +47,22 @@ describe('decideNpcAction', () => {
       scheduleActivity: 'work',
     })).toBe('idle')
   })
+
+  it('heal wins when the pressure arbitration picked it, beating scheduled sleep (plan npc-002)', () => {
+    expect(decideNpcAction({
+      collapsing: false,
+      wonNeed: 'heal',
+      scheduleActivity: 'sleep',
+    })).toBe('heal')
+  })
+
+  it('collapse still outranks heal', () => {
+    expect(decideNpcAction({
+      collapsing: true,
+      wonNeed: 'heal',
+      scheduleActivity: 'work',
+    })).toBe('collapseSleep')
+  })
 })
 
 describe('scoreNpcDecisions', () => {

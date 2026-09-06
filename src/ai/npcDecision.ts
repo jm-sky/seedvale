@@ -21,26 +21,32 @@ import { WEATHER_SEVERE_SHELTER_THRESHOLD } from './weatherPressure'
  */
 
 /** Top-level outcome of one `choose()` decision tick. */
-export type NpcDecisionKind = 'collapseSleep' | 'idle' | 'need' | 'scheduledSleep' | 'seekShelter'
+export type NpcDecisionKind = 'collapseSleep' | 'heal' | 'idle' | 'need' | 'scheduledSleep' | 'seekShelter'
 
 export type NpcDecisionInput = {
   /** `shouldCollapseSleep(vigor)` — physiological collapse outranks
    *  everything else unconditionally. */
   collapsing: boolean
   /** The winner of the same-tick `pickActionKind<NpcDecisionTarget>` need/
-   *  weather-pressure arbitration — a real `NeedId`, `'seekShelter'`, or
-   *  `'idle'` when nothing crossed its threshold. */
+   *  weather/healing-pressure arbitration — a real `NeedId`, `'seekShelter'`,
+   *  `'heal'`, or `'idle'` when nothing crossed its threshold. */
   wonNeed: NpcDecisionTarget
   scheduleActivity: ScheduleActivity
 }
 
 /** Priority ranks — encode today's sequencing 1:1 (higher wins, ties keep
  *  the earlier entry in `DECISION_ORDER`, same rule as `pickHighestScore`).
- *  Gaps of 10 leave room to insert a new outcome without renumbering. */
+ *  Gaps of 10 leave room to insert a new outcome without renumbering.
+ *  `heal` shares `need`'s rank: `wonNeed` can only ever be one of a real
+ *  `NeedId`, `'seekShelter'` or `'heal'` at a time (the same-tick
+ *  `pickActionKind` arbitration already picked a single winner), so the two
+ *  never actually compete against each other here — only against
+ *  `scheduledSleep`/`idle`, same as `need` always did. */
 export const NPC_DECISION_PRIORITY: Record<NpcDecisionKind, number> = {
   collapseSleep: 100,
   seekShelter: 90,
   need: 80,
+  heal: 80,
   scheduledSleep: 70,
   idle: 60,
 }
@@ -56,10 +62,12 @@ function isDecisionValid(kind: NpcDecisionKind, input: NpcDecisionInput): boolea
   switch (kind) {
     case 'collapseSleep':
       return input.collapsing
+    case 'heal':
+      return input.wonNeed === 'heal'
     case 'idle':
       return true
     case 'need':
-      return input.wonNeed !== 'idle' && input.wonNeed !== 'seekShelter'
+      return input.wonNeed !== 'idle' && input.wonNeed !== 'seekShelter' && input.wonNeed !== 'heal'
     case 'scheduledSleep':
       return input.scheduleActivity === 'sleep'
     case 'seekShelter':

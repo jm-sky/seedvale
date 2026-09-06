@@ -1212,8 +1212,10 @@ function isNpcPlan(value: unknown): value is Record<string, unknown> {
 }
 
 /** Validates one `NpcStateSnapshot` (plan persistence-001) — mirrors
- *  `settlement/npcState.ts`'s own shape; `helperAssignment`/`activePlan` are
- *  optional (absent means `null`, same as a fresh in-session snapshot). */
+ *  `settlement/npcState.ts`'s own shape; `physicalInjury` (plan npc-002) is
+ *  optional (absent means `0`), same as `helperAssignment`/`activePlan`
+ *  being optional (absent means `null`) — all three default the same way a
+ *  fresh in-session snapshot would. */
 function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (!value || typeof value !== 'object') return false
   const s = value as Record<string, unknown>
@@ -1221,6 +1223,7 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (!isCurrentMaxNumbers(s.stamina)) return false
   if (!isCurrentMaxNumbers(s.vigor)) return false
   if (!isNpcNeeds(s.needs)) return false
+  if (s.physicalInjury !== undefined && typeof s.physicalInjury !== 'number') return false
   if (s.helperAssignment !== undefined && s.helperAssignment !== null && !isHelperAssignment(s.helperAssignment)) return false
   if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
   return true

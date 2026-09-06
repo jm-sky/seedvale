@@ -60,7 +60,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~014~~ ~~006~~ |
 | 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`             | -       | 🟡 | M      | npc-015 |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~ |
-| 💡 `npc-002-npc-healing.md`                                                 | -       | 🟡 | M      | ~~177~~ |
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                                  | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | 010    |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | L      | ~~022~~ ~~031~~ |
@@ -105,6 +104,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | Śródlądowe rzeki na kilku seedach (równiny, doliny, drenaż górski, szwy tile'i, małe strumienie vs duże rzeki) nie kończą się na suchym lądzie; naprawione ujścia wyglądają wiarygodnie (bez sztucznych kanionów), wyrównanie koryta/wody po naprawie |
 | `world-terrain-012-macro-meadow-variation.md` | Widoczne szerokie zielone/suche łąki (~30-80 m) na otwartym terenie, płynne przejścia bez twardych linii i bez szwów chunków; drobna zmienność per-blade nadal widoczna w obrębie makro-regionu; wyłączenie `macroVariationEnabled` (GUI → Grass) przywraca poprzedni wygląd |
 | `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md` | Deer/stag habitat (las/skraj lasu), brak spawnu przy drogach, species-specific roaming, dalekie wyprawy do wody z powrotem do local behaviour, szczury jako mała populacja osadnicza (widoczne, zmniejszają zapasy, zabijalne przez psa/gracza) |
+| `npc-002-npc-healing.md` | NPC ranny w walce (`?debug=1&debugNpcCombat=1` do zadania obrażeń) leczy się dopiero po zakończeniu walki: idzie do domu, zużywa niesione `herb`/`bandage`, HP rośnie, po czym wraca do normalnej autonomii; bez consumable nie ma healing candidate |
 
 ---
 

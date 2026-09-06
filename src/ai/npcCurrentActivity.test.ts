@@ -46,6 +46,10 @@ describe('classifyPendingActivity / promoteChainKind', () => {
     expect(classifyPendingActivity({ kind: 'shelter' }, 'idle')).toBe('idle')
   })
 
+  it('reports idle for the healing reaction (plan npc-002)', () => {
+    expect(classifyPendingActivity({ kind: 'heal' }, 'idle')).toBe('idle')
+  })
+
   it('reports idle when there is no pending action', () => {
     expect(classifyPendingActivity(undefined, 'idle')).toBe('idle')
   })

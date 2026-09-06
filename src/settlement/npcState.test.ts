@@ -43,6 +43,7 @@ describe('createNpcStateRegistry', () => {
     state.stamina.current = 5
     state.vigor.current = 12
     state.needs.hunger = 0.6
+    state.physicalInjury = 20
 
     const snapshot = before.serialize()
     const after = createNpcStateRegistry(snapshot)
@@ -54,6 +55,7 @@ describe('createNpcStateRegistry', () => {
     expect(hydrated.stamina.current).toBe(5)
     expect(hydrated.vigor.current).toBe(12)
     expect(hydrated.needs.hunger).toBe(0.6)
+    expect(hydrated.physicalInjury).toBe(20)
   })
 
   it('a genuinely new npc id not present in a carried snapshot gets fresh initial state', () => {
@@ -61,6 +63,19 @@ describe('createNpcStateRegistry', () => {
     const state = registry.getOrCreate('0_0:npc:0', 0)
     expect(state.health.dead).toBe(false)
     expect(state.health.currentHp).toBe(state.health.maxHp)
+    expect(state.physicalInjury).toBe(0)
+  })
+
+  it('an older in-session snapshot with no physicalInjury field restores as 0 (plan npc-002)', () => {
+    const registry = createNpcStateRegistry({
+      '0_0:npc:0': {
+        health: { current: 80, max: 100, dead: false },
+        stamina: { current: 100, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    })
+    expect(registry.getOrCreate('0_0:npc:0', 0).physicalInjury).toBe(0)
   })
 
   it('clear() drops every state so the next getOrCreate starts fresh', () => {

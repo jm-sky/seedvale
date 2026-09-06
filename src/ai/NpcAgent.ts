@@ -61,13 +61,14 @@ import {
 } from '../economy'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
 import { Inventory } from '../items/Inventory'
+import { ITEM_CATALOG } from '../items/itemCatalog'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
-import { damageHealth, type HealthState } from '../shared/HealthState'
+import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
 import {
   drainStamina,
   getStaminaRatio,
@@ -140,6 +141,7 @@ import {
   type Personality,
   pickDialogueLine,
 } from './dialogue'
+import { decreaseInjuryFromHeal, healingPressure, increaseInjuryFromDamage } from './healingPressure'
 import {
   generateNeedPressures,
   needColor,
@@ -523,6 +525,10 @@ export function classifyPendingActivity(
   // is 'idle' whenever `seekShelter` wins arbitration), same "idle" reading
   // as walking to/settling at the campfire above.
   if (pending.kind === 'shelter' && activeNeed === 'idle') return 'idle'
+  // Healing reaction (plan npc-002) — never Need-driven (activeNeed is
+  // 'idle' whenever 'heal' wins arbitration), same "idle" reading as
+  // sheltering/settling at the campfire above.
+  if (pending.kind === 'heal' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
 
@@ -656,6 +662,12 @@ const WORK_DURATION_RANGE: [number, number] = [2, 4]
  *  order of magnitude as `social`'s 1.0 (`beginIdle`), not a real interaction
  *  duration. */
 const SHELTER_SETTLE_DURATION_SEC = 1.2
+
+/** How long (seconds, before `waitMultiplier`) `beginHeal`'s `heal` action
+ *  occupies the NPC at its treatment destination — a real duration
+ *  (simulation time, not render animation), same order of magnitude as
+ *  `drink`/`eat`'s 1.2-1.4 (plan npc-002). */
+const HEAL_DURATION_SEC = 1.5
 
 /** stamina/sec while walking toward a task (`goTo`) — deliberately low so
  *  ordinary errands (house → well → workplace → storage) don't meaningfully
@@ -1607,7 +1619,17 @@ export class NpcAgent {
    */
   takeDamage(amount: number): void {
     if (this.health.dead) return
+    const hpBefore = this.health.currentHp
     damageHealth(this.health, amount)
+    // Healable-physical-injury bookkeeping (plan npc-002) — every current
+    // NPC damage source is combat (`applyIncomingCombatDamage` is the only
+    // caller of `takeDamage`), so the actual HP lost here is, today, always
+    // physical: registered by `actualHpLoss`, never derived from
+    // `maxHp - currentHp` (see `healingPressure.ts`'s doc comment). A future
+    // non-physical damage source (starvation/dehydration) must route around
+    // this, not through `takeDamage`.
+    const actualHpLoss = hpBefore - this.health.currentHp
+    this.npcState.physicalInjury = increaseInjuryFromDamage(this.npcState.physicalInjury, actualHpLoss)
     applyDamageVigor(this.vigor)
     if (amount > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, NPC_HEIGHT, amount)
     if (this.health.dead) {
@@ -2306,10 +2328,18 @@ export class NpcAgent {
         // arbitration as a `seekShelter` decision target instead of a fake
         // `NeedId` (see `weatherPressure.ts`'s `NpcDecisionTarget`).
         const weatherPressure = this.currentWeather ? weatherShelterPressure(this.currentWeather) : 0
+        // Healing pressure (plan npc-002) — a third, independent pressure
+        // producer over `this.npcState.physicalInjury`, competing in the
+        // same arbitration as a `heal` decision target instead of a fake
+        // `health` `NeedId` (see `healingPressure.ts`'s doc comment). `0`
+        // (never a candidate) whenever there's no health consumable on hand.
+        const hasHealthConsumable = this.carried.findConsumableForNeed('health') != null
+        const healPressure = healingPressure(this.npcState.physicalInjury, this.health.maxHp, hasHealthConsumable)
         const decision = pickActionKind<NpcDecisionTarget>(
           [
             ...candidates.map((c) => ({ kind: c.target, score: c.final })),
             { kind: 'seekShelter', score: weatherPressure },
+            { kind: 'heal', score: healPressure },
           ],
           'idle',
         )
@@ -2334,6 +2364,16 @@ export class NpcAgent {
           this.activeNeed = 'idle'
           this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
           this.beginSeekShelter()
+          break
+        }
+        if (outcome === 'heal') {
+          // Injury is a pressure source, not a Need (plan npc-002) — same
+          // "never sets activeNeed" contract as seekShelter above, so the
+          // existing Plan/Strategy/critical-interrupt machinery stays
+          // completely untouched by healing.
+          this.activeNeed = 'idle'
+          this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
+          this.beginHeal()
           break
         }
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
@@ -4022,6 +4062,48 @@ export class NpcAgent {
       destination: copyVec3(this.home),
       durationSec: SHELTER_SETTLE_DURATION_SEC * this.waitMultiplier,
       onComplete: () => { this.shelterSettled = true },
+    })
+  }
+
+  /**
+   * Healable-physical-injury treatment response (plan npc-002) — a single
+   * `goTo`/`execute` step to this NPC's own `home` (V1's only treatment
+   * destination), mirroring `beginSeekShelter()`'s "existing place, no
+   * dedicated FSM" shape. Not a `NeedId`/persistent Plan: a short reaction to
+   * `physicalInjury`, re-decided from scratch by `choose()` every time (see
+   * `healingPressure()`) — if one treatment doesn't fully clear the injury
+   * and this NPC still carries a health consumable, the next `choose()` tick
+   * simply picks `heal` again.
+   *
+   * `startAction`'s own `isAbandonedDestination` check already returns this
+   * NPC safely to `choose` (via `beginUnscheduledIdle`) if `home` turns out
+   * to be unreachable — no bespoke "destination went bad" handling needed
+   * here.
+   *
+   * @produces NpcPlannedAction
+   */
+  private beginHeal(): void {
+    this.startAction({
+      kind: 'heal',
+      destination: copyVec3(this.home),
+      durationSec: HEAL_DURATION_SEC * this.waitMultiplier,
+      onComplete: () => {
+        // Full revalidation before consuming anything (plan npc-002 §7):
+        // alive, still actually injured, and a real health consumable still
+        // held — the world (or this NPC's own inventory) may have changed
+        // during the walk over.
+        if (this.health.dead) return
+        if (this.npcState.physicalInjury <= 0) return
+        const kind = this.carried.findConsumableForNeed('health')
+        if (!kind) return
+        const relief = ITEM_CATALOG[kind].consumable?.relief
+        if (relief == null) return
+        if (!this.carried.remove(kind, 1)) return
+        const hpBefore = this.health.currentHp
+        healHealth(this.health, relief)
+        const actualRestored = this.health.currentHp - hpBefore
+        this.npcState.physicalInjury = decreaseInjuryFromHeal(this.npcState.physicalInjury, actualRestored)
+      },
     })
   }
 
