@@ -37,6 +37,13 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
 
+## `shared/PhysicalAttributes.ts`
+
+**Imported by**
+
+- `player/PlayerController.ts`
+- `settlement/npcPhysicalProfile.ts`
+
 ## `shared/SettlementName.ts`
 
 **Imports**

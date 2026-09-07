@@ -544,6 +544,7 @@ Generated from TypeScript imports.
 - `audio/weatherSounds.ts`
 - `combat/criticalHit.ts`
 - `combat/defenseResolver.ts`
+- `combat/meleeStrength.ts`
 - `combat/projectile.ts`
 - `combat/rangedAttack.ts`
 - `combat/rangedReticle.ts`

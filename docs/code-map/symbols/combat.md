@@ -38,6 +38,12 @@ Generated from exported TypeScript symbols.
 - `resolveMeleeHits` — function — line 119
 - `yawToward` — function — line 146
 
+## `combat/meleeStrength.ts`
+
+- `applyMeleeStrength` — function — line 31
+- `MELEE_STRENGTH_NEUTRAL` — const — line 22
+- `meleeStrengthMultiplier` — function — line 24
+
 ## `combat/projectile.ts`
 
 - `advanceProjectile` — function — line 42

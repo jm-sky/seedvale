@@ -2,6 +2,13 @@
 
 Generated from TypeScript imports.
 
+## `player/PlayerController.test.ts`
+
+**Imports**
+
+- `combat/meleeStrength.ts`
+- `player/PlayerController.ts`
+
 ## `player/PlayerController.ts`
 
 **Imports**
@@ -19,6 +26,7 @@ Generated from TypeScript imports.
 - `player/playerEncumbrance.ts`
 - `player/verticalMotion.ts`
 - `shared/HealthState.ts`
+- `shared/PhysicalAttributes.ts`
 - `shared/StaminaState.ts`
 - `terrain/footstepSurface.ts`
 - `terrain/slopeConstraint.ts`
@@ -49,6 +57,7 @@ Generated from TypeScript imports.
 - `items/tentProp.test.ts`
 - `items/tentProp.ts`
 - `navigation/navigation.ts`
+- `player/PlayerController.test.ts`
 - `player/playerDamage.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`

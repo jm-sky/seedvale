@@ -652,6 +652,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/characters.ts`
+- `shared/PhysicalAttributes.ts`
 - `world/parseSeed.ts`
 
 **Imported by**

@@ -29,6 +29,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcCombat.test.ts`
 - `ai/npcCombat.ts`
 - `app/gameLoop.ts`
 - `combat/criticalHit.test.ts`
@@ -73,6 +74,22 @@ Generated from TypeScript imports.
 - `combat/meleeAttack.test.ts`
 - `player/playerCombat.ts`
 - `player/playerMelee.ts`
+
+## `combat/meleeStrength.test.ts`
+
+**Imports**
+
+- `combat/meleeStrength.ts`
+
+## `combat/meleeStrength.ts`
+
+**Imported by**
+
+- `ai/npcCombat.test.ts`
+- `ai/npcCombat.ts`
+- `app/gameLoop.ts`
+- `combat/meleeStrength.test.ts`
+- `player/PlayerController.test.ts`
 
 ## `combat/projectile.test.ts`
 

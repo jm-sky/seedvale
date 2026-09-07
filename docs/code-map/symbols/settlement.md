@@ -278,14 +278,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcPhysicalProfile.ts`
 
-- `ageMultiplierForAge` — function — line 76
-- `clampAge` — function — line 38
-- `generatePhysicalProfile` — function — line 143
-- `LifeStage` — type — line 13
-- `lifeStageForAge` — function — line 42
-- `NPC_AGE_MAX` — const — line 11
-- `NPC_AGE_MIN` — const — line 10
-- `PhysicalProfile` — type — line 120
+- `ageMultiplierForAge` — function — line 78
+- `clampAge` — function — line 40
+- `generatePhysicalProfile` — function — line 278
+- `LifeStage` — type — line 15
+- `lifeStageForAge` — function — line 44
+- `NPC_AGE_MAX` — const — line 13
+- `NPC_AGE_MIN` — const — line 12
+- `PhysicalProfile` — type — line 249
+- `resolveHumanStrengthProfile` — function — line 228
+- `strengthAgePotentialForAge` — function — line 206
 
 ## `settlement/npcRelationships.ts`
 

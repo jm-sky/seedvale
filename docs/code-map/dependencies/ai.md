@@ -381,6 +381,8 @@ Generated from TypeScript imports.
 
 - `ai/npcCombat.ts`
 - `combat/combatIntent.ts`
+- `combat/criticalHit.ts`
+- `combat/meleeStrength.ts`
 - `combat/projectile.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
@@ -392,6 +394,7 @@ Generated from TypeScript imports.
 - `combat/combatIntent.ts`
 - `combat/criticalHit.ts`
 - `combat/defenseResolver.ts`
+- `combat/meleeStrength.ts`
 - `combat/projectile.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`

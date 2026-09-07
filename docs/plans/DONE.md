@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | —                   | `ui-input`       | —          |
 | `ui-input-011-new-game-setup-on-empty-save-state`                      | 2026-09-07 12:11:01 | —                   | `ui-input`       | —          |
 | `ui-input-011-new-game-setup-on-empty-save-state`                      | 2026-09-07 12:11:01 | —                   | `ui-input`       | —          |
 | `npc-002-npc-healing`                                                  | 2026-09-06 08:07:25 | —                   | `npc`            | —          |

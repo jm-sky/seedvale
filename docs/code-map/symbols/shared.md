@@ -53,6 +53,14 @@ Generated from exported TypeScript symbols.
 - `isStarving` — function — line 30
 - `restoreHunger` — function — line 25
 
+## `shared/PhysicalAttributes.ts`
+
+- `PhysicalAttributes` — type — line 19
+  - domain: shared
+  - system: physical-attributes
+  - role: Shared SPEA (Strength/Perception/Endurance/Agility) physical-attribute primitive used by the player and NPCs (plan npc-019), later fauna. Stable individual base attributes only — profile data, not a mutable resource pool like `HealthState`/`StaminaState`. Must not know about combat, work, movement, species, UI, age, sex, injuries, illness or temporary conditions; those live in per-consumer profile/effective resolvers (see `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile` and `combat/meleeStrength.ts`).
+  - owns: PhysicalAttributes
+
 ## `shared/SettlementName.ts`
 
 - `generateSettlementName` — function — line 77

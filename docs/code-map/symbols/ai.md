@@ -95,7 +95,7 @@ Generated from exported TypeScript symbols.
 - `NPC_HEIGHT` — const — line 284
 - `NPC_MODEL_URLS` — const — line 348
 - `NPC_SHADOW_DISTANCE` — const — line 298
-- `NpcAgent` — class — line 805
+- `NpcAgent` — class — line 814
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
@@ -148,15 +148,15 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcCombat.ts`
 
-- `applyNpcMeleeHit` — function — line 83
-- `applyNpcRangedHit` — function — line 107
-- `NpcMeleeWeapon` — type — line 31
-- `NpcRangedWeapon` — type — line 32
-- `resolveIncomingNpcDamage` — function — line 130
-- `resolveNpcAmmoKind` — function — line 63
-- `resolveNpcDefenseConfig` — function — line 70
-- `resolveNpcMeleeWeapon` — function — line 37
-- `resolveNpcRangedWeapon` — function — line 51
+- `applyNpcMeleeHit` — function — line 88
+- `applyNpcRangedHit` — function — line 113
+- `NpcMeleeWeapon` — type — line 32
+- `NpcRangedWeapon` — type — line 33
+- `resolveIncomingNpcDamage` — function — line 136
+- `resolveNpcAmmoKind` — function — line 64
+- `resolveNpcDefenseConfig` — function — line 71
+- `resolveNpcMeleeWeapon` — function — line 38
+- `resolveNpcRangedWeapon` — function — line 52
 
 ## `ai/npcCrowd.ts`
 
