@@ -2,6 +2,14 @@
 
 Generated from exported TypeScript symbols.
 
+## `settlement/blacksmithYard.ts`
+
+- `BLACKSMITH_YARD_BASE_OFFSET` — const — line 23
+  - domain: settlements-npcs Blacksmith household-yard workplace geometry (plan settlements-npcs-024 Stage 1) — pure geometry only, no Three.js or runtime state. Computes the compact anvil + grind-workbench + NPC access-anchor arrangement for one household's blacksmith workplace, anchored to that household's own house. The workplace sits in a lateral sector offset from the house's existing outward yard axis (`props.ts`'s `houseYardPlacements()`, also core → house) so it never overlaps the common household barrel/trough/storage slots (`householdYard.ts`) or the house entrance, which faces inward toward the settlement core (`props.ts` sets house yaw to `outward + PI`).
+- `BLACKSMITH_YARD_SECTOR_OFFSET` — const — line 32
+- `blacksmithYardGeometry` — function — line 61
+- `BlacksmithYardGeometry` — type — line 46
+
 ## `settlement/campfireProps.ts`
 
 - `CampfireBodyKind` — type — line 11
@@ -332,18 +340,19 @@ Generated from exported TypeScript symbols.
 - `Place` — type — line 20
 - `PlaceType` — type — line 18
 - `socialPlaceFor` — function — line 71
-- `workplaceFor` — function — line 111
+- `workplaceFor` — function — line 114
 
 ## `settlement/props.ts`
 
-- `buildSettlementProps` — function — line 623
-- `disposeSettlementGroup` — function — line 1726
-- `SettlementHouseBed` — type — line 130
-- `SettlementHouseLandmark` — type — line 101
-- `SettlementLandmarks` — type — line 137
-- `SettlementLandPlot` — type — line 233
-- `SettlementStorageVisuals` — type — line 226
-- `SettlementTreeLandmark` — type — line 240
+- `BlacksmithWorkplace` — type — line 247
+- `buildSettlementProps` — function — line 637
+- `disposeSettlementGroup` — function — line 1773
+- `SettlementHouseBed` — type — line 131
+- `SettlementHouseLandmark` — type — line 102
+- `SettlementLandmarks` — type — line 138
+- `SettlementLandPlot` — type — line 236
+- `SettlementStorageVisuals` — type — line 229
+- `SettlementTreeLandmark` — type — line 254
 
 ## `settlement/propSpecs.ts`
 

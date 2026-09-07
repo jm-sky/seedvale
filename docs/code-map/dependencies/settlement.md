@@ -109,6 +109,20 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/settlementNightCycle.ts`
 
+## `settlement/blacksmithYard.test.ts`
+
+**Imports**
+
+- `settlement/blacksmithYard.ts`
+- `settlement/householdYard.ts`
+
+## `settlement/blacksmithYard.ts`
+
+**Imported by**
+
+- `settlement/blacksmithYard.test.ts`
+- `settlement/props.ts`
+
 ## `settlement/campfireBody.test.ts`
 
 **Imports**
@@ -504,6 +518,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `settlement/blacksmithYard.test.ts`
 - `settlement/householdYard.test.ts`
 - `settlement/props.ts`
 - `settlement/villagePlanner.test.ts`
@@ -792,6 +807,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `math/segment.ts`
 - `render/instancedProps.ts`
+- `settlement/blacksmithYard.ts`
 - `settlement/campfireProps.ts`
 - `settlement/decorProps.ts`
 - `settlement/families.ts`
