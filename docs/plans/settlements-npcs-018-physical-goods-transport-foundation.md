@@ -219,19 +219,25 @@ Order nie może przechowywać runtime object references do:
 
 Source, destination i carrier powinny być reprezentowane przez stabilne IDs/refs.
 
-Kierunek:
+Pierwszy vertical slice wymaga dokładnie dwóch endpoint variants:
 
 ```ts
 type TransportEndpointRef =
   | {
       type: 'household'
-      householdId: string
+      householdId: HouseholdId
     }
   | {
-      type: 'settlement'
+      type: 'settlement-storage'
       settlementId: string
     }
 ```
+
+`householdId` identyfikuje authoritative owner `Household.items`. `settlementId` identyfikuje authoritative owner `SettlementEconomy.items`; endpoint nie przechowuje runtime economy reference ani world position.
+
+Pozycja fizycznego pickup/unload jest projekcją endpointu rozwiązywaną przez istniejące home/storage landmarks. Nie jest częścią identity endpointu i nie może zastępować ID.
+
+Pierwszy slice nie potrzebuje generic `{ type, id }` ani arbitrary endpoint registry. Rozszerzenie union o kolejne konkretne variants ma być możliwe bez zmiany semantyki `TransportOrder`.
 
 Nie projektować API tak, aby późniejsze dodanie:
 
@@ -309,13 +315,23 @@ interface TransportOrder {
   claimedQuantity: number
   deliveredQuantity: number
 
-  carrierNpcId?: string
+  carrierNpcId: string | null
 
   state: TransportOrderState
 }
 ```
 
 Nie kopiować tego przykładu mechanicznie, jeśli aktualne typy lub conventions sugerują prostszy model.
+
+Dla pierwszego slice `requestedQuantity` jest immutable po utworzeniu. `claimedQuantity` zmienia się dokładnie raz, przy udanym pickup, a `deliveredQuantity` dokładnie raz, przy udanym unload.
+
+Obowiązuje:
+
+```text
+0 <= deliveredQuantity <= claimedQuantity <= requestedQuantity
+```
+
+W pierwszym slice jeden order reprezentuje jeden concrete `ItemKind`; po successful pickup obowiązuje `claimedQuantity > 0`, a successful completion wymaga `deliveredQuantity === claimedQuantity`.
 
 ## Goods scope
 
@@ -339,13 +355,13 @@ Nie scalać ich wyłącznie po to, aby `TransportOrder` wyglądał bardziej gene
 
 Pierwszy use case ma transportować realne `Inventory` items.
 
-Rozszerzenie na bulk economic stock powinno nastąpić dopiero przy rzeczywistym przypadku użycia.
+Dla Trader collection pierwszy order powinien dotyczyć jednego deterministycznie wybranego concrete food `ItemKind`, a nie agregatu `food` obejmującego wiele kinds. Dzięki temu order nie potrzebuje manifestu cargo ani batches jako authoritative state.
+
+Rozszerzenie na bulk economic stock albo multi-kind cargo powinno nastąpić dopiero przy rzeczywistym przypadku użycia.
 
 ## Lifecycle
 
-Utrzymać lifecycle mały.
-
-Preferowany kierunek:
+Utrzymać lifecycle mały:
 
 ```text
 pending
@@ -357,16 +373,16 @@ in-transit
 completed
 ```
 
-Opcjonalne terminal states:
+Terminal pre-pickup failures:
 
 ```text
-failed
-cancelled
+pending/assigned → cancelled
+assigned         → failed
 ```
 
-tylko jeżeli są potrzebne do poprawnej domenowej semantyki.
+`failed` oznacza, że konkretnego ordera nie da się już wykonać bez ponownego utworzenia commitmentu, np. source endpoint nie istnieje albo live pickup daje zero goods. `cancelled` oznacza świadome wycofanie commitmentu zanim cargo zmieni ownera.
 
-Nie utrwalać jako persistent states chwilowych action details:
+Nie utrwalać jako states chwilowych action details:
 
 ```text
 picking-up
@@ -375,37 +391,22 @@ unloading
 walking-to-destination
 ```
 
-To pozostaje stanem `NpcAgent` action lifecycle.
+To pozostaje stanem NPC action lifecycle.
 
-### `pending`
+### Exact lifecycle matrix
 
-Order istnieje, ale nie ma carrier.
+| Order state | Cargo owner | Carrier assignment | Dozwolone transitions | Invariants | Recovery po interruption |
+|---|---|---|---|---|---|
+| `pending` | source | `null` | `assigned`, `cancelled` | `claimed=0`, `delivered=0`; source/destination/request immutable | brak cargo do recovery; order może czekać lub zostać anulowany |
+| `assigned` | source | dokładnie jeden `carrierNpcId` | `in-transit`, `failed`, `cancelled` | `claimed=0`, `delivered=0`; carrier nie ma jeszcze cargo tego ordera | temporary action interruption nie zmienia ordera; ten sam carrier może wznowić pickup; genuine abandonment przed pickup może zwolnić assignment do `pending` tylko jeśli implementacja tego potrzebuje, bez zmiany ownership |
+| `in-transit` | assigned carrier | ten sam `carrierNpcId` | `completed` | `claimed>0`, `delivered=0`; carrier musi rzeczywiście posiadać claimed cargo; source nie posiada już tych units | interruption nie zmienia lifecycle; cargo zostaje u carrier, order pozostaje `in-transit`; nie wolno release/cancel/fail, jeżeli skutkiem byłoby pozostawienie cargo bez commitmentu |
+| `completed` | destination | historyczne `carrierNpcId` może pozostać dla diagnostics | brak | `delivered=claimed>0`; cargo nie jest już u carrier; terminal/idempotent | brak recovery; każde ponowne pickup/unload jest rejected/no-op |
+| `failed` | source | assignment może pozostać jako diagnostyczne albo zostać wyczyszczone atomowo | brak | `claimed=0`, `delivered=0`; nic nie opuściło source | terminal; nowa próba wymaga nowego ordera po ponownej ocenie świata |
+| `cancelled` | source | `null` po anulowaniu | brak | `claimed=0`, `delivered=0`; anulowanie po pickup jest niedozwolone w 018 | terminal; cargo recovery nie istnieje, bo cancel wolno wykonać tylko przed pickup |
 
-Goods nadal należą do source.
+Dla 018 temporary action interruption i domain failure to różne pojęcia. Przerwanie `PlannedAction` nie powinno automatycznie mutować `TransportOrder`, tak jak chwilowe interruption WorkContract nie oznacza abandonment commitmentu.
 
-### `assigned`
-
-Carrier został przypisany.
-
-Goods nadal należą do source.
-
-### `in-transit`
-
-Pickup zakończył się sukcesem.
-
-Goods znajdują się w:
-
-```ts
-NpcAgent.carried
-```
-
-### `completed`
-
-Unload zakończył się sukcesem.
-
-Goods znajdują się w destination.
-
-Order nie może zostać wykonany ponownie.
+Po przejściu do `in-transit` jedyną poprawną terminalizacją w 018 jest rzeczywisty successful unload do destination. Death/rebuild/off-screen cases wymagające innego recovery należą do 019.
 
 ## World ownership
 
@@ -419,7 +420,15 @@ Powód:
 transport commitment != current NPC action
 ```
 
-Wzorować ownership/lifecycle na istniejących world-owned commitment patterns, szczególnie jeśli Work Contracts oferują odpowiedni precedent.
+Wzorować ownership/lifecycle na istniejącym WorkContract patternie tylko w zakresie:
+
+- pure domain record,
+- stable IDs,
+- world-owned registry,
+- centralnie walidowane transitions,
+- lookup commitmentu po stable carrier ID.
+
+Nie kopiować WorkContract persistence/rebuild semantics mechanicznie: aktywny transport ma realne cargo w `NpcAgent.carried`, które w 018 nie jest jeszcze persistent ownerem.
 
 Dodać mały registry/store odpowiedzialny za:
 
@@ -427,15 +436,14 @@ Dodać mały registry/store odpowiedzialny za:
 - lookup by ID,
 - assignment,
 - lifecycle mutations,
+- bounded lookup active order by carrier,
 - removal/archive policy.
 
-Preferować:
+Pierwszy slice ma invariant:
 
 ```text
-Map<TransportOrderId, TransportOrder>
+at most one non-terminal TransportOrder per carrierNpcId
 ```
-
-lub istniejący równoważny pattern.
 
 Nie tworzyć `TransportManager` wykonującego globalny tick.
 
@@ -476,42 +484,48 @@ Model nie powinien jednak blokować późniejszego rozszerzenia carrier semantic
 
 ## Pickup transaction
 
-Pickup powinien wykonać:
+Pickup jest jedną domenową transakcją `source → carrier`, nawet jeśli implementacyjnie używa istniejących Inventory primitives.
+
+Preconditions:
+
+- order istnieje i jest `assigned`,
+- wykonujący NPC ma ID równe `carrierNpcId`,
+- source endpoint daje się resolve,
+- `claimedQuantity === 0`,
+- carrier nie posiada już cargo tego ordera.
+
+Transaction:
 
 1. Resolve `TransportOrder`.
 2. Resolve source from stable ref.
-3. Revalidate source availability.
-4. Determine actual claim quantity.
-5. Claim real items from source.
-6. Attempt to put claimed items into `NpcAgent.carried`.
-7. Roll back source claim if carrier cannot accept cargo.
-8. Record actual `claimedQuantity`.
-9. Transition order to `in-transit`.
+3. Revalidate exact `itemKind` availability/surplus.
+4. `actual = min(requestedQuantity, live transferable quantity)`.
+5. Jeżeli `actual <= 0`, niczego nie usuwać i zakończyć order jako `failed`.
+6. Sprawdzić carrier capacity dla całego `actual` przed commit, jeżeli istniejące API na to pozwala.
+7. Claim real items + freshness metadata ze source.
+8. Umieścić dokładnie claimowane units w `NpcAgent.carried`.
+9. Jeżeli add do carrier nie powiedzie się po source removal, atomowo odtworzyć source z tymi samymi freshness batches; order pozostaje `assigned` albo przechodzi `failed` zgodnie z przyczyną, ale `claimedQuantity` pozostaje `0`.
+10. Dopiero po rzeczywistym sukcesie ustawić `claimedQuantity = actual` i przejść `assigned → in-transit`.
 
-Order może przejść do `in-transit` wyłącznie po rzeczywistym sukcesie transferu:
-
-```text
-source → carrier
-```
+Nie wolno ustawić `claimedQuantity` na ilość tylko wybraną/zdjętą tymczasowo. To ilość faktycznie przejęta przez carrier.
 
 ### Partial pickup
 
-Jeżeli source ma mniej goods niż requested:
+Partial pickup jest dozwolony względem requested quantity:
 
 ```text
 requested = 10
-available = 6
+live transferable = 6
+carrier can hold 6
+→ claimed = 6
+→ in-transit
 ```
 
-pierwsza wersja może wykonać:
+Nie ma drugiego pickup dla pozostałych 4 units w tym samym orderze. Po pierwszym successful pickup request zostaje zamknięty do faktycznie claimed amount; pozostałe zapotrzebowanie może później wygenerować nowy order.
 
-```text
-claimed = 6
-```
+Carrier capacity nie tworzy dodatkowego rodzaju partial pickup w pierwszym slice. Jeżeli wybrane `actual` nie mieści się w całości, transakcja nie może częściowo zdjąć source i częściowo oddać reszty jako ukryte zachowanie. Najpierw ograniczyć `actual` do legalnej ilości na podstawie jawnej polityki albo odrzucić pickup i zachować source bez zmian.
 
-i transportować tę rzeczywistą ilość.
-
-Nie wymagać pełnej ilości, chyba że istniejący economic flow tego wymaga.
+Dla Trader vertical slice preferować bounded quantity, która mieści się w carrier, zamiast wprowadzać nowy capacity-driven split policy.
 
 ### Concurrent claims
 
@@ -533,25 +547,46 @@ Goods nie mogą zostać zduplikowane.
 
 ## Unload transaction
 
-Unload powinien wykonać:
+Unload jest jedną domenową transakcją `carrier → destination`.
+
+Preconditions:
+
+- order istnieje i jest `in-transit`,
+- wykonujący NPC odpowiada `carrierNpcId`,
+- `claimedQuantity > 0`,
+- `deliveredQuantity === 0`,
+- destination endpoint daje się resolve,
+- carrier faktycznie posiada co najmniej `claimedQuantity` orderowego `itemKind` wraz z metadata potrzebną do zachowania freshness.
+
+Transaction:
 
 1. Resolve current order.
 2. Resolve destination from stable ref.
-3. Verify carrier actually owns expected cargo.
-4. Attempt real transfer into destination.
-5. Update delivered quantity.
-6. Transition to `completed` only after successful transfer.
+3. Sprawdzić destination acceptance/capacity zanim cargo zostanie bezpowrotnie usunięte z carrier, albo użyć remove + exact rollback.
+4. Przenieść dokładnie `claimedQuantity` z carrier do destination z zachowaniem freshness/metadata.
+5. Dopiero po rzeczywistym sukcesie ustawić `deliveredQuantity = claimedQuantity`.
+6. Transition `in-transit → completed` wykonać atomowo z zaakceptowanym transferem.
 
-Jeżeli destination nie może przyjąć cargo:
+Destination rejection/unavailability:
 
 ```text
-cargo remains with NPC
-order remains non-completed
+carrier retains all cargo
+claimed unchanged
+delivered = 0
+state = in-transit
 ```
 
-Nie zwracać cargo automatycznie do source.
+Nie zwracać cargo automatycznie do source. Nie szukać alternate destination w 018.
 
-Nie szukać w 018 alternate destination.
+Jeżeli precondition „carrier owns expected cargo” jest złamany, nie tworzyć brakujących goods i nie oznaczać ordera jako completed. To jest invariant violation wymagający diagnostyki; 018 nie może naprawiać go przez mint/refund z order metadata.
+
+### Duplicate execution / idempotency
+
+- pickup wolno wykonać tylko w `assigned`; każde wywołanie dla `in-transit`/terminal state jest rejected/no-op bez Inventory mutation,
+- unload wolno wykonać tylko w `in-transit` z `deliveredQuantity === 0`,
+- `completed`, `failed` i `cancelled` są terminalne,
+- ponowne callback execution po lifecycle transition nie może drugi raz usuwać/dodawać goods,
+- order mutation i inventory mutation muszą być uporządkowane tak, aby żaden callback retry nie mógł zobaczyć stanu pozwalającego powtórzyć już committed transfer.
 
 ## Interruption semantics
 
@@ -561,9 +596,12 @@ Jeżeli NPC action zostaje przerwany:
 
 ```text
 goods remain in source
+order remains assigned
 ```
 
-Order może pozostać `assigned` i zostać ponownie podjęty zgodnie z istniejącym NPC commitment/action handling.
+Temporary interruption nie oznacza release assignmentu. Carrier po re-evaluation powinien wznowić ten sam non-terminal commitment zamiast tworzyć drugi order.
+
+Jeżeli carrier naprawdę nie może już wykonać ordera przed pickup, order może zostać anulowany/failed albo assignment zwolniony do `pending` zgodnie z minimalnym registry API; w każdym wariancie `claimed=0`, więc cargo ownership nie wymaga recovery.
 
 ### After pickup
 
@@ -578,11 +616,15 @@ Nie:
 
 ```text
 refund goods to source
+cancel order
+release carrier
 ```
 
 tylko dlatego, że movement/action zostało przerwane.
 
-Pełne recovery, unload/reload i death handling nie należą do 018.
+Wznowienie ma prowadzić z istniejącego `in-transit` ordera bez ponownego pickup.
+
+Pełne recovery po NPC death, unload/reload, save/load i zmianie fidelity nie należy do 018.
 
 ## First vertical slice
 
@@ -624,47 +666,28 @@ bez regresji `settlements-npcs-014`.
 
 Remote resource transport nie należy do tego planu.
 
-## Integration with settlements-npcs-014
+## Trader migration mapping
 
-Nie budować drugiego transport flow obok istniejącego Trader collection.
+Migracja ma zachować bieżące zachowanie ekonomiczne, a przenieść tylko ownership commitmentu i transaction boundaries.
 
-Zidentyfikować obecny path dla:
+| Obecna odpowiedzialność Trader flow | Docelowo | Decyzja |
+|---|---|---|
+| bounded same-settlement source discovery | istniejący household-exchange/source lookup | **reuse**; nie przenosić source scanning do transport registry |
+| wyliczenie transferable surplus/request cap | caller tworzący order | **reuse** istniejących reguł, ale przed utworzeniem ordera wybrać jeden concrete `ItemKind` |
+| pamiętanie „mam odebrać z X i dostarczyć do Y” w action chain/closure | `TransportOrder` | **replace** przez stable order ID + world-owned record |
+| runtime Household/Economy references w closure | endpoint resolution z stable refs | **replace** jako authoritative commitment; krótkotrwałe resolved refs mogą istnieć tylko podczas execution |
+| `claimFoodItems` / freshness-aware removal | Inventory transaction seam | **reuse** primitives, ale nie multi-kind claim jako shape pierwszego ordera |
+| `carryFoodClaim` capacity refund | pickup transaction semantics | **reuse concept**; zachować exact rollback, nie traktować helpera jako lifecycle authority |
+| local `carriedClaim` closure jako jedyna pamięć o tym, co jest w drodze | `TransportOrder.claimedQuantity` + real `NpcAgent.carried` | **replace** jako commitment state; freshness payload nadal może być krótkotrwałym transaction data, nie cargo ownerem |
+| `NpcAgent.carried` | physical cargo owner po pickup | **reuse bez zmiany ownership** |
+| movement source → destination | istniejący `PlannedAction` / NPC movement | **reuse**; transport registry nie ma FSM/ticka/pathfindingu |
+| direct `carrier.remove` + `economy.depositFood` | guarded unload transaction | **replace seam** tak, aby destination failure nie usuwało cargo |
+| `tryAdvanceDevelopment(economy)` po successful deposit | downstream economic side effect | **reuse**, ale wyłącznie po realnym successful unload |
+| action interruption | action lifecycle + order lookup/resume | **replace implicit closure recovery** przez jawne `assigned`/`in-transit` semantics |
 
-```text
-Household surplus
-→ Trader pickup
-→ settlement delivery
-```
+Po migracji nie powinny istnieć dwa równoległe commitment paths dla cross-household Trader collection.
 
-i przenieść odpowiedzialność za commitment do nowego `TransportOrder`.
-
-Nadal reuse:
-
-- existing surplus discovery,
-- bounded source lookup,
-- existing NPC movement,
-- live source revalidation,
-- existing `Inventory`,
-- existing freshness handling,
-- existing carried inventory,
-- destination resolution.
-
-`TransportOrder` dodaje wyłącznie brakującą warstwę:
-
-- durable runtime identity,
-- explicit endpoints,
-- carrier assignment,
-- lifecycle,
-- actual claimed/delivered quantity.
-
-Po migracji nie powinny istnieć równoległe:
-
-```text
-legacy Trader transport flow
-new TransportOrder flow
-```
-
-dla tego samego przypadku.
+Own-household Trader → economy flow nie musi być migrowany w 018, jeżeli nie jest potrzebny do pierwszego vertical slice; pozostaje regression baseline, a nie drugi system transport-demand.
 
 ## Generic item transfer
 
@@ -682,33 +705,112 @@ Powinien zachować:
 
 Nie wykonywać szerokiego refactoru całego Inventory API.
 
-## Failure semantics
+## Failure matrix
 
 018 ma obsłużyć tylko failures potrzebne dla physical vertical slice.
 
-### Source disappeared / cannot resolve
+| Failure | Order state przed failure | Cargo owner przed failure | Expected recovery |
+|---|---|---|---|
+| source endpoint cannot resolve | `assigned` | source / brak przeniesionego cargo | nie tworzyć cargo; `assigned → failed`; `claimed=delivered=0` |
+| source exists, requested kind now absent / transferable quantity 0 | `assigned` | source | brak Inventory mutation; `assigned → failed` |
+| source has less than requested, ale >0 | `assigned` | source | claim live partial amount; successful pickup → `in-transit`; brak retry na remainder w tym orderze |
+| carrier lacks capacity before source mutation | `assigned` | source | source bez zmian; order nie przechodzi `in-transit`; caller może zakończyć jako `failed` albo później retry, ale nie tworzyć partial hidden claim |
+| carrier add fails after source removal | `assigned` w trakcie pickup transaction | tymczasowo transaction-local, nie committed owner | exact rollback do source z freshness/metadata; `claimed=0`; brak `in-transit` |
+| duplicate pickup callback | `in-transit`/terminal | carrier/destination/source zależnie od terminal state | reject/no-op; żadnej Inventory mutation |
+| temporary action interruption before pickup | `assigned` | source | order zostaje `assigned`; ten sam commitment może zostać wznowiony |
+| temporary action interruption after pickup | `in-transit` | carrier | cargo pozostaje u carrier; order zostaje `in-transit`; resume unload bez nowego pickup |
+| destination endpoint temporarily unavailable | `in-transit` | carrier | żadnego remove z carrier; order pozostaje `in-transit` |
+| destination rejects capacity/acceptance | `in-transit` | carrier | cargo pozostaje w całości u carrier; `delivered=0`; order pozostaje `in-transit` |
+| carrier expected cargo missing/corrupted | `in-transit` | invariant mówi: carrier, ale runtime temu przeczy | nie mintować i nie refundować z order metadata; nie complete; surface invariant violation; pełne recovery poza 018 |
+| duplicate unload callback | `completed` | destination | reject/no-op; brak drugiego depositu |
+| cancel request before pickup | `pending`/`assigned` | source | terminal `cancelled`; carrier assignment cleared; goods bez zmian |
+| cancel/fail/release request after pickup | `in-transit` | carrier | reject w 018; order musi nadal wskazywać cargo commitment aż do unload lub późniejszego recovery z 019 |
+| NPC death / stream-out / rebuild / save while in-transit | `in-transit` | carrier według domain invariant, ale obecny carrier storage nie jest trwały | poza zakresem 018; nie udawać recovery przez zapis ordera ani kopiowanie cargo do ordera |
 
-Nie tworzyć cargo.
+## Conservation scenarios
 
-Order może zostać anulowany/failed zgodnie z minimalnym lifecycle.
+Każdy scenariusz porównuje dokładnie transportowany `ItemKind`, a dla perishables również freshness batches/metadata. Dla quantity zawsze musi zachodzić:
 
-### Source has zero goods
+```text
+source + carrier + destination = constant
+```
 
-Nie tworzyć cargo.
+### 1. Successful full transfer
 
-### Carrier capacity failure
+```text
+before: source=8 carrier=0 destination=3 total=11
+request=5
+pickup: source=3 carrier=5 destination=3 total=11
+unload: source=3 carrier=0 destination=8 total=11
+order: claimed=5 delivered=5 completed
+```
 
-Source claim musi zostać cofnięty albo transfer musi być skonstruowany tak, aby source nie stracił goods.
+### 2. Partial live availability
 
-### Destination unavailable
+```text
+before: source=4 carrier=0 destination=7 total=11
+request=6
+pickup claims 4: source=0 carrier=4 destination=7 total=11
+unload: source=0 carrier=0 destination=11 total=11
+order: claimed=4 delivered=4 completed
+```
 
-Cargo pozostaje z carrier.
+Brakujące 2 units nie powstają i nie pozostają „owed” w completed orderze.
 
-Order nie jest completed.
+### 3. Carrier capacity failure with rollback
 
-### Duplicate execution
+```text
+before: source=5 carrier=0 destination=2 total=7
+transaction temporarily removes 5 from source
+carrier rejects
+rollback: source=5 carrier=0 destination=2 total=7
+order: claimed=0 delivered=0, not in-transit
+```
 
-Completed order nie może ponownie claimować ani deliverować cargo.
+Dla perishable food source po rollback ma te same acquisition/freshness batches co przed próbą.
+
+### 4. Interruption after pickup
+
+```text
+before: source=6 carrier=0 destination=1 total=7
+pickup 3: source=3 carrier=3 destination=1 total=7
+movement interrupted: source=3 carrier=3 destination=1 total=7
+resume + unload: source=3 carrier=0 destination=4 total=7
+```
+
+Interruption nie teleportuje ani nie refunduje cargo.
+
+### 5. Destination rejection
+
+```text
+before unload: source=2 carrier=4 destination=5 total=11
+first unload rejected: source=2 carrier=4 destination=5 total=11
+later successful unload: source=2 carrier=0 destination=9 total=11
+```
+
+Order pozostaje `in-transit` pomiędzy próbami.
+
+### 6. Duplicate execution
+
+```text
+completed state: source=2 carrier=0 destination=9 total=11
+retry pickup/unload callbacks
+result: source=2 carrier=0 destination=9 total=11
+```
+
+Żaden terminal retry nie może zmienić inventory.
+
+### 7. Concurrent orders against one source
+
+```text
+source starts 7
+A requests 5
+B requests 5
+A arrives first → claims 5, source=2
+B revalidates live → claims 2, source=0
+```
+
+Suma goods A+B+source pozostaje 7; oba orders zapisują własną faktycznie claimed quantity.
 
 ## Explicit boundary: no persistence yet
 
@@ -753,7 +855,7 @@ Nie dodawać globalnego per-frame transport tick.
 
 NPC wykonują transport poprzez istniejący action flow.
 
-Order registry powinien zapewniać bezpośredni lookup po ID.
+Order registry powinien zapewniać bezpośredni lookup po ID i bounded lookup aktywnego ordera po carrier ID.
 
 Unikać:
 
@@ -770,17 +872,18 @@ Pierwszy flow już posiada source i destination wynikające z istniejącej lokal
 Przed implementacją sprawdzić aktualny kod, szczególnie:
 
 - `src/ai/NpcAgent.ts`
+- profession work / Trader collection flow
 - `src/items/Inventory.ts`
 - `src/items/foodItems.ts`
 - `src/settlement/household.ts`
 - `src/economy/settlementEconomy.ts`
-- Trader collection flow
 - household exchange hooks
 - storage destination resolution
-- NPC action lifecycle
+- NPC action lifecycle / `PlannedAction`
 - existing runtime world-owned registries/stores
 - Work Contracts ownership/lifecycle pattern
 - NPC carried inventory capacity/failure behaviour
+- persistence/rebuild boundaries for `NpcAgent.carried`
 
 Nie zakładać nowych nazw plików przed reconem.
 
@@ -789,11 +892,11 @@ Nie zakładać nowych nazw plików przed reconem.
 ### Stage 1 — Transport domain model
 
 - Define `TransportOrder`.
-- Define stable transport endpoint refs.
-- Define minimal lifecycle.
-- Restrict first cargo specification to concrete `ItemKind`.
+- Define exact first-slice endpoint refs.
+- Define lifecycle including terminal pre-pickup `failed`/`cancelled` semantics.
+- Restrict first cargo specification to one concrete `ItemKind` per order.
 - Add world-owned runtime order registry/store.
-- Add deterministic create/lookup/update operations.
+- Add deterministic create/lookup/update operations and one-active-order-per-carrier guard.
 - Add lifecycle invariant tests.
 
 ### Stage 2 — NPC physical execution
@@ -820,6 +923,8 @@ completed
 
 Do not introduce separate movement logic.
 
+Temporary action interruption must resume the same order; it must not silently create a replacement order.
+
 ### Stage 3 — Transaction safety
 
 Ensure pickup and unload preserve exact goods conservation.
@@ -830,15 +935,18 @@ Cover:
 - carrier capacity failure,
 - rollback,
 - destination failure,
-- duplicate execution.
+- duplicate execution,
+- metadata/freshness conservation.
 
-Reuse existing food/freshness helpers where practical.
+Reuse existing food/freshness helpers where practical, but do not inherit unsafe destination semantics from a helper that removes before confirming acceptance.
 
 ### Stage 4 — Migrate Trader vertical slice
 
-Migrate existing household surplus collection to `TransportOrder`.
+Migrate existing cross-household food-surplus collection to `TransportOrder`.
 
-Preserve existing economic selection behaviour.
+Preserve existing economic source-selection behaviour.
+
+Select one concrete food `ItemKind` deterministically for the first order shape.
 
 Do not add new transport demand generation.
 
@@ -846,7 +954,7 @@ Verify that the resulting path still physically collects and delivers the same g
 
 ### Stage 5 — Cleanup and observability
 
-Remove or merge redundant legacy state from the migrated flow.
+Remove or merge redundant legacy commitment state from the migrated flow.
 
 Expose minimal debug information for an order:
 
@@ -871,24 +979,28 @@ Do not add a dedicated transport UI.
 Add focused tests for:
 
 - order creation,
-- source/destination refs,
+- exact source/destination refs,
 - carrier assignment,
+- one active order per carrier,
 - valid lifecycle transitions,
 - invalid lifecycle transitions,
+- cannot cancel/fail/release after pickup,
 - source resolution failure,
 - zero source availability,
-- partial claim,
+- partial live claim,
 - concurrent live claims,
 - carrier capacity failure,
 - pickup rollback,
 - successful pickup,
+- interruption before pickup preserving source ownership,
 - interruption after pickup preserving carrier ownership,
 - successful unload,
 - destination rejection,
+- duplicate pickup prevention,
 - duplicate unload prevention,
 - completed order cannot run again,
 - exact quantity conservation,
-- freshness conservation.
+- freshness/metadata conservation.
 
 Core conservation invariant:
 
@@ -904,7 +1016,7 @@ source_after
 + destination_after
 ```
 
-for every completed or interrupted transaction.
+for every successful, failed or interrupted transaction that remains inside 018's runtime fidelity boundary.
 
 ## Manual verification
 
@@ -939,7 +1051,19 @@ source becomes unavailable before arrival
         ↓
 no goods created
         ↓
-order does not enter in-transit
+order becomes failed without entering in-transit
+```
+
+or:
+
+```text
+pickup succeeds
+        ↓
+action is temporarily interrupted
+        ↓
+cargo remains carried
+        ↓
+same in-transit order resumes and unloads
 ```
 
 ## Explicit non-goals
@@ -957,7 +1081,7 @@ Do not implement in this plan:
 - mine → settlement logistics,
 - inter-settlement logistics,
 - automatic carrier selection across the world,
-- carrier reassignment,
+- carrier reassignment after pickup,
 - carts,
 - wagons,
 - horses/donkeys as cargo carriers,
@@ -1002,7 +1126,7 @@ The plan is complete when:
 
 1. `TransportOrder` is the authoritative runtime representation of a physical transport commitment.
 2. Orders use stable source, destination and carrier references.
-3. First cargo type uses existing concrete `ItemKind` goods.
+3. First cargo type uses one existing concrete `ItemKind` per order.
 4. Existing NPC actions execute pickup, travel and unload.
 5. Actual cargo ownership follows:
 
@@ -1014,10 +1138,12 @@ The plan is complete when:
 7. Live pickup revalidation prevents stale claims.
 8. Failed pickup cannot silently delete goods.
 9. Failed unload cannot silently delete goods.
-10. Completed order cannot deliver twice.
-11. Existing Trader household-surplus flow uses the shared `TransportOrder` foundation.
-12. Existing local economic behaviour remains unchanged.
-13. No global transport tick, logistics manager or parallel inventory is introduced.
-14. The domain model can be extended by `settlements-npcs-019` without redesigning the core ownership/lifecycle contract.
+10. `in-transit` order cannot be cancelled/failed/released in a way that orphans cargo.
+11. Completed order cannot claim or deliver twice.
+12. Existing Trader cross-household surplus flow uses the shared `TransportOrder` foundation.
+13. Existing local economic selection behaviour remains unchanged.
+14. No global transport tick, logistics manager or parallel inventory is introduced.
+15. Conservation scenarios hold for success, partial pickup, interruption, rollback, destination failure and duplicate execution.
+16. The domain model can be extended by `settlements-npcs-019` without redesigning the core ownership/lifecycle contract.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
