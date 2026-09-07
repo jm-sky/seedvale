@@ -212,27 +212,31 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-35. `fauna-007` — **Animal leading and cart harness**  
+35. `world-terrain-015` — **Water Reflection Content Budget**  
+  🟡 `S` · **Score:**  19  
+   → **unlocks:** 0/0
+
+36. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-36. `items-player-019` — **Player camp repair and sewing kit**  
+37. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-37. `tools-000` — **Weapon Browser — Observatory/Admin**  
+38. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-38. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
+39. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-39. `npc-004` — **Drzewo genealogiczne NPC**  
+40. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-40. `tools-006` — **tools-006--world-observatory.md**  
+41. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -482,6 +486,7 @@ graph TD
   world_terrain_012["world-terrain-012 — Macro meadow variation"]
   world_terrain_013["world-terrain-013 — River Drainage Continuity and Terrain Adaptation"]
   world_terrain_014["world-terrain-014 — Weather-Driven Cloud Variety and Ground Fog"]
+  world_terrain_015["world-terrain-015 — Water Reflection Content Budget"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
