@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** npc-019
+**Depends on:** ~~npc-019~~
 **Domain:** `npc`
 **Subdomains:** `work`
 **Tags:** `spea` `strength` `physical-work` `carrying` `items-player`

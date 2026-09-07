@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-019-shared-spea-foundation-and-strength-driven-melee`             | —                   | 2026-09-07 14:44:46 | `npc`            | npc-020-strength-driven-physical-work-and-human-carrying, npc-021-endurance-driven-stamina-capacity-and-recovery, npc-022-agility-driven-melee-recovery, npc-023-perception-driven-observation-and-information-levels, npc-024-temporary-conditions-and-poisoning, npc-025-injury-severity-and-treatment-requirements |
 | `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | 2026-09-07 14:38:35 | `ui-input`       | —          |
 | `quests-progression-001-reputation-and-renown-foundation`              | 2026-09-07 14:33:04 | —                   | `quests-progression` | —          |
 | `quests-progression-001-reputation-and-renown-foundation`              | 2026-09-07 14:33:04 | —                   | `quests-progression` | —          |

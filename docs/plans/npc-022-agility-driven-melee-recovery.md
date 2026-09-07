@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** S
-**Depends on:** npc-019
+**Depends on:** ~~npc-019~~
 **Domain:** `npc`
 **Subdomains:** `combat` `lifecycle`
 **Tags:** `spea` `agility` `melee`

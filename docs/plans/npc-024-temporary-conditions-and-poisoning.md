@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** npc-019, ~~world-017~~
+**Depends on:** ~~npc-019~~, ~~world-017~~
 **Domain:** `npc`
 **Subdomains:** `lifecycle`
 **Tags:** `spea` `conditions` `poisoning` `health` `water`

@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** npc-002, npc-019, npc-024
+**Depends on:** npc-002, ~~npc-019~~, npc-024
 **Domain:** `npc`
 **Subdomains:** `lifecycle`
 **Tags:** `injury` `health` `spea` `healing` `treatment`
