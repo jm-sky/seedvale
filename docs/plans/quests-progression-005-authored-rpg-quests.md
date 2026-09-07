@@ -26,11 +26,11 @@ Implementator ma wdrożyć poniższy content, a nie ponownie projektować histor
 
 Plan implementować po `quests-progression-002`–`004`:
 
-- outcomes/rewards/consequences i `resolvedOutcomeId` z `002`,
-- reward scale i paid-content baseline z `003`,
-- `QuestPrerequisite` (`quest_outcome`, `relation`, `reputation`, `renown`) z `004`.
+- outcomes/rewards/consequences, `resultText` i `resolvedOutcomeId` z `002`,
+- reward scale, paid-content baseline i atomic final `gather_item` delivery z `003`,
+- `QuestPrerequisite` (`quest_outcome`, `relation`, `reputation`, `renown`) oraz quest-definition validation seam z `004`.
 
-Aktualny `main` podczas review jest jeszcze przed implementacją `002`; nazwy helperów mogą się zmienić podczas realizacji zależności, ale semantyka poniżej jest wiążąca.
+Aktualny `main` podczas review jest jeszcze przed implementacją `002`; nazwy prywatnych helperów mogą się zmienić podczas realizacji zależności, ale powyższe kontrakty domenowe są wiążące.
 
 # Questline A — Zaginiona przesyłka
 
@@ -145,7 +145,7 @@ Stage:
 { type: 'gather_item', kind: 'branch', count: 5 }
 ```
 
-Outcome `delivered_to_piotr`:
+Outcome `delivered_to_piotra`:
 
 - state: `complete`,
 - shown reward: `8 x coin`,
@@ -214,6 +214,8 @@ Nie dodawać modala A/B, dialogue tree engine ani generic action scripting.
 
 `QuestManager.onInteract()` musi obsłużyć ten objective przed zwykłym giver reminder path, ponieważ giver (`Kasia`/`Anna`) może sam być jedną z choices. `labelMarker()` ma oznaczać wszystkie NPC będące aktualnymi choice targets.
 
+Definition validator z `004` rozszerzyć o minimum 2 choices, unikalne `npcName` w objective i istnienie każdego `outcomeId` w outcomes tego samego questa. Nie tworzyć drugiego validatora w `005`.
+
 # Land reward — decyzja po review
 
 **Nie implementować land reward w `005`.**
@@ -233,11 +235,11 @@ Konkretny fallback: hidden `book_defense_intermediate` z `dzik-przy-szlaku`.
 # Reward / outcome rules
 
 - Wszystkie gałęzie kończyć przez unified terminal resolution z `002`; outcome/reward/consequences exact-once.
+- Każdy authored outcome w tym pakiecie ma mieć konkretny `resultText` zgodny z faktycznym wynikiem; UI pokazuje tekst, nigdy surowe outcome ID.
 - Coins pozostają zwykłym `ItemKind = 'coin'` i korzystają z istniejącego injected quest grant path.
 - Item rewards również korzystają z tego samego grant path; nie mutować `Inventory` bezpośrednio z quest definition/runtime.
 - Public social consequence korzysta z istniejącego `ReputationManager` seam i resolved `settlementId`.
 - Nie dodawać implicit relation fan-out.
-- Wykorzystać `resultText` z `002`, jeżeli finalny kontrakt go zachowa; UI nie pokazuje outcome IDs.
 
 # Existing systems / non-goals
 
@@ -270,8 +272,8 @@ Nie tworzyć:
 
 # Implementation order
 
-1. Upewnić się, że `002`–`004` są zaimplementowane i użyć ich faktycznych nazw typów/helperów.
-2. Dodać `talk_to_npc_choice` do istniejącego quest modelu/managera oraz definition validation.
+1. Upewnić się, że `002`–`004` są zaimplementowane i użyć ich faktycznych nazw typów/publicznych kontraktów.
+2. Dodać `talk_to_npc_choice` do istniejącego quest modelu/managera oraz rozszerzyć validator z `004`.
 3. Dodać pięć powyższych `QuestDef` do statycznego authored setu.
 4. Dodać testy contentu, outcomes, prerequisites i exact-once.
 5. Zaktualizować canonical docs/vision.
