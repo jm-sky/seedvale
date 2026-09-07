@@ -12,7 +12,7 @@ import { isPlanFile, relativePath } from './utils.js'
 
 const STATUS = /^\*\*Status:\*\*\s*`([^`]+)`/m
 const DOMAIN = /^\*\*Domain:\*\*\s*`([^`]+)`/m
-const VERIFICATION_MAX_AGE_DAYS = 7
+const VERIFICATION_MAX_AGE_DAYS = 5
 
 type DoneRecord = {
   plan: string

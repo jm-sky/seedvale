@@ -424,8 +424,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/groundFog.ts`
 
-- `createGroundFog` — function — line 67
-- `GroundFogSystem` — type — line 61
+- `createGroundFog` — function — line 191
+- `GroundFogSystem` — type — line 177
 
 ## `world/helperDeliveryHooks.ts`
 

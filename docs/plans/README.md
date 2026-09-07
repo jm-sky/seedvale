@@ -34,9 +34,10 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------- | --------------------------------------------------------------------- | --- | ------ | --------------- |
 | `2026-08-13--093--quests-v3-world-problems-reputation.md` | Etap H: drzewa/kopanie + bandyci                                      | 🔴  | XL     | ~~015~~ ~~018~~ |
 | `2026-08-17--149--shader-program-first-use-hitch.md`      | Phase C: `Green` / `MI_WindowGlass` / `Wood`                          | 🔴  | M/L    | -               |
-| `world-terrain-007-underground-caves.md`                  | Faza 0-3 done (domain/generator/lifecycle/presentation/movement/collision); Faza 4 fauna/loot/persistence deferred — see plan's "Implementation status" | 🔴  | L      | ~~097~~ ~~125~~ |
-| `world-terrain-010-waterways-and-vegetation.md`         | Phases 1/3/4/5/6/7 done (canonical river cross-section, riparian + lily + reed-cluster + seaweed vegetation); Phases 2/8/9 deferred — see plan's "Implementation status" | 🟡  | M      | -               |
-| `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | Added row count       | 🟡 | S      | -      |
+| `world-terrain-007-underground-caves.md`                  | Faza 4 fauna/loot/persistence deferred                                | 🔴  | L      | ~~097~~ ~~125~~ |
+| `world-terrain-008-underground-caves-v2.md`               | -                                                                     | 🟡  | XL     | -      |
+| `world-terrain-010-waterways-and-vegetation.md`           | Phases 2/8/9 deferred — see plan's "Implementation status"            | 🟡  | M      | -      |
+| `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | Added row count                                        | 🟡  | S      | -      |
 
 ---
 
@@ -48,6 +49,17 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `ui-input-011-new-game-setup-on-empty-save-state.md`                     | -       | 🔴 | S      | -      |
 | 💡 `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
+| 💡 `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
+| 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
+| 💡 `items-player-002-food-provenance-freshness-and-storage.md`              | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
+| 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
+| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
+| 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
+| 💡 `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
+| ◼️ `quests-progression-002-quest-outcomes-rewards-and-consequences.md`      | -       | 🔴 | M      | quests-progression-001 |
+| ◼️ `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
+| ◼️ `quests-progression-004-quest-availability-and-prerequisites.md`         | -       | 🔴 | S      | quests-progression-002 |
+| ◼️ `quests-progression-005-authored-rpg-quests.md`                          | -       | 🔴 | L      | quests-progression-002, quests-progression-004 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                   | -       | 🟡 | M | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`      | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`            | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
@@ -55,9 +67,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -     | 🔴 | M      | settlements-npcs-015 |
 | ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`       | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                   | -       | 🟡 | L      | -       |
-| 💡 `items-player-002-food-provenance-freshness-and-storage.md`              | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-| 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
-| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                               | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                   | -       | 🟡 | M      | settlements-npcs-006 |
 | ◼️ `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
@@ -68,26 +77,17 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                                  | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | 010    |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | L      | ~~022~~ ~~031~~ |
-| 💡 `world-terrain-008-underground-caves-v2.md`                              | -       | 🟡 | XL     | -      |
-| ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -       |
-| ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -       |
-| 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
-| ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
-| 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
-| 💡 `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
-| 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
 | 💡 `npc-019-shared-spea-foundation-and-strength-driven-melee.md`            | -       | 🟡 | M      | ~~npc-001~~ |
 | ◼️ `npc-020-strength-driven-physical-work-and-human-carrying.md`            | -       | 🟡 | M      | npc-019 |
 | ◼️ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | 🟡 | M      | npc-019 |
-| 💡 `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
-| ◼️ `quests-progression-002-quest-outcomes-rewards-and-consequences.md`      | -       | 🔴 | M      | quests-progression-001 |
-| ◼️ `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
-| ◼️ `quests-progression-004-quest-availability-and-prerequisites.md`         | -       | 🔴 | S      | quests-progression-002 |
-| ◼️ `quests-progression-005-authored-rpg-quests.md`                          | -       | 🔴 | L      | quests-progression-002, quests-progression-004 |
 | ◼️ `npc-022-agility-driven-melee-recovery.md`                               | -       | 🟡 | S      | npc-019 |
 | ◼️ `npc-023-perception-driven-observation-and-information-levels.md`        | -       | 🟡 | M      | npc-019, fauna-017 |
 | ◼️ `npc-024-temporary-conditions-and-poisoning.md`                          | -       | 🟡 | M      | npc-019, world-017 |
 | ◼️ `npc-025-injury-severity-and-treatment-requirements.md`                  | -       | 🟡 | M      | npc-002, npc-019, npc-024 |
+| ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -       |
+| ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -       |
+| 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
+| ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 
 ---
 

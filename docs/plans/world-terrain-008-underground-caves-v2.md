@@ -1,7 +1,7 @@
 # Plan: Underground Caves V2
 
 **Created:** 2026-09-04  
-**Status:** `planned` 📋  
+**Status:** `in progress` 🔄
 **Type:** feature  
 **Priority:** medium · **Effort:** XL  
 **Depends on:** none  
