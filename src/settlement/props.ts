@@ -15,6 +15,7 @@ import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacem
 import { createPlacedContainerProp } from '../world/containerProp'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
+import { blacksmithYardGeometry } from './blacksmithYard'
 import { type CampfireFlame, createLitCampfireVisual, preloadCampfireTemplates } from './campfireProps'
 import { createBush, createCobblePlate, createTree } from './decorProps'
 import { cobbleCountForSize, type VillageSize, villageSizeConfig } from './families'
@@ -167,11 +168,13 @@ export type SettlementLandmarks = {
    *  decision). Built unconditionally, like well/garden/stockpile, whether
    *  or not this settlement's families happen to roll a trader. */
   market: THREE.Vector3
-  /** Blacksmith's `workplace` (`places.ts`'s `workplaceFor`) — anvil + grind
-   *  workbench (plan settlements-npcs-002), same "built unconditionally like
-   *  well/garden/stockpile/market" treatment regardless of whether this
-   *  settlement's families happen to roll a blacksmith. */
-  blacksmith: THREE.Vector3
+  /** Household-owned blacksmith workplaces (plan settlements-npcs-024 Stage
+   *  1) — zero, one or many, one per family index whose family contains a
+   *  blacksmith member (`places.ts`'s `workplaceFor` resolves each NPC's own
+   *  entry by `familyIndex`). Anvil + grind workbench (plan
+   *  settlements-npcs-002) are materialized in that family's own house yard;
+   *  no settlement-wide singleton, unlike well/garden/stockpile/market. */
+  blacksmithWorkplaces: BlacksmithWorkplace[]
   /** Foot positions for homes — same order as `houses` (compat for places/livestock). */
   homes: THREE.Vector3[]
   /** Per-house catalog identity for examine / debug (issue 018). */
@@ -235,6 +238,17 @@ export type SettlementLandPlot = {
   position: THREE.Vector3
   rotation: number
   price: number
+}
+
+/** One household's blacksmith workplace (plan settlements-npcs-024 Stage 1)
+ *  — anvil + grind workbench materialized in `familyIndex`'s own house yard,
+ *  `position` the NPC work/access anchor beside them (not either prop's
+ *  mesh center). */
+export type BlacksmithWorkplace = {
+  /** Owning family/home/household index — same index space as
+   *  `landmarks.homes`/`landmarks.houses`/`SettlementDef.families`. */
+  familyIndex: number
+  position: THREE.Vector3
 }
 
 export type SettlementTreeLandmark = {
@@ -654,6 +668,13 @@ export async function buildSettlementProps(
   plan?: VillagePlan,
   /** Optional coast samplers — skips palisade on beach / seaward entrances. */
   coast?: CoastalSamplers,
+  /** Family indices (into `SettlementDef.families`, same index space as
+   *  `landmarks.homes`/`landmarks.houses`) whose family contains a
+   *  blacksmith member — the static ownership source for household-owned
+   *  blacksmith workplaces (plan settlements-npcs-024 Stage 1). Derived by
+   *  the caller from already-generated family data; this module never rolls
+   *  or inspects roles itself. */
+  blacksmithFamilyIndices: readonly number[] = [],
 ): Promise<{
   group: THREE.Group
   landmarks: SettlementLandmarks
@@ -678,7 +699,7 @@ export async function buildSettlementProps(
     gardens: [],
     haySpots: [],
     market: new THREE.Vector3(),
-    blacksmith: new THREE.Vector3(),
+    blacksmithWorkplaces: [],
     homes: [],
     houses: [],
     trees: [],
@@ -840,29 +861,9 @@ export async function buildSettlementProps(
   group.add(marketBarrel)
   landmarks.market.set(marketX, sampleHeight(marketX, marketZ), marketZ)
 
-  // Blacksmith's forge (`landmarks.blacksmith`, see `places.ts`'s
-  // `workplaceFor`) — anvil + grind workbench (plan settlements-npcs-002),
-  // built unconditionally like well/garden/stockpile/market, whether or not
-  // this settlement's families happen to roll a blacksmith. Parked assets
-  // (`docs/assets/MODELS.md`) promoted to active use here.
-  const { x: forgeX, z: forgeZ } = placeFromLandmark(
-    site, undefined, -2, -5, sampleHeight, waterLevel, coreRandom,
-  )
-  const anvil = await loadPropOrFallback('/models/parked/anvil.glb', 0.75, () => createAnvil())
-  anvil.rotation.y = coreRandom() * Math.PI * 2
-  placeOnGround(anvil, forgeX, forgeZ, sampleHeight)
-  group.add(anvil)
-  const grindWorkbench = await loadPropOrFallback('/models/parked/workbench-grind.glb', 0.95, () => createGrindWorkbench())
-  grindWorkbench.rotation.y = coreRandom() * Math.PI * 2
-  placeOnGround(grindWorkbench, forgeX + 1, forgeZ + 0.4, sampleHeight)
-  group.add(grindWorkbench)
-  landmarks.blacksmith.set(forgeX, sampleHeight(forgeX, forgeZ), forgeZ)
-
-  // Notice board (plan npc-014) — built unconditionally like well/market/
-  // blacksmith, near the plaza. No dedicated notice-board asset exists yet;
-  // reuses the existing procedural signpost prop as a stand-in (same
-  // "procedural until a dedicated asset is authored" convention as the
-  // blacksmith's parked-asset comment above).
+  // Notice board (plan npc-014) — built unconditionally like well/market,
+  // near the plaza. No dedicated notice-board asset exists yet; reuses the
+  // existing procedural signpost prop as a stand-in.
   const { x: boardX, z: boardZ } = placeFromLandmark(
     site, undefined, 3.5, 3.5, sampleHeight, waterLevel, coreRandom,
     { x: marketX, z: marketZ, minDist: 3 },
@@ -1208,6 +1209,52 @@ export async function buildSettlementProps(
   const householdFoodVisuals: FoodStorageVisual[] = householdStoragePlacements.map((p) =>
     createFoodStorageVisual(group, { x: p.x, z: p.z }, sampleHeight),
   )
+
+  // Household-owned blacksmith workplace(s) (`landmarks.blacksmithWorkplaces`,
+  // see `places.ts`'s `workplaceFor`) — plan settlements-npcs-024 Stage 1:
+  // anvil + grind workbench (plan settlements-npcs-002) materialized only
+  // for the family indices `blacksmithFamilyIndices` says actually contain a
+  // blacksmith, anchored to that family's own house yard instead of an
+  // unconditional settlement-center singleton. Parked assets
+  // (`docs/assets/MODELS.md`) promoted to active use here.
+  for (const familyIndex of blacksmithFamilyIndices) {
+    const house = landmarks.houses[familyIndex]
+    if (!house) continue
+    const outwardAngle = Math.atan2(
+      house.position.z - clearings.core.z,
+      house.position.x - clearings.core.x,
+    )
+    const geometry = blacksmithYardGeometry(
+      { x: house.position.x, z: house.position.z },
+      house.footprintRadius,
+      outwardAngle,
+    )
+    // Own deterministic seed stream, isolated from `coreRandom` (plan
+    // settlements-npcs-024's yard-basis contract) so the presence/count of
+    // blacksmith households never shifts unrelated settlement prop rolls.
+    const yawRandom = createSeededRandom(seed ^ 0xb1acc17 ^ Math.imul(familyIndex + 1, 0x9e3779b9))
+
+    const anvil = await loadPropOrFallback('/models/parked/anvil.glb', 0.75, () => createAnvil())
+    anvil.rotation.y = yawRandom() * Math.PI * 2
+    placeOnGround(anvil, geometry.anvil.x, geometry.anvil.z, sampleHeight)
+    group.add(anvil)
+
+    const grindWorkbench = await loadPropOrFallback(
+      '/models/parked/workbench-grind.glb', 0.95, () => createGrindWorkbench(),
+    )
+    grindWorkbench.rotation.y = yawRandom() * Math.PI * 2
+    placeOnGround(grindWorkbench, geometry.workbench.x, geometry.workbench.z, sampleHeight)
+    group.add(grindWorkbench)
+
+    landmarks.blacksmithWorkplaces.push({
+      familyIndex,
+      position: new THREE.Vector3(
+        geometry.anchor.x,
+        sampleHeight(geometry.anchor.x, geometry.anchor.z),
+        geometry.anchor.z,
+      ),
+    })
+  }
 
   // Hay stacks near garden pads (plan 082 B / 095). Pickaxe is a one-time
   // stockpile pickup via item spawners (plan 090), not a decorative prop.

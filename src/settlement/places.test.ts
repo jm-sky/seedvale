@@ -1,7 +1,7 @@
 import { Object3D, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { CampfireFlame } from './campfireProps'
-import type { SettlementLandmarks, SettlementTreeLandmark } from './props'
+import type { BlacksmithWorkplace, SettlementLandmarks, SettlementTreeLandmark } from './props'
 import { homePlaceId, socialPlaceFor, workplaceFor } from './places'
 
 function makeTree(id: string, x: number, z: number): SettlementTreeLandmark {
@@ -24,7 +24,7 @@ function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): Settlement
     garden,
     gardens: [garden],
     market: new Vector3(4, 0, 4),
-    blacksmith: new Vector3(6, 0, 6),
+    blacksmithWorkplaces: [],
     homes: [],
     houses: [],
     trees: [],
@@ -40,50 +40,88 @@ function makeLandmarks(overrides: Partial<SettlementLandmarks> = {}): Settlement
 describe('workplaceFor', () => {
   it('farmer -> garden', () => {
     const landmarks = makeLandmarks()
-    expect(workplaceFor('s1', 'farmer', landmarks, 0)?.position).toBe(landmarks.garden)
+    expect(workplaceFor('s1', 'farmer', landmarks, 0, 0)?.position).toBe(landmarks.garden)
   })
 
   it('trader -> market', () => {
     const landmarks = makeLandmarks()
-    expect(workplaceFor('s1', 'trader', landmarks, 0)?.position).toBe(landmarks.market)
+    expect(workplaceFor('s1', 'trader', landmarks, 0, 0)?.position).toBe(landmarks.market)
   })
 
   it('guard -> well', () => {
     const landmarks = makeLandmarks()
-    expect(workplaceFor('s1', 'guard', landmarks, 0)?.position).toBe(landmarks.well)
+    expect(workplaceFor('s1', 'guard', landmarks, 0, 0)?.position).toBe(landmarks.well)
   })
 
   it('miner -> stockpile', () => {
     const landmarks = makeLandmarks()
-    expect(workplaceFor('s1', 'miner', landmarks, 0)?.position).toBe(landmarks.stockpile)
-  })
-
-  it('blacksmith -> anvil/grind workbench landmark', () => {
-    const landmarks = makeLandmarks()
-    expect(workplaceFor('s1', 'blacksmith', landmarks, 0)?.position).toBe(landmarks.blacksmith)
+    expect(workplaceFor('s1', 'miner', landmarks, 0, 0)?.position).toBe(landmarks.stockpile)
   })
 
   it('fisher -> dock when present, else falls back to well', () => {
     const withDock = makeLandmarks({ dock: new Vector3(9, 0, 9) })
-    expect(workplaceFor('s1', 'fisher', withDock, 0)?.position).toBe(withDock.dock)
+    expect(workplaceFor('s1', 'fisher', withDock, 0, 0)?.position).toBe(withDock.dock)
 
     const withoutDock = makeLandmarks()
-    expect(workplaceFor('s1', 'fisher', withoutDock, 0)?.position).toBe(withoutDock.well)
+    expect(workplaceFor('s1', 'fisher', withoutDock, 0, 0)?.position).toBe(withoutDock.well)
   })
 
   it('woodcutter -> round-robin tree, null if no trees', () => {
     const trees = [makeTree('t0', 0, 0), makeTree('t1', 5, 5)]
     const landmarks = makeLandmarks({ trees })
-    expect(workplaceFor('s1', 'woodcutter', landmarks, 0)?.position).toBe(trees[0]!.position)
-    expect(workplaceFor('s1', 'woodcutter', landmarks, 1)?.position).toBe(trees[1]!.position)
-    expect(workplaceFor('s1', 'woodcutter', landmarks, 2)?.position).toBe(trees[0]!.position)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 0, 0)?.position).toBe(trees[0]!.position)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 1, 0)?.position).toBe(trees[1]!.position)
+    expect(workplaceFor('s1', 'woodcutter', landmarks, 2, 0)?.position).toBe(trees[0]!.position)
 
-    expect(workplaceFor('s1', 'woodcutter', makeLandmarks(), 0)).toBeNull()
+    expect(workplaceFor('s1', 'woodcutter', makeLandmarks(), 0, 0)).toBeNull()
   })
 
   it('ids are namespaced by settlement id', () => {
     const landmarks = makeLandmarks()
-    expect(workplaceFor('village_a', 'guard', landmarks, 0)?.id).toBe('village_a:workplace:well')
+    expect(workplaceFor('village_a', 'guard', landmarks, 0, 0)?.id).toBe('village_a:workplace:well')
+  })
+
+  describe('blacksmith (household-owned, plan settlements-npcs-024 Stage 1)', () => {
+    it('scenario A — no blacksmith workplace anywhere -> null, no phantom Place', () => {
+      const landmarks = makeLandmarks()
+      expect(workplaceFor('s1', 'blacksmith', landmarks, 0, 0)).toBeNull()
+      expect(workplaceFor('s1', 'blacksmith', landmarks, 0, 1)).toBeNull()
+    })
+
+    it('scenario B — one blacksmith household resolves its own workplace, not a settlement-wide one', () => {
+      const workplace: BlacksmithWorkplace = { familyIndex: 1, position: new Vector3(11, 0, 11) }
+      const landmarks = makeLandmarks({ blacksmithWorkplaces: [workplace] })
+
+      expect(workplaceFor('s1', 'blacksmith', landmarks, 0, 1)?.position).toBe(workplace.position)
+      // A non-blacksmith household index resolves nothing, even though the
+      // settlement has a blacksmith workplace elsewhere.
+      expect(workplaceFor('s1', 'blacksmith', landmarks, 0, 0)).toBeNull()
+      expect(workplaceFor('s1', 'blacksmith', landmarks, 0, 2)).toBeNull()
+    })
+
+    it('scenario C — two blacksmith members in one household resolve the same stable Place id', () => {
+      const workplace: BlacksmithWorkplace = { familyIndex: 1, position: new Vector3(11, 0, 11) }
+      const landmarks = makeLandmarks({ blacksmithWorkplaces: [workplace] })
+
+      const first = workplaceFor('s1', 'blacksmith', landmarks, 0, 1)
+      const second = workplaceFor('s1', 'blacksmith', landmarks, 1, 1)
+      expect(first?.id).toBe(second?.id)
+      expect(first?.position).toBe(second?.position)
+    })
+
+    it('scenario D — two blacksmith households resolve distinct ids/positions, never the old singleton id', () => {
+      const w0: BlacksmithWorkplace = { familyIndex: 0, position: new Vector3(1, 0, 1) }
+      const w2: BlacksmithWorkplace = { familyIndex: 2, position: new Vector3(9, 0, 9) }
+      const landmarks = makeLandmarks({ blacksmithWorkplaces: [w0, w2] })
+
+      const place0 = workplaceFor('s1', 'blacksmith', landmarks, 0, 0)
+      const place2 = workplaceFor('s1', 'blacksmith', landmarks, 0, 2)
+      expect(place0?.position).toBe(w0.position)
+      expect(place2?.position).toBe(w2.position)
+      expect(place0?.id).not.toBe(place2?.id)
+      expect(place0?.id).not.toBe('s1:workplace:blacksmith')
+      expect(place2?.id).not.toBe('s1:workplace:blacksmith')
+    })
   })
 })
 

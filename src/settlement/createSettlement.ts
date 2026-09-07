@@ -376,6 +376,13 @@ export async function createSettlement(
   const roadSegments = def.isHome && roadCtx
     ? segmentsNear(site.x, site.z, localRadius * 2, roadCtx)
     : []
+  // Static ownership source for household-owned blacksmith workplaces (plan
+  // settlements-npcs-024 Stage 1) — derived from already-generated
+  // `def.families`, before any runtime `Household`/`NpcAgent` exists, same
+  // "families first" ordering the implementation notes call out.
+  const blacksmithFamilyIndices = def.families.flatMap((family, familyIndex) =>
+    family.members.some((m) => m.character.role === 'blacksmith') ? [familyIndex] : [],
+  )
   bootMark('buildSettlementProps')
   let propsResult: Awaited<ReturnType<typeof buildSettlementProps>>
   try {
@@ -399,6 +406,7 @@ export async function createSettlement(
             coastThreshold: roadCtx.region.coastThreshold,
           }
         : { sampleHeight, waterLevel },
+      blacksmithFamilyIndices,
     )
   } finally {
     bootMarkEnd('buildSettlementProps')
@@ -620,6 +628,7 @@ export async function createSettlement(
       home,
       household,
       member,
+      familyIndex,
       // Rest of this member's own family, by name — see `NpcAgent.familyMembers`'s
       // doc comment (dialogue-facing, not a live reference to their `NpcAgent`).
       familyMembers: family.members
@@ -632,8 +641,8 @@ export async function createSettlement(
   let agents: NpcAgent[]
   try {
   agents = await Promise.all(
-    flatMembers.map(async ({ home, household, member, familyMembers }, i) => {
-      const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
+    flatMembers.map(async ({ home, household, member, familyIndex, familyMembers }, i) => {
+      const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex)
       const npcId = `${def.id}:npc:${i}`
       const needOffset = i / Math.max(1, flatMembers.length - 1)
       // Deterministic max HP/stamina/vigor + base SPEA from sex + age (plan

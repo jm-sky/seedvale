@@ -1,7 +1,7 @@
 # Plan: Household-Owned Profession Workplaces
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `in progress` 🔄 — Stage 1 (household ownership + bounded placement) implemented; Stage 2 (profession-aware yard sizing) not started.
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-002~~ ~~settlements-npcs-011~~

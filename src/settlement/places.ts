@@ -102,8 +102,11 @@ export function socialPlaceFor(
  *   hunting expedition targets live fauna, not a fixed landmark (plan 178),
  *   so this only anchors the idle `work` stand/arrow-crafting stand, not
  *   where hunting itself happens.
- * - `blacksmith` → `landmarks.blacksmith` (anvil + grind workbench, plan
- *   settlements-npcs-002) — a real maintenance workplace, not a stand-in.
+ * - `blacksmith` → household-owned (plan settlements-npcs-024 Stage 1): the
+ *   `landmarks.blacksmithWorkplaces` entry owned by `homeIndex` (anvil +
+ *   grind workbench, plan settlements-npcs-002) — a real maintenance
+ *   workplace, not a stand-in. `null` when that family has no blacksmith
+ *   workplace (no blacksmith member, or `homeIndex` doesn't own one).
  *
  * Returns `null` only when the role's landmark genuinely doesn't exist for
  * this settlement (e.g. a `woodcutter` in a settlement with no trees yet).
@@ -113,10 +116,20 @@ export function workplaceFor(
   role: Role,
   landmarks: SettlementLandmarks,
   treeIndex: number,
+  /** The NPC's own family/home/household index (`createSettlement.ts`'s
+   *  `familyIndex`, same index space as `landmarks.homes`/`.houses`) — only
+   *  consulted for household-owned roles (currently just `blacksmith`).
+   *  Communal/world role mappings ignore it, same as they already ignore
+   *  `treeIndex` unless they're `woodcutter`. */
+  homeIndex: number,
 ): Place | null {
   switch (role) {
-    case 'blacksmith':
-      return { id: `${settlementId}:workplace:blacksmith`, type: 'workplace', position: landmarks.blacksmith }
+    case 'blacksmith': {
+      const workplace = landmarks.blacksmithWorkplaces.find((w) => w.familyIndex === homeIndex)
+      return workplace
+        ? { id: `${settlementId}:workplace:blacksmith:${homeIndex}`, type: 'workplace', position: workplace.position }
+        : null
+    }
     case 'farmer':
       return { id: `${settlementId}:workplace:garden`, type: 'workplace', position: landmarks.garden }
     case 'fisher':
