@@ -37,7 +37,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `world-terrain-007-underground-caves.md`                  | Faza 4 fauna/loot/persistence deferred                                | 🔴  | L      | ~~097~~ ~~125~~ |
 | `world-terrain-008-underground-caves-v2.md`               | -                                                                     | 🟡  | XL     | -      |
 | `world-terrain-010-waterways-and-vegetation.md`           | Phases 2/8/9 deferred — see plan's "Implementation status"            | 🟡  | M      | -      |
-| `ui-input-009-merchant-item-ownership-and-semantic-item-labels.md`       | Added row count                                        | 🟡  | S      | -      |
 
 ---
 
