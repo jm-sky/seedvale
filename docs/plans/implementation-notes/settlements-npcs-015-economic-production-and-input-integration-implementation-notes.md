@@ -1,154 +1,354 @@
 # Implementation Notes: Economic Production and Input Integration
 
 **Plan:** `settlements-npcs-015-economic-production-and-input-integration.md`  
-**Reviewed:** 2026-09-02  
+**Reviewed:** 2026-09-07  
 **Status:** `planned` 📋
 
 ## Review result
 
-Plan jest trafny, ale obecny kod ma dokładnie ten podział, który plan ma usunąć: `SettlementEconomy.produce()` → stock-only, a Hunter → `Inventory.applyRecipe()`. Nie próbować rozszerzać `SettlementEconomy.produce()` o logikę household; wspólnym miejscem powinien być mały executor/orchestrator nad istniejącymi storage owners.
+READY after this review.
 
-## 1. Najważniejsze aktualne punkty wejścia
+Current `main` already has the correct storage owners and NPC work seam; 015 should only replace the two recipe execution primitives with one synchronous transaction coordinator. Do not create a production manager, scheduler, reservation registry or new storage abstraction.
 
-- `src/economy/production.ts` — `ProductionDef`, wszystkie istniejące recipes oraz `produceFirstAvailableItemRecipe()`.
-- `src/economy/stock.ts` — `EconomicStock.applyRecipe()`; stock-only, all-or-nothing tylko w obrębie jednego stocku.
-- `src/economy/settlementEconomy.ts` — `SettlementEconomy.produce()` jest cienkim wrapperem na `stock.applyRecipe()`. Nie dodawać tu mixed-storage orchestration.
-- `src/economy/npcWork.ts` — `commitRoleWork()`, `commitWoodcutterDeposit()`, `commitHunterArrowProduction()`. To jest obecny adapter work → production i powinien pozostać miejscem integracji z NPC work.
-- `src/ai/NpcAgent.ts` — `beginIdle()` uruchamia realne profession-specific work przed fallbackowym `commitRoleWork()`; `beginArrowCrafting()` robi tylko gating/czas akcji, a właściwe zużycie robi `commitHunterArrowProduction()`.
-- `src/items/Inventory.ts` — `Inventory.applyRecipe()` jest istniejącym item-only primitive, ale nie nadaje się jako mixed transaction coordinator.
-- `src/settlement/household.ts` — `Household.items` jest authoritative concrete item storage; `Household.stock` praktycznie przechowuje tylko `wood`.
-- `src/economy/localExchange.ts` — istnieją atomic/revalidated claim helpers dla local exchange; można wykorzystać ich semantykę jako wzorzec, ale nie mieszać exchange z production.
+## 1. Exact files and symbols
 
-## 2. Istotna rozbieżność względem planu
+### Recipe model
 
-Plan opisuje `EconomicStock` i `Inventory` jako dwa adaptery jednego executora. To jest właściwy kierunek, ale nie należy tworzyć abstrakcji storage, która ukryje ownership.
+`src/economy/production.ts`
 
-Najprostszy kontrakt powinien przyjmować jawny context, np. settlement `EconomicStock`/economy oraz opcjonalny konkretny `Inventory` ownera, i wykonać recipe synchronicznie. Destination dla `outputs` pozostaje economic stock, a dla `itemOutputs` — przekazane `Inventory`. Nie wyszukiwać ownera w świecie.
+- `ProductionDef`
+  - `inputs: readonly StockAmount[]`
+  - `outputs: readonly StockAmount[]`
+  - `itemInputs?: readonly ItemAmount[]`
+  - `itemOutputs?: readonly ItemAmount[]`
+- `WOODCUTTING_PRODUCTION`
+- `FARMING_PRODUCTION`
+- `FISHING_PRODUCTION`
+- `MINING_PRODUCTION`
+- `ARROWS_FROM_BRANCH_PRODUCTION`
+- `ARROWS_FROM_BEAM_PRODUCTION`
+- `HUNTER_ARROW_PRODUCTIONS`
+- `produceFirstAvailableItemRecipe()` — current item-only execution path to collapse into the new shared executor.
+- `productionForRole()` — existing deterministic role lookup; do not replace it with a recipe registry.
 
-`ProductionDef` pozostaje source of truth. Nie zmieniać jego semantyki tylko po to, aby reprezentować storage.
+### Settlement stock owner
 
-## 3. Ważna pułapka w obecnych applyRecipe()
+`src/economy/stock.ts`
 
-Oba istniejące primitives mają ograniczenie, którego nowy executor nie może odziedziczyć:
+- `StockAmount`
+- `EconomicStock.query/add/remove/has/hasAll/applyRecipe`
 
-- `EconomicStock.applyRecipe()` najpierw robi `hasAll()`, potem kolejne `remove()`.
-- `Inventory.applyRecipe()` działa analogicznie.
+`EconomicStock` owns settlement bulk quantities inside `SettlementEconomy`. It is not an item inventory and should remain unaware of households.
 
-Przy zduplikowanym input kind, np. `wood × 2 + wood × 1` przy stanie `wood = 2`, walidacja może przejść, a drugi remove się nie uda. W stocku/itemach może to oznaczać częściową konsumpcję.
+### Settlement economy facade
 
-Executor powinien **najpierw agregować inputy po kind** albo walidować wymagany finalny total dla każdego kind. Nie zakładać, że istniejące `hasAll()` jest wystarczającą walidacją.
+`src/economy/settlementEconomy.ts`
 
-Dodatkowo invalid recipe powinien odrzucać co najmniej niepoprawne ilości (np. ujemne/NaN/Infinity) zanim nastąpi jakakolwiek mutacja.
+- `SettlementEconomy`
+- `createSettlementEconomy()`
+- `SettlementEconomy.produce(def)` — current stock-only wrapper around `stock.applyRecipe()`.
+- `SettlementEconomy.items` — settlement concrete-food `Inventory`; do not confuse it with general settlement bulk stock.
+- `snapshot()` — existing authoritative persistence/rebuild projection.
 
-## 4. Transaction boundary bez trzeciego storage
+Important: `SettlementEconomy` intentionally does not expose its private `EconomicStock`. Prefer a production context that can perform stock reads/mutations through the existing `SettlementEconomy.query/add/remove` facade unless a narrowly scoped internal helper is cleaner. Do not expose `EconomicStock` globally just to satisfy the executor.
 
-Nie dodawać persistent reservation store ani globalnego `ProductionManager` tylko na potrzeby tego planu.
+### Item owner
 
-W obecnym JS execution jest synchroniczny. Dla recipe work-level wystarczy:
+`src/items/Inventory.ts`
 
-1. validate recipe,
-2. resolve jawne sources/destinations,
-3. policzyć zagregowane wymagania,
-4. sprawdzić cały live state wszystkich sources,
-5. sprawdzić możliwość zapisania wszystkich outputs,
-6. dopiero wtedy wykonać synchroniczny commit.
+- `ItemAmount`
+- `Inventory.count/has/remove/add/canAdd`
+- `Inventory.maxWeight`, `maxSize`, `totalWeight()`, `totalSize()`
+- `Inventory.applyRecipe()` — current item-only primitive; not sufficient for mixed transactions.
 
-Dzięki temu mixed recipe może być atomowe bez wprowadzania asynchronicznego locka.
+`Inventory.add()` can fail on weight/size. Any transaction that consumes inputs before aggregate output-capacity preflight is incorrect.
 
-Jeżeli implementacja użyje helperów typu claim, nie wolno robić `claim stock → claim inventory → jeśli drugi fail, zostaw pierwszy claimed`. Potrzebny jest albo prawdziwy rollback, albo — preferowane tutaj — pełna walidacja + synchroniczny commit.
+### Household owner
 
-## 5. Output capacity jest częścią transakcji
+`src/settlement/household.ts`
 
-`Inventory.add()` może zwrócić `false` z powodu weight/size. Nowy executor nie może najpierw zużyć inputów, a dopiero potem odkryć, że output się nie mieści.
+- `Household.items` — authoritative concrete item storage for household goods such as branch/beam/arrow and future `iron_rod`.
+- `Household.stock` — household wood-only `EconomicStock`; do not treat it as a generic `EconomicKind` source.
+- `HouseholdRegistry` — settlement-manager lifetime registry; household state survives settlement stream-out/in.
 
-Przed commit sprawdzić zdolność destination do przyjęcia **łącznego finalnego outputu**, nie tylko każdego `add()` osobno. W szczególności dwa outputy mogą osobno wyglądać poprawnie, ale razem przekroczyć limit.
+### NPC work integration
 
-Dla obecnego `Household.items` limit jest `Infinity`, ale executor nie powinien zakładać tego na stałe.
+`src/economy/npcWork.ts`
 
-Nie używać `Inventory.applyRecipe()` jako finalnego mixed commit, bo ignoruje wynik `add()` i może skonsumować input bez utworzenia outputu.
+- `commitWoodcutterDeposit()`
+- `commitRoleWork()`
+- `commitHunterArrowProduction()`
+- `tryAdvanceDevelopment()`
 
-## 6. ProductionResult
+This file is the existing work-completion → economy mutation adapter layer. Integrate the shared executor here rather than adding production calls to `SettlementsManager` or a global tick.
 
-Wynik powinien być małym plain-data discriminated union, zgodnym z istniejącymi conventions. Potrzebne są przynajmniej rozróżnienia:
+`src/ai/NpcAgent.ts`
+
+- `beginIdle()` dispatches profession-specific real work before fallback role work.
+- `beginArrowCrafting()` owns gating/action timing; `commitHunterArrowProduction()` performs the mutation at completion.
+
+Do not move recipe semantics or transaction code into `NpcAgent`.
+
+### Resource kinds
+
+`src/economy/kinds.ts`
+
+- `EconomicKind = 'coal' | 'copper_ore' | 'food' | 'gold' | 'iron' | 'water' | 'wood'`
+
+`EconomicKind` is deliberately distinct from `ItemKind`. `iron`/`coal` are settlement-level raw stock; future `iron_rod` is a concrete item and belongs in an `Inventory`.
+
+## 2. Ownership / lifecycle contract
+
+Authoritative runtime ownership is already established:
+
+```text
+SettlementsManager
+  ├─ EconomyRegistry
+  │    └─ SettlementEconomy
+  └─ HouseholdRegistry
+       └─ Household
+```
+
+Both registries survive settlement streaming. Their snapshots are also the existing carry/persistence path used across world rebuild/save-load; production itself must add no state alongside them.
+
+Therefore:
+
+- completed production persists only because it mutates the existing owners;
+- an in-progress validation/result/reservation must not be persisted;
+- a `WorldBundle` rebuild must not replay completed recipes;
+- executor lifetime should be stateless/module-level, not registered on `WorldBundle`.
+
+Do not add `ProductionState` to `SaveData`.
+
+## 3. Shared executor contract
+
+Recommended home: `src/economy/production.ts` or a focused sibling such as `src/economy/productionExecutor.ts` if separation materially improves clarity. Do not create a manager class.
+
+The executor should accept:
+
+- one `ProductionDef`,
+- one explicit settlement-stock owner when stock inputs/outputs are present,
+- one explicit item `Inventory` when item inputs/outputs are present.
+
+No source discovery.
+
+The caller resolves ownership before execution. For 016 that means:
+
+```text
+stock source/destination = current settlement's SettlementEconomy
+item destination         = Blacksmith's Household.items
+```
+
+For Hunter:
+
+```text
+stock owner = absent
+item owner  = Hunter household.items
+```
+
+A recipe requiring a category whose owner is absent fails as unavailable destination/source with zero mutation.
+
+## 4. Atomicity — close the design here
+
+Do not implement production reservations/claims/locks in V1.
+
+Current execution is synchronous on the JS thread. The transaction boundary should be:
+
+1. validate recipe structure/amounts,
+2. aggregate each input/output list by kind,
+3. validate required context owners,
+4. read current live source quantities,
+5. preflight all outputs against the final post-consumption destination state,
+6. perform all mutations synchronously with no callback/await between first and last mutation,
+7. return plain-data `ProductionResult`.
+
+This is sufficient for the actual concurrency model. The relevant stale-state case is two sequential execution attempts: the second reads state after the first commit.
+
+Do not use `SettlementEconomy.reserve()` as production transaction state. Its reservation map belongs to development/payment semantics and currently removes stock at reservation time.
+
+## 5. Existing `applyRecipe()` pitfall
+
+Both current recipe primitives pre-check entries individually and then mutate sequentially.
+
+Duplicate input kinds are unsafe without aggregation. Example:
+
+```text
+wood × 2
+wood × 1
+state: wood = 2
+```
+
+Entry-wise `hasAll()` can pass even though total required is 3; sequential removes can then partially consume.
+
+The new executor must aggregate totals by kind before checking or mutating. Apply the same aggregation to outputs for capacity preflight.
+
+Do not rely on `EconomicStock.applyRecipe()` or `Inventory.applyRecipe()` as the final mixed transaction primitive after 015.
+
+## 6. Recipe validation
+
+Before state mutation reject at least:
+
+- `NaN` / `Infinity` / `-Infinity`,
+- negative amounts,
+- missing required owner/context,
+- any shape that the executor cannot commit deterministically.
+
+Zero amounts may either normalize away or remain harmless no-ops, but choose one behavior in executor tests and keep it consistent. Do not let zero/invalid rows enter a partial mutation path.
+
+## 7. Inventory output preflight
+
+`Inventory.canAdd(kind, n)` checks the current inventory, not an arbitrary hypothetical set after multiple output additions/removals.
+
+A mixed transaction may consume item inputs first and thereby free weight/size before adding outputs. Conversely several outputs may collectively overflow capacity even if each one individually fits against the original state.
+
+Therefore preflight must model the final aggregate item delta, not simply call `canAdd()` independently for each output row.
+
+Minimum correct calculation can use existing public inventory facts:
+
+- current counts,
+- `totalWeight()` / `maxWeight`,
+- `totalSize()` / `maxSize`,
+- item weight/size definitions already used by `Inventory`.
+
+Prefer adding a small reusable Inventory preflight helper if needed rather than copying weight/size formula into economy code. Do not weaken `Inventory` encapsulation by reading private maps.
+
+`Household.items` is currently unbounded, but tests must include a bounded `Inventory` so this contract cannot regress.
+
+## 8. Mutation order after successful preflight
+
+Once all checks pass, there must be no expected failure point left in the commit sequence.
+
+Recommended commit order:
+
+1. remove aggregated stock inputs,
+2. remove aggregated item inputs,
+3. add aggregated stock outputs,
+4. add aggregated item outputs.
+
+If implementation keeps public mutation methods that return failure booleans, treat an unexpected failure after preflight as `transaction/revalidation-failure`; do not silently continue. Keep the code synchronous so no other actor can interleave between preflight and commit.
+
+Do not invent rollback snapshots unless a real remaining mutation can fail after a correct preflight; first eliminate that failure through preflight/helper contracts.
+
+## 9. `ProductionResult`
+
+Use a small discriminated union/plain object. It must provide enough information for callers to distinguish:
 
 - success,
-- blocked/missing-input,
-- invalid-recipe,
-- unavailable-destination,
-- transaction/revalidation failure.
+- missing/insufficient input,
+- invalid recipe,
+- missing/incompatible owner/destination,
+- unexpected transaction/revalidation failure.
 
-Nie zwracać wyjątków jako normalnego sygnału braku surowców.
+A useful result may include recipe id and missing kind/category, but do not turn it into production history or demand state.
 
-Dla Huntera obecne API zwraca `ProductionDef | null`; można zachować ten prosty adapter na zewnątrz, jeśli ogranicza to zmianę call sites, ale wewnętrzny executor powinien już zwracać jawny result.
+Downstream 017 needs a stable blocked-by-input signal. It does not need failed-attempt persistence from 015.
 
-## 7. Hunter — zachować istniejącą semantykę
+## 10. Hunter migration
 
-`HUNTER_ARROW_PRODUCTIONS` musi pozostać w tej samej kolejności: branch przed beam.
+Preserve exactly:
 
-Obecne zachowanie:
-- 1 branch → 1 arrow,
-- 1 beam → 8 arrows,
-- cap 24 jest tylko progiem rozpoczęcia kolejnej produkcji,
-- recipe działa na `household.items`,
-- żadnego `SettlementEconomy` dla branch/beam/arrow.
+- `HUNTER_ARROW_PRODUCTIONS` order: branch before beam,
+- branch recipe: `1 branch → 1 arrow`,
+- beam recipe: `1 beam → 8 arrows`,
+- arrow stock cap = start threshold only,
+- storage owner = `Household.items`,
+- mutation happens in existing completion callback via `commitHunterArrowProduction()`.
 
-Nie dodawać Hunterowi ekonomicznego wood conversion. Wspólny executor ma tylko zastąpić item-only execution, nie zmienić recipe.
+`produceFirstAvailableItemRecipe()` can become a compatibility wrapper that calls the shared executor for each def in priority order. Prefer this minimal blast radius if it avoids touching unrelated Hunter decision code.
 
-`beginArrowCrafting()` nadal powinien robić tylko decyzję/gating i rozpoczęcie action; mutation ma nastąpić w istniejącym `onComplete`.
+## 11. Existing stock-only production
 
-## 8. NPC work / fallback
+`SettlementEconomy.produce()` can remain for compatibility, but it should become a thin stock-only adapter to shared execution rather than owning independent recipe semantics.
 
-Nie tworzyć drugiego schedulera produkcji.
+Do not change `SettlementEconomy` into a mixed-storage coordinator and do not add household references to it.
 
-`NpcAgent.beginIdle()` już ma kolejność realnych zawodowych operacji → fallback `work` → `commitRoleWork()`. Nowy executor powinien być wywoływany przez istniejące `npcWork.ts` adapters, a nie bezpośrednio z globalnego update loop.
+`commitRoleWork()` should keep using the same role/work dispatch. Note that current farmer/fisher/miner placeholder `ProductionDef`s are empty no-ops because their real profession flows live elsewhere; 015 must not reinterpret those as real production content.
 
-Uwaga: obecne `commitRoleWork()` dla Farmer/Fisher/Miner jest fallbackiem/no-op dla profesji, które mają własne realne flows. Nie próbować automatycznie zamienić każdego role work w production.
+`commitWoodcutterDeposit()` remains tied to successful tree-harvest/deposit action. Never move wood minting back to generic role work.
 
-## 9. 014 i ownership
+## 12. Local exchange / transport boundary
 
-Plan 014 jest nadal oznaczony jako `planned` w `docs/plans/README.md`, mimo że jego implementation notes i aktualny codebase pokazują już local-goods claim/delivery mechanisms. Dla 015 źródłem prawdy jest kod.
+`src/economy/localExchange.ts` already contains claim/revalidation semantics for moving goods, but that subsystem owns exchange/logistics behavior, not recipe transactions.
 
-Szczególnie:
-- `Household.items` = konkretne itemy gospodarstwa,
-- `Household.stock` = scalar wood,
-- `SettlementEconomy.items` = settlement food,
-- `SettlementEconomy.stock` = settlement bulk economic resources.
+Reuse only conceptual patterns or small neutral helpers if genuinely shared. Do not make production depend on Trader activity, exchange reservations or physical transport.
 
-Nie traktować `Household.stock` jako źródła dowolnego `StockAmount`; `StockAmount.kind` odnosi się do `EconomicKind`, a household storage ma własny ograniczony ownership model.
+Production receives already-resolved owners. Missing input means blocked.
 
-## 10. Testy — najcenniejsze przypadki
+## 13. Downstream contracts
 
-Rozszerzyć istniejące `src/economy/production.test.ts` / `npcWork.test.ts` lub dodać mały test executora.
+### 016 — First processing chain / Blacksmith
 
-Najważniejsze testy poza prostym happy path:
+015 must leave no architectural decision for 016 around execution:
 
-- duplicate input kind nie powoduje partial consume,
-- mixed stock + inventory przy braku któregokolwiek inputu pozostawia oba źródła bez zmian,
-- output destination rejection pozostawia inputy bez zmian,
-- dwa outputy respektują łączny limit Inventory,
-- drugi producer po pierwszym nie może ponownie zużyć tego samego inputu,
-- stale state jest sprawdzany tuż przed commit,
-- output jest tworzony dokładnie raz.
+```text
+ProductionDef:
+  inputs      iron × 2, coal × 1
+  itemOutputs iron_rod × 1
 
-Nie testować concurrency jako prawdziwych równoległych JS threads — w tym modelu istotna jest revalidation między osobnymi synchronicznymi execution calls.
+context:
+  SettlementEconomy = stock owner
+  Blacksmith Household.items = item owner
+```
 
-## 11. Minimalny kierunek implementacji
+016 only needs to define recipe content and wire the existing Blacksmith work completion to the executor. It must not add a Blacksmith-specific transaction helper.
 
-Sugerowana kolejność:
+### 017 — Production demand / economic pressures
 
-1. ustalić mały `ProductionExecutor` + context/source types,
-2. dodać validation/agregację inputów i destination preflight,
-3. zaimplementować synchroniczny all-or-nothing commit dla stock-only,
-4. dodać item-only przez ten sam executor,
-5. dodać mixed transaction,
-6. przełączyć `SettlementEconomy.produce()` / `commitRoleWork()` tam, gdzie nie zmienia to ownership,
-7. przełączyć Huntera przez wspólny path,
-8. usunąć/ograniczyć stare równoległe execution paths dopiero po zachowaniu testów.
+015 exposes blocked outcome only. 017 decides whether repeated/persistent shortage becomes an existing Problem/Pressure. 015 does not own shortage history, timers, pressure or AI persistence.
 
-Nie rozszerzać zakresu na Blacksmith/Carpenter, processing chains, production pressure, transport ani redesign trade.
+## 14. Performance / off-screen
 
-## 12. JSDoc / preflight
+No recurring scan is needed.
 
-Dla nowego publicznego executora i istotnych typów dodać JSDoc z `@domain settlements-npcs`, aby mechanizm był łatwy do odnalezienia przez preflight.
+One execution is O(recipe rows + distinct kinds) against already-known owners. It should run only on work completion or an explicit caller action.
 
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+No camera/player distance checks belong in the executor. Off-screen/hybrid work that reaches the same completion seam must produce the same deterministic stock/item mutation.
+
+No Web Worker is justified for this work.
+
+## 15. Tests with highest value
+
+Prefer a focused new executor test file plus regressions in existing production/npcWork tests.
+
+Required cases:
+
+- stock-only success/failure,
+- item-only success/failure,
+- mixed stock→item success,
+- mixed missing stock leaves item owner unchanged,
+- mixed missing item input leaves stock unchanged,
+- duplicate stock input kind aggregates correctly,
+- duplicate item input kind aggregates correctly,
+- duplicate outputs aggregate correctly,
+- invalid quantities cause zero mutation,
+- missing context owner causes zero mutation,
+- combined bounded-Inventory outputs reject before input consumption,
+- item inputs freeing capacity are included in final-capacity calculation,
+- second sequential execution revalidates and cannot consume the same source twice,
+- output exactly once,
+- Hunter branch-before-beam behavior unchanged,
+- `commitWoodcutterDeposit()` and `commitRoleWork()` regressions,
+- `SettlementEconomy.produce()` regression if retained.
+
+Do not write thread/concurrent-worker tests for this transaction model.
+
+## 16. Minimal implementation order
+
+1. Add/define `ProductionResult` and explicit execution context.
+2. Add recipe normalization/validation + aggregation helpers.
+3. Add Inventory final-delta capacity preflight helper if needed.
+4. Implement shared synchronous executor.
+5. Route stock-only `SettlementEconomy.produce()` through it or an equivalent shared primitive.
+6. Route `produceFirstAvailableItemRecipe()` / Hunter through it.
+7. Keep `npcWork.ts` as the work-completion seam.
+8. Run targeted executor, Inventory, production and npcWork tests, then typecheck/build as appropriate.
+
+No Blacksmith recipe/content, pressure system, transport, profession redesign or unrelated economy refactor in this plan.
+
+## True open questions / blockers
+
+None found for 015 on current `main`.
+
+The only local implementation choice intentionally left open is file placement/name for the stateless executor and exact discriminant names in `ProductionResult`; ownership, transaction semantics, lifecycle, integration seam and downstream contract are closed.
+
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
