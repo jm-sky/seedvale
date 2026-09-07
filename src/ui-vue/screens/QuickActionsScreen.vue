@@ -155,6 +155,7 @@ onUnmounted(() => {
 type Action = {
   label: string
   cost: string
+  disabled?: boolean
   onClick: () => void
 }
 
@@ -187,33 +188,16 @@ const terrainActions: Action[] = [
 // items-player-015).
 const buildActions = computed<Action[]>(() => {
   const list: Action[] = []
-  if (ui.quickActions.hasChest) {
-    list.push({ label: 'Postaw skrzynię', cost: '1× skrzynia', onClick: () => startPlacementPreview('chest') })
-  }
-  if (ui.quickActions.hasTent) {
-    list.push({ label: 'Rozstaw namiot', cost: '1× namiot', onClick: () => startPlacementPreview('tent') })
-  }
-  if (ui.quickActions.fireAvailability.buildSimpleFire.available) {
-    list.push({ label: 'Zbuduj ognisko', cost: formatCostItems(FIRE_COST_ITEMS.buildSimpleFire), onClick: () => startPlacementPreview('fireSimple') })
-  }
-  if (ui.quickActions.fireAvailability.buildFirePit.available) {
-    list.push({ label: 'Zbuduj palenisko', cost: formatCostItems(FIRE_COST_ITEMS.buildFirePit), onClick: () => startPlacementPreview('firePit') })
-  }
-  if (ui.quickActions.fireAvailability.buildWoodPile.available) {
-    list.push({ label: 'Zbuduj stos drewna', cost: formatCostItems(FIRE_COST_ITEMS.buildWoodPile), onClick: () => startPlacementPreview('firePile') })
-  }
-  if (ui.quickActions.hasWoodenTorch) {
-    list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch') })
-  }
-  if (ui.quickActions.hasPalisadeMaterial) {
-    list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade') })
-  }
-  if (ui.quickActions.hasBedrollMaterial) {
-    list.push({ label: 'Rozłóż posłanie', cost: '3× skóra', onClick: () => startPlacementPreview('bedroll') })
-  }
-  if (ui.quickActions.hasPlatformMaterial) {
-    list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform') })
-  }
+
+  list.push({ label: 'Postaw skrzynię', cost: '1× skrzynia', onClick: () => startPlacementPreview('chest'), disabled: !ui.quickActions.hasChest })
+  list.push({ label: 'Rozstaw namiot', cost: '1× namiot', onClick: () => startPlacementPreview('tent'), disabled: !ui.quickActions.hasTent })
+  list.push({ label: 'Zbuduj ognisko', cost: formatCostItems(FIRE_COST_ITEMS.buildSimpleFire), onClick: () => startPlacementPreview('fireSimple'), disabled: !ui.quickActions.fireAvailability.buildSimpleFire.available })
+  list.push({ label: 'Zbuduj palenisko', cost: formatCostItems(FIRE_COST_ITEMS.buildFirePit), onClick: () => startPlacementPreview('firePit'), disabled: !ui.quickActions.fireAvailability.buildFirePit.available })
+  list.push({ label: 'Zbuduj stos drewna', cost: formatCostItems(FIRE_COST_ITEMS.buildWoodPile), onClick: () => startPlacementPreview('firePile'), disabled: !ui.quickActions.fireAvailability.buildWoodPile.available })
+  list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch'), disabled: !ui.quickActions.hasWoodenTorch })
+  list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade'), disabled: !ui.quickActions.hasPalisadeMaterial })
+  list.push({ label: 'Rozłóż posłanie', cost: '3× skóra', onClick: () => startPlacementPreview('bedroll'), disabled: !ui.quickActions.hasBedrollMaterial })
+  list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform'), disabled: !ui.quickActions.hasPlatformMaterial })
 
   list.push({ label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell })
   list.push({ label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden })
@@ -226,7 +210,10 @@ const buildActions = computed<Action[]>(() => {
   // "no cost up front" shape as "Zleć budowę" — `openHireHelp` itself tells
   // the player when there is nothing eligible to hire help for.
   list.push({ label: 'Zleć pomoc', cost: '', onClick: hireHelp })
+
   return list
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .sort((a, b) => (a.disabled ? 1 : b.disabled ? -1 : 0))
 })
 
 const CROP_SEED_LABEL: Record<CropId, string> = {
@@ -344,6 +331,7 @@ const categories = computed(() => (
         :key="category.id"
         :label="CATEGORY_LABEL[category.id]"
         :icon="category.icon"
+        :disabled="!category.visible"
         @click="selectQuickActionsCategory(category.id)"
       />
     </QuickActionsGroup>
@@ -367,6 +355,7 @@ const categories = computed(() => (
           :key="action.label"
           :label="action.label"
           :cost="action.cost"
+          :disabled="action.disabled"
           @click="action.onClick"
         />
       </QuickActionsGroup>
@@ -392,6 +381,7 @@ const categories = computed(() => (
           :key="action.label"
           :label="action.label"
           :cost="action.cost"
+          :disabled="action.disabled"
           @click="action.onClick"
         />
       </QuickActionsGroup>
@@ -404,6 +394,7 @@ const categories = computed(() => (
           :key="action.label"
           :label="action.label"
           :cost="action.cost"
+          :disabled="action.disabled"
           @click="action.onClick"
         />
       </QuickActionsGroup>
@@ -416,6 +407,7 @@ const categories = computed(() => (
           :key="action.label"
           :label="action.label"
           :cost="action.cost"
+          :disabled="action.disabled"
           @click="action.onClick"
         />
       </QuickActionsGroup>
@@ -428,6 +420,7 @@ const categories = computed(() => (
           :key="action.label"
           :label="action.label"
           :cost="action.cost"
+          :disabled="action.disabled"
           @click="action.onClick"
         />
       </QuickActionsGroup>

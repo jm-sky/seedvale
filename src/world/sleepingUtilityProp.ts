@@ -68,6 +68,8 @@ export function createPlatformProp(): THREE.Group {
     }
   }
 
+  group.scale.setScalar(0.75)
+
   return group
 }
 
