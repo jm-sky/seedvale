@@ -30,6 +30,8 @@ Plan implementować po `quests-progression-002`–`004`:
 - reward scale, paid-content baseline i atomic final `gather_item` delivery z `003`,
 - `QuestPrerequisite` (`quest_outcome`, `relation`, `reputation`, `renown`) oraz quest-definition validation seam z `004`.
 
+`005` zawsze rozszerza validator należący do `004`; nie wykonuje ponownego reconu „czy validator istnieje” i nie tworzy alternatywnego seamu.
+
 Aktualny `main` podczas review jest jeszcze przed implementacją `002`; nazwy prywatnych helperów mogą się zmienić podczas realizacji zależności, ale powyższe kontrakty domenowe są wiążące.
 
 # Questline A — Zaginiona przesyłka
