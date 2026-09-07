@@ -16,6 +16,7 @@ import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quest
 import type { Reputation } from '../reputation/ReputationManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
+import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { QuickActionsCropSeeds, QuickActionsTraps, QuickActionsWorkContract, RestOutcome, RestVariant } from '../ui/createQuickActions'
 import type { ToastVariant } from '../ui/createToast'
 import type { TrapKind } from '../world/animalTraps'
@@ -345,7 +346,14 @@ type StatBar = { current: number, max: number }
  *  `HudState.playerNeeds`). The screen never mutates these directly; UI is a
  *  read-only layer over "Player state → Needs/Health → Character UI" so a
  *  later server-authoritative move doesn't have to unwind UI-owned state. */
-export type CharacterStats = { hp: StatBar, stamina: StatBar, vigor: StatBar, hunger: StatBar, thirst: StatBar }
+export type CharacterStats = {
+  hp: StatBar,
+  stamina: StatBar,
+  vigor: StatBar,
+  hunger: StatBar,
+  thirst: StatBar,
+  attributes: PhysicalAttributes,
+}
 /** Local settlement reputation/renown for the Character Screen (plan
  *  quests-progression-001) — the settlement "aktualnie istotny dla pozycji/
  *  kontekstu gracza", resolved by app code (never a UI-owned remembered
@@ -526,6 +534,7 @@ export const ui = reactive({
     thirst: { current: 100, max: 100 },
     reputation: null,
     badges: [],
+    attributes: { strength: 0, perception: 0, endurance: 0, agility: 0 },
   } as CharacterScreenState,
   skillsScreen: {
     open: false,
@@ -1138,13 +1147,19 @@ export function setCharacterStats(stats: CharacterStats): void {
     c.stamina.current === stats.stamina.current && c.stamina.max === stats.stamina.max &&
     c.vigor.current === stats.vigor.current && c.vigor.max === stats.vigor.max &&
     c.hunger.current === stats.hunger.current && c.hunger.max === stats.hunger.max &&
-    c.thirst.current === stats.thirst.current && c.thirst.max === stats.thirst.max
+    c.thirst.current === stats.thirst.current && c.thirst.max === stats.thirst.max &&
+    c.attributes.strength === stats.attributes.strength &&
+    c.attributes.perception === stats.attributes.perception &&
+    c.attributes.endurance === stats.attributes.endurance &&
+    c.attributes.agility === stats.attributes.agility
   ) return
+
   c.hp = stats.hp
   c.stamina = stats.stamina
   c.vigor = stats.vigor
   c.hunger = stats.hunger
   c.thirst = stats.thirst
+  c.attributes = stats.attributes
 }
 
 /** Pushed on demand — after a Hidden Find resolves, and once at startup —

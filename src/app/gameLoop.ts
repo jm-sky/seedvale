@@ -1558,6 +1558,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   player.mesh.position.z,
                   target.position.x,
                   target.position.z,
+                  player.attributes.agility,
                 )
                 if (result.started) {
                   playerCombat.enter()
@@ -1819,6 +1820,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         vigor: { current: player.needs.vigor.current, max: player.needs.vigor.max },
         hunger: { current: player.needs.hunger.current, max: player.needs.hunger.max },
         thirst: { current: player.needs.thirst.current, max: player.needs.thirst.max },
+        attributes: player.attributes,
       })
       // Sneak's `active` flag can flip outside the Skills screen's own
       // toggle (rest auto-deactivates it, `PlayerController.crouch`/

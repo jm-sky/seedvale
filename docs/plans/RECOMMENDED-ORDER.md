@@ -176,55 +176,51 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-26. `npc-022` — **Agility-driven melee recovery**  
-  🟡 `S` · **Score:**  23  
-   → **unlocks:** 0/0
-
-27. `fauna-013` — **Animal hand-feeding and human affinity**  
+26. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-28. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+27. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-29. `npc-020` — **Strength-driven physical work and human carrying**  
+28. `npc-020` — **Strength-driven physical work and human carrying**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-30. `npc-021` — **Endurance-driven stamina capacity and recovery**  
+29. `npc-021` — **Endurance-driven stamina capacity and recovery**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-31. `npc-023` — **Perception-driven observation and information levels**  
+30. `npc-023` — **Perception-driven observation and information levels**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-32. `world-terrain-015` — **Water Reflection Content Budget**  
+31. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-33. `fauna-007` — **Animal leading and cart harness**  
+32. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-34. `items-player-019` — **Player camp repair and sewing kit**  
+33. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-35. `tools-000` — **Weapon Browser — Observatory/Admin**  
+34. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-36. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
+35. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-37. `npc-004` — **Drzewo genealogiczne NPC**  
+36. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-38. `tools-006` — **tools-006--world-observatory.md**  
+37. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

@@ -29,8 +29,13 @@ export type MeleeAttackLifecycle = {
   /** Progress (0..1) within the current phase — for swing/visual sync. */
   phaseProgress: () => number
   /** Starts `windUp` if currently idle. Callers gate stamina/range/etc.
-   *  before calling — this only enforces "not already mid-swing". */
-  start: (config: MeleeConfig) => boolean
+   *  before calling — this only enforces "not already mid-swing". `config`
+   *  remains the source of truth for `windUp`/`hitWindow`/damage/range/
+   *  stamina cost and is what `update()` hands back at the `hitReady` edge;
+   *  `recoveryOverrideSec`, when given, replaces only the `recovery` phase's
+   *  duration (plan npc-022 — Agility-driven melee recovery) without
+   *  mutating/cloning `config` itself. */
+  start: (config: MeleeConfig, recoveryOverrideSec?: number) => boolean
   /** Advances the lifecycle by `dt`. Call once per update tick regardless of
    *  whether an attack is in flight. */
   update: (dt: number) => MeleeAttackTickResult
@@ -38,31 +43,36 @@ export type MeleeAttackLifecycle = {
   reset: () => void
 }
 
-function phaseDuration(state: MeleeState, config: MeleeConfig): number {
-  switch (state) {
-    case 'hitWindow': return config.hitWindow
-    case 'recovery': return config.recovery
-    case 'windUp': return config.windUp
-    default: return 0
-  }
-}
-
 export function createMeleeAttackLifecycle(): MeleeAttackLifecycle {
   let state: MeleeState = 'idle'
   let timer = 0
   let config: MeleeConfig | null = null
+  // Snapshot only — resolved once in `start()` and never recomputed mid-swing
+  // (plan npc-022). `null` means "use `config.recovery` unmodified".
+  let recoveryOverride: number | null = null
+
+  function phaseDuration(): number {
+    if (!config) return 0
+    switch (state) {
+      case 'hitWindow': return config.hitWindow
+      case 'recovery': return recoveryOverride ?? config.recovery
+      case 'windUp': return config.windUp
+      default: return 0
+    }
+  }
 
   return {
     state: () => state,
     isAttacking: () => state !== 'idle',
     phaseProgress: () => {
       if (!config) return 0
-      const duration = phaseDuration(state, config)
+      const duration = phaseDuration()
       return duration > 0 ? Math.min(1, timer / duration) : 1
     },
-    start(cfg) {
+    start(cfg, recoveryOverrideSec) {
       if (state !== 'idle') return false
       config = cfg
+      recoveryOverride = recoveryOverrideSec ?? null
       state = 'windUp'
       timer = 0
       return true
@@ -87,10 +97,11 @@ export function createMeleeAttackLifecycle(): MeleeAttackLifecycle {
           state = 'recovery'
           continue
         }
-        if (state === 'recovery' && timer >= config.recovery) {
+        if (state === 'recovery' && timer >= (recoveryOverride ?? config.recovery)) {
           timer = 0
           state = 'idle'
           config = null
+          recoveryOverride = null
           break
         }
         break
@@ -101,6 +112,7 @@ export function createMeleeAttackLifecycle(): MeleeAttackLifecycle {
       state = 'idle'
       timer = 0
       config = null
+      recoveryOverride = null
     },
   }
 }

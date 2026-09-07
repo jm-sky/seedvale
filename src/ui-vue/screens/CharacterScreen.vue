@@ -32,6 +32,17 @@ const rows = computed<StatRow[]>(() => {
   ]
 })
 
+const attributeRows = computed(() => {
+  const a = ui.characterScreen.attributes
+
+  return [
+    { key: 'strength', label: 'Siła', value: a.strength },
+    { key: 'perception', label: 'Percepcja', value: a.perception },
+    { key: 'endurance', label: 'Wytrzymałość', value: a.endurance },
+    { key: 'agility', label: 'Zręczność', value: a.agility },
+  ]
+})
+
 function ratio(row: StatRow): number { return row.max > 0 ? row.current / row.max : 0 }
 function isCritical(row: StatRow): boolean { return ratio(row) <= CRITICAL_RATIO }
 
@@ -76,7 +87,9 @@ const reputationRows = computed(() => {
               <span
                 v-if="isCritical(row)"
                 class="ml-1 text-[11px] font-normal uppercase tracking-wide"
-              >krytyczne</span>
+              >
+                krytyczne
+              </span>
             </span>
             <span class="text-xs opacity-70">{{ Math.round(row.current) }} / {{ Math.round(row.max) }}</span>
           </div>
@@ -84,6 +97,27 @@ const reputationRows = computed(() => {
             <div
               class="h-full rounded-full transition-[width]"
               :style="{ width: `${Math.round(ratio(row) * 100)}%`, background: isCritical(row) ? '#e05555' : row.color }"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3 mt-4 border-t border-white/40 pt-3">
+        <h2 class="text-sm font-semibold text-center">
+          Atrybuty
+        </h2>
+        <div
+          v-for="row in attributeRows"
+          :key="row.key"
+        >
+          <div class="mb-1 flex items-baseline justify-between text-sm">
+            <span>{{ row.label }}</span>
+            <span class="text-xs opacity-70">{{ Math.round(row.value * 100) }}</span>
+          </div>
+          <div class="h-2 overflow-hidden rounded-full bg-black/45">
+            <div
+              class="h-full rounded-full transition-[width]"
+              :style="{ width: `${Math.round(row.value * 100)}%`, background: '#2a8f58' }"
             />
           </div>
         </div>

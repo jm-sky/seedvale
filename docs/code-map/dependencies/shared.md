@@ -43,6 +43,7 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `settlement/npcPhysicalProfile.ts`
+- `ui-vue/store.ts`
 
 ## `shared/SettlementName.ts`
 

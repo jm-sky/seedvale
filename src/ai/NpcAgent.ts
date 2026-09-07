@@ -43,6 +43,7 @@ import {
   playNpcCombatDeath,
 } from '../audio/actionSounds'
 import { MELEE_CRITICAL_MULTIPLIER } from '../combat/criticalHit'
+import { resolveMeleeRecovery } from '../combat/meleeAgility'
 import {
   createMeleeAttackLifecycle,
   type MeleeAttackLifecycle,
@@ -64,7 +65,12 @@ import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
-import { generatePhysicalProfile, type PhysicalProfile, resolveHumanStrengthProfile } from '../settlement/npcPhysicalProfile'
+import {
+  generatePhysicalProfile,
+  type PhysicalProfile,
+  resolveHumanAgilityProfile,
+  resolveHumanStrengthProfile,
+} from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
@@ -1205,6 +1211,12 @@ export class NpcAgent {
    *  not re-rolled per attack. Threaded into `applyNpcMeleeHit()` for the
    *  shared melee Strength rule. */
   private readonly meleeStrength: number
+  /** This NPC's already-resolved/profiled human Agility (plan npc-022,
+   *  `npcPhysicalProfile.ts`'s `resolveHumanAgilityProfile()`) — resolved
+   *  once at construction, same idiom as `meleeStrength` above. Fed into
+   *  `combat/meleeAgility.ts::resolveMeleeRecovery()` when starting a melee
+   *  attack; only cadence (recovery), never damage/wind-up. */
+  private readonly meleeAgility: number
 
   private constructor(
     root: THREE.Object3D,
@@ -1268,6 +1280,7 @@ export class NpcAgent {
     this.household = household
     this.npcState = npcState
     this.meleeStrength = resolveHumanStrengthProfile(physicalProfile)
+    this.meleeAgility = resolveHumanAgilityProfile(physicalProfile)
     this.mining = mining
     this.workContracts = workContracts ?? null
     this.playerWells = playerWells ?? null
@@ -1883,7 +1896,7 @@ export class NpcAgent {
     if (inRange && this.combatAttack.state() === 'idle') {
       if (this.stamina.current >= weapon.melee.staminaCost) {
         drainStamina(this.stamina, weapon.melee.staminaCost)
-        this.combatAttack.start(weapon.melee)
+        this.combatAttack.start(weapon.melee, resolveMeleeRecovery(weapon.melee.recovery, this.meleeAgility))
         this.anim.playOnce('attackMelee')
       } else if (isNpcCombatDebugMode() && this.simClock - this.lastStaminaSkipLogSec > 1) {
         this.lastStaminaSkipLogSec = this.simClock

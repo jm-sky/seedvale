@@ -2,11 +2,12 @@ import type { NpcGender } from '../ai/characters'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import { createSeededRandom } from '../world/parseSeed'
 
-/** Plan npc-001/npc-019 — deterministic NPC physical-profile generation from
- *  `sex` + `age`. Pure and independent of `NpcAgent`/rendering: this module
- *  produces max HP/stamina/vigor (`docs/vision/npc-physical-state.md`'s
- *  "physical profile" boundary) plus the NPC's base SPEA `PhysicalAttributes`
- *  and human Strength profile resolution (`docs/world/human-strength-calibration.md`).
+/** Plan npc-001/npc-019/npc-022 — deterministic NPC physical-profile
+ *  generation from `sex` + `age`. Pure and independent of `NpcAgent`/
+ *  rendering: this module produces max HP/stamina/vigor
+ *  (`docs/vision/npc-physical-state.md`'s "physical profile" boundary) plus
+ *  the NPC's base SPEA `PhysicalAttributes` and human Strength/Agility
+ *  profile resolution (`docs/world/human-strength-calibration.md`).
  *  Build/appearance remain future extensions, out of scope here. */
 
 export const NPC_AGE_MIN = 0
@@ -209,6 +210,67 @@ export function strengthAgePotentialForAge(age: number): number {
   return ageMultiplierForAge(clamped) * JUVENILE_STRENGTH_SHAPE_SCALE
 }
 
+/**
+ * Human Agility age curve (plan npc-022) — deliberately independent from
+ * both `AGE_MULTIPLIER_ANCHORS` (HP/Stamina/Vigor capacity) and
+ * `STRENGTH_AGE_ANCHORS` (different shape/semantics): children develop
+ * toward adult coordination, young adults get a small peak, decline stays
+ * gradual through middle age and becomes clearer in old age. Deliberately
+ * modest — age influences individual Agility, it does not determine it.
+ */
+const AGILITY_AGE_ANCHORS: readonly [number, number][] = [
+  [8, 0.80],
+  [14, 0.94],
+  [20, 1.03],
+  [25, 1.05],
+  [35, 1.03],
+  [50, 0.97],
+  [65, 0.88],
+  [80, 0.75],
+  [100, 0.60],
+]
+
+function agilityAdultPotentialForAge(age: number): number {
+  const anchors = AGILITY_AGE_ANCHORS
+  if (age <= anchors[0]![0]) return anchors[0]![1]
+  for (let i = 1; i < anchors.length; i++) {
+    const [ageHi, potHi] = anchors[i]!
+    if (age > ageHi) continue
+    const [ageLo, potLo] = anchors[i - 1]!
+    const t = ageHi === ageLo ? 0 : (age - ageLo) / (ageHi - ageLo)
+    return potLo + (potHi - potLo) * t
+  }
+  return anchors[anchors.length - 1]![1]
+}
+
+/** Ages below the youngest documented Agility anchor (8) reuse the existing
+ *  development/life-stage growth *shape* (`ageMultiplierForAge`), rescaled
+ *  to land exactly on the age-8 Agility anchor — same explicit temporary
+ *  juvenile mapping idiom as `JUVENILE_STRENGTH_SHAPE_SCALE` above, not a
+ *  researched juvenile Agility curve. */
+const JUVENILE_AGILITY_SHAPE_SCALE = AGILITY_AGE_ANCHORS[0]![1] / ageMultiplierForAge(AGILITY_AGE_ANCHORS[0]![0])
+
+/** Agility-specific age/coordination factor, `0..~1` — see
+ *  `AGILITY_AGE_ANCHORS`/juvenile-shape doc comments above. Interpolated
+ *  deterministically; ages above the oldest anchor hold that anchor's value. */
+export function agilityAgePotentialForAge(age: number): number {
+  const clamped = clampAge(age)
+  if (clamped >= AGILITY_AGE_ANCHORS[0]![0]) return agilityAdultPotentialForAge(clamped)
+  return ageMultiplierForAge(clamped) * JUVENILE_AGILITY_SHAPE_SCALE
+}
+
+/**
+ * Resolves an NPC's current human Agility profile (plan npc-022): individual
+ * base SPEA roll + age/coordination potential — deliberately **no sex
+ * shift** (plan npc-022 explicitly excludes one without a separate
+ * system-level reason). Mirrors `resolveHumanStrengthProfile`'s "stable
+ * current base" semantics; temporary conditions are a later layer and are
+ * not applied here.
+ */
+export function resolveHumanAgilityProfile(profile: PhysicalProfile): number {
+  return clamp01(profile.attributes.agility * agilityAgePotentialForAge(profile.age))
+}
+
 /** Practical v1 human sex calibration (plan npc-019 §4,
  *  `docs/world/human-strength-calibration.md`) — a profile shift around the
  *  shared neutral human reference, not a runtime bonus and not something
@@ -258,10 +320,10 @@ export type PhysicalProfile = {
   readonly maxStamina: number
   readonly maxVigor: number
   /** Base SPEA (plan npc-019 §1/§3) — stable individual variation only, sex/
-   *  age-agnostic. `resolveHumanStrengthProfile()` resolves the melee-facing
-   *  human Strength profile from this plus `sex`/`age`; Perception/
-   *  Endurance/Agility are data-only until a later plan gives them a
-   *  consumer. */
+   *  age-agnostic. `resolveHumanStrengthProfile()` and
+   *  `resolveHumanAgilityProfile()` resolve the melee-facing human Strength/
+   *  Agility profiles from this plus `sex`/`age`; Perception/Endurance are
+   *  data-only until a later plan gives them a consumer. */
   readonly attributes: PhysicalAttributes
 }
 

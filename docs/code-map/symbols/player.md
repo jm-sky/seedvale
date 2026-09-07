@@ -67,17 +67,17 @@ Generated from exported TypeScript symbols.
 
 ## `player/playerMelee.ts`
 
-- `AttackRequestResult` — type — line 49
-- `COMBAT_TARGET_MEMORY` — const — line 27
-- `createPlayerMelee` — function — line 94
-- `FALLBACK_APPROACH_DISTANCE` — const — line 37
-- `LUNGE_STAMINA_COST` — const — line 34
-- `MAX_LUNGE_DISTANCE` — const — line 31
-- `meleeSwingAngle` — function — line 230
-- `MeleeTickResult` — type — line 22
-- `pickCombatTarget` — function — line 148
-- `PlayerMelee` — type — line 58
-- `rankCombatTargets` — function — line 186
+- `AttackRequestResult` — type — line 50
+- `COMBAT_TARGET_MEMORY` — const — line 28
+- `createPlayerMelee` — function — line 100
+- `FALLBACK_APPROACH_DISTANCE` — const — line 38
+- `LUNGE_STAMINA_COST` — const — line 35
+- `MAX_LUNGE_DISTANCE` — const — line 32
+- `meleeSwingAngle` — function — line 236
+- `MeleeTickResult` — type — line 23
+- `pickCombatTarget` — function — line 154
+- `PlayerMelee` — type — line 59
+- `rankCombatTargets` — function — line 192
 
 ## `player/PlayerNeeds.ts`
 

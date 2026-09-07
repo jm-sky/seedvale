@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   ageMultiplierForAge,
+  agilityAgePotentialForAge,
   generatePhysicalProfile,
   lifeStageForAge,
   NPC_AGE_MAX,
   NPC_AGE_MIN,
+  resolveHumanAgilityProfile,
   resolveHumanStrengthProfile,
   strengthAgePotentialForAge,
 } from './npcPhysicalProfile'
@@ -297,5 +299,80 @@ describe('base SPEA attributes (plan npc-019)', () => {
       expect(strengthAgePotentialForAge(0)).toBeGreaterThan(0)
       expect(strengthAgePotentialForAge(0)).toBeLessThan(strengthAgePotentialForAge(10))
       expect(strengthAgePotentialForAge(10)).toBeLessThan(strengthAgePotentialForAge(20))
+    })
+  })
+
+  describe('agilityAgePotentialForAge (plan npc-022)', () => {
+    it('matches the documented anchors', () => {
+      expect(agilityAgePotentialForAge(8)).toBeCloseTo(0.80, 5)
+      expect(agilityAgePotentialForAge(14)).toBeCloseTo(0.94, 5)
+      expect(agilityAgePotentialForAge(20)).toBeCloseTo(1.03, 5)
+      expect(agilityAgePotentialForAge(25)).toBeCloseTo(1.05, 5)
+      expect(agilityAgePotentialForAge(35)).toBeCloseTo(1.03, 5)
+      expect(agilityAgePotentialForAge(50)).toBeCloseTo(0.97, 5)
+      expect(agilityAgePotentialForAge(65)).toBeCloseTo(0.88, 5)
+      expect(agilityAgePotentialForAge(80)).toBeCloseTo(0.75, 5)
+      expect(agilityAgePotentialForAge(100)).toBeCloseTo(0.60, 5)
+    })
+
+    it('covers development (juveniles rise toward the age-8 anchor)', () => {
+      expect(agilityAgePotentialForAge(0)).toBeGreaterThan(0)
+      expect(agilityAgePotentialForAge(0)).toBeLessThan(agilityAgePotentialForAge(4))
+      expect(agilityAgePotentialForAge(4)).toBeLessThan(agilityAgePotentialForAge(8))
+    })
+
+    it('has a young-adult peak around 20-25 that exceeds the age-8/14 development values', () => {
+      expect(agilityAgePotentialForAge(25)).toBeGreaterThan(agilityAgePotentialForAge(14))
+      expect(agilityAgePotentialForAge(25)).toBeGreaterThan(agilityAgePotentialForAge(8))
+    })
+
+    it('declines gradually through middle age', () => {
+      expect(agilityAgePotentialForAge(35)).toBeGreaterThan(agilityAgePotentialForAge(50))
+      expect(agilityAgePotentialForAge(50)).toBeGreaterThan(agilityAgePotentialForAge(65))
+    })
+
+    it('declines more sharply in old age than in middle age', () => {
+      const middleAgeDrop = agilityAgePotentialForAge(35) - agilityAgePotentialForAge(50)
+      const oldAgeDrop = agilityAgePotentialForAge(65) - agilityAgePotentialForAge(80)
+      expect(oldAgeDrop).toBeGreaterThan(middleAgeDrop)
+    })
+
+    it('is independent of the generic HP/Stamina/Vigor age multiplier and the Strength age curve', () => {
+      let anyDiffersFromGeneric = false
+      let anyDiffersFromStrength = false
+      for (let age = 0; age <= 100; age++) {
+        if (Math.abs(agilityAgePotentialForAge(age) - ageMultiplierForAge(age)) > 1e-9) anyDiffersFromGeneric = true
+        if (Math.abs(agilityAgePotentialForAge(age) - strengthAgePotentialForAge(age)) > 1e-9) anyDiffersFromStrength = true
+      }
+      expect(anyDiffersFromGeneric).toBe(true)
+      expect(anyDiffersFromStrength).toBe(true)
+    })
+  })
+
+  describe('resolveHumanAgilityProfile (plan npc-022)', () => {
+    it('preserves 0..1 bounds across the full age range', () => {
+      for (let age = 0; age <= 100; age += 5) {
+        const profile = generatePhysicalProfile(age * 3 + 1, age % 2 === 0 ? 'male' : 'female', age)
+        const agility = resolveHumanAgilityProfile(profile)
+        expect(agility).toBeGreaterThanOrEqual(0)
+        expect(agility).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('applies no sex-dependent shift (same population mean for male/female at the same age)', () => {
+      const N = 400
+      let maleSum = 0
+      let femaleSum = 0
+      for (let seed = 0; seed < N; seed++) {
+        maleSum += resolveHumanAgilityProfile(generatePhysicalProfile(seed, 'male', 30))
+        femaleSum += resolveHumanAgilityProfile(generatePhysicalProfile(seed + 1_000_000, 'female', 30))
+      }
+      expect(maleSum / N).toBeCloseTo(femaleSum / N, 1)
+    })
+
+    it('is neutral individual variation only: an unmodified base Agility of 0.5 at the peak age stays close to the peak factor', () => {
+      const profile = generatePhysicalProfile(1, 'male', 25)
+      const neutralProfile = { ...profile, attributes: { ...profile.attributes, agility: 0.5 } }
+      expect(resolveHumanAgilityProfile(neutralProfile)).toBeCloseTo(0.5 * agilityAgePotentialForAge(25), 5)
     })
   })

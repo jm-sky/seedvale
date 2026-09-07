@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 - `combat/combatIntent.ts`
 - `combat/criticalHit.ts`
 - `combat/defenseResolver.ts`
+- `combat/meleeAgility.ts`
 - `combat/meleeAttack.ts`
 - `combat/projectile.ts`
 - `combat/rangedAttack.ts`

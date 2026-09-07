@@ -1,4 +1,5 @@
 import type { MeleeConfig } from '../items/itemCatalog'
+import { resolveMeleeRecovery } from '../combat/meleeAgility'
 import {
   createMeleeAttackLifecycle,
   type MeleeAttackTickResult,
@@ -66,9 +67,13 @@ export type PlayerMelee = {
    *  `started: false` without side effects when idle/stamina reject it —
    *  callers decide what feedback (if any) an ignored request deserves.
    *  Also applies the shared physical-effort Vigor cost once, for the
-   *  attack's own `windUp+hitWindow+recovery` duration at `moderate`
-   *  intensity (plan items-player-003 §10) — never for the lunge, which
-   *  already spends its own Stamina only. */
+   *  attack's own `windUp+hitWindow+recovery` *configured* duration at
+   *  `moderate` intensity (plan items-player-003 §10) — never for the lunge,
+   *  which already spends its own Stamina only, and never the Agility-
+   *  resolved recovery (plan npc-022 — Agility changes cadence, not Vigor
+   *  cost). `agility` resolves only the `recovery` phase's actual duration
+   *  via `combat/meleeAgility.ts::resolveMeleeRecovery()`; `windUp`/
+   *  `hitWindow`/damage/range/stamina cost stay exactly as `config` says. */
   requestAttack: (
     config: MeleeConfig,
     stamina: StaminaState,
@@ -78,6 +83,7 @@ export type PlayerMelee = {
     playerZ: number,
     targetX: number,
     targetZ: number,
+    agility: number,
   ) => AttackRequestResult
   /** Advances the lifecycle by `dt`. Call once per frame regardless of input. */
   update: (dt: number) => MeleeTickResult
@@ -99,7 +105,7 @@ export function createPlayerMelee(): PlayerMelee {
     state: lifecycle.state,
     isAttacking: lifecycle.isAttacking,
     phaseProgress: lifecycle.phaseProgress,
-    requestAttack(cfg, stamina, vigor, dayLengthSec, playerX, playerZ, targetX, targetZ) {
+    requestAttack(cfg, stamina, vigor, dayLengthSec, playerX, playerZ, targetX, targetZ, agility) {
       if (lifecycle.state() !== 'idle') return { started: false, moveX: 0, moveZ: 0 }
       if (stamina.current < cfg.staminaCost) return { started: false, moveX: 0, moveZ: 0 }
       drainStamina(stamina, cfg.staminaCost)
@@ -126,7 +132,7 @@ export function createPlayerMelee(): PlayerMelee {
         }
       }
 
-      lifecycle.start(cfg)
+      lifecycle.start(cfg, resolveMeleeRecovery(cfg.recovery, agility))
       return { started: true, moveX, moveZ }
     },
     update: lifecycle.update,

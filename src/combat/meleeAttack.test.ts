@@ -59,6 +59,70 @@ describe('createMeleeAttackLifecycle', () => {
     expect(lifecycle.state()).toBe('idle')
     expect(lifecycle.isAttacking()).toBe(false)
   })
+
+  describe('recovery override (plan npc-022 — Agility-driven melee recovery)', () => {
+    it('changes only the time spent in recovery, not windUp/hitReady timing', () => {
+      const shortRecovery = KNIFE.recovery * 0.5
+      const lifecycle = createMeleeAttackLifecycle()
+      lifecycle.start(KNIFE, shortRecovery)
+
+      const step = 0.001
+      let elapsed = 0
+      let hitReadyAt: number | null = null
+      let idleAt: number | null = null
+      const totalDuration = KNIFE.windUp + KNIFE.hitWindow + shortRecovery
+      while (elapsed < totalDuration + 0.05) {
+        const tick = lifecycle.update(step)
+        elapsed += step
+        if (tick.hitReady && hitReadyAt === null) hitReadyAt = elapsed
+        if (lifecycle.state() === 'idle' && idleAt === null) idleAt = elapsed
+      }
+
+      // hitReady still fires at the original, unmodified windUp — the
+      // override only ever affects the later recovery phase.
+      expect(hitReadyAt).not.toBeNull()
+      expect(hitReadyAt!).toBeCloseTo(KNIFE.windUp, 2)
+
+      // The overridden (shorter) recovery completes the attack well before
+      // the original `KNIFE.recovery` would have.
+      expect(idleAt).not.toBeNull()
+      expect(idleAt!).toBeCloseTo(totalDuration, 2)
+      expect(idleAt!).toBeLessThan(KNIFE.windUp + KNIFE.hitWindow + KNIFE.recovery)
+    })
+
+    it('reaches exactly one hitReady edge with a recovery override, same as without one', () => {
+      const lifecycle = createMeleeAttackLifecycle()
+      lifecycle.start(KNIFE, KNIFE.recovery * 1.2)
+      let hitCount = 0
+      let elapsed = 0
+      const dt = 0.01
+      while (elapsed < KNIFE.windUp + KNIFE.hitWindow + KNIFE.recovery * 1.2 + 0.05) {
+        const tick = lifecycle.update(dt)
+        if (tick.hitReady) hitCount++
+        elapsed += dt
+      }
+      expect(hitCount).toBe(1)
+      expect(lifecycle.state()).toBe('idle')
+    })
+
+    it('a large dt still cascades correctly through an overridden recovery duration', () => {
+      const shortRecovery = KNIFE.recovery * 0.5
+      const lifecycle = createMeleeAttackLifecycle()
+      lifecycle.start(KNIFE, shortRecovery)
+      const tick = lifecycle.update(KNIFE.windUp + KNIFE.hitWindow + shortRecovery + 1)
+      expect(tick.hitReady).toBe(true)
+      expect(lifecycle.state()).toBe('idle')
+    })
+
+    it('omitting the override behaves exactly like passing the config recovery', () => {
+      const lifecycle = createMeleeAttackLifecycle()
+      lifecycle.start(KNIFE)
+      lifecycle.update(KNIFE.windUp + KNIFE.hitWindow + KNIFE.recovery - 0.001)
+      expect(lifecycle.state()).toBe('recovery')
+      lifecycle.update(0.002)
+      expect(lifecycle.state()).toBe('idle')
+    })
+  })
 })
 
 describe('resolveMeleeHits', () => {

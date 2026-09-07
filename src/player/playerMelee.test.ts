@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MeleeConfig } from '../items/itemCatalog'
 import { COMBAT_TARGET_CONE_DOT } from '../app/interactables'
+import { MELEE_AGILITY_NEUTRAL } from '../combat/meleeAgility'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
 import { createVigorState } from '../shared/VigorState'
@@ -28,7 +29,7 @@ function attackNearbyTarget(
   config: MeleeConfig,
   stamina: StaminaState,
 ) {
-  return melee.requestAttack(config, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1)
+  return melee.requestAttack(config, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL)
 }
 
 const KNIFE = ITEM_CATALOG.knife.melee!
@@ -150,7 +151,7 @@ describe('createPlayerMelee gap close (plan 124 §3)', () => {
     const melee = createPlayerMelee()
     const stamina = createStaminaState(100)
     // Target 1m ahead, well within the knife's 1.6 range.
-    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1)
+    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -1, MELEE_AGILITY_NEUTRAL)
     expect(result.started).toBe(true)
     expect(result.moveX).toBe(0)
     expect(result.moveZ).toBe(0)
@@ -160,7 +161,7 @@ describe('createPlayerMelee gap close (plan 124 §3)', () => {
     const melee = createPlayerMelee()
     const stamina = createStaminaState(100)
     // Target 5m ahead (-Z), well beyond the knife's 1.6 range.
-    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -5)
+    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -5, MELEE_AGILITY_NEUTRAL)
     expect(result.started).toBe(true)
     expect(result.moveZ).toBeLessThan(0) // moves toward -Z, i.e. toward the target
     expect(Math.abs(result.moveZ)).toBeLessThanOrEqual(MAX_LUNGE_DISTANCE)
@@ -170,7 +171,7 @@ describe('createPlayerMelee gap close (plan 124 §3)', () => {
   it('never lunges further than MAX_LUNGE_DISTANCE even for a very distant target', () => {
     const melee = createPlayerMelee()
     const stamina = createStaminaState(100)
-    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -50)
+    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -50, MELEE_AGILITY_NEUTRAL)
     expect(Math.abs(result.moveZ)).toBeCloseTo(MAX_LUNGE_DISTANCE, 5)
   })
 
@@ -178,7 +179,7 @@ describe('createPlayerMelee gap close (plan 124 §3)', () => {
     const melee = createPlayerMelee()
     // Enough for the base attack, not enough for the lunge on top of it.
     const stamina = createStaminaState(KNIFE.staminaCost + LUNGE_STAMINA_COST - 1)
-    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -5)
+    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -5, MELEE_AGILITY_NEUTRAL)
     expect(result.started).toBe(true)
     expect(Math.abs(result.moveZ)).toBeLessThanOrEqual(FALLBACK_APPROACH_DISTANCE)
     // Only the base attack cost was drained — no lunge cost on top of it.
@@ -189,7 +190,7 @@ describe('createPlayerMelee gap close (plan 124 §3)', () => {
     const melee = createPlayerMelee()
     const stamina = createStaminaState(KNIFE.staminaCost)
     // Target 5m ahead (-Z); the target itself never moves.
-    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -5)
+    const result = melee.requestAttack(KNIFE, stamina, createVigorState(100), DAY_LENGTH_SEC, 0, 0, 0, -5, MELEE_AGILITY_NEUTRAL)
     expect(result.started).toBe(true)
     expect(Math.abs(result.moveZ)).toBeLessThanOrEqual(FALLBACK_APPROACH_DISTANCE)
     // Player only moved to (0, result.moveZ); the target at (0, -5) is still

@@ -55,6 +55,21 @@ Generated from TypeScript imports.
 - `combat/defenseResolver.test.ts`
 - `player/playerDamage.ts`
 
+## `combat/meleeAgility.test.ts`
+
+**Imports**
+
+- `combat/meleeAgility.ts`
+
+## `combat/meleeAgility.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `combat/meleeAgility.test.ts`
+- `player/playerMelee.test.ts`
+- `player/playerMelee.ts`
+
 ## `combat/meleeAttack.test.ts`
 
 **Imports**

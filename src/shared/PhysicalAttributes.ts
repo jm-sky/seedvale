@@ -7,8 +7,9 @@
  *  pool like `HealthState`/`StaminaState`. Must not know about combat, work,
  *  movement, species, UI, age, sex, injuries, illness or temporary
  *  conditions; those live in per-consumer profile/effective resolvers (see
- *  `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile` and
- *  `combat/meleeStrength.ts`).
+ *  `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile`/
+ *  `resolveHumanAgilityProfile` and `combat/meleeStrength.ts`/
+ *  `combat/meleeAgility.ts`).
  * @owns PhysicalAttributes
  */
 

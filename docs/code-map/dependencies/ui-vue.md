@@ -154,6 +154,7 @@ Generated from TypeScript imports.
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/settlementGenerator.ts`
+- `shared/PhysicalAttributes.ts`
 - `ui/createQuickActions.ts`
 - `ui/createToast.ts`
 - `world/animalTraps.ts`

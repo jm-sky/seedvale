@@ -1,7 +1,7 @@
 # Plan: Agility-driven melee recovery
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~npc-019~~

@@ -28,15 +28,21 @@ Generated from exported TypeScript symbols.
 - `ResolvedDefense` — type — line 16
 - `resolveDefense` — function — line 80
 
+## `combat/meleeAgility.ts`
+
+- `MELEE_AGILITY_NEUTRAL` — const — line 25
+- `meleeRecoveryMultiplier` — function — line 30
+- `resolveMeleeRecovery` — function — line 40
+
 ## `combat/meleeAttack.ts`
 
-- `createMeleeAttackLifecycle` — function — line 50
+- `createMeleeAttackLifecycle` — function — line 46
 - `MeleeAttackLifecycle` — type — line 26
 - `MeleeAttackTickResult` — type — line 18
-- `MeleeHitCandidate` — type — line 108
+- `MeleeHitCandidate` — type — line 120
 - `MeleeState` — type — line 16
-- `resolveMeleeHits` — function — line 119
-- `yawToward` — function — line 146
+- `resolveMeleeHits` — function — line 131
+- `yawToward` — function — line 158
 
 ## `combat/meleeStrength.ts`
 
