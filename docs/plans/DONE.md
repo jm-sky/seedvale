@@ -5,6 +5,7 @@
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
 | `world-017-contextual-river-water-safety`                              | —                   | 2026-09-07 13:55:31 | `world`          | npc-024-temporary-conditions-and-poisoning |
+| `world-017-contextual-river-water-safety`                              | —                   | 2026-09-07 13:55:31 | `world`          | npc-024-temporary-conditions-and-poisoning |
 | `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | —                   | `ui-input`       | —          |
 | `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | —                   | `ui-input`       | —          |
 | `ui-input-011-new-game-setup-on-empty-save-state`                      | 2026-09-07 12:11:01 | —                   | `ui-input`       | —          |
