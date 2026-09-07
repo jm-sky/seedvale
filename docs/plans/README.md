@@ -82,7 +82,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -       |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | ~~071~~, ~~069~~ |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
-| ◼️ `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`         | -       | 🟡 | M      | -      |
+| 💡 `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`         | -       | 🟡 | M      | -      |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 
 ---

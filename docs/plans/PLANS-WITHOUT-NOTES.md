@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-07 12:52:14  
+> Date: 2026-09-07 13:01:12  
 
 ## PLANS
 
@@ -21,7 +21,6 @@
 - `tools-000-weapon-browser-observatory.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `tools-007--mpfb2-npc-hero-character-pipeline.md`
-- `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`
 
 --------------------------------
 ## PROMPTS
@@ -507,37 +506,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-007--mpfb2-npc-hero-character-pipeline-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`
-
-Prompt:
-
-```
-Zrób review planu `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/ui-input-012-placement-preview-shapes-rotation-and-coverage.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/ui-input-012-placement-preview-shapes-rotation-and-coverage-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
