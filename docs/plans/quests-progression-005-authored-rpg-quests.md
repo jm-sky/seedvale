@@ -4,7 +4,7 @@
 **Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
-**Depends on:** quests-progression-002, quests-progression-004  
+**Depends on:** quests-progression-002, quests-progression-003, quests-progression-004  
 **Domain:** `quests-progression`  
 **Subdomains:** `quests` `relationships` `rewards`  
 **Tags:** `quests` `rpg` `story` `outcomes` `rewards`  
@@ -12,910 +12,300 @@
 
 ## Cel
 
-Dodać pierwszy właściwy pakiet ręcznie zaprojektowanych questów RPG, wykorzystujących istniejące systemy Seedvale zamiast kolejnej warstwy infrastruktury.
+Dodać pierwszy pakiet ręcznie zaprojektowanych questów RPG, wykorzystujących istniejące systemy Seedvale zamiast kolejnej warstwy infrastruktury.
 
-Questy mają pokazać, że system wspiera:
+Pakiet zawiera **3 historie / 5 `QuestDef`**:
 
-```text
-poznanie NPC
-→ problem / historia
-→ kilka etapów
-→ decyzja lub sposób rozwiązania
-→ różne outcomes
-→ reward
-→ relation / reputation / renown
-→ dalsze konsekwencje
-```
+1. `zaginiona-przesylka` — eksploracja i wybór komu zaufać,
+2. `sporne-drewno` + jeden z dwóch outcome-dependent follow-upów — lokalny konflikt,
+3. `dzik-przy-szlaku` — ważniejsza sprawa społeczności, odblokowana przez renown.
 
-Najważniejszym rezultatem planu jest **nowy gameplay i historie**, nie nowy framework.
+Implementator ma wdrożyć poniższy content, a nie ponownie projektować historie.
 
-## 1. Zakres contentu
+## Kontrakty zależności
 
-Dodać **3 authored RPG questlines**.
+Plan implementować po `quests-progression-002`–`004`:
 
-Każda powinna mieć własny charakter:
+- outcomes/rewards/consequences i `resolvedOutcomeId` z `002`,
+- reward scale i paid-content baseline z `003`,
+- `QuestPrerequisite` (`quest_outcome`, `relation`, `reputation`, `renown`) z `004`.
 
-1. **osobista historia NPC**,
-2. **konflikt / decyzja między ludźmi**,
-3. **większa sprawa dotycząca osady lub okolicy**.
-
-Łącznie celować w około:
-
-```text
-5–7 nowych QuestDef
-```
-
-ponieważ questline może składać się z 1–3 kolejnych questów.
-
-Nie robić kilkunastu prostych fetch questów.
-
-Lepiej:
-
-```text
-3 historie × kilka znaczących kroków
-```
-
-niż:
-
-```text
-15 niezależnych errands
-```
+Aktualny `main` podczas review jest jeszcze przed implementacją `002`; nazwy helperów mogą się zmienić podczas realizacji zależności, ale semantyka poniżej jest wiążąca.
 
 # Questline A — Zaginiona przesyłka
 
-## 2. Założenie
+## `zaginiona-przesylka`
 
-NPC powierza graczowi odnalezienie przesyłki / pakunku, który nie dotarł do osady.
+**Giver:** `Kasia` (`trader`). To lepiej odpowiada aktualnej roli niż pierwotnie proponowany Piotr.
 
-Historia wykorzystuje eksplorację i daje pierwszy rzeczywisty wybór dotyczący znalezionego dobra.
+### Przesyłka
 
-Preferowany giver:
+**Nie dodawać `sealed_package` jako `ItemKind`.**
 
-```text
-Piotr
-```
+Odnalezienie przesyłki jest stanem aktywnego questa po ukończeniu pierwszego stage. Nie tworzyć quest-item inventory, world-item spawnu ani specjalnej persistence tylko po to, by fizycznie nosić paczkę.
 
-jeżeli aktualna rola i dialogue tej postaci nadal pasują po reconie implementacyjnym.
+### Stages
 
-Nie tworzyć nowego NPC tylko dla questa.
+1. `{ type: 'interact_spawner', spawnerType: 'cave' }` — sprawdź jaskinię przy szlaku; stage completion oznacza odnalezienie przesyłki.
+2. nowy wąski objective `talk_to_npc_choice`:
+   - rozmowa z `Kasia` → `returned_sealed`,
+   - rozmowa z `Marek` → `turned_over_to_guard`.
 
-## 3. Etap eksploracyjny
+Nie ma outcome `opened_and_returned`: codebase nie posiada taniego, istniejącego mechanizmu otwierania takiego quest-only przedmiotu.
 
-Quest prowadzi gracza do istniejącego landmark/place.
+### Outcomes
 
-Preferować istniejący:
+`returned_sealed`:
 
-```text
-interact_landmark
-```
+- state: `complete`,
+- hidden reward: `15 x coin`,
+- relation: `Kasia +2`,
+- reputation: `trust +5`, `integrity +6`,
+- renown: `+3`.
 
-Nie tworzyć nowego systemu śladów ani quest-only world object, jeżeli obecne landmarki wystarczają.
+`turned_over_to_guard`:
 
-Pierwszy questline powinien wykorzystywać istniejący świat.
+- state: `complete`,
+- hidden reward: `2 x bandage`,
+- relation: `Kasia -1`, `Marek +2`,
+- reputation: `competence +4`, `courage +2`, `integrity +1`,
+- renown: `+2`.
 
-## 4. Znaleziona przesyłka
+To nie jest morality choice: pierwszy wynik premiuje dotrzymanie zobowiązania handlowego, drugi ostrożność i zaufanie straży.
 
-Jeżeli istniejący inventory/world-item system pozwala bez dużej infrastruktury, przesyłka powinna być reprezentowana jako realny item.
+# Questline B — Sporne drewno
 
-Preferowana nazwa:
+Anna i Piotr mają sprzeczne priorytety wobec najbliższej partii materiału: Anna chce materiał na bieżące potrzeby gospodarstwa, Piotr na własne prace drwala/naprawy. Nie twierdzić, że po queście wizualnie powstał lub został naprawiony konkretny obiekt.
+
+## `sporne-drewno`
+
+**Giver:** `Anna` (`farmer`).
+
+Stages:
+
+1. `{ type: 'talk_to_npc', npcName: 'Piotr' }` — poznaj drugą stronę.
+2. `talk_to_npc_choice`:
+   - rozmowa z `Anna` → `support_anna`,
+   - rozmowa z `Piotr` → `support_piotr`.
+
+Nie dodawać `compromise` w tym pakiecie. Bez trzeciego realnego content branch byłby tylko dodatkowym przyciskiem/tekstem.
+
+`support_anna`:
+
+- state: `complete`,
+- relation: `Anna +2`, `Piotr -1`,
+- reputation: `benevolence +3`, `trust +1`,
+- renown: `+2`,
+- brak item/coin reward.
+
+`support_piotr`:
+
+- state: `complete`,
+- relation: `Piotr +2`, `Anna -1`,
+- reputation: `competence +3`, `trust +1`,
+- renown: `+2`,
+- brak item/coin reward.
+
+## `drewno-dla-anny`
+
+Availability:
 
 ```ts
-sealed_package
+{ type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_anna'] }
 ```
 
-Item:
+**Giver:** `Anna`.
 
-- może być przenoszony przez inventory,
-- nie ma normalnej wartości handlowej,
-- nie powinien pojawiać się w zwykłym merchant catalog,
-- istnieje jako quest-relevant world item.
-
-Jeżeli obecna architektura itemów nie pozwala sensownie dodać takiego przedmiotu bez dużego quest-item subsystemu, nie tworzyć osobnego inventory.
-
-Wtedy interaction przy miejscu odnalezienia może być wystarczającym deterministic state transition.
-
-Recon implementacyjny ma wybrać prostsze rozwiązanie zgodne z aktualnym kodem.
-
-## 5. Outcomes przesyłki
-
-Quest musi mieć co najmniej dwa realne rozwiązania.
-
-### `returned_sealed`
-
-Gracz oddaje przesyłkę bez naruszania jej.
-
-Konsekwencje:
-
-```text
-Piotr relation +1
-local integrity +8
-local trust +5
-renown +2
-```
-
-Reward:
-
-```text
-coins: 15
-visibility: shown
-```
-
-### `opened_and_returned`
-
-Jeżeli implementacja realnego otwierania przesyłki wymagałaby nowego generic interaction frameworka, nie dodawać go tylko dla tego questa.
-
-W takim przypadku zastąpić ten outcome drugim rozwiązaniem możliwym przez istniejące mechaniki.
-
-Jeżeli otwieranie jest tanie do implementacji:
-
-```text
-mniejsza / brak premii integrity
-Piotr relation 0 lub -1
-```
-
-oraz ewentualnie gracz poznaje informację wykorzystaną później.
-
-### Zasada
-
-Nie symulować wyboru wyłącznie przyciskiem:
-
-```text
-[A] dobry outcome
-[B] zły outcome
-```
-
-jeżeli istniejące działania świata mogą naturalnie wyrazić decyzję.
-
-# Questline B — Spór mieszkańców
-
-## 6. Założenie
-
-Dwoje istniejących NPC ma sprzeczne interesy.
-
-Preferować prosty, lokalny konflikt:
-
-```text
-Anna potrzebuje zasobu / pomocy
-Piotr chce wykorzystać ten sam zasób inaczej
-```
-
-Dokładny temat dobrać po reconie aktualnych NPC, professions, households i settlement state.
-
-Nie tworzyć konfliktu sprzecznego z istniejącymi rolami postaci.
-
-## 7. Cel gameplay
-
-Gracz poznaje obie strony.
-
-Quest wykorzystuje:
-
-```text
-talk_to_npc
-gather_item
-```
-
-oraz istniejące interactions tam, gdzie pasują.
-
-Nie dodawać dialogue tree engine.
-
-Obecny staged dialogue + Quest Outcomes powinien wystarczyć.
-
-## 8. Decyzja
-
-Gracz powinien móc zakończyć sprawę na co najmniej dwa sposoby:
-
-```text
-support_anna
-support_piotr
-```
-
-Opcjonalny trzeci outcome:
-
-```text
-compromise
-```
-
-tylko jeżeli można go zrealizować bez budowania dodatkowego generic systemu.
-
-## 9. Konsekwencje
-
-Przykładowy kontrakt:
-
-### `support_anna`
-
-```text
-Anna relation +2
-Piotr relation -1
-
-benevolence +3
-renown +2
-```
-
-### `support_piotr`
-
-```text
-Piotr relation +2
-Anna relation -1
-
-competence +3
-renown +2
-```
-
-### `compromise`
-
-Jeżeli istnieje:
-
-```text
-Anna relation +1
-Piotr relation +1
-
-trust +3
-integrity +3
-renown +3
-```
-
-Dokładne dimension deltas dopasować do finalnej treści konfliktu.
-
-Nie traktować reputation jako morality score.
-
-Konsekwencja musi wynikać z tego, **jak społeczność interpretuje konkretne działanie**.
-
-## 10. Brak jednej „poprawnej” odpowiedzi
-
-Quest nie powinien mieć technicznie oznaczonego:
+Stage:
 
 ```ts
-goodEnding: true
+{ type: 'gather_item', kind: 'branch', count: 5 }
 ```
 
-Każdy outcome może mieć:
+Outcome `delivered_to_anna`:
 
-- korzyści,
-- koszty,
-- inne relacje,
-- inne dalsze możliwości.
+- state: `complete`,
+- hidden reward: `3 x seed_carrot`,
+- relation: `Anna +1`,
+- brak dodatkowego social consequence.
 
-Nie projektować morality axis.
+## `drewno-dla-piotra`
 
-# Questline C — Przysługa dla społeczności
-
-## 11. Założenie
-
-Większy authored quest dotyczący osady lub jej bezpieczeństwa.
-
-Powinien wykorzystywać więcej niż jeden istniejący system.
-
-Preferowany charakter:
-
-```text
-problem społeczności
-→ investigation / preparation
-→ działanie w świecie
-→ rozwiązanie
-```
-
-Możliwe istniejące mechaniki:
-
-- fauna,
-- landmarks,
-- gathering,
-- combat,
-- settlement,
-- NPC dialogue.
-
-Nie wymagać wykorzystania wszystkich.
-
-## 12. Availability
-
-Questline C ma wykorzystać `quests-progression-004`.
-
-Nie powinien być dostępny od początku.
-
-Preferowany gate:
-
-```text
-renown >= 10
-```
-
-oraz ewentualnie:
-
-```text
-relation >= friendly
-```
-
-z giverem.
-
-Nie ustawiać wysokiego progu wymagającego grind.
-
-Celem jest:
-
-> społeczność zaczyna powierzać graczowi ważniejsze sprawy, ponieważ już coś o nim wie.
-
-## 13. Multi-stage structure
-
-Quest powinien mieć około 3 etapów.
-
-Preferowany rytm:
-
-```text
-1. investigate
-2. prepare / acquire / talk
-3. resolve problem
-```
-
-Nie każdy etap ma być:
-
-```text
-idź do NPC → wróć → idź do NPC → wróć
-```
-
-Wykorzystać świat.
-
-# Non-monetary reward
-
-## 14. Jeden znaczący reward
-
-Jedna z trzech historii powinna kończyć się możliwością otrzymania pierwszej **znaczącej nagrody niematerialnej / niebędącej zwykłym itemem**.
-
-Preferowana decyzja:
-
-```text
-prawo do działki
-```
-
-ponieważ Seedvale posiada już:
-
-```text
-LandOwnershipRegistry
-landPlotKey
-ownedLandPlots persistence
-```
-
-Nie tworzyć generic:
+Availability:
 
 ```ts
-reward: {
-  type: 'land'
-}
+{ type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_piotr'] }
 ```
 
-wewnątrz QuestManager.
+**Giver:** `Piotr`.
 
-Quest outcome powinien uruchomić consequence obsługiwaną przez domain ownera.
-
-## 15. Land grant consequence
-
-Dodać wąski consequence seam dla ownership.
-
-Preferowany model:
+Stage:
 
 ```ts
-type QuestOwnershipConsequence = {
-  type: 'grant_land'
-  plotKey: string
-}
+{ type: 'gather_item', kind: 'branch', count: 5 }
 ```
 
-lub równoważny typed contract zgodny z aktualnym modelem `QuestConsequences` po implementacji `002`.
+Outcome `delivered_to_piotr`:
 
-QuestManager:
+- state: `complete`,
+- shown reward: `8 x coin`,
+- relation: `Piotr +1`,
+- brak dodatkowego social consequence.
 
-```text
-resolve outcome
-→ dispatch/apply narrow consequence
-```
+Tylko odpowiedni follow-up staje się dostępny. To jest wymagany przykład outcome-dependent continuation bez `QuestChainManager`.
 
-Composition/domain integration:
+# Questline C — Dzik przy szlaku
 
-```text
-grant_land
-→ LandOwnershipRegistry
-```
+## `dzik-przy-szlaku`
 
-QuestManager nie może:
+**Giver:** `Marek` (`guard`).
 
-- posiadać land state,
-- bezpośrednio modyfikować settlement internals,
-- tworzyć równoległego `questOwnedLand`.
+Problem: mieszkańcy omijają część okolicy, w której regularnie widywany jest duży dzik. Quest nie twierdzi, że istnieje specjalny patrol route, uszkodzona infrastruktura ani system niszczenia pól — rozwiązuje problem konkretnego, realnego zwierzęcia.
 
-## 16. Konkretna działka
-
-Nie hardcodować przypadkowego world coordinate.
-
-Recon aktualnego land ownership/building systemu ma znaleźć istniejący sposób identyfikacji działki.
-
-Reward musi wskazywać stabilny `plotKey`/domain identity.
-
-Jeżeli aktualny system nie posiada bezpiecznego sposobu wybrania konkretnej działki authored questowi, nie budować dużego land-allocation systemu w tym planie.
-
-W takim przypadku użyć prostszego non-monetary reward opisanego w sekcji fallback.
-
-## 17. Fallback dla non-monetary reward
-
-Jeżeli land grant okaże się nieproporcjonalnie kosztowny względem planu, zrobić recon dostępnych domain-owned unlocks.
-
-Kolejność preferencji:
-
-```text
-1. land plot
-2. existing access/unlock mechanism
-3. horse ownership — tylko jeśli istnieje już realny owner
-4. helper — tylko jeśli obecny helper/work system semantycznie pasuje
-```
-
-Nie tworzyć:
-
-- fake house ownership,
-- fake horse ownership,
-- generic follower system,
-- generic unlock registry
-
-tylko po to, żeby mieć reward.
-
-Jeżeli żaden domain mechanism nie jest gotowy, zachować seam w planie, ale użyć wyjątkowego istniejącego item reward.
-
-# Reward design
-
-## 18. Różnorodność
-
-Nie każdy authored quest powinien kończyć się coins.
-
-W pakiecie powinny wystąpić:
-
-```text
-coins
-item
-relation
-reputation
-renown
-non-monetary/domain reward
-```
-
-Nie wszystkie jednocześnie w każdym queście.
-
-## 19. Hidden rewards
-
-Co najmniej jeden quest powinien wykorzystać:
+Availability:
 
 ```ts
-visibility: 'hidden'
+{ type: 'renown', minimum: 10 }
 ```
 
-Przykład:
+Nie dodawać relation gate do Marka: po usunięciu implicit relation przez `002` aktualny content nie gwarantuje bez grind dostępu do `friendly`.
 
-NPC prosi gracza o osobistą pomoc bez obiecywania zapłaty.
+Stages:
 
-Po rozwiązaniu może wręczyć:
+1. `{ type: 'talk_to_npc', npcName: 'Piotr' }` — drwal potwierdza problem w lesie.
+2. `{ type: 'kill_target_animal', kind: 'boar' }` — bind do jednego istniejącego dzika.
 
-```text
-item / coins / inną nagrodę
-```
+Nie używać `dangerous: true`: obecny `markDangerous()` jest mechanizmem zaprojektowanym/tuningowanym dla „groźnego wilka”, nie generic aggressive-animal authoring API.
 
-Quest Log nie zdradza jej wcześniej.
+Outcome `boar_removed`:
 
-## 20. Reward proportionality
+- state: `complete`,
+- hidden reward: `1 x book_defense_intermediate`,
+- relation: `Marek +2`,
+- reputation: `competence +6`, `courage +6`, `benevolence +2`,
+- renown: `+8`.
 
-Stosować skalę z `quests-progression-003`.
+Reward jest konkretnym fallbackiem po odrzuceniu land grant: istniejąca książka ma realny efekt przez `PlayerSkills`, bez nowego ownership/unlock systemu.
 
-Authored RPG quest może płacić więcej niż prosty paid quest, jeśli:
+# Minimalne rozszerzenie objective
 
-- jest wieloetapowy,
-- ryzykowny,
-- wymaga podróży,
-- ma istotne konsekwencje.
-
-Nie używać drogich mieczy jako przypadkowych nagród za drobne przysługi.
-
-# Existing systems first
-
-## 21. Reuse objectives
-
-Preferować istniejące:
-
-```text
-talk_to_npc
-interact_well
-interact_tree
-interact_spawner
-spot_animal
-gather_item
-kill_target_animal
-clear_wolf_den
-find_animal
-interact_landmark
-```
-
-Nowy `QuestObjective` dodawać tylko wtedy, gdy przynajmniej jeden z nowych questów rzeczywiście go potrzebuje i nie da się sensownie wyrazić przez istniejące mechanizmy.
-
-Nie tworzyć objectives spekulacyjnie.
-
-## 22. Quest-specific interactions
-
-Jeżeli authored story potrzebuje małej specyficznej interakcji, preferować wąskie rozszerzenie istniejącego interaction/event path.
-
-Nie tworzyć generic quest scripting system.
-
-Przykład:
-
-```text
-interakcja z konkretnym istniejącym obiektem
-→ QuestManager otrzymuje event
-→ odpowiedni active quest może zareagować
-```
-
-# Outcome selection
-
-## 23. Real actions wybierają outcome
-
-Preferować:
-
-```text
-działanie gracza w świecie
-→ outcome
-```
-
-nad:
-
-```text
-modal
-→ wybierz zakończenie A/B/C
-```
-
-Przykłady:
-
-```text
-oddanie przedmiotu Annie
-→ support_anna
-
-oddanie przedmiotu Piotrowi
-→ support_piotr
-```
-
-Jeżeli wybór jest czysto dialogowy i nie ma sensownego działania world-side, można wykorzystać istniejący interaction UI.
-
-Nie budować pełnego branching dialogue engine.
-
-## 24. Outcome exactly once
-
-Każda gałąź musi używać `resolveQuest(questId, outcomeId)` z `002`.
-
-Po resolution:
-
-- inny outcome nie może zostać zastosowany,
-- reward nie może zostać ponownie odebrany,
-- consequences nie mogą zostać ponownie zastosowane,
-- save/load zachowuje wybór.
-
-# Quest chains
-
-## 25. Małe chains przez prerequisites
-
-Nie tworzyć `QuestChainManager`.
-
-Jeżeli historia ma:
-
-```text
-Quest A
-→ Quest B
-```
-
-Quest B używa:
+Dodać jeden wąski objective używany przez questline A i B:
 
 ```ts
 {
-  type: 'quest_outcome',
-  questId: 'quest-a',
-  outcomeIds: [...]
+  type: 'talk_to_npc_choice'
+  choices: readonly {
+    npcName: string
+    outcomeId: QuestOutcomeId
+  }[]
 }
 ```
 
-z `quests-progression-004`.
-
-## 26. Outcome-dependent continuation
-
-Co najmniej jedna historia powinna pokazać:
+Semantyka:
 
 ```text
-Outcome A
-→ dalszy quest dostępny
-
-Outcome B
-→ ten quest nie jest dostępny
+aktywny stage
+→ gracz naprawdę rozmawia z jednym z authored NPC
+→ matching choice wybiera outcomeId
+→ ten sam terminal resolution path z 002
 ```
 
-Nie musi istnieć osobna pełna gałąź contentu dla każdego outcome.
+Nie dodawać modala A/B, dialogue tree engine ani generic action scripting.
 
-Persistent consequence wystarczy.
+`QuestManager.onInteract()` musi obsłużyć ten objective przed zwykłym giver reminder path, ponieważ giver (`Kasia`/`Anna`) może sam być jedną z choices. `labelMarker()` ma oznaczać wszystkie NPC będące aktualnymi choice targets.
 
-# NPC consistency
+# Land reward — decyzja po review
 
-## 27. Recon przed napisaniem historii
+**Nie implementować land reward w `005`.**
 
-Przed finalizacją tekstów questów sprawdzić aktualne:
+Aktualny land ownership nie daje bezpiecznego istniejącego kontraktu dla authored grantu:
 
-- NPC names,
-- professions,
-- households,
-- relationships,
-- settlement roles,
-- existing dialogue,
-- existing authored quests.
+- `LandOwnershipRegistry.setOwned(settlementId, plotId)` jest tylko prymitywem zapisu,
+- walidowany `purchaseLandPlot()` obsługuje zakup, nie grant,
+- liczba sale plots jest deterministyczna, ale może wynosić `0`,
+- gracz może wcześniej kupić dostępną działkę,
+- nie istnieje rezerwacja/allocation konkretnej wolnej działki dla questa.
 
-Nie pisać historii w oderwaniu od aktualnych postaci.
+Nie dodawać w tym planie `grant_land`, rezerwacji plotów ani questowego ownership state.
 
-Jeżeli aktualne NPC nie mają wystarczającego characterization, rozszerzyć ich dialogue/content minimalnie w ramach questów.
+Konkretny fallback: hidden `book_defense_intermediate` z `dzik-przy-szlaku`.
 
-Nie tworzyć nowego character biography subsystem.
+# Reward / outcome rules
 
-## 28. NPC nie są quest dispenserami
+- Wszystkie gałęzie kończyć przez unified terminal resolution z `002`; outcome/reward/consequences exact-once.
+- Coins pozostają zwykłym `ItemKind = 'coin'` i korzystają z istniejącego injected quest grant path.
+- Item rewards również korzystają z tego samego grant path; nie mutować `Inventory` bezpośrednio z quest definition/runtime.
+- Public social consequence korzysta z istniejącego `ReputationManager` seam i resolved `settlementId`.
+- Nie dodawać implicit relation fan-out.
+- Wykorzystać `resultText` z `002`, jeżeli finalny kontrakt go zachowa; UI nie pokazuje outcome IDs.
 
-Offer dialogue powinien wynikać z sytuacji NPC.
+# Existing systems / non-goals
 
-Po resolution ich późniejsze dialogue powinno przynajmniej minimalnie uznawać ważny outcome, jeśli istniejący dialogue mechanism pozwala na to bez dużej przebudowy.
+Reuse:
 
-Przykład:
+- `talk_to_npc`, `interact_spawner`, `gather_item`, `kill_target_animal`,
+- reserved NPC names/roles,
+- Inventory / quest item grant,
+- ReputationManager,
+- quest prerequisites z `004`,
+- existing fauna target binding/death event,
+- istniejący Quest Log.
 
-```text
-gracza pomógł Annie w sporze
-→ późniejsza rozmowa z Anną może to wspomnieć
-```
+Nie tworzyć:
 
-Nie wymagać pełnego memory/dialogue systemu.
+- `sealed_package` item,
+- quest-item inventory,
+- generic dialogue tree,
+- generic quest scripting/condition DSL,
+- `QuestChainManager`,
+- land grant/allocation,
+- horse/helper/follower unlock,
+- generic morality system.
 
-# World consistency
+# Persistence i lifecycle
 
-## 29. Nie tworzyć fikcyjnych konsekwencji
+`005` nie dodaje nowej save schema ponad kontrakt `002` (`resolvedOutcomeId`) i `004` (availability jest derived).
 
-Jeżeli quest mówi:
-
-> naprawiliśmy most
-
-to świat powinien rzeczywiście posiadać mechanizm/stage pozwalający reprezentować tę zmianę.
-
-Jeżeli go nie ma, napisać quest inaczej.
-
-Nie używać narracji:
-
-```text
-„odbudowaliśmy dom”
-```
-
-gdy dom pozostaje wizualnie i systemowo zniszczony.
-
-## 30. World independence
-
-Authored quest może czekać na gracza.
-
-Nie implementować w tym planie automatycznego rozwiązania authored stories przez NPC.
-
-Jednocześnie nie wprowadzać world state, który istnieje wyłącznie wtedy, gdy kamera/gracz znajduje się w pobliżu.
-
-# Content quality
-
-## 31. Każda historia musi mieć własny gameplay identity
-
-Nie robić:
-
-```text
-Questline A = gather 5
-Questline B = gather 6
-Questline C = gather 8
-```
-
-Docelowo:
-
-```text
-A → exploration / discovery / trust
-
-B → social conflict / choice
-
-C → multi-system community problem
-```
-
-## 32. Dialogi
-
-Teksty powinny być krótkie i naturalne.
-
-NPC powinien:
-
-- powiedzieć, czego chce,
-- wyjaśnić wystarczający kontekst,
-- nie recytować systemów gry,
-- reagować na rezultat.
-
-Unikać:
-
-```text
-„Twoja reputacja competence wynosi teraz 20.”
-```
-
-Systemowe informacje pozostają w UI.
-
-# UI
-
-## 33. Quest Log
-
-Wykorzystać UI z `002–004`.
-
-Dla nowych questów pokazywać:
-
-- title,
-- description,
-- giver,
-- current objective,
-- progress,
-- shown reward.
-
-Nie dodawać osobnego ekranu story quests.
-
-## 34. Resolved outcome
-
-Po zakończeniu historia powinna pozostać czytelna w Quest Log na tyle, na ile pozwala model z `002`.
-
-Jeżeli `resultText` został wdrożony w `002`, wykorzystać go dla znaczących outcomes.
-
-Nie pokazywać technicznych ID:
-
-```text
-support_anna
-returned_sealed
-```
-
-graczaowi.
-
-# Tests
-
-## 35. Questline tests
-
-Dla każdej historii przetestować:
-
-- availability,
-- stage progression,
-- odpowiednie interactions,
-- outcome resolution,
-- reward,
-- consequences,
-- persistence.
-
-## 36. Branching
-
-Co najmniej jedna historia:
-
-```text
-Outcome A
-Outcome B
-```
-
-Test:
-
-- A blokuje późniejsze zastosowanie B,
-- B blokuje późniejsze zastosowanie A,
-- różne rewards/consequences,
-- save/load zachowuje wybrane rozwiązanie.
-
-## 37. Prerequisites
-
-Testować co najmniej:
-
-- outcome-dependent continuation,
-- relation gate,
-- reputation albo renown gate.
-
-Nie każdy quest musi używać każdego gate.
-
-## 38. Non-monetary reward
-
-Jeżeli wdrożony land grant:
-
-- outcome przyznaje dokładnie właściwy plot,
-- ownership działa przez istniejący registry,
-- reward applied exactly once,
-- save/load zachowuje ownership,
-- QuestManager nie posiada duplicated ownership state.
-
-# Docs
-
-## 39. Aktualizacja dokumentacji
-
-Po implementacji zaktualizować odpowiednie:
-
-- `docs/state/player-systems.md`
-- `docs/state/npc.md`
-- `docs/state/settlements.md` — jeżeli wykorzystany land ownership
-- `docs/state/persistence.md` — tylko jeśli zmienia się schema/serialization
-- `docs/vision/quests.md`
-
-`docs/vision/quests.md` powinien jasno mówić, że Seedvale wspiera trzy źródła questów:
-
-```text
-Authored RPG
-Contextual
-Emergent world
-```
-
-i że authored RPG quests są pełnoprawną częścią projektu, a nie tymczasowym rozwiązaniem przed procedural quests.
-
-Dodać implementation notes zgodnie z `docs/plans/PLANNING.md`.
-
-Nie uruchamiać `pnpm docs:sync` ręcznie.
-
-# Non-goals
-
-Plan nie obejmuje:
-
-- generic dialogue tree engine,
-- cinematic system,
-- voice acting,
-- procedural quest generation,
-- JobManager,
-- quest board,
-- world-driven quest generator,
-- generic condition DSL,
-- generic quest scripting language,
-- quest chapter manager,
-- generic morality system,
-- witness/gossip system,
-- automated world resolution,
-- quest expiration,
-- generic house ownership,
-- generic horse ownership,
-- generic follower system,
-- dużego rozszerzenia liczby NPC.
+`dzik-przy-szlaku` dziedziczy aktualną semantykę wild `kill_target_animal`: bound `animalId` jest runtime-only i aktywny wild target może zostać `invalidated` po save/load lub same-session world rebuild. Nie próbować naprawiać tej ogólnej polityki w `005`.
 
 # Implementation order
 
-1. Wykonać recon aktualnych NPC, households, settlement roles i istniejącego quest contentu.
-2. Zweryfikować finalne API po `002` i `004`.
-3. Rozpisać konkretne trzy historie i ich outcomes przed zmianą kodu.
-4. Dopasować je do istniejących objectives/interactions.
-5. Dodać tylko minimalne brakujące interaction mechanisms.
-6. Zaimplementować Questline A.
-7. Zaimplementować Questline B z realnym branching.
-8. Zaimplementować Questline C z availability gate.
-9. Dodać non-monetary reward przez istniejącego domain ownera, preferując land ownership.
-10. Dodać outcome-aware dialogue tam, gdzie jest tanie i wartościowe.
-11. Dodać tests.
-12. Zaktualizować canonical docs.
-13. Dodać implementation notes.
+1. Upewnić się, że `002`–`004` są zaimplementowane i użyć ich faktycznych nazw typów/helperów.
+2. Dodać `talk_to_npc_choice` do istniejącego quest modelu/managera oraz definition validation.
+3. Dodać pięć powyższych `QuestDef` do statycznego authored setu.
+4. Dodać testy contentu, outcomes, prerequisites i exact-once.
+5. Zaktualizować canonical docs/vision.
 
-Dla ważnych nowych publicznych/integration seams dodać JSDoc oraz, gdzie pomaga preflight:
-
-```ts
-@domain quests-progression
-```
+Dla ważnego nowego integration seam dodać JSDoc z `@domain quests-progression`, jeżeli pomaga preflight.
 
 # Verification
 
 ## Automated
 
-Uruchomić odpowiednie:
+Uruchomić:
 
 - quest definition tests,
-- QuestManager tests,
-- availability tests,
+- `QuestManager` tests,
+- availability/prerequisite tests,
 - reputation integration tests,
 - inventory/reward tests,
-- land ownership tests, jeżeli dotyczy,
-- persistence tests,
+- persistence tests związane z outcome restore,
 - typecheck,
 - build.
+
+Nie uruchamiać `pnpm docs:sync` ręcznie.
 
 ## Manual — User
 
 User sprawdza w przeglądarce:
 
-1. Dostępne są trzy wyraźnie różne historie RPG.
-2. Questy mają sensowny kontekst i pasują do istniejących NPC.
-3. Nie wszystkie historie są prostymi fetch questami.
-4. Co najmniej jeden quest daje realny wybór.
-5. Różne rozwiązania powodują różne consequences.
-6. Relation konkretnych NPC zmienia się zgodnie z wyborem.
-7. Reputation/renown zmieniają się tylko tam, gdzie ma to sens.
-8. Co najmniej jedna historia odblokowuje dalszy quest przez prerequisite.
-9. Jeden ważniejszy quest nie jest dostępny od początku.
-10. Shown i hidden rewards działają poprawnie.
-11. Co najmniej jedna historia daje znaczącą non-monetary reward, jeżeli recon potwierdzi gotowy domain mechanism.
-12. Save/load zachowuje wybrane outcomes i consequences.
-13. Existing paid quests i wcześniejsze questy nie mają regresji.
+1. Są trzy różne historie RPG i łącznie pięć nowych quest definitions.
+2. `zaginiona-przesylka`: jaskinia → realna rozmowa z Kasią lub Markiem daje różny outcome i consequence.
+3. Nie istnieje fake `sealed_package` w inventory.
+4. `sporne-drewno`: rozmowa z Anną/Piotrem wybiera stronę i odblokowuje tylko właściwy follow-up.
+5. `dzik-przy-szlaku` jest ukryty przed `renown >= 10` i po odblokowaniu prowadzi do konkretnego targetu.
+6. Shown/hidden rewards działają zgodnie z definicjami.
+7. Outcomes, relation, reputation i renown nie aplikują się ponownie po kolejnych interakcjach/save-load.
+8. Existing quests nie mają regresji.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
