@@ -1,7 +1,7 @@
 # Plan: Underground Caves V2
 
 **Created:** 2026-09-04  
-**Status:** `in progress` 🔄
+**Status:** `in progress` 🔄  
 **Type:** feature  
 **Priority:** medium · **Effort:** XL  
 **Depends on:** none  
@@ -11,21 +11,19 @@
 
 ## 1. Cel
 
-Zastąpić gameplayowo nieudaną reprezentację Underground Caves V1 nowym systemem Cave V2, który tworzy wiarygodne walk-in przestrzenie podziemne o jakości wystarczającej dla third-person gameplay.
+Zastąpić gameplayowo nieudaną reprezentację Underground Caves V1 produkcyjnym Cave V2: deterministycznymi, walk-in przestrzeniami podziemnymi działającymi w tym samym świecie co surface terrain i nadającymi się do third-person gameplay.
 
-Pierwszy produkcyjny milestone pozostaje mały: jedna deterministyczna cave około 20–30 m długości, która dobrze wygląda, dobrze się eksploruje i nie zamyka architektury na przyszłe bardziej złożone caves.
+Pierwsza produkcyjna cave ma pozostać mała topologicznie, ale nie ciasna przestrzennie: wejście, passage, widening/bend, większy chamber i co najmniej jeden genuine 3D feature (`shelf` albo `overhang`). Nie implementować jeszcze pełnego proceduralnego dungeon generatora.
 
-V2 ma rozwiązać przede wszystkim:
+V2 ma przede wszystkim usunąć:
 
-- efekt połączonych rur;
-- regularne przekroje i sztuczne tunnel/chamber transitions;
+- pipe look i regularne przekroje;
+- sztuczne passage → chamber transitions;
 - seams/cracks;
-- zbyt gładkie i jednoskalowe surfaces;
-- niewystarczającą kontrolę nad floor/walls/ceiling;
-- problemy camera clearance i camera escape do surface;
-- ograniczenie obecnego `CaveVolume` do efektywnie 2.5D modelu.
-
-Nie implementować jeszcze pełnego proceduralnego dungeon generatora.
+- zbyt gładkie, jednoskalowe surfaces;
+- brak kontroli floor/walls/ceiling;
+- surface pop-out / camera escape;
+- trwałe uzależnienie gameplay queries od efektywnie 2.5D `CaveVolume`.
 
 ---
 
@@ -33,806 +31,345 @@ Nie implementować jeszcze pełnego proceduralnego dungeon generatora.
 
 Ten plan zastępuje dalszy rozwój `world-terrain-007-underground-caves.md` jako kierunek produkcyjny caves.
 
-V1 pozostaje źródłem sprawdzonych elementów infrastrukturalnych i lekcji integracyjnych. Nie rozwijać dalej jego geometrii ani nie dodawać do V1 fauna/loot/persistence przed ustabilizowaniem Cave V2.
+Z V1 zachować tylko sprawdzone mechanizmy infrastrukturalne tam, gdzie nadal pasują:
 
-Zachować tam, gdzie aktualny recon potwierdzi sens reuse:
+- world-scale cave siting;
+- deterministic cave identity;
+- `WorldBundle` ownership;
+- streaming activation/deactivation;
+- existing `ColliderRegistry` ownership;
+- surface/cave ground selection seam;
+- terrain mouth integration;
+- settlement/road/coast placement constraints.
 
-- cave placement i deterministic identity;
-- `WorldBundle` lifecycle;
-- streaming activation;
-- existing collision registry ownership;
-- vertical collider filtering;
-- surface/cave ground selection;
-- terrain integration;
-- entrance placement constraints;
-- overburden validation.
-
-Zastąpić lub przebudować tam, gdzie wymagane:
-
-- V1 geometry representation;
-- tunnel/chamber mesh generation;
-- 2.5D assumptions w `CaveVolume`;
-- geometry-derived topology assumptions;
-- camera integration, jeśli obecny mechanizm nie gwarantuje poprawnego zachowania.
-
-Po migracji nie utrzymywać dwóch produkcyjnych cave systems.
+Nie rozwijać V1 geometry. Po pełnej migracji nie utrzymywać dwóch produkcyjnych cave systems.
 
 ---
 
-## 3. Research baseline
+## 3. Architektura docelowa
 
-Plan opiera się na:
-
-- `docs/design/caves/01-problem-and-requirements.md`;
-- `docs/design/caves/02-generation-techniques-research.md`;
-- `docs/design/caves/03-advanced-sweep-vs-sdf-spike-research.md`.
-
-Research wskazuje dwie realne rodziny reprezentacji do praktycznego porównania:
-
-1. generalized / advanced sweep;
-2. graph + local SDF / continuous volume.
-
-Research nie rozstrzyga jeszcze wyboru produkcyjnej technologii.
-
----
-
-## 4. Cave V2 invariants
-
-Niezależnie od wybranej reprezentacji:
-
-- cave jest częścią tego samego świata, nie osobną sceną/interior world;
-- surface pozostaje heightmap-based;
-- lokalna volumetric representation nie zastępuje globalnego terrain;
-- topology jest deterministyczne i niezależne od presentation;
-- player/camera nie są właścicielami lifecycle cave;
-- streaming nie zmienia identity ani layoutu cave;
-- unload/reload nie zmienia cave dla tego samego seeda i generator version;
-- nie powstaje drugi collision registry;
-- nie powstaje cave-specific world manager zastępujący `WorldBundle` ownership;
-- render mesh jest derived presentation;
-- collision representation jest derived gameplay proxy/acceleration structure;
-- neither render mesh nor collider registry is authoritative cave geometry.
-
----
-
-## 5. Architektura odpowiedzialności
-
-V2 rozdziela trzy poziomy:
+Źródło prawdy:
 
 ```text
-seed + world context
+seed + world context + cave identity
         ↓
 CaveTopology
         ↓
-CaveSpatialRepresentation
+CaveSpatialRepresentation   ← production local SDF/volume
         ↓
-CavePresentation
+├─ CavePresentation         ← BufferGeometry / Mesh
+├─ gameplay spatial queries
+└─ collision proxy
 ```
 
 ### CaveTopology
 
-Opisuje semantyczny/gameplayowy layout:
+Semantyczny/gameplayowy layout, bez Three.js i bez parametrów konkretnego meshera:
 
 - entrance;
 - passages;
-- chambers/widenings;
+- chambers/widenings/constrictions;
 - connections;
-- branches;
-- spatial placement;
+- centerlines / spatial placement;
 - elevation intent;
 - desired width/height;
-- przyszłe loops/multiple entrances/ramps/shelves/platforms.
-
-Nie zależy od Three.js ani konkretnej reprezentacji geometrii.
-
-Topology nie może zawierać representation-specific parametrów typu SDF resolution, marching-cubes cell size czy sweep profile index.
+- shelf/overhang;
+- przyszłościowo loops, multiple entrances i upper/lower routes.
 
 ### CaveSpatialRepresentation
 
-Opisuje rzeczywistą przestrzeń cave niezależnie od presentation:
+Produkcyjna reprezentacja Cave V2 to **lokalny SDF/continuous volume** ograniczony do bounds jednej cave. Ma być niezależny od scene state i być źródłem rzeczywistego cave space.
 
-- empty/walkable space;
-- solid walls;
-- floor;
-- ceiling;
-- local shape/deformation;
-- spatial queries.
+Render mesh oraz collision proxy są derived. Render mesh/BVH ani collider registry nie mogą stać się autorytatywną cave geometry.
 
-Implementacja wynika z architecture decision gate.
+### Invariants
 
-### CavePresentation
-
-Jest pochodną spatial representation i odpowiada za:
-
-- `BufferGeometry`;
-- normals;
-- materials;
-- streamed scene objects;
-- presentation-only detail.
-
-Źródło prawdy pozostaje powyżej presentation.
+- cave jest częścią ciągłego świata, nie osobną sceną;
+- surface pozostaje heightmap-based;
+- nie powstaje global voxel terrain;
+- determinism nie zależy od streaming order;
+- cave identity nie zależy od vertex/triangle topology;
+- meshes powstają lazy przy activation i są disposable;
+- nie powstaje drugi collision registry ani CaveManager obok `WorldBundle`;
+- architektura nie może blokować przyszłych multi-level caves.
 
 ---
 
-## 6. Determinism i identity
+# Milestone A — Representation Decision ✅
 
-Rozdzielić stabilność topology od stabilności konkretnego mesha:
+## 4. Wynik
 
-```text
-seed + cave identity
-        ↓
-CaveTopology
-        ↓
-spatial representation
-        ↓
-derived geometry
-```
+Milestone A jest zakończony.
 
-Persistent identity nie może zależeć od vertex/triangle topology wygenerowanego mesha.
+Zaimplementowano i porównano na wspólnym `CaveTopology`:
 
-Przed dodaniem cave-specific persistent state rozstrzygnąć, czy generator wymaga jawnego `generatorVersion`, tak aby przyszłe zmiany noise/primitives/meshing nie zmieniały po cichu znaczenia zapisanego `caveId`.
+- Generalized Sweep;
+- Graph + Local SDF / Volume z Naive Surface Nets.
 
-Nie trzeba w tym planie tworzyć pełnego migration framework dla cave geometry.
+Player wykonał manual comparison w browserze i wskazał **SDF jako wyraźnie lepszą reprezentację wizualną**. Decyzja architektoniczna:
 
----
+> **Selected representation: Graph + Local SDF / continuous volume.**
 
-# Milestone A — Representation Decision
+Sweep pozostaje przegranym wariantem porównawczym i ma zostać usunięty po przeprowadzeniu produkcyjnej migracji B1. Nie jest produkcyjną alternatywą.
 
-Celem Milestone A jest porównanie reprezentacji, a nie rozpoczęcie produkcyjnego refactoru.
+### Dlaczego SDF
 
-Po zakończeniu Milestone A wymagany jest stop point i manualna decyzja gracza przed rozpoczęciem Milestone B.
+- wyraźnie lepsza naturalność;
+- lepsza odporność na pipe look;
+- continuous passage → chamber transitions;
+- naturalniejsze junctions;
+- genuine 3D features bez doklejania niezależnych sweep meshes;
+- lepsza droga do przyszłych shelves, overhangs, loops i multi-level routes.
 
----
+### Koszt zaakceptowany jako ryzyko
 
-## 7. Shared CaveTopology
+Spike SDF jest znacznie droższy od Sweep: około `112.6 ms` mesh extraction vs `1.25 ms` na baseline cave, ~`4.8×` więcej vertices. To nie unieważnia wyboru reprezentacji, ale oznacza, że performance/meshing będzie wymagane przed ukończeniem V2.
 
-Wprowadzić minimalną reprezentację topology wystarczającą dla wspólnego eksperymentu.
+### Znane poprawki zachowane z Milestone A
 
-Topology powinno opisywać gameplay intent, nie triangles.
+Nie cofać:
 
-Minimalnie:
+- poprawnego Surface Nets winding;
+- clipping geometry do deterministic analytic surface;
+- terrain-aware overburden protection;
+- pop-out containment fixes;
+- cave camera floor fallback;
+- cave torch boost;
+- SDF wet-rock material tuning.
 
-- entrance;
-- irregular passage;
-- chamber/widening;
-- local elevation change;
-- connections;
-- jeden genuine 3D feature: shelf **albo** overhang.
-
-Short side branch jest opcjonalny dla podstawowego L1, ale może być użyty jako kontrolowany stress test junctionu.
-
-JSDoc dodać dla ważnych publicznych typów i funkcji architektonicznych; użyć `@domain world-terrain` tam, gdzie pomaga preflight discovery.
-
----
-
-## 8. Common test cave
-
-Oba warianty korzystają z tej samej deterministycznej cave około 20–30 m długości.
-
-Minimalny shape:
-
-```text
-Entrance
-   ↓
-wide transition
-   ↓
-irregular descending passage
-   ↓
-local widening / bend
-   ↓
-main chamber
-   └── shelf OR overhang
-```
-
-Test musi zawierać wystarczającą zmienność, aby ujawnić:
-
-- pipe look;
-- powtarzalny cross-section;
-- artificial tunnel → chamber transition;
-- floor/ceiling coupling;
-- asymmetry quality;
-- genuine 3D geometry support.
-
-Dodatkowe stress-test features nie powinny niepotrzebnie rozszerzać produkcyjnego L1.
-
----
-
-## 9. Variant A — Generalized Sweep
-
-Nie implementować prostego `radius + noise`.
-
-Spike powinien sprawdzić co najmniej:
-
-- asymmetric profiles;
-- profile keyframes;
-- variable width;
-- variable height;
-- independent floor/ceiling shaping;
-- independent wall shaping;
-- centerline perturbation;
-- local widening;
-- chamber transition;
-- multi-scale deformation;
-- controlled roughness.
-
-Jeśli używany jest branch stress test, zweryfikować junction bez:
-
-- overlapping meshes;
-- seams;
-- pinching;
-- broken floor continuity.
-
-Celem jest sprawdzenie, czy generalized sweep rzeczywiście przestaje być systemem rur, a nie tylko rurą pokrytą noise.
-
----
-
-## 10. Variant B — Graph + Local SDF / Volume
-
-Przygotować lokalną reprezentację tylko dla testowej cave, bez globalnego voxel terrain engine.
-
-Spike powinien sprawdzić:
-
-- passage primitives;
-- chamber primitives;
-- union / smooth union tam, gdzie uzasadnione;
-- non-uniform deformation;
-- controlled multi-scale noise;
-- local subtraction/deformation;
-- shelf albo overhang;
-- continuous passage → chamber transition.
-
-Mesh extraction dobrać do lokalnego eksperymentu na podstawie aktualnego stacku i researchu.
-
-### Accidental-union stress test
-
-Umieścić dwie przestrzennie bliskie, ale topologicznie niepołączone sekcje i sprawdzić, czy influence fields / smooth unions nie tworzą przypadkowego przejścia.
-
-SDF nie wygrywa tylko dlatego, że primitives łatwo się blendują. Capsules + smooth union nadal mogą tworzyć miękkie rury.
-
----
-
-## 11. Structural geometry vs surface detail
-
-W obu wariantach oddzielić:
-
-```text
-STRUCTURAL
-chamber / widening
-wall
-floor
-ceiling
-shelf / overhang
-constriction
-
-        +
-
-SURFACE DETAIL
-noise
-bumps
-small protrusions
-roughness
-rocks
-```
-
-Najpierw cave musi być czytelna jako naturalna przestrzeń na poziomie structural geometry.
-
-Obowiązkowy test:
-
-> Structural geometry must remain readable and cave-like with small-scale surface deformation disabled.
-
-Nie maskować słabej reprezentacji dużą ilością procedural noise.
-
----
-
-## 12. Same conditions
-
-Oba warianty muszą używać:
-
-- tej samej `CaveTopology`;
-- tego samego seeda;
-- tego samego entrance;
-- podobnych dimensions;
-- tego samego material;
-- tego samego lighting;
-- tej samej player camera;
-- tych samych gameplay expectations;
-- tego samego benchmark harness/scenario.
-
-Nie porównywać dwóch różnych caves.
-
----
-
-## 13. Metrics i observability
-
-Dla obu wariantów raportować co najmniej:
-
-- topology generation time, jeśli wspólny etap jest mierzony;
-- representation generation time;
-- mesh extraction/build time;
-- peak temporary allocations / memory estimate tam, gdzie możliwe;
-- final geometry memory estimate;
-- vertices;
-- triangles;
-- collision/proxy complexity, jeśli spike jej dotyka;
-- bounds/resolution/profile parameters istotne dla interpretacji wyniku.
-
-Benchmarki wykonywać na tym samym harness/scenario. Preferować medianę z wielu generacji zamiast pojedynczego pomiaru.
-
-Nie ustalać arbitralnych twardych limitów ms przed pomiarem baseline.
-
-Jeżeli repo ma istniejący debug/performance mechanism, reuse go zamiast tworzyć `CaveDebugManager`.
-
----
-
-## 14. Visual/gameplay rubric
-
-Oba warianty ocenić w tej samej skali, np. 1–5, dla:
-
-- naturalness;
-- resistance to pipe look;
-- passage → chamber transition;
-- seam resistance;
-- wall asymmetry;
-- floor quality;
-- ceiling quality;
-- shelf/overhang quality;
-- junction quality, jeśli testowany;
-- gameplay controllability;
-- camera clearance;
-- future 3D topology potential;
-- implementation complexity.
-
-Rubric nie zastępuje manualnego gameplay review.
-
----
-
-## 15. Architecture decision gate
-
-Po implementacji obu wariantów **nie przechodzić automatycznie do Milestone B**.
-
-Gate składa się z:
-
-```text
-automated metrics
-       +
-technical inspection
-       +
-manual browser comparison by player
-       ↓
-architecture decision
-```
-
-Możliwy status po pracy agenta:
-
-```text
-Architecture spike implemented
-Technical comparison complete
-Manual comparison required
-Decision pending
-```
-
-### Sweep wins, jeśli
-
-- osiąga zaakceptowaną naturalność;
-- pipe look został rzeczywiście usunięty;
-- transitions są dobre;
-- przyszła spatial flexibility pozostaje osiągalna;
-- koszt/złożoność są znacząco niższe niż SDF.
-
-### SDF/Volume wins, jeśli
-
-- daje wyraźnie lepszą jakość przestrzeni;
-- continuous representation rzeczywiście poprawia transitions/seams;
-- genuine 3D features są znacznie prostsze i bardziej naturalne;
-- performance/memory pozostają akceptowalne dla lokalnie streamowanych caves.
-
-### Neither wins
-
-Jeśli oba warianty mają fundamentalne problemy, nie wybierać rozwiązania na siłę. Udokumentować wynik i zaprojektować kolejny wariant/hybrydę.
-
-SDF nie wygrywa automatycznie przez najwyższy visual score. Sweep może wygrać, jeśli osiąga wystarczającą jakość gameplayową przy wyraźnie mniejszej złożoności. Celem jest najlepszy trade-off dla Seedvale, nie maksymalna fidelity.
-
-### Artifact
-
-Wyniki zapisać do:
-
-`docs/design/caves/04-sweep-vs-sdf-spike-results.md`
-
-Dokument powinien zawierać:
-
-- technical results;
-- benchmark results;
-- manual gameplay observations;
-- wybraną reprezentację po decyzji gracza;
-- odrzucony wariant i powody;
-- otwarte ryzyka.
-
-Po architecture decision **zaktualizować ten plan**, wpisując konkretną wybraną reprezentację i usuwając niepotrzebną warunkowość z Milestone B.
-
-> **Do not continue into Milestone B until the player has manually compared both representations in the browser and the selected representation has been recorded in this plan.**
-
-Eksperymentalne implementacje nie stają się produkcyjne tylko dlatego, że działają. Przegrany wariant usunąć. Wygrany spike może zostać przebudowany przed produkcją, jeśli jego eksperymentalna struktura nie odpowiada docelowej architekturze.
+Szczegóły i benchmark: `docs/design/caves/04-sweep-vs-sdf-spike-results.md`.
 
 ---
 
 # Milestone B — Production Cave V2
 
-Milestone B rozpoczyna się dopiero po przejściu architecture decision gate i aktualizacji planu.
+Milestone B jest podzielony na małe produkcyjne slice'y. Nie rozszerzać scope jednego slice'a na kolejne.
+
+```text
+B1  production topology + SDF spatial representation + geometry
+B2  entrance + gameplay spatial queries
+B3  collision + third-person camera
+B4  streaming + lifecycle + performance
+B5  V1/Sweep removal + cleanup
+```
 
 ---
 
-## 16. Production spatial representation
+# B1 — Production topology + SDF spatial representation + geometry
 
-Wdrożyć jeden produkcyjny sposób reprezentowania cave space zgodnie z decyzją Milestone A.
+## 5. Cel B1
+
+Zastąpić eksperymentalny runtime oparty na `buildSpikeTestTopology()` / spike-specific SDF builderze właściwą produkcyjną ścieżką:
+
+```text
+LargeCaveSite
+    ↓
+production CaveTopology
+    ↓
+production local SDF spatial representation
+    ↓
+derived presentation mesh
+```
+
+Po B1 cave nadal może używać istniejącego `CaveVolume` / collider proxy jako **tymczasowego compatibility adaptera** do B2/B3, ale te adaptery nie są źródłem prawdy Cave V2.
+
+## 6. B1 — topology ownership
+
+### Reuse
+
+Reuse `pickLargeCaveSites()` i jego placement filtering.
+
+Cave identity musi pozostać stabilne względem dotychczasowych `caveId`. Jeśli `makeCaveId()` trzeba przenieść z V1 `caveGenerator.ts`, przenieść logikę bez zmiany wyniku.
+
+### Replace
+
+Nie używać docelowo:
+
+```text
+generateCaveDefinitions()
+        ↓
+zaakceptowany V1 layout
+        ↓
+wyrzucenie layoutu i użycie tylko entrance
+```
+
+To jest obecnie transitional Milestone-A wiring, nie production ownership.
+
+Production builder ma generować i walidować `CaveTopology` bez pośrednictwa V1 tunnel/chamber geometry.
+
+### Determinism per cave
+
+Aktualny `buildSpikeTestTopology(seed, entrance)` używa RNG zależnego od **world seed**, więc wszystkie caves w jednym świecie dostają te same losowe decyzje/wobble w lokalnym układzie.
+
+B1 musi derivować structural RNG z:
+
+```text
+world seed + stable cave identity / site coordinates + purpose-specific salt
+```
+
+Tak, aby caves były deterministyczne, ale nie były klonami.
+
+Nie używać jednego RNG streamu zależnego od call order.
+
+## 7. B1 — production L1 topology
+
+Bazowy archetype pozostaje mały:
+
+```text
+entrance
+  ↓
+transition
+  ↓
+irregular passage
+  ↓
+widening / bend
+  ↓
+main chamber
+  └─ shelf OR overhang
+```
+
+Opcjonalny krótki branch może pozostać stress/test capability, ale nie jest wymagany dla pierwszego production L1.
+
+### Skala przestrzeni
+
+Caves mają być wyraźnie większe w **cross-section**, nie przede wszystkim dłuższe.
+
+Punkt startowy do tuningu:
+
+| Section | Width | Height |
+|---|---:|---:|
+| normal passage | ~3.5–4.5 m | ~4.5–5.5 m |
+| widening / bend | ~5–6 m | ~5.5–6.5 m |
+| main chamber | ~9–10 m | ~9–11 m |
+
+Wysokość może rosnąć bardziej niż szerokość. Dodatkowej wysokości nie dodawać symetrycznie w górę kosztem overburden — preferować floor descent / downward expansion tam, gdzie terrain tego wymaga.
+
+Route length około 20–30 m nadal wystarcza dla L1. Długość nie jest głównym celem tego slice'a.
+
+## 8. B1 — terrain adaptation i overburden
+
+Usunąć spike-only model, w którym `sinkUnderTerrain()` obniża całe wnętrze jednym uniform dropem i przez to potrafi wrzucić cały dodatkowy spadek w pierwszy ~4 m segment.
+
+Production topology ma:
+
+- znać deterministic analytic surface (`sampleBaseHeight`-equivalent);
+- walidować pełny walkable/ceiling footprint, nie tylko centerline;
+- zachować specjalny mouth transition;
+- adaptować descent/topology lokalnie i płynnie;
+- odrzucić site, jeśli rozsądna topology nie mieści się pod terrain;
+- nigdy nie wypychać cave ponad surface tylko dlatego, że site był zaakceptowany przez V1 shape.
+
+Nie robić terrain carvingu wnętrza cave.
+
+## 9. B1 — production SDF spatial representation
+
+Obecny `sdfCaveMesh.ts` miesza trzy odpowiedzialności:
+
+```text
+topology interpretation
++ SDF field construction
++ grid sampling / mesh extraction
+```
+
+Rozdzielić co najmniej logicznie:
+
+```text
+CaveTopology
+   ↓
+CaveSdfSpatialRepresentation
+   - bounds
+   - deterministic field evaluation
+   - structural primitives/features
+   - representation parameters
+   ↓
+mesh extraction
+```
+
+Ważne:
+
+- spatial representation nie importuje Three.js;
+- representation parameters (`smoothK`, primitive spacing, field detail) nie trafiają do `CaveTopology`;
+- current Naive Surface Nets może pozostać pierwszym production mesherem, jeśli rozdzielenie nie wymaga jego zmiany;
+- nie robić jeszcze Dual Contouring / Marching Cubes rewrite bez profilingowego powodu;
+- structural shape i surface detail pozostają rozdzielone.
+
+### Generic topology consumption
+
+Obecny SDF builder używa hardcoded:
+
+```text
+MAIN_CHAIN = entrance → wide-transition → descending-passage → widening-bend → main-chamber
+```
+
+B1 musi przestać zależeć od konkretnych spike node IDs. Spatial representation ma konsumować `topology.segments` / graph semantics, aby późniejszy branch/loop nie wymagał przepisywania meshera.
+
+### Accidental unions
+
+SDF smooth union jest spatial-only. B1 ma zachować/testować constraint, że topologicznie niepołączone passages nie mogą zbliżyć się na tyle, aby field stworzył przypadkowy bridge.
+
+Na L1 można realizować to jako topology-generation separation constraint; nie trzeba tworzyć graph-aware SDF boolean engine.
+
+## 10. B1 — presentation geometry
+
+Mesh jest derived z production SDF representation.
 
 Wymagania:
 
-- determinism;
-- brak zależności od Three.js scene state;
-- local cave bounds;
-- continuous cave space;
-- floor/walls/ceiling;
-- spatial queries;
-- możliwość regeneration po unload;
-- separation simulation/world data from presentation;
-- future compatibility z multi-level topology.
-
-Nie używać render mesh/BVH jako jedynego źródła gameplayowych danych przestrzeni.
-
----
-
-## 17. CaveVolume decision
-
-Nie zakładać z góry zachowania ani usunięcia obecnego `CaveVolume`.
-
-Po wyborze spatial representation ocenić, czy `CaveVolume`:
-
-- pozostaje adapterem dla prostych L1 queries;
-- zostaje uogólniony;
-- czy zostaje zastąpiony.
-
-Obecny model `x/z → one floor + one ceiling` może wystarczyć jako przejściowy adapter L1, ale nie może stać się trwałym kontraktem architektury.
-
-Future caves mogą zawierać:
-
-- upper/lower routes w tym samym X/Z;
-- ledges;
-- overhangs;
-- stacked passages;
-- kilka poprawnych wysokości w jednym chamber.
-
-Pełne multi-interval queries mogą pozostać poza L1, jeśli nie są potrzebne, ale architektura nie może ich blokować.
-
----
-
-## 18. Production geometry
-
-Z wybranej spatial representation generować presentation mesh.
-
-Wymagania:
-
-- brak oczywistych tube cross-sections;
-- brak powtarzalnej symetrii;
+- brak pipe look;
 - brak seams/cracks;
-- wyraźna różnica passage/chamber;
-- natural widening/narrowing;
-- ceiling variation;
-- wall asymmetry;
+- wyraźny passage/chamber contrast;
+- asymetryczne walls;
 - grywalny floor;
-- multi-scale deformation;
-- poprawne normals;
-- poprawne disposal;
-- rozsądny vertex/triangle budget;
-- brak zbędnych draw calls.
+- ceiling variation;
+- shelf/overhang jako część continuous space;
+- poprawne winding/normals;
+- surface clip przy mouth zachowany;
+- one cave interior nie mnoży niepotrzebnie draw calls.
 
-Jako punkt startowy dla surface detail, nie jako stałą amplitudę noise:
+Naturalność ma wynikać z structural geometry + kilku skal detail, nie z dużego noise na prostych primitives.
 
-- micro detail około `0.3–0.6 m`;
-- medium irregularity około `1–2 m`;
-- większe lokalne formations około `2 m+`.
+## 11. B1 — runtime integration
 
-Naturalność ma wynikać z structural shape + kilku skal detail, nie jednego random noise pass.
-
----
-
-## 19. Entrance i surface integration
-
-Entrance traktować jako osobny problem jakościowy, nie efekt uboczny interior meshing.
-
-Połączenie:
+Zachować obecny lifecycle:
 
 ```text
-surface terrain
-      ↓
-mouth
-      ↓
-transition space
-      ↓
-interior cave
+createCaves(): precompute cheap deterministic world data
+activate(): build presentation geometry
+ deactivate(): dispose geometry
 ```
 
-Wymagania:
+Nie generować wszystkich SDF meshes podczas world boot.
 
-- entrance na odpowiednim cliff/slope;
-- szerokość i wysokość odpowiednia dla third-person gameplay;
-- brak małego okrągłego hole;
-- brak widocznej dziury przez surface;
-- terrain nad cave pozostaje surface;
-- vegetation nad tunnel pozostaje poprawna;
-- mouth transition maskuje połączenie terrain ↔ cave interior;
-- reuse istniejących rock assets tam, gdzie pomaga;
-- płynne połączenie entrance z pierwszą sekcją topology.
+`createCaves.ts` powinno po B1 przechowywać production topologies / spatial definitions, a nie parę `V1 CaveDefinition + spike topology`.
 
-Entrance transition oceniać niezależnie od interior quality.
+Do czasu B2/B3 można zachować compatibility adapter do `CaveDefinition` dla obecnego `CaveVolume` i colliderów, ale powinien być jawnie transitional i derived z production topology.
 
-### Near-surface / overburden case
+## 12. B1 — debug/cleanup boundary
 
-Zachować lokalną kontrolę roof thickness względem surface na całej wymaganej długości cave.
+Po technicznym potwierdzeniu production SDF path:
 
-Początkowe połączenie z mouth może mieć specjalne warunki, ale dalej ceiling musi zachować bezpieczny dodatni overburden.
+- `?caveSpike=sweep` nie jest już potrzebne jako runtime architecture;
+- usunąć Sweep implementation i comparison selection policy, jeśli nie są potrzebne do jednego ostatniego regression testu;
+- nazwy `spikeTestCave`, `caveSpike*`, `cave-interior-spike` nie powinny pozostać w production API;
+- nie usuwać jeszcze V1 `CaveVolume` / colliders / camera integration — to B2/B3/B5.
 
-Nie stracić poprawki V1 dotyczącej initial tunnel descent i local roof-thickness validation.
+Rename/refactor wykonywać tylko tam, gdzie usuwa faktyczną spike semantics; bez unrelated cleanup.
 
----
+## 13. B1 — technical verification
 
-## 20. Gameplay spatial queries
+Dodać targeted tests dla:
 
-Player musi otrzymywać właściwe dane cave space bez przełączania surface/cave wyłącznie na podstawie X/Z.
+- deterministic topology dla tej samej cave identity;
+- różnic structural RNG między dwiema caves tego samego world seed;
+- topology graph → SDF representation bez hardcoded node ids;
+- production overburden over full footprint;
+- near-surface rejection/adaptation;
+- disconnected-passage separation / accidental-union constraint;
+- deterministic SDF field/bounds;
+- geometry winding/bounds/no-NaN invariants;
+- lazy activation/disposal regression, jeśli zmieniony runtime flow tego wymaga.
 
-Gameplay representation ma pozwalać określić co najmniej:
-
-- cave containment;
-- floor;
-- ceiling clearance;
-- wall/collision proximity lub odpowiedni proxy;
-- bounds;
-- entrance transition.
-
-API powinno zachować drogę do przyszłych multi-level queries bez wymagania ich pełnej implementacji w L1.
-
----
-
-## 21. Collision
-
-Reuse istniejącego `ColliderRegistry`.
-
-Nie tworzyć CaveCollisionManager ani równoległego physics world.
-
-Collision ma:
-
-- blokować cave walls;
-- respektować vertical extent;
-- nie blokować surface nad cave;
-- obsługiwać entrance;
-- być stabilne przy rebuild;
-- mieć stable owner keys;
-- nie zależeć wyłącznie od render geometry.
-
-Najmniejszy wystarczający model collision dobrać po architecture gate. Może to być analytical/sampled/proxy/SDF/hybrid representation zależnie od wybranej technologii.
-
----
-
-## 22. Third-person camera
-
-Camera quality jest warunkiem ukończenia V2, nie późniejszym polish.
-
-Rozdzielić dwie odpowiedzialności:
-
-```text
-cave geometry
-→ zapewnia rozsądny third-person gameplay clearance
-
-camera obstruction
-→ obsługuje rzeczywiście ograniczone przestrzenie
-```
-
-Nie powiększać wszystkich caves tylko po to, aby uniknąć camera obstruction.
-
-W cave:
-
-- kamera nie przechodzi przez walls;
-- kamera nie przechodzi przez ceiling;
-- kamera nie wychodzi ponad terrain;
-- nie pokazuje surface grass/terrain z wnętrza;
-- normalny szeroki corridor pozwala zachować typowy boom distance;
-- w realnych zwężeniach obstruction może poprawnie skrócić dystans.
-
-Poza cave zachowanie surface camera pozostaje bez zmian, chyba że recon wykaże konieczną wspólną poprawkę.
-
----
-
-## 23. Streaming i lifecycle
-
-Reuse istniejącego world lifecycle:
-
-```text
-createWorldBundle()
-rebuildWorldBundle()
-disposeWorldBundle()
-```
-
-Cave presentation aktywować/dezaktywować przez istniejący world/chunk lifecycle.
-
-Nie generować wszystkich cave meshes na start i nie skanować wszystkich caves per frame.
-
-Po rebuild/unload:
-
-- meshes są disposed;
-- colliders usunięte;
-- runtime references nie pozostają aktywne;
-- ponowne wygenerowanie zachowuje identity/topology dla tego samego seeda/version.
-
----
-
-## 24. Performance
-
-Performance jest częścią definition of done.
-
-Dla L1 zebrać:
-
-- representation generation CPU time;
-- mesh extraction/build time;
-- peak temporary memory/allocations tam, gdzie mierzalne;
-- final geometry memory estimate;
-- vertex count;
-- triangle count;
-- collision structure size/count;
-- streaming activation cost.
-
-Następnie sprawdzić rozsądny scenariusz kilku caves w świecie bez jednoczesnego renderowania wszystkich.
-
-Web Worker rozważyć tylko wtedy, gdy profiling pokaże istotny main-thread blocking i koszt komunikacji/transferu jest uzasadniony.
-
----
-
-## 25. V1 migration and cleanup
-
-Po browser verification V2:
-
-- usunąć nieużywaną V1 geometry path;
-- usunąć zbędne V1 helpers;
-- zachować reuse'owane integration mechanisms;
-- usunąć przegrany spike;
-- nie pozostawiać produkcyjnego runtime toggle V1/V2 bez konkretnej potrzeby debugowej;
-- zaktualizować code map/docs tam, gdzie wymagane.
-
-Nie usuwać wspólnej infrastruktury tylko dlatego, że powstała podczas V1.
-
----
-
-## 26. Future capability — poza L1, ale wspierane architektonicznie
-
-Architektura ma pozostawić drogę do caves posiadających:
-
-- several entrances;
-- interconnected tunnels;
-- loops;
-- several chambers;
-- branches/dead ends;
-- multiple routes między tymi samymi przestrzeniami;
-- different elevations;
-- ramps;
-- shelves/platforms;
-- overhangs;
-- upper/lower paths.
-
-Przykład:
-
-```text
-                  upper route
-                     ╭──────────── shelf
-Entrance ────────────┤
-                     │
-                     ↓
-                 large chamber
-                     ↑
-                     │
-                 lower route
-```
-
-Nie implementować tego pełnego topology w L1.
-
----
-
-## 27. Scope out
-
-Plan nie obejmuje:
-
-- full procedural dungeon generator;
-- global voxel/SDF terrain;
-- procedural navmesh dla całego świata;
-- cave fauna;
-- cave loot;
-- cave quests;
-- cave-specific persistence state;
-- multiple production cave archetypes;
-- multiplayer cave synchronization;
-- replacement całego collision systemu;
-- replacement player movement system;
-- extensive cave decoration system.
-
-Fauna/loot/progression planować dopiero po ustabilizowaniu Cave V2 spatial model.
-
----
-
-## 28. Visual acceptance criteria
-
-Cave V2 jest nieakceptowalna, jeśli:
-
-- wygląda jak tube;
-- ma oczywiste regularne przekroje;
-- passage i chamber wyglądają jak sklejone bryły;
-- widać seams/cracks;
-- walls są prawie gładkie;
-- noise wygląda jak proceduralny displacement na rurze;
-- entrance wygląda jak mały otwór;
-- player/camera regularnie widzi surface przez cave geometry.
-
-Cave V2 powinna:
-
-- być asymetryczna;
-- mieć zmienną szerokość i wysokość;
-- zawierać local constrictions i bulges;
-- mieć nieregularny floor i ceiling;
-- mieć naturalne chamber expansion;
-- zawierać co najmniej jeden genuine 3D feature: shelf albo overhang;
-- zachować świadomą kontrolę gameplayową.
-
-Naturalność nie oznacza losowości.
-
----
-
-## 29. Manual browser verification
-
-Player wykonuje manual verification w przeglądarce.
-
-Sprawdzić co najmniej:
-
-1. L1 cave ma około 20–30 m długości.
-2. Entrance znajduje się w wiarygodnym miejscu terrain.
-3. Entrance jest odpowiednio szerokie i wysokie.
-4. Entrance transition wygląda poprawnie niezależnie od interior quality.
-5. Surface nad cave pozostaje poprawny.
-6. Grass/vegetation nie jest widoczna z interior przez błędy geometrii/kamery.
-7. Player płynnie przechodzi surface → cave.
-8. Początkowy passage stopniowo schodzi w dół.
-9. Floor nie ma przypadkowych ostrych skoków utrudniających ruch.
-10. Roof zachowuje wymagany overburden poza kontrolowanym mouth transition.
-11. Corridor nie wygląda jak tube.
-12. Cross-section nie powtarza się w oczywisty sposób.
-13. Walls są asymetryczne.
-14. Ceiling ma lokalną zmienność.
-15. Floor ma kontrolowaną nieregularność.
-16. Passage → chamber transition wygląda jak jedna przestrzeń.
-17. Chamber jest wyraźnie większy od passage.
-18. Nie ma widocznych seams.
-19. Shelf/overhang wygląda jak część przestrzeni, nie doklejony mesh.
-20. Structural geometry pozostaje cave-like przy wyłączonym small-scale detail.
-21. Player collision działa.
-22. Player nie przechodzi przez walls ani ceiling.
-23. Surface collision nad cave pozostaje poprawne.
-24. Kamera nie przechodzi przez walls ani ceiling.
-25. Kamera nie wychodzi ponad surface.
-26. Kamera nie pokazuje surface terrain z wnętrza.
-27. Normalny szeroki tunnel daje rozsądny camera distance.
-28. Geometry/topology jest deterministyczna dla tego samego seeda/version.
-29. Rebuild world nie pozostawia starych meshes/colliders.
-30. Streaming activation/deactivation nie powoduje lifecycle errors.
-31. Frame pacing pozostaje akceptowalny podczas wejścia do cave.
-
-Statusy raportować osobno:
-
-- implemented;
-- technically verified;
-- browser verified.
-
----
-
-## 30. Technical verification
-
-Po większych fazach wykonywać krótki, adekwatny verification loop.
-
-Przed zamknięciem planu:
+Uruchomić adekwatnie:
 
 ```text
 npx tsc --noEmit
@@ -841,84 +378,174 @@ npm run build
 npm run test
 ```
 
-Dodać targeted tests dla nowych kontraktów, szczególnie:
+Browser verification wykonuje Player.
 
-- deterministic topology;
-- stable cave identity;
-- topology → spatial representation determinism;
-- entrance transition invariants;
-- overburden;
-- cave containment;
-- floor/ceiling queries odpowiednie dla wybranego modelu;
-- vertical separation od surface;
-- rebuild/disposal;
-- geometry generation invariants tam, gdzie mają wartość.
+### B1 manual browser checklist
 
----
+Sprawdzić kilka caves / kilka seeds, nie tylko `definitions[0]`:
 
-## 31. Relevant code areas
-
-Przed implementacją aktualny recon musi potwierdzić dokładne ownership i symbole.
-
-Spodziewane główne obszary:
-
-- `src/world/caveGenerator.ts`;
-- `src/world/caveVolume.ts`;
-- `src/world/caveMesh.ts`;
-- `src/world/createCaves.ts`;
-- `src/world/collision.ts`;
-- `src/app/worldBundle.ts`;
-- `src/player/PlayerController.ts`;
-- cave-related tests.
-
-Nie tworzyć nowych abstrakcji tylko po to, aby odpowiadały nazwom z planu. Podział modułów ma wynikać z aktualnego kodu i wybranej reprezentacji.
+- caves nie są geometrycznymi klonami;
+- normal passage jest wyraźnie większy od obecnego spike;
+- chamber jest duży również wysokościowo;
+- entrance → first passage nie dostaje absurdalnie stromego uniform sink ramp;
+- cave nie przebija surface;
+- passage/chamber nadal zachowują przewagę SDF nad Sweep;
+- brak nowych seams / black faces;
+- wejście do aktywującej się cave nie powoduje nieakceptowalnego hitcha.
 
 ---
 
-## 32. Implementation notes
+# B2 — Entrance + gameplay spatial queries
 
-Przed kodowaniem utworzyć:
+## 14. Scope
 
-`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md`
+Po stabilnym production SDF:
 
-Implementation notes mają oszczędzić agentowi ponownego recon i zawierać tylko implementation-relevant findings:
+- dopracować `surface → mouth → transition → interior`;
+- zdecydować fate `CaveVolume`;
+- wprowadzić Y-aware spatial queries odpowiednie dla przyszłych multi-level routes;
+- usunąć `Math.min`-style one-floor assumptions jako trwały kontrakt;
+- zachować surface/cave selection na podstawie rzeczywistego 3D containment.
 
-- aktualne cave lifecycle;
-- aktualne `CaveDefinition` / `CaveVolume` ownership;
-- exact collision integration points;
-- exact `PlayerController` cave-aware flow;
-- terrain height / cave ground query relationships;
-- current camera obstruction ownership;
-- V1 files/symbols do reuse;
-- V1 files/symbols do replacement;
-- current streaming activation;
-- disposal/rebuild mechanics;
-- existing debug/performance mechanisms do reuse;
-- test entry points;
-- rozbieżności między research/plan a aktualnym kodem.
-
-Nie kopiować całego planu ani researchu.
+API ma co najmniej obsługiwać containment, floor, ceiling, bounds i entrance transition, bez render-mesh authority.
 
 ---
 
-## 33. Completion
+# B3 — Collision + third-person camera
+
+## 15. Collision
+
+Reuse `ColliderRegistry` i stable owner keys.
+
+Collision ma:
+
+- blokować cave walls;
+- respektować vertical extent;
+- nie blokować surface nad cave;
+- być derived z spatial representation / odpowiedniego proxy;
+- nie wymagać osobnego cave physics world.
+
+Rozwiązać też pre-existing cave collider Y-filter gap dla innych entity queries, jeśli aktualny recon potwierdzi, że nadal występuje.
+
+## 16. Camera
+
+Camera quality jest warunkiem ukończenia V2.
+
+W cave kamera:
+
+- nie przechodzi przez walls/ceiling;
+- nie wychodzi ponad terrain;
+- nie pokazuje surface z wnętrza;
+- utrzymuje normalny boom distance w szerokim passage;
+- skraca boom tylko przy realnym obstruction.
+
+Nie powiększać cave tylko po to, aby maskować camera bug.
+
+---
+
+# B4 — Streaming + lifecycle + performance
+
+## 17. Streaming/lifecycle
+
+Reuse istniejący `WorldBundle` lifecycle i grid-based cave activation.
+
+Po unload/rebuild:
+
+- meshes disposed;
+- colliders cleared;
+- runtime refs released;
+- ta sama cave identity/topology wraca dla tego samego seed/version.
+
+Nie skanować wszystkich caves per frame i nie generować wszystkich meshes upfront.
+
+## 18. Performance
+
+Zmierzyć:
+
+- topology generation;
+- SDF representation build;
+- mesh extraction;
+- peak temporary memory;
+- geometry memory;
+- vertices/triangles;
+- activation hitch;
+- collision proxy size.
+
+Milestone-A baseline (`~112.6 ms` SDF extraction przy `cellSize=0.4`) jest punktem odniesienia, nie akceptowanym automatycznie production budgetem.
+
+Najpierw profilować i optymalizować data/layout/grid resolution/caching. Web Worker tylko wtedy, gdy main-thread blocking pozostaje istotny i transfer overhead ma sens.
+
+---
+
+# B5 — Migration + cleanup
+
+## 19. Cleanup
+
+Po browser verification produkcyjnego Cave V2:
+
+- usunąć nieużywany V1 geometry path `caveMesh.ts`;
+- usunąć V1 layout helpers, które przestały być load-bearing;
+- usunąć Sweep/comparison harness;
+- zachować współdzielone siting/lifecycle/collision infrastructure;
+- zaktualizować code map/docs;
+- nie zostawiać runtime toggle V1/V2.
+
+---
+
+## 20. Future capability — poza L1
+
+Architektura ma pozostawić drogę do:
+
+- several entrances;
+- branches/dead ends;
+- interconnected tunnels;
+- loops;
+- several chambers;
+- different elevations;
+- ramps;
+- shelves/platforms;
+- overhangs;
+- upper/lower paths w tym samym X/Z.
+
+Nie implementować pełnego topology generatora tych układów w tym planie.
+
+---
+
+## 21. Scope out
+
+Plan nie obejmuje jeszcze:
+
+- cave fauna;
+- cave loot;
+- cave quests;
+- cave-specific persistence state;
+- multiple production cave archetypes;
+- global voxel/SDF terrain;
+- procedural navmesh całego świata;
+- multiplayer cave synchronization;
+- replacement całego player movement / collision systemu;
+- extensive cave decoration system.
+
+Fauna/loot/progression dopiero po ustabilizowaniu spatial modelu.
+
+---
+
+## 22. Completion
 
 Plan jest zakończony dopiero gdy:
 
-- oba representation spikes zostały zaimplementowane i technicznie porównane;
-- player ręcznie porównał oba warianty w browserze;
-- architecture decision została zapisana w `04-sweep-vs-sdf-spike-results.md` i w tym planie;
-- jeden wariant został wdrożony produkcyjnie;
-- przegrany spike został usunięty;
-- V1 geometry path została zastąpiona;
+- Milestone A decision SDF jest wdrożona jako production architecture;
+- spike terminology/harness nie jest produkcyjnym runtime;
+- V1 geometry path została usunięta;
 - L1 cave spełnia visual/gameplay acceptance;
-- entrance/surface integration działa;
+- entrance i surface integration działają;
+- spatial queries nie blokują przyszłego multi-level modelu;
 - collision i camera działają;
-- determinism/lifecycle są zweryfikowane;
-- performance jest zmierzone;
+- lifecycle/determinism są zweryfikowane;
+- performance jest zmierzone i akceptowalne;
 - automated verification przechodzi;
-- manual browser verification została wykonana przez gracza.
+- manual browser verification została wykonana przez Playera.
 
-Dopiero potem planować fauna/loot/quests oraz większe multi-route cave topology.
+Dopiero potem planować fauna/loot/quests i większe multi-route cave topology.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
