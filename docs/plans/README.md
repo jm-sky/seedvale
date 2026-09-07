@@ -90,6 +90,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `quests-progression-011-grave-robbing-reputation-risk-and-stealth.md`    | -       | 🟡 | S      | world-007, quests-progression-001 |
 | 💡 `quests-progression-007-wolves-approach-settlement.md`                   | -       | 🟡 | M      | fauna-016 |
 | 💡 `quests-progression-009-dark-forest-ruins-treasure-map.md`               | -       | 🟡 | M      | fauna-016, world-012 |
+| ◼️ `fauna-018-persistent-habitat-occupants.md`                              | -       | 🟡 | M      | fauna-016 |
 
 ---
 
@@ -184,7 +185,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `018`
+- fauna: `019`
 - items-player: `020`
 - npc: `026`
 - persistence: `005`

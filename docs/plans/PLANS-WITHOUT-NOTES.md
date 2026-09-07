@@ -1,10 +1,11 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-07 21:13:01  
+> Date: 2026-09-07 21:19:44  
 
 ## PLANS
 
+- `fauna-018-persistent-habitat-occupants.md`
 - `npc-004-npc-genealogy-lineages.md`
 - `npc-023-perception-driven-observation-and-information-levels.md`
 - `npc-024-temporary-conditions-and-poisoning.md`
@@ -21,6 +22,37 @@
 
 --------------------------------
 ## PROMPTS
+
+### `fauna-018-persistent-habitat-occupants.md`
+
+Prompt:
+
+```
+Zrób review planu `fauna-018-persistent-habitat-occupants.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/fauna-018-persistent-habitat-occupants.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/fauna-018-persistent-habitat-occupants-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
 
 ### `npc-004-npc-genealogy-lineages.md`
 
