@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { KeyState } from '../input/Keyboard'
 import type { ToolKind } from '../items/HeldTool'
+import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { FootstepSurface } from '../terrain/footstepSurface'
 import { disposeObject3D, loadGltfAnimated, prepareProp } from '../assets/loadGltf'
 import {
@@ -56,6 +57,15 @@ const LOOK_AT_OFFSET_NEAR = 1.6
 export const PLAYER_HEIGHT = 1.8
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
+/** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`
+ *  typical-healthy-adult reference. Fixed constants, not persisted/rolled;
+ *  see `attributes`'s own doc comment. */
+export const PLAYER_STARTING_ATTRIBUTES: PhysicalAttributes = {
+  strength: 0.6,
+  perception: 0.6,
+  endurance: 0.6,
+  agility: 0.6,
+}
 /** How far below the surface the player can sink while swimming — caps out in deep
  *  water so the head still breaks the surface instead of vanishing into the seabed. */
 const MAX_SWIM_DEPTH = 1.2
@@ -172,6 +182,11 @@ export class PlayerController {
   readonly mesh: THREE.Object3D
   /** Shared survival HP — domain state only in v1 (no death UI / respawn). */
   readonly health: HealthState
+  /** Shared SPEA (plan npc-019 §6) — fixed at `PLAYER_STARTING_ATTRIBUTES`
+   *  for now (slightly above the shared `0.5` typical-healthy-adult
+   *  reference, which stays the neutral point for consumer mappings like
+   *  melee). No persistence, character creation or progression yet. */
+  readonly attributes: PhysicalAttributes
   /** Stamina/vigor/hunger/thirst (plan 106) — `stamina` is ticked here
    *  (tightly coupled to sprint below); `app/gameLoop.ts` ticks the other
    *  three pools each frame via `PlayerNeeds.ts`'s helpers. */
@@ -292,6 +307,7 @@ export class PlayerController {
     this.sampleFootstepSurface = sampleFootstepSurface
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
+    this.attributes = PLAYER_STARTING_ATTRIBUTES
     this.needs = createPlayerNeeds()
     this.skills = createPlayerSkills()
 

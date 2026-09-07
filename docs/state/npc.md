@@ -4,7 +4,7 @@
 
 **Not:** settlement generation, `Household`/`SettlementEconomy` internals (that's [SETTLEMENTS.md](./settlements.md)), fauna's own behaviour pipeline or `AnimalAgent` internals (that's [fauna.md](./fauna.md) — this doc only covers how NPCs *consume* what fauna exposes), combat resolver internals ([combat.md](./combat.md) owns those; this doc covers only where combat hands off into NPC state), the work-contract commitment record itself ([player-systems.md](./player-systems.md)'s Work Contracts section owns that; this doc covers only the NPC-side evaluation/execution), or a plan/changelog.
 
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-07
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -18,7 +18,7 @@ When this file and the code disagree, the code wins — update this file.
 
 **Identity / physical profile — deterministic, not persisted, regenerated every session:**
 - `settlement/families.ts` generates family/household composition (name, lastName, relation, age, scale) from a settlement seed; it is the sole producer of the identity data `ai/characters.ts` (role, Big Five personality, traits) and `ai/nameCultures.ts` (names) fold into before `NpcAgent` construction. It stays settlement-owned (family/household composition is a generation concern), even though its only real consumer is NPC identity.
-- `settlement/npcPhysicalProfile.ts` deterministically derives max HP/stamina/vigor from sex + a 9-stage age curve. Strength/agility/build/appearance are explicitly out of scope today — see [Species physical reference](#species-physical-reference-not-implemented) below.
+- `settlement/npcPhysicalProfile.ts` deterministically derives max HP/stamina/vigor from sex + a 9-stage age curve, plus base SPEA (`PhysicalAttributes` — Strength/Perception/Endurance/Agility, plan npc-019): four independent deterministic truncated-normal rolls centred on `0.5`, sex/age-agnostic. `resolveHumanStrengthProfile()` resolves the melee-facing human Strength profile from base Strength + a sex calibration shift (`±0.08`) + a Strength-specific age/development curve (independent from the generic HP/Stamina/Vigor age multiplier above). Perception/Endurance/Agility remain data-only — no consumer yet. Build/appearance are still out of scope — see [Species physical reference](#species-physical-reference-not-implemented) below.
 
 **Authoritative runtime entity state — `settlement/npcState.ts`'s `NpcAuthoritativeState`, keyed by stable NPC id, owned by a registry living on `SettlementsManager` (the same shape as the settlement economy/household registries — see [settlements.md](./settlements.md)):**
 - `health`, `stamina`, `vigor`, `needs` (thirst/wood duty/water duty/hunger).
@@ -134,9 +134,9 @@ The seven `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInj
 - **Weather/environment:** current weather is threaded live, once per frame, from the game loop through the settlements layer into every NPC's decision tick (never recomputed per NPC) and competes as the `seekShelter` pressure candidate above.
 - **Persistence:** see [Persistence](#persistence) above.
 
-### Species physical reference (not implemented)
+### Species physical reference (partially implemented)
 
-A future SPEA (strength/agility/perception/endurance) layer is planned in [docs/world/species-physical-reference.md](../world/species-physical-reference.md), which would extend `npcPhysicalProfile.ts`'s current sex+age-curve HP/stamina/vigor derivation. That document is a **design reference, not implemented state** — no such fields exist on the physical profile today, and it must not be read as describing current values.
+`docs/world/species-physical-reference.md` and `docs/world/human-strength-calibration.md` are the authoritative SPEA design references. Plan npc-019 implements base SPEA (`PhysicalProfile.attributes`) and human Strength profile resolution (`resolveHumanStrengthProfile()`) as described above, plus Strength's first gameplay consumer — see [combat.md](./combat.md#melee). Perception, Endurance and Agility remain unimplemented beyond the base roll: no profile/development resolution and no consumer exist for them yet, and the two design documents otherwise remain forward-looking rather than a description of current values.
 
 ## Limitations
 

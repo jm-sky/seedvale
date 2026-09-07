@@ -1,11 +1,13 @@
 import type { NpcGender } from '../ai/characters'
+import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import { createSeededRandom } from '../world/parseSeed'
 
-/** Plan npc-001 — deterministic NPC physical-profile generation from
+/** Plan npc-001/npc-019 — deterministic NPC physical-profile generation from
  *  `sex` + `age`. Pure and independent of `NpcAgent`/rendering: this module
- *  only produces max HP/stamina/vigor (`docs/vision/npc-physical-state.md`'s
- *  "physical profile" boundary — `strength`/`agility`/build/appearance are
- *  future extensions, out of scope here). */
+ *  produces max HP/stamina/vigor (`docs/vision/npc-physical-state.md`'s
+ *  "physical profile" boundary) plus the NPC's base SPEA `PhysicalAttributes`
+ *  and human Strength profile resolution (`docs/world/human-strength-calibration.md`).
+ *  Build/appearance remain future extensions, out of scope here. */
 
 export const NPC_AGE_MIN = 0
 export const NPC_AGE_MAX = 100
@@ -101,6 +103,133 @@ function sampleVariation(random: () => number): number {
   return VARIATION_MIN + random() * (VARIATION_MAX - VARIATION_MIN)
 }
 
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value))
+}
+
+/** SPEA base-attribute distribution (plan npc-019 §3,
+ *  `docs/world/species-physical-reference.md` §6.1) — deliberately not the
+ *  uniform ±10% `sampleVariation` above: a bell-shaped truncated normal
+ *  around `0.5` so ordinary values cluster near the species reference and
+ *  `0`/`1` stay exceptional rather than routine rolls. */
+const SPEA_LATENT_SD = 1
+const SPEA_LATENT_TRUNCATION = 3
+const SPEA_ATTRIBUTE_SD = 0.10
+const SPEA_NEUTRAL = 0.5
+
+/** Deterministic standard-normal sample via Box-Muller, rejection-sampled
+ *  to stay within `±SPEA_LATENT_TRUNCATION` SD (truncated normal) — still
+ *  fully deterministic for a given `random`, since rejection only ever
+ *  consumes further calls from that same seeded stream. `|z| > 3` occurs
+ *  for well under 1% of draws, so 100 attempts is not a realistic ceiling;
+ *  the eventual fallback keeps the function total without ever being
+ *  observable in practice. */
+function sampleTruncatedStandardNormal(random: () => number): number {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const u1 = Math.max(random(), Number.EPSILON)
+    const u2 = random()
+    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * SPEA_LATENT_SD
+    if (Math.abs(z) <= SPEA_LATENT_TRUNCATION) return z
+  }
+  return 0
+}
+
+function sampleBaseSpeaAttribute(random: () => number): number {
+  return clamp01(SPEA_NEUTRAL + sampleTruncatedStandardNormal(random) * SPEA_ATTRIBUTE_SD)
+}
+
+/** One independent deterministic seed offset per SPEA attribute (plan
+ *  npc-019 §3 — no shared "athleticism" roll), same short-mnemonic-hex idiom
+ *  as `hpVariation`/`staminaVariation`/`vigorVariation` above. */
+const SPEA_ATTRIBUTE_SEED_OFFSETS = {
+  strength: 0x5354524e, // "STRN"
+  perception: 0x50455243, // "PERC"
+  endurance: 0x454e4452, // "ENDR"
+  agility: 0x4147494c, // "AGIL"
+} as const
+
+function generateBaseAttributes(seed: number): PhysicalAttributes {
+  return {
+    strength: sampleBaseSpeaAttribute(createSeededRandom(seed ^ SPEA_ATTRIBUTE_SEED_OFFSETS.strength)),
+    perception: sampleBaseSpeaAttribute(createSeededRandom(seed ^ SPEA_ATTRIBUTE_SEED_OFFSETS.perception)),
+    endurance: sampleBaseSpeaAttribute(createSeededRandom(seed ^ SPEA_ATTRIBUTE_SEED_OFFSETS.endurance)),
+    agility: sampleBaseSpeaAttribute(createSeededRandom(seed ^ SPEA_ATTRIBUTE_SEED_OFFSETS.agility)),
+  }
+}
+
+/**
+ * Human Strength adult-potential curve (plan npc-019 §5,
+ * `docs/world/human-strength-calibration.md`) — deliberately independent
+ * from `AGE_MULTIPLIER_ANCHORS` above (that curve is HP/Stamina/Vigor
+ * capacity, different semantics). Anchors are the calibration document's own
+ * table.
+ */
+const STRENGTH_AGE_ANCHORS: readonly [number, number][] = [
+  [20, 0.95],
+  [25, 0.98],
+  [30, 1.00],
+  [39, 1.00],
+  [40, 0.98],
+  [50, 0.92],
+  [60, 0.84],
+  [70, 0.73],
+  [80, 0.60],
+  [90, 0.48],
+]
+
+function strengthAdultPotentialForAge(age: number): number {
+  const anchors = STRENGTH_AGE_ANCHORS
+  if (age <= anchors[0]![0]) return anchors[0]![1]
+  for (let i = 1; i < anchors.length; i++) {
+    const [ageHi, potHi] = anchors[i]!
+    if (age > ageHi) continue
+    const [ageLo, potLo] = anchors[i - 1]!
+    const t = ageHi === ageLo ? 0 : (age - ageLo) / (ageHi - ageLo)
+    return potLo + (potHi - potLo) * t
+  }
+  return anchors[anchors.length - 1]![1]
+}
+
+/** Ages below the youngest documented Strength anchor (20) have no
+ *  dedicated biological calibration yet — `human-strength-calibration.md`'s
+ *  "Juveniles" section permits conservatively reusing the existing
+ *  development/life-stage mechanism instead. This is an explicit temporary
+ *  mapping, not a researched juvenile Strength curve (plan npc-019 §5): it
+ *  reuses `ageMultiplierForAge`'s growth *shape* for ages 0..20, rescaled so
+ *  it lands exactly on the age-20 Strength anchor rather than that curve's
+ *  own (different-semantics) age-20 value. */
+const JUVENILE_STRENGTH_SHAPE_SCALE = STRENGTH_AGE_ANCHORS[0]![1] / ageMultiplierForAge(STRENGTH_AGE_ANCHORS[0]![0])
+
+/** Strength-specific age/development potential factor, `0..~1` — see
+ *  `STRENGTH_AGE_ANCHORS`/juvenile-shape doc comments above. Interpolated
+ *  deterministically; ages above the oldest anchor hold that anchor's value. */
+export function strengthAgePotentialForAge(age: number): number {
+  const clamped = clampAge(age)
+  if (clamped >= STRENGTH_AGE_ANCHORS[0]![0]) return strengthAdultPotentialForAge(clamped)
+  return ageMultiplierForAge(clamped) * JUVENILE_STRENGTH_SHAPE_SCALE
+}
+
+/** Practical v1 human sex calibration (plan npc-019 §4,
+ *  `docs/world/human-strength-calibration.md`) — a profile shift around the
+ *  shared neutral human reference, not a runtime bonus and not something
+ *  that determines an individual's final Strength by itself: distributions
+ *  must keep overlapping (same `SPEA_ATTRIBUTE_SD` individual variation on
+ *  both sides). */
+const SEX_STRENGTH_SHIFT: Record<NpcGender, number> = { male: 0.08, female: -0.08 }
+
+/**
+ * Resolves an NPC's current human Strength profile (plan npc-019 §4-5):
+ * individual base SPEA roll + sex calibration shift + age/development
+ * potential. This is "stable current base Strength"
+ * (`human-strength-calibration.md`'s "Base vs effective Strength"), not a
+ * general `effectiveStrength()` — temporary conditions are a later layer and
+ * are not applied here.
+ */
+export function resolveHumanStrengthProfile(profile: PhysicalProfile): number {
+  const sexShifted = profile.attributes.strength + SEX_STRENGTH_SHIFT[profile.sex]
+  return clamp01(sexShifted * strengthAgePotentialForAge(profile.age))
+}
+
 /** Adult baseline scale (plan §4) — kept in this module rather than importing
  *  `npcState.ts`'s `MAX_HP`/`MAX_STAMINA`/`ai/npcVigor.ts`'s `MAX_VIGOR` so
  *  this module stays a standalone, dependency-free generator; those runtime
@@ -128,6 +257,12 @@ export type PhysicalProfile = {
   readonly maxHp: number
   readonly maxStamina: number
   readonly maxVigor: number
+  /** Base SPEA (plan npc-019 §1/§3) — stable individual variation only, sex/
+   *  age-agnostic. `resolveHumanStrengthProfile()` resolves the melee-facing
+   *  human Strength profile from this plus `sex`/`age`; Perception/
+   *  Endurance/Agility are data-only until a later plan gives them a
+   *  consumer. */
+  readonly attributes: PhysicalAttributes
 }
 
 /**
@@ -163,5 +298,6 @@ export function generatePhysicalProfile(seed: number, sex: NpcGender, age: numbe
     maxHp: finalMax(BASE_HP * sexModifier.hp * ageMultiplier * hpVariation),
     maxStamina: finalMax(BASE_STAMINA * sexModifier.stamina * ageMultiplier * staminaVariation),
     maxVigor: finalMax(BASE_VIGOR * sexModifier.vigor * ageMultiplier * vigorVariation),
+    attributes: generateBaseAttributes(seed),
   }
 }

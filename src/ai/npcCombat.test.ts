@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { CombatTargetHandle } from '../combat/combatIntent'
 import type { Projectile } from '../combat/projectile'
+import { MELEE_CRITICAL_MULTIPLIER } from '../combat/criticalHit'
+import { MELEE_STRENGTH_NEUTRAL } from '../combat/meleeStrength'
 import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import {
@@ -91,16 +93,32 @@ describe('resolveNpcDefenseConfig', () => {
 describe('applyNpcMeleeHit', () => {
   it('applies damage to the target exactly once', () => {
     const target = fakeTarget()
-    const result = applyNpcMeleeHit(target, KNIFE, 'npc:1', 'melee:target', 1)
+    const result = applyNpcMeleeHit(target, KNIFE, MELEE_STRENGTH_NEUTRAL, 'npc:1', 'melee:target', 1)
     expect(target.damages).toHaveLength(1)
     expect(target.damages[0]).toBe(result.damage)
     expect(result.damage).toBeGreaterThanOrEqual(KNIFE.damage)
   })
 
-  it('is deterministic for the same attacker/attackKey/attempt', () => {
-    const a = applyNpcMeleeHit(fakeTarget(), KNIFE, 'npc:1', 'melee:target', 7)
-    const b = applyNpcMeleeHit(fakeTarget(), KNIFE, 'npc:1', 'melee:target', 7)
+  it('is deterministic for the same attacker/attackKey/attempt/strength', () => {
+    const a = applyNpcMeleeHit(fakeTarget(), KNIFE, MELEE_STRENGTH_NEUTRAL, 'npc:1', 'melee:target', 7)
+    const b = applyNpcMeleeHit(fakeTarget(), KNIFE, MELEE_STRENGTH_NEUTRAL, 'npc:1', 'melee:target', 7)
     expect(a).toEqual(b)
+  })
+
+  it('preserves legacy melee damage at neutral Strength (0.5)', () => {
+    const result = applyNpcMeleeHit(fakeTarget(), KNIFE, MELEE_STRENGTH_NEUTRAL, 'npc:1', 'melee:target', 1)
+    expect(result.damage).toBeCloseTo(result.critical ? KNIFE.damage * MELEE_CRITICAL_MULTIPLIER : KNIFE.damage, 5)
+  })
+
+  it('applies the shared Strength contribution before critical resolution (same roll, so the critical multiplier cancels out in the ratio)', () => {
+    const attackerId = 'npc:1'
+    const attackKey = 'melee:target'
+    const attempt = 1
+    const neutral = applyNpcMeleeHit(fakeTarget(), KNIFE, 0.5, attackerId, attackKey, attempt)
+    const low = applyNpcMeleeHit(fakeTarget(), KNIFE, 0.0, attackerId, attackKey, attempt)
+    const high = applyNpcMeleeHit(fakeTarget(), KNIFE, 1.0, attackerId, attackKey, attempt)
+    expect(low.damage).toBeCloseTo(neutral.damage * 0.7, 5)
+    expect(high.damage).toBeCloseTo(neutral.damage * 1.3, 5)
   })
 })
 

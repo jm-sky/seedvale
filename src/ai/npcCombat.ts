@@ -4,6 +4,7 @@ import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
 import { isAttackFromDefensibleDirection, type ResolvedDefense, resolveDefense } from '../combat/defenseResolver'
+import { applyMeleeStrength } from '../combat/meleeStrength'
 import { type DefenseConfig, ITEM_CATALOG, type MeleeConfig, type RangedConfig } from '../items/itemCatalog'
 
 /**
@@ -75,20 +76,25 @@ export function resolveNpcDefenseConfig(carried: Inventory): DefenseConfig | nul
   return null
 }
 
-/** One resolved melee hit — critical roll, then the target's own
- *  `applyDamage` (defense against an NPC's outgoing attack, if the target
- *  exposes it, still happens inside that call: e.g. `AnimalAgent.takeDamage`
- *  or a future NPC-target defense path). Mirrors `gameLoop.ts`'s player
- *  melee hit handling without duplicating it. */
+/** One resolved melee hit — the shared Strength contribution (plan npc-019
+ *  §10, same `combat/meleeStrength.ts` rule `gameLoop.ts` applies for the
+ *  player), then critical roll, then the target's own `applyDamage`
+ *  (defense against an NPC's outgoing attack, if the target exposes it,
+ *  still happens inside that call: e.g. `AnimalAgent.takeDamage` or a future
+ *  NPC-target defense path). Mirrors `gameLoop.ts`'s player melee hit
+ *  handling without duplicating it. `strength` is the attacker's already-
+ *  resolved/profiled Strength (`npcPhysicalProfile.ts`'s
+ *  `resolveHumanStrengthProfile()`), not a raw base SPEA value. */
 export function applyNpcMeleeHit(
   target: CombatTargetHandle,
   config: MeleeConfig,
+  strength: number,
   attackerId: string,
   attackKey: string,
   attempt: number,
 ): { critical: boolean, damage: number } {
   const result = resolveCriticalHit(
-    config.damage,
+    applyMeleeStrength(config.damage, strength),
     MELEE_CRITICAL_CHANCE,
     MELEE_CRITICAL_MULTIPLIER,
     attackerId,

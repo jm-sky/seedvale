@@ -636,11 +636,16 @@ export async function createSettlement(
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i)
       const npcId = `${def.id}:npc:${i}`
       const needOffset = i / Math.max(1, flatMembers.length - 1)
-      // Deterministic max HP/stamina/vigor from sex + age (plan npc-001) —
-      // own seed stream (settlement seed + flat member index), independent
-      // of `needOffset`/name/role rolls. Only used the first time `npcId` is
-      // ever seen by `npcStateRegistry` below; hydration of an existing id
-      // ignores it (a settlement doesn't re-roll an NPC's body on reload).
+      // Deterministic max HP/stamina/vigor + base SPEA from sex + age (plan
+      // npc-001/npc-019) — own seed stream (settlement seed + flat member
+      // index), independent of `needOffset`/name/role rolls. The maxima are
+      // only used the first time `npcId` is ever seen by `npcStateRegistry`
+      // below; hydration of an existing id ignores them (a settlement
+      // doesn't re-roll an NPC's body on reload). `physicalProfile` itself
+      // is also passed straight to `NpcAgent.create()` below (base SPEA
+      // isn't part of `NpcAuthoritativeState`, see `npcState.ts`) — the same
+      // stable `physicalSeed` formula reconstructs the same profile every
+      // time, so this doesn't reroll an existing NPC's Strength either.
       const physicalSeed = settlementSeed ^ Math.imul(i + 1, 0x51ed270b) ^ 0x50485953
       const physicalProfile = generatePhysicalProfile(physicalSeed, member.character.gender, member.age)
       // Hydrates from the same HP/needs/stamina/vigor object every time this
@@ -659,6 +664,7 @@ export async function createSettlement(
         treeIndex: i,
         needOffset,
         member,
+        physicalProfile,
         familyMembers,
         playAt,
         forest,

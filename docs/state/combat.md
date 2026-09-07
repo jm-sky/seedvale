@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-07
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -26,6 +26,8 @@ Melee and ranged combat are each a single neutral state machine reused by every 
 `ITEM_CATALOG[kind].melee` (`MeleeConfig`) is the single source of truth for damage/range/arcDot/windUp/hitWindow/recovery/staminaCost per weapon — see [WEAPONS.md](../items/WEAPONS.md) for the numbers. `player/playerMelee.ts` runs the windUp→hitWindow→recovery machine plus a deterministic range+facing-arc hit test (no raycasting) against active `AnimalAgent`s, independent of the gaze-pick target. Target acquisition (`pickCombatTarget()`, reached through `buildCombatTarget()` in `app/interactables.ts`) is a fallback after gaze-pick/dig-target; on touch it uses a wider acquisition cone and the started attack commits to the yaw pointing at the acquired target, so a swing at a target outside the weapon's own `arcDot` can still connect.
 
 Weapon condition (durability/sharpness) is a separate, orthogonal system — `items/weaponMaintenance.ts` — documented in [CATALOG.md](../items/CATALOG.md); sharpness reduces melee damage before the critical roll, wear applies once per resolved hit.
+
+**Strength (plan npc-019):** `combat/meleeStrength.ts`'s `applyMeleeStrength(baseDamage, strength)` is the single shared Strength→melee-damage rule for both the player and NPCs — linear, neutral at `Strength = 0.5` (`0.7 + strength * 0.6`, so `0.0 → ×0.70`, `1.0 → ×1.30`). Damage order is weapon base → sharpness (player only) → Strength → critical roll → target defense/accepted damage. `player/PlayerController.ts`'s `attributes.strength` (fixed `0.6`, see [player-systems.md](./player-systems.md#physical-attributes-spea-plan-npc-019)) feeds the player path in `app/gameLoop.ts`; each NPC's already-resolved human Strength (`settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile()`, computed once at `NpcAgent` construction from its deterministic `PhysicalProfile`, see [npc.md](./npc.md)) feeds `ai/npcCombat.ts`'s `applyNpcMeleeHit()`. Perception/Endurance/Agility have no consumer yet.
 
 ## Ranged
 

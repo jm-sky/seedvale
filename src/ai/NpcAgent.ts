@@ -64,7 +64,7 @@ import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
-import { generatePhysicalProfile } from '../settlement/npcPhysicalProfile'
+import { generatePhysicalProfile, type PhysicalProfile, resolveHumanStrengthProfile } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
@@ -771,6 +771,15 @@ export type NpcAgentDeps = {
    *  still derives real per-member maxima from `member`'s own sex/age
    *  (plan npc-001) rather than a hidden flat 100/100/100. */
   npcState?: NpcAuthoritativeState
+  /** Deterministic physical profile (plan npc-001/npc-019) — the same object
+   *  `createSettlement.ts` already computes to seed `npcState`'s maxima via
+   *  `npcStateRegistry.getOrCreate()`; threaded through separately here so
+   *  `NpcAgent` can also read base SPEA (`resolveHumanStrengthProfile()` for
+   *  melee) without duplicating that generation call. Defaults to
+   *  `generatePhysicalProfile(treeIndex, member.character.gender, member.age)`
+   *  for callers with no profile to hand in — same "isolated fallback" idiom
+   *  as `npcState` defaulting via that same call. */
+  physicalProfile?: PhysicalProfile
   getPlayerSocial?: PlayerSocialLookup
   mining?: SettlementMiningHooks | null
   getNearbyPlayerWell?: NearbyPlayerWellLookup
@@ -1185,6 +1194,12 @@ export class NpcAgent {
    *  etc. below) so `helperAssignment` reads/writes go straight to the one
    *  object every reconstruction of this npc id shares, no second copy. */
   private readonly npcState: NpcAuthoritativeState
+  /** This NPC's already-resolved/profiled human Strength (plan npc-019 §5,
+   *  `npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile()`) — resolved
+   *  once at construction from the stable deterministic physical profile,
+   *  not re-rolled per attack. Threaded into `applyNpcMeleeHit()` for the
+   *  shared melee Strength rule. */
+  private readonly meleeStrength: number
 
   private constructor(
     root: THREE.Object3D,
@@ -1221,19 +1236,22 @@ export class NpcAgent {
     const wellQueueId = deps.wellQueueId ?? null
     const economy = deps.economy ?? null
     const household = deps.household ?? null
+    // Deterministic physical profile (plan npc-001/npc-019) — defaults to a
+    // fresh generation for callers with no `SettlementsManager`-backed
+    // profile to hand in (same "isolated fallback" idiom as `economy`/
+    // `household` defaulting to `null`). `treeIndex` stands in for the
+    // settlement seed this isolated path doesn't have. Shared below by both
+    // the `npcState` maxima fallback and `meleeStrength` so the two never
+    // resolve from two different profile rolls.
+    const physicalProfile = deps.physicalProfile ?? generatePhysicalProfile(treeIndex, member.character.gender, member.age)
     // Authoritative HP/needs/stamina/vigor (plan 197) — the same object
     // every reconstruction of this npc id hydrates from; see
     // `settlement/npcState.ts`. Defaults to a fresh state for callers with
     // no `SettlementsManager`-backed registry to hand in (same "isolated
     // fallback" idiom as `economy`/`household` defaulting to `null`) —
     // still derives real per-member maxima from `member`'s own sex/age
-    // (plan npc-001) rather than a hidden flat 100/100/100. `treeIndex`
-    // stands in for the settlement seed this isolated path doesn't have.
-    const npcState = deps.npcState ?? createNpcAuthoritativeState(
-      npcId,
-      deps.needOffset,
-      generatePhysicalProfile(treeIndex, member.character.gender, member.age),
-    )
+    // (plan npc-001) rather than a hidden flat 100/100/100.
+    const npcState = deps.npcState ?? createNpcAuthoritativeState(npcId, deps.needOffset, physicalProfile)
     const getPlayerSocial = deps.getPlayerSocial ?? (() => ({ relationLevel: 'stranger', standing: 0 }))
     const mining = deps.mining ?? null
     this.playAt = playAt
@@ -1244,6 +1262,7 @@ export class NpcAgent {
     this.economy = economy
     this.household = household
     this.npcState = npcState
+    this.meleeStrength = resolveHumanStrengthProfile(physicalProfile)
     this.mining = mining
     this.workContracts = workContracts ?? null
     this.playerWells = playerWells ?? null
@@ -1833,7 +1852,7 @@ export class NpcAgent {
         )
         if (hits.length > 0) {
           this.combatAttackAttempt += 1
-          applyNpcMeleeHit(intent.target, tick.config, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
+          applyNpcMeleeHit(intent.target, tick.config, this.meleeStrength, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
           this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
           if (isNpcCombatDebugMode()) {
             console.log('[NPC COMBAT]', `npc=${this.id}/${this.name}/${this.role}`, `attack.hit target=${intent.target.ref.id}`)

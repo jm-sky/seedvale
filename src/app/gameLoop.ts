@@ -59,6 +59,7 @@ import {
 import { playAnimalAggroSound, playAnimalSound, playSpontaneousAnimalSound } from '../audio/animalSounds'
 import { playInventoryDrop, playInventoryPickUp } from '../audio/inventorySounds'
 import { MELEE_CRITICAL_CHANCE, MELEE_CRITICAL_MULTIPLIER, resolveCriticalHit } from '../combat/criticalHit'
+import { applyMeleeStrength } from '../combat/meleeStrength'
 import { advanceProjectile, type Projectile, sweptProjectileHit } from '../combat/projectile'
 import { rangedAccuracy, rangedDeviationRoll, resolveRangedDirection } from '../combat/rangedAttack'
 import {
@@ -967,8 +968,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           attackAttemptCounter++
           // Plan 162 — critical is a shared modifier, not ranged-only; melee
           // opts into the flat baseline chance instead of a per-weapon knob.
+          // Plan npc-019 — Strength contribution (shared with NPC melee via
+          // `combat/meleeStrength.ts`) applies after sharpness, before
+          // critical resolution; neutral at `strength = 0.5`.
           const critResult = resolveCriticalHit(
-            meleeTick.config.damage * sharpnessModifier,
+            applyMeleeStrength(meleeTick.config.damage * sharpnessModifier, player.attributes.strength),
             MELEE_CRITICAL_CHANCE,
             MELEE_CRITICAL_MULTIPLIER,
             'player',

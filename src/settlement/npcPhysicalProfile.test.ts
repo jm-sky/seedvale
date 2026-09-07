@@ -5,6 +5,8 @@ import {
   lifeStageForAge,
   NPC_AGE_MAX,
   NPC_AGE_MIN,
+  resolveHumanStrengthProfile,
+  strengthAgePotentialForAge,
 } from './npcPhysicalProfile'
 
 describe('lifeStageForAge', () => {
@@ -181,3 +183,119 @@ describe('generatePhysicalProfile', () => {
     }
   })
 })
+
+describe('base SPEA attributes (plan npc-019)', () => {
+    it('keeps every attribute within 0..1 across a broad deterministic sample', () => {
+      for (let seed = 0; seed < 500; seed++) {
+        const age = seed % 101
+        const sex = seed % 2 === 0 ? 'male' : 'female'
+        const { attributes } = generatePhysicalProfile(seed, sex, age)
+        for (const value of [attributes.strength, attributes.perception, attributes.endurance, attributes.agility]) {
+          expect(value).toBeGreaterThanOrEqual(0)
+          expect(value).toBeLessThanOrEqual(1)
+        }
+      }
+    })
+
+    it('does not collapse the four attributes into one shared "athleticism" roll', () => {
+      let anyDiffer = false
+      for (let seed = 0; seed < 30; seed++) {
+        const { attributes } = generatePhysicalProfile(seed, 'male', 30)
+        if (
+          attributes.strength !== attributes.perception ||
+          attributes.perception !== attributes.endurance ||
+          attributes.endurance !== attributes.agility
+        ) {
+          anyDiffer = true
+          break
+        }
+      }
+      expect(anyDiffer).toBe(true)
+    })
+
+    it('is centered near 0.5 and overwhelmingly inside the ordinary-adult range over a broad sample', () => {
+      const N = 2000
+      let sum = 0
+      let withinOrdinary = 0
+      for (let seed = 0; seed < N; seed++) {
+        const { attributes } = generatePhysicalProfile(seed, seed % 2 === 0 ? 'male' : 'female', 30)
+        sum += attributes.strength
+        if (attributes.strength >= 0.3 && attributes.strength <= 0.7) withinOrdinary++
+      }
+      // Broad statistical invariants only (plan npc-019 §11) — not an exact
+      // sampled-mean assertion coupled to the normal-sampler implementation.
+      expect(sum / N).toBeGreaterThan(0.45)
+      expect(sum / N).toBeLessThan(0.55)
+      expect(withinOrdinary / N).toBeGreaterThan(0.9)
+    })
+  })
+
+  describe('resolveHumanStrengthProfile (plan npc-019 §4-5)', () => {
+    it('keeps overlapping male/female Strength distributions with the documented population means', () => {
+      const N = 400
+      let maleSum = 0
+      let femaleSum = 0
+      for (let seed = 0; seed < N; seed++) {
+        maleSum += resolveHumanStrengthProfile(generatePhysicalProfile(seed, 'male', 30))
+        femaleSum += resolveHumanStrengthProfile(generatePhysicalProfile(seed + 1_000_000, 'female', 30))
+      }
+      expect(maleSum / N).toBeCloseTo(0.58, 1)
+      expect(femaleSum / N).toBeCloseTo(0.42, 1)
+
+      // Overlap: a genuinely strong woman outranks a genuinely weak man from
+      // the same base-roll population (species reference §6.3 — sex must
+      // never determine an individual's final value by itself).
+      let sawOverlap = false
+      for (let seed = 0; seed < N; seed++) {
+        const male = resolveHumanStrengthProfile(generatePhysicalProfile(seed, 'male', 30))
+        const female = resolveHumanStrengthProfile(generatePhysicalProfile(seed + 1_000_000, 'female', 30))
+        if (female > male) {
+          sawOverlap = true
+          break
+        }
+      }
+      expect(sawOverlap).toBe(true)
+    })
+
+    it('preserves 0..1 bounds across the full age range', () => {
+      for (let age = 0; age <= 100; age += 5) {
+        const profile = generatePhysicalProfile(age * 3 + 1, age % 2 === 0 ? 'male' : 'female', age)
+        const strength = resolveHumanStrengthProfile(profile)
+        expect(strength).toBeGreaterThanOrEqual(0)
+        expect(strength).toBeLessThanOrEqual(1)
+      }
+    })
+  })
+
+  describe('strengthAgePotentialForAge (plan npc-019 §5)', () => {
+    it('matches the documented adult anchors', () => {
+      expect(strengthAgePotentialForAge(20)).toBeCloseTo(0.95, 5)
+      expect(strengthAgePotentialForAge(25)).toBeCloseTo(0.98, 5)
+      expect(strengthAgePotentialForAge(30)).toBeCloseTo(1.00, 5)
+      expect(strengthAgePotentialForAge(39)).toBeCloseTo(1.00, 5)
+      expect(strengthAgePotentialForAge(40)).toBeCloseTo(0.98, 5)
+      expect(strengthAgePotentialForAge(50)).toBeCloseTo(0.92, 5)
+      expect(strengthAgePotentialForAge(60)).toBeCloseTo(0.84, 5)
+      expect(strengthAgePotentialForAge(70)).toBeCloseTo(0.73, 5)
+      expect(strengthAgePotentialForAge(80)).toBeCloseTo(0.60, 5)
+      expect(strengthAgePotentialForAge(90)).toBeCloseTo(0.48, 5)
+      expect(strengthAgePotentialForAge(100)).toBeCloseTo(0.48, 5)
+    })
+
+    it('is independent of the generic HP/Stamina/Vigor age multiplier', () => {
+      let anyDiffer = false
+      for (let age = 0; age <= 100; age++) {
+        if (Math.abs(strengthAgePotentialForAge(age) - ageMultiplierForAge(age)) > 1e-9) {
+          anyDiffer = true
+          break
+        }
+      }
+      expect(anyDiffer).toBe(true)
+    })
+
+    it('rises smoothly for juveniles up to the age-20 anchor (temporary development mapping)', () => {
+      expect(strengthAgePotentialForAge(0)).toBeGreaterThan(0)
+      expect(strengthAgePotentialForAge(0)).toBeLessThan(strengthAgePotentialForAge(10))
+      expect(strengthAgePotentialForAge(10)).toBeLessThan(strengthAgePotentialForAge(20))
+    })
+  })
