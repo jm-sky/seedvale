@@ -6,14 +6,14 @@
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/4
-2. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
-   🟡 `M` · ✅ ready · unlocks 6/6
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/3
-4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · 🔒 blocked · unlocks 2/2
-5. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+4. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
    🔴 `M` · ✅ ready · unlocks 3/3
+5. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+   🔴 `M` · 🔒 blocked · unlocks 1/1
 
 ---
 
@@ -21,14 +21,14 @@
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/4 · roadmap: `economy-production`
-2. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
-   🟡 `M` · ✅ ready · unlocks 6/6 · roadmap: `physical-attributes-health-and-medicine`
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/3 · roadmap: `physical-goods-transport`
-4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · 🔒 blocked · unlocks 2/2 · roadmap: `physical-goods-transport`
-5. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+4. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
    🔴 `M` · ✅ ready · unlocks 3/3 · roadmap: `quests-and-reputation`
+5. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+   🔴 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `economy-production`
 
 ---
 
@@ -51,14 +51,14 @@ _No qualifying plans._
 
 1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/4
-2. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
-   🟡 `M` · ✅ ready · unlocks 6/6
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/3
-4. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+3. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
    🔴 `M` · ✅ ready · unlocks 3/3
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
+4. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -80,155 +80,151 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:** 105  
    → **unlocks:** 3/4
 
-2. `npc-019` — **Shared SPEA foundation and Strength-driven melee**  
-  🟡 `M` · **Score:** 103  
-   → **unlocks:** 6/6
-
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
   🔴 `M` · **Score:**  95  
    → **unlocks:** 3/3
 
-4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
   🔴 `M` · **Score:**  83  
    → **unlocks:** 2/2
 
-5. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+4. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
   🔴 `M` · **Score:**  71  
    → **unlocks:** 3/3
 
-6. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
+5. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  69  
    → **unlocks:** 1/1
 
-7. `fauna-004` — **Sheep wool cycle and shepherd**  
+6. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-8. `settlements-npcs-006` — **Wool to material**  
+7. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-9. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+8. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 0/0
 
-10. `quests-progression-004` — **Quest Availability & Prerequisites**  
+9. `quests-progression-004` — **Quest Availability & Prerequisites**  
   🔴 `S` · **Score:**  47  
    → **unlocks:** 1/1
 
-11. `settlements-npcs-007` — **Bandages and herbal medicine**  
+10. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-022` — **Household help and age-based work participation**  
+11. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-13. `ui-input-010` — **Player quick actions and primary weapon slots**  
+12. `ui-input-010` — **Player quick actions and primary weapon slots**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 1/2
 
-14. `npc-024` — **Temporary conditions and poisoning**  
+13. `npc-024` — **Temporary conditions and poisoning**  
   🟡 `M` · **Score:**  39  
    → **unlocks:** 1/1
 
-15. `npc-010` — **NPC Death & Corpse Lifecycle**  
+14. `npc-010` — **NPC Death & Corpse Lifecycle**  
   🟡 `L` · **Score:**  36  
    → **unlocks:** 1/1
 
-16. `quests-progression-003` — **Paid Quests & Player Income**  
+15. `quests-progression-003` — **Paid Quests & Player Income**  
   🔴 `M` · **Score:**  31  
    → **unlocks:** 0/0
 
-17. `items-player-018` — **Camp inspection, condition and full camp setup**  
+16. `items-player-018` — **Camp inspection, condition and full camp setup**  
   🟡 `L` · **Score:**  30  
    → **unlocks:** 1/1
 
-18. `quests-progression-005` — **Authored RPG Quests**  
+17. `quests-progression-005` — **Authored RPG Quests**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-19. `items-player-002` — **Food provenance, freshness and storage**  
+18. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-20. `items-player-014` — **Rope-pullable resource transport**  
+19. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `npc-025` — **Injury severity and treatment requirements**  
+20. `npc-025` — **Injury severity and treatment requirements**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+21. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `tools-005` — **Seedvale Character Preparation Panel**  
+22. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `npc-011` — **NPC Burial & Graves**  
+23. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-25. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+24. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-26. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+25. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-27. `npc-022` — **Agility-driven melee recovery**  
+26. `npc-022` — **Agility-driven melee recovery**  
   🟡 `S` · **Score:**  23  
    → **unlocks:** 0/0
 
-28. `fauna-013` — **Animal hand-feeding and human affinity**  
+27. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-29. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+28. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-30. `npc-020` — **Strength-driven physical work and human carrying**  
+29. `npc-020` — **Strength-driven physical work and human carrying**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-31. `npc-021` — **Endurance-driven stamina capacity and recovery**  
+30. `npc-021` — **Endurance-driven stamina capacity and recovery**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-32. `npc-023` — **Perception-driven observation and information levels**  
+31. `npc-023` — **Perception-driven observation and information levels**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-33. `world-terrain-015` — **Water Reflection Content Budget**  
+32. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-34. `fauna-007` — **Animal leading and cart harness**  
+33. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-35. `items-player-019` — **Player camp repair and sewing kit**  
+34. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-36. `tools-000` — **Weapon Browser — Observatory/Admin**  
+35. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-37. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
+36. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-38. `npc-004` — **Drzewo genealogiczne NPC**  
+37. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-39. `tools-006` — **tools-006--world-observatory.md**  
+38. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -245,24 +241,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)  
   is blocked by:
   - [`npc-010-death-and-corpse-lifecycle.md`](npc-010-death-and-corpse-lifecycle.md)
-- [`npc-020-strength-driven-physical-work-and-human-carrying.md`](npc-020-strength-driven-physical-work-and-human-carrying.md)  
-  is blocked by:
-  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
-- [`npc-021-endurance-driven-stamina-capacity-and-recovery.md`](npc-021-endurance-driven-stamina-capacity-and-recovery.md)  
-  is blocked by:
-  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
-- [`npc-022-agility-driven-melee-recovery.md`](npc-022-agility-driven-melee-recovery.md)  
-  is blocked by:
-  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
-- [`npc-023-perception-driven-observation-and-information-levels.md`](npc-023-perception-driven-observation-and-information-levels.md)  
-  is blocked by:
-  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
-- [`npc-024-temporary-conditions-and-poisoning.md`](npc-024-temporary-conditions-and-poisoning.md)  
-  is blocked by:
-  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
 - [`npc-025-injury-severity-and-treatment-requirements.md`](npc-025-injury-severity-and-treatment-requirements.md)  
   is blocked by:
-  - [`npc-019-shared-spea-foundation-and-strength-driven-melee.md`](npc-019-shared-spea-foundation-and-strength-driven-melee.md)
   - [`npc-024-temporary-conditions-and-poisoning.md`](npc-024-temporary-conditions-and-poisoning.md)
 - [`quests-progression-003-paid-quests-and-player-income.md`](quests-progression-003-paid-quests-and-player-income.md)  
   is blocked by:

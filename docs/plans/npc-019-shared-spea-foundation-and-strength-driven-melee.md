@@ -1,7 +1,7 @@
 # Plan: Shared SPEA foundation and Strength-driven melee
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-001~~

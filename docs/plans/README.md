@@ -72,7 +72,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-010-death-and-corpse-lifecycle.md`                                  | -       | 🟡 | L      | 177    |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | 010    |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | L      | ~~022~~ ~~031~~ |
-| 💡 `npc-019-shared-spea-foundation-and-strength-driven-melee.md`            | -       | 🟡 | M      | ~~npc-001~~ |
 | 💡 `npc-020-strength-driven-physical-work-and-human-carrying.md`            | -       | 🟡 | M      | npc-019 |
 | ◼️ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | 🟡 | M      | npc-019 |
 | ◼️ `npc-022-agility-driven-melee-recovery.md`                               | -       | 🟡 | S      | npc-019 |
