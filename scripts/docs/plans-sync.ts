@@ -413,38 +413,29 @@ const handleMissingPlans = async (
   return lines
 }
 
-const syncImplementationNotesMarkers = (
+const syncPlannedRows = async (
   lines: string[],
   plans: PlanInfo[],
   implementationNotesFiles: string[],
-): string[] => {
+): Promise<string[]> => {
   const planFiles = new Set(plans.map(plan => plan.file))
   const startIdx = lines.findIndex(line => line.trim() === PLANNED_HEADING)
   const endIdx = lines.findIndex(line => line.trim() === PLANNED_END_TAG)
 
-  return lines.map((line, idx) => {
-    if (idx < startIdx || idx > endIdx) return line
+  for (let idx = startIdx; idx <= endIdx; idx++) {
+    const match = lines[idx]?.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
 
-    const match = line.match(/^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/)
-
-    if (!match) return line
+    if (!match) continue
 
     const file = match[2]
+    if (!planFiles.has(file)) continue
 
-    if (!planFiles.has(file)) return line
+    const content = await readFile(resolve(PLANS_PATH, file), 'utf8')
+    const hasNotes = hasImplementationNotes(file, implementationNotesFiles)
+    lines[idx] = buildRow(file, content, hasNotes)
+  }
 
-    const hasNotes = hasImplementationNotes(
-      file,
-      implementationNotesFiles,
-    )
-    const marker = getNotesMarker(true, hasNotes)
-    const title = getPaddedPlanTitle(marker, file)
-
-    return line.replace(
-      /^\|\s*(💡|◼️)?\s*`([^`]+\.md)`\s*\|/,
-      `| ${title} |`,
-    )
-  })
+  return lines
 }
 
 const removeCompletedPlansFromPlannedSection = async (
@@ -637,7 +628,7 @@ const main = async () => {
       readmeLines,
     )
 
-  readmeLines = syncImplementationNotesMarkers(
+  readmeLines = await syncPlannedRows(
     readmeLines,
     plans,
     implementationNotesFiles,
