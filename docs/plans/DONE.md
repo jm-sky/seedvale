@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-001-reputation-and-renown-foundation`              | 2026-09-07 14:33:04 | —                   | `quests-progression` | —          |
 | `world-017-contextual-river-water-safety`                              | —                   | 2026-09-07 13:55:31 | `world`          | npc-024-temporary-conditions-and-poisoning |
 | `world-017-contextual-river-water-safety`                              | —                   | 2026-09-07 13:55:31 | `world`          | npc-024-temporary-conditions-and-poisoning |
 | `ui-input-009-merchant-item-ownership-and-semantic-item-labels`        | 2026-09-07 12:47:17 | —                   | `ui-input`       | —          |

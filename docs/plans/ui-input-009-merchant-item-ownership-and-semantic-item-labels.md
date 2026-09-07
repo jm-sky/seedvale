@@ -1,7 +1,7 @@
 # Plan: Merchant item ownership and semantic item labels
 
 **Created:** 2026-09-05
-**Status:** `verification needed` 🔍
+**Status:** `done` ✅
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Depends on:** none
