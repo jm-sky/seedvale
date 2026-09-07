@@ -83,6 +83,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -       |
 | 💡 `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`         | -       | 🟡 | M      | -      |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
+| ◼️ `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 
 ---
 
@@ -183,7 +184,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `005`
 - quests-progression: `006`
 - settlements: `003`
-- settlements-npcs: `025`
+- settlements-npcs: `026`
 - tools: `013`
 - ui-input: `013`
 - world: `018`
