@@ -16,672 +16,318 @@ Dodać pierwszą spójną pętlę gameplay:
 
 ```text
 NPC potrzebuje pomocy
-→ oferuje płatny quest
+→ oferuje zwykły QuestDef z jawnym coin reward
 → gracz wykonuje istniejącą czynność w świecie
-→ raportuje wykonanie
+→ raportuje / oddaje wymagane przedmioty
 → otrzymuje coins
 → może wydać je u kupca
 ```
 
-Gracz powinien mieć kilka sensownych sposobów zarabiania pieniędzy przez questy wykorzystujące już istniejące mechaniki świata.
+Nie tworzyć `PaidQuest`, `Job`, `ContractQuest`, `JobManager`, walletu, repeatable-job systemu ani drugiej ekonomii. Paid quest pozostaje zwykłym questem obsługiwanym przez `QuestManager` i outcome/reward model z `quests-progression-002`.
 
-Nie tworzyć osobnego `JobManager`, systemu pracy gracza ani alternatywnej waluty.
+## Kontrakt z `quests-progression-002`
 
-Paid quest pozostaje zwykłym questem obsługiwanym przez `QuestManager`.
+Ten plan zakłada jawny `QuestOutcome` z `QuestReward.items`, terminal resolution zapisujące `resolvedOutcomeId` i shared reward dispatch przez injected `QuestItemGrant` → `createApp.ts::grantItem()`.
 
----
-
-## 1. Wspólny system questów
-
-Nie wprowadzać osobnego typu runtime:
-
-```ts
-PaidQuest
-Job
-ContractQuest
-```
-
-Paid quest jest normalnym `QuestDef` wykorzystującym model rewards/outcomes z `quests-progression-002`.
-
-Przykład:
+Coins pozostają `ItemKind = 'coin'`:
 
 ```ts
 reward: {
   visibility: 'shown',
-  items: [
-    { kind: 'coin', count: 8 }
-  ]
+  items: [{ kind: 'coin', count: 8 }]
 }
 ```
 
-Nie dodawać osobnej ścieżki:
+Nie dodawać metadata `type: 'paid'`, jeżeli nie ma runtime/UI consumera.
+
+## Economy baseline — aktualny kod
+
+Źródłem prawdy jest `src/items/tradeCatalog.ts`.
+
+Istotne `MERCHANT_PRICES`:
 
 ```text
-job reward
-→ wallet
+bread                6
+firestarter           8
+knife                12
+trap_simple          14
+shovel               20
+axe                  25
+pickaxe              30
+tent                 30
+short_sword          40
+long_sword           50
+backpack             70
+basic skill books    20–30
+intermediate books   50–60
+advanced books      100–120
 ```
 
-Coins korzystają ze zwykłego inventory/grant path.
-
----
-
-## 2. Paid quests vs authored RPG quests
-
-Paid quest opisuje przede wszystkim prostą usługę lub pracę wykonywaną za ustalone wynagrodzenie.
-
-Typowe przykłady:
+Istotne resource `tradeValue()` / `sellPrice()`:
 
 ```text
-dostarczenie materiałów
-zebranie zasobów
-proste zwiadowanie
-pomoc przy gospodarstwie
-znalezienie zwierzęcia
-usunięcie lokalnego zagrożenia
+branch  tradeValue 1  sellPrice 1
+stone   tradeValue 1  sellPrice 1
+herb    tradeValue 3  sellPrice 1
 ```
 
-Nie oznacza to osobnej klasy questa.
+Quest reward jest authored zapłatą za towar + usługę/czas/ryzyko. Nie implementować `tradeValue × multiplier` ani osobnego katalogu quest values.
 
-Nie dodawać metadata:
-
-```ts
-type: 'paid'
-```
-
-jeżeli nie ma konkretnego runtime/UI consumera.
-
-Charakter questa wynika z jego treści i reward.
-
----
-
-## 3. Skala wynagrodzeń
-
-Obecny merchant catalog pozostaje źródłem odniesienia dla wartości pieniędzy.
-
-Przykładowe obecne ceny:
-
-```text
-bread            6
-knife           12
-trap_simple     14
-shovel          20
-axe             25
-pickaxe         30
-tent            30
-short_sword     40
-long_sword      50
-backpack        70
-```
-
-Nie tworzyć drugiego katalogu wartości przedmiotów dla questów.
-
-### Docelowa orientacyjna skala
-
-Przyjąć jako tuning guideline:
+Orientacyjna skala:
 
 ```text
 bardzo drobna przysługa       3–5 coins
 prosta praca                  5–10 coins
 większa praca                10–20 coins
 niebezpieczne zadanie        20–40 coins
-duże / wyjątkowe zadanie     40+ lub reward specjalny
+wyjątkowe zadanie            40+ lub reward specjalny
 ```
 
-To nie jest automatyczny kalkulator ceny.
+## Rebalance istniejących paid quests
 
-Quest autor jawnie ustala reward.
+### `woda-dla-marka`
 
-Skala ma zapobiegać przypadkowym wartościom niepowiązanym z istniejącym handlem.
-
----
-
-## 4. Reward nie może być prostym `tradeValue × multiplier`
-
-Nie implementować mechanizmu:
-
-```ts
-questReward = tradeValue(items) * 2
-```
-
-Wynagrodzenie obejmuje nie tylko wartość materiału, ale także:
-
-- czas,
-- wysiłek,
-- ryzyko,
-- dostępność zasobu,
-- podróż,
-- usługę wykonaną dla NPC.
-
-Jednocześnie reward powinien pozostać rozsądny względem wartości ekonomicznej celu.
-
----
-
-## 5. Rebalance istniejącego `drewno-na-naprawe`
-
-Obecnie:
+Po `quests-progression-002` pozostaje:
 
 ```text
-5 branches
-→ 15 coins
+5 coins
+Marek +1 (jawna personal relation consequence z 002)
 ```
 
-`branch` ma `tradeValue = 1`.
+Bez dalszego rebalansu.
 
-Prosty fetch quest nie powinien płacić trzykrotności wartości dostarczonego materiału bez dodatkowego uzasadnienia.
+### `zagubiona-owca`
 
-Ustalić:
+Po `quests-progression-002` successful outcome to **`found_and_reported`**, nie `returned_to_owner` — obecny quest tylko znajduje konkretną owcę i raportuje Annie; nie istnieje transfer livestock ownership/pozycji.
 
 ```text
-5 branches
-→ 8 coins
+found_and_reported → 10 coins → Anna +1
+sheep_died         → failed → no reward
 ```
 
-To nadal daje premię za wykonanie konkretnej usługi, ale nie dewaluuje monet.
+Bez zmiany wypłaty.
 
-Reward:
+### `drewno-na-naprawe`
+
+Aktualnie 5 `branch` ma `tradeValue = 5` i bezpośredni `sellPrice = 5` łącznie. Zmienić reward z 15 na:
 
 ```text
-visibility: shown
-8 coins
+5 branches → 8 coins
 ```
 
-Quest ma charakter formalnej/prostej pracy.
+To daje umiarkowaną premię za konkretną dostawę. Formalne zlecenie nadal nie ma relation consequence zgodnie z `quests-progression-002`.
 
-Nie zwiększać relation tylko za jego wykonanie.
+## Cztery nowe paid quests
 
----
+Wszystkie są jednorazowymi authored `QuestDef` w istniejącym `QUESTS` (`src/quests/quests.ts`). Nie wymagają nowego objective type ani subsystemu.
 
-## 6. `woda-dla-marka`
+### A. Zioła dla Anny
 
-Po `quests-progression-002`:
+Anna jest istniejącym reserved NPC o roli `farmer` (`src/ai/characters.ts`).
 
 ```text
-reward = 5 coins
+giver: Anna
+objective: gather_item herb ×3
+reward: 8 coins, shown
+relation/social: none
 ```
 
-Pozostawić bez dalszych zmian.
+Ekonomia: 3 herbs = `tradeValue 9`, bezpośrednia sprzedaż = 3 coins. Quest płaci 8 za konkretną dostawę, ale pozostaje poniżej barter value.
 
-To będzie przykład bardzo drobnej płatnej przysługi.
+Offer text ma jawnie podać 8 monet.
 
----
+### B. Kamienie dla Piotra
 
-## 7. `zagubiona-owca`
-
-Pozostawić:
+Piotr jest reserved `woodcutter`; istniejący `drewno-na-naprawe` już ustala dla niego motyw napraw w osadzie.
 
 ```text
-returned_to_owner
-→ 10 coins
+giver: Piotr
+objective: gather_item stone ×6
+reward: 9 coins, shown
+relation/social: none
 ```
 
-Szukanie zwierzęcia wymaga większego zaangażowania niż prosta interakcja lub zebranie kilku materiałów.
+Ekonomia: 6 stones = `tradeValue 6`, bezpośrednia sprzedaż = 6 coins; +3 jest premią za zamówienie/usługę.
 
-Nie zwiększać wypłaty w tym planie.
+Nie dodawać construction side effect — narracyjna naprawa nie tworzy nowego stanu świata w tym planie.
 
----
+### C. Sprawdzenie szlaku dla Kasi
 
-## 8. Nowe płatne questy
-
-Dodać kilka nowych, ręcznie zdefiniowanych questów.
-
-Celem nie jest ilość, ale pokazanie różnych istniejących mechanik gameplay.
-
-Docelowo dodać **4 nowe paid quests**.
-
-### A. Zioła dla mieszkańca
-
-Objective:
+Kasia jest reserved `trader`. Zamiast dodawać drugi conditional landmark quest, użyć już istniejącego i statycznie definiowalnego objective:
 
 ```text
-gather_item
-herb × 3
+giver: Kasia
+objective: interact_spawner { spawnerType: 'cave' }
+reward: 12 coins, shown
+relation/social: none
 ```
 
-Reward:
+`interact_spawner: cave` jest już używany przez `zwiadowca`, więc nie wymaga nowego resolvera, landmarku ani subsystemu. Narracja: sprawdzenie przejścia/szlaku handlowego przy znanej jaskini.
+
+### D. Lis przy osadzie
+
+Marek jest reserved `guard`. Użyć istniejącego fauna objective i istniejącego dzikiego predatora:
 
 ```text
-8 coins
-visibility: shown
+giver: Marek
+objective: kill_target_animal { kind: 'fox' }
+reward: 20 coins, shown
+relation: none
+social: competence +3, courage +3, renown +3
 ```
 
-Uzasadnienie ekonomiczne:
+Nie używać wilka. Obecny `AnimalTargetResolver` wybiera pierwszy żywy osobnik danego gatunku i nie rezerwuje targetu między questami; drugi wolf quest mógłby współdzielić target z `grozny-wilk`. `fox` jest już spawnionym wild predator (`createFauna.ts`) i nie jest targetem istniejącego questa.
+
+Nie ustawiać `dangerous: true`: to ma być zwykłe lokalne zlecenie, wyraźnie mniejsze niż `grozny-wilk` (`competence +10`, `courage +12`, `renown +15`) i `wilcza-jama` (`+15`, `+18`, `+25`).
+
+## `gather_item` — dokładna semantyka i turn-in
+
+Aktualny `QuestManager.handleGiverInteract()` dla aktywnego `gather_item` robi:
 
 ```text
-3 herbs tradeValue ≈ 9
+inventory.has(kind, count)
+→ inventory.remove(kind, count)
+→ advanceStage(...)
+→ jeżeli to ostatni etap: completeQuest(...)
 ```
 
-Quest nie powinien być sposobem na sprzedawanie tego samego surowca dużo powyżej jego wartości handlowej.
+Czyli przedmioty **już dziś są konsumowane** przy rozmowie z giverem; objective nie śledzi historii zebrania, tylko aktualny stan inventory. Quest Log pokazuje live `inventory.count(kind)`.
 
-Może jednak być korzystny, ponieważ NPC potrzebuje konkretnego towaru i gwarantuje odbiór.
+Zachować tę semantykę dla wszystkich `gather_item`: „przynieś/oddaj X”, nie „kiedykolwiek zbierz X”. Nie tworzyć osobnego delivery objective.
 
-Nie dodawać relation consequence.
-
-### B. Kamienie do naprawy
-
-Objective:
+Po `quests-progression-002` finalny gather turn-in musi używać wspólnego outcome resolution path i zachować kolejność transakcyjną:
 
 ```text
-gather_item
-stone × 6
+1. zweryfikuj, że quest/stage nadal może zostać rozwiązany wybranym successful outcome
+2. zweryfikuj inventory.has(kind, count)
+3. inventory.remove(kind, count)
+4. resolveQuest(...)
+5. reward dispatch przez QuestReward.items → injected QuestItemGrant
 ```
 
-Reward:
+Nie usuwać itemów przed walidacją outcome/state. Nie grantować reward przed konsumpcją. `Inventory.remove()` jest synchroniczne i zwraca `false` bez mutacji przy niedoborze; po wcześniejszym `has()` oczekiwać `true` i testować ten kontrakt.
+
+Dla `gather_item` w środku wieloetapowego questa nadal: validate items → remove → `advanceStage()`. Reward/resolution występuje dopiero na terminalnym turn-in.
+
+Nie dodawać rollback frameworku ani transaction managera; wymagany jest jeden synchroniczny, wspólny turn-in path bez możliwej gameplay mutacji między walidacją i consume/resolve.
+
+## Reward / coin grant path
+
+Nie dotykać player inventory bezpośrednio z quest definitions ani `QuestManager` reward code.
+
+Istniejąca ścieżka w `src/app/createApp.ts`:
 
 ```text
-9 coins
-visibility: shown
+QuestManager QuestItemGrant callback
+→ grantItem(kind, count)
+→ createAcquiredInstance(kind) lub Inventory.add(kind)
+→ przy overflow bundle.droppedItems.drop(...)
+→ HUD / held-tool / quick-action sync
 ```
 
-Wykorzystuje istniejący gathering.
+Dla `coin` `createAcquiredInstance()` nie tworzy instance; monety idą przez zwykłe `Inventory.add('coin')`, a overflow przez ten sam world-drop fallback. `quests-progression-002` ma już rozszerzyć reward z jednej pozycji do `QuestReward.items[]`; 003 tylko definiuje coin rewards jako dane.
 
-Nie dodawać nowych rodzajów materiałów ani construction integration.
+Nie tworzyć walletu ani bypassu `grantItem()`.
 
-Narracyjnie materiał ma być potrzebny do naprawy istniejącego elementu osady.
+## Existing objectives / integration points
 
-W tym planie quest nie musi faktycznie wykonywać konstrukcyjnej zmiany świata.
-
-### C. Rozpoznanie okolicy
-
-Wykorzystać istniejący objective oparty o landmark albo miejsce świata, jeśli obecny kod pozwala bez dokładania nowego subsystemu.
-
-Preferować:
+Nowe questy używają wyłącznie istniejących objective contracts z `src/quests/quests.ts`:
 
 ```text
-interact_landmark
+gather_item         — herb, stone; lazy inventory check + consume przy giver turn-in
+interact_spawner    — cave; `ObjectiveRef { type: 'interact_spawner', spawnerType }`
+kill_target_animal  — fox; bind do konkretnego `animalId`, completion przez `animal_died`
 ```
 
-lub istniejący odpowiednik zwiadu.
+Nie dodawać nowych `ObjectiveRef` ani world scanning do `QuestManager`.
 
-Reward:
+Fauna binding pozostaje przez injected `AnimalTargetResolver` w `createApp.ts`; death dispatch pozostaje `onAnimalDeathTarget → questManager.onInteractObjective({ type: 'animal_died', animalId })`.
 
-```text
-12 coins
-visibility: shown
-```
+Wszystkie questy nadal dostają `settlementId` w `createApp.ts` przez mapowanie `QUESTS + landmarkQuests` na realne home settlement. Social consequence lisa korzysta z istniejącego `ApplySocialConsequence` seam do `ReputationManager`.
 
-Ma pokazać, że zarabianie nie ogranicza się do fetch questów.
+## Dialogue i Quest Log
 
-Nie tworzyć nowych procedural landmarków tylko dla tego questa.
+Każdy nowy `shown` coin reward ma być zgodny z offer text (ta sama liczba monet). Nie dodawać dynamicznego formattera dialogów.
 
-### D. Lokalny drapieżnik
+Quest Log korzysta wyłącznie z reward presentation dodanego przez `quests-progression-002`; nie tworzyć jobs/contracts screen.
 
-Wykorzystać istniejące fauna objective:
+## Persistence
 
-```text
-kill_target_animal
-```
+003 nie dodaje nowego persisted state. Outcome/reward persistence i exact-once `resolvedOutcomeId` należą do `quests-progression-002`.
 
-Preferować wilka lub inny już wspierany niebezpieczny gatunek.
-
-Reward:
-
-```text
-25 coins
-visibility: shown
-```
-
-Jeżeli target jest rzeczywistym zagrożeniem dla społeczności, quest może także otrzymać niewielkie explicit social consequences:
-
-```text
-competence +
-courage +
-renown +
-```
-
-Nie używać significant values z `grozny-wilk`.
-
-Paid quest ma być mniejszym zleceniem niż istniejący authored quest o wyjątkowo groźnym wilku.
-
----
-
-## 9. Dobór giverów
-
-Wykorzystać istniejących NPC.
-
-Nie tworzyć nowych NPC tylko po to, żeby rozdawali questy.
-
-Rozłożyć nowe questy między kilku mieszkańców, żeby gra nie wyglądała jak jeden „quest hub NPC”.
-
-Quest powinien wynikać z sensownej potrzeby konkretnej postaci lub osady.
-
----
-
-## 10. Relation
-
-Paid quest nie zwiększa automatycznie relation.
-
-Domyślnie nowe formalne paid quests:
-
-```text
-relation consequence = none
-```
-
-Wyjątek jest możliwy tylko wtedy, gdy charakter konkretnego zadania jest osobisty.
-
-Nie wykorzystywać relation jako dodatkowej standardowej zapłaty.
-
----
-
-## 11. Reputation / renown
-
-Nie każdy płatny quest wpływa na reputation.
-
-Prosta dostawa:
-
-```text
-no reputation
-no renown
-```
-
-Publicznie istotne zadanie:
-
-```text
-small reputation / renown consequence
-```
-
-Przykład:
-
-```text
-usunięcie drapieżnika z okolicy
-→ competence +3
-→ courage +3
-→ renown +3
-```
-
-Dokładne wartości sprawdzić względem wartości ustalonych w `quests-progression-001`, aby zwykłe zlecenia pozostawały wyraźnie poniżej dużych questów `grozny-wilk` i `wilcza-jama`.
-
----
-
-## 12. Brak osobnego systemu repeatable jobs
-
-Nie implementować teraz:
-
-```text
-daily jobs
-job board
-procedural commissions
-repeatable quest generator
-contract rotation
-```
-
-Nowe paid quests mogą być jednorazowe.
-
-Celem planu jest działająca pętla:
-
-```text
-quest → coins → merchant
-```
-
-Repeatability można dodać później tylko wtedy, gdy gameplay faktycznie zacznie potrzebować stałego odnawialnego źródła pieniędzy.
-
----
-
-## 13. Gracz nie powinien być jedynym źródłem rozwiązania problemów świata
-
-Paid quests w tym planie są głównie authored gameplay.
-
-Nie próbować jeszcze generować ich automatycznie z household/settlement needs.
-
-Jednocześnie treść powinna być zgodna z istniejącymi systemami świata.
-
-Nie tworzyć narracji przeczących aktualnemu state.
-
-Przykład:
-
-```text
-NPC prosi o drewno do naprawy
-```
-
-jest sensowny.
-
-Ale nie tworzyć fikcyjnego systemu budowy lub produkcji tylko po to, żeby technicznie konsumować materiał po zakończeniu questa.
-
----
-
-## 14. Delivery semantics
-
-Dla `gather_item` sprawdzić istniejącą semantykę.
-
-Jeżeli obecny QuestManager jedynie sprawdza posiadanie wymaganych items, upewnić się, że płatne questy dostawcze **faktycznie konsumują przekazywane przedmioty przy turn-in**.
-
-Gracz nie może:
-
-```text
-mieć 5 branches
-→ oddać je Piotrowi
-→ zachować te same 5 branches
-→ dostać 8 coins
-```
-
-Jeżeli istniejący mechanizm już konsumuje gathered items, użyć go.
-
-Jeżeli nie — dodać consumption do wspólnego quest delivery path, nie tylko do nowych paid quests.
-
-### Atomicity
-
-Turn-in musi być atomowy:
-
-```text
-validate items
-→ consume required items
-→ resolve outcome
-→ grant reward
-```
-
-Nie konsumować materiałów, jeśli quest nie może zostać poprawnie rozwiązany.
-
----
-
-## 15. Quest text
-
-Paid quest powinien jasno komunikować wynagrodzenie, jeśli reward ma:
-
-```text
-visibility: shown
-```
-
-Offer dialogue powinien naturalnie podać kwotę.
-
-Przykład:
-
-```text
-„Przynieś mi sześć kamieni. Dam ci za nie dziewięć monet.”
-```
-
-Nie polegać wyłącznie na Quest Log.
-
-Reward text w dialogu i `QuestReward` muszą odpowiadać sobie.
-
-Nie tworzyć dynamicznego formattera dialogów w tym planie.
-
----
-
-## 16. Quest Log
-
-Wykorzystać reward display z `quests-progression-002`.
-
-Paid quest powinien pokazywać np.:
-
-```text
-Nagroda: 9 monet
-```
-
-Nie tworzyć osobnego ekranu jobs/contracts.
-
----
-
-## 17. Economy sanity checks
-
-Przed finalizacją wartości nowych questów porównać je z:
-
-```ts
-MERCHANT_PRICES
-tradeValue()
-sellPrice()
-```
-
-Sprawdzić przynajmniej:
-
-- podstawowe jedzenie,
-- podstawowe narzędzia,
-- broń,
-- backpack,
-- skill books,
-- zasoby wykorzystywane w nowych questach.
-
-Nie zmieniać całego merchant economy tylko po to, żeby dopasować je do questów.
-
-Jeżeli recon pokaże oczywistą istniejącą anomalię cenową, zanotować ją jako osobny follow-up zamiast rozszerzać scope.
-
----
-
-## 18. Docelowa pacing economy
-
-Nowy gracz powinien po wykonaniu kilku małych questów móc kupić coś gameplayowo użytecznego.
-
-Orientacyjny cel:
-
-```text
-2–3 drobne questy
-→ podstawowe narzędzie / zapasy
-
-4–6 prostych questów
-→ narzędzie pokroju axe/pickaxe/tent
-
-większa liczba prac lub trudniejsze zadania
-→ dobra broń / backpack / książki
-```
-
-Nie próbować w tym planie projektować pełnej ekonomii długoterminowej.
-
-Chodzi o uniknięcie dwóch skrajności:
-
-```text
-jeden prosty quest → najlepszy sprzęt
-```
-
-oraz:
-
-```text
-dziesiątki questów → ledwo jeden podstawowy przedmiot
-```
-
----
-
-## 19. Tests
-
-Dodać/zmienić testy obejmujące:
-
-- paid quest grantuje właściwą liczbę coins,
-- `shown` reward jest dostępny w Quest Log DTO,
-- reward przyznawany dokładnie raz,
-- failed outcome nie wypłaca wynagrodzenia,
-- formalny paid quest nie zwiększa relation,
-- publicznie ważny paid quest może mieć explicit reputation/renown consequence,
-- `gather_item` delivery konsumuje wymagane items dokładnie raz,
-- brak możliwości turn-in bez odpowiedniej liczby items,
-- consumption i reward są częścią poprawnego resolution,
-- inventory overflow korzysta ze wspólnego `grantItem`,
-- save/load nie umożliwia ponownego odebrania reward.
-
----
-
-## 20. Existing quests regression
-
-Sprawdzić co najmniej:
-
-```text
-woda-dla-marka
-zagubiona-owca
-drewno-na-naprawe
-grozny-wilk
-wilcza-jama
-```
-
-Nie zmieniać objectives `grozny-wilk` ani `wilcza-jama`.
-
-`drewno-na-naprawe` zmienić:
-
-```text
-15 coins → 8 coins
-```
-
-Reszta wartości zgodnie z `quests-progression-002`.
-
----
+Save/load nie może umożliwiać ponownego rewardu: terminal state + `resolvedOutcomeId` z 002 pozostają jedynym źródłem prawdy. `gather_item` nie zapisuje osobnego „delivered” flag.
 
 ## Non-goals
 
-Plan nie obejmuje:
+Nie implementować:
 
-- JobManager,
-- quest board,
-- procedural jobs,
-- repeatable/daily quests,
-- wages/salaries,
-- player profession,
-- employment contracts dla gracza,
-- generowania questów z household needs,
-- dynamic pricing,
-- merchant economy redesign,
-- quest reward formulas,
-- bargaining over quest payment,
-- reputation-based pay modifiers,
-- skills affecting pay,
-- non-monetary major rewards,
-- authored RPG quest chains,
-- advanced availability/prerequisites.
+- jobs/contracts/payment systemu,
+- repeatable/daily jobs, job board, rotation ani procedural commissions,
+- automatycznego reward calculatora,
+- nowych NPC,
+- nowych objective types,
+- nowego landmarku/spawnera/species tylko dla questa,
+- settlement/household resource demand integration,
+- fikcyjnego construction/production state change po delivery,
+- economy-wide rebalance,
+- osobnego currency storage.
 
----
+## Testy
 
-## Kolejność implementacji
+Rozszerzyć przede wszystkim `src/quests/QuestManager.test.ts` po zmianach z 002:
 
-1. Zweryfikować po `quests-progression-002` finalny reward/outcome contract.
-2. Sprawdzić i ujednolicić delivery item consumption.
-3. Ustalić tuning względem `tradeCatalog.ts`.
-4. Zmienić `drewno-na-naprawe` z 15 na 8 coins.
-5. Dodać 4 nowe paid quests wykorzystujące istniejące objectives.
-6. Dodać explicit social consequences tylko tam, gdzie zadanie ma publiczne znaczenie.
-7. Zaktualizować dialogi tak, żeby shown payment był komunikowany przed przyjęciem.
-8. Dodać tests.
-9. Zaktualizować canonical quest/economy docs.
-10. Dodać implementation notes zgodnie z `PLANNING.md`.
+- finalny `gather_item`: insufficient inventory → brak consume/state/reward;
+- finalny `gather_item`: dokładna liczba itemów usunięta raz, potem exact-once coin reward;
+- niepoprawny/niemożliwy outcome nie konsumuje delivery items;
+- wieloetapowy `gather_item`: consume + advance, bez przedwczesnego rewardu;
+- `drewno-na-naprawe` → 8 coins, bez relation;
+- `woda-dla-marka` → 5 coins;
+- `zagubiona-owca` successful `found_and_reported` → 10 coins; `sheep_died` → 0;
+- każdy z 4 nowych questów ma właściwy objective/reward i brak implicit relation;
+- fox quest binduje konkretny `fox` id, inny animal death nie progressuje; completion daje dokładnie `{ competence:+3, courage:+3, renown:+3 }` raz;
+- repeated giver interaction / save-load terminal quest nie wypłaca drugi raz;
+- reward callback nadal dostaje `coin` i wykorzystuje shared grant path z 002.
 
-Dla nowych/zmienionych ważnych publicznych funkcji i klas dodać JSDoc tam, gdzie poprawia to preflight discovery; użyć `@domain quests-progression` dla istotnych punktów architektury.
+Nie dodawać osobnego test harnessu dla paid quests. Trade values są już kontraktem `tradeCatalog.ts`; jeżeli nie zmieniamy katalogu, nie kopiować jego testów do questów.
 
----
+## Konkretne miejsca zmian
+
+Po ukończeniu 002 zakres 003 powinien pozostać mały:
+
+```text
+src/quests/quests.ts
+  - rebalance drewno-na-naprawe
+  - 4 nowe QuestDef/outcomes
+  - teksty zgodne z shown rewards
+
+src/quests/QuestManager.ts
+  - tylko wspólna atomic ordering dla gather_item turn-in, jeśli 002 nie pozostawi jej już w wymaganym kształcie
+
+src/quests/QuestManager.test.ts
+  - delivery atomicity + paid quest data/reward/social regressions
+```
+
+`src/app/createApp.ts`, `src/items/Inventory.ts`, `src/items/tradeCatalog.ts`, fauna/world integration powinny być reused bez nowego mechanizmu.
+
+Po implementacji zaktualizować canonical quest/economy docs tylko tam, gdzie rzeczywiście opisują dostępne questy/rewards. Nie uruchamiać `pnpm docs:sync` ręcznie — robi to GitHub workflow.
 
 ## Verification
 
 ### Automated
 
-Uruchomić odpowiednie:
-
-- QuestManager tests,
-- quest definition tests,
-- inventory/delivery tests,
-- reward tests,
-- reputation integration tests,
-- persistence tests,
-- typecheck,
-- build.
-
-Nie uruchamiać `pnpm docs:sync` ręcznie — synchronizacja odbywa się przez GitHub workflow.
+Uruchomić quest tests, następnie typecheck i build. Jeżeli 003 nie zmienia innych domen, nie rozszerzać verification na niepowiązane suite'y.
 
 ### Manual — User
 
 User sprawdza w przeglądarce:
 
-1. Można przyjąć kilka nowych płatnych questów.
-2. Przed przyjęciem wiadomo, ile wynosi jawna zapłata.
-3. Quest Log pokazuje reward.
-4. Po wykonaniu questa coins trafiają do inventory.
-5. Coins można następnie wydać u istniejącego merchant.
-6. Dostarczone materiały faktycznie znikają z inventory.
-7. Reward nie może zostać odebrany drugi raz.
-8. Formalne prace nie zwiększają automatycznie relation.
-9. Publicznie ważne zadanie może zwiększyć niewielką reputation/renown.
-10. `drewno-na-naprawe` daje 8 zamiast 15 coins.
-11. Existing RPG/fauna/landmark quests nie mają regresji.
+1. 5 branches znika z inventory przy turn-in i Piotr daje dokładnie 8 coins.
+2. Brak wymaganych herbs/stones blokuje oddanie bez utraty itemów/rewardu.
+3. Anna/Piotr/Kasia/Marek oferują nowe questy z kwotą zgodną z Quest Log.
+4. Coins trafiają do zwykłego inventory i można nimi kupować u Kupca.
+5. Fox quest dotyczy konkretnego lisa i nie przejmuje targetu `grozny-wilk`.
+6. Formalne paid quests nie podbijają relation.
+7. Fox quest daje małą social consequence tylko raz.
+8. Save/load ukończonego paid questa nie umożliwia ponownej wypłaty.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
