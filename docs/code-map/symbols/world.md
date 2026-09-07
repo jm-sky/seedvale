@@ -830,7 +830,7 @@ Generated from exported TypeScript symbols.
 
 - `createBedrollProp` — function — line 13
 - `createPlatformProp` — function — line 46
-- `disposeSleepingUtilityProp` — function — line 74
+- `disposeSleepingUtilityProp` — function — line 76
 
 ## `world/standingTorch.ts`
 

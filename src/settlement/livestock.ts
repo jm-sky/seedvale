@@ -53,6 +53,11 @@ export const LIVESTOCK_URLS: Record<LivestockKind, readonly string[]> = {
  *  wild fauna does not (plan 110, `QuestManager`'s restore loop). */
 export const LIVESTOCK_KINDS: ReadonlySet<AnimalKind> = new Set(Object.keys(LIVESTOCK_URLS) as AnimalKind[])
 
+/**
+ * Seed salt for the guaranteed sheep.
+ */
+const GUARANTEED_SHEEP_SEED_SALT = 0x53484545
+
 /** One persisted livestock/merchant-horse individual (plan persistence-001) —
  *  `AnimalAgent.snapshot()`'s authoritative fields plus the identity needed
  *  to reconnect it to the right settlement/house on load. `kind`/
@@ -120,6 +125,76 @@ function livestockToSaveRecord(settlementId: string, animal: AnimalAgent): Lives
  *  removed-id is namespaced the same way. */
 function removedKey(settlementId: string, animalId: string): string {
   return `${settlementId}:${animalId}`
+}
+
+function createGuaranteedSheep(
+  homes: readonly THREE.Vector3[],
+  settlementSeed: number,
+  settlementId: string,
+  householdByHomeId: ReadonlyMap<string, Household> | undefined,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample,
+  collidersNear: ColliderSource,
+  onAnimalDeath: ((animalId: string) => void) | undefined,
+  removed: ReadonlySet<string> | undefined,
+  saved: ReadonlyMap<string, LivestockSaveRecord> | undefined,
+): AnimalAgent | null {
+  const homeIndex = 0
+  const home = homes[homeIndex]!
+
+  // Dedicated RNG stream: adding this sheep must not alter existing
+  // livestock rolls or positions.
+  const random = createSeededRandom(settlementSeed ^ GUARANTEED_SHEEP_SEED_SALT)
+
+  const ownerHouseId = homePlaceId(settlementId, homeIndex)
+  const household = householdByHomeId?.get(ownerHouseId)
+
+  const { x, z } = findSpotNearHouse(
+    home,
+    sampleHeight,
+    waterLevel,
+    random,
+  )
+
+  const animalId = `sheep-home${homeIndex}-guaranteed`
+
+  if (removed?.has(animalId)) return null
+
+  const { visual, animations } = visualFor('sheep', animalId)
+
+  const agent = new AnimalAgent(
+    ANIMAL_DEFS.sheep,
+    animalId,
+    sampleHeight,
+    waterLevel,
+    sampleLocalWater,
+    collidersNear,
+    x,
+    z,
+    visual,
+    animations,
+    LIVESTOCK_WANDER_RADIUS,
+    undefined,
+    ownerHouseId,
+    onAnimalDeath,
+    undefined,
+    undefined,
+    undefined,
+    household,
+  )
+
+  const record = saved?.get(animalId)
+
+  if (
+    record
+    && record.kind === 'sheep'
+    && record.ownerHouseId === ownerHouseId
+  ) {
+    agent.hydrate(record)
+  }
+
+  return agent
 }
 
 export function createLivestockRegistry(initial?: {
@@ -405,12 +480,18 @@ export async function spawnLivestock(
    *  persistence-001) — `undefined` for a settlement with nothing saved yet
    *  (fresh world, or an old save predating this collection). */
   persistence?: LivestockPersistence,
+  /** Home settlement always starts with at least one sheep. */
+  ensureSheep = false,
 ): Promise<AnimalAgent[]> {
   if (!isSystemEnabled('animals')) return []
   await ensureLivestockTemplates()
   const saved = persistence?.getSaved(settlementId)
   const removed = persistence?.getRemoved(settlementId)
   const agents: AnimalAgent[] = []
+  const rolledEnsuredAnimals = {
+    sheep: false,
+  }
+
   homes.forEach((home, i) => {
     const random = createSeededRandom(houseSeed(settlementSeed, i))
     let houseAnimalIndex = 0
@@ -419,7 +500,13 @@ export async function spawnLivestock(
     // quest could later look up via `Household`/`Place` (plan 093 Etap G).
     const ownerHouseId = homePlaceId(settlementId, i)
     const household = householdByHomeId?.get(ownerHouseId)
-    for (const kind of kindsForHouse(size, random)) {
+    const kinds = kindsForHouse(size, random)
+
+    if (kinds.includes('sheep')) {
+      rolledEnsuredAnimals.sheep = true
+    }
+
+    for (const kind of kinds) {
       // Position/yaw rolls always happen, even for a tombstoned individual —
       // deterministic spawning must stay in sync for any later kind rolled
       // at this same house (plan persistence-001 §7).
@@ -456,6 +543,26 @@ export async function spawnLivestock(
       agents.push(agent)
     }
   })
+
+  if (ensureSheep && !rolledEnsuredAnimals.sheep && homes.length > 0) {
+    const sheep = createGuaranteedSheep(
+      homes, settlementSeed,
+      settlementId,
+      householdByHomeId,
+      sampleHeight,
+      waterLevel,
+      sampleLocalWater,
+      collidersNear,
+      onAnimalDeath,
+      removed,
+      saved
+    )
+    if (sheep) {
+      scene.add(sheep.mesh)
+      agents.push(sheep)
+    }
+  }
+
   if (merchantHorseSpawn) {
     const animalId = `merchant-horse-${settlementId}`
     if (!removed?.has(animalId)) {
