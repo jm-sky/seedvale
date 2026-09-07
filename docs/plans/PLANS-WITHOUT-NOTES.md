@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-07 14:48:42  
+> Date: 2026-09-07 15:01:51  
 
 ## PLANS
 
@@ -9,7 +9,6 @@
 - `npc-023-perception-driven-observation-and-information-levels.md`
 - `npc-024-temporary-conditions-and-poisoning.md`
 - `npc-025-injury-severity-and-treatment-requirements.md`
-- `quests-progression-003-paid-quests-and-player-income.md`
 - `quests-progression-004-quest-availability-and-prerequisites.md`
 - `quests-progression-005-authored-rpg-quests.md`
 - `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
@@ -133,37 +132,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-025-injury-severity-and-treatment-requirements-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `quests-progression-003-paid-quests-and-player-income.md`
-
-Prompt:
-
-```
-Zrób review planu `quests-progression-003-paid-quests-and-player-income.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/quests-progression-003-paid-quests-and-player-income.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/quests-progression-003-paid-quests-and-player-income-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
