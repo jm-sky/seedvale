@@ -1,357 +1,409 @@
 # Plan: Wilki podchodzą pod osadę
 
 **Created:** 2026-09-07
-**Status:** `draft` 📝
-**Type:** feature
+**Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-016
-**Domain:** `quests-progression`
-**Subdomains:** `quests` `progression`
-**Tags:** `wolves` `wolf-den` `pressure` `fauna`
+**Domain:** `quests-progression`  
+**Type:** `feature`  
 **Roadmap:** -
 
 ## Cel
 
-Dodać systemowy scenariusz „Wilki podchodzą pod osadę”, w którym rzeczywiste siedlisko wilków staje się źródłem utrzymującej się presji na pobliską osadę.
+Dodać systemowy scenariusz „Wilki podchodzą pod osadę”, w którym prawdziwe siedlisko wilków staje się trwałym źródłem presji na pobliską osadę.
 
-Problem ma wynikać ze stanu świata, a nie z questowego spawnu:
+Problem ma istnieć niezależnie od aktywnego questa:
 
 ```text
 wolf den
-+ elevated pressure
-+ learned human taste
-→ większa lokalna populacja wilków
-→ częstsza agresja wobec ludzi
-→ realne ataki w pobliżu osady
-→ NPC zgłaszają problem i wskazują możliwe źródło
-→ gracz odnajduje siedlisko
-→ zniszczenie siedliska trwale usuwa źródło presji
-→ skutki pozostają w świecie po zakończeniu questa
+→ od 2. dnia gry: pressure = 0.75 + humanTaste = true
+→ większa realna populacja wilków
+→ okresowe wyprawy w stronę obrzeży osady
+→ większa skłonność do traktowania ludzi jako zdobyczy
+→ realne ataki na NPC / gracza
+→ NPC zgłasza problem i wskazuje pobliskie siedlisko
+→ gracz odnajduje den
+→ zabicie części wilków tylko chwilowo redukuje zagrożenie
+→ trwałe zniszczenie den usuwa źródło presji
+→ stan pozostaje usunięty po save/load i upływie recovery window
 ```
 
-Quest ma obserwować i prowadzić gracza przez rzeczywisty stan fauny. Nie może tworzyć `questSpawn`, własnej populacji wilków ani równoległego combat/lifecycle systemu.
+Quest ma obserwować rzeczywisty stan świata. Nie może tworzyć `questSpawn`, własnej populacji wilków ani równoległego combat/lifecycle systemu.
 
 ## Stan obecny i mechanizmy do ponownego użycia
 
-Aktualny `main` ma już większość potrzebnych fundamentów:
+Aktualny `main` ma większość potrzebnych fundamentów:
 
-- `src/fauna/AnimalSpawner.ts` posiada `wolfDen` jako prawdziwy habitat spawner z deterministycznym `WOLF_DEN_ID`, population cap, death accounting, stanami `active` / `depleted` / `disabled` / `recovering` oraz thin persistence.
-- Wilki z den mogą być powiązane ze spawnerem przez `AnimalAgent.spawnPointId`; śmierci wpływają na lifecycle siedliska.
-- Dzisiejszy `wolfDen` ma `respawnIntervalDays: Infinity`, więc jest jednorazowym zagrożeniem. Ten kontrakt trzeba rozszerzyć dla scenariusza presji.
-- `AnimalAgent` i `predatorHumanDecision.ts` mają istniejącą agresję predator-vs-human opartą o hunger, strach, dystans, crowd/fire fear i prowokację.
-- Runtime `frenzied` potrafi kierować predatora przeciw pobliskim NPC, ale nie może być źródłem trwałego stanu scenariusza, bo jest runtime-only.
-- NPC mają już `senseImmediateAnimalThreat()` / `decideAnimalThreatResponse()` i używają normalnego `NpcAgent` combat pipeline do obrony lub ucieczki.
-- Obecny kod pozwala rozpoczętemu poza osadą pościgowi wilka za NPC wejść do osady, ponieważ village exclusion jest sprawdzane przy acquisition, nie przy utrzymaniu istniejącego `npcTarget`.
-- fauna-016 dodała species-specific roaming oraz rozróżnienie lokalnego wander od dalszych tripów; scenariusz powinien wykorzystywać istniejący movement ownership zamiast spawnować wilki przy osadzie.
-- `src/quests/quests.ts` ma już `clear_wolf_den`, a `QuestManager` potrafi obserwować rzeczywisty stan den bez importowania i skanowania fauny jako questowego subsystemu.
-- istniejące `wilcza-jama` i `grozny-wilk` są wcześniejszymi wolf-related questami; nowy scenariusz powinien ponownie użyć istniejących objective/world-binding seams tam, gdzie pasują, zamiast tworzyć alternatywną ścieżkę.
+- `src/fauna/AnimalSpawner.ts` posiada `wolfDen` jako prawdziwy habitat spawner ze stabilnym `WOLF_DEN_ID`, population cap, death accounting i lifecycle `active` / `depleted` / `disabled` / `recovering`.
+- Wilki z den są powiązane przez `AnimalAgent.spawnPointId`; ich śmierci wpływają na lifecycle siedliska.
+- Dzisiejszy `wolfDen` ma `respawnIntervalDays: Infinity`, więc jest jednorazowym zagrożeniem. Ten kontrakt trzeba rozszerzyć tylko dla aktywnej presji.
+- `AnimalAgent` + `predatorHumanDecision.ts` mają istniejącą agresję predator-vs-human opartą o hunger, fear, dystans, fire/crowd fear i prowokację.
+- Runtime `frenzied` jest niezależny od rabies i pokazuje istniejący integration seam dla bardziej agresywnego zachowania, ale nie może być trwałym źródłem stanu scenariusza.
+- NPC mają normalny defend/flee/combat pipeline dla zagrożeń ze strony zwierząt.
+- Obecny pościg rozpoczęty poza osadą może być kontynuowany wewnątrz osady.
+- fauna-016 dodała species-specific roaming i `trip`/destination ownership; ten sam mechanizm ma służyć do wypraw wilków w stronę osady.
+- `src/quests/quests.ts` ma `clear_wolf_den`, ale obecna semantyka oznacza śmierć początkowej watahy, nie trwałe zniszczenie den.
+- istniejące `grozny-wilk` i `wilcza-jama` są wcześniejszym wolf contentem i muszą zachować kompatybilność.
 
-Kod pozostaje źródłem prawdy podczas implementacji. Jeśli aktualny `main` zmieni którykolwiek z powyższych kontraktów, implementator powinien dostosować plan do bieżącego ownershipu zamiast odtwarzać starszą strukturę.
+Kod jest źródłem prawdy podczas implementacji.
 
-## 1. Persistent wolf-den pressure
+## 1. World-owned problem state
 
-Rozszerzyć realny `wolfDen` o dwa systemowe parametry stanu:
+Rozszerzyć realny `wolfDen` o trzy systemowe właściwości/state inputs:
 
-```text
-pressure
-humanTaste
+```ts
+pressure: number       // 0..1
+humanTaste: boolean
+canRecover: boolean
 ```
 
 Nie przechowywać ich w `QuestManager` ani w quest state.
 
 ### `pressure`
 
-`pressure` reprezentuje zwiększoną presję siedliska i wpływa bezpośrednio na realną populację generowaną przez den.
-
-W V1 zwiększona wartość ma powodować:
-
-- większy effective population cap,
-- trochę krótszy interval spawn/respawn,
-- większą szansę utrzymywania realnej obecności wilków wokół siedliska i osady.
-
-Nie tworzyć drugiego population managera. Rozszerzyć istniejący spawner/lifecycle tak, aby effective cap i spawn interval wynikały z jego własnego systemowego stanu.
-
-`pressure` ma należeć do siedliska i być persistowane wraz z jego stanem, ponieważ po save/load problem nadal ma istnieć.
-
-### `humanTaste`
-
-`humanTaste` reprezentuje nabyte traktowanie człowieka jako atrakcyjnej zdobyczy.
-
-W V1 wpływa na istniejącą decyzję predator-vs-human przez modyfikację dwóch rzeczy:
-
-- obniżenie strachu przed ludźmi,
-- podniesienie apetytu / attack pressure wobec ludzi.
-
-Nie dodawać disease/rabies ani nowego human-hunting FSM.
-
-`humanTaste` ma modyfikować istniejący scoring/aggression path, najlepiej przez jawny input do czystej reguły `predatorHumanDecision`, nie przez globalny `kind === 'wolf' && questActive` exception.
-
-Wilki związane z problematycznym den powinny dziedziczyć zachowanie wynikające z `humanTaste` od źródła problemu. Quest nie ustawia flag bezpośrednio na konkretnych wilkach.
-
-## 2. Populacja i spawn podczas presji
-
-Aktualny `wolfDen` jest jednorazowy (`respawnIntervalDays: Infinity`). Dla elevated pressure musi stać się źródłem podtrzymywanej populacji.
+`pressure` jest znormalizowaną wartością `0..1` opisującą presję siedliska.
 
 V1:
 
 ```text
-normal wolf den
-→ bazowy cap / spokojniejszy spawn
-
-elevated pressure
-→ większy effective cap
-→ trochę szybszy spawn
-→ więcej realnych wilków
+normalny stan przed aktywacją: pressure = 0
+problem od 2. dnia gry:        pressure = 0.75
 ```
 
-Nie wymagać pełnego ecosystem/population simulatora.
+`pressure` wpływa na realną populację i częstotliwość wypraw z den. W przyszłości ta sama wartość może być wyliczana z prey shortage, habitat degradation, competition, migration lub działalności osady.
 
-Nie spawnuj wilków bezpośrednio przy settlement. Wszystkie osobniki mają być normalną fauną z normalnym `home`, movement, combat i death lifecycle.
+### `humanTaste`
 
-Zabicie kilku wilków ma chwilowo zmniejszać lokalną populację, ale nie usuwa problemu, dopóki aktywne źródło nadal istnieje.
+`humanTaste` jest booleanem.
 
-## 3. Zachowanie wobec osady i ludzi
+```text
+false → normalny predator-human scoring
+true  → mniejszy fear/cost ludzi + większa atrakcyjność ludzi jako zdobyczy
+```
 
-Wszystkie wilki związane z podwyższonym `humanTaste` mają być bardziej skłonne do ataku na ludzi.
+Nie dodawać disease/rabies ani nowego human-hunting FSM.
 
-Nie implementować quest-specific target selection.
+`humanTaste` ma wejść jako jawny input do istniejącego predator-human decision path. Nie używać warunku `questActive` ani globalnego `kind === 'wolf'` wyjątku.
 
-Rozszerzyć istniejące predator-human / predator-NPC mechanizmy tak, aby parametr `humanTaste` wpływał na ten sam decision pipeline, którego zwykłe wilki już używają.
+### `canRecover`
 
-Presja nie powinna oznaczać bezwarunkowego beeline na settlement. Wilki nadal są autonomiczną fauną. Większa populacja + zmienione fear/appetite powinny zwiększyć realną częstotliwość spotkań i ataków.
+Dla problematycznego den:
 
-Jeśli do uzyskania czytelnego scenariusza potrzebne okaże się ukierunkowanie części ruchu w stronę osady, należy rozszerzyć istniejący `trip`/destination mechanism z fauna-016. Nie tworzyć nowego movement pipeline ani teleportować/spawnować wilków przy celu.
+```text
+canRecover = false
+```
 
-## 4. Źródło problemu i trwałe rozwiązanie
+Po rzeczywistym zniszczeniu i przejściu do `disabled` den nie może wejść do istniejącego recovery path. Zwykłe cave/thicket zachowują dotychczasowe recovery semantics.
+
+## 2. Aktywacja problemu
+
+Den istnieje od początku świata, ale problem nie zaczyna działać natychmiast.
+
+V1 aktywuje stan problemu na początku **2. dnia gry**, jeśli den nadal istnieje i nie został wcześniej trwale zniszczony:
+
+```text
+pressure = 0.75
+humanTaste = true
+```
+
+To jest world-state activation, nie quest activation.
+
+Rozmowa z NPC ani przyjęcie questa nie może być triggerem presji. Gracz może nigdy nie przyjąć questa, a problem i jego konsekwencje nadal powinny istnieć.
+
+Aktywacja ma używać istniejącego world-day/time ownershipu. Nie dodawać real-time timera zależnego od liczby klatek.
+
+## 3. Population scaling i respawn
+
+Bazowy questowy `wolfDen` ma obecnie cap `2` i `respawnIntervalDays: Infinity`.
+
+Przy `pressure === 0` zachować bazowe zachowanie den.
+
+Przy `pressure > 0` użyć effective values wyliczanych z baseline config, bez destrukcyjnego przepisywania bazowej konfiguracji:
+
+```text
+effectiveCap = baseCap + round(pressure * 4)
+
+effectiveRespawnIntervalDays = lerp(3.0, 1.5, pressure)
+```
+
+Dla V1:
+
+```text
+pressure = 0.75
+baseCap = 2
+
+effectiveCap = 5
+effectiveRespawnIntervalDays ≈ 1.9 dnia
+```
+
+Wymagania:
+
+- nie tworzyć drugiego population managera,
+- nie spawnować wilków przy settlement,
+- każdy nowy wilk jest normalnym `AnimalAgent` z normalnym `home`, movement, health, combat i death lifecycle,
+- śmierć kilku wilków chwilowo obniża lokalne zagrożenie,
+- dopóki den istnieje, populacja może wrócić do effective cap,
+- zniszczony permanentnie den nie generuje nowych wilków.
+
+## 4. `humanTaste` w predator-human decision
+
+Wilki powiązane z problematycznym den dziedziczą `humanTaste` z realnego źródła problemu.
+
+Nie persistować flagi na poszczególnych dzikich wilkach jako authoritative state. Po save/load lub rebuild nowe instancje powinny ponownie otrzymać zachowanie z persisted den state.
+
+Przy `humanTaste = true` istniejący scoring ma zostać zmodyfikowany w dwóch miejscach:
+
+- zmniejszyć effective human fear contribution,
+- zwiększyć human-oriented attack/appetite score.
+
+Nie wyłączać całkowicie fire fear, crowd fear, HP/self-preservation ani innych istniejących komponentów. Wilk nadal ma być autonomicznym drapieżnikiem, nie bezwarunkowym beeline na ludzi.
+
+## 5. Settlement-directed trips
+
+V1 **wymaga** okresowych wypraw w stronę osady. Nie odkładać tego do późniejszego playtestu.
+
+Rozszerzyć istniejący fauna-016 `trip`/destination mechanism zamiast dodawać nowy movement pipeline.
+
+Kontrakt V1:
+
+```text
+source: aktywny wolfDen z pressure > 0
+destination: obrzeże settlement, nie środek osady
+max concurrent settlement-directed trips per den: 1
+minimum cooldown between opportunities: 0.5 dnia gry
+traveller: pojedynczy normalny wilk z den
+```
+
+Trip nie jest gwarantowanym atakiem. Po dotarciu w pobliże ludzi normalny predator-human/NPC decision path — zmodyfikowany przez `humanTaste` — decyduje o reakcji.
+
+Nie teleportować wilków, nie spawnować ich przy celu i nie tworzyć quest-specific target selection.
+
+Ten limit ma też chronić osadę przed szybkim NPC wipe na początku gry.
+
+## 6. Źródło problemu i trwałe rozwiązanie
 
 Kill count nie jest warunkiem ukończenia problemu.
 
-Warunek systemowy:
-
 ```text
 problem active
-⇔ źródłowy wolfDen nadal istnieje
+⇔ źródłowy wolfDen nadal może generować presję
 ```
 
-Zabijanie wilków redukuje bieżące zagrożenie, ale nie kończy scenariusza.
+Zabijanie wilków redukuje bieżące zagrożenie, ale nie usuwa źródła.
 
-Ostatecznym rozwiązaniem V1 jest **zniszczenie siedliska**.
+Ostateczne rozwiązanie V1 to **trwałe zniszczenie siedliska**.
 
-Należy ponownie użyć istniejącego `depleted → Zniszcz → disabled` lifecycle tam, gdzie to możliwe, ale dla tego scenariusza zniszczenie ma być trwałe.
+Ponownie użyć istniejącego flow:
 
-Po skutecznym zniszczeniu problematycznego wolfDen:
+```text
+active
+→ depletion wymagane przez obecną interakcję
+→ [E] Zniszcz
+→ disabled
+```
 
-- `pressure` przestaje generować populację,
-- den nie może wejść ponownie w normalne recovery,
-- problem nie może spontanicznie wrócić po obecnych `RECOVERY_DAYS`,
+Dla tego den `canRecover = false`, więc `disabled` jest trwałe.
+
+Po zniszczeniu:
+
+- `pressure` nie może generować nowych wilków,
+- żaden settlement-directed trip nie może zostać rozpoczęty,
+- den nie może wejść do `recovering`,
 - stan musi przetrwać save/load i `WorldBundle` rebuild,
-- istniejące żyjące wilki mogą umrzeć/rozejść się zgodnie z normalnym systemem; nie usuwać ich magicznie tylko dlatego, że quest się zakończył.
+- istniejące żywe wilki nie są despawnowane quest cleanupem; mogą umrzeć lub rozejść się przez normalne mechanizmy.
 
-Nie wprowadzać globalnej zasady, że każde zniszczone habitat spawner jest permanentne, jeśli istniejące cave/thicket recovery nadal ma być poprawne. Permanentność powinna wynikać z właściwości/stanu tego konkretnego źródła, bez quest-only managera.
+Nie zmieniać globalnie semantyki ordinary habitat recovery.
 
-## 5. Quest flow V1
+## 7. Quest objective i world binding
 
-Quest ma prowadzić przez realny problem świata, a nie tworzyć go na potrzeby stages.
+Zachować obecne `clear_wolf_den` bez zmiany semantyki, żeby nie psuć istniejącego `wilcza-jama`.
 
-Proponowany przebieg:
+Dodać generic objective:
 
-### Etap A — problem przy osadzie
-
-NPC zgłasza, że wilki coraz częściej podchodzą pod osadę i atakują ludzi.
-
-Nie wymagać dokładnego kill count. Gracz może odpierać i zabijać wilki, ale to tylko doraźne zmniejszenie zagrożenia.
-
-### Etap B — wskazówka od NPC
-
-Rozmowa z NPC daje wskazówkę, że wilki prawdopodobnie mają pobliskie siedlisko / jamę i problem będzie wracał, dopóki źródło istnieje.
-
-To jest jawnie ustalony discovery mechanism V1 — nie implementować śledzenia tropów ani nowego investigation systemu tylko dla tego questa.
-
-### Etap C — odnalezienie siedliska
-
-Gracz odnajduje istniejący `wolfDen`.
-
-Ponownie użyć obecnych world interaction / spawner interaction / quest objective seams tam, gdzie pasują.
-
-### Etap D — eliminacja źródła
-
-Gracz eliminuje wymaganą lokalną watahę w stopniu pozwalającym na użycie istniejącego destroy interaction, a następnie **niszczy siedlisko**.
-
-Quest objective powinien reagować na rzeczywisty trwały stan den, nie na liczbę zabitych wilków.
-
-### Etap E — raport
-
-Po trwałym zniszczeniu źródła quest przechodzi do `ready_to_report` / istniejącego flow zakończenia.
-
-NPC dialog powinien odzwierciedlać, że zniknęło źródło problemu, a nie tylko że gracz zabił N wilków.
-
-## 6. Quest objectives i world-state binding
-
-Preferować rozszerzenie istniejącego `clear_wolf_den` lub najbliższego obecnego objective contract zamiast dodawania kilku wolf-specific objective typów.
-
-Objective powinien odpowiadać na pytanie:
-
-```text
-czy źródłowy den został trwale zniszczony?
+```ts
+{ type: 'destroy_spawn_point', spawnerId: string }
 ```
 
-Nie powinien odpowiadać na:
+Objective kończy się dopiero wtedy, gdy wskazany realny spawn point osiągnie trwały destruction state (`disabled` i brak możliwości recovery zgodnie z source state).
 
-```text
-ile wilków zabił gracz?
-czy quest ustawił lokalny bool complete?
-```
-
-`QuestManager` pozostaje obserwatorem stanu świata. Nie powinien być właścicielem `pressure`, `humanTaste`, population cap ani spawn timers.
-
-Jeżeli obecne `clear_wolf_den` oznacza tylko śmierć początkowej watahy, należy skorygować/rozszerzyć semantykę lub dodać bardziej precyzyjny generic world-state ref tak, aby nowy scenariusz wymagał rzeczywistego destruction state bez psucia istniejącego questa `wilcza-jama`.
-
-Nie zmieniać semantyki starego questa niejawnie. Jeśli stary content wymaga kompatybilności, zachować ją jawnie.
-
-## 7. Persistence
-
-Nowy systemowy stan musi przetrwać save/load.
-
-Persistować co najmniej dane konieczne do odtworzenia:
+`QuestManager` pozostaje obserwatorem świata. Nie jest właścicielem:
 
 - `pressure`,
 - `humanTaste`,
-- permanentne zniszczenie / brak recovery,
-- istniejący spawn-point lifecycle state.
+- `canRecover`,
+- cap/respawn timers,
+- settlement trips.
 
-Nie persistować całych dzikich wilków tylko na potrzeby tego questa.
+Nie kończyć questa na `depleted`, `isWolfDenCleared()` ani kill count.
+
+## 8. Quest content V1
+
+Dodać osobny authored quest:
+
+```text
+QuestDef.id: wilki-pod-osada
+giver: Anna
+availability: Anna / trusted
+```
+
+Anna pozostaje giverem, ponieważ obecny wolf-related content (`grozny-wilk`, `wilcza-jama`) już jest z nią związany.
+
+Quest nie uruchamia problemu. Po spełnieniu availability Anna opisuje widoczne skutki i daje wskazówkę, że wilki mają pobliską jamę/siedlisko.
+
+### Flow
+
+1. Anna zgłasza, że wilki coraz częściej podchodzą pod osadę i atakują ludzi.
+2. W rozmowie wskazuje, że źródłem może być pobliskie siedlisko i samo zabijanie pojedynczych wilków nie wystarczy.
+3. Gracz odnajduje istniejący `wolfDen`.
+4. Gracz redukuje lokalną watahę na tyle, żeby móc użyć istniejącej interakcji `Zniszcz`.
+5. Gracz trwale niszczy den.
+6. `destroy_spawn_point` przechodzi do completion i quest staje się `ready_to_report`.
+7. Anna potwierdza usunięcie źródła zagrożenia.
+
+Nie dodawać tropów, śledztwa, marker-only den, questSpawn ani nowego investigation subsystemu.
+
+## 9. Reward i konsekwencje społeczne
+
+Nie przyznawać EXP.
+
+Nie wymagać fizycznego item reward w V1.
+
+Używać istniejącego relation/social consequence systemu:
+
+```text
+relation with Anna: +2
+competence: +20
+courage: +22
+benevolence: +8
+renown: +35
+```
+
+Jeżeli aktualny main w chwili implementacji przeszedł już na nowy `QuestOutcome`/reward contract z zależnych planów, odwzorować te same wartości w aktualnym ownershipie zamiast reaktywować legacy `QuestDef.effects.exp`.
+
+## 10. Persistence
+
+Persistować stan źródła wystarczający do odtworzenia scenariusza:
+
+- `pressure`,
+- `humanTaste`,
+- `canRecover` lub równoważny source-owned permanent-destruction contract,
+- istniejący spawn-point lifecycle state,
+- dane konieczne do poprawnego kontynuowania world-day activation, jeżeli nie da się jej deterministycznie wyprowadzić wyłącznie z dnia świata i destruction state.
+
+Nie persistować konkretnych dzikich wilków tylko na potrzeby tego questa.
 
 Po restore:
 
-- aktywny problem ma ponownie utworzyć normalną populację z właściwym cap/spawn behaviour,
-- wilki mają otrzymać zachowanie wynikające z persisted `humanTaste`,
-- zniszczone siedlisko nie może się odrodzić,
-- aktywny quest ma dalej obserwować ten sam stabilny den identity.
+- przed 2. dniem problem pozostaje nieaktywny,
+- od 2. dnia aktywny niezniszczony den ma `pressure = 0.75`, `humanTaste = true`,
+- populacja wraca zgodnie z effective cap/respawn,
+- zniszczony den nie wraca,
+- quest nadal obserwuje ten sam stabilny `WOLF_DEN_ID`.
 
-Jeśli persisted representation `SavedSpawnPointState` się zmienia, zaktualizować `SaveData`, parser/defaulting i migration zgodnie z bieżącym `CURRENT_SAVE_VERSION` contract. Nie dodawać wersji save, jeśli finalna implementacja może zachować kompatybilny optional/defaulted representation zgodnie z aktualnymi zasadami persistence.
+Jeżeli `SavedSpawnPointState` się zmienia, zaktualizować `SaveData`, parser/defaulting i migrację zgodnie z aktualnym `CURRENT_SAVE_VERSION` contract.
 
-## 8. Konsekwencje świata po zakończeniu
-
-Po zakończeniu questa:
-
-- source pozostaje trwale zniszczony,
-- elevated pressure nie wraca,
-- den nie generuje nowych wilków,
-- lokalna populacja może z czasem zmaleć przez realny death/movement lifecycle,
-- historia questa/reward/reputation może pozostać w obecnym progression systemie,
-- nie resetować zachowania świata do pre-quest stanu.
-
-Nie despawnować natychmiast wszystkich żywych wilków jako quest cleanup.
-
-## 9. Relacja do istniejących wolf questów
-
-Aktualne `grozny-wilk` i `wilcza-jama` są prostszymi wcześniejszymi scenariuszami.
-
-Podczas implementacji ustalić najmniejszą spójną integrację:
-
-- reuse ich objective/world binding,
-- nie duplikować kolejnego `WOLF_DEN_ID` ani osobnego den registry,
-- nie wymuszać automatycznie przebudowy istniejącego contentu, jeśli nie jest to konieczne,
-- nie łączyć questów w hardcoded chain, jeśli obecny system nadal nie ma generic quest prerequisites.
-
-Nowy scenariusz może być osobnym questem korzystającym z tego samego systemowego typu problemu. Konkretna nazwa `QuestDef.id`, giver i reward mogą zostać dobrane przy finalizacji draftu po sprawdzeniu kolizji/content sequencing na aktualnym `main`.
-
-## 10. Performance i determinism
+## 11. Performance i determinism
 
 Nie dodawać globalnych per-frame scans.
 
-W szczególności:
+- pressure scaling liczyć w istniejącym low-frequency spawner path lub przez mały pure helper,
+- `humanTaste` jest małym inputem do istniejącego predator-human scoring,
+- settlement-directed trip korzysta z istniejącego trip ownershipu i ma cooldown,
+- nie dokładać osobnego per-wolf settlement scan,
+- zachować bounded NPC candidate lists,
+- world-day activation i trip cooldown muszą być deterministic/time-system-driven,
+- zachować kompatybilność z przyszłą hybrid/off-screen fauna simulation.
 
-- pressure powinno wpływać na istniejące low-frequency spawner updates,
-- humanTaste powinno być małym dodatkowym inputem do już wykonywanego predator-human scoring,
-- nie skanować settlement/NPC dodatkowo per wolf, jeśli istniejące bounded candidate lists wystarczają,
-- ewentualne settlement-directed trips wybierać rzadko i zachowywać destination,
-- nie uzależniać długotrwałego population state od uncontrolled frame-time randomness,
-- preserve world-day/time-skip semantics istniejącego spawner pipeline.
-
-Rozwiązanie powinno pozostawać kompatybilne z przyszłą hybrid/off-screen fauna simulation.
-
-## Zależności
+## 12. Zależności
 
 ### `fauna-016`
 
-Wymagany fundament: habitat/roaming/trip ownership jest już zaimplementowany i technicznie zweryfikowany, ale plan pozostaje w statusie `verification needed` do manualnego browser checku.
-
-Nie blokować implementacji wyłącznie z powodu statusu manual verification, jeśli aktualny kod potwierdza wymagany kontrakt.
+Wymagany fundament: habitat/roaming/trip ownership. Kod jest zaimplementowany i technicznie zweryfikowany; manual browser verification nie jest twardym blockerem tego planu, jeśli aktualny kod nadal zachowuje wymagany kontrakt.
 
 ### `fauna-017`
 
-Nie deklarować obecnie twardej zależności.
+Nie jest twardą zależnością. Jeśli implementacja może zostać wykonana przez mały state/input propagation i istniejące pure decision seams, nie czekać na refactor.
 
-`fauna-017-animal-agent-refactor.md` jest nadal draftem i czeka na architectural review. Jeśli implementacja tego planu wymaga tylko małego inputu/state propagation do obecnego `AnimalAgent`, nie należy czekać na refactor. Jeśli review przed implementacją wskaże zmianę ownershipu dokładnie w dotykanym obszarze, dostosować implementation notes do zaakceptowanej struktury.
+### Existing wolf infrastructure
 
-### Existing wolf-den / quest infrastructure
+Ponownie użyć aktualnych:
 
-Ponownie użyć obecnego `AnimalSpawner`, `createFauna`, `AnimalAgent`, `predatorHumanDecision`, fauna↔NPC combat hooks oraz `QuestManager` wolf-den objective/ref seams.
+- `AnimalSpawner`,
+- `createFauna`,
+- `AnimalAgent`,
+- `predatorHumanDecision`,
+- fauna↔NPC combat hooks,
+- `QuestManager` world-objective seams.
 
-## Testy
+## 13. Testy automatyczne
 
-Dodać focused tests przede wszystkim dla czystych reguł i persistence:
+Dodać focused tests dla:
 
-- elevated `pressure` zwiększa effective wolf population cap,
-- elevated `pressure` skraca effective spawn interval w ograniczony sposób,
-- normalny den zachowuje bazowe zachowanie,
-- `humanTaste = 0` zachowuje dotychczasowy predator-human scoring,
-- większy `humanTaste` zmniejsza human fear contribution,
-- większy `humanTaste` zwiększa human attack/appetite pressure,
-- fire/crowd/provocation nadal działają zgodnie z istniejącymi regułami,
-- wilk dziedziczy pressure-derived behaviour z właściwego `spawnPointId` / source state bez zależności od active quest,
+- aktywacja problemu nie występuje przed 2. dniem,
+- od 2. dnia niezniszczony den ustawia `pressure = 0.75`, `humanTaste = true`,
+- zniszczony wcześniej den nie aktywuje problemu,
+- `pressure = 0` zachowuje bazowy wolf-den contract,
+- `pressure = 0.75` daje effective cap `5`,
+- `pressure = 0.75` daje respawn interval około `1.9` dnia,
+- scaling pozostaje bounded dla `pressure ∈ [0,1]`,
+- `humanTaste = false` zachowuje dotychczasowy predator-human scoring,
+- `humanTaste = true` obniża human fear contribution i podnosi human attack/appetite score,
+- fire/crowd/self-preservation nadal działają,
+- source behaviour jest propagowane po `spawnPointId`, bez active quest dependency,
+- aktywne pressure pozwala na settlement-directed trip,
+- nie więcej niż 1 taki trip z den naraz,
+- cooldown `0.5` dnia blokuje zbyt częste wyprawy,
 - zabicie części wilków nie kończy problemu,
-- trwałe zniszczenie den blokuje dalsze spawny,
-- permanentnie zniszczony den nie wraca przez obecny recovery timer,
-- save/load zachowuje `pressure`, `humanTaste` i permanent destruction,
-- quest objective kończy się po realnym destruction state,
-- quest nie kończy się po samym kill count / depletion, jeśli den nie został jeszcze zniszczony,
-- istniejący `wilcza-jama` zachowuje zamierzoną kompatybilność.
+- `depleted` bez `Zniszcz` nie kończy questa,
+- `destroy_spawn_point` kończy się po trwałym destruction state,
+- `clear_wolf_den` zachowuje starą semantykę,
+- permanentnie zniszczony den nie wraca przez recovery timer,
+- save/load zachowuje active problem i permanent destruction,
+- istniejący `wilcza-jama` pozostaje kompatybilny.
 
-## Manual verification
+## 14. Manual verification
 
 Manual verification wykonuje użytkownik w przeglądarce.
 
 Sprawdzić co najmniej:
 
-1. Przy aktywnej wysokiej presji wokół den utrzymuje się wyraźnie większa liczba wilków niż normalnie.
-2. Zabicie kilku wilków chwilowo zmniejsza zagrożenie, ale po czasie populacja wraca, dopóki den istnieje.
-3. Wilki z `humanTaste` wyraźnie częściej angażują ludzi niż zwykłe wilki, ale nadal reagują przez ten sam predator AI.
-4. Wilk może rozpocząć pogoń poza osadą i kontynuować ją w obrębie osady.
-5. NPC atakowany przez wilka używa normalnego defend/flee/combat behaviour.
-6. Rozmowa z NPC daje wskazówkę o siedlisku i prowadzi do dalszego etapu.
-7. Odnalezienie istniejącego `wolfDen` nie tworzy nowej questowej populacji.
-8. Zabicie watahy bez zniszczenia siedliska nie kończy problemu.
-9. Zniszczenie siedliska kończy systemowe źródło presji.
-10. Po odczekaniu ponad obecny recovery window siedlisko nadal pozostaje trwale zniszczone.
-11. Save/load przed rozwiązaniem zachowuje problem, a save/load po rozwiązaniu zachowuje jego trwałe usunięcie.
-12. Po ukończeniu questa pozostałe żywe wilki nie znikają magicznie; świat dochodzi do nowego stanu przez normalne mechanizmy fauny.
+1. Dzień 1 nie powoduje agresywnych wypraw z den.
+2. Na początku 2. dnia problem staje się widoczny bez przyjmowania questa.
+3. W pobliżu den utrzymuje się wyraźnie większa populacja, ale nie dochodzi szybko do wybicia całej osady.
+4. Wilki okresowo kierują się ku obrzeżom settlement przez normalny movement/trip system.
+5. Wilki z `humanTaste` częściej angażują ludzi, ale nadal reagują na normalne czynniki predator AI.
+6. NPC używają normalnego defend/flee/combat behaviour.
+7. Anna daje wskazówkę o pobliskim siedlisku.
+8. Zabicie kilku wilków chwilowo redukuje zagrożenie, ale problem wraca.
+9. Zabicie całej bieżącej watahy bez zniszczenia den nie kończy questa.
+10. `Zniszcz` trwale usuwa źródło presji.
+11. Po odczekaniu ponad recovery window den nadal pozostaje zniszczony.
+12. Save/load przed rozwiązaniem zachowuje problem, a po rozwiązaniu zachowuje trwałe usunięcie.
+13. Pozostałe żywe wilki nie znikają magicznie po zakończeniu questa.
 
-## Non-goals V1
+## 15. Non-goals V1
 
 Poza zakresem:
 
-- disease/rabies jako fabularne źródło problemu,
+- disease/rabies jako źródło problemu,
 - pełny ecological pressure simulator,
-- shortage-driven wolf migration,
-- prey scarcity i competition jako dynamiczne źródła pressure,
-- regionalne migracje i zaawansowane watahy,
+- prey scarcity / competition / migration jako dynamiczne producery `pressure`,
 - breeding/reproduction overhaul,
-- alternatywne rozwiązania den bez zniszczenia,
-- negotiation / feeding / relocation rozwiązujące problem,
-- emergentne automatyczne tworzenie nowych analogicznych questów,
+- zaawansowane watahy,
+- alternatywne rozwiązania problemu,
+- feeding / relocation / negotiation,
+- emergentne automatyczne tworzenie analogicznych questów,
 - quest-only wolf spawns,
 - osobny wolf manager,
 - osobny human-hunting FSM,
 - globalny pathfinding overhaul,
 - persistence konkretnych dzikich wilków,
-- śledzenie tropów/investigation subsystem,
-- przebudowa całego istniejącego wolf quest contentu bez konkretnej potrzeby integracyjnej.
+- tracking/investigation subsystem,
+- przebudowa istniejących wolf questów bez konkretnej potrzeby kompatybilności.
 
-## Późniejsze rozszerzenia
+## 16. Późniejsze rozszerzenia
 
-System powinien pozostawić naturalny punkt rozszerzenia, aby `pressure` mogło w przyszłości wynikać z realnego ekosystemu:
+System ma zostawić naturalny punkt rozszerzenia:
 
 ```text
 prey shortage
@@ -359,42 +411,22 @@ prey shortage
 + competition
 + migration
 + settlement activity
-→ wolf pressure
-→ population / behaviour changes
+→ pressure
+→ population / trip frequency / behaviour changes
 ```
 
-`humanTaste` może w przyszłości być nabywany przez doświadczenie watahy/populacji, zamiast być ustawionym scenariuszowo.
+`humanTaste` może później być nabywany przez watahę/populację z doświadczenia zamiast być authored booleanem.
 
 Nie implementować tych producerów w V1.
 
 ## Implementation notes
 
-Przed przejściem draftu do `planned` przygotować:
+Aktualne implementation notes:
 
 `docs/plans/implementation-notes/quests-progression-007-wolves-approach-settlement-implementation-notes.md`
 
-Implementation notes mają zweryfikować na aktualnym `main` dokładne symbole i call sites dla:
+Przed kodowaniem implementator ma wykonać tylko krótki preflight bieżącego `main` w wymienionych tam call sites i zaktualizować notes, jeśli ownership się zmienił. Nie powtarzać szerokiego reconu.
 
-- tworzenia `wolfDen` i jego `PreySpawner` config,
-- propagowania `spawnPointId` / source state do nowych wilków,
-- `predatorHumanDecision` inputs i NPC-target path,
-- destruction/recovery lifecycle,
-- `SavedSpawnPointState` / `SaveData` / save assembly + restore,
-- istniejącego `clear_wolf_den` event/objective contract,
-- giver/content sequencing istniejących wolf questów.
-
-Nie powtarzać szerokiego reconu; zapisać tylko ustalenia, które oszczędzą implementatorowi ponownego śledzenia ownershipu i call sites.
-
-Dodać JSDoc dla nowych lub istotnie zmienionych publicznych/architektonicznych funkcji i typów tam, gdzie poprawi to późniejszy preflight; użyć `@domain fauna` lub `@domain quests-progression` odpowiednio do ownershipu.
-
-## Kryteria przejścia z `draft` do `planned`
-
-Przed finalizacją ustalić jeszcze:
-
-- konkretny `QuestDef.id`, giver i tekst/reward,
-- czy obecne `clear_wolf_den` może bezpiecznie zachować starą semantykę i dostać drugi destruction-oriented objective/ref, czy powinno zostać rozszerzone wstecznie kompatybilnie,
-- dokładny persisted shape `pressure` / `humanTaste` / permanent destruction,
-- dokładną reprezentację effective cap/spawn interval bez psucia generic cave/thicket lifecycle,
-- czy settlement-directed movement jest potrzebny po pierwszym playteście samego większego population + `humanTaste`, czy naturalne roaming/chase wystarcza.
+Dodać JSDoc dla nowych lub istotnie zmienionych publicznych/architektonicznych funkcji i typów tam, gdzie poprawia to późniejszy preflight; użyć `@domain fauna` lub `@domain quests-progression` zgodnie z ownershipem.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
