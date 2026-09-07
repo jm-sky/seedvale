@@ -1,412 +1,331 @@
 # Plan: First Processing Chain and Blacksmith Production
 
-**Created:** 2026-09-01
-**Status:** `planned` 📋
-**Type:** feature
-**Priority:** high · **Effort:** M
-**Depends on:** settlements-npcs-015
-**Domain:** `settlements-npcs`
-**Subdomains:** `economy` `production` `blacksmith`
-**Tags:** `processing` `production-chain` `ore` `coal`
+**Created:** 2026-09-01  
+**Status:** `planned` 📋  
+**Type:** feature  
+**Priority:** high · **Effort:** M  
+**Depends on:** settlements-npcs-015  
+**Domain:** `settlements-npcs`  
+**Subdomains:** `economy` `production` `blacksmith`  
+**Tags:** `processing` `production-chain` `ore` `coal`  
 **Roadmap:** `economy-production`  
 
 ## Goal
 
-Wykorzystać wspólny execution flow dostarczony przez `settlements-npcs-015` do uruchomienia pierwszego rzeczywistego processing chain w ekonomii.
+Dostarczyć pierwszy konkretny realny processing chain na wspólnym mechanizmie `settlements-npcs-015`, bez tworzenia blacksmith-only production subsystemu.
 
-Pierwszy vertical slice:
+Finalny vertical slice:
 
 ```text
-Miner
+ResourceDeposits
   ↓
-iron + coal w SettlementEconomy
+existing Miner work (`planOreGathering`)
   ↓
-Blacksmith
+SettlementEconomy bulk stock
+  iron × 2 + coal × 1
   ↓
-iron_rod
+existing Blacksmith scheduled work (`planBlacksmithWork`)
   ↓
-Blacksmith household Inventory
-```
-
-Celem jest zamknięcie jednej kompletnej transformacji od rzeczywistego surowca do rzeczywistego przetworzonego dobra. Ten mechanizm ma być podstawą dla kolejnych chainów, ale plan nie buduje jeszcze pełnego katalogu craftingu.
-
-## Current State / Recon
-
-Aktualny codebase ma już:
-
-- `ProductionDef` z `inputs`, `outputs`, `itemInputs` i `itemOutputs`,
-- `EconomicStock` jako właściciela settlement-level bulk resources,
-- `SettlementEconomy` jako właściciela settlement stock i concrete food inventory,
-- `Household.items` jako generic concrete-item storage,
-- NPC `miner`, który wydobywa `iron` i odkłada je do `SettlementEconomy`,
-- `coal` jako istniejący settlement-level resource,
-- rolę `blacksmith` i istniejące fizyczne workplace `landmarks.blacksmith`,
-- istniejący Blacksmith work flow, który obecnie służy wyłącznie do weapon maintenance,
-- `iron_rod` jako istniejący `ItemKind`,
-- `Inventory.applyRecipe()` jako atomiczny item recipe primitive,
-- plan `015`, który ma dostarczyć wspólny production executor/orchestration z obsługą stock + inventory oraz transactional execution.
-
-Nie znaleziono istniejącego kompletnego recipe `iron + coal → iron_rod`. `iron_rod` istnieje jako realny item, ale obecnie nie jest produkowany przez NPC economy.
-
-## Architectural Goal
-
-Po `015` architektura ma wyglądać:
-
-```text
-NpcAgent / scheduled Blacksmith work
-        ↓
-production definition
-        ↓
-ProductionExecutor (015)
-        ↓
-SettlementEconomy input source
-        ↓
-transactional input consumption
-        ↓
-Household.items output
-```
-
-Ważne granice:
-
-- `ProductionDef` pozostaje źródłem prawdy recipe.
-- `ProductionExecutor` z `015` pozostaje właścicielem execution/transaction boundary.
-- `SettlementEconomy` pozostaje właścicielem `iron` i `coal`.
-- `Household.items` pozostaje właścicielem konkretnego `iron_rod`.
-- `NpcAgent` wybiera i wykonuje pracę, ale nie implementuje recipe ani transaction semantics.
-- brak fizycznego transportu inputów w tym planie.
-
-Dla pierwszego chainu dostępność inputów jest sprawdzana w settlement-level stock. To jest świadoma granica ekonomiczna pierwszej wersji: fizyczna logistyka pomiędzy kopalnią, storage i workplace należy do przyszłego transport/logistics work.
-
-## 1. Define the First Processing Recipe
-
-Dodać pierwszą konkretną `ProductionDef` dla Blacksmitha.
-
-Initial recipe:
-
-```text
-iron × 2
-coal × 1
-    ↓
-iron_rod × 1
-```
-
-Recipe powinno używać istniejących:
-
-- `EconomicKind: iron`,
-- `EconomicKind: coal`,
-- `ItemKind: iron_rod`.
-
-Nie dodawać nowego abstrakcyjnego `metal`, `ingot` ani równoległego stock model tylko po to, aby reprezentować ten chain.
-
-## 2. Integrate with Blacksmith Work
-
-Rozszerzyć istniejący Blacksmith work flow tak, aby podczas scheduled `work`:
-
-1. sprawdził, czy recipe może zostać wykonane,
-2. rozpoczął normalny workplace action,
-3. po zakończeniu użył wspólnego production executor,
-4. zakończył się wynikiem `success` albo `blocked`.
-
-Istniejące weapon sharpening pozostaje osobnym działaniem Blacksmitha.
-
-Nie tworzyć:
-
-- `BlacksmithProductionManager`,
-- osobnego production FSM,
-- osobnego production tick,
-- osobnej kolejki Blacksmitha.
-
-## 3. Input Availability
-
-Production może wykonać się tylko, gdy wszystkie wymagane inputy są dostępne.
-
-```text
-iron < 2 OR coal < 1
-    ↓
-blocked
-    ↓
-NO input mutation
-NO iron_rod
-```
-
-Availability check może być tylko preview. Final execution musi ponownie zweryfikować live state przez transaction semantics z `015`.
-
-Nie wykonywać:
-
-- globalnego wyszukiwania rud,
-- skanowania wszystkich householdów,
-- magicznego pobierania itemów z dowolnego miejsca świata,
-- fizycznego transportu.
-
-## 4. Output Ownership
-
-Po skutecznym wykonaniu:
-
-```text
-SettlementEconomy
-  iron -2
-  coal -1
-
+shared production executor from 015
+  ↓
 Blacksmith Household.items
-  iron_rod +1
+  iron_rod × 1
 ```
 
-Output nie może być tylko wartością zwróconą przez production helper.
+`016` ma udowodnić, że wspólny executor z `015` działa w realnym NPC profession flow i z realnymi authoritative owners. Nie projektuje nowej warstwy produkcji.
 
-Jeżeli `Household.items` nie ma miejsca na output z powodu istniejących inventory semantics, execution ma zwrócić failure bez utraty inputów.
+## Verified current-code facts
 
-Nie tworzyć osobnego `ProductionOutputInventory`.
+Aktualny `main` ma już wszystkie content kinds potrzebne do chainu:
 
-## 5. Production Result Integration
+- `EconomicKind`: `iron`, `coal` w `src/economy/kinds.ts`;
+- `MineableOre`: `iron`, `coal` w `src/terrain/depositMining.ts`;
+- `ORE_ITEM` i `oreEconomicKind()` mapują oba ore types przez identyczne literal names: carried `ItemKind` → settlement `EconomicKind`, bez nowej conversion table;
+- `ItemKind`: `iron_rod` w `src/items/items.ts`;
+- `Household.items` jest generic concrete-item `Inventory`, więc może autorytatywnie przechowywać `iron_rod`;
+- `Role` zawiera `blacksmith` i `miner`;
+- `planOreGathering()` w `src/ai/npcProfessionWork.ts` wykonuje realne mine → carry → stockpile deposit i dopiero wtedy `economy.add(oreEconomicKind(...), minedCount, simTime)`;
+- `planBlacksmithWork()` już istnieje i dziś obsługuje sharpening;
+- `workplaceFor()` identyfikuje Blacksmith workplace jako household-owned `landmarks.blacksmithWorkplaces` entry po `familyIndex/homeIndex`, nie settlement-wide `landmarks.blacksmith`;
+- `SettlementEconomy` oraz `Household.items` mają istniejące snapshot/save ownership; 016 nie potrzebuje `ProductionState` w persistence.
 
-Wykorzystać wynik wykonania dostarczony przez `015`.
+Nie zakładać, że `settlements-npcs-015` jest już zaimplementowany. Jego finalne implementation notes są dependency contractem.
 
-Blacksmith work powinien rozróżniać co najmniej:
+## Dependency contract required from 015
 
-- successful processing,
-- missing/insufficient input,
-- unavailable output destination,
-- transaction/revalidation failure.
+Przed implementacją 016 `015` musi dostarczać jeden shared synchronous production executor z następującym kontraktem:
 
-Brak inputu nie powinien powodować wyjątkowego NPC flow ani uszkadzać normalnego schedule.
+- authoritative recipe type pozostaje `ProductionDef`;
+- stock inputs/outputs używają jawnie przekazanego `SettlementEconomy`;
+- item inputs/outputs używają jawnie przekazanego `Inventory`;
+- executor waliduje i agreguje quantities przed mutacją;
+- cały mixed commit jest all-or-nothing;
+- output capacity jest preflightowana przed consumption;
+- failed execution nie mutuje żadnego ownera;
+- rezultat rozróżnia co najmniej success, blocked/missing input, invalid recipe, unavailable destination/context i transaction/revalidation failure;
+- blocked-by-input jest stabilnym plain-data outcome, który downstream `017` może obserwować;
+- executor jest stateless i nie posiada scheduler/tick/persistent reservations;
+- istniejący NPC work-completion path pozostaje schedulerem produkcji;
+- `src/economy/npcWork.ts` pozostaje work-completion → economy seam.
 
-Ten plan nie tworzy jeszcze production-demand/problem/pressure integration. To należy do `017`.
+Jeżeli implementacja 015 nie spełnia tego kontraktu, 016 jest realnie blocked i nie może lokalnie odtwarzać brakującej transaction layer.
 
-## 6. Processing Selection
+## 1. Authoritative recipe definition
 
-Jeżeli Blacksmith może mieć więcej niż jedno dostępne działanie (np. sharpening i processing), użyć istniejącego work/decision flow i deterministic priority.
-
-Nie wprowadzać nowego utility/scoring system.
-
-Priorytet powinien być jawny i stabilny. Dokładna kolejność pomiędzy istniejącym sharpening a processing należy dopasować do aktualnego Blacksmith flow tak, aby nie odebrać istniejącej funkcji utrzymania broni.
-
-Jeżeli recipe nie może zostać wykonane, Blacksmith ma zachować istniejący fallback do normalnego work/idle behaviour.
-
-## 7. Reuse Existing Mining Flow
-
-Nie zmieniać sposobu, w jaki Miner wydobywa rudę, poza minimalną integracją konieczną do dostarczenia inputu do chainu.
-
-Istniejący flow:
+Dodać jedną statyczną `ProductionDef` w `src/economy/production.ts`:
 
 ```text
-ore deposit
-  ↓
-Miner
-  ↓
-NPC carried item
-  ↓
-stockpile
-  ↓
-SettlementEconomy
+BLACKSMITH_IRON_ROD_PRODUCTION
+id: blacksmith.iron_rod
+role: blacksmith
+inputs:
+  iron × 2
+  coal × 1
+outputs: []
+itemInputs: []
+itemOutputs:
+  iron_rod × 1
 ```
 
-pozostaje źródłem `iron`.
-
-Nie tworzyć drugiego NPC mining output registry.
-
-## 8. No Physical Transport Yet
-
-Ten plan świadomie nie implementuje:
-
-- kopalnia → settlement transport,
-- settlement storage → blacksmith physical pickup,
-- carts/wagons,
-- carrier/cargo,
-- inter-settlement logistics.
-
-Pierwszy processing chain operuje na istniejącym settlement economic ownership.
-
-Powód: `015` definiuje production, a fizyczny transport ma być osobnym mechanizmem wynikającym z realnych source/destination/demand relationships. `016` powinien dostarczyć processing semantics, nie przedwcześnie tworzyć transport system.
-
-## 9. Future Chain Compatibility
-
-Nowe recipe powinno być zdefiniowane tak, aby późniejsze chainy mogły używać tego samego execution path.
-
-Przyszłe przykłady:
-
-```text
-copper_ore + coal → copper
-wood/logs → planks/beams
-processed goods → tools/weapons
-```
-
-Nie implementować ich teraz.
-
-W szczególności nie dodawać jeszcze:
-
-- Carpenter production,
-- tool crafting,
-- weapon crafting,
-- copper processing,
-- leather processing,
-- Mint/coins.
-
-## 10. Interaction with Local Goods Flow
-
-Nie rozszerzać `settlements-npcs-014` o ogólny market system.
-
-Pierwszy chain może konsumować settlement-level stock już posiadany przez `SettlementEconomy`.
-
-Processed `iron_rod` trafia do Blacksmith household, ale nie wymaga jeszcze ogólnego non-food local circulation. Rozszerzenie obiegu concrete non-food goods powinno wynikać z późniejszych realnych potrzeb, a nie być częścią tego planu.
-
-## 11. Persistence and Rebuild
-
-Wykorzystać istniejące ownership/persistence semantics.
-
-Recipe definitions są statyczne i nie wymagają persistence.
-
-Live stock/inventory pozostaje authoritative w:
-
-- `SettlementEconomy`,
-- `Household.items`.
-
-Po world rebuild/reload nie może powstać dodatkowy output ani ponowne wykonanie zakończonej produkcji.
-
-Nie dodawać osobnego production persistence state, jeżeli istniejący work/action lifecycle nie wymaga go.
-
-## 12. Performance
-
-Production execution pozostaje event/work-level.
+Proporcje `2 iron + 1 coal → 1 iron_rod` są jawnie zamknięte przez finalny downstream contract planu `015`; nie są inferowane z mining yield, item weight ani innych przypadkowych wartości codebase.
 
 Nie dodawać:
 
-- per-frame production scans,
-- global recipe scans,
-- global production registry,
-- workerów,
-- nowych economy ticks.
+- `metal`, `ingot` ani nowego `EconomicKind`;
+- osobnej blacksmith recipe table/registry;
+- procedural recipe DSL;
+- conversion mapping `ItemKind ↔ EconomicKind` ponad istniejące identity mapping ore flow.
 
-Recipe selection powinno operować na małej, statycznej liście dostępnych Blacksmith recipes.
+## 2. Existing Blacksmith profession/workplace is the scheduler
+
+Rozszerzyć istniejący `planBlacksmithWork(ctx)` w `src/ai/npcProfessionWork.ts`.
+
+Nie dodawać osobnego ticka, managera, FSM ani kolejki.
+
+Blacksmith nadal pracuje wyłącznie podczas istniejącego scheduled `work` flow i używa `ctx.workplace`, który pochodzi z `workplaceFor(..., homeIndex)` i wskazuje jego household-owned anvil/grind-workbench yard.
+
+Nie wyszukiwać workplace ponownie w production code i nie odwoływać się do nieistniejącego settlement singleton `landmarks.blacksmith`.
+
+## 3. Deterministic Blacksmith work selection
+
+Zamknąć priority w istniejącym plannerze:
+
+1. jeżeli istnieje realny sharpening target i household ma `whetstone`, zachować obecne sharpening;
+2. w przeciwnym razie, jeżeli `economy`, `household` i `workplace` istnieją oraz recipe ma wymagane live inputs, rozpocząć processing work;
+3. w przeciwnym razie zwrócić `null`, aby obecny caller użył istniejącego generic work/idle fallbacku.
+
+Sharpening ma pierwszeństwo, ponieważ jest już istniejącą konkretną funkcją Blacksmitha i 016 nie powinien jej wypierać nowym processingiem.
+
+Input check przed startem action jest tylko eligibility preview. Completion zawsze musi ponownie wykonać pełny live preflight przez executor z `015`.
+
+Nie dodawać utility/scoring systemu.
+
+## 4. Work completion integration
+
+`src/economy/npcWork.ts` pozostaje integration seam.
+
+Dodać cienki adapter `commitBlacksmithProduction(economy, household)` wyłącznie jako odpowiednik istniejącego `commitHunterArrowProduction()`:
+
+- wybiera jedną statyczną `BLACKSMITH_IRON_ROD_PRODUCTION`;
+- przekazuje shared executorowi explicit owners:
+  - stock owner = `SettlementEconomy`,
+  - item owner = `household.items`;
+- zwraca `ProductionResult` z `015` bez własnej walidacji, reservation, rollback ani mutation semantics.
+
+To nie jest osobny Blacksmith transaction helper: transaction pozostaje w shared executorze 015, a `npcWork.ts` jedynie adaptuje profession completion do niego.
+
+`planBlacksmithWork().onComplete` wywołuje ten adapter dokładnie raz.
+
+## 5. Input path
+
+Realny input path pozostaje istniejący:
+
+```text
+ResourceDeposits (`iron` / `coal`)
+  ↓ mining.mine()
+NpcWorkContext.carried Inventory
+  ↓ deposit action at landmarks.stockpile
+SettlementEconomy.add(oreEconomicKind(type), minedCount, simTime)
+```
+
+016 nie zmienia `planOreGathering()`, `ORE_ITEM`, `oreEconomicKind()`, deposit yield ani resource generation.
+
+Nie wymaga, aby jeden konkretny Miner wydobył oba rodzaje ore. Recipe widzi wyłącznie settlement-level authoritative stock istniejący w momencie completion.
+
+Brak jednego z inputów jest normalnym blocked production outcome.
+
+## 6. Input consumption / output path
+
+Successful completion ma dokładnie taki authoritative efekt:
+
+```text
+SettlementEconomy:
+  iron  -2
+  coal  -1
+
+Blacksmith Household.items:
+  iron_rod +1
+```
+
+Cała mutacja musi pochodzić ze shared executor 015.
+
+Nie przenosić `iron` ani `coal` do `Household.items` tylko dlatego, że output jest itemem. Nie dodawać `iron_rod` do `EconomicStock`. Nie utrzymywać równolegle bulk + item kopii tego samego produktu.
+
+`iron`/`coal` są bulk settlement inputs; `iron_rod` jest concrete item output. To jest świadomy mixed-storage recipe, nie conversion do jednego universal inventory model.
+
+## 7. Blocked result and downstream 017 seam
+
+016 nie tworzy persistent shortage/problem/pressure state — to zakres `017`.
+
+Musi jednak zachować obserwowalny rezultat wykonania:
+
+- `commitBlacksmithProduction()` zwraca `ProductionResult` z 015;
+- `blocked-by-input` nie jest zamieniany na boolean ani wyjątek w economy seam;
+- `planBlacksmithWork` może dziś nie konsumować tego wyniku dalej, ale completion path nie może ukryć/utracić jego semantyki w shared adapterze.
+
+To jest wymagany kontrakt dla `017`: późniejsza integracja może podpiąć interpretację failed production outcome w istniejący Problem/Pressure flow bez zmiany executor contract i bez dodawania production history do 016.
+
+`017` nie może zakładać persistent failed-attempt state w 016. Persistence shortage/problem należy do jego własnej integracji z istniejącym AI/problem model.
+
+## 8. Off-screen / lifecycle semantics
+
+016 nie dodaje remote-production simulatora.
+
+Production ma te same semantics co istniejący NPC work system:
+
+- camera/player visibility nie bierze udziału w eligibility ani execution;
+- gdy żywy `NpcAgent` dochodzi do work completion, używa tego samego shared executor niezależnie od tego, czy gracz patrzy na workplace;
+- settlement stream-out nie ma być zastępowany przez osobny blacksmith tick; istniejący NPC runtime/lifecycle pozostaje właścicielem tego ograniczenia;
+- rozpoczęta, ale niezakończona transient action nie tworzy persistent production reservation ani replay po rebuild/load;
+- completed production przeżywa rebuild/save, bo zmieniła już `SettlementEconomy` i `Household.items`.
+
+016 nie rozszerza fidelity/off-screen simulation poza to, co już zapewnia settlement/NPC lifecycle.
+
+## 9. Persistence
+
+Brak nowego save schema i brak migration.
+
+Po successful commit:
+
+- settlement `iron`/`coal` quantities są objęte istniejącym `SettlementEconomy.snapshot()` → `SaveData.settlementEconomies`;
+- `iron_rod` w `Household.items` jest objęty `HouseholdSnapshot.items` → istniejącym `SaveData.households`;
+- recipe definition i `ProductionResult` są statyczne/ephemeral;
+- nie dodawać `ProductionState`, queue, reservation ani last-produced record do `SaveData`.
+
+## 10. Minimal blast radius
+
+Oczekiwane gameplay-code files po zaimplementowanym 015:
+
+- `src/economy/production.ts` — jedna recipe definition;
+- `src/economy/npcWork.ts` — cienki Blacksmith completion adapter;
+- `src/ai/npcProfessionWork.ts` — deterministic selection i `onComplete` wiring;
+- targeted tests dla tych istniejących seams.
+
+Nie zmieniać bez konkretnej potrzeby:
+
+- `SettlementEconomy` ownership/model;
+- `Household` model;
+- `Inventory` model;
+- mining/deposit logic;
+- `workplaceFor()` / settlement prop generation;
+- local exchange/trader;
+- persistence schema;
+- `NpcAgent` FSM/schedule architecture.
 
 ## Tests
 
-### Recipe definition
+### Recipe/content
 
-- recipe uses existing `iron`, `coal` and `iron_rod`,
-- input/output quantities are deterministic,
-- recipe belongs to Blacksmith processing.
+- `BLACKSMITH_IRON_ROD_PRODUCTION` ma dokładnie stock inputs `iron ×2`, `coal ×1` i item output `iron_rod ×1`;
+- recipe role/id są stabilne i Blacksmith-specific content, ale execution pozostaje shared.
 
-### Successful production
+### Work selection
 
-- sufficient `iron` + `coal` → exactly one `iron_rod`,
-- exact input quantities are consumed,
-- output lands in the Blacksmith household,
-- no free output appears elsewhere.
+- sharpening target + whetstone → sharpening wygrywa nad processingiem;
+- brak sharpening targetu + dostępne inputs → processing action at existing `ctx.workplace`;
+- brak `economy`/`household`/`workplace` → `null`;
+- brak jednego inputu → nie rozpoczyna bezcelowego processing action, zachowuje fallback;
+- preview available, lecz input zużyty przed completion → executor zwraca blocked, zero partial mutation/output.
 
-### Failure
+### Completion / transaction
 
-- missing iron → no mutation,
-- insufficient iron → no mutation,
-- missing coal → no mutation,
-- insufficient output capacity → no mutation,
-- invalid/stale execution → no partial commit.
+W testach shared executor 015 + thin adapter:
 
-### Transaction/concurrency
+- `iron=2`, `coal=1` → `iron=0`, `coal=0`, `iron_rod +1`;
+- nadmiar stocku zmniejsza się dokładnie o recipe amounts;
+- insufficient iron → zero mutation;
+- insufficient coal → zero mutation;
+- unavailable/bounded item destination → zero input consumption;
+- sequential attempts revalidate live state; drugi nie reuse'uje już zużytego stocku;
+- successful completion daje output dokładnie raz.
 
-- two production attempts cannot consume the same input twice,
-- stale availability is revalidated,
-- failed transaction creates no output,
-- successful transaction creates output exactly once.
+### Existing-system regressions
 
-### Blacksmith integration
+- current sharpening semantics bez zmian;
+- Hunter arrow production nadal używa shared 015 executor path;
+- Miner `planOreGathering()` nadal deponuje `iron`/`coal` do `SettlementEconomy` bez nowej konwersji;
+- generic `commitRoleWork()` fallback pozostaje no-op dla placeholder Blacksmith (brak Blacksmith entry w `productionForRole`);
+- no second production scheduler/tick.
 
-- Blacksmith can enter processing work when recipe is available,
-- Blacksmith uses the existing workplace,
-- existing sharpening behaviour remains functional,
-- blocked processing falls back safely to existing work/idle behaviour,
-- no second production scheduler is created.
+### Persistence contract
 
-### Miner → processing
-
-- Miner-produced `iron` reaches `SettlementEconomy`,
-- Blacksmith can consume that stock,
-- no player interaction is required.
-
-### Regression
-
-- Hunter arrow production remains unchanged,
-- existing generic production tests remain valid,
-- existing local goods flow remains valid,
-- existing NPC work/schedule remains valid.
+- existing economy snapshot round-trip zachowuje post-production `iron`/`coal`;
+- existing household snapshot round-trip zachowuje `iron_rod`;
+- brak nowych SaveData fields/migrations.
 
 ## Acceptance Criteria
 
-- A complete real processing chain exists: `iron + coal → iron_rod`.
-- The chain uses the production execution mechanism from `015`.
-- Input quantities are consumed atomically.
-- Missing input blocks production without partial mutation.
-- Output is a real existing `ItemKind` in the correct household inventory.
-- Blacksmith uses the existing physical workplace.
-- Existing weapon sharpening remains functional.
-- Miner output can become Blacksmith input.
-- No physical transport system is introduced.
-- No new production scheduler is introduced.
-- No duplicate inventory/economy state is introduced.
-- No new AI pressure/problem system is introduced.
-- The player is not required for the chain to function.
-- The chain remains usable by future processing recipes without a parallel mechanism.
+- Istnieje realny NPC processing chain `iron ×2 + coal ×1 → iron_rod ×1`.
+- Quantities pochodzą z jawnego dependency contract 015, nie z wymyślonego mappingu.
+- Inputs są realnymi `EconomicKind` produkowanymi przez istniejący mining/deposit flow.
+- Output jest realnym `ItemKind` i trafia wyłącznie do Blacksmith `Household.items`.
+- Blacksmith używa istniejącego household-owned workplace i istniejącego scheduled work flow.
+- Sharpening zachowuje pierwszeństwo i dotychczasową semantykę.
+- Cały commit używa shared executor 015; 016 nie implementuje validation/atomicity/reservations osobno.
+- Blocked-by-input `ProductionResult` pozostaje dostępny w work-completion seam dla 017.
+- Brak własnego production managera, FSM, ticka, queue, persistence state i third inventory.
+- Brak physical input transport i global scans.
+- Produkcja nie wymaga playera/kamery.
+- Completed result persistuje wyłącznie przez istniejących authoritative owners.
 
 ## Out of Scope
 
-- production demand / economic pressures (`017`),
+- production shortage → Problems/Pressures (`017`),
+- persistent failed-attempt history,
 - physical goods transport,
 - inter-settlement logistics,
-- carts/wagons/carriers,
-- Carpenter,
+- market/dynamic pricing,
+- supply/demand AI,
+- profession staffing,
+- player crafting,
+- Carpenter i pozostałe profesje,
 - copper processing,
-- leather processing,
-- tool production,
-- weapon production,
-- Mint/coins,
-- dynamic pricing,
-- global market,
-- production UI,
-- player crafting redesign,
-- new AI Need,
-- dedicated Blacksmith AI,
-- global production scheduler.
+- tool/weapon crafting,
+- generic factory framework,
+- procedural recipe DSL,
+- nowy off-screen production simulator.
 
-## Dependency
+## True blockers
 
-```text
-014 — Local Goods Circulation
-        ↓
-015 — Economic Production and Input Integration
-        ↓
-016 — First Processing Chain and Blacksmith Production
-        ↓
-017 — Production Demand and Economic Pressures
-```
+Jedyny prawdziwy blocker: `settlements-npcs-015` musi być zaimplementowany zgodnie z finalnym dependency contractem opisanym wyżej. Obecny `main` przed 015 ma dwa osobne recipe execution primitives i nie daje jeszcze poprawnego mixed stock→item atomic commit.
 
-Direct implementation dependency is `015`; `014` is inherited through `015`.
+Nie znaleziono brakującego content kind, profession, workplace, storage owner ani persistence owner, który blokowałby 016 po 015.
 
 ## Verification
 
 Automated:
 
-- targeted production tests,
-- Blacksmith work tests,
-- inventory/stock tests,
-- concurrency/transaction tests,
-- NPC work regression tests,
-- full test suite,
-- typecheck,
-- production build.
+- targeted `production` / shared executor tests z 015;
+- `src/economy/npcWork` tests dla Blacksmith adaptera;
+- `src/ai/npcProfessionWork` tests dla priority/eligibility/completion;
+- existing mining/deposit regression;
+- existing household/economy snapshot regression;
+- typecheck;
+- production build;
+- relevant test suite.
 
-Runtime:
+Manual browser verification wykonuje użytkownik, nie agent implementujący.
 
-- run a settlement with Miner + Blacksmith,
-- observe Miner producing `iron`,
-- provide/observe sufficient `coal`,
-- observe Blacksmith processing,
-- verify `iron`/coal decrease exactly,
-- verify `iron_rod` appears in the Blacksmith household,
-- remove/deplete an input and verify processing blocks without partial mutation,
-- repeat with multiple work cycles and verify no duplication,
-- confirm the player is not needed.
+Implementation should add JSDoc with `@domain settlements-npcs` tylko dla nowych ważnych publicznych symboli, jeżeli poprawi to preflight; nie dokumentować oczywistych constants ponad potrzebę.
 
-Manual browser verification remains the player's responsibility.
-
-Implementation should add JSDoc with `@domain settlements-npcs` to important new public architectural functions/classes when needed for preflight discovery.
-
-**Zrób git commit i push do main, rebase jeżeli trzeba**
+> **Zrób git commit i push do main, rebase jeżeli trzeba**
