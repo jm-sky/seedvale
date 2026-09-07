@@ -124,26 +124,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 855
-- `applyModificationToTile` — function — line 712
-- `ChunkManager` — type — line 454
-- `ChunkManagerConfig` — type — line 302
-- `createChunkManager` — function — line 880
+- `applyChunkWaterDayNight` — function — line 866
+- `applyModificationToTile` — function — line 723
+- `ChunkManager` — type — line 456
+- `ChunkManagerConfig` — type — line 304
+- `createChunkManager` — function — line 891
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 869
-- `drainByBudget` — function — line 830
-- `FinalizeStage` — type — line 394
-- `pickNearestQueuedKey` — function — line 790
-- `pickNextFinalizeKey` — function — line 808
-- `resolveUnloadedLandmark` — function — line 260
+- `CropHarvestOutcome` — type — line 880
+- `drainByBudget` — function — line 841
+- `FinalizeStage` — type — line 396
+- `pickNearestQueuedKey` — function — line 801
+- `pickNextFinalizeKey` — function — line 819
+- `resolveUnloadedLandmark` — function — line 262
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 220
-- `TerrainModification` — type — line 669
-- `tickChunkWaterSurfaces` — function — line 843
+- `ringChunkOffsets` — function — line 222
+- `TerrainModification` — type — line 680
+- `tickChunkWaterSurfaces` — function — line 854
 
 ## `terrain/chunkMeshCache.ts`
 
@@ -319,8 +319,8 @@ Generated from exported TypeScript symbols.
 ## `terrain/riverNetwork.ts`
 
 - `canonicalWaterHeight` — function — line 213
-- `computeRiverTile` — function — line 736
-- `computeRiverTileDiagnostics` — function — line 752
+- `computeRiverTile` — function — line 796
+- `computeRiverTileDiagnostics` — function — line 812
   - domain: world-terrain
 - `DEFAULT_RIVER_THRESHOLDS` — const — line 57
 - `depthFromAccumulation` — function — line 197
@@ -330,15 +330,17 @@ Generated from exported TypeScript symbols.
 - `isInsideRiverChannel` — function — line 368
 - `nearestRiverBankDistance` — function — line 351
 - `nearestRiverBankPoint` — function — line 398
+- `nearestRiverHydrologyContext` — function — line 451
 - `overlappingRiverTiles` — function — line 84
 - `RIVER_CELL_STEP` — const — line 40
 - `RIVER_TILE_HALO` — const — line 39
 - `RIVER_TILE_SIZE` — const — line 33
 - `RiverChain` — type — line 98
-- `RiverChainDiagnostic` — type — line 522
-- `RiverChainRejection` — type — line 513
-- `RiverChainTerminal` — type — line 492
+- `RiverChainDiagnostic` — type — line 582
+- `RiverChainRejection` — type — line 573
+- `RiverChainTerminal` — type — line 552
 - `riverChannelSegmentsNear` — function — line 240
+- `RiverHydrologyContext` — type — line 441
 - `RiverPoint` — type — line 97
 - `RiverTileCoord` — type — line 63
 - `riverTileCoordOf` — function — line 65

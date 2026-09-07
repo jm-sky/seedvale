@@ -983,12 +983,16 @@ Generated from TypeScript imports.
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
 - `settlement/settlementPlanCache.ts`
+- `settlement/settlementProximity.test.ts`
+- `settlement/settlementProximity.ts`
 - `settlement/settlementSignposts.test.ts`
 - `settlement/settlementSignposts.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
+- `world/riverWaterQualityResolver.test.ts`
+- `world/riverWaterQualityResolver.ts`
 
 ## `settlement/settlementNightCycle.test.ts`
 
@@ -1066,6 +1070,24 @@ Generated from TypeScript imports.
 
 - `settlement/createSettlement.ts`
 - `settlement/settlementPropColliders.test.ts`
+
+## `settlement/settlementProximity.test.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementProximity.ts`
+
+## `settlement/settlementProximity.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `settlement/settlementProximity.test.ts`
+- `world/riverWaterQualityResolver.ts`
 
 ## `settlement/settlementSignposts.test.ts`
 

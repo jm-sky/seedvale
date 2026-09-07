@@ -148,10 +148,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 883
-- `buildDigTarget` — function — line 830
+- `buildCombatTarget` — function — line 895
+- `buildDigTarget` — function — line 842
 - `buildInteractables` — function — line 311
-- `collectItem` — function — line 930
+- `collectItem` — function — line 942
 - `COMBAT_TARGET_CONE_DOT` — const — line 79
 - `COMBAT_TARGET_RANGE` — const — line 64
 - `CombatAimMode` — type — line 69
@@ -216,13 +216,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 570
-- `createWorldBundle` — function — line 922
-- `disposeWorldBundle` — function — line 1281
-- `HOME_RADIUS` — const — line 87
-- `homeChunks` — function — line 98
-- `rebuildWorldBundle` — function — line 1096
-- `WorldBundle` — type — line 121
+- `BuiltWorldSystems` — type — line 576
+- `createWorldBundle` — function — line 930
+- `disposeWorldBundle` — function — line 1289
+- `HOME_RADIUS` — const — line 88
+- `homeChunks` — function — line 99
+- `rebuildWorldBundle` — function — line 1104
+- `WorldBundle` — type — line 122
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

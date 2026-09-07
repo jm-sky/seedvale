@@ -739,6 +739,10 @@ Generated from TypeScript imports.
 - `world/createRiverWater.ts`
 - `world/riverGeometry.test.ts`
 - `world/riverGeometry.ts`
+- `world/riverWaterQuality.test.ts`
+- `world/riverWaterQuality.ts`
+- `world/riverWaterQualityResolver.test.ts`
+- `world/riverWaterQualityResolver.ts`
 
 ## `terrain/riverQuery.test.ts`
 

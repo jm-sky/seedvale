@@ -924,6 +924,7 @@ Generated from TypeScript imports.
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
+- `world/riverWaterQualityResolver.ts`
 - `world/settlementForestHooks.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`

@@ -777,6 +777,23 @@ Generated from exported TypeScript symbols.
 
 - `createRiverWaterMaterial` — function — line 146
 
+## `world/riverWaterQuality.ts`
+
+- `applyRiverWaterQualityModifiers` — function — line 64
+- `CALIBRATED_HIGH_RIVER_ELEVATION` — const — line 43
+  - domain: world
+  - system: river-water-quality
+  - role: Pure hydrology + settlement-proximity classifier feeding contextual river `WaterSource.quality` (well/lake/ocean remain static, see `WaterSource.ts::createWaterSource`).
+- `classifyBaseRiverWaterQuality` — function — line 53
+
+## `world/riverWaterQualityResolver.ts`
+
+- `createRiverWaterQualityResolver` — function — line 32
+- `RiverWaterQualityResolver` — type — line 26
+  - domain: world
+  - system: river-water-quality
+  - role: Owns the only river-water-quality cache; composes a river-context query and a settlement-def lookup through the pure classifier in `riverWaterQuality.ts`.
+
 ## `world/seedLibrary.ts`
 
 - `clearSeedCache` — function — line 96
@@ -1004,12 +1021,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/WaterSource.ts`
 
-- `createWaterSource` — function — line 88
+- `createWaterSource` — function — line 94
 - `DRINK_THIRST_RELIEF` — const — line 73
 - `UNCOVERED_WELL_CONSUMPTION_RISK` — const — line 57
 - `UNCOVERED_WELL_WARNING` — const — line 65
-- `UNDRINKABLE_WATER_WARNING` — const — line 83
-- `UNSAFE_WATER_WARNING` — const — line 78
+- `UNDRINKABLE_WATER_WARNING` — const — line 84
+- `UNSAFE_WATER_WARNING` — const — line 79
 - `WaterBodyKind` — type — line 25
 - `WaterConsumptionRisk` — type — line 37
 - `WaterQuality` — type — line 18

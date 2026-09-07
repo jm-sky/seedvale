@@ -21,6 +21,8 @@ Generated from TypeScript imports.
 - `terrain/waterBodyKind.ts`
 - `world/WaterSource.test.ts`
 - `world/playerWell.ts`
+- `world/riverWaterQuality.ts`
+- `world/riverWaterQualityResolver.ts`
 
 ## `world/animalTraps.test.ts`
 
@@ -1574,6 +1576,48 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/createRiverWater.ts`
+
+## `world/riverWaterQuality.test.ts`
+
+**Imports**
+
+- `terrain/riverNetwork.ts`
+- `world/riverWaterQuality.ts`
+
+## `world/riverWaterQuality.ts`
+
+**Imports**
+
+- `terrain/riverNetwork.ts`
+- `world/WaterSource.ts`
+
+**Imported by**
+
+- `world/riverWaterQuality.test.ts`
+- `world/riverWaterQualityResolver.ts`
+
+## `world/riverWaterQualityResolver.test.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `terrain/riverNetwork.ts`
+- `world/riverWaterQualityResolver.ts`
+
+## `world/riverWaterQualityResolver.ts`
+
+**Imports**
+
+- `settlement/settlementGenerator.ts`
+- `settlement/settlementProximity.ts`
+- `terrain/riverNetwork.ts`
+- `world/WaterSource.ts`
+- `world/riverWaterQuality.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/riverWaterQualityResolver.test.ts`
 
 ## `world/seedLibrary.test.ts`
 

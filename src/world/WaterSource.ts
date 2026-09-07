@@ -73,8 +73,9 @@ export const WELL_ROPE_REQUIRED_WARNING = 'Potrzebujesz liny, żeby czerpać wod
 export const DRINK_THIRST_RELIEF = 45
 
 /** §4 "Lake" — gameplay/UI hook only; no illness system exists to trigger
- *  (explicitly out of scope). Shown only for `unsafe` sources (lake) since
- *  plan world-011 gave river its own `safe` classification. */
+ *  (explicitly out of scope). Shown for every `unsafe` source: lake always,
+ *  and a river whose contextual classification (plan world-017,
+ *  `world/riverWaterQuality.ts`) came out `unsafe`. */
 export const UNSAFE_WATER_WARNING = 'Ta woda może powodować chorobę.'
 
 /** Shown when drink/fill is refused outright for an `undrinkable` source
@@ -82,9 +83,14 @@ export const UNSAFE_WATER_WARNING = 'Ta woda może powodować chorobę.'
  *  nothing is consumed and no illness risk applies, just plain salt water. */
 export const UNDRINKABLE_WATER_WARNING = 'Ta woda jest słona — nie da się jej pić.'
 
-/** Plan world-011 — river reclassified `safe` alongside `well` (mountain
- *  streams read as clean), ocean reclassified `undrinkable` (salt water,
- *  blocks both drink and fill); lake keeps the original `unsafe` warning. */
+/** Plan world-011 — `well` is always `safe`, `ocean` is always `undrinkable`
+ *  (salt water, blocks both drink and fill), `lake` keeps the original
+ *  `unsafe` warning. `river` is a context-free `safe` default here only:
+ *  plan world-017's `app/interactables.ts` never actually calls this for a
+ *  river shoreline — it resolves quality per pickup point via
+ *  `world/riverWaterQualityResolver.ts` instead. This default is kept for any
+ *  other caller (e.g. tests) that just needs *a* river `WaterSource` without
+ *  modeling hydrology. */
 export function createWaterSource(kind: WaterSource['kind']): WaterSource {
   if (kind === 'well' || kind === 'river') return { kind, quality: 'safe' }
   if (kind === 'ocean') return { kind, quality: 'undrinkable' }

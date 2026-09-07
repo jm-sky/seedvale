@@ -420,6 +420,66 @@ export function nearestRiverBankPoint(
   return bestPoint
 }
 
+/** Hydrology data (plan world-017) at the river point nearest `(x, z)` — same
+ *  per-segment "nearest water edge" projection/selection as
+ *  `nearestRiverBankDistance`/`nearestRiverBankPoint` above, computed
+ *  directly from `RiverChain` point pairs instead of a pre-built
+ *  `RiverChannelSegment` (which drops the source `elevation`/`accumulation`
+ *  once carving geometry is derived). Guarantees a water-quality query keys
+ *  off the exact same nearest segment/bank the shoreline resolver already
+ *  found for the same input point. `x`/`z` are the projected point on that
+ *  segment's own centerline — not the query point, and not a bank point
+ *  offset by channel width — the stable "canonical sample location" a cache
+ *  key can quantize by hydrology cell.
+ *
+ *  `distanceToWaterEdge` is exposed alongside so a caller comparing several
+ *  candidate chains/records (e.g. `ChunkManager.riverWaterContext` scanning
+ *  every loaded chunk) can pick the overall-nearest one by the same "water
+ *  edge distance" metric `nearestRiverBankDistance`/`nearestRiverBankPoint`
+ *  already use, instead of centerline distance which can disagree with it
+ *  for a wide river. */
+export type RiverHydrologyContext = {
+  x: number
+  z: number
+  elevation: number
+  accumulation: number
+  distanceToWaterEdge: number
+}
+
+/** `null` when `chains` contributes no river point with positive width
+ *  (mirrors `nearestRiverBankDistance`'s `null` contract for "nothing here"). */
+export function nearestRiverHydrologyContext(
+  chains: readonly RiverChain[],
+  x: number,
+  z: number,
+): RiverHydrologyContext | null {
+  let best: RiverHydrologyContext | null = null
+  for (const chain of chains) {
+    const pts = chain.points
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i]!
+      const b = pts[i + 1]!
+      const aHalfWidth = widthFromAccumulation(a.accumulation) / 2
+      const bHalfWidth = widthFromAccumulation(b.accumulation) / 2
+      if (aHalfWidth <= 0 && bHalfWidth <= 0) continue
+
+      const { distSq, t } = projectOntoSegment(x, z, a.x, a.z, b.x, b.z)
+      const halfWidth = aHalfWidth + (bHalfWidth - aHalfWidth) * t
+      const dist = Math.sqrt(distSq) - halfWidth
+      if (best === null || dist < best.distanceToWaterEdge) {
+        best = {
+          x: a.x + (b.x - a.x) * t,
+          z: a.z + (b.z - a.z) * t,
+          elevation: a.elevation + (b.elevation - a.elevation) * t,
+          accumulation: a.accumulation + (b.accumulation - a.accumulation) * t,
+          distanceToWaterEdge: dist,
+        }
+      }
+    }
+  }
+  return best
+}
+
 // Deterministic meandering (plan 181 Etap 7) — applied once per tile, after
 // smoothing, to the canonical pre-clip chain (same reasoning as
 // `smoothChainPoints`: two chunks must always clip identical, already-shaped

@@ -77,6 +77,7 @@ import { createTerrainPreparations, type TerrainPreparations } from '../world/cr
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
+import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 
@@ -144,6 +145,11 @@ export type WorldBundle = {
   /** Plan fauna-010 §3/§4 — world-owned deterministic grass forage patches,
    *  shared by wild herbivores (`fauna`) and settlement livestock alike. */
   grassForage: GrassForageService
+  /** Plan world-017 — lazy, cached contextual river water quality, composing
+   *  `chunkManager.riverWaterContext` and `settlementsManager.peekDef`.
+   *  World-scoped: built fresh alongside `settlementsManager` below and never
+   *  persisted, so it's naturally discarded on a `WorldBundle` rebuild. */
+  riverWaterQuality: RiverWaterQualityResolver
 }
 
 function buildChunkManager(
@@ -784,6 +790,7 @@ async function buildWorldSystems(
   const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
+  const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
 
   bootMark('placed')
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
@@ -842,6 +849,7 @@ async function buildWorldSystems(
     hives: createEmptyBeehives(),
     workContracts,
     grassForage,
+    riverWaterQuality,
   }
 
   // Deferred: fauna (§4), item preloads (§5), item spawners/drying racks/

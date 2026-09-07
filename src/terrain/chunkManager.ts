@@ -108,9 +108,11 @@ import { createGrassSystem, type WorldGrassChunk } from './grass'
 import {
   nearestRiverBankDistance,
   nearestRiverBankPoint,
+  nearestRiverHydrologyContext,
   overlappingRiverTiles,
   type RiverChain,
   riverChannelSegmentsNear,
+  type RiverHydrologyContext,
   type RiverTileCoord,
 } from './riverNetwork'
 import { createRiverQuery } from './riverQuery'
@@ -484,6 +486,15 @@ export type ChunkManager = {
    *  (`app/interactables.ts`'s `waterEdge` candidate, plan `ui-input-006`
    *  ocean/river fishing fix). `null` when no river tile is loaded nearby. */
   riverShorePoint: (worldX: number, worldZ: number) => { x: number, z: number } | null
+  /** Hydrology data (`elevation`/`accumulation`) at the nearest loaded
+   *  river's own centerline to `(worldX, worldZ)` (plan world-017) — same
+   *  bounded per-chunk scan and nearest-segment selection as
+   *  `riverShoreDistance`/`riverShorePoint` above
+   *  (`riverNetwork.ts`'s `nearestRiverHydrologyContext`), so river water
+   *  quality classification always keys off the same segment/bank the
+   *  shoreline resolver already found for the same query point. `null` when
+   *  no river tile is loaded nearby. */
+  riverWaterContext: (worldX: number, worldZ: number) => RiverHydrologyContext | null
   /** Cheap, hot-path-safe physical water sample at `(worldX, worldZ)` (plan
    *  fauna-015) — lake/ocean depth from `floorHeights` vs `waterLevel`, or a
    *  loaded river's own canonical water/bed geometry when the point sits
@@ -2219,6 +2230,17 @@ export function createChunkManager(
         }
       }
       return bestPoint
+    },
+    riverWaterContext(worldX, worldZ) {
+      let best: RiverHydrologyContext | null = null
+      for (const rec of chunks.values()) {
+        if (!rec.riverChains || rec.riverChains.length === 0) continue
+        const context = nearestRiverHydrologyContext(rec.riverChains, worldX, worldZ)
+        if (context !== null && (best === null || context.distanceToWaterEdge < best.distanceToWaterEdge)) {
+          best = context
+        }
+      }
+      return best
     },
     sampleLocalWater(worldX, worldZ) {
       const coord = worldToChunk(worldX, worldZ, config.chunkSize)

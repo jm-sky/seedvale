@@ -40,7 +40,7 @@ import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGa
 import { isWellCompleted, isWellWaterAvailable, wellPromptLabel, wellWaterSource } from '../world/playerWell'
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
-import { createWaterSource, type WaterBodyKind } from '../world/WaterSource'
+import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'
 import type { Vector3 } from 'three'
 
 /** How close (world units) the player must be to an interactable before it's
@@ -360,6 +360,12 @@ export function buildInteractables(
    *  tests that don't model inventory contents keep prior behaviour (no
    *  "Nakarm" prompt ever offered). */
   feedItemKindFor?: (animal: AnimalAgent) => ItemKind | null,
+  /** Contextual river water quality (plan world-017), lazy/cached at world
+   *  scope — `bundle.riverWaterQuality.resolve` in production
+   *  (`world/riverWaterQualityResolver.ts`). Defaults to a fail-closed
+   *  `unsafe` for any test/caller that doesn't model river hydrology, rather
+   *  than reintroducing the old blanket `river = safe`. */
+  resolveRiverWaterQuality: (worldX: number, worldZ: number) => WaterQuality = () => 'unsafe',
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -800,11 +806,17 @@ export function buildInteractables(
   const waterBody = resolveWaterBodyShore(playerPos, chunkManager)
   if (waterBody) {
     const fishingHeld = hasItemCapability(heldTool, 'fishing')
+    // River quality is contextual (plan world-017) — resolved from this same
+    // query point's hydrology + settlement proximity instead of the static
+    // per-kind default `createWaterSource` uses for well/lake/ocean.
+    const source = waterBody.kind === 'river'
+      ? { kind: 'river' as const, quality: resolveRiverWaterQuality(playerPos.x, playerPos.z) }
+      : createWaterSource(waterBody.kind)
     list.push({
       kind: 'waterEdge',
       position: waterBody.position,
       promptLabel: fishingHeld ? FISHING_PROMPT : waterBody.kind === 'ocean' ? OCEAN_WATER_PROMPT : WATER_SOURCE_PROMPT,
-      source: createWaterSource(waterBody.kind),
+      source,
     })
   }
 

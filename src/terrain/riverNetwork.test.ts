@@ -10,6 +10,7 @@ import {
   footprintOverlapsRiver,
   nearestRiverBankDistance,
   nearestRiverBankPoint,
+  nearestRiverHydrologyContext,
   overlappingRiverTiles,
   RIVER_CELL_STEP,
   RIVER_TILE_SIZE,
@@ -646,6 +647,46 @@ describe('nearestRiverBankPoint (plan ui-input-006 fishing-interaction fix)', ()
     expect(bank!.x).toBeCloseTo(32, 5)
     expect(bank!.z).toBeCloseTo(halfWidth, 5)
     expect(bank).not.toEqual({ x: 32, z: 5 })
+  })
+})
+
+describe('nearestRiverHydrologyContext (plan world-017)', () => {
+  it('is null when no chains are nearby', () => {
+    expect(nearestRiverHydrologyContext([], 0, 0)).toBeNull()
+  })
+
+  it('interpolates elevation/accumulation at the projected point, same selection as nearestRiverBankDistance', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const context = nearestRiverHydrologyContext([chain], 32, 5)
+    expect(context).not.toBeNull()
+    expect(context!.x).toBeCloseTo(32, 5)
+    expect(context!.z).toBeCloseTo(0, 5)
+    expect(context!.elevation).toBeCloseTo(95, 5) // midpoint between 100 and 90
+    expect(context!.accumulation).toBeCloseTo(300, 5)
+
+    const segments = riverChannelSegmentsNear([chain], 32, 5, 64)
+    expect(context!.distanceToWaterEdge).toBeCloseTo(nearestRiverBankDistance(segments, 32, 5)!, 5)
+  })
+
+  it('picks the nearest of several chains, same as nearestRiverBankDistance would across the same segments', () => {
+    const near: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const far: RiverChain = { points: [point(0, 50, 20, 300), point(64, 50, 10, 300)] }
+    const context = nearestRiverHydrologyContext([near, far], 32, 5)
+    expect(context).not.toBeNull()
+    expect(context!.z).toBeCloseTo(0, 5) // the near chain, not far
+  })
+
+  it('the same physical river sample is reachable from both banks with the same result', () => {
+    const chain: RiverChain = { points: [point(0, 0, 100, 300), point(64, 0, 90, 300)] }
+    const halfWidth = widthFromAccumulation(300) / 2
+    const left = nearestRiverHydrologyContext([chain], 32, -(halfWidth + 3))
+    const right = nearestRiverHydrologyContext([chain], 32, halfWidth + 3)
+    expect(left).not.toBeNull()
+    expect(right).not.toBeNull()
+    expect(left!.elevation).toBeCloseTo(right!.elevation, 5)
+    expect(left!.accumulation).toBeCloseTo(right!.accumulation, 5)
+    expect(left!.x).toBeCloseTo(right!.x, 5)
+    expect(left!.z).toBeCloseTo(right!.z, 5)
   })
 })
 

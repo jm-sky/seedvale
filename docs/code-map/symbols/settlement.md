@@ -485,6 +485,14 @@ Generated from exported TypeScript symbols.
 - `SettlementPropColliderLandmarks` — type — line 18
 - `settlementPropColliders` — function — line 25
 
+## `settlement/settlementProximity.ts`
+
+- `isNearSettlement` — function — line 32
+- `NEAR_SETTLEMENT_DISTANCE` — const — line 19
+  - domain: settlement
+  - system: settlement-proximity
+  - role: Cheap, bounded "is this world point near a settlement" check, built on the existing settlement grid instead of loaded/streamed settlements.
+
 ## `settlement/settlementSignposts.ts`
 
 - `createLabeledProp` — function — line 51
