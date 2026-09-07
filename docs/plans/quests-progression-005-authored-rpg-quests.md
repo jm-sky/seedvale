@@ -145,7 +145,7 @@ Stage:
 { type: 'gather_item', kind: 'branch', count: 5 }
 ```
 
-Outcome `delivered_to_piotra`:
+Outcome `delivered_to_piotr`:
 
 - state: `complete`,
 - shown reward: `8 x coin`,
