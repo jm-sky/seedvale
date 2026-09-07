@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.ts`
 - `ui/createStartScreen.ts`
+- `ui/startScreenFlow.ts`
 - `world/map/mapProjection.ts`
 - `world/parseSeed.ts`
 - `world/seedLibrary.ts`

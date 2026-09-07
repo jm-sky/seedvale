@@ -85,7 +85,7 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createStartScreen.ts`
 
-- `createStartScreen` — function — line 26
+- `createStartScreen` — function — line 28
 - `StartScreen` — type — line 11
 - `StartScreenChoice` — type — line 5
 
@@ -105,3 +105,14 @@ Generated from exported TypeScript symbols.
 - `barsVisibleForDistance` — function — line 22
 - `gazeOpacityFactor` — function — line 41
 - `labelOpacityForDistance` — function — line 10
+
+## `ui/startScreenFlow.ts`
+
+- `BootSaveListing` — type — line 16
+  - domain: ui-input
+  - system: start-screen
+  - role: Pure boot-loop decisions for the Start Screen (plan ui-input-011 §1/§2/§9). `main.ts` keeps every side effect — IndexedDB reads/deletes, seed resolution, `createApp()` — this module only says *whether* the screen stays open and, if not, which world to build.
+- `resolveStartScreenAction` — function — line 55
+  - domain: ui-input
+- `shouldOpenStartScreen` — function — line 28
+- `StartScreenAction` — type — line 34

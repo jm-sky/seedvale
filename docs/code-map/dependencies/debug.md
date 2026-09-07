@@ -185,6 +185,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `debug/npcDebugApi.ts`
 - `player/PlayerSkills.ts`
+- `quests/QuestManager.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/settlementGenerator.ts`
 - `terrain/riverNetwork.ts`
@@ -211,6 +212,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerSkills.ts`
+- `quests/QuestManager.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
 - `world/locations/locationConfig.ts`

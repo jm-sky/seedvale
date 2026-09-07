@@ -15,6 +15,7 @@ import {
 } from './persistence/saveDb'
 import { pickActiveSaveId, type SaveSlotInfo } from './persistence/saveSlots'
 import { createStartScreen } from './ui/createStartScreen'
+import { resolveStartScreenAction, shouldOpenStartScreen } from './ui/startScreenFlow'
 import { rawSampleParamsFromWorld } from './world/map/mapProjection'
 import { hasExplicitUrlSeed, parseSeedFromUrl } from './world/parseSeed'
 import { ensureSeedRecordsForSeeds, listSeedRecords, resolveNewGameSeed, touchSeedLastUsed } from './world/seedLibrary'
@@ -54,7 +55,7 @@ async function boot(container: HTMLElement): Promise<void> {
   }
 
   const initialManagement = await listSaveManagementEntries()
-  if (!initialManagement.ok) {
+  if (!shouldOpenStartScreen(initialManagement)) {
     // A genuine IndexedDB failure must never look like "confirmed zero
     // saves" (plan persistence-004 §4) — any real saves are untouched either
     // way (`writeSave()`'s own integrity guard doesn't depend on how boot
@@ -66,16 +67,11 @@ async function boot(container: HTMLElement): Promise<void> {
     return
   }
 
-  if (initialManagement.entries.length === 0) {
-    // Totally fresh install, no save at all yet (plan world-015 §3/notes §4)
-    // — `createApp(container)` below resolves its own seed exactly the way
-    // `createWorldConfig()` does here (no `initialSave`, no `newGame`), so
-    // this backfills a minimal `SeedRecord` for that same number without
-    // opening any management UI or generating a world twice.
-    void ensureSeedRecordsForSeeds([createWorldConfig().seed])
-    void createApp(container)
-    return
-  }
+  // NB: a confirmed-empty listing deliberately falls through to the Start
+  // Screen loop below (plan ui-input-011 §1). The old fresh-install shortcut
+  // started a world — and backfilled a `SeedRecord` for its seed — before the
+  // player could pick anything; a seed is now materialized only by
+  // `resolveNewGameSeed()` once `Rozpocznij` is confirmed (§6).
 
   // Lazy backfill (plan §3/§13) for every healthy save's seed — a save
   // written before the Seed Library existed gets a minimal record here,
@@ -106,27 +102,29 @@ async function boot(container: HTMLElement): Promise<void> {
       await deleteSave(choice.id)
       const next = await listSaveManagementEntries()
       currentEntries = next.ok ? next.entries : currentEntries.filter((e) => e.id !== choice.id)
-      if (currentEntries.length === 0) {
-        void createApp(container, undefined, { newGame: true })
-        return
-      }
-      continue
+      // Seed records and the persistent worldgen cache are independent
+      // resources (plan world-015 §10, ui-input-011 §2) — `seeds` above stays
+      // valid, and deleting the last save must not cascade into them.
     }
 
-    if (choice.type === 'new') {
-      beginNewSave(choice.name)
-      const seed = await resolveNewGameSeed(choice.seedChoice, (s) => rawSampleParamsFromWorld({ ...createWorldConfig(), seed: s }))
-      void createApp(container, undefined, { newGame: true, seed })
+    const action = resolveStartScreenAction(choice, currentEntries, activeId)
+    // Nothing left to continue, or the last row was just deleted: re-mount the
+    // Start Screen (empty `entries` → New Game form already open) instead of
+    // creating a world nobody asked for (plan ui-input-011 §1/§2).
+    if (action.kind === 'stay') continue
+
+    if (action.kind === 'newGame') {
+      beginNewSave(action.name)
+      const seed = await resolveNewGameSeed(action.seedChoice, (s) => rawSampleParamsFromWorld({ ...createWorldConfig(), seed: s }))
+      // `playerName` is per-save world config (plan ui-input-011 §5/§7):
+      // handed to `createApp` as an explicit New Game option, never stashed on
+      // `beginNewSave()` (save-slot identity only) or a global profile.
+      void createApp(container, undefined, { newGame: true, seed, playerName: action.playerName })
       return
     }
 
-    const loadId = choice.type === 'load' ? choice.id : activeId
-    if (!loadId) {
-      void createApp(container, undefined, { newGame: true })
-      return
-    }
-    setActiveSaveId(loadId)
-    const save = await readSave(loadId)
+    setActiveSaveId(action.id)
+    const save = await readSave(action.id)
     if (save) void touchSeedLastUsed(save.config.seed)
     void createApp(container, save ?? undefined)
     return

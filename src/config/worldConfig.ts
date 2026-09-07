@@ -169,7 +169,40 @@ export type WorldConfig = {
   }
 }
 
-const DEFAULT_PLAYER_NAME = 'Ja'
+/** Canonical fallback player name — also the boot New Game form's initial
+ *  value (plan ui-input-011 §5). Reading it costs nothing: unlike
+ *  `createWorldConfig()` it touches neither localStorage nor the URL, so the
+ *  Start Screen can prefill without duplicating config loading or implying a
+ *  global player profile. */
+export const DEFAULT_PLAYER_NAME = 'Ja'
+
+/** Same cap the in-game character-name field already uses. */
+export const PLAYER_NAME_MAX_LENGTH = 24
+
+export type PlayerNameError = 'empty' | 'too-long'
+
+export type PlayerNameValidation =
+  | { ok: true, name: string }
+  | { ok: false, error: PlayerNameError }
+
+/**
+ * Player-name input rule for New Game / character-name UI (plan ui-input-011
+ * §4). Deliberately *not* the save-slot rule from `saveSlots.ts`: a player
+ * name is per-save world config (`WorldConfig.player.name`), so it has no
+ * collision or slot-limit semantics — only trim + non-empty + bounded length.
+ * @domain ui-input
+ */
+export function validatePlayerName(raw: string): PlayerNameValidation {
+  const name = raw.trim()
+  if (!name) return { ok: false, error: 'empty' }
+  if (name.length > PLAYER_NAME_MAX_LENGTH) return { ok: false, error: 'too-long' }
+  return { ok: true, name }
+}
+
+/** Message for a rejected player name, mirroring `saveErrorMessage()`. */
+export function playerNameErrorMessage(error: PlayerNameError): string {
+  return error === 'empty' ? 'Podaj imię gracza.' : `Imię może mieć najwyżej ${PLAYER_NAME_MAX_LENGTH} znaków.`
+}
 
 const DEFAULT_RESOLUTION = 65
 

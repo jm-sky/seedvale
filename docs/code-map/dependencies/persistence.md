@@ -115,6 +115,8 @@ Generated from TypeScript imports.
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.test.ts`
 - `ui/createStartScreen.ts`
+- `ui/startScreenFlow.test.ts`
+- `ui/startScreenFlow.ts`
 
 ## `persistence/seedDb.test.ts`
 

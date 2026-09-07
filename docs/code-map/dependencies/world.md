@@ -1603,6 +1603,7 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createPauseMenu.ts`
 - `ui/createStartScreen.ts`
+- `ui/startScreenFlow.ts`
 - `world/seedLibrary.test.ts`
 
 ## `world/settlementForestHooks.ts`

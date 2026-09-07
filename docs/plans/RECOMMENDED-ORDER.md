@@ -36,8 +36,6 @@
 
 1. `settlements-npcs-024` — **Household-Owned Profession Workplaces**  
    🔴 `M` · ✅ ready · unlocks 0/0 · type: fix
-2. `ui-input-011` — **New Game setup on empty save state**  
-   🔴 `S` · ✅ ready · unlocks 0/0 · type: fix
 
 ---
 
@@ -165,79 +163,75 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-23. `ui-input-011` — **New Game setup on empty save state**  
-  🔴 `S` · **Score:**  29  
-   → **unlocks:** 0/0
-
-24. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `npc-025` — **Injury severity and treatment requirements**  
+24. `npc-025` — **Injury severity and treatment requirements**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+25. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-27. `tools-005` — **Seedvale Character Preparation Panel**  
+26. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-28. `npc-011` — **NPC Burial & Graves**  
+27. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-29. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+28. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-30. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+29. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-31. `npc-022` — **Agility-driven melee recovery**  
+30. `npc-022` — **Agility-driven melee recovery**  
   🟡 `S` · **Score:**  23  
    → **unlocks:** 0/0
 
-32. `fauna-013` — **Animal hand-feeding and human affinity**  
+31. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-33. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+32. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-34. `npc-020` — **Strength-driven physical work and human carrying**  
+33. `npc-020` — **Strength-driven physical work and human carrying**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-35. `npc-021` — **Endurance-driven stamina capacity and recovery**  
+34. `npc-021` — **Endurance-driven stamina capacity and recovery**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-36. `npc-023` — **Perception-driven observation and information levels**  
+35. `npc-023` — **Perception-driven observation and information levels**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-37. `fauna-007` — **Animal leading and cart harness**  
+36. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-38. `items-player-019` — **Player camp repair and sewing kit**  
+37. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-39. `tools-000` — **Weapon Browser — Observatory/Admin**  
+38. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-40. `npc-004` — **Drzewo genealogiczne NPC**  
+39. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-41. `tools-006` — **tools-006--world-observatory.md**  
+40. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

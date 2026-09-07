@@ -178,6 +178,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `main.ts`
+- `ui/startScreenFlow.test.ts`
+- `ui/startScreenFlow.ts`
 
 ## `ui/createTimeSkipOverlay.ts`
 
@@ -224,3 +226,24 @@ Generated from TypeScript imports.
 - `terrain/resourceDeposits.ts`
 - `ui/agentStatusLabel.ts`
 - `ui/labelDistance.test.ts`
+
+## `ui/startScreenFlow.test.ts`
+
+**Imports**
+
+- `persistence/saveSlots.ts`
+- `ui/createStartScreen.ts`
+- `ui/startScreenFlow.ts`
+
+## `ui/startScreenFlow.ts`
+
+**Imports**
+
+- `persistence/saveSlots.ts`
+- `ui/createStartScreen.ts`
+- `world/seedLibrary.ts`
+
+**Imported by**
+
+- `main.ts`
+- `ui/startScreenFlow.test.ts`

@@ -1,7 +1,7 @@
 # Plan: New Game setup on empty save state
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented + technically verified (`vue-tsc --noEmit`, `lint`, `test`, `build` all green). §10 browser verification is the user's step.
 **Type:** fix
 **Priority:** high · **Effort:** S
 **Depends on:** none

@@ -29,6 +29,8 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/QuestManager.test.ts`
 - `ui-vue/store.ts`

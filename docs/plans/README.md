@@ -47,7 +47,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `ui-input-011-new-game-setup-on-empty-save-state.md`                     | -       | 🔴 | S      | -      |
 | 💡 `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 | 💡 `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
 | 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
@@ -122,6 +121,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-012-macro-meadow-variation.md` | Widoczne szerokie zielone/suche łąki (~30-80 m) na otwartym terenie, płynne przejścia bez twardych linii i bez szwów chunków; drobna zmienność per-blade nadal widoczna w obrębie makro-regionu; wyłączenie `macroVariationEnabled` (GUI → Grass) przywraca poprzedni wygląd |
 | `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md` | Deer/stag habitat (las/skraj lasu), brak spawnu przy drogach, species-specific roaming, dalekie wyprawy do wody z powrotem do local behaviour, szczury jako mała populacja osadnicza (widoczne, zmniejszają zapasy, zabijalne przez psa/gracza) |
 | `npc-002-npc-healing.md` | NPC ranny w walce (`?debug=1&debugNpcCombat=1` do zadania obrażeń) leczy się dopiero po zakończeniu walki: idzie do domu, zużywa niesione `herb`/`bandage`, HP rośnie, po czym wraca do normalnej autonomii; bez consumable nie ma healing candidate |
+| `ui-input-011-new-game-setup-on-empty-save-state.md` | Pusta lista zapisów i usunięcie ostatniego zapisu zostawiają Start Screen z otwartym formularzem Nowej gry (bez automatycznego tworzenia świata); imię gracza i nazwa zapisu są niezależne i utrzymują się per save po wczytaniu; wpisy Seed Library przeżywają usunięcie wszystkich zapisów; `?seed=` jest tylko wstępnym wyborem |
 
 ---
 

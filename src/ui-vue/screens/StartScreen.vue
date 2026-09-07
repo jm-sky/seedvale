@@ -4,6 +4,12 @@ import SeedPicker from '@/components/SeedPicker.vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import {
+  DEFAULT_PLAYER_NAME,
+  PLAYER_NAME_MAX_LENGTH,
+  playerNameErrorMessage,
+  validatePlayerName,
+} from '../../config/worldConfig'
+import {
   formatSaveDay,
   MAX_SAVES,
   nextDefaultSaveName,
@@ -33,7 +39,7 @@ const emit = defineEmits<{
   choose: [choice:
     | { type: 'continue' }
     | { type: 'load', id: string }
-    | { type: 'new', name: string, seedChoice: SeedChoice }
+    | { type: 'new', name: string, playerName: string, seedChoice: SeedChoice }
     | { type: 'delete', id: string }
   ]
 }>()
@@ -44,10 +50,19 @@ const emit = defineEmits<{
 const healthySlots = computed(() => props.entries.filter((e): e is SaveSlotInfo & { status: 'ok' } => e.status === 'ok'))
 
 const view = ref<'main' | 'seedLibrary'>('main')
-const showNewGame = ref(false)
+// No save rows at all is a first-class state (plan ui-input-011 §1/§3), not a
+// reason to skip this screen or to demand an extra `Nowa gra` click: the form
+// simply starts open. `main.ts` mounts a fresh instance per loop iteration, so
+// this initial value also covers "deleted the last save" without any
+// cross-mount flag.
+const showNewGame = ref(props.entries.length === 0)
 const name = ref(nextDefaultSaveName(healthySlots.value.map((slot) => slot.name)))
+// Per-save player name (plan ui-input-011 §4/§5) — a separate concept from the
+// save-slot name, prefilled from the canonical default rather than any global
+// player profile.
+const playerName = ref(DEFAULT_PLAYER_NAME)
 const error = ref('')
-const nameInput = ref<HTMLInputElement | null>(null)
+const playerNameInput = ref<HTMLInputElement | null>(null)
 const atLimit = computed(() => healthySlots.value.length >= MAX_SAVES)
 const appVersion = __APP_VERSION__
 const gitCommit = __GIT_COMMIT__
@@ -85,8 +100,8 @@ async function openNewGame(): Promise<void> {
   if (atLimit.value) return
   showNewGame.value = true
   await nextTick()
-  nameInput.value?.focus()
-  nameInput.value?.select()
+  playerNameInput.value?.focus()
+  playerNameInput.value?.select()
 }
 
 function submitNew(): void {
@@ -94,12 +109,17 @@ function submitNew(): void {
     error.value = saveErrorMessage('limit')
     return
   }
+  const player = validatePlayerName(playerName.value)
+  if (!player.ok) {
+    error.value = playerNameErrorMessage(player.error)
+    return
+  }
   const check = validateSaveName(name.value, healthySlots.value.map((slot) => slot.name))
   if (!check.ok) {
     error.value = saveErrorMessage(check.error)
     return
   }
-  emit('choose', { type: 'new', name: check.name, seedChoice: seedChoice.value })
+  emit('choose', { type: 'new', name: check.name, playerName: player.name, seedChoice: seedChoice.value })
 }
 
 function useSeedFromLibrary(seed: number): void {
@@ -125,7 +145,10 @@ function useSeedFromLibrary(seed: number): void {
         Seedvale
       </h1>
 
-      <div class="mb-3.5 flex flex-col gap-2">
+      <div
+        v-if="entries.length > 0"
+        class="mb-3.5 flex flex-col gap-2"
+      >
         <div
           v-for="entry in entries"
           :key="entry.id"
@@ -158,32 +181,27 @@ function useSeedFromLibrary(seed: number): void {
         </div>
       </div>
 
+      <!-- Nothing healthy to continue (no saves at all, or only unhealthy
+           rows) — `Kontynuuj` is not actionable then (plan ui-input-011 §3),
+           so it stays out of the way instead of sitting there disabled. -->
       <UiButton
+        v-if="healthySlots.length > 0"
         variant="primary"
         class="mb-2 w-full"
-        :disabled="healthySlots.length === 0"
         @click="emit('choose', { type: 'continue' })"
       >
         Kontynuuj
       </UiButton>
 
-      <template v-if="!showNewGame">
-        <UiButton
-          class="mb-2 w-full"
-          :disabled="atLimit"
-          @click="openNewGame"
-        >
-          {{ atLimit ? 'Nowa gra (limit 8)' : 'Nowa gra' }}
-        </UiButton>
-        <UiButton
-          class="mb-2 w-full"
-          @click="view = 'seedLibrary'"
-        >
-          Biblioteka seedów
-        </UiButton>
-      </template>
-
-      <div v-else>
+      <UiButton
+        v-if="!showNewGame"
+        class="mb-2 w-full"
+        :disabled="atLimit"
+        @click="openNewGame"
+      >
+        {{ atLimit ? 'Nowa gra (limit 8)' : 'Nowa gra' }}
+      </UiButton>
+      <div v-if="showNewGame">
         <label
           class="mb-1.5 block text-left text-xs opacity-75"
           for="seedvale-seed-picker"
@@ -199,13 +217,28 @@ function useSeedFromLibrary(seed: number): void {
         />
         <label
           class="mb-1.5 block text-left text-xs opacity-75"
+          for="seedvale-new-player-name"
+        >
+          Imię gracza
+        </label>
+        <input
+          id="seedvale-new-player-name"
+          ref="playerNameInput"
+          v-model="playerName"
+          class="mb-2.5 w-full rounded-md border border-white/15 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-blue-400/60"
+          type="text"
+          autocomplete="off"
+          :maxlength="PLAYER_NAME_MAX_LENGTH"
+          @keydown.enter="submitNew"
+        >
+        <label
+          class="mb-1.5 block text-left text-xs opacity-75"
           for="seedvale-new-save-name"
         >
           Nazwa zapisu
         </label>
         <input
           id="seedvale-new-save-name"
-          ref="nameInput"
           v-model="name"
           class="mb-2.5 w-full rounded-md border border-white/15 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-blue-400/60"
           type="text"
@@ -227,6 +260,16 @@ function useSeedFromLibrary(seed: number): void {
           Rozpocznij
         </UiButton>
       </div>
+
+      <!-- Seed Library stays reachable in the empty state too (plan
+           ui-input-011 §3): its entries outlive every save, so a world with
+           zero saves can still be started from a previously named seed. -->
+      <UiButton
+        class="mb-2 w-full"
+        @click="view = 'seedLibrary'"
+      >
+        Biblioteka seedów
+      </UiButton>
 
       <div class="mt-4 border-t border-white/10 pt-3 text-center font-mono text-[10px] opacity-40">
         v{{ appVersion }} | {{ gitCommit }} | {{ buildDate }}

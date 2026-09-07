@@ -195,6 +195,19 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
   ))
 }
 
+/** Boot-time options for `createApp()` (plan ui-input-011 §7) — the explicit
+ *  New Game configuration seam. `seed` is an already-resolved Seed Library
+ *  choice, `playerName` the per-save `WorldConfig.player.name` the boot Start
+ *  Screen collected; both are honoured only for a genuine new world
+ *  (`newGame`, no `initialSave`, no benchmark fixture). */
+export type NewAppOptions = {
+  newGame?: boolean
+  modelTest?: boolean
+  benchmarkFixture?: BenchmarkFixture
+  seed?: number
+  playerName?: string
+}
+
 /**
  * Application composition root. It creates the long-lived systems (render
  * stack, world bundle, player, quests, UI, audio, persistence), threads their
@@ -220,7 +233,7 @@ function terrainModificationsFromSave(saved: readonly SaveTerrainModification[])
 export async function createApp(
   container: HTMLElement,
   initialSave?: SaveData | null,
-  options?: { newGame?: boolean, modelTest?: boolean, benchmarkFixture?: BenchmarkFixture, seed?: number },
+  options?: NewAppOptions,
 ): Promise<() => void> {
   const { bootMark, bootMarkEnd, bootMarksSummary } = useBootMark('createApp')
 
@@ -270,6 +283,14 @@ export async function createApp(
     } else if (!hasExplicitUrlSeed()) {
       config.seed = randomSeed()
     }
+    // Per-save player name chosen on the boot New Game form (plan
+    // ui-input-011 §5/§7). Applied here, before `PlayerController` and
+    // `player.setName(config.player.name)` below, so the new world is built
+    // from it and `saveAllDomains`/`SaveConfig.player` serialize it like any
+    // other config value — no global player profile involved.
+    // `applyStoredPlayer` keeps the existing "blank never overwrites the
+    // default" guarantee.
+    applyStoredPlayer(config.player, { name: options.playerName })
   }
   if (initialSave) {
     // A loaded save's own seed is always authoritative — it must win over

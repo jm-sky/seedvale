@@ -5,7 +5,7 @@ import type { App } from 'vue'
 export type StartScreenChoice =
   | { type: 'continue' }
   | { type: 'load', id: string }
-  | { type: 'new', name: string, seedChoice: SeedChoice }
+  | { type: 'new', name: string, playerName: string, seedChoice: SeedChoice }
   | { type: 'delete', id: string }
 
 export type StartScreen = {
@@ -22,7 +22,9 @@ export type StartScreen = {
  *  this screen mounts — rendering it here never itself reads IndexedDB.
  *  `urlSeed` is an explicit `?seed=` detected by `main.ts` via
  *  `hasExplicitUrlSeed()`/`parseSeedFromUrl()` (plan persistence-004 §9
- *  follow-up), `null` when the URL carries none. */
+ *  follow-up), `null` when the URL carries none. An empty `entries` is a
+ *  first-class state, not a reason to skip this screen (plan ui-input-011
+ *  §1/§3) — the New Game form simply opens straight away. */
 export function createStartScreen(
   parent: HTMLElement,
   entries: readonly SaveManagementEntry[],

@@ -238,4 +238,33 @@ The highest-value regression is preventing any code path from treating confirmed
 - `world-015` implemented Seed Library selection and the shared `resolveNewGameSeed()` seam now used by boot New Game.
 - `docs/plans/README.md` already contains a different `ui-input-010`, despite `PLANNING.md` still reporting `ui-input: 010`; this plan therefore uses `ui-input-011` to avoid an ID collision.
 
+## Implementation outcome (2026-09-07)
+
+Implemented as scoped. No new manager, wizard, profile store, save field or migration.
+
+### What changed
+
+| File | Change |
+| ---- | ------ |
+| `src/ui/startScreenFlow.ts` *(new)* | The two pure boot decisions: `shouldOpenStartScreen()` (a confirmed listing — empty or not — opens the screen; only a storage failure bypasses it) and `resolveStartScreenAction()` (`stay` / `newGame` / `loadSave`). Lifecycle stays in `main.ts`; this module performs no I/O. |
+| `src/main.ts` | Both shortcuts removed. The fresh-install branch (and its `ensureSeedRecordsForSeeds([createWorldConfig().seed])` backfill) is gone; a delete now always falls through to the loop. `choice.type === 'continue'` with nothing healthy left also re-mounts the screen instead of creating a world. New Game passes `playerName` into `createApp`. |
+| `src/ui/createStartScreen.ts` | `StartScreenChoice.new` carries `playerName` alongside `name` and `seedChoice`. |
+| `src/ui-vue/screens/StartScreen.vue` | `showNewGame` initialises from `props.entries.length === 0` (covers both first boot and delete-last-save, since `main.ts` mounts a fresh instance per iteration — no cross-mount flag). New `Imię gracza` field above `Nazwa zapisu`; focus on open moved to it. Empty save-list block and `Kontynuuj` are hidden rather than rendered empty/disabled; `Biblioteka seedów` moved out of the `!showNewGame` branch so it stays reachable in the empty state. |
+| `src/config/worldConfig.ts` | `DEFAULT_PLAYER_NAME` exported (Start Screen prefill — no localStorage read, no global profile), plus `PLAYER_NAME_MAX_LENGTH` (24, the cap the in-game character-name field already used), `validatePlayerName()` and `playerNameErrorMessage()`. Trim + non-empty + length only: no collision/limit semantics, deliberately not the `saveSlots.ts` rule. |
+| `src/app/createApp.ts` | Inline options type extracted to an exported `NewAppOptions` with a `playerName?` field, applied via the existing `applyStoredPlayer(config.player, { name: options.playerName })` inside the existing `newGame` branch — before `saveAllDomains(config)` and `player.setName(config.player.name)`, so the new world is built from it and `SaveConfig.player` serialises it like any other config value. |
+
+### Decisions worth remembering
+
+- **Prefill is the canonical default, not the last-used name.** `createWorldConfig()` overlays localStorage's `player.name`, so reading it at Start Screen time would have re-implied a global identity (and duplicated config loading). `DEFAULT_PLAYER_NAME` is a plain constant — the "no better existing value" case the plan allows.
+- **`shouldOpenStartScreen` is a generic type predicate** (`listing is T & { ok: true }`) so `main.ts` keeps narrowing `SaveManagementResult` to its `entries` branch without a second `.ok` check.
+- **`resolveStartScreenAction` returns the seed intent unresolved.** `resolveNewGameSeed()` — and therefore any generated `SeedRecord` — still runs only after `Rozpocznij`, in `main.ts`.
+- **Seed Library is untouched by save deletion.** The `seeds` listing loaded once before the loop stays valid across deletes; nothing cascades into `seedDb`/`worldgenCacheDb`.
+- The in-session pause-menu New Game path was not touched (plan §8) — it keeps its own character-name field and its own `resolveNewGameSeed()` call.
+
+### Verification
+
+- `npx vue-tsc --noEmit`, `pnpm run lint:fix`, `pnpm run test` (303 files / 3356 tests), `pnpm run build` — all green.
+- New tests: `src/ui/startScreenFlow.test.ts` (empty listing opens the screen; storage failure does not; delete-last-save stays; `continue` with no healthy row stays; `new` carries name/playerName/seedChoice separately and unresolved) and `src/config/worldConfig.test.ts` (blank/whitespace player name rejected, trimming, length cap, per-save independence of the config seam).
+- Browser/manual verification (plan §10) **not performed** — the user's step.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

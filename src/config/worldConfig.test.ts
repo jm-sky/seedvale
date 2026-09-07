@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldConfig } from './worldConfig'
-import { applyStoredTerrain, createBenchmarkWorldConfig } from './worldConfig'
+import {
+  applyStoredPlayer,
+  applyStoredTerrain,
+  createBenchmarkWorldConfig,
+  DEFAULT_PLAYER_NAME,
+  PLAYER_NAME_MAX_LENGTH,
+  validatePlayerName,
+} from './worldConfig'
 
 /** Minimal terrain with current roadNetwork defaults — enough for merge tests. */
 function terrainWithRoadDefaults(): WorldConfig['terrain'] {
@@ -144,5 +151,51 @@ describe('createBenchmarkWorldConfig', () => {
     expect(config.quality.preset).toBe('High')
     expect(config.postProcessing.pixelRatioCap).toBe(2)
     expect(config.showGui).toBe(false)
+  })
+})
+
+describe('validatePlayerName (plan ui-input-011 §4)', () => {
+  it('rejects a blank name', () => {
+    expect(validatePlayerName('')).toEqual({ ok: false, error: 'empty' })
+  })
+
+  it('rejects a whitespace-only name', () => {
+    expect(validatePlayerName('   ')).toEqual({ ok: false, error: 'empty' })
+  })
+
+  it('trims an accepted name', () => {
+    expect(validatePlayerName('  Anna  ')).toEqual({ ok: true, name: 'Anna' })
+  })
+
+  it('bounds the length to the same cap the in-game character-name field uses', () => {
+    expect(validatePlayerName('a'.repeat(PLAYER_NAME_MAX_LENGTH)).ok).toBe(true)
+    expect(validatePlayerName('a'.repeat(PLAYER_NAME_MAX_LENGTH + 1))).toEqual({ ok: false, error: 'too-long' })
+  })
+
+  it('has no collision semantics — the same player name is fine in two saves', () => {
+    expect(validatePlayerName('Anna')).toEqual({ ok: true, name: 'Anna' })
+    expect(validatePlayerName('Anna')).toEqual({ ok: true, name: 'Anna' })
+  })
+})
+
+describe('New Game player-name config seam (plan ui-input-011 §5/§7)', () => {
+  it('applies the chosen name to the new world\'s config', () => {
+    const player = { name: DEFAULT_PLAYER_NAME }
+    applyStoredPlayer(player, { name: 'Anna' })
+    expect(player.name).toBe('Anna')
+  })
+
+  it('keeps per-save names independent — a second world gets its own', () => {
+    const a = { name: DEFAULT_PLAYER_NAME }
+    const b = { name: DEFAULT_PLAYER_NAME }
+    applyStoredPlayer(a, { name: 'Anna' })
+    applyStoredPlayer(b, { name: 'Jan' })
+    expect([a.name, b.name]).toEqual(['Anna', 'Jan'])
+  })
+
+  it('leaves the default in place when no name was passed', () => {
+    const player = { name: DEFAULT_PLAYER_NAME }
+    applyStoredPlayer(player, { name: undefined })
+    expect(player.name).toBe(DEFAULT_PLAYER_NAME)
   })
 })
