@@ -2,80 +2,179 @@
 
 ## Verified current-code facts
 
-- `src/fauna/AnimalSpawner.ts` owns the generic habitat-spawner lifecycle. `SpawnerType` includes `wolfDen`; `PreySpawner` owns stable `id`, `kind`, `respawnIntervalDays`, `maxPreyCount`, `state`, `deathsThisCycle` and `disabledAtDay`. `WOLF_DEN_ID = 'wolf-den'` is the single current den identity.
-- `wolfDen` currently opts out of `updateSpawners()` respawn by using `respawnIntervalDays: Infinity`. Its pack still carries `spawnPointId`, contributes deaths to depletion, and can be destroyed through the generic depleted-spawner interaction.
-- `SavedSpawnPointState` in `src/fauna/AnimalSpawner.ts` currently persists only `state`, `deathsThisCycle` and `disabledAtDay`; `src/app/saveState.ts` snapshots it and `src/persistence/saveData.ts` owns the serialized shape/validation.
-- Generic habitat recovery is `disabled → recovering → active`: after `RECOVERY_DAYS = 21`, recovery waits for `MIN_RECOVERY_POPULATION = 2` nearby same-kind animals. A permanently destroyed problem den therefore needs a source-owned way to opt out of this existing recovery path without changing cave/thicket semantics globally.
-- Wild-fauna individuals are not persisted. Do not make `pressure` / `humanTaste` authoritative on individual wolves. The authoritative durable state must be den/spawner-owned and re-applied to freshly reconstructed wolves after save/load/rebuild.
-- `src/fauna/predatorHumanDecision.ts` is the pure human-response seam. `PredatorHumanDecisionInput` already includes hunger, distance, notice/panic range, fire, nearby-human count, species, HP ratio, provocation and an injected aggression roll. `scorePredatorHumanIntents()` computes competing flee/attack scores; close/retaliation branches are shared by wolf/bear.
-- Runtime `frenzied` is distinct from rabies and already feeds existing human/NPC aggression, but it is runtime-only. Reuse its integration lessons, not its state ownership, for `humanTaste`.
-- `src/fauna/faunaDecision.ts` contains the fixed top-level behaviour priority table. It already has `npc-attack-frenzied`, regular NPC response branches, `frenzy-beeline`, and normal predator fallback. Avoid adding a quest-only parallel behaviour pipeline.
-- Current village exclusion for non-frenzied predator NPC target acquisition is applied only when acquiring a target. Once `npcTarget` exists, the predator can continue the pursuit into the settlement. This is recorded in `docs/plans/LOOSE-ENDS.md`; the new scenario may rely on this current behaviour, but should not accidentally broaden normal acquisition inside settlements unless explicitly intended by `humanTaste`.
-- `docs/state/combat.md` confirms NPC animal defense is already live: `senseImmediateAnimalThreat()` / `decideAnimalThreatResponse()` choose defend/flee; defend uses `NpcAgent.beginCombat()` with the existing fauna combat target adapter. No new NPC combat path is needed.
-- fauna-016 is implemented and technically verified. It added species-specific roaming and a persistent-in-runtime trip/destination seam. If increased population plus `humanTaste` does not produce enough settlement encounters, extend that existing trip mechanism rather than increasing all wander ranges or spawning wolves beside the village.
-- `src/quests/quests.ts` already defines `QuestObjective { type: 'clear_wolf_den'; denId }` and existing wolf quests `grozny-wilk` and `wilcza-jama`. The current comment defines `clear_wolf_den` as the whole initial pack being dead, reported by `Fauna.isWolfDenCleared()`; that is weaker than the new scenario's required permanent destruction condition.
-- Existing `wilcza-jama` deliberately binds directly to `WOLF_DEN_ID`, not an individual wild animal. Preserve that stable world-entity binding pattern.
-- `QuestManager` is not fauna authority. It consumes injected/resolved world references/events and must remain an observer of the den's real state.
+- `src/fauna/AnimalSpawner.ts` owns the generic habitat-spawner lifecycle. `SpawnerType` includes `wolfDen`; `PreySpawner` owns stable `id`, `kind`, `respawnIntervalDays`, `maxPreyCount`, `state`, `deathsThisCycle` and `disabledAtDay`. `WOLF_DEN_ID = 'wolf-den'` is the current stable den identity.
+- `wolfDen` currently opts out of `updateSpawners()` respawn with `respawnIntervalDays: Infinity`. Its pack still carries `spawnPointId`, contributes deaths to depletion, and can be destroyed through the generic depleted-spawner interaction.
+- `SavedSpawnPointState` currently persists only lifecycle data; extending source-owned durable state must go through the same spawn-point persistence path rather than a quest-owned registry.
+- Generic habitat recovery is `disabled → recovering → active` after the existing recovery window. The problem den needs a source-owned way to opt out without changing ordinary cave/thicket semantics.
+- Wild-fauna individuals are not persisted. `pressure` / `humanTaste` must therefore remain authoritative on the den/spawner and be re-derived or propagated to reconstructed wolves.
+- `src/fauna/predatorHumanDecision.ts` is the pure predator-human decision seam. Reuse it for `humanTaste`; do not add a second human-hunting FSM.
+- Runtime `frenzied` is separate from rabies and is runtime-only. Reuse its integration lessons, not its state ownership.
+- NPC animal defense already exists through normal defend/flee/combat logic.
+- fauna-016 provides species-specific roaming and a `trip`/destination seam suitable for settlement-directed wolf travel.
+- `clear_wolf_den` currently means the initial pack is dead. Preserve that semantic for existing `wilcza-jama`.
+- `QuestManager` remains an observer of world state, not fauna authority.
 
-## Ownership decisions for this plan
+## Final V1 contracts
 
-### Den-owned durable problem state
+### Activation
 
-`pressure` and `humanTaste` belong to the real wolf-den/spawner state, not to quest progress and not to `AnimalAgent` persistence.
-
-The persisted source must be sufficient to reconstruct after save/load:
+The den exists from world start but the authored problem activates at the start of game day 2 if the den has not already been permanently destroyed:
 
 ```text
-wolfDen source state
-→ effective population cap / respawn interval
-→ newly created wolves inherit source behavioural modifier
-→ quest observes destruction state
+pressure = 0.75
+humanTaste = true
 ```
 
-Prefer extending the existing spawn-point snapshot contract over introducing a separate `WolfProblemState` registry unless current code at implementation time proves that `PreySpawner` cannot coherently own these fields.
+This is world-state activation, not quest activation. Acceptance/dialogue must never enable or disable the problem.
 
-### `pressure`
+Use existing world-day/time ownership. No real-time/frame timer.
 
-Keep the generic spawner's configured baseline values distinct from effective pressure-adjusted values. Avoid mutating `maxPreyCount`/`respawnIntervalDays` destructively if that would make restoration/removal of pressure ambiguous.
+### Durable den state
 
-A small pure helper around the spawner config is preferable, e.g. conceptually:
+Source-owned fields/concepts:
+
+```ts
+pressure: number       // bounded 0..1
+humanTaste: boolean
+canRecover: boolean
+```
+
+For this den, `canRecover = false`.
+
+Prefer extending the existing spawn-point snapshot contract over introducing a separate `WolfProblemState` registry unless the current code at implementation time proves the spawner cannot coherently own these fields.
+
+### Pressure scaling
+
+Keep baseline config distinct from effective values.
+
+Use pure effective calculations:
 
 ```text
-baseline config + pressure → effective cap / interval
+effectiveCap = baseCap + round(pressure * 4)
 ```
 
-Exact numeric tuning remains a plan-finalization decision.
+For `pressure > 0`:
+
+```text
+effectiveRespawnIntervalDays = lerp(3.0, 1.5, pressure)
+```
+
+For `pressure === 0`, preserve the den's baseline behaviour rather than trying to interpolate from `Infinity`.
+
+Current V1 numbers:
+
+```text
+baseCap = 2
+pressure = 0.75
+effectiveCap = 5
+effectiveRespawnIntervalDays ≈ 1.9
+```
 
 ### `humanTaste`
 
-Do not model it as rabies or as a second `frenzied` boolean.
+`humanTaste` is boolean, not numeric.
 
-Thread a bounded numeric modifier into the existing predator-human decision input/scoring seam so `0` preserves current behaviour. It should separately affect fear and human-oriented attack/appetite pressure, making its semantics visible and testable instead of hiding both effects behind one arbitrary attack-score bonus.
+Thread it into the existing predator-human decision input/scoring seam so:
 
-The source-to-individual propagation should happen at the existing wolf creation/spawn integration point in `createFauna.ts` or the nearest current constructor/config seam. Do not make `QuestManager` iterate animals and mark them.
+```text
+false → current behaviour
+true  → lower effective human fear contribution
+        + higher human-oriented attack/appetite score
+```
+
+Do not eliminate fire/crowd/self-preservation behaviour. Do not implement `questActive` or global wolf-kind exceptions.
+
+Source-to-individual propagation belongs at the current wolf creation/spawn integration point in `createFauna.ts` or the nearest current constructor/config seam. Do not make `QuestManager` iterate animals and mutate them.
+
+### Settlement-directed trips
+
+This is mandatory in V1, not a post-playtest fallback.
+
+Extend fauna-016's existing trip/destination ownership:
+
+```text
+source: active wolfDen with pressure > 0
+destination: settlement outskirts
+max concurrent settlement-directed trips per den: 1
+minimum opportunity cooldown: 0.5 game day
+traveller: one normal wolf from the den
+```
+
+The trip itself does not force combat. Once near people, normal predator-human/NPC decision logic decides the reaction, with `humanTaste` modifying its scores.
+
+No teleporting, no spawning by the village, no parallel movement pipeline.
 
 ### Permanent destruction
 
-The new quest's source resolution is stronger than existing `depleted` and stronger than existing `clear_wolf_den` pack-dead semantics.
+Reuse the existing lifecycle and destroy interaction:
 
-Reuse the generic destroy interaction, but persist an explicit source-owned non-recoverable outcome or equivalent existing state if the code has evolved by implementation time. Do not globally remove `disabled → recovering` from ordinary habitat spawners.
+```text
+active → depleted → [E] Zniszcz → disabled
+```
 
-Live wolves remaining after destruction stay real fauna and are not despawned by quest cleanup.
+For this den, `canRecover = false`, so `disabled` is permanent.
+
+Do not add a new lifecycle state unless the current code during implementation provides a clearly better generic representation. Do not globally change ordinary habitat recovery.
+
+Remaining live wolves are not despawned after destruction.
 
 ## Quest integration
 
-The new quest should use a world-state objective/ref whose success condition is the real den destruction state.
+Add generic objective:
 
-Do not silently redefine existing `clear_wolf_den` if doing so would change `wilcza-jama`. Before implementation choose one of these based on current call sites:
+```ts
+{ type: 'destroy_spawn_point', spawnerId: string }
+```
 
-1. keep `clear_wolf_den` as pack-cleared compatibility and add a generic/den-specific destruction objective/ref, or
-2. evolve `clear_wolf_den` only if every existing consumer can safely adopt the stronger semantics and the existing quest content remains correct.
+Keep `clear_wolf_den` unchanged for compatibility with `wilcza-jama`.
 
-The NPC hint stage is ordinary quest/dialogue progression. No tracking, footprints or investigation subsystem is required for V1.
+`destroy_spawn_point` succeeds only on the real persistent destruction state. It must not complete on:
 
-## Persistence integration points to verify immediately before coding
+- kill count,
+- `depleted`,
+- `isWolfDenCleared()` alone.
 
-Inspect the then-current versions of:
+The new authored quest contract is:
+
+```text
+id: wilki-pod-osada
+giver: Anna
+availability: Anna / trusted
+```
+
+Flow:
+
+1. Anna reports increasing wolf attacks.
+2. Anna points the player toward the nearby den as the likely source.
+3. Player reaches the real den.
+4. Player reduces the pack enough to unlock the existing destroy interaction.
+5. Player destroys the den.
+6. `destroy_spawn_point` clears and the quest becomes reportable.
+7. Anna confirms the source is gone.
+
+No tracking/investigation subsystem in V1.
+
+## Reward contract
+
+No EXP.
+
+No required physical item reward.
+
+Use current relation/social-consequence ownership, mapping these values into the then-current quest outcome model:
+
+```text
+Anna relation: +2
+competence: +20
+courage: +22
+benevolence: +8
+renown: +35
+```
+
+Do not reintroduce legacy EXP fields if the quest reward model has evolved before implementation.
+
+## Persistence integration points
+
+Preflight current versions of:
 
 ```text
 src/fauna/AnimalSpawner.ts
@@ -85,13 +184,21 @@ src/persistence/saveData.ts
 src/app/createApp.ts
 ```
 
-Determine whether adding optional/defaulted fields to the existing saved spawn-point entry is semantically compatible with the current migration policy. If persisted meaning changes require a save-version bump under the current `CURRENT_SAVE_VERSION` rules, add the real migration rather than relying on parser defaults accidentally.
+Persist enough source state to reconstruct:
+
+- `pressure`,
+- `humanTaste`,
+- `canRecover` or equivalent non-recoverable source contract,
+- lifecycle state,
+- activation state only if it cannot be deterministically derived from world day + destruction state.
 
 Do not persist individual wild wolves.
 
-## Behaviour/combat integration points to verify immediately before coding
+If the saved spawn-point shape changes, follow the then-current `CURRENT_SAVE_VERSION` / migration rules rather than relying on accidental parser defaults.
 
-Inspect:
+## Behaviour/combat integration points
+
+Preflight:
 
 ```text
 src/fauna/predatorHumanDecision.ts
@@ -102,17 +209,21 @@ src/ai/npcAnimalThreat.ts
 src/fauna/faunaCombat.ts
 ```
 
-Confirm where the existing human intent is refreshed/throttled and where NPC candidates are supplied. `humanTaste` should reuse those same refresh periods and bounded candidate lists — no extra per-frame settlement/NPC scan.
+Reuse existing intent refresh cadence and bounded NPC candidate lists. No extra per-frame settlement scan.
 
-## Movement escalation rule
+## Movement integration points
 
-Implement population + `humanTaste` first.
+Preflight the fauna-016 trip implementation and extend its existing reason/destination ownership rather than adding a wolf-only movement subsystem.
 
-Only add settlement-directed trips if manual verification shows that real encounters remain too rare. If needed, extend fauna-016's existing trip reason/destination ownership with a wolf-compatible destination reason and bounded opportunity/cooldown. Do not make this mandatory architecture before evidence shows it is needed.
+Pin these limits in tests:
+
+- at most one settlement-directed trip from the den at once,
+- at least `0.5` game day between opportunities,
+- destination is settlement outskirts rather than settlement center.
 
 ## Existing content compatibility
 
-Before coding, inspect the current definitions and tests for:
+Before coding, inspect current:
 
 ```text
 src/quests/quests.ts
@@ -120,34 +231,50 @@ src/quests/QuestManager.ts
 src/quests/QuestManager.test.ts
 ```
 
-Pin behaviour of `grozny-wilk` and `wilcza-jama` with focused regression tests before changing wolf-den objective semantics.
+Add regression coverage proving `grozny-wilk` and especially `wilcza-jama` preserve current behaviour.
 
-The new quest's exact `QuestDef.id`, giver, reward and relation/prerequisite sequencing remain intentionally unresolved while the plan is `draft`.
+Do not silently strengthen `clear_wolf_den` to permanent destruction semantics.
 
 ## Implementation order
 
-1. Extend/pin generic den source state and persistence (`pressure`, `humanTaste`, permanent-destruction semantics).
-2. Add pure effective-population tuning from `pressure`; convert `wolfDen` away from unconditional `Infinity` only when source state requires ongoing population.
-3. Thread source `humanTaste` into newly spawned den wolves and the existing predator-human/NPC decision seam.
-4. Add permanent destroy handling while preserving ordinary habitat recovery.
-5. Add/adjust quest world-state objective/ref for real destruction.
-6. Add NPC hint/content stages and completion/report flow.
-7. Evaluate encounter frequency; only then add a settlement-directed trip extension if required.
+1. Pin source-owned den state and persistence (`pressure`, `humanTaste`, non-recovery).
+2. Add deterministic day-2 world activation.
+3. Add pure pressure-derived effective cap/respawn values.
+4. Propagate `humanTaste` from source to spawned/rebuilt wolves and integrate it with existing predator-human scoring.
+5. Add pressure-driven settlement-directed trips through fauna-016's trip mechanism.
+6. Add permanent destroy handling while preserving ordinary habitat recovery.
+7. Add generic `destroy_spawn_point` objective and world-state resolver/event seam.
+8. Add `wilki-pod-osada` content, Anna hint/report flow and social consequences without EXP.
+9. Add focused persistence/regression tests.
 
 ## Pitfalls
 
-- Do not use active quest state to enable/disable pressure; the world problem must be capable of existing independently of the player accepting the quest.
+- Do not use active quest state as pressure authority.
+- Do not activate the problem before day 2.
 - Do not use `frenzied` as persisted authority.
-- Do not persist wild wolves just to preserve the scenario.
-- Do not turn normal wolves globally into settlement attackers.
+- Do not model `humanTaste` as rabies.
+- Do not persist wild wolves for this scenario.
+- Do not globally turn wolves into settlement attackers.
 - Do not broaden generic habitat destruction to permanent destruction.
 - Do not complete on kill count or `depleted` alone.
 - Do not despawn surviving wolves on quest completion.
-- Do not introduce a `WolfManager`, quest spawn registry or second population system.
-- Do not add disease/rabies semantics to explain `humanTaste`.
+- Do not introduce `WolfManager`, quest spawn registry or second population system.
+- Do not add EXP reward.
 
 ## Verification focus
 
-Automated tests should pin pure pressure scaling, neutral `humanTaste = 0`, monotonic fear/attack effects, persistence round-trip, non-recovery after permanent destruction, and existing wolf-quest compatibility.
+Automated tests should pin:
+
+- no activation on day 1,
+- day-2 activation to `pressure = 0.75`, `humanTaste = true`,
+- `pressure = 0.75` → effective cap `5`,
+- `pressure = 0.75` → respawn interval about `1.9` game days,
+- boolean `humanTaste` modifies fear and attack/appetite scoring while preserving other fear/self-preservation inputs,
+- settlement-directed trip concurrency/cooldown,
+- persistence round-trip,
+- no recovery after permanent destruction,
+- `destroy_spawn_point` semantics,
+- unchanged `clear_wolf_den` / `wilcza-jama` behaviour,
+- no EXP reward.
 
 Manual browser verification remains the user's responsibility; no AI browser verification.
