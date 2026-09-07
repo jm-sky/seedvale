@@ -2,13 +2,23 @@
 
 **Reviewed:** 2026-09-07  
 **Plan:** `quests-progression-006-settlement-rat-infestation.md`  
-**Status:** `draft`
+**Status:** `planned` 📋
 
 ## Review result
 
 Current `main` already contains almost every runtime primitive needed. The implementation should join four existing seams — settlement rat reconciliation, settlement storage interaction, quest world bindings, and `AnimalAgent` persistence snapshots — rather than introducing a generic problem/repair framework.
 
 The only genuinely new authoritative state is the settlement-owned storage infestation condition plus persisted rat individuals.
+
+The V1 tuning/repair decisions are closed:
+
+```text
+active infestation target = max(normalTarget + 3, 7)
+repair cost = 2 × ItemKind 'beam'
+quest completion world condition = repaired && aliveRats <= 1
+```
+
+`quests-progression-002` is a hard implementation dependency. Re-run focused preflight after 002 lands and adapt symbol-level integration to its actual current code.
 
 ## 1. Rat population owner
 
@@ -45,13 +55,20 @@ Normal settlement:
 
 Damaged settlement storage:
 
-- add one fixed infestation pressure contribution;
-- resulting target must be at least 7;
-- active infestation therefore bypasses/raises the normal cap 5;
-- dogs remain part of the existing formula; do not disable dog suppression or dog pest chasing;
-- exact fixed bonus beyond the floor is still draft tuning and must be resolved before implementation if not fixed during plan review.
+```text
+active infestation target = max(normalTarget + 3, 7)
+```
 
-Repair removes only the infestation contribution/floor. It must not call `dispose()` on current rats or directly reduce the live array.
+Where `normalTarget` is the existing target after current food/dog logic and normal cap semantics. The implementation may structure the helper differently, but must preserve the externally observable contract:
+
+- active infestation adds fixed pressure equivalent to `+3` target rats;
+- final active target is never below 7;
+- infestation can exceed the normal cap 5;
+- dogs remain part of the existing normal formula and keep normal pest chasing;
+- repair removes both `+3` and floor 7;
+- repair must not call `dispose()` on current rats or directly shrink the live array.
+
+This is not implementation-time tuning.
 
 ## 2. Rat lifecycle integration
 
@@ -173,34 +190,50 @@ Prefer extending the settlement-storage interaction with enough live/read-only i
 
 Reuse the current interaction/action stack rather than resolving repair through quest dialogue.
 
+Verified item contract:
+
+- `src/items/items.ts` defines existing `ItemKind 'beam'`;
+- `branch` / `beam` are concrete item kinds, not `EconomicKind` bulk wood.
+
+V1 repair cost is exactly:
+
+```text
+2 × ItemKind 'beam'
+```
+
+Do not substitute settlement `wood`, `branch`, or a newly-created repair material.
+
 Likely relevant existing patterns:
 
 - `src/app/actions/placementActions.ts` for timed work/busy action handling,
-- actor-neutral `contributeWork()` seams in `createPlayerWells.ts`, `createTerrainPreparations.ts`, `createPalisades.ts`, `createStandingTorches.ts` if partial work is actually useful,
+- existing action requirement/commit conventions for inventory-gated actions,
+- actor-neutral `contributeWork()` seams in `createPlayerWells.ts`, `createTerrainPreparations.ts`, `createPalisades.ts`, `createStandingTorches.ts` only if partial work is actually useful,
 - `FlavorDialog` actions for exposing a context action through the existing interaction surface.
 
-V1 does not need a reusable `RepairManager`.
+V1 does not need a reusable `RepairManager` or construction-site progress.
 
-Required mutation boundary:
+Required transaction boundary:
 
 ```text
-repair action completes
+check 2 × beam available
+→ begin timed/busy repair action
+→ successful action commit consumes exactly 2 × beam
 → authoritative settlement infestation condition becomes repaired/inactive
 → next rat reconciliation sees no infestation bonus/floor
 ```
 
-Do not let the quest directly clear the condition.
+Do not clear the condition before the successful item/action commit. A failed/cancelled action must not consume material or mutate infestation state according to the existing action semantics used by the chosen seam.
 
-Material cost is unresolved in the draft. Before implementation, resolve to one existing `ItemKind` or explicitly no material cost. Do not invent a new item solely for this quest unless separately approved.
+Do not let the quest directly clear the condition.
 
 ## 8. Quest system integration
 
-Current files:
+Current pre-002 files:
 
 - `src/quests/quests.ts` — `QuestDef`, `QuestStage`, `QuestObjective`, quest content
 - `src/quests/QuestManager.ts` — progress/objective evaluation and injected world bindings
 
-Current world-binding rule is important: `QuestManager` does not import fauna/settlement managers to scan them. Existing animal objectives are connected by injected resolver/hooks. Preserve that inversion.
+Current world-binding rule is important: `QuestManager` does not import fauna/settlement managers to scan them. Existing animal objectives are connected by injected resolver/hooks. Preserve that inversion after 002.
 
 This plan should introduce a narrow read-only resolver that can answer the bound settlement condition needed by the objective, conceptually:
 
@@ -228,13 +261,13 @@ Intermediate NPC reminder text must distinguish:
 - repaired + rats > 1,
 - repaired + rats <= 1.
 
-The last case advances to normal report/completion. The objective must not latch true from a temporary low count while infestation is still active.
+The last case advances to normal report/completion.
 
-Because `quests-progression-002` changes quest terminal/outcome semantics, implement this plan against the post-002 `QuestDef`/progress contract rather than preserving current private helper names from pre-002 `QuestManager`.
+`quests-progression-002` is a hard dependency. Implement against its final unified outcome/reporting contract; do not add compatibility code for current pre-002 terminal semantics. If 002 renames/restructures `QuestDef`, progress or resolution helpers, follow current code while preserving this plan's world-condition semantics.
 
 ## 9. Quest binding and settlement identity
 
-The quest must bind to one concrete settlement id, preferably the same resolved settlement context already attached to settlement-scoped quest definitions by the app layer.
+The quest must bind to one concrete settlement id, preferably the same resolved settlement context already attached to settlement-scoped quest definitions by the app layer after 002 integration.
 
 Do not key infestation state or rat queries by NPC display name.
 
@@ -272,9 +305,16 @@ Prefer pure/focused tests around:
 
 - normal formula unchanged,
 - normal cap still 5,
-- active infestation target >= 7,
+- active infestation computes `max(normalTarget + 3, 7)`,
 - repair returns to normal formula,
-- dog count still contributes.
+- dog count still contributes to normal target.
+
+### Repair
+
+- action unavailable/fails safely without 2 × `beam`,
+- successful repair consumes exactly 2 × `beam`,
+- successful repair flips only authoritative infestation condition,
+- repair does not directly remove current rats.
 
 ### World condition
 
@@ -301,14 +341,14 @@ Do not build UI testing infrastructure just for storage inspection/repair.
 
 ## 13. Focused implementation order
 
-1. Re-run preflight after `quests-progression-002` is implemented and verify the files above still own the same contracts.
+1. Wait for `quests-progression-002` to be implemented; then re-run preflight and verify the files above still own the same contracts.
 2. Add settlement-owned infestation condition at `SettlementsManager` lifetime.
 3. Add rat persistence registry using `AnimalSaveState` + livestock registry pattern.
 4. Wire capture/restore/save migration.
-5. Extend `ratPopulationTarget()` / `createSettlementRats()` with infestation pressure while preserving gradual reconciliation.
+5. Extend `ratPopulationTarget()` / `createSettlementRats()` with `max(normalTarget + 3, 7)` while preserving gradual reconciliation.
 6. Extend settlement storage inspection to expose damaged state.
-7. Add the narrow repair action that mutates the settlement condition.
-8. Add the injected quest world-condition resolver/objective and authored quest text.
+7. Add the narrow timed repair action requiring/consuming exactly 2 × `beam` and mutating the settlement condition.
+8. Add the injected quest world-condition resolver/objective and authored quest text against post-002 lifecycle.
 9. Add focused tests and update canonical state docs affected by the new persistence class.
 10. Run typecheck/tests/build. Browser/manual verification is performed by User.
 
@@ -325,5 +365,8 @@ Do not build UI testing infrastructure just for storage inspection/repair.
 - No quest-specific dog behavior.
 - No direct `QuestManager` import of settlement/fauna systems.
 - No persistence of Three.js objects.
+- No tuning freedom for V1 infestation formula: use `max(normalTarget + 3, 7)`.
+- No repair-cost substitution: use exactly 2 × `ItemKind 'beam'`.
+- Do not implement before `quests-progression-002`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
