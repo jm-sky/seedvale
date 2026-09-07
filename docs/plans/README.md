@@ -49,7 +49,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 | 💡 `world-017-contextual-river-water-safety.md`                             | -       | 🟡 | M      | ~~world-011~~ |
-| 💡 `settlements-npcs-024-household-owned-profession-workplaces.md`          | -       | 🔴 | M      | ~~settlements-npcs-002~~ ~~settlements-npcs-011~~ |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`              | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
 | 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
