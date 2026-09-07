@@ -105,7 +105,7 @@ Nie dodawać sztucznego reputation/renown gate do istniejącego contentu, jeśli
 
 ## Definition validation
 
-Aktualny codebase nie ma osobnego quest-definition validatora. Po 002 najpierw sprawdzić, czy taki seam został dodany; jeśli nie, dodać mały domenowy validator uruchamiany raz na finalnych runtime defs przekazanych do `QuestManager` (czyli już po composition-root settlement binding).
+`quests-progression-002` nie definiuje osobnego quest-definition validatora jako część swojego kontraktu. `004` jest właścicielem tego seam. Dodać mały domenowy validator uruchamiany raz na finalnych runtime defs przekazanych do `QuestManager`, czyli już po composition-root settlement binding. Jeśli faktyczna implementacja 002 mimo kontraktu doda równoważny validator, rozszerzyć go zamiast tworzyć drugi.
 
 Sprawdzać:
 
@@ -116,13 +116,13 @@ Sprawdzać:
 - reputation `minimum` ∈ `[-100, 100]`,
 - renown `minimum` ∈ `[0, 100]`,
 - social prerequisite ma resolved `def.settlementId`,
-- relation prerequisite nie wprowadza nowego NPC registry; użyć istniejącego source/validation dla quest NPC names, jeżeli 002 go posiada.
+- relation prerequisite nie wprowadza nowego NPC registry; użyć istniejących authored NPC names i obecnego relation store, bez osobnego identity subsystemu.
 
 Nie dodawać cycle detectora, graph representation ani runtime clamping błędnych authored thresholds.
 
 ## Testy
 
-Rozszerzyć przede wszystkim `src/quests/QuestManager.test.ts` oraz istniejące definition tests, jeśli 002 je utworzy.
+Rozszerzyć przede wszystkim `src/quests/QuestManager.test.ts`. Testy samego validatora trzymać przy istniejących quest-definition tests, jeśli 002 już takie utworzy; w przeciwnym razie dodać mały `src/quests/quests.test.ts`, nie drugi runtime harness.
 
 Pokryć:
 
