@@ -1,7 +1,7 @@
 # Plan: Settlement Rat Infestation
 
 **Created:** 2026-09-07  
-**Status:** `draft`  
+**Status:** `planned` 📋  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** fauna-016, settlements-npcs-012, quests-progression-002  
@@ -94,12 +94,10 @@ Nie tworzyć generycznego `SettlementProblemManager`, `BuildingConditionManager`
 
 Rozszerzyć istniejący rat population calculation zamiast tworzyć drugi spawn path.
 
-Aktywne uszkodzenie settlement storage ma dodawać **stały infestation pressure bonus** do istniejącej formuły.
-
-Podczas aktywnej plagi wynikowy target ma mieć floor:
+Aktywne uszkodzenie settlement storage ma dodawać **stały infestation pressure bonus `+3`** do istniejącego normalnego targetu i jednocześnie wymuszać floor 7:
 
 ```text
-minimum target = 7 alive rats
+active infestation target = max(normalTarget + 3, 7)
 ```
 
 Normalne settlements bez aktywnej plagi zachowują dotychczasową formułę i cap 5.
@@ -107,13 +105,13 @@ Normalne settlements bez aktywnej plagi zachowują dotychczasową formułę i ca
 Wymagania:
 
 - aktywna plaga może przekroczyć normalny cap 5;
-- psy nadal obniżają zwykłą część presji i nadal polują na szczury;
-- źródło plagi nie może zostać „wygaszone” samym wybiciem aktualnych szczurów;
-- po naprawie znika tylko dodatkowe źródło presji;
+- psy nadal obniżają `normalTarget` przez istniejącą formułę i nadal polują na szczury;
+- floor 7 oznacza, że same psy / samo wybicie aktualnych szczurów nie usuwają źródła plagi;
+- po naprawie znika bonus `+3` i floor 7, a target wraca do zwykłej formuły;
 - istniejące żywe szczury nie despawnują się magicznie w momencie naprawy;
 - dalszy spadek populacji ma wynikać z normalnego reconciliation / śmierci.
 
-Dokładna wartość stałego bonusu ponad wymagany floor 7 pozostaje tuningiem draftu; przed zmianą statusu na `planned` należy ją zamknąć w planie lub implementation notes. Floor 7 jest wymaganiem funkcjonalnym.
+Ta formuła jest zamkniętym kontraktem V1, nie tuningiem pozostawionym implementatorowi.
 
 ## 3. Inspection and discovery
 
@@ -140,17 +138,24 @@ Po odkryciu problemu settlement storage ma oferować wąską akcję naprawy prze
 
 V1 nie buduje generic repair framework.
 
+Naprawa wymaga dokładnie:
+
+```text
+2 × ItemKind 'beam'
+```
+
+`beam` jest istniejącym concrete `ItemKind` reprezentującym belkę; nie dodawać nowego itemu ani nie używać bulk `wood` jako zamiennika.
+
 Naprawa powinna:
 
-- być realną akcją gracza, nie natychmiastową flagą ustawianą przez dialog NPC,
+- sprawdzić posiadanie 2 × `beam` przed rozpoczęciem/commit zgodnie z istniejącymi action requirement semantics,
+- być realną timed/busy akcją gracza, nie natychmiastową flagą ustawianą przez dialog NPC,
+- zużyć dokładnie 2 × `beam` przy skutecznym commit akcji,
 - mutować settlement-owned infestation/storage condition,
 - usuwać dodatkowy rat pressure source dopiero po zakończeniu akcji,
-- używać istniejącego busy/work action pattern tam, gdzie pasuje,
 - nie tworzyć równoległego systemu construction/repair progress.
 
 Jeżeli podczas implementation current code pozwala tanio użyć actor-neutral work semantics bez rozszerzania zakresu, można to zrobić. V1 nie wymaga jednak wieloetapowego construction site ani NPC repair work.
-
-Materiał/koszt naprawy nie jest jeszcze ustalony w tym drafcie; przed `planned` trzeba wybrać konkretny istniejący `ItemKind` albo jawnie zdecydować o naprawie bez materiału.
 
 ## 5. Quest objective: world-condition resolution
 
@@ -182,7 +187,7 @@ NPC zgłasza plagę
 → player accepts
 → inspect settlement storage
 → discover damage
-→ repair storage
+→ repair storage (2 × beam)
 → bring live settlement rat count down to <= 1
 → report to giver
 → complete
@@ -262,7 +267,9 @@ Wymagany existing storage inspection / interaction seam. Plan może rozszerzyć 
 
 ### `quests-progression-002`
 
-Implementować po unified quest outcomes/rewards/consequences, aby nowy world-condition objective nie był od razu przepisywany przez zmianę quest lifecycle.
+**Twarda zależność implementacyjna.** Ten plan czeka na `quests-progression-002` i nie powinien być implementowany na tymczasowej semantyce obecnego quest completion.
+
+Po 002 użyć jego unified quest outcomes/rewards/consequences i `ready_to_report`/terminal outcome contract. Jeżeli post-002 code różni się od obecnych symboli, aktualny kod jest źródłem prawdy; zachować semantykę tego planu bez odtwarzania pre-002 lifecycle.
 
 `quests-progression-003`–`005` nie są wymagane funkcjonalnie dla V1 plagi, chyba że aktualny code po ich implementacji zmieni kontrakty, które ten plan dotyka.
 
@@ -287,9 +294,11 @@ Poza zakresem:
 Automated verification ma pokryć co najmniej:
 
 - normal rat target nadal zachowuje dotychczasowe zachowanie bez infestation,
-- aktywna infestation daje target co najmniej 7,
-- usunięcie source usuwa infestation bonus/floor, ale nie zabija/despawnuje natychmiast istniejących szczurów,
-- dogs nadal wpływają na population logic zgodnie z istniejącym kontraktem,
+- aktywna infestation liczy `max(normalTarget + 3, 7)`,
+- usunięcie source usuwa bonus/floor, ale nie zabija/despawnuje natychmiast istniejących szczurów,
+- dogs nadal wpływają na normalną część population logic zgodnie z istniejącym kontraktem,
+- repair wymaga i zużywa dokładnie 2 × `beam`,
+- brak wymaganych belek nie mutuje infestation state,
 - quest world condition jest false przy każdym pojedynczym spełnionym warunku i true tylko dla `repaired && aliveRats <= 1`,
 - save/load round-trip dla infestation state,
 - save/load round-trip dla rat individual state/identity,
@@ -298,17 +307,18 @@ Automated verification ma pokryć co najmniej:
 
 Browser/manual verification wykonuje User:
 
-- przy aktywnej pladze pojawia się co najmniej 7 szczurów w wyniku reconciliation,
+- przy aktywnej pladze populacja jest odbudowywana do targetu wynikającego z `max(normalTarget + 3, 7)`,
 - zabicie szczurów bez naprawy nie rozwiązuje problemu i populacja wraca,
 - inspection settlement storage ujawnia uszkodzenie,
-- repair usuwa pressure source,
+- bez 2 × `beam` naprawa nie może zostać skutecznie wykonana,
+- repair zużywa 2 × `beam` i usuwa pressure source,
 - po naprawie żywe szczury pozostają w świecie,
 - quest kończy się dopiero przy naprawionym storage i <=1 żywym szczurze,
 - save/load w trakcie plagi zachowuje problem i istniejące szczury.
 
 ## 13. Implementation guidance
 
-Przed kodowaniem uruchomić preflight dla tego planu i zweryfikować aktualne kontrakty po implementacji zależności.
+Przed kodowaniem uruchomić preflight dla tego planu **po implementacji `quests-progression-002`** i zweryfikować aktualne kontrakty zależności.
 
 Dodać JSDoc do nowych ważnych publicznych/architektonicznych funkcji lub typów tak, aby preflight mógł odnaleźć ownership i integrację; użyć `@domain` tam, gdzie pomaga.
 
@@ -322,7 +332,7 @@ rats.ts
 → pressure input + reconciliation
 
 existing storage interaction
-→ discovery + repair action
+→ discovery + 2 × beam repair action
 
 QuestManager
 → injected read-only world-condition result
