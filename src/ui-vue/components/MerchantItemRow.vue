@@ -70,6 +70,10 @@ function clear(): void {
         >
           ×{{ committedCount }}
         </span>
+        <span
+          v-if="ownedCount != undefined"
+          class="opacity-70 ml-2"
+        >({{ ownedCount }})</span>
       </button>
       <span class="shrink-0 text-[12px] opacity-70 max-md:text-[11px]">{{ price }}{{ priceSuffix ? ` ${priceSuffix}` : '' }}</span>
       <button
