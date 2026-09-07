@@ -169,7 +169,7 @@ Nie dodawać sztucznego reputation/renown gate tylko dla demonstracji. Jeśli is
 
 ## Definition validation
 
-Rozszerzyć validator wprowadzony przez 002, jeżeli istnieje. Jeśli 002 go nie utworzy, dodać mały quest-domain validator uruchamiany raz na finalnych runtime defs przekazanych do `QuestManager` — po composition-root settlement binding.
+`quests-progression-002` nie definiuje osobnego quest-definition validatora jako część swojego kontraktu. `004` jest właścicielem tego seam: dodać mały quest-domain validator uruchamiany raz na finalnych runtime defs przekazanych do `QuestManager`, czyli **po** composition-root settlement binding. Jeśli implementacja `002` mimo wszystko wprowadziła równoważny validator, rozszerzyć dokładnie ten istniejący seam zamiast tworzyć drugi.
 
 Sprawdzać co najmniej:
 
@@ -199,7 +199,7 @@ Lifecycle state (`offered`, `active`, `ready_to_report`, terminal) ma pierwszeń
 
 ## Testy
 
-Rozszerzyć przede wszystkim `src/quests/QuestManager.test.ts` oraz definition tests powstałe w 002.
+Rozszerzyć przede wszystkim `src/quests/QuestManager.test.ts`. Testy samego validatora trzymać przy istniejących quest-definition tests, jeżeli po `002` już istnieją; w przeciwnym razie dodać mały `src/quests/quests.test.ts` zamiast drugiego runtime harnessu.
 
 Pokryć:
 
