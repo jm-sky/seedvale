@@ -23,6 +23,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | `fauna-017-animal-agent-refactor.md`                                        | -       | 🟡 | M      | -      |
 | `quests-progression-006-settlement-rat-infestation.md`                      | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
+| `quests-progression-007-wolves-approach-settlement.md`                      | -       | 🟡 | M      | fauna-016 |
 | `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-018, settlements-npcs-019 |
 | `settlements-npcs-021-remote-production-site-logistics.md`                  | -       | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
 | `world-terrain-009-seasonal-ground-and-grass-appearance.md`                 | -       | 🟡 | M      | -      |
@@ -183,7 +184,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `020`
 - npc: `026`
 - persistence: `005`
-- quests-progression: `007`
+- quests-progression: `008`
 - settlements: `003`
 - settlements-npcs: `026`
 - tools: `013`
