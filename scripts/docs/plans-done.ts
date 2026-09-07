@@ -347,7 +347,7 @@ const parseDone = async (): Promise<DoneRecord[]> => {
           !columns.every(column => /^[-:]+$/.test(column)),
       )
       .map(columns => ({
-        plan: columns[0],
+        plan: columns[0].replaceAll('`', ''),
         verificationNeeded: columns[1] === '—' ? null : columns[1],
         done: columns[2] === '—' ? null : columns[2],
         domain: columns[3].replaceAll('`', ''),
