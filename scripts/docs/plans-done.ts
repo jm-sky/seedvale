@@ -65,17 +65,16 @@ const isPlanRecentVerification = (plan: DoneRecord | undefined): boolean => {
  * @domain tools
  */
 const getCurrentPlanFiles = async (): Promise<string[]> => {
-  const output = git(
-    'ls-files',
-    'docs/plans/*.md',
-  )
+  const output = git('ls-files', 'docs/plans/*.md')
 
-  return output
-    ? output
-        .split('\n')
-        .filter(isPlanFile)
-        .map(file => file.replace(/^docs\/plans\//, ''))
-    : []
+  const result = output
+  ? output
+      .split('\n')
+      .map(file => file.replace(/^docs\/plans\//, ''))
+      .filter(isPlanFile)
+  : []
+
+  return result
 }
 
 const getGitCommits = (
@@ -326,9 +325,7 @@ const getOpenedPlans = (
     )
 }
 
-const parseDone = async (): Promise<
-  DoneRecord[]
-> => {
+const parseDone = async (): Promise<DoneRecord[]> => {
   try {
     const content = await readFile(PLANS_DONE_PATH, 'utf8')
 
@@ -544,29 +541,15 @@ const main = async (): Promise<void> => {
       continue
     }
 
-    const content =
-      await readFile(
-        resolve(PLANS_DIR, file),
-        'utf8',
-      )
+    const content = await readFile(resolve(PLANS_DIR, file), 'utf8')
 
-    const events =
-      getStatusEvents(file)
+    const events = getStatusEvents(file)
 
-    if (
-      !events.verificationNeeded &&
-      !events.done
-    ) {
+    if (!events.verificationNeeded && !events.done) {
       continue
     }
 
-    const opened =
-      events.done
-        ? getOpenedPlans(
-            id,
-            events.done.commit,
-          )
-        : []
+    const opened = events.done ? getOpenedPlans(id, events.done.commit) : []
 
     records =
       updateRecord(
@@ -587,10 +570,7 @@ const main = async (): Promise<void> => {
       )
 
     if (events.done) {
-      await markDependencies(
-        id,
-        opened,
-      )
+      await markDependencies(id, opened)
     }
   }
 

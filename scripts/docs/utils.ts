@@ -88,11 +88,7 @@ export const getDomain = (path: string): string => path.split('/')[0] ?? 'other'
 
 export const isTsFile = (name: string): boolean => TS_EXTENSIONS.has(extname(name))
 
-export const isPlanFile = (
-  file: string,
-): boolean =>
-  PLAN_FILE_RE.test(file) &&
-  !file.endsWith(NOTES_SUFFIX)
+export const isPlanFile = (file: string): boolean => PLAN_FILE_RE.test(file) && !file.endsWith(NOTES_SUFFIX)
 
 export const relativePath = (
   path: string,
