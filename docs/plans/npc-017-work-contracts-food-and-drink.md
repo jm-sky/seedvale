@@ -12,187 +12,215 @@
 
 Ensure NPCs performing longer or remote work contracts can safely satisfy **hunger** and **thirst** without disabling needs or risking death simply because they accepted a contract.
 
-The implementation extends existing NPC needs, carried inventory, food items, liquid containers, household food/water, settlement food sources, wells, and the existing need decision/action flow.
+The implementation extends existing NPC needs, carried inventory, concrete food items, liquid containers, household food/water, settlement/world sources, and the existing work-contract/decision lifecycle.
 
-Do not create a separate `WorkerFoodSystem` or `WorkerWaterSystem`.
+Do not create a separate `WorkerFoodSystem`, `WorkerWaterSystem`, worker need model or contract-only resource store.
 
 ## Recon — current implementation
 
-Recon verified against the current `main` branch on 2026-09-01.
+Recon refreshed against current `main` on 2026-09-07.
 
-### NPC needs already exist
+### Work Contracts are implemented
 
-`Needs.ts` already models hunger and thirst and `NpcAgent` ticks them during normal simulation. Critical hunger/thirst can interrupt normal work through the existing need-pressure arbitration.
+`npc-015` has landed. `WorkContractRecord` in `src/world/workContract.ts` is the sole authoritative contract commitment record and owns `workerNpcId` plus the lifecycle:
 
-**Implication:** no new needs, thresholds, or worker-specific survival loop are required.
+```text
+advertised
+→ accepted
+→ travelling
+→ working
+→ payment_due
+```
 
-### Food is already a concrete inventory item
+Temporary action interruption does not clear the contract. `releaseWorkContract()` is for genuine abandonment, not ordinary hunger/thirst interruption.
 
-`src/items/foodItems.ts` provides shared helpers including `foodItemCount()`, `takeOneFoodItem()`, `claimFoodItems()`, and `depositFoodItems()`. Food is classified through the existing item catalog/category system.
+`src/ai/npcWorkContract.ts` already provides deterministic opportunity scoring using reward, role suitability, travel time, expected work amount and schedule conflict.
 
-**Implication:** contract provisions should use normal `ItemKind` food items.
+**Implication:** food/water feasibility must extend the existing contract evaluation/preparation seams rather than create another worker planner.
 
-### NPCs already have carried inventory
+### NPC needs and interruption are already authoritative
 
-`NpcAgent` already owns a carried `Inventory`, currently used for carried resources, tools and work-related items.
+`Needs.ts` already models hunger and thirst. `NpcAgent` uses the existing need/strategy flow, while `npcDecision.ts::shouldInterruptAction()` owns the current in-flight critical-interrupt precedence.
 
-**Gap:** food/water are not yet treated as a general survival loadout for long-distance work.
+**Implication:** no new needs, thresholds or contract-specific survival priority are required.
 
-**Implication:** extend the existing carried inventory rather than creating another worker inventory.
+### Food is already concrete inventory state
+
+`src/items/foodItems.ts` provides shared concrete-food helpers including `foodItemCount()`, `takeOneFoodItem()`, `claimFoodItems()`, `depositFoodItems()`, `carryFoodClaim()` and `deliverCarriedFoodClaim()`.
+
+Food transfers preserve `FoodBatch` freshness metadata through `removeWithFreshness()` / `addWithFreshness()`.
+
+**Implication:** contract provisions should use normal `ItemKind` food and the existing freshness-safe transfer path.
+
+### NPC carried inventory exists but is transient
+
+`NpcAgent.carried` is an existing shared `Inventory` used for weapons, ammo, gathered goods and physical transport. Its current max carry weight remains 5 kg.
+
+However `carried` is intentionally transient runtime state: it is recreated with `NpcAgent` and is not part of `NpcAuthoritativeState` / `NpcStateSnapshot`.
+
+**Implication:** reuse the same physical carried-inventory concept, but provisions that must survive NPC reconstruction/save-load need an authoritative persistence representation. Do not create a separate `WorkerInventory`.
+
+### NPC and contract persistence now exist
+
+`SaveData` persists `npcStates`, households and work contracts. Hunger/thirst and active contract commitment therefore already survive save/load through their existing owners.
+
+The remaining gap for this plan is specifically **provision ownership while carried**.
 
 ### World food discovery already exists
 
-`SettlementFoodSourceHooks` and `nearestFoodSource()` find nearby consumable food among loaded world items and harvestable crops. Natural food items such as apples are included, and item targets are revalidated through `ChunkManager.collectItem()`.
+`SettlementFoodSourceHooks` / `nearestFoodSource()` provide bounded deterministic discovery of nearby real food sources and revalidation/harvest through the existing world-item/crop path.
 
-**Implication:** real food already exists as a reusable world source. Do not add worker-specific apple search logic.
+**Implication:** do not add worker-specific apple or crop search.
 
 ### Liquid containers already exist
 
-`src/items/liquidContainer.ts` provides concrete liquid-container instances, `waterskin_*`, filling/add-liquid operations, `drinkFromLiquidContainer()`, real litre quantities, and reusable emptied containers.
+`src/items/liquidContainer.ts` provides concrete liquid-container instances, filling, `canDrinkFromLiquidContainer()`, `drinkFromLiquidContainer()`, real litre quantities and reusable empty containers.
 
-A drink consumes `LIQUID_DRINK_PORTION_LITRES` (1 litre).
+A drink consumes the existing `LIQUID_DRINK_PORTION_LITRES` amount.
 
-**Implication:** carried water should be a normal waterskin instance.
+**Implication:** carried water remains a real waterskin instance, not a scalar worker-water value.
 
 ### Household and settlement water already exist
 
-Households have a `WaterReserve`; existing NPC behaviour can drink from household water and use settlement/well sources. Player-built wells are already integrated into available water sources.
+Households own a `WaterReserve`; NPCs can already satisfy thirst through household and well/settlement sources.
 
-**Implication:** carried water is an extension for remote/long work, not a replacement for household/well behaviour.
+**Implication:** carried water is only a remote-work extension of the existing water model.
 
 ### Architectural conclusion
 
-The missing capability is **provisioning and consuming existing food/water through NPC carried inventory during long contracts**.
+The missing capability is:
 
-```
-existing needs
-      +
-existing NPC inventory
-      +
-existing food items
-      +
-existing liquid containers
-      +
-existing world/settlement sources
-      ↓
-contract-aware provisioning
+```text
+existing Work Contract lifecycle
+        +
+existing needs / interruption
+        +
+existing physical carried inventory
+        +
+existing food + liquid-container transfers
+        +
+existing household/world sources
+        ↓
+contract-aware provisioning + durable carried provisions
 ```
 
 No parallel survival system is justified.
 
-## 1. Recon existing mechanisms
+## 1. Reuse existing mechanisms
 
-Before implementation, verify and reuse:
+Implementation must reuse:
 
+- `WorkContractRecord` / `WorkContracts`,
+- `scoreWorkContractOpportunity()` / existing contract acceptance path,
 - `NpcAgent` carried inventory,
+- `NpcAuthoritativeState` / `NpcStateSnapshot` persistence boundary,
 - hunger/thirst needs,
-- critical need interrupts,
-- food consumption,
-- `foodSources`,
-- household food,
-- household `WaterReserve`,
-- wells,
-- liquid containers,
-- `waterskin_*`,
-- `drinkFromLiquidContainer()`,
-- world food collection,
-- NPC decision/pressure system,
-- Work Contract state from `npc-015`.
+- existing critical-interrupt arbitration,
+- food strategy/consumption,
+- freshness-safe food transfer helpers,
+- household food and `WaterReserve`,
+- `SettlementFoodSourceHooks`,
+- wells / existing water-source discovery,
+- liquid-container instances and drinking/filling APIs.
 
 Do not introduce parallel mechanisms.
 
-## 2. Food and water as carried NPC resources
+## 2. Food and water remain normal NPC resources
 
-Extend the existing carried inventory so it can contain basic provisions:
+The NPC's physical carried inventory may contain:
 
-```
+```text
 NPC carried inventory
-├── tools
-├── resources
+├── weapons / ammo
+├── work resources
 ├── food
-└── water containers
+└── liquid containers
 ```
 
-Food remains normal `ItemKind` data.
+Food remains normal `ItemKind` data with existing freshness metadata.
 
 Water remains a normal `LiquidContainerItemInstance`.
 
-Do not create `WorkerFood`, `WorkerWater`, `WorkerRation`, or contract-specific resource stores.
+Do not create `WorkerFood`, `WorkerWater`, `WorkerRation`, `ContractSupplies` or a second inventory model.
 
-## 3. Provisioning at contract start
+## 3. Provisioning during contract preparation
 
-When a contract is accepted, evaluate whether the NPC needs supplies.
+After a contract is accepted and before/during travel as appropriate, evaluate whether additional provisions are needed.
 
-Do not always add food/water.
+Do not provision every contract.
 
-Consider:
+Use bounded deterministic inputs already available or cheaply derivable from existing systems:
 
-- travel time,
-- work duration,
-- distance,
-- access to food/water near the work site,
+- travel distance/time,
+- committed/expected work duration,
 - current hunger/thirst,
-- existing carried supplies.
+- already-carried food/water,
+- available household supplies,
+- bounded nearby food/water availability around the work site.
 
-Short local contracts may require no additional provisions. Long or remote contracts should be able to prepare basic supplies.
+Short local contracts may require no additional supplies.
 
-## 4. Provisioning must use real resources
+Do not build an expedition planner.
 
-Prefer:
+## 4. Provisioning must transfer real resources
 
-```
-existing NPC supplies
+Prefer existing ownership:
+
+```text
+existing carried supplies
         ↓
-household food / water
+household food / available container + water
         ↓
-settlement sources
-        ↓
-local world food / water
-```
-
-Do not spawn free food or water when accepting a contract.
-
-If the current household/storage API cannot perform a required transfer cleanly, keep the first implementation limited to existing ownership/transfer mechanisms rather than adding a contract-specific warehouse.
-
-## 5. Water — waterskin
-
-Use existing liquid-container instances.
-
-```
-accept distant contract
-        ↓
-NPC obtains/has waterskin
-        ↓
-travel
-        ↓
-thirst becomes critical
-        ↓
-drinkFromLiquidContainer()
-        ↓
-water quantity decreases
+existing settlement/world sources
 ```
 
-The waterskin remains a real inventory item. An empty waterskin must not provide water.
+No resource may appear because a contract was accepted.
 
-## 6. Food provisioning
+Transfers must preserve inventory atomicity: a failed destination/capacity check must not destroy the source item or liquid container.
 
-Use normal food items.
+Use the existing freshness-aware food transfer helpers instead of reimplementing food-batch movement.
 
+## 5. Carry capacity remains real
+
+Provisioning must respect the same carried-inventory weight/size limits as every other NPC activity.
+
+Existing role weapons/ammo and work cargo already consume capacity. A full waterskin contributes its real liquid mass.
+
+Do not special-case contract provisions around `Inventory.canAdd()` or otherwise grant hidden capacity.
+
+## 6. Water — real waterskin instances
+
+For remote work:
+
+```text
+NPC has/obtains waterskin
+→ fills it from a real available source when needed
+→ carries it
+→ thirst requires drinking
+→ drinkFromLiquidContainer()
+→ Inventory.updateInstance()
+→ remaining litres decrease
 ```
+
+An empty waterskin remains the same empty instance and provides no water.
+
+Do not model `waterskin_full` as scalar contract stock or silently refill a container.
+
+## 7. Food provisioning
+
+Use normal concrete food items and preserve their freshness state.
+
+```text
 contract preparation
-        ↓
-NPC obtains food
-        ↓
-carried inventory
-        ↓
-hunger becomes critical
-        ↓
-existing food consumption
+→ transfer real food into carried inventory
+→ travel/work
+→ hunger requires food
+→ consume through existing food path
 ```
 
-Do not create contract-specific ration items.
+Do not create ration-only item kinds for this plan.
 
-## 7. Needs remain authoritative
+## 8. Needs remain authoritative
 
 Hired NPCs use exactly the same hunger/thirst needs as normal NPCs.
 
@@ -201,197 +229,119 @@ Contract work must not:
 - disable hunger,
 - disable thirst,
 - reset needs,
-- suppress critical interrupts.
+- suppress critical interrupts,
+- invent worker-specific need thresholds.
 
-```
-working
-   ↓
-thirst critical
-   ↓
-interrupt work
-   ↓
-drink
-   ↓
-resume work
-```
-
-## 8. Needs may interrupt work
-
-Use the existing need-pressure arbitration.
-
-```
-work
-  ↓
-critical hunger / thirst / rest
-  ↓
-survival action
-  ↓
-resume contract when possible
-```
-
-Do not create `WorkerNeedsManager` or contract-specific need priority.
-
-## 9. Eating from carried inventory
-
-When hunger requires food, carried food should be considered through the existing food-consumption path.
-
-Prefer:
-
-```
-carried food
-    ↓
-existing household/settlement food mechanisms
-    ↓
-existing nearby world food source
-```
-
-If the current implementation already defines a different valid priority, preserve it rather than duplicating the resolver.
-
-## 10. Drinking from carried waterskin
-
-When thirst requires water, an appropriate carried waterskin should be considered before distant household/settlement sources when the NPC is away from home.
-
-```
-carried waterskin
-      ↓
-drinkFromLiquidContainer()
-      ↓
-thirst decreases
-      ↓
-container retains remaining water
-```
-
-When empty, fall back to existing household/settlement/well mechanisms.
-
-No infinite refill.
-
-## 11. Local food discovery
-
-Reuse `SettlementFoodSourceHooks.queryNearest()` and its existing revalidation/collection path.
-
-The NPC should be able to use real consumable world food, including natural items such as an apple.
-
-```
-apple on ground
-    ↓
-existing food-source discovery
-    ↓
-collectItem()
-    ↓
-food inventory / consumption
-    ↓
-eat
-```
-
-Do not add worker-specific apple search.
-
-If physical pickup animation is absent, keep the existing collection abstraction. Animation is outside this plan.
-
-## 12. Local water discovery
-
-Reuse existing well/household/settlement water mechanisms.
-
-The NPC must not know arbitrary water sources globally. Discovery remains bounded by the existing source/query/navigation architecture.
-
-## 13. Supply exhaustion
-
-Supplies are finite.
-
-```
-food depleted
-water depleted
-```
-
-The NPC falls back to real available sources.
-
-If no source is available:
-
-```
-needs rise
-    ↓
-critical need
-    ↓
-survival takes priority
-    ↓
-work interrupted
-```
-
-Do not magically replenish supplies.
-
-## 14. Contract feasibility
-
-For long/remote contracts, food and water availability should influence NPC evaluation where the existing decision system can support it.
-
-At minimum consider:
-
-```
-distance
-+
-expected duration
-+
-available food/water
-```
-
-If the NPC clearly cannot survive the assignment with available sources, it should be able to reject the contract rather than accept an impossible commitment.
-
-Do not build a full expedition survival planner.
-
-## 15. No magic emergency refill
-
-Never implement:
-
-```
-critical hunger → spawn food
-critical thirst → refill waterskin
-```
-
-Emergency survival must use real inventory or real world/settlement sources.
-
-## 16. Work interruption and resumption
-
-Needs must not accidentally cancel a valid contract.
+## 9. Need interruption must preserve the contract
 
 Normal case:
 
-```
-working
-→ need interrupt
+```text
+working / travelling
+→ critical hunger or thirst
+→ existing interruptCurrentAction path
 → satisfy need
-→ resume contract
+→ next decision finds the same WorkContractRecord by workerNpcId
+→ resume travelling/working
 ```
 
-If the existing contract lifecycle determines that the NPC abandoned the assignment because the interruption was too long or the target became invalid, reuse that lifecycle.
+A survival interruption cancels only transient action/navigation state.
 
-Do not create food-specific contract failure states.
+Do not call `releaseWorkContract()` for an ordinary food/water interruption. Use existing release/invalidation only for genuine abandonment or invalid targets.
 
-## 17. Persistence
+## 10. Eating from carried inventory
 
-Persist any state already required by the NPC inventory/persistence architecture for:
+When hunger requires food, carried food should be a valid source through the existing food strategy/consumption mechanism.
 
-- carried food,
-- carried liquid-container instances,
-- water quantity,
-- current hunger/thirst,
-- active contract/work state,
-- interruption/resumption state where applicable.
+A remote NPC should not walk back to a distant household while usable food is already physically carried.
 
-Do not add isolated persistence for worker supplies if NPC carried inventory itself is intentionally non-persistent. Follow the repository's existing persistence boundary consistently.
+Preserve the existing central strategy/arbitration architecture rather than adding a contract-specific branch that bypasses it.
+
+## 11. Drinking from carried inventory
+
+When thirst requires water, a non-empty carried waterskin should be a valid source before a materially more distant household/well trip.
+
+Drinking must consume the real liquid amount and update the same container instance.
+
+When no usable carried water remains, fall back to existing real water-source behaviour.
+
+## 12. Local food discovery
+
+Reuse `SettlementFoodSourceHooks.queryNearest()` and the existing source revalidation/harvest path.
+
+The NPC may use real world food such as a ground item or harvestable crop when that is the selected available source.
+
+Do not add worker-specific world-food discovery.
+
+## 13. Local water discovery
+
+Reuse existing household/well/settlement water discovery.
+
+Do not give hired NPCs global knowledge of arbitrary water sources.
+
+If a waterskin is refilled, the NPC must actually reach an existing valid water source and use the normal fill semantics.
+
+## 14. Supply exhaustion
+
+Supplies are finite.
+
+```text
+carried food/water depleted
+→ try existing real sources
+→ if unavailable, needs continue worsening
+→ critical need interrupts work
+```
+
+No emergency spawning or refill is allowed.
+
+## 15. Contract feasibility
+
+Extend the existing contract opportunity/preparation decision rather than creating a separate feasibility system.
+
+Food/water availability may reduce attractiveness or reject a clearly non-survivable assignment when bounded available information shows the NPC cannot reasonably provision/satisfy the trip.
+
+The rule must remain deterministic and conservative. Do not require global world scanning or exact simulation of the whole future contract.
+
+## 16. Persistence and lifecycle continuity
+
+Current code already persists:
+
+- hunger/thirst through `SaveData.npcStates`,
+- contract commitment through `SaveData.workContracts`,
+- household resources through `SaveData.households`.
+
+`NpcAgent.carried` itself is not persistent.
+
+Therefore contract provisions that are meant to remain owned by an NPC across settlement unload/reload, `WorldBundle` rebuild and save/load must gain a **single authoritative representation within the existing NPC state boundary**, then hydrate the runtime carried inventory from that owner.
+
+Persist enough item data to preserve:
+
+- concrete food kind/count and freshness metadata required by the existing inventory semantics,
+- liquid-container instance identity,
+- liquid kind and amount,
+- other carried item instances/counts if the chosen snapshot represents the inventory as a whole.
+
+Do not duplicate active contract state into the NPC snapshot; `WorkContractRecord.workerNpcId` remains the sole authority for the commitment.
+
+Do not persist transient path/action/navigation state merely to resume a need interruption. Reconstruction should re-decide from authoritative needs + contract state.
+
+## 17. Existing persistence gaps are not this plan's scope
+
+Do not widen `npc-017` into a general inventory/persistence cleanup.
+
+In particular, unrelated existing household freshness-persistence gaps should remain separate unless the minimum authoritative NPC-provision snapshot directly requires shared serialization support.
 
 ## 18. Debugging
 
-Extend existing diagnostics where practical to expose:
+Extend existing NPC inspection/trace projections where practical to expose:
 
-- hunger,
-- thirst,
+- hunger / thirst,
+- active/critical need,
+- contract id/state,
 - carried food,
-- carried waterskins,
-- water amount,
-- active need,
-- critical need,
-- active work contract,
-- work interruption reason,
-- selected food source,
-- selected water source.
+- carried waterskin instance + litres,
+- selected food/water strategy,
+- need interruption versus genuine contract abandonment.
 
 Do not create a separate worker-survival debug UI.
 
@@ -399,120 +349,100 @@ Do not create a separate worker-survival debug UI.
 
 Do not implement:
 
-- separate WorkerFoodSystem,
-- separate WorkerWaterSystem,
-- magic provisioning,
-- full survival planner,
-- cooking during contracts,
-- crafting food,
+- separate WorkerFoodSystem / WorkerWaterSystem,
+- worker-specific NeedIds or thresholds,
+- magic provisioning/refills,
+- full expedition survival planner,
+- cooking/crafting during contracts,
 - contract-specific hunting,
 - advanced expedition logistics,
-- food trading between workers,
+- worker-to-worker food trading,
 - contract inventory UI,
-- new needs,
-- new critical thresholds.
+- general household freshness-persistence cleanup,
+- new contract failure states solely for food/water.
 
 ## Verification
 
 ### Short local contract
 
-Verify that a nearby short contract does not receive unnecessary magical provisions.
+Verify a nearby short contract can proceed without unnecessary provisioning.
 
-### Long contract
+### Long/remote contract
 
 Verify:
 
-```
+```text
 accept
-→ evaluate supplies
-→ provision real food/water when needed
+→ bounded supply evaluation
+→ transfer real provisions when needed
 → travel
 → work
-→ needs continue
-→ consume carried supplies
-→ resume work
+→ needs continue normally
+→ consume carried food/water
+→ resume contract
 ```
 
 ### Water
 
 Verify:
 
-- NPC can carry a waterskin,
-- NPC drinks from it,
-- thirst decreases,
-- water quantity decreases,
+- NPC carries a real waterskin instance,
+- drinking decreases thirst,
+- litres decrease,
 - empty container remains empty,
-- water is not infinite.
+- no infinite refill occurs.
 
 ### Food
 
 Verify:
 
-- NPC can carry food,
-- NPC consumes it,
-- hunger decreases,
-- item quantity changes according to existing inventory rules.
-
-### Apple on ground
-
-Verify:
-
-```
-apple
-→ NPC needs food
-→ existing food-source discovery
-→ collect
-→ eat
-```
+- NPC carries real food,
+- consumption decreases hunger,
+- item quantity changes through existing inventory rules,
+- freshness metadata survives provisioning transfer.
 
 ### Critical interruption
 
-Verify hunger and thirst can interrupt work and that the NPC can resume the contract afterward when the need is satisfied.
+Verify hunger/thirst can interrupt travel/work without clearing the authoritative contract, and that normal decision-making resumes it afterward.
 
 ### Exhaustion
 
-Verify depleted food/water does not trigger magic replenishment.
+Verify depleted provisions fall back to real sources and never trigger magic replenishment.
 
-### Persistence
+### Reconstruction / persistence
 
-Verify carried food/water and contract/need state according to the existing NPC persistence boundary.
+Verify an NPC carrying contract provisions across:
+
+- settlement/NpcAgent reconstruction,
+- `WorldBundle` rebuild,
+- save/load,
+
+retains exactly one authoritative ownership state for those provisions and does not duplicate or lose them.
 
 ### NPC survival
 
-Primary test:
+Primary invariant:
 
 > A long work contract must not itself cause NPC death by suppressing or bypassing normal hunger/thirst handling.
 
 ## Completion criteria
 
-A long or remote Work Contract can be performed without giving the NPC special survival rules.
+A long or remote Work Contract can be performed without giving the NPC special survival rules:
 
-```
+```text
 accept contract
-      ↓
-evaluate food/water needs
-      ↓
-prepare real supplies when needed
-      ↓
-travel
-      ↓
-work
-      ↓
-normal needs continue
-      ↓
-eat/drink from carried supplies
-      ↓
-supplies can run out
-      ↓
-use existing world/settlement sources
-      ↓
-critical needs can interrupt work
-      ↓
-resume work when possible
-      ↓
-complete contract
-      ↓
-payment_due
+→ evaluate bounded food/water feasibility
+→ prepare real supplies when needed
+→ travel/work
+→ normal needs continue
+→ eat/drink through existing mechanisms
+→ supplies can run out
+→ existing real sources remain available
+→ critical needs can interrupt transient work action
+→ authoritative contract remains assigned
+→ resume when possible
+→ complete work
+→ payment_due
 ```
 
 The NPC remains a normal inhabitant of Seedvale who happens to be performing paid work.
