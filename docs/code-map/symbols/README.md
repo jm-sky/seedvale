@@ -23,6 +23,7 @@ Generated symbol maps by source domain.
 - [`player`](./player.md)
 - [`quests`](./quests.md)
 - [`render`](./render.md)
+- [`reputation`](./reputation.md)
 - [`scene`](./scene.md)
 - [`settlement`](./settlement.md)
 - [`shared`](./shared.md)

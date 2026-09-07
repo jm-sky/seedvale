@@ -138,6 +138,7 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `interaction/Interactable.ts`
 - `persistence/saveData.ts`
+- `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 

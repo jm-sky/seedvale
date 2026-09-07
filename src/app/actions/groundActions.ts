@@ -94,14 +94,12 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
   const { worldFlags, badges, resolvedHiddenFindSpotIds } = deps
 
-  /** Pushes the current earned-badges list + the UI-facing standing reading
-   *  (plan world-007 §9) — `QuestManager.getPlayerStanding()` combined with
-   *  the cemetery-disturbance penalty, computed here rather than inside
-   *  `QuestManager` itself (see `badges.ts`'s `communityOffensePenalty` doc).
-   *  Event-driven only (called after a Hidden Find resolves), never per
-   *  frame. */
+  /** Pushes the current earned-badges list (plan world-007 §9) —
+   *  event-driven only (called after a Hidden Find resolves), never per
+   *  frame. Grave-robbing has no NPC witnesses in v1 (plan
+   *  quests-progression-001 §13), so digging never changes reputation. */
   const refreshBadgesUi = (): void => {
-    hud.setPlayerBadges(ctx.getPlayerStanding() - badges.communityOffensePenalty(), badges.listEarned())
+    hud.setPlayerBadges(badges.listEarned())
   }
   const announceBadges = (newlyEarned: readonly BadgeDef[]): void => {
     for (const badge of newlyEarned) toast.show(`Nowa odznaka: ${badge.icon} ${badge.label}`, 'info')

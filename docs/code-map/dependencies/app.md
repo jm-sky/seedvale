@@ -450,6 +450,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `render/programPrewarm.ts`
+- `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/landOwnership.ts`
 - `settlement/villagePlanDebug.ts`
@@ -815,6 +816,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
+- `reputation/ReputationManager.ts`
 - `settlement/landOwnership.ts`
 - `terrain/chunkManager.ts`
 - `terrain/depositMining.ts`

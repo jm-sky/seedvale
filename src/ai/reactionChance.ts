@@ -1,26 +1,60 @@
 import type { RelationLevel } from '../quests/quests'
+import type { Reputation } from '../reputation/ReputationManager'
 import type { Trait } from './characters'
 import type { BigFivePersonality } from './dialogue'
+import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 
 /** Which flavor of reaction plays once `computeReactionChance`'s roll
  *  succeeds — see `reactionTierForRelation`. */
 export type ReactionTier = 'normal' | 'warm' | 'enthusiastic'
 
-/** Per-NPC relation level + general player standing, resolved by name —
- *  threaded from `createApp.ts` (where `QuestManager` lives) down through
- *  `worldBundle.ts` → `SettlementsManager.ts` → `createSettlement.ts` into
- *  `NpcAgent`, mirroring the existing `onAnimalDeath` hook (plan 110) so
- *  `NpcAgent` stays quest-agnostic (no `QuestManager` import). */
-export type PlayerSocialLookup = (npcName: string) => { relationLevel: RelationLevel, standing: number }
+/** Identifies which NPC and which settlement's social state a
+ *  `PlayerSocialLookup` call is asking about (plan quests-progression-001) —
+ *  reputation/renown are per-settlement, unlike per-NPC `relationLevel`. */
+export type PlayerSocialContext = { npcName: string, settlementId: string }
+
+export type PlayerSocialState = {
+  relationLevel: RelationLevel
+  /** `QuestManager.getPlayerStanding()` — 0..1, deliberately kept separate
+   *  from `reputation`/`renown` below (plan quests-progression-001 §"Quest
+   *  outcome i reward" explicitly does not migrate it into the new system).
+   *  The only consumer left is `ai/npcAssistance.ts`'s request-willingness
+   *  calc, orthogonal to settlement reputation. */
+  standing: number
+  reputation: Readonly<Reputation>
+  renown: number
+}
+
+/** Settlement-aware relation/reputation/renown lookup — threaded from
+ *  `createApp.ts` (where `QuestManager`/`ReputationManager` live) down
+ *  through `worldBundle.ts` → `SettlementsManager.ts` → `createSettlement.ts`,
+ *  mirroring the existing `onAnimalDeath` hook (plan 110) so `NpcAgent` stays
+ *  quest/reputation-agnostic (no `QuestManager`/`ReputationManager` import).
+ *  `createSettlement.ts` closes over its own `settlementId` before handing a
+ *  narrower `(npcName) => PlayerSocialState` lookup into `NpcAgent` — see
+ *  `NpcAgentDeps.getPlayerSocial`. */
+export type PlayerSocialLookup = (context: PlayerSocialContext) => PlayerSocialState
+
+/** Neutral fallback for a `PlayerSocialLookup` with no target assigned yet
+ *  (isolated/test construction) — same "stranger, unknown" default the old
+ *  contract used, extended with neutral reputation/renown. */
+export const NEUTRAL_PLAYER_SOCIAL_STATE: PlayerSocialState = {
+  relationLevel: 'stranger',
+  standing: 0,
+  reputation: NEUTRAL_REPUTATION,
+  renown: 0,
+}
 
 export type ReactionChanceInput = {
   personality: BigFivePersonality
   traits: readonly Trait[]
   relationLevel: RelationLevel
-  /** `QuestManager.getPlayerStanding()` — 0..1 "how known/liked the Hero is
-   *  in general", derived from existing per-NPC relations (plan 117 §2).
-   *  Defaults to 0 (no reputation system reference available). */
-  reputationStanding?: number
+  /** Local settlement renown, `0..100` (plan quests-progression-001 §4) —
+   *  normalized internally so callers never hold the tuning rule themselves.
+   *  Defaults to 0 (no reputation system reference available). Reputation's
+   *  five dimensions are deliberately not consulted here — only renown
+   *  ("is the Hero recognized") drives spontaneous reaction chance. */
+  renown?: number
 }
 
 function clamp01(x: number): number {
@@ -55,7 +89,7 @@ const RELATION_BONUS: Record<RelationLevel, number> = {
   trusted: 0.3,
 }
 
-/** Reputation bonus ceiling — kept below `RELATION_BONUS.trusted` so being
+/** Renown bonus ceiling — kept below `RELATION_BONUS.trusted` so being
  *  widely known matters, but personal relationship still weighs more. */
 const REPUTATION_BONUS_MAX = 0.10
 
@@ -69,8 +103,8 @@ export function computeReactionChance(input: ReactionChanceInput): number {
   const personalityBonus = lerp(PERSONALITY_BONUS_MIN, PERSONALITY_BONUS_MAX, interest)
   const traitBonus = input.traits.includes('curious') ? CURIOUS_TRAIT_BONUS : 0
   const relationshipBonus = RELATION_BONUS[input.relationLevel]
-  const reputationBonus = lerp(0, REPUTATION_BONUS_MAX, input.reputationStanding ?? 0)
-  return clamp01(BASE_REACTION_CHANCE + personalityBonus + traitBonus + relationshipBonus + reputationBonus)
+  const renownBonus = lerp(0, REPUTATION_BONUS_MAX, (input.renown ?? 0) / 100)
+  return clamp01(BASE_REACTION_CHANCE + personalityBonus + traitBonus + relationshipBonus + renownBonus)
 }
 
 /** Reaction flavor is driven by the personal relationship only — reputation

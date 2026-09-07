@@ -257,7 +257,8 @@ import {
 import { selectBestWorkContract } from './npcWorkContract'
 import {
   computeReactionChance,
-  type PlayerSocialLookup,
+  NEUTRAL_PLAYER_SOCIAL_STATE,
+  type PlayerSocialState,
   type ReactionTier,
   reactionTierForRelation,
 } from './reactionChance'
@@ -780,7 +781,11 @@ export type NpcAgentDeps = {
    *  for callers with no profile to hand in — same "isolated fallback" idiom
    *  as `npcState` defaulting via that same call. */
   physicalProfile?: PhysicalProfile
-  getPlayerSocial?: PlayerSocialLookup
+  /** Already bound to this NPC's own settlement by `createSettlement.ts` —
+   *  `NpcAgent` itself never resolves/imports a settlement id (plan
+   *  quests-progression-001). See `reactionChance.ts`'s `PlayerSocialLookup`
+   *  for the settlement-aware contract this closes over. */
+  getPlayerSocial?: (npcName: string) => PlayerSocialState
   mining?: SettlementMiningHooks | null
   getNearbyPlayerWell?: NearbyPlayerWellLookup
   foodSources?: SettlementFoodSourceHooks
@@ -1161,10 +1166,10 @@ export class NpcAgent {
    *  delivering it, not a persistent belongings system. Small capacity: one
    *  extraction's worth of ore is all it ever needs to hold at once. */
   private readonly carried = new Inventory(undefined, NPC_CARRY_MAX_WEIGHT)
-  /** Relation level + player standing lookup, by NPC name — keeps `NpcAgent`
-   *  quest-agnostic (`QuestManager.getRelationLevel`/`getPlayerStanding`
-   *  injected from `createApp.ts`, plan 117). */
-  private readonly getPlayerSocial: PlayerSocialLookup
+  /** Relation level + standing/reputation/renown lookup, by NPC name — keeps
+   *  `NpcAgent` quest/reputation-agnostic (injected from `createApp.ts` via
+   *  `createSettlement.ts`, plan 117 / quests-progression-001). */
+  private readonly getPlayerSocial: (npcName: string) => PlayerSocialState
   /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
    *  — an alternative water-fetch destination to `landmarks.well` when
    *  closer to this NPC's household home. See `resolveWaterWellTarget`. */
@@ -1252,7 +1257,7 @@ export class NpcAgent {
     // still derives real per-member maxima from `member`'s own sex/age
     // (plan npc-001) rather than a hidden flat 100/100/100.
     const npcState = deps.npcState ?? createNpcAuthoritativeState(npcId, deps.needOffset, physicalProfile)
-    const getPlayerSocial = deps.getPlayerSocial ?? (() => ({ relationLevel: 'stranger', standing: 0 }))
+    const getPlayerSocial = deps.getPlayerSocial ?? (() => NEUTRAL_PLAYER_SOCIAL_STATE)
     const mining = deps.mining ?? null
     this.playAt = playAt
     this.forest = forest
@@ -2276,7 +2281,7 @@ export class NpcAgent {
           personality: this.personality,
           traits: this.traits,
           relationLevel: social.relationLevel,
-          reputationStanding: social.standing,
+          renown: social.renown,
         })
         // A lone NPC (nearbyNpcCount 0) keeps its full chance. In a group it
         // drops with how many others are close by — scaled by (1 - openness)

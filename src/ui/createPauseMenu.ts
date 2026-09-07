@@ -36,6 +36,11 @@ export type PauseMenuHandlers = {
   onVillagers?: () => void
   onInventory?: () => void
   onWorldMap?: () => void
+  /** Plan quests-progression-001 — Character Screen needs a settlement-
+   *  context refresh at open time, unlike Skills, so it gets the same
+   *  app-callback pattern as `onQuestLog`/`onInventory` instead of the Pause
+   *  Menu calling `openCharacterScreen()` directly. */
+  onCharacter?: () => void
 }
 export type PauseMenu = { isPaused: () => boolean; togglePause: () => void; setSeed: (seed: number) => void; dispose: () => void }
 

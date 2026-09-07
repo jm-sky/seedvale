@@ -23,24 +23,24 @@ describe('computeReactionChance', () => {
       personality: OPEN,
       traits: ['curious'],
       relationLevel: 'trusted',
-      reputationStanding: 1,
+      renown: 100,
     })
     expect(chance).toBeGreaterThanOrEqual(0.5)
     expect(chance).toBeLessThanOrEqual(0.6)
   })
 
-  it('keeps a closed, distrustful NPC well under the open-NPC ceiling despite high relation/reputation', () => {
+  it('keeps a closed, distrustful NPC well under the open-NPC ceiling despite high relation/renown', () => {
     const closedButLiked = computeReactionChance({
       personality: CLOSED,
       traits: [],
       relationLevel: 'trusted',
-      reputationStanding: 1,
+      renown: 100,
     })
     const openAndLiked = computeReactionChance({
       personality: OPEN,
       traits: ['curious'],
       relationLevel: 'trusted',
-      reputationStanding: 1,
+      renown: 100,
     })
     expect(closedButLiked).toBeGreaterThanOrEqual(0.4)
     expect(closedButLiked).toBeLessThanOrEqual(0.6)
@@ -69,20 +69,39 @@ describe('computeReactionChance', () => {
       personality: OPEN,
       traits: ['curious'],
       relationLevel: 'trusted',
-      reputationStanding: 5,
+      renown: 500,
     })
     expect(chance).toBeLessThanOrEqual(1)
   })
 
-  it('defaults reputationStanding to 0 when omitted', () => {
+  it('defaults renown to 0 when omitted', () => {
     const omitted = computeReactionChance({ personality: CLOSED, traits: [], relationLevel: 'stranger' })
     const explicitZero = computeReactionChance({
       personality: CLOSED,
       traits: [],
       relationLevel: 'stranger',
-      reputationStanding: 0,
+      renown: 0,
     })
     expect(omitted).toBe(explicitZero)
+  })
+
+  it('renown = 0 keeps the base (no-reputation-system) reaction chance', () => {
+    const base = { personality: CLOSED, traits: [] as const, relationLevel: 'stranger' as const }
+    expect(computeReactionChance({ ...base, renown: 0 })).toBe(computeReactionChance(base))
+  })
+
+  it('renown = 100 adds at most about +0.10 over renown = 0, all else equal', () => {
+    const base = { personality: CLOSED, traits: [] as const, relationLevel: 'acquainted' as const }
+    const withoutRenown = computeReactionChance({ ...base, renown: 0 })
+    const withFullRenown = computeReactionChance({ ...base, renown: 100 })
+    expect(withFullRenown - withoutRenown).toBeCloseTo(0.10, 5)
+  })
+
+  it('relation still matters more than renown — a stranger with full renown stays under an acquainted-with-no-renown NPC\'s trusted ceiling', () => {
+    const base = { personality: CLOSED, traits: [] as const }
+    const strangerFamous = computeReactionChance({ ...base, relationLevel: 'stranger', renown: 100 })
+    const trustedUnknown = computeReactionChance({ ...base, relationLevel: 'trusted', renown: 0 })
+    expect(strangerFamous).toBeLessThan(trustedUnknown)
   })
 })
 

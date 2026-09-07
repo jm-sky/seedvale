@@ -35,15 +35,19 @@ const rows = computed<StatRow[]>(() => {
 function ratio(row: StatRow): number { return row.max > 0 ? row.current / row.max : 0 }
 function isCritical(row: StatRow): boolean { return ratio(row) <= CRITICAL_RATIO }
 
-/** Coarse label for `ui.characterScreen.standing` (plan world-007 §9) — a
- *  presentation-only mapping, distinct from `RelationLevel`'s per-NPC tiers. */
-function standingLabel(standing: number): string {
-  if (standing < -0.3) return 'Znienawidzony'
-  if (standing < 0) return 'Zła'
-  if (standing < 0.3) return 'Neutralna'
-  if (standing < 0.7) return 'Dobra'
-  return 'Znakomita'
-}
+/** Five reputation dimensions (plan quests-progression-001 §14) — each is
+ *  its own `-100..100` value, deliberately never averaged into one score. */
+const reputationRows = computed(() => {
+  const rep = ui.characterScreen.reputation?.reputation
+  if (!rep) return []
+  return [
+    { key: 'trust', label: 'Zaufanie', value: rep.trust },
+    { key: 'competence', label: 'Kompetencja', value: rep.competence },
+    { key: 'benevolence', label: 'Życzliwość', value: rep.benevolence },
+    { key: 'courage', label: 'Odwaga', value: rep.courage },
+    { key: 'integrity', label: 'Uczciwość', value: rep.integrity },
+  ]
+})
 </script>
 
 <template>
@@ -86,9 +90,31 @@ function standingLabel(standing: number): string {
       </div>
 
       <div class="mt-4 border-t border-white/10 pt-3">
-        <div class="mb-1 flex items-baseline justify-between text-sm">
-          <span>Reputacja</span>
-          <span class="text-xs opacity-70">{{ standingLabel(ui.characterScreen.standing) }}</span>
+        <div
+          v-if="ui.characterScreen.reputation"
+          class="flex flex-col gap-2"
+        >
+          <div class="text-sm font-semibold">
+            Reputacja — {{ ui.characterScreen.reputation.settlementName }}
+          </div>
+          <div
+            v-for="row in reputationRows"
+            :key="row.key"
+            class="flex items-baseline justify-between text-xs"
+          >
+            <span class="opacity-80">{{ row.label }}</span>
+            <span class="opacity-70">{{ row.value }}</span>
+          </div>
+          <div class="mt-1 flex items-baseline justify-between text-xs">
+            <span class="opacity-80">Rozpoznawalność</span>
+            <span class="opacity-70">{{ ui.characterScreen.reputation.renown }}</span>
+          </div>
+        </div>
+        <div
+          v-else
+          class="text-xs opacity-60"
+        >
+          Brak lokalnej reputacji
         </div>
       </div>
 
@@ -97,7 +123,7 @@ function standingLabel(standing: number): string {
         class="mt-3 border-t border-white/10 pt-3"
       >
         <div class="mb-2 text-sm">
-          Odznaki
+          Znany z
         </div>
         <div class="flex flex-col gap-1.5">
           <div

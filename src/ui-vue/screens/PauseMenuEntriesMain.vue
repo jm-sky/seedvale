@@ -4,7 +4,7 @@ import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
-import { closePauseMenu, emitUiClick, isPauseMenuOpen, openCharacterScreen, openSkillsScreen, setPauseSaveStatus, showToast, ui } from '../store'
+import { closePauseMenu, emitUiClick, isPauseMenuOpen, openSkillsScreen, setPauseSaveStatus, showToast, ui } from '../store'
 
 const name = ref(ui.pauseMenu.playerName)
 const saveTimer = ref<number | null>(null)
@@ -40,7 +40,7 @@ async function save(): Promise<void> {
 }
 function openQuestLog(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onQuestLog?.() }
 function openInventory(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onInventory?.() }
-function openCharacter(): void { emitUiClick(); closePauseMenu(); openCharacterScreen() }
+function openCharacter(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onCharacter?.() }
 function openSkills(): void { emitUiClick(); closePauseMenu(); openSkillsScreen() }
 function openMap(): void { emitUiClick(); closePauseMenu(); ui.pauseMenu.onWorldMap?.() }
 function resume(): void { emitUiClick(); closePauseMenu() }

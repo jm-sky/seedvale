@@ -87,3 +87,55 @@ Uwaga: obecne `setCharacterBadges()` jest event-driven głównie przez Hidden Fi
 5. Character Screen + usunięcie pseudo-standing/badge penalty.
 
 Nie uruchamiać `pnpm docs:sync` ręcznie — synchronizacja dokumentacji działa w GitHub workflow.
+
+## Uzupełnienie po implementacji — realne rozbieżności z planem
+
+- `ai/npcAssistance.ts`'s `computeAssistanceWillingness()` czyta `standing`
+  (`QuestManager.getPlayerStanding()`) z tego samego `getPlayerSocial(name)`
+  callbacku, którego plan §3 przepisuje na settlement-aware `{ relationLevel,
+  reputation, renown }`. Plan nie wspomina o tym konsumencie i explicite nie
+  migruje `getPlayerStanding()` do nowego systemu, więc kontrakt
+  `PlayerSocialState` (`ai/reactionChance.ts`) zachowuje dodatkowe pole
+  `standing: number` obok `reputation`/`renown` — jedyny sposób, by nie
+  zerwać istniejącego, niezwiązanego z tym planem zachowania NPC assistance
+  bez świadomej zmiany balansu.
+- `NpcAgent` nadal nie zna swojego settlementu: `createSettlement.ts` domyka
+  settlement-aware `PlayerSocialLookup` (`(context) => PlayerSocialState`) do
+  wąskiego `(npcName) => PlayerSocialState` przed przekazaniem do
+  `NpcAgent.create` — `NpcAgentDeps.getPlayerSocial` ma teraz ten węższy typ
+  inline, nie re-eksportowany osobny alias.
+- Runtime `QuestDef` (`quests/quests.ts`) dostał dwa nowe opcjonalne pola:
+  `settlementId?: string` i `socialConsequence?: { reputation?, renown? }`
+  (świadomie osobne od `effects`, zgodnie z planem). `createApp.ts` domyka
+  `settlementId: bundle.settlementsManager.getHomeDef().id` przez `.map()`
+  na `[...QUESTS, ...landmarkQuests]` tuż przed konstrukcją `QuestManager` —
+  statyczne definicje w `quests.ts` zostają settlement-agnostyczne.
+  `QuestManager.completeQuest()` aplikuje `applySocialConsequence` tylko gdy
+  oba pola są obecne.
+- `QuestManager`'s konstruktor dostał ósmy pozycyjny parametr
+  `applySocialConsequence: ApplySocialConsequence = () => {}` (nie
+  deps-object) — zgodnie z notatką wyżej "dodawać na końcu", żeby nie
+  przesuwać istniejących pozycyjnych wywołań w testach.
+- Character Screen: `hud`/`vueUi`'s dotychczasowy `Hud.setPlayerBadges` łączył
+  `standing` z `communityOffensePenalty()`; teraz to dwa niezależne settery —
+  `setPlayerBadges(badges)` (bez zmian trigger points: boot, Hidden Find,
+  New Game) i nowy `setCharacterReputation(view | null)` odświeżany przy
+  otwarciu ekranu i po `applySocialConsequence`. Realna przeszkoda:
+  `ui-vue/screens/PauseMenuEntriesMain.vue`'s "Postać" button wywołuje
+  `openCharacterScreen()` ze store'a bezpośrednio, z pominięciem
+  `createApp.ts`'s `openCharacter()` wrappera (inaczej niż Quest
+  Log/Villagers/Inventory, które już idą przez `ui.pauseMenu.onX` callback).
+  Dodano brakujący `onCharacter` do `PauseMenuHandlers`/`PauseMenuState` i
+  zmieniono `PauseMenuEntriesMain.vue` na `ui.pauseMenu.onCharacter?.()`, tak
+  by settlement-context refresh działał niezależnie od tego, którą drogą
+  ekran się otwiera (klawisz `C` i przycisk w Pause Menu).
+- "Current settlement" dla Character Screen używa tego samego wzorca co
+  `restActions.ts`'s prywatny `nearestSettlementInRange` (najbliższa
+  `bundle.settlementsManager.getLoaded()` w promieniu
+  `REST_IN_TOWN_RADIUS`) — zaimportowano stałą zamiast duplikować magic
+  number, reszta logiki zduplikowana lokalnie w `createApp.ts` (brak
+  istniejącego współdzielonego helpera do wyekstrahowania bez szerszego
+  refaktoru).
+- `PlayerActionContext.getPlayerStanding` (i `BadgeManager.communityOffensePenalty()`)
+  miały dokładnie jednego konsumenta (`groundActions.ts`'s `refreshBadgesUi`)
+  — usunięte całkowicie zamiast zostawione jako martwy kod.

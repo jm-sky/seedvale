@@ -46,3 +46,35 @@ describe('QUESTS rewards (plan 160)', () => {
     expect(well?.reward).toEqual({ kind: 'long_sword', count: 1 })
   })
 })
+
+describe('QUESTS socialConsequence calibration (plan quests-progression-001 §6)', () => {
+  it('grozny-wilk matches its authored magnitude calibration exactly', () => {
+    const wolf = QUESTS.find((q) => q.id === 'grozny-wilk')
+    expect(wolf?.socialConsequence).toEqual({
+      reputation: { competence: 10, courage: 12, benevolence: 4 },
+      renown: 15,
+    })
+  })
+
+  it('wilcza-jama matches its authored magnitude calibration exactly', () => {
+    const den = QUESTS.find((q) => q.id === 'wilcza-jama')
+    expect(den?.socialConsequence).toEqual({
+      reputation: { competence: 15, courage: 18, benevolence: 6 },
+      renown: 25,
+    })
+  })
+
+  it('neither wolf quest changes trust or integrity', () => {
+    const wolf = QUESTS.find((q) => q.id === 'grozny-wilk')
+    const den = QUESTS.find((q) => q.id === 'wilcza-jama')
+    expect(wolf?.socialConsequence?.reputation?.trust).toBeUndefined()
+    expect(wolf?.socialConsequence?.reputation?.integrity).toBeUndefined()
+    expect(den?.socialConsequence?.reputation?.trust).toBeUndefined()
+    expect(den?.socialConsequence?.reputation?.integrity).toBeUndefined()
+  })
+
+  it('no quest authors socialConsequence without a defined magnitude source (no accidental defaults)', () => {
+    const withConsequence = QUESTS.filter((q) => q.socialConsequence)
+    expect(withConsequence.map((q) => q.id).sort()).toEqual(['grozny-wilk', 'wilcza-jama'])
+  })
+})

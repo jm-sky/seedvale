@@ -1,12 +1,14 @@
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { AnimalAgent } from '../fauna/AnimalAgent'
 import type { SaveData, SaveTerrainModification } from '../persistence/saveData'
+import type { Settlement } from '../settlement/createSettlement'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
 import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { GrassForageOverrides } from '../world/grassForage'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
+import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
 import { createHouseDoorTracker } from '../audio/doorSounds'
@@ -72,6 +74,7 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { QuestManager } from '../quests/QuestManager'
 import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
+import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
@@ -127,7 +130,7 @@ import { createGroundActions } from './actions/groundActions'
 import { createMountActions } from './actions/mountActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
-import { createRestActions } from './actions/restActions'
+import { createRestActions, REST_IN_TOWN_RADIUS } from './actions/restActions'
 import { createSurvivalActions } from './actions/survivalActions'
 import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
 import { createWorkContractActions } from './actions/workContractActions'
@@ -378,6 +381,7 @@ export async function createApp(
   // it must stay the same reference `ground` (created once, below) captured.
   const resolvedHiddenFindSpotIds = new Set<string>(initialSave?.resolvedHiddenFindSpotIds ?? [])
   const badges = new BadgeManager(initialSave?.badges)
+  const reputation = new ReputationManager(initialSave?.reputation)
   let collectedItemIds = new Set<string>(initialSave?.collectedItemIds ?? [])
   // Plan 172 — natural crop lifecycle: harvested/removed wild crops, same
   // "shared/mutated in place, reset only on a genuinely new world" contract
@@ -417,8 +421,14 @@ export async function createApp(
   // Same indirection as `onAnimalDeath` above, for the same reason — `NpcAgent`
   // reads this every reaction check (plan 117), before `questManager` exists.
   let getPlayerSocialTarget: PlayerSocialLookup | null = null
-  const getPlayerSocial: PlayerSocialLookup = (npcName) =>
-    getPlayerSocialTarget?.(npcName) ?? { relationLevel: 'stranger', standing: 0 }
+  const getPlayerSocial: PlayerSocialLookup = (context) =>
+    getPlayerSocialTarget?.(context) ?? NEUTRAL_PLAYER_SOCIAL_STATE
+  // Same indirection again — a quest's `applySocialConsequence` callback
+  // (built alongside `questManager` below) needs to push a fresh Character
+  // Screen reputation view, but the settlement lookup/`hud` it needs are
+  // only wired up further down.
+  let refreshCharacterReputationTarget: (() => void) | null = null
+  const refreshCharacterReputation = (): void => { refreshCharacterReputationTarget?.() }
   // Same "target assigned later" indirection as `onAnimalDeath` above — the
   // trap system is built with the bundle, but awarding Traps XP / toasting
   // the catch needs `player`/`toast`, which only exist further down
@@ -811,8 +821,16 @@ export async function createApp(
     )?.id
   })
 
+  // Every quest defined so far belongs to the home settlement (plan
+  // quests-progression-001 — `QuestDef` itself stays settlement-agnostic
+  // data; the composition root resolves the real settlement here, once,
+  // rather than hardcoding a settlement id inside `QuestManager`/
+  // `ReputationManager`).
+  const homeSettlementId = bundle.settlementsManager.getHomeDef().id
+  const questDefs = [...QUESTS, ...landmarkQuests].map((def) => ({ ...def, settlementId: homeSettlementId }))
+
   const questManager = new QuestManager(
-    [...QUESTS, ...landmarkQuests],
+    questDefs,
     worldAudio.playOnce,
     inventory,
     initialSave?.quests,
@@ -846,20 +864,50 @@ export async function createApp(
     (animalId) => {
       bundle.fauna.getAgents().find((a) => a.animalId === animalId)?.markDangerous()
     },
+    // The persistent quest → reputation seam (plan quests-progression-001
+    // §10) — `QuestManager` never imports `ReputationManager` directly.
+    (consequence) => {
+      applySocialConsequence(reputation, consequence)
+      refreshCharacterReputation()
+    },
   )
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
   // above can actually reach it — see those call sites' comments.
-  getPlayerSocialTarget = (npcName) => ({
-    relationLevel: questManager.getRelationLevel(npcName),
+  getPlayerSocialTarget = (context) => ({
+    relationLevel: questManager.getRelationLevel(context.npcName),
     standing: questManager.getPlayerStanding(),
+    reputation: reputation.getReputation(context.settlementId),
+    renown: reputation.getRenown(context.settlementId),
   })
   onAnimalDeathTarget = (animalId) => {
     questManager.onInteractObjective({ type: 'animal_died', animalId })
   }
+  // Character Screen's local reputation view (plan quests-progression-001) —
+  // refreshed on screen open (`openCharacter` below) and after a social
+  // consequence (the `applySocialConsequence` callback above), never
+  // per-frame. Resolves "the settlement currently relevant to the player's
+  // position" the same "nearest loaded settlement within town range" way
+  // `restActions.ts`'s `nearestSettlementInRange` does — outside any
+  // settlement's range, the screen shows no local reputation at all.
+  refreshCharacterReputationTarget = (): void => {
+    let nearest: Settlement | null = null
+    let bestDist = Infinity
+    for (const settlement of bundle.settlementsManager.getLoaded()) {
+      const dist = settlement.center.distanceTo(player.mesh.position)
+      if (dist <= REST_IN_TOWN_RADIUS && dist < bestDist) {
+        nearest = settlement
+        bestDist = dist
+      }
+    }
+    hud.setCharacterReputation(nearest
+      ? { settlementName: nearest.name, reputation: reputation.getReputation(nearest.id), renown: reputation.getRenown(nearest.id) }
+      : null)
+  }
+
   hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-  hud.setPlayerBadges(questManager.getPlayerStanding() - badges.communityOffensePenalty(), badges.listEarned())
+  hud.setPlayerBadges(badges.listEarned())
 
   // Assigned once `inventoryScreen` exists further down; every caller runs
   // later, so the initial no-op is never the one that fires.
@@ -923,7 +971,6 @@ export async function createApp(
     mouseLook,
     keyboard,
     getPlayerSocial,
-    getPlayerStanding: () => questManager.getPlayerStanding(),
     worldAudio,
     getTreeLifecycle: () => treeLifecycle,
     onInventoryChanged,
@@ -1016,6 +1063,7 @@ export async function createApp(
     worldFlags,
     resolvedHiddenFindSpotIds,
     badges,
+    reputation,
     fishingBait,
     getCollectedItemIds: () => collectedItemIds,
     getRemovedCropIds: () => removedCropIds,
@@ -1112,7 +1160,9 @@ export async function createApp(
         ground.resetTreasureProgress()
         resolvedHiddenFindSpotIds.clear()
         badges.reset()
-        hud.setPlayerBadges(questManager.getPlayerStanding(), badges.listEarned())
+        reputation.reset()
+        hud.setPlayerBadges(badges.listEarned())
+        refreshCharacterReputation()
         resetPlayerNeeds(player.needs)
         fishingBait.clear()
         fishingAttempts.clear()
@@ -1451,6 +1501,10 @@ export async function createApp(
   }
   const openCharacter = () => {
     exitGamePointerLock(renderer.domElement)
+    // Settlement context can only be stale between opens (plan
+    // quests-progression-001 — never a remembered `currentSettlementId`), so
+    // resolve it fresh right here rather than relying on the boot-time push.
+    refreshCharacterReputation()
     vueUi.openCharacterScreen()
   }
 
@@ -1466,6 +1520,7 @@ export async function createApp(
     onQuestLog: openQuestLog,
     onVillagers: openVillagers,
     onInventory: openInventory,
+    onCharacter: openCharacter,
     onWorldMap: () => {
       vueUi.openWorldMap(player.mesh.position.x, player.mesh.position.z)
     },

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { PlayerSocialState } from '../ai/reactionChance'
+import type { RelationLevel } from '../quests/quests'
 import type { LodgingOption } from './lodging'
+import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 import { hayLodgingId } from './lodging'
 import {
   collectLodgingCandidates,
@@ -7,6 +10,13 @@ import {
   resolveBestLodging,
   selectLodgingFromCandidates,
 } from './lodgingResolver'
+
+/** Lodging only ever reads `relationLevel` (plan quests-progression-001 —
+ *  "lodging nadal zależy wyłącznie od relation") — `standing`/`reputation`/
+ *  `renown` are filled with neutral placeholders these tests never assert on. */
+function socialState(relationLevel: RelationLevel): PlayerSocialState {
+  return { relationLevel, standing: 0, reputation: NEUTRAL_REPUTATION, renown: 0 }
+}
 
 function option(overrides: Partial<LodgingOption> & Pick<LodgingOption, 'id' | 'type' | 'quality'>): LodgingOption {
   return {
@@ -82,7 +92,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
       houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+      getPlayerSocial: () => socialState('friendly'),
     })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toMatchObject({ type: 'friend', ownerName: 'Anna', approachPoint: { x: 5, z: 7 } })
@@ -94,7 +104,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
       houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }),
+      getPlayerSocial: () => socialState('stranger'),
     })
     expect(candidates).toHaveLength(0)
   })
@@ -102,7 +112,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
   it('produces no candidate for an NPC without a household', () => {
     const s = settlement({ npcs: [{ name: 'Anna', household: null }], houses: [house({ x: 5, z: 7 })] })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'trusted', standing: 0 }),
+      getPlayerSocial: () => socialState('trusted'),
     })
     expect(candidates).toHaveLength(0)
   })
@@ -114,7 +124,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
       houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'trusted', standing: 0 }),
+      getPlayerSocial: () => socialState('trusted'),
     })
     expect(candidates).toHaveLength(1)
   })
@@ -129,7 +139,7 @@ describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
         bed: { position: { x: 5.2, z: 7.1 }, approach: { x: 5.5, z: 7.4 }, facing: 1.2 },
       })],
     })
-    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toMatchObject({
       id: 'settlement-1:bed:0',
@@ -143,7 +153,7 @@ describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
 
   it('produces no bed candidate for a house without one', () => {
     const s = settlement({ houses: [house({ x: 5, z: 7 })] })
-    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
     expect(candidates).toHaveLength(0)
   })
 
@@ -158,7 +168,7 @@ describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
       })],
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+      getPlayerSocial: () => socialState('friendly'),
     })
     const best = resolveBestLodging(candidates, { x: 0, z: 0 })
     expect(best?.type).toBe('bed')
@@ -168,20 +178,20 @@ describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
 describe('collectLodgingCandidates — hay fallback', () => {
   it('always offers hay when the settlement has a hay spot', () => {
     const s = settlement({ haySpot: { x: 3, z: 4 } })
-    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toMatchObject({ type: 'hay', quality: 'low', approachPoint: { x: 3, z: 4 } })
   })
 
   it('offers nothing when the settlement has no hay spot and no other source', () => {
     const s = settlement({})
-    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'trusted', standing: 0 }) })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('trusted') })
     expect(candidates).toHaveLength(0)
   })
 
   it('uses the same id `RestActions.sleepInHay` resolves against', () => {
     const s = settlement({ id: 'village-a', haySpot: { x: 3, z: 4 } })
-    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => ({ relationLevel: 'stranger', standing: 0 }) })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
     expect(candidates[0]?.id).toBe(hayLodgingId('village-a'))
   })
 })
@@ -200,7 +210,7 @@ describe('collectLodgingCandidates — multiple sources for the choice panel', (
       haySpot: { x: 1, z: 1 },
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+      getPlayerSocial: () => socialState('friendly'),
     })
     expect(candidates.map((c) => c.type).sort()).toEqual(['bed', 'friend', 'hay'])
   })
@@ -216,7 +226,7 @@ describe('collectLodgingCandidates — multiple sources for the choice panel', (
       ],
     })
     const candidates = collectLodgingCandidates([s], {
-      getPlayerSocial: () => ({ relationLevel: 'friendly', standing: 0 }),
+      getPlayerSocial: () => socialState('friendly'),
     })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toMatchObject({ type: 'bed' })

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import type { SocialConsequence } from '../reputation/ReputationManager'
 import type { QuestManagerInitial } from './QuestManager'
 import type { QuestDef } from './quests'
+import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
 import { QuestManager } from './QuestManager'
-import { relationToLevel } from './quests'
+import { QUESTS, relationToLevel } from './quests'
 
 const simpleQuest: QuestDef = {
   id: 'simple',
@@ -495,5 +497,97 @@ describe('QuestManager dangerous trait binding', () => {
     )
     acceptOffer(qm, 'Anna')
     expect(applied).toEqual([])
+  })
+})
+
+describe('QuestManager applySocialConsequence', () => {
+  const groznyWilkDef: QuestDef = { ...QUESTS.find((d) => d.id === 'grozny-wilk')!, settlementId: 'home' }
+  const wilczaJamaDef: QuestDef = { ...QUESTS.find((d) => d.id === 'wilcza-jama')!, settlementId: 'home' }
+
+  /** Both wolf quests gate on `Anna: trusted` — pre-seed the relation via
+   *  `QuestManagerInitial` instead of accepting/completing an earlier quest. */
+  function makeTrustedManager(
+    defs: readonly QuestDef[],
+    onConsequence: (c: SocialConsequence) => void,
+    resolveAnimalTarget?: (kind: string) => string | undefined,
+  ): QuestManager {
+    const initial: QuestManagerInitial = { progress: [], exp: 0, relations: { Anna: 6 } }
+    return new QuestManager(defs, undefined, new Inventory(), initial, undefined, resolveAnimalTarget, undefined, onConsequence)
+  }
+
+  it('applies exactly grozny-wilk\'s calibrated deltas, once, on completion', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = makeTrustedManager([groznyWilkDef], (c) => consequences.push(c), () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' }) // -> ready_to_report
+    qm.onInteract('Anna') // report -> complete, applies consequence
+    expect(consequences).toEqual([
+      { settlementId: 'home', reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 },
+    ])
+    // trust/integrity are untouched by this quest.
+    expect(consequences[0]?.reputation?.trust).toBeUndefined()
+    expect(consequences[0]?.reputation?.integrity).toBeUndefined()
+    // Talking to the already-complete giver again must not re-apply it.
+    qm.onInteract('Anna')
+    expect(consequences).toHaveLength(1)
+  })
+
+  it('applies exactly wilcza-jama\'s calibrated deltas, once, on completion', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = makeTrustedManager([wilczaJamaDef], (c) => consequences.push(c))
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
+    qm.onInteract('Anna')
+    expect(consequences).toEqual([
+      { settlementId: 'home', reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
+    ])
+    expect(consequences[0]?.reputation?.trust).toBeUndefined()
+    expect(consequences[0]?.reputation?.integrity).toBeUndefined()
+  })
+
+  it('does not apply a consequence for a quest with neither settlementId nor socialConsequence authored', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = makeTrustedManager([simpleQuest], (c) => consequences.push(c))
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    qm.onInteract('Anna')
+    expect(consequences).toHaveLength(0)
+  })
+
+  it('does not apply a consequence for a quest with authored deltas but no resolved settlementId', () => {
+    const { settlementId: _settlementId, ...unresolved } = groznyWilkDef
+    const consequences: SocialConsequence[] = []
+    const qm = makeTrustedManager([unresolved], (c) => consequences.push(c), () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    qm.onInteract('Anna')
+    expect(consequences).toHaveLength(0)
+  })
+
+  it('a failed quest never applies its social consequence', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = makeTrustedManager([sheepQuest], (c) => consequences.push(c), () => 'sheep-house0-0')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' }) // -> failed, no reward
+    expect(qm.getState('sheep')).toBe('failed')
+    expect(consequences).toHaveLength(0)
+  })
+
+  it('bare animal_died with no completed quest applies nothing', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = makeTrustedManager([groznyWilkDef], (c) => consequences.push(c), () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' }) // -> ready_to_report only
+    expect(consequences).toHaveLength(0)
+  })
+
+  it('passes through the quest\'s own settlementId, not a hardcoded one', () => {
+    const consequences: SocialConsequence[] = []
+    const otherSettlementDef: QuestDef = { ...groznyWilkDef, settlementId: 'outpost' }
+    const qm = makeTrustedManager([otherSettlementDef], (c) => consequences.push(c), () => 'wolf-1')
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
+    qm.onInteract('Anna')
+    expect(consequences).toEqual([{ settlementId: 'outpost', reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 }])
   })
 })

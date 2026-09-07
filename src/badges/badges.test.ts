@@ -39,16 +39,6 @@ describe('BadgeManager', () => {
     expect(newly.map((b) => b.id)).toContain('relic_seeker')
   })
 
-  it('community standing penalty grows with disturbances but stays capped at 1', () => {
-    const badges = new BadgeManager()
-    expect(badges.communityOffensePenalty()).toBe(0)
-    for (let i = 0; i < 3; i++) badges.recordGraveDisturbed()
-    const penaltyAt3 = badges.communityOffensePenalty()
-    expect(penaltyAt3).toBeGreaterThan(0)
-    for (let i = 0; i < 50; i++) badges.recordGraveDisturbed()
-    expect(badges.communityOffensePenalty()).toBeLessThanOrEqual(1)
-  })
-
   it('round-trips through exportState/constructor', () => {
     const badges = new BadgeManager()
     badges.recordGraveDisturbed()
@@ -56,7 +46,7 @@ describe('BadgeManager', () => {
     const state = badges.exportState()
     const restored = new BadgeManager(state)
     expect(restored.listEarned().map((b) => b.id).sort()).toEqual(badges.listEarned().map((b) => b.id).sort())
-    expect(restored.communityOffensePenalty()).toBe(badges.communityOffensePenalty())
+    expect(restored.exportState()).toEqual(state)
   })
 
   it('reset drops all progress', () => {
@@ -64,6 +54,6 @@ describe('BadgeManager', () => {
     badges.recordGraveDisturbed()
     badges.reset()
     expect(badges.listEarned()).toHaveLength(0)
-    expect(badges.communityOffensePenalty()).toBe(0)
+    expect(badges.exportState()).toEqual({ earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 })
   })
 })

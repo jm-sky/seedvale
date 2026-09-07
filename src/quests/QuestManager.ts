@@ -2,6 +2,7 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
+import type { SocialConsequence } from '../reputation/ReputationManager'
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
@@ -84,6 +85,13 @@ export type AnimalTargetResolver = (kind: AnimalKind) => string | undefined
  *  layer and injected, same reasoning as `AnimalTargetResolver`. */
 export type DangerousTraitApplier = (animalId: string) => void
 
+/** The persistent seam a quest completion uses to reach `ReputationManager`
+ *  without `QuestManager` importing it directly (plan quests-progression-001
+ *  §10) — the composition root maps this straight onto
+ *  `ReputationManager`'s `applySocialConsequence`. Defaults to a no-op so
+ *  every existing construction site (tests included) is unaffected. */
+export type ApplySocialConsequence = (consequence: SocialConsequence) => void
+
 /** Exp granted on turning in a quest. Flat for v1 — no per-quest tuning yet. */
 const QUEST_EXP_REWARD = 10
 /** Relation bump for the giver and any NPC named in a `talk_to_npc` stage. */
@@ -138,6 +146,7 @@ export class QuestManager {
   private readonly grantItem: QuestItemGrant
   private readonly resolveAnimalTarget: AnimalTargetResolver
   private readonly applyDangerousTrait: DangerousTraitApplier
+  private readonly applySocialConsequence: ApplySocialConsequence
   private exp = 0
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
@@ -153,6 +162,7 @@ export class QuestManager {
     grantItem: QuestItemGrant = () => {},
     resolveAnimalTarget: AnimalTargetResolver = () => undefined,
     applyDangerousTrait: DangerousTraitApplier = () => {},
+    applySocialConsequence: ApplySocialConsequence = () => {},
   ) {
     this.defs = defs
     this.playSound = playSound
@@ -160,6 +170,7 @@ export class QuestManager {
     this.grantItem = grantItem
     this.resolveAnimalTarget = resolveAnimalTarget
     this.applyDangerousTrait = applyDangerousTrait
+    this.applySocialConsequence = applySocialConsequence
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -388,6 +399,12 @@ export class QuestManager {
     }
     this.playQuestCompleteSound(def.giverName)
     if (def.reward) this.grantItem(def.reward.kind, def.reward.count)
+    // Authored, one-time public consequence (plan quests-progression-001) —
+    // only fires with both a resolved settlement and authored deltas; most
+    // quests have neither, and there is no default social effect.
+    if (def.settlementId && def.socialConsequence) {
+      this.applySocialConsequence({ settlementId: def.settlementId, ...def.socialConsequence })
+    }
     return def.reportLine
   }
 

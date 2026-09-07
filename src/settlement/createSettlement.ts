@@ -363,6 +363,15 @@ export async function createSettlement(
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
 
+  // Closes over this settlement's own `def.id` so `NpcAgent` never resolves
+  // or imports a settlement id itself (plan quests-progression-001) —
+  // `getPlayerSocial` above is the settlement-aware app-level contract,
+  // `npcGetPlayerSocial` is the narrower per-NPC-name closure every
+  // `NpcAgent.create` call below actually receives.
+  const npcGetPlayerSocial = getPlayerSocial
+    ? (npcName: string) => getPlayerSocial({ npcName, settlementId: def.id })
+    : undefined
+
   const site = { x: def.x, z: def.z, y: def.y }
   // Pure function of (seed, gx, gz) — computed up front since both the
   // livestock spawn below and the night-fire ignition roll further down need
@@ -683,7 +692,7 @@ export async function createSettlement(
         economy,
         household,
         npcState,
-        getPlayerSocial,
+        getPlayerSocial: npcGetPlayerSocial,
         mining,
         getNearbyPlayerWell,
         foodSources,

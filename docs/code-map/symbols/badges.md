@@ -6,7 +6,7 @@ Generated from exported TypeScript symbols.
 
 - `BadgeDef` — type — line 21
 - `BadgeId` — type — line 19
-- `BadgeManager` — class — line 82
+- `BadgeManager` — class — line 74
   - domain: badges
   - role: Owns earned-badge state and the discrete counters that drive it.
   - owns: BadgeId

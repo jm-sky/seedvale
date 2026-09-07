@@ -29,7 +29,7 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createHud.ts`
 
-- `createHud` — function — line 41
+- `createHud` — function — line 45
 - `Hud` — type — line 5
 
 ## `ui/createInventoryScreen.ts`
@@ -62,8 +62,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createPauseMenu.ts`
 
-- `createPauseMenu` — function — line 42
-- `PauseMenu` — type — line 40
+- `createPauseMenu` — function — line 47
+- `PauseMenu` — type — line 45
 - `PauseMenuHandlers` — type — line 6
 
 ## `ui/createQuestLog.ts`

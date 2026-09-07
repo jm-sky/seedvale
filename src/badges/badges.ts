@@ -66,14 +66,6 @@ export type BadgeManagerInitial = {
   hiddenFindsFound: number
 }
 
-/** How much each disturbed grave drags the UI-facing "community standing"
- *  reading down (see `communityOffensePenalty`), capped at 1 — deliberately
- *  kept out of `QuestManager.getPlayerStanding()` itself, which stays the
- *  per-NPC-relation-average value `ai/reactionChance.ts` already depends on
- *  for NPC reaction chance; grave-robbing has no NPC witnesses in v1 (plan
- *  §6 non-goals), so it must not silently change NPC behavior. */
-const STANDING_PENALTY_PER_GRAVE = 0.12
-
 /**
  * @domain badges
  * @role Owns earned-badge state and the discrete counters that drive it.
@@ -125,13 +117,6 @@ export class BadgeManager {
     if (this.earned.has(id)) return
     this.earned.add(id)
     newly.push(BADGE_DEFS[id])
-  }
-
-  /** 0..1 penalty for the UI-facing "community standing" reading — combined
-   *  by the caller with `QuestManager.getPlayerStanding()`, never inside
-   *  `QuestManager` itself (see the class doc comment). */
-  communityOffensePenalty(): number {
-    return Math.min(1, this.gravesDisturbed * STANDING_PENALTY_PER_GRAVE)
   }
 
   listEarned(): readonly BadgeDef[] {

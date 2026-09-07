@@ -120,7 +120,7 @@ function collectFriendCandidates(
   for (const npc of settlement.npcs) {
     const household = npc.household
     if (!household || seenHouseholds.has(household.id)) continue
-    if (!FRIEND_RELATION_LEVELS.has(getPlayerSocial(npc.name).relationLevel)) continue
+    if (!FRIEND_RELATION_LEVELS.has(getPlayerSocial({ npcName: npc.name, settlementId: settlement.id }).relationLevel)) continue
     const houseIndex = homeIndexFromPlaceId(settlement.id, household.homeId)
     const house = houseIndex != null ? settlement.houses[houseIndex] : undefined
     if (!house) continue

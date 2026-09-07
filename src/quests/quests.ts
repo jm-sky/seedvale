@@ -1,6 +1,7 @@
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { ItemKind } from '../items/items'
+import type { ReputationDimension } from '../reputation/ReputationManager'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 
@@ -145,6 +146,23 @@ export type QuestDef = {
   availability?: QuestAvailability
   /** Overrides the flat v2 relation/exp reward on completion (plan 093 Etap B). */
   effects?: QuestEffects
+  /** Which settlement this quest's giver/story belongs to — absent for every
+   *  quest defined here (this file stays world-agnostic); the composition
+   *  root attaches it once per quest, from the real settlement the giver
+   *  lives in, before constructing `QuestManager` (plan quests-progression-001,
+   *  see `createApp.ts`). Required for `socialConsequence` below to ever
+   *  apply — a quest with deltas but no resolved settlement applies nothing. */
+  settlementId?: string
+  /** Already-resolved, one-time social effect of completing this quest — a
+   *  deliberately separate field from `effects` above (plan
+   *  quests-progression-001 §"Quest outcome i reward"): `effects` is the
+   *  existing personal relation/exp reward, this is the public settlement
+   *  reputation/renown result, and the two must never be conflated. Absent
+   *  means this quest has no social consequence — most quests don't. */
+  socialConsequence?: {
+    reputation?: Partial<Record<ReputationDimension, number>>
+    renown?: number
+  }
 }
 
 export const QUESTS: readonly QuestDef[] = [
@@ -269,6 +287,9 @@ export const QUESTS: readonly QuestDef[] = [
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 2, exp: 20 },
     reward: { kind: 'damascus_long_sword', count: 1 },
+    // Magnitude calibration (plan quests-progression-001 §6) — major/public
+    // local event: a reported threat to settlement safety is resolved.
+    socialConsequence: { reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 },
   },
   {
     id: 'wilcza-jama',
@@ -287,6 +308,9 @@ export const QUESTS: readonly QuestDef[] = [
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
     effects: { relation: 3, exp: 30 },
     reward: { kind: 'obsidian_sword', count: 1 },
+    // Magnitude calibration (plan quests-progression-001 §6) — exceptional
+    // local visibility: the threat's source itself is eliminated.
+    socialConsequence: { reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
   },
 ]
 

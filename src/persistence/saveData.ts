@@ -7,6 +7,7 @@ import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { QuestState } from '../quests/quests'
+import type { Reputation } from '../reputation/ReputationManager'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
@@ -120,6 +121,15 @@ export type SaveBadges = {
   earned: readonly BadgeId[]
   gravesDisturbed: number
   hiddenFindsFound: number
+}
+
+/** Local settlement reputation & renown (plan quests-progression-001) — see
+ *  `reputation/ReputationManager.ts`. Optional/sparse, same "absent means
+ *  never yet populated" contract as `npcStates`/`households` below: an older
+ *  save without this field restores as every settlement neutral, not a
+ *  version bump/migration (nothing existing changes meaning). */
+export type SaveReputation = {
+  settlements: Record<string, { reputation: Reputation, renown: number }>
 }
 
 /** Hunger/thirst/vigor pools (`player/PlayerNeeds.ts`) plus the simulation-time
@@ -560,6 +570,11 @@ export type SaveData = {
    *  sparse/fallback contract as `npcStates`/`households` above — an absent
    *  save restores every patch as available. */
   grassForagePatches?: Record<string, number>
+  /** Local settlement reputation & renown (plan quests-progression-001), see
+   *  `SaveReputation`. Optional, same sparse/fallback contract as
+   *  `npcStates`/`households` above — an absent save restores every
+   *  settlement as neutral. */
+  reputation?: SaveReputation
 }
 
 function isSaveConfig(value: unknown): value is SaveConfig {
@@ -668,6 +683,25 @@ function isResolvedHiddenFindSpotIdsField(value: unknown): value is string[] {
 }
 
 const BADGE_IDS: ReadonlySet<string> = new Set<BadgeId>(['desecrator', 'grave_robber', 'relic_seeker', 'treasure_hunter'])
+
+const REPUTATION_DIMENSIONS = ['trust', 'competence', 'benevolence', 'courage', 'integrity'] as const
+
+function isReputationField(value: unknown): value is Reputation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const r = value as Record<string, unknown>
+  return REPUTATION_DIMENSIONS.every((dimension) => typeof r[dimension] === 'number')
+}
+
+function isSaveReputation(value: unknown): value is SaveReputation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const settlements = (value as Record<string, unknown>).settlements
+  if (!settlements || typeof settlements !== 'object' || Array.isArray(settlements)) return false
+  return Object.values(settlements as Record<string, unknown>).every((standing) => {
+    if (!standing || typeof standing !== 'object' || Array.isArray(standing)) return false
+    const s = standing as Record<string, unknown>
+    return isReputationField(s.reputation) && typeof s.renown === 'number'
+  })
+}
 
 function isSaveBadges(value: unknown): value is SaveBadges {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
@@ -1382,6 +1416,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.removedLivestockIds !== undefined && !isRemovedLivestockIdsField(v.removedLivestockIds)) return false
   // Same sparse "object of numbers" shape as `resourceDeposits` above.
   if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
+  if (v.reputation !== undefined && !isSaveReputation(v.reputation)) return false
   return true
 }
 

@@ -90,15 +90,16 @@ This is the domain's central extensibility point: a fourth pressure producer nee
 
 ## Relationships, social, and dialogue
 
-**Two entirely separate "relationship" stores exist — they share only vocabulary, not implementation:**
+**Three entirely separate "social standing" stores exist — they share only vocabulary, not implementation:**
 - **NPC↔NPC** — a symmetric pair store (get/adjust by id pair), one instance per settlement manager, persisted. Consumed today only by conversation outcomes (below).
-- **Player↔NPC** — a scalar per NPC name, owned by `QuestManager`, used for quest availability gates and read by the player-interaction resolvers below. A structurally unrelated model (single scalar keyed by name vs. a symmetric pair store keyed by id) — a future reader should not assume one derives from the other.
+- **Player↔NPC relation** — a scalar per NPC name, owned by `QuestManager`, used for quest availability gates and read by the player-interaction resolvers below. A structurally unrelated model (single scalar keyed by name vs. a symmetric pair store keyed by id) — a future reader should not assume one derives from the other.
+- **Player↔settlement reputation/renown** (plan quests-progression-001) — owned by `src/reputation/ReputationManager.ts`, keyed by settlement id, independent of `QuestManager` and of any one NPC. Five `-100..100` reputation dimensions (how the settlement judges the player's social qualities) plus a `0..100` renown (how widely known the player is there); reputation and renown change only through an explicit, already-resolved `SocialConsequence` a caller applies (today: two quest completions, via `QuestManager`'s `applySocialConsequence` seam) — the manager never inspects world/NPC/quest state itself. Persisted as its own top-level, sparse `SaveData.reputation` field (absent settlement = neutral).
 
 **Social/conversation** runs over a settlement's own campfire as a shared social place. Partner selection is deliberately unranked (same place, available, not self, deterministic tie-break) — personality only changes retry frequency, never candidate choice. Pairing is atomic per settlement per tick: both participants are reserved and one shared outcome is generated before either side's conversation begins, so a third NPC can never be offered either mid-pairing. The outcome is a small deterministic roll (agreeableness + existing relationship value) that adjusts the symmetric NPC↔NPC store by a small delta.
 
 **Dialogue** has no single owner file — it is split three ways, each independent: need-flavor lines (personality/need-keyed, plus the player-approach pause reaction), a topic-menu generator (role/family/village-flavor sentences, deliberately free of side effects — callers own data-fetching and mutation), and quest-driven overrides (`QuestManager.onInteract()`, which take priority over flavor dialogue whenever a quest is relevant to the interaction).
 
-**Quests** (`src/quests/`) are genuinely quest-agnostic of NPC internals — `QuestManager` never reaches into `NpcAgent` state, only a name-based lookup; world bindings (fauna kill/find targets, landmarks) are resolved through injected resolver functions, never a direct import of `ai/`/`fauna/`. Two more small, independent one-shot resolvers read the player↔NPC relation level without touching quests otherwise: an ambient "does this NPC notice the player" reaction chance, and a synchronous "will you give me food/water" assistance resolver. Neither is routed through the pressure/decision pipeline above — both are one-shot social decisions triggered by player action, structurally parallel to it but never contesting it.
+**Quests** (`src/quests/`) are genuinely quest-agnostic of NPC internals — `QuestManager` never reaches into `NpcAgent` state, only a name-based lookup; world bindings (fauna kill/find targets, landmarks) are resolved through injected resolver functions, never a direct import of `ai/`/`fauna/`. Two more small, independent one-shot resolvers read player↔NPC/player↔settlement social state without touching quests otherwise: an ambient "does this NPC notice the player" reaction chance (relation level + local settlement renown — reputation's five dimensions are deliberately not consulted here), and a synchronous "will you give me food/water" assistance resolver (relation level + `QuestManager.getPlayerStanding()`, a relation-average signal kept deliberately separate from settlement reputation/renown). Neither is routed through the pressure/decision pipeline above — both are one-shot social decisions triggered by player action, structurally parallel to it but never contesting it. Both reach the settlement-aware `PlayerSocialLookup` (`ai/reactionChance.ts`) threaded down from `createApp.ts` through `worldBundle.ts` → `SettlementsManager.ts` → `createSettlement.ts`, which closes over each NPC's own settlement id before handing `NpcAgent` a narrower per-name lookup — `NpcAgent` itself never resolves or imports a settlement id.
 
 ## Health, injury, and healing
 
@@ -173,6 +174,7 @@ src/settlement/npcPhysicalProfile.ts
 src/settlement/families.ts
 src/quests/QuestManager.ts
 src/quests/quests.ts
+src/reputation/ReputationManager.ts
 src/simulation/types.ts
 src/simulation/scoreActions.ts
 ```

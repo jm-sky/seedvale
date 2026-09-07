@@ -677,6 +677,7 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/dialogue.ts`
 - `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 
 **Imported by**
 
@@ -687,6 +688,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
 
 ## `ai/schedule.test.ts`

@@ -1,7 +1,7 @@
 # Plan: Reputation & Renown Foundation
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none

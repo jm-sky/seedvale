@@ -42,6 +42,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `player/PlayerSkills.ts`
 - `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/household.ts`
 - `settlement/livestock.ts`

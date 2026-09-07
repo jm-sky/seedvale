@@ -1,5 +1,5 @@
 import type { BadgeDef } from '../badges/badges'
-import type { CharacterStats } from '../ui-vue/store'
+import type { CharacterReputationView, CharacterStats } from '../ui-vue/store'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type Hud = {
@@ -27,7 +27,11 @@ export type Hud = {
   setCharacterStats: (stats: CharacterStats) => void
   /** Reputation Badges / Achievements (plan world-007 §9) — on-demand, not
    *  per-frame (see `store.ts`'s `setCharacterBadges` doc comment). */
-  setPlayerBadges: (standing: number, badges: readonly BadgeDef[]) => void
+  setPlayerBadges: (badges: readonly BadgeDef[]) => void
+  /** Local settlement reputation/renown for the Character Screen (plan
+   *  quests-progression-001) — on-demand (screen open + social consequence),
+   *  never per-frame (see `store.ts`'s `CharacterReputationView` doc). */
+  setCharacterReputation: (view: CharacterReputationView) => void
   /** Dedicated Dismount button (plan fauna-003 §10) — visible only while
    *  `mounted`, on both desktop and mobile (a plain clickable/tappable
    *  button, not gated on touch-device detection). `onDismount` is called
@@ -51,7 +55,8 @@ export function createHud(_parent: HTMLElement): Hud {
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },
     setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },
-    setPlayerBadges: (standing, badges) => { if (!disposed) getUi()?.setCharacterBadges(standing, badges) },
+    setPlayerBadges: (badges) => { if (!disposed) getUi()?.setCharacterBadges(badges) },
+    setCharacterReputation: (view) => { if (!disposed) getUi()?.setCharacterReputation(view) },
     setMounted: (mounted, animalLabel, onDismount) => {
       if (!disposed) getUi()?.setHudMounted(mounted, animalLabel, onDismount)
     },

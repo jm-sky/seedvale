@@ -6,6 +6,7 @@ import type { Inventory } from '../items/Inventory'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
+import type { ReputationManager } from '../reputation/ReputationManager'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
 import type { TerrainModification } from '../terrain/chunkManager'
 import type { ResourceDepletionState } from '../terrain/depositMining'
@@ -74,6 +75,7 @@ export type SaveStateDeps = {
    *  Game), so it's read directly rather than through a live accessor. */
   resolvedHiddenFindSpotIds: ReadonlySet<string>
   badges: BadgeManager
+  reputation: ReputationManager
   fishingBait: Map<string, FishingBaitState>
   /** Live accessors — `createApp` replaces these three on a New Game, so they
    *  must not be captured by value. */
@@ -107,7 +109,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
     config, bundle, player, mouseLook, inventory, heldTool, playerTorch,
     questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
-    resolvedHiddenFindSpotIds, badges,
+    resolvedHiddenFindSpotIds, badges, reputation,
   } = deps
 
   const buildSaveData = (): SaveData => {
@@ -155,6 +157,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     worldFlags: { ...worldFlags },
     resolvedHiddenFindSpotIds: [...resolvedHiddenFindSpotIds],
     badges: badges.exportState(),
+    reputation: reputation.exportState(),
     map: {
       discoveredCells: mapDiscovery.serialize(),
       discoveredLocations: locationKnowledge.serialize(),

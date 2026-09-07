@@ -4,7 +4,7 @@
 
 **Not:** a field-by-field `SaveData` schema dump (that's [ARCHITECTURE.md](../architecture/ARCHITECTURE.md#save-schema)'s job), a per-migration changelog narrating why each version bump happened (that belongs in the migration plans themselves), or a domain's own detailed persistence status (each domain doc states its own facts and links here for the taxonomy).
 
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-07
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -21,7 +21,7 @@ The correct mental model is "each domain owns its state and knows how to seriali
 Five categories. A given domain concept can span more than one row — state it per-concept, not per-domain.
 
 ### Persisted authoritative
-The save is the only copy; nothing regenerates it. *Examples:* settlement economies, households, NPC authoritative state (health/stamina/vigor/needs/injury/helper-assignment/active-plan), NPC↔NPC and player↔NPC relationships, livestock individuals, player inventory/needs/skills, every player-built world object (wells, torches, palisades, gardens, containers, …), work-contract commitments, quests, the game clock, map discovery/knowledge.
+The save is the only copy; nothing regenerates it. *Examples:* settlement economies, households, NPC authoritative state (health/stamina/vigor/needs/injury/helper-assignment/active-plan), NPC↔NPC and player↔NPC relationships, player↔settlement reputation/renown, livestock individuals, player inventory/needs/skills, every player-built world object (wells, torches, palisades, gardens, containers, …), work-contract commitments, quests, the game clock, map discovery/knowledge.
 
 ### Persisted delta / override
 A deterministic base plus only the deviation from it. *Examples:* player-sourced terrain modifications (system-caused carves like caves are filtered out at save time and re-derived), mining-hits-remaining on resource deposits, grass-forage-patch depletion, a fauna spawn point's FSM/recovery clock (position/type/kind stay deterministic), livestock removal tombstones, discovered map cells.
@@ -81,6 +81,7 @@ The boundary rule this codebase applies consistently: **a value that is a pure f
 | Fauna: livestock/wild/rats | Four distinct shapes — livestock persisted per individual (with an explicit pre-save capture step), spawner lifecycle persisted thin, wild individuals unpersisted-but-population-deterministic, rats unpersisted-and-not-deterministic. See [fauna.md](./fauna.md). |
 | Combat/health | `HealthState` is the shared primitive; combat itself holds zero persisted state anywhere — only each target's own consequence field persists (NPC `physicalInjury`, livestock HP inside its snapshot; nothing for the player). |
 | Quests/progression | Persisted authoritative (progress, XP, player↔NPC relations). |
+| Reputation/renown | Persisted authoritative, sparse-optional (own top-level `SaveData.reputation`, keyed by settlement id — absent settlement/save restores neutral, no version bump needed, same idiom as `npcStates`/`households`). Owned by `ReputationManager`, independent of `QuestManager`; changes only through an explicit, already-resolved consequence a caller applies. See [npc.md](./npc.md#relationships-social-and-dialogue). |
 | Time/weather | The clock persists; weather/climate is a deterministic function of the clock and is never itself stored. |
 | World locations/discovery | Discovery/knowledge state persists; location geometry itself is always deterministically re-derived from `(world seed, location id)`. See [world-locations.md](./world-locations.md). |
 

@@ -151,6 +151,7 @@ Generated from TypeScript imports.
 - `persistence/saveDb.ts`
 - `player/PlayerSkills.ts`
 - `quests/QuestManager.ts`
+- `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/settlementGenerator.ts`
 - `ui/createQuickActions.ts`

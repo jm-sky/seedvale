@@ -13,6 +13,7 @@ import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
+import type { Reputation } from '../reputation/ReputationManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { FoodSourceType } from '../settlement/settlementGenerator'
 import type { QuickActionsCropSeeds, QuickActionsTraps, QuickActionsWorkContract, RestOutcome, RestVariant } from '../ui/createQuickActions'
@@ -96,6 +97,11 @@ type PauseMenuState = {
   onBuildSimpleFire: (() => ActionResult) | null; onBuildFirePit: (() => ActionResult) | null; onBuildWoodPile: (() => ActionResult) | null; onBuildGrate: (() => ActionResult) | null
   onLightBranch: (() => ActionResult) | null; onLightWoodenTorch: (() => ActionResult) | null
   onNewGame: ((name: string, seedChoice: SeedChoice) => void) | null; onQuestLog: (() => void) | null; onVillagers: (() => void) | null; onInventory: (() => void) | null; onWorldMap: (() => void) | null
+  /** Plan quests-progression-001 — unlike Skills, Character Screen needs a
+   *  settlement-context refresh at open time (see `CharacterReputationView`'s
+   *  doc), so it gets the same `onQuestLog`/`onInventory`-style app callback
+   *  instead of the Pause Menu calling `openCharacterScreen()` directly. */
+  onCharacter: (() => void) | null
   saveStatus: string
 }
 type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
@@ -340,12 +346,23 @@ type StatBar = { current: number, max: number }
  *  read-only layer over "Player state → Needs/Health → Character UI" so a
  *  later server-authoritative move doesn't have to unwind UI-owned state. */
 export type CharacterStats = { hp: StatBar, stamina: StatBar, vigor: StatBar, hunger: StatBar, thirst: StatBar }
-/** Reputation Badges / Achievements (plan world-007 §9) — `standing` is
- *  `QuestManager.getPlayerStanding()` combined with the cemetery-disturbance
- *  penalty (`badges.ts`'s `communityOffensePenalty`), pushed on demand
+/** Local settlement reputation/renown for the Character Screen (plan
+ *  quests-progression-001) — the settlement "aktualnie istotny dla pozycji/
+ *  kontekstu gracza", resolved by app code (never a UI-owned remembered
+ *  settlement id) and pushed via `setCharacterReputation` on screen open and
+ *  after a social consequence. `null` outside any settlement's context —
+ *  the screen then shows "Brak lokalnej reputacji" but still lists badges. */
+export type CharacterReputationView = {
+  settlementName: string
+  reputation: Reputation
+  renown: number
+} | null
+/** Reputation Badges / Achievements (plan world-007 §9) — pushed on demand
  *  (`setCharacterBadges`) rather than once/frame like the rest of this
- *  screen: it only ever changes on a discrete Hidden Find event. */
-type CharacterScreenState = CharacterStats & { open: boolean, standing: number, badges: readonly BadgeDef[] }
+ *  screen: it only ever changes on a discrete Hidden Find event. `reputation`
+ *  is pushed separately (`setCharacterReputation`) since its own refresh
+ *  points differ (screen open + social consequence, not Hidden Finds). */
+type CharacterScreenState = CharacterStats & { open: boolean, reputation: CharacterReputationView, badges: readonly BadgeDef[] }
 /** Skills screen (plan 124, progression added by plan 128) — same
  *  presentation-only convention as `CharacterScreenState`: these mirror
  *  `PlayerController.skills`, pushed once/frame from `gameLoop.ts`.
@@ -460,7 +477,7 @@ export const ui = reactive({
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
     onListSaveManagement: null, onDeleteSave: null, onListSeeds: null, onRefresh: null,
     onBuildSimpleFire: null, onBuildFirePit: null, onBuildWoodPile: null, onBuildGrate: null, onLightBranch: null, onLightWoodenTorch: null,
-    onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null,
+    onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null, onCharacter: null,
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
@@ -507,7 +524,7 @@ export const ui = reactive({
     vigor: { current: 100, max: 100 },
     hunger: { current: 100, max: 100 },
     thirst: { current: 100, max: 100 },
-    standing: 0,
+    reputation: null,
     badges: [],
   } as CharacterScreenState,
   skillsScreen: {
@@ -1132,9 +1149,14 @@ export function setCharacterStats(stats: CharacterStats): void {
 
 /** Pushed on demand — after a Hidden Find resolves, and once at startup —
  *  never once/frame (see `CharacterScreenState`'s doc comment). */
-export function setCharacterBadges(standing: number, badges: readonly BadgeDef[]): void {
-  ui.characterScreen.standing = standing
+export function setCharacterBadges(badges: readonly BadgeDef[]): void {
   ui.characterScreen.badges = badges
+}
+
+/** Pushed on demand — screen open and after a social consequence, never
+ *  once/frame (plan quests-progression-001, see `CharacterReputationView`). */
+export function setCharacterReputation(view: CharacterReputationView): void {
+  ui.characterScreen.reputation = view
 }
 
 export function openSkillsScreen(): void { ui.skillsScreen.open = true; emitUiOpen() }

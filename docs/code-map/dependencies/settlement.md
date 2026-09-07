@@ -608,6 +608,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/reactionChance.ts`
+- `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 - `settlement/lodging.ts`
 - `settlement/lodgingResolver.ts`
 

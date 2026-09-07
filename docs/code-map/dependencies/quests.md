@@ -6,9 +6,11 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `fauna/AnimalSpawner.ts`
 - `items/Inventory.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 
 ## `quests/QuestManager.ts`
 
@@ -21,6 +23,7 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/items.ts`
 - `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 - `settlement/livestock.ts`
 
 **Imported by**
@@ -49,6 +52,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
 - `items/items.ts`
+- `reputation/ReputationManager.ts`
 - `terrain/chunkEnvironment.ts`
 
 **Imported by**
@@ -60,4 +64,5 @@ Generated from TypeScript imports.
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.test.ts`
+- `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`

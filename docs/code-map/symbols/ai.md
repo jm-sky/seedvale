@@ -89,24 +89,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 505
-- `CurrentActivity` — type — line 381
-- `CurrentActivityKind` — type — line 374
-- `NPC_HEIGHT` — const — line 284
-- `NPC_MODEL_URLS` — const — line 348
-- `NPC_SHADOW_DISTANCE` — const — line 298
-- `NpcAgent` — class — line 814
+- `classifyPendingActivity` — function — line 506
+- `CurrentActivity` — type — line 382
+- `CurrentActivityKind` — type — line 375
+- `NPC_HEIGHT` — const — line 285
+- `NPC_MODEL_URLS` — const — line 349
+- `NPC_SHADOW_DISTANCE` — const — line 299
+- `NpcAgent` — class — line 819
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 741
-- `NpcInspectionSnapshot` — type — line 396
-- `NpcWhy` — type — line 480
-- `projectNpcWhy` — function — line 540
-- `promoteChainKind` — function — line 497
+- `NpcAgentDeps` — type — line 742
+- `NpcInspectionSnapshot` — type — line 397
+- `NpcWhy` — type — line 481
+- `projectNpcWhy` — function — line 541
+- `promoteChainKind` — function — line 498
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -308,11 +308,14 @@ Generated from exported TypeScript symbols.
 
 ## `ai/reactionChance.ts`
 
-- `computeReactionChance` — function — line 67
-- `PlayerSocialLookup` — type — line 14
-- `ReactionChanceInput` — type — line 16
-- `ReactionTier` — type — line 7
-- `reactionTierForRelation` — function — line 80
+- `computeReactionChance` — function — line 101
+- `NEUTRAL_PLAYER_SOCIAL_STATE` — const — line 41
+- `PlayerSocialContext` — type — line 14
+- `PlayerSocialLookup` — type — line 36
+- `PlayerSocialState` — type — line 16
+- `ReactionChanceInput` — type — line 48
+- `ReactionTier` — type — line 9
+- `reactionTierForRelation` — function — line 114
 
 ## `ai/schedule.ts`
 

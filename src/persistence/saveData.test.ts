@@ -299,6 +299,45 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, households: 'nope' })).toBeNull()
   })
 
+  it('restores an older save with no reputation field as an empty settlements map', () => {
+    // `validSave` above omits `reputation` entirely (same backward-compat
+    // fixture every other optional persistence-001-style field uses).
+    const loaded = loadSaveData(validSave)
+    expect(loaded?.reputation).toBeUndefined()
+  })
+
+  it('round-trips several settlements, all five dimensions and renown', () => {
+    const withReputation: SaveData = {
+      ...validSave,
+      reputation: {
+        settlements: {
+          home: {
+            reputation: { trust: 10, competence: 15, benevolence: 6, courage: 18, integrity: -5 },
+            renown: 25,
+          },
+          outpost: {
+            reputation: { trust: 0, competence: 0, benevolence: 0, courage: 0, integrity: 0 },
+            renown: 0,
+          },
+        },
+      },
+    }
+    expect(loadSaveData(withReputation)).toEqual(withReputation)
+  })
+
+  it('rejects a malformed reputation record', () => {
+    expect(loadSaveData({
+      ...validSave,
+      reputation: { settlements: { home: { reputation: { trust: 'nope' }, renown: 0 } } },
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      reputation: { settlements: { home: { reputation: { trust: 0, competence: 0, benevolence: 0, courage: 0, integrity: 0 } } } },
+    })).toBeNull()
+    expect(loadSaveData({ ...validSave, reputation: 'nope' })).toBeNull()
+    expect(loadSaveData({ ...validSave, reputation: { settlements: 'nope' } })).toBeNull()
+  })
+
   it('rejects malformed npcRelationships/livestock/removedLivestockIds fields', () => {
     expect(loadSaveData({ ...validSave, npcRelationships: [{ a: 'x' }] })).toBeNull()
     expect(loadSaveData({ ...validSave, npcRelationships: 'nope' })).toBeNull()

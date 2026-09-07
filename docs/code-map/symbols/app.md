@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 74
-- `isChannelBusy` — function — line 81
+- `isActionBlocked` — function — line 69
+- `isChannelBusy` — function — line 76
 - `PlayerActionContext` — type — line 30
 
 ## `app/actions/actionContracts.ts`
@@ -122,13 +122,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 233
+- `createApp` — function — line 236
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 203
+- `NewAppOptions` — type — line 206
 
 ## `app/gameLoop.ts`
 
@@ -193,14 +193,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 106
+- `createSaveState` — function — line 108
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 32
-- `SaveStateDeps` — type — line 53
+- `SaveState` — type — line 33
+- `SaveStateDeps` — type — line 54
 
 ## `app/userActions.ts`
 

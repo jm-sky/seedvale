@@ -25,6 +25,7 @@ Generated navigation map for the Seedvale TypeScript codebase.
 - [`player`](./symbols/player.md) · [dependencies](./dependencies/player.md)
 - [`quests`](./symbols/quests.md) · [dependencies](./dependencies/quests.md)
 - [`render`](./symbols/render.md) · [dependencies](./dependencies/render.md)
+- [`reputation`](./symbols/reputation.md) · [dependencies](./dependencies/reputation.md)
 - [`scene`](./symbols/scene.md) · [dependencies](./dependencies/scene.md)
 - [`settlement`](./symbols/settlement.md) · [dependencies](./dependencies/settlement.md)
 - [`shared`](./symbols/shared.md) · [dependencies](./dependencies/shared.md)
