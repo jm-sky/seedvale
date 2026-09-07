@@ -22,9 +22,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | `fauna-017-animal-agent-refactor.md`                                        | -       | 🟡 | M      | -      |
-| `quests-progression-007-wolves-approach-settlement.md`                      | -       | 🟡 | M      | fauna-016 |
 | `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, quests-progression-002 |
-| `quests-progression-009-dark-forest-ruins-treasure-map.md`                  | -       | 🟡 | M      | fauna-016, world-012 |
 | `quests-progression-010-abandoned-gold-mine-colony.md`                      | -       | 🔴 | XL     | world-terrain-008, quests-progression-002, quests-progression-003 |
 | `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-018, settlements-npcs-019 |
 | `settlements-npcs-021-remote-production-site-logistics.md`                  | -       | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
@@ -90,6 +88,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
 | ◼️ `quests-progression-011-grave-robbing-reputation-risk-and-stealth.md`    | -       | 🟡 | S      | world-007, quests-progression-001 |
+| 💡 `quests-progression-007-wolves-approach-settlement.md`                   | -       | 🟡 | M      | fauna-016 |
+| 💡 `quests-progression-009-dark-forest-ruins-treasure-map.md`               | -       | 🟡 | M      | fauna-016, world-012 |
 
 ---
 
