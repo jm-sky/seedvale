@@ -41,7 +41,9 @@
 
 ### Polish
 
-1. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
+   🟡 `M` · ✅ ready · unlocks 0/0
+2. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -227,11 +229,15 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-39. `npc-004` — **Drzewo genealogiczne NPC**  
+39. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
+  🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+40. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-40. `tools-006` — **tools-006--world-observatory.md**  
+41. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -450,6 +456,7 @@ graph TD
   ui_input_009["ui-input-009 — Merchant item ownership and semantic item labels"]
   ui_input_010["ui-input-010 — Player quick actions and primary weapon slots"]
   ui_input_011["ui-input-011 — New Game setup on empty save state"]
+  ui_input_012["ui-input-012 — Placement preview shapes, rotation and coverage"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
