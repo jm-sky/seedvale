@@ -71,7 +71,7 @@ export function createAgentAnimationSet<K extends string>(
         const candidates = names[key] ?? []
         let found: THREE.AnimationAction | null = null
         for (const name of candidates) {
-          const clip = clips.find((c) => c.name === name)
+          const clip = clips.find((c) => c.name.toLowerCase() === name.toLowerCase())
           if (clip) {
             found = mixer.clipAction(clip)
             break
