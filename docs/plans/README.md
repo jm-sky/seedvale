@@ -79,7 +79,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-019-shared-spea-foundation-and-strength-driven-melee.md`            | -       | 🟡 | M      | ~~npc-001~~ |
 | ◼️ `npc-020-strength-driven-physical-work-and-human-carrying.md`            | -       | 🟡 | M      | npc-019 |
 | ◼️ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | 🟡 | M      | npc-019 |
-| ◼️ `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
+| 💡 `quests-progression-001-reputation-and-renown-foundation.md`             | -       | 🔴 | M      | -      |
 | ◼️ `quests-progression-002-quest-outcomes-rewards-and-consequences.md`      | -       | 🔴 | M      | quests-progression-001 |
 | ◼️ `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
 | ◼️ `quests-progression-004-quest-availability-and-prerequisites.md`         | -       | 🔴 | S      | quests-progression-002 |
