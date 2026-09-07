@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-07 16:35:34  
+> Date: 2026-09-07 20:55:40  
 
 ## PLANS
 
@@ -9,7 +9,6 @@
 - `npc-023-perception-driven-observation-and-information-levels.md`
 - `npc-024-temporary-conditions-and-poisoning.md`
 - `npc-025-injury-severity-and-treatment-requirements.md`
-- `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
 - `settlements-npcs-022-household-help-and-age-based-work-participation.md`
@@ -131,37 +130,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-025-injury-severity-and-treatment-requirements-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-016-first-processing-chain-and-blacksmith-production-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
