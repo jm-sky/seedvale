@@ -1,237 +1,70 @@
 # Optymalizacja: Chunk mesh — streaming geometrii
 
-Celem jest ograniczenie hitchy powodowanych przez generowanie geometrii chunków podczas streamingu świata.
+**Status:** implemented 2026-09-02 via `world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`
 
-Benchmark `stream` wykazał:
+Ten dokument zachowuje historyczne uzasadnienie optymalizacji. Nie jest listą pracy do wykonania. Aktualny kod jest źródłem prawdy; szczegóły implementacyjne są w planie i jego implementation notes.
 
-* `51` hitchy związanych z `chunk mesh`,
-* średnio **45.5 ms**,
-* maksimum **92.6 ms**.
+## Historyczny problem
 
-Proponowany zakres obejmuje trzy powiązane optymalizacje.
+Benchmark `stream` przed implementacją wykazał:
 
-## 1. Chunk mesh → istniejący worker
+- `51` hitchy związanych z `chunk mesh`,
+- średnio **45.5 ms**,
+- maksimum **92.6 ms**.
 
-### Co
+Problemem była CPU-heavy generacja danych renderowego mesha na main threadzie podczas streamingu.
 
-Przenieść CPU-heavy część generowania chunk mesh do **istniejącego workera**.
+## Stan aktualny
 
-Worker generuje dane geometrii, m.in.:
+Trzy planowane elementy zostały zaimplementowane razem:
 
-* vertices,
-* indices,
-* normals,
-* colors i inne wymagane atrybuty.
+1. **Worker mesh-data computation** — `computeChunkMeshData()` w `src/terrain/chunkMeshData.ts` liczy data-only atrybuty mesha w istniejącym `ChunkWorkerPool` / `chunkHeightmap.worker.ts`. Nie powstał drugi system workerów.
+2. **Transfer/allocation cleanup** — granica worker/main używa typed arrays; main thread pozostaje odpowiedzialny za krótką finalizację Three.js. Tile grids dla osobnego joba `mesh` są celowo structured-cloned, ponieważ main thread nadal jest ich właścicielem dla sampling/collision/content. Nie traktować tej kopii jako przypadkowego regresu do usunięcia bez sprawdzenia ownership.
+3. **Bounded runtime mesh-data cache** — `src/terrain/chunkMeshCache.ts` przechowuje `ChunkMeshData`, nie obiekty Three.js. Cache jest byte-budgeted LRU (domyślnie 64 MB), per `ChunkManager`, czyszczony przy dispose.
 
-Main thread pozostaje odpowiedzialny za utworzenie `THREE.BufferGeometry` / `THREE.Mesh` i podłączenie go do sceny.
+Aktualny przepływ w uproszczeniu:
 
-Nie przenosimy obiektów Three.js do workera — worker operuje wyłącznie na danych.
-
-### Jak
-
-Docelowy przepływ:
-
-```
-Main Thread
-    ↓
-request chunk generation
-    ↓
-Worker
-    ↓
-generate mesh data
-    ↓
-Transferable ArrayBuffers
-    ↓
-Main Thread
-    ↓
-BufferGeometry
-    ↓
-Scene
+```text
+ChunkManager
+  → tile worker job
+  → main-thread runtime terrain modifications
+  → mesh cache lookup
+      ├─ HIT  → ChunkMeshData
+      └─ MISS → mesh job in existing worker pool → ChunkMeshData → cache
+  → buildChunkGeometry()
+  → THREE geometry / mesh attach on main thread
 ```
 
-### Potencjalny zysk
+`buildChunkGeometry.ts` nie wykonuje już starego CPU-heavy per-vertex terrain/color/normal pipeline. Składa obiekty Three.js z wcześniej policzonego `ChunkMeshData`.
 
-Szacunkowo **30–80% redukcji main-thread hitcha**.
+## Ważne ownership / invalidation
 
-Orientacyjnie:
+- Runtime terrain modifications nadal mają authoritative semantics na main threadzie przed mesh jobem.
+- `meshRequestSeq` oraz identity chunka chronią przed podpięciem stale/superseded result.
+- Cache key obejmuje stałą tożsamość managera, chunk coord i `modificationsEpoch`; epoch jest globalny i świadomie może over-invalidować, ale nie może zwrócić starej geometrii.
+- Cache przechowuje tylko dane; każdy attach tworzy świeży Three.js geometry/mesh zgodnie z lifecycle `ChunkRecord`.
 
-```
-45.5 ms → ~10–30 ms
-92.6 ms → ~20–50 ms
-```
+## Co mierzyć dalej
 
-Najważniejszy efekt nie musi być proporcjonalnym zmniejszeniem całkowitego CPU work. Kluczowe jest przeniesienie kosztownej pracy poza main thread, dzięki czemu generowanie chunków nie będzie w takim stopniu blokować renderowania i interakcji.
+Nie planować ponownie worker migration ani geometry cache. Jeżeli streaming nadal hitchuje, najpierw wykonać świeży `?benchmark=stream&seed=42&res=193` i sklasyfikować pozostały koszt.
 
-### Dlaczego nie robimy dodatkowego researchu
+Szczególnie rozdzielać:
 
-Mamy już wystarczające dane do podjęcia decyzji:
+- main-thread mesh finalization,
+- worker latency / scheduling,
+- shader/program first-use stalls,
+- vegetation/content finalization,
+- inne streaming jobs.
 
-* problem jest powtarzalny,
-* występuje `51` razy podczas benchmarku,
-* koszt wynosi średnio `45.5 ms`,
-* maksimum to `92.6 ms`,
-* generowanie geometrii jest CPU-heavy,
-* projekt posiada już mechanizm workerów.
+Historyczne wartości 45.5 / 92.6 ms są baseline sprzed `world-terrain-004`, nie opisem aktualnego pipeline.
 
-Dodatkowy research odpowiedziałby głównie na pytanie **„jak duża dokładnie będzie poprawa?”**.
+## Źródła
 
-Nie jest to potrzebne przed implementacją. Rzeczywisty zysk zmierzymy po zmianie przez ponowne wykonanie tego samego benchmarku.
-
----
-
-## 2. Optymalizacja alokacji/kopii przy okazji
-
-### Co
-
-Podczas przenoszenia generowania do workera uporządkować również przepływ danych między workerem i main thread, żeby nie zastąpić jednego problemu innym.
-
-W szczególności:
-
-* używać `TypedArray`,
-* przekazywać duże bufory jako **Transferable Objects**,
-* unikać niepotrzebnego `structured clone`,
-* ograniczyć tworzenie tymczasowych tablic,
-* ograniczyć zbędne resize/realloc,
-* unikać dodatkowych kopii danych,
-* tworzyć `BufferAttribute` bez dodatkowego kopiowania, jeśli aktualny pipeline na to pozwala.
-
-### Potencjalny zysk
-
-Szacunkowo **5–20% dodatkowej redukcji kosztu streamingu/generowania**.
-
-Nie jest to jednak główny cel optymalizacji. Największą wartością pozostaje przeniesienie kosztownej pracy poza main thread.
-
-### Dlaczego robimy to przy okazji
-
-Zmiana granicy:
-
-```
-worker ↔ main thread
-```
-
-jest naturalnym momentem na uporządkowanie ownership danych i sposobu ich transferowania.
-
-Nie ma sensu robić osobnego researchu ani budować osobnego benchmarku przed implementacją.
-
-Jeżeli znajdziemy zbędne kopie lub alokacje — usuwamy je.
-
-Jeżeli aktualny pipeline już efektywnie wykorzystuje Transferable ArrayBuffers — nie komplikujemy go bez potrzeby.
-
----
-
-## 3. Cache gotowej geometrii
-
-### Co
-
-Dodać cache wyników generowania chunk mesh.
-
-Cache nie powinien przechowywać obiektów Three.js. Powinien przechowywać **dane potrzebne do odtworzenia geometrii**, tak aby ponowne użycie chunku nie wymagało ponownego wykonywania kosztownej generacji.
-
-Przepływ:
-
-```
-chunk request
-    ↓
-cache lookup
-    ↓
-HIT ─────────────→ cached mesh data
-    │
-    │ MISS
-    ▼
-worker generation
-    ↓
-cache
-    ↓
-BufferGeometry
-```
-
-### Kiedy daje największy efekt
-
-Szczególnie przy:
-
-* opuszczaniu i ponownym wejściu w obszar,
-* streamingu wokół poruszającego się gracza,
-* unload/reload chunków,
-* powracaniu do wcześniej odwiedzonych obszarów.
-
-Przy cache hit koszt ponownej generacji CPU może zostać praktycznie wyeliminowany.
-
-### Bezpieczeństwo cache
-
-Cache musi uwzględniać wszystkie dane wpływające na wynik geometrii.
-
-Jeżeli zmieni się stan świata lub inny parametr wpływający na mesh, stary wynik nie może zostać wykorzystany bez odpowiedniej invalidacji.
-
-Cache powinien mieć również kontrolowany rozmiar i mechanizm eviction, aby nie zamienić optymalizacji CPU w problem pamięci.
-
-### Potencjalny zysk
-
-Dla cache hit:
-
-```
-koszt generowania geometrii ≈ 0 ms
-```
-
-Nie zakładamy konkretnego procentowego wzrostu FPS, ponieważ całkowity efekt zależy od **cache hit rate**.
-
-To optymalizacja usuwająca powtarzalną pracę, a nie przyspieszająca pierwszą generację chunku.
-
-### Dlaczego nie robimy dodatkowego researchu
-
-Nie ma potrzeby wcześniej mierzyć potencjalnego hit rate.
-
-Jasne jest, że:
-
-```
-cache hit < ponowna generacja
-```
-
-Natomiast rzeczywisty hit rate można zmierzyć po implementacji podczas normalnego streamingu.
-
-Dlatego również tutaj właściwy cykl to:
-
-```
-implementacja → benchmark → pomiar cache hit rate → decyzja o dalszym tuningu
-```
-
----
-
-### Łączny kierunek
-
-Trzy optymalizacje tworzą jeden spójny pipeline:
-
-```
-┌──────────────────────────────┐
-│ Main Thread                  │
-│                              │
-│ request chunk                │
-└──────────────┬───────────────┘
-               │
-               ▼
-         ┌───────────┐
-         │   Cache   │
-         └─────┬─────┘
-               │ miss
-               ▼
-         ┌───────────┐
-         │  Worker   │
-         │           │
-         │ generate  │
-         │ mesh data │
-         └─────┬─────┘
-               │
-        Transferable
-          ArrayBuffers
-               │
-               ▼
-         ┌───────────┐
-         │   Three   │
-         │ BufferGeo │
-         └───────────┘
-```
-
-Główna oczekiwana korzyść:
-
-**generowanie chunk mesh przestaje blokować main thread w obecnym stopniu, a cache dodatkowo eliminuje koszt ponownej generacji wcześniej przygotowanych chunków.**
-
-Nie wykonujemy kolejnego researchu przed implementacją. Mamy wystarczająco mocny sygnał z benchmarku, a rzeczywisty efekt każdej optymalizacji będzie bardziej wartościowy jako wynik **A/B benchmarku po implementacji** niż jako wcześniejsza estymacja.
+- `docs/plans/world-terrain-004-chunk-mesh-streaming-geometry-optimization.md`
+- `docs/plans/implementation-notes/world-terrain-004-chunk-mesh-streaming-geometry-optimization-implementation-notes.md`
+- `src/terrain/chunkMeshData.ts`
+- `src/terrain/chunkMeshCache.ts`
+- `src/terrain/chunkWorkerPool.ts`
+- `src/terrain/chunkHeightmap.worker.ts`
+- `src/terrain/chunkManager.ts`
+- `src/terrain/buildChunkGeometry.ts`
