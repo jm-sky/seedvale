@@ -90,6 +90,20 @@ A plan describes **what and why**, not a line-by-line implementation.
 
 Do not assume that a plan, roadmap item or documentation matches the current code. The repository is the source of truth.
 
+## Implementation specificity
+
+Plans and implementation notes should reduce unnecessary recon and decisions during implementation **without reducing quality**.
+
+- Use the current codebase during planning.
+- Prefer verified files, symbols, types, state ownership, integration points and existing mechanisms over general guidance.
+- Resolve architectural decisions during planning when the code provides enough evidence. Leave implementation freedom only where it is genuinely justified.
+- Never invent specifics. Concrete guidance must come from current code or an explicitly defined dependency contract.
+- An unfinished dependency should not automatically make notes vague. Define its expected contract where possible; otherwise mark it as a real blocker.
+- Prefer extending existing mechanisms over suggesting parallel alternatives.
+- The implementing agent should not repeat already-resolved investigation, but must adapt when current code contradicts the plan.
+
+**Goal:** move well-supported recon and decisions into planning, reducing Claude Code work and token usage without sacrificing implementation quality.
+
 ## Implementation Notes
 
 Implementation notes are written **for the AI implementation agent**. Their purpose is to save Claude Code time, context and tokens by removing unnecessary repository rediscovery.
