@@ -1,232 +1,323 @@
 # Implementation Notes: NPC Death & Corpse Lifecycle
 
 **Plan:** `npc-010-death-and-corpse-lifecycle.md`
-**Status:** `planned`
+**Recon:** 2026-09-07, current `main`
 
-## Current-code findings
+## Najważniejsza korekta względem starego planu
 
-- NPC life is already authoritative in `NpcAuthoritativeState.health`, owned by the `NpcStateRegistry` on `SettlementsManager`. It survives settlement unload/reload and `WorldBundle` rebuilds. `HealthState.dead` is therefore the correct life/death source of truth.
-- The normal NPC damage path is already centralized in `NpcAgent.takeDamage()`: it calls `damageHealth()`, then invokes `die()` when the hit crosses into `dead`. `applyIncomingCombatDamage()` is the combat adapter and routes resolved damage into the same path.
-- `NpcAgent.die()` currently only performs runtime/death presentation cleanup: releases conversation/queue state, clears combat/action state, stops animation, rotates the mesh and hides HP UI. It explicitly does **not** create a corpse or consume inventory.
-- A dead authoritative NPC is passed through `die()` again when a new `NpcAgent` is constructed from an already-dead state. Therefore corpse creation must **not** simply be attached to `die()`; that would duplicate post-death processing on reconstruction.
-- The existing animal corpse lifecycle is **not** a generic corpse system. It is implemented inside `AnimalAgent` using `timeSinceDeath`, `corpseHeld`, `meatHarvested`, `CorpsePhase`, `corpsePhaseFromElapsed()` and `readyToRemove()`. `harvestedRemains.ts` supplies reusable remains presentation, but there is no shared NPC/animal corpse manager.
-- Animal decay is simulation-time driven and explicitly keeps lifecycle progression independent of FX distance/rendering. Reuse those semantics, but do not make NPCs depend on `AnimalAgent`.
-- `Inventory` is reusable and supports stack counts plus instance-backed items, with independent weight/size checks. However `NpcAgent.carried` is deliberately documented as a **temporary work/resource carrier**, not a persistent personal inventory.
-- `NpcAuthoritativeState` explicitly excludes `carried`. It resets when an `NpcAgent` is reconstructed. This is important: blindly moving all `carried` contents to corpse loot would turn transient ore/work resources into personal belongings and would also expose a lifecycle that currently is not authoritative.
-- `npcLoadout.ts` seeds role weapons, knives and hunter arrows directly into `carried`. These are the strongest candidates for future personal belongings, but today they are still transient runtime state. Do not silently make them persistent by this plan.
-- `Household.items` is the authoritative owner for household-level discrete goods (meat/hide/arrows/bandages etc.). `Household.stock` owns scalar economic resources. Do not move household/work resources into NPC corpse loot.
-- `QuestManager.relations` is player↔NPC relationship/standing data. It is not an ownership/legal/reputation system and has no corpse-looting authorization concept.
+NPC runtime state nie jest już tylko in-session.
 
-## Architecture decisions / recommendations
+`NpcAuthoritativeState` jest właścicielem siedmiu pól (`health`, `stamina`, `vigor`, `needs`, `physicalInjury`, `helperAssignment`, `activePlan`), a `NpcStateRegistry.serialize()` zapisuje je jako `NpcStateSnapshot`. `buildSaveData()` umieszcza snapshot w `SaveData.npcStates`; load przekazuje go przez `createWorldBundle()` → `SettlementsManager` → `createNpcStateRegistry(initialNpcStates)`. `rebuildWorldBundle()` używa tego samego snapshot/restore boundary.
 
-### 1. Keep `NpcAgent.die()` as runtime cleanup, not corpse ownership
+W praktyce `health.dead` przeżywa dziś:
 
-The post-death transition should be triggered only on the actual alive→dead edge, not whenever a dead NPC is reconstructed.
+- settlement unload/reload,
+- `WorldBundle` rebuild,
+- pełny save/load.
 
-Prefer a small death hook/callback from the NPC lifecycle into the settlement/world owner, e.g. conceptually:
+Nie budować corpse-only save path równolegle do tego mechanizmu.
 
-`takeDamage() -> dead transition -> onNpcDeath(id, position, ...)`
+Uwaga: komentarze w `src/settlement/npcState.ts` przy `helperAssignment`, `activePlan` i `NpcStateSnapshot` nadal miejscami twierdzą, że NPC state nie jest częścią `SaveData`. To stale comments po planie 197; zachowanie kodu i `SaveData.npcStates` są źródłem prawdy.
 
-Keep `die()` responsible for stopping the agent. The callback/owner creates or registers the corpse exactly once.
+## Aktualny death flow
 
-Do not add a second HP/death state.
+`NpcAgent.applyIncomingCombatDamage()` rozwiązuje defense i kieruje faktyczny damage do `takeDamage()`.
 
-### 2. Corpse state must outlive `NpcAgent`
+`takeDamage()`:
 
-A corpse cannot be owned only by `NpcAgent`: settlement streaming destroys/recreates agents. Store the authoritative corpse record outside the agent, keyed by stable NPC id, in the settlement/world ownership layer.
+1. mutuje shared `HealthState`,
+2. aktualizuje `physicalInjury`, vigor i blood trace,
+3. przy `health.dead` wywołuje `die()`.
 
-The record should contain only what is needed to resolve the lifecycle and world representation, for example:
+`die()` już poprawnie:
 
-- stable NPC id,
-- death position/yaw,
-- death-time/lifecycle anchor,
-- lifecycle state/flags,
-- loot inventory (once ownership semantics are settled),
-- burial handoff/held state needed by npc-011.
+- zwalnia aktywny work contract,
+- czyści in-flight action/conversation/combat state,
+- resetuje attack/projectile state,
+- odtwarza death animation albo fallback pose,
+- zeruje prezentację HP,
+- powoduje, że dalszy normalny update martwego NPC nie przebiega.
 
-Do not keep a live `NpcAgent` reference from the corpse.
+Nie przenosić tego cleanup do nowego corpse systemu.
 
-### 3. Do not force the animal implementation into an NPC abstraction prematurely
+### Krytyczna pułapka: `die()` nie jest edge eventem
 
-The current animal implementation is the best behavioural reference, not a ready-made shared service. If extracting a shared mechanism, extract only the pure lifecycle/state calculation that is genuinely common (phase + elapsed-time + held/processed/removal rules).
+Konstruktor po utworzeniu mesh ustawia NPC w `home.position`, a gdy hydrated `health.dead === true`, wywołuje `die(true)`. `npc-009` używa tego specjalnie, aby odtworzyć settled death pose bez replayowania animacji.
 
-Keep species/NPC-specific presentation and harvesting rules outside that abstraction.
+Dlatego:
 
-The existing `harvestedRemains.ts` can be reused for a bones/remains visual where semantically appropriate. Do not copy `animalHarvest.ts` into an NPC-specific variant.
+```text
+die() / die(true)
+≠
+"NPC właśnie umarł"
+```
 
-### 4. Resolve the persistence boundary explicitly
+Nie tworzyć corpse/loot bezpośrednio w `die()`. Potrzebny jest idempotentny alive→dead consequence zapisujący post-death state tylko przy rzeczywistym pierwszym lethal transition. Reconstruction jedynie materializuje istniejący persisted state.
 
-Full save/load currently does **not** persist NPC runtime state. The authoritative NPC registry is only an in-session continuity mechanism.
+## Gdzie powinien żyć corpse state
 
-Therefore npc-010 should not add partial corpse persistence unless the plan is deliberately expanded. Otherwise a save can contain:
+Najmniejszy spójny ownership boundary to rozszerzenie istniejącego `NpcAuthoritativeState` / `NpcStateSnapshot` o post-death state.
 
-`NPC alive/freshly regenerated after load`
+Powód:
 
-while the pre-save corpse is gone, because NPC death/HP is not in `SaveData`.
+- registry już jest keyed stable `NpcId`,
+- już ma dokładnie właściwy settlement/save/rebuild lifetime,
+- martwy NPC pozostaje w deterministycznym rosterze, więc nie potrzeba osobnego identity registry,
+- osobny top-level `SaveData.npcCorpses` duplikowałby lifecycle tego samego entity.
 
-This is an existing architectural boundary, not a corpse bug. Verification for npc-010 should distinguish:
+Preferowany model semantyczny:
 
-- same-session stream-out/in / `WorldBundle` rebuild — must preserve death/corpse/loot without duplication;
-- full save/load — NPC runtime/corpse persistence remains out of scope unless a persistence plan takes ownership.
+```ts
+NpcAuthoritativeState {
+  health: HealthState
+  // ...existing fields
+  postDeath: NpcPostDeathState | null
+}
+```
 
-Do not add a corpse-only save schema that creates a second inconsistent NPC persistence model.
+Nie przywiązywać implementacji do tej konkretnej nazwy, ale stan musi rozróżniać co najmniej:
 
-### 5. World-independence means no render dependency, not off-screen NPC simulation
+- brak śmierci,
+- aktywny corpse,
+- terminalny cleanup/no active corpse,
+- przyszły burial claim/handoff bez wdrażania burial.
 
-NPCs currently exist/tick as part of loaded settlements. There is no full off-screen NPC simulation that can currently produce a new NPC death while its settlement is unloaded.
+Dla aktywnego corpse potrzebne są dane, których obecnie nie ma w save:
 
-The corpse record itself should nevertheless be simulation-owned and independent of camera/rendering. Once created, its decay must not require the corpse mesh to remain loaded.
+- death position (`x/y?` lub `x/z` + ground resample) i yaw jeśli potrzebny,
+- trwały lifecycle/death-time anchor,
+- loot snapshot,
+- flags potrzebne do idempotencji/processing.
 
-For robust streaming, prefer an absolute simulation-time/death-time anchor or equivalent lazy resolution over a render-frame timer tied to a Three.js object. This also makes unload/reload and time-skip handling deterministic.
+### Death position jest konieczna
 
-## Loot: important current limitation
+Obecnie dead NPC przy load/reconstruction startuje w `home.position`, bo pozycja NPC nie jest częścią `NpcStateSnapshot`. Bez nowej post-death pozycji corpse po save/load przeskoczyłby do domu.
 
-The plan's distinction between personal belongings and transported resources is correct, but the current code does not yet have a persistent NPC personal-inventory ownership model.
+Nie próbować rekonstruować death position z aktualnego `NpcAgent.mesh` podczas hydration — wtedy mesh już reprezentuje świeżo utworzonego NPC w home.
 
-Before implementing loot, trace every current use of `carried`:
+## Lifecycle: reuse idei z fauna, nie klasy
 
-- role weapon / knife loadout,
-- hunter arrows,
-- mined ore,
-- harvested food/hide during hunting,
-- dialogue assistance items,
-- deposits/exchanges.
+Animal corpse pipeline nie jest generic corpse systemem. Jest zaszyty w `AnimalAgent` przez m.in.:
 
-Only items with a defensible personal-ownership contract should enter corpse loot.
+- `timeSinceDeath`,
+- `corpseHeld`,
+- `meatHarvested`,
+- `CorpsePhase`,
+- `corpsePhaseFromElapsed()`,
+- `readyToRemove()`,
+- presentation helpers (`harvestedRemains`, rot FX).
 
-In particular:
+Fauna daje dobry reference dla:
 
-- mined ore must remain a transport/work item;
-- household goods must remain owned by `Household.items`;
-- settlement/economy resources must never become personal loot;
-- a temporary deposit payload must not be duplicated into a corpse;
-- instance-backed weapons must preserve their instance id/state if they are eventually classified as personal.
+- faz `fresh → rotting → bones → removed`,
+- separacji simulation truth od presentation,
+- idempotentnego cleanup,
+- tombstone po usunięciu deterministycznie respawnowanego livestock.
 
-If the implementation needs durable personal belongings, prefer extending the existing NPC authoritative state with the **minimal owned inventory state** rather than treating the transient `carried` inventory as authoritative. This is a meaningful architectural change and should not be hidden inside corpse code.
+Nie uzależniać NPC od `AnimalAgent`. Jeżeli timing/phase rules mają być identyczne, wyciągnąć mały pure shared helper zamiast tworzyć hierarchię „generic corpse agent”.
 
-## Loot transfer
+### Preferuj absolute/lazy time anchor
 
-Reuse `Inventory.canAdd()`, `canAddInstance()`, `add()`, `addInstance()`, `remove()` and `removeInstance()`. Do not mutate the backing maps or invent corpse-specific item storage semantics.
+Animal runtime może trzymać `timeSinceDeath` w sekundach. Dla NPC lepszy jest trwały anchor oparty o world simulation time (`elapsedDays`/world days), bo:
 
-For an atomic transfer:
+- `NpcAgent.simClock` jest runtime-only,
+- settlement może być unloaded,
+- save/load i time skip muszą zachować wiek corpse,
+- nie trzeba globalnie tickować corpse daleko od gracza.
 
-1. determine exactly which item units/instances are eligible;
-2. check receiver capacity before removing them from corpse;
-3. transfer only the amount that fits;
-4. leave the remainder in corpse.
+Po materialize można wyliczyć aktualną fazę z `nowDays - deathAtDays`. Processing/loot/burial flags pozostają authoritative, a czysto czasowa faza może być derived.
 
-For instance items, preserve the original `ItemInstance.id` and state. Never clone an instance into two owners.
+To spełnia world independence bez dodawania w tym planie pełnej off-screen symulacji żywych NPC.
 
-Perishable food needs the existing food-batch semantics; do not collapse it into plain counts if it ever becomes eligible loot.
+## Persistence i migration
 
-## Unauthorized looting / reputation is currently underspecified
+Aktualnie `CURRENT_SAVE_VERSION = 6`; istnieje realny `SAVE_MIGRATIONS` chain i write/read validation.
 
-There is no existing legal/ownership/reputation mechanism that can currently distinguish `authorized recovery` from `unauthorized looting`.
+Jeżeli implementation rozszerza persisted `NpcStateSnapshot`, należy:
 
-`QuestManager.getRelation()/getPlayerStanding()` is not a substitute.
+1. bumpnąć `CURRENT_SAVE_VERSION`,
+2. dodać pojedynczą migrację z poprzedniej wersji,
+3. rozszerzyć `isSaveData()`/validator post-death fields,
+4. rozszerzyć test fixture i migration tests w `src/persistence/saveData.test.ts`,
+5. przetestować `NpcStateRegistry` serialize → hydrate round-trip.
 
-Do **not** invent a new global reputation/legal system inside npc-010. The safest implementation boundary is to expose a minimal loot-consequence seam and leave it inert until an existing ownership/authority source can supply the decision, or explicitly narrow npc-010 to neutral transfer semantics.
+Nie obchodzić tego przez opcjonalne pole z komentarzem „stare save'y domyślnie null”: obecna konwencja repo wymaga migracji przy zmianie persisted representation/semantics.
 
-This is a plan-level gap worth resolving before implementation; otherwise an agent will likely create an unjustified second reputation system.
+### Legacy dead NPC
+
+Stary save może mieć:
+
+```ts
+health.dead === true
+```
+
+ale nie ma:
+
+- rzeczywistej death position,
+- death time,
+- corpse state,
+- corpse loot.
+
+Migracja nie może tych danych wiarygodnie odtworzyć.
+
+Najbezpieczniejszy default:
+
+```text
+legacy alive → postDeath = null
+legacy dead  → terminal/no-active-corpse legacy state
+```
+
+lub równoważna reprezentacja.
+
+Nie generować dla legacy dead NPC świeżego corpse z `home.position` ani loadout lootu. To tworzyłoby fikcyjną historię i może duplikować item instances.
+
+Od pierwszego save po implementacji nowe śmierci zapisują pełny post-death state i odtwarzają go normalnie.
+
+## `NpcAgent.carried` i loot ownership
+
+`carried` nadal jest prywatnym, runtime-only `Inventory` z małym carry capem. Domain docs trafnie opisują je jako krótki hold między claim/extraction a delivery; nie jest persisted belongings inventory.
+
+Jednocześnie combat używa tego samego inventory do loadoutu.
+
+Aktualny kod `npcLoadout.ts`:
+
+| Role | startowy loadout |
+|---|---|
+| `woodcutter` | `axe` + `knife` |
+| `guard` | `long_sword` |
+| `hunter` | `hunting_bow` + `knife` + 6 `arrow` |
+| pozostałe role | `knife` fallback |
+
+`seedDefaultRoleWeapon()` tworzy realne weapon `ItemInstance`, więc durability/sharpness live na tej instancji podczas sesji.
+
+`npc-019` nie zmienił tego ownership modelu. Dodał deterministic SPEA + shared Strength→melee rule; lethal damage dalej przechodzi przez ten sam `takeDamage()`.
+
+### Jak klasyfikować loot
+
+Nie robić:
+
+```ts
+corpse.inventory = npc.carried
+```
+
+bo `carried` może zawierać:
+
+- ore w drodze do economy,
+- household food/wood/water-related payload,
+- harvest z polowania przed delivery,
+- exchange/helper delivery goods,
+- crafted/resupplied arrows i inne materiały pracy.
+
+Role loadout jest dziś jedynym wyraźnym semantycznym sygnałem „to jest wyposażenie tego NPC”, ale nadal nie ma osobnego ownership tagu per item.
+
+Jeżeli v1 ma lootować wyposażenie, dodaj minimalny classifier bazujący na istniejących `npcLoadout` semantics. Na alive→dead edge przenieś **rzeczywistą aktualną instancję** kwalifikującego się wyposażenia z `carried` do persisted corpse loot. Nie twórz nowej instancji na podstawie roli.
+
+Dla arrows trzeba podjąć jawnie decyzję, czy są personal carried ammo czy household work supply. Kod nie daje ownership flag; nie zgadywać przez „wszystko co hunter niesie”.
+
+Nie rozszerzać planu do persisted personal inventory żywego NPC, chyba że implementacja wykaże, że bez tego wymagane semantics są niemożliwe. Corpse loot może stać się persisted dopiero na death edge.
+
+## Corpse loot storage / transfer
+
+Nie potrzeba nowej klasy itemów. Reuse:
+
+- `Inventory`,
+- existing item instance serialization shape,
+- `canAdd` / `canAddInstance` + atomic remove/add semantics,
+- obecne capacity/weight rules.
+
+Post-death snapshot powinien przechowywać plain data, nie `Inventory` object. Przy materialize można zbudować Inventory z persisted counts/instances, analogicznie do innych owners w repo.
+
+Transfer musi mieć kolejność:
+
+```text
+validate receiver capacity
+→ add receiver
+→ remove/mutate corpse ownership exactly once
+```
+
+albo istniejący atomic helper o równoważnej semantyce. Failed transfer pozostawia corpse bez zmian.
+
+## Relationships / reputation
+
+Nie ma obecnie seam'u, który odpowiada na pytanie „czy gracz ma prawo zabrać przedmiot po tym NPC”.
+
+Istnieją:
+
+- `NpcRelationships`: symmetric NPC↔NPC, persisted, dziś używane przez conversation outcomes,
+- `QuestManager` player↔NPC relation keyed by NPC name oraz standing lookup używany społecznie,
+- family/household mapping z `createSettlement.ts`.
+
+Żaden z tych systemów nie jest ownership/legal authority.
+
+Nie stosować kary reputacji na podstawie samego faktu lootowania i nie traktować family/household jako automatycznego „heir authorization”. V1 powinno pozostać neutralne. Jeżeli UI/interact resolver potrzebuje seam'u, może istnieć inert callback/result do późniejszego ownership planu, ale bez nowego globalnego managera.
+
+## Household / death consequences
+
+Family → household → house mapping już istnieje i jest stabilnie odtwarzany deterministycznie. `Household` oraz NPC↔NPC relations są persisted.
+
+Nie oznacza to, że `npc-010` ma aktualizować family roster, ekonomię albo relacje po śmierci. Household response, inheritance, mourning i burial decisions pozostają poza scope.
+
+Ważne tylko, aby corpse state był keyed tym samym stable `NpcId`; `npc-011` może później rozwiązać family/household z istniejącej settlement definicji zamiast duplikować genealogy w corpse.
+
+## Materialization i cleanup
+
+Preferowany flow:
+
+```text
+real lethal edge
+→ write postDeath state (position/time/loot/status)
+→ die() runtime cleanup / death presentation
+→ settlement materializes corpse while loaded
+→ stream-out: mesh disappears, state stays in NpcStateRegistry
+→ stream-in/load: resolve phase from persisted state + world time
+→ terminal cleanup: mark postDeath terminal, dispose presentation
+```
+
+Do natural cleanup nie używać samego `scene.remove()` jako źródła prawdy.
+
+Po terminal cleanup `health.dead` nadal pozostaje `true`. To jest ważna różnica względem livestock tombstone: NPC nie jest usuwany z deterministic roster, tylko jego corpse przechodzi do terminalnego stanu.
+
+Nie kopiować `removedLivestockIds` tylko dlatego, że fauna go ma. Livestock potrzebuje tombstone, żeby deterministic spawning nie odtworzył całego zwierzęcia. NPC ma już persisted dead authoritative state keyed stable id.
 
 ## Burial handoff
 
-The corpse record should expose enough stable state for npc-011 to claim/hold it later, but npc-010 should not decide burial.
+`npc-011` potrzebuje później możliwości zatrzymania naturalnego cleanup i przejęcia corpse. W `npc-010` wystarczy mała persisted semantyka typu active/claimed/terminal albo równoważna.
 
-Avoid locking the implementation to `canBeBuried()` / `bury()` before npc-011 defines the contract. A small internal lifecycle state such as `held/buried` is fine if it is needed to prevent natural cleanup, provided it does not become a burial decision system.
+Nie projektować teraz burial task queue, grave id ani funeral ownership.
 
-Natural decay must check the handoff/held state before cleanup.
+## Testy, które realnie chronią regresje
 
-## Lifecycle and cleanup
+Najważniejsze focused tests:
 
-Use the existing animal lifecycle as the tuning/reference point:
+- `NpcStateRegistry`: alive/dead + postDeath serialize/hydrate round-trip,
+- current-version save validator przy poprawnym/błędnym postDeath,
+- migration: legacy alive → no postDeath,
+- migration: legacy dead → terminal/no fabricated corpse,
+- lethal edge tworzy state/loot raz,
+- constructor hydration `die(true)` nie tworzy nowego state/loot,
+- death transform round-trip — corpse nie wraca do home,
+- lifecycle phase z absolute time anchor po dużym skoku czasu,
+- terminal cleanup nie odtwarza corpse po stream/reload,
+- item instance ID/durability zachowane przez corpse save/load,
+- failed inventory transfer nie usuwa loot.
 
-- `fresh`
-- `rotting`
-- `bones/remains`
-- removed
+Docs-only update nie wymaga uruchamiania testów/build. Podczas implementacji uruchomić istniejące NPC/persistence tests i build.
 
-The current animal implementation has explicit 20s/40s phase thresholds and 60s unharvested lifetime; do not copy these values automatically to NPCs unless the design intends identical timing.
+## Pułapki
 
-Most importantly, separate:
+- Nie traktuj `die()` jako one-shot death event — hydration też je wywołuje.
+- Nie zapisuj corpse tylko jako Three.js object/world prop bez authoritative record.
+- Nie wykorzystuj `NpcAgent.simClock` jako persisted corpse age.
+- Nie twórz corpse w home dla legacy dead NPC.
+- Nie seeduj loadoutu drugi raz jako loot po loadzie.
+- Nie zapisuj całego `carried` jako własności osobistej.
+- Nie przenoś household/economy stock do corpse.
+- Nie wprowadzaj osobnego corpse save collection bez potrzeby.
+- Nie kopiuj livestock tombstone mechanicznie; problem identity NPC jest już rozwiązany przez `NpcStateRegistry`.
+- Nie używaj NPC↔NPC relations ani `QuestManager` relation jako legal ownership.
+- Nie rozszerzaj tego planu do full unloaded-settlement NPC simulation.
+- Nie zmieniaj shared Strength/melee path z `npc-019`.
 
-- authoritative lifecycle state/time,
-- Three.js representation,
-- loot ownership,
-- cleanup/removal.
+## Recon discrepancy poza scope tego update
 
-A corpse mesh disappearing must never be the event that advances or completes the lifecycle.
-
-If the corpse is streamed out, keep only its authoritative record. When streamed back in, reconstruct presentation from that record instead of starting a new timer.
-
-## Integration points
-
-Likely ownership path:
-
-`NpcAgent`
-→ actual death transition
-→ `createSettlement.ts` / settlement-owned death hook
-→ settlement/world corpse registry
-→ corpse presentation + interaction
-
-Relevant existing seams to reuse:
-
-- `HealthState` / `damageHealth` for life state;
-- `NpcAuthoritativeState` / `NpcStateRegistry` for stable NPC identity and in-session continuity;
-- `NpcAgent.die()` for stopping active behaviour;
-- `Inventory` for item transfer and instance preservation;
-- `Household.items` / `Household.stock` for non-personal ownership;
-- `harvestedRemains.ts` for reusable remains presentation;
-- existing animal corpse phase/timing logic as the lifecycle reference;
-- existing NPC trace/inspection infrastructure for diagnostics.
-
-Do not introduce a global God-object that owns health, NPC AI, inventory, relationships and corpse rendering.
-
-## Important edge cases
-
-- A dead NPC reconstructed from `NpcStateRegistry` must not create a second corpse.
-- A lethal hit must end active combat/action state before corpse ownership is finalized.
-- Death must release interaction queues/conversation exactly as current `die()` does.
-- A corpse must not keep a reference to a disposed `NpcAgent`.
-- Settlement stream-out must not turn a live corpse record into a fresh NPC or lose its loot.
-- Loot transfer must be one-way and capacity-aware.
-- Natural cleanup must never remove unclaimed loot silently. Define an explicit rule for what happens to loot when the corpse reaches the terminal phase; the current animal remains path does not solve this for item-bearing NPC corpses.
-- Burial handoff must block natural cleanup after the burial system claims the corpse.
-- Time skip must advance corpse lifecycle through simulation time, not by relying on render updates.
-- If a corpse is represented by a cloned NPC mesh, dispose it through the normal Three.js disposal path and never leave the original agent/label references attached.
-
-## Debug
-
-Reuse the existing NPC inspection/trace style rather than creating a separate diagnostics framework.
-
-Useful minimum data:
-
-- NPC id + `health.dead`,
-- corpse id / source NPC id,
-- death position,
-- lifecycle phase + elapsed/anchor time,
-- held/burial state,
-- eligible loot summary,
-- actual corpse inventory contents,
-- cleanup reason.
-
-The debug surface should read authoritative state, not infer death from whether a mesh happens to exist.
-
-## Suggested implementation order
-
-1. Confirm all current NPC lethal-damage paths still converge on `NpcAgent.takeDamage()`.
-2. Define the minimal corpse record/ownership boundary outside `NpcAgent`.
-3. Add the one-time alive→dead hook without changing `HealthState`.
-4. Separate corpse lifecycle state from NPC runtime/mesh lifetime.
-5. Add corpse presentation and streaming reconstruction.
-6. Resolve/classify NPC carried items before implementing loot transfer.
-7. Add inventory transfer with instance/stack atomicity.
-8. Add burial handoff guard.
-9. Add cleanup and explicit unclaimed-loot rule.
-10. Add focused tests for death idempotency, streaming/rebuild continuity, lifecycle timing and inventory atomicity.
-
-The biggest implementation risk is treating today's transient `carried` inventory as a personal NPC inventory. The second is attaching corpse creation to `die()`, which is called again when an already-dead authoritative NPC is reconstructed.
-
-## Verification scope note
-
-The plan's full-save/reload verification cannot currently be satisfied without crossing the explicit NPC persistence boundary. Keep npc-010 verification focused on same-session streaming/rebuild and simulation lifecycle unless persistence ownership is intentionally moved to a separate plan.
+`docs/state/combat.md` opisuje starszą wersję role loadout, w której część profesji była unarmed. Aktualny `src/ai/npcLoadout.ts` daje każdej roli co najmniej `knife` fallback. Dla implementacji `npc-010` kierować się kodem; tego osobnego state doc nie zmieniano w ramach tego zadania.
