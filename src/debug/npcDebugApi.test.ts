@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NpcInspectionSnapshot } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
+import type { QuestManager } from '../quests/QuestManager'
 import type { SettlementCell, SettlementDef } from '../settlement/settlementGenerator'
 import type { SettlementsManager } from '../settlement/SettlementsManager'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
@@ -14,6 +15,11 @@ import { installNpcDebugApi } from './npcDebugApi'
 vi.mock('../terrain/riverNetwork', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../terrain/riverNetwork')>()
   return { ...actual, computeRiverTile: vi.fn() }
+})
+
+vi.mock('../quests/QuestManager', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../quests/QuestManager')>()
+  return { ...actual, QuestManager: vi.fn() }
 })
 
 afterEach(() => {
@@ -107,7 +113,10 @@ function install(
     catalog: { getById: () => null, nearestSettlements: () => [], landmarksWithin: () => [], invalidateScanCache: () => {} } as unknown as WorldLocationCatalog,
     knowledge: { get: () => undefined, has: () => false, reveal: () => false, list: () => [], serialize: () => [], restore: () => {}, clear: () => {} } as unknown as LocationKnowledge,
   }
-  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags, worldLocations, () => createPlayerSkills())
+  const questManager = {
+    onInteractObjective: vi.fn(),
+  } as unknown as QuestManager
+  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags, worldLocations, () => createPlayerSkills(), questManager)
   return { teleport, api: typeof window === 'undefined' ? undefined : window.seedvale?.debug }
 }
 

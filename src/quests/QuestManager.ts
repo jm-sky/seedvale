@@ -487,8 +487,12 @@ export class QuestManager {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state !== 'active') continue
+
       const stage = this.currentStage(def, s.stageIndex)
       if (!stage) continue
+
+      this.bindAnimalTargetIfNeeded(def, s.stageIndex)
+
       const boundAnimalId = this.animalTargets.get(def.id)
       // `find_animal`'s bound target dying is failure, not progress — unlike
       // `kill_target_animal`, where the same `animal_died` ref means success

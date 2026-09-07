@@ -1,7 +1,8 @@
 import type { NpcInspectionSnapshot, NpcWhy } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
-import type { AnimalAgent } from '../fauna/AnimalAgent'
+import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
+import type { QuestManager } from '../quests/QuestManager'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
@@ -227,6 +228,7 @@ export type SeedvaleDebugApi = {
   getNextFrenzyWolf: () => AnimalAgent | null
   /** Plan items-player-016 — see `SkillsDebugApi`'s doc. */
   skills: SkillsDebugApi
+  spotAnimal: (kind: AnimalKind) => void
   help: () => string
 }
 
@@ -255,6 +257,7 @@ const HELP_TEXT = [
   'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
   'getFrenzyWolves() / getCurrentFrenzyWolf() / getNextFrenzyWolf() — frenzied-wolf DevTools selection; each returned wolf has showDebug()/hideDebug()/toggleDebug()/getDebugInfo()',
   'skills.getSkills() — every skill\'s current {value, xp}; skills.setSkillValue(id, value) — dev-only direct set (can lower, unlike real gameplay); skills.addSkillXp(id, xp) — award raw XP through the normal path',
+  'spotAnimal(kind) — simulate spotting an animal for quest progression',
 ].join('\n')
 
 /** Installs `window.seedvale.debug` when `?debug` is enabled; a no-op
@@ -282,6 +285,7 @@ export function installNpcDebugApi(
    *  current player without re-installing after a rebuild (plan
    *  items-player-016). */
   getPlayerSkills: () => PlayerSkills,
+  questManager: QuestManager,
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
 
@@ -445,6 +449,12 @@ export function installNpcDebugApi(
     getCurrentFrenzyWolf: () => getCurrentFrenzyWolf(bundle),
     getNextFrenzyWolf: () => getNextFrenzyWolf(bundle),
     skills: skillsDebug,
+    spotAnimal: (kind) => {
+      questManager.onInteractObjective({
+        type: 'spot_animal',
+        kind,
+      })
+    },
     help: () => HELP_TEXT,
   }
   window.seedvale = { ...window.seedvale, debug: api }

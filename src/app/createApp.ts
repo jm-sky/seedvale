@@ -1250,6 +1250,7 @@ export async function createApp(
     worldFlags,
     { catalog: worldLocationCatalog, knowledge: locationKnowledge },
     () => player.skills,
+    questManager,
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {
