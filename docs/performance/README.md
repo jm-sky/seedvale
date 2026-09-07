@@ -1,87 +1,22 @@
 # Seedvale — Performance & Rendering Strategy
 
-**Updated:** 2026-09-02
+**Updated:** 2026-09-07
 **Status:** active
 **Scope:** CPU · GPU · memory · rendering · chunk streaming · scalability
 
----
+This is the central overview of Seedvale performance. Current code remains the source of truth; historical measurements and research are evidence, not a current implementation checklist.
 
-## Recent plans
+## Performance model
 
-- `docs/performance/optymalizacja-chunk-mesh-streaming-geometrii.md`
+Keep three problems separate:
 
-## 1. Purpose
+- **Sustained frame cost:** draw calls/submissions, geometry, shadows, reflections, post-processing.
+- **Frame hitches:** chunk streaming, shader/program first use, synchronous WebGL/driver waits, main-thread stalls.
+- **Scalability:** NPC/fauna/settlement size, loaded chunks, memory and unbounded interaction queries.
 
-This document is the central overview of Seedvale performance.
+## Baseline
 
-It describes:
-
-- confirmed performance bottlenecks,
-- techniques already in use,
-- techniques not yet implemented,
-- recommended optimization order,
-- expected impact, effort and risk,
-- performance verification rules.
-
-Detailed measurements, experiments and implementation notes remain in `docs/reviews/`, `docs/research/` and `docs/plans/`.
-
----
-
-# 2. Performance Model
-
-Seedvale has three different performance problems.
-
-### Sustained frame cost
-
-Affects average FPS and frame time.
-
-Main factors:
-
-```text
-draw calls
-→ scene submissions
-→ geometry / triangles
-→ shadows
-→ reflections
-→ post-processing
-```
-
-### Frame hitches
-
-Affects frame-time spikes rather than average FPS.
-
-Main factors:
-
-```text
-chunk streaming
-→ material/program first use
-→ shader compilation/linking
-→ synchronous WebGL/driver waits
-→ main-thread stalls
-```
-
-### Scalability
-
-Affects performance as the simulated world grows.
-
-Main factors:
-
-```text
-NPC count
-fauna count
-settlement size
-loaded chunks
-memory / GPU resources
-O(N²) interaction queries
-```
-
-These categories should be diagnosed separately.
-
----
-
-# 3. Current Baseline
-
-The latest representative browser benchmark showed approximately:
+The September 1 benchmark batch is historical. Representative values were roughly:
 
 | Scenario | FPS | Frame p95 | Render | Water | NPC | Fauna |
 |---|---:|---:|---:|---:|---:|---:|
@@ -90,526 +25,207 @@ The latest representative browser benchmark showed approximately:
 | forest | 81.4 | 16.5 ms | 7.2 ms | 2.9 ms | 0.9 ms | 0.5 ms |
 | water | 61.8 | 25.5 ms | 11.6 ms | 2.6 ms | 0.9 ms | 0.5 ms |
 
-These values are a historical baseline. Rendering changes made afterwards require a fresh browser benchmark before being treated as the current baseline.
+Do not treat these as the current baseline after later rendering/streaming changes. Establish a fresh browser baseline before deciding the next major optimization.
 
-Running the `?benchmark=` harness via `agent-browser`: see [agent-browser-benchmarking.md](./agent-browser-benchmarking.md) for the API, known pitfalls (start-menu hang, `eval`'s CDP timeout, benchmark-runner reentrancy) and the before/after worktree methodology — read it before running a benchmark, it documents real failures hit doing this.
+## Current implementation state
 
----
+### Chunk mesh streaming — implemented
 
-# 4. Confirmed Bottlenecks
+`world-terrain-004-chunk-mesh-streaming-geometry-optimization.md` implemented the previously planned worker migration and cache.
 
-## 4.1 Rendering submissions — HIGH
-
-Heavy scenes historically reach roughly 1,300–2,000 draw calls.
-
-Vegetation is a major contributor because many `InstancedMesh` objects contain only a small number of instances.
-
-The key problem is therefore not simply "too many instances":
-
-> **There are too many separate render submissions for the amount of geometry being rendered.**
-
-### Direction
-
-Use larger but still spatially local batches.
-
-Preferred approach:
+Current pipeline:
 
 ```text
-chunk × species
-        ↓
-region × species
+ChunkManager
+  → tile job in existing ChunkWorkerPool
+  → main-thread runtime terrain modifications
+  → bounded ChunkMeshData cache lookup
+      ├─ HIT
+      └─ MISS → mesh job in existing worker pool → computeChunkMeshData()
+  → buildChunkGeometry()
+  → short Three.js geometry / mesh finalization on main thread
 ```
 
-Avoid one global vegetation batch because it would reduce culling effectiveness and complicate streaming.
+Important facts:
 
----
+- `computeChunkMeshData()` in `chunkMeshData.ts` owns the CPU-heavy data-only per-vertex extraction.
+- It runs through the existing `chunkWorkerPool.ts` / `chunkHeightmap.worker.ts` worker system; there is no second mesh worker system.
+- `buildChunkGeometry.ts` now assembles Three.js objects from computed `ChunkMeshData`; it no longer owns the old terrain/color/normal computation loop.
+- `chunkMeshCache.ts` is a bounded runtime byte-budgeted LRU cache of `ChunkMeshData`, not Three.js objects.
+- Runtime terrain modifications remain authoritative before the mesh job; request sequence/identity guards prevent stale result attachment.
+- Historical `chunk mesh` 51× / avg ~45.5 ms / max ~92.6 ms values describe the pre-implementation baseline, not current behavior.
 
-## 4.2 Water mirror — HIGH
+See [`optymalizacja-chunk-mesh-streaming-geometrii.md`](./optymalizacja-chunk-mesh-streaming-geometrii.md) and the `world-terrain-004` implementation notes.
 
-Reflection rendering can reproduce a large portion of the scene.
+### Vegetation render batching — implemented
 
-Historical measurements showed:
+The old `chunk × kind/species` batching bottleneck was addressed by archived plan 143.
 
-- hundreds of additional draw calls,
-- millions of additional triangles,
-- several milliseconds of frame cost,
-- substantial FPS improvement when the mirror was disabled.
+`src/terrain/vegetationRegionBatcher.ts` currently uses fixed **3×3 chunk rendering regions** and rebuild-on-change. It batches living trees, bushes, cacti, reeds, ferns, lilies, seaweed and selected environment props while preserving chunk ownership/streaming. LOD and reflection visibility are synchronized per region using conservative member visibility/distance rules.
+
+Therefore **“implement region vegetation batching” is not future work**. Any follow-up must start from fresh measurement of the current region-batched renderer and identify a remaining submission/culling/rebuild bottleneck. Do not create a second batching mechanism or a global vegetation batch without evidence.
+
+### Water mirror — optimized, small follow-up planned
 
 Already implemented:
 
-- reduced reflection resolution,
-- reduced update frequency,
-- layer filtering,
-- NPC/fauna exclusion,
-- grass exclusion,
-- other unnecessary object exclusions.
+- one shared 128² mirror,
+- capped update cadence,
+- water/agents/grass/small-detail layer exclusions,
+- outer streaming-ring reflection exclusion,
+- no shadow-map update during the mirror pass.
 
-### Remaining direction
+Archived plan 144's first distance/content exclusion produced only a modest draw-call reduction and no clear FPS/WATER improvement. `world-terrain-015-water-reflection-content-budget.md` is intentionally measurement-gated: find one cheap remaining reflection-content win or stop. Do not turn it into a reflection HLOD/parallel visibility system by default.
 
-Further reflection-specific:
+### Shader/program first-use hitches — still open
 
-- distance culling,
-- LOD,
-- simplified representations.
+A September 1 census observed 773 materials mapping to roughly 72 WebGL programs (73 max). Program creation progressed during streaming and correlated with first-use hitches; the clearest event was 43 → 54 programs with roughly 183 ms post-process render.
 
----
-
-## 4.3 Shadows — HIGH
-
-Shadow rendering multiplies scene work because shadow casters are rendered in an additional pass.
-
-Already implemented:
-
-- controlled shadow updates,
-- explicit update scheduling,
-- one shadow update per frame,
-- separation from mirror rendering,
-- distance-based shadow caster filtering for NPC/fauna (`NPC_SHADOW_DISTANCE`/`FAUNA_SHADOW_DISTANCE`, plan 113 P2),
-- distance-based shadow disabling for small procedural props/items (`SMALL_MESH_SHADOW_THRESHOLD`, review 005 A2 and plan 145 R2),
-- pull-based, fail-open dirty/budget shadow-map update (plan 145 R1 — implemented, `verification needed`; benchmark/visual check pending).
-
-Terrain and vegetation/prop distance filtering were investigated (plan 145) and found already covered for free by Three.js's own per-object shadow-frustum culling and by the existing LOD/`InstancedMesh.count` mechanism — no separate mechanism needed there.
-
-### Remaining direction
-
-- Confirm plan 145 (R1/R2) with a browser benchmark and visual check before treating the gain as real.
-- Simplified shadow participation for vegetation/terrain beyond what plan 145 already found sufficient — only revisit if a benchmark shows it's still a dominant cost.
-
----
-
-## 4.4 Post-processing — MEDIUM/HIGH
-
-Current pipeline includes:
+No redundant program family has been proven. Do **not** blindly consolidate materials/programs and do not repeat generic `compileAsync()` prewarm experiments. Correct flow:
 
 ```text
-RenderPass
-→ N8AO
-→ SMAA
-→ Bloom
-→ God Rays
-→ OutputPass
+measure
+→ identify a specific variant / first-use cause
+→ make one targeted change
+→ benchmark
 ```
 
-Already implemented:
+See [`audits/2026-09-01--program-census.md`](./audits/2026-09-01--program-census.md).
 
-- half-resolution AO,
-- adaptive AO suppression,
-- half-resolution Bloom,
-- conditional God Rays,
-- controlled post-processing passes.
+### Shadows
 
-### Remaining direction
+Controlled updates, NPC/fauna distance filtering, small-prop/item filtering and the plan-145 dirty/budget mechanism exist. Revisit terrain/vegetation shadow participation only if a fresh benchmark identifies shadows as dominant; existing Three.js frustum culling and LOD already cover much of this work.
 
-Only after measuring the current configuration:
+### Post-processing
 
-- cheaper AO architecture,
-- depth reuse,
-- dynamic resolution,
-- temporal techniques if justified.
+Current pipeline is EffectComposer with N8AO, SMAA, Bloom, God Rays and OutputPass. Existing optimizations include half-resolution AO/Bloom and conditional expensive passes. N8AO enable/disable is preset/GUI controlled; do not reintroduce frame-time on/off oscillation.
 
-Do not add temporal rendering simply because it is technically available.
+Potential follow-ups such as cheaper AO/depth reuse or dynamic resolution require measurement first.
 
----
+### CPU simulation scalability
 
-## 4.5 Chunk streaming hitches — CRITICAL
+Current NPC/fauna simulation is not the primary performance target. There are future O(N²)-style proximity/predator-prey pressures. When population scale makes them measurable, prefer one shared coarse spatial-query mechanism rather than parallel NPC/fauna systems.
 
-Streaming hitches are a separate problem from average FPS.
-
-Investigation identified a major first-use WebGL stall:
-
-```text
-chunk becomes visible
-→ new material/program is used
-→ shader/program work
-→ synchronous WebGL/driver wait
-→ large main-thread stall
-```
-
-A reproduced trace contained a roughly 500+ ms synchronous wait inside the rendering path.
-
-### Important conclusion
-
-Disabling shader error checking did **not** solve the problem. It only moved the synchronization point.
-
-`compileAsync()` experiments also did not produce a usable solution.
-
-### Remaining direction
-
-Investigate:
-
-1. number of generated WebGL programs,
-2. material/shader variant proliferation,
-3. opportunities for material consolidation,
-4. safe program warm-up outside the latency-critical streaming path.
-
-The goal is not to hide the stall but to prevent first-use compilation from happening when a chunk becomes visible.
-
----
-
-## 4.6 Chunk mesh CPU generation — CRITICAL (largest confirmed streaming hitch)
-
-This is a separate problem from 4.5's shader/program first-use stall: it is CPU cost, not a GPU/driver wait.
-
-### Current state
-
-`ChunkManager`'s worker pool (`chunkWorkerPool.ts` / `chunkHeightmap.worker.ts`) already runs off the main thread, but it only produces **tile data** — heights, biomes, road tint, vegetation/item/environment/crop placements — transferred back as typed-array `ArrayBuffer`s.
-
-Building the actual chunk mesh (`buildChunkGeometry.ts`: per-vertex position/color/normal assembly, apron sampling, biome/road/scorch tinting, `THREE.BufferGeometry` construction) runs entirely on the **main thread**, time-sliced through `ChunkManager`'s finalize queue (`drainByBudget`) rather than in a worker.
-
-The `benchmark=stream` harness confirms this is currently the largest recurring CPU hitch during streaming:
-
-- **51 ×** `chunk mesh` hitches,
-- avg **~45.5 ms**,
-- max **~92.6 ms**.
-
-This is a **streaming/chunk-generation cost, not a sustained render bottleneck** — it does not show up in steady-state frame time (§3), only when new chunks are generated while the player moves through the world.
-
-### Planned direction (not yet implemented)
-
-Full rationale: [`optymalizacja-chunk-mesh-streaming-geometrii.md`](./optymalizacja-chunk-mesh-streaming-geometrii.md).
-
-1. **Move chunk mesh generation into the existing worker pool.** The worker computes geometry data (vertices/indices/normals/colors); the main thread stays responsible only for building `THREE.BufferGeometry`/`THREE.Mesh` and attaching it to the scene.
-2. **Optimize allocation/copy/transfer as part of that move** — `TypedArray`s, `Transferable` buffers, avoiding structured-clone copies and unnecessary temporary arrays — without introducing a separate optimization pass.
-3. **Cache computed chunk geometry data** so re-entering an already-generated, unmodified chunk state does not redo the CPU-heavy generation.
-
-None of these three are implemented yet — do not describe this pipeline as worker-based or cached anywhere else in this document.
-
----
-
-## 4.7 CPU simulation scalability — LOW CURRENT / HIGH FUTURE
-
-NPC and fauna simulation are currently relatively cheap.
-
-However, there are unbounded `O(N²)` patterns:
-
-- fauna predator/prey checks,
-- NPC proximity/relationship checks.
-
-They are not currently worth optimizing.
-
-### Future direction
-
-Introduce a shared coarse spatial index/grid when population size makes global scans measurable.
-
-This should serve both NPCs and fauna rather than creating separate spatial-query systems.
-
----
-
-# 5. Techniques Already in Use
+## Techniques already in use
 
 | Technique | Status |
 |---|---|
-| Web Workers for terrain tile data (heights/biomes/vegetation/items/environment/crops) | ✅ |
-| Chunk mesh generation moved to worker (§4.6) | ❌ (still main-thread, planned) |
-| Chunk mesh geometry cache (§4.6) | ❌ (planned) |
-| Chunk streaming | ✅ |
-| Time-sliced chunk finalization | ✅ |
+| Terrain/chunk worker pool | ✅ |
+| Chunk mesh data computation in worker | ✅ `world-terrain-004` |
+| Bounded chunk mesh-data cache | ✅ `world-terrain-004` |
+| Time-sliced / bounded chunk finalization | ✅ |
 | `InstancedMesh` | ✅ |
-| Shared GLTF GPU resources | ✅ |
-| Grass instancing | ✅ |
-| Grass distance LOD | ✅ |
-| Frustum culling | ✅ |
-| Camera layers | ✅ |
-| Controlled shadow updates | ✅ |
-| Shadow-map dirty/budget update (plan 145 R1) | ✅ (`verification needed`) |
-| Small-item shadow threshold (plan 145 R2) | ✅ (`verification needed`) |
-| Reflection throttling | ✅ |
-| Reflection layer filtering | ✅ |
-| Half-resolution AO | ✅ |
-| Adaptive AO suppression | ✅ |
-| Half-resolution Bloom | ✅ |
+| Region vegetation batching (3×3 chunks) | ✅ plan 143 |
+| Grass distance/filler LOD | ✅ |
+| Frustum culling / camera layers | ✅ |
+| Controlled shadow updates/filtering | ✅ |
+| Reflection throttling/layer filtering | ✅ |
+| Reflection distant-ring exclusion | ✅ plan 144 |
+| Half-resolution AO/Bloom | ✅ |
 | Conditional God Rays | ✅ |
-| GPU-driven weather particles | ✅ |
+| GPU weather particles | ✅ |
 | Material program cache keys | ✅ |
-| Resource disposal | ✅ |
-| Performance instrumentation | ✅ |
-| Browser performance tracing | ✅ |
+| Performance instrumentation / browser tracing | ✅ |
 
----
+## Candidate work — measurement required
 
-# 6. Techniques Not Yet Implemented
+This is not a queue. Re-rank after a fresh benchmark.
 
-| Technique | Expected value | Priority |
+| Candidate | Expected value | Rule |
 |---|---|---|
-| Chunk mesh generation → worker | Very High for streaming hitches | P1 |
-| Chunk mesh geometry cache | High for revisited chunks | P1 |
-| Region vegetation batching | High | P1 |
-| Program/material consolidation | High | P1 |
-| Safe shader/program pre-warming | High for hitches | P1 |
-| Reflection LOD/culling | Medium/High | P2 |
-| More aggressive grass LOD | Medium | P2 |
-| Terrain LOD | Medium | P2 |
-| Cheaper AO architecture | Medium/High | P2 |
-| Dynamic resolution | Medium | P2 |
-| Static-object matrix optimization | Low/Medium | P3 |
-| HLOD | High at large scale | P3 |
-| Occlusion culling | Potentially High | P3 |
-| Shared spatial grid NPC/fauna | High at large populations | P3 |
-| GPU-driven visibility | Potentially High | P4 |
-| WebGPU/compute migration | Unknown | P4 |
+| Targeted shader/program first-use fix | potentially high for hitches | identify exact cause first |
+| Water reflection content budget | low/medium to medium | `world-terrain-015`; one cheap win or stop |
+| More aggressive grass LOD | medium | only if vegetation GPU cost remains material |
+| Terrain LOD | medium | benchmark first |
+| Cheaper AO / depth reuse | medium/high | profile post-processing first |
+| Dynamic resolution | medium | only for demonstrated GPU-bound scenes |
+| Static-object matrix cleanup | low/medium | opportunistic |
+| HLOD / occlusion culling | high at larger scale | avoid before simpler mechanisms are exhausted |
+| Shared NPC/fauna spatial grid | high at large populations | wait for measurable simulation pressure |
+| GPU-driven visibility / WebGPU | unknown | not currently justified |
 
----
+Explicitly **not candidates anymore**:
 
-# 7. Optimization Matrix
+- chunk mesh worker migration,
+- chunk mesh-data cache,
+- first implementation of region vegetation batching.
 
-| Optimization | CPU | GPU | Memory | Effort | Risk | Expected impact |
-|---|---|---|---|---|---|---|
-| Chunk mesh generation → worker (+ allocation/transfer cleanup) | 🔴 | 🟢 | 🟠 | M | M | Very High streaming-hitch reduction |
-| Chunk mesh geometry cache | 🔴 | 🟢 | 🟠 | S/M | M | High for revisited chunks |
-| Program/material consolidation | 🟢 | 🔴 | 🟢 | M | M | Very High hitch reduction |
-| Safe shader pre-warming | 🟠 | 🔴 | 🟢 | M/L | M | Very High hitch reduction |
-| Region vegetation batching | 🟠 | 🔴 | 🟢 | L | M | High |
-| Shadow budget (plan 145, implemented, unbenchmarked) | 🟢 | 🔴 | 🟢 | S/M | M | Medium/High — unconfirmed, likely near-zero in the heaviest (settlement/current) scenarios per the plan's own analysis |
-| Reflection LOD/culling | 🟢 | 🔴 | 🟢 | M | M | Medium/High |
-| Grass LOD | 🟢 | 🔴 | 🟢 | M | M | Medium |
-| Terrain LOD | 🟢 | 🔴 | 🟠 | M | M | Medium |
-| AO optimization | 🟢 | 🔴 | 🟠 | M/L | M/H | Medium/High |
-| CPU/GC cleanup | 🔴 | 🟢 | 🟠 | S/M | L | Low/Medium |
-| NPC/fauna spatial grid | 🔴 | — | 🟢 | M | M | High at scale |
-| HLOD | 🟠 | 🔴 | 🟠 | L/XL | H | High at scale |
-| GPU-driven rendering | 🔴 | 🔴 | 🟠 | XL | H | Unknown |
-| WebGPU migration | 🟠 | 🔴 | 🟠 | XL | H | Unknown |
+Those already exist in current code.
 
-Legend:
+## Recommended decision order
 
-- 🔴 = potentially significant
-- 🟠 = relevant
-- 🟢 = currently minor
+1. **Measure current code.** Use fresh browser results; do not optimize from the September 1 baseline alone.
+2. **Classify the problem:** sustained FPS vs hitch vs scalability.
+3. **Prefer the smallest existing-system extension** that removes measured work.
+4. **Change one thing and benchmark.** Keep, improve or revert based on evidence.
+5. Only then consider broader rendering architecture.
 
----
+For current known work:
 
-# 8. Recommended Implementation Order
+- `world-terrain-015` is a deliberately small, gated water-reflection follow-up.
+- Shader/program first-use remains a potentially valuable hitch target but requires focused diagnosis before implementation.
+- Vegetation batching needs a fresh post-plan-143 measurement before any follow-up plan is justified.
+- Chunk mesh streaming needs a fresh post-`world-terrain-004` benchmark before any further optimization is proposed.
 
-## P0 — Measure
+## What we do not want
 
-Before major optimization:
+Avoid complexity for its own sake:
 
-- establish fresh browser baseline,
-- measure frame p50/p95/max,
-- measure draw calls,
-- measure triangles,
-- measure render-pass timings,
-- measure streaming stalls,
-- measure WebGL program count,
-- measure JS/GPU memory where possible.
-
----
-
-## P1 — Remove major unnecessary work
-
-### 1. Chunk mesh generation → worker + cache
-
-Move chunk mesh geometry-data generation (§4.6) into the existing worker pool, clean up allocation/copy/transfer as part of that move, and add a bounded cache of computed chunk geometry data. Currently the largest confirmed CPU streaming hitch (51× / avg ~45.5 ms / max ~92.6 ms, `benchmark=stream`). Not yet implemented — see [`optymalizacja-chunk-mesh-streaming-geometrii.md`](./optymalizacja-chunk-mesh-streaming-geometrii.md).
-
-### 2. Program/material investigation
-
-Determine why many shader/program variants are created and identify consolidation opportunities.
-
-### 3. Streaming hitch solution (shader first-use)
-
-Design safe pre-warming or another mechanism that prevents first-use shader work from blocking chunk visibility (§4.5 — a separate GPU/driver-wait problem from #1 above).
-
-### 4. Region vegetation batching
-
-Implement region-level batching without destroying spatial culling.
-
-### 5. Shadow budget
-
-Reduce unnecessary shadow participation and updates. Implemented in plan 145 (R1 dirty/budget shadow-map update, R2 small-item shadow threshold); pending benchmark and browser visual verification before the gain is confirmed.
-
----
-
-## P2 — Reduce expensive rendering passes
-
-- reflection LOD/culling,
-- grass LOD,
-- terrain LOD,
-- AO optimization,
-- dynamic resolution if benchmarks justify it.
-
----
-
-## P3 — Scalability
-
-Only when measurements justify it:
-
-- HLOD,
-- occlusion culling,
-- shared NPC/fauna spatial grid,
-- deeper memory/GC optimization.
-
----
-
-## P4 — Advanced rendering
-
-Only after WebGL2 optimization is exhausted:
-
-- GPU-driven visibility,
-- compute-based approaches,
-- WebGPU prototypes.
-
-A WebGPU migration is **not currently justified by the known bottlenecks**.
-
----
-
-# 9. What We Do Not Want
-
-Do not introduce complexity simply because a technique is technically possible.
-
-Currently avoid:
-
-- full WebGPU migration,
 - global vegetation batching,
-- GPU-driven renderer,
-- temporal rendering without measured need,
-- HLOD before simpler LOD/batching is exhausted,
+- a second chunk/mesh worker pipeline,
+- a second world visibility system for reflections,
+- full WebGPU migration,
+- GPU-driven renderer without a measured need,
+- temporal rendering by default,
+- HLOD before simpler culling/LOD/batching is exhausted,
 - NPC/fauna spatial indexing before it becomes measurable,
-- large rendering rewrites without benchmark evidence.
+- broad material consolidation without a proven program variant problem.
 
-Prefer:
+Guiding loop:
 
 ```text
 measure
 → identify dominant cost
+→ reuse existing mechanism
 → change one thing
 → benchmark
 → keep / improve / revert
 ```
 
----
+## Verification
 
-# 10. Performance Verification
+For significant optimization compare, where relevant:
 
-Every significant optimization must be evaluated against a reproducible browser benchmark.
+- FPS and frame p50/p95/max,
+- draw calls and triangles,
+- render/pass timings,
+- water/mirror timing,
+- streaming hitch categories/count/avg/max,
+- WebGL program count/first-use events,
+- loaded chunks / NPC / fauna counts,
+- memory/GC indicators where available.
 
-At minimum compare:
+A theoretically faster technique is not a success until the relevant workload improves without unacceptable visual/simulation regression. Browser verification belongs to the user.
 
-```text
-FPS
-frame p50
-frame p95
-frame max
-draw calls
-triangles
-loaded chunks
-NPC count
-fauna count
-render time
-water/mirror time
-streaming time
-JS heap / GC where available
-GPU memory indicators where available
-```
+## Source documents
 
-A change is not considered successful because the code is cleaner or the technique is theoretically faster.
-
-It is successful when the measured workload improves without unacceptable visual or simulation regressions.
-
----
-
-# 11. Guiding Principle
-
-Seedvale should optimize by **removing unnecessary work before adding more advanced technology**.
-
-Preferred progression:
-
-```text
-reuse
-→ batch
-→ cull
-→ LOD
-→ reduce expensive passes
-→ time-slice
-→ measure again
-→ only then consider GPU-driven / WebGPU techniques
-```
-
-The renderer should remain understandable, scalable and compatible with the game's hybrid/off-screen simulation model.
-
----
-
-# 12. Source Documents
-
-### Core
+Core/current:
 
 - [`docs/STATE.md`](../STATE.md)
-- [`Plan 113 — Rendering Performance & GPU Scaling`](../plans/archive/2026-08-14--113--rendering-performance-gpu-scaling.md)
-- [`Plan 145 — Shadow Budget Optimization`](../plans/archive/2026-08-17--145--shadow-budget-optimization.md)
+- [`docs/architecture/GRAPHICS.md`](../architecture/GRAPHICS.md)
+- [`world-terrain-004`](../plans/world-terrain-004-chunk-mesh-streaming-geometry-optimization.md)
+- [`world-terrain-004 implementation notes`](../plans/implementation-notes/world-terrain-004-chunk-mesh-streaming-geometry-optimization-implementation-notes.md)
+- [`Plan 143 — Cross-chunk vegetation batching`](../plans/archive/2026-08-17--143--cross-chunk-vegetation-batching.md)
+- [`Plan 144 — Water reflection GPU optimization`](../plans/archive/2026-08-17--144--water-reflection-gpu-optimization.md)
+- [`world-terrain-015 — Water reflection content budget`](../plans/world-terrain-015-water-reflection-content-budget.md)
 
-### Performance reviews
-
-- [`Review 005 — Performance, architecture and assets`](../reviews/2026-08-12--005--performance-architecture-and-assets.md)
-- [`Review 012 — Performance bottleneck diagnosis`](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)
-- [`Review 013 — Architecture and performance audit`](../reviews/2026-08-15--013--architecture-and-performance-audit.md)
-- [`Review 015 — Browser performance benchmark`](../reviews/2026-08-15--015--browser-performance-benchmark.md)
-- [`Review 016 — GPU-fix runtime verification`](../reviews/2026-08-15--016--gpu-fix-runtime-verification.md)
-
-### Rendering research
+Research/reviews:
 
 - [`Research 017 — Three.js rendering audit`](../research/2026-08-17--017--threejs-rendering-audit.md)
 - [`Research 019 — Rendering optimizations`](../research/2026-08-17--019--rendering-optimizations.md)
 - [`Research 020 — Cross-chunk vegetation batching`](../research/2026-08-17--020--cross-chunk-vegetation-batching.md)
+- [`Review 012 — Performance bottleneck diagnosis`](../reviews/2026-08-14--012--perf-bottleneck-diagnosis.md)
+- [`Review 015 — Browser performance benchmark`](../reviews/2026-08-15--015--browser-performance-benchmark.md)
+- [`Program/material census`](./audits/2026-09-01--program-census.md)
 
-### Streaming
-
-- [`Plan 119 — Chunk streaming performance`](../plans/archive/2026-08-15--119--chunk-streaming-performance.md)
-- [`Research 011 — Streaming hitch investigation`](../research/2026-08-16--011--streaming-hitch-investigation.md)
-- [`Research 012 — LinkProgram / getProgramInfoLog wait`](../research/2026-08-16--012--streaming-hitch-trace-v2-linkprogram-wait.md)
-- [`Research 018 — Stream isolation probes`](../research/2026-08-17--018--stream-isolation-probes.md)
-
-### Vegetation
-
-- [`Research 004 — Grass generation`](../research/2026-08-07--004--grass-generation.md)
-- [`Plan 143 — Cross-chunk vegetation batching`](../plans/archive/2026-08-17--143--cross-chunk-vegetation-batching.md)
-
-### Related
-
-- [`Plan 136 — Three.js 0.180 → 0.185 upgrade`](../plans/archive/2026-08-16--136--threejs-180-to-185-upgrade.md)
-
-
-## Recent audit
-
-- [2026-09-01 — Program / Material Census](./audits/2026-09-01--program-census.md) — the fresh census confirms a real shader/program first-use hitch, but 773 materials map to ~72 programs, so blind program/material consolidation is not justified; a targeted investigation is needed before implementation.
-
----
-
-## Trace analysis results
-
-Historical Chrome Trace Analyzer results are stored in:
-
-`docs/performance/trace-results/`
-
-Each result should correspond to a captured performance trace and be kept as a historical record for comparing performance changes over time.
-
-> Those are results of `./scripts/analyze_trace.sh _temp/Performance/Trace-20260820T085349.json`
-
----
-
-## Batch
-
-- Batch: 2026-09-01
-  - `docs/performance/results/2026-09-01--001--benchmark-stream.json`
-  - `docs/performance/results/2026-09-01--001--benchmark-stream.md`
-  - `docs/performance/results/2026-09-01--001--benchmark-stream-program-census-dump.json`
-  - `docs/performance/results/2026-09-01--001--benchmark-stream-program-census-summary.json`
-  - `docs/performance/results/2026-09-01--002--benchmark-current.json`
-  - `docs/performance/results/2026-09-01--002--benchmark-current.md`
-  - `docs/performance/results/2026-09-01--003--benchmark-forest.json`
-  - `docs/performance/results/2026-09-01--003--benchmark-forest.md`
-  - `docs/performance/results/2026-09-01--004--benchmark-settlement.json`
-  - `docs/performance/results/2026-09-01--004--benchmark-settlement.md`
-  - `docs/performance/results/2026-09-01--005--benchmark-night.json`
-  - `docs/performance/results/2026-09-01--005--benchmark-night.md`
-  - `docs/performance/results/2026-09-01--006--benchmark-stress.json`
-  - `docs/performance/results/2026-09-01--006--benchmark-stress.md`
-  - `docs/performance/results/2026-09-01--007--benchmark-water.json`
-  - `docs/performance/results/2026-09-01--007--benchmark-water.md`
-  - `docs/performance/trace-results/Trace-20260901T090153.md`
-
-- Batch: 2026-09-02
-  - `docs/performance/results/2026-09-02--008--summary.md`
-  - `docs/performance/results/2026-09-02--008--benchmark-stream-webgl-program-census.md`
-  - `docs/performance/results/2026-09-02--010--summary--ao-transparency-aware-benchmark.md`
-
-- Batch: 2026-09-03
-  - `docs/performance/results/2026-09-03--011--benchmark-stream.md`
+Historical benchmark results remain under `docs/performance/results/` and `docs/performance/trace-results/`. Treat them as dated evidence, not current-state declarations.
