@@ -492,7 +492,7 @@ const generateDone = (
     const verificationNeeded: string = record.verificationNeeded ?? '—'
     const done: string = record.done ?? '—'
 
-    return `| ${title.padEnd(70)} | ${verificationNeeded.padEnd(19)} | ${done.padEnd(19)} | ${domain.padEnd(10)} | ${opened.padEnd(10)} |`
+    return `| ${title.padEnd(70)} | ${verificationNeeded.padEnd(19)} | ${done.padEnd(19)} | ${domain.padEnd(16)} | ${opened.padEnd(10)} |`
   })
 
   return [
@@ -500,8 +500,8 @@ const generateDone = (
     '',
     '> Automatically generated from plan history and Git. Do not edit manually.',
     '',
-    '| Plan                                                                   | To verification     | Done                | Domain | Opened |',
-    '|------------------------------------------------------------------------|---------------------|---------------------|--------|--------|',
+    '| Plan                                                                   | To verification     | Done                | Domain           | Opened |',
+    '|------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|',
     ...map,
     '',
   ].join('\n')
