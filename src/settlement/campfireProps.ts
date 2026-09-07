@@ -268,7 +268,7 @@ export function createLitCampfireVisual(
  *  this is the fallback the plan explicitly allows shipping without one. Only
  *  ever attached as a child of an existing fire's own group
  *  (`settlement/PlacedFires.ts`) — it registers no light of its own. */
-export function createGrateVisual(scale = 1): THREE.Group {
+export function createGrateVisual(scale = 0.25): THREE.Group {
   const grate = new THREE.Group()
   const ironMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, flatShading: true, metalness: 0.6, roughness: 0.5 })
 
