@@ -56,7 +56,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`       | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                   | -       | 🟡 | L      | -       |
 | 💡 `items-player-002-food-provenance-freshness-and-storage.md`              | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
-| ◼️ `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
+| 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
 | ◼️ `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                               | -       | 🟡 | M      | fauna-004 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                   | -       | 🟡 | M      | settlements-npcs-006 |
