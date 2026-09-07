@@ -12,965 +12,244 @@
 
 ## Cel
 
-Rozszerzyć obecny prosty relation gate tak, aby authored RPG quests mogły być udostępniane na podstawie wcześniejszych działań gracza i jego pozycji społecznej.
+Rozszerzyć obecny relation-only gate tak, aby authored quests mogły być oferowane na podstawie:
 
-Docelowy przepływ:
+- player↔NPC relation,
+- konkretnego resolved outcome wcześniejszego questa,
+- lokalnej settlement reputation,
+- lokalnego settlement renown.
 
-```text
-stan świata gracza
-+ wcześniejsze quest outcomes
-+ relation
-+ reputation / renown
-        ↓
-QuestAvailability
-        ↓
-NPC może zaoferować quest
-```
+Nie budować generic condition engine, DSL ani quest graph.
 
-Plan ma zapewnić tylko warunki potrzebne dla najbliższych authored RPG quests.
+## Stan wejściowy i zależności
 
-Nie budować uniwersalnego condition engine, DSL ani quest graph.
-
----
-
-## 1. Obecny problem
-
-Aktualnie `QuestAvailability` obsługuje tylko:
-
-```ts
-type QuestAvailability = {
-  relation?: {
-    npcName: string
-    minimum: RelationLevel
-  }
-}
-```
-
-To pozwala np. ukryć quest do poziomu `trusted`, ale nie pozwala powiedzieć:
+`quests-progression-001` jest już zaimplementowany i rozstrzyga settlement context dla questów:
 
 ```text
-Anna oferuje kolejny quest
-dopiero gdy:
-
-- zakończyłeś poprzedni quest określonym outcome,
-- albo masz odpowiednią reputation,
-- albo jesteś dostatecznie znany w osadzie.
+createApp.ts
+→ finalne runtime QuestDef[]
+→ QuestDef.settlementId
+→ QuestManager
 ```
 
-`quests-progression-002` dodaje `resolvedOutcomeId`, który powinien zostać wykorzystany jako fundament prerequisites.
+Aktualny composition root dopina `settlementId` do quest definitions przed konstrukcją `QuestManager`. Statyczne definitions pozostają settlement-agnostic.
 
----
+**Nie wykonywać ponownego `giverName → settlement` discovery.** Nie skanować NPC/settlementów i nie tworzyć registry po nazwie. Reputation/renown availability ma użyć istniejącego resolved `QuestDef.settlementId`.
 
-## 2. Jedna struktura prerequisite
+`quests-progression-002` pozostaje bezpośrednią zależnością tego planu i dostarcza canonical:
 
-Zastąpić specjalny relation-only model jawnym discriminated union.
+- `QuestOutcomeId`,
+- `QuestOutcome`,
+- `QuestDef.outcomes`,
+- runtime/persisted `resolvedOutcomeId?: QuestOutcomeId`,
+- unified resolution semantics.
 
-Docelowo:
+Nie dodawać w 004 równoległego outcome state.
 
-```ts
-type QuestPrerequisite =
-  | {
-      type: 'relation'
-      npcName: string
-      minimum: RelationLevel
-    }
-  | {
-      type: 'quest_outcome'
-      questId: string
-      outcomeIds: readonly QuestOutcomeId[]
-    }
-  | {
-      type: 'reputation'
-      dimension: ReputationDimension
-      minimum: number
-    }
-  | {
-      type: 'renown'
-      minimum: number
-    }
-```
+## Typy
 
-oraz:
+W `src/quests/quests.ts`, po 002, wprowadzić:
 
 ```ts
-type QuestAvailability = {
+export type QuestPrerequisite =
+  | { type: 'relation', npcName: string, minimum: RelationLevel }
+  | { type: 'quest_outcome', questId: string, outcomeIds: readonly QuestOutcomeId[] }
+  | { type: 'reputation', dimension: ReputationDimension, minimum: number }
+  | { type: 'renown', minimum: number }
+
+export type QuestAvailability = {
   prerequisites: readonly QuestPrerequisite[]
 }
 ```
 
-Wszystkie prerequisites w tablicy mają semantykę:
+`QuestDef.availability?` pozostaje opcjonalne. Wszystkie prerequisites mają semantykę AND.
 
-```text
-AND
-```
+`quest_outcome.outcomeIds` jest prostym allowed-set OR: warunek jest spełniony, jeśli `resolvedOutcomeId` należy do tablicy.
 
-Quest jest dostępny tylko wtedy, gdy wszystkie są spełnione.
+Nie zmieniać `RelationLevel`, `RELATION_LEVEL_THRESHOLDS` ani `relationToLevel()`.
 
----
+## Canonical availability evaluation
 
-## 3. Nie dodawać generic boolean expressions
+Rozszerzyć obecne `QuestManager.meetsAvailability(def)` — nie tworzyć osobnego evaluator service.
 
-Nie implementować:
+To pozostaje jednym canonical predicate używanym przez istniejących consumers:
 
-```ts
-allOf
-anyOf
-not
-and
-or
-condition groups
-nested expressions
-```
+- `handleGiverInteract()` — nie oferuje locked `not_offered` questa,
+- `list()` — ukrywa locked `not_offered` questa w Quest Log,
+- `labelMarker()` — nie pokazuje `!` dla locked `not_offered` questa.
 
-Nie tworzyć:
+UI/game loop nie interpretują prerequisites samodzielnie.
 
-```ts
-{
-  operator: 'AND',
-  children: [...]
-}
-```
+Publiczne `isQuestAvailable(id)` ma delegować do tego samego predicate. Obecny kod nie sprawdza w nim lifecycle mimo mylącego komentarza; traktować go jako query „prerequisites są teraz spełnione” i poprawić JSDoc zamiast duplikować state semantics.
 
-ani expression DSL.
-
-Najbliższe authored RPG quests tego nie potrzebują.
-
-### Proste OR dla outcomes
-
-Jeżeli kilka outcomes poprzedniego questa prowadzi do tego samego następnego questa:
-
-```ts
-{
-  type: 'quest_outcome',
-  questId: 'previous-quest',
-  outcomeIds: [
-    'helped_guard',
-    'helped_guard_without_reward',
-  ],
-}
-```
-
-Warunek jest spełniony, jeśli `resolvedOutcomeId` należy do `outcomeIds`.
-
-Dzięki temu nie potrzebujemy `anyOf`.
-
----
-
-## 4. Quest outcome prerequisite
-
-To najważniejszy nowy prerequisite.
-
-Przykład:
-
-```ts
-availability: {
-  prerequisites: [
-    {
-      type: 'quest_outcome',
-      questId: 'zagubiony-kupiec',
-      outcomeIds: ['rescued'],
-    },
-  ],
-}
-```
-
-Quest pozostaje niedostępny dopóki:
-
-```text
-zagubiony-kupiec
-→ resolvedOutcomeId === 'rescued'
-```
-
-### Outcome, nie tylko `complete`
-
-Nie używać wyłącznie:
-
-```ts
-previousQuestComplete: true
-```
-
-Outcome jest ważniejszy od samego terminal state.
-
-Przykład:
-
-```text
-Quest A
-├── oddałeś przedmiot właścicielowi
-├── zatrzymałeś go
-└── sprzedałeś komuś innemu
-```
-
-Każdy wariant może otworzyć inne późniejsze możliwości.
-
-`resolvedOutcomeId` z planu `002` jest canonical source.
-
----
-
-## 5. Relation prerequisite
-
-Zachować obecną funkcjonalność, ale przenieść ją do wspólnego modelu:
-
-```ts
-{
-  type: 'relation',
-  npcName: 'Anna',
-  minimum: 'friendly',
-}
-```
-
-Nie zmieniać istniejących:
-
-```ts
-RelationLevel
-RELATION_LEVEL_THRESHOLDS
-relationToLevel()
-```
-
-jeśli po implementacji `002` nadal są canonical.
-
-Relation oznacza:
-
-> Jak konkretny NPC postrzega gracza.
-
-Nie zastępować jej reputation.
-
----
-
-## 6. Reputation prerequisite
-
-Wykorzystać `ReputationManager` z `quests-progression-001`.
-
-Przykład:
-
-```ts
-{
-  type: 'reputation',
-  dimension: 'competence',
-  minimum: 20,
-}
-```
-
-Semantyka:
-
-> Reputation w osadzie, do której należy giver questa.
-
-Nie zapisywać `settlementId` ręcznie w każdym authored `QuestDef`.
-
-Quest author nie powinien musieć wiedzieć:
-
-```ts
-settlementId: 'settlement-0'
-```
-
-Giver jest już częścią definicji questa:
-
-```ts
-giverName
-```
-
-Composition/integration layer powinien rozwiązać osadę givera za pomocą istniejących settlement/NPC mechanisms.
-
-### Dlaczego giver settlement
-
-Dzięki temu quest:
-
-```text
-Anna → competence >= 20
-```
-
-oznacza naturalnie:
-
-> Anna powierza zadanie komuś, kto ma odpowiednią opinię w jej społeczności.
-
-Nie globalną reputation.
-
----
-
-## 7. Renown prerequisite
-
-Analogicznie:
-
-```ts
-{
-  type: 'renown',
-  minimum: 15,
-}
-```
-
-oznacza lokalny renown w osadzie givera.
-
-Przykład gameplay:
-
-```text
-gracza wykonał kilka publicznych działań
-→ ludzie zaczynają go znać
-→ NPC proponuje bardziej znaczące zadanie
-```
-
-Nie mieszać:
-
-```text
-renown = fame / rozpoznawalność
-reputation = ocena charakteru / działań
-relation = relacja z konkretną osobą
-```
-
----
-
-## 8. Brak bezpośredniej zależności QuestManager → ReputationManager
-
-`QuestManager` nie powinien importować:
-
-```ts
-ReputationManager
-SettlementsManager
-```
-
-Wykorzystać narrow injected lookup.
-
-Docelowy kontrakt może być np.:
-
-```ts
-type QuestSocialAvailabilityLookup = {
-  getReputationForNpc(
-    npcName: string,
-  ): Readonly<Reputation> | null
-
-  getRenownForNpc(
-    npcName: string,
-  ): number
-}
-```
-
-Composition root:
-
-```text
-giverName
-→ settlement containing NPC
-→ settlementId
-→ ReputationManager
-```
-
-Dokładna implementacja lookup powinna wykorzystać istniejące mechanizmy lokalizacji/ownership NPC.
-
-Nie tworzyć duplicate `npcName → settlementId` registry tylko dla questów.
-
----
-
-## 9. Relation pozostaje własnością obecnego relation systemu
-
-Nie przenosić relation do ReputationManager w tym planie.
-
-QuestManager / istniejący relationship owner pozostaje canonical source relation zgodnie z aktualną architekturą po `002`.
-
-Prerequisite evaluator korzysta z istniejącego API.
-
----
-
-## 10. Jedno miejsce ewaluacji availability
-
-Wprowadzić jedną funkcję odpowiedzialną za ocenę:
-
-```ts
-isQuestAvailable(def: QuestDef): boolean
-```
-
-lub równoważną nazwę zgodną z aktualnym `QuestManager`.
-
-Nie rozrzucać warunków po:
-
-```text
-NPC interaction
-Quest Log
-quest markers
-offer dialogue
-UI
-```
-
-Wszystkie consumers powinny korzystać z tego samego wyniku availability.
-
-Jeżeli funkcja jest ważnym architectural/public seam, dodać JSDoc i `@domain quests-progression`.
-
----
-
-## 11. Availability działa tylko przed wejściem questa w lifecycle
-
-Prerequisites decydują:
-
-> Czy quest może zostać zaoferowany?
-
-Nie decydują:
-
-> Czy już rozpoczęty quest nadal może istnieć?
-
-Kluczowa zasada:
-
-```text
-not_offered
-→ sprawdzamy prerequisites
-
-offered / active / ready_to_report
-→ nie cofamy questa przez prerequisites
-```
-
-Przykład:
-
-```text
-NPC wymaga friendly
-→ oferuje quest
-→ gracz przyjmuje
-→ relation później spada
-```
-
-Quest pozostaje aktywny.
-
-Nie:
-
-```text
-relation spadła
-→ active quest znika
-```
-
-To byłoby niestabilne i trudne do zrozumienia.
-
----
-
-## 12. Terminal outcomes również się nie cofają
-
-Quest:
-
-```text
-complete
-failed
-invalidated
-```
-
-pozostaje terminalny niezależnie od późniejszych zmian prerequisites.
-
-Availability nie przelicza historii.
-
----
-
-## 13. Ukrywanie niedostępnych questów
-
-Domyślne zachowanie:
-
-```text
-prerequisites niespełnione
-→ quest nie pojawia się w Quest Log
-→ giver go nie oferuje
-→ nie ma quest markera
-```
-
-Nie dodawać teraz:
-
-```text
-Locked quest
-???
-Requires reputation 20
-```
-
-Gracz nie musi widzieć całej przyszłej struktury questów.
-
-Authored RPG quests powinny pojawiać się naturalnie, kiedy stają się dostępne.
-
----
-
-## 14. Availability nie jest quest chain systemem
-
-Nie dodawać:
-
-```ts
-nextQuestId
-previousQuestId
-questChainId
-chapter
-sequence
-```
-
-Powiązanie:
-
-```text
-Quest A outcome
-→ availability Quest B
-```
-
-wystarcza dla prostych quest chains.
-
-Przykład:
-
-```ts
-Quest B.availability = {
-  prerequisites: [
-    {
-      type: 'quest_outcome',
-      questId: 'quest-a',
-      outcomeIds: ['helped'],
-    },
-  ],
-}
-```
-
-To pozwoli następnemu planowi tworzyć authored quest chains bez osobnego graph engine.
-
----
-
-## 15. Obsługa różnych gałęzi RPG
-
-Model musi pozwolić:
-
-```text
-Quest A
-├── Outcome: helped_anna
-│       ↓
-│   Quest B dostępny
-│
-└── Outcome: betrayed_anna
-        ↓
-    Quest C dostępny
-```
-
-Bez specjalnego branching subsystem.
-
-Quest B:
-
-```ts
-{
-  type: 'quest_outcome',
-  questId: 'quest-a',
-  outcomeIds: ['helped_anna'],
-}
-```
-
-Quest C:
-
-```ts
-{
-  type: 'quest_outcome',
-  questId: 'quest-a',
-  outcomeIds: ['betrayed_anna'],
-}
-```
-
-To jest podstawowy mechanizm potrzebny pod authored RPG content.
-
----
-
-## 16. Nie dodawać item prerequisites
-
-Na tym etapie nie dodawać:
-
-```ts
-{
-  type: 'has_item'
-}
-```
-
-Inventory jest właściwe dla objective / interaction requirements, niekoniecznie dla dostępności całego questa.
-
-Jeśli konkretny authored quest w następnym planie faktycznie będzie tego potrzebował, można wtedy rozszerzyć union.
-
-Nie projektować warunków spekulacyjnie.
-
----
-
-## 17. Nie dodawać generic world-state prerequisites
-
-Nie dodawać teraz:
-
-```ts
-worldFlag
-settlementResource
-buildingExists
-animalPopulation
-timeOfDay
-weather
-season
-playerOwnsLand
-```
-
-Te warunki będą potrzebne później dla bardziej world-driven quests.
-
-Najbliższy authored RPG plan powinien najpierw wykorzystać:
-
-```text
-quest outcome
-relation
-reputation
-renown
-```
-
-Jeżeli podczas projektowania konkretnych questów okaże się, że jeden rzeczywisty world condition jest konieczny, rozszerzyć system wtedy poprzez jawny typed prerequisite.
-
----
-
-## 18. Existing quests migration
-
-Obecne:
-
-```text
-grozny-wilk
-wilcza-jama
-```
-
-mają relation availability.
-
-Zmigrować je z:
-
-```ts
-availability: {
-  relation: {
-    npcName: 'Anna',
-    minimum: 'trusted',
-  },
-}
-```
-
-do:
-
-```ts
-availability: {
-  prerequisites: [
-    {
-      type: 'relation',
-      npcName: 'Anna',
-      minimum: 'trusted',
-    },
-  ],
-}
-```
-
-Nie zmieniać ich gameplay ani thresholdów w ramach tej migracji.
-
----
-
-## 19. Jeden realny outcome prerequisite
-
-Aby mechanizm nie pozostał wyłącznie testową infrastrukturą, wykorzystać go w istniejącym contencie tam, gdzie naturalnie tworzy ciąg.
-
-Preferowana decyzja:
-
-```text
-wilcza-jama
-```
-
-powinna wymagać pozytywnego rozwiązania:
-
-```text
-grozny-wilk
-```
-
-oprócz istniejącego relation gate.
-
-Przykład:
-
-```ts
-availability: {
-  prerequisites: [
-    {
-      type: 'relation',
-      npcName: 'Anna',
-      minimum: 'trusted',
-    },
-    {
-      type: 'quest_outcome',
-      questId: 'grozny-wilk',
-      outcomeIds: ['completed'],
-    },
-  ],
-}
-```
-
-Użyć faktycznego outcome ID przyjętego w implementacji `002`.
-
-Narracyjnie:
-
-```text
-najpierw pojawia się konkretny groźny wilk
-→ gracz rozwiązuje problem
-→ okazuje się, że źródłem zagrożenia jest wilcza jama
-```
-
-To tworzy pierwszy lekki quest chain bez nowego chain systemu.
-
----
-
-## 20. Jeden realny reputation/renown gate
-
-Nie zmieniać wielu istniejących questów tylko po to, żeby wykorzystać wszystkie nowe prerequisite types.
-
-Dodać co najwyżej jeden sensowny realny consumer, jeżeli po implementacji `001–003` istniejący content daje naturalne miejsce.
-
-Preferować `wilcza-jama` lub inny znaczący quest tylko wtedy, gdy threshold nie tworzy grind requirement.
-
-Nie wymagać sztucznie:
-
-```text
-renown 50
-```
-
-tylko po to, żeby udowodnić działanie mechanizmu.
-
-Jeżeli brak naturalnego obecnego questa, reputation/renown prerequisites mogą zostać pokryte testami i użyte dopiero w następnym authored RPG planie.
-
----
-
-## 21. Thresholds
-
-Nie tworzyć osobnych tierów availability dla reputation/renown.
-
-Quest author ustawia jawny numeric threshold:
-
-```ts
-{
-  type: 'reputation',
-  dimension: 'competence',
-  minimum: 15,
-}
-```
-
-lub:
-
-```ts
-{
-  type: 'renown',
-  minimum: 10,
-}
-```
-
-Wartości muszą mieścić się w skalach z `quests-progression-001`:
-
-```text
-reputation: -100..100
-renown:       0..100
-```
-
-Nie clampować błędnych quest definitions w runtime po cichu.
-
-Niepoprawne definicje powinny zostać wykryte przez validation/tests.
-
----
-
-## 22. Definition validation
-
-Dodać lightweight validation dla authored quest prerequisites.
-
-Sprawdzać przynajmniej:
-
-- `quest_outcome.questId` wskazuje istniejący quest,
-- wskazane `outcomeIds` istnieją w jego `outcomes`,
-- `outcomeIds` nie jest puste,
-- quest nie zależy bezpośrednio od własnego outcome,
-- reputation minimum mieści się w `-100..100`,
-- renown minimum mieści się w `0..100`,
-- relation NPC jest prawidłowym istniejącym NPC zgodnie z obecnymi validation mechanisms.
-
-Nie budować pełnego cycle detector dla całego quest graph, chyba że okazuje się to trywialne dzięki istniejącej walidacji.
-
-Bezpośredni self-dependency musi być zabroniony.
-
----
-
-## 23. Persistence
-
-Nie dodawać nowego persistence state dla prerequisites.
-
-Availability jest wartością pochodną z istniejącego state:
-
-```text
-relations
-reputation
-renown
-quest resolvedOutcomeId
-```
-
-Po load:
-
-```text
-restore source states
-→ availability jest ponownie obliczana
-```
-
-Nie zapisywać:
-
-```ts
-quest.available = true
-```
-
-jako duplicated state.
-
-Wyjątkiem pozostaje normalny lifecycle:
-
-```text
-offered
-active
-...
-```
-
-który po rozpoczęciu questa ma pierwszeństwo przed aktualnymi prerequisites.
-
----
-
-## 24. Tests
-
-Dodać testy co najmniej dla:
+## Source state
 
 ### Relation
 
-- prerequisite niespełniony → quest niewidoczny,
-- threshold osiągnięty → quest dostępny,
-- istniejące trusted gates nadal działają.
+Relation pozostaje własnością `QuestManager.relations`. Prerequisite używa istniejącego `getRelationLevel(npcName)`.
 
 ### Quest outcome
 
-- brak rozwiązania poprzedniego questa → locked,
-- właściwy outcome → available,
-- inny outcome → locked,
-- kilka `outcomeIds` działa jako allowed set,
-- `failed` bez właściwego resolved outcome nie odblokowuje questa.
-
-### Multiple prerequisites
+Po 002 czytać wyłącznie canonical runtime progress w `QuestManager`:
 
 ```text
-relation ✓
-outcome ✓
-→ available
-
-relation ✓
-outcome ✗
-→ unavailable
+resolvedOutcomeId ∈ prerequisite.outcomeIds
 ```
 
-Potwierdzić AND semantics.
+Nie wystarcza samo `state === complete`.
 
-### Reputation
+Failed outcome może odblokować późniejszy quest, jeżeli jego konkretny outcome ID jest jawnie authored. `invalidated` nie ma outcome i nie spełnia `quest_outcome` prerequisite.
 
-- właściwy dimension i threshold → available,
-- inny dimension nie spełnia gate,
-- używana jest reputation osady givera, nie globalny/średni standing.
+### Reputation / renown
 
-### Renown
+`ReputationManager` pozostaje jedynym ownerem settlement reputation/renown.
 
-- poniżej minimum → unavailable,
-- threshold → available.
+`QuestManager` nie importuje klasy `ReputationManager` ani `SettlementsManager`. Dodać narrow injected read-only lookup keyed przez **resolved settlement id**, np.:
 
-### Lifecycle stability
+```ts
+export type QuestSocialAvailabilityLookup = {
+  getReputationDimension(settlementId: string, dimension: ReputationDimension): number
+  getRenown(settlementId: string): number
+}
+```
 
-- quest przyjęty przy spełnionych prerequisites,
-- później relation/reputation/renown spada,
-- quest pozostaje aktywny.
+`createApp.ts` domyka ten lookup na istniejącym `reputationManager`.
 
-### Validation
+Evaluator używa wyłącznie:
 
-- unknown quest ID,
-- unknown outcome ID,
-- empty outcomeIds,
-- self-dependency,
-- invalid numeric range.
+```ts
+def.settlementId
+```
 
----
+Dla reputation/renown prerequisite brak `settlementId` ma failować zamknięcie (`false`) i zostać wykryty przez definition validation. Nie fallbackować do home settlement, giver lookup ani globalnego standing.
 
-## 25. Docs
+## Lifecycle semantics
 
-Po implementacji zaktualizować odpowiednie canonical docs, przede wszystkim:
+Availability decyduje tylko, czy `not_offered` quest może wejść do oferty:
 
-- `docs/state/player-systems.md`
-- `docs/state/npc.md`
-- `docs/vision/quests.md`
+```text
+not_offered → sprawdzamy prerequisites
+offered / active / ready_to_report → nie cofamy przez prerequisites
+complete / failed / invalidated → terminal history pozostaje bez zmian
+```
 
-W dokumentacji jasno opisać:
+Po zaoferowaniu/przyjęciu questa późniejszy spadek relation/reputation/renown nie usuwa ani nie blokuje aktywnego questa.
+
+Nie persistować `available: boolean`; availability jest pochodną persisted source state.
+
+## Migracja istniejącego relation gate
+
+Przepisać istniejące:
+
+```ts
+availability: {
+  relation: { npcName: 'Anna', minimum: 'trusted' }
+}
+```
+
+na:
+
+```ts
+availability: {
+  prerequisites: [
+    { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+  ]
+}
+```
+
+Bez zmiany thresholdów/gameplay. Dotyczy co najmniej `grozny-wilk` i `wilcza-jama`.
+
+## Pierwszy realny outcome prerequisite
+
+Po implementacji 002 `wilcza-jama` ma wymagać successful resolved outcome `grozny-wilk` obok istniejącego trusted relation gate.
+
+Użyć **faktycznego outcome ID z finalnej definicji 002**. Nie wpisywać z góry zgadywanego `completed`.
+
+Nie dodawać sztucznego reputation/renown gate tylko dla demonstracji. Jeśli istniejący content nie daje naturalnego progu bez grind requirement, pokryć te prerequisite types testami i użyć ich później w authored content.
+
+## Definition validation
+
+Rozszerzyć validator wprowadzony przez 002, jeżeli istnieje. Jeśli 002 go nie utworzy, dodać mały quest-domain validator uruchamiany raz na finalnych runtime defs przekazanych do `QuestManager` — po composition-root settlement binding.
+
+Sprawdzać co najmniej:
+
+- referenced `quest_outcome.questId` istnieje,
+- `outcomeIds` nie jest puste,
+- każde wskazane outcome ID istnieje w referenced quest,
+- brak direct self-dependency,
+- reputation minimum mieści się w `-100..100`,
+- renown minimum mieści się w `0..100`,
+- social prerequisite ma resolved `QuestDef.settlementId`.
+
+Nie clampować błędnych authored thresholds. Nie budować cycle detectora ani graph engine.
+
+## Persistence
+
+Nie dodawać nowego persisted availability state.
+
+Po load availability jest ponownie obliczana z:
+
+```text
+QuestManager relations
++ ReputationManager settlement state
++ QuestProgress.resolvedOutcomeId
+```
+
+Lifecycle state (`offered`, `active`, `ready_to_report`, terminal) ma pierwszeństwo po wejściu questa do lifecycle.
+
+## Testy
+
+Rozszerzyć przede wszystkim `src/quests/QuestManager.test.ts` oraz definition tests powstałe w 002.
+
+Pokryć:
+
+- relation prerequisite below/at threshold,
+- existing trusted gates po migracji,
+- outcome unresolved / matching / non-matching / multiple allowed IDs,
+- failed outcome tylko przy matching ID; `invalidated` nie odblokowuje,
+- AND semantics dla wielu prerequisites,
+- reputation dimension + threshold,
+- renown below/equal threshold,
+- dwa `settlementId` z różnym standing dają różny wynik,
+- social prerequisite bez resolved settlement context failuje,
+- `list()`, `handleGiverInteract()` i `labelMarker()` są spójne dla locked `not_offered`,
+- po `offered`/`active` późniejszy spadek social state nie cofa questa,
+- validation: unknown quest/outcome, empty outcomeIds, self-dependency, invalid ranges,
+- save/load odtwarza availability bez dodatkowego persisted pola.
+
+## Czego nie tworzyć
+
+Nie tworzyć:
+
+- `giverName → settlementId` lookupu/registry ani settlement scan,
+- dependency `QuestManager → ReputationManager` / `SettlementsManager`,
+- reuse NPC `PlayerSocialLookup` jako quest availability API,
+- generic condition engine / DSL / nested AND-OR-NOT,
+- quest graph, `nextQuestId`, chapters, cycle engine,
+- duplicated `available` state/persistence,
+- global reputation/średniego standing fallback,
+- item/world/weather/time/skill prerequisites,
+- UI dla locked quests.
+
+## Dokumentacja i verification
+
+Zaktualizować canonical docs opisujące quest lifecycle/availability i zachować rozróżnienie:
 
 ```text
 Availability = czy quest może zostać zaoferowany
-
-Objective = co gracz robi
-
-Outcome = jak quest został rozwiązany
-
+Objective    = co gracz robi
+Outcome      = jak quest został rozwiązany
 Consequences = co zmienia resolution
 ```
 
-Nie przedstawiać availability jako pełnego world-condition engine.
+Automated: quest/definition/reputation integration/persistence tests, typecheck, build.
 
-Dodać implementation notes zgodnie z `docs/plans/PLANNING.md`.
+Manual verification wykonuje User w przeglądarce. AI nie uruchamia browser verification.
 
-Nie uruchamiać `pnpm docs:sync` ręcznie.
+Nie uruchamiać `pnpm docs:sync` ręcznie — robi to GitHub workflow.
 
----
+Implementation notes:
 
-## Non-goals
-
-Plan nie obejmuje:
-
-- authored RPG quest pack,
-- nowych dużych historii,
-- dialogue choice engine,
-- generic condition DSL,
-- nested AND/OR/NOT,
-- quest graph engine,
-- quest chapters,
-- repeatable quests,
-- procedural quests,
-- world-problem generation,
-- time/weather/season gates,
-- inventory gates,
-- land/property gates,
-- skill/attribute gates,
-- quest expiration,
-- world resolution bez gracza,
-- UI listy zablokowanych questów,
-- hints typu „potrzebujesz 20 reputation”.
-
----
-
-## Kolejność implementacji
-
-1. Zweryfikować finalny model `QuestOutcome` i `resolvedOutcomeId` po `quests-progression-002`.
-2. Wprowadzić `QuestPrerequisite` i nowy `QuestAvailability`.
-3. Scentralizować evaluation availability.
-4. Podłączyć relation prerequisite.
-5. Podłączyć quest outcome prerequisite.
-6. Podłączyć reputation i renown przez narrow injected lookup.
-7. Zmigrować istniejące relation gates.
-8. Powiązać `wilcza-jama` z outcome `grozny-wilk`.
-9. Dodać validation.
-10. Dodać tests.
-11. Zaktualizować canonical docs.
-12. Dodać implementation notes.
-
-Dla istotnego publicznego evaluator/API dodać JSDoc oraz, gdzie przydatne dla preflight discovery:
-
-```ts
-@domain quests-progression
-```
-
----
-
-## Verification
-
-### Automated
-
-Uruchomić odpowiednie:
-
-- quest definition tests,
-- QuestManager tests,
-- reputation integration tests,
-- persistence tests,
-- typecheck,
-- build.
-
-### Manual — User
-
-User sprawdza w przeglądarce:
-
-1. Quest z niespełnionymi prerequisites nie jest widoczny ani oferowany.
-2. Po spełnieniu relation gate quest pojawia się.
-3. Po odpowiednim outcome poprzedniego questa pojawia się kolejny.
-4. Inny outcome nie odblokowuje niewłaściwej gałęzi.
-5. `wilcza-jama` nie jest dostępna przed rozwiązaniem `grozny-wilk`.
-6. Po rozpoczęciu questa późniejszy spadek relation/reputation nie usuwa go.
-7. Quest markers respektują availability.
-8. Existing quests bez prerequisites nadal zachowują się tak jak wcześniej.
-9. Save/load poprawnie odtwarza availability z persisted source state.
+`docs/plans/implementation-notes/quests-progression-004-quest-availability-and-prerequisites-implementation-notes.md`
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
