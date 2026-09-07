@@ -483,6 +483,7 @@ Generated from TypeScript imports.
 - `items/highQualityWeapons.test.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
+- `items/itemDisplay.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
 - `player/playerCombat.test.ts`
@@ -510,6 +511,24 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
+
+## `items/itemDisplay.test.ts`
+
+**Imports**
+
+- `items/itemDisplay.ts`
+- `items/items.ts`
+
+## `items/itemDisplay.ts`
+
+**Imports**
+
+- `items/itemCatalog.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `items/itemDisplay.test.ts`
 
 ## `items/itemInstances.ts`
 
@@ -625,6 +644,8 @@ Generated from TypeScript imports.
 - `items/itemCatalog.ts`
 - `items/itemCategories.test.ts`
 - `items/itemConsumables.test.ts`
+- `items/itemDisplay.test.ts`
+- `items/itemDisplay.ts`
 - `items/itemInstances.ts`
 - `items/itemModels.ts`
 - `items/primaryWeapons.ts`

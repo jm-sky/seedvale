@@ -7,6 +7,7 @@ import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { isToolKind } from '../../items/HeldTool'
 import { type BookTier, consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { itemDisplayName } from '../../items/itemDisplay'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
 import { tradeValue } from '../../items/tradeCatalog'
 import { SKILL_LABEL } from '../../player/PlayerSkills'
@@ -41,6 +42,7 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
 }
 
 const item = computed<ItemDef | null>(() => props.selectedItem ? ITEM_DEFS[props.selectedItem] : null)
+const displayName = computed(() => props.selectedItem ? itemDisplayName(props.selectedItem) : '')
 const group = computed(() => props.selectedItem
   ? ui.inventory.groups.find((entry) => entry.kind === props.selectedItem) ?? null
   : null)
@@ -147,7 +149,7 @@ function sharpenInstance(id: string): void {
   >
     <div class="flex flex-row items-center justify-between gap-2">
       <h1 class="mb-2 text-xl font-semibold tracking-wide">
-        {{ firstUpperCase(item.label) }}
+        {{ firstUpperCase(displayName) }}
       </h1>
       <button
         type="button"

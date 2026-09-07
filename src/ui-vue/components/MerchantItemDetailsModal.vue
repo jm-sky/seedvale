@@ -5,6 +5,7 @@ import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { type BookTier, consumeNeedNoun, ITEM_CATALOG } from '../../items/itemCatalog'
+import { itemDisplayName } from '../../items/itemDisplay'
 import { ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
 import { merchantPrice, tradeValue } from '../../items/tradeCatalog'
 import { SKILL_LABEL } from '../../player/PlayerSkills'
@@ -39,6 +40,7 @@ const CATEGORY_ICON: Record<ItemCategory, Component> = {
 }
 
 const item = computed(() => props.kind ? ITEM_DEFS[props.kind] : null)
+const displayName = computed(() => props.kind ? itemDisplayName(props.kind) : '')
 const catalogEntry = computed(() => props.kind ? ITEM_CATALOG[props.kind] : null)
 const group = computed(() => props.kind ? ui.merchant.groups.find((entry) => entry.kind === props.kind) ?? null : null)
 
@@ -70,7 +72,7 @@ function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
     >
       <div class="flex flex-row items-center justify-between gap-2">
         <h1 class="mb-2 text-xl font-semibold tracking-wide">
-          {{ firstUpperCase(item.label) }}
+          {{ firstUpperCase(displayName) }}
         </h1>
         <button
           type="button"

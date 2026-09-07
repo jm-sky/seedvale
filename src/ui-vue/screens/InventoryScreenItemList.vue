@@ -4,6 +4,7 @@ import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { isToolKind } from '../../items/HeldTool'
 import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { itemDisplayName } from '../../items/itemDisplay'
 import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
@@ -25,6 +26,7 @@ const sortMode = ref<SortMode>('category')
 const allItems = computed(() => ui.inventory.groups.map((group) => ({
   kind: group.kind,
   def: ITEM_DEFS[group.kind],
+  displayName: itemDisplayName(group.kind),
   count: group.count,
   condition: group.condition,
   uniformConditionPercent: group.uniformConditionPercent,
@@ -39,9 +41,9 @@ const items = computed(() => {
     ? allItems.value
     : allItems.value.filter((item) => hasItemCategory(item.def, filter.value as ItemCategory))
   const sorted = [...filtered]
-  if (sortMode.value === 'name') sorted.sort((a, b) => a.def.label.localeCompare(b.def.label, 'pl'))
+  if (sortMode.value === 'name') sorted.sort((a, b) => a.displayName.localeCompare(b.displayName, 'pl'))
   else if (sortMode.value === 'qty') sorted.sort((a, b) => b.count - a.count)
-  else sorted.sort((a, b) => CATEGORY_ORDER.indexOf(primaryItemCategory(a.def)) - CATEGORY_ORDER.indexOf(primaryItemCategory(b.def)) || a.def.label.localeCompare(b.def.label, 'pl'))
+  else sorted.sort((a, b) => CATEGORY_ORDER.indexOf(primaryItemCategory(a.def)) - CATEGORY_ORDER.indexOf(primaryItemCategory(b.def)) || a.displayName.localeCompare(b.displayName, 'pl'))
   return sorted
 })
 
@@ -152,7 +154,7 @@ function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
           @click="emit('select-item', item.kind)"
         >
           <span class="text-sm font-semibold">
-            {{ item.count }} × {{ item.def.label }}
+            {{ item.count }} × {{ item.displayName }}
             <span
               v-if="conditionLabel(item)"
               class="ml-1 text-[11px] font-normal opacity-70"

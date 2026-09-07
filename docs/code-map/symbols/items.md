@@ -170,6 +170,11 @@ Generated from exported TypeScript symbols.
 - `NON_ITEM_PROPS` — const — line 1366
 - `RangedConfig` — type — line 52
 
+## `items/itemDisplay.ts`
+
+- `itemDisplayName` — function — line 15
+  - domain: items-player
+
 ## `items/itemInstances.ts`
 
 - `clamp01` — function — line 141

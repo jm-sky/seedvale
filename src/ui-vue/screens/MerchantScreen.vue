@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import MerchantTabButton from '@/components/MerchantTabButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
 import { ITEM_CATALOG, type ItemCapability } from '../../items/itemCatalog'
+import { itemDisplayName } from '../../items/itemDisplay'
 import { isInstanceBackedKind } from '../../items/itemInstances'
 import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from '../../items/items'
 import { previewTransactionNetCoins } from '../../items/trade'
@@ -93,8 +94,9 @@ const buyRows = computed(() => {
     if (!matchesCategory(kind, buyFilters, hasItemKindCategory)) return []
     if (!matchesCapability(ITEM_CATALOG[kind].capabilities, buyFilters)) return []
     if (!matchesPrice(price, buyFilters)) return []
-    if (!matchesSearch(ITEM_DEFS[kind].label, buyFilters)) return []
-    return [{ kind, label: ITEM_DEFS[kind].label, price, weight: ITEM_DEFS[kind].weight, conditionPercent: null as number | null }]
+    const label = itemDisplayName(kind)
+    if (!matchesSearch(label, buyFilters)) return []
+    return [{ kind, label, price, weight: ITEM_DEFS[kind].weight, conditionPercent: null as number | null }]
   })
   return sortRows(rows, buyFilters.sort)
 })
@@ -105,10 +107,11 @@ const offerRows = computed(() => {
     if (!matchesCategory(kind, offerFilters, hasItemKindCategory)) return []
     if (!matchesCapability(ITEM_CATALOG[kind].capabilities, offerFilters)) return []
     if (!matchesPrice(price, offerFilters)) return []
-    if (!matchesSearch(ITEM_DEFS[kind].label, offerFilters)) return []
+    const label = itemDisplayName(kind)
+    if (!matchesSearch(label, offerFilters)) return []
     return [{
       kind,
-      label: ITEM_DEFS[kind].label,
+      label,
       price,
       weight: ITEM_DEFS[kind].weight,
       conditionPercent: conditionForOffer(kind),
@@ -136,11 +139,11 @@ function onClearOffer(kind: ItemKind): void {
 
 const purchaseLines = computed<TransactionLine[]>(() => (Object.entries(transaction.purchases) as [ItemKind, number][])
   .filter(([, count]) => count > 0)
-  .map(([kind, count]) => ({ kind, label: ITEM_DEFS[kind].label, count, totalValue: (merchantPrice(kind) ?? 0) * count })))
+  .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: (merchantPrice(kind) ?? 0) * count })))
 
 const offerLines = computed<TransactionLine[]>(() => (Object.entries(transaction.offer) as [ItemKind, number][])
   .filter(([, count]) => count > 0)
-  .map(([kind, count]) => ({ kind, label: ITEM_DEFS[kind].label, count, totalValue: tradeValue(kind) * count })))
+  .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: tradeValue(kind) * count })))
 
 const netCoins = computed(() => previewTransactionNetCoins(transaction.purchases, transaction.offer))
 const canTrade = computed(() => purchaseLines.value.length > 0 || offerLines.value.length > 0)

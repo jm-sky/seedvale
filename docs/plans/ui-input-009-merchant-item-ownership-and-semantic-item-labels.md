@@ -1,7 +1,7 @@
 # Plan: Merchant item ownership and semantic item labels
 
 **Created:** 2026-09-05
-**Status:** `in progress` 🔄
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** S
 **Depends on:** none
@@ -140,3 +140,4 @@ Unikać unrelated refactors.
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
 
 > Partially done by user: items count with other UI/UX and RWD fixes.
+> Book display semantics done by Claude: added `src/items/itemDisplay.ts` (`itemDisplayName()`), wired into Merchant BUY/OFFER rows, search, transaction summary, Merchant Item Details, and Inventory list/details titles + name-sort.
