@@ -85,12 +85,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/caveGenerator.ts`
 
-- `CAVE_MOUTH_DEPTH` — const — line 36
-- `CaveGeneratorInput` — type — line 80
-- `generateCaveDefinitions` — function — line 266
-- `MIN_OVERBURDEN` — const — line 61
-- `MOUTH_FOOTPRINT_MARGIN` — const — line 78
-- `MOUTH_ROOF_MIN` — const — line 74
+- `CAVE_MOUTH_DEPTH` — const — line 37
+- `CaveGeneratorInput` — type — line 81
+- `generateCaveDefinitions` — function — line 254
+- `MIN_OVERBURDEN` — const — line 62
+- `MOUTH_FOOTPRINT_MARGIN` — const — line 79
+- `MOUTH_ROOF_MIN` — const — line 75
 
 ## `world/caveMesh.ts`
 
@@ -106,6 +106,24 @@ Generated from exported TypeScript symbols.
 
 - `CAVE_RNG_SALT` — const — line 34
 - `createCaveRandom` — function — line 43
+
+## `world/caves/caveSdfField.ts`
+
+- `Bounds` — type — line 49
+- `boxSDF` — function — line 78
+- `buildCaveSdfRepresentation` — function — line 224
+  - domain: world-terrain
+- `buildVoidField` — function — line 194
+- `CaveSdfSpatialRepresentation` — type — line 54
+- `DEFAULT_SDF_PARAMS` — const — line 39
+- `ellipsoidSDF` — function — line 63
+- `FeatureBox` — type — line 60
+- `PathStation` — type — line 61
+- `placePrimitivesAlongPath` — function — line 100
+  - domain: world-terrain
+- `SdfCaveParams` — type — line 24
+- `smin` — function — line 72
+- `VoidPrimitive` — type — line 59
 
 ## `world/caves/caveSpikeMaterial.ts`
 
@@ -144,17 +162,23 @@ Generated from exported TypeScript symbols.
 - `mouthOverburdenRequirement` — function — line 35
   - domain: world-terrain
 
+## `world/caves/productionTopology.ts`
+
+- `buildProductionCaveTopology` — function — line 220
+  - domain: world-terrain
+- `MIN_DISCONNECTED_CLEARANCE` — const — line 63
+- `minGapBetweenPaths` — function — line 179
+- `ProductionTopologyInput` — type — line 65
+
 ## `world/caves/sdfCaveMesh.ts`
 
-- `AccidentalUnionStressConfig` — type — line 436
-- `buildAccidentalUnionStressMesh` — function — line 451
+- `AccidentalUnionStressConfig` — type — line 250
+- `buildAccidentalUnionStressMesh` — function — line 265
   - domain: world-terrain
-- `buildSdfCaveMesh` — function — line 370
+- `buildSdfCaveMesh` — function — line 196
   - domain: world-terrain
-- `countConnectedComponents` — function — line 474
-- `DEFAULT_SDF_PARAMS` — const — line 38
-- `SdfCaveParams` — type — line 25
-- `SdfCaveResult` — type — line 360
+- `countConnectedComponents` — function — line 288
+- `SdfCaveResult` — type — line 187
 
 ## `world/caves/spikeNoise.ts`
 
@@ -164,11 +188,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/spikeTestCave.ts`
 
-- `buildSpikeTestTopology` — function — line 192
+- `buildSpikeTestTopology` — function — line 160
   - domain: world-terrain
-- `spikeOverburdenRequirement` — function — line 105
+- `spikeOverburdenRequirement` — function — line 74
   - domain: world-terrain
-- `SpikeTestCaveOptions` — type — line 55
+- `SpikeTestCaveOptions` — type — line 51
 
 ## `world/caves/sweepCaveMesh.ts`
 
@@ -177,6 +201,10 @@ Generated from exported TypeScript symbols.
 - `DEFAULT_SWEEP_PARAMS` — const — line 40
 - `SweepCaveParams` — type — line 25
 - `SweepCaveResult` — type — line 250
+
+## `world/caves/terrainFootprint.ts`
+
+- `minSurfaceOverFootprint` — function — line 14
 
 ## `world/caves/topologyAdapter.ts`
 
@@ -235,15 +263,12 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `CaveRenderVariant` — type — line 45
-- `Caves` — type — line 68
-- `createCaves` — function — line 112
+- `Caves` — type — line 43
+- `createCaves` — function — line 97
   - system: caves
-  - role: Owns cave definitions, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
+  - role: Owns cave topologies, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
   - owns: Caves
   - lifecycle: rebuild
-- `resolveCaveRenderVariants` — function — line 58
-  - domain: world-terrain
 
 ## `world/createDryingRacks.ts`
 

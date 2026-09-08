@@ -24,10 +24,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 324
-- `CreateSettlementDeps` — type — line 215
-- `Settlement` — type — line 108
-- `settlementSpawnPoint` — function — line 203
+- `createSettlement` — function — line 325
+- `CreateSettlementDeps` — type — line 216
+- `Settlement` — type — line 109
+- `settlementSpawnPoint` — function — line 204
 
 ## `settlement/decorProps.ts`
 

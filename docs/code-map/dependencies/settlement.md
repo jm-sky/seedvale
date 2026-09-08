@@ -159,6 +159,7 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
 - `items/createDroppedItems.ts`
+- `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/VillageFire.ts`
 - `settlement/families.ts`

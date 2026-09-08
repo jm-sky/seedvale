@@ -132,6 +132,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `world/caveVolume.ts`
+- `world/caves/caveIdentity.ts`
 - `world/largeCaves.ts`
 - `world/parseSeed.ts`
 
@@ -140,7 +141,7 @@ Generated from TypeScript imports.
 - `world/caveGenerator.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/mouthOverburden.ts`
-- `world/caves/spikeTestCave.ts`
+- `world/caves/productionTopology.ts`
 - `world/createCaves.ts`
 
 ## `world/caveMesh.ts`
@@ -169,10 +170,12 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caveMesh.ts`
 - `world/caveVolume.test.ts`
+- `world/caves/caveSdfField.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTopology.test.ts`
 - `world/caves/caveTopology.ts`
 - `world/caves/mouthOverburden.ts`
+- `world/caves/productionTopology.ts`
 - `world/caves/sdfCaveMesh.test.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/caves/sweepCaveMesh.test.ts`
@@ -181,13 +184,56 @@ Generated from TypeScript imports.
 - `world/createCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 
+## `world/caves/caveIdentity.test.ts`
+
+**Imports**
+
+- `world/caves/caveIdentity.ts`
+
 ## `world/caves/caveIdentity.ts`
+
+**Imported by**
+
+- `world/caveGenerator.ts`
+- `world/caves/caveIdentity.test.ts`
+- `world/caves/productionTopology.ts`
+
+## `world/caves/caveRng.test.ts`
+
+**Imports**
+
+- `world/caves/caveRng.ts`
 
 ## `world/caves/caveRng.ts`
 
 **Imports**
 
 - `world/parseSeed.ts`
+
+**Imported by**
+
+- `world/caves/caveRng.test.ts`
+- `world/caves/productionTopology.ts`
+
+## `world/caves/caveSdfField.test.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/caveTopology.ts`
+
+## `world/caves/caveSdfField.ts`
+
+**Imports**
+
+- `world/caves/caveTopology.ts`
+- `world/caves/spikeNoise.ts`
+
+**Imported by**
+
+- `world/caves/caveSdfField.test.ts`
+- `world/caves/sdfCaveMesh.ts`
 
 ## `world/caves/caveSpikeMaterial.ts`
 
@@ -201,7 +247,6 @@ Generated from TypeScript imports.
 
 - `world/caves/sdfCaveMesh.ts`
 - `world/caves/sweepCaveMesh.ts`
-- `world/createCaves.ts`
 
 ## `world/caves/caveSurfaceIntegration.test.ts`
 
@@ -232,6 +277,10 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveSdfField.test.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/productionTopology.test.ts`
+- `world/caves/productionTopology.ts`
 - `world/caves/sdfCaveMesh.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/caves/sweepCaveMesh.ts`
@@ -242,6 +291,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/productionTopology.ts`
 - `world/caves/sdfCaveMesh.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/caves/sweepCaveMesh.ts`
@@ -253,6 +303,43 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caveVolume.ts`
+
+**Imported by**
+
+- `world/caves/productionTopology.test.ts`
+- `world/caves/productionTopology.ts`
+- `world/caves/spikeTestCave.ts`
+
+## `world/caves/productionTopology.test.ts`
+
+**Imports**
+
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthOverburden.ts`
+- `world/caves/productionTopology.ts`
+- `world/caves/terrainFootprint.ts`
+- `world/caves/topologyAdapter.ts`
+- `world/largeCaves.ts`
+
+## `world/caves/productionTopology.ts`
+
+**Imports**
+
+- `world/caveGenerator.ts`
+- `world/caveVolume.ts`
+- `world/caves/caveIdentity.ts`
+- `world/caves/caveRng.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/clipBelowSurface.ts`
+- `world/caves/mouthOverburden.ts`
+- `world/caves/terrainFootprint.ts`
+- `world/caves/topologyAdapter.ts`
+- `world/largeCaves.ts`
+
+**Imported by**
+
+- `world/caves/productionTopology.test.ts`
+- `world/createCaves.ts`
 
 ## `world/caves/sdfCaveMesh.test.ts`
 
@@ -267,10 +354,10 @@ Generated from TypeScript imports.
 **Imports**
 
 - `debug/debugMode.ts`
+- `world/caves/caveSdfField.ts`
 - `world/caves/caveSpikeMetrics.ts`
 - `world/caves/caveTopology.ts`
 - `world/caves/clipBelowSurface.ts`
-- `world/caves/spikeNoise.ts`
 
 **Imported by**
 
@@ -282,17 +369,18 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `world/caves/sdfCaveMesh.ts`
+- `world/caves/caveSdfField.ts`
 - `world/caves/sweepCaveMesh.ts`
 
 ## `world/caves/spikeTestCave.ts`
 
 **Imports**
 
-- `world/caveGenerator.ts`
 - `world/caveVolume.ts`
 - `world/caves/caveTopology.ts`
 - `world/caves/clipBelowSurface.ts`
+- `world/caves/mouthOverburden.ts`
+- `world/caves/terrainFootprint.ts`
 - `world/caves/topologyAdapter.ts`
 - `world/parseSeed.ts`
 
@@ -303,7 +391,6 @@ Generated from TypeScript imports.
 - `world/caves/sdfCaveMesh.test.ts`
 - `world/caves/sweepCaveMesh.test.ts`
 - `world/caves/topologyAdapter.test.ts`
-- `world/createCaves.ts`
 
 ## `world/caves/sweepCaveMesh.test.ts`
 
@@ -326,13 +413,18 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/sweepCaveMesh.test.ts`
-- `world/createCaves.ts`
 
 ## `world/caves/terrainFootprint.ts`
 
 **Imports**
 
 - `world/caves/clipBelowSurface.ts`
+
+**Imported by**
+
+- `world/caves/productionTopology.test.ts`
+- `world/caves/productionTopology.ts`
+- `world/caves/spikeTestCave.ts`
 
 ## `world/caves/topologyAdapter.test.ts`
 
@@ -352,6 +444,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveSurfaceIntegration.test.ts`
+- `world/caves/productionTopology.test.ts`
+- `world/caves/productionTopology.ts`
 - `world/caves/spikeTestCave.ts`
 - `world/caves/topologyAdapter.test.ts`
 - `world/createCaves.ts`
@@ -437,18 +531,11 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
-## `world/createCaves.test.ts`
-
-**Imports**
-
-- `world/createCaves.ts`
-
 ## `world/createCaves.ts`
 
 **Imports**
 
 - `assets/loadGltf.ts`
-- `debug/debugMode.ts`
 - `settlement/families.ts`
 - `settlement/settlementGenerator.ts`
 - `terrain/chunkManager.ts`
@@ -456,11 +543,9 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caveVolume.ts`
 - `world/caves/caveSpikeMaterial.ts`
-- `world/caves/caveSpikeMetrics.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/productionTopology.ts`
 - `world/caves/sdfCaveMesh.ts`
-- `world/caves/spikeTestCave.ts`
-- `world/caves/sweepCaveMesh.ts`
 - `world/caves/topologyAdapter.ts`
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.ts`
@@ -468,7 +553,6 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/worldBundle.ts`
-- `world/createCaves.test.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/locations/worldLocationCatalog.ts`
 
@@ -1036,6 +1120,8 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
+- `world/caves/productionTopology.test.ts`
+- `world/caves/productionTopology.ts`
 - `world/createCaves.ts`
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.test.ts`

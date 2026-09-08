@@ -10,9 +10,40 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `perf/agentCpuDiag.test.ts`
+- `perf/agentCpuDiag.ts`
 - `perf/index.ts`
 - `terrain/chunkManager.ts`
 - `ui/createDebugGui.ts`
+
+## `perf/agentCpuDiag.test.ts`
+
+**Imports**
+
+- `perf/active.ts`
+- `perf/agentCpuDiag.ts`
+- `perf/monitor.ts`
+- `perf/types.ts`
+
+## `perf/agentCpuDiag.ts`
+
+**Imports**
+
+- `perf/active.ts`
+- `perf/types.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/createFauna.ts`
+- `fauna/herdCohesion.ts`
+- `perf/agentCpuDiag.test.ts`
+- `perf/benchmark.ts`
+- `perf/index.ts`
+- `perf/report.test.ts`
+- `perf/report.ts`
+- `perf/types.ts`
+- `settlement/createSettlement.ts`
 
 ## `perf/benchmark.ts`
 
@@ -20,6 +51,7 @@ Generated from TypeScript imports.
 
 - `config/qualityProfiles.ts`
 - `config/worldConfig.ts`
+- `perf/agentCpuDiag.ts`
 - `perf/benchmarkScenarios.ts`
 - `perf/isolationProbe.ts`
 - `perf/monitor.ts`
@@ -106,6 +138,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `perf/active.ts`
+- `perf/agentCpuDiag.ts`
 - `perf/benchmark.ts`
 - `perf/benchmarkFixture.ts`
 - `perf/benchmarkScenarios.ts`
@@ -168,6 +201,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `perf/active.ts`
+- `perf/agentCpuDiag.test.ts`
 - `perf/benchmark.ts`
 - `perf/index.ts`
 - `perf/isolationProbe.ts`
@@ -213,6 +247,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/agentCpuDiag.ts`
 - `perf/monitor.ts`
 - `perf/report.ts`
 - `perf/types.ts`
@@ -221,6 +256,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/agentCpuDiag.ts`
 - `perf/monitor.ts`
 - `perf/percentile.ts`
 - `perf/sceneCensus.ts`
@@ -253,10 +289,13 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `perf/agentCpuDiag.ts`
 - `perf/sceneCensus.ts`
 
 **Imported by**
 
+- `perf/agentCpuDiag.test.ts`
+- `perf/agentCpuDiag.ts`
 - `perf/benchmark.ts`
 - `perf/detector.test.ts`
 - `perf/detector.ts`

@@ -7,11 +7,22 @@ Generated from exported TypeScript symbols.
 - `getMonitor` — function — line 12
 - `setActiveMonitor` — function — line 8
 
+## `perf/agentCpuDiag.ts`
+
+- `AgentCpuDiag` — type — line 48
+- `AgentCpuDiagTotals` — type — line 8
+- `AgentCpuReport` — type — line 18
+- `buildAgentCpuReport` — function — line 153
+- `createAgentCpuDiag` — function — line 74
+- `formatAgentCpuReport` — function — line 202
+- `getAgentCpuDiag` — function — line 149
+- `setActiveAgentCpuDiag` — function — line 145
+
 ## `perf/benchmark.ts`
 
-- `BenchmarkHost` — type — line 42
-- `BenchmarkRunner` — type — line 30
-- `createBenchmarkRunner` — function — line 117
+- `BenchmarkHost` — type — line 43
+- `BenchmarkRunner` — type — line 31
+- `createBenchmarkRunner` — function — line 118
 
 ## `perf/benchmarkFixture.ts`
 
@@ -93,8 +104,8 @@ Generated from exported TypeScript symbols.
 
 ## `perf/report.ts`
 
-- `buildReport` — function — line 15
-- `formatReport` — function — line 133
+- `buildReport` — function — line 17
+- `formatReport` — function — line 137
 
 ## `perf/sceneCensus.ts`
 
@@ -112,23 +123,23 @@ Generated from exported TypeScript symbols.
 
 ## `perf/types.ts`
 
-- `BudgetKind` — type — line 152
-- `HitchEvent` — type — line 55
-- `HitchReportRow` — type — line 102
-- `IsolationProbeRow` — type — line 110
-- `PERF_CATEGORIES` — const — line 7
-- `PERF_CATEGORY_COUNT` — const — line 24
-- `PERF_CATEGORY_INDEX` — const — line 26
-- `PERF_SEVERITY_RANK` — const — line 43
-- `PerfAttribution` — type — line 182
-- `PerfCategory` — type — line 22
-- `PerfContext` — type — line 72
-- `PerfDetection` — type — line 160
-- `PerfFilter` — type — line 50
-- `PerfLiveStats` — type — line 131
-- `PerfLogEvent` — type — line 169
-- `PerfReportJson` — type — line 188
-- `PerfSeverity` — type — line 41
-- `PerfSuspect` — type — line 154
-- `ScenarioAnchor` — type — line 62
-- `ScenarioRoute` — type — line 64
+- `BudgetKind` — type — line 153
+- `HitchEvent` — type — line 56
+- `HitchReportRow` — type — line 103
+- `IsolationProbeRow` — type — line 111
+- `PERF_CATEGORIES` — const — line 8
+- `PERF_CATEGORY_COUNT` — const — line 25
+- `PERF_CATEGORY_INDEX` — const — line 27
+- `PERF_SEVERITY_RANK` — const — line 44
+- `PerfAttribution` — type — line 183
+- `PerfCategory` — type — line 23
+- `PerfContext` — type — line 73
+- `PerfDetection` — type — line 161
+- `PerfFilter` — type — line 51
+- `PerfLiveStats` — type — line 132
+- `PerfLogEvent` — type — line 170
+- `PerfReportJson` — type — line 189
+- `PerfSeverity` — type — line 42
+- `PerfSuspect` — type — line 155
+- `ScenarioAnchor` — type — line 63
+- `ScenarioRoute` — type — line 65

@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
+- `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/household.ts`
 - `settlement/props.ts`
@@ -234,6 +235,7 @@ Generated from TypeScript imports.
 - `fauna/playerAwareness.ts`
 - `fauna/proceduralAnimals.ts`
 - `math/segment.ts`
+- `perf/agentCpuDiag.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
 - `shared/bootMark.ts`
@@ -368,6 +370,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `perf/agentCpuDiag.ts`
 
 **Imported by**
 
