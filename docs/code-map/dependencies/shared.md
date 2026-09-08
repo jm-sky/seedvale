@@ -84,6 +84,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalLife.test.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalCorpse.ts`
 - `items/sensibleFood.test.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.ts`

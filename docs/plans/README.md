@@ -97,6 +97,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | 💡 `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
 | 💡 `fauna-017-animal-agent-refactor.md`                                     | -       | 🟡 | L      | -      |
+| ◼️ `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~, npc-028 |
 
 ---
 
@@ -198,7 +199,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - npc: `028`
 - persistence: `005`
 - quests-progression: `012`
-- settlements: `005`
+- settlements: `006`
 - settlements-npcs: `029`
 - tools: `013`
 - ui-input: `013`

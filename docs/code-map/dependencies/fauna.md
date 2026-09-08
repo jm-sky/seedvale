@@ -18,14 +18,12 @@ Generated from TypeScript imports.
 - `audio/animalSounds.ts`
 - `debug/debugMode.ts`
 - `fauna/AnimalLife.ts`
+- `fauna/animalCorpse.ts`
 - `fauna/animalDebugVisual.ts`
 - `fauna/animalDefs.ts`
-- `fauna/bloodSplat.ts`
-- `fauna/corpseDecayFx.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
-- `fauna/harvestedRemains.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/playerAwareness.ts`
@@ -74,14 +72,12 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
 - `fauna/animalRoamingTrips.test.ts`
-- `fauna/corpseDecay.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/frenzyWolf.test.ts`
-- `fauna/harvestedRemains.test.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/herdCohesion.test.ts`
 - `fauna/herdCohesion.ts`
@@ -154,6 +150,32 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 
+## `fauna/animalCorpse.test.ts`
+
+**Imports**
+
+- `fauna/animalCorpse.ts`
+
+## `fauna/animalCorpse.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/bloodSplat.ts`
+- `fauna/corpseDecayFx.ts`
+- `fauna/harvestedRemains.ts`
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `shared/StaminaState.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.test.ts`
+- `fauna/corpseDecay.test.ts`
+- `fauna/harvestedRemains.test.ts`
+- `fauna/rabies.test.ts`
+
 ## `fauna/animalDebugVisual.ts`
 
 **Imported by**
@@ -172,6 +194,8 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
+- `fauna/corpseDecay.test.ts`
 - `world/animalTraps.ts`
 
 ## `fauna/animalDialogue.ts`
@@ -226,13 +250,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 
 ## `fauna/corpseDecay.test.ts`
 
 **Imports**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
+- `fauna/animalDefs.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/harvestedRemains.ts`
 
@@ -240,7 +265,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 
 ## `fauna/createFauna.test.ts`
 
@@ -367,7 +392,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 - `fauna/harvestedRemains.ts`
 
 ## `fauna/harvestedRemains.ts`
@@ -381,7 +406,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/harvestedRemains.test.ts`
 
@@ -535,6 +560,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 
 ## `fauna/spawnerLabels.test.ts`
 

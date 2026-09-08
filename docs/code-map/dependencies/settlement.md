@@ -852,6 +852,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/actions/groundActions.test.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 - `fauna/createFauna.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`

@@ -4,48 +4,69 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 1059
+- `AnimalAgent` — class — line 985
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 429
-- `AnimalAgentDeps` — type — line 938
-- `AnimalSaveState` — type — line 526
-- `AnimalUpdateContext` — type — line 969
-- `BURY_DURATION_SEC` — const — line 241
-- `canHarvestMeatFrom` — function — line 225
-- `canPredatorPursueIntoVillage` — function — line 732
-- `carcassCandidateScore` — function — line 691
-- `carcassFoodValue` — function — line 673
-- `corpseLingerSeconds` — function — line 169
-- `CorpsePhase` — type — line 177
-- `corpsePhaseFromElapsed` — function — line 206
-- `FAUNA_SHADOW_DISTANCE` — const — line 138
-- `FaunaAiBranch` — type — line 408
-- `FaunaNavRescueDebugInfo` — type — line 413
-- `forageEdgeScore` — function — line 596
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 301
-- `FrenzyWolfCandidate` — type — line 851
-- `HARVEST_MEAT_DURATION_SEC` — const — line 244
-- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 167
-- `isCarcassEdible` — function — line 647
-- `isRabiesCorpseContact` — function — line 893
-- `isWithinVillageRadius` — function — line 713
-- `NearbyNpcCandidate` — type — line 846
-- `pickNearestEligibleWolf` — function — line 860
-- `pickRabidTarget` — function — line 907
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 156
-- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 195
-- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 198
-- `resolveLureTarget` — function — line 761
-- `rollsRabiesInfection` — function — line 884
-- `rotFxRelevant` — function — line 215
-- `selectDietFeedKind` — function — line 632
-- `tripDayBucket` — function — line 619
-- `villageFleeBiasFalloff` — function — line 740
-- `VillageInfo` — type — line 707
+- `AnimalAgentDebugInfo` — type — line 377
+- `AnimalAgentDeps` — type — line 864
+- `AnimalSaveState` — type — line 474
+- `AnimalUpdateContext` — type — line 895
+- `BURY_DURATION_SEC` — const — line 189
+- `canPredatorPursueIntoVillage` — function — line 680
+- `carcassCandidateScore` — function — line 639
+- `carcassFoodValue` — function — line 621
+- `FAUNA_SHADOW_DISTANCE` — const — line 156
+- `FaunaAiBranch` — type — line 356
+- `FaunaNavRescueDebugInfo` — type — line 361
+- `forageEdgeScore` — function — line 544
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 249
+- `FrenzyWolfCandidate` — type — line 799
+- `HARVEST_MEAT_DURATION_SEC` — const — line 192
+- `isCarcassEdible` — function — line 595
+- `isWithinVillageRadius` — function — line 661
+- `NearbyNpcCandidate` — type — line 794
+- `pickNearestEligibleWolf` — function — line 808
+- `pickRabidTarget` — function — line 833
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 174
+- `resolveLureTarget` — function — line 709
+- `selectDietFeedKind` — function — line 580
+- `tripDayBucket` — function — line 567
+- `villageFleeBiasFalloff` — function — line 688
+- `VillageInfo` — type — line 655
+
+## `fauna/animalCorpse.ts`
+
+- `advanceAnimalCorpse` — function — line 399
+- `AnimalCorpseState` — type — line 124
+- `buryCorpse` — function — line 221
+- `canHarvestMeatFrom` — function — line 89
+- `claimCorpseAsFood` — function — line 424
+- `CorpseHost` — type — line 196
+- `corpseLingerSeconds` — function — line 38
+- `CorpseNeighbour` — type — line 209
+- `CorpsePhase` — type — line 30
+  - domain: fauna
+  - role: Corpse/remains/decay/rot-FX/rabies-exposure/food-claim state machine for one dead `AnimalAgent` (plan fauna-017 step 5, review E3) — plain state plus free functions over an explicit `CorpseHost`, mirroring how `AnimalLife.ts` owns `AnimalLifeState` without owning the animal. Not a second entity: `health.dead` stays authoritative on `AnimalAgent`, and every public method there (`bury`, `harvestMeat`, `corpsePhase`, `claimAsFood`, …) stays a thin delegate into this module, so no cross- agent call shape changes.
+- `corpsePhaseFromElapsed` — function — line 70
+- `corpseReadyToRemove` — function — line 228
+- `createAnimalCorpseState` — function — line 173
+- `disposeAnimalCorpse` — function — line 448
+- `disposeAnimalCorpseRotFx` — function — line 389
+- `harvestCorpseMeat` — function — line 279
+- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 36
+- `hideLivingVisual` — function — line 236
+- `isRabiesCorpseContact` — function — line 112
+- `markCorpseFoodConsumed` — function — line 439
+- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 59
+- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 62
+- `releaseCorpseClaim` — function — line 431
+- `rollsRabiesInfection` — function — line 103
+- `rotFxRelevant` — function — line 79
+- `spawnDeathSplat` — function — line 296
+- `spawnHarvestedRemains` — function — line 262
 
 ## `fauna/animalDebugVisual.ts`
 

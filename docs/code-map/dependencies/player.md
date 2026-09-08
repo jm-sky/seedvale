@@ -50,6 +50,7 @@ Generated from TypeScript imports.
 - `app/userActions.ts`
 - `assets/assetIndex.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalCorpse.ts`
 - `fauna/createFauna.ts`
 - `fauna/mountedSpeed.test.ts`
 - `fauna/playerAwareness.ts`
