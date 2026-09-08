@@ -35,15 +35,7 @@ import {
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import { shoreProbeHits } from '../terrain/waterBodyKind'
-import {
-  applyBarPercent,
-  computeBarPercent,
-  createAgentLabel,
-  createLabelBar,
-  INITIAL_LABEL_DISTANCE_STATE,
-  type LabelDistanceState,
-  updateAgentLabelDistanceState,
-} from '../ui/agentStatusLabel'
+import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint } from '../world/collision'
@@ -111,7 +103,6 @@ import {
   swimStaminaExertion,
   type WaterTraversalMode,
 } from './waterTraversal'
-import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 /** Species taxonomy + `ANIMAL_DEFS` moved to `./animalDefs` (plan fauna-017
  *  step 1) — re-exported wholesale so every existing importer of a species
@@ -1160,19 +1151,13 @@ export class AnimalAgent {
    *  mixer work needed), compared against `timeSinceDeath` (already tracked
    *  for corpse decay) rather than a second death-clock field. */
   private deathAnimDurationSec: number | null = null
-  private readonly label: CSS2DObject
-  private readonly labelEl: HTMLDivElement
-  private readonly labelNameEl: HTMLDivElement
-  private readonly labelBarsEl: HTMLDivElement
-  private readonly hpFillEl: HTMLDivElement
-  private readonly staminaFillEl: HTMLDivElement
-  private readonly satietyFillEl: HTMLDivElement
-  private readonly hydrationFillEl: HTMLDivElement
-  private labelDistanceState: LabelDistanceState = INITIAL_LABEL_DISTANCE_STATE
-  private lastHpPercent = -1
-  private lastStaminaPercent = -1
-  private lastSatietyPercent = -1
-  private lastHydrationPercent = -1
+  /** Name+stat-bars label owner (plan fauna-017 step 4c, review E6) —
+   *  replaces 13 hand-rolled DOM/percent-cache fields with the shared
+   *  controller `NpcAgent` already uses (`ui/agentStatusLabel.ts`). Bars are
+   *  `['hp','stamina','satiety','hydration']`; satiety/hydration are
+   *  inverted needs, fed as `{ current: 1 - hunger, max: 1 }` at each
+   *  `sync()` call (see `tickPresentationAndLife()`). */
+  private readonly labelController: AgentStatusLabelController
   readonly health: HealthState
   readonly life: AnimalLifeState
   /** Absolute `elapsedDays` anchor at which this animal's next production
@@ -1523,25 +1508,17 @@ export class AnimalAgent {
     })
     this.anim.playImmediate('idle')
 
-    const hpBar = createLabelBar('hp')
-    const staminaBar = createLabelBar('stamina')
-    // Satiety / hydration are inverted needs: full bar = well fed / hydrated.
-    const satietyBar = createLabelBar('satiety', Math.round((1 - this.life.hunger) * 100))
-    const hydrationBar = createLabelBar('hydration', Math.round((1 - this.life.thirst) * 100))
-    this.hpFillEl = hpBar.fill
-    this.staminaFillEl = staminaBar.fill
-    this.satietyFillEl = satietyBar.fill
-    this.hydrationFillEl = hydrationBar.fill
-    const labelDom = createAgentLabel(
+    // Bars seed at 100% (`createLabelBar`'s own default) rather than this
+    // individual's actual starting satiety/hydration — a one-frame cosmetic
+    // difference from the pre-adoption hand-rolled version, corrected by
+    // the first real `sync()` call in `tickPresentationAndLife()` (plan
+    // fauna-017 step 4c).
+    this.labelController = createAgentStatusLabelController(
       ANIMAL_LABELS[def.kind],
-      [hpBar, staminaBar, satietyBar, hydrationBar],
+      ['hp', 'stamina', 'satiety', 'hydration'],
       this.labelHeight(),
     )
-    this.labelEl = labelDom.el
-    this.labelNameEl = labelDom.nameEl
-    this.labelBarsEl = labelDom.barsEl
-    this.label = labelDom.label
-    this.mesh.add(this.label)
+    this.mesh.add(this.labelController.label)
 
     assignRenderLayer(this.mesh, AGENT_RENDER_LAYER)
 
@@ -1560,7 +1537,7 @@ export class AnimalAgent {
     this.motherId = undefined
     const factor = JUVENILE_SCALE_FACTOR[this.def.kind]
     if (factor) this.mesh.scale.multiplyScalar(1 / factor)
-    this.label.position.y = this.labelHeight()
+    this.labelController.label.position.y = this.labelHeight()
   }
 
   /** Name/HP label height above the mesh root — folds in the juvenile scale
@@ -1586,8 +1563,7 @@ export class AnimalAgent {
     disposeHarvestedRemains(this.naturalRemains)
     this.naturalRemains = null
     this.disposeRotFx()
-    this.label.removeFromParent()
-    this.labelEl.remove()
+    this.labelController.dispose()
     this.anim.stopAll()
     this.debugVisual?.dispose()
     this.debugVisual = null
@@ -1740,33 +1716,19 @@ export class AnimalAgent {
     this.resolveWaterTraversal()
     this.tickDrowning(dt)
     tickAnimalLife(this.life, dt, this.sprinting, { hungerThirstRate }, this.def.metabolism, this.swimExertionNow())
-    this.lastHpPercent = applyBarPercent(
-      this.hpFillEl,
-      computeBarPercent(this.health.currentHp, this.health.maxHp),
-      this.lastHpPercent,
-    )
-    this.lastStaminaPercent = applyBarPercent(
-      this.staminaFillEl,
-      computeBarPercent(this.life.stamina.current, this.life.stamina.max),
-      this.lastStaminaPercent,
-    )
-    this.lastSatietyPercent = applyBarPercent(
-      this.satietyFillEl,
-      Math.round((1 - this.life.hunger) * 100),
-      this.lastSatietyPercent,
-    )
-    this.lastHydrationPercent = applyBarPercent(
-      this.hydrationFillEl,
-      Math.round((1 - this.life.thirst) * 100),
-      this.lastHydrationPercent,
-    )
-    this.labelDistanceState = updateAgentLabelDistanceState(
-      this.labelEl,
-      this.labelBarsEl,
+    // Satiety / hydration are inverted needs (full bar = well fed/hydrated),
+    // so they're fed as `{ current: 1 - need, max: 1 }` rather than a
+    // current/max pair from `AnimalLifeState` directly.
+    this.labelController.sync(
+      {
+        hp: { current: this.health.currentHp, max: this.health.maxHp },
+        stamina: { current: this.life.stamina.current, max: this.life.stamina.max },
+        satiety: { current: 1 - this.life.hunger, max: 1 },
+        hydration: { current: 1 - this.life.thirst, max: 1 },
+      },
       this.mesh,
       this.mesh.position.distanceTo(observerPos),
       FAUNA_SHADOW_DISTANCE,
-      this.labelDistanceState,
     )
     this.anim.update(dt)
   }
@@ -1784,7 +1746,7 @@ export class AnimalAgent {
     this.health.currentHp = this.health.maxHp
     this.mesh.scale.multiplyScalar(DANGEROUS_SCALE_FACTOR)
     if (!this.isCapsule) tintPropMaterials(this.mesh, DANGEROUS_TINT_HEX)
-    this.labelNameEl.textContent = `Groźny ${ANIMAL_LABELS[this.def.kind]}`
+    this.labelController.setName(`Groźny ${ANIMAL_LABELS[this.def.kind]}`)
   }
 
   isFrenzied(): boolean {
@@ -1877,7 +1839,7 @@ export class AnimalAgent {
   setHighlighted(active: boolean): void {
     if (this.highlighted === active) return
     this.highlighted = active
-    this.labelEl.classList.toggle('npc-label--highlighted', active)
+    this.labelController.el.classList.toggle('npc-label--highlighted', active)
   }
 
   /** DevTools runtime debug entry point (fauna debug tooling — see
@@ -2055,7 +2017,7 @@ export class AnimalAgent {
       if (this.meatHarvested) {
         this.hideLivingVisual()
         void this.spawnHarvestedRemains()
-        this.labelEl.style.display = 'none'
+        this.labelController.el.style.display = 'none'
       } else if (this.anim.has('death')) {
         // Plan fauna-017 step 4b: settle on the death clip's own final pose
         // (same as a live `collapse()`) instead of always manually tipping
@@ -2067,9 +2029,7 @@ export class AnimalAgent {
         this.mesh.rotation.z = side * (Math.PI / 2)
         this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
       }
-      this.lastHpPercent = 0
-      this.hpFillEl.style.width = '0%'
-      this.labelBarsEl.style.display = 'none'
+      this.labelController.settleAtZeroHp()
     }
   }
 
@@ -2146,7 +2106,7 @@ export class AnimalAgent {
     this.mesh.rotation.z = 0
     void this.spawnHarvestedRemains()
     this.snapY()
-    this.labelEl.style.display = 'none'
+    this.labelController.el.style.display = 'none'
   }
 
   /** GLB remains as a mesh child — token so dispose mid-load does not parent
@@ -2237,9 +2197,7 @@ export class AnimalAgent {
       this.mesh.rotation.z = side * (Math.PI / 2)
       this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
     }
-    this.lastHpPercent = 0
-    this.hpFillEl.style.width = '0%'
-    this.labelBarsEl.style.display = 'none'
+    this.labelController.settleAtZeroHp()
     void this.spawnDeathSplat()
   }
 
