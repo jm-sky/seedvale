@@ -857,6 +857,8 @@ Generated from TypeScript imports.
 - `terrain/terrainPreparation.test.ts`
 - `world/createTerrainPreparations.test.ts`
 - `world/createTerrainPreparations.ts`
+- `world/siteInfrastructure.test.ts`
+- `world/siteInfrastructure.ts`
 
 ## `terrain/vegetationRegionBatcher.test.ts`
 

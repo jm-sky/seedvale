@@ -584,6 +584,7 @@ Generated from TypeScript imports.
 - `terrain/depositMining.ts`
 - `terrain/resourceDeposits.ts`
 - `world/cropLifecycle.ts`
+- `world/cultivationAnchor.ts`
 - `world/fishing.ts`
 - `world/foodSources.ts`
 - `world/plantedCrops.ts`

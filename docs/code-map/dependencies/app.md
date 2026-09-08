@@ -1053,6 +1053,7 @@ Generated from TypeScript imports.
 - `world/pointLightBudget.ts`
 - `world/riverWaterQualityResolver.ts`
 - `world/settlementForestHooks.ts`
+- `world/siteInfrastructure.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`

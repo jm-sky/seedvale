@@ -1031,6 +1031,27 @@ Generated from TypeScript imports.
 
 - `terrain/chunkManager.ts`
 
+## `world/cultivationAnchor.test.ts`
+
+**Imports**
+
+- `settlement/gardenScale.ts`
+- `world/cultivationAnchor.ts`
+- `world/playerGarden.ts`
+
+## `world/cultivationAnchor.ts`
+
+**Imports**
+
+- `settlement/gardenScale.ts`
+- `world/playerGarden.ts`
+
+**Imported by**
+
+- `ai/npcProfessionWork.ts`
+- `settlement/props.ts`
+- `world/cultivationAnchor.test.ts`
+
 ## `world/dayNight.test.ts`
 
 **Imports**
@@ -1738,8 +1759,12 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `world/createPlayerGardens.ts`
+- `world/cultivationAnchor.test.ts`
+- `world/cultivationAnchor.ts`
 - `world/foodSources.ts`
 - `world/playerGarden.test.ts`
+- `world/siteInfrastructure.test.ts`
+- `world/siteInfrastructure.ts`
 
 ## `world/playerWell.test.ts`
 
@@ -1776,6 +1801,8 @@ Generated from TypeScript imports.
 - `world/palisade.ts`
 - `world/playerWell.test.ts`
 - `world/playerWellProp.ts`
+- `world/siteInfrastructure.test.ts`
+- `world/siteInfrastructure.ts`
 - `world/standingTorch.ts`
 
 ## `world/playerWellProp.ts`
@@ -1927,6 +1954,28 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+
+## `world/siteInfrastructure.test.ts`
+
+**Imports**
+
+- `terrain/terrainPreparation.ts`
+- `world/playerGarden.ts`
+- `world/playerWell.ts`
+- `world/siteInfrastructure.ts`
+
+## `world/siteInfrastructure.ts`
+
+**Imports**
+
+- `terrain/terrainPreparation.ts`
+- `world/playerGarden.ts`
+- `world/playerWell.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/siteInfrastructure.test.ts`
 
 ## `world/sleepingUtilities.test.ts`
 

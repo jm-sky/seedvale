@@ -398,9 +398,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createTerrainPreparations.ts`
 
-- `createTerrainPreparations` — function — line 58
-- `TerrainPreparationEntry` — type — line 9
-- `TerrainPreparations` — type — line 11
+- `createTerrainPreparations` — function — line 70
+- `TerrainPreparationEntry` — type — line 14
+- `TerrainPreparations` — type — line 16
 
 ## `world/createWater.ts`
 
@@ -430,6 +430,15 @@ Generated from exported TypeScript symbols.
 ## `world/cropVisuals.ts`
 
 - `createCropStageMesh` — function — line 12
+
+## `world/cultivationAnchor.ts`
+
+- `CultivationAnchor` — type — line 13
+  - domain: world
+  - system: cultivation
+- `cultivationAnchorFromPlayerGarden` — function — line 18
+- `cultivationAnchorFromSettlementGarden` — function — line 24
+- `resolveCultivationAnchor` — function — line 34
 
 ## `world/dayNight.ts`
 
@@ -903,6 +912,20 @@ Generated from exported TypeScript symbols.
 ## `world/settlementForestHooks.ts`
 
 - `SettlementForestHooks` — type — line 4
+
+## `world/siteInfrastructure.ts`
+
+- `pointInSite` — function — line 39
+- `querySiteInfrastructure` — function — line 53
+  - domain: world
+  - system: site-infrastructure
+- `SiteBounds` — type — line 13
+  - domain: world
+  - system: site-infrastructure
+- `SiteInfrastructure` — type — line 27
+  - domain: world
+  - system: site-infrastructure
+- `SiteInfrastructureStores` — type — line 33
 
 ## `world/sleepingUtilities.ts`
 

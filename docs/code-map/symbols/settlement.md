@@ -384,15 +384,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 247
-- `buildSettlementProps` — function — line 637
-- `disposeSettlementGroup` — function — line 1773
-- `SettlementHouseBed` — type — line 131
-- `SettlementHouseLandmark` — type — line 102
-- `SettlementLandmarks` — type — line 138
-- `SettlementLandPlot` — type — line 236
-- `SettlementStorageVisuals` — type — line 229
-- `SettlementTreeLandmark` — type — line 254
+- `BlacksmithWorkplace` — type — line 252
+- `buildSettlementProps` — function — line 642
+- `disposeSettlementGroup` — function — line 1781
+- `SettlementHouseBed` — type — line 132
+- `SettlementHouseLandmark` — type — line 103
+- `SettlementLandmarks` — type — line 139
+- `SettlementLandPlot` — type — line 241
+- `SettlementStorageVisuals` — type — line 234
+- `SettlementTreeLandmark` — type — line 259
 
 ## `settlement/propSpecs.ts`
 

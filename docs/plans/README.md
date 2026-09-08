@@ -89,7 +89,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                  | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                  | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
-| 💡 `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | fauna-003 |

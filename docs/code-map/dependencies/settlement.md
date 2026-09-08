@@ -336,6 +336,8 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
+- `world/cultivationAnchor.test.ts`
+- `world/cultivationAnchor.ts`
 - `world/plantedCrops.ts`
 
 ## `settlement/hiddenTreasure.ts`
@@ -884,6 +886,7 @@ Generated from TypeScript imports.
 - `terrain/chunkHeightmap.ts`
 - `terrain/coastPlacement.ts`
 - `world/containerProp.ts`
+- `world/cultivationAnchor.ts`
 - `world/parseSeed.ts`
 - `world/treeLifecycle.ts`
 

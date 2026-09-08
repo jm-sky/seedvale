@@ -392,28 +392,36 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/terrainPreparation.ts`
 
-- `averageAbsHeightDelta` — function — line 177
-- `computeRequiredWork` — function — line 153
-- `exceedsMaxDeformation` — function — line 136
-- `formatHeightDelta` — function — line 238
-- `GridSample` — type — line 22
-- `HeightSample` — type — line 23
-- `MAX_PREPARATION_DELTA` — const — line 131
-- `MINIMUM_PREPARATION_WORK_HOURS` — const — line 150
-- `nearestGridPoint` — function — line 61
-- `preparationSamplesPerSide` — function — line 89
-- `PreparationSize` — type — line 20
-- `PreparationValidationResult` — type — line 213
-- `progressiveHeight` — function — line 200
-- `progressiveHeights` — function — line 205
-- `resolveLevelSamples` — function — line 72
-- `resolvePreparationSamples` — function — line 105
-- `TERRAIN_PREP_NPC_WORK_SESSION_HOURS` — const — line 175
-- `TERRAIN_PREP_NPC_WORK_SESSION_SEC` — const — line 168
-- `TerrainPreparationRecord` — type — line 36
-- `terrainPreparationRemainingWork` — function — line 160
-- `toolSpeedMultiplier` — function — line 188
-- `validatePreparationSamples` — function — line 225
+- `averageAbsHeightDelta` — function — line 213
+- `CompletedTerrainPreparation` — type — line 49
+  - domain: world
+  - system: terrain-preparation
+- `completedTerrainPreparationFrom` — function — line 55
+- `computeRequiredWork` — function — line 189
+- `exceedsMaxDeformation` — function — line 172
+- `formatHeightDelta` — function — line 274
+- `GridSample` — type — line 37
+- `HeightSample` — type — line 38
+- `isPreparationSize` — function — line 33
+- `MAX_PREPARATION_DELTA` — const — line 167
+- `MAX_PREPARATION_SIZE` — const — line 21
+- `MIN_PREPARATION_SIZE` — const — line 20
+- `MINIMUM_PREPARATION_WORK_HOURS` — const — line 186
+- `nearestGridPoint` — function — line 97
+- `PREPARATION_SIZES` — const — line 27
+- `preparationSamplesPerSide` — function — line 125
+- `PreparationSize` — type — line 29
+- `PreparationValidationResult` — type — line 249
+- `progressiveHeight` — function — line 236
+- `progressiveHeights` — function — line 241
+- `resolveLevelSamples` — function — line 108
+- `resolvePreparationSamples` — function — line 141
+- `TERRAIN_PREP_NPC_WORK_SESSION_HOURS` — const — line 211
+- `TERRAIN_PREP_NPC_WORK_SESSION_SEC` — const — line 204
+- `TerrainPreparationRecord` — type — line 73
+- `terrainPreparationRemainingWork` — function — line 196
+- `toolSpeedMultiplier` — function — line 224
+- `validatePreparationSamples` — function — line 261
 
 ## `terrain/vegetationRegionBatcher.ts`
 
