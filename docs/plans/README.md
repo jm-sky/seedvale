@@ -26,6 +26,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-018, settlements-npcs-019 |
 | `settlements-npcs-021-remote-production-site-logistics.md`                  | -       | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
 | `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md`  | -       | 🔴 | M      | -      |
+| `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`        | -       | 🔴 | M      | settlements-npcs-026 |
+| `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | -       | 🔴 | L      | settlements-npcs-026, settlements-npcs-027, settlements-npcs-019 |
 | `world-terrain-009-seasonal-ground-and-grass-appearance.md`                 | -       | 🟡 | M      | -      |
 
 ---
@@ -199,7 +201,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `005`
 - quests-progression: `012`
 - settlements: `003`
-- settlements-npcs: `027`
+- settlements-npcs: `029`
 - tools: `013`
 - ui-input: `013`
 - world: `020`
