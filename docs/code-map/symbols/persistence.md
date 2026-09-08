@@ -18,62 +18,61 @@ Generated from exported TypeScript symbols.
 
 ## `persistence/saveData.ts`
 
-- `CURRENT_SAVE_VERSION` — const — line 456
-- `isSaveData` — function — line 1397
-- `loadSaveData` — function — line 1461
-- `loadStoredSave` — function — line 1775
-- `migrateStoredSave` — function — line 1738
-- `QuestProgressEntry` — type — line 53
-- `SaveBadges` — type — line 132
-- `SaveBedroll` — type — line 354
-- `SaveCarriedContainer` — type — line 249
+- `CURRENT_SAVE_VERSION` — const — line 455
+- `isSaveData` — function — line 1414
+- `loadSaveData` — function — line 1478
+- `loadStoredSave` — function — line 1812
+- `migrateStoredSave` — function — line 1775
+- `SaveBadges` — type — line 131
+- `SaveBedroll` — type — line 353
+- `SaveCarriedContainer` — type — line 248
 - `SaveConfig` — type — line 33
-- `SaveConstructionContractTarget` — type — line 407
-- `SaveContractTarget` — type — line 415
-- `SaveData` — type — line 468
+- `SaveConstructionContractTarget` — type — line 406
+- `SaveContractTarget` — type — line 414
+- `SaveData` — type — line 467
   - domain: persistence
   - system: save-schema
   - role: Owns the SaveData shape and its validation/defaulting.
   - owns: SaveData
-- `SaveDroppedItem` — type — line 74
-- `SaveDryingRack` — type — line 207
-- `SaveFishingBait` — type — line 230
-- `SaveFoodBatch` — type — line 62
-- `SaveHive` — type — line 216
-- `SaveLocationKnowledge` — type — line 114
-- `SaveMap` — type — line 116
-- `SaveMigration` — type — line 1475
-- `SavePalisadeContractTarget` — type — line 413
-- `SavePalisadeSegment` — type — line 348
-- `SavePlacedContainer` — type — line 236
-- `SavePlacedFire` — type — line 78
-- `SavePlacedTent` — type — line 99
-- `SavePlacedTrap` — type — line 169
-- `SavePlantedCrop` — type — line 324
-- `SavePlantedTree` — type — line 310
-- `SavePlatform` — type — line 368
+- `SaveDroppedItem` — type — line 73
+- `SaveDryingRack` — type — line 206
+- `SaveFishingBait` — type — line 229
+- `SaveFoodBatch` — type — line 61
+- `SaveHive` — type — line 215
+- `SaveLocationKnowledge` — type — line 113
+- `SaveMap` — type — line 115
+- `SaveMigration` — type — line 1492
+- `SavePalisadeContractTarget` — type — line 412
+- `SavePalisadeSegment` — type — line 347
+- `SavePlacedContainer` — type — line 235
+- `SavePlacedFire` — type — line 77
+- `SavePlacedTent` — type — line 98
+- `SavePlacedTrap` — type — line 168
+- `SavePlantedCrop` — type — line 323
+- `SavePlantedTree` — type — line 309
+- `SavePlatform` — type — line 367
 - `SavePlayer` — type — line 41
-- `SavePlayerGarden` — type — line 378
-- `SavePlayerNeeds` — type — line 150
-- `SavePlayerTorch` — type — line 93
-- `SavePlayerWell` — type — line 265
+- `SavePlayerGarden` — type — line 377
+- `SavePlayerNeeds` — type — line 149
+- `SavePlayerTorch` — type — line 92
+- `SavePlayerWell` — type — line 264
 - `SaveQuests` — type — line 55
-- `SaveReputation` — type — line 143
-- `SaveSkill` — type — line 161
-- `SaveSkills` — type — line 162
-- `SaveSpawnPoint` — type — line 187
-- `SaveStandingTorch` — type — line 339
-- `SaveStandingTorchContractTarget` — type — line 414
-- `SaveTerrainModification` — type — line 285
-- `SaveTerrainPreparation` — type — line 296
-- `SaveTerrainPreparationContractTarget` — type — line 410
-- `SaveTimedProcess` — type — line 197
-- `SaveTreeOverride` — type — line 80
-- `SaveWorkContract` — type — line 420
-- `SaveWorkContractAdvertisement` — type — line 406
-- `SaveWorkContractState` — type — line 396
-- `SaveWorldFlags` — type — line 101
-- `StoredSaveResult` — type — line 1764
+- `SaveReputation` — type — line 142
+- `SaveSkill` — type — line 160
+- `SaveSkills` — type — line 161
+- `SaveSpawnPoint` — type — line 186
+- `SaveStandingTorch` — type — line 338
+- `SaveStandingTorchContractTarget` — type — line 413
+- `SaveTerrainModification` — type — line 284
+- `SaveTerrainPreparation` — type — line 295
+- `SaveTerrainPreparationContractTarget` — type — line 409
+- `SaveTimedProcess` — type — line 196
+- `SaveTreeOverride` — type — line 79
+- `SaveWorkContract` — type — line 419
+- `SaveWorkContractAdvertisement` — type — line 405
+- `SaveWorkContractState` — type — line 395
+- `SaveWorldFlags` — type — line 100
+- `StoredSaveResult` — type — line 1801
 
 ## `persistence/saveDb.ts`
 

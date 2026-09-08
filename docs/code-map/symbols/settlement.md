@@ -227,15 +227,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/livestock.ts`
 
-- `createLivestockRegistry` — function — line 200
-- `disposeLivestock` — function — line 595
+- `createLivestockRegistry` — function — line 196
+- `disposeLivestock` — function — line 587
 - `LIVESTOCK_KINDS` — const — line 54
 - `LIVESTOCK_URLS` — const — line 38
 - `LivestockPersistence` — type — line 78
 - `LivestockRegistry` — type — line 100
 - `LivestockSaveRecord` — type — line 67
-- `spawnLivestock` — function — line 452
-- `tickSettlementLivestock` — function — line 612
+- `spawnLivestock` — function — line 448
+- `tickSettlementLivestock` — function — line 604
 
 ## `settlement/lodging.ts`
 

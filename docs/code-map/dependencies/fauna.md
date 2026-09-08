@@ -11,6 +11,7 @@ Generated from TypeScript imports.
 - `debug/debugMode.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/animalDebugVisual.ts`
+- `fauna/animalDefs.ts`
 - `fauna/bloodSplat.ts`
 - `fauna/corpseDecayFx.ts`
 - `fauna/dogGuard.ts`
@@ -93,7 +94,6 @@ Generated from TypeScript imports.
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
 - `settlement/rats.ts`
-- `world/animalTraps.ts`
 - `world/createPlacedTraps.ts`
 
 ## `fauna/AnimalLife.test.ts`
@@ -114,6 +114,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalLife.test.ts`
+- `fauna/animalDefs.ts`
 
 ## `fauna/AnimalSpawner.test.ts`
 
@@ -148,6 +149,19 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `fauna/AnimalAgent.ts`
+
+## `fauna/animalDefs.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+- `fauna/waterTraversal.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `world/animalTraps.ts`
 
 ## `fauna/animalDialogue.ts`
 
@@ -541,4 +555,5 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
 - `fauna/waterTraversal.test.ts`

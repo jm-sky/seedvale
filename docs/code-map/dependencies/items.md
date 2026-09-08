@@ -650,6 +650,7 @@ Generated from TypeScript imports.
 - `economy/initial.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
 - `fauna/harvestedRemains.ts`

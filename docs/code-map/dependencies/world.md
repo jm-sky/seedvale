@@ -36,7 +36,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
 - `items/items.ts`
 - `world/weather.ts`
 
