@@ -4,7 +4,7 @@
 **Status:** `draft` 📝  
 **Type:** feature  
 **Priority:** high · **Effort:** S/M  
-**Depends on:** settlements-npcs-018, settlements-npcs-019  
+**Depends on:** settlements-npcs-017, settlements-npcs-018, settlements-npcs-019  
 **Domain:** `settlements-npcs`  
 **Subdomains:** `economy` `logistics`  
 **Tags:** `transport` `shortage` `surplus` `trader`  
