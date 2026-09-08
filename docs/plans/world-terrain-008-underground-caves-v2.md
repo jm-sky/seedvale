@@ -516,11 +516,24 @@ B3 collision + camera, B4 streaming/perf/workers, B5 usunięcie Sweep/V1/`CaveVo
 
 ---
 
-# B3 — Collision + third-person camera
+# B3 — Collision + third-person camera ✅
+
+**B3 status (2026-09-08): implemented.** Collision and camera occupancy
+now share strict occupancy on the retained SDF column index
+(`occupancyContains` / `occupancyIntervalAt` — no `FLOOR_GRACE`).
+Y-banded circle beads (`caveSdfColliders.ts`) register in the existing
+`ColliderRegistry` on activate. `NpcAgent` / `AnimalAgent` filter with
+`colliderActiveAtY`. The third-person boom marches `occupancyAt` (sample
+Y) for walls/ceiling/overburden and no longer uses
+`withCaveFloorFallback` as the cave camera strategy. Details, deviations
+and B4/B5 leftovers: see the "Milestone B3 — Implementation Summary"
+section in
+`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md`.
+Browser/manual verification (recon checklist, seed `1136726869`) is still
+open — technical checks are the implementation agent's job.
 
 B3 starts **after** B2: gameplay floor/containment already comes from the SDF
-column index. Do not put `CaveVolume` back on the player ground path. Collision
-and camera still use (or replace) the proxy/beads; that is this slice.
+column index. Do not put `CaveVolume` back on the player ground path.
 
 ## 15. Collision
 

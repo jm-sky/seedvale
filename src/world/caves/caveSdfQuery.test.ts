@@ -9,7 +9,10 @@ import {
   applyCaveGroundHysteresis,
   buildCaveSdfColumnIndex,
   CAVE_COLUMN_STEP,
+  CAVE_FLOOR_GRACE,
   CAVE_UNDERGROUND_MISS,
+  occupancyContains,
+  occupancyIntervalAt,
   pickInterval,
   queryColumnIndex,
 } from './caveSdfQuery'
@@ -151,6 +154,78 @@ describe('buildCaveSdfColumnIndex', () => {
     expect(inApproach).not.toBeNull()
     // Outside the recess: no portal, still rock.
     expect(queryColumnIndex(index, 0, mouthY, 12)).toBeNull()
+  })
+})
+
+describe('strict occupancy', () => {
+  it('does not use FLOOR_GRACE: below the floor is solid, queryGround still hits', () => {
+    const sample = (x: number, y: number, z: number): number => {
+      if (Math.hypot(x, z) > 1.5) return 1
+      if (y >= 4 && y <= 8) return -1
+      return 1
+    }
+    const field = representation(
+      { minX: -2, maxX: 2, minY: 0, maxY: 12, minZ: -2, maxZ: 2 },
+      sample,
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:occ', ORIGIN_ENTRANCE), () => 20, 0.4)
+    const belowFloor = 4 - CAVE_FLOOR_GRACE + 0.2
+    expect(queryColumnIndex(index, 0, belowFloor, 0)).not.toBeNull()
+    expect(occupancyContains(index, 0, belowFloor, 0)).toBe(false)
+    expect(occupancyContains(index, 0, 6, 0)).toBe(true)
+    expect(occupancyIntervalAt(index, 0, 6, 0)?.floorY).toBeGreaterThan(3.5)
+  })
+
+  it('stacked intervals stay vertically distinct (no full-height void)', () => {
+    const sample = (x: number, y: number, z: number): number => {
+      if (Math.hypot(x, z) > 1.5) return 1
+      if (y >= 0 && y <= 2) return -1
+      if (y >= 6 && y <= 9) return -1
+      return 1
+    }
+    const field = representation(
+      { minX: -2, maxX: 2, minY: -1, maxY: 12, minZ: -2, maxZ: 2 },
+      sample,
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:occ-stack', ORIGIN_ENTRANCE), () => 20, 0.4)
+    expect(occupancyContains(index, 0, 1, 0)).toBe(true)
+    expect(occupancyContains(index, 0, 4, 0)).toBe(false)
+    expect(occupancyContains(index, 0, 7, 0)).toBe(true)
+    const lower = occupancyIntervalAt(index, 0, 1, 0)
+    const upper = occupancyIntervalAt(index, 0, 7, 0)
+    expect(lower).not.toBeNull()
+    expect(upper).not.toBeNull()
+    expect(lower!.ceilingY).toBeLessThan(upper!.floorY)
+  })
+
+  it('hillside above a clipped ceiling is solid at surface Y', () => {
+    const sample = (x: number, y: number, z: number): number => {
+      if (Math.hypot(x, z) > 1.5) return 1
+      if (y >= 0 && y <= 20) return -1
+      return 1
+    }
+    const surfaceY = 8
+    const field = representation(
+      { minX: -2, maxX: 2, minY: -1, maxY: 22, minZ: -2, maxZ: 2 },
+      sample,
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:occ-clip', ORIGIN_ENTRANCE), () => surfaceY, 0.4)
+    expect(occupancyContains(index, 0, 4, 0)).toBe(true)
+    expect(occupancyContains(index, 0, surfaceY, 0)).toBe(false)
+  })
+
+  it('mouth portal remains void; rock outside the recess is solid', () => {
+    const entrance = entranceAt(0, 0, 0, 0)
+    const surface = (): number => 10
+    const field = representation(
+      { minX: -1, maxX: 1, minY: -1, maxY: 12, minZ: -1, maxZ: 1 },
+      () => 1,
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:occ-portal', entrance), surface, 0.4)
+    const mouthY = surface() - 0.8
+    expect(occupancyContains(index, 0, mouthY, 0)).toBe(true)
+    expect(occupancyContains(index, 0, mouthY, 2.2)).toBe(true)
+    expect(occupancyContains(index, 0, mouthY, 12)).toBe(false)
   })
 })
 

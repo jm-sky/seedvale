@@ -13,9 +13,9 @@
  *  so without this a surface entity walking the hillside directly above a
  *  cave tunnel would collide with that tunnel's (invisible, far-below)
  *  walls. `colliderActiveAtY` is the query-side half of this — callers that
- *  care (currently only `PlayerController`) filter with it before
- *  `resolvePosition`; callers that don't pass a Y keep seeing every
- *  collider, unchanged. */
+ *  care (`PlayerController`, `NpcAgent`, `AnimalAgent`) filter with it
+ *  before `resolvePosition` / walkability; callers that don't pass a Y keep
+ *  seeing every collider, unchanged. */
 export type VerticalExtent = {
   minY?: number
   maxY?: number

@@ -1127,10 +1127,9 @@ THREE.BufferGeometry
 ```
 
 `createCaves.ts` no longer calls `generateCaveDefinitions()`/V1 layout at all.
-`topologyToCaveDefinition()` (`topologyAdapter.ts`, unchanged) remains the
-transitional compatibility adapter feeding `createCaveVolume`/
-`buildCaveWallColliders` — still not Cave V2's source of truth, per the
-plan's compatibility boundary. `?caveSpike=sweep`, `resolveCaveRenderVariants`
+`topologyToCaveDefinition()` (`topologyAdapter.ts`) remains for
+`definitions()` / location catalog / streaming bounds until B5. Collision
+is occupancy-derived (`caveSdfColliders.ts`) as of B3. `?caveSpike=sweep`, `resolveCaveRenderVariants`
 and `caveSpikeVariant()` are deleted — the Milestone-A comparison gate
 already passed, and the doc comments on all three said as much. Sweep itself
 (`sweepCaveMesh.ts`) and the Milestone-A fixture (`spikeTestCave.ts`) are
@@ -1326,4 +1325,71 @@ visual wall. Camera boom occlusion / `CAMERA_OCCLUDER_MIN_RADIUS` is also
 B3.
 
 Do not put `CaveVolume` back on the player ground path.
+
+---
+
+# Milestone B3 — Implementation Summary (2026-09-08)
+
+Collision and camera now share one derived occupancy on the retained
+column index. B2 `queryGround()` / hysteresis / mouth portal are
+unchanged.
+
+```text
+CaveSdfColumnIndex
+  ├─ queryGround() / FLOOR_GRACE / hysteresis     B2, unchanged
+  └─ occupancyContains / occupancyIntervalAt      B3, no FLOOR_GRACE
+       ├─ Y-banded beads → ColliderRegistry       body
+       └─ resolveCameraBoom occupancyAt march     camera
+```
+
+## New/changed files
+
+- `caves/caveSdfQuery.ts` — `occupancyContains` / `occupancyIntervalAt`.
+  Strict closed interval; ceiling has no extra eps (surface clip already
+  keeps hillside entities out).
+- `caves/caveSdfColliders.ts` — `index + surface + optional field →
+  Collider[]`. Per-interval Y-bands of `column step`, 4-connected
+  silhouette, iso-snap of bead XZ at build, portal-only columns skipped
+  so the mouth stays open. `maxY` clamped below analytic surface.
+- `createCaves.ts` — builds colliders at world-build next to the index;
+  `activate()` registers them; `occupancyAt` folds runtimes with no
+  hysteresis. `topologyToCaveDefinition` stays for `definitions()` only.
+- `NpcAgent` / `AnimalAgent` — walkability (and NPC collider queries)
+  filter `colliderActiveAtY` at `mesh.position.y`.
+- `cameraBoom.ts` — optional `occupancyAt`. Origin in void: march pulls
+  in at underground non-void (wall/ceiling/overburden). Leaving a
+  near-surface void is a mouth exit; remaining boom uses the heightfield
+  only after the camera is in air. Floor clamp uses occupancy `floorY`
+  while still void. `withCaveFloorFallback` is no longer wired from
+  `syncCamera`.
+- `PlayerController` / `createApp.ts` — sibling `CaveOccupancyQuery`
+  keyed by sample Y.
+
+## Deviations from the recon text
+
+- Beads are **Y-banded slices** of each column interval (step-sized),
+  not one bead spanning the whole interval at mid-Y. A single tall
+  extrusion of the mid-height silhouette blocked the pinched floor or
+  leaked a narrow slice into the bowl path.
+- Mouth opening is "skip portal-only columns" (`representation.sample >=
+  0` at band mid-Y), not "skip when interval ceiling is near the
+  neighbor surface". The latter dropped interior walls whose SDF
+  ceiling is clipped close to overburden.
+- Camera mouth-exit: occupancy miss whose *previous* sample had a
+  surface-clipped ceiling, plus "only clip terrain after the boom has
+  been in air" so the mouth pit does not immediately yank `t` back.
+- `withCaveFloorFallback` is kept and still unit-tested; it is not the
+  production cave camera path.
+
+## Intentionally left for B4 / B5
+
+- **B4:** Y-banded bead count is higher than V1's ~110 (one ring per
+  Y-slice). Column step / band height / iso-snap cost were not profiled.
+  Mesh extraction / activation hitch / workers unchanged.
+- **B5:** `topologyToCaveDefinition`, `CaveVolume`, `buildCaveWallColliders`
+  (V1 topology beads), Sweep, `spikeTestCave.ts`, `caveMesh.ts` remain.
+  They are not on the gameplay ground, collision, or camera paths.
+
+Do not put `CaveVolume` back on the player ground path.
+
 

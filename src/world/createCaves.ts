@@ -1,19 +1,22 @@
 import * as THREE from 'three'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { CaveTopology } from './caves/caveTopology'
+import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
-import { buildCaveWallColliders } from './caveColliders'
+import { buildCaveSdfColliders } from './caves/caveSdfColliders'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caves/caveSdfField'
 import {
   applyCaveGroundHysteresis,
   buildCaveSdfColumnIndex,
   type CaveGroundHit,
   type CaveSdfColumnIndex,
+  type CaveVerticalInterval,
   lowestCeilingAt,
   lowestFloorAt,
+  occupancyIntervalAt,
   queryColumnIndex,
 } from './caves/caveSdfQuery'
 import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
@@ -55,6 +58,9 @@ export type Caves = {
    *  B2). `null` outside cave space, including a surface entity above a
    *  tunnel. Includes mouth-portal coverage and underground-miss hysteresis. */
   queryGround: (x: number, y: number, z: number) => CaveGroundHit | null
+  /** Strict occupancy (B3) — no floor grace, no hysteresis. `null` is solid
+   *  rock / outside cave void. Camera boom and derived collision share this. */
+  occupancyAt: (x: number, y: number, z: number) => CaveVerticalInterval | null
   contains: (x: number, y: number, z: number) => boolean
   /** Transitional Y-blind lowest-interval accessors. Player ground uses
    *  `queryGround` — do not route `CaveGroundQuery` through these. */
@@ -68,6 +74,7 @@ type CaveRuntime = {
   definition: CaveDefinition
   representation: CaveSdfSpatialRepresentation
   index: CaveSdfColumnIndex
+  colliders: readonly Collider[]
 }
 
 function gridKey(cx: number, cz: number): string {
@@ -89,25 +96,27 @@ function colliderOwnerKey(caveId: string): string {
 }
 
 /**
- * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B2):
+ * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B3):
  * deterministic production `CaveTopology`s, retained SDF representations and
  * derived column indexes (cheap, all computed up front), streamed SDF
- * presentation and cave-wall collision for whichever caves are near the
- * player.
+ * presentation and occupancy-derived cave-wall collision for whichever caves
+ * are near the player.
  *
  * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
  * terrain acceptance are owned by `productionTopology.ts`. Gameplay
  * floor/containment is the SDF column index (`caveSdfQuery.ts`), not
- * `CaveVolume`. `topologyToCaveDefinition` remains a transitional
- * compatibility adapter for collision only until B3.
+ * `CaveVolume`. Wall colliders are derived from strict occupancy
+ * (`caveSdfColliders.ts`). `topologyToCaveDefinition` remains only for
+ * `definitions()` / location catalog / streaming bounds until B5.
  *
  * Same lifecycle as `WorldBundle` (create/dispose alongside it, never
  * survives a rebuild).
  *
  * @system caves
  * @role Owns cave topologies, retained SDF/column-index gameplay space,
- *  streamed interior presentation and cave-wall collider registration;
- *  `PlayerController` ground/ceiling queries go through `queryGround`.
+ *  streamed interior presentation, occupancy-derived wall colliders, and
+ *  strict occupancy queries; `PlayerController` ground goes through
+ *  `queryGround` and camera through `occupancyAt`.
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -156,11 +165,13 @@ export function createCaves(
     })
     if (!topology) continue
     const representation = buildCaveSdfRepresentation(topology, undefined, detailEnabled)
+    const index = buildCaveSdfColumnIndex(representation, topology, analyticSurfaceHeight)
     v2ByCaveId.set(topology.caveId, {
       topology,
       definition: topologyToCaveDefinition(topology),
       representation,
-      index: buildCaveSdfColumnIndex(representation, topology, analyticSurfaceHeight),
+      index,
+      colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation),
     })
     siteByCaveId.set(topology.caveId, site)
   }
@@ -223,7 +234,7 @@ export function createCaves(
     placeLargeCaveVisual(framing, framingSite, (x, z) => chunkManager.sampleBaseHeight(x, z))
     group.add(framing)
     scene.add(group)
-    chunkManager.registerColliders(colliderOwnerKey(def.caveId), buildCaveWallColliders(v2.definition))
+    chunkManager.registerColliders(colliderOwnerKey(def.caveId), v2.colliders)
     active.set(def.caveId, group)
   }
 
@@ -274,6 +285,13 @@ export function createCaves(
       }
     },
     queryGround,
+    occupancyAt(x, y, z) {
+      for (const runtime of runtimes) {
+        const hit = occupancyIntervalAt(runtime.index, x, y, z)
+        if (hit) return hit
+      }
+      return null
+    },
     contains(x, y, z) {
       return queryGround(x, y, z) !== null
     },

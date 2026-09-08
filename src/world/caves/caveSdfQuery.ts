@@ -52,8 +52,14 @@ export const CAVE_COLUMN_STEP = DEFAULT_SDF_PARAMS.cellSize
 /** How far below a reported floor an entity still belongs to that interval.
  *  Matches `caveVolume.ts`'s `FLOOR_GRACE` scale so a step/jump does not
  *  drop the player out; the ceiling bound is what separates cave from the
- *  hillside above it. */
+ *  hillside above it. Collision and camera occupancy must not use this. */
 export const CAVE_FLOOR_GRACE = 2
+
+/** Closed-interval slack for strict occupancy (collision / camera). Far
+ *  smaller than `CAVE_FLOOR_GRACE` — that grace is ground continuity, not
+ *  a solid test. Do not add this to the clipped ceiling: `SURFACE_CLIP_EPS`
+ *  already keeps a surface entity out. */
+export const CAVE_OCCUPANCY_EPS = 1e-4
 
 /** Reject a void thinner than this — iso-boundary noise, not a route. */
 const MIN_INTERVAL_HEIGHT = 0.45
@@ -302,6 +308,54 @@ export function queryColumnIndex(
   const picked = pickInterval(intervals, y)
   if (!picked) return null
   return { floorY: picked.floorY, ceilingY: picked.ceilingY, intervals }
+}
+
+/**
+ * Strict void interval at `(x, y, z)` — `y` must sit inside some column
+ * interval. No `CAVE_FLOOR_GRACE`. Empty column, y above the clipped
+ * ceiling, or y below the floor is solid (returns `null`).
+ *
+ * Shared by body-collision derivation and camera boom occupancy. Do not
+ * reuse `queryColumnIndex` / `queryGround` as a wall test.
+ *
+ * @domain world-terrain
+ */
+export function occupancyIntervalAt(
+  index: CaveSdfColumnIndex,
+  x: number,
+  y: number,
+  z: number,
+): CaveVerticalInterval | null {
+  const intervals = columnIntervalsAt(index, x, z)
+  const containing: CaveVerticalInterval[] = []
+  for (const interval of intervals) {
+    if (y >= interval.floorY - CAVE_OCCUPANCY_EPS && y <= interval.ceilingY) {
+      containing.push(interval)
+    }
+  }
+  if (containing.length === 0) return null
+  if (containing.length === 1) return containing[0]!
+  let best = containing[0]!
+  let bestDist = Math.abs((best.floorY + best.ceilingY) * 0.5 - y)
+  for (let i = 1; i < containing.length; i++) {
+    const interval = containing[i]!
+    const dist = Math.abs((interval.floorY + interval.ceilingY) * 0.5 - y)
+    if (dist < bestDist) {
+      best = interval
+      bestDist = dist
+    }
+  }
+  return best
+}
+
+/** `true` when `(x, y, z)` is cave void under strict occupancy. */
+export function occupancyContains(
+  index: CaveSdfColumnIndex,
+  x: number,
+  y: number,
+  z: number,
+): boolean {
+  return occupancyIntervalAt(index, x, y, z) !== null
 }
 
 export type CaveGroundHysteresis = {

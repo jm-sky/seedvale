@@ -67,7 +67,7 @@ import {
   setActiveSaveId,
 } from '../persistence/saveDb'
 import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
-import { type CaveGroundQuery, PLAYER_STARTING_ATTRIBUTES, PlayerController } from '../player/PlayerController'
+import { type CaveGroundQuery, type CaveOccupancyQuery, PLAYER_STARTING_ATTRIBUTES, PlayerController } from '../player/PlayerController'
 import {
   resetPlayerNeeds,
   restorePersistedNeeds,
@@ -675,6 +675,7 @@ export async function createApp(
     if (!hit) return null
     return { floorY: hit.floorY, ceilingY: hit.ceilingY }
   }
+  const caveOccupancyQuery: CaveOccupancyQuery = (x, y, z) => bundle.caves.occupancyAt(x, y, z)
 
   bootMark('PlayerController.create')
   const player = await PlayerController.create(
@@ -686,6 +687,7 @@ export async function createApp(
     bundle.chunkManager.waterLevel,
     bundle.chunkManager.collidersNear,
     caveGroundQuery,
+    caveOccupancyQuery,
     (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
   )
   bootMarkEnd('PlayerController.create')
@@ -1207,6 +1209,7 @@ export async function createApp(
         bundle.chunkManager.waterLevel,
         bundle.chunkManager.collidersNear,
         caveGroundQuery,
+        caveOccupancyQuery,
         (x, z) => sampleFootstepSurface(bundle.chunkManager, x, z),
       )
       // Only a genuinely new world (new seed / New Game) relocates the player

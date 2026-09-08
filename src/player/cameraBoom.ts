@@ -33,6 +33,11 @@ export type CameraBoomInput = {
   camZ: number
   sampleHeight: (x: number, z: number) => number
   colliders: readonly Collider[]
+  /** Strict cave occupancy at the sample point (true void). When the boom
+   *  origin is in cave void, the march pulls in at the first underground
+   *  non-void sample (wall / ceiling / overburden) instead of relying on
+   *  cave collider beads passing `CAMERA_OCCLUDER_MIN_RADIUS`. */
+  occupancyAt?: (x: number, y: number, z: number) => { floorY: number, ceilingY: number } | null
 }
 
 export type CameraBoomResult = {
@@ -45,9 +50,10 @@ export type CameraBoomResult = {
 
 /**
  * Pulls the third-person camera along the look-at → desired-camera boom so
- * it stays out of the heightfield and out of large XZ colliders (houses).
- * Reuses plan 097's `Collider` circles extruded to `CAMERA_OCCLUDER_HEIGHT`
- * — not a new physics system and not a "teleport if black" fallback.
+ * it stays out of the heightfield, out of large XZ colliders (houses), and
+ * — when `occupancyAt` is provided and the origin is in cave void — out of
+ * cave walls, ceiling and overburden. Cave beads stay below
+ * `CAMERA_OCCLUDER_MIN_RADIUS` on purpose; occupancy is the cave occluder.
  */
 export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   const dx = input.camX - input.originX
@@ -59,9 +65,20 @@ export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   }
 
   let hitT = 1
+  const originOccupancy = input.occupancyAt?.(input.originX, input.originY, input.originZ) ?? null
+  const originInCave = originOccupancy !== null
 
-  const terrainHit = firstTerrainHitT(input, dx, dy, dz, dist)
-  if (terrainHit !== null && terrainHit < hitT) hitT = terrainHit
+  if (originInCave) {
+    const occupancyMarch = marchCaveOccupancy(input, dx, dy, dz)
+    if (occupancyMarch.kind === 'solid' && occupancyMarch.t < hitT) hitT = occupancyMarch.t
+    else if (occupancyMarch.kind === 'exit') {
+      const terrainHit = firstTerrainHitFromT(input, dx, dy, dz, occupancyMarch.t)
+      if (terrainHit !== null && terrainHit < hitT) hitT = terrainHit
+    }
+  } else {
+    const terrainHit = firstTerrainHitT(input, dx, dy, dz, dist)
+    if (terrainHit !== null && terrainHit < hitT) hitT = terrainHit
+  }
 
   for (const collider of input.colliders) {
     // House walls/doors are thin OBBs (plan settlements-001) — camera
@@ -88,10 +105,11 @@ export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   const t = hitT >= 1 ? 1 : clamp(hitT - pullT, minT, 1)
   const x = input.originX + dx * t
   const z = input.originZ + dz * t
-  const y = Math.max(
-    input.originY + dy * t,
-    input.sampleHeight(x, z) + CAMERA_GROUND_CLEARANCE,
-  )
+  const yAlong = input.originY + dy * t
+  const occupancy = originInCave ? input.occupancyAt?.(x, yAlong, z) ?? null : null
+  const y = occupancy
+    ? Math.max(yAlong, occupancy.floorY + CAMERA_GROUND_CLEARANCE)
+    : Math.max(yAlong, input.sampleHeight(x, z) + CAMERA_GROUND_CLEARANCE)
   return { x, y, z, t }
 }
 
@@ -118,6 +136,75 @@ function firstTerrainHitT(
     previousT = t
   }
   return null
+}
+
+function firstTerrainHitFromT(
+  input: CameraBoomInput,
+  dx: number,
+  dy: number,
+  dz: number,
+  startT: number,
+): number | null {
+  let previousT = startT
+  let wasClear = false
+  for (let i = 1; i <= TERRAIN_STEPS; i++) {
+    const t = i / TERRAIN_STEPS
+    if (t <= startT) continue
+    const x = input.originX + dx * t
+    const y = input.originY + dy * t
+    const z = input.originZ + dz * t
+    const groundY = input.sampleHeight(x, z)
+    const clear = y >= groundY + CAMERA_GROUND_CLEARANCE
+    if (clear) {
+      wasClear = true
+      previousT = t
+      continue
+    }
+    if (wasClear) return previousT
+    previousT = t
+  }
+  return null
+}
+
+type OccupancyMarch =
+  | { kind: 'solid', t: number }
+  | { kind: 'exit', t: number }
+  | { kind: 'void' }
+
+/** Underground non-void is a wall/ceiling/overburden hit. Leaving occupancy
+ *  at or above the heightfield is a mouth exit — remaining boom uses the
+ *  surface heightfield. */
+function marchCaveOccupancy(
+  input: CameraBoomInput,
+  dx: number,
+  dy: number,
+  dz: number,
+): OccupancyMarch {
+  const occupancyAt = input.occupancyAt
+  if (!occupancyAt) return { kind: 'void' }
+  let previousT = 0
+  for (let i = 1; i <= TERRAIN_STEPS; i++) {
+    const t = i / TERRAIN_STEPS
+    const x = input.originX + dx * t
+    const y = input.originY + dy * t
+    const z = input.originZ + dz * t
+    if (occupancyAt(x, y, z)) {
+      previousT = t
+      continue
+    }
+    const groundY = input.sampleHeight(x, z)
+    if (y >= groundY - 0.05) return { kind: 'exit', t: previousT }
+    const prevX = input.originX + dx * previousT
+    const prevY = input.originY + dy * previousT
+    const prevZ = input.originZ + dz * previousT
+    const prevOcc = occupancyAt(prevX, prevY, prevZ)
+    const prevGround = input.sampleHeight(prevX, prevZ)
+    if (prevOcc && prevOcc.ceilingY >= prevGround - 0.3) {
+      return { kind: 'exit', t: previousT }
+    }
+    return { kind: 'solid', t: previousT }
+  }
+  return { kind: 'void' }
 }
 
 /** First t in (0, 1] where the boom enters the collider cylinder below `roofY`. */

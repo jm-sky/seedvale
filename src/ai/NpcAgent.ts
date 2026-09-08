@@ -106,6 +106,7 @@ import {
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
+import { colliderActiveAtY } from '../world/collision'
 import { PALISADE_WORK_SESSION_HOURS, PALISADE_WORK_SESSION_SEC, palisadeRemainingWork } from '../world/palisade'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import {
@@ -4280,12 +4281,19 @@ export class NpcAgent {
     if (url) this.playAt(url, this.mesh.position, REACTION_SOUND_VOLUME)
   }
 
+  /** `collidersNear`, filtered to the NPC's current Y so underground cave
+   *  walls do not block a surface walker (plan world-terrain-008 B3). */
+  private collidersNearAtHeight(x: number, z: number): ReturnType<ColliderSource> {
+    const y = this.mesh.position.y
+    return this.collidersNear(x, z).filter((collider) => colliderActiveAtY(collider, y))
+  }
+
   private isWalkable(x: number, z: number): boolean {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
     return isPointWalkableForNpc(
       x,
       z,
-      this.collidersNear(x, z),
+      this.collidersNearAtHeight(x, z),
       this.mesh.position.x,
       this.mesh.position.z,
       this.pendingAction?.destination ?? null,
@@ -4298,7 +4306,7 @@ export class NpcAgent {
    *  any nearby disk is not a valid recovery target (plan 108). */
   private isWalkableExterior(x: number, z: number): boolean {
     if (this.sampleHeight(x, z) <= this.waterLevel + WATER_MARGIN) return false
-    return isExteriorPoint(x, z, this.collidersNear(x, z))
+    return isExteriorPoint(x, z, this.collidersNearAtHeight(x, z))
   }
 
   /** Snap `dest` onto a foreign collider's rim (house/well core is not a
@@ -4307,7 +4315,7 @@ export class NpcAgent {
     const rim = destinationOnColliderRim(
       this.mesh.position,
       dest,
-      this.collidersNear(dest.x, dest.z),
+      this.collidersNearAtHeight(dest.x, dest.z),
     )
     dest.x = rim.x
     dest.z = rim.z
@@ -4345,7 +4353,7 @@ export class NpcAgent {
   private resolveSteerTarget(dest: THREE.Vector3): THREE.Vector3 {
     const px = this.mesh.position.x
     const pz = this.mesh.position.z
-    const bypass = bypassPointForSegment(px, pz, dest, this.collidersNear(px, pz), NPC_COLLIDER_APPROACH_BUFFER)
+    const bypass = bypassPointForSegment(px, pz, dest, this.collidersNearAtHeight(px, pz), NPC_COLLIDER_APPROACH_BUFFER)
     if (!bypass) return dest
     this.tmpAvoid.set(bypass.x, dest.y, bypass.z)
     return this.tmpAvoid
@@ -4534,7 +4542,7 @@ export class NpcAgent {
     const profile: AgentProfile = {}
     const goal = navigationApproachTarget(
       dest,
-      this.collidersNear(dest.x, dest.z),
+      this.collidersNearAtHeight(dest.x, dest.z),
       NPC_COLLIDER_APPROACH_BUFFER,
       NAV_APPROACH_CLEARANCE,
     )
@@ -4575,7 +4583,7 @@ export class NpcAgent {
    *  only when `attemptNavRepath` couldn't find a real route. Samples must
    *  be exterior (plan 108) so a hop inside the occupied house is rejected. */
   private attemptBlindRepath(): void {
-    const occupied = this.collidersNear(this.mesh.position.x, this.mesh.position.z)
+    const occupied = this.collidersNearAtHeight(this.mesh.position.x, this.mesh.position.z)
     const radii = localEscapeRadii(this.mesh.position, occupied)
     const minR = radii[0] ?? 2
     const span = 1.5
@@ -4599,7 +4607,7 @@ export class NpcAgent {
    *  the nearest walkable *exterior* point on a ring that exits any occupied
    *  disk, instead of a 1.5 m hop that stays in the house core. */
   private attemptLocalEscape(): void {
-    const occupied = this.collidersNear(this.mesh.position.x, this.mesh.position.z)
+    const occupied = this.collidersNearAtHeight(this.mesh.position.x, this.mesh.position.z)
     const radii = localEscapeRadii(this.mesh.position, occupied)
     const found = sampleNearbyExteriorPoint(
       this.mesh.position.x,
@@ -4661,10 +4669,10 @@ export class NpcAgent {
   private emergencyTeleport(): void {
     const pos = this.mesh.position
     const colliders = [
-      ...this.collidersNear(pos.x, pos.z),
-      ...this.collidersNear(this.landmarks.well.x, this.landmarks.well.z),
-      ...this.collidersNear(this.landmarks.stockpile.x, this.landmarks.stockpile.z),
-      ...this.collidersNear(this.landmarks.garden.x, this.landmarks.garden.z),
+      ...this.collidersNearAtHeight(pos.x, pos.z),
+      ...this.collidersNearAtHeight(this.landmarks.well.x, this.landmarks.well.z),
+      ...this.collidersNearAtHeight(this.landmarks.stockpile.x, this.landmarks.stockpile.z),
+      ...this.collidersNearAtHeight(this.landmarks.garden.x, this.landmarks.garden.z),
     ]
     const candidates = [
       this.landmarks.well,

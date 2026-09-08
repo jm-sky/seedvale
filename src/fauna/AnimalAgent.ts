@@ -37,7 +37,7 @@ import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
 import { recordBloodHit } from '../world/bloodTraces'
-import { colliderContainsPoint } from '../world/collision'
+import { colliderActiveAtY, colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   advanceAnimalCorpse,
@@ -3444,7 +3444,9 @@ export class AnimalAgent {
     if (water.present && classifyWaterTraversal(water.depth, this.def.scale, this.def.water) === null) {
       return false
     }
+    const y = this.mesh.position.y
     for (const collider of this.collidersNear(x, z)) {
+      if (!colliderActiveAtY(collider, y)) continue
       if (colliderContainsPoint(collider, x, z)) return false
     }
     return true

@@ -27,7 +27,7 @@ import { isExhausted } from '../shared/StaminaState'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
 import { type Collider, colliderActiveAtY, resolvePosition } from '../world/collision'
-import { resolveCameraBoom, withCaveFloorFallback } from './cameraBoom'
+import { resolveCameraBoom } from './cameraBoom'
 import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
@@ -45,7 +45,7 @@ export type PlayerMovementState = 'stationary' | 'moving' | 'sprinting'
 export const MOVE_SPEED = 8
 /** Matches the capsule fallback's `CapsuleGeometry` radius (plan 097 §2.2) —
  *  the GLB model has no measured collision shape, so this stands in for both. */
-const PLAYER_COLLISION_RADIUS = 0.35
+export const PLAYER_COLLISION_RADIUS = 0.35
 export const SPRINT_MULTIPLIER = 1.8
 /** Airborne lean (radians) — no jump clip on the rig (plan 097 §4 pyt. 5), so
  *  this reuses the `crouch()`/`lieDown()` trick of rotating `modelRoot` only. */
@@ -169,6 +169,15 @@ export type ColliderSource = (x: number, z: number) => readonly Collider[]
  *  back to `HeightSampler`. Kept as its own alias instead of importing
  *  `Caves` here, same reasoning as `HeightSampler`/`ColliderSource`. */
 export type CaveGroundQuery = (x: number, y: number, z: number) => { floorY: number, ceilingY: number } | null
+/** Strict cave occupancy at the sample point (plan world-terrain-008 B3).
+ *  `null` is solid / outside void. Keyed by the sample's own Y — not the
+ *  player's. Sibling of `CaveGroundQuery`; do not reuse ground hysteresis
+ *  or `FLOOR_GRACE` as a wall/camera test. */
+export type CaveOccupancyQuery = (
+  x: number,
+  y: number,
+  z: number,
+) => { floorY: number, ceilingY: number } | null
 
 /**
  * @domain items-player
@@ -201,6 +210,7 @@ export class PlayerController {
   private waterLevel: number
   private collidersNear: ColliderSource
   private caveGround: CaveGroundQuery
+  private caveOccupancy: CaveOccupancyQuery
   private sampleFootstepSurface: (x: number, z: number) => FootstepSurface
   private readonly isCapsule: boolean
   /** The GLB scene root (or capsule mesh) — rotated independently of `mesh`
@@ -293,6 +303,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveOccupancy: CaveOccupancyQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ) {
     this.camera = camera
@@ -303,6 +314,7 @@ export class PlayerController {
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
     this.caveGround = caveGround
+    this.caveOccupancy = caveOccupancy
     this.sampleFootstepSurface = sampleFootstepSurface
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
@@ -364,6 +376,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveOccupancy: CaveOccupancyQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
     modelUrl = PLAYER_MODEL_URL,
   ): Promise<PlayerController> {
@@ -382,6 +395,7 @@ export class PlayerController {
         waterLevel,
         collidersNear,
         caveGround,
+        caveOccupancy,
         sampleFootstepSurface,
       )
     } catch (err) {
@@ -395,6 +409,7 @@ export class PlayerController {
         waterLevel,
         collidersNear,
         caveGround,
+        caveOccupancy,
         sampleFootstepSurface,
       )
     }
@@ -409,6 +424,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveOccupancy: CaveOccupancyQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): PlayerController {
     const body = new THREE.Mesh(
@@ -432,6 +448,7 @@ export class PlayerController {
       waterLevel,
       collidersNear,
       caveGround,
+      caveOccupancy,
       sampleFootstepSurface,
     )
   }
@@ -443,6 +460,7 @@ export class PlayerController {
     waterLevel: number,
     collidersNear: ColliderSource,
     caveGround: CaveGroundQuery,
+    caveOccupancy: CaveOccupancyQuery,
     sampleFootstepSurface: (x: number, z: number) => FootstepSurface,
   ): void {
     this.sampleHeight = sampleHeight
@@ -450,6 +468,7 @@ export class PlayerController {
     this.waterLevel = waterLevel
     this.collidersNear = collidersNear
     this.caveGround = caveGround
+    this.caveOccupancy = caveOccupancy
     this.sampleFootstepSurface = sampleFootstepSurface
     this.snapToGround()
   }
@@ -1042,7 +1061,8 @@ export class PlayerController {
 
   /** Third-person boom. Desired pose is unconstrained orbit; `resolveCameraBoom`
    *  then pulls along the look-at → camera segment so the lens stays out of
-   *  the heightfield and house-sized colliders (plan 097 circles, extruded). */
+   *  the heightfield, house-sized colliders, and cave occupancy (walls /
+   *  ceiling / overburden). Cave beads are not the camera occluder. */
   private syncCamera(): void {
     const { yaw, pitch, distance } = this.look
     const cosPitch = Math.cos(pitch)
@@ -1070,12 +1090,6 @@ export class PlayerController {
     const desiredX = originX + this.camOffset.x
     const desiredY = targetY + this.camOffset.y
     const desiredZ = originZ + this.camOffset.z
-    const playerY = this.mesh.position.y
-    // Player's own current cave floor, if any — used as the fallback ground
-    // for boom sample points that fall outside the (narrow) cave footprint,
-    // so the boom clamp can't mistake the surface high above a cave for its
-    // ground (world-terrain-008 Milestone A test-environment fix).
-    const originCave = this.caveGround(originX, playerY, originZ)
     const resolved = resolveCameraBoom({
       originX,
       originY: targetY,
@@ -1083,14 +1097,9 @@ export class PlayerController {
       camX: desiredX,
       camY: desiredY,
       camZ: desiredZ,
-      // Cave-aware: inside a cave, the boom must clip against the cave floor,
-      // not the surface heightfield far above (plan world-terrain-007 §20).
-      sampleHeight: withCaveFloorFallback(
-        (x, z) => this.groundAt(x, z).height,
-        (x, z) => this.caveGround(x, playerY, z)?.floorY ?? null,
-        originCave?.floorY ?? null,
-      ),
+      sampleHeight: this.sampleHeight,
       colliders: this.collidersNearAtHeight(originX, originZ),
+      occupancyAt: this.caveOccupancy,
     })
     this.camera.position.set(resolved.x, resolved.y, resolved.z)
     this.camera.lookAt(originX, targetY, originZ)

@@ -1,11 +1,8 @@
-/** Plan world-terrain-008 — transitional L1 walkable-proxy adapter.
- *  Turns a `CaveTopology` into a `CaveDefinition` so B3 can still reuse
- *  `buildCaveWallColliders` until collision is derived from the SDF.
- *  Gameplay ground/containment no longer uses this proxy (B2:
- *  `caveSdfQuery.ts`). The proxy is deliberately generous (never
- *  authoritative render geometry — plan §4). Walking past the visual SDF
- *  wall into the proxy disc is a known B3 miss; B2 hysteresis stops that
- *  gap from snapping the player to the surface.
+/** Plan world-terrain-008 — transitional L1 adapter.
+ *  Turns a `CaveTopology` into a `CaveDefinition` for `definitions()` /
+ *  location catalog / streaming bounds. Collision no longer uses this
+ *  proxy (B3: `caveSdfColliders.ts`). Gameplay ground does not use it
+ *  either (B2: `caveSdfQuery.ts`). Deleting the adapter is B5.
  *
  * @domain world-terrain
  */

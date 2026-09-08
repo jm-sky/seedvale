@@ -132,50 +132,111 @@ describe('resolveCameraBoom', () => {
     expect(along).toBeGreaterThanOrEqual(CAMERA_BOOM_MIN_DISTANCE - 0.05)
   })
 
-  it('regression (world-terrain-008): an underground origin is not lifted to a much higher surface height', () => {
+  it('regression (world-terrain-008 B3): cave look-up pulls in at the ceiling, not the surface', () => {
     // Player stands on a cave floor 6 m below a surface that reads 40 m up.
-    // Looking up steeply at a shelf/overhang (a real cave-exploration pose),
-    // the boom's own XZ reach (2 m) exits the narrow ~1.7 m cave footprint
-    // late in the march, and — without the fallback — the naive per-point
-    // ground query reads the surface far above instead of the cave the
-    // player is still standing in, so the boom is denied and held hovering
-    // just below that surface reading instead of reaching its real target.
+    // Steep look-up used to escape through the ceiling because
+    // `withCaveFloorFallback` treated every boom sample as cave floor.
     const caveFloorY = -6
+    const caveCeilingY = -1
     const surfaceY = 40
-    const footprintRadius = 1.7
     const desiredCamY = 45
-    const boomInput = {
+    const occupancyAt = (x: number, y: number, z: number) => {
+      if (Math.hypot(x, z) > 5) return null
+      if (y < caveFloorY || y > caveCeilingY) return null
+      return { floorY: caveFloorY, ceilingY: caveCeilingY }
+    }
+    const result = resolveCameraBoom({
       originX: 0,
       originY: caveFloorY + 1.5,
       originZ: 0,
       camX: 0,
       camY: desiredCamY,
       camZ: 2,
+      sampleHeight: () => surfaceY,
       colliders: [],
+      occupancyAt,
+    })
+    expect(result.t).toBeLessThan(1)
+    expect(result.y).toBeLessThan(caveCeilingY + 0.5)
+    expect(result.y).toBeLessThan(surfaceY)
+    expect(result.y).toBeGreaterThan(caveFloorY)
+  })
+
+  it('cave occupancy stops the boom at a wall without CAMERA_OCCLUDER_MIN_RADIUS beads', () => {
+    const floorY = 0
+    const ceilingY = 5
+    const wallZ = 4
+    const occupancyAt = (_x: number, y: number, z: number) => {
+      if (y < floorY || y > ceilingY) return null
+      if (z > wallZ) return null
+      return { floorY, ceilingY }
     }
-    const naiveSampleHeight = (x: number, z: number) =>
-      Math.hypot(x, z) <= footprintRadius ? caveFloorY : surfaceY
+    const caveBeads = [{ type: 'circle' as const, x: 0, z: wallZ, radius: 0.5, minY: floorY, maxY: ceilingY }]
+    const result = resolveCameraBoom({
+      originX: 0,
+      originY: 1.5,
+      originZ: 0,
+      camX: 0,
+      camY: 1.5,
+      camZ: 12,
+      sampleHeight: () => 20,
+      colliders: caveBeads,
+      occupancyAt,
+    })
+    expect(result.t).toBeLessThan(1)
+    expect(result.z).toBeLessThan(wallZ)
+    expect(result.z).toBeGreaterThan(0)
+    expect(occupancyAt(result.x, result.y, result.z)).not.toBeNull()
+  })
 
-    // Old behaviour: the naive query mistakes the distant surface for solid
-    // ground and denies the boom, leaving the camera stuck near that surface
-    // reading instead of the player's actual (underground) surroundings.
-    const buggy = resolveCameraBoom({ ...boomInput, sampleHeight: naiveSampleHeight })
-    expect(buggy.t).toBeLessThan(1)
-    expect(buggy.y).toBeGreaterThan(surfaceY - 5)
-    expect(buggy.y).toBeLessThan(surfaceY + 1)
+  it('cave occupancy does not lift an interior boom to surface + clearance', () => {
+    const caveFloorY = -6
+    const caveCeilingY = 2
+    const surfaceY = 40
+    const occupancyAt = (x: number, y: number, z: number) => {
+      if (Math.hypot(x, z) > 3) return null
+      if (y < caveFloorY || y > caveCeilingY) return null
+      return { floorY: caveFloorY, ceilingY: caveCeilingY }
+    }
+    const result = resolveCameraBoom({
+      originX: 0,
+      originY: caveFloorY + 1.5,
+      originZ: 0,
+      camX: 8,
+      camY: caveFloorY + 2,
+      camZ: 8,
+      sampleHeight: () => surfaceY,
+      colliders: [],
+      occupancyAt,
+    })
+    expect(result.y).toBeLessThan(surfaceY)
+    expect(result.y).toBeLessThan(caveCeilingY + CAMERA_GROUND_CLEARANCE + 0.3)
+  })
 
-    // Fixed behaviour: PlayerController wraps the same per-point cave lookup
-    // with the origin's own known cave floor as the out-of-footprint
-    // fallback, so the surface is never read while still underground and the
-    // boom resolves exactly as it would with no obstruction at all.
-    const fixedSampleHeight = withCaveFloorFallback(
-      naiveSampleHeight,
-      (x, z) => (Math.hypot(x, z) <= footprintRadius ? caveFloorY : null),
-      caveFloorY,
-    )
-    const fixed = resolveCameraBoom({ ...boomInput, sampleHeight: fixedSampleHeight })
-    expect(fixed.t).toBe(1)
-    expect(fixed.y).toBeCloseTo(desiredCamY)
+  it('mouth look-out may leave occupancy into exterior without collapsing to minT', () => {
+    const floorY = 8
+    const surfaceY = 10
+    const occupancyAt = (x: number, y: number, z: number) => {
+      if (Math.abs(x) > 1.5) return null
+      if (z < 0 || z > 4) return null
+      if (y < floorY || y > surfaceY - 0.05) return null
+      return { floorY, ceilingY: surfaceY - 0.05 }
+    }
+    const result = resolveCameraBoom({
+      originX: 0,
+      originY: floorY + 1.2,
+      originZ: 1,
+      camX: 0,
+      camY: surfaceY + 1,
+      camZ: 10,
+      sampleHeight: () => surfaceY,
+      colliders: [],
+      occupancyAt,
+    })
+    const dist = Math.hypot(0, (surfaceY + 1) - (floorY + 1.2), 9)
+    const minT = Math.min(CAMERA_BOOM_MIN_DISTANCE / dist, 0.5)
+    expect(result.t).toBeGreaterThan(minT + 0.05)
+    expect(result.z).toBeGreaterThan(4)
   })
 })
 
