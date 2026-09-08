@@ -4,31 +4,31 @@
 
 ### Overall
 
-1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/6
+3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · 🔒 blocked · unlocks 3/5
-3. `settlements-npcs-015` — **Economic Production and Input Integration**  
-   🔴 `M` · ✅ ready · unlocks 3/4
 4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
-   🔴 `M` · 🔒 blocked · unlocks 1/1
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
-   🟡 `L` · ✅ ready · unlocks 1/2
+   🔴 `M` · 🔒 blocked · unlocks 1/3
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+   🔴 `M` · 🔒 blocked · unlocks 1/2
 
 ---
 
 ### Roadmap Focus
 
-1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+1. `settlements-npcs-015` — **Economic Production and Input Integration**  
+   🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `economy-production`
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
    🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `physical-goods-transport`
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
    🔴 `M` · 🔒 blocked · unlocks 3/5 · roadmap: `physical-goods-transport`
-3. `settlements-npcs-015` — **Economic Production and Input Integration**  
-   🔴 `M` · ✅ ready · unlocks 3/4 · roadmap: `economy-production`
 4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
-   🔴 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `economy-production`
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
-   🟡 `L` · ✅ ready · unlocks 1/2 · roadmap: `textiles-and-herbal-medicine`
+   🔴 `M` · 🔒 blocked · unlocks 1/3 · roadmap: `economy-production`
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+   🔴 `M` · 🔒 blocked · unlocks 1/2 · roadmap: `economy-production`
 
 ---
 
@@ -47,10 +47,10 @@ _No qualifying plans._
 
 ### Ready Now
 
-1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+1. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/6
-2. `settlements-npcs-015` — **Economic Production and Input Integration**  
-   🔴 `M` · ✅ ready · unlocks 3/4
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/6
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
 4. `quests-progression-006` — **Settlement Rat Infestation**  
@@ -74,33 +74,33 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+1. `settlements-npcs-015` — **Economic Production and Input Integration**  
   🔴 `M` · **Score:** 125  
    → **unlocks:** 3/6
 
-2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+2. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+  🔴 `M` · **Score:** 125  
+   → **unlocks:** 3/6
+
+3. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
   🔴 `M` · **Score:** 117  
    → **unlocks:** 3/5
 
-3. `settlements-npcs-015` — **Economic Production and Input Integration**  
-  🔴 `M` · **Score:** 105  
-   → **unlocks:** 3/4
-
 4. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
-  🔴 `M` · **Score:**  69  
-   → **unlocks:** 1/1
+  🔴 `M` · **Score:**  89  
+   → **unlocks:** 1/3
 
-5. `fauna-004` — **Sheep wool cycle and shepherd**  
+5. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+  🔴 `M` · **Score:**  81  
+   → **unlocks:** 1/2
+
+6. `fauna-004` — **Sheep wool cycle and shepherd**  
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-6. `settlements-npcs-006` — **Wool to material**  
+7. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
-
-7. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
-  🔴 `M` · **Score:**  57  
-   → **unlocks:** 0/0
 
 8. `quests-progression-006` — **Settlement Rat Infestation**  
   🔴 `M` · **Score:**  53  
@@ -174,8 +174,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
-  🔴 `L` · **Score:**  24  
+26. `items-player-020` — **Player-built animal trough and water storage**  
+  🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
 27. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
@@ -198,39 +198,31 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-32. `npc-020` — **Strength-driven physical work and human carrying**  
-  🟡 `M` · **Score:**  21  
+32. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
+  🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
-33. `npc-021` — **Endurance-driven stamina capacity and recovery**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-34. `npc-023` — **Perception-driven observation and information levels**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-35. `world-terrain-015` — **Water Reflection Content Budget**  
+33. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-36. `fauna-007` — **Animal leading and cart harness**  
+34. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-37. `items-player-019` — **Player camp repair and sewing kit**  
+35. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-38. `tools-000` — **Weapon Browser — Observatory/Admin**  
+36. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-39. `npc-004` — **Drzewo genealogiczne NPC**  
+37. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-40. `tools-006` — **tools-006--world-observatory.md**  
+38. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -347,6 +339,7 @@ graph TD
   fauna_017["fauna-017 — AnimalAgent refactor"]
   fauna_018["fauna-018 — Persistent habitat occupants"]
   fauna_019["fauna-019 — Real cave habitats and animal home navigation"]
+  fauna_020["fauna-020 — Player-owned animals and follow/stay behaviour"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]
   items_player_002["items-player-002 — Food provenance, freshness and storage"]
   items_player_003["items-player-003 — Player Physical Effort — Stamina & Vigor"]
@@ -361,6 +354,7 @@ graph TD
   items_player_017["items-player-017 — Incremental Construction for Player Buildables"]
   items_player_018["items-player-018 — Camp inspection, condition and full camp setup"]
   items_player_019["items-player-019 — Player camp repair and sewing kit"]
+  items_player_020["items-player-020 — Player-built animal trough and water storage"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -548,6 +542,7 @@ graph TD
   ai_002 --> ai_004
   ai_003 --> ai_004
   fauna_003 --> fauna_008
+  fauna_003 --> fauna_020
   fauna_004 --> settlements_npcs_006
   fauna_006 --> fauna_007
   fauna_010 --> fauna_011
@@ -572,6 +567,7 @@ graph TD
   items_player_009 --> items_player_013
   items_player_009 --> items_player_015
   items_player_010 --> items_player_013
+  items_player_017 --> items_player_020
   items_player_017 --> settlements_005
   items_player_018 --> items_player_019
   npc_001 --> npc_019
@@ -638,6 +634,7 @@ graph TD
   settlements_npcs_015 --> settlements_npcs_007
   settlements_npcs_015 --> settlements_npcs_016
   settlements_npcs_016 --> settlements_npcs_017
+  settlements_npcs_017 --> settlements_npcs_020
   settlements_npcs_018 --> settlements_npcs_019
   settlements_npcs_018 --> settlements_npcs_020
   settlements_npcs_018 --> settlements_npcs_021
