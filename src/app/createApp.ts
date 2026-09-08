@@ -873,6 +873,10 @@ export async function createApp(
       applySocialConsequence(reputation, consequence)
       refreshCharacterReputation()
     },
+    {
+      getReputationDimension: (settlementId, dimension) => reputation.getReputationDimension(settlementId, dimension),
+      getRenown: (settlementId) => reputation.getRenown(settlementId),
+    },
   )
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`

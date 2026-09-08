@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildLandmarkQuests, QUESTS } from './quests'
+import type { QuestDef } from './quests'
+import {
+  buildLandmarkQuests,
+  QuestDefinitionValidationError,
+  QUESTS,
+  validateQuestDefinitions,
+} from './quests'
 
 describe('buildLandmarkQuests', () => {
   it('omits a landmark kind the resolver has no candidate for', () => {
@@ -85,6 +91,97 @@ describe('QUESTS social consequence calibration (plan quests-progression-001 §6
 
   it('no quest authors social consequence without a defined magnitude source (no accidental defaults)', () => {
     const withConsequence = QUESTS.filter((q) => q.outcomes.some((o) => o.consequences?.social))
-    expect(withConsequence.map((q) => q.id).sort()).toEqual(['grozny-wilk', 'wilcza-jama'])
+    expect(withConsequence.map((q) => q.id).sort()).toEqual(['grozny-wilk', 'lis-przy-osadzie', 'wilcza-jama'])
+  })
+})
+
+function runtimeQuest(partial: QuestDef): QuestDef {
+  return { ...partial, settlementId: partial.settlementId ?? 'home' }
+}
+
+describe('validateQuestDefinitions (plan quests-progression-004)', () => {
+  const baseQuest = runtimeQuest({
+    id: 'base',
+    title: 'Base',
+    description: 'desc',
+    giverName: 'Anna',
+    offerLine: 'offer',
+    stages: [{ objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind' }],
+    reportLine: 'done',
+    outcomes: [{ id: 'done', state: 'complete' }],
+  })
+
+  const prereqQuest = runtimeQuest({
+    id: 'follow-up',
+    title: 'Follow up',
+    description: 'desc',
+    giverName: 'Anna',
+    offerLine: 'offer',
+    stages: [{ objective: { type: 'interact_tree' }, description: 'tree', reminderLine: 'remind' }],
+    reportLine: 'done',
+    outcomes: [{ id: 'done', state: 'complete' }],
+    availability: {
+      prerequisites: [{ type: 'quest_outcome', questId: 'base', outcomeIds: ['done'] }],
+    },
+  })
+
+  it('accepts authored wolf-chain prerequisites once settlementId is bound', () => {
+    const grozny = runtimeQuest({ ...QUESTS.find((q) => q.id === 'grozny-wilk')! })
+    const den = runtimeQuest({ ...QUESTS.find((q) => q.id === 'wilcza-jama')! })
+    expect(() => validateQuestDefinitions([grozny, den])).not.toThrow()
+  })
+
+  it('rejects unknown quest references', () => {
+    const bad = runtimeQuest({
+      ...prereqQuest,
+      availability: { prerequisites: [{ type: 'quest_outcome', questId: 'missing', outcomeIds: ['done'] }] },
+    })
+    expect(() => validateQuestDefinitions([baseQuest, bad])).toThrow(QuestDefinitionValidationError)
+  })
+
+  it('rejects empty outcomeIds', () => {
+    const bad = runtimeQuest({
+      ...prereqQuest,
+      availability: { prerequisites: [{ type: 'quest_outcome', questId: 'base', outcomeIds: [] }] },
+    })
+    expect(() => validateQuestDefinitions([baseQuest, bad])).toThrow(/empty quest_outcome/)
+  })
+
+  it('rejects unknown outcome ids on the referenced quest', () => {
+    const bad = runtimeQuest({
+      ...prereqQuest,
+      availability: { prerequisites: [{ type: 'quest_outcome', questId: 'base', outcomeIds: ['nope'] }] },
+    })
+    expect(() => validateQuestDefinitions([baseQuest, bad])).toThrow(/unknown outcome/)
+  })
+
+  it('rejects direct self-dependency', () => {
+    const bad = runtimeQuest({
+      ...baseQuest,
+      availability: { prerequisites: [{ type: 'quest_outcome', questId: 'base', outcomeIds: ['done'] }] },
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/own outcome/)
+  })
+
+  it('rejects social prerequisites without settlementId', () => {
+    const bad: QuestDef = {
+      ...baseQuest,
+      settlementId: undefined,
+      availability: { prerequisites: [{ type: 'renown', minimum: 5 }] },
+    }
+    expect(() => validateQuestDefinitions([bad])).toThrow(/no settlementId/)
+  })
+
+  it('rejects out-of-range reputation and renown thresholds', () => {
+    const badReputation = runtimeQuest({
+      ...baseQuest,
+      availability: { prerequisites: [{ type: 'reputation', dimension: 'trust', minimum: 101 }] },
+    })
+    const badRenown = runtimeQuest({
+      ...baseQuest,
+      availability: { prerequisites: [{ type: 'renown', minimum: -1 }] },
+    })
+    expect(() => validateQuestDefinitions([badReputation])).toThrow(/reputation minimum/)
+    expect(() => validateQuestDefinitions([badRenown])).toThrow(/renown minimum/)
   })
 })

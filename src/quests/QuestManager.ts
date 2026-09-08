@@ -2,7 +2,7 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
-import type { SocialConsequence } from '../reputation/ReputationManager'
+import type { SocialConsequence, ReputationDimension } from '../reputation/ReputationManager'
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
@@ -13,13 +13,16 @@ import {
   type QuestOutcomeId,
   type QuestProgressEntry,
   type QuestReward,
+  type QuestPrerequisite,
   QUESTS,
   type QuestStage,
   type QuestState,
   RELATION_LEVEL_THRESHOLDS,
   type RelationLevel,
+  relationLevelMeetsMinimum,
   relationToLevel,
   uniqueOutcomeForState,
+  validateQuestDefinitions,
 } from './quests'
 
 /** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
@@ -115,6 +118,19 @@ export type DangerousTraitApplier = (animalId: string) => void
  *  every existing construction site (tests included) is unaffected. */
 export type ApplySocialConsequence = (consequence: SocialConsequence) => void
 
+/** Read-only settlement social standing for availability prerequisites —
+ *  keyed by the resolved `QuestDef.settlementId`, never by giver name
+ *  (plan quests-progression-004). */
+export type QuestSocialAvailabilityLookup = {
+  getReputationDimension(settlementId: string, dimension: ReputationDimension): number
+  getRenown(settlementId: string): number
+}
+
+const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
+  getReputationDimension: () => 0,
+  getRenown: () => 0,
+}
+
 /** Same headroom as NPC reaction clips (NpcAgent.ts) — a one-shot "thank you", not a focal cue. */
 const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 /** Used when a failed stage has no `failLine` of its own. */
@@ -166,6 +182,7 @@ export class QuestManager {
   private readonly resolveAnimalTarget: AnimalTargetResolver
   private readonly applyDangerousTrait: DangerousTraitApplier
   private readonly applySocialConsequence: ApplySocialConsequence
+  private readonly socialAvailability: QuestSocialAvailabilityLookup
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -181,7 +198,9 @@ export class QuestManager {
     resolveAnimalTarget: AnimalTargetResolver = () => undefined,
     applyDangerousTrait: DangerousTraitApplier = () => {},
     applySocialConsequence: ApplySocialConsequence = () => {},
+    socialAvailability: QuestSocialAvailabilityLookup = NO_SOCIAL_AVAILABILITY,
   ) {
+    validateQuestDefinitions(defs)
     this.defs = defs
     this.playSound = playSound
     this.inventory = inventory
@@ -189,6 +208,7 @@ export class QuestManager {
     this.resolveAnimalTarget = resolveAnimalTarget
     this.applyDangerousTrait = applyDangerousTrait
     this.applySocialConsequence = applySocialConsequence
+    this.socialAvailability = socialAvailability
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -292,19 +312,35 @@ export class QuestManager {
     return Math.min(1, Math.max(0, average / RELATION_LEVEL_THRESHOLDS.trusted))
   }
 
-  /** Whether `def`'s `availability` gate (if any) is currently satisfied.
-   *  Absent gate = always available, matching existing v2 quests. */
+  /** Whether every authored `availability` prerequisite on `def` is
+   *  currently satisfied. Absent availability = always available. */
   private meetsAvailability(def: QuestDef): boolean {
-    const required = def.availability?.relation
-    if (!required) return true
-    const order: readonly RelationLevel[] = ['stranger', 'acquainted', 'friendly', 'trusted']
-    const have = order.indexOf(this.getRelationLevel(required.npcName))
-    const need = order.indexOf(required.minimum)
-    return have >= need
+    const prerequisites = def.availability?.prerequisites
+    if (!prerequisites?.length) return true
+    return prerequisites.every((prereq) => this.meetsPrerequisite(def, prereq))
   }
 
-  /** Whether `id` can currently be offered — false either because it's past
-   *  `not_offered`/`offered` already, or its availability gate isn't met yet. */
+  private meetsPrerequisite(def: QuestDef, prereq: QuestPrerequisite): boolean {
+    switch (prereq.type) {
+      case 'relation':
+        return relationLevelMeetsMinimum(this.getRelationLevel(prereq.npcName), prereq.minimum)
+      case 'quest_outcome': {
+        const resolvedOutcomeId = this.stateOf(prereq.questId).resolvedOutcomeId
+        if (!resolvedOutcomeId) return false
+        return prereq.outcomeIds.includes(resolvedOutcomeId)
+      }
+      case 'reputation':
+        if (!def.settlementId) return false
+        return this.socialAvailability.getReputationDimension(def.settlementId, prereq.dimension) >= prereq.minimum
+      case 'renown':
+        if (!def.settlementId) return false
+        return this.socialAvailability.getRenown(def.settlementId) >= prereq.minimum
+    }
+  }
+
+  /** Whether `id`'s authored prerequisites are currently satisfied —
+   *  independent of lifecycle state (a quest past `not_offered` may still
+   *  return false here after relation/reputation drops). */
   isQuestAvailable(id: string): boolean {
     const def = this.defs.find((d) => d.id === id)
     if (!def) return false
@@ -468,9 +504,12 @@ export class QuestManager {
     def: QuestDef,
     s: QuestRuntimeProgress,
   ): QuestDialogOverride | null {
-    if (s.state === 'not_offered' || s.state === 'offered') {
+    if (s.state === 'not_offered') {
       if (!this.meetsAvailability(def)) return null
       this.setQuestState(def.id, { state: 'offered', stageIndex: 0 })
+    }
+    const current = this.stateOf(def.id)
+    if (current.state === 'offered') {
       return {
         line: def.offerLine,
         offer: {

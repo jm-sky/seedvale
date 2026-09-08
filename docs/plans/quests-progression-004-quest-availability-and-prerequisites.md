@@ -1,7 +1,7 @@
 # Plan: Quest Availability & Prerequisites
 
 **Created:** 2026-09-06  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Type:** feature  
 **Priority:** high · **Effort:** S  
 **Depends on:** quests-progression-002  

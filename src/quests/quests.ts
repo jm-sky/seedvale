@@ -45,10 +45,89 @@ export function relationToLevel(relation: number): RelationLevel {
   return 'stranger'
 }
 
+/** One authored gate on whether a `not_offered` quest may enter the offer
+ *  lifecycle. All prerequisites on a quest combine with AND semantics;
+ *  `quest_outcome.outcomeIds` is the only local OR (membership check). */
+export type QuestPrerequisite =
+  | { type: 'relation', npcName: string, minimum: RelationLevel }
+  | { type: 'quest_outcome', questId: string, outcomeIds: readonly QuestOutcomeId[] }
+  | { type: 'reputation', dimension: ReputationDimension, minimum: number }
+  | { type: 'renown', minimum: number }
+
 /** Gates whether a quest is offered at all. Absent = always available
  *  (existing v2 quests keep their current behaviour). */
 export type QuestAvailability = {
-  relation?: { npcName: string, minimum: RelationLevel }
+  prerequisites: readonly QuestPrerequisite[]
+}
+
+const RELATION_LEVEL_ORDER: readonly RelationLevel[] = ['stranger', 'acquainted', 'friendly', 'trusted']
+
+/** Whether `current` meets or exceeds the authored `minimum` tier. */
+export function relationLevelMeetsMinimum(current: RelationLevel, minimum: RelationLevel): boolean {
+  return RELATION_LEVEL_ORDER.indexOf(current) >= RELATION_LEVEL_ORDER.indexOf(minimum)
+}
+
+const REPUTATION_MIN = -100
+const REPUTATION_MAX = 100
+const RENOWN_MIN = 0
+const RENOWN_MAX = 100
+
+export class QuestDefinitionValidationError extends Error {}
+
+/** Validates final runtime quest definitions once, after composition-root
+ *  settlement binding. Throws `QuestDefinitionValidationError` on invalid
+ *  authored prerequisites — never clamps thresholds at runtime. */
+export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
+  const byId = new Map(defs.map((def) => [def.id, def]))
+  for (const def of defs) {
+    const prerequisites = def.availability?.prerequisites
+    if (!prerequisites?.length) continue
+    for (const prereq of prerequisites) {
+      switch (prereq.type) {
+        case 'relation':
+          break
+        case 'quest_outcome':
+          if (prereq.questId === def.id) {
+            throw new QuestDefinitionValidationError(`Quest "${def.id}" cannot depend on its own outcome`)
+          }
+          if (prereq.outcomeIds.length === 0) {
+            throw new QuestDefinitionValidationError(`Quest "${def.id}" has an empty quest_outcome.outcomeIds`)
+          }
+          const referenced = byId.get(prereq.questId)
+          if (!referenced) {
+            throw new QuestDefinitionValidationError(`Quest "${def.id}" references unknown quest "${prereq.questId}"`)
+          }
+          for (const outcomeId of prereq.outcomeIds) {
+            if (!referenced.outcomes.some((outcome) => outcome.id === outcomeId)) {
+              throw new QuestDefinitionValidationError(
+                `Quest "${def.id}" references unknown outcome "${outcomeId}" on "${prereq.questId}"`,
+              )
+            }
+          }
+          break
+        case 'reputation':
+          if (!def.settlementId) {
+            throw new QuestDefinitionValidationError(`Quest "${def.id}" has a reputation prerequisite but no settlementId`)
+          }
+          if (prereq.minimum < REPUTATION_MIN || prereq.minimum > REPUTATION_MAX) {
+            throw new QuestDefinitionValidationError(
+              `Quest "${def.id}" reputation minimum ${prereq.minimum} is outside ${REPUTATION_MIN}..${REPUTATION_MAX}`,
+            )
+          }
+          break
+        case 'renown':
+          if (!def.settlementId) {
+            throw new QuestDefinitionValidationError(`Quest "${def.id}" has a renown prerequisite but no settlementId`)
+          }
+          if (prereq.minimum < RENOWN_MIN || prereq.minimum > RENOWN_MAX) {
+            throw new QuestDefinitionValidationError(
+              `Quest "${def.id}" renown minimum ${prereq.minimum} is outside ${RENOWN_MIN}..${RENOWN_MAX}`,
+            )
+          }
+          break
+      }
+    }
+  }
 }
 
 export type QuestOutcomeId = string
@@ -189,8 +268,9 @@ export type QuestDef = {
   stages: readonly QuestStage[]
   /** Giver's line once every stage is cleared and the player reports back. */
   reportLine: string
-  /** Relation gate; quest stays `not_offered` and hidden from the giver/log
-   *  until met (plan 093 Etap A). */
+  /** Availability prerequisites; quest stays `not_offered` and hidden from
+   *  the giver/log until every prerequisite is met (plan 093 Etap A,
+   *  quests-progression-004). */
   availability?: QuestAvailability
   /** Which settlement this quest's giver/story belongs to — absent for every
    *  quest defined here (this file stays world-agnostic); the composition
@@ -487,7 +567,11 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę. Weź ten damasceński miecz — zasłużyłeś.',
-    availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
+    availability: {
+      prerequisites: [
+        { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+      ],
+    },
     outcomes: [
       {
         id: 'reported',
@@ -516,7 +600,12 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Teraz w okolicy będzie spokojniej. Weź ten obsydianowy miecz z wulkanicznego szkła.',
-    availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
+    availability: {
+      prerequisites: [
+        { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+        { type: 'quest_outcome', questId: 'grozny-wilk', outcomeIds: ['reported'] },
+      ],
+    },
     outcomes: [
       {
         id: 'reported',

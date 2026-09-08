@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SocialConsequence } from '../reputation/ReputationManager'
-import type { QuestManagerInitial } from './QuestManager'
+import type { QuestManagerInitial, QuestSocialAvailabilityLookup } from './QuestManager'
 import type { QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
@@ -40,7 +40,11 @@ const gatedQuest = quest({
     { objective: { type: 'interact_tree' }, description: 'tree', reminderLine: 'remind' },
   ],
   reportLine: 'report gated',
-  availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
+  availability: {
+    prerequisites: [
+      { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+    ],
+  },
 })
 
 const effectsQuest = quest({
@@ -62,8 +66,20 @@ function makeManager(
   defs: readonly QuestDef[],
   resolveAnimalTarget?: (kind: string) => string | undefined,
   grantItem?: (kind: string, count: number) => void,
+  initial?: QuestManagerInitial,
+  socialAvailability?: QuestSocialAvailabilityLookup,
 ): QuestManager {
-  return new QuestManager(defs, undefined, new Inventory(), undefined, grantItem, resolveAnimalTarget)
+  return new QuestManager(
+    defs,
+    undefined,
+    new Inventory(),
+    initial,
+    grantItem,
+    resolveAnimalTarget,
+    undefined,
+    undefined,
+    socialAvailability,
+  )
 }
 
 const wolfQuest = quest({
@@ -567,9 +583,19 @@ describe('QuestManager applySocialConsequence', () => {
     defs: readonly QuestDef[],
     onConsequence: (c: SocialConsequence) => void,
     resolveAnimalTarget?: (kind: string) => string | undefined,
+    initial?: QuestManagerInitial,
   ): QuestManager {
-    const initial: QuestManagerInitial = { progress: [], relations: { Anna: 6 } }
-    return new QuestManager(defs, undefined, new Inventory(), initial, undefined, resolveAnimalTarget, undefined, onConsequence)
+    const trusted: QuestManagerInitial = { progress: [], relations: { Anna: 6 } }
+    return new QuestManager(
+      defs,
+      undefined,
+      new Inventory(),
+      initial ?? trusted,
+      undefined,
+      resolveAnimalTarget,
+      undefined,
+      onConsequence,
+    )
   }
 
   it('applies exactly grozny-wilk\'s calibrated deltas, once, on completion', () => {
@@ -591,7 +617,15 @@ describe('QuestManager applySocialConsequence', () => {
 
   it('applies exactly wilcza-jama\'s calibrated deltas, once, on completion', () => {
     const consequences: SocialConsequence[] = []
-    const qm = makeTrustedManager([wilczaJamaDef], (c) => consequences.push(c))
+    const qm = makeTrustedManager(
+      [groznyWilkDef, wilczaJamaDef],
+      (c) => consequences.push(c),
+      undefined,
+      {
+        progress: [{ id: 'grozny-wilk', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'reported' }],
+        relations: { Anna: 6 },
+      },
+    )
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'wolf_den_cleared', denId: WOLF_DEN_ID })
     qm.onInteract('Anna')
@@ -1041,5 +1075,207 @@ describe('QuestManager paid quest definitions', () => {
     qm.onInteract('Anna')
     expect(granted).toEqual([])
     expect(qm.getState('ziola-dla-anny')).toBe('complete')
+  })
+})
+
+describe('QuestManager prerequisites (plan quests-progression-004)', () => {
+  const prerequisiteWolf = quest({
+    id: 'prereq-wolf',
+    giverName: 'Anna',
+    offerLine: 'wolf offer',
+    stages: [
+      { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill', reminderLine: 'remind' },
+    ],
+    reportLine: 'wolf done',
+    outcomes: [
+      { id: 'reported', state: 'complete' },
+      { id: 'escaped', state: 'failed' },
+    ],
+  })
+
+  const prerequisiteDen = quest({
+    id: 'prereq-den',
+    giverName: 'Anna',
+    offerLine: 'den offer',
+    stages: [
+      { objective: { type: 'clear_wolf_den', denId: WOLF_DEN_ID }, description: 'den', reminderLine: 'remind' },
+    ],
+    reportLine: 'den done',
+    availability: {
+      prerequisites: [
+        { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+        { type: 'quest_outcome', questId: 'prereq-wolf', outcomeIds: ['reported'] },
+      ],
+    },
+  })
+
+  const socialQuest = quest({
+    id: 'social-gated',
+    giverName: 'Anna',
+    offerLine: 'social offer',
+    settlementId: 'home',
+    stages: [
+      { objective: { type: 'interact_tree' }, description: 'tree', reminderLine: 'remind' },
+    ],
+    reportLine: 'social done',
+    availability: {
+      prerequisites: [
+        { type: 'reputation', dimension: 'courage', minimum: 10 },
+        { type: 'renown', minimum: 5 },
+      ],
+    },
+  })
+
+  const otherSettlementQuest = quest({
+    ...socialQuest,
+    id: 'social-outpost',
+    settlementId: 'outpost',
+    offerLine: 'outpost offer',
+  })
+
+  it('keeps relation below/at threshold behaviour after migration', () => {
+    const qm = makeManager([gatedQuest], undefined, undefined, { progress: [], relations: { Anna: 5 } })
+    expect(qm.isQuestAvailable('gated')).toBe(false)
+    const atThreshold = makeManager([gatedQuest], undefined, undefined, { progress: [], relations: { Anna: 6 } })
+    expect(atThreshold.isQuestAvailable('gated')).toBe(true)
+  })
+
+  it('does not unlock on quest_outcome until resolvedOutcomeId matches', () => {
+    const qm = makeManager(
+      [prerequisiteWolf, prerequisiteDen],
+      undefined,
+      undefined,
+      { progress: [{ id: 'prereq-wolf', state: 'offered', stageIndex: 0 }], relations: { Anna: 6 } },
+    )
+    expect(qm.isQuestAvailable('prereq-den')).toBe(false)
+    expect(qm.list().some((e) => e.id === 'prereq-den')).toBe(false)
+  })
+
+  it('unlocks quest_outcome when resolvedOutcomeId is in the allowed set', () => {
+    const qm = makeManager(
+      [prerequisiteWolf, prerequisiteDen],
+      undefined,
+      undefined,
+      {
+        progress: [{ id: 'prereq-wolf', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'reported' }],
+        relations: { Anna: 6 },
+      },
+    )
+    expect(qm.isQuestAvailable('prereq-den')).toBe(true)
+    expect(qm.list().some((e) => e.id === 'prereq-den')).toBe(true)
+    expect(qm.labelMarker('Anna')).toBe('!')
+    expect(qm.onInteract('Anna')?.line).toBe('den offer')
+  })
+
+  it('does not unlock on a non-matching resolved outcome', () => {
+    const qm = makeManager(
+      [prerequisiteWolf, prerequisiteDen],
+      undefined,
+      undefined,
+      {
+        progress: [{ id: 'prereq-wolf', state: 'failed', stageIndex: 0, resolvedOutcomeId: 'escaped' }],
+        relations: { Anna: 6 },
+      },
+    )
+    expect(qm.isQuestAvailable('prereq-den')).toBe(false)
+  })
+
+  it('can unlock on an authored failed outcome id when listed in outcomeIds', () => {
+    const failedFollowUp = quest({
+      ...prerequisiteDen,
+      id: 'failed-follow-up',
+      availability: {
+        prerequisites: [
+          { type: 'quest_outcome', questId: 'prereq-wolf', outcomeIds: ['escaped', 'reported'] },
+        ],
+      },
+    })
+    const qm = makeManager(
+      [prerequisiteWolf, failedFollowUp],
+      undefined,
+      undefined,
+      {
+        progress: [{ id: 'prereq-wolf', state: 'failed', stageIndex: 0, resolvedOutcomeId: 'escaped' }],
+        relations: {},
+      },
+    )
+    expect(qm.isQuestAvailable('failed-follow-up')).toBe(true)
+  })
+
+  it('does not treat invalidated progress as a matching quest_outcome', () => {
+    const qm = makeManager(
+      [prerequisiteWolf, prerequisiteDen],
+      undefined,
+      undefined,
+      {
+        progress: [{ id: 'prereq-wolf', state: 'invalidated', stageIndex: 0 }],
+        relations: { Anna: 6 },
+      },
+    )
+    expect(qm.isQuestAvailable('prereq-den')).toBe(false)
+  })
+
+  it('requires every prerequisite (AND semantics)', () => {
+    const qm = makeManager(
+      [prerequisiteWolf, prerequisiteDen],
+      undefined,
+      undefined,
+      {
+        progress: [{ id: 'prereq-wolf', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'reported' }],
+        relations: { Anna: 1 },
+      },
+    )
+    expect(qm.isQuestAvailable('prereq-den')).toBe(false)
+  })
+
+  it('reads reputation and renown from def.settlementId via the injected lookup', () => {
+    const lookup: QuestSocialAvailabilityLookup = {
+      getReputationDimension: (settlementId, dimension) => (
+        settlementId === 'home' && dimension === 'courage' ? 10 : 0
+      ),
+      getRenown: (settlementId) => (settlementId === 'home' ? 5 : 0),
+    }
+    const qm = makeManager([socialQuest, otherSettlementQuest], undefined, undefined, undefined, lookup)
+    expect(qm.isQuestAvailable('social-gated')).toBe(true)
+    expect(qm.isQuestAvailable('social-outpost')).toBe(false)
+  })
+
+  it('keeps offered/active quests visible after prerequisites later fail', () => {
+    const active = makeManager(
+      [gatedQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: 'gated', state: 'active', stageIndex: 0 }], relations: { Anna: 0 } },
+    )
+    expect(active.isQuestAvailable('gated')).toBe(false)
+    expect(active.list().some((e) => e.id === 'gated')).toBe(true)
+    expect(active.labelMarker('Anna')).toBe('…')
+    expect(active.onInteract('Anna')).not.toBeNull()
+
+    const offered = makeManager(
+      [gatedQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: 'gated', state: 'offered', stageIndex: 0 }], relations: { Anna: 0 } },
+    )
+    expect(offered.list().some((e) => e.id === 'gated')).toBe(true)
+    expect(offered.labelMarker('Anna')).toBe('!')
+    expect(offered.onInteract('Anna')?.line).toBe('offer gated')
+  })
+
+  it('restores availability from persisted relations, outcomes and social lookup after load', () => {
+    const grozny = { ...QUESTS.find((d) => d.id === 'grozny-wilk')!, settlementId: 'home' }
+    const den = { ...QUESTS.find((d) => d.id === 'wilcza-jama')!, settlementId: 'home' }
+    const lookup: QuestSocialAvailabilityLookup = {
+      getReputationDimension: () => 0,
+      getRenown: () => 0,
+    }
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'grozny-wilk', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'reported' }],
+      relations: { Anna: 6 },
+    }
+    const qm = makeManager([grozny, den], undefined, undefined, initial, lookup)
+    expect(qm.isQuestAvailable('wilcza-jama')).toBe(true)
+    expect(qm.labelMarker('Anna')).toBe('!')
   })
 })
