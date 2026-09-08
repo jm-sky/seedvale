@@ -93,6 +93,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `fauna-019-real-cave-habitats-and-animal-home-navigation.md`             | -       | 🟡 | L      | world-terrain-008, fauna-016 |
 | ◼️ `quests-progression-008-treasure-map-bear-cave.md`                       | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
 | ◼️ `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`    | -       | 🟡 | M      | -      |
+| ◼️ `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011` `world-terrain-016` |
 
 ---
 
@@ -189,7 +190,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `020`
 - items-player: `020`
-- npc: `026`
+- npc: `027`
 - persistence: `005`
 - quests-progression: `012`
 - settlements: `003`
