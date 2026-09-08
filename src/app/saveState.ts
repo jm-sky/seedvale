@@ -214,6 +214,12 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       requiredWork: p.requiredWork,
       completedWork: p.completedWork,
     })),
+    completedTerrainPreparations: bundle.terrainPreparations.completed().map((p) => ({
+      id: p.id,
+      x: p.center.x,
+      z: p.center.z,
+      size: p.size,
+    })),
     // Only `'player'`-caused entries — `'system'` ones (cave carving, fauna
     // spawn-point burn replay) are deterministically reproduced on every
     // world build and must never also be replayed from a save (plan

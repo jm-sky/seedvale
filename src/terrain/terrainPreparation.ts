@@ -17,10 +17,46 @@ import { type DigEnv, isRockGround } from './dig'
  * keeps chunk-seam texels matching in `applyModificationToTile`).
  */
 
-export type PreparationSize = 2 | 3 | 4 | 9
+export const MIN_PREPARATION_SIZE = 2
+export const MAX_PREPARATION_SIZE = 9
+
+/** Ordinary `Przygotuj teren` metre sizes (plan world-019) — the bounded
+ *  integer range the existing footprint/work formulas already consume.
+ *  Selection/validation/serialization must go through this list rather than
+ *  a quest-specific union. */
+export const PREPARATION_SIZES = [2, 3, 4, 5, 6, 7, 8, 9] as const
+
+export type PreparationSize = (typeof PREPARATION_SIZES)[number]
+
+const PREPARATION_SIZE_SET: ReadonlySet<number> = new Set(PREPARATION_SIZES)
+
+export function isPreparationSize(value: number): value is PreparationSize {
+  return PREPARATION_SIZE_SET.has(value)
+}
 
 export type GridSample = { x: number, z: number }
 export type HeightSample = GridSample & { height: number }
+
+/** Compact durable fact that a prepared area exists after active construction
+ *  ends (plan world-019). Identity, centre and metre size only — final
+ *  heights stay owned by `ChunkManager`'s exact-height overlay, and
+ *  construction-only fields (`originalHeights`, work progress, `targetHeight`)
+ *  are not carried forward.
+ *
+ * @domain world
+ * @system terrain-preparation
+ */
+export type CompletedTerrainPreparation = {
+  id: string
+  center: GridSample
+  size: PreparationSize
+}
+
+export function completedTerrainPreparationFrom(
+  record: Pick<TerrainPreparationRecord, 'id' | 'center' | 'size'>,
+): CompletedTerrainPreparation {
+  return { id: record.id, center: { x: record.center.x, z: record.center.z }, size: record.size }
+}
 
 /** Active `Przygotuj teren` work (plan `world-terrain-002` §4) — a compact,
  *  serializable data record, not an `Object3D`/manager: the marker/visual is
@@ -31,8 +67,9 @@ export type HeightSample = GridSample & { height: number }
  *  copies of progress. `originalHeights` is captured once, at confirmation,
  *  and is immutable for the record's lifetime: every progressive height is
  *  always re-derived from it (`progressiveHeights`), never accumulated.
- *  Deleted outright on completion — there is no permanent `PreparedTerrain`
- *  state (plan §8/§12). */
+ *  Completion removes this active record and writes a compact
+ *  `CompletedTerrainPreparation` (plan world-019); it does not keep a second
+ *  copy of final terrain heights. */
 export type TerrainPreparationRecord = {
   id: string
   center: GridSample
@@ -41,10 +78,9 @@ export type TerrainPreparationRecord = {
   originalHeights: readonly HeightSample[]
   requiredWork: number
   completedWork: number
-  /** Always `'active'` while a record exists — completion deletes the record
-   *  outright rather than transitioning it to a terminal status (plan §4's
-   *  field list, kept for forward-compatibility/clarity rather than a
-   *  meaningful second state today). */
+  /** Always `'active'` while a record exists — completion deletes the active
+   *  record and records a compact completed-area fact rather than transitioning
+   *  this same object to a terminal status. */
   status: 'active'
 }
 

@@ -36,6 +36,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Placement preview ghost](../src/world/placementPreview.ts) — circle/box footprint renderer for the shared placement preview.
 - [Container actions](../src/app/actions/containerActions.ts) — placing, carrying and opening a chest, plus the transfer screen wiring.
 - [Work contract actions](../src/app/actions/workContractActions.ts) — creating a construction work contract, posting it at a settlement notice board, and cancelling one.
+- [Terrain preparation](../src/terrain/terrainPreparation.ts) — metre-sized `Przygotuj teren` domain rules, bounded sizes `2…9`, and compact completed-area facts.
+- [Site infrastructure query](../src/world/siteInfrastructure.ts) — read-only bounded lookup of completed preparations, usable Player wells and live Player gardens.
+- [Cultivation anchor](../src/world/cultivationAnchor.ts) — shared position+radius contract for settlement gardens and Player-built gardens.
 - [Survival actions](../src/app/actions/survivalActions.ts) — corpse butchering/burial, campfire ignite/cook, water drinking/filling, eating.
 - [Gathering actions](../src/app/actions/gatheringActions.ts) — trap arm/disarm/collect, fishing, drying racks, hives, wild-crop harvest.
 - [Rest actions](../src/app/actions/restActions.ts) — waiting, camp/town/tent rest and the resulting rest quality.

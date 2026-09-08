@@ -181,6 +181,56 @@ describe('planProfessionWork', () => {
     it('returns null without foodSources hooks', () => {
       expect(planProfessionWork(baseCtx({ role: 'farmer' }))).toBeNull()
     })
+
+    it('farms around a supplied Player-garden cultivation anchor', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      const queried: { x: number, z: number }[] = []
+      const foodSources = {
+        queryHarvestableCrop: (x: number, z: number) => {
+          queried.push({ x, z })
+          return { kind: 'crop' as const, x: 41, z: 51, itemKind: 'carrot' }
+        },
+        harvest: () => ({ count: 2, kind: 'carrot' as const }),
+        findPlantSpot: () => ({ x: 2, z: 2 }),
+        plant: () => true,
+      }
+      const ctx = baseCtx({
+        role: 'farmer',
+        household,
+        foodSources: foodSources as unknown as NpcWorkContext['foodSources'],
+        cultivationAnchor: { position: { x: 40, z: 50 }, radius: 2.5 },
+      })
+      const work = planProfessionWork(ctx)
+      expect(work?.kind).toBe('harvest')
+      expect(queried).toEqual([{ x: 40, z: 50 }])
+      work?.onComplete?.()
+      expect(household.items.count('carrot')).toBe(2)
+    })
+
+    it('plants household seed around a Player-garden anchor without duplicating crop state', () => {
+      const household = createHousehold('h', 's', 'home:h')
+      household.items.add('seed_carrot', 1)
+      let planted = 0
+      const foodSources = {
+        queryHarvestableCrop: () => null,
+        harvest: () => null,
+        findPlantSpot: (x: number, z: number) => ({ x: x + 1, z: z + 1 }),
+        plant: () => {
+          planted += 1
+          return true
+        },
+      }
+      const work = planProfessionWork(baseCtx({
+        role: 'farmer',
+        household,
+        foodSources: foodSources as unknown as NpcWorkContext['foodSources'],
+        cultivationAnchor: { position: { x: 40, z: 50 }, radius: 2.5 },
+      }))
+      expect(work?.kind).toBe('plant')
+      work?.onComplete?.()
+      expect(household.items.count('seed_carrot')).toBe(0)
+      expect(planted).toBe(1)
+    })
   })
 
   describe('fisher', () => {

@@ -23,6 +23,7 @@ import { physicalWorkDuration } from '../player/physicalWorkStrength'
 import { householdStorageDestination, settlementStorageDestination } from '../settlement/storageDestinations'
 import { copyVec3 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
+import { type CultivationAnchor, resolveCultivationAnchor } from '../world/cultivationAnchor'
 import { FISHING_CAST_DURATION_SEC, fishingSpotId, rollFishingCatch } from '../world/fishing'
 import { CROP_SEED_ITEM } from '../world/plantedCrops'
 import { depositCarriedItems, HOUSEHOLD_EXCHANGE_MAX_TRANSFER } from './npcLogistics'
@@ -116,6 +117,10 @@ export type NpcWorkContext = {
    *  (currently ore mining) read this; generic `rollWorkDurationSec()` does
    *  not. Neutral `0.5` preserves legacy durations. */
   strength: number
+  /** Optional cultivation target (plan world-019) — a future settlement
+   *  bootstrap can supply a Player-built garden through the same Farmer
+   *  planner. Absent, the planner resolves the settlement garden landmark. */
+  cultivationAnchor?: CultivationAnchor | null
 }
 
 /**
@@ -209,8 +214,15 @@ function planArrowCrafting(ctx: NpcWorkContext): NpcPlannedAction | null {
 function planFarmWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   const { foodSources, household } = ctx
   if (!foodSources) return null
-  const garden = ctx.landmarks.garden
-  const target = foodSources.queryHarvestableCrop(garden.x, garden.z, FARM_WORK_RADIUS)
+  const garden = resolveCultivationAnchor({
+    supplied: ctx.cultivationAnchor,
+    settlementAnchors: ctx.landmarks.cultivationAnchors,
+    fallbackGarden: ctx.landmarks.garden
+      ? { x: ctx.landmarks.garden.x, z: ctx.landmarks.garden.z }
+      : null,
+  })
+  if (!garden) return null
+  const target = foodSources.queryHarvestableCrop(garden.position.x, garden.position.z, FARM_WORK_RADIUS)
   if (target) {
     const economy = ctx.economy
     return {
@@ -226,7 +238,7 @@ function planFarmWork(ctx: NpcWorkContext): NpcPlannedAction | null {
   if (!household) return null
   const seedCropId = FARM_SEED_PRIORITY.find((id) => household.items.has(CROP_SEED_ITEM[id], 1))
   if (!seedCropId) return null
-  const spot = foodSources.findPlantSpot(garden.x, garden.z, FARM_PLANT_SEARCH_RADIUS)
+  const spot = foodSources.findPlantSpot(garden.position.x, garden.position.z, FARM_PLANT_SEARCH_RADIUS)
   if (!spot) return null
   const seedKind = CROP_SEED_ITEM[seedCropId]
   return {

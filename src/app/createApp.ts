@@ -523,6 +523,11 @@ export async function createApp(
     initialSave?.storageInfestation,
     initialSave === undefined,
     grassForageOverrides,
+    (initialSave?.completedTerrainPreparations ?? []).map((p) => ({
+      id: p.id,
+      center: { x: p.x, z: p.z },
+      size: p.size,
+    })),
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do

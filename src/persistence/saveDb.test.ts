@@ -69,6 +69,7 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
     carriedContainer: null,
     playerWells: [],
     terrainPreparations: [],
+    completedTerrainPreparations: [],
     terrainModifications: [],
     plantedTrees: [],
     plantedCrops: [],

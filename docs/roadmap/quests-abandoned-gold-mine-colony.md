@@ -114,7 +114,7 @@ Allow the Player to prepare a viable future settlement site using normal world c
 
 ## Terrain preparation
 
-Reuse the existing configurable terrain-preparation mechanism which already supports continuously selectable sizes approximately from `2×2` to `9×9`.
+Reuse the existing configurable terrain-preparation mechanism. Ordinary preparation uses discrete integer metre sizes from `2×2` through `9×9` (mouse wheel / `+` / `-` cycles the bounded list). It is not a continuously selectable slider.
 
 Do not introduce a parallel quest-specific plot system.
 

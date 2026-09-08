@@ -12,7 +12,7 @@ import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { SettlementDef } from '../settlement/settlementGenerator'
 import type { ChunkCoord } from '../terrain/chunkGrid'
 import type { ResourceDepletionState } from '../terrain/depositMining'
-import type { TerrainPreparationRecord } from '../terrain/terrainPreparation'
+import type { CompletedTerrainPreparation, TerrainPreparationRecord } from '../terrain/terrainPreparation'
 import type { PlacedTrapRecord } from '../world/animalTraps'
 import type { BeehiveRecord } from '../world/beehives'
 import type { CropPlacement } from '../world/cropLifecycle'
@@ -78,6 +78,7 @@ import { createWorkContracts, type WorkContracts } from '../world/createWorkCont
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
+import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
 
@@ -138,6 +139,10 @@ export type WorldBundle = {
   palisades: Palisades
   sleepingUtilities: SleepingUtilities
   terrainPreparations: TerrainPreparations
+  /** On-demand bounded lookup over completed preparations, usable Player
+   *  wells and live Player gardens (plan world-019). Read-only aggregation;
+   *  never persisted. */
+  querySiteInfrastructure: (site: SiteBounds) => SiteInfrastructure
   caves: Caves
   dryingRacks: DryingRacks
   hives: Beehives
@@ -486,6 +491,8 @@ type WorldSystemsSeed = {
   sleepingUtilityBedrolls: readonly BedrollRecord[]
   sleepingUtilityPlatforms: readonly PlatformRecord[]
   terrainPreparations: readonly TerrainPreparationRecord[]
+  /** Compact completed prepared-area facts (plan world-019). */
+  completedTerrainPreparations: readonly CompletedTerrainPreparation[]
   dryingRacks: readonly DryingRackRecord[]
   hives: readonly BeehiveRecord[]
   /** Plan npc-014 — persistent player-issued work contracts, same "carried
@@ -633,6 +640,7 @@ async function buildWorldSystems(
     sleepingUtilityBedrolls: initialSleepingUtilityBedrolls,
     sleepingUtilityPlatforms: initialSleepingUtilityPlatforms,
     terrainPreparations: initialTerrainPreparations,
+    completedTerrainPreparations: initialCompletedTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
     workContracts: initialWorkContracts,
@@ -787,6 +795,7 @@ async function buildWorldSystems(
     chunkManager,
     chunkManager.sampleHeight,
     initialTerrainPreparations,
+    initialCompletedTerrainPreparations,
   )
   const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
   const palisades = createPalisades(
@@ -861,6 +870,11 @@ async function buildWorldSystems(
     palisades,
     sleepingUtilities,
     terrainPreparations,
+    querySiteInfrastructure: (site) => collectSiteInfrastructure(site, {
+      completedPreparations: terrainPreparations.completed(),
+      wells: playerWells.nodes(),
+      gardens: playerGardens.nodes(),
+    }),
     caves,
     dryingRacks: createEmptyDryingRacks(),
     hives: createEmptyBeehives(),
@@ -1076,6 +1090,9 @@ export async function createWorldBundle(
    *  through both `createWorldBundle` and `rebuildWorldBundle`" contract as
    *  `resourceDepletion` above. */
   grassForageOverrides: GrassForageOverrides = {},
+  /** Plan world-019 — compact completed prepared-area facts, same carry/
+   *  restore contract as `initialTerrainPreparations`. */
+  initialCompletedTerrainPreparations: readonly CompletedTerrainPreparation[] = [],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1093,6 +1110,7 @@ export async function createWorldBundle(
     sleepingUtilityBedrolls: initialSleepingUtilityBedrolls,
     sleepingUtilityPlatforms: initialSleepingUtilityPlatforms,
     terrainPreparations: initialTerrainPreparations,
+    completedTerrainPreparations: initialCompletedTerrainPreparations,
     dryingRacks: initialDryingRacks,
     hives: initialHives,
     workContracts: initialWorkContracts,
@@ -1228,8 +1246,10 @@ export async function rebuildWorldBundle(
   bundle.sleepingUtilities.dispose()
   // Active terrain-preparation work sites are positioned by the player, not
   // seed-derived — same carry-across-rebuild contract as `playerWells`/
-  // `playerGardens` above.
+  // `playerGardens` above. Completed-area facts (plan world-019) ride along
+  // so they survive an in-session rebuild the same way a save/load does.
   const carriedTerrainPreparations = resetCollectedItems ? [] : [...bundle.terrainPreparations.nodes()]
+  const carriedCompletedTerrainPreparations = resetCollectedItems ? [] : [...bundle.terrainPreparations.completed()]
   bundle.terrainPreparations.dispose()
   const carriedDryingRacks = resetCollectedItems ? [] : [...bundle.dryingRacks.nodes()]
   bundle.dryingRacks.dispose()
@@ -1285,6 +1305,7 @@ export async function rebuildWorldBundle(
     sleepingUtilityBedrolls: carriedBedrolls,
     sleepingUtilityPlatforms: carriedPlatforms,
     terrainPreparations: carriedTerrainPreparations,
+    completedTerrainPreparations: carriedCompletedTerrainPreparations,
     dryingRacks: carriedDryingRacks,
     hives: carriedHives,
     workContracts: carriedWorkContracts,

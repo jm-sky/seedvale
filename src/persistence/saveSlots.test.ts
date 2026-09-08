@@ -71,6 +71,7 @@ const currentSave = {
   carriedContainer: null,
   playerWells: [],
   terrainPreparations: [],
+  completedTerrainPreparations: [],
   terrainModifications: [],
   plantedTrees: [],
   plantedCrops: [],

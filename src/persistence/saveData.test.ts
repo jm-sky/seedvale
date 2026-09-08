@@ -83,6 +83,7 @@ const validSave: SaveData = {
     requiredWork: 2,
     completedWork: 0.5,
   }],
+  completedTerrainPreparations: [{ id: 'terrainPrep:done', x: 12, z: -8, size: 6 }],
   terrainModifications: [
     { mode: 'dig', x: 1, z: 2, radius: 1.4, depth: 0.28 },
     { mode: 'scorch', x: 3, z: 4, radius: 3, depth: 0.15 },
@@ -217,6 +218,26 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, playerWells: [{ id: 'w', x: 0, z: 0, yaw: 0, stage: 'roofed', workProgress: 0 }] })).toBeNull()
     expect(loadSaveData({ ...validSave, playerWells: [{ id: 'w', x: 0, z: 0, yaw: 0, stage: 'pit', workProgress: 'nope' }] })).toBeNull()
     expect(loadSaveData({ ...validSave, playerWells: 'nope' })).toBeNull()
+  })
+
+  it('accepts ordinary preparation sizes 2…9 and compact completed-area records (plan world-019)', () => {
+    expect(loadSaveData({
+      ...validSave,
+      terrainPreparations: [{ ...validSave.terrainPreparations[0]!, size: 6 }],
+      completedTerrainPreparations: [{ id: 'done:1', x: 1, z: 2, size: 9 }],
+    })).not.toBeNull()
+  })
+
+  it('rejects unsupported preparation sizes and malformed completed-area metadata', () => {
+    expect(loadSaveData({
+      ...validSave,
+      terrainPreparations: [{ ...validSave.terrainPreparations[0]!, size: 1 }],
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      completedTerrainPreparations: [{ id: 'done:1', x: 1, z: 2, size: 10 }],
+    })).toBeNull()
+    expect(loadSaveData({ ...validSave, completedTerrainPreparations: 'nope' })).toBeNull()
   })
 
   it('rejects malformed planted-tree/crop fields', () => {
@@ -515,6 +536,15 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       deathAtDays: 0,
       loot: { counts: {}, instances: [] },
       cleanupReason: 'legacy',
+    })
+  })
+
+  it('migrates a real v11 save (plan world-019) into v12 with an empty completed-preparation collection', () => {
+    const { completedTerrainPreparations: _completed, ...v11Fields } = validSave
+    const result = loadStoredSave({ ...v11Fields, version: 11 })
+    expect(result).toEqual({
+      status: 'ok',
+      data: { ...validSave, completedTerrainPreparations: [] },
     })
   })
 

@@ -1,7 +1,7 @@
 # Plan: Persistent Player-built Site Infrastructure
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** none

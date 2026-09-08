@@ -3,9 +3,11 @@ import {
   averageAbsHeightDelta,
   computeRequiredWork,
   exceedsMaxDeformation,
+  isPreparationSize,
   MAX_PREPARATION_DELTA,
   MINIMUM_PREPARATION_WORK_HOURS,
   nearestGridPoint,
+  PREPARATION_SIZES,
   preparationSamplesPerSide,
   progressiveHeight,
   progressiveHeights,
@@ -19,6 +21,19 @@ import {
 // step = chunkSize/(resolution-1) = 32/8 = 4 — easy to reason about by hand.
 const CHUNK_SIZE = 32
 const RESOLUTION = 9
+
+describe('isPreparationSize', () => {
+  it('accepts every integer in the ordinary 2…9 range', () => {
+    expect(PREPARATION_SIZES).toEqual([2, 3, 4, 5, 6, 7, 8, 9])
+    for (const size of PREPARATION_SIZES) expect(isPreparationSize(size)).toBe(true)
+  })
+
+  it('rejects sizes outside the supported range', () => {
+    expect(isPreparationSize(1)).toBe(false)
+    expect(isPreparationSize(10)).toBe(false)
+    expect(isPreparationSize(6.5)).toBe(false)
+  })
+})
 
 describe('nearestGridPoint / resolveLevelSamples', () => {
   it('snaps to the nearest grid vertex', () => {
@@ -56,6 +71,16 @@ describe('resolvePreparationSamples', () => {
     const { center } = resolvePreparationSamples(1, 1, 3, CHUNK_SIZE, RESOLUTION)
     expect(center.x % 4).toBeCloseTo(0, 5)
     expect(center.z % 4).toBeCloseTo(0, 5)
+  })
+
+  it('accepts every ordinary integer size 2…9, including representative 2/6/9 footprints', () => {
+    const fineResolution = 33
+    const two = resolvePreparationSamples(0, 0, 2, CHUNK_SIZE, fineResolution)
+    const six = resolvePreparationSamples(0, 0, 6, CHUNK_SIZE, fineResolution)
+    const nine = resolvePreparationSamples(0, 0, 9, CHUNK_SIZE, fineResolution)
+    expect(two.samples.length).toBeLessThan(six.samples.length)
+    expect(six.samples.length).toBeLessThan(nine.samples.length)
+    expect(preparationSamplesPerSide(6, CHUNK_SIZE, fineResolution)).toBeGreaterThan(preparationSamplesPerSide(2, CHUNK_SIZE, fineResolution))
   })
 })
 

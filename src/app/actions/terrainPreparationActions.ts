@@ -11,6 +11,7 @@ import {
   type GridSample,
   type HeightSample,
   MAX_PREPARATION_DELTA,
+  PREPARATION_SIZES,
   preparationSamplesPerSide,
   type PreparationSize,
   resolvePreparationSamples,
@@ -38,7 +39,6 @@ function terrainPrepReach(sizeMeters: PreparationSize): number {
   return Math.max(TERRAIN_PREP_REACH, sizeMeters / 2 + 0.5)
 }
 
-const SIZES: readonly PreparationSize[] = [2, 3, 4, 9]
 const HEIGHT_STEP = 0.25
 /** Wheel `deltaY` per resize step — most mice report ±100 per notch;
  *  trackpads fire many smaller deltas, so this accumulates instead of
@@ -66,8 +66,8 @@ const MAX_PREPARATION_XP = 20
 let nextPreparationId = 0
 
 function nextSize(size: PreparationSize, delta: 1 | -1): PreparationSize {
-  const index = SIZES.indexOf(size)
-  const next = SIZES[Math.max(0, Math.min(SIZES.length - 1, index + delta))]
+  const index = PREPARATION_SIZES.indexOf(size)
+  const next = PREPARATION_SIZES[Math.max(0, Math.min(PREPARATION_SIZES.length - 1, index + delta))]
   return next ?? size
 }
 
@@ -382,10 +382,9 @@ export function createTerrainPreparationActions(
     const work = activeWork
     activeWork = null
     const entry = bundle.terrainPreparations.find(work.id)
-    if (!entry) return
-    applyWorkProgress(work, 1)
-    bundle.terrainPreparations.remove(work.id)
-    awardSkillXp(player.skills, 'survival', Math.min(MAX_PREPARATION_XP, Math.round(entry.requiredWork * XP_PER_WORK_HOUR)))
+    if (entry) applyWorkProgress(work, 1)
+    else if (!bundle.terrainPreparations.wasCompleted(work.id)) return
+    awardSkillXp(player.skills, 'survival', Math.min(MAX_PREPARATION_XP, Math.round(work.requiredWork * XP_PER_WORK_HOUR)))
     toast.show('Przygotowanie terenu zakończone.')
   }
 

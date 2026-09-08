@@ -38,7 +38,8 @@ describe('createTerrainPreparations.contributeWork (plan npc-018 §15)', () => {
     preparations.place(makeRecord({ completedWork: 3 }))
     const result = preparations.contributeWork('terrainPrep:1', 5)
     expect(result).toEqual({ acceptedWork: 1, completed: true })
-    expect(preparations.find('terrainPrep:1')?.completedWork).toBe(4)
+    expect(preparations.find('terrainPrep:1')).toBeUndefined()
+    expect(preparations.completed()).toEqual([{ id: 'terrainPrep:1', center: { x: 0, z: 0 }, size: 2 }])
   })
 
   it('reports zero accepted work once nothing remains, without erroring', () => {
@@ -51,6 +52,55 @@ describe('createTerrainPreparations.contributeWork (plan npc-018 §15)', () => {
   it('returns null for an unknown id', () => {
     const preparations = createTerrainPreparations(new Scene(), fakeChunkManager(), sampleHeight)
     expect(preparations.contributeWork('nope', 1)).toBeNull()
+  })
+})
+
+describe('createTerrainPreparations.completed (plan world-019)', () => {
+  it('creates exactly one completed-area record and removes active state', () => {
+    const preparations = createTerrainPreparations(new Scene(), fakeChunkManager(), sampleHeight)
+    preparations.place(makeRecord())
+    preparations.contributeWork('terrainPrep:1', 4)
+    expect(preparations.find('terrainPrep:1')).toBeUndefined()
+    expect(preparations.nodes()).toHaveLength(0)
+    expect(preparations.completed()).toEqual([{ id: 'terrainPrep:1', center: { x: 0, z: 0 }, size: 2 }])
+    expect(preparations.wasCompleted('terrainPrep:1')).toBe(true)
+  })
+
+  it('cannot double-complete from a repeated or concurrent final contribution', () => {
+    const preparations = createTerrainPreparations(new Scene(), fakeChunkManager(), sampleHeight)
+    preparations.place(makeRecord())
+    expect(preparations.contributeWork('terrainPrep:1', 4)).toEqual({ acceptedWork: 4, completed: true })
+    expect(preparations.contributeWork('terrainPrep:1', 4)).toEqual({ acceptedWork: 0, completed: true })
+    expect(preparations.contributeWork('terrainPrep:1', 1)).toEqual({ acceptedWork: 0, completed: true })
+    expect(preparations.completed()).toHaveLength(1)
+  })
+
+  it('player setCompletedWork and NPC contributeWork produce the same terminal state', () => {
+    const viaPlayer = createTerrainPreparations(new Scene(), fakeChunkManager(), sampleHeight)
+    viaPlayer.place(makeRecord({ id: 'prep:player' }))
+    viaPlayer.setCompletedWork('prep:player', 4)
+
+    const viaNpc = createTerrainPreparations(new Scene(), fakeChunkManager(), sampleHeight)
+    viaNpc.place(makeRecord({ id: 'prep:npc' }))
+    viaNpc.contributeWork('prep:npc', 4)
+
+    expect(viaPlayer.find('prep:player')).toBeUndefined()
+    expect(viaNpc.find('prep:npc')).toBeUndefined()
+    expect(viaPlayer.completed()).toEqual([{ id: 'prep:player', center: { x: 0, z: 0 }, size: 2 }])
+    expect(viaNpc.completed()).toEqual([{ id: 'prep:npc', center: { x: 0, z: 0 }, size: 2 }])
+  })
+
+  it('restores completed facts from save without reviving active work', () => {
+    const preparations = createTerrainPreparations(
+      new Scene(),
+      fakeChunkManager(),
+      sampleHeight,
+      [],
+      [{ id: 'terrainPrep:old', center: { x: 8, z: -2 }, size: 6 }],
+    )
+    expect(preparations.nodes()).toHaveLength(0)
+    expect(preparations.wasCompleted('terrainPrep:old')).toBe(true)
+    expect(preparations.completed()[0]).toEqual({ id: 'terrainPrep:old', center: { x: 8, z: -2 }, size: 6 })
   })
 })
 

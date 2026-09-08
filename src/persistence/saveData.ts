@@ -14,7 +14,6 @@ import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { RatSaveRecord } from '../settlement/ratPersistence'
 import type { StorageInfestationCondition } from '../settlement/storageInfestation'
-import type { PreparationSize } from '../terrain/terrainPreparation'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
@@ -29,6 +28,7 @@ import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
+import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 
@@ -307,6 +307,16 @@ export type SaveTerrainPreparation = {
   completedWork: number
 }
 
+/** Compact completed `Przygotuj teren` footprint (plan world-019) — identity,
+ *  centre and metre size only. Final terrain heights remain in
+ *  `terrainModifications`; this collection must never duplicate them. */
+export type SaveCompletedTerrainPreparation = {
+  id: string
+  x: number
+  z: number
+  size: PreparationSize
+}
+
 /** Persistent planted-tree record — mirrors `world/plantedTrees.ts`'s
  *  `PlantedTreeRecord`. Identity/placement only; current growth stage lives in
  *  `treeOverrides`. */
@@ -456,7 +466,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 11
+export const CURRENT_SAVE_VERSION = 12
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -538,6 +548,9 @@ export type SaveData = {
   carriedContainer: SaveCarriedContainer | null
   playerWells: SavePlayerWell[]
   terrainPreparations: SaveTerrainPreparation[]
+  /** Compact completed prepared-area facts (plan world-019). Empty on older
+   *  saves after migration — never reconstructed from terrain geometry. */
+  completedTerrainPreparations: SaveCompletedTerrainPreparation[]
   terrainModifications: SaveTerrainModification[]
   plantedTrees: SavePlantedTree[]
   plantedCrops: SavePlantedCrop[]
@@ -1034,8 +1047,6 @@ function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
   })
 }
 
-const PREPARATION_SIZES: ReadonlySet<number> = new Set<PreparationSize>([2, 3, 4])
-
 function isHeightSamplesField(value: unknown): value is { x: number, z: number, height: number }[] {
   if (!Array.isArray(value)) return false
   return value.every((entry) => {
@@ -1054,11 +1065,25 @@ function isTerrainPreparationsField(value: unknown): value is SaveTerrainPrepara
       typeof p.id === 'string' &&
       typeof p.x === 'number' &&
       typeof p.z === 'number' &&
-      typeof p.size === 'number' && PREPARATION_SIZES.has(p.size) &&
+      typeof p.size === 'number' && isPreparationSize(p.size) &&
       typeof p.targetHeight === 'number' &&
       isHeightSamplesField(p.originalHeights) &&
       typeof p.requiredWork === 'number' &&
       typeof p.completedWork === 'number'
+    )
+  })
+}
+
+function isCompletedTerrainPreparationsField(value: unknown): value is SaveCompletedTerrainPreparation[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const p = entry as Record<string, unknown>
+    return (
+      typeof p.id === 'string' &&
+      typeof p.x === 'number' &&
+      typeof p.z === 'number' &&
+      typeof p.size === 'number' && isPreparationSize(p.size)
     )
   })
 }
@@ -1542,6 +1567,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
   if (!isTerrainPreparationsField(v.terrainPreparations)) return false
+  if (!isCompletedTerrainPreparationsField(v.completedTerrainPreparations)) return false
   if (!isTerrainModificationsField(v.terrainModifications)) return false
   if (!isPlantedTreesField(v.plantedTrees)) return false
   if (!isPlantedCropsField(v.plantedCrops)) return false
@@ -1899,6 +1925,21 @@ function migrateSaveV10ToV11(data: unknown): unknown {
   return { ...v, version: 11, npcStates: next }
 }
 
+/** v11 → v12 (plan world-019): adds compact completed terrain-preparation
+ *  metadata. Older saves have no durable prepared-area facts — they restore
+ *  as an empty collection rather than inferring footprints from terrain
+ *  geometry. */
+function migrateSaveV11ToV12(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return {
+    ...v,
+    version: 12,
+    completedTerrainPreparations: Array.isArray(v.completedTerrainPreparations)
+      ? v.completedTerrainPreparations
+      : [],
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -1910,6 +1951,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   8: migrateSaveV8ToV9,
   9: migrateSaveV9ToV10,
   10: migrateSaveV10ToV11,
+  11: migrateSaveV11ToV12,
 }
 
 function detectStoredVersion(value: unknown): number | null {

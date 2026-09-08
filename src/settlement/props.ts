@@ -13,6 +13,7 @@ import { distanceToSegment } from '../math/segment'
 import { buildInstancedProps, type PropPlacement } from '../render/instancedProps'
 import { type CoastalSamplers, isCoastalPlacement } from '../terrain/coastPlacement'
 import { createPlacedContainerProp } from '../world/containerProp'
+import { type CultivationAnchor, cultivationAnchorFromSettlementGarden } from '../world/cultivationAnchor'
 import { createSeededRandom } from '../world/parseSeed'
 import { makeTreeId, rollLivingAge, rollSizeClass, type TreeLivingAge, type TreeSizeClass, visualScaleForTree } from '../world/treeLifecycle'
 import { blacksmithYardGeometry } from './blacksmithYard'
@@ -153,6 +154,10 @@ export type SettlementLandmarks = {
   garden: THREE.Vector3
   /** All garden pads (plan 077); `garden` mirrors the primary (index 0). */
   gardens: THREE.Vector3[]
+  /** Actual cultivation footprint per garden (plan world-019) — produced at
+   *  prop-build time from each pad's `GardenScale`, so Farmer work does not
+   *  have to infer radius from a position-only landmark. */
+  cultivationAnchors?: CultivationAnchor[]
   /** World-space position(s) of the actual hay-bale prop(s) placed near a
    *  garden pad (plan 168 follow-up hay bugfix) — offset from `garden`/
    *  `gardens` by `gardenPlotRadius + ~1.4-2.6`, so `garden` itself is not a
@@ -697,6 +702,7 @@ export async function buildSettlementProps(
     stockpile: new THREE.Vector3(),
     garden: new THREE.Vector3(),
     gardens: [],
+    cultivationAnchors: [],
     haySpots: [],
     market: new THREE.Vector3(),
     blacksmithWorkplaces: [],
@@ -828,6 +834,8 @@ export async function buildSettlementProps(
     group.add(garden)
     const foot = new THREE.Vector3(gardenX, sampleHeight(gardenX, gardenZ), gardenZ)
     landmarks.gardens.push(foot)
+    landmarks.cultivationAnchors ??= []
+    landmarks.cultivationAnchors.push(cultivationAnchorFromSettlementGarden({ x: gardenX, z: gardenZ }, scale))
   }
   if (landmarks.gardens[0]) {
     landmarks.garden.copy(landmarks.gardens[0])
