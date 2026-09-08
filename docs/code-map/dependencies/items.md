@@ -47,6 +47,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/trapItemInstances.ts`
@@ -109,6 +110,7 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.ts`
 - `items/foodItems.test.ts`
 - `items/foodItems.ts`
+- `items/foodProvenance.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
@@ -131,6 +133,7 @@ Generated from TypeScript imports.
 - `settlement/storageVisuals.ts`
 - `terrain/digAction.ts`
 - `world/createPlacedContainers.ts`
+- `world/helperDeliveryHooks.ts`
 
 ## `items/ItemSpawner.ts`
 
@@ -189,6 +192,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/items.ts`
 - `settlement/VillageFire.ts`
 
@@ -197,6 +201,7 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `items/campfireCooking.test.ts`
+- `items/foodProvenance.test.ts`
 
 ## `items/coin.test.ts`
 
@@ -268,6 +273,7 @@ Generated from TypeScript imports.
 
 - `assets/loadGltf.ts`
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
@@ -331,14 +337,30 @@ Generated from TypeScript imports.
 
 - `app/actions/gatheringActions.ts`
 - `app/actions/survivalActions.ts`
+- `app/interactables.ts`
+- `economy/localExchange.test.ts`
+- `economy/settlementEconomy.ts`
+- `fauna/animalHarvest.ts`
+- `items/Inventory.test.ts`
 - `items/Inventory.ts`
+- `items/campfireCooking.ts`
+- `items/createDroppedItems.ts`
 - `items/foodFreshness.test.ts`
+- `items/foodItems.test.ts`
+- `items/foodProvenance.test.ts`
+- `items/inventoryView.ts`
+- `items/timedProcess.ts`
+- `persistence/saveData.ts`
+- `settlement/household.ts`
+- `world/createPlacedContainers.ts`
+- `world/dryingRacks.ts`
 
 ## `items/foodItems.test.ts`
 
 **Imports**
 
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/foodItems.ts`
 
 ## `items/foodItems.ts`
@@ -352,6 +374,8 @@ Generated from TypeScript imports.
 
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/containerActions.ts`
+- `app/inventoryWiring.ts`
 - `economy/localExchange.test.ts`
 - `economy/settlementEconomy.ts`
 - `items/foodItems.test.ts`
@@ -359,6 +383,15 @@ Generated from TypeScript imports.
 - `settlement/storageDestinations.test.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
+
+## `items/foodProvenance.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/campfireCooking.ts`
+- `items/foodFreshness.ts`
+- `world/dryingRacks.ts`
 
 ## `items/guardSword.test.ts`
 
@@ -418,6 +451,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
@@ -789,6 +823,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/foodFreshness.ts`
 - `items/items.ts`
 
 **Imported by**

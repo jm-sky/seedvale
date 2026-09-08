@@ -84,6 +84,7 @@ Generated from TypeScript imports.
 
 - `economy/localExchange.ts`
 - `economy/settlementEconomy.ts`
+- `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `settlement/household.ts`
 
@@ -188,6 +189,7 @@ Generated from TypeScript imports.
 - `economy/production.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
 

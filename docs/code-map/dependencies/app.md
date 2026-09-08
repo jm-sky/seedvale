@@ -68,6 +68,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
+- `items/foodItems.ts`
 - `items/inventoryView.ts`
 - `items/tentPlacement.ts`
 - `ui-vue/mount.ts`
@@ -698,6 +699,7 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`
+- `items/foodFreshness.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
 - `player/playerMelee.ts`
@@ -752,6 +754,7 @@ Generated from TypeScript imports.
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/books.ts`
+- `items/foodItems.ts`
 - `items/guardSword.ts`
 - `items/inventoryView.ts`
 - `items/itemInstances.ts`
@@ -766,6 +769,7 @@ Generated from TypeScript imports.
 - `ui-vue/mount.ts`
 - `ui/createHud.ts`
 - `ui/createToast.ts`
+- `world/dayNight.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationKnowledge.ts`

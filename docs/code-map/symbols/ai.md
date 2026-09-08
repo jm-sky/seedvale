@@ -189,10 +189,10 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcLogistics.ts`
 
-- `buildTransferAction` — function — line 160
-- `canDeliverToPlayerStorage` — function — line 338
-- `canExchangeWithHousehold` — function — line 196
-- `canWithdrawFromEconomy` — function — line 182
+- `buildTransferAction` — function — line 166
+- `canDeliverToPlayerStorage` — function — line 344
+- `canExchangeWithHousehold` — function — line 202
+- `canWithdrawFromEconomy` — function — line 188
 - `depositCarriedItems` — function — line 123
 - `depositFoodHarvest` — function — line 111
 - `depositWoodHarvest` — function — line 92
@@ -201,12 +201,12 @@ Generated from exported TypeScript symbols.
 - `HOUSEHOLD_EXCHANGE_MAX_TRANSFER` — const — line 39
 - `HUNT_YIELD_KINDS` — const — line 55
 - `NpcLogisticsCtx` — type — line 69
-- `planDeliverHuntYieldHome` — function — line 400
-- `planEconomyWithdraw` — function — line 213
-- `planHouseholdExchange` — function — line 272
-- `planPlayerStorageDelivery` — function — line 361
-- `ResourceTransferPlan` — type — line 152
-- `satisfyHouseholdResourceNeed` — function — line 139
+- `planDeliverHuntYieldHome` — function — line 406
+- `planEconomyWithdraw` — function — line 219
+- `planHouseholdExchange` — function — line 278
+- `planPlayerStorageDelivery` — function — line 367
+- `ResourceTransferPlan` — type — line 158
+- `satisfyHouseholdResourceNeed` — function — line 145
 
 ## `ai/npcMovementWatchdog.ts`
 
@@ -247,7 +247,7 @@ Generated from exported TypeScript symbols.
 - `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 43
 - `findWeaponNeedingMaintenance` — function — line 69
 - `NpcWorkContext` — type — line 89
-- `planProfessionWork` — function — line 428
+- `planProfessionWork` — function — line 429
 
 ## `ai/npcStrategies.ts`
 

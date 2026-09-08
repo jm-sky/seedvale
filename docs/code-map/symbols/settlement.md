@@ -173,18 +173,18 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/household.ts`
 
-- `createHousehold` — function — line 299
-- `createHouseholdRegistry` — function — line 423
+- `createHousehold` — function — line 312
+- `createHouseholdRegistry` — function — line 449
 - `HayForageState` — type — line 112
-- `Household` — type — line 201
+- `Household` — type — line 205
 - `HouseholdId` — type — line 22
   - domain: settlements-npcs
   - system: household
   - role: Owns one family's own food/wood/water stock, between NPC carrying and `SettlementEconomy`.
   - owns: Household
   - uses: SettlementEconomy
-- `householdIdFor` — function — line 265
-- `HouseholdRegistry` — type — line 414
+- `householdIdFor` — function — line 278
+- `HouseholdRegistry` — type — line 440
 - `HouseholdResourceKind` — type — line 37
 - `HouseholdSnapshot` — type — line 180
 - `resolveHayForage` — function — line 128

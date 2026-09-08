@@ -659,6 +659,7 @@ Generated from TypeScript imports.
 
 - `items/Inventory.ts`
 - `items/container.ts`
+- `items/foodFreshness.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
@@ -935,6 +936,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/graphicsSettings.ts`
+- `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `app/worldBundle.ts`
 - `fauna/createFauna.ts`
@@ -957,6 +959,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/foodFreshness.ts`
 - `items/items.ts`
 - `items/timedProcess.ts`
 
@@ -966,6 +969,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `items/foodProvenance.test.ts`
 - `world/createDryingRacks.ts`
 - `world/dryingRacks.test.ts`
 
@@ -1075,6 +1079,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/Inventory.ts`
 - `items/items.ts`
 - `world/createPlacedContainers.ts`
 

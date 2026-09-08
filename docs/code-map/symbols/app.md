@@ -21,9 +21,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 38
-- `ContainerActions` — type — line 25
-- `createContainerActions` — function — line 47
+- `ContainerActionDeps` — type — line 39
+- `ContainerActions` — type — line 26
+- `createContainerActions` — function — line 48
 
 ## `app/actions/gatheringActions.ts`
 
@@ -83,11 +83,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 117
-- `FeedableAnimal` — type — line 95
-- `feedAnimal` — function — line 108
-- `hasCarriedMilkContainer` — function — line 85
-- `SurvivalActions` — type — line 59
+- `createSurvivalActions` — function — line 123
+- `FeedableAnimal` — type — line 101
+- `feedAnimal` — function — line 114
+- `hasCarriedMilkContainer` — function — line 91
+- `SurvivalActions` — type — line 65
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -157,25 +157,25 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 895
-- `buildDigTarget` — function — line 842
-- `buildInteractables` — function — line 311
-- `collectItem` — function — line 942
-- `COMBAT_TARGET_CONE_DOT` — const — line 79
-- `COMBAT_TARGET_RANGE` — const — line 64
-- `CombatAimMode` — type — line 69
-- `DIG_REACH` — const — line 58
-- `GAZE_RANGE` — const — line 54
-- `INTERACT_MIN_DOT` — const — line 51
-- `INTERACT_RANGE` — const — line 48
-- `resolveHaySpot` — function — line 247
+- `buildCombatTarget` — function — line 896
+- `buildDigTarget` — function — line 843
+- `buildInteractables` — function — line 312
+- `collectItem` — function — line 943
+- `COMBAT_TARGET_CONE_DOT` — const — line 80
+- `COMBAT_TARGET_RANGE` — const — line 65
+- `CombatAimMode` — type — line 70
+- `DIG_REACH` — const — line 59
+- `GAZE_RANGE` — const — line 55
+- `INTERACT_MIN_DOT` — const — line 52
+- `INTERACT_RANGE` — const — line 49
+- `resolveHaySpot` — function — line 248
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 113
-- `InventoryWiring` — type — line 63
-- `InventoryWiringDeps` — type — line 84
-- `MerchantInventoryView` — type — line 50
+- `createInventoryWiring` — function — line 116
+- `InventoryWiring` — type — line 65
+- `InventoryWiringDeps` — type — line 86
+- `MerchantInventoryView` — type — line 52
 
 ## `app/modalState.ts`
 

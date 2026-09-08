@@ -449,6 +449,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `economy/stock.ts`
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
 

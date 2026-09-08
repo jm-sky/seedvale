@@ -302,11 +302,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlacedContainers.ts`
 
-- `createPlacedContainers` — function — line 108
-- `PlacedContainerEntry` — type — line 33
-- `PlacedContainerRecord` — type — line 13
-- `PlacedContainers` — type — line 47
-- `SaveCarriedContainer` — type — line 26
+- `createPlacedContainers` — function — line 117
+- `PlacedContainerEntry` — type — line 36
+- `PlacedContainerRecord` — type — line 14
+- `PlacedContainers` — type — line 50
+- `SaveCarriedContainer` — type — line 28
 
 ## `world/createPlacedTraps.ts`
 
@@ -403,11 +403,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/dryingRacks.ts`
 
-- `DryingRackRecord` — type — line 9
-- `DryingRecipe` — type — line 27
-- `isDryingComplete` — function — line 51
-- `pickDryingRecipe` — function — line 32
-- `startDryingProcess` — function — line 40
+- `DryingRackRecord` — type — line 10
+- `DryingRecipe` — type — line 28
+- `isDryingComplete` — function — line 58
+- `pickDryingRecipe` — function — line 33
+- `resolveDryingOutput` — function — line 68
+  - domain: items-player
+- `startDryingProcess` — function — line 41
 
 ## `world/fishing.ts`
 
@@ -474,8 +476,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/helperDeliveryHooks.ts`
 
-- `createHelperDeliveryHooks` — function — line 27
-- `HelperDeliveryHooks` — type — line 10
+- `createHelperDeliveryHooks` — function — line 28
+- `HelperDeliveryHooks` — type — line 11
 
 ## `world/hiddenFinds.ts`
 

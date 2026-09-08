@@ -53,9 +53,9 @@ Generated from exported TypeScript symbols.
 
 ## `economy/settlementEconomy.ts`
 
-- `createSettlementEconomy` — function — line 85
+- `createSettlementEconomy` — function — line 89
 - `SettlementDemand` — type — line 13
-- `SettlementEconomy` — type — line 42
+- `SettlementEconomy` — type — line 46
   - domain: settlements
   - system: settlement-economy
   - role: Owns a settlement's bulk stock, demand-driven shortage/surplus and reservations. Not player `Inventory`.

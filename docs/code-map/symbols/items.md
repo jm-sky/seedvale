@@ -17,12 +17,14 @@ Generated from exported TypeScript symbols.
 
 ## `items/campfireCooking.ts`
 
-- `COOK_DURATION_SEC` — const — line 33
-- `COOKING_RECIPES` — const — line 15
-- `CookingRecipe` — type — line 9
-- `findCookingBatch` — function — line 59
-- `findCookingRecipe` — function — line 36
-- `resolveCookingCapacity` — function — line 48
+- `COOK_DURATION_SEC` — const — line 34
+- `COOKING_RECIPES` — const — line 16
+- `CookingRecipe` — type — line 10
+- `findCookingBatch` — function — line 65
+- `findCookingRecipe` — function — line 37
+- `processCookedBatches` — function — line 82
+  - domain: items-player
+- `resolveCookingCapacity` — function — line 54
 
 ## `items/constructionMaterials.ts`
 
@@ -49,9 +51,9 @@ Generated from exported TypeScript symbols.
 
 ## `items/createDroppedItems.ts`
 
-- `createDroppedItems` — function — line 57
-- `DroppedItem` — type — line 8
-- `DroppedItems` — type — line 20
+- `createDroppedItems` — function — line 59
+- `DroppedItem` — type — line 9
+- `DroppedItems` — type — line 23
 
 ## `items/createItemSpawners.ts`
 
@@ -67,26 +69,61 @@ Generated from exported TypeScript symbols.
 
 ## `items/foodFreshness.ts`
 
-- `bait` — function — line 47
-- `BAIT_ITEM_PRIORITY` — const — line 58
-- `canMergeFoodBatches` — function — line 43
-- `FOOD_BATCH_MERGE_TOLERANCE_DAYS` — const — line 41
-- `foodFreshnessDef` — function — line 12
-- `FreshnessStage` — type — line 10
-- `getFreshnessStage` — function — line 23
-- `isBaitCapable` — function — line 51
-- `isFoodPerishable` — function — line 19
-- `isSpoiled` — function — line 32
+- `bait` — function — line 280
+- `BAIT_ITEM_PRIORITY` — const — line 289
+- `canMergeFoodBatches` — function — line 214
+- `CARRIED_FOOD_DECAY` — const — line 54
+- `checkpointFoodBatch` — function — line 187
+  - domain: items-player
+- `cloneFoodBatch` — function — line 117
+- `compareFoodBatchesFifo` — function — line 224
+  - domain: items-player
+- `createFoodBatch` — function — line 122
+- `FOOD_BATCH_MERGE_TOLERANCE_DAYS` — const — line 212
+- `FOOD_SOURCE_SPECIES` — const — line 15
+- `FOOD_SOURCE_SPECIES_LABEL` — const — line 39
+- `FoodBatch` — type — line 67
+  - domain: items-player
+- `foodBatchEffectiveAge` — function — line 144
+  - domain: items-player
+- `foodBatchesMergeEqual` — function — line 201
+- `foodBatchUsedFraction` — function — line 149
+- `foodFreshnessDef` — function — line 76
+- `foodHungerRelief` — function — line 270
+  - domain: items-player
+- `FoodSourceSpecies` — type — line 13
+- `foodTotalShelfLifeDays` — function — line 81
+- `FRESHNESS_STAGE_LABEL` — const — line 47
+- `FreshnessStage` — type — line 8
+- `getFoodBatchFreshnessStage` — function — line 163
+- `getFreshnessStage` — function — line 168
+- `getFreshnessStageFromAge` — function — line 155
+- `inheritProcessedFoodBatch` — function — line 239
+  - domain: items-player
+- `isBaitCapable` — function — line 284
+- `isFoodBatchSpoiled` — function — line 176
+- `isFoodPerishable` — function — line 87
+- `isFoodSourceSpecies` — function — line 19
+- `isSpoiled` — function — line 172
+- `MEAT_KIND_BY_SOURCE_SPECIES` — const — line 31
+- `normalizeFoodBatch` — function — line 101
+  - domain: items-player
+- `SOURCE_SPECIES_BY_MEAT_KIND` — const — line 23
+- `sourceSpeciesForMeatKind` — function — line 91
+- `STORED_FOOD_DECAY` — const — line 57
 
 ## `items/foodItems.ts`
 
-- `carryFoodClaim` — function — line 90
+- `carryFoodClaim` — function — line 124
 - `claimFoodItems` — function — line 52
-- `deliverCarriedFoodClaim` — function — line 102
-- `depositFoodItems` — function — line 73
+- `deliverCarriedFoodClaim` — function — line 142
+- `depositFoodItems` — function — line 74
+- `expandFoodBatchesToUnits` — function — line 92
 - `FOOD_ITEM_KINDS` — const — line 18
 - `FoodItemClaim` — type — line 45
 - `foodItemCount` — function — line 24
+- `skipBatchCount` — function — line 101
+- `takeBatchCount` — function — line 79
 - `takeOneFoodItem` — function — line 33
 
 ## `items/guardSword.ts`
@@ -122,25 +159,24 @@ Generated from exported TypeScript symbols.
 
 ## `items/Inventory.ts`
 
-- `DEFAULT_MAX_SIZE` — const — line 33
-- `FoodBatch` — type — line 76
-- `Inventory` — class — line 92
+- `DEFAULT_MAX_SIZE` — const — line 45
+- `Inventory` — class — line 98
   - domain: items-player
   - system: inventory
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `inventoryFullToastText` — function — line 493
-- `ItemAmount` — type — line 38
-- `SaveItemInstance` — type — line 40
-- `toSaveItemInstance` — function — line 56
+- `inventoryFullToastText` — function — line 523
+- `ItemAmount` — type — line 50
+- `SaveItemInstance` — type — line 52
+- `toSaveItemInstance` — function — line 68
 
 ## `items/inventoryView.ts`
 
-- `buildInventoryGroups` — function — line 111
-- `inventoryCountsForUi` — function — line 135
-- `InventoryGroupView` — type — line 26
-- `InventoryInstanceRow` — type — line 16
+- `buildInventoryGroups` — function — line 119
+- `inventoryCountsForUi` — function — line 149
+- `InventoryGroupView` — type — line 31
+- `InventoryInstanceRow` — type — line 21
 
 ## `items/itemCatalog.ts`
 
@@ -278,13 +314,13 @@ Generated from exported TypeScript symbols.
 
 ## `items/timedProcess.ts`
 
-- `isProcessComplete` — function — line 27
-- `ItemStackInput` — type — line 11
-- `ItemStackOutput` — type — line 12
-- `processCompletedAtDays` — function — line 23
-- `processProgress` — function — line 32
-- `TimedProcess` — type — line 14
-- `TimedProcessKind` — type — line 9
+- `isProcessComplete` — function — line 31
+- `ItemStackInput` — type — line 12
+- `ItemStackOutput` — type — line 13
+- `processCompletedAtDays` — function — line 27
+- `processProgress` — function — line 36
+- `TimedProcess` — type — line 15
+- `TimedProcessKind` — type — line 10
 
 ## `items/trade.ts`
 

@@ -166,6 +166,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalMeat.ts`
 - `items/Inventory.ts`
+- `items/foodFreshness.ts`
 - `items/items.ts`
 
 **Imported by**

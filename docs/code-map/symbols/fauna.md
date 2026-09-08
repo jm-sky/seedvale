@@ -71,8 +71,8 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalHarvest.ts`
 
-- `AnimalHarvestResult` — type — line 6
-- `harvestAnimalIntoInventory` — function — line 28
+- `AnimalHarvestResult` — type — line 7
+- `harvestAnimalIntoInventory` — function — line 29
 
 ## `fauna/AnimalLife.ts`
 
