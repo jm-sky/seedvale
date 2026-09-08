@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { AnimalAgent, type AnimalAgentDeps } from './AnimalAgent'
 import { ANIMAL_DEFS } from './animalDefs'
+import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
 
 const sampleHeight = () => 0
 const sampleLocalWater = () => DRY_WATER_SAMPLE
@@ -161,5 +162,33 @@ describe('AnimalAgent', () => {
     mounted.driveMounted(2, 0, 0, false)
 
     expect(mounted.getDebugInfo().presentation.current).toBeNull()
+  })
+
+  // D3 (plan fauna-017 step 10): `age` used to advance only through
+  // `tickMaturity()` inside `update()`, and `update()` is gated off for the
+  // whole skip (plan 196). `resolveTimeSkip` now calls the same
+  // `advanceAge()` the live tick uses, so an 8 h skip matures a juvenile
+  // (restores adult mesh scale and drops `motherId`) instead of leaving it
+  // following its mother at cub size.
+  it('resolveTimeSkip(8 h) matures a juvenile to adult scale', () => {
+    const juvenile = new AnimalAgent(makeDeps({
+      def: ANIMAL_DEFS.deer,
+      animalId: 'juv-deer',
+      lifeStage: 'juvenile',
+      motherId: 'mom-deer',
+    }))
+    const adult = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.deer, animalId: 'adult-deer' }))
+    const juvenileFactor = JUVENILE_SCALE_FACTOR.deer ?? 1
+    expect(juvenile.mesh.scale.x).toBeCloseTo(adult.mesh.scale.x * juvenileFactor, 10)
+
+    juvenile.resolveTimeSkip(JUVENILE_MATURITY_SECONDS - 1)
+    expect(juvenile.mesh.scale.x).toBeCloseTo(adult.mesh.scale.x * juvenileFactor, 10)
+
+    juvenile.resolveTimeSkip(8 * 3600)
+    expect(juvenile.mesh.scale.x).toBeCloseTo(adult.mesh.scale.x, 10)
+
+    const scaleAfterMaturity = juvenile.mesh.scale.x
+    juvenile.resolveTimeSkip(8 * 3600)
+    expect(juvenile.mesh.scale.x).toBeCloseTo(scaleAfterMaturity, 10)
   })
 })

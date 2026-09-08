@@ -1234,12 +1234,15 @@ export class AnimalAgent {
     this.pickWanderTarget()
   }
 
-  /** Ages a juvenile and flips it to `adult` past `JUVENILE_MATURITY_SECONDS`
-   *  — restores adult mesh/label scale and drops `motherId` (plan 118). The
+  /** Ages a juvenile by `seconds` and flips it to `adult` past
+   *  `JUVENILE_MATURITY_SECONDS` — restores adult mesh/label scale and drops
+   *  `motherId` (plan 118). Shared by the per-tick tail and
+   *  `resolveTimeSkip()` (plan fauna-017 step 10 / D3) so a skip uses the
+   *  same transition as live `update()`, not a separate catch-up. The
    *  one-time `lifeStage` transition is its own guard; no-op for adults. */
-  private tickMaturity(dt: number): void {
+  private advanceAge(seconds: number): void {
     if (this.lifeStage !== 'juvenile') return
-    this.age += dt
+    this.age += seconds
     if (this.age < JUVENILE_MATURITY_SECONDS) return
     this.lifeStage = 'adult'
     this.motherId = undefined
@@ -1403,7 +1406,7 @@ export class AnimalAgent {
    *  `clampBounds()` stays out — the one documented, intentional
    *  difference: a ridden animal must be able to leave its own home
    *  radius. Before this method, `driveMounted()` skipped every timer
-   *  decrement and `tickMaturity`/`tickProduction` entirely, and always
+   *  decrement and `advanceAge`/`tickProduction` entirely, and always
    *  passed `{}` (rate 1) instead of the real night rate — a ridden animal
    *  starved/dehydrated at double the stabled rate at night, and a hit
    *  mount's hurt-clip timer never counted down until dismount. */
@@ -1416,7 +1419,7 @@ export class AnimalAgent {
     if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
     if (this.howlPauseTimer > 0) this.howlPauseTimer -= dt
     if (this.vocalizeAlertRemainingSec > 0) this.vocalizeAlertRemainingSec -= dt
-    this.tickMaturity(dt)
+    this.advanceAge(dt)
     this.tickProduction(nowDays)
     this.snapY()
     this.updateAnim()
@@ -1751,21 +1754,23 @@ export class AnimalAgent {
    *  `Fauna.resolveTimeSkip` on `skip.justFinished`, never per-frame.
    *  Deliberately does **not** replay movement/behaviour/combat/corpse-FX —
    *  `update()` itself is gated off entirely while a skip is active (see
-   *  `gameLoop.ts`), so this only advances the two purely-additive, linear
+   *  `gameLoop.ts`), so this only advances the purely-additive, linear
    *  pieces of state that must still reflect the skipped World Time exactly
    *  once: a live agent's hunger/thirst/stamina (`tickAnimalLife` is pure
    *  math, safe to call once with a large `elapsedSeconds` instead of many
-   *  small steps), and a corpse's `timeSinceDeath` — bumping that alone is
-   *  enough, because the very next normal `update()` call recomputes
-   *  `corpsePhaseFromElapsed`/`readyToRemove()` fresh and will apply the
-   *  right tint/bones/removal itself, with no separate visual catch-up
-   *  needed here. */
+   *  small steps), a live juvenile's age (`advanceAge`, same transition
+   *  `update()` uses — plan fauna-017 D3), and a corpse's `timeSinceDeath`
+   *  — bumping that alone is enough, because the very next normal `update()`
+   *  call recomputes `corpsePhaseFromElapsed`/`readyToRemove()` fresh and
+   *  will apply the right tint/bones/removal itself, with no separate visual
+   *  catch-up needed here. */
   resolveTimeSkip(elapsedSeconds: number): void {
     if (this.health.dead) {
       if (!this.corpse.held) this.corpse.timeSinceDeath += elapsedSeconds
       return
     }
     tickAnimalLife(this.life, elapsedSeconds, false, {}, this.def.metabolism)
+    this.advanceAge(elapsedSeconds)
   }
 
   /** Player shovel-bury: mark corpse for disposal on the next fauna/settlement
@@ -1882,7 +1887,7 @@ export class AnimalAgent {
    *  seeded (every later call just falls through to the readiness checks
    *  below, which compare `nowDays` directly against the stored anchor; see
    *  `livestockProduction.ts`'s module doc for why this needs no per-frame
-   *  work). Mirrors `tickMaturity`'s call site. */
+   *  work). Mirrors `advanceAge`'s call site. */
   private tickProduction(nowDays: number): void {
     const production = this.def.production
     if (!production || this.productionReadyAtDays !== null) return
