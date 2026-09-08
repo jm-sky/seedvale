@@ -19,6 +19,7 @@ import {
 import { isNpcCombatDebugMode } from '../debug/debugMode'
 import { findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
+import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { tintPropMaterials } from '../settlement/props'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
@@ -4644,8 +4645,10 @@ export class AnimalAgent {
   ): AnimalAgent | null {
     let best: AnimalAgent | null = null
     let bestD = range
+    let candidatesChecked = 0
     for (const o of others) {
       if (o === this || o.def.role !== role || o.health.dead) continue
+      candidatesChecked++
       const d = Math.hypot(
         o.mesh.position.x - this.mesh.position.x,
         o.mesh.position.z - this.mesh.position.z,
@@ -4655,6 +4658,7 @@ export class AnimalAgent {
         best = o
       }
     }
+    getAgentCpuDiag().recordNearestScan(candidatesChecked)
     return best
   }
 

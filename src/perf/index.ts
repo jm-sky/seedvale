@@ -1,4 +1,12 @@
 export { getMonitor, setActiveMonitor } from './active'
+export {
+  buildAgentCpuReport,
+  createAgentCpuDiag,
+  formatAgentCpuReport,
+  getAgentCpuDiag,
+  setActiveAgentCpuDiag,
+} from './agentCpuDiag'
+export type { AgentCpuDiag, AgentCpuDiagTotals, AgentCpuReport } from './agentCpuDiag'
 export { createBenchmarkRunner } from './benchmark'
 export type { BenchmarkRunner } from './benchmark'
 export { BENCHMARK_FIXTURE } from './benchmarkFixture'

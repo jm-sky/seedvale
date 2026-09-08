@@ -35,6 +35,7 @@ import { advanceSocialPairing } from '../ai/socialBehaviour'
 import { playActionFireExtinguish, playActionFireIgnite } from '../audio/fireSounds'
 import { isSystemEnabled } from '../debug/debugMode'
 import { type SettlementEconomy, WOODSHED_DEVELOPMENT } from '../economy'
+import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { useBootMark } from '../shared/bootMark'
 import {
   copyVec3,
@@ -764,12 +765,17 @@ export async function createSettlement(
     fire,
     update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators) {
       currentNowDays = nowDays
+      const agentCpu = getAgentCpuDiag()
+      agentCpu.beginNpcCrowd()
       const crowd = npcCrowd.run(agents, dt)
+      agentCpu.endNpcCrowd()
+      agentCpu.beginNpcAgentUpdates()
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
         agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather)
         if (crowd.pushX[i] !== 0 || crowd.pushZ[i] !== 0) agent.applySeparation(crowd.pushX[i]!, crowd.pushZ[i]!)
       }
+      agentCpu.endNpcAgentUpdates()
       // Social Place conversation pairing (plan 151) — reuses this
       // settlement's own already-updated `agents` list (no global registry);
       // a no-op pass when nobody is currently settled at the campfire.

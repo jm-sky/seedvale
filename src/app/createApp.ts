@@ -49,9 +49,11 @@ import { createWeaponInstance, migrateWeaponCountsToInstances } from '../items/w
 import {
   type BenchmarkFixture,
   benchmarkScenarioFromUrl,
+  createAgentCpuDiag,
   createBenchmarkRunner,
   createPerfMonitor,
   isPerfUrlEnabled,
+  setActiveAgentCpuDiag,
   setActiveGpuTimer,
   setActiveMonitor,
   setActiveProgramCensus,
@@ -270,6 +272,8 @@ export async function createApp(
     : createWorldConfig()
   const perfMonitor = createPerfMonitor()
   setActiveMonitor(perfMonitor)
+  const agentCpuDiag = createAgentCpuDiag()
+  setActiveAgentCpuDiag(agentCpuDiag)
   if (isPerfUrlEnabled()) perfMonitor.setSource('url', true)
   // Seed-source precedence (plan persistence-004 §9, world-015 §3): a caller-
   // resolved Seed Library choice (`options.seed`, boot `StartScreen`'s New
@@ -1826,6 +1830,7 @@ export async function createApp(
     coarseCachePersistence.dispose()
     disposeWorldBundle(bundle)
     setActiveMonitor(null)
+    setActiveAgentCpuDiag(null)
     setActiveProgramCensus(null)
     setActiveGpuTimer(null)
     gpuTimer.dispose()

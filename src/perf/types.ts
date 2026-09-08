@@ -1,3 +1,4 @@
+import type { AgentCpuReport } from './agentCpuDiag'
 import type { SceneCensus } from './sceneCensus'
 
 /** Categories from plan 103 §2. CPU timers attribute work to these buckets.
@@ -212,4 +213,7 @@ export type PerfReportJson = {
   attribution: PerfAttribution
   recommendation: string
   context: PerfContext
+  /** NPC/fauna CPU breakdown — only present when perf monitoring was active
+   *  during the measured session (`?benchmark=`, `?perf=1`, or GUI toggle). */
+  agentCpu?: AgentCpuReport
 }

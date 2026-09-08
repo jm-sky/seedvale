@@ -1,5 +1,7 @@
+import type { AgentCpuReport } from './agentCpuDiag'
 import type { SessionTotals } from './monitor'
 import type { IsolationProbeRow, PerfContext, PerfReportJson } from './types'
+import { formatAgentCpuReport } from './agentCpuDiag'
 import { percentile } from './percentile'
 import { SCENE_BUCKETS, type SceneCensus } from './sceneCensus'
 import { PERF_CATEGORIES, PERF_CATEGORY_COUNT } from './types'
@@ -19,6 +21,7 @@ export function buildReport(input: {
   context?: PerfContext
   scene?: SceneCensus
   isolation?: IsolationProbeRow[]
+  agentCpu?: AgentCpuReport | null
   /** False only for `current` (plan tools-001 §2) — no fixed anchor, so it
    *  can't be trusted in an automated baseline comparison. Defaults true. */
   canonical?: boolean
@@ -127,6 +130,7 @@ export function buildReport(input: {
     },
     recommendation,
     context: ctx,
+    agentCpu: input.agentCpu ?? undefined,
   }
 }
 
@@ -221,6 +225,7 @@ export function formatReport(report: PerfReportJson): string {
     '',
     'Recommendation:',
     report.recommendation,
+    ...(report.agentCpu ? ['', formatAgentCpuReport(report.agentCpu)] : []),
   ].join('\n')
 }
 

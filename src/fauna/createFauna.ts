@@ -14,6 +14,7 @@ import {
 } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { distanceToSegment } from '../math/segment'
+import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { createCaveMouth, createThicket, tintPropMaterials } from '../settlement/props'
 import { useBootMark } from '../shared/bootMark'
 import { isCoastalPlacement } from '../terrain/coastPlacement'
@@ -945,6 +946,8 @@ export async function createFauna(
       lures = [],
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
+      const agentCpu = getAgentCpuDiag()
+      agentCpu.beginFaunaAgentUpdates()
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
         a.update(
@@ -973,6 +976,7 @@ export async function createFauna(
           lures,
         )
       }
+      agentCpu.endFaunaAgentUpdates()
       grassForage?.tickVisuals(dt, observerPos.x, observerPos.z, worldDays)
 
       if (agents.some((a) => a.readyToRemove())) {

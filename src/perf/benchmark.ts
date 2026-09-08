@@ -6,6 +6,7 @@ import type { IsolationHost } from './isolationProbe'
 import type { PerfMonitor } from './monitor'
 import type { PerfReportJson } from './types'
 import { worldToChunk } from '../terrain/chunkGrid'
+import { buildAgentCpuReport, formatAgentCpuReport, getAgentCpuDiag } from './agentCpuDiag'
 import { formatIsolationReport, runIsolationProbes } from './isolationProbe'
 import { formatProgramAttributionReport, formatProgramCensusReport, formatProgramCompileCostReport, getProgramCensus } from './programCensus'
 import { buildReport, formatReport } from './report'
@@ -192,10 +193,12 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         }
 
         // Phase: measured session.
+        getAgentCpuDiag().reset()
         monitor.setSource('benchmark', true)
         monitor.beginSession()
         await sleep(durationSec * 1000)
         const totals = monitor.endSession()
+        const agentCpuTotals = getAgentCpuDiag().snapshot()
         if (streamTimer) window.clearInterval(streamTimer)
 
         const scene = censusScene(host.isolation.scene)
@@ -207,11 +210,18 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         monitor.setSource('benchmark', false)
 
         const baseContext = monitor.getContext()
+        const agentCpu = buildAgentCpuReport({
+          frames: totals.frames,
+          totals: agentCpuTotals,
+          categoryMsSum: totals.categoryMsSum,
+          context: baseContext,
+        })
         const report = buildReport({
           durationSec,
           scenario: id,
           totals,
           canonical: id !== 'current',
+          agentCpu,
           context: {
             ...baseContext,
             timeOfDay,
@@ -227,6 +237,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         })
         console.log(formatReport(report))
         console.log(report)
+        if (agentCpu) console.log(formatAgentCpuReport(agentCpu))
         // Plan 149 Phase 0 program-census diagnostic (docs/performance/audits/
         // 2026-09-01--program-census.md) — the census (`?programCensus=1` or
         // `?benchmark=stream`, see `src/perf/flags.ts`) accumulates for the
@@ -254,6 +265,7 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 
           const headers: string[] = [
             'Seedvale Benchmark',
+            agentCpu ? 'Seedvale Agent CPU' : undefined,
             programCensus.enabled ? 'Seedvale Program Census' : undefined,
             programCensus.enabled ? 'Seedvale Program Attribution' : undefined,
             programCensus.enabled ? 'Seedvale Program Compile Cost' : undefined,
@@ -269,6 +281,11 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
 
           content.push(formatReport(report))
           content.push('\n---\n')
+
+          if (agentCpu) {
+            content.push(formatAgentCpuReport(agentCpu))
+            content.push('\n---\n')
+          }
 
           if (programCensus.enabled) {
             content.push(formatProgramCensusReport(programCensus))

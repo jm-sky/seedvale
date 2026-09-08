@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { buildAgentCpuReport } from './agentCpuDiag'
 import { createPerfMonitor } from './monitor'
 import { buildReport, formatReport } from './report'
-import { PERF_CATEGORY_COUNT } from './types'
+import { PERF_CATEGORY_COUNT, PERF_CATEGORY_INDEX } from './types'
 
 describe('createPerfMonitor', () => {
   it('begin/end is a no-op while disabled', () => {
@@ -157,5 +158,58 @@ describe('buildReport', () => {
     expect(report.attribution.largestHitchMs).toBe(52)
     expect(report.attribution.unattributedMs).toBeCloseTo(748, 0)
     expect(report.recommendation).toContain('unattributed')
+  })
+
+  it('includes the agent CPU section when provided', () => {
+    const categoryMsSum = new Float64Array(PERF_CATEGORY_COUNT)
+    categoryMsSum[PERF_CATEGORY_INDEX.NPC] = 30
+    categoryMsSum[PERF_CATEGORY_INDEX.FAUNA] = 40
+    const agentCpu = buildAgentCpuReport({
+      frames: 10,
+      totals: {
+        npcCrowdMs: 5,
+        npcAgentUpdatesMs: 15,
+        faunaAgentUpdatesMs: 30,
+        nearestCalls: 20,
+        nearestCandidatesChecked: 400,
+        herdLeaderCalls: 10,
+        herdLeaderCandidatesChecked: 2000,
+      },
+      categoryMsSum,
+      context: {
+        loadedChunks: 49,
+        npcCount: 8,
+        faunaCount: 12,
+        pixelRatio: 1,
+        quality: 'High',
+      },
+    })
+    const report = buildReport({
+      durationSec: 30,
+      scenario: 'stream',
+      agentCpu,
+      totals: {
+        frames: 10,
+        frameMsSum: 170,
+        frameMsMin: 14,
+        frameMsMax: 22,
+        frameMs: [14, 15, 16, 16, 17, 17, 18, 18, 19, 22],
+        drawCallsSum: 10000,
+        drawCallsMax: 1200,
+        trianglesSum: 10_000_000,
+        renderCategoryMs: [],
+        categoryMsSum,
+        spikeCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchCounts: new Int32Array(PERF_CATEGORY_COUNT),
+        hitchByLabel: new Map(),
+        mirrorDrawCallsSum: 0,
+        geometriesLast: 0,
+        texturesLast: 0,
+      },
+    })
+    const text = formatReport(report)
+    expect(text).toContain('[Seedvale Agent CPU]')
+    expect(text).toContain('crowd pass:')
+    expect(text).toContain('nearest scans:')
   })
 })

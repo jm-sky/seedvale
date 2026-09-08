@@ -1,4 +1,5 @@
 import type { AnimalKind } from './AnimalAgent'
+import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 
 /**
  * Pure herd/juvenile tuning + leader selection (plan 118). No Three.js/DOM —
@@ -91,5 +92,6 @@ export function pickHerdLeader<T extends HerdMemberLike>(
     if (c.herdId !== herdId || c.isDead()) continue
     if (!leader || c.animalId < leader.animalId) leader = c
   }
+  getAgentCpuDiag().recordHerdLeaderScan(candidates.length)
   return leader
 }
