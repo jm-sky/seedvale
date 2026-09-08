@@ -170,6 +170,7 @@ Generated from TypeScript imports.
 - `world/caveGenerator.ts`
 - `world/caveMesh.ts`
 - `world/caveVolume.test.ts`
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSdfField.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/caveTopology.test.ts`
@@ -184,6 +185,22 @@ Generated from TypeScript imports.
 - `world/createCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 
+## `world/caves/caveGameplayQuery.b2-recon.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `fauna/createFauna.ts`
+- `player/PlayerController.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/caveVolume.ts`
+- `world/caves/caveIdentity.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/productionTopology.ts`
+- `world/caves/topologyAdapter.ts`
+- `world/largeCaves.ts`
+
 ## `world/caves/caveIdentity.test.ts`
 
 **Imports**
@@ -195,6 +212,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caveGenerator.ts`
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveIdentity.test.ts`
 - `world/caves/productionTopology.ts`
 
@@ -232,6 +250,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSdfField.test.ts`
 - `world/caves/sdfCaveMesh.ts`
 
@@ -277,6 +296,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSdfField.test.ts`
 - `world/caves/caveSdfField.ts`
 - `world/caves/productionTopology.test.ts`
@@ -338,6 +358,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/productionTopology.test.ts`
 - `world/createCaves.ts`
 
@@ -443,6 +464,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/productionTopology.test.ts`
 - `world/caves/productionTopology.ts`
@@ -1120,6 +1142,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caveGenerator.ts`
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/caves/productionTopology.test.ts`
 - `world/caves/productionTopology.ts`

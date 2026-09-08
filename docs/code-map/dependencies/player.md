@@ -80,6 +80,7 @@ Generated from TypeScript imports.
 - `terrain/slopeConstraint.ts`
 - `terrain/waterBodyKind.ts`
 - `world/bloodTraces.ts`
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`

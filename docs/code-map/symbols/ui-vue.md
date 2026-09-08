@@ -44,17 +44,18 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/lib/drawMinimap.ts`
 
-- `adjustMinimapZoom` — function — line 35
-- `drawMinimapFrame` — function — line 68
-- `getMinimapZoom` — function — line 27
-- `lastMinimapPlayer` — function — line 194
+- `adjustMinimapZoom` — function — line 37
+- `DEFAULT_ARROW_TIP_SIZE` — const — line 25
+- `drawMinimapFrame` — function — line 77
+- `getMinimapZoom` — function — line 29
+- `lastMinimapPlayer` — function — line 209
 - `MINIMAP_SCALE` — const — line 23
-- `MinimapDrawContext` — type — line 39
+- `MinimapDrawContext` — type — line 41
 - `MinimapSettlement` — type — line 9
 - `minimapSize` — function — line 18
-- `registerMinimapDrawer` — function — line 200
-- `setMinimapZoom` — function — line 31
-- `updateRegisteredMinimap` — function — line 204
+- `registerMinimapDrawer` — function — line 215
+- `setMinimapZoom` — function — line 33
+- `updateRegisteredMinimap` — function — line 219
 
 ## `ui-vue/lib/firstUpperCase.ts`
 

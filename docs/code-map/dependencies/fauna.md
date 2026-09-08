@@ -261,6 +261,7 @@ Generated from TypeScript imports.
 - `fauna/spawnerLabels.test.ts`
 - `interaction/resolveInteraction.ts`
 - `player/playerCombat.ts`
+- `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/largeCaves.ts`
 
