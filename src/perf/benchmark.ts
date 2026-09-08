@@ -248,10 +248,53 @@ export function createBenchmarkRunner(host: BenchmarkHost): BenchmarkRunner {
         // postprocessing/mirrors/CPU-GPU separation) — independent of the
         // program census, always printed when probes ran.
         console.log(formatIsolationReport(isolation))
+
+        const getBenchmarkReport = (): string => {
+          const content: string[] = []
+
+          const headers: string[] = [
+            'Seedvale Benchmark',
+            programCensus.enabled ? 'Seedvale Program Census' : undefined,
+            programCensus.enabled ? 'Seedvale Program Attribution' : undefined,
+            programCensus.enabled ? 'Seedvale Program Compile Cost' : undefined,
+            'Seedvale Render Isolation',
+          ].filter((header): header is string => header !== undefined)
+
+          content.push('# Seedvale Performance Benchmark Report')
+          content.push('')
+          content.push(`> Generated: ${new Date().toISOString()}`)
+          content.push('> Sections:')
+          content.push(...headers.map((header) => `> - [${header}]`))
+          content.push('\n---\n')
+
+          content.push(formatReport(report))
+          content.push('\n---\n')
+
+          if (programCensus.enabled) {
+            content.push(formatProgramCensusReport(programCensus))
+            content.push('\n---\n')
+            content.push(formatProgramAttributionReport(programCensus))
+            content.push('\n---\n')
+            content.push(formatProgramCompileCostReport(programCensus))
+            content.push('\n---\n')
+          }
+
+          content.push(formatIsolationReport(isolation))
+          content.push('')
+
+          return content.join('\n')
+        }
+
+        const copyBenchmarkReport = (): void => {
+          navigator.clipboard.writeText(getBenchmarkReport())
+        }
+
         if (typeof window !== 'undefined') {
           window.__seedvalePerfLastReport = report
           const previous = window.__seedvalePerfReports ?? []
           window.__seedvalePerfReports = [...previous, report]
+          window.__copyBenchmarkReport = copyBenchmarkReport
+          window.__getBenchmarkReport = getBenchmarkReport
         }
         return report
       } finally {
@@ -271,6 +314,8 @@ declare global {
     __seedvalePerfLastReport?: PerfReportJson
     __seedvalePerfReports?: PerfReportJson[]
     __seedvaleRunBenchmark?: (id: BenchmarkScenarioId, durationSec?: number) => Promise<PerfReportJson | null>
+    __copyBenchmarkReport?: () => void
+    __getBenchmarkReport?: () => string
     __seedvaleReady?: boolean
   }
 }
