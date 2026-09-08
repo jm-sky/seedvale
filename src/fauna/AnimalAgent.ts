@@ -21,6 +21,7 @@ import { findPath, type NavigationQuery, type PathPoint } from '../navigation/na
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
 import { tintPropMaterials } from '../settlement/props'
+import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { damageHealth, type HealthState } from '../shared/HealthState'
 import { drainStamina, getStaminaRatio, isExhausted } from '../shared/StaminaState'
 import {
@@ -932,6 +933,11 @@ export function pickRabidTarget<
   return best
 }
 
+/** This animal's `AgentAnimationSet` clip keys (plan fauna-017 step 4b,
+ *  review E6) — the semantic mapping every `anim.resolve()`/`play()`/
+ *  `playOnce()`/`settleAtEnd()` call site uses instead of a raw clip name. */
+type AnimalAnimClip = 'attack' | 'death' | 'gallop' | 'hurt' | 'idle' | 'walk'
+
 /** Construction dependencies for `AnimalAgent` (plan fauna-017 step 2) —
  *  same "flat object, optionality mirrors the old positional defaults"
  *  shape as `CreateSettlementDeps`/`NpcAgentDeps`. Replaces the previous
@@ -1126,23 +1132,21 @@ export class AnimalAgent {
    *  instead, via `driveMounted()`), but needs/stamina/hp/animation
    *  bookkeeping keeps running exactly as it would while free-roaming. */
   private mounted = false
-  private readonly mixer: THREE.AnimationMixer | null
-  private readonly idleAction: THREE.AnimationAction | null
-  private readonly walkAction: THREE.AnimationAction | null
-  private readonly gallopAction: THREE.AnimationAction | null
-  /** Combat/death presentation clips (plan npc-009) — semantic mapping over
-   *  whichever names the loaded GLB actually exports (`findAction`'s
-   *  existing name-list + `Armature|`-prefix fallback), never a hard-coded
-   *  name in combat logic. `null` is a safe, silent fallback (no animation
-   *  change, existing behaviour continues) — not every species/pack exports
-   *  all three (e.g. sheep/chicken/bear have none, cow only has `Death`). */
-  private readonly attackAction: THREE.AnimationAction | null
-  private readonly hurtAction: THREE.AnimationAction | null
-  private readonly deathAction: THREE.AnimationAction | null
-  /** Countdown while a one-shot `attackAction`/`hurtAction` should keep
-   *  pre-empting `updateAnim()`'s normal idle/walk/gallop switch (plan
-   *  npc-009) — `0` outside a one-shot. Decremented in `update()` alongside
-   *  the other cooldown-style timers. */
+  /** Clip resolve/crossfade/one-shot/settle owner (plan fauna-017 step 4b,
+   *  review E6) — replaces 8 separate `THREE.AnimationAction | null` fields
+   *  (idle/walk/gallop/attack/hurt/death) plus the mixer itself, same shared
+   *  owner `NpcAgent` already uses (`shared/agentAnimationSet.ts`). A key
+   *  with no matching clip is a safe, silent fallback (existing locomotion
+   *  keeps playing, no crash) — not every species/pack exports all three
+   *  combat/death clips (e.g. sheep/chicken/bear have none, cow only has
+   *  `Death`). */
+  private readonly anim: AgentAnimationSet<AnimalAnimClip>
+  /** Countdown while a one-shot attack/hurt clip should keep pre-empting
+   *  `updateAnim()`'s normal idle/walk/gallop switch (plan npc-009) — `0`
+   *  outside a one-shot. Decremented in `update()`/`driveMounted()` (via
+   *  `tickPresentationAndLife()`) alongside the other cooldown-style timers.
+   *  Kept on the agent rather than in `AgentAnimationSet` — it gates
+   *  simulation (movement/AI), not presentation. */
   private attackAnimTimer = 0
   private hurtAnimTimer = 0
   /** Countdown while `steerToward()` should no-op for a howling wolf with no
@@ -1150,13 +1154,12 @@ export class AnimalAgent {
    *  successful howl roll in `update()`, decremented alongside the other
    *  timers. Only ever set for `kind === 'wolf'`. */
   private howlPauseTimer = 0
-  /** Bounds how long a dead animal's `update()` keeps ticking its own mixer
-   *  (plan npc-009) so the one-shot `deathAction` actually plays out — `null`
-   *  when there was no `deathAction` to play (manual tip fallback, no mixer
-   *  work needed), compared against `timeSinceDeath` (already tracked for
-   *  corpse decay) rather than a second death-clock field. */
+  /** Bounds how long a dead animal's `update()` keeps ticking its own
+   *  `anim` (plan npc-009) so the one-shot death clip actually plays out —
+   *  `null` when there was no death clip to play (manual tip fallback, no
+   *  mixer work needed), compared against `timeSinceDeath` (already tracked
+   *  for corpse decay) rather than a second death-clock field. */
   private deathAnimDurationSec: number | null = null
-  private currentAction: THREE.AnimationAction | null = null
   private readonly label: CSS2DObject
   private readonly labelEl: HTMLDivElement
   private readonly labelNameEl: HTMLDivElement
@@ -1502,31 +1505,23 @@ export class AnimalAgent {
       this.mesh.scale.multiplyScalar(JUVENILE_SCALE_FACTOR[def.kind] ?? 1)
     }
 
-    if (animations.length > 0) {
-      // Prefer skinned model root (child of wrap) so clip bindings resolve.
-      const animRoot = this.mesh.children[0] ?? this.mesh
-      this.mixer = new THREE.AnimationMixer(animRoot)
-      this.idleAction = this.findAction(animations, ['Idle', 'Idle_2'])
-      this.walkAction = this.findAction(animations, ['Walk'])
-      this.gallopAction = this.findAction(animations, ['Gallop'])
+    // Prefer skinned model root (child of wrap) so clip bindings resolve.
+    const animRoot = this.mesh.children[0] ?? this.mesh
+    this.anim = createAgentAnimationSet<AnimalAnimClip>(animRoot, animations)
+    this.anim.resolve({
+      idle: ['Idle', 'Idle_2'],
+      walk: ['Walk'],
+      gallop: ['Gallop'],
       // Predators export `Attack`; deer/stag/horse/donkey export
       // `Attack_Headbutt`/`Attack_Kick` instead (plan npc-009) — first match
       // wins, same "smallest existing-compatible name" idiom as Idle/Idle_2.
-      this.attackAction = this.findAction(animations, ['Attack', 'Attack_Headbutt'])
+      attack: ['Attack', 'Attack_Headbutt'],
       // Wolf/fox/deer/stag export `Idle_HitReact1`; horse/donkey export
       // `Idle_HitReact_Left` instead.
-      this.hurtAction = this.findAction(animations, ['Idle_HitReact1', 'Idle_HitReact_Left'])
-      this.deathAction = this.findAction(animations, ['Death'])
-      this.playAction(this.idleAction)
-    } else {
-      this.mixer = null
-      this.idleAction = null
-      this.walkAction = null
-      this.gallopAction = null
-      this.attackAction = null
-      this.hurtAction = null
-      this.deathAction = null
-    }
+      hurt: ['Idle_HitReact1', 'Idle_HitReact_Left'],
+      death: ['Death'],
+    })
+    this.anim.playImmediate('idle')
 
     const hpBar = createLabelBar('hp')
     const staminaBar = createLabelBar('stamina')
@@ -1593,7 +1588,7 @@ export class AnimalAgent {
     this.disposeRotFx()
     this.label.removeFromParent()
     this.labelEl.remove()
-    this.mixer?.stopAllAction()
+    this.anim.stopAll()
     this.debugVisual?.dispose()
     this.debugVisual = null
   }
@@ -1773,7 +1768,7 @@ export class AnimalAgent {
       FAUNA_SHADOW_DISTANCE,
       this.labelDistanceState,
     )
-    this.mixer?.update(dt)
+    this.anim.update(dt)
   }
 
   /** Marks this individual as "the" dangerous target of a `kill_target_animal
@@ -1999,9 +1994,9 @@ export class AnimalAgent {
         : null,
       presentation: {
         current: this.hurtAnimTimer > 0 ? 'hurt' : this.attackAnimTimer > 0 ? 'attack' : null,
-        hasAttackClip: this.attackAction != null,
-        hasHurtClip: this.hurtAction != null,
-        hasDeathClip: this.deathAction != null,
+        hasAttackClip: this.anim.has('attack'),
+        hasHurtClip: this.anim.has('hurt'),
+        hasDeathClip: this.anim.has('death'),
       },
     }
   }
@@ -2056,11 +2051,17 @@ export class AnimalAgent {
     if (state.corpse) {
       this.timeSinceDeath = state.corpse.timeSinceDeath
       this.meatHarvested = state.corpse.meatHarvested
-      this.mixer?.stopAllAction()
+      this.anim.stopAll()
       if (this.meatHarvested) {
         this.hideLivingVisual()
         void this.spawnHarvestedRemains()
         this.labelEl.style.display = 'none'
+      } else if (this.anim.has('death')) {
+        // Plan fauna-017 step 4b: settle on the death clip's own final pose
+        // (same as a live `collapse()`) instead of always manually tipping
+        // the corpse — only species/packs with no death clip fall back to
+        // the manual tip below.
+        this.anim.settleAtEnd('death')
       } else {
         const side = Math.random() < 0.5 ? 1 : -1
         this.mesh.rotation.z = side * (Math.PI / 2)
@@ -2217,7 +2218,7 @@ export class AnimalAgent {
       // npc-009) — never from attack intent alone, so a miss never triggers
       // a flinch. Player-sourced hits already have their own hit/kill sound
       // at the attacker's call site (`gameLoop.ts`) — this is animation only.
-      this.hurtAnimTimer = this.playOneShotAnim(this.hurtAction)
+      this.hurtAnimTimer = this.anim.playOnce('hurt')
     }
   }
 
@@ -2228,10 +2229,10 @@ export class AnimalAgent {
    *  standing up. */
   private collapse(): void {
     this.onDeath?.(this.animalId)
-    if (this.deathAction) {
-      this.deathAnimDurationSec = this.playOneShotAnim(this.deathAction)
+    if (this.anim.has('death')) {
+      this.deathAnimDurationSec = this.anim.playOnce('death')
     } else {
-      this.mixer?.stopAllAction()
+      this.anim.stopAll()
       const side = Math.random() < 0.5 ? 1 : -1
       this.mesh.rotation.z = side * (Math.PI / 2)
       this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
@@ -2443,13 +2444,13 @@ export class AnimalAgent {
         this.timeSinceDeath += dt
         this.advanceCorpseDecay(dt, others, observerPos)
       }
-      // Keep the mixer advancing only long enough for the one-shot
-      // `deathAction` to actually play (plan npc-009) — `null` when there was
-      // no clip to play (manual tip fallback, no mixer work needed), so a
+      // Keep the mixer advancing only long enough for the one-shot death
+      // clip to actually play (plan npc-009) — `null` when there was no clip
+      // to play (manual tip fallback, no mixer work needed), so a
       // permanently dead animal never costs a per-frame mixer update for the
       // rest of the session.
       if (this.deathAnimDurationSec != null && this.timeSinceDeath < this.deathAnimDurationSec) {
-        this.mixer?.update(dt)
+        this.anim.update(dt)
       }
       this.lastFaunaDecisionInput = null
       return
@@ -3022,7 +3023,7 @@ export class AnimalAgent {
     if (this.attackCooldown > 0) return
     if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
-    this.attackAnimTimer = this.playOneShotAnim(this.attackAction)
+    this.attackAnimTimer = this.anim.playOnce('attack')
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
     const { x, z } = this.mesh.position
     onHumanHit(
@@ -3062,7 +3063,7 @@ export class AnimalAgent {
     if (this.attackCooldown > 0) return
     if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
-    this.attackAnimTimer = this.playOneShotAnim(this.attackAction)
+    this.attackAnimTimer = this.anim.playOnce('attack')
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
     const { x, z } = this.mesh.position
     onNpcHit(
@@ -3268,7 +3269,7 @@ export class AnimalAgent {
     if (this.attackCooldown > 0) return
     if (isExhausted(this.life.stamina)) return
     this.attackCooldown = ATTACK_COOLDOWN
-    this.attackAnimTimer = this.playOneShotAnim(this.attackAction)
+    this.attackAnimTimer = this.anim.playOnce('attack')
     drainStamina(this.life.stamina, ATTACK_STAMINA_COST)
     target.takeDamage(damageFor(this.def.kind, target.def.kind))
     if (this.rabid) this.tryRabiesBiteInfection(target)
@@ -4319,45 +4320,6 @@ export class AnimalAgent {
     this.mesh.position.y = this.isCapsule ? y + 0.45 * this.def.scale : y
   }
 
-  private findAction(
-    clips: THREE.AnimationClip[],
-    names: string[],
-  ): THREE.AnimationAction | null {
-    if (!this.mixer) return null
-    for (const name of names) {
-      // Some packs (e.g. Farm Animals cow/sheep) export clips as "Armature|Walk"
-      // instead of a bare "Walk" — match either form.
-      const clip = clips.find((c) => c.name === name || c.name.endsWith(`|${name}`))
-      if (clip) return this.mixer.clipAction(clip)
-    }
-    return null
-  }
-
-  private playAction(action: THREE.AnimationAction | null): void {
-    if (!action || action === this.currentAction) return
-    this.currentAction?.fadeOut(0.2)
-    action.reset().setEffectiveWeight(1).fadeIn(0.2).play()
-    this.currentAction = action
-  }
-
-  /** Plays a one-shot combat/death clip (attack/hurt/death — plan npc-009):
-   *  clamps on its last frame instead of looping. Reuses `currentAction`'s
-   *  existing fadeOut-the-previous-action bookkeeping, so `updateAnim()`'s
-   *  own `playAction()` calls fade it back out cleanly once the clip's own
-   *  timer (`attackAnimTimer`/`hurtAnimTimer`) lets normal locomotion resume.
-   *  `null` is a safe no-op — see the action fields' own doc comment. Returns
-   *  the clip's duration (`0` for a no-op) for the caller's own timer. */
-  private playOneShotAnim(action: THREE.AnimationAction | null): number {
-    if (!action) return 0
-    action.reset()
-    action.setLoop(THREE.LoopOnce, 1)
-    action.clampWhenFinished = true
-    this.currentAction?.fadeOut(0.15)
-    action.setEffectiveWeight(1).fadeIn(0.1).play()
-    this.currentAction = action
-    return action.getClip().duration
-  }
-
   private updateAnim(): void {
     // Combat one-shots pre-empt normal locomotion (plan npc-009) — both are
     // already playing (triggered from `attack()`/`attackHuman()`/
@@ -4366,11 +4328,11 @@ export class AnimalAgent {
     // false: `update()`'s own `health.dead` branch returns before calling it.
     if (this.hurtAnimTimer > 0 || this.attackAnimTimer > 0) return
     if (this.sprinting) {
-      this.playAction(this.gallopAction ?? this.walkAction ?? this.idleAction)
+      this.anim.play(this.anim.has('gallop') ? 'gallop' : this.anim.has('walk') ? 'walk' : 'idle')
     } else if (this.moving) {
-      this.playAction(this.walkAction ?? this.idleAction)
+      this.anim.play(this.anim.has('walk') ? 'walk' : 'idle')
     } else {
-      this.playAction(this.idleAction)
+      this.anim.play('idle')
     }
   }
 }

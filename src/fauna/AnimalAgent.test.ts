@@ -98,6 +98,24 @@ describe('AnimalAgent', () => {
     expect(free.life.hunger).toBeLessThan(dayRateAgent.life.hunger)
   })
 
+  // R1 (plan fauna-017 step 4b): adopting the shared AgentAnimationSet must
+  // not silently drop cow/sheep-style "Armature|Walk" clip names — step 4a's
+  // suffix-match fallback is what makes this resolve.
+  it('resolves an "Armature|Walk"-style clip name via the shared animation set', () => {
+    const walkClip = new THREE.AnimationClip('Armature|Walk', 1, [])
+    const agent = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.cow, animalId: 'test-cow', animations: [walkClip] }))
+    agent.life.hunger = 0
+    agent.life.thirst = 0
+    expect(() => agent.update({
+      dt: 1,
+      others: [],
+      observerPos: new THREE.Vector3(),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })).not.toThrow()
+  })
+
   // D2: a hurt mount's `hurtAnimTimer` must count down while ridden instead
   // of freezing until dismount — before this fix, `driveMounted()` skipped
   // every timer decrement entirely, so `updateAnim()`'s hurt-clip gate
