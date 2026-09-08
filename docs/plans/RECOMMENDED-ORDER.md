@@ -391,6 +391,7 @@ graph TD
   npc_025["npc-025 — Injury severity and treatment requirements"]
   npc_026["npc-026 — NPC Grave Visits"]
   npc_027["npc-027 — Spatial-context-aware NPC movement and cave traversal"]
+  npc_028["npc-028 — Work Contracts — Multiple Workers"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -592,6 +593,7 @@ graph TD
   npc_015 --> npc_018
   npc_018 --> items_player_017
   npc_018 --> npc_016
+  npc_018 --> npc_028
   npc_018 --> settlements_005
   npc_019 --> npc_020
   npc_019 --> npc_021
