@@ -4,14 +4,14 @@
 
 ### Overall
 
-1. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/6
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · 🔒 blocked · unlocks 3/5
+3. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
    🔴 `M` · ✅ ready · unlocks 6/6
-2. `settlements-npcs-015` — **Economic Production and Input Integration**  
+4. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/4
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 3/3
-4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · 🔒 blocked · unlocks 2/2
 5. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/1
 
@@ -19,14 +19,14 @@
 
 ### Roadmap Focus
 
-1. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/6 · roadmap: `physical-goods-transport`
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+   🔴 `M` · 🔒 blocked · unlocks 3/5 · roadmap: `physical-goods-transport`
+3. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
    🔴 `M` · ✅ ready · unlocks 6/6 · roadmap: `quests-and-reputation`
-2. `settlements-npcs-015` — **Economic Production and Input Integration**  
+4. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/4 · roadmap: `economy-production`
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 3/3 · roadmap: `physical-goods-transport`
-4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-   🔴 `M` · 🔒 blocked · unlocks 2/2 · roadmap: `physical-goods-transport`
 5. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
    🔴 `M` · 🔒 blocked · unlocks 1/1 · roadmap: `economy-production`
 
@@ -49,16 +49,16 @@ _No qualifying plans._
 
 ### Ready Now
 
-1. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+   🔴 `M` · ✅ ready · unlocks 3/6
+2. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
    🔴 `M` · ✅ ready · unlocks 6/6
-2. `settlements-npcs-015` — **Economic Production and Input Integration**  
+3. `settlements-npcs-015` — **Economic Production and Input Integration**  
    🔴 `M` · ✅ ready · unlocks 3/4
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-   🔴 `M` · ✅ ready · unlocks 3/3
 4. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-5. `npc-010` — **NPC Death & Corpse Lifecycle**  
-   🟡 `L` · ✅ ready · unlocks 1/2
+5. `world-019` — **Persistent Player-built Site Infrastructure**  
+   🔴 `L` · ✅ ready · unlocks 2/2
 
 ---
 
@@ -76,21 +76,21 @@ Only planned plans are ranked.
 done / verification needed satisfy dependencies.  
 Score = priority + direct unlocks + transitive unlocks + depth - effort.
 
-1. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
+1. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
+  🔴 `M` · **Score:** 125  
+   → **unlocks:** 3/6
+
+2. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
+  🔴 `M` · **Score:** 117  
+   → **unlocks:** 3/5
+
+3. `quests-progression-002` — **Quest Outcomes, Rewards & Consequences**  
   🔴 `M` · **Score:** 113  
    → **unlocks:** 6/6
 
-2. `settlements-npcs-015` — **Economic Production and Input Integration**  
+4. `settlements-npcs-015` — **Economic Production and Input Integration**  
   🔴 `M` · **Score:** 105  
    → **unlocks:** 3/4
-
-3. `settlements-npcs-018` — **Physical Goods Transport Foundation**  
-  🔴 `M` · **Score:**  95  
-   → **unlocks:** 3/3
-
-4. `settlements-npcs-019` — **Persistent & Off-screen Transport**  
-  🔴 `M` · **Score:**  83  
-   → **unlocks:** 2/2
 
 5. `settlements-npcs-016` — **First Processing Chain and Blacksmith Production**  
   🔴 `M` · **Score:**  69  
@@ -100,21 +100,21 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  64  
    → **unlocks:** 1/2
 
-7. `quests-progression-003` — **Paid Quests & Player Income**  
-  🔴 `M` · **Score:**  59  
-   → **unlocks:** 2/2
-
-8. `settlements-npcs-006` — **Wool to material**  
+7. `settlements-npcs-006` — **Wool to material**  
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-9. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
+8. `settlements-npcs-017` — **Production Demand and Economic Pressures**  
   🔴 `M` · **Score:**  57  
    → **unlocks:** 0/0
 
-10. `quests-progression-006` — **Settlement Rat Infestation**  
+9. `quests-progression-006` — **Settlement Rat Infestation**  
   🔴 `M` · **Score:**  53  
    → **unlocks:** 0/0
+
+10. `world-019` — **Persistent Player-built Site Infrastructure**  
+  🔴 `L` · **Score:**  52  
+   → **unlocks:** 2/2
 
 11. `quests-progression-004` — **Quest Availability & Prerequisites**  
   🔴 `S` · **Score:**  47  
@@ -128,32 +128,32 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  46  
    → **unlocks:** 1/2
 
-14. `settlements-npcs-022` — **Household help and age-based work participation**  
+14. `quests-progression-003` — **Paid Quests & Player Income**  
+  🔴 `M` · **Score:**  45  
+   → **unlocks:** 1/1
+
+15. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-15. `settlements-npcs-025` — **Resource storage visualization**  
+16. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-16. `ui-input-010` — **Player quick actions and primary weapon slots**  
+17. `ui-input-010` — **Player quick actions and primary weapon slots**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 1/2
 
-17. `npc-024` — **Temporary conditions and poisoning**  
+18. `npc-024` — **Temporary conditions and poisoning**  
   🟡 `M` · **Score:**  39  
    → **unlocks:** 1/1
 
-18. `npc-011` — **NPC Burial & Graves**  
+19. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  38  
    → **unlocks:** 1/1
 
-19. `fauna-018` — **Persistent habitat occupants**  
+20. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
-   → **unlocks:** 1/1
-
-20. `quests-progression-011` — **Grave Robbing Reputation Risk & Stealth**  
-  🟡 `S` · **Score:**  35  
    → **unlocks:** 1/1
 
 21. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
@@ -279,6 +279,9 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   is blocked by:
   - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)
   - [`world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`](world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md)
+- [`npc-027-spatial-context-and-cave-traversal.md`](npc-027-spatial-context-and-cave-traversal.md)  
+  is blocked by:
+  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
 - [`quests-progression-003-paid-quests-and-player-income.md`](quests-progression-003-paid-quests-and-player-income.md)  
   is blocked by:
   - [`quests-progression-002-quest-outcomes-rewards-and-consequences.md`](quests-progression-002-quest-outcomes-rewards-and-consequences.md)
@@ -299,7 +302,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`fauna-018-persistent-habitat-occupants.md`](fauna-018-persistent-habitat-occupants.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
   - [`quests-progression-002-quest-outcomes-rewards-and-consequences.md`](quests-progression-002-quest-outcomes-rewards-and-consequences.md)
-  - [`quests-progression-011-grave-robbing-reputation-risk-and-stealth.md`](quests-progression-011-grave-robbing-reputation-risk-and-stealth.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
   - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
@@ -421,6 +423,7 @@ graph TD
   npc_024["npc-024 — Temporary conditions and poisoning"]
   npc_025["npc-025 — Injury severity and treatment requirements"]
   npc_026["npc-026 — NPC Grave Visits"]
+  npc_027["npc-027 — Spatial-context-aware NPC movement and cave traversal"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -434,10 +437,12 @@ graph TD
   quests_progression_007["quests-progression-007 — Wilki podchodzą pod osadę"]
   quests_progression_008["quests-progression-008 — Treasure map — bear cave"]
   quests_progression_009["quests-progression-009 — Mapa do skarbu — ruiny w ciemnym lesie"]
-  quests_progression_010["quests-progression-010 — Abandoned gold mine → mining colony"]
+  quests_progression_010["quests-progression-010 — Abandoned gold mine → mining colony integration"]
   quests_progression_011["quests-progression-011 — Grave Robbing Reputation Risk & Stealth"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
+  settlements_003["settlements-003 — Colony settlement bootstrap"]
+  settlements_004["settlements-004 — Gold Economic Realization & Source Entitlements"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -463,6 +468,9 @@ graph TD
   settlements_npcs_023["settlements-npcs-023 — Profession staffing and settlement composition"]
   settlements_npcs_024["settlements-npcs-024 — Household-Owned Profession Workplaces"]
   settlements_npcs_025["settlements-npcs-025 — Resource storage visualization"]
+  settlements_npcs_026["settlements-npcs-026 — NPC personal inventory and persistent belongings"]
+  settlements_npcs_027["settlements-npcs-027 — NPC expedition assignment and provisioning"]
+  settlements_npcs_028["settlements-npcs-028 — Long-distance NPC travel and expedition movement"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -504,6 +512,7 @@ graph TD
   world_016["world-016 — Ambient Soundscape Events and Lake Frogs"]
   world_017["world-017 — Contextual River Water Safety"]
   world_018["world-018 — Cave-aware rich finite resource deposits"]
+  world_019["world-019 — Persistent Player-built Site Infrastructure"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -603,7 +612,9 @@ graph TD
   npc_002 --> npc_025
   npc_006 --> fauna_004
   npc_006 --> npc_007
+  npc_006 --> npc_027
   npc_007 --> npc_009
+  npc_007 --> npc_027
   npc_010 --> npc_011
   npc_011 --> npc_026
   npc_014 --> npc_015
@@ -631,9 +642,10 @@ graph TD
   quests_progression_002 --> quests_progression_008
   quests_progression_002 --> quests_progression_010
   quests_progression_003 --> quests_progression_005
-  quests_progression_003 --> quests_progression_010
   quests_progression_004 --> quests_progression_005
   quests_progression_011 --> quests_progression_008
+  settlements_003 --> quests_progression_010
+  settlements_004 --> quests_progression_010
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
   settlements_npcs_002 --> settlements_npcs_024
@@ -663,7 +675,15 @@ graph TD
   settlements_npcs_018 --> settlements_npcs_021
   settlements_npcs_019 --> settlements_npcs_020
   settlements_npcs_019 --> settlements_npcs_021
+  settlements_npcs_019 --> settlements_npcs_028
   settlements_npcs_020 --> settlements_npcs_021
+  settlements_npcs_026 --> quests_progression_010
+  settlements_npcs_026 --> settlements_npcs_027
+  settlements_npcs_026 --> settlements_npcs_028
+  settlements_npcs_027 --> quests_progression_010
+  settlements_npcs_027 --> settlements_npcs_028
+  settlements_npcs_028 --> quests_progression_010
+  settlements_npcs_028 --> settlements_003
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008
@@ -679,15 +699,19 @@ graph TD
   world_013 --> world_014
   world_013 --> world_015
   world_017 --> npc_024
+  world_018 --> quests_progression_010
+  world_019 --> quests_progression_010
+  world_019 --> settlements_003
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_008 --> fauna_019
+  world_terrain_008 --> npc_027
   world_terrain_008 --> quests_progression_008
-  world_terrain_008 --> quests_progression_010
   world_terrain_008 --> world_018
   world_terrain_008 --> world_terrain_017
   world_terrain_010 --> world_terrain_011
   world_terrain_011 --> world_terrain_013
   world_terrain_016 --> npc_026
+  world_terrain_017 --> quests_progression_010
   world_terrain_017 --> world_018
 ```
