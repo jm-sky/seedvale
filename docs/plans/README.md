@@ -97,6 +97,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `world-terrain-017-abandoned-mountain-mine-landmark.md`                  | -       | 🔴 | M      | world-terrain-008 |
 | ◼️ `world-018-cave-aware-rich-finite-resource-deposits.md`                  | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
+| ◼️ `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
 
 ---
 
@@ -200,7 +201,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `026`
 - tools: `013`
 - ui-input: `013`
-- world: `019`
+- world: `020`
 - world-terrain: `018`
 
 This ids section is maintained automatically from the plan files.
