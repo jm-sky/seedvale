@@ -29,8 +29,12 @@ export type MountActions = {
   /** Per-frame drive: reads input, moves the mount, syncs the player's seat
    *  transform/stamina, and rolls riding stability. No-op while not mounted
    *  (beyond resolving a pending save restore). Must run before
-   *  `player.update()` each frame. */
-  update: (dt: number) => void
+   *  `player.update()` each frame. `dayFactor` (plan fauna-017 step 3, D2)
+   *  is forwarded into `AnimalAgent.driveMounted()` so a ridden animal gets
+   *  the same night hunger/thirst slowdown as a free-roaming one instead of
+   *  the stale `this.isNight` `update()` would otherwise read while
+   *  mounted. */
+  update: (dt: number, dayFactor: number) => void
   /** Defers reattaching to a persisted `mountedAnimalId` until `resolveAnimal`
    *  can find it (livestock loads asynchronously) — retried every `update()`
    *  tick while pending. */
@@ -135,7 +139,7 @@ export function createMountActions(
     })
   }
 
-  function update(dt: number): void {
+  function update(dt: number, dayFactor: number): void {
     // Drained every frame regardless of mounted state so a `T` press while
     // unmounted can't linger as a stale edge-triggered flag and fire the
     // instant the player next mounts.
@@ -163,7 +167,15 @@ export function createMountActions(
 
     const { wishX, wishZ, sprintRequested } = driveInput()
     const ridingValue = player.skills.riding.value
-    mount.driveMounted(dt, wishX, wishZ, sprintRequested, ridingSpeedMultiplier(ridingValue))
+    mount.driveMounted(
+      dt,
+      wishX,
+      wishZ,
+      sprintRequested,
+      ridingSpeedMultiplier(ridingValue),
+      dayFactor,
+      player.mesh.position,
+    )
 
     const dx = mount.mesh.position.x - lastMountX
     const dz = mount.mesh.position.z - lastMountZ

@@ -1789,8 +1789,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // Riding (plan fauna-003) drives the mount + syncs the player's seat
       // transform onto `player.mesh` before `player.update()` runs, so this
       // frame's camera/gaze/interactables all see the fresh position. No-op
-      // while not mounted.
-      mount.update(dt)
+      // while not mounted. `cachedSky.dayFactor` was just recomputed above —
+      // same value every other fauna/settlement tick this frame reads.
+      mount.update(dt, cachedSky.dayFactor)
       // Physical effort active this frame (plan items-player-003 §2/§11/§12)
       // — a physical `BusyAction` channel or active terrain-preparation work
       // — suppresses `player.update()`'s normal Stamina regeneration so it

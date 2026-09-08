@@ -1648,23 +1648,39 @@ export class AnimalAgent {
 
   /** Per-frame mounted movement — the "shared riding system" driving both
    *  horse and donkey generically (plan fauna-003 §5/§6). Called by the
-   *  riding system instead of `update()` while `mounted`; reuses the same
-   *  stepping/animation/needs tail `update()`'s own AI branch would otherwise
-   *  reach, minus `clampBounds()` — a ridden mount must be able to go
-   *  wherever the player takes it, not stay within its home wander radius.
-   *  `wishX`/`wishZ` is the player's raw (not necessarily normalized)
-   *  movement intent in world space, same convention as `PlayerController`'s
-   *  own `wish` vector. `speedMultiplier` (plan fauna-008, default 1) scales
-   *  only this player-driven path — the caller resolves it from the rider's
-   *  Riding skill (`PlayerSkills.ts`'s `ridingSpeedMultiplier`); `AnimalAgent`
-   *  itself stays unaware of player skills and free-roaming AI movement
-   *  (`walkSpeedNow()`/`sprintSpeedNow()` call sites elsewhere) is unaffected. */
-  driveMounted(dt: number, wishX: number, wishZ: number, sprintRequested: boolean, speedMultiplier = 1): void {
+   *  riding system instead of `update()` while `mounted`; shares
+   *  `update()`'s own tick tail via `tickPresentationAndLife()` (plan
+   *  fauna-017 step 3 / D2), minus `clampBounds()` — a ridden mount must be
+   *  able to go wherever the player takes it, not stay within its home
+   *  wander radius. `wishX`/`wishZ` is the player's raw (not necessarily
+   *  normalized) movement intent in world space, same convention as
+   *  `PlayerController`'s own `wish` vector. `speedMultiplier` (plan
+   *  fauna-008, default 1) scales only this player-driven path — the caller
+   *  resolves it from the rider's Riding skill (`PlayerSkills.ts`'s
+   *  `ridingSpeedMultiplier`); `AnimalAgent` itself stays unaware of player
+   *  skills and free-roaming AI movement (`walkSpeedNow()`/`sprintSpeedNow()`
+   *  call sites elsewhere) is unaffected. `dayFactor`/`observerPos` (plan
+   *  fauna-017 step 3, D2) default to "day"/this animal's own position so
+   *  every pre-existing caller/test that doesn't pass them keeps prior
+   *  behaviour; the real riding call site (`mountActions.ts`) passes the
+   *  same values `update()`'s own callers already thread through — see
+   *  `this.isNight`'s field doc for why it can't just be read here instead:
+   *  it's stale while mounted (`update()` early-returns before setting it). */
+  driveMounted(
+    dt: number,
+    wishX: number,
+    wishZ: number,
+    sprintRequested: boolean,
+    speedMultiplier = 1,
+    dayFactor = 1,
+    observerPos: THREE.Vector3 = this.mesh.position,
+  ): void {
     if (this.health.dead) return
 
     const distSq = wishX * wishX + wishZ * wishZ
     this.moving = distSq > 1e-6
     this.sprinting = this.moving && sprintRequested && !isExhausted(this.life.stamina)
+    this.isNight = dayFactor <= 0
 
     if (this.moving) {
       const dist = Math.sqrt(distSq)
@@ -1691,12 +1707,44 @@ export class AnimalAgent {
       this.mesh.position.z = result.z
     }
 
+    this.tickPresentationAndLife(
+      dt,
+      observerPos,
+      this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
+    )
+  }
+
+  /** The per-tick tail every movement mode shares (plan fauna-017 step 3,
+   *  D2 fix) — timer decrements, maturity/production, position snap,
+   *  animation, water traversal, drowning, needs, bars, label distance
+   *  state, mixer. `hungerThirstRate` is the one genuine caller difference
+   *  (night slowdown does not apply while sprinting); `nowDays` only
+   *  matters for `tickProduction()` and defaults to 0 (harmless: no
+   *  mountable species has a `production` config today, so `driveMounted()`
+   *  calling this with the default is inert, not a behaviour change).
+   *  `clampBounds()` stays out — the one documented, intentional
+   *  difference: a ridden animal must be able to leave its own home
+   *  radius. Before this method, `driveMounted()` skipped every timer
+   *  decrement and `tickMaturity`/`tickProduction` entirely, and always
+   *  passed `{}` (rate 1) instead of the real night rate — a ridden animal
+   *  starved/dehydrated at double the stabled rate at night, and a hit
+   *  mount's hurt-clip timer never counted down until dismount. */
+  private tickPresentationAndLife(dt: number, observerPos: THREE.Vector3, hungerThirstRate: number, nowDays = 0): void {
+    if (this.attackCooldown > 0) this.attackCooldown -= dt
+    if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt
+    if (this.hurtAnimTimer > 0) this.hurtAnimTimer -= dt
+    if (this.alertTimer > 0) this.alertTimer -= dt
+    if (this.provokedTimer > 0) this.provokedTimer -= dt
+    if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
+    if (this.howlPauseTimer > 0) this.howlPauseTimer -= dt
+    if (this.vocalizeAlertRemainingSec > 0) this.vocalizeAlertRemainingSec -= dt
+    this.tickMaturity(dt)
+    this.tickProduction(nowDays)
     this.snapY()
     this.updateAnim()
     this.resolveWaterTraversal()
     this.tickDrowning(dt)
-    tickAnimalLife(this.life, dt, this.sprinting, {}, this.def.metabolism, this.swimExertionNow())
-
+    tickAnimalLife(this.life, dt, this.sprinting, { hungerThirstRate }, this.def.metabolism, this.swimExertionNow())
     this.lastHpPercent = applyBarPercent(
       this.hpFillEl,
       computeBarPercent(this.health.currentHp, this.health.maxHp),
@@ -1716,6 +1764,14 @@ export class AnimalAgent {
       this.hydrationFillEl,
       Math.round((1 - this.life.thirst) * 100),
       this.lastHydrationPercent,
+    )
+    this.labelDistanceState = updateAgentLabelDistanceState(
+      this.labelEl,
+      this.labelBarsEl,
+      this.mesh,
+      this.mesh.position.distanceTo(observerPos),
+      FAUNA_SHADOW_DISTANCE,
+      this.labelDistanceState,
     )
     this.mixer?.update(dt)
   }
@@ -2407,14 +2463,6 @@ export class AnimalAgent {
       this.lastFaunaDecisionInput = null
       return
     }
-    if (this.attackCooldown > 0) this.attackCooldown -= dt
-    if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt
-    if (this.hurtAnimTimer > 0) this.hurtAnimTimer -= dt
-    if (this.alertTimer > 0) this.alertTimer -= dt
-    if (this.provokedTimer > 0) this.provokedTimer -= dt
-    if (this.sourceSearchCooldown > 0) this.sourceSearchCooldown -= dt
-    if (this.howlPauseTimer > 0) this.howlPauseTimer -= dt
-    if (this.vocalizeAlertRemainingSec > 0) this.vocalizeAlertRemainingSec -= dt
     const vocalizeTick = tickSpontaneousVocalizeCooldown(
       this.def.kind,
       dt,
@@ -2455,8 +2503,6 @@ export class AnimalAgent {
     this.currentOthers = others
     this.tickNowDays = nowDays
     this.tickGrassForage = grassForage
-    this.tickMaturity(dt)
-    this.tickProduction(nowDays)
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
     // Any predator can notice a nearby NPC (npc-008 step 6 — animal↔NPC
     // threat is a general predator behaviour, not something only a frenzied
@@ -2682,46 +2728,16 @@ export class AnimalAgent {
     }
     this.wasThreateningHuman = this.threateningHuman
     this.clampBounds()
-    this.snapY()
+    // Diagnostic-only — only reads x/z, so it doesn't depend on whether
+    // `tickPresentationAndLife()`'s own `snapY()` has run yet (see
+    // `debugLastStepDist`'s field doc).
     this.debugLastStepDist = Math.hypot(this.mesh.position.x - debugPrevX, this.mesh.position.z - debugPrevZ)
-    this.updateAnim()
-    this.resolveWaterTraversal()
-    this.tickDrowning(dt)
-    tickAnimalLife(this.life, dt, this.sprinting, {
-      hungerThirstRate: this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
-    }, this.def.metabolism, this.swimExertionNow())
-    this.lastHpPercent = applyBarPercent(
-      this.hpFillEl,
-      computeBarPercent(this.health.currentHp, this.health.maxHp),
-      this.lastHpPercent,
+    this.tickPresentationAndLife(
+      dt,
+      observerPos,
+      this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
+      nowDays,
     )
-    this.lastStaminaPercent = applyBarPercent(
-      this.staminaFillEl,
-      computeBarPercent(this.life.stamina.current, this.life.stamina.max),
-      this.lastStaminaPercent,
-    )
-    // Satiety / hydration are inverted needs (full bar = well fed/hydrated),
-    // not a current/max pair, so they round inline instead of going through
-    // `computeBarPercent`.
-    this.lastSatietyPercent = applyBarPercent(
-      this.satietyFillEl,
-      Math.round((1 - this.life.hunger) * 100),
-      this.lastSatietyPercent,
-    )
-    this.lastHydrationPercent = applyBarPercent(
-      this.hydrationFillEl,
-      Math.round((1 - this.life.thirst) * 100),
-      this.lastHydrationPercent,
-    )
-    this.labelDistanceState = updateAgentLabelDistanceState(
-      this.labelEl,
-      this.labelBarsEl,
-      this.mesh,
-      this.mesh.position.distanceTo(observerPos),
-      FAUNA_SHADOW_DISTANCE,
-      this.labelDistanceState,
-    )
-    this.mixer?.update(dt)
     if (this.debugActive && this.debugVisual) this.updateDebugVisual()
   }
 
