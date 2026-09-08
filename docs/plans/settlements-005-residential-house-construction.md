@@ -7,12 +7,12 @@
 **Depends on:** ~~npc-018~~, ~~items-player-017~~, npc-028
 **Domain:** `settlements`
 **Subdomains:** `buildings` `development`
-**Tags:** `construction` `housing` `work-contracts`
+**Tags:** `construction` `housing` `work-contracts` `lodging`
 **Roadmap:** -
 
 ## Goal
 
-Allow the Player to construct persistent residential houses that become real world/settlement homes after completion.
+Allow the Player to construct persistent residential houses that become real world/settlement homes after completion and provide high-quality lodging/rest.
 
 Initial house types:
 
@@ -21,7 +21,7 @@ Initial house types:
 
 Both use the same definition-driven building and construction mechanism. They differ in footprint, work/material requirements and housing capacity, not in architecture.
 
-The implementation must extend the existing terrain-preparation, placement, incremental-construction, shared-work, settlement `home`/`Place` and household seams rather than create a Player-only housing system.
+The implementation must extend the existing terrain-preparation, placement, incremental-construction, shared-work, settlement `home`/`Place`, household and lodging/rest seams rather than create Player-only parallel systems.
 
 ## 1. Scope and ownership
 
@@ -33,9 +33,12 @@ Keep these concepts separate:
 Residential building = physical structure and construction state
 Home Place           = semantic world location
 Household            = people/resources associated with a home
+Lodging option       = derived capability to sleep/rest at a completed home
 ```
 
 The residential-building record owns construction progress. Work Contracts own only NPC commitments/assignments. `Place`/settlement systems own semantic home integration. `Household` continues owning family resources and must not be duplicated into the building.
+
+Player sleep/rest must reuse the existing lodging and `PlayerNeeds` mechanisms; the residential-building subsystem must not own a second rest-quality or needs-restoration model.
 
 ## 2. Residential building definitions
 
@@ -58,8 +61,11 @@ Initial gameplay intent:
 
 - **Small house** — compact footprint, lower material/work cost, capacity around 3 residents.
 - **Medium house** — larger footprint, higher material/work cost, capacity around 6 residents.
+- **Completed residential house** — provides high-quality lodging/rest through the existing lodging system.
 
 Capacity and costs should be checked against current generated family sizes, item catalog and construction timings before final constants are chosen.
+
+Do not encode separate numerical sleep restoration on house definitions if the existing `LodgingQuality = 'high'` contract already represents the desired comfort.
 
 ## 3. Stable persistent identity
 
@@ -74,7 +80,7 @@ placement
 
 Completion changes the state/function of the same building identity. Do not replace an unfinished construction target with an unrelated completed object.
 
-This identity must be stable enough for persistence, Work Contract target references and later home/household association.
+This identity must be stable enough for persistence, Work Contract target references and later home/household/lodging association.
 
 ## 4. Construction stages
 
@@ -221,18 +227,50 @@ An unfinished building:
 - reserves its physical footprint,
 - is a construction target,
 - is not valid residential capacity,
-- is not an occupied household home.
+- is not an occupied household home,
+- is not valid lodging.
 
 A completed building:
 
 - is physically functional as residential housing,
 - exposes its configured housing capacity,
 - integrates with the existing semantic `PlaceType = 'home'` model,
+- provides high-quality Player lodging/rest,
 - may remain empty.
 
 Completion must therefore establish or expose a stable `home` Place linkage without creating a parallel `PlayerHouseHome` concept.
 
-## 13. Empty houses are valid
+## 13. Player lodging and high-quality rest
+
+A completed residential house is a valid Player sleep/rest location.
+
+Reuse the existing lodging contract from `src/settlement/lodging.ts` and the existing sleep/time-skip path. In particular, the current system already defines:
+
+```text
+LodgingQuality = 'high' | 'normal' | 'low'
+high → full sleep restoration through lodgingRestQuality()
+```
+
+Residential houses should therefore expose or derive an existing-style lodging option with `quality: 'high'` rather than introducing house-specific comfort percentages or directly mutating `PlayerNeeds`.
+
+Intended flow:
+
+```text
+completed house
+→ valid home/lodging source
+→ Player selects/interacts with sleep action
+→ existing lodging/rest action
+→ existing Sleep/time skip
+→ high-quality needs restoration
+```
+
+The house does not need an enterable interior for this initial capability. Sleeping may resolve through an entrance/approach anchor compatible with the existing lodging movement/action flow. Do not add a second movement system or teleport-only house sleep path.
+
+When a built house belongs to a settlement, it should be eligible for the existing settlement lodging discovery/selection mechanism where appropriate. A completed house outside a settlement must still be able to offer direct Player rest through the same underlying lodging/rest semantics rather than requiring an artificial settlement association.
+
+Do not equate the ability to sleep in a house with Household occupancy or permanent Player ownership. Access policy may initially be permissive for Player-constructed completed houses; future ownership/permission rules may refine who may use a given home.
+
+## 14. Empty houses are valid
 
 A completed residential building does **not** automatically create a Household or generate residents.
 
@@ -240,7 +278,7 @@ This is deliberate. The architecture should support:
 
 ```text
 completed empty house
-→ available housing
+→ available housing + high-quality Player lodging
 → later household assignment / settlement population growth
 ```
 
@@ -248,7 +286,7 @@ Actual migration, household relocation/creation and autonomous population growth
 
 This keeps the first residential-construction plan focused while providing the correct systemic seam for settlement development.
 
-## 14. Household compatibility
+## 15. Household compatibility
 
 Existing `Household.homeId` and `Place(home)` semantics remain authoritative.
 
@@ -258,15 +296,15 @@ Avoid introducing a second `householdId`/`homeId` mapping owned by the residenti
 
 A future occupancy plan should be able to associate a household with a completed house through stable ids rather than array/index alignment.
 
-## 15. Generated settlement houses
+## 16. Generated settlement houses
 
 Do not convert procedurally generated villages into construction projects.
 
 Existing generated houses continue to appear completed.
 
-Where practical, generated residential buildings and newly built residential buildings should converge on compatible semantic `home`/residential concepts after completion, but this plan must not force a broad village-generation rewrite solely to achieve representation purity.
+Where practical, generated residential buildings and newly built residential buildings should converge on compatible semantic `home` and lodging concepts after completion, but this plan must not force a broad village-generation rewrite solely to achieve representation purity.
 
-## 16. Settlement association
+## 17. Settlement association
 
 A newly built house may be associated with an existing settlement when current settlement/world ownership rules can determine that relationship reliably.
 
@@ -276,7 +314,7 @@ A house outside a suitable settlement may remain an independent residential worl
 
 Settlement-driven decisions to create new houses are a follow-up feature.
 
-## 17. Construction initiator is not residential owner
+## 18. Construction initiator is not residential owner
 
 Keep these concepts distinct:
 
@@ -288,6 +326,8 @@ Player built the house
 
 The construction system records what is necessary for construction and world identity. Residential ownership/occupancy should use existing/future settlement and household mechanisms rather than being inferred forever from the construction initiator.
 
+The Player being allowed to rest in a completed Player-constructed house does not change this ownership boundary.
+
 This allows the same mechanism to support later:
 
 - Player housing,
@@ -295,7 +335,7 @@ This allows the same mechanism to support later:
 - settlement expansion,
 - quest/colony construction.
 
-## 18. Persistence and rebuild continuity
+## 19. Persistence and rebuild continuity
 
 Persist enough authoritative state to reconstruct every runtime-built house, including data equivalent to:
 
@@ -308,25 +348,29 @@ Persist enough authoritative state to reconstruct every runtime-built house, inc
 - completed state,
 - stable home/place linkage when completed.
 
+Do not persist a redundant `LodgingOption`; derive it from authoritative completed-house/home state in the same spirit as existing lodging offers.
+
 Follow the existing domain-owned serialization and `WorldBundle` rebuild patterns. Do not make `SaveData` the runtime authority.
 
 Old saves without residential-building records must continue to load normally.
 
-## 19. Removal and invalidation
+## 20. Removal and invalidation
 
 Removing/cancelling an unfinished building must invalidate or otherwise safely terminate Work Contracts targeting it through the existing contract-target invalidation path.
 
 Do not implement full demolition semantics for completed occupied houses in this plan. If necessary, completed houses may simply be non-removable until displacement/demolition has an explicit systemic design.
 
-## 20. Performance
+## 21. Performance
 
 Construction state is interaction/event driven, not a per-frame simulation system.
 
 Completed houses should have runtime/rendering cost comparable to existing settlement buildings. Do not add one update loop per building.
 
+Lodging availability should be derived/query-driven like the existing lodging system, not maintained by a per-house simulation tick.
+
 Multi-worker contribution must remain actor-neutral and bounded by the existing construction target rather than requiring a construction coordinator/manager.
 
-## 21. Implementation guidance
+## 22. Implementation guidance
 
 Before implementation, create/update implementation notes according to `docs/plans/PLANNING.md` and verify the exact current files/symbols because dependencies may have changed the construction APIs.
 
@@ -339,6 +383,9 @@ In particular inspect the current implementations of:
 - `VillagePlan` / `VillageBuildingPlan` / residential plots,
 - `Place` and home-place creation/resolution,
 - `Household.homeId`,
+- `src/settlement/lodging.ts` and `lodgingResolver.ts`,
+- `src/app/actions/restActions.ts`,
+- existing house bed/approach anchors where reusable,
 - persistence/rebuild ownership for player-built world objects.
 
 Add JSDoc to important new architectural/public functions and types where it improves AI preflight discovery; use `@domain settlements` on the residential-building ownership boundary.
@@ -386,13 +433,30 @@ Confirm a stage cannot accept useful work without its required materials and res
 
 After completion, confirm the building exposes/resolves a stable existing-style `home` Place and housing capacity without automatically creating a Household.
 
+### High-quality Player rest
+
+Confirm an unfinished house cannot be used for lodging.
+
+After completion:
+
+```text
+Player chooses/interacts with house lodging
+→ existing lodging/rest flow runs
+→ time advances through existing Sleep path
+→ `quality: 'high'` restoration is applied
+```
+
+Confirm this does not bypass existing Player sleep/rest rules or duplicate `PlayerNeeds` restoration logic.
+
+Confirm a completed Player-built house outside a settlement can still provide direct rest without creating a fake settlement.
+
 ### Empty house
 
-Confirm a completed unoccupied house remains valid and persisted.
+Confirm a completed unoccupied house remains valid, persisted and usable for Player rest without automatically creating a Household.
 
 ### Save/load and rebuild
 
-Verify partial construction, completed empty houses and Work Contract target references restore deterministically without duplicating progress or identity.
+Verify partial construction, completed empty houses and Work Contract target references restore deterministically without duplicating progress or identity. Confirm lodging remains available after reload/rebuild because it is derived from restored completed-house state rather than separately persisted.
 
 ## Non-goals
 
@@ -401,13 +465,14 @@ Do not implement in this plan:
 - automatic household creation or relocation,
 - migration/population growth,
 - autonomous settlement decisions to build houses,
-- Player home/bed/interior gameplay,
-- interiors or entering buildings,
-- furniture placement,
+- enterable house interiors,
+- manual bed/furniture placement,
+- broader furniture gameplay,
 - building upgrades,
 - building damage/repair,
 - completed-house demolition/displacement,
 - rent or real-estate economy,
+- detailed residential access/ownership permissions beyond what is required for Player-constructed-house lodging,
 - overcrowding penalties,
 - NPC construction-material procurement/hauling,
 - permanent construction crews or foremen,
