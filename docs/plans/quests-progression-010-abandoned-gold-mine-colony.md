@@ -1,538 +1,484 @@
-# Plan: Abandoned gold mine → mining colony
+# Plan: Abandoned gold mine → mining colony integration
 
 **Created:** 2026-09-07
 **Status:** `draft` 📝
-**Type:** feature
-**Priority:** high · **Effort:** XL
-**Depends on:** world-terrain-008, quests-progression-002, quests-progression-003
-**Domain:** `quests-progression`
-**Subdomains:** `quests` `rewards` `progression`
-**Tags:** `gold-mine` `colony` `cave` `construction` `expedition` `profit-share`
-**Roadmap:** -
+**Priority:** high · **Effort:** M
+**Depends on:** world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002
+**Domain:** `quests-progression`  
+**Type:** `feature`  
+**Roadmap:** `quests-abandoned-gold-mine-colony`
+
+> **Draft do sprawdzenia, uzupełniania i poprawy.** Finalne integration contracts trzeba ponownie zweryfikować na aktualnym `main` po ustabilizowaniu zależności, szczególnie expedition/travel, colony bootstrap, gold entitlement oraz quest outcomes.
 
 ## Goal
 
-Add a substantial authored questline in which the Player discovers an abandoned gold mine in the mountains, reports the discovery to a sponsoring settlement, prepares minimum infrastructure for reopening it, and causes a real mining expedition to establish a small persistent colony at the site.
-
-The quest should bootstrap a new world situation and then hand ownership back to normal simulation systems:
+Zintegrować istniejące systemy Seedvale w jeden authored questline:
 
 ```text
-mountain cave + real gold deposits
-→ discovery / information
-→ sponsor decision
-→ Player prepares site
-→ expedition travels to mine
-→ provisional camp / colony starts
-→ miners use normal needs, work and economy
-→ later quests can develop the colony further
+existing abandoned mountain mine
+→ information or independent discovery
+→ real gold confirmation
+→ sponsor report
+→ real site infrastructure
+→ buyout or 20% share choice
+→ real NPC expedition
+→ real travel / arrival
+→ real colony bootstrap
+→ quest completion
+→ ordinary autonomous simulation continues
 ```
 
-The mine and gold must exist independently of quest progression. The Player may discover the mine without first obtaining the intended map/information.
+Plan jest przede wszystkim **warstwą integracyjną**. Nie implementuje wewnątrz questa kopalni, złóż, construction state, NPC travel, kolonii, produkcji złota ani profit-share accounting.
 
-Do not build a parallel quest economy, quest mine, quest workers or quest settlement simulation. The quest owns progression and authored transitions; world, settlement, NPC, resource and economy systems own the resulting state.
+Mapa/informacja ujawnia istniejące miejsce. Nigdy nie tworzy kopalni.
 
-## Dependencies
+Independent discovery i normalny information path muszą zbiegać się do jednego quest flow, a nie tworzyć dwóch równoległych questów.
 
-### `world-terrain-008` — Underground Caves V2
+## Architectural invariant
 
-Treat a production-ready Cave V2 architecture as a hard dependency for the mine interior.
+Quest może:
 
-The abandoned mine must use a real walk-in cave in the shared cave system. Do not create a separate `MineInterior`, quest scene, teleport-only underground area or second underground representation.
+- utrzymywać authored progression,
+- reagować na authoritative world facts,
+- inicjować istniejące generic operations,
+- przechowywać irreversible authored choice,
+- przechowywać stable reference do operacji, jeśli nie można jej deterministycznie odnaleźć.
 
-The dependency must provide enough production functionality for this plan to bind a stable cave/world-location identity, place/query real world content inside it, enter/traverse it normally, collide with it correctly, and stream/rebuild it without quest-owned geometry state.
+Quest nie może utrzymywać własnych kopii:
 
-A key integration requirement for this plan is:
+- deposit depletion,
+- construction completion,
+- expedition progress,
+- settlement population,
+- gold production,
+- profit-share accounting.
 
-```text
-Cave V2 spatial representation
-+ stable cave identity
-→ ordinary ResourceDeposit placement/query inside the cave
-→ ordinary NPC/player mining against those deposits
-```
+Po colony bootstrap normalne systemy świata przejmują pełną odpowiedzialność za dalsze działanie kolonii.
 
-If Cave V2 does not yet expose a coherent way to host real `ResourceDeposit` instances and normal mining interactions underground, that missing seam is a real blocker to the underground deposits. Extend the shared cave/world-resource integration rather than implementing quest-local deposits.
+## Dependencies and expected contracts
+
+### `world-terrain-017` — abandoned mountain mine landmark
+
+Dostarcza istniejącą przed questem kopalnię jako stabilny world feature / WorldLocation związany z Cave V2.
+
+Quest potrzebuje stable mine/location identity i możliwości ujawnienia/odnalezienia tego miejsca. Nie odpowiada za siting, terrain classification, cave generation ani geometry.
+
+### `world-018` — cave-aware rich finite resource deposits
+
+Dostarcza realne gold deposits związane z kopalnią/cave oraz normalne mining/depletion/persistence.
+
+Quest jedynie potwierdza, że właściwe realne złoże złota zostało odkryte/rozpoznane. Nie prowadzi licznika rudy i nie tworzy quest deposits.
+
+### `world-019` — persistent Player-built site infrastructure
+
+Dostarcza durable completed terrain preparations oraz read-only site infrastructure query agregujące authoritative world stores.
+
+Quest nakłada własną policy na wynik query, zamiast zapisywać `wellBuilt`, `plotsDone` lub `gardenDone`.
+
+### `settlements-npcs-026` — NPC personal inventory and persistent belongings
+
+Zapewnia wymagany trwały stan NPC wykorzystywany przez provisioning i expedition lifecycle.
+
+### `settlements-npcs-027` — expedition assignment and provisioning
+
+Dostarcza generic expedition assignment/dispatch contract. Quest może zlecić ekspedycję do mine site, ale nie wybiera i nie kopiuje jej runtime state we własnym modelu.
+
+### `settlements-npcs-028` — long-distance NPC travel and expedition movement
+
+Dostarcza realny travel/arrival lifecycle dla ekspedycji. Quest obserwuje ten stan zamiast utrzymywać `expeditionProgress`.
+
+### `settlements-003` — colony bootstrap
+
+Dostarcza generic przejście z przybyłej ekspedycji i przygotowanego site do zwykłego persistent settlement.
+
+Quest nie tworzy households, tents, settlement population ani economy bezpośrednio.
+
+### `settlements-004` — gold economic realization and source entitlements
+
+Dostarcza source-aware gold realization oraz persistent entitlement/accounting potrzebne dla wariantu 20% share.
+
+Quest ustanawia odpowiedni agreement/entitlement po wyborze Playera. Nie liczy produkcji ani należności.
 
 ### `quests-progression-002` — quest outcomes, rewards and consequences
 
-Use the shared quest outcome/reward/consequence model for authored stage resolution and irreversible outcomes. Do not add a mine-specific quest state machine beside the normal quest system.
+Dostarcza shared authored outcome/reward/consequence path i exact-once resolution semantics.
 
-### `quests-progression-003` — paid quests and Player income
+Finalna implementacja musi ponownie sprawdzić aktualny contract po zakończeniu tego planu, szczególnie pod kątem wyboru wykonywanego przed terminalnym końcem całego questline'u.
 
-Use the shared coin reward path for the sponsor's one-time payments. Coins remain ordinary inventory/economy items; do not add a quest wallet.
+## Existing integration foundations
 
-The continuing V1 profit share described below is a new persistent entitlement driven by production from this mine, not a replacement for the normal paid-quest reward mechanism.
+Aktualny `main` posiada już ważne elementy, które należy wykorzystać:
 
-## World setup and mine siting
+- `QuestManager` jako owner quest runtime/progress,
+- `LocationKnowledge` z persistent stable location knowledge,
+- `WorldLocation` / world-location catalog,
+- sources wiedzy m.in. `npc`, `map`, `exploration`,
+- NPC/map reveal przez `LocationKnowledge.reveal(...)`,
+- world interaction refs i landmark objectives,
+- normalny quest giver interaction / availability indicator,
+- Player wells, gardens i terrain preparation,
+- ordinary `ResourceDeposit` mining/depletion,
+- normalne NPC professions / settlement economy foundations,
+- save/load dla quest progress i world knowledge.
 
-### Mountain requirement
+Nie zakładać jednak, że obecne generic seams są wystarczające. Braki wymienione niżej są częścią integration work, jeśli nie zostaną wcześniej rozwiązane przez dependencies.
 
-The abandoned mine must be a real cave **in mountainous terrain**. A random nearby cave outside the mountains is not an acceptable substitute.
+## Missing generic seams to reconfirm
 
-Selection/generation must use the current post-`world-terrain-008` terrain and cave data rather than visual mesh heuristics where a semantic terrain/cave signal exists.
+### Gameplay exploration → `LocationKnowledge`
 
-Required conceptual constraints:
-
-```text
-candidate cave
-+ mountainous terrain / mountain region
-+ suitable relation to the regional settlements
-→ abandoned gold mine candidate
-```
-
-Before implementation, reconfirm the actual mountain/massif ownership and Cave V2 placement APIs. Prefer extending deterministic worldgen/siting constraints so the required world feature exists coherently.
-
-If a generated region can legitimately contain no suitable mountain+cave candidate, do not silently degrade to a flatland mine. Implementation must resolve this at the worldgen/siting layer — for example by deterministically ensuring a suitable candidate in the relevant regional generation context — using the smallest extension compatible with the current terrain architecture.
-
-Do not generate a cave only when the quest starts.
-
-### Mine exists before the quest
-
-The cave, mine identity and gold deposits are world content. They are generated/bound independently of whether the Player has received information about them.
-
-The Player can therefore encounter the mine through ordinary exploration before any quest stage points there.
-
-## Gold deposits
-
-The mine uses ordinary world/resource-owned gold deposits and the existing mining/depletion path.
-
-Target authored layout is approximately **five real gold deposits**:
-
-- **1–2** near the cave entrance / immediately outside it,
-- **2–3** inside the cave.
-
-The exact count may be selected deterministically within those ranges if the shared placement architecture supports it cleanly. The important invariant is that both the exterior clue and richer underground continuation exist.
-
-Reuse `ResourceDeposit`, `src/world/depositMining.ts` and the current post-dependency resource placement/lookup mechanisms. `gold` remains an ordinary mineable/economic resource.
-
-Required behaviour:
-
-- Player mining uses normal mining actions and depletion,
-- NPC miners use normal miner work against the same deposits,
-- depletion is real world state, not quest progress,
-- extracted gold enters the ordinary settlement economy/storage flow,
-- quest completion never refills a deposit,
-- save/load follows the shared resource/depletion persistence contract.
-
-Do not introduce `QuestGoldDeposit`, a quest counter representing remaining ore, or a second mining implementation.
-
-## Regional settlement roles
-
-The questline uses two settlement roles.
-
-### Home settlement
-
-The Player's starting/home settlement should be deliberately **small**, rather than receiving an arbitrary generated size that can make the regional progression nonsensical.
-
-Use the existing settlement size model and worldgen constraints. Do not create a quest-only settlement-size field.
-
-### Mother / sponsoring settlement
-
-A nearby **medium or large** settlement acts as the regional centre that can sponsor reopening the mine and send workers.
-
-The small home settlement may contain the NPC who first knows of the old map/mine story and refers the Player to the larger settlement. The sponsor/administrator in the larger settlement owns the reopening decision and expedition dialogue.
-
-The mine colony should retain a stable relationship to this settlement, conceptually:
+`LocationKnowledge` potrafi zapisać:
 
 ```text
-mining colony → parent / sponsoring settlement id
+mineLocationId
++ confirmed
++ exploration
 ```
 
-Use an existing settlement relationship field if one exists by implementation time. Otherwise add the smallest semantically reusable settlement-level relationship required by this scenario; do not create a politics/faction hierarchy subsystem solely for the quest.
+ale finalna implementacja musi zweryfikować, czy istnieje już normalny gameplay trigger odkrywający konkretną WorldLocation przez fizyczne dotarcie/inspekcję.
 
-Generation should establish a coherent regional arrangement rather than searching the whole world at quest runtime.
+Jeżeli nadal go brakuje, dodać najmniejszy reusable world-location discovery seam. Nie dodawać mine-specific discovery flag.
+
+### World-knowledge quest availability
+
+Obecne quest availability może nie potrafić jeszcze wyrażać prerequisite opartego o world knowledge.
+
+Potrzebny contract powinien pozwalać, aby:
+
+```text
+normal authored information prerequisite
+OR mine already independently discovered
+→ same quest becomes actionable
+→ normal quest availability `!`
+```
+
+Preferować injected/read-only prerequisite resolver albo inne małe rozszerzenie obecnego availability mechanism.
+
+Nie importować całego world system do `QuestManager` i nie budować pełnego condition DSL tylko dla tego questa.
+
+### Resource deposit/source objective
+
+Quest potrzebuje generic sposobu potwierdzenia realnego gold deposit należącego do właściwej kopalni/source.
+
+Preferowany model:
+
+```text
+ordinary Player interaction/inspection/mining event
+→ stable resource/deposit/source ref
+→ generic quest objective observes matching world fact
+```
+
+Objective oznacza **potwierdzenie złota**, nie `mine N gold`.
+
+Nie hard-code'ować gold mine w `QuestManager`.
+
+### Persistent authored mid-quest choice
+
+Player wybiera:
+
+```text
+buyout
+OR
+20% share
+```
+
+przed dispatch/bootstrap, podczas gdy terminalny koniec questa następuje dopiero po powstaniu kolonii.
+
+Jeżeli aktualny quest outcome/dialogue system nadal nie obsługuje takiego persistent non-terminal choice, dodać najmniejszy reusable authored-choice mechanism. Nie budować pełnego dialogue-tree engine.
+
+Choice musi być exact-once i round-tripować przez save/load.
 
 ## Quest flow
 
-### 1. Information / map entry
+### 1. Information path
 
-An authored NPC in or associated with the small home settlement can provide information leading toward the abandoned mine and/or refer the Player to the larger regional settlement.
+Odpowiedni NPC/informacja/mapa prowadzi Playera do istniejącej abandoned mountain mine.
 
-The map/information may remain quest knowledge in V1; it does not need to become a physical inventory item unless the current authored-quest architecture makes that useful.
-
-The map reveals an existing mine. It never creates the cave, deposits or mine state.
-
-### 2. Independent discovery shortcut
-
-The Player may find the mine before receiving the map/information.
-
-Discovering the authored mine through ordinary exploration persists a stable discovery fact. That discovery makes the relevant NPC immediately actionable — in UI terms, the normal quest-availability `!` should appear as though the Player already had the information needed to start/advance this questline.
-
-This is deliberately a V1 convergence shortcut:
+Informacja używa shared world-location knowledge:
 
 ```text
-normal information path ─┐
-                         ├→ report / sponsor path
+existing mine WorldLocation
+→ reveal / discover through normal knowledge path
+```
+
+Nie generować kopalni ani depositów przy rozpoczęciu questa.
+
+### 2. Independent discovery
+
+Player może odnaleźć kopalnię bez wcześniejszej informacji.
+
+Ordinary exploration zapisuje discovery w `LocationKnowledge`, nie w quest-local state.
+
+To discovery powoduje, że odpowiedni authored NPC staje się actionable przez normalny quest availability mechanism.
+
+Obie ścieżki zbiegają się do tego samego questa:
+
+```text
+information/map ─────────┐
+                         ├→ same mine confirmation/report flow
 independent discovery ───┘
 ```
 
-Do not build a second full quest branch for accidental discovery. Do not duplicate the mine discovery into an inventory map item merely to satisfy prerequisites.
+Nie tworzyć drugiego questa i nie mintować fikcyjnego map item tylko po to, żeby spełnić prerequisite.
 
-### 3. Explore and confirm gold
+### 3. Confirm real gold
 
-The Player travels to the real cave and confirms that it contains gold.
+Player dociera do kopalni i potwierdza realne gold deposits należące do tej kopalni/source.
 
-The exterior 1–2 deposits allow the mine to be recognised without requiring the Player to exhaustively clear/explore the interior. The 2–3 interior deposits make the cave itself materially valuable.
+Quest reaguje na authoritative deposit/world interaction fact.
 
-Use a stable mine/cave discovery or authored world-interaction fact rather than checking camera position every frame. If the current quest objective vocabulary cannot express discovery/inspection of this world feature, extend the generic quest/world objective seam with the smallest reusable objective/ref instead of hard-coding the cave in `QuestManager`.
+Nie wymaga wydobycia konkretnej liczby sztuk i nie przechowuje depletion/progress kopania.
 
-The objective is discovery/confirmation, not mining N units of gold.
+### 4. Report to sponsor
 
-### 4. Report to the sponsoring settlement
+Player raportuje odkrycie sponsorowi/administratorowi w większej osadzie.
 
-The Player reports the discovery to the sponsor/administrator in the medium/large settlement.
+Sponsor nie tworzy kolonii natychmiast. Warunkiem dispatch jest przygotowanie realnego site infrastructure.
 
-The sponsor agrees to reopen the mine if minimum infrastructure is prepared first. This is the authored transition from discovery into site preparation; it must not directly spawn a completed colony.
+### 5. Prepare real infrastructure
 
-### 5. Prepare minimum infrastructure
+Quest sprawdza przez shared site query co najmniej:
 
-Before an expedition is dispatched, require real world infrastructure at the mine site. V1 minimum:
+- **2 odpowiednie completed prepared plots**,
+- **1 usable Player-built well**,
+- **1 agricultural construction / usable cultivation anchor**.
 
-- **1–2 prepared terrain plots**, using the existing terrain preparation mechanism,
-- **one Player-built well** that resolves to a usable `WaterSource`,
-- **one garden / basic food-growing area** using the normal garden/farming representation.
+Dokładna kwalifikacja geometrii i site bounds ma być jawna i deterministyczna w finalnym planie/implementacji po ustabilizowaniu `world-019`.
 
-The exact geometry/count thresholds should be explicit and deterministic in implementation and should validate authoritative world objects within the mine/colony site, not quest-owned booleans such as `wellBuilt = true`.
+Quest nie persistuje derived `siteReady`.
 
-Reuse existing `TerrainPreparationRecord`, construction/shared-work seams, Player well stages/groundwater resolution, `WaterSource`, and garden/farmer systems.
+Każde ponowne sprawdzenie korzysta z authoritative world state.
 
-If garden creation is currently settlement-generation-only rather than a reusable runtime construction/placement operation, extend the shared settlement/garden mechanism minimally so this site can own a real garden. Do not create `QuestGarden`.
+### 6. Buyout vs 20% share
 
-The prepared plots are intended to support the initial camp and later buildings. Do not require a complete permanent village before the expedition arrives.
+Po zaakceptowaniu przygotowanego site Player dokonuje trwałego wyboru:
 
-### 6. Infrastructure hand-in and payment
+- większy one-time **buyout**, albo
+- **20% share** powiązany z realną przyszłą produkcją właściwego mine/colony source.
 
-Once the authoritative infrastructure requirements are satisfied, the Player reports back to the sponsor.
+Buyout korzysta z normalnego quest reward/coin path.
 
-The sponsor:
+Share ustanawia persistent entitlement przez `settlements-004`.
 
-1. recognises the real completed infrastructure,
-2. pays the authored one-time preparation reward through the normal quest reward/coin path,
-3. commits to sending the expedition.
+Quest nie przechowuje accrued value, production cursor ani claim accounting.
 
-The reward must resolve exactly once across save/load.
+### 7. Dispatch real expedition
 
-### 7. Expedition departs
+Sponsor uruchamia istniejący expedition assignment/provisioning mechanism.
 
-The sponsor sends an initial expedition of approximately **three miners**.
+Quest może przechować stable expedition assignment reference tylko wtedy, gdy dependency nie zapewnia jednoznacznego deterministic lookup po sponsor/site/agreement identity.
 
-These must be real NPCs, not quest markers or temporary cinematic actors. The intended experience is that they physically travel from the sponsoring settlement toward the mine using normal NPC movement/pathfinding where practical.
+Nie przechowywać kopii NPC IDs, positions, supplies ani travel progress, jeżeli należą już do expedition/NPC state.
 
-V1 may use a narrow deterministic expedition/relocation orchestration hook because the current simulation does not provide a generic runtime migration/job-market/settlement-founding mechanism.
+Dispatch musi być idempotentny przez save/load i repeated dialogue.
 
-That hook may decide **who moves and when**, but after assignment the NPCs must continue to use normal authoritative NPC state for:
+### 8. Observe travel and arrival
 
-- movement,
-- needs,
-- schedules/routines,
-- health and lifecycle,
-- profession/work,
-- inventory,
-- save/load.
+Quest obserwuje realny lifecycle ekspedycji z `settlements-npcs-028`.
 
-Do not implement generic migration, a labor market or a new NPC controller solely for this quest.
+Nie symuluje ruchu, nie teleportuje quest actors i nie zwiększa własnego progress timera.
 
-### 8. Provisional mining camp
+Player/camera nie są wymagane do kontynuacji travel.
 
-On arrival, the miners establish a provisional camp on/near the prepared site and begin living there.
+### 9. Observe colony bootstrap
 
-The first visible colony should be intentionally small. V1 target:
+Po realnym arrival generic `settlements-003` tworzy/aktywuje zwykłe persistent settlement przy mine site.
 
-- about three miners,
-- tents rather than instantly generated permanent houses,
-- access to the prepared well,
-- access to the garden/basic food infrastructure,
-- normal mining work at the real gold deposits.
+Quest obserwuje authoritative bootstrap/founded-settlement fact.
 
-Before implementation, inspect the current tent/camp/placement ownership. If an existing reusable camp/tent representation can become NPC home/shelter, use it. Otherwise add the smallest persistent **provisional settlement camp** mechanism required to give these NPCs real shelter/home anchors; do not encode tents as quest-stage decoration.
+Nie tworzy własnego `MiningColony`, tents, households, population ani economy state.
 
-The quest may author the initial placement/assignment of the camp. Once established, the camp's world objects and NPC state are normal persistent simulation state.
+### 10. Complete quest
 
-### 9. Colony activation
+Quest kończy się dopiero po potwierdzeniu realnego colony bootstrap.
 
-The site becomes an actual small mining colony once the expedition has arrived and its minimum camp state is established.
+Terminal outcome/reward/consequences korzystają ze shared quest resolution contract.
 
-There is currently no verified generic runtime flow for:
+Po completion quest nie steruje dalszą kopalnią ani kolonią.
+
+### 11. Autonomous continuation
+
+Po zakończeniu:
 
 ```text
-world location
-→ found settlement
-→ attach households/NPCs
-→ begin autonomous settlement simulation
+real settlement
++ real NPCs
++ real gold deposits
++ ordinary work/economy
++ source-aware entitlement if selected
+→ normal simulation continues independently
 ```
 
-V1 may therefore use a narrow deterministic **colony bootstrap** integration that creates/registers the minimum settlement identity and assigns the expedition to it.
+Dalsze houses, storage, workers, roads, food expansion i rozwój kolonii należą do zwykłej symulacji albo późniejszych questów.
 
-This bootstrap is intentionally bounded. It must reuse the normal settlement representation, economy, households/NPC ownership and simulation after creation rather than introducing `MiningColonyManager` or a quest-owned mini-settlement.
+## Quest-owned persistent state
 
-The colony should persist independently of the Player/camera after activation.
+Minimalizować persisted quest state.
 
-### 10. Autonomous mining
-
-After activation, miners perform the existing miner profession work:
+Quest powinien posiadać tylko authored progression/decisions, np. konceptualnie:
 
 ```text
-needs / schedule
-→ travel to ordinary gold ResourceDeposit
-→ mine through normal depositMining
-→ carry/deposit output
-→ SettlementEconomy gold stock
+QuestProgress
+- quest id
+- lifecycle state
+- stage index
+- resolved outcome where applicable
+- authored reward choice: buyout | share
+- optional stable operation reference only if required
 ```
 
-The mine is world/resource-owned; miners do not need a household-owned mine building. Storage and economy should follow current communal settlement mechanisms.
+### Explicitly not quest-owned
 
-The quest must not increment production on a timer, simulate miners while the normal NPC system is active, or grant gold merely because the Player is away.
-
-Normal adaptive/off-screen simulation should continue to own remote activity where supported.
-
-### 11. Later colony-development quests
-
-Permanent houses, expanded storage, additional workers, improved food infrastructure, roads and other development are deliberately **not prerequisites for the initial reopening**.
-
-The initial questline should end with a viable provisional colony that can operate. Later authored/systemic quests can ask the Player to help turn it into a more permanent settlement.
-
-Those later quests should operate on the same real colony and world state rather than replacing the provisional site with a scripted final village.
-
-## Profit share V1
-
-At the relevant reward decision, the Player may choose between:
-
-- a larger one-time buyout/payment, or
-- a continuing **share in profits V1**.
-
-V1 does not introduce full enterprise accounting, investors, wages, operating expenses or a generic business system.
-
-Technically, the continuing share should be a **production royalty derived from real gold produced by this specific mine/colony**, presented narratively as a share in profits.
-
-Do not calculate the Player's share from current `SettlementEconomy.gold` stock. Settlement stock can be consumed, transferred or loaded from save data and is not a reliable production ledger.
-
-Required conceptual seam:
-
-```text
-confirmed gold production/deposit
-+ source = this mine / its deposits
-+ Player entitlement
-→ accrue claimable coin value exactly once
-```
-
-Prefer a narrow reusable source-aware production/economic event at the authoritative miner deposit/production boundary if the current code still lacks one. Do not couple `SettlementEconomy.add('gold')` directly to a quest id.
-
-Persist the entitlement and its accrual/claim state, conceptually equivalent to:
-
-```text
-reward mode: buyout | profit_share
-mine/colony identity
-accrued claimable value
-last accounted production identity/cursor where required
-```
-
-The exact schema must follow the current quest outcome and save architecture at implementation time.
-
-The royalty must be driven by real future mine production, including simulation that occurs without the Player standing at the mine. It must not require the quest giver to be loaded for accrual.
-
-Claiming/paying the accrued coins should reuse the normal coin grant/inventory path. A simple sponsor/administrator interaction for collecting accrued share is sufficient for V1.
-
-## State ownership
-
-Keep authoritative state in its owning domain:
-
-| State | Owner |
+| State | Authoritative owner |
 |---|---|
-| quest stage / resolved reward choice | quest system |
-| mine discovery knowledge | shared world/quest discovery integration |
-| cave identity/topology/interior | Cave V2 / world-terrain |
-| mountain classification | terrain/worldgen |
-| gold deposit identity/content/depletion | world resources |
-| terrain preparation | existing terrain preparation system |
-| well construction and water availability | player well / water systems |
-| garden/crops | settlement/farming systems |
-| expedition NPC identity, needs, movement, inventory | NPC system |
-| provisional tents/camp objects | shared world/settlement/camp representation |
-| colony identity / parent settlement relation | settlement system |
-| gold stock and normal economic flow | `SettlementEconomy` |
-| profit-share entitlement/accrual | quest/reward integration, persisted |
-| Player coins | normal item/inventory system |
+| mine discovery | `LocationKnowledge` |
+| mine/cave identity and geometry | world / Cave V2 / mine landmark |
+| deposit identity, reserves, depletion | world resources |
+| completed preparations | terrain/site infrastructure |
+| well state / water availability | Player well / water systems |
+| agricultural construction/crops | garden/cultivation systems |
+| expedition composition/provisioning | expedition/NPC systems |
+| expedition movement/arrival | travel/NPC systems |
+| settlement identity/population | settlement system |
+| gold production | economy/resource systems |
+| 20% entitlement and accrual | source-aware economy/entitlement system |
+| Player coins | inventory |
 
-Quest state may reference stable ids and record irreversible authored decisions. Do not copy live simulation values into quest state for convenience.
+Do not persist derived readiness or duplicate authoritative values for convenience.
 
-## Persistence
+## Operation identity and idempotency
 
-Save/load must preserve the world transition without duplicating rewards, NPCs, deposits or settlement creation.
+Every cross-system command issued by the quest must be safe against repeated interaction and save/load.
 
-At minimum verify persistence/restore for:
+Required invariants:
 
-- mine discovery and quest stage,
-- reward choice and one-time payout resolution,
-- cave/mine stable binding where not deterministic from worldgen,
-- gold deposit depletion through the shared resource contract,
-- terrain preparation,
-- well construction and water availability,
-- garden/crop state through its owning system,
-- expedition dispatched/not-dispatched transition,
-- identities of the three expedition NPCs,
-- travel/arrival state where required by normal NPC persistence,
-- provisional camp/tents,
-- colony identity and parent/sponsor relationship,
-- households/settlement membership after bootstrap,
-- settlement economy after activation,
-- profit-share entitlement and accrued/claimed value.
+- information reveal cannot create duplicate mine state,
+- reward choice resolves once,
+- buyout pays once,
+- share entitlement is established once,
+- expedition dispatch cannot create duplicate expedition,
+- colony bootstrap cannot create duplicate settlement,
+- quest completion cannot replay irreversible consequences.
 
-Colony bootstrap must be idempotent. Loading a save after dispatch/arrival must never create a second expedition, duplicate settlement or regenerate five fresh gold deposits.
+Prefer stable IDs / deterministic lookup supplied by owning systems over extra quest flags.
 
-Derived deterministic worldgen state should remain derived where existing systems already guarantee stable reconstruction.
+## Dialogue and NPC availability
 
-## Reuse / extension targets
+Use the normal NPC dialogue and quest indicator path.
 
-Implementation should reconfirm and reuse the current equivalents of:
+Required authored states include at least:
 
-- `src/quests/QuestManager.ts` and quest definitions — stages, objectives, outcomes and persistent quest progress,
-- `src/world/depositMining.ts` — normal ore mining/depletion including `gold`,
-- `ResourceDeposit` ownership/placement/lookup — exterior and cave-interior deposits,
-- `SettlementEconomy` — normal colony gold stock/flow,
-- miner profession work and its authoritative deposit-to-settlement path,
-- `TerrainPreparationRecord` and existing shared terrain-work/construction integration,
-- `src/world/playerWell.ts` / `createPlayerWells.ts` and `WaterSource`,
-- existing settlement garden/farmer/crop mechanisms,
-- existing Work Contracts/shared construction where infrastructure work can reuse them,
-- NPC pathfinding/movement, profession, schedules, needs and persistence,
-- households and settlement membership,
-- settlement generation/registration/runtime ownership,
-- current tent/camp/shelter mechanisms,
-- post-`world-terrain-008` Cave V2 spatial/location APIs,
-- save schema and rebuild/restore paths for every new authoritative field.
+- initial information / map path,
+- independent-discovery-aware availability,
+- mine confirmed / sponsor report,
+- infrastructure requirement,
+- infrastructure accepted,
+- buyout/share choice,
+- expedition dispatched / travelling,
+- arrival/bootstrap acknowledgement,
+- final completion.
 
-If current code has moved these responsibilities by implementation time, follow current ownership rather than preserving obsolete file names from this draft.
+Do not make dialogue authoritative for world facts. Dialogue reads quest + world state and presents it.
 
-## Explicit V1 integration hooks
+Independent discovery should result in normal actionable quest availability rather than a special popup or parallel interaction mode.
 
-The following bounded hooks are acceptable because no generic current mechanism was verified during planning:
+## Failure and edge cases
 
-### Colony bootstrap
+Final implementation must explicitly decide behaviour for at least:
 
-A deterministic transition that registers a real small settlement/colony at the prepared mine site and attaches the expedition to it.
+- Player discovers mine before meeting information NPC,
+- Player confirms gold before quest offer,
+- infrastructure already exists before sponsor asks for it,
+- Player mines/depletes some gold before sponsor report,
+- save/load after reward choice but before dispatch,
+- save/load while expedition travels,
+- Player leaves region while expedition travels/bootstrap occurs,
+- expedition member lifecycle changes if generic expedition system permits it,
+- colony already exists when quest resumes after restore,
+- selected share entitlement already exists when dialogue repeats.
 
-After bootstrap, ordinary settlement/NPC/economy systems take over.
+Where possible, recompute progression eligibility from authoritative facts instead of requiring the Player to repeat already-completed world actions.
 
-### Initial expedition assignment / relocation
+## Scope
 
-A deterministic authored assignment of roughly three miners from the mother settlement and their destination. It is not a generic migration system.
+This plan owns:
 
-### Provisional camp establishment
-
-A bounded integration for miners to establish persistent tents/home anchors if the current shared camp representation cannot already do this directly.
-
-### Source-aware production royalty
-
-A narrow production attribution seam sufficient to accrue the Player's persisted V1 share from real gold produced by this mine.
-
-These hooks should be designed so future generic migration, settlement founding, enterprise/accounting or colony-development systems can replace the authored trigger without replacing the resulting world state.
-
-## Architecture constraints
-
-- The mine is real world content and exists before quest discovery.
-- The mine must be in mountainous terrain.
-- The mine uses Cave V2; no parallel underground system.
-- Gold uses real `ResourceDeposit` instances and normal depletion.
-- Exterior and interior deposits are part of one mine feature.
-- The map/information reveals the mine; it does not create it.
-- Independent exploration converges into the same questline and enables the relevant NPC `!`.
-- Infrastructure completion is determined from real world objects/state.
-- The expedition consists of real NPCs.
-- NPCs physically travel where normal pathfinding/lifecycle makes this practical; do not teleport merely because the Player is not observing them unless the normal adaptive simulation resolves remote travel that way.
-- Tents/camp must be persistent world/shelter state, not decorative quest props.
-- After bootstrap, the colony uses normal settlement/NPC/economy simulation and operates without the Player.
-- Profit share is based on attributed production, not current stock.
-- Prefer stable ids over runtime object references for all authored bindings.
-- Do not keep the mine/colony at high simulation fidelity solely because a quest references it.
-- Add JSDoc for important new shared/public architectural APIs; use `@domain quests-progression` and the owning domain tag where useful for preflight discovery.
+- authored quest definition/stages/dialogue integration,
+- convergence of information and independent-discovery paths,
+- integration of world knowledge with quest availability,
+- generic deposit/source confirmation objective if still missing,
+- mine-specific infrastructure qualification policy over generic query results,
+- persistent buyout/share authored choice integration,
+- calls into expedition dispatch,
+- observation of travel/arrival/bootstrap,
+- final quest resolution,
+- exact-once/idempotent cross-system orchestration.
 
 ## Non-goals
 
-Do not implement in this plan:
+Do **not** implement here:
 
-- a generic dynamic settlement-founding UI,
-- a generic migration or immigration simulation,
-- a runtime labor market,
-- a generic company/business/investment/shareholder system,
-- full profit-and-loss accounting,
-- wages, taxes or operating-cost simulation solely for profit share,
-- a separate mine economy,
-- a separate mine-interior renderer or scene,
-- procedural generation of arbitrary mining quests,
-- a complete settlement hierarchy/politics model,
-- permanent build-out of the mining colony,
-- every later colony-development quest,
-- multiplayer synchronization.
+- Cave V2,
+- abandoned mine generation/siting,
+- rich deposit generation,
+- deposit depletion/mining mechanics,
+- terrain preparation implementation,
+- well construction,
+- garden/cultivation implementation,
+- NPC personal inventory,
+- expedition candidate selection/provisioning internals,
+- long-distance travel/pathfinding,
+- tents/camp implementation,
+- household creation mechanics,
+- generic settlement bootstrap internals,
+- mining profession behaviour,
+- settlement economy,
+- source-aware gold production accounting,
+- profit-share accrual/claim accounting,
+- generic migration/labour market,
+- permanent colony development,
+- a general dialogue tree/condition DSL unless independently justified.
 
-## Performance
+## Implementation approach
 
-The quest should add negligible continuous quest bookkeeping.
+Before coding, reconfirm current `main` and implementation notes for every dependency that has moved to `done`.
 
-- Resolve discovery, construction completion, expedition transitions and production attribution through events/action boundaries or bounded low-frequency checks, not per-frame global scans.
-- Cave lifecycle follows Cave V2 streaming; quest references must not pin the interior loaded.
-- Do not keep expedition NPCs or colony residents in near/full-fidelity simulation solely because they are quest-related.
-- Use normal adaptive/off-screen NPC and settlement simulation after activation.
-- Production royalty accounting should happen at authoritative production/deposit events, not by repeatedly scanning settlement inventories.
-- Do not add a worker solely for quest/royalty bookkeeping.
+Suggested integration order after dependencies are ready:
+
+1. Reconfirm stable mine WorldLocation/source identities and actual dependency APIs.
+2. Add/finalize generic gameplay WorldLocation exploration discovery if still missing.
+3. Add/finalize generic world-knowledge quest availability seam if still missing.
+4. Add/finalize generic resource deposit/source objective/ref if still missing.
+5. Add the authored quest definition and information/independent-discovery convergence.
+6. Integrate sponsor report and authoritative site infrastructure policy.
+7. Add/finalize persistent authored mid-quest choice if still missing.
+8. Wire buyout/share consequences to normal reward and entitlement owners.
+9. Dispatch expedition through the generic expedition API.
+10. Observe travel/arrival without copying state.
+11. Observe/trigger idempotent colony bootstrap through the shared settlement API.
+12. Resolve the quest through the normal outcome mechanism.
+13. Add focused integration/persistence tests and update docs/roadmap status as appropriate.
 
 ## Verification
 
-Automated verification should cover, where practical:
+Automated verification should cover at least:
 
-- the authored mine satisfies the mountain+cave siting contract,
-- the same mine/deposits exist before and after quest activation,
-- approximately five ordinary gold deposits are bound as intended: 1–2 exterior and 2–3 interior,
-- deposits use normal mining/depletion and cannot be refilled by quest transitions,
-- independent mine discovery persists and enables the same relevant NPC availability path as prior information,
-- the map/information path and independent-discovery path converge without duplicate stages/rewards,
-- infrastructure gating reads authoritative terrain/well/garden state,
-- incomplete infrastructure cannot dispatch the expedition,
-- completing infrastructure pays the preparation reward exactly once,
-- expedition dispatch is idempotent across save/load,
-- roughly three real miner NPCs are assigned and reach the site through the intended movement/off-screen travel contract,
-- provisional camp objects and NPC home/shelter state persist,
-- colony bootstrap creates/registers one real settlement identity exactly once,
-- expedition NPCs become members/residents of that colony without losing normal needs/schedules/inventory state,
-- miners use ordinary gold deposits and deposit output through the normal economy path,
-- colony mining continues independently of Player/camera under the normal simulation contract,
-- buyout and profit-share reward choices are mutually exclusive and persistent,
-- profit-share accrues only from attributable real production from this mine,
-- save/load cannot double-account production or duplicate claimable coins,
-- claiming accrued share uses normal coins and cannot claim the same accrual twice,
-- existing cave, terrain, construction, well, garden, NPC, mining, settlement, economy, quest and persistence tests remain green.
+- information path and independent discovery converge to the same quest,
+- independent discovery survives save/load,
+- discovery makes the correct NPC actionable through normal availability,
+- already-confirmed gold can satisfy progression without duplicate interaction,
+- deposit depletion remains resource-owned,
+- infrastructure qualification reads authoritative world state,
+- pre-existing qualifying infrastructure is accepted,
+- buyout/share choice persists,
+- buyout is exact-once,
+- share establishes exactly one entitlement,
+- expedition dispatch is exact-once,
+- quest observes restored in-progress travel,
+- colony bootstrap is exact-once,
+- quest can recover after loading a save where the colony already exists,
+- completion does not own or stop subsequent mining/economy simulation.
 
-## Manual verification
-
-Manual browser verification is performed by the User.
-
-Verify at least:
-
-1. normal information/map path from the small settlement through the sponsoring settlement to the mine;
-2. discovering the mine first through exploration and seeing the relevant NPC become available with `!`;
-3. exterior gold visible/usable and interior gold reachable through the real Cave V2 interior;
-4. infrastructure cannot be completed with unrelated distant terrain/well/garden objects;
-5. preparing 1–2 plots, a working well and garden unlocks the sponsor hand-in;
-6. sponsor pays once and sends the expedition;
-7. the three miners visibly travel/arrive, establish tents and begin living at the site;
-8. miners satisfy needs and mine/deposit gold without Player scripting;
-9. leave the region, return later and confirm the colony continued coherently;
-10. save/reload before discovery, during infrastructure preparation, after expedition dispatch, during travel, after camp establishment and after colony activation;
-11. both reward modes: one-time buyout and V1 profit share;
-12. with profit share selected, allow real mining to occur off-screen, return to the sponsor and collect only the correctly accrued amount.
-
-## Completion criteria
-
-- A deterministic abandoned gold mine exists as a real mountain Cave V2 world feature independently of quest progression.
-- It contains ordinary gold deposits using the shared mining/depletion system, with 1–2 near the entrance and 2–3 inside.
-- The small home settlement and medium/large sponsoring settlement form a coherent regional quest setup.
-- The Player can reach the sponsor path either through authored information/map knowledge or by independently discovering the mine.
-- Real terrain preparation, a working well and a real garden gate expedition dispatch.
-- Completing minimum infrastructure produces a one-time normal quest payment and sends approximately three real miners.
-- The miners travel to the site, establish a persistent provisional tent camp and continue as normal NPCs.
-- Colony bootstrap creates one real small settlement identity linked to its sponsoring settlement and hands subsequent operation to ordinary settlement/NPC systems.
-- Miners autonomously extract real gold and feed it into normal `SettlementEconomy` flow.
-- The colony continues operating independently of Player/camera according to the normal adaptive simulation model.
-- The Player can choose a one-time buyout or persistent V1 profit share; the latter accrues from attributable real production rather than settlement stock snapshots.
-- Save/load cannot duplicate the mine, deposits, infrastructure completion, expedition, colony, rewards or profit-share accrual.
-- Later quests can extend the same colony rather than replacing it with a scripted final state.
+Player performs browser/manual verification.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
