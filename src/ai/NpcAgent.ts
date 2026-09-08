@@ -595,9 +595,9 @@ const WATER_DRINK_FROM_STOCK_AMOUNT = 1
  *  not a world-wide search. See `resolveWaterWellTarget`. */
 const PLAYER_WELL_WATER_SEARCH_RADIUS = 60
 
-/** NPC carry capacity — only ever needs to hold a handful of profession
- *  yields (weight ~1 each) at a time, a small fraction of the player's
- *  `DEFAULT_MAX_WEIGHT`. */
+/** NPC temporary logistics carrier cap (plan npc-020) — task/profession
+ *  yield capacity, not biological human carrying. Independent of Strength
+ *  and of the player's body-carry resolver. */
 const NPC_CARRY_MAX_WEIGHT = 5
 
 /** Real hunger-source discovery radius (plan 174) — same order of magnitude
@@ -781,8 +781,9 @@ export type NpcAgentDeps = {
   /** Deterministic physical profile (plan npc-001/npc-019) — the same object
    *  `createSettlement.ts` already computes to seed `npcState`'s maxima via
    *  `npcStateRegistry.getOrCreate()`; threaded through separately here so
-   *  `NpcAgent` can also read base SPEA (`resolveHumanStrengthProfile()` for
-   *  melee) without duplicating that generation call. Defaults to
+   *  `NpcAgent` can also read resolved human Strength (melee + physical
+   *  work) and Agility (melee recovery) without duplicating that generation
+   *  call. Defaults to
    *  `generatePhysicalProfile(treeIndex, member.character.gender, member.age)`
    *  for callers with no profile to hand in — same "isolated fallback" idiom
    *  as `npcState` defaulting via that same call. */
@@ -1208,8 +1209,9 @@ export class NpcAgent {
   /** This NPC's already-resolved/profiled human Strength (plan npc-019 §5,
    *  `npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile()`) — resolved
    *  once at construction from the stable deterministic physical profile,
-   *  not re-rolled per attack. Threaded into `applyNpcMeleeHit()` for the
-   *  shared melee Strength rule. */
+   *  not re-rolled per attack or work action. Threaded into
+   *  `applyNpcMeleeHit()` for melee and into `NpcWorkContext.strength` for
+   *  physical work (plan npc-020). */
   private readonly meleeStrength: number
   /** This NPC's already-resolved/profiled human Agility (plan npc-022,
    *  `npcPhysicalProfile.ts`'s `resolveHumanAgilityProfile()`) — resolved
@@ -3621,6 +3623,7 @@ export class NpcAgent {
       mining: this.mining,
       foodSources: this.foodSources,
       householdExchange: this.householdExchange,
+      strength: this.meleeStrength,
     }
   }
 

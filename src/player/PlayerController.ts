@@ -184,7 +184,7 @@ export class PlayerController {
   /** Shared SPEA (plan npc-019 §6) — fixed at `PLAYER_STARTING_ATTRIBUTES`
    *  for now (slightly above the shared `0.5` typical-healthy-adult
    *  reference, which stays the neutral point for consumer mappings like
-   *  melee). No persistence, character creation or progression yet. */
+   *  melee, physical work and human carrying). No persistence, character creation or progression yet. */
   readonly attributes: PhysicalAttributes
   /** Stamina/vigor/hunger/thirst (plan 106) — `stamina` is ticked here
    *  (tightly coupled to sprint below); `app/gameLoop.ts` ticks the other

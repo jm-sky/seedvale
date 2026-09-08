@@ -66,7 +66,8 @@ import {
   listSaves,
   setActiveSaveId,
 } from '../persistence/saveDb'
-import { type CaveGroundQuery, PlayerController } from '../player/PlayerController'
+import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
+import { type CaveGroundQuery, PLAYER_STARTING_ATTRIBUTES, PlayerController } from '../player/PlayerController'
 import {
   resetPlayerNeeds,
   restorePersistedNeeds,
@@ -589,7 +590,7 @@ export async function createApp(
 
   const inventory = new Inventory(
     initialSave?.inventory,
-    undefined,
+    humanBodyCarryCapacityKg(PLAYER_STARTING_ATTRIBUTES.strength),
     initialSave ? Inventory.instancesFromJSON(initialSave.inventoryInstances ?? []) : undefined,
     initialSave?.foodBatches,
     DEFAULT_MAX_SIZE,

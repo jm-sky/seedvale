@@ -9,7 +9,8 @@
  *  conditions; those live in per-consumer profile/effective resolvers (see
  *  `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile`/
  *  `resolveHumanAgilityProfile` and `combat/meleeStrength.ts`/
- *  `combat/meleeAgility.ts`).
+ *  `combat/meleeAgility.ts`, plus `player/physicalWorkStrength.ts` and
+ *  `player/humanCarryCapacity.ts`).
  * @owns PhysicalAttributes
  */
 

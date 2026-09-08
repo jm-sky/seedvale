@@ -3,7 +3,10 @@ import type { NpcWorkContext } from './npcProfessionWork'
 import { createSettlementEconomy } from '../economy'
 import { Inventory } from '../items/Inventory'
 import { createWeaponInstance } from '../items/weaponMaintenance'
+import { physicalWorkDuration } from '../player/physicalWorkStrength'
 import { createHousehold } from '../settlement/household'
+import { MINE_DURATION_SEC } from '../terrain/depositMining'
+import { FISHING_CAST_DURATION_SEC } from '../world/fishing'
 import { BLACKSMITH_SHARPEN_THRESHOLD, findWeaponNeedingMaintenance, planProfessionWork } from './npcProfessionWork'
 
 const HOME = { x: 0, y: 0, z: 0 }
@@ -45,6 +48,7 @@ function baseCtx(overrides: Partial<NpcWorkContext> = {}): NpcWorkContext {
     mining: null,
     foodSources: null,
     householdExchange: null,
+    strength: 0.5,
     ...overrides,
   }
 }
@@ -92,18 +96,54 @@ describe('planProfessionWork', () => {
   })
 
   describe('miner', () => {
+    const mining = {
+      queryNearest: () => ({ id: 'd1', type: 'iron' as const, x: 1, z: 1, remaining: 5 }),
+      mine: () => ({ ok: true as const, yield: { kind: 'iron' as const, count: 1 }, remaining: 4 }),
+    }
+
     it('returns null without carry room for the ore kind', () => {
       const carried = new Inventory(undefined, 0.001)
-      const mining = {
-        queryNearest: () => ({ id: 'd1', type: 'iron' as const, x: 1, z: 1, remaining: 5 }),
-        mine: () => ({ ok: true as const, yield: { kind: 'iron' as const, count: 1 }, remaining: 4 }),
-      }
       const ctx = baseCtx({ role: 'miner', mining, economy: createSettlementEconomy('s', {}, []), carried })
       expect(planProfessionWork(ctx)).toBeNull()
     })
 
     it('returns null without mining hooks or economy', () => {
       expect(planProfessionWork(baseCtx({ role: 'miner' }))).toBeNull()
+    })
+
+    it('preserves legacy mining duration at Strength 0.5 and leaves the deposit step unchanged', () => {
+      const ctx = baseCtx({
+        role: 'miner',
+        mining,
+        economy: createSettlementEconomy('s', {}, []),
+        strength: 0.5,
+        waitMultiplier: 2,
+      })
+      const work = planProfessionWork(ctx)
+      expect(work?.kind).toBe('mine')
+      expect(work?.durationSec).toBe(MINE_DURATION_SEC * 2)
+      expect(work?.next?.durationSec).toBe(0.8 * 2)
+    })
+
+    it('applies the shared physical-work Strength rule to mining only', () => {
+      const strong = planProfessionWork(baseCtx({
+        role: 'miner',
+        mining,
+        economy: createSettlementEconomy('s', {}, []),
+        strength: 1,
+      }))
+      const weak = planProfessionWork(baseCtx({
+        role: 'miner',
+        mining,
+        economy: createSettlementEconomy('s', {}, []),
+        strength: 0,
+      }))
+      expect(strong?.durationSec).toBe(physicalWorkDuration(MINE_DURATION_SEC, 1))
+      expect(weak?.durationSec).toBe(physicalWorkDuration(MINE_DURATION_SEC, 0))
+      expect(strong?.durationSec).toBeLessThan(MINE_DURATION_SEC)
+      expect(weak?.durationSec).toBeGreaterThan(MINE_DURATION_SEC)
+      expect(strong?.next?.durationSec).toBe(0.8)
+      expect(weak?.next?.durationSec).toBe(0.8)
     })
   })
 
@@ -117,9 +157,10 @@ describe('planProfessionWork', () => {
         findPlantSpot: () => ({ x: 2, z: 2 }),
         plant: () => true,
       }
-      const ctx = baseCtx({ role: 'farmer', household, foodSources: foodSources as unknown as NpcWorkContext['foodSources'] })
+      const ctx = baseCtx({ role: 'farmer', household, foodSources: foodSources as unknown as NpcWorkContext['foodSources'], strength: 1 })
       const work = planProfessionWork(ctx)
       expect(work?.kind).toBe('harvest')
+      expect(work?.durationSec).toBe(3)
     })
 
     it('never plants without a real seed item in the household', () => {
@@ -150,9 +191,10 @@ describe('planProfessionWork', () => {
 
     it('casts at the dock when one exists and there is carry room', () => {
       const landmarks = { ...LANDMARKS, dock: { x: 3, y: 0, z: 3 } } as unknown as NpcWorkContext['landmarks']
-      const ctx = baseCtx({ role: 'fisher', landmarks })
+      const ctx = baseCtx({ role: 'fisher', landmarks, strength: 1 })
       const work = planProfessionWork(ctx)
       expect(work?.kind).toBe('fish')
+      expect(work?.durationSec).toBe(FISHING_CAST_DURATION_SEC)
     })
   })
 

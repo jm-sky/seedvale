@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
+import { PLAYER_STARTING_ATTRIBUTES } from '../player/PlayerController'
 import { createFoodBatch } from './foodFreshness'
-import { Inventory } from './Inventory'
+import { DEFAULT_MAX_SIZE, Inventory } from './Inventory'
 import { isWeaponItemInstance } from './itemInstances'
 import { itemSizeUnits } from './items'
 import { createTrapInstance } from './trapItemInstances'
@@ -97,6 +99,20 @@ describe('Inventory backpack capacity (plan 186)', () => {
     expect(inv.maxWeight).toBe(35)
     inv.remove('backpack', 1)
     expect(inv.maxWeight).toBe(20)
+  })
+
+  it('adds backpack bonus onto a Strength-derived non-integer base without rounding (plan npc-020)', () => {
+    const base = humanBodyCarryCapacityKg(PLAYER_STARTING_ATTRIBUTES.strength)
+    const inv = new Inventory({}, base, undefined, undefined, DEFAULT_MAX_SIZE)
+    expect(inv.maxWeight).toBe(21.2)
+    expect(inv.maxSize).toBe(DEFAULT_MAX_SIZE)
+    expect(inv.add('backpack', 1)).toBe(true)
+    expect(inv.maxWeight).toBe(36.2)
+    expect(inv.maxSize).toBe(DEFAULT_MAX_SIZE)
+  })
+
+  it('keeps the constructor default at the Strength 0.5 human baseline', () => {
+    expect(new Inventory().maxWeight).toBe(humanBodyCarryCapacityKg(0.5))
   })
 })
 

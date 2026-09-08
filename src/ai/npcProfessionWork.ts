@@ -19,6 +19,7 @@ import { carryFoodClaim, claimFoodItems, type FoodItemClaim } from '../items/foo
 import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
+import { physicalWorkDuration } from '../player/physicalWorkStrength'
 import { householdStorageDestination, settlementStorageDestination } from '../settlement/storageDestinations'
 import { copyVec3 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
@@ -110,6 +111,11 @@ export type NpcWorkContext = {
   mining: SettlementMiningHooks | null
   foodSources: SettlementFoodSourceHooks | null
   householdExchange: HouseholdExchangeHooks | null
+  /** Already-resolved human Strength (`resolveHumanStrengthProfile()`), the
+   *  same value melee uses — not raw base SPEA. Physical-work planners
+   *  (currently ore mining) read this; generic `rollWorkDurationSec()` does
+   *  not. Neutral `0.5` preserves legacy durations. */
+  strength: number
 }
 
 /**
@@ -140,7 +146,7 @@ function planOreGathering(ctx: NpcWorkContext): NpcPlannedAction | null {
   return {
     kind: 'mine',
     destination: copyVec3({ x: target.x, y: ctx.sampleHeight(target.x, target.z), z: target.z }),
-    durationSec: MINE_DURATION_SEC * ctx.waitMultiplier,
+    durationSec: physicalWorkDuration(MINE_DURATION_SEC * ctx.waitMultiplier, ctx.strength),
     onComplete: () => {
       const result = mining.mine(target.id)
       if (result.ok && carried.add(result.yield.kind, result.yield.count)) {

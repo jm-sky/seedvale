@@ -30,11 +30,13 @@ import {
 import { ITEM_DEFS, type ItemKind, itemSizeUnits } from './items'
 import { LIQUID_DENSITY_KG_PER_LITRE } from './liquidContainer'
 
-/** Default carry limit (kg) — see plan `2026-08-08--043`. Not persisted (the
- *  plan keeps weight/limit derived from config/definitions, not save data);
- *  a future equipment system (backpacks) would vary this per player instead.
- *  Callers other than the player pass their own `maxWeight` (see `NpcAgent`'s
- *  small carry cap, plan 131). */
+/** Default carry limit (kg) — the Strength = 0.5 human baseline (plan
+ *  npc-020). Not persisted (weight/limit stay derived from config, not save
+ *  data). The player's inventory is constructed with a Strength-derived
+ *  base instead (`humanBodyCarryCapacityKg`); other callers pass their own
+ *  `maxWeight` (see `NpcAgent`'s logistics cap). Equipment
+ *  `carryCapacityBonus` (backpacks) is added by the `maxWeight` getter, not
+ *  this default. */
 const DEFAULT_MAX_WEIGHT = 20
 
 /** Default gabarite capacity (plan 164), independent of `maxWeight` — see
@@ -145,11 +147,12 @@ export class Inventory {
     this.ensureFoodBatchCoverage()
   }
 
-  /** Effective carry-weight limit (plan 186): the constructor's base plus
-   *  `carryCapacityBonus` summed over every currently-held unit that
-   *  declares one (backpacks) — derived, never persisted, same as the old
-   *  plain `maxWeight` field it replaces. Computed on every access rather
-   *  than cached so `add()`/`remove()` never have to remember to refresh it. */
+  /** Effective carry-weight limit: the constructor's base (for the player,
+   *  the Strength-derived human body capacity) plus `carryCapacityBonus`
+   *  summed over every currently-held unit that declares one (backpacks) —
+   *  derived, never persisted. Computed on every access rather than cached
+   *  so `add()`/`remove()` never have to remember to refresh it. Strength
+   *  does not multiply these equipment bonuses. */
   get maxWeight(): number {
     let bonus = 0
     for (const [kind, n] of this.counts) {

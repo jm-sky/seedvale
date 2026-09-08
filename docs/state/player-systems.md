@@ -12,7 +12,15 @@ When this file and the code disagree, the code wins — update this file.
 
 ## Physical attributes (SPEA, plan npc-019)
 
-`PlayerController.attributes` holds the shared `PhysicalAttributes` primitive (`src/shared/PhysicalAttributes.ts` — also used by NPCs, see [npc.md](./npc.md)): Strength, Perception, Endurance, Agility, each `0..1`. The Player starts at a fixed `{ strength: 0.6, perception: 0.6, endurance: 0.6, agility: 0.6 }` (`PLAYER_STARTING_ATTRIBUTES`), slightly above the shared `0.5` typical-healthy-adult reference — that reference point is unchanged and stays neutral for consumer mappings such as melee. Not persisted, not progressable and not configurable yet. Strength and Agility each have one melee consumer today (damage and recovery respectively — see [combat.md](./combat.md#melee)); Perception and Endurance have no consumer yet.
+`PlayerController.attributes` holds the shared `PhysicalAttributes` primitive (`src/shared/PhysicalAttributes.ts` — also used by NPCs, see [npc.md](./npc.md)): Strength, Perception, Endurance, Agility, each `0..1`. The Player starts at a fixed `{ strength: 0.6, perception: 0.6, endurance: 0.6, agility: 0.6 }` (`PLAYER_STARTING_ATTRIBUTES`), slightly above the shared `0.5` typical-healthy-adult reference — that reference point is unchanged and stays neutral for consumer mappings. Not persisted, not progressable and not configurable yet.
+
+Strength currently has three explicit consumers, each with its own mapping (neutral at `0.5`; the Player's starting `0.6` is a small intentional advantage, not a shifted neutral point):
+
+- melee damage — [combat.md](./combat.md#melee);
+- physical work speed — `player/physicalWorkStrength.ts`, applied at explicit timed actions in `app/actions/groundActions.ts` (dig, pickaxe dig, level, mound, tree chop, ore mine). `BusyAction` itself stays attribute-agnostic. Stamina/Vigor still drain at the existing per-second rates, so a shorter action spends less total effort without a second Strength discount. Fishing, planting, cooking, fire lighting and compressed/time-skip construction stay Strength-neutral;
+- human body carry capacity — see [Carry capacity](#carry-capacity-plan-186--npc-020) below.
+
+Agility has one melee-recovery consumer ([combat.md](./combat.md#melee)). Perception and Endurance have no consumer yet.
 
 ## Survival needs
 
@@ -112,9 +120,19 @@ Any species whose `AnimalDef.mount` is set is ridable (today: horse, donkey) —
 
 The player's own knife-harvest (`startHarvestMeat`) and corpse burial share the exact `harvestAnimalIntoInventory`/`meatKindForAnimal` path a Hunter NPC's post-kill harvest uses (`fauna/animalHarvest.ts`) — not a separate player-only pipeline. The player's own crop harvest (`app/actions/gatheringActions.ts`'s `harvestCrop`) calls `ChunkManager.harvestCrop`/`findNearestGarden` directly and duplicates only the yield-scaling math; NPC hunger-seeking instead goes through the generic `world/foodSources.ts` resolver (`nearestFoodSource`/`SettlementFoodSourceHooks`), which treats a wild crop, a settlement-garden crop, and a player-plot crop identically. The player's own search path is not currently unified with that resolver.
 
-## Carry capacity (plan 186)
+## Carry capacity (plan 186, npc-020)
 
-`ItemCatalogEntry.carryCapacityBonus` (only `backpack` sets it today) is summed over currently-held matching counts into `Inventory.maxWeight`, which is a derived getter, not a stored/persisted field — the same "recompute after load" contract it already had. Feeds the existing overload/movement penalty (`player/playerEncumbrance.ts`) unchanged. A carried chest's own weight (`PlacedContainers.carriedWeightKg()`) also counts toward this overload calculation, alongside `Inventory.totalWeight()`.
+```text
+Strength → humanBodyCarryCapacityKg() → Inventory constructor baseMaxWeight
++ equipment carryCapacityBonus (backpack)
+→ Inventory.maxWeight
++ actual load (item weight + liquid mass + carried-container weight)
+→ existing computeEncumbrance()
+```
+
+The player's inventory base is the human body-carry resolver (`player/humanCarryCapacity.ts`: `14 + strength * 12` kg). `Strength = 0.5` is the existing `20 kg` baseline; starting Player `0.6` resolves to `21.2 kg` and is not rounded in simulation. `Inventory` stays attribute-agnostic — it receives a capacity number, not Strength. Equipment `carryCapacityBonus` (only `backpack` sets it today) remains additive and is not multiplied by Strength. Gabarite (`maxSize`) stays independent of weight.
+
+`ItemCatalogEntry.carryCapacityBonus` is summed over currently-held matching counts into `Inventory.maxWeight`, which is a derived getter, not a stored/persisted field — the same "recompute after load" contract it already had. Feeds the existing overload/movement penalty (`player/playerEncumbrance.ts`) unchanged; encumbrance thresholds themselves are not Strength-aware. A carried chest's own weight (`PlacedContainers.carriedWeightKg()`) also counts toward this overload calculation, alongside `Inventory.totalWeight()`.
 
 ## Entry points
 
@@ -122,6 +140,8 @@ The player's own knife-harvest (`startHarvestMeat`) and corpse burial share the 
 src/player/PlayerNeeds.ts
 src/player/PlayerSkills.ts
 src/player/playerEncumbrance.ts
+src/player/physicalWorkStrength.ts
+src/player/humanCarryCapacity.ts
 src/app/busyAction.ts
 src/app/campRest.ts
 src/app/actions/restActions.ts

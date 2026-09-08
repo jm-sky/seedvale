@@ -6,11 +6,14 @@ import { villageNearest } from '../../debug/locationQueries'
 import { createHeldTool } from '../../items/HeldTool'
 import { Inventory } from '../../items/Inventory'
 import { ITEM_DEFS, type ItemKind } from '../../items/items'
+import { physicalWorkDuration } from '../../player/physicalWorkStrength'
+import { PLAYER_STARTING_ATTRIBUTES } from '../../player/PlayerController'
 import { applySocialConsequence, ReputationManager } from '../../reputation/ReputationManager'
 import { GRAVE_DISTURBANCE_EXPOSURE, socialExposureEventRoll } from '../../reputation/socialExposure'
 import { cemeteryGraveLayout } from '../../settlement/props'
 import { rotateOffsetY } from '../../settlement/propUtils'
 import { DIG_DURATION_SEC } from '../../terrain/dig'
+import { applyDigAt } from '../../terrain/digAction'
 import {
   findHiddenFindSpot,
   type HiddenFindLandmark,
@@ -97,7 +100,10 @@ function setupFelledTreeChop(maxWeight: number) {
 
   const ctx = {
     bundle: { chunkManager, settlementsManager },
-    player: { mesh: { position: { x: 0, z: 0 } } },
+    player: {
+      mesh: { position: { x: 0, z: 0 } },
+      attributes: PLAYER_STARTING_ATTRIBUTES,
+    },
     inventory,
     heldTool,
     hud: {},
@@ -281,6 +287,7 @@ function setupHiddenFindDig(options: {
     },
     player: {
       mesh: { position: { x: 0, z: 0 } },
+      attributes: PLAYER_STARTING_ATTRIBUTES,
       skills: { sneak: { active: options.sneakActive ?? false, value: options.sneakValue ?? 0.2 } },
     },
     inventory,
@@ -440,6 +447,56 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
     second.digAt(dig.x, dig.z)
     expect(second.applySocial).not.toHaveBeenCalled()
     expect(spotId).toBeDefined()
+  })
+})
+
+describe('physical-work Strength duration (plan npc-020)', () => {
+  it('shortens shovel dig for starting Strength 0.6 and still completes once', () => {
+    const inventory = new Inventory({ shovel: 1 }, 100)
+    const heldTool = createHeldTool(inventory, 'shovel')
+    const busy = createBusyAction()
+    const toast = { show: vi.fn() }
+    const ctx = {
+      bundle: {
+        chunkManager: { getNearbyLandmarks: () => [], modifyTerrain: vi.fn() },
+        settlementsManager: { peekDef: () => null, getLoaded: () => [], home: null },
+        droppedItems: { settleNear: vi.fn(), drop: vi.fn() },
+      },
+      player: {
+        mesh: { position: { x: 0, z: 0 } },
+        attributes: PLAYER_STARTING_ATTRIBUTES,
+      },
+      inventory,
+      heldTool,
+      hud: { setPlayerBadges: vi.fn() },
+      toast,
+      busy,
+      timeSkip: { isActive: () => false },
+      restCamp: { isActive: () => false },
+      dayNight: { elapsedDays: 0, dayLengthSec: 600, timeOfDay: 0.5 },
+      mouseLook: { state: { yaw: 0 } },
+      worldAudio: { playAt: vi.fn(), playOnce: vi.fn() },
+      grantItem: vi.fn(),
+      syncQuickActionAvailability: vi.fn(),
+    } as unknown as PlayerActionContext
+    const deps: GroundActionsDeps = {
+      worldFlags: { hiddenTreasureFound: false },
+      badges: new BadgeManager(),
+      resolvedHiddenFindSpotIds: new Set(),
+      applySocialConsequence: vi.fn(),
+    }
+    const duration = physicalWorkDuration(DIG_DURATION_SEC, PLAYER_STARTING_ATTRIBUTES.strength)
+    expect(duration).toBeLessThan(DIG_DURATION_SEC)
+
+    vi.mocked(applyDigAt).mockClear()
+    createGroundActions(ctx, deps).startDigAt(0, 0)
+    expect(busy.isActive()).toBe(true)
+    busy.tick(duration - 1e-6)
+    expect(applyDigAt).not.toHaveBeenCalled()
+    expect(busy.isActive()).toBe(true)
+    busy.tick(1e-5)
+    expect(applyDigAt).toHaveBeenCalledTimes(1)
+    expect(busy.isActive()).toBe(false)
   })
 })
 

@@ -14,6 +14,7 @@ import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { createAcquiredInstance } from '../../items/trade'
+import { physicalWorkDuration } from '../../player/physicalWorkStrength'
 import { physicalEffortBusyOptions } from '../../player/PlayerNeeds'
 import {
   GRAVE_DISTURBANCE_EXPOSURE,
@@ -103,6 +104,11 @@ function hashString(value: string): number {
 export function createGroundActions(ctx: PlayerActionContext, deps: GroundActionsDeps): GroundActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
   const { worldFlags, badges, resolvedHiddenFindSpotIds, applySocialConsequence } = deps
+
+  /** Strength-adjusted duration for genuine physical effort. Stamina/Vigor
+   *  per-second rates stay on `physicalEffortBusyOptions()` unchanged. */
+  const physicalDuration = (baseDurationSec: number): number =>
+    physicalWorkDuration(baseDurationSec, player.attributes.strength)
 
   /** Pushes the current earned-badges list (plan world-007 §9) —
    *  event-driven only (called after a Hidden Find resolves), never per
@@ -242,7 +248,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       return
     }
     playActionDig(worldAudio.playOnce)
-    busy.start(DIG_DURATION_SEC, 'Kopanie…', () => {
+    busy.start(physicalDuration(DIG_DURATION_SEC), 'Kopanie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       checkHiddenTreasureDig(x, z)
       checkHiddenFindDig(x, z)
@@ -258,7 +264,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       return
     }
     playActionMine(worldAudio.playAt, { x, z })
-    busy.start(DIG_DURATION_SEC, 'Kucie…', () => {
+    busy.start(physicalDuration(DIG_DURATION_SEC), 'Kucie…', () => {
       applyDigAt(bundle.chunkManager, x, z, profile, digFeedback())
       ctx.syncQuickActionAvailability()
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
@@ -270,7 +276,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
     }
-    busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
+    busy.start(physicalDuration(DIG_DURATION_SEC), 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
@@ -281,7 +287,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       toast.show('Nie ma tu czego wyrównać.', 'error')
       return
     }
-    busy.start(DIG_DURATION_SEC, 'Wyrównywanie…', () => {
+    busy.start(physicalDuration(DIG_DURATION_SEC), 'Wyrównywanie…', () => {
       applyLevelAt(bundle.chunkManager, x, z, toast)
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
@@ -297,7 +303,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       return
     }
     playActionDig(worldAudio.playOnce)
-    busy.start(DIG_DURATION_SEC, 'Usypywanie…', () => {
+    busy.start(physicalDuration(DIG_DURATION_SEC), 'Usypywanie…', () => {
       applyMoundAt(bundle.chunkManager, x, z, profile.depth, toast)
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
@@ -321,7 +327,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
           ? 'Ścinanie…'
           : 'Rąbanie…'
     playActionChop(worldAudio.playAt, { x, z })
-    busy.start(CHOP_DURATION_SEC, busyLabel, () => {
+    busy.start(physicalDuration(CHOP_DURATION_SEC), busyLabel, () => {
       const landmark = bundle.settlementsManager
         .getLoaded()
         .flatMap((s) => s.landmarks.trees)
@@ -406,7 +412,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       return
     }
     playActionMine(worldAudio.playAt, { x, z })
-    busy.start(MINE_DURATION_SEC, 'Wydobywanie…', () => {
+    busy.start(physicalDuration(MINE_DURATION_SEC), 'Wydobywanie…', () => {
       if (!inventory.canAdd(stepYield.kind, stepYield.count)) {
         toast.show(inventoryFullToastText(inventory, stepYield.kind, stepYield.count), 'error')
         return
