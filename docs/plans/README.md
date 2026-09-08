@@ -95,7 +95,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -      |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
-| ◼️ `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | fauna-003 |
+| 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | fauna-003 |
 | ◼️ `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 | ◼️ `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |
 
