@@ -22,6 +22,8 @@ export function minimapSize(touch: boolean): number {
 /** World units → minimap px at zoom 1×. */
 export const MINIMAP_SCALE = 2
 
+export const DEFAULT_ARROW_TIP_SIZE = 7
+
 let minimapZoom = 1
 
 export function getMinimapZoom(): number {
@@ -48,7 +50,8 @@ function drawArrow(
   y: number,
   dirX: number,
   dirY: number,
-  tipSize = 7,
+  tipSize = DEFAULT_ARROW_TIP_SIZE,
+  outline = false,
 ): void {
   const perpX = -dirY
   const perpY = dirX
@@ -58,6 +61,12 @@ function drawArrow(
   ctx.lineTo(x - dirX * tipSize - perpX * tipSize * 0.6, y - dirY * tipSize - perpY * tipSize * 0.6)
   ctx.closePath()
   ctx.fill()
+
+  if (outline) {
+    ctx.strokeStyle = 'rgba(10, 10, 10, 0.75)'
+    ctx.lineWidth = 2.5
+    ctx.stroke()
+  }
 }
 
 /**
@@ -147,10 +156,16 @@ export function drawMinimapFrame(
     const dx = location.x - playerPos.x
     const dz = location.z - playerPos.z
     const dist = Math.hypot(dx, dz)
+
     if (dist <= halfRange) {
       const { x, y } = toMap(location.x, location.z)
       ctx.fillStyle = color
       ctx.fillRect(x - 4, y - 4, 8, 8)
+
+      ctx.strokeStyle = 'rgba(10, 10, 10, 0.75)'
+      ctx.lineWidth = 2
+      ctx.strokeRect(x - 4.5, y - 4.5, 9, 9)
+
       if (location.label) {
         ctx.font = '10px sans-serif'
         ctx.textAlign = 'center'
@@ -165,7 +180,7 @@ export function drawMinimapFrame(
       const dirX = rotated.x / len
       const dirY = rotated.y / len
       ctx.fillStyle = color
-      drawArrow(ctx, centerX + dirX * arrowRadius, centerY + dirY * arrowRadius, dirX, dirY)
+      drawArrow(ctx, centerX + dirX * arrowRadius, centerY + dirY * arrowRadius, dirX, dirY, DEFAULT_ARROW_TIP_SIZE, true)
     }
   }
 
