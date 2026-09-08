@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-08 07:12:58  
+> Date: 2026-09-08 07:46:03  
 
 ## PLANS
 
@@ -12,6 +12,7 @@
 - `npc-024-temporary-conditions-and-poisoning.md`
 - `npc-025-injury-severity-and-treatment-requirements.md`
 - `npc-026-npc-grave-visits.md`
+- `npc-027-spatial-context-and-cave-traversal.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `quests-progression-011-grave-robbing-reputation-risk-and-stealth.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
@@ -231,6 +232,37 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-026-npc-grave-visits-implementation-notes.md`
+
+Umieść w nim:
+- sugestie dotyczące implementacji,
+- istotne detale techniczne,
+- decyzje architektoniczne,
+- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
+- potencjalne problemy, zależności i pułapki,
+- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
+
+Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
+Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
+
+Plik dodaj na branch `main` w repozytorium.
+```
+
+### `npc-027-spatial-context-and-cave-traversal.md`
+
+Prompt:
+
+```
+Zrób review planu `npc-027-spatial-context-and-cave-traversal.md`
+
+Wczytaj:
+- `docs/STATE.md`
+- `docs/plans/PLANNING.md` (Implementation Notes section),
+- `docs/plans/npc-027-spatial-context-and-cave-traversal.md`
+- aktualny codebase,
+- potrzebne zależności i powiązane implementacje.
+
+Na podstawie review utwórz w repo plik:
+`docs/plans/implementation-notes/npc-027-spatial-context-and-cave-traversal-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
