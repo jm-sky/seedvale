@@ -1305,6 +1305,14 @@ export class AnimalAgent {
   }
 
   dispose(): void {
+    // D1 (plan fauna-017 step 6b): release any carcass claim this agent
+    // holds before it's disposed — without this, a predator killed (by a
+    // dog, the player, an NPC, another rabid animal, or drowning) mid-
+    // approach permanently locks its claimed carcass, since `update()`
+    // early-returns for a dead agent and the claim was the only thing
+    // keeping other predators from selecting it (`isCarcassEdible`).
+    // Idempotent: `dispose()` may run after `collapse()` already called it.
+    this.cancelSourceTarget()
     disposeAnimalCorpse(this.corpse)
     this.labelController.dispose()
     this.anim.stopAll()
@@ -1880,6 +1888,12 @@ export class AnimalAgent {
    *  (sheep, chicken, bear, capsule fallback) instead of leaving it frozen
    *  standing up. */
   private collapse(): void {
+    // D1 (plan fauna-017 step 6b): a predator that dies while holding a
+    // carcass claim (its own `sourceTarget.corpse`) must release it here —
+    // `update()` early-returns for a dead agent, so `cancelSourceTarget()`
+    // would otherwise never run again for this instance, and the claim
+    // would lock that carcass unclaimed-but-inedible for its entire linger.
+    this.cancelSourceTarget()
     this.onDeath?.(this.animalId)
     if (this.anim.has('death')) {
       this.deathAnimDurationSec = this.anim.playOnce('death')

@@ -50,6 +50,37 @@ describe('AnimalAgent', () => {
     expect(agent.life.thirst).toBeGreaterThan(0.5)
   })
 
+  // D1 (plan fauna-017 step 6b): a predator that dies while holding a
+  // carcass claim used to lock that carcass unclaimed-but-inedible for its
+  // entire linger, because `update()` early-returns for a dead agent and
+  // `cancelSourceTarget()` (the only path that released the claim) was
+  // never called from `collapse()`/`dispose()`.
+  it('releases a held carcass claim when the claiming predator dies, so another predator can claim it', () => {
+    const corpse = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.rabbit, animalId: 'corpse-rabbit', x: 2, z: 0 }))
+    corpse.takeDamage(9999)
+    expect(corpse.isDead()).toBe(true)
+
+    const wolfA = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.wolf, animalId: 'wolf-a', x: 0, z: 0 }))
+    wolfA.life.hunger = 0.9 // elevated — routes into pursueNeeds -> findCarcassTarget
+    // Observer (player) placed far away so `senseEnvironment` doesn't detect
+    // it as active and divert the decision away from `predator-normal`.
+    wolfA.update({
+      dt: 1,
+      others: [wolfA, corpse],
+      observerPos: new THREE.Vector3(1000, 0, 1000),
+      dayFactor: 1,
+      forestFactor: 0,
+      litFires: [],
+    })
+    // wolfA claimed the fresh corpse — a second predator cannot also claim it.
+    expect(corpse.claimAsFood({})).toBe(false)
+
+    wolfA.takeDamage(9999) // kill wolfA — collapse() must release its claim
+    expect(wolfA.isDead()).toBe(true)
+
+    expect(corpse.claimAsFood({})).toBe(true)
+  })
+
   // D2 (plan fauna-017 step 3): `driveMounted()` used to always pass `{}`
   // (rate 1) to `tickAnimalLife`, so a ridden animal at night burned
   // hunger/thirst at 2x a free-roaming one's rate. Both callers now share
