@@ -361,6 +361,7 @@ Roadmap is not another priority system.
 - `physical-goods-transport`
 - `physical-resource-storage-and-logistics`
 - `player-construction`
+- `quests-abandoned-gold-mine-colony`
 - `quests-and-reputation`
 - `textiles-and-herbal-medicine`
 - `workforce-for-hire`

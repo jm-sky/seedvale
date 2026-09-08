@@ -298,10 +298,9 @@ const recommend = (
         a.id.localeCompare(b.id),
       )
 
-    if (!candidates.length)
-      throw new Error(
-        'Dependency cycle or unresolved blocker among: ' + [...remaining].join(', '),
-      )
+    if (!candidates.length) {
+      break
+    }
 
     const next = candidates[0]
     remaining.delete(next.id)

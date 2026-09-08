@@ -30,6 +30,7 @@ Plans and current code take precedence over roadmap documents when they disagree
 | `physical-goods-transport.md` |
 | `physical-resource-storage-and-logistics.md` |
 | `player-construction.md` |
+| `quests-abandoned-gold-mine-colony.md` |
 | `quests-and-reputation.md` |
 | `textiles-and-herbal-medicine.md` |
 | `workforce-for-hire.md` |
