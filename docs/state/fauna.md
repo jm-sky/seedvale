@@ -4,7 +4,7 @@
 
 **Not:** NPC decision-consumption logic ([npc.md](./npc.md) owns how a hunter/farmer *consumes* what this doc exposes), settlement economy internals ([settlements.md](./settlements.md)), combat resolver internals ([combat.md](./combat.md) owns the damage pipeline; this doc covers only fauna's own outgoing-damage asymmetry), water-traversal ownership ([water.md](./water.md) owns the physical water answer; this doc covers only how fauna consumes it), or a plan/changelog.
 
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-08
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -12,7 +12,7 @@ When this file and the code disagree, the code wins — update this file.
 
 ## Architecture
 
-`src/fauna/AnimalAgent.ts` is not just a coordination point (the way `NpcAgent.ts` is for NPCs) but the actual owner of most species data, decision glue, and the corpse/rabies/harvest lifecycle — it composes roughly a dozen small, pure, independently-tested modules (behaviour arbitration, combat, water-traversal classification, predator/human decision, dog-guard, herd cohesion, spawner lifecycle, hunting hooks, harvest, meat, livestock production) rather than delegating out to as many modules as `ai/NpcAgent.ts` does. This is a real structural difference from the NPC domain, not an oversight — do not read it as "fauna needs the same refactor NPC got."
+`src/fauna/AnimalAgent.ts` is the central per-animal integration point (decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API) and is supposed to stay one class. Species taxonomy lives in `animalDefs.ts`; corpse/remains/decay/rabies-exposure/food-claim state in `animalCorpse.ts`; food/water source selection and atomic relief in `animalForaging.ts`; water-trip commitment and the shared radial probe in `animalRoaming.ts`. Top-level behaviour arbitration is already a tested priority table in `faunaDecision.ts`. The remaining composed modules (combat, water-traversal classification, predator/human decision, dog-guard, prey-alert perception, herd cohesion, spawner lifecycle, hunting hooks, harvest, meat, livestock production) are called as thin adapters. This is a real structural difference from the NPC domain — fauna already had the decision-table shape the NPC refactor later copied, and the later AnimalAgent split (fauna-017) moved ownership, not arbitration.
 
 **Livestock and rats are not a parallel type.** Both are plain `AnimalAgent` instances of the exact same class wild fauna uses, distinguished only by ownership/registration — see [Persistence classes](#persistence-classes) and [Settlement/ecosystem interactions](#settlementecosystem-interactions).
 
@@ -22,7 +22,7 @@ When this file and the code disagree, the code wins — update this file.
 
 ## Individual state ownership
 
-One `AnimalAgent` instance per animal holds its own state directly — health, hunger/thirst/stamina, corpse-lifecycle fields, disease/quest booleans, live combat commitments, and (for livestock only) an owning household reference. **There is no separate authoritative-state object the way NPC has `NpcAuthoritativeState`** — an animal's state lives and dies with the JS object itself. What survives a reload depends entirely on which of the three persistence classes below the individual belongs to.
+One `AnimalAgent` instance per animal holds its own state directly — health, hunger/thirst/stamina, a corpse-lifecycle state object (`animalCorpse.ts`), disease/quest booleans, live combat commitments, and (for livestock only) an owning household reference. **There is no separate authoritative-state object the way NPC has `NpcAuthoritativeState`** — an animal's state lives and dies with the JS object itself. What survives a reload depends entirely on which of the three persistence classes below the individual belongs to.
 
 Population/spawner state is a separate, smaller mechanism: a habitat spawner (cave/thicket/wolfDen) is a small explicit state machine (`active`/`depleted`/`disabled`/`recovering`) independent of any individual animal — it ticks respawn timers in game-days, depletes once enough of its population dies in the current cycle, and recovers after a fixed delay plus a live nearby-population check. This is the one piece of fauna population state with its own persisted snapshot (see below).
 
@@ -36,9 +36,9 @@ Top-level arbitration is a fixed priority table (13 behaviour kinds, gaps of 10,
 
 **Habitat/spawning:** wild-fauna "ring" spawns are placed at a settlement-relative offset per habitat profile (open/meadow/forest/water/edge), gated by river-channel clearance and habitat checks; cave/thicket/wolfDen habitat spawners are placed further out and tracked as the separate spawner state machine above. Herd species spawn one or two juveniles alongside an adult per a species-specific chance table.
 
-**Adult/juvenile:** a juvenile spawns smaller and matures after a fixed real-time window, ticked every update call. It follows its mother within a tight radius; herd leadership is deterministic (the alive herd member with the lexicographically smallest id) rather than a stored/reassigned field, so a dead leader is simply excluded next call.
+**Adult/juvenile:** a juvenile spawns smaller and matures after a fixed real-time window. Age advances from the live tick *and* from `resolveTimeSkip()` through the same `advanceAge()` operation, so an 8 h skip matures a cub the same way normal progression does. A juvenile follows its mother within a tight radius; herd leadership is deterministic (the alive herd member with the lexicographically smallest id) rather than a stored/reassigned field, so a dead leader is simply excluded next call.
 
-**Water traversal** classifies the physical water answer (owned by terrain — see [water.md](./water.md)) into dry/wading/swimming/impassable for a given species, using the species' own scale to derive wading depth rather than a new per-species field. This classifier is the single call site every movement mode shares (autonomous wander/food/water search, the local-grid pathfinding fallback, and mounted player-driven movement) — traversability can never diverge between free-roaming and ridden movement. Drowning damage applies only while actually swimming and stamina-exhausted, and stops immediately on reaching shore.
+**Water traversal** classifies the physical water answer (owned by terrain — see [water.md](./water.md)) into dry/wading/swimming/impassable for a given species, using the species' own scale to derive wading depth rather than a new per-species field. `isWalkable` is the single call site every movement mode shares (autonomous wander/food/water search, the local-grid pathfinding fallback, and mounted player-driven movement) — walkability can never diverge between free-roaming and ridden movement. The rest of the per-tick tail is *not* the same guarantee: a mounted animal is intentionally not clamped to its home radius, and until fauna-017 the mounted path also skipped timer/maturity/night-metabolism bookkeeping. Drowning damage applies only while actually swimming and stamina-exhausted, and stops immediately on reaching shore.
 
 ## Corpse, decay, and rabies lifecycle
 
@@ -56,6 +56,8 @@ Death (`takeDamage()` → collapse, `onDeath` fires once regardless of cause) st
 ## Settlement/ecosystem interactions
 
 **Livestock** (7 kinds, spawned by a per-house deterministic roll) is the identical `AnimalAgent` class wild fauna uses, with an owning household set. Ownership changes concrete behaviour at real call sites: water-seeking tries the owner's trough/household water before a natural shoreline; diet-seeking prefers the owner's own stored food before a shared forage patch. Grass forage itself is shared identically by wild fauna and livestock through one atomic service — depletion is a sparse per-patch override, not per-patch object state; patch placement stays deterministic and unpersisted.
+
+**Household dogs** (fauna-011) are livestock-role `AnimalAgent`s (`AnimalDef.role: 'livestock'`, meat diet, `fleeRange: 0`), not a parallel type and not predators — they eat meat but never hunt, and carcass-seeking is gated by role rather than a dog-specific flag. Guard resolution (`dogGuard.ts`) is recomputed fresh every tick: a wolf attacking this dog's own household wins inside a wide home radius; a wolf attacking another settlement inhabitant may be assisted inside a tighter radius; a distant/unrelated wolf never becomes a chase target. Contextual bark is a separate, cooldown-gated stimulus (active guard, then a nearby wolf howl, then a stranger at the house) and never chains dog-to-dog. Idle pest-chase of settlement rats is a third, lower contract — only reached once guard/needs/lure claimed nothing this tick, and home-bounded so a dog never leaves its yard hunting vermin.
 
 **Rats** are a settlement-local pressure/nuisance mechanism implemented as plain `AnimalAgent` instances, physically hosted in `src/settlement/` but fauna-owned by convention. A target population is computed live from `(household food + settlement food) / a food-per-pressure constant − dog count × a suppression factor`, clamped to a small cap, reconciled at most every half game-day — one rat spawned/despawned at a time. Rats drain real food through the exact same atomic primitives every other consumer uses (household/economy withdraw), gated by a deterministic hashed per-rat roll so outcomes don't depend on frame timing:
 
@@ -122,6 +124,10 @@ Any species whose `AnimalDef.mount` is set is ridable — today, horse and donke
 
 ```text
 src/fauna/AnimalAgent.ts
+src/fauna/animalDefs.ts
+src/fauna/animalCorpse.ts
+src/fauna/animalForaging.ts
+src/fauna/animalRoaming.ts
 src/fauna/AnimalLife.ts
 src/fauna/AnimalSpawner.ts
 src/fauna/createFauna.ts

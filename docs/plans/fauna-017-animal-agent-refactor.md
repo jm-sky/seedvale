@@ -1,7 +1,7 @@
 # Plan: AnimalAgent refactor
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** refactor
 **Priority:** medium · **Effort:** L
 **Depends on:** none
@@ -9,6 +9,10 @@
 **Subdomains:** `behavior` `lifecycle`
 **Tags:** `AnimalAgent` `architecture` `refactor`
 **Roadmap:** -
+
+> Implementation landed on `main` 2026-09-08 (steps 1–11). Automated checks
+> for the remaining steps (9–11) passed; steps 1–8 were already on `main`.
+> Browser/manual verification (review §11, 12 points) is still the user's.
 
 > **Faza 0 zakończona.** Review architektoniczny został wykonany 2026-09-08 i jest implementation
 > discovery dla tego planu:

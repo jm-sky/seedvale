@@ -86,6 +86,19 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Agent animation set](../src/shared/agentAnimationSet.ts) — clip resolve/crossfade/one-shot/settle owner over an `AnimationMixer`.
 - [Agent status label](../src/ui/agentStatusLabel.ts) — the shared floating name/bars/debug-line CSS2D label and its controller.
 
+## Fauna internals
+
+`AnimalAgent.ts` is the per-animal integration point and stays the entry point for runtime behaviour; the modules below own the domain data/logic it delegates to (`docs/reviews/2026-09-03--AnimalAgent-refactor-review.md`).
+
+- [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
+- [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
+- [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim state machine.
+- [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
+- [Roaming](../src/fauna/animalRoaming.ts) — water-trip state machine and shared radial probe.
+- [Fauna decision](../src/fauna/faunaDecision.ts) — fixed-priority behaviour table.
+- [Dog guard](../src/fauna/dogGuard.ts) — household-dog guard/bark/pest resolution.
+- [Prey alert](../src/fauna/preyAlertPerception.ts) — extra-range threat-alert relevance.
+
 <!-- AI_NAVIGATION_INDEX_START -->
 
 ### ai
