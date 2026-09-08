@@ -26,6 +26,6 @@ Don't add a new file here just because a system exists. A new doc belongs here o
 
 - [architecture/ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — runtime composition, `WorldBundle` lifecycle, and the authoritative save-schema field list.
 - [items/CATALOG.md](../items/CATALOG.md), [items/WEAPONS.md](../items/WEAPONS.md) — item/weapon definitions and numbers.
-- [world/species-physical-reference.md](../world/species-physical-reference.md) — a **design reference**, not an implemented state doc: a future strength/agility/perception/endurance layer for NPCs and fauna. No such fields exist in the current codebase; see `npc.md` and `fauna.md` for the implemented-today physical layer it would extend.
+- [world/species-physical-reference.md](../world/species-physical-reference.md) — a **design reference**, not an implemented state doc: the authoritative SPEA/species model for NPCs and fauna. Runtime SPEA exists for humans (`PhysicalAttributes`, NPC rolls, Strength melee damage, Agility melee recovery) — see `npc.md` and `combat.md` for what is implemented today. Fauna still has no SPEA fields; do not treat the full design reference as implemented runtime.
 
 No `runtime-ui-audio.md` exists here by design — no cross-domain seam in this layer currently requires a dedicated current-state doc beyond `STATE.md`'s own UI/input section and `architecture/ARCHITECTURE.md`/`architecture/GRAPHICS.md`.

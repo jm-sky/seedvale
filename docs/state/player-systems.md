@@ -12,7 +12,7 @@ When this file and the code disagree, the code wins — update this file.
 
 ## Physical attributes (SPEA, plan npc-019)
 
-`PlayerController.attributes` holds the shared `PhysicalAttributes` primitive (`src/shared/PhysicalAttributes.ts` — also used by NPCs, see [npc.md](./npc.md)): Strength, Perception, Endurance, Agility, each `0..1`. The Player starts at a fixed `{ strength: 0.6, perception: 0.6, endurance: 0.6, agility: 0.6 }` (`PLAYER_STARTING_ATTRIBUTES`), slightly above the shared `0.5` typical-healthy-adult reference — that reference point is unchanged and stays neutral for consumer mappings such as melee. Not persisted, not progressable and not configurable yet; Strength is the only attribute with a consumer so far (melee — see [combat.md](./combat.md#melee)).
+`PlayerController.attributes` holds the shared `PhysicalAttributes` primitive (`src/shared/PhysicalAttributes.ts` — also used by NPCs, see [npc.md](./npc.md)): Strength, Perception, Endurance, Agility, each `0..1`. The Player starts at a fixed `{ strength: 0.6, perception: 0.6, endurance: 0.6, agility: 0.6 }` (`PLAYER_STARTING_ATTRIBUTES`), slightly above the shared `0.5` typical-healthy-adult reference — that reference point is unchanged and stays neutral for consumer mappings such as melee. Not persisted, not progressable and not configurable yet. Strength and Agility each have one melee consumer today (damage and recovery respectively — see [combat.md](./combat.md#melee)); Perception and Endurance have no consumer yet.
 
 ## Survival needs
 
