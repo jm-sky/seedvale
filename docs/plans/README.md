@@ -55,7 +55,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
 | 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
-| 💡 `quests-progression-003-paid-quests-and-player-income.md`                | -       | 🔴 | M      | quests-progression-002 |
 | 💡 `quests-progression-004-quest-availability-and-prerequisites.md`         | -       | 🔴 | S      | quests-progression-002 |
 | 💡 `quests-progression-005-authored-rpg-quests.md`                          | -       | 🔴 | L      | quests-progression-002, quests-progression-003, quests-progression-004 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                   | -       | 🟡 | M      | ~~155~~ ~~122~~ |

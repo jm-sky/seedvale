@@ -26,8 +26,8 @@ Generated from exported TypeScript symbols.
 
 ## `quests/quests.ts`
 
-- `buildLandmarkQuests` — function — line 452
-- `LandmarkResolver` — type — line 441
+- `buildLandmarkQuests` — function — line 550
+- `LandmarkResolver` — type — line 539
 - `QUEST_STATES` — const — line 90
 - `QuestAvailability` — type — line 50
 - `QuestConsequences` — type — line 65
