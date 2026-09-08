@@ -174,6 +174,7 @@ Generated from TypeScript imports.
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
 - `settlement/npcPhysicalProfile.ts`
+- `settlement/npcPostDeath.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/places.ts`
@@ -693,6 +694,36 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/npcPhysicalProfile.test.ts`
 
+## `settlement/npcPostDeath.test.ts`
+
+**Imports**
+
+- `ai/npcLoadout.ts`
+- `items/Inventory.ts`
+- `items/weaponMaintenance.ts`
+- `settlement/npcPostDeath.ts`
+- `settlement/npcState.ts`
+- `shared/HealthState.ts`
+
+## `settlement/npcPostDeath.ts`
+
+**Imports**
+
+- `ai/characters.ts`
+- `ai/npcLoadout.ts`
+- `items/Inventory.ts`
+- `items/createDroppedItems.ts`
+- `items/items.ts`
+- `shared/corpseLifecycle.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/actions/containerActions.ts`
+- `settlement/createSettlement.ts`
+- `settlement/npcPostDeath.test.ts`
+- `settlement/npcState.ts`
+
 ## `settlement/npcRelationships.test.ts`
 
 **Imports**
@@ -726,6 +757,7 @@ Generated from TypeScript imports.
 - `ai/helperAssignment.ts`
 - `ai/npcPlan.ts`
 - `ai/npcVigor.ts`
+- `settlement/npcPostDeath.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
@@ -738,6 +770,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
 
 ## `settlement/pathDryness.ts`

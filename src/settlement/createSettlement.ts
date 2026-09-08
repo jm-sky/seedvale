@@ -52,6 +52,10 @@ import { type Household, householdIdFor, type HouseholdRegistry } from './househ
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
 import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettlementLivestock } from './livestock'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
+import {
+  finalizeExpiredNpcCorpse,
+  shouldSkipNpcCorpsePresentation,
+} from './npcPostDeath'
 import { createNpcRelationships, type NpcRelationships } from './npcRelationships'
 import { homePlaceId, type Place, socialPlaceFor, workplaceFor } from './places'
 import {
@@ -665,7 +669,8 @@ export async function createSettlement(
   bootMark('npcCreation')
   let agents: NpcAgent[]
   try {
-  agents = await Promise.all(
+  const nowDays = forest?.getWorldDays() ?? 0
+  agents = (await Promise.all(
     flatMembers.map(async ({ home, household, member, familyIndex, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex)
       const npcId = `${def.id}:npc:${i}`
@@ -687,6 +692,8 @@ export async function createSettlement(
       // unload/reload) — a genuinely new id gets the usual fresh state
       // (plan 197), seeded with this NPC's generated maxima.
       const npcState = npcStateRegistry.getOrCreate(npcId, needOffset, physicalProfile)
+      if (npcState.postDeath) finalizeExpiredNpcCorpse(npcState.postDeath, nowDays, droppedItems)
+      if (shouldSkipNpcCorpsePresentation(npcState, nowDays)) return null
       const agent = await NpcAgent.create({
         sampleHeight,
         waterLevel,
@@ -725,7 +732,7 @@ export async function createSettlement(
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
     }),
-  )
+  )).filter((agent): agent is NpcAgent => agent != null)
   } finally {
     bootMarkEnd('npcCreation')
   }
@@ -791,7 +798,9 @@ export async function createSettlement(
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
         agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather, playerObservation)
-        if (crowd.pushX[i] !== 0 || crowd.pushZ[i] !== 0) agent.applySeparation(crowd.pushX[i]!, crowd.pushZ[i]!)
+        if (!agent.health.dead && (crowd.pushX[i] !== 0 || crowd.pushZ[i] !== 0)) {
+          agent.applySeparation(crowd.pushX[i]!, crowd.pushZ[i]!)
+        }
       }
       agentCpu.endNpcAgentUpdates()
       // Social Place conversation pairing (plan 151) — reuses this

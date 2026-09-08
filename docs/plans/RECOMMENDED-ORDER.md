@@ -114,115 +114,111 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-11. `npc-010` — **NPC Death & Corpse Lifecycle**  
-  🟡 `L` · **Score:**  46  
-   → **unlocks:** 1/2
-
-12. `settlements-npcs-022` — **Household help and age-based work participation**  
+11. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-025` — **Resource storage visualization**  
+12. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-14. `ui-input-010` — **Player quick actions and primary weapon slots**  
+13. `ui-input-010` — **Player quick actions and primary weapon slots**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 1/2
 
-15. `npc-024` — **Temporary conditions and poisoning**  
+14. `npc-024` — **Temporary conditions and poisoning**  
   🟡 `M` · **Score:**  39  
    → **unlocks:** 1/1
 
-16. `npc-011` — **NPC Burial & Graves**  
+15. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  38  
    → **unlocks:** 1/1
 
-17. `fauna-018` — **Persistent habitat occupants**  
+16. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-18. `settlements-005` — **Residential House Construction**  
+17. `settlements-005` — **Residential House Construction**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-19. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+18. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-20. `npc-026` — **NPC Grave Visits**  
+19. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `items-player-018` — **Camp inspection, condition and full camp setup**  
+20. `items-player-018` — **Camp inspection, condition and full camp setup**  
   🟡 `L` · **Score:**  30  
    → **unlocks:** 1/1
 
-22. `items-player-014` — **Rope-pullable resource transport**  
+21. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `npc-025` — **Injury severity and treatment requirements**  
+22. `npc-025` — **Injury severity and treatment requirements**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+23. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `tools-005` — **Seedvale Character Preparation Panel**  
+24. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `items-player-020` — **Player-built animal trough and water storage**  
+25. `items-player-020` — **Player-built animal trough and water storage**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-27. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+26. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-28. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+27. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-29. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+28. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-30. `fauna-013` — **Animal hand-feeding and human affinity**  
+29. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-31. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+30. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-32. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
+31. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
   🟡 `M` · **Score:**  19  
    → **unlocks:** 0/0
 
-33. `world-terrain-015` — **Water Reflection Content Budget**  
+32. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-34. `fauna-007` — **Animal leading and cart harness**  
+33. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-35. `items-player-019` — **Player camp repair and sewing kit**  
+34. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-36. `tools-000` — **Weapon Browser — Observatory/Admin**  
+35. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-37. `npc-004` — **Drzewo genealogiczne NPC**  
+36. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-38. `tools-006` — **tools-006--world-observatory.md**  
+37. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -239,9 +235,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`items-player-019-player-camp-repair-and-sewing-kit.md`](items-player-019-player-camp-repair-and-sewing-kit.md)  
   is blocked by:
   - [`items-player-018-camp-inspection-condition-and-full-camp-setup.md`](items-player-018-camp-inspection-condition-and-full-camp-setup.md)
-- [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)  
-  is blocked by:
-  - [`npc-010-death-and-corpse-lifecycle.md`](npc-010-death-and-corpse-lifecycle.md)
 - [`npc-025-injury-severity-and-treatment-requirements.md`](npc-025-injury-severity-and-treatment-requirements.md)  
   is blocked by:
   - [`npc-024-temporary-conditions-and-poisoning.md`](npc-024-temporary-conditions-and-poisoning.md)

@@ -78,10 +78,6 @@ import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
-import {
-  describeSettlementStorageRepair,
-  formatSettlementStorageInspection,
-} from '../settlement/storageRepair'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -127,6 +123,10 @@ import {
 } from '../render/shadowBudget'
 import { villageSizeConfig } from '../settlement/families'
 import { purchaseLandPlot } from '../settlement/landPurchase'
+import {
+  describeSettlementStorageRepair,
+  formatSettlementStorageInspection,
+} from '../settlement/storageRepair'
 import { FIRE_FUEL_KINDS, type VillageFire } from '../settlement/VillageFire'
 import { getHungerRatio } from '../shared/HungerState'
 import { drainStamina, getStaminaRatio } from '../shared/StaminaState'
@@ -161,7 +161,7 @@ type Highlightable = NpcAgent | AnimalAgent
 
 function interactableAgent(target: Interactable | null): Highlightable | null {
   if (!target) return null
-  if (target.kind === 'npc') return target.npc
+  if (target.kind === 'npc' || target.kind === 'npcCorpse') return target.npc
   if (target.kind === 'animal' || target.kind === 'corpse') return target.animal
   return null
 }
@@ -398,6 +398,9 @@ export type GameLoopDeps = {
   /** Opens the generic container transfer screen for a placed `chest`
    *  (plan 164 §7). */
   openContainer?: (id: string) => void
+  /** Opens the generic transfer screen over an NPC corpse's persisted loot
+   *  (plan npc-010). */
+  openNpcCorpse?: (npc: NpcAgent) => void
   /** Picks a placed container up (with contents) — carried state (plan 164
    *  §8/§15), not an inventory item. */
   pickUpContainer?: (id: string) => void
@@ -539,7 +542,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
@@ -1362,7 +1365,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
 
       const gazeCandidates: { position: { x: number, z: number }, agent: Highlightable }[] = []
       for (const item of interactables) {
-        if (item.kind === 'npc') gazeCandidates.push({ position: item.position, agent: item.npc })
+        if (item.kind === 'npc' || item.kind === 'npcCorpse') gazeCandidates.push({ position: item.position, agent: item.npc })
         else if (item.kind === 'animal' || item.kind === 'corpse') {
           gazeCandidates.push({ position: item.position, agent: item.animal })
         }
@@ -1375,9 +1378,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         INTERACT_MIN_DOT,
       )
       setHighlight(interactableAgent(target) ?? gazed?.agent ?? null)
-      if (target?.kind === 'npc' && npcInspectTrigger?.consume()) {
+      if ((target?.kind === 'npc' || target?.kind === 'npcCorpse') && npcInspectTrigger?.consume()) {
         exitGamePointerLock(renderer.domElement)
-        npcInspector?.open(target.npc, target.settlement.name)
+        npcInspector?.open(target.npc, target.kind === 'npc' ? target.settlement.name : target.npc.displayName)
       }
       const interactPressed = keyboard.consumeInteract()
       const altInteractPressed = keyboard.consumeAltInteract()
@@ -1567,6 +1570,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           // pause menu already does on open (createPauseMenu's onPause).
           exitGamePointerLock(renderer.domElement)
           vueUi.openNpcDialogueMenu(target.npc, target.settlement, questManager, dayNight.timeOfDay)
+        } else if (target.kind === 'npcCorpse') {
+          openNpcCorpse?.(target.npc)
         } else if (target.kind === 'animal') {
           if (isMeleeTool(held) && !player.isDowned()) {
             // `[E]` over a gazed live animal is the attack *trigger* (keeps

@@ -72,6 +72,13 @@ import {
   resolveHumanEnduranceProfile,
   resolveHumanStrengthProfile,
 } from '../settlement/npcPhysicalProfile'
+import {
+  commitNpcDeath,
+  finalizeExpiredNpcCorpse,
+  hasActiveNpcCorpse,
+  type NpcPostDeathState,
+  resolveNpcCorpsePhase,
+} from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
@@ -485,7 +492,19 @@ export type NpcInspectionSnapshot = {
   }
   stamina: { current: number, max: number }
   vigor: { current: number, max: number }
-  health: { current: number, max: number }
+  health: { current: number, max: number, dead?: boolean }
+  /** Authoritative post-death/corpse projection (plan npc-010) — `null`
+   *  while alive. Reads `NpcAuthoritativeState`, not mesh presence. Optional
+   *  on synthetic test snapshots. */
+  postDeath?: {
+    status: NpcPostDeathState['status']
+    deathPosition: { x: number, z: number }
+    deathAtDays: number
+    phase: 'bones' | 'fresh' | 'removed' | 'rotting'
+    loot: { counts: Partial<Record<ItemKind, number>>, instanceIds: string[] }
+    burialClaimed: boolean
+    cleanupReason: NpcPostDeathState['cleanupReason']
+  } | null
   household: { food: number, wood: number, water: number } | null
   frozen: boolean
 }
@@ -1319,9 +1338,11 @@ export class NpcAgent {
     this.gender = character.gender
     this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
     this.role = character.role
-    seedDefaultRoleWeapon(this.carried, this.role)
-    if (this.role === 'hunter') seedHunterSupplies(this.carried)
-    if (this.role === 'woodcutter') ensureKnifeCarried(this.carried)
+    if (!npcState.health.dead) {
+      seedDefaultRoleWeapon(this.carried, this.role)
+      if (this.role === 'hunter') seedHunterSupplies(this.carried)
+      if (this.role === 'woodcutter') ensureKnifeCarried(this.carried)
+    }
     this.traits = character.traits
     this.personality = character.personality
     this.relation = member.relation
@@ -1402,8 +1423,16 @@ export class NpcAgent {
     // `alreadySettled` (plan npc-009) skips playing the death clip from frame
     // 0 — a reconstructed corpse should present its settled end pose
     // immediately, not replay the whole collapse animation on every load/
-    // stream-in.
-    if (this.health.dead) this.die(true)
+    // stream-in. Do NOT commit a new post-death record here: `die(true)` is
+    // reconstruction, not an alive→dead edge (plan npc-010).
+    if (this.health.dead) {
+      const post = this.npcState.postDeath
+      if (hasActiveNpcCorpse(post)) {
+        this.mesh.position.set(post.x, sampleHeight(post.x, post.z), post.z)
+        this.mesh.rotation.y = post.yaw
+      }
+      this.die(true)
+    }
   }
 
   static async create(deps: NpcAgentDeps): Promise<NpcAgent> {
@@ -1542,7 +1571,8 @@ export class NpcAgent {
       },
       stamina: { current: this.stamina.current, max: this.stamina.max },
       vigor: { current: this.vigor.current, max: this.vigor.max },
-      health: { current: this.health.currentHp, max: this.health.maxHp },
+      health: { current: this.health.currentHp, max: this.health.maxHp, dead: this.health.dead },
+      postDeath: this.inspectPostDeath(),
       household: this.household
         ? {
             food: this.household.foodCount(),
@@ -1559,6 +1589,46 @@ export class NpcAgent {
   why(timeOfDay: number): NpcWhy {
     const snapshot = this.createInspectionSnapshot(timeOfDay)
     return projectNpcWhy(snapshot, this.needValueFor(snapshot.activeNeed))
+  }
+
+  /** Authoritative post-death record, or `null` while alive. */
+  getPostDeath(): NpcPostDeathState | null {
+    return this.npcState.postDeath
+  }
+
+  hasLootableCorpse(): boolean {
+    return this.mesh.visible && hasActiveNpcCorpse(this.npcState.postDeath)
+  }
+
+  concealCorpsePresentation(): void {
+    this.mesh.visible = false
+    this.mesh.removeFromParent()
+  }
+
+  private inspectPostDeath(): NpcInspectionSnapshot['postDeath'] {
+    const post = this.npcState.postDeath
+    if (!post) return null
+    const nowDays = this.forest?.getWorldDays() ?? post.deathAtDays
+    return {
+      status: post.status,
+      deathPosition: { x: post.x, z: post.z },
+      deathAtDays: post.deathAtDays,
+      phase: resolveNpcCorpsePhase(post, nowDays),
+      loot: {
+        counts: { ...post.loot.counts },
+        instanceIds: post.loot.instances.map((row) => row.id),
+      },
+      burialClaimed: post.status === 'claimed',
+      cleanupReason: post.cleanupReason,
+    }
+  }
+
+  private resolveCorpseLifecycle(): void {
+    const post = this.npcState.postDeath
+    if (!post || !this.mesh.visible) return
+    const nowDays = this.forest?.getWorldDays() ?? 0
+    if (!finalizeExpiredNpcCorpse(post, nowDays, this.droppedItems)) return
+    this.concealCorpsePresentation()
   }
 
   private needValueFor(need: NeedId): number | null {
@@ -1687,6 +1757,15 @@ export class NpcAgent {
     applyDamageVigor(this.vigor)
     if (amount > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, NPC_HEIGHT, amount)
     if (this.health.dead) {
+      commitNpcDeath({
+        state: this.npcState,
+        carried: this.carried,
+        role: this.role,
+        x: this.mesh.position.x,
+        z: this.mesh.position.z,
+        yaw: this.mesh.rotation.y,
+        nowDays: this.forest?.getWorldDays() ?? 0,
+      })
       this.die()
     } else if (amount > 0) {
       // Hurt presentation lives on the seam right after real damage is
@@ -2153,10 +2232,11 @@ export class NpcAgent {
     onKill?.()
   }
 
-  /** One-time death consequence (plan 177 §9/§13) — stops the NPC in place
-   *  (mirrors `AnimalAgent.collapse()`'s tip-over) rather than a corpse/loot
-   *  system, which stays out of this plan's scope. `update()` no-ops for a
-   *  dead NPC from the next tick on.
+  /** One-time death consequence (plan 177 §9/§13, extended by npc-010) —
+   *  stops the NPC in place and clears live execution. Authoritative corpse
+   *  state is written by `commitNpcDeath()` on the alive→dead edge, never
+   *  from this method: the constructor calls `die(true)` for already-dead
+   *  hydration. `update()` no-ops for a dead NPC from the next tick on.
    *  @param alreadySettled Reconstructed from already-dead authoritative
    *  state (plan npc-009, e.g. the constructor's own hydration call) — jumps
    *  the death clip straight to its final clamped frame instead of playing
@@ -2249,6 +2329,7 @@ export class NpcAgent {
       if (this.deathAnimSettleAtSimClock != null && this.simClock < this.deathAnimSettleAtSimClock) {
         this.anim.update(dt)
       }
+      this.resolveCorpseLifecycle()
       return
     }
     this.currentWeather = weather ?? null
@@ -4434,6 +4515,7 @@ export class NpcAgent {
    *  Falls back to an axis-only nudge or a no-op rather than ever stepping
    *  into water or a static collider — mirrors `steerTo`'s own fallback. */
   applySeparation(dx: number, dz: number): void {
+    if (this.health.dead) return
     const x = this.mesh.position.x
     const z = this.mesh.position.z
     if (this.isWalkableExterior(x + dx, z + dz)) {

@@ -93,6 +93,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/npcPhysicalProfile.ts`
+- `settlement/npcPostDeath.ts`
 - `settlement/npcState.ts`
 - `settlement/places.ts`
 - `settlement/props.ts`
@@ -134,6 +135,7 @@ Generated from TypeScript imports.
 - `ai/dialogueTemplates.ts`
 - `ai/npcCurrentActivity.test.ts`
 - `ai/npcWhy.test.ts`
+- `app/actions/containerActions.ts`
 - `app/dialogueTimeControl.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
@@ -182,6 +184,7 @@ Generated from TypeScript imports.
 - `economy/production.ts`
 - `settlement/families.ts`
 - `settlement/npcPhysicalProfile.ts`
+- `settlement/npcPostDeath.ts`
 - `settlement/places.ts`
 - `terrain/naturalResources.ts`
 
@@ -472,6 +475,8 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcLoadout.test.ts`
+- `settlement/npcPostDeath.test.ts`
+- `settlement/npcPostDeath.ts`
 
 ## `ai/npcLogistics.test.ts`
 

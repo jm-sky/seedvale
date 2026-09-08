@@ -71,7 +71,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
 | 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`             | -       | 🟡 | M      | ~~npc-015~~, ~~npc-018~~ |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~ |
-| 💡 `npc-010-death-and-corpse-lifecycle.md`                                  | -       | 🟡 | L      | ~~177~~ |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | npc-010 |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
 | ✅ `npc-021-endurance-driven-stamina-capacity-and-recovery.md`              | -       | ✅ | M      | ~~npc-019~~ |
@@ -115,7 +114,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `items-player-002-food-provenance-freshness-and-storage.md` | Świeżość w ekwipunku/skrzyni (0.5×), pieczenie/suszenie dziedziczy zużytą część shelf-life i gatunek, zepsute nie da się przetworzyć, save/load nie resetuje wieku |
 | `npc-006-shared-npc-animal-pathfinding.md` | NPC i zwierzęta poruszają się naturalnie, omijają przeszkody i nie zacinają się |
 | `settlements-npcs-014-local-goods-circulation.md` | Naturalny obieg dóbr: producent → handlarz → magazyn → gospodarstwo |
-| `npc-009-combat-feedback-and-death-consequences.md` | Walka NPC/zwierząt: animacje, audio, obrażenia i śmierć |
+| `npc-010-death-and-corpse-lifecycle.md` | Śmierć NPC: corpse zostaje w miejscu śmierci (nie w domu), loot loadoutu, decay w czasie, save/load bez duplikacji itemów, legacy martwy NPC bez sfabrykowanego corpse |
 | `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | UX budowania, placementu i przygotowania terenu |
 | `npc-007-interaction-destination-approach.md` | NPC naturalnie podchodzą do studni i nie wpadają w pętle ruchu |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Góry, doliny, rzeki, seamy i płynność streamingu |

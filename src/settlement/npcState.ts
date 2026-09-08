@@ -6,6 +6,13 @@ import { applyDerivedStaminaMax } from '../shared/enduranceStamina'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
 import { createVigorState, type VigorState } from '../shared/VigorState'
+import {
+  cloneNpcPostDeath,
+  createLegacyTerminalNpcPostDeath,
+  type NpcPostDeathState,
+} from './npcPostDeath'
+
+export type { NpcPostDeathState } from './npcPostDeath'
 
 export type NpcId = string
 
@@ -60,6 +67,11 @@ export type NpcAuthoritativeState = {
    *  survives an in-session `WorldBundle` rebuild via `NpcStateSnapshot`
    *  below. Not part of `SaveData` — no NPC runtime state is. */
   activePlan: NpcPlan | null
+  /** Post-death / corpse record (plan npc-010) — `null` while alive. Mutable
+   *  in place like `activePlan`. Survives settlement unload, `WorldBundle`
+   *  rebuild and `SaveData.npcStates`; `NpcAgent` is only the loaded
+   *  presentation. */
+  postDeath: NpcPostDeathState | null
 }
 
 /** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -77,6 +89,8 @@ export type NpcStateSnapshot = {
   physicalInjury?: number
   helperAssignment?: HelperAssignment | null
   activePlan?: NpcPlan | null
+  /** Required on current saves; older in-session snapshots default below. */
+  postDeath?: NpcPostDeathState | null
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -89,6 +103,9 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     physicalInjury: snapshot.physicalInjury ?? 0,
     helperAssignment: snapshot.helperAssignment ?? null,
     activePlan: snapshot.activePlan ?? null,
+    postDeath: snapshot.postDeath !== undefined
+      ? cloneNpcPostDeath(snapshot.postDeath)
+      : (snapshot.health.dead ? createLegacyTerminalNpcPostDeath() : null),
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
   return state
@@ -126,6 +143,7 @@ export function createNpcAuthoritativeState(
     physicalInjury: 0,
     helperAssignment: null,
     activePlan: null,
+    postDeath: null,
   }
 }
 
@@ -179,6 +197,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           physicalInjury: state.physicalInjury,
           helperAssignment: state.helperAssignment,
           activePlan: state.activePlan,
+          postDeath: cloneNpcPostDeath(state.postDeath),
         }
       }
       return out

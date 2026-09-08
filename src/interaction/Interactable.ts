@@ -27,6 +27,10 @@ export type WorldItemRef = {
  *  persisted or owns lifetime. */
 export type Interactable =
   | { kind: 'npc', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent, settlement: Settlement }
+  /** Dead NPC corpse (plan npc-010) — `[E]` opens the existing inventory
+   *  transfer screen over persisted corpse loot. Neutral in v1: no ownership
+   *  or reputation consequence. */
+  | { kind: 'npcCorpse', position: { x: number, z: number }, promptLabel: string, npc: NpcAgent }
   /** `interactRange` (plan 153) overrides `pickInGaze`'s flat range for this
    *  one candidate — set only when an active quest's `spot_animal` objective
    *  needs a wider reach than a skittish species' normal interact distance

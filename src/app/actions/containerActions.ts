@@ -1,3 +1,4 @@
+import type { NpcAgent } from '../../ai/NpcAgent'
 import type { VueUi } from '../../ui-vue/mount'
 import type { GroundPlacementDefinition, PlacementBlocker, PlacementPreviewResult } from './placementActions'
 import { exitGamePointerLock } from '../../input/MouseLook'
@@ -13,6 +14,7 @@ import { skipBatchCount } from '../../items/foodItems'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
+import { canLootNpcCorpse, corpseLootInventory, transferCorpseCountTo, transferCorpseInstanceTo } from '../../settlement/npcPostDeath'
 import { CHEST_DEPTH, CHEST_WIDTH } from '../../world/containerProp'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
@@ -33,6 +35,7 @@ export type ContainerActions = {
   placeContainerAtAim: (objectYaw?: number) => void
   putDownContainerAtAim: () => void
   openContainer: (id: string) => void
+  openNpcCorpse: (npc: NpcAgent) => void
   pickUpContainer: (id: string) => void
 }
 
@@ -52,14 +55,10 @@ export function createContainerActions(
   const { bundle, player, inventory, hud, toast, busy, mouseLook } = ctx
   const { vueUi, tentBlockers, rendererElement } = deps
 
-  /** The container currently shown by the transfer screen — set on open,
-   *  cleared when that same container is picked up, so `configureContainerScreen`'s
-   *  handlers (registered once, below) always act on the right
-   *  `PlacedContainerEntry` without the screen itself knowing container ids.
-   *  Opening a different container overwrites it; a stale id left behind by
-   *  an Esc/backdrop close is harmless since the transfer buttons are only
-   *  rendered while `ui.containerScreen.open` is true. */
-  let openContainerId: string | null = null
+  /** The transfer screen currently shown — a placed chest or an NPC corpse
+   *  (plan npc-010). Opening one overwrites the other; handlers below always
+   *  act on this session so the Vue screen stays inventory-agnostic. */
+  let openTransfer: { kind: 'container', id: string } | { kind: 'npcCorpse', npc: NpcAgent } | null = null
 
   /** Shared placement contract for a container (plan `world-008`) — one
    *  `aim` + `evaluate` pair `previewContainerPlacement`, `placeContainerAtAim`
@@ -143,7 +142,7 @@ export function createContainerActions(
     const entry = bundle.placedContainers.find(id)
     if (!entry) return
     exitGamePointerLock(rendererElement)
-    openContainerId = id
+    openTransfer = { kind: 'container', id }
     const def = CONTAINER_DEFS[entry.kind]
     vueUi.openContainerScreen(
       def.label,
@@ -174,12 +173,49 @@ export function createContainerActions(
     )
   }
 
+  const refreshNpcCorpseScreen = (npc: NpcAgent): void => {
+    const post = npc.getPostDeath()
+    if (!post || !vueUi.isContainerScreenOpen()) return
+    const contents = corpseLootInventory(post.loot)
+    vueUi.refreshContainerScreen(
+      contents.toJSON(),
+      buildInventoryGroups(contents, ctx.dayNight.elapsedDays),
+      contents.totalWeight(),
+      Math.max(contents.totalSize(), 1),
+      inventoryCountsForUi(inventory),
+      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+    )
+  }
+
+  const openNpcCorpse = (npc: NpcAgent): void => {
+    if (isActionBlocked(ctx)) return
+    if (!canLootNpcCorpse(npc.id) || !npc.hasLootableCorpse()) return
+    const post = npc.getPostDeath()
+    if (!post) return
+    exitGamePointerLock(rendererElement)
+    openTransfer = { kind: 'npcCorpse', npc }
+    const contents = corpseLootInventory(post.loot)
+    vueUi.openContainerScreen(
+      `Zwłoki: ${npc.displayName}`,
+      contents.toJSON(),
+      buildInventoryGroups(contents, ctx.dayNight.elapsedDays),
+      contents.totalWeight(),
+      Math.max(contents.totalSize(), 1),
+      inventoryCountsForUi(inventory),
+      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
+      inventory.totalWeight(),
+      inventory.maxWeight,
+    )
+  }
+
   const pickUpContainer = (id: string): void => {
     if (isActionBlocked(ctx)) return
     if (!bundle.placedContainers.pickUp(id)) return
-    if (openContainerId === id) {
+    if (openTransfer?.kind === 'container' && openTransfer.id === id) {
       vueUi.closeContainerScreen()
-      openContainerId = null
+      openTransfer = null
     }
     ctx.syncQuickActionAvailability()
     toast.show('Podniesiono skrzynię.')
@@ -187,11 +223,15 @@ export function createContainerActions(
 
   vueUi.configureContainerScreen({
     onDeposit: (kind, amount) => {
-      if (!openContainerId) return
+      if (!openTransfer) return
+      if (openTransfer.kind === 'npcCorpse') {
+        toast.show('Nie możesz zostawiać przedmiotów przy zwłokach.', 'error')
+        return
+      }
       const nowDays = ctx.dayNight.elapsedDays
       const batches = inventory.removeWithFreshness(kind, amount, nowDays)
       if (!batches) return
-      const accepted = bundle.placedContainers.deposit(openContainerId, kind, amount, nowDays, batches)
+      const accepted = bundle.placedContainers.deposit(openTransfer.id, kind, amount, nowDays, batches)
       if (accepted <= 0) {
         inventory.addWithFreshness(kind, amount, batches, nowDays)
         toast.show('Brak miejsca w skrzyni.', 'error')
@@ -202,51 +242,80 @@ export function createContainerActions(
       }
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
+      refreshContainerScreenFor(openTransfer.id)
     },
     onWithdraw: (kind, amount) => {
-      if (!openContainerId) return
+      if (!openTransfer) return
       if (!inventory.canAdd(kind, amount)) {
         toast.show(inventoryFullToastText(inventory, kind, amount), 'error')
         return
       }
+      if (openTransfer.kind === 'npcCorpse') {
+        const post = openTransfer.npc.getPostDeath()
+        if (!post || !transferCorpseCountTo(post, inventory, kind, amount)) return
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshNpcCorpseScreen(openTransfer.npc)
+        return
+      }
       const nowDays = ctx.dayNight.elapsedDays
-      const withdrawn = bundle.placedContainers.withdraw(openContainerId, kind, amount, nowDays)
+      const withdrawn = bundle.placedContainers.withdraw(openTransfer.id, kind, amount, nowDays)
       if (withdrawn.amount <= 0) return
       inventory.addWithFreshness(kind, withdrawn.amount, withdrawn.batches, nowDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
+      refreshContainerScreenFor(openTransfer.id)
     },
     onDepositInstance: (instanceId) => {
-      if (!openContainerId) return
+      if (!openTransfer) return
+      if (openTransfer.kind === 'npcCorpse') {
+        toast.show('Nie możesz zostawiać przedmiotów przy zwłokach.', 'error')
+        return
+      }
       const instance = inventory.getInstance(instanceId)
       if (!instance) return
-      if (!bundle.placedContainers.depositInstance(openContainerId, instance)) {
+      if (!bundle.placedContainers.depositInstance(openTransfer.id, instance)) {
         toast.show('Brak miejsca w skrzyni.', 'error')
         return
       }
       if (!inventory.removeInstance(instanceId)) return
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
+      refreshContainerScreenFor(openTransfer.id)
     },
     onWithdrawInstance: (instanceId) => {
-      if (!openContainerId) return
-      const instance = bundle.placedContainers.find(openContainerId)?.contents.getInstance(instanceId)
+      if (!openTransfer) return
+      if (openTransfer.kind === 'npcCorpse') {
+        const post = openTransfer.npc.getPostDeath()
+        const instance = post ? corpseLootInventory(post.loot).getInstance(instanceId) : null
+        if (!post || !instance) return
+        if (!inventory.canAddInstance(instance)) {
+          toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
+          return
+        }
+        if (!transferCorpseInstanceTo(post, inventory, instanceId)) {
+          toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
+          return
+        }
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshNpcCorpseScreen(openTransfer.npc)
+        return
+      }
+      const instance = bundle.placedContainers.find(openTransfer.id)?.contents.getInstance(instanceId)
       if (!instance) return
       if (!inventory.canAddInstance(instance)) {
         toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
         return
       }
-      const withdrawn = bundle.placedContainers.withdrawInstance(openContainerId, instanceId)
+      const withdrawn = bundle.placedContainers.withdrawInstance(openTransfer.id, instanceId)
       if (!withdrawn) return
       if (!inventory.addInstance(withdrawn)) return
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      refreshContainerScreenFor(openContainerId)
+      refreshContainerScreenFor(openTransfer.id)
     },
   })
 
-  return { previewContainerPlacement, placeContainerAtAim, putDownContainerAtAim, openContainer, pickUpContainer }
+  return { previewContainerPlacement, placeContainerAtAim, putDownContainerAtAim, openContainer, openNpcCorpse, pickUpContainer }
 }

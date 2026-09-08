@@ -43,12 +43,12 @@ Coarse world features (lakes, mountain peaks, cemeteries, and similar) are class
 
 ### Settlements / NPCs
 
-Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements. `SettlementEconomy` (settlement-owned bulk stock) and `Household` (one family's own wood/water/food/items) are the two resource registries settlements host; both persist and carry across an in-session `WorldBundle` rebuild. NPC authoritative state — all seven fields (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`) — is physically hosted here (`NpcStateRegistry`) and persists as part of `SaveData.npcStates`, but the decision architecture, work dispatch, combat integration, and social/dialogue behaviour that consume it are canonical in `npc.md`, not documented here. Land ownership (`LandOwnershipRegistry`/`SaveData.ownedLandPlots`) is a separate, simpler player-facing mechanic.
+Plan-first villages (`VillagePlan` → `SettlementDef`), streamed settlements. `SettlementEconomy` (settlement-owned bulk stock) and `Household` (one family's own wood/water/food/items) are the two resource registries settlements host; both persist and carry across an in-session `WorldBundle` rebuild. NPC authoritative state — all eight fields (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`/`postDeath`) — is physically hosted here (`NpcStateRegistry`) and persists as part of `SaveData.npcStates`, but the decision architecture, work dispatch, combat integration, and social/dialogue behaviour that consume it are canonical in `npc.md`, not documented here. Land ownership (`LandOwnershipRegistry`/`SaveData.ownedLandPlots`) is a separate, simpler player-facing mechanic.
 
 - Settlement generation, streaming, households, settlement/household economy, land ownership: [state/settlements.md](./state/settlements.md)
-- NPC decisions, needs/pressure arbitration, work and profession dispatch, work-contract evaluation, combat integration, social/dialogue/relationships, movement: [state/npc.md](./state/npc.md)
+- NPC decisions, needs/pressure arbitration, work and profession dispatch, work-contract evaluation, combat integration, social/dialogue/relationships, movement, death/corpse lifecycle: [state/npc.md](./state/npc.md)
 - Combat (NPC combat phase, animal attack & defense, role loadouts): [state/combat.md](./state/combat.md)
-- Still not implemented: inter-settlement trade, Social Places beyond a settlement's own campfire, conversation partner ranking by personality/traits/role/relationship, NPC death disposal (see "Not implemented" below).
+- Still not implemented: inter-settlement trade, Social Places beyond a settlement's own campfire, conversation partner ranking by personality/traits/role/relationship.
 
 ### Fauna
 
@@ -161,7 +161,6 @@ Do not treat a passing build as proof that a visual Three.js feature is correct.
 - Player HP is not persisted — every Continue/Load fully heals the player, while NPC and livestock HP both persist. See [persistence.md](./state/persistence.md#known-persistence-limitations).
 - Individual wild fauna are never persisted (only the population is deterministically reconstructed); rats are neither persisted nor seed-derivable at all. See [fauna.md](./state/fauna.md#persistence-classes).
 - NPC/animal execution state (pending action, pathfinding, combat intent, carried inventory) is never persisted and resets on every reconstruction.
-- NPC death has no disposal path — a dead NPC stays in its settlement's roster permanently. See [npc.md](./state/npc.md).
 - Social Places beyond a settlement's own campfire; conversation partner selection/ranking by personality/traits/role/relationship; group conversations; social interaction memory entries.
 - LLM/AI-generated quests.
 - Inter-settlement trade and player crafting.

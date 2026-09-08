@@ -263,6 +263,7 @@ describe('loadSaveData v1 contract', () => {
           needs: { thirst: 0.1, woodDuty: 0.2, waterDuty: 0.1, hunger: 0.3 },
           helperAssignment: { targetContainerId: 'chest:1', resourceKind: 'food', enabled: true },
           activePlan: { goal: 'obtainWood', strategy: null, state: 'active', progress: { amount: 1 }, currentStep: 'findNextTarget' },
+          postDeath: null,
         },
       },
       households: {
@@ -480,6 +481,88 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
         },
       },
     })
+  })
+
+  it('migrates a real v10 save (plan npc-010) into v11, adding postDeath without fabricating corpses', () => {
+    const v10Save = {
+      ...validSave,
+      version: 10,
+      npcStates: {
+        alive: {
+          health: { current: 80, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+        },
+        dead: {
+          health: { current: 0, max: 100, dead: true },
+          stamina: { current: 0, max: 100 },
+          vigor: { current: 0, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+        },
+      },
+    }
+    const result = loadStoredSave(v10Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.npcStates?.alive.postDeath).toBeNull()
+    expect(result.data.npcStates?.dead.postDeath).toEqual({
+      status: 'terminal',
+      x: 0,
+      z: 0,
+      yaw: 0,
+      deathAtDays: 0,
+      loot: { counts: {}, instances: [] },
+      cleanupReason: 'legacy',
+    })
+  })
+
+  it('accepts a current-version npcStates record with active corpse loot and rejects a malformed postDeath', () => {
+    const withCorpse = {
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 0, max: 100, dead: true },
+          stamina: { current: 0, max: 100 },
+          vigor: { current: 0, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: {
+            status: 'active',
+            x: 3,
+            z: 4,
+            yaw: 0.2,
+            deathAtDays: 1.5,
+            loot: { counts: {}, instances: [{ id: 'w1', kind: 'knife', durability: 0.4, sharpness: 0.8 }] },
+            cleanupReason: null,
+          },
+        },
+      },
+    }
+    expect(isSaveData(withCorpse)).toBe(true)
+    expect(isSaveData({
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 0, max: 100, dead: true },
+          stamina: { current: 0, max: 100 },
+          vigor: { current: 0, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: { status: 'active' },
+        },
+      },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 80, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+        },
+      },
+    })).toBe(false)
   })
 
   it('rejects malformed SaveQuests progress and relation values', () => {

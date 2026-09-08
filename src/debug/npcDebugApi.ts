@@ -179,6 +179,10 @@ export type SkillsDebugApi = {
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
+  /** Authoritative NPC state including post-death/corpse (plan npc-010) —
+   *  reads `NpcStateRegistry`, so it works for terminal/unloaded NPCs that
+   *  have no live `NpcAgent`. */
+  npcState: (id: string) => import('../settlement/npcState').NpcStateSnapshot | null
   /** Household-level mutation history (plan settlements-npcs-013) —
    *  fresh-resolving by id, works whether or not the owning settlement is
    *  currently loaded. `null` for a household id never created. */
@@ -243,6 +247,7 @@ type VillageIdentityLike = { id: string, name: string, size: VillageSize, x: num
 const HELP_TEXT = [
   'window.seedvale.debug — developer console API (?debug=1 only)',
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
+  'npcState(id) — authoritative NPC snapshot including post-death/corpse (works without a live agent)',
   'npc(id).history(filter?) — NPC decision/action trace (plan 170); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); filter: {since?, limit?, types?}',
   'village(id) — resolves by id even if the village is currently unloaded (npcs() is [] then)',
   'villages() — lists currently loaded villages only',
@@ -418,6 +423,7 @@ export function installNpcDebugApi(
       }
     },
     npcs: (filter) => queryNpcs(bundle, getTimeOfDay(), filter),
+    npcState: (id) => bundle.settlementsManager.snapshotNpcStates()[id] ?? null,
     household: (id) => (bundle.settlementsManager.getHousehold(id) ? { history: (filter) => householdHistory(bundle, id, filter) } : null),
     settlement: (id) => (findVillageDef(bundle.settlementsManager, id) ? { history: (filter) => settlementHistory(bundle, id, filter) } : null),
     setFrenzyWolf: () => setFrenzyWolf(bundle),

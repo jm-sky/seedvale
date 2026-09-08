@@ -92,7 +92,7 @@ Generated from exported TypeScript symbols.
 
 - `HiddenTreasureDebugApi` — type — line 151
 - `HouseholdDebugHandle` — type — line 70
-- `installNpcDebugApi` — function — line 273
+- `installNpcDebugApi` — function — line 278
 - `LocationsDebugApi` — type — line 102
 - `NpcDebugHandle` — type — line 55
 - `SeedvaleDebugApi` — type — line 179

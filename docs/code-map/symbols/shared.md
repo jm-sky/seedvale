@@ -11,6 +11,11 @@ Generated from exported TypeScript symbols.
 
 - `useBootMark` — const — line 11
 
+## `shared/corpseLifecycle.ts`
+
+- `CorpseDecayPhase` — type — line 8
+- `decayPhaseFromElapsed` — function — line 12
+
 ## `shared/enduranceStamina.ts`
 
 - `applyDerivedStaminaMax` — function — line 28

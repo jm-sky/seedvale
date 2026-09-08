@@ -62,3 +62,13 @@ export function seedHunterSupplies(carried: Inventory): void {
   ensureKnifeCarried(carried)
   if (carried.count('arrow') === 0) carried.add('arrow', HUNTER_STARTING_ARROWS)
 }
+
+/** Whether `kind` is this role's personal loadout belonging (plan npc-010) —
+ *  the default role weapon, plus the extra `knife` woodcutter/hunter seed
+ *  beside a non-knife primary. Arrows and every other carried work/economy
+ *  payload stay out: they are household/expedition supply, not personal
+ *  equipment, and the loadout helpers never tag ownership per item. */
+export function isNpcLoadoutBelonging(kind: ItemKind, role: Role): boolean {
+  if (kind === defaultWeaponForRole(role)) return true
+  return kind === 'knife' && (role === 'woodcutter' || role === 'hunter')
+}

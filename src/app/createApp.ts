@@ -1760,6 +1760,7 @@ export async function createApp(
     tidyGardenPlot: placement.tidyGardenPlot,
     waterGardenPlot: placement.waterGardenPlot,
     openContainer: containers.openContainer,
+    openNpcCorpse: containers.openNpcCorpse,
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,

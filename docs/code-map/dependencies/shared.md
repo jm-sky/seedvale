@@ -25,6 +25,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/playerDamage.ts`
 - `player/playerDownedRecovery.test.ts`
+- `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
 - `settlement/npcState.ts`
 - `shared/HealthState.test.ts`
@@ -160,6 +161,13 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `fauna/createFauna.ts`
 - `settlement/createSettlement.ts`
+
+## `shared/corpseLifecycle.ts`
+
+**Imported by**
+
+- `fauna/animalCorpse.ts`
+- `settlement/npcPostDeath.ts`
 
 ## `shared/enduranceStamina.test.ts`
 

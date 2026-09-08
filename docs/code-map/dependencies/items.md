@@ -138,6 +138,8 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
+- `settlement/npcPostDeath.test.ts`
+- `settlement/npcPostDeath.ts`
 - `settlement/storageRepair.test.ts`
 - `settlement/storageRepair.ts`
 - `settlement/storageVisuals.test.ts`
@@ -313,6 +315,7 @@ Generated from TypeScript imports.
 - `items/createDroppedItems.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/npcPostDeath.ts`
 - `terrain/digAction.ts`
 
 ## `items/createItemSpawners.ts`
@@ -728,6 +731,7 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `settlement/VillageFire.ts`
 - `settlement/household.ts`
+- `settlement/npcPostDeath.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageRepair.ts`
 - `settlement/storageVisuals.ts`
@@ -1027,5 +1031,6 @@ Generated from TypeScript imports.
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/weaponMaintenance.test.ts`
+- `settlement/npcPostDeath.test.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`

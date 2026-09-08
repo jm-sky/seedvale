@@ -4,7 +4,7 @@
 
 **Nie jest:** indeksem planów ([plans/README.md](../plans/README.md)), katalogiem GLB ([assets/](../assets/README.md)), kontraktem renderu ([GRAPHICS.md](../architecture/GRAPHICS.md)), snapshotem całego codebase ([STATE.md](../STATE.md)), ani drugim dokumentem o życiu NPC — decyzje/potrzeby/strategie/praca/walka/relacje/dialog NPC są kanonicznie opisane w [npc.md](./npc.md); ten plik pokazuje tylko, gdzie osada hostuje NPC-a i jak jego praca dociera do gospodarstwa/ekonomii.
 
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-08
 
 Gdy ten plik rozjeżdża się z kodem — **wygrywa kod**, potem aktualizujemy ten dokument.
 
@@ -22,7 +22,7 @@ Historia zakresu: zarchiwizowane plany [047](../plans/archive/2026-08-09--047--v
 | S4 | Picie ze studni idzie przez wspólny per-osada `InteractionQueue` (FIFO, jedna obsługa naraz). Picie w domu omija kolejkę. | ten sam typ kolejki jest do ponownego użycia przy ogrodzie/straganie |
 | S5 | Dzienny rytm = szablon roli + overlay cech (`effectiveScheduleFor`). Pilne potrzeby wygrywają w `choose()`. | od planu 151: overlay `sociable` ma producenta — ognisko osady (§Social poniżej) |
 | S6 | `VigorState` ≠ `StaminaState`. Wigor to budżet dnia; zwykły odpoczynek odnawia tylko staminę. Collapse → istniejący `goSleep`/`sleep`. | fauna nie używa wigoru |
-| S7 | Autorytatywny stan NPC — wszystkie siedem pól (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`) — jest persystowany w `SaveData.npcStates` (opcjonalne, sparse, od planu persistence-001). `phase`/`pendingAction`/pathfinding/`combatIntent`/noszony `Inventory` **nie** są — resetują się przy każdej rekonstrukcji, więc Continue nie przywraca pełnej symulacji *wykonania*. | zob. [npc.md](./npc.md#persistence), [persistence.md](./persistence.md) |
+| S7 | Autorytatywny stan NPC — wszystkie osiem pól (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`/`postDeath`) — jest persystowany w `SaveData.npcStates` (opcjonalne, sparse, od planu persistence-001; `postDeath` od npc-010). `phase`/`pendingAction`/pathfinding/`combatIntent`/noszony `Inventory` **nie** są — resetują się przy każdej rekonstrukcji, więc Continue nie przywraca pełnej symulacji *wykonania*. | zob. [npc.md](./npc.md#persistence), [persistence.md](./persistence.md) |
 | S8 | Ruch NPC ma watchdog utknięcia — brak postępu pozycji eskaluje `repath` → `local escape` → `abandon` → (przy powtarzającym się utknięciu) emergency teleport. Cel w obcym dysku (dom, studnia, sterta drewna, wóz kupca) jest snapowany na obręcz od strony NPC (`destinationOnColliderRim`); rescue próbuje tylko punkty **na zewnątrz** zajętego collidera; teleport nie wraca na środek domu. Drenaż staminy zależy od tego, co NPC robi (chodzenie tanie, ciężka `execute` drogie), nie samej fazy. `stamina === 0` w `goTo`/`execute` → faza `exhausted` (odpoczynek w miejscu, ta sama akcja wznawia się po odzyskaniu progu). | `src/ai/npcMovementWatchdog.ts`, `src/ai/npcColliderRim.ts`; emergency teleport zawsze loguje `console.warn('[npc:rescue] emergency teleport', ...)` |
 | S9 | Kolaps wigoru i **krytyczna** potrzeba (`pickNeed({ critical: true })`, progi wyraźnie wyżej niż zwykłe `pickNeed`) przerywają akcję już w locie (`goTo`/`execute`) — throttled check (~1 s) w `NpcAgent.update()`, tylko gdy `activeNeed === 'idle'` (akcja harmonogramowa, nie need-driven — unika przerzucania między potrzebami). Zwykła zmiana godziny nadal **nie** przerywa (plan 060 obowiązuje dalej). | `src/ai/NpcAgent.ts`'s `tickCriticalInterrupt`/`interruptCurrentAction`, `src/ai/Needs.ts`'s `pickNeed`'s `critical` option (plan [114](../plans/archive/2026-08-14--114--npc-critical-need-vigor-interrupt.md)) |
 
@@ -81,7 +81,7 @@ Multiplayer nie jest planowany teraz i nie projektujemy go tutaj. Ale S3/S7 poka
 
 ### NPC (stan hostowany tutaj, architektura decyzyjna w npc.md)
 
-Autorytatywny stan NPC (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`) jest fizycznie hostowany w `src/settlement/` — `NpcStateRegistry` (`npcState.ts`) żyje na `SettlementsManager`, keyed po stabilnym `npc.id`, tym samym wzorcem co `HouseholdRegistry`/`EconomyRegistry`: stream-out/in i `WorldBundle` rebuild (`snapshotNpcStates()`/`initialNpcStates`) hydratują `NpcAgent` z tego samego stanu zamiast tworzyć świeży, więc śmierć (`health.dead`) przetrwa reload w tej samej sesji. Persystowane w `SaveData.npcStates` od planu persistence-001 (zob. S7 wyżej). To jedyne miejsce, gdzie osada "hostuje" NPC-a fizycznie — cała reszta architektury (needs/pressure/decyzje, harmonogram, movement watchdog, walka, dialog) jest kanonicznie opisana w [npc.md](./npc.md), nie tutaj.
+Autorytatywny stan NPC (`health`/`stamina`/`vigor`/`needs`/`physicalInjury`/`helperAssignment`/`activePlan`/`postDeath`) jest fizycznie hostowany w `src/settlement/` — `NpcStateRegistry` (`npcState.ts`) żyje na `SettlementsManager`, keyed po stabilnym `npc.id`, tym samym wzorcem co `HouseholdRegistry`/`EconomyRegistry`: stream-out/in i `WorldBundle` rebuild (`snapshotNpcStates()`/`initialNpcStates`) hydratują `NpcAgent` z tego samego stanu zamiast tworzyć świeży, więc śmierć (`health.dead`) i corpse (`postDeath`) przetrwają reload w tej samej sesji. Persystowane w `SaveData.npcStates` od planu persistence-001 (zob. S7 wyżej). To jedyne miejsce, gdzie osada "hostuje" NPC-a fizycznie — cała reszta architektury (needs/pressure/decyzje, harmonogram, movement watchdog, walka, dialog, death/corpse lifecycle) jest kanonicznie opisana w [npc.md](./npc.md), nie tutaj.
 
 Kupiec przy straganie: dialog v2 (ekran Vue) w osadzie domowej wystawia handel (dwie kolumny, kupno/sprzedaż/barter); strażnik może oddać miecz — to settlement-specific treść menu dialogu, nie zmiana architektury dialogu opisanej w [npc.md](./npc.md#relationships-social-and-dialogue).
 
@@ -124,6 +124,8 @@ src/ai/socialBehaviour.ts
 src/ai/npcMovementWatchdog.ts
 src/ai/npcColliderRim.ts
 src/settlement/npcRelationships.ts
+src/settlement/npcState.ts
+src/settlement/npcPostDeath.ts
 src/shared/VigorState.ts
 src/shared/StaminaState.ts
 ```

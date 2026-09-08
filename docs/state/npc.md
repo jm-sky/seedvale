@@ -25,12 +25,13 @@ When this file and the code disagree, the code wins — update this file.
 - `physicalInjury` — outstanding healable HP loss, deliberately *not* derived from `maxHp − currentHp` so a future non-physical damage source (starvation, dehydration) can never conflate with it.
 - `helperAssignment` — a player-configured delivery target (`{targetContainerId, resourceKind, enabled}`, set from the Villagers UI).
 - `activePlan` — the persistent Plan described below (`{goal, strategy, state, progress, currentStep}`).
+- `postDeath` — corpse/lifecycle record after the alive→dead edge (`null` while alive). Holds death position/yaw, a world-days death-time anchor, persisted loadout loot, and `active`/`claimed`/`terminal` status so a corpse can age during stream-out/time-skip and not rematerialize after natural cleanup. Burial (`npc-011`) can `claimed`-lock cleanup without a parallel corpse registry.
 
-`NpcAgent` holds **direct references** into this state, not a copy — disposing/recreating the `NpcAgent` instance (settlement unload/reload, an in-session `WorldBundle` rebuild) re-hydrates from the same object. **All seven fields above are persisted** as part of `SaveData.npcStates` — see [Persistence](#persistence).
+`NpcAgent` holds **direct references** into this state, not a copy — disposing/recreating the `NpcAgent` instance (settlement unload/reload, an in-session `WorldBundle` rebuild) re-hydrates from the same object. **All eight fields above are persisted** as part of `SaveData.npcStates` — see [Persistence](#persistence).
 
-**Deliberately excluded from authoritative state — owned by `NpcAgent` itself, reset on every reconstruction:** `phase`, `pendingAction`, pathfinding/watchdog state, `combatIntent`, the carried `Inventory`. These are transient presentation/execution state, not entity identity, and are never persisted.
+**Deliberately excluded from authoritative state — owned by `NpcAgent` itself, reset on every reconstruction:** `phase`, `pendingAction`, pathfinding/watchdog state, `combatIntent`, the carried `Inventory` (except loadout items moved onto `postDeath.loot` at death). These are transient presentation/execution state, not entity identity, and are never persisted.
 
-**NPC death has no disposal path.** A dead NPC stays in its settlement's roster permanently (excluded from proximity/separation and dialogue targeting, but never removed) — unlike fauna's `fresh → rotting → bones → removed` corpse lifecycle. Any future feature touching NPC death (loot, funerals, population effects, a "kill an NPC" quest objective) needs a disposal path first; the reason it doesn't exist today is that there's no well-defined runtime end-state to persist, not a persistence omission.
+**NPC death** is that `postDeath` record, not a second HP system and not an `NpcAgent`-lifetime mesh (`settlement/npcPostDeath.ts`). The alive→dead edge writes death transform, a world-days time anchor, and classified loadout loot once; `die()`/`die(true)` only handle runtime presentation and must not mint a second corpse. Natural decay is `fresh → rotting → bones → removed` from `nowDays - deathAtDays`. Terminal cleanup drops remaining loot as world items and prevents rematerialization; a burial claim blocks that cleanup for `npc-011`. Legacy saves of already-dead NPCs migrate to terminal/no-active-corpse rather than inventing a home-position body or loadout.
 
 ## Decision architecture
 
@@ -124,7 +125,7 @@ NPCs carry a generic `Inventory` — the same class and capability-flag catalog 
 
 ## Persistence
 
-The seven `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/helperAssignment/activePlan) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/carried inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit. Identity/physical profile is deterministic and never persisted. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
+The eight `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/helperAssignment/activePlan/postDeath) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/carried inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
 
 ## Cross-domain integrations
 
@@ -141,7 +142,7 @@ The seven `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInj
 
 ## Limitations
 
-- NPC death has no disposal path (see above) — a standing gap any death-adjacent feature needs to resolve first.
+- Burial decisions, graves, and household mourning remain `npc-011` — this plan only leaves a `claimed` handoff on the corpse record.
 - Blacksmith and farmer-planting profession work is wired but currently dormant in a normal playthrough — nothing yet supplies the household-held item (whetstone, seed) either path requires.
 - An NPC's carried inventory is never persisted; an interrupted claim/delivery after the claim step genuinely loses the goods.
 - The two "relationship" stores (NPC↔NPC and player↔NPC) are easy to conflate by name but are structurally unrelated — see [Relationships, social, and dialogue](#relationships-social-and-dialogue).
@@ -169,6 +170,7 @@ src/ai/helperAssignment.ts
 src/ai/characters.ts
 src/ai/nameCultures.ts
 src/settlement/npcState.ts
+src/settlement/npcPostDeath.ts
 src/settlement/npcRelationships.ts
 src/settlement/npcPhysicalProfile.ts
 src/settlement/families.ts

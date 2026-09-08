@@ -33,34 +33,34 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalCorpse.ts`
 
-- `advanceAnimalCorpse` — function — line 399
-- `AnimalCorpseState` — type — line 124
-- `buryCorpse` — function — line 221
-- `canHarvestMeatFrom` — function — line 89
-- `claimCorpseAsFood` — function — line 424
-- `CorpseHost` — type — line 196
-- `corpseLingerSeconds` — function — line 38
-- `CorpseNeighbour` — type — line 209
-- `CorpsePhase` — type — line 30
+- `advanceAnimalCorpse` — function — line 398
+- `AnimalCorpseState` — type — line 123
+- `buryCorpse` — function — line 220
+- `canHarvestMeatFrom` — function — line 88
+- `claimCorpseAsFood` — function — line 423
+- `CorpseHost` — type — line 195
+- `corpseLingerSeconds` — function — line 39
+- `CorpseNeighbour` — type — line 208
+- `CorpsePhase` — type — line 31
   - domain: fauna
   - role: Corpse/remains/decay/rot-FX/rabies-exposure/food-claim state machine for one dead `AnimalAgent` (plan fauna-017 step 5, review E3) — plain state plus free functions over an explicit `CorpseHost`, mirroring how `AnimalLife.ts` owns `AnimalLifeState` without owning the animal. Not a second entity: `health.dead` stays authoritative on `AnimalAgent`, and every public method there (`bury`, `harvestMeat`, `corpsePhase`, `claimAsFood`, …) stays a thin delegate into this module, so no cross- agent call shape changes.
-- `corpsePhaseFromElapsed` — function — line 70
-- `corpseReadyToRemove` — function — line 228
-- `createAnimalCorpseState` — function — line 173
-- `disposeAnimalCorpse` — function — line 448
-- `disposeAnimalCorpseRotFx` — function — line 389
-- `harvestCorpseMeat` — function — line 279
-- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 36
-- `hideLivingVisual` — function — line 236
-- `isRabiesCorpseContact` — function — line 112
-- `markCorpseFoodConsumed` — function — line 439
-- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 59
-- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 62
-- `releaseCorpseClaim` — function — line 431
-- `rollsRabiesInfection` — function — line 103
-- `rotFxRelevant` — function — line 79
-- `spawnDeathSplat` — function — line 296
-- `spawnHarvestedRemains` — function — line 262
+- `corpsePhaseFromElapsed` — function — line 71
+- `corpseReadyToRemove` — function — line 227
+- `createAnimalCorpseState` — function — line 172
+- `disposeAnimalCorpse` — function — line 447
+- `disposeAnimalCorpseRotFx` — function — line 388
+- `harvestCorpseMeat` — function — line 278
+- `HARVESTED_REMAINS_LINGER_SECONDS` — const — line 37
+- `hideLivingVisual` — function — line 235
+- `isRabiesCorpseContact` — function — line 111
+- `markCorpseFoodConsumed` — function — line 438
+- `RABIES_CORPSE_CONTACT_RADIUS` — const — line 60
+- `RABIES_CORPSE_INFECTION_CHANCE` — const — line 63
+- `releaseCorpseClaim` — function — line 430
+- `rollsRabiesInfection` — function — line 102
+- `rotFxRelevant` — function — line 78
+- `spawnDeathSplat` — function — line 295
+- `spawnHarvestedRemains` — function — line 261
 
 ## `fauna/animalDebugVisual.ts`
 

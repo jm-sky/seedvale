@@ -107,7 +107,7 @@ function capitalize(text: string): string {
  *  106) alongside the call. A *completed* player-built well becomes a plain
  *  `well` candidate (see `app/interactables.ts`), so it goes through here too. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' | 'noticeBoard' | 'settlementStorage' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'npcCorpse' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' | 'noticeBoard' | 'settlementStorage' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

@@ -4,7 +4,7 @@
 
 **Not:** a field-by-field `SaveData` schema dump (that's [ARCHITECTURE.md](../architecture/ARCHITECTURE.md#save-schema)'s job), a per-migration changelog narrating why each version bump happened (that belongs in the migration plans themselves), or a domain's own detailed persistence status (each domain doc states its own facts and links here for the taxonomy).
 
-**Last verified:** 2026-09-07
+**Last verified:** 2026-09-08
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -74,7 +74,7 @@ The boundary rule this codebase applies consistently: **a value that is a pure f
 |---|---|
 | Terrain/hydrology | Deterministic reconstruction; player-sourced modifications and resource-deposit depletion persist as deltas. |
 | Settlements/households/economy | Persisted authoritative (economies required; households sparse-optional). Settlement generation itself is deterministic. Land ownership persists as a flat top-level field — the one settlement-domain concept not using the shared registry idiom below (a style asymmetry, not a correctness risk). |
-| NPCs | Authoritative state (all seven fields) and both relationship stores persist. Identity/physical profile is deterministic. Decision/execution runtime state and carried inventory never persist. See [npc.md](./npc.md). |
+| NPCs | Authoritative state (all eight fields, including post-death/corpse) and both relationship stores persist. Identity/physical profile is deterministic. Decision/execution runtime state and carried inventory never persist (loadout belongings become corpse loot at death). See [npc.md](./npc.md). |
 | Player | Inventory (counts, item instances, *and* food-batch freshness), survival needs, and skills (XP) persist. **HP does not** — see [Known persistence limitations](#known-persistence-limitations). Stamina is deliberately not persisted. |
 | Inventory/items | A generic `Inventory` class is reused by the player, NPCs, households, the settlement economy, and every placed container — persistence fidelity differs by owner (see limitations below), not by mechanism. |
 | World objects/buildables | Persisted authoritative, one array per object type; construction progress lives on the object's own entry, never duplicated onto a work contract. |

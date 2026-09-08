@@ -9,11 +9,11 @@ import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
-import type { RatSaveRecord } from '../settlement/ratPersistence'
-import type { StorageInfestationCondition } from '../settlement/storageInfestation'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
+import type { RatSaveRecord } from '../settlement/ratPersistence'
+import type { StorageInfestationCondition } from '../settlement/storageInfestation'
 import type { PreparationSize } from '../terrain/terrainPreparation'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
@@ -456,7 +456,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 10
+export const CURRENT_SAVE_VERSION = 11
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -553,13 +553,11 @@ export type SaveData = {
   resourceDeposits: Record<string, number>
   workContracts: SaveWorkContract[]
   /** NPC authoritative state (health/needs/stamina/vigor/helper assignment/
-   *  active plan), keyed by stable npc id (plan persistence-001) — see
-   *  `settlement/npcState.ts`'s `NpcStateSnapshot`. Sparse: an id absent here
-   *  falls back to normal deterministic NPC creation (older v1 saves, or an
-   *  NPC never yet constructed this session). Optional — same "existing v1
-   *  slots predate this collection, missing means empty" contract as every
-   *  field below (plan persistence-001 §15: no version bump/migration
-   *  framework for this; every new save always writes it). */
+   *  active plan/post-death), keyed by stable npc id (plan persistence-001 /
+   *  npc-010) — see `settlement/npcState.ts`'s `NpcStateSnapshot`. Sparse: an
+   *  id absent here falls back to normal deterministic NPC creation. Optional
+   *  at the collection level (missing means empty); each snapshot itself is
+   *  validated against the current contract, including `postDeath`. */
   npcStates?: Record<NpcId, NpcStateSnapshot>
   /** Household authoritative state (stock/water/items), keyed by stable
    *  household id (plan persistence-001) — see `settlement/household.ts`'s
@@ -1310,11 +1308,11 @@ function isNpcPlan(value: unknown): value is Record<string, unknown> {
   )
 }
 
-/** Validates one `NpcStateSnapshot` (plan persistence-001) — mirrors
- *  `settlement/npcState.ts`'s own shape; `physicalInjury` (plan npc-002) is
+/** Validates one `NpcStateSnapshot` (plan persistence-001 / npc-010) —
+ *  mirrors `settlement/npcState.ts`'s own shape; `physicalInjury` is
  *  optional (absent means `0`), same as `helperAssignment`/`activePlan`
- *  being optional (absent means `null`) — all three default the same way a
- *  fresh in-session snapshot would. */
+ *  being optional (absent means `null`). `postDeath` is required on the
+ *  current schema (`null` while alive). */
 function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (!value || typeof value !== 'object') return false
   const s = value as Record<string, unknown>
@@ -1325,7 +1323,36 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (s.physicalInjury !== undefined && typeof s.physicalInjury !== 'number') return false
   if (s.helperAssignment !== undefined && s.helperAssignment !== null && !isHelperAssignment(s.helperAssignment)) return false
   if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
+  if (!('postDeath' in s) || !isNpcPostDeathField(s.postDeath)) return false
   return true
+}
+
+const NPC_POST_DEATH_STATUSES: ReadonlySet<string> = new Set(['active', 'claimed', 'terminal'])
+const NPC_CORPSE_CLEANUP_REASONS: ReadonlySet<string> = new Set(['buried', 'decay', 'legacy'])
+
+function isNpcCorpseLoot(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const loot = value as Record<string, unknown>
+  if (!loot.counts || typeof loot.counts !== 'object' || Array.isArray(loot.counts)) return false
+  for (const amount of Object.values(loot.counts as Record<string, unknown>)) {
+    if (typeof amount !== 'number') return false
+  }
+  return isSaveItemInstancesField(loot.instances)
+}
+
+function isNpcPostDeathField(value: unknown): boolean {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const p = value as Record<string, unknown>
+  return (
+    typeof p.status === 'string' && NPC_POST_DEATH_STATUSES.has(p.status) &&
+    typeof p.x === 'number' &&
+    typeof p.z === 'number' &&
+    typeof p.yaw === 'number' &&
+    typeof p.deathAtDays === 'number' &&
+    isNpcCorpseLoot(p.loot) &&
+    (p.cleanupReason === null || (typeof p.cleanupReason === 'string' && NPC_CORPSE_CLEANUP_REASONS.has(p.cleanupReason)))
+  )
 }
 
 function isNpcStatesField(value: unknown): value is Record<NpcId, NpcStateSnapshot> {
@@ -1836,6 +1863,42 @@ function migrateSaveV9ToV10(data: unknown): unknown {
   }
 }
 
+/** v10 → v11 (plan npc-010): adds persisted NPC post-death/corpse state.
+ *  Alive records get `postDeath: null`. Dead records from before this plan
+ *  have no recoverable death transform or loot, so they become terminal
+ *  legacy corpses rather than inventing a home-position body or loadout. */
+function migrateSaveV10ToV11(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const npcStates = v.npcStates
+  if (!npcStates || typeof npcStates !== 'object' || Array.isArray(npcStates)) {
+    return { ...v, version: 11 }
+  }
+  const next: Record<string, unknown> = {}
+  for (const [id, snapshot] of Object.entries(npcStates as Record<string, unknown>)) {
+    if (!snapshot || typeof snapshot !== 'object') {
+      next[id] = snapshot
+      continue
+    }
+    const s = snapshot as Record<string, unknown>
+    const health = s.health as { dead?: boolean } | undefined
+    next[id] = {
+      ...s,
+      postDeath: health?.dead
+        ? {
+            status: 'terminal',
+            x: 0,
+            z: 0,
+            yaw: 0,
+            deathAtDays: 0,
+            loot: { counts: {}, instances: [] },
+            cleanupReason: 'legacy',
+          }
+        : null,
+    }
+  }
+  return { ...v, version: 11, npcStates: next }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -1846,6 +1909,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   7: migrateSaveV7ToV8,
   8: migrateSaveV8ToV9,
   9: migrateSaveV9ToV10,
+  10: migrateSaveV10ToV11,
 }
 
 function detectStoredVersion(value: unknown): number | null {

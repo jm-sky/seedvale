@@ -170,6 +170,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/props.ts`
 - `shared/StaminaState.ts`
+- `shared/corpseLifecycle.ts`
 
 **Imported by**
 

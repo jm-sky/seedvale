@@ -56,6 +56,7 @@ describe('createNpcStateRegistry', () => {
     expect(hydrated.vigor.current).toBe(12)
     expect(hydrated.needs.hunger).toBe(0.6)
     expect(hydrated.physicalInjury).toBe(20)
+    expect(hydrated.postDeath).toBeNull()
   })
 
   it('a genuinely new npc id not present in a carried snapshot gets fresh initial state', () => {

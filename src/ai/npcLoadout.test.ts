@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { resolveNpcAmmoKind, resolveNpcMeleeWeapon, resolveNpcRangedWeapon } from './npcCombat'
-import { defaultWeaponForRole, ensureKnifeCarried, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
+import { defaultWeaponForRole, ensureKnifeCarried, isNpcLoadoutBelonging, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
 
 describe('defaultWeaponForRole', () => {
   it('maps roles to their default melee weapon', () => {
@@ -101,5 +101,13 @@ describe('ensureKnifeCarried', () => {
     ensureKnifeCarried(carried)
     ensureKnifeCarried(carried)
     expect(carried.countInstances('knife')).toBe(1)
+  })
+})
+
+describe('isNpcLoadoutBelonging (plan npc-010)', () => {
+  it('does not treat arrows as hunter loadout belongings', () => {
+    expect(isNpcLoadoutBelonging('arrow', 'hunter')).toBe(false)
+    expect(isNpcLoadoutBelonging('hunting_bow', 'hunter')).toBe(true)
+    expect(isNpcLoadoutBelonging('knife', 'hunter')).toBe(true)
   })
 })

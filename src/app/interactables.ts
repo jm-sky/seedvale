@@ -539,12 +539,20 @@ export function buildInteractables(
 
   for (const settlement of settlements) {
     for (const npc of settlement.npcs) {
-      // A dead NPC now stays in `settlement.npcs` for the rest of the
-      // session (plan 197 — death is authoritative, survives settlement
-      // unload/reload) instead of vanishing on the next reload; exclude it
-      // from dialogue targeting the same way combat already excludes it
-      // (`player/playerCombat.ts`).
-      if (npc.health.dead) continue
+      // A dead NPC stays in `settlement.npcs` while its corpse is active
+      // (plan npc-010) — talk targeting still excludes it; loot uses the
+      // `npcCorpse` candidate below.
+      if (npc.health.dead) {
+        if (npc.hasLootableCorpse() && withinRange(npc.mesh.position.x, npc.mesh.position.z, playerPos, GAZE_RANGE)) {
+          list.push({
+            kind: 'npcCorpse',
+            position: npc.mesh.position,
+            promptLabel: `Przeszukaj zwłoki: ${npc.displayName}`,
+            npc,
+          })
+        }
+        continue
+      }
       if (!withinRange(npc.mesh.position.x, npc.mesh.position.z, playerPos, GAZE_RANGE)) continue
       list.push({
         kind: 'npc',

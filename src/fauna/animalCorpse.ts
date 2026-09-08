@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { HeightSampler } from '../player/PlayerController'
 import type { AnimalKind } from './animalDefs'
 import { tintPropMaterials } from '../settlement/props'
+import { decayPhaseFromElapsed } from '../shared/corpseLifecycle'
 import { drainStamina, type StaminaState } from '../shared/StaminaState'
 import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
 import { animateCorpseRotFx, createCorpseRotFx, disposeCorpseRotFx } from './corpseDecayFx'
@@ -68,9 +69,7 @@ const CORPSE_ROT_TINT_HEX = 0x3a4224
  *  `AnimalAgent`/Three.js (plan 188). Only meaningful for a dead, unharvested,
  *  unburied corpse; callers gate those cases separately. */
 export function corpsePhaseFromElapsed(elapsedSeconds: number): CorpsePhase {
-  if (elapsedSeconds >= CORPSE_BONES_ONSET_SECONDS) return 'bones'
-  if (elapsedSeconds >= CORPSE_ROT_ONSET_SECONDS) return 'rotting'
-  return 'fresh'
+  return decayPhaseFromElapsed(elapsedSeconds, CORPSE_ROT_ONSET_SECONDS, CORPSE_BONES_ONSET_SECONDS)
 }
 
 /** Whether a rotting corpse's lightweight FX should be presented — distance

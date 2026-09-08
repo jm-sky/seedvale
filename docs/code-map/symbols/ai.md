@@ -89,24 +89,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 522
-- `CurrentActivity` — type — line 398
-- `CurrentActivityKind` — type — line 391
-- `NPC_HEIGHT` — const — line 301
-- `NPC_MODEL_URLS` — const — line 365
-- `NPC_SHADOW_DISTANCE` — const — line 315
-- `NpcAgent` — class — line 836
+- `classifyPendingActivity` — function — line 541
+- `CurrentActivity` — type — line 405
+- `CurrentActivityKind` — type — line 398
+- `NPC_HEIGHT` — const — line 308
+- `NPC_MODEL_URLS` — const — line 372
+- `NPC_SHADOW_DISTANCE` — const — line 322
+- `NpcAgent` — class — line 855
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 758
-- `NpcInspectionSnapshot` — type — line 413
-- `NpcWhy` — type — line 497
-- `projectNpcWhy` — function — line 557
-- `promoteChainKind` — function — line 514
+- `NpcAgentDeps` — type — line 777
+- `NpcInspectionSnapshot` — type — line 420
+- `NpcWhy` — type — line 516
+- `projectNpcWhy` — function — line 576
+- `promoteChainKind` — function — line 533
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -184,6 +184,7 @@ Generated from exported TypeScript symbols.
 
 - `defaultWeaponForRole` — function — line 22
 - `ensureKnifeCarried` — function — line 46
+- `isNpcLoadoutBelonging` — function — line 71
 - `seedDefaultRoleWeapon` — function — line 32
 - `seedHunterSupplies` — function — line 61
 

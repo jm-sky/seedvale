@@ -21,9 +21,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 39
-- `ContainerActions` — type — line 26
-- `createContainerActions` — function — line 48
+- `ContainerActionDeps` — type — line 42
+- `ContainerActions` — type — line 28
+- `createContainerActions` — function — line 51
 
 ## `app/actions/cookMealIntent.ts`
 
@@ -155,12 +155,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 531
+- `createGameLoop` — function — line 534
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 499
+- `GameLoop` — type — line 502
 - `GameLoopDeps` — type — line 267
 
 ## `app/graphicsSettings.ts`
@@ -171,10 +171,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 897
-- `buildDigTarget` — function — line 844
+- `buildCombatTarget` — function — line 905
+- `buildDigTarget` — function — line 852
 - `buildInteractables` — function — line 312
-- `collectItem` — function — line 944
+- `collectItem` — function — line 952
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70

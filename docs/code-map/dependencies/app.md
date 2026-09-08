@@ -66,6 +66,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `ai/NpcAgent.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementYaw.ts`
@@ -75,6 +76,7 @@ Generated from TypeScript imports.
 - `items/foodItems.ts`
 - `items/inventoryView.ts`
 - `items/tentPlacement.ts`
+- `settlement/npcPostDeath.ts`
 - `ui-vue/mount.ts`
 - `world/containerProp.ts`
 

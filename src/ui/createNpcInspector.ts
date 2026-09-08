@@ -295,9 +295,20 @@ export function createNpcInspector(
     row(overview, 'phase', snapshot.phase)
     row(overview, 'activity', snapshot.activity.kind)
     row(overview, 'position', `${snapshot.position.x.toFixed(1)}, ${snapshot.position.z.toFixed(1)}`)
-    row(overview, 'hp', `${snapshot.health.current.toFixed(0)}/${snapshot.health.max}`)
+    row(overview, 'hp', `${snapshot.health.current.toFixed(0)}/${snapshot.health.max}${snapshot.health.dead ? ' (dead)' : ''}`)
     row(overview, 'stamina', `${snapshot.stamina.current.toFixed(0)}/${snapshot.stamina.max}`)
     row(overview, 'vigor', `${snapshot.vigor.current.toFixed(0)}/${snapshot.vigor.max}`)
+    if (snapshot.postDeath) {
+      row(overview, 'corpse', snapshot.postDeath.status)
+      row(overview, 'corpse phase', snapshot.postDeath.phase)
+      row(overview, 'death pos', `${snapshot.postDeath.deathPosition.x.toFixed(1)}, ${snapshot.postDeath.deathPosition.z.toFixed(1)}`)
+      row(overview, 'death day', snapshot.postDeath.deathAtDays.toFixed(2))
+      row(overview, 'corpse loot', snapshot.postDeath.loot.instanceIds.length > 0
+        ? snapshot.postDeath.loot.instanceIds.join(', ')
+        : JSON.stringify(snapshot.postDeath.loot.counts))
+      row(overview, 'burial', snapshot.postDeath.burialClaimed ? 'claimed' : 'none')
+      row(overview, 'cleanup', snapshot.postDeath.cleanupReason ?? '-')
+    }
     row(overview, 'rescue', `${snapshot.watchdog.rescueStage} (${snapshot.watchdog.lowProgressStrikes})`)
     row(overview, 'frozen', snapshot.frozen ? 'yes' : 'no')
 
