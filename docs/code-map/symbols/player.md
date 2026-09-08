@@ -11,9 +11,9 @@ Generated from exported TypeScript symbols.
 - `CAMERA_OCCLUDER_MIN_RADIUS` — const — line 10
 - `CAMERA_TERRAIN_SKIP_DISTANCE` — const — line 23
 - `CameraBoomInput` — type — line 27
-- `CameraBoomResult` — type — line 38
-- `resolveCameraBoom` — function — line 52
-- `withCaveFloorFallback` — function — line 203
+- `CameraBoomResult` — type — line 43
+- `resolveCameraBoom` — function — line 58
+- `withCaveFloorFallback` — function — line 290
 
 ## `player/humanCarryCapacity.ts`
 
@@ -52,13 +52,15 @@ Generated from exported TypeScript symbols.
 ## `player/PlayerController.ts`
 
 - `CaveGroundQuery` — type — line 171
+- `CaveOccupancyQuery` — type — line 176
 - `ColliderSource` — type — line 164
 - `HeightSampler` — type — line 161
 - `MOVE_SPEED` — const — line 45
+- `PLAYER_COLLISION_RADIUS` — const — line 48
 - `PLAYER_HEIGHT` — const — line 57
 - `PLAYER_MODEL_URL` — const — line 159
 - `PLAYER_STARTING_ATTRIBUTES` — const — line 63
-- `PlayerController` — class — line 179
+- `PlayerController` — class — line 188
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.

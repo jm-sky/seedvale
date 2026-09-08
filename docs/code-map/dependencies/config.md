@@ -85,6 +85,7 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createDebugGui.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/map/mapProjection.ts`
 - `world/worldContext.ts`

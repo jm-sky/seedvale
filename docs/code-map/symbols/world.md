@@ -107,6 +107,12 @@ Generated from exported TypeScript symbols.
 - `CAVE_RNG_SALT` — const — line 34
 - `createCaveRandom` — function — line 43
 
+## `world/caves/caveSdfColliders.ts`
+
+- `buildCaveSdfColliders` — function — line 94
+  - domain: world-terrain
+- `CAVE_SDF_BEAD_RADIUS` — const — line 21
+
 ## `world/caves/caveSdfField.ts`
 
 - `Bounds` — type — line 49
@@ -127,25 +133,29 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfQuery.ts`
 
-- `applyCaveGroundHysteresis` — function — line 321
+- `applyCaveGroundHysteresis` — function — line 375
   - domain: world-terrain
-- `buildCaveSdfColumnIndex` — function — line 204
+- `buildCaveSdfColumnIndex` — function — line 210
   - domain: world-terrain
 - `CAVE_COLUMN_STEP` — const — line 50
 - `CAVE_FLOOR_GRACE` — const — line 56
-- `CAVE_UNDERGROUND_MISS` — const — line 70
+- `CAVE_OCCUPANCY_EPS` — const — line 62
+- `CAVE_UNDERGROUND_MISS` — const — line 76
 - `CaveGroundHit` — type — line 30
-- `CaveGroundHysteresis` — type — line 307
+- `CaveGroundHysteresis` — type — line 361
 - `CaveSdfColumnIndex` — type — line 37
 - `CaveVerticalInterval` — type — line 28
-- `columnIntervalsAt` — function — line 244
-- `lowestCeilingAt` — function — line 342
-- `lowestFloorAt` — function — line 336
-- `pickInterval` — function — line 261
+- `columnIntervalsAt` — function — line 250
+- `lowestCeilingAt` — function — line 396
+- `lowestFloorAt` — function — line 390
+- `occupancyContains` — function — line 352
+- `occupancyIntervalAt` — function — line 323
   - domain: world-terrain
-- `queryColumnIndex` — function — line 295
+- `pickInterval` — function — line 267
   - domain: world-terrain
-- `SurfaceHeightSampler` — type — line 75
+- `queryColumnIndex` — function — line 301
+  - domain: world-terrain
+- `SurfaceHeightSampler` — type — line 81
 
 ## `world/caves/caveSpikeMaterial.ts`
 
@@ -240,8 +250,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/topologyAdapter.ts`
 
-- `PROXY_MARGIN` — const — line 19
-- `topologyToCaveDefinition` — function — line 51
+- `PROXY_MARGIN` — const — line 16
+- `topologyToCaveDefinition` — function — line 48
   - domain: world-terrain
 
 ## `world/caveVolume.ts`
@@ -297,10 +307,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 48
-- `createCaves` — function — line 114
+- `Caves` — type — line 51
+- `createCaves` — function — line 123
   - system: caves
-  - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `queryGround`.
+  - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation, occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`.
   - owns: Caves
   - lifecycle: rebuild
 

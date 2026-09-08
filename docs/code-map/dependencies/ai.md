@@ -108,6 +108,7 @@ Generated from TypeScript imports.
 - `ui/agentStatusLabel.ts`
 - `ui/labelDistance.ts`
 - `world/bloodTraces.ts`
+- `world/collision.ts`
 - `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
 - `world/createStandingTorches.ts`

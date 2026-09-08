@@ -90,6 +90,7 @@ Generated from TypeScript imports.
 - `terrain/waterBodyKind.ts`
 - `world/bloodTraces.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`
@@ -216,6 +217,7 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
+- `world/caves/caveGameplayQuery.b3-recon.test.ts`
 
 ## `player/humanCarryCapacity.test.ts`
 
