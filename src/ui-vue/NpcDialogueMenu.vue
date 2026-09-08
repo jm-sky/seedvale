@@ -6,10 +6,15 @@ import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } fro
 import { useOverlayScreen } from './composables/useOverlayScreen'
 import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, ui } from './store'
 
+const BACKDROP_CLOSE_GUARD_MS = 300
+
 type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea'
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
+const openedAt = ref(0)
+
 useOverlayScreen('npc-dialogue', isNpcDialogueMenuOpen, closeNpcDialogueMenu)
+
 const archetype = computed(() => (state.npc ? nearestArchetype(state.npc.personality) : 'calm'))
 const hasOffer = computed(() => state.helpResult?.offer != null)
 const isHomeTrader = computed(() => state.npc?.role === 'trader' && state.settlement?.isHome === true)
@@ -18,6 +23,7 @@ const swordLine = ref('')
 const foodLine = ref('')
 const waterLine = ref('')
 const areaLine = ref('')
+
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
   switch (topic.value) {
@@ -33,46 +39,71 @@ const responseText = computed(() => {
     default: return ''
   }
 })
+
 function resetMenu(): void { topic.value = null; swordLine.value = ''; foodLine.value = ''; waterLine.value = ''; areaLine.value = '' }
 function backToTopics(): void { emitUiClick(); resetMenu() }
 function selectTopic(next: Topic): void { emitUiClick(); topic.value = next }
+
 function askSword(): void {
   emitUiClick()
   swordLine.value = state.onAskSword?.() ?? ''
   topic.value = 'askSword'
   state.canAskSword = state.getCanAskSword?.() ?? false
 }
+
 function requestFood(): void {
   emitUiClick()
   const npc = state.npc as NpcAgent | null
   if (npc) foodLine.value = state.onRequestFood?.(npc) ?? ''
   topic.value = 'requestFood'
 }
+
 function requestWater(): void {
   emitUiClick()
   const npc = state.npc as NpcAgent | null
   if (npc) waterLine.value = state.onRequestWater?.(npc) ?? ''
   topic.value = 'requestWater'
 }
+
 function askAboutArea(): void {
   emitUiClick()
   areaLine.value = state.onAskAboutArea?.() ?? ''
   topic.value = 'aboutArea'
 }
+
 function openTrade(): void {
   emitUiClick()
   state.onOpenTrade?.()
 }
-function accept(): void { emitUiClick(); acceptNpcDialogueOffer(); topic.value = null }
-function close(): void { emitUiClick(); closeNpcDialogueMenu(); topic.value = null }
-watch(() => state.open, (open) => { if (open) resetMenu() })
+
+function accept(): void {
+  emitUiClick(); acceptNpcDialogueOffer()
+  topic.value = null
+}
+
+function close(): void {
+  emitUiClick(); closeNpcDialogueMenu()
+  topic.value = null
+}
+
+function closeFromBackdrop(): void {
+  if (performance.now() - openedAt.value < BACKDROP_CLOSE_GUARD_MS) return
+  close()
+}
+
+watch(() => state.open, (open) => {
+  if (!open) return
+
+  openedAt.value = performance.now()
+  resetMenu()
+})
 </script>
 
 <template>
   <div
     v-if="state.open"
     class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
-    @click.self="close"
+    @click.self="closeFromBackdrop"
   >
     <div
       class="max-h-[calc(100dvh-32px)] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
