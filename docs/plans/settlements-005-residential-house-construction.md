@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** L
-**Depends on:** ~~npc-018~~, ~~items-player-017~~, npc-028
+**Depends on:** ~~npc-018~~, ~~items-player-017~~
 **Domain:** `settlements`
 **Subdomains:** `buildings` `development`
 **Tags:** `construction` `housing` `work-contracts` `lodging`

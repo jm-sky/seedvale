@@ -78,10 +78,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-023-perception-driven-observation-and-information-levels.md`        | -       | 🟡 | M      | ~~npc-019~~ |
 | ◼️ `npc-024-temporary-conditions-and-poisoning.md`                          | -       | 🟡 | M      | ~~npc-019~~, ~~world-017~~ |
 | ◼️ `npc-025-injury-severity-and-treatment-requirements.md`                  | -       | 🟡 | M      | npc-002, ~~npc-019~~, npc-024 |
-| ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -      |
-| ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
-| 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
-| ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -      |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
@@ -97,7 +93,11 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | 💡 `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
 | 💡 `fauna-017-animal-agent-refactor.md`                                     | -       | 🟡 | L      | -      |
-| 💡 `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~, npc-028 |
+| 💡 `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~ |
+| ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -      |
+| ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
+| 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
+| ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -      |
 
 ---
 

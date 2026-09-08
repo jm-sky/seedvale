@@ -4,6 +4,10 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-005-authored-rpg-quests`                           | 2026-09-08 14:08:05 | —                   | `quests-progression` | —          |
+| `quests-progression-004-quest-availability-and-prerequisites`          | —                   | 2026-09-08 13:30:57 | `quests-progression` | quests-progression-005-authored-rpg-quests |
+| `quests-progression-003-paid-quests-and-player-income`                 | —                   | 2026-09-08 13:24:00 | `quests-progression` | quests-progression-005-authored-rpg-quests |
+| `quests-progression-002-quest-outcomes-rewards-and-consequences`       | 2026-09-08 13:19:34 | —                   | `quests-progression` | —          |
 | `items-player-002-food-provenance-freshness-and-storage`               | 2026-09-08 12:28:17 | —                   | `items-player`   | —          |
 | `ui-input-012-placement-preview-shapes-rotation-and-coverage`          | 2026-09-08 11:49:22 | —                   | `ui-input`       | —          |
 | `quests-progression-011-grave-robbing-reputation-risk-and-stealth`     | 2026-09-08 10:53:33 | —                   | `quests-progression` | —          |

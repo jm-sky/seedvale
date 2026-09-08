@@ -4,7 +4,7 @@
 **Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
-**Depends on:** quests-progression-002, quests-progression-003, quests-progression-004  
+**Depends on:** quests-progression-002, ~~quests-progression-003~~, ~~quests-progression-004~~  
 **Domain:** `quests-progression`  
 **Subdomains:** `quests` `relationships` `rewards`  
 **Tags:** `quests` `rpg` `story` `outcomes` `rewards`  
