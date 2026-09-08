@@ -115,6 +115,7 @@ Generated from TypeScript imports.
 - `shared/HungerState.ts`
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
+- `shared/enduranceStamina.ts`
 
 ## `player/PlayerNeeds.ts`
 
@@ -125,6 +126,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
+- `shared/enduranceStamina.ts`
 - `world/timeConversion.ts`
 
 **Imported by**

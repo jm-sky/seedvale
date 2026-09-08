@@ -101,6 +101,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
 - `shared/agentAnimationSet.ts`
+- `shared/enduranceStamina.ts`
 - `simulation/index.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/slopeConstraint.ts`
@@ -590,8 +591,10 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `settlement/npcPhysicalProfile.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
+- `shared/enduranceStamina.ts`
 
 ## `ai/npcStrategies.test.ts`
 

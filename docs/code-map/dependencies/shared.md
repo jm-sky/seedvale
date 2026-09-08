@@ -94,6 +94,7 @@ Generated from TypeScript imports.
 - `player/playerRanged.ts`
 - `settlement/npcState.ts`
 - `shared/StaminaState.test.ts`
+- `shared/enduranceStamina.test.ts`
 
 ## `shared/ThirstState.ts`
 
@@ -159,6 +160,26 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `fauna/createFauna.ts`
 - `settlement/createSettlement.ts`
+
+## `shared/enduranceStamina.test.ts`
+
+**Imports**
+
+- `shared/StaminaState.ts`
+- `shared/enduranceStamina.ts`
+
+## `shared/enduranceStamina.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcStamina.test.ts`
+- `player/PlayerNeeds.test.ts`
+- `player/PlayerNeeds.ts`
+- `settlement/npcPhysicalProfile.test.ts`
+- `settlement/npcPhysicalProfile.ts`
+- `settlement/npcState.ts`
+- `shared/enduranceStamina.test.ts`
 
 ## `shared/fireParticles.type.ts`
 

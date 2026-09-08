@@ -11,6 +11,16 @@ Generated from exported TypeScript symbols.
 
 - `useBootMark` — const — line 11
 
+## `shared/enduranceStamina.ts`
+
+- `applyDerivedStaminaMax` — function — line 28
+- `resolveEnduranceStaminaRecoveryMultiplier` — function — line 22
+- `resolveMaxStaminaFromEndurance` — function — line 14
+  - domain: shared
+  - system: physical-attributes
+  - role: Shared Endurance → Stamina capability resolvers (plan npc-021). Pure mapping from effective Endurance to max Stamina and recovery multiplier — consumer-agnostic; activity drain rates stay owned by each consumer. `StaminaState` remains the mutable `{ max, current }` pool.
+  - uses: PhysicalAttributes
+
 ## `shared/fireParticles.type.ts`
 
 - `BurstPool` — type — line 29
@@ -55,10 +65,10 @@ Generated from exported TypeScript symbols.
 
 ## `shared/PhysicalAttributes.ts`
 
-- `PhysicalAttributes` — type — line 21
+- `PhysicalAttributes` — type — line 22
   - domain: shared
   - system: physical-attributes
-  - role: Shared SPEA (Strength/Perception/Endurance/Agility) physical-attribute primitive used by the player and NPCs (plan npc-019), later fauna. Stable individual base attributes only — profile data, not a mutable resource pool like `HealthState`/`StaminaState`. Must not know about combat, work, movement, species, UI, age, sex, injuries, illness or temporary conditions; those live in per-consumer profile/effective resolvers (see `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile`/ `resolveHumanAgilityProfile` and `combat/meleeStrength.ts`/ `combat/meleeAgility.ts`, plus `player/physicalWorkStrength.ts` and `player/humanCarryCapacity.ts`).
+  - role: Shared SPEA (Strength/Perception/Endurance/Agility) physical-attribute primitive used by the player and NPCs (plan npc-019), later fauna. Stable individual base attributes only — profile data, not a mutable resource pool like `HealthState`/`StaminaState`. Must not know about combat, work, movement, species, UI, age, sex, injuries, illness or temporary conditions; those live in per-consumer profile/effective resolvers (see `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile`/ `resolveHumanAgilityProfile`/`resolveHumanEnduranceProfile` and `combat/meleeStrength.ts`/`combat/meleeAgility.ts`, plus `player/physicalWorkStrength.ts`, `player/humanCarryCapacity.ts` and `shared/enduranceStamina.ts`.
   - owns: PhysicalAttributes
 
 ## `shared/SettlementName.ts`

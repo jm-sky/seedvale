@@ -286,18 +286,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcPhysicalProfile.ts`
 
-- `ageMultiplierForAge` — function — line 79
-- `agilityAgePotentialForAge` — function — line 256
-- `clampAge` — function — line 41
-- `generatePhysicalProfile` — function — line 340
-- `LifeStage` — type — line 16
-- `lifeStageForAge` — function — line 45
-- `NPC_AGE_MAX` — const — line 14
-- `NPC_AGE_MIN` — const — line 13
-- `PhysicalProfile` — type — line 311
-- `resolveHumanAgilityProfile` — function — line 270
-- `resolveHumanStrengthProfile` — function — line 290
-- `strengthAgePotentialForAge` — function — line 207
+- `ageMultiplierForAge` — function — line 80
+- `agilityAgePotentialForAge` — function — line 257
+- `clampAge` — function — line 42
+- `generatePhysicalProfile` — function — line 361
+- `LifeStage` — type — line 17
+- `lifeStageForAge` — function — line 46
+- `NPC_AGE_MAX` — const — line 15
+- `NPC_AGE_MIN` — const — line 14
+- `PhysicalProfile` — type — line 328
+- `resolveHumanAgilityProfile` — function — line 271
+- `resolveHumanEnduranceProfile` — function — line 308
+- `resolveHumanStrengthProfile` — function — line 296
+- `strengthAgePotentialForAge` — function — line 208
 
 ## `settlement/npcRelationships.ts`
 
@@ -307,15 +308,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 112
-- `createNpcStateRegistry` — function — line 149
-- `MAX_HP` — const — line 14
-- `MAX_STAMINA` — const — line 15
-- `NpcAuthoritativeState` — type — line 31
-- `NpcId` — type — line 9
-- `NpcPhysicalMaxima` — type — line 98
-- `NpcStateRegistry` — type — line 136
-- `NpcStateSnapshot` — type — line 68
+- `createNpcAuthoritativeState` — function — line 115
+- `createNpcStateRegistry` — function — line 152
+- `MAX_HP` — const — line 15
+- `MAX_STAMINA` — const — line 16
+- `NpcAuthoritativeState` — type — line 32
+- `NpcId` — type — line 10
+- `NpcPhysicalMaxima` — type — line 101
+- `NpcStateRegistry` — type — line 139
+- `NpcStateSnapshot` — type — line 69
 
 ## `settlement/pathDryness.ts`
 

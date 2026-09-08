@@ -101,39 +101,39 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerNeeds.ts`
 
-- `applyRepresentedPhysicalEffortVigor` — function — line 147
-- `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 81
-- `createPlayerNeeds` — function — line 208
-- `DEHYDRATION_HP_PER_SEC` — const — line 181
-- `drinkWater` — function — line 352
-- `eatFood` — function — line 348
-- `hungerSevereDurationSec` — function — line 167
-- `isTakingDeprivationDamage` — function — line 360
-- `physicalEffortBusyOptions` — function — line 131
-- `PhysicalEffortIntensity` — type — line 89
-- `physicalEffortStaminaCostPerSec` — function — line 117
-- `physicalEffortVigorCostPerSec` — function — line 124
-- `PLAYER_MAX_HUNGER` — const — line 41
-- `PLAYER_MAX_STAMINA` — const — line 39
-- `PLAYER_MAX_THIRST` — const — line 42
-- `PLAYER_MAX_VIGOR` — const — line 40
-- `PlayerNeeds` — type — line 30
+- `applyRepresentedPhysicalEffortVigor` — function — line 151
+- `BUSY_ACTION_STAMINA_COST_PER_SEC` — const — line 85
+- `createPlayerNeeds` — function — line 212
+- `DEHYDRATION_HP_PER_SEC` — const — line 185
+- `drinkWater` — function — line 378
+- `eatFood` — function — line 374
+- `hungerSevereDurationSec` — function — line 171
+- `isTakingDeprivationDamage` — function — line 386
+- `physicalEffortBusyOptions` — function — line 135
+- `PhysicalEffortIntensity` — type — line 93
+- `physicalEffortStaminaCostPerSec` — function — line 121
+- `physicalEffortVigorCostPerSec` — function — line 128
+- `PLAYER_MAX_HUNGER` — const — line 45
+- `PLAYER_MAX_STAMINA` — const — line 43
+- `PLAYER_MAX_THIRST` — const — line 46
+- `PLAYER_MAX_VIGOR` — const — line 44
+- `PlayerNeeds` — type — line 34
   - domain: items-player
   - system: player-needs
   - role: Owns the player's stamina/vigor/hunger/thirst survival pools.
   - owns: PlayerNeeds
   - uses: StaminaState, VigorState
   - simulation: tick
-- `resetPlayerNeeds` — function — line 220
-- `restoreNeedsFromSleep` — function — line 342
-- `restorePersistedNeeds` — function — line 241
-- `STARVATION_HP_PER_SEC` — const — line 180
-- `thirstSevereDurationSec` — function — line 170
-- `tickHealthRegen` — function — line 369
-- `tickPlayerMovementVigor` — function — line 320
-- `tickPlayerNeeds` — function — line 266
-- `tickPlayerStamina` — function — line 293
-- `tickRidingStamina` — function — line 311
+- `resetPlayerNeeds` — function — line 224
+- `restoreNeedsFromSleep` — function — line 368
+- `restorePersistedNeeds` — function — line 245
+- `STARVATION_HP_PER_SEC` — const — line 184
+- `thirstSevereDurationSec` — function — line 174
+- `tickHealthRegen` — function — line 395
+- `tickPlayerMovementVigor` — function — line 346
+- `tickPlayerNeeds` — function — line 270
+- `tickPlayerStamina` — function — line 297
+- `tickRidingStamina` — function — line 326
 
 ## `player/playerRanged.ts`
 
