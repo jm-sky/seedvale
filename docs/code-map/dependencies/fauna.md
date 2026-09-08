@@ -45,6 +45,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/agentAnimationSet.ts`
 - `simulation/index.ts`
+- `simulation/observation.ts`
 - `terrain/slopeConstraint.ts`
 - `terrain/waterSample.ts`
 - `ui/agentStatusLabel.ts`

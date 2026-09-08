@@ -83,6 +83,23 @@ Generated from TypeScript imports.
 - `simulation/index.ts`
 - `simulation/interactionQueue.test.ts`
 
+## `simulation/observation.test.ts`
+
+**Imports**
+
+- `simulation/observation.ts`
+
+## `simulation/observation.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/gameLoop.ts`
+- `fauna/AnimalAgent.ts`
+- `settlement/createSettlement.ts`
+- `simulation/observation.test.ts`
+- `ui/agentStatusLabel.ts`
+
 ## `simulation/scoreActions.test.ts`
 
 **Imports**

@@ -2,10 +2,17 @@
 
 Generated from TypeScript imports.
 
+## `ui/agentStatusLabel.test.ts`
+
+**Imports**
+
+- `ui/agentStatusLabel.ts`
+
 ## `ui/agentStatusLabel.ts`
 
 **Imports**
 
+- `simulation/observation.ts`
 - `ui/labelDistance.ts`
 - `world/waterMirror.ts`
 
@@ -14,6 +21,7 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `fauna/AnimalAgent.ts`
 - `player/PlayerController.ts`
+- `ui/agentStatusLabel.test.ts`
 
 ## `ui/createBusyOverlay.ts`
 
@@ -34,6 +42,7 @@ Generated from TypeScript imports.
 - `audio/playerMoveSounds.ts`
 - `config/qualityProfiles.ts`
 - `config/worldConfig.ts`
+- `debug/debugMode.ts`
 - `perf/active.ts`
 - `perf/benchmarkScenarios.ts`
 - `world/dayNight.ts`

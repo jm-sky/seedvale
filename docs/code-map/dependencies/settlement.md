@@ -187,6 +187,7 @@ Generated from TypeScript imports.
 - `shared/SettlementName.ts`
 - `shared/bootMark.ts`
 - `simulation/index.ts`
+- `simulation/observation.ts`
 - `terrain/naturalResources.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/waterSample.ts`

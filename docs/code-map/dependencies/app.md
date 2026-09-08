@@ -686,6 +686,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/ThirstState.ts`
 - `shared/VigorState.ts`
+- `simulation/observation.ts`
 - `ui-vue/mount.ts`
 - `ui/createBusyOverlay.ts`
 - `ui/createHud.ts`

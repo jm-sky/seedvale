@@ -4,17 +4,18 @@ Generated from exported TypeScript symbols.
 
 ## `ui/agentStatusLabel.ts`
 
-- `AgentLabelDom` — type — line 31
-- `AgentStatusLabelController` — type — line 112
-- `applyBarPercent` — function — line 83
-- `computeBarPercent` — function — line 74
-- `createAgentLabel` — function — line 47
-- `createAgentStatusLabelController` — function — line 146
-- `createLabelBar` — function — line 21
-- `INITIAL_LABEL_DISTANCE_STATE` — const — line 97
-- `LabelBarKind` — type — line 16
-- `LabelDistanceState` — type — line 91
-- `updateAgentLabelDistanceState` — function — line 220
+- `AgentLabelDom` — type — line 33
+- `AgentLabelObservationPresentation` — type — line 101
+- `AgentStatusLabelController` — type — line 128
+- `applyBarPercent` — function — line 85
+- `computeBarPercent` — function — line 76
+- `createAgentLabel` — function — line 49
+- `createAgentStatusLabelController` — function — line 163
+- `createLabelBar` — function — line 23
+- `INITIAL_LABEL_DISTANCE_STATE` — const — line 113
+- `LabelBarKind` — type — line 18
+- `LabelDistanceState` — type — line 93
+- `updateAgentLabelDistanceState` — function — line 352
 
 ## `ui/createBusyOverlay.ts`
 
@@ -23,9 +24,9 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createDebugGui.ts`
 
-- `createDebugGui` — function — line 61
-- `DebugGuiHandle` — type — line 48
-- `DebugGuiHandlers` — type — line 20
+- `createDebugGui` — function — line 64
+- `DebugGuiHandle` — type — line 51
+- `DebugGuiHandlers` — type — line 21
 
 ## `ui/createHud.ts`
 

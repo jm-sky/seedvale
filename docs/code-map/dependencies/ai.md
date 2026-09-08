@@ -103,6 +103,7 @@ Generated from TypeScript imports.
 - `shared/agentAnimationSet.ts`
 - `shared/enduranceStamina.ts`
 - `simulation/index.ts`
+- `simulation/observation.ts`
 - `terrain/resourceDeposits.ts`
 - `terrain/slopeConstraint.ts`
 - `terrain/terrainPreparation.ts`
