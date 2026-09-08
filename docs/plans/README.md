@@ -21,6 +21,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
+| `npc-028-work-contracts-multiple-workers.md`                                | -       | 🔴 | M      | ~~npc-018~~ |
 | `quests-progression-010-abandoned-gold-mine-colony.md`                      | -       | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
 | `settlements-003-colony-bootstrap.md`                                       | -       | 🔴 | L      | world-019, settlements-npcs-028 |
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`      | -       | 🔴 | M      | -      |
@@ -196,7 +197,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - ai: `005`
 - fauna: `020`
 - items-player: `020`
-- npc: `028`
+- npc: `029`
 - persistence: `005`
 - quests-progression: `012`
 - settlements: `006`
