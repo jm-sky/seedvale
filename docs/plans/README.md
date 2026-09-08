@@ -25,11 +25,12 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `quests-progression-010-abandoned-gold-mine-colony.md`                      | -       | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
 | `settlements-003-colony-bootstrap.md`                                       | -       | 🔴 | L      | world-019, settlements-npcs-028 |
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`      | -       | 🔴 | M      | -      |
-| `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-018, settlements-npcs-019 |
+| `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-017, settlements-npcs-018, settlements-npcs-019 |
 | `settlements-npcs-021-remote-production-site-logistics.md`                  | -       | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
 | `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md`  | -       | 🔴 | M      | -      |
 | `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`        | -       | 🔴 | M      | settlements-npcs-026 |
 | `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | -       | 🔴 | L      | settlements-npcs-026, settlements-npcs-027, settlements-npcs-019 |
+| `tools-007--mpfb2-npc-hero-character-pipeline.md`                           | -       | 🔴 | L      | -      |
 | `world-terrain-009-seasonal-ground-and-grass-appearance.md`                 | -       | 🟡 | M      | -      |
 
 ---
@@ -95,7 +96,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -      |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
-| ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -      |
+| ◼️ `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | fauna-003 |
 
 ---
 
@@ -192,7 +193,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 ## Next plan IDs
 
 - ai: `005`
-- fauna: `020`
+- fauna: `021`
 - items-player: `020`
 - npc: `029`
 - persistence: `005`
