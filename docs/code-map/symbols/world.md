@@ -125,6 +125,28 @@ Generated from exported TypeScript symbols.
 - `smin` — function — line 72
 - `VoidPrimitive` — type — line 59
 
+## `world/caves/caveSdfQuery.ts`
+
+- `applyCaveGroundHysteresis` — function — line 321
+  - domain: world-terrain
+- `buildCaveSdfColumnIndex` — function — line 204
+  - domain: world-terrain
+- `CAVE_COLUMN_STEP` — const — line 50
+- `CAVE_FLOOR_GRACE` — const — line 56
+- `CAVE_UNDERGROUND_MISS` — const — line 70
+- `CaveGroundHit` — type — line 30
+- `CaveGroundHysteresis` — type — line 307
+- `CaveSdfColumnIndex` — type — line 37
+- `CaveVerticalInterval` — type — line 28
+- `columnIntervalsAt` — function — line 244
+- `lowestCeilingAt` — function — line 342
+- `lowestFloorAt` — function — line 336
+- `pickInterval` — function — line 261
+  - domain: world-terrain
+- `queryColumnIndex` — function — line 295
+  - domain: world-terrain
+- `SurfaceHeightSampler` — type — line 75
+
 ## `world/caves/caveSpikeMaterial.ts`
 
 - `createCaveSpikeMaterial` — function — line 21
@@ -155,6 +177,16 @@ Generated from exported TypeScript symbols.
 - `SurfaceHeightSampler` — type — line 27
   - domain: world-terrain
 
+## `world/caves/mouthCarve.ts`
+
+- `CAVE_APPROACH_DEPTH` — const — line 19
+- `CAVE_APPROACH_OFFSET` — const — line 21
+- `CAVE_APPROACH_RADIUS` — const — line 18
+- `CAVE_MOUTH_RADIUS` — const — line 22
+- `mouthCarveDepth` — function — line 52
+  - domain: world-terrain
+- `smoothstep` — function — line 26
+
 ## `world/caves/mouthOverburden.ts`
 
 - `MOUTH_TRANSITION_RANGE` — const — line 20
@@ -172,13 +204,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/sdfCaveMesh.ts`
 
-- `AccidentalUnionStressConfig` — type — line 250
-- `buildAccidentalUnionStressMesh` — function — line 265
+- `AccidentalUnionStressConfig` — type — line 252
+- `buildAccidentalUnionStressMesh` — function — line 267
   - domain: world-terrain
-- `buildSdfCaveMesh` — function — line 196
+- `buildSdfCaveMesh` — function — line 197
   - domain: world-terrain
-- `countConnectedComponents` — function — line 288
-- `SdfCaveResult` — type — line 187
+- `countConnectedComponents` — function — line 290
+- `SdfCaveResult` — type — line 188
 
 ## `world/caves/spikeNoise.ts`
 
@@ -208,8 +240,8 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/topologyAdapter.ts`
 
-- `PROXY_MARGIN` — const — line 20
-- `topologyToCaveDefinition` — function — line 52
+- `PROXY_MARGIN` — const — line 19
+- `topologyToCaveDefinition` — function — line 51
   - domain: world-terrain
 
 ## `world/caveVolume.ts`
@@ -265,10 +297,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 43
-- `createCaves` — function — line 97
+- `Caves` — type — line 48
+- `createCaves` — function — line 114
   - system: caves
-  - role: Owns cave topologies, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `contains`/`sampleFloor`/`sampleCeiling`.
+  - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation and cave-wall collider registration; `PlayerController` ground/ceiling queries go through `queryGround`.
   - owns: Caves
   - lifecycle: rebuild
 

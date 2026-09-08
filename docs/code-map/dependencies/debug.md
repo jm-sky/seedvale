@@ -75,6 +75,7 @@ Generated from TypeScript imports.
 - `world/caves/sdfCaveMesh.ts`
 - `world/caves/sweepCaveMesh.ts`
 - `world/clouds.ts`
+- `world/createCaves.ts`
 - `world/groundFog.ts`
 - `world/weatherParticles.ts`
 

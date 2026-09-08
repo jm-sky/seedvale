@@ -33,14 +33,14 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveGroundQuery` — type — line 172
+- `CaveGroundQuery` — type — line 171
 - `ColliderSource` — type — line 164
 - `HeightSampler` — type — line 161
 - `MOVE_SPEED` — const — line 45
 - `PLAYER_HEIGHT` — const — line 57
 - `PLAYER_MODEL_URL` — const — line 159
 - `PLAYER_STARTING_ATTRIBUTES` — const — line 63
-- `PlayerController` — class — line 180
+- `PlayerController` — class — line 179
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
