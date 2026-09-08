@@ -1,14 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-08 16:31:01  
+> Date: 2026-09-08 16:52:15  
 
 ## PLANS
 
 - `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`
 - `items-player-020-player-built-animal-trough-and-water-storage.md`
 - `npc-004-npc-genealogy-lineages.md`
-- `npc-025-injury-severity-and-treatment-requirements.md`
 - `npc-027-spatial-context-and-cave-traversal.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
@@ -99,37 +98,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-004-npc-genealogy-lineages-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `npc-025-injury-severity-and-treatment-requirements.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-025-injury-severity-and-treatment-requirements.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/npc-025-injury-severity-and-treatment-requirements.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/npc-025-injury-severity-and-treatment-requirements-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
