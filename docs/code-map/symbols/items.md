@@ -49,6 +49,15 @@ Generated from exported TypeScript symbols.
 - `ContainerPlacementReason` — type — line 53
 - `containerTotalWeight` — function — line 66
 
+## `items/cookingFireResolver.ts`
+
+- `CookingFireRef` — type — line 7
+- `NearbyCookingFire` — type — line 11
+- `resolveCookingFireByRef` — function — line 81
+- `resolveNearbyCookingFire` — function — line 35
+  - domain: ui-input
+- `resolvePlacedFireById` — function — line 92
+
 ## `items/createDroppedItems.ts`
 
 - `createDroppedItems` — function — line 59
@@ -284,9 +293,17 @@ Generated from exported TypeScript symbols.
 
 ## `items/primaryWeapons.ts`
 
-- `createPrimaryWeaponSelection` — function — line 36
+- `createPrimaryWeaponSelection` — function — line 43
+- `isPrimaryMeleeAssignment` — function — line 71
+- `isPrimaryRangedAssignment` — function — line 77
 - `PrimaryWeaponChoice` — type — line 6
-- `PrimaryWeaponSelection` — type — line 16
+- `PrimaryWeaponSelection` — type — line 13
+- `SavePrimaryWeaponChoice` — type — line 8
+
+## `items/sensibleFood.ts`
+
+- `resolveSensibleFoodKind` — function — line 66
+  - domain: ui-input
 
 ## `items/tentPlacement.ts`
 

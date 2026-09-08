@@ -34,9 +34,9 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createInventoryScreen.ts`
 
-- `createInventoryScreen` — function — line 43
-- `InventoryScreen` — type — line 25
-- `InventoryScreenHandlers` — type — line 8
+- `createInventoryScreen` — function — line 48
+- `InventoryScreen` — type — line 28
+- `InventoryScreenHandlers` — type — line 9
 
 ## `ui/createLoadingScreen.ts`
 
@@ -74,8 +74,8 @@ Generated from exported TypeScript symbols.
 
 ## `ui/createQuickActions.ts`
 
-- `createQuickActions` — function — line 140
-- `QuickActions` — type — line 131
+- `createQuickActions` — function — line 144
+- `QuickActions` — type — line 135
 - `QuickActionsCropSeeds` — type — line 13
 - `QuickActionsHandlers` — type — line 29
 - `QuickActionsTraps` — type — line 9

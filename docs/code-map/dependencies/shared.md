@@ -33,7 +33,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.test.ts`
 - `app/gameLoop.ts`
+- `items/sensibleFood.test.ts`
 - `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
 
@@ -75,12 +77,14 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcStamina.test.ts`
 - `ai/npcVigor.test.ts`
+- `app/actions/cookMealIntent.test.ts`
 - `app/actions/mountActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalLife.test.ts`
 - `fauna/AnimalLife.ts`
+- `items/sensibleFood.test.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.ts`
 - `player/playerMelee.test.ts`
@@ -94,7 +98,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.test.ts`
 - `app/gameLoop.ts`
+- `items/sensibleFood.test.ts`
 - `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
 
@@ -111,10 +117,12 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcVigor.test.ts`
 - `ai/npcVigor.ts`
+- `app/actions/cookMealIntent.test.ts`
 - `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `items/sensibleFood.test.ts`
 - `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
 - `player/playerMelee.test.ts`
@@ -135,6 +143,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `fauna/AnimalAgent.ts`
 - `shared/agentAnimationSet.test.ts`
 
 ## `shared/bootMark.ts`

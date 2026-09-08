@@ -27,6 +27,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/containerActions.ts`
+- `app/actions/cookMealIntent.test.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
@@ -49,6 +51,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/userActions.ts`
@@ -77,6 +80,47 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/placementPreviewActions.ts`
+- `app/createApp.ts`
+
+## `app/actions/cookMealIntent.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/cookMealIntent.ts`
+- `app/busyAction.ts`
+- `app/worldBundle.ts`
+- `items/Inventory.ts`
+- `player/PlayerController.ts`
+- `player/PlayerNeeds.ts`
+- `settlement/VillageFire.ts`
+- `shared/HungerState.ts`
+- `shared/StaminaState.ts`
+- `shared/ThirstState.ts`
+- `shared/VigorState.ts`
+- `world/dayNight.ts`
+
+## `app/actions/cookMealIntent.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/actionContracts.ts`
+- `app/actions/placementPreviewActions.ts`
+- `app/actions/survivalActions.ts`
+- `app/busyAction.ts`
+- `app/worldBundle.ts`
+- `items/Inventory.ts`
+- `items/campfireCooking.ts`
+- `items/cookingFireResolver.ts`
+- `items/items.ts`
+- `items/sensibleFood.ts`
+- `player/PlayerController.ts`
+- `world/dayNight.ts`
+
+**Imported by**
+
+- `app/actions/cookMealIntent.test.ts`
 - `app/createApp.ts`
 
 ## `app/actions/gatheringActions.ts`
@@ -231,6 +275,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.ts`
 - `app/createApp.ts`
 - `ui-vue/store.ts`
 - `ui/createQuickActions.ts`
@@ -324,6 +369,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -391,6 +437,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/cookMealIntent.test.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/busyAction.test.ts`
@@ -432,6 +480,7 @@ Generated from TypeScript imports.
 - `ai/reactionChance.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
@@ -738,6 +787,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/gameLoop.ts`
 - `app/interactables.test.ts`
+- `items/cookingFireResolver.ts`
 - `player/playerCombat.test.ts`
 - `player/playerCombat.ts`
 - `player/playerMelee.test.ts`
@@ -757,6 +807,7 @@ Generated from TypeScript imports.
 - `items/foodItems.ts`
 - `items/guardSword.ts`
 - `items/inventoryView.ts`
+- `items/itemCatalog.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/primaryWeapons.ts`
@@ -854,6 +905,7 @@ Generated from TypeScript imports.
 - `input/MouseLook.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/primaryWeapons.ts`
 - `persistence/saveData.ts`
 - `persistence/saveDb.ts`
 - `persistence/saveSlots.ts`
@@ -982,6 +1034,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/cookMealIntent.test.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/graphicsSettings.ts`

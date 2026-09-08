@@ -26,6 +26,7 @@ Generated from TypeScript imports.
 - `app/userActions.test.ts`
 - `app/userActions.ts`
 - `app/worldBundle.ts`
+- `items/cookingFireResolver.ts`
 - `persistence/saveData.ts`
 - `settlement/PlacedFires.test.ts`
 
@@ -98,12 +99,14 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/gameLoop.ts`
 - `interaction/Interactable.ts`
 - `items/campfireCooking.test.ts`
 - `items/campfireCooking.ts`
+- `items/cookingFireResolver.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/VillageFire.test.ts`
 - `settlement/createSettlement.ts`
@@ -209,6 +212,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
+- `items/cookingFireResolver.ts`
 - `player/playerCombat.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/lodgingResolver.ts`

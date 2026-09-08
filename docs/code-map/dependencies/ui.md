@@ -66,6 +66,7 @@ Generated from TypeScript imports.
 
 - `items/inventoryView.ts`
 - `items/items.ts`
+- `items/primaryWeapons.ts`
 - `items/trade.ts`
 - `items/weaponMaintenance.ts`
 - `ui-vue/mount.ts`

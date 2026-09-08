@@ -39,6 +39,8 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
+- `app/actions/cookMealIntent.test.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
 - `app/gameLoop.ts`
@@ -119,6 +121,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
@@ -128,6 +131,8 @@ Generated from TypeScript imports.
 - `app/actions/terrainPreparationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `items/sensibleFood.test.ts`
+- `items/sensibleFood.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.test.ts`
 - `player/playerDamage.ts`

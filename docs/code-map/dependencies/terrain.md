@@ -930,6 +930,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `settlement/SettlementsManager.ts`

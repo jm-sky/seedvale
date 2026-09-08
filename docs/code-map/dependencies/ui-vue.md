@@ -146,6 +146,7 @@ Generated from TypeScript imports.
 - `input/isTouchDevice.ts`
 - `items/inventoryView.ts`
 - `items/items.ts`
+- `items/primaryWeapons.ts`
 - `items/trade.ts`
 - `items/weaponMaintenance.ts`
 - `persistence/saveDb.ts`

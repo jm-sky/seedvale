@@ -78,6 +78,8 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
+- `app/actions/cookMealIntent.test.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
@@ -117,7 +119,10 @@ Generated from TypeScript imports.
 - `items/itemConsumables.test.ts`
 - `items/liquidContainer.test.ts`
 - `items/liquidContainer.ts`
+- `items/primaryWeapons.test.ts`
 - `items/primaryWeapons.ts`
+- `items/sensibleFood.test.ts`
+- `items/sensibleFood.ts`
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/trapInstanceTrade.test.ts`
@@ -198,6 +203,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/cookMealIntent.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `items/campfireCooking.test.ts`
@@ -258,6 +264,19 @@ Generated from TypeScript imports.
 - `items/container.test.ts`
 - `persistence/saveData.ts`
 - `world/createPlacedContainers.ts`
+
+## `items/cookingFireResolver.ts`
+
+**Imports**
+
+- `app/interactables.ts`
+- `settlement/PlacedFires.ts`
+- `settlement/VillageFire.ts`
+- `settlement/createSettlement.ts`
+
+**Imported by**
+
+- `app/actions/cookMealIntent.ts`
 
 ## `items/createDroppedItems.test.ts`
 
@@ -349,6 +368,7 @@ Generated from TypeScript imports.
 - `items/foodItems.test.ts`
 - `items/foodProvenance.test.ts`
 - `items/inventoryView.ts`
+- `items/sensibleFood.ts`
 - `items/timedProcess.ts`
 - `persistence/saveData.ts`
 - `settlement/household.ts`
@@ -499,6 +519,7 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
+- `app/inventoryWiring.ts`
 - `combat/defenseResolver.test.ts`
 - `combat/defenseResolver.ts`
 - `combat/meleeAttack.test.ts`
@@ -520,6 +541,8 @@ Generated from TypeScript imports.
 - `items/itemDisplay.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
+- `items/sensibleFood.ts`
+- `persistence/saveData.ts`
 - `player/playerCombat.test.ts`
 - `player/playerDamage.ts`
 - `player/playerMelee.test.ts`
@@ -634,6 +657,7 @@ Generated from TypeScript imports.
 - `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
 - `app/actions/actionContracts.ts`
+- `app/actions/cookMealIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
@@ -684,6 +708,7 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/itemModels.ts`
 - `items/primaryWeapons.ts`
+- `items/sensibleFood.ts`
 - `items/tentProp.ts`
 - `items/timedProcess.ts`
 - `items/trade.ts`
@@ -747,6 +772,14 @@ Generated from TypeScript imports.
 - `items/liquidContainer.test.ts`
 - `items/trade.ts`
 
+## `items/primaryWeapons.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/primaryWeapons.ts`
+- `persistence/saveData.ts`
+
 ## `items/primaryWeapons.ts`
 
 **Imports**
@@ -760,6 +793,38 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/inventoryWiring.ts`
+- `app/saveState.ts`
+- `items/primaryWeapons.test.ts`
+- `persistence/saveData.ts`
+- `ui-vue/store.ts`
+- `ui/createInventoryScreen.ts`
+
+## `items/sensibleFood.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/sensibleFood.ts`
+- `player/PlayerNeeds.ts`
+- `shared/HungerState.ts`
+- `shared/StaminaState.ts`
+- `shared/ThirstState.ts`
+- `shared/VigorState.ts`
+
+## `items/sensibleFood.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `player/PlayerNeeds.ts`
+
+**Imported by**
+
+- `app/actions/cookMealIntent.ts`
+- `items/sensibleFood.test.ts`
 
 ## `items/tentPlacement.test.ts`
 

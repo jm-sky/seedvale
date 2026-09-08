@@ -39,8 +39,10 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/container.ts`
 - `items/foodFreshness.ts`
+- `items/itemCatalog.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
+- `items/primaryWeapons.ts`
 - `player/PlayerSkills.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.ts`
@@ -64,6 +66,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/saveState.ts`
+- `items/primaryWeapons.test.ts`
 - `persistence/saveData.test.ts`
 - `persistence/saveDb.test.ts`
 - `persistence/saveDb.ts`

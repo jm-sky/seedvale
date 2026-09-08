@@ -25,6 +25,14 @@ Generated from exported TypeScript symbols.
 - `ContainerActions` — type — line 26
 - `createContainerActions` — function — line 48
 
+## `app/actions/cookMealIntent.ts`
+
+- `CookMealIntentController` — type — line 28
+- `CookMealIntentPhase` — type — line 19
+- `createCookMealIntent` — function — line 55
+  - domain: ui-input
+- `runEatAnything` — function — line 197
+
 ## `app/actions/gatheringActions.ts`
 
 - `createGatheringActions` — function — line 67
@@ -39,7 +47,7 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/mountActions.ts`
 
-- `createMountActions` — function — line 40
+- `createMountActions` — function — line 44
 - `DismountReason` — type — line 18
 - `MountActions` — type — line 20
 
@@ -58,11 +66,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 123
-- `PlacementPreviewActionDeps` — type — line 73
-- `PlacementPreviewActions` — type — line 103
+- `createPlacementPreviewActions` — function — line 130
+- `PlacementPreviewActionDeps` — type — line 79
+- `PlacementPreviewActions` — type — line 109
 - `PlacementPreviewKind` — type — line 23
   - domain: ui-input
+- `PlacementPreviewLifecycle` — type — line 44
 - `PlacementPreviewUiView` — type — line 36
 
 ## `app/actions/placementYaw.ts`
@@ -83,11 +92,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 123
-- `FeedableAnimal` — type — line 101
-- `feedAnimal` — function — line 114
-- `hasCarriedMilkContainer` — function — line 91
-- `SurvivalActions` — type — line 65
+- `createSurvivalActions` — function — line 131
+- `FeedableAnimal` — type — line 109
+- `feedAnimal` — function — line 122
+- `hasCarriedMilkContainer` — function — line 99
+- `SurvivalActionLifecycle` — type — line 63
+- `SurvivalActions` — type — line 73
 
 ## `app/actions/terrainPreparationActions.ts`
 
@@ -131,13 +141,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 238
+- `createApp` — function — line 239
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 208
+- `NewAppOptions` — type — line 209
 
 ## `app/gameLoop.ts`
 
@@ -172,10 +182,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 116
-- `InventoryWiring` — type — line 65
-- `InventoryWiringDeps` — type — line 86
-- `MerchantInventoryView` — type — line 52
+- `createInventoryWiring` — function — line 119
+- `InventoryWiring` — type — line 66
+- `InventoryWiringDeps` — type — line 89
+- `MerchantInventoryView` — type — line 53
 
 ## `app/modalState.ts`
 
@@ -202,14 +212,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/saveState.ts`
 
-- `createSaveState` — function — line 108
+- `createSaveState` — function — line 110
   - domain: persistence
   - system: save-state
   - role: Assembles the live runtime state into `SaveData` and owns when it is written.
   - produces: SaveData
   - integration: Reads across WorldBundle, player and UI state to build one save.
-- `SaveState` — type — line 33
-- `SaveStateDeps` — type — line 54
+- `SaveState` — type — line 34
+- `SaveStateDeps` — type — line 55
 
 ## `app/userActions.ts`
 

@@ -2,6 +2,14 @@
 
 Generated from TypeScript imports.
 
+## `fauna/AnimalAgent.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `terrain/waterSample.ts`
+
 ## `fauna/AnimalAgent.ts`
 
 **Imports**
@@ -34,6 +42,7 @@ Generated from TypeScript imports.
 - `settlement/props.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
+- `shared/agentAnimationSet.ts`
 - `simulation/index.ts`
 - `terrain/slopeConstraint.ts`
 - `terrain/waterBodyKind.ts`
@@ -59,6 +68,7 @@ Generated from TypeScript imports.
 - `debug/faunaInspector.ts`
 - `debug/npcDebugApi.ts`
 - `debug/npcInspector.ts`
+- `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalDialogue.ts`
 - `fauna/animalHarvest.ts`
@@ -160,6 +170,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `world/animalTraps.ts`
 
