@@ -115,6 +115,7 @@ Generated from TypeScript imports.
 
 - `debug/faunaInspector.test.ts`
 - `debug/npcDebugApi.ts`
+- `fauna/AnimalAgent.ts`
 
 ## `debug/householdHistory.ts`
 

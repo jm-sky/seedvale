@@ -8,6 +8,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/animalDefs.ts`
+- `fauna/herdCohesion.ts`
 - `terrain/waterSample.ts`
 
 ## `fauna/AnimalAgent.ts`
@@ -17,6 +18,7 @@ Generated from TypeScript imports.
 - `ai/npcMovementWatchdog.ts`
 - `audio/animalSounds.ts`
 - `debug/debugMode.ts`
+- `debug/faunaInspector.ts`
 - `fauna/AnimalLife.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalDebugVisual.ts`
@@ -83,7 +85,6 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.test.ts`
 - `fauna/mountedSpeed.test.ts`
-- `fauna/preyAlertPerception.ts`
 - `fauna/rabies.test.ts`
 - `fauna/trapLure.test.ts`
 - `fauna/villageAvoidance.test.ts`
@@ -202,6 +203,7 @@ Generated from TypeScript imports.
 - `fauna/animalRoamingTrips.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
+- `fauna/preyAlertPerception.ts`
 - `world/animalTraps.ts`
 
 ## `fauna/animalDialogue.ts`
@@ -487,6 +489,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
 - `fauna/herdCohesion.test.ts`
@@ -601,7 +604,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
 
 **Imported by**
 

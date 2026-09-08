@@ -53,11 +53,12 @@ Generated from exported TypeScript symbols.
 
 ## `debug/faunaInspector.ts`
 
-- `FrenzyWolfCandidate` — type — line 17
-- `getCurrentFrenzyWolf` — function — line 48
-- `getFrenzyWolves` — function — line 41
-- `getNextFrenzyWolf` — function — line 60
-- `pickNextFrenzyWolfId` — function — line 25
+- `FrenzyWolfCandidate` — type — line 41
+- `getCurrentFrenzyWolf` — function — line 72
+- `getFrenzyWolves` — function — line 65
+- `getNextFrenzyWolf` — function — line 84
+- `logNpcThreatBranch` — function — line 24
+- `pickNextFrenzyWolfId` — function — line 49
 
 ## `debug/householdHistory.ts`
 

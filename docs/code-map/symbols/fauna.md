@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 797
+- `AnimalAgent` — class — line 793
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 344
-- `AnimalAgentDeps` — type — line 676
-- `AnimalSaveState` — type — line 441
-- `AnimalUpdateContext` — type — line 707
-- `BURY_DURATION_SEC` — const — line 210
-- `canPredatorPursueIntoVillage` — function — line 492
-- `FAUNA_SHADOW_DISTANCE` — const — line 177
-- `FaunaAiBranch` — type — line 323
-- `FaunaNavRescueDebugInfo` — type — line 328
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 270
-- `FrenzyWolfCandidate` — type — line 611
-- `HARVEST_MEAT_DURATION_SEC` — const — line 213
-- `isWithinVillageRadius` — function — line 473
-- `NearbyNpcCandidate` — type — line 606
-- `pickNearestEligibleWolf` — function — line 620
-- `pickRabidTarget` — function — line 645
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 195
-- `resolveLureTarget` — function — line 521
-- `villageFleeBiasFalloff` — function — line 500
-- `VillageInfo` — type — line 467
+- `AnimalAgentDebugInfo` — type — line 354
+- `AnimalAgentDeps` — type — line 672
+- `AnimalSaveState` — type — line 451
+- `AnimalUpdateContext` — type — line 703
+- `BURY_DURATION_SEC` — const — line 224
+- `canPredatorPursueIntoVillage` — function — line 502
+- `FAUNA_SHADOW_DISTANCE` — const — line 191
+- `FaunaAiBranch` — type — line 333
+- `FaunaNavRescueDebugInfo` — type — line 338
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 284
+- `FrenzyWolfCandidate` — type — line 607
+- `HARVEST_MEAT_DURATION_SEC` — const — line 227
+- `isWithinVillageRadius` — function — line 483
+- `NearbyNpcCandidate` — type — line 602
+- `pickNearestEligibleWolf` — function — line 616
+- `pickRabidTarget` — function — line 641
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 209
+- `resolveLureTarget` — function — line 531
+- `villageFleeBiasFalloff` — function — line 510
+- `VillageInfo` — type — line 477
 
 ## `fauna/animalCorpse.ts`
 
@@ -204,15 +204,21 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/dogGuard.ts`
 
-- `DogBarkStimulus` — type — line 95
-- `DogGuardTargetResolved` — type — line 21
-- `DogGuardWolfCandidate` — type — line 13
-- `DogPestCandidate` — type — line 67
-- `RecentVocalizeCandidate` — type — line 102
-- `resolveDogBarkStimulus` — function — line 113
-- `resolveDogGuardTarget` — function — line 39
-- `resolveDogPestTarget` — function — line 77
-- `StrangerNpcCandidate` — type — line 104
+- `DOG_BARK_COOLDOWN_SEC` — const — line 42
+- `DOG_BARK_HOWL_RADIUS` — const — line 33
+- `DOG_BARK_STRANGER_RADIUS` — const — line 38
+- `DOG_GUARD_ASSIST_RADIUS` — const — line 27
+- `DOG_GUARD_OWN_RADIUS` — const — line 22
+- `DOG_PEST_RADIUS` — const — line 16
+- `DogBarkStimulus` — type — line 129
+- `DogGuardTargetResolved` — type — line 55
+- `DogGuardWolfCandidate` — type — line 47
+- `DogPestCandidate` — type — line 101
+- `RecentVocalizeCandidate` — type — line 136
+- `resolveDogBarkStimulus` — function — line 147
+- `resolveDogGuardTarget` — function — line 73
+- `resolveDogPestTarget` — function — line 111
+- `StrangerNpcCandidate` — type — line 138
 
 ## `fauna/faunaCombat.ts`
 
@@ -299,8 +305,9 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/preyAlertPerception.ts`
 
-- `PreyAlertCandidate` — type — line 21
-- `resolvePreyAlertThreat` — function — line 56
+- `PREY_ALERT_RANGE_BONUS` — const — line 27
+- `PreyAlertCandidate` — type — line 34
+- `resolvePreyAlertThreat` — function — line 69
 
 ## `fauna/proceduralAnimals.ts`
 
