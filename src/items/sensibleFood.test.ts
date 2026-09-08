@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { Inventory } from './Inventory'
-import { resolveSensibleFoodKind } from './sensibleFood'
-import { createHungerState } from '../shared/HungerState'
 import { type PlayerNeeds } from '../player/PlayerNeeds'
+import { createHungerState } from '../shared/HungerState'
 import { createStaminaState } from '../shared/StaminaState'
 import { createThirstState } from '../shared/ThirstState'
 import { createVigorState } from '../shared/VigorState'
+import { Inventory } from './Inventory'
+import { resolveSensibleFoodKind } from './sensibleFood'
 
 describe('resolveSensibleFoodKind', () => {
   it('returns null when no hunger-food is available', () => {

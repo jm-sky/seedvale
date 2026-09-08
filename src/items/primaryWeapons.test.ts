@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { CURRENT_SAVE_VERSION, loadStoredSave, type SaveData } from '../persistence/saveData'
 import { Inventory } from './Inventory'
 import { createPrimaryWeaponSelection } from './primaryWeapons'
-import { CURRENT_SAVE_VERSION, loadStoredSave, type SaveData } from '../persistence/saveData'
 
 describe('primaryWeapons', () => {
   it('initializes empty slots on first equip only', () => {

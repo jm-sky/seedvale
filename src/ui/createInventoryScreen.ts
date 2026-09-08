@@ -1,6 +1,6 @@
 import type { InventoryGroupView } from '../items/inventoryView'
-import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { ItemKind } from '../items/items'
+import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { TradeResult } from '../items/trade'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { TrapKind } from '../world/animalTraps'

@@ -1,14 +1,14 @@
+import type { PlayerNeeds } from '../player/PlayerNeeds'
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
-import type { PlayerNeeds } from '../player/PlayerNeeds'
-import { ITEM_CATALOG } from './itemCatalog'
 import {
-  type FoodSourceSpecies,
   foodBatchUsedFraction,
   foodHungerRelief,
+  type FoodSourceSpecies,
   getFoodBatchFreshnessStage,
   isFoodBatchSpoiled,
 } from './foodFreshness'
+import { ITEM_CATALOG } from './itemCatalog'
 import { ITEM_DEFS } from './items'
 
 /** Stable catalog iteration order for deterministic tie-breaks. */
