@@ -94,7 +94,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-007-wolves-approach-settlement.md`                   | -       | 🟡 | M      | fauna-016 |
 | 💡 `quests-progression-009-dark-forest-ruins-treasure-map.md`               | -       | 🟡 | M      | fauna-016, world-012 |
 | 💡 `fauna-018-persistent-habitat-occupants.md`                              | -       | 🟡 | M      | fauna-016 |
-| ◼️ `fauna-019-real-cave-habitats-and-animal-home-navigation.md`             | -       | 🟡 | L      | world-terrain-008, fauna-016 |
+| 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`             | -       | 🟡 | L      | world-terrain-008, fauna-016 |
 | ◼️ `quests-progression-008-treasure-map-bear-cave.md`                       | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
 | 💡 `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`    | -       | 🟡 | M      | -      |
 | 💡 `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011` `world-terrain-016` |
