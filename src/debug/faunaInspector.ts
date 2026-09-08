@@ -14,6 +14,30 @@ import type { AnimalAgent } from '../fauna/AnimalAgent'
 
 let selectedAnimalId: string | null = null
 
+/** `[NPC COMBAT]` diagnostic line for one predator's NPC-threat decision
+ *  branch (`AnimalAgent.update()`'s `npc-attack`/`npc-attack-frenzied`/
+ *  `npc-flee`/`npc-ignore` cases, plan fauna-017 step 8, review P1) — the
+ *  single home for what were four near-identical inline `console.log`
+ *  blocks. Only ever called behind `isNpcCombatDebugMode()`. `npcThreat`'s
+ *  `homeId` (not `id` twice — the bug this consolidation fixes) is what the
+ *  dog-guard tier keys on. */
+export function logNpcThreatBranch(opts: {
+  label: string
+  animalId: string
+  kind: string
+  frenzied: boolean
+  npcThreat: { id: string, homeId?: string }
+  playerActive: boolean
+}): void {
+  console.log(
+    `[NPC COMBAT] ${opts.label}`,
+    `wolf=${opts.animalId}/${opts.kind}`,
+    `frenzy=${opts.frenzied}`,
+    `npcThreat=${opts.npcThreat.id}/${opts.npcThreat.homeId}`,
+    `playerActive=${opts.playerActive}`,
+  )
+}
+
 export type FrenzyWolfCandidate = { animalId: string, frenzied: boolean, dead: boolean }
 
 /** Pure selection-cycling rule behind `getNextFrenzyWolf()` — unit-testable

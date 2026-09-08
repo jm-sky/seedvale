@@ -16,6 +16,7 @@ import {
   tickSpontaneousVocalizeCooldown,
 } from '../audio/animalSounds'
 import { isNpcCombatDebugMode } from '../debug/debugMode'
+import { logNpcThreatBranch } from '../debug/faunaInspector'
 import { findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import { getAgentCpuDiag } from '../perf/agentCpuDiag'
@@ -2042,10 +2043,7 @@ export class AnimalAgent {
       // zachowywać normalnego lęku przed człowiekiem") — a rabid animal
       // never flees or considers human/NPC targets, it single-mindedly
       // chases the nearest live animal (see `updateRabid`).
-      this.threateningHuman = false
-      this.humanDecisionTimer = 0
-      this.npcDecisionTimer = 0
-      this.provokedTimer = 0
+      this.resetHumanThreatState()
       this.debugBranch = 'rabid'
       this.lastFaunaDecisionInput = null
       this.updateRabid(dt, others)
@@ -2078,10 +2076,7 @@ export class AnimalAgent {
       this.debugBranch = branch
       switch (branch) {
         case 'dog-guard': {
-          this.threateningHuman = false
-          this.humanDecisionTimer = 0
-          this.npcDecisionTimer = 0
-          this.provokedTimer = 0
+          this.resetHumanThreatState()
           this.updateDogGuard(dt, guardTarget!)
           break
         }
@@ -2095,32 +2090,31 @@ export class AnimalAgent {
           // (moveTowardStrategicVillage, below) — it just oscillates outside
           // the fire radius, short of the village (plan 179 follow-up).
           // Mirrors the existing `this.frenzied` bypass in `pickPointNear()`.
-          this.threateningHuman = false
-          this.humanDecisionTimer = 0
-          this.npcDecisionTimer = 0
-          this.provokedTimer = 0
+          this.resetHumanThreatState()
           this.cancelSourceTarget()
           this.setIntent('flee', { x: sense.nearestFire!.x, z: sense.nearestFire!.z })
           this.fleeFrom(sense.nearestFire!.x, sense.nearestFire!.z, dt)
           break
         }
         case 'frenzy-beeline': {
-          this.threateningHuman = false
-          this.humanDecisionTimer = 0
-          this.npcDecisionTimer = 0
-          this.provokedTimer = 0
+          // No `cancelSourceTarget()` here either — same asymmetry as
+          // `npc-attack-frenzied` below, on purpose (implementation notes
+          // F2, not fixed here): a frenzied predator committed to reaching
+          // the village keeps whatever source claim it already held.
+          this.resetHumanThreatState()
           this.moveTowardStrategicVillage(dt)
           break
         }
         case 'npc-attack': {
           if (isNpcCombatDebugMode()) {
-            console.log(
-              '[NPC COMBAT] npcThreat ON',
-              `wolf=${this.animalId}/${this.def.kind}`,
-              `frenzy=${this.frenzied}`,
-              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
-              `playerActive=${sense.playerActive}`,
-            )
+            logNpcThreatBranch({
+              label: 'npcThreat ON',
+              animalId: this.animalId,
+              kind: this.def.kind,
+              frenzied: this.frenzied,
+              npcThreat: npcThreat!,
+              playerActive: sense.playerActive,
+            })
           }
           this.cancelSourceTarget()
           this.threateningHuman = true
@@ -2132,13 +2126,14 @@ export class AnimalAgent {
           // No `cancelSourceTarget()` here — asymmetric with the other
           // branches on purpose (implementation notes F2, not fixed here).
           if (!this.threateningHuman && isNpcCombatDebugMode()) {
-            console.log(
-              '[NPC COMBAT] threat state ON',
-              `wolf=${this.animalId}/${this.def.kind}`,
-              `frenzy=${this.frenzied}`,
-              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
-              `playerActive=${sense.playerActive}`,
-            )
+            logNpcThreatBranch({
+              label: 'threat state ON',
+              animalId: this.animalId,
+              kind: this.def.kind,
+              frenzied: this.frenzied,
+              npcThreat: npcThreat!,
+              playerActive: sense.playerActive,
+            })
           }
           this.threateningHuman = true
           this.setIntent('attack', { x: npcThreat!.x, z: npcThreat!.z })
@@ -2147,13 +2142,14 @@ export class AnimalAgent {
         }
         case 'npc-flee': {
           if (isNpcCombatDebugMode()) {
-            console.log(
-              '[NPC COMBAT] npcThreat ON',
-              `wolf=${this.animalId}/${this.def.kind}`,
-              `frenzy=${this.frenzied}`,
-              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
-              `playerActive=${sense.playerActive}`,
-            )
+            logNpcThreatBranch({
+              label: 'npcThreat ON',
+              animalId: this.animalId,
+              kind: this.def.kind,
+              frenzied: this.frenzied,
+              npcThreat: npcThreat!,
+              playerActive: sense.playerActive,
+            })
           }
           this.cancelSourceTarget()
           this.threateningHuman = false
@@ -2163,13 +2159,14 @@ export class AnimalAgent {
         }
         case 'npc-ignore': {
           if (isNpcCombatDebugMode()) {
-            console.log(
-              '[NPC COMBAT] npcThreat ON',
-              `wolf=${this.animalId}/${this.def.kind}`,
-              `frenzy=${this.frenzied}`,
-              `npcThreat=${npcThreat!.id}/${npcThreat!.id}`,
-              `playerActive=${sense.playerActive}`,
-            )
+            logNpcThreatBranch({
+              label: 'npcThreat ON',
+              animalId: this.animalId,
+              kind: this.def.kind,
+              frenzied: this.frenzied,
+              npcThreat: npcThreat!,
+              playerActive: sense.playerActive,
+            })
           }
           this.cancelSourceTarget()
           this.threateningHuman = false
@@ -2210,18 +2207,12 @@ export class AnimalAgent {
           break
         }
         case 'predator-normal': {
-          this.threateningHuman = false
-          this.humanDecisionTimer = 0
-          this.npcDecisionTimer = 0
-          this.provokedTimer = 0
+          this.resetHumanThreatState()
           this.updatePredator(dt, others, lures)
           break
         }
         case 'prey-normal': {
-          this.threateningHuman = false
-          this.humanDecisionTimer = 0
-          this.npcDecisionTimer = 0
-          this.provokedTimer = 0
+          this.resetHumanThreatState()
           this.updatePrey(dt, others, lures, nearbyPredators, nearbyRats)
           break
         }
@@ -2257,6 +2248,21 @@ export class AnimalAgent {
       nowDays,
     )
     if (this.debugActive && this.debugVisual) this.updateDebugVisual()
+  }
+
+  /** Resets the four-field human/NPC-threat throttle state shared by every
+   *  decision branch that doesn't want an immediate re-score this tick
+   *  (plan fauna-017 step 8, review P1) — six inline copies before this
+   *  consolidation (the `rabid` gate, `dog-guard`, `fire-avoid`,
+   *  `frenzy-beeline`, `predator-normal`, `prey-normal`). Deliberately not
+   *  called from every branch: `npc-attack`/`npc-attack-frenzied`/
+   *  `npc-flee`/`npc-ignore`/`player-*` all want their own throttle state
+   *  to persist or be set explicitly instead. */
+  private resetHumanThreatState(): void {
+    this.threateningHuman = false
+    this.humanDecisionTimer = 0
+    this.npcDecisionTimer = 0
+    this.provokedTimer = 0
   }
 
   /** Feeds this tick's steering-relevant state to the `showDebug()` overlay
