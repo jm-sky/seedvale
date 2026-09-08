@@ -3,6 +3,8 @@
 > Plan: `docs/plans/world-terrain-008-underground-caves-v2.md`
 > Recon date: **2026-09-07**
 > Scope: **Milestone B1 only — production topology + SDF spatial representation + geometry**
+>
+> **Superseded as current-runtime truth.** B1 landed 2026-09-08. §1 below describes the *pre-B1* `generateCaveDefinitions` + spike wiring. For what the production pipeline actually is now, see the "Milestone B1 — Implementation Summary" in `world-terrain-008-underground-caves-v2-implementation-notes.md`. For B2 gameplay queries, see `world-terrain-008-underground-caves-v2-b2-recon.md` — do not treat this file's §1 as the live `createCaves.ts` flow.
 
 This is a focused addendum to the original Milestone-A implementation notes. Do not reread the whole repository before B1; start from the files and constraints below.
 

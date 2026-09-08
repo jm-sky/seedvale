@@ -1231,3 +1231,17 @@ node ids sharing nothing with the Milestone-A fixture, arc-length primitive
 resampling. `caveSurfaceIntegration.test.ts` and `sdfCaveMesh.test.ts` updated
 only for `buildSdfCaveMesh`'s new (`includeBranch`-less) signature — their
 own assertions are unchanged.
+
+---
+
+# Milestone B2 — Recon pointer (2026-09-08)
+
+B1 left gameplay ground on `topologyToCaveDefinition` → `CaveVolume`. That
+is now the B2 problem, not a remaining B1 task. Do not implement B2 from
+this file's Milestone-A "CaveVolume / Spatial Query Constraints" section
+alone — it still describes the proxy correctly, but the post-B1 repros are
+mouth-portal + flat-proxy-floor vs SDF bowl, not "SDF void outside the
+proxy XZ".
+
+Read `world-terrain-008-underground-caves-v2-b2-recon.md` and
+`src/world/caves/caveGameplayQuery.b2-recon.test.ts` before writing B2 code.

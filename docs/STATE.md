@@ -28,7 +28,7 @@ Each subsection below is a short current-state summary. Domain documents hold th
 
 ### World / terrain
 
-Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lifecycle, weather/seasons as deterministic functions of `(seed, elapsedDays)`, mountains, and rivers with their own hydrology/geometry. Ocean, lakes, day/night, fog and post-processing are implemented. Short-lived environmental blood traces are created directly from player/NPC/animal damage entry points and rendered via one capacity-fixed instanced mesh, resynced to whatever traces are within the streamed-terrain radius; not persisted, carried across an in-session `WorldBundle` rebuild the same way other player-positioned world objects are.
+Procedurally chunked, streamed terrain with instanced vegetation/rocks, tree lifecycle, weather/seasons as deterministic functions of `(seed, elapsedDays)`, mountains, and rivers with their own hydrology/geometry. Ocean, lakes, day/night, fog and post-processing are implemented. Short-lived environmental blood traces are created directly from player/NPC/animal damage entry points and rendered via one capacity-fixed instanced mesh, resynced to whatever traces are within the streamed-terrain radius; not persisted, carried across an in-session `WorldBundle` rebuild the same way other player-positioned world objects are. Walk-in caves are Cave V2 (production SDF interiors, `createCaves()` / `src/world/caves/`); gameplay ground/containment still uses the transitional `CaveVolume` proxy (plan world-terrain-008 Milestone B2).
 
 - Generation/streaming/vegetation/mountains/weather: [state/terrain-and-world-generation.md](./state/terrain-and-world-generation.md)
 - Ocean, lakes and rivers: [state/water.md](./state/water.md)
@@ -105,6 +105,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `QuestManager` — quest progress, EXP and player↔NPC relations.
 - `ReputationManager` (`src/reputation/`) — per-settlement reputation (five `-100..100` dimensions) and renown (`0..100`); independent of `QuestManager`, changed only via an explicit `SocialConsequence` a caller applies. Cemetery grave disturbance uses `socialExposure.ts` for a one-shot day/night + Sneak roll before that consequence.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
+- `createCaves` / Cave V2 — streamed walk-in interiors (`src/world/caves/`); presentation is production SDF, gameplay ground is still a `CaveVolume` proxy until world-terrain-008 B2.
 - `WorldLocationCatalog` / `LocationKnowledge` / `NavigationTargets` — concrete named world locations, player discovery state and active travel targets. See [state/world-locations.md](./state/world-locations.md).
 - `Place` / schedule-related NPC work — foundation for daily routines.
 - The persistent worldgen cache (`worldgenCacheDb.ts`, `(seed, namespace, version, fingerprint) → payload`) is a structurally separate, disposable versioning concept from `SaveData.version` — never a correctness dependency. See [persistence.md](./state/persistence.md#worldgen-cache) for the mechanism and its one current namespace.

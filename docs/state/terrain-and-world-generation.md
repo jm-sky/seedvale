@@ -4,7 +4,7 @@
 
 **Not:** a rendering/visual-contract log (that's [GRAPHICS.md](../architecture/GRAPHICS.md) — shader/material *why*), the ocean/lake/river domain (that's [WATER.md](../state/water.md)), a plan (that's [plans/](../plans/README.md)), or the whole-codebase snapshot (that's [STATE.md](../STATE.md)).
 
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-08
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -84,7 +84,7 @@ The hydrology simulation, river-tile geometry, and rendering are canonical in [w
 
 ## World locations
 
-Coarse world-location classification (lakes, mountain peaks, cemeteries, …) consumes this domain's terrain sampling surface (`sampleContinentalnessAt`/`sampleFloorAt`/`sampleHeightAt`/`sampleMountainRidgeAt`) but is a separate, persisted-progression domain, not part of terrain generation — see [world-locations.md](./world-locations.md).
+Coarse world-location classification (lakes, mountain peaks, cemeteries, …) consumes this domain's terrain sampling surface (`sampleContinentalnessAt`/`sampleFloorAt`/`sampleHeightAt`/`sampleMountainRidgeAt`) but is a separate, persisted-progression domain, not part of terrain generation — see [world-locations.md](./world-locations.md). Cave interiors are not heightmap features: Cave V2 (`createCaves()`, `src/world/caves/`) is a streamed SDF interior owned by `WorldBundle.caves`, sited by `pickLargeCaveSites()`. Mouth recess carves are `'system'` terrain modifications (replayed every world build, never persisted). Gameplay ground inside a cave still goes through a `CaveVolume` proxy derived from topology, not the SDF — that remaining seam is plan world-terrain-008 Milestone B2.
 
 ## Persistence
 
@@ -101,6 +101,8 @@ src/terrain/vegetationRegionBatcher.ts
 src/terrain/slopeConstraint.ts
 src/render/instancedProps.ts
 src/world/treeLifecycle.ts
+src/world/createCaves.ts
+src/world/caves/
 src/world/weather.ts
 src/world/weatherVisuals.ts
 src/world/weatherParticles.ts

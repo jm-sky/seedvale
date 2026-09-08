@@ -411,21 +411,112 @@ Sprawdzić kilka caves / kilka seeds, nie tylko `definitions[0]`:
 
 # B2 — Entrance + gameplay spatial queries
 
-## 14. Scope
+**B2 status (2026-09-08): recon done, not implemented.** Current runtime, root
+cause of both post-B1 surface-snap repros, query contract, performance and
+the B3 boundary are in
+`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b2-recon.md`.
+Diagnostic pins live in `src/world/caves/caveGameplayQuery.b2-recon.test.ts`.
+Do not start from the one-paragraph scope that used to sit here.
 
-Po stabilnym production SDF:
+## 14. Cel B2
 
-- dopracować `surface → mouth → transition → interior`;
-- zdecydować fate `CaveVolume`;
-- wprowadzić Y-aware spatial queries odpowiednie dla przyszłych multi-level routes;
-- usunąć `Math.min`-style one-floor assumptions jako trwały kontrakt;
-- zachować surface/cave selection na podstawie rzeczywistego 3D containment.
+Po B1 rendering jest produkcyjnym SDF, ale gameplay ground/containment nadal idzie przez lossy compatibility proxy:
 
-API ma co najmniej obsługiwać containment, floor, ceiling, bounds i entrance transition, bez render-mesh authority.
+```text
+CaveTopology
+    → topologyToCaveDefinition
+    → CaveVolume
+    → Caves.contains / sampleFloor(x,z) / sampleCeiling(x,z)
+    → CaveGroundQuery
+    → PlayerController.groundAt()
+    → miss ⇒ surface sampleHeight ⇒ unlimited upward snap
+```
+
+B2 zastępuje tę ścieżkę produkcyjnymi query opartymi o Cave V2 spatial representation:
+
+```text
+CaveTopology
+    → CaveSdfSpatialRepresentation          (już jest, pure field)
+    → CaveSdfColumnIndex                    (nowy derived occupancy)
+    → Caves.queryGround(x, y, z)
+    → CaveGroundQuery
+```
+
+`CaveGroundQuery` w `PlayerController` już jest `(x,y,z)` — nie zmieniać movement systemu. Źródłem prawdy jaskini pozostaje lokalne SDF; mesh i (do B3) collidery są derived.
+
+Nie rozwiązywać problemu przez `PROXY_MARGIN`.
+
+## 14a. Aktualny runtime (potwierdzony w kodzie)
+
+- `createCaves.ts` trzyma `{ topology, definition }` per cave. SDF representation jest budowane wewnątrz `buildSdfCaveMesh()` przy `activate()` i **nie jest retencjonowane**.
+- `caves.contains` / `sampleFloor` / `sampleCeiling` foldują **wszystkie** `CaveVolume`, nie tylko active.
+- `sampleFloor` / `sampleCeiling` są Y-independent (`Math.min` najniższego floora). `contains` jest Y-aware, ale na **spanie proxy**, nie na SDF.
+- `createApp.ts` `caveGroundQuery` woła te trzy osobno. Miss → `null` → `groundAt` bierze `sampleHeight`.
+- `integrateVerticalMotion`: grounded + `groundY >= y - STEP_DOWN_MAX` (0.45) ustawia `y = groundY` **w górę bez limitu**. To ostatni krok obu repro.
+
+Collision (`buildCaveWallColliders(definition)`) i camera boom są **poza B2**.
+
+## 14b. Root cause obu repro (seed `1136726869`)
+
+Hipoteza „proxy nie pokrywa SDF void w XZ” jest **zła jako główna dziura**. Skan kolumn o clearance ≥ 1.8 m: prawie cały standing-height SDF void leży *wewnątrz* proxy. Rozjazd jest pionowy i semantyczny.
+
+**Repro 1 — `Grota Mroczna` (`cave:cave:7fd14c30`, x=316.008, z=109.778).** Wejście. Carve podejścia (r=3.2 m, środek 2.2 m na zewnątrz) jest większy niż entrance disc proxy (r=`1.5+0.9=2.4` m). `contains` na Y podłogi ust ginie przy d=2.4 m; surface jest >1 m wyżej → snap w górę. Sufit proxy przy ustach jest tylko 0.20 m nad surową powierzchnią (`2.6 − 2.4`). SDF mouth to zamknięta elipsoida, clip jest tylko na meshu.
+
+**Repro 2 — `Grota Czarnego Kamienia` (`cave:cave:0e3cce97`, x=135.843, z=-17.814).** Komora. Gracz stoi na **płaskiej** podłodze proxy. Na tej wysokości ściana SDF jest ~2.0 m od środka komory; containment i collider ring siedzą na ~5.7 m. ~3.7 m clip-through przez widoczny rock, potem wyjście z disc → snap. `sampleFloor` nie śledzi miski SDF (podłoga rośnie ku ścianie).
+
+Oba kończą się tym samym: `caveGroundQuery` zwraca `null` pod ziemią.
+
+## 14c. Kontrakt query
+
+`CaveSdfSpatialRepresentation` ma dziś tylko `{ bounds, sample(x,y,z) }`. To za mało na gameplay i za drogie na hot path (pętla po wszystkich primitives + `smin` + noise, razy ~20 wywołań `groundAt` na klatkę).
+
+B2 dodaje derived **column index** (lokalny, deterministyczny, snap origin do stałego kroku świata, step 0.25–0.5 m, start 0.4 m):
+
+- per kolumna: posortowane rozłączne `{ floorY, ceilingY }[]` — multi-level-safe, bez `Math.min`;
+- clip do analytic surface (`sampleBaseHeight`, ten sam sampler co `clipBelowSurface.ts`);
+- **mouth portal**: footprint carve’u (approach + mouth) ∪ clipped SDF, dopóki `y` jest między podłogą wnęki a powierzchnią;
+- jedna funkcja `queryGround(x,y,z) → { floorY, ceilingY, intervals } | null`;
+- hysteresis: nie wracać na surface, gdy `sampleHeight - playerY` jest ewidentnie podziemnym missem (wyjście ustami nadal działa, bo tam wysokości się schodzą).
+
+Nie raymarchować SDF per frame. Nie robić z mesha/BVH autorytetu. Nie budować globalnego voxel terenu.
+
+## 14d. Fate `CaveVolume` / adaptera
+
+Po B2:
+
+- **usunąć z gameplay ground path** (`Caves.contains` / player `caveGroundQuery`);
+- **zostawić** `topologyToCaveDefinition` + `createCaveVolume` + `buildCaveWallColliders` jako collision adapter do B3;
+- `Caves.definitions()` może zostać dla katalogu lokacji (czyta `entrance`) — nie trzeba przepinać w B2;
+- nie kasować `caveVolume.ts` / `topologyAdapter.ts` w tym slice.
+
+## 14e. Weryfikacja B2
+
+Targeted tests (wzór `caveSurfaceIntegration.test.ts`, bez browsera):
+
+- invert `caveGameplayQuery.b2-recon.test.ts` dla obu cave ID powyżej;
+- stacked intervals pick-by-Y;
+- hillside above cave nie jest contained;
+- column index determinism.
+
+```text
+npx tsc --noEmit
+pnpm run lint
+pnpm run test
+```
+
+Browser: Player, checklist w reconie B2 (te dwa ID / współrzędne). Agent nie odpala przeglądarki.
+
+## 14f. Poza zakresem B2
+
+B3 collision + camera, B4 streaming/perf/workers, B5 usunięcie Sweep/V1/`CaveVolume`, Dual Contouring, podnoszenie `PROXY_MARGIN`, rzeźbiony hillside doorway, fauna/loot/navmesh, zmiana `makeCaveId` / siting / production topology.
 
 ---
 
 # B3 — Collision + third-person camera
+
+B3 starts **after** B2: gameplay floor/containment already comes from the SDF
+column index. Do not put `CaveVolume` back on the player ground path. Collision
+and camera still use (or replace) the proxy/beads; that is this slice.
 
 ## 15. Collision
 
