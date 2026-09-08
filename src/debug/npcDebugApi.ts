@@ -136,15 +136,15 @@ export type WorldLocationDebugEntry = WorldLocation & { discovered: boolean }
 export type WorldLocationsDebugApi = {
   /** Every cave/cemetery/lake/mountainPeak/settlement within `FAR_RANGE_KM`
    *  of the player, each flagged with whether it's currently known. */
-  list: () => WorldLocationDebugEntry[]
+  list: (rangeKm?: number) => WorldLocationDebugEntry[]
   listUndiscovered: () => WorldLocationDebugEntry[]
   /** Marks one location `confirmed`/`exploration` — a no-op (returns
    *  `false`) if `id` doesn't resolve to a real location. */
   reveal: (id: string) => boolean
   /** Reveals everything `list()` currently returns; returns how many were
    *  newly revealed. */
-  revealAll: () => number
-  listCaves: () => WorldLocationDebugEntry[]
+  revealAll: (rangeKm?: number) => number
+  listCaves: (rangeKm?: number) => WorldLocationDebugEntry[]
   teleportToFirstCave: () => Promise<boolean>
 }
 
@@ -362,11 +362,11 @@ export function installNpcDebugApi(
   }
 
   const worldLocationsDebug: WorldLocationsDebugApi = {
-    list: () => {
+    list: (rangeKm?: number) => {
       const { x, z } = getPlayerPosition()
       const all = [
-        ...worldLocations.catalog.landmarksWithin(x, z, FAR_RANGE_KM),
-        ...worldLocations.catalog.nearestSettlements(x, z, FAR_RANGE_KM),
+        ...worldLocations.catalog.landmarksWithin(x, z, rangeKm ?? FAR_RANGE_KM),
+        ...worldLocations.catalog.nearestSettlements(x, z, rangeKm ?? FAR_RANGE_KM),
       ]
       return all.map((location) => ({ ...location, discovered: worldLocations.knowledge.has(location.id) }))
     },
@@ -376,8 +376,8 @@ export function installNpcDebugApi(
       if (!location) return false
       return worldLocations.knowledge.reveal(id, 'confirmed', 'exploration')
     },
-    revealAll: () => worldLocationsDebug.list().filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
-    listCaves: () => worldLocationsDebug.list().filter(l => l.kind === 'cave'),
+    revealAll: (rangeKm?: number) => worldLocationsDebug.list(rangeKm).filter((location) => worldLocations.knowledge.reveal(location.id, 'confirmed', 'exploration')).length,
+    listCaves: (rangeKm?: number) => worldLocationsDebug.list(rangeKm).filter(l => l.kind === 'cave'),
     teleportToFirstCave: async () => {
       console.log('Searching for caves...')
       const cave = worldLocationsDebug.listCaves().at(0)
