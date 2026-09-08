@@ -22,7 +22,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | `fauna-017-animal-agent-refactor.md`                                        | -       | 🟡 | M      | -      |
-| `quests-progression-010-abandoned-gold-mine-colony.md`                      | -       | 🔴 | XL     | world-terrain-008, quests-progression-002, quests-progression-003 |
+| `quests-progression-010-abandoned-gold-mine-colony.md`                      | -       | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
 | `settlements-003-colony-bootstrap.md`                                       | -       | 🔴 | L      | world-019, settlements-npcs-028 |
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`      | -       | 🔴 | M      | -      |
 | `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-018, settlements-npcs-019 |
