@@ -22,6 +22,7 @@ Generated from TypeScript imports.
 - `fauna/animalDebugVisual.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalRoaming.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
@@ -43,7 +44,6 @@ Generated from TypeScript imports.
 - `shared/agentAnimationSet.ts`
 - `simulation/index.ts`
 - `terrain/slopeConstraint.ts`
-- `terrain/waterBodyKind.ts`
 - `terrain/waterSample.ts`
 - `ui/agentStatusLabel.ts`
 - `world/animalTraps.ts`
@@ -71,7 +71,6 @@ Generated from TypeScript imports.
 - `fauna/animalDialogue.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/animalMeat.ts`
-- `fauna/animalRoamingTrips.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
@@ -199,6 +198,8 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalRoaming.ts`
+- `fauna/animalRoamingTrips.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `world/animalTraps.ts`
@@ -231,6 +232,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalLife.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalDefs.ts`
+- `fauna/animalRoaming.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
 - `player/PlayerController.ts`
@@ -272,11 +274,33 @@ Generated from TypeScript imports.
 - `fauna/animalHarvest.ts`
 - `fauna/harvestedRemains.ts`
 
+## `fauna/animalRoaming.test.ts`
+
+**Imports**
+
+- `fauna/animalRoaming.ts`
+
+## `fauna/animalRoaming.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `player/PlayerController.ts`
+- `terrain/waterBodyKind.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.ts`
+- `fauna/animalRoaming.test.ts`
+- `fauna/animalRoamingTrips.test.ts`
+
 ## `fauna/animalRoamingTrips.test.ts`
 
 **Imports**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalRoaming.ts`
 
 ## `fauna/bloodSplat.ts`
 
