@@ -908,7 +908,6 @@ export async function createApp(
       : null)
   }
 
-  hud.setExp(questManager.getExp())
   hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
   hud.setPlayerBadges(badges.listEarned())
 
@@ -1180,7 +1179,6 @@ export async function createApp(
         fishingAttempts.clear()
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         syncHeldHud()
-        hud.setExp(questManager.getExp())
         syncQuickActionAvailability()
       }
       // New chunkManager/ocean instances start with default (untinted) water —
@@ -1489,7 +1487,7 @@ export async function createApp(
 
   const openQuestLog = () => {
     questLog.open()
-    questLog.refresh(questManager.list(), questManager.getExp(), (name) =>
+    questLog.refresh(questManager.list(), (name) =>
       questManager.getRelation(name),
     )
   }

@@ -11,7 +11,7 @@ Quests should expose meaningful opportunities created by the living world rather
 - Quest opportunities emerge from NPC, household, settlement, resource, fauna and world problems.
 - Objectives bind to real world entities and state where appropriate.
 - Dialogue and quest availability reflect current relationships and circumstances.
-- Completing or failing a quest changes the world or relationships when meaningful.
+- Completing or failing a quest applies an authored outcome: item/coin rewards and consequences (relation, reputation/renown) rather than a global EXP grant.
 - Quest history preserves consequences and can influence future opportunities.
 - Authored structures provide reliable gameplay framing while world state supplies the circumstances.
 

@@ -9,12 +9,17 @@ import { LIVESTOCK_KINDS } from '../settlement/livestock'
 import {
   type QuestDef,
   type QuestObjective,
+  type QuestOutcome,
+  type QuestOutcomeId,
+  type QuestProgressEntry,
+  type QuestReward,
   QUESTS,
   type QuestStage,
   type QuestState,
   RELATION_LEVEL_THRESHOLDS,
   type RelationLevel,
   relationToLevel,
+  uniqueOutcomeForState,
 } from './quests'
 
 /** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
@@ -35,8 +40,16 @@ export type QuestDialogOverride = {
   }
 }
 
+export type { QuestProgressEntry }
+
+export type QuestPromisedReward = {
+  items: ReadonlyArray<{ kind: ItemKind, count: number }>
+}
+
 export type QuestListEntry = {
   id: string
+  title: string
+  description: string
   giverName: string
   state: QuestState
   stageIndex: number
@@ -44,14 +57,24 @@ export type QuestListEntry = {
   /** Description of the current stage's objective (with a live count for
    *  `gather_item`), or null when not `active`. */
   currentObjective: string | null
+  resolvedOutcomeId?: QuestOutcomeId
+  /** Presentation line after resolution — from the outcome, else the
+   *  giver `reportLine` / stage `failLine`. */
+  resultText?: string
+  /** Unambiguous shown reward among complete outcomes; null when hidden,
+   *  mixed, or already resolved. */
+  promisedReward: QuestPromisedReward | null
 }
-
-export type QuestProgressEntry = { id: string, state: QuestState, stageIndex: number }
 
 export type QuestManagerInitial = {
   progress: readonly QuestProgressEntry[]
-  exp: number
   relations: Record<string, number>
+}
+
+type QuestRuntimeProgress = {
+  state: QuestState
+  stageIndex: number
+  resolvedOutcomeId?: QuestOutcomeId
 }
 
 export type QuestItemGrant = (kind: ItemKind, count: number) => void
@@ -92,10 +115,6 @@ export type DangerousTraitApplier = (animalId: string) => void
  *  every existing construction site (tests included) is unaffected. */
 export type ApplySocialConsequence = (consequence: SocialConsequence) => void
 
-/** Exp granted on turning in a quest. Flat for v1 — no per-quest tuning yet. */
-const QUEST_EXP_REWARD = 10
-/** Relation bump for the giver and any NPC named in a `talk_to_npc` stage. */
-const QUEST_RELATION_REWARD = 1
 /** Same headroom as NPC reaction clips (NpcAgent.ts) — a one-shot "thank you", not a focal cue. */
 const QUEST_COMPLETE_SOUND_VOLUME = 0.35
 /** Used when a failed stage has no `failLine` of its own. */
@@ -137,7 +156,7 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
 export class QuestManager {
   private readonly defs: readonly QuestDef[]
   private readonly inventory: Inventory
-  private readonly states = new Map<string, { state: QuestState, stageIndex: number }>()
+  private readonly states = new Map<string, QuestRuntimeProgress>()
   private readonly relations = new Map<string, number>()
   /** `questId → animalId` bound the moment a `kill_target_animal` stage
    *  becomes active — see `bindAnimalTargetIfNeeded`. */
@@ -147,7 +166,6 @@ export class QuestManager {
   private readonly resolveAnimalTarget: AnimalTargetResolver
   private readonly applyDangerousTrait: DangerousTraitApplier
   private readonly applySocialConsequence: ApplySocialConsequence
-  private exp = 0
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -175,46 +193,45 @@ export class QuestManager {
     if (initial) {
       for (const entry of initial.progress) {
         if (!this.states.has(entry.id)) continue
+        const def = this.defs.find((d) => d.id === entry.id)
+        const restored = def ? normalizeRestoredProgress(def, entry) : entry
         // `animalTargets` is never persisted (see its field comment), so an
         // `active` animal-bound quest needs to either rebind or be flagged as
         // unrecoverable on restore. Wild fauna's `animalId`/dead-alive state
         // isn't persisted either, so a naive rebind could silently retarget a
         // different individual — only livestock's deterministic spawn makes
         // rebinding trustworthy (plan 110).
-        const def = this.defs.find((d) => d.id === entry.id)
-        const stage = entry.state === 'active' ? def?.stages[entry.stageIndex] : undefined
+        const stage = restored.state === 'active' ? def?.stages[restored.stageIndex] : undefined
         const objective = stage?.objective
         if (def && (objective?.type === 'kill_target_animal' || objective?.type === 'find_animal')) {
           if (!LIVESTOCK_KINDS.has(objective.kind)) {
-            this.states.set(entry.id, { state: 'invalidated', stageIndex: entry.stageIndex })
+            this.states.set(entry.id, { state: 'invalidated', stageIndex: restored.stageIndex })
             continue
           }
-          this.states.set(entry.id, { state: entry.state, stageIndex: entry.stageIndex })
-          this.bindAnimalTargetIfNeeded(def, entry.stageIndex)
+          this.states.set(entry.id, runtimeProgress(restored))
+          this.bindAnimalTargetIfNeeded(def, restored.stageIndex)
           continue
         }
-        this.states.set(entry.id, { state: entry.state, stageIndex: entry.stageIndex })
+        this.states.set(entry.id, runtimeProgress(restored))
       }
-      this.exp = initial.exp
       for (const [name, value] of Object.entries(initial.relations)) this.relations.set(name, value)
     }
   }
 
-  /** Drops all progress/exp/relations back to a fresh-start state — used on
+  /** Drops all progress/relations back to a fresh-start state — used on
    *  "New Game" so a new save doesn't inherit the previous playthrough's quest
    *  state (the instance itself is kept, since callers hold a `const` ref). */
   reset(): void {
     for (const def of this.defs) this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
     this.relations.clear()
     this.animalTargets.clear()
-    this.exp = 0
   }
 
-  private stateOf(id: string): { state: QuestState, stageIndex: number } {
+  private stateOf(id: string): QuestRuntimeProgress {
     return this.states.get(id) ?? { state: 'not_offered', stageIndex: 0 }
   }
 
-  private setQuestState(id: string, value: { state: QuestState, stageIndex: number }): void {
+  private setQuestState(id: string, value: QuestRuntimeProgress): void {
     this.states.set(id, value)
     this.dirty = true
   }
@@ -251,10 +268,6 @@ export class QuestManager {
 
   getState(id: string): QuestState {
     return this.stateOf(id).state
-  }
-
-  getExp(): number {
-    return this.exp
   }
 
   /** Sympathy score for an NPC by name, bumped on quest completion. Defaults to 0. */
@@ -317,13 +330,20 @@ export class QuestManager {
       .map((def) => {
         const s = this.stateOf(def.id)
         const stage = this.currentStage(def, s.stageIndex)
+        const resolved = resolvedOutcome(def, s)
+        const terminal = s.state === 'complete' || s.state === 'failed' || s.state === 'invalidated'
         return {
           id: def.id,
+          title: def.title,
+          description: def.description,
           giverName: def.giverName,
           state: s.state,
           stageIndex: s.stageIndex,
           totalStages: def.stages.length,
           currentObjective: s.state === 'active' && stage ? this.objectiveDescription(stage) : null,
+          resolvedOutcomeId: s.resolvedOutcomeId,
+          resultText: resultPresentation(def, s, resolved, stage),
+          promisedReward: terminal ? null : promisedShownReward(def),
         }
       })
   }
@@ -386,41 +406,58 @@ export class QuestManager {
     }
   }
 
-  private completeQuest(def: QuestDef): string {
-    this.setQuestState(def.id, { state: 'complete', stageIndex: def.stages.length })
+  /** Terminal resolution. Callers pick the outcome; this never scans for a
+   *  "best" result. Returns false when the quest or outcome is unknown, or
+   *  the quest is already terminal (`complete`/`failed`/`invalidated`). */
+  resolveQuest(questId: string, outcomeId: QuestOutcomeId): boolean {
+    const def = this.defs.find((d) => d.id === questId)
+    if (!def) return false
+    return this.applyOutcome(def, outcomeId) !== null
+  }
+
+  /** Applies `outcomeId` exactly once: terminal state, reward, consequences.
+   *  Presentation (spoken line / complete sound) is the caller's job except
+   *  the existing successful-turn-in thank-you clip. */
+  private applyOutcome(def: QuestDef, outcomeId: QuestOutcomeId): QuestOutcome | null {
+    const current = this.stateOf(def.id)
+    if (current.state === 'complete' || current.state === 'failed' || current.state === 'invalidated') return null
+    const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
+    if (!outcome) return null
+
+    const stageIndex = outcome.state === 'complete' ? def.stages.length : current.stageIndex
+    this.setQuestState(def.id, { state: outcome.state, stageIndex, resolvedOutcomeId: outcome.id })
     this.animalTargets.delete(def.id)
-    const relationReward = def.effects?.relation ?? QUEST_RELATION_REWARD
-    this.exp += def.effects?.exp ?? QUEST_EXP_REWARD
-    this.bumpRelation(def.giverName, relationReward)
-    for (const stage of def.stages) {
-      if (stage.objective.type === 'talk_to_npc') {
-        this.bumpRelation(stage.objective.npcName, relationReward)
-      }
+
+    if (outcome.reward?.items) {
+      for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
     }
-    this.playQuestCompleteSound(def.giverName)
-    if (def.reward) this.grantItem(def.reward.kind, def.reward.count)
-    // Authored, one-time public consequence (plan quests-progression-001) —
-    // only fires with both a resolved settlement and authored deltas; most
-    // quests have neither, and there is no default social effect.
-    if (def.settlementId && def.socialConsequence) {
-      this.applySocialConsequence({ settlementId: def.settlementId, ...def.socialConsequence })
+    if (outcome.consequences?.relations) {
+      for (const rel of outcome.consequences.relations) this.bumpRelation(rel.npcName, rel.delta)
     }
+    if (def.settlementId && outcome.consequences?.social) {
+      this.applySocialConsequence({ settlementId: def.settlementId, ...outcome.consequences.social })
+    }
+    if (outcome.state === 'complete') this.playQuestCompleteSound(def.giverName)
+    return outcome
+  }
+
+  private resolveSuccessfulTurnIn(def: QuestDef): string | null {
+    const outcome = uniqueOutcomeForState(def, 'complete')
+    if (!outcome) return null
+    if (!this.applyOutcome(def, outcome.id)) return null
     return def.reportLine
   }
 
-  /** Terminal failure — the current stage's bound world entity can no longer
-   *  be completed (e.g. a `find_animal` target died before being found).
-   *  Mirrors `completeQuest`'s cleanup (clears any animal binding) but grants
-   *  no reward and cannot be re-entered from `failed`. */
-  private failQuest(def: QuestDef, stageIndex: number): string {
-    this.setQuestState(def.id, { state: 'failed', stageIndex })
-    this.animalTargets.delete(def.id)
-    return this.currentStage(def, stageIndex)?.failLine ?? QUEST_FAILED_FALLBACK_LINE
+  private resolveFailedFind(def: QuestDef, stage: QuestStage | undefined): string | null {
+    const outcome = uniqueOutcomeForState(def, 'failed')
+    if (!outcome) return null
+    if (!this.applyOutcome(def, outcome.id)) return null
+    return outcome.resultText ?? stage?.failLine ?? QUEST_FAILED_FALLBACK_LINE
   }
 
   /** Advances past the current stage — to the next stage if any remain, or to
-   *  `ready_to_report` once the last one clears. */
-  private advanceStage(def: QuestDef, s: { state: QuestState, stageIndex: number }): void {
+   *  `ready_to_report` once the last one clears. Does not resolve the quest. */
+  private advanceStage(def: QuestDef, s: QuestRuntimeProgress): void {
     const nextIndex = s.stageIndex + 1
     const nextState = nextIndex >= def.stages.length ? 'ready_to_report' : 'active'
     this.setQuestState(def.id, { state: nextState, stageIndex: nextIndex })
@@ -429,7 +466,7 @@ export class QuestManager {
 
   private handleGiverInteract(
     def: QuestDef,
-    s: { state: QuestState, stageIndex: number },
+    s: QuestRuntimeProgress,
   ): QuestDialogOverride | null {
     if (s.state === 'not_offered' || s.state === 'offered') {
       if (!this.meetsAvailability(def)) return null
@@ -454,7 +491,10 @@ export class QuestManager {
           this.inventory.remove(kind, count)
           this.advanceStage(def, s)
           const updated = this.stateOf(def.id)
-          if (updated.state === 'ready_to_report') return { line: this.completeQuest(def) }
+          if (updated.state === 'ready_to_report') {
+            const line = this.resolveSuccessfulTurnIn(def)
+            return line ? { line } : { line: def.reportLine }
+          }
           return { line: this.currentStage(def, updated.stageIndex)?.reminderLine ?? def.reportLine }
         }
         return { line: stage.reminderLine }
@@ -462,7 +502,8 @@ export class QuestManager {
       return { line: stage.reminderLine }
     }
     if (s.state === 'ready_to_report') {
-      return { line: this.completeQuest(def) }
+      const line = this.resolveSuccessfulTurnIn(def)
+      return line ? { line } : null
     }
     return null
   }
@@ -515,7 +556,8 @@ export class QuestManager {
       // `kill_target_animal`, where the same `animal_died` ref means success
       // (handled below via `objectiveMatchesRef`).
       if (ref.type === 'animal_died' && stage.objective.type === 'find_animal' && boundAnimalId === ref.animalId) {
-        return { line: this.failQuest(def, s.stageIndex) }
+        const line = this.resolveFailedFind(def, stage)
+        return line ? { line } : null
       }
       if (!objectiveMatchesRef(stage.objective, ref, boundAnimalId)) continue
       this.advanceStage(def, s)
@@ -562,11 +604,78 @@ export class QuestManager {
   exportProgress(): QuestProgressEntry[] {
     return this.defs.map((def) => {
       const s = this.stateOf(def.id)
-      return { id: def.id, state: s.state, stageIndex: s.stageIndex }
+      const entry: QuestProgressEntry = { id: def.id, state: s.state, stageIndex: s.stageIndex }
+      if ((s.state === 'complete' || s.state === 'failed') && s.resolvedOutcomeId) {
+        entry.resolvedOutcomeId = s.resolvedOutcomeId
+      }
+      return entry
     })
   }
 
   exportRelations(): Record<string, number> {
     return Object.fromEntries(this.relations)
   }
+}
+
+function runtimeProgress(entry: QuestProgressEntry): QuestRuntimeProgress {
+  const progress: QuestRuntimeProgress = { state: entry.state, stageIndex: entry.stageIndex }
+  if ((entry.state === 'complete' || entry.state === 'failed') && entry.resolvedOutcomeId) {
+    progress.resolvedOutcomeId = entry.resolvedOutcomeId
+  }
+  return progress
+}
+
+/** Legacy terminal entries without an outcome id take the unique matching
+ *  authored outcome; 0 or >1 matches are left unresolved. */
+function normalizeRestoredProgress(def: QuestDef, entry: QuestProgressEntry): QuestProgressEntry {
+  if (entry.state !== 'complete' && entry.state !== 'failed') {
+    return { id: entry.id, state: entry.state, stageIndex: entry.stageIndex }
+  }
+  if (entry.resolvedOutcomeId) {
+    return {
+      id: entry.id,
+      state: entry.state,
+      stageIndex: entry.stageIndex,
+      resolvedOutcomeId: entry.resolvedOutcomeId,
+    }
+  }
+  const outcome = uniqueOutcomeForState(def, entry.state)
+  if (!outcome) return { id: entry.id, state: entry.state, stageIndex: entry.stageIndex }
+  return { id: entry.id, state: entry.state, stageIndex: entry.stageIndex, resolvedOutcomeId: outcome.id }
+}
+
+function resolvedOutcome(def: QuestDef, progress: QuestRuntimeProgress): QuestOutcome | undefined {
+  if (!progress.resolvedOutcomeId) return undefined
+  return def.outcomes.find((outcome) => outcome.id === progress.resolvedOutcomeId)
+}
+
+function resultPresentation(
+  def: QuestDef,
+  progress: QuestRuntimeProgress,
+  outcome: QuestOutcome | undefined,
+  stage: QuestStage | undefined,
+): string | undefined {
+  if (outcome?.resultText) return outcome.resultText
+  if (progress.state === 'complete') return def.reportLine
+  if (progress.state === 'failed') return stage?.failLine
+  return undefined
+}
+
+function sameShownReward(a: QuestReward | undefined, b: QuestReward): boolean {
+  if (!a || a.visibility !== 'shown' || b.visibility !== 'shown') return false
+  const aItems = a.items ?? []
+  const bItems = b.items ?? []
+  if (aItems.length !== bItems.length) return false
+  return aItems.every((item, i) => item.kind === bItems[i]?.kind && item.count === bItems[i]?.count)
+}
+
+function promisedShownReward(def: QuestDef): QuestPromisedReward | null {
+  const complete = def.outcomes.filter((outcome) => outcome.state === 'complete')
+  if (complete.length === 0) return null
+  const first = complete[0]?.reward
+  if (!first || first.visibility !== 'shown') return null
+  for (const outcome of complete.slice(1)) {
+    if (!sameShownReward(outcome.reward, first)) return null
+  }
+  return { items: first.items ?? [] }
 }

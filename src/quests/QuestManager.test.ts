@@ -7,7 +7,22 @@ import { Inventory } from '../items/Inventory'
 import { QuestManager } from './QuestManager'
 import { QUESTS, relationToLevel } from './quests'
 
-const simpleQuest: QuestDef = {
+function quest(
+  partial: Omit<QuestDef, 'title' | 'description' | 'outcomes'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes'>>,
+): QuestDef {
+  return {
+    ...partial,
+    title: partial.title ?? partial.id,
+    description: partial.description ?? partial.offerLine,
+    outcomes: partial.outcomes ?? [{
+      id: 'complete',
+      state: 'complete',
+      consequences: { relations: [{ npcName: partial.giverName, delta: 1 }] },
+    }],
+  }
+}
+
+const simpleQuest = quest({
   id: 'simple',
   giverName: 'Anna',
   offerLine: 'offer',
@@ -15,9 +30,9 @@ const simpleQuest: QuestDef = {
     { objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind' },
   ],
   reportLine: 'report',
-}
+})
 
-const gatedQuest: QuestDef = {
+const gatedQuest = quest({
   id: 'gated',
   giverName: 'Anna',
   offerLine: 'offer gated',
@@ -26,9 +41,9 @@ const gatedQuest: QuestDef = {
   ],
   reportLine: 'report gated',
   availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
-}
+})
 
-const effectsQuest: QuestDef = {
+const effectsQuest = quest({
   id: 'effects',
   giverName: 'Kasia',
   offerLine: 'offer effects',
@@ -36,17 +51,22 @@ const effectsQuest: QuestDef = {
     { objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind' },
   ],
   reportLine: 'report effects',
-  effects: { relation: 3, exp: 25 },
-}
+  outcomes: [{
+    id: 'complete',
+    state: 'complete',
+    consequences: { relations: [{ npcName: 'Kasia', delta: 3 }] },
+  }],
+})
 
 function makeManager(
   defs: readonly QuestDef[],
   resolveAnimalTarget?: (kind: string) => string | undefined,
+  grantItem?: (kind: string, count: number) => void,
 ): QuestManager {
-  return new QuestManager(defs, undefined, new Inventory(), undefined, undefined, resolveAnimalTarget)
+  return new QuestManager(defs, undefined, new Inventory(), undefined, grantItem, resolveAnimalTarget)
 }
 
-const wolfQuest: QuestDef = {
+const wolfQuest = quest({
   id: 'wolf',
   giverName: 'Anna',
   offerLine: 'offer wolf',
@@ -54,7 +74,7 @@ const wolfQuest: QuestDef = {
     { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill wolf', reminderLine: 'remind' },
   ],
   reportLine: 'report wolf',
-}
+})
 
 /** Talks to `npcName` and accepts the offer, moving the matching quest to `active`. */
 function acceptOffer(qm: QuestManager, npcName: string): void {
@@ -98,7 +118,14 @@ describe('QuestManager availability', () => {
   })
 
   it('unlocks a gated quest once relation crosses the threshold via effects', () => {
-    const boosted: QuestDef = { ...simpleQuest, effects: { relation: 6, exp: 0 } }
+    const boosted = quest({
+      ...simpleQuest,
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        consequences: { relations: [{ npcName: 'Anna', delta: 6 }] },
+      }],
+    })
     const qm = makeManager([boosted, gatedQuest])
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
@@ -119,28 +146,53 @@ describe('QuestManager availability', () => {
   })
 })
 
-describe('QuestManager effects', () => {
-  it('applies default v2 relation/exp reward when effects is absent', () => {
-    const qm = makeManager([simpleQuest])
+describe('QuestManager outcomes', () => {
+  it('does not apply an implicit giver relation when consequences omit relations', () => {
+    const noRelation = quest({
+      ...simpleQuest,
+      outcomes: [{ id: 'complete', state: 'complete' }],
+    })
+    const qm = makeManager([noRelation])
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'interact_well' })
     qm.onInteract('Anna')
-    expect(qm.getExp()).toBe(10)
-    expect(qm.getRelation('Anna')).toBe(1)
+    expect(qm.getRelation('Anna')).toBe(0)
+    expect(qm.getState('simple')).toBe('complete')
   })
 
-  it('applies custom effects exactly once', () => {
+  it('applies authored relation consequences exactly once', () => {
     const qm = makeManager([effectsQuest])
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective({ type: 'interact_well' })
     const result = qm.onInteract('Kasia')
     expect(result?.line).toBe('report effects')
-    expect(qm.getExp()).toBe(25)
     expect(qm.getRelation('Kasia')).toBe(3)
-    // Talking again after completion must not re-apply effects.
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('complete')
     qm.onInteract('Kasia')
-    expect(qm.getExp()).toBe(25)
     expect(qm.getRelation('Kasia')).toBe(3)
+  })
+
+  it('does not bump a talk_to_npc target unless the outcome names them', () => {
+    const relay = quest({
+      id: 'relay',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      stages: [
+        { objective: { type: 'talk_to_npc', npcName: 'Piotr' }, description: 'talk', reminderLine: 'remind', progressLine: 'got it' },
+      ],
+      reportLine: 'report',
+      outcomes: [{
+        id: 'delivered',
+        state: 'complete',
+        consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
+      }],
+    })
+    const qm = makeManager([relay])
+    acceptOffer(qm, 'Anna')
+    qm.onInteract('Piotr')
+    qm.onInteract('Anna')
+    expect(qm.getRelation('Anna')).toBe(1)
+    expect(qm.getRelation('Piotr')).toBe(0)
   })
 })
 
@@ -179,7 +231,7 @@ describe('QuestManager kill_target_animal binding', () => {
 })
 
 describe('QuestManager find_animal binding', () => {
-  const sheepQuest: QuestDef = {
+  const sheepQuest = quest({
     id: 'sheep',
     giverName: 'Anna',
     offerLine: 'offer sheep',
@@ -187,7 +239,11 @@ describe('QuestManager find_animal binding', () => {
       { objective: { type: 'find_animal', kind: 'sheep' }, description: 'find sheep', reminderLine: 'remind' },
     ],
     reportLine: 'report sheep',
-  }
+    outcomes: [
+      { id: 'found_and_reported', state: 'complete' },
+      { id: 'sheep_died', state: 'failed' },
+    ],
+  })
 
   it('binds to the resolver-supplied animalId on accept, and completes only when that animal is found', () => {
     const qm = makeManager([sheepQuest], () => 'sheep-house0-0')
@@ -213,7 +269,7 @@ describe('QuestManager find_animal binding', () => {
 })
 
 describe('QuestManager clear_wolf_den', () => {
-  const denQuest: QuestDef = {
+  const denQuest = quest({
     id: 'den',
     giverName: 'Anna',
     offerLine: 'offer den',
@@ -221,7 +277,7 @@ describe('QuestManager clear_wolf_den', () => {
       { objective: { type: 'clear_wolf_den', denId: 'wolf-den' }, description: 'clear den', reminderLine: 'remind' },
     ],
     reportLine: 'report den',
-  }
+  })
 
   it('only completes when the matching denId is reported', () => {
     const qm = makeManager([denQuest])
@@ -235,7 +291,7 @@ describe('QuestManager clear_wolf_den', () => {
 })
 
 describe('QuestManager interact_landmark', () => {
-  const landmarkQuest: QuestDef = {
+  const landmarkQuest = quest({
     id: 'landmark',
     giverName: 'Anna',
     offerLine: 'offer landmark',
@@ -248,7 +304,7 @@ describe('QuestManager interact_landmark', () => {
       },
     ],
     reportLine: 'report landmark',
-  }
+  })
 
   it('only completes when the bound landmarkId is reported', () => {
     const qm = makeManager([landmarkQuest])
@@ -271,20 +327,20 @@ describe('QuestManager interact_landmark', () => {
 })
 
 describe('QuestManager reset', () => {
-  it('clears relation, exp and progress back to fresh state', () => {
+  it('clears relation and progress back to fresh state', () => {
     const qm = makeManager([effectsQuest])
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective({ type: 'interact_well' })
     qm.onInteract('Kasia')
-    expect(qm.getExp()).toBeGreaterThan(0)
+    expect(qm.getRelation('Kasia')).toBeGreaterThan(0)
     qm.reset()
-    expect(qm.getExp()).toBe(0)
     expect(qm.getRelation('Kasia')).toBe(0)
     expect(qm.getState('effects')).toBe('not_offered')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
   })
 })
 
-const sheepQuest: QuestDef = {
+const sheepQuest = quest({
   id: 'sheep',
   giverName: 'Anna',
   offerLine: 'offer sheep',
@@ -297,7 +353,11 @@ const sheepQuest: QuestDef = {
     },
   ],
   reportLine: 'report sheep',
-}
+  outcomes: [
+    { id: 'found_and_reported', state: 'complete', consequences: { relations: [{ npcName: 'Anna', delta: 1 }] } },
+    { id: 'sheep_died', state: 'failed' },
+  ],
+})
 
 describe('QuestManager failed lifecycle', () => {
   it('transitions find_animal to failed when the bound target dies before being found', () => {
@@ -312,6 +372,7 @@ describe('QuestManager failed lifecycle', () => {
     const override = qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
     expect(override?.line).toBe('too late')
     expect(qm.getState('sheep')).toBe('failed')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('sheep_died')
   })
 
   it('falls back to a generic line when the stage has no failLine', () => {
@@ -327,7 +388,6 @@ describe('QuestManager failed lifecycle', () => {
     const qm = makeManager([sheepQuest], () => 'sheep-house0-0')
     acceptOffer(qm, 'Anna')
     qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
-    expect(qm.getExp()).toBe(0)
     expect(qm.getRelation('Anna')).toBe(0)
     // Talking to the giver again must not offer a fresh instance or complete it.
     expect(qm.onInteract('Anna')).toBeNull()
@@ -350,7 +410,7 @@ describe('QuestManager failed lifecycle', () => {
 })
 
 describe('QuestManager save/load restore of animal-bound quests', () => {
-  const wolfDef: QuestDef = {
+  const wolfDef = quest({
     id: 'wolf',
     giverName: 'Anna',
     offerLine: 'offer wolf',
@@ -358,7 +418,7 @@ describe('QuestManager save/load restore of animal-bound quests', () => {
       { objective: { type: 'kill_target_animal', kind: 'wolf' }, description: 'kill wolf', reminderLine: 'remind' },
     ],
     reportLine: 'report wolf',
-  }
+  })
 
   function makeRestoredManager(
     defs: readonly QuestDef[],
@@ -371,7 +431,6 @@ describe('QuestManager save/load restore of animal-bound quests', () => {
   it('rebinds an active livestock-kind quest (sheep) on restore and can still complete it', () => {
     const initial: QuestManagerInitial = {
       progress: [{ id: 'sheep', state: 'active', stageIndex: 0 }],
-      exp: 0,
       relations: {},
     }
     const qm = makeRestoredManager([sheepQuest], initial, () => 'sheep-house0-0')
@@ -384,7 +443,6 @@ describe('QuestManager save/load restore of animal-bound quests', () => {
   it('invalidates an active wild-fauna-kind quest (wolf) on restore instead of rebinding', () => {
     const initial: QuestManagerInitial = {
       progress: [{ id: 'wolf', state: 'active', stageIndex: 0 }],
-      exp: 0,
       relations: {},
     }
     const qm = makeRestoredManager([wolfDef], initial, () => 'wolf-1')
@@ -398,13 +456,12 @@ describe('QuestManager save/load restore of animal-bound quests', () => {
   it('leaves non-animal-bound quest states untouched on restore', () => {
     const initial: QuestManagerInitial = {
       progress: [{ id: 'simple', state: 'ready_to_report', stageIndex: 0 }],
-      exp: 5,
       relations: { Anna: 2 },
     }
     const qm = makeRestoredManager([simpleQuest], initial, () => undefined)
     expect(qm.getState('simple')).toBe('ready_to_report')
-    expect(qm.getExp()).toBe(5)
     expect(qm.getRelation('Anna')).toBe(2)
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
   })
 })
 
@@ -455,7 +512,7 @@ describe('QuestManager invalidateStaleAnimalTargets (mid-session rebuild)', () =
 })
 
 describe('QuestManager dangerous trait binding', () => {
-  const dangerousWolfQuest: QuestDef = {
+  const dangerousWolfQuest = quest({
     id: 'dangerous-wolf',
     giverName: 'Anna',
     offerLine: 'offer dangerous wolf',
@@ -467,7 +524,7 @@ describe('QuestManager dangerous trait binding', () => {
       },
     ],
     reportLine: 'report dangerous wolf',
-  }
+  })
 
   it('applies the dangerous trait to the bound animal on bind, not to unrelated wolves', () => {
     const applied: string[] = []
@@ -511,7 +568,7 @@ describe('QuestManager applySocialConsequence', () => {
     onConsequence: (c: SocialConsequence) => void,
     resolveAnimalTarget?: (kind: string) => string | undefined,
   ): QuestManager {
-    const initial: QuestManagerInitial = { progress: [], exp: 0, relations: { Anna: 6 } }
+    const initial: QuestManagerInitial = { progress: [], relations: { Anna: 6 } }
     return new QuestManager(defs, undefined, new Inventory(), initial, undefined, resolveAnimalTarget, undefined, onConsequence)
   }
 
@@ -545,7 +602,7 @@ describe('QuestManager applySocialConsequence', () => {
     expect(consequences[0]?.reputation?.integrity).toBeUndefined()
   })
 
-  it('does not apply a consequence for a quest with neither settlementId nor socialConsequence authored', () => {
+  it('does not apply a consequence for a quest with neither settlementId nor social authored', () => {
     const consequences: SocialConsequence[] = []
     const qm = makeTrustedManager([simpleQuest], (c) => consequences.push(c))
     acceptOffer(qm, 'Anna')
@@ -589,5 +646,228 @@ describe('QuestManager applySocialConsequence', () => {
     qm.onInteractObjective({ type: 'animal_died', animalId: 'wolf-1' })
     qm.onInteract('Anna')
     expect(consequences).toEqual([{ settlementId: 'outpost', reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 }])
+  })
+})
+
+describe('QuestManager resolveQuest', () => {
+  it('applies reward items through the grant callback exactly once', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const rewarded = quest({
+      ...simpleQuest,
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 5 }, { kind: 'shell', count: 2 }] },
+      }],
+    })
+    const qm = makeManager([rewarded], undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(granted).toEqual([])
+    qm.onInteract('Anna')
+    expect(granted).toEqual([{ kind: 'coin', count: 5 }, { kind: 'shell', count: 2 }])
+    qm.onInteract('Anna')
+    expect(granted).toHaveLength(2)
+    expect(qm.resolveQuest('simple', 'complete')).toBe(false)
+    expect(granted).toHaveLength(2)
+  })
+
+  it('does not mutate state for an unknown outcome id', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const rewarded = quest({
+      ...simpleQuest,
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 1 }] },
+        consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
+      }],
+    })
+    const qm = makeManager([rewarded], undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(qm.resolveQuest('simple', 'nope')).toBe(false)
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    expect(qm.getRelation('Anna')).toBe(0)
+    expect(granted).toEqual([])
+  })
+
+  it('does not guess when multiple complete outcomes exist', () => {
+    const multi = quest({
+      ...simpleQuest,
+      outcomes: [
+        { id: 'a', state: 'complete', consequences: { relations: [{ npcName: 'Anna', delta: 1 }] } },
+        { id: 'b', state: 'complete', consequences: { relations: [{ npcName: 'Anna', delta: 2 }] } },
+      ],
+    })
+    const qm = makeManager([multi])
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    expect(qm.onInteract('Anna')).toBeNull()
+    expect(qm.getState('simple')).toBe('ready_to_report')
+    expect(qm.getRelation('Anna')).toBe(0)
+  })
+
+  it('grants no items when the outcome has no reward', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const qm = makeManager([simpleQuest], undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'interact_well' })
+    qm.onInteract('Anna')
+    expect(granted).toEqual([])
+  })
+})
+
+describe('QuestManager promised reward preview', () => {
+  it('shows an unambiguous shown reward and hides hidden or mixed complete rewards', () => {
+    const shown = quest({
+      ...simpleQuest,
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 5 }] },
+      }],
+    })
+    const hidden = quest({
+      ...simpleQuest,
+      id: 'hidden',
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        reward: { visibility: 'hidden', items: [{ kind: 'coin', count: 5 }] },
+      }],
+    })
+    const mixed = quest({
+      ...simpleQuest,
+      id: 'mixed',
+      outcomes: [
+        { id: 'a', state: 'complete', reward: { visibility: 'shown', items: [{ kind: 'coin', count: 5 }] } },
+        { id: 'b', state: 'complete', reward: { visibility: 'shown', items: [{ kind: 'shell', count: 1 }] } },
+      ],
+    })
+    const qm = makeManager([shown, hidden, mixed])
+    expect(qm.list().find((e) => e.id === 'simple')?.promisedReward).toEqual({ items: [{ kind: 'coin', count: 5 }] })
+    expect(qm.list().find((e) => e.id === 'hidden')?.promisedReward).toBeNull()
+    expect(qm.list().find((e) => e.id === 'mixed')?.promisedReward).toBeNull()
+  })
+})
+
+describe('QuestManager authored sheep outcomes', () => {
+  const sheepDef = QUESTS.find((d) => d.id === 'zagubiona-owca')!
+
+  it('resolves found_and_reported after find + report', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const qm = new QuestManager(
+      [sheepDef],
+      undefined,
+      new Inventory(),
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+      () => 'sheep-house0-0',
+    )
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })
+    expect(qm.getState('zagubiona-owca')).toBe('ready_to_report')
+    expect(granted).toEqual([])
+    qm.onInteract('Anna')
+    expect(qm.getState('zagubiona-owca')).toBe('complete')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('found_and_reported')
+    expect(granted).toEqual([{ kind: 'coin', count: 10 }])
+    expect(qm.getRelation('Anna')).toBe(1)
+  })
+
+  it('resolves sheep_died when the bound target dies', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const qm = new QuestManager(
+      [sheepDef],
+      undefined,
+      new Inventory(),
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+      () => 'sheep-house0-0',
+    )
+    acceptOffer(qm, 'Anna')
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'sheep-house0-0' })
+    expect(qm.getState('zagubiona-owca')).toBe('failed')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('sheep_died')
+    expect(granted).toEqual([])
+    expect(qm.getRelation('Anna')).toBe(0)
+  })
+})
+
+describe('QuestManager legacy restore outcome normalization', () => {
+  it('fills resolvedOutcomeId from the unique matching terminal outcome', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'simple', state: 'complete', stageIndex: 1 }],
+      relations: { Anna: 1 },
+    }
+    const qm = new QuestManager([simpleQuest], undefined, new Inventory(), initial)
+    expect(qm.exportProgress()).toEqual([
+      { id: 'simple', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'complete' },
+    ])
+    expect(qm.getRelation('Anna')).toBe(1)
+  })
+
+  it('does not pick an outcome when zero or more than one match the terminal state', () => {
+    const none = quest({ ...simpleQuest, id: 'none', outcomes: [{ id: 'fail', state: 'failed' }] })
+    const many = quest({
+      ...simpleQuest,
+      id: 'many',
+      outcomes: [
+        { id: 'a', state: 'complete' },
+        { id: 'b', state: 'complete' },
+      ],
+    })
+    const qm = new QuestManager(
+      [none, many],
+      undefined,
+      new Inventory(),
+      {
+        progress: [
+          { id: 'none', state: 'complete', stageIndex: 1 },
+          { id: 'many', state: 'complete', stageIndex: 1 },
+        ],
+        relations: {},
+      },
+    )
+    expect(qm.exportProgress().find((e) => e.id === 'none')?.resolvedOutcomeId).toBeUndefined()
+    expect(qm.exportProgress().find((e) => e.id === 'many')?.resolvedOutcomeId).toBeUndefined()
+  })
+
+  it('does not attach an outcome to invalidated progress', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'wolf', state: 'invalidated', stageIndex: 0 }],
+      relations: {},
+    }
+    const qm = new QuestManager([wolfQuest], undefined, new Inventory(), initial)
+    expect(qm.getState('wolf')).toBe('invalidated')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
+    expect(qm.getRelation('Anna')).toBe(0)
+  })
+})
+
+describe('QuestManager formal vs personal relation rebalance', () => {
+  it('drewno-na-naprawe grants coins without a relation bump', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const def = QUESTS.find((d) => d.id === 'drewno-na-naprawe')!
+    const inventory = new Inventory()
+    inventory.add('branch', 5)
+    const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Piotr')
+    qm.onInteract('Piotr')
+    expect(qm.getState('drewno-na-naprawe')).toBe('complete')
+    expect(granted).toEqual([{ kind: 'coin', count: 15 }])
+    expect(qm.getRelation('Piotr')).toBe(0)
+  })
+
+  it('woda-dla-marka grants five coins instead of a sword', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const def = QUESTS.find((d) => d.id === 'woda-dla-marka')!
+    const qm = new QuestManager([def], undefined, new Inventory(), undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Marek')
+    qm.onInteractObjective({ type: 'interact_well' })
+    qm.onInteract('Marek')
+    expect(granted).toEqual([{ kind: 'coin', count: 5 }])
+    expect(qm.getRelation('Marek')).toBe(1)
   })
 })

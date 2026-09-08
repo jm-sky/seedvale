@@ -105,7 +105,7 @@ type PauseMenuState = {
   onCharacter: (() => void) | null
   saveStatus: string
 }
-type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; exp: number; relation: (name: string) => number }
+type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; relation: (name: string) => number }
 /** One button in the shared contextual interaction panel (plan `ui-input-002`
  *  §2/§3) — `reasonLabel` explains a disabled action (e.g. missing
  *  materials/capability). `run` is the real domain callback (e.g.
@@ -402,7 +402,6 @@ type HudState = {
   /** FPS is debug chrome, not player-facing UI (review 007 C6) — hidden by
    *  default, toggled from Ustawienia. */
   showFps: boolean
-  exp: string
   weight: string
   held: string
   hint: string
@@ -489,7 +488,7 @@ export const ui = reactive({
     onNewGame: null, onQuestLog: null, onVillagers: null, onInventory: null, onWorldMap: null, onCharacter: null,
     saveStatus: '',
   } as PauseMenuState,
-  questLog: { open: false, entries: [], exp: 0, relation: () => 0 } as QuestLogState,
+  questLog: { open: false, entries: [], relation: () => 0 } as QuestLogState,
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
@@ -559,7 +558,6 @@ export const ui = reactive({
     phase: '',
     fps: '',
     showFps: false,
-    exp: '',
     weight: '',
     held: '',
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
@@ -640,8 +638,8 @@ export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }
 export function setPauseActiveSaveName(name: string): void { ui.pauseMenu.activeSaveName = name }
 
-export function openQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
-export function refreshQuestLog(entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.exp = exp; ui.questLog.relation = relation }
+export function openQuestLog(entries: readonly QuestListEntry[], relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
+export function refreshQuestLog(entries: readonly QuestListEntry[], relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.relation = relation }
 export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
@@ -1291,11 +1289,6 @@ export function setHudTime(timeOfDay: number): void {
   if (ui.hud.time !== time) ui.hud.time = time
   const phase = phaseName(timeOfDay)
   if (ui.hud.phase !== phase) ui.hud.phase = phase
-}
-export function setHudExp(exp: number): void {
-  const text = `exp ${exp}`
-  if (ui.hud.exp === text) return
-  ui.hud.exp = text
 }
 export function setHudInventoryWeight(current: number, max: number): void {
   const text = `${current.toFixed(1)}/${max.toFixed(1)} kg`

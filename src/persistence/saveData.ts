@@ -6,7 +6,6 @@ import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
-import type { QuestState } from '../quests/quests'
 import type { Reputation } from '../reputation/ReputationManager'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
@@ -25,6 +24,7 @@ import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshn
 import { isToolKind } from '../items/HeldTool'
 import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
+import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 
@@ -50,11 +50,10 @@ export type SavePlayer = {
   mountedAnimalId?: string
 }
 
-export type QuestProgressEntry = { id: string, state: QuestState, stageIndex: number }
+export type { QuestProgressEntry }
 
 export type SaveQuests = {
   progress: QuestProgressEntry[]
-  exp: number
   relations: Record<string, number>
 }
 
@@ -453,7 +452,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 7
+export const CURRENT_SAVE_VERSION = 8
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1394,6 +1393,24 @@ function isRemovedLivestockIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
+function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
+  if (!value || typeof value !== 'object') return false
+  const e = value as Record<string, unknown>
+  if (typeof e.id !== 'string') return false
+  if (typeof e.state !== 'string' || !QUEST_STATES.has(e.state as QuestProgressEntry['state'])) return false
+  if (typeof e.stageIndex !== 'number' || !Number.isInteger(e.stageIndex) || e.stageIndex < 0) return false
+  if (e.resolvedOutcomeId !== undefined && typeof e.resolvedOutcomeId !== 'string') return false
+  return true
+}
+
+function isSaveQuests(value: unknown): value is SaveQuests {
+  if (!value || typeof value !== 'object') return false
+  const q = value as Record<string, unknown>
+  if (!Array.isArray(q.progress) || !q.progress.every(isQuestProgressEntry)) return false
+  if (!q.relations || typeof q.relations !== 'object' || Array.isArray(q.relations)) return false
+  return Object.values(q.relations as Record<string, unknown>).every((relation) => typeof relation === 'number')
+}
+
 export function isSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -1401,7 +1418,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isSaveConfig(v.config)) return false
   if (!isSavePlayer(v.player)) return false
   if (typeof v.savedAt !== 'number') return false
-  if (!v.quests || typeof v.quests !== 'object') return false
+  if (!isSaveQuests(v.quests)) return false
   if (!v.inventory || typeof v.inventory !== 'object') return false
   if (!isSaveItemInstancesField(v.inventoryInstances)) return false
   if (!Array.isArray(v.collectedItemIds)) return false
@@ -1710,6 +1727,25 @@ function migrateSaveV6ToV7(data: unknown): unknown {
   }
 }
 
+/** v7 → v8 (plan quests-progression-002): drops `quests.exp` (global quest
+ *  EXP is gone) and leaves progress/relations intact. Outcome ids are not
+ *  invented here — `QuestManager` normalizes a legacy terminal entry that
+ *  has a unique matching outcome. */
+function migrateSaveV7ToV8(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const quests = v.quests && typeof v.quests === 'object' ? v.quests as Record<string, unknown> : {}
+  return {
+    ...v,
+    version: 8,
+    quests: {
+      progress: Array.isArray(quests.progress) ? quests.progress : [],
+      relations: quests.relations && typeof quests.relations === 'object' && !Array.isArray(quests.relations)
+        ? quests.relations
+        : {},
+    },
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
@@ -1720,6 +1756,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   4: migrateSaveV4ToV5,
   5: migrateSaveV5ToV6,
   6: migrateSaveV6ToV7,
+  7: migrateSaveV7ToV8,
 }
 
 function detectStoredVersion(value: unknown): number | null {

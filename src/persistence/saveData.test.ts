@@ -25,7 +25,7 @@ const validSave: SaveData = {
   config,
   player: { x: 3, z: 4, yaw: 0.1, pitch: 0.2 },
   savedAt: 100,
-  quests: { progress: [], exp: 0, relations: {} },
+  quests: { progress: [], relations: {} },
   inventory: {},
   inventoryInstances: [],
   collectedItemIds: [],
@@ -446,7 +446,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })
   })
 
-  it('migrates a real v6 save (plan items-player-002) into v7 without inventing current timestamps', () => {
+  it('migrates a real v6 save (plan items-player-002) into current without inventing current timestamps', () => {
     const v6Save = {
       ...validSave,
       version: 6,
@@ -456,6 +456,48 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [] } } },
     }
     expect(loadStoredSave(v6Save)).toEqual({ status: 'ok', data: validSave })
+  })
+
+  it('migrates a real v7 save (plan quests-progression-002) into v8, dropping quests.exp without resetting progress or relations', () => {
+    const v7Save = {
+      ...validSave,
+      version: 7,
+      quests: {
+        progress: [{ id: 'relay-anna-piotr', state: 'complete', stageIndex: 1 }],
+        exp: 40,
+        relations: { Anna: 2, Piotr: 1 },
+      },
+    }
+    expect(loadStoredSave(v7Save)).toEqual({
+      status: 'ok',
+      data: {
+        ...validSave,
+        quests: {
+          progress: [{ id: 'relay-anna-piotr', state: 'complete', stageIndex: 1 }],
+          relations: { Anna: 2, Piotr: 1 },
+        },
+      },
+    })
+  })
+
+  it('rejects malformed SaveQuests progress and relation values', () => {
+    expect(isSaveData({ ...validSave, quests: { progress: 'nope', relations: {} } })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      quests: { progress: [{ id: 'x', state: 'bogus', stageIndex: 0 }], relations: {} },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      quests: { progress: [{ id: 'x', state: 'active', stageIndex: -1 }], relations: {} },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      quests: { progress: [{ id: 'x', state: 'complete', stageIndex: 0, resolvedOutcomeId: 1 }], relations: {} },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      quests: { progress: [], relations: { Anna: 'trusted' } },
+    })).toBe(false)
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

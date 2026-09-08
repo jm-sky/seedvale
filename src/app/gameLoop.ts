@@ -1781,7 +1781,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         player.mesh.position.z,
       )
       hud.setTime(dayNight.timeOfDay)
-      hud.setExp(questManager.getExp())
       // Plan 164 §9 — one authoritative load calc, recomputed every frame
       // (cheap: `totalWeight()`/`carriedWeightKg()` are small-map sums, same
       // order of cost as the HUD weight readout already updated on every

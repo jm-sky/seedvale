@@ -137,7 +137,6 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     savedAt: Date.now(),
     quests: {
       progress: questManager.exportProgress(),
-      exp: questManager.getExp(),
       relations: questManager.exportRelations(),
     },
     inventory: inventory.toJSON(),

@@ -51,12 +51,60 @@ export type QuestAvailability = {
   relation?: { npcName: string, minimum: RelationLevel }
 }
 
-/** End-of-quest effects applied once by `QuestManager.completeQuest()`.
- *  Absent fields fall back to the v2 flat defaults (`QUEST_RELATION_REWARD`/
- *  `QUEST_EXP_REWARD`) so existing quests are unaffected. */
-export type QuestEffects = {
-  relation?: number
-  exp?: number
+export type QuestOutcomeId = string
+
+/** Direct player compensation — items/coins. Relation/reputation/renown
+ *  belong on `QuestConsequences`, never here. */
+export type QuestReward = {
+  visibility: 'shown' | 'hidden'
+  items?: ReadonlyArray<{ kind: ItemKind, count: number }>
+}
+
+/** Changes to other systems: player↔NPC relation and settlement
+ *  reputation/renown. Applied exactly once by `QuestManager` resolution. */
+export type QuestConsequences = {
+  relations?: ReadonlyArray<{ npcName: string, delta: number }>
+  social?: {
+    reputation?: Partial<Record<ReputationDimension, number>>
+    renown?: number
+  }
+}
+
+export type QuestOutcome = {
+  id: QuestOutcomeId
+  state: 'complete' | 'failed'
+  resultText?: string
+  reward?: QuestReward
+  consequences?: QuestConsequences
+}
+
+/** Persisted/runtime quest progress. `resolvedOutcomeId` is set only for
+ *  `complete`/`failed`; `invalidated` and in-progress states omit it. */
+export type QuestProgressEntry = {
+  id: string
+  state: QuestState
+  stageIndex: number
+  resolvedOutcomeId?: QuestOutcomeId
+}
+
+export const QUEST_STATES: ReadonlySet<QuestState> = new Set([
+  'active',
+  'complete',
+  'failed',
+  'invalidated',
+  'not_offered',
+  'offered',
+  'ready_to_report',
+])
+
+/** The single authored outcome whose `state` matches, or `undefined` when
+ *  zero or more than one match — callers must not guess. */
+export function uniqueOutcomeForState(
+  def: { outcomes: readonly QuestOutcome[] },
+  state: 'complete' | 'failed',
+): QuestOutcome | undefined {
+  const matches = def.outcomes.filter((outcome) => outcome.state === state)
+  return matches.length === 1 ? matches[0] : undefined
 }
 
 export type QuestObjective =
@@ -133,41 +181,35 @@ export type QuestStage = {
 
 export type QuestDef = {
   id: string
+  title: string
+  description: string
   /** Must match an `NPC_NAMES` entry in `ai/NpcAgent.ts`. */
   giverName: string
   offerLine: string
   stages: readonly QuestStage[]
   /** Giver's line once every stage is cleared and the player reports back. */
   reportLine: string
-  /** Optional inventory grant on turn-in (plan 090 sword from Strażnik). */
-  reward?: { kind: ItemKind, count: number }
   /** Relation gate; quest stays `not_offered` and hidden from the giver/log
    *  until met (plan 093 Etap A). */
   availability?: QuestAvailability
-  /** Overrides the flat v2 relation/exp reward on completion (plan 093 Etap B). */
-  effects?: QuestEffects
   /** Which settlement this quest's giver/story belongs to — absent for every
    *  quest defined here (this file stays world-agnostic); the composition
    *  root attaches it once per quest, from the real settlement the giver
    *  lives in, before constructing `QuestManager` (plan quests-progression-001,
-   *  see `createApp.ts`). Required for `socialConsequence` below to ever
-   *  apply — a quest with deltas but no resolved settlement applies nothing. */
+   *  see `createApp.ts`). Required for an outcome's `consequences.social` to
+   *  ever apply — a quest with deltas but no resolved settlement applies
+   *  nothing. */
   settlementId?: string
-  /** Already-resolved, one-time social effect of completing this quest — a
-   *  deliberately separate field from `effects` above (plan
-   *  quests-progression-001 §"Quest outcome i reward"): `effects` is the
-   *  existing personal relation/exp reward, this is the public settlement
-   *  reputation/renown result, and the two must never be conflated. Absent
-   *  means this quest has no social consequence — most quests don't. */
-  socialConsequence?: {
-    reputation?: Partial<Record<ReputationDimension, number>>
-    renown?: number
-  }
+  /** Authored terminal results. Objective completion is not resolution —
+   *  a caller picks one of these. `invalidated` is not an outcome. */
+  outcomes: readonly QuestOutcome[]
 }
 
 export const QUESTS: readonly QuestDef[] = [
   {
     id: 'relay-anna-piotr',
+    title: 'Wiadomość dla Piotra',
+    description: 'Anna prosi, żebyś przekazał Piotrowi, że jutro idą na ryby o świcie.',
     giverName: 'Anna',
     offerLine:
       'Możesz przekazać wiadomość Piotrowi? Powiedz mu, że jutro idziemy na ryby o świcie.',
@@ -180,9 +222,23 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Świetnie, dziękuję za przekazanie wiadomości!',
+    outcomes: [
+      {
+        id: 'delivered',
+        state: 'complete',
+        consequences: {
+          relations: [
+            { npcName: 'Anna', delta: 1 },
+            { npcName: 'Piotr', delta: 1 },
+          ],
+        },
+      },
+    ],
   },
   {
     id: 'shells-dla-kasi',
+    title: 'Muszle dla Kasi',
+    description: 'Kasia potrzebuje trzech muszli do ozdobienia progu.',
     giverName: 'Kasia',
     offerLine: 'Zbierasz muszle nad morzem? Przydałyby mi się trzy do ozdobienia progu.',
     stages: [
@@ -193,9 +249,18 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Piękne! Dziękuję, teraz próg będzie ładniejszy.',
+    outcomes: [
+      {
+        id: 'delivered',
+        state: 'complete',
+        consequences: { relations: [{ npcName: 'Kasia', delta: 1 }] },
+      },
+    ],
   },
   {
     id: 'woda-dla-marka',
+    title: 'Woda dla Marka',
+    description: 'Marek ma zajęte ręce i prosi, żebyś zaczerpnął dla niego wody ze studni.',
     giverName: 'Marek',
     offerLine: 'Ręce mam zajęte — zaczerpniesz dla mnie wody ze studni?',
     stages: [
@@ -206,11 +271,20 @@ export const QUESTS: readonly QuestDef[] = [
         progressLine: 'Zaczerpnąłeś wody. Wróć do Marka.',
       },
     ],
-    reportLine: 'Dzięki, akurat mi się przydała. Weź ten miecz — przyda Ci się w drodze.',
-    reward: { kind: 'long_sword', count: 1 },
+    reportLine: 'Dzięki, akurat mi się przydała. Weź te monety.',
+    outcomes: [
+      {
+        id: 'delivered',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 5 }] },
+        consequences: { relations: [{ npcName: 'Marek', delta: 1 }] },
+      },
+    ],
   },
   {
     id: 'zwiadowca',
+    title: 'Zwiadowca',
+    description: 'Piotr potrzebuje zwiadu: jaskinia z sarnami, jeleń po drodze i dwa kamienie z gór.',
     giverName: 'Piotr',
     offerLine:
       'Zwiadowca mi trzeba — sprawdź jaskinię z sarnami, wypatrz jelenia po drodze, i przynieś dwa kamienie z gór na dowód.',
@@ -238,9 +312,18 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Dobra robota, zwiadowco. Teraz wiem, że okolica bezpieczna.',
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] },
+      },
+    ],
   },
   {
     id: 'zagubiona-owca',
+    title: 'Zagubiona owca',
+    description: 'Annie zawieruszyła się owca. Znajdź ją i daj znać.',
     giverName: 'Anna',
     offerLine:
       'Owca gdzieś mi się zawieruszyła. Rozejrzysz się po okolicy i ją znajdziesz?',
@@ -254,10 +337,24 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'Uff, dzięki. Już się bałam, że coś ją spotkało.',
-    reward: { kind: 'coin', count: 10 },
+    outcomes: [
+      {
+        id: 'found_and_reported',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 10 }] },
+        consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
+      },
+      {
+        id: 'sheep_died',
+        state: 'failed',
+        resultText: 'Zbyt późno... to na pewno była ona. Przykro mi, Anno.',
+      },
+    ],
   },
   {
     id: 'drewno-na-naprawe',
+    title: 'Drewno na naprawę',
+    description: 'Piotrowi rozłazi się płot — zbierz kilka gałęzi na naprawę.',
     giverName: 'Piotr',
     offerLine: 'Płot mi się rozłazi — zbierzesz kilka gałęzi, żebym miał czym go naprawić?',
     stages: [
@@ -268,10 +365,18 @@ export const QUESTS: readonly QuestDef[] = [
       },
     ],
     reportLine: 'To starczy w zupełności. Płot znów będzie trzymał się kupy.',
-    reward: { kind: 'coin', count: 15 },
+    outcomes: [
+      {
+        id: 'delivered',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 15 }] },
+      },
+    ],
   },
   {
     id: 'grozny-wilk',
+    title: 'Groźny wilk',
+    description: 'W okolicy wioski pojawił się groźny wilk. Ludzie boją się wychodzić poza osadę.',
     giverName: 'Anna',
     offerLine:
       'W okolicy wioski pojawił się groźny wilk. Ludzie boją się wychodzić poza osadę — zajmiesz się nim?',
@@ -285,14 +390,22 @@ export const QUESTS: readonly QuestDef[] = [
     ],
     reportLine: 'Dzięki Tobie znowu można spokojnie wychodzić poza osadę. Weź ten damasceński miecz — zasłużyłeś.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
-    effects: { relation: 2, exp: 20 },
-    reward: { kind: 'damascus_long_sword', count: 1 },
-    // Magnitude calibration (plan quests-progression-001 §6) — major/public
-    // local event: a reported threat to settlement safety is resolved.
-    socialConsequence: { reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 },
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'damascus_long_sword', count: 1 }] },
+        consequences: {
+          relations: [{ npcName: 'Anna', delta: 2 }],
+          social: { reputation: { competence: 10, courage: 12, benevolence: 4 }, renown: 15 },
+        },
+      },
+    ],
   },
   {
     id: 'wilcza-jama',
+    title: 'Wilcza jama',
+    description: 'Wilki mają jamę niedaleko. Znajdź ją i rozwiąż ten problem raz na zawsze.',
     giverName: 'Anna',
     offerLine:
       'Te wilki skądś się biorą — mają jamę niedaleko. Znajdź ją i rozwiąż ten problem raz na zawsze.',
@@ -306,11 +419,17 @@ export const QUESTS: readonly QuestDef[] = [
     ],
     reportLine: 'Teraz w okolicy będzie spokojniej. Weź ten obsydianowy miecz z wulkanicznego szkła.',
     availability: { relation: { npcName: 'Anna', minimum: 'trusted' } },
-    effects: { relation: 3, exp: 30 },
-    reward: { kind: 'obsidian_sword', count: 1 },
-    // Magnitude calibration (plan quests-progression-001 §6) — exceptional
-    // local visibility: the threat's source itself is eliminated.
-    socialConsequence: { reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'obsidian_sword', count: 1 }] },
+        consequences: {
+          relations: [{ npcName: 'Anna', delta: 3 }],
+          social: { reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
+        },
+      },
+    ],
   },
 ]
 
@@ -337,6 +456,8 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
   if (ruinsId) {
     quests.push({
       id: 'stare-ruiny',
+      title: 'Stare ruiny',
+      description: 'Piotr natknął się na stare ruiny podczas zwiadu i nie miał czasu ich zbadać.',
       giverName: 'Piotr',
       offerLine:
         'Podczas ostatniego zwiadu natknąłem się na jakieś stare ruiny, ale nie miałem czasu się im przyjrzeć. Sprawdzisz je?',
@@ -349,6 +470,13 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
         },
       ],
       reportLine: 'Dobrze wiedzieć, co tam jest, zanim ktoś natknie się na to nieprzygotowany. Dzięki.',
+      outcomes: [
+        {
+          id: 'reported',
+          state: 'complete',
+          consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] },
+        },
+      ],
     })
   }
 
@@ -356,6 +484,8 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
   if (monolithId) {
     quests.push({
       id: 'slad-przy-monolicie',
+      title: 'Ślad przy monolicie',
+      description: 'Ktoś z osady nie wrócił — ostatni raz widziano go przy starym monolicie.',
       giverName: 'Anna',
       offerLine:
         'Jeden z naszych wyruszył w stronę wzgórz kilka dni temu i wciąż nie wrócił. Podobno ostatni raz widziano go przy starym monolicie — sprawdzisz to miejsce?',
@@ -368,7 +498,13 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
         },
       ],
       reportLine: 'Ślady obozowiska... więc żył jeszcze, kiedy tam był. To już coś. Dziękuję, że sprawdziłeś.',
-      effects: { relation: 2, exp: 15 },
+      outcomes: [
+        {
+          id: 'reported',
+          state: 'complete',
+          consequences: { relations: [{ npcName: 'Anna', delta: 2 }] },
+        },
+      ],
     })
   }
 
@@ -376,6 +512,8 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
   if (cemeteryId) {
     quests.push({
       id: 'zapomniany-cmentarz',
+      title: 'Zapomniany cmentarz',
+      description: 'Kasia prosi, żebyś sprawdził, czy groby na zaniedbanym cmentarzu jeszcze stoją.',
       giverName: 'Kasia',
       offerLine:
         'Cmentarzyk na skraju wioski od dawna zarasta chwastami, nikt tam już nie zagląda. Poszedłbyś sprawdzić, czy groby jeszcze stoją?',
@@ -388,6 +526,13 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
         },
       ],
       reportLine: 'To dobrze, że ktoś jeszcze o nich pamięta. Dziękuję, że sprawdziłeś.',
+      outcomes: [
+        {
+          id: 'reported',
+          state: 'complete',
+          consequences: { relations: [{ npcName: 'Kasia', delta: 1 }] },
+        },
+      ],
     })
   }
 

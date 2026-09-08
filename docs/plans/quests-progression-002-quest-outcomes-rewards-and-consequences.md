@@ -1,7 +1,7 @@
 # Plan: Quest Outcomes, Rewards & Consequences
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** quests-progression-001
@@ -247,6 +247,8 @@ Nie budować possible-outcomes preview.
 3. zarejestrować `SAVE_MIGRATIONS[6]`,
 4. usunąć `quests.exp` z nowego writer contract,
 5. dodać `resolvedOutcomeId?: QuestOutcomeId` do persisted progress.
+
+**Implementation adaptation:** at implementation time `CURRENT_SAVE_VERSION` was already `7` (items-player-002 food batches), so this plan landed as `7 → 8` with `migrateSaveV7ToV8` / `SAVE_MIGRATIONS[7]`. The v6→v7 food-batch step is left untouched.
 
 Migracja v6→v7 zachowuje progress/relations i usuwa EXP; nie resetuje historii.
 

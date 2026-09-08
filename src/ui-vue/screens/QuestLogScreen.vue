@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { QuestState } from '../../quests/quests'
+import { ITEM_DEFS, type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeQuestLog, isQuestLogOpen, ui } from '../store'
@@ -30,6 +31,10 @@ function matchesFilter(state: QuestState): boolean {
   if (filter.value === 'complete') return state === 'complete' || state === 'failed' || state === 'invalidated'
   return state === 'active' || state === 'offered' || state === 'ready_to_report'
 }
+
+function formatReward(items: ReadonlyArray<{ kind: ItemKind, count: number }>): string {
+  return items.map((item) => `${item.count}× ${ITEM_DEFS[item.kind].label}`).join(', ')
+}
 </script>
 
 <template>
@@ -46,9 +51,6 @@ function matchesFilter(state: QuestState): boolean {
       <h1 class="mb-1 text-lg font-semibold tracking-wide">
         Zadania
       </h1>
-      <div class="mb-4 text-xs opacity-70">
-        Exp: {{ ui.questLog.exp }}
-      </div>
 
       <div class="mb-3 flex gap-1">
         <button
@@ -72,22 +74,37 @@ function matchesFilter(state: QuestState): boolean {
         </div>
         <div
           v-for="entry in ui.questLog.entries.filter((e) => matchesFilter(e.state))"
-          :key="entry.giverName + entry.state + entry.stageIndex"
+          :key="entry.id"
           class="rounded-md bg-white/5 p-3"
         >
           <div class="font-semibold text-sm">
-            {{ entry.giverName }}
+            {{ entry.title }}
           </div>
           <div class="text-xs opacity-70">
-            {{ STATE_LABEL[entry.state] }}<template v-if="entry.totalStages > 1">
+            {{ entry.giverName }} · {{ STATE_LABEL[entry.state] }}<template v-if="entry.totalStages > 1">
               — Etap {{ entry.stageIndex + 1 }}/{{ entry.totalStages }}
             </template>
+          </div>
+          <div class="mt-1 text-sm">
+            {{ entry.description }}
           </div>
           <div
             v-if="entry.currentObjective"
             class="mt-1 text-sm"
           >
             {{ entry.currentObjective }}
+          </div>
+          <div
+            v-if="entry.resultText"
+            class="mt-1 text-sm opacity-80"
+          >
+            {{ entry.resultText }}
+          </div>
+          <div
+            v-if="entry.promisedReward && entry.promisedReward.items.length > 0"
+            class="mt-1 text-xs opacity-70"
+          >
+            Nagroda: {{ formatReward(entry.promisedReward.items) }}
           </div>
           <div class="mt-1 text-xs opacity-70">
             ♥ {{ entry.giverName }} {{ ui.questLog.relation(entry.giverName) }}

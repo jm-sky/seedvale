@@ -29,7 +29,7 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
     config,
     player: { x: 1, z: 2, yaw: 0, pitch: 0 },
     savedAt: overrides?.savedAt ?? 100,
-    quests: { progress: [], exp: 0, relations: {} },
+    quests: { progress: [], relations: {} },
     inventory: {},
     inventoryInstances: [],
     collectedItemIds: [],

@@ -344,6 +344,8 @@ Nie tworzyć jeszcze pełnego systemu bandytów w ramach tego planu.
 
 ## Faza 10 — Quest effects
 
+> **Aktualny kontrakt (quests-progression-002):** `QuestEffects` i globalny quest EXP nie istnieją. Resolution idzie przez `QuestDef.outcomes` — `reward` to items/coins, `consequences` to relation i settlement reputation/renown. Ten rozdział opisuje historyczny v3 design, nie bieżący runtime.
+
 Wprowadzić generyczny, ale ograniczony model efektów kończących questa.
 
 Pierwsze efekty:

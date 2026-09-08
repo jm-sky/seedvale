@@ -7,7 +7,7 @@ export type QuestLog = {
   open: () => void
   close: () => void
   toggle: () => void
-  refresh: (entries: readonly QuestListEntry[], exp: number, relation: (name: string) => number) => void
+  refresh: (entries: readonly QuestListEntry[], relation: (name: string) => number) => void
   dispose: () => void
 }
 
@@ -18,10 +18,10 @@ export function createQuestLog(_parent: HTMLElement, handlers: QuestLogHandlers 
   const close = () => { if (!disposed) { getUi()?.closeQuestLog(); handlers.onClose?.() } }
   return {
     isOpen: () => !disposed && (getUi()?.isQuestLogOpen() ?? false),
-    open: () => { if (!disposed) getUi()?.openQuestLog([], 0, () => 0) },
+    open: () => { if (!disposed) getUi()?.openQuestLog([], () => 0) },
     close,
-    toggle: () => { if (!disposed) { if (getUi()?.isQuestLogOpen()) close(); else getUi()?.openQuestLog([], 0, () => 0) } },
-    refresh: (entries, exp, relation) => { if (!disposed) { const ui = getUi(); if (ui?.isQuestLogOpen()) ui.refreshQuestLog(entries, exp, relation); else ui?.openQuestLog(entries, exp, relation) } },
+    toggle: () => { if (!disposed) { if (getUi()?.isQuestLogOpen()) close(); else getUi()?.openQuestLog([], () => 0) } },
+    refresh: (entries, relation) => { if (!disposed) { const ui = getUi(); if (ui?.isQuestLogOpen()) ui.refreshQuestLog(entries, relation); else ui?.openQuestLog(entries, relation) } },
     dispose: () => { if (!disposed) { disposed = true; getUi()?.closeQuestLog() } },
   }
 }
