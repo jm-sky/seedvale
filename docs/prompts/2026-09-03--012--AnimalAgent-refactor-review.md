@@ -1,5 +1,7 @@
 # Seedvale — AnimalAgent refactor review
 
+**Status:** `done` ✅  
+
 Pracuj bezpośrednio na aktualnym `main`.
 
 ## Cel
