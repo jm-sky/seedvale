@@ -21,7 +21,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| `fauna-017-animal-agent-refactor.md`                                        | -       | 🟡 | M      | -      |
 | `quests-progression-010-abandoned-gold-mine-colony.md`                      | -       | 🔴 | M      | world-terrain-017, world-018, world-019, settlements-npcs-026, settlements-npcs-027, settlements-npcs-028, settlements-003, settlements-004, quests-progression-002 |
 | `settlements-003-colony-bootstrap.md`                                       | -       | 🔴 | L      | world-019, settlements-npcs-028 |
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`      | -       | 🔴 | M      | -      |
@@ -100,6 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                  | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | 💡 `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
+| ◼️ `fauna-017-animal-agent-refactor.md`                                     | -       | 🟡 | L      | -      |
 
 ---
 

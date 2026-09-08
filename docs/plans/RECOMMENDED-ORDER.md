@@ -170,76 +170,76 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-25. `items-player-002` — **Food provenance, freshness and storage**  
-  🟡 `M` · **Score:**  29  
-   → **unlocks:** 0/0
-
-26. `items-player-014` — **Rope-pullable resource transport**  
+25. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-27. `npc-025` — **Injury severity and treatment requirements**  
+26. `npc-025` — **Injury severity and treatment requirements**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-28. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+27. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-29. `tools-005` — **Seedvale Character Preparation Panel**  
+28. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-30. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+29. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-31. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+30. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-32. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+31. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-33. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+32. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-34. `fauna-013` — **Animal hand-feeding and human affinity**  
+33. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-35. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+34. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-36. `npc-020` — **Strength-driven physical work and human carrying**  
+35. `npc-020` — **Strength-driven physical work and human carrying**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-37. `npc-021` — **Endurance-driven stamina capacity and recovery**  
+36. `npc-021` — **Endurance-driven stamina capacity and recovery**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-38. `npc-023` — **Perception-driven observation and information levels**  
+37. `npc-023` — **Perception-driven observation and information levels**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-39. `world-terrain-015` — **Water Reflection Content Budget**  
+38. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-40. `fauna-007` — **Animal leading and cart harness**  
+39. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-41. `items-player-019` — **Player camp repair and sewing kit**  
+40. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-42. `tools-000` — **Weapon Browser — Observatory/Admin**  
+41. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
+   → **unlocks:** 0/0
+
+42. `fauna-017` — **AnimalAgent refactor**  
+  🟡 `L` · **Score:**  14  
    → **unlocks:** 0/0
 
 43. `npc-004` — **Drzewo genealogiczne NPC**  
@@ -375,7 +375,7 @@ graph TD
   fauna_014["fauna-014 — Animal traps — bait attraction and species coverage"]
   fauna_015["fauna-015 — Animal water traversal, wading, swimming and drowning"]
   fauna_016["fauna-016 — Animal habitats, roaming, water trips and settlement rats"]
-  fauna_017["fauna-017 — AnimalAgent refactor after architectural review"]
+  fauna_017["fauna-017 — AnimalAgent refactor"]
   fauna_018["fauna-018 — Persistent habitat occupants"]
   fauna_019["fauna-019 — Real cave habitats and animal home navigation"]
   items_player_001["items-player-001 — Containers, Waterskins & Copper Items"]

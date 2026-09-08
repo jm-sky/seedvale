@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-002-food-provenance-freshness-and-storage`               | 2026-09-08 12:28:17 | —                   | `items-player`   | —          |
+| `ui-input-012-placement-preview-shapes-rotation-and-coverage`          | 2026-09-08 11:49:22 | —                   | `ui-input`       | —          |
 | `quests-progression-011-grave-robbing-reputation-risk-and-stealth`     | 2026-09-08 10:53:33 | —                   | `quests-progression` | —          |
 | `npc-022-agility-driven-melee-recovery`                                | —                   | 2026-09-07 15:15:55 | `npc`            | npc-004-npc-genealogy-lineages |
 | `npc-019-shared-spea-foundation-and-strength-driven-melee`             | —                   | 2026-09-07 14:44:46 | `npc`            | npc-020-strength-driven-physical-work-and-human-carrying, npc-021-endurance-driven-stamina-capacity-and-recovery, npc-022-agility-driven-melee-recovery, npc-023-perception-driven-observation-and-information-levels, npc-024-temporary-conditions-and-poisoning, npc-025-injury-severity-and-treatment-requirements |
