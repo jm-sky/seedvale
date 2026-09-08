@@ -99,7 +99,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                  | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | 💡 `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
-| ◼️ `fauna-017-animal-agent-refactor.md`                                     | -       | 🟡 | L      | -      |
+| 💡 `fauna-017-animal-agent-refactor.md`                                     | -       | 🟡 | L      | -      |
 
 ---
 
