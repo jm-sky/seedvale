@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
+import { ANIMAL_DEFS } from './animalDefs'
 import {
-  ANIMAL_DEFS,
   carcassCandidateScore,
   carcassFoodValue,
   forageEdgeScore,
   isCarcassEdible,
   selectDietFeedKind,
-} from './AnimalAgent'
+} from './animalForaging'
 
 describe('forageEdgeScore (plan 094)', () => {
   it('peaks at forest-edge density (0.45)', () => {

@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { Household } from '../settlement/household'
@@ -66,14 +65,26 @@ import {
   type AnimalLifeStage,
   type AnimalRole,
   dietAcceptsItem,
-  type ScavengingConfig,
 } from './animalDefs'
+import {
+  applySourceRelief,
+  DRINK_DURATION_SEC,
+  EAT_DURATION_SEC,
+  findFoodTarget,
+  findWaterTarget,
+  FOOD_INTERACTION_RANGE,
+  type ForagingContext,
+  isSourceTargetValid,
+  SOURCE_SEARCH_COOLDOWN_SEC,
+  SOURCE_TARGET_TIMEOUT_SEC,
+  type SourceTarget,
+  WATER_INTERACTION_RANGE,
+} from './animalForaging'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
   consumeFood,
   createAnimalLifeState,
-  drinkWater,
   NEED_ELEVATED_THRESHOLD,
   SLEEP_HUNGER_THIRST_RATE,
   STAMINA_REST_THRESHOLD,
@@ -126,6 +137,11 @@ export * from './animalCorpse'
  *  step 1) — re-exported wholesale so every existing importer of a species
  *  type or `ANIMAL_DEFS` from `AnimalAgent.ts` is unaffected. */
 export * from './animalDefs'
+/** Food/water source selection, validation and relief moved to
+ *  `./animalForaging` (plan fauna-017 step 6a) — re-exported wholesale for
+ *  the same reason. `foodWaterTargeting.test.ts` is redirected to import
+ *  from the new module directly. */
+export * from './animalForaging'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
  *  npc-006) — see `AnimalAgent.chaseNav`/`fleeNav`'s doc for why chase and
@@ -288,56 +304,6 @@ const ATTACK_STAMINA_COST = 0.05
 /** How often predators re-score flee vs attack toward a noticed human
  *  (plan 055 Phase 6 — movement stays per-frame). */
 const HUMAN_DECISION_INTERVAL_SEC = 0.2
-/** Radius (world units) searched around the animal for a valid forage spot
- *  or a scavengeable carcass once hunger crosses `NEED_ELEVATED_THRESHOLD`
- *  (plan 094). */
-const FOOD_SEARCH_RADIUS = 14
-/** Hunger (`AnimalLifeState.hunger`) a scavenging-capable predator must
- *  reach before a `rotting` corpse becomes a viable food candidate at all
- *  (plan fauna-005) — well above `NEED_ELEVATED_THRESHOLD` (the threshold
- *  that starts food search in general), so a lightly hungry predator still
- *  prefers to keep looking for a fresh kill instead of falling back onto
- *  carrion just because it exists. */
-const SCAVENGE_ROTTING_HUNGER_THRESHOLD = 0.65
-/** Same idea as above but for `bones`, the lowest-value tier — needs the
- *  eater even hungrier before it's worth considering (plan fauna-005). */
-const SCAVENGE_BONES_HUNGER_THRESHOLD = 0.8
-/** Score weight applied to a carcass candidate's food value before
- *  subtracting distance (plan fauna-005), same `weight*value - distance`
- *  idiom as `findWaterTarget`/`findForageTarget`'s `hits`/`suitability`
- *  scoring. Large enough that, within `FOOD_SEARCH_RADIUS`, a `fresh`
- *  corpse (value 1) always outscores a `rotting`/`bones` candidate for the
- *  tuned wolf preference values: `weight * (1 - value) > FOOD_SEARCH_RADIUS`. */
-const CARCASS_VALUE_WEIGHT = 30
-/** Radius (world units) searched around the animal for a walkable shoreline
- *  point once thirst crosses `NEED_ELEVATED_THRESHOLD` (plan 094). */
-const WATER_SEARCH_RADIUS = 20
-/** Candidate points sampled per forage/carcass search call. */
-const FOOD_SEARCH_ATTEMPTS = 10
-/** Candidate points sampled per water search call — wider radius than
- *  forage, so more attempts to actually land near a shore. */
-const WATER_SEARCH_ATTEMPTS = 14
-/** Distance at which an animal counts as having arrived at a forage spot or
- *  carcass, and can start eating. */
-const FOOD_INTERACTION_RANGE = 1.4
-/** Distance at which an animal counts as having arrived at a shoreline
- *  point, and can start drinking. */
-const WATER_INTERACTION_RANGE = 1.2
-/** Seconds spent stationary eating before hunger relief (`consumeFood`) is
- *  applied — a short, real action, not a per-frame drain. */
-const EAT_DURATION_SEC = 3
-/** Seconds spent stationary drinking before thirst relief (`drinkWater`) is
- *  applied. */
-const DRINK_DURATION_SEC = 2
-/** Seconds to wait before retrying a failed food/water search — without
- *  this, a hungry/thirsty animal with no source in range would re-scan
- *  candidate points every frame. */
-const SOURCE_SEARCH_COOLDOWN_SEC = 3
-/** Seconds an animal will pursue a cached food/water target before giving
- *  up and re-searching — guards against a target that passed validation but
- *  is effectively unreachable (e.g. boxed in by terrain `steerToward` can't
- *  route around). */
-const SOURCE_TARGET_TIMEOUT_SEC = 20
 /** Seconds to wait before re-scanning `lures` for a new candidate once the
  *  current search/target came up empty (plan fauna-014 §11/§12) — a bounded
  *  low-frequency search over a small array, same throttling idiom as
@@ -485,38 +451,6 @@ export type AnimalSaveState = {
   corpse: { timeSinceDeath: number, meatHarvested: boolean } | null
 }
 
-/** A real-world food/water destination an animal is pursuing (plan 094) —
- *  `corpse` is set only for `kind: 'carcass'`, so the eater can release its
- *  claim on cancel/completion. */
-type SourceTargetKind = 'water' | 'forage' | 'carcass' | 'feed' | 'grassPatch'
-type SourceTarget = {
-  kind: SourceTargetKind
-  x: number
-  z: number
-  corpse?: AnimalAgent
-  /** Set when this `water` target is the owning household's `AnimalTrough`
-   *  (plan 122) rather than a natural shoreline — `performSourceAction`
-   *  drains `household.water` in addition to relieving `life.thirst`. */
-  trough?: boolean
-  /** Set only for `kind: 'carcass'` — corpse phase/value/score captured at
-   *  selection time (plan fauna-005), for `getDebugInfo()`'s `foodTarget`
-   *  diagnostics only. The authoritative eat-time check re-reads the live
-   *  corpse phase/value (`performSourceAction`), never these cached values. */
-  corpsePhase?: CorpsePhase
-  foodValue?: number
-  score?: number
-  /** Set only for `kind: 'feed'` (plan fauna-010 §7) — the diet-eligible
-   *  `ItemKind` selected from the owning household's `items` at search time.
-   *  `performSourceAction` re-checks/removes this exact kind on completion,
-   *  never a re-derived one, so a completed eat always matches what was
-   *  actually offered. */
-  feedItemKind?: ItemKind
-  /** Set only for `kind: 'grassPatch'` (plan fauna-010 §3/§4) — the stable
-   *  `GrassForagePatch` id this target resolves through `grassForage` for
-   *  live availability checks and final atomic consumption. */
-  patchId?: string
-}
-
 /** A committed "trip" beyond normal local wander (plan fauna-016 §4) —
  *  `destination` is chosen once (`maybeStartWaterTrip`) and retained for the
  *  whole trip; `wander()`'s own per-tick retargeting never touches it.
@@ -531,18 +465,6 @@ type AnimalTrip = {
   phase: AnimalTripPhase
   /** Countdown (sec) while `phase === 'staying'`; unused otherwise. */
   stayRemainingSec: number
-}
-
-/** One trough visit's draw against the household water reserve — same order
- *  of magnitude as `NpcAgent`'s `WATER_DRINK_FROM_STOCK_AMOUNT`. */
-const TROUGH_DRINK_AMOUNT = 1
-
-/** Forage habitat suitability from a `sampleForestFactor` reading — peaks at
- *  forest-edge density (~0.45) rather than open meadow or deep forest,
- *  matching deer/stag habitat preference (plan 094). Pure so it's
- *  unit-testable without instantiating `AnimalAgent`/Three.js. */
-export function forageEdgeScore(forestFactor: number): number {
-  return Math.max(0, 1 - Math.abs(forestFactor - 0.45) * 2)
 }
 
 /** FNV-1a string hash — same local-per-module idiom as e.g.
@@ -568,76 +490,6 @@ export function tripDayBucket(animalId: string, worldDays: number, cooldownDays:
   if (cooldownDays <= 0) return 0
   const phase = (hashString(animalId) % 1000) / 1000
   return Math.floor(worldDays / cooldownDays + phase)
-}
-
-/** First `dietItems` kind actually present in `items` (plan fauna-010 §3/§7)
- *  — declaration order of the species' own `AnimalDietConfig.items` object,
- *  the same "small literal, stable insertion order" convention diet configs
- *  are authored with (not `FOOD_ITEM_KINDS`' catalog order, since diet items
- *  are per-species and deliberately short). Deterministic: the same
- *  household contents always select the same kind. `null` when the
- *  household holds none of this species' diet items. */
-export function selectDietFeedKind(
-  items: Inventory,
-  dietItems: Partial<Record<ItemKind, number>>,
-): ItemKind | null {
-  for (const kind of Object.keys(dietItems) as ItemKind[]) {
-    if (items.has(kind, 1)) return kind
-  }
-  return null
-}
-
-/** Whether a corpse can feed this eater (plan 094). `consumed` is set once
- *  an eat action completes, so the same carcass cannot refill hunger
- *  repeatedly. A claim held by someone else blocks selection; a claim held
- *  by `eater` (or no claim) is allowed. Harvested remains (`harvested`) are
- *  bones/scraps, not food (plan 137). */
-export function isCarcassEdible(opts: {
-  dead: boolean
-  expired: boolean
-  consumed: boolean
-  harvested?: boolean
-  claimedBy: unknown
-  eater: unknown
-}): boolean {
-  if (!opts.dead || opts.expired || opts.consumed || opts.harvested) return false
-  if (opts.claimedBy != null && opts.claimedBy !== opts.eater) return false
-  return true
-}
-
-/** Food value of a corpse `phase` for a given eater (plan fauna-005) — `null`
- *  when this phase isn't food for this eater right now:
- *  - `fresh` is always full value (1), the pre-existing plan 094 baseline
- *    available to any predator regardless of `scavenging`.
- *  - `rotting`/`bones` require both the eater's `scavenging` capability
- *    (absent for a non-scavenger, e.g. fox/bear) *and* hunger past that
- *    tier's threshold (`SCAVENGE_ROTTING_HUNGER_THRESHOLD`/
- *    `SCAVENGE_BONES_HUNGER_THRESHOLD`) — a barely-hungry wolf won't fall
- *    back onto carrion just because it exists.
- *  A `rotting`/`bones` value is always below `fresh`'s 1, so
- *  `carcassCandidateScore` naturally prefers a reachable fresh kill.
- *  Pure/exported so preference/hunger-gating is unit-testable without
- *  instantiating `AnimalAgent`, same technique as `corpsePhaseFromElapsed`. */
-export function carcassFoodValue(
-  phase: CorpsePhase,
-  scavenging: ScavengingConfig | undefined,
-  hunger: number,
-): number | null {
-  if (phase === 'fresh') return 1
-  if (!scavenging) return null
-  if (phase === 'rotting') return hunger >= SCAVENGE_ROTTING_HUNGER_THRESHOLD ? scavenging.rottingValue : null
-  return hunger >= SCAVENGE_BONES_HUNGER_THRESHOLD ? scavenging.bonesValue : null
-}
-
-/** Carcass candidate selection score (plan fauna-005) — combines food value
- *  (`carcassFoodValue`) with distance (closer preferred, same
- *  `weight*value - distance` idiom as `findWaterTarget`/`findForageTarget`).
- *  `riskPenalty` is a decision seam for a future disease/food-safety system
- *  (plan fauna-005 §12) — always 0 today since no such system exists yet; a
- *  future one can pass a positive penalty here without any other change to
- *  selection. Pure/exported for the same reason as `carcassFoodValue`. */
-export function carcassCandidateScore(value: number, distance: number, riskPenalty = 0): number {
-  return value * CARCASS_VALUE_WEIGHT - distance - riskPenalty
 }
 
 type EnvironmentSense = {
@@ -3247,6 +3099,30 @@ export class AnimalAgent {
    *  search doesn't re-run every frame. Returns `true` if it handled this
    *  frame's movement (searching, walking to, or eating/drinking at a
    *  source), `false` if the caller should fall back to biased wander. */
+  /** Per-tick foraging environment for `animalForaging.ts`'s selection/
+   *  validation/relief functions (plan fauna-017 step 6a) — built fresh only
+   *  while a need search/pursuit is actually happening (`pursueNeeds`),
+   *  never cached across ticks. `ROAM_RADIUS` is this agent's flat
+   *  movement-domain home bound, not a foraging-owned constant. */
+  private foragingContext(): ForagingContext {
+    return {
+      x: this.mesh.position.x,
+      z: this.mesh.position.z,
+      home: this.home,
+      def: this.def,
+      life: this.life,
+      household: this.household,
+      nowDays: this.tickNowDays,
+      grassForage: this.tickGrassForage,
+      sampleHeight: this.sampleHeight,
+      waterLevel: this.waterLevel,
+      sampleForestFactor: this.sampleForestFactor,
+      roamRadius: ROAM_RADIUS,
+      isWalkable: (x, z) => this.isWalkable(x, z),
+      isNearVillage: (pos) => this.isNearVillage(pos),
+    }
+  }
+
   private pursueNeeds(dt: number, others: readonly AnimalAgent[]): boolean {
     const thirstElevated = this.life.thirst > NEED_ELEVATED_THRESHOLD
     const hungerElevated = this.life.hunger > NEED_ELEVATED_THRESHOLD
@@ -3254,105 +3130,18 @@ export class AnimalAgent {
       this.cancelSourceTarget()
       return false
     }
-    if (this.sourceTarget && !this.isSourceTargetValid(this.sourceTarget)) {
+    const ctx = this.foragingContext()
+    if (this.sourceTarget && !isSourceTargetValid(ctx, this, this.sourceTarget)) {
       this.cancelSourceTarget()
     }
     if (!this.sourceTarget && this.sourceSearchCooldown <= 0) {
       this.sourceTarget = thirstElevated
-        ? this.findWaterTarget() ?? (hungerElevated ? this.findFoodTarget(others) : null)
-        : this.findFoodTarget(others)
+        ? findWaterTarget(ctx) ?? (hungerElevated ? findFoodTarget(ctx, this, others) : null)
+        : findFoodTarget(ctx, this, others)
       if (!this.sourceTarget) this.sourceSearchCooldown = SOURCE_SEARCH_COOLDOWN_SEC
     }
     if (!this.sourceTarget) return false
     return this.pursueSourceTarget(dt)
-  }
-
-  private findFoodTarget(others: readonly AnimalAgent[]): SourceTarget | null {
-    return this.def.role === 'predator' ? this.findCarcassTarget(others) : this.findDietTarget()
-  }
-
-  /** Diet-aware herbivore food search (plan fauna-010 §2/§3/§4/§7) — replaces
-   *  the old abstract "any suitable terrain point" forage for every species
-   *  with `def.diet`: prefers an eligible item already sitting in the owning
-   *  household's `items` (mirrors `findTroughTarget`'s "prefer local stored
-   *  resource" hierarchy), then falls back to a real `GrassForagePatch`.
-   *  A species without `def.diet` (out of this plan's scope — duck/boar) or
-   *  with no `grassForage` service wired in keeps the old abstract
-   *  `findForageTarget()` behaviour unchanged. */
-  private findDietTarget(): SourceTarget | null {
-    const diet = this.def.diet
-    if (!diet) return this.findForageTarget()
-    if (this.household && diet.items) {
-      // Lazy hay top-up (plan fauna-010 §6) — resolved right before reading
-      // eligibility, not on a schedule; see `Household.resolveHayForage`'s doc.
-      this.household.resolveHayForage(this.tickNowDays)
-      const feedItemKind = selectDietFeedKind(this.household.items, diet.items)
-      if (feedItemKind) return { kind: 'feed', x: this.home.x, z: this.home.z, feedItemKind }
-    }
-    if (diet.grass != null && this.tickGrassForage) {
-      return this.findGrassPatchTarget(this.tickGrassForage)
-    }
-    return null
-  }
-
-  /** Best-scoring reachable `GrassForagePatch` within `FOOD_SEARCH_RADIUS`
-   *  (plan fauna-010 §3/§4) — same walkable/village/roam-radius filtering and
-   *  closer-is-better scoring idiom as `findForageTarget`, applied to the
-   *  candidate set `grassForage.queryNear()` returns instead of random
-   *  terrain points. No claim is taken here: two animals may target the same
-   *  patch, and the race resolves atomically at `performSourceAction` time
-   *  (`grassForage.consume()`'s first-wins contract) — the loser's
-   *  `isSourceTargetValid` check then simply fails and it replans. */
-  private findGrassPatchTarget(grassForage: GrassForageService): SourceTarget | null {
-    let best: SourceTarget | null = null
-    let bestScore = -Infinity
-    for (const candidate of grassForage.queryNear(this.mesh.position.x, this.mesh.position.z, FOOD_SEARCH_RADIUS, this.tickNowDays)) {
-      if (!this.isWalkable(candidate.x, candidate.z)) continue
-      if (this.def.sociability === 'wild' && this.isNearVillage(candidate)) continue
-      if (Math.hypot(candidate.x - this.home.x, candidate.z - this.home.z) > ROAM_RADIUS) continue
-      const d = Math.hypot(candidate.x - this.mesh.position.x, candidate.z - this.mesh.position.z)
-      const score = -d
-      if (score > bestScore) {
-        bestScore = score
-        best = { kind: 'grassPatch', x: candidate.x, z: candidate.z, patchId: candidate.id }
-      }
-    }
-    return best
-  }
-
-  private isSourceTargetValid(target: SourceTarget): boolean {
-    if (target.kind === 'carcass') {
-      const corpse = target.corpse
-      if (!corpse) return false
-      const phase = corpse.corpsePhase()
-      if (!isCarcassEdible({
-        dead: corpse.health.dead,
-        expired: corpse.readyToRemove(),
-        consumed: corpse.corpse.consumedPhase === phase,
-        harvested: corpse.corpse.meatHarvested,
-        claimedBy: corpse.corpse.claimedBy,
-        eater: this,
-      })) return false
-      // Plan fauna-005: a non-scavenger's fresh target can decay past
-      // `fresh` while it's still approaching — same rejection `findCarcassTarget`
-      // would apply to a fresh search this frame, checked live rather than
-      // trusting the phase cached on `target` at selection time.
-      if (carcassFoodValue(phase, this.def.scavenging, this.life.hunger) == null) return false
-      return corpse.corpse.claimedBy === this
-    }
-    if (target.kind === 'feed') {
-      // Re-checked live, not cached — another animal/NPC may have taken the
-      // last unit while this one was approaching (plan fauna-010 §7, same
-      // "no free relief on a raced source" contract as the trough above).
-      return !!target.feedItemKind && !!this.household?.items.has(target.feedItemKind, 1)
-    }
-    if (target.kind === 'grassPatch') {
-      if (!target.patchId || !this.tickGrassForage?.isAvailable(target.patchId, this.tickNowDays)) return false
-      if (!this.isWalkable(target.x, target.z)) return false
-      return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
-    }
-    if (!this.isWalkable(target.x, target.z)) return false
-    return Math.hypot(target.x - this.home.x, target.z - this.home.z) <= ROAM_RADIUS
   }
 
   /** Releases any corpse claim and clears the cached target — called both on
@@ -3390,173 +3179,29 @@ export class AnimalAgent {
 
   /** Stand still and eat/drink for a fixed duration; relief is applied once
    *  on completion, not drained per-frame (plan 094 — keeps the effect
-   *  independent of frame/update rate). */
+   *  independent of frame/update rate). Owns only the timing gate — the
+   *  actual five-arm relief switch is `animalForaging.ts`'s
+   *  `applySourceRelief()`. */
   private performSourceAction(dt: number, target: SourceTarget): void {
     this.actionTimer += dt
     const duration = target.kind === 'water' ? DRINK_DURATION_SEC : EAT_DURATION_SEC
     if (this.actionTimer < duration) return
-    if (target.kind === 'water') {
-      if (target.trough) {
-        // Trough may have run dry while approaching (another animal/NPC
-        // drank first) — no free relief; next search re-checks the
-        // household reserve and falls back to a shoreline (plan 122).
-        if (this.household?.water.has(TROUGH_DRINK_AMOUNT)) {
-          this.household.water.remove(TROUGH_DRINK_AMOUNT)
-          drinkWater(this.life)
-        }
-      } else {
-        drinkWater(this.life)
-      }
-    } else if (target.kind === 'carcass' && target.corpse) {
-      // Re-read the live corpse rather than the value cached on `target` at
-      // selection time — a failed revalidation (already harvested, phase
-      // drifted past what this eater can still eat) must not grant free
-      // hunger relief (plan fauna-005).
-      const corpse = target.corpse
-      const phase = corpse.corpsePhase()
-      const value = corpse.corpse.meatHarvested ? null : carcassFoodValue(phase, this.def.scavenging, this.life.hunger)
-      if (value != null) {
-        consumeFood(this.life, value)
-        corpse.markFoodConsumed(phase)
-      }
-    } else if (target.kind === 'feed' && target.feedItemKind) {
-      // Re-checked/removed by the exact kind selected at search time, not a
-      // re-derived one (plan fauna-010 §7) — mirrors the trough's live
-      // `household.water.has`/`.remove` re-check above. A failed `remove`
-      // (another consumer took the last unit first) grants no relief; the
-      // next search replans through the existing retry/cooldown path.
-      if (this.household?.items.remove(target.feedItemKind, 1)) {
-        consumeFood(this.life, this.def.diet?.items?.[target.feedItemKind] ?? 1)
-      }
-    } else if (target.kind === 'grassPatch' && target.patchId) {
-      // Atomic first-wins consumption (plan fauna-010 §3/§4) — a losing
-      // competitor for the same patch gets no relief and replans through the
-      // same retry/cooldown path as every other invalidated source.
-      if (this.tickGrassForage?.consume(target.patchId, this.tickNowDays)) {
-        consumeFood(this.life, this.def.diet?.grass ?? 1)
-      }
-    } else {
-      consumeFood(this.life)
-    }
+    applySourceRelief(this.foragingContext(), target)
     this.cancelSourceTarget()
-  }
-
-  /** Household `AnimalTrough` (plan 122) — preferred over a natural
-   *  shoreline search when the owning household has stored water, the same
-   *  "prefer local stored water" hierarchy `NpcAgent`'s personal thirst
-   *  uses. Only livestock have a `household` (wild fauna: always `undefined`,
-   *  falls straight through to the shoreline search below). */
-  private findTroughTarget(): SourceTarget | null {
-    if (!this.household?.water.has(TROUGH_DRINK_AMOUNT)) return null
-    return { kind: 'water', x: this.home.x, z: this.home.z, trough: true }
-  }
-
-  private findWaterTarget(): SourceTarget | null {
-    const trough = this.findTroughTarget()
-    if (trough) return trough
-    let best: SourceTarget | null = null
-    let bestScore = -Infinity
-    for (let attempt = 0; attempt < WATER_SEARCH_ATTEMPTS; attempt++) {
-      const angle = Math.random() * Math.PI * 2
-      const dist = Math.random() * WATER_SEARCH_RADIUS
-      const x = this.mesh.position.x + Math.cos(angle) * dist
-      const z = this.mesh.position.z + Math.sin(angle) * dist
-      if (!this.isWalkable(x, z)) continue
-      const hits = shoreProbeHits(x, z, this.sampleHeight, this.waterLevel)
-      if (hits === 0) continue
-      if (this.def.sociability === 'wild' && this.isNearVillage({ x, z })) continue
-      if (Math.hypot(x - this.home.x, z - this.home.z) > ROAM_RADIUS) continue
-      const d = Math.hypot(x - this.mesh.position.x, z - this.mesh.position.z)
-      const score = hits * 10 - d
-      if (score > bestScore) {
-        bestScore = score
-        best = { kind: 'water', x, z }
-      }
-    }
-    return best
-  }
-
-  /** Habitat-biased forage spot for wild prey/livestock — uses
-   *  `sampleForestFactor` when available (wild fauna, see `createFauna.ts`);
-   *  falls back to distance-only scoring when it isn't (livestock, plan
-   *  094 §2). */
-  private findForageTarget(): SourceTarget | null {
-    let best: SourceTarget | null = null
-    let bestScore = -Infinity
-    for (let attempt = 0; attempt < FOOD_SEARCH_ATTEMPTS; attempt++) {
-      const angle = Math.random() * Math.PI * 2
-      const dist = Math.random() * FOOD_SEARCH_RADIUS
-      const x = this.mesh.position.x + Math.cos(angle) * dist
-      const z = this.mesh.position.z + Math.sin(angle) * dist
-      if (!this.isWalkable(x, z)) continue
-      if (this.def.sociability === 'wild' && this.isNearVillage({ x, z })) continue
-      if (Math.hypot(x - this.home.x, z - this.home.z) > ROAM_RADIUS) continue
-      const suitability = this.sampleForestFactor ? forageEdgeScore(this.sampleForestFactor(x, z)) : 0.5
-      const d = Math.hypot(x - this.mesh.position.x, z - this.mesh.position.z)
-      const score = suitability * 10 - d
-      if (score > bestScore) {
-        bestScore = score
-        best = { kind: 'forage', x, z }
-      }
-    }
-    return best
-  }
-
-  /** Best-scoring unclaimed dead prey within `FOOD_SEARCH_RADIUS` (plan
-   *  094/fauna-005): a `fresh` corpse is always eligible baseline food;
-   *  `rotting`/`bones` are additionally scored via `carcassFoodValue`/
-   *  `carcassCandidateScore` so only a species with the `scavenging`
-   *  capability (currently only wolf), hungry enough, will fall back onto
-   *  lower-quality remains — and even then a reachable fresh kill always
-   *  wins (see `CARCASS_VALUE_WEIGHT`'s doc). Claimed on selection so a
-   *  second predator can't also target it (plan 094 §8). */
-  private findCarcassTarget(others: readonly AnimalAgent[]): SourceTarget | null {
-    let best: AnimalAgent | null = null
-    let bestScore = -Infinity
-    let bestValue = 0
-    for (const o of others) {
-      if (o === this || o.def.role !== 'prey') continue
-      const phase = o.corpsePhase()
-      if (!isCarcassEdible({
-        dead: o.health.dead,
-        expired: o.readyToRemove(),
-        consumed: o.corpse.consumedPhase === phase,
-        harvested: o.corpse.meatHarvested,
-        claimedBy: o.corpse.claimedBy,
-        eater: this,
-      })) continue
-      const d = Math.hypot(o.mesh.position.x - this.mesh.position.x, o.mesh.position.z - this.mesh.position.z)
-      if (d > FOOD_SEARCH_RADIUS) continue
-      const value = carcassFoodValue(phase, this.def.scavenging, this.life.hunger)
-      if (value == null) continue
-      const score = carcassCandidateScore(value, d)
-      if (score > bestScore) {
-        bestScore = score
-        best = o
-        bestValue = value
-      }
-    }
-    if (!best || !best.claimAsFood(this)) return null
-    return {
-      kind: 'carcass',
-      x: best.mesh.position.x,
-      z: best.mesh.position.z,
-      corpse: best,
-      corpsePhase: best.corpsePhase(),
-      foodValue: bestValue,
-      score: bestScore,
-    }
   }
 
   /** True if this corpse's current phase is unclaimed or already claimed by
    *  `by` — guards against two predators both completing an eat action on
    *  one carcass. Once this phase's food is gone (`consumedPhase`), a
-   *  later decay into a new phase (plan fauna-005) makes it claimable again. */
-  private claimAsFood(by: AnimalAgent): boolean {
+   *  later decay into a new phase (plan fauna-005) makes it claimable again.
+   *  Not `private`: part of `CarcassCandidate`'s structural contract
+   *  (`animalForaging.ts`, plan fauna-017 step 6a) — called cross-agent from
+   *  that module, not just from within this class. */
+  claimAsFood(by: unknown): boolean {
     return claimCorpseAsFood(this.corpse, by)
   }
 
-  private releaseFoodClaim(by: AnimalAgent): void {
+  releaseFoodClaim(by: unknown): void {
     releaseCorpseClaim(this.corpse, by)
   }
 
@@ -3564,8 +3209,25 @@ export class AnimalAgent {
    *  passes the live phase it just finished eating at, not necessarily
    *  `corpse.phase` at some other time, so a corpse that decays mid-eat
    *  can't have the wrong phase marked consumed. */
-  private markFoodConsumed(phase: CorpsePhase): void {
+  markFoodConsumed(phase: CorpsePhase): void {
     markCorpseFoodConsumed(this.corpse, phase)
+  }
+
+  /** Read-only mirrors of this corpse's food-claim state — part of
+   *  `CarcassCandidate`'s structural contract (`animalForaging.ts`, plan
+   *  fauna-017 step 6a). Narrow getters instead of exposing the whole
+   *  `AnimalCorpseState` object, so that module only ever reads exactly
+   *  this. */
+  get foodClaimedBy(): unknown {
+    return this.corpse.claimedBy
+  }
+
+  get foodConsumedPhase(): CorpsePhase | null {
+    return this.corpse.consumedPhase
+  }
+
+  get meatHarvested(): boolean {
+    return this.corpse.meatHarvested
   }
 
   private withinRange(x: number, z: number, radius: number): boolean {
