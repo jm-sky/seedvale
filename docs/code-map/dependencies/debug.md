@@ -158,6 +158,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `debug/locationQueries.test.ts`
 - `debug/npcDebugApi.ts`

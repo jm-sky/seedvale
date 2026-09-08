@@ -111,10 +111,17 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/busyAction.ts`
 - `badges/badges.ts`
+- `debug/locationQueries.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
+- `reputation/ReputationManager.ts`
+- `reputation/socialExposure.ts`
+- `settlement/propUtils.ts`
+- `settlement/props.ts`
+- `terrain/dig.ts`
+- `world/hiddenFinds.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
 
@@ -133,10 +140,13 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/trade.ts`
 - `player/PlayerNeeds.ts`
+- `reputation/ReputationManager.ts`
+- `reputation/socialExposure.ts`
 - `settlement/hiddenTreasure.ts`
 - `terrain/depositMining.ts`
 - `terrain/dig.ts`
 - `terrain/digAction.ts`
+- `world/dayNight.ts`
 - `world/hiddenFinds.ts`
 - `world/parseSeed.ts`
 - `world/treeHarvest.ts`

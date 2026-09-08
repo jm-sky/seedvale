@@ -13,6 +13,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/reactionChance.ts`
+- `app/actions/groundActions.test.ts`
+- `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `app/saveState.ts`
 - `persistence/saveData.ts`
@@ -20,5 +22,25 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `reputation/ReputationManager.test.ts`
+- `reputation/socialExposure.ts`
 - `settlement/lodgingResolver.test.ts`
 - `ui-vue/store.ts`
+
+## `reputation/socialExposure.test.ts`
+
+**Imports**
+
+- `reputation/socialExposure.ts`
+
+## `reputation/socialExposure.ts`
+
+**Imports**
+
+- `reputation/ReputationManager.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/actions/groundActions.test.ts`
+- `app/actions/groundActions.ts`
+- `reputation/socialExposure.test.ts`

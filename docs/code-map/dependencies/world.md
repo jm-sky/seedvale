@@ -800,6 +800,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/graphicsSettings.ts`
@@ -976,6 +977,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `world/hiddenFinds.test.ts`
 
@@ -1361,6 +1363,7 @@ Generated from TypeScript imports.
 - `items/createItemSpawners.ts`
 - `items/villageTools.test.ts`
 - `main.ts`
+- `reputation/socialExposure.ts`
 - `settlement/families.ts`
 - `settlement/findSettlementSite.ts`
 - `settlement/houseCatalog.ts`
