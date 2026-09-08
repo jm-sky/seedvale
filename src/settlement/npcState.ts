@@ -2,6 +2,7 @@ import type { HelperAssignment } from '../ai/helperAssignment'
 import type { NpcPlan } from '../ai/npcPlan'
 import { createNeedState, type NeedState } from '../ai/Needs'
 import { MAX_VIGOR } from '../ai/npcVigor'
+import { applyDerivedStaminaMax } from '../shared/enduranceStamina'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
 import { createVigorState, type VigorState } from '../shared/VigorState'
@@ -78,8 +79,8 @@ export type NpcStateSnapshot = {
   activePlan?: NpcPlan | null
 }
 
-function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeState {
-  return {
+function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
+  const state: NpcAuthoritativeState = {
     id,
     health: { maxHp: snapshot.health.max, currentHp: snapshot.health.current, dead: snapshot.health.dead },
     stamina: { max: snapshot.stamina.max, current: snapshot.stamina.current },
@@ -89,6 +90,8 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot): NpcAuthoritativeSt
     helperAssignment: snapshot.helperAssignment ?? null,
     activePlan: snapshot.activePlan ?? null,
   }
+  if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
+  return state
 }
 
 /** Max HP/stamina/vigor for a newly created `NpcAuthoritativeState` — the
@@ -153,7 +156,9 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
       const existing = byId.get(id)
       if (existing) return existing
       const seed = initial?.[id]
-      const created = seed ? fromSnapshot(id, seed) : createNpcAuthoritativeState(id, needOffset, maxima)
+      const created = seed
+        ? fromSnapshot(id, seed, maxima)
+        : createNpcAuthoritativeState(id, needOffset, maxima)
       byId.set(id, created)
       return created
     },

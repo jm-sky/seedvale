@@ -69,11 +69,13 @@ import {
   generatePhysicalProfile,
   type PhysicalProfile,
   resolveHumanAgilityProfile,
+  resolveHumanEnduranceProfile,
   resolveHumanStrengthProfile,
 } from '../settlement/npcPhysicalProfile'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
+import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
 import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
 import {
   drainStamina,
@@ -1329,7 +1331,10 @@ export class NpcAgent {
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
     const energetic = this.traits.includes('energetic')
     this.fatigueMult = energetic ? ENERGETIC_FATIGUE_MULT : 1
-    this.restRate = BASE_REST_RATE * (energetic ? ENERGETIC_REST_MULT : 1)
+    const enduranceRecoveryMult = resolveEnduranceStaminaRecoveryMultiplier(
+      resolveHumanEnduranceProfile(physicalProfile),
+    )
+    this.restRate = BASE_REST_RATE * enduranceRecoveryMult * (energetic ? ENERGETIC_REST_MULT : 1)
     this.waitMultiplier = this.traits.includes('fast_worker') ? FAST_WORKER_WAIT_MULT : 1
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = npcState.needs

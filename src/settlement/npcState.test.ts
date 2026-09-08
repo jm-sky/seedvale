@@ -106,6 +106,52 @@ describe('createNpcStateRegistry', () => {
     expect(state.vigor.current).toBe(66)
   })
 
+  it('re-derives stamina max from supplied maxima when hydrating a carried snapshot (plan npc-021)', () => {
+    const snapshot = {
+      '0_0:npc:0': {
+        health: { current: 80, max: 100, dead: false },
+        stamina: { current: 90, max: 110 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    }
+    const registry = createNpcStateRegistry(snapshot)
+    const derivedMax = 106
+    const state = registry.getOrCreate('0_0:npc:0', 0, { maxHp: 100, maxStamina: derivedMax, maxVigor: 100 })
+    expect(state.stamina.max).toBe(derivedMax)
+    expect(state.stamina.current).toBe(90)
+  })
+
+  it('clamps saved stamina current when the newly derived max is lower', () => {
+    const snapshot = {
+      '0_0:npc:0': {
+        health: { current: 80, max: 100, dead: false },
+        stamina: { current: 90, max: 110 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    }
+    const registry = createNpcStateRegistry(snapshot)
+    const state = registry.getOrCreate('0_0:npc:0', 0, { maxHp: 100, maxStamina: 70, maxVigor: 100 })
+    expect(state.stamina.max).toBe(70)
+    expect(state.stamina.current).toBe(70)
+  })
+
+  it('does not refill stamina current when the newly derived max is higher', () => {
+    const snapshot = {
+      '0_0:npc:0': {
+        health: { current: 80, max: 100, dead: false },
+        stamina: { current: 40, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    }
+    const registry = createNpcStateRegistry(snapshot)
+    const state = registry.getOrCreate('0_0:npc:0', 0, { maxHp: 100, maxStamina: 130, maxVigor: 100 })
+    expect(state.stamina.max).toBe(130)
+    expect(state.stamina.current).toBe(40)
+  })
+
   it('hydration of an already-known npc id ignores newly supplied maxima (plan 197 lifecycle continuity)', () => {
     const registry = createNpcStateRegistry()
     const first = registry.getOrCreate('0_0:npc:0', 0, { maxHp: 88, maxStamina: 77, maxVigor: 66 })

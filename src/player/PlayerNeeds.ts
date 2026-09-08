@@ -1,3 +1,7 @@
+import {
+  resolveEnduranceStaminaRecoveryMultiplier,
+  resolveMaxStaminaFromEndurance,
+} from '../shared/enduranceStamina'
 import { healHealth, type HealthState } from '../shared/HealthState'
 import { createHungerState, drainHunger, type HungerState, isStarving, restoreHunger } from '../shared/HungerState'
 import { createStaminaState, drainStamina, restoreStamina, type StaminaState } from '../shared/StaminaState'
@@ -36,7 +40,7 @@ export type PlayerNeeds = {
   dehydrationDuration: number
 }
 
-export const PLAYER_MAX_STAMINA = 100
+export const PLAYER_MAX_STAMINA = resolveMaxStaminaFromEndurance(0.5)
 export const PLAYER_MAX_VIGOR = 100
 export const PLAYER_MAX_HUNGER = 100
 export const PLAYER_MAX_THIRST = 100
@@ -205,9 +209,9 @@ function ratePerSecond(amount: number, gameDays: number, dayLengthSec: number): 
  *  never partially cancels that same-tick damage. */
 const HP_REGEN_PER_SEC = 0.3
 
-export function createPlayerNeeds(): PlayerNeeds {
+export function createPlayerNeeds(effectiveEndurance = 0.5): PlayerNeeds {
   return {
-    stamina: createStaminaState(PLAYER_MAX_STAMINA),
+    stamina: createStaminaState(resolveMaxStaminaFromEndurance(effectiveEndurance)),
     vigor: createVigorState(PLAYER_MAX_VIGOR),
     hunger: createHungerState(PLAYER_MAX_HUNGER),
     thirst: createThirstState(PLAYER_MAX_THIRST),
@@ -290,9 +294,20 @@ export function tickPlayerNeeds(needs: PlayerNeeds, dt: number, dayLengthSec: nu
  *  positive balance. `false` here never itself drains Stamina; it only
  *  withholds the regen this tick would otherwise grant. Defaults to `true`
  *  so every other caller (riding, downed, resting) is unaffected. */
-export function tickPlayerStamina(stamina: StaminaState, dt: number, sprinting: boolean, recoveryAllowed = true): void {
+export function tickPlayerStamina(
+  stamina: StaminaState,
+  dt: number,
+  sprinting: boolean,
+  recoveryAllowed = true,
+  effectiveEndurance = 0.5,
+): void {
   if (sprinting) drainStamina(stamina, STAMINA_SPRINT_DRAIN_PER_SEC * dt)
-  else if (recoveryAllowed) restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
+  else if (recoveryAllowed) {
+    restoreStamina(
+      stamina,
+      STAMINA_REGEN_PER_SEC * resolveEnduranceStaminaRecoveryMultiplier(effectiveEndurance) * dt,
+    )
+  }
 }
 
 /** Stamina cost of riding a mount (plan fauna-003 §9) — far lighter than
@@ -308,9 +323,20 @@ const RIDING_STAMINA_DRAIN_PER_SEC = 3
  *  the moving/drain branch — the stationary regeneration branch is
  *  untouched, so a mounted-but-idle player still recovers at the normal
  *  rate regardless of skill. */
-export function tickRidingStamina(stamina: StaminaState, dt: number, mountMoving: boolean, drainMultiplier = 1): void {
+export function tickRidingStamina(
+  stamina: StaminaState,
+  dt: number,
+  mountMoving: boolean,
+  drainMultiplier = 1,
+  effectiveEndurance = 0.5,
+): void {
   if (mountMoving) drainStamina(stamina, RIDING_STAMINA_DRAIN_PER_SEC * drainMultiplier * dt)
-  else restoreStamina(stamina, STAMINA_REGEN_PER_SEC * dt)
+  else {
+    restoreStamina(
+      stamina,
+      STAMINA_REGEN_PER_SEC * resolveEnduranceStaminaRecoveryMultiplier(effectiveEndurance) * dt,
+    )
+  }
 }
 
 /** Extra Vigor cost for actually moving, on top of the idle baseline

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { generatePhysicalProfile, resolveHumanEnduranceProfile } from '../settlement/npcPhysicalProfile'
+import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
 import { createHealthState, damageHealth, isAlive } from '../shared/HealthState'
 import {
   createStaminaState,
@@ -106,5 +108,36 @@ describe('NPC stamina rebalance contract (walk vs. work)', () => {
     restoreStamina(stamina, 100 * STAMINA_EXHAUSTED_RESUME_RATIO)
     expect(getStaminaRatio(stamina) >= STAMINA_EXHAUSTED_RESUME_RATIO).toBe(true)
     expect(getStaminaRatio(stamina)).toBeLessThan(1)
+  })
+})
+
+describe('NPC Endurance-driven stamina recovery (plan npc-021)', () => {
+  const BASE_REST_RATE = 6
+  const ENERGETIC_REST_MULT = 1.5
+
+  function npcRestRate(endurance: number, energetic: boolean): number {
+    return BASE_REST_RATE
+      * resolveEnduranceStaminaRecoveryMultiplier(endurance)
+      * (energetic ? ENERGETIC_REST_MULT : 1)
+  }
+
+  it('keeps neutral Endurance base recovery at 6/sec', () => {
+    expect(npcRestRate(0.5, false)).toBeCloseTo(6, 10)
+  })
+
+  it('scales Endurance 0.6 recovery to 6.36/sec before energetic', () => {
+    expect(npcRestRate(0.6, false)).toBeCloseTo(6.36, 10)
+  })
+
+  it('composes energetic independently with Endurance recovery', () => {
+    expect(npcRestRate(0.6, true)).toBeCloseTo(6.36 * ENERGETIC_REST_MULT, 10)
+  })
+
+  it('does not create an unbounded work/rest loop for energetic + high Endurance', () => {
+    const profile = generatePhysicalProfile(7, 'male', 30)
+    const endurance = resolveHumanEnduranceProfile(profile)
+    const restRate = npcRestRate(endurance, true)
+    const heavyWorkRate = 3
+    expect(restRate).toBeLessThan(heavyWorkRate * 10)
   })
 })

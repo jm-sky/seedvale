@@ -1,7 +1,7 @@
 # Plan: Endurance-driven stamina capacity and recovery
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `done` ✅ — implemented + technically verified (`tsc`/lint/test). Browser/manual verification not performed by the agent.
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-019~~

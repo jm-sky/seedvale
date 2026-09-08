@@ -188,7 +188,7 @@ export function createMountActions(
     if (seat) player.setMountedTransform(seat.x, seat.y, seat.z, seat.yaw)
 
     const moving = moved > 1e-5
-    tickRidingStamina(player.needs.stamina, dt, moving, ridingStaminaDrainMultiplier(ridingValue))
+    tickRidingStamina(player.needs.stamina, dt, moving, ridingStaminaDrainMultiplier(ridingValue), player.attributes.endurance)
 
     checkStability(dt, mount, moving, mount.isSprinting())
   }

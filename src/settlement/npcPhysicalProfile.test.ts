@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
 import {
   ageMultiplierForAge,
   agilityAgePotentialForAge,
@@ -7,6 +8,7 @@ import {
   NPC_AGE_MAX,
   NPC_AGE_MIN,
   resolveHumanAgilityProfile,
+  resolveHumanEnduranceProfile,
   resolveHumanStrengthProfile,
   strengthAgePotentialForAge,
 } from './npcPhysicalProfile'
@@ -128,34 +130,56 @@ describe('generatePhysicalProfile', () => {
     }
   })
 
-  it('applies the exact sex modifiers at prime age with neutral variation', () => {
-    // Neutral variation isn't directly settable, so instead assert the ratio
-    // between average male/female output over many seeds converges near the
-    // plan's documented modifiers (1.10/0.90 HP+stamina, 1.00/1.05 vigor).
+  it('derives maxStamina only from resolved Endurance (plan npc-021)', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const profile = generatePhysicalProfile(seed, seed % 2 === 0 ? 'male' : 'female', 20 + (seed % 60))
+      const endurance = resolveHumanEnduranceProfile(profile)
+      expect(profile.maxStamina).toBeCloseTo(resolveMaxStaminaFromEndurance(endurance), 10)
+    }
+  })
+
+  it('does not apply legacy sex/age/stamina-variation multipliers downstream of Endurance', () => {
+    const profile = generatePhysicalProfile(42, 'male', 30)
+    const legacyDownstream = profile.maxStamina
+      * (profile.sex === 'male' ? 1.10 : 0.90)
+      * profile.ageMultiplier
+      * profile.staminaVariation
+    expect(profile.maxStamina).not.toBeCloseTo(legacyDownstream, 1)
+  })
+
+  it('applies the exact sex modifiers to HP/Vigor at prime age with neutral variation', () => {
     const N = 400
-    let femaleHp = 0, femaleStamina = 0, femaleVigor = 0, maleHp = 0, maleStamina = 0, maleVigor = 0
+    let femaleHp = 0, femaleVigor = 0, maleHp = 0, maleVigor = 0
     for (let seed = 0; seed < N; seed++) {
       const m = generatePhysicalProfile(seed, 'male', 30)
       const f = generatePhysicalProfile(seed + 1_000_000, 'female', 30)
       maleHp += m.maxHp
       femaleHp += f.maxHp
-      maleStamina += m.maxStamina
-      femaleStamina += f.maxStamina
       maleVigor += m.maxVigor
       femaleVigor += f.maxVigor
     }
     expect(maleHp / femaleHp).toBeCloseTo(1.10 / 0.90, 1)
-    expect(maleStamina / femaleStamina).toBeCloseTo(1.10 / 0.90, 1)
     expect(maleVigor / femaleVigor).toBeCloseTo(1.00 / 1.05, 1)
   })
 
-  it('produces valid, positive integer maxima across the full age range', () => {
+  it('keeps male/female Endurance population bias upstream without a second max-Stamina sex multiplier', () => {
+    const N = 400
+    let maleSum = 0
+    let femaleSum = 0
+    for (let seed = 0; seed < N; seed++) {
+      maleSum += resolveHumanEnduranceProfile(generatePhysicalProfile(seed, 'male', 30))
+      femaleSum += resolveHumanEnduranceProfile(generatePhysicalProfile(seed + 1_000_000, 'female', 30))
+    }
+    expect(maleSum / N).toBeGreaterThan(femaleSum / N)
+  })
+
+  it('produces valid, positive maxima across the full age range', () => {
     for (let age = 0; age <= 100; age += 5) {
       const p = generatePhysicalProfile(age * 7 + 1, age % 2 === 0 ? 'male' : 'female', age)
-      for (const max of [p.maxHp, p.maxStamina, p.maxVigor]) {
-        expect(Number.isInteger(max)).toBe(true)
-        expect(max).toBeGreaterThan(0)
-      }
+      expect(Number.isInteger(p.maxHp)).toBe(true)
+      expect(Number.isInteger(p.maxVigor)).toBe(true)
+      expect(p.maxStamina).toBeGreaterThan(0)
+      expect(p.maxStamina).toBeLessThanOrEqual(130)
     }
   })
 
@@ -229,6 +253,30 @@ describe('base SPEA attributes (plan npc-019)', () => {
       expect(sum / N).toBeGreaterThan(0.45)
       expect(sum / N).toBeLessThan(0.55)
       expect(withinOrdinary / N).toBeGreaterThan(0.9)
+    })
+  })
+
+  describe('resolveHumanEnduranceProfile (plan npc-021)', () => {
+    it('preserves 0..1 bounds across the full age range', () => {
+      for (let age = 0; age <= 100; age += 5) {
+        const profile = generatePhysicalProfile(age * 3 + 1, age % 2 === 0 ? 'male' : 'female', age)
+        const endurance = resolveHumanEnduranceProfile(profile)
+        expect(endurance).toBeGreaterThanOrEqual(0)
+        expect(endurance).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('maps neutral base Endurance 0.5 at prime age to legacy-neutral max Stamina 100', () => {
+      const profile = generatePhysicalProfile(1, 'male', 30)
+      const neutralProfile = {
+        ...profile,
+        attributes: { ...profile.attributes, endurance: 0.5 },
+        ageMultiplier: 1,
+        staminaVariation: 1,
+        sex: 'male' as const,
+      }
+      expect(resolveHumanEnduranceProfile(neutralProfile)).toBeCloseTo(0.58, 5)
+      expect(resolveMaxStaminaFromEndurance(0.5)).toBe(100)
     })
   })
 

@@ -8,9 +8,10 @@
  *  movement, species, UI, age, sex, injuries, illness or temporary
  *  conditions; those live in per-consumer profile/effective resolvers (see
  *  `settlement/npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile`/
- *  `resolveHumanAgilityProfile` and `combat/meleeStrength.ts`/
- *  `combat/meleeAgility.ts`, plus `player/physicalWorkStrength.ts` and
- *  `player/humanCarryCapacity.ts`).
+ *  `resolveHumanAgilityProfile`/`resolveHumanEnduranceProfile` and
+ *  `combat/meleeStrength.ts`/`combat/meleeAgility.ts`, plus
+ *  `player/physicalWorkStrength.ts`, `player/humanCarryCapacity.ts` and
+ *  `shared/enduranceStamina.ts`.
  * @owns PhysicalAttributes
  */
 

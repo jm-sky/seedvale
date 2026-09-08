@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
 import { createHealthState } from '../shared/HealthState'
 import { HUNGER_STARVING_THRESHOLD } from '../shared/HungerState'
 import { THIRST_DEHYDRATED_THRESHOLD } from '../shared/ThirstState'
@@ -12,6 +13,7 @@ import {
   isTakingDeprivationDamage,
   physicalEffortStaminaCostPerSec,
   physicalEffortVigorCostPerSec,
+  PLAYER_MAX_STAMINA,
   restoreNeedsFromSleep,
   restorePersistedNeeds,
   thirstSevereDurationSec,
@@ -363,5 +365,39 @@ describe('restorePersistedNeeds (plan 200 — save continuity)', () => {
     })
     expect(needs.starvationDuration).toBe(0)
     expect(needs.dehydrationDuration).toBe(0)
+  })
+})
+
+describe('Endurance-driven Stamina capacity and recovery (plan npc-021)', () => {
+  it('defaults neutral Endurance 0.5 to legacy max Stamina 100', () => {
+    const needs = createPlayerNeeds()
+    expect(needs.stamina.max).toBe(PLAYER_MAX_STAMINA)
+    expect(needs.stamina.max).toBe(100)
+  })
+
+  it('starting Endurance 0.6 resolves to max Stamina 106', () => {
+    expect(createPlayerNeeds(0.6).stamina.max).toBeCloseTo(106, 10)
+  })
+
+  it('neutral recovery stays 12/sec at Endurance 0.5', () => {
+    const needs = createPlayerNeeds()
+    needs.stamina.current = 0
+    tickPlayerStamina(needs.stamina, 1, false, true, 0.5)
+    expect(needs.stamina.current).toBeCloseTo(12, 10)
+  })
+
+  it('starting Endurance 0.6 recovery becomes 12.72/sec', () => {
+    const needs = createPlayerNeeds(0.6)
+    needs.stamina.current = 0
+    tickPlayerStamina(needs.stamina, 1, false, true, 0.6)
+    expect(needs.stamina.current).toBeCloseTo(12 * resolveEnduranceStaminaRecoveryMultiplier(0.6), 10)
+  })
+
+  it('does not change sprint drain or physical-effort stamina costs', () => {
+    const needs = createPlayerNeeds(0.6)
+    needs.stamina.current = 100
+    tickPlayerStamina(needs.stamina, 1, true, true, 0.6)
+    expect(needs.stamina.current).toBe(80)
+    expect(physicalEffortStaminaCostPerSec('moderate')).toBe(6)
   })
 })

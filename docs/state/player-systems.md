@@ -20,11 +20,20 @@ Strength currently has three explicit consumers, each with its own mapping (neut
 - physical work speed — `player/physicalWorkStrength.ts`, applied at explicit timed actions in `app/actions/groundActions.ts` (dig, pickaxe dig, level, mound, tree chop, ore mine). `BusyAction` itself stays attribute-agnostic. Stamina/Vigor still drain at the existing per-second rates, so a shorter action spends less total effort without a second Strength discount. Fishing, planting, cooking, fire lighting and compressed/time-skip construction stay Strength-neutral;
 - human body carry capacity — see [Carry capacity](#carry-capacity-plan-186--npc-020) below.
 
-Agility has one melee-recovery consumer ([combat.md](./combat.md#melee)). Perception and Endurance have no consumer yet.
+Agility has one melee-recovery consumer ([combat.md](./combat.md#melee)).
+
+Endurance has two Stamina consumers (plan npc-021), both via `src/shared/enduranceStamina.ts` — neutral at `Endurance = 0.5`, unchanged from the old `100` max / `12/sec` recovery baseline:
+
+- max Stamina — `resolveMaxStaminaFromEndurance()` (`70 + endurance × 60`; starting `Endurance 0.6` → `106`);
+- Stamina recovery multiplier — `resolveEnduranceStaminaRecoveryMultiplier()` (`0.7 + endurance × 0.6`; starting recovery → `12.72/sec` from the existing `12/sec` base).
+
+Endurance does **not** reduce activity Stamina costs (sprint, melee, ranged, physical `BusyAction`, deprivation penalties). Vigor remains a separate longer-term budget.
+
+Perception has no consumer yet.
 
 ## Survival needs
 
-`PlayerController.needs` (`src/player/PlayerNeeds.ts`, plan 106) holds four pools: stamina, vigor, hunger, thirst. Sprint is gated on stamina. Vigor drains passively at idle/rest and faster with movement (`tickPlayerMovementVigor`). Hunger/thirst below a critical threshold (20% of the pool) accrue a starvation/dehydration duration (reset once the pool climbs back above critical); a growing duration first drains vigor/stamina faster, and only after a "severe" duration window does slow HP loss begin (`playerDamage.ts`'s `tickPlayerStarvationDamage`) — this reuses the existing player damage/downed path, it is not a second death system. During an active time-skip, world time scales by the day/night time multiplier instead of freezing, so needs and their HUD bars progress visibly through a rest/sleep skip.
+`PlayerController.needs` (`src/player/PlayerNeeds.ts`, plan 106) holds four pools: stamina, vigor, hunger, thirst. `createPlayerNeeds()` receives the Player's effective Endurance (from `PLAYER_STARTING_ATTRIBUTES`, currently `0.6`) to derive max Stamina; `tickPlayerStamina()`/`tickRidingStamina()` apply the Endurance recovery multiplier only while normal recovery is already allowed — sprint drain, physical-work channels, deprivation penalties and recovery-suppression conditions are unchanged. Sprint is gated on stamina. Vigor drains passively at idle/rest and faster with movement (`tickPlayerMovementVigor`). Hunger/thirst below a critical threshold (20% of the pool) accrue a starvation/dehydration duration (reset once the pool climbs back above critical); a growing duration first drains vigor/stamina faster, and only after a "severe" duration window does slow HP loss begin (`playerDamage.ts`'s `tickPlayerStarvationDamage`) — this reuses the existing player damage/downed path, it is not a second death system. During an active time-skip, world time scales by the day/night time multiplier instead of freezing, so needs and their HUD bars progress visibly through a rest/sleep skip.
 
 Passive HP regen (`PlayerNeeds.ts`'s `tickHealthRegen`, plan 153) is slow and suppressed while starving/dehydrated; herbs/bandages heal faster.
 

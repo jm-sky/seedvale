@@ -319,7 +319,7 @@ export class PlayerController {
     this.isCapsule = isCapsule
     this.health = createHealthState(PLAYER_MAX_HP)
     this.attributes = PLAYER_STARTING_ATTRIBUTES
-    this.needs = createPlayerNeeds()
+    this.needs = createPlayerNeeds(this.attributes.endurance)
     this.skills = createPlayerSkills()
 
     this.mesh = new THREE.Group()
@@ -810,14 +810,14 @@ export class PlayerController {
       return
     }
     if (this.downed) {
-      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed)
+      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed, this.attributes.endurance)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
       return
     }
     if (this.pose !== 'stand') {
-      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed)
+      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed, this.attributes.endurance)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
@@ -836,7 +836,7 @@ export class PlayerController {
     if (this.encumbranceBlocked) this.wish.set(0, 0, 0)
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
-    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed)
+    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, this.attributes.endurance)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {

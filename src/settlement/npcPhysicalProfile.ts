@@ -1,5 +1,6 @@
 import type { NpcGender } from '../ai/characters'
 import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
+import { resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
 import { createSeededRandom } from '../world/parseSeed'
 
 /** Plan npc-001/npc-019/npc-022 — deterministic NPC physical-profile
@@ -279,6 +280,11 @@ export function resolveHumanAgilityProfile(profile: PhysicalProfile): number {
  *  both sides). */
 const SEX_STRENGTH_SHIFT: Record<NpcGender, number> = { male: 0.08, female: -0.08 }
 
+/** Practical v1 human sex calibration for Endurance (plan npc-021) — mirrors
+ *  the legacy `SEX_MODIFIERS.stamina` population bias, migrated upstream into
+ *  the human Endurance profile instead of a downstream max-Stamina multiplier. */
+const SEX_ENDURANCE_SHIFT: Record<NpcGender, number> = { male: 0.08, female: -0.08 }
+
 /**
  * Resolves an NPC's current human Strength profile (plan npc-019 §4-5):
  * individual base SPEA roll + sex calibration shift + age/development
@@ -292,12 +298,23 @@ export function resolveHumanStrengthProfile(profile: PhysicalProfile): number {
   return clamp01(sexShifted * strengthAgePotentialForAge(profile.age))
 }
 
+/**
+ * Resolves an NPC's current human Endurance profile (plan npc-021): individual
+ * base SPEA roll + sex calibration shift + legacy age/individual stamina
+ * inputs migrated upstream (`ageMultiplier`, `staminaVariation`). This is
+ * "stable current base Endurance", not a general `effectiveEndurance()` —
+ * temporary conditions are a later layer and are not applied here.
+ */
+export function resolveHumanEnduranceProfile(profile: PhysicalProfile): number {
+  const sexShifted = profile.attributes.endurance + SEX_ENDURANCE_SHIFT[profile.sex]
+  return clamp01(sexShifted * profile.ageMultiplier * profile.staminaVariation)
+}
+
 /** Adult baseline scale (plan §4) — kept in this module rather than importing
  *  `npcState.ts`'s `MAX_HP`/`MAX_STAMINA`/`ai/npcVigor.ts`'s `MAX_VIGOR` so
  *  this module stays a standalone, dependency-free generator; those runtime
  *  constants and these baselines are intentionally the same numbers. */
 const BASE_HP = 100
-const BASE_STAMINA = 100
 const BASE_VIGOR = 100
 
 /** Final maxima never round/clamp down to 0 or below — an infant's HP is
@@ -320,16 +337,20 @@ export type PhysicalProfile = {
   readonly maxStamina: number
   readonly maxVigor: number
   /** Base SPEA (plan npc-019 §1/§3) — stable individual variation only, sex/
-   *  age-agnostic. `resolveHumanStrengthProfile()` and
-   *  `resolveHumanAgilityProfile()` resolve the melee-facing human Strength/
-   *  Agility profiles from this plus `sex`/`age`; Perception/Endurance are
-   *  data-only until a later plan gives them a consumer. */
+   *  age-agnostic. `resolveHumanStrengthProfile()`,
+   *  `resolveHumanAgilityProfile()` and `resolveHumanEnduranceProfile()`
+   *  resolve the human Strength/Agility/Endurance profiles from this plus
+   *  `sex`/`age`/legacy variation inputs; Perception is data-only until a
+   *  later plan gives it a consumer. */
   readonly attributes: PhysicalAttributes
 }
 
 /**
  * Deterministic physical-profile generation (plan §5-6):
- * `finalMax = adultBase × sexModifier × ageModifier × individualVariation`.
+ * HP/Vigor: `finalMax = adultBase × sexModifier × ageModifier × variation`.
+ * Stamina max (plan npc-021): `resolveMaxStaminaFromEndurance(
+ * resolveHumanEnduranceProfile(...))` — legacy sex/age/stamina-variation inputs
+ * shape Endurance upstream, not final max Stamina downstream.
  *
  * `seed` must come from the caller's own deterministic world/family inputs
  * (settlement seed + member index, or a family-generation seed) — never
@@ -348,8 +369,9 @@ export function generatePhysicalProfile(seed: number, sex: NpcGender, age: numbe
   const hpVariation = sampleVariation(createSeededRandom(seed ^ 0x48505f56))
   const staminaVariation = sampleVariation(createSeededRandom(seed ^ 0x5354414d))
   const vigorVariation = sampleVariation(createSeededRandom(seed ^ 0x56494752))
+  const attributes = generateBaseAttributes(seed)
 
-  return {
+  const profileForEndurance: PhysicalProfile = {
     sex,
     age: clampedAge,
     lifeStage: lifeStageForAge(clampedAge),
@@ -357,9 +379,16 @@ export function generatePhysicalProfile(seed: number, sex: NpcGender, age: numbe
     hpVariation,
     staminaVariation,
     vigorVariation,
+    maxHp: 0,
+    maxStamina: 0,
+    maxVigor: 0,
+    attributes,
+  }
+
+  return {
+    ...profileForEndurance,
     maxHp: finalMax(BASE_HP * sexModifier.hp * ageMultiplier * hpVariation),
-    maxStamina: finalMax(BASE_STAMINA * sexModifier.stamina * ageMultiplier * staminaVariation),
+    maxStamina: resolveMaxStaminaFromEndurance(resolveHumanEnduranceProfile(profileForEndurance)),
     maxVigor: finalMax(BASE_VIGOR * sexModifier.vigor * ageMultiplier * vigorVariation),
-    attributes: generateBaseAttributes(seed),
   }
 }
