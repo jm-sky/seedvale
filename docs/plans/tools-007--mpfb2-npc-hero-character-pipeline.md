@@ -1,7 +1,7 @@
 # Plan: MPFB2 NPC / Hero Character Pipeline
 
 **Created:** 2026-08-24  
-**Status:** `planned` 📋  
+**Status:** `draft` 📝  
 **Type:** infrastructure  
 **Priority:** high · **Effort:** L  
 **Depends on:** none  
