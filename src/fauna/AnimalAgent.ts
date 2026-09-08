@@ -33,7 +33,6 @@ import {
   type ScoredAction,
 } from '../simulation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
-import { shoreProbeHits } from '../terrain/waterBodyKind'
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
 import { recordBloodHit } from '../world/bloodTraces'
@@ -90,6 +89,7 @@ import {
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
+import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
 import { resolveDogBarkStimulus, resolveDogGuardTarget, resolveDogPestTarget } from './dogGuard'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
@@ -142,6 +142,11 @@ export * from './animalDefs'
  *  the same reason. `foodWaterTargeting.test.ts` is redirected to import
  *  from the new module directly. */
 export * from './animalForaging'
+/** Trip state machine + shared radial-probe primitive moved to
+ *  `./animalRoaming` (plan fauna-017 step 7) — re-exported wholesale for the
+ *  same reason. `animalRoamingTrips.test.ts` is redirected to import from
+ *  the new module (and `./animalDefs` for `ANIMAL_DEFS`) directly. */
+export * from './animalRoaming'
 
 /** One movement mode's stuck-watchdog + in-flight `findPath()` route (plan
  *  npc-006) — see `AnimalAgent.chaseNav`/`fleeNav`'s doc for why chase and
@@ -285,10 +290,6 @@ const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
  *  fauna-016 §5) — looser than `wander()`'s 1.2 since a shoreline point is
  *  probe-selected, not a precise walkable target. */
 const TRIP_ARRIVAL_RADIUS = 2
-/** Bounded radial-probe attempt budget for a water-trip destination search
- *  (plan fauna-016 §5/§10) — only spent once, when a trip actually starts,
- *  same idiom as `WATER_SEARCH_ATTEMPTS` for the needs-driven search. */
-const WATER_TRIP_SEARCH_ATTEMPTS = 16
 /** Max distance (m) from a dog's own `home` it will chase a nearby rat (plan
  *  fauna-016 §9) — tighter than any guard-target radius, since this is idle
  *  yard behaviour, not household defense. */
@@ -449,47 +450,6 @@ export type AnimalSaveState = {
    *  individual's corpse lifecycle (linger threshold, harvested-remains vs.
    *  natural-decay presentation) resume exactly where it left off. */
   corpse: { timeSinceDeath: number, meatHarvested: boolean } | null
-}
-
-/** A committed "trip" beyond normal local wander (plan fauna-016 §4) —
- *  `destination` is chosen once (`maybeStartWaterTrip`) and retained for the
- *  whole trip; `wander()`'s own per-tick retargeting never touches it.
- *  `'water'` is the only trip kind so far, but the shape (destination + phase
- *  + committed state) is meant to generalize to a later trip kind without a
- *  second movement system. */
-type AnimalTripKind = 'water'
-type AnimalTripPhase = 'traveling' | 'staying' | 'returning'
-type AnimalTrip = {
-  kind: AnimalTripKind
-  destination: THREE.Vector3
-  phase: AnimalTripPhase
-  /** Countdown (sec) while `phase === 'staying'`; unused otherwise. */
-  stayRemainingSec: number
-}
-
-/** FNV-1a string hash — same local-per-module idiom as e.g.
- *  `world/fishing.ts`'s `hashString` (deliberately duplicated rather than
- *  shared, matching that convention). Used only to phase-offset a trip's day
- *  bucket per animal below. */
-function hashString(value: string): number {
-  let h = 2166136261
-  for (let i = 0; i < value.length; i++) {
-    h ^= value.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-/** Deterministic day-bucket index for `animalId`'s next trip opportunity
- *  (plan fauna-016 §5/§10) — advances once per `cooldownDays`, phase-offset
- *  per animal (a stable hash of its own id) so a whole population doesn't
- *  become "due" on the same day. Pure/testable; `AnimalAgent` only commits to
- *  a new trip when this bucket differs from the last one it acted on
- *  (`maybeStartWaterTrip`), never by rerolling every tick. */
-export function tripDayBucket(animalId: string, worldDays: number, cooldownDays: number): number {
-  if (cooldownDays <= 0) return 0
-  const phase = (hashString(animalId) % 1000) / 1000
-  return Math.floor(worldDays / cooldownDays + phase)
 }
 
 type EnvironmentSense = {
@@ -3293,7 +3253,15 @@ export class AnimalAgent {
     const bucket = tripDayBucket(this.animalId, this.tickNowDays, config.cooldownDays)
     if (bucket === this.lastWaterTripBucket) return false
     this.lastWaterTripBucket = bucket
-    const destination = this.findWaterTripDestination(config.searchRadius)
+    const destination = findWaterTripDestination({
+      home: this.home,
+      searchRadius: config.searchRadius,
+      sociability: this.def.sociability,
+      sampleHeight: this.sampleHeight,
+      waterLevel: this.waterLevel,
+      isWalkable: (x, z) => this.isWalkable(x, z),
+      isNearVillage: (pos) => this.isNearVillage(pos),
+    })
     if (!destination) return false
     this.trip = {
       kind: 'water',
@@ -3329,35 +3297,6 @@ export class AnimalAgent {
     this.sourceDest.set(this.home.x, 0, this.home.z)
     this.steerToward(this.sourceDest, this.walkSpeedNow(), dt)
     if (this.arrived(this.sourceDest, TRIP_ARRIVAL_RADIUS)) this.trip = null
-  }
-
-  /** Bounded radial-probe search for a reachable water-trip destination
-   *  (plan fauna-016 §5/§6) — same shoreline-probe technique as
-   *  `findWaterTarget()`, but centered on `home` (stable regardless of where
-   *  the trip happens to start) and allowed out to `searchRadius`,
-   *  deliberately past `ROAM_RADIUS`/`wanderRadius`. Only ever called once,
-   *  when a trip is starting — never scans per-frame or across all loaded
-   *  water features. */
-  private findWaterTripDestination(searchRadius: number): { x: number, z: number } | null {
-    let best: { x: number, z: number } | null = null
-    let bestScore = -Infinity
-    for (let attempt = 0; attempt < WATER_TRIP_SEARCH_ATTEMPTS; attempt++) {
-      const angle = Math.random() * Math.PI * 2
-      const dist = Math.random() * searchRadius
-      const x = this.home.x + Math.cos(angle) * dist
-      const z = this.home.z + Math.sin(angle) * dist
-      if (!this.isWalkable(x, z)) continue
-      const hits = shoreProbeHits(x, z, this.sampleHeight, this.waterLevel)
-      if (hits === 0) continue
-      if (this.def.sociability === 'wild' && this.isNearVillage({ x, z })) continue
-      const d = Math.hypot(x - this.home.x, z - this.home.z)
-      const score = hits * 10 - d
-      if (score > bestScore) {
-        bestScore = score
-        best = { x, z }
-      }
-    }
-    return best
   }
 
   /** hunger/thirst above `NEED_ELEVATED_THRESHOLD` widen the wander radius

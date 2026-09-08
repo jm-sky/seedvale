@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMAL_DEFS, tripDayBucket } from './AnimalAgent'
+import { ANIMAL_DEFS } from './animalDefs'
+import { tripDayBucket } from './animalRoaming'
 
 describe('AnimalDef.roaming (plan fauna-016 §3 — species-specific roaming range)', () => {
   it('gives small prey a tighter roaming band than large prey/predators', () => {

@@ -7,6 +7,7 @@ import type { CorpsePhase } from './animalCorpse'
 import type { AnimalDef, AnimalRole, ScavengingConfig } from './animalDefs'
 import { shoreProbeHits } from '../terrain/waterBodyKind'
 import { type AnimalLifeState, consumeFood, drinkWater } from './AnimalLife'
+import { probeBestPointNear } from './animalRoaming'
 
 /**
  * @domain fauna
@@ -240,26 +241,23 @@ export function findTroughTarget(ctx: ForagingContext): SourceTarget | null {
 export function findWaterTarget(ctx: ForagingContext): SourceTarget | null {
   const trough = findTroughTarget(ctx)
   if (trough) return trough
-  let best: SourceTarget | null = null
-  let bestScore = -Infinity
-  for (let attempt = 0; attempt < WATER_SEARCH_ATTEMPTS; attempt++) {
-    const angle = Math.random() * Math.PI * 2
-    const dist = Math.random() * WATER_SEARCH_RADIUS
-    const x = ctx.x + Math.cos(angle) * dist
-    const z = ctx.z + Math.sin(angle) * dist
-    if (!ctx.isWalkable(x, z)) continue
-    const hits = shoreProbeHits(x, z, ctx.sampleHeight, ctx.waterLevel)
-    if (hits === 0) continue
-    if (ctx.def.sociability === 'wild' && ctx.isNearVillage({ x, z })) continue
-    if (Math.hypot(x - ctx.home.x, z - ctx.home.z) > ctx.roamRadius) continue
-    const d = Math.hypot(x - ctx.x, z - ctx.z)
-    const score = hits * 10 - d
-    if (score > bestScore) {
-      bestScore = score
-      best = { kind: 'water', x, z }
-    }
-  }
-  return best
+  const best = probeBestPointNear(
+    { x: ctx.x, z: ctx.z },
+    WATER_SEARCH_RADIUS,
+    WATER_SEARCH_ATTEMPTS,
+    (x, z) => {
+      if (!ctx.isWalkable(x, z)) return false
+      if (shoreProbeHits(x, z, ctx.sampleHeight, ctx.waterLevel) === 0) return false
+      if (ctx.def.sociability === 'wild' && ctx.isNearVillage({ x, z })) return false
+      return Math.hypot(x - ctx.home.x, z - ctx.home.z) <= ctx.roamRadius
+    },
+    (x, z) => {
+      const hits = shoreProbeHits(x, z, ctx.sampleHeight, ctx.waterLevel)
+      const d = Math.hypot(x - ctx.x, z - ctx.z)
+      return hits * 10 - d
+    },
+  )
+  return best ? { kind: 'water', x: best.x, z: best.z } : null
 }
 
 /** Habitat-biased forage spot for wild prey/livestock — uses
@@ -267,25 +265,22 @@ export function findWaterTarget(ctx: ForagingContext): SourceTarget | null {
  *  falls back to distance-only scoring when it isn't (livestock, plan
  *  094 §2). */
 export function findForageTarget(ctx: ForagingContext): SourceTarget | null {
-  let best: SourceTarget | null = null
-  let bestScore = -Infinity
-  for (let attempt = 0; attempt < FOOD_SEARCH_ATTEMPTS; attempt++) {
-    const angle = Math.random() * Math.PI * 2
-    const dist = Math.random() * FOOD_SEARCH_RADIUS
-    const x = ctx.x + Math.cos(angle) * dist
-    const z = ctx.z + Math.sin(angle) * dist
-    if (!ctx.isWalkable(x, z)) continue
-    if (ctx.def.sociability === 'wild' && ctx.isNearVillage({ x, z })) continue
-    if (Math.hypot(x - ctx.home.x, z - ctx.home.z) > ctx.roamRadius) continue
-    const suitability = ctx.sampleForestFactor ? forageEdgeScore(ctx.sampleForestFactor(x, z)) : 0.5
-    const d = Math.hypot(x - ctx.x, z - ctx.z)
-    const score = suitability * 10 - d
-    if (score > bestScore) {
-      bestScore = score
-      best = { kind: 'forage', x, z }
-    }
-  }
-  return best
+  const best = probeBestPointNear(
+    { x: ctx.x, z: ctx.z },
+    FOOD_SEARCH_RADIUS,
+    FOOD_SEARCH_ATTEMPTS,
+    (x, z) => {
+      if (!ctx.isWalkable(x, z)) return false
+      if (ctx.def.sociability === 'wild' && ctx.isNearVillage({ x, z })) return false
+      return Math.hypot(x - ctx.home.x, z - ctx.home.z) <= ctx.roamRadius
+    },
+    (x, z) => {
+      const suitability = ctx.sampleForestFactor ? forageEdgeScore(ctx.sampleForestFactor(x, z)) : 0.5
+      const d = Math.hypot(x - ctx.x, z - ctx.z)
+      return suitability * 10 - d
+    },
+  )
+  return best ? { kind: 'forage', x: best.x, z: best.z } : null
 }
 
 /** Best-scoring reachable `GrassForagePatch` within `FOOD_SEARCH_RADIUS`
