@@ -163,8 +163,8 @@ function createGuaranteedSheep(
 
   const { visual, animations } = visualFor('sheep', animalId)
 
-  const agent = new AnimalAgent(
-    ANIMAL_DEFS.sheep,
+  const agent = new AnimalAgent({
+    def: ANIMAL_DEFS.sheep,
     animalId,
     sampleHeight,
     waterLevel,
@@ -174,15 +174,11 @@ function createGuaranteedSheep(
     z,
     visual,
     animations,
-    LIVESTOCK_WANDER_RADIUS,
-    undefined,
+    wanderRadius: LIVESTOCK_WANDER_RADIUS,
     ownerHouseId,
-    onAnimalDeath,
-    undefined,
-    undefined,
-    undefined,
+    onDeath: onAnimalDeath,
     household,
-  )
+  })
 
   const record = saved?.get(animalId)
 
@@ -514,8 +510,8 @@ export async function spawnLivestock(
       const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
       if (removed?.has(animalId)) continue
       const { visual, animations } = visualFor(kind, animalId)
-      const agent = new AnimalAgent(
-        ANIMAL_DEFS[kind],
+      const agent = new AnimalAgent({
+        def: ANIMAL_DEFS[kind],
         animalId,
         sampleHeight,
         waterLevel,
@@ -525,15 +521,11 @@ export async function spawnLivestock(
         z,
         visual,
         animations,
-        LIVESTOCK_WANDER_RADIUS,
-        undefined,
+        wanderRadius: LIVESTOCK_WANDER_RADIUS,
         ownerHouseId,
-        onAnimalDeath,
-        undefined,
-        undefined,
-        undefined,
+        onDeath: onAnimalDeath,
         household,
-      )
+      })
       // Persisted state is authoritative for an existing individual — a
       // kind/owner mismatch (e.g. a stale save from before a species-weight
       // change) is never trusted, and this deterministic spawn wins instead.
@@ -567,19 +559,19 @@ export async function spawnLivestock(
     const animalId = `merchant-horse-${settlementId}`
     if (!removed?.has(animalId)) {
       const { visual, animations } = visualFor('horse', animalId)
-      const agent = new AnimalAgent(
-        ANIMAL_DEFS.horse,
+      const agent = new AnimalAgent({
+        def: ANIMAL_DEFS.horse,
         animalId,
         sampleHeight,
         waterLevel,
         sampleLocalWater,
         collidersNear,
-        merchantHorseSpawn.x,
-        merchantHorseSpawn.z,
+        x: merchantHorseSpawn.x,
+        z: merchantHorseSpawn.z,
         visual,
         animations,
-        LIVESTOCK_WANDER_RADIUS,
-      )
+        wanderRadius: LIVESTOCK_WANDER_RADIUS,
+      })
       agent.mesh.rotation.y = merchantHorseSpawn.yaw
       const record = saved?.get(animalId)
       if (record && record.kind === 'horse') agent.hydrate(record)
@@ -656,11 +648,22 @@ export function tickSettlementLivestock(
   // branch of `isPlayerNoticed()` is structurally unreachable for these
   // kinds regardless of the value passed.
   for (const animal of livestock) {
-    animal.update(
-      dt, livestock, observerPos, dayFactor, 0, litFires, villages,
-      undefined, undefined, undefined, undefined, undefined, undefined, onAnimalVocalize, nowDays,
-      timeOfDay, grassForage, nearbyPredators, nearbySettlementNpcs, undefined, nearbyRats,
-    )
+    animal.update({
+      dt,
+      others: livestock,
+      observerPos,
+      dayFactor,
+      forestFactor: 0,
+      litFires,
+      villages,
+      onVocalize: onAnimalVocalize,
+      nowDays,
+      timeOfDay,
+      grassForage,
+      nearbyPredators,
+      nearbySettlementNpcs,
+      nearbyRats,
+    })
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the
     // animal only learns it was collected via the `onCollected` hook, never

@@ -146,22 +146,19 @@ export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
     const x = site.x + Math.cos(angle) * dist
     const z = site.z + Math.sin(angle) * dist
     const animalId = `rat-${deps.settlementId}-${nextRatIndex++}`
-    const agent = new AnimalAgent(
-      ANIMAL_DEFS.rat,
+    const agent = new AnimalAgent({
+      def: ANIMAL_DEFS.rat,
       animalId,
-      deps.sampleHeight,
-      deps.waterLevel,
-      deps.sampleLocalWater,
-      deps.collidersNear,
+      sampleHeight: deps.sampleHeight,
+      waterLevel: deps.waterLevel,
+      sampleLocalWater: deps.sampleLocalWater,
+      collidersNear: deps.collidersNear,
       x,
       z,
-      createRatModel(),
-      [],
-      undefined,
-      undefined,
-      undefined,
-      deps.onAnimalDeath,
-    )
+      visual: createRatModel(),
+      animations: [],
+      onDeath: deps.onAnimalDeath,
+    })
     deps.scene.add(agent.mesh)
     agents.push(agent)
   }
@@ -229,11 +226,17 @@ export function createSettlementRats(deps: SettlementRatsDeps): SettlementRats {
   return {
     update(ctx) {
       for (const rat of agents) {
-        rat.update(
-          ctx.dt, agents, ctx.observerPos, ctx.dayFactor, 0, ctx.litFires, ctx.villages,
-          undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-          ctx.nowDays, ctx.timeOfDay,
-        )
+        rat.update({
+          dt: ctx.dt,
+          others: agents,
+          observerPos: ctx.observerPos,
+          dayFactor: ctx.dayFactor,
+          forestFactor: 0,
+          litFires: ctx.litFires,
+          villages: ctx.villages,
+          nowDays: ctx.nowDays,
+          timeOfDay: ctx.timeOfDay,
+        })
       }
       if (agents.some((a) => a.readyToRemove())) {
         const kept: AnimalAgent[] = []

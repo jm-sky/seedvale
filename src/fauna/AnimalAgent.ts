@@ -932,6 +932,125 @@ export function pickRabidTarget<
   return best
 }
 
+/** Construction dependencies for `AnimalAgent` (plan fauna-017 step 2) —
+ *  same "flat object, optionality mirrors the old positional defaults"
+ *  shape as `CreateSettlementDeps`/`NpcAgentDeps`. Replaces the previous
+ *  19-parameter positional constructor; every call site converts
+ *  mechanically (same fields, same order, same defaults), so this is not a
+ *  new construction contract, just a named one. */
+export type AnimalAgentDeps = {
+  def: AnimalDef
+  animalId: string
+  sampleHeight: HeightSampler
+  waterLevel: number
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  collidersNear: ColliderSource
+  x: number
+  z: number
+  visual?: THREE.Object3D
+  animations?: THREE.AnimationClip[]
+  /** Explicit override (e.g. livestock's fixed `LIVESTOCK_WANDER_RADIUS`) —
+   *  wins over `def.roaming` when supplied (plan fauna-016 §3). `undefined`
+   *  (every wild ring-spawn caller) falls through to `def.roaming`, then to
+   *  `DEFAULT_WANDER_RADIUS`. */
+  wanderRadius?: readonly [number, number]
+  sampleForestFactor?: (x: number, z: number) => number
+  ownerHouseId?: string
+  onDeath?: (animalId: string) => void
+  herdId?: string
+  lifeStage?: AnimalLifeStage
+  motherId?: string
+  household?: Household | null
+  spawnPointId?: string
+}
+
+/** Per-tick inputs for `AnimalAgent.update()` (plan fauna-017 step 2) — same
+ *  flat-object conversion as `AnimalAgentDeps`, one field per former
+ *  positional parameter, same defaults. Replaces the previous 21-parameter
+ *  positional `update()`, which call sites reached past runs of 6-8
+ *  `undefined` placeholders (review §P3). */
+export type AnimalUpdateContext = {
+  dt: number
+  others: AnimalAgent[]
+  observerPos: THREE.Vector3
+  dayFactor: number
+  forestFactor: number
+  litFires: readonly { x: number, z: number }[]
+  villages?: readonly VillageInfo[]
+  nearbyHumanCount?: number
+  /** Optional fauna→human damage seam (plan 056). Absent → chase only. */
+  onHumanHit?: (damage: number, attackerX: number, attackerZ: number) => void
+  /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
+   *  so existing callers/tests that don't pass it keep prior behaviour. */
+  playerStealth?: PlayerStealthState
+  /** Bounded/local NPC candidates (plan 179 §5/§7) — only consulted for a
+   *  `frenzied` predator, and only once the player isn't the active
+   *  threat, so ordinary (non-frenzied) predator behaviour is unaffected.
+   *  Caller (`Fauna.update`) is responsible for keeping this small (loaded
+   *  settlements' NPCs), never a global scan. */
+  nearbyNpcs?: readonly NearbyNpcCandidate[]
+  /** Fauna→NPC damage seam (plan 179 §9/§11), mirrors `onHumanHit` but
+   *  keyed to the specific NPC id chosen as target. `attackerAnimalId` is
+   *  diagnostic-only (`?debug=1&debugNpcCombat=1` combat logging) — lets
+   *  the caller look this animal back up via `getAgents()` without this
+   *  callback needing to know about `AnimalAgent` itself. */
+  onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number, attackerAnimalId: string) => void
+  /** Aggression/alert audio hook (plan 188 §11) — fired once on the rising
+   *  edge of this predator committing to a human chase, not every frame. */
+  onAggro?: (kind: AnimalKind, x: number, z: number) => void
+  /** Spontaneous ambient vocalization hook (plan settlements-npcs-004 §1,
+   *  extended fauna-009 §1/§4) — fired at most once per tick, on the frame
+   *  `tickSpontaneousVocalizeCooldown` rolls a success. No-op for any kind
+   *  without a configured vocalization (cow/sheep/chicken/wolf/rooster). */
+  onVocalize?: (kind: AnimalKind, x: number, z: number) => void
+  /** `dayNight.elapsedDays` (plan fauna-002) — only meaningful for a
+   *  livestock kind with `def.production`; drives the day-anchor
+   *  production readiness check (`tickProduction`/`livestockProduction.ts`).
+   *  Defaults to 0 so existing wild-fauna/test callers that never touch
+   *  production are unaffected. */
+  nowDays?: number
+  /** `dayNight.timeOfDay` (plan fauna-009 §1/§4) — the raw world clock (not
+   *  just `dayFactor`), needed to weight wolf howl toward night/twilight and
+   *  rooster crow toward dawn (`spontaneousVocalizeTimeWeight`); `dayFactor`
+   *  alone can't tell dawn from dusk. Defaults to noon (full "day" weight)
+   *  so existing wild-fauna/test callers that don't pass it keep prior
+   *  behaviour for every kind without time-of-day weighting. */
+  timeOfDay?: number
+  /** Shared world-owned forage service (plan fauna-010 §3/§4) — queried by
+   *  `findDietTarget()` for a species with `def.diet.grass`, consumed
+   *  atomically on a completed eat action. `undefined` for any caller that
+   *  doesn't wire one (tests, a species without `def.diet`); grass-patch
+   *  selection is then simply skipped, same "capability absent → branch
+   *  never taken" convention as `def.diet` itself. */
+  grassForage?: GrassForageService
+  /** Bounded/local live predators (plan fauna-011 §9/§10/§11) — only
+   *  consulted by a `dog` (`resolveGuardTarget`/`resolveBarkStimulus`);
+   *  every other kind never reads this. Caller-bounded the same way as
+   *  `nearbyNpcs` — `tickSettlementLivestock`'s per-frame wolf filter, not
+   *  a per-dog scan (see that call site's doc). Defaults to none so every
+   *  existing caller/test keeps prior behaviour. */
+  nearbyPredators?: readonly AnimalAgent[]
+  /** Bounded/local same-settlement NPCs (plan fauna-011 §7) — only
+   *  consulted by a `dog`'s stranger-bark check
+   *  (`resolveBarkStimulus`), deliberately the settlement's own
+   *  already-updated `agents` list (cheap, already in scope at the call
+   *  site) rather than the global cross-settlement `nearbyNpcs` wolves use.
+   *  Defaults to none so every existing caller/test keeps prior behaviour. */
+  nearbySettlementNpcs?: readonly NearbyNpcCandidate[]
+  /** Currently active+baited traps (plan fauna-014 §3/§4) — a small,
+   *  world/fauna-owned snapshot (`PlacedTraps.activeLures()`), not a
+   *  per-animal query. Consulted only by `updatePredator`/`updatePrey`'s
+   *  own `pursueLure()`, below any threat/needs response. Defaults to none
+   *  so existing callers/tests keep prior behaviour. */
+  lures?: readonly TrapLureDescriptor[]
+  /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
+   *  for an owned `dog`'s idle pest-chase (`pursuePest`); every other kind
+   *  never reads this. Caller-bounded the same way as `nearbySettlementNpcs`
+   *  (`settlement/rats.ts`'s own small population, not a world scan).
+   *  Defaults to none so existing callers/tests keep prior behaviour. */
+  nearbyRats?: readonly AnimalAgent[]
+}
+
 /**
  * @domain fauna
  * @system animal-agent
@@ -1312,31 +1431,28 @@ export class AnimalAgent {
    *  kind without a configured vocalization. */
   private spontaneousVocalizeCooldownSec: number
 
-  constructor(
-    def: AnimalDef,
-    animalId: string,
-    sampleHeight: HeightSampler,
-    waterLevel: number,
-    sampleLocalWater: (x: number, z: number) => LocalWaterSample,
-    collidersNear: ColliderSource,
-    x: number,
-    z: number,
-    visual?: THREE.Object3D,
-    animations: THREE.AnimationClip[] = [],
-    /** Explicit override (e.g. livestock's fixed `LIVESTOCK_WANDER_RADIUS`) —
-     *  wins over `def.roaming` when supplied (plan fauna-016 §3). `undefined`
-     *  (every wild ring-spawn caller) falls through to `def.roaming`, then to
-     *  `DEFAULT_WANDER_RADIUS`. */
-    wanderRadius?: readonly [number, number],
-    sampleForestFactor?: (x: number, z: number) => number,
-    ownerHouseId?: string,
-    onDeath?: (animalId: string) => void,
-    herdId?: string,
-    lifeStage: AnimalLifeStage = 'adult',
-    motherId?: string,
-    household?: Household | null,
-    spawnPointId?: string,
-  ) {
+  constructor(deps: AnimalAgentDeps) {
+    const {
+      def,
+      animalId,
+      sampleHeight,
+      waterLevel,
+      sampleLocalWater,
+      collidersNear,
+      x,
+      z,
+      visual,
+      animations = [],
+      wanderRadius,
+      sampleForestFactor,
+      ownerHouseId,
+      onDeath,
+      herdId,
+      lifeStage = 'adult',
+      motherId,
+      household,
+      spawnPointId,
+    } = deps
     this.def = def
     this.animalId = animalId
     this.herdId = herdId
@@ -2242,87 +2358,30 @@ export class AnimalAgent {
     this.productionReadyAtDays = nextLivestockProductionReadyAtDays(nowDays, production.intervalDays)
   }
 
-  update(
-    dt: number,
-    others: AnimalAgent[],
-    observerPos: THREE.Vector3,
-    dayFactor: number,
-    forestFactor: number,
-    litFires: readonly { x: number, z: number }[],
-    villages: readonly VillageInfo[] = [],
-    nearbyHumanCount = 1,
-    /** Optional fauna→human damage seam (plan 056). Absent → chase only. */
-    onHumanHit?: (damage: number, attackerX: number, attackerZ: number) => void,
-    /** Sneak/movement stealth inputs (plan 124 §4). Defaults to "no effect"
-     *  so existing callers/tests that don't pass it keep prior behaviour. */
-    playerStealth: PlayerStealthState = { sneakValue: 0, sneakActive: false, movement: 'stationary' },
-    /** Bounded/local NPC candidates (plan 179 §5/§7) — only consulted for a
-     *  `frenzied` predator, and only once the player isn't the active
-     *  threat, so ordinary (non-frenzied) predator behaviour is unaffected.
-     *  Caller (`Fauna.update`) is responsible for keeping this small (loaded
-     *  settlements' NPCs), never a global scan. */
-    nearbyNpcs: readonly NearbyNpcCandidate[] = [],
-    /** Fauna→NPC damage seam (plan 179 §9/§11), mirrors `onHumanHit` but
-     *  keyed to the specific NPC id chosen as target. `attackerAnimalId` is
-     *  diagnostic-only (`?debug=1&debugNpcCombat=1` combat logging) — lets
-     *  the caller look this animal back up via `getAgents()` without this
-     *  callback needing to know about `AnimalAgent` itself. */
-    onNpcHit?: (targetId: string, damage: number, attackerX: number, attackerZ: number, attackerAnimalId: string) => void,
-    /** Aggression/alert audio hook (plan 188 §11) — fired once on the rising
-     *  edge of this predator committing to a human chase, not every frame. */
-    onAggro?: (kind: AnimalKind, x: number, z: number) => void,
-    /** Spontaneous ambient vocalization hook (plan settlements-npcs-004 §1,
-     *  extended fauna-009 §1/§4) — fired at most once per tick, on the frame
-     *  `tickSpontaneousVocalizeCooldown` rolls a success. No-op for any kind
-     *  without a configured vocalization (cow/sheep/chicken/wolf/rooster). */
-    onVocalize?: (kind: AnimalKind, x: number, z: number) => void,
-    /** `dayNight.elapsedDays` (plan fauna-002) — only meaningful for a
-     *  livestock kind with `def.production`; drives the day-anchor
-     *  production readiness check (`tickProduction`/`livestockProduction.ts`).
-     *  Defaults to 0 so existing wild-fauna/test callers that never touch
-     *  production are unaffected. */
-    nowDays = 0,
-    /** `dayNight.timeOfDay` (plan fauna-009 §1/§4) — the raw world clock (not
-     *  just `dayFactor`), needed to weight wolf howl toward night/twilight and
-     *  rooster crow toward dawn (`spontaneousVocalizeTimeWeight`); `dayFactor`
-     *  alone can't tell dawn from dusk. Defaults to noon (full "day" weight)
-     *  so existing wild-fauna/test callers that don't pass it keep prior
-     *  behaviour for every kind without time-of-day weighting. */
-    timeOfDay = 0.5,
-    /** Shared world-owned forage service (plan fauna-010 §3/§4) — queried by
-     *  `findDietTarget()` for a species with `def.diet.grass`, consumed
-     *  atomically on a completed eat action. `undefined` for any caller that
-     *  doesn't wire one (tests, a species without `def.diet`); grass-patch
-     *  selection is then simply skipped, same "capability absent → branch
-     *  never taken" convention as `def.diet` itself. */
-    grassForage?: GrassForageService,
-    /** Bounded/local live predators (plan fauna-011 §9/§10/§11) — only
-     *  consulted by a `dog` (`resolveGuardTarget`/`resolveBarkStimulus`);
-     *  every other kind never reads this. Caller-bounded the same way as
-     *  `nearbyNpcs` — `tickSettlementLivestock`'s per-frame wolf filter, not
-     *  a per-dog scan (see that call site's doc). Defaults to none so every
-     *  existing caller/test keeps prior behaviour. */
-    nearbyPredators: readonly AnimalAgent[] = [],
-    /** Bounded/local same-settlement NPCs (plan fauna-011 §7) — only
-     *  consulted by a `dog`'s stranger-bark check
-     *  (`resolveBarkStimulus`), deliberately the settlement's own
-     *  already-updated `agents` list (cheap, already in scope at the call
-     *  site) rather than the global cross-settlement `nearbyNpcs` wolves use.
-     *  Defaults to none so every existing caller/test keeps prior behaviour. */
-    nearbySettlementNpcs: readonly NearbyNpcCandidate[] = [],
-    /** Currently active+baited traps (plan fauna-014 §3/§4) — a small,
-     *  world/fauna-owned snapshot (`PlacedTraps.activeLures()`), not a
-     *  per-animal query. Consulted only by `updatePredator`/`updatePrey`'s
-     *  own `pursueLure()`, below any threat/needs response. Defaults to none
-     *  so existing callers/tests keep prior behaviour. */
-    lures: readonly TrapLureDescriptor[] = [],
-    /** This settlement's own live rats (plan fauna-016 §9) — only meaningful
-     *  for an owned `dog`'s idle pest-chase (`pursuePest`); every other kind
-     *  never reads this. Caller-bounded the same way as `nearbySettlementNpcs`
-     *  (`settlement/rats.ts`'s own small population, not a world scan).
-     *  Defaults to none so existing callers/tests keep prior behaviour. */
-    nearbyRats: readonly AnimalAgent[] = [],
-  ): void {
+  update(ctx: AnimalUpdateContext): void {
+    const {
+      dt,
+      others,
+      observerPos,
+      dayFactor,
+      forestFactor,
+      litFires,
+      villages = [],
+      nearbyHumanCount = 1,
+      onHumanHit,
+      playerStealth = { sneakValue: 0, sneakActive: false, movement: 'stationary' },
+      nearbyNpcs = [],
+      onNpcHit,
+      onAggro,
+      onVocalize,
+      nowDays = 0,
+      timeOfDay = 0.5,
+      grassForage,
+      nearbyPredators = [],
+      nearbySettlementNpcs = [],
+      lures = [],
+      nearbyRats = [],
+    } = ctx
     if (this.health.dead) {
       if (!this.corpseHeld) {
         this.timeSinceDeath += dt

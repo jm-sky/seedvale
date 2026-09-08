@@ -645,8 +645,8 @@ export async function createFauna(
     }
     const animalId = `${kind}-${nextAnimalId++}`
     if (spawnPointId) animalToSpawner.set(animalId, spawnPointId)
-    return new AnimalAgent(
-      ANIMAL_DEFS[kind],
+    return new AnimalAgent({
+      def: ANIMAL_DEFS[kind],
       animalId,
       sampleHeight,
       waterLevel,
@@ -656,16 +656,13 @@ export async function createFauna(
       z,
       visual,
       animations,
-      undefined,
       sampleForestFactor,
-      undefined,
-      handleAnimalDeath,
+      onDeath: handleAnimalDeath,
       herdId,
       lifeStage,
       motherId,
-      undefined,
       spawnPointId,
-    )
+    })
   }
 
   bootMark('ringSpawns')
@@ -950,9 +947,9 @@ export async function createFauna(
       agentCpu.beginFaunaAgentUpdates()
       for (const a of agents) {
         const forestFactor = sampleForestFactor(a.mesh.position.x, a.mesh.position.z)
-        a.update(
+        a.update({
           dt,
-          agents,
+          others: agents,
           observerPos,
           dayFactor,
           forestFactor,
@@ -963,18 +960,16 @@ export async function createFauna(
           playerStealth,
           nearbyNpcs,
           onNpcHit,
-          onAnimalAggro,
+          onAggro: onAnimalAggro,
           // Wild fauna's only spontaneous-vocalization kind is `wolf` (howl,
           // plan fauna-009) — cow/sheep/chicken/rooster never spawn here,
           // only via `settlement/livestock.ts` (`createSettlement.ts`).
-          onAnimalVocalize,
-          worldDays,
+          onVocalize: onAnimalVocalize,
+          nowDays: worldDays,
           timeOfDay,
           grassForage,
-          undefined,
-          undefined,
           lures,
-        )
+        })
       }
       agentCpu.endFaunaAgentUpdates()
       grassForage?.tickVisuals(dt, observerPos.x, observerPos.z, worldDays)
