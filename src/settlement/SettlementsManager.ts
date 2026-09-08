@@ -116,6 +116,8 @@ export type SettlementsManager = {
      *  forwarded straight to each loaded `Settlement.update`. Only
      *  meaningful for a settlement with an owned `dog`. */
     nearbyPredators?: readonly AnimalAgent[],
+    /** Player-as-observer presentation inputs (npc-023). */
+    playerObservation?: import('../simulation/observation').PlayerObservationInput,
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -576,7 +578,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
@@ -596,6 +598,7 @@ export async function createSettlementsManager(
           onAnimalVocalize,
           weather,
           nearbyPredators,
+          playerObservation,
         )
       }
       for (const instances of midpoints.values()) {

@@ -640,9 +640,11 @@ export function tickSettlementLivestock(
      *  "small caller-bounded population, not a scan" contract as
      *  `nearbyPredators`/`nearbySettlementNpcs` above. */
     nearbyRats?: readonly AnimalAgent[]
+    /** Player-as-observer presentation inputs (npc-023). */
+    playerObservation?: import('../simulation/observation').PlayerObservationInput
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs, nearbyRats } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -663,6 +665,7 @@ export function tickSettlementLivestock(
       nearbyPredators,
       nearbySettlementNpcs,
       nearbyRats,
+      playerObservation,
     })
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the

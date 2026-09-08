@@ -1294,6 +1294,8 @@ export async function createApp(
     },
   })
 
+  const labelObservationDebug = { fullLabelInfo: isDebugMode() }
+
   const gui = createDebugGui(config, dayNight, climate, renderer, {
     onTerrainChange,
     onSkyChange: graphics.updateSkyFromGui,
@@ -1312,7 +1314,7 @@ export async function createApp(
     onFillerGrassDebugVisibleChange: graphics.setFillerGrassDebugVisible,
     onPerfTimingsToggle: (enabled) => { perfMonitor.setSource('gui', enabled) },
     onRunBenchmark: (id) => { void benchmark.run(id) },
-  })
+  }, labelObservationDebug)
 
   if (config.showGui) gui.toggle()
   vueUi.configureWorldConfigScreen(config, dayNight, {
@@ -1759,6 +1761,10 @@ export async function createApp(
     onInventoryChanged,
     setFrameTiming: gui.setFrameTiming,
     syncPointLightBudget: () => { pointLightBudget.sync(camera) },
+    getPlayerObservation: () => ({
+      perception: player.attributes.perception,
+      fullLabelInfo: isDebugMode() && labelObservationDebug.fullLabelInfo,
+    }),
   })
   bootMarkEnd('createGameLoop')
 

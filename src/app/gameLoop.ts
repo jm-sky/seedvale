@@ -19,6 +19,7 @@ import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
+import type { PlayerObservationInput } from '../simulation/observation'
 import type { VueUi } from '../ui-vue/mount'
 import type { BusyOverlay } from '../ui/createBusyOverlay'
 import type { Hud } from '../ui/createHud'
@@ -485,6 +486,8 @@ export type GameLoopDeps = {
    *  production budget (16, unless `?pointLightBudget` overrides) before any
    *  render pass. See `src/world/pointLightBudget.ts`. */
   syncPointLightBudget?: () => void
+  /** Live player-as-observer presentation inputs for NPC/fauna labels (npc-023). */
+  getPlayerObservation: () => PlayerObservationInput
 }
 
 export type GameLoop = {
@@ -532,7 +535,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
-    onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget,
+    onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
 
   renderer.shadowMap.autoUpdate = false
@@ -1906,6 +1909,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // array, never a per-dog scan (see `AnimalAgent.update()`'s
         // `nearbyPredators` param doc).
         const nearbyWolves = bundle.fauna.getAgents().filter((a) => a.def.kind === 'wolf' && !a.isDead())
+        const playerObservation = getPlayerObservation()
         withCategory(monitor, 'NPC', () => {
           bundle.settlementsManager.update(
             dt,
@@ -1922,6 +1926,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             (kind, x, z) => playSpontaneousAnimalSound(kind, worldAudio.playAt, { x, z }),
             climate.weather,
             nearbyWolves,
+            playerObservation,
           )
         })
         withCategory(monitor, 'FAUNA', () => {
@@ -1991,6 +1996,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             // Plan fauna-014 §3/§11 — computed once per pass, not per animal,
             // and forwarded straight into every `AnimalAgent.update()` call.
             bundle.placedTraps.activeLures(),
+            playerObservation,
           )
         })
         // Traps run inside the fauna pass's own cadence (plan 141 §11): the

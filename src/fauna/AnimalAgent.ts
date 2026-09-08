@@ -33,6 +33,12 @@ import {
   type PlannedAction,
   type ScoredAction,
 } from '../simulation'
+import {
+  DEFAULT_PLAYER_OBSERVATION,
+  type ObservationLevel,
+  type PlayerObservationInput,
+  resolveStableObservationLevel,
+} from '../simulation/observation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import { type AgentStatusLabelController, createAgentStatusLabelController } from '../ui/agentStatusLabel'
 import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world/animalTraps'
@@ -780,6 +786,11 @@ export type AnimalUpdateContext = {
    *  (`settlement/rats.ts`'s own small population, not a world scan).
    *  Defaults to none so existing callers/tests keep prior behaviour. */
   nearbyRats?: readonly AnimalAgent[]
+  /** Player-as-observer presentation inputs (npc-023) — defaults to neutral
+   *  perception with no debug bypass so tests/callers that omit it keep prior
+   *  detailed-label behaviour only when they also omit observation wiring;
+   *  gameplay callers pass the live player values every frame. */
+  playerObservation?: PlayerObservationInput
 }
 
 /**
@@ -899,6 +910,8 @@ export class AnimalAgent {
    *  inverted needs, fed as `{ current: 1 - hunger, max: 1 }` at each
    *  `sync()` call (see `tickPresentationAndLife()`). */
   private readonly labelController: AgentStatusLabelController
+  /** Runtime-only hysteresis cache for observation-level presentation (npc-023). */
+  private lastObservationLevel: ObservationLevel | null = null
   readonly health: HealthState
   readonly life: AnimalLifeState
   /** Absolute `elapsedDays` anchor at which this animal's next production
@@ -1410,7 +1423,13 @@ export class AnimalAgent {
    *  passed `{}` (rate 1) instead of the real night rate — a ridden animal
    *  starved/dehydrated at double the stabled rate at night, and a hit
    *  mount's hurt-clip timer never counted down until dismount. */
-  private tickPresentationAndLife(dt: number, observerPos: THREE.Vector3, hungerThirstRate: number, nowDays = 0): void {
+  private tickPresentationAndLife(
+    dt: number,
+    observerPos: THREE.Vector3,
+    hungerThirstRate: number,
+    nowDays = 0,
+    playerObservation: PlayerObservationInput = DEFAULT_PLAYER_OBSERVATION,
+  ): void {
     if (this.attackCooldown > 0) this.attackCooldown -= dt
     if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt
     if (this.hurtAnimTimer > 0) this.hurtAnimTimer -= dt
@@ -1426,6 +1445,15 @@ export class AnimalAgent {
     this.resolveWaterTraversal()
     this.tickDrowning(dt)
     tickAnimalLife(this.life, dt, this.sprinting, { hungerThirstRate }, this.def.metabolism, this.swimExertionNow())
+    const distance = this.mesh.position.distanceTo(observerPos)
+    const observationLevel = resolveStableObservationLevel(
+      { perception: playerObservation.perception, distance },
+      this.lastObservationLevel,
+    )
+    this.lastObservationLevel = observationLevel
+    const speciesLabel = ANIMAL_LABELS[this.def.kind]
+    const knownName = this.dangerous ? `Groźny ${speciesLabel}` : speciesLabel
+    const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     // Satiety / hydration are inverted needs (full bar = well fed/hydrated),
     // so they're fed as `{ current: 1 - need, max: 1 }` rather than a
     // current/max pair from `AnimalLifeState` directly.
@@ -1437,8 +1465,17 @@ export class AnimalAgent {
         hydration: { current: 1 - this.life.thirst, max: 1 },
       },
       this.mesh,
-      this.mesh.position.distanceTo(observerPos),
+      distance,
       FAUNA_SHADOW_DISTANCE,
+      undefined,
+      {
+        level: observationLevel,
+        broadIdentity: speciesLabel,
+        knownName,
+        healthRatio,
+        staminaRatio: getStaminaRatio(this.life.stamina),
+        fullLabelInfo: playerObservation.fullLabelInfo,
+      },
     )
     this.anim.update(dt)
   }
@@ -1956,6 +1993,7 @@ export class AnimalAgent {
       nearbySettlementNpcs = [],
       lures = [],
       nearbyRats = [],
+      playerObservation = DEFAULT_PLAYER_OBSERVATION,
     } = ctx
     if (this.health.dead) {
       if (!this.corpse.held) {
@@ -2246,6 +2284,7 @@ export class AnimalAgent {
       observerPos,
       this.isNight && !this.sprinting ? SLEEP_HUNGER_THIRST_RATE : 1,
       nowDays,
+      playerObservation,
     )
     if (this.debugActive && this.debugVisual) this.updateDebugVisual()
   }

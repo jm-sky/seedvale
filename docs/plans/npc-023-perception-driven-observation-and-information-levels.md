@@ -1,7 +1,7 @@
 # Plan: Perception-driven observation and information levels
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-019~~

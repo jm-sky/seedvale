@@ -98,6 +98,13 @@ import {
   replaceActionLifecycle,
   type ScoredAction,
 } from '../simulation'
+import {
+  DEFAULT_PLAYER_OBSERVATION,
+  NPC_BROAD_IDENTITY_LABEL,
+  type ObservationLevel,
+  type PlayerObservationInput,
+  resolveStableObservationLevel,
+} from '../simulation/observation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
 import {
   TERRAIN_PREP_NPC_WORK_SESSION_HOURS,
@@ -1097,6 +1104,8 @@ export class NpcAgent {
    *  `labelDistanceState`). `ui/agentStatusLabel.ts` owns the guarded-write
    *  presentation logic; this only ever drives it. */
   private readonly labelController: AgentStatusLabelController
+  /** Runtime-only hysteresis cache for observation-level presentation (npc-023). */
+  private lastObservationLevel: ObservationLevel | null = null
   /** Why the NPC is currently in `goSleep`/`sleep`. `null` when awake. */
   private sleepReason: SleepReason | null = null
   /** Set externally (e.g. by a QuestManager) — NpcAgent stays quest-agnostic. */
@@ -2226,6 +2235,7 @@ export class NpcAgent {
      *  caller/test that doesn't pass one; weather then contributes no
      *  pressure, same as an isolated fallback with no economy/household. */
     weather?: WeatherState,
+    playerObservation: PlayerObservationInput = DEFAULT_PLAYER_OBSERVATION,
   ): void {
     this.simClock += dt
     this.dayLengthSec = dayLengthSec
@@ -2638,13 +2648,19 @@ export class NpcAgent {
       material.emissive.setHex(color)
     }
     const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
-    this.labelController.setName(`${this.displayName}${questSuffix}`)
+    const distance = this.mesh.position.distanceTo(observerPos)
+    const observationLevel = resolveStableObservationLevel(
+      { perception: playerObservation.perception, distance },
+      this.lastObservationLevel,
+    )
+    this.lastObservationLevel = observationLevel
     this.updateDebugLabel()
     const gaze = gazeOpacityFactor(
       this.mesh.position.x - observerPos.x,
       this.mesh.position.z - observerPos.z,
       observerYaw,
     )
+    const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     this.labelController.sync(
       {
         hp: { current: this.health.currentHp, max: this.health.maxHp },
@@ -2652,9 +2668,17 @@ export class NpcAgent {
         vigor: { current: this.vigor.current, max: this.vigor.max },
       },
       this.mesh,
-      this.mesh.position.distanceTo(observerPos),
+      distance,
       NPC_SHADOW_DISTANCE,
       gaze,
+      {
+        level: observationLevel,
+        broadIdentity: NPC_BROAD_IDENTITY_LABEL,
+        knownName: `${this.displayName}${questSuffix}`,
+        healthRatio,
+        staminaRatio: getStaminaRatio(this.stamina),
+        fullLabelInfo: playerObservation.fullLabelInfo,
+      },
     )
     this.anim.update(dt)
   }

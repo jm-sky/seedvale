@@ -104,6 +104,9 @@ export type Fauna = {
      *  never a per-animal query. Defaults to none so existing callers/tests
      *  keep prior behaviour. */
     lures?: readonly TrapLureDescriptor[],
+    /** Player-as-observer presentation inputs (npc-023) — forwarded to each
+     *  wild `AnimalAgent.update()`. */
+    playerObservation?: import('../simulation/observation').PlayerObservationInput,
   ) => void
   dispose: () => void
   /** Deterministic time-skip catch-up (plan 196) — called once by
@@ -941,6 +944,7 @@ export async function createFauna(
       onAnimalAggro,
       onAnimalVocalize,
       lures = [],
+      playerObservation,
     ) {
       const dayFactor = skyParamsFromTime(timeOfDay).dayFactor
       const agentCpu = getAgentCpuDiag()
@@ -969,6 +973,7 @@ export async function createFauna(
           timeOfDay,
           grassForage,
           lures,
+          playerObservation,
         })
       }
       agentCpu.endFaunaAgentUpdates()

@@ -11,6 +11,7 @@ import type { DropLivestockProductHook } from '../fauna/livestockProduction'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { SettlementTerrain } from '../shared/SettlementName'
+import type { PlayerObservationInput } from '../simulation/observation'
 import type { NaturalResource } from '../terrain/naturalResources'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { LocalWaterSample } from '../terrain/waterSample'
@@ -180,6 +181,9 @@ export type Settlement = {
      *  an owned `dog`. Caller (`SettlementsManager.update`) keeps this small
      *  (a per-frame filter over `Fauna.getAgents()`, not a scan per dog). */
     nearbyPredators?: readonly AnimalAgent[],
+    /** Player-as-observer presentation inputs (npc-023) — forwarded to each
+     *  `NpcAgent.update()` and livestock `AnimalAgent.update()`. */
+    playerObservation?: PlayerObservationInput,
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -763,7 +767,7 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators, playerObservation) {
       currentNowDays = nowDays
       const agentCpu = getAgentCpuDiag()
       agentCpu.beginNpcCrowd()
@@ -772,7 +776,7 @@ export async function createSettlement(
       agentCpu.beginNpcAgentUpdates()
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather, playerObservation)
         if (crowd.pushX[i] !== 0 || crowd.pushZ[i] !== 0) agent.applySeparation(crowd.pushX[i]!, crowd.pushZ[i]!)
       }
       agentCpu.endNpcAgentUpdates()
@@ -816,6 +820,7 @@ export async function createSettlement(
         nearbyPredators,
         nearbySettlementNpcs,
         nearbyRats: rats.getAgents(),
+        playerObservation,
       })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived

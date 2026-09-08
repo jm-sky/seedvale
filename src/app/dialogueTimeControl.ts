@@ -32,12 +32,14 @@ NpcAgent.prototype.update = function (
   nearbyNpcCount,
   dayLengthSec,
   nearbyAnimalThreats,
+  weather,
+  playerObservation,
 ): void {
   if (isEngagedNpc(engagementState(), this)) {
-    originalNpcUpdate.call(this, 0, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec, nearbyAnimalThreats)
+    originalNpcUpdate.call(this, 0, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec, nearbyAnimalThreats, weather, playerObservation)
     return
   }
-  originalNpcUpdate.call(this, dt, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec, nearbyAnimalThreats)
+  originalNpcUpdate.call(this, dt, observerPos, observerYaw, timeOfDay, nearbyNpcCount, dayLengthSec, nearbyAnimalThreats, weather, playerObservation)
 }
 
 const originalPlayerUpdate = PlayerController.prototype.update

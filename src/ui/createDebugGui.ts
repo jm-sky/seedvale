@@ -12,6 +12,7 @@ import {
 } from '../audio/playerMoveSounds'
 import { QUALITY_PRESET_IDS } from '../config/qualityProfiles'
 import { triangleCount } from '../config/worldConfig'
+import { isDebugMode } from '../debug/debugMode'
 import { getMonitor } from '../perf/active'
 import { BENCHMARK_SCENARIO_IDS, type BenchmarkScenarioId } from '../perf/benchmarkScenarios'
 import { SEASON_LABELS, WEATHER_LABELS } from '../world/weather'
@@ -43,6 +44,8 @@ export type DebugGuiHandlers = {
   onFillerGrassDebugVisibleChange: (visible: boolean) => void
   onPerfTimingsToggle: (enabled: boolean) => void
   onRunBenchmark: (id: BenchmarkScenarioId) => void
+  /** Debug-only observation bypass for NPC/fauna label information gating (npc-023). */
+  onFullLabelInfoChange?: (enabled: boolean) => void
 }
 
 export type DebugGuiHandle = {
@@ -64,6 +67,7 @@ export function createDebugGui(
   climate: ClimateState,
   renderer: WebGLRenderer,
   handlers: DebugGuiHandlers,
+  labelDebug?: { fullLabelInfo: boolean },
 ): DebugGuiHandle {
   const gui = new GUI({ title: 'Seedvale' })
   gui.close()
@@ -763,6 +767,14 @@ export function createDebugGui(
     .name('Footstep pack')
     .onChange((pack: FootstepPackId) => setFootstepPack(pack))
   audioFolder.add(audio, 'surface').name('Footstep surface').listen().disable()
+
+  if (isDebugMode() && labelDebug) {
+    const labels = gui.addFolder('Labels')
+    labels
+      .add(labelDebug, 'fullLabelInfo')
+      .name('Full label info')
+      .onChange((enabled: boolean) => handlers.onFullLabelInfoChange?.(enabled))
+  }
 
   const perfFolder = gui.addFolder('Performance')
   perfFolder

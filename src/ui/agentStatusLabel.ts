@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import type { ObservationLevel } from '../simulation/observation'
+import { formatPhysicalAssessment } from '../simulation/observation'
 import { setSubtreeCastShadow } from '../world/waterMirror'
 import { barsVisibleForDistance, labelOpacityForDistance } from './labelDistance'
 
@@ -94,6 +96,20 @@ export type LabelDistanceState = {
   opacity: number
 }
 
+/** Already-resolved observation presentation for one label sync — callers own
+ *  Perception/distance policy; this controller only maps level → DOM. */
+export type AgentLabelObservationPresentation = {
+  level: ObservationLevel
+  /** Broad non-personal identity for `basic`/`assessed`. */
+  broadIdentity: string
+  /** Knowledge-authorized or detailed personal label when `detailed`. */
+  knownName: string
+  healthRatio: number
+  staminaRatio: number
+  /** Debug bypass — show full detailed presentation regardless of `level`. */
+  fullLabelInfo?: boolean
+}
+
 export const INITIAL_LABEL_DISTANCE_STATE: LabelDistanceState = {
   barsVisible: null,
   shadowCasting: null,
@@ -131,6 +147,7 @@ export type AgentStatusLabelController = {
     distance: number,
     shadowDistance: number,
     gazeFactor?: number,
+    observation?: AgentLabelObservationPresentation,
   ) => void
   /** Resets the bars-hidden/hp-zeroed presentation a death/despawn wants
    *  (mirrors `NpcAgent`'s pre-202 die() label reset) — `hp` alone, since
@@ -153,12 +170,19 @@ export function createAgentStatusLabelController(
   const fillByKind = new Map<LabelBarKind, HTMLDivElement>(builtBars.map((b) => [b.kind, b.fill]))
   const lastPercentByKind = new Map<LabelBarKind, number>(builtBars.map((b) => [b.kind, -1]))
 
+  const assessmentEl = document.createElement('div')
+  assessmentEl.className = 'npc-label__assessment'
+  assessmentEl.style.display = 'none'
+  labelDom.el.append(assessmentEl)
+
   const debugEl = document.createElement('div')
   debugEl.className = 'npc-label__debug'
   debugEl.style.display = 'none'
   labelDom.el.append(debugEl)
 
   let lastName = name
+  let lastAssessmentText = ''
+  let lastObservationLevel: ObservationLevel | null = null
   let lastDebugText = ''
   let distanceState = INITIAL_LABEL_DISTANCE_STATE
 
@@ -181,12 +205,32 @@ export function createAgentStatusLabelController(
         debugEl.textContent = text
       }
     },
-    sync: (barValues, mesh, distance, shadowDistance, gazeFactor = 1) => {
+    sync: (barValues, mesh, distance, shadowDistance, gazeFactor = 1, observation) => {
       for (const [kind, fill] of fillByKind) {
         const value = barValues[kind]
         if (!value) continue
         const percent = computeBarPercent(value.current, value.max)
         lastPercentByKind.set(kind, applyBarPercent(fill, percent, lastPercentByKind.get(kind) ?? -1))
+      }
+      let showBarsOverride: boolean | undefined
+      if (observation) {
+        const presentation = resolveAgentLabelObservationPresentation(observation)
+        distanceState = applyAgentLabelObservationPresentation(
+          labelDom.nameEl,
+          labelDom.barsEl,
+          assessmentEl,
+          presentation,
+          {
+            lastName,
+            lastAssessmentText,
+            lastObservationLevel,
+          },
+          distanceState,
+        )
+        lastName = presentation.nameText
+        lastAssessmentText = presentation.assessmentText
+        lastObservationLevel = presentation.level
+        showBarsOverride = presentation.showBars
       }
       distanceState = updateAgentLabelDistanceState(
         labelDom.el,
@@ -196,6 +240,7 @@ export function createAgentStatusLabelController(
         shadowDistance,
         distanceState,
         gazeFactor,
+        showBarsOverride,
       )
     },
     settleAtZeroHp: () => {
@@ -217,6 +262,93 @@ export function createAgentStatusLabelController(
  *  optionally scaled by an NPC-only `gazeFactor`) — write-if-changed against
  *  `prev`, same guard shape as `applyBarPercent`. Returns the new state to
  *  store back into the caller's own field. */
+type ResolvedAgentLabelObservationPresentation = {
+  level: ObservationLevel
+  nameText: string
+  assessmentText: string
+  showBars: boolean
+  showName: boolean
+  showAssessment: boolean
+}
+
+function resolveAgentLabelObservationPresentation(
+  observation: AgentLabelObservationPresentation,
+): ResolvedAgentLabelObservationPresentation {
+  const level = observation.fullLabelInfo ? 'detailed' : observation.level
+  const assessmentText = formatPhysicalAssessment(observation.healthRatio, observation.staminaRatio)
+  switch (level) {
+    case 'assessed':
+      return {
+        level,
+        nameText: observation.broadIdentity,
+        assessmentText,
+        showBars: false,
+        showName: true,
+        showAssessment: true,
+      }
+    case 'basic':
+      return {
+        level,
+        nameText: observation.broadIdentity,
+        assessmentText,
+        showBars: false,
+        showName: true,
+        showAssessment: false,
+      }
+    case 'detailed':
+      return {
+        level,
+        nameText: observation.knownName,
+        assessmentText,
+        showBars: true,
+        showName: true,
+        showAssessment: false,
+      }
+    case 'none':
+      return {
+        level,
+        nameText: '',
+        assessmentText,
+        showBars: false,
+        showName: false,
+        showAssessment: false,
+      }
+  }
+}
+
+function applyAgentLabelObservationPresentation(
+  nameEl: HTMLDivElement,
+  barsEl: HTMLDivElement,
+  assessmentEl: HTMLDivElement,
+  presentation: ResolvedAgentLabelObservationPresentation,
+  prev: {
+    lastName: string
+    lastAssessmentText: string
+    lastObservationLevel: ObservationLevel | null
+  },
+  distanceState: LabelDistanceState,
+): LabelDistanceState {
+  const nameDisplay = presentation.showName ? '' : 'none'
+  if (nameEl.style.display !== nameDisplay) nameEl.style.display = nameDisplay
+  if (presentation.showName && presentation.nameText !== prev.lastName) {
+    nameEl.textContent = presentation.nameText
+  }
+
+  const assessmentDisplay = presentation.showAssessment ? '' : 'none'
+  if (assessmentEl.style.display !== assessmentDisplay) assessmentEl.style.display = assessmentDisplay
+  if (presentation.showAssessment && presentation.assessmentText !== prev.lastAssessmentText) {
+    assessmentEl.textContent = presentation.assessmentText
+  }
+
+  const showBars = presentation.showBars
+  if (showBars !== distanceState.barsVisible) barsEl.style.display = showBars ? '' : 'none'
+
+  return {
+    ...distanceState,
+    barsVisible: showBars,
+  }
+}
+
 export function updateAgentLabelDistanceState(
   el: HTMLDivElement,
   barsEl: HTMLDivElement,
@@ -225,8 +357,9 @@ export function updateAgentLabelDistanceState(
   shadowDistance: number,
   prev: LabelDistanceState,
   gazeFactor = 1,
+  showBarsOverride?: boolean,
 ): LabelDistanceState {
-  const showBars = barsVisibleForDistance(distance)
+  const showBars = showBarsOverride ?? barsVisibleForDistance(distance)
   if (showBars !== prev.barsVisible) barsEl.style.display = showBars ? '' : 'none'
 
   const shadowCasting = distance <= shadowDistance
