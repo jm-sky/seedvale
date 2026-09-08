@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
@@ -330,6 +331,24 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 
+## `app/actions/storageInfestationActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/worldBundle.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
+- `player/PlayerNeeds.ts`
+- `quests/QuestManager.ts`
+- `settlement/storageRepair.ts`
+- `ui/createHud.ts`
+- `ui/createToast.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+
 ## `app/actions/survivalActions.test.ts`
 
 **Imports**
@@ -491,6 +510,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
@@ -682,6 +702,7 @@ Generated from TypeScript imports.
 - `settlement/families.ts`
 - `settlement/landOwnership.ts`
 - `settlement/landPurchase.ts`
+- `settlement/storageRepair.ts`
 - `shared/HungerState.ts`
 - `shared/StaminaState.ts`
 - `shared/ThirstState.ts`
@@ -1042,6 +1063,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/graphicsSettings.ts`

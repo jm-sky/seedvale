@@ -63,6 +63,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
@@ -213,6 +214,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/actionContext.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`

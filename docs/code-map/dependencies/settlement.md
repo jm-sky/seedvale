@@ -51,11 +51,13 @@ Generated from TypeScript imports.
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
 - `settlement/props.ts`
+- `settlement/ratPersistence.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementSignposts.ts`
 - `settlement/settlementTerrain.ts`
+- `settlement/storageInfestation.ts`
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/resourceDeposits.ts`
@@ -901,6 +903,26 @@ Generated from TypeScript imports.
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
 
+## `settlement/ratPersistence.test.ts`
+
+**Imports**
+
+- `settlement/ratPersistence.ts`
+- `settlement/storageInfestation.ts`
+
+## `settlement/ratPersistence.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/ratPersistence.test.ts`
+- `settlement/rats.ts`
+
 ## `settlement/rats.test.ts`
 
 **Imports**
@@ -917,6 +939,7 @@ Generated from TypeScript imports.
 - `fauna/proceduralAnimals.ts`
 - `player/PlayerController.ts`
 - `settlement/household.ts`
+- `settlement/ratPersistence.ts`
 - `terrain/waterSample.ts`
 - `world/parseSeed.ts`
 
@@ -1182,6 +1205,34 @@ Generated from TypeScript imports.
 - `ai/npcLogistics.ts`
 - `ai/npcProfessionWork.ts`
 - `settlement/storageDestinations.test.ts`
+
+## `settlement/storageInfestation.ts`
+
+**Imported by**
+
+- `persistence/saveData.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/ratPersistence.test.ts`
+
+## `settlement/storageRepair.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `settlement/storageRepair.ts`
+
+## `settlement/storageRepair.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/items.ts`
+
+**Imported by**
+
+- `app/actions/storageInfestationActions.ts`
+- `app/gameLoop.ts`
+- `settlement/storageRepair.test.ts`
 
 ## `settlement/storageVisuals.test.ts`
 

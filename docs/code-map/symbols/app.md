@@ -90,6 +90,10 @@ Generated from exported TypeScript symbols.
 - `RestActionDeps` — type — line 97
 - `RestActions` — type — line 48
 
+## `app/actions/storageInfestationActions.ts`
+
+- `createStorageInfestationActions` — function — line 27
+
 ## `app/actions/survivalActions.ts`
 
 - `createSurvivalActions` — function — line 131
@@ -141,23 +145,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 240
+- `createApp` — function — line 241
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 210
+- `NewAppOptions` — type — line 211
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 525
+- `createGameLoop` — function — line 531
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 493
-- `GameLoopDeps` — type — line 263
+- `GameLoop` — type — line 499
+- `GameLoopDeps` — type — line 267
 
 ## `app/graphicsSettings.ts`
 
@@ -167,10 +171,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 896
-- `buildDigTarget` — function — line 843
+- `buildCombatTarget` — function — line 897
+- `buildDigTarget` — function — line 844
 - `buildInteractables` — function — line 312
-- `collectItem` — function — line 943
+- `collectItem` — function — line 944
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70
@@ -235,12 +239,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 576
-- `createWorldBundle` — function — line 930
-- `disposeWorldBundle` — function — line 1289
+- `BuiltWorldSystems` — type — line 589
+- `createWorldBundle` — function — line 947
+- `disposeWorldBundle` — function — line 1320
 - `HOME_RADIUS` — const — line 88
 - `homeChunks` — function — line 99
-- `rebuildWorldBundle` — function — line 1104
+- `rebuildWorldBundle` — function — line 1129
 - `WorldBundle` — type — line 122
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).

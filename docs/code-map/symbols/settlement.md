@@ -24,10 +24,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 329
-- `CreateSettlementDeps` — type — line 220
+- `createSettlement` — function — line 336
+- `CreateSettlementDeps` — type — line 223
 - `Settlement` — type — line 110
-- `settlementSpawnPoint` — function — line 208
+- `settlementSpawnPoint` — function — line 211
 
 ## `settlement/decorProps.ts`
 
@@ -414,14 +414,31 @@ Generated from exported TypeScript symbols.
 - `TerrainSampler` — type — line 29
 - `tintPropMaterials` — function — line 10
 
+## `settlement/ratPersistence.ts`
+
+- `createRatRegistry` — function — line 41
+- `RatPersistence` — type — line 17
+- `RatRegistry` — type — line 23
+- `RatSaveRecord` — type — line 12
+  - domain: fauna
+  - system: settlement-rat-persistence
+  - role: Per-`SettlementsManager` persistence for wild settlement rats (plan quests-progression-006) — mirrors `livestock.ts`'s registry lifecycle without livestock ownership semantics.
+
 ## `settlement/rats.ts`
 
-- `createSettlementRats` — function — line 134
-- `RatFoodSite` — type — line 91
-- `ratPopulationTarget` — function — line 49
+- `createSettlementRats` — function — line 130
+- `RAT_INFESTATION_FLOOR` — const — line 34
+- `RAT_INFESTATION_PRESSURE_BONUS` — const — line 32
+- `RAT_POPULATION_CAP` — const — line 26
+  - domain: fauna
+  - system: settlement-rats
+  - role: Settlement-local rat population pressure/reconciliation (plan fauna-016 §7/§8/§9, quests-progression-006) — deliberately not a `RatManager`: rats are plain `AnimalAgent('rat')` instances this module spawns/despawns toward a small, deterministic-target population and periodically drains real household/settlement food from.
+- `RatFoodSite` — type — line 82
+- `ratNormalPopulationTarget` — function — line 43
+- `ratPopulationTarget` — function — line 53
 - `RatPressureInputs` — type — line 36
-- `SettlementRats` — type — line 112
-- `SettlementRatsDeps` — type — line 93
+- `SettlementRats` — type — line 103
+- `SettlementRatsDeps` — type — line 84
 
 ## `settlement/roadNetwork.ts`
 
@@ -510,13 +527,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 175
+- `createSettlementsManager` — function — line 184
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 68
+- `SettlementsManager` — type — line 70
 
 ## `settlement/settlementStructures.ts`
 
@@ -551,6 +568,23 @@ Generated from exported TypeScript symbols.
   - role: Resolves the physical destination for a wood/food delivery, given the household or settlement it belongs to.
 - `householdStorageDestination` — function — line 39
 - `settlementStorageDestination` — function — line 45
+
+## `settlement/storageInfestation.ts`
+
+- `createStorageInfestationRegistry` — function — line 22
+- `StorageInfestationCondition` — type — line 10
+  - domain: settlements
+  - system: storage-infestation
+  - role: Authoritative settlement-owned storage infestation condition (plan quests-progression-006) — keyed by stable `settlementId`, survives settlement stream-out/in, `WorldBundle` rebuild and save/load. Not owned by `QuestManager` or Three.js props.
+- `StorageInfestationRegistry` — type — line 12
+
+## `settlement/storageRepair.ts`
+
+- `describeSettlementStorageRepair` — function — line 19
+- `formatSettlementStorageInspection` — function — line 40
+- `SETTLEMENT_STORAGE_REPAIR_BEAM_COST` — const — line 5
+- `SETTLEMENT_STORAGE_REPAIR_DURATION_SEC` — const — line 8
+- `SettlementStorageRepairView` — type — line 10
 
 ## `settlement/storageVisuals.ts`
 

@@ -23,11 +23,13 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/items.ts`
 - `quests/quests.ts`
+- `quests/settlementRatInfestation.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/livestock.ts`
 
 **Imported by**
 
+- `app/actions/storageInfestationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/inventoryWiring.ts`
@@ -66,3 +68,16 @@ Generated from TypeScript imports.
 - `quests/quests.test.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`
+
+## `quests/settlementRatInfestation.test.ts`
+
+**Imports**
+
+- `quests/settlementRatInfestation.ts`
+
+## `quests/settlementRatInfestation.ts`
+
+**Imported by**
+
+- `quests/QuestManager.ts`
+- `quests/settlementRatInfestation.test.ts`

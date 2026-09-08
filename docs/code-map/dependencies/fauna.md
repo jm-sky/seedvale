@@ -99,6 +99,7 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
+- `settlement/ratPersistence.ts`
 - `settlement/rats.ts`
 - `world/createPlacedTraps.ts`
 

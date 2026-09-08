@@ -13,8 +13,9 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/resolveInteraction.ts`
 
+- `formatSettlementStorageLines` — function — line 53
 - `InteractionOutcome` — type — line 14
-- `resolveInteraction` — function — line 111
+- `resolveInteraction` — function — line 109
 
 ## `interaction/treeInspection.ts`
 

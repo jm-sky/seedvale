@@ -51,6 +51,8 @@ Generated from TypeScript imports.
 - `settlement/livestock.ts`
 - `settlement/npcRelationships.ts`
 - `settlement/npcState.ts`
+- `settlement/ratPersistence.ts`
+- `settlement/storageInfestation.ts`
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`

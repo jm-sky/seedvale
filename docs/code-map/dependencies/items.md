@@ -86,6 +86,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
@@ -137,6 +138,8 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
+- `settlement/storageRepair.test.ts`
+- `settlement/storageRepair.ts`
 - `settlement/storageVisuals.test.ts`
 - `settlement/storageVisuals.ts`
 - `terrain/digAction.ts`
@@ -666,6 +669,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
+- `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -725,6 +729,7 @@ Generated from TypeScript imports.
 - `settlement/VillageFire.ts`
 - `settlement/household.ts`
 - `settlement/storageDestinations.ts`
+- `settlement/storageRepair.ts`
 - `settlement/storageVisuals.ts`
 - `terrain/chunkItems.ts`
 - `terrain/chunkManager.ts`
