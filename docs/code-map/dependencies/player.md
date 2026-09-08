@@ -51,6 +51,7 @@ Generated from TypeScript imports.
 - `assets/assetIndex.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.ts`
+- `fauna/animalForaging.ts`
 - `fauna/createFauna.ts`
 - `fauna/mountedSpeed.test.ts`
 - `fauna/playerAwareness.ts`

@@ -912,6 +912,7 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `audio/createAmbientAudio.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.ts`
 - `terrain/waterBodyKind.test.ts`
 
 ## `terrain/waterSample.test.ts`

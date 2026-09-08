@@ -473,6 +473,8 @@ Generated from TypeScript imports.
 - `economy/npcWork.test.ts`
 - `economy/npcWork.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.test.ts`
+- `fauna/animalForaging.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
 - `persistence/saveData.ts`

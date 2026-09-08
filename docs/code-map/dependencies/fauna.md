@@ -21,6 +21,7 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `fauna/animalDebugVisual.ts`
 - `fauna/animalDefs.ts`
+- `fauna/animalForaging.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
@@ -30,7 +31,6 @@ Generated from TypeScript imports.
 - `fauna/predatorHumanDecision.ts`
 - `fauna/preyAlertPerception.ts`
 - `fauna/waterTraversal.ts`
-- `items/Inventory.ts`
 - `items/items.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
@@ -76,7 +76,6 @@ Generated from TypeScript imports.
 - `fauna/faunaCombat.test.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
-- `fauna/foodWaterTargeting.test.ts`
 - `fauna/frenzyWolf.test.ts`
 - `fauna/harvestedRemains.ts`
 - `fauna/herdCohesion.test.ts`
@@ -121,6 +120,8 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalLife.test.ts`
 - `fauna/animalDefs.ts`
+- `fauna/animalForaging.test.ts`
+- `fauna/animalForaging.ts`
 
 ## `fauna/AnimalSpawner.test.ts`
 
@@ -172,6 +173,7 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.test.ts`
+- `fauna/animalForaging.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/harvestedRemains.test.ts`
 - `fauna/rabies.test.ts`
@@ -195,7 +197,10 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.ts`
+- `fauna/animalForaging.test.ts`
+- `fauna/animalForaging.ts`
 - `fauna/corpseDecay.test.ts`
+- `fauna/foodWaterTargeting.test.ts`
 - `world/animalTraps.ts`
 
 ## `fauna/animalDialogue.ts`
@@ -207,6 +212,37 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `interaction/resolveInteraction.ts`
+
+## `fauna/animalForaging.test.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalForaging.ts`
+- `items/Inventory.ts`
+- `settlement/household.ts`
+- `world/createGrassForagePatches.ts`
+
+## `fauna/animalForaging.ts`
+
+**Imports**
+
+- `fauna/AnimalLife.ts`
+- `fauna/animalCorpse.ts`
+- `fauna/animalDefs.ts`
+- `items/Inventory.ts`
+- `items/items.ts`
+- `player/PlayerController.ts`
+- `settlement/household.ts`
+- `terrain/waterBodyKind.ts`
+- `world/createGrassForagePatches.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.test.ts`
+- `fauna/foodWaterTargeting.test.ts`
 
 ## `fauna/animalHarvest.ts`
 
@@ -379,7 +415,8 @@ Generated from TypeScript imports.
 
 **Imports**
 
-- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/animalForaging.ts`
 - `items/Inventory.ts`
 
 ## `fauna/frenzyWolf.test.ts`

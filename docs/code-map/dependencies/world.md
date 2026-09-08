@@ -660,6 +660,8 @@ Generated from TypeScript imports.
 
 - `app/worldBundle.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalForaging.test.ts`
+- `fauna/animalForaging.ts`
 - `fauna/createFauna.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`

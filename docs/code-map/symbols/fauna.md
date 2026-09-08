@@ -4,38 +4,33 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 985
+- `AnimalAgent` — class — line 837
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 377
-- `AnimalAgentDeps` — type — line 864
-- `AnimalSaveState` — type — line 474
-- `AnimalUpdateContext` — type — line 895
-- `BURY_DURATION_SEC` — const — line 189
-- `canPredatorPursueIntoVillage` — function — line 680
-- `carcassCandidateScore` — function — line 639
-- `carcassFoodValue` — function — line 621
-- `FAUNA_SHADOW_DISTANCE` — const — line 156
-- `FaunaAiBranch` — type — line 356
-- `FaunaNavRescueDebugInfo` — type — line 361
-- `forageEdgeScore` — function — line 544
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 249
-- `FrenzyWolfCandidate` — type — line 799
-- `HARVEST_MEAT_DURATION_SEC` — const — line 192
-- `isCarcassEdible` — function — line 595
-- `isWithinVillageRadius` — function — line 661
-- `NearbyNpcCandidate` — type — line 794
-- `pickNearestEligibleWolf` — function — line 808
-- `pickRabidTarget` — function — line 833
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 174
-- `resolveLureTarget` — function — line 709
-- `selectDietFeedKind` — function — line 580
-- `tripDayBucket` — function — line 567
-- `villageFleeBiasFalloff` — function — line 688
-- `VillageInfo` — type — line 655
+- `AnimalAgentDebugInfo` — type — line 343
+- `AnimalAgentDeps` — type — line 716
+- `AnimalSaveState` — type — line 440
+- `AnimalUpdateContext` — type — line 747
+- `BURY_DURATION_SEC` — const — line 205
+- `canPredatorPursueIntoVillage` — function — line 532
+- `FAUNA_SHADOW_DISTANCE` — const — line 172
+- `FaunaAiBranch` — type — line 322
+- `FaunaNavRescueDebugInfo` — type — line 327
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 265
+- `FrenzyWolfCandidate` — type — line 651
+- `HARVEST_MEAT_DURATION_SEC` — const — line 208
+- `isWithinVillageRadius` — function — line 513
+- `NearbyNpcCandidate` — type — line 646
+- `pickNearestEligibleWolf` — function — line 660
+- `pickRabidTarget` — function — line 685
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 190
+- `resolveLureTarget` — function — line 561
+- `tripDayBucket` — function — line 489
+- `villageFleeBiasFalloff` — function — line 540
+- `VillageInfo` — type — line 507
 
 ## `fauna/animalCorpse.ts`
 
@@ -96,6 +91,31 @@ Generated from exported TypeScript symbols.
 ## `fauna/animalDialogue.ts`
 
 - `pickAnimalFlavorLine` — function — line 72
+
+## `fauna/animalForaging.ts`
+
+- `applySourceRelief` — function — line 447
+- `CarcassCandidate` — type — line 160
+- `carcassCandidateScore` — function — line 151
+- `carcassFoodValue` — function — line 133
+- `DRINK_DURATION_SEC` — const — line 63
+- `EAT_DURATION_SEC` — const — line 60
+- `findFoodTarget` — function — line 393
+- `findForageTarget` — function — line 269
+- `findGrassPatchTarget` — function — line 299
+- `findTroughTarget` — function — line 235
+- `findWaterTarget` — function — line 240
+- `FOOD_INTERACTION_RANGE` — const — line 54
+- `forageEdgeScore` — function — line 81
+- `ForagingContext` — type — line 210
+- `isCarcassEdible` — function — line 107
+- `isSourceTargetValid` — function — line 405
+- `selectDietFeedKind` — function — line 92
+- `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 67
+- `SOURCE_TARGET_TIMEOUT_SEC` — const — line 72
+- `SourceTarget` — type — line 178
+- `SourceTargetKind` — type — line 177
+- `WATER_INTERACTION_RANGE` — const — line 57
 
 ## `fauna/animalHarvest.ts`
 
