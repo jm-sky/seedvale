@@ -29,6 +29,24 @@ describe('createAgentAnimationSet', () => {
     expect(anim.has('attack')).toBe(true)
   })
 
+  it('resolves an "Armature|Walk"-style suffixed clip name for the candidate "Walk" (plan fauna-017 step 4a)', () => {
+    const root = new THREE.Object3D()
+    const anim = createAgentAnimationSet<'walk'>(root, [testClip('Armature|Walk')])
+    anim.resolve({ walk: ['Walk'] })
+    expect(anim.has('walk')).toBe(true)
+  })
+
+  it('an exact clip name match still wins over a suffix match', () => {
+    const root = new THREE.Object3D()
+    // Suffix-matching clip appears first in `clips` — the exact match must
+    // still be preferred over it, not just whichever comes first.
+    const suffixClip = testClip('Armature|Walk', 2)
+    const exactClip = testClip('Walk', 1)
+    const anim = createAgentAnimationSet<'walk'>(root, [suffixClip, exactClip])
+    anim.resolve({ walk: ['Walk'] })
+    expect(anim.playOnce('walk')).toBeCloseTo(1)
+  })
+
   it('resolves to null (has() false) when no candidate name matches any clip', () => {
     const root = new THREE.Object3D()
     const anim = createAgentAnimationSet<'missing'>(root, [testClip('Idle')])

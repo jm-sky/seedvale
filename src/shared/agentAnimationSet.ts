@@ -71,7 +71,15 @@ export function createAgentAnimationSet<K extends string>(
         const candidates = names[key] ?? []
         let found: THREE.AnimationAction | null = null
         for (const name of candidates) {
-          const clip = clips.find((c) => c.name.toLowerCase() === name.toLowerCase())
+          const lowerName = name.toLowerCase()
+          // Exact match first; only fall back to a `Something|<name>` suffix
+          // match (case-insensitive) — some packs (e.g. Farm Animals cow/
+          // sheep) export clips that way instead of a bare name, same rule
+          // `AnimalAgent.findAction()` already applied before adopting this
+          // shared owner (plan fauna-017 step 4a). Exact always wins even
+          // when a suffix-matching clip appears earlier in `clips`.
+          const clip = clips.find((c) => c.name.toLowerCase() === lowerName)
+            ?? clips.find((c) => c.name.toLowerCase().endsWith(`|${lowerName}`))
           if (clip) {
             found = mixer.clipAction(clip)
             break
