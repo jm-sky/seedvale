@@ -1,4 +1,4 @@
-import type { AnimalKind } from '../fauna/AnimalAgent'
+import type { AnimalKind } from '../fauna/animalDefs'
 import type { ItemKind } from '../items/items'
 import { computeWeather, getSeason, type WeatherState, type WeatherType } from './weather'
 
