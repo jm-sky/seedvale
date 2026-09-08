@@ -57,8 +57,8 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/3
 4. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-5. `settlements-npcs-022` — **Household help and age-based work participation**  
-   🔴 `M` · ✅ ready · unlocks 0/0
+5. `npc-010` — **NPC Death & Corpse Lifecycle**  
+   🟡 `L` · ✅ ready · unlocks 1/2
 
 ---
 
@@ -124,131 +124,135 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-13. `settlements-npcs-022` — **Household help and age-based work participation**  
+13. `npc-010` — **NPC Death & Corpse Lifecycle**  
+  🟡 `L` · **Score:**  46  
+   → **unlocks:** 1/2
+
+14. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-14. `settlements-npcs-025` — **Resource storage visualization**  
+15. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-15. `ui-input-010` — **Player quick actions and primary weapon slots**  
+16. `ui-input-010` — **Player quick actions and primary weapon slots**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 1/2
 
-16. `npc-024` — **Temporary conditions and poisoning**  
+17. `npc-024` — **Temporary conditions and poisoning**  
   🟡 `M` · **Score:**  39  
    → **unlocks:** 1/1
 
-17. `fauna-018` — **Persistent habitat occupants**  
+18. `npc-011` — **NPC Burial & Graves**  
+  🟡 `L` · **Score:**  38  
+   → **unlocks:** 1/1
+
+19. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-18. `npc-010` — **NPC Death & Corpse Lifecycle**  
-  🟡 `L` · **Score:**  36  
-   → **unlocks:** 1/1
-
-19. `quests-progression-011` — **Grave Robbing Reputation Risk & Stealth**  
+20. `quests-progression-011` — **Grave Robbing Reputation Risk & Stealth**  
   🟡 `S` · **Score:**  35  
    → **unlocks:** 1/1
 
-20. `items-player-018` — **Camp inspection, condition and full camp setup**  
+21. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+  🟡 `M` · **Score:**  31  
+   → **unlocks:** 1/1
+
+22. `npc-026` — **NPC Grave Visits**  
+  🟡 `S` · **Score:**  31  
+   → **unlocks:** 0/0
+
+23. `items-player-018` — **Camp inspection, condition and full camp setup**  
   🟡 `L` · **Score:**  30  
    → **unlocks:** 1/1
 
-21. `quests-progression-005` — **Authored RPG Quests**  
+24. `quests-progression-005` — **Authored RPG Quests**  
   🔴 `L` · **Score:**  30  
    → **unlocks:** 0/0
 
-22. `items-player-002` — **Food provenance, freshness and storage**  
+25. `items-player-002` — **Food provenance, freshness and storage**  
   🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-23. `items-player-014` — **Rope-pullable resource transport**  
+26. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `npc-025` — **Injury severity and treatment requirements**  
+27. `npc-025` — **Injury severity and treatment requirements**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+28. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `tools-005` — **Seedvale Character Preparation Panel**  
+29. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-27. `npc-011` — **NPC Burial & Graves**  
-  🟡 `L` · **Score:**  24  
-   → **unlocks:** 0/0
-
-28. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
+30. `tools-007` — **MPFB2 NPC / Hero Character Pipeline**  
   🔴 `L` · **Score:**  24  
    → **unlocks:** 0/0
 
-29. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+31. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-30. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+32. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-31. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+33. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-32. `fauna-013` — **Animal hand-feeding and human affinity**  
+34. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-33. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+35. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-34. `npc-020` — **Strength-driven physical work and human carrying**  
+36. `npc-020` — **Strength-driven physical work and human carrying**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-35. `npc-021` — **Endurance-driven stamina capacity and recovery**  
+37. `npc-021` — **Endurance-driven stamina capacity and recovery**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-36. `npc-023` — **Perception-driven observation and information levels**  
+38. `npc-023` — **Perception-driven observation and information levels**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-37. `world-terrain-015` — **Water Reflection Content Budget**  
+39. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-38. `fauna-007` — **Animal leading and cart harness**  
+40. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-39. `items-player-019` — **Player camp repair and sewing kit**  
+41. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-40. `tools-000` — **Weapon Browser — Observatory/Admin**  
+42. `tools-000` — **Weapon Browser — Observatory/Admin**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-41. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
+43. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-42. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-43. `npc-004` — **Drzewo genealogiczne NPC**  
+44. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-44. `tools-006` — **tools-006--world-observatory.md**  
+45. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
@@ -271,6 +275,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`npc-025-injury-severity-and-treatment-requirements.md`](npc-025-injury-severity-and-treatment-requirements.md)  
   is blocked by:
   - [`npc-024-temporary-conditions-and-poisoning.md`](npc-024-temporary-conditions-and-poisoning.md)
+- [`npc-026-npc-grave-visits.md`](npc-026-npc-grave-visits.md)  
+  is blocked by:
+  - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)
+  - [`world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`](world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md)
 - [`quests-progression-003-paid-quests-and-player-income.md`](quests-progression-003-paid-quests-and-player-income.md)  
   is blocked by:
   - [`quests-progression-002-quest-outcomes-rewards-and-consequences.md`](quests-progression-002-quest-outcomes-rewards-and-consequences.md)
@@ -309,6 +317,13 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`settlements-npcs-019-persistent-and-off-screen-transport.md`](settlements-npcs-019-persistent-and-off-screen-transport.md)  
   is blocked by:
   - [`settlements-npcs-018-physical-goods-transport-foundation.md`](settlements-npcs-018-physical-goods-transport-foundation.md)
+- [`world-018-cave-aware-rich-finite-resource-deposits.md`](world-018-cave-aware-rich-finite-resource-deposits.md)  
+  is blocked by:
+  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
+  - [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)
+- [`world-terrain-017-abandoned-mountain-mine-landmark.md`](world-terrain-017-abandoned-mountain-mine-landmark.md)  
+  is blocked by:
+  - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
 
 ---
 
@@ -405,6 +420,7 @@ graph TD
   npc_023["npc-023 — Perception-driven observation and information levels"]
   npc_024["npc-024 — Temporary conditions and poisoning"]
   npc_025["npc-025 — Injury severity and treatment requirements"]
+  npc_026["npc-026 — NPC Grave Visits"]
   persistence_001["persistence-001 — Full Simulation Persistence"]
   persistence_002["persistence-002 — save integrity guard"]
   persistence_003["persistence-003 — save schema versioning and future migrations"]
@@ -487,6 +503,7 @@ graph TD
   world_015["world-015 — Seed Library and persistent worldgen cache"]
   world_016["world-016 — Ambient Soundscape Events and Lake Frogs"]
   world_017["world-017 — Contextual River Water Safety"]
+  world_018["world-018 — Cave-aware rich finite resource deposits"]
   world_terrain_001["world-terrain-001 — Cloud System"]
   world_terrain_002["world-terrain-002 — Terrain Modification & Land Preparation"]
   world_terrain_003["world-terrain-003 — Weather puddles V2 — stronger shader surface effect"]
@@ -503,6 +520,7 @@ graph TD
   world_terrain_014["world-terrain-014 — Weather-Driven Cloud Variety and Ground Fog"]
   world_terrain_015["world-terrain-015 — Water Reflection Content Budget"]
   world_terrain_016["world-terrain-016 — Settlement Cemeteries & Abandoned Graveyards"]
+  world_terrain_017["world-terrain-017 — Abandoned mountain mine landmark"]
   008 --> items_player_010
   040 --> npc_012
   069 --> settlements_npcs_008
@@ -587,6 +605,7 @@ graph TD
   npc_006 --> npc_007
   npc_007 --> npc_009
   npc_010 --> npc_011
+  npc_011 --> npc_026
   npc_014 --> npc_015
   npc_015 --> npc_016
   npc_015 --> npc_017
@@ -665,6 +684,10 @@ graph TD
   world_terrain_008 --> fauna_019
   world_terrain_008 --> quests_progression_008
   world_terrain_008 --> quests_progression_010
+  world_terrain_008 --> world_018
+  world_terrain_008 --> world_terrain_017
   world_terrain_010 --> world_terrain_011
   world_terrain_011 --> world_terrain_013
+  world_terrain_016 --> npc_026
+  world_terrain_017 --> world_018
 ```
