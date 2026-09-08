@@ -30,6 +30,8 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md`  | -       | 🔴 | M      | -      |
 | `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`        | -       | 🔴 | M      | settlements-npcs-026 |
 | `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | -       | 🔴 | L      | settlements-npcs-026, settlements-npcs-027, settlements-npcs-019 |
+| `tools-000-weapon-browser-observatory.md`                                   | -       | 🟡 | M      | -      |
+| `tools-006--world-observatory.md`                                           | -       | ⚪ | XL     | -      |
 | `tools-007--mpfb2-npc-hero-character-pipeline.md`                           | -       | 🔴 | L      | -      |
 | `world-terrain-009-seasonal-ground-and-grass-appearance.md`                 | -       | 🟡 | M      | -      |
 
@@ -89,9 +91,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | 💡 `world-019-persistent-player-built-site-infrastructure.md`               | -       | 🔴 | L      | -      |
 | 💡 `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~ |
-| ◼️ `tools-000-weapon-browser-observatory.md`                                | -       | 🟡 | M      | -      |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
-| 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
 | 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | fauna-003 |
 | ◼️ `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 | ◼️ `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |

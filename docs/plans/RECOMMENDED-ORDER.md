@@ -214,16 +214,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-36. `tools-000` — **Weapon Browser — Observatory/Admin**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-37. `npc-004` — **Drzewo genealogiczne NPC**  
+36. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
-   → **unlocks:** 0/0
-
-38. `tools-006` — **tools-006--world-observatory.md**  
-  ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 
 ---

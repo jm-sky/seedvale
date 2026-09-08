@@ -1,7 +1,7 @@
 # Plan: Weapon Browser — Observatory/Admin
 
 **Created:** 2026-08-19
-**Status:** `planned` 📋
+**Status:** `draft` 📝
 **Type:** infrastructure
 **Priority:** medium · **Effort:** M
 **Depends on:** none
