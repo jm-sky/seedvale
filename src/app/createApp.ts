@@ -1399,6 +1399,10 @@ export async function createApp(
   placementPreviewIsActive = placementPreview.isActive
   vueUi.configureAbortPlacementPreview(placementPreview.cancel)
   vueUi.configurePlacementPreviewConfirm(placementPreview.confirm)
+  vueUi.configurePlacementPreviewRotation({
+    rotateLeft: placementPreview.rotateLeft,
+    rotateRight: placementPreview.rotateRight,
+  })
 
   const syncNearTownQuickActions = (): void => {
     vueUi.setQuickActionsNearTown(rest.isNearTown())
@@ -1461,7 +1465,7 @@ export async function createApp(
     onStartPlacementPreview: placementPreview.start,
     onPlaceTrap: placement.placeTrapAtAim,
     onPutDownContainer: containers.putDownContainerAtAim,
-    onBuildWell: placement.placeWellAtAim,
+    onBuildWell: () => placementPreview.start('well'),
     onBuildGarden: placement.placeGardenAtAim,
     onPlantTree: placement.plantTreeAtAim,
     onPlantCrop: placement.plantCropAtAim,

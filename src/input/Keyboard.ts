@@ -16,6 +16,10 @@ export type KeyState = {
   questLog: boolean
   /** Edge-triggered: set true on KeyG keydown, cleared by consumeDrop(). */
   drop: boolean
+  /** Edge-triggered: set true on KeyF keydown, cleared by consumeRotateLeft()
+   *  — placement-preview rotation (plan `ui-input-012`); drained every frame
+   *  by `PlacementPreviewActions.tick` so a stray press cannot linger. */
+  rotateLeft: boolean
   /** Edge-triggered: set true on KeyI keydown, cleared by consumeInventory(). */
   inventory: boolean
   /** Edge-triggered: set true on KeyQ keydown, cleared by consumeQuickActions(). */
@@ -66,6 +70,7 @@ const KEY_MAP: Record<string, keyof KeyState> = {
   KeyR: 'altInteract',
   KeyL: 'questLog',
   KeyG: 'drop',
+  KeyF: 'rotateLeft',
   KeyI: 'inventory',
   KeyQ: 'quickActions',
   KeyM: 'minimap',
@@ -84,7 +89,7 @@ const KEY_MAP: Record<string, keyof KeyState> = {
 
 /** Actions that latch true on keydown and are cleared by the consumer, not by keyup —
  *  so a tap registers exactly once regardless of how long the key stays down. */
-const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'comma', 'cycleTarget', 'dismount', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'skills'])
+const EDGE_TRIGGERED = new Set<keyof KeyState>(['altInteract', 'character', 'comma', 'cycleTarget', 'dismount', 'drop', 'interact', 'inventory', 'jump', 'minimap', 'minus', 'period', 'plus', 'questLog', 'quickActions', 'rotateLeft', 'skills'])
 
 /** True while the event is headed for a text field — the pause menu's Character
  *  name input is the live case. Without this, `KEY_MAP` letters (w/a/s/d/e/l/g)
@@ -112,6 +117,8 @@ export function createKeyboard(): {
   consumeQuestLog: () => boolean
   /** Reads and clears the pending drop press. Returns true at most once per keydown. */
   consumeDrop: () => boolean
+  /** Reads and clears the pending rotate-left press (`F`, plan `ui-input-012`). */
+  consumeRotateLeft: () => boolean
   /** Reads and clears the pending inventory press. Returns true at most once per keydown. */
   consumeInventory: () => boolean
   /** Reads and clears the pending quick actions press. Returns true at most once per keydown. */
@@ -149,6 +156,7 @@ export function createKeyboard(): {
     altInteract: false,
     questLog: false,
     drop: false,
+    rotateLeft: false,
     inventory: false,
     quickActions: false,
     minimap: false,
@@ -187,7 +195,7 @@ export function createKeyboard(): {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 
-  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period' | 'dismount'): boolean => {
+  const consume = (key: 'interact' | 'interactReleased' | 'altInteract' | 'questLog' | 'drop' | 'rotateLeft' | 'inventory' | 'quickActions' | 'minimap' | 'skills' | 'character' | 'jump' | 'cycleTarget' | 'plus' | 'minus' | 'comma' | 'period' | 'dismount'): boolean => {
     if (!state[key]) return false
     state[key] = false
     return true
@@ -200,6 +208,7 @@ export function createKeyboard(): {
     consumeAltInteract: () => consume('altInteract'),
     consumeQuestLog: () => consume('questLog'),
     consumeDrop: () => consume('drop'),
+    consumeRotateLeft: () => consume('rotateLeft'),
     consumeInventory: () => consume('inventory'),
     consumeQuickActions: () => consume('quickActions'),
     consumeMinimap: () => consume('minimap'),

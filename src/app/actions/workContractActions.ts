@@ -20,6 +20,7 @@ import {
   type PlacementPreviewResult,
   previewGroundPlacement,
 } from './placementActions'
+import { placementAimSite } from './placementYaw'
 
 /** Player is always the employer in this foundation phase (plan npc-014) —
  *  a `string`, not a literal, so a later NPC-employer phase needs no schema
@@ -107,14 +108,12 @@ export function createWorkContractActions(
    *  non-terminal existing contract target, so two contracts can't stack on
    *  the same spot. */
   const contractPlacementDefinition = (): GroundPlacementDefinition<GroundPlacementReason> => ({
-    aim: () => {
-      const yaw = mouseLook.state.yaw
-      return {
-        x: player.mesh.position.x - Math.sin(yaw) * CONTRACT_TARGET_PLACE_REACH,
-        z: player.mesh.position.z - Math.cos(yaw) * CONTRACT_TARGET_PLACE_REACH,
-        yaw,
-      }
-    },
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      CONTRACT_TARGET_PLACE_REACH,
+    ),
     evaluate: (site) => evaluateGroundPlacement({
       x: site.x,
       z: site.z,
@@ -131,6 +130,7 @@ export function createWorkContractActions(
       separation: CONTRACT_TARGET_SEPARATION,
     }),
     footprintRadius: CONTRACT_TARGET_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'circle', radius: CONTRACT_TARGET_FOOTPRINT_RADIUS },
     reasonLabel: (reason) => CONTRACT_TARGET_PLACEMENT_MESSAGE[reason],
   })
 

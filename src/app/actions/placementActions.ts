@@ -1,4 +1,5 @@
 import type { CropId } from '../../world/cropLifecycle'
+import type { PlacementPreviewFootprint } from '../../world/placementPreview'
 import { playActionWellConstruction } from '../../audio/actionSounds'
 import {
   applyRecovery,
@@ -20,7 +21,7 @@ import {
   TENT_SETUP_DURATION_SEC,
   type TentPlacementReason,
 } from '../../items/tentPlacement'
-import { TENT_FOOTPRINT_RADIUS, TENT_LENGTH } from '../../items/tentProp'
+import { TENT_FOOTPRINT_RADIUS, TENT_LENGTH, TENT_WIDTH } from '../../items/tentProp'
 import { selectInstanceToPlace } from '../../items/trade'
 import {
   applyRepresentedPhysicalEffortVigor,
@@ -40,6 +41,7 @@ import {
 import {
   isPalisadeConstructionComplete,
   PALISADE_FOOTPRINT_RADIUS,
+  PALISADE_LENGTH,
   PALISADE_MATERIAL_REQUIREMENTS,
   PALISADE_PLACE_DURATION_SEC,
   PALISADE_PLACE_REACH,
@@ -92,6 +94,7 @@ import {
   WELL_WORK_LABEL,
   WELL_WORK_SESSION_HOURS,
   WELL_WORK_SESSION_SEC,
+  type WellPlacementReason,
   wellStageCapabilities,
   wellStageRequirements,
   wellStageWorkHours,
@@ -113,6 +116,12 @@ import {
   type PlatformPlacementReason,
 } from '../../world/sleepingUtilities'
 import {
+  BEDROLL_LENGTH,
+  BEDROLL_WIDTH,
+  PLATFORM_FOOTPRINT_LENGTH,
+  PLATFORM_FOOTPRINT_WIDTH,
+} from '../../world/sleepingUtilityProp'
+import {
   isStandingTorchConstructionComplete,
   STANDING_TORCH_FOOTPRINT_RADIUS,
   STANDING_TORCH_MATERIAL_REQUIREMENTS,
@@ -126,6 +135,7 @@ import {
   standingTorchRemainingWork,
 } from '../../world/standingTorch'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
+import { placementAimSite } from './placementYaw'
 
 /** A world object the player can put down in front of themselves — the shared
  *  `evaluateGroundPlacement` + busy-channel shape used by tents (plan 099),
@@ -134,17 +144,22 @@ import { isActionBlocked, type PlayerActionContext } from './actionContext'
  *  Esc costs nothing. */
 export type PlacementBlocker = { x: number, z: number, radius: number }
 
+export type { PlacementPreviewFootprint }
+
 /** Read-only per-frame result backing the shared placement-preview ghost/UI
- *  (plan `ui-input-004` §2/§7) — every `preview*Placement()` below returns
- *  this same shape so `app/actions/placementPreviewActions.ts` can render
- *  and validate any of chest/tent/fire without knowing their individual
- *  reason types. Never authoritative: the real placement action re-resolves
- *  aim and re-validates from scratch at confirm time. */
+ *  (plan `ui-input-004` §2/§7, footprint/yaw by `ui-input-012`) — every
+ *  `preview*Placement()` below returns this same shape so
+ *  `app/actions/placementPreviewActions.ts` can render and validate any of
+ *  chest/tent/fire without knowing their individual reason types. Never
+ *  authoritative: the real placement action re-resolves aim and re-validates
+ *  from scratch at confirm time. */
 export type PlacementPreviewResult = {
   x: number
   z: number
   yaw: number
   footprintRadius: number
+  /** Presentational ghost shape — independent of `footprintRadius` clearance. */
+  footprint: PlacementPreviewFootprint
   valid: boolean
   reasonLabel: string
 }
@@ -172,6 +187,8 @@ export type GroundPlacementDefinition<Reason extends string> = {
   aim: () => GroundPlacementSite
   evaluate: (site: GroundPlacementSite) => Reason
   footprintRadius: number
+  /** Presentational ghost shape — independent of `footprintRadius` clearance. */
+  previewFootprint: PlacementPreviewFootprint
   reasonLabel: (reason: Exclude<Reason, 'ok'>) => string
 }
 
@@ -196,6 +213,7 @@ export function previewGroundPlacement<Reason extends string>(
     z: site.z,
     yaw: site.yaw,
     footprintRadius: def.footprintRadius,
+    footprint: def.previewFootprint,
     valid: ok,
     reasonLabel: ok ? '' : def.reasonLabel(reason as Exclude<Reason, 'ok'>),
   }
@@ -218,10 +236,15 @@ export type PlacementActions = {
   tentBlockers: (x: number, z: number) => PlacementBlocker[]
   /** Read-only preview of tent placement at the player's current aim (plan
    *  `ui-input-004` §2) — backs the shared placement-preview ghost/UI;
-   *  `placeTentAtAim` remains the only mutation seam. */
-  previewTentPlacement: () => PlacementPreviewResult
-  placeTentAtAim: () => void
+   *  `placeTentAtAim` remains the only mutation seam. `objectYaw` freezes
+   *  the tent's orientation independently of camera aim (plan `ui-input-012`). */
+  previewTentPlacement: (objectYaw?: number) => PlacementPreviewResult
+  placeTentAtAim: (objectYaw?: number) => void
   placeTrapAtAim: (kind: TrapKind) => void
+  /** Read-only preview of well placement at the player's current aim (plan
+   *  `ui-input-012`) — same shared preview seam as tent/torch; confirm still
+   *  re-resolves via `placeWellAtAim`. */
+  previewWellPlacement: () => PlacementPreviewResult
   placeWellAtAim: () => void
   workOnWell: (id: string) => void
   /** Read-only preview of what pressing `[E]` on this well would require/do
@@ -272,12 +295,12 @@ export type PlacementActions = {
    *  segment endpoint when one is in range; backs the shared
    *  placement-preview ghost/UI. `placePalisadeAtAim` remains the only
    *  mutation seam. */
-  previewPalisadePlacement: () => PlacementPreviewResult
+  previewPalisadePlacement: (objectYaw?: number) => PlacementPreviewResult
   /** Places a new palisade segment ahead of the player (plan items-player-010
    *  §1/§2/§3/§4) — snaps to the nearest valid endpoint of an existing
    *  segment within reach, then consumes `PALISADE_MATERIAL_REQUIREMENTS`
    *  atomically on completion, nothing on a rejected/cancelled placement. */
-  placePalisadeAtAim: () => void
+  placePalisadeAtAim: (objectYaw?: number) => void
   /** `[E]` on an unfinished palisade segment (plan items-player-017 §10) —
    *  same shape as `workOnStandingTorch`, `moderate`-effort represented
    *  vigor cost. No-op if `id` is unknown or already complete. */
@@ -295,31 +318,25 @@ export type PlacementActions = {
   /** Read-only preview of bedroll placement at the player's current aim
    *  (plan items-player-013) — same shape as `previewStandingTorchPlacement`;
    *  `placeBedrollAtAim` remains the only mutation seam. */
-  previewBedrollPlacement: () => PlacementPreviewResult
+  previewBedrollPlacement: (objectYaw?: number) => PlacementPreviewResult
   /** Places a new leather bedroll ahead of the player (plan items-player-013)
    *  — consumes `BEDROLL_MATERIAL_REQUIREMENTS` atomically on completion,
    *  nothing on a rejected/cancelled placement. */
-  placeBedrollAtAim: () => void
+  placeBedrollAtAim: (objectYaw?: number) => void
   /** Read-only preview of raised-platform placement at the player's current
    *  aim (plan items-player-013) — same shape as `previewBedrollPlacement`. */
-  previewPlatformPlacement: () => PlacementPreviewResult
+  previewPlatformPlacement: (objectYaw?: number) => PlacementPreviewResult
   /** Places a new raised sleeping platform ahead of the player (plan
    *  items-player-013) — consumes `PLATFORM_MATERIAL_REQUIREMENTS` atomically
    *  on completion, nothing on a rejected/cancelled placement. */
-  placePlatformAtAim: () => void
+  placePlatformAtAim: (objectYaw?: number) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
 
-  const tentAimPoint = (): { x: number, z: number, yaw: number } => {
-    const yaw = mouseLook.state.yaw
-    return {
-      x: player.mesh.position.x - Math.sin(yaw) * TENT_LENGTH,
-      z: player.mesh.position.z - Math.cos(yaw) * TENT_LENGTH,
-      yaw,
-    }
-  }
+  const tentAimPoint = (): { x: number, z: number, yaw: number } =>
+    placementAimSite(player.mesh.position.x, player.mesh.position.z, mouseLook.state.yaw, TENT_LENGTH)
 
   const tentBlockers = (x: number, z: number): PlacementBlocker[] => {
     const blockers: PlacementBlocker[] = []
@@ -342,8 +359,14 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   /** Shared placement contract for a tent (plan `world-008`) — one `aim` +
    *  `evaluate` pair `previewTentPlacement` and `placeTentAtAim` both build
    *  from, so they can never validate a site differently. */
-  const tentPlacementDefinition = (): GroundPlacementDefinition<TentPlacementReason> => ({
-    aim: tentAimPoint,
+  const tentPlacementDefinition = (objectYaw?: number): GroundPlacementDefinition<TentPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      TENT_LENGTH,
+      objectYaw,
+    ),
     evaluate: (site) => evaluateTentPlacement({
       x: site.x,
       z: site.z,
@@ -353,14 +376,16 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       otherTents: bundle.placedTents.nodes(),
     }),
     footprintRadius: TENT_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'box', width: TENT_WIDTH, depth: TENT_LENGTH },
     reasonLabel: (reason) => TENT_PLACEMENT_MESSAGE[reason],
   })
 
-  const previewTentPlacement = (): PlacementPreviewResult => previewGroundPlacement(tentPlacementDefinition())
+  const previewTentPlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(tentPlacementDefinition(objectYaw))
 
-  const placeTentAtAim = (): void => {
+  const placeTentAtAim = (objectYaw?: number): void => {
     if (!inventory.has('tent', 1) || isActionBlocked(ctx)) return
-    const { site, reason } = evaluatePlacementSite(tentPlacementDefinition())
+    const { site, reason } = evaluatePlacementSite(tentPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
       return
@@ -420,6 +445,33 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     })
   }
 
+  const wellPlacementDefinition = (): GroundPlacementDefinition<WellPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      WELL_PLACE_REACH,
+    ),
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.playerWells.nodes(),
+        footprintRadius: WELL_FOOTPRINT_RADIUS,
+        separation: WELL_SEPARATION,
+      })
+      return reason === 'occupied' ? 'well' : reason
+    },
+    footprintRadius: WELL_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'circle', radius: WELL_FOOTPRINT_RADIUS },
+    reasonLabel: (reason) => WELL_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewWellPlacement = (): PlacementPreviewResult => previewGroundPlacement(wellPlacementDefinition())
+
   /** Places a new player-built well ahead of the player (plan 127 §5/§11) —
    *  same busy-channel shape as pitching a tent/setting a trap: the shovel
    *  is required but never consumed (plan §2), only the `pit` stage's
@@ -428,25 +480,13 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  each subsequent stage actually starts (`advanceWellStage` below). */
   const placeWellAtAim = (): void => {
     if (!inventory.hasCapability('soil_digging') || isActionBlocked(ctx)) return
-    const yaw = mouseLook.state.yaw
-    const x = player.mesh.position.x - Math.sin(yaw) * WELL_PLACE_REACH
-    const z = player.mesh.position.z - Math.cos(yaw) * WELL_PLACE_REACH
-    const reason = evaluateGroundPlacement({
-      x,
-      z,
-      sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
-      waterLevel: bundle.chunkManager.waterLevel,
-      blockers: tentBlockers(x, z),
-      peers: bundle.playerWells.nodes(),
-      footprintRadius: WELL_FOOTPRINT_RADIUS,
-      separation: WELL_SEPARATION,
-    })
+    const { site, reason } = evaluatePlacementSite(wellPlacementDefinition())
     if (reason !== 'ok') {
-      toast.show(WELL_PLACEMENT_MESSAGE[reason === 'occupied' ? 'well' : reason], 'error')
+      toast.show(WELL_PLACEMENT_MESSAGE[reason], 'error')
       return
     }
     busy.start(WELL_PLACE_DURATION_SEC, 'Kopanie dołu pod studnię…', () => {
-      bundle.playerWells.place(x, z, yaw)
+      bundle.playerWells.place(site.x, site.z, site.yaw)
       toast.show('Rozpoczęto kopanie studni.')
     }, physicalEffortBusyOptions('moderate', dayNight.dayLengthSec))
   }
@@ -767,14 +807,12 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  separation differ (a single post, not a footprint the player stands
    *  inside). */
   const standingTorchPlacementDefinition = (): GroundPlacementDefinition<StandingTorchPlacementReason> => ({
-    aim: () => {
-      const yaw = mouseLook.state.yaw
-      return {
-        x: player.mesh.position.x - Math.sin(yaw) * STANDING_TORCH_PLACE_REACH,
-        z: player.mesh.position.z - Math.cos(yaw) * STANDING_TORCH_PLACE_REACH,
-        yaw,
-      }
-    },
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      STANDING_TORCH_PLACE_REACH,
+    ),
     evaluate: (site) => {
       const reason = evaluateGroundPlacement({
         x: site.x,
@@ -789,6 +827,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return reason === 'occupied' ? 'torch' : reason
     },
     footprintRadius: STANDING_TORCH_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'circle', radius: STANDING_TORCH_FOOTPRINT_RADIUS },
     reasonLabel: (reason) => STANDING_TORCH_PLACEMENT_MESSAGE[reason],
   })
 
@@ -878,12 +917,16 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
    *  every other placeable uses). `evaluate` re-validates the *resolved*
    *  (possibly snapped) site — a rejected snap site still shows as invalid,
    *  it never silently falls back to the raw aim point. */
-  const palisadePlacementDefinition = (): GroundPlacementDefinition<PalisadePlacementReason> => ({
+  const palisadePlacementDefinition = (objectYaw?: number): GroundPlacementDefinition<PalisadePlacementReason> => ({
     aim: () => {
-      const yaw = mouseLook.state.yaw
-      const rawX = player.mesh.position.x - Math.sin(yaw) * PALISADE_PLACE_REACH
-      const rawZ = player.mesh.position.z - Math.cos(yaw) * PALISADE_PLACE_REACH
-      return resolvePalisadeSite({ x: rawX, z: rawZ, yaw }, bundle.palisades.nodes())
+      const raw = placementAimSite(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        mouseLook.state.yaw,
+        PALISADE_PLACE_REACH,
+        objectYaw,
+      )
+      return resolvePalisadeSite(raw, bundle.palisades.nodes())
     },
     evaluate: (site) => {
       const reason = evaluateGroundPlacement({
@@ -899,20 +942,21 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return reason === 'occupied' ? 'palisade' : reason
     },
     footprintRadius: PALISADE_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'box', width: PALISADE_FOOTPRINT_RADIUS * 2, depth: PALISADE_LENGTH },
     reasonLabel: (reason) => PALISADE_PLACEMENT_MESSAGE[reason],
   })
 
-  const previewPalisadePlacement = (): PlacementPreviewResult =>
-    previewGroundPlacement(palisadePlacementDefinition())
+  const previewPalisadePlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(palisadePlacementDefinition(objectYaw))
 
   /** Places a new palisade segment ahead of the player (plan items-player-010
    *  §1/§2/§3/§4) — same "validate the resolved site, then busy-channel,
    *  consume+build only on completion" shape as `placeStandingTorchAtAim`;
    *  the site (including any snap) is re-resolved and re-validated here, at
    *  confirm time, never trusted from a cached preview result. */
-  const placePalisadeAtAim = (): void => {
+  const placePalisadeAtAim = (objectYaw?: number): void => {
     if (isActionBlocked(ctx)) return
-    const { site, reason } = evaluatePlacementSite(palisadePlacementDefinition())
+    const { site, reason } = evaluatePlacementSite(palisadePlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(PALISADE_PLACEMENT_MESSAGE[reason], 'error')
       return
@@ -993,15 +1037,14 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
 
   /** Shared placement contract for a bedroll (plan items-player-013) — same
    *  shape as `standingTorchPlacementDefinition`. */
-  const bedrollPlacementDefinition = (): GroundPlacementDefinition<BedrollPlacementReason> => ({
-    aim: () => {
-      const yaw = mouseLook.state.yaw
-      return {
-        x: player.mesh.position.x - Math.sin(yaw) * BEDROLL_PLACE_REACH,
-        z: player.mesh.position.z - Math.cos(yaw) * BEDROLL_PLACE_REACH,
-        yaw,
-      }
-    },
+  const bedrollPlacementDefinition = (objectYaw?: number): GroundPlacementDefinition<BedrollPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      BEDROLL_PLACE_REACH,
+      objectYaw,
+    ),
     evaluate: (site) => {
       const reason = evaluateGroundPlacement({
         x: site.x,
@@ -1016,17 +1059,19 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return reason === 'occupied' ? 'bedroll' : reason
     },
     footprintRadius: BEDROLL_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'box', width: BEDROLL_WIDTH, depth: BEDROLL_LENGTH },
     reasonLabel: (reason) => BEDROLL_PLACEMENT_MESSAGE[reason],
   })
 
-  const previewBedrollPlacement = (): PlacementPreviewResult => previewGroundPlacement(bedrollPlacementDefinition())
+  const previewBedrollPlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(bedrollPlacementDefinition(objectYaw))
 
   /** Places a new leather bedroll ahead of the player (plan items-player-013)
    *  — same "validate, then busy-channel, consume+build only on completion"
    *  shape as `placeStandingTorchAtAim`. No capability/tool is required. */
-  const placeBedrollAtAim = (): void => {
+  const placeBedrollAtAim = (objectYaw?: number): void => {
     if (isActionBlocked(ctx)) return
-    const { site, reason } = evaluatePlacementSite(bedrollPlacementDefinition())
+    const { site, reason } = evaluatePlacementSite(bedrollPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(BEDROLL_PLACEMENT_MESSAGE[reason], 'error')
       return
@@ -1054,15 +1099,14 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
 
   /** Shared placement contract for a raised sleeping platform (plan
    *  items-player-013) — same shape as `bedrollPlacementDefinition`. */
-  const platformPlacementDefinition = (): GroundPlacementDefinition<PlatformPlacementReason> => ({
-    aim: () => {
-      const yaw = mouseLook.state.yaw
-      return {
-        x: player.mesh.position.x - Math.sin(yaw) * PLATFORM_PLACE_REACH,
-        z: player.mesh.position.z - Math.cos(yaw) * PLATFORM_PLACE_REACH,
-        yaw,
-      }
-    },
+  const platformPlacementDefinition = (objectYaw?: number): GroundPlacementDefinition<PlatformPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      PLATFORM_PLACE_REACH,
+      objectYaw,
+    ),
     evaluate: (site) => {
       const reason = evaluateGroundPlacement({
         x: site.x,
@@ -1077,16 +1121,18 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       return reason === 'occupied' ? 'platform' : reason
     },
     footprintRadius: PLATFORM_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'box', width: PLATFORM_FOOTPRINT_WIDTH, depth: PLATFORM_FOOTPRINT_LENGTH },
     reasonLabel: (reason) => PLATFORM_PLACEMENT_MESSAGE[reason],
   })
 
-  const previewPlatformPlacement = (): PlacementPreviewResult => previewGroundPlacement(platformPlacementDefinition())
+  const previewPlatformPlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(platformPlacementDefinition(objectYaw))
 
   /** Places a new raised sleeping platform ahead of the player (plan
    *  items-player-013) — same shape as `placeBedrollAtAim`. */
-  const placePlatformAtAim = (): void => {
+  const placePlatformAtAim = (objectYaw?: number): void => {
     if (isActionBlocked(ctx)) return
-    const { site, reason } = evaluatePlacementSite(platformPlacementDefinition())
+    const { site, reason } = evaluatePlacementSite(platformPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(PLATFORM_PLACEMENT_MESSAGE[reason], 'error')
       return
@@ -1118,6 +1164,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     previewTentPlacement,
     placeTentAtAim,
     placeTrapAtAim,
+    previewWellPlacement,
     placeWellAtAim,
     workOnWell,
     describeWellWork,

@@ -310,6 +310,7 @@ type PlacementPreviewState = {
   label: string
   valid: boolean
   reasonLabel: string
+  supportsRotation: boolean
 }
 /** `config`/`dayNight` are the *same* mutable objects `createApp.ts` already
  *  holds (see plan 005 — "Nie duplikować stanu"), assigned once via
@@ -514,7 +515,7 @@ export const ui = reactive({
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
-  placementPreview: { visible: false, label: '', valid: false, reasonLabel: '' } as PlacementPreviewState,
+  placementPreview: { visible: false, label: '', valid: false, reasonLabel: '', supportsRotation: false } as PlacementPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
@@ -1078,14 +1079,33 @@ export function confirmPlacementPreview(): void {
   placementPreviewConfirmHandler?.()
 }
 
-export function showPlacementPreview(view: { label: string, valid: boolean, reasonLabel: string }): void {
+/** Thin rotate wrappers over `PlacementPreviewActions.rotateLeft/Right` —
+ *  Vue must not compute yaw or steps (plan `ui-input-012`). */
+export type PlacementPreviewRotationControls = {
+  rotateLeft: () => void
+  rotateRight: () => void
+}
+let placementPreviewRotationHandler: PlacementPreviewRotationControls | null = null
+export function configurePlacementPreviewRotation(handler: PlacementPreviewRotationControls | null): void {
+  placementPreviewRotationHandler = handler
+}
+export function rotatePlacementPreviewLeft(): void {
+  placementPreviewRotationHandler?.rotateLeft()
+}
+export function rotatePlacementPreviewRight(): void {
+  placementPreviewRotationHandler?.rotateRight()
+}
+
+export function showPlacementPreview(view: { label: string, valid: boolean, reasonLabel: string, supportsRotation?: boolean }): void {
   ui.placementPreview.visible = true
   ui.placementPreview.label = view.label
   ui.placementPreview.valid = view.valid
   ui.placementPreview.reasonLabel = view.reasonLabel
+  ui.placementPreview.supportsRotation = view.supportsRotation ?? false
 }
 export function hidePlacementPreview(): void {
   ui.placementPreview.visible = false
+  ui.placementPreview.supportsRotation = false
 }
 
 export function configureWorldConfigScreen(config: WorldConfig, dayNight: DayNightState, handlers: {

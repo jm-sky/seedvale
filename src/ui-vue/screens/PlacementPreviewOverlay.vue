@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { abortPlacementPreview, confirmPlacementPreview, ui } from '../store'
+import { isTouchDevice } from '../../input/isTouchDevice'
+import {
+  abortPlacementPreview,
+  confirmPlacementPreview,
+  rotatePlacementPreviewLeft,
+  rotatePlacementPreviewRight,
+  ui,
+} from '../store'
+
+const touchDevice = isTouchDevice()
 </script>
 
 <template>
@@ -14,6 +23,27 @@ import { abortPlacementPreview, confirmPlacementPreview, ui } from '../store'
         class="text-[13px] text-red-300"
       >
         {{ ui.placementPreview.reasonLabel }}
+      </div>
+      <div
+        v-if="ui.placementPreview.supportsRotation"
+        class="flex items-center gap-2"
+      >
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1 text-[13px] hover:bg-white/20"
+          aria-label="Obróć w lewo"
+          @click="rotatePlacementPreviewLeft"
+        >
+          ↶
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1 text-[13px] hover:bg-white/20"
+          aria-label="Obróć w prawo"
+          @click="rotatePlacementPreviewRight"
+        >
+          ↷
+        </button>
       </div>
       <div class="flex items-center gap-2">
         <button
@@ -31,6 +61,12 @@ import { abortPlacementPreview, confirmPlacementPreview, ui } from '../store'
         >
           Anuluj [Esc]
         </button>
+      </div>
+      <div
+        v-if="ui.placementPreview.supportsRotation && !touchDevice"
+        class="text-[12px] text-ink/70"
+      >
+        F / G — Obróć
       </div>
     </div>
   </div>

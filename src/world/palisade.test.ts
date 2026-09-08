@@ -84,6 +84,16 @@ describe('resolvePalisadeSite', () => {
     expect(newBack.z).toBeCloseTo(front.z)
   })
 
+  it('forms a 45° corner when the aim yaw is a placement-rotation step', () => {
+    const front = palisadeEndpoints(existing[0]!).front
+    const cornerYaw = Math.PI / 4
+    const site = resolvePalisadeSite({ x: front.x + 0.2, z: front.z + 0.2, yaw: cornerYaw }, existing, 1.5)
+    const newBack = palisadeEndpoints({ x: site.x, z: site.z, yaw: site.yaw }).back
+    expect(newBack.x).toBeCloseTo(front.x)
+    expect(newBack.z).toBeCloseTo(front.z)
+    expect(site.yaw).toBe(cornerYaw)
+  })
+
   it('leaves the aim unchanged when no endpoint is in range', () => {
     const aim = { x: 50, z: 50, yaw: 1.2 }
     expect(resolvePalisadeSite(aim, existing, 1.5)).toEqual(aim)

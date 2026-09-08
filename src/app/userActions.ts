@@ -100,6 +100,7 @@ const getUserActions = (
       z: aim.z,
       yaw: aim.yaw,
       footprintRadius: FIRE_FOOTPRINT_RADIUS,
+      footprint: { kind: 'circle', radius: FIRE_FOOTPRINT_RADIUS },
       valid,
       reasonLabel: valid ? '' : 'Za mało miejsca lub zbyt blisko wody/zbocza.',
     }

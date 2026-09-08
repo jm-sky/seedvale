@@ -4,7 +4,7 @@
 
 **Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../state/settlements.md)).
 
-**Last verified:** 2026-09-07
+**Last verified:** 2026-09-08
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -38,6 +38,10 @@ Sneak is toggled from the pause menu; active sneak slows movement and feeds `fau
 
 Timed player actions (dig/chop/mine/bury/harvest/ignite/cook/tent-setup/destroy-spawner/well-work bout) run on `src/app/busyAction.ts`, a short real-time overlay — seconds, not minutes. Most show a progress bar and can be Esc-cancelled with nothing consumed (a tent, for example, is only spent when setup completes). Harvest pins the corpse being worked on so it can't despawn mid-channel. Taking damage during a busy channel or a rest/wait skip interrupts it — see [combat.md](./combat.md#combat-interruption-plan-186).
 
+## Object placement preview (plan `ui-input-012`)
+
+`PlacementPreviewActions` is the single construction-preview lifecycle for chest, tent, fires, standing torch, palisade, bedroll, platform, well and work-contract targets. The ghost (`world/placementPreview.ts`) draws a circle or box footprint from `PlacementPreviewResult.footprint`; domain clearance stays the existing `footprintRadius` circle. Placeables that declare `supportsRotation` freeze a 45°-snapped object yaw at preview start (`F`/`G` or overlay buttons step it); camera look still moves the aim point. Confirm re-resolves the site with that yaw and re-runs domain validation — the preview result is never authoritative.
+
 ## Camp rest quality
 
 `src/app/campRest.ts` is a pure module, not a manager. `CampRestContext { hasBlanket, hasTent, hasWarmFire }` is resolved once, when rest starts, from the existing `PlacedTents`/`PlacedFires` lists (a fire must be lit and within a warmth radius; village fires don't count — town rest is already full). `campRestQuality()` maps that context to a `[0,1]` quality (blanket only 0.55 < blanket+fire 0.75 < tent+blanket 0.8 < full camp 1.0), with the Survival skill closing up to 60% of the gap. `restoreNeedsFromSleep(needs, quality)` can only fail to fill the bar, never lower it below what it already had; stamina is always fully refilled regardless of quality. `app/actions/restActions.ts`'s `onSleepFinished()` owns applying the outcome.
@@ -50,7 +54,7 @@ The walk is cancellable at any time — `Esc` (already first in `App.vue`'s keyd
 
 ## Player-built wells (plan 127, groundwater/protection by plan world-004)
 
-`world/playerWell.ts` + `world/createPlayerWells.ts` use an **active-work** model: Quick Actions places a persistent record in the `pit` stage with zero progress, and each construction stage (`pit`/`well`/`roof`) only advances from hours of *active* player work (`workProgress`) — never from elapsed world time, so leaving the game does not finish a well. A `[E]` press runs one short busy-channel work bout; the measured world-time delta of that bout (not an assumed value) is credited to `workProgress` on both natural completion and Escape-cancellation, so an interruption keeps exactly the work done and resumes from there. The first bout of a new stage validates its tool requirement (`world/playerWell.ts`'s `wellStageCapabilities`) and atomically consumes that stage's material cost; resuming the same stage re-checks the tool but never re-charges materials.
+`world/playerWell.ts` + `world/createPlayerWells.ts` use an **active-work** model: Quick Actions enters the shared placement-preview mode (`PlacementPreviewActions`, same lifecycle as tent/chest/palisade) and confirm places a persistent record in the `pit` stage with zero progress. Each construction stage (`pit`/`well`/`roof`) only advances from hours of *active* player work (`workProgress`) — never from elapsed world time, so leaving the game does not finish a well. A `[E]` press runs one short busy-channel work bout; the measured world-time delta of that bout (not an assumed value) is credited to `workProgress` on both natural completion and Escape-cancellation, so an interruption keeps exactly the work done and resumes from there. The first bout of a new stage validates its tool requirement (`world/playerWell.ts`'s `wellStageCapabilities`) and atomically consumes that stage's material cost; resuming the same stage re-checks the tool but never re-charges materials.
 
 Plan world-004 resolves each well's water once, at placement (`world/wellGroundwater.ts`'s `resolveWellWater` — a pure, deterministic function of world seed + position + local terrain height/water level, no `Math.random()`), and persists the result on the record (`waterDepth`/`waterKind: groundwater | reservoir | underground_stream`) so it never changes across chunk unload/reload or save/load (`SaveData` migrated v3→v4, defaulting a pre-plan well to a shallow `groundwater` reading). Higher terrain resolves to deeper water; a small deterministic chance instead lands on a shallower `reservoir`/`underground_stream`. `waterDepth` drives three things through shared helpers, never a duplicated depth check: the `pit` stage's active-work requirement (`getWellPitWorkHours`, replacing the old fixed 2h), whether `pit` additionally requires `rock_mining` on top of `soil_digging` (`wellStageCapabilities`, threshold `wellGroundwater.ts`'s `DEEP_WELL_DEPTH_THRESHOLD`), and whether drawing water at all needs a carried (never consumed) `rope` item (`wellWaterSource`'s `WaterSource.requiresRope`).
 

@@ -1,7 +1,7 @@
 # Plan: Placement preview shapes, rotation and coverage
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** M
 **Depends on:** none

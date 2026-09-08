@@ -811,6 +811,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       keyboard.consumeAltInteract()
       const questLogConsumed = keyboard.consumeQuestLog()
       keyboard.consumeDrop()
+      keyboard.consumeRotateLeft()
       keyboard.consumeJump()
       const inventoryConsumed = keyboard.consumeInventory()
       const quickActionsConsumed = keyboard.consumeQuickActions()

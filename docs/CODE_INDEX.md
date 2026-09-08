@@ -32,6 +32,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Action context](../src/app/actions/actionContext.ts) — the shared dependency bundle plus the "another activity is already running" guards.
 - [Ground actions](../src/app/actions/groundActions.ts) — shovel/pickaxe dig and level, multi-stage tree chop, ore-deposit mining.
 - [Placement actions](../src/app/actions/placementActions.ts) — putting a tent/trap/well/garden/standing torch/palisade segment down in front of the player, advancing a player-built well's stage, igniting a standing torch, and removing a palisade segment (with material recovery).
+- [Placement preview](../src/app/actions/placementPreviewActions.ts) — shared aim/ghost/confirm/cancel/rotation lifecycle for built objects; domain modules still own validity and mutation.
+- [Placement preview ghost](../src/world/placementPreview.ts) — circle/box footprint renderer for the shared placement preview.
 - [Container actions](../src/app/actions/containerActions.ts) — placing, carrying and opening a chest, plus the transfer screen wiring.
 - [Work contract actions](../src/app/actions/workContractActions.ts) — creating a construction work contract, posting it at a settlement notice board, and cancelling one.
 - [Survival actions](../src/app/actions/survivalActions.ts) — corpse butchering/burial, campfire ignite/cook, water drinking/filling, eating.

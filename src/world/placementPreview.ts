@@ -1,13 +1,19 @@
 import * as THREE from 'three'
 
+/** Presentational footprint the shared placement ghost can draw — independent
+ *  of the domain clearance radius used by `evaluateGroundPlacement`. */
+export type PlacementPreviewFootprint =
+  | { kind: 'circle'; radius: number }
+  | { kind: 'box'; width: number; depth: number }
+
 /**
  * Vanilla Three.js ghost mesh for the shared object-placement preview mode
- * (plan `ui-input-004` §2/§7) — a world-space, circular footprint marker
- * following the player's aim, colored green/red by whether the currently
- * aimed spot would validate for the selected object (chest/tent/fire). Pure
- * rendering: no domain logic, no scene ownership beyond its own group (the
- * caller adds/removes it from `scene`), same split as
- * `world/terrainPreparationPreview.ts`.
+ * (plan `ui-input-004` §2/§7, shapes/yaw by `ui-input-012`) — a world-space
+ * footprint marker following the player's aim, colored green/red by whether
+ * the currently aimed spot would validate. Circle and box geometries are
+ * created once and only scaled/shown per frame. Pure rendering: no domain
+ * logic, no scene ownership beyond its own group (the caller adds/removes
+ * it from `scene`), same split as `world/terrainPreparationPreview.ts`.
  */
 const VALID_COLOR = 0x4caf50
 const INVALID_COLOR = 0xe0524a
@@ -24,13 +30,21 @@ function circlePositions(segments: number): number[] {
   return positions
 }
 
+const BOX_CORNERS = [
+  -0.5, 0, -0.5,
+  0.5, 0, -0.5,
+  0.5, 0, 0.5,
+  -0.5, 0, 0.5,
+]
+
 export type PlacementPreviewGhost = {
   group: THREE.Object3D
-  /** Sets the footprint's world-space radius (metres) — cheap, no geometry
-   *  rebuild (unit circle scaled per-axis). */
-  setRadius: (radius: number) => void
-  /** Positions the whole ghost at world `(x, z)`, feet at `y`. */
-  setTransform: (x: number, z: number, y: number) => void
+  /** Switches between the prebuilt circle/box meshes and scales them —
+   *  cheap, no geometry rebuild. */
+  setFootprint: (footprint: PlacementPreviewFootprint) => void
+  /** Positions the whole ghost at world `(x, z)`, feet at `y`, oriented by
+   *  `yaw` (circle footprints are rotationally symmetric). */
+  setTransform: (x: number, z: number, y: number, yaw?: number) => void
   setValid: (valid: boolean) => void
   dispose: () => void
 }
@@ -47,34 +61,59 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
     depthWrite: false,
     side: THREE.DoubleSide,
   })
-  const fillPositions: number[] = [0, 0, 0, ...circlePositions(SEGMENTS)]
-  const fillGeometry = new THREE.BufferGeometry()
-  fillGeometry.setAttribute('position', new THREE.Float32BufferAttribute(fillPositions, 3))
-  const fillIndices: number[] = []
-  for (let i = 1; i <= SEGMENTS; i++) fillIndices.push(0, i, i + 1)
-  fillGeometry.setIndex(fillIndices)
-  const fill = new THREE.Mesh(fillGeometry, fillMaterial)
-  group.add(fill)
-
   const ringMaterial = new THREE.LineBasicMaterial({
     color: VALID_COLOR,
     transparent: true,
     opacity: LINE_OPACITY,
     depthTest: false,
   })
-  const ringGeometry = new THREE.BufferGeometry()
-  ringGeometry.setAttribute('position', new THREE.Float32BufferAttribute(circlePositions(SEGMENTS), 3))
-  const ring = new THREE.LineLoop(ringGeometry, ringMaterial)
-  group.add(ring)
+
+  const circleFillPositions: number[] = [0, 0, 0, ...circlePositions(SEGMENTS)]
+  const circleFillGeometry = new THREE.BufferGeometry()
+  circleFillGeometry.setAttribute('position', new THREE.Float32BufferAttribute(circleFillPositions, 3))
+  const circleFillIndices: number[] = []
+  for (let i = 1; i <= SEGMENTS; i++) circleFillIndices.push(0, i, i + 1)
+  circleFillGeometry.setIndex(circleFillIndices)
+  const circleFill = new THREE.Mesh(circleFillGeometry, fillMaterial)
+  group.add(circleFill)
+
+  const circleRingGeometry = new THREE.BufferGeometry()
+  circleRingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(circlePositions(SEGMENTS), 3))
+  const circleRing = new THREE.LineLoop(circleRingGeometry, ringMaterial)
+  group.add(circleRing)
+
+  const boxFillGeometry = new THREE.BufferGeometry()
+  boxFillGeometry.setAttribute('position', new THREE.Float32BufferAttribute(BOX_CORNERS, 3))
+  boxFillGeometry.setIndex([0, 1, 2, 0, 2, 3])
+  const boxFill = new THREE.Mesh(boxFillGeometry, fillMaterial)
+  boxFill.visible = false
+  group.add(boxFill)
+
+  const boxRingGeometry = new THREE.BufferGeometry()
+  boxRingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(BOX_CORNERS, 3))
+  const boxRing = new THREE.LineLoop(boxRingGeometry, ringMaterial)
+  boxRing.visible = false
+  group.add(boxRing)
 
   return {
     group,
-    setRadius(radius) {
-      fill.scale.set(radius, 1, radius)
-      ring.scale.set(radius, 1, radius)
+    setFootprint(footprint) {
+      const isBox = footprint.kind === 'box'
+      circleFill.visible = !isBox
+      circleRing.visible = !isBox
+      boxFill.visible = isBox
+      boxRing.visible = isBox
+      if (isBox) {
+        boxFill.scale.set(footprint.width, 1, footprint.depth)
+        boxRing.scale.set(footprint.width, 1, footprint.depth)
+      } else {
+        circleFill.scale.set(footprint.radius, 1, footprint.radius)
+        circleRing.scale.set(footprint.radius, 1, footprint.radius)
+      }
     },
-    setTransform(x, z, y) {
+    setTransform(x, z, y, yaw = 0) {
       group.position.set(x, y, z)
+      group.rotation.y = yaw
     },
     setValid(valid) {
       const color = valid ? VALID_COLOR : INVALID_COLOR
@@ -82,9 +121,11 @@ export function createPlacementPreviewGhost(): PlacementPreviewGhost {
       ringMaterial.color.setHex(color)
     },
     dispose() {
-      fillGeometry.dispose()
+      circleFillGeometry.dispose()
+      circleRingGeometry.dispose()
+      boxFillGeometry.dispose()
+      boxRingGeometry.dispose()
       fillMaterial.dispose()
-      ringGeometry.dispose()
       ringMaterial.dispose()
     },
   }

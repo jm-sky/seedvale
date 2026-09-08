@@ -7,8 +7,10 @@ import { ITEM_DEFS } from '../items/items'
  * yet, `docs/assets/MODELS.md`). Same convention as `items/tentProp.ts` /
  * `world/trapProp.ts`: a cheap box + lid, no per-frame animation.
  */
-const CHEST_WIDTH = 0.9
-const CHEST_DEPTH = 0.55
+/** World-space chest body — shared by the procedural prop and the placement
+ *  preview box (plan `ui-input-012`). */
+export const CHEST_WIDTH = 0.9
+export const CHEST_DEPTH = 0.55
 const CHEST_BODY_HEIGHT = 0.45
 const CHEST_LID_HEIGHT = 0.16
 

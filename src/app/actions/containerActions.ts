@@ -12,8 +12,10 @@ import {
 import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
+import { CHEST_DEPTH, CHEST_WIDTH } from '../../world/containerProp'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
+import { placementAimSite } from './placementYaw'
 
 /** Everything the generic player storage (plan 164) does from the app layer:
  *  putting a bought chest down, carrying one, and the transfer screen that
@@ -26,8 +28,8 @@ export type ContainerActions = {
    *  ghost/UI; `placeContainerAtAim` remains the only mutation seam. Does
    *  not apply to `putDownContainerAtAim` (the carried-container put-down
    *  path), which stays its own instant action. */
-  previewContainerPlacement: () => PlacementPreviewResult
-  placeContainerAtAim: () => void
+  previewContainerPlacement: (objectYaw?: number) => PlacementPreviewResult
+  placeContainerAtAim: (objectYaw?: number) => void
   putDownContainerAtAim: () => void
   openContainer: (id: string) => void
   pickUpContainer: (id: string) => void
@@ -64,17 +66,19 @@ export function createContainerActions(
    *  validate a site differently. `peers` is containers only (not
    *  tents/traps) — `CONTAINER_PLACEMENT_MESSAGE`'s `container` reason is
    *  specifically "another chest already stands here". */
-  const containerPlacementDefinition = (kind: ContainerKind): GroundPlacementDefinition<GroundPlacementReason> => {
+  const containerPlacementDefinition = (
+    kind: ContainerKind,
+    objectYaw?: number,
+  ): GroundPlacementDefinition<GroundPlacementReason> => {
     const def = CONTAINER_DEFS[kind]
     return {
-      aim: () => {
-        const yaw = mouseLook.state.yaw
-        return {
-          x: player.mesh.position.x - Math.sin(yaw) * CONTAINER_PLACE_REACH,
-          z: player.mesh.position.z - Math.cos(yaw) * CONTAINER_PLACE_REACH,
-          yaw,
-        }
-      },
+      aim: () => placementAimSite(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        mouseLook.state.yaw,
+        CONTAINER_PLACE_REACH,
+        objectYaw,
+      ),
       evaluate: (site) => evaluateGroundPlacement({
         x: site.x,
         z: site.z,
@@ -86,6 +90,7 @@ export function createContainerActions(
         separation: def.separation,
       }),
       footprintRadius: def.footprintRadius,
+      previewFootprint: { kind: 'box', width: CHEST_WIDTH, depth: CHEST_DEPTH },
       reasonLabel: (reason) => CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason],
     }
   }
@@ -93,11 +98,12 @@ export function createContainerActions(
   /** Sets a purchased, empty `chest` down in front of the player (plan 164
    *  §4) — same busy-channel shape as pitching a tent/setting a trap: the
    *  inventory item is only spent when the channel completes. */
-  const previewContainerPlacement = (): PlacementPreviewResult => previewGroundPlacement(containerPlacementDefinition('chest'))
+  const previewContainerPlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(containerPlacementDefinition('chest', objectYaw))
 
-  const placeContainerAtAim = (): void => {
+  const placeContainerAtAim = (objectYaw?: number): void => {
     if (!inventory.has('chest', 1) || isActionBlocked(ctx)) return
-    const { site, reason } = evaluatePlacementSite(containerPlacementDefinition('chest'))
+    const { site, reason } = evaluatePlacementSite(containerPlacementDefinition('chest', objectYaw))
     if (reason !== 'ok') {
       toast.show(CONTAINER_PLACEMENT_MESSAGE[reason === 'occupied' ? 'container' : reason], 'error')
       return

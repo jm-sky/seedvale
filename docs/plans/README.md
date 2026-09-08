@@ -87,7 +87,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
 | ◼️ `tools-007--mpfb2-npc-hero-character-pipeline.md`                        | -       | 🔴 | L      | -      |
-| 💡 `ui-input-012-placement-preview-shapes-rotation-and-coverage.md`         | -       | 🟡 | M      | -      |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
@@ -137,6 +136,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md` | Deer/stag habitat (las/skraj lasu), brak spawnu przy drogach, species-specific roaming, dalekie wyprawy do wody z powrotem do local behaviour, szczury jako mała populacja osadnicza (widoczne, zmniejszają zapasy, zabijalne przez psa/gracza) |
 | `npc-002-npc-healing.md` | NPC ranny w walce (`?debug=1&debugNpcCombat=1` do zadania obrażeń) leczy się dopiero po zakończeniu walki: idzie do domu, zużywa niesione `herb`/`bandage`, HP rośnie, po czym wraca do normalnej autonomii; bez consumable nie ma healing candidate |
 | `ui-input-011-new-game-setup-on-empty-save-state.md` | Pusta lista zapisów i usunięcie ostatniego zapisu zostawiają Start Screen z otwartym formularzem Nowej gry (bez automatycznego tworzenia świata); imię gracza i nazwa zapisu są niezależne i utrzymują się per save po wczytaniu; wpisy Seed Library przeżywają usunięcie wszystkich zapisów; `?seed=` jest tylko wstępnym wyborem |
+| `ui-input-012-placement-preview-shapes-rotation-and-coverage.md` | Studnia wchodzi w preview; palisada/namiot/skrzynia/posłanie/podest pokazują box i kierunek; F/G (i przyciski) obracają o 45° bez ruszania celu aim; kamera po starcie preview nie kręci obiektem; G nie wyrzuca itemu podczas rotowalnego preview; snapping palisady pod 45°/90° |
 
 ---
 

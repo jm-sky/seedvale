@@ -64,12 +64,14 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementYaw.ts`
 - `input/MouseLook.ts`
 - `items/Inventory.ts`
 - `items/container.ts`
 - `items/inventoryView.ts`
 - `items/tentPlacement.ts`
 - `ui-vue/mount.ts`
+- `world/containerProp.ts`
 
 **Imported by**
 
@@ -180,6 +182,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `app/actions/placementYaw.ts`
 - `audio/actionSounds.ts`
 - `items/constructionMaterials.ts`
 - `items/itemCatalog.ts`
@@ -194,17 +197,20 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
 - `world/palisade.ts`
+- `world/placementPreview.ts`
 - `world/plantedCrops.ts`
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
+- `world/sleepingUtilityProp.ts`
 - `world/standingTorch.ts`
 
 **Imported by**
 
 - `app/actions/containerActions.ts`
 - `app/actions/placementPreviewActions.ts`
+- `app/actions/placementPreviewContract.test.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`
@@ -218,6 +224,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContracts.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementYaw.ts`
 - `app/actions/workContractActions.ts`
 - `world/placementPreview.ts`
 
@@ -226,6 +233,28 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `ui-vue/store.ts`
 - `ui/createQuickActions.ts`
+
+## `app/actions/placementPreviewContract.test.ts`
+
+**Imports**
+
+- `app/actions/placementActions.ts`
+
+## `app/actions/placementYaw.test.ts`
+
+**Imports**
+
+- `app/actions/placementYaw.ts`
+
+## `app/actions/placementYaw.ts`
+
+**Imported by**
+
+- `app/actions/containerActions.ts`
+- `app/actions/placementActions.ts`
+- `app/actions/placementPreviewActions.ts`
+- `app/actions/placementYaw.test.ts`
+- `app/actions/workContractActions.ts`
 
 ## `app/actions/restActions.ts`
 
@@ -322,6 +351,7 @@ Generated from TypeScript imports.
 
 - `app/actions/actionContext.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/placementYaw.ts`
 - `items/tentPlacement.ts`
 - `terrain/terrainPreparation.ts`
 - `ui-vue/mount.ts`

@@ -40,9 +40,7 @@ _No qualifying plans._
 
 ### Polish
 
-1. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
-   🟡 `M` · ✅ ready · unlocks 0/0
-2. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -244,15 +242,11 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-43. `ui-input-012` — **Placement preview shapes, rotation and coverage**  
-  🟡 `M` · **Score:**  17  
-   → **unlocks:** 0/0
-
-44. `npc-004` — **Drzewo genealogiczne NPC**  
+43. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-45. `tools-006` — **tools-006--world-observatory.md**  
+44. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

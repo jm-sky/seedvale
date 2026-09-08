@@ -513,6 +513,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/containerActions.ts`
 - `settlement/props.ts`
 - `world/createPlacedContainers.ts`
 
@@ -1516,6 +1517,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
 
 ## `world/plantedCrops.test.ts`
@@ -1809,6 +1811,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/placementActions.ts`
 - `world/createSleepingUtilities.ts`
 
 ## `world/standingTorch.test.ts`

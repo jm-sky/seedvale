@@ -6,8 +6,10 @@ import { disposeObject3D } from '../assets/loadGltf'
  *  `items/tentProp.ts`'s tent. V1 has exactly one bedroll variant (`leather`)
  *  so there is no per-variant branching yet. */
 
-const BEDROLL_LENGTH = 1.9
-const BEDROLL_WIDTH = 0.7
+/** World-space bedroll mattress — shared by the procedural prop and the
+ *  placement preview box (plan `ui-input-012`). */
+export const BEDROLL_LENGTH = 1.9
+export const BEDROLL_WIDTH = 0.7
 const BEDROLL_HEIGHT = 0.12
 
 export function createBedrollProp(): THREE.Group {
@@ -38,8 +40,13 @@ export function createBedrollProp(): THREE.Group {
   return group
 }
 
-const PLATFORM_LENGTH = 2.4
-const PLATFORM_WIDTH = 1.6
+/** Source-mesh platform deck before `PLATFORM_VISUAL_SCALE` — preview uses
+ *  the post-scale world size so the ghost matches the placed prop. */
+export const PLATFORM_LENGTH = 2.4
+export const PLATFORM_WIDTH = 1.6
+export const PLATFORM_VISUAL_SCALE = 0.75
+export const PLATFORM_FOOTPRINT_WIDTH = PLATFORM_WIDTH * PLATFORM_VISUAL_SCALE
+export const PLATFORM_FOOTPRINT_LENGTH = PLATFORM_LENGTH * PLATFORM_VISUAL_SCALE
 const PLATFORM_DECK_HEIGHT = 0.5
 const PLATFORM_DECK_THICKNESS = 0.08
 
@@ -68,7 +75,7 @@ export function createPlatformProp(): THREE.Group {
     }
   }
 
-  group.scale.setScalar(0.75)
+  group.scale.setScalar(PLATFORM_VISUAL_SCALE)
 
   return group
 }

@@ -21,9 +21,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/containerActions.ts`
 
-- `ContainerActionDeps` — type — line 36
-- `ContainerActions` — type — line 23
-- `createContainerActions` — function — line 45
+- `ContainerActionDeps` — type — line 38
+- `ContainerActions` — type — line 25
+- `createContainerActions` — function — line 47
 
 ## `app/actions/gatheringActions.ts`
 
@@ -45,24 +45,33 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 312
-- `evaluatePlacementSite` — function — line 179
-- `GroundPlacementDefinition` — type — line 171
+- `createPlacementActions` — function — line 335
+- `evaluatePlacementSite` — function — line 196
+- `GroundPlacementDefinition` — type — line 186
   - domain: world
-- `GroundPlacementSite` — type — line 155
-- `PlacementActions` — type — line 211
-- `PlacementBlocker` — type — line 135
-- `PlacementPreviewResult` — type — line 143
-- `previewGroundPlacement` — function — line 189
-- `WellWorkView` — type — line 204
+- `GroundPlacementSite` — type — line 170
+- `PlacementActions` — type — line 229
+- `PlacementBlocker` — type — line 145
+- `PlacementPreviewResult` — type — line 156
+- `previewGroundPlacement` — function — line 206
+- `WellWorkView` — type — line 222
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 87
-- `PlacementPreviewActionDeps` — type — line 42
-- `PlacementPreviewActions` — type — line 70
-- `PlacementPreviewKind` — type — line 21
-- `PlacementPreviewUiView` — type — line 23
+- `createPlacementPreviewActions` — function — line 123
+- `PlacementPreviewActionDeps` — type — line 73
+- `PlacementPreviewActions` — type — line 103
+- `PlacementPreviewKind` — type — line 23
+  - domain: ui-input
+- `PlacementPreviewUiView` — type — line 36
+
+## `app/actions/placementYaw.ts`
+
+- `PLACEMENT_YAW_STEP` — const — line 10
+  - domain: ui-input
+- `placementAimSite` — function — line 24
+- `placementObjectYaw` — function — line 18
+- `snapPlacementYaw45` — function — line 13
 
 ## `app/actions/restActions.ts`
 
@@ -89,10 +98,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/workContractActions.ts`
 
-- `createWorkContractActions` — function — line 98
-- `WorkContractActionDeps` — type — line 92
-- `WorkContractActions` — type — line 65
-- `WorkContractQuickActionEntry` — type — line 63
+- `createWorkContractActions` — function — line 99
+- `WorkContractActionDeps` — type — line 93
+- `WorkContractActions` — type — line 66
+- `WorkContractQuickActionEntry` — type — line 64
 
 ## `app/appRenderLoop.ts`
 

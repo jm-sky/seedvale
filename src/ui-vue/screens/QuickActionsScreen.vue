@@ -105,7 +105,7 @@ function prepareTerrain(): void {
 
 function buildWell(): void {
   closeQuickActions()
-  ui.quickActions.onBuildWell?.()
+  ui.quickActions.onStartPlacementPreview?.('well')
 }
 
 function buildGarden(): void {

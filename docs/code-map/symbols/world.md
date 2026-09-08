@@ -252,8 +252,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/containerProp.ts`
 
-- `createPlacedContainerProp` — function — line 15
-- `disposePlacedContainerProp` — function — line 48
+- `CHEST_DEPTH` — const — line 13
+- `CHEST_WIDTH` — const — line 12
+- `createPlacedContainerProp` — function — line 17
+- `disposePlacedContainerProp` — function — line 50
 
 ## `world/createBeehives.ts`
 
@@ -685,8 +687,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/placementPreview.ts`
 
-- `createPlacementPreviewGhost` — function — line 38
-- `PlacementPreviewGhost` — type — line 27
+- `createPlacementPreviewGhost` — function — line 52
+- `PlacementPreviewFootprint` — type — line 5
+- `PlacementPreviewGhost` — type — line 40
 
 ## `world/plantedCrops.ts`
 
@@ -888,9 +891,16 @@ Generated from exported TypeScript symbols.
 
 ## `world/sleepingUtilityProp.ts`
 
-- `createBedrollProp` — function — line 13
-- `createPlatformProp` — function — line 46
-- `disposeSleepingUtilityProp` — function — line 76
+- `BEDROLL_LENGTH` — const — line 11
+- `BEDROLL_WIDTH` — const — line 12
+- `createBedrollProp` — function — line 15
+- `createPlatformProp` — function — line 53
+- `disposeSleepingUtilityProp` — function — line 83
+- `PLATFORM_FOOTPRINT_LENGTH` — const — line 49
+- `PLATFORM_FOOTPRINT_WIDTH` — const — line 48
+- `PLATFORM_LENGTH` — const — line 45
+- `PLATFORM_VISUAL_SCALE` — const — line 47
+- `PLATFORM_WIDTH` — const — line 46
 
 ## `world/standingTorch.ts`
 
