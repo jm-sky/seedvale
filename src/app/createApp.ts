@@ -135,6 +135,7 @@ import { createMountActions } from './actions/mountActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
 import { createRestActions, REST_IN_TOWN_RADIUS } from './actions/restActions'
+import { createStorageInfestationActions } from './actions/storageInfestationActions'
 import { createSurvivalActions } from './actions/survivalActions'
 import { createTerrainPreparationActions } from './actions/terrainPreparationActions'
 import { createWorkContractActions } from './actions/workContractActions'
@@ -517,6 +518,10 @@ export async function createApp(
     initialSave?.npcRelationships,
     initialSave?.livestock,
     initialSave?.removedLivestockIds,
+    initialSave?.rats,
+    initialSave?.removedRatIds,
+    initialSave?.storageInfestation,
+    initialSave === undefined,
     grassForageOverrides,
   )
   bootMarkEnd('createWorldBundle')
@@ -885,6 +890,12 @@ export async function createApp(
       getReputationDimension: (settlementId, dimension) => reputation.getReputationDimension(settlementId, dimension),
       getRenown: (settlementId) => reputation.getRenown(settlementId),
     },
+    {
+      getSnapshot: (settlementId) => ({
+        infestationActive: bundle.settlementsManager.isStorageInfestationActive(settlementId),
+        aliveRatCount: bundle.settlementsManager.countAliveRats(settlementId),
+      }),
+    },
   )
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
@@ -897,6 +908,7 @@ export async function createApp(
   })
   onAnimalDeathTarget = (animalId) => {
     questManager.onInteractObjective({ type: 'animal_died', animalId })
+    questManager.pollSettlementRatInfestationObjectives()
   }
   // Character Screen's local reputation view (plan quests-progression-001) —
   // refreshed on screen open (`openCharacter` below) and after a social
@@ -1014,6 +1026,15 @@ export async function createApp(
   }
 
   const placement = createPlacementActions(actionCtx)
+  const storageInfestation = createStorageInfestationActions({
+    ctx: actionCtx,
+    bundle,
+    inventory,
+    hud,
+    toast,
+    questManager,
+    onInventoryChanged,
+  })
   const containers = createContainerActions(actionCtx, {
     vueUi,
     tentBlockers: placement.tentBlockers,
@@ -1746,6 +1767,7 @@ export async function createApp(
     workOnStandingTorch: placement.workOnStandingTorch,
     workOnPalisade: placement.workOnPalisade,
     removePalisadeSegment: placement.removePalisadeSegment,
+    repairSettlementStorage: storageInfestation.repairSettlementStorage,
     openNoticeBoard: contracts.openNoticeBoard,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
     tickPlacementPreview: placementPreview.tick,

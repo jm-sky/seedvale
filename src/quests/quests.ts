@@ -280,6 +280,11 @@ export type QuestObjective =
    *  so a persisted `active` quest matches its rebuilt `QuestDef` by `id`
    *  exactly like every other quest. */
   | { type: 'interact_landmark', landmarkId: string }
+  /** Settlement storage rat infestation resolved (plan quests-progression-006) —
+   *  satisfied when the bound settlement's storage infestation is repaired and
+   *  alive rat count is <= 1. `QuestManager` reads live world state through
+   *  an injected lookup, never by importing settlement/fauna managers. */
+  | { type: 'resolve_storage_rat_infestation' }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -859,6 +864,36 @@ export const QUESTS: readonly QuestDef[] = [
         consequences: {
           relations: [{ npcName: 'Marek', delta: 2 }],
           social: { reputation: { competence: 6, courage: 6, benevolence: 2 }, renown: 8 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'plaga-szcurow',
+    title: 'Plaga szczurów',
+    description:
+      'Marek zgłasza plagę szczurów wokół magazynu osady. Zbadaj składowisko, napraw uszkodzenia i doprowadź liczbę żywych szczurów w osadzie do jednego albo mniej.',
+    giverName: 'Marek',
+    offerLine:
+      'Szczury roi się przy magazynie i zżerają zapasy. Możesz się temu przyjrzeć i pomóc osadzie?',
+    stages: [
+      {
+        objective: { type: 'resolve_storage_rat_infestation' },
+        description:
+          'Zbadaj magazyn osady, napraw uszkodzenia i doprowadź liczbę żywych szczurów w osadzie do co najwyżej jednego.',
+        reminderLine: 'Plaga wciąż nie wygasła — sprawdź magazyn i szczury w osadzie.',
+        progressLine: 'Wygląda na to, że plaga wygasła. Wróć do Marka.',
+      },
+    ],
+    reportLine: 'Dzięki — magazyn jest znowu bezpieczny, a szczurów prawie nie ma.',
+    outcomes: [
+      {
+        id: 'infestation_cleared',
+        state: 'complete',
+        resultText: 'Dzięki — magazyn jest znowu bezpieczny, a szczurów prawie nie ma.',
+        consequences: {
+          relations: [{ npcName: 'Marek', delta: 2 }],
+          social: { reputation: { competence: 4, benevolence: 3 }, renown: 5 },
         },
       },
     ],

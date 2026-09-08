@@ -1,7 +1,7 @@
 # Plan: Settlement Rat Infestation
 
 **Created:** 2026-09-07  
-**Status:** `planned` 📋  
+**Status:** `implemented` ✅  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** fauna-016, settlements-npcs-012, quests-progression-002  

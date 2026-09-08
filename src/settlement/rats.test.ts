@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { ratPopulationTarget } from './rats'
+import {
+  ratNormalPopulationTarget,
+  ratPopulationTarget,
+  RAT_INFESTATION_FLOOR,
+  RAT_INFESTATION_PRESSURE_BONUS,
+  RAT_POPULATION_CAP,
+} from './rats'
 
 describe('ratPopulationTarget (plan fauna-016 §7 — settlement rat pressure)', () => {
   it('is zero with no food available', () => {
@@ -14,7 +20,7 @@ describe('ratPopulationTarget (plan fauna-016 §7 — settlement rat pressure)',
 
   it('clamps to a small population even with abundant food', () => {
     const target = ratPopulationTarget({ householdFoodCount: 1000, settlementFoodCount: 1000, dogCount: 0 })
-    expect(target).toBeLessThanOrEqual(5)
+    expect(target).toBeLessThanOrEqual(RAT_POPULATION_CAP)
   })
 
   it('decreases under dog pressure', () => {
@@ -31,5 +37,25 @@ describe('ratPopulationTarget (plan fauna-016 §7 — settlement rat pressure)',
     const combined = ratPopulationTarget({ householdFoodCount: 15, settlementFoodCount: 15, dogCount: 0 })
     const householdOnly = ratPopulationTarget({ householdFoodCount: 15, settlementFoodCount: 0, dogCount: 0 })
     expect(combined).toBeGreaterThan(householdOnly)
+  })
+})
+
+describe('ratPopulationTarget infestation contract (plan quests-progression-006)', () => {
+  const inputs = { householdFoodCount: 30, settlementFoodCount: 0, dogCount: 0 }
+
+  it('uses max(normalTarget + 3, 7) while infestation is active', () => {
+    const normal = ratNormalPopulationTarget(inputs)
+    expect(ratPopulationTarget(inputs, true)).toBe(Math.max(normal + RAT_INFESTATION_PRESSURE_BONUS, RAT_INFESTATION_FLOOR))
+  })
+
+  it('returns to the normal formula once infestation is inactive', () => {
+    expect(ratPopulationTarget(inputs, false)).toBe(ratNormalPopulationTarget(inputs))
+    expect(ratPopulationTarget(inputs, true)).toBeGreaterThan(ratPopulationTarget(inputs, false))
+  })
+
+  it('still applies dog suppression to the normal portion before infestation bonus', () => {
+    const infestedWithDogs = ratPopulationTarget({ ...inputs, dogCount: 3 }, true)
+    const infestedWithoutDogs = ratPopulationTarget(inputs, true)
+    expect(infestedWithDogs).toBeLessThanOrEqual(infestedWithoutDogs)
   })
 })

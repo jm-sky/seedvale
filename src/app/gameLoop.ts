@@ -77,7 +77,11 @@ import { combatTargetForAnimal, isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
-import { resolveInteraction } from '../interaction/resolveInteraction'
+import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
+import {
+  describeSettlementStorageRepair,
+  formatSettlementStorageInspection,
+} from '../settlement/storageRepair'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -425,6 +429,8 @@ export type GameLoopDeps = {
   /** `[E]` on a settlement notice board (plan npc-014) — opens the physical-
    *  posting panel listing the player's own postable contracts. */
   openNoticeBoard?: (settlementId: string) => void
+  /** `[E]` repair action on damaged settlement storage (plan quests-progression-006). */
+  repairSettlementStorage?: (settlementId: string) => void
   /** Terrain-preparation preview mode (plan `world-terrain-002` §2) — called
    *  unconditionally, before the gaze/interact dispatch, so a confirming
    *  `[E]` press is consumed here rather than falling through to it. No-ops
@@ -533,7 +539,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, openNoticeBoard,
+    openContainer, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
@@ -1487,6 +1493,24 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // construction bout; `[R]` removal stays available either way.
         if (interactPressed && !target.complete) workOnPalisade?.(target.id)
         if (altInteractPressed) removePalisadeSegment?.(target.id)
+      } else if (target?.kind === 'settlementStorage') {
+        if (interactPressed) {
+          const infestationActive = bundle.settlementsManager.isStorageInfestationActive(target.settlementId)
+          const line = formatSettlementStorageInspection(
+            formatSettlementStorageLines(target.economy),
+            infestationActive,
+          )
+          const repairView = describeSettlementStorageRepair(infestationActive, inventory)
+          const actions = repairView
+            ? [{
+                label: 'Napraw magazyn',
+                enabled: repairView.canRepair,
+                reasonLabel: repairView.reasonLabel,
+                run: () => repairSettlementStorage?.(target.settlementId),
+              }]
+            : []
+          vueUi.openFlavorDialog('Magazyn osady', line, actions)
+        }
       } else if (target?.kind === 'noticeBoard') {
         if (interactPressed) openNoticeBoard?.(target.settlementId)
       } else if (target?.kind === 'terrainPreparation') {

@@ -647,6 +647,7 @@ export function buildInteractables(
         position: { x: settlement.landmarks.settlementStorage.x, z: settlement.landmarks.settlementStorage.z },
         promptLabel: 'Zbadaj: Magazyn osady',
         economy: settlement.economy,
+        settlementId: settlement.id,
       })
     }
 

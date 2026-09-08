@@ -68,6 +68,7 @@ function makeManager(
   grantItem?: (kind: string, count: number) => void,
   initial?: QuestManagerInitial,
   socialAvailability?: QuestSocialAvailabilityLookup,
+  settlementRatInfestation?: import('./QuestManager').SettlementRatInfestationLookup,
 ): QuestManager {
   return new QuestManager(
     defs,
@@ -79,6 +80,7 @@ function makeManager(
     undefined,
     undefined,
     socialAvailability,
+    settlementRatInfestation,
   )
 }
 
@@ -281,6 +283,38 @@ describe('QuestManager find_animal binding', () => {
     acceptOffer(qm, 'Anna')
     expect(qm.onInteractObjective({ type: 'animal_found', animalId: 'sheep-house0-0' })).toBeNull()
     expect(qm.getState('sheep')).toBe('active')
+  })
+})
+
+describe('QuestManager resolve_storage_rat_infestation', () => {
+  const ratQuest = quest({
+    id: 'plaga',
+    giverName: 'Marek',
+    offerLine: 'offer rats',
+    settlementId: 'home',
+    stages: [
+      {
+        objective: { type: 'resolve_storage_rat_infestation' },
+        description: 'clear infestation',
+        reminderLine: 'fallback',
+      },
+    ],
+    reportLine: 'report rats',
+  })
+
+  it('stays active until storage is repaired and rats are at most one', () => {
+    let snapshot = { infestationActive: true, aliveRatCount: 5 }
+    const qm = makeManager([ratQuest], undefined, undefined, undefined, undefined, {
+      getSnapshot: () => snapshot,
+    })
+    acceptOffer(qm, 'Marek')
+    expect(qm.getState('plaga')).toBe('active')
+    snapshot = { infestationActive: false, aliveRatCount: 5 }
+    qm.pollSettlementRatInfestationObjectives()
+    expect(qm.getState('plaga')).toBe('active')
+    snapshot = { infestationActive: false, aliveRatCount: 1 }
+    qm.pollSettlementRatInfestationObjectives()
+    expect(qm.getState('plaga')).toBe('ready_to_report')
   })
 })
 

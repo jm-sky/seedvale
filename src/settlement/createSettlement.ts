@@ -130,6 +130,9 @@ export type Settlement = {
    *  — see `settlement/livestock.ts`. Wild fauna (wolf/deer/etc.) stays in
    *  the separate, home-settlement-only `Fauna` system (`fauna/createFauna.ts`). */
   livestock: readonly AnimalAgent[]
+  /** Wild settlement rats (plan fauna-016, quests-progression-006) — not
+   *  household-owned livestock. */
+  readonly rats: readonly AnimalAgent[]
   landmarks: SettlementLandmarks
   /** Settlement-owned bulk stock / demand / development (plan 071). */
   economy: SettlementEconomy
@@ -249,6 +252,10 @@ export type CreateSettlementDeps = {
    *  `spawnLivestock`, and consulted again in `update()`'s corpse-removal
    *  loop so a newly-completed removal is tombstoned immediately. */
   livestockPersistence?: LivestockPersistence
+  /** Saved rat individuals + tombstones (plan quests-progression-006). */
+  ratPersistence?: import('./ratPersistence').RatPersistence
+  /** Whether this settlement's shared storage infestation is still active. */
+  infestationActive: (settlementId: string) => boolean
   // collision
   collidersNear: ColliderSource
   /** Registers this settlement's static colliders (well + houses +
@@ -357,6 +364,8 @@ export async function createSettlement(
     helperDelivery,
     relations = createNpcRelationships(),
     livestockPersistence,
+    ratPersistence,
+    infestationActive = () => false,
     workContracts,
     playerWells,
     droppedItems,
@@ -583,6 +592,8 @@ export async function createSettlement(
     settlementId: def.id,
     settlementSeed,
     onAnimalDeath,
+    infestationActive: () => infestationActive(def.id),
+    ratPersistence,
   })
 
   bootMark('signposts')
@@ -762,6 +773,9 @@ export async function createSettlement(
     center: new Vector3(site.x, site.y, site.z),
     npcs: agents,
     livestock,
+    get rats() {
+      return rats.getAgents()
+    },
     landmarks,
     economy,
     households,

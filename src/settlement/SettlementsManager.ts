@@ -31,9 +31,11 @@ import { createNullPointLightBudget, type PointLightBudget } from '../world/poin
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import { createLivestockRegistry, type LivestockSaveRecord } from './livestock'
+import { createRatRegistry, type RatSaveRecord } from './ratPersistence'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost } from './props'
+import { createStorageInfestationRegistry, type StorageInfestationCondition } from './storageInfestation'
 import {
   type MidpointSignpost,
   midpointSignpostsFor,
@@ -162,6 +164,13 @@ export type SettlementsManager = {
    *  settlement's saved state first, then serializes the whole registry (plan
    *  persistence-001) — see `LivestockRegistry.serialize`. */
   snapshotLivestock: () => { entries: LivestockSaveRecord[], removedIds: string[] }
+  /** Flat rat persistence snapshot (plan quests-progression-006). */
+  snapshotRats: () => { entries: RatSaveRecord[], removedIds: string[] }
+  /** Storage infestation condition per settlement (plan quests-progression-006). */
+  snapshotStorageInfestation: () => Record<string, StorageInfestationCondition>
+  isStorageInfestationActive: (settlementId: string) => boolean
+  repairStorageInfestation: (settlementId: string) => void
+  countAliveRats: (settlementId: string) => number
   dispose: () => void
 }
 
@@ -254,6 +263,14 @@ export async function createSettlementsManager(
    *  streamed-in alike. */
   initialLivestock?: readonly LivestockSaveRecord[],
   initialRemovedLivestockIds?: readonly string[],
+  /** Saved settlement rats + tombstones (plan quests-progression-006). */
+  initialRats?: readonly RatSaveRecord[],
+  initialRemovedRatIds?: readonly string[],
+  /** Persisted storage infestation per settlement (plan quests-progression-006). */
+  initialStorageInfestation?: Record<string, StorageInfestationCondition>,
+  /** When true, the home settlement starts with active storage infestation if
+   *  no persisted entry exists yet (authored V1 trigger). */
+  seedHomeStorageInfestation?: boolean,
   /** Authoritative Work Contract lifecycle (plan npc-015) — forwarded into
    *  every `createSettlement` call the same way `mining`/`foodSources` are
    *  above. */
@@ -344,6 +361,13 @@ export async function createSettlementsManager(
     removedIds: initialRemovedLivestockIds ?? [],
   })
 
+  const rats = createRatRegistry({
+    entries: initialRats ?? [],
+    removedIds: initialRemovedRatIds ?? [],
+  })
+
+  const storageInfestation = createStorageInfestationRegistry(initialStorageInfestation)
+
   // One shared deps object for every `createSettlement` call (createSettlement
   // refactor review, P1) — was a 26-argument positional call duplicated
   // verbatim at both call sites below; `def`/`economy` stay per-call since
@@ -359,6 +383,8 @@ export async function createSettlementsManager(
     npcStateRegistry: npcStates,
     relations: npcRelationships,
     livestockPersistence: livestock,
+    ratPersistence: rats,
+    infestationActive: (settlementId) => storageInfestation.isActive(settlementId),
     collidersNear,
     registerColliders,
     clearColliders,
@@ -401,6 +427,9 @@ export async function createSettlementsManager(
   const homeDef = defFor({ gx: 0, gz: 0 })
   if (!homeDef) {
     throw new Error('[SettlementsManager] home settlement (0,0) failed to generate')
+  }
+  if (seedHomeStorageInfestation && initialStorageInfestation?.[homeDef.id] === undefined) {
+    storageInfestation.activate(homeDef.id)
   }
   // Built the same way a streamed-in neighbor is below (`ensureLoaded`) —
   // kicked off immediately rather than waiting for the player to wander into
@@ -536,10 +565,10 @@ export async function createSettlementsManager(
   }
 
   function unload(id: string, entry: Entry): void {
-    // Capture livestock state before `dispose()` throws the live `AnimalAgent`s
-    // away (plan persistence-001) — unlike households/NPC state, they have no
-    // registry-owned object that outlives the settlement on its own.
-    if (entry.settlement) livestock.capture(id, entry.settlement.livestock)
+    if (entry.settlement) {
+      livestock.capture(id, entry.settlement.livestock)
+      rats.capture(id, entry.settlement.rats)
+    }
     entry.settlement?.dispose()
     entries.delete(id)
     syncMidpoints()
@@ -626,6 +655,20 @@ export async function createSettlementsManager(
       }
       return livestock.serialize()
     },
+    snapshotRats: () => {
+      for (const entry of entries.values()) {
+        if (entry.settlement) rats.capture(entry.def.id, entry.settlement.rats)
+      }
+      return rats.serialize()
+    },
+    snapshotStorageInfestation: () => storageInfestation.serialize(),
+    isStorageInfestationActive: (settlementId) => storageInfestation.isActive(settlementId),
+    repairStorageInfestation: (settlementId) => storageInfestation.repair(settlementId),
+    countAliveRats: (settlementId) => {
+      const entry = entries.get(settlementId)
+      if (!entry?.settlement) return 0
+      return entry.settlement.rats.reduce((n, rat) => n + (rat.isDead() ? 0 : 1), 0)
+    },
     dispose() {
       disposed = true
       for (const entry of entries.values()) entry.settlement?.dispose()
@@ -638,6 +681,8 @@ export async function createSettlementsManager(
       households.clear()
       npcStates.clear()
       livestock.clear()
+      rats.clear()
+      storageInfestation.clear()
     },
   }
 }

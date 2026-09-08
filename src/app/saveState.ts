@@ -120,6 +120,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     // explicit refresh unlike households/NPC state (no live object survives a
     // settlement unload on its own).
     const livestockSnapshot = bundle.settlementsManager.snapshotLivestock()
+    const ratSnapshot = bundle.settlementsManager.snapshotRats()
     return {
       version: CURRENT_SAVE_VERSION,
     config: {
@@ -242,6 +243,9 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       npcRelationships: bundle.settlementsManager.snapshotRelationships(),
       livestock: livestockSnapshot.entries,
       removedLivestockIds: livestockSnapshot.removedIds,
+      rats: ratSnapshot.entries,
+      removedRatIds: ratSnapshot.removedIds,
+      storageInfestation: bundle.settlementsManager.snapshotStorageInfestation(),
     }
   }
 

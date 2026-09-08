@@ -80,7 +80,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-025-injury-severity-and-treatment-requirements.md`                  | -       | 🟡 | M      | npc-002, ~~npc-019~~, npc-024 |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
-| 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
+| ✅ `quests-progression-006-settlement-rat-infestation.md`                   | -       | ✅ | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
 | 💡 `quests-progression-007-wolves-approach-settlement.md`                   | -       | 🟡 | M      | fauna-016 |
 | 💡 `quests-progression-009-dark-forest-ruins-treasure-map.md`               | -       | 🟡 | M      | fauna-016, world-012 |
 | 💡 `fauna-018-persistent-habitat-occupants.md`                              | -       | 🟡 | M      | fauna-016 |

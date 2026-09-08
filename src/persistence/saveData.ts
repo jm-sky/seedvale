@@ -9,6 +9,8 @@ import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
+import type { RatSaveRecord } from '../settlement/ratPersistence'
+import type { StorageInfestationCondition } from '../settlement/storageInfestation'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
 import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
@@ -454,7 +456,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 9
+export const CURRENT_SAVE_VERSION = 10
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -578,6 +580,13 @@ export type SaveData = {
    *  save must not be recreated by deterministic spawning on load. Optional,
    *  same contract as `npcStates`. */
   removedLivestockIds?: string[]
+  /** Wild settlement rat individuals (plan quests-progression-006). */
+  rats?: RatSaveRecord[]
+  /** `${settlementId}:${animalId}` tombstones for settlement rats. */
+  removedRatIds?: string[]
+  /** Settlement storage infestation condition per settlement id (plan
+   *  quests-progression-006). */
+  storageInfestation?: Record<string, StorageInfestationCondition>
   /** Sparse grass forage patch depletion overrides (plan fauna-010 §3/§4) —
    *  `patchId -> availableAtDays`, see `world/grassForage.ts`'s
    *  `GrassForageOverrides`. Patch *placement* is deterministic and never
@@ -1418,6 +1427,36 @@ function isRemovedLivestockIdsField(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((id) => typeof id === 'string')
 }
 
+function isRatSaveRecord(value: unknown): value is RatSaveRecord {
+  if (!value || typeof value !== 'object') return false
+  const r = value as Record<string, unknown>
+  return (
+    typeof r.settlementId === 'string' &&
+    typeof r.animalId === 'string' &&
+    typeof r.x === 'number' &&
+    typeof r.z === 'number' &&
+    typeof r.yaw === 'number' &&
+    isNpcHealth(r.health) &&
+    isLivestockLife(r.life) &&
+    (r.productionReadyAtDays === null || typeof r.productionReadyAtDays === 'number') &&
+    typeof r.eggPending === 'boolean' &&
+    isLivestockCorpse(r.corpse)
+  )
+}
+
+function isRatsField(value: unknown): value is RatSaveRecord[] {
+  return Array.isArray(value) && value.every(isRatSaveRecord)
+}
+
+function isRemovedRatIdsField(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string')
+}
+
+function isStorageInfestationField(value: unknown): value is Record<string, StorageInfestationCondition> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every((entry) => entry === 'active' || entry === 'repaired')
+}
+
 function isQuestProgressEntry(value: unknown): value is QuestProgressEntry {
   if (!value || typeof value !== 'object') return false
   const e = value as Record<string, unknown>
@@ -1491,6 +1530,9 @@ export function isSaveData(value: unknown): value is SaveData {
   if (v.npcRelationships !== undefined && !isNpcRelationshipsField(v.npcRelationships)) return false
   if (v.livestock !== undefined && !isLivestockField(v.livestock)) return false
   if (v.removedLivestockIds !== undefined && !isRemovedLivestockIdsField(v.removedLivestockIds)) return false
+  if (v.rats !== undefined && !isRatsField(v.rats)) return false
+  if (v.removedRatIds !== undefined && !isRemovedRatIdsField(v.removedRatIds)) return false
+  if (v.storageInfestation !== undefined && !isStorageInfestationField(v.storageInfestation)) return false
   // Same sparse "object of numbers" shape as `resourceDeposits` above.
   if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
   if (v.reputation !== undefined && !isSaveReputation(v.reputation)) return false
@@ -1786,6 +1828,14 @@ function migrateSaveV8ToV9(data: unknown): unknown {
   }
 }
 
+function migrateSaveV9ToV10(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return {
+    ...v,
+    version: 10,
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -1795,6 +1845,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   6: migrateSaveV6ToV7,
   7: migrateSaveV7ToV8,
   8: migrateSaveV8ToV9,
+  9: migrateSaveV9ToV10,
 }
 
 function detectStoredVersion(value: unknown): number | null {

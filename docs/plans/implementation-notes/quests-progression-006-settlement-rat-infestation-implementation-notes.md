@@ -2,7 +2,7 @@
 
 **Reviewed:** 2026-09-07  
 **Plan:** `quests-progression-006-settlement-rat-infestation.md`  
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 
 ## Review result
 

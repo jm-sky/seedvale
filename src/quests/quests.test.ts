@@ -95,6 +95,7 @@ describe('QUESTS social consequence calibration (plan quests-progression-001 §6
       'dzik-przy-szlaku',
       'grozny-wilk',
       'lis-przy-osadzie',
+      'plaga-szcurow',
       'sporne-drewno',
       'wilcza-jama',
       'zaginiona-przesylka',

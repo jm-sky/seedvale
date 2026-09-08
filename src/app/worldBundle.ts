@@ -266,6 +266,10 @@ function buildSettlementsManager(
   initialNpcRelationships?: readonly NpcRelationshipEntry[],
   initialLivestock?: readonly LivestockSaveRecord[],
   initialRemovedLivestockIds?: readonly string[],
+  initialRats?: readonly import('../settlement/ratPersistence').RatSaveRecord[],
+  initialRemovedRatIds?: readonly string[],
+  initialStorageInfestation?: Record<string, import('../settlement/storageInfestation').StorageInfestationCondition>,
+  seedHomeStorageInfestation?: boolean,
   /** Forwarded into every `createSettlement` call → every `NpcAgent` the
    *  same way `helperDelivery`/`hunting` are above (plan npc-015). Unlike
    *  `hunting`, these are built *before* `SettlementsManager` (see
@@ -323,6 +327,10 @@ function buildSettlementsManager(
     initialNpcRelationships,
     initialLivestock,
     initialRemovedLivestockIds,
+    initialRats,
+    initialRemovedRatIds,
+    initialStorageInfestation,
+    seedHomeStorageInfestation,
     workContracts,
     playerWells,
     droppedItems,
@@ -495,6 +503,11 @@ type WorldSystemsSeed = {
    *  same contract as `npcRelationships` above. */
   livestock?: readonly LivestockSaveRecord[]
   removedLivestockIds?: readonly string[]
+  rats?: readonly import('../settlement/ratPersistence').RatSaveRecord[]
+  removedRatIds?: readonly string[]
+  storageInfestation?: Record<string, import('../settlement/storageInfestation').StorageInfestationCondition>
+  /** Authored V1 trigger for home storage infestation on a fresh world. */
+  seedHomeStorageInfestation?: boolean
   spawnerState?: ReadonlyMap<string, SavedSpawnPointState>
   resourceDepletion: ResourceDepletionState
   onAnimalDeath?: (animalId: string) => void
@@ -629,6 +642,10 @@ async function buildWorldSystems(
     npcRelationships: initialNpcRelationships,
     livestock: initialLivestock,
     removedLivestockIds: initialRemovedLivestockIds,
+    rats: initialRats,
+    removedRatIds: initialRemovedRatIds,
+    storageInfestation: initialStorageInfestation,
+    seedHomeStorageInfestation,
     spawnerState: initialSpawnerState,
     resourceDepletion,
     grassForageOverrides,
@@ -787,7 +804,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -1050,6 +1067,10 @@ export async function createWorldBundle(
   initialNpcRelationships?: readonly NpcRelationshipEntry[],
   initialLivestock?: readonly LivestockSaveRecord[],
   initialRemovedLivestockIds?: readonly string[],
+  initialRats?: readonly import('../settlement/ratPersistence').RatSaveRecord[],
+  initialRemovedRatIds?: readonly string[],
+  initialStorageInfestation?: Record<string, import('../settlement/storageInfestation').StorageInfestationCondition>,
+  seedHomeStorageInfestation: boolean = false,
   /** Plan fauna-010 §3/§4 — sparse grass forage depletion overrides, same
    *  "long-lived object owned by `createApp.ts`, mutated in place, threaded
    *  through both `createWorldBundle` and `rebuildWorldBundle`" contract as
@@ -1081,6 +1102,10 @@ export async function createWorldBundle(
     npcRelationships: initialNpcRelationships,
     livestock: initialLivestock,
     removedLivestockIds: initialRemovedLivestockIds,
+    rats: initialRats,
+    removedRatIds: initialRemovedRatIds,
+    storageInfestation: initialStorageInfestation,
+    seedHomeStorageInfestation,
     spawnerState: initialSpawnerState,
     resourceDepletion,
     grassForageOverrides,
@@ -1225,6 +1250,8 @@ export async function rebuildWorldBundle(
   // above, applied to NPC relationships/livestock (plan persistence-001).
   const carriedNpcRelationships = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotRelationships()
   const carriedLivestock = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotLivestock()
+  const carriedRats = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotRats()
+  const carriedStorageInfestation = resetCollectedItems ? undefined : bundle.settlementsManager.snapshotStorageInfestation()
   bundle.caves.dispose()
   bundle.resourceDeposits.dispose()
   bundle.grassForage.dispose()
@@ -1267,6 +1294,10 @@ export async function rebuildWorldBundle(
     npcRelationships: carriedNpcRelationships,
     livestock: carriedLivestock?.entries,
     removedLivestockIds: carriedLivestock?.removedIds,
+    rats: carriedRats?.entries,
+    removedRatIds: carriedRats?.removedIds,
+    storageInfestation: carriedStorageInfestation,
+    seedHomeStorageInfestation: false,
     spawnerState: carriedSpawnerState,
     resourceDepletion,
     grassForageOverrides,

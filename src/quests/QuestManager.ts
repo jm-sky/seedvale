@@ -24,6 +24,11 @@ import {
   uniqueOutcomeForState,
   validateQuestDefinitions,
 } from './quests'
+import {
+  isSettlementRatInfestationResolved,
+  settlementRatInfestationReminderLine,
+  type SettlementRatInfestationSnapshot,
+} from './settlementRatInfestation'
 
 /** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
  *  so a floating NPC label reads correctly even without the CSS color that
@@ -127,6 +132,16 @@ export type QuestSocialAvailabilityLookup = {
   getRenown(settlementId: string): number
 }
 
+/** Read-only settlement rat-infestation world condition for
+ *  `resolve_storage_rat_infestation` (plan quests-progression-006). */
+export type SettlementRatInfestationLookup = {
+  getSnapshot: (settlementId: string) => SettlementRatInfestationSnapshot
+}
+
+const NO_SETTLEMENT_RAT_INFESTATION: SettlementRatInfestationLookup = {
+  getSnapshot: () => ({ infestationActive: false, aliveRatCount: 0 }),
+}
+
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
   getReputationDimension: () => 0,
   getRenown: () => 0,
@@ -192,6 +207,7 @@ export class QuestManager {
   private readonly applyDangerousTrait: DangerousTraitApplier
   private readonly applySocialConsequence: ApplySocialConsequence
   private readonly socialAvailability: QuestSocialAvailabilityLookup
+  private readonly settlementRatInfestation: SettlementRatInfestationLookup
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -208,6 +224,7 @@ export class QuestManager {
     applyDangerousTrait: DangerousTraitApplier = () => {},
     applySocialConsequence: ApplySocialConsequence = () => {},
     socialAvailability: QuestSocialAvailabilityLookup = NO_SOCIAL_AVAILABILITY,
+    settlementRatInfestation: SettlementRatInfestationLookup = NO_SETTLEMENT_RAT_INFESTATION,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -218,6 +235,7 @@ export class QuestManager {
     this.applyDangerousTrait = applyDangerousTrait
     this.applySocialConsequence = applySocialConsequence
     this.socialAvailability = socialAvailability
+    this.settlementRatInfestation = settlementRatInfestation
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -393,6 +411,40 @@ export class QuestManager {
       })
   }
 
+  /** Polls live world state for active `resolve_storage_rat_infestation`
+   *  objectives — call after rat deaths or storage repair (plan
+   *  quests-progression-006). */
+  pollSettlementRatInfestationObjectives(): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (stage?.objective.type !== 'resolve_storage_rat_infestation') continue
+      if (!def.settlementId) continue
+      const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
+      if (isSettlementRatInfestationResolved(snapshot)) this.advanceStage(def, s)
+    }
+  }
+
+  private handleStorageRatInfestationGiver(
+    def: QuestDef,
+    s: QuestRuntimeProgress,
+    stage: QuestStage,
+  ): QuestDialogOverride {
+    if (!def.settlementId) return { line: stage.reminderLine }
+    const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
+    const line = settlementRatInfestationReminderLine(snapshot)
+    if (isSettlementRatInfestationResolved(snapshot)) {
+      this.advanceStage(def, s)
+      const updated = this.stateOf(def.id)
+      if (updated.state === 'ready_to_report') {
+        const reportLine = this.resolveSuccessfulTurnIn(def)
+        return reportLine ? { line: reportLine } : { line }
+      }
+    }
+    return { line }
+  }
+
   private bumpRelation(npcName: string, amount: number): void {
     this.relations.set(npcName, this.getRelation(npcName) + amount)
   }
@@ -533,6 +585,9 @@ export class QuestManager {
     if (s.state === 'active') {
       const stage = this.currentStage(def, s.stageIndex)
       if (!stage) return null
+      if (stage.objective.type === 'resolve_storage_rat_infestation') {
+        return this.handleStorageRatInfestationGiver(def, s, stage)
+      }
       if (stage.objective.type === 'gather_item') {
         const { kind, count } = stage.objective
         const isFinalStage = s.stageIndex >= def.stages.length - 1

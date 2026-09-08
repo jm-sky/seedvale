@@ -108,7 +108,7 @@ export type Interactable =
   /** Settlement storage container (plan 156) — read-only stock view over
    *  `SettlementEconomy`, same "presentation, not owner" contract as
    *  `householdStorage`. */
-  | { kind: 'settlementStorage', position: { x: number, z: number }, promptLabel: string, economy: SettlementEconomy }
+  | { kind: 'settlementStorage', position: { x: number, z: number }, promptLabel: string, economy: SettlementEconomy, settlementId: string }
   /** Physical wood stockpile (plan settlements-npcs-012) — a single physical
    *  storage destination, distinct from the aggregated `settlementStorage`
    *  crate. Read-only view over `storageVisuals.ts`'s

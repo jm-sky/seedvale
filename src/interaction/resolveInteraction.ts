@@ -49,10 +49,8 @@ function formatHouseholdStorage(household: Household): string {
   ].join('\n')
 }
 
-/** Excludes `water` — `SettlementEconomy`'s `water` stock is unused seed
- *  data (`economy/initial.ts`), the real reserve lives on `Household.water`
- *  (plan 122) and stays out of the settlement-wide container. */
-function formatSettlementStorage(economy: SettlementEconomy): string {
+/** Read-only stock lines for settlement storage (plan 156). */
+export function formatSettlementStorageLines(economy: SettlementEconomy): string {
   return [
     `Jedzenie: ${economy.query('food')}`,
     `Drewno: ${economy.query('wood')}`,
@@ -65,7 +63,7 @@ function formatSettlementStorage(economy: SettlementEconomy): string {
 
 /** Read-only single-line quantity for the physical wood stockpile (plan
  *  settlements-npcs-012) — a distinct, narrower interaction from
- *  `formatSettlementStorage`'s aggregated crate view, sharing its live total
+ *  `formatSettlementStorageLines`'s aggregated crate view, sharing its live total
  *  with `storageVisuals.ts`'s stockpile visual via `physicalWoodStockpileQuantity`
  *  so the two can never disagree. */
 function formatWoodStorage(households: readonly Household[], economy: SettlementEconomy): string {
@@ -109,7 +107,7 @@ function capitalize(text: string): string {
  *  106) alongside the call. A *completed* player-built well becomes a plain
  *  `well` candidate (see `app/interactables.ts`), so it goes through here too. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' | 'noticeBoard' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' | 'noticeBoard' | 'settlementStorage' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {
@@ -158,8 +156,6 @@ export function resolveInteraction(
         line: override?.line ?? pickFrom(LANDMARK_FLAVOR_LINES[target.envKind]),
       }
     }
-    case 'settlementStorage':
-      return { speakerName: 'Magazyn osady', line: formatSettlementStorage(target.economy) }
     case 'spawner': {
       const override = questManager.onInteractObjective({
         type: 'interact_spawner',

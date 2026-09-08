@@ -86,7 +86,7 @@ Fauna has a genuine four-tier persistence picture — treat these as four distin
 **Not persisted; population is deterministically reconstructed, individual identity is not.** The fixed spawn table plus seeded placement fully reproduces the population every session, but a specific individual's position/health/hunger/rabies-infection/frenzy/juvenile state simply ceases to exist on unload — a wolf that was rabid, mid-chase, or juvenile at save time comes back as a fresh deterministic spawn. The generic per-individual snapshot capability used by livestock exists on the class and could be called for a wild individual, but nothing does — a future feature persisting a specific wild animal (a tracked quest animal, an ongoing rabies outbreak) needs a call site, not new infrastructure.
 
 ### Rats
-**Not persisted, and not seed-derivable** — a fourth, distinct shape, worse than "unpersisted but deterministic." The population is a live formula over current food and dog count, reconciled from zero every time a settlement streams back in; even the *count* is not reproducible from `(seed, elapsedDays)` alone, unlike a wild wolf pack's.
+**Persisted per individual (plan quests-progression-006), with a live pressure target.** Settlement rats use the same `AnimalAgent.snapshot()` / capture-registry pattern as livestock, keyed by settlement id with removed-id tombstones. The *target population* is still a live formula over current food, dog count, and whether shared settlement storage infestation is active (`max(normalTarget + 3, 7)` while damaged); reconciliation gradually adjusts the live count toward that target after restore rather than respawning the full target instantly.
 
 **Riding is the one place the wild/livestock boundary is player-visible today:** the persisted mount reference stores a livestock animal id specifically because only livestock kinds have a deterministic id that survives a reload — a player who somehow mounted a wild animal would have no way to reconnect the save reference to a real post-reload individual (not currently possible in practice; mount capability is only configured for livestock kinds).
 
@@ -115,7 +115,7 @@ Any species whose `AnimalDef.mount` is set is ridable — today, horse and donke
 ## Limitations
 
 - Wild-fauna individuals have no persistence and no reconstruction guarantee beyond population-level determinism (see [Persistence classes](#persistence-classes)).
-- Rats are neither persisted nor seed-derivable — a settlement's rat population fully resets on every reload.
+- Settlement rats persist as individuals, but their target population remains a live pressure formula (food, dogs, storage infestation) — not seed-derivable at the population level.
 - Fauna's outgoing attack damage bypasses the shared critical/defense pipeline (see [Combat](#combat)) — a known asymmetry, not yet resolved either way.
 - Ordinary movement-target search (wander/food/water) uses unseeded randomness, unlike the deterministic hashed rolls used for population-protection and rat food-eating. This is internally consistent today only because wild-fauna individual state is never persisted — there is nothing for the randomness to desynchronize against across a save/reload. If wild-fauna persistence is ever added, this boundary needs to become an explicit, stated policy rather than an implicit one.
 - Blacksmith/farmer-adjacent gaps aside, no disease system beyond rabies exists — a decaying-food risk-penalty seam exists in the corpse-scavenging scoring function but is currently inert.
@@ -144,5 +144,7 @@ src/fauna/dogGuard.ts
 src/fauna/preyAlertPerception.ts
 src/settlement/livestock.ts
 src/settlement/rats.ts
+src/settlement/ratPersistence.ts
+src/settlement/storageInfestation.ts
 src/world/createGrassForagePatches.ts
 ```
