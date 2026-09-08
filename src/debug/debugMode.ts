@@ -120,14 +120,3 @@ export function isSystemEnabled(name: DebugSystemName): boolean {
     return true
   }
 }
-
-/** `?caveSpike=sweep|sdf` — plan world-terrain-008 Milestone A comparison
- *  harness selector. Cave V2 SDF is now the default representation, so an
- *  absent (or unrecognised) value resolves to `'sdf'`; `?caveSpike=sweep`
- *  remains an explicit comparison/debug override. One exported reader,
- *  deleted (along with the `createCaves.ts` branch it feeds) after the
- *  architecture decision gate. */
-export function caveSpikeVariant(): 'sweep' | 'sdf' {
-  const raw = urlParamValue('caveSpike')
-  return raw === 'sweep' ? 'sweep' : 'sdf'
-}

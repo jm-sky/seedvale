@@ -130,7 +130,7 @@ describe('Cave V2 spike surface integration (seed 1922931019 / cave:641d64fc)', 
 
   it('puts no SDF geometry above the terrain and leaves the mouth open', () => {
     const topology = buildSpikeTestTopology(REPRO_SEED, entrance, { surfaceHeightAt })
-    const { geometry } = buildSdfCaveMesh(topology, TEST_SDF_PARAMS, false, surfaceHeightAt)
+    const { geometry } = buildSdfCaveMesh(topology, TEST_SDF_PARAMS, surfaceHeightAt)
     const positions = geometry.getAttribute('position')
 
     let worstAboveTerrain = -Infinity

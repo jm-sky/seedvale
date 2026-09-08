@@ -1099,3 +1099,135 @@ longer reachable from any normal runtime path; it stays in the tree only for
 tests/rollback until a Milestone B cleanup removes it. This does not settle
 any of the "Open Decisions" above — it only fixes which representation
 normal play actually sees.
+
+---
+
+# Milestone B1 — Implementation Summary (2026-09-08)
+
+Everything above this line is Milestone-A history; it now describes a
+superseded runtime (`buildSpikeTestTopology()` + `generateCaveDefinitions()`
+wiring in `createCaves.ts`). This section records what B1 actually built —
+see the B1 recon (`world-terrain-008-underground-caves-v2-b1-recon.md`) for
+the debt it replaced.
+
+## New production pipeline
+
+```text
+pickLargeCaveSites()                    (unchanged — largeCaves.ts)
+   ↓
+buildProductionCaveTopology()           (new — caves/productionTopology.ts)
+   ↓  null = site rejected (no reasonable route fits the terrain)
+CaveTopology
+   ↓
+buildCaveSdfRepresentation()            (new — caves/caveSdfField.ts, pure, no THREE)
+   ↓
+buildSdfCaveMesh()                      (caves/sdfCaveMesh.ts — now presentation-only)
+   ↓
+THREE.BufferGeometry
+```
+
+`createCaves.ts` no longer calls `generateCaveDefinitions()`/V1 layout at all.
+`topologyToCaveDefinition()` (`topologyAdapter.ts`, unchanged) remains the
+transitional compatibility adapter feeding `createCaveVolume`/
+`buildCaveWallColliders` — still not Cave V2's source of truth, per the
+plan's compatibility boundary. `?caveSpike=sweep`, `resolveCaveRenderVariants`
+and `caveSpikeVariant()` are deleted — the Milestone-A comparison gate
+already passed, and the doc comments on all three said as much. Sweep itself
+(`sweepCaveMesh.ts`) and the Milestone-A fixture (`spikeTestCave.ts`) are
+untouched and still exercised by their own unit tests; neither is reachable
+from production code any more.
+
+## New/changed files
+
+- `caves/caveIdentity.ts` — `makeCaveId()` moved out of `caveGenerator.ts`
+  (bit-mixing unchanged, pinned by a regression test).
+- `caves/caveRng.ts` — `createCaveRandom(caveId, salt)`: per-cave,
+  per-purpose deterministic RNG streams, replacing Milestone-A's
+  world-seed-only streams (the "every cave gets the same wobble" bug).
+- `caves/mouthOverburden.ts`, `caves/terrainFootprint.ts` — the mouth-roof
+  contract and footprint-sampling helper extracted out of `spikeTestCave.ts`
+  so production code doesn't depend on the Milestone-A test module;
+  `spikeTestCave.ts` now delegates to them (`spikeOverburdenRequirement` kept
+  as a thin wrapper — `caveSurfaceIntegration.test.ts` pins it).
+- `caves/productionTopology.ts` — the production topology builder. See
+  "Terrain adaptation" and "Branch separation" below.
+- `caves/caveSdfField.ts` — the pure `CaveTopology -> CaveSdfSpatialRepresentation`
+  split the plan asked for (§9). No Three.js import.
+- `caves/sdfCaveMesh.ts` — trimmed to grid sampling + Naive Surface Nets +
+  clipping + `THREE.BufferGeometry`; field/primitive logic moved to
+  `caveSdfField.ts`. `buildSdfCaveMesh()` dropped its `includeBranch` param —
+  every segment in `topology.segments` is now always included generically.
+- `createCaves.ts` — rewired as described above; entrance mouth-framing now
+  reuses the real `LargeCaveSite` (kept alongside each topology) instead of a
+  `def.variant` read through the adapter, which the adapter always hardcodes
+  to `0` — using it directly would have made every cave's mouth-rock framing
+  identical.
+
+## Deviations from the plan text worth recording
+
+- **Generic segment consumption, no chain-walk.** The plan's §5 wording
+  ("consume `topology.segments`/graph directly") is implemented literally:
+  `buildCaveSdfRepresentation` places primitives **per segment**
+  (`topology.segments.flatMap(...)`), not by reconstructing a traversal
+  order. A branch is just another segment; no second hardcoded chain, no
+  graph traversal code at all.
+- **Primitive placement now resamples by true arc length**
+  (`placePrimitivesAlongPath` in `caveSdfField.ts`), unlike Milestone A's
+  `placePrimitives` (which guaranteed only "at least one primitive per
+  keyframe pair"). This was necessary, not cosmetic: production centerlines
+  carry many more control points than the Milestone-A fixture (terrain
+  adaptation stations, ~1.5-2 m apart, vs. a handful of shape keyframes), and
+  primitive count must depend on `primitiveSpacing` alone, not on centerline
+  density, or SDF field cost regresses.
+- **Terrain adaptation is a sequential, monotonic station walk**
+  (`adaptStation`/`walkSegment` in `productionTopology.ts`), not a rewrite of
+  Milestone A's single global `sinkUnderTerrain()` deficit. Each control
+  point's floor Y is the lower of (a) a gentle nominal per-metre descent and
+  (b) whatever the local terrain footprint at that exact point requires,
+  never rising back up — so descent is local/smooth rather than one uniform
+  drop dumped on the first segment (implementation notes §3's bug). It is
+  **not** a mathematically tight full-footprint guarantee between control
+  points — it leaves `STATION_SAFETY` (0.35 m) of margin for the gap between
+  the probe pattern and an arbitrarily dense check, exactly like Milestone
+  A's `OVERBURDEN_SAFETY` did, just station-based rather than one global
+  fine-grained walk. `productionTopology.test.ts`'s overburden test tolerates
+  that documented margin rather than asserting zero residual.
+- **Accidental-union prevention is generation-time, not field-time.** Per the
+  plan's own suggestion (§9: "topology-generation separation constraint,
+  nie trzeba tworzyć graph-aware SDF boolean engine"), a branch is only kept
+  if `minGapBetweenPaths()` reports every non-junction main-route/branch
+  station pair at least `MIN_DISCONNECTED_CLEARANCE` (1.5 m, safely above
+  `smoothK` 0.9 m) apart; otherwise the branch is silently dropped (never
+  rejects the whole site — it's explicitly optional, plan §7/§8).
+- **Feature (shelf/overhang) overburden is corrected locally, capped, not
+  gated.** `lowerFeatureIfNeeded()` nudges the feature down (never rejects
+  the site) up to `MAX_FEATURE_DROP` (3 m) — a decorative appendage isn't
+  worth failing a whole cave over.
+- **`resolveCaveRenderVariants`/`caveSpikeVariant()` deleted**, not just
+  unused. Both carried doc comments saying they exist only until the
+  Milestone-A decision gate; that gate passed. `createCaves.test.ts` (which
+  only ever tested `resolveCaveRenderVariants`) was removed since there is no
+  longer a pure exported helper in `createCaves.ts` to unit test — coverage
+  moved to `productionTopology.test.ts`/`caveSdfField.test.ts`, which are
+  pure and don't need a `ChunkManager`.
+- **Not done in B1** (left for later milestones, matching the plan's scope
+  boundaries): `spikeTestCave.ts`/`sweepCaveMesh.ts` removal (optional
+  B1 cleanup the plan explicitly didn't require; left alone to avoid
+  unrelated risk), `caveSpikeMaterial.ts`/`caveSpikeMetrics.ts` renaming
+  (still spike-named but representation-agnostic infra, not production
+  API surface exposed to gameplay), and no `createCaves()`-level
+  activation/disposal test was added (the lifecycle code itself is
+  unchanged from Milestone A — only what it builds changed — so existing
+  coverage gaps there predate B1).
+
+## Tests added
+
+`caveIdentity.test.ts`, `caveRng.test.ts`, `productionTopology.test.ts`,
+`caveSdfField.test.ts` — determinism, per-cave RNG independence, iteration-
+order independence, full-footprint overburden (gentle + steep terrain),
+deterministic rejection on unworkable terrain, branch generation +
+separation-constraint unit tests, generic segment-graph consumption with
+node ids sharing nothing with the Milestone-A fixture, arc-length primitive
+resampling. `caveSurfaceIntegration.test.ts` and `sdfCaveMesh.test.ts` updated
+only for `buildSdfCaveMesh`'s new (`includeBranch`-less) signature — their
+own assertions are unchanged.

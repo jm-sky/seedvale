@@ -2,34 +2,32 @@ import * as THREE from 'three'
 import type { ChunkManager } from '../terrain/chunkManager'
 import type { CaveTopology } from './caves/caveTopology'
 import { disposeObject3D } from '../assets/loadGltf'
-import { caveSpikeVariant } from '../debug/debugMode'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
 import { buildCaveWallColliders } from './caveColliders'
-import { CAVE_MOUTH_DEPTH, generateCaveDefinitions } from './caveGenerator'
+import { CAVE_MOUTH_DEPTH } from './caveGenerator'
 import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
-import { reportCaveSpikeMetrics, runMedianOfN } from './caves/caveSpikeMetrics'
+import { buildProductionCaveTopology } from './caves/productionTopology'
 import { buildSdfCaveMesh } from './caves/sdfCaveMesh'
-import { buildSpikeTestTopology } from './caves/spikeTestCave'
-import { buildSweepCaveMesh } from './caves/sweepCaveMesh'
 import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition, type CaveVolume, createCaveVolume } from './caveVolume'
-import { openingDirection } from './largeCaves'
+import { type LargeCaveSite, openingDirection, pickLargeCaveSites } from './largeCaves'
 import { createLargeCaveVisual, placeLargeCaveVisual } from './largeCaveVisual'
 import type { Scene } from 'three'
 
-/** Local terrain recess at the mouth only — the underground tunnel/chamber
- *  itself is never carved into the surface heightmap (plan world-terrain-007
- *  §7/§9), it's the procedural interior mesh (`caveMesh.ts`). Same constants
- *  `createLargeCaves.ts` used for its mouth/approach carve. */
+/** Local terrain recess at the mouth only — the underground passage itself
+ *  is never carved into the surface heightmap, it's the procedural interior
+ *  mesh (`sdfCaveMesh.ts`). Same constants `createLargeCaves.ts` used for its
+ *  mouth/approach carve. */
 const APPROACH_RADIUS = 3.2
 const APPROACH_DEPTH = 1.35
 const MOUTH_RADIUS = 1.65
-/** Same depth `caveGenerator.ts` starts the interior at — the mouth node's
- *  floor is the bottom of this recess, so the two must never drift apart. */
+/** Same depth `productionTopology.ts` starts the interior at — the mouth
+ *  node's floor is the bottom of this recess, so the two must never drift
+ *  apart. */
 const MOUTH_DEPTH = CAVE_MOUTH_DEPTH
 
-/** Short synthetic "site" length fed to the existing `largeCaveVisual.ts`
+/** Short site-shaped input fed to the existing `largeCaveVisual.ts`
  *  rock-framing helper — just enough for a convincing mouth cluster; the
  *  interior beyond it is the procedural mesh, not a rock-lined trench. */
 const MOUTH_FRAMING_LENGTH = 3
@@ -41,29 +39,6 @@ const ACTIVATE_DISTANCE = 55
 /** > ACTIVATE_DISTANCE — hysteresis ring avoiding activate/deactivate
  *  thrashing right at the boundary (same pattern as settlement streaming). */
 const DEACTIVATE_DISTANCE = 80
-
-export type CaveRenderVariant = 'sweep' | 'sdf'
-
-/**
- * Plan world-terrain-008 Milestone A runtime selection policy — pure so it is
- * testable without a Three.js/world harness. `caveIds` must be in
- * deterministic definition order: with `spikeVariant === 'sweep'` the first
- * id becomes the one Sweep-vs-SDF comparison target and every other cave
- * still resolves to `'sdf'`; any other `spikeVariant` value resolves every
- * cave to `'sdf'`. There is no runtime path back to the legacy V1 renderer —
- * every accepted cave always gets a Cave V2 (Sweep or SDF) variant.
- *
- * @domain world-terrain
- */
-export function resolveCaveRenderVariants(
-  caveIds: readonly string[],
-  spikeVariant: CaveRenderVariant,
-): ReadonlyMap<string, CaveRenderVariant> {
-  const comparisonTargetId = spikeVariant === 'sweep' ? caveIds[0] : undefined
-  const variants = new Map<string, CaveRenderVariant>()
-  for (const id of caveIds) variants.set(id, id === comparisonTargetId ? 'sweep' : 'sdf')
-  return variants
-}
 
 export type Caves = {
   definitions: () => readonly CaveDefinition[]
@@ -96,16 +71,26 @@ function colliderOwnerKey(caveId: string): string {
 }
 
 /**
- * Owns the plan world-terrain-007 cave subsystem: deterministic
- * `CaveDefinition`s (cheap, all computed up front — same reasoning as
- * `largeCaves.ts`'s sites), streamed presentation and cave-wall collision
- * for whichever caves are near the player. Same lifecycle as `WorldBundle`
- * (create/dispose alongside it, never survives a rebuild).
+ * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B1):
+ * deterministic production `CaveTopology`s (cheap, all computed up front —
+ * same reasoning as `largeCaves.ts`'s sites), streamed SDF presentation and
+ * cave-wall collision for whichever caves are near the player.
+ *
+ * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
+ * terrain acceptance are owned by `productionTopology.ts`, not V1's
+ * tunnel/chamber `CaveDefinition` graph (`caveGenerator.ts`) — a site is
+ * dropped here if no reasonable route fits under the local terrain, same as
+ * V1's own overburden rejection. `topologyToCaveDefinition` remains a
+ * transitional compatibility adapter for `CaveVolume`/collision only (plan
+ * §"Compatibility boundary") — it is never Cave V2's source of truth.
+ *
+ * Same lifecycle as `WorldBundle` (create/dispose alongside it, never
+ * survives a rebuild).
  *
  * @system caves
- * @role Owns cave definitions, streamed interior presentation and
- *  cave-wall collider registration; `PlayerController` ground/ceiling
- *  queries go through `contains`/`sampleFloor`/`sampleCeiling`.
+ * @role Owns cave topologies, streamed interior presentation and cave-wall
+ *  collider registration; `PlayerController` ground/ceiling queries go
+ *  through `contains`/`sampleFloor`/`sampleCeiling`.
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -123,7 +108,7 @@ export function createCaves(
     radius: cell.gx === 0 && cell.gz === 0 ? homeFootprint : villageSizeConfig('MD').footprintRadius,
   }))
 
-  const definitions = generateCaveDefinitions({
+  const sites = pickLargeCaveSites({
     seed,
     sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
     sampleContinentalness: (x, z) => chunkManager.sampleContinentalness(x, z),
@@ -133,42 +118,38 @@ export function createCaves(
     roadsNear: (x, z, querySize) => chunkManager.roadCorridorsNear(x, z, querySize),
     villages,
   })
-  // Plan world-terrain-008 Milestone A — Cave V2 (SDF) is the runtime default
-  // for every accepted cave; `?caveSpike=sweep` is an explicit diagnostic
-  // override that turns exactly one deterministic cave into the Sweep
-  // comparison target, everything else stays SDF (see
-  // `resolveCaveRenderVariants`). No normal cave falls back to the legacy V1
-  // renderer. See implementation notes "Shared Comparison Harness".
+
   // Deterministic analytic surface — `sampleHeight` reads the chunk tile once
-  // a chunk is resident, so the spike geometry would otherwise depend on
-  // streaming order (it is built on activation, not at world build).
-  const spikeSurfaceHeight = (x: number, z: number): number => chunkManager.sampleBaseHeight(x, z)
-  const spikeVariant = caveSpikeVariant()
-  const renderVariants = resolveCaveRenderVariants(definitions.map((def) => def.caveId), spikeVariant)
+  // a chunk is resident, so topology would otherwise depend on streaming
+  // order (it is built on activation, not at world build).
+  const analyticSurfaceHeight = (x: number, z: number): number => chunkManager.sampleBaseHeight(x, z)
 
   // Topology/proxy precompute — lightweight deterministic data (no Three.js
-  // geometry), same "cheap, all computed up front" reasoning as `definitions`
-  // itself. Actual presentation geometry is still built lazily on activation.
+  // geometry), same "cheap, all computed up front" reasoning as `sites`
+  // itself. Actual presentation geometry is still built lazily on
+  // activation. A site is silently dropped if no reasonable route fits
+  // under its local terrain (`buildProductionCaveTopology` returning
+  // `null`) — the Cave V2 acceptance authority, not V1's.
   const v2ByCaveId = new Map<string, { topology: CaveTopology, definition: CaveDefinition }>()
-  for (const def of definitions) {
-    const topology = buildSpikeTestTopology(seed, def.entrance, { surfaceHeightAt: spikeSurfaceHeight })
-    v2ByCaveId.set(def.caveId, { topology, definition: topologyToCaveDefinition(topology) })
+  const siteByCaveId = new Map<string, LargeCaveSite>()
+  for (const site of sites) {
+    const topology = buildProductionCaveTopology({
+      seed,
+      site,
+      sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
+      sampleBaseHeight: analyticSurfaceHeight,
+    })
+    if (!topology) continue
+    v2ByCaveId.set(topology.caveId, { topology, definition: topologyToCaveDefinition(topology) })
+    siteByCaveId.set(topology.caveId, site)
   }
 
-  if (spikeVariant === 'sweep' && definitions.length === 0) {
-    console.warn('[caveSpike] no cave definitions accepted for this seed — try a different ?seed=')
-  } else if (spikeVariant === 'sweep') {
-    const comparisonTarget = definitions[0]!
-    const comparisonTopology = v2ByCaveId.get(comparisonTarget.caveId)!.topology
-    console.log(
-      `[caveSpike] variant=sweep caveId=${comparisonTarget.caveId} entrance=(${comparisonTarget.entrance.x.toFixed(1)}, ${comparisonTarget.entrance.z.toFixed(1)})`,
-    )
-    const sample = runMedianOfN(() => buildSweepCaveMesh(comparisonTopology, undefined, false, spikeSurfaceHeight), 5)
-    sample.geometry.dispose()
-    reportCaveSpikeMetrics(sample.metrics)
+  const definitions: CaveDefinition[] = [...v2ByCaveId.values()].map((v) => v.definition)
+  if (definitions.length === 0) {
+    console.warn('[caves] no cave sites accepted for this seed — try a different ?seed=')
   }
 
-  const volumes: readonly CaveVolume[] = definitions.map((def) => createCaveVolume(v2ByCaveId.get(def.caveId)!.definition))
+  const volumes: readonly CaveVolume[] = definitions.map((def) => createCaveVolume(def))
 
   // Local entrance recess only — deterministic from `definition.entrance`,
   // redone from scratch on every world build, never persisted (same
@@ -198,24 +179,23 @@ export function createCaves(
   }
 
   const active = new Map<string, THREE.Object3D>()
+  const caveMaterial = createCaveSpikeMaterial('sdf')
 
   function activate(def: CaveDefinition): void {
     if (active.has(def.caveId)) return
     const v2 = v2ByCaveId.get(def.caveId)!
-    const variant = renderVariants.get(def.caveId) ?? 'sdf'
     const group = new THREE.Group()
     group.name = `cave:${def.caveId}`
     // Built fresh on every activation (not cached) — `deactivate()` disposes
-    // the group's geometry, so a shared/cached spike mesh would render
-    // nothing (or throw) on the next activation.
-    const built = variant === 'sweep'
-      ? buildSweepCaveMesh(v2.topology, undefined, false, spikeSurfaceHeight)
-      : buildSdfCaveMesh(v2.topology, undefined, false, spikeSurfaceHeight)
-    const mesh = new THREE.Mesh(built.geometry, createCaveSpikeMaterial(variant))
-    mesh.name = `cave-interior-spike:${def.caveId}`
+    // the group's geometry, so a shared/cached mesh would render nothing (or
+    // throw) on the next activation.
+    const built = buildSdfCaveMesh(v2.topology, undefined, analyticSurfaceHeight)
+    const mesh = new THREE.Mesh(built.geometry, caveMaterial)
+    mesh.name = `cave-interior:${def.caveId}`
     mesh.receiveShadow = true
     group.add(mesh)
-    const framingSite = { x: def.entrance.x, z: def.entrance.z, yaw: def.entrance.yaw, length: MOUTH_FRAMING_LENGTH, variant: def.variant }
+    const site = siteByCaveId.get(def.caveId)!
+    const framingSite = { ...site, length: MOUTH_FRAMING_LENGTH }
     const framing = createLargeCaveVisual(framingSite)
     placeLargeCaveVisual(framing, framingSite, (x, z) => chunkManager.sampleBaseHeight(x, z))
     group.add(framing)

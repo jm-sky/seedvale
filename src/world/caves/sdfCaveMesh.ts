@@ -1,16 +1,15 @@
-/** Plan world-terrain-008 Milestone A §10 — Variant B: graph + local SDF.
- *  Builds a bounded, local scalar field (no global voxel terrain, no
- *  chunked volume, no worker) as a smooth union of ellipsoid "void"
- *  primitives sampled along the `CaveTopology` centerline (main trunk, plus
- *  the branch if present), subtracts a solid box for the shelf/overhang
- *  feature, and extracts the iso-surface with a local implementation of
- *  Naive Surface Nets (no marching-cubes/dual-contouring implementation
- *  exists anywhere else in this repository — the mesher is legitimately
- *  part of this spike's cost).
+/** Plan world-terrain-008 — derived presentation geometry for the production
+ *  Graph + Local SDF representation (`caveSdfField.ts`): grid sampling +
+ *  Naive Surface Nets extraction + analytic-surface clipping +
+ *  `THREE.BufferGeometry`. No field/topology-interpretation logic lives here
+ *  any more — see `caveSdfField.ts` for `CaveTopology -> pure SDF field`
+ *  (plan §9's `CaveTopology -> CaveSpatialRepresentation -> mesh extraction`
+ *  split).
  *
- * Domain-warp surface noise is a crude per-axis 1D sum (not true 3D Perlin)
- * — a deliberate simplification for a local spike; see the spike results
- * doc for how it reads in practice.
+ *  Naive Surface Nets: one vertex per cell straddling the iso-surface, quads
+ *  stitched along every sign-changing grid edge (no marching-cubes case
+ *  table) — the only implicit-surface mesher in this repository, so its cost
+ *  is legitimately part of this representation's cost.
  *
  * @domain world-terrain
  */
@@ -19,189 +18,20 @@ import * as THREE from 'three'
 import type { CaveSpikeMetrics } from './caveSpikeMetrics'
 import type { CaveTopology, CaveTopologyPoint } from './caveTopology'
 import { isSystemEnabled } from '../../debug/debugMode'
+import {
+  type Bounds,
+  buildCaveSdfRepresentation,
+  buildVoidField,
+  DEFAULT_SDF_PARAMS,
+  type SdfCaveParams,
+  type VoidPrimitive,
+} from './caveSdfField'
 import { clipTrianglesBelowSurface, type SurfaceHeightSampler } from './clipBelowSurface'
-import { createMultiScaleNoise1D, type NoiseOctave } from './spikeNoise'
 
-export type SdfCaveParams = {
-  /** World-units per SDF grid cell. Smaller = finer surface, cubically more
-   *  samples. */
-  cellSize: number
-  /** Polynomial smooth-union blend radius (metres) between neighbouring void
-   *  primitives — too large re-creates the "soft rubber tube" failure mode
-   *  the plan warns about (§10). */
-  smoothK: number
-  /** Spacing (metres) between void primitives placed along the centerline. */
-  primitiveSpacing: number
-  detail: { micro: NoiseOctave, medium: NoiseOctave }
-}
-
-export const DEFAULT_SDF_PARAMS: SdfCaveParams = {
-  cellSize: 0.4,
-  smoothK: 0.9,
-  primitiveSpacing: 0.8,
-  detail: {
-    micro: { cellSize: 0.5, amplitude: 0.08 },
-    medium: { cellSize: 1.8, amplitude: 0.22 },
-  },
-}
-
-const MAIN_CHAIN = ['entrance', 'wide-transition', 'descending-passage', 'widening-bend', 'main-chamber'] as const
+export { DEFAULT_SDF_PARAMS, type SdfCaveParams } from './caveSdfField'
 
 function now(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
-}
-
-// --- Primitive placement -----------------------------------------------
-
-type VoidPrimitive = { cx: number, cy: number, cz: number, rx: number, ry: number, rz: number }
-
-type Keyframe = { position: CaveTopologyPoint, width: number, height: number }
-
-function buildKeyframes(topology: CaveTopology, chain: readonly string[]): Keyframe[] {
-  const nodeById = new Map(topology.nodes.map((n) => [n.id, n]))
-  const segByPair = new Map(topology.segments.map((s) => [`${s.from}>${s.to}`, s]))
-  const keyframes: Keyframe[] = []
-  for (let i = 0; i < chain.length - 1; i++) {
-    const fromId = chain[i]!
-    const toId = chain[i + 1]!
-    const seg = segByPair.get(`${fromId}>${toId}`)
-    if (!seg) throw new Error(`sdfCaveMesh: no segment ${fromId}->${toId}`)
-    const fromNode = nodeById.get(fromId)!
-    const toNode = nodeById.get(toId)!
-    const pts = seg.centerline
-    if (i === 0) keyframes.push({ position: pts[0]!, width: fromNode.targetWidth, height: fromNode.targetHeight })
-    for (let k = 1; k < pts.length; k++) {
-      const t = k / (pts.length - 1)
-      keyframes.push({
-        position: pts[k]!,
-        width: fromNode.targetWidth + (toNode.targetWidth - fromNode.targetWidth) * t,
-        height: fromNode.targetHeight + (toNode.targetHeight - fromNode.targetHeight) * t,
-      })
-    }
-  }
-  return keyframes
-}
-
-function placePrimitives(keyframes: readonly Keyframe[], spacing: number): VoidPrimitive[] {
-  const out: VoidPrimitive[] = []
-  const push = (k: Keyframe): void => {
-    out.push({ cx: k.position.x, cy: k.position.y + k.height * 0.5, cz: k.position.z, rx: k.width / 2, ry: k.height / 2, rz: k.width / 2 })
-  }
-  push(keyframes[0]!)
-  for (let i = 0; i < keyframes.length - 1; i++) {
-    const a = keyframes[i]!
-    const b = keyframes[i + 1]!
-    const dist = Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y, b.position.z - a.position.z)
-    const steps = Math.max(1, Math.round(dist / spacing))
-    for (let s = 1; s <= steps; s++) {
-      const t = s / steps
-      push({
-        position: {
-          x: a.position.x + (b.position.x - a.position.x) * t,
-          y: a.position.y + (b.position.y - a.position.y) * t,
-          z: a.position.z + (b.position.z - a.position.z) * t,
-        },
-        width: a.width + (b.width - a.width) * t,
-        height: a.height + (b.height - a.height) * t,
-      })
-    }
-  }
-  return out
-}
-
-// --- Field ---------------------------------------------------------------
-
-function ellipsoidSDF(x: number, y: number, z: number, p: VoidPrimitive): number {
-  const dx = (x - p.cx) / p.rx
-  const dy = (y - p.cy) / p.ry
-  const dz = (z - p.cz) / p.rz
-  const len = Math.sqrt(dx * dx + dy * dy + dz * dz)
-  const scale = Math.min(p.rx, p.ry, p.rz)
-  return (len - 1) * scale
-}
-
-function smin(a: number, b: number, k: number): number {
-  if (k <= 0) return Math.min(a, b)
-  const h = Math.max(k - Math.abs(a - b), 0) / k
-  return Math.min(a, b) - h * h * k * 0.25
-}
-
-function boxSDF(x: number, y: number, z: number, cx: number, cy: number, cz: number, hx: number, hy: number, hz: number): number {
-  const qx = Math.abs(x - cx) - hx
-  const qy = Math.abs(y - cy) - hy
-  const qz = Math.abs(z - cz) - hz
-  const ox = Math.max(qx, 0)
-  const oy = Math.max(qy, 0)
-  const oz = Math.max(qz, 0)
-  const outside = Math.sqrt(ox * ox + oy * oy + oz * oz)
-  const inside = Math.min(Math.max(qx, Math.max(qy, qz)), 0)
-  return outside + inside
-}
-
-type FeatureBox = { cx: number, cy: number, cz: number, hx: number, hy: number, hz: number }
-
-function featureBoxesFromTopology(topology: CaveTopology): FeatureBox[] {
-  return topology.features.map((f) => ({
-    cx: f.position.x,
-    cy: f.position.y,
-    cz: f.position.z,
-    hx: f.size.width / 2,
-    hy: f.size.height / 2,
-    hz: f.size.depth / 2,
-  }))
-}
-
-function buildField(
-  primitives: readonly VoidPrimitive[],
-  features: readonly FeatureBox[],
-  smoothK: number,
-  detailEnabled: boolean,
-  noiseX: (s: number) => number,
-  noiseY: (s: number) => number,
-  noiseZ: (s: number) => number,
-): (x: number, y: number, z: number) => number {
-  return (x, y, z) => {
-    let d = Infinity
-    for (const p of primitives) {
-      const pd = ellipsoidSDF(x, y, z, p)
-      d = d === Infinity ? pd : smin(d, pd, smoothK)
-    }
-    for (const f of features) {
-      const boxD = boxSDF(x, y, z, f.cx, f.cy, f.cz, f.hx, f.hy, f.hz)
-      d = Math.max(d, -boxD)
-    }
-    if (detailEnabled) {
-      d += noiseX(x) * 0.34 + noiseY(y) * 0.34 + noiseZ(z) * 0.32
-    }
-    return d
-  }
-}
-
-// --- Bounds ----------------------------------------------------------------
-
-type Bounds = { minX: number, maxX: number, minY: number, maxY: number, minZ: number, maxZ: number }
-
-function computeTopologyBounds(topology: CaveTopology, margin: number): Bounds {
-  let minX = Infinity
-  let maxX = -Infinity
-  let minY = Infinity
-  let maxY = -Infinity
-  let minZ = Infinity
-  let maxZ = -Infinity
-  const expand = (x: number, y: number, z: number, r: number): void => {
-    minX = Math.min(minX, x - r)
-    maxX = Math.max(maxX, x + r)
-    minY = Math.min(minY, y - r)
-    maxY = Math.max(maxY, y + r * 1.6)
-    minZ = Math.min(minZ, z - r)
-    maxZ = Math.max(maxZ, z + r)
-  }
-  for (const n of topology.nodes) expand(n.position.x, n.position.y, n.position.z, Math.max(n.targetWidth, n.targetHeight))
-  for (const seg of topology.segments) for (const p of seg.centerline) expand(p.x, p.y, p.z, 2)
-  for (const f of topology.features) {
-    expand(f.position.x, f.position.y, f.position.z, Math.max(f.size.width, f.size.height, f.size.depth))
-  }
-  return { minX: minX - margin, maxX: maxX + margin, minY: minY - margin, maxY: maxY + margin, minZ: minZ - margin, maxZ: maxZ + margin }
 }
 
 // --- Naive Surface Nets ------------------------------------------------
@@ -274,19 +104,16 @@ function computeCellVertex(grid: SampledGrid, i: number, j: number, k: number): 
 }
 
 /**
- * Naive Surface Nets extraction: one vertex per cell straddling the
- * iso-surface, quads stitched along every sign-changing grid edge (no
- * marching-cubes case table).
- *
- * Winding **is** tracked per quad, from the sign of the crossed edge: the
- * base corner order around each axis yields a face normal along `+axis`, so a
- * quad whose edge goes rock→void (`va >= 0`) keeps it and one going
- * void→rock (`va < 0`) is reversed, leaving every face pointing into the
- * cave void. Emitting one fixed order regardless of sign (as this mesher
- * originally did) leaves roughly half the surface back-facing, and since the
- * shared cave material is `DoubleSide` + `flatShading` — where three.js
- * flips the derived normal by `gl_FrontFacing` — those faces are lit from
- * behind and render black. That is what made the mouth read as a black blob.
+ * Naive Surface Nets extraction. Winding **is** tracked per quad, from the
+ * sign of the crossed edge: the base corner order around each axis yields a
+ * face normal along `+axis`, so a quad whose edge goes rock→void (`va >= 0`)
+ * keeps it and one going void→rock (`va < 0`) is reversed, leaving every face
+ * pointing into the cave void. Emitting one fixed order regardless of sign
+ * (as this mesher originally did) leaves roughly half the surface
+ * back-facing, and since the shared cave material is `DoubleSide` +
+ * `flatShading` — where three.js flips the derived normal by
+ * `gl_FrontFacing` — those faces are lit from behind and render black. That
+ * is what made the mouth read as a black blob.
  */
 function extractSurfaceNets(grid: SampledGrid): { positions: number[], indices: number[] } {
   const { nx, ny, nz } = grid
@@ -360,37 +187,24 @@ function extractSurfaceNets(grid: SampledGrid): { positions: number[], indices: 
 export type SdfCaveResult = { geometry: THREE.BufferGeometry, metrics: CaveSpikeMetrics }
 
 /**
- * Builds the SDF spike's presentation geometry for `topology`. Pure — no
- * scene/collision/save side effects. Local grid only: bounded to the
- * topology's own footprint plus margin, never a global voxel terrain (plan
- * world-terrain-008 §10).
+ * Builds Cave V2's production presentation geometry for `topology`. Pure —
+ * no scene/collision/save side effects. Local grid only: bounded to the
+ * representation's own footprint plus margin, never a global voxel terrain.
  *
  * @domain world-terrain
  */
 export function buildSdfCaveMesh(
   topology: CaveTopology,
   params: SdfCaveParams = DEFAULT_SDF_PARAMS,
-  includeBranch = false,
   surfaceHeightAt?: SurfaceHeightSampler,
 ): SdfCaveResult {
-  const seedBase = topology.seed
-  const noiseX = createMultiScaleNoise1D(seedBase ^ 0x11223344, [params.detail.micro, params.detail.medium])
-  const noiseY = createMultiScaleNoise1D(seedBase ^ 0x22334455, [params.detail.micro, params.detail.medium])
-  const noiseZ = createMultiScaleNoise1D(seedBase ^ 0x33445566, [params.detail.micro, params.detail.medium])
   const detailEnabled = isSystemEnabled('caveDetail')
 
   const t0 = now()
-  const primitives = placePrimitives(buildKeyframes(topology, MAIN_CHAIN), params.primitiveSpacing)
-  const hasBranch = topology.nodes.some((n) => n.id === 'branch-chamber')
-  if (includeBranch && hasBranch) {
-    primitives.push(...placePrimitives(buildKeyframes(topology, ['widening-bend', 'branch-chamber']), params.primitiveSpacing))
-  }
-  const features = featureBoxesFromTopology(topology)
-  const field = buildField(primitives, features, params.smoothK, detailEnabled, noiseX, noiseY, noiseZ)
-  const bounds = computeTopologyBounds(topology, params.cellSize * 2)
+  const representation = buildCaveSdfRepresentation(topology, params, detailEnabled)
   const t1 = now()
 
-  const grid = sampleGrid(bounds, params.cellSize, field)
+  const grid = sampleGrid(representation.bounds, params.cellSize, representation.sample)
 
   const extracted = extractSurfaceNets(grid)
   // The iso-surface is closed, so without this the entrance ellipsoid is
@@ -429,7 +243,7 @@ export function buildSdfCaveMesh(
   return { geometry, metrics }
 }
 
-/** Plan §10 accidental-union stress test config: two spatially close but
+/** Plan §10/§9 accidental-union stress test config: two spatially close but
  *  topologically unconnected void clusters. The clusters carry no topology
  *  segment between them — a real check that a smooth union does not bridge
  *  sections the layout never asked to be connected. */
@@ -442,9 +256,9 @@ export type AccidentalUnionStressConfig = {
 
 /**
  * Builds just the two-cluster field from `config` and extracts it — bypasses
- * `CaveTopology` entirely since the point is exactly that these clusters are
- * *not* topologically connected. Used only by the accidental-union stress
- * test (plan §10).
+ * `CaveTopology`/`caveSdfField.ts` entirely since the point is exactly that
+ * these clusters are *not* topologically connected. Used only by the
+ * accidental-union stress test.
  *
  * @domain world-terrain
  */
@@ -453,7 +267,7 @@ export function buildAccidentalUnionStressMesh(config: AccidentalUnionStressConf
     { cx: config.clusterA.center.x, cy: config.clusterA.center.y, cz: config.clusterA.center.z, rx: config.clusterA.radius, ry: config.clusterA.radius, rz: config.clusterA.radius },
     { cx: config.clusterB.center.x, cy: config.clusterB.center.y, cz: config.clusterB.center.z, rx: config.clusterB.radius, ry: config.clusterB.radius, rz: config.clusterB.radius },
   ]
-  const field = buildField(primitives, [], config.smoothK, false, () => 0, () => 0, () => 0)
+  const field = buildVoidField(primitives, [], config.smoothK, null)
   const margin = config.cellSize * 2
   const bounds: Bounds = {
     minX: Math.min(config.clusterA.center.x - config.clusterA.radius, config.clusterB.center.x - config.clusterB.radius) - margin,

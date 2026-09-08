@@ -155,7 +155,21 @@ B5  V1/Sweep removal + cleanup
 
 ---
 
-# B1 — Production topology + SDF spatial representation + geometry
+# B1 — Production topology + SDF spatial representation + geometry ✅
+
+**B1 status (2026-09-08): implemented.** `createCaves.ts` now runs
+`pickLargeCaveSites → buildProductionCaveTopology → buildCaveSdfRepresentation
+→ buildSdfCaveMesh`, with per-cave deterministic RNG, local terrain-adaptive
+descent (full-footprint overburden, reject-on-unworkable-terrain), a
+`MIN_DISCONNECTED_CLEARANCE` generation-time separation constraint against
+accidental branch unions, and generic `topology.segments` consumption (no
+`MAIN_CHAIN`). `?caveSpike=sweep`/`resolveCaveRenderVariants` were removed
+from the production path (Milestone-A gate already passed). Details,
+deviations and what's intentionally deferred: see the "Milestone B1 —
+Implementation Summary" section in
+`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md`.
+Browser/manual verification (§13's checklist) is still open — technical
+checks (`tsc`, `lint`, `build`, `test`) pass.
 
 ## 5. Cel B1
 

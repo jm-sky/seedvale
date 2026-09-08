@@ -17,8 +17,9 @@ import type {
   CaveTopologySegment,
 } from './caveTopology'
 import type { SurfaceHeightSampler } from './clipBelowSurface'
-import { MIN_OVERBURDEN, MOUTH_FOOTPRINT_MARGIN, MOUTH_ROOF_MIN } from '../caveGenerator'
 import { createSeededRandom } from '../parseSeed'
+import { mouthOverburdenRequirement } from './mouthOverburden'
+import { minSurfaceOverFootprint } from './terrainFootprint'
 import { PROXY_MARGIN } from './topologyAdapter'
 
 // Distinct per-purpose RNG streams (never one shared stream consumed in a
@@ -26,11 +27,6 @@ import { PROXY_MARGIN } from './topologyAdapter'
 const FEATURE_SEED_OFFSET = 0xca5ef1a7
 const CENTERLINE_SEED_OFFSET = 0xc3702171
 
-/** Horizontal distance from the mouth within which the leading section is
- *  held to `MOUTH_ROOF_MIN` instead of the full `MIN_OVERBURDEN` — the
- *  topology's own first segment, mirroring `caveGenerator.ts`'s
- *  `OVERBURDEN_MOUTH_SKIP` allowance for V1's leading tunnel section. */
-const MOUTH_TRANSITION_RANGE = 4
 /** Metres between overburden probes along the route. */
 const OVERBURDEN_PROBE_STEP = 0.5
 /** Slack added on top of the required overburden, covering the gap between
@@ -64,47 +60,19 @@ export type SpikeTestCaveOptions = {
   surfaceHeightAt?: SurfaceHeightSampler
 }
 
-/** Lowest surface height over the walkable footprint around `(x, z)` — the
- *  full cross-section, not just the centerline: a corridor crossing a slope
- *  breaks out on its downhill flank long before its centerline does. */
-function minSurfaceOverFootprint(
-  surfaceHeightAt: SurfaceHeightSampler,
-  x: number,
-  z: number,
-  radius: number,
-): number {
-  let lowest = surfaceHeightAt(x, z)
-  for (let i = 0; i < 16; i++) {
-    const angle = (i / 16) * Math.PI * 2
-    const dx = Math.cos(angle)
-    const dz = Math.sin(angle)
-    for (const f of [0.4, 0.7, 1]) {
-      lowest = Math.min(lowest, surfaceHeightAt(x + dx * radius * f, z + dz * radius * f))
-    }
-  }
-  return lowest
-}
-
-/** Radius around the entrance that *is* the opening and so is legitimately
- *  roofless — the entrance node's own walkable footprint as
- *  `topologyToCaveDefinition` inflates it, plus V1's own lip past the carved
- *  recess (`MOUTH_FOOTPRINT_MARGIN - MOUTH_RADIUS`). V1 exempts its whole
- *  mouth node the same way. */
-function mouthOpeningRadius(entrance: CaveEntrance): number {
-  return Math.max(MOUTH_FOOTPRINT_MARGIN, entrance.width / 2 + PROXY_MARGIN + 0.35)
-}
-
 /**
  * Required clearance between the local surface and the cave ceiling at
  * `distanceFromMouth`, following V1's own mouth contract: the opening is
  * legitimately roofless, the leading section keeps a thin but positive roof,
- * everything past it keeps the full overburden. `null` = exempt.
+ * everything past it keeps the full overburden. `null` = exempt. Thin wrapper
+ * over the shared `mouthOverburden.ts` contract, fixed at this spike's own
+ * `PROXY_MARGIN` — kept exported under its original name since
+ * `caveSurfaceIntegration.test.ts` pins this exact Milestone-A regression.
  *
  * @domain world-terrain
  */
 export function spikeOverburdenRequirement(entrance: CaveEntrance, distanceFromMouth: number): number | null {
-  if (distanceFromMouth < mouthOpeningRadius(entrance)) return null
-  return distanceFromMouth < MOUTH_TRANSITION_RANGE ? MOUTH_ROOF_MIN : MIN_OVERBURDEN
+  return mouthOverburdenRequirement(entrance, distanceFromMouth, PROXY_MARGIN)
 }
 
 /**

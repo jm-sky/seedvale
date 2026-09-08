@@ -96,6 +96,17 @@ Generated from exported TypeScript symbols.
 
 - `createCaveInteriorMesh` — function — line 117
 
+## `world/caves/caveIdentity.ts`
+
+- `CaveIdentitySite` — type — line 11
+  - domain: world-terrain
+- `makeCaveId` — function — line 15
+
+## `world/caves/caveRng.ts`
+
+- `CAVE_RNG_SALT` — const — line 34
+- `createCaveRandom` — function — line 43
+
 ## `world/caves/caveSpikeMaterial.ts`
 
 - `createCaveSpikeMaterial` — function — line 21
@@ -124,6 +135,13 @@ Generated from exported TypeScript symbols.
 - `clipTrianglesBelowSurface` — function — line 35
   - domain: world-terrain
 - `SurfaceHeightSampler` — type — line 27
+  - domain: world-terrain
+
+## `world/caves/mouthOverburden.ts`
+
+- `MOUTH_TRANSITION_RANGE` — const — line 20
+- `mouthOpeningRadius` — function — line 25
+- `mouthOverburdenRequirement` — function — line 35
   - domain: world-terrain
 
 ## `world/caves/sdfCaveMesh.ts`

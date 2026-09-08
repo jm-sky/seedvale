@@ -6,6 +6,7 @@
  *  interior would break through the surface (overburden). Pure — no
  *  Three.js, no `ChunkManager`, deterministic from its inputs only. */
 
+import { makeCaveId } from './caves/caveIdentity'
 import {
   type CaveBounds,
   type CaveDefinition,
@@ -87,19 +88,6 @@ function rotateXZ(dx: number, dz: number, angle: number): { dx: number, dz: numb
 
 function floorAtDistance(entranceFloorY: number, distance: number): number {
   return entranceFloorY - Math.min(distance, MAX_DESCENT / DESCENT_PER_METER) * DESCENT_PER_METER
-}
-
-/** Deterministic, index/order-independent id from the seed + the site's own
- *  (already-deterministic) placement — same seed → same id; rebuild/save
- *  reorder never changes it (contract §3). */
-function makeCaveId(seed: number, site: LargeCaveSite): string {
-  const fixedX = Math.round(site.x * 100)
-  const fixedZ = Math.round(site.z * 100)
-  let h = (seed ^ 0x9e3779b9) >>> 0
-  h = Math.imul(h ^ fixedX, 0x85ebca6b) >>> 0
-  h = Math.imul(h ^ fixedZ, 0xc2b2ae35) >>> 0
-  h = (h ^ (h >>> 16)) >>> 0
-  return `cave:${h.toString(16).padStart(8, '0')}`
 }
 
 function overburdenOk(
