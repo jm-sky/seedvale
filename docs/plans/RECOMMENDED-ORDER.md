@@ -226,15 +226,11 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-39. `fauna-017` — **AnimalAgent refactor**  
-  🟡 `L` · **Score:**  14  
-   → **unlocks:** 0/0
-
-40. `npc-004` — **Drzewo genealogiczne NPC**  
+39. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
-41. `tools-006` — **tools-006--world-observatory.md**  
+40. `tools-006` — **tools-006--world-observatory.md**  
   ⚪ `XL` · **Score:**   0  
    → **unlocks:** 0/0
 

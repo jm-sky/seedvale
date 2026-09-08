@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `fauna-017-animal-agent-refactor`                                      | 2026-09-08 15:03:52 | —                   | `fauna`          | —          |
 | `quests-progression-005-authored-rpg-quests`                           | 2026-09-08 14:08:05 | —                   | `quests-progression` | —          |
 | `quests-progression-004-quest-availability-and-prerequisites`          | —                   | 2026-09-08 13:30:57 | `quests-progression` | quests-progression-005-authored-rpg-quests |
 | `quests-progression-003-paid-quests-and-player-income`                 | —                   | 2026-09-08 13:24:00 | `quests-progression` | quests-progression-005-authored-rpg-quests |
