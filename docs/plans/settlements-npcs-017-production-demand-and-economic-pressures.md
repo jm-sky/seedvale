@@ -351,6 +351,8 @@ Nie dodawać nowego globalnego tickera tylko dla production demand.
 
 `016` is the first concrete consumer/use case for this mechanism, but `017` should operate on production state established by `015` and must not be architecturally dependent on a particular processing chain.
 
+`016` is therefore a validation/content dependency for `017`, not an architectural dependency: it guarantees a real processing chain on which the shortage → problem/pressure integration can be exercised without making that specific chain part of the architecture.
+
 ## Verification
 
 Automated:
