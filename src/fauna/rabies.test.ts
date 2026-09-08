@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { pickRabidTarget, RABIES_BITE_INFECTION_CHANCE } from './AnimalAgent'
 import {
   isRabiesCorpseContact,
-  pickRabidTarget,
-  RABIES_BITE_INFECTION_CHANCE,
   RABIES_CORPSE_CONTACT_RADIUS,
   RABIES_CORPSE_INFECTION_CHANCE,
   rollsRabiesInfection,
-} from './AnimalAgent'
+} from './animalCorpse'
 
 describe('rollsRabiesInfection (plan fauna-001 — shared bite/corpse roll)', () => {
   it('succeeds when the roll lands below the chance', () => {

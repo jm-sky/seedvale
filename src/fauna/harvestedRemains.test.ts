@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { corpseLingerSeconds, HARVESTED_REMAINS_LINGER_SECONDS } from './AnimalAgent'
+import { corpseLingerSeconds, HARVESTED_REMAINS_LINGER_SECONDS } from './animalCorpse'
 import {
   createHarvestedRemains,
   largeBoneCount,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ANIMAL_DEFS, canHarvestMeatFrom, corpsePhaseFromElapsed, rotFxRelevant } from './AnimalAgent'
+import { canHarvestMeatFrom, corpsePhaseFromElapsed, rotFxRelevant } from './animalCorpse'
+import { ANIMAL_DEFS } from './animalDefs'
 import { MAX_HP } from './faunaCombat'
 import { createHarvestedRemains, createNaturalRemains } from './harvestedRemains'
 

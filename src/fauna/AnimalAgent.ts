@@ -40,6 +40,24 @@ import { isSpeciesTrappable, TRAP_DEFS, type TrapLureDescriptor } from '../world
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderContainsPoint } from '../world/collision'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
+import {
+  advanceAnimalCorpse,
+  type AnimalCorpseState,
+  buryCorpse,
+  canHarvestMeatFrom,
+  claimCorpseAsFood,
+  type CorpsePhase,
+  corpseReadyToRemove,
+  createAnimalCorpseState,
+  disposeAnimalCorpse,
+  harvestCorpseMeat,
+  hideLivingVisual,
+  markCorpseFoodConsumed,
+  releaseCorpseClaim,
+  rollsRabiesInfection,
+  spawnDeathSplat,
+  spawnHarvestedRemains,
+} from './animalCorpse'
 import { type AnimalDebugVisual, createAnimalDebugVisual } from './animalDebugVisual'
 import {
   ANIMAL_LABELS,
@@ -61,8 +79,6 @@ import {
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
-import { createBloodSplat, disposeBloodSplat } from './bloodSplat'
-import { animateCorpseRotFx, createCorpseRotFx, disposeCorpseRotFx } from './corpseDecayFx'
 import { resolveDogBarkStimulus, resolveDogGuardTarget, resolveDogPestTarget } from './dogGuard'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
@@ -71,11 +87,6 @@ import {
   type FaunaDecisionInput,
   scoreFaunaBehaviours,
 } from './faunaDecision'
-import {
-  createHarvestedRemainsAsync,
-  createNaturalRemainsAsync,
-  disposeHarvestedRemains,
-} from './harvestedRemains'
 import {
   HERD_FOLLOW_RADIUS,
   HERD_SPECIES,
@@ -104,6 +115,13 @@ import {
   type WaterTraversalMode,
 } from './waterTraversal'
 
+/** Corpse/remains/decay/rabies-exposure/claim state machine moved to
+ *  `./animalCorpse` (plan fauna-017 step 5) — re-exported wholesale for the
+ *  same reason. New test/import sites should prefer `./animalCorpse`
+ *  directly (implementation notes' "new modules become the canonical
+ *  location"); this stays a compatibility bridge for anything not yet
+ *  redirected. */
+export * from './animalCorpse'
 /** Species taxonomy + `ANIMAL_DEFS` moved to `./animalDefs` (plan fauna-017
  *  step 1) — re-exported wholesale so every existing importer of a species
  *  type or `ANIMAL_DEFS` from `AnimalAgent.ts` is unaffected. */
@@ -160,76 +178,6 @@ export const RABIES_BITE_INFECTION_CHANCE = 0.35
  *  `fleeRange` split (meaningless or zero for several roles). Roughly
  *  matches the existing predator detect-range scale (14–20). */
 const RABIES_TARGET_DETECT_RANGE = 14
-/** Seconds a corpse stays in the scene (frozen pose) before it's disposed. */
-const CORPSE_LINGER_SECONDS = 60
-/** Seconds harvested remains stay after a knife harvest (plan 137) — own
- *  lifetime, not whatever was left of the unharvested 60 s linger. */
-export const HARVESTED_REMAINS_LINGER_SECONDS = 90
-
-export function corpseLingerSeconds(meatHarvested: boolean): number {
-  return meatHarvested ? HARVESTED_REMAINS_LINGER_SECONDS : CORPSE_LINGER_SECONDS
-}
-
-/** Natural (unharvested, unburied) corpse decay phase (plan 188) — both
- *  thresholds sit inside `CORPSE_LINGER_SECONDS`, so the existing 60 s total
- *  unharvested lifetime (`corpseLingerSeconds(false)`/`readyToRemove()`) is
- *  unchanged; this only subdivides it into a visibly distinct progression. */
-export type CorpsePhase = 'fresh' | 'rotting' | 'bones'
-/** Seconds after death before a natural corpse starts visibly rotting. */
-const CORPSE_ROT_ONSET_SECONDS = 20
-/** Seconds after death a natural corpse decomposes into a bones pile. */
-const CORPSE_BONES_ONSET_SECONDS = 40
-/** Distance (world units) within which a rotting corpse gets its lightweight
- *  particle/fog FX — beyond this, only lifecycle timers/state keep advancing
- *  (plan 188 §6: simulation truth vs. presentation). */
-const CORPSE_FX_DISTANCE = 22
-/** Radius (world units) within which a rotting corpse saps nearby live
- *  fauna's stamina — the v1 "negative proximity effect" hook (plan 188 §4),
- *  reusing the existing `AnimalLifeState.stamina` needs integration point
- *  instead of a new disease/status-effect system. */
-const CORPSE_ROT_INFLUENCE_RADIUS = 5
-const CORPSE_ROT_STAMINA_DRAIN_PER_SEC = 0.03
-/** Radius (world units) within which a live animal's contact with a
- *  rabies-infected, `rotting` corpse can transmit rabies (plan fauna-001 —
- *  the feature's explicit "wejście w promień 0.5 m" figure). */
-export const RABIES_CORPSE_CONTACT_RADIUS = 0.5
-/** Chance a single corpse-contact exposure actually transmits rabies (plan
- *  fauna-001 — the feature's explicit 50% figure). */
-export const RABIES_CORPSE_INFECTION_CHANCE = 0.5
-/** Sickly tint applied to a rotting corpse's materials — same technique as
- *  `markDangerous()`'s `tintPropMaterials` call, just a different hex. */
-const CORPSE_ROT_TINT_HEX = 0x3a4224
-
-/** Pure phase-from-elapsed-time lookup — unit-testable without instantiating
- *  `AnimalAgent`/Three.js (plan 188). Only meaningful for a dead, unharvested,
- *  unburied corpse; callers gate those cases separately. */
-export function corpsePhaseFromElapsed(elapsedSeconds: number): CorpsePhase {
-  if (elapsedSeconds >= CORPSE_BONES_ONSET_SECONDS) return 'bones'
-  if (elapsedSeconds >= CORPSE_ROT_ONSET_SECONDS) return 'rotting'
-  return 'fresh'
-}
-
-/** Whether a rotting corpse's lightweight FX should be presented — distance
- *  gate only, never a reason to pause the lifecycle itself (plan 188 §6/§9).
- *  Pure/exported so the presentation rule is unit-testable without Three.js. */
-export function rotFxRelevant(phase: CorpsePhase, distanceToObserver: number): boolean {
-  return phase === 'rotting' && distanceToObserver <= CORPSE_FX_DISTANCE
-}
-
-/** Whether a corpse can still yield a knife-harvest — meat is only good
- *  while `fresh`; once natural decay has moved it into `rotting`/`bones` (or
- *  it's been buried, or already harvested), it's a lost source (plan 188
- *  follow-up: "meat only from fresh corpses"). Pure/exported so
- *  `AnimalAgent.canHarvestMeat()`'s rule is unit-testable without Three.js,
- *  same technique as `corpsePhaseFromElapsed`/`isCarcassEdible` above. */
-export function canHarvestMeatFrom(opts: {
-  dead: boolean
-  meatHarvested: boolean
-  buried: boolean
-  corpsePhase: CorpsePhase
-}): boolean {
-  return opts.dead && !opts.meatHarvested && !opts.buried && opts.corpsePhase === 'fresh'
-}
 
 /** "Groźny wilk" (plan 110) — `markDangerous()` tuning. A visible, tougher
  *  individual, not a separate animal type or model. */
@@ -876,28 +824,6 @@ export function pickNearestEligibleWolf(
   return best
 }
 
-/** Single infection roll shared by bite and corpse-contact transmission
- *  (plan fauna-001) — one call per discrete event (a landed bite, or a
- *  corpse's first-contact exposure), never per-tick, so the outcome is
- *  independent of frame rate/tick frequency. Pure/exported so it's
- *  unit-testable without instantiating `AnimalAgent`. */
-export function rollsRabiesInfection(chance: number, roll: number): boolean {
-  return roll < chance
-}
-
-/** Whether a live animal at `distance` from a corpse counts as rabies
- *  contact (plan fauna-001) — only a `rotting`, rabies-infected corpse is
- *  contagious; `fresh`/`bones` corpses and healthy corpses never are. Pure
- *  so it's unit-testable without instantiating `AnimalAgent`/Three.js, same
- *  technique as `corpsePhaseFromElapsed`. */
-export function isRabiesCorpseContact(opts: {
-  corpsePhase: CorpsePhase
-  corpseInfected: boolean
-  distance: number
-}): boolean {
-  return opts.corpseInfected && opts.corpsePhase === 'rotting' && opts.distance < RABIES_CORPSE_CONTACT_RADIUS
-}
-
 /** Nearest live animal of *any* role within `range` (plan fauna-001) — a
  *  rabid animal's target search, unlike the role-filtered `nearest()` used
  *  by normal predator/prey AI. Generic/structural (same "testable without
@@ -1084,7 +1010,10 @@ export class AnimalAgent {
    *  (plan 110); injected the same way as `ownerHouseId`'s callers thread
    *  cross-cutting concerns in from the spawn site. */
   private readonly onDeath?: (animalId: string) => void
-  private readonly sampleHeight: HeightSampler
+  /** Not `private`: `CorpseHost`'s structural contract (`animalCorpse.ts`,
+   *  plan fauna-017 step 5) needs it public so `this` satisfies that type
+   *  without a wrapper allocation — same reasoning as `isCapsule`/`def`. */
+  readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
   /** Local physical water sample (plan fauna-015), forwarded unchanged from
    *  `ChunkManager.sampleLocalWater` by the spawn site — the sole input
@@ -1102,7 +1031,11 @@ export class AnimalAgent {
    *  passes one; livestock's spawn path omits it, and forage search falls
    *  back to distance-only scoring (see `findForageTarget`). */
   private readonly sampleForestFactor?: (x: number, z: number) => number
-  private readonly isCapsule: boolean
+  /** Not `private`: part of `CorpseHost`'s structural contract
+   *  (`animalCorpse.ts`, plan fauna-017 step 5) — `this` is passed directly
+   *  wherever a `CorpseHost` is expected, so every field that type reads
+   *  must be publicly accessible. */
+  readonly isCapsule: boolean
   private target = new THREE.Vector3()
   private readonly fleeTarget = new THREE.Vector3()
   private wanderTimer = 0
@@ -1174,7 +1107,6 @@ export class AnimalAgent {
    *  outstanding egg (plan fauna-002 §2.1). */
   private eggPending = false
   private attackCooldown = 0
-  private timeSinceDeath = 0
   private isNight = false
   private highlighted = false
   /** True while `showDebug()`'s world-space overlay is active for this
@@ -1244,11 +1176,6 @@ export class AnimalAgent {
    *  through its corpse-linger lifetime, so this also marks an infected
    *  corpse as contagious (see `applyRabiesCorpseExposure`). */
   private rabid = false
-  /** `animalId`s of live animals this corpse has already rolled a rabies
-   *  contact-exposure check against (plan fauna-001) — a one-shot guard so
-   *  an animal lingering next to an infected `rotting` corpse doesn't get
-   *  re-rolled every tick. Only ever populated/read while `rabid`. */
-  private readonly rabiesExposedAnimalIds = new Set<string>()
   /** Strategic (not combat) target set alongside `frenzied` — the nearest
    *  loaded village at frenzy time, a plain position/radius snapshot (plan
    *  179 §3/§5), not a live `Settlement`/scene reference. Drives
@@ -1328,26 +1255,16 @@ export class AnimalAgent {
    *  signal `NpcAgent`'s bounded local threat perception reads to react
    *  *before* taking damage (plan 179 §6/§10). See `isThreateningHuman()`. */
   private threateningHuman = false
-  private bloodSplat: THREE.Object3D | null = null
-  private bloodSplatToken = 0
-  private harvestedRemains: THREE.Object3D | null = null
-  private harvestedRemainsToken = 0
-  /** Natural (unharvested) decay endpoint — a bones pile with no hide/meat,
-   *  distinct from `harvestedRemains` (plan 188). Mutually exclusive with it:
-   *  `advanceCorpseDecay` never runs once `meatHarvested` is set. */
-  private naturalRemains: THREE.Object3D | null = null
-  private naturalRemainsToken = 0
-  /** Current natural-decay phase (plan 188) — stays `'fresh'` for the
-   *  lifetime of a harvested or buried corpse, since `advanceCorpseDecay`
-   *  short-circuits for those. */
-  private corpsePhaseValue: CorpsePhase = 'fresh'
-  /** Set by `bury()` — stops natural decay progression/FX immediately so a
-   *  buried corpse never later produces a natural bones pile (plan 188). */
-  private buried = false
-  /** Lightweight rotting-corpse particle/fog group, present only while the
-   *  corpse is in the `rotting` phase *and* within `CORPSE_FX_DISTANCE` of
-   *  the observer (plan 188 §6/§9). */
-  private rotFx: THREE.Object3D | null = null
+  /** Corpse/remains/decay/rabies-exposure/food-claim state (plan fauna-017
+   *  step 5, review E3) — replaces 15 individual fields (bloodSplat+token,
+   *  harvestedRemains+token, naturalRemains+token, rotFx, corpsePhaseValue/
+   *  buried/meatHarvested/corpseHeld, rabiesExposedAnimalIds, foodClaimedBy/
+   *  foodConsumedPhase, timeSinceDeath) with the plain state object
+   *  `animalCorpse.ts` owns — same "state + free functions over an explicit
+   *  host" shape as `AnimalLife.ts`'s `AnimalLifeState`. `health.dead`
+   *  stays authoritative on the agent; this only tracks what happens to the
+   *  corpse once it is. */
+  private readonly corpse: AnimalCorpseState = createAnimalCorpseState()
   /** Rising-edge detector for the aggro/growl audio hook (plan 188 §11). */
   private wasThreateningHuman = false
   /** Cached real food/water destination while hunger/thirst is elevated
@@ -1369,23 +1286,6 @@ export class AnimalAgent {
   /** Seconds remaining before the next failed lure search retries, same
    *  throttling convention as `sourceSearchCooldown`. */
   private lureSearchCooldown = 0
-  /** Set on a dead prey's `AnimalAgent` by the predator currently eating it
-   *  — guards against two predators completing an eat action on the same
-   *  corpse (plan 094). */
-  private foodClaimedBy: AnimalAgent | null = null
-  /** The `CorpsePhase` a predator was in when it last finished eating this
-   *  corpse, `null` until then (plan 094/fauna-005) — per-phase rather than
-   *  a single flag so a corpse eaten `fresh` can still be scavenged again
-   *  once it later decays into `rotting`/`bones`: only the *current* phase
-   *  being equal to this value means "already eaten, no food left here". */
-  private foodConsumedPhase: CorpsePhase | null = null
-  /** Set once the player knife-harvests `raw_meat` from this corpse (plan
-   *  106) — independent of `foodConsumed` (predator eating and player
-   *  harvesting are different consumers), guards against harvesting twice. */
-  private meatHarvested = false
-  /** Pauses corpse linger while the player is mid-harvest (Esc-cancellable
-   *  busy channel) so the body can't despawn underneath the overlay. */
-  private corpseHeld = false
   /** Set once by `markDangerous()` — a visibly/gameplay-distinct individual
    *  bound to a `kill_target_animal { dangerous: true }` quest stage
    *  (plan 110), not a separate animal type. */
@@ -1553,16 +1453,7 @@ export class AnimalAgent {
   }
 
   dispose(): void {
-    this.bloodSplatToken++
-    this.harvestedRemainsToken++
-    this.naturalRemainsToken++
-    disposeBloodSplat(this.bloodSplat)
-    this.bloodSplat = null
-    disposeHarvestedRemains(this.harvestedRemains)
-    this.harvestedRemains = null
-    disposeHarvestedRemains(this.naturalRemains)
-    this.naturalRemains = null
-    this.disposeRotFx()
+    disposeAnimalCorpse(this.corpse)
     this.labelController.dispose()
     this.anim.stopAll()
     this.debugVisual?.dispose()
@@ -1980,7 +1871,9 @@ export class AnimalAgent {
       life: { hunger: this.life.hunger, thirst: this.life.thirst, stamina: getStaminaRatio(this.life.stamina) },
       productionReadyAtDays: this.productionReadyAtDays,
       eggPending: this.eggPending,
-      corpse: this.health.dead ? { timeSinceDeath: this.timeSinceDeath, meatHarvested: this.meatHarvested } : null,
+      corpse: this.health.dead
+        ? { timeSinceDeath: this.corpse.timeSinceDeath, meatHarvested: this.corpse.meatHarvested }
+        : null,
     }
   }
 
@@ -1993,7 +1886,7 @@ export class AnimalAgent {
    *  (tipped pose, or hidden + harvested-remains mesh) is re-derived directly
    *  here; natural corpse-decay presentation (tint/bones) self-corrects on
    *  the next `update()` tick from the restored `timeSinceDeath` — see
-   *  `advanceCorpseDecay()`. Never reports `onDeath` — that already fired,
+   *  `advanceAnimalCorpse()`. Never reports `onDeath` — that already fired,
    *  before this save was taken. */
   hydrate(state: AnimalSaveState): void {
     this.mesh.position.x = state.x
@@ -2011,12 +1904,12 @@ export class AnimalAgent {
     this.productionReadyAtDays = state.productionReadyAtDays
     this.eggPending = state.eggPending
     if (state.corpse) {
-      this.timeSinceDeath = state.corpse.timeSinceDeath
-      this.meatHarvested = state.corpse.meatHarvested
+      this.corpse.timeSinceDeath = state.corpse.timeSinceDeath
+      this.corpse.meatHarvested = state.corpse.meatHarvested
       this.anim.stopAll()
-      if (this.meatHarvested) {
-        this.hideLivingVisual()
-        void this.spawnHarvestedRemains()
+      if (this.corpse.meatHarvested) {
+        hideLivingVisual(this)
+        void spawnHarvestedRemains(this.corpse, this)
         this.labelController.el.style.display = 'none'
       } else if (this.anim.has('death')) {
         // Plan fauna-017 step 4b: settle on the death clip's own final pose
@@ -2035,8 +1928,7 @@ export class AnimalAgent {
 
   /** True once a dead agent's corpse has lingered long enough to be disposed. */
   readyToRemove(): boolean {
-    const linger = corpseLingerSeconds(this.meatHarvested)
-    return this.health.dead && !this.corpseHeld && this.timeSinceDeath >= linger
+    return corpseReadyToRemove(this.corpse, this.health.dead)
   }
 
   /** Minimal deterministic time-skip catch-up (plan 196) — called once by
@@ -2054,7 +1946,7 @@ export class AnimalAgent {
    *  needed here. */
   resolveTimeSkip(elapsedSeconds: number): void {
     if (this.health.dead) {
-      if (!this.corpseHeld) this.timeSinceDeath += elapsedSeconds
+      if (!this.corpse.held) this.corpse.timeSinceDeath += elapsedSeconds
       return
     }
     tickAnimalLife(this.life, elapsedSeconds, false, {}, this.def.metabolism)
@@ -2065,9 +1957,7 @@ export class AnimalAgent {
    *  must never later produce a natural bones pile. */
   bury(): void {
     if (!this.health.dead) return
-    this.buried = true
-    this.disposeRotFx()
-    this.timeSinceDeath = HARVESTED_REMAINS_LINGER_SECONDS
+    buryCorpse(this.corpse)
   }
 
   /** Plan 106/188 — a dead, not-yet-harvested, unburied corpse can yield
@@ -2076,9 +1966,9 @@ export class AnimalAgent {
   canHarvestMeat(): boolean {
     return canHarvestMeatFrom({
       dead: this.health.dead,
-      meatHarvested: this.meatHarvested,
-      buried: this.buried,
-      corpsePhase: this.corpsePhaseValue,
+      meatHarvested: this.corpse.meatHarvested,
+      buried: this.corpse.buried,
+      corpsePhase: this.corpse.phase,
     })
   }
 
@@ -2091,71 +1981,21 @@ export class AnimalAgent {
    *  multi-second harvest channel). */
   harvestMeat(): void {
     if (!this.canHarvestMeat()) return
-    this.meatHarvested = true
-    this.timeSinceDeath = 0
-    // Leave the natural decay path (plan 188) — any rotting FX/bones already
-    // produced no longer apply once the player claims the harvested-remains path.
-    this.disposeRotFx()
-    if (this.naturalRemains) {
-      this.naturalRemainsToken++
-      disposeHarvestedRemains(this.naturalRemains)
-      this.naturalRemains = null
-    }
-    this.corpsePhaseValue = 'fresh'
-    this.hideLivingVisual()
+    harvestCorpseMeat(this.corpse, this)
     this.mesh.rotation.z = 0
-    void this.spawnHarvestedRemains()
     this.snapY()
     this.labelController.el.style.display = 'none'
-  }
-
-  /** GLB remains as a mesh child — token so dispose mid-load does not parent
-   *  a stale clone. Fallback pile is still a Group named `harvested-remains`. */
-  private async spawnHarvestedRemains(): Promise<void> {
-    const token = ++this.harvestedRemainsToken
-    const remains = await createHarvestedRemainsAsync(this.def.kind, this.def.modelHeight)
-    if (token !== this.harvestedRemainsToken || !this.mesh.parent) {
-      disposeHarvestedRemains(remains)
-      return
-    }
-    this.harvestedRemains = remains
-    this.mesh.add(remains)
-  }
-
-  /** Hide the living GLB/capsule without hiding the CSS2D label or the
-   *  remains we'll parent onto the same root. Capsule geometry lives on
-   *  `this.mesh` itself, so `mesh.visible = false` would also hide children. */
-  private hideLivingVisual(): void {
-    if (this.isCapsule) {
-      const mat = (this.mesh as THREE.Mesh).material
-      if (Array.isArray(mat)) {
-        for (const m of mat) m.visible = false
-      } else {
-        mat.visible = false
-      }
-      return
-    }
-    this.mesh.traverse((child) => {
-      if (child === this.mesh) return
-      if ((child as { isCSS2DObject?: boolean }).isCSS2DObject) return
-      let walk: THREE.Object3D | null = child
-      while (walk && walk !== this.mesh) {
-        if (walk.name === 'harvested-remains' || walk.name === 'natural-remains') return
-        walk = walk.parent
-      }
-      if ((child as THREE.Mesh).isMesh) child.visible = false
-    })
   }
 
   /** Pin this corpse for the duration of a player harvest channel. Linger
    *  does not advance and `readyToRemove()` stays false until `releaseCorpseHold`. */
   holdCorpse(): void {
     if (!this.health.dead) return
-    this.corpseHeld = true
+    this.corpse.held = true
   }
 
   releaseCorpseHold(): void {
-    this.corpseHeld = false
+    this.corpse.held = false
   }
 
   /** `source: 'npc'` (plan 177) is another human attacker, same provocation
@@ -2198,29 +2038,13 @@ export class AnimalAgent {
       this.mesh.position.y += this.isCapsule ? 0.2 * this.def.scale : this.def.modelHeight * 0.3
     }
     this.labelController.settleAtZeroHp()
-    void this.spawnDeathSplat()
-  }
-
-  /** Ground splat as a scene sibling — must not parent to the tipped mesh. */
-  private async spawnDeathSplat(): Promise<void> {
-    const token = ++this.bloodSplatToken
-    const splat = await createBloodSplat(this.def.modelHeight)
-    if (!splat) return
-    if (token !== this.bloodSplatToken || !this.mesh.parent) {
-      disposeBloodSplat(splat)
-      return
-    }
-    const y = this.sampleHeight(this.mesh.position.x, this.mesh.position.z)
-    splat.position.set(this.mesh.position.x, y + 0.02, this.mesh.position.z)
-    splat.rotation.y = Math.random() * Math.PI * 2
-    this.mesh.parent.add(splat)
-    this.bloodSplat = splat
+    void spawnDeathSplat(this.corpse, this)
   }
 
   /** Current natural-decay phase (plan 188) — `'fresh'` for the lifetime of
-   *  a harvested or buried corpse, see `corpsePhaseValue`'s field doc. */
+   *  a harvested or buried corpse, see `AnimalCorpseState.phase`'s field doc. */
   corpsePhase(): CorpsePhase {
-    return this.corpsePhaseValue
+    return this.corpse.phase
   }
 
   /** Advances the natural (unharvested, unburied) corpse decay lifecycle —
@@ -2228,98 +2052,7 @@ export class AnimalAgent {
    *  FX presentation is distance-gated (plan 188 §6/§10). No-op once the
    *  corpse has left this path via `harvestMeat()`/`bury()`. */
   private advanceCorpseDecay(dt: number, others: readonly AnimalAgent[], observerPos: THREE.Vector3): void {
-    if (this.meatHarvested || this.buried) return
-    const phase = corpsePhaseFromElapsed(this.timeSinceDeath)
-    if (phase !== this.corpsePhaseValue) {
-      this.corpsePhaseValue = phase
-      this.onCorpsePhaseChanged(phase)
-    }
-    if (phase === 'rotting') {
-      this.applyRotInfluence(dt, others)
-      if (this.rabid) this.applyRabiesCorpseExposure(others)
-    }
-    this.updateRotFx(dt, phase, observerPos)
-  }
-
-  private onCorpsePhaseChanged(phase: CorpsePhase): void {
-    if (phase === 'rotting') {
-      tintPropMaterials(this.mesh, CORPSE_ROT_TINT_HEX)
-    } else if (phase === 'bones') {
-      this.disposeRotFx()
-      this.hideLivingVisual()
-      void this.spawnNaturalRemains()
-    }
-  }
-
-  /** GLB/procedural bones pile as a mesh child — mirrors
-   *  `spawnHarvestedRemains()`'s token-guarded async attach, sharing the same
-   *  cached templates/dispose helper (plan 188). */
-  private async spawnNaturalRemains(): Promise<void> {
-    const token = ++this.naturalRemainsToken
-    const remains = await createNaturalRemainsAsync(this.def.kind, this.def.modelHeight)
-    if (token !== this.naturalRemainsToken || !this.mesh.parent) {
-      disposeHarvestedRemains(remains)
-      return
-    }
-    this.naturalRemains = remains
-    this.mesh.add(remains)
-  }
-
-  /** V1 "negative proximity effect" hook (plan 188 §4) — a small, temporary,
-   *  bounded stamina drain on nearby *live* fauna, reusing the existing
-   *  needs seam instead of a disease/status-effect system. `others` is the
-   *  same local/bounded list already threaded through `update()`, never a
-   *  world/settlement scan. */
-  private applyRotInfluence(dt: number, others: readonly AnimalAgent[]): void {
-    for (const other of others) {
-      if (other === this || other.health.dead) continue
-      if (this.withinRange(other.mesh.position.x, other.mesh.position.z, CORPSE_ROT_INFLUENCE_RADIUS)) {
-        drainStamina(other.life.stamina, CORPSE_ROT_STAMINA_DRAIN_PER_SEC * dt)
-      }
-    }
-  }
-
-  /** Rabies corpse-contact transmission (plan fauna-001) — this corpse is
-   *  infected and currently `rotting`; any nearby live, not-yet-infected
-   *  animal gets a single, guarded contact-exposure roll (never repeated
-   *  for the same pair, see `rabiesExposedAnimalIds`). Reuses the same
-   *  local/bounded `others` list `applyRotInfluence` already iterates —
-   *  no separate corpse/disease scan. */
-  private applyRabiesCorpseExposure(others: readonly AnimalAgent[]): void {
-    for (const other of others) {
-      if (other === this || other.health.dead || other.rabid) continue
-      if (this.rabiesExposedAnimalIds.has(other.animalId)) continue
-      const distance = Math.hypot(
-        other.mesh.position.x - this.mesh.position.x,
-        other.mesh.position.z - this.mesh.position.z,
-      )
-      if (!isRabiesCorpseContact({ corpsePhase: this.corpsePhaseValue, corpseInfected: this.rabid, distance })) continue
-      this.rabiesExposedAnimalIds.add(other.animalId)
-      if (rollsRabiesInfection(RABIES_CORPSE_INFECTION_CHANCE, Math.random())) other.infectWithRabies()
-    }
-  }
-
-  /** Presentation only — creates/animates/disposes the rotting-corpse
-   *  particle+fog group based on phase and observer distance (plan 188 §6/§9),
-   *  never affecting the lifecycle timers themselves. */
-  private updateRotFx(dt: number, phase: CorpsePhase, observerPos: THREE.Vector3): void {
-    const relevant = rotFxRelevant(phase, this.mesh.position.distanceTo(observerPos))
-    if (relevant) {
-      if (!this.rotFx) {
-        this.rotFx = createCorpseRotFx(this.def.modelHeight)
-        this.rotFx.position.copy(this.mesh.position)
-        this.mesh.parent?.add(this.rotFx)
-      }
-      animateCorpseRotFx(this.rotFx, dt)
-    } else if (this.rotFx) {
-      this.disposeRotFx()
-    }
-  }
-
-  private disposeRotFx(): void {
-    if (!this.rotFx) return
-    disposeCorpseRotFx(this.rotFx)
-    this.rotFx = null
+    advanceAnimalCorpse(this.corpse, this, dt, this.rabid, others, observerPos)
   }
 
   /** Lazily seeds `productionReadyAtDays` on the very first real tick — a
@@ -2398,8 +2131,8 @@ export class AnimalAgent {
       nearbyRats = [],
     } = ctx
     if (this.health.dead) {
-      if (!this.corpseHeld) {
-        this.timeSinceDeath += dt
+      if (!this.corpse.held) {
+        this.corpse.timeSinceDeath += dt
         this.advanceCorpseDecay(dt, others, observerPos)
       }
       // Keep the mixer advancing only long enough for the one-shot death
@@ -2407,7 +2140,7 @@ export class AnimalAgent {
       // to play (manual tip fallback, no mixer work needed), so a
       // permanently dead animal never costs a per-frame mixer update for the
       // rest of the session.
-      if (this.deathAnimDurationSec != null && this.timeSinceDeath < this.deathAnimDurationSec) {
+      if (this.deathAnimDurationSec != null && this.corpse.timeSinceDeath < this.deathAnimDurationSec) {
         this.anim.update(dt)
       }
       this.lastFaunaDecisionInput = null
@@ -3595,9 +3328,9 @@ export class AnimalAgent {
       if (!isCarcassEdible({
         dead: corpse.health.dead,
         expired: corpse.readyToRemove(),
-        consumed: corpse.foodConsumedPhase === phase,
-        harvested: corpse.meatHarvested,
-        claimedBy: corpse.foodClaimedBy,
+        consumed: corpse.corpse.consumedPhase === phase,
+        harvested: corpse.corpse.meatHarvested,
+        claimedBy: corpse.corpse.claimedBy,
         eater: this,
       })) return false
       // Plan fauna-005: a non-scavenger's fresh target can decay past
@@ -3605,7 +3338,7 @@ export class AnimalAgent {
       // would apply to a fresh search this frame, checked live rather than
       // trusting the phase cached on `target` at selection time.
       if (carcassFoodValue(phase, this.def.scavenging, this.life.hunger) == null) return false
-      return corpse.foodClaimedBy === this
+      return corpse.corpse.claimedBy === this
     }
     if (target.kind === 'feed') {
       // Re-checked live, not cached — another animal/NPC may have taken the
@@ -3681,7 +3414,7 @@ export class AnimalAgent {
       // hunger relief (plan fauna-005).
       const corpse = target.corpse
       const phase = corpse.corpsePhase()
-      const value = corpse.meatHarvested ? null : carcassFoodValue(phase, this.def.scavenging, this.life.hunger)
+      const value = corpse.corpse.meatHarvested ? null : carcassFoodValue(phase, this.def.scavenging, this.life.hunger)
       if (value != null) {
         consumeFood(this.life, value)
         corpse.markFoodConsumed(phase)
@@ -3787,9 +3520,9 @@ export class AnimalAgent {
       if (!isCarcassEdible({
         dead: o.health.dead,
         expired: o.readyToRemove(),
-        consumed: o.foodConsumedPhase === phase,
-        harvested: o.meatHarvested,
-        claimedBy: o.foodClaimedBy,
+        consumed: o.corpse.consumedPhase === phase,
+        harvested: o.corpse.meatHarvested,
+        claimedBy: o.corpse.claimedBy,
         eater: this,
       })) continue
       const d = Math.hypot(o.mesh.position.x - this.mesh.position.x, o.mesh.position.z - this.mesh.position.z)
@@ -3817,26 +3550,22 @@ export class AnimalAgent {
 
   /** True if this corpse's current phase is unclaimed or already claimed by
    *  `by` — guards against two predators both completing an eat action on
-   *  one carcass. Once this phase's food is gone (`foodConsumedPhase`), a
+   *  one carcass. Once this phase's food is gone (`consumedPhase`), a
    *  later decay into a new phase (plan fauna-005) makes it claimable again. */
   private claimAsFood(by: AnimalAgent): boolean {
-    if (this.foodConsumedPhase === this.corpsePhaseValue) return false
-    if (this.foodClaimedBy && this.foodClaimedBy !== by) return false
-    this.foodClaimedBy = by
-    return true
+    return claimCorpseAsFood(this.corpse, by)
   }
 
   private releaseFoodClaim(by: AnimalAgent): void {
-    if (this.foodClaimedBy === by) this.foodClaimedBy = null
+    releaseCorpseClaim(this.corpse, by)
   }
 
   /** Marks `phase` as eaten-out on this corpse (plan fauna-005) — the eater
    *  passes the live phase it just finished eating at, not necessarily
-   *  `corpsePhaseValue` at some other time, so a corpse that decays mid-eat
+   *  `corpse.phase` at some other time, so a corpse that decays mid-eat
    *  can't have the wrong phase marked consumed. */
   private markFoodConsumed(phase: CorpsePhase): void {
-    this.foodConsumedPhase = phase
-    this.foodClaimedBy = null
+    markCorpseFoodConsumed(this.corpse, phase)
   }
 
   private withinRange(x: number, z: number, radius: number): boolean {
