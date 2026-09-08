@@ -1,7 +1,7 @@
 # Plan: Paid Quests & Player Income
 
 **Created:** 2026-09-06  
-**Status:** `planned` 📋  
+**Status:** `done` ✅  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** quests-progression-002  

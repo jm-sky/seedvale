@@ -487,17 +487,20 @@ export class QuestManager {
       if (!stage) return null
       if (stage.objective.type === 'gather_item') {
         const { kind, count } = stage.objective
-        if (this.inventory.has(kind, count)) {
-          this.inventory.remove(kind, count)
-          this.advanceStage(def, s)
-          const updated = this.stateOf(def.id)
-          if (updated.state === 'ready_to_report') {
-            const line = this.resolveSuccessfulTurnIn(def)
-            return line ? { line } : { line: def.reportLine }
-          }
-          return { line: this.currentStage(def, updated.stageIndex)?.reminderLine ?? def.reportLine }
+        const isFinalStage = s.stageIndex >= def.stages.length - 1
+        if (isFinalStage) {
+          const outcome = uniqueOutcomeForState(def, 'complete')
+          if (!outcome) return { line: stage.reminderLine }
+          if (!this.inventory.has(kind, count)) return { line: stage.reminderLine }
+          if (!this.inventory.remove(kind, count)) return { line: stage.reminderLine }
+          const applied = this.applyOutcome(def, outcome.id)
+          return applied ? { line: def.reportLine } : { line: stage.reminderLine }
         }
-        return { line: stage.reminderLine }
+        if (!this.inventory.has(kind, count)) return { line: stage.reminderLine }
+        if (!this.inventory.remove(kind, count)) return { line: stage.reminderLine }
+        this.advanceStage(def, s)
+        const updated = this.stateOf(def.id)
+        return { line: this.currentStage(def, updated.stageIndex)?.reminderLine ?? def.reportLine }
       }
       return { line: stage.reminderLine }
     }

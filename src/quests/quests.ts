@@ -356,7 +356,8 @@ export const QUESTS: readonly QuestDef[] = [
     title: 'Drewno na naprawę',
     description: 'Piotrowi rozłazi się płot — zbierz kilka gałęzi na naprawę.',
     giverName: 'Piotr',
-    offerLine: 'Płot mi się rozłazi — zbierzesz kilka gałęzi, żebym miał czym go naprawić?',
+    offerLine:
+      'Płot mi się rozłazi — zbierzesz pięć gałęzi na naprawę? Zapłacę osiem monet.',
     stages: [
       {
         objective: { type: 'gather_item', kind: 'branch', count: 5 },
@@ -369,7 +370,104 @@ export const QUESTS: readonly QuestDef[] = [
       {
         id: 'delivered',
         state: 'complete',
-        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 15 }] },
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
+      },
+    ],
+  },
+  {
+    id: 'ziola-dla-anny',
+    title: 'Zioła dla Anny',
+    description: 'Anna potrzebuje trzech ziół do domowych zapasów.',
+    giverName: 'Anna',
+    offerLine:
+      'Zbierasz zioła w okolicy? Przydałyby mi się trzy sztuki — zapłacę osiem monet.',
+    stages: [
+      {
+        objective: { type: 'gather_item', kind: 'herb', count: 3 },
+        description: 'Zbierz 3 zioła.',
+        reminderLine: 'Masz już trzy zioła?',
+      },
+    ],
+    reportLine: 'Dziękuję, dokładnie tyle mi trzeba.',
+    outcomes: [
+      {
+        id: 'delivered',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
+      },
+    ],
+  },
+  {
+    id: 'kamienie-dla-piotra',
+    title: 'Kamienie dla Piotra',
+    description: 'Piotrowi brakuje kamieni na naprawy w osadzie.',
+    giverName: 'Piotr',
+    offerLine:
+      'Potrzebuję sześciu kamieni na naprawy — przyniesiesz? Zapłacę dziewięć monet.',
+    stages: [
+      {
+        objective: { type: 'gather_item', kind: 'stone', count: 6 },
+        description: 'Zbierz 6 kamieni.',
+        reminderLine: 'Masz już sześć kamieni?',
+      },
+    ],
+    reportLine: 'To wystarczy. Dzięki za dostawę.',
+    outcomes: [
+      {
+        id: 'delivered',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 9 }] },
+      },
+    ],
+  },
+  {
+    id: 'sprawdz-szlak',
+    title: 'Sprawdzenie szlaku',
+    description: 'Kasia prosi o sprawdzenie przejścia przy jaskini na szlaku handlowym.',
+    giverName: 'Kasia',
+    offerLine:
+      'Szlak handlowy przy jaskini trzeba sprawdzić — dasz radę tam zajrzeć? Zapłacę dwanaście monet.',
+    stages: [
+      {
+        objective: { type: 'interact_spawner', spawnerType: 'cave' },
+        description: 'Sprawdź przejście przy jaskini.',
+        reminderLine: 'Byłeś już przy jaskini na szlaku?',
+        progressLine: 'Przejście wygląda na przejezdne. Wróć do Kasi.',
+      },
+    ],
+    reportLine: 'Dobrze wiedzieć, że szlak jest czysty. Weź zapłatę.',
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 12 }] },
+      },
+    ],
+  },
+  {
+    id: 'lis-przy-osadzie',
+    title: 'Lis przy osadzie',
+    description: 'Marek prosi o pozbycie się lisa grasującego przy osadzie.',
+    giverName: 'Marek',
+    offerLine:
+      'Przy osadzie grasuje lis — dasz radę go przegonić? Zapłacę dwadzieścia monet.',
+    stages: [
+      {
+        objective: { type: 'kill_target_animal', kind: 'fox' },
+        description: 'Pozbądź się lisa przy osadzie.',
+        reminderLine: 'Lis wciąż grasuje w okolicy.',
+        progressLine: 'Lis nie wróci. Wróć do Marka.',
+      },
+    ],
+    reportLine: 'Dzięki — teraz będzie spokojniej. Weź monety.',
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 20 }] },
+        consequences: {
+          social: { reputation: { competence: 3, courage: 3 }, renown: 3 },
+        },
       },
     ],
   },

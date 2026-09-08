@@ -856,7 +856,7 @@ describe('QuestManager formal vs personal relation rebalance', () => {
     acceptOffer(qm, 'Piotr')
     qm.onInteract('Piotr')
     expect(qm.getState('drewno-na-naprawe')).toBe('complete')
-    expect(granted).toEqual([{ kind: 'coin', count: 15 }])
+    expect(granted).toEqual([{ kind: 'coin', count: 8 }])
     expect(qm.getRelation('Piotr')).toBe(0)
   })
 
@@ -869,5 +869,177 @@ describe('QuestManager formal vs personal relation rebalance', () => {
     qm.onInteract('Marek')
     expect(granted).toEqual([{ kind: 'coin', count: 5 }])
     expect(qm.getRelation('Marek')).toBe(1)
+  })
+})
+
+describe('QuestManager gather_item turn-in', () => {
+  const gatherQuest = quest({
+    id: 'gather-coins',
+    giverName: 'Anna',
+    offerLine: 'offer gather',
+    stages: [
+      { objective: { type: 'gather_item', kind: 'herb', count: 3 }, description: 'gather herbs', reminderLine: 'remind herbs' },
+    ],
+    reportLine: 'report gather',
+    outcomes: [{
+      id: 'delivered',
+      state: 'complete',
+      reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
+    }],
+  })
+
+  const multiStageGather = quest({
+    id: 'multi-gather',
+    giverName: 'Piotr',
+    offerLine: 'offer multi',
+    stages: [
+      { objective: { type: 'gather_item', kind: 'stone', count: 2 }, description: 'gather stones', reminderLine: 'remind stones' },
+      { objective: { type: 'interact_spawner', spawnerType: 'cave' }, description: 'cave', reminderLine: 'remind cave', progressLine: 'cave done' },
+    ],
+    reportLine: 'report multi',
+    outcomes: [{ id: 'reported', state: 'complete', consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] } }],
+  })
+
+  const ambiguousGather = quest({
+    id: 'ambiguous-gather',
+    giverName: 'Anna',
+    offerLine: 'offer ambiguous',
+    stages: [
+      { objective: { type: 'gather_item', kind: 'branch', count: 2 }, description: 'gather branches', reminderLine: 'remind branches' },
+    ],
+    reportLine: 'report ambiguous',
+    outcomes: [
+      { id: 'a', state: 'complete', reward: { visibility: 'shown', items: [{ kind: 'coin', count: 5 }] } },
+      { id: 'b', state: 'complete', reward: { visibility: 'shown', items: [{ kind: 'coin', count: 10 }] } },
+    ],
+  })
+
+  it('does not consume items or grant reward when inventory is insufficient', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('herb', 2)
+    const qm = new QuestManager([gatherQuest], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteract('Anna')
+    expect(inventory.count('herb')).toBe(2)
+    expect(qm.getState('gather-coins')).toBe('active')
+    expect(granted).toEqual([])
+  })
+
+  it('removes the exact item count once and grants coin reward exactly once on final turn-in', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('herb', 3)
+    const qm = new QuestManager([gatherQuest], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteract('Anna')
+    expect(inventory.count('herb')).toBe(0)
+    expect(qm.getState('gather-coins')).toBe('complete')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('delivered')
+    expect(granted).toEqual([{ kind: 'coin', count: 8 }])
+    qm.onInteract('Anna')
+    expect(granted).toHaveLength(1)
+  })
+
+  it('does not consume delivery items when multiple complete outcomes make resolution ambiguous', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('branch', 2)
+    const qm = new QuestManager([ambiguousGather], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteract('Anna')
+    expect(inventory.count('branch')).toBe(2)
+    expect(qm.getState('ambiguous-gather')).toBe('active')
+    expect(granted).toEqual([])
+  })
+
+  it('consumes items and advances without reward on a non-terminal gather stage', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('stone', 2)
+    const qm = new QuestManager([multiStageGather], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Piotr')
+    expect(qm.onInteract('Piotr')?.line).toBe('remind cave')
+    expect(inventory.count('stone')).toBe(0)
+    expect(qm.getState('multi-gather')).toBe('active')
+    expect(qm.getState('multi-gather')).not.toBe('ready_to_report')
+    expect(granted).toEqual([])
+  })
+})
+
+describe('QuestManager paid quest definitions', () => {
+  it('ziola-dla-anny delivers herb ×3 for 8 coins without relation', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const def = QUESTS.find((d) => d.id === 'ziola-dla-anny')!
+    const inventory = new Inventory()
+    inventory.add('herb', 3)
+    const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Anna')
+    qm.onInteract('Anna')
+    expect(granted).toEqual([{ kind: 'coin', count: 8 }])
+    expect(qm.getRelation('Anna')).toBe(0)
+    expect(qm.list().find((e) => e.id === 'ziola-dla-anny')?.promisedReward).toBeNull()
+  })
+
+  it('kamienie-dla-piotra delivers stone ×6 for 9 coins without relation', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const def = QUESTS.find((d) => d.id === 'kamienie-dla-piotra')!
+    const inventory = new Inventory()
+    inventory.add('stone', 6)
+    const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Piotr')
+    qm.onInteract('Piotr')
+    expect(granted).toEqual([{ kind: 'coin', count: 9 }])
+    expect(qm.getRelation('Piotr')).toBe(0)
+  })
+
+  it('sprawdz-szlak pays 12 coins after cave interaction without relation', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const def = QUESTS.find((d) => d.id === 'sprawdz-szlak')!
+    const qm = new QuestManager([def], undefined, new Inventory(), undefined, (kind, count) => granted.push({ kind, count }))
+    acceptOffer(qm, 'Kasia')
+    qm.onInteractObjective({ type: 'interact_spawner', spawnerType: 'cave' })
+    qm.onInteract('Kasia')
+    expect(granted).toEqual([{ kind: 'coin', count: 12 }])
+    expect(qm.getRelation('Kasia')).toBe(0)
+  })
+
+  it('lis-przy-osadzie binds a fox, ignores other deaths, and applies social consequence once', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const consequences: SocialConsequence[] = []
+    const def: QuestDef = { ...QUESTS.find((d) => d.id === 'lis-przy-osadzie')!, settlementId: 'home' }
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      new Inventory(),
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+      () => 'fox-1',
+      undefined,
+      (c) => consequences.push(c),
+    )
+    acceptOffer(qm, 'Marek')
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'fox-2' })).toBeNull()
+    qm.onInteractObjective({ type: 'animal_died', animalId: 'fox-1' })
+    qm.onInteract('Marek')
+    expect(granted).toEqual([{ kind: 'coin', count: 20 }])
+    expect(consequences).toEqual([{ settlementId: 'home', reputation: { competence: 3, courage: 3 }, renown: 3 }])
+    expect(qm.getRelation('Marek')).toBe(0)
+    qm.onInteract('Marek')
+    expect(granted).toHaveLength(1)
+    expect(consequences).toHaveLength(1)
+  })
+
+  it('does not pay reward again after terminal restore of a completed paid quest', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const def = QUESTS.find((d) => d.id === 'ziola-dla-anny')!
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'ziola-dla-anny', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'delivered' }],
+      relations: {},
+    }
+    const qm = new QuestManager([def], undefined, new Inventory(), initial, (kind, count) => granted.push({ kind, count }))
+    qm.onInteract('Anna')
+    expect(granted).toEqual([])
+    expect(qm.getState('ziola-dla-anny')).toBe('complete')
   })
 })
