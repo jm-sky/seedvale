@@ -34,6 +34,8 @@ Food and water are ordinary `Inventory` items with a `consumable` catalog flag (
 
 Sneak is toggled from the pause menu; active sneak slows movement and feeds `fauna/playerAwareness.ts`'s detection probability (no second detection system). Survival is passive: it shortens a few busy-channel durations and raises `roasted_meat`'s hunger relief, and reduces the camp-rest penalty below.
 
+Skill books are ordinary inventory items. `items/books.ts`'s `readBook()` (`Czytaj`) is the only path that raises a skill toward a book's target; a quest may grant a book through the existing item-grant seam (the hidden `book_defense_intermediate` from `dzik-przy-szlaku`) rather than a separate unlock or skill-award path.
+
 ## Busy channels
 
 Timed player actions (dig/chop/mine/bury/harvest/ignite/cook/tent-setup/destroy-spawner/well-work bout) run on `src/app/busyAction.ts`, a short real-time overlay — seconds, not minutes. Most show a progress bar and can be Esc-cancelled with nothing consumed (a tent, for example, is only spent when setup completes). Harvest pins the corpse being worked on so it can't despawn mid-channel. Taking damage during a busy channel or a rest/wait skip interrupts it — see [combat.md](./combat.md#combat-interruption-plan-186).

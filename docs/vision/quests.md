@@ -15,6 +15,10 @@ Quests should expose meaningful opportunities created by the living world rather
 - Quest history preserves consequences and can influence future opportunities.
 - Authored structures provide reliable gameplay framing while world state supplies the circumstances.
 
+## Current authored RPG pack
+
+The first hand-authored RPG pack (`quests-progression-005`) is three stories / five `QuestDef`s: a branching lost-shipment choice (`zaginiona-przesylka`), a local material dispute with one outcome-dependent follow-up (`sporne-drewno` → `drewno-dla-anny` or `drewno-dla-piotra`), and a renown-gated boar hunt (`dzik-przy-szlaku`). Branching uses a narrow `talk_to_npc_choice` objective on the existing `onInteract` path — not a dialogue tree, quest-item inventory, or land grant.
+
 ## Future evolution
 
 1. Expand world-problem quest sources.

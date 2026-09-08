@@ -76,17 +76,17 @@ export class QuestDefinitionValidationError extends Error {}
 
 /** Validates final runtime quest definitions once, after composition-root
  *  settlement binding. Throws `QuestDefinitionValidationError` on invalid
- *  authored prerequisites — never clamps thresholds at runtime. */
+ *  authored prerequisites or `talk_to_npc_choice` objectives — never clamps
+ *  thresholds at runtime. */
 export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
   const byId = new Map(defs.map((def) => [def.id, def]))
   for (const def of defs) {
+    validateTalkToNpcChoiceObjective(def)
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) continue
     for (const prereq of prerequisites) {
       switch (prereq.type) {
-        case 'relation':
-          break
-        case 'quest_outcome':
+        case 'quest_outcome': {
           if (prereq.questId === def.id) {
             throw new QuestDefinitionValidationError(`Quest "${def.id}" cannot depend on its own outcome`)
           }
@@ -105,15 +105,8 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
             }
           }
           break
-        case 'reputation':
-          if (!def.settlementId) {
-            throw new QuestDefinitionValidationError(`Quest "${def.id}" has a reputation prerequisite but no settlementId`)
-          }
-          if (prereq.minimum < REPUTATION_MIN || prereq.minimum > REPUTATION_MAX) {
-            throw new QuestDefinitionValidationError(
-              `Quest "${def.id}" reputation minimum ${prereq.minimum} is outside ${REPUTATION_MIN}..${REPUTATION_MAX}`,
-            )
-          }
+        }
+        case 'relation':
           break
         case 'renown':
           if (!def.settlementId) {
@@ -125,6 +118,41 @@ export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
             )
           }
           break
+        case 'reputation':
+          if (!def.settlementId) {
+            throw new QuestDefinitionValidationError(`Quest "${def.id}" has a reputation prerequisite but no settlementId`)
+          }
+          if (prereq.minimum < REPUTATION_MIN || prereq.minimum > REPUTATION_MAX) {
+            throw new QuestDefinitionValidationError(
+              `Quest "${def.id}" reputation minimum ${prereq.minimum} is outside ${REPUTATION_MIN}..${REPUTATION_MAX}`,
+            )
+          }
+          break
+      }
+    }
+  }
+}
+
+function validateTalkToNpcChoiceObjective(def: QuestDef): void {
+  for (const stage of def.stages) {
+    const objective = stage.objective
+    if (objective.type !== 'talk_to_npc_choice') continue
+    if (objective.choices.length < 2) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" talk_to_npc_choice needs at least 2 choices`,
+      )
+    }
+    const names = objective.choices.map((choice) => choice.npcName)
+    if (new Set(names).size !== names.length) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" talk_to_npc_choice has duplicate npcName`,
+      )
+    }
+    for (const choice of objective.choices) {
+      if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" talk_to_npc_choice references unknown outcome "${choice.outcomeId}"`,
+        )
       }
     }
   }
@@ -188,6 +216,18 @@ export function uniqueOutcomeForState(
 
 export type QuestObjective =
   | { type: 'talk_to_npc', npcName: string }
+  /** Talking to one of the authored NPCs selects a terminal outcome
+   *  (plan quests-progression-005). Resolved immediately through the same
+   *  path as other outcomes — not a dialogue tree. The giver may also be a
+   *  choice target, so `QuestManager.onInteract` dispatches this before the
+   *  giver reminder. */
+  | {
+      type: 'talk_to_npc_choice'
+      choices: readonly {
+        npcName: string
+        outcomeId: QuestOutcomeId
+      }[]
+    }
   | { type: 'interact_well' }
   | { type: 'interact_tree' }
   | { type: 'interact_spawner', spawnerType: SpawnerType }
@@ -614,6 +654,211 @@ export const QUESTS: readonly QuestDef[] = [
         consequences: {
           relations: [{ npcName: 'Anna', delta: 3 }],
           social: { reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'zaginiona-przesylka',
+    title: 'Zaginiona przesyłka',
+    description: 'Kasia zgubiła handlową przesyłkę przy jaskini na szlaku. Sprawdź jaskinię i zdecyduj, komu ją oddać.',
+    giverName: 'Kasia',
+    offerLine:
+      'Zgubiłam przesyłkę przy jaskini na szlaku. Dasz radę tam zajrzeć? Potem zdecyduj, komu ją oddać — mnie albo Markowi.',
+    stages: [
+      {
+        objective: { type: 'interact_spawner', spawnerType: 'cave' },
+        description: 'Sprawdź jaskinię przy szlaku.',
+        reminderLine: 'Byłeś już przy jaskini?',
+        progressLine: 'Przesyłka jest. Oddaj ją Kasi albo przekaż strażnikowi Markowi.',
+      },
+      {
+        objective: {
+          type: 'talk_to_npc_choice',
+          choices: [
+            { npcName: 'Kasia', outcomeId: 'returned_sealed' },
+            { npcName: 'Marek', outcomeId: 'turned_over_to_guard' },
+          ],
+        },
+        description: 'Oddaj przesyłkę Kasi albo przekaż ją Markowi.',
+        reminderLine: 'Oddałeś już przesyłkę? Kasia albo Marek.',
+      },
+    ],
+    reportLine: 'Przesyłka wróciła tam, gdzie powinna.',
+    outcomes: [
+      {
+        id: 'returned_sealed',
+        state: 'complete',
+        resultText: 'Dziękuję, że przyniosłeś przesyłkę nietkniętą. To dla mnie dużo znaczy.',
+        reward: { visibility: 'hidden', items: [{ kind: 'coin', count: 15 }] },
+        consequences: {
+          relations: [{ npcName: 'Kasia', delta: 2 }],
+          social: { reputation: { trust: 5, integrity: 6 }, renown: 3 },
+        },
+      },
+      {
+        id: 'turned_over_to_guard',
+        state: 'complete',
+        resultText: 'Dobrze, że mi to oddałeś. Sprawdzę, skąd ta przesyłka.',
+        reward: { visibility: 'hidden', items: [{ kind: 'bandage', count: 2 }] },
+        consequences: {
+          relations: [
+            { npcName: 'Kasia', delta: -1 },
+            { npcName: 'Marek', delta: 2 },
+          ],
+          social: { reputation: { competence: 4, courage: 2, integrity: 1 }, renown: 2 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'sporne-drewno',
+    title: 'Sporne drewno',
+    description: 'Anna i Piotr chcą pierwszeństwa do tej samej pomocy przy materiale. Porozmawiaj z obojgiem i zdecyduj, komu pomożesz.',
+    giverName: 'Anna',
+    offerLine:
+      'Potrzebujemy materiału na gospodarstwo, ale Piotr też na niego liczy. Porozmawiaj z nim i zdecyduj, komu pomożesz.',
+    stages: [
+      {
+        objective: { type: 'talk_to_npc', npcName: 'Piotr' },
+        description: 'Porozmawiaj z Piotrem.',
+        reminderLine: 'Rozmawiałeś już z Piotrem?',
+        progressLine: 'Anna chce materiał na gospodarstwo, ja na swoje prace. Zdecyduj, komu pomożesz.',
+      },
+      {
+        objective: {
+          type: 'talk_to_npc_choice',
+          choices: [
+            { npcName: 'Anna', outcomeId: 'support_anna' },
+            { npcName: 'Piotr', outcomeId: 'support_piotr' },
+          ],
+        },
+        description: 'Zdecyduj, czy pomożesz Annie, czy Piotrowi.',
+        reminderLine: 'Zdecydowałeś już, komu pomożesz?',
+      },
+    ],
+    reportLine: 'Wiem już, na kogo liczyć.',
+    outcomes: [
+      {
+        id: 'support_anna',
+        state: 'complete',
+        resultText: 'Dziękuję. Przyda nam się każda pomoc przy gospodarstwie.',
+        consequences: {
+          relations: [
+            { npcName: 'Anna', delta: 2 },
+            { npcName: 'Piotr', delta: -1 },
+          ],
+          social: { reputation: { benevolence: 3, trust: 1 }, renown: 2 },
+        },
+      },
+      {
+        id: 'support_piotr',
+        state: 'complete',
+        resultText: 'Dobra, skoro tak. Będę miał czym robić.',
+        consequences: {
+          relations: [
+            { npcName: 'Piotr', delta: 2 },
+            { npcName: 'Anna', delta: -1 },
+          ],
+          social: { reputation: { competence: 3, trust: 1 }, renown: 2 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'drewno-dla-anny',
+    title: 'Drewno dla Anny',
+    description: 'Anna czeka na gałęzie na potrzeby gospodarstwa.',
+    giverName: 'Anna',
+    offerLine: 'Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.',
+    stages: [
+      {
+        objective: { type: 'gather_item', kind: 'branch', count: 5 },
+        description: 'Zbierz 5 gałęzi.',
+        reminderLine: 'Masz już pięć gałęzi?',
+      },
+    ],
+    reportLine: 'Dziękuję, to wystarczy.',
+    availability: {
+      prerequisites: [
+        { type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_anna'] },
+      ],
+    },
+    outcomes: [
+      {
+        id: 'delivered_to_anna',
+        state: 'complete',
+        resultText: 'Dziękuję, to wystarczy.',
+        reward: { visibility: 'hidden', items: [{ kind: 'seed_carrot', count: 3 }] },
+        consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
+      },
+    ],
+  },
+  {
+    id: 'drewno-dla-piotra',
+    title: 'Drewno dla Piotra',
+    description: 'Piotr czeka na gałęzie do swoich prac.',
+    giverName: 'Piotr',
+    offerLine: 'Skoro tak — zbierzesz pięć gałęzi? Zapłacę osiem monet.',
+    stages: [
+      {
+        objective: { type: 'gather_item', kind: 'branch', count: 5 },
+        description: 'Zbierz 5 gałęzi.',
+        reminderLine: 'Masz już pięć gałęzi?',
+      },
+    ],
+    reportLine: 'To starczy. Weź zapłatę.',
+    availability: {
+      prerequisites: [
+        { type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_piotr'] },
+      ],
+    },
+    outcomes: [
+      {
+        id: 'delivered_to_piotr',
+        state: 'complete',
+        resultText: 'To starczy. Weź zapłatę.',
+        reward: { visibility: 'shown', items: [{ kind: 'coin', count: 8 }] },
+        consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] },
+      },
+    ],
+  },
+  {
+    id: 'dzik-przy-szlaku',
+    title: 'Dzik przy szlaku',
+    description: 'Mieszkańcy omijają część okolicy, gdzie regularnie widywany jest duży dzik. Marek prosi, żebyś się tym zajął.',
+    giverName: 'Marek',
+    offerLine:
+      'Przy szlaku regularnie widują dużego dzika, ludzie omijają tamtędy. Piotr lepiej zna las — najpierw z nim pogadaj, potem zajmij się bestią.',
+    stages: [
+      {
+        objective: { type: 'talk_to_npc', npcName: 'Piotr' },
+        description: 'Porozmawiaj z Piotrem o dziku.',
+        reminderLine: 'Pytałeś już Piotra o dzika?',
+        progressLine: 'Tak, przy szlaku w lesie kręci się duży dzik. Uważaj na siebie.',
+      },
+      {
+        objective: { type: 'kill_target_animal', kind: 'boar' },
+        description: 'Pozbądź się dzika przy szlaku.',
+        reminderLine: 'Dzik wciąż kręci się przy szlaku.',
+        progressLine: 'Dzik nie wróci. Wróć do Marka.',
+      },
+    ],
+    reportLine: 'Dzięki. Weź tę książkę — przyda ci się, zanim znów wyjdziesz poza osadę.',
+    availability: {
+      prerequisites: [
+        { type: 'renown', minimum: 10 },
+      ],
+    },
+    outcomes: [
+      {
+        id: 'boar_removed',
+        state: 'complete',
+        resultText: 'Dzięki. Weź tę książkę — przyda ci się, zanim znów wyjdziesz poza osadę.',
+        reward: { visibility: 'hidden', items: [{ kind: 'book_defense_intermediate', count: 1 }] },
+        consequences: {
+          relations: [{ npcName: 'Marek', delta: 2 }],
+          social: { reputation: { competence: 6, courage: 6, benevolence: 2 }, renown: 8 },
         },
       },
     ],

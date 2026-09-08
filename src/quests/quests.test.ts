@@ -91,7 +91,14 @@ describe('QUESTS social consequence calibration (plan quests-progression-001 §6
 
   it('no quest authors social consequence without a defined magnitude source (no accidental defaults)', () => {
     const withConsequence = QUESTS.filter((q) => q.outcomes.some((o) => o.consequences?.social))
-    expect(withConsequence.map((q) => q.id).sort()).toEqual(['grozny-wilk', 'lis-przy-osadzie', 'wilcza-jama'])
+    expect(withConsequence.map((q) => q.id).sort()).toEqual([
+      'dzik-przy-szlaku',
+      'grozny-wilk',
+      'lis-przy-osadzie',
+      'sporne-drewno',
+      'wilcza-jama',
+      'zaginiona-przesylka',
+    ])
   })
 })
 
@@ -183,5 +190,123 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
     })
     expect(() => validateQuestDefinitions([badReputation])).toThrow(/reputation minimum/)
     expect(() => validateQuestDefinitions([badRenown])).toThrow(/renown minimum/)
+  })
+
+  it('rejects talk_to_npc_choice with fewer than two choices', () => {
+    const bad = runtimeQuest({
+      ...baseQuest,
+      stages: [{
+        objective: { type: 'talk_to_npc_choice', choices: [{ npcName: 'Anna', outcomeId: 'done' }] },
+        description: 'choose',
+        reminderLine: 'remind',
+      }],
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/at least 2 choices/)
+  })
+
+  it('rejects talk_to_npc_choice with duplicate npcName', () => {
+    const bad = runtimeQuest({
+      ...baseQuest,
+      stages: [{
+        objective: {
+          type: 'talk_to_npc_choice',
+          choices: [
+            { npcName: 'Anna', outcomeId: 'done' },
+            { npcName: 'Anna', outcomeId: 'done' },
+          ],
+        },
+        description: 'choose',
+        reminderLine: 'remind',
+      }],
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/duplicate npcName/)
+  })
+
+  it('rejects talk_to_npc_choice that references an unknown outcome', () => {
+    const bad = runtimeQuest({
+      ...baseQuest,
+      stages: [{
+        objective: {
+          type: 'talk_to_npc_choice',
+          choices: [
+            { npcName: 'Anna', outcomeId: 'done' },
+            { npcName: 'Piotr', outcomeId: 'missing' },
+          ],
+        },
+        description: 'choose',
+        reminderLine: 'remind',
+      }],
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/unknown outcome/)
+  })
+
+  it('accepts authored RPG quests once settlementId is bound', () => {
+    const ids = [
+      'zaginiona-przesylka',
+      'sporne-drewno',
+      'drewno-dla-anny',
+      'drewno-dla-piotra',
+      'dzik-przy-szlaku',
+    ]
+    const defs = ids.map((id) => runtimeQuest({ ...QUESTS.find((q) => q.id === id)! }))
+    expect(() => validateQuestDefinitions(defs)).not.toThrow()
+  })
+})
+
+describe('QUESTS authored RPG pack (plan quests-progression-005)', () => {
+  it('authors three stories as five definitions with the planned givers and outcomes', () => {
+    const lost = QUESTS.find((q) => q.id === 'zaginiona-przesylka')
+    const dispute = QUESTS.find((q) => q.id === 'sporne-drewno')
+    const forAnna = QUESTS.find((q) => q.id === 'drewno-dla-anny')
+    const forPiotr = QUESTS.find((q) => q.id === 'drewno-dla-piotra')
+    const boar = QUESTS.find((q) => q.id === 'dzik-przy-szlaku')
+    expect(lost?.giverName).toBe('Kasia')
+    expect(dispute?.giverName).toBe('Anna')
+    expect(forAnna?.giverName).toBe('Anna')
+    expect(forPiotr?.giverName).toBe('Piotr')
+    expect(boar?.giverName).toBe('Marek')
+    expect(lost?.outcomes.map((o) => o.id)).toEqual(['returned_sealed', 'turned_over_to_guard'])
+    expect(dispute?.outcomes.map((o) => o.id)).toEqual(['support_anna', 'support_piotr'])
+    expect(forAnna?.availability?.prerequisites).toEqual([
+      { type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_anna'] },
+    ])
+    expect(forPiotr?.availability?.prerequisites).toEqual([
+      { type: 'quest_outcome', questId: 'sporne-drewno', outcomeIds: ['support_piotr'] },
+    ])
+    expect(boar?.availability?.prerequisites).toEqual([{ type: 'renown', minimum: 10 }])
+  })
+
+  it('does not invent a sealed_package item or gather stage for zaginiona-przesylka', () => {
+    const lost = QUESTS.find((q) => q.id === 'zaginiona-przesylka')!
+    expect(lost.stages.some((stage) => stage.objective.type === 'gather_item')).toBe(false)
+    const kinds = lost.outcomes.flatMap((outcome) => outcome.reward?.items?.map((item) => item.kind) ?? [])
+    expect(kinds).not.toContain('sealed_package')
+  })
+
+  it('gives every authored RPG outcome a resultText rather than relying on the raw id', () => {
+    const ids = [
+      'zaginiona-przesylka',
+      'sporne-drewno',
+      'drewno-dla-anny',
+      'drewno-dla-piotra',
+      'dzik-przy-szlaku',
+    ]
+    for (const id of ids) {
+      const def = QUESTS.find((q) => q.id === id)!
+      for (const outcome of def.outcomes) {
+        expect(outcome.resultText && outcome.resultText.length).toBeGreaterThan(0)
+        expect(outcome.resultText).not.toBe(outcome.id)
+      }
+    }
+  })
+
+  it('keeps dzik-przy-szlaku on a non-dangerous boar and a hidden defense book', () => {
+    const boar = QUESTS.find((q) => q.id === 'dzik-przy-szlaku')!
+    const kill = boar.stages[1]?.objective
+    expect(kill).toEqual({ type: 'kill_target_animal', kind: 'boar' })
+    expect(boar.outcomes[0]?.reward).toEqual({
+      visibility: 'hidden',
+      items: [{ kind: 'book_defense_intermediate', count: 1 }],
+    })
   })
 })

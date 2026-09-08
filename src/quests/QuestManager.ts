@@ -2,7 +2,7 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
-import type { SocialConsequence, ReputationDimension } from '../reputation/ReputationManager'
+import type { ReputationDimension, SocialConsequence } from '../reputation/ReputationManager'
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
@@ -11,9 +11,9 @@ import {
   type QuestObjective,
   type QuestOutcome,
   type QuestOutcomeId,
+  type QuestPrerequisite,
   type QuestProgressEntry,
   type QuestReward,
-  type QuestPrerequisite,
   QUESTS,
   type QuestStage,
   type QuestState,
@@ -28,7 +28,8 @@ import {
 /** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
  *  so a floating NPC label reads correctly even without the CSS color that
  *  usually accompanies it. `TALK_TARGET` is a separate case (a non-giver NPC
- *  named by an active `talk_to_npc` objective) from the giver's own 3 states. */
+ *  named by an active `talk_to_npc` objective, or any NPC named by an active
+ *  `talk_to_npc_choice`) from the giver's own 3 states. */
 export const QUEST_MARKER_AVAILABLE = '!'
 export const QUEST_MARKER_IN_PROGRESS = '…'
 export const QUEST_MARKER_READY = '✓'
@@ -158,6 +159,14 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
     case 'wolf_den_cleared':
       return objective.type === 'clear_wolf_den' && objective.denId === ref.denId
   }
+}
+
+function matchingTalkChoice(
+  objective: QuestObjective | undefined,
+  npcName: string,
+): { npcName: string, outcomeId: QuestOutcomeId } | undefined {
+  if (objective?.type !== 'talk_to_npc_choice') return undefined
+  return objective.choices.find((choice) => choice.npcName === npcName)
 }
 
 /** Drives multi-stage quests. Kept out of `NpcAgent`/world objects so they stay
@@ -322,19 +331,19 @@ export class QuestManager {
 
   private meetsPrerequisite(def: QuestDef, prereq: QuestPrerequisite): boolean {
     switch (prereq.type) {
-      case 'relation':
-        return relationLevelMeetsMinimum(this.getRelationLevel(prereq.npcName), prereq.minimum)
       case 'quest_outcome': {
         const resolvedOutcomeId = this.stateOf(prereq.questId).resolvedOutcomeId
         if (!resolvedOutcomeId) return false
         return prereq.outcomeIds.includes(resolvedOutcomeId)
       }
-      case 'reputation':
-        if (!def.settlementId) return false
-        return this.socialAvailability.getReputationDimension(def.settlementId, prereq.dimension) >= prereq.minimum
+      case 'relation':
+        return relationLevelMeetsMinimum(this.getRelationLevel(prereq.npcName), prereq.minimum)
       case 'renown':
         if (!def.settlementId) return false
         return this.socialAvailability.getRenown(def.settlementId) >= prereq.minimum
+      case 'reputation':
+        if (!def.settlementId) return false
+        return this.socialAvailability.getReputationDimension(def.settlementId, prereq.dimension) >= prereq.minimum
     }
   }
 
@@ -550,6 +559,26 @@ export class QuestManager {
     return null
   }
 
+  /**
+   * Active `talk_to_npc_choice`: talking to a matching NPC selects that
+   * choice's outcome and resolves through `applyOutcome`. Must run before
+   * giver reminder handling because the giver may also be a choice target
+   * (plan quests-progression-005).
+   *
+   * @domain quests-progression
+   */
+  private resolveTalkToNpcChoice(def: QuestDef, npcName: string): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return null
+    const stage = this.currentStage(def, s.stageIndex)
+    const choice = matchingTalkChoice(stage?.objective, npcName)
+    if (!choice) return null
+    if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) return null
+    const applied = this.applyOutcome(def, choice.outcomeId)
+    if (!applied) return null
+    return { line: applied.resultText ?? def.reportLine }
+  }
+
   /** Quest-driven line/offer for talking to `npcName` right now, or null if
    *  this NPC has nothing quest-related to say (caller falls back to normal
    *  dialogue). `completedFallback` (plan 153) — an already-turned-in
@@ -561,6 +590,9 @@ export class QuestManager {
     let completedFallback: QuestDialogOverride | null = null
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
+
+      const choiceResult = this.resolveTalkToNpcChoice(def, npcName)
+      if (choiceResult) return choiceResult
 
       if (npcName === def.giverName) {
         const result = this.handleGiverInteract(def, s)
@@ -615,6 +647,10 @@ export class QuestManager {
   labelMarker(npcName: string): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
+      if (s.state === 'active') {
+        const stage = this.currentStage(def, s.stageIndex)
+        if (matchingTalkChoice(stage?.objective, npcName)) return QUEST_MARKER_TALK_TARGET
+      }
       if (npcName === def.giverName) {
         if (s.state === 'ready_to_report') return QUEST_MARKER_READY
         if (s.state === 'active') return QUEST_MARKER_IN_PROGRESS

@@ -1279,3 +1279,295 @@ describe('QuestManager prerequisites (plan quests-progression-004)', () => {
     expect(qm.labelMarker('Anna')).toBe('!')
   })
 })
+
+function homeQuest(id: string): QuestDef {
+  return { ...QUESTS.find((d) => d.id === id)!, settlementId: 'home' }
+}
+
+const woodPack = (): QuestDef[] => [
+  homeQuest('sporne-drewno'),
+  homeQuest('drewno-dla-anny'),
+  homeQuest('drewno-dla-piotra'),
+]
+
+describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => {
+  function makeChoiceManager(
+    grantItem?: (kind: string, count: number) => void,
+    applySocial?: (c: SocialConsequence) => void,
+  ): QuestManager {
+    return new QuestManager(
+      [homeQuest('zaginiona-przesylka')],
+      undefined,
+      new Inventory(),
+      undefined,
+      grantItem,
+      undefined,
+      undefined,
+      applySocial,
+    )
+  }
+
+  function startChoiceStage(qm: QuestManager): void {
+    acceptOffer(qm, 'Kasia')
+    qm.onInteractObjective({ type: 'interact_spawner', spawnerType: 'cave' })
+  }
+
+  it('advances the cave stage without granting an item, then talks to Kasia for returned_sealed', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const consequences: SocialConsequence[] = []
+    const qm = makeChoiceManager(
+      (kind, count) => granted.push({ kind, count }),
+      (c) => consequences.push(c),
+    )
+    acceptOffer(qm, 'Kasia')
+    expect(qm.onInteract('Kasia')?.line).toBe('Byłeś już przy jaskini?')
+    expect(qm.onInteract('Marek')).toBeNull()
+    qm.onInteractObjective({ type: 'interact_spawner', spawnerType: 'cave' })
+    expect(granted).toEqual([])
+    expect(qm.getState('zaginiona-przesylka')).toBe('active')
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
+    expect(qm.list().find((e) => e.id === 'zaginiona-przesylka')?.promisedReward).toBeNull()
+
+    const line = qm.onInteract('Kasia')
+    expect(line?.line).toBe('Dziękuję, że przyniosłeś przesyłkę nietkniętą. To dla mnie dużo znaczy.')
+    expect(qm.getState('zaginiona-przesylka')).toBe('complete')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('returned_sealed')
+    expect(granted).toEqual([{ kind: 'coin', count: 15 }])
+    expect(qm.getRelation('Kasia')).toBe(2)
+    expect(qm.getRelation('Marek')).toBe(0)
+    expect(consequences).toEqual([{ settlementId: 'home', reputation: { trust: 5, integrity: 6 }, renown: 3 }])
+    expect(qm.list().find((e) => e.id === 'zaginiona-przesylka')?.resultText)
+      .toBe('Dziękuję, że przyniosłeś przesyłkę nietkniętą. To dla mnie dużo znaczy.')
+  })
+
+  it('lets Marek select only turned_over_to_guard, even though Kasia is the giver', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const consequences: SocialConsequence[] = []
+    const qm = makeChoiceManager(
+      (kind, count) => granted.push({ kind, count }),
+      (c) => consequences.push(c),
+    )
+    startChoiceStage(qm)
+    expect(qm.labelMarker('Kasia')).toBe('?')
+    expect(qm.labelMarker('Marek')).toBe('?')
+    const line = qm.onInteract('Marek')
+    expect(line?.line).toBe('Dobrze, że mi to oddałeś. Sprawdzę, skąd ta przesyłka.')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('turned_over_to_guard')
+    expect(granted).toEqual([{ kind: 'bandage', count: 2 }])
+    expect(qm.getRelation('Kasia')).toBe(-1)
+    expect(qm.getRelation('Marek')).toBe(2)
+    expect(consequences).toEqual([{
+      settlementId: 'home',
+      reputation: { competence: 4, courage: 2, integrity: 1 },
+      renown: 2,
+    }])
+  })
+
+  it('does not change outcome, reward or consequences on a later conversation', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const consequences: SocialConsequence[] = []
+    const qm = makeChoiceManager(
+      (kind, count) => granted.push({ kind, count }),
+      (c) => consequences.push(c),
+    )
+    startChoiceStage(qm)
+    qm.onInteract('Kasia')
+    qm.onInteract('Marek')
+    qm.onInteract('Kasia')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('returned_sealed')
+    expect(granted).toEqual([{ kind: 'coin', count: 15 }])
+    expect(qm.getRelation('Kasia')).toBe(2)
+    expect(qm.getRelation('Marek')).toBe(0)
+    expect(consequences).toHaveLength(1)
+    expect(qm.labelMarker('Kasia')).toBeNull()
+    expect(qm.labelMarker('Marek')).toBeNull()
+  })
+
+  it('keeps ordinary talk_to_npc markers and giver reminders when the stage is not a choice', () => {
+    const relay = quest({
+      id: 'relay',
+      giverName: 'Anna',
+      offerLine: 'offer',
+      stages: [
+        { objective: { type: 'talk_to_npc', npcName: 'Piotr' }, description: 'talk', reminderLine: 'remind', progressLine: 'got it' },
+      ],
+      reportLine: 'report',
+    })
+    const qm = makeManager([relay])
+    acceptOffer(qm, 'Anna')
+    expect(qm.labelMarker('Anna')).toBe('…')
+    expect(qm.labelMarker('Piotr')).toBe('?')
+    expect(qm.onInteract('Anna')?.line).toBe('remind')
+    expect(qm.onInteract('Piotr')?.line).toBe('got it')
+    expect(qm.getState('relay')).toBe('ready_to_report')
+    expect(qm.labelMarker('Piotr')).toBeNull()
+    expect(qm.labelMarker('Anna')).toBe('✓')
+  })
+})
+
+describe('QuestManager sporne-drewno follow-ups (plan quests-progression-005)', () => {
+  it('requires Piotr before the side choice, then unlocks only Anna\'s follow-up', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('branch', 5)
+    const qm = new QuestManager(
+      woodPack(),
+      undefined,
+      inventory,
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+    )
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteract('Anna')?.line).toBe('Rozmawiałeś już z Piotrem?')
+    expect(qm.getState('sporne-drewno')).toBe('active')
+    expect(qm.onInteract('Piotr')?.line).toBe('Anna chce materiał na gospodarstwo, ja na swoje prace. Zdecyduj, komu pomożesz.')
+    expect(qm.onInteract('Anna')?.line).toBe('Dziękuję. Przyda nam się każda pomoc przy gospodarstwie.')
+    expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
+    expect(qm.getRelation('Anna')).toBe(2)
+    expect(qm.getRelation('Piotr')).toBe(-1)
+    expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(true)
+    expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(false)
+    expect(qm.onInteract('Piotr')).toBeNull()
+    expect(qm.onInteract('Anna')?.line).toBe('Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.')
+    qm.onInteract('Anna')?.offer?.onAccept()
+    qm.onInteract('Anna')
+    expect(inventory.count('branch')).toBe(0)
+    expect(granted).toEqual([{ kind: 'seed_carrot', count: 3 }])
+    expect(qm.getRelation('Anna')).toBe(3)
+    expect(qm.exportProgress().find((e) => e.id === 'drewno-dla-anny')?.resolvedOutcomeId).toBe('delivered_to_anna')
+    qm.onInteract('Anna')
+    expect(granted).toHaveLength(1)
+    expect(inventory.count('branch')).toBe(0)
+  })
+
+  it('unlocks only Piotr\'s paid follow-up after support_piotr and consumes branches once', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('branch', 5)
+    const qm = new QuestManager(
+      woodPack(),
+      undefined,
+      inventory,
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+    )
+    acceptOffer(qm, 'Anna')
+    qm.onInteract('Piotr')
+    expect(qm.onInteract('Piotr')?.line).toBe('Dobra, skoro tak. Będę miał czym robić.')
+    expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_piotr')
+    expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(false)
+    expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(true)
+    expect(qm.list().find((e) => e.id === 'drewno-dla-piotra')?.promisedReward).toEqual({
+      items: [{ kind: 'coin', count: 8 }],
+    })
+    acceptOffer(qm, 'Piotr')
+    qm.onInteract('Piotr')
+    expect(inventory.count('branch')).toBe(0)
+    expect(granted).toEqual([{ kind: 'coin', count: 8 }])
+    expect(qm.getRelation('Piotr')).toBe(3)
+    expect(qm.list().find((e) => e.id === 'drewno-dla-piotra')?.promisedReward).toBeNull()
+  })
+
+  it('restores the chosen outcome and the matching follow-up after save/load', () => {
+    const initial: QuestManagerInitial = {
+      progress: [{ id: 'sporne-drewno', state: 'complete', stageIndex: 2, resolvedOutcomeId: 'support_anna' }],
+      relations: { Anna: 2, Piotr: -1 },
+    }
+    const qm = new QuestManager(woodPack(), undefined, new Inventory(), initial)
+    expect(qm.exportProgress().find((e) => e.id === 'sporne-drewno')?.resolvedOutcomeId).toBe('support_anna')
+    expect(qm.isQuestAvailable('drewno-dla-anny')).toBe(true)
+    expect(qm.isQuestAvailable('drewno-dla-piotra')).toBe(false)
+    expect(qm.onInteract('Anna')?.line).toBe('Skoro zdecydowałeś — przyniesiesz pięć gałęzi? Przyda się na gospodarstwie.')
+  })
+})
+
+describe('QuestManager dzik-przy-szlaku (plan quests-progression-005)', () => {
+  const boarLookup = (renown: number): QuestSocialAvailabilityLookup => ({
+    getReputationDimension: () => 0,
+    getRenown: () => renown,
+  })
+
+  it('stays locked at renown 9 and offers at 10', () => {
+    const def = homeQuest('dzik-przy-szlaku')
+    const locked = makeManager([def], undefined, undefined, undefined, boarLookup(9))
+    expect(locked.isQuestAvailable('dzik-przy-szlaku')).toBe(false)
+    expect(locked.onInteract('Marek')).toBeNull()
+    expect(locked.list()).toHaveLength(0)
+    const open = makeManager([def], undefined, undefined, undefined, boarLookup(10))
+    expect(open.isQuestAvailable('dzik-przy-szlaku')).toBe(true)
+    expect(open.onInteract('Marek')?.line).toContain('dzika')
+  })
+
+  it('requires Piotr, binds one boar, and applies the hidden book plus social once', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const consequences: SocialConsequence[] = []
+    const marked: string[] = []
+    const def = homeQuest('dzik-przy-szlaku')
+    const qm = new QuestManager(
+      [def],
+      undefined,
+      new Inventory(),
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+      () => 'boar-1',
+      (animalId) => marked.push(animalId),
+      (c) => consequences.push(c),
+      boarLookup(10),
+    )
+    acceptOffer(qm, 'Marek')
+    expect(qm.onInteract('Marek')?.line).toBe('Pytałeś już Piotra o dzika?')
+    expect(qm.onInteract('Piotr')?.line).toBe('Tak, przy szlaku w lesie kręci się duży dzik. Uważaj na siebie.')
+    expect(marked).toEqual([])
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'boar-2' })).toBeNull()
+    expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'boar-1' })?.line).toBe('Dzik nie wróci. Wróć do Marka.')
+    expect(qm.getState('dzik-przy-szlaku')).toBe('ready_to_report')
+    const report = qm.onInteract('Marek')
+    expect(report?.line).toBe('Dzięki. Weź tę książkę — przyda ci się, zanim znów wyjdziesz poza osadę.')
+    expect(granted).toEqual([{ kind: 'book_defense_intermediate', count: 1 }])
+    expect(qm.getRelation('Marek')).toBe(2)
+    expect(consequences).toEqual([{
+      settlementId: 'home',
+      reputation: { competence: 6, courage: 6, benevolence: 2 },
+      renown: 8,
+    }])
+    qm.onInteract('Marek')
+    expect(granted).toHaveLength(1)
+    expect(consequences).toHaveLength(1)
+    expect(marked).toEqual([])
+  })
+
+  it('invalidates an active wild boar binding on restore and rebuild', () => {
+    const def = homeQuest('dzik-przy-szlaku')
+    const restored = new QuestManager(
+      [def],
+      undefined,
+      new Inventory(),
+      { progress: [{ id: 'dzik-przy-szlaku', state: 'active', stageIndex: 1 }], relations: {} },
+      undefined,
+      () => 'boar-1',
+      undefined,
+      undefined,
+      boarLookup(10),
+    )
+    expect(restored.getState('dzik-przy-szlaku')).toBe('invalidated')
+    expect(restored.onInteractObjective({ type: 'animal_died', animalId: 'boar-1' })).toBeNull()
+
+    const live = new QuestManager(
+      [def],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'boar-1',
+      undefined,
+      undefined,
+      boarLookup(10),
+    )
+    acceptOffer(live, 'Marek')
+    live.onInteract('Piotr')
+    expect(live.getState('dzik-przy-szlaku')).toBe('active')
+    live.invalidateStaleAnimalTargets()
+    expect(live.getState('dzik-przy-szlaku')).toBe('invalidated')
+    expect(live.onInteractObjective({ type: 'animal_died', animalId: 'boar-1' })).toBeNull()
+  })
+})

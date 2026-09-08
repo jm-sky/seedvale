@@ -1,7 +1,7 @@
 # Plan: Authored RPG Quests
 
 **Created:** 2026-09-06  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** L  
 **Depends on:** quests-progression-002, quests-progression-003, quests-progression-004  
