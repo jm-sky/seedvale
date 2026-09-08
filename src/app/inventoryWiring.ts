@@ -5,6 +5,7 @@ import type { Inventory } from '../items/Inventory'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { PrimaryWeaponSelection } from '../items/primaryWeapons'
+import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import type { TradeResult } from '../items/trade'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
@@ -81,6 +82,8 @@ export type InventoryWiring = {
    *  weapon `primaryWeapons` currently remembers, no-op if none is set. */
   equipPrimaryMeleeWeapon: () => void
   equipPrimaryRangedWeapon: () => void
+  setPrimaryMeleeWeapon: (kind: ItemKind, instanceId: string | null) => void
+  setPrimaryRangedWeapon: (kind: ItemKind, instanceId: string | null) => void
 }
 
 export type InventoryWiringDeps = {
@@ -254,6 +257,20 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   const equipPrimaryMeleeWeapon = (): void => equipPrimary(primaryWeapons.primaryMelee())
   const equipPrimaryRangedWeapon = (): void => equipPrimary(primaryWeapons.primaryRanged())
 
+  const setPrimaryMeleeWeapon = (kind: ItemKind, instanceId: string | null): void => {
+    if (!isMeleeToolKind(kind) || !inventory.has(kind, 1)) return
+    primaryWeapons.setPrimaryMelee({ kind, instanceId })
+    deps.syncHeldHud()
+    deps.refreshInventoryScreen()
+  }
+
+  const setPrimaryRangedWeapon = (kind: ItemKind, instanceId: string | null): void => {
+    if (!isRangedTool(kind) || !inventory.has(kind, 1)) return
+    primaryWeapons.setPrimaryRanged({ kind, instanceId })
+    deps.syncHeldHud()
+    deps.refreshInventoryScreen()
+  }
+
   /** Shared by every merchant buy/sell path: weight/held-tool/quick-action
    *  resync plus a full merchant re-render. */
   const afterTrade = (): void => {
@@ -370,5 +387,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     unequipTool,
     equipPrimaryMeleeWeapon,
     equipPrimaryRangedWeapon,
+    setPrimaryMeleeWeapon,
+    setPrimaryRangedWeapon,
   }
 }

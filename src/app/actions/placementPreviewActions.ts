@@ -40,6 +40,12 @@ export type PlacementPreviewUiView = {
   supportsRotation: boolean
 }
 
+/** Async completion hooks for multi-stage player intents (plan ui-input-010). */
+export type PlacementPreviewLifecycle = {
+  onConfirmed?: (result: { kind: 'fireSimple', placedFireId: string }) => void
+  onCancelled?: () => void
+}
+
 const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   chest: 'Skrzynia',
   tent: 'Namiot',
@@ -102,8 +108,9 @@ export type PlacementPreviewActionDeps = {
 
 export type PlacementPreviewActions = {
   /** Quick Actions "Budowa" entries — enters the preview mode for `kind`.
-   *  No-op if another preview/busy activity is already running. */
-  start: (kind: PlacementPreviewKind) => void
+   *  No-op if another preview/busy activity is already running. Optional
+   *  lifecycle hooks are used by multi-stage player intents such as cook-meal. */
+  start: (kind: PlacementPreviewKind, lifecycle?: PlacementPreviewLifecycle) => void
   isActive: () => boolean
   /** Per-frame while active (aim tracking, `[E]` confirm, `[F]/[G]` rotate) —
    *  call unconditionally, before the gaze/interact dispatch, same convention
@@ -132,6 +139,15 @@ export function createPlacementPreviewActions(
   let lastResult: PlacementPreviewResult | null = null
   let placementStartYaw = 0
   let rotationSteps = 0
+  let intentLifecycle: PlacementPreviewLifecycle | null = null
+
+  const finishIntent = (cancelled: boolean, fireId?: string): void => {
+    const lifecycle = intentLifecycle
+    intentLifecycle = null
+    if (!lifecycle) return
+    if (cancelled || !fireId) lifecycle.onCancelled?.()
+    else lifecycle.onConfirmed?.({ kind: 'fireSimple', placedFireId: fireId })
+  }
 
   const supportsRotation = (kind: PlacementPreviewKind | null): boolean =>
     kind !== null && SUPPORTS_ROTATION[kind]
@@ -164,7 +180,12 @@ export function createPlacementPreviewActions(
       case 'chest': containers.placeContainerAtAim(objectYaw); return
       case 'firePile': buildWoodPile(); return
       case 'firePit': buildFirePit(); return
-      case 'fireSimple': buildSimpleFire(); return
+      case 'fireSimple': {
+        const result = buildSimpleFire()
+        if (result.ok && result.placedFireId) finishIntent(false, result.placedFireId)
+        else finishIntent(true)
+        return
+      }
       case 'palisade': placement.placePalisadeAtAim(objectYaw); return
       case 'platform': placement.placePlatformAtAim(objectYaw); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
@@ -174,22 +195,25 @@ export function createPlacementPreviewActions(
     }
   }
 
-  const exit = (): void => {
+  const exit = (cancelIntent = false): void => {
     if (!active) return
+    if (cancelIntent && intentLifecycle) finishIntent(true)
     active = null
     lastResult = null
     placementStartYaw = 0
     rotationSteps = 0
+    intentLifecycle = null
     mouseLook.state.zoomLocked = false
     ghost.group.removeFromParent()
     hidePreview()
   }
 
-  const start = (kind: PlacementPreviewKind): void => {
+  const start = (kind: PlacementPreviewKind, lifecycle?: PlacementPreviewLifecycle): void => {
     if (active || isOtherPreviewActive() || isActionBlocked(ctx)) return
     active = kind
     rotationSteps = 0
     placementStartYaw = snapPlacementYaw45(mouseLook.state.yaw)
+    intentLifecycle = lifecycle ?? null
     mouseLook.state.zoomLocked = true
     scene.add(ghost.group)
   }
@@ -210,15 +234,15 @@ export function createPlacementPreviewActions(
     if (!active || !lastResult?.valid) return
     const kind = active
     const objectYaw = currentObjectYaw()
-    exit()
     commit(kind, objectYaw)
+    exit(false)
   }
 
   const tick = (): void => {
     const rotateLeftPressed = keyboard.consumeRotateLeft()
     if (!active) return
     if (isActionBlocked(ctx)) {
-      exit()
+      exit(true)
       return
     }
     if (supportsRotation(active)) {
@@ -241,7 +265,7 @@ export function createPlacementPreviewActions(
 
   const cancel = (): boolean => {
     if (!active) return false
-    exit()
+    exit(true)
     return true
   }
 

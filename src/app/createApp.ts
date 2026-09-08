@@ -8,6 +8,7 @@ import type { TrapCaptureEvent } from '../world/createPlacedTraps'
 import type { GrassForageOverrides } from '../world/grassForage'
 import type { NearbyPlayerWellLookup } from '../world/playerWell'
 import type { PlayerActionContext } from './actions/actionContext'
+import { createCookMealIntent, runEatAnything } from './actions/cookMealIntent'
 import { NEUTRAL_PLAYER_SOCIAL_STATE } from '../ai/reactionChance'
 import { createAmbientAudio } from '../audio/createAmbientAudio'
 import { createWorldAudio } from '../audio/createWorldAudio'
@@ -606,6 +607,10 @@ export async function createApp(
   grantStartingLoadout(inventory)
   const heldTool = createHeldTool(inventory, initialSave?.heldTool ?? null)
   const primaryWeapons = createPrimaryWeaponSelection()
+  if (initialSave) {
+    primaryWeapons.restoreState(initialSave)
+  }
+  primaryWeapons.syncWithInventory(inventory)
   /** Whether the player could build a palisade segment right now, ignoring
    *  position — same "own the rare/costly component, full cost re-checked at
    *  build time" gate `hasWoodenTorch` uses, just against a count instead of
@@ -1067,6 +1072,7 @@ export async function createApp(
     mouseLook,
     inventory,
     heldTool,
+    primaryWeapons,
     playerTorch,
     questManager,
     dayNight,
@@ -1095,9 +1101,11 @@ export async function createApp(
    *  e.g. "New Game") — an unrelated terrain-param rebuild on the same seed
    *  should keep it, since item ids are seed-derived and stay meaningful. */
   bootMark('rebuildWorld')
+  let cancelActivePlayerIntent: () => void = () => {}
   const rebuildWorld = async (resetCollectedItems = false) => {
     if (rebuilding) return
     rebuilding = true
+    cancelActivePlayerIntent()
     gui.setBusy(true)
     try {
       syncSeedInUrl(config.seed)
@@ -1346,6 +1354,8 @@ export async function createApp(
     onRead: inventoryWiring.readBookItem,
     onSellInstances: inventoryWiring.sellInventoryInstances,
     onSharpen: inventoryWiring.sharpenInventoryWeapon,
+    onSetPrimaryMelee: inventoryWiring.setPrimaryMeleeWeapon,
+    onSetPrimaryRanged: inventoryWiring.setPrimaryRangedWeapon,
     onPlaceTrap: (kind) => {
       inventoryScreen.close()
       placement.placeTrapAtAim(kind)
@@ -1367,6 +1377,8 @@ export async function createApp(
       inventory.maxSize,
       heldTool.held(),
       buildInventoryGroups(inventory, dayNight.elapsedDays),
+      primaryWeapons.primaryMelee(),
+      primaryWeapons.primaryRanged(),
     )
   }
 
@@ -1405,6 +1417,19 @@ export async function createApp(
     rotateLeft: placementPreview.rotateLeft,
     rotateRight: placementPreview.rotateRight,
   })
+
+  const cookMealIntent = createCookMealIntent({
+    ctx: actionCtx,
+    bundle,
+    player,
+    inventory,
+    dayNight,
+    survival,
+    placementPreview,
+    busy,
+    toast,
+  })
+  cancelActivePlayerIntent = () => cookMealIntent.cancel()
 
   const syncNearTownQuickActions = (): void => {
     vueUi.setQuickActionsNearTown(rest.isNearTown())
@@ -1474,6 +1499,8 @@ export async function createApp(
     onEquipFishingRod: () => inventoryWiring.equipTool('fishing_rod'),
     onCancelWorkContract: contracts.cancelContract,
     onHireHelp: contracts.openHireHelp,
+    onEatAnything: () => runEatAnything(inventory, player, dayNight, survival.consumeItem),
+    onCookMeal: () => cookMealIntent.startCookMeal(),
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -1797,6 +1824,7 @@ export async function createApp(
     vueUi.configureAbortRest(null)
     timeSkip.cancel()
     timeSkipOverlay.dispose()
+    cookMealIntent.cancel()
     busy.cancel()
     busyOverlay.dispose()
     restCamp.dispose()

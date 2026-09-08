@@ -7,6 +7,9 @@ import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { FOOD_SOURCE_SPECIES_LABEL, foodHungerRelief, FRESHNESS_STAGE_LABEL } from '../../items/foodFreshness'
 import { isToolKind } from '../../items/HeldTool'
+import { isMeleeToolKind, isRangedTool } from '../../items/itemCatalog'
+import { isWeaponMaintenanceKind } from '../../items/itemInstances'
+import { isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from '../../items/primaryWeapons'
 import { type BookTier, consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
@@ -121,6 +124,22 @@ const instanceRows = computed(() => {
 
 const whetstoneCount = computed<number>(() => ui.inventory.counts.whetstone ?? 0)
 const merchantOpen = computed(() => ui.merchant.open)
+const isPrimaryMelee = computed(() => props.selectedItem
+  ? isPrimaryMeleeAssignment(props.selectedItem, ui.inventory.primaryMelee)
+  : false)
+const isPrimaryRanged = computed(() => props.selectedItem
+  ? isPrimaryRangedAssignment(props.selectedItem, null, ui.inventory.primaryRanged)
+  : false)
+const showSetPrimaryMelee = computed(() =>
+  props.selectedItem != null
+  && isMeleeToolKind(props.selectedItem)
+  && !isWeaponMaintenanceKind(props.selectedItem)
+  && !isPrimaryMelee.value)
+const showSetPrimaryRanged = computed(() =>
+  props.selectedItem != null
+  && isRangedTool(props.selectedItem)
+  && !isWeaponMaintenanceKind(props.selectedItem)
+  && !isPrimaryRanged.value)
 
 useTouchScroll(panel)
 
@@ -150,6 +169,22 @@ function sharpenInstance(id: string): void {
   if (result === 'no_whetstone') showToast('Brak osełki.', 'error')
   else if (result === 'already_max') showToast('Ostrość jest już maksymalna.', 'error')
   else showToast('Nie można naostrzyć tej broni.', 'error')
+}
+
+function setPrimaryMelee(kind: ItemKind, instanceId: string | null = null): void {
+  ui.inventory.onSetPrimaryMelee?.(kind, instanceId)
+}
+
+function setPrimaryRanged(kind: ItemKind, instanceId: string | null = null): void {
+  ui.inventory.onSetPrimaryRanged?.(kind, instanceId)
+}
+
+function isInstancePrimaryMelee(id: string): boolean {
+  return props.selectedItem != null && isPrimaryMeleeAssignment(props.selectedItem, { kind: props.selectedItem, instanceId: id })
+}
+
+function isInstancePrimaryRanged(id: string): boolean {
+  return props.selectedItem != null && isPrimaryRangedAssignment(props.selectedItem, id, ui.inventory.primaryRanged)
 }
 </script>
 
@@ -294,6 +329,18 @@ function sharpenInstance(id: string): void {
         label="Stan"
         :value="BOOK_STATE_LABEL[bookState]"
       />
+
+      <InventoryScreenSection
+        v-if="isPrimaryMelee"
+        label="Skrót"
+        value="Podstawowa broń biała"
+      />
+
+      <InventoryScreenSection
+        v-if="isPrimaryRanged"
+        label="Skrót"
+        value="Podstawowa broń dystansowa"
+      />
     </div>
 
     <div
@@ -314,6 +361,26 @@ function sharpenInstance(id: string): void {
           </span>
           <span v-else>{{ row.count }}× {{ firstUpperCase(item.label) }} {{ row.conditionPercent }}%</span>
           <div class="flex flex-wrap gap-2">
+            <template v-if="melee && isWeaponMaintenanceKind(item.kind)">
+              <ItemsScreenItemButton
+                v-for="id in row.ids"
+                :key="`primary-melee-${id}`"
+                class="min-h-0 py-1"
+                :label="isInstancePrimaryMelee(id) ? 'Podstawowa broń biała' : 'Ustaw jako podstawową broń białą'"
+                :disabled="isInstancePrimaryMelee(id)"
+                @click="setPrimaryMelee(item.kind, id)"
+              />
+            </template>
+            <template v-if="ranged && isWeaponMaintenanceKind(item.kind)">
+              <ItemsScreenItemButton
+                v-for="id in row.ids"
+                :key="`primary-ranged-${id}`"
+                class="min-h-0 py-1"
+                :label="isInstancePrimaryRanged(id) ? 'Podstawowa broń dystansowa' : 'Ustaw jako podstawową broń dystansową'"
+                :disabled="isInstancePrimaryRanged(id)"
+                @click="setPrimaryRanged(item.kind, id)"
+              />
+            </template>
             <template v-if="row.sharpnessPercent !== null && row.sharpnessPercent < 100">
               <ItemsScreenItemButton
                 v-for="id in row.ids"
@@ -354,6 +421,16 @@ function sharpenInstance(id: string): void {
         v-if="trapKindForItem(item.kind)"
         label="Zastaw"
         @click="onPlaceTrap(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="showSetPrimaryMelee"
+        label="Ustaw jako podstawową broń białą"
+        @click="setPrimaryMelee(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="showSetPrimaryRanged"
+        label="Ustaw jako podstawową broń dystansową"
+        @click="setPrimaryRanged(item.kind)"
       />
       <ItemsScreenItemButton
         v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"

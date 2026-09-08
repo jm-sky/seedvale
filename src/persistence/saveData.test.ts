@@ -34,6 +34,8 @@ const validSave: SaveData = {
   timeOfDay: 0.32,
   elapsedDays: 2,
   heldTool: null,
+  primaryMeleeWeapon: null,
+  primaryRangedWeapon: null,
   treeOverrides: {},
   playerTorch: null,
   placedTents: [],

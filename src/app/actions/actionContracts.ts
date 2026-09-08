@@ -23,7 +23,7 @@ export type ActionAvailability =
   | { available: false; missing: readonly ActionRequirement[] }
 
 export type ActionResult =
-  | { ok: true }
+  | { ok: true, placedFireId?: string }
   | { ok: false; missing: readonly ActionRequirement[] }
 
 /** `null` when `actual >= required` (requirement satisfied). */

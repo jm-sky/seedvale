@@ -90,6 +90,10 @@ export type QuickActionsHandlers = {
    *  already-existing unfinished target, distinct from `onStartPlacementPreview`
    *  with kind `'workContract'` (a brand-new target). */
   onHireHelp?: () => void
+  /** "Zjedz cokolwiek" (plan ui-input-010) — deterministic hunger-food resolver. */
+  onEatAnything?: () => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }
+  /** "Ugotuj posiłek" (plan ui-input-010) — multi-stage cook-meal intent. */
+  onCookMeal?: () => void
   /** Initial digging-capability ownership for showing dig/level buttons. */
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */

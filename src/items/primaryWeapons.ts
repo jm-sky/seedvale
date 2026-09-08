@@ -5,24 +5,24 @@ import { isWeaponMaintenanceKind } from './itemInstances'
 
 export type PrimaryWeaponChoice = { kind: ItemKind, instanceId: string | null }
 
-/** Remembers "the melee weapon" / "the ranged weapon" the player last
- *  equipped, so a HUD shortcut can re-equip either with one click without a
- *  separate favorite-picker UI (plan `ui-input-002` §6). Session-local only —
- *  not part of `SaveData`; re-populates itself the first time the player
- *  equips a melee/ranged weapon in a session, same as before this feature
- *  existed except for the shortcut. Not a second equipment model: both
- *  choices resolve through the same `HeldTool.equip()` and are re-validated
- *  against `Inventory`, mirroring `HeldTool.syncWithInventory`'s contract. */
+export type SavePrimaryWeaponChoice = PrimaryWeaponChoice
+
+/** Explicit primary melee/ranged weapon slots configured from Inventory and
+ *  restored from save. Both choices resolve through the same `HeldTool.equip()`
+ *  path and are re-validated against `Inventory` via `syncWithInventory()`. */
 export type PrimaryWeaponSelection = {
   primaryMelee: () => PrimaryWeaponChoice | null
   primaryRanged: () => PrimaryWeaponChoice | null
-  /** Call after any successful `HeldTool.equip()` — updates the remembered
-   *  choice when the equipped kind is melee/ranged, no-ops otherwise. */
+  setPrimaryMelee: (choice: PrimaryWeaponChoice) => void
+  setPrimaryRanged: (choice: PrimaryWeaponChoice) => void
+  /** Call after any successful ordinary `HeldTool.equip()` — populates an
+   *  empty melee/ranged slot only; never overwrites an explicit assignment. */
   noteEquipped: (kind: ItemKind, instanceId: string | null) => void
   /** Drops a choice whose kind is no longer in inventory, and re-resolves its
-   *  instance id (weapon-maintenance kinds) the same way `HeldTool` does —
-   *  call alongside `heldTool.syncWithInventory()`. */
+   *  instance id (weapon-maintenance kinds) the same way `HeldTool` does. */
   syncWithInventory: (inventory: Inventory) => void
+  exportState: () => { primaryMeleeWeapon: SavePrimaryWeaponChoice | null, primaryRangedWeapon: SavePrimaryWeaponChoice | null }
+  restoreState: (saved: { primaryMeleeWeapon?: SavePrimaryWeaponChoice | null, primaryRangedWeapon?: SavePrimaryWeaponChoice | null }) => void
 }
 
 function resolveInstanceId(inventory: Inventory, kind: ItemKind, preferId: string | null): string | null {
@@ -33,6 +33,13 @@ function resolveInstanceId(inventory: Inventory, kind: ItemKind, preferId: strin
   return instances[0]!.id
 }
 
+function syncChoice(inventory: Inventory, choice: PrimaryWeaponChoice | null): PrimaryWeaponChoice | null {
+  if (!choice) return null
+  return inventory.has(choice.kind, 1)
+    ? { kind: choice.kind, instanceId: resolveInstanceId(inventory, choice.kind, choice.instanceId) }
+    : null
+}
+
 export function createPrimaryWeaponSelection(): PrimaryWeaponSelection {
   let melee: PrimaryWeaponChoice | null = null
   let ranged: PrimaryWeaponChoice | null = null
@@ -40,13 +47,35 @@ export function createPrimaryWeaponSelection(): PrimaryWeaponSelection {
   return {
     primaryMelee: () => melee,
     primaryRanged: () => ranged,
+    setPrimaryMelee(choice) { melee = choice },
+    setPrimaryRanged(choice) { ranged = choice },
     noteEquipped(kind, instanceId) {
-      if (isMeleeToolKind(kind)) melee = { kind, instanceId }
-      else if (isRangedTool(kind)) ranged = { kind, instanceId }
+      if (isMeleeToolKind(kind) && !melee) melee = { kind, instanceId }
+      else if (isRangedTool(kind) && !ranged) ranged = { kind, instanceId }
     },
     syncWithInventory(inventory) {
-      if (melee) melee = inventory.has(melee.kind, 1) ? { kind: melee.kind, instanceId: resolveInstanceId(inventory, melee.kind, melee.instanceId) } : null
-      if (ranged) ranged = inventory.has(ranged.kind, 1) ? { kind: ranged.kind, instanceId: resolveInstanceId(inventory, ranged.kind, ranged.instanceId) } : null
+      melee = syncChoice(inventory, melee)
+      ranged = syncChoice(inventory, ranged)
+    },
+    exportState: () => ({
+      primaryMeleeWeapon: melee ? { ...melee } : null,
+      primaryRangedWeapon: ranged ? { ...ranged } : null,
+    }),
+    restoreState(saved) {
+      melee = saved.primaryMeleeWeapon ?? null
+      ranged = saved.primaryRangedWeapon ?? null
     },
   }
+}
+
+export function isPrimaryMeleeAssignment(kind: ItemKind, choice: PrimaryWeaponChoice | null): boolean {
+  if (!choice || choice.kind !== kind) return false
+  if (!isWeaponMaintenanceKind(kind)) return true
+  return choice.instanceId != null
+}
+
+export function isPrimaryRangedAssignment(kind: ItemKind, instanceId: string | null, choice: PrimaryWeaponChoice | null): boolean {
+  if (!choice || choice.kind !== kind) return false
+  if (!isWeaponMaintenanceKind(kind)) return true
+  return choice.instanceId === instanceId
 }

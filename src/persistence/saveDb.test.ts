@@ -38,6 +38,8 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
     timeOfDay: 0.32,
     elapsedDays: overrides?.elapsedDays ?? 0,
     heldTool: null,
+    primaryMeleeWeapon: null,
+    primaryRangedWeapon: null,
     treeOverrides: {},
     playerTorch: null,
     placedTents: [],

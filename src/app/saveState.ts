@@ -3,6 +3,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { createMouseLook } from '../input/MouseLook'
 import type { HeldTool } from '../items/HeldTool'
 import type { Inventory } from '../items/Inventory'
+import type { PrimaryWeaponSelection } from '../items/primaryWeapons'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
@@ -58,6 +59,7 @@ export type SaveStateDeps = {
   mouseLook: ReturnType<typeof createMouseLook>
   inventory: Inventory
   heldTool: HeldTool
+  primaryWeapons: PrimaryWeaponSelection
   playerTorch: PlayerTorch
   questManager: QuestManager
   dayNight: DayNightState
@@ -107,7 +109,7 @@ export type SaveStateDeps = {
  */
 export function createSaveState(deps: SaveStateDeps): SaveState {
   const {
-    config, bundle, player, mouseLook, inventory, heldTool, playerTorch,
+    config, bundle, player, mouseLook, inventory, heldTool, primaryWeapons, playerTorch,
     questManager, dayNight, mapDiscovery, locationKnowledge, navigationTargets, landOwnership, vueUi, worldFlags, fishingBait,
     resolvedHiddenFindSpotIds, badges, reputation,
   } = deps
@@ -147,6 +149,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     timeOfDay: dayNight.timeOfDay,
     elapsedDays: dayNight.elapsedDays,
     heldTool: heldTool.held(),
+    ...primaryWeapons.exportState(),
     treeOverrides: deps.getTreeLifecycle().serializeOverrides(),
     playerTorch: playerTorch.isLit() && playerTorch.source()
       ? { source: playerTorch.source()!, fuelRemaining: playerTorch.fuelRemaining() }

@@ -22,8 +22,10 @@ import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
 import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
+import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
+import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
@@ -452,7 +454,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 8
+export const CURRENT_SAVE_VERSION = 9
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -493,6 +495,10 @@ export type SaveData = {
   elapsedDays: number
   /** Single held-tool slot (`items/HeldTool.ts`). Null when nothing is in hand. */
   heldTool: ItemKind | null
+  /** Explicit primary weapon slots (plan ui-input-010) — player configuration,
+   *  not the currently held tool. */
+  primaryMeleeWeapon: SavePrimaryWeaponChoice | null
+  primaryRangedWeapon: SavePrimaryWeaponChoice | null
   /** Sparse tree lifecycle overrides (`world/treeLifecycle.ts`) — only trees
    *  whose state diverges from procedural default + world-time growth. */
   treeOverrides: Record<string, SaveTreeOverride>
@@ -623,6 +629,25 @@ function isHeldToolField(value: unknown): value is ItemKind | null {
   if (value === null) return true
   if (typeof value !== 'string') return false
   return isToolKind(value as ItemKind)
+}
+
+function normalizeSavePrimaryWeaponChoice(
+  value: unknown,
+  slot: 'melee' | 'ranged',
+): SavePrimaryWeaponChoice | null {
+  if (value == null) return null
+  if (!value || typeof value !== 'object') return null
+  const v = value as Record<string, unknown>
+  if (typeof v.kind !== 'string') return null
+  const kind = v.kind as ItemKind
+  if (slot === 'melee' ? !isMeleeToolKind(kind) : !isRangedTool(kind)) return null
+  if (v.instanceId !== undefined && v.instanceId !== null && typeof v.instanceId !== 'string') return null
+  return { kind, instanceId: typeof v.instanceId === 'string' ? v.instanceId : null }
+}
+
+function isPrimaryWeaponChoiceField(value: unknown, slot: 'melee' | 'ranged'): value is SavePrimaryWeaponChoice | null {
+  if (value === null) return true
+  return normalizeSavePrimaryWeaponChoice(value, slot) !== null
 }
 
 function isTreeOverridesField(value: unknown): value is Record<string, SaveTreeOverride> {
@@ -1427,6 +1452,8 @@ export function isSaveData(value: unknown): value is SaveData {
   if (typeof v.timeOfDay !== 'number') return false
   if (typeof v.elapsedDays !== 'number') return false
   if (!isHeldToolField(v.heldTool)) return false
+  if (!isPrimaryWeaponChoiceField(v.primaryMeleeWeapon, 'melee')) return false
+  if (!isPrimaryWeaponChoiceField(v.primaryRangedWeapon, 'ranged')) return false
   if (!isTreeOverridesField(v.treeOverrides)) return false
   if (!isPlayerTorchField(v.playerTorch)) return false
   if (!isPlacedTentsField(v.placedTents)) return false
@@ -1749,6 +1776,16 @@ function migrateSaveV7ToV8(data: unknown): unknown {
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
+function migrateSaveV8ToV9(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return {
+    ...v,
+    version: 9,
+    primaryMeleeWeapon: normalizeSavePrimaryWeaponChoice(v.primaryMeleeWeapon, 'melee'),
+    primaryRangedWeapon: normalizeSavePrimaryWeaponChoice(v.primaryRangedWeapon, 'ranged'),
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -1757,6 +1794,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   5: migrateSaveV5ToV6,
   6: migrateSaveV6ToV7,
   7: migrateSaveV7ToV8,
+  8: migrateSaveV8ToV9,
 }
 
 function detectStoredVersion(value: unknown): number | null {

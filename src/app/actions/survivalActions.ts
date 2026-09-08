@@ -57,6 +57,14 @@ import {
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 import { type ActionResult, capabilityRequirement, itemRequirement, targetRequirement, toResult } from './actionContracts'
 
+/** Optional async completion hooks for multi-stage player intents (plan
+ *  ui-input-010). Normal callers omit these; the cook-meal controller uses
+ *  them to continue only after final revalidation succeeds. */
+export type SurvivalActionLifecycle = {
+  onComplete?: (outcome: 'success' | 'failure') => void
+  onCancel?: () => void
+}
+
 /** Survival-loop actions on the world around the player: butchering/burying a
  *  corpse, lighting and cooking at a campfire, destroying a depleted habitat,
  *  drinking/filling at a `WaterSource`, and eating what's in the bag. They all
@@ -65,8 +73,8 @@ import { type ActionResult, capabilityRequirement, itemRequirement, targetRequir
 export type SurvivalActions = {
   startBuryCorpse: (animal: AnimalAgent) => ActionResult
   startHarvestMeat: (animal: AnimalAgent) => ActionResult
-  startIgniteFire: (fire: VillageFire) => ActionResult
-  startCookAt: (fire: VillageFire) => ActionResult
+  startIgniteFire: (fire: VillageFire, lifecycle?: SurvivalActionLifecycle) => ActionResult
+  startCookAt: (fire: VillageFire, lifecycle?: SurvivalActionLifecycle) => ActionResult
   startDestroySpawner: (spawner: PreySpawner) => ActionResult
   drinkFromWaterSource: (source: WaterSource) => ActionResult
   fillWaterskin: (source: WaterSource) => ActionResult
@@ -182,7 +190,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
   /** Lights an unlit campfire (busy channel, blurred) — "dołóż gałąź" on an
    *  already-lit fire stays instant/inline in `gameLoop.ts`, not routed
    *  through here. */
-  const startIgniteFire = (fire: VillageFire): ActionResult => {
+  const startIgniteFire = (fire: VillageFire, lifecycle?: SurvivalActionLifecycle): ActionResult => {
     if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     if (!inventory.hasCapability('fire_starting')) {
       toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
@@ -196,7 +204,10 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     // never retimed (plan 128 §3.1).
     const duration = IGNITE_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value)
     busy.start(duration, 'Rozpalanie ogniska…', () => {
-      if (fire.isLit()) return
+      if (fire.isLit()) {
+        lifecycle?.onComplete?.('failure')
+        return
+      }
       let consumedFuel = false
       for (const kind of FIRE_FUEL_KINDS) {
         if (inventory.remove(kind, 1)) {
@@ -204,13 +215,17 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
           break
         }
       }
-      if (!consumedFuel) return
+      if (!consumedFuel) {
+        lifecycle?.onComplete?.('failure')
+        return
+      }
       fire.light()
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.igniteFire)
       toast.show('Ognisko zapłonęło.')
-    }, { blurred: true })
+      lifecycle?.onComplete?.('success')
+    }, { blurred: true, onCancel: () => lifecycle?.onCancel?.() })
     return { ok: true }
   }
 
@@ -258,7 +273,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
    *  `resolveCookingCapacity`/`findCookingBatch`). Still one busy channel
    *  producing `batch × recipe.count` of the output at once, not N separate
    *  cooking actions. */
-  const startCookAt = (fire: VillageFire): ActionResult => {
+  const startCookAt = (fire: VillageFire, lifecycle?: SurvivalActionLifecycle): ActionResult => {
     if (isActionBlocked(ctx)) return { ok: false, missing: [] }
     if (!fire.isLit()) {
       toast.show('Ognisko musi się palić.', 'error')
@@ -283,6 +298,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     busy.start(COOK_DURATION_SEC, label, () => {
       if (!fire.isLit()) {
         toast.show('Ogień zgasł.', 'error')
+        lifecycle?.onComplete?.('failure')
         return
       }
       // Re-clamped against inventory as it stands right now — the channel may
@@ -290,29 +306,34 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       const batch = Math.min(capacity, inventory.count(recipe.input))
       if (batch <= 0) {
         toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
+        lifecycle?.onComplete?.('failure')
         return
       }
       const nowDays = dayNight.elapsedDays
       const fifo = inventory.fifoFoodBatch(recipe.input, nowDays)
       if (fifo && isFoodBatchSpoiled(recipe.input, fifo, nowDays)) {
         toast.show('To jedzenie się zepsuło.', 'error')
+        lifecycle?.onComplete?.('failure')
         return
       }
       const outputCount = outputFor(batch)
       const hasRoom = inventory.canAdd(recipe.output, outputCount)
       if (!hasRoom) {
         toast.show(inventoryFullToastText(inventory, recipe.output, outputCount), 'error')
+        lifecycle?.onComplete?.('failure')
         return
       }
       const consumed = inventory.removeWithFreshness(recipe.input, batch, nowDays)
       if (!consumed) {
         toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
+        lifecycle?.onComplete?.('failure')
         return
       }
       const outputs = processCookedBatches(recipe.input, recipe.output, consumed, nowDays, CARRIED_FOOD_DECAY)
       const produced = outputs.reduce((sum, b) => sum + b.count, 0)
       if (produced <= 0) {
         toast.show('To jedzenie się zepsuło.', 'error')
+        lifecycle?.onComplete?.('failure')
         return
       }
       inventory.addWithFreshness(recipe.output, produced, outputs, nowDays)
@@ -320,7 +341,8 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       ctx.onInventoryChanged()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
       toast.show(`+${produced} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
-    }, { blurred: true })
+      lifecycle?.onComplete?.('success')
+    }, { blurred: true, onCancel: () => lifecycle?.onCancel?.() })
     return { ok: true }
   }
 

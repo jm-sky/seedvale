@@ -6,6 +6,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
+import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { TradeResult } from '../items/trade'
@@ -85,6 +86,10 @@ type InventoryState = {
   /** "Postaw" (plan 164) — places a purchased `chest` in the world ahead of
    *  the player, same ground-suitability flow as `onPlaceTent`. */
   onPlaceContainer: (() => void) | null
+  primaryMelee: PrimaryWeaponChoice | null
+  primaryRanged: PrimaryWeaponChoice | null
+  onSetPrimaryMelee: ((kind: ItemKind, instanceId: string | null) => void) | null
+  onSetPrimaryRanged: ((kind: ItemKind, instanceId: string | null) => void) | null
 }
 type PauseMenuState = {
   open: boolean; seed: number; playerName: string; activeSaveName: string
@@ -149,6 +154,7 @@ export type QuickActionsCategoryId =
   | 'czekaj'
   | 'skrzynia'
   | 'odpoczynek'
+  | 'przetrwanie'
   | 'zlecenia'
 
 type QuickActionsState = {
@@ -248,6 +254,8 @@ type QuickActionsState = {
    *  active contract yet. Distinct from "Zleć budowę" (`onStartPlacementPreview`
    *  with kind `'workContract'`), which places a brand-new target. */
   onHireHelp: (() => void) | null
+  onEatAnything: (() => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }) | null
+  onCookMeal: (() => void) | null
 }
 type MerchantState = {
   open: boolean
@@ -479,7 +487,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
@@ -509,7 +517,7 @@ export const ui = reactive({
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
     hasFishingRod: false, onEquipFishingRod: null,
-    workContracts: [], onCancelWorkContract: null,
+    workContracts: [], onCancelWorkContract: null, onEatAnything: null, onCookMeal: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,
@@ -734,6 +742,8 @@ export function openInventory(
   maxSize: number,
   heldTool: ItemKind | null,
   groups: readonly InventoryGroupView[],
+  primaryMelee: PrimaryWeaponChoice | null,
+  primaryRanged: PrimaryWeaponChoice | null,
   onDrop: (kind: ItemKind) => void,
   onEquip: (kind: ItemKind) => void,
   onUnequip: () => void,
@@ -743,6 +753,8 @@ export function openInventory(
   onSellInstances: (instanceIds: readonly string[]) => TradeResult,
   onSharpen: (instanceId: string) => SharpenResult,
   onPlaceContainer: () => void,
+  onSetPrimaryMelee: (kind: ItemKind, instanceId: string | null) => void,
+  onSetPrimaryRanged: (kind: ItemKind, instanceId: string | null) => void,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -751,6 +763,8 @@ export function openInventory(
   ui.inventory.totalSize = totalSize
   ui.inventory.maxSize = maxSize
   ui.inventory.heldTool = heldTool
+  ui.inventory.primaryMelee = primaryMelee
+  ui.inventory.primaryRanged = primaryRanged
   ui.inventory.onDrop = onDrop
   ui.inventory.onEquip = onEquip
   ui.inventory.onUnequip = onUnequip
@@ -760,6 +774,8 @@ export function openInventory(
   ui.inventory.onSellInstances = onSellInstances
   ui.inventory.onSharpen = onSharpen
   ui.inventory.onPlaceContainer = onPlaceContainer
+  ui.inventory.onSetPrimaryMelee = onSetPrimaryMelee
+  ui.inventory.onSetPrimaryRanged = onSetPrimaryRanged
   ui.inventory.open = true
   emitUiOpen()
 }
@@ -771,6 +787,8 @@ export function refreshInventory(
   maxSize: number,
   heldTool: ItemKind | null,
   groups: readonly InventoryGroupView[],
+  primaryMelee: PrimaryWeaponChoice | null,
+  primaryRanged: PrimaryWeaponChoice | null,
 ): void {
   ui.inventory.counts = { ...counts }
   ui.inventory.groups = groups
@@ -779,6 +797,8 @@ export function refreshInventory(
   ui.inventory.totalSize = totalSize
   ui.inventory.maxSize = maxSize
   ui.inventory.heldTool = heldTool
+  ui.inventory.primaryMelee = primaryMelee
+  ui.inventory.primaryRanged = primaryRanged
 }
 export function closeInventory(): void {
   ui.inventory.open = false

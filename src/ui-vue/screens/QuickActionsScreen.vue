@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ScrollText, ShovelIcon, Sword, TractorIcon, TreesIcon, Zap } from 'lucide-vue-next'
+import { BedSingleIcon, BowArrow, BoxIcon, BuildingIcon, ClockIcon, FishingRod, FlameIcon, LockIcon, ScrollText, ShovelIcon, Sword, TractorIcon, TreesIcon, Utensils, Zap } from 'lucide-vue-next'
 import { type Component, computed, onUnmounted, ref, watch } from 'vue'
 import QuickActionsGroup from '@/components/QuickActionsGroup.vue'
 import type { PlacementPreviewKind } from '../../app/actions/placementPreviewActions'
@@ -133,6 +133,17 @@ function equipFishingRod(): void {
   ui.quickActions.onEquipFishingRod?.()
 }
 
+function eatAnything(): void {
+  const result = ui.quickActions.onEatAnything?.() ?? { ok: false, toast: 'Nie masz nic do jedzenia.', kind: 'error' as const }
+  if (result.ok) closeQuickActions()
+  else if (result.toast) showToast(result.toast, result.kind)
+}
+
+function cookMeal(): void {
+  closeQuickActions()
+  ui.quickActions.onCookMeal?.()
+}
+
 function cancelWorkContract(id: string): void {
   ui.quickActions.onCancelWorkContract?.(id)
 }
@@ -180,6 +191,11 @@ const shovelActions: Action[] = [
 
 const terrainActions: Action[] = [
   { label: 'Przygotuj teren', cost: 'łopata', onClick: prepareTerrain },
+]
+
+const survivalActions: Action[] = [
+  { label: 'Zjedz cokolwiek', cost: 'jedzenie', onClick: eatAnything },
+  { label: 'Ugotuj posiłek', cost: 'surowe mięso/ryba', onClick: cookMeal },
 ]
 
 // "Postaw skrzynię"/"Rozstaw namiot"/"Zbuduj ognisko"/"Zbuduj palenisko"/
@@ -249,6 +265,7 @@ const CATEGORY_LABEL: Record<QuickActionsCategoryId, string> = {
   czekaj: 'Czekaj',
   skrzynia: 'Skrzynia',
   odpoczynek: 'Odpoczynek',
+  przetrwanie: 'Przetrwanie',
   zlecenia: 'Zlecenia',
 }
 
@@ -264,6 +281,7 @@ const categories = computed(() => (
     { id: 'czekaj', visible: true, icon: ClockIcon },
     { id: 'skrzynia', visible: ui.quickActions.hasCarriedContainer, icon: BoxIcon },
     { id: 'odpoczynek', visible: true, icon: BedSingleIcon },
+    { id: 'przetrwanie', visible: true, icon: Utensils },
     { id: 'zlecenia', visible: ui.quickActions.workContracts.length > 0, icon: ScrollText },
   ] as const satisfies readonly { id: QuickActionsCategoryId, visible: boolean, icon: Component }[]
 ).filter((c) => c.visible))
@@ -465,6 +483,19 @@ const categories = computed(() => (
           v-if="ui.quickActions.nearTown"
           label="Nocuj w mieście"
           @click="rest('town')"
+        />
+      </QuickActionsGroup>
+      <QuickActionsGroup
+        v-if="ui.quickActions.category === 'przetrwanie'"
+        label="Przetrwanie"
+      >
+        <QuickActionsButton
+          v-for="action in survivalActions"
+          :key="action.label"
+          :label="action.label"
+          :cost="action.cost"
+          :disabled="action.disabled"
+          @click="action.onClick"
         />
       </QuickActionsGroup>
       <QuickActionsGroup

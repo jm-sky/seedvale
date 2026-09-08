@@ -120,10 +120,10 @@ const getUserActions = (
     if (!result.ok) return result
 
     inventory.remove('branch', SIMPLE_FIRE_BRANCH_COST)
-    bundle.placedFires.place(aim.x, aim.z, 'simple')
+    const entry = bundle.placedFires.place(aim.x, aim.z, 'simple')
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
 
-    return { ok: true }
+    return { ok: true, placedFireId: entry.id }
   }
 
   // `buildFirePit` intentionally has no `fire_starting` capability
