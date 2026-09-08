@@ -97,6 +97,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | 💡 `tools-006--world-observatory.md`                                        | -       | ⚪ | XL     | -      |
 | ◼️ `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | fauna-003 |
+| ◼️ `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 
 ---
 
@@ -194,7 +195,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `021`
-- items-player: `020`
+- items-player: `021`
 - npc: `029`
 - persistence: `005`
 - quests-progression: `012`
