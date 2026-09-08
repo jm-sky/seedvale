@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/groundActions.test.ts`
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
 - `app/gameLoop.ts`
@@ -56,6 +57,7 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `fauna/mountedSpeed.test.ts`
 - `fauna/playerAwareness.ts`
+- `items/Inventory.test.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`
@@ -63,6 +65,8 @@ Generated from TypeScript imports.
 - `items/tentProp.ts`
 - `navigation/navigation.ts`
 - `player/PlayerController.test.ts`
+- `player/humanCarryCapacity.test.ts`
+- `player/physicalWorkStrength.test.ts`
 - `player/playerDamage.ts`
 - `settlement/PlacedFires.ts`
 - `settlement/SettlementsManager.ts`
@@ -212,6 +216,38 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
+
+## `player/humanCarryCapacity.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `player/humanCarryCapacity.ts`
+
+## `player/humanCarryCapacity.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `items/Inventory.test.ts`
+- `player/humanCarryCapacity.test.ts`
+
+## `player/physicalWorkStrength.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `player/physicalWorkStrength.ts`
+
+## `player/physicalWorkStrength.ts`
+
+**Imported by**
+
+- `ai/npcProfessionWork.test.ts`
+- `ai/npcProfessionWork.ts`
+- `app/actions/groundActions.test.ts`
+- `app/actions/groundActions.ts`
+- `player/physicalWorkStrength.test.ts`
 
 ## `player/playerCombat.test.ts`
 

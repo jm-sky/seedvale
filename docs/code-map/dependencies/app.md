@@ -163,11 +163,14 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
+- `player/PlayerController.ts`
+- `player/physicalWorkStrength.ts`
 - `reputation/ReputationManager.ts`
 - `reputation/socialExposure.ts`
 - `settlement/propUtils.ts`
 - `settlement/props.ts`
 - `terrain/dig.ts`
+- `terrain/digAction.ts`
 - `world/hiddenFinds.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
@@ -187,6 +190,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/trade.ts`
 - `player/PlayerNeeds.ts`
+- `player/physicalWorkStrength.ts`
 - `reputation/ReputationManager.ts`
 - `reputation/socialExposure.ts`
 - `settlement/hiddenTreasure.ts`
@@ -537,6 +541,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
+- `player/humanCarryCapacity.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `render/programPrewarm.ts`

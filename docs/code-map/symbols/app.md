@@ -41,9 +41,9 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/groundActions.ts`
 
-- `createGroundActions` — function — line 103
-- `GroundActions` — type — line 51
-- `GroundActionsDeps` — type — line 75
+- `createGroundActions` — function — line 104
+- `GroundActions` — type — line 52
+- `GroundActionsDeps` — type — line 76
 
 ## `app/actions/mountActions.ts`
 
@@ -141,13 +141,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 239
+- `createApp` — function — line 240
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 209
+- `NewAppOptions` — type — line 210
 
 ## `app/gameLoop.ts`
 

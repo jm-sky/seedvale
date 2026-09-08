@@ -95,7 +95,7 @@ Generated from exported TypeScript symbols.
 - `NPC_HEIGHT` — const — line 291
 - `NPC_MODEL_URLS` — const — line 355
 - `NPC_SHADOW_DISTANCE` — const — line 305
-- `NpcAgent` — class — line 825
+- `NpcAgent` — class — line 826
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
@@ -244,10 +244,10 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 43
-- `findWeaponNeedingMaintenance` — function — line 69
-- `NpcWorkContext` — type — line 89
-- `planProfessionWork` — function — line 429
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 44
+- `findWeaponNeedingMaintenance` — function — line 70
+- `NpcWorkContext` — type — line 90
+- `planProfessionWork` — function — line 435
 
 ## `ai/npcStrategies.ts`
 

@@ -547,7 +547,10 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `items/Inventory.ts`
 - `items/weaponMaintenance.ts`
+- `player/physicalWorkStrength.ts`
 - `settlement/household.ts`
+- `terrain/depositMining.ts`
+- `world/fishing.ts`
 
 ## `ai/npcProfessionWork.ts`
 
@@ -563,6 +566,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/weaponMaintenance.ts`
 - `player/PlayerController.ts`
+- `player/physicalWorkStrength.ts`
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/places.ts`

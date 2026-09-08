@@ -1045,6 +1045,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/gatheringActions.ts`
 - `app/createApp.ts`

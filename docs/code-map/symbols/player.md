@@ -15,6 +15,24 @@ Generated from exported TypeScript symbols.
 - `resolveCameraBoom` — function — line 52
 - `withCaveFloorFallback` — function — line 203
 
+## `player/humanCarryCapacity.ts`
+
+- `HUMAN_CARRY_NEUTRAL_KG` — const — line 30
+- `HUMAN_CARRY_STRENGTH_NEUTRAL` — const — line 26
+  - domain: items-player
+  - system: human-carry-capacity
+  - role: Maps resolved human Strength onto body carry capacity in kilograms.
+- `humanBodyCarryCapacityKg` — function — line 32
+
+## `player/physicalWorkStrength.ts`
+
+- `PHYSICAL_WORK_STRENGTH_NEUTRAL` — const — line 27
+  - domain: items-player
+  - system: physical-work-strength
+  - role: Maps resolved Strength onto existing physical-work duration.
+- `physicalWorkDuration` — function — line 35
+- `physicalWorkSpeedMultiplier` — function — line 29
+
 ## `player/playerCombat.ts`
 
 - `collectLivingCombatTargets` — function — line 56

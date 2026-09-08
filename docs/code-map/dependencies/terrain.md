@@ -481,6 +481,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/groundActions.ts`
 - `app/createApp.ts`
@@ -533,6 +534,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 
 ## `terrain/distanceLod.test.ts`

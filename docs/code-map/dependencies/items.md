@@ -52,6 +52,8 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/trapItemInstances.ts`
 - `items/weaponMaintenance.ts`
+- `player/PlayerController.ts`
+- `player/humanCarryCapacity.ts`
 
 ## `items/Inventory.ts`
 
