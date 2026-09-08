@@ -1,7 +1,7 @@
 # Plan: Gold Economic Realization & Source Entitlements
 
 **Created:** 2026-09-08
-**Status:** `draft`
+**Status:** `draft` 📝
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none
