@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-010-death-and-corpse-lifecycle`                                   | 2026-09-08 19:14:15 | —                   | `npc`            | —          |
 | `npc-020-strength-driven-physical-work-and-human-carrying`             | 2026-09-08 15:29:43 | —                   | `npc`            | —          |
 | `npc-023-perception-driven-observation-and-information-levels`         | —                   | 2026-09-08 15:10:08 | `npc`            | —          |
 | `fauna-017-animal-agent-refactor`                                      | 2026-09-08 15:03:52 | —                   | `fauna`          | —          |
