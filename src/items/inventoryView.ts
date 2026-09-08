@@ -1,6 +1,11 @@
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
 import {
+  type FoodSourceSpecies,
+  type FreshnessStage,
+  getFoodBatchFreshnessStage,
+} from './foodFreshness'
+import {
   INSTANCE_BACKED_KINDS,
   isLiquidContainerInstance,
   isTrapItemInstance,
@@ -31,6 +36,9 @@ export type InventoryGroupView = {
   /** Set when `condition === 'uniform'` — e.g. 100 for full durability traps. */
   uniformConditionPercent: number | null
   instances: readonly InventoryInstanceRow[]
+  /** FIFO perishable batch at `nowDays` — presentation only (plan items-player-002). */
+  freshnessStage?: FreshnessStage
+  sourceSpecies?: FoodSourceSpecies
 }
 
 function buildTrapGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
@@ -108,7 +116,7 @@ function buildLiquidContainerGroup(kind: ItemKind, instances: readonly ItemInsta
 }
 
 /** Derived presentation for inventory UI — not persisted. */
-export function buildInventoryGroups(inventory: Inventory): InventoryGroupView[] {
+export function buildInventoryGroups(inventory: Inventory, nowDays = 0): InventoryGroupView[] {
   const groups: InventoryGroupView[] = []
 
   for (const kind of INSTANCE_BACKED_KINDS) {
@@ -119,13 +127,19 @@ export function buildInventoryGroups(inventory: Inventory): InventoryGroupView[]
 
   for (const [kind, count] of Object.entries(inventory.toJSON()) as [ItemKind, number][]) {
     if (count > 0 && !INSTANCE_BACKED_KINDS.has(kind)) {
-      groups.push({
+      const fifo = inventory.fifoFoodBatch(kind, nowDays)
+      const group: InventoryGroupView = {
         kind,
         count,
         condition: null,
         uniformConditionPercent: null,
         instances: [],
-      })
+      }
+      if (fifo) {
+        group.freshnessStage = getFoodBatchFreshnessStage(kind, fifo, nowDays)
+        if (fifo.sourceSpecies) group.sourceSpecies = fifo.sourceSpecies
+      }
+      groups.push(group)
     }
   }
 

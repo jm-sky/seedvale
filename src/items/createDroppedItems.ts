@@ -1,5 +1,6 @@
 import { type Object3D, type Scene } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
+import type { FoodBatch } from './foodFreshness'
 import type { SaveItemInstance } from './Inventory'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
@@ -15,6 +16,8 @@ export type DroppedItem = {
    *  condition instead of minting a fresh default one. Absent for plain
    *  stackable kinds. */
   instance?: SaveItemInstance
+  /** Perishable food provenance for a dropped unit (plan items-player-002). */
+  foodBatch?: FoodBatch
 }
 
 export type DroppedItems = {
@@ -29,9 +32,8 @@ export type DroppedItems = {
    *  producer callback, e.g. a chicken resetting its egg cycle), so it's
    *  silently lost across a reload the same way other non-persisted runtime
    *  state already is. */
-  drop: (kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, onCollected?: () => void) => void
-  /** Removes a dropped item's mesh and record; null if `id` isn't known. */
-  collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null
+  drop: (kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, onCollected?: () => void, foodBatch?: FoodBatch) => void
+  collect: (id: string) => { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch } | null
   /** Advances items still in flight (plan 097 phase 2.1). Landed items cost
    *  nothing — only entries in `falling` are touched. */
   tick: (dt: number) => void
@@ -83,8 +85,10 @@ export function createDroppedItems(
 
   return {
     nodes: () => items,
-    drop(kind, x, z, instance, onCollected) {
-      const item: DroppedItem = { id: `drop:${Date.now()}:${nextDropId++}`, kind, x, z, instance }
+    drop(kind, x, z, instance, onCollected, foodBatch) {
+      const item: DroppedItem = { id: `drop:${Date.now()}:${nextDropId++}`, kind, x, z }
+      if (instance) item.instance = instance
+      if (foodBatch) item.foodBatch = foodBatch
       items.push(item)
       spawnMesh(item, DROP_SPAWN_HEIGHT)
       falling.set(item.id, { vy: 0 })
@@ -104,7 +108,14 @@ export function createDroppedItems(
       const onCollected = collectedCallbacks.get(id)
       collectedCallbacks.delete(id)
       onCollected?.()
-      return { kind: item!.kind, x: item!.x, z: item!.z, instance: item!.instance }
+      const collected: { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch } = {
+        kind: item!.kind,
+        x: item!.x,
+        z: item!.z,
+        instance: item!.instance,
+      }
+      if (item!.foodBatch) collected.foodBatch = item!.foodBatch
+      return collected
     },
     settleNear(x, z, radius) {
       for (const item of items) {

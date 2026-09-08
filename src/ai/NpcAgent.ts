@@ -3542,7 +3542,7 @@ export class NpcAgent {
    * when there's nothing to deliver.
    */
   private deliverHuntYieldHome(household: Household | null): void {
-    const work = planDeliverHuntYieldHome(this.carried, household, this.home, this.waitMultiplier)
+    const work = planDeliverHuntYieldHome(this.carried, household, this.home, this.waitMultiplier, () => this.simClock)
     if (work) this.startAction(work)
   }
 

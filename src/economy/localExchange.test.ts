@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createFoodBatch, STORED_FOOD_DECAY } from '../items/foodFreshness'
 import { claimFoodItems } from '../items/foodItems'
 import { createHousehold } from '../settlement/household'
 import { claimEconomySurplus, claimHouseholdSurplus } from './localExchange'
@@ -119,10 +120,10 @@ describe('SettlementEconomy.withdrawFood / depositFood', () => {
     // way to backdate genuinely new food — this simulates a fish already a
     // few days old when the transfer below claims it).
     economy.items.add('fish', 2, 5)
-    const claimed = economy.withdrawFood(2)
+    const claimed = economy.withdrawFood(2, 5)
     const receiving = createSettlementEconomy('other', {}, [])
-    for (const { kind, amount, batches } of claimed) receiving.depositFood(kind, amount, 0, batches)
-    expect(receiving.items.getFoodBatches('fish')).toEqual([{ count: 2, acquiredAtDays: 5 }])
+    for (const { kind, amount, batches } of claimed) receiving.depositFood(kind, amount, 5, batches)
+    expect(receiving.items.getFoodBatches('fish', 5)).toEqual([createFoodBatch(2, 5, STORED_FOOD_DECAY)])
   })
 })
 

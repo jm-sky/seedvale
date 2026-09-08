@@ -17,8 +17,9 @@ describe('foodFreshness (plan 159)', () => {
     expect(isSpoiled('berries', 0, 5)).toBe(true)
   })
 
-  it('merges only batches within the tolerance window', () => {
-    expect(canMergeFoodBatches(1, 1.1)).toBe(true)
+  it('merges only batches with identical timestamps', () => {
+    expect(canMergeFoodBatches(1, 1)).toBe(true)
+    expect(canMergeFoodBatches(1, 1.1)).toBe(false)
     expect(canMergeFoodBatches(1, 5)).toBe(false)
   })
 

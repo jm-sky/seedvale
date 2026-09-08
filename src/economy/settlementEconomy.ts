@@ -1,13 +1,13 @@
 import type { SettlementHistoryEvent } from '../debug/settlementHistory'
-import type { SaveItemInstance } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { DevelopmentDef, DevelopmentStatus } from './development'
 import type { EconomicKind } from './kinds'
 import type { ProductionDef } from './production'
 import { createSequenceAllocator } from '../debug/domainHistory'
 import { createSettlementHistoryBuffer } from '../debug/settlementHistory'
+import { STORED_FOOD_DECAY } from '../items/foodFreshness'
 import { claimFoodItems, type FoodItemClaim, foodItemCount } from '../items/foodItems'
-import { type FoodBatch, Inventory } from '../items/Inventory'
+import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 import { EconomicStock, type StockAmount } from './stock'
 
 export type SettlementDemand = {
@@ -30,7 +30,11 @@ type Reservation = {
  *  per-settlement record. */
 export type SettlementEconomySnapshot = {
   stock: Partial<Record<EconomicKind, number>>
-  food: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] }
+  food: {
+    counts: Partial<Record<ItemKind, number>>
+    instances: readonly SaveItemInstance[]
+    foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>
+  }
 }
 
 /**
@@ -88,13 +92,20 @@ export function createSettlementEconomy(
   demands: readonly SettlementDemand[],
   /** Carried across a `WorldBundle` rebuild / loaded from `SaveData`, same
    *  contract as `initial` above — omitted for a genuinely new settlement. */
-  initialFood?: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] },
+  initialFood?: {
+    counts: Partial<Record<ItemKind, number>>
+    instances: readonly SaveItemInstance[]
+    foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>
+  },
 ): SettlementEconomy {
   const stock = new EconomicStock(initial)
   const items = new Inventory(
     initialFood?.counts,
     Infinity,
     initialFood ? Inventory.instancesFromJSON(initialFood.instances) : undefined,
+    initialFood?.foodBatches,
+    Infinity,
+    STORED_FOOD_DECAY,
   )
   const demandByKind = new Map<EconomicKind, number>()
   for (const demand of demands) demandByKind.set(demand.kind, demand.target)
@@ -165,12 +176,12 @@ export function createSettlementEconomy(
     },
     depositFood(kind, amount, simTime = 0, batches) {
       if (amount > 0) {
-        items.addWithFreshness(kind, amount, batches ?? [])
+        items.addWithFreshness(kind, amount, batches ?? [], simTime)
         historyBuf.record({ simTime, seq: seq.next(), type: 'food.deposited', kind, amount })
       }
     },
     withdrawFood(amount, simTime = 0) {
-      const claimed = claimFoodItems(items, amount)
+      const claimed = claimFoodItems(items, amount, simTime)
       const total = claimed.reduce((sum, c) => sum + c.amount, 0)
       if (total > 0) historyBuf.record({ simTime, seq: seq.next(), type: 'food.withdrawn', amount: total })
       return claimed
@@ -194,7 +205,14 @@ export function createSettlementEconomy(
       return true
     },
     snapshot() {
-      return { stock: stock.toJSON(), food: { counts: items.toJSON(), instances: items.instancesToJSON() } }
+      return {
+        stock: stock.toJSON(),
+        food: {
+          counts: items.toJSON(),
+          instances: items.instancesToJSON(),
+          foodBatches: items.foodBatchesToJSON(),
+        },
+      }
     },
     history: () => historyBuf.history(),
   }

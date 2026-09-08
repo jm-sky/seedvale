@@ -1,5 +1,6 @@
 import type { ItemKind } from '../items/items'
-import { isProcessComplete, type ItemStackOutput, type TimedProcess } from '../items/timedProcess'
+import { CARRIED_FOOD_DECAY, checkpointFoodBatch, type FoodBatch, inheritProcessedFoodBatch } from '../items/foodFreshness'
+import { isProcessComplete, type ItemStackOutput, processCompletedAtDays, type TimedProcess } from '../items/timedProcess'
 
 /** Plan 159 §8 — physical drying rack: a deterministic settlement landmark
  *  (same "persistent world record + presentation object" idea as the well/
@@ -37,7 +38,12 @@ export function pickDryingRecipe(has: (kind: ItemKind) => boolean): DryingRecipe
   return null
 }
 
-export function startDryingProcess(id: string, recipe: DryingRecipe, nowDays: number): TimedProcess {
+export function startDryingProcess(
+  id: string,
+  recipe: DryingRecipe,
+  nowDays: number,
+  inputBatches: readonly FoodBatch[] = [],
+): TimedProcess {
   return {
     id,
     kind: 'drying',
@@ -45,9 +51,34 @@ export function startDryingProcess(id: string, recipe: DryingRecipe, nowDays: nu
     durationDays: recipe.durationDays,
     input: [{ kind: recipe.inputKind, count: 1 }],
     output: [recipe.output],
+    inputBatches: inputBatches.map((b) => checkpointFoodBatch(b, nowDays, CARRIED_FOOD_DECAY)),
   }
 }
 
 export function isDryingComplete(process: TimedProcess, nowDays: number): boolean {
   return isProcessComplete(process, nowDays)
+}
+
+/**
+ * Output batches as of `nowDays`, aged 1.0× from logical completion.
+ * Empty when the raw input spoiled before/at completion.
+ *
+ * @domain items-player
+ */
+export function resolveDryingOutput(process: TimedProcess, nowDays: number): FoodBatch[] {
+  const inputKind = process.input[0]?.kind
+  const outputKind = process.output[0]?.kind
+  if (!inputKind || !outputKind) return []
+  const completedAt = processCompletedAtDays(process)
+  const inputBatches = process.inputBatches ?? []
+  const outputs: FoodBatch[] = []
+  for (const input of inputBatches) {
+    const inherited = inheritProcessedFoodBatch(input, inputKind, outputKind, completedAt, CARRIED_FOOD_DECAY)
+    if (!inherited) continue
+    const aged = nowDays > completedAt
+      ? { ...inherited, accumulatedEffectiveAge: inherited.accumulatedEffectiveAge + (nowDays - completedAt) * CARRIED_FOOD_DECAY, lastCheckpointDays: nowDays }
+      : inherited
+    outputs.push(aged)
+  }
+  return outputs
 }

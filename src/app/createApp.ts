@@ -936,6 +936,7 @@ export async function createApp(
     refreshInventoryScreen: () => refreshInventoryScreen(),
     locationCatalog: worldLocationCatalog,
     locationKnowledge,
+    dayNight,
   })
   vueUi.configurePrimaryWeaponShortcuts({
     equipMelee: inventoryWiring.equipPrimaryMeleeWeapon,
@@ -1364,7 +1365,7 @@ export async function createApp(
       inventory.totalSize(),
       inventory.maxSize,
       heldTool.held(),
-      buildInventoryGroups(inventory),
+      buildInventoryGroups(inventory, dayNight.elapsedDays),
     )
   }
 

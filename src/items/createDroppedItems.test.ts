@@ -70,10 +70,12 @@ describe('createDroppedItems onCollected hook (plan fauna-002)', () => {
     expect(collectedCount).toBe(0)
   })
 
-  it('does not require onCollected — plain drops still collect fine', () => {
+  it('round-trips a perishable foodBatch through collect()', () => {
     const dropped = createDroppedItems(new Scene(), sampleHeight)
-    dropped.drop('egg', 0, 0)
+    const foodBatch = { count: 1, acquiredAtDays: 4, accumulatedEffectiveAge: 0.5, lastCheckpointDays: 4, decayModifier: 1, sourceSpecies: 'deer' as const }
+    dropped.drop('deer_meat', 2, 3, undefined, undefined, foodBatch)
     const [node] = dropped.nodes()
-    expect(dropped.collect(node!.id)).toEqual({ kind: 'egg', x: 0, z: 0, instance: undefined })
+    expect(node!.foodBatch).toEqual(foodBatch)
+    expect(dropped.collect(node!.id)).toEqual({ kind: 'deer_meat', x: 2, z: 3, instance: undefined, foodBatch })
   })
 })

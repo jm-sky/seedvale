@@ -14,8 +14,14 @@ import {
   SPAWNER_DESTROY_BRANCH_COST,
 } from '../../fauna/AnimalSpawner'
 import { spawnerDestroyBusyLabel } from '../../fauna/createFauna'
-import { COOK_DURATION_SEC, findCookingBatch, resolveCookingCapacity } from '../../items/campfireCooking'
-import { getFreshnessStage } from '../../items/foodFreshness'
+import { COOK_DURATION_SEC, findCookingBatch, processCookedBatches, resolveCookingCapacity } from '../../items/campfireCooking'
+import {
+  CARRIED_FOOD_DECAY,
+  foodHungerRelief,
+  getFoodBatchFreshnessStage,
+  isFoodBatchSpoiled,
+  sourceSpeciesForMeatKind,
+} from '../../items/foodFreshness'
 import { type Inventory, inventoryFullToastText } from '../../items/Inventory'
 import { CAPABILITY_NEED_LABEL, hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
 import { isLiquidContainerInstance, isLiquidContainerKind, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
@@ -259,7 +265,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       return toResult([targetRequirement(false, 'fireLit')])
     }
     const capacity = resolveCookingCapacity(fire, inventory)
-    const found = findCookingBatch(inventory, capacity)
+    const found = findCookingBatch(inventory, capacity, dayNight.elapsedDays)
     if (!found) {
       toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
       return toResult([targetRequirement(false, 'cookableFood')])
@@ -286,17 +292,34 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
         return
       }
-      const outputCount = outputFor(batch)
-      const hasRoom = inventory.canAdd(recipe.output, outputCount)
-      if (!hasRoom || !inventory.remove(recipe.input, batch)) {
-        toast.show(hasRoom ? 'Ekwipunek jest za ciężki.' : inventoryFullToastText(inventory, recipe.output, outputCount), 'error')
+      const nowDays = dayNight.elapsedDays
+      const fifo = inventory.fifoFoodBatch(recipe.input, nowDays)
+      if (fifo && isFoodBatchSpoiled(recipe.input, fifo, nowDays)) {
+        toast.show('To jedzenie się zepsuło.', 'error')
         return
       }
-      inventory.add(recipe.output, outputCount, dayNight.elapsedDays)
+      const outputCount = outputFor(batch)
+      const hasRoom = inventory.canAdd(recipe.output, outputCount)
+      if (!hasRoom) {
+        toast.show(inventoryFullToastText(inventory, recipe.output, outputCount), 'error')
+        return
+      }
+      const consumed = inventory.removeWithFreshness(recipe.input, batch, nowDays)
+      if (!consumed) {
+        toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
+        return
+      }
+      const outputs = processCookedBatches(recipe.input, recipe.output, consumed, nowDays, CARRIED_FOOD_DECAY)
+      const produced = outputs.reduce((sum, b) => sum + b.count, 0)
+      if (produced <= 0) {
+        toast.show('To jedzenie się zepsuło.', 'error')
+        return
+      }
+      inventory.addWithFreshness(recipe.output, produced, outputs, nowDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.cookMeat)
-      toast.show(`+${outputCount} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
+      toast.show(`+${produced} ${ITEM_DEFS[recipe.output].label}`, 'pickup')
     }, { blurred: true })
     return { ok: true }
   }
@@ -464,18 +487,18 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     // Plan 159 §3/§5 — spoiled food is non-consumable rather than acting
     // like fresh food; checked against the batch that would actually be
     // eaten (oldest first, same order `remove()` consumes in).
-    const acquiredAtDays = inventory.oldestAcquiredAtDays(kind)
-    if (acquiredAtDays != null && getFreshnessStage(kind, acquiredAtDays, dayNight.elapsedDays) === 'spoiled') {
+    const fifo = inventory.fifoFoodBatch(kind, dayNight.elapsedDays)
+    if (fifo && getFoodBatchFreshnessStage(kind, fifo, dayNight.elapsedDays) === 'spoiled') {
       toast.show('To jedzenie się zepsuło.', 'error')
       return toResult([targetRequirement(false, 'notSpoiled')])
     }
-    if (!inventory.remove(kind, 1)) return toResult([itemRequirement(0, 1, kind)])
+    const consumed = inventory.removeWithFreshness(kind, 1, dayNight.elapsedDays)
+    if (!consumed) return toResult([itemRequirement(0, 1, kind)])
     if (entry.resultKind) inventory.add(entry.resultKind, 1)
-    // Plan 128 §4 — Survival makes the *same* `roasted_meat` more nourishing;
-    // no roasted variants, no skill-dependent recipes.
+    const sourceSpecies = consumed[0]?.sourceSpecies ?? sourceSpeciesForMeatKind(kind)
     const relief = kind === 'roasted_meat'
-      ? entry.relief * survivalFoodMultiplier(player.skills.survival.value)
-      : entry.relief
+      ? foodHungerRelief(kind, sourceSpecies) * survivalFoodMultiplier(player.skills.survival.value)
+      : foodHungerRelief(kind, sourceSpecies)
     if (entry.need === 'hunger') eatFood(player.needs, relief)
     else if (entry.need === 'thirst') drinkWaterNeeds(player.needs, relief)
     else healHealth(player.health, relief)

@@ -6,7 +6,7 @@ import type { FishingBaitState } from '../../world/fishing'
 import { playActionFishingCast } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
 import { ANIMAL_LABELS } from '../../fauna/AnimalAgent'
-import { BAIT_ITEM_PRIORITY } from '../../items/foodFreshness'
+import { BAIT_ITEM_PRIORITY, isFoodBatchSpoiled } from '../../items/foodFreshness'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { ITEM_DEFS } from '../../items/items'
 import { trapInstanceFromWorld } from '../../items/trapItemInstances'
@@ -15,7 +15,7 @@ import { damageHealth } from '../../shared/HealthState'
 import { TRAP_DEFS } from '../../world/animalTraps'
 import { HIVE_STING_DAMAGE, honeyAvailable, rollHiveSting } from '../../world/beehives'
 import { CROP_DEFS, resolveCropHarvest } from '../../world/cropLifecycle'
-import { isDryingComplete, pickDryingRecipe, startDryingProcess } from '../../world/dryingRacks'
+import { isDryingComplete, pickDryingRecipe, resolveDryingOutput, startDryingProcess } from '../../world/dryingRacks'
 import {
   applyFishingBait as applyFishingBaitToSpot,
   FISHING_CAST_DURATION_SEC,
@@ -248,7 +248,7 @@ export function createGatheringActions(
       toast.show('Potrzebujesz przynęty — np. jagód lub mięsa.', 'error')
       return
     }
-    if (!inventory.remove(kind, 1)) return
+    if (!inventory.remove(kind, 1, dayNight.elapsedDays)) return
     const spotId = fishingSpotId(x, z)
     fishingBait.set(spotId, applyFishingBaitToSpot(fishingBait.get(spotId) ?? null, kind, dayNight.elapsedDays))
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
@@ -270,15 +270,23 @@ export function createGatheringActions(
       }
       const output = rack.process.output[0]
       if (!output) return
-      if (!inventory.canAdd(output.kind, output.count)) {
-        toast.show(inventoryFullToastText(inventory, output.kind, output.count), 'error')
+      const nowDays = dayNight.elapsedDays
+      const outputs = resolveDryingOutput(rack.process, nowDays)
+      const produced = outputs.reduce((sum, b) => sum + b.count, 0)
+      if (produced <= 0) {
+        bundle.dryingRacks.clearProcess(id)
+        toast.show('Surowiec zepsuł się podczas suszenia.', 'error')
+        return
+      }
+      if (!inventory.canAdd(output.kind, produced)) {
+        toast.show(inventoryFullToastText(inventory, output.kind, produced), 'error')
         return
       }
       bundle.dryingRacks.clearProcess(id)
-      inventory.add(output.kind, output.count, dayNight.elapsedDays)
+      inventory.addWithFreshness(output.kind, produced, outputs, nowDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
-      toast.show(`+${output.count} ${ITEM_DEFS[output.kind].label}`, 'pickup')
+      toast.show(`+${produced} ${ITEM_DEFS[output.kind].label}`, 'pickup')
       return
     }
     const recipe = pickDryingRecipe((kind) => inventory.has(kind, 1))
@@ -286,8 +294,15 @@ export function createGatheringActions(
       toast.show('Potrzebujesz surowego mięsa lub ryby.', 'error')
       return
     }
-    if (!inventory.remove(recipe.inputKind, 1)) return
-    bundle.dryingRacks.startProcess(id, startDryingProcess(`${id}:${Math.round(dayNight.elapsedDays * 1000)}`, recipe, dayNight.elapsedDays))
+    const nowDays = dayNight.elapsedDays
+    const fifo = inventory.fifoFoodBatch(recipe.inputKind, nowDays)
+    if (fifo && isFoodBatchSpoiled(recipe.inputKind, fifo, nowDays)) {
+      toast.show('To jedzenie się zepsuło.', 'error')
+      return
+    }
+    const consumed = inventory.removeWithFreshness(recipe.inputKind, 1, nowDays)
+    if (!consumed) return
+    bundle.dryingRacks.startProcess(id, startDryingProcess(`${id}:${Math.round(nowDays * 1000)}`, recipe, nowDays, consumed))
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     toast.show('Rozpoczęto suszenie.')

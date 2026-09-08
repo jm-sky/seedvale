@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createFoodBatch } from './foodFreshness'
 import { carryFoodClaim, claimFoodItems, deliverCarriedFoodClaim, depositFoodItems, FOOD_ITEM_KINDS, foodItemCount, takeOneFoodItem } from './foodItems'
 import { Inventory } from './Inventory'
 
@@ -74,8 +75,8 @@ describe('claimFoodItems', () => {
   it('claims a single kind fully when it alone covers the amount', () => {
     const inv = new Inventory()
     inv.add('carrot', 5)
-    const claimed = claimFoodItems(inv, 3)
-    expect(claimed).toEqual([{ kind: 'carrot', amount: 3, batches: [{ count: 3, acquiredAtDays: 0 }] }])
+    const claimed = claimFoodItems(inv, 3, 0)
+    expect(claimed).toEqual([{ kind: 'carrot', amount: 3, batches: [createFoodBatch(3, 0, 1)] }])
     expect(inv.count('carrot')).toBe(2)
   })
 
@@ -112,10 +113,10 @@ describe('depositFoodItems', () => {
   it('preserves the claimed batch acquiredAtDays instead of resetting freshness to day 0', () => {
     const source = new Inventory()
     source.add('fish', 2, 4)
-    const claimed = claimFoodItems(source, 2)
+    const claimed = claimFoodItems(source, 2, 4)
     const destination = new Inventory()
-    depositFoodItems(destination, claimed)
-    expect(destination.getFoodBatches('fish')).toEqual([{ count: 2, acquiredAtDays: 4 }])
+    depositFoodItems(destination, claimed, 4)
+    expect(destination.getFoodBatches('fish', 4)).toEqual([createFoodBatch(2, 4, 1)])
   })
 })
 
@@ -126,15 +127,15 @@ describe('carryFoodClaim / deliverCarriedFoodClaim', () => {
     const carrier = new Inventory()
     const destination = new Inventory()
 
-    const claimed = claimFoodItems(source, 3)
-    const carried = carryFoodClaim(carrier, claimed, source)
+    const claimed = claimFoodItems(source, 3, 2)
+    const carried = carryFoodClaim(carrier, claimed, source, 2)
     expect(foodItemCount(carrier)).toBe(3)
     expect(foodItemCount(source)).toBe(0)
 
-    deliverCarriedFoodClaim(carrier, carried, destination)
+    deliverCarriedFoodClaim(carrier, carried, destination, 2)
     expect(foodItemCount(carrier)).toBe(0)
     expect(foodItemCount(destination)).toBe(3)
-    expect(destination.getFoodBatches('fish')).toEqual([{ count: 3, acquiredAtDays: 2 }])
+    expect(destination.getFoodBatches('fish', 2)).toEqual([createFoodBatch(3, 2, 1)])
   })
 
   it('refunds whatever does not fit in the carrier straight back to the source', () => {

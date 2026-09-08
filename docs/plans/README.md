@@ -53,7 +53,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
-| 💡 `items-player-002-food-provenance-freshness-and-storage.md`              | -       | 🟡 | M      | ~~155~~ ~~159~~ ~~164~~ ~~184~~ |
 | 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
 | 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
@@ -114,6 +113,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 |------|---------|
 | `fauna-009-wolf-howling-and-rooster-vocalization.md` | Wycie wilków i pianie kogutów: timing, zachowanie i brak spamowania audio |
 | `items-player-003-player-physical-effort-stamina-vigor.md` | Odczuwalny balans Stamina/Vigor podczas ruchu, pracy i regeneracji |
+| `items-player-002-food-provenance-freshness-and-storage.md` | Świeżość w ekwipunku/skrzyni (0.5×), pieczenie/suszenie dziedziczy zużytą część shelf-life i gatunek, zepsute nie da się przetworzyć, save/load nie resetuje wieku |
 | `npc-006-shared-npc-animal-pathfinding.md` | NPC i zwierzęta poruszają się naturalnie, omijają przeszkody i nie zacinają się |
 | `settlements-npcs-014-local-goods-circulation.md` | Naturalny obieg dóbr: producent → handlarz → magazyn → gospodarstwo |
 | `npc-009-combat-feedback-and-death-consequences.md` | Walka NPC/zwierząt: animacje, audio, obrażenia i śmierć |

@@ -5,6 +5,7 @@ import InventoryScreenSection from '@/components/InventoryScreenSection.vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
+import { FOOD_SOURCE_SPECIES_LABEL, foodHungerRelief, FRESHNESS_STAGE_LABEL } from '../../items/foodFreshness'
 import { isToolKind } from '../../items/HeldTool'
 import { type BookTier, consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
@@ -60,6 +61,18 @@ const meleeSpeed = computed<string | null>(() => {
 const ranged = computed(() => catalogEntry.value?.ranged ?? null)
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
 const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
+const consumableRelief = computed(() => {
+  if (!consumable.value || !props.selectedItem) return 0
+  return foodHungerRelief(props.selectedItem, group.value?.sourceSpecies)
+})
+const freshnessLabel = computed(() => {
+  const stage = group.value?.freshnessStage
+  return stage ? FRESHNESS_STAGE_LABEL[stage] : null
+})
+const sourceSpeciesLabel = computed(() => {
+  const species = group.value?.sourceSpecies
+  return species ? FOOD_SOURCE_SPECIES_LABEL[species] : null
+})
 const book = computed(() => catalogEntry.value?.book ?? null)
 /** Live current value of the book's skill — `ui.skillsScreen` is pushed
  *  explicitly by `readBookItem` right after a successful read (plan
@@ -237,7 +250,19 @@ function sharpenInstance(id: string): void {
       <InventoryScreenSection
         v-if="consumable"
         label="Efekt"
-        :value="`+${consumable.relief} ${consumeNeedNoun(consumable.need)}`"
+        :value="`+${consumableRelief} ${consumeNeedNoun(consumable.need)}`"
+      />
+
+      <InventoryScreenSection
+        v-if="freshnessLabel"
+        label="Świeżość"
+        :value="freshnessLabel"
+      />
+
+      <InventoryScreenSection
+        v-if="sourceSpeciesLabel"
+        label="Źródło"
+        :value="sourceSpeciesLabel"
       />
 
       <InventoryScreenSection

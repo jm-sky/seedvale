@@ -1,6 +1,7 @@
 import type { VillageFire } from '../settlement/VillageFire'
-import type { Inventory } from './Inventory'
+import type { FoodBatch, Inventory } from './Inventory'
 import type { ItemKind } from './items'
+import { inheritProcessedFoodBatch, isFoodBatchSpoiled } from './foodFreshness'
 
 /** Plan 106 §6 — first (and deliberately only) processing recipe: `input
  *  item(s) → processing station → output item`. Intentionally a flat lookup
@@ -32,9 +33,14 @@ export const COOKING_RECIPES: readonly CookingRecipe[] = [
  *  harvest/ignite, not minutes of a frozen overlay. */
 export const COOK_DURATION_SEC = 5
 
-/** First recipe the player currently holds the input for, or null. */
-export function findCookingRecipe(inventory: Inventory): CookingRecipe | null {
-  return COOKING_RECIPES.find((recipe) => inventory.has(recipe.input, 1)) ?? null
+/** First recipe the player currently holds a non-spoiled input for, or null. */
+export function findCookingRecipe(inventory: Inventory, nowDays?: number): CookingRecipe | null {
+  return COOKING_RECIPES.find((recipe) => {
+    if (!inventory.has(recipe.input, 1)) return false
+    if (nowDays == null) return true
+    const fifo = inventory.fifoFoodBatch(recipe.input, nowDays)
+    return fifo != null && !isFoodBatchSpoiled(recipe.input, fifo, nowDays)
+  }) ?? null
 }
 
 /** Plan 175 — how many meat items a station can process in one cooking
@@ -59,9 +65,31 @@ export function resolveCookingCapacity(fire: VillageFire, inventory: Inventory):
 export function findCookingBatch(
   inventory: Inventory,
   capacity: number,
+  nowDays?: number,
 ): { recipe: CookingRecipe, batch: number } | null {
-  const recipe = findCookingRecipe(inventory)
+  const recipe = findCookingRecipe(inventory, nowDays)
   if (!recipe) return null
   const batch = Math.min(capacity, inventory.count(recipe.input))
   return batch > 0 ? { recipe, batch } : null
+}
+
+/**
+ * Turns consumed raw FIFO batches into processed output batches, inheriting
+ * used-fraction and sourceSpecies. Spoiled units are dropped (no edible output).
+ *
+ * @domain items-player
+ */
+export function processCookedBatches(
+  inputKind: ItemKind,
+  outputKind: ItemKind,
+  consumed: readonly FoodBatch[],
+  completedAtDays: number,
+  outputDecayModifier: number,
+): FoodBatch[] {
+  const outputs: FoodBatch[] = []
+  for (const input of consumed) {
+    const out = inheritProcessedFoodBatch(input, inputKind, outputKind, completedAtDays, outputDecayModifier)
+    if (out) outputs.push(out)
+  }
+  return outputs
 }

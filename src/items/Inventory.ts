@@ -1,4 +1,16 @@
-import { canMergeFoodBatches, isFoodPerishable } from './foodFreshness'
+import {
+  CARRIED_FOOD_DECAY,
+  checkpointFoodBatch,
+  cloneFoodBatch,
+  compareFoodBatchesFifo,
+  createFoodBatch,
+  type FoodBatch,
+  foodBatchesMergeEqual,
+  type FoodSourceSpecies,
+  isFoodPerishable,
+  normalizeFoodBatch,
+  sourceSpeciesForMeatKind,
+} from './foodFreshness'
 import { CAPABILITY_KINDS, CONSUMABLE_KINDS_BY_NEED, type ConsumableNeed, ITEM_CATALOG, type ItemCapability } from './itemCatalog'
 import {
   clamp01,
@@ -67,13 +79,7 @@ export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
   return row
 }
 
-/** Plan 159 — a stack-level freshness batch for one perishable `ItemKind`.
- *  Freshness belongs to the stack, not to an individual food unit: a kind's
- *  total `count` (still tracked in `counts` for every existing caller) is
- *  split across one or more batches by acquisition day, so two pickups with
- *  incompatible ages stay distinguishable without ever creating one
- *  `ItemInstance` per food unit. */
-export type FoodBatch = { count: number, acquiredAtDays: number }
+export type { FoodBatch, FoodSourceSpecies } from './foodFreshness'
 
 /** Generic item carrier: counters + a weight limit. Originally player-only;
  *  reused by `NpcAgent` (plan 131) as a brief hold between extracting a
@@ -101,6 +107,9 @@ export class Inventory {
    *  that doesn't pass one — NPC temporary carrying, pre-164 tests) means
    *  "no size gate", matching pre-existing behaviour exactly. */
   readonly maxSize: number
+  /** Storage decay applied to perishable food while it sits here
+   *  (plan items-player-002). 1.0× carried, 0.5× chest/household/settlement. */
+  readonly decayModifier: number
 
   constructor(
     initial?: Partial<Record<ItemKind, number>>,
@@ -108,9 +117,11 @@ export class Inventory {
     initialInstances?: readonly ItemInstance[],
     initialFoodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>,
     maxSize = Infinity,
+    decayModifier = CARRIED_FOOD_DECAY,
   ) {
     this.baseMaxWeight = maxWeight
     this.maxSize = maxSize
+    this.decayModifier = decayModifier
     if (initial) {
       for (const [kind, count] of Object.entries(initial) as [ItemKind, number][]) {
         if (count > 0) this.counts.set(kind, count)
@@ -127,10 +138,11 @@ export class Inventory {
         if (!isFoodPerishable(kind) || !batches || batches.length === 0) continue
         const clamped = batches
           .filter((b) => b.count > 0)
-          .map((b) => ({ count: b.count, acquiredAtDays: b.acquiredAtDays }))
+          .map((b) => normalizeFoodBatch(b, decayModifier))
         if (clamped.length > 0) this.foodBatches.set(kind, clamped)
       }
     }
+    this.ensureFoodBatchCoverage()
   }
 
   /** Effective carry-weight limit (plan 186): the constructor's base plus
@@ -147,67 +159,76 @@ export class Inventory {
     return this.baseMaxWeight + bonus
   }
 
-  private addFoodBatch(kind: ItemKind, n: number, acquiredAtDays: number): void {
-    const batches = this.foodBatches.get(kind) ?? []
-    const compatible = batches.find((b) => canMergeFoodBatches(b.acquiredAtDays, acquiredAtDays))
-    if (compatible) {
-      // Weighted-average acquisition day keeps the merged batch's deadline
-      // representative of both contributions instead of always snapping to
-      // whichever pickup happened first/last.
-      const total = compatible.count + n
-      compatible.acquiredAtDays = (compatible.acquiredAtDays * compatible.count + acquiredAtDays * n) / total
-      compatible.count = total
-    } else {
-      batches.push({ count: n, acquiredAtDays })
+  /** Perishable counts without batches (old container/household snapshots)
+   *  get a day-0 batch rather than a silently untracked stack. */
+  private ensureFoodBatchCoverage(): void {
+    for (const [kind, count] of this.counts) {
+      if (!isFoodPerishable(kind) || count <= 0) continue
+      const batches = this.foodBatches.get(kind) ?? []
+      const covered = batches.reduce((sum, b) => sum + b.count, 0)
+      if (covered >= count) continue
+      batches.push(createFoodBatch(count - covered, 0, this.decayModifier, sourceSpeciesForMeatKind(kind)))
+      this.foodBatches.set(kind, batches)
     }
+  }
+
+  private sortFifo(kind: ItemKind, batches: FoodBatch[], nowDays: number): void {
+    const indexed = batches.map((batch, index) => ({ batch, index }))
+    indexed.sort((a, b) => {
+      const cmp = compareFoodBatchesFifo(kind, nowDays, a.batch, b.batch)
+      return cmp !== 0 ? cmp : a.index - b.index
+    })
+    for (let i = 0; i < indexed.length; i++) batches[i] = indexed[i]!.batch
+  }
+
+  private addFoodBatch(kind: ItemKind, incoming: FoodBatch): void {
+    const batch = cloneFoodBatch({ ...incoming, decayModifier: incoming.decayModifier })
+    const batches = this.foodBatches.get(kind) ?? []
+    const compatible = batches.find((b) => foodBatchesMergeEqual(b, batch))
+    if (compatible) compatible.count += batch.count
+    else batches.push(batch)
     this.foodBatches.set(kind, batches)
   }
 
-  /** Removes `n` units from `kind`'s batches, oldest (most spoiled) first —
-   *  matches the "use it before it spoils" intuition and keeps whichever
-   *  batch a consumer just read (e.g. `oldestAcquiredAtDays`) consistent with
-   *  what actually gets removed next. Returns the exact chunks consumed
-   *  (oldest first) — `remove()` ignores this, but `removeWithFreshness()`
-   *  hands it on so a transfer can replay the same `acquiredAtDays` on the
-   *  receiving side instead of losing it at `add()`'s day-0 default. */
-  private removeFoodBatch(kind: ItemKind, n: number): FoodBatch[] {
+  /** Removes `n` units FIFO by remaining effective shelf-life at `nowDays`.
+   *  Returned batches are checkpointed at `nowDays` under this inventory's
+   *  decay so a transfer can continue under the destination modifier. */
+  private removeFoodBatch(kind: ItemKind, n: number, nowDays: number): FoodBatch[] {
     const consumed: FoodBatch[] = []
     const batches = this.foodBatches.get(kind)
     if (!batches || batches.length === 0) return consumed
-    batches.sort((a, b) => a.acquiredAtDays - b.acquiredAtDays)
+    this.sortFifo(kind, batches, nowDays)
     let remaining = n
     while (remaining > 0 && batches.length > 0) {
       const first = batches[0]!
-      if (first.count <= remaining) {
-        consumed.push({ count: first.count, acquiredAtDays: first.acquiredAtDays })
-        remaining -= first.count
-        batches.shift()
-      } else {
-        consumed.push({ count: remaining, acquiredAtDays: first.acquiredAtDays })
-        first.count -= remaining
-        remaining = 0
-      }
+      const take = Math.min(first.count, remaining)
+      consumed.push(checkpointFoodBatch({ ...cloneFoodBatch(first), count: take }, nowDays, this.decayModifier))
+      first.count -= take
+      remaining -= take
+      if (first.count <= 0) batches.shift()
     }
     if (batches.length === 0) this.foodBatches.delete(kind)
     return consumed
   }
 
-  /** Read-only snapshot of `kind`'s freshness batches, oldest first. Empty
-   *  for non-perishable kinds or kinds never added with a batch. */
-  getFoodBatches(kind: ItemKind): readonly FoodBatch[] {
+  /** Read-only snapshot of `kind`'s freshness batches, FIFO at `nowDays`. */
+  getFoodBatches(kind: ItemKind, nowDays = 0): readonly FoodBatch[] {
     const batches = this.foodBatches.get(kind)
     if (!batches) return []
-    return [...batches].sort((a, b) => a.acquiredAtDays - b.acquiredAtDays).map((b) => ({ ...b }))
+    const copy = batches.map(cloneFoodBatch)
+    this.sortFifo(kind, copy, nowDays)
+    return copy
   }
 
-  /** Acquisition day of the batch that would be consumed/eaten next (oldest
-   *  first), or null when `kind` isn't perishable or isn't held. Consumption
-   *  paths (player `consumeItem`, NPC eating) use this to resolve the
-   *  freshness stage of "the" item about to be used. */
-  oldestAcquiredAtDays(kind: ItemKind): number | null {
-    const batches = this.foodBatches.get(kind)
-    if (!batches || batches.length === 0) return null
-    return batches.reduce((min, b) => Math.min(min, b.acquiredAtDays), Infinity)
+  /** The batch that would be consumed next at `nowDays`, or null. */
+  fifoFoodBatch(kind: ItemKind, nowDays = 0): FoodBatch | null {
+    return this.getFoodBatches(kind, nowDays)[0] ?? null
+  }
+
+  /** Acquisition day of the FIFO batch — kept for callers that only need
+   *  the provenance timestamp of whatever would be used next. */
+  oldestAcquiredAtDays(kind: ItemKind, nowDays = 0): number | null {
+    return this.fifoFoodBatch(kind, nowDays)?.acquiredAtDays ?? null
   }
 
   /** Held liquid mass (plan items-player-001 §13, resolved now that content
@@ -259,40 +280,50 @@ export class Inventory {
   /** Adds `n` of `kind` if it fits under `maxWeight`; a no-op (returns false)
    *  otherwise — callers are expected to check first via `canAdd()` when they
    *  need to leave the item's world representation in place on failure (see
-   *  `app/createApp.ts`'s pickup handling). `acquiredAtDays` (plan 159) is
-   *  only meaningful — and only recorded — for perishable kinds
-   *  (`isFoodPerishable`); every other call site can omit it. */
-  add(kind: ItemKind, n = 1, acquiredAtDays?: number): boolean {
+   *  `app/createApp.ts`'s pickup handling). `acquiredAtDays` (plan 159 /
+   *  items-player-002) is only recorded for perishable kinds; every other
+   *  call site can omit it. New perishable units start at effective age 0
+   *  under this inventory's storage decay. */
+  add(kind: ItemKind, n = 1, acquiredAtDays?: number, sourceSpecies?: FoodSourceSpecies): boolean {
     if (!this.canAdd(kind, n)) return false
     this.counts.set(kind, this.count(kind) + n)
-    if (isFoodPerishable(kind)) this.addFoodBatch(kind, n, acquiredAtDays ?? 0)
+    if (isFoodPerishable(kind)) {
+      const acquired = acquiredAtDays ?? 0
+      this.addFoodBatch(kind, createFoodBatch(
+        n,
+        acquired,
+        this.decayModifier,
+        sourceSpecies ?? sourceSpeciesForMeatKind(kind),
+      ))
+    }
     return true
   }
 
-  /** Like `add()`, but replays `batches`' original `acquiredAtDays` instead
-   *  of the day-0 default — the receiving half of a claim/carry/deposit
-   *  transfer that must not silently "refresh" a perishable item just
-   *  because it changed hands (plan settlements-npcs-014 implementation
-   *  notes §11). Falls back to plain `add()` when `batches` is empty (a
-   *  non-perishable kind, or a caller with no batch info to preserve). */
-  addWithFreshness(kind: ItemKind, n: number, batches: readonly FoodBatch[]): boolean {
-    if (batches.length === 0) return this.add(kind, n)
+  /** Receiving half of a food transfer: incoming batches are checkpointed
+   *  onto this inventory's decay at `nowDays` (when provided) so a chest /
+   *  household / settlement never silently continues a carried 1.0× clock.
+   *  Falls back to plain `add()` when `batches` is empty. */
+  addWithFreshness(kind: ItemKind, n: number, batches: readonly FoodBatch[], nowDays?: number): boolean {
+    if (batches.length === 0) return this.add(kind, n, nowDays)
     if (!this.canAdd(kind, n)) return false
     this.counts.set(kind, this.count(kind) + n)
-    if (isFoodPerishable(kind)) for (const batch of batches) this.addFoodBatch(kind, batch.count, batch.acquiredAtDays)
+    if (isFoodPerishable(kind)) {
+      for (const batch of batches) {
+        const incoming = nowDays == null ? cloneFoodBatch(batch) : checkpointFoodBatch(batch, nowDays, this.decayModifier)
+        this.addFoodBatch(kind, incoming)
+      }
+    }
     return true
   }
 
-  /** Like `remove()`, but also returns the exact freshness batches consumed
-   *  (oldest first, see `removeFoodBatch`) — the claiming half of a
-   *  claim/carry/deposit transfer, paired with `addWithFreshness()` on the
-   *  receiving end. `null` (no-op) when there isn't `n` held; `[]` for a
-   *  non-perishable kind (nothing to track). */
-  removeWithFreshness(kind: ItemKind, n: number): readonly FoodBatch[] | null {
+  /** Claiming half of a food transfer — FIFO at `nowDays`, returning
+   *  checkpointed batches ready for `addWithFreshness` on the destination.
+   *  `null` when there isn't `n` held; `[]` for a non-perishable kind. */
+  removeWithFreshness(kind: ItemKind, n: number, nowDays = 0): readonly FoodBatch[] | null {
     const current = this.count(kind)
     if (current < n) return null
     this.counts.set(kind, current - n)
-    return isFoodPerishable(kind) ? this.removeFoodBatch(kind, n) : []
+    return isFoodPerishable(kind) ? this.removeFoodBatch(kind, n, nowDays) : []
   }
 
   addInstance(instance: ItemInstance): boolean {
@@ -407,11 +438,11 @@ export class Inventory {
     return true
   }
 
-  remove(kind: ItemKind, n: number): boolean {
+  remove(kind: ItemKind, n: number, nowDays = 0): boolean {
     const current = this.count(kind)
     if (current < n) return false
     this.counts.set(kind, current - n)
-    if (isFoodPerishable(kind)) this.removeFoodBatch(kind, n)
+    if (isFoodPerishable(kind)) this.removeFoodBatch(kind, n, nowDays)
     return true
   }
 
@@ -429,12 +460,11 @@ export class Inventory {
     return Object.fromEntries(this.counts) as Partial<Record<ItemKind, number>>
   }
 
-  /** Persists only what can't be re-derived: perishable kinds' batch counts +
-   *  acquisition days. Non-perishable kinds never appear here. */
+  /** Persists perishable kinds' batch provenance and lazy decay state. */
   foodBatchesToJSON(): Partial<Record<ItemKind, FoodBatch[]>> {
     const out: Partial<Record<ItemKind, FoodBatch[]>> = {}
     for (const [kind, batches] of this.foodBatches) {
-      if (batches.length > 0) out[kind] = batches.map((b) => ({ ...b }))
+      if (batches.length > 0) out[kind] = batches.map(cloneFoodBatch)
     }
     return out
   }

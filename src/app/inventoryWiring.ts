@@ -12,12 +12,14 @@ import type { QuestManager } from '../quests/QuestManager'
 import type { VueUi } from '../ui-vue/mount'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
+import type { DayNightState } from '../world/dayNight'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
 import { aboutAreaLine, requestAssistanceLine } from '../ai/dialogueTemplates'
 import { playInventoryDrop } from '../audio/inventorySounds'
 import { readBook } from '../items/books'
+import { expandFoodBatchesToUnits } from '../items/foodItems'
 import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
@@ -108,17 +110,20 @@ export type InventoryWiringDeps = {
    *  purchases both reveal into the same player-wide `LocationKnowledge`. */
   locationCatalog: WorldLocationCatalog
   locationKnowledge: LocationKnowledge
+  dayNight: DayNightState
 }
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, primaryWeapons, playerTorch, hud, toast, vueUi,
-    questManager, worldFlags, playOnce, grantItem, locationCatalog, locationKnowledge,
+    questManager, worldFlags, playOnce, grantItem, locationCatalog, locationKnowledge, dayNight,
   } = deps
+
+  const nowDays = (): number => dayNight.elapsedDays
 
   const merchantInventoryView = () => ({
     counts: inventoryCountsForUi(inventory),
-    groups: buildInventoryGroups(inventory),
+    groups: buildInventoryGroups(inventory, nowDays()),
   })
 
   const syncMerchantIfOpen = (): void => {
@@ -194,10 +199,13 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     const instances = instanceBacked ? inventory.getInstances(kind) : []
     const count = instanceBacked ? instances.length : inventory.count(kind)
     if (count <= 0) return
+    let unitBatches: ReturnType<typeof expandFoodBatchesToUnits> = []
     if (instanceBacked) {
       for (const instance of instances) inventory.removeInstance(instance.id)
     } else {
-      inventory.remove(kind, count)
+      const removed = inventory.removeWithFreshness(kind, count, nowDays())
+      if (!removed) return
+      unitBatches = expandFoodBatchesToUnits(removed)
     }
     heldTool.syncWithInventory()
     if (playerTorch.isLit() && playerTorch.source() === 'wooden_torch' && heldTool.held() !== 'wooden_torch') {
@@ -210,6 +218,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
         player.mesh.position.x + Math.cos(angle) * 0.6,
         player.mesh.position.z + Math.sin(angle) * 0.6,
         instanceBacked ? toSaveItemInstance(instances[i]!) : undefined,
+        undefined,
+        unitBatches[i],
       )
     }
     playInventoryDrop(playOnce)

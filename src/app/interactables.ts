@@ -4,6 +4,7 @@ import type { Interactable, WorldItemRef } from '../interaction/Interactable'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemSpawners } from '../items/createItemSpawners'
 import type { PlacedTents } from '../items/createPlacedTents'
+import type { FoodBatch } from '../items/foodFreshness'
 import type { ToolKind } from '../items/HeldTool'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { Settlement } from '../settlement/createSettlement'
@@ -944,7 +945,7 @@ export function collectItem(
   chunkManager: ChunkManager,
   itemSpawners: ItemSpawners,
   droppedItems: DroppedItems,
-): { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance } | null {
+): { kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: FoodBatch } | null {
   switch (ref.source) {
     case 'dropped':
       return droppedItems.collect(ref.id)

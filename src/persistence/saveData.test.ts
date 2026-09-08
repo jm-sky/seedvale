@@ -46,7 +46,7 @@ const validSave: SaveData = {
     discoveredLocations: [{ id: 'cave:home-cave-0', state: 'confirmed', source: 'exploration' }],
     targets: ['cave:home-cave-0'],
   },
-  settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [] } } },
+  settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [], foodBatches: {} } } },
   playerNeeds: { hunger: 12, thirst: 8, vigor: 40, starvationDuration: 5400, dehydrationDuration: 900 },
   ownedLandPlots: ['0_0:plot-sale-0'],
   skills: {
@@ -61,15 +61,15 @@ const validSave: SaveData = {
     { id: 'home:cave', state: 'disabled', deathsThisCycle: 2, disabledAtDay: 9.5 },
     { id: 'home:thicket', state: 'active', deathsThisCycle: 0, disabledAtDay: null },
   ],
-  foodBatches: { berries: [{ count: 3, acquiredAtDays: 1.5 }] },
+  foodBatches: { berries: [{ count: 3, acquiredAtDays: 1.5, accumulatedEffectiveAge: 0, lastCheckpointDays: 1.5, decayModifier: 1 }] },
   dryingRacks: [{ id: 'dryingrack:0', x: 1, z: 2, yaw: 0, process: null }],
   hives: [{ id: 'hive:0', x: 3, z: 4, yaw: 0, lastCollectedAtDay: 2, burned: false, burnRewardCollected: false }],
   fishingBait: { 'fishspot:1:2': { kind: 'berries', appliedAtDays: 1, expiresAtDays: 4, strength: 1 } },
   harvestedCropIds: ['0:0:crop0', '1:-2:crop1'],
   placedContainers: [
-    { id: 'chest:1', kind: 'chest', x: 5, z: -3, yaw: 0.4, counts: { stone: 2 }, instances: [] },
+    { id: 'chest:1', kind: 'chest', x: 5, z: -3, yaw: 0.4, counts: { stone: 2 }, instances: [], foodBatches: {} },
   ],
-  carriedContainer: { id: 'chest:2', kind: 'chest', counts: {}, instances: [] },
+  carriedContainer: { id: 'chest:2', kind: 'chest', counts: {}, instances: [], foodBatches: {} },
   playerWells: [{ id: 'well:1', x: 5, z: -3, yaw: 0.4, stage: 'well', workProgress: 1.25, waterDepth: 5, waterKind: 'groundwater' }],
   terrainPreparations: [{
     id: 'terrainPrep:1',
@@ -432,7 +432,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })
   })
 
-  it('migrates a real v5 save (plan items-player-017) into v6, defaulting missing construction progress to already-complete', () => {
+  it('migrates a real v5 save (plan items-player-017) into current, defaulting missing construction progress to already-complete', () => {
     const { completedWork: _tcw, ...v5Torch } = validSave.standingTorches[0]!
     const { completedWork: _pcw, ...v5Palisade } = validSave.palisades[0]!
     const v5Save = { ...validSave, version: 5, standingTorches: [v5Torch], palisades: [v5Palisade] }
@@ -444,6 +444,18 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
         palisades: [{ ...v5Palisade, completedWork: PALISADE_REQUIRED_WORK }],
       },
     })
+  })
+
+  it('migrates a real v6 save (plan items-player-002) into v7 without inventing current timestamps', () => {
+    const v6Save = {
+      ...validSave,
+      version: 6,
+      foodBatches: { berries: [{ count: 3, acquiredAtDays: 1.5 }] },
+      placedContainers: [{ id: 'chest:1', kind: 'chest', x: 5, z: -3, yaw: 0.4, counts: { stone: 2 }, instances: [] }],
+      carriedContainer: { id: 'chest:2', kind: 'chest', counts: {}, instances: [] },
+      settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [] } } },
+    }
+    expect(loadStoredSave(v6Save)).toEqual({ status: 'ok', data: validSave })
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

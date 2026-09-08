@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createFoodBatch } from './foodFreshness'
 import { Inventory } from './Inventory'
 import { isWeaponItemInstance } from './itemInstances'
 import { itemSizeUnits } from './items'
@@ -171,14 +172,14 @@ describe('Inventory food batches (plan 159)', () => {
     expect(inv.oldestAcquiredAtDays('stone')).toBeNull()
   })
 
-  it('merges compatible-age additions into one batch', () => {
+  it('keeps distinct timestamps as separate batches', () => {
     const inv = new Inventory()
     inv.add('berries', 2, 5)
     inv.add('berries', 1, 5.1)
     expect(inv.count('berries')).toBe(3)
     const batches = inv.getFoodBatches('berries')
-    expect(batches).toHaveLength(1)
-    expect(batches[0]!.count).toBe(3)
+    expect(batches).toHaveLength(2)
+    expect(batches.map((b) => b.count).sort()).toEqual([1, 2])
   })
 
   it('keeps incompatible-age additions as separate batches', () => {
@@ -208,10 +209,11 @@ describe('Inventory food batches (plan 159)', () => {
   })
 
   it('restores batches from the constructor and persists them via foodBatchesToJSON', () => {
-    const inv = new Inventory({ berries: 2 }, undefined, undefined, { berries: [{ count: 2, acquiredAtDays: 3 }] })
+    const batch = createFoodBatch(2, 3, 1)
+    const inv = new Inventory({ berries: 2 }, undefined, undefined, { berries: [batch] })
     expect(inv.count('berries')).toBe(2)
-    expect(inv.getFoodBatches('berries')).toEqual([{ count: 2, acquiredAtDays: 3 }])
-    expect(inv.foodBatchesToJSON()).toEqual({ berries: [{ count: 2, acquiredAtDays: 3 }] })
+    expect(inv.getFoodBatches('berries')).toEqual([batch])
+    expect(inv.foodBatchesToJSON()).toEqual({ berries: [batch] })
   })
 
   it('clears batches with clear()', () => {
@@ -239,8 +241,11 @@ describe('Inventory.removeWithFreshness / addWithFreshness (plan settlements-npc
     const inv = new Inventory()
     inv.add('berries', 1, 0)
     inv.add('berries', 1, 10)
-    const consumed = inv.removeWithFreshness('berries', 2)
-    expect(consumed).toEqual([{ count: 1, acquiredAtDays: 0 }, { count: 1, acquiredAtDays: 10 }])
+    const consumed = inv.removeWithFreshness('berries', 2, 10)
+    expect(consumed).toEqual([
+      { ...createFoodBatch(1, 0, 1), accumulatedEffectiveAge: 10, lastCheckpointDays: 10 },
+      createFoodBatch(1, 10, 1),
+    ])
     expect(inv.count('berries')).toBe(0)
   })
 
@@ -253,31 +258,32 @@ describe('Inventory.removeWithFreshness / addWithFreshness (plan settlements-npc
 
   it('addWithFreshness replays the given batches instead of stamping day 0', () => {
     const inv = new Inventory()
-    expect(inv.addWithFreshness('berries', 2, [{ count: 2, acquiredAtDays: 7 }])).toBe(true)
+    const batch = createFoodBatch(2, 7, 1)
+    expect(inv.addWithFreshness('berries', 2, [batch])).toBe(true)
     expect(inv.count('berries')).toBe(2)
-    expect(inv.getFoodBatches('berries')).toEqual([{ count: 2, acquiredAtDays: 7 }])
+    expect(inv.getFoodBatches('berries')).toEqual([batch])
   })
 
   it('addWithFreshness falls back to add()\'s default when given no batches', () => {
     const inv = new Inventory()
     expect(inv.addWithFreshness('berries', 2, [])).toBe(true)
-    expect(inv.getFoodBatches('berries')).toEqual([{ count: 2, acquiredAtDays: 0 }])
+    expect(inv.getFoodBatches('berries')).toEqual([createFoodBatch(2, 0, 1)])
   })
 
   it('addWithFreshness respects capacity, refusing (and not partially applying) when it does not fit', () => {
     const inv = new Inventory(undefined, 0.01)
-    expect(inv.addWithFreshness('berries', 5, [{ count: 5, acquiredAtDays: 3 }])).toBe(false)
+    expect(inv.addWithFreshness('berries', 5, [createFoodBatch(5, 3, 1)])).toBe(false)
     expect(inv.count('berries')).toBe(0)
   })
 
   it('round-trips a claim between two inventories with freshness intact', () => {
     const source = new Inventory()
     source.add('berries', 3, 4)
-    const consumed = source.removeWithFreshness('berries', 3)
+    const consumed = source.removeWithFreshness('berries', 3, 4)
     expect(consumed).not.toBeNull()
     const destination = new Inventory()
-    destination.addWithFreshness('berries', 3, consumed!)
-    expect(destination.getFoodBatches('berries')).toEqual([{ count: 3, acquiredAtDays: 4 }])
+    destination.addWithFreshness('berries', 3, consumed!, 4)
+    expect(destination.getFoodBatches('berries', 4)).toEqual([createFoodBatch(3, 4, 1)])
   })
 })
 

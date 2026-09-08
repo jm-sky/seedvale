@@ -104,11 +104,10 @@ Today there is exactly one namespace (coarse world-location classification, used
 ## Known persistence limitations
 
 - **Player HP is not persisted.** Every Continue/Load fully heals the player, while NPC and livestock HP both persist. Unlike player stamina — which carries an explicit "not worth persisting" rationale — nothing states this is a deliberate choice. This is a maintainer decision (persist it, or document the omission as deliberate), not resolved here.
-- **Food-freshness batch anchors are lost outside the player's own inventory.** The player's inventory persists a per-batch acquisition timestamp so freshness survives a save/load; the structurally identical inventories owned by households, the settlement economy, and placed containers persist only counts and item instances, with no equivalent field. This is notable because in-session transfers between these owners *do* carry freshness end-to-end — a save/load then discards exactly what an in-session transfer preserves.
 - **Rats have no persistence and are not seed-derivable.** A settlement's rat population is entirely rebuilt from a live formula every time that settlement streams back in — see [fauna.md](./fauna.md).
 - **Wild-fauna individual state is not persisted.** Population reconstruction is deterministic; no specific individual's position, health, hunger, disease state, or life stage survives a session boundary. The generic per-individual snapshot mechanism exists on the fauna runtime class itself but is only ever invoked for livestock — see [fauna.md](./fauna.md).
 
-None of the four items above is a "bug" in the sense of contradicting a stated invariant — the first two are undocumented gaps with no stated rationale either way; the latter two are documented, deliberate scope decisions. Treat them accordingly rather than uniformly as defects.
+None of the three items above is a "bug" in the sense of contradicting a stated invariant — the first is an undocumented gap with no stated rationale either way; the latter two are documented, deliberate scope decisions. Treat them accordingly rather than uniformly as defects.
 
 ## Entry points
 

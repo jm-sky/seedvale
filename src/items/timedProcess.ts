@@ -1,3 +1,4 @@
+import type { FoodBatch } from './foodFreshness'
 import type { ItemKind } from './items'
 
 /** Plan 159 §7 — a small generic model for a background process (drying,
@@ -18,6 +19,9 @@ export type TimedProcess = {
   durationDays: number
   input: readonly ItemStackInput[]
   output: readonly ItemStackOutput[]
+  /** Perishable input provenance — travels from start to collect so drying
+   *  cannot drop age/sourceSpecies (plan items-player-002). */
+  inputBatches?: readonly FoodBatch[]
 }
 
 export function processCompletedAtDays(process: TimedProcess): number {

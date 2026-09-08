@@ -21,6 +21,7 @@ import type { WellStage } from '../world/playerWell'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
+import { type FoodSourceSpecies, isFoodSourceSpecies } from '../items/foodFreshness'
 import { isToolKind } from '../items/HeldTool'
 import { isTrapKind } from '../items/itemInstances'
 import { type ItemKind } from '../items/items'
@@ -57,9 +58,20 @@ export type SaveQuests = {
   relations: Record<string, number>
 }
 
+/** Stack-level freshness batches for perishable food (`items/foodFreshness.ts`). */
+export type SaveFoodBatch = {
+  count: number
+  acquiredAtDays: number
+  sourceSpecies?: FoodSourceSpecies
+  accumulatedEffectiveAge: number
+  lastCheckpointDays: number
+  decayModifier: number
+}
+
 /** `instance` (plan 199) — set only when this drop came from an
- *  `ItemInstance` (traps, weapon-maintenance kinds). */
-export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number, instance?: SaveItemInstance }
+ *  `ItemInstance` (traps, weapon-maintenance kinds). `foodBatch` preserves
+ *  perishable provenance for a dropped unit (plan items-player-002). */
+export type SaveDroppedItem = { id: string, kind: ItemKind, x: number, z: number, instance?: SaveItemInstance, foodBatch?: SaveFoodBatch }
 
 /** `kind` — `'pit'` (stone-ring, longer burn) vs `'simple'` (branches only,
  *  shorter burn). `grate` is optional; a missing value restores as `false`. */
@@ -179,11 +191,6 @@ export type SaveSpawnPoint = {
   disabledAtDay: number | null
 }
 
-/** Stack-level freshness batches for the player's perishable food
- *  (`items/Inventory.ts`'s `FoodBatch`). Only perishable kinds ever appear
- *  here; storage/derived freshness stages are never persisted. */
-export type SaveFoodBatch = { count: number, acquiredAtDays: number }
-
 /** Persistent drying rack (`world/dryingRacks.ts`'s `DryingRackRecord`) —
  *  same "player chose the spot" shape as `SavePlacedTent`/`SavePlacedTrap`,
  *  plus at most one in-flight `TimedProcess`. */
@@ -194,6 +201,7 @@ export type SaveTimedProcess = {
   durationDays: number
   input: { kind: ItemKind, count: number }[]
   output: { kind: ItemKind, count: number }[]
+  inputBatches?: SaveFoodBatch[]
 }
 
 export type SaveDryingRack = {
@@ -233,6 +241,7 @@ export type SavePlacedContainer = {
   yaw: number
   counts: Partial<Record<ItemKind, number>>
   instances: SaveItemInstance[]
+  foodBatches?: Partial<Record<ItemKind, SaveFoodBatch[]>>
 }
 
 /** The container currently in the player's hands — same contents shape, no
@@ -242,6 +251,7 @@ export type SaveCarriedContainer = {
   kind: ContainerKind
   counts: Partial<Record<ItemKind, number>>
   instances: SaveItemInstance[]
+  foodBatches?: Partial<Record<ItemKind, SaveFoodBatch[]>>
 }
 
 /** Persistent player-built well — mirrors `world/playerWell.ts`'s
@@ -443,7 +453,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 6
+export const CURRENT_SAVE_VERSION = 7
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -600,6 +610,16 @@ function isSavePlayer(value: unknown): value is SavePlayer {
   )
 }
 
+function isDroppedItemsField(value: unknown): value is SaveDroppedItem[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const d = entry as Record<string, unknown>
+    if (typeof d.id !== 'string' || typeof d.kind !== 'string' || typeof d.x !== 'number' || typeof d.z !== 'number') return false
+    return d.foodBatch === undefined || isSaveFoodBatch(d.foodBatch)
+  })
+}
+
 function isHeldToolField(value: unknown): value is ItemKind | null {
   if (value === null) return true
   if (typeof value !== 'string') return false
@@ -731,7 +751,7 @@ function isSettlementEconomySnapshot(value: unknown): value is SettlementEconomy
   for (const amount of Object.values(food.counts as Record<string, unknown>)) {
     if (typeof amount !== 'number') return false
   }
-  return isSaveItemInstancesField(food.instances)
+  return isSaveItemInstancesField(food.instances) && isOptionalFoodBatchesField(food.foodBatches)
 }
 
 function isSettlementEconomiesField(value: unknown): value is Record<string, SettlementEconomySnapshot> {
@@ -841,13 +861,18 @@ function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
   })
 }
 
+function isSaveFoodBatch(value: unknown): value is SaveFoodBatch {
+  if (!value || typeof value !== 'object') return false
+  const b = value as Record<string, unknown>
+  if (typeof b.count !== 'number' || typeof b.acquiredAtDays !== 'number') return false
+  if (typeof b.accumulatedEffectiveAge !== 'number' || typeof b.lastCheckpointDays !== 'number') return false
+  if (typeof b.decayModifier !== 'number') return false
+  if (b.sourceSpecies !== undefined && !isFoodSourceSpecies(b.sourceSpecies)) return false
+  return true
+}
+
 function isSaveFoodBatchArray(value: unknown): value is SaveFoodBatch[] {
-  if (!Array.isArray(value)) return false
-  return value.every((entry) => {
-    if (!entry || typeof entry !== 'object') return false
-    const b = entry as Record<string, unknown>
-    return typeof b.count === 'number' && typeof b.acquiredAtDays === 'number'
-  })
+  return Array.isArray(value) && value.every(isSaveFoodBatch)
 }
 
 function isFoodBatchesField(value: unknown): value is Partial<Record<ItemKind, SaveFoodBatch[]>> {
@@ -855,18 +880,23 @@ function isFoodBatchesField(value: unknown): value is Partial<Record<ItemKind, S
   return Object.values(value as Record<string, unknown>).every(isSaveFoodBatchArray)
 }
 
+function isOptionalFoodBatchesField(value: unknown): boolean {
+  return value === undefined || isFoodBatchesField(value)
+}
+
 function isTimedProcessField(value: unknown): value is SaveTimedProcess | null {
   if (value === null) return true
   if (!value || typeof value !== 'object') return false
   const p = value as Record<string, unknown>
-  return (
-    typeof p.id === 'string' &&
-    p.kind === 'drying' &&
-    typeof p.startedAtDays === 'number' &&
-    typeof p.durationDays === 'number' &&
-    Array.isArray(p.input) &&
-    Array.isArray(p.output)
-  )
+  if (
+    typeof p.id !== 'string' ||
+    p.kind !== 'drying' ||
+    typeof p.startedAtDays !== 'number' ||
+    typeof p.durationDays !== 'number' ||
+    !Array.isArray(p.input) ||
+    !Array.isArray(p.output)
+  ) return false
+  return p.inputBatches === undefined || isSaveFoodBatchArray(p.inputBatches)
 }
 
 function isDryingRacksField(value: unknown): value is SaveDryingRack[] {
@@ -933,7 +963,8 @@ function isPlacedContainersField(value: unknown): value is SavePlacedContainer[]
       typeof c.z === 'number' &&
       typeof c.yaw === 'number' &&
       !!c.counts && typeof c.counts === 'object' &&
-      isSaveItemInstancesField(c.instances)
+      isSaveItemInstancesField(c.instances) &&
+      isOptionalFoodBatchesField(c.foodBatches)
     )
   })
 }
@@ -946,7 +977,8 @@ function isCarriedContainerField(value: unknown): value is SaveCarriedContainer 
     typeof c.id === 'string' &&
     typeof c.kind === 'string' && CONTAINER_KINDS.has(c.kind) &&
     !!c.counts && typeof c.counts === 'object' &&
-    isSaveItemInstancesField(c.instances)
+    isSaveItemInstancesField(c.instances) &&
+    isOptionalFoodBatchesField(c.foodBatches)
   )
 }
 
@@ -1288,6 +1320,7 @@ function isHouseholdSnapshot(value: unknown): value is HouseholdSnapshot {
       if (typeof amount !== 'number') return false
     }
     if (!isSaveItemInstancesField(items.instances)) return false
+    if (!isOptionalFoodBatchesField(items.foodBatches)) return false
   }
   return true
 }
@@ -1372,7 +1405,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!v.inventory || typeof v.inventory !== 'object') return false
   if (!isSaveItemInstancesField(v.inventoryInstances)) return false
   if (!Array.isArray(v.collectedItemIds)) return false
-  if (!Array.isArray(v.droppedItems)) return false
+  if (!isDroppedItemsField(v.droppedItems)) return false
   if (!Array.isArray(v.placedFires)) return false
   if (typeof v.timeOfDay !== 'number') return false
   if (typeof v.elapsedDays !== 'number') return false
@@ -1557,6 +1590,126 @@ function migrateSaveV5ToV6(data: unknown): unknown {
   }
 }
 
+function migrateSaveFoodBatch(entry: unknown, fallbackDecay: number): SaveFoodBatch {
+  const b = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {}
+  const acquiredAtDays = typeof b.acquiredAtDays === 'number' && Number.isFinite(b.acquiredAtDays) ? b.acquiredAtDays : 0
+  const count = typeof b.count === 'number' && Number.isFinite(b.count) ? b.count : 0
+  const batch: SaveFoodBatch = {
+    count,
+    acquiredAtDays,
+    accumulatedEffectiveAge: typeof b.accumulatedEffectiveAge === 'number' && Number.isFinite(b.accumulatedEffectiveAge)
+      ? Math.max(0, b.accumulatedEffectiveAge)
+      : 0,
+    lastCheckpointDays: typeof b.lastCheckpointDays === 'number' && Number.isFinite(b.lastCheckpointDays)
+      ? b.lastCheckpointDays
+      : acquiredAtDays,
+    decayModifier: typeof b.decayModifier === 'number' && Number.isFinite(b.decayModifier) && b.decayModifier > 0
+      ? b.decayModifier
+      : fallbackDecay,
+  }
+  if (isFoodSourceSpecies(b.sourceSpecies)) batch.sourceSpecies = b.sourceSpecies
+  return batch
+}
+
+function migrateSaveFoodBatchesMap(value: unknown, fallbackDecay: number): Partial<Record<ItemKind, SaveFoodBatch[]>> {
+  if (!value || typeof value !== 'object') return {}
+  const out: Partial<Record<ItemKind, SaveFoodBatch[]>> = {}
+  for (const [kind, batches] of Object.entries(value as Record<string, unknown>)) {
+    if (!Array.isArray(batches)) continue
+    out[kind as ItemKind] = batches.map((entry) => migrateSaveFoodBatch(entry, fallbackDecay))
+  }
+  return out
+}
+
+function migrateTimedProcessV6(process: unknown): unknown {
+  if (!process || typeof process !== 'object') return process
+  const p = process as Record<string, unknown>
+  if (Array.isArray(p.inputBatches)) {
+    return { ...p, inputBatches: p.inputBatches.map((entry) => migrateSaveFoodBatch(entry, 1)) }
+  }
+  const startedAtDays = typeof p.startedAtDays === 'number' ? p.startedAtDays : 0
+  const input = Array.isArray(p.input) ? p.input : []
+  const inputBatches = input.flatMap((stack) => {
+    if (!stack || typeof stack !== 'object') return []
+    const s = stack as Record<string, unknown>
+    const count = typeof s.count === 'number' ? s.count : 0
+    if (count <= 0) return []
+    return [migrateSaveFoodBatch({ count, acquiredAtDays: startedAtDays }, 1)]
+  })
+  return { ...p, inputBatches }
+}
+
+/** v6 → v7 (plan items-player-002): persist lazy decay fields, container /
+ *  household / settlement foodBatches, drying inputBatches, and dropped
+ *  food provenance. Missing batches become `{}` rather than inventing
+ *  current world-time (that would refresh food). Existing player batches
+ *  keep `acquiredAtDays` and start with accumulated age 0 at that timestamp. */
+function migrateSaveV6ToV7(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const dryingRacks = Array.isArray(v.dryingRacks) ? v.dryingRacks : []
+  const placedContainers = Array.isArray(v.placedContainers) ? v.placedContainers : []
+  const droppedItems = Array.isArray(v.droppedItems) ? v.droppedItems : []
+  const settlementEconomies = v.settlementEconomies && typeof v.settlementEconomies === 'object'
+    ? v.settlementEconomies as Record<string, Record<string, unknown>>
+    : {}
+  const households = v.households && typeof v.households === 'object'
+    ? v.households as Record<string, Record<string, unknown>>
+    : undefined
+
+  const carried = v.carriedContainer && typeof v.carriedContainer === 'object'
+    ? v.carriedContainer as Record<string, unknown>
+    : null
+
+  return {
+    ...v,
+    version: 7,
+    foodBatches: migrateSaveFoodBatchesMap(v.foodBatches, 1),
+    droppedItems: droppedItems.map((entry) => {
+      const d = entry as Record<string, unknown>
+      if (d.foodBatch === undefined) return d
+      return { ...d, foodBatch: migrateSaveFoodBatch(d.foodBatch, 1) }
+    }),
+    dryingRacks: dryingRacks.map((entry) => {
+      const r = entry as Record<string, unknown>
+      return { ...r, process: r.process ? migrateTimedProcessV6(r.process) : null }
+    }),
+    placedContainers: placedContainers.map((entry) => {
+      const c = entry as Record<string, unknown>
+      return { ...c, foodBatches: migrateSaveFoodBatchesMap(c.foodBatches, 0.5) }
+    }),
+    carriedContainer: carried
+      ? { ...carried, foodBatches: migrateSaveFoodBatchesMap(carried.foodBatches, 0.5) }
+      : null,
+    settlementEconomies: Object.fromEntries(
+      Object.entries(settlementEconomies).map(([id, snapshot]) => {
+        const food = snapshot.food && typeof snapshot.food === 'object'
+          ? snapshot.food as Record<string, unknown>
+          : {}
+        return [id, {
+          ...snapshot,
+          food: { ...food, foodBatches: migrateSaveFoodBatchesMap(food.foodBatches, 0.5) },
+        }]
+      }),
+    ),
+    ...(households
+      ? {
+          households: Object.fromEntries(
+            Object.entries(households).map(([id, snapshot]) => {
+              const items = snapshot.items && typeof snapshot.items === 'object'
+                ? snapshot.items as Record<string, unknown>
+                : undefined
+              if (!items) return [id, snapshot]
+              return [id, {
+                ...snapshot,
+                items: { ...items, foodBatches: migrateSaveFoodBatchesMap(items.foodBatches, 0.5) },
+              }]
+            }),
+          ),
+        }
+      : {}),
+  }
+}
+
 /** Registry of migrations, keyed by the version each one accepts as input.
  *  One entry per exact source version, chained by `migrateStoredSave()` —
  *  avoid a single monolithic function covering every historical step. */
@@ -1566,6 +1719,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   3: migrateSaveV3ToV4,
   4: migrateSaveV4ToV5,
   5: migrateSaveV5ToV6,
+  6: migrateSaveV6ToV7,
 }
 
 function detectStoredVersion(value: unknown): number | null {

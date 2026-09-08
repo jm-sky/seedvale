@@ -1,12 +1,12 @@
 import type { HouseholdHistoryEvent } from '../debug/householdHistory'
 import type { SettlementEconomy } from '../economy/settlementEconomy'
-import type { SaveItemInstance } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import { createSequenceAllocator } from '../debug/domainHistory'
 import { createHouseholdHistoryBuffer } from '../debug/householdHistory'
 import { EconomicStock } from '../economy/stock'
-import { foodItemCount, takeOneFoodItem } from '../items/foodItems'
-import { Inventory } from '../items/Inventory'
+import { STORED_FOOD_DECAY } from '../items/foodFreshness'
+import { foodItemCount, skipBatchCount, takeBatchCount, takeOneFoodItem } from '../items/foodItems'
+import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 
 /**
  * NPC household resource layer (plan 069). One family/home has one
@@ -184,7 +184,11 @@ export type HouseholdSnapshot = {
    *  holds (hunted meat/hide, arrows, bandages, …), distinct from `stock`'s
    *  scalar food/wood economic counters. Optional so older in-session
    *  snapshots without it still hydrate (a fresh empty `Inventory`). */
-  items?: { counts: Partial<Record<ItemKind, number>>, instances: readonly SaveItemInstance[] }
+  items?: {
+    counts: Partial<Record<ItemKind, number>>
+    instances: readonly SaveItemInstance[]
+    foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>
+  }
   /** Temporary hay-source lazy anchor (plan fauna-010 §6) — optional so an
    *  older in-session snapshot without it still hydrates (a fresh source
    *  starting from day 0, same "missing means default" contract `items`
@@ -240,7 +244,16 @@ export type Household = {
   deposit: (kind: 'wood', amount: number, economy?: SettlementEconomy | null, simTime?: number) => void
   /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
    *  shape, gathered/received food lands as `itemKind` units in `items`. */
-  depositFood: (itemKind: ItemKind, amount: number, economy?: SettlementEconomy | null, simTime?: number) => void
+  /** Concrete-food counterpart of `deposit` — same capacity-cap/overflow
+   *  shape, gathered/received food lands as `itemKind` units in `items`.
+   *  `batches` preserves provenance on a transfer; omit for newly produced food. */
+  depositFood: (
+    itemKind: ItemKind,
+    amount: number,
+    economy?: SettlementEconomy | null,
+    simTime?: number,
+    batches?: readonly FoodBatch[],
+  ) => void
   /** Removes exactly one concrete food item (deterministic kind order, see
    *  `items/foodItems.ts`) — the "eat one unit" primitive every consumption
    *  path uses instead of the old `stock.remove('food', 1)`. */
@@ -317,6 +330,9 @@ export function createHousehold(
     initial?.items?.counts ?? (initial ? undefined : initialHouseholdFoodCounts(id)),
     Infinity,
     initial?.items ? Inventory.instancesFromJSON(initial.items.instances) : undefined,
+    initial?.items?.foodBatches,
+    Infinity,
+    STORED_FOOD_DECAY,
   )
   if (!initial && hasHunter) items.add('bandage', HUNTER_STARTING_BANDAGES)
   let hayForage: HayForageState = initial?.hayForage ?? { nextPortionAtDays: 0, portionsToday: 0, dayAnchor: 0 }
@@ -363,15 +379,21 @@ export function createHousehold(
         historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind })
       }
     },
-    depositFood: (itemKind, amount, economy, simTime = 0) => {
+    depositFood: (itemKind, amount, economy, simTime = 0, batches) => {
       if (amount <= 0) return
       const before = shortageOf('food')
       const capacity = HOUSEHOLD_POLICY.food.capacity
       const room = Math.max(0, capacity - foodItemCount(items))
       const toHousehold = Math.min(amount, room)
-      if (toHousehold > 0) items.add(itemKind, toHousehold)
+      if (toHousehold > 0) {
+        if (batches && batches.length > 0) items.addWithFreshness(itemKind, toHousehold, takeBatchCount(batches, toHousehold), simTime)
+        else items.add(itemKind, toHousehold, simTime)
+      }
       const overflow = amount - toHousehold
-      if (overflow > 0 && economy) economy.depositFood(itemKind, overflow, simTime)
+      if (overflow > 0 && economy) {
+        const overflowBatches = batches && batches.length > 0 ? skipBatchCount(batches, toHousehold) : undefined
+        economy.depositFood(itemKind, overflow, simTime, overflowBatches)
+      }
       historyBuf.record({ simTime, seq: seq.next(), type: 'food.deposited', itemKind, amount: toHousehold, overflowed: overflow })
       if (before > 0 && shortageOf('food') === 0) {
         historyBuf.record({ simTime, seq: seq.next(), type: 'shortage.resolved', kind: 'food' })
@@ -379,7 +401,7 @@ export function createHousehold(
     },
     takeFood: (simTime = 0) => {
       const before = shortageOf('food')
-      const kind = takeOneFoodItem(items)
+      const kind = takeOneFoodItem(items, simTime)
       if (kind) {
         historyBuf.record({ simTime, seq: seq.next(), type: 'food.taken', itemKind: kind })
         const after = shortageOf('food')
@@ -398,7 +420,11 @@ export function createHousehold(
     snapshot: () => ({
       stock: stock.toJSON(),
       water: water.current,
-      items: { counts: items.toJSON(), instances: items.instancesToJSON() },
+      items: {
+        counts: items.toJSON(),
+        instances: items.instancesToJSON(),
+        foodBatches: items.foodBatchesToJSON(),
+      },
       hayForage,
     }),
     history: () => historyBuf.history(),

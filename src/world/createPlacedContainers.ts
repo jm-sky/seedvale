@@ -3,7 +3,8 @@ import type { ItemInstance } from '../items/itemInstances'
 import type { ItemKind } from '../items/items'
 import type { HeightSampler } from '../player/PlayerController'
 import { CONTAINER_DEFS, type ContainerKind, containerTotalWeight } from '../items/container'
-import { Inventory, type SaveItemInstance } from '../items/Inventory'
+import { STORED_FOOD_DECAY } from '../items/foodFreshness'
+import { type FoodBatch, Inventory, type SaveItemInstance } from '../items/Inventory'
 import { placeOnGround } from '../settlement/props'
 import { createPlacedContainerProp, disposePlacedContainerProp } from './containerProp'
 
@@ -18,6 +19,7 @@ export type PlacedContainerRecord = {
   yaw: number
   counts: Partial<Record<ItemKind, number>>
   instances: SaveItemInstance[]
+  foodBatches?: Partial<Record<ItemKind, FoodBatch[]>>
 }
 
 /** Persisted shape of the container the player is currently carrying (plan
@@ -28,6 +30,7 @@ export type SaveCarriedContainer = {
   kind: ContainerKind
   counts: Partial<Record<ItemKind, number>>
   instances: SaveItemInstance[]
+  foodBatches?: Partial<Record<ItemKind, FoodBatch[]>>
 }
 
 export type PlacedContainerEntry = {
@@ -67,20 +70,25 @@ export type PlacedContainers = {
   containerCounts: (id: string) => Partial<Record<ItemKind, number>>
   containerInstances: (id: string, kind: ItemKind) => readonly ItemInstance[]
   containerWeight: (id: string) => number
-  /** Player/NPC → container, capacity-checked (gabarite only — see
-   *  container.ts). Returns the accepted amount; a partial/zero accept never
-   *  loses the remainder (caller keeps it). `acquiredAtDays` only matters for
-   *  perishable kinds (plan 159 `FoodBatch`s) — omit for non-food. */
-  deposit: (id: string, kind: ItemKind, amount: number, acquiredAtDays?: number) => number
+  /** Player/NPC → container, capacity-checked (gabarite only). Returns the
+   *  accepted amount; a partial/zero accept never loses the remainder.
+   *  `nowDays` checkpoints decay onto chest 0.5× storage. */
+  deposit: (id: string, kind: ItemKind, amount: number, nowDays?: number, batches?: readonly FoodBatch[]) => number
   depositInstance: (id: string, instance: ItemInstance) => boolean
-  /** Container → player/NPC. Returns the amount actually removed. */
-  withdraw: (id: string, kind: ItemKind, amount: number) => number
+  /** Container → player/NPC. Returns the amount actually removed plus the
+   *  FIFO batches checkpointed at `nowDays`. */
+  withdraw: (id: string, kind: ItemKind, amount: number, nowDays?: number) => { amount: number, batches: readonly FoodBatch[] }
   withdrawInstance: (id: string, instanceId: string) => ItemInstance | null
   dispose: () => void
 }
 
-function contentsFromSave(counts: Partial<Record<ItemKind, number>>, instances: SaveItemInstance[], capacityUnits: number): Inventory {
-  return new Inventory(counts, Infinity, Inventory.instancesFromJSON(instances), undefined, capacityUnits)
+function contentsFromSave(
+  counts: Partial<Record<ItemKind, number>>,
+  instances: SaveItemInstance[],
+  capacityUnits: number,
+  foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>,
+): Inventory {
+  return new Inventory(counts, Infinity, Inventory.instancesFromJSON(instances), foodBatches, capacityUnits, STORED_FOOD_DECAY)
 }
 
 function toRecord(entry: { id: string, kind: ContainerKind, x: number, z: number, yaw: number, contents: Inventory }): PlacedContainerRecord {
@@ -92,6 +100,7 @@ function toRecord(entry: { id: string, kind: ContainerKind, x: number, z: number
     yaw: entry.yaw,
     counts: entry.contents.toJSON(),
     instances: entry.contents.instancesToJSON(),
+    foodBatches: entry.contents.foodBatchesToJSON(),
   }
 }
 
@@ -127,7 +136,7 @@ export function createPlacedContainers(
       z: record.z,
       yaw: record.yaw,
       mesh,
-      contents: contentsFromSave(record.counts, record.instances, def.capacityUnits),
+      contents: contentsFromSave(record.counts, record.instances, def.capacityUnits, record.foodBatches),
     })
   }
 
@@ -137,7 +146,7 @@ export function createPlacedContainers(
     carried = {
       id: initialCarried.id,
       kind: initialCarried.kind,
-      contents: contentsFromSave(initialCarried.counts, initialCarried.instances, def.capacityUnits),
+      contents: contentsFromSave(initialCarried.counts, initialCarried.instances, def.capacityUnits, initialCarried.foodBatches),
     }
   }
 
@@ -156,6 +165,7 @@ export function createPlacedContainers(
         yaw,
         counts: {},
         instances: [],
+        foodBatches: {},
       }
       spawn(record)
       return record
@@ -174,7 +184,7 @@ export function createPlacedContainers(
     carriedKind: () => carried?.kind ?? null,
     carriedWeightKg: () => (carried ? containerTotalWeight(CONTAINER_DEFS[carried.kind], carried.contents.totalWeight()) : 0),
     carriedNode: () => (carried
-      ? { id: carried.id, kind: carried.kind, counts: carried.contents.toJSON(), instances: carried.contents.instancesToJSON() }
+      ? { id: carried.id, kind: carried.kind, counts: carried.contents.toJSON(), instances: carried.contents.instancesToJSON(), foodBatches: carried.contents.foodBatchesToJSON() }
       : null),
     putDownCarried(x, z, yaw) {
       if (!carried) return null
@@ -194,11 +204,24 @@ export function createPlacedContainers(
       if (!entry) return 0
       return containerTotalWeight(CONTAINER_DEFS[entry.kind], entry.contents.totalWeight())
     },
-    deposit(id, kind, amount, acquiredAtDays) {
+    deposit(id, kind, amount, nowDays = 0, batches) {
       const entry = find(id)
       if (!entry || amount <= 0) return 0
+      if (batches && batches.length > 0) {
+        let accepted = 0
+        let remaining = amount
+        for (const batch of batches) {
+          if (remaining <= 0) break
+          const take = Math.min(batch.count, remaining)
+          const slice = { ...batch, count: take }
+          if (!entry.contents.addWithFreshness(kind, take, [slice], nowDays)) break
+          accepted += take
+          remaining -= take
+        }
+        return accepted
+      }
       let accepted = 0
-      while (accepted < amount && entry.contents.add(kind, 1, acquiredAtDays)) accepted++
+      while (accepted < amount && entry.contents.add(kind, 1, nowDays)) accepted++
       return accepted
     },
     depositInstance(id, instance) {
@@ -206,13 +229,14 @@ export function createPlacedContainers(
       if (!entry) return false
       return entry.contents.addInstance(instance)
     },
-    withdraw(id, kind, amount) {
+    withdraw(id, kind, amount, nowDays = 0) {
       const entry = find(id)
-      if (!entry || amount <= 0) return 0
+      if (!entry || amount <= 0) return { amount: 0, batches: [] }
       const have = entry.contents.count(kind)
       const take = Math.min(have, amount)
-      if (take <= 0) return 0
-      return entry.contents.remove(kind, take) ? take : 0
+      if (take <= 0) return { amount: 0, batches: [] }
+      const batches = entry.contents.removeWithFreshness(kind, take, nowDays)
+      return batches ? { amount: take, batches } : { amount: 0, batches: [] }
     },
     withdrawInstance(id, instanceId) {
       const entry = find(id)

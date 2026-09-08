@@ -1,6 +1,7 @@
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { AnimalAgent } from './AnimalAgent'
+import { sourceSpeciesForMeatKind } from '../items/foodFreshness'
 import { meatKindForAnimal } from './animalMeat'
 
 export type AnimalHarvestResult = {
@@ -34,7 +35,7 @@ export function harvestAnimalIntoInventory(
   const meatKind = meatKindForAnimal(animal.def.kind)
   if (!inventory.canAdd(meatKind, 1)) return null
   animal.harvestMeat()
-  inventory.add(meatKind, 1, acquiredAtDays)
+  inventory.add(meatKind, 1, acquiredAtDays, sourceSpeciesForMeatKind(meatKind))
   const hide = inventory.canAdd('hide', 1) && inventory.add('hide', 1)
   return { meatKind, hide }
 }

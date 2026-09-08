@@ -1503,6 +1503,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 : null
               const acquiredInstance = restoredInstance ?? createAcquiredInstance(collected.kind)
               if (acquiredInstance) inventory.addInstance(acquiredInstance)
+              else if (collected.foodBatch) inventory.addWithFreshness(collected.kind, 1, [collected.foodBatch], dayNight.elapsedDays)
               else inventory.add(collected.kind, 1, dayNight.elapsedDays)
               playInventoryPickUp(worldAudio.playOnce)
               hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)

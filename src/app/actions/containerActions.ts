@@ -9,6 +9,7 @@ import {
   type ContainerKind,
   containerTotalWeight,
 } from '../../items/container'
+import { skipBatchCount } from '../../items/foodItems'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
@@ -147,11 +148,11 @@ export function createContainerActions(
     vueUi.openContainerScreen(
       def.label,
       entry.contents.toJSON(),
-      buildInventoryGroups(entry.contents),
+      buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
       containerTotalWeight(def, entry.contents.totalWeight()),
       def.capacityUnits,
       inventoryCountsForUi(inventory),
-      buildInventoryGroups(inventory),
+      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
       inventory.totalWeight(),
       inventory.maxWeight,
     )
@@ -163,11 +164,11 @@ export function createContainerActions(
     const def = CONTAINER_DEFS[entry.kind]
     vueUi.refreshContainerScreen(
       entry.contents.toJSON(),
-      buildInventoryGroups(entry.contents),
+      buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
       containerTotalWeight(def, entry.contents.totalWeight()),
       def.capacityUnits,
       inventoryCountsForUi(inventory),
-      buildInventoryGroups(inventory),
+      buildInventoryGroups(inventory, ctx.dayNight.elapsedDays),
       inventory.totalWeight(),
       inventory.maxWeight,
     )
@@ -187,12 +188,18 @@ export function createContainerActions(
   vueUi.configureContainerScreen({
     onDeposit: (kind, amount) => {
       if (!openContainerId) return
-      const accepted = bundle.placedContainers.deposit(openContainerId, kind, amount, inventory.oldestAcquiredAtDays(kind) ?? undefined)
+      const nowDays = ctx.dayNight.elapsedDays
+      const batches = inventory.removeWithFreshness(kind, amount, nowDays)
+      if (!batches) return
+      const accepted = bundle.placedContainers.deposit(openContainerId, kind, amount, nowDays, batches)
       if (accepted <= 0) {
+        inventory.addWithFreshness(kind, amount, batches, nowDays)
         toast.show('Brak miejsca w skrzyni.', 'error')
         return
       }
-      if (!inventory.remove(kind, accepted)) return
+      if (accepted < amount) {
+        inventory.addWithFreshness(kind, amount - accepted, skipBatchCount(batches, accepted), nowDays)
+      }
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       refreshContainerScreenFor(openContainerId)
@@ -203,11 +210,10 @@ export function createContainerActions(
         toast.show(inventoryFullToastText(inventory, kind, amount), 'error')
         return
       }
-      const entry = bundle.placedContainers.find(openContainerId)
-      const acquiredAtDays = entry?.contents.oldestAcquiredAtDays(kind) ?? undefined
-      const removed = bundle.placedContainers.withdraw(openContainerId, kind, amount)
-      if (removed <= 0) return
-      inventory.add(kind, removed, acquiredAtDays)
+      const nowDays = ctx.dayNight.elapsedDays
+      const withdrawn = bundle.placedContainers.withdraw(openContainerId, kind, amount, nowDays)
+      if (withdrawn.amount <= 0) return
+      inventory.addWithFreshness(kind, withdrawn.amount, withdrawn.batches, nowDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       refreshContainerScreenFor(openContainerId)

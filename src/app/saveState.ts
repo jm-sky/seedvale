@@ -186,7 +186,14 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     foodBatches: inventory.foodBatchesToJSON(),
     dryingRacks: bundle.dryingRacks.nodes().map((rack) => ({
       ...rack,
-      process: rack.process ? { ...rack.process, input: [...rack.process.input], output: [...rack.process.output] } : null,
+      process: rack.process
+        ? {
+            ...rack.process,
+            input: [...rack.process.input],
+            output: [...rack.process.output],
+            inputBatches: rack.process.inputBatches?.map((b) => ({ ...b })),
+          }
+        : null,
     })),
     hives: bundle.hives.nodes().map((hive) => ({ ...hive })),
     fishingBait: Object.fromEntries(fishingBait),

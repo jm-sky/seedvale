@@ -1,7 +1,7 @@
 # Plan: Food provenance, freshness and storage
 
 **Created:** 2026-08-31  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** medium · **Effort:** M  
 **Depends on:** ~~155~~ ~~159~~ ~~164~~ ~~184~~  

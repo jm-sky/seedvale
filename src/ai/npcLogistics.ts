@@ -120,12 +120,18 @@ export function depositFoodHarvest(household: Household | null, economy: Settlem
  *  overflow here: `Household.items` (an `Inventory`, not `EconomicStock`) is
  *  unbounded, same as any other physical storage building. Used by the
  *  hunter's meat/hide delivery and the fisher's fish delivery alike. */
-export function depositCarriedItems(carried: Inventory, household: Household, kinds: readonly ItemKind[]): void {
+export function depositCarriedItems(
+  carried: Inventory,
+  household: Household,
+  kinds: readonly ItemKind[],
+  nowDays = 0,
+): void {
   for (const kind of kinds) {
     const n = carried.count(kind)
     if (n <= 0) continue
-    carried.remove(kind, n)
-    household.items.add(kind, n)
+    const batches = carried.removeWithFreshness(kind, n, nowDays)
+    if (!batches) continue
+    household.items.addWithFreshness(kind, n, batches, nowDays)
   }
 }
 
@@ -234,11 +240,11 @@ export function planEconomyWithdraw(ctx: NpcLogisticsCtx, kind: HouseholdResourc
       deposit,
       onPickup: () => {
         const claimed = economy.withdrawFood(requested, ctx.simTime())
-        carriedClaim = carryFoodClaim(ctx.carried, claimed, economy.items)
+        carriedClaim = carryFoodClaim(ctx.carried, claimed, economy.items, ctx.simTime())
       },
       onDeposit: () => {
         if (carriedClaim.length === 0) return
-        deliverCarriedFoodClaim(ctx.carried, carriedClaim, household.items)
+        deliverCarriedFoodClaim(ctx.carried, carriedClaim, household.items, ctx.simTime())
         satisfyHouseholdResourceNeed(ctx.needs, household, 'food', ctx.simTime())
       },
     }, ctx.waitMultiplier)
@@ -294,12 +300,12 @@ export function planHouseholdExchange(ctx: NpcLogisticsCtx, kind: HouseholdResou
       pickup,
       deposit,
       onPickup: () => {
-        const claimed = claimFoodItems(sourceHousehold.items, requested)
-        carriedClaim = carryFoodClaim(ctx.carried, claimed, sourceHousehold.items)
+        const claimed = claimFoodItems(sourceHousehold.items, requested, ctx.simTime())
+        carriedClaim = carryFoodClaim(ctx.carried, claimed, sourceHousehold.items, ctx.simTime())
       },
       onDeposit: () => {
         if (carriedClaim.length === 0) return
-        deliverCarriedFoodClaim(ctx.carried, carriedClaim, household.items)
+        deliverCarriedFoodClaim(ctx.carried, carriedClaim, household.items, ctx.simTime())
         satisfyHouseholdResourceNeed(ctx.needs, household, 'food', ctx.simTime())
       },
     }, ctx.waitMultiplier)
@@ -376,7 +382,7 @@ export function planPlayerStorageDelivery(ctx: NpcLogisticsCtx): NpcPlannedActio
     onPickup: () => {
       const take = Math.min(household.surplus('food'), requested)
       if (take <= 0) return
-      const removed = claimFoodItems(household.items, take)
+      const removed = claimFoodItems(household.items, take, ctx.simTime())
       const removedTotal = removed.reduce((n, r) => n + r.amount, 0)
       if (removedTotal > 0 && carried.add(HELPER_DELIVERY_ITEM_KIND, removedTotal)) gathered = removedTotal
     },
@@ -397,12 +403,18 @@ export function planPlayerStorageDelivery(ctx: NpcLogisticsCtx): NpcPlannedActio
  * scheduled action. `null` (stays on `choose`, already set by `endCombat`)
  * when there's nothing to deliver.
  */
-export function planDeliverHuntYieldHome(carried: Inventory, household: Household | null, home: Vec3, waitMultiplier: number): NpcPlannedAction | null {
+export function planDeliverHuntYieldHome(
+  carried: Inventory,
+  household: Household | null,
+  home: Vec3,
+  waitMultiplier: number,
+  nowDays: () => number = () => 0,
+): NpcPlannedAction | null {
   if (!household || !HUNT_YIELD_KINDS.some((kind) => carried.count(kind) > 0)) return null
   return {
     kind: 'deposit',
     destination: copyVec3(home),
     durationSec: 1.0 * waitMultiplier,
-    onComplete: () => depositCarriedItems(carried, household, HUNT_YIELD_KINDS),
+    onComplete: () => depositCarriedItems(carried, household, HUNT_YIELD_KINDS, nowDays()),
   }
 }

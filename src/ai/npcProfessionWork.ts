@@ -264,7 +264,7 @@ function planFishingWork(ctx: NpcWorkContext): NpcPlannedAction | null {
       destination: copyVec3(householdStorageDestination('food', ctx.home, ctx.landmarks.stockpile)),
       durationSec: 0.8 * ctx.waitMultiplier,
       onComplete: () => {
-        if (ctx.household) depositCarriedItems(ctx.carried, ctx.household, FISH_YIELD_KINDS)
+        if (ctx.household) depositCarriedItems(ctx.carried, ctx.household, FISH_YIELD_KINDS, ctx.simTime())
       },
     },
   }
@@ -324,8 +324,8 @@ function planTraderCollection(ctx: NpcWorkContext, household: Household, economy
     destination: pickupDestination,
     durationSec: 1.2 * ctx.waitMultiplier,
     onComplete: () => {
-      const claimed = claimFoodItems(sourceHousehold.items, requested)
-      carriedClaim = carryFoodClaim(ctx.carried, claimed, sourceHousehold.items)
+      const claimed = claimFoodItems(sourceHousehold.items, requested, ctx.simTime())
+      carriedClaim = carryFoodClaim(ctx.carried, claimed, sourceHousehold.items, ctx.simTime())
     },
     next: {
       kind: 'deposit',
@@ -334,8 +334,9 @@ function planTraderCollection(ctx: NpcWorkContext, household: Household, economy
       onComplete: () => {
         if (carriedClaim.length === 0) return
         for (const claim of carriedClaim) {
-          ctx.carried.remove(claim.kind, claim.amount)
-          economy.depositFood(claim.kind, claim.amount, ctx.simTime(), claim.batches)
+          const batches = ctx.carried.removeWithFreshness(claim.kind, claim.amount, ctx.simTime())
+          if (!batches) continue
+          economy.depositFood(claim.kind, claim.amount, ctx.simTime(), batches)
         }
         tryAdvanceDevelopment(economy)
       },
@@ -373,7 +374,7 @@ function planTraderWork(ctx: NpcWorkContext): NpcPlannedAction | null {
         // requested amount, so the cap is a no-op in practice. `batches`
         // (plan settlements-npcs-014) keeps this claim's freshness intact
         // across the transfer instead of resetting it to day 0.
-        const claimed = claimFoodItems(household.items, household.surplus('food'))
+        const claimed = claimFoodItems(household.items, household.surplus('food'), ctx.simTime())
         for (const { kind: itemKind, amount, batches } of claimed) economy.depositFood(itemKind, amount, ctx.simTime(), batches)
         return
       }

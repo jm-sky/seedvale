@@ -1,3 +1,4 @@
+import type { FoodBatch } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { PlacedContainers } from './createPlacedContainers'
 
@@ -21,7 +22,7 @@ export type HelperDeliveryHooks = {
   /** Atomic transfer into the container, capacity-checked (plan 164) —
    *  returns the amount actually accepted; a partial/zero accept leaves the
    *  remainder with the caller. */
-  deposit: (containerId: string, kind: ItemKind, amount: number, acquiredAtDays?: number) => number
+  deposit: (containerId: string, kind: ItemKind, amount: number, nowDays?: number, batches?: readonly FoodBatch[]) => number
 }
 
 export function createHelperDeliveryHooks(containers: PlacedContainers): HelperDeliveryHooks {
@@ -34,6 +35,6 @@ export function createHelperDeliveryHooks(containers: PlacedContainers): HelperD
       const entry = containers.find(containerId)
       return entry ? entry.contents.canAdd(kind, 1) : false
     },
-    deposit: (containerId, kind, amount, acquiredAtDays) => containers.deposit(containerId, kind, amount, acquiredAtDays),
+    deposit: (containerId, kind, amount, nowDays, batches) => containers.deposit(containerId, kind, amount, nowDays, batches),
   }
 }
