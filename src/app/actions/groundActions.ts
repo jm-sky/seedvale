@@ -1,5 +1,6 @@
 import type { BadgeDef, BadgeManager } from '../../badges/badges'
 import type { ItemKind } from '../../items/items'
+import type { SocialConsequence } from '../../reputation/ReputationManager'
 import {
   playActionBranchBreak,
   playActionChop,
@@ -14,10 +15,16 @@ import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
 import { createAcquiredInstance } from '../../items/trade'
 import { physicalEffortBusyOptions } from '../../player/PlayerNeeds'
+import {
+  GRAVE_DISTURBANCE_EXPOSURE,
+  resolveSocialExposure,
+  socialExposureEventRoll,
+} from '../../reputation/socialExposure'
 import { HIDDEN_TREASURE_MARKER_COUNT, hiddenTreasureDigHit } from '../../settlement/hiddenTreasure'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
+import { phaseName } from '../../world/dayNight'
 import { findHiddenFindSpot, HIDDEN_FIND_SEARCH_RADIUS, resolveHiddenFindLoot } from '../../world/hiddenFinds'
 import { createSeededRandom } from '../../world/parseSeed'
 import { advanceWorldTreeHarvest, CHOP_DURATION_SEC } from '../../world/treeHarvest'
@@ -79,6 +86,9 @@ export type GroundActionsDeps = {
    *  `createApp.ts` clears it on New Game, same "mutated in place" contract
    *  as `landOwnership`/`mapDiscovery`. */
   resolvedHiddenFindSpotIds: Set<string>
+  /** App-owned reputation seam (plan quests-progression-011) — applied only
+   *  after a cemetery grave's first social-exposure roll succeeds. */
+  applySocialConsequence: (consequence: SocialConsequence) => void
 }
 
 function hashString(value: string): number {
@@ -92,12 +102,13 @@ function hashString(value: string): number {
 
 export function createGroundActions(ctx: PlayerActionContext, deps: GroundActionsDeps): GroundActions {
   const { bundle, player, inventory, heldTool, hud, toast, busy, dayNight, mouseLook, worldAudio } = ctx
-  const { worldFlags, badges, resolvedHiddenFindSpotIds } = deps
+  const { worldFlags, badges, resolvedHiddenFindSpotIds, applySocialConsequence } = deps
 
   /** Pushes the current earned-badges list (plan world-007 §9) —
    *  event-driven only (called after a Hidden Find resolves), never per
-   *  frame. Grave-robbing has no NPC witnesses in v1 (plan
-   *  quests-progression-001 §13), so digging never changes reputation. */
+   *  frame. Grave disturbance always records badge/progress; reputation
+   *  changes only when the one-shot social-exposure roll succeeds (plan
+   *  quests-progression-011). */
   const refreshBadgesUi = (): void => {
     hud.setPlayerBadges(badges.listEarned())
   }
@@ -181,15 +192,33 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     resolvedHiddenFindSpotIds.add(match.spotId)
 
     const isGraveDisturbance = match.landmark.kind === 'cemetery'
-    const settlementSize = isGraveDisturbance
-      ? villageNearest({ x, z }, bundle.settlementsManager)?.size
-      : undefined
-    const loot = resolveHiddenFindLoot(match.landmark, match.spotId, match.spotIndex, settlementSize)
+    const nearestVillage = isGraveDisturbance
+      ? villageNearest({ x, z }, bundle.settlementsManager)
+      : null
+    const loot = resolveHiddenFindLoot(match.landmark, match.spotId, match.spotIndex, nearestVillage?.size)
 
     const newlyEarned: BadgeDef[] = []
-    // The act of disturbing a grave is the offense (plan §6) — independent
-    // of whether it turned out to hold anything.
+    // The act of disturbing a grave is the offense (plan world-007 §6) —
+    // independent of whether it turned out to hold anything, and independent
+    // of whether the social-exposure roll succeeds.
     if (isGraveDisturbance) newlyEarned.push(...badges.recordGraveDisturbed())
+
+    if (isGraveDisturbance && nearestVillage?.id) {
+      const sneak = player.skills.sneak
+      const { exposed } = resolveSocialExposure({
+        night: phaseName(dayNight.timeOfDay) === 'noc',
+        sneakActive: sneak.active,
+        sneakValue: sneak.value,
+        eventRoll: socialExposureEventRoll(match.spotId),
+      })
+      if (exposed) {
+        applySocialConsequence({
+          settlementId: nearestVillage.id,
+          reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
+          renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
+        })
+      }
+    }
 
     if (loot.kind === 'coins') {
       ctx.grantItem('coin', loot.amount)

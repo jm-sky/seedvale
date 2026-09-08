@@ -58,6 +58,11 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Vue UI mount](../src/ui-vue/mount.ts) — the `VueUi` facade the app layer talks to.
 - [Vanilla UI facades](../src/ui/) — `create*` modules; most are now thin wrappers over Vue screens.
 
+## Reputation / progression
+
+- [ReputationManager](../src/reputation/ReputationManager.ts) — per-settlement reputation dimensions and renown; callers apply an already-resolved `SocialConsequence`.
+- [Social exposure](../src/reputation/socialExposure.ts) — pure day/night + Sneak exposure roll used when a cemetery grave first resolves.
+
 ## Persistence
 
 - [Save state](../src/app/saveState.ts) — assembles the live runtime state into `SaveData` and owns when it is written.

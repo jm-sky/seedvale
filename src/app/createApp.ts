@@ -1010,7 +1010,15 @@ export async function createApp(
   })
   const gathering = createGatheringActions(actionCtx, { vueUi, fishingBait, fishingAttempts })
   const survival = createSurvivalActions(actionCtx)
-  const ground = createGroundActions(actionCtx, { worldFlags, badges, resolvedHiddenFindSpotIds })
+  const ground = createGroundActions(actionCtx, {
+    worldFlags,
+    badges,
+    resolvedHiddenFindSpotIds,
+    applySocialConsequence: (consequence) => {
+      applySocialConsequence(reputation, consequence)
+      refreshCharacterReputation()
+    },
+  })
   const rest = createRestActions(actionCtx, {
     timeSkipOverlay,
     busyOverlay,

@@ -9,9 +9,9 @@
  *
  * Both are keyed by settlement id and only ever change through an explicit,
  * already-resolved `SocialConsequence` a caller applies (quest completion,
- * a future domain integration) — this manager never inspects world/NPC/
- * quest state itself and never infers whether an event became socially
- * known (see the plan's "Zasada wiedzy społecznej").
+ * an exposed cemetery grave disturbance) — this manager never inspects
+ * world/NPC/quest state itself and never infers whether an event became
+ * socially known (see the plan's "Zasada wiedzy społecznej").
  */
 
 export type ReputationDimension = 'trust' | 'competence' | 'benevolence' | 'courage' | 'integrity'
@@ -142,8 +142,9 @@ export type SocialConsequence = {
 /** Applies an already-resolved `SocialConsequence` to `manager` — the one
  *  place that fans a consequence's sparse deltas out into individual
  *  `changeReputation`/`changeRenown` calls, reused by every call site
- *  (`QuestManager`'s `applySocialConsequence` seam and any future domain
- *  integration) instead of each one re-implementing the fan-out. */
+ *  (`QuestManager`'s `applySocialConsequence` seam and grave-disturbance
+ *  exposure in `groundActions`) instead of each one re-implementing the
+ *  fan-out. */
 export function applySocialConsequence(manager: ReputationManager, consequence: SocialConsequence): void {
   if (consequence.reputation) {
     for (const [dimension, delta] of Object.entries(consequence.reputation) as [ReputationDimension, number | undefined][]) {

@@ -1,7 +1,7 @@
 # Plan: Grave Robbing Reputation Risk & Stealth
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** S
 **Depends on:** world-007, quests-progression-001

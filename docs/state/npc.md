@@ -4,7 +4,7 @@
 
 **Not:** settlement generation, `Household`/`SettlementEconomy` internals (that's [SETTLEMENTS.md](./settlements.md)), fauna's own behaviour pipeline or `AnimalAgent` internals (that's [fauna.md](./fauna.md) — this doc only covers how NPCs *consume* what fauna exposes), combat resolver internals ([combat.md](./combat.md) owns those; this doc covers only where combat hands off into NPC state), the work-contract commitment record itself ([player-systems.md](./player-systems.md)'s Work Contracts section owns that; this doc covers only the NPC-side evaluation/execution), or a plan/changelog.
 
-**Last verified:** 2026-09-07
+**Last verified:** 2026-09-08
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -93,7 +93,7 @@ This is the domain's central extensibility point: a fourth pressure producer nee
 **Three entirely separate "social standing" stores exist — they share only vocabulary, not implementation:**
 - **NPC↔NPC** — a symmetric pair store (get/adjust by id pair), one instance per settlement manager, persisted. Consumed today only by conversation outcomes (below).
 - **Player↔NPC relation** — a scalar per NPC name, owned by `QuestManager`, used for quest availability gates and read by the player-interaction resolvers below. A structurally unrelated model (single scalar keyed by name vs. a symmetric pair store keyed by id) — a future reader should not assume one derives from the other.
-- **Player↔settlement reputation/renown** (plan quests-progression-001) — owned by `src/reputation/ReputationManager.ts`, keyed by settlement id, independent of `QuestManager` and of any one NPC. Five `-100..100` reputation dimensions (how the settlement judges the player's social qualities) plus a `0..100` renown (how widely known the player is there); reputation and renown change only through an explicit, already-resolved `SocialConsequence` a caller applies (today: two quest completions, via `QuestManager`'s `applySocialConsequence` seam) — the manager never inspects world/NPC/quest state itself. Persisted as its own top-level, sparse `SaveData.reputation` field (absent settlement = neutral).
+- **Player↔settlement reputation/renown** (plan quests-progression-001) — owned by `src/reputation/ReputationManager.ts`, keyed by settlement id, independent of `QuestManager` and of any one NPC. Five `-100..100` reputation dimensions (how the settlement judges the player's social qualities) plus a `0..100` renown (how widely known the player is there); reputation and renown change only through an explicit, already-resolved `SocialConsequence` a caller applies (quest completion via `QuestManager`'s `applySocialConsequence` seam, and an exposed first-time cemetery grave disturbance via `groundActions` + `socialExposure.ts`) — the manager never inspects world/NPC/quest state itself. Persisted as its own top-level, sparse `SaveData.reputation` field (absent settlement = neutral).
 
 **Social/conversation** runs over a settlement's own campfire as a shared social place. Partner selection is deliberately unranked (same place, available, not self, deterministic tie-break) — personality only changes retry frequency, never candidate choice. Pairing is atomic per settlement per tick: both participants are reserved and one shared outcome is generated before either side's conversation begins, so a third NPC can never be offered either mid-pairing. The outcome is a small deterministic roll (agreeableness + existing relationship value) that adjusts the symmetric NPC↔NPC store by a small delta.
 

@@ -1,14 +1,43 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { BadgeManager } from '../../badges/badges'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WeaponItemInstance } from '../../items/itemInstances'
 import type { PlayerActionContext } from './actionContext'
+import { BadgeManager } from '../../badges/badges'
+import { villageNearest } from '../../debug/locationQueries'
 import { createHeldTool } from '../../items/HeldTool'
 import { Inventory } from '../../items/Inventory'
 import { ITEM_DEFS, type ItemKind } from '../../items/items'
+import { applySocialConsequence, ReputationManager } from '../../reputation/ReputationManager'
+import { GRAVE_DISTURBANCE_EXPOSURE, socialExposureEventRoll } from '../../reputation/socialExposure'
+import { cemeteryGraveLayout } from '../../settlement/props'
+import { rotateOffsetY } from '../../settlement/propUtils'
+import { DIG_DURATION_SEC } from '../../terrain/dig'
+import {
+  findHiddenFindSpot,
+  type HiddenFindLandmark,
+  resolveHiddenFindLoot,
+} from '../../world/hiddenFinds'
 import { CHOP_DURATION_SEC } from '../../world/treeHarvest'
 import { createTreeLifecycle, type TreeEnvSample } from '../../world/treeLifecycle'
 import { createBusyAction } from '../busyAction'
 import { createGroundActions, type GroundActionsDeps } from './groundActions'
+
+vi.mock('../../terrain/dig', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../terrain/dig')>()
+  return {
+    ...actual,
+    getDigProfileAt: vi.fn(() => ({ depth: 0.28, stoneChance: 0, surface: 'soil' as const })),
+  }
+})
+
+vi.mock('../../terrain/digAction', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../terrain/digAction')>()
+  return { ...actual, applyDigAt: vi.fn() }
+})
+
+vi.mock('../../debug/locationQueries', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../debug/locationQueries')>()
+  return { ...actual, villageNearest: vi.fn(() => null) }
+})
 
 // A `felled` tree's final chop step is the one that yields both `branch` and
 // `beam` at once (`treeLifecycle.ts`'s `FELLING_BEAM_YIELD`) — the scenario
@@ -90,6 +119,7 @@ function setupFelledTreeChop(maxWeight: number) {
     worldFlags: { hiddenTreasureFound: false },
     badges: {} as unknown as BadgeManager,
     resolvedHiddenFindSpotIds: new Set(),
+    applySocialConsequence: vi.fn(),
   }
 
   const chop = () => {
@@ -151,3 +181,265 @@ describe('startTreeChop reward delivery (tree harvest reward delivery fix)', () 
     expect(toast.show).toHaveBeenCalledWith(expectedMessage, 'pickup')
   })
 })
+
+function cemeteryLandmark(id: string): HiddenFindLandmark {
+  return { id, kind: 'cemetery', x: 100, z: 50, rotationY: 0.7, scale: 1, cemeterySize: 'SM' }
+}
+
+function gravePosition(landmark: HiddenFindLandmark, index: number): { x: number, z: number } {
+  const local = cemeteryGraveLayout(landmark.cemeterySize ?? 'SM', landmark.scale)[index]!
+  const rotated = rotateOffsetY(local.x, local.z, landmark.rotationY)
+  return { x: landmark.x + rotated.x, z: landmark.z + rotated.z }
+}
+
+function cemeterySpotWithRoll(predicate: (roll: number) => boolean): {
+  landmark: HiddenFindLandmark
+  dig: { x: number, z: number }
+  spotId: string
+} {
+  for (let i = 0; i < 400; i++) {
+    const landmark = cemeteryLandmark(`cemetery:exposure:${i}`)
+    const dig = gravePosition(landmark, 0)
+    const match = findHiddenFindSpot([landmark], dig.x, dig.z, () => false)
+    if (!match) continue
+    const roll = socialExposureEventRoll(match.spotId)
+    if (predicate(roll)) return { landmark, dig, spotId: match.spotId }
+  }
+  throw new Error('expected a cemetery spot whose exposure roll matches the predicate')
+}
+
+function emptyCemeteryGraveWithRoll(predicate: (roll: number) => boolean): {
+  landmark: HiddenFindLandmark
+  dig: { x: number, z: number }
+} {
+  for (let i = 0; i < 80; i++) {
+    const landmark = cemeteryLandmark(`cemetery:empty:${i}`)
+    const layout = cemeteryGraveLayout(landmark.cemeterySize ?? 'SM', landmark.scale)
+    for (let index = 0; index < layout.length; index++) {
+      const loot = resolveHiddenFindLoot(landmark, `${landmark.id}:${index}`, index, 'SM')
+      if (loot.kind !== 'empty') continue
+      const dig = gravePosition(landmark, index)
+      const match = findHiddenFindSpot([landmark], dig.x, dig.z, () => false)
+      if (match?.spotId !== `${landmark.id}:${index}`) continue
+      if (predicate(socialExposureEventRoll(match.spotId))) return { landmark, dig }
+    }
+  }
+  throw new Error('expected an empty cemetery grave whose exposure roll matches')
+}
+
+function stoneCircleWithFind(): HiddenFindLandmark {
+  for (let i = 0; i < 80; i++) {
+    const landmark: HiddenFindLandmark = {
+      id: `stoneCircle:exposure:${i}`,
+      kind: 'stoneCircle',
+      x: 20,
+      z: -30,
+      rotationY: 0,
+      scale: 1,
+    }
+    if (findHiddenFindSpot([landmark], landmark.x, landmark.z, () => false)) return landmark
+  }
+  throw new Error('expected a stoneCircle Hidden Find')
+}
+
+const NEAREST_VILLAGE = {
+  kind: 'village' as const,
+  position: { x: 0, z: 0 },
+  distance: 12,
+  id: 'anna-village',
+  name: 'Anna',
+  size: 'SM' as const,
+}
+
+function setupHiddenFindDig(options: {
+  landmarks: HiddenFindLandmark[]
+  timeOfDay: number
+  sneakActive?: boolean
+  sneakValue?: number
+  resolved?: Set<string>
+  village?: typeof NEAREST_VILLAGE | null
+}) {
+  const inventory = new Inventory({ shovel: 1 }, 100)
+  const heldTool = createHeldTool(inventory, 'shovel')
+  const dropped: { kind: ItemKind, count: number }[] = []
+  const grantItem = makeGrantItem(inventory, dropped)
+  const toast = { show: vi.fn() }
+  const busy = createBusyAction()
+  const badges = new BadgeManager()
+  const applySocial = vi.fn()
+  const resolvedHiddenFindSpotIds = options.resolved ?? new Set<string>()
+  vi.mocked(villageNearest).mockReturnValue(options.village === undefined ? NEAREST_VILLAGE : options.village)
+
+  const ctx = {
+    bundle: {
+      chunkManager: {
+        getNearbyLandmarks: () => options.landmarks,
+        modifyTerrain: vi.fn(),
+      },
+      settlementsManager: { peekDef: () => null, getLoaded: () => [], home: null },
+      droppedItems: { settleNear: vi.fn(), drop: vi.fn() },
+    },
+    player: {
+      mesh: { position: { x: 0, z: 0 } },
+      skills: { sneak: { active: options.sneakActive ?? false, value: options.sneakValue ?? 0.2 } },
+    },
+    inventory,
+    heldTool,
+    hud: { setPlayerBadges: vi.fn() },
+    toast,
+    busy,
+    timeSkip: { isActive: () => false },
+    restCamp: { isActive: () => false },
+    dayNight: { elapsedDays: 0, dayLengthSec: 600, timeOfDay: options.timeOfDay },
+    mouseLook: { state: { yaw: 0 } },
+    worldAudio: { playAt: vi.fn(), playOnce: vi.fn() },
+    grantItem,
+    syncQuickActionAvailability: vi.fn(),
+  } as unknown as PlayerActionContext
+
+  const deps: GroundActionsDeps = {
+    worldFlags: { hiddenTreasureFound: false },
+    badges,
+    resolvedHiddenFindSpotIds,
+    applySocialConsequence: applySocial,
+  }
+
+  const digAt = (x: number, z: number) => {
+    createGroundActions(ctx, deps).startDigAt(x, z)
+    busy.tick(DIG_DURATION_SEC)
+  }
+
+  return { badges, applySocial, resolvedHiddenFindSpotIds, digAt, grantItem }
+}
+
+describe('cemetery grave social exposure (quests-progression-011)', () => {
+  beforeEach(() => {
+    vi.mocked(villageNearest).mockReset()
+    vi.mocked(villageNearest).mockReturnValue(null)
+  })
+
+  it('applies integrity -8 / trust -4 / renown +2 exactly once when the grave is exposed', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const { applySocial, badges, resolvedHiddenFindSpotIds, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(badges.exportState().gravesDisturbed).toBe(1)
+    expect(applySocial).toHaveBeenCalledTimes(1)
+    expect(applySocial).toHaveBeenCalledWith({
+      settlementId: 'anna-village',
+      reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
+      renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
+    })
+    expect(resolvedHiddenFindSpotIds.size).toBe(1)
+
+    applySocial.mockClear()
+    digAt(dig.x, dig.z)
+    expect(applySocial).not.toHaveBeenCalled()
+    expect(badges.exportState().gravesDisturbed).toBe(1)
+  })
+
+  it('does not change reputation or renown when the grave is not exposed', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll >= 0.5)
+    const { applySocial, badges, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(badges.exportState().gravesDisturbed).toBe(1)
+    expect(applySocial).not.toHaveBeenCalled()
+  })
+
+  it('still runs exposure for an empty grave', () => {
+    const { landmark, dig } = emptyCemeteryGraveWithRoll((roll) => roll < 0.5)
+    const { applySocial, badges, grantItem, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(badges.exportState().gravesDisturbed).toBe(1)
+    expect(grantItem).not.toHaveBeenCalled()
+    expect(applySocial).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not run grave exposure for a non-cemetery Hidden Find', () => {
+    const landmark = stoneCircleWithFind()
+    const { applySocial, badges, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+
+    digAt(landmark.x, landmark.z)
+
+    expect(badges.exportState().gravesDisturbed).toBe(0)
+    expect(applySocial).not.toHaveBeenCalled()
+  })
+
+  it('records the badge without a settlement reputation fallback', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const { applySocial, badges, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+      village: null,
+    })
+
+    digAt(dig.x, dig.z)
+
+    expect(badges.exportState().gravesDisturbed).toBe(1)
+    expect(applySocial).not.toHaveBeenCalled()
+  })
+
+  it('keeps other reputation dimensions unchanged when the consequence is applied', () => {
+    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const reputation = new ReputationManager()
+    const { applySocial, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+    applySocial.mockImplementation((consequence) => applySocialConsequence(reputation, consequence))
+
+    digAt(dig.x, dig.z)
+
+    expect(reputation.getReputationDimension('anna-village', 'integrity')).toBe(-8)
+    expect(reputation.getReputationDimension('anna-village', 'trust')).toBe(-4)
+    expect(reputation.getRenown('anna-village')).toBe(2)
+    expect(reputation.getReputationDimension('anna-village', 'competence')).toBe(0)
+    expect(reputation.getReputationDimension('anna-village', 'benevolence')).toBe(0)
+    expect(reputation.getReputationDimension('anna-village', 'courage')).toBe(0)
+  })
+
+  it('preserves the social consequence through ReputationManager save/load and does not reroll a resolved grave', () => {
+    const { landmark, dig, spotId } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const reputation = new ReputationManager()
+    const { applySocial, resolvedHiddenFindSpotIds, digAt } = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.5,
+    })
+    applySocial.mockImplementation((consequence) => applySocialConsequence(reputation, consequence))
+
+    digAt(dig.x, dig.z)
+    const restored = new ReputationManager(reputation.exportState())
+    expect(restored.getReputationDimension('anna-village', 'integrity')).toBe(-8)
+    expect(restored.getRenown('anna-village')).toBe(2)
+
+    applySocial.mockClear()
+    const second = setupHiddenFindDig({
+      landmarks: [landmark],
+      timeOfDay: 0.05,
+      sneakActive: true,
+      sneakValue: 1,
+      resolved: new Set(resolvedHiddenFindSpotIds),
+    })
+    second.digAt(dig.x, dig.z)
+    expect(second.applySocial).not.toHaveBeenCalled()
+    expect(spotId).toBeDefined()
+  })
+})
+

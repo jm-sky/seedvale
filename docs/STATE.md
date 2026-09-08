@@ -2,7 +2,7 @@
 
 **Purpose:** a short, current snapshot of the implemented architecture — enough to start a plan without reading every prior plan first. This document describes what exists now, not the desired future state, and not *how* any given plan implemented it.
 
-**Last verified:** 2026-09-07
+**Last verified:** 2026-09-08
 
 ## Read this first
 
@@ -71,7 +71,7 @@ Predator/prey/livestock ecosystem built on one shared `AnimalAgent` class — wi
 
 `QuestManager` with definitions, objectives, stages and multi-stage world interactions. Relation levels (`stranger`/`acquainted`/`friendly`/`trusted`) gate quest availability; `QuestDef.effects` overrides the flat relation/EXP reward. World-problem quests exist end-to-end (bound to a specific `AnimalAgent`/livestock/wolf-den instance via an injected resolver — `QuestManager` never imports fauna to scan it itself). Terminal states include `failed` and `invalidated` (set only on save/load restore, when a quest's bound animal identity can't be safely re-derived). Procedural landmarks carry a stable, save-free derived id and back a `interact_landmark` objective. Quest progress, EXP and player↔NPC relations persist; this player↔NPC relation store is structurally unrelated to the separate NPC↔NPC relationship store — see `npc.md`'s Relationships, social, and dialogue section. Bandit objectives and LLM quest generation remain unimplemented.
 
-`ReputationManager` (`src/reputation/`) owns local, per-settlement reputation (five `-100..100` dimensions: trust/competence/benevolence/courage/integrity) and renown (`0..100`) — a settlement-scoped social standing independent of `QuestManager`'s per-NPC relations and of `BadgeManager`'s earned-badge/history record. Changes only through an explicit, already-resolved `SocialConsequence` a caller applies (Stage 1: `grozny-wilk`/`wilcza-jama` completion, via `QuestManager`'s `applySocialConsequence` seam) — the manager never infers social knowledge from world/quest state itself. NPC spontaneous-reaction chance reads local renown (not reputation's dimensions); the Character Screen shows the settlement currently relevant to the player's position, or "Brak lokalnej reputacji" outside one. No witness/gossip/decay/cross-settlement propagation yet. See `npc.md`'s Relationships, social, and dialogue section and `persistence.md`'s Reputation/renown row.
+`ReputationManager` (`src/reputation/`) owns local, per-settlement reputation (five `-100..100` dimensions: trust/competence/benevolence/courage/integrity) and renown (`0..100`) — a settlement-scoped social standing independent of `QuestManager`'s per-NPC relations and of `BadgeManager`'s earned-badge/history record. Changes only through an explicit, already-resolved `SocialConsequence` a caller applies (quest completion via `QuestManager`'s seam, and a first-time cemetery grave disturbance whose deterministic social-exposure roll succeeds) — the manager never infers social knowledge from world/quest state itself. Grave disturbance always records `BadgeManager` history independently of that roll. NPC spontaneous-reaction chance reads local renown (not reputation's dimensions); the Character Screen shows the settlement currently relevant to the player's position, or "Brak lokalnej reputacji" outside one. No witness/gossip/decay/cross-settlement propagation yet. See `npc.md`'s Relationships, social, and dialogue section and `persistence.md`'s Reputation/renown row.
 
 ### Persistence
 
@@ -103,7 +103,7 @@ Prefer extending existing shared mechanisms instead of creating parallel systems
 - `Inventory` / `ItemKind` / `HeldTool` — item ownership + single held-tool slot; `Inventory` itself is generic (player + NPC). `src/items/primaryWeapons.ts` remembers the last-equipped melee/ranged weapon (session-local, not in `SaveData`) behind the HUD's primary-weapon shortcut buttons.
 - `TreeLifecycle` / `harvestWorldTree*` — tree growth + multi-stage chop (`src/world/treeLifecycle.ts`, `treeHarvest.ts`), plus deterministic branch gathering with its own regeneration cooldown.
 - `QuestManager` — quest progress, EXP and player↔NPC relations.
-- `ReputationManager` (`src/reputation/`) — per-settlement reputation (five `-100..100` dimensions) and renown (`0..100`); independent of `QuestManager`, changed only via an explicit `SocialConsequence` a caller applies.
+- `ReputationManager` (`src/reputation/`) — per-settlement reputation (five `-100..100` dimensions) and renown (`0..100`); independent of `QuestManager`, changed only via an explicit `SocialConsequence` a caller applies. Cemetery grave disturbance uses `socialExposure.ts` for a one-shot day/night + Sneak roll before that consequence.
 - `ChunkManager` — terrain sampling, streaming and environment-facing world queries.
 - `WorldLocationCatalog` / `LocationKnowledge` / `NavigationTargets` — concrete named world locations, player discovery state and active travel targets. See [state/world-locations.md](./state/world-locations.md).
 - `Place` / schedule-related NPC work — foundation for daily routines.
