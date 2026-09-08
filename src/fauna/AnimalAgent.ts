@@ -91,7 +91,20 @@ import {
   tickAnimalLife,
 } from './AnimalLife'
 import { type AnimalTrip, findWaterTripDestination, tripDayBucket } from './animalRoaming'
-import { resolveDogBarkStimulus, resolveDogGuardTarget, resolveDogPestTarget } from './dogGuard'
+import {
+  DOG_BARK_COOLDOWN_SEC,
+  DOG_BARK_HOWL_RADIUS,
+  DOG_BARK_STRANGER_RADIUS,
+  DOG_GUARD_ASSIST_RADIUS,
+  DOG_GUARD_OWN_RADIUS,
+  DOG_PEST_RADIUS,
+  type DogGuardWolfCandidate,
+  type DogPestCandidate,
+  type RecentVocalizeCandidate,
+  resolveDogBarkStimulus,
+  resolveDogGuardTarget,
+  resolveDogPestTarget,
+} from './dogGuard'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
   decideFaunaBehaviour,
@@ -119,7 +132,7 @@ import {
   type PredatorHumanIntent,
   PROVOCATION_SECONDS,
 } from './predatorHumanDecision'
-import { type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
+import { PREY_ALERT_RANGE_BONUS, type PreyAlertCandidate, resolvePreyAlertThreat } from './preyAlertPerception'
 import {
   classifyWaterTraversal,
   shouldApplyDrowningDamage,
@@ -291,10 +304,6 @@ const DEFAULT_WANDER_RADIUS: readonly [number, number] = [6, 16]
  *  fauna-016 §5) — looser than `wander()`'s 1.2 since a shoreline point is
  *  probe-selected, not a precise walkable target. */
 const TRIP_ARRIVAL_RADIUS = 2
-/** Max distance (m) from a dog's own `home` it will chase a nearby rat (plan
- *  fauna-016 §9) — tighter than any guard-target radius, since this is idle
- *  yard behaviour, not household defense. */
-const DOG_PEST_RADIUS = 10
 /** Chance per expired wander timer, while stamina ratio is below
  *  `STAMINA_REST_THRESHOLD`, that the animal extends the timer and stays put
  *  instead of picking a new wander target — a tired animal rests more. */
@@ -550,48 +559,34 @@ export function resolveLureTarget(
  *  sticky commitment) — see that field's doc. */
 type DogGuardTarget = { wolf: AnimalAgent, protectedNpcId: string, ownHousehold: boolean }
 
-/** Max distance (m) from a dog's own home a wolf attacking *this dog's own
- *  household* is still worth chasing (plan fauna-011 §10/§13: own-household
- *  defense gets the most latitude, but a dog must still "pozostać lokalnym
- *  obrońcą", never a settlement-wide police). Bigger than
- *  `DOG_GUARD_ASSIST_RADIUS` below on purpose. */
-const DOG_GUARD_OWN_RADIUS = 40
-/** Max distance (m) from a dog's own home a wolf attacking a *different*
- *  household's NPC is still worth assisting (plan fauna-011 §10) — tighter
- *  than `DOG_GUARD_OWN_RADIUS` so helping a stranger never pulls a dog far
- *  from its own home/family. */
-const DOG_GUARD_ASSIST_RADIUS = 20
-/** Radius (m) from a dog's own home within which a recent wolf howl
- *  (`recentVocalizeAlert`) is "relevant" enough to trigger an alert bark
- *  (plan fauna-011 §7/§8) — deliberately generous next to the guard radii
- *  above, since this only ever produces a bark, never a chase ("odległy wilk
- *  może wywołać jedynie alert"). */
-const DOG_BARK_HOWL_RADIUS = 45
-/** Radius (m) from a dog's own home within which an unfamiliar (different-
- *  household) settlement NPC triggers an observational bark (plan
- *  fauna-011 §7) — tight, since this is "a stranger right by the house", not
- *  general awareness of the whole settlement. */
-const DOG_BARK_STRANGER_RADIUS = 10
-/** Shared cooldown between every dog bark trigger (plan fauna-011 §7) — the
- *  actual anti-spam gate; keeps a settlement's dogs from cascading into a
- *  continuous chorus over one lingering stimulus. */
-const DOG_BARK_COOLDOWN_SEC = 10
 /** How long a vocalization stays "recent" for `recentVocalizeAlert` readers
  *  (plan fauna-011 §8) — short and spatially local by construction (readers
  *  compare against the vocalizing animal's own position), matching the
  *  plan's "transient, spatially bounded" stimulus requirement. */
 const VOCALIZE_ALERT_DURATION_SEC = 6
-/** Flat bonus (m) added on top of a prey/domestic species' own `fleeRange`
- *  to get its threat-alert radius (plan fauna-012 §6/§9/§11) — a relevant
- *  recent predator howl or live predator-hunting-something signal within
- *  this wider radius raises flee relevance even with no immediate spatial
- *  threat in `fleeRange`. Reuses `fleeRange` itself as the per-species
- *  differentiation (a skittish `rabbit` already has a bigger `fleeRange`
- *  than a placid `cow`) rather than a second per-species config field —
- *  `resolveAlertThreat()`'s `this.def.fleeRange > 0` gate is what excludes
- *  `dog` (`fleeRange: 0`, guard/bark already covers its own threat
- *  response) with no kind-specific branch needed. */
-const PREY_ALERT_RANGE_BONUS = 20
+
+/** Reused per-tick candidate buffers so the four dog/prey-alert adapters
+ *  stay allocation-free after warmup (plan fauna-017 step 9 / review P6).
+ *  Plain-data copies only — never live `AnimalAgent` references, never held
+ *  as world identity across ticks (implementation notes: nearby NPC/animal
+ *  sets stay caller-owned). Sequential fauna-pass processing makes a module
+ *  buffer safe: each resolver copies ids/positions out before the next
+ *  animal reuses the slots. */
+const preyAlertScratch: PreyAlertCandidate[] = []
+const preyAlertContextScratch: { context: 'ambient' | 'alert' }[] = []
+const dogGuardWolfScratch: DogGuardWolfCandidate[] = []
+const dogGuardNpcTargetScratch: { npcId: string, homeId?: string }[] = []
+const dogPestScratch: DogPestCandidate[] = []
+const dogHowlScratch: RecentVocalizeCandidate[] = []
+
+function scratchAt<T>(buf: T[], i: number, create: () => T): T {
+  let item = buf[i]
+  if (!item) {
+    item = create()
+    buf[i] = item
+  }
+  return item
+}
 
 /** A nearby NPC candidate for predator human-targeting (plan 179 §5/§7) —
  *  the same narrow shape as `countNearbyHumans`' NPC positions, plus a
@@ -2846,15 +2841,25 @@ export class AnimalAgent {
    *  this tick's movement. */
   private pursuePest(dt: number, nearbyRats: readonly AnimalAgent[]): boolean {
     if (nearbyRats.length === 0) return false
-    const candidates = nearbyRats.map((rat) => ({
-      id: rat.animalId,
-      x: rat.mesh.position.x,
-      z: rat.mesh.position.z,
-      dead: rat.isDead(),
-    }))
-    const resolved = resolveDogPestTarget({ x: this.home.x, z: this.home.z }, candidates, DOG_PEST_RADIUS)
+    let n = 0
+    for (const rat of nearbyRats) {
+      const c = scratchAt(dogPestScratch, n, () => ({ id: '', x: 0, z: 0, dead: false }))
+      c.id = rat.animalId
+      c.x = rat.mesh.position.x
+      c.z = rat.mesh.position.z
+      c.dead = rat.isDead()
+      n++
+    }
+    dogPestScratch.length = n
+    const resolved = resolveDogPestTarget({ x: this.home.x, z: this.home.z }, dogPestScratch, DOG_PEST_RADIUS)
     if (!resolved) return false
-    const rat = nearbyRats.find((r) => r.animalId === resolved.id)
+    let rat: AnimalAgent | undefined
+    for (const r of nearbyRats) {
+      if (r.animalId === resolved.id) {
+        rat = r
+        break
+      }
+    }
     if (!rat) return false
     this.setIntent('chase', copyVec3(rat.mesh.position))
     const dist = Math.hypot(
@@ -2887,32 +2892,40 @@ export class AnimalAgent {
     nearbyPredators: readonly AnimalAgent[],
   ): { x: number, z: number } | null {
     if (this.def.fleeRange <= 0) return null
-    const candidates: PreyAlertCandidate[] = []
+    let n = 0
+    const push = (a: AnimalAgent): void => {
+      const c = scratchAt(preyAlertScratch, n, () => ({
+        x: 0,
+        z: 0,
+        dead: false,
+        role: 'prey' as const,
+        recentVocalizeAlert: null,
+        huntingLiveTarget: false,
+      }))
+      c.x = a.mesh.position.x
+      c.z = a.mesh.position.z
+      c.dead = a.health.dead
+      c.role = a.def.role
+      if (a.vocalizeAlertRemainingSec > 0) {
+        const ctx = scratchAt(preyAlertContextScratch, n, () => ({ context: 'ambient' as const }))
+        ctx.context = a.vocalizeAlertContext
+        c.recentVocalizeAlert = ctx
+      } else {
+        c.recentVocalizeAlert = null
+      }
+      c.huntingLiveTarget = a.isHuntingLive
+      n++
+    }
     for (const a of others) {
       if (a === this) continue
-      candidates.push({
-        x: a.mesh.position.x,
-        z: a.mesh.position.z,
-        dead: a.health.dead,
-        role: a.def.role,
-        recentVocalizeAlert: a.recentVocalizeAlert,
-        huntingLiveTarget: a.isHuntingLive,
-      })
+      push(a)
     }
-    for (const a of nearbyPredators) {
-      candidates.push({
-        x: a.mesh.position.x,
-        z: a.mesh.position.z,
-        dead: a.health.dead,
-        role: a.def.role,
-        recentVocalizeAlert: a.recentVocalizeAlert,
-        huntingLiveTarget: a.isHuntingLive,
-      })
-    }
+    for (const a of nearbyPredators) push(a)
+    preyAlertScratch.length = n
     return resolvePreyAlertThreat(
       this.mesh.position.x,
       this.mesh.position.z,
-      candidates,
+      preyAlertScratch,
       this.def.fleeRange + PREY_ALERT_RANGE_BONUS,
     )
   }
@@ -2959,21 +2972,46 @@ export class AnimalAgent {
    *  commitment, so a dead/retargeted wolf or a target that walked outside
    *  its tier's radius simply stops being returned — no decay timer needed. */
   private resolveGuardTarget(nearbyPredators: readonly AnimalAgent[]): DogGuardTarget | null {
+    let n = 0
+    for (const wolf of nearbyPredators) {
+      const c = scratchAt(dogGuardWolfScratch, n, () => ({
+        id: '',
+        x: 0,
+        z: 0,
+        dead: false,
+        npcTarget: null,
+      }))
+      c.id = wolf.animalId
+      c.x = wolf.mesh.position.x
+      c.z = wolf.mesh.position.z
+      c.dead = wolf.health.dead
+      const npc = wolf.npcTarget
+      if (npc) {
+        const target = scratchAt(dogGuardNpcTargetScratch, n, (): { npcId: string, homeId?: string } => ({ npcId: '' }))
+        target.npcId = npc.id
+        target.homeId = npc.homeId
+        c.npcTarget = target
+      } else {
+        c.npcTarget = null
+      }
+      n++
+    }
+    dogGuardWolfScratch.length = n
     const resolved = resolveDogGuardTarget(
       this.home,
       this.ownerHouseId,
-      nearbyPredators.map((wolf) => ({
-        id: wolf.animalId,
-        x: wolf.mesh.position.x,
-        z: wolf.mesh.position.z,
-        dead: wolf.health.dead,
-        npcTarget: wolf.npcAttackTarget,
-      })),
+      dogGuardWolfScratch,
       DOG_GUARD_OWN_RADIUS,
       DOG_GUARD_ASSIST_RADIUS,
     )
     if (!resolved) return null
-    const wolf = nearbyPredators.find((a) => a.animalId === resolved.wolfId)
+    let wolf: AnimalAgent | undefined
+    for (const a of nearbyPredators) {
+      if (a.animalId === resolved.wolfId) {
+        wolf = a
+        break
+      }
+    }
     if (!wolf) return null
     return { wolf, protectedNpcId: resolved.protectedNpcId, ownHousehold: resolved.ownHousehold }
   }
@@ -3018,13 +3056,20 @@ export class AnimalAgent {
   ): void {
     if (this.barkCooldownSec > 0) this.barkCooldownSec -= dt
     if (this.barkCooldownSec > 0) return
+    let howlN = 0
+    for (const wolf of nearbyPredators) {
+      if (wolf.health.dead || wolf.vocalizeAlertRemainingSec <= 0) continue
+      const howl = scratchAt(dogHowlScratch, howlN, () => ({ x: 0, z: 0 }))
+      howl.x = wolf.mesh.position.x
+      howl.z = wolf.mesh.position.z
+      howlN++
+    }
+    dogHowlScratch.length = howlN
     const stimulus = resolveDogBarkStimulus(
       this.home,
       this.ownerHouseId,
       guardTarget !== null,
-      nearbyPredators
-        .filter((wolf) => !wolf.health.dead && wolf.recentVocalizeAlert)
-        .map((wolf) => wolf.recentVocalizeAlert!),
+      dogHowlScratch,
       DOG_BARK_HOWL_RADIUS,
       nearbySettlementNpcs,
       DOG_BARK_STRANGER_RADIUS,

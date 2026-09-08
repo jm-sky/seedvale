@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DOG_BARK_HOWL_RADIUS,
+  DOG_BARK_STRANGER_RADIUS,
+  DOG_GUARD_ASSIST_RADIUS,
+  DOG_GUARD_OWN_RADIUS,
+  DOG_PEST_RADIUS,
   type DogGuardWolfCandidate,
   type DogPestCandidate,
   resolveDogBarkStimulus,
@@ -8,8 +13,6 @@ import {
 } from './dogGuard'
 
 const HOME = { x: 0, z: 0 }
-const OWN_RADIUS = 40
-const ASSIST_RADIUS = 20
 
 function wolf(overrides: Partial<DogGuardWolfCandidate>): DogGuardWolfCandidate {
   return { id: 'wolf-1', x: 5, z: 0, dead: false, npcTarget: null, ...overrides }
@@ -24,8 +27,8 @@ describe('resolveDogGuardTarget', () => {
         wolf({ id: 'wolf-foreign', x: 8, z: 0, npcTarget: { npcId: 'npc-foreign', homeId: 'house-2' } }),
         wolf({ id: 'wolf-own', x: 12, z: 0, npcTarget: { npcId: 'npc-own', homeId: 'house-1' } }),
       ],
-      OWN_RADIUS,
-      ASSIST_RADIUS,
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
     )
     expect(result).toEqual({ wolfId: 'wolf-own', protectedNpcId: 'npc-own', ownHousehold: true })
   })
@@ -35,8 +38,8 @@ describe('resolveDogGuardTarget', () => {
       HOME,
       'house-1',
       [wolf({ id: 'wolf-foreign', x: 5, z: 0, npcTarget: { npcId: 'npc-foreign', homeId: 'house-2' } })],
-      OWN_RADIUS,
-      ASSIST_RADIUS,
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
     )
     expect(result).toEqual({ wolfId: 'wolf-foreign', protectedNpcId: 'npc-foreign', ownHousehold: false })
   })
@@ -45,9 +48,9 @@ describe('resolveDogGuardTarget', () => {
     const result = resolveDogGuardTarget(
       HOME,
       'house-1',
-      [wolf({ x: ASSIST_RADIUS + 1, z: 0, npcTarget: { npcId: 'npc-foreign', homeId: 'house-2' } })],
-      OWN_RADIUS,
-      ASSIST_RADIUS,
+      [wolf({ x: DOG_GUARD_ASSIST_RADIUS + 1, z: 0, npcTarget: { npcId: 'npc-foreign', homeId: 'house-2' } })],
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
     )
     expect(result).toBeNull()
   })
@@ -56,15 +59,15 @@ describe('resolveDogGuardTarget', () => {
     const result = resolveDogGuardTarget(
       HOME,
       'house-1',
-      [wolf({ x: OWN_RADIUS + 1, z: 0, npcTarget: { npcId: 'npc-own', homeId: 'house-1' } })],
-      OWN_RADIUS,
-      ASSIST_RADIUS,
+      [wolf({ x: DOG_GUARD_OWN_RADIUS + 1, z: 0, npcTarget: { npcId: 'npc-own', homeId: 'house-1' } })],
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
     )
     expect(result).toBeNull()
   })
 
   it('a wolf merely present, not attacking anyone, never resolves a guard target', () => {
-    const result = resolveDogGuardTarget(HOME, 'house-1', [wolf({ npcTarget: null })], OWN_RADIUS, ASSIST_RADIUS)
+    const result = resolveDogGuardTarget(HOME, 'house-1', [wolf({ npcTarget: null })], DOG_GUARD_OWN_RADIUS, DOG_GUARD_ASSIST_RADIUS)
     expect(result).toBeNull()
   })
 
@@ -73,8 +76,8 @@ describe('resolveDogGuardTarget', () => {
       HOME,
       'house-1',
       [wolf({ dead: true, npcTarget: { npcId: 'npc-own', homeId: 'house-1' } })],
-      OWN_RADIUS,
-      ASSIST_RADIUS,
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
     )
     expect(result).toBeNull()
   })
@@ -84,37 +87,36 @@ describe('resolveDogGuardTarget', () => {
       HOME,
       undefined,
       [wolf({ npcTarget: { npcId: 'npc', homeId: 'house-1' } })],
-      OWN_RADIUS,
-      ASSIST_RADIUS,
+      DOG_GUARD_OWN_RADIUS,
+      DOG_GUARD_ASSIST_RADIUS,
     )
-    // Falls into the foreign/assist tier instead, still bounded by ASSIST_RADIUS.
+    // Falls into the foreign/assist tier instead, still bounded by DOG_GUARD_ASSIST_RADIUS.
     expect(result).toEqual({ wolfId: 'wolf-1', protectedNpcId: 'npc', ownHousehold: false })
   })
 })
 
 describe('resolveDogBarkStimulus', () => {
-  const HOWL_RADIUS = 45
-  const STRANGER_RADIUS = 10
-
   it('an active guard target outranks every other stimulus', () => {
     const stimulus = resolveDogBarkStimulus(
       HOME, 'house-1', true,
-      [{ x: 100, z: 100 }], HOWL_RADIUS,
-      [{ x: 1, z: 0, homeId: 'house-2' }], STRANGER_RADIUS,
+      [{ x: 100, z: 100 }], DOG_BARK_HOWL_RADIUS,
+      [{ x: 1, z: 0, homeId: 'house-2' }], DOG_BARK_STRANGER_RADIUS,
     )
     expect(stimulus).toBe('guard')
   })
 
   it('a recent nearby wolf howl is a relevant stimulus even with no guard target', () => {
-    const stimulus = resolveDogBarkStimulus(HOME, 'house-1', false, [{ x: 10, z: 0 }], HOWL_RADIUS, [], STRANGER_RADIUS)
+    const stimulus = resolveDogBarkStimulus(
+      HOME, 'house-1', false, [{ x: 10, z: 0 }], DOG_BARK_HOWL_RADIUS, [], DOG_BARK_STRANGER_RADIUS,
+    )
     expect(stimulus).toBe('wolf-howl')
   })
 
   it('a distant wolf howl (outside the howl radius) triggers no alert at all — never a chase', () => {
     const stimulus = resolveDogBarkStimulus(
       HOME, 'house-1', false,
-      [{ x: HOWL_RADIUS + 1, z: 0 }], HOWL_RADIUS,
-      [], STRANGER_RADIUS,
+      [{ x: DOG_BARK_HOWL_RADIUS + 1, z: 0 }], DOG_BARK_HOWL_RADIUS,
+      [], DOG_BARK_STRANGER_RADIUS,
     )
     expect(stimulus).toBeNull()
   })
@@ -122,8 +124,8 @@ describe('resolveDogBarkStimulus', () => {
   it('a foreign-household NPC right by the house is a stranger stimulus', () => {
     const stimulus = resolveDogBarkStimulus(
       HOME, 'house-1', false,
-      [], HOWL_RADIUS,
-      [{ x: 2, z: 0, homeId: 'house-2' }], STRANGER_RADIUS,
+      [], DOG_BARK_HOWL_RADIUS,
+      [{ x: 2, z: 0, homeId: 'house-2' }], DOG_BARK_STRANGER_RADIUS,
     )
     expect(stimulus).toBe('stranger')
   })
@@ -131,8 +133,8 @@ describe('resolveDogBarkStimulus', () => {
   it('an own-household NPC nearby is never a stranger stimulus', () => {
     const stimulus = resolveDogBarkStimulus(
       HOME, 'house-1', false,
-      [], HOWL_RADIUS,
-      [{ x: 2, z: 0, homeId: 'house-1' }], STRANGER_RADIUS,
+      [], DOG_BARK_HOWL_RADIUS,
+      [{ x: 2, z: 0, homeId: 'house-1' }], DOG_BARK_STRANGER_RADIUS,
     )
     expect(stimulus).toBeNull()
   })
@@ -147,22 +149,22 @@ describe('resolveDogPestTarget (plan fauna-016 §9 — idle rat-chase, separate 
     const result = resolveDogPestTarget(
       HOME,
       [rat({ id: 'far', x: 9, z: 0 }), rat({ id: 'near', x: 3, z: 0 })],
-      10,
+      DOG_PEST_RADIUS,
     )
     expect(result?.id).toBe('near')
   })
 
   it('ignores a dead rat', () => {
-    const result = resolveDogPestTarget(HOME, [rat({ dead: true })], 10)
+    const result = resolveDogPestTarget(HOME, [rat({ dead: true })], DOG_PEST_RADIUS)
     expect(result).toBeNull()
   })
 
   it('never targets a rat beyond radius — home-bounded', () => {
-    const result = resolveDogPestTarget(HOME, [rat({ x: 20, z: 0 })], 10)
+    const result = resolveDogPestTarget(HOME, [rat({ x: 20, z: 0 })], DOG_PEST_RADIUS)
     expect(result).toBeNull()
   })
 
   it('returns null with no nearby rats', () => {
-    expect(resolveDogPestTarget(HOME, [], 10)).toBeNull()
+    expect(resolveDogPestTarget(HOME, [], DOG_PEST_RADIUS)).toBeNull()
   })
 })

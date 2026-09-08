@@ -1,4 +1,4 @@
-import type { AnimalRole } from './AnimalAgent'
+import type { AnimalRole } from './animalDefs'
 
 /**
  * Pure prey/domestic-herbivore threat-alert relevance (plan fauna-012 §6/§8/
@@ -12,6 +12,19 @@ import type { AnimalRole } from './AnimalAgent'
  * threat within `fleeRange` always wins; this is the transient/stimulus tier
  * below it, not a replacement for it).
  */
+
+/** Flat bonus (m) added on top of a prey/domestic species' own `fleeRange`
+ *  to get its threat-alert radius (plan fauna-012 §6/§9/§11) — a relevant
+ *  recent predator howl or live predator-hunting-something signal within
+ *  this wider radius raises flee relevance even with no immediate spatial
+ *  threat in `fleeRange`. Reuses `fleeRange` itself as the per-species
+ *  differentiation (a skittish `rabbit` already has a bigger `fleeRange`
+ *  than a placid `cow`) rather than a second per-species config field —
+ *  `AnimalAgent.resolveAlertThreat()`'s `this.def.fleeRange > 0` gate is
+ *  what excludes `dog` (`fleeRange: 0`, guard/bark already covers its own
+ *  threat response) with no kind-specific branch needed. Moved here from
+ *  `AnimalAgent.ts` (plan fauna-017 step 9 / review P8). */
+export const PREY_ALERT_RANGE_BONUS = 20
 
 /** One live candidate as seen by a fleeing prey/domestic animal — a wolf,
  *  another livestock individual, or a guard dog. `recentVocalizeAlert` and

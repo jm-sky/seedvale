@@ -5,7 +5,41 @@
  * the narrow candidate shapes below and calls straight through; no
  * `AnimalAgent`/Three.js import here, so the actual priority/radius rules
  * are unit-testable without constructing a live agent.
+ *
+ * Production radii/cooldown live here (plan fauna-017 step 9 / review P8)
+ * so the adapter in `AnimalAgent` cannot drift from the tested owner.
  */
+
+/** Max distance (m) from a dog's own `home` it will chase a nearby rat (plan
+ *  fauna-016 §9) — tighter than any guard-target radius, since this is idle
+ *  yard behaviour, not household defense. */
+export const DOG_PEST_RADIUS = 10
+/** Max distance (m) from a dog's own home a wolf attacking *this dog's own
+ *  household* is still worth chasing (plan fauna-011 §10/§13: own-household
+ *  defense gets the most latitude, but a dog must still "pozostać lokalnym
+ *  obrońcą", never a settlement-wide police). Bigger than
+ *  `DOG_GUARD_ASSIST_RADIUS` below on purpose. */
+export const DOG_GUARD_OWN_RADIUS = 40
+/** Max distance (m) from a dog's own home a wolf attacking a *different*
+ *  household's NPC is still worth assisting (plan fauna-011 §10) — tighter
+ *  than `DOG_GUARD_OWN_RADIUS` so helping a stranger never pulls a dog far
+ *  from its own home/family. */
+export const DOG_GUARD_ASSIST_RADIUS = 20
+/** Radius (m) from a dog's own home within which a recent wolf howl
+ *  (`recentVocalizeAlert`) is "relevant" enough to trigger an alert bark
+ *  (plan fauna-011 §7/§8) — deliberately generous next to the guard radii
+ *  above, since this only ever produces a bark, never a chase ("odległy wilk
+ *  może wywołać jedynie alert"). */
+export const DOG_BARK_HOWL_RADIUS = 45
+/** Radius (m) from a dog's own home within which an unfamiliar (different-
+ *  household) settlement NPC triggers an observational bark (plan
+ *  fauna-011 §7) — tight, since this is "a stranger right by the house", not
+ *  general awareness of the whole settlement. */
+export const DOG_BARK_STRANGER_RADIUS = 10
+/** Shared cooldown between every dog bark trigger (plan fauna-011 §7) — the
+ *  actual anti-spam gate; keeps a settlement's dogs from cascading into a
+ *  continuous chorus over one lingering stimulus. */
+export const DOG_BARK_COOLDOWN_SEC = 10
 
 /** One live wolf, as seen by a household dog — `npcTarget` is that wolf's
  *  own authoritative committed attack target (never inferred from
