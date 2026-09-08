@@ -61,7 +61,8 @@ Initial gameplay intent:
 
 - **Small house** — compact footprint, lower material/work cost, capacity around 3 residents.
 - **Medium house** — larger footprint, higher material/work cost, capacity around 6 residents.
-- **Completed residential house** — provides high-quality lodging/rest through the existing lodging system.
+- **Completed residential house (v1)** — directly provides high-quality lodging/rest through the existing lodging system.
+- **Bed-aware lodging (v2)** — later replaces the v1 completion shortcut so a usable bed becomes the physical requirement for house sleep.
 
 Capacity and costs should be checked against current generated family sizes, item catalog and construction timings before final constants are chosen.
 
@@ -230,19 +231,21 @@ An unfinished building:
 - is not an occupied household home,
 - is not valid lodging.
 
-A completed building:
+A completed building in v1:
 
 - is physically functional as residential housing,
 - exposes its configured housing capacity,
 - integrates with the existing semantic `PlaceType = 'home'` model,
-- provides high-quality Player lodging/rest,
+- directly provides high-quality Player lodging/rest,
 - may remain empty.
 
 Completion must therefore establish or expose a stable `home` Place linkage without creating a parallel `PlayerHouseHome` concept.
 
 ## 13. Player lodging and high-quality rest
 
-A completed residential house is a valid Player sleep/rest location.
+### v1 — completed house is sufficient
+
+For this plan's initial version, a completed residential house is itself a valid Player sleep/rest location. **A physical bed is not required in v1.**
 
 Reuse the existing lodging contract from `src/settlement/lodging.ts` and the existing sleep/time-skip path. In particular, the current system already defines:
 
@@ -253,7 +256,7 @@ high → full sleep restoration through lodgingRestQuality()
 
 Residential houses should therefore expose or derive an existing-style lodging option with `quality: 'high'` rather than introducing house-specific comfort percentages or directly mutating `PlayerNeeds`.
 
-Intended flow:
+Intended v1 flow:
 
 ```text
 completed house
@@ -264,17 +267,30 @@ completed house
 → high-quality needs restoration
 ```
 
-The house does not need an enterable interior for this initial capability. Sleeping may resolve through an entrance/approach anchor compatible with the existing lodging movement/action flow. Do not add a second movement system or teleport-only house sleep path.
+The house does not need an enterable interior or physical bed for this initial capability. Sleeping may resolve through an entrance/approach anchor compatible with the existing lodging movement/action flow. Do not add a second movement system or teleport-only house sleep path.
 
 When a built house belongs to a settlement, it should be eligible for the existing settlement lodging discovery/selection mechanism where appropriate. A completed house outside a settlement must still be able to offer direct Player rest through the same underlying lodging/rest semantics rather than requiring an artificial settlement association.
 
 Do not equate the ability to sleep in a house with Household occupancy or permanent Player ownership. Access policy may initially be permissive for Player-constructed completed houses; future ownership/permission rules may refine who may use a given home.
 
+### v2 — physical bed becomes the capability
+
+A follow-up version will introduce the real bed requirement. At that point:
+
+```text
+completed house + usable bed
+→ high-quality lodging
+completed house without bed
+→ no house sleep
+```
+
+Design v1 so this can be changed by replacing the lodging eligibility/provider rule, not by rewriting sleep restoration or `ResidentialBuildingRecord` construction semantics. Do not persist a fake `hasBed` flag in v1 solely to anticipate the follow-up.
+
 ## 14. Empty houses are valid
 
 A completed residential building does **not** automatically create a Household or generate residents.
 
-This is deliberate. The architecture should support:
+This is deliberate. The v1 architecture supports:
 
 ```text
 completed empty house
@@ -348,7 +364,7 @@ Persist enough authoritative state to reconstruct every runtime-built house, inc
 - completed state,
 - stable home/place linkage when completed.
 
-Do not persist a redundant `LodgingOption`; derive it from authoritative completed-house/home state in the same spirit as existing lodging offers.
+Do not persist a redundant `LodgingOption`; derive v1 lodging from authoritative completed-house/home state. In v2 the same derivation should instead depend on a real bed capability.
 
 Follow the existing domain-owned serialization and `WorldBundle` rebuild patterns. Do not make `SaveData` the runtime authority.
 
@@ -385,8 +401,10 @@ In particular inspect the current implementations of:
 - `Household.homeId`,
 - `src/settlement/lodging.ts` and `lodgingResolver.ts`,
 - `src/app/actions/restActions.ts`,
-- existing house bed/approach anchors where reusable,
+- existing house/bed/approach anchors as references for the later v2 bed capability,
 - persistence/rebuild ownership for player-built world objects.
+
+For v1, do **not** block lodging on the existence of a bed asset/anchor. Use a stable house entrance/approach point and the existing lodging/rest machinery. Keep the provider boundary narrow so v2 can swap eligibility to a physical bed.
 
 Add JSDoc to important new architectural/public functions and types where it improves AI preflight discovery; use `@domain settlements` on the residential-building ownership boundary.
 
@@ -433,11 +451,11 @@ Confirm a stage cannot accept useful work without its required materials and res
 
 After completion, confirm the building exposes/resolves a stable existing-style `home` Place and housing capacity without automatically creating a Household.
 
-### High-quality Player rest
+### High-quality Player rest — v1
 
 Confirm an unfinished house cannot be used for lodging.
 
-After completion:
+After completion, **without requiring a bed**:
 
 ```text
 Player chooses/interacts with house lodging
@@ -456,7 +474,7 @@ Confirm a completed unoccupied house remains valid, persisted and usable for Pla
 
 ### Save/load and rebuild
 
-Verify partial construction, completed empty houses and Work Contract target references restore deterministically without duplicating progress or identity. Confirm lodging remains available after reload/rebuild because it is derived from restored completed-house state rather than separately persisted.
+Verify partial construction, completed empty houses and Work Contract target references restore deterministically without duplicating progress or identity. Confirm v1 lodging remains available after reload/rebuild because it is derived from restored completed-house state rather than separately persisted.
 
 ## Non-goals
 
@@ -466,6 +484,7 @@ Do not implement in this plan:
 - migration/population growth,
 - autonomous settlement decisions to build houses,
 - enterable house interiors,
+- physical-bed requirement for house sleep (v2),
 - manual bed/furniture placement,
 - broader furniture gameplay,
 - building upgrades,
@@ -481,7 +500,15 @@ Do not implement in this plan:
 
 ## Follow-up direction
 
-The intended systemic continuation is:
+The intended systemic continuation includes two independent extensions:
+
+```text
+v1 completed-house lodging
+→ v2 physical bed/furniture capability
+→ house sleep requires usable bed
+```
+
+and:
 
 ```text
 housing shortage / settlement pressure
@@ -493,6 +520,6 @@ housing shortage / settlement pressure
 → persistent settlement growth
 ```
 
-This plan should leave that path open without implementing it prematurely.
+This plan should leave both paths open without implementing them prematurely.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
