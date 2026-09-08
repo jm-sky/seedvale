@@ -1,24 +1,31 @@
-/** B2 recon diagnostic — production SDF vs the current gameplay proxy
- *  (`topologyToCaveDefinition` → `CaveVolume`) on the two 2026-09-08
- *  surface-snap repros. Pure/analytic: `sampleHeightAt` + production
- *  topology, no `ChunkManager`, no browser.
+/** B2 gameplay-query regression — production SDF column index vs the two
+ *  2026-09-08 surface-snap repros. Pure/analytic: `sampleHeightAt` +
+ *  production topology, no `ChunkManager`, no browser.
  *
- *  These tests pin the *current* mismatch so B2 can invert the failing
- *  gameplay contract. See
+ *  Pins live at seed `1136726869`. See
  *  `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b2-recon.md`.
  */
 
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import type { CaveTopology } from './caveTopology'
 import { createBenchmarkWorldConfig } from '../../config/worldConfig'
 import { measureSlope } from '../../fauna/createFauna'
 import { PLAYER_HEIGHT } from '../../player/PlayerController'
 import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightmap'
-import { createCaveVolume, type CaveVolume } from '../caveVolume'
-import { openingDirection, type LargeCaveSite } from '../largeCaves'
-import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caveSdfField'
+import { type CaveVolume, createCaveVolume } from '../caveVolume'
+import { type LargeCaveSite, openingDirection } from '../largeCaves'
 import { makeCaveId } from './caveIdentity'
+import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caveSdfField'
+import {
+  applyCaveGroundHysteresis,
+  buildCaveSdfColumnIndex,
+  CAVE_UNDERGROUND_MISS,
+  type CaveGroundHit,
+  type CaveSdfColumnIndex,
+  queryColumnIndex,
+} from './caveSdfQuery'
+import { mouthCarveDepth } from './mouthCarve'
 import { buildProductionCaveTopology } from './productionTopology'
-import type { CaveTopology } from './caveTopology'
 import { PROXY_MARGIN, topologyToCaveDefinition } from './topologyAdapter'
 
 const REPRO_SEED = 1136726869
@@ -73,6 +80,7 @@ function siteFromEntrance(x: number, z: number, surfaceHeightAt: (x: number, z: 
 type BuiltCave = {
   topology: CaveTopology
   sdf: CaveSdfSpatialRepresentation
+  index: CaveSdfColumnIndex
   volume: CaveVolume
   surfaceHeightAt: (x: number, z: number) => number
 }
@@ -87,9 +95,11 @@ function buildReproCave(x: number, z: number): BuiltCave {
     sampleBaseHeight: surfaceHeightAt,
   })
   if (!topology) throw new Error(`production topology rejected site (${x}, ${z})`)
+  const sdf = buildCaveSdfRepresentation(topology)
   return {
     topology,
-    sdf: buildCaveSdfRepresentation(topology),
+    sdf,
+    index: buildCaveSdfColumnIndex(sdf, topology, surfaceHeightAt),
     volume: createCaveVolume(topologyToCaveDefinition(topology)),
     surfaceHeightAt,
   }
@@ -129,8 +139,8 @@ function lowestWalkableInterval(
   return best
 }
 
-function countSdfWalkableOutsideProxy(cave: BuiltCave): { walkable: number, uncovered: number } {
-  const { sdf, volume, surfaceHeightAt } = cave
+function countSdfWalkableOutsideQuery(cave: BuiltCave): { walkable: number, uncovered: number } {
+  const { sdf, index, surfaceHeightAt } = cave
   const { bounds } = sdf
   let walkable = 0
   let uncovered = 0
@@ -139,14 +149,12 @@ function countSdfWalkableOutsideProxy(cave: BuiltCave): { walkable: number, unco
       const interval = lowestWalkableInterval(sdf.sample, surfaceHeightAt(x, z), x, z, bounds.minY, bounds.maxY)
       if (!interval) continue
       walkable++
-      if (!volume.contains(x, interval.floorY + QUERY_ABOVE_FLOOR, z)) uncovered++
+      if (!queryColumnIndex(index, x, interval.floorY + QUERY_ABOVE_FLOOR, z)) uncovered++
     }
   }
   return { walkable, uncovered }
 }
 
-/** Along a ground-plane ray from a node, at the *proxy* floor + 1 m (what
- *  `PlayerController.groundAt` actually stands the player on today). */
 function wallApproach(cave: BuiltCave, origin: { x: number, y: number, z: number }, dx: number, dz: number): {
   sdfWallDistance: number | null
   proxyExitDistance: number | null
@@ -172,83 +180,164 @@ function wallApproach(cave: BuiltCave, origin: { x: number, y: number, z: number
   }
 }
 
-describe('B2 recon: CaveVolume proxy vs production SDF (seed 1136726869)', () => {
+describe('B2 gameplay query: seed 1136726869', () => {
+  let mroczna: BuiltCave
+  let czarny: BuiltCave
+
+  beforeAll(() => {
+    mroczna = buildReproCave(GROTA_MROCZNA.x, GROTA_MROCZNA.z)
+    czarny = buildReproCave(GROTA_CZARNEGO_KAMIENIA.x, GROTA_CZARNEGO_KAMIENIA.z)
+  })
+
   it('reconstructs Grota Mroczna as cave:7fd14c30', () => {
     const surfaceHeightAt = surfaceSampler(REPRO_SEED)
     const site = siteFromEntrance(GROTA_MROCZNA.x, GROTA_MROCZNA.z, surfaceHeightAt)
     expect(makeCaveId(REPRO_SEED, site)).toBe(GROTA_MROCZNA.caveId)
-    expect(buildReproCave(GROTA_MROCZNA.x, GROTA_MROCZNA.z).topology.caveId).toBe(GROTA_MROCZNA.caveId)
+    expect(mroczna.topology.caveId).toBe(GROTA_MROCZNA.caveId)
   })
 
   it('reconstructs Grota Czarnego Kamienia as cave:0e3cce97', () => {
     const surfaceHeightAt = surfaceSampler(REPRO_SEED)
     const site = siteFromEntrance(GROTA_CZARNEGO_KAMIENIA.x, GROTA_CZARNEGO_KAMIENIA.z, surfaceHeightAt)
     expect(makeCaveId(REPRO_SEED, site)).toBe(GROTA_CZARNEGO_KAMIENIA.caveId)
-    expect(buildReproCave(GROTA_CZARNEGO_KAMIENIA.x, GROTA_CZARNEGO_KAMIENIA.z).topology.caveId).toBe(GROTA_CZARNEGO_KAMIENIA.caveId)
+    expect(czarny.topology.caveId).toBe(GROTA_CZARNEGO_KAMIENIA.caveId)
   })
 
-  it('player-height SDF columns are almost entirely inside the proxy — leftover cells are iso-boundary noise, not the repro', () => {
-    for (const cave of [GROTA_MROCZNA, GROTA_CZARNEGO_KAMIENIA]) {
-      const report = countSdfWalkableOutsideProxy(buildReproCave(cave.x, cave.z))
+  it('player-height SDF void below the analytic surface is covered by queryGround', () => {
+    for (const cave of [mroczna, czarny]) {
+      const report = countSdfWalkableOutsideQuery(cave)
       expect(report.walkable).toBeGreaterThan(50)
-      expect(report.uncovered / report.walkable).toBeLessThan(0.01)
+      expect(report.uncovered / report.walkable).toBeLessThan(0.02)
     }
   })
 
-  it('Grota Czarnego Kamienia: at the proxy floor, the SDF wall is well inside the proxy / collider ring', () => {
-    const cave = buildReproCave(GROTA_CZARNEGO_KAMIENIA.x, GROTA_CZARNEGO_KAMIENIA.z)
-    const chamber = cave.topology.nodes.find((n) => n.id === 'chamber')!
-    const into = openingDirection(cave.topology.entrance.yaw)
-    // Sideways from the chamber — away from the incoming tunnel.
-    const side = { dx: -into.dz, dz: into.dx }
-    const hit = wallApproach(cave, chamber.position, side.dx, side.dz)
-    expect(hit.sdfWallDistance).not.toBeNull()
-    expect(hit.proxyExitDistance).not.toBeNull()
-    // Visual wall (SDF zero at standing height on the flat proxy floor)
-    // is metres inside the containment/collider ring — walking "to the
-    // wall" clips through mesh, then leaving the proxy snaps to surface.
-    expect(hit.sdfWallDistance!).toBeLessThan(hit.colliderRingDistance - 1)
-    expect(hit.proxyExitDistance!).toBeGreaterThan(hit.sdfWallDistance! + 1)
+  it('column index is retained and reusable (lifecycle/cache ownership)', () => {
+    const a = queryColumnIndex(czarny.index, czarny.topology.entrance.x, czarny.topology.entrance.y + 1, czarny.topology.entrance.z)
+    const b = queryColumnIndex(czarny.index, czarny.topology.entrance.x, czarny.topology.entrance.y + 1, czarny.topology.entrance.z)
+    expect(a).toEqual(b)
+    expect(czarny.index.columns).toBe(czarny.index.columns)
   })
 
-  it('Grota Mroczna: mouth-floor Y is contained only in a tight disc; a step outward at the same Y leaves the cave', () => {
-    const cave = buildReproCave(GROTA_MROCZNA.x, GROTA_MROCZNA.z)
-    const { entrance } = cave.topology
+  it('Grota Mroczna: mouth-floor Y stays contained through the carved approach', () => {
+    const { entrance } = mroczna.topology
     const out = openingDirection(entrance.yaw)
     const y = entrance.y + 0.2
-    expect(cave.volume.contains(entrance.x, y, entrance.z)).toBe(true)
-    // Carved approach is centred 2.2 m outward with radius 3.2 m
-    // (`createCaves.ts`); the entrance disc is only width/2+PROXY_MARGIN.
+    expect(queryColumnIndex(mroczna.index, entrance.x, y, entrance.z)).not.toBeNull()
     const outsideApproach = 3.5
     const x = entrance.x + out.dx * outsideApproach
     const z = entrance.z + out.dz * outsideApproach
-    expect(cave.volume.contains(x, y, z)).toBe(false)
-    const surfaceY = cave.surfaceHeightAt(x, z)
-    // Standing in the approach pit then leaving containment snaps *up*
-    // because surface ground is above the player (`STEP_DOWN_MAX` only
-    // limits downward snaps).
+    expect(mouthCarveDepth(x, z, entrance)).toBeGreaterThan(0.2)
+    // Proxy disc still ends at ~2.4 m — that is no longer gameplay truth.
+    expect(mroczna.volume.contains(x, y, z)).toBe(false)
+    expect(queryColumnIndex(mroczna.index, x, y, z)).not.toBeNull()
+    const surfaceY = mroczna.surfaceHeightAt(x, z)
     expect(surfaceY).toBeGreaterThan(y + 0.45)
   })
 
-  it('proxy sampleFloor is a flat plane; SDF floor rises toward the chamber wall', () => {
-    const cave = buildReproCave(GROTA_CZARNEGO_KAMIENIA.x, GROTA_CZARNEGO_KAMIENIA.z)
-    const chamber = cave.topology.nodes.find((n) => n.id === 'chamber')!
-    const proxyFloor = cave.volume.sampleFloor(chamber.position.x, chamber.position.z)
+  it('Grota Mroczna: leaving the recess at surface height is a real surface transition', () => {
+    const { entrance } = mroczna.topology
+    const out = openingDirection(entrance.yaw)
+    const x = entrance.x + out.dx * 8
+    const z = entrance.z + out.dz * 8
+    const surfaceY = mroczna.surfaceHeightAt(x, z)
+    expect(queryColumnIndex(mroczna.index, x, surfaceY, z)).toBeNull()
+    expect(mouthCarveDepth(x, z, entrance)).toBe(0)
+  })
+
+  it('hillside above a tunnel is not contained (surface entity, not cave floor)', () => {
+    const chamber = czarny.topology.nodes.find((n) => n.id === 'chamber')!
+    const surfaceY = czarny.surfaceHeightAt(chamber.position.x, chamber.position.z)
+    expect(queryColumnIndex(czarny.index, chamber.position.x, surfaceY, chamber.position.z)).toBeNull()
+    expect(queryColumnIndex(czarny.index, chamber.position.x, chamber.position.y + QUERY_ABOVE_FLOOR, chamber.position.z)).not.toBeNull()
+  })
+
+  it('Grota Czarnego Kamienia: queryGround tracks the SDF bowl, not the flat proxy floor', () => {
+    const chamber = czarny.topology.nodes.find((n) => n.id === 'chamber')!
+    const proxyFloor = czarny.volume.sampleFloor(chamber.position.x, chamber.position.z)
     expect(proxyFloor).not.toBeNull()
-    const into = openingDirection(cave.topology.entrance.yaw)
+    const into = openingDirection(czarny.topology.entrance.yaw)
     const side = { dx: -into.dz, dz: into.dx }
     const d = 2.2
     const x = chamber.position.x + side.dx * d
     const z = chamber.position.z + side.dz * d
-    const interval = lowestWalkableInterval(
-      cave.sdf.sample,
-      cave.surfaceHeightAt(x, z),
+    const sdfInterval = lowestWalkableInterval(
+      czarny.sdf.sample,
+      czarny.surfaceHeightAt(x, z),
       x,
       z,
-      cave.sdf.bounds.minY,
-      cave.sdf.bounds.maxY,
+      czarny.sdf.bounds.minY,
+      czarny.sdf.bounds.maxY,
     )
-    expect(interval).not.toBeNull()
-    expect(interval!.floorY).toBeGreaterThan(proxyFloor! + 0.3)
+    expect(sdfInterval).not.toBeNull()
+    const hit = queryColumnIndex(czarny.index, x, sdfInterval!.floorY + QUERY_ABOVE_FLOOR, z)
+    expect(hit).not.toBeNull()
+    expect(hit!.floorY).toBeGreaterThan(proxyFloor! + 0.25)
+    expect(Math.abs(hit!.floorY - sdfInterval!.floorY)).toBeLessThan(0.5)
+  })
+
+  it('Grota Czarnego Kamienia: walking the SDF floor toward the wall stays in cave until the visual wall', () => {
+    const chamber = czarny.topology.nodes.find((n) => n.id === 'chamber')!
+    const into = openingDirection(czarny.topology.entrance.yaw)
+    const side = { dx: -into.dz, dz: into.dx }
+    const hit = wallApproach(czarny, chamber.position, side.dx, side.dz)
+    expect(hit.sdfWallDistance).not.toBeNull()
+    // B3 leftover: proxy/colliders are still wider than the SDF wall.
+    expect(hit.sdfWallDistance!).toBeLessThan(hit.colliderRingDistance - 1)
+    expect(hit.proxyExitDistance!).toBeGreaterThan(hit.sdfWallDistance! + 1)
+
+    let last: CaveGroundHit | null = null
+    const wall = hit.sdfWallDistance!
+    for (let d = 0; d < wall - 0.15; d += RAY_STEP) {
+      const x = chamber.position.x + side.dx * d
+      const z = chamber.position.z + side.dz * d
+      const interval = lowestWalkableInterval(
+        czarny.sdf.sample,
+        czarny.surfaceHeightAt(x, z),
+        x,
+        z,
+        czarny.sdf.bounds.minY,
+        czarny.sdf.bounds.maxY,
+      )
+      if (!interval) continue
+      const y = interval.floorY + QUERY_ABOVE_FLOOR
+      const q = queryColumnIndex(czarny.index, x, y, z)
+      expect(q).not.toBeNull()
+      last = q
+    }
+    expect(last).not.toBeNull()
+
+    const past = wall + 0.4
+    const x = chamber.position.x + side.dx * past
+    const z = chamber.position.z + side.dz * past
+    const y = last!.floorY + QUERY_ABOVE_FLOOR
+    const missed = queryColumnIndex(czarny.index, x, y, z)
+    const surfaceY = czarny.surfaceHeightAt(x, z)
+    expect(surfaceY).toBeGreaterThan(y + CAVE_UNDERGROUND_MISS)
+    // Raw column miss is allowed in rock (B3 collision). Hysteresis must
+    // still refuse the surface snap.
+    const held = applyCaveGroundHysteresis(missed, y, surfaceY, last)
+    expect(held.hit).not.toBeNull()
+    expect(held.hit!.floorY).toBeLessThan(surfaceY - 1)
+  })
+
+  it('player ground path does not use CaveVolume: proxy containment past the SDF wall is not queryGround', () => {
+    const chamber = czarny.topology.nodes.find((n) => n.id === 'chamber')!
+    const into = openingDirection(czarny.topology.entrance.yaw)
+    const side = { dx: -into.dz, dz: into.dx }
+    const hit = wallApproach(czarny, chamber.position, side.dx, side.dz)
+    const d = (hit.sdfWallDistance! + hit.proxyExitDistance!) / 2
+    const x = chamber.position.x + side.dx * d
+    const z = chamber.position.z + side.dz * d
+    const y = chamber.position.y + QUERY_ABOVE_FLOOR
+    expect(czarny.volume.contains(x, y, z)).toBe(true)
+    const proxyFloor = czarny.volume.sampleFloor(x, z)
+    expect(proxyFloor).not.toBeNull()
+    expect(proxyFloor!).toBeCloseTo(chamber.position.y, 0)
+    const q = queryColumnIndex(czarny.index, x, y, z)
+    // Either the ghost plane is no longer cave space, or the hit is the
+    // SDF bowl — never CaveVolume's flat proxy floor as gameplay truth.
+    if (q) {
+      expect(q.floorY).toBeGreaterThan(proxyFloor! + 0.2)
+    }
   })
 })

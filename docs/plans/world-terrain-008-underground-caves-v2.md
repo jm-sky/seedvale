@@ -411,12 +411,16 @@ Sprawdzić kilka caves / kilka seeds, nie tylko `definitions[0]`:
 
 # B2 — Entrance + gameplay spatial queries
 
-**B2 status (2026-09-08): recon done, not implemented.** Current runtime, root
-cause of both post-B1 surface-snap repros, query contract, performance and
-the B3 boundary are in
-`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b2-recon.md`.
-Diagnostic pins live in `src/world/caves/caveGameplayQuery.b2-recon.test.ts`.
-Do not start from the one-paragraph scope that used to sit here.
+**B2 status (2026-09-08): implemented.** Gameplay ground/containment now
+goes through a derived SDF column index (`caveSdfQuery.ts`) retained at
+world-build, not `CaveVolume`. Mouth portal = entrance carve ∪ clipped SDF
+interior. Underground-miss hysteresis prevents a single query miss from
+snapping the player to the surface. Collision still uses
+`topologyToCaveDefinition` until B3. Details, deviations and the B3 collider
+mismatch: see the "Milestone B2 — Implementation Summary" section in
+`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md`.
+Browser/manual verification (recon checklist, seed `1136726869`) is still
+open — technical checks (`tsc`, `lint`, `build`, `test`) pass.
 
 ## 14. Cel B2
 

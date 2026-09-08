@@ -1237,11 +1237,93 @@ own assertions are unchanged.
 # Milestone B2 — Recon pointer (2026-09-08)
 
 B1 left gameplay ground on `topologyToCaveDefinition` → `CaveVolume`. That
-is now the B2 problem, not a remaining B1 task. Do not implement B2 from
-this file's Milestone-A "CaveVolume / Spatial Query Constraints" section
-alone — it still describes the proxy correctly, but the post-B1 repros are
-mouth-portal + flat-proxy-floor vs SDF bowl, not "SDF void outside the
-proxy XZ".
+was the B2 problem. The recon that scoped this slice:
 
-Read `world-terrain-008-underground-caves-v2-b2-recon.md` and
-`src/world/caves/caveGameplayQuery.b2-recon.test.ts` before writing B2 code.
+`world-terrain-008-underground-caves-v2-b2-recon.md`
+
+Diagnostic pins (now inverted as regression tests):
+`src/world/caves/caveGameplayQuery.b2-recon.test.ts`.
+
+---
+
+# Milestone B2 — Implementation Summary (2026-09-08)
+
+Gameplay floor/containment no longer uses `CaveVolume`. The production path is:
+
+```text
+CaveTopology
+    ↓
+CaveSdfSpatialRepresentation          retained at world-build (createCaves)
+    ↓
+CaveSdfColumnIndex                    derived occupancy, same lifetime
+    ↓
+queryColumnIndex(x,y,z)               Y-aware interval pick
+    ↓
+applyCaveGroundHysteresis             underground-miss continuity
+    ↓
+Caves.queryGround → CaveGroundQuery
+```
+
+`createApp.ts` `caveGroundQuery` is a one-line wrapper around `queryGround`.
+`contains` is `queryGround !== null` (so the torch `isInCave` seam stays).
+`sampleFloor` / `sampleCeiling` remain as Y-blind lowest-interval accessors
+and are unused by the player.
+
+## New/changed files
+
+- `caves/mouthCarve.ts` — shared approach/mouth discs, depths and smoothstep
+  falloff matching `applyModificationToTile`. `createCaves` carve calls and
+  the gameplay portal consume the same constants so they cannot drift.
+- `caves/caveSdfQuery.ts` — column index, `queryColumnIndex`, interval pick,
+  hysteresis. No Three.js. No `CaveVolume`.
+- `caves/caveSdfQuery.test.ts` — synthetic stacked intervals, determinism,
+  surface clip, mouth portal, hysteresis.
+- `createCaves.ts` — builds representation + column index up front; ground
+  path uses the index; `createCaveVolume` is gone from this file. Colliders
+  still register `buildCaveWallColliders(definition)`.
+- `sdfCaveMesh.ts` — optional prebuilt representation so activate does not
+  reconstruct the field.
+- `createApp.ts` / `PlayerController.ts` JSDoc — player ground reads
+  `queryGround`.
+
+## Query contract (as implemented)
+
+- Per column: sorted disjoint `{ floorY, ceilingY }[]`.
+- Origin snapped to a fixed world multiple of `CAVE_COLUMN_STEP` (0.4 m).
+- Pick by Y with `CAVE_FLOOR_GRACE` (2 m) on the floor only. Never
+  `Math.min` across stacked intervals. No airborne-above-ceiling fallback
+  — that would capture a surface entity over a shallow roof.
+- SDF ceilings clipped to `sampleBaseHeight - 0.05` (analytic surface, never
+  resident `sampleHeight`).
+- Mouth portal: carve depth at `(x,z)` unioned with clipped SDF intervals.
+  `mouth portal = entrance carve ∪ clipped SDF interior`.
+- Hysteresis: a miss with `surfaceY - y > 1.5 m` keeps the last cave hit.
+  Mouth exit still works because there `sampleHeight ≈ playerY`.
+
+## Deviations from the recon text
+
+- The recon's "airborne: floor below y and ceiling above y − PLAYER_HEIGHT"
+  pick is **not** implemented. It treated a surface entity standing ~0–1.8 m
+  above a clipped ceiling as still in-cave. Jump/step are already covered by
+  containment + `FLOOR_GRACE`.
+- Column lookup is nearest-neighbour, not bilinear. Bowl tracking on the
+  two repro caves is within 0.5 m of a fine SDF floor scan.
+- `CaveSdfSpatialRepresentation` is retained on the `Caves` handle (recon
+  allowed index-only). Mesh extraction reuses it on activate; the index is
+  not rebuilt per frame or per activate.
+- `Caves.sampleFloor` / `sampleCeiling` were kept as lowest-interval
+  wrappers rather than deleted, so any leftover debug caller does not go
+  back to `CaveVolume`. Player ground does not call them.
+
+## Intentionally left for B3
+
+Collision still uses `topologyToCaveDefinition` → `buildCaveWallColliders`.
+On Grota Czarnego Kamienia (`cave:0e3cce97`) the SDF wall at standing height
+on the proxy floor is ~2 m from the chamber centre; the collider ring sits
+at ~5.7 m. B2 stops the surface teleport when the player walks that gap
+(hysteresis + SDF floor ownership) but does **not** stop the body at the
+visual wall. Camera boom occlusion / `CAMERA_OCCLUDER_MIN_RADIUS` is also
+B3.
+
+Do not put `CaveVolume` back on the player ground path.
+

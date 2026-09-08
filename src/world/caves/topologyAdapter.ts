@@ -1,12 +1,11 @@
-/** Plan world-terrain-008 Milestone A §17 — the L1 walkable-proxy adapter.
- *  Turns a `CaveTopology` into a `CaveDefinition` so both spikes can reuse
- *  `createCaveVolume` (ground/ceiling queries) and `buildCaveWallColliders`
- *  (collision) completely unchanged. This proxy is deliberately generous
- *  (never authoritative render geometry — plan §4) so the spike mesh's
- *  visible walkable area is never wider than the proxy's collision/ground
- *  coverage (risk: a player standing outside the proxy falls through to
- *  `sampleHeight` and gets snapped to the surface — see implementation
- *  notes "One trap worth knowing").
+/** Plan world-terrain-008 — transitional L1 walkable-proxy adapter.
+ *  Turns a `CaveTopology` into a `CaveDefinition` so B3 can still reuse
+ *  `buildCaveWallColliders` until collision is derived from the SDF.
+ *  Gameplay ground/containment no longer uses this proxy (B2:
+ *  `caveSdfQuery.ts`). The proxy is deliberately generous (never
+ *  authoritative render geometry — plan §4). Walking past the visual SDF
+ *  wall into the proxy disc is a known B3 miss; B2 hysteresis stops that
+ *  gap from snapping the player to the surface.
  *
  * @domain world-terrain
  */

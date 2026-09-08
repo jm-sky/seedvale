@@ -22,6 +22,7 @@ import {
   type Bounds,
   buildCaveSdfRepresentation,
   buildVoidField,
+  type CaveSdfSpatialRepresentation,
   DEFAULT_SDF_PARAMS,
   type SdfCaveParams,
   type VoidPrimitive,
@@ -197,14 +198,15 @@ export function buildSdfCaveMesh(
   topology: CaveTopology,
   params: SdfCaveParams = DEFAULT_SDF_PARAMS,
   surfaceHeightAt?: SurfaceHeightSampler,
+  representation?: CaveSdfSpatialRepresentation,
 ): SdfCaveResult {
   const detailEnabled = isSystemEnabled('caveDetail')
 
   const t0 = now()
-  const representation = buildCaveSdfRepresentation(topology, params, detailEnabled)
+  const field = representation ?? buildCaveSdfRepresentation(topology, params, detailEnabled)
   const t1 = now()
 
-  const grid = sampleGrid(representation.bounds, params.cellSize, representation.sample)
+  const grid = sampleGrid(field.bounds, params.cellSize, field.sample)
 
   const extracted = extractSurfaceNets(grid)
   // The iso-surface is closed, so without this the entrance ellipsoid is

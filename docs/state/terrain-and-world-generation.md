@@ -84,7 +84,7 @@ The hydrology simulation, river-tile geometry, and rendering are canonical in [w
 
 ## World locations
 
-Coarse world-location classification (lakes, mountain peaks, cemeteries, …) consumes this domain's terrain sampling surface (`sampleContinentalnessAt`/`sampleFloorAt`/`sampleHeightAt`/`sampleMountainRidgeAt`) but is a separate, persisted-progression domain, not part of terrain generation — see [world-locations.md](./world-locations.md). Cave interiors are not heightmap features: Cave V2 (`createCaves()`, `src/world/caves/`) is a streamed SDF interior owned by `WorldBundle.caves`, sited by `pickLargeCaveSites()`. Mouth recess carves are `'system'` terrain modifications (replayed every world build, never persisted). Gameplay ground inside a cave still goes through a `CaveVolume` proxy derived from topology, not the SDF — that remaining seam is plan world-terrain-008 Milestone B2.
+Coarse world-location classification (lakes, mountain peaks, cemeteries, …) consumes this domain's terrain sampling surface (`sampleContinentalnessAt`/`sampleFloorAt`/`sampleHeightAt`/`sampleMountainRidgeAt`) but is a separate, persisted-progression domain, not part of terrain generation — see [world-locations.md](./world-locations.md). Cave interiors are not heightmap features: Cave V2 (`createCaves()`, `src/world/caves/`) is a streamed SDF interior owned by `WorldBundle.caves`, sited by `pickLargeCaveSites()`. Mouth recess carves are `'system'` terrain modifications (replayed every world build, never persisted). Gameplay ground inside a cave is a derived SDF column index (`caveSdfQuery.ts` / `Caves.queryGround`), not the `CaveVolume` proxy — that adapter remains for wall colliders until plan world-terrain-008 Milestone B3.
 
 ## Persistence
 

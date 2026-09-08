@@ -162,13 +162,12 @@ export type HeightSampler = (x: number, z: number) => number
 /** `ChunkManager.collidersNear` (plan 097 §2.2) — kept as its own alias
  *  instead of importing `ChunkManager` here, same reasoning as `HeightSampler`. */
 export type ColliderSource = (x: number, z: number) => readonly Collider[]
-/** `Caves.contains`/`sampleFloor`/`sampleCeiling` (plan world-terrain-007),
- *  collapsed into one query keyed by the entity's own (previous-frame) Y —
- *  the only way to tell "standing on the hillside above a cave" apart from
- *  "standing in the cave below it" at the same X/Z (contract §14). Returns
- *  `null` outside any cave, in which case the caller falls back to
- *  `HeightSampler`. Kept as its own alias instead of importing `Caves` here,
- *  same reasoning as `HeightSampler`/`ColliderSource`. */
+/** `Caves.queryGround` (plan world-terrain-008 B2), keyed by the entity's
+ *  own (previous-frame) Y — the only way to tell "standing on the hillside
+ *  above a cave" apart from "standing in the cave below it" at the same
+ *  X/Z. Returns `null` outside any cave, in which case the caller falls
+ *  back to `HeightSampler`. Kept as its own alias instead of importing
+ *  `Caves` here, same reasoning as `HeightSampler`/`ColliderSource`. */
 export type CaveGroundQuery = (x: number, y: number, z: number) => { floorY: number, ceilingY: number } | null
 
 /**

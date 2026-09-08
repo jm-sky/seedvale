@@ -665,11 +665,9 @@ export async function createApp(
   // doc comment requires, so this stays correct across `rebuildWorldBundle`
   // without needing to be re-passed to `player.setGround()` below.
   const caveGroundQuery: CaveGroundQuery = (x, y, z) => {
-    if (!bundle.caves.contains(x, y, z)) return null
-    const floorY = bundle.caves.sampleFloor(x, z)
-    const ceilingY = bundle.caves.sampleCeiling(x, z)
-    if (floorY == null || ceilingY == null) return null
-    return { floorY, ceilingY }
+    const hit = bundle.caves.queryGround(x, y, z)
+    if (!hit) return null
+    return { floorY: hit.floorY, ceilingY: hit.ceilingY }
   }
 
   bootMark('PlayerController.create')
@@ -723,7 +721,8 @@ export async function createApp(
     onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
     onExtinguish: () => playActionFireExtinguish(worldAudio.playAt, player.mesh.position),
     // Same reused cave query as `caveGroundQuery` above (world-terrain-008
-    // Milestone A test-environment patch) — brightens only this torch.
+    // B2) — brightens only this torch. `contains` is Y-aware over the SDF
+    // column index, including mouth-portal + underground-miss hysteresis.
     isInCave: () => bundle.caves.contains(
       player.mesh.position.x,
       player.mesh.position.y,
