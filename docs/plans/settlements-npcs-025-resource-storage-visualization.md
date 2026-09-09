@@ -17,7 +17,7 @@ Keep the current ownership model intact: authoritative quantities stay in `House
 
 The work has four parts:
 
-1. replace scale-only quantity cues for wood/food with bounded visible-item / fill-level cues,
+1. replace scale-only quantity cues for wood/food with bounded discrete visual states,
 2. audit every `EconomicKind` for an appropriate settlement storage representation,
 3. reuse existing GLBs / procedural fallbacks where practical,
 4. keep render/update cost bounded independently of stored quantity.
@@ -49,51 +49,70 @@ Do not create another destination system in this plan.
 - food uses concrete `ItemKind`s through `createItemMesh(kind)`, with a bounded number of displayed food kinds;
 - food quantity is currently communicated mainly by scaling one representative model per displayed kind.
 
-Existing reusable resource visuals include:
+A new authored progressive wood asset has been prepared for this plan:
 
-- wood: `/models/settlement/wood_pile.glb` plus existing procedural stockpile fallback,
-- gold: `/models/nature/resource_gold_1.glb`,
-- iron / coal / copper ore: `/models/nature/resource_rock_1.glb` with resource-specific tint,
-- ore fallback: existing procedural `createRockCluster(...)`,
-- food: existing `createItemMesh(kind)` / `ITEM_GLB_SPECS` pipeline,
-- water: no verified quantity-storage representation; the well is a source/place, not stored-water quantity.
+- `wood_pile_progressive.glb`
+- root: `wood_pile_progressive`
+- children: `Pile_01`, `Pile_05`, `Pile_10`, `Pile_18`, `Pile_29`
+- each child is a complete alternative pile variant; variants are not additive and exactly one should be visible at a time.
 
-The ore GLBs are currently used by `src/terrain/resourceDeposits.ts` for deposits, not settlement stock. Reuse their visual language only if the storage result remains semantically distinct from a mineable world deposit.
+The original `wood_pile.glb` remains the current runtime asset until implementation migrates the visual controller.
+
+Existing nature assets `resource_rock_1.glb` and `resource_gold_1.glb` are world-deposit visuals: rocks protruding from terrain, with the gold variant showing gold fragments in grey rock. They are semantically unsuitable as stored-resource piles and must not be reused directly for settlement storage.
+
+Food continues to use the existing `createItemMesh(kind)` / `ITEM_GLB_SPECS` pipeline.
+
+Water has no verified quantity-storage representation; the well is a source/place, not stored-water quantity.
 
 ## Scope
 
-### 1. Asset-structure audit before implementation
+### 1. Asset contract before implementation
 
-Inspect the actual GLB scene structure for:
+Verify the checked-in progressive wood asset and record its final repository path in implementation notes. The intended contract is:
 
-- `public/models/settlement/wood_pile.glb`
-- `public/models/nature/resource_rock_1.glb`
-- `public/models/nature/resource_gold_1.glb`
-- the actual crate/barrel/storage GLB used by settlement food storage
+```text
+wood_pile_progressive
+├── Pile_01
+├── Pile_05
+├── Pile_10
+├── Pile_18
+└── Pile_29
+```
 
-For each candidate record in implementation notes:
+Requirements:
 
-- node count,
-- mesh count,
-- whether visually meaningful units are separate child objects/meshes,
-- whether parts can be independently toggled through `Object3D.visible`,
-- whether the model is effectively one merged mesh,
-- whether object names/order are stable enough for deterministic reveal,
-- whether a procedural fallback is better suited to progressive presentation.
+- names above are stable runtime identifiers,
+- variants share the same placement/orientation and read as one pile growing in amount,
+- each `Pile_*` is independently toggleable through `Object3D.visible`,
+- all variants are loaded/cloned once with the settlement prop,
+- sync must not traverse/sort arbitrary GLB hierarchy every update; resolve and cache references during initialization,
+- exactly one pile variant is visible for positive normal-range quantities,
+- zero quantity hides all variants.
 
-Do not assume that one GLB means one mesh or one draw call.
-
-If an authored pile contains independently useful child parts, prefer reusing and revealing those parts over adding multiple new asset variants.
+Also keep the existing crate audit for food storage. Do not introduce fill-height behavior unless the active container geometry actually supports it.
 
 ### 2. Shared quantity-to-visual policy
 
-Add a small reusable, pure presentation mapping in or next to `storageVisuals.ts` for bounded quantity visualization.
+Add small pure presentation mappings in or next to `storageVisuals.ts`. Wood uses its authored five-stage contract; food uses bounded representative counts.
 
-It should derive concepts such as:
+#### Wood stage mapping
 
-- visible representative count,
-- fill level / vertical level where relevant,
-- optional pile stage/band.
+Use these authored variants:
+
+| Stored wood | Visible variant |
+|---:|---|
+| 0 | none |
+| 1 | `Pile_01` |
+| 2–5 | `Pile_05` |
+| 6–10 | `Pile_10` |
+| 11–20 | `Pile_18` |
+| 21+ | `Pile_29` |
+
+These thresholds intentionally follow the prepared visual variants rather than trying to represent every unit literally.
+
+High-quantity overflow may retain the existing bounded extra-pile mechanism if it still reads naturally, but the primary pile must remain `Pile_29` rather than scale beyond authored size.
+
+#### Food representative mapping
 
 Target mapping for discrete representatives:
 
@@ -103,11 +122,12 @@ Target mapping for discrete representatives:
 | 1 | 1 |
 | 2 | 2 |
 | 3–4 | 3 |
-| 5–7 | 4–5 |
-| 8–12 | 5–6 |
-| 13+ | bounded at roughly 6–8 |
+| 5–7 | 4 |
+| 8–12 | 5 |
+| 13–20 | 6 |
+| 21+ | 8 max |
 
-Exact thresholds may be tuned after inspecting real asset/container geometry, but preserve these invariants:
+Preserve these invariants:
 
 - one stored unit must not read as a full pile/container,
 - low quantities stay close to one visible representative per unit,
@@ -120,23 +140,21 @@ Exact thresholds may be tuned after inspecting real asset/container geometry, bu
 
 Keep the existing authoritative aggregate wood quantity calculation and existing sync integration.
 
-Preferred implementation after GLB audit:
+Replace the current scale-band primary pile with `wood_pile_progressive.glb`:
 
-1. If `wood_pile.glb` exposes independently useful logs/pile components:
-   - create/clone the authored pile once,
-   - build/cache the revealable child list during initialization,
-   - deterministically reveal more parts as quantity rises,
-   - do not traverse/sort the hierarchy every settlement update.
-2. If `wood_pile.glb` is effectively merged:
-   - use it only once quantity visually justifies a full pile,
-   - represent low quantities with existing suitable log/branch/beam/procedural assets,
-   - create a bounded pool once rather than allocate/dispose geometry when quantity changes.
+1. load/clone the progressive asset once;
+2. resolve `Pile_01`, `Pile_05`, `Pile_10`, `Pile_18`, `Pile_29` once during initialization;
+3. validate/fail safely if expected nodes are missing;
+4. `sync(quantity)` selects the pure wood stage and toggles only cached `.visible` values;
+5. do not scale the selected pile according to quantity;
+6. zero hides all stages;
+7. optional high-stock overflow stays strictly bounded and may reuse the full `Pile_29` representation if appropriate.
 
 Desired progression:
 
-`single/few logs → small stack → medium stack → full pile → bounded overflow piles`.
+`1 log → small pile → medium pile → large pile → full 29-log pile → bounded overflow`.
 
-High-quantity overflow may retain the existing bounded extra-pile concept if it still reads naturally after low/mid-range correction.
+Do not generate procedural loose logs for low/mid quantities now that the authored progressive asset exists. Keep procedural stockpile geometry only as fallback if the asset cannot be loaded.
 
 ### 4. Food visualization
 
@@ -145,27 +163,17 @@ Replace scale-only quantity cues with bounded discrete representatives.
 For each displayed food kind:
 
 - use `createItemMesh(kind)` so the existing GLB/procedural item pipeline remains authoritative,
-- create a bounded representative pool once,
-- toggle `visible` based on the shared quantity mapping,
+- create/cache a bounded representative pool,
+- toggle `visible` based on the quantity mapping,
 - keep item scale near its normal model scale,
 - use deterministic local positions/rotations,
 - do not allocate/dispose item meshes on quantity changes.
 
 #### Container fill behavior
 
-If the active settlement storage prop is an open crate, barrel or comparable container:
+The currently audited settlement `crate.glb` is closed/merged. Therefore v1 should keep bounded visible representatives placed deterministically on/adjacent to the storage prop and **not** fake an internal rising fill level.
 
-- only render the visible top layer of stored items,
-- encode increasing quantity both through visible representative count and the Y position of that top layer,
-- do not render hidden lower layers,
-- clamp the highest fill level below/inside the rim,
-- derive min/max local Y from the real container geometry/bounds, not guessed world-space constants.
-
-Use a bounded fill curve such as:
-
-`low → quarter → half → three-quarter → near-full`.
-
-If the current food prop is not suitable for this illusion, keep bounded top-surface representatives and document whether an existing crate/barrel asset is a better replacement.
+A true `low → quarter → half → three-quarter → near-full` fill-height presentation is deferred until an intentionally open container exists with real usable interior/rim bounds.
 
 ### 5. Audit all settlement resources
 
@@ -174,32 +182,29 @@ Implementation notes must include one table covering every `EconomicKind` with:
 - authoritative owner,
 - current physical storage/delivery destination if any,
 - current visualization status,
-- existing candidate GLB(s),
-- procedural fallback if any,
-- GLB structure suitability,
+- existing candidate asset/procedural visual if semantically suitable,
 - proposed representation type,
 - implementation/defer status and blocker if deferred.
 
-Expected representation classes:
+Expected decisions:
 
-- `wood`: staged loose pile,
-- `food`: bounded discrete representatives + fill level where container supports it,
-- `iron`: candidate loose ore pile,
-- `coal`: candidate loose ore pile,
-- `gold`: candidate loose ore pile,
-- `copper_ore`: candidate loose ore pile,
-- `water`: requires a semantically correct stored-water representation; do not treat the existing well as stored quantity.
+- `wood`: **implement** using `wood_pile_progressive.glb`,
+- `food`: **implement** using bounded discrete representatives,
+- `iron`, `coal`, `gold`, `copper_ore`: **defer physical storage visualization** until a real storage destination and semantically correct stored-material visual exist,
+- `water`: **defer** until a stored-water container/destination exists.
 
-For ores, prefer one shared pile/reveal mechanism parameterized by template/tint over four independent implementations.
+`resource_rock_1.glb` and `resource_gold_1.glb` are terrain deposit visuals and are explicitly **not** candidates for stored ore/gold presentation.
 
-Do not force every missing resource visual into this implementation if the audit shows that no real physical storage destination/container exists yet. In that case, record the precise blocker and defer only that resource rather than inventing storage semantics.
+Do not force every missing resource visual into this implementation. Do not invent storage anchors, reuse mineable deposits as stockpiles, or map water stock onto the well.
+
+If a future plan defines one shared settlement bulk-goods storage destination for ores/minerals, prefer one shared bounded storage-visual mechanism parameterized by resource kind over four independent implementations.
 
 ### 6. Performance constraints
 
 Required constraints:
 
-- hard cap visible representatives per resource/kind,
-- initialize/cache child lists and representative transforms once,
+- hard cap visible food representatives per resource/kind,
+- wood variants cached once by stable name,
 - update only `visible` and bounded transforms during sync,
 - no per-tick GLB loading,
 - no per-tick geometry/material cloning,
@@ -208,34 +213,37 @@ Required constraints:
 - reuse existing GLB template/clone pipelines,
 - no worker: this is small presentation bookkeeping and worker communication would be unjustified.
 
-Separate GLB child meshes may still produce separate draw calls. If an audited model contains too many child meshes, reveal only a bounded useful subset or choose a more appropriate representation instead of mechanically exposing the whole hierarchy.
+Only one primary `Pile_*` variant should be visible at a time, so hidden variants must not create render draw calls. Keep any overflow count bounded.
 
 ### 7. Determinism
 
-Representative ordering, offsets and rotations must be stable for the same storage visual.
+Wood-stage choice is a pure function of quantity. Food representative ordering, offsets and rotations must be stable for the same storage visual.
 
-Prefer predefined local slots or one-time seeded placement from stable settlement/resource identity. Never use frame/tick-time randomness.
+Prefer predefined local slots. No frame/tick-time randomness.
 
 ### 8. Tests
 
-Extend the current storage-visual tests, expected at `src/settlement/storageVisuals.test.ts`, with pure behavior coverage for:
+Extend `src/settlement/storageVisuals.test.ts` with pure behavior coverage for:
 
-- `0` quantity → no representatives,
-- `1` → one representative,
-- `2` → two where capacity allows,
-- all threshold transitions,
-- high quantities remain capped,
-- fill level is monotonic and clamped,
-- deterministic output for equal input,
-- wood overflow remains bounded,
+- wood `0` → no pile variant,
+- exact wood boundaries `1`, `2`, `5`, `6`, `10`, `11`, `20`, `21`,
+- wood high quantities remain on `Pile_29` plus only bounded overflow if retained,
+- exactly one primary `Pile_*` is visible for positive quantities,
 - existing aggregate wood quantity semantics remain unchanged,
-- food kind selection remains bounded and deterministic.
+- food `0` → no representatives,
+- food `1` → one representative,
+- food `2` → two where capacity allows,
+- all food threshold transitions,
+- high food quantities remain capped,
+- deterministic output for equal input,
+- food kind selection remains bounded and deterministic,
+- repeated sync/quantity changes preserve pooled object identities.
 
-Avoid brittle tests against incidental Three.js child indices unless the asset audit establishes stable authored names that intentionally become part of the visual contract.
+For the progressive wood asset, stable authored names intentionally become part of the visual contract and may be tested at the controller boundary. Avoid incidental child-index assertions.
 
 ## Implementation notes required before coding
 
-Create:
+Update:
 
 `docs/plans/implementation-notes/settlements-npcs-025-resource-storage-visualization-implementation-notes.md`
 
@@ -243,10 +251,10 @@ The notes should remove asset/code recon from the implementation pass and includ
 
 1. exact symbols and call sites in `storageVisuals.ts`, `props.ts`, settlement construction/update wiring and item-model pipeline,
 2. the full `EconomicKind` audit table,
-3. exact GLB node/mesh audit for candidate assets,
-4. which child objects are safe to reveal independently, if any,
-5. exact settlement food container prop and local bounds relevant to fill height,
-6. chosen quantity thresholds and caps,
+3. the final progressive wood asset path and exact node-name contract,
+4. chosen wood thresholds and any overflow rule,
+5. exact settlement food container prop and why internal fill is deferred,
+6. chosen food representative thresholds/caps,
 7. chosen deterministic slot layouts or generation rule,
 8. exact files/symbols to modify,
 9. explicitly deferred resources and concrete blockers,
@@ -261,8 +269,7 @@ Verify against current code before editing:
 - `src/settlement/storageVisuals.ts`
 - `src/settlement/storageVisuals.test.ts`
 - `src/settlement/props.ts`
-- `src/settlement/propSpecs.ts` only if an already-present asset needs exposure through the current prop-spec mechanism
-- `src/items/itemModels.ts` only if an existing food asset must be exposed through the current item GLB pipeline
+- settlement prop/template loading helper if needed for the new progressive asset
 - `docs/plans/implementation-notes/settlements-npcs-025-resource-storage-visualization-implementation-notes.md`
 
 Do not refactor unrelated settlement economy, inventory, resource-deposit or persistence systems.
@@ -278,14 +285,14 @@ Automated verification:
 
 Manual browser verification is performed by the User, not the AI agent. Verify visually:
 
-- 1–2 wood no longer appears as a complete large pile,
-- wood progresses naturally through small/medium/full stages,
+- `1` wood shows only `Pile_01`,
+- wood transitions naturally through `Pile_05`, `Pile_10`, `Pile_18`, `Pile_29`,
+- changing wood quantity does not scale, flicker or reposition the primary pile,
+- high wood quantities remain bounded,
 - 1–2 food items display as 1–2 representatives,
 - higher food quantities increase density without giant item scaling,
-- open-container food rises as the notional fill level increases,
-- representatives remain inside/on the intended storage prop,
+- food representatives remain on/adjacent to the intended storage prop,
 - quantity changes do not cause flicker or reshuffling,
-- high quantities do not create unbounded objects,
 - multiple settlements show no obvious storage-visual performance regression.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
