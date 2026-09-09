@@ -1,7 +1,7 @@
 # Plan: Temporary conditions and poisoning
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-019~~, ~~world-017~~

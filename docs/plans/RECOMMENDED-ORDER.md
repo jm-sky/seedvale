@@ -40,7 +40,9 @@ _No qualifying plans._
 
 ### Polish
 
-1. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `settlements-006` — **Merchant sell pricing — condition and social standing**  
+   🟡 `S` · ✅ ready · unlocks 0/0
+2. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -126,76 +128,76 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  41  
    → **unlocks:** 1/2
 
-14. `npc-024` — **Temporary conditions and poisoning**  
-  🟡 `M` · **Score:**  39  
-   → **unlocks:** 1/1
-
-15. `npc-011` — **NPC Burial & Graves**  
+14. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  38  
    → **unlocks:** 1/1
 
-16. `fauna-018` — **Persistent habitat occupants**  
+15. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-17. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
+16. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-18. `settlements-005` — **Residential House Construction**  
+17. `settlements-005` — **Residential House Construction**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-19. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+18. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-20. `npc-026` — **NPC Grave Visits**  
+19. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  31  
    → **unlocks:** 0/0
 
-21. `items-player-018` — **Camp inspection, condition and full camp setup**  
+20. `items-player-018` — **Camp inspection, condition and full camp setup**  
   🟡 `L` · **Score:**  30  
    → **unlocks:** 1/1
 
-22. `items-player-014` — **Rope-pullable resource transport**  
+21. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-23. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+22. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-24. `tools-005` — **Seedvale Character Preparation Panel**  
+23. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `items-player-020` — **Player-built animal trough and water storage**  
+24. `items-player-020` — **Player-built animal trough and water storage**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-26. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+25. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-27. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+26. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-28. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+27. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-29. `fauna-013` — **Animal hand-feeding and human affinity**  
+28. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-30. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+29. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-31. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
+30. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
   🟡 `M` · **Score:**  21  
+   → **unlocks:** 0/0
+
+31. `settlements-006` — **Merchant sell pricing — condition and social standing**  
+  🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
 32. `world-terrain-015` — **Water Reflection Content Budget**  
@@ -388,6 +390,7 @@ graph TD
   settlements_003["settlements-003 — Colony settlement bootstrap"]
   settlements_004["settlements-004 — Gold Economic Realization & Source Entitlements"]
   settlements_005["settlements-005 — Residential House Construction"]
+  settlements_006["settlements-006 — Merchant sell pricing — condition and social standing"]
   settlements_npcs_001["settlements-npcs-001 — Cultivation Hydration & Watering"]
   settlements_npcs_002["settlements-npcs-002 — NPC professions — complete profession work integration"]
   settlements_npcs_003["settlements-npcs-003 — Hunter Arrow Production"]
@@ -586,6 +589,7 @@ graph TD
   persistence_003 --> persistence_004
   quests_progression_001 --> quests_progression_002
   quests_progression_001 --> quests_progression_011
+  quests_progression_001 --> settlements_006
   quests_progression_002 --> quests_progression_003
   quests_progression_002 --> quests_progression_004
   quests_progression_002 --> quests_progression_005

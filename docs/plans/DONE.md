@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-025-injury-severity-and-treatment-requirements`                   | 2026-09-09 08:37:24 | —                   | `npc`            | —          |
 | `world-019-persistent-player-built-site-infrastructure`                | 2026-09-08 23:33:05 | —                   | `world`          | —          |
 | `npc-010-death-and-corpse-lifecycle`                                   | 2026-09-08 19:14:15 | —                   | `npc`            | —          |
 | `npc-020-strength-driven-physical-work-and-human-carrying`             | 2026-09-08 15:29:43 | —                   | `npc`            | —          |
