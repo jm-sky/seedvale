@@ -30,6 +30,7 @@ Generated from TypeScript imports.
 - `app/userActions.ts`
 - `input/createTouchControls.ts`
 - `player/PlayerController.ts`
+- `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 
 ## `input/createTouchControls.ts`
