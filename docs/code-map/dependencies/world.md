@@ -216,6 +216,7 @@ Generated from TypeScript imports.
 
 - `config/worldConfig.ts`
 - `fauna/createFauna.ts`
+- `input/MouseLook.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.ts`
 - `player/verticalMotion.ts`

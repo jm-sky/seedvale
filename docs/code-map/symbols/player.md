@@ -13,7 +13,7 @@ Generated from exported TypeScript symbols.
 - `CameraBoomInput` — type — line 27
 - `CameraBoomResult` — type — line 43
 - `resolveCameraBoom` — function — line 58
-- `withCaveFloorFallback` — function — line 290
+- `withCaveFloorFallback` — function — line 302
 
 ## `player/humanCarryCapacity.ts`
 
