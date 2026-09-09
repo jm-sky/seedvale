@@ -174,6 +174,8 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       starvationDuration: player.needs.starvationDuration,
       dehydrationDuration: player.needs.dehydrationDuration,
     },
+    playerConditions: player.snapshotTemporaryConditionsState(),
+    waterDrinkEventCount: player.waterDrinkEventCount > 0 ? player.waterDrinkEventCount : undefined,
     ownedLandPlots: landOwnership.toJSON(),
     // Only XP round-trips — `value` is derived on load and `active` is
     // runtime-only (plan 128 §2).

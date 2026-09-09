@@ -48,7 +48,7 @@ export function createMountActions(
    *  system never scans the world itself beyond this one indirection. */
   resolveAnimal: (animalId: string) => AnimalAgent | null,
 ): MountActions {
-  const { player, toast, bundle, keyboard, mouseLook } = ctx
+  const { player, toast, bundle, keyboard, mouseLook, dayNight } = ctx
 
   let mount: AnimalAgent | null = null
   let pendingRestoreId: string | null = null
@@ -188,7 +188,7 @@ export function createMountActions(
     if (seat) player.setMountedTransform(seat.x, seat.y, seat.z, seat.yaw)
 
     const moving = moved > 1e-5
-    tickRidingStamina(player.needs.stamina, dt, moving, ridingStaminaDrainMultiplier(ridingValue), player.attributes.endurance)
+    tickRidingStamina(player.needs.stamina, dt, moving, ridingStaminaDrainMultiplier(ridingValue), player.effectiveAttributes(dayNight.elapsedDays).endurance)
 
     checkStability(dt, mount, moving, mount.isSprinting())
   }

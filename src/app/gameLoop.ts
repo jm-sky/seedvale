@@ -986,7 +986,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           // `combat/meleeStrength.ts`) applies after sharpness, before
           // critical resolution; neutral at `strength = 0.5`.
           const critResult = resolveCriticalHit(
-            applyMeleeStrength(meleeTick.config.damage * sharpnessModifier, player.attributes.strength),
+            applyMeleeStrength(meleeTick.config.damage * sharpnessModifier, player.effectiveAttributes(dayNight.elapsedDays).strength),
             MELEE_CRITICAL_CHANCE,
             MELEE_CRITICAL_MULTIPLIER,
             'player',
@@ -1592,7 +1592,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                   player.mesh.position.z,
                   target.position.x,
                   target.position.z,
-                  player.attributes.agility,
+                  player.effectiveAttributes(dayNight.elapsedDays).agility,
                 )
                 if (result.started) {
                   playerCombat.enter()
@@ -1829,7 +1829,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // — suppresses `player.update()`'s normal Stamina regeneration so it
       // can never net out against the Stamina those channels already drain.
       const physicalEffortActive = busy.isPhysical() || (isTerrainPreparationWorkActive?.() ?? false)
-      withCategory(monitor, 'PHYSICS', () => { player.update(dt, dayNight.dayLengthSec, physicalEffortActive) })
+      withCategory(monitor, 'PHYSICS', () => { player.update(dt, dayNight.dayLengthSec, physicalEffortActive, dayNight.elapsedDays) })
+      player.syncDerivedPhysicalCapabilities(dayNight.elapsedDays, (kg) => inventory.setBaseMaxWeight(kg))
       // Hunger/thirst/vigor progress on `worldDt` (scaled during a time-skip,
       // see above) — stamina keeps ticking inside `player.update(dt)` on raw
       // `dt` (tied to sprint) regardless of any skip.
@@ -1848,13 +1849,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         hunger: getHungerRatio(player.needs.hunger),
         thirst: getThirstRatio(player.needs.thirst),
       })
+      const poisoning = player.poisoningStatus(dayNight.elapsedDays)
+      hud.setPlayerCondition(poisoning.active
+        ? (poisoning.tier === 'severe' ? 'Zatrucie (ciężkie)' : poisoning.tier === 'moderate' ? 'Zatrucie (umiarkowane)' : 'Zatrucie')
+        : '')
+      const effectiveAttributes = player.effectiveAttributes(dayNight.elapsedDays)
       hud.setCharacterStats({
         hp: { current: player.health.currentHp, max: player.health.maxHp },
         stamina: { current: player.needs.stamina.current, max: player.needs.stamina.max },
         vigor: { current: player.needs.vigor.current, max: player.needs.vigor.max },
         hunger: { current: player.needs.hunger.current, max: player.needs.hunger.max },
         thirst: { current: player.needs.thirst.current, max: player.needs.thirst.max },
-        attributes: player.attributes,
+        attributes: effectiveAttributes,
       })
       // Sneak's `active` flag can flip outside the Skills screen's own
       // toggle (rest auto-deactivates it, `PlayerController.crouch`/

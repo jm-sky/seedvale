@@ -108,7 +108,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
   /** Strength-adjusted duration for genuine physical effort. Stamina/Vigor
    *  per-second rates stay on `physicalEffortBusyOptions()` unchanged. */
   const physicalDuration = (baseDurationSec: number): number =>
-    physicalWorkDuration(baseDurationSec, player.attributes.strength)
+    physicalWorkDuration(baseDurationSec, player.effectiveAttributes(dayNight.elapsedDays).strength)
 
   /** Pushes the current earned-badges list (plan world-007 §9) —
    *  event-driven only (called after a Hidden Find resolves), never per

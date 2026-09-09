@@ -709,6 +709,8 @@ export async function createApp(
     player.setPosition(initialSave.player.x, initialSave.player.z)
     restorePersistedNeeds(player.needs, initialSave.playerNeeds)
     restorePersistedSkills(player.skills, initialSave.skills)
+    player.restoreTemporaryConditionsState(initialSave.playerConditions, initialSave.waterDrinkEventCount ?? 0)
+    player.syncDerivedPhysicalCapabilities(initialSave.elapsedDays, (kg) => inventory.setBaseMaxWeight(kg))
   } else {
     // Computed straight from `homeDef` (site position, sync the moment
     // `SettlementsManager` resolves it) rather than waiting on
@@ -1010,6 +1012,7 @@ export async function createApp(
     syncQuickActionAvailability,
     syncHeldHud: () => syncHeldHud(),
     refreshInventoryScreen: () => refreshInventoryScreen(),
+    getWorldSeed: () => config.seed,
   }
 
   // Riding (plan fauna-003) — livestock has a deterministic per-house
@@ -1375,6 +1378,8 @@ export async function createApp(
     worldFlags,
     { catalog: worldLocationCatalog, knowledge: locationKnowledge },
     () => player.skills,
+    () => player,
+    () => dayNight.elapsedDays,
     questManager,
   )
 

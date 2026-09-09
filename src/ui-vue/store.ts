@@ -417,6 +417,8 @@ type HudState = {
    *  `hp` is `HealthState`, not a `PlayerNeeds` pool — same blob so the HUD
    *  has one per-frame push. */
   playerNeeds: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }
+  /** Temporary physical condition summary for HUD (plan npc-024) — empty hides. */
+  playerCondition: string
   /** Ranged-aim reticle visibility (plan 186 §1). */
   aiming: boolean
   /** Soft-locked target's projected screen position (viewport fractions
@@ -570,6 +572,7 @@ export const ui = reactive({
     held: '',
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
     playerNeeds: { hp: 1, stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
+    playerCondition: '',
     aiming: false,
     aimTargetScreen: null,
     primaryMeleeLabel: '',
@@ -1348,6 +1351,10 @@ export function setHudPlayerNeeds(needs: { hp: number, stamina: number, vigor: n
     p.thirst === needs.thirst
   ) return
   ui.hud.playerNeeds = needs
+}
+export function setHudPlayerCondition(label: string): void {
+  if (ui.hud.playerCondition === label) return
+  ui.hud.playerCondition = label
 }
 export function setHudAiming(aiming: boolean, targetScreen: { x: number, y: number } | null = null): void {
   ui.hud.aiming = aiming

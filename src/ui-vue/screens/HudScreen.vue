@@ -43,6 +43,7 @@ const needBars = computed(() => [
       <span v-if="ui.hud.phase">{{ ui.hud.phase }}</span>
       <span v-if="ui.hud.showFps && ui.hud.fps">{{ ui.hud.fps }}</span>
       <span v-if="ui.hud.weight">{{ ui.hud.weight }}</span>
+      <span v-if="ui.hud.playerCondition" class="text-amber-300">{{ ui.hud.playerCondition }}</span>
       <span v-if="ui.hud.held">{{ ui.hud.held }}</span>
     </div>
     <div class="mt-2 flex w-[130px] flex-col gap-1 max-[700px]:w-[100px]">

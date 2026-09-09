@@ -16,6 +16,8 @@ export type Hud = {
   setPrimaryWeapons: (meleeLabel: string, rangedLabel: string) => void
   /** Ratios (0-1) for the HUD bars (plan 106 + issue 034). `hp` is HealthState. */
   setPlayerNeeds: (needs: { hp: number, stamina: number, vigor: number, hunger: number, thirst: number }) => void
+  /** Active temporary condition label — empty hides (plan npc-024). */
+  setPlayerCondition: (label: string) => void
   /** Shows/hides the ranged-aim reticle (plan 186 §1) — true only while
    *  `playerRanged.state() === 'draw'`. `targetScreen` is the soft-locked
    *  target's projected viewport position (fractions 0-1, y from the top);
@@ -51,6 +53,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
     setPrimaryWeapons: (meleeLabel, rangedLabel) => { if (!disposed) getUi()?.setHudPrimaryWeapons(meleeLabel, rangedLabel) },
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
+    setPlayerCondition: (label) => { if (!disposed) getUi()?.setHudPlayerCondition(label) },
     setAiming: (aiming, targetScreen) => { if (!disposed) getUi()?.setHudAiming(aiming, targetScreen ?? null) },
     setCharacterStats: (stats) => { if (!disposed) getUi()?.setCharacterStats(stats) },
     setPlayerBadges: (badges) => { if (!disposed) getUi()?.setCharacterBadges(badges) },

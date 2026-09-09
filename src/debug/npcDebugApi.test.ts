@@ -9,6 +9,7 @@ import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldContext } from '../world/worldContext'
 import { createPlayerSkills } from '../player/PlayerSkills'
+import { createEmptyTemporaryConditions } from '../shared/temporaryConditions'
 import { computeRiverTile, riverTileCoordOf } from '../terrain/riverNetwork'
 import { installNpcDebugApi } from './npcDebugApi'
 
@@ -116,7 +117,24 @@ function install(
   const questManager = {
     onInteractObjective: vi.fn(),
   } as unknown as QuestManager
-  installNpcDebugApi(bundle, worldContext, config, () => 0.5, getPlayerPosition, teleport, worldFlags, worldLocations, () => createPlayerSkills(), questManager)
+  const player = {
+    temporaryConditions: createEmptyTemporaryConditions(),
+    syncDerivedPhysicalCapabilities: vi.fn(),
+  }
+  installNpcDebugApi(
+    bundle,
+    worldContext,
+    config,
+    () => 0.5,
+    getPlayerPosition,
+    teleport,
+    worldFlags,
+    worldLocations,
+    () => createPlayerSkills(),
+    () => player as unknown as import('../player/PlayerController').PlayerController,
+    () => 0,
+    questManager,
+  )
   return { teleport, api: typeof window === 'undefined' ? undefined : window.seedvale?.debug }
 }
 

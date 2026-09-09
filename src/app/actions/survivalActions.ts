@@ -46,7 +46,13 @@ import {
 } from '../../player/PlayerSkills'
 import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
 import { damageHealth, healHealth } from '../../shared/HealthState'
+import { applyConditionTreatment } from '../../shared/temporaryConditions'
+import {
+  tryApplyUnsafeWaterPoisoningExposure,
+  waterPoisoningExposureEventRoll,
+} from '../../shared/waterPoisoningExposure'
 import { drainVigor } from '../../shared/VigorState'
+import { createSeededRandom } from '../../world/parseSeed'
 import {
   DRINK_THIRST_RELIEF,
   UNCOVERED_WELL_WARNING,
@@ -56,6 +62,21 @@ import {
 } from '../../world/WaterSource'
 import { isActionBlocked, isChannelBusy, type PlayerActionContext } from './actionContext'
 import { type ActionResult, capabilityRequirement, itemRequirement, targetRequirement, toResult } from './actionContracts'
+
+const LEGACY_WELL_CONSUMPTION_SALT = 'legacy-well-consumption'
+
+function hashString(value: string): number {
+  let h = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function legacyWaterConsumptionRoll(worldSeed: number, drinkEventIndex: number, purpose: string): number {
+  return createSeededRandom(hashString(`${worldSeed}:player:${drinkEventIndex}:${purpose}:${LEGACY_WELL_CONSUMPTION_SALT}`))()
+}
 
 /** Optional async completion hooks for multi-stage player intents (plan
  *  ui-input-010). Normal callers omit these; the cook-meal controller uses
@@ -376,12 +397,38 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     if (!hasRopeIfRequired(source)) return toResult([itemRequirement(0, 1, 'rope')])
     drinkWaterNeeds(player.needs, DRINK_THIRST_RELIEF)
     playActionWell(worldAudio.playAt, player.mesh.position)
+    const nowDays = dayNight.elapsedDays
+    const drinkEventIndex = player.waterDrinkEventCount
+    player.waterDrinkEventCount += 1
+    const poisonRoll = waterPoisoningExposureEventRoll({
+      worldSeed: ctx.getWorldSeed(),
+      actorId: 'player',
+      drinkEventIndex,
+      source,
+    })
+    const poisoned = tryApplyUnsafeWaterPoisoningExposure(player.temporaryConditions, {
+      source,
+      nowDays,
+      roll: poisonRoll,
+    })
+    if (poisoned) {
+      player.syncDerivedPhysicalCapabilities(nowDays, (kg) => inventory.setBaseMaxWeight(kg))
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    }
     const risk = source.consumptionRisk
-    if (risk && Math.random() < risk.chance) {
-      const hpDamage = Math.round(risk.hpDamageMin + Math.random() * (risk.hpDamageMax - risk.hpDamageMin))
-      damageHealth(player.health, hpDamage)
-      drainVigor(player.needs.vigor, risk.vigorLoss)
-      toast.show(UNCOVERED_WELL_WARNING, 'error')
+    if (risk) {
+      const legacyRoll = legacyWaterConsumptionRoll(ctx.getWorldSeed(), drinkEventIndex, 'chance')
+      if (legacyRoll < risk.chance) {
+        const damageRoll = legacyWaterConsumptionRoll(ctx.getWorldSeed(), drinkEventIndex, 'damage')
+        const hpDamage = Math.round(risk.hpDamageMin + damageRoll * (risk.hpDamageMax - risk.hpDamageMin))
+        damageHealth(player.health, hpDamage)
+        drainVigor(player.needs.vigor, risk.vigorLoss)
+        toast.show(UNCOVERED_WELL_WARNING, 'error')
+        return { ok: true }
+      }
+    }
+    if (poisoned) {
+      toast.show('Ta woda spowodowała zatrucie.', 'error')
     } else {
       toast.show(source.quality === 'unsafe' ? UNSAFE_WATER_WARNING : 'Napito się wody.', source.quality === 'unsafe' ? 'error' : undefined)
     }
@@ -524,6 +571,11 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     if (entry.need === 'hunger') eatFood(player.needs, relief)
     else if (entry.need === 'thirst') drinkWaterNeeds(player.needs, relief)
     else healHealth(player.health, relief)
+    const treatment = ITEM_CATALOG[kind].conditionTreatment
+    if (treatment) {
+      applyConditionTreatment(player.temporaryConditions, treatment.kind, treatment.severityReduction, dayNight.elapsedDays)
+      player.syncDerivedPhysicalCapabilities(dayNight.elapsedDays, (kg) => inventory.setBaseMaxWeight(kg))
+    }
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     ctx.refreshInventoryScreen()

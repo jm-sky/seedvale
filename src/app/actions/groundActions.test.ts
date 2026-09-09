@@ -49,6 +49,15 @@ const TREE_ENV: TreeEnvSample = { biome: { desert: 0, swamp: 0, forest: 1 }, moi
 const AXE_WEIGHT = ITEM_DEFS.axe.weight
 const BRANCH_WEIGHT = ITEM_DEFS.branch.weight
 
+function mockPlayer(overrides: Record<string, unknown> = {}) {
+  return {
+    mesh: { position: { x: 0, z: 0 } },
+    attributes: PLAYER_STARTING_ATTRIBUTES,
+    effectiveAttributes: () => PLAYER_STARTING_ATTRIBUTES,
+    ...overrides,
+  }
+}
+
 /** A stand-in for `createApp.ts`'s real `grantItem` closure (not exported,
  *  see `actionContext.ts`'s doc comment on `PlayerActionContext.grantItem`):
  *  per-unit `Inventory.add`, overflow recorded instead of dropped-item world
@@ -100,10 +109,7 @@ function setupFelledTreeChop(maxWeight: number) {
 
   const ctx = {
     bundle: { chunkManager, settlementsManager },
-    player: {
-      mesh: { position: { x: 0, z: 0 } },
-      attributes: PLAYER_STARTING_ATTRIBUTES,
-    },
+    player: mockPlayer(),
     inventory,
     heldTool,
     hud: {},
@@ -285,11 +291,9 @@ function setupHiddenFindDig(options: {
       settlementsManager: { peekDef: () => null, getLoaded: () => [], home: null },
       droppedItems: { settleNear: vi.fn(), drop: vi.fn() },
     },
-    player: {
-      mesh: { position: { x: 0, z: 0 } },
-      attributes: PLAYER_STARTING_ATTRIBUTES,
+    player: mockPlayer({
       skills: { sneak: { active: options.sneakActive ?? false, value: options.sneakValue ?? 0.2 } },
-    },
+    }),
     inventory,
     heldTool,
     hud: { setPlayerBadges: vi.fn() },
@@ -462,10 +466,7 @@ describe('physical-work Strength duration (plan npc-020)', () => {
         settlementsManager: { peekDef: () => null, getLoaded: () => [], home: null },
         droppedItems: { settleNear: vi.fn(), drop: vi.fn() },
       },
-      player: {
-        mesh: { position: { x: 0, z: 0 } },
-        attributes: PLAYER_STARTING_ATTRIBUTES,
-      },
+      player: mockPlayer(),
       inventory,
       heldTool,
       hud: { setPlayerBadges: vi.fn() },

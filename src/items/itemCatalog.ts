@@ -191,6 +191,12 @@ export type ItemCatalogEntry = {
     targetSkillValue: number
     tier: BookTier
   }
+  /** Plan npc-024 — catalog-driven temporary-condition treatment. Narrow and
+   *  data-driven; not implied by `consumable.need === 'health'`. */
+  conditionTreatment?: {
+    kind: 'poisoning'
+    severityReduction: number
+  }
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -730,6 +736,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     modelUrl: null,
     notes: 'Plan 153 — world chunk collectible (same flora pool as mushroom/flower, `terrain/chunkItems.ts`). Small, free healing source.',
     consumable: { need: 'health', relief: 8 },
+    conditionTreatment: { kind: 'poisoning', severityReduction: 20 },
   },
   bandage: {
     kind: 'bandage',

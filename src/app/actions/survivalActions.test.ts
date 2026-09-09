@@ -4,6 +4,8 @@ import type { PlayerActionContext } from './actionContext'
 import { Inventory } from '../../items/Inventory'
 import { createPlayerNeeds } from '../../player/PlayerNeeds'
 import { createHealthState } from '../../shared/HealthState'
+import { createEmptyTemporaryConditions, applyPoisoningExposure, getResolvedPoisoningSeverity, POISONING_INITIAL_EXPOSURE_SEVERITY } from '../../shared/temporaryConditions'
+import { resolveUnsafeWaterPoisoningExposure, waterPoisoningExposureEventRoll } from '../../shared/waterPoisoningExposure'
 import { createWaterSource, type WaterSource } from '../../world/WaterSource'
 import { createBusyAction } from '../busyAction'
 import { createSurvivalActions, type FeedableAnimal, feedAnimal } from './survivalActions'
@@ -18,7 +20,14 @@ function setup() {
 
   const ctx = {
     bundle: {},
-    player: { needs, health, mesh: { position: { x: 0, y: 0, z: 0 } } },
+    player: {
+      needs,
+      health,
+      mesh: { position: { x: 0, y: 0, z: 0 } },
+      temporaryConditions: createEmptyTemporaryConditions(),
+      waterDrinkEventCount: 0,
+      syncDerivedPhysicalCapabilities: vi.fn(),
+    },
     inventory,
     heldTool: {},
     hud: { setInventoryWeight: vi.fn() },
@@ -29,10 +38,12 @@ function setup() {
     dayNight: { elapsedDays: 0, dayLengthSec: 600 },
     worldAudio: { playAt: vi.fn(), playOnce: vi.fn() },
     onInventoryChanged: vi.fn(),
+    refreshInventoryScreen: vi.fn(),
+    getWorldSeed: () => 42,
   } as unknown as PlayerActionContext
 
   const actions = createSurvivalActions(ctx)
-  return { actions, needs, health, inventory, toast }
+  return { actions, needs, health, inventory, toast, ctx }
 }
 
 describe('drinkFromWaterSource (plan world-011)', () => {
@@ -47,11 +58,24 @@ describe('drinkFromWaterSource (plan world-011)', () => {
     expect(toast.show).toHaveBeenCalledWith('Napito się wody.', undefined)
   })
 
-  it('restores thirst with the unsafe warning for lake', () => {
-    const { actions, needs, toast } = setup()
+  it('restores thirst with the unsafe warning for lake when poisoning roll fails', () => {
+    const { actions, needs, toast, ctx } = setup()
     needs.thirst.current = 0
+    const source = createWaterSource('lake')
+    let drinkEventIndex = 0
+    while (resolveUnsafeWaterPoisoningExposure({
+      roll: waterPoisoningExposureEventRoll({
+        worldSeed: ctx.getWorldSeed(),
+        actorId: 'player',
+        drinkEventIndex,
+        source,
+      }),
+    })) {
+      drinkEventIndex += 1
+    }
+    ;(ctx.player as { waterDrinkEventCount: number }).waterDrinkEventCount = drinkEventIndex
 
-    actions.drinkFromWaterSource(createWaterSource('lake'))
+    actions.drinkFromWaterSource(source)
 
     expect(needs.thirst.current).toBeGreaterThan(0)
     expect(toast.show).toHaveBeenCalledWith('Ta woda może powodować chorobę.', 'error')
@@ -240,5 +264,23 @@ describe('feedAnimal (plan fauna-011 §6)', () => {
     expect(fed).toBe(false)
     expect(animal.feedByPlayer).toHaveBeenCalledWith('raw_meat')
     expect(inventory.has('raw_meat', 1)).toBe(true)
+  })
+})
+
+describe('consumeItem — condition treatment (plan npc-024)', () => {
+  it('herb heals HP and reduces poisoning; bandage only heals HP', () => {
+    const { actions, health, inventory, ctx } = setup()
+    inventory.add('herb', 2)
+    inventory.add('bandage', 1)
+    applyPoisoningExposure(ctx.player.temporaryConditions, 0)
+
+    actions.consumeItem('herb')
+    expect(getResolvedPoisoningSeverity(ctx.player.temporaryConditions, 0)).toBeLessThan(POISONING_INITIAL_EXPOSURE_SEVERITY)
+    expect(health.currentHp).toBeGreaterThan(90)
+
+    applyPoisoningExposure(ctx.player.temporaryConditions, 0)
+    const severityBeforeBandage = getResolvedPoisoningSeverity(ctx.player.temporaryConditions, 0)
+    actions.consumeItem('bandage')
+    expect(getResolvedPoisoningSeverity(ctx.player.temporaryConditions, 0)).toBe(severityBeforeBandage)
   })
 })

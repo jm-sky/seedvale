@@ -103,7 +103,7 @@ export class Inventory {
   /** Only populated for kinds with `ItemCatalogEntry.food.freshness` — see
    *  `isFoodPerishable()`. Every entry's batches always sum to `counts.get(kind)`. */
   private readonly foodBatches = new Map<ItemKind, FoodBatch[]>()
-  private readonly baseMaxWeight: number
+  private baseMaxWeight: number
   /** Gabarite capacity (plan 164), independent of `maxWeight` — see
    *  `ItemSize`/`itemSizeUnits`. `Infinity` (the default for every caller
    *  that doesn't pass one — NPC temporary carrying, pre-164 tests) means
@@ -160,6 +160,12 @@ export class Inventory {
       if (perUnit) bonus += perUnit * n
     }
     return this.baseMaxWeight + bonus
+  }
+
+  /** Updates the Strength-derived body capacity baseline (plan npc-024) when
+   *  effective Strength changes — does not persist. */
+  setBaseMaxWeight(maxWeight: number): void {
+    this.baseMaxWeight = maxWeight
   }
 
   /** Perishable counts without batches (old container/household snapshots)

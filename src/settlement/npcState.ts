@@ -7,10 +7,19 @@ import { createHealthState, type HealthState } from '../shared/HealthState'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
 import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
+  createEmptyTemporaryConditions,
+  restoreTemporaryConditions,
+  snapshotTemporaryConditions,
+  type SaveTemporaryConditionsSnapshot,
+  type TemporaryConditionsState,
+} from '../shared/temporaryConditions'
+import {
   cloneNpcPostDeath,
   createLegacyTerminalNpcPostDeath,
   type NpcPostDeathState,
 } from './npcPostDeath'
+
+export type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 
 export type { NpcPostDeathState } from './npcPostDeath'
 
@@ -72,6 +81,9 @@ export type NpcAuthoritativeState = {
    *  rebuild and `SaveData.npcStates`; `NpcAgent` is only the loaded
    *  presentation. */
   postDeath: NpcPostDeathState | null
+  /** Temporary physical conditions (plan npc-024) — shared mutable object,
+   *  same lifecycle pattern as `physicalInjury`. */
+  temporaryConditions: TemporaryConditionsState
 }
 
 /** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -91,6 +103,8 @@ export type NpcStateSnapshot = {
   activePlan?: NpcPlan | null
   /** Required on current saves; older in-session snapshots default below. */
   postDeath?: NpcPostDeathState | null
+  /** Optional — absent means no active temporary conditions. */
+  temporaryConditions?: SaveTemporaryConditionsSnapshot
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -106,6 +120,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     postDeath: snapshot.postDeath !== undefined
       ? cloneNpcPostDeath(snapshot.postDeath)
       : (snapshot.health.dead ? createLegacyTerminalNpcPostDeath() : null),
+    temporaryConditions: restoreTemporaryConditions(snapshot.temporaryConditions),
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
   return state
@@ -144,6 +159,7 @@ export function createNpcAuthoritativeState(
     helperAssignment: null,
     activePlan: null,
     postDeath: null,
+    temporaryConditions: createEmptyTemporaryConditions(),
   }
 }
 
@@ -198,6 +214,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           helperAssignment: state.helperAssignment,
           activePlan: state.activePlan,
           postDeath: cloneNpcPostDeath(state.postDeath),
+          temporaryConditions: snapshotTemporaryConditions(state.temporaryConditions),
         }
       }
       return out

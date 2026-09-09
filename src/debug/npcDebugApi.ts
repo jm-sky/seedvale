@@ -3,6 +3,7 @@ import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { QuestManager } from '../quests/QuestManager'
+import type { PlayerController } from '../player/PlayerController'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
@@ -14,6 +15,12 @@ import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'
+import {
+  applyPoisoningExposure,
+  clearCondition,
+  getResolvedPoisoningSeverity,
+  POISONING_INITIAL_EXPOSURE_SEVERITY,
+} from '../shared/temporaryConditions'
 import { FAR_RANGE_KM } from '../world/locations/locationConfig'
 import { isAdminMode, isDebugMode } from './debugMode'
 import { type HistoryFilter } from './domainHistory'
@@ -176,6 +183,14 @@ export type SkillsDebugApi = {
   addSkillXp: (id: SkillId, xp: number) => void
 }
 
+export type ConditionsDebugApi = {
+  player: () => { poisoning: number }
+  applyPlayerPoisoning: (severity?: number) => void
+  clearPlayerPoisoning: () => void
+  applyNpcPoisoning: (npcId: string, severity?: number) => void
+  clearNpcPoisoning: (npcId: string) => void
+}
+
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
@@ -232,6 +247,8 @@ export type SeedvaleDebugApi = {
   getNextFrenzyWolf: () => AnimalAgent | null
   /** Plan items-player-016 — see `SkillsDebugApi`'s doc. */
   skills: SkillsDebugApi
+  /** Temporary physical conditions (plan npc-024) — deterministic shared API. */
+  conditions: ConditionsDebugApi
   spotAnimal: (kind: AnimalKind) => void
   help: () => string
 }
@@ -262,6 +279,8 @@ const HELP_TEXT = [
   'navigation() — pathfinding counters (requests/successes/failures, search time, visited nodes, waypoints, repaths, active routes)',
   'getFrenzyWolves() / getCurrentFrenzyWolf() / getNextFrenzyWolf() — frenzied-wolf DevTools selection; each returned wolf has showDebug()/hideDebug()/toggleDebug()/getDebugInfo()',
   'skills.getSkills() — every skill\'s current {value, xp}; skills.setSkillValue(id, value) — dev-only direct set (can lower, unlike real gameplay); skills.addSkillXp(id, xp) — award raw XP through the normal path',
+  'conditions.player() — current player poisoning severity; conditions.applyPlayerPoisoning(severity?) / clearPlayerPoisoning() — test hooks',
+  'conditions.applyNpcPoisoning(npcId, severity?) / clearNpcPoisoning(npcId) — authoritative NPC condition state',
   'spotAnimal(kind) — simulate spotting an animal for quest progression',
 ].join('\n')
 
@@ -290,6 +309,8 @@ export function installNpcDebugApi(
    *  current player without re-installing after a rebuild (plan
    *  items-player-016). */
   getPlayerSkills: () => PlayerSkills,
+  getPlayer: () => PlayerController,
+  getElapsedDays: () => number,
   questManager: QuestManager,
 ): void {
   if (!isDebugMode() && !isAdminMode()) return
@@ -410,6 +431,26 @@ export function installNpcDebugApi(
     addSkillXp: (id, xp) => awardSkillXp(getPlayerSkills(), id, xp),
   }
 
+  const conditionsDebug: ConditionsDebugApi = {
+    player: () => ({
+      poisoning: getResolvedPoisoningSeverity(getPlayer().temporaryConditions, getElapsedDays()),
+    }),
+    applyPlayerPoisoning: (severity = POISONING_INITIAL_EXPOSURE_SEVERITY) => {
+      applyPoisoningExposure(getPlayer().temporaryConditions, getElapsedDays(), severity)
+      getPlayer().syncDerivedPhysicalCapabilities(getElapsedDays())
+    },
+    clearPlayerPoisoning: () => {
+      clearCondition(getPlayer().temporaryConditions, 'poisoning', getElapsedDays())
+      getPlayer().syncDerivedPhysicalCapabilities(getElapsedDays())
+    },
+    applyNpcPoisoning: (npcId, severity = POISONING_INITIAL_EXPOSURE_SEVERITY) => {
+      findNpcById(bundle, npcId)?.npc.applyPoisoningForDebug(getElapsedDays(), severity)
+    },
+    clearNpcPoisoning: (npcId) => {
+      findNpcById(bundle, npcId)?.npc.clearPoisoningForDebug(getElapsedDays())
+    },
+  }
+
   const api: SeedvaleDebugApi = {
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null
@@ -455,6 +496,7 @@ export function installNpcDebugApi(
     getCurrentFrenzyWolf: () => getCurrentFrenzyWolf(bundle),
     getNextFrenzyWolf: () => getNextFrenzyWolf(bundle),
     skills: skillsDebug,
+    conditions: conditionsDebug,
     spotAnimal: (kind) => {
       questManager.onInteractObjective({
         type: 'spot_animal',

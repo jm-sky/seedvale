@@ -68,9 +68,6 @@ import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from 
 import {
   generatePhysicalProfile,
   type PhysicalProfile,
-  resolveHumanAgilityProfile,
-  resolveHumanEnduranceProfile,
-  resolveHumanStrengthProfile,
 } from '../settlement/npcPhysicalProfile'
 import {
   commitNpcDeath,
@@ -83,6 +80,8 @@ import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
+import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
+import { applyPoisoningExposure, clearCondition, getResolvedPoisoningSeverity, POISONING_INITIAL_EXPOSURE_SEVERITY, POISONING_MAX_SEVERITY } from '../shared/temporaryConditions'
 import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
 import {
   drainStamina,
@@ -898,7 +897,6 @@ export class NpcAgent {
    *  (`WALK_FATIGUE_RATE`/`BASE_FATIGUE_RATE`/`LIGHT_EXECUTE_FATIGUE_RATE`) —
    *  `energetic` drains slower. */
   private readonly fatigueMult: number
-  private readonly restRate: number
   private readonly waitMultiplier: number
   private readonly sampleHeight: HeightSampler
   private readonly waterLevel: number
@@ -1237,19 +1235,8 @@ export class NpcAgent {
    *  etc. below) so `helperAssignment` reads/writes go straight to the one
    *  object every reconstruction of this npc id shares, no second copy. */
   private readonly npcState: NpcAuthoritativeState
-  /** This NPC's already-resolved/profiled human Strength (plan npc-019 §5,
-   *  `npcPhysicalProfile.ts`'s `resolveHumanStrengthProfile()`) — resolved
-   *  once at construction from the stable deterministic physical profile,
-   *  not re-rolled per attack or work action. Threaded into
-   *  `applyNpcMeleeHit()` for melee and into `NpcWorkContext.strength` for
-   *  physical work (plan npc-020). */
-  private readonly meleeStrength: number
-  /** This NPC's already-resolved/profiled human Agility (plan npc-022,
-   *  `npcPhysicalProfile.ts`'s `resolveHumanAgilityProfile()`) — resolved
-   *  once at construction, same idiom as `meleeStrength` above. Fed into
-   *  `combat/meleeAgility.ts::resolveMeleeRecovery()` when starting a melee
-   *  attack; only cadence (recovery), never damage/wind-up. */
-  private readonly meleeAgility: number
+  private readonly physicalProfile: PhysicalProfile
+  private lastFullLabelInfo = false
 
   private constructor(
     root: THREE.Object3D,
@@ -1312,8 +1299,7 @@ export class NpcAgent {
     this.economy = economy
     this.household = household
     this.npcState = npcState
-    this.meleeStrength = resolveHumanStrengthProfile(physicalProfile)
-    this.meleeAgility = resolveHumanAgilityProfile(physicalProfile)
+    this.physicalProfile = physicalProfile
     this.mining = mining
     this.workContracts = workContracts ?? null
     this.playerWells = playerWells ?? null
@@ -1361,10 +1347,6 @@ export class NpcAgent {
     this.pauseParams = applySociableBoost(pausePersonalityParams(this.personality), this.traits)
     const energetic = this.traits.includes('energetic')
     this.fatigueMult = energetic ? ENERGETIC_FATIGUE_MULT : 1
-    const enduranceRecoveryMult = resolveEnduranceStaminaRecoveryMultiplier(
-      resolveHumanEnduranceProfile(physicalProfile),
-    )
-    this.restRate = BASE_REST_RATE * enduranceRecoveryMult * (energetic ? ENERGETIC_REST_MULT : 1)
     this.waitMultiplier = this.traits.includes('fast_worker') ? FAST_WORKER_WAIT_MULT : 1
     this.treeIndex = treeIndex % Math.max(1, landmarks.trees.length)
     this.needs = npcState.needs
@@ -1966,7 +1948,7 @@ export class NpcAgent {
         )
         if (hits.length > 0) {
           this.combatAttackAttempt += 1
-          applyNpcMeleeHit(intent.target, tick.config, this.meleeStrength, this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
+          applyNpcMeleeHit(intent.target, tick.config, this.effectiveMeleeStrength(), this.id, `melee:${intent.target.ref.id}`, this.combatAttackAttempt)
           this.trace.record({ simTime: this.simClock, type: 'combat.hit', targetId: intent.target.ref.id })
           if (isNpcCombatDebugMode()) {
             console.log('[NPC COMBAT]', `npc=${this.id}/${this.name}/${this.role}`, `attack.hit target=${intent.target.ref.id}`)
@@ -1992,7 +1974,7 @@ export class NpcAgent {
     if (inRange && this.combatAttack.state() === 'idle') {
       if (this.stamina.current >= weapon.melee.staminaCost) {
         drainStamina(this.stamina, weapon.melee.staminaCost)
-        this.combatAttack.start(weapon.melee, resolveMeleeRecovery(weapon.melee.recovery, this.meleeAgility))
+        this.combatAttack.start(weapon.melee, resolveMeleeRecovery(weapon.melee.recovery, this.effectiveMeleeAgility()))
         this.anim.playOnce('attackMelee')
       } else if (isNpcCombatDebugMode() && this.simClock - this.lastStaminaSkipLogSec > 1) {
         this.lastStaminaSkipLogSec = this.simClock
@@ -2347,14 +2329,14 @@ export class NpcAgent {
       const rate = executeIsHeavy ? BASE_FATIGUE_RATE : LIGHT_EXECUTE_FATIGUE_RATE
       drainStamina(this.stamina, rate * this.fatigueMult * dt)
     } else if (REST_PHASES.has(this.phase)) {
-      restoreStamina(this.stamina, this.restRate * dt)
+      restoreStamina(this.stamina, this.effectiveRestRate() * dt)
     } else if (this.phase === 'combat' && this.isCombatCycleIdle()) {
       // Only regens between swings/shots (never mid-attack) — mirrors the
       // lump `staminaCost` spend on `combatAttack.start()`/
       // `combatRangedAttack.start()` below instead of a second continuous
       // drain rate, so a stamina-exhausted NPC eventually recovers enough to
       // keep fighting instead of softlocking in combat.
-      restoreStamina(this.stamina, this.restRate * 0.5 * dt)
+      restoreStamina(this.stamina, this.effectiveRestRate() * 0.5 * dt)
     }
     if ((this.phase === 'goTo' || this.phase === 'execute') && isExhausted(this.stamina)) {
       this.previousPhase = this.phase
@@ -2734,6 +2716,7 @@ export class NpcAgent {
       { perception: playerObservation.perception, distance },
       this.lastObservationLevel,
     )
+    this.lastFullLabelInfo = playerObservation.fullLabelInfo
     this.lastObservationLevel = observationLevel
     this.updateDebugLabel()
     const gaze = gazeOpacityFactor(
@@ -2799,10 +2782,10 @@ export class NpcAgent {
       const vigorStep = tickVigorForSimulatedStep(this.vigor, activity, stepDt, napping)
       napping = vigorStep.napping
       if (activity === 'sleep' || vigorStep.slept) {
-        restoreStamina(this.stamina, this.restRate * stepDt)
+        restoreStamina(this.stamina, this.effectiveRestRate() * stepDt)
       } else {
         if (activity === 'work') drainStamina(this.stamina, BASE_FATIGUE_RATE * this.fatigueMult * stepDt)
-        else restoreStamina(this.stamina, this.restRate * stepDt)
+        else restoreStamina(this.stamina, this.effectiveRestRate() * stepDt)
         // Not asleep this step — resolve whichever need would have sent the
         // NPC off to drink/eat/gather, same amounts `beginNeed` applies.
         const need = pickNeed(this.needs, this.needPickOptions())
@@ -2896,6 +2879,43 @@ export class NpcAgent {
     return this.phase === 'execute' || this.phase === 'lookAtPlayer'
   }
 
+  private nowDays(): number {
+    return this.forest?.getWorldDays() ?? 0
+  }
+
+  private effectivePhysicalAttributes() {
+    return resolveNpcEffectivePhysicalAttributes(this.physicalProfile, this.npcState.temporaryConditions, this.nowDays())
+  }
+
+  private effectiveMeleeStrength(): number {
+    return this.effectivePhysicalAttributes().strength
+  }
+
+  private effectiveMeleeAgility(): number {
+    return this.effectivePhysicalAttributes().agility
+  }
+
+  private effectiveRestRate(): number {
+    const energetic = this.traits.includes('energetic')
+    const enduranceRecoveryMult = resolveEnduranceStaminaRecoveryMultiplier(
+      this.effectivePhysicalAttributes().endurance,
+    )
+    return BASE_REST_RATE * enduranceRecoveryMult * (energetic ? ENERGETIC_REST_MULT : 1)
+  }
+
+  /** Debug/test hooks (plan npc-024) — mutate authoritative condition state. */
+  applyPoisoningForDebug(nowDays: number, severity = POISONING_INITIAL_EXPOSURE_SEVERITY): void {
+    applyPoisoningExposure(this.npcState.temporaryConditions, nowDays, severity)
+  }
+
+  clearPoisoningForDebug(nowDays: number): void {
+    clearCondition(this.npcState.temporaryConditions, 'poisoning', nowDays)
+  }
+
+  debugPoisoningSeverity(nowDays: number): number {
+    return getResolvedPoisoningSeverity(this.npcState.temporaryConditions, nowDays)
+  }
+
   /** `?debug=1`-only diagnostic line — phase/action/distance/stamina/rescue
    *  state, per the movement-resilience plan's instrumentation requirement.
    *  Hidden (and left unwritten) outside debug mode. */
@@ -2922,8 +2942,16 @@ export class NpcAgent {
       ? ` · arrows ${this.carried.count('arrow')} yield ${HUNT_YIELD_KINDS.reduce((n, kind) => n + this.carried.count(kind), 0)}`
         + (this.phase === 'combat' && this.combatIntent ? ` target ${this.combatIntent.target.ref.id}` : '')
       : ''
+    const conditionText = this.lastFullLabelInfo
+      ? (() => {
+          const severity = getResolvedPoisoningSeverity(this.npcState.temporaryConditions, this.nowDays())
+          return severity > 0
+            ? ` · poisoning ${severity}/${POISONING_MAX_SEVERITY} S${(this.effectiveMeleeStrength() * 100).toFixed(0)} E${(this.effectivePhysicalAttributes().endurance * 100).toFixed(0)} A${(this.effectiveMeleeAgility() * 100).toFixed(0)}`
+            : ''
+        })()
+      : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
-      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}`
+      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}${conditionText}`
     this.labelController.setDebugLine(text)
   }
 
@@ -3734,7 +3762,7 @@ export class NpcAgent {
       mining: this.mining,
       foodSources: this.foodSources,
       householdExchange: this.householdExchange,
-      strength: this.meleeStrength,
+      strength: this.effectiveMeleeStrength(),
     }
   }
 

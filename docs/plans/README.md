@@ -75,7 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~ |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | npc-010 |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
-| 💡 `npc-024-temporary-conditions-and-poisoning.md`                          | -       | 🟡 | M      | ~~npc-019~~, ~~world-017~~ |
+| ✅ `npc-024-temporary-conditions-and-poisoning.md`                          | -       | 🟡 | M      | ~~npc-019~~, ~~world-017~~ |
 | 💡 `npc-025-injury-severity-and-treatment-requirements.md`                  | -       | 🟡 | M      | npc-002, ~~npc-019~~, npc-024 |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |

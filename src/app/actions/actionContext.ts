@@ -62,6 +62,8 @@ export type PlayerActionContext = {
   syncQuickActionAvailability: () => void
   syncHeldHud: () => void
   refreshInventoryScreen: () => void
+  /** World seed for deterministic event rolls (plan npc-024). */
+  getWorldSeed: () => number
 }
 
 /** The standard "another blocking activity is already running" guard: a busy

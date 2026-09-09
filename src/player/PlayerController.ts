@@ -23,6 +23,17 @@ import {
   mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
 import { createHealthState, type HealthState } from '../shared/HealthState'
+import { resolvePlayerEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
+import {
+  createEmptyTemporaryConditions,
+  hasActivePoisoning,
+  poisoningSeverityTier,
+  restoreTemporaryConditions,
+  snapshotTemporaryConditions,
+  type SaveTemporaryConditionsSnapshot,
+  type TemporaryConditionsState,
+} from '../shared/temporaryConditions'
+import { applyDerivedStaminaMax, resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
 import { isExhausted } from '../shared/StaminaState'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
@@ -31,6 +42,7 @@ import { resolveCameraBoom } from './cameraBoom'
 import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
+import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
 import { integrateVerticalMotion } from './verticalMotion'
 
 /** Stationary/moving/sprinting classification of the player's current
@@ -202,6 +214,11 @@ export class PlayerController {
   /** Sneak + future skills (plan 124 §1) — value/active state only, no
    *  progression yet. */
   readonly skills: PlayerSkills
+  /** Temporary physical conditions (plan npc-024) — authoritative runtime state,
+   *  persisted through `SaveData.playerConditions`. */
+  readonly temporaryConditions: TemporaryConditionsState
+  /** Monotonic drink-event counter for deterministic unsafe-water exposure rolls. */
+  waterDrinkEventCount = 0
   private readonly camera: THREE.PerspectiveCamera
   private readonly keys: KeyState
   private readonly look: LookState
@@ -321,6 +338,7 @@ export class PlayerController {
     this.attributes = PLAYER_STARTING_ATTRIBUTES
     this.needs = createPlayerNeeds(this.attributes.endurance)
     this.skills = createPlayerSkills()
+    this.temporaryConditions = createEmptyTemporaryConditions()
 
     this.mesh = new THREE.Group()
     this.mesh.add(root)
@@ -795,14 +813,50 @@ export class PlayerController {
     this.mesh.rotation.y = yaw
   }
 
+  /** Effective SPEA after temporary conditions (plan npc-024) — never mutates
+   *  `attributes`. */
+  effectiveAttributes(nowDays: number): PhysicalAttributes {
+    return resolvePlayerEffectivePhysicalAttributes(this.attributes, this.temporaryConditions, nowDays)
+  }
+
+  /** Re-syncs derived max Stamina (with clamping) and optional carry capacity
+   *  when effective Endurance/Strength change. */
+  syncDerivedPhysicalCapabilities(nowDays: number, onBaseCarryCapacityKg?: (kg: number) => void): void {
+    const effective = this.effectiveAttributes(nowDays)
+    applyDerivedStaminaMax(this.needs.stamina, resolveMaxStaminaFromEndurance(effective.endurance))
+    onBaseCarryCapacityKg?.(humanBodyCarryCapacityKg(effective.strength))
+  }
+
+  restoreTemporaryConditionsState(
+    saved?: SaveTemporaryConditionsSnapshot | null,
+    waterDrinkEventCount = 0,
+  ): void {
+    this.temporaryConditions.conditions = restoreTemporaryConditions(saved).conditions
+    this.waterDrinkEventCount = Math.max(0, waterDrinkEventCount)
+  }
+
+  snapshotTemporaryConditionsState(): SaveTemporaryConditionsSnapshot | undefined {
+    return snapshotTemporaryConditions(this.temporaryConditions)
+  }
+
+  /** Player-facing poisoning status for HUD — not a medical diagnosis label. */
+  poisoningStatus(nowDays: number): { active: boolean, tier: ReturnType<typeof poisoningSeverityTier> } {
+    const active = hasActivePoisoning(this.temporaryConditions, nowDays)
+    const severity = active
+      ? this.temporaryConditions.conditions.poisoning?.severity ?? 0
+      : 0
+    return { active, tier: poisoningSeverityTier(severity) }
+  }
+
   /** `effortActive` (plan items-player-003 §2/§12) — true while a physical
    *  `BusyAction`/terrain-preparation channel is draining Stamina through its
    *  own channel this frame (`app/gameLoop.ts`'s `busy.isPhysical()` /
    *  terrain-prep check). Suppresses normal Stamina regeneration so the two
    *  mechanisms can never net out to a positive balance; never drains
    *  Stamina by itself. */
-  update(dt: number, dayLengthSec: number, effortActive = false): void {
+  update(dt: number, dayLengthSec: number, effortActive = false, nowDays = 0): void {
     const recoveryAllowed = !effortActive
+    const endurance = this.effectiveAttributes(nowDays).endurance
     if (this.mounted) {
       this.syncCamera()
       this.syncHpBar()
@@ -810,14 +864,14 @@ export class PlayerController {
       return
     }
     if (this.downed) {
-      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed, this.attributes.endurance)
+      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed, endurance)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
       return
     }
     if (this.pose !== 'stand') {
-      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed, this.attributes.endurance)
+      tickPlayerStamina(this.needs.stamina, dt, false, recoveryAllowed, endurance)
       this.syncCamera()
       this.syncHpBar()
       this.mixer?.update(dt)
@@ -836,7 +890,7 @@ export class PlayerController {
     if (this.encumbranceBlocked) this.wish.set(0, 0, 0)
     this.moving = this.wish.lengthSq() > 0
     this.sprinting = this.moving && this.keys.sprint && !isExhausted(this.needs.stamina)
-    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, this.attributes.endurance)
+    tickPlayerStamina(this.needs.stamina, dt, this.sprinting, recoveryAllowed, endurance)
     if (this.moving) tickPlayerMovementVigor(this.needs.vigor, dt, this.sprinting, dayLengthSec)
     if (!this.skills.sneak.active) this.sneakUseDistance = 0
     if (this.moving) {

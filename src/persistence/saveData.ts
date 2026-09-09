@@ -7,6 +7,7 @@ import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
+import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
@@ -529,6 +530,10 @@ export type SaveData = {
   map: SaveMap
   settlementEconomies: Record<string, SettlementEconomySnapshot>
   playerNeeds: SavePlayerNeeds
+  /** Player temporary physical conditions (plan npc-024) — optional/sparse. */
+  playerConditions?: SaveTemporaryConditionsSnapshot
+  /** Monotonic direct-drink counter for deterministic unsafe-water rolls. */
+  waterDrinkEventCount?: number
   /** Sparse `settlementId:plotId` composite-key list
    *  (`settlement/landOwnership.ts`); an empty list means no purchased plots. */
   ownedLandPlots: string[]
@@ -1348,8 +1353,24 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (s.physicalInjury !== undefined && typeof s.physicalInjury !== 'number') return false
   if (s.helperAssignment !== undefined && s.helperAssignment !== null && !isHelperAssignment(s.helperAssignment)) return false
   if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
+  if (s.temporaryConditions !== undefined && !isTemporaryConditionsSnapshotField(s.temporaryConditions)) return false
   if (!('postDeath' in s) || !isNpcPostDeathField(s.postDeath)) return false
   return true
+}
+
+function isTemporaryConditionsSnapshotField(value: unknown): value is SaveTemporaryConditionsSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  for (const entry of Object.values(value as Record<string, unknown>)) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false
+    const e = entry as Record<string, unknown>
+    if (typeof e.severity !== 'number' || typeof e.lastUpdatedAtDays !== 'number') return false
+  }
+  return true
+}
+
+function isPlayerConditionsField(value: unknown): value is SaveTemporaryConditionsSnapshot | undefined {
+  if (value === undefined) return true
+  return isTemporaryConditionsSnapshotField(value)
 }
 
 const NPC_POST_DEATH_STATUSES: ReadonlySet<string> = new Set(['active', 'claimed', 'terminal'])
@@ -1589,6 +1610,8 @@ export function isSaveData(value: unknown): value is SaveData {
   // Same sparse "object of numbers" shape as `resourceDeposits` above.
   if (v.grassForagePatches !== undefined && !isResourceDepositsField(v.grassForagePatches)) return false
   if (v.reputation !== undefined && !isSaveReputation(v.reputation)) return false
+  if (!isPlayerConditionsField(v.playerConditions)) return false
+  if (v.waterDrinkEventCount !== undefined && typeof v.waterDrinkEventCount !== 'number') return false
   return true
 }
 
