@@ -10,7 +10,7 @@ import type { NpcStrategyId } from './npcStrategies'
  * `needForGoal` below). Pure, Three.js-free, so plan lifecycle transitions
  * are unit-testable without a real `NpcAgent`.
  */
-export type NpcGoalId = 'fulfilWorkDuty' | 'obtainWood' | 'secureFood' | 'secureWater'
+export type NpcGoalId = 'buryDeceased' | 'fulfilWorkDuty' | 'obtainWood' | 'secureFood' | 'secureWater'
 
 export type NpcPlanState =
   | 'active'
@@ -32,6 +32,8 @@ export type NpcPlanState =
  */
 export type NpcPlan = {
   goal: NpcGoalId
+  /** Stable deceased NPC id when `goal === 'buryDeceased'` (plan npc-011). */
+  deceasedNpcId?: string
   strategy: NpcStrategyId | null
   state: NpcPlanState
   progress: { amount: number }
@@ -59,6 +61,8 @@ export function needForGoal(goal: NpcGoalId): NeedId {
     case 'obtainWood': return 'wood'
     case 'secureFood': return 'food'
     case 'secureWater': return 'water'
+    case 'buryDeceased':
+      throw new Error('buryDeceased is not backed by a NeedId')
   }
 }
 
@@ -74,8 +78,32 @@ export function planIsResumable(plan: NpcPlan | null, goal: NpcGoalId): plan is 
   return plan != null && plan.goal === goal && !isPlanTerminal(plan)
 }
 
-export function createNpcPlan(goal: NpcGoalId, currentStep = 'findNextTarget'): NpcPlan {
-  return { goal, strategy: null, state: 'active', progress: { amount: 0 }, currentStep }
+export function createNpcPlan(goal: NpcGoalId, currentStep = 'findNextTarget', deceasedNpcId?: string): NpcPlan {
+  return {
+    goal,
+    deceasedNpcId: goal === 'buryDeceased' ? deceasedNpcId : undefined,
+    strategy: null,
+    state: 'active',
+    progress: { amount: 0 },
+    currentStep,
+  }
+}
+
+export function createBurialPlan(deceasedNpcId: string): NpcPlan {
+  return createNpcPlan('buryDeceased', 'findCorpse', deceasedNpcId)
+}
+
+export function isBurialPlan(plan: NpcPlan | null | undefined): plan is NpcPlan & { deceasedNpcId: string } {
+  return plan != null && plan.goal === 'buryDeceased' && typeof plan.deceasedNpcId === 'string'
+}
+
+export function isBurialPlanForDeceased(plan: NpcPlan | null | undefined, deceasedNpcId: string): boolean {
+  return isBurialPlan(plan) && plan.deceasedNpcId === deceasedNpcId
+}
+
+export function planIsBurialResumable(plan: NpcPlan | null, deceasedNpcId: string): plan is NpcPlan {
+  if (!isBurialPlanForDeceased(plan, deceasedNpcId)) return false
+  return !isPlanTerminal(plan as NpcPlan)
 }
 
 export function setPlanStrategy(plan: NpcPlan, strategy: NpcStrategyId | null): NpcPlan {

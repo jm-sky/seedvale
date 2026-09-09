@@ -308,6 +308,9 @@ export async function createSettlementsManager(
   /** Player-built residential houses (plan settlements-005) — forwarded the
    *  same way as `palisades`. */
   residentialBuildings?: ResidentialBuildings,
+  /** NPC burial graves (plan npc-011) — forwarded into every `createSettlement`
+   *  call the same way as `droppedItems`. */
+  npcGraves?: import('../world/npcGraves').NpcGraves,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -418,6 +421,7 @@ export async function createSettlementsManager(
     palisades,
     standingTorches,
     residentialBuildings,
+    npcGraves,
   }
 
   const entries = new Map<string, Entry>()

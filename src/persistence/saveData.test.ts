@@ -41,6 +41,7 @@ const validSave: SaveData = {
   playerTorch: null,
   placedTents: [],
   placedTraps: [],
+  graves: [],
   worldFlags: {},
   resolvedHiddenFindSpotIds: ['cemetery:0:0:0:1:0', 'stoneCircle:2:1:0:1'],
   badges: { earned: ['grave_robber'], gravesDisturbed: 1, hiddenFindsFound: 0 },
@@ -584,6 +585,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       deathAtDays: 0,
       loot: { counts: {}, instances: [] },
       cleanupReason: 'legacy',
+      burialClaimantId: null,
     })
     expect(result.data.npcStates?.dead.personalInventory).toEqual({ counts: {}, instances: [] })
   })

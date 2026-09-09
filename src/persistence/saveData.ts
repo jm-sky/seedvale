@@ -16,6 +16,7 @@ import type { RatSaveRecord } from '../settlement/ratPersistence'
 import type { StorageInfestationCondition } from '../settlement/storageInfestation'
 import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { TrapKind, TrapState } from '../world/animalTraps'
+import type { SaveGrave } from '../world/npcGraves'
 import type { CropId } from '../world/cropLifecycle'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { WellStage } from '../world/playerWell'
@@ -536,7 +537,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 20
+export const CURRENT_SAVE_VERSION = 21
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -588,6 +589,9 @@ export type SaveData = {
   playerTorch: SavePlayerTorch | null
   placedTents: SavePlacedTent[]
   placedTraps: SavePlacedTrap[]
+  /** NPC burial graves (plan npc-011) — positions aren't derivable from the
+   *  seed; completed burials round-trip like `placedTraps`. */
+  graves: SaveGrave[]
   worldFlags: SaveWorldFlags
   /** Resolved Hidden Find spot ids (plan world-007 §10) — sparse, same
    *  "already-collected id" contract as `collectedItemIds`/`harvestedCropIds`.
@@ -944,6 +948,22 @@ function isPlacedTrapsField(value: unknown): value is SavePlacedTrap[] {
       typeof t.skillAtActivation === 'number' &&
       typeof t.weatherCheckedAtDay === 'number' &&
       (t.baitKind === undefined || t.baitKind === null || typeof t.baitKind === 'string')
+    )
+  })
+}
+
+function isGravesField(value: unknown): value is SaveGrave[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const g = entry as Record<string, unknown>
+    return (
+      typeof g.id === 'string' &&
+      typeof g.x === 'number' &&
+      typeof g.z === 'number' &&
+      typeof g.yaw === 'number' &&
+      typeof g.deceasedNpcId === 'string' &&
+      typeof g.buriedAtDays === 'number'
     )
   })
 }
@@ -1466,7 +1486,7 @@ function isHelperAssignment(value: unknown): value is Record<string, unknown> {
   )
 }
 
-const NPC_GOAL_IDS: ReadonlySet<string> = new Set(['fulfilWorkDuty', 'obtainWood', 'secureFood', 'secureWater'])
+const NPC_GOAL_IDS: ReadonlySet<string> = new Set(['buryDeceased', 'fulfilWorkDuty', 'obtainWood', 'secureFood', 'secureWater'])
 const NPC_PLAN_STATES: ReadonlySet<string> = new Set([
   'active', 'blocked', 'completed', 'interrupted', 'obsolete', 'partially_completed',
 ])
@@ -1479,8 +1499,13 @@ function isNpcPlan(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== 'object') return false
   const p = value as Record<string, unknown>
   const progress = p.progress as Record<string, unknown> | undefined
+  if (typeof p.goal !== 'string' || !NPC_GOAL_IDS.has(p.goal)) return false
+  if (p.goal === 'buryDeceased') {
+    if (typeof p.deceasedNpcId !== 'string') return false
+  } else if (p.deceasedNpcId !== undefined) {
+    return false
+  }
   return (
-    typeof p.goal === 'string' && NPC_GOAL_IDS.has(p.goal) &&
     (p.strategy === null || (typeof p.strategy === 'string' && NPC_STRATEGY_IDS.has(p.strategy))) &&
     typeof p.state === 'string' && NPC_PLAN_STATES.has(p.state) &&
     !!progress && typeof progress.amount === 'number' &&
@@ -1560,7 +1585,8 @@ function isNpcPostDeathField(value: unknown): boolean {
     typeof p.yaw === 'number' &&
     typeof p.deathAtDays === 'number' &&
     isNpcCorpseLoot(p.loot) &&
-    (p.cleanupReason === null || (typeof p.cleanupReason === 'string' && NPC_CORPSE_CLEANUP_REASONS.has(p.cleanupReason)))
+    (p.cleanupReason === null || (typeof p.cleanupReason === 'string' && NPC_CORPSE_CLEANUP_REASONS.has(p.cleanupReason))) &&
+    (p.burialClaimantId === undefined || p.burialClaimantId === null || typeof p.burialClaimantId === 'string')
   )
 }
 
@@ -1726,6 +1752,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlayerTorchField(v.playerTorch)) return false
   if (!isPlacedTentsField(v.placedTents)) return false
   if (!isPlacedTrapsField(v.placedTraps)) return false
+  if (!isGravesField(v.graves)) return false
   if (!isWorldFlagsField(v.worldFlags)) return false
   if (!isResolvedHiddenFindSpotIdsField(v.resolvedHiddenFindSpotIds)) return false
   if (!isSaveBadges(v.badges)) return false
@@ -2454,6 +2481,23 @@ function migrateSaveV19ToV20(data: unknown): unknown {
   return { ...v, version: 20, workContracts }
 }
 
+/** v20 → v21 (plan npc-011): NPC burial graves + optional post-death claim owner. */
+function migrateSaveV20ToV21(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const npcStates = v.npcStates && typeof v.npcStates === 'object' && !Array.isArray(v.npcStates)
+    ? Object.fromEntries(Object.entries(v.npcStates as Record<string, unknown>).map(([id, state]) => {
+      if (!state || typeof state !== 'object') return [id, state]
+      const s = state as Record<string, unknown>
+      const postDeath = s.postDeath
+      if (!postDeath || typeof postDeath !== 'object' || postDeath === null) return [id, state]
+      const p = postDeath as Record<string, unknown>
+      if (p.burialClaimantId !== undefined) return [id, state]
+      return [id, { ...s, postDeath: { ...p, burialClaimantId: null } }]
+    }))
+    : v.npcStates
+  return { ...v, version: 21, graves: [], npcStates }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2474,6 +2518,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   17: migrateSaveV17ToV18,
   18: migrateSaveV18ToV19,
   19: migrateSaveV19ToV20,
+  20: migrateSaveV20ToV21,
 }
 
 function detectStoredVersion(value: unknown): number | null {

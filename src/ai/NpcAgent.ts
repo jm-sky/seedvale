@@ -74,13 +74,19 @@ import {
   type PhysicalProfile,
 } from '../settlement/npcPhysicalProfile'
 import {
+  claimNpcCorpseForBurial,
   commitNpcDeath,
   finalizeExpiredNpcCorpse,
+  finalizeNpcCorpseBurial,
   hasActiveNpcCorpse,
+  isNpcCorpseBuryable,
   type NpcPostDeathState,
+  recoverStaleNpcBurialClaim,
+  releaseNpcCorpseBurialClaim,
   resolveNpcCorpsePhase,
 } from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
+import { ensureNpcBurialGrave } from '../world/npcGraves'
 import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
@@ -198,6 +204,8 @@ import {
   type Personality,
   pickDialogueLine,
 } from './dialogue'
+import type { NpcBurialHooks } from './burialPressure'
+import { resolveBurialPressure } from './burialPressure'
 import { healingPressure } from './healingPressure'
 import {
   generateNeedPressures,
@@ -274,14 +282,19 @@ import {
 } from './npcPersonalProvisions'
 import {
   blockPlan,
+  completePlan,
+  createBurialPlan,
   createNpcPlan,
   goalForNeed,
   interruptPlan,
+  isBurialPlan,
+  isBurialPlanForDeceased,
   needForGoal,
   type NpcGoalId,
   type NpcPlan,
   type NpcPlanState,
   obsoletePlan,
+  planIsBurialResumable,
   planIsResumable,
   progressPlan,
   resumePlan,
@@ -625,6 +638,7 @@ export function classifyPendingActivity(
   // 'idle' whenever 'heal' wins arbitration), same "idle" reading as
   // sheltering/settling at the campfire above.
   if (pending.kind === 'heal' && activeNeed === 'idle') return 'idle'
+  if (pending.kind === 'bury' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'approachPlayer' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
@@ -766,6 +780,10 @@ const SHELTER_SETTLE_DURATION_SEC = 1.2
  *  `drink`/`eat`'s 1.2-1.4 (plan npc-002). */
 const HEAL_DURATION_SEC = 1.5
 
+/** How long (seconds, before `waitMultiplier`) `beginBurial`'s `bury` action
+ *  occupies the NPC at the corpse — same order of magnitude as `heal`. */
+const BURIAL_DURATION_SEC = 2.5
+
 /** stamina/sec while walking toward a task (`goTo`) — deliberately low so
  *  ordinary errands (house → well → workplace → storage) don't meaningfully
  *  dent stamina; only sustained heavy work should. */
@@ -904,6 +922,8 @@ export type NpcAgentDeps = {
   /** Player-built residential houses (plan settlements-005). */
   residentialBuildings?: ResidentialBuildings | null
   droppedItems?: DroppedItems | null
+  /** NPC burial execution context (plan npc-011) — null in isolated fallbacks. */
+  burialHooks?: NpcBurialHooks | null
 }
 
 /**
@@ -1271,6 +1291,7 @@ export class NpcAgent {
    *  worker supply chain. Null in isolated fallbacks; a stage requiring
    *  materials then simply stays blocked (see `runContractWorkBout`). */
   private readonly droppedItems: DroppedItems | null
+  private readonly burialHooks: NpcBurialHooks | null
   /** Cached from `update()`'s own parameter (plan npc-015) — Work Contract
    *  travel-time estimation needs the real-seconds↔game-hours ratio, but
    *  isn't itself called from `update()`, so it's stashed here rather than
@@ -1347,6 +1368,7 @@ export class NpcAgent {
       standingTorches,
       residentialBuildings,
       droppedItems,
+      burialHooks,
     } = deps
     const playAt = deps.playAt ?? (() => {})
     const npcId = deps.npcId ?? ''
@@ -1389,6 +1411,7 @@ export class NpcAgent {
     this.standingTorches = standingTorches ?? null
     this.residentialBuildings = residentialBuildings ?? null
     this.droppedItems = droppedItems ?? null
+    this.burialHooks = burialHooks ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
@@ -2569,11 +2592,14 @@ export class NpcAgent {
           this.health.maxHp,
           treatmentKind != null,
         )
+        this.reevaluateBurialPlan()
+        const burial = this.burialPressureCandidate()
         const decision = pickActionKind<NpcDecisionTarget>(
           [
             ...candidates.map((c) => ({ kind: c.target, score: c.final })),
             { kind: 'seekShelter', score: weatherPressure },
             { kind: 'heal', score: healPressure },
+            { kind: 'buryDeceased', score: burial.score },
           ],
           'idle',
         )
@@ -2608,6 +2634,12 @@ export class NpcAgent {
           this.activeNeed = 'idle'
           this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
           this.beginHeal()
+          break
+        }
+        if (outcome === 'buryDeceased') {
+          this.activeNeed = 'idle'
+          this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
+          if (burial.deceasedNpcId) this.beginBurial(burial.deceasedNpcId)
           break
         }
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
@@ -4732,6 +4764,127 @@ export class NpcAgent {
         registerPhysicalInjuryFromHeal(this.npcState, actualRestored, this.nowDays())
       },
     })
+  }
+
+  private burialPressureCandidate(): ReturnType<typeof resolveBurialPressure> {
+    const hooks = this.burialHooks
+    if (!hooks || this.health.dead) return { score: 0, deceasedNpcId: null }
+    return resolveBurialPressure({
+      claimantId: this.id,
+      claimantHouseholdId: hooks.householdId,
+      claimantPosition: { x: this.mesh.position.x, z: this.mesh.position.z },
+      settlementPrefix: hooks.settlementPrefix,
+      npcStates: Object.fromEntries(hooks.listSettlementNpcStates()),
+      npcHouseholdId: hooks.npcHouseholdId,
+      relations: hooks.relations,
+      graves: hooks.graves,
+      activePlan: this.npcState.activePlan,
+      nowDays: this.nowDays(),
+    })
+  }
+
+  private reevaluateBurialPlan(): void {
+    const plan = this.npcState.activePlan
+    if (!isBurialPlan(plan)) return
+    const hooks = this.burialHooks
+    if (!hooks) {
+      this.cancelBurialPlan()
+      return
+    }
+    const deceasedId = plan.deceasedNpcId
+    const post = hooks.getNpcState(deceasedId)?.postDeath
+    if (post) recoverStaleNpcBurialClaim(post, planIsBurialResumable(plan, deceasedId))
+    if (hooks.graves.hasForDeceased(deceasedId) || !post || !isNpcCorpseBuryable(post, this.nowDays())) {
+      this.cancelBurialPlan()
+    }
+  }
+
+  private ensureBurialPlan(deceasedNpcId: string): void {
+    const plan = this.npcState.activePlan
+    if (planIsBurialResumable(plan, deceasedNpcId)) {
+      this.npcState.activePlan = resumePlan(plan)
+      return
+    }
+    this.npcState.activePlan = createBurialPlan(deceasedNpcId)
+  }
+
+  private cancelBurialPlan(reason: 'completed' | 'obsolete' = 'obsolete'): void {
+    const plan = this.npcState.activePlan
+    if (!isBurialPlan(plan)) return
+    const hooks = this.burialHooks
+    const post = hooks?.getNpcState(plan.deceasedNpcId)?.postDeath
+    if (post) releaseNpcCorpseBurialClaim(post)
+    this.npcState.activePlan = reason === 'completed' ? completePlan(plan) : obsoletePlan(plan)
+  }
+
+  private beginBurial(deceasedNpcId: string): void {
+    const hooks = this.burialHooks
+    if (!hooks || this.health.dead) return
+    this.ensureBurialPlan(deceasedNpcId)
+    const post = hooks.getNpcState(deceasedNpcId)?.postDeath
+    if (!post || hooks.graves.hasForDeceased(deceasedNpcId) || !isNpcCorpseBuryable(post, this.nowDays())) {
+      this.cancelBurialPlan()
+      return
+    }
+    recoverStaleNpcBurialClaim(post, true)
+    if (!claimNpcCorpseForBurial(post, this.id)) {
+      this.cancelBurialPlan()
+      return
+    }
+    this.startAction({
+      kind: 'bury',
+      destination: copyVec3({ x: post.x, y: 0, z: post.z }),
+      durationSec: BURIAL_DURATION_SEC * this.waitMultiplier,
+      onComplete: () => this.executeBurial(deceasedNpcId),
+    })
+  }
+
+  private executeBurial(deceasedNpcId: string): void {
+    const hooks = this.burialHooks
+    if (!hooks) {
+      this.cancelBurialPlan()
+      return
+    }
+    const post = hooks.getNpcState(deceasedNpcId)?.postDeath
+    if (!post) {
+      this.cancelBurialPlan()
+      return
+    }
+    if (hooks.graves.hasForDeceased(deceasedNpcId)) {
+      this.cancelBurialPlan('completed')
+      return
+    }
+    if (post.status === 'claimed' && post.burialClaimantId !== this.id) {
+      this.cancelBurialPlan()
+      return
+    }
+    if (post.status === 'active' && !claimNpcCorpseForBurial(post, this.id)) {
+      this.cancelBurialPlan()
+      return
+    }
+    const result = finalizeNpcCorpseBurial(post, this.id)
+    if (result === 'invalid') {
+      this.cancelBurialPlan()
+      return
+    }
+    if (result === 'already_terminal') {
+      if (hooks.graves.hasForDeceased(deceasedNpcId)) this.cancelBurialPlan('completed')
+      else this.cancelBurialPlan()
+      return
+    }
+    if (!ensureNpcBurialGrave({
+      graves: hooks.graves,
+      deceasedNpcId,
+      x: post.x,
+      z: post.z,
+      yaw: post.yaw,
+      buriedAtDays: this.nowDays(),
+    }) && !hooks.graves.hasForDeceased(deceasedNpcId)) {
+      this.cancelBurialPlan()
+      return
+    }
+    const plan = this.npcState.activePlan
+    if (isBurialPlanForDeceased(plan, deceasedNpcId)) this.npcState.activePlan = completePlan(plan!)
   }
 
   /**

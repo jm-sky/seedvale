@@ -338,6 +338,8 @@ export type CreateSettlementDeps = {
   /** Player-built residential houses (plan settlements-005) — forwarded the
    *  same way as `palisades`. */
   residentialBuildings?: ResidentialBuildings
+  /** NPC burial graves (plan npc-011) — forwarded into every `NpcAgent.create`. */
+  npcGraves?: import('../world/npcGraves').NpcGraves
 }
 
 export async function createSettlement(
@@ -381,6 +383,7 @@ export async function createSettlement(
     palisades,
     standingTorches,
     residentialBuildings,
+    npcGraves,
   } = deps
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
@@ -670,6 +673,26 @@ export async function createSettlement(
     }))
   })
 
+  const npcHouseholdById = new Map<string, string>()
+  const settlementNpcStates: [string, import('./npcState').NpcAuthoritativeState][] = []
+  flatMembers.forEach(({ household }, i) => {
+    const npcId = `${def.id}:npc:${i}`
+    npcHouseholdById.set(npcId, household.id)
+    const state = npcStateRegistry.get(npcId)
+    if (state) settlementNpcStates.push([npcId, state])
+  })
+  const burialHooks = npcGraves
+    ? {
+        settlementPrefix: def.id,
+        householdId: null as string | null,
+        getNpcState: (id: string) => npcStateRegistry.get(id),
+        npcHouseholdId: (id: string) => npcHouseholdById.get(id) ?? null,
+        relations,
+        graves: npcGraves,
+        listSettlementNpcStates: () => settlementNpcStates,
+      }
+    : null
+
   bootMark('npcCreation')
   let agents: NpcAgent[]
   try {
@@ -733,6 +756,9 @@ export async function createSettlement(
         palisades,
         standingTorches,
         residentialBuildings,
+        burialHooks: burialHooks
+          ? { ...burialHooks, householdId: household.id }
+          : null,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

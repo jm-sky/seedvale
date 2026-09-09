@@ -95,6 +95,7 @@ function validLegacyV8Save(): Record<string, unknown> {
     playerTorch: null,
     placedTents: [],
     placedTraps: [],
+    graves: [],
     worldFlags: {},
     resolvedHiddenFindSpotIds: [],
     badges: { earned: [], gravesDisturbed: 0, hiddenFindsFound: 0 },

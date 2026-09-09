@@ -158,7 +158,7 @@ describe('burial claim and natural cleanup', () => {
     const post = createActiveNpcPostDeath({
       x: 1, z: 2, yaw: 0, deathAtDays: 0, loot: { counts: { stone: 1 }, instances: [] },
     })
-    expect(claimNpcCorpseForBurial(post)).toBe(true)
+    expect(claimNpcCorpseForBurial(post, '0_0:npc:1')).toBe(true)
     expect(npcCorpseReadyToRemove(post, NPC_CORPSE_REMOVE_DAYS + 1)).toBe(false)
     expect(finalizeExpiredNpcCorpse(post, NPC_CORPSE_REMOVE_DAYS + 1, null)).toBe(false)
     expect(post.status).toBe('claimed')
@@ -208,7 +208,7 @@ describe('burial claim and natural cleanup', () => {
     claimed.postDeath = createActiveNpcPostDeath({
       x: 0, z: 0, yaw: 0, deathAtDays: 0, loot: { counts: {}, instances: [] },
     })
-    claimNpcCorpseForBurial(claimed.postDeath)
+    claimNpcCorpseForBurial(claimed.postDeath!, '0_0:npc:2')
     expect(shouldSkipNpcCorpsePresentation(claimed, NPC_CORPSE_REMOVE_DAYS + 5)).toBe(false)
   })
 })

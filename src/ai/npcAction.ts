@@ -60,6 +60,9 @@ export type ActionId =
   /** Nearby-player approach for an interaction intent (plan npc-016) —
    *  generic movement; payment is the first caller. */
   | 'approachPlayer'
+  /** Household burial of a deceased NPC (plan npc-011) — normal `goTo`/`execute`
+   *  at the corpse position; reads as `idle` to `classifyPendingActivity`. */
+  | 'bury'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and

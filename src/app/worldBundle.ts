@@ -70,6 +70,8 @@ import {
   type SaveCarriedContainer,
 } from '../world/createPlacedContainers'
 import { createPlacedTraps, type PlacedTraps, type PlacedTrapsHooks } from '../world/createPlacedTraps'
+import type { NpcGraves, SaveGrave } from '../world/npcGraves'
+import { createNpcGraves } from '../world/npcGraves'
 import { createPlayerGardens, type PlayerGardens } from '../world/createPlayerGardens'
 import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
 import { createResidentialBuildings, type ResidentialBuildings } from '../world/createResidentialBuildings'
@@ -134,6 +136,8 @@ export type WorldBundle = {
   placedFires: PlacedFires
   placedTents: PlacedTents
   placedTraps: PlacedTraps
+  /** NPC burial graves (plan npc-011) — persistent completed burial results. */
+  npcGraves: NpcGraves
   placedContainers: PlacedContainers
   playerWells: PlayerWells
   playerGardens: PlayerGardens
@@ -302,6 +306,8 @@ function buildSettlementsManager(
   /** Player-built residential houses (plan settlements-005) — forwarded the
    *  same way as `palisades`/`standingTorches`. */
   residentialBuildings?: ResidentialBuildings,
+  /** NPC burial graves (plan npc-011) — forwarded into every `createSettlement`. */
+  npcGraves?: import('../world/npcGraves').NpcGraves,
 ): Promise<SettlementsManager> {
   return createSettlementsManager(
     scene,
@@ -350,6 +356,7 @@ function buildSettlementsManager(
     palisades,
     standingTorches,
     residentialBuildings,
+    npcGraves,
   )
 }
 
@@ -489,6 +496,7 @@ type WorldSystemsSeed = {
   placedFires: readonly PlacedFire[]
   placedTents: readonly PlacedTent[]
   placedTraps: readonly PlacedTrapRecord[]
+  graves: readonly SaveGrave[]
   placedContainers: readonly PlacedContainerRecord[]
   carriedContainer: SaveCarriedContainer | null
   playerWells: readonly PlayerWellRecord[]
@@ -639,6 +647,7 @@ async function buildWorldSystems(
     placedFires: initialPlacedFires,
     placedTents: initialPlacedTents,
     placedTraps: initialPlacedTraps,
+    graves: initialGraves,
     placedContainers: initialPlacedContainers,
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
@@ -823,13 +832,17 @@ async function buildWorldSystems(
   )
   bootMarkEnd('droppedItems+wells+workContracts+terrainPrep+buildables')
 
+  bootMark('createNpcGraves')
+  const npcGraves = createNpcGraves(scene, chunkManager.sampleHeight, initialGraves)
+  bootMarkEnd('createNpcGraves')
+
   // Now fast: returns as soon as `homeDef` (the home site's position/id/size
   // — a pure function of seed+terrain) is resolved and the home settlement's
   // own full build (houses/NPCs/livestock) has been kicked off in the
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches, residentialBuildings)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -879,6 +892,7 @@ async function buildWorldSystems(
     placedFires,
     placedTents,
     placedTraps,
+    npcGraves,
     placedContainers,
     playerWells,
     playerGardens,
@@ -997,6 +1011,8 @@ export async function createWorldBundle(
   initialPlacedFires: readonly PlacedFire[],
   initialPlacedTents: readonly PlacedTent[],
   initialPlacedTraps: readonly PlacedTrapRecord[],
+  /** NPC burial graves (plan npc-011) — same carry contract as `initialPlacedTraps`. */
+  initialGraves: readonly SaveGrave[] = [],
   /** Plan 164 — persistent player-placed storage containers, same "carried
    *  across rebuild, reset only on a genuinely new world" contract as
    *  `initialPlacedTents`/`initialPlacedTraps`. */
@@ -1121,6 +1137,7 @@ export async function createWorldBundle(
     placedFires: initialPlacedFires,
     placedTents: initialPlacedTents,
     placedTraps: initialPlacedTraps,
+    graves: initialGraves,
     placedContainers: initialPlacedContainers,
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
@@ -1240,6 +1257,8 @@ export async function rebuildWorldBundle(
   bundle.placedTents.dispose()
   const carriedTraps = resetCollectedItems ? [] : [...bundle.placedTraps.nodes()]
   bundle.placedTraps.dispose()
+  const carriedGraves = resetCollectedItems ? [] : [...bundle.npcGraves.nodes()]
+  bundle.npcGraves.dispose()
   const carriedContainerNodes = resetCollectedItems ? [] : [...bundle.placedContainers.nodes()]
   const carriedContainerHeld = resetCollectedItems ? null : bundle.placedContainers.carriedNode()
   bundle.placedContainers.dispose()
@@ -1319,6 +1338,7 @@ export async function rebuildWorldBundle(
     placedFires: carriedFires,
     placedTents: carriedTents,
     placedTraps: carriedTraps,
+    graves: carriedGraves,
     placedContainers: carriedContainerNodes,
     carriedContainer: carriedContainerHeld,
     playerWells: carriedPlayerWells,
@@ -1370,6 +1390,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedFires.dispose()
   bundle.placedTents.dispose()
   bundle.placedTraps.dispose()
+  bundle.npcGraves.dispose()
   bundle.placedContainers.dispose()
   bundle.playerWells.dispose()
   bundle.playerGardens.dispose()

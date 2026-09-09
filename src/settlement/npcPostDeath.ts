@@ -40,6 +40,8 @@ export type NpcPostDeathState = {
   deathAtDays: number
   loot: NpcCorpseLootSnapshot
   cleanupReason: NpcCorpseCleanupReason | null
+  /** Stable claimant NPC id while `status === 'claimed'` (plan npc-011). */
+  burialClaimantId: string | null
 }
 
 /** World-day thresholds — fauna's 20/40/60 s linger is too short for a human
@@ -68,6 +70,7 @@ export function cloneNpcPostDeath(state: NpcPostDeathState | null): NpcPostDeath
     deathAtDays: state.deathAtDays,
     loot: cloneNpcCorpseLoot(state.loot),
     cleanupReason: state.cleanupReason,
+    burialClaimantId: state.burialClaimantId ?? null,
   }
 }
 
@@ -86,6 +89,7 @@ export function createLegacyTerminalNpcPostDeath(): NpcPostDeathState {
     deathAtDays: 0,
     loot: createEmptyNpcCorpseLoot(),
     cleanupReason: 'legacy',
+    burialClaimantId: null,
   }
 }
 
@@ -104,6 +108,7 @@ export function createActiveNpcPostDeath(params: {
     deathAtDays: params.deathAtDays,
     loot: cloneNpcCorpseLoot(params.loot),
     cleanupReason: null,
+    burialClaimantId: null,
   }
 }
 
@@ -132,16 +137,63 @@ export function markNpcPostDeathTerminal(postDeath: NpcPostDeathState, reason: N
 }
 
 /** Burial handoff for `npc-011` — blocks natural cleanup while claimed. */
-export function claimNpcCorpseForBurial(postDeath: NpcPostDeathState): boolean {
+export function claimNpcCorpseForBurial(postDeath: NpcPostDeathState, claimantId: string): boolean {
+  if (postDeath.status === 'claimed') {
+    return postDeath.burialClaimantId === claimantId
+  }
   if (postDeath.status !== 'active') return false
   postDeath.status = 'claimed'
+  postDeath.burialClaimantId = claimantId
   return true
 }
 
 export function releaseNpcCorpseBurialClaim(postDeath: NpcPostDeathState): boolean {
   if (postDeath.status !== 'claimed') return false
   postDeath.status = 'active'
+  postDeath.burialClaimantId = null
   return true
+}
+
+/** Deterministic stale-claim recovery (plan npc-011) — a persisted claim is
+ *  resumable only while the claimant still holds a matching burial plan. */
+export function recoverStaleNpcBurialClaim(
+  postDeath: NpcPostDeathState,
+  claimantHasMatchingPlan: boolean,
+): void {
+  if (postDeath.status !== 'claimed') return
+  if (claimantHasMatchingPlan) return
+  releaseNpcCorpseBurialClaim(postDeath)
+}
+
+export function npcCorpseBurialClaimOwner(postDeath: NpcPostDeathState): string | null {
+  return postDeath.status === 'claimed' ? postDeath.burialClaimantId : null
+}
+
+export function isNpcCorpseBuryable(
+  postDeath: NpcPostDeathState | null | undefined,
+  nowDays: number,
+): postDeath is NpcPostDeathState {
+  if (!hasActiveNpcCorpse(postDeath)) return false
+  return resolveNpcCorpsePhase(postDeath, nowDays) !== 'removed'
+}
+
+export type FinalizeNpcBurialResult = 'buried' | 'already_terminal' | 'invalid'
+
+/** Idempotent terminal transition for successful burial (plan npc-011). Grave
+ *  creation is owned by the caller — this only resolves corpse truth. */
+export function finalizeNpcCorpseBurial(
+  postDeath: NpcPostDeathState,
+  claimantId: string,
+): FinalizeNpcBurialResult {
+  if (postDeath.status === 'terminal') {
+    return postDeath.cleanupReason === 'buried' ? 'already_terminal' : 'invalid'
+  }
+  if (postDeath.status === 'claimed' && postDeath.burialClaimantId !== claimantId) return 'invalid'
+  if (postDeath.status !== 'active' && postDeath.status !== 'claimed') return 'invalid'
+  dropNpcCorpseLoot(postDeath, null)
+  markNpcPostDeathTerminal(postDeath, 'buried')
+  postDeath.burialClaimantId = null
+  return 'buried'
 }
 
 /** V1 loot authorization is inert/neutral (plan npc-010 §7) — no ownership

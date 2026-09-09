@@ -480,6 +480,7 @@ export async function createApp(
     (initialSave?.placedFires ?? []).map((f) => ({ ...f, grate: f.grate === true })),
     initialSave?.placedTents ?? [],
     (initialSave?.placedTraps ?? []).map((t) => ({ ...t, baitKind: t.baitKind ?? null })),
+    initialSave?.graves ?? [],
     initialSave?.placedContainers ?? [],
     initialSave?.carriedContainer ?? null,
     initialSave?.playerWells ?? [],

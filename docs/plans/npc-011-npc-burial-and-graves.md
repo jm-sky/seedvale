@@ -1,7 +1,19 @@
 # Plan: NPC Burial & Graves
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+
+## Implementation status
+
+Implemented on `main` (2026-09-09):
+
+- Burial pressure producer (`buryDeceased` decision target, not a `NeedId`) with household/relationship eligibility.
+- Persistent `buryDeceased` plan with `deceasedNpcId`; claim owner on `NpcPostDeathState`.
+- `NpcAgent` burial action chain: claim → goTo corpse → timed `bury` → atomic corpse terminal + grave ensure.
+- `NpcGraves` world collection + `SaveData.graves` (schema v21).
+- Focused unit tests for pressure, graves, claim idempotency and legacy dead handling.
+
+Browser/gameplay verification remains manual.
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** ~~npc-010~~, ~~world-terrain-016~~
