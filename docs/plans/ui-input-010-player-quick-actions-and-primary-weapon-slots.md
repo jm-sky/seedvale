@@ -1,7 +1,8 @@
 # Plan: Player quick actions and primary weapon slots
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `done` ✅
+**Implemented at:** 2026-09-08 13:53
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none
