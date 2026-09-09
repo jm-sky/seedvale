@@ -352,25 +352,25 @@ function isInstancePrimaryRanged(id: string): boolean {
         <div
           v-for="row in instanceRows"
           :key="`${row.conditionPercent}:${row.sharpnessPercent}`"
-          class="flex flex-col gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
+          class="flex flex-row items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
         >
           <div class="flex flex-wrap items-center gap-2">
             <span class="font-medium">{{ row.count }}×</span>
             <span
               v-if="row.sharpnessPercent !== null"
-              class="rounded-full bg-white/10 px-2 py-0.5 text-[11px]"
+              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
             >
               Stan {{ row.conditionPercent }}%
             </span>
             <span
               v-else
-              class="rounded-full bg-white/10 px-2 py-0.5 text-[11px]"
+              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
             >
               {{ row.conditionPercent }}%
             </span>
             <span
               v-if="row.sharpnessPercent !== null"
-              class="rounded-full bg-white/10 px-2 py-0.5 text-[11px]"
+              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
             >
               Ostrość {{ row.sharpnessPercent }}%
             </span>
@@ -417,6 +417,7 @@ function isInstancePrimaryRanged(id: string): boolean {
                 v-if="row.sharpnessPercent !== null && row.sharpnessPercent < 100"
                 class="min-h-0 py-1"
                 :label="`Naostrz (${whetstoneCount})`"
+                :disabled="whetstoneCount === 0"
                 @click="sharpenInstance(id)"
               />
               <ItemsScreenItemButton
