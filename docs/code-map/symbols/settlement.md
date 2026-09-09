@@ -306,15 +306,15 @@ Generated from exported TypeScript symbols.
 - `claimNpcCorpseForBurial` — function — line 135
 - `cloneNpcCorpseLoot` — function — line 54
 - `cloneNpcPostDeath` — function — line 61
-- `commitNpcDeath` — function — line 199
+- `commitNpcDeath` — function — line 196
 - `corpseLootInventory` — function — line 153
 - `createActiveNpcPostDeath` — function — line 92
 - `createEmptyNpcCorpseLoot` — function — line 74
 - `createLegacyTerminalNpcPostDeath` — function — line 80
-- `dropNpcCorpseLoot` — function — line 257
+- `dropNpcCorpseLoot` — function — line 254
 - `EMPTY_NPC_CORPSE_LOOT` — const — line 52
-- `extractNpcLoadoutLoot` — function — line 180
-- `finalizeExpiredNpcCorpse` — function — line 269
+- `extractNpcLoadoutLoot` — function — line 177
+- `finalizeExpiredNpcCorpse` — function — line 266
 - `hasActiveNpcCorpse` — function — line 110
 - `markNpcPostDeathTerminal` — function — line 129
 - `NPC_CORPSE_BONES_ONSET_DAYS` — const — line 49
@@ -332,10 +332,10 @@ Generated from exported TypeScript symbols.
   - owns: NpcPostDeathState
 - `releaseNpcCorpseBurialClaim` — function — line 141
 - `resolveNpcCorpsePhase` — function — line 119
-- `shouldSkipNpcCorpsePresentation` — function — line 281
+- `shouldSkipNpcCorpsePresentation` — function — line 278
 - `snapshotCorpseLoot` — function — line 157
-- `transferCorpseCountTo` — function — line 235
-- `transferCorpseInstanceTo` — function — line 219
+- `transferCorpseCountTo` — function — line 232
+- `transferCorpseInstanceTo` — function — line 216
 
 ## `settlement/npcRelationships.ts`
 
@@ -345,16 +345,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 173
-- `createNpcStateRegistry` — function — line 214
-- `MAX_HP` — const — line 37
-- `MAX_STAMINA` — const — line 38
-- `NpcAuthoritativeState` — type — line 57
-  - domain: settlements-npcs
-- `NpcId` — type — line 32
-- `NpcPhysicalMaxima` — type — line 159
-- `NpcStateRegistry` — type — line 201
-- `NpcStateSnapshot` — type — line 110
+- `createNpcAuthoritativeState` — function — line 155
+- `createNpcStateRegistry` — function — line 194
+- `MAX_HP` — const — line 31
+- `MAX_STAMINA` — const — line 32
+- `NpcAuthoritativeState` — type — line 48
+- `NpcId` — type — line 26
+- `NpcPhysicalMaxima` — type — line 141
+- `NpcStateRegistry` — type — line 181
+- `NpcStateSnapshot` — type — line 97
 
 ## `settlement/pathDryness.ts`
 

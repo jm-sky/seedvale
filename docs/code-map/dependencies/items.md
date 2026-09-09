@@ -120,8 +120,6 @@ Generated from TypeScript imports.
 - `items/foodItems.ts`
 - `items/foodProvenance.test.ts`
 - `items/highQualityWeapons.test.ts`
-- `items/inventoryTransfer.test.ts`
-- `items/inventoryTransfer.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemConsumables.test.ts`
@@ -144,7 +142,6 @@ Generated from TypeScript imports.
 - `settlement/landPurchase.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcPostDeath.ts`
-- `settlement/npcState.ts`
 - `settlement/storageRepair.test.ts`
 - `settlement/storageRepair.ts`
 - `settlement/storageVisuals.test.ts`
@@ -381,13 +378,11 @@ Generated from TypeScript imports.
 - `items/foodFreshness.test.ts`
 - `items/foodItems.test.ts`
 - `items/foodProvenance.test.ts`
-- `items/inventoryTransfer.test.ts`
 - `items/inventoryView.ts`
 - `items/sensibleFood.ts`
 - `items/timedProcess.ts`
 - `persistence/saveData.ts`
 - `settlement/household.ts`
-- `settlement/npcState.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/dryingRacks.ts`
 
@@ -481,26 +476,6 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/tradeCatalog.ts`
 - `items/weaponMaintenance.ts`
-
-## `items/inventoryTransfer.test.ts`
-
-**Imports**
-
-- `items/Inventory.ts`
-- `items/foodFreshness.ts`
-- `items/inventoryTransfer.ts`
-- `items/weaponMaintenance.ts`
-
-## `items/inventoryTransfer.ts`
-
-**Imports**
-
-- `items/Inventory.ts`
-- `items/items.ts`
-
-**Imported by**
-
-- `items/inventoryTransfer.test.ts`
 
 ## `items/inventoryView.ts`
 
@@ -737,7 +712,6 @@ Generated from TypeScript imports.
 - `items/guardSword.ts`
 - `items/heldToolVisual.ts`
 - `items/highQualityWeapons.test.ts`
-- `items/inventoryTransfer.ts`
 - `items/inventoryView.ts`
 - `items/itemCapabilities.test.ts`
 - `items/itemCatalog.ts`
@@ -813,7 +787,6 @@ Generated from TypeScript imports.
 - `items/inventoryView.ts`
 - `items/liquidContainer.test.ts`
 - `items/trade.ts`
-- `settlement/npcState.test.ts`
 
 ## `items/primaryWeapons.test.ts`
 
@@ -1065,12 +1038,10 @@ Generated from TypeScript imports.
 - `items/HeldTool.test.ts`
 - `items/Inventory.test.ts`
 - `items/highQualityWeapons.test.ts`
-- `items/inventoryTransfer.test.ts`
 - `items/inventoryView.ts`
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/weaponMaintenance.test.ts`
 - `settlement/npcPostDeath.test.ts`
-- `settlement/npcState.test.ts`
 - `ui-vue/store.ts`
 - `ui/createInventoryScreen.ts`
