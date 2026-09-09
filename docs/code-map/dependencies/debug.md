@@ -191,6 +191,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/settlementGenerator.ts`
+- `shared/temporaryConditions.ts`
 - `terrain/riverNetwork.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
@@ -214,10 +215,12 @@ Generated from TypeScript imports.
 - `debug/villageInspector.ts`
 - `fauna/AnimalAgent.ts`
 - `navigation/navigationStats.ts`
+- `player/PlayerController.ts`
 - `player/PlayerSkills.ts`
 - `quests/QuestManager.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `shared/temporaryConditions.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`

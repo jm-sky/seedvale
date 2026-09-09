@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 69
-- `isChannelBusy` — function — line 76
+- `isActionBlocked` — function — line 71
+- `isChannelBusy` — function — line 78
 - `PlayerActionContext` — type — line 30
 
 ## `app/actions/actionContracts.ts`
@@ -96,12 +96,12 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 131
-- `FeedableAnimal` — type — line 109
-- `feedAnimal` — function — line 122
-- `hasCarriedMilkContainer` — function — line 99
-- `SurvivalActionLifecycle` — type — line 63
-- `SurvivalActions` — type — line 73
+- `createSurvivalActions` — function — line 152
+- `FeedableAnimal` — type — line 130
+- `feedAnimal` — function — line 143
+- `hasCarriedMilkContainer` — function — line 120
+- `SurvivalActionLifecycle` — type — line 84
+- `SurvivalActions` — type — line 94
 
 ## `app/actions/terrainPreparationActions.ts`
 

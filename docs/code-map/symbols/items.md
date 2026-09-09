@@ -175,7 +175,7 @@ Generated from exported TypeScript symbols.
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `inventoryFullToastText` — function — line 526
+- `inventoryFullToastText` — function — line 532
 - `ItemAmount` — type — line 52
 - `SaveItemInstance` — type — line 54
 - `toSaveItemInstance` — function — line 70
@@ -189,30 +189,30 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1276
+- `ARROW_DAMAGE_BONUS` — const — line 1283
 - `BookTier` — type — line 130
-- `CAPABILITY_KINDS` — const — line 1307
+- `CAPABILITY_KINDS` — const — line 1314
 - `CAPABILITY_NEED_LABEL` — const — line 109
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1342
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1349
 - `ConsumableNeed` — type — line 121
-- `consumeNeedNoun` — function — line 207
-- `consumeVerbLabel` — function — line 198
+- `consumeNeedNoun` — function — line 213
+- `consumeVerbLabel` — function — line 204
 - `DefenseConfig` — type — line 41
-- `hasItemCapability` — function — line 1332
-- `HOLDABLE_KINDS` — const — line 1298
-- `isMeleeToolKind` — function — line 1291
-- `isRangedTool` — function — line 1283
-- `ITEM_CATALOG` — const — line 221
+- `hasItemCapability` — function — line 1339
+- `HOLDABLE_KINDS` — const — line 1305
+- `isMeleeToolKind` — function — line 1298
+- `isRangedTool` — function — line 1290
+- `ITEM_CATALOG` — const — line 227
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1360
+- `ITEM_SYSTEM_ROADMAP` — const — line 1367
 - `ItemCapability` — type — line 88
 - `ItemCatalogEntry` — type — line 132
 - `ItemSpawnKind` — type — line 13
 - `MeleeConfig` — type — line 24
-- `NON_ITEM_PROPS` — const — line 1366
+- `NON_ITEM_PROPS` — const — line 1373
 - `RangedConfig` — type — line 52
 
 ## `items/itemDisplay.ts`

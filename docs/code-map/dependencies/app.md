@@ -362,6 +362,8 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `player/PlayerNeeds.ts`
 - `shared/HealthState.ts`
+- `shared/temporaryConditions.ts`
+- `shared/waterPoisoningExposure.ts`
 - `world/WaterSource.ts`
 
 ## `app/actions/survivalActions.ts`
@@ -390,7 +392,10 @@ Generated from TypeScript imports.
 - `settlement/VillageFire.ts`
 - `shared/HealthState.ts`
 - `shared/VigorState.ts`
+- `shared/temporaryConditions.ts`
+- `shared/waterPoisoningExposure.ts`
 - `world/WaterSource.ts`
+- `world/parseSeed.ts`
 
 **Imported by**
 

@@ -345,15 +345,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/npcState.ts`
 
-- `createNpcAuthoritativeState` — function — line 132
-- `createNpcStateRegistry` — function — line 170
-- `MAX_HP` — const — line 22
-- `MAX_STAMINA` — const — line 23
-- `NpcAuthoritativeState` — type — line 39
-- `NpcId` — type — line 17
-- `NpcPhysicalMaxima` — type — line 118
-- `NpcStateRegistry` — type — line 157
-- `NpcStateSnapshot` — type — line 81
+- `createNpcAuthoritativeState` — function — line 147
+- `createNpcStateRegistry` — function — line 186
+- `MAX_HP` — const — line 31
+- `MAX_STAMINA` — const — line 32
+- `NpcAuthoritativeState` — type — line 48
+- `NpcId` — type — line 26
+- `NpcPhysicalMaxima` — type — line 133
+- `NpcStateRegistry` — type — line 173
+- `NpcStateSnapshot` — type — line 93
 
 ## `settlement/pathDryness.ts`
 

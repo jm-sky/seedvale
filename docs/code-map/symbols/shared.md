@@ -16,6 +16,16 @@ Generated from exported TypeScript symbols.
 - `CorpseDecayPhase` — type — line 8
 - `decayPhaseFromElapsed` — function — line 12
 
+## `shared/effectivePhysicalAttributes.ts`
+
+- `resolveEffectivePhysicalAttributes` — function — line 30
+- `resolveNpcBasePhysicalAttributes` — function — line 21
+  - domain: shared
+  - system: physical-attributes
+  - role: Effective SPEA seam (plan npc-024) — profile/base attributes plus temporary-condition modifiers. Consumers read from here instead of branching on condition kind.
+- `resolveNpcEffectivePhysicalAttributes` — function — line 38
+- `resolvePlayerEffectivePhysicalAttributes` — function — line 46
+
 ## `shared/enduranceStamina.ts`
 
 - `applyDerivedStaminaMax` — function — line 28
@@ -94,6 +104,37 @@ Generated from exported TypeScript symbols.
   - role: Shared physical-effort capacity used by the player, NPCs and fauna.
   - owns: StaminaState
 
+## `shared/temporaryConditions.ts`
+
+- `applyConditionModifiersToAttributes` — function — line 133
+- `applyConditionTreatment` — function — line 191
+- `applyPoisoningExposure` — function — line 150
+- `applyPoisoningTreatment` — function — line 170
+- `clearCondition` — function — line 186
+- `cloneTemporaryConditions` — function — line 42
+- `ConditionEntry` — type — line 13
+- `ConditionKind` — type — line 11
+  - domain: shared
+  - system: temporary-conditions
+  - role: Shared authoritative temporary physical-condition state (plan npc-024). Lazy elapsed-game-time progression — no global manager, no per-frame tick.
+  - owns: ConditionKind, TemporaryConditionsState
+- `createEmptyTemporaryConditions` — function — line 38
+- `getResolvedPoisoningSeverity` — function — line 106
+- `hasActivePoisoning` — function — line 111
+- `POISONING_INITIAL_EXPOSURE_SEVERITY` — const — line 26
+- `POISONING_MAX_SEVERITY` — const — line 24
+- `POISONING_MAX_SPEA_PENALTY` — const — line 36
+- `POISONING_RECOVERY_PER_GAME_DAY` — const — line 30
+- `POISONING_REPEAT_EXPOSURE_SEVERITY` — const — line 28
+- `poisoningSeverityTier` — function — line 116
+- `poisoningSpeaPenalties` — function — line 123
+- `resolveTemporaryConditionsProgress` — function — line 91
+- `restoreTemporaryConditions` — function — line 60
+- `SaveTemporaryConditionsSnapshot` — type — line 22
+- `snapshotTemporaryConditions` — function — line 50
+- `TemporaryConditionsState` — type — line 18
+- `UNSAFE_WATER_POISONING_EXPOSURE_CHANCE` — const — line 32
+
 ## `shared/ThirstState.ts`
 
 - `createThirstState` — function — line 15
@@ -121,3 +162,9 @@ Generated from exported TypeScript symbols.
   - system: vigor
   - role: NPC daily physiological budget; collapse gates sleep through the NPC FSM. Not used by fauna.
   - owns: VigorState
+
+## `shared/waterPoisoningExposure.ts`
+
+- `resolveUnsafeWaterPoisoningExposure` — function — line 38
+- `tryApplyUnsafeWaterPoisoningExposure` — function — line 48
+- `waterPoisoningExposureEventRoll` — function — line 28

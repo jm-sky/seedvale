@@ -18,6 +18,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
+- `shared/waterPoisoningExposure.test.ts`
+- `shared/waterPoisoningExposure.ts`
 - `terrain/waterBodyKind.ts`
 - `world/WaterSource.test.ts`
 - `world/playerWell.ts`
@@ -1636,6 +1638,7 @@ Generated from TypeScript imports.
 - `ai/characters.ts`
 - `ai/nameCultures.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `assets/houseDefinitionExample.ts`
 - `config/worldConfig.ts`
@@ -1658,6 +1661,7 @@ Generated from TypeScript imports.
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
 - `shared/SettlementName.ts`
+- `shared/waterPoisoningExposure.ts`
 - `terrain/biomeColors.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.test.ts`

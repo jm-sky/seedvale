@@ -102,7 +102,9 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
 - `shared/agentAnimationSet.ts`
+- `shared/effectivePhysicalAttributes.ts`
 - `shared/enduranceStamina.ts`
+- `shared/temporaryConditions.ts`
 - `simulation/index.ts`
 - `simulation/observation.ts`
 - `terrain/resourceDeposits.ts`

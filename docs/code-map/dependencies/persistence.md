@@ -53,6 +53,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/ratPersistence.ts`
 - `settlement/storageInfestation.ts`
+- `shared/temporaryConditions.ts`
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`

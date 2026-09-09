@@ -46,6 +46,8 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `settlement/npcPhysicalProfile.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/temporaryConditions.ts`
 - `ui-vue/store.ts`
 
 ## `shared/SettlementName.ts`
@@ -169,6 +171,20 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `settlement/npcPostDeath.ts`
 
+## `shared/effectivePhysicalAttributes.ts`
+
+**Imports**
+
+- `settlement/npcPhysicalProfile.ts`
+- `shared/PhysicalAttributes.ts`
+- `shared/temporaryConditions.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `player/PlayerController.ts`
+- `shared/waterPoisoningExposure.test.ts`
+
 ## `shared/enduranceStamina.test.ts`
 
 **Imports**
@@ -182,6 +198,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/npcStamina.test.ts`
+- `player/PlayerController.ts`
 - `player/PlayerNeeds.test.ts`
 - `player/PlayerNeeds.ts`
 - `settlement/npcPhysicalProfile.test.ts`
@@ -208,6 +225,34 @@ Generated from TypeScript imports.
 - `settlement/campfireProps.ts`
 - `settlement/houseLighting.ts`
 
+## `shared/temporaryConditions.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `shared/temporaryConditions.ts`
+
+## `shared/temporaryConditions.ts`
+
+**Imports**
+
+- `shared/PhysicalAttributes.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/actions/survivalActions.test.ts`
+- `app/actions/survivalActions.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
+- `persistence/saveData.ts`
+- `player/PlayerController.ts`
+- `settlement/npcState.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/temporaryConditions.test.ts`
+- `shared/waterPoisoningExposure.test.ts`
+- `shared/waterPoisoningExposure.ts`
+
 ## `shared/torchConfig.ts`
 
 **Imports**
@@ -218,3 +263,27 @@ Generated from TypeScript imports.
 
 - `player/PlayerTorch.ts`
 - `settlement/houseLighting.ts`
+
+## `shared/waterPoisoningExposure.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/temporaryConditions.ts`
+- `shared/waterPoisoningExposure.ts`
+- `world/WaterSource.ts`
+
+## `shared/waterPoisoningExposure.ts`
+
+**Imports**
+
+- `shared/temporaryConditions.ts`
+- `world/WaterSource.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/actions/survivalActions.test.ts`
+- `app/actions/survivalActions.ts`
+- `shared/waterPoisoningExposure.test.ts`

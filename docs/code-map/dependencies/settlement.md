@@ -695,6 +695,7 @@ Generated from TypeScript imports.
 - `ai/npcStamina.test.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcPhysicalProfile.test.ts`
+- `shared/effectivePhysicalAttributes.ts`
 
 ## `settlement/npcPostDeath.test.ts`
 
@@ -764,6 +765,7 @@ Generated from TypeScript imports.
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`
 - `shared/enduranceStamina.ts`
+- `shared/temporaryConditions.ts`
 
 **Imported by**
 

@@ -23,11 +23,15 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/cameraBoom.ts`
+- `player/humanCarryCapacity.ts`
 - `player/playerEncumbrance.ts`
 - `player/verticalMotion.ts`
 - `shared/HealthState.ts`
 - `shared/PhysicalAttributes.ts`
 - `shared/StaminaState.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/enduranceStamina.ts`
+- `shared/temporaryConditions.ts`
 - `terrain/footstepSurface.ts`
 - `terrain/slopeConstraint.ts`
 - `ui/agentStatusLabel.ts`
@@ -50,6 +54,7 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/userActions.ts`
 - `assets/assetIndex.ts`
+- `debug/npcDebugApi.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.ts`
@@ -82,6 +87,8 @@ Generated from TypeScript imports.
 - `settlement/settlementSignposts.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
+- `shared/temporaryConditions.test.ts`
+- `shared/waterPoisoningExposure.test.ts`
 - `terrain/bloodOverlay.ts`
 - `terrain/chunkManager.ts`
 - `terrain/dig.ts`
@@ -235,6 +242,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `items/Inventory.test.ts`
+- `player/PlayerController.ts`
 - `player/humanCarryCapacity.test.ts`
 
 ## `player/physicalWorkStrength.test.ts`
