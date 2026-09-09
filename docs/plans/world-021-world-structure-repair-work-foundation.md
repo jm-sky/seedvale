@@ -3,7 +3,7 @@
 **Created:** 2026-09-09
 **Status:** `planned` 📋
 **Priority:** high · **Effort:** M
-**Depends on:** world-020
+**Depends on:** ~~world-020~~
 **Domain:** `world`  
 **Type:** `feature`  
 **Roadmap:** -

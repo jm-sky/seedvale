@@ -5,7 +5,7 @@
 **Implemented at:** 2026-09-09
 **Type:** feature
 **Priority:** high · **Effort:** M
-**Depends on:** items-player-018
+**Depends on:** ~~items-player-018~~
 **Domain:** `world`
 **Subdomains:** `simulation` `weather`
 **Tags:** `condition` `degradation` `structures` `maintenance`
