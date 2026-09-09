@@ -112,10 +112,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/workContractActions.ts`
 
-- `createWorkContractActions` — function — line 99
-- `WorkContractActionDeps` — type — line 93
-- `WorkContractActions` — type — line 66
-- `WorkContractQuickActionEntry` — type — line 64
+- `createWorkContractActions` — function — line 100
+- `WorkContractActionDeps` — type — line 94
+- `WorkContractActions` — type — line 67
+- `WorkContractQuickActionEntry` — type — line 65
 
 ## `app/appRenderLoop.ts`
 

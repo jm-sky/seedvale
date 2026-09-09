@@ -137,48 +137,76 @@ describe('createWorkContracts one-active-contract-per-target (plan npc-018 §9)'
   })
 })
 
-describe('createWorkContracts NPC commitment lifecycle (plan npc-015)', () => {
-  it('discoverableAt only returns still-open (advertised) contracts at that board', () => {
+describe('createWorkContracts NPC assignment lifecycle (plan npc-015 / npc-028)', () => {
+  it('discoverableAt returns posted contracts with a free work slot', () => {
     const contracts = createWorkContracts(new Scene(), sampleHeight)
     const record = contracts.create(makeParams())!
     expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
     contracts.post(record.id, 'noticeBoard:home', 2)
     expect(contracts.discoverableAt('noticeBoard:home')).toEqual([contracts.find(record.id)])
     contracts.accept(record.id, 'npc:1', 3)
-    // Accepted — still posted, but no longer offered to anyone else.
+    // requestedWorkerCount defaults to 1 — slot filled, still posted.
     expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
     expect(contracts.postedAt('noticeBoard:home')).toEqual([contracts.find(record.id)])
   })
 
-  it('accept/beginTravel/beginWork/completeWork drive one contract end to end', () => {
+  it('accept/beginTravel/beginWork/completeWork drive one assignment end to end', () => {
     const contracts = createWorkContracts(new Scene(), sampleHeight)
     const record = contracts.create(makeParams())!
     contracts.post(record.id, 'noticeBoard:home', 2)
-    expect(contracts.accept(record.id, 'npc:1', 3)?.state).toBe('accepted')
-    expect(contracts.findByWorker('npc:1')?.id).toBe(record.id)
-    expect(contracts.beginTravel(record.id, 'npc:1')?.state).toBe('travelling')
-    expect(contracts.beginWork(record.id, 'npc:1', 9)?.state).toBe('working')
-    expect(contracts.completeWork(record.id, 'npc:1')?.state).toBe('payment_due')
-    // payment_due is still findable by worker (npc-016's own lookup) — just
-    // no longer something NpcAgent actively pursues.
-    expect(contracts.findByWorker('npc:1')?.state).toBe('payment_due')
+    expect(contracts.accept(record.id, 'npc:1', 3)?.state).toBe('active')
+    expect(contracts.findActiveWorkByNpc('npc:1')?.contract.id).toBe(record.id)
+    expect(contracts.findActiveWorkByNpc('npc:1')?.assignment.state).toBe('accepted')
+    expect(contracts.beginTravel(record.id, 'npc:1')).not.toBeNull()
+    expect(contracts.findActiveWorkByNpc('npc:1')?.assignment.state).toBe('travelling')
+    expect(contracts.beginWork(record.id, 'npc:1', 9)).not.toBeNull()
+    expect(contracts.findActiveWorkByNpc('npc:1')?.assignment.state).toBe('working')
+    expect(contracts.completeWork(record.id, 'npc:1')?.state).toBe('settling')
+    // payment_due is not a work-active assignment — NpcAgent stops pursuing;
+    // npc-016 looks up claims separately.
+    expect(contracts.findActiveWorkByNpc('npc:1')).toBeUndefined()
+    expect(contracts.find(record.id)?.assignments[0]?.state).toBe('payment_due')
   })
 
-  it('accept rejects a second worker once one is already assigned', () => {
+  it('accepts a second worker while a slot remains, then rejects further acceptance', () => {
     const contracts = createWorkContracts(new Scene(), sampleHeight)
-    const record = contracts.create(makeParams())!
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    expect(contracts.accept(record.id, 'npc:1', 3)).not.toBeNull()
+    expect(contracts.discoverableAt('noticeBoard:home')).toHaveLength(1)
+    expect(contracts.accept(record.id, 'npc:2', 4)).not.toBeNull()
+    expect(contracts.accept(record.id, 'npc:3', 5)).toBeNull()
+    expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
+  })
+
+  it('rejects the same NPC accepting twice, including after release', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
     contracts.post(record.id, 'noticeBoard:home', 2)
     contracts.accept(record.id, 'npc:1', 3)
-    expect(contracts.accept(record.id, 'npc:2', 4)).toBeNull()
+    expect(contracts.accept(record.id, 'npc:1', 4)).toBeNull()
+    contracts.release(record.id, 'npc:1')
+    expect(contracts.accept(record.id, 'npc:1', 5)).toBeNull()
+    expect(contracts.accept(record.id, 'npc:2', 6)).not.toBeNull()
   })
 
-  it('release returns the contract to advertised and findByWorker stops returning it', () => {
+  it('rejects an NPC that already has a work-active assignment on another contract', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const first = contracts.create(makeParams())!
+    const second = contracts.create(makeParams({ target: { kind: 'construction', targetId: 'well:2' } }))!
+    contracts.post(first.id, 'noticeBoard:home', 2)
+    contracts.post(second.id, 'noticeBoard:home', 2)
+    contracts.accept(first.id, 'npc:1', 3)
+    expect(contracts.accept(second.id, 'npc:1', 4)).toBeNull()
+  })
+
+  it('release returns a slot and findActiveWorkByNpc stops returning that NPC', () => {
     const contracts = createWorkContracts(new Scene(), sampleHeight)
     const record = contracts.create(makeParams())!
     contracts.post(record.id, 'noticeBoard:home', 2)
     contracts.accept(record.id, 'npc:1', 3)
     expect(contracts.release(record.id, 'npc:1')).toBe(true)
-    expect(contracts.findByWorker('npc:1')).toBeUndefined()
+    expect(contracts.findActiveWorkByNpc('npc:1')).toBeUndefined()
     expect(contracts.discoverableAt('noticeBoard:home')).toEqual([contracts.find(record.id)])
   })
 
@@ -189,6 +217,34 @@ describe('createWorkContracts NPC commitment lifecycle (plan npc-015)', () => {
     expect(contracts.beginWork('nope', 'npc:1', 1)).toBeNull()
     expect(contracts.completeWork('nope', 'npc:1')).toBeNull()
     expect(contracts.release('nope', 'npc:1')).toBe(false)
+  })
+
+  it('completeWork settles every still-work-active assignment on the contract', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    contracts.accept(record.id, 'npc:2', 4)
+    contracts.beginTravel(record.id, 'npc:1')
+    contracts.beginWork(record.id, 'npc:1', 9)
+    contracts.completeWork(record.id, 'npc:1')
+    const fresh = contracts.find(record.id)!
+    expect(fresh.state).toBe('settling')
+    expect(fresh.assignments.every((a) => a.state === 'payment_due')).toBe(true)
+    expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
+  })
+
+  it('cancellation releases every work-active assignment', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    contracts.accept(record.id, 'npc:2', 4)
+    expect(contracts.cancel(record.id)).toBe(true)
+    const fresh = contracts.find(record.id)!
+    expect(fresh.state).toBe('cancelled')
+    expect(fresh.assignments.every((a) => a.state === 'released')).toBe(true)
+    expect(contracts.findActiveWorkByNpc('npc:1')).toBeUndefined()
   })
 })
 
@@ -202,10 +258,11 @@ describe('createWorkContracts.creditNpcWork (plan npc-018 §6/§17)', () => {
     contracts.beginWork(record.id, 'npc:1', 9)
     const credited = contracts.creditNpcWork(record.id, 'npc:1', 2)
     expect(credited?.npcWorkCompleted).toBe(2)
+    expect(credited?.assignments[0]?.workCompleted).toBe(2)
     expect(contracts.find(record.id)?.npcWorkCompleted).toBe(2)
   })
 
-  it('rejects crediting the wrong worker, an unknown id, or a non-working contract', () => {
+  it('rejects crediting the wrong worker, an unknown id, or a non-working assignment', () => {
     const contracts = createWorkContracts(new Scene(), sampleHeight)
     const record = contracts.create(makeParams())!
     contracts.post(record.id, 'noticeBoard:home', 2)
@@ -215,5 +272,23 @@ describe('createWorkContracts.creditNpcWork (plan npc-018 §6/§17)', () => {
     contracts.beginTravel(record.id, 'npc:1')
     contracts.beginWork(record.id, 'npc:1', 9)
     expect(contracts.creditNpcWork(record.id, 'npc:2', 2)).toBeNull()
+  })
+
+  it('credits two workers independently into the same aggregate', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    contracts.accept(record.id, 'npc:2', 4)
+    contracts.beginTravel(record.id, 'npc:1')
+    contracts.beginWork(record.id, 'npc:1', 9)
+    contracts.beginTravel(record.id, 'npc:2')
+    contracts.beginWork(record.id, 'npc:2', 10)
+    contracts.creditNpcWork(record.id, 'npc:1', 2)
+    contracts.creditNpcWork(record.id, 'npc:2', 1.5)
+    const fresh = contracts.find(record.id)!
+    expect(fresh.npcWorkCompleted).toBe(3.5)
+    expect(fresh.assignments.find((a) => a.npcId === 'npc:1')?.workCompleted).toBe(2)
+    expect(fresh.assignments.find((a) => a.npcId === 'npc:2')?.workCompleted).toBe(1.5)
   })
 })

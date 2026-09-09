@@ -111,6 +111,57 @@ describe('scoreWorkContractOpportunity', () => {
     const input = baseInput({ hasWorkplace: false })
     expect(scoreWorkContractOpportunity(half, input)).toBeGreaterThan(scoreWorkContractOpportunity(full, input))
   })
+
+  it('prices only the expected remaining share once multiple workers can participate (plan npc-028 §11)', () => {
+    const solo = createWorkContractRecord({
+      id: 'workContract:solo',
+      employer: 'player',
+      target: { kind: 'construction', targetId: 'well:1' },
+      x: 0,
+      z: 0,
+      rewardCoins: 90,
+      requestedWorkShare: 1,
+      remainingWorkAtCreation: COMMITTED_WORK_HOURS,
+      requestedWorkerCount: 1,
+      now: 1,
+    })
+    const crew = createWorkContractRecord({
+      id: 'workContract:crew',
+      employer: 'player',
+      target: { kind: 'construction', targetId: 'well:1' },
+      x: 0,
+      z: 0,
+      rewardCoins: 90,
+      requestedWorkShare: 1,
+      remainingWorkAtCreation: COMMITTED_WORK_HOURS,
+      requestedWorkerCount: 3,
+      now: 1,
+    })
+    const input = baseInput({ hasWorkplace: false })
+    const soloScore = scoreWorkContractOpportunity(solo, input)
+    const crewScore = scoreWorkContractOpportunity(crew, input)
+    expect(soloScore).toBe(90 + 5 - COMMITTED_WORK_HOURS * 3)
+    expect(crewScore).toBe(30 + 5 - (COMMITTED_WORK_HOURS / 3) * 3)
+    expect(crewScore).not.toBe(soloScore)
+  })
+
+  it('does not divide by zero when committedWork is 0', () => {
+    const empty = createWorkContractRecord({
+      id: 'workContract:empty',
+      employer: 'player',
+      target: { kind: 'construction', targetId: 'well:1' },
+      x: 0,
+      z: 0,
+      rewardCoins: 50,
+      requestedWorkShare: 1,
+      remainingWorkAtCreation: 0,
+      requestedWorkerCount: 2,
+      now: 1,
+    })
+    const score = scoreWorkContractOpportunity(empty, baseInput({ hasWorkplace: false }))
+    expect(Number.isFinite(score)).toBe(true)
+    expect(score).toBe(5) // suitability only
+  })
 })
 
 describe('selectBestWorkContract', () => {

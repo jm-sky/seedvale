@@ -156,8 +156,11 @@ import { harvestWorldTreeFully } from '../world/treeHarvest'
 import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   type ContractTarget,
+  findAssignment,
   isNpcCommitmentFulfilled,
   noticeBoardId,
+  type WorkContractAssignment,
+  type WorkContractAssignmentState,
   type WorkContractRecord,
   type WorkContractState,
 } from '../world/workContract'
@@ -476,6 +479,7 @@ export type NpcInspectionSnapshot = {
   contract: {
     id: string
     state: WorkContractState
+    assignmentState: WorkContractAssignmentState
     rewardCoins: number
     targetKind: ContractTarget['kind']
     targetId: string
@@ -483,6 +487,8 @@ export type NpcInspectionSnapshot = {
     remainingWorkAtCreation: number
     committedWork: number
     npcWorkCompleted: number
+    assignmentWorkCompleted: number
+    requestedWorkerCount: number
     targetRemainingWork: number | null
   } | null
   action: {
@@ -1185,7 +1191,7 @@ export class NpcAgent {
   private readonly mining: SettlementMiningHooks | null
   /** Authoritative work-contract lifecycle (plan npc-015) — the single world
    *  system this NPC's own commitment is always resolved from
-   *  (`workContracts.findByWorker(this.id)`), never a second copy on
+   *  (`workContracts.findActiveWorkByNpc(this.id)`), never a second copy on
    *  `NpcAuthoritativeState`. Null in isolated fallbacks, same as `mining`. */
   private readonly workContracts: WorkContracts | null
   /** The one construction target kind a work contract can reference today
@@ -1523,8 +1529,9 @@ export class NpcAgent {
           }
         : null,
       contract: (() => {
-        const mine = this.workContracts?.findByWorker(this.id)
-        if (!mine) return null
+        const found = this.workContracts?.findActiveWorkByNpc(this.id)
+        if (!found) return null
+        const { contract: mine, assignment } = found
         const targetRemainingWork = (() => {
           if (mine.target.kind === 'construction') {
             const well = this.findContractWell(mine.target.targetId)
@@ -1544,6 +1551,7 @@ export class NpcAgent {
         return {
           id: mine.id,
           state: mine.state,
+          assignmentState: assignment.state,
           rewardCoins: mine.rewardCoins,
           targetKind: mine.target.kind,
           targetId: mine.target.targetId,
@@ -1551,6 +1559,8 @@ export class NpcAgent {
           remainingWorkAtCreation: mine.remainingWorkAtCreation,
           committedWork: mine.committedWork,
           npcWorkCompleted: mine.npcWorkCompleted,
+          assignmentWorkCompleted: assignment.workCompleted,
+          requestedWorkerCount: mine.requestedWorkerCount,
           targetRemainingWork,
         }
       })(),
@@ -2254,8 +2264,8 @@ export class NpcAgent {
     // npc-015 §12) — release it back to the board rather than leaving the
     // contract stuck in `travelling`/`working` forever with an assigned
     // worker that will never move again.
-    const mine = this.workContracts?.findByWorker(this.id)
-    if (mine) this.workContracts!.release(mine.id, this.id)
+    const mine = this.workContracts?.findActiveWorkByNpc(this.id)
+    if (mine) this.workContracts!.release(mine.contract.id, this.id)
     // No D1/D2 gap here — already released the conversation, already
     // failed the lifecycle unconditionally-safe (`failActionLifecycle`
     // no-ops unless `status === 'active'`, same effect as the old explicit
@@ -3966,7 +3976,7 @@ export class NpcAgent {
    * `beginIdle` fall through to its ordinary schedule dispatch.
    *
    * Deliberately stateless on the NPC side: the commitment itself is never
-   * cached here, always re-read from `workContracts.findByWorker(this.id)`
+   * cached here, always re-read from `workContracts.findActiveWorkByNpc(this.id)`
    * (implementation notes "Recommended contract ownership") — so an
    * interruption (`tickCriticalInterrupt`), a settlement unload/reload, or a
    * save/load round-trip all resume the exact same contract for free, with
@@ -3977,8 +3987,8 @@ export class NpcAgent {
   private tryPursueWorkContract(scheduledActivity: ScheduleActivity): boolean {
     const contracts = this.workContracts
     if (!contracts) return false
-    const mine = contracts.findByWorker(this.id)
-    if (mine) return this.pursueAcceptedContract(mine)
+    const mine = contracts.findActiveWorkByNpc(this.id)
+    if (mine) return this.pursueAcceptedContract(mine.contract, mine.assignment)
     return this.tryAcceptWorkContractOpportunity(contracts, scheduledActivity)
   }
 
@@ -4004,28 +4014,35 @@ export class NpcAgent {
     if (!best) return false
     const accepted = contracts.accept(best.contract.id, this.id, this.simClock)
     if (!accepted) return false
+    const assignment = findAssignment(accepted, this.id)
+    if (!assignment) return false
     this.trace.record({ simTime: this.simClock, type: 'contract.accepted', contractId: accepted.id, score: best.score })
-    return this.pursueAcceptedContract(accepted)
+    return this.pursueAcceptedContract(accepted, assignment)
   }
 
-  /** Drives one step of an already-`accepted`/`travelling`/`working`
-   *  contract's commitment (plan §6/§7/§10/§12, extended to
-   *  `terrain_preparation` by plan npc-018) — always resolves the target
-   *  fresh from `record.target.targetId` rather than any cached position
-   *  (plan §6: "the destination must derive from the authoritative contract
-   *  target/flag"). Returns `true` once this idle slot has been claimed
-   *  (even when the outcome this tick was an invalidation, not real
+  /** Drives one step of this NPC's already-accepted assignment (plan npc-015
+   *  §6/§7/§10/§12, extended to `terrain_preparation` by plan npc-018) —
+   *  always resolves the target fresh from `record.target.targetId` rather
+   *  than any cached position (plan §6: "the destination must derive from the
+   *  authoritative contract target/flag"). Assignment state is re-read
+   *  from a freshly resolved record between steps because another worker can
+   *  mutate the same contract. Returns `true` once this idle slot has been
+   *  claimed (even when the outcome this tick was an invalidation, not real
    *  progress) — `beginIdle` should not also start a schedule activity. */
-  private pursueAcceptedContract(record: WorkContractRecord): boolean {
+  private pursueAcceptedContract(record: WorkContractRecord, assignment: WorkContractAssignment): boolean {
     const contracts = this.workContracts
     if (!contracts) return false
-    if (record.state === 'payment_due') return false // nothing left to actively do — npc-016's turn.
-    if (record.target.kind === 'construction') return this.pursueConstructionContract(record, contracts)
-    if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, contracts)
-    return this.pursueBuildableContract(record, contracts)
+    if (assignment.state === 'payment_due' || assignment.state === 'released') return false
+    if (record.target.kind === 'construction') return this.pursueConstructionContract(record, assignment, contracts)
+    if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, assignment, contracts)
+    return this.pursueBuildableContract(record, assignment, contracts)
   }
 
-  private pursueConstructionContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
+  private pursueConstructionContract(
+    record: WorkContractRecord,
+    assignment: WorkContractAssignment,
+    contracts: WorkContracts,
+  ): boolean {
     const well = this.findContractWell(record.target.targetId)
     if (!well) {
       // Target disappeared/became invalid (plan §12) — never leave the
@@ -4035,15 +4052,16 @@ export class NpcAgent {
       return true
     }
     if (isWellCompleted(well)) {
-      // Target itself finished (plan §8) — ends the work phase regardless
-      // of whether the NPC's own `committedWork` was ever reached.
+      // Target itself finished (plan npc-028 §16) — ends the work phase
+      // for every still-work-active assignment, regardless of whether the
+      // group's `committedWork` was ever reached.
       contracts.completeWork(record.id, this.id)
       this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
       return true
     }
     const destination = { x: well.x, y: this.sampleHeight(well.x, well.z), z: well.z }
-    if (record.state === 'accepted' || record.state === 'travelling') {
-      if (record.state === 'accepted') contracts.beginTravel(record.id, this.id)
+    if (assignment.state === 'accepted' || assignment.state === 'travelling') {
+      if (assignment.state === 'accepted') contracts.beginTravel(record.id, this.id)
       const contractId = record.id
       this.startAction({
         kind: 'work',
@@ -4051,14 +4069,15 @@ export class NpcAgent {
         durationSec: 1.0 * this.waitMultiplier,
         onComplete: () => {
           const fresh = contracts.find(contractId)
-          if (fresh?.state === 'travelling' && fresh.workerNpcId === this.id) {
+          const freshAssignment = fresh ? findAssignment(fresh, this.id) : undefined
+          if (freshAssignment?.state === 'travelling') {
             contracts.beginWork(contractId, this.id, this.simClock)
           }
         },
       })
       return true
     }
-    // record.state === 'working'
+    // assignment.state === 'working'
     this.runContractWorkBout(record.id, well, destination)
     return true
   }
@@ -4072,7 +4091,11 @@ export class NpcAgent {
    *  completed" from "target invalidated" once `find` returns nothing
    *  (`TerrainPreparations.wasCompleted`, since a completed preparation is
    *  removed from the active registry, plan §16). */
-  private pursueTerrainContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
+  private pursueTerrainContract(
+    record: WorkContractRecord,
+    assignment: WorkContractAssignment,
+    contracts: WorkContracts,
+  ): boolean {
     const terrainPreparations = this.terrainPreparations
     if (!terrainPreparations) return false
     const prep = terrainPreparations.find(record.target.targetId)
@@ -4087,8 +4110,8 @@ export class NpcAgent {
       return true
     }
     const destination = { x: prep.center.x, y: this.sampleHeight(prep.center.x, prep.center.z), z: prep.center.z }
-    if (record.state === 'accepted' || record.state === 'travelling') {
-      if (record.state === 'accepted') contracts.beginTravel(record.id, this.id)
+    if (assignment.state === 'accepted' || assignment.state === 'travelling') {
+      if (assignment.state === 'accepted') contracts.beginTravel(record.id, this.id)
       const contractId = record.id
       this.startAction({
         kind: 'work',
@@ -4096,14 +4119,15 @@ export class NpcAgent {
         durationSec: 1.0 * this.waitMultiplier,
         onComplete: () => {
           const fresh = contracts.find(contractId)
-          if (fresh?.state === 'travelling' && fresh.workerNpcId === this.id) {
+          const freshAssignment = fresh ? findAssignment(fresh, this.id) : undefined
+          if (freshAssignment?.state === 'travelling') {
             contracts.beginWork(contractId, this.id, this.simClock)
           }
         },
       })
       return true
     }
-    // record.state === 'working'
+    // assignment.state === 'working'
     this.runTerrainContractWorkBout(record.id, prep, destination)
     return true
   }
@@ -4136,7 +4160,8 @@ export class NpcAgent {
       durationSec: WELL_WORK_SESSION_SEC * this.waitMultiplier,
       onComplete: () => {
         const freshContract = contracts.find(contractId)
-        if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
+        const freshAssignment = freshContract ? findAssignment(freshContract, this.id) : undefined
+        if (!freshAssignment || freshAssignment.state !== 'working') return
         const freshWell = this.findContractWell(well.id)
         if (!freshWell) {
           contracts.invalidateTarget(contractId)
@@ -4199,7 +4224,8 @@ export class NpcAgent {
       durationSec: TERRAIN_PREP_NPC_WORK_SESSION_SEC * this.waitMultiplier,
       onComplete: () => {
         const freshContract = contracts.find(contractId)
-        if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
+        const freshAssignment = freshContract ? findAssignment(freshContract, this.id) : undefined
+        if (!freshAssignment || freshAssignment.state !== 'working') return
         const result = terrainPreparations.contributeWork(prep.id, TERRAIN_PREP_NPC_WORK_SESSION_HOURS)
         if (!result) {
           contracts.invalidateTarget(contractId)
@@ -4224,7 +4250,11 @@ export class NpcAgent {
    *  NPC behavior"). Neither buildable removes its record on completion
    *  (unlike terrain preparation), so "missing" always means genuinely
    *  removed/invalidated — no `wasCompleted` bookkeeping needed. */
-  private pursueBuildableContract(record: WorkContractRecord, contracts: WorkContracts): boolean {
+  private pursueBuildableContract(
+    record: WorkContractRecord,
+    assignment: WorkContractAssignment,
+    contracts: WorkContracts,
+  ): boolean {
     const kind = record.target.kind as 'palisade' | 'standing_torch'
     const runtime = kind === 'palisade' ? this.palisades : this.standingTorches
     if (!runtime) return false
@@ -4235,8 +4265,8 @@ export class NpcAgent {
       return true
     }
     const destination = { x: entry.x, y: this.sampleHeight(entry.x, entry.z), z: entry.z }
-    if (record.state === 'accepted' || record.state === 'travelling') {
-      if (record.state === 'accepted') contracts.beginTravel(record.id, this.id)
+    if (assignment.state === 'accepted' || assignment.state === 'travelling') {
+      if (assignment.state === 'accepted') contracts.beginTravel(record.id, this.id)
       const contractId = record.id
       this.startAction({
         kind: 'work',
@@ -4244,14 +4274,15 @@ export class NpcAgent {
         durationSec: 1.0 * this.waitMultiplier,
         onComplete: () => {
           const fresh = contracts.find(contractId)
-          if (fresh?.state === 'travelling' && fresh.workerNpcId === this.id) {
+          const freshAssignment = fresh ? findAssignment(fresh, this.id) : undefined
+          if (freshAssignment?.state === 'travelling') {
             contracts.beginWork(contractId, this.id, this.simClock)
           }
         },
       })
       return true
     }
-    // record.state === 'working'
+    // assignment.state === 'working'
     this.runBuildableContractWorkBout(record.id, kind, record.target.targetId, destination)
     return true
   }
@@ -4275,7 +4306,8 @@ export class NpcAgent {
       durationSec: sessionSec * this.waitMultiplier,
       onComplete: () => {
         const freshContract = contracts.find(contractId)
-        if (!freshContract || freshContract.state !== 'working' || freshContract.workerNpcId !== this.id) return
+        const freshAssignment = freshContract ? findAssignment(freshContract, this.id) : undefined
+        if (!freshAssignment || freshAssignment.state !== 'working') return
         const result = runtime.contributeWork(targetId, sessionHours)
         if (!result) {
           contracts.invalidateTarget(contractId)

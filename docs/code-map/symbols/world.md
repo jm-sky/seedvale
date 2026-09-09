@@ -409,10 +409,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/createWorkContracts.ts`
 
-- `CreateWorkContractParams` — type — line 23
-- `createWorkContracts` — function — line 144
+- `CreateWorkContractParams` — type — line 28
+- `createWorkContracts` — function — line 160
   - domain: npc
-- `WorkContracts` — type — line 38
+- `WorkContractAssignmentLookup` — type — line 46
+- `WorkContracts` — type — line 51
 
 ## `world/cropLifecycle.ts`
 
@@ -1207,34 +1208,45 @@ Generated from exported TypeScript symbols.
 
 ## `world/workContract.ts`
 
-- `acceptWorkContract` — function — line 248
-- `beginContractTravel` — function — line 255
-- `beginContractWork` — function — line 262
-- `canAcceptContract` — function — line 241
-- `cancelWorkContract` — function — line 224
-- `canPostContract` — function — line 155
-- `completeContractWork` — function — line 270
-- `ConstructionContractTarget` — type — line 47
-- `contractHasActiveTarget` — function — line 147
-- `ContractTarget` — type — line 79
-- `createWorkContractRecord` — function — line 171
-- `invalidateWorkContract` — function — line 232
-- `isContractTerminal` — function — line 141
-- `isNpcCommitmentFulfilled` — function — line 295
-- `noticeBoardId` — function — line 163
-- `PalisadeContractTarget` — type — line 65
-- `postWorkContract` — function — line 213
-- `recordNpcWorkContribution` — function — line 303
-- `releaseWorkContract` — function — line 285
-- `sameContractTarget` — function — line 311
-- `StandingTorchContractTarget` — type — line 72
-- `TerrainPreparationContractTarget` — type — line 56
-- `WORK_SHARE_PRESETS` — const — line 169
-- `WorkContractAdvertisement` — type — line 35
-- `WorkContractRecord` — type — line 85
-- `WorkContractState` — type — line 24
+- `acceptWorkContract` — function — line 340
+- `activeWorkAssignmentCount` — function — line 176
+- `beginContractTravel` — function — line 373
+- `beginContractWork` — function — line 381
+- `canAcceptContract` — function — line 333
+- `cancelWorkContract` — function — line 303
+- `canPostContract` — function — line 203
+- `completeContractWork` — function — line 403
+- `ConstructionContractTarget` — type — line 52
+- `contractHasActiveTarget` — function — line 195
+- `contractRewardRate` — function — line 439
+- `ContractTarget` — type — line 84
+- `createWorkContractRecord` — function — line 242
+- `expectedCandidateWork` — function — line 448
+- `findAssignment` — function — line 189
+- `groupRemainingWork` — function — line 185
+- `invalidateWorkContract` — function — line 317
+- `isAssignmentWorkActive` — function — line 171
+- `isContractDiscoverable` — function — line 213
+- `isContractTerminal` — function — line 165
+- `isNpcCommitmentFulfilled` — function — line 433
+- `normalizeRequestedWorkerCount` — function — line 237
+- `noticeBoardId` — function — line 225
+- `PalisadeContractTarget` — type — line 70
+- `postWorkContract` — function — line 284
+- `recordNpcWorkContribution` — function — line 461
+- `releaseWorkContract` — function — line 415
+- `sameContractTarget` — function — line 483
+- `StandingTorchContractTarget` — type — line 77
+- `TerrainPreparationContractTarget` — type — line 61
+- `WORK_SHARE_PRESETS` — const — line 231
+- `WorkContractAdvertisement` — type — line 40
+- `WorkContractAssignment` — type — line 94
+- `WorkContractAssignmentState` — type — line 33
+- `WorkContractRecord` — type — line 104
+- `WorkContractState` — type — line 21
   - domain: npc
-- `WorkType` — type — line 39
+- `WORKER_COUNT_PRESETS` — const — line 235
+- `WorkType` — type — line 44
 
 ## `world/worldContext.ts`
 

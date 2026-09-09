@@ -410,14 +410,25 @@ export type SavePlayerGarden = {
 export type SaveWorkContractState =
   | 'available'
   | 'advertised'
+  | 'active'
+  | 'settling'
+  | 'completed'
+  | 'cancelled'
+  | 'invalidated'
+export type SaveWorkContractAssignmentState =
   | 'accepted'
   | 'travelling'
   | 'working'
   | 'payment_due'
-  | 'completed'
-  | 'cancelled'
-  | 'invalidated'
+  | 'released'
 export type SaveWorkContractAdvertisement = 'not_posted' | 'posted'
+export type SaveWorkContractAssignment = {
+  npcId: string
+  state: SaveWorkContractAssignmentState
+  acceptedAt: number
+  workStartedAt: number | null
+  workCompleted: number
+}
 export type SaveConstructionContractTarget = { kind: 'construction', targetId: string }
 /** Mirrors `world/workContract.ts`'s `TerrainPreparationContractTarget`
  *  (plan npc-018 §14). */
@@ -444,13 +455,11 @@ export type SaveWorkContract = {
   postedBoardId: string | null
   createdAt: number
   postedAt: number | null
-  /** NPC worker commitment (plan npc-015 §5/§13) — `null` while unassigned;
-   *  the sole persisted record of "which NPC is doing this", never
-   *  duplicated onto NPC-side save state (see `world/workContract.ts`'s
-   *  `WorkContractRecord.workerNpcId`). */
-  workerNpcId: string | null
-  acceptedAt: number | null
-  workStartedAt: number | null
+  /** Integer `>= 1` — frozen after creation (plan npc-028 §4/§20). */
+  requestedWorkerCount: number
+  /** Every NPC that has accepted this contract, including released and
+   *  payment-due history. Not duplicated onto NPC-side save state. */
+  assignments: SaveWorkContractAssignment[]
   /** Shared-work commitment snapshot (plan npc-018 §23) — mirrors
    *  `world/workContract.ts`'s `WorkContractRecord` fields of the same name.
    *  Frozen at creation except `npcWorkCompleted`, which only ever grows
@@ -467,7 +476,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 13
+export const CURRENT_SAVE_VERSION = 14
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1246,12 +1255,28 @@ function isPlatformsField(value: unknown): value is SavePlatform[] {
 }
 
 const WORK_CONTRACT_STATES: ReadonlySet<string> = new Set([
-  'accepted', 'advertised', 'available', 'cancelled', 'completed', 'invalidated', 'payment_due', 'travelling', 'working',
+  'active', 'advertised', 'available', 'cancelled', 'completed', 'invalidated', 'settling',
+])
+
+const WORK_CONTRACT_ASSIGNMENT_STATES: ReadonlySet<string> = new Set([
+  'accepted', 'payment_due', 'released', 'travelling', 'working',
 ])
 
 const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set([
   'construction', 'palisade', 'standing_torch', 'terrain_preparation',
 ])
+
+function isWorkContractAssignment(value: unknown): value is SaveWorkContractAssignment {
+  if (!value || typeof value !== 'object') return false
+  const a = value as Record<string, unknown>
+  return (
+    typeof a.npcId === 'string' &&
+    typeof a.state === 'string' && WORK_CONTRACT_ASSIGNMENT_STATES.has(a.state) &&
+    typeof a.acceptedAt === 'number' &&
+    (a.workStartedAt === null || typeof a.workStartedAt === 'number') &&
+    typeof a.workCompleted === 'number'
+  )
+}
 
 function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
   if (!Array.isArray(value)) return false
@@ -1274,9 +1299,8 @@ function isWorkContractsField(value: unknown): value is SaveWorkContract[] {
       (c.postedBoardId === null || typeof c.postedBoardId === 'string') &&
       typeof c.createdAt === 'number' &&
       (c.postedAt === null || typeof c.postedAt === 'number') &&
-      (c.workerNpcId === null || typeof c.workerNpcId === 'string') &&
-      (c.acceptedAt === null || typeof c.acceptedAt === 'number') &&
-      (c.workStartedAt === null || typeof c.workStartedAt === 'number') &&
+      typeof c.requestedWorkerCount === 'number' && Number.isInteger(c.requestedWorkerCount) && c.requestedWorkerCount >= 1 &&
+      Array.isArray(c.assignments) && c.assignments.every(isWorkContractAssignment) &&
       typeof c.requestedWorkShare === 'number' &&
       typeof c.remainingWorkAtCreation === 'number' &&
       typeof c.committedWork === 'number' &&
@@ -1995,6 +2019,76 @@ function migrateSaveV12ToV13(data: unknown): unknown {
   return { ...v, version: 13, npcStates: next }
 }
 
+function migrateContractStateV13ToV14(state: unknown): SaveWorkContractState {
+  if (state === 'accepted' || state === 'travelling' || state === 'working') return 'active'
+  if (state === 'payment_due') return 'settling'
+  if (state === 'available' || state === 'advertised' || state === 'active' || state === 'settling'
+    || state === 'completed' || state === 'cancelled' || state === 'invalidated') {
+    return state
+  }
+  return 'available'
+}
+
+function migrateAssignmentStateV13ToV14(state: unknown): SaveWorkContractAssignmentState {
+  if (state === 'accepted' || state === 'travelling' || state === 'working' || state === 'payment_due' || state === 'released') {
+    return state
+  }
+  return 'accepted'
+}
+
+function migrateWorkContractV13ToV14(entry: unknown): Record<string, unknown> {
+  const c = (entry && typeof entry === 'object') ? entry as Record<string, unknown> : {}
+  const {
+    workerNpcId,
+    acceptedAt,
+    workStartedAt,
+    assignments: existingAssignments,
+    requestedWorkerCount: existingCount,
+    ...rest
+  } = c
+  const requestedWorkerCount = typeof existingCount === 'number' && Number.isInteger(existingCount) && existingCount >= 1
+    ? existingCount
+    : 1
+  let assignments: SaveWorkContractAssignment[]
+  if (Array.isArray(existingAssignments)) {
+    assignments = existingAssignments.filter(isWorkContractAssignment)
+  } else if (typeof workerNpcId === 'string') {
+    assignments = [{
+      npcId: workerNpcId,
+      state: migrateAssignmentStateV13ToV14(c.state),
+      acceptedAt: typeof acceptedAt === 'number' ? acceptedAt : 0,
+      workStartedAt: typeof workStartedAt === 'number' ? workStartedAt : null,
+      workCompleted: typeof c.npcWorkCompleted === 'number' ? c.npcWorkCompleted : 0,
+    }]
+  } else {
+    assignments = []
+  }
+  return {
+    ...rest,
+    state: migrateContractStateV13ToV14(c.state),
+    requestedWorkerCount,
+    assignments,
+  }
+}
+
+/** v13 → v14 (plan npc-028): replaces the single-worker contract fields with
+ *  `requestedWorkerCount` + `assignments[]`. An old unassigned contract
+ *  becomes `requestedWorkerCount: 1` with an empty assignment list. A
+ *  contract that had `workerNpcId` becomes one equivalent assignment; its
+ *  `workCompleted` is copied from the existing aggregate `npcWorkCompleted`
+ *  and is not added to the aggregate again. Old execution states
+ *  (`accepted`/`travelling`/`working`/`payment_due`) move onto that
+ *  assignment; the contract itself becomes `active` or `settling`. */
+function migrateSaveV13ToV14(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const workContracts = Array.isArray(v.workContracts) ? v.workContracts : []
+  return {
+    ...v,
+    version: 14,
+    workContracts: workContracts.map(migrateWorkContractV13ToV14),
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2008,6 +2102,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   10: migrateSaveV10ToV11,
   11: migrateSaveV11ToV12,
   12: migrateSaveV12ToV13,
+  13: migrateSaveV13ToV14,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   acceptWorkContract,
+  activeWorkAssignmentCount,
   beginContractTravel,
   beginContractWork,
   canAcceptContract,
@@ -9,7 +10,11 @@ import {
   completeContractWork,
   contractHasActiveTarget,
   createWorkContractRecord,
+  expectedCandidateWork,
+  findAssignment,
+  groupRemainingWork,
   invalidateWorkContract,
+  isContractDiscoverable,
   isContractTerminal,
   isNpcCommitmentFulfilled,
   noticeBoardId,
@@ -19,7 +24,11 @@ import {
   sameContractTarget,
 } from './workContract'
 
-function makeRecord(overrides: { requestedWorkShare?: number, remainingWorkAtCreation?: number } = {}) {
+function makeRecord(overrides: {
+  requestedWorkShare?: number
+  remainingWorkAtCreation?: number
+  requestedWorkerCount?: number
+} = {}) {
   return createWorkContractRecord({
     id: 'workContract:1',
     employer: 'player',
@@ -29,25 +38,25 @@ function makeRecord(overrides: { requestedWorkShare?: number, remainingWorkAtCre
     rewardCoins: 25,
     requestedWorkShare: overrides.requestedWorkShare ?? 1,
     remainingWorkAtCreation: overrides.remainingWorkAtCreation ?? 6,
+    requestedWorkerCount: overrides.requestedWorkerCount,
     now: 1,
   })
 }
 
-function makeAdvertised() {
-  return postWorkContract(makeRecord(), 'noticeBoard:home', 2)!
+function makeAdvertised(overrides: Parameters<typeof makeRecord>[0] = {}) {
+  return postWorkContract(makeRecord(overrides), 'noticeBoard:home', 2)!
 }
 
 describe('createWorkContractRecord', () => {
-  it('starts available/not_posted, unassigned', () => {
+  it('starts available/not_posted, with no assignments', () => {
     const record = makeRecord()
     expect(record.state).toBe('available')
     expect(record.advertisement).toBe('not_posted')
     expect(record.postedBoardId).toBeNull()
     expect(record.postedAt).toBeNull()
     expect(record.target).toEqual({ kind: 'construction', targetId: 'contractTarget:1' })
-    expect(record.workerNpcId).toBeNull()
-    expect(record.acceptedAt).toBeNull()
-    expect(record.workStartedAt).toBeNull()
+    expect(record.requestedWorkerCount).toBe(1)
+    expect(record.assignments).toEqual([])
   })
 
   it('snapshots the work commitment exactly once (plan npc-018 §5)', () => {
@@ -63,6 +72,12 @@ describe('createWorkContractRecord', () => {
     expect(over.requestedWorkShare).toBe(1)
     expect(over.remainingWorkAtCreation).toBe(0)
     expect(over.committedWork).toBe(0)
+  })
+
+  it('normalizes requestedWorkerCount to an integer ≥ 1 (plan npc-028 §4)', () => {
+    expect(makeRecord({ requestedWorkerCount: 3 }).requestedWorkerCount).toBe(3)
+    expect(makeRecord({ requestedWorkerCount: 0 }).requestedWorkerCount).toBe(1)
+    expect(makeRecord({ requestedWorkerCount: 2.9 }).requestedWorkerCount).toBe(2)
   })
 })
 
@@ -144,6 +159,8 @@ describe('isContractTerminal / contractHasActiveTarget', () => {
     expect(isContractTerminal('invalidated')).toBe(true)
     expect(isContractTerminal('available')).toBe(false)
     expect(isContractTerminal('advertised')).toBe(false)
+    expect(isContractTerminal('active')).toBe(false)
+    expect(isContractTerminal('settling')).toBe(false)
   })
 
   it('contractHasActiveTarget mirrors the terminal check', () => {
@@ -160,55 +177,68 @@ describe('noticeBoardId', () => {
   })
 })
 
-describe('NPC commitment lifecycle (plan npc-015)', () => {
-  it('accepts an advertised, unassigned contract', () => {
+describe('NPC assignment lifecycle (plan npc-028)', () => {
+  it('accepts an advertised contract by adding an assignment and moving to active', () => {
     const advertised = makeAdvertised()
-    expect(canAcceptContract(advertised)).toBe(true)
-    const accepted = acceptWorkContract(advertised, 'npc:1', 5)
-    expect(accepted!.state).toBe('accepted')
-    expect(accepted!.workerNpcId).toBe('npc:1')
-    expect(accepted!.acceptedAt).toBe(5)
+    expect(canAcceptContract(advertised, 'npc:1')).toBe(true)
+    const accepted = acceptWorkContract(advertised, 'npc:1', 5)!
+    expect(accepted.state).toBe('active')
+    expect(findAssignment(accepted, 'npc:1')).toMatchObject({
+      npcId: 'npc:1',
+      state: 'accepted',
+      acceptedAt: 5,
+      workStartedAt: null,
+      workCompleted: 0,
+    })
   })
 
-  it('rejects accepting an already-assigned, not-yet-posted, or terminal contract', () => {
-    expect(acceptWorkContract(makeRecord(), 'npc:1', 5)).toBeNull() // not posted
+  it('rejects accepting a not-yet-posted, terminal, or already-assigned-to-this-NPC contract', () => {
+    expect(acceptWorkContract(makeRecord(), 'npc:1', 5)).toBeNull()
     const accepted = acceptWorkContract(makeAdvertised(), 'npc:1', 5)!
-    expect(canAcceptContract(accepted)).toBe(false)
-    expect(acceptWorkContract(accepted, 'npc:2', 6)).toBeNull() // already taken
+    expect(canAcceptContract(accepted, 'npc:1')).toBe(false)
+    expect(acceptWorkContract(accepted, 'npc:1', 6)).toBeNull()
     const cancelled = cancelWorkContract(makeAdvertised())!
     expect(acceptWorkContract(cancelled, 'npc:1', 5)).toBeNull()
   })
 
-  it('walks accepted → travelling → working → payment_due for the assigned worker only', () => {
+  it('walks accepted → travelling → working → settling for the assigned worker only', () => {
     const accepted = acceptWorkContract(makeAdvertised(), 'npc:1', 5)!
-    expect(beginContractTravel(accepted, 'npc:2')).toBeNull() // wrong worker
+    expect(beginContractTravel(accepted, 'npc:2')).toBeNull()
     const travelling = beginContractTravel(accepted, 'npc:1')!
-    expect(travelling.state).toBe('travelling')
+    expect(findAssignment(travelling, 'npc:1')?.state).toBe('travelling')
     expect(beginContractWork(travelling, 'npc:2', 9)).toBeNull()
     const working = beginContractWork(travelling, 'npc:1', 9)!
-    expect(working.state).toBe('working')
-    expect(working.workStartedAt).toBe(9)
+    expect(findAssignment(working, 'npc:1')).toMatchObject({ state: 'working', workStartedAt: 9 })
     expect(completeContractWork(working, 'npc:2')).toBeNull()
-    const paymentDue = completeContractWork(working, 'npc:1')!
-    expect(paymentDue.state).toBe('payment_due')
+    const settled = completeContractWork(working, 'npc:1')!
+    expect(settled.state).toBe('settling')
+    expect(findAssignment(settled, 'npc:1')?.state).toBe('payment_due')
   })
 
   it('rejects skipping a lifecycle step', () => {
     const accepted = acceptWorkContract(makeAdvertised(), 'npc:1', 5)!
-    expect(beginContractWork(accepted, 'npc:1', 9)).toBeNull() // still accepted, not travelling
-    expect(completeContractWork(accepted, 'npc:1')).toBeNull()
+    expect(beginContractWork(accepted, 'npc:1', 9)).toBeNull()
+    expect(completeContractWork(accepted, 'npc:1')).not.toBeNull() // work-active may settle early (target finished while travelling)
   })
 
-  it('releases a commitment back to advertised, keeping the posting, only for the assigned worker', () => {
-    const working = beginContractWork(beginContractTravel(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!, 'npc:1')!, 'npc:1', 9)!
+  it('releases a work-active assignment, keeping the posting and contribution', () => {
+    const working = beginContractWork(
+      beginContractTravel(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!, 'npc:1')!,
+      'npc:1',
+      9,
+    )!
+    const credited = recordNpcWorkContribution(working, 'npc:1', 2)!
     expect(releaseWorkContract(working, 'npc:2')).toBeNull()
-    const released = releaseWorkContract(working, 'npc:1')!
+    const released = releaseWorkContract(credited, 'npc:1')!
     expect(released.state).toBe('advertised')
-    expect(released.workerNpcId).toBeNull()
-    expect(released.acceptedAt).toBeNull()
-    expect(released.workStartedAt).toBeNull()
+    expect(findAssignment(released, 'npc:1')).toMatchObject({
+      state: 'released',
+      workCompleted: 2,
+    })
+    expect(released.npcWorkCompleted).toBe(2)
     expect(released.advertisement).toBe('posted')
     expect(released.postedBoardId).toBe('noticeBoard:home')
+    expect(isContractDiscoverable(released)).toBe(true)
   })
 
   it('cannot release an unassigned or terminal contract', () => {
@@ -217,34 +247,161 @@ describe('NPC commitment lifecycle (plan npc-015)', () => {
     expect(releaseWorkContract(cancelled, 'npc:1')).toBeNull()
   })
 
-  it('cancelling or invalidating an assigned contract also clears the worker', () => {
+  it('cancelling or invalidating an assigned contract releases work-active assignments without dropping history', () => {
     const accepted = acceptWorkContract(makeAdvertised(), 'npc:1', 5)!
-    expect(cancelWorkContract(accepted)!.workerNpcId).toBeNull()
-    expect(invalidateWorkContract(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!)!.workerNpcId).toBeNull()
+    const cancelled = cancelWorkContract(accepted)!
+    expect(findAssignment(cancelled, 'npc:1')?.state).toBe('released')
+    const invalidated = invalidateWorkContract(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!)!
+    expect(findAssignment(invalidated, 'npc:1')?.state).toBe('released')
   })
 })
 
-describe('shared-work commitment accounting (plan npc-018)', () => {
-  it('recordNpcWorkContribution adds to npcWorkCompleted without mutating the input', () => {
-    const record = makeRecord()
-    const credited = recordNpcWorkContribution(record, 2)
+describe('multiple workers (plan npc-028)', () => {
+  it('allows simultaneous assignments up to requestedWorkerCount and rejects a duplicate NPC', () => {
+    const advertised = makeAdvertised({ requestedWorkerCount: 3 })
+    const a = acceptWorkContract(advertised, 'npc:1', 5)!
+    expect(isContractDiscoverable(a)).toBe(true)
+    const b = acceptWorkContract(a, 'npc:2', 6)!
+    const c = acceptWorkContract(b, 'npc:3', 7)!
+    expect(activeWorkAssignmentCount(c)).toBe(3)
+    expect(canAcceptContract(c, 'npc:4')).toBe(false)
+    expect(acceptWorkContract(c, 'npc:4', 8)).toBeNull()
+    expect(acceptWorkContract(c, 'npc:1', 8)).toBeNull()
+  })
+
+  it('lets workers progress independently', () => {
+    const advertised = makeAdvertised({ requestedWorkerCount: 3 })
+    let record = acceptWorkContract(advertised, 'npc:a', 5)!
+    record = acceptWorkContract(record, 'npc:b', 6)!
+    record = acceptWorkContract(record, 'npc:c', 7)!
+    record = beginContractTravel(record, 'npc:a')!
+    record = beginContractWork(record, 'npc:a', 8)!
+    record = beginContractTravel(record, 'npc:b')!
+    expect(findAssignment(record, 'npc:a')?.state).toBe('working')
+    expect(findAssignment(record, 'npc:b')?.state).toBe('travelling')
+    expect(findAssignment(record, 'npc:c')?.state).toBe('accepted')
+    expect(record.state).toBe('active')
+  })
+
+  it('does not multiply group commitment by worker count', () => {
+    const record = makeRecord({ requestedWorkShare: 0.75, remainingWorkAtCreation: 12, requestedWorkerCount: 3 })
+    expect(record.committedWork).toBe(9)
+  })
+
+  it('credits per-assignment work into the aggregate without double-counting', () => {
+    let record = beginContractWork(
+      beginContractTravel(acceptWorkContract(makeAdvertised({ requestedWorkerCount: 2 }), 'npc:1', 5)!, 'npc:1')!,
+      'npc:1',
+      9,
+    )!
+    record = acceptWorkContract(record, 'npc:2', 6)!
+    record = beginContractTravel(record, 'npc:2')!
+    record = beginContractWork(record, 'npc:2', 10)!
+    record = recordNpcWorkContribution(record, 'npc:1', 5)!
+    record = recordNpcWorkContribution(record, 'npc:2', 3)!
+    expect(findAssignment(record, 'npc:1')?.workCompleted).toBe(5)
+    expect(findAssignment(record, 'npc:2')?.workCompleted).toBe(3)
+    expect(record.npcWorkCompleted).toBe(8)
+    expect(groupRemainingWork(record)).toBe(0) // committedWork defaults to 6; 5+3 overshoots
+  })
+
+  it('releasing one worker reopens a slot without touching others', () => {
+    let record = acceptWorkContract(makeAdvertised({ requestedWorkerCount: 3 }), 'npc:1', 5)!
+    record = acceptWorkContract(record, 'npc:2', 6)!
+    record = acceptWorkContract(record, 'npc:3', 7)!
+    record = beginContractTravel(record, 'npc:1')!
+    record = beginContractWork(record, 'npc:1', 8)!
+    record = recordNpcWorkContribution(record, 'npc:1', 2)!
+    const released = releaseWorkContract(record, 'npc:1')!
+    expect(findAssignment(released, 'npc:1')?.state).toBe('released')
+    expect(findAssignment(released, 'npc:1')?.workCompleted).toBe(2)
+    expect(findAssignment(released, 'npc:2')?.state).toBe('accepted')
+    expect(findAssignment(released, 'npc:3')?.state).toBe('accepted')
+    expect(released.npcWorkCompleted).toBe(2)
+    expect(released.state).toBe('active')
+    expect(isContractDiscoverable(released)).toBe(true)
+    const replacement = acceptWorkContract(released, 'npc:4', 9)!
+    expect(findAssignment(replacement, 'npc:4')?.state).toBe('accepted')
+    expect(replacement.committedWork).toBe(record.committedWork)
+  })
+
+  it('completeContractWork settles every still-work-active assignment', () => {
+    let record = acceptWorkContract(makeAdvertised({ requestedWorkerCount: 2 }), 'npc:1', 5)!
+    record = acceptWorkContract(record, 'npc:2', 6)!
+    record = beginContractTravel(record, 'npc:1')!
+    record = beginContractWork(record, 'npc:1', 8)!
+    const settled = completeContractWork(record, 'npc:1')!
+    expect(settled.state).toBe('settling')
+    expect(findAssignment(settled, 'npc:1')?.state).toBe('payment_due')
+    expect(findAssignment(settled, 'npc:2')?.state).toBe('payment_due')
+    expect(isContractDiscoverable(settled)).toBe(false)
+  })
+
+  it('cancellation releases every work-active assignment and keeps contribution', () => {
+    let record = beginContractWork(
+      beginContractTravel(acceptWorkContract(makeAdvertised({ requestedWorkerCount: 2 }), 'npc:1', 5)!, 'npc:1')!,
+      'npc:1',
+      8,
+    )!
+    record = acceptWorkContract(record, 'npc:2', 6)!
+    record = recordNpcWorkContribution(record, 'npc:1', 1)!
+    const cancelled = cancelWorkContract(record)!
+    expect(cancelled.state).toBe('cancelled')
+    expect(findAssignment(cancelled, 'npc:1')).toMatchObject({ state: 'released', workCompleted: 1 })
+    expect(findAssignment(cancelled, 'npc:2')?.state).toBe('released')
+    expect(cancelled.npcWorkCompleted).toBe(1)
+  })
+})
+
+describe('shared-work commitment accounting (plan npc-018 / npc-028)', () => {
+  it('recordNpcWorkContribution adds to assignment and aggregate without mutating the input', () => {
+    const working = beginContractWork(
+      beginContractTravel(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!, 'npc:1')!,
+      'npc:1',
+      9,
+    )!
+    const credited = recordNpcWorkContribution(working, 'npc:1', 2)!
     expect(credited.npcWorkCompleted).toBe(2)
-    expect(record.npcWorkCompleted).toBe(0)
-    expect(recordNpcWorkContribution(credited, 1.5).npcWorkCompleted).toBe(3.5)
+    expect(findAssignment(credited, 'npc:1')?.workCompleted).toBe(2)
+    expect(working.npcWorkCompleted).toBe(0)
+    expect(recordNpcWorkContribution(credited, 'npc:1', 1.5)!.npcWorkCompleted).toBe(3.5)
   })
 
   it('recordNpcWorkContribution is a no-op for a non-positive amount', () => {
-    const record = makeRecord()
-    expect(recordNpcWorkContribution(record, 0)).toBe(record)
-    expect(recordNpcWorkContribution(record, -1)).toBe(record)
+    const working = beginContractWork(
+      beginContractTravel(acceptWorkContract(makeAdvertised(), 'npc:1', 5)!, 'npc:1')!,
+      'npc:1',
+      9,
+    )!
+    expect(recordNpcWorkContribution(working, 'npc:1', 0)).toBe(working)
+    expect(recordNpcWorkContribution(working, 'npc:1', -1)).toBe(working)
+  })
+
+  it('rejects crediting a worker who is not currently working', () => {
+    const accepted = acceptWorkContract(makeAdvertised(), 'npc:1', 5)!
+    expect(recordNpcWorkContribution(accepted, 'npc:1', 2)).toBeNull()
+    expect(recordNpcWorkContribution(accepted, 'npc:2', 2)).toBeNull()
   })
 
   it('isNpcCommitmentFulfilled compares npcWorkCompleted against committedWork, not the target\'s total work', () => {
     const record = makeRecord({ requestedWorkShare: 0.5, remainingWorkAtCreation: 6 }) // committedWork = 3
     expect(isNpcCommitmentFulfilled(record)).toBe(false)
-    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(record, 2))).toBe(false)
-    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(record, 3))).toBe(true)
-    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(record, 10))).toBe(true) // overshoot still fulfilled
+    const working = beginContractWork(
+      beginContractTravel(acceptWorkContract(postWorkContract(record, 'noticeBoard:home', 2)!, 'npc:1', 5)!, 'npc:1')!,
+      'npc:1',
+      9,
+    )!
+    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(working, 'npc:1', 2)!)).toBe(false)
+    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(working, 'npc:1', 3)!)).toBe(true)
+    expect(isNpcCommitmentFulfilled(recordNpcWorkContribution(working, 'npc:1', 10)!)).toBe(true)
+  })
+
+  it('expectedCandidateWork splits remaining group work across remaining slots', () => {
+    const advertised = makeAdvertised({ requestedWorkerCount: 3, remainingWorkAtCreation: 12, requestedWorkShare: 0.75 })
+    expect(advertised.committedWork).toBe(9)
+    expect(expectedCandidateWork(advertised)).toBe(3)
+    const one = acceptWorkContract(advertised, 'npc:1', 5)!
+    expect(expectedCandidateWork(one)).toBe(3)
   })
 
   it('sameContractTarget compares kind + targetId, not object identity', () => {

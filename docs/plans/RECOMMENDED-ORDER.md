@@ -120,111 +120,107 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  53  
    → **unlocks:** 0/0
 
-12. `npc-028` — **Work Contracts — Multiple Workers**  
-  🔴 `M` · **Score:**  47  
-   → **unlocks:** 1/1
-
-13. `settlements-npcs-007` — **Bandages and herbal medicine**  
+12. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-14. `world-021` — **World structure repair work foundation**  
+13. `world-021` — **World structure repair work foundation**  
   🔴 `M` · **Score:**  47  
    → **unlocks:** 1/1
 
-15. `settlements-npcs-022` — **Household help and age-based work participation**  
+14. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-16. `items-player-021` — **Player skills and targeted skill actions foundation**  
+15. `items-player-021` — **Player skills and targeted skill actions foundation**  
   🔴 `M` · **Score:**  41  
    → **unlocks:** 1/1
 
-17. `settlements-npcs-025` — **Resource storage visualization**  
+16. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-18. `npc-011` — **NPC Burial & Graves**  
+17. `npc-011` — **NPC Burial & Graves**  
   🟡 `L` · **Score:**  38  
    → **unlocks:** 1/1
 
-19. `fauna-018` — **Persistent habitat occupants**  
+18. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-20. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
+19. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-21. `settlements-005` — **Residential House Construction**  
+20. `settlements-005` — **Residential House Construction**  
   🔴 `L` · **Score:**  32  
    → **unlocks:** 0/0
 
-22. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+21. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-23. `npc-026` — **NPC Grave Visits**  
+22. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  31  
    → **unlocks:** 0/0
 
-24. `items-player-014` — **Rope-pullable resource transport**  
+23. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-25. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+24. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-26. `tools-005` — **Seedvale Character Preparation Panel**  
+25. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-27. `items-player-020` — **Player-built animal trough and water storage**  
+26. `items-player-020` — **Player-built animal trough and water storage**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-28. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+27. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-29. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+28. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-30. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+29. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-31. `items-player-019` — **Player camp repair and sewing kit**  
+30. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  22  
    → **unlocks:** 0/0
 
-32. `fauna-013` — **Animal hand-feeding and human affinity**  
+31. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-33. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+32. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-34. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
+33. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-35. `settlements-006` — **Merchant sell pricing — condition and social standing**  
+34. `settlements-006` — **Merchant sell pricing — condition and social standing**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-36. `world-terrain-015` — **Water Reflection Content Budget**  
+35. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-37. `fauna-007` — **Animal leading and cart harness**  
+36. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-38. `npc-004` — **Drzewo genealogiczne NPC**  
+37. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 
@@ -243,9 +239,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`items-player-018-camp-inspection-condition-and-full-camp-setup.md`](items-player-018-camp-inspection-condition-and-full-camp-setup.md)
   - [`items-player-021-player-skills-and-targeted-skill-actions-foundation.md`](items-player-021-player-skills-and-targeted-skill-actions-foundation.md)
   - [`world-021-world-structure-repair-work-foundation.md`](world-021-world-structure-repair-work-foundation.md)
-- [`npc-016-work-contracts-payment-and-employer-interaction.md`](npc-016-work-contracts-payment-and-employer-interaction.md)  
-  is blocked by:
-  - [`npc-028-work-contracts-multiple-workers.md`](npc-028-work-contracts-multiple-workers.md)
 - [`npc-026-npc-grave-visits.md`](npc-026-npc-grave-visits.md)  
   is blocked by:
   - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)

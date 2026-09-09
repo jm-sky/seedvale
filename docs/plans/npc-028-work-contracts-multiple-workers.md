@@ -1,7 +1,7 @@
 # Plan: Work Contracts — Multiple Workers
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~npc-018~~

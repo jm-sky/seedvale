@@ -93,7 +93,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
 | 💡 `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | -       | 🟡 | S      | ~~quests-progression-001~~ |
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
-| 💡 `npc-028-work-contracts-multiple-workers.md`                             | -       | 🔴 | M      | ~~npc-018~~ |
 | 💡 `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
 | ◼️ `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
 
@@ -119,6 +118,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `npc-013-night-campfire-gathering.md` | Naturalność nocnych spotkań NPC przy ognisku |
 | `npc-012-weather-reaction-and-shelter.md` | Naturalność reakcji NPC na złą pogodę i powrotu do rutyny |
 | `npc-015-work-contracts-npc-work-and-construction.md` | Pełny przebieg kontraktu NPC w świecie, w tym przerwanie przez potrzeby i wznowienie |
+| `npc-028-work-contracts-multiple-workers.md` | Zlecenie na 2–3 najemników: kilku NPC przyjmuje to samo ogłoszenie, pracują niezależnie na tym samym celu, zwolnienie/śmierć jednego otwiera slot bez resetu wkładu, wynagrodzenie jest łączne (nie per osoba), save/load nie duplikuje assignmentów |
 | `fauna-006-wolf-settlement-entry.md` | Wilk sensownie ściga cel do osady, ale nie wchodzi do niej bez powodu |
 | `world-terrain-005-distance-based-terrain-detail-lod.md` | Jakość i wydajność grass/road LOD z różnych odległości |
 | `world-terrain-006-world-generation-placement-correctness.md` | Rzeki, brzegi, góry, roślinność, placement obiektów i seamy chunków |

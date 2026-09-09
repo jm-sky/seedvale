@@ -113,9 +113,8 @@ const validSave: SaveData = {
     postedBoardId: 'noticeBoard:home',
     createdAt: 2,
     postedAt: 2.1,
-    workerNpcId: null,
-    acceptedAt: null,
-    workStartedAt: null,
+    requestedWorkerCount: 1,
+    assignments: [],
     requestedWorkShare: 0.5,
     remainingWorkAtCreation: 6,
     committedWork: 3,
@@ -261,6 +260,8 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], state: 'bogus' }] })).toBeNull()
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], target: { kind: 'bogus', targetId: 'x' } }] })).toBeNull()
     expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], advertisement: 'bogus' }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], requestedWorkerCount: 0 }] })).toBeNull()
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...validSave.workContracts[0], assignments: [{ npcId: 'npc:1', state: 'bogus', acceptedAt: 1, workStartedAt: null, workCompleted: 0 }] }] })).toBeNull()
     expect(loadSaveData({ ...validSave, workContracts: 'nope' })).toBeNull()
   })
 
@@ -450,8 +451,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
   })
 
   it('migrates a real v2 save (plan npc-015) into v3, defaulting the new work-contract worker fields to null', () => {
-    const { workerNpcId: _w, acceptedAt: _a, workStartedAt: _s, ...v2Contract } = validSave.workContracts[0]!
-    const v2Save = { ...validSave, version: 2, workContracts: [v2Contract] }
+    const v2Save = { ...validSave, version: 2 }
     expect(loadStoredSave(v2Save)).toEqual({ status: 'ok', data: validSave })
   })
 
@@ -600,6 +600,76 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.npcStates?.['home:npc:0']?.personalInventory).toEqual({ counts: {}, instances: [] })
     expect(result.data.npcStates?.['home:npc:0']?.postDeath).toBeNull()
   })
+
+  it('migrates a real v13 save (plan npc-028) into v14 for an unassigned contract', () => {
+    const { requestedWorkerCount: _c, assignments: _a, ...v13Contract } = validSave.workContracts[0]!
+    const v13Save = {
+      ...validSave,
+      version: 13,
+      workContracts: [{
+        ...v13Contract,
+        workerNpcId: null,
+        acceptedAt: null,
+        workStartedAt: null,
+      }],
+    }
+    expect(loadStoredSave(v13Save)).toEqual({ status: 'ok', data: validSave })
+  })
+
+  it.each([
+    ['accepted', 'active', 'accepted'],
+    ['travelling', 'active', 'travelling'],
+    ['working', 'active', 'working'],
+    ['payment_due', 'settling', 'payment_due'],
+  ] as const)('migrates a v13 %s contract into one assignment without double-counting work', (oldState, contractState, assignmentState) => {
+    const { requestedWorkerCount: _c, assignments: _a, ...base } = validSave.workContracts[0]!
+    const v13Save = {
+      ...validSave,
+      version: 13,
+      workContracts: [{
+        ...base,
+        state: oldState,
+        workerNpcId: 'npc:1',
+        acceptedAt: 4,
+        workStartedAt: oldState === 'working' || oldState === 'payment_due' ? 5 : null,
+        npcWorkCompleted: 2,
+      }],
+    }
+    const result = loadStoredSave(v13Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.workContracts[0]).toEqual({
+      ...base,
+      state: contractState,
+      requestedWorkerCount: 1,
+      npcWorkCompleted: 2,
+      assignments: [{
+        npcId: 'npc:1',
+        state: assignmentState,
+        acceptedAt: 4,
+        workStartedAt: oldState === 'working' || oldState === 'payment_due' ? 5 : null,
+        workCompleted: 2,
+      }],
+    })
+  })
+
+  it('round-trips palisade and standing_torch work-contract targets', () => {
+    const palisade = {
+      ...validSave.workContracts[0]!,
+      id: 'workContract:palisade',
+      workType: 'palisade' as const,
+      target: { kind: 'palisade' as const, targetId: 'palisade:1' },
+    }
+    const torch = {
+      ...validSave.workContracts[0]!,
+      id: 'workContract:torch',
+      workType: 'standing_torch' as const,
+      target: { kind: 'standing_torch' as const, targetId: 'standingTorch:1' },
+    }
+    const loaded = loadSaveData({ ...validSave, workContracts: [palisade, torch] })
+    expect(loaded?.workContracts).toEqual([palisade, torch])
+  })
+
 
   it('accepts a current-version npcStates record with active corpse loot and rejects a malformed postDeath', () => {
     const withCorpse = {

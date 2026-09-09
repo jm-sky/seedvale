@@ -10,6 +10,7 @@ import {
   isContractTerminal,
   noticeBoardId,
   WORK_SHARE_PRESETS,
+  WORKER_COUNT_PRESETS,
   type WorkType,
 } from '../../world/workContract'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
@@ -152,35 +153,45 @@ export function createWorkContractActions(
   ): void => {
     vueUi.openFlavorDialog(
       dialogTitle,
-      `Jaki procent pozostałej pracy (${formatHours(remainingWorkAtCreation)} h) ma wykonać najemnik?`,
+      `Jaki procent pozostałej pracy (${formatHours(remainingWorkAtCreation)} h) ma wykonać najemna grupa?`,
       WORK_SHARE_PRESETS.map((share) => ({
         label: `${Math.round(share * 100)}%`,
         enabled: true,
         reasonLabel: '',
         run: () => vueUi.openFlavorDialog(
           dialogTitle,
-          'Wybierz wynagrodzenie za wykonanie prac. Zlecenie nie zostanie jeszcze ogłoszone — trzeba będzie zanieść ogłoszenie na tablicę w osadzie.',
-          CONTRACT_REWARD_PRESETS.map((reward) => ({
-            label: `${reward} monet`,
+          'Ilu najemników zatrudnić do tej pracy? Wynagrodzenie jest łączne dla całej grupy, nie za każdego osobno.',
+          WORKER_COUNT_PRESETS.map((workerCount) => ({
+            label: workerCount === 1 ? '1 najemnik' : `${workerCount} najemników`,
             enabled: true,
             reasonLabel: '',
-            run: () => {
-              const created = bundle.workContracts.create({
-                employer: CONTRACT_EMPLOYER,
-                target,
-                x,
-                z,
-                rewardCoins: reward,
-                requestedWorkShare: share,
-                remainingWorkAtCreation,
-                now: dayNight.elapsedDays,
-              })
-              ctx.syncQuickActionAvailability()
-              toast.show(
-                created ? 'Utworzono zlecenie. Zanieś ogłoszenie do tablicy w osadzie.' : 'Ten cel ma już aktywne zlecenie.',
-                created ? 'info' : 'error',
-              )
-            },
+            run: () => vueUi.openFlavorDialog(
+              dialogTitle,
+              'Wybierz całkowite wynagrodzenie za wykonanie prac. Zlecenie nie zostanie jeszcze ogłoszone — trzeba będzie zanieść ogłoszenie na tablicę w osadzie.',
+              CONTRACT_REWARD_PRESETS.map((reward) => ({
+                label: `${reward} monet`,
+                enabled: true,
+                reasonLabel: '',
+                run: () => {
+                  const created = bundle.workContracts.create({
+                    employer: CONTRACT_EMPLOYER,
+                    target,
+                    x,
+                    z,
+                    rewardCoins: reward,
+                    requestedWorkShare: share,
+                    remainingWorkAtCreation,
+                    requestedWorkerCount: workerCount,
+                    now: dayNight.elapsedDays,
+                  })
+                  ctx.syncQuickActionAvailability()
+                  toast.show(
+                    created ? 'Utworzono zlecenie. Zanieś ogłoszenie do tablicy w osadzie.' : 'Ten cel ma już aktywne zlecenie.',
+                    created ? 'info' : 'error',
+                  )
+                },
+              })),
+            ),
           })),
         ),
       })),

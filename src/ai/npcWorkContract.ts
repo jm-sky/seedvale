@@ -1,7 +1,11 @@
-import type { WorkContractRecord } from '../world/workContract'
 import type { Role } from './characters'
 import type { ScheduleActivity } from './schedule'
 import { realSecondsToGameHours } from '../world/timeConversion'
+import {
+  contractRewardRate,
+  expectedCandidateWork,
+  type WorkContractRecord,
+} from '../world/workContract'
 import { idleIntentFor } from './schedule'
 
 /**
@@ -84,11 +88,13 @@ export function scoreWorkContractOpportunity(
   const suitability = CONTRACT_SUITABILITY_BY_ROLE[input.role] ?? 0
   const scheduleConflict =
     input.hasWorkplace && idleIntentFor(input.scheduledActivity) === 'work' ? CONTRACT_SCHEDULE_CONFLICT_PENALTY : 0
+  const expectedWork = expectedCandidateWork(contract)
+  const expectedReward = expectedWork * contractRewardRate(contract)
   return (
-    contract.rewardCoins
+    expectedReward
     + suitability
     - travelHours * CONTRACT_TRAVEL_HOUR_COST
-    - contract.committedWork * CONTRACT_WORK_HOUR_COST
+    - expectedWork * CONTRACT_WORK_HOUR_COST
     - scheduleConflict
   )
 }

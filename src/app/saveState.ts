@@ -242,10 +242,10 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     platforms: bundle.sleepingUtilities.platforms.nodes().map((p) => ({ ...p })),
     resourceDeposits: Object.fromEntries(deps.getResourceDepletion()),
     grassForagePatches: bundle.grassForage.serialize(),
-    workContracts: bundle.workContracts.nodes().map((c): SaveWorkContract =>
-      c.target.kind === 'construction'
-        ? { ...c, target: { kind: 'construction', targetId: c.target.targetId } }
-        : { ...c, target: { kind: 'terrain_preparation', targetId: c.target.targetId } }),
+    workContracts: bundle.workContracts.nodes().map((c): SaveWorkContract => ({
+      ...c,
+      target: { kind: c.target.kind, targetId: c.target.targetId },
+    })),
       npcStates: bundle.settlementsManager.snapshotNpcStates(),
       households: bundle.settlementsManager.snapshotHouseholds(),
       npcRelationships: bundle.settlementsManager.snapshotRelationships(),
