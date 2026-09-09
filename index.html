@@ -155,9 +155,11 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-
       .npc-label__marker {
         flex: 0 0 auto;
+      }
+      .npc-label__marker:not(:empty)::before {
+        content: " · ";
       }
       .npc-label__assessment {
         text-align: center;
