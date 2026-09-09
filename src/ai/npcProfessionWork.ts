@@ -20,7 +20,11 @@ import { Inventory } from '../items/Inventory'
 import { isWeaponItemInstance, WEAPON_MAINTENANCE_KIND_LIST, type WeaponItemInstance } from '../items/itemInstances'
 import { sharpenWeapon } from '../items/weaponMaintenance'
 import { physicalWorkDuration } from '../player/physicalWorkStrength'
-import { householdStorageDestination, settlementStorageDestination } from '../settlement/storageDestinations'
+import {
+  householdStorageDestination,
+  resolveHouseholdWoodStorage,
+  settlementStorageDestination,
+} from '../settlement/storageDestinations'
 import { copyVec3 } from '../simulation'
 import { MINE_DURATION_SEC, ORE_ITEM, oreEconomicKind } from '../terrain/depositMining'
 import { type CultivationAnchor, resolveCultivationAnchor } from '../world/cultivationAnchor'
@@ -279,7 +283,11 @@ function planFishingWork(ctx: NpcWorkContext): NpcPlannedAction | null {
     },
     next: {
       kind: 'deposit',
-      destination: copyVec3(householdStorageDestination('food', ctx.home, ctx.landmarks.stockpile)),
+      destination: copyVec3(householdStorageDestination(
+        'food',
+        ctx.home,
+        resolveHouseholdWoodStorage(ctx.home, ctx.landmarks),
+      )),
       durationSec: 0.8 * ctx.waitMultiplier,
       onComplete: () => {
         if (ctx.household) depositCarriedItems(ctx.carried, ctx.household, FISH_YIELD_KINDS, ctx.simTime())

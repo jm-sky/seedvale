@@ -22,6 +22,12 @@ describe('householdYard (plan settlements-npcs-011)', () => {
     expect(householdYardRadius(3)).toBe(3 + HOUSEHOLD_YARD_PROP_OFFSETS.storage)
   })
 
+  it('keeps wood on its own yard slot inside storage clearance', () => {
+    expect(HOUSEHOLD_YARD_PROP_OFFSETS.wood).toBeGreaterThan(HOUSEHOLD_YARD_PROP_OFFSETS.trough)
+    expect(HOUSEHOLD_YARD_PROP_OFFSETS.wood).toBeLessThan(HOUSEHOLD_YARD_PROP_OFFSETS.storage)
+    expect(householdYardRadius()).toBe(MAX_HOUSE_FOOTPRINT_RADIUS + HOUSEHOLD_YARD_PROP_OFFSETS.storage)
+  })
+
   it('the planner house plot already reserves enough room for the household yard', () => {
     // villagePlanner.ts's HOUSE_PLOT_RADIUS is the spacing/site-selection
     // reservation around every house plot; it must stay >= the worst-case

@@ -72,7 +72,6 @@ import { cellSeed } from './settlementGenerator'
 import { createSettlementNightCycle } from './settlementNightCycle'
 import { settlementPropColliders } from './settlementPropColliders'
 import { createSettlementSignposts } from './settlementSignposts'
-import { physicalWoodStockpileQuantity } from './storageVisuals'
 import { createVillageFire, FUEL_PER_BRANCH, type VillageFire } from './VillageFire'
 import {
   buildWellInteractionQueueConfig,
@@ -854,17 +853,17 @@ export async function createSettlement(
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived
       // sync every tick; each controller no-ops unless its own visual state
-      // actually changed. The one shared wood pile reflects every household's
-      // own pantry wood plus the settlement's bulk wood, since both are
-      // physically deposited at the same `landmarks.stockpile` destination
-      // (plan settlements-npcs-009). Food is per-storage-location, so each
-      // household's crate reflects only that household's own `items`.
-      storageVisual.wood.sync(physicalWoodStockpileQuantity(households, economy))
+      // actually changed. Settlement wood and each household's wood have
+      // separate physical piles (settlements-npcs-025 follow-up).
+      storageVisual.settlementWood.sync(economy.query('wood'))
       storageVisual.settlementFood.sync(economy.items)
-      if (storageVisual.householdFood.length > 0) {
-        for (let i = 0; i < householdStorages.length; i++) {
-          const visual = storageVisual.householdFood[i % storageVisual.householdFood.length]!
-          visual.sync(householdStorages[i]!.household.items)
+      for (let i = 0; i < householdStorages.length; i++) {
+        const household = householdStorages[i]!.household
+        if (storageVisual.householdWood.length > 0) {
+          storageVisual.householdWood[i % storageVisual.householdWood.length]!.sync(household.stock.query('wood'))
+        }
+        if (storageVisual.householdFood.length > 0) {
+          storageVisual.householdFood[i % storageVisual.householdFood.length]!.sync(household.items)
         }
       }
       for (const torch of villageTorches) torch.update(dt)

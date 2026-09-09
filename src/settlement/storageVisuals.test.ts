@@ -9,7 +9,6 @@ import {
   createWoodPileVisual,
   findWoodPileStageNodes,
   FOOD_STORAGE_MAX_SLOTS,
-  physicalWoodStockpileQuantity,
   selectFoodStorageSlots,
   WOOD_PILE_MAX_EXTRA,
   WOOD_PILE_STAGES,
@@ -122,39 +121,37 @@ describe('selectFoodStorageSlots', () => {
   })
 })
 
-describe('physicalWoodStockpileQuantity', () => {
-  it('is zero with no wood anywhere', () => {
-    const economy = createSettlementEconomy('s', { wood: 0 }, [])
-    expect(physicalWoodStockpileQuantity([], economy)).toBe(0)
-  })
+describe('wood pile visual ownership (settlements-npcs-025 follow-up)', () => {
+  it('settlement and household piles stay independent', () => {
+    const settlementPile = progressivePile()
+    const householdAPile = progressivePile()
+    const householdBPile = progressivePile()
+    const settlementVisual = createWoodPileVisual(settlementPile, [])
+    const householdAVisual = createWoodPileVisual(householdAPile, [])
+    const householdBVisual = createWoodPileVisual(householdBPile, [])
 
-  it('sums a small quantity from a single household', () => {
-    const economy = createSettlementEconomy('s', { wood: 0 }, [])
-    const household = householdWithWood('h1', 2)
-    expect(physicalWoodStockpileQuantity([household], economy)).toBe(2)
-  })
+    const economy = createSettlementEconomy('s', { wood: 10 }, [])
+    const householdA = householdWithWood('a', 2)
+    const householdB = householdWithWood('b', 6)
 
-  it('aggregates both household and settlement-economy wood', () => {
-    const economy = createSettlementEconomy('s', { wood: 30 }, [])
-    const households = [householdWithWood('h1', 10), householdWithWood('h2', 5)]
-    expect(physicalWoodStockpileQuantity(households, economy)).toBe(45)
-  })
+    settlementVisual.sync(economy.query('wood'))
+    householdAVisual.sync(householdA.stock.query('wood'))
+    householdBVisual.sync(householdB.stock.query('wood'))
 
-  it('reflects the current authoritative quantity after it changes', () => {
-    const economy = createSettlementEconomy('s', { wood: 5 }, [])
-    const household = householdWithWood('h1', 1)
-    expect(physicalWoodStockpileQuantity([household], economy)).toBe(6)
-    economy.add('wood', 10)
-    household.stock.add('wood', 4)
-    expect(physicalWoodStockpileQuantity([household], economy)).toBe(20)
-  })
+    expect(visibleStages(settlementPile)).toEqual(['Pile_10'])
+    expect(visibleStages(householdAPile)).toEqual(['Pile_05'])
+    expect(visibleStages(householdBPile)).toEqual(['Pile_10'])
 
-  it('never mutates household or economy state — read-only', () => {
-    const economy = createSettlementEconomy('s', { wood: 5 }, [])
-    const household = householdWithWood('h1', 3)
-    physicalWoodStockpileQuantity([household], economy)
-    expect(household.stock.query('wood')).toBe(3)
-    expect(economy.query('wood')).toBe(5)
+    householdA.stock.add('wood', 9)
+    householdAVisual.sync(householdA.stock.query('wood'))
+    expect(visibleStages(householdAPile)).toEqual(['Pile_18'])
+    expect(visibleStages(householdBPile)).toEqual(['Pile_10'])
+    expect(visibleStages(settlementPile)).toEqual(['Pile_10'])
+
+    economy.add('wood', 8)
+    settlementVisual.sync(economy.query('wood'))
+    expect(visibleStages(settlementPile)).toEqual(['Pile_18'])
+    expect(visibleStages(householdBPile)).toEqual(['Pile_10'])
   })
 })
 

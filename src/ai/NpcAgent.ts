@@ -78,7 +78,7 @@ import {
   resolveNpcCorpsePhase,
 } from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
-import { householdStorageDestination } from '../settlement/storageDestinations'
+import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
 import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
@@ -3552,7 +3552,11 @@ export class NpcAgent {
             },
             next: {
               kind: 'deposit',
-              destination: copyVec3(householdStorageDestination('wood', this.home, this.landmarks.stockpile)),
+              destination: copyVec3(householdStorageDestination(
+                'wood',
+                this.home,
+                resolveHouseholdWoodStorage(this.home, this.landmarks),
+              )),
               durationSec: 0.8 * this.waitMultiplier,
               onComplete: () => {
                 relieveNeed(this.needs, 'wood')

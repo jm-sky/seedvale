@@ -211,6 +211,10 @@ export type SettlementLandmarks = {
    *  build each `Interactable`. Presentation only; the prop never owns the
    *  quantity, `Household.stock`/`.water` does. */
   householdStorages: THREE.Vector3[]
+  /** Household yard wood-pile positions (settlements-npcs-025 follow-up),
+   *  same order as `homes`/`houses`/`householdStorages` — delivery, visuals
+   *  and destination resolution all use this landmark, never recompute offsets. */
+  householdWoodStorages: THREE.Vector3[]
   /** One settlement-wide storage container position (plan 156), next to the
    *  wood stockpile. Presentation only — `SettlementEconomy` owns the stock. */
   settlementStorage: THREE.Vector3
@@ -231,10 +235,11 @@ export type SettlementLandmarks = {
 
 /** Physical storage visual controllers (plan settlements-npcs-010), returned
  *  alongside `landmarks` so `createSettlement.ts` can drive them from live
- *  `Household`/`SettlementEconomy` state each tick. `householdFood` is
- *  same-order as `landmarks.householdStorages`. */
+ *  `Household`/`SettlementEconomy` state each tick. `householdWood` and
+ *  `householdFood` are same-order as `landmarks.householdStorages`. */
 export type SettlementStorageVisuals = {
-  wood: WoodPileVisual
+  settlementWood: WoodPileVisual
+  householdWood: WoodPileVisual[]
   settlementFood: FoodStorageVisual
   householdFood: FoodStorageVisual[]
 }
@@ -735,6 +740,7 @@ export async function buildSettlementProps(
       price: p.price ?? 0,
     })),
     householdStorages: [],
+    householdWoodStorages: [],
     settlementStorage: new THREE.Vector3(),
     noticeBoard: new THREE.Vector3(),
   }
@@ -775,7 +781,7 @@ export async function buildSettlementProps(
     placeOnGround(extra, stockX + offset.dx, stockZ + offset.dz, sampleHeight)
     group.add(extra)
   }
-  const woodStorageVisual = createWoodPileVisual(stockpile, woodPileExtras)
+  const settlementWoodVisual = createWoodPileVisual(stockpile, woodPileExtras)
 
   // Settlement storage container (plan 156) — physical representation of
   // `SettlementEconomy`, one per settlement, next to the wood stockpile
@@ -1230,6 +1236,23 @@ export async function buildSettlementProps(
   const householdFoodVisuals: FoodStorageVisual[] = householdStoragePlacements.map((p) =>
     createFoodStorageVisual(group, { x: p.x, z: p.z }, sampleHeight),
   )
+
+  // Household yard wood piles (settlements-npcs-025 follow-up) — one
+  // progressive pile per house yard, index-aligned with storage crates above.
+  // Primary stage only (no overflow clones): yard space is tight and high
+  // household stock still maps to `Pile_29`.
+  const householdWoodPlacements = houseYardPlacements(HOUSEHOLD_YARD_PROP_OFFSETS.wood, 0.9)
+  landmarks.householdWoodStorages = householdWoodPlacements.map(
+    (p) => new THREE.Vector3(p.x, p.groundY, p.z),
+  )
+  const householdWoodTemplate = await loadPrimaryWoodStockpile()
+  const householdWoodVisuals: WoodPileVisual[] = []
+  for (const p of householdWoodPlacements) {
+    const pile = householdWoodTemplate.clone(true)
+    placeOnGround(pile, p.x, p.z, sampleHeight)
+    group.add(pile)
+    householdWoodVisuals.push(createWoodPileVisual(pile, []))
+  }
 
   // Household-owned blacksmith workplace(s) (`landmarks.blacksmithWorkplaces`,
   // see `places.ts`'s `workplaceFor`) — plan settlements-npcs-024 Stage 1:
@@ -1787,7 +1810,12 @@ export async function buildSettlementProps(
     houseLights,
     villageTorches,
     houseAssemblies,
-    storageVisual: { wood: woodStorageVisual, settlementFood: settlementFoodVisual, householdFood: householdFoodVisuals },
+    storageVisual: {
+      settlementWood: settlementWoodVisual,
+      householdWood: householdWoodVisuals,
+      settlementFood: settlementFoodVisual,
+      householdFood: householdFoodVisuals,
+    },
   }
 }
 

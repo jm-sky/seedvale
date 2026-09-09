@@ -18,7 +18,7 @@ Authoritative quantities remain in `Household` / `SettlementEconomy`; presentati
 The work is staged:
 
 1. **Stage 1 — progressive wood pile**: implemented authored discrete wood pile variants;
-2. **Stage 1 follow-up — split settlement vs household wood storage**: correct the old shared-stockpile assumption so settlement wood and each household's wood have separate physical destinations and separate progressive piles;
+2. **Stage 1 follow-up — split settlement vs household wood storage**: implemented — settlement wood and each household's wood have separate physical destinations and separate progressive piles;
 3. **Stage 2 — pooled food representatives**: replace scale-only food quantity cues with bounded discrete representatives and stable cached pools;
 4. **Stage 3A — container-ready food layout foundation**: deterministic local/container-relative layout;
 5. **Stage 3B — actual container fill visualization**: only after a suitable open container asset is checked in and verified;
@@ -48,15 +48,7 @@ Stage 1 is already implemented on current `main`:
 - no quantity-driven primary-pile scaling
 - bounded overflow
 
-However, Stage 1 preserved the older physical-storage assumption from `settlements-npcs-009/010`:
-
-- `householdStorageDestination('wood', ...)` resolves to the shared settlement `landmarks.stockpile`;
-- settlement wood also resolves to `landmarks.stockpile`;
-- `physicalWoodStockpileQuantity()` sums `Σ Household.stock.wood + SettlementEconomy.wood`;
-- `createSettlement.ts` feeds that total to one `storageVisual.wood` controller;
-- the settlement wood interactable reports the same aggregate total.
-
-That old assumption is now superseded. The intended world model is:
+Stage 1 follow-up is implemented on current `main`. The physical model is:
 
 ```text
 SettlementEconomy.wood
@@ -108,9 +100,7 @@ Mapping:
 
 Stage nodes remain cached by stable authored names. Hidden stages do not render. High-stock overflow remains bounded.
 
-### 1F. Stage 1 follow-up — separate settlement and household wood storage
-
-This is the next wood correction.
+### 1F. Stage 1 follow-up — separate settlement and household wood storage — implemented
 
 #### Ownership and visual source
 
@@ -141,7 +131,7 @@ Requirements:
 - update household yard clearance if the new slot extends the required radius;
 - do not invent a new general landmark system.
 
-Expose the physical positions explicitly, e.g. `SettlementLandmarks.householdWoodStorages` (exact name may follow current conventions), so delivery, visuals and interactions resolve the same point rather than recomputing offsets independently.
+Implemented as `SettlementLandmarks.householdWoodStorages` (index-aligned with `homes` / `householdStorages`), placed via `HOUSEHOLD_YARD_PROP_OFFSETS.wood` and `houseYardPlacements()` in `props.ts`. Delivery resolves through `resolveHouseholdWoodStorage()` + `householdStorageDestination('wood', home, woodPoint)`.
 
 #### Visual controllers
 
@@ -169,7 +159,7 @@ The settlement wood pile must report only settlement-owned wood.
 
 Household storage inspection should continue reporting that household's own stock and therefore naturally include its own wood. If a dedicated household wood-pile interactable is useful, reuse the household reference and do not introduce duplicate quantity state.
 
-`physicalWoodStockpileQuantity()` no longer represents one physical pile after this follow-up. Remove it if unused, or rename/re-scope it only if a real aggregate-total caller still needs it. Do not keep it as the visual/inspection source for the settlement pile.
+`physicalWoodStockpileQuantity()` was removed. Settlement wood inspection (`woodStorage` interactable) reads `economy.query('wood')` only.
 
 #### Performance
 
@@ -238,7 +228,7 @@ Treat as candidate until checked in and verify hierarchy, dimensions, origin/ori
 
 ### 5. Remaining `EconomicKind`s
 
-- `wood`: Stage 1 + Stage 1 follow-up;
+- `wood`: Stage 1 + Stage 1 follow-up — implemented;
 - `food`: Stage 2 + 3A + 3B;
 - `iron`, `coal`, `gold`, `copper_ore`: defer until real destinations and semantically correct stored-material visuals exist;
 - `water`: defer until stored-water container/destination exists.

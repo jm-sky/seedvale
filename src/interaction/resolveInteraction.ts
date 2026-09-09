@@ -7,7 +7,6 @@ import { isDebugMode } from '../debug/debugMode'
 import { ANIMAL_LABELS } from '../fauna/AnimalAgent'
 import { pickAnimalFlavorLine } from '../fauna/animalDialogue'
 import { SPAWNER_LABELS } from '../fauna/createFauna'
-import { physicalWoodStockpileQuantity } from '../settlement/storageVisuals'
 import { LANDMARK_LABELS } from '../terrain/chunkEnvironment'
 import { treeInspectionFlavor } from './treeInspection'
 
@@ -61,13 +60,11 @@ export function formatSettlementStorageLines(economy: SettlementEconomy): string
   ].join('\n')
 }
 
-/** Read-only single-line quantity for the physical wood stockpile (plan
- *  settlements-npcs-012) — a distinct, narrower interaction from
- *  `formatSettlementStorageLines`'s aggregated crate view, sharing its live total
- *  with `storageVisuals.ts`'s stockpile visual via `physicalWoodStockpileQuantity`
- *  so the two can never disagree. */
-function formatWoodStorage(households: readonly Household[], economy: SettlementEconomy): string {
-  return `Drewno: ${physicalWoodStockpileQuantity(households, economy)}`
+/** Read-only single-line quantity for the settlement wood stockpile (plan
+ *  settlements-npcs-012) — settlement bulk wood only, matching the
+ *  settlement pile visual (settlements-npcs-025 follow-up). */
+function formatWoodStorage(economy: SettlementEconomy): string {
+  return `Drewno: ${economy.query('wood')}`
 }
 
 function capitalize(text: string): string {
@@ -177,6 +174,6 @@ export function resolveInteraction(
       return { speakerName: 'Studnia', line: override?.line ?? pickFrom(WELL_FLAVOR_LINES) }
     }
     case 'woodStorage':
-      return { speakerName: 'Sterta drewna', line: formatWoodStorage(target.households, target.economy) }
+      return { speakerName: 'Sterta drewna', line: formatWoodStorage(target.economy) }
   }
 }

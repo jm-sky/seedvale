@@ -21,9 +21,10 @@ import { HOUSE_CATALOG } from './houseCatalog'
 export const MAX_HOUSE_FOOTPRINT_RADIUS = Math.max(...HOUSE_CATALOG.map((e) => e.footprintRadius))
 
 /** Offsets past the house footprint edge for each household yard prop
- *  (plan 122/156) — storage is the outermost, so it sets the yard's
- *  required clearance radius. */
-export const HOUSEHOLD_YARD_PROP_OFFSETS = { barrel: 0.85, trough: 1.35, storage: 1.9 } as const
+ *  (plan 122/156) — storage is the outermost common prop, so it sets the
+ *  yard's required clearance radius. Wood sits on its own slot between
+ *  trough and storage (settlements-npcs-025 follow-up), not on the crate. */
+export const HOUSEHOLD_YARD_PROP_OFFSETS = { barrel: 0.85, trough: 1.35, wood: 1.55, storage: 1.9 } as const
 
 /** Clearance radius one household needs around its house center, given
  *  that house's real `footprintRadius` (`houseBuilder.ts`'s

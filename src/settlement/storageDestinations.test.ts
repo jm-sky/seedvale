@@ -4,6 +4,7 @@ import { FOOD_ITEM_KINDS } from '../items/foodItems'
 import {
   classifyItemStorageKind,
   householdStorageDestination,
+  resolveHouseholdWoodStorage,
   settlementStorageDestination,
 } from './storageDestinations'
 
@@ -25,19 +26,41 @@ describe('classifyItemStorageKind', () => {
 
 describe('householdStorageDestination', () => {
   const home = new Vector3(1, 0, 1)
-  const stockpile = new Vector3(9, 0, 9)
+  const householdWood = new Vector3(3, 0, 4)
 
   it('resolves food to the household home', () => {
-    expect(householdStorageDestination('food', home, stockpile)).toBe(home)
+    expect(householdStorageDestination('food', home, householdWood)).toBe(home)
   })
 
-  it('resolves wood to the shared stockpile, never home', () => {
-    expect(householdStorageDestination('wood', home, stockpile)).toBe(stockpile)
+  it('resolves wood to the household wood storage point, never home or settlement stockpile', () => {
+    expect(householdStorageDestination('wood', home, householdWood)).toBe(householdWood)
+    expect(householdStorageDestination('wood', home, householdWood)).not.toBe(home)
   })
 
   it('never sends food to the wood destination or vice versa', () => {
-    expect(householdStorageDestination('food', home, stockpile)).not.toBe(stockpile)
-    expect(householdStorageDestination('wood', home, stockpile)).not.toBe(home)
+    expect(householdStorageDestination('food', home, householdWood)).not.toBe(householdWood)
+    expect(householdStorageDestination('wood', home, householdWood)).not.toBe(home)
+  })
+})
+
+describe('resolveHouseholdWoodStorage', () => {
+  const homeA = new Vector3(1, 0, 1)
+  const homeB = new Vector3(9, 0, 9)
+  const woodA = new Vector3(2, 0, 2)
+  const woodB = new Vector3(10, 0, 8)
+
+  it('returns the index-aligned household wood landmark for each home', () => {
+    const landmarks = {
+      homes: [homeA, homeB],
+      householdWoodStorages: [woodA, woodB],
+    }
+    expect(resolveHouseholdWoodStorage(homeA, landmarks)).toBe(woodA)
+    expect(resolveHouseholdWoodStorage(homeB, landmarks)).toBe(woodB)
+  })
+
+  it('falls back to home when no wood landmark exists for that index', () => {
+    const landmarks = { homes: [homeA], householdWoodStorages: [] as Vector3[] }
+    expect(resolveHouseholdWoodStorage(homeA, landmarks)).toBe(homeA)
   })
 })
 
@@ -49,7 +72,7 @@ describe('settlementStorageDestination', () => {
     expect(settlementStorageDestination('food', stockpile, settlementStorage)).toBe(settlementStorage)
   })
 
-  it('resolves wood to the shared stockpile', () => {
+  it('resolves wood to the settlement stockpile', () => {
     expect(settlementStorageDestination('wood', stockpile, settlementStorage)).toBe(stockpile)
   })
 
