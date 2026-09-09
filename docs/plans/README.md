@@ -95,6 +95,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | -       | 🟡 | S      | ~~quests-progression-001~~ |
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
 | ◼️ `npc-028-work-contracts-multiple-workers.md`                             | -       | 🔴 | M      | ~~npc-018~~ |
+| ◼️ `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
 
 ---
 
@@ -201,7 +202,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements-npcs: `029`
 - tools: `013`
 - ui-input: `013`
-- world: `020`
+- world: `021`
 - world-terrain: `018`
 
 This ids section is maintained automatically from the plan files.
