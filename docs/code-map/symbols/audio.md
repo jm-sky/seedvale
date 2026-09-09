@@ -74,8 +74,9 @@ Generated from exported TypeScript symbols.
 
 ## `audio/createAmbientAudio.ts`
 
-- `AmbientAudio` — type — line 138
-- `createAmbientAudio` — function — line 158
+- `AmbientAudio` — type — line 152
+- `caveAmbientMix` — function — line 138
+- `createAmbientAudio` — function — line 174
 - `cricketsTimeFactor` — function — line 50
 - `weatherAmbientFactor` — function — line 76
 - `WeatherAmbientFactor` — type — line 67

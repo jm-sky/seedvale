@@ -100,6 +100,7 @@ Generated from TypeScript imports.
 - `terrain/waterBodyKind.ts`
 - `world/bloodTraces.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
@@ -230,6 +231,7 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 
 ## `player/humanCarryCapacity.test.ts`
@@ -417,3 +419,4 @@ Generated from TypeScript imports.
 
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`

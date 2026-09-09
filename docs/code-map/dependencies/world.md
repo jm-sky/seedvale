@@ -174,6 +174,7 @@ Generated from TypeScript imports.
 - `world/caveVolume.test.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
+- `world/caves/caveSdfColliders.ts`
 - `world/caves/caveSdfField.test.ts`
 - `world/caves/caveSdfQuery.test.ts`
 - `world/caves/caveSdfQuery.ts`
@@ -209,6 +210,26 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.ts`
 - `world/largeCaves.ts`
 
+## `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
+
+**Imports**
+
+- `config/worldConfig.ts`
+- `fauna/createFauna.ts`
+- `player/PlayerController.ts`
+- `player/cameraBoom.ts`
+- `player/verticalMotion.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/caves/caveIdentity.ts`
+- `world/caves/caveSdfColliders.ts`
+- `world/caves/caveSdfField.ts`
+- `world/caves/caveSdfQuery.ts`
+- `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
+- `world/caves/productionTopology.ts`
+- `world/collision.ts`
+- `world/largeCaves.ts`
+
 ## `world/caves/caveGameplayQuery.b3-recon.test.ts`
 
 **Imports**
@@ -239,6 +260,7 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveIdentity.test.ts`
 - `world/caves/productionTopology.ts`
@@ -269,18 +291,22 @@ Generated from TypeScript imports.
 - `world/caves/caveSdfField.ts`
 - `world/caves/caveSdfQuery.ts`
 - `world/caves/caveTopology.ts`
+- `world/caves/mouthCarve.ts`
 - `world/collision.ts`
 
 ## `world/caves/caveSdfColliders.ts`
 
 **Imports**
 
+- `world/caveVolume.ts`
 - `world/caves/caveSdfField.ts`
 - `world/caves/caveSdfQuery.ts`
+- `world/caves/mouthCarve.ts`
 - `world/collision.ts`
 
 **Imported by**
 
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
 - `world/createCaves.ts`
@@ -303,6 +329,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
 - `world/caves/caveSdfColliders.ts`
@@ -335,6 +362,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
 - `world/caves/caveSdfColliders.ts`
@@ -384,6 +412,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
 - `world/caves/caveSdfField.test.ts`
@@ -398,10 +427,21 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.ts`
 - `world/createCaves.ts`
 
+## `world/caves/clipBelowSurface.test.ts`
+
+**Imports**
+
+- `world/caves/clipBelowSurface.ts`
+
 ## `world/caves/clipBelowSurface.ts`
+
+**Imports**
+
+- `world/caves/mouthCarve.ts`
 
 **Imported by**
 
+- `world/caves/clipBelowSurface.test.ts`
 - `world/caves/productionTopology.ts`
 - `world/caves/sdfCaveMesh.ts`
 - `world/caves/spikeTestCave.ts`
@@ -419,8 +459,12 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
+- `world/caves/caveSdfColliders.test.ts`
+- `world/caves/caveSdfColliders.ts`
 - `world/caves/caveSdfQuery.test.ts`
 - `world/caves/caveSdfQuery.ts`
+- `world/caves/clipBelowSurface.ts`
 - `world/createCaves.ts`
 
 ## `world/caves/mouthOverburden.ts`
@@ -465,6 +509,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/productionTopology.test.ts`
 - `world/createCaves.ts`
@@ -629,6 +674,7 @@ Generated from TypeScript imports.
 - `terrain/chunkManager.ts`
 - `world/caveColliders.test.ts`
 - `world/caveColliders.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSdfColliders.test.ts`
 - `world/caves/caveSdfColliders.ts`
@@ -1309,6 +1355,7 @@ Generated from TypeScript imports.
 
 - `world/caveGenerator.ts`
 - `world/caves/caveGameplayQuery.b2-recon.test.ts`
+- `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSdfQuery.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
