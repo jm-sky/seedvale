@@ -359,7 +359,7 @@ export type GameLoopDeps = {
    *  world `[R]` quick-action so pickup+use is one keypress (plan 153). */
   consumeItem?: (kind: ItemKind) => void
   startTentRest: (id: string) => void
-  packTent: (id: string) => void
+  inspectTent: (id: string) => void
   /** `[E]` on a hay bale (plan 168 follow-up) — sleeps directly in it via
    *  the same lodging commit path "Nocuj w mieście" uses, skipping Quick
    *  Actions entirely. */
@@ -540,7 +540,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, packTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
@@ -1397,7 +1397,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
-        if (altInteractPressed) packTent(target.id)
+        if (altInteractPressed) inspectTent(target.id)
       } else if (target?.kind === 'hay') {
         if (interactPressed) sleepInHay?.(target.settlementId)
       } else if (target?.kind === 'trap') {

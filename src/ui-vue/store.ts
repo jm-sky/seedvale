@@ -257,6 +257,7 @@ type QuickActionsState = {
   onHireHelp: (() => void) | null
   onEatAnything: (() => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }) | null
   onCookMeal: (() => void) | null
+  onStartFullCamp: (() => void) | null
 }
 /** Merchant-resolved sell pricing (plan settlements-006) — plain data and
  *  inventory-backed helpers built once per merchant session at the app layer. */
@@ -533,7 +534,7 @@ export const ui = reactive({
     hasTreeSeed: false, cropSeeds: { carrot: false, potato: false, cabbage: false },
     onPlantTree: null, onPlantCrop: null,
     hasFishingRod: false, onEquipFishingRod: null,
-    workContracts: [], onCancelWorkContract: null, onEatAnything: null, onCookMeal: null,
+    workContracts: [], onCancelWorkContract: null, onEatAnything: null, onCookMeal: null, onStartFullCamp: null,
   } as QuickActionsState,
   timeSkip: { visible: false, label: '', fadeVisible: false, fadeStrength: 0, progress: 0, canCancelRest: false, canCancelTerrainPreparation: false } as TimeSkipState,
   lodgingWalk: { active: false } as LodgingWalkState,

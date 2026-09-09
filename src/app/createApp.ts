@@ -129,6 +129,7 @@ import { createWeatherParticles } from '../world/weatherParticles'
 import { createWorldContext } from '../world/worldContext'
 import { createContainerActions } from './actions/containerActions'
 import { createCookMealIntent, runEatAnything } from './actions/cookMealIntent'
+import { createFullCampIntent } from './actions/fullCampIntent'
 import { createGatheringActions } from './actions/gatheringActions'
 import { createGroundActions } from './actions/groundActions'
 import { createMountActions } from './actions/mountActions'
@@ -1467,7 +1468,21 @@ export async function createApp(
     busy,
     toast,
   })
-  cancelActivePlayerIntent = () => cookMealIntent.cancel()
+  const fullCampIntent = createFullCampIntent({
+    ctx: actionCtx,
+    bundle,
+    player,
+    inventory,
+    dayNight,
+    survival,
+    placementPreview,
+    busy,
+    toast,
+  })
+  cancelActivePlayerIntent = () => {
+    cookMealIntent.cancel()
+    fullCampIntent.cancel()
+  }
 
   const syncNearTownQuickActions = (): void => {
     vueUi.setQuickActionsNearTown(rest.isNearTown())
@@ -1538,7 +1553,14 @@ export async function createApp(
     onCancelWorkContract: contracts.cancelContract,
     onHireHelp: contracts.openHireHelp,
     onEatAnything: () => runEatAnything(inventory, player, dayNight, survival.consumeItem),
-    onCookMeal: () => cookMealIntent.startCookMeal(),
+    onCookMeal: () => {
+      fullCampIntent.cancel()
+      cookMealIntent.startCookMeal()
+    },
+    onStartFullCamp: () => {
+      cookMealIntent.cancel()
+      fullCampIntent.startFullCamp()
+    },
   })
   syncQuickActionAvailability()
   syncNearTownQuickActions()
@@ -1757,7 +1779,7 @@ export async function createApp(
     fillWaterskin: survival.fillWaterskin,
     consumeItem: survival.consumeItem,
     startTentRest: rest.startTentRest,
-    packTent: rest.packTent,
+    inspectTent: rest.inspectTent,
     sleepInHay: rest.sleepInHay,
     openTrapArmDialog: gathering.openTrapArmDialog,
     disarmTrap: gathering.disarmTrap,
@@ -1869,6 +1891,7 @@ export async function createApp(
     timeSkip.cancel()
     timeSkipOverlay.dispose()
     cookMealIntent.cancel()
+    fullCampIntent.cancel()
     busy.cancel()
     busyOverlay.dispose()
     restCamp.dispose()

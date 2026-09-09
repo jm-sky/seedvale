@@ -820,7 +820,7 @@ async function buildWorldSystems(
 
   bootMark('placed')
   const placedFires = createPlacedFires(scene, chunkManager.sampleHeight, initialPlacedFires, playAt, pointLightBudget)
-  const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents)
+  const placedTents = createPlacedTents(scene, chunkManager.sampleHeight, initialPlacedTents, config.seed)
   const placedTraps = createPlacedTraps(
     scene,
     chunkManager.sampleHeight,

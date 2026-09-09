@@ -4,7 +4,7 @@
 
 **Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../state/settlements.md)).
 
-**Last verified:** 2026-09-08
+**Last verified:** 2026-09-09
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -63,7 +63,7 @@ Timed player actions (dig/chop/mine/bury/harvest/ignite/cook/tent-setup/destroy-
 
 ## Camp rest quality
 
-`src/app/campRest.ts` is a pure module, not a manager. `CampRestContext { hasBlanket, hasTent, hasWarmFire }` is resolved once, when rest starts, from the existing `PlacedTents`/`PlacedFires` lists (a fire must be lit and within a warmth radius; village fires don't count — town rest is already full). `campRestQuality()` maps that context to a `[0,1]` quality (blanket only 0.55 < blanket+fire 0.75 < tent+blanket 0.8 < full camp 1.0), with the Survival skill closing up to 60% of the gap. `restoreNeedsFromSleep(needs, quality)` can only fail to fill the bar, never lower it below what it already had; stamina is always fully refilled regardless of quality. `app/actions/restActions.ts`'s `onSleepFinished()` owns applying the outcome.
+`src/app/campRest.ts` is a pure module, not a manager. `CampRestContext { hasBlanket, hasWarmFire, tentCondition, bedrollCondition, platformCondition }` is resolved once at rest/inspection time from the existing `PlacedTents` / sleeping utilities / `PlacedFires` lists via `src/app/campRestSnapshot.ts` (a fire must be lit and within a warmth radius; village fires don't count — town rest is already full). Tent/bedroll/platform condition is a persisted 0..100 lazy weather-driven value — tents decay slower than exposed utilities, and a tent's current shelter factor (`condition/100`) reduces utility weather exposure smoothly. `campRestQuality()` interpolates tent shelter between the no-tent and full-tent endpoints of the matching blanket/fire pair (blanket only 0.55 < blanket+fire 0.75 < tent+blanket 0.8 < full camp 1.0 at 100% tent), then adds a bedroll bonus whose raised-platform factor interpolates 0.75..1.00 from supporting-platform condition. Survival still closes up to 60% of the remaining gap. Inspection `[R]` on a player tent opens the existing `FlavorDialog` with the same snapshot/quality rest uses. `restoreNeedsFromSleep(needs, quality)` can only fail to fill the bar, never lower it below what it already had; stamina is always fully refilled regardless of quality. `app/actions/restActions.ts`'s `onSleepFinished()` owns applying the outcome. Quick Action `Śpij na biwaku (8h)` is the original blanket bivouac rest; `Rozbij pełny obóz` is a single-active intent (`app/actions/fullCampIntent.ts`, same pattern as cook-meal) that reuses/places tent → platform → bedroll → fire through the existing placement preview and Busy Actions, without a `CampManager` or persisted camp membership.
 
 ## Settlement lodging (plan 168)
 
@@ -155,7 +155,9 @@ src/player/physicalWorkStrength.ts
 src/player/humanCarryCapacity.ts
 src/app/busyAction.ts
 src/app/campRest.ts
+src/app/campRestSnapshot.ts
 src/app/actions/restActions.ts
+src/app/actions/fullCampIntent.ts
 src/app/actions/placementActions.ts
 src/app/actions/gatheringActions.ts
 src/app/actions/survivalActions.ts

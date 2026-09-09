@@ -1,6 +1,6 @@
 import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { GroundPlacementReason } from '../items/tentPlacement'
-import { computeRainExposureDays, computeWeather, getSeason, WEATHER_CYCLE_DAYS } from './weather'
+import { computeRainExposureDays, computeSnowExposureDays } from './weather'
 
 /**
  * Player-built sleeping utilities — pure domain logic (plan items-player-013).
@@ -137,36 +137,50 @@ export const SLEEPING_UTILITY_SNOW_DECAY_PER_DAY = 18
  *  the worst-case "zero out" time at either decay rate above. */
 export const SLEEPING_UTILITY_SIM_WINDOW_DAYS = 10
 
-/** Cumulative snow "intensity-days" between two `elapsedDays` timestamps —
- *  the snow counterpart to `world/weather.ts`'s `computeRainExposureDays`,
- *  which only covers rain. No general weather-exposure helper exists yet
- *  (implementation notes §8); kept local rather than promoted into
- *  `weather.ts` for a single caller. */
-function computeSnowExposureDays(seed: number, fromDays: number, toDays: number): number {
-  if (toDays <= fromDays) return 0
-  const startCycle = Math.floor(fromDays / WEATHER_CYCLE_DAYS)
-  const endCycle = Math.floor(toDays / WEATHER_CYCLE_DAYS)
-  let exposure = 0
-  for (let cycle = startCycle; cycle <= endCycle; cycle++) {
-    const cycleStart = cycle * WEATHER_CYCLE_DAYS
-    const cycleEnd = cycleStart + WEATHER_CYCLE_DAYS
-    const overlapDays = Math.min(cycleEnd, toDays) - Math.max(cycleStart, fromDays)
-    if (overlapDays <= 0) continue
-    const w = computeWeather(seed, cycleStart, getSeason(cycleStart))
-    if (w.type === 'snow') exposure += overlapDays * w.intensity
-  }
-  return exposure
+export type WeatherDrivenConditionRates = {
+  rainDecayPerDay: number
+  snowDecayPerDay: number
+  simWindowDays: number
+}
+
+/**
+ * Pure, lazy, bounded-cost weather-driven condition — owned here so tent and
+ * sleeping utilities share one rain/snow integration (plan items-player-018).
+ *
+ * `shelterFactor` is `0..1` (0 = fully exposed, 1 = fully sheltered). Effective
+ * exposure is `rawWeatherExposure × (1 - shelterFactor)`, applied uniformly
+ * across the lookback window from the current shelter read. No historical
+ * tent-placement log is kept.
+ *
+ * @domain items-player
+ */
+export function resolveWeatherDrivenCondition(
+  record: Pick<{ condition: number, lastConditionUpdateAtDays: number }, 'condition' | 'lastConditionUpdateAtDays'>,
+  seed: number,
+  nowDays: number,
+  shelterFactor: number,
+  rates: WeatherDrivenConditionRates,
+): number {
+  const elapsed = Math.max(0, nowDays - record.lastConditionUpdateAtDays)
+  if (elapsed <= 0) return clampCondition(record.condition)
+  const factor = Math.max(0, Math.min(1, shelterFactor))
+  if (factor >= 1) return clampCondition(record.condition)
+  const windowDays = Math.min(elapsed, rates.simWindowDays)
+  const fromDays = nowDays - windowDays
+  const rainExposure = computeRainExposureDays(seed, fromDays, nowDays)
+  const snowExposure = computeSnowExposureDays(seed, fromDays, nowDays)
+  const decay = (rainExposure * rates.rainDecayPerDay + snowExposure * rates.snowDecayPerDay) * (1 - factor)
+  return clampCondition(record.condition - decay)
 }
 
 /**
  * Pure, lazy, bounded-cost condition resolver — same "resolve on demand, no
  * per-frame ticking" shape as `playerGarden.ts`'s `resolveCultivationCare`/
- * `resolveGardenHydration`. `sheltered` is the caller's *current* shelter
- * read (`app/campRest.ts`'s `hasTentNear` against this record's own
- * position) applied uniformly across the whole elapsed span since
- * `record.lastConditionUpdateAtDays` — the same accepted simplification
- * `resolveGardenHydration` makes for hydration (no historical tent-placement
- * log is kept, only "is it sheltered right now").
+ * `resolveGardenHydration`. `shelterFactor` is the caller's *current* tent
+ * shelter (`0..1`, plan items-player-018) applied uniformly across the whole
+ * elapsed span since `record.lastConditionUpdateAtDays` — the same accepted
+ * simplification `resolveGardenHydration` makes for hydration (no historical
+ * tent-placement log is kept, only "how sheltered is it right now").
  *
  * Condition only ever decreases (no repair action in v1) — a persisted
  * anchor never needs to advance, so this can always resolve directly from
@@ -176,17 +190,11 @@ export function resolveSleepingUtilityCondition(
   record: Pick<BedrollRecord | PlatformRecord, 'condition' | 'lastConditionUpdateAtDays'>,
   seed: number,
   nowDays: number,
-  sheltered: boolean,
+  shelterFactor: number,
 ): number {
-  const elapsed = Math.max(0, nowDays - record.lastConditionUpdateAtDays)
-  if (elapsed <= 0) return clampCondition(record.condition)
-  // A sheltered utility (under/near a pitched tent) gets no direct weather
-  // exposure (plan §"Exposure") — no decay to resolve.
-  if (sheltered) return clampCondition(record.condition)
-  const windowDays = Math.min(elapsed, SLEEPING_UTILITY_SIM_WINDOW_DAYS)
-  const fromDays = nowDays - windowDays
-  const rainExposure = computeRainExposureDays(seed, fromDays, nowDays)
-  const snowExposure = computeSnowExposureDays(seed, fromDays, nowDays)
-  const decay = rainExposure * SLEEPING_UTILITY_RAIN_DECAY_PER_DAY + snowExposure * SLEEPING_UTILITY_SNOW_DECAY_PER_DAY
-  return clampCondition(record.condition - decay)
+  return resolveWeatherDrivenCondition(record, seed, nowDays, shelterFactor, {
+    rainDecayPerDay: SLEEPING_UTILITY_RAIN_DECAY_PER_DAY,
+    snowDecayPerDay: SLEEPING_UTILITY_SNOW_DECAY_PER_DAY,
+    simWindowDays: SLEEPING_UTILITY_SIM_WINDOW_DAYS,
+  })
 }

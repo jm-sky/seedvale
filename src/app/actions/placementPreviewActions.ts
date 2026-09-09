@@ -1,6 +1,6 @@
 import type { ActionResult } from './actionContracts'
 import type { ContainerActions } from './containerActions'
-import type { PlacementActions, PlacementPreviewResult } from './placementActions'
+import type { PlacementActions, PlacementMutationLifecycle, PlacementPreviewResult } from './placementActions'
 import type { WorkContractActions } from './workContractActions'
 import { createPlacementPreviewGhost, type PlacementPreviewGhost } from '../../world/placementPreview'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
@@ -40,9 +40,17 @@ export type PlacementPreviewUiView = {
   supportsRotation: boolean
 }
 
-/** Async completion hooks for multi-stage player intents (plan ui-input-010). */
+/** Async completion hooks for multi-stage player intents (plan ui-input-010 /
+ *  items-player-018). Tent/bedroll/platform confirm after Busy Action success;
+ *  fireSimple confirms immediately because placement is synchronous. */
+export type PlacementPreviewConfirmResult =
+  | { kind: 'fireSimple', placedFireId: string }
+  | { kind: 'tent', placedId: string }
+  | { kind: 'bedroll', placedId: string }
+  | { kind: 'platform', placedId: string }
+
 export type PlacementPreviewLifecycle = {
-  onConfirmed?: (result: { kind: 'fireSimple', placedFireId: string }) => void
+  onConfirmed?: (result: PlacementPreviewConfirmResult) => void
   onCancelled?: () => void
 }
 
@@ -141,13 +149,24 @@ export function createPlacementPreviewActions(
   let rotationSteps = 0
   let intentLifecycle: PlacementPreviewLifecycle | null = null
 
-  const finishIntent = (cancelled: boolean, fireId?: string): void => {
+  const finishIntent = (cancelled: boolean, result?: PlacementPreviewConfirmResult): void => {
     const lifecycle = intentLifecycle
     intentLifecycle = null
     if (!lifecycle) return
-    if (cancelled || !fireId) lifecycle.onCancelled?.()
-    else lifecycle.onConfirmed?.({ kind: 'fireSimple', placedFireId: fireId })
+    if (cancelled || !result) lifecycle.onCancelled?.()
+    else lifecycle.onConfirmed?.(result)
   }
+
+  const notifyPlacement = (
+    lifecycle: PlacementPreviewLifecycle | null,
+    kind: 'tent' | 'bedroll' | 'platform',
+  ): PlacementMutationLifecycle => ({
+    onComplete: (outcome, placedId) => {
+      if (outcome === 'success' && placedId) lifecycle?.onConfirmed?.({ kind, placedId })
+      else lifecycle?.onCancelled?.()
+    },
+    onCancel: () => lifecycle?.onCancelled?.(),
+  })
 
   const supportsRotation = (kind: PlacementPreviewKind | null): boolean =>
     kind !== null && SUPPORTS_ROTATION[kind]
@@ -176,20 +195,35 @@ export function createPlacementPreviewActions(
 
   const commit = (kind: PlacementPreviewKind, objectYaw?: number): void => {
     switch (kind) {
-      case 'bedroll': placement.placeBedrollAtAim(objectYaw); return
+      case 'bedroll': {
+        const lifecycle = intentLifecycle
+        intentLifecycle = null
+        placement.placeBedrollAtAim(objectYaw, notifyPlacement(lifecycle, 'bedroll'))
+        return
+      }
       case 'chest': containers.placeContainerAtAim(objectYaw); return
       case 'firePile': buildWoodPile(); return
       case 'firePit': buildFirePit(); return
       case 'fireSimple': {
         const result = buildSimpleFire()
-        if (result.ok && result.placedFireId) finishIntent(false, result.placedFireId)
+        if (result.ok && result.placedFireId) finishIntent(false, { kind: 'fireSimple', placedFireId: result.placedFireId })
         else finishIntent(true)
         return
       }
       case 'palisade': placement.placePalisadeAtAim(objectYaw); return
-      case 'platform': placement.placePlatformAtAim(objectYaw); return
+      case 'platform': {
+        const lifecycle = intentLifecycle
+        intentLifecycle = null
+        placement.placePlatformAtAim(objectYaw, notifyPlacement(lifecycle, 'platform'))
+        return
+      }
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
-      case 'tent': placement.placeTentAtAim(objectYaw); return
+      case 'tent': {
+        const lifecycle = intentLifecycle
+        intentLifecycle = null
+        placement.placeTentAtAim(objectYaw, notifyPlacement(lifecycle, 'tent'))
+        return
+      }
       case 'well': placement.placeWellAtAim(); return
       case 'workContract': workContract.confirmContractPlacementAtAim(); return
     }

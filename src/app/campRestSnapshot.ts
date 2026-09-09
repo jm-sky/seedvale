@@ -1,0 +1,187 @@
+import type { PlacedTent } from '../items/createPlacedTents'
+import { isPlayerPlacedFire } from '../settlement/PlacedFires'
+import {
+  BEDROLL_ON_PLATFORM_RADIUS,
+  BEDROLL_REST_RADIUS,
+  type BedrollRecord,
+  findNearestSleepingUtility,
+  type PlatformRecord,
+} from '../world/sleepingUtilities'
+import {
+  type CampRestContext,
+  type CampRestExplanation,
+  explainCampRest,
+  formatCampRestBreakdown,
+  TENT_SHELTER_RADIUS,
+  tentShelterFactor,
+  WARM_FIRE_RADIUS,
+} from './campRest'
+
+export type CampSnapshotFire = {
+  id: string
+  x: number
+  z: number
+  lit: boolean
+}
+
+/**
+ * Derived camp snapshot at an explicit `(x, z)` anchor (plan items-player-018).
+ * Not a persistent `CampEntity` — ids/records are only for the current
+ * inspection, rest, or full-camp intent step.
+ *
+ * @domain items-player
+ */
+export type CampRestSnapshot = {
+  anchor: { x: number, z: number }
+  context: CampRestContext
+  quality: number
+  explanation: CampRestExplanation
+  tent: PlacedTent | null
+  tentCondition: number
+  bedroll: BedrollRecord | null
+  bedrollCondition: number
+  platform: PlatformRecord | null
+  platformCondition: number
+  fire: CampSnapshotFire | null
+}
+
+export type CampRestSnapshotInput = {
+  x: number
+  z: number
+  tents: {
+    list: () => readonly PlacedTent[]
+    conditionOf: (id: string, worldDays: number) => number | null
+  }
+  bedrolls: {
+    list: () => readonly BedrollRecord[]
+    conditionOf: (id: string, worldDays: number, shelterFactor: number) => number | null
+  }
+  platforms: {
+    list: () => readonly PlatformRecord[]
+    conditionOf: (id: string, worldDays: number, shelterFactor: number) => number | null
+  }
+  fires: readonly {
+    id: string
+    x: number
+    z: number
+    habitatBurn: boolean
+    fire: { isLit: () => boolean }
+  }[]
+  nowDays: number
+  hasBlanket: boolean
+  survivalValue: number
+}
+
+function distanceSq(a: { x: number, z: number }, x: number, z: number): number {
+  const dx = a.x - x
+  const dz = a.z - z
+  return dx * dx + dz * dz
+}
+
+/** Nearest player-built fire within `radius`. Lit fires win, then nearest,
+ *  then stable id tie-break — same policy as cooking-fire resolution, but
+ *  settlement fires are never camp components (plan items-player-018). */
+export function findNearestPlayerFire(
+  fires: CampRestSnapshotInput['fires'],
+  x: number,
+  z: number,
+  radius = WARM_FIRE_RADIUS,
+): CampSnapshotFire | null {
+  const radiusSq = radius * radius
+  let best: CampSnapshotFire | null = null
+  let bestLit = false
+  let bestDistSq = Infinity
+  for (const entry of fires) {
+    if (!isPlayerPlacedFire(entry)) continue
+    const distSq = distanceSq(entry, x, z)
+    if (distSq > radiusSq) continue
+    const lit = entry.fire.isLit()
+    const candidate: CampSnapshotFire = { id: entry.id, x: entry.x, z: entry.z, lit }
+    if (!best) {
+      best = candidate
+      bestLit = lit
+      bestDistSq = distSq
+      continue
+    }
+    if (lit !== bestLit) {
+      if (lit) {
+        best = candidate
+        bestLit = true
+        bestDistSq = distSq
+      }
+      continue
+    }
+    if (distSq < bestDistSq || (distSq === bestDistSq && candidate.id < best.id)) {
+      best = candidate
+      bestDistSq = distSq
+    }
+  }
+  return best
+}
+
+/**
+ * Spatial camp lookup + condition reads for one explicit anchor. Does not
+ * read the camera or `player.mesh`. Quality comes from `campRest.ts` — the
+ * same path sleep uses.
+ *
+ * @domain items-player
+ */
+export function resolveCampRestSnapshot(input: CampRestSnapshotInput): CampRestSnapshot {
+  const { x, z, nowDays, hasBlanket, survivalValue } = input
+  const tent = findNearestSleepingUtility(input.tents.list(), x, z, TENT_SHELTER_RADIUS)
+  const tentCondition = tent ? input.tents.conditionOf(tent.id, nowDays) ?? 0 : 0
+  const shelterFactor = tentShelterFactor(tentCondition)
+
+  const bedroll = findNearestSleepingUtility(input.bedrolls.list(), x, z, BEDROLL_REST_RADIUS)
+  const bedrollCondition = bedroll
+    ? input.bedrolls.conditionOf(bedroll.id, nowDays, shelterFactor) ?? 0
+    : 0
+
+  const platform = bedroll
+    ? findNearestSleepingUtility(input.platforms.list(), bedroll.x, bedroll.z, BEDROLL_ON_PLATFORM_RADIUS)
+    : null
+  const platformCondition = platform
+    ? input.platforms.conditionOf(platform.id, nowDays, shelterFactor) ?? 0
+    : 0
+
+  const fire = findNearestPlayerFire(input.fires, x, z)
+  const context: CampRestContext = {
+    hasBlanket,
+    hasWarmFire: fire?.lit === true,
+    tentCondition,
+    bedrollCondition,
+    platformCondition,
+  }
+  const explanation = explainCampRest(context, survivalValue)
+  return {
+    anchor: { x, z },
+    context,
+    quality: explanation.quality,
+    explanation,
+    tent,
+    tentCondition,
+    bedroll,
+    bedrollCondition,
+    platform,
+    platformCondition,
+    fire,
+  }
+}
+
+export function formatCampInspectionDescription(snapshot: CampRestSnapshot): string {
+  const detected: string[] = []
+  if (snapshot.tent) detected.push(`• Namiot (${Math.round(snapshot.tentCondition)}%)`)
+  if (snapshot.bedroll) detected.push(`• Posłanie (${Math.round(snapshot.bedrollCondition)}%)`)
+  if (snapshot.platform) detected.push(`• Platforma (${Math.round(snapshot.platformCondition)}%)`)
+  if (snapshot.fire) detected.push(`• Ognisko — ${snapshot.fire.lit ? 'rozpalone' : 'zgaszone'}`)
+  if (detected.length === 0) detected.push('• brak dodatkowych elementów obozu')
+
+  return [
+    `Stan namiotu: ${Math.round(snapshot.tentCondition)}%`,
+    '',
+    'Wykryte elementy:',
+    ...detected,
+    '',
+    formatCampRestBreakdown(snapshot.explanation),
+  ].join('\n')
+}

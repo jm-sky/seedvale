@@ -152,8 +152,12 @@ export function createCookMealIntent(deps: CookMealIntentDeps): CookMealIntentCo
   const beginPlacement = (): void => {
     phase = 'waiting-for-fire-placement'
     placementPreview.start('fireSimple', {
-      onConfirmed: ({ placedFireId }) => {
-        fireRef = { source: 'placed', id: placedFireId }
+      onConfirmed: (result) => {
+        if (result.kind !== 'fireSimple') {
+          cancel()
+          return
+        }
+        fireRef = { source: 'placed', id: result.placedFireId }
         const fire = resolveFire()
         if (!fire) {
           cancel()

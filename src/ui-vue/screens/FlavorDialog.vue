@@ -23,7 +23,7 @@ useTouchScroll(panel)
       <h2 class="mb-3 text-base font-semibold tracking-wide">
         {{ ui.flavorDialog.name }}
       </h2>
-      <p class="text-sm leading-relaxed opacity-90">
+      <p class="whitespace-pre-line text-sm leading-relaxed opacity-90">
         {{ ui.flavorDialog.line }}
       </p>
       <div

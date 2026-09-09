@@ -616,6 +616,22 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave(v13Save)).toEqual({ status: 'ok', data: validSave })
   })
 
+  it('migrates a real v14 save (plan items-player-018) into v15 with tent condition defaults', () => {
+    const v14Save = {
+      ...validSave,
+      version: 14,
+      elapsedDays: 6,
+      placedTents: [{ id: 'tent:old', x: 1, z: 2, yaw: 0.3 }],
+    }
+    const result = loadStoredSave(v14Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.placedTents).toEqual([
+      { id: 'tent:old', x: 1, z: 2, yaw: 0.3, condition: 100, lastConditionUpdateAtDays: 6 },
+    ])
+  })
+
   it.each([
     ['accepted', 'active', 'accepted'],
     ['travelling', 'active', 'travelling'],

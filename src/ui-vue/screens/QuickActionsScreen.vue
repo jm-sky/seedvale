@@ -144,6 +144,11 @@ function cookMeal(): void {
   ui.quickActions.onCookMeal?.()
 }
 
+function startFullCamp(): void {
+  closeQuickActions()
+  ui.quickActions.onStartFullCamp?.()
+}
+
 function cancelWorkContract(id: string): void {
   ui.quickActions.onCancelWorkContract?.(id)
 }
@@ -476,8 +481,12 @@ const categories = computed(() => (
         label="Odpoczynek"
       >
         <QuickActionsButton
-          label="Rozbij obóz (8h)"
+          label="Śpij na biwaku (8h)"
           @click="rest('camp')"
+        />
+        <QuickActionsButton
+          label="Rozbij pełny obóz"
+          @click="startFullCamp"
         />
         <QuickActionsButton
           v-if="ui.quickActions.nearTown"

@@ -395,7 +395,7 @@ export function buildInteractables(
     list.push({
       kind: 'tent',
       position: { x: tent.x, z: tent.z },
-      promptLabel: '[E] Odpocznij · [R] Złóż namiot',
+      promptLabel: '[E] Odpocznij · [R] Zbadaj',
       id: tent.id,
     })
   }

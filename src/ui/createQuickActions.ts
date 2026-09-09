@@ -94,6 +94,8 @@ export type QuickActionsHandlers = {
   onEatAnything?: () => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }
   /** "Ugotuj posiłek" (plan ui-input-010) — multi-stage cook-meal intent. */
   onCookMeal?: () => void
+  /** "Rozbij pełny obóz" (plan items-player-018) — multi-stage camp setup. */
+  onStartFullCamp?: () => void
   /** Initial digging-capability ownership for showing dig/level buttons. */
   hasDiggingTool?: boolean
   /** Initial tent ownership for showing "Rozstaw namiot". */

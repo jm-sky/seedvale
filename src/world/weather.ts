@@ -233,6 +233,25 @@ export function computeRainExposureDays(seed: number, fromDays: number, toDays: 
   return exposure
 }
 
+/** Cumulative snow "intensity-days" between two `elapsedDays` timestamps —
+ *  the snow counterpart to `computeRainExposureDays`. Used by lazy tent /
+ *  sleeping-utility condition (plan items-player-018), not by blood traces. */
+export function computeSnowExposureDays(seed: number, fromDays: number, toDays: number): number {
+  if (toDays <= fromDays) return 0
+  const startCycle = Math.floor(fromDays / WEATHER_CYCLE_DAYS)
+  const endCycle = Math.floor(toDays / WEATHER_CYCLE_DAYS)
+  let exposure = 0
+  for (let cycle = startCycle; cycle <= endCycle; cycle++) {
+    const cycleStart = cycle * WEATHER_CYCLE_DAYS
+    const cycleEnd = cycleStart + WEATHER_CYCLE_DAYS
+    const overlapDays = Math.min(cycleEnd, toDays) - Math.max(cycleStart, fromDays)
+    if (overlapDays <= 0) continue
+    const w = computeWeather(seed, cycleStart, getSeason(cycleStart))
+    if (w.type === 'snow') exposure += overlapDays * w.intensity
+  }
+  return exposure
+}
+
 export type WorldClimateState = {
   season: Season
   seasonProgress: number

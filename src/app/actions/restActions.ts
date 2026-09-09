@@ -19,12 +19,7 @@ import {
 } from '../../settlement/lodging'
 import { collectLodgingCandidates, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
 import { getVigorRatio } from '../../shared/VigorState'
-import {
-  BEDROLL_ON_PLATFORM_RADIUS,
-  BEDROLL_REST_RADIUS,
-  findNearestSleepingUtility,
-} from '../../world/sleepingUtilities'
-import { type CampRestContext, campRestQuality, hasTentNear, hasWarmFireNear } from '../campRest'
+import { formatCampInspectionDescription, resolveCampRestSnapshot } from '../campRestSnapshot'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 /** One button in the generic contextual interaction panel
@@ -57,6 +52,7 @@ export type RestActions = {
    *  a `run()` callback on the panel, not a further call to `startRest`. */
   startRest: (variant: RestVariant) => RestOutcome
   startTentRest: (id: string) => void
+  inspectTent: (id: string) => void
   packTent: (id: string) => void
   /** A full night's sleep just finished — applies the resolved rest quality
    *  and any Survival XP the camp earned. */
@@ -147,40 +143,25 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     restCancelAllowedByVigor = restCancelAllowedByStartVigor(getVigorRatio(player.needs.vigor))
   }
 
-  /** One-shot proximity lookup at rest start — never a per-frame scan. Only
-   *  player-built fires count as camp warmth; a village's own campfire belongs
-   *  to town rest, which is already a full night. The nearest player-built
-   *  bedroll within `BEDROLL_REST_RADIUS` (plan items-player-013) contributes
-   *  its resolved current condition; a platform only matters when it's
-   *  actually supporting that same bedroll (`hasRaisedBedroll`) — a lone
-   *  platform never grants anything on its own. */
-  const resolveCampContext = (hasBlanket: boolean, hasTent: boolean): CampRestContext => {
-    const px = player.mesh.position.x
-    const pz = player.mesh.position.z
-    const nearestBedroll = findNearestSleepingUtility(bundle.sleepingUtilities.bedrolls.list(), px, pz, BEDROLL_REST_RADIUS)
-    const bedrollSheltered = nearestBedroll !== null
-      && hasTentNear(bundle.placedTents.nodes(), nearestBedroll.x, nearestBedroll.z)
-    const bedrollCondition = nearestBedroll
-      ? bundle.sleepingUtilities.bedrolls.conditionOf(nearestBedroll.id, dayNight.elapsedDays, bedrollSheltered) ?? 0
-      : 0
-    const hasRaisedBedroll = nearestBedroll !== null && findNearestSleepingUtility(
-      bundle.sleepingUtilities.platforms.nodes(),
-      nearestBedroll.x,
-      nearestBedroll.z,
-      BEDROLL_ON_PLATFORM_RADIUS,
-    ) !== null
-    return {
-      hasBlanket,
-      hasTent: hasTent || hasTentNear(bundle.placedTents.list(), px, pz),
-      hasWarmFire: hasWarmFireNear(bundle.placedFires.list(), px, pz),
-      bedrollCondition,
-      hasRaisedBedroll,
-    }
-  }
+  /** One-shot camp snapshot at an explicit anchor — never a per-frame scan.
+   *  Only player-built fires count as camp warmth; a village's own campfire
+   *  belongs to town rest. Quality comes from the same `campRest.ts` path
+   *  inspection uses (plan items-player-018). */
+  const resolveSnapshot = (x: number, z: number, hasBlanket: boolean) => resolveCampRestSnapshot({
+    x,
+    z,
+    tents: bundle.placedTents,
+    bedrolls: bundle.sleepingUtilities.bedrolls,
+    platforms: bundle.sleepingUtilities.platforms,
+    fires: bundle.placedFires.list(),
+    nowDays: dayNight.elapsedDays,
+    hasBlanket,
+    survivalValue: player.skills.survival.value,
+  })
 
-  const beginCampRest = (context: CampRestContext): void => {
+  const beginCampRest = (snapshot: ReturnType<typeof resolveSnapshot>): void => {
     pendingRest = {
-      quality: campRestQuality(context, player.skills.survival.value),
+      quality: snapshot.quality,
       awardsSurvivalXp: true,
     }
   }
@@ -401,7 +382,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
       onSleepStart: () => {
         // The quick action already required a blanket; the tent/fire halves
         // of the camp come from what's actually pitched/lit around here.
-        beginCampRest(resolveCampContext(true, false))
+        beginCampRest(resolveSnapshot(player.mesh.position.x, player.mesh.position.z, true))
         captureRestCancelVigorGate()
         timeSkip.start(8, {
           fadeStrength: 1,
@@ -426,12 +407,30 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
       onSleepStart: () => {
         // Resolved after the pose move so the fire/tent lookup uses where the
         // player actually sleeps.
-        beginCampRest(resolveCampContext(inventory.has('blanket', 1), true))
+        beginCampRest(resolveSnapshot(player.mesh.position.x, player.mesh.position.z, inventory.has('blanket', 1)))
         captureRestCancelVigorGate()
         timeSkip.start(8, { fadeStrength: 1, label: 'Odpoczywasz w namiocie...' })
       },
       onComplete: () => {},
     })
+  }
+
+  const inspectTent = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const tent = bundle.placedTents.list().find((entry) => entry.id === id)
+    if (!tent) return
+    const snapshot = resolveSnapshot(tent.x, tent.z, inventory.has('blanket', 1))
+    const canPack = inventory.canAdd('tent')
+    openLodgingPanel('To twój namiot', formatCampInspectionDescription(snapshot), [
+      { label: 'Odpocznij', enabled: true, reasonLabel: '', run: () => startTentRest(id) },
+      {
+        label: 'Złóż namiot',
+        enabled: canPack,
+        reasonLabel: canPack ? '' : inventoryFullToastText(inventory, 'tent', 1),
+        run: () => packTent(id),
+      },
+      { label: 'Zamknij', enabled: true, reasonLabel: '', run: () => {} },
+    ])
   }
 
   const packTent = (id: string): void => {
@@ -511,6 +510,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     startWait,
     startRest,
     startTentRest,
+    inspectTent,
     packTent,
     onSleepFinished,
     abortRest,

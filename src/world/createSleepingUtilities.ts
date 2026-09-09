@@ -19,15 +19,15 @@ export type SleepingUtilities = {
     place: (x: number, z: number, yaw: number, worldDays: number, variant: SleepingUtilityVariant) => BedrollRecord
     /** Resolved current condition (plan §"Condition resolution"), or `null`
      *  if `id` no longer exists — same pure-read contract as
-     *  `PlayerGardens.hydrationOf`. `sheltered` is the caller's own
-     *  `hasTentNear` read against this record's position. */
-    conditionOf: (id: string, worldDays: number, sheltered: boolean) => number | null
+     *  `PlayerGardens.hydrationOf`. `shelterFactor` is `0..1` tent shelter
+     *  (plan items-player-018) against this record's position. */
+    conditionOf: (id: string, worldDays: number, shelterFactor: number) => number | null
   }
   platforms: {
     list: () => readonly PlatformEntry[]
     nodes: () => readonly PlatformRecord[]
     place: (x: number, z: number, yaw: number, worldDays: number) => PlatformRecord
-    conditionOf: (id: string, worldDays: number, sheltered: boolean) => number | null
+    conditionOf: (id: string, worldDays: number, shelterFactor: number) => number | null
   }
   dispose: () => void
 }
@@ -101,9 +101,9 @@ export function createSleepingUtilities(
         spawnBedroll(record)
         return record
       },
-      conditionOf(id, worldDays, sheltered) {
+      conditionOf(id, worldDays, shelterFactor) {
         const entry = bedrolls.find((b) => b.id === id)
-        return entry ? resolveSleepingUtilityCondition(entry, seed, worldDays, sheltered) : null
+        return entry ? resolveSleepingUtilityCondition(entry, seed, worldDays, shelterFactor) : null
       },
     },
     platforms: {
@@ -123,9 +123,9 @@ export function createSleepingUtilities(
         spawnPlatform(record)
         return record
       },
-      conditionOf(id, worldDays, sheltered) {
+      conditionOf(id, worldDays, shelterFactor) {
         const entry = platforms.find((p) => p.id === id)
-        return entry ? resolveSleepingUtilityCondition(entry, seed, worldDays, sheltered) : null
+        return entry ? resolveSleepingUtilityCondition(entry, seed, worldDays, shelterFactor) : null
       },
     },
     dispose() {

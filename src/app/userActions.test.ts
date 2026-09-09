@@ -89,10 +89,11 @@ describe('userActions fire contracts', () => {
 
   it('buildSimpleFire succeeds and consumes materials once requirements are met', () => {
     const { actions, inventory, bundle } = makeActions({ inventory: new Inventory({ branch: 2, firestarter: 1 }, 1000) })
+    vi.mocked(bundle.placedFires.place).mockReturnValue({ id: 'fire-1' } as never)
 
     const result = actions.buildSimpleFire()
 
-    expect(result).toEqual({ ok: true })
+    expect(result).toEqual({ ok: true, placedFireId: 'fire-1' })
     expect(inventory.count('branch')).toBe(0)
     expect(bundle.placedFires.place).toHaveBeenCalledTimes(1)
   })

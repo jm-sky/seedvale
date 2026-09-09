@@ -192,6 +192,13 @@ export type GroundPlacementDefinition<Reason extends string> = {
   reasonLabel: (reason: Exclude<Reason, 'ok'>) => string
 }
 
+/** Async completion hooks for multi-stage player intents (plan ui-input-010 /
+ *  items-player-018). Normal placement callers omit these. */
+export type PlacementMutationLifecycle = {
+  onComplete?: (outcome: 'success' | 'failure', placedId?: string) => void
+  onCancel?: () => void
+}
+
 /** Resolves the current aim + suitability for `def` once. */
 export function evaluatePlacementSite<Reason extends string>(
   def: GroundPlacementDefinition<Reason>,
@@ -239,7 +246,7 @@ export type PlacementActions = {
    *  `placeTentAtAim` remains the only mutation seam. `objectYaw` freezes
    *  the tent's orientation independently of camera aim (plan `ui-input-012`). */
   previewTentPlacement: (objectYaw?: number) => PlacementPreviewResult
-  placeTentAtAim: (objectYaw?: number) => void
+  placeTentAtAim: (objectYaw?: number, lifecycle?: PlacementMutationLifecycle) => void
   placeTrapAtAim: (kind: TrapKind) => void
   /** Read-only preview of well placement at the player's current aim (plan
    *  `ui-input-012`) — same shared preview seam as tent/torch; confirm still
@@ -322,14 +329,14 @@ export type PlacementActions = {
   /** Places a new leather bedroll ahead of the player (plan items-player-013)
    *  — consumes `BEDROLL_MATERIAL_REQUIREMENTS` atomically on completion,
    *  nothing on a rejected/cancelled placement. */
-  placeBedrollAtAim: (objectYaw?: number) => void
+  placeBedrollAtAim: (objectYaw?: number, lifecycle?: PlacementMutationLifecycle) => void
   /** Read-only preview of raised-platform placement at the player's current
    *  aim (plan items-player-013) — same shape as `previewBedrollPlacement`. */
   previewPlatformPlacement: (objectYaw?: number) => PlacementPreviewResult
   /** Places a new raised sleeping platform ahead of the player (plan
    *  items-player-013) — consumes `PLATFORM_MATERIAL_REQUIREMENTS` atomically
    *  on completion, nothing on a rejected/cancelled placement. */
-  placePlatformAtAim: (objectYaw?: number) => void
+  placePlatformAtAim: (objectYaw?: number, lifecycle?: PlacementMutationLifecycle) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -383,11 +390,15 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   const previewTentPlacement = (objectYaw?: number): PlacementPreviewResult =>
     previewGroundPlacement(tentPlacementDefinition(objectYaw))
 
-  const placeTentAtAim = (objectYaw?: number): void => {
-    if (!inventory.has('tent', 1) || isActionBlocked(ctx)) return
+  const placeTentAtAim = (objectYaw?: number, lifecycle?: PlacementMutationLifecycle): void => {
+    if (!inventory.has('tent', 1) || isActionBlocked(ctx)) {
+      lifecycle?.onComplete?.('failure')
+      return
+    }
     const { site, reason } = evaluatePlacementSite(tentPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
+      lifecycle?.onComplete?.('failure')
       return
     }
     // Survival shortens the setup channel; the tent itself is only spent when
@@ -396,13 +407,18 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       TENT_SETUP_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value),
       'Rozstawianie namiotu…',
       () => {
-        if (!inventory.remove('tent', 1)) return
-        bundle.placedTents.place(site.x, site.z, site.yaw)
+        if (!inventory.remove('tent', 1)) {
+          lifecycle?.onComplete?.('failure')
+          return
+        }
+        const tent = bundle.placedTents.place(site.x, site.z, site.yaw, dayNight.elapsedDays)
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.syncQuickActionAvailability()
         awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.pitchTent)
         toast.show('Rozstawiono namiot.')
+        lifecycle?.onComplete?.('success', tent.id)
       },
+      { onCancel: () => lifecycle?.onCancel?.() },
     )
   }
 
@@ -1069,11 +1085,15 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
   /** Places a new leather bedroll ahead of the player (plan items-player-013)
    *  — same "validate, then busy-channel, consume+build only on completion"
    *  shape as `placeStandingTorchAtAim`. No capability/tool is required. */
-  const placeBedrollAtAim = (objectYaw?: number): void => {
-    if (isActionBlocked(ctx)) return
+  const placeBedrollAtAim = (objectYaw?: number, lifecycle?: PlacementMutationLifecycle): void => {
+    if (isActionBlocked(ctx)) {
+      lifecycle?.onComplete?.('failure')
+      return
+    }
     const { site, reason } = evaluatePlacementSite(bedrollPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(BEDROLL_PLACEMENT_MESSAGE[reason], 'error')
+      lifecycle?.onComplete?.('failure')
       return
     }
     const missing = BEDROLL_MATERIAL_REQUIREMENTS.filter(
@@ -1084,17 +1104,22 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
         `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
         'error',
       )
+      lifecycle?.onComplete?.('failure')
       return
     }
     busy.start(BEDROLL_PLACE_DURATION_SEC, 'Rozkładanie posłania…', () => {
       for (const r of BEDROLL_MATERIAL_REQUIREMENTS) {
-        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) {
+          lifecycle?.onComplete?.('failure')
+          return
+        }
       }
-      bundle.sleepingUtilities.bedrolls.place(site.x, site.z, site.yaw, dayNight.elapsedDays, 'leather')
+      const bedroll = bundle.sleepingUtilities.bedrolls.place(site.x, site.z, site.yaw, dayNight.elapsedDays, 'leather')
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Rozłożono posłanie.')
-    })
+      lifecycle?.onComplete?.('success', bedroll.id)
+    }, { onCancel: () => lifecycle?.onCancel?.() })
   }
 
   /** Shared placement contract for a raised sleeping platform (plan
@@ -1130,11 +1155,15 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
 
   /** Places a new raised sleeping platform ahead of the player (plan
    *  items-player-013) — same shape as `placeBedrollAtAim`. */
-  const placePlatformAtAim = (objectYaw?: number): void => {
-    if (isActionBlocked(ctx)) return
+  const placePlatformAtAim = (objectYaw?: number, lifecycle?: PlacementMutationLifecycle): void => {
+    if (isActionBlocked(ctx)) {
+      lifecycle?.onComplete?.('failure')
+      return
+    }
     const { site, reason } = evaluatePlacementSite(platformPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(PLATFORM_PLACEMENT_MESSAGE[reason], 'error')
+      lifecycle?.onComplete?.('failure')
       return
     }
     const missing = PLATFORM_MATERIAL_REQUIREMENTS.filter(
@@ -1145,17 +1174,22 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
         `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
         'error',
       )
+      lifecycle?.onComplete?.('failure')
       return
     }
     busy.start(PLATFORM_PLACE_DURATION_SEC, 'Budowa podestu…', () => {
       for (const r of PLATFORM_MATERIAL_REQUIREMENTS) {
-        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) {
+          lifecycle?.onComplete?.('failure')
+          return
+        }
       }
-      bundle.sleepingUtilities.platforms.place(site.x, site.z, site.yaw, dayNight.elapsedDays)
+      const platform = bundle.sleepingUtilities.platforms.place(site.x, site.z, site.yaw, dayNight.elapsedDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Zbudowano podest do spania.')
-    })
+      lifecycle?.onComplete?.('success', platform.id)
+    }, { onCancel: () => lifecycle?.onCancel?.() })
   }
 
   return {

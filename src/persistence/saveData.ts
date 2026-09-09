@@ -100,7 +100,15 @@ export type SavePlayerTorch = {
   fuelRemaining: number
 }
 
-export type SavePlacedTent = { id: string, x: number, z: number, yaw: number }
+export type SavePlacedTent = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  /** 0..100 lazy weather-driven condition (plan items-player-018). */
+  condition: number
+  lastConditionUpdateAtDays: number
+}
 
 export type SaveWorldFlags = {
   /** Strażnik already gifted a long_sword (quest or dialogue, plan 090). */
@@ -476,7 +484,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 14
+export const CURRENT_SAVE_VERSION = 15
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -724,6 +732,7 @@ function isPlacedTentsField(value: unknown): value is SavePlacedTent[] {
     const t = raw as Record<string, unknown>
     if (typeof t.id !== 'string') return false
     if (typeof t.x !== 'number' || typeof t.z !== 'number' || typeof t.yaw !== 'number') return false
+    if (typeof t.condition !== 'number' || typeof t.lastConditionUpdateAtDays !== 'number') return false
   }
   return true
 }
@@ -2089,6 +2098,30 @@ function migrateSaveV13ToV14(data: unknown): unknown {
   }
 }
 
+/** v14 → v15 (plan items-player-018): tents gain persisted lazy condition.
+ *  Old tents default to 100% with the save's `elapsedDays` as the weather
+ *  anchor, so they do not retroactively decay from day 0. */
+function migrateSaveV14ToV15(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const elapsedDays = typeof v.elapsedDays === 'number' ? v.elapsedDays : 0
+  const placedTents = Array.isArray(v.placedTents) ? v.placedTents : []
+  return {
+    ...v,
+    version: 15,
+    placedTents: placedTents.map((raw) => {
+      if (!raw || typeof raw !== 'object') return raw
+      const t = raw as Record<string, unknown>
+      return {
+        ...t,
+        condition: typeof t.condition === 'number' ? t.condition : 100,
+        lastConditionUpdateAtDays: typeof t.lastConditionUpdateAtDays === 'number'
+          ? t.lastConditionUpdateAtDays
+          : elapsedDays,
+      }
+    }),
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2103,6 +2136,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   11: migrateSaveV11ToV12,
   12: migrateSaveV12ToV13,
   13: migrateSaveV13ToV14,
+  14: migrateSaveV14ToV15,
 }
 
 function detectStoredVersion(value: unknown): number | null {

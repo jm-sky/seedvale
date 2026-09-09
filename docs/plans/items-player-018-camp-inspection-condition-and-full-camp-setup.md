@@ -1,7 +1,8 @@
 # Plan: Camp inspection, condition and full camp setup
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-09
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** ui-input-010
