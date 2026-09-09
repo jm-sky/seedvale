@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeFlavorDialog, isFlavorDialogOpen, ui } from '../store'
@@ -7,6 +7,46 @@ import { closeFlavorDialog, isFlavorDialogOpen, ui } from '../store'
 useOverlayScreen('flavor-dialog', isFlavorDialogOpen, closeFlavorDialog)
 const panel = ref<HTMLElement | null>(null)
 useTouchScroll(panel)
+
+function enabledButtons(): HTMLButtonElement[] {
+  if (!panel.value) return []
+  return [...panel.value.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
+}
+
+function focusFirstEnabledButton(): void {
+  void nextTick(() => {
+    enabledButtons()[0]?.focus()
+  })
+}
+
+watch(() => ui.flavorDialog.open, (open) => {
+  if (open) focusFirstEnabledButton()
+})
+
+function runAction(run: () => void): void {
+  closeFlavorDialog()
+  run()
+}
+
+/** Minimal focus trap — Tab / Shift+Tab cycle only the enabled action buttons. */
+function onPanelKeyDown(event: KeyboardEvent): void {
+  if (event.key !== 'Tab') return
+  const buttons = enabledButtons()
+  if (buttons.length === 0) return
+  const first = buttons[0]!
+  const last = buttons[buttons.length - 1]!
+  if (event.shiftKey) {
+    if (document.activeElement === first || !panel.value?.contains(document.activeElement)) {
+      event.preventDefault()
+      last.focus()
+    }
+    return
+  }
+  if (document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
 </script>
 
 <template>
@@ -19,8 +59,15 @@ useTouchScroll(panel)
       ref="panel"
       class="max-h-[calc(100dvh-32px)] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
       style="touch-action: pan-y"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="ui.flavorDialog.actions.length ? 'flavor-dialog-title' : undefined"
+      @keydown="onPanelKeyDown"
     >
-      <h2 class="mb-3 text-base font-semibold tracking-wide">
+      <h2
+        id="flavor-dialog-title"
+        class="mb-3 text-base font-semibold tracking-wide"
+      >
         {{ ui.flavorDialog.name }}
       </h2>
       <p class="whitespace-pre-line text-sm leading-relaxed opacity-90">
@@ -34,9 +81,9 @@ useTouchScroll(panel)
           v-for="action in ui.flavorDialog.actions"
           :key="action.label"
           type="button"
-          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-left text-[13px] hover:bg-white/20 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white/10"
+          class="cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-left text-[13px] hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(255,196,92,0.9)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white/10"
           :disabled="!action.enabled"
-          @click="closeFlavorDialog(); action.run()"
+          @click="runAction(action.run)"
         >
           {{ action.label }}
           <span

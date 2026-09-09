@@ -127,6 +127,8 @@ type FlavorDialogState = {
   /** Extra actions beyond the implicit Esc/E-close (plan `ui-input-002`) —
    *  empty for the plain flavor-text case, which renders exactly as before. */
   actions: readonly InteractionPanelAction[]
+  onOpen: (() => void) | null
+  onClose: (() => void) | null
 }
 export type FireActionId = 'lightBranch' | 'lightWoodenTorch' | 'buildFirePit' | 'buildSimpleFire' | 'buildWoodPile' | 'buildGrate'
 
@@ -514,7 +516,7 @@ export const ui = reactive({
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], relation: () => 0 } as QuestLogState,
-  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [] } as FlavorDialogState,
+  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [], onOpen: null, onClose: null } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
     hasPalisadeMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
@@ -669,14 +671,22 @@ export function refreshQuestLog(entries: readonly QuestListEntry[], relation: (n
 export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
+export function configureFlavorDialog(handlers: { onOpen?: () => void, onClose?: () => void }): void {
+  ui.flavorDialog.onOpen = handlers.onOpen ?? null
+  ui.flavorDialog.onClose = handlers.onClose ?? null
+}
 export function openFlavorDialog(name: string, line: string, actions: readonly InteractionPanelAction[] = []): void {
+  const wasOpen = ui.flavorDialog.open
   ui.flavorDialog.prompt = null
   ui.flavorDialog.progress = null
   ui.flavorDialog.name = name
   ui.flavorDialog.line = line
   ui.flavorDialog.actions = actions
   ui.flavorDialog.open = true
-  emitUiOpen()
+  if (!wasOpen) {
+    emitUiOpen()
+    ui.flavorDialog.onOpen?.()
+  }
 }
 export function setFlavorPrompt(text: string | null, highlighted = false, progress: number | null = null): void {
   if (!ui.flavorDialog.open) {
@@ -685,7 +695,11 @@ export function setFlavorPrompt(text: string | null, highlighted = false, progre
     ui.flavorDialog.progress = progress
   }
 }
-export function closeFlavorDialog(): void { ui.flavorDialog.open = false }
+export function closeFlavorDialog(): void {
+  if (!ui.flavorDialog.open) return
+  ui.flavorDialog.open = false
+  ui.flavorDialog.onClose?.()
+}
 export function isFlavorDialogOpen(): boolean { return ui.flavorDialog.open }
 
 export function openVillagers(): void { ui.villagers.open = true; ui.villagers.page = 0 }

@@ -225,12 +225,13 @@ const buildActions = computed<Action[]>(() => {
   list.push({ label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell })
   list.push({ label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden })
 
-  // "Zleć budowę" (plan npc-014) — always available, no material cost; the
-  // reward is chosen after the target is placed, not spent up front.
-  list.push({ label: 'Zleć budowę', cost: '', onClick: () => startPlacementPreview('workContract') })
+  // "Zleć budowę studni" (plan npc-014) — always available, no material
+  // cost; the reward is chosen after the well target is placed, not spent up
+  // front. This flow intentionally supports only `PlayerWellRecord` targets.
+  list.push({ label: 'Zleć budowę studni', cost: '', onClick: () => startPlacementPreview('workContract') })
   // "Zleć pomoc" (plan npc-018 §20) — hires help for an already-existing
   // unfinished target instead of placing a new one; always visible, same
-  // "no cost up front" shape as "Zleć budowę" — `openHireHelp` itself tells
+  // "no cost up front" shape as "Zleć budowę studni" — `openHireHelp` itself tells
   // the player when there is nothing eligible to hire help for.
   list.push({ label: 'Zleć pomoc', cost: '', onClick: hireHelp })
 

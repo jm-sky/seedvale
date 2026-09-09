@@ -1711,6 +1711,46 @@ export async function createApp(
   }, () => vueUi.isNpcDialogueMenuOpen())
   void refreshActiveSaveName()
 
+  /** When a flavor dialog opened under pointer lock, restore lock only after
+   *  the whole dialog chain closes and no other clickable UI still needs the
+   *  cursor — deferred so a synchronous close→open chain never re-locks
+   *  between steps. */
+  let restorePointerLockAfterFlavorDialog = false
+  const blocksGamePointerLockRestore = (): boolean =>
+    vueUi.isFlavorDialogOpen() ||
+    quickActions.isOpen() ||
+    pauseMenu.isPaused() ||
+    inventoryScreen.isOpen() ||
+    vueUi.isMerchantOpen() ||
+    vueUi.isContainerScreenOpen() ||
+    vueUi.isNpcDialogueMenuOpen() ||
+    npcDialog.isOpen() ||
+    questLog.isOpen() ||
+    vueUi.isVillagersOpen() ||
+    vueUi.isWorldConfigScreenOpen() ||
+    vueUi.isNotesOpen() ||
+    vueUi.isSkillsScreenOpen() ||
+    vueUi.isCharacterScreenOpen() ||
+    vueUi.isWorldMapOpen()
+  const scheduleRestorePointerLockAfterFlavorDialog = (): void => {
+    queueMicrotask(() => {
+      if (!restorePointerLockAfterFlavorDialog) return
+      if (blocksGamePointerLockRestore()) return
+      restorePointerLockAfterFlavorDialog = false
+      requestGamePointerLock(renderer.domElement)
+    })
+  }
+  vueUi.configureFlavorDialog({
+    onOpen: () => {
+      if (exitGamePointerLock(renderer.domElement)) {
+        restorePointerLockAfterFlavorDialog = true
+      }
+    },
+    onClose: () => {
+      scheduleRestorePointerLockAfterFlavorDialog()
+    },
+  })
+
   /** Guard against the ☰ / Quick Actions buttons opening their overlay on top
    *  of another already-open full-screen modal (npc dialog/quest log/
    *  villagers) — those don't disable the button the way they disable the rest

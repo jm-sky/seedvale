@@ -591,9 +591,9 @@ export const WELL_STAGE_START_PROMPT: Record<WellStage, string> = {
 
 /** Busy-overlay label shown while a work-session bout is actively running. */
 export const WELL_WORK_LABEL: Record<WellStage, string> = {
-  pit: 'Kopanie dołu w toku…',
+  pit: 'Kopanie dołu pod studnię w toku…',
   well: 'Budowa studni w toku…',
-  roof: 'Budowa daszku w toku…',
+  roof: 'Budowa daszku studni w toku…',
 }
 
 /** Generic active-work-hours formatter — whole numbers print bare, anything
