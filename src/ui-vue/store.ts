@@ -9,6 +9,7 @@ import type { WorldConfig } from '../config/worldConfig'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
+import type { SellPriceContext } from '../items/tradeCatalog'
 import type { TradeResult } from '../items/trade'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
@@ -257,11 +258,24 @@ type QuickActionsState = {
   onEatAnything: (() => { ok: boolean, toast: string, kind: 'info' | 'error' | 'pickup' }) | null
   onCookMeal: (() => void) | null
 }
+/** Merchant-resolved sell pricing (plan settlements-006) — plain data and
+ *  inventory-backed helpers built once per merchant session at the app layer. */
+export type MerchantPricing = {
+  context: SellPriceContext
+  unitOfferPrice: (kind: ItemKind) => number | null
+  offerLineTotal: (kind: ItemKind, count: number) => number
+  previewNetCoins: (
+    purchases: Partial<Record<ItemKind, number>>,
+    offer: Partial<Record<ItemKind, number>>,
+  ) => number
+}
+
 type MerchantState = {
   open: boolean
   npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
   groups: readonly InventoryGroupView[]
+  pricing: MerchantPricing | null
   /** Settles one mixed BUY+OFFER basket atomically (plan ui-input-003) —
    *  supersedes the old single-target onBuyCoins/onBuyBarter/onSellCoins. */
   onSettleTransaction: ((
@@ -525,7 +539,7 @@ export const ui = reactive({
   lodgingWalk: { active: false } as LodgingWalkState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
   placementPreview: { visible: false, label: '', valid: false, reasonLabel: '', supportsRotation: false } as PlacementPreviewState,
-  merchant: { open: false, npc: null, counts: {}, groups: [], onSettleTransaction: null, onSellInstances: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, groups: [], pricing: null, onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
@@ -818,10 +832,12 @@ export function configureMerchant(handlers: Pick<MerchantState, 'onSettleTransac
 export function openMerchant(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
+  pricing: MerchantPricing,
   npc: NpcAgent | null = null,
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
+  ui.merchant.pricing = pricing
   ui.merchant.npc = npc ? markRaw(npc) : null
   ui.merchant.open = true
 }
@@ -829,10 +845,11 @@ export function openMerchant(
 export function openMerchantFromDialogue(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
+  pricing: MerchantPricing,
 ): void {
   const npc = ui.npcDialogueMenu.npc as NpcAgent | null
   closeNpcDialogueMenu({ decline: false })
-  openMerchant(counts, groups, npc)
+  openMerchant(counts, groups, pricing, npc)
 }
 export function refreshMerchant(
   counts: Partial<Record<ItemKind, number>>,
@@ -844,6 +861,7 @@ export function refreshMerchant(
 export function closeMerchant(): void {
   ui.merchant.open = false
   ui.merchant.npc = null
+  ui.merchant.pricing = null
 }
 export function isMerchantOpen(): boolean { return ui.merchant.open }
 

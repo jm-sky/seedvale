@@ -6,7 +6,7 @@ import {
   sellInstancesForCoins,
   settleTransaction,
 } from './trade'
-import { BROKEN_SELL_MULTIPLIER, resolveInstanceSellPrice, tradeValue } from './tradeCatalog'
+import { BROKEN_SELL_MULTIPLIER, BASE_SELL_FACTOR, resolveInstanceSellPrice, roundSellPrice, tradeValue } from './tradeCatalog'
 import { createTrapInstance } from './trapItemInstances'
 
 describe('trap instance trade (plan 155)', () => {
@@ -32,20 +32,20 @@ describe('trap instance trade (plan 155)', () => {
     expect(new Set(ids).size).toBe(3)
   })
 
-  it('applies the central condition discount curve', () => {
+  it('applies the shared condition-aware sell formula', () => {
     const full = createTrapInstance('trap_simple')
     const half = createTrapInstance('trap_simple')
     half.durability = 1
     const base = tradeValue('trap_simple')
-    expect(resolveInstanceSellPrice(full)).toBe(Math.max(1, Math.floor(base * 0.9 * 0.5)))
-    expect(resolveInstanceSellPrice(half)).toBe(Math.max(1, Math.floor(base * (1 - 0.175) * 0.5)))
+    expect(resolveInstanceSellPrice(full)).toBe(roundSellPrice(base * BASE_SELL_FACTOR))
+    expect(resolveInstanceSellPrice(half)).toBe(roundSellPrice(base * BASE_SELL_FACTOR * 0.5))
   })
 
   it('sells broken traps for a very low price', () => {
     const broken = createTrapInstance('trap_simple')
     broken.durability = 0
     const price = resolveInstanceSellPrice(broken)
-    expect(price).toBe(Math.max(1, Math.floor(tradeValue('trap_simple') * BROKEN_SELL_MULTIPLIER)))
+    expect(price).toBe(roundSellPrice(tradeValue('trap_simple') * BROKEN_SELL_MULTIPLIER))
   })
 
   it('auto-sell chooses the lowest condition first with stable id tie-break', () => {

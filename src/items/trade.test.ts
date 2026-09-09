@@ -1,8 +1,38 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from './Inventory'
-import { settleTransaction } from './trade'
-import { MERCHANT_STOCK, merchantPrice, offerValue, sellPrice, tradeValue } from './tradeCatalog'
 import { createWeaponInstance } from './weaponMaintenance'
+import {
+  previewTransactionNetCoins,
+  resolveOfferLineBuyback,
+  settleTransaction,
+} from './trade'
+import {
+  BASE_SELL_FACTOR,
+  fullConditionSellFactor,
+  MAX_SELL_FACTOR,
+  MERCHANT_STOCK,
+  merchantPrice,
+  NEUTRAL_SELL_PRICE_CONTEXT,
+  relationshipEffect,
+  reputationEffect,
+  resolveInstanceSellPrice,
+  roundSellPrice,
+  sellPrice,
+  tradeValue,
+  type SellPriceContext,
+} from './tradeCatalog'
+import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
+import type { RelationLevel } from '../quests/quests'
+import { createTrapInstance } from './trapItemInstances'
+
+function makeContext(overrides: Partial<SellPriceContext> & { reputation?: Partial<SellPriceContext['reputation']> } = {}): SellPriceContext {
+  return {
+    relation: overrides.relation ?? NEUTRAL_SELL_PRICE_CONTEXT.relation,
+    relationLevel: overrides.relationLevel ?? NEUTRAL_SELL_PRICE_CONTEXT.relationLevel,
+    reputation: { ...NEUTRAL_REPUTATION, ...overrides.reputation },
+    renown: overrides.renown ?? NEUTRAL_SELL_PRICE_CONTEXT.renown,
+  }
+}
 
 describe('tradeCatalog (plan 090)', () => {
   it('lists every stocked item with a positive coin price', () => {
@@ -40,16 +70,121 @@ describe('tradeCatalog (plan 090)', () => {
   })
 })
 
-describe('sellPrice', () => {
-  it('is half the trade value, floored, at least 1', () => {
-    expect(sellPrice('knife')).toBe(6)
-    expect(sellPrice('long_sword')).toBe(25)
-    expect(sellPrice('stone')).toBe(1)
+describe('merchant sell pricing (plan settlements-006)', () => {
+  it('uses ~90% of trade value for a neutral stack item', () => {
+    expect(sellPrice('knife')).toBe(10)
+    expect(sellPrice('long_sword')).toBe(45)
   })
 
-  it('refuses shell and coin', () => {
+  it('keeps minimum 1 coin and refuses shell/coin', () => {
+    expect(sellPrice('stone')).toBe(1)
     expect(sellPrice('shell')).toBeNull()
     expect(sellPrice('coin')).toBeNull()
+  })
+
+  it('maps positive relation tiers to 0/+1/+3/+5 pp', () => {
+    const tiers: Array<[RelationLevel, number]> = [
+      ['stranger', 0],
+      ['acquainted', 0.01],
+      ['friendly', 0.03],
+      ['trusted', 0.05],
+    ]
+    for (const [relationLevel, expected] of tiers) {
+      expect(relationshipEffect(makeContext({ relation: 99, relationLevel }))).toBe(expected)
+    }
+  })
+
+  it('does not increase the positive relation bonus above trusted (+5 pp)', () => {
+    expect(relationshipEffect(makeContext({ relation: 99, relationLevel: 'trusted' }))).toBe(0.05)
+  })
+
+  it('maps negative relation continuously down to -5 pp', () => {
+    expect(relationshipEffect(makeContext({ relation: -3, relationLevel: 'stranger' }))).toBe(-0.03)
+    expect(relationshipEffect(makeContext({ relation: -10, relationLevel: 'stranger' }))).toBe(-0.05)
+  })
+
+  it('weights trust/integrity/competence and ignores benevolence/courage', () => {
+    const positive = makeContext({
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 0,
+    })
+    expect(reputationEffect(positive)).toBeCloseTo(0.05, 5)
+    const negative = makeContext({
+      reputation: { trust: -100, integrity: -100, competence: -100, benevolence: 100, courage: 100 },
+      renown: 0,
+    })
+    expect(reputationEffect(negative)).toBeCloseTo(-0.05, 5)
+  })
+
+  it('uses renown only as an amplifier, not a standalone bonus', () => {
+    expect(reputationEffect(makeContext({ renown: 100 }))).toBe(0)
+  })
+
+  it('amplifies both positive and negative reputation with high renown', () => {
+    const good = makeContext({
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    const bad = makeContext({
+      reputation: { trust: -100, integrity: -100, competence: -100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    expect(reputationEffect(good)).toBeCloseTo(0.10, 5)
+    expect(reputationEffect(bad)).toBeCloseTo(-0.10, 5)
+  })
+
+  it('caps full-condition pricing at ~105% and ~80%', () => {
+    const best = makeContext({
+      relation: 10,
+      relationLevel: 'trusted',
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    const worst = makeContext({
+      relation: -10,
+      relationLevel: 'stranger',
+      reputation: { trust: -100, integrity: -100, competence: -100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    expect(fullConditionSellFactor(best)).toBeCloseTo(MAX_SELL_FACTOR, 5)
+    expect(fullConditionSellFactor(worst)).toBeCloseTo(0.80, 5)
+    expect(sellPrice('obsidian_sword', best)).toBe(roundSellPrice(tradeValue('obsidian_sword') * MAX_SELL_FACTOR))
+    expect(sellPrice('long_sword', worst)).toBe(40)
+  })
+
+  it('caps stocked buyback at merchant list price to prevent buy/sell arbitrage', () => {
+    const best = makeContext({
+      relation: 10,
+      relationLevel: 'trusted',
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    expect(sellPrice('knife', best)).toBe(merchantPrice('knife'))
+    const inv = new Inventory({ coin: 12 })
+    expect(settleTransaction(inv, { knife: 1 }, {})).toBe('ok')
+    expect(settleTransaction(inv, {}, { knife: 1 }, best)).toBe('ok')
+    expect(inv.count('coin')).toBe(12)
+  })
+
+  it('allows non-stocked goods to exceed 100% nominal value', () => {
+    const best = makeContext({
+      relation: 10,
+      relationLevel: 'trusted',
+      reputation: { trust: 100, integrity: 100, competence: 100, benevolence: 0, courage: 0 },
+      renown: 100,
+    })
+    expect(sellPrice('obsidian_sword', best)).toBe(roundSellPrice(tradeValue('obsidian_sword') * MAX_SELL_FACTOR))
+  })
+
+  it('scales trap sell price proportionally with condition and stays monotonic', () => {
+    const full = createTrapInstance('trap_simple')
+    const half = createTrapInstance('trap_simple')
+    half.durability = 1
+    const base = tradeValue('trap_simple')
+    const neutral = NEUTRAL_SELL_PRICE_CONTEXT
+    expect(resolveInstanceSellPrice(full, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR))
+    expect(resolveInstanceSellPrice(half, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR * 0.5))
+    expect(resolveInstanceSellPrice(full, neutral)! > resolveInstanceSellPrice(half, neutral)!)
   })
 })
 
@@ -105,29 +240,24 @@ describe('settleTransaction — buying with coins (supersedes buyWithCoins)', ()
 })
 
 describe('settleTransaction — offer covers purchase (supersedes buyWithBarter)', () => {
-  // Plan 161 moved knife/axe/sword/etc. into `instances`, not `counts` — real
-  // gameplay never has these as plain stack counts
-  // (`migrateWeaponCountsToInstances` converts on load), so these build the
-  // offer inventories the way a real save actually holds them.
-  it('accepts an offer whose combined value exactly covers the price for zero coins (today\'s barter case)', () => {
-    const inv = new Inventory(undefined, undefined, [
+  it('accepts an offer whose combined merchant and barter value covers the purchase for zero coins', () => {
+    const inv = new Inventory({ coin: 0, shell: 6 }, undefined, [
       createWeaponInstance('axe'),
       createWeaponInstance('axe'),
     ])
-    expect(offerValue({ axe: 2 })).toBe(50)
-    expect(settleTransaction(inv, { long_sword: 1 }, { axe: 2 })).toBe('ok')
+    expect(settleTransaction(inv, { long_sword: 1 }, { axe: 2, shell: 6 })).toBe('ok')
     expect(inv.countInstances('axe')).toBe(0)
+    expect(inv.count('shell')).toBe(0)
     expect(inv.countInstances('long_sword')).toBe(1)
     expect(inv.count('coin')).toBe(0)
   })
 
   it('tops up an under-covering offer with coins instead of rejecting it', () => {
     const inv = new Inventory({ coin: 20 }, undefined, [createWeaponInstance('knife')])
-    // knife tradeValue 12, axe price 25 → offer covers 12, player pays the 13 coin difference
     expect(settleTransaction(inv, { axe: 1 }, { knife: 1 })).toBe('ok')
     expect(inv.countInstances('knife')).toBe(0)
     expect(inv.countInstances('axe')).toBe(1)
-    expect(inv.count('coin')).toBe(7)
+    expect(inv.count('coin')).toBe(5)
   })
 
   it('refuses an under-covering offer when coins on hand cannot make up the difference', () => {
@@ -144,26 +274,20 @@ describe('settleTransaction — offer covers purchase (supersedes buyWithBarter)
     expect(inv.countInstances('knife')).toBe(1)
   })
 
-  it('scales the required offer value by purchase count', () => {
+  it('scales the required offer buyback value by purchase count', () => {
     const inv = new Inventory({ coin: 0 }, undefined, [
       createWeaponInstance('axe'),
       createWeaponInstance('axe'),
       createWeaponInstance('axe'),
       createWeaponInstance('axe'),
+      createWeaponInstance('axe'),
     ])
-    expect(offerValue({ axe: 4 })).toBe(100)
-    expect(settleTransaction(inv, { long_sword: 2 }, { axe: 4 })).toBe('ok')
+    expect(settleTransaction(inv, { long_sword: 2 }, { axe: 5 })).toBe('ok')
     expect(inv.countInstances('axe')).toBe(0)
     expect(inv.countInstances('long_sword')).toBe(2)
   })
 
   it('refuses (without taking the offer) a trade that fits maxWeight but overflows maxSize', () => {
-    // A single `long_sword` (weight 2.5, size LG=4) covers 40 arrows in
-    // value; arrows are near-weightless (0.05 each, XS=1 size each), so the
-    // swap barely moves the weight total but blows a tight size cap. Before
-    // this fix `wouldFitAfter` only checked weight, so the sword would be
-    // handed over and `Inventory.add` would then silently no-op on the
-    // arrows — sword gone, no arrows received.
     const inv = new Inventory({ coin: 0 }, 1000, [createWeaponInstance('long_sword')], undefined, 10)
     expect(settleTransaction(inv, { arrow: 40 }, { long_sword: 1 })).toBe('full')
     expect(inv.countInstances('long_sword')).toBe(1)
@@ -172,35 +296,33 @@ describe('settleTransaction — offer covers purchase (supersedes buyWithBarter)
 })
 
 describe('settleTransaction — offer-only, exceeding purchase cost (supersedes sellForCoins)', () => {
-  it('is atomic: item out, coins in at the sell spread', () => {
+  it('is atomic: item out, coins in at the merchant buyback rate', () => {
     const inv = new Inventory({ coin: 0 }, undefined, [createWeaponInstance('knife')])
     expect(settleTransaction(inv, {}, { knife: 1 })).toBe('ok')
     expect(inv.countInstances('knife')).toBe(0)
-    expect(inv.count('coin')).toBe(6)
+    expect(inv.count('coin')).toBe(10)
   })
 
-  it('does not profit from buying and immediately selling', () => {
+  it('does not profit from buying and immediately selling stocked goods', () => {
     const inv = new Inventory({ coin: 12 })
     expect(settleTransaction(inv, { knife: 1 }, {})).toBe('ok')
     expect(settleTransaction(inv, {}, { knife: 1 })).toBe('ok')
     expect(inv.count('knife')).toBe(0)
-    expect(inv.count('coin')).toBe(6)
+    expect(inv.count('coin')).toBe(10)
   })
 
-  it('credits an offer that exceeds the (zero) purchase cost at half value, matching sellPrice', () => {
+  it('credits an offer that exceeds the (zero) purchase cost at merchant buyback value', () => {
     const inv = new Inventory({ coin: 0 }, undefined, [createWeaponInstance('long_sword')])
-    expect(sellPrice('long_sword')).toBe(25)
+    expect(sellPrice('long_sword')).toBe(45)
     expect(settleTransaction(inv, {}, { long_sword: 1 })).toBe('ok')
-    expect(inv.count('coin')).toBe(25)
+    expect(inv.count('coin')).toBe(45)
   })
 
-  it('credits only the excess beyond the purchase at half value when offer overshoots a real buy', () => {
-    // axe tradeValue 25 offered against a 12-coin knife purchase: 12 of the
-    // 25 covers the knife at full barter rate, the remaining 13 is halved.
+  it('credits only the excess beyond the purchase at merchant buyback value when offer overshoots a real buy', () => {
     const inv = new Inventory({ coin: 0 }, undefined, [createWeaponInstance('axe')])
     expect(settleTransaction(inv, { knife: 1 }, { axe: 1 })).toBe('ok')
     expect(inv.countInstances('knife')).toBe(1)
-    expect(inv.count('coin')).toBe(Math.floor((25 - 12) * 0.5))
+    expect(inv.count('coin')).toBe(22 - 12)
   })
 
   it('refuses shell and coin as a pure-offer sale without mutating inventory', () => {
@@ -212,9 +334,6 @@ describe('settleTransaction — offer-only, exceeding purchase cost (supersedes 
   })
 
   it('lets barter-only shells pay down a purchase but never turn into change', () => {
-    // 5 shells (tradeValue 1 each = 5) fully cover a 5-coin? no merchant kind
-    // costs that little except firestarter/wooden_torch (8); use those with
-    // extra shells so the excess (barter-only) value has nowhere to go.
     const inv = new Inventory({ coin: 0, shell: 20 })
     expect(settleTransaction(inv, { firestarter: 1 }, { shell: 20 })).toBe('ok')
     expect(inv.count('shell')).toBe(0)
@@ -237,5 +356,32 @@ describe('settleTransaction — offer-only, exceeding purchase cost (supersedes 
   it('rejects an empty transaction', () => {
     const inv = new Inventory({ coin: 10 })
     expect(settleTransaction(inv, {}, {})).toBe('invalid_offer')
+  })
+})
+
+describe('merchant transaction preview/commit parity', () => {
+  it('matches preview and settlement for mixed baskets and instance-backed offers', () => {
+    const inv = new Inventory({ coin: 5 }, undefined, [
+      createWeaponInstance('knife'),
+      createWeaponInstance('axe'),
+    ])
+    const purchases = { blanket: 1 }
+    const offer = { knife: 1 }
+    const preview = previewTransactionNetCoins(inv, purchases, offer)
+    expect(settleTransaction(inv, purchases, offer)).toBe('ok')
+    expect(inv.count('coin')).toBe(5 - preview)
+  })
+
+  it('values mixed-condition instance groups using the same worst-condition selection as settlement', () => {
+    const good = createWeaponInstance('knife')
+    const bad = createWeaponInstance('knife')
+    bad.durability = 0.2
+    bad.sharpness = 0.2
+    const inv = new Inventory(undefined, undefined, [good, bad])
+    const line = resolveOfferLineBuyback(inv, 'knife', 1)
+    expect(line.instanceIds).toEqual([bad.id])
+    expect(settleTransaction(inv, {}, { knife: 1 })).toBe('ok')
+    expect(inv.getInstance(good.id)).not.toBeNull()
+    expect(inv.getInstance(bad.id)).toBeNull()
   })
 })

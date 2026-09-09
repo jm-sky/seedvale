@@ -6,8 +6,7 @@ import { ITEM_CATALOG, type ItemCapability } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
 import { isInstanceBackedKind } from '../../items/itemInstances'
 import { hasItemKindCategory, ITEM_DEFS, type ItemKind } from '../../items/items'
-import { previewTransactionNetCoins } from '../../items/trade'
-import { MERCHANT_STOCK, merchantPrice, tradeValue } from '../../items/tradeCatalog'
+import { MERCHANT_STOCK, merchantPrice } from '../../items/tradeCatalog'
 import MerchantFilterBar from '../components/MerchantFilterBar.vue'
 import MerchantItemDetailsModal from '../components/MerchantItemDetailsModal.vue'
 import MerchantItemRow from '../components/MerchantItemRow.vue'
@@ -102,8 +101,9 @@ const buyRows = computed(() => {
 })
 
 const offerRows = computed(() => {
+  const unitOfferPrice = ui.merchant.pricing?.unitOfferPrice
   const rows = offerableKinds.value.flatMap((kind) => {
-    const price = tradeValue(kind)
+    const price = unitOfferPrice?.(kind) ?? 0
     if (!matchesCategory(kind, offerFilters, hasItemKindCategory)) return []
     if (!matchesCapability(ITEM_CATALOG[kind].capabilities, offerFilters)) return []
     if (!matchesPrice(price, offerFilters)) return []
@@ -141,11 +141,21 @@ const purchaseLines = computed<TransactionLine[]>(() => (Object.entries(transact
   .filter(([, count]) => count > 0)
   .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: (merchantPrice(kind) ?? 0) * count })))
 
-const offerLines = computed<TransactionLine[]>(() => (Object.entries(transaction.offer) as [ItemKind, number][])
-  .filter(([, count]) => count > 0)
-  .map(([kind, count]) => ({ kind, label: itemDisplayName(kind), count, totalValue: tradeValue(kind) * count })))
+const offerLines = computed<TransactionLine[]>(() => {
+  const offerLineTotal = ui.merchant.pricing?.offerLineTotal
+  return (Object.entries(transaction.offer) as [ItemKind, number][])
+    .filter(([, count]) => count > 0)
+    .map(([kind, count]) => ({
+      kind,
+      label: itemDisplayName(kind),
+      count,
+      totalValue: offerLineTotal?.(kind, count) ?? 0,
+    }))
+})
 
-const netCoins = computed(() => previewTransactionNetCoins(transaction.purchases, transaction.offer))
+const netCoins = computed(() =>
+  ui.merchant.pricing?.previewNetCoins(transaction.purchases, transaction.offer) ?? 0,
+)
 const canTrade = computed(() => purchaseLines.value.length > 0 || offerLines.value.length > 0)
 
 function clampStaleTransaction(): boolean {

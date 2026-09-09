@@ -9,7 +9,11 @@ import type { TradeResult } from '../items/trade'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
 import type { QuestManager } from '../quests/QuestManager'
+import type { ReputationManager } from '../reputation/ReputationManager'
+import type { Settlement } from '../settlement/createSettlement'
 import type { VueUi } from '../ui-vue/mount'
+import type { MerchantPricing } from '../ui-vue/store'
+import { ui } from '../ui-vue/store'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { DayNightState } from '../world/dayNight'
@@ -26,7 +30,8 @@ import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryVi
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
-import { sellInstancesForCoins, settleTransaction } from '../items/trade'
+import { sellInstancesForCoins, previewTransactionNetCoins, resolveOfferLineBuyback, settleTransaction } from '../items/trade'
+import { NEUTRAL_SELL_PRICE_CONTEXT, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
 import {
@@ -97,6 +102,7 @@ export type InventoryWiringDeps = {
   toast: Toast
   vueUi: VueUi
   questManager: QuestManager
+  reputationManager: ReputationManager
   /** Persisted one-shot world flags (`SaveData.worldFlags`) — the guard's
    *  sword gift is the only consumer today. Mutated in place. */
   worldFlags: { guardSwordGifted: boolean }
@@ -119,8 +125,45 @@ export type InventoryWiringDeps = {
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, primaryWeapons, playerTorch, hud, toast, vueUi,
-    questManager, worldFlags, playOnce, grantItem, locationCatalog, locationKnowledge, dayNight,
+    questManager, reputationManager, worldFlags, playOnce, grantItem, locationCatalog, locationKnowledge, dayNight,
   } = deps
+
+  let activeMerchantPricing: MerchantPricing | null = null
+
+  const findSettlementForNpc = (npc: NpcAgent): Settlement | null => {
+    for (const settlement of bundle.settlementsManager.getLoaded()) {
+      if (settlement.npcs.includes(npc)) return settlement
+    }
+    return null
+  }
+
+  const buildSellPriceContext = (npc: NpcAgent | null): SellPriceContext => {
+    if (!npc) return NEUTRAL_SELL_PRICE_CONTEXT
+    const settlement = findSettlementForNpc(npc)
+    const settlementId = settlement?.id ?? null
+    return {
+      relation: questManager.getRelation(npc.name),
+      relationLevel: questManager.getRelationLevel(npc.name),
+      reputation: settlementId ? reputationManager.getReputation(settlementId) : NEUTRAL_SELL_PRICE_CONTEXT.reputation,
+      renown: settlementId ? reputationManager.getRenown(settlementId) : 0,
+    }
+  }
+
+  const createMerchantPricing = (npc: NpcAgent | null): MerchantPricing => {
+    const context = buildSellPriceContext(npc)
+    return {
+      context,
+      unitOfferPrice: (kind) => sellPrice(kind, context),
+      offerLineTotal: (kind, count) => resolveOfferLineBuyback(inventory, kind, count, context).value,
+      previewNetCoins: (purchases, offer) => previewTransactionNetCoins(inventory, purchases, offer, context),
+    }
+  }
+
+  const merchantSellContext = (): SellPriceContext => (
+    vueUi.isMerchantOpen() && activeMerchantPricing
+      ? activeMerchantPricing.context
+      : NEUTRAL_SELL_PRICE_CONTEXT
+  )
 
   const nowDays = (): number => dayNight.elapsedDays
 
@@ -137,7 +180,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   const sellInventoryInstances = (instanceIds: readonly string[]) => {
-    const result = sellInstancesForCoins(inventory, instanceIds)
+    const result = sellInstancesForCoins(inventory, instanceIds, merchantSellContext())
     if (result.result === 'ok') {
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       heldTool.syncWithInventory()
@@ -305,7 +348,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
 
   vueUi.configureMerchant({
     onSettleTransaction: (purchases, offer) => {
-      const result = settleTransaction(inventory, purchases, offer)
+      const result = settleTransaction(inventory, purchases, offer, merchantSellContext())
       if (result === 'ok') {
         afterTrade()
         let newlyDiscovered = 0
@@ -354,7 +397,10 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     getCanAskSword: () => !worldFlags.guardSwordGifted,
     onOpenTrade: () => {
       const view = merchantInventoryView()
-      vueUi.openMerchantFromDialogue(view.counts, view.groups)
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+      const pricing = createMerchantPricing(npc)
+      activeMerchantPricing = pricing
+      vueUi.openMerchantFromDialogue(view.counts, view.groups, pricing)
     },
     onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
     onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),

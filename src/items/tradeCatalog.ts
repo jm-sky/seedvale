@@ -1,5 +1,7 @@
 import { isTrapItemInstance, type ItemInstance } from './itemInstances'
 import { ITEM_DEFS, type ItemKind } from './items'
+import type { RelationLevel } from '../quests/quests'
+import { NEUTRAL_REPUTATION, type Reputation } from '../reputation/ReputationManager'
 import { trapConditionRatio } from './trapItemInstances'
 
 /**
@@ -165,6 +167,26 @@ const RESOURCE_TRADE_VALUE: Partial<Record<ItemKind, number>> = {
   obsidian_sword: 320,
 }
 
+/** @domain settlements — neutral social standing for merchant sell pricing. */
+export const NEUTRAL_SELL_PRICE_CONTEXT: Readonly<SellPriceContext> = Object.freeze({
+  relation: 0,
+  relationLevel: 'stranger',
+  reputation: NEUTRAL_REPUTATION,
+  renown: 0,
+})
+
+/** @domain settlements — full-condition sell factor bounds (plan settlements-006). */
+export const BASE_SELL_FACTOR = 0.90
+export const MIN_SELL_FACTOR = 0.80
+export const MAX_SELL_FACTOR = 1.05
+
+export type SellPriceContext = {
+  relation: number
+  relationLevel: RelationLevel
+  reputation: Readonly<Reputation>
+  renown: number
+}
+
 export function merchantPrice(kind: ItemKind): number | null {
   return MERCHANT_PRICES[kind] ?? null
 }
@@ -182,16 +204,69 @@ export function tradeValue(kind: ItemKind): number {
   return Math.max(1, Math.round(ITEM_DEFS[kind].weight * 4))
 }
 
-/** Player → merchant sell price in coins. Half of `tradeValue`, at least 1.
- *  `shell` and `coin` cannot be sold (review 105 trade; issue 035 keeps shells
- *  as barter-only so they do not convert 1:1 into coins). */
+/** Player → merchant sell price in coins. `shell` and `coin` cannot be sold
+ *  (review 105 trade; issue 035 keeps shells as barter-only so they do not
+ *  convert 1:1 into coins). */
 export function canSell(kind: ItemKind): boolean {
   return kind !== 'shell' && kind !== 'coin'
 }
 
-export function sellPrice(kind: ItemKind): number | null {
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+/** @domain settlements — relation tier bonus in percentage points (0.01 = 1 pp). */
+export function relationshipEffect(context: SellPriceContext): number {
+  if (context.relation >= 0) {
+    switch (context.relationLevel) {
+      case 'trusted': return 0.05
+      case 'friendly': return 0.03
+      case 'acquainted': return 0.01
+      default: return 0
+    }
+  }
+  return clamp(context.relation * 0.01, -0.05, 0)
+}
+
+/** @domain settlements — weighted reputation × renown amplification (percentage points). */
+export function reputationEffect(context: SellPriceContext): number {
+  const reputationScore =
+    context.reputation.trust * 0.40
+    + context.reputation.integrity * 0.40
+    + context.reputation.competence * 0.20
+  const reputationNormalized = reputationScore / 100
+  const renownFactor = 1 + context.renown / 100
+  return reputationNormalized * 0.05 * renownFactor
+}
+
+/** @domain settlements — sell factor for a full-condition item before durability scaling. */
+export function fullConditionSellFactor(context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT): number {
+  return clamp(
+    BASE_SELL_FACTOR + relationshipEffect(context) + reputationEffect(context),
+    MIN_SELL_FACTOR,
+    MAX_SELL_FACTOR,
+  )
+}
+
+/** @domain settlements — deterministic integer coin rounding shared by stack and instance pricing. */
+export function roundSellPrice(nominalValue: number): number {
+  return Math.max(1, Math.floor(nominalValue))
+}
+
+function capStockedBuyback(kind: ItemKind, price: number): number {
+  const stockPrice = merchantPrice(kind)
+  return stockPrice != null ? Math.min(price, stockPrice) : price
+}
+
+/** @domain settlements — merchant buyback for a stackable kind at full condition. */
+export function sellPrice(
+  kind: ItemKind,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): number | null {
   if (!canSell(kind)) return null
-  return Math.max(1, Math.floor(tradeValue(kind) * 0.5))
+  const nominal = tradeValue(kind)
+  const raw = nominal * fullConditionSellFactor(context)
+  return roundSellPrice(capStockedBuyback(kind, raw))
 }
 
 export function offerValue(offer: Partial<Record<ItemKind, number>>): number {
@@ -202,30 +277,23 @@ export function offerValue(offer: Partial<Record<ItemKind, number>>): number {
   return total
 }
 
-/** Central condition discount range (plan 155) — 10–25% off base value. */
-export const USAGE_DISCOUNT_MIN = 0.10
-export const USAGE_DISCOUNT_RANGE = 0.15
-
 /** Broken trap sell multiplier vs `tradeValue` (plan 155). */
 export const BROKEN_SELL_MULTIPLIER = 0.05
 
-export type SellPriceContext = Record<string, never>
-
-/** Merchant buyback for a concrete item instance — price is derived, never stored. */
+/** @domain settlements — merchant buyback for a concrete item instance — price is derived, never stored. */
 export function resolveInstanceSellPrice(
   instance: ItemInstance,
-  _context?: SellPriceContext,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
 ): number | null {
   if (!canSell(instance.kind)) return null
-  const base = tradeValue(instance.kind)
-  if (!isTrapItemInstance(instance)) {
-    return sellPrice(instance.kind)
+  const nominal = tradeValue(instance.kind)
+  if (isTrapItemInstance(instance)) {
+    if (instance.durability <= 0) {
+      return roundSellPrice(nominal * BROKEN_SELL_MULTIPLIER)
+    }
+    const condition = trapConditionRatio(instance)
+    const raw = nominal * fullConditionSellFactor(context) * condition
+    return roundSellPrice(capStockedBuyback(instance.kind, raw))
   }
-  if (instance.durability <= 0) {
-    return Math.max(1, Math.floor(base * BROKEN_SELL_MULTIPLIER))
-  }
-  const condition = trapConditionRatio(instance)
-  const usageDiscount = USAGE_DISCOUNT_MIN + USAGE_DISCOUNT_RANGE * (1 - condition)
-  const adjusted = base * (1 - usageDiscount)
-  return Math.max(1, Math.floor(adjusted * 0.5))
+  return sellPrice(instance.kind, context)
 }

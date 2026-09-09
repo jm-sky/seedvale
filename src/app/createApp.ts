@@ -957,6 +957,7 @@ export async function createApp(
     toast,
     vueUi,
     questManager,
+    reputationManager: reputation,
     worldFlags,
     playOnce: worldAudio.playOnce,
     grantItem,

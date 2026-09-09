@@ -14,9 +14,11 @@ import { createLiquidContainerInstance } from './liquidContainer'
 import {
   canSell,
   merchantPrice,
-  offerValue,
   resolveInstanceSellPrice,
+  type SellPriceContext,
+  sellPrice,
   tradeValue,
+  NEUTRAL_SELL_PRICE_CONTEXT,
 } from './tradeCatalog'
 import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
@@ -26,6 +28,12 @@ export type TradeResult = 'ok' | 'cannot_afford' | 'full' | 'not_sold' | 'invali
 export type InstanceSellResult =
   | { result: 'ok', totalCoins: number, soldIds: readonly string[] }
   | { result: Exclude<TradeResult, 'ok'> }
+
+export type OfferBuybackResolution = {
+  buybackValue: number
+  nonSellableBarterValue: number
+  instanceIdsByKind: Partial<Record<ItemKind, readonly string[]>>
+}
 
 /** Weight and gabarite are independent caps (plan 164 §10) — a trade must
  *  clear both after removing payment/offer and adding the purchased kind, or
@@ -105,15 +113,17 @@ function isValidOffer(
 }
 
 /** Removes an already-validated offer from `inventory` — instance-backed
- *  kinds give up their worst-condition units first (mirrors
- *  `selectInstancesToSell`'s ordering for a direct coin sale). */
-function removeOffer(inventory: Inventory, offer: Partial<Record<ItemKind, number>>): void {
+ *  kinds give up the instances chosen during offer resolution. */
+function removeOffer(
+  inventory: Inventory,
+  offer: Partial<Record<ItemKind, number>>,
+  instanceIdsByKind: Partial<Record<ItemKind, readonly string[]>>,
+): void {
   for (const [offerKind, count] of Object.entries(offer) as [ItemKind, number][]) {
     if (count <= 0) continue
     if (isInstanceBackedKind(offerKind)) {
-      for (const id of selectInstancesToSell(inventory.getInstances(offerKind), count)) {
-        inventory.removeInstance(id)
-      }
+      const ids = instanceIdsByKind[offerKind] ?? selectInstancesToSell(inventory.getInstances(offerKind), count)
+      for (const id of ids) inventory.removeInstance(id)
     } else {
       inventory.remove(offerKind, count)
     }
@@ -180,48 +190,73 @@ function addPurchased(inventory: Inventory, kind: ItemKind, count: number): void
   inventory.add(kind, count)
 }
 
-/** Splits an offer's barter value (see `offerValue`) into the portion that
- *  came from coin-sellable kinds vs. barter-only kinds (`canSell() === false`,
- *  e.g. `shell` — "barter token... does not buy or sell shells for coins",
- *  `tradeCatalog.ts`). Only the sellable portion may ever become cash. */
-function splitOfferValue(offer: Partial<Record<ItemKind, number>>): { sellable: number, nonSellable: number } {
-  let sellable = 0
-  let nonSellable = 0
+/** @domain settlements — deterministic merchant buyback for one offer row, using
+ *  the same worst-condition instance selection that settlement will remove. */
+export function resolveOfferLineBuyback(
+  inventory: Inventory,
+  kind: ItemKind,
+  count: number,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): { value: number, instanceIds: readonly string[] } {
+  if (count <= 0) return { value: 0, instanceIds: [] }
+  if (!canSell(kind)) return { value: tradeValue(kind) * count, instanceIds: [] }
+  if (isInstanceBackedKind(kind)) {
+    const ids = selectInstancesToSell(inventory.getInstances(kind), count)
+    let value = 0
+    for (const id of ids) {
+      const instance = inventory.getInstance(id)
+      if (!instance) continue
+      value += resolveInstanceSellPrice(instance, context) ?? 0
+    }
+    return { value, instanceIds: ids }
+  }
+  return { value: (sellPrice(kind, context) ?? 0) * count, instanceIds: [] }
+}
+
+/** @domain settlements — merchant buyback for an entire offer basket plus the
+ *  concrete instance ids settlement should remove for instance-backed kinds. */
+export function resolveOfferBuyback(
+  inventory: Inventory,
+  offer: Partial<Record<ItemKind, number>>,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): OfferBuybackResolution {
+  let buybackValue = 0
+  let nonSellableBarterValue = 0
+  const instanceIdsByKind: Partial<Record<ItemKind, readonly string[]>> = {}
   for (const [kind, count] of Object.entries(offer) as [ItemKind, number][]) {
     if (count <= 0) continue
-    const value = tradeValue(kind) * count
-    if (canSell(kind)) sellable += value
-    else nonSellable += value
+    if (!canSell(kind)) {
+      nonSellableBarterValue += tradeValue(kind) * count
+      continue
+    }
+    const line = resolveOfferLineBuyback(inventory, kind, count, context)
+    buybackValue += line.value
+    if (line.instanceIds.length > 0) instanceIdsByKind[kind] = line.instanceIds
   }
-  return { sellable, nonSellable }
+  return { buybackValue, nonSellableBarterValue, instanceIdsByKind }
 }
 
 /**
  * Settles one mixed transaction: `purchases` (bought at `merchantPrice`) and
- * `offer` (items given up, valued at full `tradeValue` up to however much of
- * `purchases`' cost they cover — the rest, if any, is credited at half value,
- * matching `sellPrice`'s coin-sell rate, and only for kinds `canSell()`
- * allows to become coins at all) netted into a single coin delta. Atomic:
- * validate the whole transaction, then remove offer + add purchases + settle
- * coins in one pass. Supersedes the old single-target `buyWithCoins`/
- * `buyWithBarter`/`sellForCoins` (plan ui-input-003) — those never gave
- * change on an over-valued offer; this is the generalized replacement.
+ * `offer` (items given up at merchant buyback value for sellable kinds, or at
+ * full `tradeValue` for barter-only kinds such as `shell`) netted into a single
+ * coin delta. Atomic: validate the whole transaction, then remove offer + add
+ * purchases + settle coins in one pass.
  */
 /** Shared coin-settlement arithmetic between `settleTransaction` (authoritative,
  *  called with a strictly-validated `totalBuyCost`) and `previewTransactionNetCoins`
  *  (UI display only, called with a leniently-summed one) — one formula, two
  *  totalBuyCost computations with different validation strictness. */
-function computeNetCoins(totalBuyCost: number, offer: Partial<Record<ItemKind, number>>): number {
-  const offerBarterValue = offerValue(offer)
-  if (offerBarterValue <= totalBuyCost) return totalBuyCost - offerBarterValue
-  // Barter-only value (e.g. shells) pays down the purchase cost first — it
-  // can never become cash anyway — then sellable value covers the rest of
-  // the cost; only sellable value left over after that becomes "You
-  // receive" coins, at half rate.
-  const { sellable, nonSellable } = splitOfferValue(offer)
-  const remainingAfterNonSellable = Math.max(0, totalBuyCost - nonSellable)
-  const leftoverSellable = Math.max(0, sellable - remainingAfterNonSellable)
-  return -Math.floor(leftoverSellable * 0.5)
+function computeNetCoins(
+  totalBuyCost: number,
+  resolution: OfferBuybackResolution,
+): number {
+  const { buybackValue, nonSellableBarterValue } = resolution
+  const totalPayment = buybackValue + nonSellableBarterValue
+  if (totalPayment <= totalBuyCost) return totalBuyCost - totalPayment
+  const remainingAfterNonSellable = Math.max(0, totalBuyCost - nonSellableBarterValue)
+  const excessBuyback = Math.max(0, buybackValue - remainingAfterNonSellable)
+  return -excessBuyback
 }
 
 /** UI-preview-only net coin delta (positive = "To pay", negative = "You
@@ -232,20 +267,23 @@ function computeNetCoins(totalBuyCost: number, offer: Partial<Record<ItemKind, n
  *  math, not a commit path — `settleTransaction` remains the authoritative
  *  validator. */
 export function previewTransactionNetCoins(
+  inventory: Inventory,
   purchases: Partial<Record<ItemKind, number>>,
   offer: Partial<Record<ItemKind, number>>,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
 ): number {
   let totalBuyCost = 0
   for (const [kind, count] of Object.entries(purchases) as [ItemKind, number][]) {
     if (count > 0) totalBuyCost += (merchantPrice(kind) ?? 0) * count
   }
-  return computeNetCoins(totalBuyCost, offer)
+  return computeNetCoins(totalBuyCost, resolveOfferBuyback(inventory, offer, context))
 }
 
 export function settleTransaction(
   inventory: Inventory,
   purchases: Partial<Record<ItemKind, number>>,
   offer: Partial<Record<ItemKind, number>>,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
 ): TradeResult {
   const purchaseEntries = (Object.entries(purchases) as [ItemKind, number][]).filter(([, count]) => count > 0)
   const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
@@ -258,11 +296,12 @@ export function settleTransaction(
     totalBuyCost += unitPrice * count
   }
   if (offerHasEntries && !isValidOffer(inventory, offer)) return 'invalid_offer'
-  const netCoins = computeNetCoins(totalBuyCost, offer)
+  const offerResolution = resolveOfferBuyback(inventory, offer, context)
+  const netCoins = computeNetCoins(totalBuyCost, offerResolution)
   if (purchaseEntries.length === 0 && netCoins === 0) return 'not_sold'
   if (netCoins > 0 && !inventory.has('coin', netCoins)) return 'cannot_afford'
   if (!wouldFitAfterTransaction(inventory, offer, purchases, netCoins)) return 'full'
-  removeOffer(inventory, offer)
+  removeOffer(inventory, offer, offerResolution.instanceIdsByKind)
   for (const [kind, count] of purchaseEntries) addPurchased(inventory, kind, count)
   if (netCoins > 0) inventory.remove('coin', netCoins)
   else if (netCoins < 0) inventory.add('coin', -netCoins)
@@ -273,6 +312,7 @@ export function settleTransaction(
 export function sellInstancesForCoins(
   inventory: Inventory,
   instanceIds: readonly string[],
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
 ): InstanceSellResult {
   if (instanceIds.length === 0) return { result: 'invalid_offer' }
   const unique = [...new Set(instanceIds)]
@@ -283,7 +323,7 @@ export function sellInstancesForCoins(
   for (const id of unique) {
     const instance = inventory.getInstance(id)
     if (!instance) return { result: 'invalid_offer' }
-    const price = resolveInstanceSellPrice(instance)
+    const price = resolveInstanceSellPrice(instance, context)
     if (price == null) return { result: 'not_sold' }
     instances.push(instance)
     totalCoins += price
@@ -299,3 +339,5 @@ export function sellInstancesForCoins(
   inventory.add('coin', totalCoins)
   return { result: 'ok', totalCoins, soldIds: unique }
 }
+
+export type { SellPriceContext }
