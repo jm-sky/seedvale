@@ -61,7 +61,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`            | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`            | -       | 🔴 | M      | settlements-npcs-018 |
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md` | -       | 🔴 | M      | settlements-npcs-015 |
-| ◼️ `settlements-npcs-017-production-demand-and-economic-pressures.md`       | -       | 🔴 | M      | settlements-npcs-016 |
+| 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`       | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                   | -       | 🟡 | L      | npc-006, fauna-012, fauna-016, settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                               | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                   | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
