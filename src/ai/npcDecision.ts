@@ -21,7 +21,7 @@ import { WEATHER_SEVERE_SHELTER_THRESHOLD } from './weatherPressure'
  */
 
 /** Top-level outcome of one `choose()` decision tick. */
-export type NpcDecisionKind = 'buryDeceased' | 'collapseSleep' | 'heal' | 'idle' | 'need' | 'scheduledSleep' | 'seekShelter'
+export type NpcDecisionKind = 'buryDeceased' | 'collapseSleep' | 'heal' | 'idle' | 'need' | 'scheduledSleep' | 'seekShelter' | 'visitGrave'
 
 export type NpcDecisionInput = {
   /** `shouldCollapseSleep(vigor)` — physiological collapse outranks
@@ -49,6 +49,7 @@ export const NPC_DECISION_PRIORITY: Record<NpcDecisionKind, number> = {
   heal: 80,
   buryDeceased: 78,
   scheduledSleep: 70,
+  visitGrave: 65,
   idle: 60,
 }
 
@@ -70,11 +71,13 @@ function isDecisionValid(kind: NpcDecisionKind, input: NpcDecisionInput): boolea
     case 'idle':
       return true
     case 'need':
-      return input.wonNeed !== 'idle' && input.wonNeed !== 'seekShelter' && input.wonNeed !== 'heal' && input.wonNeed !== 'buryDeceased'
+      return input.wonNeed !== 'idle' && input.wonNeed !== 'seekShelter' && input.wonNeed !== 'heal' && input.wonNeed !== 'buryDeceased' && input.wonNeed !== 'visitGrave'
     case 'scheduledSleep':
       return input.scheduleActivity === 'sleep'
     case 'seekShelter':
       return input.wonNeed === 'seekShelter'
+    case 'visitGrave':
+      return input.wonNeed === 'visitGrave'
   }
 }
 

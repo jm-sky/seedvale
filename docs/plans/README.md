@@ -66,13 +66,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | -       | 🔴 | M      | -      |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
-<<<<<<< HEAD
-| 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | ~~npc-010~~, ~~world-terrain-016~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
-=======
-| 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~, ~~settlements-npcs-026~~ |
-| 💡 `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011` `world-terrain-016` |
->>>>>>> 100672fc (Implement NPC burial and graves (npc-011))
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `quests-progression-007-wolves-approach-settlement.md`                   | -       | 🟡 | M      | fauna-016 |
@@ -81,7 +75,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`             | -       | 🟡 | L      | world-terrain-008, fauna-016 |
 | ◼️ `quests-progression-008-treasure-map-bear-cave.md`                       | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
 | 💡 `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`    | -       | 🟡 | M      | -      |
-| 💡 `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
 | 💡 `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 | 💡 `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                  | -       | 🔴 | M      | world-terrain-008 |
@@ -111,6 +104,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `settlements-npcs-014-local-goods-circulation.md` | Naturalny obieg dóbr: producent → handlarz → magazyn → gospodarstwo |
 | `npc-010-death-and-corpse-lifecycle.md` | Śmierć NPC: corpse zostaje w miejscu śmierci (nie w domu), loot loadoutu, decay w czasie, save/load bez duplikacji itemów, legacy martwy NPC bez sfabrykowanego corpse |
 | `npc-011-npc-burial-and-graves.md` | Członek household po śmierci kogoś z rodziny może dostać burial pressure, odebrać claim, dojść do corpse, wykonać pochówek i zostawić persistent grave + terminal corpse; brak fake NeedId; brak duplikacji grave po reload/rebuild; legacy dead bez corpse nie dostaje grave |
+| `npc-026-npc-grave-visits.md` | Żyjący członek rodziny okazjonalnie odwiedza persistent grave zmarłego; wizyta przegrywa z potrzebami/pogodą/snem, wygrywa z idle; cooldown per zmarły przeżywa save/load; brak fake NeedId i nearest-cemetery fallback |
 | `ui-input-004-construction-placement-and-terrain-preparation-ux.md` | UX budowania, placementu i przygotowania terenu |
 | `npc-007-interaction-destination-approach.md` | NPC naturalnie podchodzą do studni i nie wpadają w pętle ruchu |
 | `2026-08-21--191--mountain-peaks-and-massifs.md` | Góry, doliny, rzeki, seamy i płynność streamingu |

@@ -14,7 +14,7 @@ import type { NeedId } from './Needs'
  *
  * @domain npc
  */
-export type NpcDecisionTarget = NeedId | 'buryDeceased' | 'heal' | 'seekShelter'
+export type NpcDecisionTarget = NeedId | 'buryDeceased' | 'heal' | 'seekShelter' | 'visitGrave'
 
 /** Below this rain intensity, rain reads as "light" — no shelter pressure at
  *  all, so a lightly rained-on NPC keeps doing whatever it was doing (plan

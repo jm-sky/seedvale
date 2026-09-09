@@ -31,6 +31,13 @@ export type { NpcPostDeathState } from './npcPostDeath'
 
 export type NpcId = string
 
+/** Per-deceased grave-visit cooldown history (plan npc-026) — bounded to
+ *  family graves this visitor has actually completed a stay at. */
+export type NpcGraveVisitRecord = {
+  deceasedNpcId: NpcId
+  lastVisitedAtDays: number
+}
+
 /** Baseline/fallback capacities — real NPC construction paths pass generated
  *  `NpcPhysicalMaxima` instead (plan npc-001's `generatePhysicalProfile`).
  *  Exported for the isolated-fallback default in `NpcAgent.create()`. */
@@ -101,6 +108,9 @@ export type NpcAuthoritativeState = {
   /** Temporary physical conditions (plan npc-024) — shared mutable object,
    *  same lifecycle pattern as `physicalInjury`. */
   temporaryConditions: TemporaryConditionsState
+  /** Completed family-grave visit timestamps (plan npc-026) — per-deceased,
+   *  keyed by semantic `deceasedNpcId`, not grave mesh identity. */
+  graveVisits: NpcGraveVisitRecord[]
 }
 
 /** Plain-data snapshot — mirrors `SettlementEconomy.snapshot()` /
@@ -125,6 +135,8 @@ export type NpcStateSnapshot = {
   postDeath?: NpcPostDeathState | null
   /** Optional — absent means no active temporary conditions. */
   temporaryConditions?: SaveTemporaryConditionsSnapshot
+  /** Optional — absent means no completed grave visits yet (plan npc-026). */
+  graveVisits?: NpcGraveVisitRecord[]
   /** Required on current saves. Absent (legacy / older in-session snapshot)
    *  restores as an empty personal inventory — never a profession/role seed. */
   personalInventory?: InventoryContentsSnapshot
@@ -145,6 +157,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
       ? cloneNpcPostDeath(snapshot.postDeath)
       : (snapshot.health.dead ? createLegacyTerminalNpcPostDeath() : null),
     temporaryConditions: restoreTemporaryConditions(snapshot.temporaryConditions),
+    graveVisits: snapshot.graveVisits?.map((entry) => ({ ...entry })) ?? [],
     personalInventory: inventoryFromContents(snapshot.personalInventory),
     needsInitialPersonalLoadout: false,
   }
@@ -186,6 +199,7 @@ export function createNpcAuthoritativeState(
     activePlan: null,
     postDeath: null,
     temporaryConditions: createEmptyTemporaryConditions(),
+    graveVisits: [],
     personalInventory: new Inventory(),
     needsInitialPersonalLoadout: true,
   }
@@ -244,6 +258,9 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           activePlan: state.activePlan,
           postDeath: cloneNpcPostDeath(state.postDeath),
           temporaryConditions: snapshotTemporaryConditions(state.temporaryConditions),
+          graveVisits: state.graveVisits.length > 0
+            ? state.graveVisits.map((entry) => ({ ...entry }))
+            : undefined,
           personalInventory: snapshotInventoryContents(state.personalInventory),
         }
       }

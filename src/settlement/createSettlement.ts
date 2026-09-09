@@ -681,6 +681,17 @@ export async function createSettlement(
     const state = npcStateRegistry.get(npcId)
     if (state) settlementNpcStates.push([npcId, state])
   })
+  const familyNpcIdsByVisitor = new Map<string, readonly string[]>()
+  for (let i = 0; i < flatMembers.length; i++) {
+    const familyIndex = flatMembers[i]!.familyIndex
+    const familyNpcIds = flatMembers
+      .map((member, j) => ({ member, j }))
+      .filter(({ member }) => member.familyIndex === familyIndex)
+      .map(({ j }) => `${def.id}:npc:${j}`)
+    for (const visitorId of familyNpcIds) {
+      familyNpcIdsByVisitor.set(visitorId, familyNpcIds.filter((id) => id !== visitorId))
+    }
+  }
   const burialHooks = npcGraves
     ? {
         settlementPrefix: def.id,
@@ -690,6 +701,13 @@ export async function createSettlement(
         relations,
         graves: npcGraves,
         listSettlementNpcStates: () => settlementNpcStates,
+      }
+    : null
+  const graveVisitHooks = npcGraves
+    ? {
+        familyNpcIds: (visitorId: string) => familyNpcIdsByVisitor.get(visitorId) ?? [],
+        getNpcState: (id: string) => npcStateRegistry.get(id),
+        graves: npcGraves,
       }
     : null
 
@@ -759,6 +777,7 @@ export async function createSettlement(
         burialHooks: burialHooks
           ? { ...burialHooks, householdId: household.id }
           : null,
+        graveVisitHooks,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
@@ -828,7 +847,7 @@ export async function createSettlement(
       agentCpu.beginNpcAgentUpdates()
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i]!
-        agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather, playerObservation)
+        agent.update(dt, observerPos, observerYaw, timeOfDay, crowd.nearbyCounts[i]!, dayLengthSec, nearbyAnimalThreats, weather, playerObservation, nowDays)
         if (!agent.health.dead && (crowd.pushX[i] !== 0 || crowd.pushZ[i] !== 0)) {
           agent.applySeparation(crowd.pushX[i]!, crowd.pushZ[i]!)
         }

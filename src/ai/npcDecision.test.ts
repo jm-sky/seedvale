@@ -56,6 +56,19 @@ describe('decideNpcAction', () => {
     })).toBe('heal')
   })
 
+  it('visitGrave beats idle but loses to scheduled sleep (plan npc-026)', () => {
+    expect(decideNpcAction({
+      collapsing: false,
+      wonNeed: 'visitGrave',
+      scheduleActivity: 'work',
+    })).toBe('visitGrave')
+    expect(decideNpcAction({
+      collapsing: false,
+      wonNeed: 'visitGrave',
+      scheduleActivity: 'sleep',
+    })).toBe('scheduledSleep')
+  })
+
   it('collapse still outranks heal', () => {
     expect(decideNpcAction({
       collapsing: true,

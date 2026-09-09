@@ -63,6 +63,9 @@ export type ActionId =
   /** Household burial of a deceased NPC (plan npc-011) — normal `goTo`/`execute`
    *  at the corpse position; reads as `idle` to `classifyPendingActivity`. */
   | 'bury'
+  /** Family grave visit (plan npc-026) — normal `goTo`/`execute` at a persistent
+   *  grave position; reads as `idle` to `classifyPendingActivity`. */
+  | 'visitGrave'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and

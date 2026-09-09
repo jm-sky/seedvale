@@ -206,6 +206,12 @@ import {
 } from './dialogue'
 import type { NpcBurialHooks } from './burialPressure'
 import { resolveBurialPressure } from './burialPressure'
+import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
+import {
+  recordGraveVisit,
+  revalidateGraveVisitCandidate,
+  resolveGraveVisitPressure,
+} from './graveVisitPressure'
 import { healingPressure } from './healingPressure'
 import {
   generateNeedPressures,
@@ -639,6 +645,7 @@ export function classifyPendingActivity(
   // sheltering/settling at the campfire above.
   if (pending.kind === 'heal' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'bury' && activeNeed === 'idle') return 'idle'
+  if (pending.kind === 'visitGrave' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'approachPlayer' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
@@ -784,6 +791,10 @@ const HEAL_DURATION_SEC = 1.5
  *  occupies the NPC at the corpse — same order of magnitude as `heal`. */
 const BURIAL_DURATION_SEC = 2.5
 
+/** How long (seconds, before `waitMultiplier`) `beginVisitGrave`'s action
+ *  occupies the NPC at a persistent family grave (plan npc-026). */
+const GRAVE_VISIT_DURATION_SEC = 2.0
+
 /** stamina/sec while walking toward a task (`goTo`) — deliberately low so
  *  ordinary errands (house → well → workplace → storage) don't meaningfully
  *  dent stamina; only sustained heavy work should. */
@@ -924,6 +935,8 @@ export type NpcAgentDeps = {
   droppedItems?: DroppedItems | null
   /** NPC burial execution context (plan npc-011) — null in isolated fallbacks. */
   burialHooks?: NpcBurialHooks | null
+  /** Family grave-visit lookup context (plan npc-026) — null in isolated fallbacks. */
+  graveVisitHooks?: NpcGraveVisitHooks | null
 }
 
 /**
@@ -1292,6 +1305,11 @@ export class NpcAgent {
    *  materials then simply stays blocked (see `runContractWorkBout`). */
   private readonly droppedItems: DroppedItems | null
   private readonly burialHooks: NpcBurialHooks | null
+  private readonly graveVisitHooks: NpcGraveVisitHooks | null
+  /** Cached from `update()`'s `nowDays` argument (plan npc-026) — absolute
+   *  simulation days for persisted grave-visit cooldowns. Falls back to
+   *  `forest.getWorldDays()` for isolated callers/tests. */
+  private worldNowDays = 0
   /** Cached from `update()`'s own parameter (plan npc-015) — Work Contract
    *  travel-time estimation needs the real-seconds↔game-hours ratio, but
    *  isn't itself called from `update()`, so it's stashed here rather than
@@ -1369,6 +1387,7 @@ export class NpcAgent {
       residentialBuildings,
       droppedItems,
       burialHooks,
+      graveVisitHooks,
     } = deps
     const playAt = deps.playAt ?? (() => {})
     const npcId = deps.npcId ?? ''
@@ -1412,6 +1431,7 @@ export class NpcAgent {
     this.residentialBuildings = residentialBuildings ?? null
     this.droppedItems = droppedItems ?? null
     this.burialHooks = burialHooks ?? null
+    this.graveVisitHooks = graveVisitHooks ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
@@ -2430,9 +2450,13 @@ export class NpcAgent {
      *  pressure, same as an isolated fallback with no economy/household. */
     weather?: WeatherState,
     playerObservation: PlayerObservationInput = DEFAULT_PLAYER_OBSERVATION,
+    /** Absolute simulation days (`dayNight.elapsedDays`) for persisted
+     *  grave-visit cooldowns (plan npc-026). Defaults to `forest` world days. */
+    nowDays?: number,
   ): void {
     this.simClock += dt
     this.dayLengthSec = dayLengthSec
+    this.worldNowDays = nowDays ?? this.forest?.getWorldDays() ?? 0
     this.lastObserverX = observerPos.x
     this.lastObserverZ = observerPos.z
     if (this.frozen) return
@@ -2594,12 +2618,14 @@ export class NpcAgent {
         )
         this.reevaluateBurialPlan()
         const burial = this.burialPressureCandidate()
+        const graveVisit = this.graveVisitPressureCandidate()
         const decision = pickActionKind<NpcDecisionTarget>(
           [
             ...candidates.map((c) => ({ kind: c.target, score: c.final })),
             { kind: 'seekShelter', score: weatherPressure },
             { kind: 'heal', score: healPressure },
             { kind: 'buryDeceased', score: burial.score },
+            { kind: 'visitGrave', score: graveVisit.score },
           ],
           'idle',
         )
@@ -2640,6 +2666,12 @@ export class NpcAgent {
           this.activeNeed = 'idle'
           this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
           if (burial.deceasedNpcId) this.beginBurial(burial.deceasedNpcId)
+          break
+        }
+        if (outcome === 'visitGrave') {
+          this.activeNeed = 'idle'
+          this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
+          if (graveVisit.candidate) this.beginVisitGrave(graveVisit.candidate)
           break
         }
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
@@ -3041,7 +3073,7 @@ export class NpcAgent {
   }
 
   private nowDays(): number {
-    return this.forest?.getWorldDays() ?? 0
+    return this.worldNowDays
   }
 
   /** Outstanding payable wage claim for this NPC, if any (plan npc-016).
@@ -4885,6 +4917,35 @@ export class NpcAgent {
     }
     const plan = this.npcState.activePlan
     if (isBurialPlanForDeceased(plan, deceasedNpcId)) this.npcState.activePlan = completePlan(plan!)
+  }
+
+  private graveVisitPressureCandidate(): ReturnType<typeof resolveGraveVisitPressure> {
+    const hooks = this.graveVisitHooks
+    if (!hooks || this.health.dead) return { score: 0, candidate: null }
+    return resolveGraveVisitPressure(this.id, this.npcState, hooks, this.nowDays())
+  }
+
+  private beginVisitGrave(candidate: GraveVisitCandidate): void {
+    const hooks = this.graveVisitHooks
+    if (!hooks || this.health.dead) return
+    const revalidated = revalidateGraveVisitCandidate(candidate, hooks)
+    if (!revalidated) return
+    const { deceasedNpcId, graveId } = revalidated
+    this.startAction({
+      kind: 'visitGrave',
+      destination: copyVec3({ x: revalidated.x, y: 0, z: revalidated.z }),
+      durationSec: GRAVE_VISIT_DURATION_SEC * this.waitMultiplier,
+      onComplete: () => this.completeGraveVisit(deceasedNpcId, graveId),
+    })
+  }
+
+  private completeGraveVisit(deceasedNpcId: string, graveId: string): void {
+    const hooks = this.graveVisitHooks
+    if (!hooks) return
+    const grave = hooks.graves.get(graveId)
+    if (!grave || grave.deceasedNpcId !== deceasedNpcId) return
+    if (!hooks.getNpcState(deceasedNpcId)?.health.dead) return
+    recordGraveVisit(this.npcState.graveVisits, deceasedNpcId, this.nowDays())
   }
 
   /**

@@ -1542,6 +1542,15 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
   if (s.temporaryConditions !== undefined && !isTemporaryConditionsSnapshotField(s.temporaryConditions)) return false
   if (!('postDeath' in s) || !isNpcPostDeathField(s.postDeath)) return false
+  if (s.graveVisits !== undefined) {
+    if (!Array.isArray(s.graveVisits)) return false
+    for (const entry of s.graveVisits) {
+      if (!entry || typeof entry !== 'object') return false
+      const visit = entry as Record<string, unknown>
+      if (typeof visit.deceasedNpcId !== 'string') return false
+      if (typeof visit.lastVisitedAtDays !== 'number') return false
+    }
+  }
   if (!isInventoryContentsSnapshot(s.personalInventory)) return false
   return true
 }

@@ -1,7 +1,7 @@
 # Plan: NPC Grave Visits
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 **Priority:** medium · **Effort:** S
 **Depends on:** `npc-011`, ~~world-terrain-016~~
 **Domain:** `npc`  
@@ -46,9 +46,9 @@ oraz underlying deterministic topology/placement (`cemeteryAssignment.ts`, `ceme
 
 `npc-026` **nie powinien sam wybierać cemetery**. Po `npc-011` konsumuje już gotowy persistent grave.
 
-### `npc-011` nadal jest rzeczywistym blockerem
+### `npc-011` jest zaimplementowany
 
-`npc-011` jest nadal `planned`. To ono ma dodać completed burial result:
+`npc-011` dostarcza completed burial result:
 
 ```text
 GraveRecord
