@@ -570,7 +570,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 185
+- `createSettlementsManager` — function — line 191
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.

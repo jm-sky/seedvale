@@ -50,6 +50,7 @@ import {
   weightedTopN,
 } from '../world/locations/locationDiscovery'
 import { settlementLocationId } from '../world/locations/worldLocationCatalog'
+import { payWorkContractAssignment } from './actions/workContractPayment'
 
 /** Nearest settlements the home guard always mentions each conversation
  *  (plan §8 — no pool/scarcity mechanic, unlike landmarks). */
@@ -419,6 +420,40 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       const revealedSettlements = nearbySettlements.filter((location) => locationKnowledge.reveal(location.id, 'discovered', 'npc'))
 
       return aboutAreaLine([...revealedLandmarks, ...revealedSettlements].map((location) => location.name))
+    },
+    onPayWage: () => {
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
+      const claim = ui.npcDialogueMenu.paymentClaim
+      if (!npc || !claim) return 'Nie mam nic do wypłaty.'
+      const result = payWorkContractAssignment(
+        {
+          workContracts: bundle.workContracts,
+          getNpcState: (id) => bundle.settlementsManager.getNpcState(id),
+          playerInventory: inventory,
+        },
+        { contractId: claim.contractId, npcId: npc.id, nowDays: dayNight.elapsedDays },
+      )
+      if (result.status === 'paid') {
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        deps.syncQuickActionAvailability()
+        toast.show(`Zapłacono ${result.coins} monet.`, 'info')
+        ui.npcDialogueMenu.paymentClaim = null
+        return `Dziękuję. ${result.coins} monet — to zgadza się z umową.`
+      }
+      if (result.status === 'insufficient_coins') {
+        toast.show('Za mało monet, żeby zapłacić za pracę.', 'error')
+        return 'Nie masz przy sobie tyle monet.'
+      }
+      if (result.status === 'destination_full') {
+        toast.show('Najemnik nie uniesie już więcej.', 'error')
+        return 'Nie dam rady wziąć tyle monet — nie mam miejsca.'
+      }
+      if (result.status === 'worker_missing') {
+        toast.show('Nie można teraz wypłacić wynagrodzenia.', 'error')
+        return 'Coś jest nie tak — spróbuj za chwilę.'
+      }
+      ui.npcDialogueMenu.paymentClaim = null
+      return 'Ta należność nie jest już aktualna.'
     },
   })
 

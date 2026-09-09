@@ -3,6 +3,17 @@
 **Reviewed:** 2026-09-09
 **Plan:** `npc-016-work-contracts-payment-and-employer-interaction.md`
 
+## Implemented — 2026-09-09
+
+Per-assignment wage claims on existing Work Contracts. No second wallet, payment manager, or payment modal.
+
+- `WorkContractAssignment` owns `rewardCoinsDue` / request timing / deadline and states `paid` | `unpaid` | `uncollectable` (plus existing `payment_due` | `released`). Freeze on complete/release/death; `floor(workCompleted * rewardCoins / committedWork)` never exceeds the group ceiling.
+- `payWorkContractAssignment` in `src/app/actions/workContractPayment.ts` is the only Pay path: re-resolve live ids, then `transferInventoryCount` player `Inventory` → NPC `personalInventory`.
+- Nearby-player approach via `src/ai/approachPlayer.ts` + existing `goTo`; Pay/defer lives on the shared NPC dialogue. Player is the only employer.
+- Save v19→v20 migrates assignment payment fields; no synthetic NPC coins. Legacy `payment_due` with work gets a floor claim; deadline stays null.
+
+Browser verification remains the User's job.
+
 ## Recon result
 
 The previous notes are materially stale in two places:

@@ -441,11 +441,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/createWorkContracts.ts`
 
-- `CreateWorkContractParams` — type — line 28
-- `createWorkContracts` — function — line 160
+- `CreateWorkContractParams` — type — line 35
+- `createWorkContracts` — function — line 180
   - domain: npc
-- `WorkContractAssignmentLookup` — type — line 46
-- `WorkContracts` — type — line 51
+- `WorkContractAssignmentLookup` — type — line 53
+- `WorkContracts` — type — line 58
 
 ## `world/cropLifecycle.ts`
 
@@ -1326,46 +1326,63 @@ Generated from exported TypeScript symbols.
 
 ## `world/workContract.ts`
 
-- `acceptWorkContract` — function — line 347
-- `activeWorkAssignmentCount` — function — line 183
-- `beginContractTravel` — function — line 380
-- `beginContractWork` — function — line 388
-- `canAcceptContract` — function — line 340
-- `cancelWorkContract` — function — line 310
-- `canPostContract` — function — line 210
-- `completeContractWork` — function — line 410
-- `ConstructionContractTarget` — type — line 52
-- `contractHasActiveTarget` — function — line 202
-- `contractRewardRate` — function — line 446
-- `ContractTarget` — type — line 90
-- `createWorkContractRecord` — function — line 249
-- `expectedCandidateWork` — function — line 455
-- `findAssignment` — function — line 196
-- `groupRemainingWork` — function — line 192
-- `invalidateWorkContract` — function — line 324
-- `isAssignmentWorkActive` — function — line 178
-- `isContractDiscoverable` — function — line 220
-- `isContractTerminal` — function — line 172
-- `isNpcCommitmentFulfilled` — function — line 440
-- `normalizeRequestedWorkerCount` — function — line 244
-- `noticeBoardId` — function — line 232
-- `PalisadeContractTarget` — type — line 70
-- `postWorkContract` — function — line 291
-- `recordNpcWorkContribution` — function — line 468
-- `releaseWorkContract` — function — line 422
-- `ResidentialBuildingContractTarget` — type — line 83
-- `sameContractTarget` — function — line 490
-- `StandingTorchContractTarget` — type — line 77
-- `TerrainPreparationContractTarget` — type — line 61
-- `WORK_SHARE_PRESETS` — const — line 238
-- `WorkContractAdvertisement` — type — line 40
-- `WorkContractAssignment` — type — line 101
-- `WorkContractAssignmentState` — type — line 33
-- `WorkContractRecord` — type — line 111
+- `acceptWorkContract` — function — line 512
+- `activeWorkAssignmentCount` — function — line 299
+- `assignmentRewardCoinsDue` — function — line 262
+- `beginContractTravel` — function — line 546
+- `beginContractWork` — function — line 554
+- `canAcceptContract` — function — line 505
+- `cancelWorkContract` — function — line 469
+- `canPostContract` — function — line 326
+- `completeContractWork` — function — line 577
+- `ConstructionContractTarget` — type — line 91
+- `contractHasActiveTarget` — function — line 318
+- `contractRewardRate` — function — line 670
+- `ContractTarget` — type — line 129
+- `createWorkContractRecord` — function — line 365
+- `DEFAULT_PAYMENT_PATIENCE_DAYS` — const — line 62
+- `expectedCandidateWork` — function — line 679
+- `expireWorkAssignmentPayment` — function — line 624
+- `findAssignment` — function — line 312
+- `frozenAssignmentClaimSum` — function — line 248
+- `groupRemainingWork` — function — line 308
+- `hasUnresolvedPaymentClaims` — function — line 274
+- `invalidateWorkContract` — function — line 486
+- `isAssignmentClaimTerminal` — function — line 242
+- `isAssignmentPayable` — function — line 238
+- `isAssignmentWorkActive` — function — line 227
+- `isContractDiscoverable` — function — line 336
+- `isContractTerminal` — function — line 221
+- `isNpcCommitmentFulfilled` — function — line 664
+- `isPaymentRequestEligible` — function — line 286
+- `markWorkAssignmentPaid` — function — line 615
+- `markWorkAssignmentUncollectable` — function — line 638
+- `normalizeRequestedWorkerCount` — function — line 360
+- `noticeBoardId` — function — line 348
+- `PalisadeContractTarget` — type — line 109
+- `PAYMENT_REQUEST_INTERVAL_DAYS` — const — line 59
+- `postWorkContract` — function — line 407
+- `recordNpcWorkContribution` — function — line 692
+- `recordWorkAssignmentPaymentRequest` — function — line 649
+- `refreshContractSettlement` — function — line 280
+- `releaseWorkContract` — function — line 594
+- `ResidentialBuildingContractTarget` — type — line 122
+- `sameContractTarget` — function — line 714
+- `StandingTorchContractTarget` — type — line 116
+- `TerrainPreparationContractTarget` — type — line 100
+- `WORK_SHARE_PRESETS` — const — line 354
+- `WorkContractAdvertisement` — type — line 79
+- `WorkContractAssignment` — type — line 140
+- `WorkContractAssignmentState` — type — line 35
+- `WorkContractClaimTiming` — type — line 53
+- `workContractPaymentPatienceDays` — function — line 68
+- `WorkContractRecord` — type — line 160
+- `WorkContractRelationLevel` — type — line 65
+- `WorkContractReleaseReason` — type — line 48
 - `WorkContractState` — type — line 21
   - domain: npc
-- `WORKER_COUNT_PRESETS` — const — line 242
-- `WorkType` — type — line 44
+- `WORKER_COUNT_PRESETS` — const — line 358
+- `WorkType` — type — line 83
 
 ## `world/worldContext.ts`
 

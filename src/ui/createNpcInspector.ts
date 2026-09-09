@@ -117,6 +117,21 @@ function buildInspectorText(
     lines.push(`  work share: ${Math.round(snapshot.contract.requestedWorkShare * 100)}% of ${snapshot.contract.remainingWorkAtCreation.toFixed(1)}h at creation`)
     lines.push(`  group committed: ${snapshot.contract.npcWorkCompleted.toFixed(1)} / ${snapshot.contract.committedWork.toFixed(1)}h`)
     lines.push(`  this NPC: ${snapshot.contract.assignmentWorkCompleted.toFixed(1)}h`)
+    if (snapshot.contract.rewardCoinsDue != null) {
+      lines.push(`  claim: ${snapshot.contract.rewardCoinsDue} coins`)
+    }
+    if (snapshot.contract.paymentDeadline != null) {
+      lines.push(`  payment deadline: day ${snapshot.contract.paymentDeadline.toFixed(2)}`)
+    }
+    if (snapshot.contract.lastPaymentRequestAt != null) {
+      lines.push(`  last payment request: day ${snapshot.contract.lastPaymentRequestAt.toFixed(2)}`)
+    }
+    if (snapshot.contract.paymentApproachIntent) {
+      lines.push(`  approach: ${snapshot.contract.paymentApproachIntent.kind} ${snapshot.contract.paymentApproachIntent.contractId}`)
+    }
+    if (snapshot.contract.paymentApproachInterruptReason) {
+      lines.push(`  approach interrupt: ${snapshot.contract.paymentApproachInterruptReason}`)
+    }
     lines.push(`  target remaining: ${snapshot.contract.targetRemainingWork?.toFixed(1) ?? '-'}h`)
   } else {
     lines.push('  -')
@@ -184,6 +199,7 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'contract.accepted': return `${t}s contract.accepted → ${event.contractId} (score ${event.score.toFixed(1)})`
     case 'contract.evaluated': return `${t}s contract.evaluated → ${event.candidates.map((c) => `${c.contractId}:${c.score.toFixed(1)}`).join(', ') || '-'}`
     case 'contract.invalidated': return `${t}s contract.invalidated → ${event.contractId} (${event.reason})`
+    case 'contract.paymentRequested': return `${t}s contract.paymentRequested → ${event.contractId}`
     case 'contract.workCompleted': return `${t}s contract.workCompleted → ${event.contractId}`
     case 'debug.freeze': return `${t}s debug.freeze`
     case 'debug.reevaluate': return `${t}s debug.reevaluate`

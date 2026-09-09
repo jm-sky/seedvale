@@ -11,18 +11,25 @@ import {
   contractHasActiveTarget,
   type ContractTarget,
   createWorkContractRecord,
+  expireWorkAssignmentPayment,
   findAssignment,
   invalidateWorkContract,
+  isAssignmentPayable,
   isAssignmentWorkActive,
   isContractDiscoverable,
   isContractTerminal,
+  markWorkAssignmentPaid,
+  markWorkAssignmentUncollectable,
   normalizeRequestedWorkerCount,
   postWorkContract,
   recordNpcWorkContribution,
+  recordWorkAssignmentPaymentRequest,
   releaseWorkContract,
   sameContractTarget,
   type WorkContractAssignment,
+  type WorkContractClaimTiming,
   type WorkContractRecord,
+  type WorkContractReleaseReason,
 } from './workContract'
 
 export type CreateWorkContractParams = {
@@ -71,10 +78,10 @@ export type WorkContracts = {
   post: (id: string, boardId: string, now: number) => WorkContractRecord | null
   /** Cancels `id` and removes its flag — returns `false` (no-op) if `id` is
    *  unknown or already terminal (plan §10). */
-  cancel: (id: string) => boolean
+  cancel: (id: string, timing?: WorkContractClaimTiming) => boolean
   /** Marks `id`'s target invalid and removes its flag — same no-op contract
    *  as `cancel` (plan §10). */
-  invalidateTarget: (id: string) => boolean
+  invalidateTarget: (id: string, timing?: WorkContractClaimTiming) => boolean
   /** Contracts currently posted at `boardId` (plan §9) — the board's own
    *  "what's here" view, resolved by querying contracts rather than a
    *  duplicated list kept on the board. */
@@ -87,10 +94,14 @@ export type WorkContracts = {
   /**
    * This NPC's current work-active assignment (`accepted`/`travelling`/
    * `working`) and its owning contract, or `undefined` (plan npc-028 §21).
-   * Payment-due/released history is not returned here — npc-016 will add
-   * claim lookup. Linear scan; never persisted.
+   * Payment-due/released history is not returned here — use
+   * `findPayableByNpc`. Linear scan; never persisted.
    */
   findActiveWorkByNpc: (npcId: string) => WorkContractAssignmentLookup | undefined
+  /** This NPC's outstanding payable assignment (`payment_due` with a
+   *  positive frozen claim), or `undefined` (plan npc-016). Expires an
+   *  overdue claim first so callers never see a stale `payment_due`. */
+  findPayableByNpc: (npcId: string, now: number) => WorkContractAssignmentLookup | undefined
   /** The one active (non-terminal) contract referencing `target`, or
    *  `undefined` (plan items-player-017 §17) — used to invalidate a
    *  buildable's own contract when the player removes it, since
@@ -107,9 +118,9 @@ export type WorkContracts = {
    *  worker has reached the target. Same guards as `beginTravel`. */
   beginWork: (id: string, npcId: string, now: number) => WorkContractRecord | null
   /** Ends the work phase for every still-work-active assignment (plan
-   *  npc-028 §15/§16). `null` if `id` is unknown or `npcId` is not currently
-   *  work-active on it. */
-  completeWork: (id: string, npcId: string) => WorkContractRecord | null
+   *  npc-028 §15/§16, npc-016 §6). `null` if `id` is unknown or `npcId` is
+   *  not currently work-active on it. */
+  completeWork: (id: string, npcId: string, timing?: WorkContractClaimTiming) => WorkContractRecord | null
   /** Credits `workAmount` of useful work `npcId` actually got accepted by the
    *  target (plan npc-028 §8) — updates assignment `workCompleted` and
    *  aggregate `npcWorkCompleted` together. `null` if `id` is unknown or
@@ -117,10 +128,19 @@ export type WorkContracts = {
    *  no-op that still returns the current record. */
   creditNpcWork: (id: string, npcId: string, workAmount: number) => WorkContractRecord | null
   /** Releases `npcId`'s work participation without touching the posting
-   *  (plan npc-028 §13) — genuine abandonment (the worker died, or can no
-   *  longer fulfil it), never a temporary interruption. `false` if `id`
-   *  is unknown or `npcId` is not currently work-active on it. */
-  release: (id: string, npcId: string) => boolean
+   *  (plan npc-028 §13, npc-016 §6/§8) — genuine abandonment or death, never
+   *  a temporary interruption. `false` if `id` is unknown or `npcId` is not
+   *  currently work-active on it. */
+  release: (id: string, npcId: string, reason?: WorkContractReleaseReason, timing?: WorkContractClaimTiming) => boolean
+  /** Marks a payable assignment `paid` after a successful coin transfer
+   *  (plan npc-016). `null` if the claim is no longer payable. */
+  markPaid: (id: string, npcId: string) => WorkContractRecord | null
+  /** Dead worker whose payable claim can no longer be collected. */
+  markUncollectable: (id: string, npcId: string) => WorkContractRecord | null
+  /** Stamps this assignment's payment-request throttle (plan npc-016 §17). */
+  recordPaymentRequest: (id: string, npcId: string, now: number) => WorkContractRecord | null
+  /** Lazy patience expiry for one NPC's payable assignment. */
+  expirePayment: (id: string, npcId: string, now: number) => WorkContractRecord | null
   dispose: () => void
 }
 
@@ -196,6 +216,20 @@ export function createWorkContracts(
     return undefined
   }
 
+  const findPayableByNpc = (npcId: string, now: number): WorkContractAssignmentLookup | undefined => {
+    for (let i = 0; i < records.length; i++) {
+      const contract = records[i]!
+      const assignment = findAssignment(contract, npcId)
+      if (!assignment) continue
+      const expired = expireWorkAssignmentPayment(contract, npcId, now)
+      if (expired && expired !== contract) records[i] = expired
+      const fresh = records[i]!
+      const current = findAssignment(fresh, npcId)
+      if (current && isAssignmentPayable(current)) return { contract: fresh, assignment: current }
+    }
+    return undefined
+  }
+
   const replace = (id: string, updated: WorkContractRecord | null): WorkContractRecord | null => {
     if (!updated) return null
     const index = indexOf(id)
@@ -236,19 +270,19 @@ export function createWorkContracts(
       if (index === -1) return null
       return replace(id, postWorkContract(records[index]!, boardId, now))
     },
-    cancel(id) {
+    cancel(id, timing) {
       const index = indexOf(id)
       if (index === -1) return false
-      const updated = cancelWorkContract(records[index]!)
+      const updated = cancelWorkContract(records[index]!, timing)
       if (!updated) return false
       records[index] = updated
       removeFlag(id)
       return true
     },
-    invalidateTarget(id) {
+    invalidateTarget(id, timing) {
       const index = indexOf(id)
       if (index === -1) return false
-      const updated = invalidateWorkContract(records[index]!)
+      const updated = invalidateWorkContract(records[index]!, timing)
       if (!updated) return false
       records[index] = updated
       removeFlag(id)
@@ -259,6 +293,7 @@ export function createWorkContracts(
     ),
     discoverableAt: (boardId) => records.filter((r) => r.postedBoardId === boardId && isContractDiscoverable(r)),
     findActiveWorkByNpc,
+    findPayableByNpc,
     findByTarget: (target) => records.find((r) => !isContractTerminal(r.state) && sameContractTarget(r.target, target)),
     accept(id, npcId, now) {
       if (findActiveWorkByNpc(npcId)) return null
@@ -276,15 +311,15 @@ export function createWorkContracts(
       if (index === -1) return null
       return replace(id, beginContractWork(records[index]!, npcId, now))
     },
-    completeWork(id, npcId) {
+    completeWork(id, npcId, timing) {
       const index = indexOf(id)
       if (index === -1) return null
-      return replace(id, completeContractWork(records[index]!, npcId))
+      return replace(id, completeContractWork(records[index]!, npcId, timing))
     },
-    release(id, npcId) {
+    release(id, npcId, reason = 'abandoned', timing) {
       const index = indexOf(id)
       if (index === -1) return false
-      const updated = releaseWorkContract(records[index]!, npcId)
+      const updated = releaseWorkContract(records[index]!, npcId, reason, timing)
       if (!updated) return false
       records[index] = updated
       return true
@@ -293,6 +328,26 @@ export function createWorkContracts(
       const index = indexOf(id)
       if (index === -1) return null
       return replace(id, recordNpcWorkContribution(records[index]!, npcId, workAmount))
+    },
+    markPaid(id, npcId) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      return replace(id, markWorkAssignmentPaid(records[index]!, npcId))
+    },
+    markUncollectable(id, npcId) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      return replace(id, markWorkAssignmentUncollectable(records[index]!, npcId))
+    },
+    recordPaymentRequest(id, npcId, now) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      return replace(id, recordWorkAssignmentPaymentRequest(records[index]!, npcId, now))
+    },
+    expirePayment(id, npcId, now) {
+      const index = indexOf(id)
+      if (index === -1) return null
+      return replace(id, expireWorkAssignmentPayment(records[index]!, npcId, now))
     },
     dispose() {
       for (const flag of flags.values()) {

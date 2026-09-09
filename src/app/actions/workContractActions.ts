@@ -312,7 +312,7 @@ export function createWorkContractActions(
   }
 
   const cancelContract = (id: string): void => {
-    if (!bundle.workContracts.cancel(id)) return
+    if (!bundle.workContracts.cancel(id, { now: dayNight.elapsedDays })) return
     toast.show('Zlecenie anulowane.')
     ctx.syncQuickActionAvailability()
   }

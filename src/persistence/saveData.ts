@@ -472,6 +472,9 @@ export type SaveWorkContractAssignmentState =
   | 'travelling'
   | 'working'
   | 'payment_due'
+  | 'paid'
+  | 'unpaid'
+  | 'uncollectable'
   | 'released'
 export type SaveWorkContractAdvertisement = 'not_posted' | 'posted'
 export type SaveWorkContractAssignment = {
@@ -480,6 +483,9 @@ export type SaveWorkContractAssignment = {
   acceptedAt: number
   workStartedAt: number | null
   workCompleted: number
+  rewardCoinsDue: number
+  lastPaymentRequestAt: number | null
+  paymentDeadline: number | null
 }
 export type SaveConstructionContractTarget = { kind: 'construction', targetId: string }
 /** Mirrors `world/workContract.ts`'s `TerrainPreparationContractTarget`
@@ -530,7 +536,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 19
+export const CURRENT_SAVE_VERSION = 20
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1374,7 +1380,7 @@ const WORK_CONTRACT_STATES: ReadonlySet<string> = new Set([
 ])
 
 const WORK_CONTRACT_ASSIGNMENT_STATES: ReadonlySet<string> = new Set([
-  'accepted', 'payment_due', 'released', 'travelling', 'working',
+  'accepted', 'paid', 'payment_due', 'released', 'travelling', 'uncollectable', 'unpaid', 'working',
 ])
 
 const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set([
@@ -1389,7 +1395,10 @@ function isWorkContractAssignment(value: unknown): value is SaveWorkContractAssi
     typeof a.state === 'string' && WORK_CONTRACT_ASSIGNMENT_STATES.has(a.state) &&
     typeof a.acceptedAt === 'number' &&
     (a.workStartedAt === null || typeof a.workStartedAt === 'number') &&
-    typeof a.workCompleted === 'number'
+    typeof a.workCompleted === 'number' &&
+    typeof a.rewardCoinsDue === 'number' &&
+    (a.lastPaymentRequestAt === null || typeof a.lastPaymentRequestAt === 'number') &&
+    (a.paymentDeadline === null || typeof a.paymentDeadline === 'number')
   )
 }
 
@@ -2175,6 +2184,9 @@ function migrateWorkContractV13ToV14(entry: unknown): Record<string, unknown> {
       acceptedAt: typeof acceptedAt === 'number' ? acceptedAt : 0,
       workStartedAt: typeof workStartedAt === 'number' ? workStartedAt : null,
       workCompleted: typeof c.npcWorkCompleted === 'number' ? c.npcWorkCompleted : 0,
+      rewardCoinsDue: 0,
+      lastPaymentRequestAt: null,
+      paymentDeadline: null,
     }]
   } else {
     assignments = []
@@ -2385,6 +2397,63 @@ function migrateSaveV18ToV19(data: unknown): unknown {
   }
 }
 
+function migrateAssignmentV19ToV20(
+  assignment: unknown,
+  rewardCoins: number,
+  committedWork: number,
+  alreadyFrozen: number,
+): SaveWorkContractAssignment | null {
+  if (!assignment || typeof assignment !== 'object') return null
+  const a = assignment as Record<string, unknown>
+  if (typeof a.npcId !== 'string') return null
+  const state = (
+    a.state === 'accepted' || a.state === 'travelling' || a.state === 'working'
+    || a.state === 'payment_due' || a.state === 'paid' || a.state === 'unpaid'
+    || a.state === 'uncollectable' || a.state === 'released'
+  ) ? a.state : 'accepted'
+  const workCompleted = typeof a.workCompleted === 'number' ? a.workCompleted : 0
+  let rewardCoinsDue = typeof a.rewardCoinsDue === 'number' ? a.rewardCoinsDue : 0
+  if (rewardCoinsDue <= 0 && state === 'payment_due' && workCompleted > 0 && committedWork > 0 && rewardCoins > 0) {
+    const proportional = Math.floor(workCompleted * rewardCoins / committedWork)
+    rewardCoinsDue = Math.min(proportional, Math.max(0, rewardCoins - alreadyFrozen))
+  }
+  return {
+    npcId: a.npcId,
+    state,
+    acceptedAt: typeof a.acceptedAt === 'number' ? a.acceptedAt : 0,
+    workStartedAt: typeof a.workStartedAt === 'number' ? a.workStartedAt : null,
+    workCompleted,
+    rewardCoinsDue,
+    lastPaymentRequestAt: typeof a.lastPaymentRequestAt === 'number' ? a.lastPaymentRequestAt : null,
+    paymentDeadline: typeof a.paymentDeadline === 'number' ? a.paymentDeadline : null,
+  }
+}
+
+/** v19 → v20 (plan npc-016): assignment wage-claim fields. Does not credit
+ *  coins into NPC inventories — old saves never transferred wages. */
+function migrateSaveV19ToV20(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const workContracts = Array.isArray(v.workContracts)
+    ? (v.workContracts as unknown[]).map((entry) => {
+      if (!entry || typeof entry !== 'object') return entry
+      const c = entry as Record<string, unknown>
+      const rewardCoins = typeof c.rewardCoins === 'number' ? c.rewardCoins : 0
+      const committedWork = typeof c.committedWork === 'number' ? c.committedWork : 0
+      if (!Array.isArray(c.assignments)) return { ...c }
+      let frozen = 0
+      const assignments: SaveWorkContractAssignment[] = []
+      for (const assignment of c.assignments) {
+        const migrated = migrateAssignmentV19ToV20(assignment, rewardCoins, committedWork, frozen)
+        if (!migrated) continue
+        frozen += Math.max(0, migrated.rewardCoinsDue)
+        assignments.push(migrated)
+      }
+      return { ...c, assignments }
+    })
+    : v.workContracts
+  return { ...v, version: 20, workContracts }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2404,6 +2473,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   16: migrateSaveV16ToV17,
   17: migrateSaveV17ToV18,
   18: migrateSaveV18ToV19,
+  19: migrateSaveV19ToV20,
 }
 
 function detectStoredVersion(value: unknown): number | null {

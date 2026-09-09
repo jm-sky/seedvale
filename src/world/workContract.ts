@@ -27,15 +27,54 @@ export type WorkContractState =
   | 'cancelled'
   | 'invalidated'
 
-/** One NPC's execution against a Work Contract (plan npc-028 §1).
- *  `payment_due` is the work-phase handoff to npc-016; `released` is
- *  genuine abandonment/death, not a temporary interruption. */
+/** One NPC's execution against a Work Contract (plan npc-028 §1, extended
+ *  by npc-016). `payment_due` is a payable claim; `paid` / `unpaid` /
+ *  `uncollectable` are terminal claim outcomes. `released` is genuine
+ *  abandonment/death with no positive wage. Temporary interruptions never
+ *  use these states. */
 export type WorkContractAssignmentState =
   | 'accepted'
   | 'travelling'
   | 'working'
   | 'payment_due'
+  | 'paid'
+  | 'unpaid'
+  | 'uncollectable'
   | 'released'
+
+/** Genuine stop of contractual work (plan npc-016 §6/§8/§13) — never a
+ *  temporary hunger/sleep/combat interruption. Death preserves an earned
+ *  claim as `uncollectable` instead of creating a payable one. */
+export type WorkContractReleaseReason = 'abandoned' | 'death'
+
+/** World-time inputs used when an assignment's wage claim is frozen
+ *  (plan npc-016 §4/§18). `patienceDaysFor` may consult relation once at
+ *  freeze time; the resulting deadline is then immutable. */
+export type WorkContractClaimTiming = {
+  now: number
+  patienceDaysFor?: (npcId: string) => number
+}
+
+/** One world hour in `elapsedDays` units (plan npc-016 §17). */
+export const PAYMENT_REQUEST_INTERVAL_DAYS = 1 / 24
+
+/** Default payment patience when no relation lookup is available. */
+export const DEFAULT_PAYMENT_PATIENCE_DAYS = 1
+
+/** Relation snapshot used only at claim freeze (plan npc-016 §18). */
+export type WorkContractRelationLevel = 'stranger' | 'acquainted' | 'friendly' | 'trusted'
+
+/** Frozen patience in elapsed days — better personal relation waits longer. */
+export function workContractPaymentPatienceDays(
+  level: WorkContractRelationLevel = 'stranger',
+): number {
+  switch (level) {
+    case 'acquainted': return 1.5
+    case 'friendly': return 2
+    case 'trusted': return 3
+    default: return DEFAULT_PAYMENT_PATIENCE_DAYS
+  }
+}
 
 export type WorkContractAdvertisement = 'not_posted' | 'posted'
 
@@ -104,8 +143,18 @@ export type WorkContractAssignment = {
   acceptedAt: number
   workStartedAt: number | null
   /** Useful work this NPC actually got accepted by the target — not a
-   *  personal quota. Payment (npc-016) will derive a claim from this. */
+   *  personal quota. Payment (npc-016) derives a claim from this. */
   workCompleted: number
+  /** Frozen integer wage for this assignment (plan npc-016 §4). `0` until
+   *  participation permanently ends after positive useful work. Immutable
+   *  once frozen. */
+  rewardCoinsDue: number
+  /** Absolute `elapsedDays` of the last payment request, or `null` if none
+   *  has been made yet (plan npc-016 §17). */
+  lastPaymentRequestAt: number | null
+  /** Absolute `elapsedDays` after which a still-due claim becomes `unpaid`
+   *  (plan npc-016 §18). `null` when no positive claim exists. */
+  paymentDeadline: number | null
 }
 
 export type WorkContractRecord = {
@@ -174,10 +223,77 @@ export function isContractTerminal(state: WorkContractState): boolean {
 }
 
 /** True while this assignment still occupies a work slot (plan npc-028
- *  §4). `payment_due` / `released` do not. */
+ *  §4). Payment-due, terminal claim, and released assignments do not. */
 export function isAssignmentWorkActive(assignment: WorkContractAssignment): boolean {
   return WORK_ACTIVE_ASSIGNMENT_STATES.has(assignment.state)
 }
+
+const TERMINAL_CLAIM_STATES: ReadonlySet<WorkContractAssignmentState> = new Set([
+  'paid',
+  'uncollectable',
+  'unpaid',
+])
+
+/** Positive earned claims that still need employer resolution. */
+export function isAssignmentPayable(assignment: WorkContractAssignment): boolean {
+  return assignment.state === 'payment_due' && assignment.rewardCoinsDue > 0
+}
+
+export function isAssignmentClaimTerminal(state: WorkContractAssignmentState): boolean {
+  return TERMINAL_CLAIM_STATES.has(state)
+}
+
+/** Sum of already-frozen integer claims — never used as a second ledger,
+ *  only to clamp a newly frozen claim so the group stays `<= rewardCoins`. */
+export function frozenAssignmentClaimSum(record: WorkContractRecord): number {
+  let sum = 0
+  for (const assignment of record.assignments) {
+    if (assignment.rewardCoinsDue > 0) sum += assignment.rewardCoinsDue
+  }
+  return sum
+}
+
+/**
+ * Deterministic integer wage from one assignment's final `workCompleted`
+ * and the frozen group rate (plan npc-016 §4). Floor discards fractional
+ * remainder coins rather than introducing a second currency ledger.
+ * `alreadyFrozen` clamps the result so the group never exceeds `rewardCoins`.
+ */
+export function assignmentRewardCoinsDue(
+  record: WorkContractRecord,
+  workCompleted: number,
+  alreadyFrozen = 0,
+): number {
+  if (workCompleted <= 0) return 0
+  if (!(record.committedWork > 0) || !(record.rewardCoins > 0)) return 0
+  const proportional = Math.floor(workCompleted * record.rewardCoins / record.committedWork)
+  const remaining = Math.max(0, record.rewardCoins - alreadyFrozen)
+  return Math.min(proportional, remaining)
+}
+
+export function hasUnresolvedPaymentClaims(record: WorkContractRecord): boolean {
+  return record.assignments.some(isAssignmentPayable)
+}
+
+/** `settling` → `completed` once every positive claim is terminal
+ *  (plan npc-016 §9). Other contract states are left unchanged. */
+export function refreshContractSettlement(record: WorkContractRecord): WorkContractRecord {
+  if (record.state !== 'settling') return record
+  if (hasUnresolvedPaymentClaims(record)) return record
+  return { ...record, state: 'completed' }
+}
+
+export function isPaymentRequestEligible(assignment: WorkContractAssignment, now: number): boolean {
+  if (!isAssignmentPayable(assignment)) return false
+  if (assignment.lastPaymentRequestAt == null) return true
+  return now >= assignment.lastPaymentRequestAt + PAYMENT_REQUEST_INTERVAL_DAYS
+}
+
+function emptyPaymentFields(): Pick<WorkContractAssignment, 'rewardCoinsDue' | 'lastPaymentRequestAt' | 'paymentDeadline'> {
+  return { rewardCoinsDue: 0, lastPaymentRequestAt: null, paymentDeadline: null }
+}
+
+const DEFAULT_CLAIM_TIMING: WorkContractClaimTiming = { now: 0 }
 
 /** Count of assignments still participating in contractual work. */
 export function activeWorkAssignmentCount(record: WorkContractRecord): number {
@@ -297,38 +413,87 @@ export function postWorkContract(
   return { ...record, state: 'advertised', advertisement: 'posted', postedBoardId: boardId, postedAt: now }
 }
 
-function releaseWorkActiveAssignments(record: WorkContractRecord): WorkContractAssignment[] {
-  return record.assignments.map((assignment) => (
-    isAssignmentWorkActive(assignment) ? { ...assignment, state: 'released' } : assignment
-  ))
+function freezeWorkActiveAssignments(
+  record: WorkContractRecord,
+  outcome: 'payment_due' | 'uncollectable',
+  timing: WorkContractClaimTiming,
+): WorkContractAssignment[] {
+  let frozen = frozenAssignmentClaimSum(record)
+  return record.assignments.map((assignment) => {
+    if (!isAssignmentWorkActive(assignment)) return assignment
+    const next = freezeAssignmentClaimAgainst(record, assignment, outcome, timing, frozen)
+    frozen += Math.max(0, next.rewardCoinsDue - assignment.rewardCoinsDue)
+    return next
+  })
+}
+
+function freezeAssignmentClaimAgainst(
+  record: WorkContractRecord,
+  assignment: WorkContractAssignment,
+  outcome: 'payment_due' | 'uncollectable',
+  timing: WorkContractClaimTiming,
+  alreadyFrozen: number,
+): WorkContractAssignment {
+  if (assignment.rewardCoinsDue > 0) return { ...assignment, state: outcome }
+  const due = assignmentRewardCoinsDue(record, assignment.workCompleted, alreadyFrozen)
+  if (due <= 0) return { ...assignment, state: 'released', ...emptyPaymentFields() }
+  const patience = timing.patienceDaysFor?.(assignment.npcId) ?? DEFAULT_PAYMENT_PATIENCE_DAYS
+  return {
+    ...assignment,
+    state: outcome,
+    rewardCoinsDue: due,
+    lastPaymentRequestAt: null,
+    paymentDeadline: timing.now + patience,
+  }
+}
+
+function freezeAssignmentClaim(
+  record: WorkContractRecord,
+  assignment: WorkContractAssignment,
+  outcome: 'payment_due' | 'uncollectable',
+  timing: WorkContractClaimTiming,
+): WorkContractAssignment {
+  return freezeAssignmentClaimAgainst(
+    record,
+    assignment,
+    outcome,
+    timing,
+    frozenAssignmentClaimSum(record) - Math.max(0, assignment.rewardCoinsDue),
+  )
 }
 
 /** Cancels `record` — clears any publication atomically with the state
- *  change (plan §10). Work-active assignments are released; historical
- *  contribution is preserved for npc-016. Returns `null` (no-op) if
- *  already terminal. */
-export function cancelWorkContract(record: WorkContractRecord): WorkContractRecord | null {
+ *  change (plan §10). Work-active assignments freeze earned claims as
+ *  living `payment_due` (plan npc-016); zero-work assignments are
+ *  `released`. Returns `null` (no-op) if already terminal. */
+export function cancelWorkContract(
+  record: WorkContractRecord,
+  timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
+): WorkContractRecord | null {
   if (isContractTerminal(record.state)) return null
   return {
     ...record,
     state: 'cancelled',
     advertisement: 'not_posted',
     postedBoardId: null,
-    assignments: releaseWorkActiveAssignments(record),
+    assignments: freezeWorkActiveAssignments(record, 'payment_due', timing),
   }
 }
 
 /** Invalidates `record`'s target — same atomic publication cleanup as
  *  `cancelWorkContract`, distinct terminal state (plan §10). Returns `null`
  *  (no-op) if already terminal. */
-export function invalidateWorkContract(record: WorkContractRecord): WorkContractRecord | null {
+export function invalidateWorkContract(
+  record: WorkContractRecord,
+  timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
+): WorkContractRecord | null {
   if (isContractTerminal(record.state)) return null
   return {
     ...record,
     state: 'invalidated',
     advertisement: 'not_posted',
     postedBoardId: null,
-    assignments: releaseWorkActiveAssignments(record),
+    assignments: freezeWorkActiveAssignments(record, 'payment_due', timing),
   }
 }
 
@@ -352,6 +517,7 @@ export function acceptWorkContract(record: WorkContractRecord, npcId: string, no
     acceptedAt: now,
     workStartedAt: null,
     workCompleted: 0,
+    ...emptyPaymentFields(),
   }
   return {
     ...record,
@@ -391,45 +557,103 @@ export function beginContractWork(record: WorkContractRecord, npcId: string, now
   ))
 }
 
-function settleWorkPhase(record: WorkContractRecord): WorkContractRecord {
-  return {
+function settleWorkPhase(
+  record: WorkContractRecord,
+  timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
+): WorkContractRecord {
+  const next: WorkContractRecord = {
     ...record,
     state: 'settling',
-    assignments: record.assignments.map((assignment) => (
-      isAssignmentWorkActive(assignment) ? { ...assignment, state: 'payment_due' } : assignment
-    )),
+    assignments: freezeWorkActiveAssignments(record, 'payment_due', timing),
   }
+  return refreshContractSettlement(next)
 }
 
 /** Ends the contractual work phase for every still-work-active assignment
- *  (plan npc-028 §15/§16) — group commitment fulfilled, or the real target
- *  no longer accepts useful work. `npcId` must currently have a
- *  work-active assignment (authorization); other workers stop regardless of
- *  their individual progress. Never synthesizes contribution. `null` if
+ *  (plan npc-028 §15/§16, npc-016 §6) — group commitment fulfilled, or the
+ *  real target no longer accepts useful work. Positive contribution freezes
+ *  a per-assignment claim; zero-work assignments are `released`. `null` if
  *  `npcId` is not currently work-active on this contract. */
-export function completeContractWork(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+export function completeContractWork(
+  record: WorkContractRecord,
+  npcId: string,
+  timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
+): WorkContractRecord | null {
   const assignment = findAssignment(record, npcId)
   if (!assignment || !isAssignmentWorkActive(assignment)) return null
-  return settleWorkPhase(record)
+  return settleWorkPhase(record, timing)
 }
 
-/** Releases `npcId`'s work participation (plan npc-028 §13) — genuine
- *  abandonment/death, never a temporary interruption. Preserves that
- *  assignment's `workCompleted` and the aggregate `npcWorkCompleted`. Other
- *  assignments are untouched. Reopens one work slot when useful group work
- *  remains (`advertised` if nobody is left working; `active` otherwise).
- *  Use `invalidateWorkContract` when the target itself is the problem. */
-export function releaseWorkContract(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+/** Releases `npcId`'s work participation (plan npc-028 §13, npc-016 §6/§8)
+ *  — genuine abandonment/death, never a temporary interruption. A living
+ *  worker with useful work keeps a `payment_due` claim and frees the slot;
+ *  death with useful work becomes `uncollectable`. Zero-work stops are
+ *  `released` with no wage. Reopens a work slot when useful group work
+ *  remains. Use `invalidateWorkContract` when the target itself is the
+ *  problem. */
+export function releaseWorkContract(
+  record: WorkContractRecord,
+  npcId: string,
+  reason: WorkContractReleaseReason = 'abandoned',
+  timing: WorkContractClaimTiming = DEFAULT_CLAIM_TIMING,
+): WorkContractRecord | null {
   const current = findAssignment(record, npcId)
   if (!current || !isAssignmentWorkActive(current)) return null
+  const outcome = reason === 'death' ? 'uncollectable' as const : 'payment_due' as const
   const assignments = record.assignments.map((assignment) => (
-    assignment.npcId === npcId ? { ...assignment, state: 'released' as const } : assignment
+    assignment.npcId === npcId ? freezeAssignmentClaim(record, assignment, outcome, timing) : assignment
   ))
   const next: WorkContractRecord = { ...record, assignments }
   if (activeWorkAssignmentCount(next) > 0) return { ...next, state: 'active' }
-  if (groupRemainingWork(next) <= 0) return settleWorkPhase(next)
+  if (groupRemainingWork(next) <= 0) return settleWorkPhase(next, timing)
   if (next.advertisement === 'posted') return { ...next, state: 'advertised' }
   return next
+}
+
+/** Marks a still-payable assignment `paid` (plan npc-016 §15) — inventory
+ *  transfer must already have succeeded. Refreshes aggregate settlement. */
+export function markWorkAssignmentPaid(record: WorkContractRecord, npcId: string): WorkContractRecord | null {
+  const current = findAssignment(record, npcId)
+  if (!current || !isAssignmentPayable(current)) return null
+  const updated = withAssignment(record, npcId, (assignment) => ({ ...assignment, state: 'paid' as const }))
+  return updated ? refreshContractSettlement(updated) : null
+}
+
+/** Patience expiry: `payment_due` → `unpaid` when `now >= paymentDeadline`
+ *  (plan npc-016 §18). Unchanged record if the deadline has not passed. */
+export function expireWorkAssignmentPayment(
+  record: WorkContractRecord,
+  npcId: string,
+  now: number,
+): WorkContractRecord | null {
+  const current = findAssignment(record, npcId)
+  if (!current || current.state !== 'payment_due') return null
+  if (current.paymentDeadline == null || now < current.paymentDeadline) return record
+  const updated = withAssignment(record, npcId, (assignment) => ({ ...assignment, state: 'unpaid' as const }))
+  return updated ? refreshContractSettlement(updated) : null
+}
+
+/** Dead worker with a still-payable claim (plan npc-016 §8) — preserves the
+ *  frozen amount and stops payment requests. */
+export function markWorkAssignmentUncollectable(
+  record: WorkContractRecord,
+  npcId: string,
+): WorkContractRecord | null {
+  const current = findAssignment(record, npcId)
+  if (!current || !isAssignmentPayable(current)) return null
+  const updated = withAssignment(record, npcId, (assignment) => ({ ...assignment, state: 'uncollectable' as const }))
+  return updated ? refreshContractSettlement(updated) : null
+}
+
+/** Stamps `lastPaymentRequestAt` on a payable assignment (plan npc-016 §17). */
+export function recordWorkAssignmentPaymentRequest(
+  record: WorkContractRecord,
+  npcId: string,
+  now: number,
+): WorkContractRecord | null {
+  const current = findAssignment(record, npcId)
+  if (!current || !isAssignmentPayable(current)) return null
+  return withAssignment(record, npcId, (assignment) => ({ ...assignment, lastPaymentRequestAt: now }))
 }
 
 /** True once the NPC *group* has performed its full agreed share (plan

@@ -8,7 +8,7 @@ import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogu
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
-type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea'
+type Topic = 'aboutSelf' | 'aboutVillage' | 'currentActivity' | 'goodbye' | 'help' | 'askSword' | 'requestFood' | 'requestWater' | 'aboutArea' | 'payment'
 const state = ui.npcDialogueMenu
 const topic = ref<Topic | null>(null)
 const openedAt = ref(0)
@@ -23,6 +23,7 @@ const swordLine = ref('')
 const foodLine = ref('')
 const waterLine = ref('')
 const areaLine = ref('')
+const paymentLine = ref('')
 
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
@@ -34,13 +35,25 @@ const responseText = computed(() => {
     case 'currentActivity': return currentActivityLine(state.npc.getCurrentActivity(state.timeOfDay), archetype.value)
     case 'goodbye': return goodbyeLine(archetype.value)
     case 'help': return state.helpResult?.line ?? ''
+    case 'payment': return paymentLine.value || (
+      state.paymentClaim
+        ? `Za wykonaną pracę należy mi się ${state.paymentClaim.coins} monet.`
+        : ''
+    )
     case 'requestFood': return foodLine.value
     case 'requestWater': return waterLine.value
     default: return ''
   }
 })
 
-function resetMenu(): void { topic.value = null; swordLine.value = ''; foodLine.value = ''; waterLine.value = ''; areaLine.value = '' }
+function resetMenu(): void {
+  topic.value = null
+  swordLine.value = ''
+  foodLine.value = ''
+  waterLine.value = ''
+  areaLine.value = ''
+  paymentLine.value = ''
+}
 function backToTopics(): void { emitUiClick(); resetMenu() }
 function selectTopic(next: Topic): void { emitUiClick(); topic.value = next }
 
@@ -71,6 +84,17 @@ function askAboutArea(): void {
   topic.value = 'aboutArea'
 }
 
+function payWage(): void {
+  emitUiClick()
+  paymentLine.value = state.onPayWage?.() ?? ''
+  topic.value = 'payment'
+}
+
+function deferWage(): void {
+  emitUiClick()
+  resetMenu()
+}
+
 function openTrade(): void {
   emitUiClick()
   state.onOpenTrade?.()
@@ -96,6 +120,7 @@ watch(() => state.open, (open) => {
 
   openedAt.value = performance.now()
   resetMenu()
+  if (state.paymentClaim) topic.value = 'payment'
 })
 </script>
 
@@ -172,7 +197,26 @@ watch(() => state.open, (open) => {
           {{ responseText }}
         </p>
         <div
-          v-if="topic === 'help' && hasOffer"
+          v-if="topic === 'payment' && !paymentLine && state.paymentClaim"
+          class="flex gap-2"
+        >
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-md bg-white/10 px-3 py-2 text-sm font-medium hover:bg-white/20"
+            @click="payWage"
+          >
+            Zapłać {{ state.paymentClaim.coins }}
+          </button>
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-md bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+            @click="deferWage"
+          >
+            Jeszcze nie
+          </button>
+        </div>
+        <div
+          v-else-if="topic === 'help' && hasOffer"
           class="flex gap-2"
         >
           <button

@@ -64,6 +64,10 @@ type NpcDialogueMenuState = {
    *  "no args, resolved against whatever NPC/settlement is open" shape as
    *  `onAskSword`. */
   onAskAboutArea: (() => string) | null
+  /** Wage-claim context for the open NPC (plan npc-016) — stable ids only.
+   *  `onPayWage` re-resolves live contract/assignment/inventories. */
+  paymentClaim: { contractId: string, npcId: string, coins: number } | null
+  onPayWage: (() => string) | null
 }
 type InventoryState = {
   open: boolean
@@ -511,7 +515,7 @@ export function emitUiClick(): void {
 }
 
 export const ui = reactive({
-  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null } as NpcDialogueMenuState,
+  npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
   inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
@@ -736,11 +740,19 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.timeOfDay = timeOfDay
   state.helpResult = override ?? { line: npc.getDialogueLine() }
   state.canAskSword = state.getCanAskSword?.() ?? false
+  state.paymentClaim = npc.preparePaymentRequest()
   state.open = true
   emitUiOpen()
   playNpcVoice(npc, pickNpcGreetingSound(npc.voiceActor))
 }
-function resetNpcDialogueMenu(): void { const state = ui.npcDialogueMenu; state.open = false; state.npc = null; state.settlement = null; state.helpResult = null }
+function resetNpcDialogueMenu(): void {
+  const state = ui.npcDialogueMenu
+  state.open = false
+  state.npc = null
+  state.settlement = null
+  state.helpResult = null
+  state.paymentClaim = null
+}
 /** `decline: false` means this close is a transition (e.g. into trade — see
  *  `openMerchantFromDialogue`), not the player actually leaving/declining — skip
  *  both `onDecline()` and the farewell line in that case, same guard. */
@@ -770,6 +782,7 @@ export function configureNpcDialogueMenu(handlers: {
   onRequestFood: (npc: NpcAgent) => string
   onRequestWater: (npc: NpcAgent) => string
   onAskAboutArea: () => string
+  onPayWage: () => string
 }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword
   ui.npcDialogueMenu.onOpenTrade = handlers.onOpenTrade
@@ -777,6 +790,7 @@ export function configureNpcDialogueMenu(handlers: {
   ui.npcDialogueMenu.onRequestFood = handlers.onRequestFood
   ui.npcDialogueMenu.onRequestWater = handlers.onRequestWater
   ui.npcDialogueMenu.onAskAboutArea = handlers.onAskAboutArea
+  ui.npcDialogueMenu.onPayWage = handlers.onPayWage
 }
 
 export function openInventory(

@@ -916,6 +916,9 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
         acceptedAt: 4,
         workStartedAt: oldState === 'working' || oldState === 'payment_due' ? 5 : null,
         workCompleted: 2,
+        rewardCoinsDue: assignmentState === 'payment_due' ? 16 : 0,
+        lastPaymentRequestAt: null,
+        paymentDeadline: null,
       }],
     })
   })
@@ -935,6 +938,63 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     }
     const loaded = loadSaveData({ ...validSave, workContracts: [palisade, torch] })
     expect(loaded?.workContracts).toEqual([palisade, torch])
+  })
+
+  it('round-trips assignment payment fields and terminal claim states (plan npc-016)', () => {
+    const assignment = {
+      npcId: 'npc:1',
+      state: 'payment_due' as const,
+      acceptedAt: 4,
+      workStartedAt: 5,
+      workCompleted: 2,
+      rewardCoinsDue: 16,
+      lastPaymentRequestAt: 6.2,
+      paymentDeadline: 7,
+    }
+    const contract = {
+      ...validSave.workContracts[0]!,
+      state: 'settling' as const,
+      assignments: [assignment],
+    }
+    const loaded = loadSaveData({ ...validSave, workContracts: [contract] })
+    expect(loaded?.workContracts[0]?.assignments).toEqual([assignment])
+    const paid = { ...assignment, state: 'paid' as const }
+    const unpaid = { ...assignment, state: 'unpaid' as const, lastPaymentRequestAt: null }
+    const uncollectable = { ...assignment, state: 'uncollectable' as const, paymentDeadline: null }
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...contract, assignments: [paid] }] })?.workContracts[0]?.assignments[0]?.state).toBe('paid')
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...contract, assignments: [unpaid] }] })?.workContracts[0]?.assignments[0]?.state).toBe('unpaid')
+    expect(loadSaveData({ ...validSave, workContracts: [{ ...contract, assignments: [uncollectable] }] })?.workContracts[0]?.assignments[0]?.state).toBe('uncollectable')
+  })
+
+  it('migrates a v19 assignment without synthesizing NPC coins (plan npc-016)', () => {
+    const { rewardCoinsDue: _d, lastPaymentRequestAt: _r, paymentDeadline: _p, ...legacyAssignment } = {
+      npcId: 'npc:1',
+      state: 'payment_due' as const,
+      acceptedAt: 4,
+      workStartedAt: 5,
+      workCompleted: 2,
+      rewardCoinsDue: 0,
+      lastPaymentRequestAt: null,
+      paymentDeadline: null,
+    }
+    const v19Save = {
+      ...validSave,
+      version: 19,
+      workContracts: [{
+        ...validSave.workContracts[0]!,
+        state: 'settling',
+        assignments: [legacyAssignment],
+      }],
+    }
+    const result = loadStoredSave(v19Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.workContracts[0]?.assignments[0]).toEqual({
+      ...legacyAssignment,
+      rewardCoinsDue: 16,
+      lastPaymentRequestAt: null,
+      paymentDeadline: null,
+    })
   })
 
 

@@ -150,43 +150,39 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-20. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
-  🟡 `M` · **Score:**  25  
-   → **unlocks:** 0/0
-
-21. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+20. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-22. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+21. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-23. `fauna-013` — **Animal hand-feeding and human affinity**  
+22. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-24. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+23. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-25. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
+24. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-26. `world-terrain-015` — **Water Reflection Content Budget**  
+25. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-27. `fauna-007` — **Animal leading and cart harness**  
+26. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-28. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
+27. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-29. `npc-004` — **Drzewo genealogiczne NPC**  
+28. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 

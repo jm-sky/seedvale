@@ -2,6 +2,16 @@
 
 Generated from exported TypeScript symbols.
 
+## `ai/approachPlayer.ts`
+
+- `ApproachPlayerIntent` — type — line 9
+  - domain: npc
+- `horizontalDistance` — function — line 21
+- `isPlayerApproachArrived` — function — line 40
+- `isPlayerLocallyEligible` — function — line 30
+- `PLAYER_APPROACH_ARRIVE_RANGE` — const — line 19
+- `PLAYER_APPROACH_LOCAL_RANGE` — const — line 16
+
 ## `ai/characters.ts`
 
 - `CharacterDef` — type — line 23
@@ -83,29 +93,29 @@ Generated from exported TypeScript symbols.
 ## `ai/npcAction.ts`
 
 - `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 68
+- `NpcPlannedAction` — type — line 71
 - `Phase` — type — line 10
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 571
-- `CurrentActivity` — type — line 428
-- `CurrentActivityKind` — type — line 421
-- `NPC_HEIGHT` — const — line 331
-- `NPC_MODEL_URLS` — const — line 395
-- `NPC_SHADOW_DISTANCE` — const — line 345
-- `NpcAgent` — class — line 887
+- `classifyPendingActivity` — function — line 584
+- `CurrentActivity` — type — line 436
+- `CurrentActivityKind` — type — line 429
+- `NPC_HEIGHT` — const — line 339
+- `NPC_MODEL_URLS` — const — line 403
+- `NPC_SHADOW_DISTANCE` — const — line 353
+- `NpcAgent` — class — line 901
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 807
-- `NpcInspectionSnapshot` — type — line 443
-- `NpcWhy` — type — line 546
-- `projectNpcWhy` — function — line 606
-- `promoteChainKind` — function — line 563
+- `NpcAgentDeps` — type — line 821
+- `NpcInspectionSnapshot` — type — line 451
+- `NpcWhy` — type — line 559
+- `projectNpcWhy` — function — line 620
+- `promoteChainKind` — function — line 576
 
 ## `ai/npcAnimalThreat.ts`
 

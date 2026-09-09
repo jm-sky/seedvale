@@ -1215,7 +1215,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     if (!bundle.palisades.remove(id)) return
     const contract = bundle.workContracts.findByTarget({ kind: 'palisade', targetId: id })
-    if (contract) bundle.workContracts.invalidateTarget(contract.id)
+    if (contract) bundle.workContracts.invalidateTarget(contract.id, { now: dayNight.elapsedDays })
     applyRecovery(inventory, recovered)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
@@ -1547,7 +1547,7 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }
     if (!bundle.residentialBuildings.remove(id)) return
     const contract = bundle.workContracts.findByTarget({ kind: 'residential_building', targetId: id })
-    if (contract) bundle.workContracts.invalidateTarget(contract.id)
+    if (contract) bundle.workContracts.invalidateTarget(contract.id, { now: dayNight.elapsedDays })
     if (recovered.length > 0) applyRecovery(inventory, recovered)
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()

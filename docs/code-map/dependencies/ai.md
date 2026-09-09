@@ -42,6 +42,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/Needs.ts`
+- `ai/approachPlayer.ts`
 - `ai/characters.ts`
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
@@ -157,6 +158,19 @@ Generated from TypeScript imports.
 - `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/store.ts`
 - `ui/createNpcInspector.ts`
+
+## `ai/approachPlayer.test.ts`
+
+**Imports**
+
+- `ai/approachPlayer.ts`
+
+## `ai/approachPlayer.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/approachPlayer.test.ts`
 
 ## `ai/characters.test.ts`
 

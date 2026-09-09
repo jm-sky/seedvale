@@ -165,13 +165,21 @@ import { AGENT_RENDER_LAYER, assignRenderLayer } from '../world/waterMirror'
 import {
   type ContractTarget,
   findAssignment,
+  isAssignmentWorkActive,
   isNpcCommitmentFulfilled,
+  isPaymentRequestEligible,
   noticeBoardId,
   type WorkContractAssignment,
   type WorkContractAssignmentState,
+  workContractPaymentPatienceDays,
   type WorkContractRecord,
   type WorkContractState,
 } from '../world/workContract'
+import {
+  type ApproachPlayerIntent,
+  isPlayerApproachArrived,
+  isPlayerLocallyEligible,
+} from './approachPlayer'
 import {
   type CharacterDef,
   genderForName,
@@ -498,6 +506,11 @@ export type NpcInspectionSnapshot = {
     assignmentWorkCompleted: number
     requestedWorkerCount: number
     targetRemainingWork: number | null
+    rewardCoinsDue?: number
+    lastPaymentRequestAt?: number | null
+    paymentDeadline?: number | null
+    paymentApproachIntent?: ApproachPlayerIntent | null
+    paymentApproachInterruptReason?: string | null
   } | null
   action: {
     kind: ActionId
@@ -595,6 +608,7 @@ export function classifyPendingActivity(
   // 'idle' whenever 'heal' wins arbitration), same "idle" reading as
   // sheltering/settling at the campfire above.
   if (pending.kind === 'heal' && activeNeed === 'idle') return 'idle'
+  if (pending.kind === 'approachPlayer' && activeNeed === 'idle') return 'idle'
   return 'need'
 }
 
@@ -1204,6 +1218,13 @@ export class NpcAgent {
    *  (`workContracts.findActiveWorkByNpc(this.id)`), never a second copy on
    *  `NpcAuthoritativeState`. Null in isolated fallbacks, same as `mining`. */
   private readonly workContracts: WorkContracts | null
+  /** Last player/observer XZ this tick — local reaction data only, never a
+   *  global chase target (plan npc-016 §11). */
+  private lastObserverX = 0
+  private lastObserverZ = 0
+  /** Transient nearby-player approach for a payable claim. Never persisted. */
+  private paymentApproachIntent: ApproachPlayerIntent | null = null
+  private paymentApproachInterruptReason: string | null = null
   /** The one construction target kind a work contract can reference today
    *  (plan npc-015 §7) — NPC construction execution advances this same
    *  world-owned record the player's own `[E]` well-work would, through the
@@ -1545,6 +1566,7 @@ export class NpcAgent {
         : null,
       contract: (() => {
         const found = this.workContracts?.findActiveWorkByNpc(this.id)
+          ?? this.workContracts?.findPayableByNpc(this.id, this.nowDays())
         if (!found) return null
         const { contract: mine, assignment } = found
         const targetRemainingWork = (() => {
@@ -1581,6 +1603,11 @@ export class NpcAgent {
           assignmentWorkCompleted: assignment.workCompleted,
           requestedWorkerCount: mine.requestedWorkerCount,
           targetRemainingWork,
+          rewardCoinsDue: assignment.rewardCoinsDue,
+          lastPaymentRequestAt: assignment.lastPaymentRequestAt,
+          paymentDeadline: assignment.paymentDeadline,
+          paymentApproachIntent: this.paymentApproachIntent,
+          paymentApproachInterruptReason: this.paymentApproachInterruptReason,
         }
       })(),
       action: this.pendingAction
@@ -2284,7 +2311,11 @@ export class NpcAgent {
     // contract stuck in `travelling`/`working` forever with an assigned
     // worker that will never move again.
     const mine = this.workContracts?.findActiveWorkByNpc(this.id)
-    if (mine) this.workContracts!.release(mine.contract.id, this.id)
+    if (mine) this.workContracts!.release(mine.contract.id, this.id, 'death', this.claimTiming())
+    else {
+      const payable = this.workContracts?.findPayableByNpc(this.id, this.nowDays())
+      if (payable) this.workContracts!.markUncollectable(payable.contract.id, this.id)
+    }
     // No D1/D2 gap here — already released the conversation, already
     // failed the lifecycle unconditionally-safe (`failActionLifecycle`
     // no-ops unless `status === 'active'`, same effect as the old explicit
@@ -2355,6 +2386,8 @@ export class NpcAgent {
   ): void {
     this.simClock += dt
     this.dayLengthSec = dayLengthSec
+    this.lastObserverX = observerPos.x
+    this.lastObserverZ = observerPos.z
     if (this.frozen) return
     if (this.health.dead) {
       // Keep the mixer advancing only long enough for the one-shot death
@@ -2680,6 +2713,14 @@ export class NpcAgent {
             action.destination = queue.worldDestination(this.id)
           }
         }
+        if (action.kind === 'approachPlayer') {
+          action.destination = { x: observerPos.x, y: observerPos.y, z: observerPos.z }
+          if (!isPlayerLocallyEligible(this.mesh.position.x, this.mesh.position.z, observerPos.x, observerPos.z)) {
+            this.paymentApproachInterruptReason = 'player_left'
+            this.interruptCurrentAction()
+            break
+          }
+        }
         this.tmp.set(action.destination.x, action.destination.y, action.destination.z)
         const steerTarget = this.resolveSteerTarget(this.tmp)
         if (this.steerWithRescue(steerTarget, dt)) {
@@ -2945,6 +2986,21 @@ export class NpcAgent {
 
   private nowDays(): number {
     return this.forest?.getWorldDays() ?? 0
+  }
+
+  /** Outstanding payable wage claim for this NPC, if any (plan npc-016).
+   *  Stamps the per-assignment request throttle when a claim is still due. */
+  preparePaymentRequest(): { contractId: string, npcId: string, coins: number } | null {
+    const contracts = this.workContracts
+    if (!contracts) return null
+    const found = contracts.findPayableByNpc(this.id, this.nowDays())
+    if (!found) return null
+    contracts.recordPaymentRequest(found.contract.id, this.id, this.nowDays())
+    return {
+      contractId: found.contract.id,
+      npcId: this.id,
+      coins: found.assignment.rewardCoinsDue,
+    }
   }
 
   private effectivePhysicalAttributes() {
@@ -3271,6 +3327,7 @@ export class NpcAgent {
     this.releaseConversationIfAny()
     if (opts.lifecycle === 'fail') failActionLifecycle(this.actionLifecycle)
     this.leaveActiveQueue()
+    if (this.pendingAction?.kind === 'approachPlayer') this.clearPaymentApproach('interrupted')
     this.pendingAction = null
     this.pathWaypoints = []
     this.pathIndex = 0
@@ -4012,7 +4069,89 @@ export class NpcAgent {
     if (!contracts) return false
     const mine = contracts.findActiveWorkByNpc(this.id)
     if (mine) return this.pursueAcceptedContract(mine.contract, mine.assignment)
+    if (this.tryRequestWorkPayment()) return true
     return this.tryAcceptWorkContractOpportunity(contracts, scheduledActivity)
+  }
+
+  private claimTiming() {
+    return {
+      now: this.nowDays(),
+      patienceDaysFor: () => workContractPaymentPatienceDays(this.getPlayerSocial(this.name).relationLevel),
+    }
+  }
+
+  private clearPaymentApproach(reason: string): void {
+    if (this.paymentApproachIntent) {
+      this.paymentApproachInterruptReason = this.paymentApproachInterruptReason ?? reason
+      this.paymentApproachIntent = null
+    }
+  }
+
+  /**
+   * Bounded local payment request (plan npc-016 §10–§12) — only when the
+   * player is already nearby, the claim is still payable, and the per-
+   * assignment throttle allows another request. Never a world-wide chase.
+   */
+  private tryRequestWorkPayment(): boolean {
+    const contracts = this.workContracts
+    if (!contracts) return false
+    const payable = contracts.findPayableByNpc(this.id, this.nowDays())
+    if (!payable) return false
+    if (!isPaymentRequestEligible(payable.assignment, this.nowDays())) return false
+    if (!isPlayerLocallyEligible(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) return false
+    this.paymentApproachInterruptReason = null
+    this.paymentApproachIntent = {
+      kind: 'work_contract_payment',
+      contractId: payable.contract.id,
+      npcId: this.id,
+    }
+    if (isPlayerApproachArrived(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) {
+      this.completePaymentApproach()
+      return true
+    }
+    this.startAction({
+      kind: 'approachPlayer',
+      destination: copyVec3({ x: this.lastObserverX, y: this.mesh.position.y, z: this.lastObserverZ }),
+      durationSec: 0.6 * this.waitMultiplier,
+      onComplete: () => this.completePaymentApproach(),
+    })
+    return true
+  }
+
+  private completePaymentApproach(): void {
+    const contracts = this.workContracts
+    const intent = this.paymentApproachIntent
+    if (!contracts || !intent) return
+    if (!isPlayerApproachArrived(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.lastObserverX,
+      this.lastObserverZ,
+    )) {
+      this.clearPaymentApproach('player_left')
+      return
+    }
+    const payable = contracts.findPayableByNpc(this.id, this.nowDays())
+    if (!payable || payable.contract.id !== intent.contractId) {
+      this.clearPaymentApproach('stale_claim')
+      return
+    }
+    contracts.recordPaymentRequest(payable.contract.id, this.id, this.nowDays())
+    this.trace.record({
+      simTime: this.simClock,
+      type: 'contract.paymentRequested',
+      contractId: payable.contract.id,
+    })
   }
 
   /** No existing commitment — evaluate this NPC's own settlement notice
@@ -4055,7 +4194,7 @@ export class NpcAgent {
   private pursueAcceptedContract(record: WorkContractRecord, assignment: WorkContractAssignment): boolean {
     const contracts = this.workContracts
     if (!contracts) return false
-    if (assignment.state === 'payment_due' || assignment.state === 'released') return false
+    if (!isAssignmentWorkActive(assignment)) return false
     if (record.target.kind === 'construction') return this.pursueConstructionContract(record, assignment, contracts)
     if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, assignment, contracts)
     if (record.target.kind === 'residential_building') return this.pursueResidentialContract(record, assignment, contracts)
@@ -4071,7 +4210,7 @@ export class NpcAgent {
     if (!well) {
       // Target disappeared/became invalid (plan §12) — never leave the
       // contract stuck; hand it back to a terminal state instead.
-      contracts.invalidateTarget(record.id)
+      contracts.invalidateTarget(record.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
       return true
     }
@@ -4079,7 +4218,7 @@ export class NpcAgent {
       // Target itself finished (plan npc-028 §16) — ends the work phase
       // for every still-work-active assignment, regardless of whether the
       // group's `committedWork` was ever reached.
-      contracts.completeWork(record.id, this.id)
+      contracts.completeWork(record.id, this.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
       return true
     }
@@ -4125,10 +4264,10 @@ export class NpcAgent {
     const prep = terrainPreparations.find(record.target.targetId)
     if (!prep) {
       if (terrainPreparations.wasCompleted(record.target.targetId)) {
-        contracts.completeWork(record.id, this.id)
+        contracts.completeWork(record.id, this.id, this.claimTiming())
         this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
       } else {
-        contracts.invalidateTarget(record.id)
+        contracts.invalidateTarget(record.id, this.claimTiming())
         this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
       }
       return true
@@ -4188,7 +4327,7 @@ export class NpcAgent {
         if (!freshAssignment || freshAssignment.state !== 'working') return
         const freshWell = this.findContractWell(well.id)
         if (!freshWell) {
-          contracts.invalidateTarget(contractId)
+          contracts.invalidateTarget(contractId, this.claimTiming())
           return
         }
         const dropped = this.droppedItems
@@ -4210,7 +4349,7 @@ export class NpcAgent {
           capabilities: null,
         })
         if (outcome.status === 'completed') {
-          contracts.completeWork(contractId, this.id)
+          contracts.completeWork(contractId, this.id, this.claimTiming())
           return
         }
         if (outcome.status === 'blocked') return // blocked on materials — commitment stays intact, retried next bout.
@@ -4222,7 +4361,7 @@ export class NpcAgent {
         const updatedWell = this.findContractWell(freshWell.id)
         const targetCompleted = updatedWell != null && isWellCompleted(updatedWell)
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
-        if (targetCompleted || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+        if (targetCompleted || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },
     })
   }
@@ -4252,14 +4391,14 @@ export class NpcAgent {
         if (!freshAssignment || freshAssignment.state !== 'working') return
         const result = terrainPreparations.contributeWork(prep.id, TERRAIN_PREP_NPC_WORK_SESSION_HOURS)
         if (!result) {
-          contracts.invalidateTarget(contractId)
+          contracts.invalidateTarget(contractId, this.claimTiming())
           return
         }
         const creditedContract = result.acceptedWork > 0
           ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
           : contracts.find(contractId)
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
-        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },
     })
   }
@@ -4277,12 +4416,12 @@ export class NpcAgent {
     if (!runtime) return false
     const entry = runtime.find(record.target.targetId)
     if (!entry) {
-      contracts.invalidateTarget(record.id)
+      contracts.invalidateTarget(record.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
       return true
     }
     if (isResidentialBuildingComplete(entry)) {
-      contracts.completeWork(record.id, this.id)
+      contracts.completeWork(record.id, this.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
       return true
     }
@@ -4325,14 +4464,14 @@ export class NpcAgent {
         if (!freshAssignment || freshAssignment.state !== 'working') return
         const result = runtime.contributeWork(targetId, RESIDENTIAL_BUILDING_WORK_SESSION_HOURS)
         if (!result) {
-          contracts.invalidateTarget(contractId)
+          contracts.invalidateTarget(contractId, this.claimTiming())
           return
         }
         const creditedContract = result.acceptedWork > 0
           ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
           : contracts.find(contractId)
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
-        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },
     })
     return true
@@ -4358,7 +4497,7 @@ export class NpcAgent {
     if (!runtime) return false
     const entry = runtime.list().find((e) => e.id === record.target.targetId)
     if (!entry) {
-      contracts.invalidateTarget(record.id)
+      contracts.invalidateTarget(record.id, this.claimTiming())
       this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
       return true
     }
@@ -4408,14 +4547,14 @@ export class NpcAgent {
         if (!freshAssignment || freshAssignment.state !== 'working') return
         const result = runtime.contributeWork(targetId, sessionHours)
         if (!result) {
-          contracts.invalidateTarget(contractId)
+          contracts.invalidateTarget(contractId, this.claimTiming())
           return
         }
         const creditedContract = result.acceptedWork > 0
           ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
           : contracts.find(contractId)
         const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
-        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id, this.claimTiming())
       },
     })
   }

@@ -66,7 +66,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | -       | 🔴 | M      | -      |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
-| 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`             | -       | 🟡 | M      | ~~npc-015~~, ~~npc-018~~, ~~npc-028~~, ~~settlements-npcs-026~~ |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~, ~~settlements-npcs-026~~ |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | npc-010 |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
@@ -98,6 +97,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `npc-016-work-contracts-payment-and-employer-interaction.md` | Najemnik po skończonej pracy podchodzi tylko gdy gracz jest w pobliżu; dialog otwiera Zapłać N / Jeszcze nie; monety schodzą z gracza do `personalInventory` NPC; za mało monet / pełny ekwipunek NPC nic nie rusza; powtórne Zapłać nic nie robi; śmierć najemnika nie obciąża gracza; save/load zachowuje należność i już wypłacone monety |
 | `settlements-005-residential-house-construction.md` | Placement małej/średniej chaty, stage-gated materiały, praca gracza i NPC, terrain prep przy stoku, ukończenie → lodging high, anulowanie niedokończonej, save/load |
 | `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | Neutralny handlarz ~90% nominalnej wartości; lepsza relacja/reputacja podbija ofertę (max ~105% dla nie-stockowanych); zużyty trap taniej proporcjonalnie do stanu; broken trap ~5% salvage; podsumowanie transakcji = finalna wypłata; brak arbitrażu buy→sell na stockowanych towarach |
 | `fauna-009-wolf-howling-and-rooster-vocalization.md` | Wycie wilków i pianie kogutów: timing, zachowanie i brak spamowania audio |

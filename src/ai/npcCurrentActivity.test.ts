@@ -50,6 +50,10 @@ describe('classifyPendingActivity / promoteChainKind', () => {
     expect(classifyPendingActivity({ kind: 'heal' }, 'idle')).toBe('idle')
   })
 
+  it('reports idle for a nearby-player approach (plan npc-016)', () => {
+    expect(classifyPendingActivity({ kind: 'approachPlayer' }, 'idle')).toBe('idle')
+  })
+
   it('reports idle when there is no pending action', () => {
     expect(classifyPendingActivity(undefined, 'idle')).toBe('idle')
   })

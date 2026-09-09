@@ -1,7 +1,8 @@
 # Plan: Work Contracts — Payment & Employer Interaction
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-09 16:30
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-015~~, ~~npc-018~~, ~~npc-028~~, ~~settlements-npcs-026~~

@@ -127,6 +127,13 @@ Generated from exported TypeScript symbols.
 - `WorkContractActions` — type — line 69
 - `WorkContractQuickActionEntry` — type — line 67
 
+## `app/actions/workContractPayment.ts`
+
+- `payWorkContractAssignment` — function — line 30
+  - domain: npc
+- `PayWorkContractDeps` — type — line 16
+- `PayWorkContractResult` — type — line 9
+
 ## `app/appRenderLoop.ts`
 
 - `AppRenderLoop` — type — line 26
@@ -218,10 +225,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 125
-- `InventoryWiring` — type — line 71
-- `InventoryWiringDeps` — type — line 94
-- `MerchantInventoryView` — type — line 58
+- `createInventoryWiring` — function — line 126
+- `InventoryWiring` — type — line 72
+- `InventoryWiringDeps` — type — line 95
+- `MerchantInventoryView` — type — line 59
 
 ## `app/modalState.ts`
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   acceptWorkContract,
   activeWorkAssignmentCount,
+  assignmentRewardCoinsDue,
   beginContractTravel,
   beginContractWork,
   canAcceptContract,
@@ -11,15 +12,23 @@ import {
   contractHasActiveTarget,
   createWorkContractRecord,
   expectedCandidateWork,
+  expireWorkAssignmentPayment,
   findAssignment,
+  frozenAssignmentClaimSum,
   groupRemainingWork,
+  hasUnresolvedPaymentClaims,
   invalidateWorkContract,
   isContractDiscoverable,
   isContractTerminal,
   isNpcCommitmentFulfilled,
+  isPaymentRequestEligible,
+  markWorkAssignmentPaid,
+  markWorkAssignmentUncollectable,
   noticeBoardId,
+  PAYMENT_REQUEST_INTERVAL_DAYS,
   postWorkContract,
   recordNpcWorkContribution,
+  recordWorkAssignmentPaymentRequest,
   releaseWorkContract,
   sameContractTarget,
 } from './workContract'
@@ -211,8 +220,9 @@ describe('NPC assignment lifecycle (plan npc-028)', () => {
     expect(findAssignment(working, 'npc:1')).toMatchObject({ state: 'working', workStartedAt: 9 })
     expect(completeContractWork(working, 'npc:2')).toBeNull()
     const settled = completeContractWork(working, 'npc:1')!
-    expect(settled.state).toBe('settling')
-    expect(findAssignment(settled, 'npc:1')?.state).toBe('payment_due')
+    expect(settled.state).toBe('completed')
+    expect(findAssignment(settled, 'npc:1')?.state).toBe('released')
+    expect(findAssignment(settled, 'npc:1')?.rewardCoinsDue).toBe(0)
   })
 
   it('rejects skipping a lifecycle step', () => {
@@ -232,8 +242,9 @@ describe('NPC assignment lifecycle (plan npc-028)', () => {
     const released = releaseWorkContract(credited, 'npc:1')!
     expect(released.state).toBe('advertised')
     expect(findAssignment(released, 'npc:1')).toMatchObject({
-      state: 'released',
+      state: 'payment_due',
       workCompleted: 2,
+      rewardCoinsDue: 8,
     })
     expect(released.npcWorkCompleted).toBe(2)
     expect(released.advertisement).toBe('posted')
@@ -313,8 +324,9 @@ describe('multiple workers (plan npc-028)', () => {
     record = beginContractWork(record, 'npc:1', 8)!
     record = recordNpcWorkContribution(record, 'npc:1', 2)!
     const released = releaseWorkContract(record, 'npc:1')!
-    expect(findAssignment(released, 'npc:1')?.state).toBe('released')
+    expect(findAssignment(released, 'npc:1')?.state).toBe('payment_due')
     expect(findAssignment(released, 'npc:1')?.workCompleted).toBe(2)
+    expect(findAssignment(released, 'npc:1')?.rewardCoinsDue).toBe(8)
     expect(findAssignment(released, 'npc:2')?.state).toBe('accepted')
     expect(findAssignment(released, 'npc:3')?.state).toBe('accepted')
     expect(released.npcWorkCompleted).toBe(2)
@@ -330,7 +342,11 @@ describe('multiple workers (plan npc-028)', () => {
     record = acceptWorkContract(record, 'npc:2', 6)!
     record = beginContractTravel(record, 'npc:1')!
     record = beginContractWork(record, 'npc:1', 8)!
-    const settled = completeContractWork(record, 'npc:1')!
+    record = beginContractTravel(record, 'npc:2')!
+    record = beginContractWork(record, 'npc:2', 9)!
+    record = recordNpcWorkContribution(record, 'npc:1', 2)!
+    record = recordNpcWorkContribution(record, 'npc:2', 1)!
+    const settled = completeContractWork(record, 'npc:1', { now: 12 })!
     expect(settled.state).toBe('settling')
     expect(findAssignment(settled, 'npc:1')?.state).toBe('payment_due')
     expect(findAssignment(settled, 'npc:2')?.state).toBe('payment_due')
@@ -347,7 +363,7 @@ describe('multiple workers (plan npc-028)', () => {
     record = recordNpcWorkContribution(record, 'npc:1', 1)!
     const cancelled = cancelWorkContract(record)!
     expect(cancelled.state).toBe('cancelled')
-    expect(findAssignment(cancelled, 'npc:1')).toMatchObject({ state: 'released', workCompleted: 1 })
+    expect(findAssignment(cancelled, 'npc:1')).toMatchObject({ state: 'payment_due', workCompleted: 1 })
     expect(findAssignment(cancelled, 'npc:2')?.state).toBe('released')
     expect(cancelled.npcWorkCompleted).toBe(1)
   })
@@ -408,5 +424,99 @@ describe('shared-work commitment accounting (plan npc-018 / npc-028)', () => {
     expect(sameContractTarget({ kind: 'construction', targetId: 'a' }, { kind: 'construction', targetId: 'a' })).toBe(true)
     expect(sameContractTarget({ kind: 'construction', targetId: 'a' }, { kind: 'construction', targetId: 'b' })).toBe(false)
     expect(sameContractTarget({ kind: 'construction', targetId: 'a' }, { kind: 'terrain_preparation', targetId: 'a' })).toBe(false)
+  })
+})
+
+function workingWith(npcId: string, work: number, record = makeAdvertised({ requestedWorkerCount: 3 })) {
+  let next = acceptWorkContract(record, npcId, 5)!
+  next = beginContractTravel(next, npcId)!
+  next = beginContractWork(next, npcId, 9)!
+  if (work > 0) next = recordNpcWorkContribution(next, npcId, work)!
+  return next
+}
+
+describe('assignment payment claims (plan npc-016)', () => {
+  it('freezes a proportional integer claim from accepted useful work', () => {
+    const settled = completeContractWork(workingWith('npc:1', 2), 'npc:1', { now: 10 })!
+    const assignment = findAssignment(settled, 'npc:1')!
+    expect(assignment.state).toBe('payment_due')
+    expect(assignment.rewardCoinsDue).toBe(8) // floor(2 * 25 / 6)
+    expect(assignment.paymentDeadline).toBe(11)
+    expect(assignment.lastPaymentRequestAt).toBeNull()
+    expect(settled.state).toBe('settling')
+  })
+
+  it('does not create a positive claim when workCompleted is 0', () => {
+    const settled = completeContractWork(workingWith('npc:1', 0), 'npc:1')!
+    expect(findAssignment(settled, 'npc:1')).toMatchObject({ state: 'released', rewardCoinsDue: 0 })
+    expect(settled.state).toBe('completed')
+    expect(hasUnresolvedPaymentClaims(settled)).toBe(false)
+  })
+
+  it('never lets frozen claims exceed the contract reward ceiling', () => {
+    let record = makeAdvertised({ requestedWorkerCount: 2 })
+    record = workingWith('npc:1', 5, record)
+    record = acceptWorkContract(record, 'npc:2', 6)!
+    record = beginContractTravel(record, 'npc:2')!
+    record = beginContractWork(record, 'npc:2', 10)!
+    record = recordNpcWorkContribution(record, 'npc:2', 3)!
+    const settled = completeContractWork(record, 'npc:1')!
+    expect(frozenAssignmentClaimSum(settled)).toBeLessThanOrEqual(settled.rewardCoins)
+    expect(assignmentRewardCoinsDue(settled, 5) + assignmentRewardCoinsDue(settled, 3, 20)).toBeLessThanOrEqual(25)
+  })
+
+  it('keeps a payment_due claim while another assignment is still working', () => {
+    let record = workingWith('npc:1', 2)
+    record = acceptWorkContract(record, 'npc:2', 6)!
+    record = beginContractTravel(record, 'npc:2')!
+    const released = releaseWorkContract(record, 'npc:1', 'abandoned', { now: 11 })!
+    expect(released.state).toBe('active')
+    expect(findAssignment(released, 'npc:1')?.state).toBe('payment_due')
+    expect(findAssignment(released, 'npc:2')?.state).toBe('travelling')
+    expect(activeWorkAssignmentCount(released)).toBe(1)
+    expect(isContractDiscoverable(released)).toBe(true)
+  })
+
+  it('marks a dead worker uncollectable without creating a payable claim for the player', () => {
+    const dead = releaseWorkContract(workingWith('npc:1', 2), 'npc:1', 'death', { now: 10 })!
+    expect(findAssignment(dead, 'npc:1')).toMatchObject({
+      state: 'uncollectable',
+      workCompleted: 2,
+      rewardCoinsDue: 8,
+    })
+    expect(hasUnresolvedPaymentClaims(dead)).toBe(false)
+    expect(dead.state).toBe('advertised')
+  })
+
+  it('completes the contract only after every positive claim is terminal', () => {
+    const settled = completeContractWork(workingWith('npc:1', 2), 'npc:1', { now: 10 })!
+    expect(settled.state).toBe('settling')
+    expect(markWorkAssignmentPaid(settled, 'npc:1')?.state).toBe('completed')
+  })
+
+  it('expires a payable claim to unpaid after the frozen deadline', () => {
+    const settled = completeContractWork(workingWith('npc:1', 2), 'npc:1', { now: 10 })!
+    expect(expireWorkAssignmentPayment(settled, 'npc:1', 10.9)).toEqual(settled)
+    const unpaid = expireWorkAssignmentPayment(settled, 'npc:1', 11)!
+    expect(findAssignment(unpaid, 'npc:1')?.state).toBe('unpaid')
+    expect(unpaid.state).toBe('completed')
+    expect(markWorkAssignmentPaid(unpaid, 'npc:1')).toBeNull()
+  })
+
+  it('does not re-pay a claim that is already paid or uncollectable', () => {
+    const settled = completeContractWork(workingWith('npc:1', 2), 'npc:1', { now: 10 })!
+    const paid = markWorkAssignmentPaid(settled, 'npc:1')!
+    expect(markWorkAssignmentPaid(paid, 'npc:1')).toBeNull()
+    expect(markWorkAssignmentUncollectable(paid, 'npc:1')).toBeNull()
+  })
+
+  it('throttles payment requests per assignment', () => {
+    const settled = completeContractWork(workingWith('npc:1', 2), 'npc:1', { now: 10 })!
+    const assignment = findAssignment(settled, 'npc:1')!
+    expect(isPaymentRequestEligible(assignment, 10)).toBe(true)
+    const requested = recordWorkAssignmentPaymentRequest(settled, 'npc:1', 10)!
+    const after = findAssignment(requested, 'npc:1')!
+    expect(isPaymentRequestEligible(after, 10 + PAYMENT_REQUEST_INTERVAL_DAYS - 0.001)).toBe(false)
+    expect(isPaymentRequestEligible(after, 10 + PAYMENT_REQUEST_INTERVAL_DAYS)).toBe(true)
   })
 })

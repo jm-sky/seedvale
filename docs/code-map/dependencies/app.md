@@ -501,6 +501,30 @@ Generated from TypeScript imports.
 - `app/actions/placementPreviewActions.ts`
 - `app/createApp.ts`
 
+## `app/actions/workContractPayment.test.ts`
+
+**Imports**
+
+- `app/actions/workContractPayment.ts`
+- `items/Inventory.ts`
+- `settlement/npcState.ts`
+- `world/createWorkContracts.ts`
+
+## `app/actions/workContractPayment.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/inventoryTransfer.ts`
+- `settlement/npcState.ts`
+- `world/createWorkContracts.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `app/actions/workContractPayment.test.ts`
+- `app/inventoryWiring.ts`
+
 ## `app/appRenderLoop.ts`
 
 **Imports**
@@ -926,6 +950,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/dialogueTemplates.ts`
+- `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
 - `audio/createWorldAudio.ts`
 - `audio/inventorySounds.ts`

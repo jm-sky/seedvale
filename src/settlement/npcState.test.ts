@@ -216,9 +216,11 @@ describe('NpcAuthoritativeState personalInventory (plan settlements-npcs-026)', 
     const before = createNpcStateRegistry()
     const state = before.getOrCreate('0_0:npc:0', 0)
     state.personalInventory.add('dried_meat', 3)
+    state.personalInventory.add('coin', 8)
     const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
     expect(hydrated.personalInventory).not.toBe(state.personalInventory)
     expect(hydrated.personalInventory.count('dried_meat')).toBe(3)
+    expect(hydrated.personalInventory.count('coin')).toBe(8)
     expect(hydrated.needsInitialPersonalLoadout).toBe(false)
   })
 

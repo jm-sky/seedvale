@@ -161,11 +161,11 @@ describe('createWorkContracts NPC assignment lifecycle (plan npc-015 / npc-028)'
     expect(contracts.findActiveWorkByNpc('npc:1')?.assignment.state).toBe('travelling')
     expect(contracts.beginWork(record.id, 'npc:1', 9)).not.toBeNull()
     expect(contracts.findActiveWorkByNpc('npc:1')?.assignment.state).toBe('working')
-    expect(contracts.completeWork(record.id, 'npc:1')?.state).toBe('settling')
-    // payment_due is not a work-active assignment — NpcAgent stops pursuing;
-    // npc-016 looks up claims separately.
+    expect(contracts.completeWork(record.id, 'npc:1')?.state).toBe('completed')
+    // zero-work payment_due is not created — NpcAgent stops pursuing;
+    // npc-016 looks up payable claims separately.
     expect(contracts.findActiveWorkByNpc('npc:1')).toBeUndefined()
-    expect(contracts.find(record.id)?.assignments[0]?.state).toBe('payment_due')
+    expect(contracts.find(record.id)?.assignments[0]?.state).toBe('released')
   })
 
   it('accepts a second worker while a slot remains, then rejects further acceptance', () => {
@@ -229,8 +229,8 @@ describe('createWorkContracts NPC assignment lifecycle (plan npc-015 / npc-028)'
     contracts.beginWork(record.id, 'npc:1', 9)
     contracts.completeWork(record.id, 'npc:1')
     const fresh = contracts.find(record.id)!
-    expect(fresh.state).toBe('settling')
-    expect(fresh.assignments.every((a) => a.state === 'payment_due')).toBe(true)
+    expect(fresh.state).toBe('completed')
+    expect(fresh.assignments.every((a) => a.state === 'released')).toBe(true)
     expect(contracts.discoverableAt('noticeBoard:home')).toEqual([])
   })
 
@@ -290,5 +290,42 @@ describe('createWorkContracts.creditNpcWork (plan npc-018 §6/§17)', () => {
     expect(fresh.npcWorkCompleted).toBe(3.5)
     expect(fresh.assignments.find((a) => a.npcId === 'npc:1')?.workCompleted).toBe(2)
     expect(fresh.assignments.find((a) => a.npcId === 'npc:2')?.workCompleted).toBe(1.5)
+  })
+})
+
+describe('createWorkContracts payment transitions (plan npc-016)', () => {
+  it('findPayableByNpc returns a payment-due worker who does not occupy a work slot', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    contracts.beginTravel(record.id, 'npc:1')
+    contracts.beginWork(record.id, 'npc:1', 9)
+    contracts.creditNpcWork(record.id, 'npc:1', 2)
+    contracts.release(record.id, 'npc:1', 'abandoned', { now: 10 })
+    expect(contracts.findActiveWorkByNpc('npc:1')).toBeUndefined()
+    expect(contracts.findPayableByNpc('npc:1', 10)?.assignment).toMatchObject({
+      state: 'payment_due',
+      rewardCoinsDue: 8,
+    })
+    expect(contracts.discoverableAt('noticeBoard:home')).toHaveLength(1)
+    expect(contracts.accept(record.id, 'npc:2', 11)).not.toBeNull()
+    expect(contracts.findActiveWorkByNpc('npc:2')?.assignment.state).toBe('accepted')
+    expect(contracts.findPayableByNpc('npc:1', 10.5)?.assignment.state).toBe('payment_due')
+  })
+
+  it('markPaid is idempotent and independent of a replacement worker', () => {
+    const contracts = createWorkContracts(new Scene(), sampleHeight)
+    const record = contracts.create(makeParams({ requestedWorkerCount: 2 }))!
+    contracts.post(record.id, 'noticeBoard:home', 2)
+    contracts.accept(record.id, 'npc:1', 3)
+    contracts.beginTravel(record.id, 'npc:1')
+    contracts.beginWork(record.id, 'npc:1', 9)
+    contracts.creditNpcWork(record.id, 'npc:1', 2)
+    contracts.release(record.id, 'npc:1', 'abandoned', { now: 10 })
+    contracts.accept(record.id, 'npc:2', 11)
+    expect(contracts.markPaid(record.id, 'npc:1')?.assignments.find((a) => a.npcId === 'npc:1')?.state).toBe('paid')
+    expect(contracts.markPaid(record.id, 'npc:1')).toBeNull()
+    expect(contracts.findActiveWorkByNpc('npc:2')?.assignment.state).toBe('accepted')
   })
 })

@@ -93,6 +93,8 @@ Generated from TypeScript imports.
 - `app/actions/storageInfestationActions.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
+- `app/actions/workContractPayment.test.ts`
+- `app/actions/workContractPayment.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
 - `app/interactables.ts`
@@ -552,6 +554,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/workContractPayment.ts`
 - `items/inventoryTransfer.test.ts`
 
 ## `items/inventoryView.ts`

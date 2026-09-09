@@ -1120,6 +1120,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/workContractPayment.test.ts`
+- `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
@@ -2531,6 +2533,7 @@ Generated from TypeScript imports.
 - `ai/npcWorkContract.test.ts`
 - `ai/npcWorkContract.ts`
 - `app/actions/workContractActions.ts`
+- `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
 - `world/createWorkContracts.test.ts`
 - `world/createWorkContracts.ts`

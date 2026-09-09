@@ -33,7 +33,7 @@ import { createSettlement, type CreateSettlementDeps, type Settlement } from './
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import { createLivestockRegistry, type LivestockSaveRecord } from './livestock'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
-import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
+import { createNpcStateRegistry, type NpcAuthoritativeState, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost } from './props'
 import { createRatRegistry, type RatSaveRecord } from './ratPersistence'
 import {
@@ -158,6 +158,12 @@ export type SettlementsManager = {
   /** Snapshot of every NPC's authoritative state created so far — see
    *  `NpcStateRegistry.serialize` (plan 197 §7). */
   snapshotNpcStates: () => Record<NpcId, NpcStateSnapshot>
+  /** Fresh-resolving live NPC-state lookup (plan npc-016) — the registry-
+   *  owned `NpcAuthoritativeState` survives settlement unload/reload, so
+   *  wage payment can mutate `personalInventory` whether or not the worker
+   *  is currently streamed in. Narrow wrapper over `NpcStateRegistry.get`,
+   *  not a snapshot. */
+  getNpcState: (id: NpcId) => NpcAuthoritativeState | undefined
   /** Plain-data snapshot of every non-zero NPC↔NPC relation pair so far —
    *  see `NpcRelationships.snapshot` (plan persistence-001). */
   snapshotRelationships: () => NpcRelationshipEntry[]
@@ -653,6 +659,7 @@ export async function createSettlementsManager(
     snapshotEconomies: () => economies.serialize(),
     snapshotHouseholds: () => households.serialize(),
     snapshotNpcStates: () => npcStates.serialize(),
+    getNpcState: (id) => npcStates.get(id),
     snapshotRelationships: () => npcRelationships.snapshot(),
     snapshotLivestock: () => {
       for (const entry of entries.values()) {

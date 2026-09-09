@@ -57,6 +57,9 @@ export type ActionId =
   | 'shelter'
   | 'social'
   | 'work'
+  /** Nearby-player approach for an interaction intent (plan npc-016) —
+   *  generic movement; payment is the first caller. */
+  | 'approachPlayer'
 
 /**
  * NPC adapter over the shared `PlannedAction` contract: destination and
