@@ -1,7 +1,7 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-09 18:20:03  
+> Date: 2026-09-09 18:23:44  
 
 ## PLANS
 
@@ -10,7 +10,6 @@
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
 - `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
-- `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md`
 - `tools-005-seedvale-character-preparation-panel.md`
 - `ui-input-013-character-stats.md`
 
@@ -157,37 +156,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/settlements-npcs-023-profession-staffing-and-settlement-composition-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
