@@ -57,7 +57,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
 | 💡 `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
 | 💡 `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
-| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018, items-player-021, world-021 |
+| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018, settlements-006, items-player-021, world-021 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                   | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`      | -       | 🔴 | M      | settlements-npcs-014 |
@@ -92,7 +92,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~ |
 | 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | ~~fauna-003~~ |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
-| 💡 `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | -       | 🟡 | S      | ~~quests-progression-001~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 
 ---
@@ -105,6 +104,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | Neutralny handlarz ~90% nominalnej wartości; lepsza relacja/reputacja podbija ofertę (max ~105% dla nie-stockowanych); zużyty trap taniej proporcjonalnie do stanu; broken trap ~5% salvage; podsumowanie transakcji = finalna wypłata; brak arbitrażu buy→sell na stockowanych towarach |
 | `fauna-009-wolf-howling-and-rooster-vocalization.md` | Wycie wilków i pianie kogutów: timing, zachowanie i brak spamowania audio |
 | `items-player-003-player-physical-effort-stamina-vigor.md` | Odczuwalny balans Stamina/Vigor podczas ruchu, pracy i regeneracji |
 | `items-player-002-food-provenance-freshness-and-storage.md` | Świeżość w ekwipunku/skrzyni (0.5×), pieczenie/suszenie dziedziczy zużytą część shelf-life i gatunek, zepsute nie da się przetworzyć, save/load nie resetuje wieku |

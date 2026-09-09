@@ -9,6 +9,7 @@ import {
 } from './trade'
 import {
   BASE_SELL_FACTOR,
+  BROKEN_SELL_MULTIPLIER,
   fullConditionSellFactor,
   MAX_SELL_FACTOR,
   MERCHANT_STOCK,
@@ -185,6 +186,13 @@ describe('merchant sell pricing (plan settlements-006)', () => {
     expect(resolveInstanceSellPrice(full, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR))
     expect(resolveInstanceSellPrice(half, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR * 0.5))
     expect(resolveInstanceSellPrice(full, neutral)! > resolveInstanceSellPrice(half, neutral)!)
+  })
+
+  it('preserves broken trap salvage pricing at 5% of nominal value', () => {
+    const broken = createTrapInstance('trap_simple')
+    broken.durability = 0
+    const base = tradeValue('trap_simple')
+    expect(resolveInstanceSellPrice(broken)).toBe(roundSellPrice(base * BROKEN_SELL_MULTIPLIER))
   })
 })
 
