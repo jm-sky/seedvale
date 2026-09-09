@@ -7,10 +7,14 @@ import { createHousehold, type Household } from './household'
 import {
   createFoodStorageVisual,
   createWoodPileVisual,
+  findWoodPileStageNodes,
   FOOD_STORAGE_MAX_SLOTS,
   physicalWoodStockpileQuantity,
   selectFoodStorageSlots,
   WOOD_PILE_MAX_EXTRA,
+  WOOD_PILE_STAGES,
+  woodPileStage,
+  type WoodPileStage,
   woodPileVisualState,
 } from './storageVisuals'
 
@@ -23,20 +27,42 @@ function householdWithWood(id: string, wood: number): Household {
   return household
 }
 
-describe('woodPileVisualState', () => {
-  it('produces no pile at zero', () => {
-    expect(woodPileVisualState(0)).toEqual({ visible: false, scale: 0, extraPiles: 0 })
+function progressivePile(): THREE.Object3D {
+  const root = new THREE.Object3D()
+  for (const name of WOOD_PILE_STAGES) {
+    const node = new THREE.Object3D()
+    node.name = name
+    root.add(node)
+  }
+  return root
+}
+
+function visibleStages(root: THREE.Object3D): WoodPileStage[] {
+  return WOOD_PILE_STAGES.filter((name) => root.getObjectByName(name)?.visible)
+}
+
+describe('woodPileStage', () => {
+  it('maps documented quantity boundaries onto authored variants', () => {
+    expect(woodPileStage(0)).toBeNull()
+    expect(woodPileStage(1)).toBe('Pile_01')
+    expect(woodPileStage(2)).toBe('Pile_05')
+    expect(woodPileStage(5)).toBe('Pile_05')
+    expect(woodPileStage(6)).toBe('Pile_10')
+    expect(woodPileStage(10)).toBe('Pile_10')
+    expect(woodPileStage(11)).toBe('Pile_18')
+    expect(woodPileStage(20)).toBe('Pile_18')
+    expect(woodPileStage(21)).toBe('Pile_29')
+    expect(woodPileStage(1000)).toBe('Pile_29')
   })
 
-  it('produces the correct band for each documented threshold', () => {
-    expect(woodPileVisualState(1).visible).toBe(true)
-    expect(woodPileVisualState(3).scale).toBe(woodPileVisualState(1).scale)
-    expect(woodPileVisualState(4).scale).toBeGreaterThan(woodPileVisualState(3).scale)
-    expect(woodPileVisualState(7).scale).toBe(woodPileVisualState(4).scale)
-    expect(woodPileVisualState(8).scale).toBeGreaterThan(woodPileVisualState(7).scale)
-    expect(woodPileVisualState(12).scale).toBe(woodPileVisualState(8).scale)
-    expect(woodPileVisualState(13).scale).toBeGreaterThan(woodPileVisualState(12).scale)
-    expect(woodPileVisualState(20).scale).toBe(woodPileVisualState(13).scale)
+  it('is deterministic for the same quantity', () => {
+    expect(woodPileStage(9)).toBe(woodPileStage(9))
+  })
+})
+
+describe('woodPileVisualState', () => {
+  it('produces no primary stage at zero', () => {
+    expect(woodPileVisualState(0)).toEqual({ stage: null, extraPiles: 0 })
   })
 
   it('adds an additional pile once quantity passes 20, bounded', () => {
@@ -47,8 +73,9 @@ describe('woodPileVisualState', () => {
     expect(woodPileVisualState(1000).extraPiles).toBe(WOOD_PILE_MAX_EXTRA)
   })
 
-  it('is deterministic for the same quantity', () => {
-    expect(woodPileVisualState(9)).toEqual(woodPileVisualState(9))
+  it('keeps Pile_29 as the primary stage for high stock', () => {
+    expect(woodPileVisualState(21).stage).toBe('Pile_29')
+    expect(woodPileVisualState(1000).stage).toBe('Pile_29')
   })
 })
 
@@ -132,45 +159,87 @@ describe('physicalWoodStockpileQuantity', () => {
 })
 
 describe('createWoodPileVisual', () => {
-  it('hides the main pile and every extra pile at zero quantity', () => {
-    const main = new THREE.Object3D()
+  it('hides every authored variant and extra pile at zero quantity', () => {
+    const main = progressivePile()
     const extras = [new THREE.Object3D(), new THREE.Object3D()]
     const visual = createWoodPileVisual(main, extras)
     visual.sync(0)
-    expect(main.visible).toBe(false)
+    expect(visibleStages(main)).toEqual([])
     expect(extras.every((e) => !e.visible)).toBe(true)
   })
 
-  it('shows the main pile and scales it once quantity is positive', () => {
-    const main = new THREE.Object3D()
+  it('shows exactly one authored variant for a positive quantity', () => {
+    const main = progressivePile()
     const visual = createWoodPileVisual(main, [])
     visual.sync(5)
-    expect(main.visible).toBe(true)
-    expect(main.scale.x).toBeGreaterThan(0)
+    expect(visibleStages(main)).toEqual(['Pile_05'])
   })
 
-  it('reveals extra piles only once quantity overflows the top band', () => {
-    const main = new THREE.Object3D()
+  it('selects Pile_29 for 21+ without scaling the primary pile', () => {
+    const main = progressivePile()
+    const baseScale = main.scale.x
+    const visual = createWoodPileVisual(main, [])
+    visual.sync(21)
+    expect(visibleStages(main)).toEqual(['Pile_29'])
+    visual.sync(1000)
+    expect(visibleStages(main)).toEqual(['Pile_29'])
+    expect(main.scale.x).toBe(baseScale)
+  })
+
+  it('reveals extra piles only once quantity overflows the last authored stage, bounded', () => {
+    const main = progressivePile()
     const extras = [new THREE.Object3D(), new THREE.Object3D(), new THREE.Object3D()]
     const visual = createWoodPileVisual(main, extras)
     visual.sync(20)
     expect(extras.every((e) => !e.visible)).toBe(true)
-    visual.sync(25)
+    visual.sync(21)
     expect(extras[0]!.visible).toBe(true)
     expect(extras[1]!.visible).toBe(false)
+    visual.sync(1000)
+    expect(extras.filter((e) => e.visible)).toHaveLength(WOOD_PILE_MAX_EXTRA)
   })
 
-  it('updates visuals when the underlying quantity changes', () => {
-    const main = new THREE.Object3D()
+  it('updates the visible variant when the underlying quantity changes', () => {
+    const main = progressivePile()
     const visual = createWoodPileVisual(main, [])
-    visual.sync(2)
-    const smallScale = main.scale.x
+    visual.sync(1)
+    expect(visibleStages(main)).toEqual(['Pile_01'])
     visual.sync(15)
-    expect(main.scale.x).toBeGreaterThan(smallScale)
+    expect(visibleStages(main)).toEqual(['Pile_18'])
+  })
+
+  it('does not replace object identities across repeated sync calls', () => {
+    const main = progressivePile()
+    const extras = [new THREE.Object3D()]
+    const nodes = Object.fromEntries(
+      WOOD_PILE_STAGES.map((name) => [name, main.getObjectByName(name)]),
+    )
+    const extra = extras[0]!
+    const visual = createWoodPileVisual(main, extras)
+    visual.sync(1)
+    visual.sync(21)
+    visual.sync(1)
+    expect(main.children).toHaveLength(WOOD_PILE_STAGES.length)
+    for (const name of WOOD_PILE_STAGES) {
+      expect(main.getObjectByName(name)).toBe(nodes[name])
+    }
+    expect(extras[0]).toBe(extra)
+  })
+
+  it('falls back to showing the whole pile when authored node names are missing', () => {
+    const main = new THREE.Object3D()
+    const baseScale = main.scale.clone()
+    const visual = createWoodPileVisual(main, [])
+    expect(findWoodPileStageNodes(main)).toBeNull()
+    visual.sync(0)
+    expect(main.visible).toBe(false)
+    visual.sync(5)
+    expect(main.visible).toBe(true)
+    expect(main.scale.equals(baseScale)).toBe(true)
   })
 
   it('disposal removes the extra-pile objects it created', () => {
-    const main = new THREE.Object3D()
+    const main = progressivePile()
     const parent = new THREE.Group()
     const extra = new THREE.Object3D()
     parent.add(extra)

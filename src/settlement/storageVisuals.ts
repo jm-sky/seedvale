@@ -19,20 +19,14 @@ import { placeOnGround, type TerrainSampler } from './propUtils'
  * @role Derives a bounded, deterministic Three.js visual from a storage destination's authoritative quantity/contents.
  */
 
-/** Deterministic wood-quantity -> pile-scale bands (plan §4) — the single
- *  source of truth for the thresholds so they aren't scattered through
- *  rendering code. Ordered ascending; `quantity` picks the first band whose
- *  `max` it doesn't exceed. */
-export const WOOD_PILE_BANDS: readonly { max: number, scale: number }[] = [
-  { max: 3, scale: 0.55 },
-  { max: 7, scale: 0.75 },
-  { max: 12, scale: 0.95 },
-  { max: 20, scale: 1.2 },
-]
+/** Authored alternative pile variants in `wood_pile_progressive.glb`.
+ *  Stable runtime names — resolve once, never by child index. */
+export const WOOD_PILE_STAGES = ['Pile_01', 'Pile_05', 'Pile_10', 'Pile_18', 'Pile_29'] as const
+export type WoodPileStage = (typeof WOOD_PILE_STAGES)[number]
 
-/** Beyond the top band, one additional pile appears per this many extra
- *  units, bounded by `WOOD_PILE_MAX_EXTRA` (plan §6/§9 — bounded visual
- *  representation, never one mesh per unit). */
+/** Beyond the last authored primary stage (`Pile_18` covers 11–20), one extra
+ *  full pile appears per this many units, bounded by `WOOD_PILE_MAX_EXTRA`. */
+export const WOOD_PILE_OVERFLOW_START = 20
 export const WOOD_PILE_OVERFLOW_STEP = 20
 export const WOOD_PILE_MAX_EXTRA = 3
 
@@ -63,26 +57,54 @@ export function physicalWoodStockpileQuantity(households: readonly Household[], 
 }
 
 export type WoodPileVisualState = {
-  visible: boolean
-  scale: number
+  stage: WoodPileStage | null
   extraPiles: number
 }
 
-/** Pure quantity -> visual-state mapping, no Three.js/randomness involved —
- *  the same total quantity always produces the same state (plan §10). */
+/**
+ * Pure quantity → authored wood-pile stage. Variants are complete
+ * alternatives: a positive quantity selects exactly one `Pile_*`.
+ */
+export function woodPileStage(quantity: number): WoodPileStage | null {
+  if (quantity <= 0) return null
+  if (quantity === 1) return 'Pile_01'
+  if (quantity <= 5) return 'Pile_05'
+  if (quantity <= 10) return 'Pile_10'
+  if (quantity <= 20) return 'Pile_18'
+  return 'Pile_29'
+}
+
+/** Bounded extra-pile count for high stock. `Pile_29` stays the primary. */
+export function woodPileOverflowCount(quantity: number): number {
+  if (quantity <= WOOD_PILE_OVERFLOW_START) return 0
+  return Math.min(
+    WOOD_PILE_MAX_EXTRA,
+    Math.ceil((quantity - WOOD_PILE_OVERFLOW_START) / WOOD_PILE_OVERFLOW_STEP),
+  )
+}
+
+/** Pure quantity → visual-state mapping, no Three.js/randomness involved. */
 export function woodPileVisualState(quantity: number): WoodPileVisualState {
-  if (quantity <= 0) return { visible: false, scale: 0, extraPiles: 0 }
-  const topBand = WOOD_PILE_BANDS[WOOD_PILE_BANDS.length - 1]!
-  const band = WOOD_PILE_BANDS.find((b) => quantity <= b.max) ?? topBand
-  const overflow = Math.max(0, quantity - topBand.max)
-  const extraPiles = Math.min(WOOD_PILE_MAX_EXTRA, Math.ceil(overflow / WOOD_PILE_OVERFLOW_STEP))
-  return { visible: true, scale: band.scale, extraPiles }
+  return { stage: woodPileStage(quantity), extraPiles: woodPileOverflowCount(quantity) }
+}
+
+/** Cache authored `Pile_*` nodes once. Null if any required name is missing. */
+export function findWoodPileStageNodes(
+  root: THREE.Object3D,
+): Record<WoodPileStage, THREE.Object3D> | null {
+  const stages = {} as Record<WoodPileStage, THREE.Object3D>
+  for (const name of WOOD_PILE_STAGES) {
+    const node = root.getObjectByName(name)
+    if (!node) return null
+    stages[name] = node
+  }
+  return stages
 }
 
 export type WoodPileVisual = {
-  /** Re-derives the pile's visible/scale/extra-pile state from `quantity`.
+  /** Re-derives authored-variant / overflow visibility from `quantity`.
    *  A cheap no-op when the resulting visual state hasn't changed since the
-   *  last call (plan §8 — change-driven, not rebuilt every frame). */
+   *  last call — change-driven, not rebuilt every frame. */
   sync: (quantity: number) => void
   /** Disposes the extra-pile meshes this controller owns. The main pile
    *  itself is owned by the caller (already part of the settlement's own
@@ -91,22 +113,31 @@ export type WoodPileVisual = {
 }
 
 /**
- * Wraps an already-placed main pile plus its (hidden) extra-pile siblings
- * into one quantity-driven controller. `extraPiles` must already be
- * positioned and parented — this only ever toggles `.visible`/`.scale`.
+ * Wraps an already-placed primary pile plus its extra-pile siblings into
+ * one quantity-driven controller. Authored `Pile_*` nodes are resolved once;
+ * `sync()` only toggles cached `.visible`. Missing node names fall back to
+ * showing/hiding the whole primary object, still without quantity scaling.
  */
 export function createWoodPileVisual(mainPile: THREE.Object3D, extraPiles: readonly THREE.Object3D[]): WoodPileVisual {
-  const mainBaseScale = mainPile.scale.x || 1
+  const stages = findWoodPileStageNodes(mainPile)
+  if (stages) {
+    for (const name of WOOD_PILE_STAGES) stages[name].visible = false
+  }
   for (const pile of extraPiles) pile.visible = false
   let lastSignature = ''
   return {
     sync(quantity) {
       const state = woodPileVisualState(quantity)
-      const signature = `${state.visible}|${state.scale}|${state.extraPiles}`
+      const signature = `${state.stage}|${state.extraPiles}`
       if (signature === lastSignature) return
       lastSignature = signature
-      mainPile.visible = state.visible
-      mainPile.scale.setScalar(mainBaseScale * (state.scale || 1))
+      if (stages) {
+        for (const name of WOOD_PILE_STAGES) {
+          stages[name].visible = name === state.stage
+        }
+      } else {
+        mainPile.visible = state.stage !== null
+      }
       for (let i = 0; i < extraPiles.length; i++) extraPiles[i]!.visible = i < state.extraPiles
     },
     dispose() {

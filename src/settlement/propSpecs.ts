@@ -107,6 +107,8 @@ export const WELL_URL = '/models/settlement/well.glb'
 export const WELL_HEIGHT = 2.0
 
 export const WOOD_PILE_URL = '/models/settlement/wood_pile.glb'
+/** Quantity-driven primary stockpile — five alternative `Pile_*` variants. */
+export const WOOD_PILE_PROGRESSIVE_URL = '/models/settlement/wood_pile_progressive.glb'
 /** 1.5× the first drop-in height (0.9) so stacked beams read at village scale. */
 export const WOOD_PILE_HEIGHT = 1.35
 /** Player/NPC collision disk (issue 036). Wagon placement uses a larger 2.5 m

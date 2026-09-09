@@ -67,6 +67,7 @@ import {
   WELL_HEIGHT,
   WELL_URL,
   WOOD_PILE_HEIGHT,
+  WOOD_PILE_PROGRESSIVE_URL,
   WOOD_PILE_URL,
 } from './propSpecs'
 import { cloneProp, clonePropWithYaw, loadPropOrFallback, loadPropTemplates, placeOnGround } from './propUtils'
@@ -94,6 +95,7 @@ import {
 import {
   createFoodStorageVisual,
   createWoodPileVisual,
+  findWoodPileStageNodes,
   type FoodStorageVisual,
   WOOD_PILE_EXTRA_OFFSETS,
   type WoodPileVisual,
@@ -639,6 +641,22 @@ function landmarkOf(plan: VillagePlan | undefined, kind: VillageLandmarkPlan['ki
   return plan?.landmarks.find((l) => l.kind === kind && l.index === index)
 }
 
+/** Primary stockpile: progressive authored variants, else the existing GLB/procedural path. */
+async function loadPrimaryWoodStockpile(): Promise<THREE.Object3D> {
+  try {
+    const model = await loadGltf(WOOD_PILE_PROGRESSIVE_URL)
+    prepareProp(model, WOOD_PILE_HEIGHT)
+    if (findWoodPileStageNodes(model)) return model
+    console.warn(
+      `[settlement] ${WOOD_PILE_PROGRESSIVE_URL} is missing required Pile_* nodes, using fallback`,
+    )
+    disposeObject3D(model)
+  } catch (err) {
+    console.warn(`[settlement] failed to load ${WOOD_PILE_PROGRESSIVE_URL}, using fallback`, err)
+  }
+  return loadPropOrFallback(WOOD_PILE_URL, WOOD_PILE_HEIGHT, createStockpile)
+}
+
 export async function buildSettlementProps(
   site: SettlementSite,
   sampleHeight: (x: number, z: number) => number,
@@ -739,19 +757,14 @@ export async function buildSettlementProps(
   const { x: stockX, z: stockZ } = placeFromLandmark(
     site, landmarkOf(plan, 'stockpile', 0), 4, 1.5, sampleHeight, waterLevel, coreRandom,
   )
-  const stockpile = await loadPropOrFallback(
-    WOOD_PILE_URL,
-    WOOD_PILE_HEIGHT,
-    createStockpile,
-  )
+  const stockpile = await loadPrimaryWoodStockpile()
   placeOnGround(stockpile, stockX, stockZ, sampleHeight)
   group.add(stockpile)
   landmarks.stockpile.set(stockX, sampleHeight(stockX, stockZ), stockZ)
 
-  // Wood pile visual (plan settlements-npcs-010) — the same `stockpile` prop
-  // above, now driven by the settlement's actual stored wood instead of
-  // always showing full. A handful of extra piles, pre-placed but hidden,
-  // cover the "21+" overflow band without rebuilding geometry at runtime.
+  // Wood pile visual — progressive `Pile_*` on the primary stockpile, with a
+  // handful of extra full piles (pre-placed, hidden) covering high-stock
+  // overflow without rebuilding geometry at runtime.
   const woodPileExtras = await loadPropTemplates(
     WOOD_PILE_EXTRA_OFFSETS.map(() => ({ url: WOOD_PILE_URL, height: WOOD_PILE_HEIGHT })),
     createStockpile,
