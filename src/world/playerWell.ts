@@ -8,6 +8,7 @@ import {
   CONDITION_MAX,
   resolveCondition,
 } from './condition'
+import { applyRepairWork, isRepairComplete, type RepairProgress } from './repair'
 import { createWaterSource, UNCOVERED_WELL_CONSUMPTION_RISK, type WaterSource } from './WaterSource'
 import { computeRainExposureDays, computeSnowExposureDays } from './weather'
 import { isDeepWellDepth, WELL_WATER_DEPTH_MAX, WELL_WATER_DEPTH_MIN, type WellWaterKind } from './wellGroundwater'
@@ -58,6 +59,9 @@ export type PlayerWellRecord = {
    *  `0` is a maximally degraded existing roof, not a missing roof. */
   roofCondition?: number
   lastRoofConditionUpdateAtDays?: number
+  /** Active roof-repair episode (plan world-021). Independent of
+   *  construction `workProgress`; absent means no repair is in progress. */
+  roofRepair?: RepairProgress
 }
 
 /** Active-work hours required to finish `well`/`roof`, unaffected by depth
@@ -148,6 +152,140 @@ export function wellStageRequirements(stage: WellStage): readonly MaterialRequir
   if (cost.stone > 0) requirements.push({ kind: 'stone', count: cost.stone })
   if (cost.branch > 0) requirements.push({ kind: 'branch', count: cost.branch })
   return requirements
+}
+
+/** Repair is cheaper than rebuilding the roof from scratch (`WELL_STAGE_COST.roof`
+ *  + `WELL_STAGE_WORK_HOURS.roof`) but still a real cost, not a free reset.
+ *  Applied to the restored-condition fraction for both materials and work. */
+export const WELL_ROOF_REPAIR_COST_FACTOR = 0.75
+
+export type WellRoofRepairQuote = {
+  currentCondition: number
+  targetCondition: number
+  materials: readonly MaterialRequirement[]
+  requiredWork: number
+}
+
+export type WellRoofRepairStartOutcome =
+  | {
+    status: 'started'
+    quote: WellRoofRepairQuote
+    progress: RepairProgress
+    roofCondition: number
+    lastRoofConditionUpdateAtDays: number
+  }
+  | { status: 'blocked', missing: readonly MaterialRequirement[] }
+  | { status: 'unavailable' }
+
+/** True while a persistent roof-repair episode is stored on `record`. */
+export function hasActiveWellRoofRepair(record: PlayerWellRecord): boolean {
+  return record.roofRepair !== undefined
+}
+
+function restoredConditionFraction(currentCondition: number, targetCondition: number): number {
+  return (targetCondition - currentCondition) / CONDITION_MAX
+}
+
+function wellRoofRepairMaterials(restoredFraction: number): readonly MaterialRequirement[] {
+  const branchCost = WELL_STAGE_COST.roof.branch
+  if (branchCost <= 0 || restoredFraction <= 0) return []
+  const count = Math.max(1, Math.round(branchCost * restoredFraction * WELL_ROOF_REPAIR_COST_FACTOR))
+  return [{ kind: 'branch', count: count }]
+}
+
+function wellRoofRepairRequiredWork(restoredFraction: number): number {
+  return WELL_STAGE_WORK_HOURS.roof * restoredFraction * WELL_ROOF_REPAIR_COST_FACTOR
+}
+
+/**
+ * Derived, read-only roof-repair quote. `null` when the roof component does
+ * not exist, an episode is already active, or `targetCondition` is not a
+ * legal improvement of the resolved current condition. Does not mutate
+ * `record` and does not checkpoint condition.
+ *
+ * @domain world
+ */
+export function quoteWellRoofRepair(
+  record: PlayerWellRecord,
+  seed: number,
+  nowDays: number,
+  targetCondition = CONDITION_MAX,
+): WellRoofRepairQuote | null {
+  if (hasActiveWellRoofRepair(record)) return null
+  const currentCondition = resolveWellRoofCondition(record, seed, nowDays)
+  if (currentCondition === null) return null
+  if (!(currentCondition < targetCondition && targetCondition <= CONDITION_MAX)) return null
+  const fraction = restoredConditionFraction(currentCondition, targetCondition)
+  return {
+    currentCondition,
+    targetCondition,
+    materials: wellRoofRepairMaterials(fraction),
+    requiredWork: wellRoofRepairRequiredWork(fraction),
+  }
+}
+
+/**
+ * Authoritative start-repair transaction. Read-only quote + material
+ * preflight run first; condition is checkpointed and the episode is created
+ * only after every requirement is available. The caller applies the returned
+ * condition/progress onto the live well record.
+ *
+ * @domain world
+ */
+export function beginWellRoofRepair(params: {
+  record: PlayerWellRecord
+  seed: number
+  nowDays: number
+  targetCondition?: number
+  hasMaterial: (requirement: MaterialRequirement) => boolean
+  consumeMaterial: (requirement: MaterialRequirement) => void
+}): WellRoofRepairStartOutcome {
+  const { consumeMaterial, hasMaterial, nowDays, record, seed } = params
+  const targetCondition = params.targetCondition ?? CONDITION_MAX
+  const quote = quoteWellRoofRepair(record, seed, nowDays, targetCondition)
+  if (!quote) return { status: 'unavailable' }
+  const missing = quote.materials.filter((requirement) => !hasMaterial(requirement))
+  if (missing.length > 0) return { status: 'blocked', missing }
+  for (const requirement of quote.materials) consumeMaterial(requirement)
+  const checkpointed = checkpointCondition(quote.currentCondition, nowDays)
+  return {
+    status: 'started',
+    quote,
+    progress: {
+      startedCondition: checkpointed.condition,
+      targetCondition: quote.targetCondition,
+      requiredWork: quote.requiredWork,
+      completedWork: 0,
+    },
+    roofCondition: checkpointed.condition,
+    lastRoofConditionUpdateAtDays: checkpointed.lastConditionUpdateAtDays,
+  }
+}
+
+/**
+ * Apply an actor-neutral work contribution to an active roof-repair episode.
+ * Completion writes `targetCondition`, clears the episode, and resets the
+ * condition anchor to `nowDays`. Does not mutate `record`.
+ *
+ * @domain world
+ */
+export function applyWellRoofRepairWork(
+  record: PlayerWellRecord,
+  workAmount: number,
+  nowDays: number,
+): { record: PlayerWellRecord, acceptedWork: number } {
+  if (!record.roofRepair) return { record, acceptedWork: 0 }
+  const { progress, acceptedWork } = applyRepairWork(record.roofRepair, workAmount)
+  if (!isRepairComplete(progress)) {
+    return { record: { ...record, roofRepair: progress }, acceptedWork }
+  }
+  const next: PlayerWellRecord = {
+    ...record,
+    roofCondition: progress.targetCondition,
+    lastRoofConditionUpdateAtDays: nowDays,
+  }
+  delete next.roofRepair
+  return { record: next, acceptedWork }
 }
 
 /** Outcome of one `advanceWellConstruction` call. `'completed'` — no active
@@ -301,6 +439,8 @@ export function resolveWellRoofCondition(
   nowDays: number,
 ): number | null {
   if (!isWellCompleted(record) || !hasInitializedWellRoof(record)) return null
+  // Active repair freezes degradation at the checkpointed started condition.
+  if (hasActiveWellRoofRepair(record)) return clampCondition(record.roofCondition)
   const elapsed = Math.max(0, nowDays - record.lastRoofConditionUpdateAtDays)
   const windowDays = Math.min(elapsed, WELL_ROOF_SIM_WINDOW_DAYS)
   const fromDays = nowDays - windowDays
@@ -340,6 +480,7 @@ export function applyWellRoofConditionDelta(
   nowDays: number,
   delta: number,
 ): PlayerWellRecord {
+  if (hasActiveWellRoofRepair(record)) return record
   const resolved = resolveWellRoofCondition(record, seed, nowDays)
   if (resolved === null) return record
   const checkpointed = checkpointCondition(resolved, nowDays)
@@ -356,8 +497,12 @@ export function applyWellRoofConditionDelta(
  *  to reach it), so it's water-available regardless of the roof's own
  *  progress. */
 export function isWellWaterAvailable(record: PlayerWellRecord): boolean {
+  if (hasActiveWellRoofRepair(record)) return false
   return record.stage === 'roof' || (record.stage === 'well' && isWellStageWorkComplete(record))
 }
+
+/** Player/NPC-facing reason when water use is blocked by an active roof repair. */
+export const WELL_WATER_UNAVAILABLE_DURING_REPAIR = 'Studnia jest obecnie naprawiana.'
 
 /** The `WaterSource` a completed-body well currently draws (plan world-004
  *  §6/§10, roof protection extended by world-020) — `requiresRope` is purely
@@ -392,8 +537,8 @@ export function wellWaterSource(
 /** The stage a `[E]` press right now would work on: `record.stage` itself if
  *  its work isn't finished yet, otherwise the next stage (about to be
  *  started/transitioned into in the same press). `null` once the well is
- *  fully completed — `app/interactables.ts` stops emitting a `playerWell`
- *  candidate at that point, so callers shouldn't normally see `null`. */
+ *  fully completed — construction work is done; completed wells stay
+ *  `playerWell` interactables so roof repair can still relookup by id. */
 export function activeWellStage(record: PlayerWellRecord): WellStage | null {
   if (!isWellStageWorkComplete(record)) return record.stage
   return nextWellStage(record)
@@ -434,6 +579,9 @@ export const WELL_WORK_SESSION_SEC = 8
  *  additional bout(s), never shortened by this constant alone. */
 export const WELL_WORK_SESSION_HOURS = 2
 
+/** Busy-overlay label while a roof-repair work bout is running. */
+export const WELL_ROOF_REPAIR_WORK_LABEL = 'Naprawa daszku w toku…'
+
 /** `[E]` prompt to start (fresh) or resume/transition into a stage's work. */
 export const WELL_STAGE_START_PROMPT: Record<WellStage, string> = {
   pit: '[E] Wykop dół',
@@ -455,15 +603,27 @@ export function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
 }
 
-/** Prompt for an unfinished (not yet `roof`-complete) well — a completed well
- *  instead becomes a plain `well` `Interactable` (see `app/interactables.ts`).
- *  Appends the current progress fraction only while genuinely resuming an
- *  already-started stage (not when the press would start a new one), and a
- *  short hint once the well's body is already usable as a `WaterSource`
- *  (plan world-004 §5) even though construction (the roof) isn't finished —
- *  reachable through `[R]`'s requirements panel (`app/gameLoop.ts`'s
- *  `playerWell` handling), not a dedicated keybinding. */
-export function wellPromptLabel(record: PlayerWellRecord): string {
+/** Clock-style work duration for repair dialog copy (`2 h 30 min`). */
+export function formatWorkDuration(hours: number): string {
+  const totalMinutes = Math.max(0, Math.round(hours * 60))
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  if (h === 0) return `${m} min`
+  if (m === 0) return `${h} h`
+  return `${h} h ${m} min`
+}
+
+/** Prompt for a player-built well. Completed wells stay `playerWell`
+ *  interactables (plan world-021) so inspect/repair can relookup by id;
+ *  unfinished wells keep the construction `[E]`/`[R]` copy. */
+export function wellPromptLabel(record: PlayerWellRecord, resolvedRoofCondition: number | null = null): string {
+  if (isWellCompleted(record)) {
+    if (hasActiveWellRoofRepair(record)) return '[E] Kontynuuj naprawę · [R] Szczegóły'
+    if (resolvedRoofCondition !== null && resolvedRoofCondition < CONDITION_MAX) {
+      return '[E] Napij się · [R] Napraw'
+    }
+    return '[E] Napij się · [R] Napełnij bukłak'
+  }
   const stage = activeWellStage(record)
   const waterHint = isWellWaterAvailable(record) ? ' · woda dostępna w [R]' : ''
   if (!stage) return `${WELL_STAGE_START_PROMPT.roof}${waterHint} · [R] wymagania`

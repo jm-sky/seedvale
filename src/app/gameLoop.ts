@@ -134,6 +134,7 @@ import { getThirstRatio } from '../shared/ThirstState'
 import { getVigorRatio } from '../shared/VigorState'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
+import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
@@ -413,6 +414,15 @@ export type GameLoopDeps = {
   /** Read-only preview backing the well's interaction/construction panel
    *  (plan `ui-input-002` §3) — see `placementActions.ts`'s `WellWorkView`. */
   describeWellWork?: (id: string) => { title: string, description: string, canWork: boolean, reasonLabel: string } | null
+  describeWellRoofRepair?: (id: string) => {
+    title: string
+    description: string
+    canAct: boolean
+    reasonLabel: string
+    mode: 'start' | 'continue'
+    waterAvailable: boolean
+  } | null
+  workOnWellRoofRepair?: (id: string) => void
   /** `[E]` on an unlit standing torch (plan items-player-009) — validates
    *  `fire_starting`, flips its authoritative `lit`, and updates its runtime
    *  flame/light. No-op (including re-checking `lit`) if already lit. */
@@ -542,7 +552,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
@@ -1456,34 +1466,72 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) openContainer?.(target.id)
         if (altInteractPressed) pickUpContainer?.(target.id)
       } else if (target?.kind === 'playerWell') {
-        // `[E]` keeps firing/continuing the work session directly (unchanged
-        // repeated-press loop — plan ui-input-002 §3 keeps the "existing
-        // flow" for build/continue). `[R]` opens a read-only panel showing
-        // the same requirements/availability `workOnWell` itself checks, for
-        // players who want to review before committing.
-        if (interactPressed) workOnWell?.(target.id)
-        if (altInteractPressed) {
-          const wellId = target.id
-          const view = describeWellWork?.(wellId)
-          if (view) {
-            const actions = [
-              { label: view.title, enabled: view.canWork, reasonLabel: view.reasonLabel, run: () => workOnWell?.(wellId) },
-            ]
-            // Plan world-004 §5 — the well's body already makes it a usable
-            // `WaterSource` before its roof (construction) is finished, so
-            // the same requirements panel also offers drawing water; missing
-            // rope (deep well) or the uncovered-well risk are surfaced by
-            // `drinkFromWaterSource`/`fillWaterskin` themselves, same as the
-            // plain `well` candidate.
-            const source = target.waterSource
-            if (source) {
-              actions.push(
-                { label: 'Napij się', enabled: true, reasonLabel: '', run: () => drinkFromWaterSource?.(source) },
-                { label: 'Napełnij pojemnik', enabled: true, reasonLabel: '', run: () => fillWaterskin?.(source) },
-              )
+        // Unfinished: `[E]` construction bout, `[R]` requirements panel.
+        // Completed: `[E]` drinks (or continues repair), `[R]` fills when
+        // healthy and opens the repair dialog when the roof is damaged or
+        // a repair episode is already active (plan world-021).
+        const wellId = target.id
+        const source = target.waterSource
+        const openRepairDialog = (): void => {
+          const view = describeWellRoofRepair?.(wellId)
+          if (!view) return
+          const actions = [
+            {
+              label: view.mode === 'continue' ? 'Kontynuuj naprawę' : 'Rozpocznij naprawę',
+              enabled: view.canAct,
+              reasonLabel: view.reasonLabel,
+              run: () => workOnWellRoofRepair?.(wellId),
+            },
+            {
+              label: 'Napij się',
+              enabled: view.waterAvailable && !!source,
+              reasonLabel: view.waterAvailable ? '' : WELL_WATER_UNAVAILABLE_DURING_REPAIR,
+              run: () => { if (source) drinkFromWaterSource?.(source) },
+            },
+            {
+              label: 'Napełnij pojemnik',
+              enabled: view.waterAvailable && !!source,
+              reasonLabel: view.waterAvailable ? '' : WELL_WATER_UNAVAILABLE_DURING_REPAIR,
+              run: () => { if (source) fillWaterskin?.(source) },
+            },
+          ]
+          vueUi.openFlavorDialog(view.title, view.description, actions)
+        }
+        if (!target.complete) {
+          if (interactPressed) workOnWell?.(wellId)
+          if (altInteractPressed) {
+            const view = describeWellWork?.(wellId)
+            if (view) {
+              const actions = [
+                { label: view.title, enabled: view.canWork, reasonLabel: view.reasonLabel, run: () => workOnWell?.(wellId) },
+              ]
+              if (source) {
+                actions.push(
+                  { label: 'Napij się', enabled: true, reasonLabel: '', run: () => drinkFromWaterSource?.(source) },
+                  { label: 'Napełnij pojemnik', enabled: true, reasonLabel: '', run: () => fillWaterskin?.(source) },
+                )
+              }
+              vueUi.openFlavorDialog(view.title, view.description, actions)
             }
-            vueUi.openFlavorDialog(view.title, view.description, actions)
           }
+        } else if (interactPressed) {
+          if (source) {
+            const outcome = resolveInteraction({
+              kind: 'well',
+              position: target.position,
+              promptLabel: target.promptLabel,
+              source,
+            }, questManager)
+            playActionWell(worldAudio.playAt, target.position)
+            npcDialog.open(outcome.speakerName, outcome.line, outcome.offer)
+            drinkFromWaterSource?.(source)
+          } else {
+            workOnWellRoofRepair?.(wellId)
+          }
+        } else if (altInteractPressed) {
+          const repairView = describeWellRoofRepair?.(wellId)
+          if (repairView) openRepairDialog()
+          else if (source) fillWaterskin?.(source)
         }
       } else if (target?.kind === 'standingTorch') {
         // Unfinished (plan items-player-017 §11) — `[E]` runs a construction

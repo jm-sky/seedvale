@@ -1,15 +1,19 @@
 import { type Object3D, type Scene } from 'three'
+import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { HeightSampler } from '../player/PlayerController'
 import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
 import {
   applyWellRoofConditionDelta,
+  applyWellRoofRepairWork,
+  beginWellRoofRepair,
   initializeWellRoofCondition,
   isWellWaterAvailable,
   type NearbyPlayerWellLookup,
   type PlayerWellRecord,
   WELL_FOOTPRINT_RADIUS,
+  type WellRoofRepairStartOutcome,
   type WellStage,
 } from './playerWell'
 import { createPlayerWellStageProp } from './playerWellProp'
@@ -43,6 +47,25 @@ export type PlayerWells = {
    * nor double-counted. False if the well is unknown or has no roof yet.
    */
   applyRoofConditionDelta: (id: string, seed: number, nowDays: number, delta: number) => boolean
+  /**
+   * Start a roof-repair episode on the live well (plan world-021). Relookups
+   * by id, derives a fresh quote, consumes materials only after every
+   * requirement is available, then checkpoints condition and stores
+   * `RepairProgress`. Does not checkpoint on a failed material preflight.
+   */
+  startRoofRepair: (
+    id: string,
+    nowDays: number,
+    hasMaterial: (requirement: MaterialRequirement) => boolean,
+    consumeMaterial: (requirement: MaterialRequirement) => void,
+    targetCondition?: number,
+  ) => WellRoofRepairStartOutcome
+  /**
+   * Actor-neutral roof-repair contribution (plan world-021). Returns the
+   * exact `acceptedWork`. Completion restores target condition, clears the
+   * episode, and resets the condition anchor.
+   */
+  contributeRoofRepairWork: (id: string, workAmount: number, nowDays: number) => number
   /** Nearest well within `maxDistance` that's already usable as a
    *  `WaterSource` (`isWellWaterAvailable` — plan world-004 §5/§10, the roof
    *  need not be finished), or null — the `NearbyPlayerWellLookup`
@@ -112,6 +135,16 @@ export function createPlayerWells(
           lastRoofConditionUpdateAtDays: entry.lastRoofConditionUpdateAtDays,
         }
       : {}),
+    ...(entry.roofRepair
+      ? {
+          roofRepair: {
+            startedCondition: entry.roofRepair.startedCondition,
+            targetCondition: entry.roofRepair.targetCondition,
+            requiredWork: entry.roofRepair.requiredWork,
+            completedWork: entry.roofRepair.completedWork,
+          },
+        }
+      : {}),
   })
 
   return {
@@ -163,6 +196,33 @@ export function createPlayerWells(
       entry.roofCondition = next.roofCondition
       entry.lastRoofConditionUpdateAtDays = next.lastRoofConditionUpdateAtDays
       return true
+    },
+    startRoofRepair(id, nowDays, hasMaterial, consumeMaterial, targetCondition) {
+      const entry = find(id)
+      if (!entry) return { status: 'unavailable' }
+      const outcome = beginWellRoofRepair({
+        record: entry,
+        seed,
+        nowDays,
+        targetCondition,
+        hasMaterial,
+        consumeMaterial,
+      })
+      if (outcome.status !== 'started') return outcome
+      entry.roofCondition = outcome.roofCondition
+      entry.lastRoofConditionUpdateAtDays = outcome.lastRoofConditionUpdateAtDays
+      entry.roofRepair = outcome.progress
+      return outcome
+    },
+    contributeRoofRepairWork(id, workAmount, nowDays) {
+      const entry = find(id)
+      if (!entry) return 0
+      const { record, acceptedWork } = applyWellRoofRepairWork(entry, workAmount, nowDays)
+      entry.roofCondition = record.roofCondition
+      entry.lastRoofConditionUpdateAtDays = record.lastRoofConditionUpdateAtDays
+      if (record.roofRepair) entry.roofRepair = record.roofRepair
+      else delete entry.roofRepair
+      return acceptedWork
     },
     nearestCompleted(x, z, maxDistance) {
       let best: PlayerWellEntry | null = null

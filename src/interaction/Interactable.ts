@@ -43,10 +43,9 @@ export type Interactable =
   | { kind: 'corpse', position: { x: number, z: number }, promptLabel: string, animal: AnimalAgent, action: 'bury' | 'harvest' }
   /** `[E]` drinks directly; `[R]` fills a carried empty waterskin (plan 106
    *  §4). `source` is resolved by `app/interactables.ts` at candidate-build
-   *  time — a settlement well always plain `createWaterSource('well')`, a
-   *  completed player-built well `world/playerWell.ts`'s `wellWaterSource`
-   *  (plan world-004 §6/§10), so `app/gameLoop.ts` never has to re-derive
-   *  which kind of well this is. */
+   *  time — a settlement well always plain `createWaterSource('well')`.
+   *  Completed player-built wells stay `playerWell` so repair can relookup
+   *  by id (plan world-021); they are never this generic `well` kind. */
   | { kind: 'well', position: { x: number, z: number }, promptLabel: string, source: WaterSource }
   /** Synthetic target for a nearby lake/river/ocean shoreline (plan
    *  `ui-input-006`) — built fresh each frame from `chunkManager` terrain
@@ -136,14 +135,14 @@ export type Interactable =
    *  references; current contents are resolved fresh from `PlacedContainers`
    *  at interact time, never a cached snapshot. */
   | { kind: 'container', position: { x: number, z: number }, promptLabel: string, id: string }
-  /** Player-built well still under construction (plan 127) — `pit`/`well`/
-   *  `roof` stage not yet fully done. `[E]` advances the active stage's work;
-   *  `[R]` opens a requirements panel that also offers drink/fill once
-   *  `waterSource` is non-null (plan world-004 §5: the body alone already
-   *  makes it a usable `WaterSource`, well before the roof is built). A
-   *  fully-completed well (`isWellCompleted`) becomes a plain `well`
-   *  candidate instead — see `app/interactables.ts`. */
-  | { kind: 'playerWell', position: { x: number, z: number }, promptLabel: string, id: string, stage: WellStage, waterSource: WaterSource | null }
+  /** Player-built well (plan 127). While construction is unfinished,
+   *  `[E]` advances the active stage's work and `[R]` opens the
+   *  requirements panel (drink/fill once `waterSource` is non-null).
+   *  A completed well stays this kind so inspect/repair can relookup by
+   *  id (plan world-021) — settlement wells remain generic `well`.
+   *  `complete`/`waterSource` are per-frame display snapshots; start/resume
+   *  revalidate from the live record. */
+  | { kind: 'playerWell', position: { x: number, z: number }, promptLabel: string, id: string, stage: WellStage, waterSource: WaterSource | null, complete: boolean }
   /** Player-built garden plot (plan 176) — `[E] Zrób porządek` restores its
    *  maintenance state; always offered, even while fully maintained. `care`
    *  is a per-frame resolved snapshot for the prompt only — the action

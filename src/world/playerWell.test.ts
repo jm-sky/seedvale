@@ -3,7 +3,10 @@ import {
   activeWellStage,
   advanceWellConstruction,
   applyWellRoofConditionDelta,
+  applyWellRoofRepairWork,
+  beginWellRoofRepair,
   getWellPitWorkHours,
+  hasActiveWellRoofRepair,
   hasWellRoofCondition,
   initializeWellRoofCondition,
   isWellCompleted,
@@ -11,8 +14,10 @@ import {
   isWellWaterAvailable,
   nextWellStage,
   type PlayerWellRecord,
+  quoteWellRoofRepair,
   resolveWellRoofCondition,
   WELL_ROOF_PASSIVE_DECAY_PER_DAY,
+  WELL_ROOF_REPAIR_COST_FACTOR,
   WELL_ROOF_SIM_WINDOW_DAYS,
   WELL_STAGE_CAPABILITY,
   WELL_STAGE_COST,
@@ -499,5 +504,125 @@ describe('applyWellRoofConditionDelta checkpoint (plan world-020 / world-021)', 
   it('is a no-op when the roof component does not exist', () => {
     const well = record({ stage: 'well', workProgress: WELL_STAGE_WORK_HOURS.well })
     expect(applyWellRoofConditionDelta(well, 1, 10, -5)).toBe(well)
+  })
+})
+
+describe('well roof repair (plan world-021)', () => {
+  it('has no repair quote on unfinished or healthy roofs', () => {
+    expect(quoteWellRoofRepair(record({ stage: 'pit' }), 1, 0)).toBeNull()
+    expect(quoteWellRoofRepair(record({ stage: 'roof', workProgress: 0 }), 1, 0)).toBeNull()
+    expect(quoteWellRoofRepair(completedRoof(), 1, 0)).toBeNull()
+  })
+
+  it('quotes a V1 player repair to 100 from a damaged completed roof', () => {
+    const quote = quoteWellRoofRepair(completedRoof({ roofCondition: 40 }), 1, 0)
+    expect(quote).not.toBeNull()
+    expect(quote!.currentCondition).toBe(40)
+    expect(quote!.targetCondition).toBe(100)
+    expect(quote!.materials).toEqual([{ kind: 'branch', count: 2 }])
+    expect(quote!.requiredWork).toBeCloseTo(WELL_STAGE_WORK_HOURS.roof * 0.6 * WELL_ROOF_REPAIR_COST_FACTOR)
+  })
+
+  it('keeps a full 0→100 repair strictly cheaper than rebuilding the roof', () => {
+    const quote = quoteWellRoofRepair(completedRoof({ roofCondition: 0 }), 1, 0)!
+    const rebuildBranches = WELL_STAGE_COST.roof.branch
+    const rebuildWork = WELL_STAGE_WORK_HOURS.roof
+    const quotedBranches = quote.materials.reduce((sum, r) => sum + (r.kind === 'branch' ? r.count : 0), 0)
+    expect(quotedBranches).toBeLessThan(rebuildBranches)
+    expect(quote.requiredWork).toBeLessThan(rebuildWork)
+    expect(quotedBranches).toBeGreaterThan(0)
+    expect(quote.requiredWork).toBeGreaterThan(0)
+  })
+
+  it('does not checkpoint or consume when materials are missing', () => {
+    const well = completedRoof({ roofCondition: 40, lastRoofConditionUpdateAtDays: 0 })
+    const consumed: string[] = []
+    const outcome = beginWellRoofRepair({
+      record: well,
+      seed: 1,
+      nowDays: 0,
+      hasMaterial: () => false,
+      consumeMaterial: (r) => consumed.push(r.kind),
+    })
+    expect(outcome).toEqual({ status: 'blocked', missing: [{ kind: 'branch', count: 2 }] })
+    expect(consumed).toEqual([])
+    expect(well.roofCondition).toBe(40)
+    expect(well.lastRoofConditionUpdateAtDays).toBe(0)
+    expect(well.roofRepair).toBeUndefined()
+  })
+
+  it('consumes every material exactly once on a successful start and freezes degradation', () => {
+    const well = completedRoof({ roofCondition: 40, lastRoofConditionUpdateAtDays: 0 })
+    const consumed: { kind: string, count: number }[] = []
+    const outcome = beginWellRoofRepair({
+      record: well,
+      seed: 1,
+      nowDays: 0,
+      hasMaterial: () => true,
+      consumeMaterial: (r) => consumed.push({ kind: r.kind, count: r.count }),
+    })
+    expect(outcome.status).toBe('started')
+    if (outcome.status !== 'started') return
+    expect(consumed).toEqual([{ kind: 'branch', count: 2 }])
+    expect(outcome.progress.startedCondition).toBe(outcome.quote.currentCondition)
+    expect(outcome.progress.targetCondition).toBe(100)
+    expect(outcome.progress.completedWork).toBe(0)
+    expect(outcome.lastRoofConditionUpdateAtDays).toBe(0)
+    const started = { ...well, roofCondition: outcome.roofCondition, lastRoofConditionUpdateAtDays: outcome.lastRoofConditionUpdateAtDays, roofRepair: outcome.progress }
+    expect(resolveWellRoofCondition(started, 1, 20)).toBe(outcome.roofCondition)
+    expect(isWellWaterAvailable(started)).toBe(false)
+    expect(applyWellRoofConditionDelta(started, 1, 20, -10)).toBe(started)
+  })
+
+  it('cannot start a second episode while one is already active', () => {
+    const well = completedRoof({
+      roofCondition: 40,
+      roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0.2 },
+    })
+    expect(quoteWellRoofRepair(well, 1, 0)).toBeNull()
+    expect(beginWellRoofRepair({
+      record: well,
+      seed: 1,
+      nowDays: 1,
+      hasMaterial: () => true,
+      consumeMaterial: () => { throw new Error('must not consume') },
+    })).toEqual({ status: 'unavailable' })
+  })
+
+  it('accumulates partial work and completes atomically', () => {
+    const well = completedRoof({
+      roofCondition: 40,
+      lastRoofConditionUpdateAtDays: 3,
+      roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0.25 },
+    })
+    const afterPartial = applyWellRoofRepairWork(well, 0.5, 4)
+    expect(afterPartial.acceptedWork).toBe(0.5)
+    expect(afterPartial.record.roofRepair?.completedWork).toBe(0.75)
+    expect(afterPartial.record.roofCondition).toBe(40)
+    const done = applyWellRoofRepairWork(afterPartial.record, 1, 5)
+    expect(done.acceptedWork).toBe(0.25)
+    expect(done.record.roofRepair).toBeUndefined()
+    expect(done.record.roofCondition).toBe(100)
+    expect(done.record.lastRoofConditionUpdateAtDays).toBe(5)
+    expect(hasActiveWellRoofRepair(done.record)).toBe(false)
+    expect(isWellWaterAvailable(done.record)).toBe(true)
+    const later = resolveWellRoofCondition(done.record, 1, 5 + WELL_ROOF_SIM_WINDOW_DAYS)
+    expect(later).not.toBeNull()
+    expect(later!).toBeLessThan(100)
+  })
+
+  it('blocks water use only while the roof repair is active', () => {
+    expect(isWellWaterAvailable(completedRoof())).toBe(true)
+    expect(isWellWaterAvailable(completedRoof({
+      roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0 },
+    }))).toBe(false)
+  })
+
+  it('prompt exposes repair on a damaged completed roof and continue while active', () => {
+    expect(wellPromptLabel(completedRoof(), 100)).toBe('[E] Napij się · [R] Napełnij bukłak')
+    expect(wellPromptLabel(completedRoof({ roofCondition: 40 }), 40)).toBe('[E] Napij się · [R] Napraw')
+    expect(wellPromptLabel(completedRoof({
+      roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0 },
+    }), 40)).toBe('[E] Kontynuuj naprawę · [R] Szczegóły')
   })
 })

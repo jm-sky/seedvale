@@ -19,6 +19,7 @@ import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
 import type { WellStage } from '../world/playerWell'
+import type { RepairProgress } from '../world/repair'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
 import type { TreeSizeClass } from '../world/treeLifecycle'
 import type { WellWaterKind } from '../world/wellGroundwater'
@@ -276,7 +277,9 @@ export type SaveCarriedContainer = {
  *  time passed. `waterDepth`/`waterKind` are the groundwater result resolved
  *  once at placement (plan world-004 §1/§9/§11). Optional `roofCondition` /
  *  `lastRoofConditionUpdateAtDays` exist only after the roof is completed
- *  (plan world-020) — they are independent of `workProgress`. */
+ *  (plan world-020) — they are independent of `workProgress`. Optional
+ *  `roofRepair` is an active repair episode (plan world-021), never a quote
+ *  or remaining-work cache. */
 export type SavePlayerWell = {
   id: string
   x: number
@@ -288,6 +291,7 @@ export type SavePlayerWell = {
   waterKind: WellWaterKind
   roofCondition?: number
   lastRoofConditionUpdateAtDays?: number
+  roofRepair?: RepairProgress
 }
 
 /** Persistent runtime terrain deformation (plan `world-terrain-save`) —
@@ -489,7 +493,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 16
+export const CURRENT_SAVE_VERSION = 17
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1059,6 +1063,17 @@ function isCarriedContainerField(value: unknown): value is SaveCarriedContainer 
 const WELL_STAGES: ReadonlySet<string> = new Set<WellStage>(['pit', 'roof', 'well'])
 const WELL_WATER_KINDS: ReadonlySet<string> = new Set<WellWaterKind>(['groundwater', 'reservoir', 'underground_stream'])
 
+function isRepairProgressField(value: unknown): value is RepairProgress {
+  if (!value || typeof value !== 'object') return false
+  const p = value as Record<string, unknown>
+  return (
+    typeof p.startedCondition === 'number'
+    && typeof p.targetCondition === 'number'
+    && typeof p.requiredWork === 'number'
+    && typeof p.completedWork === 'number'
+  )
+}
+
 function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
   if (!Array.isArray(value)) return false
   return value.every((entry) => {
@@ -1069,6 +1084,9 @@ function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
     if (hasRoofCondition !== hasRoofAnchor) return false
     if (hasRoofCondition && (typeof w.roofCondition !== 'number' || typeof w.lastRoofConditionUpdateAtDays !== 'number')) {
       return false
+    }
+    if (w.roofRepair !== undefined) {
+      if (!hasRoofCondition || !isRepairProgressField(w.roofRepair)) return false
     }
     return (
       typeof w.id === 'string' &&
@@ -2167,6 +2185,14 @@ function migrateSaveV15ToV16(data: unknown): unknown {
   }
 }
 
+/** v16 → v17 (plan world-021): optional `roofRepair` on a completed roof.
+ *  Pre-plan wells have no active episode — absence is the correct default,
+ *  so this step only advances the version. */
+function migrateSaveV16ToV17(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 17 }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2183,6 +2209,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   13: migrateSaveV13ToV14,
   14: migrateSaveV14ToV15,
   15: migrateSaveV15ToV16,
+  16: migrateSaveV16ToV17,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -457,29 +457,21 @@ export function buildInteractables(
     })
   }
 
-  // Plan 127 — a completed well (`roof`, its own duration elapsed) becomes a
-  // plain `well` candidate: same drink/fill interaction as any other well,
-  // no special-cased prompt (implementation notes §14). Still under
-  // construction, it exposes its own stage-advance prompt instead.
+  // Plan 127 / world-021 — player-built wells keep `playerWell` identity
+  // after the roof completes so inspect/repair can relookup by id.
+  // Settlement wells below stay the generic `well` kind.
   for (const well of placedWells.list()) {
     if (!withinRange(well.x, well.z, playerPos, GAZE_RANGE)) continue
     const roofCondition = resolveWellRoofCondition(well, worldSeed, nowDays)
-    if (isWellCompleted(well)) {
-      list.push({
-        kind: 'well',
-        position: { x: well.x, z: well.z },
-        promptLabel: WATER_SOURCE_PROMPT,
-        source: wellWaterSource(well, roofCondition),
-      })
-      continue
-    }
+    const complete = isWellCompleted(well)
     list.push({
       kind: 'playerWell',
       position: { x: well.x, z: well.z },
-      promptLabel: wellPromptLabel(well),
+      promptLabel: wellPromptLabel(well, roofCondition),
       id: well.id,
       stage: well.stage,
       waterSource: isWellWaterAvailable(well) ? wellWaterSource(well, roofCondition) : null,
+      complete,
     })
   }
 

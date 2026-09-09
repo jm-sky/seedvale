@@ -60,8 +60,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 ## World simulation
 
 - [Condition](../src/world/condition.ts) — shared `0..100` lazy condition math (clamp, delta, resolver, checkpoint) used by camp utilities and structure components.
+- [Repair](../src/world/repair.ts) — shared actor-neutral `RepairProgress` work math for world-owned repair episodes.
 - [Sleeping utilities](../src/world/sleepingUtilities.ts) — bedroll/platform domain condition, placement, and tent-shelter factor.
-- [Player well](../src/world/playerWell.ts) — player-built well construction plus completed-roof condition and drink-risk protection.
+- [Player well](../src/world/playerWell.ts) — player-built well construction, completed-roof condition/protection, and roof repair quotes/episodes.
 - [Weather](../src/world/weather.ts) — deterministic season/weather and rain/snow exposure.
 
 ## UI wiring

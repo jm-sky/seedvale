@@ -79,6 +79,8 @@ Plan world-004 resolves each well's water once, at placement (`world/wellGroundw
 
 A well becomes a usable `WaterSource` once its `well`-stage body is finished (`isWellWaterAvailable`) — the roof is protection, not activation; `[R]`'s requirements panel gains "Napij się"/"Napełnij pojemnik" buttons once water is available, even mid-roof-construction. `isWellCompleted` (`stage === 'roof'` and done) still gates full construction/NPC-contract completion and initializes the roof's own 0..100 lazy condition (`roofCondition` / `lastRoofConditionUpdateAtDays`, independent of `workProgress`). Direct-drink `consumptionRisk` is the existing uncovered-well payload scaled by remaining exposure (`1 - resolvedRoofCondition/100`): a fresh completed roof at 100 matches the old no-risk behaviour, 0 matches the old uncovered 50% chance / `-1..2 HP` / `-5 Vigor`, and filling a container still does not carry the risk forward. The well body and water source are not destroyed at condition 0. Shared condition math lives in `world/condition.ts`; weather exposure in `world/weather.ts`. NPCs may also target any water-available player well (roof optional) for their own water-fetch when it's closer than the settlement's own well.
 
+A damaged completed roof can start a persistent repair episode (`RepairProgress` on the well record, shared math in `world/repair.ts`). Materials are committed atomically at start from inventory + nearby dropped items; work is actor-neutral (`PlayerWells.contributeRoofRepairWork`) and does not grow from elapsed time. Active roof repair freezes degradation at the checkpointed condition, blocks water use for both the player and `nearestCompleted()` NPC lookup (`Studnia jest obecnie naprawiana.`), and restores `targetCondition` (V1 player target is 100) when accepted work completes. Completed player-built wells stay `playerWell` interactables so inspect/repair can relookup by id; settlement wells stay generic `well`.
+
 ## Player-built standing torches (plan items-player-009)
 
 `world/standingTorch.ts` + `world/createStandingTorches.ts` are a single-stage player-built world object, same shape as a garden plot: Quick Actions "Postaw pochodnię" places it directly on ground (no wall/fence/building anchor) through the shared ground-placement preview/evaluator, consuming `1× beam + 1× wooden_torch` atomically from inventory or nearby dropped items via `constructionMaterials.ts` — `beam` stands in for the plan's "wooden pole" since no such item exists in the catalog. Runtime flame/light reuses the existing village-torch visual (`settlement/houseLighting.ts`'s `createVillageTorchLight`) rather than a new lighting system, and is registered with the shared `PointLightBudget`; the portable `wooden_torch` item stays a separate, unrelated hand-held item.
@@ -175,6 +177,7 @@ src/settlement/VillageFire.ts
 src/settlement/PlacedFires.ts
 src/world/WaterSource.ts
 src/world/playerWell.ts
+src/world/repair.ts
 src/world/animalTraps.ts
 src/world/plantedTrees.ts
 src/world/plantedCrops.ts

@@ -70,6 +70,22 @@ describe('querySiteInfrastructure (plan world-019)', () => {
     expect(result.wells).toEqual([])
   })
 
+  it('does not treat a completed well as usable water while its roof is being repaired', () => {
+    const result = querySiteInfrastructure(site, {
+      completedPreparations: [],
+      wells: [well({
+        id: 'well:repairing',
+        stage: 'roof',
+        workProgress: 1,
+        roofCondition: 40,
+        lastRoofConditionUpdateAtDays: 1,
+        roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0 },
+      })],
+      gardens: [],
+    })
+    expect(result.wells).toEqual([])
+  })
+
   it('does not return a garden that is no longer in the live store', () => {
     const result = querySiteInfrastructure(site, {
       completedPreparations: [],

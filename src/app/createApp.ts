@@ -1797,6 +1797,8 @@ export async function createApp(
     pickUpContainer: containers.pickUpContainer,
     workOnWell: placement.workOnWell,
     describeWellWork: placement.describeWellWork,
+    describeWellRoofRepair: placement.describeWellRoofRepair,
+    workOnWellRoofRepair: placement.workOnWellRoofRepair,
     igniteStandingTorch: placement.igniteStandingTorch,
     workOnStandingTorch: placement.workOnStandingTorch,
     workOnPalisade: placement.workOnPalisade,

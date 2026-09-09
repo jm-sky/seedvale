@@ -86,10 +86,15 @@ import {
 import {
   activeWellStage,
   advanceWellConstruction,
+  formatWorkDuration,
+  isWellCompleted,
+  isWellWaterAvailable,
+  quoteWellRoofRepair,
   WELL_FOOTPRINT_RADIUS,
   WELL_PLACE_DURATION_SEC,
   WELL_PLACE_REACH,
   WELL_PLACEMENT_MESSAGE,
+  WELL_ROOF_REPAIR_WORK_LABEL,
   WELL_SEPARATION,
   WELL_WORK_LABEL,
   WELL_WORK_SESSION_HOURS,
@@ -99,6 +104,7 @@ import {
   wellStageRequirements,
   wellStageWorkHours,
 } from '../../world/playerWell'
+import { repairRemainingWork } from '../../world/repair'
 import {
   BEDROLL_FOOTPRINT_RADIUS,
   BEDROLL_MATERIAL_REQUIREMENTS,
@@ -233,6 +239,15 @@ export type WellWorkView = {
   reasonLabel: string
 }
 
+export type WellRoofRepairView = {
+  title: string
+  description: string
+  canAct: boolean
+  reasonLabel: string
+  mode: 'start' | 'continue'
+  waterAvailable: boolean
+}
+
 export type PlacementActions = {
   /** Where a tent placed right now would land (its far end is `TENT_LENGTH`
    *  ahead of the player, along the current look yaw). */
@@ -260,6 +275,10 @@ export type PlacementActions = {
    *  §3); `workOnWell` itself remains the only place that actually spends
    *  materials or starts work. */
   describeWellWork: (id: string) => WellWorkView | null
+  /** Read-only roof-repair preview for a completed player-built well. */
+  describeWellRoofRepair: (id: string) => WellRoofRepairView | null
+  /** Starts or resumes one roof-repair work bout on a completed well. */
+  workOnWellRoofRepair: (id: string) => void
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
    *  — a single-stage placement (unlike a well), immediately usable as a
    *  planting anchor once built. */
@@ -624,6 +643,106 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     const remainingHours = Math.max(0, wellStageWorkHours(stage, well.waterDepth) - well.workProgress)
     return { title, description: `Pozostało: ${remainingHours.toFixed(1)} h pracy.`, canWork: true, reasonLabel: '' }
   }
+
+  const describeWellRoofRepair = (id: string): WellRoofRepairView | null => {
+    const well = bundle.playerWells.list().find((entry) => entry.id === id)
+    if (!well || !isWellCompleted(well)) return null
+    const waterAvailable = isWellWaterAvailable(well)
+    if (well.roofRepair) {
+      return {
+        title: 'Naprawa daszku studni',
+        description: [
+          `Stan przed naprawą: ${Math.round(well.roofRepair.startedCondition)} / 100`,
+          `Cel: ${Math.round(well.roofRepair.targetCondition)} / 100`,
+          `Postęp pracy: ${formatWorkDuration(well.roofRepair.completedWork)} / ${formatWorkDuration(well.roofRepair.requiredWork)}`,
+          'Materiały: dostarczone',
+        ].join('\n'),
+        canAct: true,
+        reasonLabel: '',
+        mode: 'continue',
+        waterAvailable: false,
+      }
+    }
+    const quote = quoteWellRoofRepair(well, ctx.getWorldSeed(), dayNight.elapsedDays)
+    if (!quote) return null
+    const missing = quote.materials.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    const materialLines = quote.materials.length > 0
+      ? quote.materials.map((r) => `${r.count} × ${ITEM_DEFS[r.kind].label}`).join('\n')
+      : 'brak'
+    return {
+      title: 'Napraw daszek studni',
+      description: [
+        `Stan: ${Math.round(quote.currentCondition)} / 100`,
+        `Po naprawie: ${Math.round(quote.targetCondition)} / 100`,
+        '',
+        'Potrzebne materiały:',
+        materialLines,
+        '',
+        'Czas pracy:',
+        formatWorkDuration(quote.requiredWork),
+      ].join('\n'),
+      canAct: missing.length === 0,
+      reasonLabel: missing.length > 0
+        ? `Brakuje: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
+        : '',
+      mode: 'start',
+      waterAvailable,
+    }
+  }
+
+  const startRoofRepairBout = (id: string): void => {
+    const well = bundle.playerWells.list().find((entry) => entry.id === id)
+    if (!well?.roofRepair) return
+    const remainingHours = repairRemainingWork(well.roofRepair)
+    if (remainingHours <= 0) return
+    const sessionHours = Math.min(WELL_WORK_SESSION_HOURS, remainingHours)
+    const sessionSec = (sessionHours / WELL_WORK_SESSION_HOURS) * WELL_WORK_SESSION_SEC
+    const startedAt = performance.now()
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      const creditedHours = sessionHours * fraction
+      const accepted = bundle.playerWells.contributeRoofRepairWork(id, creditedHours, dayNight.elapsedDays)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', accepted)
+    }
+    playActionWellConstruction(worldAudio.playAt, { x: well.x, z: well.z })
+    busy.start(sessionSec, WELL_ROOF_REPAIR_WORK_LABEL, () => {
+      const accepted = bundle.playerWells.contributeRoofRepairWork(id, sessionHours, dayNight.elapsedDays)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', accepted)
+    }, {
+      onCancel: creditPartial,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
+    })
+  }
+
+  const workOnWellRoofRepair = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const well = bundle.playerWells.list().find((entry) => entry.id === id)
+    if (!well || !isWellCompleted(well)) return
+    if (!well.roofRepair) {
+      const outcome = bundle.playerWells.startRoofRepair(
+        id,
+        dayNight.elapsedDays,
+        (r) => hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+        (r) => consumeMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+      )
+      if (outcome.status === 'blocked') {
+        toast.show(
+          `Potrzebujesz: ${outcome.missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+          'error',
+        )
+        return
+      }
+      if (outcome.status !== 'started') return
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+    }
+    startRoofRepairBout(id)
+  }
+
+  /** Places a new player-built garden plot ahead of the player (plan 174 §1)
 
   /** Places a new player-built garden plot ahead of the player (plan 174 §1)
    *  — same shared-placement shape as a tent/trap/well, but single-stage:
@@ -1202,6 +1321,8 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeWellAtAim,
     workOnWell,
     describeWellWork,
+    describeWellRoofRepair,
+    workOnWellRoofRepair,
     placeGardenAtAim,
     tidyGardenPlot,
     waterGardenPlot,

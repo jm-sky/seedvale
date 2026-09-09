@@ -682,6 +682,99 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })).toBeNull()
   })
 
+  it('migrates a real v16 save (plan world-021) into the current schema without inventing a repair episode', () => {
+    const v16Save = {
+      ...validSave,
+      version: 16,
+      playerWells: [{
+        id: 'well:done',
+        x: 1,
+        z: 2,
+        yaw: 0,
+        stage: 'roof',
+        workProgress: 1,
+        waterDepth: 5,
+        waterKind: 'groundwater',
+        roofCondition: 80,
+        lastRoofConditionUpdateAtDays: 4,
+      }],
+    }
+    const result = loadStoredSave(v16Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.playerWells).toEqual([{
+      id: 'well:done',
+      x: 1,
+      z: 2,
+      yaw: 0,
+      stage: 'roof',
+      workProgress: 1,
+      waterDepth: 5,
+      waterKind: 'groundwater',
+      roofCondition: 80,
+      lastRoofConditionUpdateAtDays: 4,
+    }])
+  })
+
+  it('round-trips a current-schema well with partial roof-repair progress', () => {
+    const withRepair = {
+      ...validSave,
+      playerWells: [{
+        id: 'w',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        stage: 'roof' as const,
+        workProgress: 1,
+        waterDepth: 5,
+        waterKind: 'groundwater' as const,
+        roofCondition: 42,
+        lastRoofConditionUpdateAtDays: 3,
+        roofRepair: {
+          startedCondition: 42,
+          targetCondition: 100,
+          requiredWork: 0.45,
+          completedWork: 0.1,
+        },
+      }],
+    }
+    expect(loadSaveData(withRepair)).toEqual(withRepair)
+  })
+
+  it('rejects a current-schema well whose roofRepair is malformed or missing roof condition', () => {
+    expect(loadSaveData({
+      ...validSave,
+      playerWells: [{
+        id: 'w',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        stage: 'roof',
+        workProgress: 1,
+        waterDepth: 5,
+        waterKind: 'groundwater',
+        roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0 },
+      }],
+    })).toBeNull()
+    expect(loadSaveData({
+      ...validSave,
+      playerWells: [{
+        id: 'w',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        stage: 'roof',
+        workProgress: 1,
+        waterDepth: 5,
+        waterKind: 'groundwater',
+        roofCondition: 40,
+        lastRoofConditionUpdateAtDays: 1,
+        roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1 },
+      }],
+    })).toBeNull()
+  })
+
   it.each([
     ['accepted', 'active', 'accepted'],
     ['travelling', 'active', 'travelling'],

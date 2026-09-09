@@ -1,7 +1,7 @@
 import { Scene } from 'three'
 import { describe, expect, it } from 'vitest'
 import { createPlayerWells } from './createPlayerWells'
-import { getWellPitWorkHours, isWellCompleted, WELL_STAGE_WORK_HOURS } from './playerWell'
+import { getWellPitWorkHours, isWellCompleted, isWellWaterAvailable, WELL_STAGE_WORK_HOURS } from './playerWell'
 import { resolveWellWater } from './wellGroundwater'
 
 const sampleHeight = (): number => 0
@@ -175,6 +175,58 @@ describe('createPlayerWells', () => {
     expect(wells.applyRoofConditionDelta('nope', 1, 0, -10)).toBe(false)
     const record = wells.place(0, 0, 0)
     expect(wells.applyRoofConditionDelta(record.id, 1, 0, -10)).toBe(false)
+  })
+
+  it('startRoofRepair consumes materials once, freezes degradation, and round-trips through nodes()', () => {
+    const { wells } = setup()
+    const record = wells.place(1, 1, 0)
+    wells.addWork(record.id, pitHoursFor(1, 1), 0)
+    wells.transitionTo(record.id, 'well')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well, 0)
+    wells.transitionTo(record.id, 'roof')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.roof, 2)
+    wells.applyRoofConditionDelta(record.id, SEED, 2, -60)
+    const consumed: number[] = []
+    const started = wells.startRoofRepair(
+      record.id,
+      2,
+      () => true,
+      (r) => consumed.push(r.count),
+    )
+    expect(started.status).toBe('started')
+    if (started.status !== 'started') return
+    expect(consumed).toEqual([started.quote.materials[0]!.count])
+    expect(isWellWaterAvailable(wells.nodes()[0]!)).toBe(false)
+    expect(wells.nearestCompleted(1, 1, 100)).toBeNull()
+    const accepted = wells.contributeRoofRepairWork(record.id, 0.1, 2)
+    expect(accepted).toBe(0.1)
+    const snapshot = wells.nodes()
+    expect(snapshot[0]!.roofRepair?.completedWork).toBe(0.1)
+    const restored = createPlayerWells(new Scene(), sampleHeight, () => {}, () => {}, snapshot, SEED, WATER_LEVEL)
+    expect(restored.nodes()[0]!.roofRepair).toEqual(snapshot[0]!.roofRepair)
+    expect(restored.startRoofRepair(record.id, 4, () => true, () => { throw new Error('must not consume on resume') }).status).toBe('unavailable')
+    const remaining = restored.nodes()[0]!.roofRepair!.requiredWork - 0.1
+    expect(restored.contributeRoofRepairWork(record.id, remaining + 1, 5)).toBe(remaining)
+    expect(restored.nodes()[0]!.roofRepair).toBeUndefined()
+    expect(restored.nodes()[0]!.roofCondition).toBe(100)
+    expect(restored.nodes()[0]!.lastRoofConditionUpdateAtDays).toBe(5)
+    expect(isWellWaterAvailable(restored.nodes()[0]!)).toBe(true)
+    expect(restored.nearestCompleted(1, 1, 100)).toEqual({ x: 1, y: 0, z: 1 })
+  })
+
+  it('startRoofRepair does not mutate the well when materials are missing', () => {
+    const { wells } = setup()
+    const record = wells.place(0, 0, 0)
+    wells.addWork(record.id, pitHoursFor(0, 0), 0)
+    wells.transitionTo(record.id, 'well')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well, 0)
+    wells.transitionTo(record.id, 'roof')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.roof, 1)
+    wells.applyRoofConditionDelta(record.id, SEED, 2, -50)
+    const before = wells.nodes()[0]!
+    const outcome = wells.startRoofRepair(record.id, 3, () => false, () => { throw new Error('must not consume') })
+    expect(outcome.status).toBe('blocked')
+    expect(wells.nodes()[0]!).toEqual(before)
   })
 
   it('dispose clears every registered collider', () => {
