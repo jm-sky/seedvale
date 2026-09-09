@@ -68,10 +68,10 @@ export function createPrimaryWeaponSelection(): PrimaryWeaponSelection {
   }
 }
 
-export function isPrimaryMeleeAssignment(kind: ItemKind, choice: PrimaryWeaponChoice | null): boolean {
+export function isPrimaryMeleeAssignment(kind: ItemKind, instanceId: string | null, choice: PrimaryWeaponChoice | null): boolean {
   if (!choice || choice.kind !== kind) return false
   if (!isWeaponMaintenanceKind(kind)) return true
-  return choice.instanceId != null
+  return choice.instanceId === instanceId
 }
 
 export function isPrimaryRangedAssignment(kind: ItemKind, instanceId: string | null, choice: PrimaryWeaponChoice | null): boolean {

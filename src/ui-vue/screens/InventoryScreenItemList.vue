@@ -2,10 +2,13 @@
 import { computed, ref } from 'vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
+import type { InventoryInstanceRow } from '../../items/inventoryView'
 import { isToolKind } from '../../items/HeldTool'
-import { type ConsumableNeed, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { type ConsumableNeed, consumeVerbLabel, isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
+import { isWeaponMaintenanceKind } from '../../items/itemInstances'
 import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
+import { isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from '../../items/primaryWeapons'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { ui } from '../store'
@@ -30,6 +33,7 @@ const allItems = computed(() => ui.inventory.groups.map((group) => ({
   count: group.count,
   condition: group.condition,
   uniformConditionPercent: group.uniformConditionPercent,
+  instances: group.instances,
   consumable: ITEM_CATALOG[group.kind].consumable ?? null,
   book: ITEM_CATALOG[group.kind].book ?? null,
 })))
@@ -77,6 +81,41 @@ function onPlaceTrap(kind: ItemKind): void {
   if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
 }
 function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
+
+function resolvePrimaryInstanceId(kind: ItemKind, instances: readonly InventoryInstanceRow[]): string | null {
+  if (!isWeaponMaintenanceKind(kind)) return null
+  return instances[0]?.id ?? null
+}
+
+function isPrimaryMeleeItem(kind: ItemKind): boolean {
+  const choice = ui.inventory.primaryMelee
+  if (!choice || choice.kind !== kind) return false
+  if (isWeaponMaintenanceKind(kind)) return true
+  return isPrimaryMeleeAssignment(kind, null, choice)
+}
+
+function isPrimaryRangedItem(kind: ItemKind): boolean {
+  const choice = ui.inventory.primaryRanged
+  if (!choice || choice.kind !== kind) return false
+  if (isWeaponMaintenanceKind(kind)) return true
+  return isPrimaryRangedAssignment(kind, null, choice)
+}
+
+function canSetPrimaryMelee(kind: ItemKind): boolean {
+  return isMeleeToolKind(kind) && !isPrimaryMeleeItem(kind)
+}
+
+function canSetPrimaryRanged(kind: ItemKind): boolean {
+  return isRangedTool(kind) && !isPrimaryRangedItem(kind)
+}
+
+function setPrimaryMelee(kind: ItemKind, instances: readonly InventoryInstanceRow[]): void {
+  ui.inventory.onSetPrimaryMelee?.(kind, resolvePrimaryInstanceId(kind, instances))
+}
+
+function setPrimaryRanged(kind: ItemKind, instances: readonly InventoryInstanceRow[]): void {
+  ui.inventory.onSetPrimaryRanged?.(kind, resolvePrimaryInstanceId(kind, instances))
+}
 </script>
 
 <template>
@@ -153,12 +192,24 @@ function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
           class="cursor-pointer flex items-baseline justify-between hover:text-primary"
           @click="emit('select-item', item.kind)"
         >
-          <span class="text-sm font-semibold">
-            {{ item.count }} × {{ item.displayName }}
+          <span class="text-sm font-semibold flex flex-wrap items-center gap-1.5">
+            <span>{{ item.count }} × {{ item.displayName }}</span>
             <span
               v-if="conditionLabel(item)"
-              class="ml-1 text-[11px] font-normal opacity-70"
+              class="text-[11px] font-normal opacity-70"
             >{{ conditionLabel(item) }}</span>
+            <span
+              v-if="isPrimaryMeleeItem(item.kind)"
+              class="rounded-full bg-primary/30 px-2 py-0.5 text-[10px] font-medium"
+            >
+              Podstawowa
+            </span>
+            <span
+              v-if="isPrimaryRangedItem(item.kind)"
+              class="rounded-full bg-primary/30 px-2 py-0.5 text-[10px] font-medium"
+            >
+              Podstawowa
+            </span>
           </span>
           <span class="text-[11px] uppercase tracking-wide opacity-60">
             {{ categoryLabels(item.def) }}
@@ -204,6 +255,18 @@ function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
               class="min-h-0 py-1"
               label="Odłóż"
               @click="onUnequip"
+            />
+            <ItemsScreenItemButton
+              v-if="canSetPrimaryMelee(item.kind)"
+              class="min-h-0 py-1"
+              label="Ustaw podstawową"
+              @click="setPrimaryMelee(item.kind, item.instances)"
+            />
+            <ItemsScreenItemButton
+              v-if="canSetPrimaryRanged(item.kind)"
+              class="min-h-0 py-1"
+              label="Ustaw podstawową"
+              @click="setPrimaryRanged(item.kind, item.instances)"
             />
           </div>
           <div class="flex items-center justify-end gap-2">

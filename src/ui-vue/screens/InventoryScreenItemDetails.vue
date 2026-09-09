@@ -124,12 +124,10 @@ const instanceRows = computed(() => {
 
 const whetstoneCount = computed<number>(() => ui.inventory.counts.whetstone ?? 0)
 const merchantOpen = computed(() => ui.merchant.open)
-const isPrimaryMelee = computed(() => props.selectedItem
-  ? isPrimaryMeleeAssignment(props.selectedItem, ui.inventory.primaryMelee)
-  : false)
-const isPrimaryRanged = computed(() => props.selectedItem
-  ? isPrimaryRangedAssignment(props.selectedItem, null, ui.inventory.primaryRanged)
-  : false)
+const isPrimaryMelee = computed(() => props.selectedItem != null
+  && ui.inventory.primaryMelee?.kind === props.selectedItem)
+const isPrimaryRanged = computed(() => props.selectedItem != null
+  && ui.inventory.primaryRanged?.kind === props.selectedItem)
 const showSetPrimaryMelee = computed(() =>
   props.selectedItem != null
   && isMeleeToolKind(props.selectedItem)
@@ -180,7 +178,7 @@ function setPrimaryRanged(kind: ItemKind, instanceId: string | null = null): voi
 }
 
 function isInstancePrimaryMelee(id: string): boolean {
-  return props.selectedItem != null && isPrimaryMeleeAssignment(props.selectedItem, { kind: props.selectedItem, instanceId: id })
+  return props.selectedItem != null && isPrimaryMeleeAssignment(props.selectedItem, id, ui.inventory.primaryMelee)
 }
 
 function isInstancePrimaryRanged(id: string): boolean {
@@ -354,51 +352,80 @@ function isInstancePrimaryRanged(id: string): boolean {
         <div
           v-for="row in instanceRows"
           :key="`${row.conditionPercent}:${row.sharpnessPercent}`"
-          class="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
+          class="flex flex-col gap-2 rounded-md bg-white/5 px-3 py-2 text-sm"
         >
-          <span v-if="row.sharpnessPercent !== null">
-            {{ row.count }}× stan {{ row.conditionPercent }}% / ostrość {{ row.sharpnessPercent }}%
-          </span>
-          <span v-else>{{ row.count }}× {{ firstUpperCase(item.label) }} {{ row.conditionPercent }}%</span>
-          <div class="flex flex-wrap gap-2">
-            <template v-if="melee && isWeaponMaintenanceKind(item.kind)">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-medium">{{ row.count }}×</span>
+            <span
+              v-if="row.sharpnessPercent !== null"
+              class="rounded-full bg-white/10 px-2 py-0.5 text-[11px]"
+            >
+              Stan {{ row.conditionPercent }}%
+            </span>
+            <span
+              v-else
+              class="rounded-full bg-white/10 px-2 py-0.5 text-[11px]"
+            >
+              {{ row.conditionPercent }}%
+            </span>
+            <span
+              v-if="row.sharpnessPercent !== null"
+              class="rounded-full bg-white/10 px-2 py-0.5 text-[11px]"
+            >
+              Ostrość {{ row.sharpnessPercent }}%
+            </span>
+          </div>
+          <div
+            v-for="(id, index) in row.ids"
+            :key="id"
+            class="flex flex-wrap items-center justify-between gap-2"
+          >
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                v-if="row.ids.length > 1"
+                class="text-[11px] opacity-60"
+              >
+                #{{ index + 1 }}
+              </span>
+              <span
+                v-if="melee && isWeaponMaintenanceKind(item.kind) && isInstancePrimaryMelee(id)"
+                class="rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-medium"
+              >
+                Podstawowa
+              </span>
+              <span
+                v-if="ranged && isWeaponMaintenanceKind(item.kind) && isInstancePrimaryRanged(id)"
+                class="rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-medium"
+              >
+                Podstawowa
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-2">
               <ItemsScreenItemButton
-                v-for="id in row.ids"
-                :key="`primary-melee-${id}`"
+                v-if="melee && isWeaponMaintenanceKind(item.kind) && !isInstancePrimaryMelee(id)"
                 class="min-h-0 py-1"
-                :label="isInstancePrimaryMelee(id) ? 'Podstawowa broń biała' : 'Ustaw jako podstawową broń białą'"
-                :disabled="isInstancePrimaryMelee(id)"
+                label="Ustaw podstawową"
                 @click="setPrimaryMelee(item.kind, id)"
               />
-            </template>
-            <template v-if="ranged && isWeaponMaintenanceKind(item.kind)">
               <ItemsScreenItemButton
-                v-for="id in row.ids"
-                :key="`primary-ranged-${id}`"
+                v-if="ranged && isWeaponMaintenanceKind(item.kind) && !isInstancePrimaryRanged(id)"
                 class="min-h-0 py-1"
-                :label="isInstancePrimaryRanged(id) ? 'Podstawowa broń dystansowa' : 'Ustaw jako podstawową broń dystansową'"
-                :disabled="isInstancePrimaryRanged(id)"
+                label="Ustaw podstawową"
                 @click="setPrimaryRanged(item.kind, id)"
               />
-            </template>
-            <template v-if="row.sharpnessPercent !== null && row.sharpnessPercent < 100">
               <ItemsScreenItemButton
-                v-for="id in row.ids"
-                :key="`sharpen-${id}`"
+                v-if="row.sharpnessPercent !== null && row.sharpnessPercent < 100"
                 class="min-h-0 py-1"
                 :label="`Naostrz (${whetstoneCount})`"
                 @click="sharpenInstance(id)"
               />
-            </template>
-            <template v-if="merchantOpen">
               <ItemsScreenItemButton
-                v-for="id in row.ids"
-                :key="`sell-${id}`"
+                v-if="merchantOpen"
                 class="min-h-0 py-1"
                 :label="`Sprzedaj (${row.sellPrice})`"
                 @click="sellInstance(id)"
               />
-            </template>
+            </div>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CURRENT_SAVE_VERSION, loadStoredSave, type SaveData } from '../persistence/saveData'
 import { Inventory } from './Inventory'
-import { createPrimaryWeaponSelection } from './primaryWeapons'
+import { createPrimaryWeaponSelection, isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from './primaryWeapons'
 
 describe('primaryWeapons', () => {
   it('initializes empty slots on first equip only', () => {
@@ -50,6 +50,19 @@ describe('primaryWeapons', () => {
 
     expect(restored.primaryMelee()).toEqual(saved.primaryMeleeWeapon)
     expect(restored.primaryRanged()).toEqual(saved.primaryRangedWeapon)
+  })
+
+  it('matches melee instance id for weapon-maintenance kinds', () => {
+    const choice = { kind: 'damascus_long_sword' as const, instanceId: 'inst-a' }
+    expect(isPrimaryMeleeAssignment('damascus_long_sword', 'inst-a', choice)).toBe(true)
+    expect(isPrimaryMeleeAssignment('damascus_long_sword', 'inst-b', choice)).toBe(false)
+    expect(isPrimaryMeleeAssignment('damascus_long_sword', null, choice)).toBe(false)
+  })
+
+  it('ignores instance id for non-maintenance ranged weapons', () => {
+    const choice = { kind: 'short_bow' as const, instanceId: null }
+    expect(isPrimaryRangedAssignment('short_bow', null, choice)).toBe(true)
+    expect(isPrimaryRangedAssignment('short_bow', 'ignored', choice)).toBe(true)
   })
 
   it('migrates older saves without primary weapon fields to empty slots', () => {
