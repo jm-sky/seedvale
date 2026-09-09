@@ -250,7 +250,7 @@ Quote jest derived/read-only i nie jest persistowany.
 
 ## 10. Well roof degradation semantics
 
-Przed implementacją tego planu `world-020` musi używać tej samej semantyki: pierwszym well consumerem condition jest roof component, nie cała studnia.
+`world-020` musi używać tej samej semantyki: pierwszym well consumerem condition jest roof component, nie cała studnia.
 
 Roof condition może spadać przez:
 
@@ -541,7 +541,7 @@ Plan nie zależy od `npc-028` i nie dodaje jeszcze `repair` do `WorkType` / `Con
 
 Future repair Work Contract może później wskazać ten sam world-owned repair target bez zmiany jego progress ownership.
 
-## 24. Repair skill and camp repair boundaries
+## 24. Repair skill boundary
 
 `world-021` nie zna:
 
@@ -552,11 +552,63 @@ Future repair Work Contract może później wskazać ten sam world-owned repair 
 
 Future skill flow może określić achievable target, work efficiency lub material efficiency, a następnie wywołać istniejące world repair API.
 
-`items-player-019` nie jest migrowany w tym planie. Po powstaniu repair foundation powinien zostać zrewidowany, aby nie posiadał równoległego repair ownership i korzystał ze shared repair semantics tam, gdzie pasują.
-
 Nie zakładać twardej zależności `items-player-021 → world-021`, jeśli jego targeted-skill vertical slice nadal może korzystać z trap inspection. To sequencing/future integration, nie automatycznie dependency.
 
-## 25. Existing settlement storage repair
+## 25. Camp repair integration boundary
+
+`items-player-019` ma konsumować tę samą semantykę repair episode dla deployed camp structures:
+
+```text
+condition
+→ repair quote
+→ materials committed at repair start
+→ persistent RepairProgress
+→ actor-neutral work contributions
+→ completion updates condition
+```
+
+Tent, bedroll i raised sleeping platform nie powinny implementować równoległego modelu:
+
+```text
+1 material
+→ immediate +condition
+```
+
+Ich camp-specific domain nadal posiada:
+
+- material kinds/count,
+- tool capabilities,
+- required work scaling,
+- Repair/Survival skill interpretation,
+- contextual UI.
+
+Shared `world-021` semantics posiadają natomiast repair progress ownership, material commitment timing i work contribution lifecycle.
+
+Nie oznacza to, że każdy przyszły repairable inventory item musi używać persistent repair episode.
+
+Dla małych carried/equipment items posiadających własne:
+
+```text
+durability
+sharpness
+item condition
+```
+
+domena może później użyć prostszej one-shot/incremental repair operation, jeśli nie potrzebuje persistent/shared work.
+
+Canonical boundary:
+
+```text
+deployed/world structure
+→ RepairProgress episode
+
+small inventory item
+→ domain-specific repair semantics allowed
+```
+
+Nie tworzyć jednego globalnego RepairManagera w celu wymuszenia identycznego lifecycle dla obu kategorii.
+
+## 26. Existing settlement storage repair
 
 `src/settlement/storageRepair.ts` pozostaje quest-specific one-shot repair.
 
@@ -564,7 +616,7 @@ Nie migrować go w tym planie.
 
 Future cleanup może podłączyć go do shared repair work dopiero wtedy, gdy settlement storage dostanie realne condition i będzie to usuwać rzeczywistą duplikację.
 
-## 26. Persistence and off-screen continuity
+## 27. Persistence and off-screen continuity
 
 Aktywny roof repair musi round-trip through save/load razem z authoritative condition state.
 
@@ -602,7 +654,7 @@ elapsed world time ≠ repair work
 
 Progress zwiększa się wyłącznie przez explicit accepted work contribution. Future aggregated NPC simulation może generować takie contributions bez zmiany modelu.
 
-## 27. Zero condition
+## 28. Zero condition
 
 Roof z condition `0` pozostaje istniejącym, ale całkowicie nieskutecznym ochronnie elementem.
 
@@ -610,7 +662,7 @@ Nie usuwać automatycznie mesh/object i nie wprowadzać destruction/reconstructi
 
 Może zostać naprawiony do legalnego target condition.
 
-## 28. Expected files
+## 29. Expected files
 
 Expected primary files:
 
@@ -630,7 +682,7 @@ Dostosować exact paths do aktualnego code ownership podczas implementation reco
 
 Nie umieszczać domain logic w Vue components.
 
-## 29. Testing
+## 30. Testing
 
 Shared repair primitives:
 
@@ -706,13 +758,15 @@ Plan nie implementuje:
 - multiple-worker Work Contract integration,
 - worker reservation / worker limits / worker scaling,
 - repair professions,
-- camp/weapon/tool/trap repair,
+- weapon/tool/trap inventory repair,
 - settlement building repair,
 - storage repair migration,
 - damaged visual variants,
 - collapse/reconstruction,
 - generic building framework,
 - global RepairManager.
+
+`items-player-019` is a planned consumer of this foundation for deployed camp structures, but its implementation remains outside this plan.
 
 ## Follow-ups
 
@@ -727,7 +781,7 @@ world-021 — THIS PLAN
 Then independent consumers/integrations can converge on the same foundation:
 
 ```text
-world-021 ─────────────→ items-player-019 camp repair revision
+world-021 ─────────────→ items-player-019 camp repair
       ├───────────────→ future Repair skill integration from items-player-021
       └─ + npc-028 ───→ future repair Work Contracts
                             ↓
@@ -750,7 +804,7 @@ Nie tworzyć dla NPC równoległego maintenance progress systemu.
 
 ## Dependency note
 
-Przed implementacją `world-021` należy skorygować `world-020`, aby pierwszy well condition consumer był jednoznacznie roof componentem, a nie whole-well degradation.
+`world-020` musi utrzymywać roof-only condition semantics dla player-built well, zgodne z tym planem.
 
 `world-021` pozostaje zależny tylko od `world-020`.
 
