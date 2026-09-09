@@ -202,10 +202,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 905
-- `buildDigTarget` — function — line 852
+- `buildCombatTarget` — function — line 910
+- `buildDigTarget` — function — line 857
 - `buildInteractables` — function — line 312
-- `collectItem` — function — line 952
+- `collectItem` — function — line 957
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70

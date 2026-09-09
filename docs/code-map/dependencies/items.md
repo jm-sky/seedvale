@@ -357,6 +357,7 @@ Generated from TypeScript imports.
 - `items/tentProp.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
+- `world/condition.ts`
 - `world/sleepingUtilities.ts`
 
 **Imported by**

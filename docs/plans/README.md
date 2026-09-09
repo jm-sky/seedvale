@@ -55,7 +55,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
-| 💡 `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
 | 💡 `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
 | 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018, settlements-006, items-player-021, world-021 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |

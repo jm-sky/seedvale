@@ -292,6 +292,20 @@ Generated from exported TypeScript symbols.
 - `resolvePosition` — function — line 223
 - `VerticalExtent` — type — line 19
 
+## `world/condition.ts`
+
+- `applyConditionDelta` — function — line 31
+  - domain: world
+- `checkpointCondition` — function — line 48
+  - domain: world
+- `clampCondition` — function — line 20
+- `CONDITION_MAX` — const — line 17
+- `ConditionDecay` — type — line 35
+- `ConditionState` — type — line 10
+  - domain: world
+- `resolveCondition` — function — line 67
+  - domain: world
+
 ## `world/containerProp.ts`
 
 - `CHEST_DEPTH` — const — line 13
@@ -366,9 +380,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlayerWells.ts`
 
-- `createPlayerWells` — function — line 56
-- `PlayerWellEntry` — type — line 16
-- `PlayerWells` — type — line 18
+- `createPlayerWells` — function — line 66
+- `PlayerWellEntry` — type — line 18
+- `PlayerWells` — type — line 20
 
 ## `world/createRiverWater.ts`
 
@@ -818,38 +832,51 @@ Generated from exported TypeScript symbols.
 
 ## `world/playerWell.ts`
 
-- `activeWellStage` — function — line 259
-- `advanceWellConstruction` — function — line 164
-- `formatHours` — function — line 316
-- `getWellPitWorkHours` — function — line 70
-- `isWellCompleted` — function — line 227
-- `isWellStageWorkComplete` — function — line 219
-- `isWellWaterAvailable` — function — line 236
-- `NearbyPlayerWellLookup` — type — line 346
-- `nextWellStage` — function — line 214
-- `PlayerWellRecord` — type — line 26
-- `WELL_FOOTPRINT_RADIUS` — const — line 276
-- `WELL_PLACE_DURATION_SEC` — const — line 282
-- `WELL_PLACE_REACH` — const — line 279
-- `WELL_PLACEMENT_MESSAGE` — const — line 266
-- `WELL_SEPARATION` — const — line 277
-- `WELL_STAGE_CAPABILITY` — const — line 105
-- `WELL_STAGE_COST` — const — line 93
-- `WELL_STAGE_START_PROMPT` — const — line 300
-- `WELL_STAGE_WORK_HOURS` — const — line 56
-- `WELL_WORK_LABEL` — const — line 307
-- `WELL_WORK_SESSION_HOURS` — const — line 297
-- `WELL_WORK_SESSION_SEC` — const — line 288
-- `WellMaterialCost` — type — line 87
-- `WellPlacementReason` — type — line 264
-- `wellPromptLabel` — function — line 328
-- `wellRemainingWork` — function — line 199
-- `WellStage` — type — line 21
-- `wellStageCapabilities` — function — line 118
-- `wellStageRequirements` — function — line 130
-- `wellStageWorkHours` — function — line 83
-- `wellWaterSource` — function — line 245
-- `WellWorkOutcome` — type — line 151
+- `activeWellStage` — function — line 397
+- `advanceWellConstruction` — function — line 179
+- `applyWellRoofConditionDelta` — function — line 337
+  - domain: world
+- `formatHours` — function — line 454
+- `getWellPitWorkHours` — function — line 85
+- `hasWellRoofCondition` — function — line 264
+- `initializeWellRoofCondition` — function — line 283
+  - domain: world
+- `initialWellRoofCondition` — function — line 270
+- `isWellCompleted` — function — line 243
+- `isWellStageWorkComplete` — function — line 234
+- `isWellWaterAvailable` — function — line 358
+- `NearbyPlayerWellLookup` — type — line 484
+- `nextWellStage` — function — line 229
+- `PlayerWellRecord` — type — line 36
+- `resolveWellRoofCondition` — function — line 298
+  - domain: world
+- `WELL_FOOTPRINT_RADIUS` — const — line 414
+- `WELL_PLACE_DURATION_SEC` — const — line 420
+- `WELL_PLACE_REACH` — const — line 417
+- `WELL_PLACEMENT_MESSAGE` — const — line 404
+- `WELL_ROOF_PASSIVE_DECAY_PER_DAY` — const — line 251
+- `WELL_ROOF_RAIN_DECAY_PER_DAY` — const — line 252
+- `WELL_ROOF_SIM_WINDOW_DAYS` — const — line 254
+- `WELL_ROOF_SNOW_DECAY_PER_DAY` — const — line 253
+- `WELL_SEPARATION` — const — line 415
+- `WELL_STAGE_CAPABILITY` — const — line 120
+- `WELL_STAGE_COST` — const — line 108
+- `WELL_STAGE_START_PROMPT` — const — line 438
+- `WELL_STAGE_WORK_HOURS` — const — line 71
+- `WELL_WORK_LABEL` — const — line 445
+- `WELL_WORK_SESSION_HOURS` — const — line 435
+- `WELL_WORK_SESSION_SEC` — const — line 426
+- `WellMaterialCost` — type — line 102
+- `WellPlacementReason` — type — line 402
+- `wellPromptLabel` — function — line 466
+- `wellRemainingWork` — function — line 214
+- `wellRoofProtectionFactor` — function — line 325
+- `WellStage` — type — line 29
+- `wellStageCapabilities` — function — line 133
+- `wellStageRequirements` — function — line 145
+- `wellStageWorkHours` — function — line 98
+- `wellWaterSource` — function — line 370
+- `WellWorkOutcome` — type — line 166
 
 ## `world/playerWellProp.ts`
 
@@ -930,35 +957,35 @@ Generated from exported TypeScript symbols.
 
 ## `world/sleepingUtilities.ts`
 
-- `BEDROLL_FOOTPRINT_RADIUS` — const — line 51
-- `BEDROLL_MATERIAL_REQUIREMENTS` — const — line 64
-- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 96
-- `BEDROLL_PLACE_DURATION_SEC` — const — line 54
-- `BEDROLL_PLACE_REACH` — const — line 53
-- `BEDROLL_PLACEMENT_MESSAGE` — const — line 71
-- `BEDROLL_REST_RADIUS` — const — line 90
-- `BEDROLL_SEPARATION` — const — line 52
-- `BedrollPlacementReason` — type — line 68
-- `BedrollRecord` — type — line 24
-- `findNearestSleepingUtility` — function — line 102
-- `PLATFORM_FOOTPRINT_RADIUS` — const — line 56
-- `PLATFORM_MATERIAL_REQUIREMENTS` — const — line 66
-- `PLATFORM_PLACE_DURATION_SEC` — const — line 59
-- `PLATFORM_PLACE_REACH` — const — line 58
-- `PLATFORM_PLACEMENT_MESSAGE` — const — line 79
-- `PLATFORM_SEPARATION` — const — line 57
-- `PlatformPlacementReason` — type — line 69
-- `PlatformRecord` — type — line 39
-- `resolveSleepingUtilityCondition` — function — line 189
-- `resolveWeatherDrivenCondition` — function — line 157
+- `BEDROLL_FOOTPRINT_RADIUS` — const — line 52
+- `BEDROLL_MATERIAL_REQUIREMENTS` — const — line 65
+- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 97
+- `BEDROLL_PLACE_DURATION_SEC` — const — line 55
+- `BEDROLL_PLACE_REACH` — const — line 54
+- `BEDROLL_PLACEMENT_MESSAGE` — const — line 72
+- `BEDROLL_REST_RADIUS` — const — line 91
+- `BEDROLL_SEPARATION` — const — line 53
+- `BedrollPlacementReason` — type — line 69
+- `BedrollRecord` — type — line 25
+- `findNearestSleepingUtility` — function — line 103
+- `PLATFORM_FOOTPRINT_RADIUS` — const — line 57
+- `PLATFORM_MATERIAL_REQUIREMENTS` — const — line 67
+- `PLATFORM_PLACE_DURATION_SEC` — const — line 60
+- `PLATFORM_PLACE_REACH` — const — line 59
+- `PLATFORM_PLACEMENT_MESSAGE` — const — line 80
+- `PLATFORM_SEPARATION` — const — line 58
+- `PlatformPlacementReason` — type — line 70
+- `PlatformRecord` — type — line 40
+- `resolveSleepingUtilityCondition` — function — line 196
+- `resolveWeatherDrivenCondition` — function — line 154
   - domain: items-player
-- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 122
-- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 132
-- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 138
-- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 133
-- `SleepingUtilityVariant` — type — line 22
+- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 123
+- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 129
+- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 135
+- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 130
+- `SleepingUtilityVariant` — type — line 23
   - domain: items-player
-- `WeatherDrivenConditionRates` — type — line 140
+- `WeatherDrivenConditionRates` — type — line 137
 
 ## `world/sleepingUtilityProp.ts`
 
@@ -1145,20 +1172,20 @@ Generated from exported TypeScript symbols.
 
 ## `world/WaterSource.ts`
 
-- `createWaterSource` — function — line 94
-- `DRINK_THIRST_RELIEF` — const — line 73
-- `UNCOVERED_WELL_CONSUMPTION_RISK` — const — line 57
-- `UNCOVERED_WELL_WARNING` — const — line 65
-- `UNDRINKABLE_WATER_WARNING` — const — line 84
-- `UNSAFE_WATER_WARNING` — const — line 79
+- `createWaterSource` — function — line 96
+- `DRINK_THIRST_RELIEF` — const — line 75
+- `UNCOVERED_WELL_CONSUMPTION_RISK` — const — line 59
+- `UNCOVERED_WELL_WARNING` — const — line 67
+- `UNDRINKABLE_WATER_WARNING` — const — line 86
+- `UNSAFE_WATER_WARNING` — const — line 81
 - `WaterBodyKind` — type — line 25
-- `WaterConsumptionRisk` — type — line 37
+- `WaterConsumptionRisk` — type — line 39
 - `WaterQuality` — type — line 18
   - domain: world
   - system: water-source
   - role: Shared well/lake/river/ocean drink/fill abstraction; future polluted/treated sources should reuse it.
-- `WaterSource` — type — line 45
-- `WELL_ROPE_REQUIRED_WARNING` — const — line 68
+- `WaterSource` — type — line 47
+- `WELL_ROPE_REQUIRED_WARNING` — const — line 70
 
 ## `world/weather.ts`
 

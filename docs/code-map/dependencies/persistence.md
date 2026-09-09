@@ -56,6 +56,7 @@ Generated from TypeScript imports.
 - `shared/temporaryConditions.ts`
 - `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
+- `world/condition.ts`
 - `world/cropLifecycle.ts`
 - `world/map/mapTypes.ts`
 - `world/palisade.ts`

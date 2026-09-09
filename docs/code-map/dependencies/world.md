@@ -22,6 +22,7 @@ Generated from TypeScript imports.
 - `shared/waterPoisoningExposure.ts`
 - `terrain/waterBodyKind.ts`
 - `world/WaterSource.test.ts`
+- `world/playerWell.test.ts`
 - `world/playerWell.ts`
 - `world/riverWaterQuality.ts`
 - `world/riverWaterQualityResolver.ts`
@@ -636,6 +637,22 @@ Generated from TypeScript imports.
 - `world/createPalisades.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+
+## `world/condition.test.ts`
+
+**Imports**
+
+- `world/condition.ts`
+
+## `world/condition.ts`
+
+**Imported by**
+
+- `items/createPlacedTents.ts`
+- `persistence/saveData.ts`
+- `world/condition.test.ts`
+- `world/playerWell.ts`
+- `world/sleepingUtilities.ts`
 
 ## `world/containerProp.ts`
 
@@ -1776,6 +1793,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `world/WaterSource.ts`
 - `world/playerWell.ts`
 - `world/wellGroundwater.ts`
 
@@ -1787,6 +1805,8 @@ Generated from TypeScript imports.
 - `items/itemCatalog.ts`
 - `items/tentPlacement.ts`
 - `world/WaterSource.ts`
+- `world/condition.ts`
+- `world/weather.ts`
 - `world/wellGroundwater.ts`
 
 **Imported by**
@@ -1995,6 +2015,7 @@ Generated from TypeScript imports.
 
 - `items/constructionMaterials.ts`
 - `items/tentPlacement.ts`
+- `world/condition.ts`
 - `world/weather.ts`
 
 **Imported by**
@@ -2245,6 +2266,7 @@ Generated from TypeScript imports.
 - `world/clouds.ts`
 - `world/groundFog.ts`
 - `world/playerGarden.ts`
+- `world/playerWell.ts`
 - `world/sleepingUtilities.ts`
 - `world/weather.test.ts`
 - `world/weatherParticles.ts`
