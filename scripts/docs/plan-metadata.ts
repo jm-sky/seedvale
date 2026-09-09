@@ -75,6 +75,10 @@ export type ValidatePlanHeaderOptions = {
   legacy?: boolean
 }
 
+const REPAIR_STATUS_MAP: Record<string, Status> = {
+  implemented: 'verification needed',
+}
+
 /** Header block is everything above the first `##` heading. */
 const extractHeaderBlock = (content: string): string => {
   const idx = content.search(/^##\s/m)
@@ -473,7 +477,8 @@ const processStatus = (ctx: RepairContext): void => {
     return
   }
 
-  const finalStatus = normalized ?? DEFAULT_STATUS
+  const mappedStatus = REPAIR_STATUS_MAP[raw ?? ''] ?? DEFAULT_STATUS
+  const finalStatus = mappedStatus ?? normalized ?? DEFAULT_STATUS
 
   if (!normalized) {
     ctx.warnings.push(`Status: unrecognized value "${raw ?? ''}" — defaulted to "planned"`)
