@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `world-021-world-structure-repair-work-foundation`                     | 2026-09-09 12:41:36 | —                   | `world`          | —          |
+| `quests-progression-006-settlement-rat-infestation`                    | 2026-09-09 12:30:04 | —                   | `quests-progression` | —          |
 | `world-020-world-structure-condition-and-degradation`                  | 2026-09-09 12:17:59 | —                   | `world`          | —          |
 | `settlements-006-merchant-sell-pricing-condition-and-social-standing`  | 2026-09-09 11:26:30 | —                   | `settlements`    | —          |
 | `items-player-018-camp-inspection-condition-and-full-camp-setup`       | 2026-09-09 10:58:37 | —                   | `items-player`   | —          |
