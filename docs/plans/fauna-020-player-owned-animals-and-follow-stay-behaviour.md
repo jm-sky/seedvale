@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** fauna-003
+**Depends on:** ~~fauna-003~~
 **Domain:** `fauna`
 **Subdomains:** `domestication` `behavior` `lifecycle`
 **Tags:** `ownership` `follow` `stay` `horse` `persistence`
