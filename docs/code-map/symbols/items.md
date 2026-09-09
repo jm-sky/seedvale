@@ -26,6 +26,33 @@ Generated from exported TypeScript symbols.
   - domain: items-player
 - `resolveCookingCapacity` — function — line 54
 
+## `items/campRepair.ts`
+
+- `applyCampRepairWork` — function — line 213
+  - domain: items-player
+- `BEDROLL_REPAIR_FULL_WORK_HOURS` — const — line 38
+- `beginCampRepair` — function — line 166
+  - domain: items-player
+- `CAMP_REPAIR_COST_FACTOR` — const — line 32
+- `CAMP_REPAIR_DURATION_CUT` — const — line 50
+- `CAMP_REPAIR_SESSION_HOURS` — const — line 43
+- `CAMP_REPAIR_SESSION_SEC` — const — line 44
+- `CAMP_REPAIR_XP_PER_WORK_HOUR` — const — line 47
+- `CampRepairableRecord` — type — line 200
+- `campRepairCapability` — function — line 237
+- `campRepairDurationScale` — function — line 243
+- `CampRepairQuote` — type — line 52
+- `CampRepairStartOutcome` — type — line 62
+- `CampRepairTargetKind` — type — line 28
+  - domain: items-player
+- `campRepairXp` — function — line 248
+- `hasActiveCampRepair` — function — line 232
+- `PLATFORM_REPAIR_FULL_WORK_HOURS` — const — line 39
+- `resolveCampRepairQuote` — function — line 139
+  - domain: items-player
+- `TENT_REPAIR_FULL_HIDE` — const — line 36
+- `TENT_REPAIR_FULL_WORK_HOURS` — const — line 37
+
 ## `items/constructionMaterials.ts`
 
 - `applyRecovery` — function — line 135
@@ -71,14 +98,15 @@ Generated from exported TypeScript symbols.
 
 ## `items/createPlacedTents.ts`
 
-- `createPlacedTents` — function — line 64
+- `createPlacedTents` — function — line 107
   - domain: items-player
-- `PlacedTent` — type — line 11
-- `PlacedTentEntry` — type — line 23
-- `PlacedTents` — type — line 25
-- `TENT_CONDITION_MAX` — const — line 41
-- `TENT_RAIN_DECAY_PER_DAY` — const — line 39
-- `TENT_SNOW_DECAY_PER_DAY` — const — line 40
+- `PlacedTent` — type — line 20
+- `PlacedTentEntry` — type — line 34
+- `PlacedTents` — type — line 41
+- `TENT_CONDITION_MAX` — const — line 73
+- `TENT_RAIN_DECAY_PER_DAY` — const — line 71
+- `TENT_SNOW_DECAY_PER_DAY` — const — line 72
+- `TentPackResult` — type — line 36
 
 ## `items/foodFreshness.ts`
 
@@ -172,21 +200,21 @@ Generated from exported TypeScript symbols.
 
 ## `items/Inventory.ts`
 
-- `DEFAULT_MAX_SIZE` — const — line 56
-- `EMPTY_INVENTORY_CONTENTS` — const — line 108
-- `Inventory` — class — line 127
+- `DEFAULT_MAX_SIZE` — const — line 59
+- `EMPTY_INVENTORY_CONTENTS` — const — line 114
+- `Inventory` — class — line 133
   - domain: items-player
   - system: inventory
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `InventoryContentsSnapshot` — type — line 102
-- `inventoryFromContents` — function — line 579
-- `inventoryFullToastText` — function — line 598
-- `ItemAmount` — type — line 61
-- `SaveItemInstance` — type — line 63
-- `snapshotInventoryContents` — function — line 569
-- `toSaveItemInstance` — function — line 79
+- `InventoryContentsSnapshot` — type — line 108
+- `inventoryFromContents` — function — line 594
+- `inventoryFullToastText` — function — line 613
+- `ItemAmount` — type — line 64
+- `SaveItemInstance` — type — line 66
+- `snapshotInventoryContents` — function — line 584
+- `toSaveItemInstance` — function — line 84
 
 ## `items/inventoryTransfer.ts`
 
@@ -204,32 +232,32 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1292
-- `BookTier` — type — line 131
-- `CAPABILITY_KINDS` — const — line 1323
-- `CAPABILITY_NEED_LABEL` — const — line 110
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1358
-- `ConsumableNeed` — type — line 122
-- `consumeNeedNoun` — function — line 221
-- `consumeVerbLabel` — function — line 212
+- `ARROW_DAMAGE_BONUS` — const — line 1305
+- `BookTier` — type — line 134
+- `CAPABILITY_KINDS` — const — line 1336
+- `CAPABILITY_NEED_LABEL` — const — line 112
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1371
+- `ConsumableNeed` — type — line 125
+- `consumeNeedNoun` — function — line 224
+- `consumeVerbLabel` — function — line 215
 - `DefenseConfig` — type — line 42
-- `hasItemCapability` — function — line 1348
-- `HOLDABLE_KINDS` — const — line 1314
-- `INJURY_TREATMENT_KINDS` — const — line 1380
-- `isMeleeToolKind` — function — line 1307
-- `isRangedTool` — function — line 1299
-- `ITEM_CATALOG` — const — line 235
+- `hasItemCapability` — function — line 1361
+- `HOLDABLE_KINDS` — const — line 1327
+- `INJURY_TREATMENT_KINDS` — const — line 1393
+- `isMeleeToolKind` — function — line 1320
+- `isRangedTool` — function — line 1312
+- `ITEM_CATALOG` — const — line 238
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1401
+- `ITEM_SYSTEM_ROADMAP` — const — line 1414
 - `ItemCapability` — type — line 89
-- `ItemCatalogEntry` — type — line 133
+- `ItemCatalogEntry` — type — line 136
 - `ItemSpawnKind` — type — line 14
-- `itemTreatsPhysicalInjury` — function — line 1393
+- `itemTreatsPhysicalInjury` — function — line 1406
 - `MeleeConfig` — type — line 25
-- `NON_ITEM_PROPS` — const — line 1407
+- `NON_ITEM_PROPS` — const — line 1420
 - `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`
@@ -239,15 +267,18 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemInstances.ts`
 
-- `clamp01` — function — line 141
-- `cloneItemInstance` — function — line 146
-- `createItemInstanceId` — function — line 117
-- `INSTANCE_BACKED_KINDS` — const — line 122
-- `isInstanceBackedKind` — function — line 129
+- `clamp01` — function — line 167
+- `clampCampCondition` — function — line 126
+- `cloneItemInstance` — function — line 172
+- `createItemInstanceId` — function — line 142
+- `createTentInstance` — function — line 131
+- `INSTANCE_BACKED_KINDS` — const — line 147
+- `isInstanceBackedKind` — function — line 155
 - `isLiquidContainerInstance` — function — line 110
 - `isLiquidContainerKind` — function — line 84
-- `isTrapItemInstance` — function — line 137
-- `isTrapKind` — function — line 133
+- `isTentItemInstance` — function — line 121
+- `isTrapItemInstance` — function — line 163
+- `isTrapKind` — function — line 159
 - `isWeaponItemInstance` — function — line 97
 - `isWeaponMaintenanceKind` — function — line 57
 - `ItemInstance` — type — line 4
@@ -256,6 +287,7 @@ Generated from exported TypeScript symbols.
 - `LiquidContainerItemInstance` — type — line 104
 - `LiquidContainerKind` — type — line 67
 - `LiquidContent` — type — line 62
+- `TentItemInstance` — type — line 116
 - `TrapItemInstance` — type — line 11
 - `TrapKind` — type — line 9
 - `WEAPON_MAINTENANCE_KIND_LIST` — const — line 39
@@ -271,22 +303,22 @@ Generated from exported TypeScript symbols.
 
 ## `items/items.ts`
 
-- `canCancelRestNow` — function — line 209
-- `canCancelRestProgress` — function — line 180
-- `createItemMesh` — function — line 1177
-- `hasItemCategory` — function — line 159
-- `hasItemKindCategory` — function — line 163
-- `ITEM_DEFS` — const — line 213
-- `ITEM_SIZE_UNITS` — const — line 132
-- `ItemCategory` — type — line 123
-- `ItemDef` — type — line 145
+- `canCancelRestNow` — function — line 210
+- `canCancelRestProgress` — function — line 181
+- `createItemMesh` — function — line 1187
+- `hasItemCategory` — function — line 160
+- `hasItemKindCategory` — function — line 164
+- `ITEM_DEFS` — const — line 214
+- `ITEM_SIZE_UNITS` — const — line 133
+- `ItemCategory` — type — line 124
+- `ItemDef` — type — line 146
 - `ItemKind` — type — line 6
-- `ItemSize` — type — line 128
-- `itemSizeUnits` — function — line 141
-- `primaryItemCategory` — function — line 170
-- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 178
-- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 190
-- `restCancelAllowedByStartVigor` — function — line 197
+- `ItemSize` — type — line 129
+- `itemSizeUnits` — function — line 142
+- `primaryItemCategory` — function — line 171
+- `REST_CANCEL_PROGRESS_THRESHOLD` — const — line 179
+- `REST_CANCEL_VIGOR_THRESHOLD` — const — line 191
+- `restCancelAllowedByStartVigor` — function — line 198
 
 ## `items/ItemSpawner.ts`
 
@@ -360,49 +392,49 @@ Generated from exported TypeScript symbols.
 
 ## `items/trade.ts`
 
-- `createAcquiredInstance` — function — line 137
-- `InstanceSellResult` — type — line 28
-- `OfferBuybackResolution` — type — line 32
-- `previewTransactionNetCoins` — function — line 269
-- `resolveOfferBuyback` — function — line 218
+- `createAcquiredInstance` — function — line 139
+- `InstanceSellResult` — type — line 30
+- `OfferBuybackResolution` — type — line 34
+- `previewTransactionNetCoins` — function — line 273
+- `resolveOfferBuyback` — function — line 222
   - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
-- `resolveOfferLineBuyback` — function — line 195
+- `resolveOfferLineBuyback` — function — line 199
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
-- `selectInstancesToSell` — function — line 153
-- `selectInstanceToPlace` — function — line 168
-- `sellInstancesForCoins` — function — line 312
-- `settleTransaction` — function — line 282
-- `TradeResult` — type — line 26
+- `selectInstancesToSell` — function — line 157
+- `selectInstanceToPlace` — function — line 172
+- `sellInstancesForCoins` — function — line 316
+- `settleTransaction` — function — line 286
+- `TradeResult` — type — line 28
 
 ## `items/tradeCatalog.ts`
 
-- `BASE_SELL_FACTOR` — const — line 179
+- `BASE_SELL_FACTOR` — const — line 181
   - domain: settlements — full-condition sell factor bounds (plan settlements-006).
-- `BROKEN_SELL_MULTIPLIER` — const — line 281
-- `canSell` — function — line 210
-- `fullConditionSellFactor` — function — line 243
+- `BROKEN_SELL_MULTIPLIER` — const — line 283
+- `canSell` — function — line 212
+- `fullConditionSellFactor` — function — line 245
   - domain: settlements — sell factor for a full-condition item before durability scaling.
-- `isMerchantStock` — function — line 194
-- `MAX_SELL_FACTOR` — const — line 181
+- `isMerchantStock` — function — line 196
+- `MAX_SELL_FACTOR` — const — line 183
 - `MERCHANT_PRICES` — const — line 13
-- `MERCHANT_STOCK` — const — line 86
-- `merchantPrice` — function — line 190
-- `MIN_SELL_FACTOR` — const — line 180
-- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 171
+- `MERCHANT_STOCK` — const — line 87
+- `merchantPrice` — function — line 192
+- `MIN_SELL_FACTOR` — const — line 182
+- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 173
   - domain: settlements — neutral social standing for merchant sell pricing.
-- `offerValue` — function — line 272
-- `relationshipEffect` — function — line 219
+- `offerValue` — function — line 274
+- `relationshipEffect` — function — line 221
   - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
-- `reputationEffect` — function — line 232
+- `reputationEffect` — function — line 234
   - domain: settlements — weighted reputation × renown amplification (percentage points).
-- `resolveInstanceSellPrice` — function — line 284
+- `resolveInstanceSellPrice` — function — line 286
   - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
-- `roundSellPrice` — function — line 252
+- `roundSellPrice` — function — line 254
   - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
-- `sellPrice` — function — line 262
+- `sellPrice` — function — line 264
   - domain: settlements — merchant buyback for a stackable kind at full condition.
-- `SellPriceContext` — type — line 183
-- `tradeValue` — function — line 199
+- `SellPriceContext` — type — line 185
+- `tradeValue` — function — line 201
 
 ## `items/trapItemInstances.ts`
 

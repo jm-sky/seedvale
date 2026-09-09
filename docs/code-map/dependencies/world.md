@@ -702,6 +702,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `items/campRepair.test.ts`
+- `items/campRepair.ts`
 - `items/createPlacedTents.ts`
 - `persistence/saveData.ts`
 - `world/condition.test.ts`
@@ -997,6 +999,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/campRepair.ts`
+- `items/constructionMaterials.ts`
+- `items/itemCatalog.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
 - `world/sleepingUtilities.ts`
@@ -1004,6 +1009,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/interactables.ts`
 - `app/worldBundle.ts`
 
 ## `world/createStandingTorches.ts`
@@ -1898,6 +1904,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/createApp.ts`
@@ -1959,9 +1966,13 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+- `items/campRepair.ts`
+- `items/createPlacedTents.ts`
 - `persistence/saveData.ts`
 - `world/playerWell.ts`
 - `world/repair.test.ts`
+- `world/sleepingUtilities.ts`
 
 ## `world/residentialBuilding.test.ts`
 
@@ -2161,15 +2172,18 @@ Generated from TypeScript imports.
 - `items/constructionMaterials.ts`
 - `items/tentPlacement.ts`
 - `world/condition.ts`
+- `world/repair.ts`
 - `world/weather.ts`
 
 **Imported by**
 
 - `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
 - `app/campRestSnapshot.ts`
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `items/campRepair.ts`
 - `items/createPlacedTents.test.ts`
 - `items/createPlacedTents.ts`
 - `persistence/saveData.ts`

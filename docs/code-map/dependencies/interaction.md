@@ -76,6 +76,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `interaction/Interactable.ts`
+- `items/campRepair.ts`
 - `items/items.ts`
 - `player/PlayerSkills.ts`
 - `world/animalTraps.ts`

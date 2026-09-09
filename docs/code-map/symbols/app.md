@@ -94,11 +94,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 108
-- `LodgingChoiceAction` — type — line 30
-- `REST_IN_TOWN_RADIUS` — const — line 38
-- `RestActionDeps` — type — line 96
-- `RestActions` — type — line 44
+- `createRestActions` — function — line 141
+- `LodgingChoiceAction` — type — line 59
+- `REST_IN_TOWN_RADIUS` — const — line 67
+- `RestActionDeps` — type — line 129
+- `RestActions` — type — line 73
 
 ## `app/actions/storageInfestationActions.ts`
 
@@ -187,13 +187,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 552
+- `createGameLoop` — function — line 557
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 520
-- `GameLoopDeps` — type — line 270
+- `GameLoop` — type — line 525
+- `GameLoopDeps` — type — line 271
 
 ## `app/graphicsSettings.ts`
 
@@ -203,18 +203,18 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 917
-- `buildDigTarget` — function — line 864
-- `buildInteractables` — function — line 318
-- `collectItem` — function — line 964
-- `COMBAT_TARGET_CONE_DOT` — const — line 86
-- `COMBAT_TARGET_RANGE` — const — line 71
-- `CombatAimMode` — type — line 76
-- `DIG_REACH` — const — line 65
-- `GAZE_RANGE` — const — line 61
-- `INTERACT_MIN_DOT` — const — line 58
-- `INTERACT_RANGE` — const — line 55
-- `resolveHaySpot` — function — line 254
+- `buildCombatTarget` — function — line 939
+- `buildDigTarget` — function — line 886
+- `buildInteractables` — function — line 319
+- `collectItem` — function — line 986
+- `COMBAT_TARGET_CONE_DOT` — const — line 87
+- `COMBAT_TARGET_RANGE` — const — line 72
+- `CombatAimMode` — type — line 77
+- `DIG_REACH` — const — line 66
+- `GAZE_RANGE` — const — line 62
+- `INTERACT_MIN_DOT` — const — line 59
+- `INTERACT_RANGE` — const — line 56
+- `resolveHaySpot` — function — line 255
 
 ## `app/inventoryWiring.ts`
 

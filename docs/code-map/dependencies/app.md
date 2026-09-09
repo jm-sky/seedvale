@@ -138,6 +138,7 @@ Generated from TypeScript imports.
 - `app/busyAction.ts`
 - `app/worldBundle.ts`
 - `items/Inventory.ts`
+- `items/itemInstances.ts`
 - `player/PlayerController.ts`
 - `settlement/VillageFire.ts`
 - `world/dayNight.ts`
@@ -360,12 +361,18 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
+- `app/campRest.ts`
 - `app/campRestSnapshot.ts`
 - `items/Inventory.ts`
+- `items/campRepair.ts`
+- `items/constructionMaterials.ts`
+- `items/itemCatalog.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
 - `items/tentProp.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
+- `player/skillEvaluation.ts`
 - `settlement/createSettlement.ts`
 - `settlement/lodging.ts`
 - `settlement/lodgingResolver.ts`
@@ -373,7 +380,10 @@ Generated from TypeScript imports.
 - `ui/createBusyOverlay.ts`
 - `ui/createQuickActions.ts`
 - `ui/createTimeSkipOverlay.ts`
+- `world/playerWell.ts`
+- `world/repair.ts`
 - `world/residentialBuilding.ts`
+- `world/sleepingUtilities.ts`
 
 **Imported by**
 
@@ -550,6 +560,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/restActions.ts`
 - `app/campRest.test.ts`
 - `app/campRestSnapshot.test.ts`
 - `app/campRestSnapshot.ts`
@@ -764,6 +775,7 @@ Generated from TypeScript imports.
 - `interaction/treeInspection.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
+- `items/campRepair.ts`
 - `items/itemCatalog.ts`
 - `items/itemInstances.ts`
 - `items/items.ts`
@@ -885,6 +897,7 @@ Generated from TypeScript imports.
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
 - `world/createResidentialBuildings.ts`
+- `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/cropLifecycle.ts`

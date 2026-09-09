@@ -154,6 +154,7 @@ Generated from TypeScript imports.
 - `app/actions/terrainPreparationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `items/campRepair.ts`
 - `items/sensibleFood.test.ts`
 - `items/sensibleFood.ts`
 - `player/PlayerController.ts`
@@ -413,6 +414,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/restActions.ts`
 - `player/skillEvaluation.test.ts`
 
 ## `player/targetedSkillSelection.test.ts`

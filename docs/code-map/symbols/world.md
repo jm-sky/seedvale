@@ -415,11 +415,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/createSleepingUtilities.ts`
 
-- `BedrollEntry` — type — line 12
-- `createSleepingUtilities` — function — line 52
+- `BedrollEntry` — type — line 20
+- `createSleepingUtilities` — function — line 85
   - domain: items-player
-- `PlatformEntry` — type — line 13
-- `SleepingUtilities` — type — line 15
+- `PlatformEntry` — type — line 21
+- `SleepingUtilities` — type — line 36
 
 ## `world/createStandingTorches.ts`
 
@@ -1044,35 +1044,35 @@ Generated from exported TypeScript symbols.
 
 ## `world/sleepingUtilities.ts`
 
-- `BEDROLL_FOOTPRINT_RADIUS` — const — line 52
-- `BEDROLL_MATERIAL_REQUIREMENTS` — const — line 65
-- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 97
-- `BEDROLL_PLACE_DURATION_SEC` — const — line 55
-- `BEDROLL_PLACE_REACH` — const — line 54
-- `BEDROLL_PLACEMENT_MESSAGE` — const — line 72
-- `BEDROLL_REST_RADIUS` — const — line 91
-- `BEDROLL_SEPARATION` — const — line 53
-- `BedrollPlacementReason` — type — line 69
-- `BedrollRecord` — type — line 25
-- `findNearestSleepingUtility` — function — line 103
-- `PLATFORM_FOOTPRINT_RADIUS` — const — line 57
-- `PLATFORM_MATERIAL_REQUIREMENTS` — const — line 67
-- `PLATFORM_PLACE_DURATION_SEC` — const — line 60
-- `PLATFORM_PLACE_REACH` — const — line 59
-- `PLATFORM_PLACEMENT_MESSAGE` — const — line 80
-- `PLATFORM_SEPARATION` — const — line 58
-- `PlatformPlacementReason` — type — line 70
-- `PlatformRecord` — type — line 40
-- `resolveSleepingUtilityCondition` — function — line 196
-- `resolveWeatherDrivenCondition` — function — line 154
+- `BEDROLL_FOOTPRINT_RADIUS` — const — line 55
+- `BEDROLL_MATERIAL_REQUIREMENTS` — const — line 68
+- `BEDROLL_ON_PLATFORM_RADIUS` — const — line 100
+- `BEDROLL_PLACE_DURATION_SEC` — const — line 58
+- `BEDROLL_PLACE_REACH` — const — line 57
+- `BEDROLL_PLACEMENT_MESSAGE` — const — line 75
+- `BEDROLL_REST_RADIUS` — const — line 94
+- `BEDROLL_SEPARATION` — const — line 56
+- `BedrollPlacementReason` — type — line 72
+- `BedrollRecord` — type — line 26
+- `findNearestSleepingUtility` — function — line 106
+- `PLATFORM_FOOTPRINT_RADIUS` — const — line 60
+- `PLATFORM_MATERIAL_REQUIREMENTS` — const — line 70
+- `PLATFORM_PLACE_DURATION_SEC` — const — line 63
+- `PLATFORM_PLACE_REACH` — const — line 62
+- `PLATFORM_PLACEMENT_MESSAGE` — const — line 83
+- `PLATFORM_SEPARATION` — const — line 61
+- `PlatformPlacementReason` — type — line 73
+- `PlatformRecord` — type — line 41
+- `resolveSleepingUtilityCondition` — function — line 199
+- `resolveWeatherDrivenCondition` — function — line 157
   - domain: items-player
-- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 123
-- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 129
-- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 135
-- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 130
-- `SleepingUtilityVariant` — type — line 23
+- `SLEEPING_UTILITY_CONDITION_MAX` — const — line 126
+- `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 132
+- `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 138
+- `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 133
+- `SleepingUtilityVariant` — type — line 24
   - domain: items-player
-- `WeatherDrivenConditionRates` — type — line 137
+- `WeatherDrivenConditionRates` — type — line 140
 
 ## `world/sleepingUtilityProp.ts`
 

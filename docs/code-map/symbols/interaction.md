@@ -15,19 +15,17 @@ Generated from exported TypeScript symbols.
 
 - `formatSettlementStorageLines` — function — line 52
 - `InteractionOutcome` — type — line 13
-- `resolveInteraction` — function — line 107
+- `resolveInteraction` — function — line 109
 
 ## `interaction/targetedSkillAction.ts`
 
-- `executeTargetedSkillAction` — function — line 88
-- `queryTargetedSkillAction` — function — line 67
-- `TargetedSkillAction` — type — line 27
-  - domain: items-player
-  - system: interaction
-- `TargetedSkillActionId` — type — line 17
-- `TargetedSkillExecuteResult` — type — line 35
-- `targetedSkillPrompt` — function — line 105
-- `TargetedSkillQueryContext` — type — line 13
+- `executeTargetedSkillAction` — function — line 113
+- `queryTargetedSkillAction` — function — line 76
+- `TargetedSkillAction` — type — line 22
+- `TargetedSkillActionId` — type — line 20
+- `TargetedSkillExecuteResult` — type — line 30
+- `targetedSkillPrompt` — function — line 138
+- `TargetedSkillQueryContext` — type — line 14
   - domain: items-player
   - system: interaction
 

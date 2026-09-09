@@ -199,6 +199,34 @@ Generated from TypeScript imports.
 
 - `app/restCampSequence.ts`
 
+## `items/campRepair.test.ts`
+
+**Imports**
+
+- `items/campRepair.ts`
+- `world/condition.ts`
+
+## `items/campRepair.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `items/itemCatalog.ts`
+- `items/items.ts`
+- `player/PlayerNeeds.ts`
+- `world/condition.ts`
+- `world/repair.ts`
+- `world/sleepingUtilities.ts`
+
+**Imported by**
+
+- `app/actions/restActions.ts`
+- `app/gameLoop.ts`
+- `interaction/targetedSkillAction.ts`
+- `items/campRepair.test.ts`
+- `items/createPlacedTents.ts`
+- `world/createSleepingUtilities.ts`
+
 ## `items/campfireCooking.test.ts`
 
 **Imports**
@@ -254,8 +282,12 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+- `items/campRepair.ts`
 - `items/constructionMaterials.test.ts`
+- `items/createPlacedTents.ts`
 - `world/createPlayerWells.ts`
+- `world/createSleepingUtilities.ts`
 - `world/palisade.test.ts`
 - `world/palisade.ts`
 - `world/playerWell.ts`
@@ -356,10 +388,14 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/campRepair.ts`
+- `items/constructionMaterials.ts`
+- `items/itemCatalog.ts`
 - `items/tentProp.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
 - `world/condition.ts`
+- `world/repair.ts`
 - `world/sleepingUtilities.ts`
 
 **Imported by**
@@ -568,6 +604,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContracts.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -586,7 +623,9 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/books.test.ts`
 - `items/books.ts`
+- `items/campRepair.ts`
 - `items/coin.test.ts`
+- `items/createPlacedTents.ts`
 - `items/foodFreshness.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/itemCapabilities.test.ts`
@@ -604,6 +643,7 @@ Generated from TypeScript imports.
 - `player/playerRanged.ts`
 - `ui-vue/composables/useMerchantTradeState.ts`
 - `ui-vue/playerQuickActions.ts`
+- `world/createSleepingUtilities.ts`
 - `world/foodSources.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
@@ -650,8 +690,10 @@ Generated from TypeScript imports.
 
 - `ai/npcLoadout.ts`
 - `ai/npcProfessionWork.ts`
+- `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
@@ -667,6 +709,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/liquidContainer.ts`
 - `items/primaryWeapons.ts`
+- `items/trade.test.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
 - `items/trapInstanceTrade.test.ts`
@@ -743,6 +786,7 @@ Generated from TypeScript imports.
 - `items/books.test.ts`
 - `items/books.ts`
 - `items/campBlanketProp.ts`
+- `items/campRepair.ts`
 - `items/campfireCooking.ts`
 - `items/coin.test.ts`
 - `items/constructionMaterials.test.ts`
@@ -966,6 +1010,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `items/Inventory.ts`
+- `items/itemInstances.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
 - `items/trapItemInstances.ts`
