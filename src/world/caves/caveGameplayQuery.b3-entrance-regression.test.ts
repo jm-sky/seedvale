@@ -11,6 +11,9 @@ import type { CaveTopology } from './caveTopology'
 import { createBenchmarkWorldConfig } from '../../config/worldConfig'
 import { measureSlope } from '../../fauna/createFauna'
 import {
+  CAMERA_DISTANCE_DEFAULT,
+} from '../../input/MouseLook'
+import {
   CAMERA_GROUND_CLEARANCE,
   resolveCameraBoom,
 } from '../../player/cameraBoom'
@@ -340,8 +343,65 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
       expect(occupancyContains(czarny.index, x, standingY, z)).toBe(true)
       if (along < -0.5) {
         expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, x, standingY, z)).toBe(true)
+        expect(hit!.openSky, `interior along=${along} must not be tagged openSky`).toBeFalsy()
+        expect(hit!.ceilingY - PLAYER_HEIGHT).toBeGreaterThan(hit!.floorY)
       }
     }
+  })
+
+  it('Czarny Kamień: descending passage 3.5–12 m has no surface ownership or floor holes', () => {
+    let prevFloor: number | null = null
+    let prevCeiling: number | null = null
+    for (let along = -3.5; along >= -12; along -= 0.25) {
+      const { x, z } = xzAt(czarny, along)
+      const surfaceY = czarny.surfaceHeightAt(x, z)
+      const intervals = columnIntervalsAt(czarny.index, x, z)
+      expect(intervals.length, `along=${along} stacked`).toBe(1)
+      const floor = intervals[0]!.floorY
+      const ceiling = intervals[0]!.ceilingY
+      expect(floor).toBeLessThan(surfaceY - 1)
+      if (prevFloor !== null) {
+        expect(Math.abs(floor - prevFloor), `along=${along} floor delta`).toBeLessThan(0.45)
+      }
+      if (prevCeiling !== null) {
+        expect(Math.abs(ceiling - prevCeiling), `along=${along} ceiling delta`).toBeLessThan(0.6)
+      }
+      prevFloor = floor
+      prevCeiling = ceiling
+      const standingY = floor + 1.1
+      const hit = queryColumnIndex(czarny.index, x, standingY, z)
+      expect(hit).not.toBeNull()
+      expect(hit!.openSky).toBeFalsy()
+      expect(occupancyContains(czarny.index, x, standingY, z)).toBe(true)
+      expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, x, standingY, z)).toBe(true)
+      expect(hit!.ceilingY - PLAYER_HEIGHT).toBeGreaterThan(hit!.floorY)
+    }
+  })
+
+  it('Czarny Kamień: boom from 5 m inside toward the mouth stays in occupancy', () => {
+    const { x, z } = xzAt(czarny, -5)
+    const intervals = columnIntervalsAt(czarny.index, x, z)
+    const floorY = intervals[0]!.floorY
+    const originY = floorY + 1.1
+    const out = openingDirection(czarny.topology.entrance.yaw)
+    const result = resolveCameraBoom({
+      originX: x,
+      originY,
+      originZ: z,
+      camX: x + out.dx * CAMERA_DISTANCE_DEFAULT,
+      camY: originY + 1,
+      camZ: z + out.dz * CAMERA_DISTANCE_DEFAULT,
+      sampleHeight: czarny.surfaceHeightAt,
+      colliders: [],
+      occupancyAt: (qx, qy, qz) => occupancyIntervalAt(czarny.index, qx, qy, qz),
+    })
+    const camAlong = mouthAlong(result.x, result.z, czarny.topology.entrance)
+    const camSurface = czarny.surfaceHeightAt(result.x, result.z)
+    const camOcc = occupancyIntervalAt(czarny.index, result.x, result.y, result.z)
+    expect(camOcc).not.toBeNull()
+    expect(camOcc!.openSky).toBeFalsy()
+    expect(camAlong).toBeLessThan(0.2)
+    expect(result.y).toBeLessThan(camSurface - 0.5)
   })
 
   it('Czarny Kamień: stable interior is cave ground + interior occupancy', () => {
@@ -401,5 +461,29 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
     )
     expect(clippedAgain.indices.length).toBeGreaterThan(0)
     expect(clippedAgain.indices.length).toBeLessThan(unclipped.geometry.getIndex()!.count)
+  })
+
+  it('doorway leftover: dual-disc carve crater extends past the mesh aperture (not a closed visual contract)', () => {
+    const { entrance } = czarny.topology
+    let maxCarveAlong = 0
+    for (let along = 0; along <= 6.5; along += 0.2) {
+      const { x, z } = xzAt(czarny, along)
+      if (mouthCarveDepth(x, z, entrance) > 0.2) maxCarveAlong = along
+    }
+    const builtMesh = buildSdfCaveMesh(czarny.topology, undefined, czarny.surfaceHeightAt, czarny.sdf)
+    const pos = builtMesh.geometry.getAttribute('position')!
+    const idx = builtMesh.geometry.getIndex()!
+    let maxMeshAlong = -Infinity
+    for (let i = 0; i + 2 < idx.count; i += 3) {
+      const a = idx.array[i]!
+      const b = idx.array[i + 1]!
+      const c = idx.array[i + 2]!
+      const cx = (pos.array[a * 3]! + pos.array[b * 3]! + pos.array[c * 3]!) / 3
+      const cz = (pos.array[a * 3 + 2]! + pos.array[b * 3 + 2]! + pos.array[c * 3 + 2]!) / 3
+      maxMeshAlong = Math.max(maxMeshAlong, mouthAlong(cx, cz, entrance))
+    }
+    expect(maxCarveAlong).toBeGreaterThan(4)
+    expect(maxMeshAlong).toBeLessThan(1)
+    expect(maxCarveAlong - maxMeshAlong).toBeGreaterThan(3.5)
   })
 })

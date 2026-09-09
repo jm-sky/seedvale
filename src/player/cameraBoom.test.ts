@@ -220,7 +220,7 @@ describe('resolveCameraBoom', () => {
       if (Math.abs(x) > 1.5) return null
       if (z < 0 || z > 4) return null
       if (y < floorY || y > surfaceY - 0.05) return null
-      return { floorY, ceilingY: surfaceY - 0.05 }
+      return { floorY, ceilingY: surfaceY - 0.05, openSky: true }
     }
     const result = resolveCameraBoom({
       originX: 0,
@@ -237,6 +237,31 @@ describe('resolveCameraBoom', () => {
     const minT = Math.min(CAMERA_BOOM_MIN_DISTANCE / dist, 0.5)
     expect(result.t).toBeGreaterThan(minT + 0.05)
     expect(result.z).toBeGreaterThan(4)
+  })
+
+  it('interior origin does not treat a hillside air miss as a mouth exit', () => {
+    const caveFloorY = 4
+    const caveCeilingY = 8
+    const surfaceY = 10
+    const occupancyAt = (_x: number, y: number, z: number) => {
+      if (z > 6) return null
+      if (y < caveFloorY || y > caveCeilingY) return null
+      return { floorY: caveFloorY, ceilingY: caveCeilingY }
+    }
+    const result = resolveCameraBoom({
+      originX: 0,
+      originY: caveFloorY + 1.1,
+      originZ: 0,
+      camX: 0,
+      camY: caveFloorY + 2,
+      camZ: 12,
+      sampleHeight: () => surfaceY,
+      colliders: [],
+      occupancyAt,
+    })
+    expect(occupancyAt(result.x, result.y, result.z)).not.toBeNull()
+    expect(result.z).toBeLessThanOrEqual(6)
+    expect(result.y).toBeLessThan(surfaceY)
   })
 })
 

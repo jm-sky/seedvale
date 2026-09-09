@@ -18,6 +18,7 @@ import {
   isCaveInteriorAt,
   lowestCeilingAt,
   lowestFloorAt,
+  occupancyContains,
   occupancyIntervalAt,
   queryColumnIndex,
 } from './caves/caveSdfQuery'
@@ -69,6 +70,8 @@ export type Caves = {
    * Approach/mouth portal occupancy is not interior.
    */
   queryInterior: (x: number, y: number, z: number) => boolean
+  /** Strict occupancy at `(x, y, z)`. Not hysteretic `queryGround` — torch
+   *  / audio callers must not mutate the player's floor hysteresis. */
   contains: (x: number, y: number, z: number) => boolean
   /** Transitional Y-blind lowest-interval accessors. Player ground uses
    *  `queryGround` — do not route `CaveGroundQuery` through these. */
@@ -317,7 +320,10 @@ export function createCaves(
       return interiorConfirmed
     },
     contains(x, y, z) {
-      return queryGround(x, y, z) !== null
+      for (const runtime of runtimes) {
+        if (occupancyContains(runtime.index, x, y, z)) return true
+      }
+      return false
     },
     sampleFloor(x, z) {
       let lowest: number | null = null

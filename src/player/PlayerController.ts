@@ -199,7 +199,7 @@ export type CaveOccupancyQuery = (
   x: number,
   y: number,
   z: number,
-) => { floorY: number, ceilingY: number } | null
+) => { floorY: number, ceilingY: number, openSky?: boolean } | null
 
 /**
  * @domain items-player

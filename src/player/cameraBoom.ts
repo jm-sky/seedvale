@@ -37,7 +37,7 @@ export type CameraBoomInput = {
    *  origin is in cave void, the march pulls in at the first underground
    *  non-void sample (wall / ceiling / overburden) instead of relying on
    *  cave collider beads passing `CAMERA_OCCLUDER_MIN_RADIUS`. */
-  occupancyAt?: (x: number, y: number, z: number) => { floorY: number, ceilingY: number } | null
+  occupancyAt?: (x: number, y: number, z: number) => { floorY: number, ceilingY: number, openSky?: boolean } | null
 }
 
 export type CameraBoomResult = {
@@ -69,7 +69,7 @@ export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   const originInCave = originOccupancy !== null
 
   if (originInCave) {
-    const occupancyMarch = marchCaveOccupancy(input, dx, dy, dz)
+    const occupancyMarch = marchCaveOccupancy(input, dx, dy, dz, originOccupancy)
     if (occupancyMarch.kind === 'solid' && occupancyMarch.t < hitT) hitT = occupancyMarch.t
     else if (occupancyMarch.kind === 'exit') {
       const terrainHit = firstTerrainHitFromT(input, dx, dy, dz, occupancyMarch.t)
@@ -172,16 +172,19 @@ type OccupancyMarch =
   | { kind: 'void' }
 
 /** Underground non-void is a wall/ceiling/overburden hit. Leaving occupancy
- *  at or above the heightfield is a mouth exit — remaining boom uses the
- *  surface heightfield. */
+ *  at or above the heightfield is a mouth look-out only when the boom
+ *  *origin* is already in the open-sky portal. Interior origin (walking in)
+ *  must not park the 12 m boom on the hillside. */
 function marchCaveOccupancy(
   input: CameraBoomInput,
   dx: number,
   dy: number,
   dz: number,
+  originOcc: { floorY: number, ceilingY: number, openSky?: boolean } | null,
 ): OccupancyMarch {
   const occupancyAt = input.occupancyAt
   if (!occupancyAt) return { kind: 'void' }
+  const originOpenSky = Boolean(originOcc?.openSky)
   let previousT = 0
   for (let i = 1; i <= TERRAIN_STEPS; i++) {
     const t = i / TERRAIN_STEPS
@@ -193,13 +196,22 @@ function marchCaveOccupancy(
       continue
     }
     const groundY = input.sampleHeight(x, z)
-    if (y >= groundY - 0.05) return { kind: 'exit', t: previousT }
+    if (y >= groundY - 0.05) {
+      if (originOpenSky) return { kind: 'exit', t: previousT }
+      return { kind: 'solid', t: previousT }
+    }
     const prevX = input.originX + dx * previousT
     const prevY = input.originY + dy * previousT
     const prevZ = input.originZ + dz * previousT
     const prevOcc = occupancyAt(prevX, prevY, prevZ)
     const prevGround = input.sampleHeight(prevX, prevZ)
-    if (prevOcc && prevOcc.ceilingY >= prevGround - 0.3) {
+    // Interior SDF clipped to the heightfield is still cave void. The
+    // ceiling≈surface heuristic is only a mouth look-out from the portal.
+    if (
+      originOpenSky
+      && prevOcc?.openSky
+      && prevOcc.ceilingY >= prevGround - 0.3
+    ) {
       return { kind: 'exit', t: previousT }
     }
     return { kind: 'solid', t: previousT }

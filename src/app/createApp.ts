@@ -742,9 +742,8 @@ export async function createApp(
     onChange: () => syncHeldHud(),
     onIgnite: () => playActionFireIgnite(worldAudio.playAt, player.mesh.position),
     onExtinguish: () => playActionFireExtinguish(worldAudio.playAt, player.mesh.position),
-    // Same reused cave query as `caveGroundQuery` above (world-terrain-008
-    // B2) — brightens only this torch. `contains` is Y-aware over the SDF
-    // column index, including mouth-portal + underground-miss hysteresis.
+    // Strict occupancy — not hysteretic `queryGround`. Torch must not
+    // mutate ground hysteresis by sharing `contains` with the player floor.
     isInCave: () => bundle.caves.contains(
       player.mesh.position.x,
       player.mesh.position.y,

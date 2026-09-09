@@ -1397,8 +1397,8 @@ Do not put `CaveVolume` back on the player ground path.
 # Milestone B3 — Entrance regression (2026-09-09)
 
 Manual playtest on seed `1136726869` (Grota Czarnego Kamienia, Grota Mroczna)
-showed a B3 entrance-ownership bug, not a new milestone. B3 remains complete
-after this fix. Do not start B4 on the back of it.
+showed a B3 entrance-ownership bug, not a new milestone. Do not start B4
+on the back of it. Manual verification is still required; B3 is not closed.
 
 ## Root cause
 
@@ -1554,5 +1554,150 @@ hillside doorway remains a leftover — not a third ownership workaround.
   the recess into a vertical hillside door. That remains the sculpted
   doorway loose end — do not shrink carve radii as a third workaround.
 - B4 / B5 unchanged.
+
+---
+
+# Milestone B3 — Entrance regression, third pass (2026-09-09)
+
+Manual playtest of `ef420657` on seed `1136726869` (Grota Czarnego Kamienia)
+was clearly better (ambience, enterable mouth, no immediate burial) but
+**B3 is not closed**. Player still snaps to the surface ~5 m past the
+entrance where the tunnel starts descending. Outside, there is still no
+real hole in the grass. Inside, a sky gap remains between shell and
+terrain.
+
+Do **not** mark B3 complete from automated tests. Manual verification is
+still required.
+
+## Descending-path diagnostic (Czarny Kamień, along 0 → −12 m @ 0.25 m)
+
+Column index on the production path is **continuous**. No empty/split
+intervals on the |lat|<0.6 walking strip. The only large floor jump is
+mouth portal → SDF at along 0.00 → −0.40 (`7.15 → 6.20`, Δ −0.95 m).
+From along −3.5 to −12, adjacent 0.25 m floor deltas stay under 0.45 m.
+`queryGround` never selects the surface. `queryInterior` stays true after
+the mouth. Invalid `ceilingY − playerHeight < floorY` does not appear on
+this path once `openSky` is portal-only.
+
+Nearest-column 0.4 m lookup is not the 5 m miss. Mouth-wall 4-neighbor
+mismatches exist at along 0 to −2.25 (off-axis), not on the descending
+axis at 5 m.
+
+`FLOOR_GRACE`, hysteresis distance, and snap tolerances were **not**
+raised. There was no missing column to paper over.
+
+## ROOT CAUSE — DESCENDING SNAP
+
+```text
+ROOT CAUSE — DESCENDING SNAP
+
+First failing sample:
+  seed=1136726869  cave:0e3cce97  Grota Czarnego Kamienia
+  along ≈ −5 m (opening +X, tunnel −X)
+  player still on cave ground (queryGround cave, occupancy true)
+  CAMERA_DISTANCE_DEFAULT = 12 m, boom toward the mouth
+
+Evidence:
+  Interior SDF columns along −0.5 … −3.0 were tagged openSky because
+  scanSdfIntervals clipped the ceiling to surface−0.05 (heightfield
+  roof bound, not a portal). Example: along=−0.50 ivl=[5.86..9.97 sky].
+  openSky ended at along=−3.25; topology transition is along=−3.75
+  (floor 4.57) — this is already SDF passage, not mouth-portal end.
+
+  Walking in, the 12 m boom hits the rising floor / surface-clipped
+  interior of the shallower section. Occupancy miss, y still below the
+  hillside. marchCaveOccupancy treated prevOcc.ceilingY ≈ surface as a
+  mouth exit (any openSky/surface-clip interval). Remaining boom then
+  followed the heightfield → camera sat on the grass. Third-person view
+  reads as the player popping to the surface even though queryGround
+  never handed them the meadow.
+
+  A second exit path (occupancy miss with y ≥ ground) did the same when
+  the boom cleared the portal into outdoor air from an *interior* origin.
+
+Affected contract:
+  occupancyAt.openSky meaning (portal only)
+  camera boom mouth-exit vs solid overburden
+  Caves.contains must not share hysteretic queryGround
+```
+
+This is a local query/camera contract bug, not a column-index
+representation failure. No neighbor-aware lookup and no FLOOR_GRACE bump.
+
+## Fix
+
+- SDF intervals clipped to the heightfield are **not** `openSky`. Only
+  the mouth/approach portal interval is.
+- `marchCaveOccupancy` takes a mouth look-out (`exit` → remaining boom on
+  the heightfield) only when the boom **origin** is already in that
+  portal. Interior origin: occupancy miss is `solid` (camera stays in
+  cave void).
+- `Caves.contains` is strict `occupancyContains` (torch). It no longer
+  calls hysteretic `queryGround`.
+
+## Doorway seam — STOP (dual-disc bowl)
+
+Same coordinate space, Grota Czarnego Kamienia:
+
+```text
+terrain carve crater   along outward to ~5.4 m  (approach r=3.2 + offset 2.2)
+mesh after aperture    maxAlong ≈ 0.70 m (hood); aperture strip along ≲ 0.04
+entrance roof          −0.20 m (ellipsoid through terrain)
+```
+
+Dual-disc bowl + vertical aperture clip cannot make a hillside doorway:
+
+- Outside: hood + surface-flush clip + grass hide any real hole.
+- Inside: SDF rim at the mouth plane vs 5.4 m carve crater → sky gap /
+  exposed underside.
+
+This is not a local carve/aperture/clip mismatch that a third geometry
+hack can close. **No further doorway workaround in this B3 slice.**
+
+Minimal correct doorway contract (not implemented here):
+
+```text
+mouth-plane rectangular heightfield cut = entrance.width × entrance.height
+SDF clip at the same plane
+shell meets the cut
+no approach bowl
+```
+
+Fog / darkness / torch / oversized portal must not mask this.
+
+## Cave size / overburden (not changed)
+
+Do not increase route length. Prefer growing **down**. Measured L1 on
+this seed (Czarny Kamień):
+
+| station | along | w × h | roof (surface−ceiling) |
+|---|---|---|---|
+| entrance | 0 | 3.00 × 2.60 | −0.20 (pokes through) |
+| transition | −3.75 | 4.45 × 4.75 | **1.11** (bottleneck) |
+| passage | −11.37 | 4.30 × 4.76 | 3.34 |
+| widening | −16.34 | 5.37 × 5.52 | — |
+| chamber | −21.88 | 9.58 × 10.96 | 2.55 |
+
+`MIN_OVERBURDEN=1.4`, `MAX_TOTAL_DROP=12`. Chamber floor is already
+~11 m below the mouth.
+
+Wanted (orientative): passage 4–5 × 5–6, widening 5.5–6.5 × 6–7,
+chamber 10–11 × 10–12. Passage width is already in range; height is ~1 m
+short. Transition roof 1.11 m **forbids raising the ceiling**. Chamber
+is already near the drop cap.
+
+Safe modest gain: a little extra **width** on passage/widening, and
+chamber height only by dropping the floor if `MAX_TOTAL_DROP` is raised
+with a per-station overburden check. Do **not** raise ceilings toward
+the surface. Skip any size bump until the doorway contract exists —
+bigger void against the same bowl would worsen the sky gap.
+
+## Remaining B3 leftovers
+
+- Hillside doorway / terrain hole / interior sky seam (needs the
+  doorway contract above, not another clip tweak).
+- Manual verification of the descending-snap camera fix on this seed.
+- Cave size increase (blocked on overburden + doorway).
+- B4 streaming/workers/performance, B5 cleanup: untouched.
 
 

@@ -136,7 +136,7 @@ function scanSdfIntervals(
       const floorY = runStart
       const ceilingY = refineZeroCrossing(sampleY, prevY, yClamped, false)
       if (ceilingY - floorY >= MIN_INTERVAL_HEIGHT) {
-        out.push(taggedInterval(floorY, ceilingY, surfaceY))
+        out.push({ floorY, ceilingY })
       }
     }
     prevY = yClamped
@@ -146,15 +146,13 @@ function scanSdfIntervals(
     const floorY = runStart
     const ceilingY = top
     if (ceilingY - floorY >= MIN_INTERVAL_HEIGHT) {
-      out.push(taggedInterval(floorY, ceilingY, surfaceY))
+      // Heightfield clip is a roof bound, not an open-sky portal. Tagging
+      // these intervals `openSky` made the 12 m camera boom treat interior
+      // overburden as a mouth exit (~5 m into Grota Czarnego Kamienia).
+      out.push({ floorY, ceilingY })
     }
   }
   return out
-}
-
-function taggedInterval(floorY: number, ceilingY: number, surfaceY: number): CaveVerticalInterval {
-  const openSky = ceilingY >= surfaceY - SURFACE_CLIP_EPS - 1e-6
-  return openSky ? { floorY, ceilingY, openSky: true } : { floorY, ceilingY }
 }
 
 function portalInterval(x: number, z: number, entrance: CaveEntrance, surfaceY: number): CaveVerticalInterval | null {
