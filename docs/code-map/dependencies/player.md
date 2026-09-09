@@ -45,6 +45,8 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/groundActions.test.ts`
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`

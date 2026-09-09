@@ -84,6 +84,8 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
@@ -250,6 +252,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
 - `items/constructionMaterials.test.ts`
 - `world/palisade.test.ts`
@@ -340,6 +343,13 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `items/createPlacedTents.test.ts`
+
+**Imports**
+
+- `items/createPlacedTents.ts`
+- `world/sleepingUtilities.ts`
+
 ## `items/createPlacedTents.ts`
 
 **Imports**
@@ -347,11 +357,14 @@ Generated from TypeScript imports.
 - `items/tentProp.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
+- `world/sleepingUtilities.ts`
 
 **Imported by**
 
+- `app/campRestSnapshot.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
+- `items/createPlacedTents.test.ts`
 
 ## `items/foodFreshness.test.ts`
 

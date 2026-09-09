@@ -22,6 +22,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/campRestSnapshot.ts`
 - `app/interactables.ts`
 - `app/userActions.test.ts`
 - `app/userActions.ts`
@@ -102,6 +103,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/cookMealIntent.test.ts`
+- `app/actions/fullCampIntent.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/gameLoop.ts`

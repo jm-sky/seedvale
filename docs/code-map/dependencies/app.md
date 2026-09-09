@@ -29,6 +29,8 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
@@ -124,6 +126,42 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/cookMealIntent.test.ts`
+- `app/createApp.ts`
+
+## `app/actions/fullCampIntent.test.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/fullCampIntent.ts`
+- `app/actions/placementPreviewActions.ts`
+- `app/busyAction.ts`
+- `app/worldBundle.ts`
+- `items/Inventory.ts`
+- `player/PlayerController.ts`
+- `settlement/VillageFire.ts`
+- `world/dayNight.ts`
+
+## `app/actions/fullCampIntent.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/placementPreviewActions.ts`
+- `app/actions/survivalActions.ts`
+- `app/busyAction.ts`
+- `app/campRestSnapshot.ts`
+- `app/userActions.ts`
+- `app/worldBundle.ts`
+- `items/Inventory.ts`
+- `items/constructionMaterials.ts`
+- `player/PlayerController.ts`
+- `world/dayNight.ts`
+- `world/sleepingUtilities.ts`
+
+**Imported by**
+
+- `app/actions/fullCampIntent.test.ts`
 - `app/createApp.ts`
 
 ## `app/actions/gatheringActions.ts`
@@ -283,6 +321,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/createApp.ts`
 - `ui-vue/store.ts`
 - `ui/createQuickActions.ts`
@@ -314,7 +354,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `app/actions/actionContext.ts`
-- `app/campRest.ts`
+- `app/campRestSnapshot.ts`
 - `items/Inventory.ts`
 - `items/items.ts`
 - `items/tentProp.ts`
@@ -327,7 +367,6 @@ Generated from TypeScript imports.
 - `ui/createBusyOverlay.ts`
 - `ui/createQuickActions.ts`
 - `ui/createTimeSkipOverlay.ts`
-- `world/sleepingUtilities.ts`
 
 **Imported by**
 
@@ -400,6 +439,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -469,6 +509,8 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/busyAction.test.ts`
@@ -500,8 +542,31 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `app/actions/restActions.ts`
 - `app/campRest.test.ts`
+- `app/campRestSnapshot.test.ts`
+- `app/campRestSnapshot.ts`
+
+## `app/campRestSnapshot.test.ts`
+
+**Imports**
+
+- `app/campRest.ts`
+- `app/campRestSnapshot.ts`
+
+## `app/campRestSnapshot.ts`
+
+**Imports**
+
+- `app/campRest.ts`
+- `items/createPlacedTents.ts`
+- `settlement/PlacedFires.ts`
+- `world/sleepingUtilities.ts`
+
+**Imported by**
+
+- `app/actions/fullCampIntent.ts`
+- `app/actions/restActions.ts`
+- `app/campRestSnapshot.test.ts`
 
 ## `app/createApp.ts`
 
@@ -511,6 +576,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/containerActions.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/mountActions.ts`
@@ -996,6 +1062,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/fullCampIntent.ts`
 - `app/createApp.ts`
 - `app/userActions.test.ts`
 - `ui-vue/playerQuickActions.ts`
@@ -1075,6 +1142,8 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/storageInfestationActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`

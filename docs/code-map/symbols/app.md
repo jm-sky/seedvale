@@ -31,7 +31,14 @@ Generated from exported TypeScript symbols.
 - `CookMealIntentPhase` — type — line 19
 - `createCookMealIntent` — function — line 55
   - domain: ui-input
-- `runEatAnything` — function — line 197
+- `runEatAnything` — function — line 201
+
+## `app/actions/fullCampIntent.ts`
+
+- `createFullCampIntent` — function — line 55
+  - domain: items-player
+- `FullCampIntentController` — type — line 29
+- `FullCampIntentPhase` — type — line 19
 
 ## `app/actions/gatheringActions.ts`
 
@@ -53,25 +60,27 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 335
-- `evaluatePlacementSite` — function — line 196
+- `createPlacementActions` — function — line 342
+- `evaluatePlacementSite` — function — line 203
 - `GroundPlacementDefinition` — type — line 186
   - domain: world
 - `GroundPlacementSite` — type — line 170
-- `PlacementActions` — type — line 229
+- `PlacementActions` — type — line 236
 - `PlacementBlocker` — type — line 145
+- `PlacementMutationLifecycle` — type — line 197
 - `PlacementPreviewResult` — type — line 156
-- `previewGroundPlacement` — function — line 206
-- `WellWorkView` — type — line 222
+- `previewGroundPlacement` — function — line 213
+- `WellWorkView` — type — line 229
 
 ## `app/actions/placementPreviewActions.ts`
 
-- `createPlacementPreviewActions` — function — line 130
-- `PlacementPreviewActionDeps` — type — line 79
-- `PlacementPreviewActions` — type — line 109
+- `createPlacementPreviewActions` — function — line 138
+- `PlacementPreviewActionDeps` — type — line 87
+- `PlacementPreviewActions` — type — line 117
+- `PlacementPreviewConfirmResult` — type — line 46
 - `PlacementPreviewKind` — type — line 23
   - domain: ui-input
-- `PlacementPreviewLifecycle` — type — line 44
+- `PlacementPreviewLifecycle` — type — line 52
 - `PlacementPreviewUiView` — type — line 36
 
 ## `app/actions/placementYaw.ts`
@@ -84,11 +93,11 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/restActions.ts`
 
-- `createRestActions` — function — line 109
-- `LodgingChoiceAction` — type — line 34
-- `REST_IN_TOWN_RADIUS` — const — line 42
-- `RestActionDeps` — type — line 97
-- `RestActions` — type — line 48
+- `createRestActions` — function — line 105
+- `LodgingChoiceAction` — type — line 29
+- `REST_IN_TOWN_RADIUS` — const — line 37
+- `RestActionDeps` — type — line 93
+- `RestActions` — type — line 43
 
 ## `app/actions/storageInfestationActions.ts`
 
@@ -136,22 +145,44 @@ Generated from exported TypeScript symbols.
 
 ## `app/campRest.ts`
 
-- `CampRestContext` — type — line 11
-- `campRestQuality` — function — line 128
-- `hasTentNear` — function — line 62
-- `hasWarmFireNear` — function — line 49
-- `TENT_SHELTER_RADIUS` — const — line 37
-- `WARM_FIRE_RADIUS` — const — line 33
+- `CAMP_REST_BASE_QUALITY` — const — line 105
+- `CampRestContext` — type — line 13
+  - domain: items-player
+- `CampRestExplanation` — type — line 41
+- `CampRestExplanationLine` — type — line 33
+- `campRestQuality` — function — line 219
+- `explainCampRest` — function — line 177
+  - domain: items-player
+- `formatCampRestBreakdown` — function — line 224
+- `hasTentNear` — function — line 77
+- `hasWarmFireNear` — function — line 64
+- `RAISED_BEDROLL_FACTOR_MAX` — const — line 119
+- `RAISED_BEDROLL_FACTOR_MIN` — const — line 118
+- `TENT_SHELTER_RADIUS` — const — line 52
+- `tentShelterFactor` — function — line 95
+  - domain: items-player
+- `WARM_FIRE_RADIUS` — const — line 48
+
+## `app/campRestSnapshot.ts`
+
+- `CampRestSnapshot` — type — line 34
+  - domain: items-player
+- `CampRestSnapshotInput` — type — line 48
+- `CampSnapshotFire` — type — line 20
+- `findNearestPlayerFire` — function — line 84
+- `formatCampInspectionDescription` — function — line 171
+- `resolveCampRestSnapshot` — function — line 129
+  - domain: items-player
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 241
+- `createApp` — function — line 242
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 211
+- `NewAppOptions` — type — line 212
 
 ## `app/gameLoop.ts`
 

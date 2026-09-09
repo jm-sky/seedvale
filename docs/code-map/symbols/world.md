@@ -949,13 +949,16 @@ Generated from exported TypeScript symbols.
 - `PLATFORM_SEPARATION` — const — line 57
 - `PlatformPlacementReason` — type — line 69
 - `PlatformRecord` — type — line 39
-- `resolveSleepingUtilityCondition` — function — line 175
+- `resolveSleepingUtilityCondition` — function — line 189
+- `resolveWeatherDrivenCondition` — function — line 157
+  - domain: items-player
 - `SLEEPING_UTILITY_CONDITION_MAX` — const — line 122
 - `SLEEPING_UTILITY_RAIN_DECAY_PER_DAY` — const — line 132
 - `SLEEPING_UTILITY_SIM_WINDOW_DAYS` — const — line 138
 - `SLEEPING_UTILITY_SNOW_DECAY_PER_DAY` — const — line 133
 - `SleepingUtilityVariant` — type — line 22
   - domain: items-player
+- `WeatherDrivenConditionRates` — type — line 140
 
 ## `world/sleepingUtilityProp.ts`
 
@@ -1159,12 +1162,13 @@ Generated from exported TypeScript symbols.
 
 ## `world/weather.ts`
 
-- `ClimateState` — type — line 259
-- `computeClimate` — function — line 245
+- `ClimateState` — type — line 278
+- `computeClimate` — function — line 264
 - `computeRainExposureDays` — function — line 220
+- `computeSnowExposureDays` — function — line 239
 - `computeSurfaceWeather` — function — line 166
 - `computeWeather` — function — line 116
-- `createClimateState` — function — line 272
+- `createClimateState` — function — line 291
 - `DAYS_PER_SEASON` — const — line 31
 - `getSeason` — function — line 33
 - `getSeasonProgress` — function — line 39
@@ -1174,13 +1178,13 @@ Generated from exported TypeScript symbols.
 - `SNOW_MELT_WINDOW_DAYS` — const — line 143
 - `SurfaceWeatherState` — type — line 151
 - `temperatureFor` — function — line 69
-- `tickClimate` — function — line 276
+- `tickClimate` — function — line 295
 - `WEATHER_CYCLE_DAYS` — const — line 77
 - `WEATHER_LABELS` — const — line 21
 - `WeatherState` — type — line 101
 - `WeatherType` — type — line 9
 - `WETNESS_DRY_WINDOW_DAYS` — const — line 136
-- `WorldClimateState` — type — line 236
+- `WorldClimateState` — type — line 255
 
 ## `world/weatherParticles.ts`
 

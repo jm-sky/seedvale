@@ -1072,6 +1072,8 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/actions/cookMealIntent.test.ts`
 - `app/actions/cookMealIntent.ts`
+- `app/actions/fullCampIntent.test.ts`
+- `app/actions/fullCampIntent.ts`
 - `app/actions/groundActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -1997,10 +1999,13 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
-- `app/actions/restActions.ts`
+- `app/campRestSnapshot.ts`
 - `app/createApp.ts`
 - `app/worldBundle.ts`
+- `items/createPlacedTents.test.ts`
+- `items/createPlacedTents.ts`
 - `persistence/saveData.ts`
 - `world/createSleepingUtilities.ts`
 - `world/sleepingUtilities.test.ts`
