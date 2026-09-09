@@ -16,7 +16,10 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/createApp.ts`
+- `app/inventoryWiring.ts`
 - `app/saveState.ts`
+- `items/trade.test.ts`
+- `items/tradeCatalog.ts`
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`

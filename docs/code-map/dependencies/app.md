@@ -846,12 +846,16 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
+- `items/tradeCatalog.ts`
 - `items/weaponMaintenance.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
 - `quests/QuestManager.ts`
+- `reputation/ReputationManager.ts`
+- `settlement/createSettlement.ts`
 - `ui-vue/mount.ts`
+- `ui-vue/store.ts`
 - `ui/createHud.ts`
 - `ui/createToast.ts`
 - `world/dayNight.ts`

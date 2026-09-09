@@ -1,7 +1,7 @@
 # Plan: Merchant sell pricing — condition and social standing
 
 **Created:** 2026-09-09
-**Status:** `implemented` ✅
+**Status:** `planned` 📋
 **Priority:** medium · **Effort:** S
 **Depends on:** ~~quests-progression-001~~
 **Domain:** `settlements`

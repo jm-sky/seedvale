@@ -62,6 +62,8 @@ Generated from TypeScript imports.
 - `ai/npcAssistance.ts`
 - `ai/reactionChance.ts`
 - `app/createApp.ts`
+- `items/trade.test.ts`
+- `items/tradeCatalog.ts`
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`

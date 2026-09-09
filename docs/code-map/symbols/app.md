@@ -186,10 +186,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 119
-- `InventoryWiring` — type — line 66
-- `InventoryWiringDeps` — type — line 89
-- `MerchantInventoryView` — type — line 53
+- `createInventoryWiring` — function — line 125
+- `InventoryWiring` — type — line 71
+- `InventoryWiringDeps` — type — line 94
+- `MerchantInventoryView` — type — line 58
 
 ## `app/modalState.ts`
 

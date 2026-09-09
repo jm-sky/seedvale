@@ -343,30 +343,49 @@ Generated from exported TypeScript symbols.
 
 ## `items/trade.ts`
 
-- `createAcquiredInstance` — function — line 127
-- `InstanceSellResult` — type — line 26
-- `previewTransactionNetCoins` — function — line 234
-- `selectInstancesToSell` — function — line 143
-- `selectInstanceToPlace` — function — line 158
-- `sellInstancesForCoins` — function — line 273
-- `settleTransaction` — function — line 245
-- `TradeResult` — type — line 24
+- `createAcquiredInstance` — function — line 137
+- `InstanceSellResult` — type — line 28
+- `OfferBuybackResolution` — type — line 32
+- `previewTransactionNetCoins` — function — line 269
+- `resolveOfferBuyback` — function — line 218
+  - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
+- `resolveOfferLineBuyback` — function — line 195
+  - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
+- `selectInstancesToSell` — function — line 153
+- `selectInstanceToPlace` — function — line 168
+- `sellInstancesForCoins` — function — line 312
+- `settleTransaction` — function — line 282
+- `TradeResult` — type — line 26
 
 ## `items/tradeCatalog.ts`
 
-- `BROKEN_SELL_MULTIPLIER` — const — line 210
-- `canSell` — function — line 188
-- `isMerchantStock` — function — line 172
-- `MERCHANT_PRICES` — const — line 11
-- `MERCHANT_STOCK` — const — line 84
-- `merchantPrice` — function — line 168
-- `offerValue` — function — line 197
-- `resolveInstanceSellPrice` — function — line 215
-- `sellPrice` — function — line 192
-- `SellPriceContext` — type — line 212
-- `tradeValue` — function — line 177
-- `USAGE_DISCOUNT_MIN` — const — line 206
-- `USAGE_DISCOUNT_RANGE` — const — line 207
+- `BASE_SELL_FACTOR` — const — line 179
+  - domain: settlements — full-condition sell factor bounds (plan settlements-006).
+- `BROKEN_SELL_MULTIPLIER` — const — line 281
+- `canSell` — function — line 210
+- `fullConditionSellFactor` — function — line 243
+  - domain: settlements — sell factor for a full-condition item before durability scaling.
+- `isMerchantStock` — function — line 194
+- `MAX_SELL_FACTOR` — const — line 181
+- `MERCHANT_PRICES` — const — line 13
+- `MERCHANT_STOCK` — const — line 86
+- `merchantPrice` — function — line 190
+- `MIN_SELL_FACTOR` — const — line 180
+- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 171
+  - domain: settlements — neutral social standing for merchant sell pricing.
+- `offerValue` — function — line 272
+- `relationshipEffect` — function — line 219
+  - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
+- `reputationEffect` — function — line 232
+  - domain: settlements — weighted reputation × renown amplification (percentage points).
+- `resolveInstanceSellPrice` — function — line 284
+  - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
+- `roundSellPrice` — function — line 252
+  - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
+- `sellPrice` — function — line 262
+  - domain: settlements — merchant buyback for a stackable kind at full condition.
+- `SellPriceContext` — type — line 183
+- `tradeValue` — function — line 199
 
 ## `items/trapItemInstances.ts`
 

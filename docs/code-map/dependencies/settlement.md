@@ -214,6 +214,7 @@ Generated from TypeScript imports.
 - `app/actions/restActions.ts`
 - `app/createApp.ts`
 - `app/interactables.ts`
+- `app/inventoryWiring.ts`
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
 - `items/cookingFireResolver.ts`

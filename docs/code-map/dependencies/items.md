@@ -921,7 +921,10 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
+- `items/trapItemInstances.ts`
 - `items/weaponMaintenance.ts`
+- `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 
 ## `items/trade.ts`
 
@@ -954,15 +957,19 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/trapItemInstances.ts`
+- `quests/quests.ts`
+- `reputation/ReputationManager.ts`
 
 **Imported by**
 
+- `app/inventoryWiring.ts`
 - `items/books.test.ts`
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryView.ts`
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/trapInstanceTrade.test.ts`
+- `ui-vue/store.ts`
 
 ## `items/trapInstanceLifecycle.test.ts`
 
@@ -992,6 +999,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `items/Inventory.test.ts`
 - `items/inventoryView.ts`
+- `items/trade.test.ts`
 - `items/trade.ts`
 - `items/tradeCatalog.ts`
 - `items/trapInstanceLifecycle.test.ts`

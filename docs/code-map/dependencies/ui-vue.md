@@ -148,6 +148,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `items/primaryWeapons.ts`
 - `items/trade.ts`
+- `items/tradeCatalog.ts`
 - `items/weaponMaintenance.ts`
 - `persistence/saveDb.ts`
 - `player/PlayerSkills.ts`
@@ -167,6 +168,7 @@ Generated from TypeScript imports.
 
 - `app/createApp.ts`
 - `app/dialogueTimeControl.ts`
+- `app/inventoryWiring.ts`
 - `ui-vue/composables/useOverlayScreen.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/playerQuickActions.test.ts`
