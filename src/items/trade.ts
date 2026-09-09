@@ -1,7 +1,9 @@
 import type { Inventory } from './Inventory'
 import {
+  createTentInstance,
   isInstanceBackedKind,
   isLiquidContainerKind,
+  isTentItemInstance,
   isTrapItemInstance,
   isTrapKind,
   isWeaponItemInstance,
@@ -138,6 +140,7 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
   if (isTrapKind(kind)) return createTrapInstance(kind)
   if (isWeaponMaintenanceKind(kind)) return createWeaponInstance(kind)
   if (isLiquidContainerKind(kind)) return createLiquidContainerInstance(kind)
+  if (kind === 'tent') return createTentInstance()
   return null
 }
 
@@ -146,6 +149,7 @@ export function createAcquiredInstance(kind: ItemKind): ItemInstance | null {
 function conditionRatio(instance: ItemInstance): number {
   if (isTrapItemInstance(instance)) return trapConditionRatio(instance)
   if (isWeaponItemInstance(instance)) return (instance.durability + instance.sharpness) / 2
+  if (isTentItemInstance(instance)) return instance.condition / 100
   return 1
 }
 

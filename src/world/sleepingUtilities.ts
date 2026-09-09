@@ -1,5 +1,6 @@
 import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { GroundPlacementReason } from '../items/tentPlacement'
+import type { RepairProgress } from './repair'
 import { clampCondition, CONDITION_MAX, type ConditionState, resolveCondition } from './condition'
 import { computeRainExposureDays, computeSnowExposureDays } from './weather'
 
@@ -28,13 +29,13 @@ export type BedrollRecord = {
   z: number
   yaw: number
   variant: SleepingUtilityVariant
-  /** 0..100 — see `resolveSleepingUtilityCondition`. Never mutated after
-   *  placement in v1 (no repair action exists yet) — kept as a real field
-   *  rather than derived solely from `lastConditionUpdateAtDays` so a future
-   *  repair/maintenance action can extend this record without a redesign
-   *  (plan §"Representation should keep material/variant explicit"). */
+  /** 0..100 — see `resolveSleepingUtilityCondition`. Weather decay is
+   *  frozen while `repair` is set (plan items-player-019). `0` does not
+   *  auto-remove the bedroll. */
   condition: number
   lastConditionUpdateAtDays: number
+  /** Active repair episode (plan items-player-019). */
+  repair?: RepairProgress
 }
 
 export type PlatformRecord = {
@@ -44,6 +45,8 @@ export type PlatformRecord = {
   yaw: number
   condition: number
   lastConditionUpdateAtDays: number
+  /** Active repair episode (plan items-player-019). */
+  repair?: RepairProgress
 }
 
 /** Clearance/spacing + reach — a bedroll is a small ground object, similar

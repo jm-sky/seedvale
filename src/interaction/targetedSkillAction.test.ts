@@ -40,6 +40,8 @@ function contextWith(trap: PlacedTrapRecord | null): TargetedSkillQueryContext {
   if (trap) traps.set(trap.id, trap)
   return {
     getTrap: (id) => traps.get(id) ?? null,
+    campRepairAvailable: () => null,
+    startCampRepair: () => {},
   }
 }
 
@@ -94,7 +96,7 @@ describe('executeTargetedSkillAction (plan items-player-021)', () => {
   it('revalidates against live domain state between query and execute', () => {
     const trap = trapRecord()
     const traps = new Map<string, PlacedTrapRecord>([[trap.id, trap]])
-    const ctx: TargetedSkillQueryContext = { getTrap: (id) => traps.get(id) ?? null }
+    const ctx: TargetedSkillQueryContext = { getTrap: (id) => traps.get(id) ?? null, campRepairAvailable: () => null, startCampRepair: () => {} }
     const queried = queryTargetedSkillAction('traps', trapTarget(), ctx)
     expect(queried).not.toBeNull()
     traps.delete(trap.id)
@@ -107,12 +109,12 @@ describe('executeTargetedSkillAction (plan items-player-021)', () => {
   it('reads the current durability if the record changed after targeting', () => {
     const trap = trapRecord({ durability: 2 })
     const traps = new Map<string, PlacedTrapRecord>([[trap.id, { ...trap }]])
-    const ctx: TargetedSkillQueryContext = { getTrap: (id) => traps.get(id) ?? null }
+    const ctx: TargetedSkillQueryContext = { getTrap: (id) => traps.get(id) ?? null, campRepairAvailable: () => null, startCampRepair: () => {} }
     queryTargetedSkillAction('traps', trapTarget(), ctx)
     traps.set(trap.id, { ...trap, durability: 0.5, state: 'broken', baitKind: null })
     const result = executeTargetedSkillAction('traps', trapTarget(trap.id, 'broken'), ctx)
     expect(result.ok).toBe(true)
-    if (result.ok) {
+    if (result.ok && 'line' in result) {
       expect(result.line).toContain('Stan: zniszczona')
       expect(result.line).toContain('Wytrzymałość: 0.5/2')
     }
@@ -128,5 +130,47 @@ describe('targetedSkillPrompt', () => {
   it('explains missing actions without falling back to the world prompt', () => {
     expect(targetedSkillPrompt('repair', null, true)).toBe('Naprawa — brak akcji')
     expect(targetedSkillPrompt('medicine', null, false)).toBe('Medycyna — wybierz cel')
+  })
+})
+
+describe('targeted Repair on camp objects (plan items-player-019)', () => {
+  const tentTarget = (): Extract<Interactable, { kind: 'tent' }> => ({
+    kind: 'tent',
+    position: { x: 0, z: 0 },
+    promptLabel: '[E] Odpocznij',
+    id: 'tent-1',
+  })
+
+  it('offers start/continue on a live tent and execute calls the shared action', () => {
+    const started: string[] = []
+    const ctx: TargetedSkillQueryContext = {
+      getTrap: () => null,
+      campRepairAvailable: (kind, id) => kind === 'tent' && id === 'tent-1' ? { mode: 'start' } : null,
+      startCampRepair: (kind, id) => { started.push(`${kind}:${id}`) },
+    }
+    const action = queryTargetedSkillAction('repair', tentTarget(), ctx)
+    expect(action).toEqual({
+      id: 'repair-camp',
+      skill: 'repair',
+      targetId: 'tent-1',
+      targetKind: 'tent',
+      promptLabel: '[E] Napraw: namiot',
+    })
+    expect(executeTargetedSkillAction('repair', tentTarget(), ctx)).toEqual({ ok: true, started: true })
+    expect(started).toEqual(['tent:tent-1'])
+  })
+
+  it('revalidates availability at execute and does not start when the target is gone', () => {
+    let available: { mode: 'start' | 'continue' } | null = { mode: 'continue' }
+    const started: string[] = []
+    const ctx: TargetedSkillQueryContext = {
+      getTrap: () => null,
+      campRepairAvailable: () => available,
+      startCampRepair: (kind, id) => { started.push(`${kind}:${id}`) },
+    }
+    expect(queryTargetedSkillAction('repair', tentTarget(), ctx)?.promptLabel).toBe('[E] Kontynuuj naprawę: namiot')
+    available = null
+    expect(executeTargetedSkillAction('repair', tentTarget(), ctx)).toEqual({ ok: false, reason: 'unavailable' })
+    expect(started).toEqual([])
   })
 })

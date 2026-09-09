@@ -84,6 +84,8 @@ export type Interactable =
    *  `profile` non-null → `[E]` dig; `canLevel` → `[R]` level. */
   | { kind: 'dig', position: { x: number, z: number }, promptLabel: string, profile: DigProfile | null, canLevel: boolean }
   | { kind: 'tent', position: { x: number, z: number }, promptLabel: string, id: string }
+  | { kind: 'bedroll', position: { x: number, z: number }, promptLabel: string, id: string }
+  | { kind: 'platform', position: { x: number, z: number }, promptLabel: string, id: string }
   /** Settlement hay bale (plan 168 follow-up) — `[E]` sleeps in it directly,
    *  the same commit path as picking "Stóg siana" from the "Nocuj w
    *  mieście" panel (`RestActions.sleepInHay`), skipping Quick Actions

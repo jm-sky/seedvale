@@ -13,6 +13,7 @@ import type { PreySpawner } from '../fauna/AnimalSpawner'
 import type { TouchControls } from '../input/createTouchControls'
 import type { createKeyboard } from '../input/Keyboard'
 import type { Interactable } from '../interaction/Interactable'
+import type { CampRepairTargetKind } from '../items/campRepair'
 import type { HeldTool } from '../items/HeldTool'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
@@ -79,7 +80,7 @@ import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
-import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt } from '../interaction/targetedSkillAction'
+import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt, type TargetedSkillQueryContext } from '../interaction/targetedSkillAction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -365,6 +366,10 @@ export type GameLoopDeps = {
   consumeItem?: (kind: ItemKind) => void
   startTentRest: (id: string) => void
   inspectTent: (id: string) => void
+  inspectBedroll: (id: string) => void
+  inspectPlatform: (id: string) => void
+  workOnCampRepair: (kind: CampRepairTargetKind, id: string) => void
+  campRepairAvailable: (kind: CampRepairTargetKind, id: string) => { mode: 'start' | 'continue' } | null
   /** `[E]` on a hay bale (plan 168 follow-up) — sleeps directly in it via
    *  the same lodging commit path "Nocuj w mieście" uses, skipping Quick
    *  Actions entirely. */
@@ -559,7 +564,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
-    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
+    drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
@@ -567,8 +572,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   } = deps
 
   renderer.shadowMap.autoUpdate = false
-  const skillQueryContext = {
+  const skillQueryContext: TargetedSkillQueryContext = {
     getTrap: (id: string) => bundle.placedTraps.get(id),
+    campRepairAvailable: (kind, id) => deps.campRepairAvailable(kind, id),
+    startCampRepair: (kind, id) => deps.workOnCampRepair(kind, id),
   }
 
   const timer = new Timer()
@@ -922,6 +929,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.droppedItems,
         bundle.placedFires,
         bundle.placedTents,
+        bundle.sleepingUtilities,
         bundle.placedTraps,
         bundle.placedContainers,
         bundle.resourceDeposits,
@@ -1423,7 +1431,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) {
           if (target && skillAction) {
             const result = executeTargetedSkillAction(selectedSkill, target, skillQueryContext)
-            if (result.ok) vueUi.openFlavorDialog(result.title, result.line)
+            if (result.ok && 'started' in result) {
+              /* camp repair already started the domain action */
+            } else if (result.ok) vueUi.openFlavorDialog(result.title, result.line)
             else toast.show('Cel jest już niedostępny.', 'error')
           }
         }
@@ -1441,6 +1451,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       } else if (target?.kind === 'tent') {
         if (interactPressed) startTentRest(target.id)
         if (altInteractPressed) inspectTent(target.id)
+      } else if (target?.kind === 'bedroll') {
+        if (interactPressed) inspectBedroll(target.id)
+      } else if (target?.kind === 'platform') {
+        if (interactPressed) inspectPlatform(target.id)
       } else if (target?.kind === 'hay') {
         if (interactPressed) sleepInHay?.(target.settlementId)
       } else if (target?.kind === 'trap') {

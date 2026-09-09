@@ -744,6 +744,25 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     })
   })
 
+  it('migrates a real v18 save (plan items-player-019) stacked tents into tent instances only', () => {
+    const v18Save = {
+      ...validSave,
+      version: 18,
+      inventory: { tent: 2, hide: 1 },
+      inventoryInstances: [],
+    }
+    const result = loadStoredSave(v18Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.inventory.tent).toBeUndefined()
+    expect(result.data.inventory.hide).toBe(1)
+    expect(result.data.inventoryInstances).toEqual([
+      { id: 'tent:migrated:1', kind: 'tent', condition: 100 },
+      { id: 'tent:migrated:2', kind: 'tent', condition: 100 },
+    ])
+  })
+
   it('round-trips a partial residential house without persisting lodging', () => {
     const withHouse = {
       ...validSave,
@@ -788,6 +807,47 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       }],
     }
     expect(loadSaveData(withRepair)).toEqual(withRepair)
+  })
+
+  it('round-trips camp repair progress on tent/bedroll/platform (plan items-player-019)', () => {
+    const repair = {
+      startedCondition: 40,
+      targetCondition: 100,
+      requiredWork: 0.3,
+      completedWork: 0.1,
+    }
+    const withCampRepair = {
+      ...validSave,
+      placedTents: [{
+        id: 'tent:1',
+        x: 1,
+        z: 2,
+        yaw: 0,
+        condition: 40,
+        lastConditionUpdateAtDays: 3,
+        repair,
+      }],
+      bedrolls: [{
+        id: 'bedroll:1',
+        x: 3,
+        z: 4,
+        yaw: 0.2,
+        variant: 'leather' as const,
+        condition: 40,
+        lastConditionUpdateAtDays: 3,
+        repair,
+      }],
+      platforms: [{
+        id: 'platform:1',
+        x: 5,
+        z: 6,
+        yaw: 0.1,
+        condition: 40,
+        lastConditionUpdateAtDays: 3,
+        repair,
+      }],
+    }
+    expect(loadSaveData(withCampRepair)).toEqual(withCampRepair)
   })
 
   it('rejects a current-schema well whose roofRepair is malformed or missing roof condition', () => {

@@ -1,6 +1,6 @@
 import type { RelationLevel } from '../quests/quests'
 import { NEUTRAL_REPUTATION, type Reputation } from '../reputation/ReputationManager'
-import { isTrapItemInstance, type ItemInstance } from './itemInstances'
+import { isTentItemInstance, isTrapItemInstance, type ItemInstance } from './itemInstances'
 import { ITEM_DEFS, type ItemKind } from './items'
 import { trapConditionRatio } from './trapItemInstances'
 
@@ -42,6 +42,7 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   bandage: 10,
   fishing_rod: 18,
   whetstone: 6,
+  sewing_kit: 18,
   short_bow: 45,
   hunting_bow: 75,
   long_bow: 120,
@@ -115,6 +116,7 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'bandage',
   'fishing_rod',
   'whetstone',
+  'sewing_kit',
   'short_bow',
   'hunting_bow',
   'long_bow',
@@ -292,6 +294,11 @@ export function resolveInstanceSellPrice(
       return roundSellPrice(nominal * BROKEN_SELL_MULTIPLIER)
     }
     const condition = trapConditionRatio(instance)
+    const raw = nominal * fullConditionSellFactor(context) * condition
+    return roundSellPrice(capStockedBuyback(instance.kind, raw))
+  }
+  if (isTentItemInstance(instance)) {
+    const condition = Math.max(0, Math.min(1, instance.condition / 100))
     const raw = nominal * fullConditionSellFactor(context) * condition
     return roundSellPrice(capStockedBuyback(instance.kind, raw))
   }

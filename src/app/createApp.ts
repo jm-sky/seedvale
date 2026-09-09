@@ -647,7 +647,7 @@ export async function createApp(
   // has finished.
   const syncQuickActionAvailability = (): void => {
     vueUi.setQuickActionsHasDiggingTool(inventory.hasCapability('soil_digging'))
-    vueUi.setQuickActionsHasTent(inventory.has('tent', 1))
+    vueUi.setQuickActionsHasTent(inventory.countInstances('tent') > 0)
     vueUi.setQuickActionsHasChest(inventory.has('chest', 1))
     vueUi.setQuickActionsHasWoodenTorch(inventory.has('wooden_torch', 1))
     vueUi.setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial())
@@ -1507,7 +1507,7 @@ export async function createApp(
   let restorePointerLockAfterQuickActions = false
   const quickActions = createQuickActions(container, {
     hasDiggingTool: inventory.hasCapability('soil_digging'),
-    hasTent: inventory.has('tent', 1),
+    hasTent: inventory.countInstances('tent') > 0,
     hasChest: inventory.has('chest', 1),
     hasWoodenTorch: inventory.has('wooden_torch', 1),
     hasPalisadeMaterial: hasPalisadeMaterial(),
@@ -1835,6 +1835,10 @@ export async function createApp(
     consumeItem: survival.consumeItem,
     startTentRest: rest.startTentRest,
     inspectTent: rest.inspectTent,
+    inspectBedroll: rest.inspectBedroll,
+    inspectPlatform: rest.inspectPlatform,
+    workOnCampRepair: rest.workOnCampRepair,
+    campRepairAvailable: rest.campRepairAvailable,
     sleepInHay: rest.sleepInHay,
     sleepInOwnedHouse: rest.sleepInOwnedHouse,
     openTrapArmDialog: gathering.openTrapArmDialog,

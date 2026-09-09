@@ -111,6 +111,31 @@ export function isLiquidContainerInstance(instance: ItemInstance): instance is L
   return isLiquidContainerKind(instance.kind)
 }
 
+/** Camp condition is `0..100`, not the weapon `[0,1]` scale. Packed tents
+ *  do not weather-degrade; the world record owns lazy decay. */
+export type TentItemInstance = ItemInstance & {
+  kind: 'tent'
+  condition: number
+}
+
+export function isTentItemInstance(instance: ItemInstance): instance is TentItemInstance {
+  return instance.kind === 'tent'
+}
+
+/** Clamp tent/camp condition onto `0..100` without using weapon `clamp01()`. */
+export function clampCampCondition(n: number): number {
+  if (!Number.isFinite(n)) return 100
+  return Math.max(0, Math.min(100, n))
+}
+
+export function createTentInstance(condition = 100, id?: string): TentItemInstance {
+  return {
+    id: id ?? createItemInstanceId(),
+    kind: 'tent',
+    condition: clampCampCondition(condition),
+  }
+}
+
 let nextInstanceId = 0
 
 /** Stable ID for the physical item across inventory ↔ world boundaries. */
@@ -120,6 +145,7 @@ export function createItemInstanceId(): string {
 }
 
 export const INSTANCE_BACKED_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>([
+  'tent',
   'trap_good',
   'trap_simple',
   ...WEAPON_MAINTENANCE_KINDS,
@@ -169,6 +195,14 @@ export function cloneItemInstance(instance: ItemInstance): ItemInstance {
       amountLitres: instance.amountLitres,
     }
     return container
+  }
+  if (isTentItemInstance(instance)) {
+    const tent: TentItemInstance = {
+      id: instance.id,
+      kind: 'tent',
+      condition: clampCampCondition(instance.condition),
+    }
+    return tent
   }
   return { id: instance.id, kind: instance.kind }
 }

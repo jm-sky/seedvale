@@ -111,6 +111,8 @@ export type SavePlacedTent = {
   /** 0..100 lazy weather-driven condition (plan items-player-018). */
   condition: number
   lastConditionUpdateAtDays: number
+  /** Active repair episode (plan items-player-019). */
+  repair?: RepairProgress
 }
 
 export type SaveWorldFlags = {
@@ -412,13 +414,24 @@ export type SaveBedroll = {
   variant: SleepingUtilityVariant
   condition: number
   lastConditionUpdateAtDays: number
+  /** Active repair episode (plan items-player-019). */
+  repair?: RepairProgress
 }
 
 /** Persistent player-built raised sleeping platform — mirrors
  *  `world/sleepingUtilities.ts`'s `PlatformRecord`. No `bedroll` reference is
  *  persisted — which bedroll (if any) is "on" a platform is always resolved
  *  spatially on demand (plan items-player-013 §"Relacja bedroll ↔ platform"). */
-export type SavePlatform = { id: string, x: number, z: number, yaw: number, condition: number, lastConditionUpdateAtDays: number }
+export type SavePlatform = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  condition: number
+  lastConditionUpdateAtDays: number
+  /** Active repair episode (plan items-player-019). */
+  repair?: RepairProgress
+}
 
 /** Persistent player-built garden plot — mirrors `world/playerGarden.ts`'s
  *  `PlayerGardenRecord`. A plot has no construction stages of its own (crops
@@ -517,7 +530,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 18
+export const CURRENT_SAVE_VERSION = 19
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -538,8 +551,8 @@ export type SaveData = {
   inventory: Partial<Record<ItemKind, number>>
   /** Per-instance item state — durability/sharpness for weapons/traps, held
    *  liquid (`liquid`/`amountLitres`, plan items-player-001) for waterskins/
-   *  buckets — for every instance-backed kind (`items/Inventory.ts`'s
-   *  `SaveItemInstance`). */
+   *  buckets, tent `condition` `0..100` (plan items-player-019) — for every
+   *  instance-backed kind (`items/Inventory.ts`'s `SaveItemInstance`). */
   inventoryInstances: SaveItemInstance[]
   /** Ids of world-generated items (`terrain/chunkItems.ts`) already picked up —
    *  see `ChunkManagerConfig.collectedItemIds`. */
@@ -767,6 +780,7 @@ function isPlacedTentsField(value: unknown): value is SavePlacedTent[] {
     if (typeof t.id !== 'string') return false
     if (typeof t.x !== 'number' || typeof t.z !== 'number' || typeof t.yaw !== 'number') return false
     if (typeof t.condition !== 'number' || typeof t.lastConditionUpdateAtDays !== 'number') return false
+    if (t.repair !== undefined && !isRepairProgressField(t.repair)) return false
   }
   return true
 }
@@ -962,6 +976,7 @@ function isSaveItemInstancesField(value: unknown): value is SaveItemInstance[] {
     // happens in `Inventory.instancesFromJSON`, not here.
     if (row.liquid !== undefined && row.liquid !== 'water' && row.liquid !== 'milk') return false
     if (row.amountLitres !== undefined && (typeof row.amountLitres !== 'number' || !Number.isFinite(row.amountLitres) || row.amountLitres < 0)) return false
+    if (row.condition !== undefined && (typeof row.condition !== 'number' || !Number.isFinite(row.condition))) return false
     return true
   })
 }
@@ -1331,7 +1346,8 @@ function isBedrollsField(value: unknown): value is SaveBedroll[] {
       typeof b.yaw === 'number' &&
       b.variant === 'leather' &&
       typeof b.condition === 'number' &&
-      typeof b.lastConditionUpdateAtDays === 'number'
+      typeof b.lastConditionUpdateAtDays === 'number' &&
+      (b.repair === undefined || isRepairProgressField(b.repair))
     )
   })
 }
@@ -1347,7 +1363,8 @@ function isPlatformsField(value: unknown): value is SavePlatform[] {
       typeof p.z === 'number' &&
       typeof p.yaw === 'number' &&
       typeof p.condition === 'number' &&
-      typeof p.lastConditionUpdateAtDays === 'number'
+      typeof p.lastConditionUpdateAtDays === 'number' &&
+      (p.repair === undefined || isRepairProgressField(p.repair))
     )
   })
 }
@@ -2261,6 +2278,113 @@ function migrateSaveV17ToV18(data: unknown): unknown {
   return { ...v, version: 18, residentialBuildings: [] }
 }
 
+function tentInstanceRow(id: string): SaveItemInstance {
+  return { id, kind: 'tent', condition: 100 }
+}
+
+function migrateTentCountToInstances(
+  counts: Partial<Record<ItemKind, number>> | undefined,
+  instances: SaveItemInstance[] | undefined,
+  seq: { n: number },
+): { counts: Partial<Record<ItemKind, number>>, instances: SaveItemInstance[] } {
+  const nextCounts = { ...(counts ?? {}) }
+  const nextInstances = [...(instances ?? [])]
+  const stacked = nextCounts.tent
+  if (typeof stacked === 'number' && stacked > 0) {
+    for (let i = 0; i < stacked; i++) {
+      seq.n += 1
+      nextInstances.push(tentInstanceRow(`tent:migrated:${seq.n}`))
+    }
+  }
+  delete nextCounts.tent
+  return { counts: nextCounts, instances: nextInstances }
+}
+
+function migrateInventoryContentsTents(
+  contents: { counts?: Partial<Record<ItemKind, number>>, instances?: SaveItemInstance[] } | undefined,
+  seq: { n: number },
+): { counts: Partial<Record<ItemKind, number>>, instances: SaveItemInstance[], foodBatches?: unknown } | undefined {
+  if (!contents || typeof contents !== 'object') return contents as undefined
+  const migrated = migrateTentCountToInstances(contents.counts, contents.instances, seq)
+  return { ...contents, counts: migrated.counts, instances: migrated.instances }
+}
+
+/** v18 → v19 (plan items-player-019): stacked tents become tent instances at
+ *  condition 100; camp records may carry optional `repair` (absent is the
+ *  correct default). */
+function migrateSaveV18ToV19(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const seq = { n: 0 }
+  const inventory = (v.inventory ?? {}) as Partial<Record<ItemKind, number>>
+  const inventoryInstances = Array.isArray(v.inventoryInstances) ? v.inventoryInstances as SaveItemInstance[] : []
+  const playerInv = migrateTentCountToInstances(inventory, inventoryInstances, seq)
+
+  const droppedItems = Array.isArray(v.droppedItems)
+    ? (v.droppedItems as Record<string, unknown>[]).map((item) => {
+      if (!item || item.kind !== 'tent' || item.instance) return item
+      seq.n += 1
+      return { ...item, instance: tentInstanceRow(`tent:migrated:${seq.n}`) }
+    })
+    : v.droppedItems
+
+  const placedContainers = Array.isArray(v.placedContainers)
+    ? (v.placedContainers as Record<string, unknown>[]).map((container) => {
+      if (!container) return container
+      const migrated = migrateTentCountToInstances(
+        container.counts as Partial<Record<ItemKind, number>> | undefined,
+        container.instances as SaveItemInstance[] | undefined,
+        seq,
+      )
+      return { ...container, counts: migrated.counts, instances: migrated.instances }
+    })
+    : v.placedContainers
+
+  const carried = v.carriedContainer && typeof v.carriedContainer === 'object'
+    ? (() => {
+      const c = v.carriedContainer as Record<string, unknown>
+      const migrated = migrateTentCountToInstances(
+        c.counts as Partial<Record<ItemKind, number>> | undefined,
+        c.instances as SaveItemInstance[] | undefined,
+        seq,
+      )
+      return { ...c, counts: migrated.counts, instances: migrated.instances }
+    })()
+    : v.carriedContainer
+
+  const households = v.households && typeof v.households === 'object'
+    ? Object.fromEntries(Object.entries(v.households as Record<string, unknown>).map(([id, household]) => {
+      if (!household || typeof household !== 'object') return [id, household]
+      const h = household as Record<string, unknown>
+      const items = migrateInventoryContentsTents(h.items as { counts?: Partial<Record<ItemKind, number>>, instances?: SaveItemInstance[] }, seq)
+      return [id, items ? { ...h, items } : household]
+    }))
+    : v.households
+
+  const npcStates = v.npcStates && typeof v.npcStates === 'object'
+    ? Object.fromEntries(Object.entries(v.npcStates as Record<string, unknown>).map(([id, state]) => {
+      if (!state || typeof state !== 'object') return [id, state]
+      const s = state as Record<string, unknown>
+      const personalInventory = migrateInventoryContentsTents(
+        s.personalInventory as { counts?: Partial<Record<ItemKind, number>>, instances?: SaveItemInstance[] },
+        seq,
+      )
+      return [id, personalInventory ? { ...s, personalInventory } : state]
+    }))
+    : v.npcStates
+
+  return {
+    ...v,
+    version: 19,
+    inventory: playerInv.counts,
+    inventoryInstances: playerInv.instances,
+    droppedItems,
+    placedContainers,
+    carriedContainer: carried,
+    households,
+    npcStates,
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2279,6 +2403,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   15: migrateSaveV15ToV16,
   16: migrateSaveV16ToV17,
   17: migrateSaveV17ToV18,
+  18: migrateSaveV18ToV19,
 }
 
 function detectStoredVersion(value: unknown): number | null {

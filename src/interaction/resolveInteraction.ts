@@ -93,7 +93,9 @@ function capitalize(text: string): string {
  *  access this module doesn't have, handled directly in `gameLoop.ts`;
  *  `standingTorch` (plan items-player-009), same `Inventory`-access reason —
  *  `Ignite` checks `fire_starting`, handled directly in `gameLoop.ts`/
- *  `placementActions.ts`; `palisade` (plan items-player-010), same
+ *  `placementActions.ts`; `bedroll`/`platform` (plan items-player-019), camp
+ *  inspection/repair handled directly in `gameLoop.ts`/`restActions.ts`;
+ *  `palisade` (plan items-player-010), same
  *  `Inventory`-access reason — removal recovers materials, handled directly
  *  in `gameLoop.ts`/`placementActions.ts`; `noticeBoard` (plan npc-014),
  *  which opens its own physical-posting panel instead of this dialog,
@@ -105,7 +107,7 @@ function capitalize(text: string): string {
  *  for repair identity (plan world-021); drink still synthesizes a `well`
  *  candidate here so the existing flavor/quest hook is unchanged. */
 export function resolveInteraction(
-  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'npcCorpse' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' | 'residentialBuilding' | 'noticeBoard' | 'settlementStorage' }>,
+  target: Exclude<Interactable, { kind: 'campfire' | 'item' | 'npc' | 'npcCorpse' | 'dig' | 'corpse' | 'deposit' | 'tent' | 'bedroll' | 'platform' | 'trap' | 'waterEdge' | 'landPlot' | 'dryingRack' | 'hive' | 'crop' | 'container' | 'playerWell' | 'gardenPlot' | 'terrainPreparation' | 'hay' | 'standingTorch' | 'palisade' | 'residentialBuilding' | 'noticeBoard' | 'settlementStorage' }>,
   questManager: QuestManager,
 ): InteractionOutcome {
   switch (target.kind) {

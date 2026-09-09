@@ -53,7 +53,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                        | Summary | Pri | Effort | Depends |
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
-| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018, settlements-006, items-player-021, world-021 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | ~~fauna-010~~, ~~fauna-011~~, ~~fauna-017~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                   | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`      | -       | 🔴 | M      | settlements-npcs-014 |
@@ -130,6 +129,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `ui-input-011-new-game-setup-on-empty-save-state.md` | Pusta lista zapisów i usunięcie ostatniego zapisu zostawiają Start Screen z otwartym formularzem Nowej gry (bez automatycznego tworzenia świata); imię gracza i nazwa zapisu są niezależne i utrzymują się per save po wczytaniu; wpisy Seed Library przeżywają usunięcie wszystkich zapisów; `?seed=` jest tylko wstępnym wyborem |
 | `ui-input-012-placement-preview-shapes-rotation-and-coverage.md` | Studnia wchodzi w preview; palisada/namiot/skrzynia/posłanie/podest pokazują box i kierunek; F/G (i przyciski) obracają o 45° bez ruszania celu aim; kamera po starcie preview nie kręci obiektem; G nie wyrzuca itemu podczas rotowalnego preview; snapping palisady pod 45°/90° |
 | `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | Skills: Medycyna i Naprawa widoczne; wybór Pułapki wchodzi w targeting; [E] na istniejącej pułapce otwiera Sprawdź z żywym stanem/wytrzymałością/przynętą; Esc anuluje targeting bez mutacji świata; bez wybranego skilla arm/disarm/collect działają jak wcześniej |
+| `items-player-019-player-camp-repair-and-sewing-kit.md` | Zakup zestawu do szycia; naprawa namiotu/posłania/podestu; brak narzędzia/materiału; przerwa + wznowienie; save/load w trakcie naprawy; aktywna naprawa namiotu blokuje składanie; id/condition namiotu przeżywa pack → save/load → redeploy |
 
 ---
 

@@ -1,3 +1,4 @@
+import type { CampRepairTargetKind } from '../items/campRepair'
 import type { Interactable } from './Interactable'
 import { ITEM_DEFS } from '../items/items'
 import { SKILL_LABEL, type SkillId } from '../player/PlayerSkills'
@@ -5,25 +6,19 @@ import { type PlacedTrapRecord, TRAP_DEFS, type TrapState } from '../world/anima
 
 /**
  * Live domain lookups for targeted skill query/execute (plan items-player-021).
- * Query must not mutate these owners.
+ * Query must not mutate these owners. `startCampRepair` is execute-only.
  *
  * @domain items-player
  * @system interaction
  */
 export type TargetedSkillQueryContext = {
   getTrap: (id: string) => PlacedTrapRecord | null
+  campRepairAvailable: (kind: CampRepairTargetKind, id: string) => { mode: 'start' | 'continue' } | null
+  startCampRepair: (kind: CampRepairTargetKind, id: string) => void
 }
 
-export type TargetedSkillActionId = 'inspect-trap'
+export type TargetedSkillActionId = 'inspect-trap' | 'repair-camp'
 
-/**
- * Contextual skill action resolved for the current `(skill, Interactable)`.
- * Identity fields are stable ids for revalidation — not a copied snapshot of
- * durability, bait, or other owner state.
- *
- * @domain items-player
- * @system interaction
- */
 export type TargetedSkillAction = {
   id: TargetedSkillActionId
   skill: SkillId
@@ -34,6 +29,7 @@ export type TargetedSkillAction = {
 
 export type TargetedSkillExecuteResult =
   | { ok: true, title: string, line: string }
+  | { ok: true, started: true }
   | { ok: false, reason: 'invalid-target' | 'unavailable' }
 
 const TRAP_STATE_LABEL: Record<TrapState, string> = {
@@ -60,6 +56,19 @@ function formatTrapInspection(trap: PlacedTrapRecord): { title: string, line: st
   }
 }
 
+function campRepairTarget(target: Interactable): { kind: CampRepairTargetKind, id: string } | null {
+  if (target.kind === 'tent' || target.kind === 'bedroll' || target.kind === 'platform') {
+    return { kind: target.kind, id: target.id }
+  }
+  return null
+}
+
+function campRepairLabel(kind: CampRepairTargetKind): string {
+  if (kind === 'tent') return 'namiot'
+  if (kind === 'bedroll') return 'posłanie'
+  return 'podest'
+}
+
 /**
  * Availability only — never mutates the world. Returns no action when the
  * selected skill has no consumer for this target.
@@ -69,6 +78,21 @@ export function queryTargetedSkillAction(
   target: Interactable,
   context: TargetedSkillQueryContext,
 ): TargetedSkillAction | null {
+  if (skill === 'repair') {
+    const camp = campRepairTarget(target)
+    if (!camp) return null
+    const available = context.campRepairAvailable(camp.kind, camp.id)
+    if (!available) return null
+    return {
+      id: 'repair-camp',
+      skill,
+      targetId: camp.id,
+      targetKind: camp.kind,
+      promptLabel: available.mode === 'continue'
+        ? `[E] Kontynuuj naprawę: ${campRepairLabel(camp.kind)}`
+        : `[E] Napraw: ${campRepairLabel(camp.kind)}`,
+    }
+  }
   if (skill !== 'traps' || target.kind !== 'trap') return null
   const trap = context.getTrap(target.id)
   if (!trap) return null
@@ -83,7 +107,8 @@ export function queryTargetedSkillAction(
 
 /**
  * Revalidates live domain state at execute time. Inspect reports current trap
- * facts and awards no XP.
+ * facts and awards no XP. Camp repair starts/resumes the same domain action
+ * the inspection dialog uses.
  */
 export function executeTargetedSkillAction(
   skill: SkillId,
@@ -92,6 +117,14 @@ export function executeTargetedSkillAction(
 ): TargetedSkillExecuteResult {
   const action = queryTargetedSkillAction(skill, target, context)
   if (!action) return { ok: false, reason: 'unavailable' }
+  if (action.id === 'repair-camp') {
+    const camp = campRepairTarget(target)
+    if (!camp || action.targetId !== camp.id) return { ok: false, reason: 'invalid-target' }
+    const available = context.campRepairAvailable(camp.kind, action.targetId)
+    if (!available) return { ok: false, reason: 'unavailable' }
+    context.startCampRepair(camp.kind, action.targetId)
+    return { ok: true, started: true }
+  }
   if (action.id === 'inspect-trap') {
     const trap = context.getTrap(action.targetId)
     if (!trap) return { ok: false, reason: 'invalid-target' }

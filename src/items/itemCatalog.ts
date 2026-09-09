@@ -103,6 +103,8 @@ export type ItemCapability =
   | 'fire_starting'
   /** Cast at a lake shore (`world/fishing.ts`). */
   | 'fishing'
+  /** Patch tent/bedroll fabric (`items/campRepair.ts`). */
+  | 'textile_repair'
 
 /** Genitive Polish phrase used after "Potrzebujesz …" when an action is
  *  refused for a missing capability — keeps requirement messages capability-
@@ -111,6 +113,7 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
   branch_trimming: 'noża',
   fire_starting: 'krzesiwa',
   fishing: 'wędki',
+  textile_repair: 'zestawu do szycia',
   meat_harvesting: 'noża do oprawiania',
   rock_mining: 'narzędzia do kucia w skale',
   soil_digging: 'narzędzia do kopania',
@@ -431,7 +434,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Buy from Kupiec; place / rest / pack (plan 090). Not a world spawn.',
+    notes: 'Buy from Kupiec; place / rest / pack (plan 090). Instance-backed with 0..100 condition (plan items-player-019). Not a world spawn.',
   },
   trap_simple: {
     kind: 'trap_simple',
@@ -946,6 +949,16 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan 161 — Kupiec stock. Stackable; consumed one at a time by `sharpenWeapon()` on a supported weapon instance.',
+  },
+  sewing_kit: {
+    kind: 'sewing_kit',
+    label: 'zestaw do szycia',
+    holdable: false,
+    capabilities: ['textile_repair'],
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan items-player-019 — Kupiec stock. Reusable utility; gates tent/bedroll repair via `textile_repair`, never by kind identity.',
   },
   short_bow: {
     kind: 'short_bow',

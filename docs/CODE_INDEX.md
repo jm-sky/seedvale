@@ -41,7 +41,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Cultivation anchor](../src/world/cultivationAnchor.ts) — shared position+radius contract for settlement gardens and Player-built gardens.
 - [Survival actions](../src/app/actions/survivalActions.ts) — corpse butchering/burial, campfire ignite/cook, water drinking/filling, eating.
 - [Gathering actions](../src/app/actions/gatheringActions.ts) — trap arm/disarm/collect, fishing, drying racks, hives, wild-crop harvest.
-- [Rest actions](../src/app/actions/restActions.ts) — waiting, camp/town/tent rest and the resulting rest quality.
+- [Rest actions](../src/app/actions/restActions.ts) — waiting, camp/town/tent rest, camp inspection, and tent/bedroll/platform repair bouts.
+- [Camp repair](../src/items/campRepair.ts) — tent/bedroll/platform repair quotes and start/apply helpers over shared `RepairProgress`.
 - [Camp rest quality](../src/app/campRest.ts) — the pure blanket/tent/fire → quality mapping the rest actions consume.
 - [Busy channel](../src/app/busyAction.ts) — the short real-time action channel every timed interaction above runs on.
 - [User actions](../src/app/userActions.ts) — fire building and torch lighting, shared by Quick Actions and the pause menu.
@@ -55,7 +56,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [PlayerSkills](../src/player/PlayerSkills.ts) — the eight skills, their XP curve and the single award path.
 - [Skill evaluation](../src/player/skillEvaluation.ts) — primary + optional support/context competence, independent of world targeting.
 - [Targeted skill selection](../src/player/targetedSkillSelection.ts) — runtime-only selected targeted skill.
-- [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; trap inspect is the first consumer.
+- [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; consumers are trap inspect and camp Repair.
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).

@@ -1,5 +1,17 @@
 # Implementation Notes: items-player-019 — Player camp repair and sewing kit
 
+## Implemented — 2026-09-09
+
+Thin camp-repair consumer of existing systems. No new repair manager, targeting framework, or camp persistence store.
+
+- `sewing_kit` / `textile_repair`; merchant 18 coin; tent/bedroll repair gates on capability, never kit kind.
+- Portable tent is instance-backed (`TentItemInstance.id == PlacedTent.id`, condition `0..100`). Save v18→v19 migrates stacked tents to instances at condition 100 with deterministic ids `tent:migrated:N`.
+- Shared quote/start/apply in `src/items/campRepair.ts`; owners (`createPlacedTents`, sleeping utilities) store optional `RepairProgress` and freeze weather decay while an episode is active.
+- Inspection Napraw/Kontynuuj and targeted Repair both call `RestActions.workOnCampRepair`. Busy Action is one work bout; materials commit once at start; resume re-checks capability; XP only for accepted work. Survival is omitted from the v1 formula.
+- Active tent repair blocks packing. Inventory-full pack leaves the world tent in place.
+
+Browser verification remains the User's job. Do not run `pnpm docs:sync`.
+
 ## Recon status — 2026-09-09
 
 Dependencies previously treated as future contracts are now implemented on `main` and must be consumed directly:

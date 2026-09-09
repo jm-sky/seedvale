@@ -23,6 +23,7 @@ describe('item capability lookup', () => {
     expect(hasItemCapability('axe', 'wood_chopping')).toBe(true)
     expect(hasItemCapability('firestarter', 'fire_starting')).toBe(true)
     expect(hasItemCapability('fishing_rod', 'fishing')).toBe(true)
+    expect(hasItemCapability('sewing_kit', 'textile_repair')).toBe(true)
   })
 
   it('is false for a kind without the capability, and for no item at all', () => {
@@ -45,6 +46,7 @@ describe('item capability lookup', () => {
     expect(CAPABILITY_KINDS.meat_harvesting).toEqual(['damascus_knife', 'knife'])
     expect(CAPABILITY_KINDS.soil_digging).toEqual(['shovel'])
     expect(CAPABILITY_KINDS.rock_mining).toEqual(['pickaxe'])
+    expect(CAPABILITY_KINDS.textile_repair).toEqual(['sewing_kit'])
   })
 
   it('keeps CAPABILITY_KINDS and the per-entry declarations in sync', () => {
@@ -62,6 +64,8 @@ describe('Inventory capability queries', () => {
     expect(new Inventory({ shovel: 1 }).hasCapability('soil_digging')).toBe(true)
     expect(new Inventory({ pickaxe: 1 }).hasCapability('soil_digging')).toBe(false)
     expect(new Inventory().hasCapability('soil_digging')).toBe(false)
+    expect(new Inventory({ sewing_kit: 1 }).hasCapability('textile_repair')).toBe(true)
+    expect(ITEM_CATALOG.sewing_kit.holdable).toBe(false)
   })
 
   it('accepts either substitute for the same capability', () => {
@@ -105,7 +109,12 @@ describe('holdable is the single source of truth for the held-tool slot', () => 
 
   it('every capability-carrying kind can actually be held or carried', () => {
     for (const kinds of Object.values(CAPABILITY_KINDS)) {
-      for (const kind of kinds) expect(ITEM_CATALOG[kind].holdable).toBe(true)
+      for (const kind of kinds) {
+        expect(ITEM_CATALOG[kind]).toBeDefined()
+        // sewing_kit is a carried (non-holdable) utility; other capability
+        // items remain tools that occupy the held slot.
+        if (kind !== 'sewing_kit') expect(ITEM_CATALOG[kind].holdable).toBe(true)
+      }
     }
   })
 })

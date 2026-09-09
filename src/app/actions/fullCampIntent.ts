@@ -109,7 +109,7 @@ export function createFullCampIntent(deps: FullCampIntentDeps): FullCampIntentCo
     ))
   }
 
-  const canPlaceTent = (): boolean => inventory.has('tent', 1)
+  const canPlaceTent = (): boolean => inventory.countInstances('tent') > 0
   const canPlaceBedroll = (): boolean => hasAllMaterials(BEDROLL_MATERIAL_REQUIREMENTS)
   const canPlacePlatform = (): boolean => hasAllMaterials(PLATFORM_MATERIAL_REQUIREMENTS)
   const canPlaceFire = (): boolean =>

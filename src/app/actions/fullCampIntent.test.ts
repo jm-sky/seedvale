@@ -7,6 +7,7 @@ import type { WorldBundle } from '../worldBundle'
 import type { PlayerActionContext } from './actionContext'
 import type { PlacementPreviewConfirmResult, PlacementPreviewLifecycle } from './placementPreviewActions'
 import { Inventory } from '../../items/Inventory'
+import { createTentInstance } from '../../items/itemInstances'
 import { createBusyAction } from '../busyAction'
 import { createFullCampIntent } from './fullCampIntent'
 
@@ -209,7 +210,7 @@ describe('createFullCampIntent', () => {
   it('skips a later component when inventory is spent between steps', () => {
     const kinds: string[] = []
     const tents: ReturnType<typeof tentEntry>[] = []
-    const inventory = new Inventory({ tent: 1, hide: 3, branch: 2 })
+    const inventory = new Inventory({ hide: 3, branch: 2 }, undefined, [createTentInstance()])
     const start = vi.fn((kind: string, lifecycle?: PlacementPreviewLifecycle) => {
       kinds.push(kind)
       if (kind === 'tent') {
@@ -228,6 +229,14 @@ describe('createFullCampIntent', () => {
     expect(kinds).not.toContain('bedroll')
   })
 })
+
+function inventoryFromRecord(record: Record<string, number>): Inventory {
+  const tentCount = record.tent ?? 0
+  const rest = { ...record }
+  delete rest.tent
+  const instances = Array.from({ length: tentCount }, () => createTentInstance())
+  return new Inventory(rest, undefined, instances)
+}
 
 function mockFire(lit: boolean): VillageFire {
   let isLit = lit
@@ -270,7 +279,7 @@ function createTestIntent(overrides: {
 }) {
   const inventory = overrides.inventory instanceof Inventory
     ? overrides.inventory
-    : new Inventory(overrides.inventory ?? {})
+    : inventoryFromRecord(overrides.inventory ?? {})
   const tents = overrides.tents ?? []
   const bedrolls = overrides.bedrolls ?? []
   const platforms = overrides.platforms ?? []

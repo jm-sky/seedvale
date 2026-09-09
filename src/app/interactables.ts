@@ -19,6 +19,7 @@ import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { ResidentialBuildings } from '../world/createResidentialBuildings'
+import type { SleepingUtilities } from '../world/createSleepingUtilities'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
@@ -323,6 +324,7 @@ export function buildInteractables(
   droppedItems: DroppedItems,
   placedFires: PlacedFires,
   placedTents: PlacedTents,
+  sleepingUtilities: SleepingUtilities,
   placedTraps: PlacedTraps,
   placedContainers: PlacedContainers,
   resourceDeposits: ResourceDeposits,
@@ -408,6 +410,26 @@ export function buildInteractables(
       position: { x: tent.x, z: tent.z },
       promptLabel: '[E] Odpocznij · [R] Zbadaj',
       id: tent.id,
+    })
+  }
+
+  for (const bedroll of sleepingUtilities.bedrolls.list()) {
+    if (!withinRange(bedroll.x, bedroll.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'bedroll',
+      position: { x: bedroll.x, z: bedroll.z },
+      promptLabel: '[E] Zbadaj posłanie',
+      id: bedroll.id,
+    })
+  }
+
+  for (const platform of sleepingUtilities.platforms.list()) {
+    if (!withinRange(platform.x, platform.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'platform',
+      position: { x: platform.x, z: platform.z },
+      promptLabel: '[E] Zbadaj podest',
+      id: platform.id,
     })
   }
 

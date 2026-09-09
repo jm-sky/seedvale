@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { RelationLevel } from '../quests/quests'
 import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 import { Inventory } from './Inventory'
+import { createTentInstance, isTentItemInstance } from './itemInstances'
 import {
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
@@ -49,6 +50,7 @@ describe('tradeCatalog (plan 090)', () => {
     expect(merchantPrice('long_sword')).toBe(50)
     expect(merchantPrice('pickaxe')).toBe(30)
     expect(merchantPrice('tent')).toBe(30)
+    expect(merchantPrice('sewing_kit')).toBe(18)
   })
 
   it('stocks plan-160 merchant weapons and leaves the rarest quest-only', () => {
@@ -193,6 +195,24 @@ describe('merchant sell pricing (plan settlements-006)', () => {
     broken.durability = 0
     const base = tradeValue('trap_simple')
     expect(resolveInstanceSellPrice(broken)).toBe(roundSellPrice(base * BROKEN_SELL_MULTIPLIER))
+  })
+
+  it('creates a fresh tent instance at condition 100 on merchant purchase', () => {
+    const inv = new Inventory({ coin: 40 })
+    expect(settleTransaction(inv, { tent: 1 }, {})).toBe('ok')
+    expect(inv.count('tent')).toBe(0)
+    expect(inv.countInstances('tent')).toBe(1)
+    const tent = inv.getInstances('tent')[0]
+    expect(tent && isTentItemInstance(tent) && tent.condition).toBe(100)
+  })
+
+  it('scales damaged tent sell price by 0..100 condition', () => {
+    const full = createTentInstance(100)
+    const half = createTentInstance(50)
+    const base = tradeValue('tent')
+    const neutral = NEUTRAL_SELL_PRICE_CONTEXT
+    expect(resolveInstanceSellPrice(full, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR))
+    expect(resolveInstanceSellPrice(half, neutral)).toBe(roundSellPrice(base * BASE_SELL_FACTOR * 0.5))
   })
 })
 

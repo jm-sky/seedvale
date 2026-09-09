@@ -11,7 +11,7 @@ import {
   type MaterialRequirement,
 } from '../../items/constructionMaterials'
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
-import { isLiquidContainerInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
+import { isLiquidContainerInstance, isTentItemInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidContainer'
 import {
@@ -452,10 +452,16 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     previewGroundPlacement(tentPlacementDefinition(objectYaw))
 
   const placeTentAtAim = (objectYaw?: number, lifecycle?: PlacementMutationLifecycle): void => {
-    if (!inventory.has('tent', 1) || isActionBlocked(ctx)) {
+    const candidates = inventory.getInstances('tent').filter(isTentItemInstance)
+    const selected = candidates.sort((a, b) => {
+      if (a.condition !== b.condition) return a.condition - b.condition
+      return a.id.localeCompare(b.id)
+    })[0]
+    if (!selected || isActionBlocked(ctx)) {
       lifecycle?.onComplete?.('failure')
       return
     }
+    const instanceId = selected.id
     const { site, reason } = evaluatePlacementSite(tentPlacementDefinition(objectYaw))
     if (reason !== 'ok') {
       toast.show(TENT_PLACEMENT_MESSAGE[reason], 'error')
@@ -468,11 +474,15 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       TENT_SETUP_DURATION_SEC * survivalDurationMultiplier(player.skills.survival.value),
       'Rozstawianie namiotu…',
       () => {
-        if (!inventory.remove('tent', 1)) {
+        const instance = inventory.getInstance(instanceId)
+        if (!instance || !isTentItemInstance(instance) || !inventory.removeInstance(instanceId)) {
           lifecycle?.onComplete?.('failure')
           return
         }
-        const tent = bundle.placedTents.place(site.x, site.z, site.yaw, dayNight.elapsedDays)
+        const tent = bundle.placedTents.place(site.x, site.z, site.yaw, dayNight.elapsedDays, {
+          id: instance.id,
+          condition: instance.condition,
+        })
         hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
         ctx.syncQuickActionAvailability()
         awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.pitchTent)

@@ -1,7 +1,7 @@
 # Plan: Player camp repair and sewing kit
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** items-player-018, settlements-006, items-player-021, world-021

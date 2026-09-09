@@ -78,6 +78,7 @@ export type ItemKind =
   | 'roasted_fish'
   | 'fishing_rod'
   | 'whetstone'
+  | 'sewing_kit'
   | 'short_bow'
   | 'hunting_bow'
   | 'long_bow'
@@ -849,6 +850,15 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XS',
     color: 0x8a8a90,
     description: 'Kamień szlifierski. Przywraca ostrość zużytej broni białej.'
+  },
+  sewing_kit: {
+    kind: 'sewing_kit',
+    label: 'zestaw do szycia',
+    categories: ['utility'],
+    weight: 0.4,
+    size: 'SM',
+    color: 0xc4a882,
+    description: 'Igły, nić i łatki. Pozwala naprawiać namiot i posłanie.'
   },
   short_bow: {
     kind: 'short_bow',
@@ -1855,6 +1865,15 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
       new THREE.MeshStandardMaterial({ color: ITEM_DEFS.whetstone.color, flatShading: true }),
     )
     mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'sewing_kit') {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.05, 0.1),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.sewing_kit.color, flatShading: true }),
+    )
+    mesh.position.y = 0.025
     mesh.castShadow = true
     return mesh
   }

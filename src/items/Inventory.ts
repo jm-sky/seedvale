@@ -23,9 +23,11 @@ import {
 } from './itemCatalog'
 import {
   clamp01,
+  clampCampCondition,
   cloneItemInstance,
   isLiquidContainerInstance,
   isLiquidContainerKind,
+  isTentItemInstance,
   isTrapItemInstance,
   isTrapKind,
   isWeaponItemInstance,
@@ -33,6 +35,7 @@ import {
   type ItemInstance,
   type LiquidContainerItemInstance,
   type LiquidContent,
+  type TentItemInstance,
   type TrapItemInstance,
   type WeaponItemInstance,
 } from './itemInstances'
@@ -70,6 +73,8 @@ export type SaveItemInstance = {
    *  `amountLitres` means empty; `liquid` is meaningless (and omitted) then. */
   liquid?: LiquidContent
   amountLitres?: number
+  /** Plan items-player-019 — tent instances only; `0..100`, absent → `100`. */
+  condition?: number
 }
 
 /** `ItemInstance` → its persisted-row shape — the single conversion used by
@@ -87,6 +92,7 @@ export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
     row.liquid = instance.liquid
     row.amountLitres = instance.amountLitres
   }
+  if (isTentItemInstance(instance)) row.condition = instance.condition
   return row
 }
 
@@ -557,6 +563,15 @@ export class Inventory {
           amountLitres: liquid ? amountLitres : 0,
         }
         out.push(container)
+        continue
+      }
+      if (row.kind === 'tent') {
+        const tent: TentItemInstance = {
+          id: row.id,
+          kind: 'tent',
+          condition: typeof row.condition === 'number' ? clampCampCondition(row.condition) : 100,
+        }
+        out.push(tent)
         continue
       }
       out.push({ id: row.id, kind: row.kind })

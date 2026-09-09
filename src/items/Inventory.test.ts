@@ -3,7 +3,7 @@ import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
 import { PLAYER_STARTING_ATTRIBUTES } from '../player/PlayerController'
 import { createFoodBatch } from './foodFreshness'
 import { DEFAULT_MAX_SIZE, Inventory } from './Inventory'
-import { isWeaponItemInstance } from './itemInstances'
+import { createTentInstance, isWeaponItemInstance } from './itemInstances'
 import { itemSizeUnits } from './items'
 import { createTrapInstance } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'
@@ -177,6 +177,15 @@ describe('Inventory weapon instances (plan 161)', () => {
     const trap = createTrapInstance('trap_simple')
     const restored = Inventory.instancesFromJSON([{ id: trap.id, kind: 'trap_simple', durability: trap.durability }])
     expect(restored).toEqual([{ id: trap.id, kind: 'trap_simple', durability: trap.durability }])
+  })
+
+  it('round-trips tent condition on the 0..100 scale', () => {
+    const inv = new Inventory()
+    const tent = createTentInstance(37, 'tent:kept')
+    expect(inv.addInstance(tent)).toBe(true)
+    const json = inv.instancesToJSON()
+    expect(json).toEqual([{ id: 'tent:kept', kind: 'tent', condition: 37 }])
+    expect(Inventory.instancesFromJSON(json)).toEqual([{ id: 'tent:kept', kind: 'tent', condition: 37 }])
   })
 })
 

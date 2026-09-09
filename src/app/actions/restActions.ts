@@ -3,11 +3,36 @@ import type { LodgingOption } from '../../settlement/lodging'
 import type { BusyOverlay } from '../../ui/createBusyOverlay'
 import type { RestOutcome, RestVariant } from '../../ui/createQuickActions'
 import type { TimeSkipOverlay } from '../../ui/createTimeSkipOverlay'
+import {
+  CAMP_REPAIR_SESSION_HOURS,
+  CAMP_REPAIR_SESSION_SEC,
+  campRepairCapability,
+  campRepairDurationScale,
+  type CampRepairQuote,
+  type CampRepairStartOutcome,
+  type CampRepairTargetKind,
+  campRepairXp,
+  hasActiveCampRepair,
+  resolveCampRepairQuote,
+} from '../../items/campRepair'
+import {
+  CONSTRUCTION_MATERIAL_RADIUS,
+  consumeMaterial,
+  hasMaterial,
+  type MaterialRequirement,
+} from '../../items/constructionMaterials'
 import { inventoryFullToastText } from '../../items/Inventory'
-import { canCancelRestNow, restCancelAllowedByStartVigor } from '../../items/items'
+import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
+import { createTentInstance } from '../../items/itemInstances'
+import { canCancelRestNow, ITEM_DEFS, restCancelAllowedByStartVigor } from '../../items/items'
 import { tentRestPose } from '../../items/tentProp'
-import { restoreNeedsFromSleep } from '../../player/PlayerNeeds'
+import {
+  applyRepresentedPhysicalEffortVigor,
+  physicalEffortStaminaCostPerSec,
+  restoreNeedsFromSleep,
+} from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD } from '../../player/PlayerSkills'
+import { evaluateSkillCompetence } from '../../player/skillEvaluation'
 import {
   advanceLodgingProgress,
   hayLodgingId,
@@ -19,7 +44,11 @@ import {
 } from '../../settlement/lodging'
 import { collectLodgingCandidates, collectOwnedHouseLodgingOptions, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
 import { getVigorRatio } from '../../shared/VigorState'
+import { formatWorkDuration } from '../../world/playerWell'
+import { type RepairProgress, repairRemainingWork } from '../../world/repair'
 import { residentialBuildingLodgingId } from '../../world/residentialBuilding'
+import { findNearestSleepingUtility } from '../../world/sleepingUtilities'
+import { TENT_SHELTER_RADIUS, tentShelterFactor } from '../campRest'
 import { formatCampInspectionDescription, resolveCampRestSnapshot } from '../campRestSnapshot'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -54,7 +83,11 @@ export type RestActions = {
   startRest: (variant: RestVariant) => RestOutcome
   startTentRest: (id: string) => void
   inspectTent: (id: string) => void
+  inspectBedroll: (id: string) => void
+  inspectPlatform: (id: string) => void
   packTent: (id: string) => void
+  workOnCampRepair: (kind: CampRepairTargetKind, id: string) => void
+  campRepairAvailable: (kind: CampRepairTargetKind, id: string) => { mode: 'start' | 'continue' } | null
   /** A full night's sleep just finished — applies the resolved rest quality
    *  and any Survival XP the camp earned. */
   onSleepFinished: () => void
@@ -437,33 +470,312 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     })
   }
 
+  const shelterAt = (x: number, z: number): number => {
+    const tent = findNearestSleepingUtility(bundle.placedTents.list(), x, z, TENT_SHELTER_RADIUS)
+    const tentCondition = tent ? bundle.placedTents.conditionOf(tent.id, dayNight.elapsedDays) ?? 0 : 0
+    return tentShelterFactor(tentCondition)
+  }
+
+  type CampRepairView = {
+    title: string
+    description: string
+    canAct: boolean
+    reasonLabel: string
+    mode: 'start' | 'continue'
+  }
+
+  const describeCampRepair = (kind: CampRepairTargetKind, id: string): CampRepairView | null => {
+    const nowDays = dayNight.elapsedDays
+    if (kind === 'tent') {
+      const tent = bundle.placedTents.get(id)
+      if (!tent) return null
+      if (hasActiveCampRepair(tent) && tent.repair) {
+        return formatContinueView('tent', 'Naprawa namiotu', tent.repair)
+      }
+      const current = bundle.placedTents.conditionOf(id, nowDays)
+      if (current === null) return null
+      return describeQuote('tent', current, tent.x, tent.z)
+    }
+    if (kind === 'bedroll') {
+      const bedroll = bundle.sleepingUtilities.bedrolls.get(id)
+      if (!bedroll) return null
+      if (hasActiveCampRepair(bedroll) && bedroll.repair) {
+        return formatContinueView('bedroll', 'Naprawa posłania', bedroll.repair)
+      }
+      const current = bundle.sleepingUtilities.bedrolls.conditionOf(id, nowDays, shelterAt(bedroll.x, bedroll.z))
+      if (current === null) return null
+      return describeQuote('bedroll', current, bedroll.x, bedroll.z)
+    }
+    const platform = bundle.sleepingUtilities.platforms.get(id)
+    if (!platform) return null
+    if (hasActiveCampRepair(platform) && platform.repair) {
+      return formatContinueView('platform', 'Naprawa podestu', platform.repair)
+    }
+    const current = bundle.sleepingUtilities.platforms.conditionOf(id, nowDays, shelterAt(platform.x, platform.z))
+    if (current === null) return null
+    return describeQuote('platform', current, platform.x, platform.z)
+  }
+
+  const formatContinueView = (kind: CampRepairTargetKind, title: string, repair: RepairProgress): CampRepairView => {
+    const capability = campRepairCapability(kind)
+    const canAct = inventory.hasCapability(capability)
+    return {
+      title,
+      description: [
+        `Stan przed naprawą: ${Math.round(repair.startedCondition)} / 100`,
+        `Cel: ${Math.round(repair.targetCondition)} / 100`,
+        `Postęp pracy: ${formatWorkDuration(repair.completedWork)} / ${formatWorkDuration(repair.requiredWork)}`,
+        'Materiały: dostarczone',
+      ].join('\n'),
+      canAct,
+      reasonLabel: canAct ? '' : `Potrzebujesz ${CAPABILITY_NEED_LABEL[capability]}.`,
+      mode: 'continue',
+    }
+  }
+
+  const describeQuote = (kind: CampRepairTargetKind, current: number, x: number, z: number): CampRepairView | null => {
+    const quote = resolveCampRepairQuote(kind, current)
+    if (!quote) return null
+    return formatQuoteView(kind, quote, x, z)
+  }
+
+  const formatQuoteView = (kind: CampRepairTargetKind, quote: CampRepairQuote, x: number, z: number): CampRepairView => {
+    const title = kind === 'tent' ? 'Napraw namiot' : kind === 'bedroll' ? 'Napraw posłanie' : 'Napraw podest'
+    if (!inventory.hasCapability(quote.capability)) {
+      return {
+        title,
+        description: '',
+        canAct: false,
+        reasonLabel: `Potrzebujesz ${CAPABILITY_NEED_LABEL[quote.capability]}.`,
+        mode: 'start',
+      }
+    }
+    const missing = quote.materials.filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    const materialLines = quote.materials.length > 0
+      ? quote.materials.map((r) => `${r.count} × ${ITEM_DEFS[r.kind].label}`).join('\n')
+      : 'brak'
+    return {
+      title,
+      description: [
+        `Stan: ${Math.round(quote.currentCondition)} / 100`,
+        `Po naprawie: ${Math.round(quote.targetCondition)} / 100`,
+        '',
+        'Potrzebne materiały:',
+        materialLines,
+        '',
+        'Czas pracy:',
+        formatWorkDuration(quote.requiredWork),
+      ].join('\n'),
+      canAct: missing.length === 0,
+      reasonLabel: missing.length > 0
+        ? `Brakuje: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
+        : '',
+      mode: 'start',
+    }
+  }
+
+  const campRecord = (kind: CampRepairTargetKind, id: string) =>
+    kind === 'tent'
+      ? bundle.placedTents.get(id)
+      : kind === 'bedroll'
+        ? bundle.sleepingUtilities.bedrolls.get(id)
+        : bundle.sleepingUtilities.platforms.get(id)
+
+  const startCampRepairBout = (kind: CampRepairTargetKind, id: string): void => {
+    const record = campRecord(kind, id)
+    if (!record?.repair) return
+    const remainingHours = repairRemainingWork(record.repair)
+    if (remainingHours <= 0) return
+    const sessionHours = Math.min(CAMP_REPAIR_SESSION_HOURS, remainingHours)
+    const competence = evaluateSkillCompetence(player.skills, 'repair')
+    const sessionSec = (sessionHours / CAMP_REPAIR_SESSION_HOURS) * CAMP_REPAIR_SESSION_SEC * campRepairDurationScale(competence.primary.value)
+    const startedAt = performance.now()
+    const effort = kind === 'platform' ? 'moderate' as const : 'light' as const
+    const contribute = (work: number): void => {
+      const accepted = kind === 'tent'
+        ? bundle.placedTents.contributeRepairWork(id, work, dayNight.elapsedDays)
+        : kind === 'bedroll'
+          ? bundle.sleepingUtilities.bedrolls.contributeRepairWork(id, work, dayNight.elapsedDays)
+          : bundle.sleepingUtilities.platforms.contributeRepairWork(id, work, dayNight.elapsedDays)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, effort, accepted)
+      awardSkillXp(player.skills, 'repair', campRepairXp(accepted))
+    }
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      contribute(sessionHours * fraction)
+    }
+    const label = kind === 'tent' ? 'Naprawa namiotu…' : kind === 'bedroll' ? 'Naprawa posłania…' : 'Naprawa podestu…'
+    busy.start(sessionSec, label, () => {
+      contribute(sessionHours)
+    }, {
+      onCancel: creditPartial,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec(effort),
+    })
+  }
+
+  const workOnCampRepair = (kind: CampRepairTargetKind, id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const nowDays = dayNight.elapsedDays
+    const startIfNeeded = (): boolean => {
+      const hasCap = (c: Parameters<typeof inventory.hasCapability>[0]) => inventory.hasCapability(c)
+      const at = (x: number, z: number) => ({
+        has: (r: Parameters<typeof hasMaterial>[5]) => hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
+        consume: (r: Parameters<typeof consumeMaterial>[5]) => {
+          consumeMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r)
+        },
+      })
+      const refuseCapability = (capability: ReturnType<typeof campRepairCapability>): false => {
+        toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL[capability]}.`, 'error')
+        return false
+      }
+      const refuseMissing = (missing: readonly MaterialRequirement[]): false => {
+        toast.show(`Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`, 'error')
+        return false
+      }
+      const reportStart = (outcome: CampRepairStartOutcome): boolean => {
+        if (outcome.status === 'blocked-capability') return refuseCapability(outcome.capability)
+        if (outcome.status === 'blocked') return refuseMissing(outcome.missing)
+        if (outcome.status !== 'started') return false
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        return true
+      }
+      if (kind === 'tent') {
+        const tent = bundle.placedTents.get(id)
+        if (!tent) return false
+        if (tent.repair) {
+          const capability = campRepairCapability('tent')
+          return hasCap(capability) || refuseCapability(capability)
+        }
+        const materials = at(tent.x, tent.z)
+        return reportStart(bundle.placedTents.startRepair(id, nowDays, hasCap, materials.has, materials.consume))
+      }
+      if (kind === 'bedroll') {
+        const bedroll = bundle.sleepingUtilities.bedrolls.get(id)
+        if (!bedroll) return false
+        if (bedroll.repair) {
+          const capability = campRepairCapability('bedroll')
+          return hasCap(capability) || refuseCapability(capability)
+        }
+        const materials = at(bedroll.x, bedroll.z)
+        return reportStart(bundle.sleepingUtilities.bedrolls.startRepair(
+          id, nowDays, shelterAt(bedroll.x, bedroll.z), hasCap, materials.has, materials.consume,
+        ))
+      }
+      const platform = bundle.sleepingUtilities.platforms.get(id)
+      if (!platform) return false
+      if (platform.repair) {
+        const capability = campRepairCapability('platform')
+        return hasCap(capability) || refuseCapability(capability)
+      }
+      const materials = at(platform.x, platform.z)
+      return reportStart(bundle.sleepingUtilities.platforms.startRepair(
+        id, nowDays, shelterAt(platform.x, platform.z), hasCap, materials.has, materials.consume,
+      ))
+    }
+    if (!startIfNeeded()) return
+    startCampRepairBout(kind, id)
+  }
+
   const inspectTent = (id: string): void => {
     if (isActionBlocked(ctx)) return
     const tent = bundle.placedTents.list().find((entry) => entry.id === id)
     if (!tent) return
     const snapshot = resolveSnapshot(tent.x, tent.z, inventory.has('blanket', 1))
-    const canPack = inventory.canAdd('tent')
-    openLodgingPanel('To twój namiot', formatCampInspectionDescription(snapshot), [
+    const instance = createTentInstance(bundle.placedTents.conditionOf(id, dayNight.elapsedDays) ?? tent.condition, tent.id)
+    const canPack = !hasActiveCampRepair(tent) && inventory.canAddInstance(instance)
+    const repair = describeCampRepair('tent', id)
+    const actions: LodgingChoiceAction[] = [
       { label: 'Odpocznij', enabled: true, reasonLabel: '', run: () => startTentRest(id) },
-      {
-        label: 'Złóż namiot',
-        enabled: canPack,
-        reasonLabel: canPack ? '' : inventoryFullToastText(inventory, 'tent', 1),
-        run: () => packTent(id),
-      },
-      { label: 'Zamknij', enabled: true, reasonLabel: '', run: () => {} },
-    ])
+    ]
+    if (repair) {
+      actions.push({
+        label: repair.mode === 'continue' ? 'Kontynuuj naprawę' : 'Napraw',
+        enabled: repair.canAct,
+        reasonLabel: repair.reasonLabel,
+        run: () => workOnCampRepair('tent', id),
+      })
+    }
+    actions.push({
+      label: 'Złóż namiot',
+      enabled: canPack,
+      reasonLabel: hasActiveCampRepair(tent)
+        ? 'Nie możesz złożyć namiotu w trakcie naprawy.'
+        : canPack ? '' : inventoryFullToastText(inventory, 'tent', 1),
+      run: () => packTent(id),
+    })
+    actions.push({ label: 'Zamknij', enabled: true, reasonLabel: '', run: () => {} })
+    openLodgingPanel('To twój namiot', [
+      formatCampInspectionDescription(snapshot),
+      repair && repair.mode === 'start' ? `\n\n${repair.description}` : '',
+      repair && repair.mode === 'continue' ? `\n\n${repair.description}` : '',
+    ].join(''), actions)
+  }
+
+  const inspectBedroll = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const bedroll = bundle.sleepingUtilities.bedrolls.get(id)
+    if (!bedroll) return
+    const condition = bundle.sleepingUtilities.bedrolls.conditionOf(id, dayNight.elapsedDays, shelterAt(bedroll.x, bedroll.z)) ?? bedroll.condition
+    const repair = describeCampRepair('bedroll', id)
+    const actions: LodgingChoiceAction[] = []
+    if (repair) {
+      actions.push({
+        label: repair.mode === 'continue' ? 'Kontynuuj naprawę' : 'Napraw',
+        enabled: repair.canAct,
+        reasonLabel: repair.reasonLabel,
+        run: () => workOnCampRepair('bedroll', id),
+      })
+    }
+    actions.push({ label: 'Zamknij', enabled: true, reasonLabel: '', run: () => {} })
+    openLodgingPanel('Posłanie', [
+      `Stan: ${Math.round(condition)} / 100`,
+      repair ? `\n\n${repair.description}` : '',
+    ].join(''), actions)
+  }
+
+  const inspectPlatform = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const platform = bundle.sleepingUtilities.platforms.get(id)
+    if (!platform) return
+    const condition = bundle.sleepingUtilities.platforms.conditionOf(id, dayNight.elapsedDays, shelterAt(platform.x, platform.z)) ?? platform.condition
+    const repair = describeCampRepair('platform', id)
+    const actions: LodgingChoiceAction[] = []
+    if (repair) {
+      actions.push({
+        label: repair.mode === 'continue' ? 'Kontynuuj naprawę' : 'Napraw',
+        enabled: repair.canAct,
+        reasonLabel: repair.reasonLabel,
+        run: () => workOnCampRepair('platform', id),
+      })
+    }
+    actions.push({ label: 'Zamknij', enabled: true, reasonLabel: '', run: () => {} })
+    openLodgingPanel('Podest do spania', [
+      `Stan: ${Math.round(condition)} / 100`,
+      repair ? `\n\n${repair.description}` : '',
+    ].join(''), actions)
   }
 
   const packTent = (id: string): void => {
     if (isActionBlocked(ctx)) return
-    if (!inventory.canAdd('tent')) {
+    const live = bundle.placedTents.get(id)
+    if (!live) return
+    if (hasActiveCampRepair(live)) {
+      toast.show('Nie możesz złożyć namiotu w trakcie naprawy.', 'error')
+      return
+    }
+    const resolved = bundle.placedTents.conditionOf(id, dayNight.elapsedDays) ?? live.condition
+    const preview = createTentInstance(resolved, live.id)
+    if (!inventory.canAddInstance(preview)) {
       toast.show(inventoryFullToastText(inventory, 'tent', 1), 'error')
       return
     }
-    const packed = bundle.placedTents.pack(id)
-    if (!packed) return
-    inventory.add('tent', 1)
+    const packed = bundle.placedTents.pack(id, dayNight.elapsedDays)
+    if (packed.status !== 'packed') return
+    inventory.addInstance(createTentInstance(packed.tent.condition, packed.tent.id))
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.syncQuickActionAvailability()
     toast.show('+1 Namiot', 'pickup')
@@ -533,7 +845,14 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     startRest,
     startTentRest,
     inspectTent,
+    inspectBedroll,
+    inspectPlatform,
     packTent,
+    workOnCampRepair,
+    campRepairAvailable: (kind, id) => {
+      const view = describeCampRepair(kind, id)
+      return view ? { mode: view.mode } : null
+    },
     onSleepFinished,
     abortRest,
     abortBusy,
