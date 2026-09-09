@@ -263,6 +263,57 @@ describe('resolveCameraBoom', () => {
     expect(result.z).toBeLessThanOrEqual(6)
     expect(result.y).toBeLessThan(surfaceY)
   })
+
+  it('interior solid miss does not heightfield-clamp Y to the hillside', () => {
+    const floorY = 2
+    const ceilingY = 8
+    const surfaceY = 11
+    const occupancyAt = (x: number, y: number, _z: number) => {
+      if (Math.abs(x) > 1) return null
+      if (y < floorY || y > ceilingY) return null
+      return { floorY, ceilingY }
+    }
+    const result = resolveCameraBoom({
+      originX: 0,
+      originY: floorY + 1.1,
+      originZ: 0,
+      camX: 8,
+      camY: floorY + 5,
+      camZ: 0,
+      sampleHeight: () => surfaceY,
+      colliders: [],
+      occupancyAt,
+    })
+    expect(result.y).toBeLessThan(surfaceY)
+    expect(result.y).not.toBeCloseTo(surfaceY + CAMERA_GROUND_CLEARANCE, 1)
+    expect(Math.abs(result.x)).toBeLessThanOrEqual(1)
+    expect(occupancyAt(result.x, result.y, result.z)).not.toBeNull()
+  })
+
+  it('interior follow shortens instead of parking in a surface-clipped mouth hood', () => {
+    const surfaceY = 10
+    const occupancyAt = (_x: number, y: number, z: number) => {
+      if (z < 0 || z > 8) return null
+      if (y < 2 || y > 9.95) return null
+      if (z > 4) return { floorY: 7, ceilingY: 9.92 }
+      return { floorY: 3, ceilingY: 8 }
+    }
+    const result = resolveCameraBoom({
+      originX: 0,
+      originY: 4.1,
+      originZ: 0,
+      camX: 0,
+      camY: 8,
+      camZ: 12,
+      sampleHeight: () => surfaceY,
+      colliders: [],
+      occupancyAt,
+    })
+    expect(result.z).toBeLessThanOrEqual(4)
+    expect(result.y).toBeLessThan(surfaceY)
+    expect(result.y).toBeLessThan(7.4)
+    expect(occupancyAt(result.x, result.y, result.z)).not.toBeNull()
+  })
 })
 
 describe('withCaveFloorFallback', () => {

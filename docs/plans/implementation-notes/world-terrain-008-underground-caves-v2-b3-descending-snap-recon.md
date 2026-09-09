@@ -5,7 +5,8 @@
 > Scope: remaining “player/camera pops to the surface a few metres past the
 > mouth, as the tunnel starts descending” after `ef420657` and `f5bacadb`.
 > Diagnostic: `src/world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
-> No browser. No fix. B3 stays open.
+> RC1+RC2 camera fix landed 2026-09-09. RC3 doorway not in this slice.
+> No browser. B3 stays open pending Player manual verification.
 
 Current code is source of truth. The 2026-09-08 B3 recon is the collision /
 camera *architecture* map. The 2026-09-09 third-pass note in
@@ -405,7 +406,24 @@ Minimal local fix (camera contract, same occupancy owner):
 Doorway / terrain-hole / interior sky seam stays the separate leftover
 (ROOT CAUSE 3). Fog/darkness must not mask it.
 
-**DO NOT IMPLEMENT YET.**
+## Fix landed (2026-09-09) — RC1 + RC2 only
+
+Implemented in `resolveCameraBoom` (`src/player/cameraBoom.ts`). No
+`queryGround` / doorway change. B3 still needs **manual** verification on
+this seed; do not mark complete.
+
+- **RC1:** `originFollowVoid` never uses `sampleHeight + 0.45` as camera Y.
+  After a solid march, `lastInteriorVoidT` walks back to follow-void;
+  Y is clamped to that occupancy interval.
+- **RC2:** from a follow-void origin, `openSky` and heightfield-clipped
+  occupancy (`ceilingY >= surface − 0.3`) are solid. Boom shortens in the
+  descending interior instead of parking at along ≈ −0.4.
+- Portal / surface-clipped **hood origin** still looks out (`exit`).
+- RC3 doorway leftover is untouched.
+
+Harness pins in `caveGameplayQuery.b3-descending-trace.test.ts` now assert
+the post-fix contracts (no +1.7 m Y jump, no hillside clamp at along ≈ −10.8,
+camera stays in occupancy, boom not in the mouth throat).
 
 ---
 
@@ -415,9 +433,10 @@ Doorway / terrain-hole / interior sky seam stays the separate leftover
 
 - identity / topology for `cave:0e3cce97`;
 - player contracts through the descent;
-- behind-mouth camera Y bounce at along ≈ −4;
-- yaw=0 heightfield clamp leftover at along ≈ −11;
+- behind-mouth boom shortens at along ≈ −4 (no +1.7 m Y jump, not parked in the throat);
+- yaw=0 interior boom does not heightfield-clamp at along ≈ −10.8;
 - query table stations;
 - Grota Mroczna player contracts.
+- RC3 doorway leftover remains a presentation pin, not a camera-Y pin.
 
 No Playwright. Browser verification remains the Player’s.

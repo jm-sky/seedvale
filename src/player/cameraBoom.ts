@@ -23,6 +23,14 @@ export const CAMERA_BOOM_PULL_IN = 0.2
 export const CAMERA_TERRAIN_SKIP_DISTANCE = 1.5
 const TERRAIN_STEPS = 20
 const DEGENERATE = 1e-8
+/** Sit this far below an occupancy ceiling so the near plane is not in rock. */
+const CAMERA_CEILING_CLEARANCE = 0.05
+/** Occupancy whose ceiling is this close to the heightfield is the surface
+ *  clip / mouth hood — not a place for an interior follow camera to park.
+ *  Same slack as the portal look-out heuristic in `marchCaveOccupancy`. */
+const INTERIOR_SURFACE_CLIP = 0.3
+
+type OccupancySample = { floorY: number, ceilingY: number, openSky?: boolean }
 
 export type CameraBoomInput = {
   originX: number
@@ -37,7 +45,7 @@ export type CameraBoomInput = {
    *  origin is in cave void, the march pulls in at the first underground
    *  non-void sample (wall / ceiling / overburden) instead of relying on
    *  cave collider beads passing `CAMERA_OCCLUDER_MIN_RADIUS`. */
-  occupancyAt?: (x: number, y: number, z: number) => { floorY: number, ceilingY: number, openSky?: boolean } | null
+  occupancyAt?: (x: number, y: number, z: number) => OccupancySample | null
 }
 
 export type CameraBoomResult = {
@@ -52,8 +60,11 @@ export type CameraBoomResult = {
  * Pulls the third-person camera along the look-at → desired-camera boom so
  * it stays out of the heightfield, out of large XZ colliders (houses), and
  * — when `occupancyAt` is provided and the origin is in cave void — out of
- * cave walls, ceiling and overburden. Cave beads stay below
- * `CAMERA_OCCLUDER_MIN_RADIUS` on purpose; occupancy is the cave occluder.
+ * cave walls, ceiling and overburden. Stable interior follow void never
+ * falls back to the outdoor heightfield; the boom shortens to the last
+ * follow-void sample instead of parking in the surface-clipped mouth hood.
+ * Cave beads stay below `CAMERA_OCCLUDER_MIN_RADIUS` on purpose; occupancy
+ * is the cave occluder.
  */
 export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   const dx = input.camX - input.originX
@@ -67,9 +78,13 @@ export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
   let hitT = 1
   const originOccupancy = input.occupancyAt?.(input.originX, input.originY, input.originZ) ?? null
   const originInCave = originOccupancy !== null
+  const originFollowVoid = isInteriorFollowVoid(
+    originOccupancy,
+    input.sampleHeight(input.originX, input.originZ),
+  )
 
   if (originInCave) {
-    const occupancyMarch = marchCaveOccupancy(input, dx, dy, dz, originOccupancy)
+    const occupancyMarch = marchCaveOccupancy(input, dx, dy, dz, originOccupancy, originFollowVoid)
     if (occupancyMarch.kind === 'solid' && occupancyMarch.t < hitT) hitT = occupancyMarch.t
     else if (occupancyMarch.kind === 'exit') {
       const terrainHit = firstTerrainHitFromT(input, dx, dy, dz, occupancyMarch.t)
@@ -102,15 +117,82 @@ export function resolveCameraBoom(input: CameraBoomInput): CameraBoomResult {
 
   const pullT = CAMERA_BOOM_PULL_IN / dist
   const minT = Math.min(CAMERA_BOOM_MIN_DISTANCE / dist, 0.5)
-  const t = hitT >= 1 ? 1 : clamp(hitT - pullT, minT, 1)
+  let t = hitT >= 1 ? 1 : clamp(hitT - pullT, minT, 1)
+
+  if (originFollowVoid) {
+    t = lastInteriorVoidT(input, dx, dy, dz, t, minT)
+  }
+
   const x = input.originX + dx * t
   const z = input.originZ + dz * t
   const yAlong = input.originY + dy * t
   const occupancy = originInCave ? input.occupancyAt?.(x, yAlong, z) ?? null : null
-  const y = occupancy
-    ? Math.max(yAlong, occupancy.floorY + CAMERA_GROUND_CLEARANCE)
-    : Math.max(yAlong, input.sampleHeight(x, z) + CAMERA_GROUND_CLEARANCE)
+  const y = resolveBoomY(input, originFollowVoid, originOccupancy, occupancy, x, yAlong, z)
   return { x, y, z, t }
+}
+
+/**
+ * Interior follow void: strict occupancy that is not the open-sky portal and
+ * not a heightfield-clipped hood. Portal origin keeps using raw occupancy so
+ * a real mouth look-out still leaves the cave.
+ */
+function isInteriorFollowVoid(
+  occ: OccupancySample | null,
+  groundY: number,
+): boolean {
+  if (!occ || occ.openSky) return false
+  if (occ.ceilingY >= groundY - INTERIOR_SURFACE_CLIP) return false
+  return true
+}
+
+function lastInteriorVoidT(
+  input: CameraBoomInput,
+  dx: number,
+  dy: number,
+  dz: number,
+  startT: number,
+  minT: number,
+): number {
+  const occupancyAt = input.occupancyAt
+  if (!occupancyAt) return startT
+  let t = startT
+  for (let guard = 0; guard <= TERRAIN_STEPS; guard++) {
+    const x = input.originX + dx * t
+    const y = input.originY + dy * t
+    const z = input.originZ + dz * t
+    const occ = occupancyAt(x, y, z)
+    const groundY = input.sampleHeight(x, z)
+    if (isInteriorFollowVoid(occ, groundY)) return t
+    if (t <= minT + 1e-9) return minT
+    t = Math.max(minT, t - 1 / TERRAIN_STEPS)
+  }
+  return minT
+}
+
+function clampToOccupancy(yAlong: number, occ: OccupancySample): number {
+  const lo = occ.floorY + CAMERA_GROUND_CLEARANCE
+  const hi = occ.ceilingY - CAMERA_CEILING_CLEARANCE
+  if (hi < lo) return (occ.floorY + occ.ceilingY) * 0.5
+  return clamp(yAlong, lo, hi)
+}
+
+function resolveBoomY(
+  input: CameraBoomInput,
+  originFollowVoid: boolean,
+  originOccupancy: OccupancySample | null,
+  occupancy: OccupancySample | null,
+  x: number,
+  yAlong: number,
+  z: number,
+): number {
+  if (originFollowVoid) {
+    const groundY = input.sampleHeight(x, z)
+    const follow = isInteriorFollowVoid(occupancy, groundY) ? occupancy : originOccupancy
+    if (follow) return clampToOccupancy(yAlong, follow)
+    return yAlong
+  }
+  if (occupancy) return Math.max(yAlong, occupancy.floorY + CAMERA_GROUND_CLEARANCE)
+  return Math.max(yAlong, input.sampleHeight(x, z) + CAMERA_GROUND_CLEARANCE)
 }
 
 function firstTerrainHitT(
@@ -180,24 +262,28 @@ function marchCaveOccupancy(
   dx: number,
   dy: number,
   dz: number,
-  originOcc: { floorY: number, ceilingY: number, openSky?: boolean } | null,
+  originOcc: OccupancySample | null,
+  originFollowVoid: boolean,
 ): OccupancyMarch {
   const occupancyAt = input.occupancyAt
   if (!occupancyAt) return { kind: 'void' }
   const originOpenSky = Boolean(originOcc?.openSky)
+  const originMayLookOut = originOpenSky || !originFollowVoid
   let previousT = 0
   for (let i = 1; i <= TERRAIN_STEPS; i++) {
     const t = i / TERRAIN_STEPS
     const x = input.originX + dx * t
     const y = input.originY + dy * t
     const z = input.originZ + dz * t
-    if (occupancyAt(x, y, z)) {
+    const occ = occupancyAt(x, y, z)
+    const groundY = input.sampleHeight(x, z)
+    const inVoid = originFollowVoid ? isInteriorFollowVoid(occ, groundY) : occ !== null
+    if (inVoid) {
       previousT = t
       continue
     }
-    const groundY = input.sampleHeight(x, z)
     if (y >= groundY - 0.05) {
-      if (originOpenSky) return { kind: 'exit', t: previousT }
+      if (originMayLookOut) return { kind: 'exit', t: previousT }
       return { kind: 'solid', t: previousT }
     }
     const prevX = input.originX + dx * previousT
@@ -205,12 +291,10 @@ function marchCaveOccupancy(
     const prevZ = input.originZ + dz * previousT
     const prevOcc = occupancyAt(prevX, prevY, prevZ)
     const prevGround = input.sampleHeight(prevX, prevZ)
-    // Interior SDF clipped to the heightfield is still cave void. The
-    // ceiling≈surface heuristic is only a mouth look-out from the portal.
     if (
-      originOpenSky
-      && prevOcc?.openSky
-      && prevOcc.ceilingY >= prevGround - 0.3
+      originMayLookOut
+      && prevOcc
+      && (prevOcc.openSky || prevOcc.ceilingY >= prevGround - INTERIOR_SURFACE_CLIP)
     ) {
       return { kind: 'exit', t: previousT }
     }

@@ -1,6 +1,6 @@
-/** B3 descending-path movement trace — RECON ONLY.
+/** B3 descending-path movement trace — regression harness for RC1+RC2.
  *  Reconstructs PlayerController update order on the production Grota
- *  Czarnego Kamienia route (seed `1136726869`). No production-code change.
+ *  Czarnego Kamienia route (seed `1136726869`).
  *  No browser. See world-terrain-008 B3 recon notes.
  */
 
@@ -19,12 +19,11 @@ import {
 import {
   MOVE_SPEED,
   PLAYER_COLLISION_RADIUS,
-  PLAYER_HEIGHT,
   rockCeilingMaxY,
 } from '../../player/PlayerController'
 import { integrateVerticalMotion } from '../../player/verticalMotion'
-import { applySlopeMovementConstraint, sampleSlope } from '../../terrain/slopeConstraint'
 import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightmap'
+import { applySlopeMovementConstraint, sampleSlope } from '../../terrain/slopeConstraint'
 import { colliderActiveAtY, resolvePosition } from '../collision'
 import { type LargeCaveSite, openingDirection } from '../largeCaves'
 import { makeCaveId } from './caveIdentity'
@@ -185,7 +184,6 @@ function classifyBoom(
   const dx = camX - originX
   const dy = camY - originY
   const dz = camZ - originZ
-  const dist = Math.hypot(dx, dy, dz)
   if (!originInCave) {
     const yAlong = originY + dy * result.t
     return {
@@ -472,7 +470,6 @@ function simulateWalk(cave: BuiltCave, cameraMode: CameraMode): { ticks: TickRow
       kinds.push('interior-lost-underground')
     }
     const interiorPlayer = row.queryInterior && row.along < 0
-    const camBuriedPlayer = buried(row)
     const camOnSurface = row.camY >= row.camSurfaceY - 0.15
     const prevCamUnderground = prev.camY < prev.camSurfaceY - 0.5
     if (interiorPlayer && prevCamUnderground && camOnSurface && row.camY - prev.camY > 0.8) {
@@ -568,36 +565,41 @@ describe('B3 descending movement trace: seed 1136726869', () => {
     expect(interior.filter((t) => t.along < -0.5).every((t) => !t.openSky)).toBe(true)
   })
 
-  it('behind-mouth boom stays underground but jumps toward the surface at the descent', () => {
+  it('behind-mouth boom shortens in the descending interior instead of jumping toward the hillside', () => {
     const { ticks } = simulateWalk(czarny, 'behind-toward-mouth')
-    const lastGood = nearestAlong(ticks, -3.5)
-    const firstBad = nearestAlong(ticks, -4.0)
-    const next = nearestAlong(ticks, -5.0)
-    expect(lastGood.queryInterior).toBe(true)
-    expect(lastGood.groundSource).toBe('cave')
-    expect(lastGood.camY).toBeLessThan(lastGood.camSurfaceY - 2)
-    expect(firstBad.playerYJump).toBeLessThan(0.5)
-    expect(firstBad.groundSource).toBe('cave')
-    expect(firstBad.camY - lastGood.camY).toBeGreaterThan(1.2)
-    expect(firstBad.camSurfaceY - firstBad.camY).toBeLessThan(2.2)
-    expect(firstBad.camAlong).toBeGreaterThan(-1.2)
-    expect(next.camY).toBeLessThan(next.camSurfaceY - 2)
+    const at35 = nearestAlong(ticks, -3.5)
+    const at4 = nearestAlong(ticks, -4.0)
+    const at5 = nearestAlong(ticks, -5.0)
+    for (const row of [at35, at4, at5]) {
+      expect(row.queryInterior).toBe(true)
+      expect(row.groundSource).toBe('cave')
+      expect(row.occupancyAtFeet).toBe(true)
+      expect(row.camY).toBeLessThan(row.camSurfaceY - 1.5)
+      expect(row.boom.heightfieldClamped).toBe(false)
+      expect(row.camOccupancy).toBe(true)
+    }
+    expect(at4.playerYJump).toBeLessThan(0.5)
+    expect(at4.camY - at35.camY).toBeLessThan(0.8)
+    expect(at4.camAlong).toBeLessThan(-1.2)
+    expect(at4.along - at4.camAlong).toBeLessThan(3.5)
+    expect(at5.camAlong).toBeLessThan(-1.2)
   })
 
-  it('leftover: occupancy-null after a solid march heightfield-clamps camera Y to the hillside', () => {
+  it('interior occupancy-null after a solid march does not clamp camera Y to the hillside', () => {
     const { ticks, divergences } = simulateWalk(czarny, 'default-yaw0')
     const clamp = divergences.find((d) => d.kind === 'camera-heightfield-clamp')
-    expect(clamp).toBeTruthy()
-    expect(clamp!.row.along).toBeLessThan(-8)
-    expect(clamp!.prev.camY).toBeLessThan(clamp!.prev.camSurfaceY - 2)
-    expect(clamp!.row.camY).toBeGreaterThan(clamp!.row.camSurfaceY - 0.15)
-    expect(clamp!.row.boom.heightfieldClamped).toBe(true)
-    expect(clamp!.row.boom.marchKind).toBe('solid')
-    expect(clamp!.row.boom.resolvedOccupancy).toBe(false)
-    expect(clamp!.row.groundSource).toBe('cave')
-    expect(clamp!.row.yAfterVertical).toBeLessThan(clamp!.row.surfaceY - 6)
-    const interior = ticks.filter((t) => t.queryInterior && t.along < 0)
-    expect(interior.some((t) => t.boom.heightfieldClamped)).toBe(true)
+    expect(clamp).toBeUndefined()
+    const around108 = nearestAlong(ticks, -10.8)
+    expect(around108.queryInterior).toBe(true)
+    expect(around108.groundSource).toBe('cave')
+    expect(around108.camY).toBeLessThan(around108.camSurfaceY - 1.5)
+    expect(around108.camY).not.toBeCloseTo(around108.camSurfaceY + CAMERA_GROUND_CLEARANCE, 1)
+    expect(around108.boom.heightfieldClamped).toBe(false)
+    expect(around108.camOccupancy).toBe(true)
+    const interior = ticks.filter((t) => t.queryInterior && t.along < -0.5)
+    expect(interior.every((t) => !t.boom.heightfieldClamped)).toBe(true)
+    expect(interior.every((t) => t.camY < t.camSurfaceY - 0.5)).toBe(true)
+    expect(interior.every((t) => t.camOccupancy)).toBe(true)
   })
 
   it('query contracts at representative stations', () => {
@@ -629,15 +631,14 @@ describe('B3 descending movement trace: seed 1136726869', () => {
     }
   })
 
-  it('presentation: descent camera sits in the mouth throat; vertical ray can miss rock', () => {
+  it('presentation leftover: doorway sky gap is out of scope; descent camera stays in occupancy', () => {
     const { ticks } = simulateWalk(czarny, 'behind-toward-mouth')
     const descent = nearestAlong(ticks, -4)
-    expect(descent.camAlong).toBeGreaterThan(-1.2)
-    expect(descent.camAlong).toBeLessThan(0.5)
-    const camSky = verticalSkyClearance(czarny, descent.camX, descent.camY, descent.camZ)
+    expect(descent.camAlong).toBeLessThan(-1.2)
+    expect(descent.camOccupancy).toBe(true)
+    expect(descent.camY).toBeLessThan(descent.camSurfaceY - 1.5)
     const playerSky = verticalSkyClearance(czarny, descent.x, descent.yAfterVertical + 1.1, descent.z)
     expect(playerSky.hitsRock).toBe(true)
-    expect(camSky.surfaceY - descent.camY).toBeLessThan(2.5)
   })
 
   it('Grota Mroczna: same player contracts; behind-mouth boom stays cave-owned into the descent', () => {

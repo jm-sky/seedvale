@@ -1702,11 +1702,44 @@ bigger void against the same bowl would worsen the sky gap.
 ## Remaining B3 leftovers
 
 - Hillside doorway / terrain hole / interior sky seam (needs the
-  doorway contract above, not another clip tweak).
-- Descending-snap after `f5bacadb`: player ground stays cave-owned; camera
-  Y still jumps (throat parking + occupancy-null heightfield clamp). See
-  `world-terrain-008-underground-caves-v2-b3-descending-snap-recon.md`.
+  doorway contract above, not another clip tweak). RC3 from the
+  descending-snap recon — not this slice.
+- Descending-snap RC1+RC2 (camera) implemented 2026-09-09; **manual
+  verification still required** on seed `1136726869`, Grota Czarnego
+  Kamienia. See recon note + fix below.
 - Cave size increase (blocked on overburden + doorway).
 - B4 streaming/workers/performance, B5 cleanup: untouched.
+
+---
+
+# Milestone B3 — Descending-snap camera fix (2026-09-09)
+
+Recon: `world-terrain-008-underground-caves-v2-b3-descending-snap-recon.md`.
+No player-ground change. No doorway/RC3.
+
+## RC1
+
+`originFollowVoid` (interior occupancy that is not `openSky` and not
+heightfield-clipped) never uses `sampleHeight + CAMERA_GROUND_CLEARANCE`
+as camera Y. After a solid occupancy march, `lastInteriorVoidT` walks
+back to the last follow-void sample; Y is clamped to that interval's
+floor/ceiling.
+
+## RC2
+
+From a follow-void origin, occupancy that is `openSky` or whose ceiling
+sits within 0.3 m of the heightfield is treated as solid. The 12 m boom
+shortens and stays in the descending interior instead of parking in the
+mouth throat (along ≈ −0.4 while the player is at −4).
+
+Portal / surface-clipped hood origin still uses the mouth look-out
+(`exit` → remaining boom on the heightfield). Outdoor boom is unchanged.
+
+## Verification
+
+Targeted: `cameraBoom.test.ts`, `caveGameplayQuery.b3-descending-trace.test.ts`,
+`caveGameplayQuery.b3-entrance-regression.test.ts`. No browser. Player does
+the Grota Czarnego Kamienia walk-in on seed `1136726869`. Do **not** mark
+B3 complete from this slice.
 
 

@@ -400,8 +400,9 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
     const camOcc = occupancyIntervalAt(czarny.index, result.x, result.y, result.z)
     expect(camOcc).not.toBeNull()
     expect(camOcc!.openSky).toBeFalsy()
-    expect(camAlong).toBeLessThan(0.2)
+    expect(camAlong).toBeLessThan(-1)
     expect(result.y).toBeLessThan(camSurface - 0.5)
+    expect(result.t).toBeLessThan(1)
   })
 
   it('Czarny Kamień: stable interior is cave ground + interior occupancy', () => {
