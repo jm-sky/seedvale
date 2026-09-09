@@ -476,6 +476,8 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `ai/npcLogistics.test.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcPersonalProvisions.test.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
 - `app/worldBundle.ts`

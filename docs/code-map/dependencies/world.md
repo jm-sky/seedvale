@@ -2299,7 +2299,7 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/NpcAgent.ts`
-- `ai/npcWorkContract.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/socialBehaviour.ts`
 - `fauna/createFauna.ts`
 - `player/PlayerNeeds.ts`
@@ -2530,6 +2530,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcWorkContract.test.ts`
 - `ai/npcWorkContract.ts`
 - `app/actions/workContractActions.ts`

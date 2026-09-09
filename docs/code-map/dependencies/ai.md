@@ -27,6 +27,7 @@ Generated from TypeScript imports.
 - `ai/npcDecision.ts`
 - `ai/npcLogistics.test.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcPlan.ts`
 - `ai/npcVigor.test.ts`
 - `ai/weatherPressure.test.ts`
@@ -57,6 +58,7 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.ts`
 - `ai/npcMovementWatchdog.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcPlan.ts`
 - `ai/npcProfessionWork.ts`
 - `ai/npcStrategies.ts`
@@ -85,8 +87,11 @@ Generated from TypeScript imports.
 - `items/Inventory.ts`
 - `items/constructionMaterials.ts`
 - `items/createDroppedItems.ts`
+- `items/foodItems.ts`
 - `items/itemCatalog.ts`
+- `items/itemInstances.ts`
 - `items/items.ts`
+- `items/liquidContainer.ts`
 - `navigation/navigation.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
@@ -553,6 +558,35 @@ Generated from TypeScript imports.
 - `ai/npcMovementWatchdog.test.ts`
 - `fauna/AnimalAgent.ts`
 
+## `ai/npcPersonalProvisions.test.ts`
+
+**Imports**
+
+- `ai/npcPersonalProvisions.ts`
+- `items/Inventory.ts`
+- `items/foodFreshness.ts`
+- `items/liquidContainer.ts`
+- `settlement/household.ts`
+
+## `ai/npcPersonalProvisions.ts`
+
+**Imports**
+
+- `ai/Needs.ts`
+- `items/Inventory.ts`
+- `items/foodItems.ts`
+- `items/itemInstances.ts`
+- `items/liquidContainer.ts`
+- `settlement/household.ts`
+- `world/timeConversion.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/npcPersonalProvisions.test.ts`
+- `ai/npcWorkContract.ts`
+
 ## `ai/npcPlan.test.ts`
 
 **Imports**
@@ -696,8 +730,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/characters.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/schedule.ts`
-- `world/timeConversion.ts`
 - `world/workContract.ts`
 
 **Imported by**

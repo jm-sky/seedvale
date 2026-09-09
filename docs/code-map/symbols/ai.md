@@ -98,24 +98,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 584
-- `CurrentActivity` — type — line 436
-- `CurrentActivityKind` — type — line 429
-- `NPC_HEIGHT` — const — line 339
-- `NPC_MODEL_URLS` — const — line 403
-- `NPC_SHADOW_DISTANCE` — const — line 353
-- `NpcAgent` — class — line 901
+- `classifyPendingActivity` — function — line 601
+- `CurrentActivity` — type — line 447
+- `CurrentActivityKind` — type — line 440
+- `NPC_HEIGHT` — const — line 350
+- `NPC_MODEL_URLS` — const — line 414
+- `NPC_SHADOW_DISTANCE` — const — line 364
+- `NpcAgent` — class — line 918
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 821
-- `NpcInspectionSnapshot` — type — line 451
-- `NpcWhy` — type — line 559
-- `projectNpcWhy` — function — line 620
-- `promoteChainKind` — function — line 576
+- `NpcAgentDeps` — type — line 838
+- `NpcInspectionSnapshot` — type — line 462
+- `NpcWhy` — type — line 576
+- `projectNpcWhy` — function — line 637
+- `promoteChainKind` — function — line 593
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -236,6 +236,27 @@ Generated from exported TypeScript symbols.
 - `STUCK_STRIKES_FOR_REPATH` — const — line 35
 - `tickMovementWatchdog` — function — line 80
 
+## `ai/npcPersonalProvisions.ts`
+
+- `buildContractProvisionContext` — function — line 263
+- `CONTRACT_MISSING_DRINK_PENALTY` — const — line 43
+- `CONTRACT_MISSING_FOOD_UNIT_PENALTY` — const — line 41
+- `ContractProvisionAvailability` — type — line 135
+- `ContractProvisionEstimate` — type — line 87
+- `contractProvisionFeasibilityPenalty` — function — line 163
+- `ContractProvisionResult` — type — line 178
+- `contractTravelHours` — function — line 126
+- `countPersonalDrinkPortions` — function — line 51
+- `countPersonalFood` — function — line 46
+- `estimateContractProvisionNeed` — function — line 98
+- `findDrinkablePersonalWaterContainer` — function — line 64
+- `findFillablePersonalWaterskin` — function — line 74
+- `hasFillablePersonalWaterskin` — function — line 83
+- `LOCAL_CONTRACT_TRAVEL_HOURS` — const — line 30
+  - domain: npc
+- `provisionContractSupplies` — function — line 221
+- `readContractProvisionAvailability` — function — line 144
+
 ## `ai/npcPlan.ts`
 
 - `blockPlan` — function — line 105
@@ -263,16 +284,16 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcStrategies.ts`
 
-- `FoodStrategyContext` — type — line 33
-- `getFoodStrategyCandidates` — function — line 79
-- `getWaterDutyStrategyCandidates` — function — line 107
-- `getWaterStrategyCandidates` — function — line 97
-- `getWoodStrategyCandidates` — function — line 128
-- `NpcStrategyCandidate` — type — line 28
+- `FoodStrategyContext` — type — line 35
+- `getFoodStrategyCandidates` — function — line 86
+- `getWaterDutyStrategyCandidates` — function — line 120
+- `getWaterStrategyCandidates` — function — line 109
+- `getWoodStrategyCandidates` — function — line 141
+- `NpcStrategyCandidate` — type — line 30
 - `NpcStrategyId` — type — line 15
-- `selectStrategy` — function — line 141
-- `WaterStrategyContext` — type — line 91
-- `WoodStrategyContext` — type — line 111
+- `selectStrategy` — function — line 154
+- `WaterStrategyContext` — type — line 99
+- `WoodStrategyContext` — type — line 124
 
 ## `ai/npcVigor.ts`
 
@@ -313,10 +334,10 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcWorkContract.ts`
 
-- `ScoredWorkContract` — type — line 102
-- `scoreWorkContractOpportunity` — function — line 79
-- `selectBestWorkContract` — function — line 109
-- `WorkContractEvaluationInput` — type — line 56
+- `ScoredWorkContract` — type — line 125
+- `scoreWorkContractOpportunity` — function — line 92
+- `selectBestWorkContract` — function — line 132
+- `WorkContractEvaluationInput` — type — line 60
 
 ## `ai/reactionChance.ts`
 

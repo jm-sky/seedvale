@@ -78,6 +78,8 @@ Generated from TypeScript imports.
 - `ai/npcLoadout.ts`
 - `ai/npcLogistics.test.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcPersonalProvisions.test.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.test.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/actionContext.ts`
@@ -422,6 +424,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/npcPersonalProvisions.test.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/interactables.ts`
@@ -462,7 +465,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `ai/npcLogistics.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/containerActions.ts`
 - `app/inventoryWiring.ts`
@@ -691,7 +696,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
 - `ai/npcLoadout.ts`
+- `ai/npcPersonalProvisions.ts`
 - `ai/npcProfessionWork.ts`
 - `app/actions/fullCampIntent.test.ts`
 - `app/actions/groundActions.test.ts`
@@ -871,6 +878,9 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/NpcAgent.ts`
+- `ai/npcPersonalProvisions.test.ts`
+- `ai/npcPersonalProvisions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
