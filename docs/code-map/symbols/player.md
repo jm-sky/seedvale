@@ -10,10 +10,10 @@ Generated from exported TypeScript symbols.
 - `CAMERA_OCCLUDER_HEIGHT` — const — line 13
 - `CAMERA_OCCLUDER_MIN_RADIUS` — const — line 10
 - `CAMERA_TERRAIN_SKIP_DISTANCE` — const — line 23
-- `CameraBoomInput` — type — line 27
-- `CameraBoomResult` — type — line 43
-- `resolveCameraBoom` — function — line 58
-- `withCaveFloorFallback` — function — line 302
+- `CameraBoomInput` — type — line 35
+- `CameraBoomResult` — type — line 51
+- `resolveCameraBoom` — function — line 69
+- `withCaveFloorFallback` — function — line 386
 
 ## `player/humanCarryCapacity.ts`
 
