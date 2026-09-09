@@ -9,6 +9,8 @@ A world-level work contract system allowing the player to hire NPCs for temporar
 
 The system should model employment as a world interaction, not as a player-only quest or a special companion mode.
 
+One Work Contract represents one job against one authoritative world target. Individual hired NPC participation belongs to worker assignments under that contract, so multiple NPCs can work independently without creating parallel contracts for the same job.
+
 ## Core loop
 
 ```
@@ -16,18 +18,20 @@ player creates contract
         ↓
 contract is advertised in the world
         ↓
-eligible NPC evaluates the opportunity
+one or more eligible NPCs evaluate the opportunity
         ↓
-NPC accepts or rejects
+NPC assignments are created independently
         ↓
-NPC travels / performs the work
+workers travel / perform useful work independently
         ↓
-contract becomes completed
+individual contributions are recorded
         ↓
-payment becomes due
+individual payment claims become due
         ↓
-player pays
+player settles claims
 ```
+
+The world target remains the sole owner of real work progress. Work Contracts own the job/commitment, while worker assignments own per-NPC participation, contribution and settlement state.
 
 ## Contract
 
@@ -37,14 +41,19 @@ A contract should contain, at minimum:
 - work type
 - target / object of work
 - target location or entity
+- requested worker count where multi-worker work is supported
+- group work commitment / scope
 - reward
   - coins
-  - and/or items
-- expected effort / duration
+  - and/or items later
 - lifecycle state
-- payment state
+- advertisement state
+- worker assignments
+- aggregate accepted NPC contribution
 
 The target should be a real world reference where practical, not an abstract quest-only identifier.
+
+The contract reward should represent the frozen maximum price for the contracted group work commitment. It should not be multiplied by worker count. Individual worker claims should be derived from useful work actually accepted from that worker.
 
 Examples:
 
@@ -81,9 +90,9 @@ Relevant factors include:
 - current work commitments
 - distance to the target
 - estimated travel time
-- estimated work duration
+- estimated personal work share / duration
 - opportunity cost
-- reward value
+- expected reward
 - safety / danger
 - time of day
 - household responsibilities
@@ -93,8 +102,10 @@ Relevant factors include:
 The NPC should explicitly estimate the time commitment:
 
 ```
-travel time + work time + return / follow-up time
+travel time + expected work time + return / follow-up time
 ```
+
+For multi-worker contracts, a candidate should not assume it will personally perform the contract's full group commitment. Expected personal work and reward should reflect the shared remaining workload and available/fillable worker slots.
 
 This estimate should influence the decision rather than being decorative information.
 
@@ -139,17 +150,21 @@ Avoid separate implementations such as `ConstructionWorker`, `GuardWorker`, or `
 
 Different contract types should primarily provide different objectives and target requirements.
 
+Multiple workers on the same contract should progress independently. One worker travelling, sleeping, fighting, abandoning the job or becoming unavailable must not pause the others. Worker-specific execution state belongs to assignments rather than one shared contract-level travelling/working state.
+
 ## Contract types
 
 Potential types:
 
 ### Construction
 
-NPC builds a specified structure at a specified location.
+NPCs build a specified structure at a specified location.
 
 Example:
 
 > Build a well here — 40 coins.
+
+One contract may request several workers. They share one group work commitment and contribute to the same authoritative target progress alongside the Player.
 
 ### Guard
 
@@ -181,15 +196,23 @@ The existing concept of binding objectives to a concrete animal instance is rele
 
 Payment should be a real transaction.
 
-After work completion:
+Payment belongs to the individual worker assignment/claim rather than one shared contract-level `PAYMENT_DUE` state.
+
+Conceptually:
 
 ```
-COMPLETED
-    ↓
-PAYMENT_DUE
-    ↓
-PAID
+worker performs useful work
+        ↓
+assignment contribution recorded
+        ↓
+payment claim becomes due
+        ↓
+PAID / UNPAID
 ```
+
+Different assignments on the same contract may therefore be in different work/payment states simultaneously.
+
+A worker is owed only for useful work actually accepted from that worker. If the Player completes the target before NPCs fulfil the original group commitment, no synthetic contribution or payment obligation should be created for work that was never performed.
 
 The player may not necessarily need to pay immediately.
 
@@ -219,6 +242,48 @@ while:
 
 This creates social behaviour rather than a binary quest timeout.
 
+## Outstanding claims after worker death
+
+Earned compensation is a persistent economic obligation and should not automatically disappear when the worker dies.
+
+Future direction:
+
+```
+worker has earned unpaid compensation
+        ↓
+worker dies
+        ↓
+claim survives
+        ↓
+household may inherit the claim
+        ↓
+eligible household member may decide to pursue it
+        ↓
+payment / abandonment / other terminal outcome
+```
+
+Two concepts must remain distinct:
+
+> **Ownership of a claim and the decision to pursue it are separate.**
+
+A household inheriting an obligation should not imply that a family member automatically demands payment. Pursuing the claim should emerge from household/NPC context.
+
+Relevant factors may include:
+
+- size of the unpaid claim
+- household shortages / economic need
+- relationship with the deceased
+- personality / traits of potential representatives
+- effort, travel cost and practical chance of collection
+- employer payment history / reputation
+- time elapsed since the death
+
+A spouse or close relative may often be a natural representative, but representation should not be a rigid fixed rule. Availability, relationships, household structure and character should matter.
+
+If the current representative dies or becomes unavailable, the household may later choose another representative. If the household ceases to exist or no one is willing to pursue the claim, it may eventually become uncollectable/abandoned according to future rules.
+
+A later implementation plan should determine whether transferable/inherited claims justify extracting payment obligations from `WorkContractAssignment` into a separate persistent economic claim concept. Do not create a parallel inheritance AI solely for Work Contracts; reuse household, relationship, death, pressure/decision and payment systems.
+
 ## Non-payment consequences
 
 Failure to pay should have graduated consequences.
@@ -232,7 +297,7 @@ grace period
     ↓
 overdue
     ↓
-NPC reminder / complaint
+NPC / claimant reminder or complaint
     ↓
 relationship penalty
     ↓
@@ -244,6 +309,8 @@ refusal of future work
 More severe or repeated non-payment can produce stronger reactions.
 
 The consequence should not necessarily be an immediate global reputation penalty. Information should be able to spread socially later.
+
+Several unpaid claims against the same employer may later combine into stronger household/social pressure while remaining distinct economic obligations.
 
 ## Reputation and sympathy
 
@@ -267,7 +334,7 @@ completion + payment
 Broken promise / non-payment:
 
 ```
-unpaid contract
+unpaid claim
     → negative relationship
     → potentially lower player standing
 ```
@@ -284,6 +351,7 @@ For example:
 - "Don't work for him."
 - "He paid me extra."
 - "He left me waiting for my money."
+- "He still owes my family for the work my husband did."
 
 This can connect contracts with:
 
@@ -291,20 +359,23 @@ This can connect contracts with:
 - relationships
 - dialogue
 - reputation
+- households
 - local social networks
 
 ## Player-independent world behaviour
 
 The contract system must not require the player or camera to be present for the world to continue.
 
-Once accepted, an NPC should continue the commitment according to the simulation model, including while the player is elsewhere.
+Once accepted, NPCs should continue their commitments according to the simulation model, including while the player is elsewhere.
 
 Hybrid/off-screen simulation may later reduce detail for remote contracts while preserving:
 
 - contract state
-- estimated progress
+- assignment state
+- useful work contribution
 - completion
-- payment obligation
+- payment obligations
+- claimant/beneficiary state where applicable
 - meaningful failure
 
 ## Persistence
@@ -317,36 +388,40 @@ Persistence will eventually need to cover at least:
 - issuer
 - work type
 - target reference
+- group work commitment
 - reward
-- state
-- accepted NPC
-- progress / completion
-- payment status
+- contract state
+- worker assignments
+- per-worker contribution
+- assignment/payment state
 - relevant timestamps / deadlines if introduced
-- outstanding obligations
+- outstanding payment claims
+- claimant / beneficiary where applicable
 
-A save/load during an unpaid contract must not lose the obligation.
+A save/load during an unpaid claim must not lose the obligation.
 
 ## MVP direction
 
-Keep the first implementation deliberately small.
+Keep the first implementation deliberately small, but preserve the architecture required by later multi-worker/payment behaviour.
 
-Suggested first vertical slice:
+The initial vertical slice is centered on construction Work Contracts:
 
 1. player creates one construction work contract
-2. contract has a target construction location
-3. contract has a coin reward
+2. contract references a real construction target
+3. contract has a coin reward and frozen work commitment
 4. contract is advertised at a settlement
-5. eligible NPC discovers it
-6. NPC evaluates reward + distance + estimated time + basic needs/personality/role factors
-7. NPC accepts or rejects
-8. accepted NPC travels to the target
-9. NPC uses the existing construction mechanism
-10. contract becomes payment due
-11. player pays the NPC
-12. payment completes the contract
+5. eligible NPC discovers and evaluates it
+6. NPC accepts and becomes an assignment
+7. NPC travels to the target
+8. NPC contributes through the existing construction mechanism
+9. useful NPC contribution is recorded
+10. payment becomes due for the worker's actual contribution
+11. player pays the worker
+12. claim becomes paid and the contract eventually settles
 
-Do not include all contract types, complex social propagation, deadlines, item rewards, or a full employment UI in the first vertical slice unless required by the existing architecture.
+The architecture may then extend one contract to multiple independent worker assignments sharing the same target and group commitment.
+
+Do not include all contract types, complex social propagation, item rewards, household inheritance/claim transfer, or a full employment UI in the first vertical slice unless required by the existing architecture.
 
 ## Architectural constraints
 
@@ -355,26 +430,29 @@ Do not include all contract types, complex social propagation, deadlines, item r
 - Do not create a parallel scheduler.
 - Do not create a separate companion AI.
 - Reuse existing target/object references where possible.
-- Keep contract state authoritative and explicit.
-- Treat payment as a real economy transaction.
+- Keep target progress authoritative on the world target.
+- Keep the Work Contract authoritative for the job/group commitment.
+- Keep worker-specific participation and contribution on assignments.
+- Treat payment as a real economy transaction and individual claim.
 - Keep employment compatible with off-screen simulation.
 - Make consequences persistent and socially meaningful.
 - Prefer deterministic evaluation with inspectable scores/modifiers.
+- Preserve one Work Contract job per concrete target while allowing multiple worker assignments inside it.
 
-## Open questions for implementation planning
+## Open questions for future planning
 
-- Where should authoritative `WorkContract` state live?
-- Should contracts be owned globally by the world or by a settlement/economy subsystem?
-- How should advertisements reference contracts?
-- How should an NPC discover eligible advertisements without scanning every contract?
-- What existing construction API can execute the first contract?
-- How should NPC time estimation be represented?
-- How should reward valuation interact with existing economy values?
-- What existing player relation/standing API should be used for payment patience?
-- Which state must be persisted in the first stage?
-- How should accepted contracts interact with an NPC's existing scheduled work?
-- What happens when the target disappears, becomes invalid, or the player cancels the contract?
-- What happens if the NPC dies or becomes unable to finish the contract?
+Most foundational ownership questions are resolved by the current Work Contract plans. Remaining roadmap-level questions include:
+
+- When should an earned payment obligation become independent from the originating worker assignment?
+- Should transferable/inherited payment obligations become a separate persistent `PaymentClaim`-like concept?
+- Under what conditions does a household inherit an unpaid worker claim?
+- Which household member becomes the active representative/claimant?
+- How should household needs, relationship to the deceased and personality affect the decision to pursue payment?
+- What happens if the representative dies, leaves or becomes unavailable?
+- What happens if the household dissolves or no eligible claimant remains?
+- How should repeated unpaid claims against one employer affect future work acceptance and social reputation?
+- How should reward valuation integrate with broader economy values as production/currency systems mature?
+- How should future contract types estimate personal workload, risk and expected reward?
 
 ## Related systems
 
@@ -384,6 +462,8 @@ This concept should be evaluated against the existing:
 - NPC personality / decision modifiers
 - NPC work and schedules
 - NPC actions and navigation
+- NPC death / corpse lifecycle
+- households and family relationships
 - player construction
 - quests and objective target references
 - economy / coins
