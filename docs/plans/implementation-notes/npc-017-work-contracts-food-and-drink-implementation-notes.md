@@ -1,19 +1,18 @@
 # Implementation Notes: Work Contracts — Food & Drink for Hired NPCs
 
-**Reviewed:** 2026-09-07
+**Reviewed:** 2026-09-09
 **Plan:** npc-017-work-contracts-food-and-drink.md
 
-## Current contract seam — npc-015 is implemented
+## Current contract seam
 
-`npc-015` is no longer a precondition to wait for. Current `main` has the real runtime lifecycle.
+`npc-015` is implemented and remains the correct ownership boundary.
 
 - `src/world/workContract.ts::WorkContractRecord` is the sole authority for contract commitment. It owns `workerNpcId`, lifecycle state and work-progress commitment fields.
-- Implemented active lifecycle is `advertised → accepted → travelling → working → payment_due`, with `cancelled` / `invalidated` terminal states and `releaseWorkContract()` for genuine worker abandonment.
-- `NpcAgent` does **not** keep a second contract assignment. It calls `WorkContracts.findByWorker(this.id)` and resumes the authoritative record from there.
-- `NpcAgent.pursueAcceptedContract()` drives the accepted/travelling/working lifecycle. `payment_due` is deliberately no longer active work.
-- Ordinary interruption is already distinct from abandonment: transient action cancellation does not call `releaseWorkContract()`.
+- Active lifecycle is `advertised → accepted → travelling → working → payment_due`, with `cancelled` / `invalidated` terminal states and `releaseWorkContract()` for genuine worker abandonment.
+- `NpcAgent` does **not** keep a second contract assignment. It queries `WorkContracts.findByWorker(this.id)` and resumes the authoritative record.
+- Ordinary action interruption is distinct from abandonment.
 
-For 017, keep that ownership unchanged. Food/water state must never be copied into `WorkContractRecord`; the contract records the commitment, not the worker's belongings.
+For 017, keep this ownership unchanged. Food/water state must never be copied into `WorkContractRecord`.
 
 ## Existing contract evaluation to extend
 
@@ -23,189 +22,229 @@ For 017, keep that ownership unchanged. Food/water state must never be copied in
 
 - reward,
 - role suitability,
-- travel time derived from actual walk speed/day length,
-- `contract.committedWork`,
+- travel time derived from real walk speed/day length,
+- expected work,
 - schedule conflict.
 
-`selectBestWorkContract()` selects the highest positive candidate and is already unit-tested in `src/ai/npcWorkContract.test.ts`.
+`selectBestWorkContract()` picks the best positive candidate.
 
-Food/water feasibility should extend this existing evaluation/preparation seam with bounded information. Do not add a separate contract-survival planner or second acceptance system.
+Food/water feasibility should extend this existing evaluation/preparation seam with bounded information. Keep the split:
 
-The clean split is likely:
+- **opportunity evaluation** — read-only, cheaply reject/penalize obviously non-survivable remote work;
+- **after acceptance / before travel** — perform actual real-resource provisioning.
 
-- **opportunity evaluation**: cheaply reject/penalize obviously non-survivable remote work,
-- **after acceptance / before travel**: perform actual real-resource provisioning.
-
-Do not make scoring mutate inventory.
+Do not make scoring mutate inventory and do not add a second acceptance system.
 
 ## Need/action arbitration to preserve
 
 Relevant current owners:
 
-- `src/ai/Needs.ts` — hunger/thirst state and normal/critical thresholds,
-- `src/ai/npcStrategies.ts` — need strategy candidate selection,
-- `src/ai/npcDecision.ts::decideNpcAction()` — top-level choose ordering,
-- `src/ai/npcDecision.ts::shouldInterruptAction()` — pure in-flight critical-interrupt precedence,
-- `NpcAgent.tickCriticalInterrupt()` / `interruptCurrentAction()` — runtime execution/cleanup.
+- `src/ai/Needs.ts` — hunger/thirst state, drift, normal and critical thresholds;
+- `src/ai/npcStrategies.ts` / current strategy-candidate helpers — need strategy selection;
+- `src/ai/npcDecision.ts::decideNpcAction()` — top-level decision ordering;
+- `src/ai/npcDecision.ts::shouldInterruptAction()` — in-flight critical-interrupt precedence;
+- `NpcAgent.tickCriticalInterrupt()` / `interruptCurrentAction()` — runtime interruption.
 
-`shouldInterruptAction()` intentionally only lets a critical need interrupt when `activeNeed === 'idle'`; it avoids need-to-need thrashing. Keep this behaviour.
+017 should only make personal food/water available to the normal need strategy/consumption path. Do not add a `WorkerNeedsManager`, new `NeedId`, contract-only interrupt priority or worker-specific thresholds.
 
-017 should only make carried food/water available to the normal food/water strategy/consumption path. Do not add a `WorkerNeedsManager`, new `NeedId`, or contract-only interrupt priority.
+## settlements-npcs-026 changed the inventory ownership model
 
-## NpcAgent.carried — reusable runtime carrier, not authoritative state
+The previous npc-017 notes are stale here.
 
-`NpcAgent.carried` remains:
-
-- a normal shared `Inventory`,
-- max weight `NPC_CARRY_MAX_WEIGHT = 5`,
-- used by weapons/ammo, gathering, helper/logistics flows and other physical carrying,
-- transient runtime state,
-- explicitly excluded from `NpcAuthoritativeState` today.
-
-The plan should reuse this physical carrier. It should **not** introduce `WorkerInventory` or `ContractSupplies`.
-
-But simply adding provisions to `NpcAgent.carried` is insufficient: they would be lost when the agent is reconstructed.
-
-## Persistence boundary changed since the previous notes
-
-The previous notes' statement that NPC runtime state is not part of `SaveData` is stale.
-
-Current persistence already includes:
-
-- `SaveData.npcStates` from `SettlementsManager.snapshotNpcStates()`,
-- `SaveData.workContracts`,
-- `SaveData.households`.
-
-`NpcAuthoritativeState` / `NpcStateSnapshot` persist health, stamina, vigor, needs, physical injury, helper assignment and active plan through the NPC-state path.
-
-`NpcAgent.carried` is still not persisted.
-
-### Recommended ownership for provisions
-
-If 017 provisions must survive settlement unload/reload, `WorldBundle` rebuild and save/load, extend the existing NPC authoritative-state boundary with the minimum carried-inventory representation needed to hydrate `NpcAgent.carried`.
-
-Prefer one whole-inventory snapshot representation over special `contractFood` / `contractWater` fields if that is the smallest coherent ownership model; `carried` already contains heterogeneous items and role loadout.
-
-Do not duplicate contract assignment there — `WorkContractRecord.workerNpcId` stays authoritative.
-
-Do not persist navigation/path/action closures. After reconstruction, the NPC should re-decide from persisted needs + contract + carried belongings.
-
-## Loadout hydration is a duplication hazard
-
-`src/ai/npcLoadout.ts` seeds role weapons/ammo into `carried` during agent construction.
-
-If 017 makes carried inventory authoritative/persisted, construction order matters:
+Current `src/settlement/npcState.ts` has:
 
 ```text
-new NPC with no carried snapshot
-→ seed role loadout normally
-
-existing NPC with carried snapshot
-→ hydrate snapshot
-→ do not blindly seed duplicate weapons/ammo
+NpcAuthoritativeState.personalInventory: Inventory
+NpcStateSnapshot.personalInventory?: InventoryContentsSnapshot
 ```
 
-Inspect the exact constructor/loadout call path before implementing the snapshot. The invariant is one physical inventory state, not "restored provisions + freshly re-seeded equipment".
+The live `NpcAgent.personalInventory` is the **same Inventory object** held by authoritative NPC state. It survives settlement unload/reload, `WorldBundle` rebuild and `SaveData.npcStates` persistence.
 
-## Food transfer helpers are already freshness-safe
+`NpcAgent.carried` still exists, but its role is deliberately different:
 
-The previous notes' `claimFoodItems()` freshness warning is obsolete.
+- temporary work/logistics payload;
+- capped by `NPC_CARRY_MAX_WEIGHT = 5 kg`;
+- recreated with the agent;
+- intentionally excluded from `NpcAuthoritativeState`.
 
-Current `src/items/foodItems.ts` already provides:
+Do not persist `carried` just to support provisions.
 
-- `FoodItemClaim` with exact `FoodBatch[]`,
-- `claimFoodItems()` using `Inventory.removeWithFreshness()`,
-- `depositFoodItems()` using `Inventory.addWithFreshness()`,
-- `carryFoodClaim()` with capacity failure refund to the source,
-- `deliverCarriedFoodClaim()` for the carrier → destination leg.
+### Provision ownership decision
 
-Reuse these helpers or the same underlying freshness-aware primitives. Do not create another food-transfer format and do not regress to plain `Inventory.add()` for perishables.
+Contract food/water that conceptually belongs to the NPC and must survive reconstruction should live in the existing `personalInventory`.
 
-There is a separate existing persistence gap around household `foodBatches`; do not turn npc-017 into a general household freshness-persistence project unless shared serialization support is strictly required by the NPC carried snapshot.
+Transient contract/build/gathering cargo should stay in `NpcAgent.carried`.
 
-## Provisioning source / transfer ownership
+This preserves the boundary introduced by settlements-npcs-026 instead of undoing it.
 
-Expected ownership flow for food is:
+## Existing persistence is already sufficient
 
-```text
-Household.items
-→ freshness-safe claim
-→ NpcAgent.carried / authoritative carried snapshot
-```
+`InventoryContentsSnapshot` already persists:
 
-Keep transfer atomic with respect to carry capacity. Existing `carryFoodClaim()` already refunds a claim that does not fit.
+- count-based items,
+- concrete item instances,
+- liquid-container identity/content/litres,
+- perishable `FoodBatch` freshness metadata.
 
-Do not mint provision food at acceptance.
+`NpcStateRegistry.serialize()` already snapshots `state.personalInventory`, and restore already hydrates it through `inventoryFromContents()`.
 
-For settlement-level food, only use an existing concrete-item withdrawal/transfer path if one is actually available; do not reintroduce abstract food scalars just to make provisioning easier.
+Therefore npc-017 does **not** need:
 
-## Carry capacity is a real constraint
+- a new field on `NpcAuthoritativeState`,
+- a new field on `NpcStateSnapshot`,
+- a new top-level `SaveData` field,
+- a carried-provisions snapshot,
+- a provision-specific serialization format,
+- a save migration solely for food/water provisions.
 
-`Inventory.canAdd()` applies weight and size constraints. NPC carry weight remains 5 kg.
+This is the main correction versus the previous notes.
 
-Account for:
+## Loadout reconstruction duplication is already solved by settlements-npcs-026
 
-- role weapon,
-- ammo,
-- existing cargo,
-- food,
-- liquid mass in a filled waterskin.
+`src/ai/npcLoadout.ts` seeds personal belongings only on genuine first creation using `needsInitialPersonalLoadout`.
 
-Do not reserve hidden "contract provision capacity". If a loadout cannot fit, provisioning/feasibility must react to the real capacity.
+Snapshot restore sets that latch to `false`, so reconstruction reuses the existing `personalInventory` and does not blindly reseed personal weapons.
 
-## Water instances
+017 should reuse this behaviour, not add another hydration/loadout path.
 
-`src/items/liquidContainer.ts` remains the authoritative API.
+Hunter arrows and other transient work supply that intentionally remain in `NpcAgent.carried` are not a reason to move provisions back into that transient owner.
 
-Use:
+## Food transfer helpers are freshness-safe
 
-- `LiquidContainerItemInstance`,
-- existing container creation only when obtaining a real item is justified by ownership rules,
-- `fillLiquidContainer()`,
+`src/items/foodItems.ts` already provides freshness-preserving movement through `FoodBatch`-aware helpers/primitives, including:
+
+- `claimFoodItems()`,
+- `depositFoodItems()`,
+- `carryFoodClaim()`,
+- `deliverCarriedFoodClaim()`,
+- underlying `removeWithFreshness()` / `addWithFreshness()`.
+
+For household → personal provision transfer, reuse these primitives or the narrowest existing helper that fits the source/destination shape.
+
+Do not regress perishables to plain count-only transfer.
+
+## Current food strategy seam
+
+Current `NpcAgent.beginNeed('food')` does not consume from `personalInventory`.
+
+Its existing strategy path covers household/economy/exchange/hunt/nearby-world-food behaviour. That is the seam to extend.
+
+Add an available personal-food candidate when `personalInventory` contains usable food. Execution should:
+
+1. consume one real food unit through freshness-aware inventory semantics;
+2. call the normal hunger relief path;
+3. remain part of the central strategy selection/trace flow.
+
+Do not add a contract-only `if (working && hungry)` eating branch.
+
+A personal-food strategy should normally beat a materially more distant trip when usable food is already on the NPC, while preserving deterministic ordering/scoring conventions of the existing strategy layer.
+
+## Current water strategy seam
+
+Current `NpcAgent.beginNeed('water')` chooses between:
+
+- household `WaterReserve`,
+- well/player-built water source fallback.
+
+It does not currently drink from `personalInventory` liquid containers.
+
+Add a personal-container candidate through the same strategy-selection path.
+
+Use the existing liquid-container API:
+
 - `canDrinkFromLiquidContainer()`,
 - `drinkFromLiquidContainer()`,
 - `Inventory.updateInstance()`.
 
-A full waterskin is not a scalar count. The same instance becomes partially full and then empty.
+The same instance must remain after drinking; litres decrease and an exhausted container becomes empty.
 
-After drinking, apply the returned instance with `Inventory.updateInstance()`; do not mutate the old instance in place or delete it when empty.
+When no usable personal container remains, current household/well behaviour should continue unchanged.
 
-Do not create a pre-filled waterskin merely because a contract needs water. The NPC must own/find a real container and obtain water from an existing source.
+## Liquid-container provisioning
 
-## Existing food/world discovery
+A waterskin is a real item instance, not a scalar stock value.
 
-`src/world/foodSources.ts` already owns bounded deterministic nearby real-food discovery through `SettlementFoodSourceHooks.queryNearest()` and the existing harvest/revalidation path.
+Expected remote-work flow:
+
+```text
+NPC owns/legitimately obtains empty waterskin
+→ waterskin is in personalInventory
+→ NPC reaches real water source
+→ fillLiquidContainer(..., 'water')
+→ personalInventory.updateInstance(...)
+→ travel/work
+→ thirst selects personal container
+→ drinkFromLiquidContainer(...)
+→ personalInventory.updateInstance(...)
+```
+
+Do not create a pre-filled waterskin merely because a contract needs one and do not silently refill it.
+
+## Provisioning source / transfer ownership
+
+Expected food ownership flow:
+
+```text
+Household.items
+→ freshness-safe withdrawal
+→ NpcAuthoritativeState.personalInventory
+```
+
+Expected water flow:
+
+```text
+existing personal liquid container
+→ real water source
+→ fill existing instance
+```
+
+If acquiring a container from some existing owner is required, use a real ownership transfer. Do not mint one at contract acceptance.
+
+Keep transfer atomic with respect to destination capacity.
+
+## Capacity
+
+Use the capacity semantics of the inventory that actually owns the item:
+
+- `personalInventory.canAdd()` / `canAddInstance()` for personal provisions;
+- existing `NpcAgent.carried` 5 kg cap for transient work/logistics payload.
+
+Do not grant hidden provision capacity.
+
+Also do not turn npc-017 into a redesign of NPC total/body carrying capacity or an attempt to merge the two inventory concepts. That belongs to other plans.
+
+## Existing world food discovery
+
+`src/world/foodSources.ts` / `SettlementFoodSourceHooks.queryNearest()` already own bounded deterministic nearby real-food discovery and source revalidation/harvest.
 
 Do not add worker-specific apple/crop searching or global source knowledge.
 
-A carried-food strategy should generally avoid a pointless remote trip when food is already physically on the NPC, but keep the exact ordering inside the existing strategy-selection architecture.
+Personal provisions are an additional local source candidate, not a replacement for world food.
 
 ## Existing water sources
 
-`Household.water` is the authoritative household `WaterReserve`. Existing NPC behaviour already uses household water and settlement/player-built well sources.
+`Household.water` remains the household `WaterReserve`. Existing NPC behaviour already uses household water and wells/player-built sources.
 
-Carried water should be another source candidate, not a replacement water system.
+Personal water is another source candidate, not a replacement water system.
 
-When the waterskin is empty, normal water-source selection should resume.
-
-Refilling is only valid after actually reaching a normal water source and applying normal liquid-container fill semantics.
+Refilling is only valid after actually reaching a valid existing source and applying normal liquid-container fill semantics.
 
 ## Contract interruption / resumption invariant
 
-Current contract design already supports the desired invariant:
+Current contract design already supports:
 
 ```text
 contract travelling/working
 → critical need interrupts pending action
 → contract record still has workerNpcId
 → satisfy need
-→ normal choose/idle contract seam finds same record
+→ normal decision flow finds same contract
 → pursueAcceptedContract() resumes it
 ```
 
-Do not add an explicit food-specific "paused contract" state.
+Do not add an explicit food-specific `paused` contract state.
 
-Do not call `releaseWorkContract()` merely because hunger/thirst interrupted an action. That API is for genuine abandonment while the target remains valid.
+Do not call `releaseWorkContract()` merely because hunger/thirst interrupted an action.
 
 ## Bounded feasibility rule
 
@@ -213,64 +252,57 @@ Do not simulate the whole future contract.
 
 Use existing deterministic inputs:
 
-- contract distance / existing travel-time math,
-- `committedWork` as expected work magnitude,
+- contract distance / travel-time math,
+- expected work,
 - current hunger/thirst,
-- current carried provisions,
+- existing personal food/water,
 - household supplies,
 - bounded local source availability if cheaply queryable,
-- real carry capacity.
+- real inventory capacity.
 
-Prefer a conservative gate/penalty that prevents obviously impossible remote assignments without requiring global searches.
+Prefer a conservative gate/penalty that prevents obviously impossible remote assignments without global searches.
 
-Keep read-only evaluation separate from the mutating provisioning action.
+Keep read-only evaluation separate from mutating provisioning.
 
 ## Diagnostics
 
-`NpcAgent.createInspectionSnapshot()` already projects:
+`NpcAgent.createInspectionSnapshot()` already exposes needs, current strategy/decision state and contract information.
 
-- needs,
-- active need,
-- decision/strategy candidates,
-- current action,
-- authoritative contract id/state/progress,
-- household food/water.
+Extend existing diagnostics where useful with:
 
-Extend this existing snapshot/trace rather than adding a worker-survival UI.
-
-Useful additions for 017:
-
-- carried food counts/kinds,
-- carried liquid-container ids + litres,
-- selected carried-food/carried-water strategy,
-- provisioning failure reason where useful,
+- personal food counts/kinds,
+- personal liquid-container ids + litres,
+- selected personal-food/personal-water strategy,
+- provisioning failure reason,
 - interruption versus genuine contract abandonment.
 
-If carried inventory becomes authoritative, diagnostics should project that same state rather than maintain debug-only copies.
+Do not add a worker-survival debug UI or debug-only ownership copy.
 
 ## Suggested implementation order
 
-1. Inspect the current `NpcAgent` constructor/loadout path and decide the minimal authoritative carried-inventory snapshot shape.
-2. Add snapshot/hydration through `NpcAuthoritativeState` / `NpcStateSnapshot` / `SaveData.npcStates`, avoiding duplicate role loadout.
-3. Reuse freshness-safe food transfer and liquid-container instance serialization for real provisioning.
-4. Add carried-food and carried-water consumption candidates through the existing need strategy path.
-5. Add bounded contract feasibility to the existing `npcWorkContract.ts` evaluation seam.
-6. Add post-acceptance/pre-travel provisioning without mutating the pure scorer.
-7. Verify critical interrupt → satisfy need → `pursueAcceptedContract()` resume without `releaseWorkContract()`.
-8. Add focused tests for capacity/refund, finite food/water, partial/empty waterskin, reconstruction/save-load continuity and duplicate-loadout prevention.
+1. Add focused selectors/helpers for usable food and drinkable liquid containers in `personalInventory` using existing item/inventory APIs.
+2. Extend the existing food strategy candidate/execution path with personal food consumption.
+3. Extend the existing water strategy candidate/execution path with personal liquid-container drinking.
+4. Add post-acceptance/pre-travel provisioning using real household/source transfers into `personalInventory` where needed.
+5. Add bounded food/water feasibility to the existing `npcWorkContract.ts` evaluation seam without mutating from the scorer.
+6. Verify critical interrupt → satisfy need → contract resume without `releaseWorkContract()`.
+7. Add focused tests for freshness-preserving provision transfer, liquid depletion, finite supplies, capacity failure, reconstruction/save-load continuity and no duplicate provisioning.
+
+No new NPC inventory persistence implementation step should exist in this order.
 
 ## Main pitfalls
 
-- Treating the already-landed `npc-015` APIs as hypothetical.
+- Treating `personalInventory` as hypothetical or non-persistent after settlements-npcs-026.
+- Adding another `NpcStateSnapshot` provision field even though `InventoryContentsSnapshot` already persists the required data.
+- Persisting transient `NpcAgent.carried` merely to carry food/water.
+- Moving unrelated work/logistics cargo into `personalInventory`.
 - Copying contract assignment into NPC state instead of querying `WorkContractRecord.workerNpcId`.
-- Treating `NpcAgent.carried` as durable without adding authoritative ownership.
-- Persisting only food/water while reconstructing the rest of carried inventory independently and duplicating equipment.
-- Reimplementing food transfers even though freshness-safe `FoodItemClaim` / `carryFoodClaim()` already exist.
-- Spawning food or a filled waterskin during acceptance.
+- Reimplementing food transfers instead of using freshness-aware inventory primitives.
+- Spawning food or a filled/new waterskin during acceptance.
 - Treating waterskins as scalar item counts.
-- Ignoring the 5 kg carry limit and existing equipment/cargo.
+- Bypassing the owning inventory's real capacity checks.
 - Letting a critical need call `releaseWorkContract()` instead of only interrupting transient action state.
 - Adding a worker-specific need/decision system.
-- Expanding 017 into unrelated household freshness-persistence cleanup.
+- Expanding 017 into general inventory/corpse/household persistence cleanup.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
