@@ -24,6 +24,7 @@ const CAPABILITY_LABEL: Record<ItemCapability, string> = {
   rock_mining: 'Kucie w skale',
   fire_starting: 'Rozpalanie ognia',
   fishing: 'Wędkowanie',
+  textile_repair: 'Naprawa tekstyliów',
 }
 
 const categoryChips: { id: CategoryFilter, label: string }[] = [
