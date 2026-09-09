@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-09 07:01:23  
+> Date: 2026-09-09 07:02:31  
 
 ## PLANS
 
-- `items-player-021-player-skills-and-targeted-skill-actions-foundation.md`
 - `npc-004-npc-genealogy-lineages.md`
 - `npc-027-spatial-context-and-cave-traversal.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
@@ -17,37 +16,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `items-player-021-player-skills-and-targeted-skill-actions-foundation.md`
-
-Prompt:
-
-```
-Zrób review planu `items-player-021-player-skills-and-targeted-skill-actions-foundation.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-021-player-skills-and-targeted-skill-actions-foundation.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-021-player-skills-and-targeted-skill-actions-foundation-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `npc-004-npc-genealogy-lineages.md`
 
