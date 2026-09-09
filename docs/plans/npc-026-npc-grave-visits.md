@@ -2,459 +2,329 @@
 
 **Created:** 2026-09-08
 **Status:** `planned` 📋
-**Type:** feature
 **Priority:** medium · **Effort:** S
-**Depends on:** `npc-011` `world-terrain-016`
-**Domain:** `npc`
-**Subdomains:** `behavior` `decision-making` `relationships`
-**Tags:** `graves` `households` `cemetery`
+**Depends on:** `npc-011`, ~~world-terrain-016~~
+**Domain:** `npc`  
+**Type:** `feature`  
 **Roadmap:** -
 
 ## Cel
 
-Dodać mały, autonomiczny mechanizm, dzięki któremu NPC czasem odwiedzają groby osób, z którymi byli powiązani.
-
-V1 ma reuse istniejące systemy i pozostać prostym optional behaviour:
+Dodać małe autonomiczne zachowanie, w którym żyjący NPC może okazjonalnie odwiedzić **konkretny persistent grave** zmarłego członka swojej rodziny.
 
 ```text
-deceased NPC
-→ persistent grave
-→ household / existing meaningful relation
-→ simple visit opportunity
-→ normal AI arbitration
-→ walk to grave
-→ short stay
-→ normal AI resumes
+persisted family membership
++ completed burial / persistent grave
++ cooldown expired
++ low optional pressure
+→ normal NPC arbitration
+→ normal goTo → execute action
+→ krótki pobyt przy grobie
+→ persisted visit timestamp
+→ normal AI
 ```
 
-Mechanika działa bez udziału gracza i tworzy naturalną podstawę dla późniejszych świadków wydarzeń na cmentarzu.
+Wizyta wynika wyłącznie ze stanu świata i AI. Nie zależy od obecności gracza ani kamery.
 
-Nie budować osobnego systemu żałoby, pamięci ani cemetery scheduling.
+## Aktualny punkt wyjścia
 
-## 1. Wizyta dotyczy konkretnego persistent grave
+### `npc-010` jest zaimplementowany
 
-NPC nie podejmuje abstrakcyjnej decyzji `go to cemetery`, tylko `visit grave of NPC X`.
+`NpcAuthoritativeState.postDeath` jest rzeczywistym persisted ownerem corpse lifecycle. `NpcPostDeathState` ma status `active | claimed | terminal`, death transform, `deathAtDays`, loot i cleanup reason. Stable corpse identity to obecnie `NpcId` zmarłego + jego `postDeath` record; nie istnieje osobny corpse id.
 
-Wymagany contract z `npc-011`:
+`createSettlement.ts` odtwarza ten stan przez `NpcStateRegistry`, lazy-finalizuje expired active corpse i nie materializuje terminal corpse. `npc-026` nie może projektować alternatywnego post-death modelu.
+
+### `world-terrain-016` jest zaimplementowany
+
+Canonical settlement → cemetery lookup istnieje jako:
 
 ```text
-deceased NpcId
-→ persistent grave
-→ world position
+ChunkManager.resolveCemeteryForSettlement(settlementId)
 ```
 
-Twardy invariant V1:
+oraz underlying deterministic topology/placement (`cemeteryAssignment.ts`, `cemeteryPlacement.ts`). Shared cemetery jest normalnym wynikiem tego samego contractu.
+
+`npc-026` **nie powinien sam wybierać cemetery**. Po `npc-011` konsumuje już gotowy persistent grave.
+
+### `npc-011` nadal jest rzeczywistym blockerem
+
+`npc-011` jest nadal `planned`. To ono ma dodać completed burial result:
 
 ```text
-grave visit requires an existing persistent grave
+GraveRecord
++ stable grave id
++ deceasedNpcId
++ cemeteryId
++ persisted world position
++ Graves collection / SaveData
 ```
 
-Jeżeli NPC zmarł, ale nie został jeszcze pochowany, nie może powstać grave visit.
+oraz idempotent corpse → grave finalization.
 
-Nie używać proceduralnych graves z cemetery layout jako celu wizyty.
+`npc-026` nie może tworzyć tymczasowego grave registry ani wykorzystywać proceduralnych grave meshes z cemetery layout jako substytutu.
 
-## 2. Household jest podstawowym źródłem eligibility
+## 1. Stable grave identity / lookup
 
-V1 nie może zależeć wyłącznie od rozwiniętych relacji interpersonalnych, ponieważ na początku świata mogłyby nie istnieć wystarczająco silne relationships.
+V1 odwiedza grób konkretnego zmarłego, nie abstrakcyjny cmentarz.
 
-Podstawowa reguła:
+Docelowy lookup po `npc-011`:
 
 ```text
-living NPC belongs to deceased household
-→ eligible to visit grave
+deceasedNpcId
+→ deterministic grave id (preferowane przez 011: `grave:${deceasedNpcId}`)
+→ Graves.find(graveId) / równoważny bounded lookup
+→ GraveRecord
+→ x / z / yaw
 ```
 
-Household zapewnia minimalny, od początku działający social connection.
+`deceasedNpcId` jest semantic identity używanym przez NPC behaviour i cooldown. `GraveRecord.id` jest stable world-object identity.
 
-Jeżeli obecny relationship system już posiada prostą, istniejącą semantykę pozwalającą rozpoznać meaningful relationship, można jej użyć jako dodatkowego źródła eligibility:
+Nie używać:
+
+- nearest cemetery,
+- cemetery scan,
+- procedural grave mesh identity,
+- osobnego `GraveVisitRegistry`.
+
+## 2. Eligibility — family/household bez drugiego modelu
+
+`Household` nie przechowuje listy członków. Family membership jest deterministycznie generowana w `SettlementDef.families`.
+
+`createSettlement.ts` zachowuje dziś invariant:
 
 ```text
-existing meaningful relationship with deceased
-→ also eligible
+1 family = 1 household = 1 house
 ```
 
-Nie tworzyć dla tego planu nowego relationship scoringu, progów ani archetypów. Jeżeli current code nie daje prostego istniejącego rozstrzygnięcia, V1 działa tylko na household, a rozszerzenie o relationships pozostaje późniejszym krokiem.
+oraz flattenuje `def.families`, tworząc stabilne `npcId = ${settlementId}:npc:${flatIndex}`.
 
-## 3. Grave musi zachowywać potrzebny kontekst po śmierci
+V1 powinien zbudować bounded family-member lookup przy settlement construction, tam gdzie `def.families`, `familyIndex`, `npcId` i household są już razem dostępne. Nie rekonstruować członkostwa przez skan `HouseholdRegistry` i nie dodawać member list tylko dla grave visits.
 
-Po burial musi być możliwe ustalenie:
+Eligibility V1:
 
 ```text
-grave
-→ deceased NpcId
+living NPC
+→ same generated family as deceased NPC
+→ deceased NPC has completed persistent grave
+→ eligible candidate
 ```
 
-oraz minimalnego kontekstu pozwalającego odnaleźć członków household zmarłego.
+`NpcRelationships` nie daje obecnie canonical semantic threshold typu „meaningful relationship”, więc nie dodawać relationship-only eligibility w V1. Rozszerzenie może przyjść później, gdy wspólny contract będzie już istniał.
 
-Jeżeli lifecycle zmarłego usuwa informacje potrzebne do późniejszego lookup, contract `npc-011` musi zachować minimalny trwały kontekst.
+## 3. Candidate resolver — bounded i lokalny
 
-Nie tworzyć osobnego grave-household registry, jeżeli można reuse istniejący persisted ownership.
+Nie skanować wszystkich graves ani wszystkich NPC.
 
-## 4. Prosta częstotliwość
-
-NPC nie powinien odwiedzać tego samego grobu często.
-
-Wystarczy prosty mechanizm:
+Preferowany seam przekazany do `NpcAgent`:
 
 ```text
-eligible
-+ same grave not visited recently
-+ optional activity opportunity
-→ small deterministic chance / propensity to visit
+resolveGraveVisitCandidates(visitorNpcId)
+→ mała lista / at most one candidate z własnej family
 ```
 
-Ocena odbywa się podczas istniejącego low-frequency decision cadence.
+Resolver korzysta z lokalnej informacji settlement/family i stable grave lookup z `npc-011`.
 
-Nie implementować:
-
-- grief decay,
-- grief stages,
-- anniversaries,
-- remembrance scoring,
-- family-role weights,
-- rozbudowanej probabilistyki.
-
-## 5. Prosty cooldown
-
-Semantyczny contract:
-
-> Ten sam NPC nie powinien zbyt szybko ponownie odwiedzać tego samego grobu.
-
-Preferować najprostszy stan pasujący do obecnej architektury. Nie wymuszać mapy `visitorNpcId + deceasedNpcId`, jeżeli wymagałaby nieproporcjonalnej zmiany persistence.
-
-Jeżeli istniejący NPC state pozwala tanio zachować last visit per deceased/grave, jest to preferowane, ponieważ odwiedzenie jednego grobu nie powinno niepotrzebnie blokować wszystkich innych wizyt.
-
-Nie dodawać globalnego visit registry.
-
-## 6. Decision priority
-
-Grave visit jest optional activity o niskim priority.
-
-Nie powinien wygrywać z:
-
-- danger,
-- combat,
-- fleeing,
-- critical needs,
-- pilną pracą.
-
-Powinien konkurować głównie z idle/home/leisure i innymi niewymagającymi aktywnościami.
-
-Reuse istniejący AI arbitration. Nie tworzyć osobnego scheduler-a cemetery visits.
-
-## 7. Time of day
-
-V1 nie potrzebuje rozbudowanego modelu godzin odwiedzin.
-
-Preferować naturalne zachowanie wynikające z istniejącego schedule i decision timing. Lekka preferencja dnia / późnego popołudnia jest dopuszczalna tylko wtedy, gdy można ją uzyskać przez istniejący mechanizm bez dokładania osobnej probabilistyki.
-
-Nie wprowadzać zakazu nocnych wizyt. NPC może znaleźć się przy grobie nocą w wyniku normalnego przebiegu dnia.
-
-## 8. Plan/action
-
-Wizyta używa normalnego flow:
+Candidate powinien zawierać co najmniej:
 
 ```text
-decision
-→ visit-grave plan/action
-→ navigation
-→ arrival
-→ short stay
-→ complete
+deceasedNpcId
+graveId
+position
 ```
 
-Target zachowuje semantic identity konkretnego deceased/grave, nie tylko cemetery position.
+Nie przepychać całego grave registry do `NpcAgent`.
 
-Nie implementować cemetery-specific pathfinding ani movement systemu.
+## 4. Persisted cooldown jest potrzebny
 
-## 9. Short stay
+Aktualny `NpcAuthoritativeState` nie ma generic memory/history field odpowiedniego do wizyt. `activePlan` nie jest cooldown store, a transient `NpcAgent.simClock` resetuje się przy reconstruction.
 
-Po dotarciu NPC pozostaje przy grobie przez krótki, rzeczywisty czas.
-
-Nie może to być `arrive → complete` w tym samym ticku.
+Aby save/load i settlement stream-out nie powodowały natychmiastowych ponownych wizyt, dodać mały NPC-owned persisted state, np. bounded entries:
 
 ```text
-arrive
-→ stand near grave
-→ short deterministic duration
-→ complete
+graveVisits: [
+  { deceasedNpcId, lastVisitedAtDays }
+]
 ```
 
-Idle wystarczy. Facing grave można dodać tylko jeśli tanio reuse istniejący mechanism.
+lub równoważny minimalny shape.
 
-Nie dodawać rytuałów ani nowych animacji jako wymagania V1.
+Wymagania:
 
-## 10. Interruptions
+- klucz semantic: `deceasedNpcId` / stable grave identity,
+- timestamp: absolute simulation `elapsedDays`,
+- bounded tylko do rzeczywiście odwiedzonych grobów rodzinnych,
+- round-trip przez `NpcStateSnapshot` / `NpcStateRegistry.serialize()` / `SaveData.npcStates`,
+- bez globalnego visit history managera.
 
-Jeżeli podczas planu pojawi się ważniejszy stan, normalny AI lifecycle powinien móc przerwać wizytę i wykonać replan.
+Per-deceased cooldown jest preferowany nad jednym globalnym `lastGraveVisitAtDays`, ponieważ odwiedzenie jednego grobu nie powinno blokować wszystkich innych rodzinnych grobów.
 
-Dotyczy przede wszystkim danger, combat, fleeing i critical needs.
+## 5. Simulation-time seam
 
-Nie tworzyć specjalnego cancellation systemu dla grave visits.
+Cooldown musi używać world simulation time.
 
-## 11. Shared cemeteries
-
-`world-terrain-016` może przypisać dwa `SM` settlements do jednego shared cemetery.
-
-Grave visit nie potrzebuje specjalnej obsługi tego przypadku. NPC idzie do konkretnego persistent grave, więc mieszkańcy obu osad mogą naturalnie pojawiać się w tym samym cemetery.
-
-To jest pożądany emergent effect, ale plan nie dodaje dodatkowych interakcji pomiędzy visitorami.
-
-## 12. Cemetery classification nie steruje wizytą
-
-Dla grave visit nie ma znaczenia, czy cemetery jest settlement cemetery czy abandoned cemetery.
-
-Liczy się wyłącznie:
+Aktualnie:
 
 ```text
-known deceased
-→ existing persistent grave
+game loop / SettlementsManager
+→ Settlement.update(..., nowDays = dayNight.elapsedDays, ...)
+→ NpcAgent.update(...)
 ```
 
-NPC nie wybiera cemetery przez nearest lookup.
+ale `createSettlement.ts` **nie przekazuje dziś `nowDays` do `NpcAgent.update()`**.
 
-## 13. World independence
+Implementacja 026 powinna minimalnie doprowadzić `nowDays` do decision/completion seam (argument update albo równie wąski existing-style dependency). Nie używać:
 
-Wizyta nie może być wywoływana przez gracza.
+- `Date.now()`,
+- wall clock,
+- `NpcAgent.simClock` do persisted cooldownu.
 
-Nie:
+Nie dodawać off-screen tickera; absolute `elapsedDays` pozwala ocenić cooldown lazy po ponownym załadowaniu.
+
+## 6. Grave-visit pressure — dokładny integration seam
+
+Aktualny wybór ma dwa etapy:
+
+1. `NpcAgent` generuje pressure candidates i wykonuje jeden `pickActionKind<NpcDecisionTarget>()` nad needs + `seekShelter` + `heal`.
+2. `decideNpcAction()` nakłada outer priority: collapse → pressure winner → scheduled sleep → idle.
+
+Grave visit ma wejść do **pierwszego etapu**, w `NpcAgent` w tym samym miejscu, w którym dokładane są weather/healing pressure candidates.
+
+Rozszerzyć shared union `NpcDecisionTarget` o `'visitGrave'`. Nie tworzyć fake `NeedId`.
+
+Candidate powstaje tylko jeśli:
 
 ```text
-player enters cemetery
-→ spawn visitor
+eligible persistent grave exists
++ cooldown expired
++ deterministic low-frequency opportunity permits visit
 ```
 
-Nie:
+Pressure ma być niskie/optional. Musi przegrywać z realnymi potrzebami, healing/weather i scheduled sleep, ale może wygrać z idle.
+
+Najmniejsza outer-decision zmiana: dodać `visitGrave` do `NpcDecisionKind` z rangą pomiędzy `scheduledSleep(70)` i `idle(60)`, albo równoważnie zachować identyczną semantykę przez istniejący pressure winner. Nie budować drugiego arbitrażu.
+
+## 7. Deterministic opportunity
+
+Wizyta nie powinna być próbą co każdy `choose()` po wygaśnięciu cooldownu.
+
+Użyć prostego deterministycznego opportunity gate na istniejącym decision cadence, opartego na stable NPC/grave identity + simulation time bucket. Nie używać `Math.random()` ani wall clock.
+
+Nie dodawać grief score, anniversaries, stages ani cemetery schedule.
+
+## 8. `NpcPlan` — nie rozszerzać bez potrzeby
+
+Aktualny `NpcPlan` jest nadal jawnie need-centric:
 
 ```text
-player digs grave
-→ send NPC there
+NpcGoalId = fulfilWorkDuty | obtainWood | secureFood | secureWater
+strategy: NpcStrategyId | null
 ```
 
-NPC odwiedza grób dlatego, że jego AI niezależnie podjął taką decyzję.
+`goalForNeed()` / `needForGoal()` utrzymują mapping z `NeedId`.
 
-Dzięki temu późniejszy witness system może otrzymać prawdziwy emergent przypadek:
+Grave visit jest krótkim optional pressure reaction, bliższym `heal` / `shelter` / `social` niż długiemu persistent resource goal.
+
+Dlatego **npc-026 nie powinien rozszerzać `NpcPlan`**. `npc-011` może wcześniej rozszerzyć plan model dla wieloetapowego burial; 026 nie ma obowiązku reuse burial plan tylko dlatego, że dotyczy grobu.
+
+W toku wizyty semantic target może pozostać transient w `NpcAgent` / `NpcPlannedAction`. Cooldown jest osobno authoritative i persisted.
+
+## 9. Action / movement lifecycle
+
+Reuse `src/ai/npcAction.ts`:
 
 ```text
-NPC independently visits grave
-+
-player happens to be digging nearby
-→ possible witness
+ActionId += 'visitGrave'
+NpcPlannedAction
+→ destination = GraveRecord position snapshot
+→ normal goTo
+→ normal execute
+→ durationSec > 0
+→ onComplete updates persisted graveVisits timestamp
+→ choose
 ```
 
-## 14. Hybrid simulation
+Nie dodawać cemetery-specific pathfindingu, movement mode ani osobnego FSM.
 
-Nie wymuszać detailed simulation tylko po to, aby NPC odbył grave visit.
+`visitGrave` jest pressure reaction, nie Need: `activeNeed` powinien pozostać `'idle'`, analogicznie do `heal`/`shelter`/`social`. Dzięki temu istniejący `tickCriticalInterrupt()` może przerwać wizytę przy vigor collapse, critical need lub severe weather bez nowego cancellation subsystemu.
 
-Reuse istniejący model simulation fidelity.
+Cooldown aktualizować dopiero po successful timed stay, nie przy samym wyborze candidate ani rozpoczęciu drogi.
 
-Dla aktywnie symulowanego NPC można wykonać real navigation i short stay. Dla remote NPC zachować zgodność z istniejącym modelem bez ładowania chunków i pathfindingu.
+## 10. Revalidation
 
-Nie tworzyć off-screen grave visit simulator.
+Przed dispatch i przy completion rewalidować stable grave identity.
 
-## 15. Performance
+Jeżeli grave zniknie / lookup przestanie być valid, action staje się obsolete i NPC wraca do normalnej arbitration. Nie próbować wtedy wybierać nearest cemetery ani proceduralnego grobu.
 
-Nie wykonywać per-frame:
+## 11. Settlement streaming / reconstruction
 
-- grave scans,
-- household scans,
-- relationship scans.
+`NpcStateRegistry` żyje na `SettlementsManager` i przeżywa unload/reload; `NpcAgent` runtime (`phase`, `pendingAction`, pathfinding, action timers) nie jest persisted.
 
-Candidate lookup powinien zaczynać się od istniejących powiązań NPC:
+V1 akceptuje:
 
 ```text
-NPC
-→ own household / existing meaningful relationships
-→ deceased members
-→ persistent graves
+stream-out podczas wizyty
+→ transient travel/action przepada
+→ persisted cooldown nie zmienia się, jeśli visit nie ukończono
+→ po stream-in NPC może ponownie rozważyć wizytę
 ```
 
-Nie skanować wszystkich graves w świecie.
+Nie dodawać off-screen movement executora.
 
-Ocena odbywa się tylko podczas istniejącego low-frequency decision cadence.
+Persistent grave z `npc-011` jest world-owned i również musi przeżyć reconstruction niezależnie od settlement mesh.
 
-Web Worker nie jest potrzebny.
-
-## 16. State ownership
-
-Preferowany podział:
-
-```text
-npc-011 burial
-→ persistent grave + deceased identity
-
-household / existing relationships
-→ who is eligible
-
-NPC AI
-→ whether visit happens now
-
-plan/action
-→ execution
-
-navigation
-→ travel
-
-minimal existing NPC state
-→ cooldown if required
-```
-
-Nie tworzyć `GraveVisitManager`, `MourningManager` ani cemetery scheduler.
-
-## 17. Scope exclusions
+## 12. Scope exclusions
 
 Poza V1:
 
-- grief simulation i grief stages,
+- grief / mourning simulation,
 - anniversaries,
-- remembrance model,
-- flowers, candles i offerings,
-- prayer i kneeling animations,
-- multi-grave visits,
-- coordinated household visits,
-- funeral processions,
+- flowers/candles/offerings,
+- funeral procession,
+- coordinated family visits,
 - cemetery conversations,
-- gossip,
-- witness logic,
-- reputation,
-- observation memory / `lastSeen`,
-- crime system,
-- dedicated cemetery schedule activity,
-- nowy relationship scoring tylko dla grave visits.
+- player witness/reputation logic,
+- relationship-only eligibility,
+- global NPC memory manager,
+- grave registry drugi względem `npc-011`,
+- cemetery scheduler,
+- cemetery-specific navigation,
+- off-screen visit executor.
 
-## 18. Recon przed implementacją
+## 13. Implementation order
 
-Przed implementacją zweryfikować aktualny `main`:
+1. Zaimplementować / zweryfikować finalny `npc-011` grave contract.
+2. Użyć stable `deceasedNpcId → graveId → GraveRecord` lookup z 011.
+3. Przy `createSettlement.ts` zbudować bounded family-member/deceased lookup bez duplikowania family modelu.
+4. Dodać minimalny persisted per-deceased grave-visit history do `NpcAuthoritativeState` / snapshot persistence.
+5. Doprowadzić `nowDays` (`dayNight.elapsedDays`) do NPC decision/completion seam.
+6. Dodać pure/bounded grave-visit pressure candidate i `'visitGrave'` do istniejącego arbitration path.
+7. Dodać zwykły `NpcPlannedAction` `visitGrave` z normalnym navigation + timed execute.
+8. Aktualizować cooldown wyłącznie po completion.
+9. Dodać focused tests dla eligibility, priority, cooldown, persistence i reconstruction.
+10. Zaktualizować implementation notes / state docs, jeśli publiczne ownership/contracts się zmienią.
 
-1. `npc-011` grave representation i lifecycle,
-2. czy po śmierci zachowany jest lookup deceased → household,
-3. persisted household membership,
-4. istniejącą relationship representation i czy posiada już prostą semantykę meaningful relationship,
-5. NPC decision/arbitration,
-6. plans/actions,
-7. navigation target semantics,
-8. interruption/replan flow,
-9. world time / możliwy cooldown representation,
-10. remote NPC simulation.
+## 14. Automated verification
 
-Jeżeli current code ma odpowiedni optional-activity / pressure mechanism, reuse go.
+Najwyższe ROI:
 
-Nie tworzyć nowego pressure/goal abstraction bez potrzeby.
+- same-family living NPC + persistent grave daje bounded candidate,
+- unrelated NPC / corpse without grave nie daje candidate,
+- lookup używa stable grave id, nie nearest cemetery,
+- cooldown per deceased przeżywa save/load i `WorldBundle` rebuild,
+- elapsed world days, nie wall clock/simClock, sterują cooldownem,
+- critical need / severe weather / scheduled sleep wygrywają z visit,
+- visit może wygrać z idle,
+- action używa normalnego `goTo → execute` i nie kończy się w ticku arrival,
+- cooldown zapisuje się dopiero po successful completion,
+- unload/reload nie wymaga persisted path/action state,
+- player presence nie generuje candidate.
 
-Jeżeli `npc-011` nie zapewnia jeszcze taniego stable lookup `deceasedNpcId → persistent grave`, potraktować to jako dependency contract/blocker zamiast tworzyć równoległy registry.
+## Manual verification
 
-## 19. Implementation direction
-
-Preferowany flow:
-
-```text
-NPC decision cadence
-        ↓
-household / existing meaningful relations
-        ↓
-known deceased with persistent grave
-        ↓
-same grave not visited recently
-        ↓
-simple visit opportunity
-        ↓
-normal arbitration
-        ↓
-visit grave
-        ↓
-navigate
-        ↓
-short stay
-        ↓
-update minimal cooldown state if needed
-        ↓
-normal AI
-```
-
-Important public/architectural additions powinny otrzymać JSDoc tam, gdzie pomaga to preflight discovery, preferując `@domain npc`.
-
-## 20. Implementation order
-
-1. Zweryfikować `npc-011` persistent grave contract.
-2. Zweryfikować dostępność household po śmierci NPC.
-3. Dodać prosty lookup eligible deceased dla living NPC przez household.
-4. Reuse existing meaningful relationships tylko jeśli obecny system daje prosty contract bez nowego scoringu.
-5. Dobrać najprostszy cooldown pasujący do obecnego NPC state/persistence.
-6. Włączyć visit opportunity do istniejącej arbitration.
-7. Dodać semantic grave target.
-8. Dodać/reuse visit plan/action.
-9. Reuse navigation.
-10. Dodać short stay duration.
-11. Zweryfikować interruption/replan.
-12. Zweryfikować shared cemetery.
-13. Zweryfikować remote simulation.
-14. Dodać testy.
-15. Utworzyć implementation notes.
-16. Zaktualizować relevant STATE/docs.
-
-## 21. Automated verification
-
-### Eligibility
-
-- member household zmarłego może zostać kandydatem,
-- mechanika działa bez wcześniej rozwiniętej silnej relationship,
-- existing meaningful relationship może rozszerzyć eligibility tylko jeśli taki contract już istnieje,
-- unrelated NPC nie odwiedza losowego grave,
-- deceased bez persistent grave nie generuje visit,
-- procedural grave nie jest celem wizyty.
-
-### Frequency
-
-- ten sam NPC nie odwiedza tego samego grave zbyt często,
-- visit pozostaje optional i rzadki,
-- rozwiązanie nie wymaga rozbudowanego grief modelu.
-
-### Arbitration
-
-- danger wygrywa z visit,
-- critical need wygrywa z visit,
-- urgent work wygrywa z visit,
-- visit może wygrać z idle/optional activity.
-
-### Execution
-
-- NPC idzie do konkretnego persistent grave,
-- pozostaje przy nim przez realny krótki czas,
-- kończy action,
-- wraca do normalnej arbitration,
-- visit może zostać przerwany przez ważniejszy stan.
-
-### World semantics
-
-- player presence nie uruchamia visit,
-- player digging nie uruchamia visit,
-- shared cemetery działa bez specjalnej visit logiki,
-- cemetery classification nie jest używane jako nearest-destination heuristic.
-
-### Performance
-
-- brak per-frame scanów,
-- brak global grave scan,
-- lookup zaczyna się od household/istniejących relationships,
-- remote NPC nie wymusza detailed simulation.
-
-## 22. Manual verification
-
-Manualną weryfikację wykonuje User w browserze.
-
-Sprawdzić:
-
-1. burial NPC,
-2. późniejszą wizytę członka household,
-3. działanie bez wcześniej rozwiniętej silnej relationship,
-4. brak ciągłych/codziennych wizyt tego samego grobu,
-5. dojście do konkretnego persistent grave,
-6. realny krótki pobyt przy grave,
-7. normalne odejście po visit,
-8. przerwanie przez ważniejszą potrzebę lub danger,
-9. visitor na shared cemetery,
-10. brak związku pomiędzy player presence a pojawieniem się visitor.
+Manualną weryfikację wykonuje User w browserze po implementacji feature.
 
 AI agent nie wykonuje browser verification.
+
+Nie uruchamiać `pnpm docs:sync` ręcznie — repozytorium ma automatyczny GitHub workflow.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
