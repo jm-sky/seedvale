@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
-**Depends on:** fauna-010, fauna-011
+**Depends on:** ~~fauna-010~~, ~~fauna-011~~, ~~fauna-017~~
 **Domain:** `fauna`
 **Subdomains:** `domestication`
 **Tags:** `feeding` `interaction` `affinity`
@@ -12,441 +12,302 @@
 
 ## Cel
 
-Dodać wspólną interakcję ręcznego karmienia zwierząt oraz lekką, deterministyczną relację zwierzę → konkretna osoba tam, gdzie zachowanie rzeczywiście jej potrzebuje.
+Dodać lekką relację zwierzę → konkretna osoba do istniejącego player → animal feeding, bez tworzenia drugiego systemu karmienia, potrzeb ani relacji.
 
-Pierwszym pełnym konsumentem affinity jest pies. Inne obsługiwane zwierzęta mogą korzystać z tego samego hand-feeding mechanism bez konieczności tworzenia martwego relationship state.
-
-Podstawowy flow:
+Gameplay pozostaje:
 
 ```text
-human actor has food
-→ animal diet compatibility
-→ hand-feed interaction
-→ successful feed consumes item exactly once
-→ shared AnimalLife hunger relief
-→ affinity change when animal supports it
-→ later social behaviour may use affinity
+human ma kompatybilne jedzenie
+→ animal może je przyjąć
+→ udane karmienie zużywa dokładnie 1 item
+→ ten sam shared hunger relief co inne źródła jedzenia
+→ affinity rośnie tylko dla affinity-enabled animal
+→ pies może traktować znaną osobę mniej jak obcego
 ```
 
-Nie tworzyć `feedDog()`, `DogAffinity` ani osobnego inventory/diet systemu dla tej funkcji.
+Pierwszym pełnym konsumentem affinity jest pies. Koń, krowa i inne zwierzęta objęte `AnimalDef.diet.items` mają korzystać z tego samego hand-feeding flow bez automatycznego tworzenia affinity state.
 
-## Założenia
+## Aktualny punkt wyjścia po `fauna-017`
 
-Plan zakłada ukończenie:
+Generic player feeding już istnieje i nie wolno tworzyć go ponownie:
 
-### fauna-010
+- `src/app/interactables.ts` używa istniejącej animal interaction i `feedItemKindFor(animal)` do promptu `Nakarm`;
+- `src/app/actions/survivalActions.ts` ma `feedAnimal()`, które wybiera kompatybilny item i usuwa dokładnie jedną sztukę dopiero po sukcesie operacji domenowej;
+- `AnimalAgent.feedByPlayer()` jest obecnym publicznym seamem, ale nadal zawiera starą bezpośrednią ścieżkę `diet → consumeFood()`;
+- `src/fauna/animalForaging.ts` po `fauna-017` jest kanonicznym właścicielem wyboru źródeł jedzenia, live validation oraz atomic food/source relief dla autonomicznego żywienia;
+- `src/fauna/AnimalLife.ts` pozostaje właścicielem hunger state i `consumeFood()`;
+- `src/fauna/animalDefs.ts` pozostaje właścicielem species diet i capability-style konfiguracji;
+- `src/fauna/dogGuard.ts` pozostaje czystym resolverem guard/bark behaviour;
+- persistent livestock używa istniejącego `AnimalSaveState` + `snapshot()` / `hydrate()` przez `src/settlement/livestock.ts`.
 
-Dostępne są:
+Plan ma rozszerzyć te granice, a nie cofnąć refaktor `AnimalAgent`.
 
-- declarative species diet,
-- species metabolism,
-- wspólny food/source model,
-- diet compatibility i nutritional value.
+## 1. Jedna domenowa operacja hand-feeding
 
-Hand-feeding musi używać tego samego diet contractu co autonomiczne żywienie zwierzęcia. Nie utrzymywać osobnych list `autonomous food` i `player-feed food`.
+Zachować obecny interaction/raycast/UI pipeline.
 
-### fauna-011
-
-Dostępne są:
-
-- dog jako domestic animal,
-- household ownership,
-- home behaviour,
-- guard behaviour,
-- social/stranger barking, które może później uwzględnić affinity.
-
-## 1. Generic hand-feed interaction
-
-Rozszerzyć istniejącą interakcję z `Interactable.kind === 'animal'` o możliwość karmienia kompatybilnym itemem.
-
-Nie dodawać osobnego raycastu, selection system ani dog-specific interaction path.
-
-Player interaction jest adapterem do domenowej operacji karmienia. Reguły diety, akceptacji jedzenia, hunger relief i affinity nie powinny należeć do UI ani `gameLoop`.
-
-Domenowa operacja powinna być wystarczająco neutralna względem human actor, aby przyszły NPC action mógł użyć tej samej ścieżki bez duplikowania zasad.
-
-Nie narzucać nazwy/API przed reconem kodu po `fauna-010`.
-
-## 2. Wybór i walidacja jedzenia
-
-Źródłem prawdy pozostaje species diet z `fauna-010`.
-
-Przykłady:
+`feedAnimal()` w `survivalActions.ts` pozostaje player adapterem odpowiedzialnym za:
 
 ```text
-horse + hay       → valid
-horse + carrot    → valid if configured
-cow + hay         → valid
-dog + meat        → valid
-dog + hay         → invalid
+wybór carried diet item
+→ wywołanie domenowej operacji animal
+→ Inventory.remove(kind, 1) tylko po sukcesie
 ```
 
-Nie hard-code'ować list per gatunek w interaction/UI.
+Nie może sam rozstrzygać hunger acceptance, nutritional relief ani affinity.
 
-Jeżeli wiele itemów w inventory jest zgodnych z dietą, użyć najprostszego istniejącego mechanizmu wyboru, np. aktywnego/trzymanego itemu, jeżeli aktualny interaction model go udostępnia. W przeciwnym razie zastosować małą deterministyczną regułę.
+Obecne `feedByPlayer(itemKind)` należy ewoluować w cienki publiczny adapter operacji actor-aware zamiast rozbudowywać jego logikę. Nazwa może zostać zmieniona na bardziej neutralną (`tryHandFeed` lub równoważną), jeżeli poprawi kontrakt i call-sites.
 
-Nie dodawać dużego food-selection modalu w V1.
+## 2. Food rules pozostają wspólne z autonomicznym żywieniem
 
-## 3. Feed success invariant
+Hand-feeding musi używać:
 
-Zachować invariant:
+- `AnimalDef.diet.items` z `animalDefs.ts`,
+- istniejącej wartości relief dla konkretnego itemu,
+- `AnimalLifeState` / `consumeFood()` z `AnimalLife.ts`.
 
-> Udane karmienie zużywa dokładnie jeden zaakceptowany item i aplikuje efekt dokładnie raz. Anulowane lub nieudane karmienie nie zużywa itemu i nie daje efektu.
+Po `fauna-017` nie dodawać ponownie diet/food mutation logic do `AnimalAgent`.
 
-Wykorzystać istniejący action/interaction transaction seam zamiast projektować osobny mechanizm commitowania wyłącznie dla karmienia.
+W `animalForaging.ts` wydzielić/reuse małą czystą operację dla przyjęcia diet itemu przez animal, tak aby autonomous household feed i hand-feed opierały się na tym samym diet + hunger relief contract. Nie modelować ręcznego karmienia jako nowego równoległego needs systemu ani jako osobnego inventory source graph.
 
-Przed sukcesem revalidować tylko dane wymagane przez istniejący pipeline, m.in. żywe/dostępne zwierzę, kompatybilność i dostępność itemu.
+`SourceTarget.kind === 'feed'` nadal oznacza autonomiczne dojście do jedzenia z household storage; nie przeciążać tego targetu transient player interaction state.
 
-## 4. Hunger relief
+## 3. Hunger acceptance
 
-Karmienie korzysta ze wspólnego `AnimalLifeState`.
+Zwierzę może przyjąć jedzenie tylko wtedy, gdy jest wystarczająco głodne.
 
-Efekt wynika z nutritional value/diet modelu `fauna-010`.
-
-Ten sam item powinien mieć spójną wartość niezależnie od tego, czy zwierzę:
-
-- znalazło źródło samo,
-- zjadło z household feeding point,
-- dostało jedzenie bezpośrednio od człowieka.
-
-Nie ustawiać hunger bezpośrednio do zera i nie tworzyć osobnych wartości `feed relief` per interaction.
-
-## 5. Zwierzę może odmówić jedzenia
-
-Nie pozwalać farmić affinity przez karmienie całkowicie najedzonego zwierzęcia.
-
-Preferować naturalną regułę opartą o istniejący hunger state:
+Użyć jednego wspólnego kryterium opartego o `AnimalLifeState.hunger`; w pierwszej kolejności reuse `NEED_ELEVATED_THRESHOLD`, jeżeli nie ma powodu do osobnego progu.
 
 ```text
-animal hungry enough
-→ may accept compatible food
+hungry enough + compatible item + live animal
+→ accept
 
-animal not hungry enough
-→ refuses food
+satiated / dead / incompatible
+→ reject
 → item remains
-→ no hunger relief
-→ no affinity gain
+→ no relief
+→ no affinity
 ```
 
-Użyć jednego małego `canAcceptFood`/równoważnego kryterium wynikającego ze wspólnego modelu potrzeb, zamiast nakładać kilka niezależnych cooldownów i diminishing-return systems.
+Nie dodawać dodatkowego cooldownu ani diminishing returns w V1.
 
-## 6. Affinity tylko tam, gdzie jest używane
+Prompt w `interactables.ts` powinien używać tego samego read-only predicate co domenowa operacja, ale finalny commit musi rewalidować stan ponownie.
 
-Feeding jest generyczne dla obsługiwanych animals.
+## 4. Feed success invariant
 
-Affinity nie musi być tworzone dla każdego zwierzęcia.
+Zachować:
+
+> Udane karmienie aplikuje efekt dokładnie raz i dopiero wtedy zużywa dokładnie jeden item. Nieudane/anulowane karmienie nie zużywa itemu i nie daje affinity.
+
+Nie zmieniać istniejącej kolejności transakcji w `survivalActions.ts` na `remove first`.
+
+## 5. Lifecycle boundary
+
+Hand-feeding dotyczy tylko żywego, aktualnie dostępnego animal.
+
+`AnimalAgent` pozostaje właściwym miejscem na rewalidację jego lifecycle (`isDead()` / corpse state), ponieważ `animalForaging.ts` nie jest właścicielem agent death lifecycle.
+
+Nie tworzyć dodatkowego `feedable/dead` state obok istniejącego lifecycle.
+
+## 6. Affinity capability i ownership
+
+Affinity ma być stanem indywidualnego animal, ale tylko dla species, które realnie go konsumują.
+
+Zgodnie z aktualną konwencją `AnimalDef`, capability powinna wynikać z obecności małego opcjonalnego configu w `animalDefs.ts`, zamiast rozrzucać kolejne `kind === 'dog'` w feeding code.
+
+V1:
 
 ```text
-generic hand-feeding → supported animals
-affinity state       → persistent/domestic animals that use it
-V1 behavioural user  → dog
+dog → affinity enabled
+other fed animals → hand-feeding działa, affinity state nie jest tworzony
 ```
 
-Nie tworzyć martwych wpisów affinity dla krów, koni, wild fauna itd., jeżeli żadne ich zachowanie jeszcze tej informacji nie konsumuje.
-
-Mechanizm powinien jednak pozwalać rozszerzyć affinity na kolejne persistent/domestic animals później bez przebudowy hand-feeding.
-
-## 7. Semantyka affinity i familiarity
-
-Affinity reprezentuje indywidualną pozytywną relację/zaufanie zwierzęcia do konkretnego human actor.
-
-`familiar` / `trusted` są interpretacją affinity lub kontekstu, a nie osobnym równoległym systemem relacji.
-
-Przykład:
+Twardo zachować:
 
 ```text
-own household member
-→ familiar by ownership context
-
-player repeatedly feeds dog when hungry
-→ affinity grows
-→ player eventually treated as familiar/trusted
+ownerHouseId = ownership/contextual family membership
+affinity     = indywidualna relacja do konkretnej osoby
 ```
 
-Nie materializować wpisów affinity dla wszystkich członków owning household, jeśli `ownerHouseId → Household.members` już dostarcza potrzebny kontekst.
+Affinity nie zmienia ownership, protected household membership, guard priority ani combat loyalty.
 
-## 8. Ownership ≠ affinity
+## 7. Human identity
 
-Zachować twarde rozdzielenie:
+Affinity kluczować stabilnym identyfikatorem osoby, nigdy object reference ani transient indexem.
 
-```text
-ownership
-= do którego household należy zwierzę
+Nie wykonywać szerokiego actor-identity refactoru. Dla V1 wystarczy mały fauna-facing identyfikator z namespacem, np. stała identity gracza oraz przyszłe `npc:<stableNpcId>`.
 
-affinity
-= indywidualna relacja zwierzęcia do konkretnej osoby
-```
+Nie materializować affinity entries dla członków owning household tylko po to, aby reprezentować istniejącą familiarity wynikającą z `ownerHouseId` / NPC `homeId`.
 
-Affinity nie może zmieniać ownership ani automatycznie czynić aktora chronionym przez guard behaviour.
+## 8. Sparse affinity state
 
-W szczególności karmienie obcego psa nie może powodować, że zacznie on chronić gracza przed własnym household.
+Nie tworzyć macierzy animals × humans ani globalnego relationship managera.
 
-Guard priority z `fauna-011` pozostaje oparty o household/threat relevance.
+Affinity:
+
+- istnieje tylko na affinity-enabled individual animal,
+- wpis dla human powstaje dopiero przy rzeczywistym gain,
+- wartości są bounded i deterministycznie aktualizowane,
+- unrelated humans nie dostają pustych wpisów.
+
+Nie używać `QuestManager` relations ani NPC relationship stores — mają inny ownership i semantykę.
 
 ## 9. Pies jako pierwszy behavioural consumer
 
-Dog powinien jako pierwszy realnie wykorzystywać affinity.
+`dogGuard.ts` pozostaje właścicielem interpretacji stranger/social barking.
 
-### Feeding
+Rozszerzyć istniejący `resolveDogBarkStimulus()` / jego candidate contract tak, aby przy stranger evaluation można było uwzględnić stable human id + interpreted familiarity.
 
-```text
-player feeds hungry dog compatible meat
-→ item consumed
-→ hunger relief
-→ affinity to player increases
-```
+Własny household nadal jest familiar z kontekstu `homeId === ownerHouseId`.
 
-### Stranger/social barking
-
-Affinity może zmniejszać stranger relevance wobec znanej osoby:
+Dla osoby spoza household:
 
 ```text
-unfamiliar human near home
-→ dog may observe/bark
+affinity < trusted threshold
+→ stranger stimulus jak obecnie
 
-familiar/trusted human
-→ reduced or no stranger bark
+affinity >= trusted threshold
+→ stranger relevance suppressed/reduced
 ```
 
-Nie wiązać jeszcze affinity z:
+Nie zmieniać `resolveDogGuardTarget()` ani wolf-defense priority.
 
-- guard priority,
-- following player,
-- commands,
-- ownership transfer,
-- combat loyalty.
+Player musi wejść do istniejącego dog social perception jako kandydat bez tworzenia nowego world scan. Reuse player data już dostępne w `AnimalAgent.update()`/perception.
 
-## 10. Affinity gain
+## 10. Persistence
 
-Udane, sensowne karmienie może dawać mały dodatni affinity gain.
+Affinity psa musi round-tripować razem z istniejącym persistent livestock individual state.
 
-Nie przyznawać affinity za:
+Rozszerzyć `AnimalSaveState` o opcjonalną sparse reprezentację affinity i obsłużyć ją przez istniejące:
 
-- odrzucone jedzenie,
-- przerwaną interakcję,
-- niekompatybilny item,
-- próbę karmienia najedzonego zwierzęcia.
+- `AnimalAgent.snapshot()`,
+- `AnimalAgent.hydrate()`,
+- `LivestockSaveRecord`,
+- `src/persistence/saveData.ts` validation.
 
-Hunger acceptance jest podstawową ochroną przed spam farmingiem. Nie dodawać dodatkowego affinity cooldownu, jeśli nie jest potrzebny po testach.
+Pole musi być optional/backward-compatible.
 
-Nie budować w tym planie pełnego negative-affinity/fear/grudge system.
+Nie tworzyć `DogAffinitySaveData` i nie rozszerzać wild-fauna persistence. Wild animals nadal nie zyskują trwałej indywidualnej affinity tylko dlatego, że generic `AnimalSaveState` potrafi ją reprezentować.
 
-Jeżeli obecny combat daje bardzo tani i naturalny hook na `human damages dog → affinity decreases`, można go wykorzystać tylko wtedy, gdy nie rozszerza scope'u i nie wymaga nowego memory systemu. Nie jest to requirement V1.
+## 11. Animacja i feedback
 
-## 11. Human actor identity
+Karmienie ma korzystać z istniejącego animation mappingu, jeśli dany species posiada użyteczny eat/interact clip.
 
-Affinity musi używać stabilnej identity osoby, nie object reference ani transient array index.
+Brak dedykowanej animacji nie blokuje feature.
 
-Dla gracza użyć istniejącej trwałej identity reprezentacji, jeśli istnieje.
+Nie hard-code'ować clip names w interaction/UI i nie tworzyć osobnego animation subsystemu.
 
-Dla przyszłego NPC feeding używać stabilnego NPC id.
+Feedback ma pozostać lekki; bez affinity bar, relationship panel ani dużego feed-selection modalu.
 
-Jeżeli obecna architektura nie posiada wspólnej human identity abstraction, nie tworzyć szerokiego actor-identity refactoru tylko dla tego planu. Zastosować najmniejszą reprezentację zgodną z obecnym persistence model i udokumentować granicę.
+## 12. NPC feeding boundary
 
-## 12. Sparse affinity storage
+NPC feeding job/schedule pozostaje poza scope.
 
-Nie utrzymywać macierzy:
+Domenowa operacja ma jednak być actor-neutralna, aby przyszłe NPC action mogło wykonać:
 
 ```text
-all animals × all humans
+stable human id + item
+→ ta sama compatibility/acceptance/relief operacja
+→ ten sam affinity gain
 ```
 
-Affinity jest sparse i istnieje tylko dla znaczących indywidualnych relacji.
+bez kopiowania zasad player feeding.
 
-Tworzyć wpis dopiero po interakcji, która rzeczywiście zmienia affinity.
+## 13. Debugging
 
-Nie inicjalizować wpisów dla unrelated NPCs ani wild fauna.
+Jeżeli istniejący fauna inspector wymaga rozszerzenia, pokazać co najmniej:
 
-Ownership store i affinity store nie mogą duplikować tych samych informacji.
-
-## 13. Persistence
-
-Affinity psa/persistent affinity-enabled animal musi przetrwać save/load.
-
-Gracz nie powinien po reloadzie stawać się ponownie obcym dla psa, z którym zbudował relację.
-
-Zapisać sparse affinity w istniejącym authority dla persistent/domestic animal state lub najbliższym zgodnym ownership boundary.
-
-Nie tworzyć `DogAffinitySaveData` ani nie rozszerzać przy okazji persistence całej wild fauna.
-
-Transient feed action nie wymaga persistence.
-
-## 14. Reakcja zwierzęcia i animacje
-
-Karmienie powinno mieć widoczną reakcję zwierzęcia, gdy istniejące assety/animation mapping to umożliwiają.
-
-Preferowany flow:
-
-```text
-human offers food
-→ animal accepts
-→ existing eat/interact animation
-→ successful feed effect
-```
-
-Dla psa sprawdzić rzeczywiste clip names modeli Quaternius i wykorzystać odpowiedni istniejący clip, jeśli dostępny.
-
-Dla innych gatunków użyć istniejącej eat animation, jeśli jest.
-
-Brak dedykowanej animacji nie blokuje mechaniki.
-
-Nie hard-code'ować clip names poza istniejącym species animation mapping.
-
-## 15. UI / feedback
-
-Animal interaction prompt powinien oferować karmienie tylko wtedy, gdy istnieje sensowny kompatybilny item i zwierzę może go przyjąć.
-
-Po udanym karmieniu wykorzystać lekki istniejący feedback.
-
-Nie dodawać:
-
-- affinity bar w HUD,
-- relationship panel,
-- dużego feed inventory modal.
-
-Affinity może być widoczne w debug tooling w V1.
-
-## 16. Other domestic animals
-
-Ten sam hand-feeding mechanism powinien działać bez species-specific interaction code dla innych gatunków objętych dietą `fauna-010`, np.:
-
-```text
-player feeds horse hay/carrot
-player feeds cow hay
-```
-
-Nie tworzyć jednak affinity state tylko dlatego, że zwierzę można nakarmić.
-
-Przyszłe plany mogą wykorzystać affinity/familiarity dla:
-
-- easier leading,
-- mounting acceptance,
-- milking tolerance,
-- reduced flee response,
-- handling/breeding.
-
-Te efekty są poza zakresem.
-
-## 17. NPC feeding boundary
-
-Pełne zachowanie:
-
-```text
-NPC notices hungry animal
-→ obtains food
-→ approaches animal
-→ hand-feeds it
-```
-
-pozostaje poza zakresem.
-
-Nie dodawać NPC feeding job ani caretaker profession.
-
-Domenowa operacja karmienia powinna jednak pozwolić przyszłemu NPC action użyć tych samych zasad diety, acceptance i consumption zamiast tworzyć drugą ścieżkę.
-
-## 18. Debugging / observability
-
-Rozszerzyć istniejący fauna debug output tylko jeśli potrzebne o:
-
-- hunger / can accept food,
-- compatible offered food,
+- hunger i can-accept-food,
 - affinity entries dla affinity-enabled animal,
-- interpreted familiarity/trust,
-- dla psa: ownership context obok affinity do obserwowanego human actor.
+- interpreted trusted/familiar dla wskazanego human,
+- `ownerHouseId` obok affinity u psa.
 
-Debug powinien pozwalać odpowiedzieć:
+Nie tworzyć osobnego relationship debug UI.
 
-> Dlaczego pies przyjął/odrzucił jedzenie i dlaczego traktuje tę osobę jako obcą albo znajomą?
+## Implementacja — preferowana kolejność
 
-Nie tworzyć osobnego relationship debug panelu, jeśli istniejący fauna inspector wystarcza.
+1. W `AnimalLife.ts` / `animalForaging.ts` dodać współdzielony read/commit contract acceptance + diet relief bez nowych needs.
+2. Zmienić `AnimalAgent` hand-feed seam na lifecycle-aware, actor-aware cienki adapter.
+3. Zachować transakcyjny `feedAnimal()` i zaktualizować prompt gating w `interactables.ts`.
+4. Dodać capability/config affinity w `animalDefs.ts` i sparse per-agent state.
+5. Podłączyć affinity gain wyłącznie po udanym feed commit.
+6. Rozszerzyć `dogGuard.ts` stranger candidate/resolver oraz player candidate adapter w `AnimalAgent`.
+7. Dodać snapshot/hydrate + save validation.
+8. Rozszerzyć focused tests i debug info.
 
 ## Testy
 
-Dodać testy przede wszystkim dla domenowych invariantów:
+Dodać/rozszerzyć focused tests dla:
 
-- compatible food can feed animal,
-- incompatible food is rejected,
-- successful feed consumes exactly one item,
-- cancelled/failed feed consumes nothing,
-- hunger relief matches shared nutritional value,
-- satiated animal refuses food and gives no affinity,
-- successful dog feeding increases affinity to feeding human,
-- affinity is per human identity,
-- affinity does not replace/change household ownership,
-- affinity does not automatically change guard priority,
-- dog stranger/social response can distinguish unfamiliar and familiar/trusted human,
-- sparse affinity survives save/load for dog/persistent affinity-enabled animal,
-- no affinity entry is created for unrelated humans,
-- hand-feeding another supported species does not require species-specific interaction code or unused affinity state.
+- compatible food accepted przez shared diet contract,
+- incompatible food rejected,
+- satiated/dead animal rejected,
+- successful feed consumes exactly one inventory item,
+- failed feed consumes none,
+- relief odpowiada temu samemu `AnimalDef.diet.items[kind]` co autonomous feeding,
+- successful dog feed increments only feeding human affinity,
+- non-affinity species nie alokuje/persistuje relationship state,
+- affinity dla dwóch human ids jest niezależne,
+- ownership pozostaje bez zmian,
+- trusted outsider nie wywołuje normalnego stranger bark,
+- guard target resolution pozostaje bez zmian,
+- affinity round-tripuje przez livestock save/load,
+- stary save bez affinity nadal przechodzi validation/hydration.
+
+Preferować istniejące test suites: `animalForaging.test.ts`, `survivalActions`/feeding tests, `dogGuard.test.ts`, `AnimalAgent.test.ts` oraz focused persistence/livestock tests.
 
 ## Manual verification
 
-W przeglądarce sprawdzić co najmniej:
+W przeglądarce sprawdzić:
 
-1. Gracz z kompatybilnym itemem może nakarmić głodne zwierzę.
-2. Koń przyjmuje zgodne z dietą jedzenie.
-3. Krowa przyjmuje zgodne z dietą jedzenie.
-4. Pies przyjmuje zgodne z dietą mięso.
-5. Pies odrzuca niezgodny item.
-6. Najedzone zwierzę odmawia jedzenia i item pozostaje w inventory.
-7. Udane karmienie zużywa dokładnie jeden item i zmniejsza hunger.
-8. Przerwane/nieudane karmienie nie zużywa itemu.
-9. Sensowne karmienie psa zwiększa jego affinity do gracza.
-10. Pies z wysoką affinity traktuje gracza mniej jak obcego przy social/stranger barking.
-11. Affinity nie zmienia owner household ani guard priority.
-12. Save/load zachowuje indywidualną relację psa do gracza.
-13. Karmienie innych zwierząt korzysta z tego samego diet/feeding mechanism.
-14. Jeśli dostępna jest odpowiednia animacja, zwierzę wizualnie reaguje na przyjęcie jedzenia.
+1. Głodny koń/krowa/pies przyjmuje kompatybilne jedzenie.
+2. Niezgodne jedzenie nie jest konsumowane.
+3. Najedzone lub martwe zwierzę nie może zostać nakarmione.
+4. Sukces usuwa dokładnie 1 item i zmniejsza hunger zgodnie ze wspólnym diet relief.
+5. Karmienie psa zwiększa affinity do gracza; karmienie innych zwierząt nie tworzy martwego affinity state.
+6. Po osiągnięciu trusted threshold pies mniej/nie szczeka na gracza jako stranger.
+7. Affinity nie zmienia owner household ani guard behaviour.
+8. Save/load zachowuje affinity psa.
+
+Browser verification wykonuje użytkownik, nie agent AI.
 
 ## Performance
 
-Affinity storage musi być sparse.
+Hand-feeding pozostaje event-driven i nie dodaje nowego update loop.
 
-Nie wykonywać per-frame lookupów affinity dla wszystkich aktorów.
+Affinity storage jest sparse. Nie skanować globalnie animals × humans i nie wykonywać affinity lookupów poza behaviour, które faktycznie ich potrzebują.
 
-Affinity query wykonywać tylko w zachowaniach, które faktycznie jej potrzebują, np. dog stranger/social evaluation i hand-feeding.
-
-Nie dodawać globalnego relationship managera skanującego wszystkie animals.
-
-Hand-feeding jest interakcją zdarzeniową i nie powinno dodawać nowego regularnego update loop.
+Dog stranger evaluation ma reuse obecny bounded perception/candidate path bez nowego per-frame world scan.
 
 ## Poza zakresem
 
 - petting/głaskanie,
-- dog commands,
-- follow-player companion mode,
-- taming wild/stray animals,
-- adoption/ownership transfer,
+- dog commands i follow/stay,
+- taming wild animals,
+- ownership transfer/adoption,
 - affinity-based guarding,
 - combat loyalty,
-- grooming,
-- toys/play,
-- animal training skills,
-- breeding bonus from affinity,
-- mating preference,
-- full negative affinity/fear/hostility memory,
-- persistent grudges/trauma,
+- negative affinity/fear/grudges,
 - animal personality,
-- full NPC feeding jobs,
-- animal caretaker profession,
-- automatic NPC feeding schedules,
+- NPC caretaker jobs/schedules,
+- breeding/production bonuses,
 - affinity UI panel,
-- naming pets,
-- whistle/call commands.
+- naming/whistle commands.
 
 ## Dokumentacja / AI preflight
 
-Dla nowych ważnych publicznych granic hand-feeding i affinity dodać JSDoc z `@domain fauna`.
+Dla nowych ważnych publicznych granic dodać JSDoc z `@domain fauna`.
 
-Szczególnie jasno udokumentować:
+Szczególnie jasno opisać:
 
 ```text
+AnimalAgent = integration/lifecycle/public adapter
+animalForaging = shared food/source selection + validation + relief rules
+AnimalLife = hunger state/mutation
 ownership ≠ affinity
 familiarity = interpretation/context, not duplicate relationship state
-diet compatibility ≠ interaction-specific whitelist
-feeding domain rules ≠ player UI/interaction adapter
 ```
 
-Affinity ma rozszerzać istniejące zachowanie persistent/domestic animals tylko tam, gdzie jest faktycznie konsumowane, a nie tworzyć równoległy globalny relationship system.
+Nie importować nowych canonical food helpers z compatibility re-exportów `AnimalAgent.ts`; nowe call-sites powinny preferować bezpośredni import z `animalForaging.ts` / `animalDefs.ts` / `AnimalLife.ts` zgodnie z `fauna-017`.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
