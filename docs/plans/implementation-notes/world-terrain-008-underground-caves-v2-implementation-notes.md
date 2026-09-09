@@ -1559,6 +1559,13 @@ hillside doorway remains a leftover — not a third ownership workaround.
 
 # Milestone B3 — Entrance regression, third pass (2026-09-09)
 
+**Superseded as descending-snap diagnosis.** Static column sampling here was
+correct that `queryGround` stays cave-owned. The `openSky` mouth-exit camera
+path it named was real and was closed in `f5bacadb`, but it is **not** the
+remaining user-visible snap. Current movement-trace recon:
+`world-terrain-008-underground-caves-v2-b3-descending-snap-recon.md`
+(2026-09-09). Do **not** mark B3 complete.
+
 Manual playtest of `ef420657` on seed `1136726869` (Grota Czarnego Kamienia)
 was clearly better (ambience, enterable mouth, no immediate burial) but
 **B3 is not closed**. Player still snaps to the surface ~5 m past the
@@ -1696,7 +1703,9 @@ bigger void against the same bowl would worsen the sky gap.
 
 - Hillside doorway / terrain hole / interior sky seam (needs the
   doorway contract above, not another clip tweak).
-- Manual verification of the descending-snap camera fix on this seed.
+- Descending-snap after `f5bacadb`: player ground stays cave-owned; camera
+  Y still jumps (throat parking + occupancy-null heightfield clamp). See
+  `world-terrain-008-underground-caves-v2-b3-descending-snap-recon.md`.
 - Cave size increase (blocked on overburden + doorway).
 - B4 streaming/workers/performance, B5 cleanup: untouched.
 
