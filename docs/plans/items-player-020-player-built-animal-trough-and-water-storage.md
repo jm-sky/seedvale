@@ -1,7 +1,7 @@
 # Plan: Player-built animal trough and water storage
 
 **Created:** 2026-09-08
-**Status:** `implemented` ✅
+**Status:** `planned` 📋
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~items-player-017~~
 **Domain:** `items-player`  

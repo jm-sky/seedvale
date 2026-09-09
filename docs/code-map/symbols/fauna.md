@@ -4,7 +4,7 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 829
+- `AnimalAgent` — class — line 832
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
@@ -93,28 +93,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/animalForaging.ts`
 
-- `applySourceRelief` — function — line 442
-- `CarcassCandidate` — type — line 161
-- `carcassCandidateScore` — function — line 152
-- `carcassFoodValue` — function — line 134
+- `AnimalWaterSourceProvider` — type — line 89
+- `applySourceRelief` — function — line 496
+- `CarcassCandidate` — type — line 182
+- `carcassCandidateScore` — function — line 173
+- `carcassFoodValue` — function — line 155
 - `DRINK_DURATION_SEC` — const — line 64
 - `EAT_DURATION_SEC` — const — line 61
-- `findFoodTarget` — function — line 388
-- `findForageTarget` — function — line 267
-- `findGrassPatchTarget` — function — line 294
-- `findTroughTarget` — function — line 236
-- `findWaterTarget` — function — line 241
+- `findFoodTarget` — function — line 439
+- `findForageTarget` — function — line 318
+- `findGrassPatchTarget` — function — line 345
+- `findHouseholdTroughTarget` — function — line 259
+- `findTroughTarget` — const — line 266
+- `findWaterTarget` — function — line 290
 - `FOOD_INTERACTION_RANGE` — const — line 55
-- `forageEdgeScore` — function — line 82
-- `ForagingContext` — type — line 211
-- `isCarcassEdible` — function — line 108
-- `isSourceTargetValid` — function — line 400
-- `selectDietFeedKind` — function — line 93
+- `forageEdgeScore` — function — line 103
+- `ForagingContext` — type — line 231
+- `isCarcassEdible` — function — line 129
+- `isSourceTargetValid` — function — line 451
+- `selectDietFeedKind` — function — line 114
 - `SOURCE_SEARCH_COOLDOWN_SEC` — const — line 68
 - `SOURCE_TARGET_TIMEOUT_SEC` — const — line 73
-- `SourceTarget` — type — line 179
-- `SourceTargetKind` — type — line 178
+- `SourceTarget` — type — line 200
+- `SourceTargetKind` — type — line 199
+- `TROUGH_DRINK_AMOUNT` — const — line 76
 - `WATER_INTERACTION_RANGE` — const — line 58
+- `WaterSourceRef` — type — line 81
 
 ## `fauna/animalHarvest.ts`
 

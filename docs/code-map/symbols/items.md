@@ -338,7 +338,8 @@ Generated from exported TypeScript symbols.
 - `LIQUID_DENSITY_KG_PER_LITRE` — const — line 25
 - `LIQUID_DRINK_PORTION_LITRES` — const — line 20
 - `liquidContainerCapacity` — function — line 27
-- `migrateLegacyWaterskinsToInstances` — function — line 128
+- `migrateLegacyWaterskinsToInstances` — function — line 143
+- `pourLiquidFromContainer` — function — line 117
 
 ## `items/primaryWeapons.ts`
 

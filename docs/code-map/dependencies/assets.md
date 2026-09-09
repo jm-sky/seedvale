@@ -244,6 +244,7 @@ Generated from TypeScript imports.
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`
 - `world/createPlayerGardens.ts`
+- `world/createPlayerTroughs.ts`
 - `world/createPlayerWells.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`

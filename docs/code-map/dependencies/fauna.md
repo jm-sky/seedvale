@@ -252,6 +252,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
+- `world/createPlayerTroughs.ts`
 
 ## `fauna/animalHarvest.ts`
 

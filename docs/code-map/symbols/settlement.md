@@ -24,7 +24,7 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 345
+- `createSettlement` — function — line 349
 - `CreateSettlementDeps` — type — line 227
 - `Settlement` — type — line 114
 - `settlementSpawnPoint` — function — line 215
@@ -595,22 +595,24 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementStructures.ts`
 
-- `createAnvil` — function — line 170
+- `createAnvil` — function — line 191
 - `createBarrel` — function — line 100
-- `createCrate` — function — line 157
-- `createDock` — function — line 239
-- `createGarden` — function — line 307
-- `createGrindWorkbench` — function — line 196
+- `createCrate` — function — line 178
+- `createDock` — function — line 260
+- `createGarden` — function — line 328
+- `createGrindWorkbench` — function — line 217
 - `createHayBale` — function — line 124
 - `createHut` — function — line 10
-- `createSignpost` — function — line 265
-- `createStockpile` — function — line 221
-- `createTrough` — function — line 138
-- `createVillageNamepost` — function — line 286
+- `createSignpost` — function — line 286
+- `createStockpile` — function — line 242
+- `createTrough` — function — line 170
+- `createTroughVisual` — function — line 146
+- `createVillageNamepost` — function — line 307
 - `createWell` — function — line 37
-- `createWheatField` — function — line 358
-- `layoutCropsGarden` — function — line 337
-- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 284
+- `createWheatField` — function — line 379
+- `layoutCropsGarden` — function — line 358
+- `TroughVisual` — type — line 137
+- `VILLAGE_NAMEPOST_BOARD_CENTER_Y` — const — line 305
 
 ## `settlement/settlementTerrain.ts`
 

@@ -943,6 +943,23 @@ Generated from TypeScript imports.
 - `world/createPlayerGardens.test.ts`
 - `world/foodSources.ts`
 
+## `world/createPlayerTroughs.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `fauna/animalForaging.ts`
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `settlement/settlementStructures.ts`
+- `world/playerTrough.ts`
+
+**Imported by**
+
+- `app/interactables.ts`
+- `app/worldBundle.ts`
+- `world/playerTrough.test.ts`
+
 ## `world/createPlayerWells.test.ts`
 
 **Imports**
@@ -1939,6 +1956,31 @@ Generated from TypeScript imports.
 - `world/siteInfrastructure.test.ts`
 - `world/siteInfrastructure.ts`
 
+## `world/playerTrough.test.ts`
+
+**Imports**
+
+- `world/createPlayerTroughs.ts`
+- `world/playerTrough.ts`
+
+## `world/playerTrough.ts`
+
+**Imports**
+
+- `items/constructionMaterials.ts`
+- `items/tentPlacement.ts`
+- `world/playerWell.ts`
+
+**Imported by**
+
+- `app/actions/placementActions.ts`
+- `app/createApp.ts`
+- `app/interactables.ts`
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`
+- `world/createPlayerTroughs.ts`
+- `world/playerTrough.test.ts`
+
 ## `world/playerWell.test.ts`
 
 **Imports**
@@ -1978,6 +2020,7 @@ Generated from TypeScript imports.
 - `world/createPlayerWells.test.ts`
 - `world/createPlayerWells.ts`
 - `world/palisade.ts`
+- `world/playerTrough.ts`
 - `world/playerWell.test.ts`
 - `world/playerWellProp.ts`
 - `world/residentialBuilding.ts`

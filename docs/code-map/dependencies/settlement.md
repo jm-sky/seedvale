@@ -961,6 +961,7 @@ Generated from TypeScript imports.
 - `world/createPlacedContainers.ts`
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
+- `world/createPlayerTroughs.ts`
 - `world/createPlayerWells.ts`
 - `world/createResidentialBuildings.ts`
 - `world/createSleepingUtilities.ts`
@@ -1246,6 +1247,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `settlement/props.ts`
+- `world/createPlayerTroughs.ts`
 - `world/playerWellProp.ts`
 
 ## `settlement/settlementTerrain.ts`

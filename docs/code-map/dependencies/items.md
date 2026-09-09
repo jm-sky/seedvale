@@ -294,6 +294,7 @@ Generated from TypeScript imports.
 - `world/createSleepingUtilities.ts`
 - `world/palisade.test.ts`
 - `world/palisade.ts`
+- `world/playerTrough.ts`
 - `world/playerWell.ts`
 - `world/residentialBuilding.ts`
 - `world/sleepingUtilities.ts`
@@ -970,6 +971,7 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/palisade.ts`
 - `world/playerGarden.ts`
+- `world/playerTrough.ts`
 - `world/playerWell.ts`
 - `world/residentialBuilding.test.ts`
 - `world/residentialBuilding.ts`

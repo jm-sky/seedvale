@@ -389,6 +389,13 @@ Generated from exported TypeScript symbols.
 - `PlayerGardenEntry` — type — line 19
 - `PlayerGardens` — type — line 21
 
+## `world/createPlayerTroughs.ts`
+
+- `createPlayerTroughs` — function — line 51
+  - domain: items-player
+- `PlayerTroughEntry` — type — line 16
+- `PlayerTroughs` — type — line 32
+
 ## `world/createPlayerWells.ts`
 
 - `createPlayerWells` — function — line 89
@@ -859,6 +866,28 @@ Generated from exported TypeScript symbols.
 - `WATERING_HYDRATION_GAIN` — const — line 197
 - `WATERING_LITRES` — const — line 200
 - `weedGrowthMultiplier` — function — line 234
+
+## `world/playerTrough.ts`
+
+- `clampPlayerTroughWaterLitres` — function — line 72
+- `isPlayerTroughConstructionComplete` — function — line 64
+- `PLAYER_TROUGH_CAPACITY_LITRES` — const — line 25
+- `PLAYER_TROUGH_FILL_DURATION_SEC` — const — line 58
+- `PLAYER_TROUGH_FOOTPRINT_RADIUS` — const — line 29
+- `PLAYER_TROUGH_MATERIAL_REQUIREMENTS` — const — line 47
+- `PLAYER_TROUGH_PLACE_DURATION_SEC` — const — line 32
+- `PLAYER_TROUGH_PLACE_REACH` — const — line 31
+- `PLAYER_TROUGH_PLACEMENT_MESSAGE` — const — line 36
+- `PLAYER_TROUGH_REQUIRED_WORK` — const — line 52
+- `PLAYER_TROUGH_SEPARATION` — const — line 30
+- `PLAYER_TROUGH_WORK_SESSION_HOURS` — const — line 54
+- `PLAYER_TROUGH_WORK_SESSION_SEC` — const — line 53
+- `playerTroughFreeCapacity` — function — line 68
+- `PlayerTroughPlacementReason` — type — line 34
+- `playerTroughPromptLabel` — function — line 76
+- `PlayerTroughRecord` — type — line 14
+  - domain: items-player
+- `playerTroughRemainingWork` — function — line 60
 
 ## `world/playerWell.ts`
 
