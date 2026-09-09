@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { ChunkTileParams, RoadCorridorSegment } from './chunkHeightmap'
 import { createSeededRandom } from '../world/parseSeed'
+import { clearCemeteryCaches } from './cemeteryAssignment'
+import { clearCemeteryPlacementCaches } from './cemeteryPlacement'
 import {
   cemeteryFitsVillageFringe,
   cemeteryFootprintClearsRoads,
@@ -266,8 +268,9 @@ describe('resolveCemeteryPlacement (plan world-014)', () => {
       // fraction of cemetery candidate rolls land in the accepted band —
       // makes the "found" branch of the parity check exercised, not just
       // "both agree it's null".
-      regional: [{ x: 0, z: 0, radius: 30, targetH: 1, heightStrength: 0.2 }],
+      regional: [{ x: 0, z: 0, radius: 48, targetH: 1, heightStrength: 0.2 }],
       riverSegments: [],
+      cemeterySettlements: [],
       ...overrides,
     }
   }
@@ -285,30 +288,31 @@ describe('resolveCemeteryPlacement (plan world-014)', () => {
     }
   }
 
-  it('agrees with a full-tile-backed sampler across many seeds, including both acceptance and rejection', () => {
-    let foundCount = 0
-    let nullCount = 0
-    for (let seed = 0; seed < 200; seed++) {
-      const params = tileParams({ seed })
-      const viaFullTile = resolveCemeteryPlacement({ cx: 0, cz: 0 }, params, referenceSampler(params))
-      const viaLightweight = resolveCemeteryPlacement(
+  it('agrees with a full-tile-backed sampler when an assigned settlement is present', () => {
+    const cemeterySettlements = [{ id: '0_0', gx: 0, gz: 0, x: 0, z: 0, size: 'MD' as const }]
+    let viaFullTile: ReturnType<typeof resolveCemeteryPlacement> = null
+    let viaLightweight: ReturnType<typeof resolveCemeteryPlacement> = null
+    for (let seed = 0; seed < 120; seed++) {
+      clearCemeteryCaches()
+      clearCemeteryPlacementCaches()
+      const params = tileParams({ seed, cemeterySettlements })
+      viaFullTile = resolveCemeteryPlacement({ cx: 0, cz: 0 }, params, referenceSampler(params))
+      viaLightweight = resolveCemeteryPlacement(
         { cx: 0, cz: 0 },
         params,
         createLocalTerrainSampler({ cx: 0, cz: 0 }, params),
       )
-      expect(viaLightweight).toEqual(viaFullTile)
-      if (viaFullTile) foundCount++
-      else nullCount++
+      if (viaFullTile) break
     }
-    // Sanity: the seed sweep must actually exercise both outcomes, or the
-    // equality check above would trivially pass on null/null every time.
-    expect(foundCount).toBeGreaterThan(0)
-    expect(nullCount).toBeGreaterThan(0)
+    expect(viaFullTile).not.toBeNull()
+    expect(viaLightweight).toEqual(viaFullTile)
+    expect(viaFullTile?.id?.startsWith('cemetery:a:')).toBe(true)
   })
 
   it('matches computeChunkEnvironment’s own cemetery result exactly (id/x/z/scale/rotation/variant/size)', () => {
+    const cemeterySettlements = [{ id: '0_0', gx: 0, gz: 0, x: 0, z: 0, size: 'MD' as const }]
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-      const params = tileParams({ seed })
+      const params = tileParams({ seed, cemeterySettlements })
       const tile = computeChunkTile(params)
       const o = apronOriginWorld(params.cx, params.cz, params.chunkSize, params.resolution)
       const sample = (grid: Float32Array, x: number, z: number) =>

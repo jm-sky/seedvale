@@ -47,7 +47,8 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
-import { setSettlementRiverQuery } from '../settlement/settlementPlanCache'
+import { cellFromId } from '../settlement/settlementGenerator'
+import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
 import { createChunkRiver, type WorldRiver } from '../world/createRiverWater'
 import { createChunkWater, type WorldWater } from '../world/createWater'
@@ -67,6 +68,13 @@ import { createTreeStageMesh, preloadTreeStumpTemplate, tagTreeMesh } from '../w
 import { assignRenderLayer, REFLECTION_DISTANT_LAYER, REFLECTION_SKIPPED_LAYER, type WaterMirror } from '../world/waterMirror'
 import { biomeWeightsAt, type ForestBiome, forestBiomeAt, forestDensityAt } from './biomeRegions'
 import { buildChunkGeometry, createTerrainMaterial } from './buildChunkGeometry'
+import {
+  CEMETERY_SETTLEMENT_GATHER_RADIUS,
+  collectSettlementRefsNear,
+  makeSettlementRefPeek,
+  resolveCemeteryTopologyForSettlement,
+} from './cemeteryAssignment'
+import { resolveAbandonedCemeteryForChunk, resolvePlacementForTopology } from './cemeteryPlacement'
 import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind, resolveCemeteryPlacement } from './chunkEnvironment'
 import {
   chebyshevDistance,
@@ -577,6 +585,14 @@ export type ChunkManager = {
     worldZ: number,
     maxChunkRadius: number,
   ) => { id: string, x: number, z: number } | undefined
+  /** Canonical assigned active cemetery for a settlement (plan world-terrain-016). */
+  resolveCemeteryForSettlement: (
+    settlementId: string,
+  ) => { id: string, x: number, z: number, cemeterySize?: CemeterySize } | undefined
+  /** Resolve a cemetery landmark id back to its placement (active or abandoned). */
+  resolveCemeteryById: (cemeteryId: string) => { id: string, x: number, z: number, cemeterySize?: CemeterySize } | undefined
+  /** Abandoned cemetery in a chunk, if the wilderness roll produced one. */
+  probeAbandonedCemeteryAtChunk: (coord: ChunkCoord) => { id: string, x: number, z: number } | undefined
   /** Runtime terrain-deformation layer (plan 052 — shovel digging), additive
    *  on top of the generated height field: a soft radial depression,
    *  `-depth` at the center falling off to 0 at `radius`. Not the seed-derived
@@ -1058,9 +1074,28 @@ export function createChunkManager(
     return record.riverChains
   }
 
+  function settlementResolveCtx() {
+    return {
+      seed: roadCtx.seed,
+      sampleHeight: roadCtx.sampleHeight,
+      waterLevel: roadCtx.waterLevel,
+      localSearchRadius: roadCtx.localSearchRadius,
+      terrainSamplers: roadCtx.terrainSamplers,
+      heightScale: roadCtx.heightScale,
+      region: roadCtx.region,
+      homeSize: roadCtx.homeSize,
+    }
+  }
+
   function paramsFor(coord: ChunkCoord, riverSegments: RiverChannelSegment[]): ChunkTileParams {
     const { x, z } = chunkCenter(coord, config.chunkSize)
     const village = villageSegmentsNear(x, z, config.chunkSize, roadCtx)
+    const cemeterySettlements = collectSettlementRefsNear(
+      x,
+      z,
+      CEMETERY_SETTLEMENT_GATHER_RADIUS,
+      (cell) => settlementDefFor(cell, settlementResolveCtx()),
+    )
     return {
       cx: coord.cx,
       cz: coord.cz,
@@ -1096,7 +1131,58 @@ export function createChunkManager(
       clearings: village.clearings,
       regional: village.regional,
       riverSegments,
+      cemeterySettlements,
     }
+  }
+
+  function resolveCemeteryForSettlement(settlementId: string) {
+    const cell = cellFromId(settlementId)
+    if (!cell) return undefined
+    const def = settlementDefFor(cell, settlementResolveCtx())
+    if (!def) return undefined
+    const coord = worldToChunk(def.x, def.z, config.chunkSize)
+    const params = paramsFor(coord, [])
+    const peekRef = makeSettlementRefPeek(params.cemeterySettlements ?? [])
+    const topology = resolveCemeteryTopologyForSettlement(settlementId, peekRef)
+    if (!topology) return undefined
+    const placed = resolvePlacementForTopology(topology, params, createLocalTerrainSampler(coord, params))
+    if (!placed) return undefined
+    return { id: placed.id, x: placed.x, z: placed.z, cemeterySize: placed.size }
+  }
+
+  function probeAbandonedCemeteryAtChunk(coord: ChunkCoord) {
+    const params = paramsFor(coord, [])
+    const placement = resolveAbandonedCemeteryForChunk(coord, params, createLocalTerrainSampler(coord, params))
+    if (!placement?.id) return undefined
+    return { id: placement.id, x: placement.x, z: placement.z }
+  }
+
+  function resolveCemeteryById(cemeteryId: string) {
+    if (cemeteryId.startsWith('cemetery:w:')) {
+      const parts = cemeteryId.split(':')
+      const cx = Number(parts[2])
+      const cz = Number(parts[3])
+      if (!Number.isInteger(cx) || !Number.isInteger(cz)) return undefined
+      const coord = { cx, cz }
+      const params = paramsFor(coord, [])
+      const placement = resolveAbandonedCemeteryForChunk(coord, params, createLocalTerrainSampler(coord, params))
+      if (!placement?.id || placement.id !== cemeteryId) return undefined
+      return { id: placement.id, x: placement.x, z: placement.z, cemeterySize: placement.cemeterySize }
+    }
+    if (cemeteryId.startsWith('cemetery:a:')) {
+      const served = cemeteryId.slice('cemetery:a:'.length).split(':')[0]?.split('+') ?? []
+      const primary = served[0]
+      if (!primary) return undefined
+      const resolved = resolveCemeteryForSettlement(primary)
+      if (!resolved || resolved.id !== cemeteryId) return undefined
+      return resolved
+    }
+    const parts = cemeteryId.split(':')
+    const cx = Number(parts[1])
+    const cz = Number(parts[2])
+    if (!Number.isInteger(cx) || !Number.isInteger(cz)) return undefined
+    const found = resolveUnloadedLandmark('cemetery', { cx, cz }, paramsFor({ cx, cz }, []))
+    return found?.id === cemeteryId ? found : undefined
   }
 
   function isHomeChunk(coord: ChunkCoord): boolean {
@@ -2394,6 +2480,9 @@ export function createChunkManager(
       getMonitor().recordHitch('PROPS', performance.now() - t0, `findLandmarkNear:${kind} (miss)`)
       return undefined
     },
+    resolveCemeteryForSettlement,
+    resolveCemeteryById,
+    probeAbandonedCemeteryAtChunk,
     collectItem(id) {
       for (const rec of chunks.values()) {
         if (!rec.items) continue

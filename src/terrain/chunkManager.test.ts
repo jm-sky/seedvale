@@ -2,6 +2,8 @@ import { Vector3 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { ChunkTileParams } from './chunkHeightmap'
 import type { ChunkTileResult } from './chunkHeightmapProtocol'
+import { clearCemeteryCaches } from './cemeteryAssignment'
+import { clearCemeteryPlacementCaches } from './cemeteryPlacement'
 import * as chunkHeightmap from './chunkHeightmap'
 import { apronOriginWorld } from './chunkHeightmap'
 import {
@@ -415,8 +417,9 @@ describe('resolveUnloadedLandmark (plan world-014)', () => {
       clearings: [],
       // Wide village-fringe disk so cemetery candidates have a real chance
       // to be accepted across seeds, not just rejected outright.
-      regional: [{ x: 0, z: 0, radius: 30, targetH: 1, heightStrength: 0.2 }],
+      regional: [{ x: 0, z: 0, radius: 48, targetH: 1, heightStrength: 0.2 }],
       riverSegments: [],
+      cemeterySettlements: [],
       ...overrides,
     }
   }
@@ -424,14 +427,21 @@ describe('resolveUnloadedLandmark (plan world-014)', () => {
   it('resolves a cemetery without calling full computeChunkTile()', () => {
     const spy = vi.spyOn(chunkHeightmap, 'computeChunkTile')
     try {
-      // Sweep a few seeds so at least one produces an actual cemetery hit,
-      // not just a null result on every attempt.
-      let sawHit = false
-      for (let seed = 0; seed < 30; seed++) {
-        const found = resolveUnloadedLandmark('cemetery', { cx: 0, cz: 0 }, tileParams({ seed }))
-        if (found) sawHit = true
+      let found: ReturnType<typeof resolveUnloadedLandmark> = undefined
+      for (let seed = 0; seed < 120; seed++) {
+        clearCemeteryCaches()
+        clearCemeteryPlacementCaches()
+        found = resolveUnloadedLandmark(
+          'cemetery',
+          { cx: 0, cz: 0 },
+          tileParams({
+            seed,
+            cemeterySettlements: [{ id: '0_0', gx: 0, gz: 0, x: 0, z: 0, size: 'MD' }],
+          }),
+        )
+        if (found) break
       }
-      expect(sawHit).toBe(true)
+      expect(found?.id?.startsWith('cemetery:a:')).toBe(true)
       expect(spy).not.toHaveBeenCalled()
     } finally {
       spy.mockRestore()

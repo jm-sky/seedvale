@@ -1,5 +1,6 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise'
 import { MathUtils } from 'three'
+import type { CemeterySettlementRef } from './cemeteryAssignment'
 import type { ChunkCoord } from './chunkGrid'
 import { LinearSpline } from '../math/linearSpline'
 import { projectOntoSegment } from '../math/segment'
@@ -297,6 +298,10 @@ export type ChunkTileParams = {
    *  that sampler must stay carving-agnostic to avoid a circular dependency —
    *  excluded from `RawSampleParams` for the same reason `roadSegments` is. */
   riverSegments: RiverChannelSegment[]
+  /** Settlement summaries near this chunk for assignment-driven cemetery placement
+   *  (`cemeteryPlacement.ts`) — populated by `chunkManager.paramsFor()`. */
+  /** Empty when no settlements are near this chunk — assignment-driven cemeteries are skipped. */
+  cemeterySettlements?: readonly CemeterySettlementRef[]
 }
 
 export type RawSampleParams = Omit<
@@ -311,6 +316,7 @@ export type RawSampleParams = Omit<
   | 'clearings'
   | 'regional'
   | 'riverSegments'
+  | 'cemeterySettlements'
 >
 
 export type ChunkTileData = {

@@ -1,7 +1,18 @@
 # Implementation Notes: Settlement Cemeteries & Abandoned Graveyards
 
 **Reviewed:** 2026-09-08  
+**Implemented:** 2026-09-09  
 **Plan:** `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`
+
+## Implementation summary (2026-09-09)
+
+- Added `src/terrain/cemeteryAssignment.ts` — deterministic SM mutual-best pairing, assignment ids, cemetery ids (`cemetery:a:…` active, `cemetery:w:…` abandoned), sizing from served settlement scale, reverse lookup.
+- Added `src/terrain/cemeteryPlacement.ts` — shared physical validation, dedicated/shared/abandoned candidate search, chunk ownership, placement cache.
+- `resolveCemeteryPlacement` / `computeChunkEnvironment` now use assignment-driven active cemeteries plus a rare abandoned wilderness path (`ABANDONED_CEMETERY_CHANCE = 0.012`); removed active `CEMETERY_CHANCE = 0.28`.
+- `ChunkTileParams.cemeterySettlements` populated in `chunkManager.paramsFor()`; `ChunkManager` exposes `resolveCemeteryForSettlement`, `resolveCemeteryById`, `probeAbandonedCemeteryAtChunk`.
+- `WorldLocationCatalog` uses canonical assignment lookup, dedupes shared cemeteries by id, discovers abandoned cemeteries via bounded chunk probe.
+- `groundActions.checkHiddenFindDig` uses `servedSettlementIdsForCemeteryId` instead of `villageNearest` for grave consequences/loot settlement selection.
+- **Save compatibility:** legacy `cemetery:<cx>:<cz>:…` ids still resolve via chunk lookup; old discovery/target/hidden-find ids from pre-assignment worlds may fail validation or become inert (no nearest-cemetery remapping).
 
 ## Review conclusion
 

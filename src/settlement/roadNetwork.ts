@@ -8,6 +8,8 @@ import type {
   RoadCorridorSegment,
 } from '../terrain/chunkHeightmap'
 import type { TerrainSamplers } from './settlementTerrain'
+import { clearCemeteryCaches } from '../terrain/cemeteryAssignment'
+import { clearCemeteryPlacementCaches } from '../terrain/cemeteryPlacement'
 import { createSeededRandom } from '../world/parseSeed'
 import { villageSizeConfig } from './families'
 import { clearMinorLocationCaches, minorLocationsFor } from './minorLocations'
@@ -73,6 +75,8 @@ export function clearRoadNetworkCaches(): void {
   clearSettlementDefCache()
   clearMinorLocationCaches()
   routeCache.clear()
+  clearCemeteryCaches()
+  clearCemeteryPlacementCaches()
 }
 
 function resolveCtx(ctx: RoadNetworkContext): SettlementResolveContext {

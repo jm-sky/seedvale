@@ -210,7 +210,7 @@ function cemeterySpotWithRoll(predicate: (roll: number) => boolean): {
   spotId: string
 } {
   for (let i = 0; i < 400; i++) {
-    const landmark = cemeteryLandmark(`cemetery:exposure:${i}`)
+    const landmark = cemeteryLandmark(`cemetery:a:anna-village:${i.toString(36)}`)
     const dig = gravePosition(landmark, 0)
     const match = findHiddenFindSpot([landmark], dig.x, dig.z, () => false)
     if (!match) continue
@@ -225,7 +225,7 @@ function emptyCemeteryGraveWithRoll(predicate: (roll: number) => boolean): {
   dig: { x: number, z: number }
 } {
   for (let i = 0; i < 80; i++) {
-    const landmark = cemeteryLandmark(`cemetery:empty:${i}`)
+    const landmark = cemeteryLandmark(`cemetery:a:anna-village:empty${i.toString(36)}`)
     const layout = cemeteryGraveLayout(landmark.cemeterySize ?? 'SM', landmark.scale)
     for (let index = 0; index < layout.length; index++) {
       const loot = resolveHiddenFindLoot(landmark, `${landmark.id}:${index}`, index, 'SM')
@@ -394,11 +394,11 @@ describe('cemetery grave social exposure (quests-progression-011)', () => {
   })
 
   it('records the badge without a settlement reputation fallback', () => {
-    const { landmark, dig } = cemeterySpotWithRoll((roll) => roll < 0.5)
+    const landmark = cemeteryLandmark('cemetery:w:0:0:0:abandoned')
+    const dig = gravePosition(landmark, 0)
     const { applySocial, badges, digAt } = setupHiddenFindDig({
       landmarks: [landmark],
       timeOfDay: 0.5,
-      village: null,
     })
 
     digAt(dig.x, dig.z)

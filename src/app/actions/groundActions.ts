@@ -9,7 +9,6 @@ import {
   playActionTreeFall,
 } from '../../audio/actionSounds'
 import { playInventoryPickUp } from '../../audio/inventorySounds'
-import { villageNearest } from '../../debug/locationQueries'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { hasItemCapability } from '../../items/itemCatalog'
 import { ITEM_DEFS } from '../../items/items'
@@ -22,6 +21,8 @@ import {
   socialExposureEventRoll,
 } from '../../reputation/socialExposure'
 import { HIDDEN_TREASURE_MARKER_COUNT, hiddenTreasureDigHit } from '../../settlement/hiddenTreasure'
+import { cellFromId } from '../../settlement/settlementGenerator'
+import { servedSettlementIdsForCemeteryId } from '../../terrain/cemeteryAssignment'
 import { MINE_DURATION_SEC, yieldForOre } from '../../terrain/depositMining'
 import { DIG_DURATION_SEC, getDigProfileAt, getRockDigProfileAt } from '../../terrain/dig'
 import { applyDigAt, applyLevelAt, applyMoundAt } from '../../terrain/digAction'
@@ -198,10 +199,13 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     resolvedHiddenFindSpotIds.add(match.spotId)
 
     const isGraveDisturbance = match.landmark.kind === 'cemetery'
-    const nearestVillage = isGraveDisturbance
-      ? villageNearest({ x, z }, bundle.settlementsManager)
-      : null
-    const loot = resolveHiddenFindLoot(match.landmark, match.spotId, match.spotIndex, nearestVillage?.size)
+    const servedSettlementIds = isGraveDisturbance
+      ? servedSettlementIdsForCemeteryId(match.landmark.id)
+      : []
+    const lootSettlementSize = servedSettlementIds[0]
+      ? bundle.settlementsManager.peekDef(cellFromId(servedSettlementIds[0])!)?.size
+      : undefined
+    const loot = resolveHiddenFindLoot(match.landmark, match.spotId, match.spotIndex, lootSettlementSize)
 
     const newlyEarned: BadgeDef[] = []
     // The act of disturbing a grave is the offense (plan world-007 §6) —
@@ -209,7 +213,8 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
     // of whether the social-exposure roll succeeds.
     if (isGraveDisturbance) newlyEarned.push(...badges.recordGraveDisturbed())
 
-    if (isGraveDisturbance && nearestVillage?.id) {
+    const consequenceSettlementId = servedSettlementIds[0]
+    if (isGraveDisturbance && consequenceSettlementId) {
       const sneak = player.skills.sneak
       const { exposed } = resolveSocialExposure({
         night: phaseName(dayNight.timeOfDay) === 'noc',
@@ -219,7 +224,7 @@ export function createGroundActions(ctx: PlayerActionContext, deps: GroundAction
       })
       if (exposed) {
         applySocialConsequence({
-          settlementId: nearestVillage.id,
+          settlementId: consequenceSettlementId,
           reputation: { ...GRAVE_DISTURBANCE_EXPOSURE.reputation },
           renown: GRAVE_DISTURBANCE_EXPOSURE.renown,
         })

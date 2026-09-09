@@ -4,10 +4,10 @@ import type { ChunkManager } from '../../terrain/chunkManager'
 import type { Caves } from '../createCaves'
 import type { WorldLocation, WorldLocationKind } from './worldLocationTypes'
 import { cellFromId, cellsWithinRadius, SETTLEMENT_GRID_STEP, worldToCell } from '../../settlement/settlementGenerator'
+import { isAbandonedCemeteryId } from '../../terrain/cemeteryAssignment'
 import { sampleContinentalnessAt, sampleFloorAt, sampleHeightAt, sampleMountainRidgeAt } from '../../terrain/chunkHeightmap'
 import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
 import {
-  CEMETERY_SEARCH_CHUNK_RADIUS,
   kmToWorldUnits,
   LAKE_FLOOD_FILL_SAFETY_CAP,
   LOCATION_SCAN_STEP,
@@ -180,15 +180,9 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     return { id, kind: 'cave', x: def.entrance.x, z: def.entrance.z, name: landmarkName(seed, 'cave', id), discoveryWeight: weightOf(seed, id) }
   }
 
-  /** `landmarkId` is `chunkEnvironment.ts`'s own `cemetery:<cx>:<cz>:<ordinal>:<seed36>`
-   *  — used verbatim as the `WorldLocation.id` (notes §4/§21: same identity
-   *  the physical landmark carries, never a second id scheme). */
-  function cemeteryLocationFromChunk(cx: number, cz: number): WorldLocation | null {
-    const chunkSize = getChunkSize()
-    const centerX = cx * chunkSize + chunkSize / 2
-    const centerZ = cz * chunkSize + chunkSize / 2
-    const found = getChunkManager().findLandmarkNear('cemetery', centerX, centerZ, 0)
-    if (!found) return null
+  function cemeteryLocationFromResolved(
+    found: { id: string, x: number, z: number },
+  ): WorldLocation {
     const seed = getSeed()
     return {
       id: found.id,
@@ -220,11 +214,8 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     }
     if (kind === 'cave') return caveLocationFromCaveId(id.slice(sep + 1))
     if (kind === 'cemetery') {
-      const parts = id.split(':')
-      const cx = Number(parts[1])
-      const cz = Number(parts[2])
-      if (!Number.isInteger(cx) || !Number.isInteger(cz)) return null
-      return cemeteryLocationFromChunk(cx, cz)
+      const found = getChunkManager().resolveCemeteryById(id)
+      return found ? cemeteryLocationFromResolved(found) : null
     }
     if (kind === 'lake' || kind === 'mountainPeak') {
       const [cxStr, czStr] = id.slice(sep + 1).split(',')
@@ -258,39 +249,48 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
 
   function cemeteryForSettlement(def: SettlementDef): WorldLocation | null {
     if (cemeteryCache.has(def.id)) return cemeteryCache.get(def.id) ?? null
-    const found = getChunkManager().findLandmarkNear('cemetery', def.x, def.z, CEMETERY_SEARCH_CHUNK_RADIUS)
-    const seed = getSeed()
-    const loc: WorldLocation | null = found
-      ? { id: found.id, kind: 'cemetery', x: found.x, z: found.z, name: landmarkName(seed, 'cemetery', found.id), discoveryWeight: weightOf(seed, found.id) }
-      : null
+    const found = getChunkManager().resolveCemeteryForSettlement(def.id)
+    const loc = found ? cemeteryLocationFromResolved(found) : null
     cemeteryCache.set(def.id, loc)
     return loc
   }
 
   function cemeteryCandidates(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
-    // Cemeteries only ever spawn on a settlement's own fringe — search the
-    // nearest settlements (bounded — this is real chunk-generation work,
-    // see locationConfig.ts) rather than scanning the world. `minKm` is
-    // applied only to the resolved cemetery location below, never to which
-    // settlements get searched — narrowing the settlement search itself
-    // would make Far Map search different settlements than
-    // `landmarksWithin(200) -> filter(60)` used to (notes §5).
     const center = worldToCell(x, z)
     const searchMarginKm = 5
     const radiusCells = Math.ceil(kmToWorldUnits(maxKm + searchMarginKm) / SETTLEMENT_GRID_STEP) + 1
     const settlements = cellsWithinRadius(center, radiusCells)
       .map((cell) => lookupSettlement(cell))
       .filter((def): def is SettlementDef => def != null)
-      .sort((a, b) => distanceKm(x, z, a.x, a.z) - distanceKm(x, z, b.x, b.z))
+      .sort((a, b) => distanceKm(x, z, a.x, a.z) - distanceKm(x, z, b.x, a.z))
       .slice(0, MAX_CEMETERY_SETTLEMENTS_SEARCHED)
 
+    const seen = new Set<string>()
     const out: WorldLocation[] = []
     for (const def of settlements) {
       const loc = cemeteryForSettlement(def)
-      if (!loc) continue
+      if (!loc || seen.has(loc.id)) continue
       const km = distanceKm(x, z, loc.x, loc.z)
       if (km > maxKm || km <= minKm) continue
+      seen.add(loc.id)
       out.push(loc)
+    }
+
+    const chunkSize = getChunkSize()
+    const outerWorld = kmToWorldUnits(maxKm)
+    const minCx = Math.floor((x - outerWorld) / chunkSize)
+    const maxCx = Math.floor((x + outerWorld) / chunkSize)
+    const minCz = Math.floor((z - outerWorld) / chunkSize)
+    const maxCz = Math.floor((z + outerWorld) / chunkSize)
+    for (let cz = minCz; cz <= maxCz; cz++) {
+      for (let cx = minCx; cx <= maxCx; cx++) {
+        const abandoned = getChunkManager().probeAbandonedCemeteryAtChunk({ cx, cz })
+        if (!abandoned || !isAbandonedCemeteryId(abandoned.id) || seen.has(abandoned.id)) continue
+        const km = distanceKm(x, z, abandoned.x, abandoned.z)
+        if (km > maxKm || km <= minKm) continue
+        seen.add(abandoned.id)
+        out.push(cemeteryLocationFromResolved(abandoned))
+      }
     }
     return out
   }

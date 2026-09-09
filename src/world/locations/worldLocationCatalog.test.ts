@@ -86,15 +86,14 @@ function fakeCaves(defs: Partial<CaveDefinition>[]): Caves {
   return { definitions: () => defs as CaveDefinition[] } as unknown as Caves
 }
 
-function fakeChunkManager(cemeteries: { chunkX: number, chunkZ: number, id: string, x: number, z: number }[] = []): ChunkManager {
+function fakeChunkManager(
+  cemeteries: { chunkX: number, chunkZ: number, id: string, x: number, z: number }[] = [],
+  bySettlement: Record<string, { id: string, x: number, z: number }> = {},
+): ChunkManager {
+  const abandoned = cemeteries.filter((c) => c.id.startsWith('cemetery:w:'))
   return {
     findLandmarkNear: (kind: string, worldX: number, worldZ: number) => {
       if (kind !== 'cemetery') return undefined
-      // Test double mirrors `findLandmarkNear`'s real "nearest chunk"
-      // resolution closely enough: `worldLocationCatalog.ts` always calls it
-      // either from the exact cemetery chunk's own center (id resolve) or
-      // from a settlement's position for a search, so a coarse distance
-      // pick is sufficient here.
       let best: typeof cemeteries[number] | undefined
       let bestDist = Infinity
       for (const c of cemeteries) {
@@ -102,6 +101,15 @@ function fakeChunkManager(cemeteries: { chunkX: number, chunkZ: number, id: stri
         if (dist < bestDist) { bestDist = dist; best = c }
       }
       return best && bestDist < 200 ? { id: best.id, x: best.x, z: best.z } : undefined
+    },
+    resolveCemeteryForSettlement: (settlementId: string) => bySettlement[settlementId],
+    resolveCemeteryById: (cemeteryId: string) => {
+      const hit = cemeteries.find((c) => c.id === cemeteryId)
+      return hit ? { id: hit.id, x: hit.x, z: hit.z } : undefined
+    },
+    probeAbandonedCemeteryAtChunk: (coord: { cx: number, cz: number }) => {
+      const hit = abandoned.find((c) => c.chunkX === coord.cx && c.chunkZ === coord.cz)
+      return hit ? { id: hit.id, x: hit.x, z: hit.z } : undefined
     },
   } as unknown as ChunkManager
 }
