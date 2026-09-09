@@ -183,30 +183,32 @@ Generated from exported TypeScript symbols.
 
 - `defaultWeaponForRole` — function — line 22
 - `ensureKnifeCarried` — function — line 46
-- `isNpcLoadoutBelonging` — function — line 71
+- `isNpcLoadoutBelonging` — function — line 95
 - `seedDefaultRoleWeapon` — function — line 32
+- `seedHunterStartingArrows` — function — line 69
 - `seedHunterSupplies` — function — line 61
+- `seedInitialPersonalBelongingsIfNeeded` — function — line 79
 
 ## `ai/npcLogistics.ts`
 
-- `buildTransferAction` — function — line 166
-- `canDeliverToPlayerStorage` — function — line 344
-- `canExchangeWithHousehold` — function — line 202
-- `canWithdrawFromEconomy` — function — line 188
-- `depositCarriedItems` — function — line 123
-- `depositFoodHarvest` — function — line 111
-- `depositWoodHarvest` — function — line 92
-- `HELPER_DELIVERY_ITEM_KIND` — const — line 50
-- `HELPER_DELIVERY_MAX_CARRY` — const — line 51
+- `buildTransferAction` — function — line 167
+- `canDeliverToPlayerStorage` — function — line 345
+- `canExchangeWithHousehold` — function — line 203
+- `canWithdrawFromEconomy` — function — line 189
+- `depositCarriedItems` — function — line 124
+- `depositFoodHarvest` — function — line 112
+- `depositWoodHarvest` — function — line 93
+- `HELPER_DELIVERY_ITEM_KIND` — const — line 51
+- `HELPER_DELIVERY_MAX_CARRY` — const — line 52
 - `HOUSEHOLD_EXCHANGE_MAX_TRANSFER` — const — line 39
-- `HUNT_YIELD_KINDS` — const — line 55
-- `NpcLogisticsCtx` — type — line 69
-- `planDeliverHuntYieldHome` — function — line 406
-- `planEconomyWithdraw` — function — line 219
-- `planHouseholdExchange` — function — line 278
-- `planPlayerStorageDelivery` — function — line 367
-- `ResourceTransferPlan` — type — line 158
-- `satisfyHouseholdResourceNeed` — function — line 145
+- `HUNT_YIELD_KINDS` — const — line 56
+- `NpcLogisticsCtx` — type — line 70
+- `planDeliverHuntYieldHome` — function — line 407
+- `planEconomyWithdraw` — function — line 220
+- `planHouseholdExchange` — function — line 279
+- `planPlayerStorageDelivery` — function — line 368
+- `ResourceTransferPlan` — type — line 159
+- `satisfyHouseholdResourceNeed` — function — line 146
 
 ## `ai/npcMovementWatchdog.ts`
 

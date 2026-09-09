@@ -96,7 +96,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-028-work-contracts-multiple-workers.md`                             | -       | 🔴 | M      | ~~npc-018~~ |
 | ◼️ `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
 | ◼️ `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
-| 💡 `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` | -       | 🔴 | M      | -      |
 
 ---
 
