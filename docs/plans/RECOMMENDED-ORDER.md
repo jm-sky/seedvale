@@ -40,7 +40,9 @@ _No qualifying plans._
 
 ### Polish
 
-1. `npc-004` — **Drzewo genealogiczne NPC**  
+1. `ui-input-014` — **Construction Status, Inspection and Context Actions**  
+   🟡 `M` · ✅ ready · unlocks 0/0
+2. `npc-004` — **Drzewo genealogiczne NPC**  
    ⚪ `S` · ✅ ready · unlocks 0/0
 
 ---
@@ -53,10 +55,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/6
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `settlements-npcs-022` — **Household help and age-based work participation**  
-   🔴 `M` · ✅ ready · unlocks 0/0
-5. `settlements-npcs-025` — **Resource storage visualization**  
+4. `quests-progression-013` — **Rat infestation nest and reproduction**  
    🟡 `M` · ✅ ready · unlocks 0/0
+5. `settlements-npcs-022` — **Household help and age-based work participation**  
+   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -106,44 +108,44 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-9. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `quests-progression-013` — **Rat infestation nest and reproduction**  
+  🟡 `M` · **Score:**  45  
+   → **unlocks:** 0/0
+
+10. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-10. `settlements-npcs-025` — **Resource storage visualization**  
+11. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
-
-11. `npc-011` — **NPC Burial & Graves**  
-  🟡 `L` · **Score:**  38  
-   → **unlocks:** 1/1
 
 12. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-13. `fauna-020` — **Player-owned animals and follow/stay behaviour**  
-  🟡 `M` · **Score:**  33  
-   → **unlocks:** 1/1
-
-14. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+13. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-15. `npc-026` — **NPC Grave Visits**  
-  🟡 `S` · **Score:**  31  
+14. `ui-input-013` — **Character stats**  
+  🟡 `M` · **Score:**  29  
    → **unlocks:** 0/0
 
-16. `items-player-014` — **Rope-pullable resource transport**  
+15. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+16. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `tools-005` — **Seedvale Character Preparation Panel**  
+17. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+18. `ui-input-014` — **Construction Status, Inspection and Context Actions**  
+  🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
 19. `items-player-020` — **Player-built animal trough and water storage**  
@@ -162,8 +164,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-23. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
-  🟡 `M` · **Score:**  21  
+23. `npc-026` — **NPC Grave Visits**  
+  🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
 24. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
@@ -195,7 +197,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
 - [`npc-026-npc-grave-visits.md`](npc-026-npc-grave-visits.md)  
   is blocked by:
-  - [`npc-011-npc-burial-and-graves.md`](npc-011-npc-burial-and-graves.md)
   - [`world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`](world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md)
 - [`npc-027-spatial-context-and-cave-traversal.md`](npc-027-spatial-context-and-cave-traversal.md)  
   is blocked by:
@@ -205,9 +206,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
   - [`fauna-018-persistent-habitat-occupants.md`](fauna-018-persistent-habitat-occupants.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
-- [`quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md`](quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md)  
-  is blocked by:
-  - [`fauna-020-player-owned-animals-and-follow-stay-behaviour.md`](fauna-020-player-owned-animals-and-follow-stay-behaviour.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
   - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
@@ -350,6 +348,7 @@ graph TD
   quests_progression_010["quests-progression-010 — Abandoned gold mine → mining colony integration"]
   quests_progression_011["quests-progression-011 — Grave Robbing Reputation Risk & Stealth"]
   quests_progression_012["quests-progression-012 — Horse acquisition through merchant purchase and quest reward"]
+  quests_progression_013["quests-progression-013 — Rat infestation nest and reproduction"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -409,6 +408,8 @@ graph TD
   ui_input_010["ui-input-010 — Player quick actions and primary weapon slots"]
   ui_input_011["ui-input-011 — New Game setup on empty save state"]
   ui_input_012["ui-input-012 — Placement preview shapes, rotation and coverage"]
+  ui_input_013["ui-input-013 — Character stats"]
+  ui_input_014["ui-input-014 — Construction Status, Inspection and Context Actions"]
   world_001["world-001 — Playtest Gameplay Fixes — Stamina, Fire Time-Skip and Bear Behaviour"]
   world_003["world-003 — Faster Application Startup"]
   world_004["world-004 — Well Depth, Groundwater & Well Protection"]
@@ -529,9 +530,11 @@ graph TD
   items_player_010 --> items_player_013
   items_player_017 --> items_player_020
   items_player_017 --> settlements_005
+  items_player_017 --> ui_input_014
   items_player_018 --> items_player_019
   items_player_018 --> world_020
   items_player_021 --> items_player_019
+  items_player_021 --> ui_input_013
   npc_001 --> npc_019
   npc_002 --> npc_025
   npc_006 --> fauna_004
@@ -539,7 +542,6 @@ graph TD
   npc_006 --> npc_027
   npc_007 --> npc_009
   npc_007 --> npc_027
-  npc_010 --> npc_011
   npc_011 --> npc_026
   npc_014 --> npc_015
   npc_015 --> npc_016
@@ -549,6 +551,7 @@ graph TD
   npc_018 --> npc_016
   npc_018 --> npc_028
   npc_018 --> settlements_005
+  npc_018 --> ui_input_014
   npc_019 --> npc_020
   npc_019 --> npc_021
   npc_019 --> npc_022
@@ -556,6 +559,8 @@ graph TD
   npc_019 --> npc_024
   npc_019 --> npc_025
   npc_024 --> npc_025
+  npc_024 --> ui_input_013
+  npc_025 --> ui_input_013
   npc_028 --> npc_016
   persistence_002 --> persistence_003
   persistence_002 --> persistence_004
@@ -571,9 +576,11 @@ graph TD
   quests_progression_002 --> quests_progression_010
   quests_progression_003 --> quests_progression_005
   quests_progression_004 --> quests_progression_005
+  quests_progression_006 --> quests_progression_013
   quests_progression_011 --> quests_progression_008
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
+  settlements_005 --> ui_input_014
   settlements_006 --> items_player_019
   settlements_npcs_002 --> settlements_npcs_005
   settlements_npcs_002 --> settlements_npcs_022
@@ -619,6 +626,7 @@ graph TD
   tools_010 --> tools_011
   tools_011 --> tools_012
   ui_input_001 --> ui_input_008
+  ui_input_002 --> ui_input_014
   ui_input_006 --> world_016
   ui_input_010 --> items_player_018
   world_006 --> world_016
@@ -636,6 +644,7 @@ graph TD
   world_019 --> settlements_003
   world_020 --> world_021
   world_021 --> items_player_019
+  world_021 --> ui_input_014
   world_terrain_001 --> world_terrain_014
   world_terrain_004 --> world_terrain_005
   world_terrain_008 --> fauna_019

@@ -4,7 +4,10 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-016-work-contracts-payment-and-employer-interaction`              | 2026-09-09 16:50:32 | —                   | `npc`            | —          |
+| `npc-011-npc-burial-and-graves`                                        | 2026-09-09 16:23:02 | —                   | `npc`            | —          |
 | `items-player-019-player-camp-repair-and-sewing-kit`                   | 2026-09-09 15:59:12 | —                   | `items-player`   | —          |
+| `npc-017-work-contracts-food-and-drink`                                | 2026-09-09 15:36:00 | —                   | `npc`            | —          |
 | `items-player-021-player-skills-and-targeted-skill-actions-foundation` | 2026-09-09 14:31:43 | —                   | `items-player`   | —          |
 | `ui-input-010-player-quick-actions-and-primary-weapon-slots`           | —                   | 2026-09-09 14:10:58 | `ui-input`       | —          |
 | `settlements-005-residential-house-construction`                       | 2026-09-09 13:36:12 | —                   | `settlements`    | —          |
