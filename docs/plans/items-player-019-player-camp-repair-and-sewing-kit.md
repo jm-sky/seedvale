@@ -18,57 +18,56 @@ Dodać deterministyczną naprawę player-built camp equipment:
 - bedroll,
 - raised sleeping platform,
 
-w oparciu o istniejące:
+w oparciu o istniejące condition, Inventory, item instances, item capabilities, Busy Action, physical effort i contextual interaction UI oraz fundamenty z:
 
-- condition,
-- Inventory,
-- item instances,
-- item capabilities,
-- Survival,
-- Busy Action,
-- physical effort,
-- contextual interaction UI.
+- `world-021` — persistent repair episode + actor-neutral work contribution,
+- `items-player-021` — `Repair` skill + targeted/contextual skill action seam.
 
-Repair nie jest osobnym crafting/maintenance frameworkiem.
+Camp repair nie tworzy równoległego immediate-condition repair modelu.
 
 Canonical flow:
 
 ```text
 current condition
-+ repair material
++ Repair skill
++ optional Survival context
 + required capability
-+ Survival
-→ repair amount + duration
-→ Busy Action / physical effort
-→ revalidation
-→ consume one material
-→ update authoritative condition
-→ Survival XP
++ repair materials
+→ resolve repair quote
+→ atomically commit materials
+→ create persistent RepairProgress
+→ Busy Action contributes work
+→ interruption preserves progress
+→ completion updates authoritative condition
+→ Repair XP
 ```
 
 ## 1. Responsibility model
 
-Rozdzielić trzy role:
+Rozdzielić odpowiedzialności:
 
 ```text
-tool capability
-→ czy gracz może wykonać dany rodzaj pracy
-
-repair material
-→ fizyczny zasób zużywany przez naprawę
+Repair
+→ primary technical competence
 
 Survival
-→ szybkość i efektywność wykorzystania materiału
+→ optional supporting/context competence for camp equipment
+
+tool capability
+→ fizyczna możliwość wykonania danego rodzaju pracy
+
+repair materials
+→ fizyczne zasoby committed do repair episode
+
+world object
+→ authoritative owner condition + RepairProgress
 ```
 
+`Repair` z `items-player-021` jest primary skill dla camp repair.
+
+`Survival` może pozostać supporting/context skill, jeżeli daje realny i prosty gameplay benefit, ale nie może posiadać repair progression ani zastępować `Repair`.
+
 Nie używać RNG.
-
-Nie dodawać minimalnego progu Survival blokującego naprawę.
-
-Nowy gracz może naprawiać, ale:
-
-- wolniej,
-- mniej efektywnie materiałowo.
 
 ## 2. Supported objects
 
@@ -77,7 +76,8 @@ Nowy gracz może naprawiać, ale:
 ```text
 capability: textile_repair
 material: hide
-skill: Survival
+primary skill: Repair
+support: Survival optional
 ```
 
 ### Bedroll
@@ -85,7 +85,8 @@ skill: Survival
 ```text
 capability: textile_repair
 material: hide
-skill: Survival
+primary skill: Repair
+support: Survival optional
 ```
 
 ### Platform
@@ -93,16 +94,11 @@ skill: Survival
 ```text
 capability: wood_chopping
 material: branch
-skill: Survival
+primary skill: Repair
+support: Survival optional
 ```
 
-Nie dodawać nowego:
-
-- Repair skill,
-- Crafting skill,
-- Construction skill.
-
-Aktualny `PlayerSkills` posiada sześć skilli, a Survival już steruje pracami obozowymi i ich czasem.
+Nie dodawać osobnego Crafting ani Construction skill tylko dla tych akcji.
 
 ## 3. New `textile_repair` capability
 
@@ -112,21 +108,13 @@ Rozszerzyć `ItemCapability`:
 | 'textile_repair'
 ```
 
-Znaczenie:
-
-> naprawa i szycie wyposażenia z tkaniny, skóry lub podobnych elastycznych materiałów.
-
-Dodać:
+Dodać odpowiedni capability label, np.:
 
 ```ts
 CAPABILITY_NEED_LABEL.textile_repair = 'zestawu do szycia'
 ```
 
-Repair nigdy nie powinien sprawdzać:
-
-```ts
-inventory.has('sewing_kit')
-```
+Repair nigdy nie powinien sprawdzać konkretnego item kind, jeśli capability już reprezentuje wymaganie.
 
 Canonical gate:
 
@@ -142,41 +130,25 @@ Dodać:
 sewing_kit
 ```
 
-Label:
-
-```text
-zestaw do szycia
-```
-
 Properties:
 
-- category: utility/tool zgodnie z istniejącym katalogiem,
+- label: `zestaw do szycia`,
+- utility/tool zgodnie z aktualnym katalogiem,
 - holdable: false,
 - reusable,
-- nie jest consumable,
-- nie ma durability w tym planie,
+- non-consumable,
+- no durability in this plan,
 - capability: `['textile_repair']`,
 - weight: **0.4 kg**,
-- size: dobrać do istniejącej enum skali jako mały item, preferować `S`.
+- size zgodny z istniejącą enum scale, preferować `S`.
 
-Nie dodawać:
-
-- osobnego equipment slot,
-- held visual,
-- osobnego repair inventory.
-
-Sama obecność w Inventory daje capability.
+Nie dodawać osobnego equipment slot ani repair inventory.
 
 ## 5. Sewing kit acquisition
 
 Reuse istniejący merchant flow.
 
-Dodać `sewing_kit` do:
-
-```ts
-MERCHANT_PRICES
-MERCHANT_STOCK
-```
+Dodać `sewing_kit` do właściwych merchant price/stock definitions.
 
 Canonical cena:
 
@@ -184,52 +156,29 @@ Canonical cena:
 18 coin
 ```
 
-Obecna skala to m.in. firestarter 8, knife 12, fishing rod 18, shovel 20, axe 25, tent 30. `18` umieszcza zestaw jako przydatne specjalistyczne narzędzie, ale nadal dostępne relatywnie wcześnie.
-
-Nie dodawać w tym planie:
-
-- crafting recipe,
-- world spawn,
-- quest reward,
-- NPC production.
+Nie dodawać crafting recipe, world spawn, quest reward ani NPC production w tym planie.
 
 ## 6. Tent condition continuity — mandatory prerequisite
 
-`items-player-018` dodaje condition do postawionego namiotu, ale obecny inventory tent jest stackowanym itemem.
+`items-player-018` dodaje condition do postawionego namiotu, ale portable tent nie może resetować condition przy pack/redeploy.
 
-Aktualnie:
-
-```text
-world tent
-→ packTent()
-→ inventory.add('tent', 1)
-```
-
-a przy placement:
-
-```text
-inventory.remove('tent', 1)
-→ placedTents.place(...)
-```
-
-To traci indywidualny stan obiektu.
-
-Repair nie może zostać wdrożony z takim modelem, ponieważ:
+Invariant:
 
 ```text
 damaged tent 20%
 → pack
+→ inventory
 → deploy
-→ fresh tent 100%
+→ still 20%
 ```
 
-byłby darmową naprawą.
+Nie dopuścić do darmowej naprawy przez world ↔ inventory transition.
 
 ## 7. Tent becomes instance-backed
 
 Rozszerzyć istniejący item-instance mechanism zamiast tworzyć osobny portable-tent state.
 
-Dodać:
+Koncepcyjnie:
 
 ```ts
 export type TentItemInstance = ItemInstance & {
@@ -238,19 +187,7 @@ export type TentItemInstance = ItemInstance & {
 }
 ```
 
-Dodać `tent` do:
-
-```ts
-INSTANCE_BACKED_KINDS
-```
-
-oraz odpowiednie:
-
-```ts
-isTentItemInstance(...)
-```
-
-i cloning/save/restore/acquisition support.
+Dodać `tent` do aktualnego instance-backed mechanism wraz z cloning/save/restore/acquisition support.
 
 Kupiony nowy namiot:
 
@@ -258,19 +195,13 @@ Kupiony nowy namiot:
 condition = 100
 ```
 
-Reuse istniejące:
-
-```text
-Inventory.addInstance()
-Inventory.removeInstance()
-Inventory.getInstances()
-```
+Reuse istniejące `Inventory.addInstance()`, `removeInstance()`, `getInstances()` i centralny instance acquisition path.
 
 ## 8. Stable tent identity across inventory ↔ world
 
 Namiot zachowuje tę samą fizyczną tożsamość.
 
-Preferowany model:
+Preferowany invariant:
 
 ```text
 TentItemInstance.id
@@ -278,282 +209,186 @@ TentItemInstance.id
 PlacedTent.id
 ```
 
-Nie generować nowego niezależnego id przy każdym rozstawieniu tego samego namiotu.
+Jeśli aktualny code ownership wymaga innej reprezentacji ID, zachować przynajmniej stable physical identity i condition continuity.
 
 ### Placement
 
-Wybrać konkretną carried `TentItemInstance`.
-
-Po successful Busy Action:
-
-```text
-removeInstance(instance.id)
-→ placedTents.place(instance, position...)
-```
-
-Placed tent zachowuje:
-
-```ts
-{
-  id,
-  x,
-  z,
-  yaw,
-  condition,
-  lastConditionUpdateAtDays
-}
-```
+Wybrać konkretną carried instance. Po successful placement przenieść ją do world-owned state bez resetu condition.
 
 ### Packing
 
-Najpierw resolve current condition do `now`.
+Najpierw resolve current condition do `now`, następnie przenieść tę wartość do carried instance.
 
-Następnie:
-
-```text
-PlacedTent
-→ TentItemInstance {
-    id,
-    kind: 'tent',
-    condition: resolvedCondition
-  }
-→ inventory.addInstance(...)
-```
-
-World weather timestamp nie musi podróżować w inventory, ponieważ packed tent nie degraduje się od world weather.
+Packed tent nie degraduje się od world weather, więc world degradation anchor nie musi podróżować w inventory.
 
 ### Redeploy
 
-Nowy world record:
+Przy ponownym placement:
 
 ```text
 condition = instance.condition
 lastConditionUpdateAtDays = current elapsedDays
 ```
 
-Czyli weather degradation zaczyna nowy okres dopiero po ponownym rozstawieniu.
-
 ## 9. Migration for existing tent inventory
 
-Saves sprzed instance-backed tent mogą zawierać:
+Stare saves zawierające stackowane tents deterministycznie zamienić na świeże instances:
 
 ```text
-inventory count: tent
+count N
+→ N TentItemInstances at condition 100
 ```
 
-Migracja/restoration musi deterministycznie zamienić każdą jednostkę na świeży:
+Po migracji nie pozostawiać dwóch równoległych representations.
 
-```ts
-TentItemInstance {
-  id: ...,
-  kind: 'tent',
-  condition: 100,
-}
-```
+Placed condition-aware tents zachowują condition zgodnie z `items-player-018`.
 
-Nie pozostawiać dwóch równoległych representation:
+## 10. Camp repair materials
+
+Reuse istniejący `MaterialRequirement` i material kinds.
+
+Tent:
 
 ```text
-stacked tent + instance-backed tent
+hide
 ```
-
-po zakończeniu migracji.
-
-## 10. Tent repair material
-
-Obecny namiot nie posiada construction recipe. Jest zwykłym itemem kupowanym od Kupca za `30 coin`, a jego katalog opisuje go jako `buy / place / rest / pack`.
-
-Dlatego nie udawać, że istnieje canonical construction requirement.
-
-Wprowadzić jawnie **repair material**, nie construction recipe:
-
-```ts
-TENT_REPAIR_MATERIAL: MaterialRequirement = {
-  kind: 'hide',
-  count: 1,
-}
-```
-
-Uzasadnienie:
-
-- `hide` już istnieje,
-- jest używane do leather bedroll,
-- pasuje do prostego namiotu survivalowego,
-- nie wymaga wprowadzania nowego `cloth` tylko dla jednej funkcji.
-
-To jest repair definition, nie deklaracja sposobu budowy całego namiotu.
-
-## 11. Existing sleeping utility materials remain canonical
 
 Bedroll:
 
-```ts
-BEDROLL_MATERIAL_REQUIREMENTS = [
-  { kind: 'hide', count: 3 }
-]
+```text
+hide
 ```
 
 Platform:
 
-```ts
-PLATFORM_MATERIAL_REQUIREMENTS = [
-  { kind: 'branch', count: 6 }
-]
+```text
+branch
 ```
 
-Repair definitions mają korzystać z tych samych material kinds.
+Nie udawać, że tent posiada construction recipe, jeśli go nie ma. Jego repair material jest camp-domain repair definition.
 
-Nie tworzyć alternatywnych repair materials dla bedroll/platform.
+Nie tworzyć drugiego repair-specific `{ kind, count }` type.
 
-## 12. Incremental repair
+## 11. Repair episode semantics
 
-Jedna action nie naprawia automatycznie do `100%`.
+Tent, bedroll i raised platform są deployed/world objects i mają konsumować persistent repair semantics z `world-021`.
 
-Jedna successful repair action zużywa:
+Nie używać modelu:
 
 ```text
-1 material unit
+1 material
+→ immediate +condition
 ```
 
-i przywraca określoną liczbę condition points.
-
-Przykład:
+Canonical state:
 
 ```text
-condition 42
-+ 1 hide
-→ condition 72
+current condition
+→ active RepairProgress {
+    startedCondition,
+    targetCondition,
+    requiredWork,
+    completedWork
+  }
+→ completion
+→ authoritative condition = targetCondition
 ```
 
-Gracz może powtarzać akcję.
-
-## 13. Base repair values
-
-Material efficiency ma być powiązane z konstrukcją lub rozmiarem obiektu.
-
-### Bedroll
-
-3 hide odpowiada pełnemu obiektowi.
-
-Base:
+V1 player flow:
 
 ```text
-34 condition / hide
+damaged camp object
+→ repair to 100
 ```
 
-### Platform
+Shared foundation nadal wspiera partial target condition dla przyszłych NPC/AI use cases, ale player UI nie musi wybierać targetu.
 
-6 branches odpowiada pełnemu obiektowi.
+## 12. Camp repair quote
 
-Base:
+Camp domain określa:
+
+- material kind/count,
+- required capability,
+- required work,
+- physical effort,
+- legal target condition.
+
+Shared `RepairProgress` pozostaje własnością `world-021` semantics.
+
+Nie utrwalać starego `baseRepairPoints` jako bezpośredniego `+condition`.
+
+Dawne wartości `25 / 34 / 17` mogą służyć tylko jako balance reference przy dobieraniu kosztu materiałowego, jeśli pomagają zachować dotychczasową ekonomię.
+
+Canonical quote:
 
 ```text
-17 condition / branch
+current condition
+→ damage to restore
+→ deterministic materials + requiredWork + targetCondition
 ```
 
-### Tent
-
-Ponieważ nie ma construction recipe, przyjąć jawny repair balance:
+Dla player V1:
 
 ```text
-25 condition / hide
+targetCondition = 100
 ```
 
-Czyli pełna odbudowa namiotu z 0% kosztowałaby nominalnie około 4 hide przy neutralnej wydajności.
+Material cost powinien rosnąć wraz ze skalą uszkodzenia.
 
-Namiot jest większy od bedrolla, więc jedna skóra daje mniejszy repair gain niż przy bedrollu.
+## 13. Repair resolver
 
-## 14. Survival material efficiency
-
-Użyć jednego shared pure helpera:
-
-```ts
-repairMaterialMultiplier(survival)
-```
-
-Canonical formula:
-
-```ts
-0.8 + 0.4 * survival
-```
-
-Przy obecnym Survival `0.2..1`:
-
-```text
-0.2 → 0.88×
-1.0 → 1.20×
-```
-
-Final repair:
+Dodać jeden pure/domain resolver dla preview i authoritative validation, koncepcyjnie:
 
 ```ts
-baseRepairPoints * repairMaterialMultiplier(survival)
+resolveCampRepairQuote({
+  objectKind,
+  currentCondition,
+  repairValue,
+  survivalValue?,
+})
 ```
 
-Zaokrąglać deterministycznie do integer condition points, preferować `Math.round()`.
-
-Clamp do `0..100`.
-
-## 15. Result examples
-
-### Bedroll
-
-Base `34`:
-
-```text
-Survival 0.2 → około 30
-Survival 1.0 → około 41
-```
-
-### Platform
-
-Base `17`:
-
-```text
-Survival 0.2 → około 15
-Survival 1.0 → około 20
-```
-
-### Tent
-
-Base `25`:
-
-```text
-Survival 0.2 → około 22
-Survival 1.0 → 30
-```
-
-Survival poprawia gospodarkę materiałową, ale nie robi z materiałów wielokrotnie większej wartości.
-
-## 16. Repair duration
-
-Reuse istniejący:
+Result koncepcyjnie:
 
 ```ts
-survivalDurationMultiplier()
+{
+  currentCondition,
+  targetCondition,
+  materials,
+  requiredWork,
+  capability,
+  effort,
+}
 ```
 
-Nie tworzyć osobnej krzywej czasu.
+UI nie oblicza kosztów, work time ani skill modifiers.
 
-Base durations:
+Exact API dopasować do shared repair primitives z `world-021` i actual code ownership.
+
+## 14. Repair and Survival skill contribution
+
+`Repair` jest primary skill.
+
+Najprostsza V1 semantyka:
 
 ```text
-bedroll  → 4 s
-tent     → 6 s
-platform → 5 s
+Repair
+→ work efficiency / effective duration
 ```
 
-Final:
+`Survival` może dawać mały camp-specific support modifier dla work/material efficiency, ale tylko jeśli istniejący skill-evaluation seam z `items-player-021` pozwala to zrobić bez nowej równoległej formuły.
 
-```ts
-baseDuration * survivalDurationMultiplier(player.skills.survival.value)
-```
+Nie narzucać globalnego weighted average.
 
-## 17. Physical effort
+Jeżeli podczas implementation recon nie ma naturalnego support seam, Survival może w V1 nie wpływać na wynik.
+
+Nie używać starego `survivalDurationMultiplier()` jako canonical repair owner tylko dlatego, że był używany w poprzednim draftcie.
+
+## 15. Physical effort
 
 Reuse istniejący physical effort model.
 
-Intensity:
+Preferowane intensity:
 
 ```text
 bedroll  → light
@@ -561,58 +396,134 @@ tent     → light
 platform → moderate
 ```
 
-Użyć istniejących helpers:
-
-- `physicalEffortBusyOptions`,
-- `physicalEffortStaminaCostPerSec`,
-- innych aktualnych helperów, jeśli obecny action pattern tego wymaga.
-
 Nie implementować repair-specific stamina system.
 
-## 18. Repair definition
+## 16. Resolve degradation before starting repair
 
-Wydzielić mały domain contract, np.:
-
-```ts
-type CampRepairDefinition = {
-  capability: ItemCapability
-  material: ItemKind
-  baseRepairPoints: number
-  baseDurationSec: number
-  effort: PhysicalEffortIntensity
-}
-```
-
-Definitions:
+Przed repair quote/start dla world object:
 
 ```text
-tent:
-  textile_repair
-  hide
-  25
-  6s
-  light
-
-bedroll:
-  textile_repair
-  hide
-  34
-  4s
-  light
-
-platform:
-  wood_chopping
-  branch
-  17
-  5s
-  moderate
+stored condition
++ lastConditionUpdateAtDays
+→ resolve environmental degradation to now
+→ authoritative current condition
 ```
 
-Nie budować generic repair registry dla wszystkich itemów w grze.
+Nigdy nie naprawiać stale stored condition.
 
-Scope pozostaje camp equipment.
+## 17. Material transaction
 
-## 19. Tool requirements
+Camp repair używa tej samej transakcji co `world-021`.
+
+Canonical start:
+
+```text
+resolve current condition
+→ derive authoritative quote
+→ validate capability/materials
+→ consume/commit all required materials atomically
+→ checkpoint condition + anchor
+→ create RepairProgress
+```
+
+Jeśli requirements nie są spełnione:
+
+```text
+no material consumed
+no RepairProgress created
+```
+
+Po rozpoczęciu:
+
+```text
+materials remain committed
+```
+
+Przerwanie work bout nie refunduje materiałów i nie kasuje repair episode.
+
+## 18. Repair episode start revalidation
+
+Przed utworzeniem repair episode revalidate:
+
+1. target nadal istnieje,
+2. resolved condition `< 100`,
+3. target nie ma już active repair,
+4. required capability jest dostępne,
+5. wszystkie wymagane materials są dostępne,
+6. authoritative quote nadal jest legalny,
+7. player action nie jest blocked.
+
+UI preview nie jest authority.
+
+## 19. Busy Action becomes a work bout
+
+Busy Action nie reprezentuje już całej naprawy.
+
+Canonical semantics:
+
+```text
+Busy Action
+→ elapsed useful work
+→ contribute accepted work to authoritative RepairProgress
+```
+
+Przy interruption:
+
+```text
+accepted partial work remains
+materials remain committed
+repair remains active
+```
+
+Nie persistować Busy Action; persistować world-owned repair progress.
+
+## 20. Work bout revalidation
+
+Przy rozpoczęciu/wznowieniu work bout revalidate co najmniej:
+
+- target exists,
+- repair episode still active,
+- actor can continue,
+- required capability is still available, jeśli dana akcja wymaga narzędzia podczas pracy.
+
+Nie sprawdzać ani nie konsumować ponownie materials po utworzeniu repair episode.
+
+## 21. Repair completion
+
+Completion należy do domain mutation ownera targetu.
+
+Gdy:
+
+```text
+completedWork >= requiredWork
+```
+
+wykonać atomic:
+
+```text
+condition = targetCondition
+repair = undefined
+lastConditionUpdateAtDays = completion time
+```
+
+Normalny environmental degradation resumes od nowego anchor.
+
+Nie dodawać osobnego completed repair recordu.
+
+## 22. Cancellation and resume
+
+Esc / Busy cancellation kończy wyłącznie bieżący work bout.
+
+```text
+work bout cancelled
+→ RepairProgress remains
+→ committed materials remain
+→ repair can be resumed
+```
+
+Nie dodawać explicit `Cancel repair`/refund semantics w V1.
+
+## 23. Tool requirements
 
 Tent / bedroll:
 
@@ -626,629 +537,322 @@ Platform:
 inventory.hasCapability('wood_chopping')
 ```
 
-Platforma nie wymaga konkretnego `axe`.
+Nie wymagać konkretnego axe/sewing kit kind, jeśli capability jest spełnione przez inny zgodny tool.
 
-Każdy obecny lub przyszły tool z `wood_chopping` jest poprawny.
+## 24. Repair interaction and preview
 
-Nie wymagać, aby tool był aktualnie trzymany w dłoni.
+Reuse istniejący FlavorDialog/contextual action mechanism.
 
-## 20. Repair resolver
-
-Pure helper musi być jedynym źródłem preview i actual result.
-
-Przykładowo:
-
-```ts
-resolveCampRepair({
-  objectKind,
-  condition,
-  survivalValue,
-})
-```
-
-Result:
-
-```ts
-{
-  finalCondition,
-  restoredCondition,
-  material,
-  capability,
-  durationSec,
-  effort,
-}
-```
-
-Vue nie przelicza repair points.
-
-## 21. Resolve degradation before repair
-
-Przed jakąkolwiek naprawą world object:
-
-```text
-stored condition
-+ lastConditionUpdateAtDays
-→ resolve weather degradation to now
-→ current condition
-```
-
-Dopiero ten resolved value jest wejściem do repair.
-
-Nigdy nie naprawiać stale stored condition.
-
-## 22. Repair mutation
-
-Successful repair:
-
-```text
-resolved current condition
-→ add repair points
-→ clamp to 100
-→ write condition
-→ lastConditionUpdateAtDays = now
-```
-
-To resetuje environmental-degradation anchor.
-
-W przeciwnym razie wcześniejszy weather exposure zostałby naliczony ponownie po naprawie.
-
-## 23. Preflight
-
-Przed Busy Action sprawdzić:
-
-1. object still exists,
-2. current resolved condition `< 100`,
-3. required capability,
-4. at least 1 required repair material,
-5. player action is not blocked.
-
-Jeżeli którakolwiek nie zachodzi: nie startować action.
-
-## 24. Completion revalidation
-
-Busy Action nie może ufać preflight snapshot.
-
-Przy completion ponownie:
-
-1. znaleźć object po id,
-2. resolve current condition do aktualnego `now`,
-3. sprawdzić `< 100`,
-4. sprawdzić required capability,
-5. sprawdzić material,
-6. consume exactly 1 material,
-7. apply repair,
-8. advance timestamp,
-9. award XP.
-
-Jeśli stan zmienił się w trakcie: fail safely.
-
-## 25. Material transaction
-
-Nie konsumować materiału:
-
-- przy otwarciu inspection,
-- przy preview,
-- przy starcie Busy Action.
-
-Consume dopiero na successful completion.
-
-Jeżeli material zniknie podczas działania:
-
-```text
-no repair
-no material consumption by this action
-no XP
-```
-
-## 26. Cancellation
-
-Esc / Busy cancellation:
-
-```text
-no material consumed
-no condition restored
-no XP
-```
-
-Nie persistować partial repair progress.
-
-Repair actions są wystarczająco krótkie, żeby nie wymagały incremental work state.
-
-## 27. Tent inspection
-
-Inspection z `items-player-018` dostaje:
-
-```text
-Napraw
-```
-
-Przykład:
-
-```text
-To twój namiot
-
-Stan: 46%
-
-[Odpocznij]
-[Napraw]
-[Złóż namiot]
-[Zamknij]
-```
-
-Repair action disabled states:
-
-```text
-100%
-→ Stan idealny
-
-no sewing kit
-→ Potrzebujesz zestawu do szycia
-
-no hide
-→ Potrzebujesz skóry
-```
-
-## 28. Bedroll inspection
-
-Dodać/reuse contextual FlavorDialog.
-
-Przykład:
+Przed rozpoczęciem:
 
 ```text
 Posłanie
 
 Stan: 58%
+Po naprawie: 100%
 
-Naprawa:
-58% → 88%
-Koszt: 1× skóra
+Materiały:
+2 × skóra
 
-[Napraw]
-[Zamknij]
-```
-
-Nie tworzyć `BedrollModal.vue`.
-
-## 29. Platform inspection
-
-Analogicznie:
-
-```text
-Podest do spania
-
-Stan: 41%
-
-Naprawa:
-41% → 56%
-Koszt: 1× gałąź
+Czas pracy:
+1 h 20 min
 
 [Napraw]
 [Zamknij]
 ```
 
-Missing tool:
+Disabled states powinny pokazywać brak capability/materials lub full condition.
+
+Po rozpoczęciu:
 
 ```text
-Potrzebujesz narzędzia do rąbania
+Naprawa w toku
+
+Stan przed naprawą: 58%
+Cel: 100%
+Postęp pracy: 35 min / 1 h 20 min
+Materiały: dostarczone
+
+[Kontynuuj naprawę]
+[Zamknij]
 ```
 
-zgodnie z obecnym capability label.
+Preview i start validation korzystają z tego samego domain quote resolvera.
 
-## 30. Preview
+## 25. Tent interaction
 
-Inspection powinno pokazywać:
+Tent inspection z `items-player-018` dostaje repair action obok istniejących opcji.
 
-```text
-current condition → predicted condition
-material cost
-```
+Nie tworzyć dedicated `TentRepairModal`.
 
-Np.:
+W czasie active repair nadal można inspectować/continue repair, ale nie wykonywać operacji, które zniszczyłyby authoritative repair state.
 
-```text
-Stan: 64% → 94%
-Koszt: 1× skóra
-```
+## 26. Bedroll and platform interaction
 
-Preview i actual completion muszą korzystać z tego samego resolvera.
+Bedroll/platform analogicznie dostają contextual repair/continue action przez istniejący dialog mechanism.
 
-Nie pokazywać graczowi surowych mnożników typu `repair efficiency = 1.04`.
+Nie tworzyć osobnych modal components tylko dla repair.
 
-## 31. Repair from condition 0
+## 27. Repair from condition 0
 
-Condition `0` nie oznacza zniszczenia obiektu.
+Condition `0` nie oznacza automatycznie zniszczenia obiektu.
 
-Obiekt:
+Camp object:
 
 - istnieje,
 - można inspectować,
-- można naprawić,
+- można rozpocząć repair episode,
 - zachowuje identity.
 
-Nie dodawać:
+Nie dodawać irreparable threshold, auto-destruction ani replacement workflow.
 
-- irreparable threshold,
-- auto-destruction,
-- replacement workflow.
+## 28. Repair XP
 
-## 32. Repeated repair
+Meaningful accepted/completed repair work nagradza `Repair` XP zgodnie z istniejącym XP model + anti-farming conventions.
 
-Allowed:
-
-```text
-20 → 50 → 80 → 100
-```
-
-Ostatnia repair może zmarnować część potencjalnych repair points.
-
-Przykład:
-
-```text
-93 → 100
-```
-
-nadal zużywa pełną 1 sztukę materiału.
-
-Preview pokazuje to przed rozpoczęciem.
-
-Nie implementować fractional materials/refunds.
-
-## 33. Survival XP
-
-Dodać:
-
-```ts
-SKILL_XP_AWARD.repairCampEquipment = 6
-```
-
-Award once per successfully consumed material unit.
-
-Tylko gdy:
-
-```text
-finalCondition > currentCondition
-```
-
-Nie awardować za:
+Nie nagradzać za:
 
 - preview,
-- failed attempt,
-- cancellation,
-- already-full object,
-- missing material,
-- missing tool.
+- targeting,
+- rozpoczęcie bez work contribution,
+- failed start,
+- cancellation bez accepted work.
 
-## 34. Packing repaired tent
+Nie używać Survival XP jako głównej nagrody za techniczną naprawę.
 
-Przed packing:
+Exact award cadence dobrać tak, aby interruptions/resume nie umożliwiały XP farming; preferować accepted useful work lub completion-weighted award zgodny z obecnymi skill semantics.
+
+## 29. Packing repaired tent
+
+Przed packing resolve current condition do `now`.
+
+Jeżeli tent posiada active repair:
 
 ```text
-resolve tent condition to now
+packing blocked in V1
 ```
 
-Następnie spakowany `TentItemInstance` dostaje dokładnie tę wartość.
+z czytelnym feedbackiem, np. że najpierw trzeba dokończyć naprawę.
+
+Nie próbować przenosić active `RepairProgress` do inventory item instance w tym planie.
+
+Po zakończonej naprawie:
+
+```text
+world tent condition X
+→ pack
+→ inventory tent instance condition X
+→ save/load
+→ deploy
+→ world tent condition X
+```
+
+## 30. Merchant purchase and selling after tent migration
+
+Kupno fresh tent korzysta z istniejącego instance acquisition path i daje condition `100`.
+
+Sprzedaż instance-backed tent powinna reuse istniejący instance sell flow.
+
+Jeżeli istnieje shared condition-based instance pricing, reuse go. Jeśli nie, wykonać minimalne condition-aware pricing bez osobnego merchant subsystemu.
 
 Invariant:
 
 ```text
-world tent 63%
-→ pack
-→ inventory tent instance 63%
-→ save/load
-→ deploy
-→ world tent 63%
+lower tent condition
+→ monotonic lower sell value
 ```
 
-## 35. Merchant purchase of tents after migration
+## 31. Persistence
 
-Ponieważ `tent` staje się instance-backed, Kupiec musi kupować nowy namiot przez istniejący instance acquisition path.
+Persistować authoritative state.
 
-Nie robić special-case w Merchant UI.
-
-Existing trade code już potrafi:
+### Carried tent
 
 ```text
-createAcquiredInstance(kind)
-→ inventory.addInstance(instance)
+id
+kind: tent
+condition
 ```
 
-dla instance-backed kinds.
+### Placed camp object
 
-Rozszerzyć centralny factory o tent.
+Istniejący condition + timestamp oraz active repair progress wymagany przez `world-021` semantics.
 
-Fresh purchased tent:
+Dla active repair persistować tylko authoritative fields, np.:
 
 ```text
-condition = 100
-```
-
-## 36. Tent selling
-
-Po zmianie na instance-backed item sprzedaż powinna przejść przez istniejący instance sell flow.
-
-Jeżeli obecny `resolveInstanceSellPrice()` nie zna tent condition, w tym planie zdecydować:
-
-```text
-tent sell price depends on condition
-```
-
-Reuse istniejący general pattern dla used instances zamiast traktowania `20%` namiotu jak nowego.
-
-Minimalna zasada:
-
-```text
-condition 100% → normal instance sell price
-lower condition → monotonic discount
-```
-
-Nie tworzyć osobnego merchant subsystem.
-
-Jeśli existing general instance-condition discount helper można reuse, użyć go.
-
-## 37. SaveData
-
-Persistować:
-
-### Inventory tent
-
-```ts
-TentItemInstance {
-  id,
-  kind: 'tent',
-  condition
-}
-```
-
-### Placed tent
-
-```ts
-PlacedTent {
-  id,
-  x,
-  z,
-  yaw,
-  condition,
-  lastConditionUpdateAtDays
-}
+startedCondition
+targetCondition
+requiredWork
+completedWork
 ```
 
 Nie persistować:
 
-- repair preview,
-- active repair,
-- repair history,
-- repair multiplier,
-- repair definition,
-- active Busy Action.
+- quote,
+- UI state,
+- current worker,
+- Busy Action,
+- material source,
+- skill multiplier,
+- repair history.
 
-## 38. Migration
+Po save/load active repair można kontynuować bez ponownej konsumpcji committed materials.
 
-Migration musi pokryć:
+## 32. Migration
 
-### Old carried tents
+Old carried tents:
 
 ```text
 count N
-→ N fresh TentItemInstances
+→ N fresh instances at condition 100
 ```
 
-### Existing placed tents
+Existing placed tents zachowują condition/timestamp z `items-player-018`.
 
-Po `items-player-018`:
+Old saves bez repair state:
 
 ```text
-condition / timestamp preserved
+no active repair
 ```
 
-Jeżeli save pochodzi sprzed condition:
+Nie resetować condition-aware placed tents podczas migracji portable tent representation.
 
-```text
-condition = 100
-lastConditionUpdateAtDays = appropriate restore/current anchor
-```
-
-zgodnie z migration strategy przyjętą w `items-player-018`.
-
-Nie resetować postawionych condition-aware tents podczas migracji do instance-backed inventory.
-
-## 39. Full camp interaction
+## 33. Full camp interaction
 
 `Rozbij pełny obóz` nie naprawia nic automatycznie.
 
-Jeżeli znajdzie:
-
-```text
-tent 25%
-bedroll 40%
-platform 70%
-```
-
-to reuse tych obiektów zgodnie z ich aktualnym condition.
-
-Repair pozostaje świadomą akcją gracza.
+Damaged existing camp objects zachowują swój condition.
 
 Nie rozszerzać PlayerIntentController o auto-maintenance.
 
-## 40. Tests — sewing kit
+## 34. UI/domain boundary
 
-Sprawdzić:
+Vue może:
+
+- renderować condition,
+- renderować quote,
+- renderować progress i disabled reason,
+- invoke action.
+
+Vue nie może:
+
+- obliczać material cost,
+- obliczać required work,
+- obliczać skill modifiers,
+- konsumować materiałów,
+- mutować RepairProgress/condition,
+- resolve weather degradation.
+
+## 35. Tests — sewing kit and capabilities
+
+Sprawdzić co najmniej:
 
 ```text
 sewing_kit → textile_repair
 knife → no textile_repair
 ```
 
-oraz:
+oraz merchant purchase/save-load flow.
 
-- jest w merchant stock,
-- kosztuje 18 coin,
-- purchase działa przez existing flow,
-- save/load inventory zachowuje item.
+## 36. Tests — tent identity
 
-## 41. Tests — tent identity
-
-Kluczowe:
+Kluczowy regression:
 
 ```text
 buy tent
 → instance id A / condition 100
 → deploy
-→ world id A
-→ degrade/repair to 63
+→ world identity A
+→ degrade/repair to X
 → pack
-→ inventory id A / condition 63
+→ inventory identity A / condition X
+→ save/load
 → deploy
-→ world id A / condition 63
+→ same identity / condition X
 ```
-
-Nie musi zostać dokładnie użyty `id` jako world id, jeśli aktualna implementacja ma silny powód techniczny przeciwko temu, ale **stable physical identity i condition continuity są wymaganym invariantem**.
 
 Nie wolno resetować condition.
 
-## 42. Tests — repair amount
+## 37. Tests — repair quote
 
-Dla tent/bedroll/platform:
+Dla tent/bedroll/platform sprawdzić m.in.:
 
-- condition 0,
-- condition 50,
-- condition 99,
-- Survival 0.2,
-- intermediate Survival,
-- Survival 1.
+- condition `0`, `50`, `99`,
+- deterministic target `100`,
+- material count rośnie sensownie wraz z większym damage,
+- requiredWork jest dodatnie dla realnej naprawy,
+- condition `100` nie tworzy quote/start action,
+- preview i authoritative resolver są zgodne.
 
-Sprawdzić:
+Jeżeli `Repair` wpływa na required/effective work, higher Repair nie może pogarszać wyniku.
 
-```text
-result <= 100
-result > current
-higher Survival => repair amount >= lower Survival
-```
+Jeżeli Survival zostaje supporting modifierem, sprawdzić tylko rzeczywiście przyjętą semantykę.
 
-## 43. Tests — exact base balance
-
-Sprawdzić expected repair points:
-
-```text
-tent base = 25
-bedroll base = 34
-platform base = 17
-```
-
-oraz multiplier:
-
-```text
-0.8 + 0.4 * survival
-```
-
-## 44. Tests — degradation timestamp
-
-Scenario:
-
-```text
-place object day 0
-weather degradation until day 3
-repair day 3
-write repaired condition
-lastConditionUpdateAtDays = day 3
-resolve again day 3
-→ exactly repaired condition
-```
-
-Potem:
-
-```text
-resolve day 4
-→ only weather exposure after day 3 counted
-```
-
-## 45. Tests — transaction semantics
+## 38. Tests — repair transaction
 
 Sprawdzić:
 
 1. no capability → no start,
-2. no material → no start,
+2. insufficient materials → no start/no consumption,
 3. condition 100 → no start,
-4. cancel → no material/no condition/no XP,
-5. object removed during Busy → no material/no XP,
-6. material disappears during Busy → no repair,
-7. success → exactly 1 material consumed,
-8. success → condition increases,
-9. success → timestamp advances,
-10. success → 6 Survival XP,
-11. repeated repair works,
-12. final repair clamps at 100.
+4. valid start → all materials consumed exactly once,
+5. valid start → RepairProgress created,
+6. cancellation/interruption → progress/material commitment survives,
+7. resume → same repair episode continues,
+8. multiple work bouts accumulate accepted work,
+9. completion → condition becomes targetCondition,
+10. completion → repair state removed,
+11. completion → degradation timestamp resets,
+12. save/load mid-repair → no repeated material consumption.
 
-## 46. Tests — packed tent exploit
+## 39. Tests — active repair restrictions
 
-Explicit regression:
-
-```text
-tent condition = 10
-→ pack
-→ deploy
-```
-
-Expected:
+Sprawdzić:
 
 ```text
-condition = 10
+active tent repair
+→ packing blocked
+→ inspection/continue repair available
 ```
 
-Never:
+oraz odpowiednie restrictions dla bedroll/platform, jeśli istnieją operacje usuwające/przenoszące target.
+
+## 40. Tests — degradation checkpoint
+
+Scenario:
 
 ```text
-condition = 100
+weather degradation until day N
+→ start repair day N
+→ repair starts from resolved current condition
+→ completion day M
+→ condition anchor = day M
+→ future degradation counts only after completion
 ```
 
-## 47. Tests — save/load
+Podczas active repair zachowanie freeze degradation ma być zgodne z `world-021`.
 
-Check:
+## 41. Tests — Repair XP
 
-```text
-carried damaged tent
-→ save/load
-→ same condition
-```
+Sprawdzić:
 
-and:
+- no XP for preview/failed start,
+- no XP farming przez start/cancel,
+- accepted useful repair work awards Repair zgodnie z przyjętą cadence,
+- Survival nie dostaje primary repair reward.
 
-```text
-placed damaged/repaired tent
-→ save/load
-→ same resolved state
-```
+## 42. Documentation
 
-plus existing bedroll/platform persistence.
+Po implementacji zaktualizować odpowiednie canonical docs dotyczące:
 
-## 48. UI/domain boundary
-
-Vue może:
-
-- renderować condition,
-- renderować predicted result,
-- renderować disabled reason,
-- invoke action.
-
-Vue nie może:
-
-- obliczać repair amount,
-- sprawdzać tool kind,
-- obliczać Survival multiplier,
-- konsumować materiału,
-- mutować condition,
-- resolve weather degradation.
-
-## 49. Documentation
-
-Po implementacji zaktualizować:
-
-- `docs/items/CATALOG.md`,
-- player systems,
-- camp/rest documentation,
+- item catalog,
+- player skills,
+- camp/rest,
 - sleeping utilities,
-- persistence docs jeśli schema zmienia się przez `TentItemInstance`,
-- merchant documentation,
-- implementation notes zgodnie z `docs/plans/PLANNING.md`.
+- persistence,
+- merchant flow,
+- repair foundation integration.
 
 Wyraźnie udokumentować:
 
@@ -1257,67 +861,60 @@ tent is instance-backed
 condition survives pack/redeploy
 repair material ≠ construction recipe
 tool capability ≠ skill
+camp world objects use persistent RepairProgress
+Repair is primary repair skill
 ```
 
-Dodać JSDoc dla ważnych publicznych/domain helpers i klas, szczególnie repair resolvera, tent instance lifecycle oraz condition mutation. Użyć `@domain items-player` tam, gdzie pasuje do istniejącej konwencji.
+Dodać JSDoc dla ważnych public/domain helpers zgodnie z aktualną konwencją.
 
 Nie uruchamiać ręcznie `pnpm docs:sync`.
 
 ## Out of scope
 
-- weapon durability repair,
+- weapon/tool durability repair,
 - sharpening,
-- clothing durability,
-- armor durability,
+- clothing/armor durability,
 - sewing kit durability,
 - crafting sewing kit,
 - crafting tent,
-- cloth item/material,
+- cloth material,
 - tailoring profession,
-- Repair skill,
-- Crafting skill,
-- Construction skill,
-- NPC repair,
+- generic inventory-item repair framework,
+- player-selectable partial target condition,
+- NPC autonomous repair,
 - paid repair service,
-- Work Contracts for repair,
+- repair Work Contracts,
 - automatic maintenance,
 - auto-repair during sleep,
 - auto-repair in Full Camp,
+- explicit repair abandonment/refunds,
 - irreparable condition,
 - object destruction at 0,
 - material quality,
 - tool quality,
 - repair RNG,
-- repair animation work beyond reusing available generic action/busy presentation.
+- dedicated repair animation framework.
 
 ## Completion criteria
 
 Plan jest zakończony, gdy:
 
 - istnieje `textile_repair`,
-- `sewing_kit` zapewnia capability,
-- sewing kit kosztuje 18 coin i jest dostępny u Kupca,
-- namiot i bedroll wymagają `textile_repair`,
-- platform wymaga `wood_chopping`,
-- tent repair używa `hide`,
-- bedroll repair używa `hide`,
-- platform repair używa `branch`,
-- base repair values to odpowiednio `25 / 34 / 17`,
-- Survival zwiększa material efficiency przez jedną shared formułę,
-- Survival skraca Busy duration przez istniejący helper,
-- repair reuse physical effort,
-- każda action konsumuje maksymalnie jedną jednostkę materiału,
-- repair jest incremental,
-- condition jest resolve do current time przed naprawą,
-- successful repair przesuwa degradation timestamp,
-- preview i actual result używają tego samego resolvera,
-- tent/bedroll/platform mają contextual repair UI,
-- repair awards Survival XP tylko po sukcesie,
-- `tent` jest instance-backed,
-- condition namiotu przeżywa pack → inventory → save/load → redeploy,
-- spakowanie nie może resetować condition,
-- fresh merchant tent zaczyna na 100%,
-- nie powstał równoległy repair/crafting framework,
+- `sewing_kit` zapewnia capability i jest dostępny u Kupca za 18 coin,
+- namiot i bedroll wymagają `textile_repair`, platform wymaga `wood_chopping`,
+- tent/bedroll/platform mają camp-specific material requirements,
+- `Repair` jest primary skill dla camp repair,
+- camp objects konsumują persistent `RepairProgress` semantics z `world-021`,
+- materials są atomically committed przy start repair episode,
+- Busy Action wnosi actor-neutral work contribution zamiast bezpośredniego `+condition`,
+- interruption/resume zachowuje progress,
+- completion ustawia authoritative condition na target i resetuje degradation anchor,
+- player V1 repair target to `100`,
+- preview i actual start używają tego samego domain quote resolvera,
+- Repair XP nie jest przyznawane za failed/cancelled work bez useful contribution,
+- tent jest instance-backed i condition przeżywa pack → inventory → save/load → redeploy,
+- active tent repair blokuje packing w V1,
+- nie powstał równoległy repair ownership/framework,
 - automated tests przechodzą,
 - implementation notes i canonical docs są aktualne.
 
@@ -1328,13 +925,14 @@ Browser/manual verification wykonuje User, nie AI.
 Zweryfikować ręcznie co najmniej:
 
 - zakup `sewing_kit` u Kupca,
-- repair namiotu z camp inspection,
-- repair bedrolla,
-- repair platformy,
+- repair namiotu, bedrolla i platformy,
 - missing-tool i missing-material feedback,
-- cancellation bez zużycia materiału,
-- wyższy Survival skraca czas i zwiększa repair gain,
+- materiały consumed raz przy rozpoczęciu repair,
+- interruption + resume tego samego repair episode,
+- save/load w trakcie repair,
+- Repair wpływa zgodnie z implementacją i dostaje XP,
+- active tent repair blokuje packing,
 - condition namiotu przeżywa pack → save/load → redeploy,
-- repaired condition poprawnie degraduje się dalej od nowego timestamp.
+- repaired condition poprawnie degraduje się dalej od completion timestamp.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
