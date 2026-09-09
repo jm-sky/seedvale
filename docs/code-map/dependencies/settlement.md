@@ -42,8 +42,10 @@ Generated from TypeScript imports.
 - `economy/index.ts`
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalOwnership.ts`
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.ts`
+- `fauna/ownedAnimalControl.ts`
 - `items/createDroppedItems.ts`
 - `player/PlayerController.ts`
 - `settlement/createSettlement.ts`
@@ -583,6 +585,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/animalOwnership.ts`
 - `settlement/livestock.ts`
 
 ## `settlement/livestock.ts`
@@ -592,7 +595,9 @@ Generated from TypeScript imports.
 - `assets/loadGltf.ts`
 - `debug/debugMode.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/animalOwnership.ts`
 - `fauna/livestockProduction.ts`
+- `fauna/ownedAnimalControl.ts`
 - `fauna/proceduralAnimals.ts`
 - `player/PlayerController.ts`
 - `settlement/families.ts`

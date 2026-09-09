@@ -85,6 +85,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
 | ◼️ `ui-input-013-character-stats.md`                                        | -       | 🟡 | M      | ~~npc-024~~, ~~npc-025~~, ~~items-player-021~~ |
 | 💡 `quests-progression-013-rat-infestation-nest-and-reproduction.md`        | -       | 🟡 | M      | ~~quests-progression-006~~ |
+| 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | ~~fauna-003~~ |
 
 ---
 

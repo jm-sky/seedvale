@@ -24,12 +24,14 @@ Generated from TypeScript imports.
 - `fauna/animalDebugVisual.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/livestockProduction.ts`
+- `fauna/ownedAnimalControl.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/predatorHumanDecision.ts`
 - `fauna/preyAlertPerception.ts`
@@ -278,6 +280,22 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/harvestedRemains.ts`
+
+## `fauna/animalOwnership.test.ts`
+
+**Imports**
+
+- `fauna/animalOwnership.ts`
+
+## `fauna/animalOwnership.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalOwnership.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/livestock.test.ts`
+- `settlement/livestock.ts`
 
 ## `fauna/animalRoaming.test.ts`
 
@@ -562,6 +580,21 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.ts`
+
+## `fauna/ownedAnimalControl.test.ts`
+
+**Imports**
+
+- `fauna/ownedAnimalControl.ts`
+
+## `fauna/ownedAnimalControl.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/ownedAnimalControl.test.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/livestock.ts`
 
 ## `fauna/playerAwareness.test.ts`
 

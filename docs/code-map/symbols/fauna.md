@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 804
+- `AnimalAgent` — class — line 829
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 360
-- `AnimalAgentDeps` — type — line 678
-- `AnimalSaveState` — type — line 457
-- `AnimalUpdateContext` — type — line 709
-- `BURY_DURATION_SEC` — const — line 230
-- `canPredatorPursueIntoVillage` — function — line 508
-- `FAUNA_SHADOW_DISTANCE` — const — line 197
-- `FaunaAiBranch` — type — line 339
-- `FaunaNavRescueDebugInfo` — type — line 344
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 290
-- `FrenzyWolfCandidate` — type — line 613
-- `HARVEST_MEAT_DURATION_SEC` — const — line 233
-- `isWithinVillageRadius` — function — line 489
-- `NearbyNpcCandidate` — type — line 608
-- `pickNearestEligibleWolf` — function — line 622
-- `pickRabidTarget` — function — line 647
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 215
-- `resolveLureTarget` — function — line 537
-- `villageFleeBiasFalloff` — function — line 516
-- `VillageInfo` — type — line 483
+- `AnimalAgentDebugInfo` — type — line 375
+- `AnimalAgentDeps` — type — line 700
+- `AnimalSaveState` — type — line 472
+- `AnimalUpdateContext` — type — line 731
+- `BURY_DURATION_SEC` — const — line 245
+- `canPredatorPursueIntoVillage` — function — line 530
+- `FAUNA_SHADOW_DISTANCE` — const — line 212
+- `FaunaAiBranch` — type — line 354
+- `FaunaNavRescueDebugInfo` — type — line 359
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 305
+- `FrenzyWolfCandidate` — type — line 635
+- `HARVEST_MEAT_DURATION_SEC` — const — line 248
+- `isWithinVillageRadius` — function — line 511
+- `NearbyNpcCandidate` — type — line 630
+- `pickNearestEligibleWolf` — function — line 644
+- `pickRabidTarget` — function — line 669
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 230
+- `resolveLureTarget` — function — line 559
+- `villageFleeBiasFalloff` — function — line 538
+- `VillageInfo` — type — line 505
 
 ## `fauna/animalCorpse.ts`
 
@@ -141,6 +141,16 @@ Generated from exported TypeScript symbols.
 
 - `MEAT_KIND_BY_ANIMAL` — const — line 13
 - `meatKindForAnimal` — function — line 21
+
+## `fauna/animalOwnership.ts`
+
+- `AnimalOwner` — type — line 3
+- `deriveOwnerHouseId` — function — line 12
+- `isHouseholdOwned` — function — line 20
+- `isPlayerOwned` — function — line 16
+- `ownerFromHouseId` — function — line 8
+- `ownersEqual` — function — line 24
+- `parseAnimalOwnerFromRecord` — function — line 33
 
 ## `fauna/animalRoaming.ts`
 
@@ -275,6 +285,20 @@ Generated from exported TypeScript symbols.
 - `initialLivestockProductionReadyAtDays` — function — line 54
 - `livestockProductionReady` — function — line 37
 - `nextLivestockProductionReadyAtDays` — function — line 45
+
+## `fauna/ownedAnimalControl.ts`
+
+- `createDefaultOwnedAnimalControlState` — function — line 14
+- `createFollowOwnedAnimalControlState` — function — line 18
+- `FOLLOW_START_DISTANCE` — const — line 11
+- `FOLLOW_STOP_DISTANCE` — const — line 12
+- `hydrateOwnedAnimalControl` — function — line 68
+- `OwnedAnimalControlMode` — type — line 2
+- `OwnedAnimalControlState` — type — line 4
+- `OwnedControlMovement` — type — line 22
+- `resolveOwnedControlMovement` — function — line 27
+- `setOwnedAnimalControlMode` — function — line 49
+- `snapshotOwnedAnimalControl` — function — line 59
 
 ## `fauna/playerAwareness.ts`
 

@@ -210,10 +210,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 939
-- `buildDigTarget` — function — line 886
-- `buildInteractables` — function — line 319
-- `collectItem` — function — line 986
+- `buildCombatTarget` — function — line 947
+- `buildDigTarget` — function — line 894
+- `buildInteractables` — function — line 320
+- `collectItem` — function — line 994
 - `COMBAT_TARGET_CONE_DOT` — const — line 87
 - `COMBAT_TARGET_RANGE` — const — line 72
 - `CombatAimMode` — type — line 77
@@ -221,7 +221,7 @@ Generated from exported TypeScript symbols.
 - `GAZE_RANGE` — const — line 62
 - `INTERACT_MIN_DOT` — const — line 59
 - `INTERACT_RANGE` — const — line 56
-- `resolveHaySpot` — function — line 255
+- `resolveHaySpot` — function — line 256
 
 ## `app/inventoryWiring.ts`
 
