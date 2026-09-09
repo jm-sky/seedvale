@@ -27,7 +27,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | `settlements-004-gold-economic-realization-and-source-entitlements.md`      | -       | 🔴 | M      | -      |
 | `settlements-npcs-020-economy-driven-transport-demand-integration.md`       | -       | 🔴 | S      | settlements-npcs-017, settlements-npcs-018, settlements-npcs-019 |
 | `settlements-npcs-021-remote-production-site-logistics.md`                  | -       | 🔴 | M      | settlements-npcs-018, settlements-npcs-019, settlements-npcs-020 |
-| `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md`  | -       | 🔴 | M      | -      |
 | `settlements-npcs-027-npc-expedition-assignment-and-provisioning.md`        | -       | 🔴 | M      | settlements-npcs-026 |
 | `settlements-npcs-028-long-distance-npc-travel-and-expedition-movement.md`  | -       | 🔴 | L      | settlements-npcs-026, settlements-npcs-027, settlements-npcs-019 |
 | `tools-000-weapon-browser-observatory.md`                                   | -       | 🟡 | M      | -      |
@@ -95,6 +94,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 | 💡 `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
+| ◼️ `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` | -       | 🔴 | M      | -      |
 
 ---
 
