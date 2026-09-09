@@ -94,7 +94,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 | 💡 `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
-| ◼️ `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` | -       | 🔴 | M      | -      |
+| 💡 `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` | -       | 🔴 | M      | -      |
 
 ---
 
