@@ -285,6 +285,7 @@ describe('loadSaveData v1 contract', () => {
           helperAssignment: { targetContainerId: 'chest:1', resourceKind: 'food', enabled: true },
           activePlan: { goal: 'obtainWood', strategy: null, state: 'active', progress: { amount: 1 }, currentStep: 'findNextTarget' },
           postDeath: null,
+          personalInventory: { counts: { knife: 1 }, instances: [] },
         },
       },
       households: {
@@ -330,6 +331,7 @@ describe('loadSaveData v1 contract', () => {
           physicalInjury: 40,
           injuryRecoveryUpdatedAtDays: 2.5,
           postDeath: null,
+          personalInventory: { counts: {}, instances: [] },
         },
       },
     }
@@ -555,6 +557,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(result.data.npcStates?.alive.postDeath).toBeNull()
+    expect(result.data.npcStates?.alive.personalInventory).toEqual({ counts: {}, instances: [] })
     expect(result.data.npcStates?.dead.postDeath).toEqual({
       status: 'terminal',
       x: 0,
@@ -564,6 +567,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       loot: { counts: {}, instances: [] },
       cleanupReason: 'legacy',
     })
+    expect(result.data.npcStates?.dead.personalInventory).toEqual({ counts: {}, instances: [] })
   })
 
   it('migrates a real v11 save (plan world-019) into v12 with an empty completed-preparation collection', () => {
@@ -573,6 +577,28 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       status: 'ok',
       data: { ...validSave, completedTerrainPreparations: [] },
     })
+  })
+
+  it('migrates a real v12 save (plan settlements-npcs-026) into v13 with empty personal inventories', () => {
+    const v12Save = {
+      ...validSave,
+      version: 12,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 80, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: null,
+        },
+      },
+    }
+    const result = loadStoredSave(v12Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.npcStates?.['home:npc:0']?.personalInventory).toEqual({ counts: {}, instances: [] })
+    expect(result.data.npcStates?.['home:npc:0']?.postDeath).toBeNull()
   })
 
   it('accepts a current-version npcStates record with active corpse loot and rejects a malformed postDeath', () => {
@@ -593,6 +619,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
             loot: { counts: {}, instances: [{ id: 'w1', kind: 'knife', durability: 0.4, sharpness: 0.8 }] },
             cleanupReason: null,
           },
+          personalInventory: { counts: {}, instances: [] },
         },
       },
     }
@@ -617,6 +644,31 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
           stamina: { current: 100, max: 100 },
           vigor: { current: 100, max: 100 },
           needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+        },
+      },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 80, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: null,
+        },
+      },
+    })).toBe(false)
+    expect(isSaveData({
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 80, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          postDeath: null,
+          personalInventory: { counts: { stone: 'nope' }, instances: [] },
         },
       },
     })).toBe(false)

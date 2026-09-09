@@ -27,10 +27,11 @@ When this file and the code disagree, the code wins — update this file.
 - `helperAssignment` — a player-configured delivery target (`{targetContainerId, resourceKind, enabled}`, set from the Villagers UI).
 - `activePlan` — the persistent Plan described below (`{goal, strategy, state, progress, currentStep}`).
 - `postDeath` — corpse/lifecycle record after the alive→dead edge (`null` while alive). Holds death position/yaw, a world-days death-time anchor, persisted loadout loot, and `active`/`claimed`/`terminal` status so a corpse can age during stream-out/time-skip and not rematerialize after natural cleanup. Burial (`npc-011`) can `claimed`-lock cleanup without a parallel corpse registry.
+- `personalInventory` — every NPC's authoritative personal belongings (`Inventory`, including when empty). Survives settlement streaming, `WorldBundle` rebuild and save/load. Distinct from transient `NpcAgent.carried` work cargo.
 
-`NpcAgent` holds **direct references** into this state, not a copy — disposing/recreating the `NpcAgent` instance (settlement unload/reload, an in-session `WorldBundle` rebuild) re-hydrates from the same object. **All eight fields above are persisted** as part of `SaveData.npcStates` — see [Persistence](#persistence).
+`NpcAgent` holds **direct references** into this state, not a copy — disposing/recreating the `NpcAgent` instance (settlement unload/reload, an in-session `WorldBundle` rebuild) re-hydrates from the same object. **All of the fields above are persisted** as part of `SaveData.npcStates` — see [Persistence](#persistence). `needsInitialPersonalLoadout` is a runtime-only latch on the same object (first creation vs restore) and is never saved.
 
-**Deliberately excluded from authoritative state — owned by `NpcAgent` itself, reset on every reconstruction:** `phase`, `pendingAction`, pathfinding/watchdog state, `combatIntent`, the carried `Inventory` (except loadout items moved onto `postDeath.loot` at death). These are transient presentation/execution state, not entity identity, and are never persisted.
+**Deliberately excluded from authoritative state — owned by `NpcAgent` itself, reset on every reconstruction:** `phase`, `pendingAction`, pathfinding/watchdog state, `combatIntent`, the carried `Inventory` (work/logistics payload; loadout items that crossed the alive→dead edge live on `postDeath.loot`). These are transient presentation/execution state, not entity identity, and are never persisted.
 
 **NPC death** is that `postDeath` record, not a second HP system and not an `NpcAgent`-lifetime mesh (`settlement/npcPostDeath.ts`). The alive→dead edge writes death transform, a world-days time anchor, and classified loadout loot once; `die()`/`die(true)` only handle runtime presentation and must not mint a second corpse. Natural decay is `fresh → rotting → bones → removed` from `nowDays - deathAtDays`. Terminal cleanup drops remaining loot as world items and prevents rematerialization; a burial claim blocks that cleanup for `npc-011`. Legacy saves of already-dead NPCs migrate to terminal/no-active-corpse rather than inventing a home-position body or loadout.
 
@@ -130,11 +131,16 @@ Combat's responsibility ends at registering accepted physical damage; combat nev
 
 ## Inventory/items
 
-NPCs carry a generic `Inventory` — the same class and capability-flag catalog the player uses, with its own carry-weight cap (`NPC_CARRY_MAX_WEIGHT = 5 kg`). That cap is a **temporary logistics/task carrier** for gathering, hunt yield, profession transfers and household/economy flow — not the NPC's biological human carrying capacity. Plan npc-020 does not replace it with the player's Strength body-carry resolver; NPC physical carrying/encumbrance is deferred. No NPC-specific item catalog or container type exists; see [player-systems.md](./player-systems.md) and [items/CATALOG.md](../items/CATALOG.md) for the shared mechanism. An NPC's carried inventory is not persisted — see below.
+NPCs reuse the generic `Inventory` class in two distinct roles:
+
+- **`NpcAuthoritativeState.personalInventory`** — persistent personal belongings (role weapons, later expedition gear). Always present, including when empty. Seeded with starting loadout only on genuine first creation of authoritative state; reconstruction and legacy saves never reseed from profession/role/household.
+- **`NpcAgent.carried`** — temporary logistics/task carrier for gathering, hunt yield, profession transfers and household/economy flow, capped at `NPC_CARRY_MAX_WEIGHT = 5 kg`. That cap is **not** the NPC's biological human carrying capacity. Plan npc-020 does not replace it with the player's Strength body-carry resolver; NPC physical carrying/encumbrance is deferred. Hunter starting arrows stay here as work supply (not personal belongings) and are reseeded after reconstruction.
+
+Combat/weapon resolution reads personal belongings; ammo and work cargo stay on `carried`. No NPC-specific item catalog or container type exists; see [player-systems.md](./player-systems.md) and [items/CATALOG.md](../items/CATALOG.md) for the shared mechanism.
 
 ## Persistence
 
-The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/injuryRecoveryUpdatedAtDays/temporaryConditions/helperAssignment/activePlan/postDeath) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/carried inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. Derived injury severity and SPEA modifiers are recomputed after restore. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
+The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/injuryRecoveryUpdatedAtDays/temporaryConditions/helperAssignment/activePlan/postDeath/personalInventory) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/`carried` inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. Derived injury severity and SPEA modifiers are recomputed after restore. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
 
 ## Cross-domain integrations
 
@@ -153,7 +159,7 @@ The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/phy
 
 - Burial decisions, graves, and household mourning remain `npc-011` — this plan only leaves a `claimed` handoff on the corpse record.
 - Blacksmith and farmer-planting profession work is wired but currently dormant in a normal playthrough — nothing yet supplies the household-held item (whetstone, seed) either path requires.
-- An NPC's carried inventory is never persisted; an interrupted claim/delivery after the claim step genuinely loses the goods.
+- An NPC's `carried` inventory is never persisted; an interrupted claim/delivery after the claim step genuinely loses the goods. Personal belongings on `personalInventory` persist.
 - The two "relationship" stores (NPC↔NPC and player↔NPC) are easy to conflate by name but are structurally unrelated — see [Relationships, social, and dialogue](#relationships-social-and-dialogue).
 
 ## Entry points

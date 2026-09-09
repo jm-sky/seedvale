@@ -31,11 +31,10 @@ import { createNullPointLightBudget, type PointLightBudget } from '../world/poin
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
 import { createLivestockRegistry, type LivestockSaveRecord } from './livestock'
-import { createRatRegistry, type RatSaveRecord } from './ratPersistence'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost } from './props'
-import { createStorageInfestationRegistry, type StorageInfestationCondition } from './storageInfestation'
+import { createRatRegistry, type RatSaveRecord } from './ratPersistence'
 import {
   type MidpointSignpost,
   midpointSignpostsFor,
@@ -51,6 +50,7 @@ import {
 } from './settlementGenerator'
 import { settlementDefFor } from './settlementPlanCache'
 import { createLabeledProp, disposeLabeledProp, type LabeledProp, updateLabelOpacity } from './settlementSignposts'
+import { createStorageInfestationRegistry, type StorageInfestationCondition } from './storageInfestation'
 
 type Entry = {
   def: SettlementDef

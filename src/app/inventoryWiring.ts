@@ -13,7 +13,6 @@ import type { ReputationManager } from '../reputation/ReputationManager'
 import type { Settlement } from '../settlement/createSettlement'
 import type { VueUi } from '../ui-vue/mount'
 import type { MerchantPricing } from '../ui-vue/store'
-import { ui } from '../ui-vue/store'
 import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { DayNightState } from '../world/dayNight'
@@ -30,10 +29,11 @@ import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryVi
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
-import { sellInstancesForCoins, previewTransactionNetCoins, resolveOfferLineBuyback, settleTransaction } from '../items/trade'
+import { previewTransactionNetCoins, resolveOfferLineBuyback, sellInstancesForCoins, settleTransaction } from '../items/trade'
 import { NEUTRAL_SELL_PRICE_CONTEXT, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
+import { ui } from '../ui-vue/store'
 import {
   FAR_RANGE_KM,
   GUARD_LANDMARK_POOL_SIZE,

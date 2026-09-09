@@ -2,6 +2,12 @@ import type { HelperAssignment } from '../ai/helperAssignment'
 import type { NpcPlan } from '../ai/npcPlan'
 import { createNeedState, type NeedState } from '../ai/Needs'
 import { MAX_VIGOR } from '../ai/npcVigor'
+import {
+  Inventory,
+  type InventoryContentsSnapshot,
+  inventoryFromContents,
+  snapshotInventoryContents,
+} from '../items/Inventory'
 import { applyDerivedStaminaMax } from '../shared/enduranceStamina'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
@@ -32,18 +38,21 @@ export const MAX_HP = 100
 export const MAX_STAMINA = 100
 
 /**
- * Authoritative NPC entity state (plan 197) — everything an `NpcAgent`
- * mutates during simulation that must outlive that specific `NpcAgent`
- * instance across settlement unload/reload and `WorldBundle` rebuild.
+ * Authoritative NPC entity state (plan 197 / persistence-001 /
+ * settlements-npcs-026) — everything an `NpcAgent` mutates during simulation
+ * that must outlive that specific `NpcAgent` instance across settlement
+ * unload/reload, `WorldBundle` rebuild and `SaveData.npcStates`.
  * `NpcAgent` holds direct references into these objects and mutates them in
  * place; there is no separate copy step and no second source of truth (plan
  * 197 §4), the same "shared mutable object, not a snapshot" pattern
  * `Household`/`SettlementEconomy` already use.
  *
  * Deliberately narrow — `phase`/`pendingAction`/pathfinding/combat-intent/
- * `carried` (the ore-carry inventory) stay owned by `NpcAgent` itself and
- * reset on reconstruction: transient presentation/navigation state, not
- * authoritative entity state (plan 197 §1).
+ * `carried` (transient work/logistics payload) stay owned by `NpcAgent`
+ * itself and reset on reconstruction. Personal belongings live on
+ * `personalInventory` here, not on `carried`.
+ *
+ * @domain settlements-npcs
  */
 export type NpcAuthoritativeState = {
   readonly id: NpcId
@@ -51,17 +60,24 @@ export type NpcAuthoritativeState = {
   readonly stamina: StaminaState
   readonly vigor: VigorState
   readonly needs: NeedState
+  /** Authoritative personal belongings (plan settlements-npcs-026) — every
+   *  NPC always has this container, including when it is empty. Direct
+   *  reference shared with the live `NpcAgent`; reconstruction must reuse
+   *  this object, never reseed a loadout. Distinct from transient
+   *  `NpcAgent.carried` work cargo. */
+  readonly personalInventory: Inventory
+  /** Runtime-only latch: true on genuine first creation so `NpcAgent` can
+   *  seed starting personal belongings once. Snapshot restore is always
+   *  false — legacy saves stay empty and reconstruction never reseeds.
+   *  Never persisted. */
+  needsInitialPersonalLoadout: boolean
   /** Outstanding healable-physical-injury HP loss (plan npc-002) — separate
    *  from `health` itself (which stays combat/AI-agnostic): registered from
    *  accepted physical damage, relieved by actual restored HP, never derived
    *  from `health.maxHp - health.currentHp` (would conflate it with future
    *  non-physical deprivation damage). Mutable in place, same "shared
-   *  object, no snapshot copy" pattern as `activePlan`. Round-trips the same
-   *  way `health` does: carried across an in-session `WorldBundle` rebuild
-   *  and `SaveData.npcStates` (plan persistence-001) via `NpcStateSnapshot`
-   *  below — despite this file's older per-field doc comments below, `health`/
-   *  `needs`/`stamina`/`vigor` (and, via the same snapshot, `helperAssignment`/
-   *  `activePlan`) are in fact persisted today; see `docs/plans/LOOSE-ENDS.md`. */
+   *  object, no snapshot copy" pattern as `activePlan`. Round-trips via
+   *  `NpcStateSnapshot` / `SaveData.npcStates`. */
   physicalInjury: number
   /** Lazy natural-recovery clock (plan npc-025). Optional so older snapshots
    *  initialize on first resolution to current world time without retroactive
@@ -70,15 +86,12 @@ export type NpcAuthoritativeState = {
   /** Helper resource-delivery assignment (plan 167) — `null` when this NPC
    *  has none. Mutable in place (assigned/cleared from the Villagers screen),
    *  the same "shared object, no snapshot copy" pattern as the other fields
-   *  here. Carried across an in-session `WorldBundle` rebuild via
-   *  `NpcStateSnapshot` below; not part of `SaveData` — no NPC runtime state
-   *  is (see this file's module doc). */
+   *  here. Round-trips via `NpcStateSnapshot` / `SaveData.npcStates`. */
   helperAssignment: HelperAssignment | null
   /** Persistent Goal + Strategy + progress (plan ai-004) — `null` when this
    *  NPC has no current Plan (e.g. `idle`). Mutable in place, same
-   *  "shared object, no snapshot copy" pattern as `helperAssignment`, so it
-   *  survives an in-session `WorldBundle` rebuild via `NpcStateSnapshot`
-   *  below. Not part of `SaveData` — no NPC runtime state is. */
+   *  "shared object, no snapshot copy" pattern as `helperAssignment`.
+   *  Round-trips via `NpcStateSnapshot` / `SaveData.npcStates`. */
   activePlan: NpcPlan | null
   /** Post-death / corpse record (plan npc-010) — `null` while alive. Mutable
    *  in place like `activePlan`. Survives settlement unload, `WorldBundle`
@@ -90,10 +103,10 @@ export type NpcAuthoritativeState = {
   temporaryConditions: TemporaryConditionsState
 }
 
-/** Plain-data carry snapshot — mirrors `SettlementEconomy.snapshot()` /
- *  `Household.snapshot()`. Used only to seed a freshly-constructed registry
- *  across a `WorldBundle` rebuild (`rebuildWorldBundle`'s `carried*` idiom);
- *  not part of `SaveData` (plan 197 explicitly excludes full NPC save/load). */
+/** Plain-data snapshot — mirrors `SettlementEconomy.snapshot()` /
+ *  `Household.snapshot()`. Used both to seed a freshly-constructed registry
+ *  across a `WorldBundle` rebuild (`rebuildWorldBundle`'s `carried*` idiom)
+ *  and as `SaveData.npcStates` (plan persistence-001 / settlements-npcs-026). */
 export type NpcStateSnapshot = {
   health: { current: number, max: number, dead: boolean }
   stamina: { current: number, max: number }
@@ -112,6 +125,9 @@ export type NpcStateSnapshot = {
   postDeath?: NpcPostDeathState | null
   /** Optional — absent means no active temporary conditions. */
   temporaryConditions?: SaveTemporaryConditionsSnapshot
+  /** Required on current saves. Absent (legacy / older in-session snapshot)
+   *  restores as an empty personal inventory — never a profession/role seed. */
+  personalInventory?: InventoryContentsSnapshot
 }
 
 function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysicalMaxima): NpcAuthoritativeState {
@@ -129,6 +145,8 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
       ? cloneNpcPostDeath(snapshot.postDeath)
       : (snapshot.health.dead ? createLegacyTerminalNpcPostDeath() : null),
     temporaryConditions: restoreTemporaryConditions(snapshot.temporaryConditions),
+    personalInventory: inventoryFromContents(snapshot.personalInventory),
+    needsInitialPersonalLoadout: false,
   }
   if (maxima) applyDerivedStaminaMax(state.stamina, maxima.maxStamina)
   return state
@@ -168,6 +186,8 @@ export function createNpcAuthoritativeState(
     activePlan: null,
     postDeath: null,
     temporaryConditions: createEmptyTemporaryConditions(),
+    personalInventory: new Inventory(),
+    needsInitialPersonalLoadout: true,
   }
 }
 
@@ -186,8 +206,8 @@ export type NpcStateRegistry = {
   getOrCreate: (id: NpcId, needOffset: number, maxima?: NpcPhysicalMaxima) => NpcAuthoritativeState
   get: (id: NpcId) => NpcAuthoritativeState | undefined
   clear: () => void
-  /** Plain-data snapshot of every NPC state created so far — see
-   *  `NpcStateSnapshot`'s doc comment. */
+  /** Plain-data snapshot of every NPC state created so far — used for both
+   *  in-session `WorldBundle` rebuild and `SaveData.npcStates`. */
   serialize: () => Record<NpcId, NpcStateSnapshot>
 }
 
@@ -224,6 +244,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           activePlan: state.activePlan,
           postDeath: cloneNpcPostDeath(state.postDeath),
           temporaryConditions: snapshotTemporaryConditions(state.temporaryConditions),
+          personalInventory: snapshotInventoryContents(state.personalInventory),
         }
       }
       return out

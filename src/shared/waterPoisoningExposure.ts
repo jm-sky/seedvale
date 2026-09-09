@@ -1,9 +1,9 @@
-import { createSeededRandom } from '../world/parseSeed'
 import type { WaterSource } from '../world/WaterSource'
+import { createSeededRandom } from '../world/parseSeed'
 import {
   applyPoisoningExposure,
-  UNSAFE_WATER_POISONING_EXPOSURE_CHANCE,
   type TemporaryConditionsState,
+  UNSAFE_WATER_POISONING_EXPOSURE_CHANCE,
 } from './temporaryConditions'
 
 /**

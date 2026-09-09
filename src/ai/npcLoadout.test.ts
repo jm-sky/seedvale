@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Inventory } from '../items/Inventory'
 import { resolveNpcAmmoKind, resolveNpcMeleeWeapon, resolveNpcRangedWeapon } from './npcCombat'
-import { defaultWeaponForRole, ensureKnifeCarried, isNpcLoadoutBelonging, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
+import { defaultWeaponForRole, ensureKnifeCarried, isNpcLoadoutBelonging, seedDefaultRoleWeapon, seedHunterStartingArrows, seedHunterSupplies, seedInitialPersonalBelongingsIfNeeded } from './npcLoadout'
 
 describe('defaultWeaponForRole', () => {
   it('maps roles to their default melee weapon', () => {
@@ -109,5 +109,35 @@ describe('isNpcLoadoutBelonging (plan npc-010)', () => {
     expect(isNpcLoadoutBelonging('arrow', 'hunter')).toBe(false)
     expect(isNpcLoadoutBelonging('hunting_bow', 'hunter')).toBe(true)
     expect(isNpcLoadoutBelonging('knife', 'hunter')).toBe(true)
+  })
+})
+
+describe('seedInitialPersonalBelongingsIfNeeded (plan settlements-npcs-026)', () => {
+  it('seeds role belongings once on first creation and never reseeds', () => {
+    const inventory = new Inventory()
+    const state = { needsInitialPersonalLoadout: true }
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'woodcutter', state)
+    expect(inventory.holdsAny('axe')).toBe(true)
+    expect(inventory.holdsAny('knife')).toBe(true)
+    expect(state.needsInitialPersonalLoadout).toBe(false)
+    const axeCount = inventory.countInstances('axe')
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'woodcutter', state)
+    expect(inventory.countInstances('axe')).toBe(axeCount)
+  })
+
+  it('does not seed a restored empty inventory (legacy save)', () => {
+    const inventory = new Inventory()
+    const state = { needsInitialPersonalLoadout: false }
+    seedInitialPersonalBelongingsIfNeeded(inventory, 'guard', state)
+    expect(inventory.isEmpty()).toBe(true)
+  })
+})
+
+describe('seedHunterStartingArrows', () => {
+  it('adds starting arrows to the transient carrier without a knife', () => {
+    const carried = new Inventory(undefined, 5)
+    seedHunterStartingArrows(carried)
+    expect(carried.count('arrow')).toBe(6)
+    expect(carried.holdsAny('knife')).toBe(false)
   })
 })

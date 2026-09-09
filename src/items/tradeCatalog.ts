@@ -1,7 +1,7 @@
-import { isTrapItemInstance, type ItemInstance } from './itemInstances'
-import { ITEM_DEFS, type ItemKind } from './items'
 import type { RelationLevel } from '../quests/quests'
 import { NEUTRAL_REPUTATION, type Reputation } from '../reputation/ReputationManager'
+import { isTrapItemInstance, type ItemInstance } from './itemInstances'
+import { ITEM_DEFS, type ItemKind } from './items'
 import { trapConditionRatio } from './trapItemInstances'
 
 /**
@@ -219,9 +219,9 @@ function clamp(value: number, min: number, max: number): number {
 export function relationshipEffect(context: SellPriceContext): number {
   if (context.relation >= 0) {
     switch (context.relationLevel) {
-      case 'trusted': return 0.05
-      case 'friendly': return 0.03
       case 'acquainted': return 0.01
+      case 'friendly': return 0.03
+      case 'trusted': return 0.05
       default: return 0
     }
   }

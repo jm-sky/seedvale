@@ -92,13 +92,31 @@ export function toSaveItemInstance(instance: ItemInstance): SaveItemInstance {
 
 export type { FoodBatch, FoodSourceSpecies } from './foodFreshness'
 
+/**
+ * Persisted contents of a generic `Inventory` — counts, item-instance state
+ * (including liquid-container fill) and optional perishable food batches.
+ * Capacity (`maxWeight`/`maxSize`) and decay modifier are runtime
+ * configuration and are never stored here. Shared by household items, NPC
+ * personal inventory, and any other owner that round-trips a full `Inventory`.
+ */
+export type InventoryContentsSnapshot = {
+  counts: Partial<Record<ItemKind, number>>
+  instances: readonly SaveItemInstance[]
+  foodBatches?: Partial<Record<ItemKind, readonly FoodBatch[]>>
+}
+
+export const EMPTY_INVENTORY_CONTENTS: InventoryContentsSnapshot = {
+  counts: {},
+  instances: [],
+}
+
 /** Generic item carrier: counters + a weight limit. Originally player-only;
- *  reused by `NpcAgent` (plan 131) as a brief hold between extracting a
- *  world resource and delivering it, not a persistent belongings system. The
- *  player's own instance is in-memory + persisted via `toJSON()`/the
- *  constructor's `initial` param — see `persistence/saveData.ts`.
- *  `maxWeight` itself is never persisted (derived on every load) — see plan
- *  `043` §3/§11.
+ *  reused by `NpcAgent` as a brief logistics hold (plan 131) and as the
+ *  authoritative NPC personal-belongings store on `NpcAuthoritativeState`
+ *  (plan settlements-npcs-026). The player's own instance is in-memory +
+ *  persisted via `toJSON()`/the constructor's `initial` param — see
+ *  `persistence/saveData.ts`. `maxWeight` itself is never persisted
+ *  (derived on every load) — see plan `043` §3/§11.
  *
  * @domain items-player
  * @system inventory
@@ -545,6 +563,33 @@ export class Inventory {
     }
     return out
   }
+}
+
+/** Plain-data contents of `inventory` for save/rebuild snapshots. */
+export function snapshotInventoryContents(inventory: Inventory): InventoryContentsSnapshot {
+  return {
+    counts: inventory.toJSON(),
+    instances: inventory.instancesToJSON(),
+    foodBatches: inventory.foodBatchesToJSON(),
+  }
+}
+
+/** Restores an `Inventory` from a contents snapshot. Missing/legacy snapshot
+ *  yields an empty inventory. Callers pass capacity/decay for the owner. */
+export function inventoryFromContents(
+  snapshot?: InventoryContentsSnapshot,
+  maxWeight?: number,
+  maxSize?: number,
+  decayModifier?: number,
+): Inventory {
+  return new Inventory(
+    snapshot?.counts,
+    maxWeight,
+    snapshot ? Inventory.instancesFromJSON(snapshot.instances) : undefined,
+    snapshot?.foodBatches,
+    maxSize,
+    decayModifier,
+  )
 }
 
 /** Toast text for a failed `canAdd`/`canAddInstance` — picks wording by

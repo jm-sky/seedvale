@@ -220,7 +220,7 @@ import {
   resolveNpcRangedWeapon,
 } from './npcCombat'
 import { decideNpcAction, type NpcDecisionKind, scoreNpcDecisions, shouldInterruptAction } from './npcDecision'
-import { ensureKnifeCarried, seedDefaultRoleWeapon, seedHunterSupplies } from './npcLoadout'
+import { seedHunterStartingArrows, seedInitialPersonalBelongingsIfNeeded } from './npcLoadout'
 import {
   canDeliverToPlayerStorage,
   canExchangeWithHousehold,
@@ -891,6 +891,10 @@ export class NpcAgent {
   readonly health: HealthState
   readonly stamina: StaminaState
   readonly vigor: VigorState
+  /** Authoritative personal belongings — the same `Inventory` object as
+   *  `npcState.personalInventory`, not a copy. Survives reconstruction.
+   *  Distinct from private `carried` work cargo (plan settlements-npcs-026). */
+  readonly personalInventory: Inventory
   /** `null` only when the role's landmark doesn't exist for this settlement
    *  (e.g. a `woodcutter` with no trees yet) — see `places.ts`'s
    *  `workplaceFor`. Consumed by `beginIdle()`'s `work` scheduled activity. */
@@ -1216,8 +1220,9 @@ export class NpcAgent {
   private dayLengthSec = 600
   /** Generic item carrier reused from the player's own `Inventory` (plan
    *  131) — an NPC's brief hold between extracting a world resource (ore) and
-   *  delivering it, not a persistent belongings system. Small capacity: one
-   *  extraction's worth of ore is all it ever needs to hold at once. */
+   *  delivering it, not persistent personal belongings. Small capacity: one
+   *  extraction's worth of ore is all it ever needs to hold at once. Role
+   *  weapons live on `personalInventory`. */
   private readonly carried = new Inventory(undefined, NPC_CARRY_MAX_WEIGHT)
   /** Relation level + standing/reputation/renown lookup, by NPC name — keeps
    *  `NpcAgent` quest/reputation-agnostic (injected from `createApp.ts` via
@@ -1341,10 +1346,10 @@ export class NpcAgent {
     this.gender = character.gender
     this.voiceActor = voiceActorForIndex(this.gender, treeIndex)
     this.role = character.role
+    this.personalInventory = npcState.personalInventory
     if (!npcState.health.dead) {
-      seedDefaultRoleWeapon(this.carried, this.role)
-      if (this.role === 'hunter') seedHunterSupplies(this.carried)
-      if (this.role === 'woodcutter') ensureKnifeCarried(this.carried)
+      seedInitialPersonalBelongingsIfNeeded(this.personalInventory, this.role, npcState)
+      if (this.role === 'hunter') seedHunterStartingArrows(this.carried)
     }
     this.traits = character.traits
     this.personality = character.personality
@@ -1761,7 +1766,7 @@ export class NpcAgent {
     if (this.health.dead) {
       commitNpcDeath({
         state: this.npcState,
-        carried: this.carried,
+        personalInventory: this.personalInventory,
         role: this.role,
         x: this.mesh.position.x,
         z: this.mesh.position.z,
@@ -1779,7 +1784,7 @@ export class NpcAgent {
 
   /** Incoming combat damage (plan 177 §8/§10 — `animal → NPC`, `NPC → NPC`,
    *  `player → NPC` all share this one entry point): resolves this NPC's own
-   *  defense (whatever `carried` currently exposes) before the HP loss
+   *  defense (whatever `personalInventory` currently exposes) before the HP loss
    *  itself goes through the same `takeDamage()` every other damage source
    *  uses. Returns the resolved outcome so a caller (e.g. a future
    *  animal-attack decision) can react (retaliate, flee) without
@@ -1797,7 +1802,7 @@ export class NpcAgent {
     this.defenseAttempt += 1
     const resolved = resolveIncomingNpcDamage({
       amount: params.amount,
-      carried: this.carried,
+      carried: this.personalInventory,
       defenderId: this.id,
       defenderX: this.mesh.position.x,
       defenderZ: this.mesh.position.z,
@@ -1811,13 +1816,13 @@ export class NpcAgent {
     return resolved
   }
 
-  /** Diagnostic-only: whether `carried` currently has a weapon this NPC
+  /** Diagnostic-only: whether `personalInventory` currently has a weapon this NPC
    *  could fight back with — same melee/loaded-ranged capability check
    *  `reactToAnimalThreat`/`beginCombat` already use, exposed read-only for
    *  `?debug=1&debugNpcCombat=1` combat logging (no side effect). */
   canFightBack(): boolean {
-    if (resolveNpcMeleeWeapon(this.carried)) return true
-    const rangedWeapon = resolveNpcRangedWeapon(this.carried)
+    if (resolveNpcMeleeWeapon(this.personalInventory)) return true
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
     return rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
   }
 
@@ -1877,7 +1882,7 @@ export class NpcAgent {
    *  `beginCollapseSleep`/`interruptCurrentAction` already do for their own
    *  transitions) and replaces the shared `actionLifecycle`. Returns `false`
    *  without any side effect — no combat starts — when the target is
-   *  already invalid, or this NPC has no carried weapon matching
+   *  already invalid, or this NPC has no personal weapon matching
    *  `intent.mode` (plan 177 §6/§7: "no config → combat attack cannot
    *  start", never a silent fallback to the other mode). Ranged additionally
    *  requires at least one compatible ammo unit already carried — a bow with
@@ -1889,10 +1894,10 @@ export class NpcAgent {
     let meleeWeapon: NpcMeleeWeapon | null = null
     let rangedWeapon: NpcRangedWeapon | null = null
     if (intent.mode === 'melee') {
-      meleeWeapon = resolveNpcMeleeWeapon(this.carried)
+      meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory)
       if (!meleeWeapon) return false
     } else {
-      rangedWeapon = resolveNpcRangedWeapon(this.carried)
+      rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
       if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
     }
 
@@ -2123,13 +2128,13 @@ export class NpcAgent {
    *  → decision flow (plan 179 §7/§8/§9/§10) — the threat is a situation;
    *  `decideAnimalThreatResponse` (same `pickHighestScore` shape as every
    *  other scored decision in this codebase) picks `defend` or `flee` from
-   *  this NPC's own carried-weapon capability and health, exactly like
+   *  this NPC's own personal-weapon capability and health, exactly like
    *  `pickNeed` scores ordinary needs. `defend` hands off to the existing
    *  177 `beginCombat()`; `flee` reuses the existing `wander` phase/movement
    *  pipeline — no new combat or flee system. */
   private reactToAnimalThreat(threat: ImmediateAnimalThreat): void {
-    const meleeWeapon = resolveNpcMeleeWeapon(this.carried)
-    const rangedWeapon = resolveNpcRangedWeapon(this.carried)
+    const meleeWeapon = resolveNpcMeleeWeapon(this.personalInventory)
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
     const hasRanged = rangedWeapon != null && resolveNpcAmmoKind(this.carried, rangedWeapon.ranged) != null
     const healthRatio = this.health.maxHp > 0 ? this.health.currentHp / this.health.maxHp : 0
     const decision = decideAnimalThreatResponse({
@@ -3715,7 +3720,7 @@ export class NpcAgent {
         this.carried.add('arrow', available)
       }
     }
-    const rangedWeapon = resolveNpcRangedWeapon(this.carried)
+    const rangedWeapon = resolveNpcRangedWeapon(this.personalInventory)
     if (!rangedWeapon || !resolveNpcAmmoKind(this.carried, rangedWeapon.ranged)) return false
     const target = hunting.queryTarget(this.mesh.position.x, this.mesh.position.z, HUNT_SEARCH_RADIUS)
     if (!target) return false

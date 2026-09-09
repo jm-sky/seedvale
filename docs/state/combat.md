@@ -4,7 +4,7 @@
 
 **Not:** the per-item stat tables (damage/range/timings — that's [items/WEAPONS.md](../items/WEAPONS.md) and [items/CATALOG.md](../items/CATALOG.md)), NPC life/economy outside of combat (that's [SETTLEMENTS.md](../state/settlements.md)), or a plan. Combat spans the `items-player`, `settlements-npcs` and `fauna` plan domains at once, which is why it lives here rather than folded into one of them.
 
-**Last verified:** 2026-09-07
+**Last verified:** 2026-09-09
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -47,9 +47,9 @@ A shot that reaches `maxDistance` without a hit becomes an ordinary dropped-item
 
 ## NPC combat (plan 177)
 
-`NpcAgent` gained a `combat` `Phase`, driven from its own `update()` cadence — there is no second `NpcCombatManager`/loop. `beginCombat(intent: CombatIntent)`/`cancelCombat()` starts/stops it; `NpcAgent` never picks its own target, reason to fight, or weapon mode — `CombatIntent { target, mode: 'melee' | 'ranged' }` is always supplied by an external decision system (below). `src/ai/npcCombat.ts` resolves the attacking/defending item and ammo straight from `NpcAgent.carried` — there is no separate NPC equipment system. Each `NpcAgent` owns at most one in-flight `Projectile` on itself for ranged attacks (mirrors `combatAttack` already being a per-agent field), so it needs no camera/player/gameLoop involvement and no shared world projectile registry.
+`NpcAgent` gained a `combat` `Phase`, driven from its own `update()` cadence — there is no second `NpcCombatManager`/loop. `beginCombat(intent: CombatIntent)`/`cancelCombat()` starts/stops it; `NpcAgent` never picks its own target, reason to fight, or weapon mode — `CombatIntent { target, mode: 'melee' | 'ranged' }` is always supplied by an external decision system (below). `src/ai/npcCombat.ts` resolves the attacking/defending item straight from `NpcAgent.personalInventory` and ammo from transient `NpcAgent.carried` — there is no separate NPC equipment-slot system. Each `NpcAgent` owns at most one in-flight `Projectile` on itself for ranged attacks (mirrors `combatAttack` already being a per-agent field), so it needs no camera/player/gameLoop involvement and no shared world projectile registry.
 
-NPC role-based carried weapons (plan 185): `src/ai/npcLoadout.ts`'s `defaultWeaponForRole()` seeds `carried` once at `NpcAgent` construction — `woodcutter → axe`, `guard → long_sword`, `farmer → knife`; `trader`/`miner`/`fisher` stay unarmed (no existing item justifies a default for them). Before this plan, nothing ever put a weapon into `carried`, so the combat resolution above was reachable but never actually armed.
+NPC role-based personal weapons (plan 185 / settlements-npcs-026): `src/ai/npcLoadout.ts`'s `seedInitialPersonalBelongingsIfNeeded()` seeds `personalInventory` once at genuine first creation of authoritative NPC state — `woodcutter → axe` (+ knife), `guard → long_sword`, `hunter → hunting_bow` (+ knife), other roles → knife. Reconstruction and legacy saves never reseed from role/profession. Hunter starting arrows remain transient `carried` work supply.
 
 ## Fauna outgoing attacks
 
@@ -59,7 +59,7 @@ NPC role-based carried weapons (plan 185): `src/ai/npcLoadout.ts`'s `defaultWeap
 
 `AnimalAgent` gained runtime-only `frenzied`/`strategicVillage` state (`setFrenzied()`, debug-only trigger — no new species/FSM/save field). Frenzy feeds the existing predator-human decision as `provoked: provokedTimer > 0 || frenzied`, reusing the same retaliation branch a player-provoked wolf already uses; a frenzied predator can also target a nearby NPC through the same scoring function.
 
-On the NPC side, `src/ai/npcAnimalThreat.ts` (`senseImmediateAnimalThreat()`/`decideAnimalThreatResponse()`) is a small threat→`defend`/`flee` decision from carried-weapon capability + health, wired ahead of `NpcAgent.update()`'s phase switch so an NPC reacts *before* taking damage. `defend` calls `beginCombat()` with `fauna/faunaCombat.ts`'s `combatTargetForAnimal()`; `flee` reuses the existing wander/movement pipeline. This animal-defense path was the first live caller of `beginCombat()`; Hunter (plan 178, below) is the second — bandit AI remains a future caller with no decision framework yet.
+On the NPC side, `src/ai/npcAnimalThreat.ts` (`senseImmediateAnimalThreat()`/`decideAnimalThreatResponse()`) is a small threat→`defend`/`flee` decision from personal-weapon capability + health, wired ahead of `NpcAgent.update()`'s phase switch so an NPC reacts *before* taking damage. `defend` calls `beginCombat()` with `fauna/faunaCombat.ts`'s `combatTargetForAnimal()`; `flee` reuses the existing wander/movement pipeline. This animal-defense path was the first live caller of `beginCombat()`; Hunter (plan 178, below) is the second — bandit AI remains a future caller with no decision framework yet.
 
 ## Hunter ranged combat (plan 178)
 

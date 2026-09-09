@@ -6,7 +6,7 @@ import {
   sellInstancesForCoins,
   settleTransaction,
 } from './trade'
-import { BROKEN_SELL_MULTIPLIER, BASE_SELL_FACTOR, resolveInstanceSellPrice, roundSellPrice, tradeValue } from './tradeCatalog'
+import { BASE_SELL_FACTOR, BROKEN_SELL_MULTIPLIER, resolveInstanceSellPrice, roundSellPrice, tradeValue } from './tradeCatalog'
 import { createTrapInstance } from './trapItemInstances'
 
 describe('trap instance trade (plan 155)', () => {

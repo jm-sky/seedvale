@@ -1,7 +1,7 @@
 # Plan: NPC personal inventory and persistent belongings
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none
@@ -9,6 +9,7 @@
 **Subdomains:** `logistics` `household`
 **Tags:** `npc-inventory` `ownership` `persistence` `equipment`
 **Roadmap:** `quests-abandoned-gold-mine-colony.md`
+**Implemented at:** 2026-09-09 09:17
 
 ## Goal
 

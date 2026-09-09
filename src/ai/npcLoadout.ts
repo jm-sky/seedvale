@@ -60,7 +60,31 @@ const HUNTER_STARTING_ARROWS = 6
  *  (a ranged weapon and a harvesting tool), not one. */
 export function seedHunterSupplies(carried: Inventory): void {
   ensureKnifeCarried(carried)
+  seedHunterStartingArrows(carried)
+}
+
+/** Starting ammo a fresh hunter holds as work supply, not a personal
+ *  belonging (`isNpcLoadoutBelonging` excludes arrows). Reseeded onto
+ *  transient `carried` after reconstruction — unlike personal weapons. */
+export function seedHunterStartingArrows(carried: Inventory): void {
   if (carried.count('arrow') === 0) carried.add('arrow', HUNTER_STARTING_ARROWS)
+}
+
+/**
+ * Seeds role weapons/knife into authoritative personal inventory once, on
+ * genuine first NPC-state creation (plan settlements-npcs-026). Snapshot
+ * restore leaves `needsInitialPersonalLoadout` false so legacy saves stay
+ * empty and reconstruction never reseeds.
+ */
+export function seedInitialPersonalBelongingsIfNeeded(
+  inventory: Inventory,
+  role: Role,
+  state: { needsInitialPersonalLoadout: boolean },
+): void {
+  if (!state.needsInitialPersonalLoadout) return
+  seedDefaultRoleWeapon(inventory, role)
+  if (role === 'hunter' || role === 'woodcutter') ensureKnifeCarried(inventory)
+  state.needsInitialPersonalLoadout = false
 }
 
 /** Whether `kind` is this role's personal loadout belonging (plan npc-010) —

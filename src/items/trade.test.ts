@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { RelationLevel } from '../quests/quests'
+import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 import { Inventory } from './Inventory'
-import { createWeaponInstance } from './weaponMaintenance'
 import {
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
@@ -18,12 +19,11 @@ import {
   resolveInstanceSellPrice,
   roundSellPrice,
   sellPrice,
-  tradeValue,
   type SellPriceContext,
+  tradeValue,
 } from './tradeCatalog'
-import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
-import type { RelationLevel } from '../quests/quests'
 import { createTrapInstance } from './trapItemInstances'
+import { createWeaponInstance } from './weaponMaintenance'
 
 function makeContext(overrides: Partial<SellPriceContext> & { reputation?: Partial<SellPriceContext['reputation']> } = {}): SellPriceContext {
   return {

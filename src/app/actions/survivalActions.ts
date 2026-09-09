@@ -47,11 +47,11 @@ import {
 import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
 import { damageHealth, healHealth } from '../../shared/HealthState'
 import { applyConditionTreatment } from '../../shared/temporaryConditions'
+import { drainVigor } from '../../shared/VigorState'
 import {
   tryApplyUnsafeWaterPoisoningExposure,
   waterPoisoningExposureEventRoll,
 } from '../../shared/waterPoisoningExposure'
-import { drainVigor } from '../../shared/VigorState'
 import { createSeededRandom } from '../../world/parseSeed'
 import {
   DRINK_THIRST_RELIEF,

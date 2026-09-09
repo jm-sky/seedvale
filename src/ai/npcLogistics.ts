@@ -45,8 +45,9 @@ export const HOUSEHOLD_EXCHANGE_MAX_TRANSFER: Record<HouseholdResourceKind, numb
  *  as a plain, non-species-specific staple (catalog notes: "prepared for
  *  future/emergency use"), so this reuses it rather than widening
  *  `HelperDeliveryHooks.deposit` to a per-kind list. One trip moves at most
- *  `HELPER_DELIVERY_MAX_CARRY` units — comfortably under
- *  `NPC_CARRY_MAX_WEIGHT` alongside this NPC's role weapon. */
+   *  `HELPER_DELIVERY_MAX_CARRY` units — comfortably under
+   *  `NPC_CARRY_MAX_WEIGHT` as work cargo. Role weapons live on personal
+   *  inventory, not this logistics carrier. */
 export const HELPER_DELIVERY_ITEM_KIND: ItemKind = 'bread'
 export const HELPER_DELIVERY_MAX_CARRY = 3
 

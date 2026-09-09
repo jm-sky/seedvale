@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { createFoodBatch } from '../items/foodFreshness'
+import { createLiquidContainerInstance, fillLiquidContainer } from '../items/liquidContainer'
+import { createWeaponInstance } from '../items/weaponMaintenance'
 import { damageHealth } from '../shared/HealthState'
 import { createNpcAuthoritativeState, createNpcStateRegistry } from './npcState'
 
@@ -173,5 +176,97 @@ describe('createNpcStateRegistry', () => {
     expect(rehydrated.health.maxHp).toBe(88)
     expect(rehydrated.stamina.max).toBe(77)
     expect(rehydrated.vigor.max).toBe(66)
+  })
+})
+
+describe('NpcAuthoritativeState personalInventory (plan settlements-npcs-026)', () => {
+  it('gives every new NPC a distinct empty Inventory', () => {
+    const a = createNpcAuthoritativeState('npc:0', 0)
+    const b = createNpcAuthoritativeState('npc:1', 1)
+    expect(a.personalInventory.isEmpty()).toBe(true)
+    expect(b.personalInventory.isEmpty()).toBe(true)
+    expect(a.personalInventory).not.toBe(b.personalInventory)
+    expect(a.needsInitialPersonalLoadout).toBe(true)
+  })
+
+  it('repeated getOrCreate returns the same personal inventory object without reseeding', () => {
+    const registry = createNpcStateRegistry()
+    const first = registry.getOrCreate('0_0:npc:0', 0)
+    const knife = createWeaponInstance('knife')
+    expect(first.personalInventory.addInstance(knife)).toBe(true)
+    first.needsInitialPersonalLoadout = false
+
+    const again = registry.getOrCreate('0_0:npc:0', 0)
+    expect(again).toBe(first)
+    expect(again.personalInventory).toBe(first.personalInventory)
+    expect(again.personalInventory.getInstance(knife.id)?.id).toBe(knife.id)
+    expect(again.personalInventory.countInstances('knife')).toBe(1)
+  })
+
+  it('two npc ids never share inventory contents by object aliasing', () => {
+    const registry = createNpcStateRegistry()
+    const a = registry.getOrCreate('0_0:npc:0', 0)
+    const b = registry.getOrCreate('0_0:npc:1', 1)
+    a.personalInventory.add('stone', 2)
+    expect(b.personalInventory.count('stone')).toBe(0)
+    expect(a.personalInventory).not.toBe(b.personalInventory)
+  })
+
+  it('serialize → createNpcStateRegistry preserves plain counts', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.personalInventory.add('dried_meat', 3)
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.personalInventory).not.toBe(state.personalInventory)
+    expect(hydrated.personalInventory.count('dried_meat')).toBe(3)
+    expect(hydrated.needsInitialPersonalLoadout).toBe(false)
+  })
+
+  it('round-trip preserves weapon instance id, condition and waterskin liquid', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    const knife = createWeaponInstance('knife')
+    knife.durability = 0.4
+    knife.sharpness = 0.7
+    expect(state.personalInventory.addInstance(knife)).toBe(true)
+    const filled = fillLiquidContainer(createLiquidContainerInstance('waterskin_small'), 'water')
+    expect(filled).not.toBeNull()
+    expect(state.personalInventory.addInstance(filled!)).toBe(true)
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    const restoredKnife = hydrated.personalInventory.getInstance(knife.id)
+    expect(restoredKnife).toMatchObject({ id: knife.id, kind: 'knife', durability: 0.4, sharpness: 0.7 })
+    const restoredSkin = hydrated.personalInventory.getInstance(filled!.id)
+    expect(restoredSkin).toMatchObject({ id: filled!.id, kind: 'waterskin_small', liquid: 'water', amountLitres: 2 })
+  })
+
+  it('round-trip preserves food batches / provenance / decay', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    const batch = createFoodBatch(2, 3, 1, 'boar')
+    expect(state.personalInventory.addWithFreshness('raw_meat', 2, [batch], 4)).toBe(true)
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    const restored = hydrated.personalInventory.getFoodBatches('raw_meat', 4)
+    expect(hydrated.personalInventory.count('raw_meat')).toBe(2)
+    expect(restored[0]).toMatchObject({
+      count: 2,
+      acquiredAtDays: 3,
+      sourceSpecies: 'boar',
+    })
+  })
+
+  it('legacy snapshot without personalInventory restores empty and does not latch a loadout seed', () => {
+    const registry = createNpcStateRegistry({
+      '0_0:npc:0': {
+        health: { current: 80, max: 100, dead: false },
+        stamina: { current: 100, max: 100 },
+        vigor: { current: 100, max: 100 },
+        needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+      },
+    })
+    const state = registry.getOrCreate('0_0:npc:0', 0)
+    expect(state.personalInventory.isEmpty()).toBe(true)
+    expect(state.needsInitialPersonalLoadout).toBe(false)
   })
 })

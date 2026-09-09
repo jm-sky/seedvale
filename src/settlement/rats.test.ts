@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ratNormalPopulationTarget,
-  ratPopulationTarget,
   RAT_INFESTATION_FLOOR,
   RAT_INFESTATION_PRESSURE_BONUS,
   RAT_POPULATION_CAP,
+  ratNormalPopulationTarget,
+  ratPopulationTarget,
 } from './rats'
 
 describe('ratPopulationTarget (plan fauna-016 §7 — settlement rat pressure)', () => {

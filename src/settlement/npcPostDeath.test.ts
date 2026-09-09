@@ -86,7 +86,7 @@ describe('extractNpcLoadoutLoot / commitNpcDeath', () => {
     damageHealth(state.health, state.health.maxHp)
 
     expect(commitNpcDeath({
-      state, carried, role: 'farmer', x: 3, z: 5, yaw: 0.4, nowDays: 1.5,
+      state, personalInventory: carried, role: 'farmer', x: 3, z: 5, yaw: 0.4, nowDays: 1.5,
     })).toBe(true)
     expect(state.postDeath?.status).toBe('active')
     expect(state.postDeath?.x).toBe(3)
@@ -97,7 +97,7 @@ describe('extractNpcLoadoutLoot / commitNpcDeath', () => {
     const extra = new Inventory(undefined, 20)
     extra.addInstance(createWeaponInstance('knife'))
     expect(commitNpcDeath({
-      state, carried: extra, role: 'farmer', x: 99, z: 99, yaw: 0, nowDays: 9,
+      state, personalInventory: extra, role: 'farmer', x: 99, z: 99, yaw: 0, nowDays: 9,
     })).toBe(false)
     expect(state.postDeath?.x).toBe(3)
     expect(state.postDeath?.loot.instances).toHaveLength(1)

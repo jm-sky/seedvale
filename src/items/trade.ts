@@ -14,11 +14,11 @@ import { createLiquidContainerInstance } from './liquidContainer'
 import {
   canSell,
   merchantPrice,
-  resolveInstanceSellPrice,
-  type SellPriceContext,
-  sellPrice,
-  tradeValue,
   NEUTRAL_SELL_PRICE_CONTEXT,
+  resolveInstanceSellPrice,
+  sellPrice,
+  type SellPriceContext,
+  tradeValue,
 } from './tradeCatalog'
 import { createTrapInstance, trapConditionRatio } from './trapItemInstances'
 import { createWeaponInstance } from './weaponMaintenance'

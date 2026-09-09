@@ -2,6 +2,7 @@ import type { Inventory } from '../../items/Inventory'
 import type { QuestManager } from '../../quests/QuestManager'
 import type { Hud } from '../../ui/createHud'
 import type { Toast } from '../../ui/createToast'
+import type { WorldBundle } from '../worldBundle'
 import { ITEM_DEFS } from '../../items/items'
 import {
   applyRepresentedPhysicalEffortVigor,
@@ -11,7 +12,6 @@ import {
   SETTLEMENT_STORAGE_REPAIR_BEAM_COST,
   SETTLEMENT_STORAGE_REPAIR_DURATION_SEC,
 } from '../../settlement/storageRepair'
-import type { WorldBundle } from '../worldBundle'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
 type StorageInfestationActionDeps = {

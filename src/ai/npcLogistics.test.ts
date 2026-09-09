@@ -65,6 +65,23 @@ describe('planEconomyWithdraw', () => {
     expect(economy.items.count('bread')).toBeLessThan(10)
   })
 
+  it('does not move work cargo into a separate personal inventory (plan settlements-npcs-026)', () => {
+    const economy = createSettlementEconomy('s', {}, [])
+    economy.depositFood('bread', 10)
+    const household = createHousehold('h', 's', 'home:h')
+    household.items.remove('bread', household.items.count('bread'))
+    const personalInventory = new Inventory()
+    personalInventory.add('stone', 1)
+    const ctx = baseCtx({ household, economy })
+
+    runTransfer(planEconomyWithdraw(ctx, 'food'))
+
+    expect(personalInventory.count('stone')).toBe(1)
+    expect(personalInventory.count('bread')).toBe(0)
+    expect(ctx.carried.count('bread')).toBe(0)
+    expect(household.items.count('bread')).toBeGreaterThan(0)
+  })
+
   it('preserves food batches (freshness) across the claim → carry → deposit chain', () => {
     const economy = createSettlementEconomy('s', {}, [])
     economy.depositFood('bread', 4)

@@ -4,7 +4,7 @@ import type { SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnPointState } from '../fauna/AnimalSpawner'
 import type { ContainerKind } from '../items/container'
-import type { SaveItemInstance } from '../items/Inventory'
+import type { InventoryContentsSnapshot, SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
@@ -467,7 +467,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 12
+export const CURRENT_SAVE_VERSION = 13
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -571,11 +571,13 @@ export type SaveData = {
   resourceDeposits: Record<string, number>
   workContracts: SaveWorkContract[]
   /** NPC authoritative state (health/needs/stamina/vigor/helper assignment/
-   *  active plan/post-death), keyed by stable npc id (plan persistence-001 /
-   *  npc-010) — see `settlement/npcState.ts`'s `NpcStateSnapshot`. Sparse: an
-   *  id absent here falls back to normal deterministic NPC creation. Optional
-   *  at the collection level (missing means empty); each snapshot itself is
-   *  validated against the current contract, including `postDeath`. */
+   *  active plan/post-death/personal inventory), keyed by stable npc id
+   *  (plan persistence-001 / npc-010 / settlements-npcs-026) — see
+   *  `settlement/npcState.ts`'s `NpcStateSnapshot`. Sparse: an id absent here
+   *  falls back to normal deterministic NPC creation. Optional at the
+   *  collection level (missing means empty); each snapshot itself is
+   *  validated against the current contract, including `postDeath` and
+   *  `personalInventory`. */
   npcStates?: Record<NpcId, NpcStateSnapshot>
   /** Household authoritative state (stock/water/items), keyed by stable
    *  household id (plan persistence-001) — see `settlement/household.ts`'s
@@ -1338,12 +1340,22 @@ function isNpcPlan(value: unknown): value is Record<string, unknown> {
   )
 }
 
-/** Validates one `NpcStateSnapshot` (plan persistence-001 / npc-010) —
- *  mirrors `settlement/npcState.ts`'s own shape; `physicalInjury` is
- *  optional (absent means `0`), `injuryRecoveryUpdatedAtDays` is optional
- *  (absent means initialize on first lazy resolution), same as
+function isInventoryContentsSnapshot(value: unknown): value is InventoryContentsSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const items = value as Record<string, unknown>
+  if (!items.counts || typeof items.counts !== 'object' || Array.isArray(items.counts)) return false
+  for (const amount of Object.values(items.counts as Record<string, unknown>)) {
+    if (typeof amount !== 'number') return false
+  }
+  return isSaveItemInstancesField(items.instances) && isOptionalFoodBatchesField(items.foodBatches)
+}
+
+/** Validates one `NpcStateSnapshot` (plan persistence-001 / npc-010 /
+ *  settlements-npcs-026) — mirrors `settlement/npcState.ts`'s own shape;
+ *  `physicalInjury` is optional (absent means `0`), `injuryRecoveryUpdatedAtDays`
+ *  is optional (absent means initialize on first lazy resolution), same as
  *  `helperAssignment`/`activePlan` being optional (absent means `null`).
- *  `postDeath` is required on the current schema (`null` while alive). */
+ *  `postDeath` and `personalInventory` are required on the current schema. */
 function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (!value || typeof value !== 'object') return false
   const s = value as Record<string, unknown>
@@ -1357,6 +1369,7 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
   if (s.temporaryConditions !== undefined && !isTemporaryConditionsSnapshotField(s.temporaryConditions)) return false
   if (!('postDeath' in s) || !isNpcPostDeathField(s.postDeath)) return false
+  if (!isInventoryContentsSnapshot(s.personalInventory)) return false
   return true
 }
 
@@ -1421,14 +1434,7 @@ function isHouseholdSnapshot(value: unknown): value is HouseholdSnapshot {
   }
   if (typeof h.water !== 'number') return false
   if (h.items !== undefined) {
-    if (!h.items || typeof h.items !== 'object') return false
-    const items = h.items as Record<string, unknown>
-    if (!items.counts || typeof items.counts !== 'object' || Array.isArray(items.counts)) return false
-    for (const amount of Object.values(items.counts as Record<string, unknown>)) {
-      if (typeof amount !== 'number') return false
-    }
-    if (!isSaveItemInstancesField(items.instances)) return false
-    if (!isOptionalFoodBatchesField(items.foodBatches)) return false
+    if (!isInventoryContentsSnapshot(h.items)) return false
   }
   return true
 }
@@ -1965,6 +1971,30 @@ function migrateSaveV11ToV12(data: unknown): unknown {
   }
 }
 
+/** v12 → v13 (plan settlements-npcs-026): adds empty personal inventory to
+ *  every existing NPC snapshot. Does not seed profession/role/household
+ *  equipment — legacy saves restore as empty belongings. */
+function migrateSaveV12ToV13(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const npcStates = v.npcStates
+  if (!npcStates || typeof npcStates !== 'object' || Array.isArray(npcStates)) {
+    return { ...v, version: 13 }
+  }
+  const next: Record<string, unknown> = {}
+  for (const [id, snapshot] of Object.entries(npcStates as Record<string, unknown>)) {
+    if (!snapshot || typeof snapshot !== 'object') {
+      next[id] = snapshot
+      continue
+    }
+    const s = snapshot as Record<string, unknown>
+    next[id] = {
+      ...s,
+      personalInventory: s.personalInventory ?? { counts: {}, instances: [] },
+    }
+  }
+  return { ...v, version: 13, npcStates: next }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -1977,6 +2007,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   9: migrateSaveV9ToV10,
   10: migrateSaveV10ToV11,
   11: migrateSaveV11ToV12,
+  12: migrateSaveV12ToV13,
 }
 
 function detectStoredVersion(value: unknown): number | null {

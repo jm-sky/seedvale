@@ -22,27 +22,27 @@ import {
   findRightHandSocket,
   mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
-import { createHealthState, type HealthState } from '../shared/HealthState'
 import { resolvePlayerEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
+import { applyDerivedStaminaMax, resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
+import { createHealthState, type HealthState } from '../shared/HealthState'
+import { isExhausted } from '../shared/StaminaState'
 import {
   createEmptyTemporaryConditions,
   hasActivePoisoning,
   poisoningSeverityTier,
   restoreTemporaryConditions,
-  snapshotTemporaryConditions,
   type SaveTemporaryConditionsSnapshot,
+  snapshotTemporaryConditions,
   type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
-import { applyDerivedStaminaMax, resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
-import { isExhausted } from '../shared/StaminaState'
 import { applySlopeMovementConstraint } from '../terrain/slopeConstraint'
 import { applyBarPercent, computeBarPercent, createAgentLabel, createLabelBar } from '../ui/agentStatusLabel'
 import { type Collider, colliderActiveAtY, resolvePosition } from '../world/collision'
 import { resolveCameraBoom } from './cameraBoom'
+import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
 import { computeEncumbrance } from './playerEncumbrance'
 import { createPlayerNeeds, type PlayerNeeds, tickPlayerMovementVigor, tickPlayerStamina } from './PlayerNeeds'
 import { accumulateSneakUse, applySneakSpeedModifier, createPlayerSkills, type PlayerSkills } from './PlayerSkills'
-import { humanBodyCarryCapacityKg } from './humanCarryCapacity'
 import { integrateVerticalMotion } from './verticalMotion'
 
 /** Stationary/moving/sprinting classification of the player's current

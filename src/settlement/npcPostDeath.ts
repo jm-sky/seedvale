@@ -172,18 +172,21 @@ function loadoutKindsFor(role: Role): readonly ItemKind[] {
   return matched
 }
 
-/** Moves the actual carried loadout instances onto a loot snapshot and
- *  removes them from `carried`. Work/economy payloads stay in `carried`. */
-export function extractNpcLoadoutLoot(carried: Inventory, role: Role): NpcCorpseLootSnapshot {
+/** Moves the actual personal-loadout instances onto a loot snapshot and
+ *  removes them from `personalInventory`. Work/economy payloads on
+ *  `NpcAgent.carried` stay out of this path (plan settlements-npcs-026).
+ *  Full personalInventory including food-batch freshness remains an
+ *  npc-010 follow-up — corpse loot still does not persist food batches. */
+export function extractNpcLoadoutLoot(inventory: Inventory, role: Role): NpcCorpseLootSnapshot {
   const loot = new Inventory(undefined, Infinity, undefined, undefined, Infinity)
   for (const kind of loadoutKindsFor(role)) {
-    for (const instance of carried.getInstances(kind)) {
+    for (const instance of inventory.getInstances(kind)) {
       if (!loot.addInstance(instance)) continue
-      carried.removeInstance(instance.id)
+      inventory.removeInstance(instance.id)
     }
-    const count = carried.count(kind)
+    const count = inventory.count(kind)
     if (count <= 0) continue
-    if (loot.add(kind, count)) carried.remove(kind, count)
+    if (loot.add(kind, count)) inventory.remove(kind, count)
   }
   return snapshotCorpseLoot(loot)
 }
@@ -195,7 +198,7 @@ export function extractNpcLoadoutLoot(carried: Inventory, role: Role): NpcCorpse
  */
 export function commitNpcDeath(opts: {
   state: { postDeath: NpcPostDeathState | null }
-  carried: Inventory
+  personalInventory: Inventory
   role: Role
   x: number
   z: number
@@ -208,7 +211,7 @@ export function commitNpcDeath(opts: {
     z: opts.z,
     yaw: opts.yaw,
     deathAtDays: opts.nowDays,
-    loot: extractNpcLoadoutLoot(opts.carried, opts.role),
+    loot: extractNpcLoadoutLoot(opts.personalInventory, opts.role),
   })
   return true
 }
