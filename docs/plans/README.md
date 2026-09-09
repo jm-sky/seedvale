@@ -94,7 +94,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | -       | 🟡 | S      | ~~quests-progression-001~~ |
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
 | 💡 `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
-| ◼️ `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
+| 💡 `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
 
 ---
 
