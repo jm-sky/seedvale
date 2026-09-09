@@ -55,7 +55,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | --------------------------------------------------------------------------- | ------- | --- | ------ | ------- |
 | 💡 `ui-input-010-player-quick-actions-and-primary-weapon-slots.md`          | -       | 🟡 | M      | -      |
 | 💡 `items-player-018-camp-inspection-condition-and-full-camp-setup.md`      | -       | 🟡 | L      | ui-input-010 |
-| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018 |
+| 💡 `items-player-019-player-camp-repair-and-sewing-kit.md`                  | -       | 🟡 | L      | items-player-018, items-player-021, world-021 |
 | 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                    | -       | 🟡 | M      | fauna-010, fauna-011 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                   | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`      | -       | 🔴 | M      | settlements-npcs-014 |
@@ -91,7 +91,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `items-player-020-player-built-animal-trough-and-water-storage.md`       | -       | 🟡 | M      | ~~items-player-017~~ |
 | 💡 `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
-| 💡 `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` | -       | 🔴 | M      | -      |
 | 💡 `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | -       | 🟡 | S      | ~~quests-progression-001~~ |
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
 | ◼️ `npc-028-work-contracts-multiple-workers.md`                             | -       | 🔴 | M      | ~~npc-018~~ |

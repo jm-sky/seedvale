@@ -4,7 +4,7 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** items-player-018
+**Depends on:** items-player-018, items-player-021, world-021
 **Domain:** `items-player`
 **Subdomains:** `items` `interaction` `player-needs`
 **Tags:** `repair` `camp` `condition` `tools`

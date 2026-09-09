@@ -750,6 +750,9 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `items/foodFreshness.ts`
+- `items/liquidContainer.ts`
+- `items/weaponMaintenance.ts`
 - `settlement/npcState.ts`
 - `shared/HealthState.ts`
 
@@ -761,6 +764,7 @@ Generated from TypeScript imports.
 - `ai/helperAssignment.ts`
 - `ai/npcPlan.ts`
 - `ai/npcVigor.ts`
+- `items/Inventory.ts`
 - `settlement/npcPostDeath.ts`
 - `shared/HealthState.ts`
 - `shared/StaminaState.ts`
