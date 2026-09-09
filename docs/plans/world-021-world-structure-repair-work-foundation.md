@@ -2,7 +2,7 @@
 
 **Created:** 2026-09-09
 **Status:** `verification needed` 🔍
-**Implemented at:** 2026-09-09
+**Implemented at:** 2026-09-09 12:41
 **Priority:** high · **Effort:** M
 **Depends on:** ~~world-020~~
 **Domain:** `world`  

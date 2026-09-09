@@ -2,7 +2,7 @@
 
 **Created:** 2026-09-09
 **Status:** `verification needed` 🔍
-**Implemented at:** 2026-09-09
+**Implemented at:** 2026-09-09 12:17
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~items-player-018~~

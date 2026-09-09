@@ -30,6 +30,12 @@ Generated from TypeScript imports.
 - `input/enableTouchScroll.ts`
 - `input/isTouchDevice.ts`
 
+## `ui-vue/flavorDialogLifecycle.test.ts`
+
+**Imports**
+
+- `ui-vue/store.ts`
+
 ## `ui-vue/lib/drawMap.ts`
 
 **Imports**
@@ -170,6 +176,7 @@ Generated from TypeScript imports.
 - `app/dialogueTimeControl.ts`
 - `app/inventoryWiring.ts`
 - `ui-vue/composables/useOverlayScreen.ts`
+- `ui-vue/flavorDialogLifecycle.test.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/playerQuickActions.test.ts`
 - `ui-vue/playerQuickActions.ts`

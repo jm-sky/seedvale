@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-005-residential-house-construction`                       | 2026-09-09 13:36:12 | —                   | `settlements`    | —          |
 | `world-021-world-structure-repair-work-foundation`                     | 2026-09-09 12:41:36 | —                   | `world`          | —          |
 | `quests-progression-006-settlement-rat-infestation`                    | 2026-09-09 12:30:04 | —                   | `quests-progression` | —          |
 | `world-020-world-structure-condition-and-degradation`                  | 2026-09-09 12:17:59 | —                   | `world`          | —          |
