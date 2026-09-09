@@ -59,29 +59,29 @@ describe('createPlayerWells', () => {
     const { wells } = setup()
     const record = wells.place(0, 0, 0)
     const half = pitHoursFor(0, 0) / 2
-    expect(wells.addWork(record.id, half)).toBe(true)
+    expect(wells.addWork(record.id, half, 0)).toBe(true)
     expect(wells.nodes()[0]!.workProgress).toBe(half)
-    expect(wells.addWork(record.id, half)).toBe(true)
+    expect(wells.addWork(record.id, half, 0)).toBe(true)
     expect(wells.nodes()[0]!.workProgress).toBe(half * 2)
   })
 
   it('addWork on an unknown id is a no-op returning false', () => {
     const { wells } = setup()
-    expect(wells.addWork('nope', 1)).toBe(false)
+    expect(wells.addWork('nope', 1, 0)).toBe(false)
   })
 
   it('addWork never drives progress negative', () => {
     const { wells } = setup()
     const record = wells.place(0, 0, 0)
-    wells.addWork(record.id, 0.2)
-    wells.addWork(record.id, -5)
+    wells.addWork(record.id, 0.2, 0)
+    wells.addWork(record.id, -5, 0)
     expect(wells.nodes()[0]!.workProgress).toBe(0)
   })
 
   it('transitionTo resets progress to 0 and swaps the stage mesh', () => {
     const { wells } = setup()
     const record = wells.place(0, 0, 0)
-    wells.addWork(record.id, pitHoursFor(0, 0))
+    wells.addWork(record.id, pitHoursFor(0, 0), 0)
     const pitMesh = wells.list()[0]!.mesh
     expect(wells.transitionTo(record.id, 'well')).toBe(true)
     const entry = wells.list()[0]!
@@ -107,7 +107,7 @@ describe('createPlayerWells', () => {
   it('nearestCompleted ignores a well whose body work is unfinished', () => {
     const { wells } = setup()
     const record = wells.place(0, 0, 0)
-    wells.addWork(record.id, pitHoursFor(0, 0))
+    wells.addWork(record.id, pitHoursFor(0, 0), 0)
     wells.transitionTo(record.id, 'well')
     // No work done on the `well` stage yet — body not finished, no water.
     expect(wells.nearestCompleted(0, 0, 100)).toBeNull()
@@ -116,9 +116,9 @@ describe('createPlayerWells', () => {
   it('nearestCompleted finds a well once its body (well-stage) work is done, even before the roof', () => {
     const { wells } = setup()
     const record = wells.place(3, 4, 0)
-    wells.addWork(record.id, pitHoursFor(3, 4))
+    wells.addWork(record.id, pitHoursFor(3, 4), 0)
     wells.transitionTo(record.id, 'well')
-    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well)
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well, 0)
     // Still in the `well` stage — roof not started — but already a water source.
     expect(isWellCompleted(wells.nodes()[0]!)).toBe(false)
     const nearest = wells.nearestCompleted(0, 0, 100)
@@ -128,13 +128,53 @@ describe('createPlayerWells', () => {
   it('nearestCompleted still finds a fully completed (roofed) well', () => {
     const { wells } = setup()
     const record = wells.place(3, 4, 0)
-    wells.addWork(record.id, pitHoursFor(3, 4))
+    wells.addWork(record.id, pitHoursFor(3, 4), 0)
     wells.transitionTo(record.id, 'well')
-    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well)
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well, 0)
     wells.transitionTo(record.id, 'roof')
-    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.roof)
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.roof, 6)
     expect(isWellCompleted(wells.nodes()[0]!)).toBe(true)
+    expect(wells.nodes()[0]!.roofCondition).toBe(100)
+    expect(wells.nodes()[0]!.lastRoofConditionUpdateAtDays).toBe(6)
     expect(wells.nearestCompleted(0, 0, 100)).toEqual({ x: 3, y: 0, z: 4 })
+  })
+
+  it('does not initialize roof condition until the roof stage itself completes', () => {
+    const { wells } = setup()
+    const record = wells.place(0, 0, 0)
+    wells.addWork(record.id, pitHoursFor(0, 0), 2)
+    wells.transitionTo(record.id, 'well')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well, 2)
+    wells.transitionTo(record.id, 'roof')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.roof / 2, 2)
+    expect(wells.nodes()[0]!.roofCondition).toBeUndefined()
+    expect(wells.nodes()[0]!.lastRoofConditionUpdateAtDays).toBeUndefined()
+    expect(wells.nodes()[0]!.workProgress).toBe(WELL_STAGE_WORK_HOURS.roof / 2)
+  })
+
+  it('round-trips roof condition through nodes() and a fresh runtime restore', () => {
+    const { wells } = setup()
+    const record = wells.place(1, 1, 0)
+    wells.addWork(record.id, pitHoursFor(1, 1), 0)
+    wells.transitionTo(record.id, 'well')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.well, 0)
+    wells.transitionTo(record.id, 'roof')
+    wells.addWork(record.id, WELL_STAGE_WORK_HOURS.roof, 9)
+    wells.applyRoofConditionDelta(record.id, 1, 9, -20)
+    const snapshot = wells.nodes()
+    expect(snapshot[0]!.roofCondition).toBe(80)
+    expect(snapshot[0]!.lastRoofConditionUpdateAtDays).toBe(9)
+    const restored = createPlayerWells(new Scene(), sampleHeight, () => {}, () => {}, snapshot, SEED, WATER_LEVEL)
+    expect(restored.nodes()[0]!.roofCondition).toBe(80)
+    expect(restored.nodes()[0]!.lastRoofConditionUpdateAtDays).toBe(9)
+    expect(restored.nodes()[0]!.workProgress).toBe(WELL_STAGE_WORK_HOURS.roof)
+  })
+
+  it('applyRoofConditionDelta is a no-op for an unknown id or unfinished roof', () => {
+    const { wells } = setup()
+    expect(wells.applyRoofConditionDelta('nope', 1, 0, -10)).toBe(false)
+    const record = wells.place(0, 0, 0)
+    expect(wells.applyRoofConditionDelta(record.id, 1, 0, -10)).toBe(false)
   })
 
   it('dispose clears every registered collider', () => {

@@ -1,6 +1,7 @@
 import { type Object3D, type Scene } from 'three'
 import type { HeightSampler } from '../player/PlayerController'
 import { placeOnGround } from '../settlement/props'
+import { CONDITION_MAX } from '../world/condition'
 import {
   resolveWeatherDrivenCondition,
   SLEEPING_UTILITY_SIM_WINDOW_DAYS,
@@ -37,7 +38,7 @@ export type PlacedTents = {
  *  (plan items-player-018). */
 export const TENT_RAIN_DECAY_PER_DAY = 10
 export const TENT_SNOW_DECAY_PER_DAY = 8
-export const TENT_CONDITION_MAX = 100
+export const TENT_CONDITION_MAX = CONDITION_MAX
 
 let nextTentId = 0
 

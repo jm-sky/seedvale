@@ -616,7 +616,7 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(loadStoredSave(v13Save)).toEqual({ status: 'ok', data: validSave })
   })
 
-  it('migrates a real v14 save (plan items-player-018) into v15 with tent condition defaults', () => {
+  it('migrates a real v14 save (plan items-player-018) into current with tent condition defaults', () => {
     const v14Save = {
       ...validSave,
       version: 14,
@@ -630,6 +630,56 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.placedTents).toEqual([
       { id: 'tent:old', x: 1, z: 2, yaw: 0.3, condition: 100, lastConditionUpdateAtDays: 6 },
     ])
+  })
+
+  it('migrates a real v15 save (plan world-020) into v16 with completed-roof condition defaults', () => {
+    const v15Save = {
+      ...validSave,
+      version: 15,
+      elapsedDays: 11,
+      playerWells: [
+        { id: 'well:done', x: 1, z: 2, yaw: 0, stage: 'roof', workProgress: 1, waterDepth: 5, waterKind: 'groundwater' },
+        { id: 'well:open', x: 3, z: 4, yaw: 0, stage: 'roof', workProgress: 0, waterDepth: 5, waterKind: 'groundwater' },
+        { id: 'well:body', x: 5, z: 6, yaw: 0, stage: 'well', workProgress: 1, waterDepth: 5, waterKind: 'groundwater' },
+      ],
+    }
+    const result = loadStoredSave(v15Save)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.playerWells).toEqual([
+      {
+        id: 'well:done',
+        x: 1,
+        z: 2,
+        yaw: 0,
+        stage: 'roof',
+        workProgress: 1,
+        waterDepth: 5,
+        waterKind: 'groundwater',
+        roofCondition: 100,
+        lastRoofConditionUpdateAtDays: 11,
+      },
+      { id: 'well:open', x: 3, z: 4, yaw: 0, stage: 'roof', workProgress: 0, waterDepth: 5, waterKind: 'groundwater' },
+      { id: 'well:body', x: 5, z: 6, yaw: 0, stage: 'well', workProgress: 1, waterDepth: 5, waterKind: 'groundwater' },
+    ])
+  })
+
+  it('rejects a current-schema well with only one of the roof-condition fields', () => {
+    expect(loadSaveData({
+      ...validSave,
+      playerWells: [{
+        id: 'w',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        stage: 'roof',
+        workProgress: 1,
+        waterDepth: 5,
+        waterKind: 'groundwater',
+        roofCondition: 100,
+      }],
+    })).toBeNull()
   })
 
   it.each([

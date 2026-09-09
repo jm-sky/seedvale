@@ -919,6 +919,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         hasMilkContainer,
         (animal) => (animal.def.diet?.items ? selectDietFeedKind(inventory, animal.def.diet.items) : null),
         bundle.riverWaterQuality.resolve,
+        getSeed(),
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of

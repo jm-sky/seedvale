@@ -27,13 +27,15 @@ export type WaterBodyKind = 'lake' | 'river' | 'ocean'
 /** Generic consumption-time health risk (plan world-004 §6) — deliberately
  *  distinct from `WaterQuality`'s existing safe/unsafe/undrinkable warning
  *  text so a future full water-quality/illness system doesn't have to unwind
- *  an overloaded meaning. Currently only set for an uncovered player-built
- *  well (`world/playerWell.ts`'s `wellWaterSource`); a roofed well and every
- *  natural water body carry no risk. Rolled once per direct drink action
- *  (`app/actions/survivalActions.ts`'s `drinkFromWaterSource`) — filling a
- *  container severs the association instead of tainting the carried water,
- *  the same "can't mark a filled instance as risky later" limitation
- *  `UNDRINKABLE_WATER_WARNING` already accepts for salt water. */
+ *  an overloaded meaning. Currently only set for an uncovered / degraded
+ *  player-built well (`world/playerWell.ts`'s `wellWaterSource`); a completed
+ *  roof at condition 100 and every natural water body carry no risk. Risk
+ *  chance scales with remaining roof exposure (`1 - condition/100`). Rolled
+ *  once per direct drink action (`app/actions/survivalActions.ts`'s
+ *  `drinkFromWaterSource`) — filling a container severs the association
+ *  instead of tainting the carried water, the same "can't mark a filled
+ *  instance as risky later" limitation `UNDRINKABLE_WATER_WARNING` already
+ *  accepts for salt water. */
 export type WaterConsumptionRisk = {
   /** Probability `[0,1]` this risk triggers on one direct drink. */
   chance: number

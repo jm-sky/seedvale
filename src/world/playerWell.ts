@@ -1,7 +1,15 @@
 import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { ItemCapability } from '../items/itemCatalog'
 import type { GroundPlacementReason } from '../items/tentPlacement'
+import {
+  applyConditionDelta,
+  checkpointCondition,
+  clampCondition,
+  CONDITION_MAX,
+  resolveCondition,
+} from './condition'
 import { createWaterSource, UNCOVERED_WELL_CONSUMPTION_RISK, type WaterSource } from './WaterSource'
+import { computeRainExposureDays, computeSnowExposureDays } from './weather'
 import { isDeepWellDepth, WELL_WATER_DEPTH_MAX, WELL_WATER_DEPTH_MIN, type WellWaterKind } from './wellGroundwater'
 
 /**
@@ -22,7 +30,9 @@ export type WellStage = 'pit' | 'well' | 'roof'
 
 /** Persisted state of one player-built well. Intentionally excludes a
  *  `WaterSource`/quantity/`Object3D` reference — those are always derived
- *  from `stage`/`workProgress`. */
+ *  from `stage`/`workProgress`. Optional `roofCondition` /
+ *  `lastRoofConditionUpdateAtDays` exist only after the roof is completed
+ *  (plan world-020) and are independent of construction progress. */
 export type PlayerWellRecord = {
   id: string
   x: number
@@ -43,6 +53,11 @@ export type PlayerWellRecord = {
    *  (`wellWaterSource`). */
   waterDepth: number
   waterKind: WellWaterKind
+  /** 0..100 — completed-roof component only (plan world-020). Absent until
+   *  `isWellCompleted` first becomes true; independent of `workProgress`.
+   *  `0` is a maximally degraded existing roof, not a missing roof. */
+  roofCondition?: number
+  lastRoofConditionUpdateAtDays?: number
 }
 
 /** Active-work hours required to finish `well`/`roof`, unaffected by depth
@@ -221,11 +236,118 @@ export function isWellStageWorkComplete(record: PlayerWellRecord): boolean {
 }
 
 /** Only `roof` reaching its own work requirement counts as a finished well —
- *  the single place that decides whether a well counts as fully protected
- *  (no `wellWaterSource` consumption risk). See `isWellWaterAvailable` for
- *  "usable as a `WaterSource` at all", which doesn't require the roof. */
+ *  the single place that decides whether the roof component exists. See
+ *  `isWellWaterAvailable` for "usable as a `WaterSource` at all", which
+ *  doesn't require the roof. Protection is then a function of resolved roof
+ *  condition (`wellWaterSource`), not a binary completed/uncompleted flag. */
 export function isWellCompleted(record: PlayerWellRecord): boolean {
   return record.stage === 'roof' && isWellStageWorkComplete(record)
+}
+
+/** Wooden well-roof wear (plan world-020) — slower than camp utilities so
+ *  maintenance sits on a many-/dozen-day scale rather than a single storm.
+ *  Weather lookback is bounded; passive wear still uses the full elapsed
+ *  interval so a long save/time-skip gap cannot undercount time-only decay. */
+export const WELL_ROOF_PASSIVE_DECAY_PER_DAY = 2.5
+export const WELL_ROOF_RAIN_DECAY_PER_DAY = 5
+export const WELL_ROOF_SNOW_DECAY_PER_DAY = 4
+export const WELL_ROOF_SIM_WINDOW_DAYS = 20
+
+function hasInitializedWellRoof(
+  record: PlayerWellRecord,
+): record is PlayerWellRecord & { roofCondition: number, lastRoofConditionUpdateAtDays: number } {
+  return record.roofCondition !== undefined && record.lastRoofConditionUpdateAtDays !== undefined
+}
+
+/** True only once the roof component exists *and* its condition lifecycle has
+ *  been initialized. An unfinished `roof` stage is not a roof. */
+export function hasWellRoofCondition(record: PlayerWellRecord): boolean {
+  return isWellCompleted(record) && hasInitializedWellRoof(record)
+}
+
+/** Fresh completed-roof component state — condition 100, anchor = `nowDays`.
+ *  Call exactly when `isWellCompleted` first becomes true; never from render. */
+export function initialWellRoofCondition(nowDays: number): {
+  roofCondition: number
+  lastRoofConditionUpdateAtDays: number
+} {
+  return { roofCondition: CONDITION_MAX, lastRoofConditionUpdateAtDays: nowDays }
+}
+
+/**
+ * Write initial roof condition onto `record` if the roof just completed and
+ * has no condition yet. Returns true when this call established the component.
+ *
+ * @domain world
+ */
+export function initializeWellRoofCondition(record: PlayerWellRecord, nowDays: number): boolean {
+  if (!isWellCompleted(record) || hasInitializedWellRoof(record)) return false
+  const initial = initialWellRoofCondition(nowDays)
+  record.roofCondition = initial.roofCondition
+  record.lastRoofConditionUpdateAtDays = initial.lastRoofConditionUpdateAtDays
+  return true
+}
+
+/**
+ * Pure lazy roof-condition resolver. Returns `null` when the roof component
+ * does not exist (pit / body / unfinished roof) — that is not condition 100.
+ * Does not mutate `record`.
+ *
+ * @domain world
+ */
+export function resolveWellRoofCondition(
+  record: PlayerWellRecord,
+  seed: number,
+  nowDays: number,
+): number | null {
+  if (!isWellCompleted(record) || !hasInitializedWellRoof(record)) return null
+  const elapsed = Math.max(0, nowDays - record.lastRoofConditionUpdateAtDays)
+  const windowDays = Math.min(elapsed, WELL_ROOF_SIM_WINDOW_DAYS)
+  const fromDays = nowDays - windowDays
+  return resolveCondition({
+    state: {
+      condition: record.roofCondition,
+      lastConditionUpdateAtDays: record.lastRoofConditionUpdateAtDays,
+    },
+    nowDays,
+    passiveDays: elapsed,
+    rainExposureDays: computeRainExposureDays(seed, fromDays, nowDays),
+    snowExposureDays: computeSnowExposureDays(seed, fromDays, nowDays),
+    decay: {
+      passivePerDay: WELL_ROOF_PASSIVE_DECAY_PER_DAY,
+      rainPerExposureDay: WELL_ROOF_RAIN_DECAY_PER_DAY,
+      snowPerExposureDay: WELL_ROOF_SNOW_DECAY_PER_DAY,
+    },
+  })
+}
+
+/** `0..1` protection from a resolved roof condition. No roof → `0`. */
+export function wellRoofProtectionFactor(resolvedRoofCondition: number | null): number {
+  if (resolvedRoofCondition === null) return 0
+  return clampCondition(resolvedRoofCondition) / CONDITION_MAX
+}
+
+/**
+ * Resolve lazy roof wear at `nowDays`, commit it, then apply `delta`.
+ * The canonical checkpoint rule future repair (`world-021`) must use —
+ * never mutate a stale stored `roofCondition` without this step.
+ *
+ * @domain world
+ */
+export function applyWellRoofConditionDelta(
+  record: PlayerWellRecord,
+  seed: number,
+  nowDays: number,
+  delta: number,
+): PlayerWellRecord {
+  const resolved = resolveWellRoofCondition(record, seed, nowDays)
+  if (resolved === null) return record
+  const checkpointed = checkpointCondition(resolved, nowDays)
+  return {
+    ...record,
+    roofCondition: applyConditionDelta(checkpointed.condition, delta),
+    lastRoofConditionUpdateAtDays: checkpointed.lastConditionUpdateAtDays,
+  }
 }
 
 /** A well is a usable `WaterSource` once its `well`-stage body is finished —
@@ -238,16 +360,32 @@ export function isWellWaterAvailable(record: PlayerWellRecord): boolean {
 }
 
 /** The `WaterSource` a completed-body well currently draws (plan world-004
- *  §6/§10) — `requiresRope` is purely a function of depth (a roofed deep
- *  well still needs a rope); `consumptionRisk` disappears only once the roof
- *  itself is finished (`isWellCompleted`), not merely once water is
- *  available. Callers must first check `isWellWaterAvailable`. */
-export function wellWaterSource(record: PlayerWellRecord): WaterSource {
+ *  §6/§10, roof protection extended by world-020) — `requiresRope` is purely
+ *  a function of depth (a roofed deep well still needs a rope).
+ *  `consumptionRisk` scales with the already-resolved roof condition the
+ *  caller supplies: `100` → no risk (today's completed-roof behaviour),
+ *  `0` / missing roof → full `UNCOVERED_WELL_CONSUMPTION_RISK`, intermediate
+ *  values scale only `chance`. This module does not resolve weather itself.
+ *  Callers must first check `isWellWaterAvailable`. */
+export function wellWaterSource(
+  record: PlayerWellRecord,
+  resolvedRoofCondition: number | null = null,
+): WaterSource {
   const source = createWaterSource('well')
+  const protection = isWellCompleted(record) ? wellRoofProtectionFactor(resolvedRoofCondition) : 0
+  const remainingRisk = 1 - protection
+  const consumptionRisk = remainingRisk <= 0
+    ? undefined
+    : remainingRisk >= 1
+      ? UNCOVERED_WELL_CONSUMPTION_RISK
+      : {
+          ...UNCOVERED_WELL_CONSUMPTION_RISK,
+          chance: UNCOVERED_WELL_CONSUMPTION_RISK.chance * remainingRisk,
+        }
   return {
     ...source,
     requiresRope: isDeepWellDepth(record.waterDepth) ? true : undefined,
-    consumptionRisk: isWellCompleted(record) ? undefined : UNCOVERED_WELL_CONSUMPTION_RISK,
+    consumptionRisk,
   }
 }
 

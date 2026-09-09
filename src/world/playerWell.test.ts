@@ -2,22 +2,30 @@ import { describe, expect, it } from 'vitest'
 import {
   activeWellStage,
   advanceWellConstruction,
+  applyWellRoofConditionDelta,
   getWellPitWorkHours,
+  hasWellRoofCondition,
+  initializeWellRoofCondition,
   isWellCompleted,
   isWellStageWorkComplete,
   isWellWaterAvailable,
   nextWellStage,
   type PlayerWellRecord,
+  resolveWellRoofCondition,
+  WELL_ROOF_PASSIVE_DECAY_PER_DAY,
+  WELL_ROOF_SIM_WINDOW_DAYS,
   WELL_STAGE_CAPABILITY,
   WELL_STAGE_COST,
   WELL_STAGE_WORK_HOURS,
   wellPromptLabel,
   wellRemainingWork,
+  wellRoofProtectionFactor,
   wellStageCapabilities,
   wellStageRequirements,
   wellStageWorkHours,
   wellWaterSource,
 } from './playerWell'
+import { UNCOVERED_WELL_CONSUMPTION_RISK } from './WaterSource'
 import { DEEP_WELL_DEPTH_THRESHOLD, WELL_WATER_DEPTH_MAX, WELL_WATER_DEPTH_MIN } from './wellGroundwater'
 
 const SHALLOW_DEPTH = WELL_WATER_DEPTH_MIN
@@ -45,9 +53,9 @@ describe('playerWell active-work stage transitions', () => {
   })
 
   it('never completes from elapsed time — only `workProgress` (added via `addWork`) can complete a stage', () => {
-    // No function in this module accepts a "now"/elapsed-time argument any
-    // more — `isWellStageWorkComplete`/`isWellCompleted` take only `record`.
-    // A record left at workProgress: 0 stays incomplete no matter what.
+    // Construction completion still depends only on `workProgress`, not on
+    // elapsed world time. Roof *condition* after completion is a separate
+    // lazy weather/time axis (plan world-020).
     const untouched = record({ stage: 'pit', workProgress: 0 })
     expect(isWellStageWorkComplete(untouched)).toBe(false)
     expect(isWellCompleted({ ...untouched, stage: 'roof' })).toBe(false)
@@ -205,8 +213,8 @@ describe('wellWaterSource (plan world-004 §4/§6)', () => {
     expect(source.quality).toBe('safe')
   })
 
-  it('a fully roofed well carries no consumption risk', () => {
-    const source = wellWaterSource(record({ stage: 'roof', workProgress: WELL_STAGE_WORK_HOURS.roof }))
+  it('a fully roofed well at condition 100 carries no consumption risk', () => {
+    const source = wellWaterSource(record({ stage: 'roof', workProgress: WELL_STAGE_WORK_HOURS.roof }), 100)
     expect(source.consumptionRisk).toBeUndefined()
   })
 
@@ -381,5 +389,115 @@ describe('advanceWellConstruction', () => {
       capabilities: { has: (c) => c !== 'rock_mining' },
     })
     expect(outcome.status).not.toBe('blocked')
+  })
+})
+
+function completedRoof(overrides: Partial<PlayerWellRecord> = {}): PlayerWellRecord {
+  return record({
+    stage: 'roof',
+    workProgress: WELL_STAGE_WORK_HOURS.roof,
+    roofCondition: 100,
+    lastRoofConditionUpdateAtDays: 0,
+    ...overrides,
+  })
+}
+
+describe('well roof condition (plan world-020)', () => {
+  it('has no roof-condition lifecycle during pit, body, or unfinished roof', () => {
+    expect(hasWellRoofCondition(record({ stage: 'pit' }))).toBe(false)
+    expect(hasWellRoofCondition(record({ stage: 'well', workProgress: WELL_STAGE_WORK_HOURS.well }))).toBe(false)
+    expect(hasWellRoofCondition(record({ stage: 'roof', workProgress: 0 }))).toBe(false)
+    expect(resolveWellRoofCondition(record({ stage: 'roof', workProgress: 0 }), 1, 10)).toBeNull()
+  })
+
+  it('initializes roof condition at 100 exactly once when the roof completes', () => {
+    const well = record({ stage: 'roof', workProgress: WELL_STAGE_WORK_HOURS.roof })
+    expect(hasWellRoofCondition(well)).toBe(false)
+    expect(initializeWellRoofCondition(well, 4.5)).toBe(true)
+    expect(well.roofCondition).toBe(100)
+    expect(well.lastRoofConditionUpdateAtDays).toBe(4.5)
+    expect(initializeWellRoofCondition(well, 9)).toBe(false)
+    expect(well.roofCondition).toBe(100)
+    expect(well.lastRoofConditionUpdateAtDays).toBe(4.5)
+  })
+
+  it('does not initialize condition on an unfinished roof stage', () => {
+    const well = record({ stage: 'roof', workProgress: 0 })
+    expect(initializeWellRoofCondition(well, 3)).toBe(false)
+    expect(well.roofCondition).toBeUndefined()
+  })
+
+  it('resolves passive wear over the full elapsed interval, not only the weather window', () => {
+    const well = completedRoof({ roofCondition: 80 })
+    const nowDays = WELL_ROOF_SIM_WINDOW_DAYS + 10
+    const resolved = resolveWellRoofCondition(well, 1, nowDays)
+    const windowedPassive = 80 - WELL_ROOF_PASSIVE_DECAY_PER_DAY * WELL_ROOF_SIM_WINDOW_DAYS
+    expect(resolved).not.toBeNull()
+    expect(resolved!).toBeLessThan(windowedPassive)
+    expect(resolved!).toBeGreaterThanOrEqual(0)
+  })
+
+  it('never leaves 0..100', () => {
+    const well = completedRoof({ roofCondition: 100 })
+    const resolved = resolveWellRoofCondition(well, 3, 1000)
+    expect(resolved).toBeGreaterThanOrEqual(0)
+    expect(resolved).toBeLessThanOrEqual(100)
+  })
+
+  it('is deterministic for the same inputs', () => {
+    const well = completedRoof()
+    expect(resolveWellRoofCondition(well, 42, 8)).toBe(resolveWellRoofCondition(well, 42, 8))
+  })
+
+  it('condition 0 is still an existing roof with zero protection, not a missing component', () => {
+    const well = completedRoof({ roofCondition: 0 })
+    expect(isWellCompleted(well)).toBe(true)
+    expect(resolveWellRoofCondition(well, 1, 0)).toBe(0)
+    expect(wellRoofProtectionFactor(0)).toBe(0)
+    expect(well.workProgress).toBe(WELL_STAGE_WORK_HOURS.roof)
+  })
+})
+
+describe('wellWaterSource roof-protection factor (plan world-020)', () => {
+  const uncoveredChance = UNCOVERED_WELL_CONSUMPTION_RISK.chance
+  const completed = completedRoof()
+
+  it('100 / 50 / 0 condition produce 0 / 50% / 100% of uncovered risk chance', () => {
+    expect(wellWaterSource(completed, 100).consumptionRisk).toBeUndefined()
+    expect(wellWaterSource(completed, 50).consumptionRisk).toEqual({
+      ...UNCOVERED_WELL_CONSUMPTION_RISK,
+      chance: uncoveredChance * 0.5,
+    })
+    expect(wellWaterSource(completed, 0).consumptionRisk).toEqual(UNCOVERED_WELL_CONSUMPTION_RISK)
+  })
+
+  it('keeps WaterQuality as safe regardless of roof condition', () => {
+    expect(wellWaterSource(completed, 0).quality).toBe('safe')
+    expect(wellWaterSource(completed, 50).quality).toBe('safe')
+  })
+
+  it('does not mutate the well record when deriving a water source', () => {
+    const well = completedRoof({ roofCondition: 80 })
+    const before = { ...well }
+    wellWaterSource(well, 80)
+    expect(well).toEqual(before)
+  })
+})
+
+describe('applyWellRoofConditionDelta checkpoint (plan world-020 / world-021)', () => {
+  it('resolves elapsed wear, advances the anchor, then applies the delta', () => {
+    const well = completedRoof({ roofCondition: 100, lastRoofConditionUpdateAtDays: 0 })
+    const nowDays = 8
+    const resolved = resolveWellRoofCondition(well, 7, nowDays)!
+    const next = applyWellRoofConditionDelta(well, 7, nowDays, 10)
+    expect(next.lastRoofConditionUpdateAtDays).toBe(nowDays)
+    expect(next.roofCondition).toBe(Math.min(100, resolved + 10))
+    expect(well.roofCondition).toBe(100)
+    expect(well.lastRoofConditionUpdateAtDays).toBe(0)
+  })
+
+  it('is a no-op when the roof component does not exist', () => {
+    const well = record({ stage: 'well', workProgress: WELL_STAGE_WORK_HOURS.well })
+    expect(applyWellRoofConditionDelta(well, 1, 10, -5)).toBe(well)
   })
 })

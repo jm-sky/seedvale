@@ -57,6 +57,13 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).
 
+## World simulation
+
+- [Condition](../src/world/condition.ts) — shared `0..100` lazy condition math (clamp, delta, resolver, checkpoint) used by camp utilities and structure components.
+- [Sleeping utilities](../src/world/sleepingUtilities.ts) — bedroll/platform domain condition, placement, and tent-shelter factor.
+- [Player well](../src/world/playerWell.ts) — player-built well construction plus completed-roof condition and drink-risk protection.
+- [Weather](../src/world/weather.ts) — deterministic season/weather and rain/snow exposure.
+
 ## UI wiring
 
 - [Inventory / trade wiring](../src/app/inventoryWiring.ts) — inventory-screen handlers plus every home-trader buy/sell path.

@@ -4,6 +4,8 @@ import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
 import { placeOnGround } from '../settlement/props'
 import {
+  applyWellRoofConditionDelta,
+  initializeWellRoofCondition,
   isWellWaterAvailable,
   type NearbyPlayerWellLookup,
   type PlayerWellRecord,
@@ -26,13 +28,21 @@ export type PlayerWells = {
   place: (x: number, z: number, yaw: number) => PlayerWellRecord
   /** Adds `hoursDelta` (clamped ≥ 0) of active-work progress to `id`'s
    *  current stage. Pure bookkeeping only — never changes `stage`, the mesh
-   *  or the collider. False if the well is unknown. */
-  addWork: (id: string, hoursDelta: number) => boolean
+   *  or the collider. When this credit first completes the roof, initializes
+   *  roof condition at 100 with `nowDays` as the weather/time anchor (plan
+   *  world-020). False if the well is unknown. */
+  addWork: (id: string, hoursDelta: number, nowDays: number) => boolean
   /** Transitions `id` into `nextStage`: resets `workProgress` to 0, swaps the
    *  stage-visual mesh and re-registers the collider (idempotent by id — the
    *  caller must already have validated/consumed `nextStage`'s tool/material
    *  cost). False if the well is unknown. */
   transitionTo: (id: string, nextStage: WellStage) => boolean
+  /**
+   * Checkpoint-then-mutate roof condition at `nowDays` (plan world-020 /
+   * world-021). Resolves lazy wear first so elapsed weather is neither lost
+   * nor double-counted. False if the well is unknown or has no roof yet.
+   */
+  applyRoofConditionDelta: (id: string, seed: number, nowDays: number, delta: number) => boolean
   /** Nearest well within `maxDistance` that's already usable as a
    *  `WaterSource` (`isWellWaterAvailable` — plan world-004 §5/§10, the roof
    *  need not be finished), or null — the `NearbyPlayerWellLookup`
@@ -96,6 +106,12 @@ export function createPlayerWells(
     workProgress: entry.workProgress,
     waterDepth: entry.waterDepth,
     waterKind: entry.waterKind,
+    ...(entry.roofCondition !== undefined && entry.lastRoofConditionUpdateAtDays !== undefined
+      ? {
+          roofCondition: entry.roofCondition,
+          lastRoofConditionUpdateAtDays: entry.lastRoofConditionUpdateAtDays,
+        }
+      : {}),
   })
 
   return {
@@ -116,10 +132,11 @@ export function createPlayerWells(
       spawn(record)
       return record
     },
-    addWork(id, hoursDelta) {
+    addWork(id, hoursDelta, nowDays) {
       const entry = find(id)
       if (!entry) return false
       entry.workProgress = Math.max(0, entry.workProgress + hoursDelta)
+      initializeWellRoofCondition(entry, nowDays)
       return true
     },
     transitionTo(id, nextStage) {
@@ -136,6 +153,15 @@ export function createPlayerWells(
       entry.workProgress = 0
       // Idempotent by id — replaces, never appends (implementation notes §16).
       registerCollider(entry)
+      return true
+    },
+    applyRoofConditionDelta(id, seed, nowDays, delta) {
+      const entry = find(id)
+      if (!entry) return false
+      const next = applyWellRoofConditionDelta(entry, seed, nowDays, delta)
+      if (next === entry) return false
+      entry.roofCondition = next.roofCondition
+      entry.lastRoofConditionUpdateAtDays = next.lastRoofConditionUpdateAtDays
       return true
     },
     nearestCompleted(x, z, maxDistance) {

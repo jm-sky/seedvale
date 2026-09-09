@@ -30,7 +30,9 @@ import { type ItemKind } from '../items/items'
 import { type SavePrimaryWeaponChoice } from '../items/primaryWeapons'
 import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
+import { CONDITION_MAX } from '../world/condition'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
+import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
@@ -268,12 +270,13 @@ export type SaveCarriedContainer = {
 
 /** Persistent player-built well — mirrors `world/playerWell.ts`'s
  *  `PlayerWellRecord`; the drawn `WaterSource` itself is never saved, only
- *  re-derived from `stage`/`workProgress`/`waterDepth`/`waterKind`.
- *  `workProgress` is hours of *active* player work toward the current stage —
- *  a stage cannot finish just because time passed. `waterDepth`/`waterKind`
- *  are the groundwater result resolved once at placement (plan world-004
- *  §1/§9/§11, `world/wellGroundwater.ts`'s `resolveWellWater`) — never
- *  recomputed on load. */
+ *  re-derived from `stage`/`workProgress`/`waterDepth`/`waterKind` plus the
+ *  resolved roof-condition factor. `workProgress` is hours of *active*
+ *  player work toward the current stage — a stage cannot finish just because
+ *  time passed. `waterDepth`/`waterKind` are the groundwater result resolved
+ *  once at placement (plan world-004 §1/§9/§11). Optional `roofCondition` /
+ *  `lastRoofConditionUpdateAtDays` exist only after the roof is completed
+ *  (plan world-020) — they are independent of `workProgress`. */
 export type SavePlayerWell = {
   id: string
   x: number
@@ -283,6 +286,8 @@ export type SavePlayerWell = {
   workProgress: number
   waterDepth: number
   waterKind: WellWaterKind
+  roofCondition?: number
+  lastRoofConditionUpdateAtDays?: number
 }
 
 /** Persistent runtime terrain deformation (plan `world-terrain-save`) —
@@ -484,7 +489,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 15
+export const CURRENT_SAVE_VERSION = 16
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -1059,6 +1064,12 @@ function isPlayerWellsField(value: unknown): value is SavePlayerWell[] {
   return value.every((entry) => {
     if (!entry || typeof entry !== 'object') return false
     const w = entry as Record<string, unknown>
+    const hasRoofCondition = w.roofCondition !== undefined
+    const hasRoofAnchor = w.lastRoofConditionUpdateAtDays !== undefined
+    if (hasRoofCondition !== hasRoofAnchor) return false
+    if (hasRoofCondition && (typeof w.roofCondition !== 'number' || typeof w.lastRoofConditionUpdateAtDays !== 'number')) {
+      return false
+    }
     return (
       typeof w.id === 'string' &&
       typeof w.x === 'number' &&
@@ -2122,6 +2133,40 @@ function migrateSaveV14ToV15(data: unknown): unknown {
   }
 }
 
+/** v15 → v16 (plan world-020): completed well roofs gain persisted lazy
+ *  condition. Old completed roofs default to 100% with the save's
+ *  `elapsedDays` as the weather/time anchor, so they do not retroactively
+ *  decay from day 0. Unfinished wells stay without roof-condition state. */
+function migrateSaveV15ToV16(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  const elapsedDays = typeof v.elapsedDays === 'number' ? v.elapsedDays : 0
+  const playerWells = Array.isArray(v.playerWells) ? v.playerWells : []
+  return {
+    ...v,
+    version: 16,
+    playerWells: playerWells.map((raw) => {
+      if (!raw || typeof raw !== 'object') return raw
+      const w = raw as Record<string, unknown>
+      const roofComplete = w.stage === 'roof'
+        && typeof w.workProgress === 'number'
+        && w.workProgress >= WELL_STAGE_WORK_HOURS.roof
+      if (!roofComplete) {
+        const rest = { ...w }
+        delete rest.roofCondition
+        delete rest.lastRoofConditionUpdateAtDays
+        return rest
+      }
+      return {
+        ...w,
+        roofCondition: typeof w.roofCondition === 'number' ? w.roofCondition : CONDITION_MAX,
+        lastRoofConditionUpdateAtDays: typeof w.lastRoofConditionUpdateAtDays === 'number'
+          ? w.lastRoofConditionUpdateAtDays
+          : elapsedDays,
+      }
+    }),
+  }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2137,6 +2182,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   12: migrateSaveV12ToV13,
   13: migrateSaveV13ToV14,
   14: migrateSaveV14ToV15,
+  15: migrateSaveV15ToV16,
 }
 
 function detectStoredVersion(value: unknown): number | null {

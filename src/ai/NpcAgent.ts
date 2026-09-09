@@ -4190,7 +4190,7 @@ export class NpcAgent {
           return
         }
         if (outcome.status === 'blocked') return // blocked on materials — commitment stays intact, retried next bout.
-        wells.addWork(freshWell.id, WELL_WORK_SESSION_HOURS)
+        wells.addWork(freshWell.id, WELL_WORK_SESSION_HOURS, this.nowDays())
         // Two independent stop conditions (plan §7/§8): the NPC's own
         // commitment is fulfilled, or the real target finished. Either ends
         // the contractual work phase — never both required, never neither.

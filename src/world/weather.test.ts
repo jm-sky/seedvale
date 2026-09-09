@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   computeClimate,
   computeRainExposureDays,
+  computeSnowExposureDays,
   computeSurfaceWeather,
   computeWeather,
   createClimateState,
@@ -192,6 +193,40 @@ describe('tickClimate', () => {
     state.forced = 'auto'
     tickClimate(state, seed, 10)
     expect(state.weather).toEqual(computeWeather(seed, 10, getSeason(10)))
+  })
+})
+
+describe('computeSnowExposureDays', () => {
+  it('is 0 for an empty or inverted span', () => {
+    expect(computeSnowExposureDays(7, 5, 5)).toBe(0)
+    expect(computeSnowExposureDays(7, 5, 2)).toBe(0)
+  })
+
+  it('is never negative and is additive across adjoining sub-spans', () => {
+    const seed = 123
+    const from = 10
+    const mid = 11.7
+    const to = 13.4
+    const whole = computeSnowExposureDays(seed, from, to)
+    const parts = computeSnowExposureDays(seed, from, mid) + computeSnowExposureDays(seed, mid, to)
+    expect(whole).toBeGreaterThanOrEqual(0)
+    expect(whole).toBeCloseTo(parts, 10)
+  })
+
+  it('matches a hand-rolled sum over the same cycles computeWeather reports', () => {
+    const seed = 55
+    const from = 0
+    const to = WEATHER_CYCLE_DAYS * 6.5
+    let expected = 0
+    for (let cycle = 0; cycle <= 6; cycle++) {
+      const cycleStart = cycle * WEATHER_CYCLE_DAYS
+      const cycleEnd = cycleStart + WEATHER_CYCLE_DAYS
+      const overlap = Math.min(cycleEnd, to) - Math.max(cycleStart, from)
+      if (overlap <= 0) continue
+      const w = computeWeather(seed, cycleStart, getSeason(cycleStart))
+      if (w.type === 'snow') expected += overlap * w.intensity
+    }
+    expect(computeSnowExposureDays(seed, from, to)).toBeCloseTo(expected, 10)
   })
 })
 

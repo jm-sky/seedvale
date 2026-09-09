@@ -38,7 +38,7 @@ import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifec
 import { isDryingComplete } from '../world/dryingRacks'
 import { isPalisadeConstructionComplete, palisadePromptLabel } from '../world/palisade'
 import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
-import { isWellCompleted, isWellWaterAvailable, wellPromptLabel, wellWaterSource } from '../world/playerWell'
+import { isWellCompleted, isWellWaterAvailable, resolveWellRoofCondition, wellPromptLabel, wellWaterSource } from '../world/playerWell'
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'
@@ -367,6 +367,10 @@ export function buildInteractables(
    *  `unsafe` for any test/caller that doesn't model river hydrology, rather
    *  than reintroducing the old blanket `river = safe`. */
   resolveRiverWaterQuality: (worldX: number, worldZ: number) => WaterQuality = () => 'unsafe',
+  /** World seed for lazy well-roof weather (plan world-020). Optional so
+   *  existing callers/tests that never touch wells keep compiling; `0` is
+   *  deterministic, not a hidden live clock. */
+  worldSeed = 0,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -459,12 +463,13 @@ export function buildInteractables(
   // construction, it exposes its own stage-advance prompt instead.
   for (const well of placedWells.list()) {
     if (!withinRange(well.x, well.z, playerPos, GAZE_RANGE)) continue
+    const roofCondition = resolveWellRoofCondition(well, worldSeed, nowDays)
     if (isWellCompleted(well)) {
       list.push({
         kind: 'well',
         position: { x: well.x, z: well.z },
         promptLabel: WATER_SOURCE_PROMPT,
-        source: wellWaterSource(well),
+        source: wellWaterSource(well, roofCondition),
       })
       continue
     }
@@ -474,7 +479,7 @@ export function buildInteractables(
       promptLabel: wellPromptLabel(well),
       id: well.id,
       stage: well.stage,
-      waterSource: isWellWaterAvailable(well) ? wellWaterSource(well) : null,
+      waterSource: isWellWaterAvailable(well) ? wellWaterSource(well, roofCondition) : null,
     })
   }
 

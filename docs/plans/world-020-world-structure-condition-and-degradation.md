@@ -1,7 +1,8 @@
 # Plan: World structure condition and degradation
 
 **Created:** 2026-09-09
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-09
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** items-player-018

@@ -574,14 +574,14 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
       const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
       const creditedHours = sessionHours * fraction
-      bundle.playerWells.addWork(id, creditedHours)
+      bundle.playerWells.addWork(id, creditedHours, dayNight.elapsedDays)
       applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', creditedHours)
     }
     if (stage === 'roof') {
       playActionWellConstruction(worldAudio.playAt, { x: well.x, z: well.z })
     }
     busy.start(sessionSec, WELL_WORK_LABEL[stage], () => {
-      bundle.playerWells.addWork(id, sessionHours)
+      bundle.playerWells.addWork(id, sessionHours, dayNight.elapsedDays)
       applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'heavy', sessionHours)
     }, {
       onCancel: creditPartial,

@@ -1,5 +1,6 @@
 import type { MaterialRequirement } from '../items/constructionMaterials'
 import type { GroundPlacementReason } from '../items/tentPlacement'
+import { clampCondition, CONDITION_MAX, type ConditionState, resolveCondition } from './condition'
 import { computeRainExposureDays, computeSnowExposureDays } from './weather'
 
 /**
@@ -119,11 +120,7 @@ export function findNearestSleepingUtility<T extends { id: string, x: number, z:
   return best
 }
 
-export const SLEEPING_UTILITY_CONDITION_MAX = 100
-
-function clampCondition(condition: number): number {
-  return Math.max(0, Math.min(SLEEPING_UTILITY_CONDITION_MAX, condition))
-}
+export const SLEEPING_UTILITY_CONDITION_MAX = CONDITION_MAX
 
 /** Points of condition lost per full rain/snow "exposure day" (plan
  *  §"Environmental degradation") — tuned so continuous heavy weather zeroes
@@ -155,7 +152,7 @@ export type WeatherDrivenConditionRates = {
  * @domain items-player
  */
 export function resolveWeatherDrivenCondition(
-  record: Pick<{ condition: number, lastConditionUpdateAtDays: number }, 'condition' | 'lastConditionUpdateAtDays'>,
+  record: ConditionState,
   seed: number,
   nowDays: number,
   shelterFactor: number,
@@ -167,10 +164,18 @@ export function resolveWeatherDrivenCondition(
   if (factor >= 1) return clampCondition(record.condition)
   const windowDays = Math.min(elapsed, rates.simWindowDays)
   const fromDays = nowDays - windowDays
-  const rainExposure = computeRainExposureDays(seed, fromDays, nowDays)
-  const snowExposure = computeSnowExposureDays(seed, fromDays, nowDays)
-  const decay = (rainExposure * rates.rainDecayPerDay + snowExposure * rates.snowDecayPerDay) * (1 - factor)
-  return clampCondition(record.condition - decay)
+  const exposureScale = 1 - factor
+  return resolveCondition({
+    state: record,
+    nowDays,
+    passiveDays: 0,
+    rainExposureDays: computeRainExposureDays(seed, fromDays, nowDays) * exposureScale,
+    snowExposureDays: computeSnowExposureDays(seed, fromDays, nowDays) * exposureScale,
+    decay: {
+      rainPerExposureDay: rates.rainDecayPerDay,
+      snowPerExposureDay: rates.snowDecayPerDay,
+    },
+  })
 }
 
 /**
@@ -182,9 +187,11 @@ export function resolveWeatherDrivenCondition(
  * simplification `resolveGardenHydration` makes for hydration (no historical
  * tent-placement log is kept, only "how sheltered is it right now").
  *
- * Condition only ever decreases (no repair action in v1) — a persisted
- * anchor never needs to advance, so this can always resolve directly from
- * the object's original placement anchor, however large the gap.
+ * Condition only ever decreases from weather in v1 (no repair action yet) —
+ * a persisted anchor never needs to advance for sleeping utilities, so this
+ * can always resolve directly from the object's original placement anchor.
+ * Shared clamp/delta math lives in `world/condition.ts`; this function stays
+ * the public camp-domain seam.
  */
 export function resolveSleepingUtilityCondition(
   record: Pick<BedrollRecord | PlatformRecord, 'condition' | 'lastConditionUpdateAtDays'>,
