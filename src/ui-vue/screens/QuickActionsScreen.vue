@@ -217,6 +217,7 @@ const buildActions = computed<Action[]>(() => {
   list.push({ label: 'Zbuduj stos drewna', cost: formatCostItems(FIRE_COST_ITEMS.buildWoodPile), onClick: () => startPlacementPreview('firePile'), disabled: !ui.quickActions.fireAvailability.buildWoodPile.available })
   list.push({ label: 'Postaw pochodnię', cost: '1× belka, 1× pochodnia', onClick: () => startPlacementPreview('standingTorch'), disabled: !ui.quickActions.hasWoodenTorch })
   list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade'), disabled: !ui.quickActions.hasPalisadeMaterial })
+  list.push({ label: 'Postaw koryto', cost: '2× belka', onClick: () => startPlacementPreview('playerTrough'), disabled: !ui.quickActions.hasTroughMaterial })
   list.push({ label: 'Rozłóż posłanie', cost: '3× skóra', onClick: () => startPlacementPreview('bedroll'), disabled: !ui.quickActions.hasBedrollMaterial })
   list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform'), disabled: !ui.quickActions.hasPlatformMaterial })
   list.push({ label: 'Zbuduj małą chatę', cost: '', onClick: () => startPlacementPreview('smallHouse') })

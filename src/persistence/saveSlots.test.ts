@@ -78,6 +78,7 @@ const currentSave = {
   plantedCrops: [],
   playerGardens: [],
   standingTorches: [],
+  playerTroughs: [],
   palisades: [],
   residentialBuildings: [],
   bedrolls: [],

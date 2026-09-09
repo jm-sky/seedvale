@@ -118,6 +118,7 @@ import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { PALISADE_MATERIAL_REQUIREMENTS } from '../world/palisade'
+import { PLAYER_TROUGH_MATERIAL_REQUIREMENTS } from '../world/playerTrough'
 import { hasExplicitUrlSeed, randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
@@ -512,6 +513,7 @@ export async function createApp(
     })),
     () => worldGeneration !== initialWorldGeneration,
     initialSave?.standingTorches ?? [],
+    initialSave?.playerTroughs ?? [],
     initialSave?.palisades ?? [],
     initialSave?.bedrolls ?? [],
     initialSave?.platforms ?? [],
@@ -632,6 +634,8 @@ export async function createApp(
    *  a single item (plan items-player-010). */
   const hasPalisadeMaterial = (): boolean =>
     PALISADE_MATERIAL_REQUIREMENTS.every((r) => inventory.has(r.kind, r.count))
+  const hasTroughMaterial = (): boolean =>
+    PLAYER_TROUGH_MATERIAL_REQUIREMENTS.every((r) => inventory.has(r.kind, r.count))
   /** Same "own the material, full cost re-checked at build time" gate as
    *  `hasPalisadeMaterial`, for the two sleeping utilities (plan
    *  items-player-013). */
@@ -652,6 +656,7 @@ export async function createApp(
     vueUi.setQuickActionsHasChest(inventory.has('chest', 1))
     vueUi.setQuickActionsHasWoodenTorch(inventory.has('wooden_torch', 1))
     vueUi.setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial())
+    vueUi.setQuickActionsHasTroughMaterial(hasTroughMaterial())
     vueUi.setQuickActionsHasBedrollMaterial(hasBedrollMaterial())
     vueUi.setQuickActionsHasPlatformMaterial(hasPlatformMaterial())
     vueUi.setQuickActionsTraps({
@@ -1509,6 +1514,7 @@ export async function createApp(
     hasChest: inventory.has('chest', 1),
     hasWoodenTorch: inventory.has('wooden_torch', 1),
     hasPalisadeMaterial: hasPalisadeMaterial(),
+    hasTroughMaterial: hasTroughMaterial(),
     hasBedrollMaterial: hasBedrollMaterial(),
     hasPlatformMaterial: hasPlatformMaterial(),
     hasCarriedContainer: bundle.placedContainers.hasCarried(),
@@ -1859,6 +1865,8 @@ export async function createApp(
     workOnWellRoofRepair: placement.workOnWellRoofRepair,
     igniteStandingTorch: placement.igniteStandingTorch,
     workOnStandingTorch: placement.workOnStandingTorch,
+    workOnPlayerTrough: placement.workOnPlayerTrough,
+    fillPlayerTrough: placement.fillPlayerTrough,
     workOnPalisade: placement.workOnPalisade,
     removePalisadeSegment: placement.removePalisadeSegment,
     supplyResidentialBuildingMaterials: placement.supplyResidentialBuildingMaterials,

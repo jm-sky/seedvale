@@ -27,6 +27,7 @@ export type PlacementPreviewKind =
   | 'firePit'
   | 'firePile'
   | 'standingTorch'
+  | 'playerTrough'
   | 'palisade'
   | 'bedroll'
   | 'platform'
@@ -63,6 +64,7 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   firePit: 'Palenisko',
   firePile: 'Stos drewna',
   standingTorch: 'Pochodnia',
+  playerTrough: 'Koryto',
   palisade: 'Palisada',
   bedroll: 'Posłanie',
   platform: 'Podest do spania',
@@ -81,6 +83,7 @@ const SUPPORTS_ROTATION: Record<PlacementPreviewKind, boolean> = {
   firePit: false,
   firePile: false,
   standingTorch: false,
+  playerTrough: false,
   palisade: true,
   bedroll: true,
   platform: true,
@@ -98,6 +101,8 @@ export type PlacementPreviewActionDeps = {
     | 'placeTentAtAim'
     | 'previewStandingTorchPlacement'
     | 'placeStandingTorchAtAim'
+    | 'previewPlayerTroughPlacement'
+    | 'placePlayerTroughAtAim'
     | 'previewPalisadePlacement'
     | 'placePalisadeAtAim'
     | 'previewBedrollPlacement'
@@ -199,6 +204,7 @@ export function createPlacementPreviewActions(
       case 'platform': return placement.previewPlatformPlacement(objectYaw)
       case 'smallHouse': return placement.previewSmallHousePlacement(objectYaw)
       case 'standingTorch': return placement.previewStandingTorchPlacement()
+      case 'playerTrough': return placement.previewPlayerTroughPlacement()
       case 'tent': return placement.previewTentPlacement(objectYaw)
       case 'well': return placement.previewWellPlacement()
       case 'workContract': return workContract.previewContractPlacement()
@@ -232,6 +238,7 @@ export function createPlacementPreviewActions(
       }
       case 'smallHouse': placement.placeSmallHouseAtAim(objectYaw); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
+      case 'playerTrough': placement.placePlayerTroughAtAim(); return
       case 'tent': {
         const lifecycle = intentLifecycle
         intentLifecycle = null

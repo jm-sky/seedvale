@@ -131,11 +131,19 @@ export function createHayBale(scale = 1): THREE.Group {
   return hay
 }
 
+/** Runtime seam for trough water visibility (plan items-player-020 §8) — the
+ *  settlement trough instances keep water visible (household storage is
+ *  implied); player-built troughs drive `setHasWater` from `waterLitres`. */
+export type TroughVisual = {
+  object: THREE.Group
+  setHasWater: (hasWater: boolean) => void
+}
+
 /** Household `AnimalTrough` (plan 122) — no GLB yet (`docs/assets/MODELS.md`),
  *  procedural only. Low open wooden basin with a water-colored inset so it
  *  reads as "holds water" even without a per-instance fill-level visual
  *  (instanced like `createBarrel`/`createHayBale`, see `buildSettlementProps`). */
-export function createTrough(scale = 1): THREE.Group {
+export function createTroughVisual(scale = 1): TroughVisual {
   const trough = new THREE.Group()
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4f30, flatShading: true })
   const waterMat = new THREE.MeshStandardMaterial({ color: 0x3a7ea8, flatShading: true, roughness: 0.25 })
@@ -147,9 +155,22 @@ export function createTrough(scale = 1): THREE.Group {
 
   const water = new THREE.Mesh(new THREE.BoxGeometry(0.82 * scale, 0.05 * scale, 0.27 * scale), waterMat)
   water.position.y = 0.24 * scale
+  water.name = 'troughWater'
   trough.add(water)
 
-  return trough
+  return {
+    object: trough,
+    setHasWater(hasWater: boolean) {
+      water.visible = hasWater
+    },
+  }
+}
+
+/** Back-compat alias — settlement instancing only needs the root `Group`. */
+export function createTrough(scale = 1): THREE.Group {
+  const visual = createTroughVisual(scale)
+  visual.setHasWater(true)
+  return visual.object
 }
 
 /** Fallback if `crate.glb` fails to load — plain flat-shaded box, same

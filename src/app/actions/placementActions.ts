@@ -13,7 +13,7 @@ import {
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
 import { isLiquidContainerInstance, isTentItemInstance, isTrapItemInstance, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
-import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidContainer'
+import { drinkFromLiquidContainer, hasLiquidContent, pourLiquidFromContainer } from '../../items/liquidContainer'
 import {
   evaluateGroundPlacement,
   evaluateOrientedGroundPlacement,
@@ -168,6 +168,21 @@ import {
   type StandingTorchPlacementReason,
   standingTorchRemainingWork,
 } from '../../world/standingTorch'
+import {
+  isPlayerTroughConstructionComplete,
+  PLAYER_TROUGH_FILL_DURATION_SEC,
+  PLAYER_TROUGH_FOOTPRINT_RADIUS,
+  PLAYER_TROUGH_MATERIAL_REQUIREMENTS,
+  PLAYER_TROUGH_PLACE_DURATION_SEC,
+  PLAYER_TROUGH_PLACE_REACH,
+  PLAYER_TROUGH_PLACEMENT_MESSAGE,
+  PLAYER_TROUGH_SEPARATION,
+  PLAYER_TROUGH_WORK_SESSION_HOURS,
+  PLAYER_TROUGH_WORK_SESSION_SEC,
+  playerTroughFreeCapacity,
+  type PlayerTroughPlacementReason,
+  playerTroughRemainingWork,
+} from '../../world/playerTrough'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { placementAimSite } from './placementYaw'
 
@@ -344,6 +359,10 @@ export type PlacementActions = {
    *  applied, same "measured wall-clock fraction on cancel" contract as
    *  `workOnWell`. No-op if `id` is unknown or already complete. */
   workOnStandingTorch: (id: string) => void
+  previewPlayerTroughPlacement: () => PlacementPreviewResult
+  placePlayerTroughAtAim: () => void
+  workOnPlayerTrough: (id: string) => void
+  fillPlayerTrough: (id: string) => void
   /** Read-only preview of palisade-segment placement at the player's current
    *  aim (plan items-player-010 §1/§3/§4) — already snapped to a nearby
    *  segment endpoint when one is in range; backs the shared
@@ -1095,6 +1114,130 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     })
   }
 
+  const playerTroughPlacementDefinition = (): GroundPlacementDefinition<PlayerTroughPlacementReason> => ({
+    aim: () => placementAimSite(
+      player.mesh.position.x,
+      player.mesh.position.z,
+      mouseLook.state.yaw,
+      PLAYER_TROUGH_PLACE_REACH,
+    ),
+    evaluate: (site) => {
+      const reason = evaluateGroundPlacement({
+        x: site.x,
+        z: site.z,
+        sampleHeight: (x, z) => bundle.chunkManager.sampleHeight(x, z),
+        waterLevel: bundle.chunkManager.waterLevel,
+        blockers: tentBlockers(site.x, site.z),
+        peers: bundle.playerTroughs.nodes(),
+        footprintRadius: PLAYER_TROUGH_FOOTPRINT_RADIUS,
+        separation: PLAYER_TROUGH_SEPARATION,
+      })
+      return reason === 'occupied' ? 'trough' : reason
+    },
+    footprintRadius: PLAYER_TROUGH_FOOTPRINT_RADIUS,
+    previewFootprint: { kind: 'circle', radius: PLAYER_TROUGH_FOOTPRINT_RADIUS },
+    reasonLabel: (reason) => PLAYER_TROUGH_PLACEMENT_MESSAGE[reason],
+  })
+
+  const previewPlayerTroughPlacement = (): PlacementPreviewResult =>
+    previewGroundPlacement(playerTroughPlacementDefinition())
+
+  const placePlayerTroughAtAim = (): void => {
+    if (isActionBlocked(ctx)) return
+    const { site, reason } = evaluatePlacementSite(playerTroughPlacementDefinition())
+    if (reason !== 'ok') {
+      toast.show(PLAYER_TROUGH_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const missing = PLAYER_TROUGH_MATERIAL_REQUIREMENTS.filter(
+      (r) => !inventory.has(r.kind, r.count),
+    )
+    if (missing.length > 0) {
+      toast.show('Brakuje materiałów na koryto.', 'error')
+      return
+    }
+    busy.start(PLAYER_TROUGH_PLACE_DURATION_SEC, 'Stawianie koryta…', () => {
+      const { reason: confirmReason } = evaluatePlacementSite(playerTroughPlacementDefinition())
+      if (confirmReason !== 'ok') {
+        toast.show(PLAYER_TROUGH_PLACEMENT_MESSAGE[confirmReason], 'error')
+        return
+      }
+      for (const r of PLAYER_TROUGH_MATERIAL_REQUIREMENTS) {
+        if (!consumeMaterial(inventory, bundle.droppedItems, site.x, site.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+      }
+      bundle.playerTroughs.place(site.x, site.z, site.yaw)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show('Rozpoczęto budowę koryta.')
+    })
+  }
+
+  const workOnPlayerTrough = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const trough = bundle.playerTroughs.list().find((entry) => entry.id === id)
+    if (!trough || isPlayerTroughConstructionComplete(trough)) return
+    const sessionHours = Math.min(PLAYER_TROUGH_WORK_SESSION_HOURS, playerTroughRemainingWork(trough))
+    const sessionSec = (sessionHours / PLAYER_TROUGH_WORK_SESSION_HOURS) * PLAYER_TROUGH_WORK_SESSION_SEC
+    const startedAt = performance.now()
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      const creditedHours = sessionHours * fraction
+      bundle.playerTroughs.contributeWork(id, creditedHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', creditedHours)
+    }
+    busy.start(sessionSec, 'Budowa koryta w toku…', () => {
+      bundle.playerTroughs.contributeWork(id, sessionHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours)
+    }, {
+      onCancel: creditPartial,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
+    })
+  }
+
+  const carriedWaterContainersForTrough = (): LiquidContainerItemInstance[] =>
+    LIQUID_CONTAINER_KIND_LIST.flatMap((kind) => inventory.getInstances(kind))
+      .filter(isLiquidContainerInstance)
+      .filter((inst) => inst.liquid === 'water' && inst.amountLitres > 0)
+
+  const fillPlayerTrough = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const trough = bundle.playerTroughs.list().find((entry) => entry.id === id)
+    if (!trough || !isPlayerTroughConstructionComplete(trough)) return
+    if (playerTroughFreeCapacity(trough) <= 0) {
+      toast.show('Koryto jest pełne.', 'error')
+      return
+    }
+    if (carriedWaterContainersForTrough().length === 0) {
+      toast.show('Potrzebujesz pojemnika z wodą.', 'error')
+      return
+    }
+    busy.start(PLAYER_TROUGH_FILL_DURATION_SEC, 'Napełnianie koryta…', () => {
+      const liveTrough = bundle.playerTroughs.list().find((entry) => entry.id === id)
+      if (!liveTrough || !isPlayerTroughConstructionComplete(liveTrough)) {
+        toast.show('Koryto już zniknęło.', 'error')
+        return
+      }
+      const freeCapacity = playerTroughFreeCapacity(liveTrough)
+      if (freeCapacity <= 0) {
+        toast.show('Koryto jest pełne.', 'error')
+        return
+      }
+      const container = carriedWaterContainersForTrough()[0]
+      if (!container || container.liquid !== 'water' || container.amountLitres <= 0) {
+        toast.show('Potrzebujesz pojemnika z wodą.', 'error')
+        return
+      }
+      const transfer = Math.min(container.amountLitres, freeCapacity)
+      const poured = bundle.playerTroughs.addWater(id, transfer)
+      if (poured <= 0) return
+      inventory.updateInstance(container.id, (inst) => pourLiquidFromContainer(inst as LiquidContainerItemInstance, poured)!)
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
+      toast.show(`Dodano ${poured} l wody do koryta.`)
+    })
+  }
+
   /** Shared placement contract for a palisade segment (plan items-player-010
    *  §1/§4) — `aim` resolves the player's raw reach point and then, via
    *  `resolvePalisadeSite`, snaps it onto the nearest existing segment
@@ -1575,6 +1718,10 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeStandingTorchAtAim,
     igniteStandingTorch,
     workOnStandingTorch,
+    previewPlayerTroughPlacement,
+    placePlayerTroughAtAim,
+    workOnPlayerTrough,
+    fillPlayerTrough,
     previewPalisadePlacement,
     placePalisadeAtAim,
     workOnPalisade,

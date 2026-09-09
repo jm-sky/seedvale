@@ -100,6 +100,7 @@ const validSave: SaveData = {
     hydration: 60, lastHydrationUpdateAtDays: 3.5, droughtStressDays: 0,
   }],
   standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true, completedWork: 1 }],
+  playerTroughs: [],
   palisades: [{ id: 'palisade:1', x: 11, z: -2, yaw: 0.4, completedWork: 1.5 }],
   residentialBuildings: [],
   bedrolls: [{ id: 'bedroll:1', x: 12, z: -3, yaw: 0.4, variant: 'leather', condition: 90, lastConditionUpdateAtDays: 3.5 }],
@@ -131,6 +132,16 @@ describe('loadSaveData v1 contract', () => {
   it('round-trips a fully-formed native save', () => {
     const loaded = loadSaveData(validSave)
     expect(loaded).toEqual(validSave)
+    expect(isSaveData(loaded)).toBe(true)
+  })
+
+  it('round-trips player-built trough records (plan items-player-020)', () => {
+    const save = {
+      ...validSave,
+      playerTroughs: [{ id: 'playerTrough:1', x: 10, z: 11, yaw: 0.2, completedWork: 1.5, waterLitres: 4 }],
+    }
+    const loaded = loadSaveData(save)
+    expect(loaded).toEqual(save)
     expect(isSaveData(loaded)).toBe(true)
   })
 
@@ -1091,6 +1102,12 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       ...validSave,
       quests: { progress: [], relations: { Anna: 'trusted' } },
     })).toBe(false)
+  })
+
+  it('migrates a real v21 save (plan items-player-020) into current, defaulting missing playerTroughs to []', () => {
+    const { playerTroughs: _pt, ...v21Body } = validSave
+    const v21Save = { ...v21Body, version: 21 }
+    expect(loadStoredSave(v21Save)).toEqual({ status: 'ok', data: validSave })
   })
 
   describe('migrateStoredSave() chain mechanism', () => {

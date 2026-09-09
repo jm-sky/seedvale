@@ -140,6 +140,7 @@ import { updateFoliageWind } from '../world/foliageWind'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
+import { isLiquidContainerInstance, LIQUID_CONTAINER_KIND_LIST } from '../items/itemInstances'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
 import {
   buildCombatTarget,
@@ -439,6 +440,8 @@ export type GameLoopDeps = {
   /** `[E]` on an unfinished standing torch (plan items-player-017 §11) — runs
    *  one active-work bout through the actor-neutral construction seam. */
   workOnStandingTorch?: (id: string) => void
+  workOnPlayerTrough?: (id: string) => void
+  fillPlayerTrough?: (id: string) => void
   /** `[E]` on an unfinished palisade segment (plan items-player-017 §10) —
    *  same shape as `workOnStandingTorch`. */
   workOnPalisade?: (id: string) => void
@@ -566,7 +569,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
@@ -921,6 +924,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       tickPlacementPreview?.()
       const held = heldTool.held()
       const hasMilkContainer = hasCarriedMilkContainer(inventory)
+      const hasCarriedWaterContainer = LIQUID_CONTAINER_KIND_LIST
+        .flatMap((kind) => inventory.getInstances(kind))
+        .some((inst) => isLiquidContainerInstance(inst) && inst.liquid === 'water' && inst.amountLitres > 0)
       const interactables = buildInteractables(
         bundle.settlementsManager.getLoaded(),
         bundle.fauna,
@@ -938,6 +944,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.playerWells,
         bundle.playerGardens,
         bundle.standingTorches,
+        bundle.playerTroughs,
         bundle.palisades,
         bundle.residentialBuildings,
         bundle.terrainPreparations,
@@ -948,6 +955,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         inventory.hasCapability('meat_harvesting'),
         (kind) => questManager.activeSpotAnimalRange(kind),
         hasMilkContainer,
+        hasCarriedWaterContainer,
         (animal) => (animal.def.diet?.items ? selectDietFeedKind(inventory, animal.def.diet.items) : null),
         bundle.riverWaterQuality.resolve,
         bundle.settlementsManager.getDetachedLivestock(),
@@ -1586,6 +1594,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         if (interactPressed) {
           if (!target.complete) workOnStandingTorch?.(target.id)
           else if (!target.lit) igniteStandingTorch?.(target.id)
+        }
+      } else if (target?.kind === 'playerTrough') {
+        if (interactPressed) {
+          if (!target.complete) workOnPlayerTrough?.(target.id)
+          else if (target.canFill) fillPlayerTrough?.(target.id)
         }
       } else if (target?.kind === 'palisade') {
         // Unfinished (plan items-player-017 §10/§17) — `[E]` runs a

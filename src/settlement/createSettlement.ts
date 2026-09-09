@@ -325,6 +325,10 @@ export type CreateSettlementDeps = {
    *  forwarded into `tickSettlementLivestock` the same way as `hunting`/
    *  `foodSources` above. */
   grassForage?: GrassForageService
+  /** Shared world-owned player-trough water provider (plan items-player-020
+   *  §4) — forwarded into `tickSettlementLivestock` the same way as
+   *  `grassForage` above. */
+  waterSourceProvider?: import('../fauna/animalForaging').AnimalWaterSourceProvider
   /** Active terrain-preparation work sites (plan npc-018) — the second
    *  construction-like Work Contract target, forwarded into every
    *  `NpcAgent.create` call the same way as `workContracts`/`playerWells`. */
@@ -379,6 +383,7 @@ export async function createSettlement(
     playerWells,
     droppedItems,
     grassForage,
+    waterSourceProvider,
     terrainPreparations,
     palisades,
     standingTorches,
@@ -890,6 +895,7 @@ export async function createSettlement(
         onAnimalVocalize,
         persistence: livestockPersistence,
         grassForage,
+        waterSourceProvider,
         nearbyPredators,
         nearbySettlementNpcs,
         nearbyRats: rats.getAgents(),

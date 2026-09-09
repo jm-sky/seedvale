@@ -71,9 +71,30 @@ export const SOURCE_SEARCH_COOLDOWN_SEC = 3
  *  is effectively unreachable (e.g. boxed in by terrain `steerToward` can't
  *  route around). */
 export const SOURCE_TARGET_TIMEOUT_SEC = 20
-/** One trough visit's draw against the household water reserve — same order
- *  of magnitude as `NpcAgent`'s `WATER_DRINK_FROM_STOCK_AMOUNT`. */
-const TROUGH_DRINK_AMOUNT = 1
+/** One trough visit's draw against a finite water reserve — same order of
+ *  magnitude as `NpcAgent`'s `WATER_DRINK_FROM_STOCK_AMOUNT`. */
+export const TROUGH_DRINK_AMOUNT = 1
+
+/** Discriminated water-source identity for `kind: 'water'` targets (plan
+ *  items-player-020 §4) — replaces the old `trough?: boolean` household-only
+ *  flag so household storage and player-built troughs stay unambiguous. */
+export type WaterSourceRef =
+  | { kind: 'natural' }
+  | { kind: 'household' }
+  | { kind: 'playerTrough', id: string }
+
+/** Narrow world-owned provider seam for finite player-built trough water
+ *  (plan items-player-020 §4) — `animalForaging` owns selection/eligibility;
+ *  `createPlayerTroughs` owns records and mutation. */
+export type AnimalWaterSourceProvider = {
+  queryAvailableNear: (
+    x: number,
+    z: number,
+    radius: number,
+  ) => readonly { id: string, x: number, z: number }[]
+  isAvailable: (id: string, litres: number) => boolean
+  consume: (id: string, litres: number) => boolean
+}
 
 /** Forage habitat suitability from a `sampleForestFactor` reading — peaks at
  *  forest-edge density (~0.45) rather than open meadow or deep forest,
@@ -181,10 +202,9 @@ export type SourceTarget = {
   x: number
   z: number
   corpse?: CarcassCandidate
-  /** Set when this `water` target is the owning household's `AnimalTrough`
-   *  (plan 122) rather than a natural shoreline — `applySourceRelief`
-   *  drains `household.water` in addition to relieving `life.thirst`. */
-  trough?: boolean
+  /** Set only for `kind: 'water'` — which finite/infinite source this target
+   *  resolves through at completion time (plan items-player-020 §4). */
+  waterSource?: WaterSourceRef
   /** Set only for `kind: 'carcass'` — corpse phase/value/score captured at
    *  selection time (plan fauna-005), for `getDebugInfo()`'s `foodTarget`
    *  diagnostics only. The authoritative eat-time check re-reads the live
@@ -226,6 +246,9 @@ export type ForagingContext = {
   roamRadius: number
   isWalkable: (x: number, z: number) => boolean
   isNearVillage: (pos: { readonly x: number, readonly z: number }) => boolean
+  /** Optional finite player-built trough provider (plan items-player-020 §4)
+   *  — queried only during an active water search, never per frame. */
+  waterSourceProvider?: AnimalWaterSourceProvider
 }
 
 /** Household `AnimalTrough` (plan 122) — preferred over a natural
@@ -233,14 +256,42 @@ export type ForagingContext = {
  *  "prefer local stored water" hierarchy `NpcAgent`'s personal thirst
  *  uses. Only livestock have a `household` (wild fauna: always `undefined`,
  *  falls straight through to the shoreline search below). */
-export function findTroughTarget(ctx: ForagingContext): SourceTarget | null {
+export function findHouseholdTroughTarget(ctx: ForagingContext): SourceTarget | null {
   if (!ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) return null
-  return { kind: 'water', x: ctx.home.x, z: ctx.home.z, trough: true }
+  return { kind: 'water', x: ctx.home.x, z: ctx.home.z, waterSource: { kind: 'household' } }
+}
+
+/** @deprecated Use `findHouseholdTroughTarget` — kept as a thin alias for
+ *  existing tests/callers during the items-player-020 refactor. */
+export const findTroughTarget = findHouseholdTroughTarget
+
+function findPlayerTroughTarget(ctx: ForagingContext): SourceTarget | null {
+  const provider = ctx.waterSourceProvider
+  if (!provider) return null
+  let best: { id: string, x: number, z: number } | null = null
+  let bestScore = -Infinity
+  for (const candidate of provider.queryAvailableNear(ctx.x, ctx.z, WATER_SEARCH_RADIUS)) {
+    if (!provider.isAvailable(candidate.id, TROUGH_DRINK_AMOUNT)) continue
+    if (!ctx.isWalkable(candidate.x, candidate.z)) continue
+    if (ctx.def.sociability === 'wild' && ctx.isNearVillage(candidate)) continue
+    if (Math.hypot(candidate.x - ctx.home.x, candidate.z - ctx.home.z) > ctx.roamRadius) continue
+    const d = Math.hypot(candidate.x - ctx.x, candidate.z - ctx.z)
+    const score = -d
+    if (score > bestScore) {
+      bestScore = score
+      best = candidate
+    }
+  }
+  return best
+    ? { kind: 'water', x: best.x, z: best.z, waterSource: { kind: 'playerTrough', id: best.id } }
+    : null
 }
 
 export function findWaterTarget(ctx: ForagingContext): SourceTarget | null {
-  const trough = findTroughTarget(ctx)
-  if (trough) return trough
+  const householdTrough = findHouseholdTroughTarget(ctx)
+  if (householdTrough) return householdTrough
+  const playerTrough = findPlayerTroughTarget(ctx)
+  if (playerTrough) return playerTrough
   const best = probeBestPointNear(
     { x: ctx.x, z: ctx.z },
     WATER_SEARCH_RADIUS,
@@ -257,7 +308,7 @@ export function findWaterTarget(ctx: ForagingContext): SourceTarget | null {
       return hits * 10 - d
     },
   )
-  return best ? { kind: 'water', x: best.x, z: best.z } : null
+  return best ? { kind: 'water', x: best.x, z: best.z, waterSource: { kind: 'natural' } } : null
 }
 
 /** Habitat-biased forage spot for wild prey/livestock — uses
@@ -428,6 +479,9 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
     if (!ctx.isWalkable(target.x, target.z)) return false
     return Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) <= ctx.roamRadius
   }
+  if (target.kind === 'water' && target.waterSource?.kind === 'playerTrough') {
+    if (!ctx.waterSourceProvider?.isAvailable(target.waterSource.id, TROUGH_DRINK_AMOUNT)) return false
+  }
   if (!ctx.isWalkable(target.x, target.z)) return false
   return Math.hypot(target.x - ctx.home.x, target.z - ctx.home.z) <= ctx.roamRadius
 }
@@ -441,12 +495,17 @@ export function isSourceTargetValid(ctx: ForagingContext, eater: unknown, target
  *  that timing. */
 export function applySourceRelief(ctx: ForagingContext, target: SourceTarget): void {
   if (target.kind === 'water') {
-    if (target.trough) {
-      // Trough may have run dry while approaching (another animal/NPC
-      // drank first) — no free relief; next search re-checks the
-      // household reserve and falls back to a shoreline (plan 122).
+    const source = target.waterSource ?? { kind: 'natural' }
+    if (source.kind === 'household') {
+      // Household trough may have run dry while approaching (another
+      // animal/NPC drank first) — no free relief; next search re-checks the
+      // reserve and falls back to shoreline/player trough (plan 122).
       if (ctx.household?.water.has(TROUGH_DRINK_AMOUNT)) {
         ctx.household.water.remove(TROUGH_DRINK_AMOUNT)
+        drinkWater(ctx.life)
+      }
+    } else if (source.kind === 'playerTrough') {
+      if (ctx.waterSourceProvider?.consume(source.id, TROUGH_DRINK_AMOUNT)) {
         drinkWater(ctx.life)
       }
     } else {

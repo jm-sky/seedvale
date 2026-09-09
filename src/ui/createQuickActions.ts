@@ -109,6 +109,8 @@ export type QuickActionsHandlers = {
    *  "Postaw segment palisady" (plan items-player-010), same shape as
    *  `hasChest`. */
   hasPalisadeMaterial?: boolean
+  /** Initial "enough beam to build a player trough" flag (plan items-player-020). */
+  hasTroughMaterial?: boolean
   /** Initial "enough hide to build a bedroll" flag for showing "Rozłóż
    *  posłanie" (plan items-player-013), same shape as `hasPalisadeMaterial`. */
   hasBedrollMaterial?: boolean
@@ -164,6 +166,9 @@ export function createQuickActions(
   }
   if (typeof handlers.hasPalisadeMaterial === 'boolean') {
     getUi()?.setQuickActionsHasPalisadeMaterial(handlers.hasPalisadeMaterial)
+  }
+  if (typeof handlers.hasTroughMaterial === 'boolean') {
+    getUi()?.setQuickActionsHasTroughMaterial(handlers.hasTroughMaterial)
   }
   if (typeof handlers.hasBedrollMaterial === 'boolean') {
     getUi()?.setQuickActionsHasBedrollMaterial(handlers.hasBedrollMaterial)

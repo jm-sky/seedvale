@@ -310,6 +310,10 @@ export async function createSettlementsManager(
    *  global, not derived from any settlement), so passed directly rather
    *  than late-bound like `hunting`. */
   grassForage?: GrassForageService,
+  /** Shared world-owned player-trough water provider (plan items-player-020
+   *  §4) — forwarded into every `createSettlement` call the same way as
+   *  `grassForage` above. */
+  waterSourceProvider?: import('../fauna/animalForaging').AnimalWaterSourceProvider,
   /** Active terrain-preparation work sites (plan npc-018) — forwarded into
    *  every `createSettlement` call the same way `workContracts`/`playerWells`
    *  are above, so NPC Work Contract execution can travel to/contribute work
@@ -468,6 +472,7 @@ export async function createSettlementsManager(
     playerWells,
     droppedItems,
     grassForage,
+    waterSourceProvider,
     terrainPreparations,
     palisades,
     standingTorches,
@@ -711,6 +716,7 @@ export async function createSettlementsManager(
           onAnimalVocalize,
           persistence: livestock,
           grassForage,
+          waterSourceProvider,
           playerObservation,
           playerControlPos: { x: playerPos.x, z: playerPos.z },
           resolvePersistenceSettlementId: (animal) => detachedOriginById.get(animal.animalId) ?? 'detached',

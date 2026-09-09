@@ -782,6 +782,9 @@ export type AnimalUpdateContext = {
    *  selection is then simply skipped, same "capability absent → branch
    *  never taken" convention as `def.diet` itself. */
   grassForage?: GrassForageService
+  /** Shared world-owned player-trough water provider (plan items-player-020
+   *  §4) — queried only during an active water search, never per frame. */
+  waterSourceProvider?: import('./animalForaging').AnimalWaterSourceProvider
   /** Bounded/local live predators (plan fauna-011 §9/§10/§11) — only
    *  consulted by a `dog` (`resolveGuardTarget`/`resolveBarkStimulus`);
    *  every other kind never reads this. Caller-bounded the same way as
@@ -1159,6 +1162,7 @@ export class AnimalAgent {
    *  no `def.diet`), in which case grass-patch selection is simply skipped. */
   private tickNowDays = 0
   private tickGrassForage: GrassForageService | undefined
+  private tickWaterSourceProvider: import('./animalForaging').AnimalWaterSourceProvider | undefined
   /** Spontaneous ambient vocalization timer (plan settlements-npcs-004 §1) —
    *  seeded per-instance in the constructor, ticked in `update()` via
    *  `tickSpontaneousVocalizeCooldown`. `Infinity` (and never fires) for any
@@ -2061,6 +2065,7 @@ export class AnimalAgent {
       nowDays = 0,
       timeOfDay = 0.5,
       grassForage,
+      waterSourceProvider,
       nearbyPredators = [],
       nearbySettlementNpcs = [],
       lures = [],
@@ -2134,6 +2139,7 @@ export class AnimalAgent {
     this.currentOthers = others
     this.tickNowDays = nowDays
     this.tickGrassForage = grassForage
+    this.tickWaterSourceProvider = waterSourceProvider
     const sense = this.senseEnvironment(dt, observerPos, dayFactor, forestFactor, litFires, playerStealth)
     // Any predator can notice a nearby NPC (npc-008 step 6 — animal↔NPC
     // threat is a general predator behaviour, not something only a frenzied
@@ -3278,6 +3284,7 @@ export class AnimalAgent {
       household: this._household,
       nowDays: this.tickNowDays,
       grassForage: this.tickGrassForage,
+      waterSourceProvider: this.tickWaterSourceProvider,
       sampleHeight: this.sampleHeight,
       waterLevel: this.waterLevel,
       sampleForestFactor: this.sampleForestFactor,

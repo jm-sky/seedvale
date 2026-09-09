@@ -82,7 +82,7 @@ describe('findTroughTarget / findWaterTarget (plan 122 — trough preferred over
     const ctx = makeCtx({ household: fakeHousehold({ waterAmount: 5 }), def: ANIMAL_DEFS.cow })
     const target = findWaterTarget(ctx)
     expect(target?.kind).toBe('water')
-    expect(target?.trough).toBe(true)
+    expect(target?.waterSource).toEqual({ kind: 'household' })
   })
 
   it('grants no trough target when the household reserve is empty', () => {
@@ -102,7 +102,7 @@ describe('isSourceTargetValid / applySourceRelief — trough (plan 122)', () => 
   it('a drained trough grants no relief and the target fails revalidation', () => {
     const household = fakeHousehold({ waterAmount: 0 })
     const ctx = makeCtx({ household, def: ANIMAL_DEFS.cow })
-    const target: SourceTarget = { kind: 'water', x: 0, z: 0, trough: true }
+    const target: SourceTarget = { kind: 'water', x: 0, z: 0, waterSource: { kind: 'household' } }
     // Trough targets don't fail isSourceTargetValid's generic checks (no
     // live re-check there — the atomic water draw itself is the gate), but
     // applySourceRelief must not relieve thirst from an empty reserve.
@@ -125,9 +125,64 @@ describe('isSourceTargetValid / applySourceRelief — trough (plan 122)', () => 
     } as unknown as Household
     const ctx = makeCtx({ household, def: ANIMAL_DEFS.cow })
     ctx.life.thirst = 0.8
-    applySourceRelief(ctx, { kind: 'water', x: 0, z: 0, trough: true })
+    applySourceRelief(ctx, { kind: 'water', x: 0, z: 0, waterSource: { kind: 'household' } })
     expect(waterAmount).toBe(4)
     expect(ctx.life.thirst).toBeLessThan(0.8)
+  })
+})
+
+describe('player-built trough water (plan items-player-020)', () => {
+  function fakeWaterProvider(state: { litres: number, id: string }) {
+    return {
+      queryAvailableNear: () => (state.litres > 0 ? [{ id: state.id, x: 1, z: 0 }] : []),
+      isAvailable: (_id: string, litres: number) => state.litres >= litres,
+      consume: (_id: string, litres: number) => {
+        if (state.litres < litres) return false
+        state.litres -= litres
+        return true
+      },
+    }
+  }
+
+  it('prefers household trough over a nearby player trough', () => {
+    const provider = fakeWaterProvider({ litres: 5, id: 'trough:1' })
+    const ctx = makeCtx({
+      household: fakeHousehold({ waterAmount: 5 }),
+      waterSourceProvider: provider,
+      def: ANIMAL_DEFS.cow,
+      x: 0,
+      z: 0,
+      home: { x: 0, z: 0 },
+    })
+    const target = findWaterTarget(ctx)
+    expect(target?.waterSource).toEqual({ kind: 'household' })
+  })
+
+  it('uses a nearby player trough when household water is empty', () => {
+    const provider = fakeWaterProvider({ litres: 5, id: 'trough:1' })
+    const ctx = makeCtx({
+      household: fakeHousehold({ waterAmount: 0 }),
+      waterSourceProvider: provider,
+      def: ANIMAL_DEFS.cow,
+      x: 0,
+      z: 0,
+      home: { x: 0, z: 0 },
+    })
+    const target = findWaterTarget(ctx)
+    expect(target?.waterSource).toEqual({ kind: 'playerTrough', id: 'trough:1' })
+  })
+
+  it('grants no relief when player trough consume fails', () => {
+    const provider = fakeWaterProvider({ litres: 0, id: 'trough:1' })
+    const ctx = makeCtx({ waterSourceProvider: provider, def: ANIMAL_DEFS.cow })
+    const before = ctx.life.thirst
+    applySourceRelief(ctx, {
+      kind: 'water',
+      x: 1,
+      z: 0,
+      waterSource: { kind: 'playerTrough', id: 'trough:1' },
+    })
+    expect(ctx.life.thirst).toBe(before)
   })
 })
 

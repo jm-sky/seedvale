@@ -46,6 +46,8 @@ import {
   isResidentialBuildingComplete,
   residentialBuildingPromptLabel,
 } from '../world/residentialBuilding'
+import type { PlayerTroughs } from '../world/createPlayerTroughs'
+import { isPlayerTroughConstructionComplete, playerTroughPromptLabel } from '../world/playerTrough'
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'
@@ -334,6 +336,7 @@ export function buildInteractables(
   placedWells: PlayerWells,
   playerGardens: PlayerGardens,
   standingTorches: StandingTorches,
+  playerTroughs: PlayerTroughs,
   palisades: Palisades,
   residentialBuildings: ResidentialBuildings,
   terrainPreparations: TerrainPreparations,
@@ -364,6 +367,8 @@ export function buildInteractables(
    *  this module stays inventory-agnostic. Defaults to false for existing
    *  callers/tests. */
   hasMilkContainer = false,
+  /** Player carries a water-filled liquid container (plan items-player-020). */
+  hasCarriedWaterContainer = false,
   /** Player-feeding resolver (plan fauna-011 §6) — precomputed the same way
    *  `hasMilkContainer`/`inventoryHasFreeKnife` are, so this module stays
    *  inventory-agnostic. Returns the first inventory item compatible with
@@ -535,6 +540,18 @@ export function buildInteractables(
       id: torch.id,
       lit: torch.lit,
       complete: isStandingTorchConstructionComplete(torch),
+    })
+  }
+
+  for (const trough of playerTroughs.list()) {
+    if (!withinRange(trough.x, trough.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'playerTrough',
+      position: { x: trough.x, z: trough.z },
+      promptLabel: playerTroughPromptLabel(trough, hasCarriedWaterContainer),
+      id: trough.id,
+      complete: isPlayerTroughConstructionComplete(trough),
+      canFill: hasCarriedWaterContainer,
     })
   }
 

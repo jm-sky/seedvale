@@ -788,6 +788,9 @@ export function tickSettlementLivestock(
      *  forwarded unchanged into every `AnimalAgent.update()` call below, same
      *  contract as `createFauna.ts`'s wild-fauna loop. */
     grassForage?: GrassForageService
+    /** Shared world-owned player-trough water provider (plan items-player-020
+     *  §4) — same forwarding contract as `grassForage` above. */
+    waterSourceProvider?: import('../fauna/animalForaging').AnimalWaterSourceProvider
     /** Bounded/local live wild predators (plan fauna-011 §9/§10/§11) — only
      *  meaningful for an owned `dog` (`AnimalAgent.resolveGuardTarget()`);
      *  every other livestock kind never reads this. The caller
@@ -813,7 +816,7 @@ export function tickSettlementLivestock(
     resolvePersistenceSettlementId?: (animal: AnimalAgent) => string
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation, playerControlPos, resolvePersistenceSettlementId } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, waterSourceProvider, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation, playerControlPos, resolvePersistenceSettlementId } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -831,6 +834,7 @@ export function tickSettlementLivestock(
       nowDays,
       timeOfDay,
       grassForage,
+      waterSourceProvider,
       nearbyPredators,
       nearbySettlementNpcs,
       nearbyRats,

@@ -486,6 +486,9 @@ export async function createFauna(
    *  Optional so existing tests that don't model it keep prior behaviour
    *  (herbivores simply fall back to the old abstract forage spot). */
   grassForage?: GrassForageService,
+  /** Shared world-owned player-trough water provider (plan items-player-020
+   *  §4) — forwarded unchanged into every `AnimalAgent.update()` call below. */
+  waterSourceProvider?: import('./animalForaging').AnimalWaterSourceProvider,
   /** Signed distance from a point to the nearest loaded river's water edge
    *  (`ChunkManager.riverShoreDistance`) — negative inside the water, `null`
    *  when no river channel is near. Optional so callers/tests without
@@ -972,6 +975,7 @@ export async function createFauna(
           nowDays: worldDays,
           timeOfDay,
           grassForage,
+          waterSourceProvider,
           lures,
           playerObservation,
         })

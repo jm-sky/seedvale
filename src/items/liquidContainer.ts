@@ -110,6 +110,21 @@ export function emptyLiquidContainer(instance: LiquidContainerItemInstance): Liq
   return { ...instance, liquid: null, amountLitres: 0 }
 }
 
+/** Removes up to `litres` from `instance` — the "pour a specific amount out"
+ *  counterpart to `drinkFromLiquidContainer` (plan items-player-020 §3).
+ *  Null when there isn't enough held; an emptied container gets the canonical
+ *  `{ liquid: null, amountLitres: 0 }` state. */
+export function pourLiquidFromContainer(
+  instance: LiquidContainerItemInstance,
+  litres: number,
+): LiquidContainerItemInstance | null {
+  if (litres <= 0 || instance.liquid === null || instance.amountLitres < litres) return null
+  const remaining = instance.amountLitres - litres
+  return remaining <= 0
+    ? { ...instance, liquid: null, amountLitres: 0 }
+    : { ...instance, amountLitres: remaining }
+}
+
 /** The sized kind a legacy `waterskin_empty`/`waterskin_full` (plan 106,
  *  kept in `ItemKind` only so an old save's counts still parse) becomes — plan-106 waterskins had no
  *  size concept, so `waterskin_medium` (5 l) is the closest "generic"

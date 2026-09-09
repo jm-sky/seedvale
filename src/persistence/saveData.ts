@@ -35,6 +35,7 @@ import { isPreparationSize, type PreparationSize } from '../terrain/terrainPrepa
 import { CONDITION_MAX } from '../world/condition'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
+import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
@@ -381,6 +382,17 @@ export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number,
  *  contract as `SaveStandingTorch.completedWork`. */
 export type SavePalisadeSegment = { id: string, x: number, z: number, yaw: number, completedWork: number }
 
+/** Persistent player-built animal trough — mirrors `world/playerTrough.ts`'s
+ *  `PlayerTroughRecord` (plan items-player-020). */
+export type SavePlayerTrough = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+  completedWork: number
+  waterLitres: number
+}
+
 export type SaveResidentialOwner =
   | { kind: 'player' }
   | { kind: 'household', householdId: string }
@@ -537,7 +549,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 21
+export const CURRENT_SAVE_VERSION = 22
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -634,6 +646,7 @@ export type SaveData = {
   plantedCrops: SavePlantedCrop[]
   playerGardens: SavePlayerGarden[]
   standingTorches: SaveStandingTorch[]
+  playerTroughs: SavePlayerTrough[]
   palisades: SavePalisadeSegment[]
   residentialBuildings: SaveResidentialBuilding[]
   bedrolls: SaveBedroll[]
@@ -1312,6 +1325,26 @@ function isStandingTorchesField(value: unknown): value is SaveStandingTorch[] {
   })
 }
 
+function isPlayerTroughsField(value: unknown): value is SavePlayerTrough[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const t = entry as Record<string, unknown>
+    return (
+      typeof t.id === 'string' &&
+      Number.isFinite(t.x) &&
+      Number.isFinite(t.z) &&
+      Number.isFinite(t.yaw) &&
+      typeof t.completedWork === 'number' &&
+      t.completedWork >= 0 &&
+      t.completedWork <= PLAYER_TROUGH_REQUIRED_WORK &&
+      typeof t.waterLitres === 'number' &&
+      t.waterLitres >= 0 &&
+      t.waterLitres <= PLAYER_TROUGH_CAPACITY_LITRES
+    )
+  })
+}
+
 function isPalisadesField(value: unknown): value is SavePalisadeSegment[] {
   if (!Array.isArray(value)) return false
   return value.every((entry) => {
@@ -1808,6 +1841,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlantedCropsField(v.plantedCrops)) return false
   if (!isPlayerGardensField(v.playerGardens)) return false
   if (!isStandingTorchesField(v.standingTorches)) return false
+  if (!isPlayerTroughsField(v.playerTroughs)) return false
   if (!isPalisadesField(v.palisades)) return false
   if (!isResidentialBuildingsField(v.residentialBuildings)) return false
   if (!isBedrollsField(v.bedrolls)) return false
@@ -2529,6 +2563,12 @@ function migrateSaveV20ToV21(data: unknown): unknown {
   return { ...v, version: 21, graves: [], npcStates }
 }
 
+/** v21 → v22 (plan items-player-020): player-built animal troughs. */
+function migrateSaveV21ToV22(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 22, playerTroughs: [] }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2550,6 +2590,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   18: migrateSaveV18ToV19,
   19: migrateSaveV19ToV20,
   20: migrateSaveV20ToV21,
+  21: migrateSaveV21ToV22,
 }
 
 function detectStoredVersion(value: unknown): number | null {

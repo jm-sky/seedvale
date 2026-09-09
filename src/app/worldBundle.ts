@@ -76,7 +76,9 @@ import { createPlayerGardens, type PlayerGardens } from '../world/createPlayerGa
 import { createPlayerWells, type PlayerWells } from '../world/createPlayerWells'
 import { createResidentialBuildings, type ResidentialBuildings } from '../world/createResidentialBuildings'
 import { createSleepingUtilities, type SleepingUtilities } from '../world/createSleepingUtilities'
+import { createPlayerTroughs, type PlayerTroughs } from '../world/createPlayerTroughs'
 import { createStandingTorches, type StandingTorches } from '../world/createStandingTorches'
+import type { PlayerTroughRecord } from '../world/playerTrough'
 import { createTerrainPreparations, type TerrainPreparations } from '../world/createTerrainPreparations'
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
@@ -142,6 +144,7 @@ export type WorldBundle = {
   playerWells: PlayerWells
   playerGardens: PlayerGardens
   standingTorches: StandingTorches
+  playerTroughs: PlayerTroughs
   palisades: Palisades
   residentialBuildings: ResidentialBuildings
   sleepingUtilities: SleepingUtilities
@@ -292,6 +295,9 @@ function buildSettlementsManager(
   /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
    *  forwarded into `createSettlementsManager`. */
   grassForage?: GrassForageService,
+  /** Player-built animal troughs (plan items-player-020) — forwarded as the
+   *  fauna water provider into every `createSettlement` call. */
+  playerTroughs?: PlayerTroughs,
   /** Active terrain-preparation work sites (plan npc-018) — forwarded into
    *  every `createSettlement` call → every `NpcAgent`, built ahead of
    *  `SettlementsManager` the same way as `workContracts`/`playerWells`. */
@@ -352,6 +358,7 @@ function buildSettlementsManager(
     playerWells,
     droppedItems,
     grassForage,
+    playerTroughs,
     terrainPreparations,
     palisades,
     standingTorches,
@@ -381,6 +388,7 @@ function buildFauna(
   /** Shared world-owned grass forage service (plan fauna-010 §3/§4) —
    *  forwarded unchanged into `createFauna`. */
   grassForage?: GrassForageService,
+  waterSourceProvider?: import('../fauna/animalForaging').AnimalWaterSourceProvider,
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -431,6 +439,7 @@ function buildFauna(
     onAnimalDeath,
     initialSpawnerState,
     grassForage,
+    waterSourceProvider,
     chunkManager.riverShoreDistance,
   ).finally(() => bootMarkEnd('createFauna'))
 }
@@ -502,6 +511,7 @@ type WorldSystemsSeed = {
   playerWells: readonly PlayerWellRecord[]
   playerGardens: readonly PlayerGardenRecord[]
   standingTorches: readonly StandingTorchRecord[]
+  playerTroughs: readonly PlayerTroughRecord[]
   palisades: readonly PalisadeSegmentRecord[]
   residentialBuildings: readonly ResidentialBuildingRecord[]
   sleepingUtilityBedrolls: readonly BedrollRecord[]
@@ -653,6 +663,7 @@ async function buildWorldSystems(
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
     standingTorches: initialStandingTorches,
+    playerTroughs: initialPlayerTroughs,
     palisades: initialPalisades,
     residentialBuildings: initialResidentialBuildings,
     sleepingUtilityBedrolls: initialSleepingUtilityBedrolls,
@@ -816,6 +827,7 @@ async function buildWorldSystems(
     initialCompletedTerrainPreparations,
   )
   const standingTorches = createStandingTorches(scene, chunkManager.sampleHeight, initialStandingTorches, pointLightBudget)
+  const playerTroughs = createPlayerTroughs(scene, chunkManager.sampleHeight, initialPlayerTroughs)
   const palisades = createPalisades(
     scene,
     chunkManager.sampleHeight,
@@ -842,7 +854,7 @@ async function buildWorldSystems(
   // background, not awaited here (world-003 §3) — see
   // `SettlementsManager.homeReady`.
   bootMark('buildSettlementsManager')
-  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, playerWells, droppedItems, grassForage, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
+  const settlementsManager = await buildSettlementsManager(scene, chunkManager, config.seed, playAt, config, forest, worldContext, mining, initialEconomies, onAnimalDeath, getPlayerSocial, isLandPlotOwned, pointLightBudget, getNearbyPlayerWell, foodSources, hunting, initialHouseholds, initialNpcStates, helperDelivery, initialNpcRelationships, initialLivestock, initialRemovedLivestockIds, initialRats, initialRemovedRatIds, initialStorageInfestation, seedHomeStorageInfestation, workContracts, playerWells, droppedItems, grassForage, playerTroughs, terrainPreparations, palisades, standingTorches, residentialBuildings, npcGraves)
   bootMarkEnd('buildSettlementsManager')
   const homeDef = settlementsManager.getHomeDef()
   const riverWaterQuality = createRiverWaterQualityResolver(chunkManager.riverWaterContext, settlementsManager.peekDef)
@@ -897,6 +909,7 @@ async function buildWorldSystems(
     playerWells,
     playerGardens,
     standingTorches,
+    playerTroughs,
     palisades,
     residentialBuildings,
     sleepingUtilities,
@@ -930,7 +943,7 @@ async function buildWorldSystems(
         (async () => {
           bootMark('background:buildFauna')
           try {
-            return await buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState, grassForage)
+            return await buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState, grassForage, playerTroughs)
           } finally {
             bootMarkEnd('background:buildFauna')
           }
@@ -1089,6 +1102,10 @@ export async function createWorldBundle(
    *  "carried across rebuild, reset only on a genuinely new world" contract
    *  as `initialPlayerWells`/`initialPlayerGardens` above. */
   initialStandingTorches: readonly StandingTorchRecord[] = [],
+  /** Plan items-player-020 — persistent player-built animal troughs, same
+   *  "carried across rebuild, reset only on a genuinely new world" contract
+   *  as `initialStandingTorches` above. */
+  initialPlayerTroughs: readonly PlayerTroughRecord[] = [],
   /** Plan items-player-010 — persistent player-built palisade segments, same
    *  "carried across rebuild, reset only on a genuinely new world" contract
    *  as `initialStandingTorches` above. */
@@ -1143,6 +1160,7 @@ export async function createWorldBundle(
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
     standingTorches: initialStandingTorches,
+    playerTroughs: initialPlayerTroughs,
     palisades: initialPalisades,
     residentialBuildings: initialResidentialBuildings,
     sleepingUtilityBedrolls: initialSleepingUtilityBedrolls,
@@ -1275,6 +1293,8 @@ export async function rebuildWorldBundle(
   // seed-derived — same carry-across-rebuild contract as `playerGardens` above.
   const carriedStandingTorches = resetCollectedItems ? [] : [...bundle.standingTorches.nodes()]
   bundle.standingTorches.dispose()
+  const carriedPlayerTroughs = resetCollectedItems ? [] : [...bundle.playerTroughs.nodes()]
+  bundle.playerTroughs.dispose()
   // Player-built palisade segments are positioned by the player, not
   // seed-derived — same carry-across-rebuild contract as `standingTorches` above.
   const carriedPalisades = resetCollectedItems ? [] : [...bundle.palisades.nodes()]
@@ -1344,6 +1364,7 @@ export async function rebuildWorldBundle(
     playerWells: carriedPlayerWells,
     playerGardens: carriedPlayerGardens,
     standingTorches: carriedStandingTorches,
+    playerTroughs: carriedPlayerTroughs,
     palisades: carriedPalisades,
     residentialBuildings: carriedResidentialBuildings,
     sleepingUtilityBedrolls: carriedBedrolls,
@@ -1395,6 +1416,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.playerWells.dispose()
   bundle.playerGardens.dispose()
   bundle.standingTorches.dispose()
+  bundle.playerTroughs.dispose()
   bundle.palisades.dispose()
   bundle.residentialBuildings.dispose()
   bundle.sleepingUtilities.dispose()

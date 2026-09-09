@@ -217,6 +217,8 @@ type QuickActionsState = {
    *  — drives "Postaw segment palisady" under "Budowa", same shape as
    *  `hasWoodenTorch`. */
   hasPalisadeMaterial: boolean
+  /** Owning enough `beam` to build a player trough (plan items-player-020). */
+  hasTroughMaterial: boolean
   /** Owning enough `hide` to build a bedroll (plan items-player-013) — drives
    *  "Rozłóż posłanie" under "Budowa", same shape as `hasPalisadeMaterial`. */
   hasBedrollMaterial: boolean
@@ -530,7 +532,7 @@ export const ui = reactive({
   flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', actions: [], onOpen: null, onClose: null } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
-    hasPalisadeMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
+    hasPalisadeMaterial: false, hasTroughMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
     traps: { simple: false, good: false },
     fireAvailability: {
       buildSimpleFire: NOT_YET_AVAILABLE,
@@ -962,6 +964,7 @@ export function setQuickActionsHasTent(hasTent: boolean): void { ui.quickActions
 export function setQuickActionsHasChest(hasChest: boolean): void { ui.quickActions.hasChest = hasChest }
 export function setQuickActionsHasWoodenTorch(hasWoodenTorch: boolean): void { ui.quickActions.hasWoodenTorch = hasWoodenTorch }
 export function setQuickActionsHasPalisadeMaterial(hasPalisadeMaterial: boolean): void { ui.quickActions.hasPalisadeMaterial = hasPalisadeMaterial }
+export function setQuickActionsHasTroughMaterial(hasTroughMaterial: boolean): void { ui.quickActions.hasTroughMaterial = hasTroughMaterial }
 export function setQuickActionsHasBedrollMaterial(hasBedrollMaterial: boolean): void { ui.quickActions.hasBedrollMaterial = hasBedrollMaterial }
 export function setQuickActionsHasPlatformMaterial(hasPlatformMaterial: boolean): void { ui.quickActions.hasPlatformMaterial = hasPlatformMaterial }
 export function setQuickActionsHasCarriedContainer(hasCarriedContainer: boolean): void { ui.quickActions.hasCarriedContainer = hasCarriedContainer }
