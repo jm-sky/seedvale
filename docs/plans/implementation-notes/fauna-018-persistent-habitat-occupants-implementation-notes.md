@@ -1,22 +1,117 @@
 # Implementation notes: fauna-018 persistent habitat occupants
 
+## Recon baseline
+
+Focused recon wykonany 2026-09-09 na aktualnym `main`, po dużym refaktorze `fauna-017`.
+
+Planowa koncepcja pozostaje właściwa: potrzebny jest sparse, fauna-owned mechanizm stable habitat occupant identity + `AnimalSaveState` persistence + permanent tombstone. Nie ma potrzeby redesignu całej fauny ani cofania `fauna-017`.
+
+Najważniejsza zmiana względem poprzednich notes: `AnimalAgent` nadal integruje pojedynczego runtime agenta i nadal posiada persistence seam, ale lifecycle/foraging/roaming mają już kanoniczne moduły. Implementacja `fauna-018` musi się do nich dopasować zamiast dopisywać równoległe mechanizmy do klasy.
+
 ## Current codebase facts
 
-- `src/fauna/createFauna.ts` owns ordinary wild-fauna creation and habitat-spawner replenishment. Ordinary `animalId` is still `${kind}-${nextAnimalId++}` and therefore cannot be reused as persistent identity.
-- `PreySpawner.id` is already deterministic and survives rebuild/save-load. `AnimalAgent.spawnPointId` links spawned animals back to that habitat.
-- `src/fauna/AnimalSpawner.ts:updateSpawners()` currently counts only **live same-kind animals within `SPAWNER_RADIUS` (12)**. This is insufficient for persistent occupancy: a resident that temporarily leaves home for roaming/trips would look like a vacancy and could receive a replacement.
-- `createFauna()` currently fills every active habitat immediately to `maxPreyCount`, then later replenishes it through `updateSpawners()`. Persistent declarations therefore must be applied before generic habitat filling/replenishment decides how many ordinary slots are available.
-- `AnimalAgent.snapshot()` / `hydrate()` is the correct state seam and is already proven by livestock persistence. `AnimalSaveState` currently stores position/yaw, HP/dead, hunger/thirst/stamina ratio, production state and corpse `{ timeSinceDeath, meatHarvested }`; transient target/path/trip/action/animation state is intentionally absent.
-- `rabid` is **not** currently part of `AnimalSaveState`. Persistent occupants need it; extend the shared snapshot instead of adding a persistent-wild-only disease field.
-- Corpse phase itself is not persisted. `hydrate()` restores `timeSinceDeath`/`meatHarvested`; presentation/phase is re-derived. Keep this contract.
-- Livestock persistence in `src/settlement/livestock.ts` is the closest lifecycle pattern: live snapshots + immediate tombstone when `readyToRemove()` becomes true + deterministic reconstruction that respects tombstones. Reuse the pattern, not settlement/household ownership.
-- `SaveData` is currently version 6 and the current repository rule is to bump schema version when persisted representation/semantics change. The plan's older-save wording should not bypass the migration pipeline.
+### `src/fauna/createFauna.ts`
+
+- Nadal jest composition root dla ordinary wild fauna i habitat spawners.
+- `Fauna` obecnie expose'uje `update()`, `dispose()`, `resolveTimeSkip()`, `getAgents()`, `getSpawners()`, `isWolfDenCleared()`, marker/destroy-spawner API — brak persistent-individual snapshot API.
+- Ordinary `animalId` nadal powstaje lokalnie w `spawnAgent()` jako `${kind}-${nextAnimalId++}`. Ten counter jest per-build i nie może być stable identity dla persistent occupant.
+- `spawnAgent()` już centralizuje normalny `AnimalAgent` construction, visuals/assets, scene registration oraz optional `spawnPointId` → `animalToSpawner` binding. Persistent creation powinno wejść przez ten sam seam z optional explicit `animalId`, nie tworzyć drugiego spawn path.
+- `handleAnimalDeath()` nadal odłącza `animalToSpawner` i zasila istniejące spawner death/depletion accounting. Persistent slot ownership nie może być z tego inferowane.
+- Removal odbywa się w `Fauna.update()` przez `agents.some(a => a.readyToRemove())`, `disposeAgent(a)` i odfiltrowanie tablicy. To jest właściwy seam na immediate persistent tombstone **przed** disposal.
+- `updateSpawners()` nadal dostaje projection tylko żywych agentów (`!a.isDead()`) jako `{ kind, x, z }`. Persistent occupancy nie może opierać się na tej projection, bo resident może odejść od domu albo być corpse.
+
+### `src/fauna/AnimalSpawner.ts`
+
+- `PreySpawner.id` pozostaje stabilnym identity obecnego habitat/spawn pointu.
+- Spawn-point lifecycle ma własny persisted state przez `SavedSpawnPointState` / `snapshotSpawnPointState()` / `restoreSpawnPointState()`.
+- `updateSpawners()` pozostaje właścicielem timer/depletion/recovery/replenishment mechanics; `fauna-018` powinien rozszerzyć wyłącznie capacity/occupancy seam.
+- Obecny nearby/live population model nie wystarcza dla persistent slot ownership. Persistent resident fizycznie poza `SPAWNER_RADIUS`, corpse albo tombstone nadal musi zajmować logiczny slot.
+
+### `src/fauna/AnimalAgent.ts` po `fauna-017`
+
+`AnimalAgent` nadal jest poprawnym runtime integration ownerem pojedynczego zwierzęcia i nadal zawiera:
+
+- `animalId`,
+- `spawnPointId`,
+- `snapshot()` / `hydrate()` przez `AnimalSaveState`,
+- `isDead()`,
+- `readyToRemove()`,
+- normalny update/combat/movement integration.
+
+Nie należy jednak dopisywać do niego nowych ownerów subsystemów. Po `fauna-017` kanoniczne moduły to:
+
+- `src/fauna/AnimalLife.ts` — hunger/thirst/stamina/biological state helpers,
+- `src/fauna/animalCorpse.ts` — corpse/remains/decay/rabies exposure/claim/removal lifecycle,
+- `src/fauna/animalForaging.ts` — source selection/validation/relief i `SourceTarget`,
+- `src/fauna/animalRoaming.ts` — roaming/water-trip logic i `AnimalTrip`,
+- `src/fauna/animalDefs.ts` — taxonomy/species definitions.
+
+`AnimalAgent.ts` re-exportuje część tych modułów compatibility-only. Nowy kod powinien importować kanoniczne symbole bezpośrednio tam, gdzie to ma sens.
+
+`AnimalSaveState` pozostaje wspólnym persistence contractem dla agentów. Implementacja musi ponownie przeczytać dokładny aktualny shape przed zmianą. Nie persistować `SourceTarget`, `AnimalTrip`, paths/nav rescue, combat targets, action/animation state.
+
+### Existing persistence precedents
+
+#### Livestock
+
+`src/settlement/livestock.ts` nadal daje wzorzec:
+
+```text
+stable deterministic individual identity
++ AnimalSaveState
++ live capture
++ removed/tombstone ids
++ reconstruction
+```
+
+Jest jednak settlement/household-owned, więc nie jest właściwym ownerem persistent wild inhabitants.
+
+#### Settlement rats — nowy ważny precedent
+
+`src/settlement/ratPersistence.ts` i `src/settlement/rats.ts` są bliższym lifecycle patternem dla wild fauna:
+
+- `RatSaveRecord = AnimalSaveState + settlementId + animalId`,
+- registry posiada `capture()`, `serialize()`, `getSaved()`, `getRemoved()`, `markRemoved()`,
+- restore tworzy normalny `AnimalAgent` i następnie wywołuje `hydrate()`,
+- `createSettlementRats.update()` wywołuje `markRemoved()` **przed** dispose, gdy `readyToRemove()` jest true.
+
+Reuse tego wzorca powinien być koncepcyjny. Persistent habitat occupants są fauna-owned, nie `SettlementsManager`-owned.
+
+### Persistence / save schema
+
+- `src/app/saveState.ts::buildSaveData()` jest jedynym assembly pointem live `SaveData`.
+- Obecnie pobiera `spawnPoints` bezpośrednio z `bundle.fauna.getSpawners()` i `snapshotSpawnPointState()`.
+- Livestock/rats są capture'owane przez `SettlementsManager` (`snapshotLivestock()`, `snapshotRats()`). Persistent habitat occupants nie powinny iść tą drogą; snapshot ma pochodzić z `bundle.fauna`.
+- `src/persistence/saveData.ts` ma obecnie `CURRENT_SAVE_VERSION = 18` i obowiązujący sequential `SAVE_MIGRATIONS` contract. Nie hardcodować `v7` ani żadnego numeru w implementacji; sprawdzić HEAD i wykonać `current → current+1`.
+- Jeżeli `AnimalSaveState` zostanie rozszerzony o durable field (np. rabies, jeśli nadal go brakuje), migration musi poprawnie defaultować **wszystkie** istniejące persisted `AnimalSaveState` consumers, obecnie co najmniej livestock i rats.
+
+### `src/app/worldBundle.ts`
+
+`buildFauna()` jest właściwym composition boundary. Obecnie przekazuje do `createFauna()` m.in.:
+
+- `homeDef.id`, seed i settlement geometry,
+- terrain/water/road queries,
+- `initialSpawnerState`,
+- grass forage service.
+
+`rebuildWorldBundle()` już wykonuje poprawny in-session carry dla spawn-point lifecycle:
+
+```text
+bundle.fauna.getSpawners()
+→ snapshotSpawnPointState
+→ bundle.fauna.dispose()
+→ build new world with carriedSpawnerState
+```
+
+Persistent occupant registry potrzebuje analogicznego plain-data carry wykonanego **przed** `bundle.fauna.dispose()`. Gdy `resetCollectedItems === true`, carry ma zostać wyzerowane tak jak inne genuinely-new-world state.
 
 ## Recommended ownership / data shape
 
-Keep the registry fauna-owned and small. Do not add a `NotableAnimalManager`.
+Preferować nowy mały moduł:
 
-Prefer a dedicated fauna module such as `src/fauna/persistentOccupants.ts` containing pure identity/registry helpers and serializable types, while `createFauna.ts` remains the composition point that instantiates `AnimalAgent`s.
+`src/fauna/persistentOccupants.ts`
+
+Nie jest to nowy manager symulacji. Powinien zawierać przede wszystkim serializowalne typy, stable-key helpers i sparse registry state.
 
 Suggested conceptual contracts:
 
@@ -34,130 +129,339 @@ type PersistentOccupantSaveRecord = {
   kind: AnimalKind
   state: AnimalSaveState
 }
+
+type PersistentOccupantSnapshot = {
+  entries: PersistentOccupantSaveRecord[]
+  removedSlots: string[]
+}
 ```
 
-Keep tombstones keyed by the logical slot (`habitatId + occupantKey`), not only by runtime `animalId`. The slot identity is the authoritative fact that must stay unavailable after removal.
+Nazwy są orientacyjne; ważniejszy jest ownership i invariant.
 
-Use one stable identity helper, e.g. a namespaced string derived only from `habitatId` + `occupantKey`. Do not include spawn order. `kind` should be validated against the declaration on restore rather than trusted as the identity source.
-
-The generic key should remain `habitatId`, not `spawnerId`, so `fauna-019` can later bind the same mechanism to a real cave identity without redesigning persistence. Existing `PreySpawner.id` is simply the first usable habitat id source.
-
-## Habitat occupancy semantics
-
-Do not derive persistent occupancy from distance or current nearby population.
-
-For each habitat, distinguish:
-
-- ordinary capacity,
-- declared persistent slots,
-- current state of each persistent slot: live/dead-corpse/removed.
-
-A persistent slot consumes capacity in **all** three states. A resident temporarily away from home still owns the slot. A corpse still owns it. A tombstone permanently blocks it.
-
-Therefore adjust initial habitat fill and `updateSpawners()` around an explicit effective ordinary capacity, conceptually:
+Stable logical key powinien wynikać wyłącznie z:
 
 ```text
-ordinaryCapacity = maxPreyCount - persistentSlotCount
+habitatId + occupantKey
 ```
 
-Then count/proximity logic only decides replenishment of those ordinary slots. Do not let a traveling persistent resident influence whether its own slot is recreated.
+Tombstone keyed po logical slot jest bezpieczniejszy niż tombstone tylko po `animalId`: authoritative fact brzmi „ten slot miał swojego persistent mieszkańca i jego lifecycle się zakończył”.
 
-Be careful with the current death accounting: `handleAnimalDeath()` removes `animalToSpawner` immediately on death and increments `deathsThisCycle`. That is fine for depletion, but it must not be interpreted as freeing the persistent slot. Slot release never occurs; it transitions to corpse, then tombstone.
+`kind` powinien być walidowany względem aktualnej declaration przy restore. Nie pozwalać saved recordowi po cichu zmienić species zadeklarowanego occupanta.
 
-## Runtime lifecycle
+## Habitat identity
 
-During creation/reconstruction:
+Dla obecnych spawn-point habitats `PreySpawner.id` jest gotowym stable `habitatId`.
 
-1. Build stable habitat declarations.
-2. For each persistent slot:
-   - tombstone → create nothing;
-   - saved state → create the declared kind with the stable id, then `hydrate()` before first update;
-   - no saved state → create once from the declaration with stable id.
-3. Register the persistent agent in normal `agents` and normal spawner death accounting where applicable.
-4. Fill only remaining ordinary habitat capacity.
+Nie nazywać publicznego kontraktu wyłącznie `spawnerId`, ponieważ przyszły real cave habitat z `fauna-019` może mieć własne world-stable identity niezależne od obecnego prop/spawner implementation.
 
-When pruning `readyToRemove()` agents in `createFauna.update()`, mark a persistent slot removed **before** `disposeAgent()`/array removal. This is the equivalent of livestock's immediate `markRemoved()` and is required for in-session `WorldBundle` rebuild safety even before the next save.
+Dobra granica:
 
-Expose a small snapshot/serialize method from `Fauna` for persistent occupants. `SaveState.buildSaveData()` should read it directly from `bundle.fauna`, analogous to the existing spawner snapshot path.
+```text
+persistentOccupants knows habitatId
+current createFauna adapter may source it from PreySpawner.id
+future cave integration may source it from cave/habitat identity
+```
 
-## WorldBundle rebuild integration
+Nie hashować pozycji floating-point jako podstawowego identity.
 
-`Fauna` itself is recreated during `WorldBundle` rebuild. Persisted occupants therefore need the same two reconstruction inputs as other carried world state:
+## Stable animal id
 
-- real save/load input from `SaveData`,
-- in-session carried snapshot taken from the old `bundle.fauna` before disposal.
+Dodać jeden deterministic helper, np. konceptualnie:
 
-Do not rely solely on `SaveData`; config-triggered rebuilds happen without a save. Add a carried persistent-occupant snapshot in `rebuildWorldBundle()` alongside the existing carried spawner/settlement/world state and pass it into `buildFauna()` / `createFauna()`.
+```text
+persistentAnimalId(habitatId, occupantKey)
+```
 
-Keep this as plain serializable data, never old `AnimalAgent` references.
+Id musi być namespaced tak, aby nie kolidowało z ordinary `${kind}-${nextAnimalId++}` ani między habitatami.
 
-## `AnimalSaveState` / rabies
+Nie zmieniać identity strategy zwykłej wild fauna.
 
-Extend the shared snapshot with rabies state and let livestock automatically benefit from the same round-trip.
+`spawnAgent()` w `createFauna.ts` powinien przyjmować optional explicit id:
 
-Prefer making the new current-schema field explicit and migrating old livestock records to `rabid: false`, rather than creating a second disease persistence path. `hydrate()` must assign it before the first update.
+```text
+ordinary caller
+→ no explicit id
+→ existing nextAnimalId path
 
-Do not add trip/path/chase target persistence. Current `AnimalTrip` is deliberately transient; after load a persistent animal keeps durable biological/lifecycle state and resumes normal decision-making from there.
+persistent caller
+→ stable explicit id
+→ same AnimalAgent construction path
+```
 
-## Save schema
+Nie duplikować loaderów/assets/death callback/scene registration.
 
-Relevant files:
+## Initial construction order
 
-- `src/persistence/saveData.ts`
-- `src/app/saveState.ts`
-- `src/app/createApp.ts`
-- `src/app/worldBundle.ts`
+Najważniejszy ordering invariant:
 
-Add one sparse fauna collection for persistent occupants/tombstones; do not add all wild animals.
+**persistent declarations/restore muszą zostać rozstrzygnięte przed generic habitat initial fill.**
 
-Because this changes the persisted schema, follow the current `CURRENT_SAVE_VERSION` + `SAVE_MIGRATIONS` contract. A v6→v7 migration can default the new persistent-occupant collection to empty and default existing livestock animal snapshots to non-rabid. Runtime interpretation of an absent persistent record remains "declared occupant has never been saved yet → create fresh once".
+Reconstruction:
 
-Update the save validator for:
+1. Zbuduj deterministic habitat declarations.
+2. Zarejestruj persistent slots w registry.
+3. Dla każdego slotu:
+   - tombstone → nic nie twórz,
+   - saved record → spawn stable id + `hydrate()` przed first update,
+   - brak recordu → first spawn stable id.
+4. Dopiero potem wypełnij ordinary habitat capacity.
+5. `updateSpawners()` później replenishes tylko ordinary capacity.
 
-- stable slot ids / strings,
-- `AnimalKind`,
-- `AnimalSaveState`, including corpse consistency,
-- tombstone representation.
+Jeżeli generic fill wykona się pierwszy, restored persistent resident może dać `maxPreyCount + 1` albo przypadkowo wypchnąć zwykłego osobnika.
 
-Do not silently accept a saved `kind` that conflicts with the current declaration; prefer ignoring/rejecting that record and following the repository's existing validation policy rather than hydrating the wrong species.
+## Explicit habitat occupancy seam
 
-## Integration points to reuse
+Nie reprezentować persistent ownership przez proximity count.
 
-- `src/fauna/createFauna.ts`
-  - `spawnAgent()` should gain a way to receive an explicit stable `animalId`; ordinary callers continue using `nextAnimalId`.
-  - persistent creation must still use the same templates, `AnimalAgent`, death callback, scene registration and `spawnPointId` linkage.
-- `src/fauna/AnimalSpawner.ts`
-  - keep current timer/depletion/recovery mechanics;
-  - change only the capacity/occupancy seam needed so persistent slots are not represented by proximity counts.
-- `src/fauna/AnimalAgent.ts`
-  - reuse `snapshot()`/`hydrate()` and `readyToRemove()`;
-  - extend shared durable state with rabies only.
-- `src/settlement/livestock.ts`
-  - reference implementation for capture/tombstone semantics; do not import its registry into fauna.
-- `docs/plans/fauna-016...` implementation
-  - persistent animals must continue using normal roaming, water trips and habitat behaviour; persistent status must not create a movement special case.
-- `quests-progression-008` / future `fauna-019`
-  - they should consume declaration/lookup by stable habitat + occupant key; they must not own alive/dead/HP state.
+Dla każdego habitat logicznie istnieją:
+
+- `maxPreyCount`,
+- `persistentSlotCount`,
+- ordinary respawn capacity,
+- registry state każdego persistent slotu: live/corpse/removed.
+
+Persistent slot konsumuje capacity w każdym z tych stanów.
+
+Konceptualnie:
+
+```text
+ordinaryCapacity = max(0, maxPreyCount - persistentSlotCount)
+```
+
+`AnimalSpawner.updateSpawners()` nadal może używać aktualnej live-nearby projection do liczenia **ordinary** population. Nie może na tej podstawie stwierdzać, że persistent slot jest wolny.
+
+Nie dodawać per-frame scan po registry, jeśli capacity można wyliczyć/lookupnąć po `spawner.id` z małej mapy.
+
+## Death / corpse / removal lifecycle
+
+Po `fauna-017` corpse semantics są kanonicznie w `animalCorpse.ts`, ale `AnimalAgent.readyToRemove()` pozostaje właściwym integration seam.
+
+Lifecycle persistent occupant:
+
+```text
+live
+→ normal death path
+→ dead/corpse still persisted as same occupant
+→ normal animalCorpse lifecycle
+→ readyToRemove() true
+→ registry.markRemoved(slot)
+→ dispose/remove agent
+→ tombstone persists forever unless future explicit gameplay rule says otherwise
+```
+
+Nie tombstonować w `handleAnimalDeath()`: spawner death accounting i persistent logical slot to dwa różne fakty.
+
+Nie czekać z tombstone do następnego save. Rat persistence już pokazuje poprawny pattern: `markRemoved()` przed disposal.
+
+## Durable state / `AnimalSaveState`
+
+Nie projektować drugiego persistent-wild snapshotu. `PersistentOccupantSaveRecord.state` ma być normalnym `AnimalSaveState`.
+
+Przed implementacją sprawdzić aktualny type i `snapshot()`/`hydrate()` po wszystkich zmianach na `main`.
+
+Jeżeli `rabid` nadal nie round-tripuje, rozszerzyć wspólny snapshot i migration. Nie dodawać pola `rabid` tylko do `PersistentOccupantSaveRecord`, bo stworzyłoby to drugi owner disease persistence.
+
+Nie persistować:
+
+- `animalForaging.SourceTarget`,
+- `animalRoaming.AnimalTrip`,
+- active paths/nav rescue,
+- chase/flee target,
+- current action/behaviour phase,
+- animations,
+- terrain-derived Y.
+
+Po hydration normalne `AnimalLife`, `animalForaging`, `animalRoaming`, combat/decision systems mają ponownie wybrać dalsze działania.
+
+## Fauna API
+
+Rozszerzyć `Fauna` minimalnie o snapshot potrzebny persistence/rebuild, np. konceptualnie:
+
+```ts
+snapshotPersistentOccupants(): PersistentOccupantSnapshot
+```
+
+Ewentualny stable lookup dla późniejszych consumers może być dodany tylko jeśli jest potrzebny przez ten plan/testy; nie budować szerokiego notable-animal API na zapas.
+
+Registry state powinien być dostępny wewnątrz `createFauna()` bez wystawiania mutowalnych map na zewnątrz.
+
+## Save/load wiring
+
+Relevant current files:
+
+- `src/fauna/persistentOccupants.ts` — new sparse registry/types/helpers,
+- `src/fauna/createFauna.ts` — declaration/restore/spawn/removal integration,
+- `src/fauna/AnimalSpawner.ts` — narrow ordinary-capacity seam,
+- `src/fauna/AnimalAgent.ts` — shared snapshot/hydration only if durable-state gap exists,
+- `src/fauna/AnimalLife.ts`, `animalCorpse.ts`, `animalForaging.ts`, `animalRoaming.ts` — reuse, do not refactor back into agent,
+- `src/app/worldBundle.ts` — build + rebuild carry,
+- `src/app/saveState.ts` — snapshot into `SaveData`,
+- `src/persistence/saveData.ts` — schema, validator, migration,
+- `src/settlement/ratPersistence.ts` / `rats.ts` — reference lifecycle pattern,
+- `src/settlement/livestock.ts` — reference stable-individual persistence pattern.
+
+### Save path
+
+```text
+SaveState.buildSaveData()
+→ bundle.fauna.snapshotPersistentOccupants()
+→ SaveData.persistentHabitatOccupants / removed slots (exact naming TBD)
+```
+
+Nie routować tego przez `SettlementsManager`.
+
+### Real load path
+
+```text
+SaveData
+→ createWorldBundle/buildWorldSystems
+→ buildFauna(initialPersistentOccupants)
+→ createFauna(...)
+→ registry restore
+→ stable agent creation + hydrate
+```
+
+### In-session rebuild path
+
+```text
+rebuildWorldBundle()
+→ snapshot persistent occupants before fauna.dispose()
+→ resetCollectedItems ? undefined/empty : carried snapshot
+→ build new fauna with carried snapshot
+```
+
+Plain serializable state only; żadnych old `AnimalAgent` references.
+
+## Save schema / migration
+
+Recon baseline: `CURRENT_SAVE_VERSION = 18`.
+
+Implementation rule:
+
+1. Re-read current value at implementation time.
+2. Add one next migration (`N → N+1`).
+3. Default new persistent occupant entries/tombstones to empty.
+4. Update `SaveData` validator.
+5. Jeżeli wspólny `AnimalSaveState` zyskuje field, migrate/default existing livestock + rats records too.
+6. Preserve fail-closed validation policy.
+
+Nie wpisywać do planu implementacyjnego założenia, że konkretny next version to `19`; `main` może zmienić schema wcześniej.
+
+## `AnimalSpawner` integration guardrails
+
+Zmiana ma być wąska:
+
+- zachować `PreySpawner` state machine,
+- zachować depletion/recovery timers,
+- zachować ordinary respawn location logic,
+- nie robić quest-specific checks,
+- nie specjalizować po `bear`,
+- nie uzależniać slotu od current distance resident → home,
+- nie zwalniać persistent slotu po death,
+- nie zwiększać `maxPreyCount` dla persistent resident.
+
+Najbardziej naturalny seam to jawna informacja o ordinary capacity lub reserved persistent-slot count keyed po habitat id. Dokładna sygnatura powinna wynikać z aktualnego `AnimalSpawner.ts` w implementation preflight.
+
+## `handleAnimalDeath()` interaction
+
+Obecne death callback accounting może pozostać bez zmian dla depletion semantics.
+
+Ważne rozdzielenie:
+
+```text
+animalToSpawner/deathsThisCycle
+= spawn-point ecological/depletion accounting
+
+persistent slot registry
+= logical individual continuity
+```
+
+Death może usunąć mapping używany do spawner accounting, ale nie może uwolnić persistent slotu. Slot pozostaje reserved przez corpse, a później tombstone.
+
+## Normal behaviour after hydrate
+
+Persistent status nie powinien pojawiać się w scoring/decision branches `AnimalAgent.update()`.
+
+Persistent resident nadal korzysta normalnie z:
+
+- `AnimalLife`,
+- `animalForaging`,
+- `animalRoaming`,
+- predator/prey behaviour,
+- water traversal,
+- combat/flee,
+- `animalCorpse`.
+
+Nie dodawać `if (persistent) stayNearHome` ani osobnego movement mode.
+
+## Focused tests
+
+Najbardziej wartościowe test seams:
+
+### Pure registry / identity
+
+- stable slot key,
+- stable `animalId`,
+- niezależność od `nextAnimalId`,
+- tombstone blocks reconstruction,
+- kind/declaration mismatch validation.
+
+### `AnimalSpawner.test.ts`
+
+- persistent slot redukuje ordinary capacity,
+- resident poza nearby radius nie tworzy vacancy,
+- corpse nie tworzy vacancy,
+- tombstone nie tworzy vacancy,
+- ordinary slots nadal replenish normally.
+
+### `AnimalAgent` / lifecycle tests
+
+- `AnimalSaveState` durable fields round-trip,
+- corpse state round-trip,
+- shared disease field round-trip, jeżeli dodany,
+- transient `SourceTarget` / `AnimalTrip` nie jest wymagany do hydration.
+
+### `createFauna` focused integration
+
+- declaration restore before generic initial fill,
+- explicit stable id używa normalnego spawn path,
+- `readyToRemove()` marks tombstone before disposal,
+- snapshot + reconstruct does not duplicate resident.
+
+### `worldBundle` / persistence
+
+- carried snapshot survives same-world rebuild,
+- new-world rebuild resets it,
+- migration defaults collection/tombstones,
+- save/load restores live/corpse/removed states.
 
 ## Pitfalls
 
-- **Do not use nearby count as slot ownership.** A resident away from the cave/home would otherwise be duplicated.
-- **Do not tombstone on death.** Save during corpse lifetime must restore the corpse.
-- **Do not wait until save to tombstone.** `readyToRemove()` must mutate the runtime registry immediately or rebuild can resurrect the animal.
-- **Do not let generic initial fill run first.** Otherwise the restored persistent resident becomes `maxPreyCount + 1` or displaces an arbitrary ordinary animal.
-- **Do not make persistent identity depend on species spawn counters or order.**
-- **Do not persist terrain-derived Y, pathfinding, current target, trip state, combat target or animation.**
-- **Do not couple the registry to settlements.** Current spawners are settlement-derived, but future real-cave habitats are world/fauna-owned.
-- Review `isWolfDenCleared()` assumptions if persistent occupants are ever used for wolf-den packs: it currently tracks the ids created in the current build, not a general habitat-slot registry. No broad refactor is needed for the bear use case.
+- **Nie dodawaj lifecycle z powrotem do `AnimalAgent`.** `fauna-017` wyznaczył canonical modules.
+- **Nie używaj nearby count jako persistent ownership.** Roaming/foraging/trips celowo odprowadzają zwierzę od home.
+- **Nie tombstonuj na death.** Corpse musi round-tripować.
+- **Nie czekaj do save z tombstone.** `readyToRemove()` → `markRemoved()` przed dispose.
+- **Nie uruchamiaj generic fill przed persistent restore.** Powstanie duplicate/over-capacity.
+- **Nie persistuj `SourceTarget` ani `AnimalTrip`.** Są transient execution state.
+- **Nie podpinaj registry do `SettlementsManager`.** Rats są tylko patternem, nie ownerem.
+- **Nie zakładaj save version 6/7/9.** Recon baseline ma v18; implementation musi czytać aktualny HEAD.
+- **Nie twórz `NotableAnimalManager`.** Stable persistent occupant jest fauna conceptem, notable/quest meaning jest osobną warstwą.
+- **Nie rozwiązuj real-cave navigation w tym planie.** `fauna-019`/quest consumer ma użyć gotowego identity/persistence contractu.
+- `isWolfDenCleared()` nadal ma własne semantics oparte o wilki utworzone przez den. Nie refaktorować go szeroko dla bear use case; wrócić do niego dopiero, jeśli persistent pack rzeczywiście stanie się consumerem.
 
 ## Focused implementation order
 
-1. Add persistent slot identity/types/registry and explicit-id support in `spawnAgent()`.
-2. Extend `AnimalSaveState` with rabies and update shared snapshot/hydration tests.
-3. Integrate declared occupants into habitat initial fill and ordinary-capacity accounting.
-4. Tombstone at `readyToRemove()` and expose fauna snapshot/restore.
-5. Wire in-session `WorldBundle` carry.
-6. Add `SaveData` v7 migration/validation + `SaveState`/load wiring.
-7. Add focused tests for travel-away occupancy, corpse restore and rebuild-before-save resurrection prevention in addition to the plan's listed cases.
+1. Re-read current `AnimalSaveState`, `spawnAgent()`, `AnimalSpawner.updateSpawners()` i current save version.
+2. Dodać `persistentOccupants.ts`: stable slot/id helpers, records, registry + pure tests.
+3. Dodać explicit-id seam do istniejącego `createFauna.ts::spawnAgent()` bez duplikowania construction path.
+4. Zintegrować declarations/restore **przed** generic habitat initial fill.
+5. Dodać explicit persistent-slot reservation / ordinary-capacity seam do `AnimalSpawner` i testy resident-away/corpse/tombstone.
+6. W `Fauna.update()` markować persistent tombstone przed disposal na `readyToRemove()`.
+7. Dodać `Fauna.snapshotPersistentOccupants()` oraz same-session carry w `rebuildWorldBundle()`.
+8. Dodać `SaveData` collection + validator + next sequential migration + `SaveState.buildSaveData()`/load wiring.
+9. Jeżeli recon potwierdzi brak durable disease state w `AnimalSaveState`, rozszerzyć wspólny snapshot/hydrate i migrate existing livestock/rats records.
+10. Uruchomić focused unit/integration tests + repo build/typecheck zgodnie z bieżącymi skryptami. Browser verification pozostaje po stronie użytkownika.
 
-The most important invariant is: **persistent slot ownership is independent of the animal's current distance from home and survives live → corpse → tombstone without ever becoming an ordinary respawn vacancy.**
+Najważniejszy invariant:
+
+**persistent slot ownership jest niezależny od aktualnej pozycji agenta i przechodzi ciągle przez live → corpse → tombstone; żaden etap nie może stać się ordinary respawn vacancy.**
