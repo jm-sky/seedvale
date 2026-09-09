@@ -290,6 +290,8 @@ Generated from TypeScript imports.
 - `settlement/villagePlan.ts`
 - `settlement/villagePlanner.test.ts`
 - `settlement/villagePlanner.ts`
+- `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
 - `world/createCaves.ts`
 - `world/hiddenFinds.ts`
 
@@ -931,6 +933,8 @@ Generated from TypeScript imports.
 - `settlement/settlementSignposts.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/wellInteractionQueue.test.ts`
+- `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
 - `terrain/resourceDeposits.ts`
@@ -1016,6 +1020,8 @@ Generated from TypeScript imports.
 - `settlement/settlementPlanCache.ts`
 - `settlement/settlementTerrain.ts`
 - `settlement/villagePlanner.ts`
+- `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
 - `terrain/chunkHeightmap.ts`
 - `world/parseSeed.ts`
 
@@ -1062,6 +1068,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/dialogueTemplates.ts`
+- `app/actions/groundActions.ts`
 - `app/actions/placementActions.ts`
 - `app/worldBundle.ts`
 - `debug/locationQueries.test.ts`
@@ -1080,6 +1087,10 @@ Generated from TypeScript imports.
 - `settlement/settlementProximity.ts`
 - `settlement/settlementSignposts.test.ts`
 - `settlement/settlementSignposts.ts`
+- `terrain/cemeteryAssignment.test.ts`
+- `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
+- `terrain/chunkManager.ts`
 - `ui-vue/store.ts`
 - `world/createCaves.ts`
 - `world/locations/worldLocationCatalog.test.ts`

@@ -485,24 +485,24 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/roadNetwork.ts`
 
-- `clearRoadNetworkCaches` — function — line 72
-- `entranceToward` — function — line 97
-- `findRoute` — function — line 185
-- `meanderRoute` — function — line 311
-- `MidpointSignpost` — type — line 528
-- `midpointSignpostsFor` — function — line 542
-- `neighborsFor` — function — line 128
-- `RoadNetworkContext` — type — line 49
-- `RoadSegment` — type — line 39
-- `RoadSegmentKind` — type — line 37
-- `RoutePoint` — type — line 27
-- `routeToMinorLocation` — function — line 612
-- `segmentsNear` — function — line 650
-- `SettlementSignpost` — type — line 469
-- `signpostsForSettlement` — function — line 481
-- `VillageSegments` — type — line 693
-- `villageSegmentsNear` — function — line 717
-- `yawToward` — function — line 465
+- `clearRoadNetworkCaches` — function — line 74
+- `entranceToward` — function — line 101
+- `findRoute` — function — line 189
+- `meanderRoute` — function — line 315
+- `MidpointSignpost` — type — line 532
+- `midpointSignpostsFor` — function — line 546
+- `neighborsFor` — function — line 132
+- `RoadNetworkContext` — type — line 51
+- `RoadSegment` — type — line 41
+- `RoadSegmentKind` — type — line 39
+- `RoutePoint` — type — line 29
+- `routeToMinorLocation` — function — line 616
+- `segmentsNear` — function — line 654
+- `SettlementSignpost` — type — line 473
+- `signpostsForSettlement` — function — line 485
+- `VillageSegments` — type — line 697
+- `villageSegmentsNear` — function — line 721
+- `yawToward` — function — line 469
 
 ## `settlement/settlementGenerator.ts`
 

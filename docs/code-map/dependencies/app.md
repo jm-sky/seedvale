@@ -226,7 +226,6 @@ Generated from TypeScript imports.
 - `audio/actionSounds.ts`
 - `audio/inventorySounds.ts`
 - `badges/badges.ts`
-- `debug/locationQueries.ts`
 - `items/Inventory.ts`
 - `items/itemCatalog.ts`
 - `items/items.ts`
@@ -236,6 +235,8 @@ Generated from TypeScript imports.
 - `reputation/ReputationManager.ts`
 - `reputation/socialExposure.ts`
 - `settlement/hiddenTreasure.ts`
+- `settlement/settlementGenerator.ts`
+- `terrain/cemeteryAssignment.ts`
 - `terrain/depositMining.ts`
 - `terrain/dig.ts`
 - `terrain/digAction.ts`

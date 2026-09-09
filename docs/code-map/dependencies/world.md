@@ -1542,6 +1542,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `settlement/settlementGenerator.ts`
+- `terrain/cemeteryAssignment.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkManager.ts`
 - `terrain/terrainClassification.ts`
@@ -1772,6 +1773,8 @@ Generated from TypeScript imports.
 - `shared/SettlementName.ts`
 - `shared/waterPoisoningExposure.ts`
 - `terrain/biomeColors.ts`
+- `terrain/cemeteryAssignment.ts`
+- `terrain/cemeteryPlacement.ts`
 - `terrain/chunkCrops.ts`
 - `terrain/chunkEnvironment.test.ts`
 - `terrain/chunkEnvironment.ts`

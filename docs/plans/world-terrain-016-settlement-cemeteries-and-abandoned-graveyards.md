@@ -1,7 +1,7 @@
 # Plan: Settlement Cemeteries & Abandoned Graveyards
 
 **Created:** 2026-09-08
-**Status:** `implemented` ✅
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none
