@@ -67,7 +67,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | -       | 🔴 | M      | -      |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
-| 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`             | -       | 🟡 | M      | ~~npc-015~~, ~~npc-018~~, npc-028 |
+| 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`             | -       | 🟡 | M      | ~~npc-015~~, ~~npc-018~~, ~~npc-028~~, ~~settlements-npcs-026~~ |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~, ~~settlements-npcs-026~~ |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | npc-010 |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
