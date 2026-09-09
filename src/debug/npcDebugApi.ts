@@ -2,10 +2,11 @@ import type { NpcInspectionSnapshot, NpcWhy } from '../ai/NpcAgent'
 import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
-import type { QuestManager } from '../quests/QuestManager'
 import type { PlayerController } from '../player/PlayerController'
+import type { QuestManager } from '../quests/QuestManager'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
+import type { TreatableInjurySeverity } from '../shared/injurySeverity'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldLocation } from '../world/locations/worldLocationTypes'
@@ -191,6 +192,13 @@ export type ConditionsDebugApi = {
   clearNpcPoisoning: (npcId: string) => void
 }
 
+export type InjuryDebugApi = {
+  npc: (npcId: string) => ReturnType<import('../ai/NpcAgent').NpcAgent['debugInjuryState']> | null
+  applyNpcInjury: (npcId: string, severity: TreatableInjurySeverity) => void
+  clearNpcInjury: (npcId: string) => void
+  giveNpcBandage: (npcId: string) => boolean
+}
+
 export type SeedvaleDebugApi = {
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
@@ -249,6 +257,8 @@ export type SeedvaleDebugApi = {
   skills: SkillsDebugApi
   /** Temporary physical conditions (plan npc-024) — deterministic shared API. */
   conditions: ConditionsDebugApi
+  /** Physical injury severity / treatment (plan npc-025). */
+  injury: InjuryDebugApi
   spotAnimal: (kind: AnimalKind) => void
   help: () => string
 }
@@ -281,6 +291,9 @@ const HELP_TEXT = [
   'skills.getSkills() — every skill\'s current {value, xp}; skills.setSkillValue(id, value) — dev-only direct set (can lower, unlike real gameplay); skills.addSkillXp(id, xp) — award raw XP through the normal path',
   'conditions.player() — current player poisoning severity; conditions.applyPlayerPoisoning(severity?) / clearPlayerPoisoning() — test hooks',
   'conditions.applyNpcPoisoning(npcId, severity?) / clearNpcPoisoning(npcId) — authoritative NPC condition state',
+  'injury.npc(id) — physicalInjury, derived severity, SPEA modifiers, treatment eligibility',
+  'injury.applyNpcInjury(id, "minor"|"serious"|"critical") / clearNpcInjury(id) — real damage/heal accounting',
+  'injury.giveNpcBandage(id) — add a bandage so self-treatment is feasible',
   'spotAnimal(kind) — simulate spotting an animal for quest progression',
 ].join('\n')
 
@@ -451,6 +464,17 @@ export function installNpcDebugApi(
     },
   }
 
+  const injuryDebug: InjuryDebugApi = {
+    npc: (npcId) => findNpcById(bundle, npcId)?.npc.debugInjuryState(getElapsedDays()) ?? null,
+    applyNpcInjury: (npcId, severity) => {
+      findNpcById(bundle, npcId)?.npc.applyInjuryForDebug(severity, getElapsedDays())
+    },
+    clearNpcInjury: (npcId) => {
+      findNpcById(bundle, npcId)?.npc.clearInjuryForDebug(getElapsedDays())
+    },
+    giveNpcBandage: (npcId) => findNpcById(bundle, npcId)?.npc.giveBandageForDebug() ?? false,
+  }
+
   const api: SeedvaleDebugApi = {
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null
@@ -497,6 +521,7 @@ export function installNpcDebugApi(
     getNextFrenzyWolf: () => getNextFrenzyWolf(bundle),
     skills: skillsDebug,
     conditions: conditionsDebug,
+    injury: injuryDebug,
     spotAnimal: (kind) => {
       questManager.onInteractObjective({
         type: 'spot_animal',

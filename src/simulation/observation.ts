@@ -1,3 +1,5 @@
+import type { InjurySeverity } from '../shared/injurySeverity'
+
 /**
  * @domain npc
  * @system observation
@@ -90,6 +92,24 @@ export function assessHealthRatio(ratio: number): QualitativeHealth {
   if (ratio >= 0.40) return 'hurt'
   if (ratio >= 0.15) return 'badlyWounded'
   return 'critical'
+}
+
+/** Maps derived injury severity onto the existing qualitative health vocabulary
+ *  (plan npc-025) — no second injury-label system. */
+export function qualitativeHealthFromInjurySeverity(severity: InjurySeverity): QualitativeHealth {
+  switch (severity) {
+    case 'critical': return 'critical'
+    case 'minor': return 'hurt'
+    case 'none': return 'healthy'
+    case 'serious': return 'badlyWounded'
+  }
+}
+
+export function formatPhysicalAssessmentFromQualitative(
+  health: QualitativeHealth,
+  staminaRatio: number,
+): string {
+  return `${qualitativeHealthLabel(health)} · ${qualitativeStaminaLabel(assessStaminaRatio(staminaRatio))}`
 }
 
 export function assessStaminaRatio(ratio: number): QualitativeStamina {

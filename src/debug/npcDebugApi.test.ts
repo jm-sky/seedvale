@@ -183,7 +183,7 @@ describe('SeedvaleDebugApi shape', () => {
     const help = api!.help()
     expect(typeof help).toBe('string')
     expect(help.length).toBeGreaterThan(0)
-    for (const word of ['npc', 'village', 'locations', 'teleportTo']) {
+    for (const word of ['npc', 'village', 'locations', 'teleportTo', 'injury']) {
       expect(help).toContain(word)
     }
   })

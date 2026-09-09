@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { ObservationLevel } from '../simulation/observation'
-import { formatPhysicalAssessment } from '../simulation/observation'
+import type { ObservationLevel, QualitativeHealth } from '../simulation/observation'
+import { formatPhysicalAssessment, formatPhysicalAssessmentFromQualitative } from '../simulation/observation'
 import { setSubtreeCastShadow } from '../world/waterMirror'
 import { barsVisibleForDistance, labelOpacityForDistance } from './labelDistance'
 
@@ -106,6 +106,9 @@ export type AgentLabelObservationPresentation = {
   knownName: string
   healthRatio: number
   staminaRatio: number
+  /** When set (NPC injury observation, plan npc-025), qualitative health
+   *  text uses this instead of deriving from `healthRatio` alone. */
+  qualitativeHealth?: QualitativeHealth
   /** Debug bypass — show full detailed presentation regardless of `level`. */
   fullLabelInfo?: boolean
 }
@@ -275,7 +278,9 @@ function resolveAgentLabelObservationPresentation(
   observation: AgentLabelObservationPresentation,
 ): ResolvedAgentLabelObservationPresentation {
   const level = observation.fullLabelInfo ? 'detailed' : observation.level
-  const assessmentText = formatPhysicalAssessment(observation.healthRatio, observation.staminaRatio)
+  const assessmentText = observation.qualitativeHealth
+    ? formatPhysicalAssessmentFromQualitative(observation.qualitativeHealth, observation.staminaRatio)
+    : formatPhysicalAssessment(observation.healthRatio, observation.staminaRatio)
   switch (level) {
     case 'assessed':
       return {

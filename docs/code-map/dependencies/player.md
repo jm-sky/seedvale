@@ -87,6 +87,7 @@ Generated from TypeScript imports.
 - `settlement/settlementSignposts.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
+- `shared/injurySeverity.test.ts`
 - `shared/temporaryConditions.test.ts`
 - `shared/waterPoisoningExposure.test.ts`
 - `terrain/bloodOverlay.ts`

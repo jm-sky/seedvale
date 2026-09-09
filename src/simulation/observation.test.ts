@@ -3,7 +3,9 @@ import {
   assessHealthRatio,
   assessStaminaRatio,
   formatPhysicalAssessment,
+  formatPhysicalAssessmentFromQualitative,
   observationRangeScale,
+  qualitativeHealthFromInjurySeverity,
   resolveObservationLevel,
   resolveStableObservationLevel,
   stabilizeObservationLevel,
@@ -110,5 +112,13 @@ describe('qualitative physical assessment', () => {
     expect(formatPhysicalAssessment(0.8, 0.7)).toBe('Zdrowy · Wypoczęty')
     expect(formatPhysicalAssessment(0.1, 0.1)).toBe('Krytyczny · Wyczerpany')
     expect(formatPhysicalAssessment(1, 1)).not.toMatch(/\d/)
+  })
+
+  it('maps injury severity onto the same qualitative health labels (plan npc-025)', () => {
+    expect(qualitativeHealthFromInjurySeverity('none')).toBe('healthy')
+    expect(qualitativeHealthFromInjurySeverity('minor')).toBe('hurt')
+    expect(qualitativeHealthFromInjurySeverity('serious')).toBe('badlyWounded')
+    expect(qualitativeHealthFromInjurySeverity('critical')).toBe('critical')
+    expect(formatPhysicalAssessmentFromQualitative('badlyWounded', 0.7)).toBe('Ciężko ranny · Wypoczęty')
   })
 })

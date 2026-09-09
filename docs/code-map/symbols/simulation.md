@@ -29,26 +29,28 @@ Generated from exported TypeScript symbols.
 
 ## `simulation/observation.ts`
 
-- `assessHealthRatio` — function — line 88
-- `assessStaminaRatio` — function — line 95
-- `DEFAULT_PLAYER_OBSERVATION` — const — line 25
-- `formatPhysicalAssessment` — function — line 118
-- `NEUTRAL_PERCEPTION` — const — line 21
-- `NPC_BROAD_IDENTITY_LABEL` — const — line 23
-- `ObservationInput` — type — line 10
-- `ObservationLevel` — type — line 8
+- `assessHealthRatio` — function — line 90
+- `assessStaminaRatio` — function — line 115
+- `DEFAULT_PLAYER_OBSERVATION` — const — line 27
+- `formatPhysicalAssessment` — function — line 138
+- `formatPhysicalAssessmentFromQualitative` — function — line 108
+- `NEUTRAL_PERCEPTION` — const — line 23
+- `NPC_BROAD_IDENTITY_LABEL` — const — line 25
+- `ObservationInput` — type — line 12
+- `ObservationLevel` — type — line 10
   - domain: npc
   - system: observation
   - role: Pure observation-level resolution from observer Perception and distance. Intended for presentation now and simulation consumers later — no DOM/UI dependency.
-- `observationRangeScale` — function — line 50
-- `PlayerObservationInput` — type — line 15
-- `QualitativeHealth` — type — line 42
-- `qualitativeHealthLabel` — function — line 101
-- `QualitativeStamina` — type — line 43
-- `qualitativeStaminaLabel` — function — line 110
-- `resolveObservationLevel` — function — line 55
-- `resolveStableObservationLevel` — function — line 81
-- `stabilizeObservationLevel` — function — line 65
+- `observationRangeScale` — function — line 52
+- `PlayerObservationInput` — type — line 17
+- `QualitativeHealth` — type — line 44
+- `qualitativeHealthFromInjurySeverity` — function — line 99
+- `qualitativeHealthLabel` — function — line 121
+- `QualitativeStamina` — type — line 45
+- `qualitativeStaminaLabel` — function — line 130
+- `resolveObservationLevel` — function — line 57
+- `resolveStableObservationLevel` — function — line 83
+- `stabilizeObservationLevel` — function — line 67
 
 ## `simulation/scoreActions.ts`
 

@@ -104,6 +104,8 @@ Generated from TypeScript imports.
 - `shared/agentAnimationSet.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/enduranceStamina.ts`
+- `shared/injuryRecovery.ts`
+- `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
 - `simulation/index.ts`
 - `simulation/observation.ts`
@@ -271,9 +273,15 @@ Generated from TypeScript imports.
 - `ai/Needs.ts`
 - `ai/healingPressure.ts`
 - `ai/weatherPressure.ts`
+- `items/Inventory.ts`
+- `shared/injurySeverity.ts`
 - `simulation/index.ts`
 
 ## `ai/healingPressure.ts`
+
+**Imports**
+
+- `shared/injurySeverity.ts`
 
 **Imported by**
 

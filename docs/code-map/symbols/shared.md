@@ -18,13 +18,14 @@ Generated from exported TypeScript symbols.
 
 ## `shared/effectivePhysicalAttributes.ts`
 
-- `resolveEffectivePhysicalAttributes` — function — line 30
-- `resolveNpcBasePhysicalAttributes` — function — line 21
+- `InjuryModifierInput` — type — line 23
   - domain: shared
   - system: physical-attributes
-  - role: Effective SPEA seam (plan npc-024) — profile/base attributes plus temporary-condition modifiers. Consumers read from here instead of branching on condition kind.
-- `resolveNpcEffectivePhysicalAttributes` — function — line 38
-- `resolvePlayerEffectivePhysicalAttributes` — function — line 46
+  - role: Effective SPEA seam (plan npc-024 / npc-025) — profile/base attributes, then physical-injury modifiers, then temporary-condition modifiers. Consumers read from here instead of branching on injury or condition kind.
+- `resolveEffectivePhysicalAttributes` — function — line 37
+- `resolveNpcBasePhysicalAttributes` — function — line 28
+- `resolveNpcEffectivePhysicalAttributes` — function — line 49
+- `resolvePlayerEffectivePhysicalAttributes` — function — line 63
 
 ## `shared/enduranceStamina.ts`
 
@@ -77,6 +78,38 @@ Generated from exported TypeScript symbols.
 - `HungerState` — type — line 4
 - `isStarving` — function — line 30
 - `restoreHunger` — function — line 25
+
+## `shared/injuryRecovery.ts`
+
+- `applyInjurySeverityForDebug` — function — line 92
+- `InjuryRecoveryState` — type — line 19
+  - domain: shared
+  - system: health
+  - role: Lazy elapsed-game-time natural injury recovery (plan npc-025). Recovery restores HP through `healHealth` and reduces `physicalInjury` by the actual restored amount. No global scan, no render-frame tick.
+- `registerPhysicalInjuryFromDamage` — function — line 66
+- `registerPhysicalInjuryFromHeal` — function — line 77
+- `resolveInjuryRecovery` — function — line 35
+
+## `shared/injurySeverity.ts`
+
+- `applyInjuryModifiersToAttributes` — function — line 95
+- `criticalInjuryFloor` — function — line 79
+- `decreaseInjuryFromHeal` — function — line 151
+- `increaseInjuryFromDamage` — function — line 145
+- `INJURY_NATURAL_RECOVERY_HP_PER_DAY` — const — line 40
+- `INJURY_SEVERITY_THRESHOLDS` — const — line 22
+- `INJURY_SPEA_PENALTY` — const — line 30
+- `InjurySeverity` — type — line 12
+  - domain: shared
+  - system: health
+  - role: Pure derived physical-injury severity (plan npc-025). `physicalInjury` remains the single authoritative wound amount — severity, SPEA modifiers and recovery policy are re-derived from it and are never persisted.
+  - owns: InjurySeverity
+- `injurySeverityRank` — function — line 73
+- `injurySpeaPenalties` — function — line 84
+- `naturalInjuryRecoveryHp` — function — line 116
+- `representativeInjuryAmount` — function — line 157
+- `resolveInjurySeverity` — function — line 65
+- `TreatableInjurySeverity` — type — line 15
 
 ## `shared/PhysicalAttributes.ts`
 

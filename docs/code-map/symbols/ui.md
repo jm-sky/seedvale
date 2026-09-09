@@ -6,16 +6,16 @@ Generated from exported TypeScript symbols.
 
 - `AgentLabelDom` — type — line 33
 - `AgentLabelObservationPresentation` — type — line 101
-- `AgentStatusLabelController` — type — line 128
+- `AgentStatusLabelController` — type — line 131
 - `applyBarPercent` — function — line 85
 - `computeBarPercent` — function — line 76
 - `createAgentLabel` — function — line 49
-- `createAgentStatusLabelController` — function — line 163
+- `createAgentStatusLabelController` — function — line 166
 - `createLabelBar` — function — line 23
-- `INITIAL_LABEL_DISTANCE_STATE` — const — line 113
+- `INITIAL_LABEL_DISTANCE_STATE` — const — line 116
 - `LabelBarKind` — type — line 18
 - `LabelDistanceState` — type — line 93
-- `updateAgentLabelDistanceState` — function — line 352
+- `updateAgentLabelDistanceState` — function — line 357
 
 ## `ui/createBusyOverlay.ts`
 

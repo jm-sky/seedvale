@@ -4,7 +4,7 @@
 
 **Not:** settlement generation, `Household`/`SettlementEconomy` internals (that's [SETTLEMENTS.md](./settlements.md)), fauna's own behaviour pipeline or `AnimalAgent` internals (that's [fauna.md](./fauna.md) — this doc only covers how NPCs *consume* what fauna exposes), combat resolver internals ([combat.md](./combat.md) owns those; this doc covers only where combat hands off into NPC state), the work-contract commitment record itself ([player-systems.md](./player-systems.md)'s Work Contracts section owns that; this doc covers only the NPC-side evaluation/execution), or a plan/changelog.
 
-**Last verified:** 2026-09-08
+**Last verified:** 2026-09-09
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -22,7 +22,8 @@ When this file and the code disagree, the code wins — update this file.
 
 **Authoritative runtime entity state — `settlement/npcState.ts`'s `NpcAuthoritativeState`, keyed by stable NPC id, owned by a registry living on `SettlementsManager` (the same shape as the settlement economy/household registries — see [settlements.md](./settlements.md)):**
 - `health`, `stamina`, `vigor`, `needs` (thirst/wood duty/water duty/hunger).
-- `physicalInjury` — outstanding healable HP loss, deliberately *not* derived from `maxHp − currentHp` so a future non-physical damage source (starvation, dehydration) can never conflate with it.
+- `physicalInjury` — outstanding healable HP loss, deliberately *not* derived from `maxHp − currentHp` so a future non-physical damage source (starvation, dehydration) can never conflate with it. Derived **injury severity** (`none`/`minor`/`serious`/`critical`) and injury SPEA modifiers are recomputed from this amount and are not stored.
+- `injuryRecoveryUpdatedAtDays` — optional lazy natural-recovery clock so unloaded/off-screen NPCs catch up from elapsed game time without a global scan.
 - `helperAssignment` — a player-configured delivery target (`{targetContainerId, resourceKind, enabled}`, set from the Villagers UI).
 - `activePlan` — the persistent Plan described below (`{goal, strategy, state, progress, currentStep}`).
 - `postDeath` — corpse/lifecycle record after the alive→dead edge (`null` while alive). Holds death position/yaw, a world-days death-time anchor, persisted loadout loot, and `active`/`claimed`/`terminal` status so a corpse can age during stream-out/time-skip and not rematerialize after natural cleanup. Burial (`npc-011`) can `claimed`-lock cleanup without a parallel corpse registry.
@@ -42,8 +43,9 @@ When this file and the code disagree, the code wins — update this file.
    a. Needs        physiological + duty meters (water/wood/waterDuty/food/idle),
                     re-ranked (never added/removed) by personality/role modifiers
    b. Weather       a single 'seekShelter' candidate, scored from current weather
-   c. Healing       a single 'heal' candidate, scored from physicalInjury + a
-                    held health consumable
+   c. Healing       a single 'heal' candidate, scored from derived injury
+                    severity + a catalog-suitable physical-injury treatment
+                    (not a generic health consumable)
 
 2. ARBITRATION      one winner: a real need | 'seekShelter' | 'heal' | 'idle'
 
@@ -108,16 +110,23 @@ This is the domain's central extensibility point: a fourth pressure producer nee
 combat damage
 → NpcAgent.takeDamage() — the single NPC damage entry point
   → HealthState (shared primitive, see combat.md)
-  → physicalInjury written in exactly one line (never derived from
-    maxHp − currentHp)
-→ healing pressure scores physicalInjury + a held health consumable
-  → competes as the 'heal' decision-arbitration candidate (step 1c above)
-→ beginHeal(): walk home, revalidate alive/injured/still-holding-a-consumable,
-  consume the best-relief-first consumable, apply the HP restore
+  → physicalInjury increased by actual accepted HP loss
+→ derived injury severity (none/minor/serious/critical) from
+  physicalInjury / maxHp — never persisted, never inferred from generic
+  HP deficit
+→ injury SPEA modifiers compose into effective attributes (with
+  temporary conditions from npc-024)
+→ natural recovery is lazy elapsed-game-time: healHealth then reduce
+  injury by actual restored HP. Critical recovery cannot cross into
+  serious. Off-screen NPCs catch up from injuryRecoveryUpdatedAtDays.
+→ healing pressure scores derived severity + catalog-suitable treatment
+  → competes as the same 'heal' decision-arbitration candidate
+→ beginHeal(): walk home, revalidate alive/injured/severity/suitable
+  catalog treatment/HP room, consume, apply immediate HP restore
 → physicalInjury drops by the actually-restored HP
 ```
 
-Combat's responsibility ends at the one-line `physicalInjury` write; combat never reads it back. Healing never auto-fires from combat and is never wired into the critical-interrupt path — it only ever wins at a natural arbitration tick. Combat mechanics themselves (the damage pipeline, critical hits, defense) are canonical in [combat.md](./combat.md).
+Combat's responsibility ends at registering accepted physical damage; combat never reads severity back and never interrupts to heal. A generic health consumable (`herb`) is not wound medicine; `bandage` declares `injuryTreatment`. Healing never auto-fires from combat and is never wired into the critical-interrupt path — it only ever wins at a natural arbitration tick. Combat mechanics themselves (the damage pipeline, critical hits, defense) are canonical in [combat.md](./combat.md).
 
 ## Inventory/items
 
@@ -125,7 +134,7 @@ NPCs carry a generic `Inventory` — the same class and capability-flag catalog 
 
 ## Persistence
 
-The eight `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/helperAssignment/activePlan/postDeath) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/carried inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
+The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/physicalInjury/injuryRecoveryUpdatedAtDays/temporaryConditions/helperAssignment/activePlan/postDeath) persist as part of `SaveData.npcStates`; NPC↔NPC relationships persist as a sparse (non-zero-pair-only) `SaveData` field. Phase/pending-action/pathfinding/watchdog/combat-intent/carried inventory never persist and reset fresh on every reconstruction — an interrupted delivery genuinely loses whatever was mid-transit (loadout belongings that crossed the alive→dead edge live on `postDeath.loot` instead). Identity/physical profile is deterministic and never persisted. Derived injury severity and SPEA modifiers are recomputed after restore. See [persistence.md](./persistence.md) for the full classification and the shared save/rebuild mechanism that keeps a save and an in-session `WorldBundle` rebuild from drifting apart.
 
 ## Cross-domain integrations
 
@@ -161,6 +170,8 @@ src/ai/npcProfessionWork.ts
 src/ai/npcWorkContract.ts
 src/ai/weatherPressure.ts
 src/ai/healingPressure.ts
+src/shared/injurySeverity.ts
+src/shared/injuryRecovery.ts
 src/ai/npcAnimalThreat.ts
 src/ai/npcCombat.ts
 src/ai/socialBehaviour.ts

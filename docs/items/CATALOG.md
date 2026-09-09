@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-04 (plan items-player-016 — `knowledge` category + 18 skill books)
+**Last updated:** 2026-09-09 (plan npc-025 — physical-injury treatment on `bandage`)
 
 ## Quick rules
 
@@ -29,6 +29,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | Inventory category | `ITEM_DEFS.categories` — `resource` / `tool` / `utility` / `food` / `weapon` / `knowledge` (multi-category, e.g. axe = tool + weapon); hunger consumables are `food`, waterskins stay `utility`. `knowledge` (plan items-player-016) covers `map_near`/`map_far` (→ `LocationKnowledge`) and the 18 skill books (→ `PlayerSkills`) — a shared item category, not a shared gameplay system |
 | Skill books (plan items-player-016) | `ITEM_CATALOG[kind].book` (`{ skill, requiredSkillValue, targetSkillValue, tier }`) — the single source of truth for inventory/merchant presentation and the "Czytaj" action (`items/books.ts`'s `readBook`). Reading raises the named `SkillId` straight to `targetSkillValue` via `PlayerSkills.ts`'s `raiseSkillToValue` (never lowers XP, no-op once already met); requires the current skill to be `>= requiredSkillValue` first. No parallel book-progression state — the book itself is never consumed. |
 | Consumable (Zjedz/Wypij/Opatrz) | `ITEM_CATALOG[kind].consumable` (plan 106, 153) — `{ need: 'hunger'\|'thirst'\|'health', relief, resultKind? }`; driven from inventory screen (`InventoryScreenItemDetails.vue`), world drink/cook actions, or the world `[R]` quick-action on a pickupable item (`interactables.ts`'s `itemPromptLabel`) |
+| Physical-injury treatment (plan npc-025) | `ITEM_CATALOG[kind].injuryTreatment` (`{ immediateHp, maxSeverity }`) — independent of `consumable.need === 'health'`. `bandage` treats physical injury through critical; `herb` does not. `Inventory.findInjuryTreatment(severity)` is the shared lookup for healing pressure and `beginHeal()` |
 | Player needs | `player/PlayerNeeds.ts` — stamina/vigor/hunger/thirst pools on `PlayerController.needs`; HUD bars in `HudScreen.vue` (HP first, then the four needs — issue 034) |
 | Passive HP regen | `player/PlayerNeeds.ts`'s `tickHealthRegen` (plan 153) — slow, suppressed while starving/dehydrated; herb/bandage heal faster |
 | Water source (well/lake) | `world/WaterSource.ts` — `[E]` drink, `[R]` fill waterskin; lake is a synthetic per-frame target (`interactables.ts`'s `isNearLakeShore`), not a discrete world object |
@@ -97,8 +98,8 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
 | coin | moneta | — | — | world chunk (rare) | `items/coin.glb` | plan 129 / issue 035; near-zero weight (0.001 kg); Kupiec buy/sell currency + quest reward + land-plot price; shells stay barter-only |
-| herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153; Opatrz (+8 health) — free but scarce (half mushroom's weight) |
-| bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153; Opatrz (+35 health) — reliable, purchasable healing |
+| herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153 / npc-024; Opatrz (+8 health) + poisoning treatment; **not** physical-injury treatment (npc-025) |
+| bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153 / npc-025; Opatrz (+35 health) and catalog `injuryTreatment` up to critical |
 | damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | `items/damascus_knife.glb` (M44) | plan 160; teal/silver damascus, not gray; harvests corpses like knife |
 | damascus_short_sword | krótki miecz damasceński | yes | 24 | none (Kupiec) | `items/damascus_short_sword.glb` (M45) | plan 160; teal/navy damascus, not gray |
 | damascus_long_sword | długi miecz damasceński | yes | 40 | none (quest grozny-wilk) | `items/damascus_long_sword.glb` (M46) | plan 160; teal/navy damascus; not Kupiec stock |

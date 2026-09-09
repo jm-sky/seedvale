@@ -183,3 +183,12 @@ Debug apply/clear injury powinien używać normalnego physical-damage/heal accou
 6. Observation/debug hooks i regresyjne testy integracyjne.
 
 Nie rozszerzać tego planu o assisted Medicine, wound types, combat retreat ani nowy medical manager.
+
+## What was implemented (2026-09-09)
+
+- Pure `InjurySeverity` resolver, SPEA penalties and natural-recovery policy in `src/shared/injurySeverity.ts`.
+- Lazy `injuryRecoveryUpdatedAtDays` on `NpcAuthoritativeState` / snapshot; recovery uses `healHealth` then actual-restored accounting.
+- Injury modifiers compose in `resolveEffectivePhysicalAttributes` before temporary-condition modifiers.
+- Catalog `injuryTreatment` on `bandage` (not `herb`); `Inventory.findInjuryTreatment` shared by pressure and `beginHeal()`.
+- Existing `'heal'` candidate only — no parallel pressures; combat is not interrupted.
+- Debug: `window.seedvale.debug.injury.applyNpcInjury/clearNpcInjury/giveNpcBandage`.

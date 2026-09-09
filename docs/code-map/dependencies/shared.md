@@ -29,6 +29,8 @@ Generated from TypeScript imports.
 - `settlement/npcState.test.ts`
 - `settlement/npcState.ts`
 - `shared/HealthState.test.ts`
+- `shared/injuryRecovery.test.ts`
+- `shared/injuryRecovery.ts`
 
 ## `shared/HungerState.ts`
 
@@ -47,6 +49,7 @@ Generated from TypeScript imports.
 - `player/PlayerController.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `shared/effectivePhysicalAttributes.ts`
+- `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
 - `ui-vue/store.ts`
 
@@ -177,6 +180,7 @@ Generated from TypeScript imports.
 
 - `settlement/npcPhysicalProfile.ts`
 - `shared/PhysicalAttributes.ts`
+- `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
 
 **Imported by**
@@ -224,6 +228,53 @@ Generated from TypeScript imports.
 - `player/PlayerTorch.ts`
 - `settlement/campfireProps.ts`
 - `settlement/houseLighting.ts`
+
+## `shared/injuryRecovery.test.ts`
+
+**Imports**
+
+- `shared/HealthState.ts`
+- `shared/injuryRecovery.ts`
+- `shared/injurySeverity.ts`
+
+## `shared/injuryRecovery.ts`
+
+**Imports**
+
+- `shared/HealthState.ts`
+- `shared/injurySeverity.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `shared/injuryRecovery.test.ts`
+
+## `shared/injurySeverity.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `shared/injurySeverity.ts`
+
+## `shared/injurySeverity.ts`
+
+**Imports**
+
+- `shared/PhysicalAttributes.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/healingPressure.test.ts`
+- `ai/healingPressure.ts`
+- `debug/npcDebugApi.ts`
+- `items/Inventory.ts`
+- `items/itemCatalog.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/injuryRecovery.test.ts`
+- `shared/injuryRecovery.ts`
+- `shared/injurySeverity.test.ts`
+- `simulation/observation.ts`
 
 ## `shared/temporaryConditions.test.ts`
 

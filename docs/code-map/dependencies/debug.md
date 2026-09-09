@@ -220,6 +220,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `settlement/families.ts`
 - `settlement/household.ts`
+- `shared/injurySeverity.ts`
 - `shared/temporaryConditions.ts`
 - `world/locations/locationConfig.ts`
 - `world/locations/locationKnowledge.ts`

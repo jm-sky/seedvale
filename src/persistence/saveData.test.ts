@@ -318,6 +318,33 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData({ ...validSave, npcStates: 'nope' })).toBeNull()
   })
 
+  it('accepts optional injuryRecoveryUpdatedAtDays and rejects a malformed value (plan npc-025)', () => {
+    const withAnchor = {
+      ...validSave,
+      npcStates: {
+        'home:npc:0': {
+          health: { current: 60, max: 100, dead: false },
+          stamina: { current: 100, max: 100 },
+          vigor: { current: 100, max: 100 },
+          needs: { thirst: 0, woodDuty: 0, waterDuty: 0, hunger: 0 },
+          physicalInjury: 40,
+          injuryRecoveryUpdatedAtDays: 2.5,
+          postDeath: null,
+        },
+      },
+    }
+    expect(loadSaveData(withAnchor)).toEqual(withAnchor)
+    expect(loadSaveData({
+      ...withAnchor,
+      npcStates: {
+        'home:npc:0': {
+          ...withAnchor.npcStates['home:npc:0'],
+          injuryRecoveryUpdatedAtDays: 'nope',
+        },
+      },
+    })).toBeNull()
+  })
+
   it('rejects a malformed households record', () => {
     expect(loadSaveData({ ...validSave, households: { h: { water: 'nope' } } })).toBeNull()
     expect(loadSaveData({ ...validSave, households: 'nope' })).toBeNull()

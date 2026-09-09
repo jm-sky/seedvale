@@ -67,7 +67,18 @@ describe('createNpcStateRegistry', () => {
     expect(state.physicalInjury).toBe(0)
   })
 
-  it('an older in-session snapshot with no physicalInjury field restores as 0 (plan npc-002)', () => {
+  it('round-trips the injury recovery anchor with physicalInjury (plan npc-025)', () => {
+    const before = createNpcStateRegistry()
+    const state = before.getOrCreate('0_0:npc:0', 0)
+    state.physicalInjury = 40
+    state.injuryRecoveryUpdatedAtDays = 3.25
+
+    const hydrated = createNpcStateRegistry(before.serialize()).getOrCreate('0_0:npc:0', 0)
+    expect(hydrated.physicalInjury).toBe(40)
+    expect(hydrated.injuryRecoveryUpdatedAtDays).toBe(3.25)
+  })
+
+  it('an older snapshot without injuryRecoveryUpdatedAtDays still loads', () => {
     const registry = createNpcStateRegistry({
       '0_0:npc:0': {
         health: { current: 80, max: 100, dead: false },
@@ -77,6 +88,7 @@ describe('createNpcStateRegistry', () => {
       },
     })
     expect(registry.getOrCreate('0_0:npc:0', 0).physicalInjury).toBe(0)
+    expect(registry.getOrCreate('0_0:npc:0', 0).injuryRecoveryUpdatedAtDays).toBeUndefined()
   })
 
   it('clear() drops every state so the next getOrCreate starts fresh', () => {

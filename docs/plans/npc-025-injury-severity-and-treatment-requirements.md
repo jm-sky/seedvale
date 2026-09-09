@@ -1,7 +1,7 @@
 # Plan: Injury severity and treatment requirements
 
 **Created:** 2026-09-06
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** npc-002, ~~npc-019~~, npc-024

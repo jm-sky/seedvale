@@ -68,13 +68,12 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-006-wool-to-material.md`                               | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                   | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
 | ◼️ `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
-| ◼️ `settlements-npcs-023-profession-staffing-a nd-settlement-composition.md` | -       | 🔴 | M      | -      |
+| ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | -       | 🔴 | M      | -      |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
 | 💡 `npc-016-work-contracts-payment-and-employer-interaction.md`             | -       | 🟡 | M      | ~~npc-015~~, ~~npc-018~~ |
 | 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~ |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | npc-010 |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
-| 💡 `npc-025-injury-severity-and-treatment-requirements.md`                  | -       | 🟡 | M      | npc-002, ~~npc-019~~, npc-024 |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                 | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `quests-progression-007-wolves-approach-settlement.md`                   | -       | 🟡 | M      | fauna-016 |
@@ -94,6 +93,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md` | -       | 🟡 | M      | fauna-020 |
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
 | 💡 `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` | -       | 🔴 | M      | -      |
+| 💡 `npc-024-temporary-conditions-and-poisoning.md`                          | -       | 🟡 | M      | ~~npc-019~~, ~~world-017~~ |
 
 ---
 
@@ -128,7 +128,8 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `world-terrain-011-river-sink-resolution-and-inland-drainage-recovery.md` | Śródlądowe rzeki na kilku seedach (równiny, doliny, drenaż górski, szwy tile'i, małe strumienie vs duże rzeki) nie kończą się na suchym lądzie; naprawione ujścia wyglądają wiarygodnie (bez sztucznych kanionów), wyrównanie koryta/wody po naprawie |
 | `world-terrain-012-macro-meadow-variation.md` | Widoczne szerokie zielone/suche łąki (~30-80 m) na otwartym terenie, płynne przejścia bez twardych linii i bez szwów chunków; drobna zmienność per-blade nadal widoczna w obrębie makro-regionu; wyłączenie `macroVariationEnabled` (GUI → Grass) przywraca poprzedni wygląd |
 | `fauna-016-animal-habitats-roaming-water-trips-and-settlement-rats.md` | Deer/stag habitat (las/skraj lasu), brak spawnu przy drogach, species-specific roaming, dalekie wyprawy do wody z powrotem do local behaviour, szczury jako mała populacja osadnicza (widoczne, zmniejszają zapasy, zabijalne przez psa/gracza) |
-| `npc-002-npc-healing.md` | NPC ranny w walce (`?debug=1&debugNpcCombat=1` do zadania obrażeń) leczy się dopiero po zakończeniu walki: idzie do domu, zużywa niesione `herb`/`bandage`, HP rośnie, po czym wraca do normalnej autonomii; bez consumable nie ma healing candidate |
+| `npc-002-npc-healing.md` | NPC ranny w walce (`?debug=1&debugNpcCombat=1` do zadania obrażeń) leczy się dopiero po zakończeniu walki: idzie do domu, zużywa catalogowy `injuryTreatment` (`bandage`; `herb` sam nie wystarcza po npc-025), HP rośnie, po czym wraca do normalnej autonomii; bez odpowiedniego treatmentu nie ma healing candidate |
+| `npc-025-injury-severity-and-treatment-requirements.md` | `?debug=1`: `injury.applyNpcInjury(id, 'minor'|'serious'|'critical')` pokazuje derived severity i SPEA; minor regeneruje się naturalnie z HP; serious wolniej i mocniej idzie się leczyć; `bandage` leczy uraz, `herb` nie; critical nie schodzi naturalnie do serious; `giveNpcBandage` + leczenie stabilizuje critical; brak leczenia nie zapętla heal; combat nie jest przerywany; save/streaming zachowuje `physicalInjury` |
 | `ui-input-011-new-game-setup-on-empty-save-state.md` | Pusta lista zapisów i usunięcie ostatniego zapisu zostawiają Start Screen z otwartym formularzem Nowej gry (bez automatycznego tworzenia świata); imię gracza i nazwa zapisu są niezależne i utrzymują się per save po wczytaniu; wpisy Seed Library przeżywają usunięcie wszystkich zapisów; `?seed=` jest tylko wstępnym wyborem |
 | `ui-input-012-placement-preview-shapes-rotation-and-coverage.md` | Studnia wchodzi w preview; palisada/namiot/skrzynia/posłanie/podest pokazują box i kierunek; F/G (i przyciski) obracają o 45° bez ruszania celu aim; kamera po starcie preview nie kręci obiektem; G nie wyrzuca itemu podczas rotowalnego preview; snapping palisady pod 45°/90° |
 

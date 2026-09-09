@@ -91,6 +91,10 @@ Generated from TypeScript imports.
 
 ## `simulation/observation.ts`
 
+**Imports**
+
+- `shared/injurySeverity.ts`
+
 **Imported by**
 
 - `ai/NpcAgent.ts`

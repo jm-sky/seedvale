@@ -1,3 +1,4 @@
+import type { InjurySeverity } from '../shared/injurySeverity'
 import {
   CARRIED_FOOD_DECAY,
   checkpointFoodBatch,
@@ -11,7 +12,15 @@ import {
   normalizeFoodBatch,
   sourceSpeciesForMeatKind,
 } from './foodFreshness'
-import { CAPABILITY_KINDS, CONSUMABLE_KINDS_BY_NEED, type ConsumableNeed, ITEM_CATALOG, type ItemCapability } from './itemCatalog'
+import {
+  CAPABILITY_KINDS,
+  CONSUMABLE_KINDS_BY_NEED,
+  type ConsumableNeed,
+  INJURY_TREATMENT_KINDS,
+  ITEM_CATALOG,
+  type ItemCapability,
+  itemTreatsPhysicalInjury,
+} from './itemCatalog'
 import {
   clamp01,
   cloneItemInstance,
@@ -391,6 +400,18 @@ export class Inventory {
   findConsumableForNeed(need: ConsumableNeed): ItemKind | null {
     for (const kind of CONSUMABLE_KINDS_BY_NEED[need]) {
       if (this.count(kind) > 0) return kind
+    }
+    return null
+  }
+
+  /** Best held catalog-declared physical-injury treatment for `severity`
+   *  (plan npc-025), or null. Shares `INJURY_TREATMENT_KINDS` /
+   *  `itemTreatsPhysicalInjury` with healing pressure so feasibility and
+   *  execution cannot disagree. Generic health consumables without
+   *  `injuryTreatment` are never returned. */
+  findInjuryTreatment(severity: InjurySeverity): ItemKind | null {
+    for (const kind of INJURY_TREATMENT_KINDS) {
+      if (this.count(kind) > 0 && itemTreatsPhysicalInjury(kind, severity)) return kind
     }
     return null
   }

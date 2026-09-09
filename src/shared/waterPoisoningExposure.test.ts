@@ -69,7 +69,7 @@ describe('waterPoisoningExposure (plan npc-024)', () => {
   })
 })
 
-describe('effectivePhysicalAttributes (plan npc-024)', () => {
+describe('effectivePhysicalAttributes (plan npc-024 / npc-025)', () => {
   it('restores pre-condition effective values after recovery', () => {
     const conditions = createEmptyTemporaryConditions()
     applyPoisoningExposure(conditions, 0)
@@ -77,5 +77,27 @@ describe('effectivePhysicalAttributes (plan npc-024)', () => {
     expect(poisoned.strength).toBeLessThan(PLAYER_STARTING_ATTRIBUTES.strength)
     const recovered = resolveEffectivePhysicalAttributes(PLAYER_STARTING_ATTRIBUTES, conditions, 100)
     expect(recovered).toEqual(PLAYER_STARTING_ATTRIBUTES)
+  })
+
+  it('composes injury and condition modifiers without mutating base attributes', () => {
+    const conditions = createEmptyTemporaryConditions()
+    applyPoisoningExposure(conditions, 0)
+    const base = { ...PLAYER_STARTING_ATTRIBUTES }
+    const injured = resolveEffectivePhysicalAttributes(base, createEmptyTemporaryConditions(), 0, {
+      maxHp: 100,
+      physicalInjury: 80,
+    })
+    const both = resolveEffectivePhysicalAttributes(base, conditions, 0, {
+      maxHp: 100,
+      physicalInjury: 80,
+    })
+    expect(base).toEqual(PLAYER_STARTING_ATTRIBUTES)
+    expect(injured.strength).toBeLessThan(base.strength)
+    expect(both.strength).toBeLessThan(injured.strength)
+    expect(both.perception).toBe(base.perception)
+    expect(resolveEffectivePhysicalAttributes(base, conditions, 0, {
+      maxHp: 100,
+      physicalInjury: 80,
+    })).toEqual(both)
   })
 })

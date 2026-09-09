@@ -5,14 +5,14 @@ import { MAX_VIGOR } from '../ai/npcVigor'
 import { applyDerivedStaminaMax } from '../shared/enduranceStamina'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { createStaminaState, type StaminaState } from '../shared/StaminaState'
-import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
   createEmptyTemporaryConditions,
   restoreTemporaryConditions,
-  snapshotTemporaryConditions,
   type SaveTemporaryConditionsSnapshot,
+  snapshotTemporaryConditions,
   type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
+import { createVigorState, type VigorState } from '../shared/VigorState'
 import {
   cloneNpcPostDeath,
   createLegacyTerminalNpcPostDeath,
@@ -63,6 +63,10 @@ export type NpcAuthoritativeState = {
    *  `needs`/`stamina`/`vigor` (and, via the same snapshot, `helperAssignment`/
    *  `activePlan`) are in fact persisted today; see `docs/plans/LOOSE-ENDS.md`. */
   physicalInjury: number
+  /** Lazy natural-recovery clock (plan npc-025). Optional so older snapshots
+   *  initialize on first resolution to current world time without retroactive
+   *  healing. Not a second injury amount — severity stays derived. */
+  injuryRecoveryUpdatedAtDays?: number
   /** Helper resource-delivery assignment (plan 167) — `null` when this NPC
    *  has none. Mutable in place (assigned/cleared from the Villagers screen),
    *  the same "shared object, no snapshot copy" pattern as the other fields
@@ -99,6 +103,9 @@ export type NpcStateSnapshot = {
    *  defaults to 0, same "no outstanding injury" starting point as a freshly
    *  created state. */
   physicalInjury?: number
+  /** Optional recovery-time anchor (plan npc-025). Absent means "initialize
+   *  on first lazy resolution". */
+  injuryRecoveryUpdatedAtDays?: number
   helperAssignment?: HelperAssignment | null
   activePlan?: NpcPlan | null
   /** Required on current saves; older in-session snapshots default below. */
@@ -115,6 +122,7 @@ function fromSnapshot(id: NpcId, snapshot: NpcStateSnapshot, maxima?: NpcPhysica
     vigor: { max: snapshot.vigor.max, current: snapshot.vigor.current },
     needs: { ...snapshot.needs },
     physicalInjury: snapshot.physicalInjury ?? 0,
+    injuryRecoveryUpdatedAtDays: snapshot.injuryRecoveryUpdatedAtDays,
     helperAssignment: snapshot.helperAssignment ?? null,
     activePlan: snapshot.activePlan ?? null,
     postDeath: snapshot.postDeath !== undefined
@@ -211,6 +219,7 @@ export function createNpcStateRegistry(initial?: Record<NpcId, NpcStateSnapshot>
           vigor: { current: state.vigor.current, max: state.vigor.max },
           needs: { ...state.needs },
           physicalInjury: state.physicalInjury,
+          injuryRecoveryUpdatedAtDays: state.injuryRecoveryUpdatedAtDays,
           helperAssignment: state.helperAssignment,
           activePlan: state.activePlan,
           postDeath: cloneNpcPostDeath(state.postDeath),

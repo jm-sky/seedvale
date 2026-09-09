@@ -42,9 +42,8 @@ Generated from exported TypeScript symbols.
 
 ## `ai/healingPressure.ts`
 
-- `decreaseInjuryFromHeal` — function — line 56
-- `healingPressure` — function — line 33
-- `increaseInjuryFromDamage` — function — line 48
+- `HEALING_PRESSURE_BY_SEVERITY` — const — line 24
+- `healingPressure` — function — line 38
 
 ## `ai/helperAssignment.ts`
 
@@ -89,24 +88,24 @@ Generated from exported TypeScript symbols.
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 540
-- `CurrentActivity` — type — line 404
-- `CurrentActivityKind` — type — line 397
-- `NPC_HEIGHT` — const — line 307
-- `NPC_MODEL_URLS` — const — line 371
-- `NPC_SHADOW_DISTANCE` — const — line 321
-- `NpcAgent` — class — line 854
+- `classifyPendingActivity` — function — line 557
+- `CurrentActivity` — type — line 417
+- `CurrentActivityKind` — type — line 410
+- `NPC_HEIGHT` — const — line 320
+- `NPC_MODEL_URLS` — const — line 384
+- `NPC_SHADOW_DISTANCE` — const — line 334
+- `NpcAgent` — class — line 871
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 776
-- `NpcInspectionSnapshot` — type — line 419
-- `NpcWhy` — type — line 515
-- `projectNpcWhy` — function — line 575
-- `promoteChainKind` — function — line 532
+- `NpcAgentDeps` — type — line 793
+- `NpcInspectionSnapshot` — type — line 432
+- `NpcWhy` — type — line 532
+- `projectNpcWhy` — function — line 592
+- `promoteChainKind` — function — line 549
 
 ## `ai/npcAnimalThreat.ts`
 

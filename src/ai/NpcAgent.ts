@@ -79,10 +79,21 @@ import {
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { householdStorageDestination } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
-import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
-import { applyPoisoningExposure, clearCondition, getResolvedPoisoningSeverity, POISONING_INITIAL_EXPOSURE_SEVERITY, POISONING_MAX_SEVERITY } from '../shared/temporaryConditions'
+import { resolveEnduranceStaminaRecoveryMultiplier } from '../shared/enduranceStamina'
 import { damageHealth, healHealth, type HealthState } from '../shared/HealthState'
+import {
+  applyInjurySeverityForDebug,
+  registerPhysicalInjuryFromDamage,
+  registerPhysicalInjuryFromHeal,
+  resolveInjuryRecovery,
+} from '../shared/injuryRecovery'
+import {
+  type InjurySeverity,
+  injurySpeaPenalties,
+  resolveInjurySeverity,
+  type TreatableInjurySeverity,
+} from '../shared/injurySeverity'
 import {
   drainStamina,
   getStaminaRatio,
@@ -90,6 +101,7 @@ import {
   restoreStamina,
   type StaminaState,
 } from '../shared/StaminaState'
+import { applyPoisoningExposure, clearCondition, getResolvedPoisoningSeverity, POISONING_INITIAL_EXPOSURE_SEVERITY, POISONING_MAX_SEVERITY } from '../shared/temporaryConditions'
 import {
   type ActionLifecycle,
   type ActionLifecycleStatus,
@@ -109,6 +121,7 @@ import {
   NPC_BROAD_IDENTITY_LABEL,
   type ObservationLevel,
   type PlayerObservationInput,
+  qualitativeHealthFromInjurySeverity,
   resolveStableObservationLevel,
 } from '../simulation/observation'
 import { stepWithSlopeAndCollision } from '../terrain/slopeConstraint'
@@ -163,7 +176,7 @@ import {
   type Personality,
   pickDialogueLine,
 } from './dialogue'
-import { decreaseInjuryFromHeal, healingPressure, increaseInjuryFromDamage } from './healingPressure'
+import { healingPressure } from './healingPressure'
 import {
   generateNeedPressures,
   needColor,
@@ -492,6 +505,10 @@ export type NpcInspectionSnapshot = {
   stamina: { current: number, max: number }
   vigor: { current: number, max: number }
   health: { current: number, max: number, dead?: boolean }
+  /** Outstanding physical injury after lazy recovery (plan npc-025). Optional
+   *  on synthetic test snapshots. */
+  physicalInjury?: number
+  injurySeverity?: InjurySeverity
   /** Authoritative post-death/corpse projection (plan npc-010) — `null`
    *  while alive. Reads `NpcAuthoritativeState`, not mesh presence. Optional
    *  on synthetic test snapshots. */
@@ -1474,6 +1491,7 @@ export class NpcAgent {
 
   /** Read-only diagnostic snapshot (plan 170) — see `NpcInspectionSnapshot`. */
   createInspectionSnapshot(timeOfDay: number): NpcInspectionSnapshot {
+    resolveInjuryRecovery(this.npcState, this.nowDays())
     const queue = this.activeQueueId ? this.queues.get(this.activeQueueId) : undefined
     return {
       id: this.id,
@@ -1554,6 +1572,8 @@ export class NpcAgent {
       stamina: { current: this.stamina.current, max: this.stamina.max },
       vigor: { current: this.vigor.current, max: this.vigor.max },
       health: { current: this.health.currentHp, max: this.health.maxHp, dead: this.health.dead },
+      physicalInjury: this.npcState.physicalInjury,
+      injurySeverity: resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp),
       postDeath: this.inspectPostDeath(),
       household: this.household
         ? {
@@ -1735,7 +1755,7 @@ export class NpcAgent {
     // non-physical damage source (starvation/dehydration) must route around
     // this, not through `takeDamage`.
     const actualHpLoss = hpBefore - this.health.currentHp
-    this.npcState.physicalInjury = increaseInjuryFromDamage(this.npcState.physicalInjury, actualHpLoss)
+    registerPhysicalInjuryFromDamage(this.npcState, actualHpLoss, this.nowDays())
     applyDamageVigor(this.vigor)
     if (amount > 0) recordBloodHit(this.mesh.position.x, this.mesh.position.z, NPC_HEIGHT, amount)
     if (this.health.dead) {
@@ -2315,6 +2335,7 @@ export class NpcAgent {
       return
     }
     this.currentWeather = weather ?? null
+    resolveInjuryRecovery(this.npcState, this.nowDays())
     const prevPhase = this.phase
     tickNeeds(this.needs, dt, dayLengthSec, {
       hungerThirstRate: this.phase === 'sleep' ? SLEEP_HUNGER_THIRST_RATE : 1,
@@ -2446,13 +2467,17 @@ export class NpcAgent {
         // arbitration as a `seekShelter` decision target instead of a fake
         // `NeedId` (see `weatherPressure.ts`'s `NpcDecisionTarget`).
         const weatherPressure = this.currentWeather ? weatherShelterPressure(this.currentWeather) : 0
-        // Healing pressure (plan npc-002) — a third, independent pressure
-        // producer over `this.npcState.physicalInjury`, competing in the
-        // same arbitration as a `heal` decision target instead of a fake
-        // `health` `NeedId` (see `healingPressure.ts`'s doc comment). `0`
-        // (never a candidate) whenever there's no health consumable on hand.
-        const hasHealthConsumable = this.carried.findConsumableForNeed('health') != null
-        const healPressure = healingPressure(this.npcState.physicalInjury, this.health.maxHp, hasHealthConsumable)
+        // Healing pressure (plan npc-002 / npc-025) — a third, independent
+        // pressure producer over derived injury severity + catalog-suitable
+        // treatment, competing as a `heal` decision target. `0` (never a
+        // candidate) when no item can treat the current severity.
+        const injurySeverity = resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp)
+        const treatmentKind = this.carried.findInjuryTreatment(injurySeverity)
+        const healPressure = healingPressure(
+          this.npcState.physicalInjury,
+          this.health.maxHp,
+          treatmentKind != null,
+        )
         const decision = pickActionKind<NpcDecisionTarget>(
           [
             ...candidates.map((c) => ({ kind: c.target, score: c.final })),
@@ -2741,6 +2766,10 @@ export class NpcAgent {
         knownName: `${this.displayName}${questSuffix}`,
         healthRatio,
         staminaRatio: getStaminaRatio(this.stamina),
+        qualitativeHealth: (() => {
+          const severity = resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp)
+          return severity === 'none' ? undefined : qualitativeHealthFromInjurySeverity(severity)
+        })(),
         fullLabelInfo: playerObservation.fullLabelInfo,
       },
     )
@@ -2762,6 +2791,7 @@ export class NpcAgent {
    *  See `docs/plans/archive/2026-08-12--075--time-skip-npc-catchup.md`. */
   resolveTimeSkip(startTimeOfDay: number, hours: number, dayLengthSec: number): void {
     if (this.health.dead) return
+    resolveInjuryRecovery(this.npcState, this.nowDays())
     let finalActivity: ScheduleActivity | null = null
     let elapsed = 0
     let napping = this.sleepReason === 'collapse' || shouldCollapseSleep(this.vigor)
@@ -2884,7 +2914,13 @@ export class NpcAgent {
   }
 
   private effectivePhysicalAttributes() {
-    return resolveNpcEffectivePhysicalAttributes(this.physicalProfile, this.npcState.temporaryConditions, this.nowDays())
+    resolveInjuryRecovery(this.npcState, this.nowDays())
+    return resolveNpcEffectivePhysicalAttributes(
+      this.physicalProfile,
+      this.npcState.temporaryConditions,
+      this.nowDays(),
+      { maxHp: this.health.maxHp, physicalInjury: this.npcState.physicalInjury },
+    )
   }
 
   private effectiveMeleeStrength(): number {
@@ -2916,6 +2952,36 @@ export class NpcAgent {
     return getResolvedPoisoningSeverity(this.npcState.temporaryConditions, nowDays)
   }
 
+  /** Debug/test hooks (plan npc-025) — real damage/heal accounting, never
+   *  independent HP/injury writes. */
+  applyInjuryForDebug(severity: TreatableInjurySeverity, nowDays = this.nowDays()): void {
+    applyInjurySeverityForDebug(this.npcState, severity, nowDays)
+  }
+
+  clearInjuryForDebug(nowDays = this.nowDays()): void {
+    applyInjurySeverityForDebug(this.npcState, 'none', nowDays)
+  }
+
+  giveBandageForDebug(): boolean {
+    return this.carried.add('bandage', 1)
+  }
+
+  debugInjuryState(nowDays = this.nowDays()): {
+    modifiers: ReturnType<typeof injurySpeaPenalties>
+    physicalInjury: number
+    severity: ReturnType<typeof resolveInjurySeverity>
+    treatmentKind: ReturnType<Inventory['findInjuryTreatment']>
+  } {
+    resolveInjuryRecovery(this.npcState, nowDays)
+    const severity = resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp)
+    return {
+      modifiers: injurySpeaPenalties(severity),
+      physicalInjury: this.npcState.physicalInjury,
+      severity,
+      treatmentKind: this.carried.findInjuryTreatment(severity),
+    }
+  }
+
   /** `?debug=1`-only diagnostic line — phase/action/distance/stamina/rescue
    *  state, per the movement-resilience plan's instrumentation requirement.
    *  Hidden (and left unwritten) outside debug mode. */
@@ -2942,6 +3008,12 @@ export class NpcAgent {
       ? ` · arrows ${this.carried.count('arrow')} yield ${HUNT_YIELD_KINDS.reduce((n, kind) => n + this.carried.count(kind), 0)}`
         + (this.phase === 'combat' && this.combatIntent ? ` target ${this.combatIntent.target.ref.id}` : '')
       : ''
+    const injury = this.debugInjuryState()
+    const injuryText = injury.severity === 'none'
+      ? ''
+      : ` · injury ${injury.physicalInjury.toFixed(1)}/${this.health.maxHp} ${injury.severity}`
+        + ` S${(injury.modifiers.strength * 100).toFixed(0)} E${(injury.modifiers.endurance * 100).toFixed(0)} A${(injury.modifiers.agility * 100).toFixed(0)}`
+        + ` treat=${injury.treatmentKind ?? 'none'}`
     const conditionText = this.lastFullLabelInfo
       ? (() => {
           const severity = getResolvedPoisoningSeverity(this.npcState.temporaryConditions, this.nowDays())
@@ -2951,7 +3023,7 @@ export class NpcAgent {
         })()
       : ''
     const text = `${this.phase} · ${this.pendingAction?.kind ?? '-'} · dist ${distText} · `
-      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}${conditionText}`
+      + `stamina ${staminaPercent}% · rescue ${this.watchdog.rescueStage} (${this.watchdog.lowProgressStrikes})${householdText}${huntText}${injuryText}${conditionText}`
     this.labelController.setDebugLine(text)
   }
 
@@ -4245,14 +4317,14 @@ export class NpcAgent {
   }
 
   /**
-   * Healable-physical-injury treatment response (plan npc-002) — a single
-   * `goTo`/`execute` step to this NPC's own `home` (V1's only treatment
-   * destination), mirroring `beginSeekShelter()`'s "existing place, no
-   * dedicated FSM" shape. Not a `NeedId`/persistent Plan: a short reaction to
-   * `physicalInjury`, re-decided from scratch by `choose()` every time (see
-   * `healingPressure()`) — if one treatment doesn't fully clear the injury
-   * and this NPC still carries a health consumable, the next `choose()` tick
-   * simply picks `heal` again.
+   * Healable-physical-injury treatment response (plan npc-002 / npc-025) —
+   * a single `goTo`/`execute` step to this NPC's own `home` (V1's only
+   * treatment destination), mirroring `beginSeekShelter()`'s "existing
+   * place, no dedicated FSM" shape. Not a `NeedId`/persistent Plan: a short
+   * reaction to derived injury severity, re-decided from scratch by
+   * `choose()` every time — if one treatment doesn't fully clear the injury
+   * and a still-suitable item remains, the next `choose()` tick simply
+   * picks `heal` again.
    *
    * `startAction`'s own `isAbandonedDestination` check already returns this
    * NPC safely to `choose` (via `beginUnscheduledIdle`) if `home` turns out
@@ -4267,21 +4339,24 @@ export class NpcAgent {
       destination: copyVec3(this.home),
       durationSec: HEAL_DURATION_SEC * this.waitMultiplier,
       onComplete: () => {
-        // Full revalidation before consuming anything (plan npc-002 §7):
-        // alive, still actually injured, and a real health consumable still
-        // held — the world (or this NPC's own inventory) may have changed
-        // during the walk over.
+        // Full revalidation before consuming anything (plan npc-025):
+        // alive, still actually injured, current severity, selected item
+        // still held, catalog still declares suitable physical-injury
+        // treatment, and HP can actually be restored.
         if (this.health.dead) return
+        resolveInjuryRecovery(this.npcState, this.nowDays())
         if (this.npcState.physicalInjury <= 0) return
-        const kind = this.carried.findConsumableForNeed('health')
+        if (this.health.currentHp >= this.health.maxHp) return
+        const severity = resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp)
+        const kind = this.carried.findInjuryTreatment(severity)
         if (!kind) return
-        const relief = ITEM_CATALOG[kind].consumable?.relief
-        if (relief == null) return
+        const treatment = ITEM_CATALOG[kind].injuryTreatment
+        if (!treatment) return
         if (!this.carried.remove(kind, 1)) return
         const hpBefore = this.health.currentHp
-        healHealth(this.health, relief)
+        healHealth(this.health, treatment.immediateHp)
         const actualRestored = this.health.currentHp - hpBefore
-        this.npcState.physicalInjury = decreaseInjuryFromHeal(this.npcState.physicalInjury, actualRestored)
+        registerPhysicalInjuryFromHeal(this.npcState, actualRestored, this.nowDays())
       },
     })
   }

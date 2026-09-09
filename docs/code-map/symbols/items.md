@@ -168,17 +168,17 @@ Generated from exported TypeScript symbols.
 
 ## `items/Inventory.ts`
 
-- `DEFAULT_MAX_SIZE` — const — line 47
-- `Inventory` — class — line 100
+- `DEFAULT_MAX_SIZE` — const — line 56
+- `Inventory` — class — line 109
   - domain: items-player
   - system: inventory
   - role: Owns item ownership: stack counts, item instances and perishable food batches.
   - owns: FoodBatch
   - produces: SaveItemInstance
-- `inventoryFullToastText` — function — line 532
-- `ItemAmount` — type — line 52
-- `SaveItemInstance` — type — line 54
-- `toSaveItemInstance` — function — line 70
+- `inventoryFullToastText` — function — line 553
+- `ItemAmount` — type — line 61
+- `SaveItemInstance` — type — line 63
+- `toSaveItemInstance` — function — line 79
 
 ## `items/inventoryView.ts`
 
@@ -189,31 +189,33 @@ Generated from exported TypeScript symbols.
 
 ## `items/itemCatalog.ts`
 
-- `ARROW_DAMAGE_BONUS` — const — line 1283
-- `BookTier` — type — line 130
-- `CAPABILITY_KINDS` — const — line 1314
-- `CAPABILITY_NEED_LABEL` — const — line 109
-- `CONSUMABLE_KINDS_BY_NEED` — const — line 1349
-- `ConsumableNeed` — type — line 121
-- `consumeNeedNoun` — function — line 213
-- `consumeVerbLabel` — function — line 204
-- `DefenseConfig` — type — line 41
-- `hasItemCapability` — function — line 1339
-- `HOLDABLE_KINDS` — const — line 1305
-- `isMeleeToolKind` — function — line 1298
-- `isRangedTool` — function — line 1290
-- `ITEM_CATALOG` — const — line 227
+- `ARROW_DAMAGE_BONUS` — const — line 1292
+- `BookTier` — type — line 131
+- `CAPABILITY_KINDS` — const — line 1323
+- `CAPABILITY_NEED_LABEL` — const — line 110
+- `CONSUMABLE_KINDS_BY_NEED` — const — line 1358
+- `ConsumableNeed` — type — line 122
+- `consumeNeedNoun` — function — line 221
+- `consumeVerbLabel` — function — line 212
+- `DefenseConfig` — type — line 42
+- `hasItemCapability` — function — line 1348
+- `HOLDABLE_KINDS` — const — line 1314
+- `INJURY_TREATMENT_KINDS` — const — line 1380
+- `isMeleeToolKind` — function — line 1307
+- `isRangedTool` — function — line 1299
+- `ITEM_CATALOG` — const — line 235
   - domain: items-player
   - system: item-catalog
   - role: Single source of truth for per-`ItemKind` gameplay flags and tool-capability gates.
   - owns: ItemCatalogEntry
-- `ITEM_SYSTEM_ROADMAP` — const — line 1367
-- `ItemCapability` — type — line 88
-- `ItemCatalogEntry` — type — line 132
-- `ItemSpawnKind` — type — line 13
-- `MeleeConfig` — type — line 24
-- `NON_ITEM_PROPS` — const — line 1373
-- `RangedConfig` — type — line 52
+- `ITEM_SYSTEM_ROADMAP` — const — line 1401
+- `ItemCapability` — type — line 89
+- `ItemCatalogEntry` — type — line 133
+- `ItemSpawnKind` — type — line 14
+- `itemTreatsPhysicalInjury` — function — line 1393
+- `MeleeConfig` — type — line 25
+- `NON_ITEM_PROPS` — const — line 1407
+- `RangedConfig` — type — line 53
 
 ## `items/itemDisplay.ts`
 

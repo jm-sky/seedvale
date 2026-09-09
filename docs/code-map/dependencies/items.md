@@ -64,10 +64,12 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `items/liquidContainer.ts`
+- `shared/injurySeverity.ts`
 
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/healingPressure.test.ts`
 - `ai/npcAssistance.test.ts`
 - `ai/npcAssistance.ts`
 - `ai/npcCombat.test.ts`
@@ -513,6 +515,7 @@ Generated from TypeScript imports.
 - `items/itemInstances.ts`
 - `items/items.ts`
 - `player/PlayerSkills.ts`
+- `shared/injurySeverity.ts`
 - `world/WaterSource.ts`
 
 **Imported by**

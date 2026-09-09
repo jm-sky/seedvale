@@ -7,7 +7,6 @@ import type { ContainerKind } from '../items/container'
 import type { SaveItemInstance } from '../items/Inventory'
 import type { SkillId } from '../player/PlayerSkills'
 import type { Reputation } from '../reputation/ReputationManager'
-import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { HouseholdId, HouseholdSnapshot } from '../settlement/household'
 import type { LivestockSaveRecord } from '../settlement/livestock'
 import type { NpcRelationshipEntry } from '../settlement/npcRelationships'
@@ -15,6 +14,7 @@ import type { NpcId, NpcStateSnapshot } from '../settlement/npcState'
 import type { PlacedFireKind } from '../settlement/PlacedFires'
 import type { RatSaveRecord } from '../settlement/ratPersistence'
 import type { StorageInfestationCondition } from '../settlement/storageInfestation'
+import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { TrapKind, TrapState } from '../world/animalTraps'
 import type { CropId } from '../world/cropLifecycle'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
@@ -1340,9 +1340,10 @@ function isNpcPlan(value: unknown): value is Record<string, unknown> {
 
 /** Validates one `NpcStateSnapshot` (plan persistence-001 / npc-010) —
  *  mirrors `settlement/npcState.ts`'s own shape; `physicalInjury` is
- *  optional (absent means `0`), same as `helperAssignment`/`activePlan`
- *  being optional (absent means `null`). `postDeath` is required on the
- *  current schema (`null` while alive). */
+ *  optional (absent means `0`), `injuryRecoveryUpdatedAtDays` is optional
+ *  (absent means initialize on first lazy resolution), same as
+ *  `helperAssignment`/`activePlan` being optional (absent means `null`).
+ *  `postDeath` is required on the current schema (`null` while alive). */
 function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (!value || typeof value !== 'object') return false
   const s = value as Record<string, unknown>
@@ -1351,6 +1352,7 @@ function isNpcStateSnapshot(value: unknown): value is NpcStateSnapshot {
   if (!isCurrentMaxNumbers(s.vigor)) return false
   if (!isNpcNeeds(s.needs)) return false
   if (s.physicalInjury !== undefined && typeof s.physicalInjury !== 'number') return false
+  if (s.injuryRecoveryUpdatedAtDays !== undefined && typeof s.injuryRecoveryUpdatedAtDays !== 'number') return false
   if (s.helperAssignment !== undefined && s.helperAssignment !== null && !isHelperAssignment(s.helperAssignment)) return false
   if (s.activePlan !== undefined && s.activePlan !== null && !isNpcPlan(s.activePlan)) return false
   if (s.temporaryConditions !== undefined && !isTemporaryConditionsSnapshotField(s.temporaryConditions)) return false

@@ -1,6 +1,7 @@
 import type { SkillId } from '../player/PlayerSkills'
 import type { LiquidContent } from './itemInstances'
 import type { ItemKind } from './items'
+import { type InjurySeverity, injurySeverityRank, type TreatableInjurySeverity } from '../shared/injurySeverity'
 /**
  * Machine-readable item catalog for Seedvale.
  * Prefer this (or docs/items/CATALOG.md) over grepping scattered ITEM_DEFS / spawners.
@@ -196,6 +197,13 @@ export type ItemCatalogEntry = {
   conditionTreatment?: {
     kind: 'poisoning'
     severityReduction: number
+  }
+  /** Plan npc-025 — catalog-driven physical-injury treatment. Independent of
+   *  `consumable.need === 'health'`: a generic HP item is not automatically
+   *  valid wound medicine. */
+  injuryTreatment?: {
+    immediateHp: number
+    maxSeverity: TreatableInjurySeverity
   }
 }
 
@@ -745,8 +753,9 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan 153 — Kupiec stock. Reliable, purchasable healing; stronger than a herb.',
+    notes: 'Plan 153 / npc-025 — Kupiec stock. Reliable wound treatment; stronger than a herb. Physical-injury treatment is catalog-declared, not implied by health consumption.',
     consumable: { need: 'health', relief: 35 },
+    injuryTreatment: { immediateHp: 35, maxSeverity: 'critical' },
   },
   damascus_knife: {
     kind: 'damascus_knife',
@@ -1362,6 +1371,31 @@ export const CONSUMABLE_KINDS_BY_NEED: Record<ConsumableNeed, readonly ItemKind[
   }
   return out
 })()
+
+/**
+ * Kinds declaring `injuryTreatment`, **best first** (higher `immediateHp`).
+ * `Inventory.findInjuryTreatment` uses this so healing pressure and
+ * execution share one catalog-driven lookup instead of hard-coding kinds.
+ */
+export const INJURY_TREATMENT_KINDS: readonly ItemKind[] = (() => {
+  const order = Object.keys(ITEM_CATALOG) as ItemKind[]
+  const kinds = order.filter((kind) => ITEM_CATALOG[kind].injuryTreatment)
+  const rank = new Map(order.map((kind, index) => [kind, index]))
+  kinds.sort((a, b) => {
+    const potency = (ITEM_CATALOG[b].injuryTreatment?.immediateHp ?? 0)
+      - (ITEM_CATALOG[a].injuryTreatment?.immediateHp ?? 0)
+    return potency !== 0 ? potency : rank.get(a)! - rank.get(b)!
+  })
+  return kinds
+})()
+
+/** Whether `kind` may treat the current derived injury severity. */
+export function itemTreatsPhysicalInjury(kind: ItemKind, severity: InjurySeverity): boolean {
+  if (severity === 'none') return false
+  const treatment = ITEM_CATALOG[kind].injuryTreatment
+  if (!treatment) return false
+  return injurySeverityRank(severity) <= injurySeverityRank(treatment.maxSeverity)
+}
 
 /** Cross-cutting item systems not tied to a single kind (roadmap only). */
 export const ITEM_SYSTEM_ROADMAP = [
