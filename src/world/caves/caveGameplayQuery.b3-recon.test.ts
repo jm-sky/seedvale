@@ -95,7 +95,7 @@ function buildReproCave(x: number, z: number): BuiltCave {
     topology,
     sdf,
     index,
-    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf),
+    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, topology.entrance),
     surfaceHeightAt,
   }
 }
@@ -216,7 +216,7 @@ describe('B3 collision: seed 1136726869 Grota Czarnego Kamienia', () => {
   })
 
   it('derived colliders are deterministic', () => {
-    const again = buildCaveSdfColliders(cave.index, cave.surfaceHeightAt, cave.sdf)
+    const again = buildCaveSdfColliders(cave.index, cave.surfaceHeightAt, cave.sdf, cave.topology.entrance)
     expect(again).toEqual(cave.colliders)
   })
 

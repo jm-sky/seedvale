@@ -1860,6 +1860,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         climate.weather,
         player.mesh.position.x,
         player.mesh.position.z,
+        bundle.caves.queryInterior(
+          player.mesh.position.x,
+          player.mesh.position.y,
+          player.mesh.position.z,
+        ),
       )
       hud.setTime(dayNight.timeOfDay)
       // Plan 164 §9 — one authoritative load calc, recomputed every frame

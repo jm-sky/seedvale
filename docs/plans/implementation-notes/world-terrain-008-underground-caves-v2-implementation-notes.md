@@ -1392,4 +1392,61 @@ CaveSdfColumnIndex
 
 Do not put `CaveVolume` back on the player ground path.
 
+---
+
+# Milestone B3 — Entrance regression (2026-09-09)
+
+Manual playtest on seed `1136726869` (Grota Czarnego Kamienia, Grota Mroczna)
+showed a B3 entrance-ownership bug, not a new milestone. B3 remains complete
+after this fix. Do not start B4 on the back of it.
+
+## Root cause
+
+The SDF entrance is a **closed ellipsoid**. B2 unioned its void with the
+mouth/approach carve into one tall column (`floor = ellipsoid bottom`,
+`ceiling = surface − 0.05`). A player walking the carved recess was still
+inside that interval, so `queryGround` handed them cave floor **before**
+the portal. `FLOOR_GRACE` / hysteresis then kept them there.
+
+The same front cap is the visible **black sphere** in the mouth pit
+(surface clip only removes geometry above the meadow). Occupancy-derived
+beads iso-snapped onto that shell and blocked the opening.
+
+Camera stayed on the surface because occupancy at look-at was a
+near-surface portal interval, which `resolveCameraBoom` treats as a mouth
+exit. Player Y and camera Y disagreed.
+
+## Fix
+
+- SDF occupancy is not indexed outward of the mouth plane
+  (`mouthAlong` > `MOUTH_INTERIOR_ALONG`). The approach is portal-only;
+  its floor is the carved recess.
+- Portal and SDF intervals only merge when their floors are walkably
+  close; otherwise they stay stacked so a surface Y cannot pick a deep
+  interior floor.
+- Wall beads skip outward columns and do not emit toward an outward
+  neighbour (the opening stays open).
+- Presentation additionally clips triangles whose centroid is outward of
+  the mouth plane (`clipTrianglesInFrontOfMouth`).
+- `Caves.queryInterior` is occupancy on the inward side of that plane,
+  with two-sample hysteresis. Cave ambience (`ambient-cave-01.ogg`)
+  reuses it; torch `isInCave` still uses `queryGround` / mouth portal.
+
+`withCaveFloorFallback` stays unwired.
+
+## New caves on the map
+
+Focused check: this B3 fix (and B3 itself) does not change
+`pickLargeCaveSites`, `buildProductionCaveTopology`, `makeCaveId`, or
+`worldLocationCatalog`. Newly noticed map caves are not a regression of
+this slice.
+
+## Leftovers (unchanged)
+
+- **B4:** bead count / column step / mesh extraction / activation hitch /
+  workers.
+- **B5:** `topologyToCaveDefinition`, `CaveVolume`, V1 `caveMesh.ts`,
+  Sweep, `spikeTestCave.ts`.
+- Sculpted hillside doorway (pre-existing loose end).
+
 

@@ -8,6 +8,7 @@
  * @domain world-terrain
  */
 
+import type { CaveEntrance } from '../caveVolume'
 import type { Collider } from '../collision'
 import type { CaveSdfSpatialRepresentation } from './caveSdfField'
 import {
@@ -15,6 +16,7 @@ import {
   occupancyContains,
   type SurfaceHeightSampler,
 } from './caveSdfQuery'
+import { MOUTH_INTERIOR_ALONG, mouthAlong } from './mouthCarve'
 
 /** Matches V1 `caveColliders.ts` bead size so `resolvePosition` overlap
  *  stays continuous along a wall (`step` 0.4 < 2 × radius). */
@@ -95,6 +97,7 @@ export function buildCaveSdfColliders(
   index: CaveSdfColumnIndex,
   surfaceHeightAt: SurfaceHeightSampler,
   representation?: CaveSdfSpatialRepresentation,
+  entrance?: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
 ): Collider[] {
   const out: Collider[] = []
   const { step } = index
@@ -104,6 +107,7 @@ export function buildCaveSdfColliders(
       const intervals = index.columns[iz * index.nx + ix] ?? []
       if (intervals.length === 0) continue
       const { x, z } = columnCenter(index, ix, iz)
+      if (entrance && mouthAlong(x, z, entrance) > MOUTH_INTERIOR_ALONG) continue
       for (const interval of intervals) {
         for (let y0 = interval.floorY; y0 < interval.ceilingY - 1e-6; y0 += band) {
           const y1 = Math.min(y0 + band, interval.ceilingY)
@@ -114,6 +118,7 @@ export function buildCaveSdfColliders(
             const niz = iz + dz
             const nx = x + dx * step
             const nz = z + dz * step
+            if (entrance && mouthAlong(nx, nz, entrance) > MOUTH_INTERIOR_ALONG) continue
             const neighborVoid = inBounds(index, nix, niz) && occupancyContains(index, nx, midY, nz)
             if (neighborVoid) continue
             if (isPortalOnlyColumn(representation, x, midY, z)) continue

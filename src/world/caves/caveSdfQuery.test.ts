@@ -7,10 +7,12 @@ import type { CaveSdfSpatialRepresentation } from './caveSdfField'
 import type { CaveTopology } from './caveTopology'
 import {
   applyCaveGroundHysteresis,
+  applyCaveInteriorHysteresis,
   buildCaveSdfColumnIndex,
   CAVE_COLUMN_STEP,
   CAVE_FLOOR_GRACE,
   CAVE_UNDERGROUND_MISS,
+  isCaveInteriorAt,
   occupancyContains,
   occupancyIntervalAt,
   pickInterval,
@@ -116,21 +118,23 @@ describe('buildCaveSdfColumnIndex', () => {
 
   it('clips SDF intervals to the analytic surface', () => {
     const sample = (x: number, y: number, z: number): number => {
-      if (Math.hypot(x, z) > 1.5) return 1
+      if (Math.hypot(x, z) > 2.5) return 1
       if (y >= 0 && y <= 20) return -1
       return 1
     }
     const surfaceY = 8
     const field = representation(
-      { minX: -2, maxX: 2, minY: -1, maxY: 22, minZ: -2, maxZ: 2 },
+      { minX: -3, maxX: 3, minY: -1, maxY: 22, minZ: -3, maxZ: 3 },
       sample,
     )
     const index = buildCaveSdfColumnIndex(field, topologyFor('cave:clip', ORIGIN_ENTRANCE), () => surfaceY, 0.4)
-    const hit = queryColumnIndex(index, 0, 4, 0)
+    // Inward of the mouth plane and outside the carve, so this is SDF clip
+    // only — not the portal interval at the entrance disc.
+    const hit = queryColumnIndex(index, 0, 4, -2.2)
     expect(hit).not.toBeNull()
     expect(hit!.ceilingY).toBeLessThan(surfaceY)
     expect(hit!.ceilingY).toBeGreaterThan(surfaceY - 0.3)
-    expect(queryColumnIndex(index, 0, surfaceY, 0)).toBeNull()
+    expect(queryColumnIndex(index, 0, surfaceY, -2.2)).toBeNull()
   })
 
   it('unions the mouth/approach carve as a portal below the analytic surface', () => {
@@ -255,5 +259,66 @@ describe('applyCaveGroundHysteresis', () => {
     const resolved = applyCaveGroundHysteresis(next, 4, 20, caveHit)
     expect(resolved.hit).toEqual(next)
     expect(resolved.remember).toEqual(next)
+  })
+})
+
+describe('mouth-plane entrance ownership', () => {
+  it('does not assign a deep SDF floor to a surface player in the approach', () => {
+    const entrance = entranceAt(0, 0, 0, 0)
+    const surface = (): number => 10
+    // Closed ellipsoid centred at the mouth, extending into the approach.
+    const field = representation(
+      { minX: -4, maxX: 4, minY: -2, maxY: 12, minZ: -4, maxZ: 8 },
+      (x, y, z) => {
+        const dx = x / 2
+        const dy = (y - 1.3) / 1.3
+        const dz = z / 2
+        return Math.hypot(dx, dy, dz) - 1
+      },
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:approach', entrance), surface, 0.4)
+    const approachZ = 2.2
+    const carvedY = surface() - mouthCarveDepth(0, approachZ, entrance)
+    const hit = queryColumnIndex(index, 0, carvedY, approachZ)
+    expect(hit).not.toBeNull()
+    expect(hit!.floorY).toBeGreaterThan(carvedY - 0.35)
+    expect(hit!.floorY).toBeLessThan(carvedY + 0.35)
+    expect(isCaveInteriorAt(index, entrance, 0, carvedY, approachZ)).toBe(false)
+  })
+
+  it('hands the player to cave ground after crossing the mouth plane', () => {
+    const entrance = entranceAt(0, 0, 0, 0)
+    const surface = (): number => 10
+    const field = representation(
+      { minX: -4, maxX: 4, minY: -2, maxY: 12, minZ: -8, maxZ: 4 },
+      (x, y, z) => {
+        const dx = x / 2
+        const dy = (y - 1.3) / 1.3
+        const dz = z / 2
+        return Math.hypot(dx, dy, dz) - 1
+      },
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:enter', entrance), surface, 0.4)
+    const interiorZ = -1.2
+    const hit = queryColumnIndex(index, 0, 1.3, interiorZ)
+    expect(hit).not.toBeNull()
+    expect(isCaveInteriorAt(index, entrance, 0, 1.3, interiorZ)).toBe(true)
+  })
+})
+
+describe('applyCaveInteriorHysteresis', () => {
+  it('ignores a single opposite sample at the mouth boundary', () => {
+    const entered = applyCaveInteriorHysteresis(true, false, false)
+    expect(entered.interior).toBe(false)
+    expect(entered.rememberRaw).toBe(true)
+    const confirmed = applyCaveInteriorHysteresis(true, true, false)
+    expect(confirmed.interior).toBe(true)
+  })
+
+  it('requires two consecutive exterior samples to leave', () => {
+    const flicker = applyCaveInteriorHysteresis(false, true, true)
+    expect(flicker.interior).toBe(true)
+    const left = applyCaveInteriorHysteresis(false, false, true)
+    expect(left.interior).toBe(false)
   })
 })

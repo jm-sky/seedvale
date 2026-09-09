@@ -4,7 +4,7 @@ Living backlog of sound effects Seedvale still needs (or has but must wire).
 
 Inventory of files already in the repo: [`public/sounds/README.md`](../../public/sounds/README.md). One-shot research snapshot that seeded this list: [research 007](../research/2026-08-11--007--sound-needs.md).
 
-**Last updated:** 2026-09-05
+**Last updated:** 2026-09-09
 
 ## How to use
 
@@ -30,7 +30,7 @@ If the feature needs no new sound, do nothing to this file.
 |----------|-------|-------|
 | NPC | hmm / thank-you / greeting / farewell / confirmation (M/F, per-actor voice) | Dialogue reactions + Super Dialogue Audio Pack v1 (plan 116) — greeting on dialogue open, farewell on close, confirmation on offer accept, extra hmm/thank-you variety |
 | Animals | chicken, cow, wolf, horse, sheep, rooster, dog | `[E]` on animal (donkey/rooster still silent on `[E]`, no clip). Cow/sheep/chicken also: spontaneous per-animal ambient vocalization with cooldown + concurrent-play cap (plan settlements-npcs-004 §1), milking completion (§2), chicken egg-laid (§2) — all reuse this same `[E]` clip/volume via `animalSounds.ts`'s `playSpontaneousAnimalSound`/`playAnimalSound`. Wolf howl / rooster crow (plan fauna-009) are a separate spontaneous-vocalization clip pair (`fauna-wolf-howl-1.ogg`/`fauna-rooster-crow-1.ogg`, distinct from the `[E]` growl), dawn/night-weighted via `spontaneousVocalizeTimeWeight` — howl also carries farther (`playAt`'s `maxDistance` override) and suppresses while the wolf is chasing/attacking/fleeing. Dog bark (plan fauna-011 §7) reuses the same `[E]`/`animal-dog-01` clip for its contextual guard/wolf-howl/stranger alert, gated by `AnimalAgent.updateDogVocalization()`'s own stimulus+cooldown check (`dogGuard.ts`), never a spontaneous random roll |
-| Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop, owl one-shot, lake frogs loop | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006); owl (migrated to the shared `audio/ambientEvents.ts` runtime, plan world-016) is a random one-shot (not a loop) — cooldown-gated on night + forest weight. Lake frogs (plan world-016) are a single lazy loop whose gain = continuous lake-shore proximity (`terrain/waterBodyKind.ts`'s `lakeProximityAt`) × a dusk/night/pre-dawn profile × weather — local environmental ambience, not a fauna species |
+| Ambient | forest, night crickets, coast, wind, meadow, soft waves, birds, fire loop, rain loop, owl one-shot, lake frogs loop, cave interior | Area / time / mountain / campfire loops; rain loop gain = weather intensity (plan 040 Etap 1); birds + crickets also scale with time-of-day profile and weather (clear/cloudy/fog/rain/snow) per biome weight (plan world-006); owl (migrated to the shared `audio/ambientEvents.ts` runtime, plan world-016) is a random one-shot (not a loop) — cooldown-gated on night + forest weight. Lake frogs (plan world-016) are a single lazy loop whose gain = continuous lake-shore proximity (`terrain/waterBodyKind.ts`'s `lakeProximityAt`) × a dusk/night/pre-dawn profile × weather — local environmental ambience, not a fauna species. Cave interior (`ambient-cave-01.ogg`) crossfades against those surface layers from `Caves.queryInterior` (Cave V2 B3), not landmark name or entrance distance |
 | Inventory | pick-up ×4, drop ×1 | Collect / drop |
 | UI | `ui-click-01` | Inventory / pause / dialog (open + click) |
 | Actions | dig ×4, wood-chop ×2 (variant pool), branch-break ×1, tree-fall ×1, melee hit/kill, well ×1, well-construction ×1, fishing-cast ×1, fire ignite/extinguish | Shovel / axe (delimb + fell + buck steps, player + NPC) / melee / well draw / well roof construction / fishing rod cast / campfire. NPC/animal combat impact+death (plan npc-009, `playCombatHit`/`playNpcCombatDeath`/`playAnimalCombatDeath`) and NPC ranged draw/release (`playCombatBowDraw`/`playActionBowRelease`) reuse these same clips — see S26 for the still-open melee-swing/animal-death-vocal gap |
@@ -58,6 +58,7 @@ If the feature needs no new sound, do nothing to this file.
 | S09 | Door / enter house | Optional on house proximity | `wired` | `door-open-01` / `door-close-01` + latch/creak |
 | S10 | Fauna: deer / fox / stag one-shot | Today only chicken/cow/wolf/dog SFX | `needed` | `animal-dog-01` now wired for `dog` (plan fauna-011) — deer/fox/stag still open |
 | S11 | Wolf distant (bark/howl) vs contact growl | Distinguish threat distance | `wired` | Plan fauna-009 — `fauna-wolf-howl-1.ogg`, spontaneous (dawn/night-weighted, longer `playAt` range), distinct from `animal-wolf-01`'s `[E]` growl |
+| S27 | Cave interior ambience | Player inside a Cave V2 interior; surface beds mute | `wired` | `ambient-cave-01.ogg` via `createAmbientAudio.ts`; state is `Caves.queryInterior` (occupancy inward of the mouth plane, two-sample hysteresis) |
 
 ### P2 — settlement / economy
 

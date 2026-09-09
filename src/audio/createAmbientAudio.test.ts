@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cricketsTimeFactor, weatherAmbientFactor } from './createAmbientAudio'
+import { caveAmbientMix, cricketsTimeFactor, weatherAmbientFactor } from './createAmbientAudio'
 
 describe('cricketsTimeFactor', () => {
   it('is silent through the day', () => {
@@ -48,5 +48,12 @@ describe('weatherAmbientFactor', () => {
     expect(heavy.birds).toBeLessThanOrEqual(0)
     expect(heavy.crickets).toBeLessThanOrEqual(0)
     expect(heavy.frogs).toBeGreaterThan(0)
+  })
+})
+
+describe('caveAmbientMix', () => {
+  it('enables cave ambience only for interior state and restores surface on exit', () => {
+    expect(caveAmbientMix(false)).toEqual({ surface: 1, cave: 0 })
+    expect(caveAmbientMix(true)).toEqual({ surface: 0, cave: 1 })
   })
 })

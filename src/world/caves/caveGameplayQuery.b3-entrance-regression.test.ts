@@ -1,0 +1,262 @@
+/** B3 entrance-transition regression after the 2026-09-09 manual playtest
+ *  on seed `1136726869` (Grota Czarnego Kamienia / Grota Mroczna).
+ *
+ *  Surface → approach → mouth → interior must be continuous: no premature
+ *  cave floor, no occupancy-derived door on the SDF front shell, camera and
+ *  cave-interior state agree. Pure/analytic: no `ChunkManager`, no browser.
+ */
+
+import { beforeAll, describe, expect, it } from 'vitest'
+import type { CaveTopology } from './caveTopology'
+import { createBenchmarkWorldConfig } from '../../config/worldConfig'
+import { measureSlope } from '../../fauna/createFauna'
+import {
+  CAMERA_GROUND_CLEARANCE,
+  resolveCameraBoom,
+} from '../../player/cameraBoom'
+import { PLAYER_COLLISION_RADIUS } from '../../player/PlayerController'
+import { STEP_DOWN_MAX } from '../../player/verticalMotion'
+import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightmap'
+import { colliderActiveAtY, resolvePosition } from '../collision'
+import { type LargeCaveSite, openingDirection } from '../largeCaves'
+import { makeCaveId } from './caveIdentity'
+import { buildCaveSdfColliders } from './caveSdfColliders'
+import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caveSdfField'
+import {
+  applyCaveInteriorHysteresis,
+  buildCaveSdfColumnIndex,
+  type CaveSdfColumnIndex,
+  isCaveInteriorAt,
+  occupancyIntervalAt,
+  queryColumnIndex,
+} from './caveSdfQuery'
+import { mouthAlong, mouthCarveDepth } from './mouthCarve'
+import { buildProductionCaveTopology } from './productionTopology'
+
+const REPRO_SEED = 1136726869
+
+const GROTA_MROCZNA = {
+  caveId: 'cave:7fd14c30',
+  x: 316.00823859384826,
+  z: 109.77792295821729,
+}
+
+const GROTA_CZARNEGO_KAMIENIA = {
+  caveId: 'cave:0e3cce97',
+  x: 135.84259216988767,
+  z: -17.813611096688362,
+}
+
+function surfaceSampler(seed: number): (x: number, z: number) => number {
+  const config = createBenchmarkWorldConfig({ seed, terrainResolution: 193, loadRadius: 4 })
+  const t = config.terrain
+  const params: RawSampleParams = {
+    seed: config.seed,
+    heightScale: t.heightScale,
+    waterLevel: t.waterLevel,
+    noiseScale: t.noiseScale,
+    detailAmplitude: t.detailAmplitude,
+    hillsScale: t.hillsScale,
+    hillsAmplitude: t.hillsAmplitude,
+    hillsFbm: t.hillsFbm,
+    fbm: t.fbm,
+    biome: t.biome,
+    region: t.region,
+  }
+  return (x, z) => sampleHeightAt(x, z, params)
+}
+
+function siteFromEntrance(x: number, z: number, surfaceHeightAt: (x: number, z: number) => number): LargeCaveSite {
+  return {
+    x,
+    z,
+    yaw: measureSlope(x, z, 4, surfaceHeightAt).yaw,
+    length: 12,
+    variant: 0,
+  }
+}
+
+type BuiltCave = {
+  topology: CaveTopology
+  sdf: CaveSdfSpatialRepresentation
+  index: CaveSdfColumnIndex
+  colliders: ReturnType<typeof buildCaveSdfColliders>
+  surfaceHeightAt: (x: number, z: number) => number
+}
+
+function buildReproCave(x: number, z: number): BuiltCave {
+  const surfaceHeightAt = surfaceSampler(REPRO_SEED)
+  const site = siteFromEntrance(x, z, surfaceHeightAt)
+  const topology = buildProductionCaveTopology({
+    seed: REPRO_SEED,
+    site,
+    sampleHeight: surfaceHeightAt,
+    sampleBaseHeight: surfaceHeightAt,
+  })
+  if (!topology) throw new Error(`production topology rejected site (${x}, ${z})`)
+  const sdf = buildCaveSdfRepresentation(topology)
+  const index = buildCaveSdfColumnIndex(sdf, topology, surfaceHeightAt)
+  return {
+    topology,
+    sdf,
+    index,
+    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, topology.entrance),
+    surfaceHeightAt,
+  }
+}
+
+function approachPoint(cave: BuiltCave, along: number): { x: number, z: number, carvedY: number } {
+  const { entrance } = cave.topology
+  const out = openingDirection(entrance.yaw)
+  const x = entrance.x + out.dx * along
+  const z = entrance.z + out.dz * along
+  const surfaceY = cave.surfaceHeightAt(x, z)
+  const carvedY = surfaceY - mouthCarveDepth(x, z, entrance)
+  return { x, z, carvedY }
+}
+
+function interiorStanding(cave: BuiltCave): { x: number, y: number, z: number } {
+  const chamber = cave.topology.nodes.find((n) => n.id === 'chamber') ?? cave.topology.nodes[cave.topology.nodes.length - 1]!
+  const hit = queryColumnIndex(cave.index, chamber.position.x, chamber.position.y + 1, chamber.position.z)
+  if (!hit) throw new Error('chamber is not queryGround space')
+  return { x: chamber.position.x, y: hit.floorY + 1.1, z: chamber.position.z }
+}
+
+const CAVES = [
+  { name: 'Grota Czarnego Kamienia', pin: GROTA_CZARNEGO_KAMIENIA },
+  { name: 'Grota Mroczna', pin: GROTA_MROCZNA },
+]
+
+describe('B3 entrance regression: seed 1136726869', () => {
+  const built = new Map<string, BuiltCave>()
+
+  beforeAll(() => {
+    for (const cave of CAVES) {
+      const result = buildReproCave(cave.pin.x, cave.pin.z)
+      expect(makeCaveId(REPRO_SEED, siteFromEntrance(cave.pin.x, cave.pin.z, result.surfaceHeightAt))).toBe(cave.pin.caveId)
+      built.set(cave.name, result)
+    }
+  })
+
+  for (const { name } of CAVES) {
+    describe(name, () => {
+      it('surface/approach walking height keeps surface ground, not cave floor', () => {
+        const cave = built.get(name)!
+        const { x, z, carvedY } = approachPoint(cave, 3.2)
+        expect(mouthAlong(x, z, cave.topology.entrance)).toBeGreaterThan(0.5)
+        expect(mouthCarveDepth(x, z, cave.topology.entrance)).toBeGreaterThan(0.15)
+        const hit = queryColumnIndex(cave.index, x, carvedY, z)
+        expect(hit).not.toBeNull()
+        expect(hit!.floorY).toBeGreaterThan(carvedY - STEP_DOWN_MAX)
+        expect(hit!.floorY).toBeLessThan(carvedY + 0.35)
+        expect(isCaveInteriorAt(cave.index, cave.topology.entrance, x, carvedY, z)).toBe(false)
+      })
+
+      it('does not premature-sink: cave floor is not more than a step below the carved recess', () => {
+        const cave = built.get(name)!
+        const { x, z, carvedY } = approachPoint(cave, 2.2)
+        const hit = queryColumnIndex(cave.index, x, carvedY, z)
+        expect(hit).not.toBeNull()
+        expect(carvedY - hit!.floorY).toBeLessThanOrEqual(STEP_DOWN_MAX)
+      })
+
+      it('after entering, cave ground takes over at interior Y', () => {
+        const cave = built.get(name)!
+        const standing = interiorStanding(cave)
+        const hit = queryColumnIndex(cave.index, standing.x, standing.y, standing.z)
+        expect(hit).not.toBeNull()
+        expect(hit!.floorY).toBeLessThan(cave.surfaceHeightAt(standing.x, standing.z) - 1)
+        expect(isCaveInteriorAt(cave.index, cave.topology.entrance, standing.x, standing.y, standing.z)).toBe(true)
+      })
+
+      it('leaving through the mouth returns surface ground at surface Y', () => {
+        const cave = built.get(name)!
+        const { x, z } = approachPoint(cave, 8)
+        const surfaceY = cave.surfaceHeightAt(x, z)
+        expect(mouthCarveDepth(x, z, cave.topology.entrance)).toBe(0)
+        expect(queryColumnIndex(cave.index, x, surfaceY, z)).toBeNull()
+        expect(isCaveInteriorAt(cave.index, cave.topology.entrance, x, surfaceY, z)).toBe(false)
+      })
+
+      it('occupancy-derived colliders do not seal the portal', () => {
+        const cave = built.get(name)!
+        const { x, z, carvedY } = approachPoint(cave, 2.2)
+        const active = cave.colliders.filter((c) => colliderActiveAtY(c, carvedY))
+        const resolved = resolvePosition(x, z, PLAYER_COLLISION_RADIUS, active)
+        expect(Math.hypot(resolved.x - x, resolved.z - z)).toBeLessThan(0.05)
+      })
+
+      it('camera stays in occupancy when the player is interior, not on the terrain', () => {
+        const cave = built.get(name)!
+        const standing = interiorStanding(cave)
+        const surfaceY = cave.surfaceHeightAt(standing.x, standing.z)
+        const occupancyAt = (x: number, y: number, z: number) => occupancyIntervalAt(cave.index, x, y, z)
+        expect(occupancyAt(standing.x, standing.y, standing.z)).not.toBeNull()
+        const result = resolveCameraBoom({
+          originX: standing.x,
+          originY: standing.y,
+          originZ: standing.z,
+          camX: standing.x + 8,
+          camY: standing.y + 2,
+          camZ: standing.z + 8,
+          sampleHeight: cave.surfaceHeightAt,
+          colliders: [],
+          occupancyAt,
+        })
+        expect(result.y).toBeLessThan(surfaceY)
+        expect(result.y).not.toBeCloseTo(surfaceY + CAMERA_GROUND_CLEARANCE, 0)
+      })
+
+      it('camera does not tunnel the ceiling/overburden from interior', () => {
+        const cave = built.get(name)!
+        const standing = interiorStanding(cave)
+        const hit = occupancyIntervalAt(cave.index, standing.x, standing.y, standing.z)!
+        const surfaceY = cave.surfaceHeightAt(standing.x, standing.z)
+        const result = resolveCameraBoom({
+          originX: standing.x,
+          originY: standing.y,
+          originZ: standing.z,
+          camX: standing.x,
+          camY: surfaceY + 10,
+          camZ: standing.z + 0.5,
+          sampleHeight: cave.surfaceHeightAt,
+          colliders: [],
+          occupancyAt: (x, y, z) => occupancyIntervalAt(cave.index, x, y, z),
+        })
+        expect(result.t).toBeLessThan(1)
+        expect(result.y).toBeLessThan(surfaceY)
+        expect(result.y).toBeLessThan(hit.ceilingY + CAMERA_GROUND_CLEARANCE + 0.5)
+      })
+
+      it('a real mouth exit switches the boom back to surface behaviour', () => {
+        const cave = built.get(name)!
+        const { entrance } = cave.topology
+        const out = openingDirection(entrance.yaw)
+        const originY = entrance.y + 1.1
+        const result = resolveCameraBoom({
+          originX: entrance.x,
+          originY,
+          originZ: entrance.z,
+          camX: entrance.x + out.dx * 12,
+          camY: originY + 1,
+          camZ: entrance.z + out.dz * 12,
+          sampleHeight: cave.surfaceHeightAt,
+          colliders: [],
+          occupancyAt: (x, y, z) => occupancyIntervalAt(cave.index, x, y, z),
+        })
+        expect(result.t).toBeGreaterThan(0.2)
+        expect(Math.hypot(result.x - entrance.x, result.z - entrance.z)).toBeGreaterThan(1)
+      })
+    })
+  }
+
+  it('cave-interior state does not flicker on a single boundary sample', () => {
+    const cave = built.get('Grota Czarnego Kamienia')!
+    const standing = interiorStanding(cave)
+    expect(isCaveInteriorAt(cave.index, cave.topology.entrance, standing.x, standing.y, standing.z)).toBe(true)
+    const flicker = applyCaveInteriorHysteresis(false, true, true)
+    expect(flicker.interior).toBe(true)
+    const left = applyCaveInteriorHysteresis(false, false, true)
+    expect(left.interior).toBe(false)
+  })
+})

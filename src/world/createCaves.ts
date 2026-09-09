@@ -10,10 +10,12 @@ import { buildCaveSdfColliders } from './caves/caveSdfColliders'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caves/caveSdfField'
 import {
   applyCaveGroundHysteresis,
+  applyCaveInteriorHysteresis,
   buildCaveSdfColumnIndex,
   type CaveGroundHit,
   type CaveSdfColumnIndex,
   type CaveVerticalInterval,
+  isCaveInteriorAt,
   lowestCeilingAt,
   lowestFloorAt,
   occupancyIntervalAt,
@@ -61,6 +63,12 @@ export type Caves = {
   /** Strict occupancy (B3) — no floor grace, no hysteresis. `null` is solid
    *  rock / outside cave void. Camera boom and derived collision share this. */
   occupancyAt: (x: number, y: number, z: number) => CaveVerticalInterval | null
+  /**
+   * Hysteretic cave-interior flag for the player's current position.
+   * Call once per frame from the player sample — not from camera march.
+   * Approach/mouth portal occupancy is not interior.
+   */
+  queryInterior: (x: number, y: number, z: number) => boolean
   contains: (x: number, y: number, z: number) => boolean
   /** Transitional Y-blind lowest-interval accessors. Player ground uses
    *  `queryGround` — do not route `CaveGroundQuery` through these. */
@@ -116,7 +124,8 @@ function colliderOwnerKey(caveId: string): string {
  * @role Owns cave topologies, retained SDF/column-index gameplay space,
  *  streamed interior presentation, occupancy-derived wall colliders, and
  *  strict occupancy queries; `PlayerController` ground goes through
- *  `queryGround` and camera through `occupancyAt`.
+ *  `queryGround` and camera through `occupancyAt`. `queryInterior` is the
+ *  hysteretic player-position cave-interior signal (audio / diagnostics).
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -171,7 +180,7 @@ export function createCaves(
       definition: topologyToCaveDefinition(topology),
       representation,
       index,
-      colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation),
+      colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation, topology.entrance),
     })
     siteByCaveId.set(topology.caveId, site)
   }
@@ -213,6 +222,8 @@ export function createCaves(
   const active = new Map<string, THREE.Object3D>()
   const caveMaterial = createCaveSpikeMaterial('sdf')
   let lastGroundHit: CaveGroundHit | null = null
+  let lastInteriorRaw: boolean | null = null
+  let interiorConfirmed = false
 
   function activate(def: CaveDefinition): void {
     if (active.has(def.caveId)) return
@@ -292,6 +303,19 @@ export function createCaves(
       }
       return null
     },
+    queryInterior(x, y, z) {
+      let sample = false
+      for (const runtime of runtimes) {
+        if (isCaveInteriorAt(runtime.index, runtime.topology.entrance, x, y, z)) {
+          sample = true
+          break
+        }
+      }
+      const resolved = applyCaveInteriorHysteresis(sample, lastInteriorRaw, interiorConfirmed)
+      lastInteriorRaw = resolved.rememberRaw
+      interiorConfirmed = resolved.interior
+      return interiorConfirmed
+    },
     contains(x, y, z) {
       return queryGround(x, y, z) !== null
     },
@@ -317,6 +341,8 @@ export function createCaves(
     },
     dispose() {
       lastGroundHit = null
+      lastInteriorRaw = null
+      interiorConfirmed = false
       for (const caveId of [...active.keys()]) deactivate(caveId)
     },
   }

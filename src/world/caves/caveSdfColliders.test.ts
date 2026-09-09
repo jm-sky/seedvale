@@ -8,6 +8,7 @@ import type { CaveTopology } from './caveTopology'
 import { colliderActiveAtY, colliderContainsPoint, resolvePosition } from '../collision'
 import { buildCaveSdfColliders, CAVE_SDF_BEAD_RADIUS } from './caveSdfColliders'
 import { buildCaveSdfColumnIndex, occupancyContains } from './caveSdfQuery'
+import { mouthCarveDepth } from './mouthCarve'
 
 function entranceAt(x: number, y: number, z: number, yaw = 0): CaveEntrance {
   return { x, y, z, yaw, width: 3, height: 2.6 }
@@ -170,5 +171,26 @@ describe('buildCaveSdfColliders', () => {
       (c) => colliderActiveAtY(c, 2) && colliderContainsPoint(c, x, z),
     )
     expect(undergroundBlocked).toBe(true)
+  })
+
+  it('does not block the approach with the closed SDF front shell', () => {
+    const entrance = entranceAt(0, 0, 0, 0)
+    const surface = (): number => 10
+    const field = representation(
+      { minX: -4, maxX: 4, minY: -2, maxY: 12, minZ: -4, maxZ: 8 },
+      (x, y, z) => {
+        const dx = x / 2
+        const dy = (y - 1.3) / 1.3
+        const dz = z / 2
+        return Math.hypot(dx, dy, dz) - 1
+      },
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:col-shell', entrance), surface, 0.4)
+    const colliders = buildCaveSdfColliders(index, surface, field, entrance)
+    const approachZ = 2.2
+    const y = surface() - mouthCarveDepth(0, approachZ, entrance)
+    const active = colliders.filter((c) => colliderActiveAtY(c, y))
+    const resolved = resolvePosition(0, approachZ, 0.35, active)
+    expect(Math.hypot(resolved.x, resolved.z - approachZ)).toBeLessThan(0.05)
   })
 })

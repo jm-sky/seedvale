@@ -22,6 +22,8 @@ import {
   CAVE_APPROACH_OFFSET,
   CAVE_APPROACH_RADIUS,
   CAVE_MOUTH_RADIUS,
+  MOUTH_INTERIOR_ALONG,
+  mouthAlong,
   mouthCarveDepth,
 } from './mouthCarve'
 
@@ -70,6 +72,13 @@ const SURFACE_CLIP_EPS = 0.05
 
 /** Minimum carve depth that still counts as mouth-portal space. */
 const MIN_PORTAL_DEPTH = 0.05
+/** Portal and SDF intervals only merge when their floors are this close —
+ *  otherwise a deep interior bowl would steal a surface player in the
+ *  carved recess. Slightly above `STEP_DOWN_MAX` (0.45). */
+const WALKABLE_FLOOR_MERGE = 0.6
+/** Keep a stacked interior interval this far below the portal floor so
+ *  `unionIntervals` cannot glue them back into one tall column. */
+const PORTAL_SDF_SPLIT = 0.2
 
 /** `sampleHeight - playerY` above this is an underground miss, not a
  *  legitimate cave→surface exit (mouth exit has the two heights meeting). */
@@ -185,6 +194,27 @@ function expandBoundsForMouth(
   }
 }
 
+function combinePortalAndSdf(
+  sdf: readonly CaveVerticalInterval[],
+  portal: CaveVerticalInterval | null,
+): CaveVerticalInterval[] {
+  if (!portal) return sdf.map((interval) => ({ floorY: interval.floorY, ceilingY: interval.ceilingY }))
+  if (sdf.length === 0) return [portal]
+  const compatible: CaveVerticalInterval[] = []
+  const separate: CaveVerticalInterval[] = []
+  for (const interval of sdf) {
+    if (Math.abs(interval.floorY - portal.floorY) <= WALKABLE_FLOOR_MERGE) {
+      compatible.push(interval)
+      continue
+    }
+    const clippedCeiling = Math.min(interval.ceilingY, portal.floorY - PORTAL_SDF_SPLIT)
+    if (clippedCeiling - interval.floorY >= MIN_INTERVAL_HEIGHT) {
+      separate.push({ floorY: interval.floorY, ceilingY: clippedCeiling })
+    }
+  }
+  return [...separate, ...unionIntervals([...compatible, portal])].sort((a, b) => a.floorY - b.floorY)
+}
+
 function intervalsForColumn(
   representation: CaveSdfSpatialRepresentation,
   entrance: CaveEntrance,
@@ -195,9 +225,14 @@ function intervalsForColumn(
   maxY: number,
 ): CaveVerticalInterval[] {
   const surfaceY = surfaceHeightAt(x, z)
-  const sdf = scanSdfIntervals(representation.sample, x, z, minY, maxY, surfaceY)
+  // Closed entrance ellipsoids occupy the approach pit. That void is not
+  // cave interior — only the carved portal is, and its floor is the recess,
+  // not the ellipsoid's bottom.
+  const sdf = mouthAlong(x, z, entrance) > MOUTH_INTERIOR_ALONG
+    ? []
+    : scanSdfIntervals(representation.sample, x, z, minY, maxY, surfaceY)
   const portal = portalInterval(x, z, entrance, surfaceY)
-  return unionIntervals(portal ? [...sdf, portal] : sdf)
+  return combinePortalAndSdf(sdf, portal)
 }
 
 /**
@@ -356,6 +391,45 @@ export function occupancyContains(
   z: number,
 ): boolean {
   return occupancyIntervalAt(index, x, y, z) !== null
+}
+
+/**
+ * True when the sample is cave *interior* — occupancy on the inward side of
+ * the mouth plane. The carved approach is void for walking/camera look-out,
+ * but it is not interior (surface player, surface ambience).
+ *
+ * @domain world-terrain
+ */
+export function isCaveInteriorAt(
+  index: CaveSdfColumnIndex,
+  entrance: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
+  x: number,
+  y: number,
+  z: number,
+): boolean {
+  if (mouthAlong(x, z, entrance) > MOUTH_INTERIOR_ALONG) return false
+  return occupancyContains(index, x, y, z)
+}
+
+export type CaveInteriorHysteresis = {
+  interior: boolean
+  rememberRaw: boolean
+}
+
+/**
+ * Two-sample confirmation so a single mouth-boundary occupancy flicker does
+ * not flip cave-interior state (ambience / diagnostics).
+ *
+ * @domain world-terrain
+ */
+export function applyCaveInteriorHysteresis(
+  sample: boolean,
+  lastRaw: boolean | null,
+  confirmed: boolean,
+): CaveInteriorHysteresis {
+  if (lastRaw === null) return { interior: sample, rememberRaw: sample }
+  if (sample === lastRaw) return { interior: sample, rememberRaw: sample }
+  return { interior: confirmed, rememberRaw: sample }
 }
 
 export type CaveGroundHysteresis = {

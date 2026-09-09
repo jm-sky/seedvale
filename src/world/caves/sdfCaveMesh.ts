@@ -27,7 +27,7 @@ import {
   type SdfCaveParams,
   type VoidPrimitive,
 } from './caveSdfField'
-import { clipTrianglesBelowSurface, type SurfaceHeightSampler } from './clipBelowSurface'
+import { clipTrianglesBelowSurface, clipTrianglesInFrontOfMouth, type SurfaceHeightSampler } from './clipBelowSurface'
 
 export { DEFAULT_SDF_PARAMS, type SdfCaveParams } from './caveSdfField'
 
@@ -212,9 +212,15 @@ export function buildSdfCaveMesh(
   // The iso-surface is closed, so without this the entrance ellipsoid is
   // capped into a sealed dome standing proud of the meadow instead of an
   // open portal — see `clipBelowSurface.ts`.
-  const { positions, indices } = surfaceHeightAt
+  const surfaceClipped = surfaceHeightAt
     ? clipTrianglesBelowSurface(extracted.positions, extracted.indices, surfaceHeightAt)
     : extracted
+  // Surface clip alone leaves the closed entrance ellipsoid's front cap
+  // sitting in the mouth pit (the "black sphere"). Drop that cap at the
+  // mouth plane so the portal is an opening, not a bulb.
+  const { positions, indices } = surfaceHeightAt
+    ? clipTrianglesInFrontOfMouth(surfaceClipped.positions, surfaceClipped.indices, topology.entrance)
+    : surfaceClipped
   const t3 = now()
 
   const geometry = new THREE.BufferGeometry()

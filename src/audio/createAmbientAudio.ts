@@ -125,6 +125,20 @@ const OWL_EVENT: AmbientEventDefinition = {
 const FROG_LOOP_URL = '/sounds/ambient-lake-frogs-loop-01.ogg'
 const FROG_MAX_VOLUME = 0.32
 
+/** Cave interior bed — driven by `Caves.queryInterior`, not landmark name
+ *  or entrance distance. Crossfades against surface layers via the existing
+ *  loop gain lerp. Source/license: public/sounds/README.md. */
+const CAVE_LOOP_URL = '/sounds/ambient-cave-01.ogg'
+const CAVE_MAX_VOLUME = 0.4
+
+/**
+ * Surface vs cave interior mix. `WorldAudio` already lerps loop gains, so
+ * this is a hard 0/1 target — not a second crossfade curve.
+ */
+export function caveAmbientMix(inCaveInterior: boolean): { surface: number, cave: number } {
+  return inCaveInterior ? { surface: 0, cave: 1 } : { surface: 1, cave: 0 }
+}
+
 /** Terrain samplers are cheap but not free (a few `smoothstep`s) — resample
  *  the player's area weights on a throttle instead of every frame; gain
  *  still lerps smoothly every frame via `WorldAudio.update()`. */
@@ -143,7 +157,8 @@ export type AmbientAudio = {
    *  finer resolution than `dayFactor` gives across the night half;
    *  `weather` scales birds/crickets/frogs (plan world-006 §3, world-016);
    *  `playerX`/`playerZ` drive the area (forest/coast) crossfade and the
-   *  lake-frog proximity sampler. */
+   *  lake-frog proximity sampler; `inCaveInterior` is the hysteretic
+   *  `Caves.queryInterior` flag (not landmark proximity). */
   update: (
     dt: number,
     dayFactor: number,
@@ -151,6 +166,7 @@ export type AmbientAudio = {
     weather: WeatherState,
     playerX: number,
     playerZ: number,
+    inCaveInterior?: boolean,
   ) => void
   dispose: () => void
 }
@@ -168,11 +184,13 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
   let meadowLoop: AudioLoopHandle | null = null
   let birdsLoop: AudioLoopHandle | null = null
   let frogLoop: AudioLoopHandle | null = null
+  let caveLoop: AudioLoopHandle | null = null
   let sampleAccum = 0
   // `lastForestWeight` is refreshed only inside the throttled `sampleAccum`
   // block below (same staleness the area loops already tolerate) and feeds
   // the owl event's eligibility check every frame via `ambientEvents`.
   let lastForestWeight = 0
+  let lastInCaveInterior = false
   const ambientEvents = createAmbientEventRuntime(worldAudio, [OWL_EVENT])
 
   function update(
@@ -182,56 +200,67 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     weather: WeatherState,
     playerX: number,
     playerZ: number,
+    inCaveInterior = false,
   ): void {
     const weatherFactor = weatherAmbientFactor(weather)
+    const mix = caveAmbientMix(inCaveInterior)
+    if (!caveLoop && mix.cave > 0) {
+      caveLoop = worldAudio.createLoop(CAVE_LOOP_URL)
+    }
+    caveLoop?.setTargetGain(mix.cave * CAVE_MAX_VOLUME)
     if (!nightLoop && dayFactor < NIGHT_LOOP_TRIGGER_DAY_FACTOR) {
       nightLoop = worldAudio.createLoop(NIGHT_LOOP_URL)
     }
-    nightLoop?.setTargetGain(cricketsTimeFactor(timeOfDay) * weatherFactor.crickets * NIGHT_MAX_VOLUME)
+    nightLoop?.setTargetGain(cricketsTimeFactor(timeOfDay) * weatherFactor.crickets * NIGHT_MAX_VOLUME * mix.surface)
 
     ambientEvents.update(dt, {
       nightPhase: nightPhase(timeOfDay),
-      forestWeight: lastForestWeight,
+      forestWeight: lastForestWeight * mix.surface,
       playerX,
       playerZ,
     })
 
     sampleAccum += dt
+    if (inCaveInterior !== lastInCaveInterior) {
+      sampleAccum = SAMPLE_INTERVAL
+      lastInCaveInterior = inCaveInterior
+    }
     if (sampleAccum < SAMPLE_INTERVAL) return
     sampleAccum = 0
     const w = ambientWeightsAt(playerX, playerZ, samplers)
     lastForestWeight = w.forest
     const meadow = (1 - w.ocean) * (1 - w.mountain) * (1 - w.forest)
     // Quieter/silent at night — birds are asleep.
-    forestLoop.setTargetGain(w.forest * dayFactor * FOREST_MAX_VOLUME)
+    forestLoop.setTargetGain(w.forest * dayFactor * FOREST_MAX_VOLUME * mix.surface)
     if (!coastLoop && w.ocean > 0) {
       coastLoop = worldAudio.createLoop(COAST_LOOP_URL)
     }
-    coastLoop?.setTargetGain(w.ocean * COAST_MAX_VOLUME)
+    coastLoop?.setTargetGain(w.ocean * COAST_MAX_VOLUME * mix.surface)
     if (!coastSoftLoop && w.ocean > 0) {
       coastSoftLoop = worldAudio.createLoop(COAST_SOFT_LOOP_URL)
     }
-    coastSoftLoop?.setTargetGain(w.ocean * COAST_SOFT_MAX_VOLUME)
+    coastSoftLoop?.setTargetGain(w.ocean * COAST_SOFT_MAX_VOLUME * mix.surface)
     if (!windLoop && w.mountain > 0) {
       windLoop = worldAudio.createLoop(WIND_LOOP_URL)
     }
-    windLoop?.setTargetGain(w.mountain * WIND_MAX_VOLUME)
+    windLoop?.setTargetGain(w.mountain * WIND_MAX_VOLUME * mix.surface)
     if (!meadowLoop && meadow > 0) {
       meadowLoop = worldAudio.createLoop(MEADOW_LOOP_URL)
     }
-    meadowLoop?.setTargetGain(meadow * dayFactor * MEADOW_MAX_VOLUME)
+    meadowLoop?.setTargetGain(meadow * dayFactor * MEADOW_MAX_VOLUME * mix.surface)
     if (!birdsLoop && (w.forest > 0 || meadow > 0)) {
       birdsLoop = worldAudio.createLoop(BIRDS_LOOP_URL)
     }
     birdsLoop?.setTargetGain(
-      (w.forest * BIRDS_FOREST_MAX_VOLUME + meadow * BIRDS_MEADOW_MAX_VOLUME) * dayFactor * weatherFactor.birds,
+      (w.forest * BIRDS_FOREST_MAX_VOLUME + meadow * BIRDS_MEADOW_MAX_VOLUME)
+        * dayFactor * weatherFactor.birds * mix.surface,
     )
 
     const lakeProximity = lakeProximityAt(playerX, playerZ, samplers)
     if (!frogLoop && lakeProximity > 0) {
       frogLoop = worldAudio.createLoop(FROG_LOOP_URL)
     }
-    frogLoop?.setTargetGain(lakeProximity * frogsTimeFactor(timeOfDay) * weatherFactor.frogs * FROG_MAX_VOLUME)
+    frogLoop?.setTargetGain(lakeProximity * frogsTimeFactor(timeOfDay) * weatherFactor.frogs * FROG_MAX_VOLUME * mix.surface)
   }
 
   function dispose(): void {
@@ -243,6 +272,7 @@ export function createAmbientAudio(worldAudio: WorldAudio, samplers: AmbientSamp
     meadowLoop?.dispose()
     birdsLoop?.dispose()
     frogLoop?.dispose()
+    caveLoop?.dispose()
   }
 
   return { update, dispose }

@@ -13,12 +13,15 @@
  *    `CAVE_MOUTH_DEPTH` (2.4 m) below the surface, so the leading section is
  *    ~0.2 m proud of the terrain by construction, for every seed.
  *
- *  Cutting the geometry at the terrain restores the invariant and turns the
- *  SDF dome into a real opening: the surviving mesh has a boundary loop
- *  exactly where the cave meets the ground.
+ *  Cutting the geometry at the terrain restores the overburden invariant.
+ *  The closed entrance ellipsoid's front cap still sits in the carved
+ *  mouth pit after that clip; `clipTrianglesInFrontOfMouth` drops it at
+ *  the mouth plane so the portal is an opening, not a black bulb.
  *
  * @domain world-terrain
  */
+
+import { MOUTH_INTERIOR_ALONG, mouthAlong } from './mouthCarve'
 
 /** Height sampler used to clip cave presentation geometry. Must be the
  *  deterministic analytic surface (`ChunkManager.sampleBaseHeight`), never a
@@ -64,6 +67,46 @@ export function clipTrianglesBelowSurface(
     const b = indices[i + 1]!
     const c = indices[i + 2]!
     if (!below[a] || !below[b] || !below[c]) continue
+    outIndices.push(keep(a), keep(b), keep(c))
+  }
+
+  return { positions: outPositions, indices: outIndices }
+}
+
+/**
+ * Drops triangles whose centroid sits outward of the mouth plane. The SDF
+ * iso-surface is a closed ellipsoid, so without this the front cap remains
+ * in the carved recess as a black bulb (clipping only at the heightfield
+ * leaves everything below the meadow).
+ *
+ * @domain world-terrain
+ */
+export function clipTrianglesInFrontOfMouth(
+  positions: readonly number[],
+  indices: readonly number[],
+  entrance: { x: number, z: number, yaw: number },
+): { positions: number[], indices: number[] } {
+  const vertexCount = positions.length / 3
+  const remap = new Int32Array(vertexCount).fill(-1)
+  const outPositions: number[] = []
+  const outIndices: number[] = []
+  const keep = (v: number): number => {
+    let mapped = remap[v]!
+    if (mapped < 0) {
+      mapped = outPositions.length / 3
+      remap[v] = mapped
+      outPositions.push(positions[v * 3]!, positions[v * 3 + 1]!, positions[v * 3 + 2]!)
+    }
+    return mapped
+  }
+
+  for (let i = 0; i + 2 < indices.length; i += 3) {
+    const a = indices[i]!
+    const b = indices[i + 1]!
+    const c = indices[i + 2]!
+    const cx = (positions[a * 3]! + positions[b * 3]! + positions[c * 3]!) / 3
+    const cz = (positions[a * 3 + 2]! + positions[b * 3 + 2]! + positions[c * 3 + 2]!) / 3
+    if (mouthAlong(cx, cz, entrance) > MOUTH_INTERIOR_ALONG) continue
     outIndices.push(keep(a), keep(b), keep(c))
   }
 

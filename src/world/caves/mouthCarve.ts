@@ -20,6 +20,26 @@ export const CAVE_APPROACH_DEPTH = 1.35
 /** Centre of the approach pit, along `openingDirection`, from the entrance. */
 export const CAVE_APPROACH_OFFSET = 2.2
 export const CAVE_MOUTH_RADIUS = 1.65
+/** Signed distance along `openingDirection` from the entrance. Positive is
+ *  outward (approach / hillside); negative is into the cave. SDF occupancy,
+ *  occupancy-derived wall beads and the presentation front-cap clip all use
+ *  this plane so the closed entrance ellipsoid does not own the approach. */
+export const MOUTH_INTERIOR_ALONG = 0.05
+
+/**
+ * Signed distance along the mouth plane's outward axis. Greater than
+ * `MOUTH_INTERIOR_ALONG` is the approach / hillside, not cave interior.
+ *
+ * @domain world-terrain
+ */
+export function mouthAlong(
+  x: number,
+  z: number,
+  entrance: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
+): number {
+  const out = openingDirection(entrance.yaw)
+  return (x - entrance.x) * out.dx + (z - entrance.z) * out.dz
+}
 
 /** Same Hermite smoothstep `THREE.MathUtils.smoothstep` uses, so the
  *  gameplay portal depth matches the heightmap dig without importing Three. */
