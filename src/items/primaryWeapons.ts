@@ -1,7 +1,7 @@
 import type { Inventory } from './Inventory'
 import type { ItemKind } from './items'
 import { isMeleeToolKind, isRangedTool } from './itemCatalog'
-import { isWeaponMaintenanceKind } from './itemInstances'
+import { isInstanceBackedKind, isWeaponMaintenanceKind } from './itemInstances'
 
 export type PrimaryWeaponChoice = { kind: ItemKind, instanceId: string | null }
 
@@ -33,11 +33,36 @@ function resolveInstanceId(inventory: Inventory, kind: ItemKind, preferId: strin
   return instances[0]!.id
 }
 
+/** Kind-level ownership for primary-weapon slots. Instance-backed weapons
+ *  live in `Inventory.instances` (`countInstances`); stack weapons still
+ *  use `has()`. Does not require a specific instance — `syncChoice` relies
+ *  on that so a removed instance can re-resolve onto another of the same
+ *  kind. */
+export function inventoryOwnsPrimaryWeaponKind(inventory: Inventory, kind: ItemKind): boolean {
+  return isInstanceBackedKind(kind)
+    ? inventory.countInstances(kind) > 0
+    : inventory.has(kind, 1)
+}
+
+/** Assignment-time ownership. A concrete `instanceId` must exist in
+ *  inventory and match `kind`; `null` falls back to kind-level ownership
+ *  (stack weapons, or instance-backed kinds when the UI did not name one). */
+export function inventoryOwnsPrimaryWeaponChoice(
+  inventory: Inventory,
+  kind: ItemKind,
+  instanceId: string | null,
+): boolean {
+  if (instanceId != null) {
+    const instance = inventory.getInstance(instanceId)
+    return instance !== null && instance.kind === kind
+  }
+  return inventoryOwnsPrimaryWeaponKind(inventory, kind)
+}
+
 function syncChoice(inventory: Inventory, choice: PrimaryWeaponChoice | null): PrimaryWeaponChoice | null {
   if (!choice) return null
-  return inventory.has(choice.kind, 1)
-    ? { kind: choice.kind, instanceId: resolveInstanceId(inventory, choice.kind, choice.instanceId) }
-    : null
+  if (!inventoryOwnsPrimaryWeaponKind(inventory, choice.kind)) return null
+  return { kind: choice.kind, instanceId: resolveInstanceId(inventory, choice.kind, choice.instanceId) }
 }
 
 export function createPrimaryWeaponSelection(): PrimaryWeaponSelection {

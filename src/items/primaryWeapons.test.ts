@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { CURRENT_SAVE_VERSION, loadStoredSave, type SaveData } from '../persistence/saveData'
 import { Inventory } from './Inventory'
-import { createPrimaryWeaponSelection, isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from './primaryWeapons'
+import {
+  createPrimaryWeaponSelection,
+  inventoryOwnsPrimaryWeaponChoice,
+  isPrimaryMeleeAssignment,
+  isPrimaryRangedAssignment,
+} from './primaryWeapons'
+import { createWeaponInstance } from './weaponMaintenance'
 
 describe('primaryWeapons', () => {
   it('initializes empty slots on first equip only', () => {
@@ -28,15 +34,113 @@ describe('primaryWeapons', () => {
   })
 
   it('clears slots when the selected kind is gone', () => {
-    const inventory = new Inventory({ long_sword: 1 })
+    const sword = createWeaponInstance('long_sword')
+    const inventory = new Inventory({}, undefined, [sword])
     const primary = createPrimaryWeaponSelection()
-    primary.setPrimaryMelee({ kind: 'long_sword', instanceId: null })
+    primary.setPrimaryMelee({ kind: 'long_sword', instanceId: sword.id })
     primary.syncWithInventory(inventory)
     expect(primary.primaryMelee()?.kind).toBe('long_sword')
 
-    inventory.remove('long_sword', 1)
+    inventory.removeInstance(sword.id)
     primary.syncWithInventory(inventory)
     expect(primary.primaryMelee()).toBeNull()
+  })
+
+  it('can assign instance-backed damascus_long_sword as primary', () => {
+    const sword = createWeaponInstance('damascus_long_sword')
+    const inventory = new Inventory({}, undefined, [sword])
+    expect(inventory.has('damascus_long_sword', 1)).toBe(false)
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'damascus_long_sword', sword.id)).toBe(true)
+
+    const primary = createPrimaryWeaponSelection()
+    primary.setPrimaryMelee({ kind: 'damascus_long_sword', instanceId: sword.id })
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()).toEqual({ kind: 'damascus_long_sword', instanceId: sword.id })
+  })
+
+  it('can assign instance-backed axe as primary', () => {
+    const axe = createWeaponInstance('axe')
+    const inventory = new Inventory({}, undefined, [axe])
+    expect(inventory.has('axe', 1)).toBe(false)
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'axe', axe.id)).toBe(true)
+
+    const primary = createPrimaryWeaponSelection()
+    primary.setPrimaryMelee({ kind: 'axe', instanceId: axe.id })
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()).toEqual({ kind: 'axe', instanceId: axe.id })
+  })
+
+  it('keeps an instance-backed primary through syncWithInventory', () => {
+    const sword = createWeaponInstance('damascus_long_sword')
+    const inventory = new Inventory({}, undefined, [sword])
+    const primary = createPrimaryWeaponSelection()
+    primary.setPrimaryMelee({ kind: 'damascus_long_sword', instanceId: sword.id })
+
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()).toEqual({ kind: 'damascus_long_sword', instanceId: sword.id })
+  })
+
+  it('restore then sync keeps an instance-backed primary', () => {
+    const sword = createWeaponInstance('damascus_long_sword')
+    const inventory = new Inventory({}, undefined, [sword])
+    const primary = createPrimaryWeaponSelection()
+    primary.restoreState({
+      primaryMeleeWeapon: { kind: 'damascus_long_sword', instanceId: sword.id },
+      primaryRangedWeapon: null,
+    })
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()).toEqual({ kind: 'damascus_long_sword', instanceId: sword.id })
+  })
+
+  it('re-resolves instanceId onto another instance of the same kind', () => {
+    const first = createWeaponInstance('axe')
+    const second = createWeaponInstance('axe')
+    const inventory = new Inventory({}, undefined, [first, second])
+    const primary = createPrimaryWeaponSelection()
+    primary.setPrimaryMelee({ kind: 'axe', instanceId: first.id })
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()?.instanceId).toBe(first.id)
+
+    inventory.removeInstance(first.id)
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()).toEqual({ kind: 'axe', instanceId: second.id })
+  })
+
+  it('clears primary when the last instance of the kind is removed', () => {
+    const axe = createWeaponInstance('axe')
+    const inventory = new Inventory({}, undefined, [axe])
+    const primary = createPrimaryWeaponSelection()
+    primary.setPrimaryMelee({ kind: 'axe', instanceId: axe.id })
+    primary.syncWithInventory(inventory)
+
+    inventory.removeInstance(axe.id)
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryMelee()).toBeNull()
+  })
+
+  it('rejects a missing or other-kind instanceId at assignment', () => {
+    const axe = createWeaponInstance('axe')
+    const sword = createWeaponInstance('damascus_long_sword')
+    const inventory = new Inventory({}, undefined, [axe, sword])
+
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'axe', 'missing-id')).toBe(false)
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'axe', sword.id)).toBe(false)
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'damascus_long_sword', axe.id)).toBe(false)
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'axe', axe.id)).toBe(true)
+  })
+
+  it('keeps a stack-based ranged primary and clears it when the stack is gone', () => {
+    const inventory = new Inventory({ short_bow: 1 })
+    expect(inventoryOwnsPrimaryWeaponChoice(inventory, 'short_bow', null)).toBe(true)
+
+    const primary = createPrimaryWeaponSelection()
+    primary.setPrimaryRanged({ kind: 'short_bow', instanceId: null })
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryRanged()).toEqual({ kind: 'short_bow', instanceId: null })
+
+    inventory.remove('short_bow', 1)
+    primary.syncWithInventory(inventory)
+    expect(primary.primaryRanged()).toBeNull()
   })
 
   it('round-trips through SaveData export/restore', () => {

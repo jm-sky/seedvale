@@ -29,6 +29,7 @@ import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryVi
 import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
+import { inventoryOwnsPrimaryWeaponChoice } from '../items/primaryWeapons'
 import { previewTransactionNetCoins, resolveOfferLineBuyback, sellInstancesForCoins, settleTransaction } from '../items/trade'
 import { NEUTRAL_SELL_PRICE_CONTEXT, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
@@ -302,14 +303,14 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   const equipPrimaryRangedWeapon = (): void => equipPrimary(primaryWeapons.primaryRanged())
 
   const setPrimaryMeleeWeapon = (kind: ItemKind, instanceId: string | null): void => {
-    if (!isMeleeToolKind(kind) || !inventory.has(kind, 1)) return
+    if (!isMeleeToolKind(kind) || !inventoryOwnsPrimaryWeaponChoice(inventory, kind, instanceId)) return
     primaryWeapons.setPrimaryMelee({ kind, instanceId })
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
   }
 
   const setPrimaryRangedWeapon = (kind: ItemKind, instanceId: string | null): void => {
-    if (!isRangedTool(kind) || !inventory.has(kind, 1)) return
+    if (!isRangedTool(kind) || !inventoryOwnsPrimaryWeaponChoice(inventory, kind, instanceId)) return
     primaryWeapons.setPrimaryRanged({ kind, instanceId })
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
