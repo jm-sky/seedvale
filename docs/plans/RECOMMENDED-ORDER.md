@@ -162,28 +162,28 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-23. `items-player-019` — **Player camp repair and sewing kit**  
-  🟡 `L` · **Score:**  22  
-   → **unlocks:** 0/0
-
-24. `fauna-013` — **Animal hand-feeding and human affinity**  
+23. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-25. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+24. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-26. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
+25. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-27. `world-terrain-015` — **Water Reflection Content Budget**  
+26. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-28. `fauna-007` — **Animal leading and cart harness**  
+27. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
+   → **unlocks:** 0/0
+
+28. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
+  🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
 29. `npc-004` — **Drzewo genealogiczne NPC**  
@@ -388,6 +388,7 @@ graph TD
   settlements_npcs_026["settlements-npcs-026 — NPC personal inventory and persistent belongings"]
   settlements_npcs_027["settlements-npcs-027 — NPC expedition assignment and provisioning"]
   settlements_npcs_028["settlements-npcs-028 — Long-distance NPC travel and expedition movement"]
+  settlements_npcs_029["settlements-npcs-029 — Animal Corpse Cleanup & Household Sanitation"]
   tools_000["tools-000 — Weapon Browser — Observatory/Admin"]
   tools_001["tools-001 — Performance Benchmark Determinism & Reliability"]
   tools_002["tools-002 — Trace Analyzer — Real Application CPU Attribution"]
@@ -521,6 +522,8 @@ graph TD
   fauna_016 --> quests_progression_006
   fauna_016 --> quests_progression_007
   fauna_016 --> quests_progression_009
+  fauna_017 --> fauna_013
+  fauna_017 --> fauna_018
   fauna_018 --> quests_progression_008
   fauna_019 --> quests_progression_008
   fauna_020 --> quests_progression_012
@@ -608,6 +611,8 @@ graph TD
   settlements_npcs_019 --> settlements_npcs_021
   settlements_npcs_019 --> settlements_npcs_028
   settlements_npcs_020 --> settlements_npcs_021
+  settlements_npcs_026 --> npc_016
+  settlements_npcs_026 --> npc_017
   settlements_npcs_026 --> quests_progression_010
   settlements_npcs_026 --> settlements_npcs_027
   settlements_npcs_026 --> settlements_npcs_028

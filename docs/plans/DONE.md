@@ -4,6 +4,9 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-019-player-camp-repair-and-sewing-kit`                   | 2026-09-09 15:59:12 | —                   | `items-player`   | —          |
+| `items-player-021-player-skills-and-targeted-skill-actions-foundation` | 2026-09-09 14:31:43 | —                   | `items-player`   | —          |
+| `ui-input-010-player-quick-actions-and-primary-weapon-slots`           | —                   | 2026-09-09 14:10:58 | `ui-input`       | —          |
 | `settlements-005-residential-house-construction`                       | 2026-09-09 13:36:12 | —                   | `settlements`    | —          |
 | `world-021-world-structure-repair-work-foundation`                     | 2026-09-09 12:41:36 | —                   | `world`          | —          |
 | `quests-progression-006-settlement-rat-infestation`                    | 2026-09-09 12:30:04 | —                   | `quests-progression` | —          |
