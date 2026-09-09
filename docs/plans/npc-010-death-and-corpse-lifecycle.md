@@ -97,33 +97,47 @@ Lifecycle ma być liczony z trwałego czasu symulacji (np. world-days/death-time
 
 Plan nie dodaje pełnej symulacji NPC w niezaładowanych settlementach. Nowa śmierć nie musi powstawać tam, gdzie NPC w ogóle nie jest aktualnie symulowany; wymaganiem jest niezależny od renderingu lifecycle już istniejącej śmierci/corpse.
 
-### 5. NPC inventory → corpse loot
+### 5. NPC personal inventory → corpse loot
 
-`NpcAgent.carried` pozostaje runtime-only i nie jest personal inventory. Służy jednocześnie do krótkiego transportu zasobów oraz combat/loadout.
+`settlements-npcs-026-npc-personal-inventory-and-persistent-belongings.md` ustanawia docelowy ownership contract: każdy NPC ma zawsze authoritative `personalInventory` należący do `NpcAuthoritativeState`, natomiast `NpcAgent.carried` pozostaje runtime-only transient action/work payload.
 
-Aktualny `npcLoadout.ts` daje:
+Po wdrożeniu `settlements-npcs-026` źródłem osobistego corpse loot ma być wyłącznie realny personal inventory NPC, nie profession/role i nie `NpcAgent.carried`.
 
-- `woodcutter`: `axe` + `knife`,
-- `guard`: `long_sword`,
-- `hunter`: `hunting_bow` + `knife` + początkowe arrows,
-- pozostałe role: co najmniej `knife` przez fallback.
+Wymagany one-shot handoff na alive→dead edge:
 
-Sama obecność przedmiotu w `carried` nie oznacza ownership. Nie przenosić do corpse automatycznie:
+```text
+NpcAuthoritativeState.personalInventory
+    ↓ transactional ownership transfer
+NpcPostDeathState / corpse Inventory
+```
 
-- ore i innych transportowanych zasobów,
-- payloadów household exchange/delivery,
-- household/economy stock,
-- przypadkowo niesionych materiałów pracy.
+Zasady:
 
-Jeżeli do loot mają wejść role/loadout belongings, klasyfikować je jawnie na podstawie istniejących loadout semantics i przenosić rzeczywisty item/instance z `carried` na alive→dead edge. Nie regenerować lootu na podstawie roli podczas load/stream-in.
+- przenieść rzeczywiste itemy/instances należące do NPC dokładnie raz,
+- nie regenerować lootu na podstawie profession, role ani `npcLoadout.ts`,
+- nie traktować `NpcAgent.carried` jako ownership source,
+- nie przenosić do corpse transportowanych zasobów, household/economy stock ani work/action payloadów tylko dlatego, że NPC aktualnie je niesie,
+- śmierć nie zwraca belongings automatycznie do household/economy,
+- po handoff corpse/post-death state staje się authoritative ownerem tych itemów,
+- save/load i stream-in nie mogą ponownie wykonywać handoff ani tworzyć nowych item instance IDs.
 
 Wykorzystać istniejący `Inventory` / `ItemInstance`. Zachować:
 
 - stack quantities,
 - item instance IDs,
-- durability/sharpness i inne dane instances.
+- durability/sharpness i inne dane instances,
+- freshness batches,
+- liquid-container state i inne wspierane przez generic `Inventory` instance metadata.
 
-Persisted corpse loot musi od tej chwili być własnością post-death state, aby save/load nie regenerował nowych instance IDs ani nie duplikował przedmiotów.
+Persisted corpse loot musi być własnością post-death state, aby save/load nie regenerował nowych instance IDs ani nie duplikował przedmiotów.
+
+#### Follow-up integration dependency
+
+Aktualna implementacja `npc-010` powstała przed authoritative NPC personal inventory. Nie przebudowywać teraz corpse lifecycle ani tworzyć parallel inventory path.
+
+Po implementacji `settlements-npcs-026` wykonać focused follow-up w `npc-010`, który przełączy istniejący death-loot handoff z legacy loadout/`carried` assumptions na `NpcAuthoritativeState.personalInventory`.
+
+To jest zależność tylko dla integracji personal belongings → corpse. Nie oznacza, że cały już istniejący corpse lifecycle jest implementacyjnie zależny od `settlements-npcs-026`.
 
 ### 6. Loot interaction
 
@@ -220,10 +234,10 @@ HealthState
   → alive/dead source of truth
 
 NpcAuthoritativeState / NpcStateRegistry
-  → persisted NPC + post-death state
+  → persisted NPC state + personalInventory + post-death state
 
 NpcAgent
-  → live NPC execution + death presentation cleanup
+  → live NPC execution + transient carried work payload + death presentation cleanup
 
 Combat
   → damage/combat resolution
@@ -232,7 +246,7 @@ Settlement/world presentation
   → materialization/interactions corpse while loaded
 
 Inventory
-  → actual corpse item contents / transfer semantics
+  → personal belongings + actual corpse item contents / transfer semantics
 
 Relationships/reputation
   → bez corpse-ownership semantics w v1
@@ -254,7 +268,7 @@ Rozszerzyć istniejące NPC inspection/trace o minimum potrzebne do sprawdzenia:
 - post-death/corpse state i source NPC id,
 - death position/time anchor,
 - lifecycle phase,
-- loot classification + actual persisted contents,
+- personal inventory before handoff + actual persisted corpse contents,
 - burial/held state,
 - cleanup reason.
 
@@ -281,12 +295,16 @@ Nie tworzyć osobnego systemu diagnostycznego. Debug ma czytać authoritative st
 
 ### Loot
 
-1. Do corpse trafiają tylko jawnie kwalifikujące się belongings.
-2. Transportowane zasoby/towary household/economy nie stają się lootem.
-3. Item instances zachowują ID i stan.
-4. Stacki nie są duplikowane.
-5. Transfer respektuje weight/size/capacity.
-6. Przy braku miejsca item pozostaje w corpse.
+Po wdrożeniu `settlements-npcs-026` focused integration verification ma potwierdzić:
+
+1. Cały kwalifikujący się personal inventory NPC przechodzi do corpse dokładnie raz.
+2. Po handoff personal inventory NPC nie zachowuje duplikatu przeniesionych itemów.
+3. `NpcAgent.carried` work/transport payload nie staje się corpse loot.
+4. Profession/role/loadout nie regeneruje dodatkowych itemów przy death/load/stream-in.
+5. Item instances zachowują ID i pełny wspierany stan.
+6. Stacki nie są duplikowane.
+7. Corpse → looter transfer respektuje weight/size/capacity.
+8. Przy braku miejsca item pozostaje w corpse.
 
 ### Lifecycle
 
@@ -305,7 +323,8 @@ Uruchomić istniejące testy NPC/persistence oraz build. Dodać focused tests dl
 - one-shot death transition,
 - reconstruction bez duplicate corpse/loot,
 - lifecycle time-anchor resolution,
-- inventory transfer atomicity.
+- inventory transfer atomicity,
+- po `settlements-npcs-026`: one-shot `personalInventory → corpse Inventory` ownership handoff.
 
 Nie zmieniać bez potrzeby:
 
@@ -334,5 +353,6 @@ Nie zmieniać bez potrzeby:
 - **009 — NPC Combat Feedback**
 - **011 — NPC Burial & Graves**
 - **npc-019 — Shared SPEA foundation and Strength-driven melee**
+- **settlements-npcs-026 — NPC personal inventory and persistent belongings** — downstream ownership integration required for personal belongings → corpse handoff
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
