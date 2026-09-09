@@ -15,15 +15,15 @@
 ## Current skill ownership
 
 - `src/player/PlayerSkills.ts` is the current source of truth for `SkillId`, `SkillState`, `PlayerSkills`, labels, the shared XP curve, `createPlayerSkills()`, `awardSkillXp()`, restore, debug setters and existing skill modifiers.
-- `xp` is authoritative progression state; `value` is derived. `active` is runtime-only and currently meaningful for Sneak. Do not reuse it as the targeted-skill selection state.
-- `createPlayerSkills()` currently constructs all six skills explicitly. Adding `medicine`/`repair` to `SkillId` therefore requires updating this constructor and all exhaustive `Record<SkillId, ...>` sites rather than weakening the type to make compilation pass.
-- The header comment in `PlayerSkills.ts` still says "two skills" although the code owns six. Fix stale architectural comments encountered in the touched skill surface rather than preserving that contradiction.
+- `xp` is authoritative progression state; `value` is derived. `active` is runtime-only and currently meaningful for Sneak. It is not the selected targeted skill.
+- `createPlayerSkills()` constructs all eight skills explicitly. Exhaustive `Record<SkillId, ...>` sites were updated rather than weakening the type.
+- Stale "two skills" / "six skills" comments on the touched skill surface were fixed.
 
 ## Persistence contract
 
 - `src/persistence/saveData.ts` imports `SkillId`; `SaveSkills` is currently `Record<SkillId, SaveSkill>`. Expanding `SkillId` therefore changes the required serialized shape at the type level.
 - `restorePersistedSkills()` already overlays a `Partial<Record<SkillId, { xp: number }>>` onto a fresh `createPlayerSkills()` set and defaults absent/non-positive XP to `0`. Preserve/reuse that behavior for old saves rather than adding special Medicine/Repair restore branches in gameplay code.
-- Inspect the current save schema parser/migration path before changing the serialized contract. If the parser currently requires every key because `SaveSkills` is a required `Record`, normalize/migrate older saves through the existing persistence pipeline so missing `medicine`/`repair` become `{ xp: 0 }` (or equivalent canonical representation).
+- `isSkillsField` keeps `medicine`/`repair` optional, same pattern as `riding`, so older current-version saves load without a schema bump. `restorePersistedSkills()` defaults missing keys to novice XP `0`. New saves write both keys.
 - Never persist derived `value`, `active` or the selected targeted skill.
 
 ## Existing world interaction boundary
@@ -88,8 +88,8 @@
 
 ## Related plan warning
 
-`items-player-019-player-camp-repair-and-sewing-kit.md` currently explicitly avoids a Repair skill and assigns camp repair competence to Survival. After `items-player-021` is implemented, that plan must be reconsidered against the new Repair contract rather than implemented unchanged. Do not silently preserve two competing meanings of repair competence.
+`items-player-019-player-camp-repair-and-sewing-kit.md` now depends on this plan and treats `Repair` as primary camp-repair competence, with Survival only as optional support through `evaluateSkillCompetence`. Do not revert camp repair to a Survival-owned skill.
 
-Likewise, any existing Medicine/healing plan should reuse the new skill-evaluation/targeted-action seams without creating a parallel health or targeting system.
+Player-side Medicine/assisted treatment (after `npc-025`'s patient model) must reuse `evaluateSkillCompetence` and the targeted-skill action seam. Do not add a parallel health system, targeting pipeline, or skill-check framework.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
