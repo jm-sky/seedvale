@@ -16,9 +16,9 @@ import type { RatSaveRecord } from '../settlement/ratPersistence'
 import type { StorageInfestationCondition } from '../settlement/storageInfestation'
 import type { SaveTemporaryConditionsSnapshot } from '../shared/temporaryConditions'
 import type { TrapKind, TrapState } from '../world/animalTraps'
-import type { SaveGrave } from '../world/npcGraves'
 import type { CropId } from '../world/cropLifecycle'
 import type { MapConfidence, MapSource } from '../world/map/mapTypes'
+import type { SaveGrave } from '../world/npcGraves'
 import type { WellStage } from '../world/playerWell'
 import type { RepairProgress } from '../world/repair'
 import type { SleepingUtilityVariant } from '../world/sleepingUtilities'
@@ -1659,6 +1659,26 @@ function isLivestockCorpse(value: unknown): value is { timeSinceDeath: number, m
   return typeof c.timeSinceDeath === 'number' && typeof c.meatHarvested === 'boolean'
 }
 
+function isAnimalOwnerField(value: unknown): boolean {
+  if (value === undefined) return true
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const o = value as Record<string, unknown>
+  if (o.kind === 'player') return true
+  return o.kind === 'household' && typeof o.houseId === 'string'
+}
+
+function isOwnedAnimalControlField(value: unknown): boolean {
+  if (value === undefined) return true
+  if (!value || typeof value !== 'object') return false
+  const c = value as Record<string, unknown>
+  if (c.mode !== 'follow' && c.mode !== 'stay') return false
+  if (c.stayAnchor === undefined) return true
+  if (!c.stayAnchor || typeof c.stayAnchor !== 'object') return false
+  const a = c.stayAnchor as Record<string, unknown>
+  return typeof a.x === 'number' && typeof a.z === 'number'
+}
+
 /** Validates one `LivestockSaveRecord` (plan persistence-001) — `kind` is
  *  validated against the full `AnimalKind` set (not just `LIVESTOCK_KINDS`)
  *  since a merchant horse is a plain `'horse'` too; `livestock.ts`'s own
@@ -1672,6 +1692,8 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     typeof r.animalId === 'string' &&
     typeof r.kind === 'string' && ANIMAL_KINDS.has(r.kind) &&
     (r.ownerHouseId === undefined || typeof r.ownerHouseId === 'string') &&
+    isAnimalOwnerField(r.owner) &&
+    isOwnedAnimalControlField(r.control) &&
     typeof r.x === 'number' &&
     typeof r.z === 'number' &&
     typeof r.yaw === 'number' &&

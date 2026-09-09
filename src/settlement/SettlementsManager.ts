@@ -5,8 +5,10 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { HomeVillageSize } from '../config/worldConfig'
 import type { SettlementEconomy, SettlementEconomySnapshot } from '../economy/settlementEconomy'
 import type { AnimalAgent, AnimalKind, VillageInfo } from '../fauna/AnimalAgent'
+import type { AnimalOwner } from '../fauna/animalOwnership'
 import type { SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
+import type { OwnedAnimalControlMode } from '../fauna/ownedAnimalControl'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { RegionParams } from '../terrain/chunkHeightmap'
@@ -31,7 +33,17 @@ import { type ChunkCoord, chunksNear } from '../terrain/chunkGrid'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { createSettlement, type CreateSettlementDeps, type Settlement } from './createSettlement'
 import { createHouseholdRegistry, type Household, type HouseholdId, type HouseholdSnapshot } from './household'
-import { createLivestockRegistry, type LivestockSaveRecord } from './livestock'
+import {
+  createLivestockRegistry,
+  type LivestockSaveRecord,
+  type PersistentLivestockContext,
+  resolveLivePersistentAnimal,
+  restoreDetachedPlayerOwnedLivestock,
+  setOwnedAnimalControl,
+  type SpawnAnimalFromRecordDeps,
+  tickSettlementLivestock,
+  transferAnimalOwnership,
+} from './livestock'
 import { createNpcRelationships, type NpcRelationshipEntry } from './npcRelationships'
 import { createNpcStateRegistry, type NpcAuthoritativeState, type NpcId, type NpcStateSnapshot } from './npcState'
 import { createSignpost } from './props'
@@ -178,6 +190,11 @@ export type SettlementsManager = {
   isStorageInfestationActive: (settlementId: string) => boolean
   repairStorageInfestation: (settlementId: string) => void
   countAliveRats: (settlementId: string) => number
+  /** Public persistent-animal lookup (plan fauna-020). */
+  resolvePersistentAnimal: (animalId: string) => AnimalAgent | null
+  transferAnimalOwnership: (animalId: string, owner: AnimalOwner) => boolean
+  setOwnedAnimalControl: (animalId: string, mode: OwnedAnimalControlMode) => boolean
+  getDetachedLivestock: () => AnimalAgent[]
   dispose: () => void
 }
 
@@ -373,6 +390,40 @@ export async function createSettlementsManager(
     entries: initialLivestock ?? [],
     removedIds: initialRemovedLivestockIds ?? [],
   })
+
+  const detachedLivestock: AnimalAgent[] = []
+  const detachedById = new Map<string, AnimalAgent>()
+  const detachedOriginById = new Map<string, string>()
+
+  const persistentLivestockCtx: PersistentLivestockContext = {
+    getLoadedSettlements: () => {
+      const out: { id: string, livestock: readonly AnimalAgent[] }[] = []
+      for (const entry of entries.values()) {
+        if (entry.settlement) out.push({ id: entry.def.id, livestock: entry.settlement.livestock })
+      }
+      return out
+    },
+    detached: detachedLivestock,
+    detachedById,
+    detachedOriginById,
+    registry: livestock,
+  }
+
+  const spawnAnimalDeps: SpawnAnimalFromRecordDeps = {
+    scene,
+    sampleHeight,
+    waterLevel,
+    sampleLocalWater,
+    collidersNear,
+    onAnimalDeath,
+  }
+  await restoreDetachedPlayerOwnedLivestock(
+    spawnAnimalDeps,
+    livestock,
+    detachedLivestock,
+    detachedById,
+    detachedOriginById,
+  )
 
   const rats = createRatRegistry({
     entries: initialRats ?? [],
@@ -645,6 +696,36 @@ export async function createSettlementsManager(
           playerObservation,
         )
       }
+      if (detachedLivestock.length > 0) {
+        tickSettlementLivestock(detachedLivestock, {
+          dt,
+          settlementId: 'detached',
+          observerPos: playerPos,
+          dayFactor,
+          timeOfDay,
+          nowDays: nowDays ?? 0,
+          litFires,
+          villages,
+          getNowDays: () => nowDays ?? 0,
+          dropLivestockProduct,
+          onAnimalVocalize,
+          persistence: livestock,
+          grassForage,
+          playerObservation,
+          playerControlPos: { x: playerPos.x, z: playerPos.z },
+          resolvePersistenceSettlementId: (animal) => detachedOriginById.get(animal.animalId) ?? 'detached',
+        })
+        for (const [animalId, animal] of detachedById) {
+          if (!detachedLivestock.includes(animal)) {
+            detachedById.delete(animalId)
+            detachedOriginById.delete(animalId)
+          }
+        }
+        for (const animal of detachedLivestock) {
+          const origin = detachedOriginById.get(animal.animalId)
+          if (origin) livestock.upsert(origin, animal)
+        }
+      }
       for (const instances of midpoints.values()) {
         for (const inst of instances) updateLabelOpacity(inst, playerPos)
       }
@@ -669,6 +750,10 @@ export async function createSettlementsManager(
       for (const entry of entries.values()) {
         if (entry.settlement) livestock.capture(entry.def.id, entry.settlement.livestock)
       }
+      for (const animal of detachedLivestock) {
+        const origin = detachedOriginById.get(animal.animalId)
+        if (origin) livestock.upsert(origin, animal)
+      }
       return livestock.serialize()
     },
     snapshotRats: () => {
@@ -685,8 +770,19 @@ export async function createSettlementsManager(
       if (!entry?.settlement) return 0
       return entry.settlement.rats.reduce((n, rat) => n + (rat.isDead() ? 0 : 1), 0)
     },
+    resolvePersistentAnimal: (animalId) => resolveLivePersistentAnimal(persistentLivestockCtx, animalId)?.animal ?? null,
+    transferAnimalOwnership: (animalId, owner) => transferAnimalOwnership(persistentLivestockCtx, animalId, owner),
+    setOwnedAnimalControl: (animalId, mode) => setOwnedAnimalControl(persistentLivestockCtx, animalId, mode),
+    getDetachedLivestock: () => detachedLivestock,
     dispose() {
       disposed = true
+      for (const animal of detachedLivestock) {
+        animal.dispose()
+        animal.mesh.removeFromParent()
+      }
+      detachedLivestock.length = 0
+      detachedById.clear()
+      detachedOriginById.clear()
       for (const entry of entries.values()) entry.settlement?.dispose()
       for (const instances of midpoints.values()) {
         for (const inst of instances) disposeMidpointInstance(inst)

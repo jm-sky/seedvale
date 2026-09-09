@@ -133,6 +133,7 @@ function animalPromptLabel(
   // Any animal carrying a `mount` config is mountable (plan fauna-003 §5) —
   // no ownership/taming gate yet, so the prompt is unconditional whenever no
   // weapon is held.
+  if (animal.isPlayerOwned()) return `Steruj: ${label}`
   if (ANIMAL_DEFS[kind].mount) return `Dosiądź: ${label}`
   if (canMilk && animal.canBeMilked(nowDays)) return `Wydój: ${label}`
   if (feedItemKind) return `Nakarm: ${label}`
@@ -376,6 +377,9 @@ export function buildInteractables(
    *  `unsafe` for any test/caller that doesn't model river hydrology, rather
    *  than reintroducing the old blanket `river = safe`. */
   resolveRiverWaterQuality: (worldX: number, worldZ: number) => WaterQuality = () => 'unsafe',
+  /** Detached player-owned livestock (plan fauna-020) — not in any loaded
+   *  settlement's `livestock` array but still interactable. */
+  detachedLivestock: readonly AnimalAgent[] = [],
   /** World seed for lazy well-roof weather (plan world-020). Optional so
    *  existing callers/tests that never touch wells keep compiling; `0` is
    *  deterministic, not a hidden live clock. */
@@ -769,13 +773,13 @@ export function buildInteractables(
     })
   }
 
-  for (const animal of fauna.getAgents()) {
+  function pushLiveAnimalCandidate(animal: AnimalAgent): void {
     const rangeOverride = activeSpotAnimalRange?.(animal.def.kind) ?? rangedToolRange(heldTool)
-    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, Math.max(GAZE_RANGE, rangeOverride ?? 0))) continue
+    if (!withinRange(animal.mesh.position.x, animal.mesh.position.z, playerPos, Math.max(GAZE_RANGE, rangeOverride ?? 0))) return
     if (animal.isDead()) {
       const corpse = corpseCandidate(animal, shovelHeld, knifeAvailable)
       if (corpse) list.push(corpse)
-      continue
+      return
     }
     list.push({
       kind: 'animal',
@@ -785,6 +789,10 @@ export function buildInteractables(
       interactRange: rangeOverride ?? undefined,
     })
   }
+
+  for (const animal of detachedLivestock) pushLiveAnimalCandidate(animal)
+
+  for (const animal of fauna.getAgents()) pushLiveAnimalCandidate(animal)
 
   for (const landmark of chunkManager.getNearbyLandmarks(playerPos, GAZE_RANGE)) {
     list.push({

@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import type { AnimalSaveState, NearbyNpcCandidate, VillageInfo } from '../fauna/AnimalAgent'
 import type { DropLivestockProductHook } from '../fauna/livestockProduction'
+import type { OwnedAnimalControlMode } from '../fauna/ownedAnimalControl'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
 import type { LocalWaterSample } from '../terrain/waterSample'
 import type { GrassForageService } from '../world/createGrassForagePatches'
@@ -14,6 +15,12 @@ import {
 } from '../assets/loadGltf'
 import { isSystemEnabled } from '../debug/debugMode'
 import { ANIMAL_DEFS, AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
+import {
+  type AnimalOwner,
+  deriveOwnerHouseId,
+  isPlayerOwned as isPlayerOwnedOwner,
+  parseAnimalOwnerFromRecord,
+} from '../fauna/animalOwnership'
 import {
   createChickenModel,
   createCowModel,
@@ -64,11 +71,30 @@ const GUARANTEED_SHEEP_SEED_SALT = 0x53484545
  *  `ownerHouseId` are validated against the deterministically-recomputed
  *  identity at hydration time (`spawnLivestock`'s per-individual kind/owner
  *  check below), never trusted blindly. */
-export type LivestockSaveRecord = AnimalSaveState & {
+export type LivestockSaveRecord = {
   settlementId: string
   animalId: string
   kind: AnimalKind
+  /** Legacy household slot id — derived from `owner` on write (plan fauna-020). */
   ownerHouseId?: string
+  /** Authoritative ownership when present (plan fauna-020). */
+  owner?: AnimalOwner
+} & AnimalSaveState
+
+export function isPlayerOwnedLivestockRecord(record: LivestockSaveRecord): boolean {
+  return isPlayerOwnedOwner(parseAnimalOwnerFromRecord(record))
+}
+
+export function livestockRecordMatchesHouseholdSlot(
+  record: LivestockSaveRecord,
+  kind: AnimalKind,
+  ownerHouseId: string,
+): boolean {
+  if (isPlayerOwnedLivestockRecord(record)) return false
+  const recordOwner = parseAnimalOwnerFromRecord(record)
+  return record.kind === kind
+    && recordOwner?.kind === 'household'
+    && recordOwner.houseId === ownerHouseId
 }
 
 /** Narrow view `spawnLivestock()`/`createSettlement.ts` need over the
@@ -105,19 +131,63 @@ export type LivestockRegistry = LivestockPersistence & {
    *  already (`Settlement.update()`'s own array splice), so this never
    *  resurrects one dropped via `markRemoved`. */
   capture: (settlementId: string, animals: readonly AnimalAgent[]) => void
+  /** Upserts one live individual under its origin namespace (plan fauna-020). */
+  upsert: (settlementId: string, animal: AnimalAgent) => void
   /** Flat `SaveData`-shaped snapshot of everything captured so far. */
   serialize: () => { entries: LivestockSaveRecord[], removedIds: string[] }
   clear: () => void
 }
 
 function livestockToSaveRecord(settlementId: string, animal: AnimalAgent): LivestockSaveRecord {
+  const owner = animal.getOwner()
   return {
     settlementId,
     animalId: animal.animalId,
     kind: animal.def.kind,
-    ownerHouseId: animal.ownerHouseId,
+    owner,
+    ownerHouseId: deriveOwnerHouseId(owner),
     ...animal.snapshot(),
   }
+}
+
+export type SpawnAnimalFromRecordDeps = {
+  scene: THREE.Scene
+  sampleHeight: HeightSampler
+  waterLevel: number
+  sampleLocalWater: (x: number, z: number) => LocalWaterSample
+  collidersNear: ColliderSource
+  onAnimalDeath?: (animalId: string) => void
+}
+
+/** Spawns one persistent livestock individual from a saved record (plan fauna-020). */
+export async function spawnAnimalFromRecord(
+  deps: SpawnAnimalFromRecordDeps,
+  record: LivestockSaveRecord,
+): Promise<AnimalAgent> {
+  await ensureLivestockTemplates()
+  const kind = record.kind as LivestockKind
+  const { visual, animations } = visualFor(kind, record.animalId)
+  const agent = new AnimalAgent({
+    def: ANIMAL_DEFS[kind],
+    animalId: record.animalId,
+    sampleHeight: deps.sampleHeight,
+    waterLevel: deps.waterLevel,
+    sampleLocalWater: deps.sampleLocalWater,
+    collidersNear: deps.collidersNear,
+    x: record.x,
+    z: record.z,
+    visual,
+    animations,
+    wanderRadius: LIVESTOCK_WANDER_RADIUS,
+    ownerHouseId: deriveOwnerHouseId(parseAnimalOwnerFromRecord(record)),
+    onDeath: deps.onAnimalDeath,
+  })
+  agent.hydrate({
+    ...record,
+    owner: parseAnimalOwnerFromRecord(record),
+  })
+  deps.scene.add(agent.mesh)
+  return agent
 }
 
 /** `removedLivestockIds` composite key — `animalId` alone collides across
@@ -160,6 +230,8 @@ function createGuaranteedSheep(
   const animalId = `sheep-home${homeIndex}-guaranteed`
 
   if (removed?.has(animalId)) return null
+  const savedRecord = saved?.get(animalId)
+  if (savedRecord && isPlayerOwnedLivestockRecord(savedRecord)) return null
 
   const { visual, animations } = visualFor('sheep', animalId)
 
@@ -182,12 +254,8 @@ function createGuaranteedSheep(
 
   const record = saved?.get(animalId)
 
-  if (
-    record
-    && record.kind === 'sheep'
-    && record.ownerHouseId === ownerHouseId
-  ) {
-    agent.hydrate(record)
+  if (record && livestockRecordMatchesHouseholdSlot(record, 'sheep', ownerHouseId)) {
+    agent.hydrate({ ...record, owner: parseAnimalOwnerFromRecord(record) })
   }
 
   return agent
@@ -227,6 +295,9 @@ export function createLivestockRegistry(initial?: {
     capture(settlementId, animals) {
       const m = savedFor(settlementId)
       for (const animal of animals) m.set(animal.animalId, livestockToSaveRecord(settlementId, animal))
+    },
+    upsert(settlementId, animal) {
+      savedFor(settlementId).set(animal.animalId, livestockToSaveRecord(settlementId, animal))
     },
     markRemoved(settlementId, animalId) {
       bySettlement.get(settlementId)?.delete(animalId)
@@ -509,6 +580,8 @@ export async function spawnLivestock(
       const { x, z } = findSpotNearHouse(home, sampleHeight, waterLevel, random)
       const animalId = `${kind}-house${i}-${houseAnimalIndex++}`
       if (removed?.has(animalId)) continue
+      const record = saved?.get(animalId)
+      if (record && isPlayerOwnedLivestockRecord(record)) continue
       const { visual, animations } = visualFor(kind, animalId)
       const agent = new AnimalAgent({
         def: ANIMAL_DEFS[kind],
@@ -526,11 +599,11 @@ export async function spawnLivestock(
         onDeath: onAnimalDeath,
         household,
       })
-      // Persisted state is authoritative for an existing individual — a
-      // kind/owner mismatch (e.g. a stale save from before a species-weight
-      // change) is never trusted, and this deterministic spawn wins instead.
-      const record = saved?.get(animalId)
-      if (record && record.kind === kind && record.ownerHouseId === ownerHouseId) agent.hydrate(record)
+      // Persisted household-owned state is authoritative for an existing
+      // individual — player-owned records restore via the detached path.
+      if (record && livestockRecordMatchesHouseholdSlot(record, kind, ownerHouseId)) {
+        agent.hydrate({ ...record, owner: parseAnimalOwnerFromRecord(record) })
+      }
       scene.add(agent.mesh)
       agents.push(agent)
     }
@@ -557,7 +630,8 @@ export async function spawnLivestock(
 
   if (merchantHorseSpawn) {
     const animalId = `merchant-horse-${settlementId}`
-    if (!removed?.has(animalId)) {
+    const record = saved?.get(animalId)
+    if (!removed?.has(animalId) && !(record && isPlayerOwnedLivestockRecord(record))) {
       const { visual, animations } = visualFor('horse', animalId)
       const agent = new AnimalAgent({
         def: ANIMAL_DEFS.horse,
@@ -573,8 +647,9 @@ export async function spawnLivestock(
         wanderRadius: LIVESTOCK_WANDER_RADIUS,
       })
       agent.mesh.rotation.y = merchantHorseSpawn.yaw
-      const record = saved?.get(animalId)
-      if (record && record.kind === 'horse') agent.hydrate(record)
+      if (record && record.kind === 'horse') {
+        agent.hydrate({ ...record, owner: parseAnimalOwnerFromRecord(record) })
+      }
       scene.add(agent.mesh)
       agents.push(agent)
     }
@@ -584,6 +659,96 @@ export async function spawnLivestock(
 
 /** GLB clones share the loader's cached GPU resources (`sharedGpu`);
  *  procedural fallbacks own their geometry — `disposeObject3D` skips shared. */
+/** Restores every player-owned saved record as a detached live agent (plan fauna-020). */
+export type PersistentLivestockContext = {
+  getLoadedSettlements: () => readonly { id: string, livestock: readonly AnimalAgent[] }[]
+  detached: AnimalAgent[]
+  detachedById: Map<string, AnimalAgent>
+  detachedOriginById: Map<string, string>
+  registry: LivestockRegistry
+}
+
+export function resolveLivePersistentAnimal(
+  ctx: PersistentLivestockContext,
+  animalId: string,
+): {
+  animal: AnimalAgent
+  originSettlementId: string
+  settlementLivestock: readonly AnimalAgent[] | null
+} | null {
+  const detached = ctx.detachedById.get(animalId)
+  if (detached) {
+    const origin = ctx.detachedOriginById.get(animalId)
+    if (!origin) return null
+    return { animal: detached, originSettlementId: origin, settlementLivestock: null }
+  }
+  for (const settlement of ctx.getLoadedSettlements()) {
+    const found = settlement.livestock.find((a) => a.animalId === animalId)
+    if (found) {
+      return {
+        animal: found,
+        originSettlementId: settlement.id,
+        settlementLivestock: settlement.livestock,
+      }
+    }
+  }
+  return null
+}
+
+export function transferAnimalOwnership(
+  ctx: PersistentLivestockContext,
+  animalId: string,
+  newOwner: AnimalOwner,
+): boolean {
+  const resolved = resolveLivePersistentAnimal(ctx, animalId)
+  if (!resolved || newOwner?.kind !== 'player' || resolved.animal.isPlayerOwned()) return false
+
+  resolved.animal.transferOwnershipToPlayer()
+
+  if (resolved.settlementLivestock) {
+    const list = resolved.settlementLivestock as AnimalAgent[]
+    const idx = list.indexOf(resolved.animal)
+    if (idx >= 0) list.splice(idx, 1)
+  }
+
+  if (!ctx.detachedById.has(animalId)) {
+    ctx.detached.push(resolved.animal)
+    ctx.detachedById.set(animalId, resolved.animal)
+  }
+  ctx.detachedOriginById.set(animalId, resolved.originSettlementId)
+  ctx.registry.upsert(resolved.originSettlementId, resolved.animal)
+  return true
+}
+
+export function setOwnedAnimalControl(
+  ctx: PersistentLivestockContext,
+  animalId: string,
+  mode: OwnedAnimalControlMode,
+): boolean {
+  const resolved = resolveLivePersistentAnimal(ctx, animalId)
+  if (!resolved || !resolved.animal.isPlayerOwned() || resolved.animal.isDead()) return false
+  resolved.animal.setOwnedControlMode(mode)
+  ctx.registry.upsert(resolved.originSettlementId, resolved.animal)
+  return true
+}
+
+export async function restoreDetachedPlayerOwnedLivestock(
+  deps: SpawnAnimalFromRecordDeps,
+  registry: LivestockRegistry,
+  detached: AnimalAgent[],
+  detachedById: Map<string, AnimalAgent>,
+  detachedOriginById: Map<string, string>,
+): Promise<void> {
+  for (const record of registry.serialize().entries) {
+    if (!isPlayerOwnedLivestockRecord(record)) continue
+    if (detachedById.has(record.animalId)) continue
+    const agent = await spawnAnimalFromRecord(deps, record)
+    detached.push(agent)
+    detachedById.set(record.animalId, agent)
+    detachedOriginById.set(record.animalId, record.settlementId)
+  }
+}
+
 export function disposeLivestock(agents: readonly AnimalAgent[]): void {
   for (const agent of agents) {
     agent.dispose()
@@ -642,9 +807,13 @@ export function tickSettlementLivestock(
     nearbyRats?: readonly AnimalAgent[]
     /** Player-as-observer presentation inputs (npc-023). */
     playerObservation?: import('../simulation/observation').PlayerObservationInput
+    /** Narrow player position for player-owned Follow control (plan fauna-020). */
+    playerControlPos?: { x: number, z: number }
+    /** Origin namespace for detached individuals (plan fauna-020). */
+    resolvePersistenceSettlementId?: (animal: AnimalAgent) => string
   },
 ): void {
-  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation } = ctx
+  const { dt, settlementId, observerPos, dayFactor, timeOfDay, nowDays, litFires, villages, getNowDays, dropLivestockProduct, onAnimalVocalize, persistence, grassForage, nearbyPredators, nearbySettlementNpcs, nearbyRats, playerObservation, playerControlPos, resolvePersistenceSettlementId } = ctx
   // `forestFactor` is hardcoded to 0 — every owned-livestock `AnimalDef` has
   // `playerNoticeRange`/`playerPanicRange` 0, so the forestFactor-modified
   // branch of `isPlayerNoticed()` is structurally unreachable for these
@@ -666,6 +835,7 @@ export function tickSettlementLivestock(
       nearbySettlementNpcs,
       nearbyRats,
       playerObservation,
+      playerControlPos,
     })
     // Plan fauna-002 §2 — a `chicken`'s egg becomes a normal world item the
     // instant its cycle completes, at wherever it's currently standing; the
@@ -684,7 +854,7 @@ export function tickSettlementLivestock(
     const kept: AnimalAgent[] = []
     for (const animal of livestock) {
       if (animal.readyToRemove()) {
-        persistence?.markRemoved(settlementId, animal.animalId)
+        persistence?.markRemoved(resolvePersistenceSettlementId?.(animal) ?? settlementId, animal.animalId)
         animal.dispose()
         animal.mesh.removeFromParent()
         disposeObject3D(animal.mesh)

@@ -950,6 +950,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         hasMilkContainer,
         (animal) => (animal.def.diet?.items ? selectDietFeedKind(inventory, animal.def.diet.items) : null),
         bundle.riverWaterQuality.resolve,
+        bundle.settlementsManager.getDetachedLivestock(),
         getSeed(),
       )
 
@@ -1746,6 +1747,35 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 player.beginRangedDraw()
               }
             }
+          } else if (target.animal.isPlayerOwned()) {
+            const label = ANIMAL_LABELS[target.animal.def.kind]
+            const actions = []
+            if (target.animal.getOwnedControlMode() !== 'follow') {
+              actions.push({
+                label: 'Podążaj',
+                enabled: true,
+                reasonLabel: '',
+                run: () => { bundle.settlementsManager.setOwnedAnimalControl(target.animal.animalId, 'follow') },
+              })
+            }
+            if (target.animal.getOwnedControlMode() !== 'stay') {
+              actions.push({
+                label: 'Zostań',
+                enabled: true,
+                reasonLabel: '',
+                run: () => { bundle.settlementsManager.setOwnedAnimalControl(target.animal.animalId, 'stay') },
+              })
+            }
+            if (target.animal.isMountable()) {
+              actions.push({
+                label: `Dosiądź: ${label}`,
+                enabled: true,
+                reasonLabel: '',
+                run: () => { mount.tryMount(target.animal) },
+              })
+            }
+            vueUi.openFlavorDialog(`Steruj: ${label}`, 'Wybierz zachowanie zwierzęcia.', actions)
+            playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
           } else if (target.animal.isMountable()) {
             mount.tryMount(target.animal)
           } else if (target.animal.canBeMilked(dayNight.elapsedDays) && hasMilkContainer) {

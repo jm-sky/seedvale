@@ -80,7 +80,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                  | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                  | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
-| 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | ~~fauna-003~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | 💡 `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md` | -       | 🟡 | M      | -      |
 | 💡 `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
@@ -133,6 +132,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `ui-input-012-placement-preview-shapes-rotation-and-coverage.md` | Studnia wchodzi w preview; palisada/namiot/skrzynia/posłanie/podest pokazują box i kierunek; F/G (i przyciski) obracają o 45° bez ruszania celu aim; kamera po starcie preview nie kręci obiektem; G nie wyrzuca itemu podczas rotowalnego preview; snapping palisady pod 45°/90° |
 | `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | Skills: Medycyna i Naprawa widoczne; wybór Pułapki wchodzi w targeting; [E] na istniejącej pułapce otwiera Sprawdź z żywym stanem/wytrzymałością/przynętą; Esc anuluje targeting bez mutacji świata; bez wybranego skilla arm/disarm/collect działają jak wcześniej |
 | `items-player-019-player-camp-repair-and-sewing-kit.md` | Zakup zestawu do szycia; naprawa namiotu/posłania/podestu; brak narzędzia/materiału; przerwa + wznowienie; save/load w trakcie naprawy; aktywna naprawa namiotu blokuje składanie; id/condition namiotu przeżywa pack → save/load → redeploy |
+| `fauna-020-player-owned-animals-and-follow-stay-behaviour.md` | Transfer konia zachowuje ten sam `animalId`; unload osady nie usuwa owned horse; Follow z hysteresis; Stay nie blokuje potrzeb/threat; dismount przywraca control state; save/load ownership/control/position; brak duplikatu po reload osady; death + tombstone blokuje respawn slotu |
 
 ---
 

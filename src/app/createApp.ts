@@ -1032,13 +1032,10 @@ export async function createApp(
   // not (see `LIVESTOCK_KINDS`), but only `mount`-configured kinds (horse/
   // donkey, both livestock-only today) can ever be the target in the first
   // place.
-  const resolveMountAnimal = (animalId: string): AnimalAgent | null => {
-    for (const settlement of bundle.settlementsManager.getLoaded()) {
-      const found = settlement.livestock.find((a) => a.animalId === animalId)
-      if (found) return found
-    }
-    return bundle.fauna.getAgents().find((a) => a.animalId === animalId) ?? null
-  }
+  const resolveMountAnimal = (animalId: string): AnimalAgent | null =>
+    bundle.settlementsManager.resolvePersistentAnimal(animalId)
+    ?? bundle.fauna.getAgents().find((a) => a.animalId === animalId)
+    ?? null
   const mount = createMountActions(actionCtx, resolveMountAnimal)
   if (initialSave?.player.mountedAnimalId) {
     mount.restoreMountedAnimalId(initialSave.player.mountedAnimalId)

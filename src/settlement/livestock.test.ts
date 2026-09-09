@@ -1,9 +1,24 @@
 import { Object3D, Vector3 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { AnimalAgent, AnimalSaveState } from '../fauna/AnimalAgent'
-import { createLivestockRegistry, tickSettlementLivestock } from './livestock'
+import { ownerFromHouseId } from '../fauna/animalOwnership'
+import {
+  createLivestockRegistry,
+  isPlayerOwnedLivestockRecord,
+  livestockRecordMatchesHouseholdSlot,
+  type LivestockSaveRecord,
+  resolveLivePersistentAnimal,
+  setOwnedAnimalControl,
+  tickSettlementLivestock,
+  transferAnimalOwnership,
+} from './livestock'
 
-function fakeAnimal(animalId: string, kind: 'chicken' | 'horse', ownerHouseId?: string): AnimalAgent {
+function fakeAnimal(
+  animalId: string,
+  kind: 'chicken' | 'horse',
+  ownerHouseId?: string,
+  owner = ownerFromHouseId(ownerHouseId),
+): AnimalAgent {
   const state: AnimalSaveState = {
     x: 1, z: 2, yaw: 0.3,
     health: { current: 5, max: 10, dead: false },
@@ -11,10 +26,18 @@ function fakeAnimal(animalId: string, kind: 'chicken' | 'horse', ownerHouseId?: 
     productionReadyAtDays: 2,
     eggPending: false,
     corpse: null,
+    owner,
   }
   return {
     animalId,
     ownerHouseId,
+    getOwner: () => owner,
+    isPlayerOwned: () => owner?.kind === 'player',
+    isDead: () => false,
+    setOwnedControlMode: vi.fn(),
+    transferOwnershipToPlayer: vi.fn(function (this: AnimalAgent) {
+      (this as { getOwner: () => unknown }).getOwner = () => ({ kind: 'player' })
+    }),
     def: { kind },
     snapshot: () => state,
   } as unknown as AnimalAgent
@@ -69,6 +92,15 @@ describe('createLivestockRegistry', () => {
     expect(registry.getRemoved('village-a')?.has('merchant-horse-village-a')).toBeFalsy()
   })
 
+  it('serializes player-owned records with owner field and origin namespace', () => {
+    const registry = createLivestockRegistry()
+    registry.upsert('home', fakeAnimal('horse-house0-0', 'horse', 'home:home:0', { kind: 'player' }))
+    const entry = registry.serialize().entries[0]!
+    expect(entry.owner).toEqual({ kind: 'player' })
+    expect(entry.settlementId).toBe('home')
+    expect(isPlayerOwnedLivestockRecord(entry)).toBe(true)
+  })
+
   it('rehydrates from an initial {entries, removedIds} snapshot (composite-key parsing)', () => {
     const seeded = createLivestockRegistry()
     seeded.capture('home', [fakeAnimal('chicken-house0-0', 'chicken')])
@@ -78,6 +110,74 @@ describe('createLivestockRegistry', () => {
     const restored = createLivestockRegistry({ entries, removedIds })
     expect(restored.getSaved('home')?.get('chicken-house0-0')?.animalId).toBe('chicken-house0-0')
     expect(restored.getRemoved('home')?.has('chicken-house1-0')).toBe(true)
+  })
+})
+
+describe('livestock reconciliation helpers', () => {
+  const householdRecord: LivestockSaveRecord = {
+    settlementId: 'home',
+    animalId: 'horse-house0-0',
+    kind: 'horse',
+    owner: { kind: 'household', houseId: 'home:home:0' },
+    ownerHouseId: 'home:home:0',
+    x: 0, z: 0, yaw: 0,
+    health: { current: 10, max: 10, dead: false },
+    life: { hunger: 0, thirst: 0, stamina: 1 },
+    productionReadyAtDays: null,
+    eggPending: false,
+    corpse: null,
+  }
+
+  it('accepts household records only for matching deterministic slots', () => {
+    expect(livestockRecordMatchesHouseholdSlot(householdRecord, 'horse', 'home:home:0')).toBe(true)
+    expect(livestockRecordMatchesHouseholdSlot(householdRecord, 'horse', 'home:home:1')).toBe(false)
+  })
+
+  it('rejects player-owned records for household slot hydration', () => {
+    const playerRecord = { ...householdRecord, owner: { kind: 'player' as const }, ownerHouseId: undefined }
+    expect(livestockRecordMatchesHouseholdSlot(playerRecord, 'horse', 'home:home:0')).toBe(false)
+    expect(isPlayerOwnedLivestockRecord(playerRecord)).toBe(true)
+  })
+})
+
+describe('persistent livestock operations', () => {
+  it('transfer keeps the same object identity and moves it to detached collection', () => {
+    const registry = createLivestockRegistry()
+    const animal = fakeAnimal('horse-house0-0', 'horse', 'home:home:0')
+    const settlementLivestock = [animal]
+    const detached: AnimalAgent[] = []
+    const detachedById = new Map<string, AnimalAgent>()
+    const detachedOriginById = new Map<string, string>()
+    const ctx = {
+      getLoadedSettlements: () => [{ id: 'home', livestock: settlementLivestock }],
+      detached,
+      detachedById,
+      detachedOriginById,
+      registry,
+    }
+
+    expect(transferAnimalOwnership(ctx, 'horse-house0-0', { kind: 'player' })).toBe(true)
+    expect(settlementLivestock).toHaveLength(0)
+    expect(detached).toEqual([animal])
+    expect(detachedById.get('horse-house0-0')).toBe(animal)
+    expect(detachedOriginById.get('horse-house0-0')).toBe('home')
+    expect(resolveLivePersistentAnimal(ctx, 'horse-house0-0')?.animal).toBe(animal)
+    expect(animal.transferOwnershipToPlayer).toHaveBeenCalled()
+  })
+
+  it('setOwnedAnimalControl updates only player-owned live animals', () => {
+    const registry = createLivestockRegistry()
+    const animal = fakeAnimal('horse-house0-0', 'horse', undefined, { kind: 'player' })
+    const detached = [animal]
+    const ctx = {
+      getLoadedSettlements: () => [],
+      detached,
+      detachedById: new Map([['horse-house0-0', animal]]),
+      detachedOriginById: new Map([['horse-house0-0', 'home']]),
+      registry,
+    }
+    expect(setOwnedAnimalControl(ctx, 'horse-house0-0', 'stay')).toBe(true)
+    expect(animal.setOwnedControlMode).toHaveBeenCalledWith('stay')
   })
 })
 

@@ -894,6 +894,7 @@ export async function createSettlement(
         nearbySettlementNpcs,
         nearbyRats: rats.getAgents(),
         playerObservation,
+        playerControlPos: { x: observerPos.x, z: observerPos.z },
       })
       placeWoodshedIfComplete()
       // Physical storage visuals (plan settlements-npcs-010) — cheap derived
