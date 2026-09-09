@@ -1,6 +1,8 @@
 /** Weather ambience — a single shared, non-positional rain loop; gain tracks
  *  rain intensity. Mirrors `fireSounds.ts::createFireAudio`'s "one shared
- *  loop, lazily created on first non-zero gain" pattern. */
+ *  loop, lazily created on first non-zero gain" pattern. Cave interior uses
+ *  the same `Caves.queryInterior` flag as `createAmbientAudio` — rain is
+ *  not a second cave detector. */
 
 import type { WeatherState } from '../world/weather'
 import type { AudioLoopHandle, WorldAudio } from './createWorldAudio'
@@ -10,7 +12,7 @@ export const AMBIENT_RAIN_LOOP_URL = '/sounds/ambient-rain-loop-01.ogg'
 const RAIN_LOOP_MAX_VOLUME = 0.45
 
 export type WeatherAudio = {
-  update: (weather: WeatherState) => void
+  update: (weather: WeatherState, inCaveInterior?: boolean) => void
   dispose: () => void
 }
 
@@ -19,8 +21,8 @@ export type WeatherAudio = {
 export function createWeatherAudio(worldAudio: WorldAudio): WeatherAudio {
   let rainLoop: AudioLoopHandle | null = null
 
-  function update(weather: WeatherState): void {
-    const gain = weather.type === 'rain' ? weather.intensity : 0
+  function update(weather: WeatherState, inCaveInterior = false): void {
+    const gain = !inCaveInterior && weather.type === 'rain' ? weather.intensity : 0
     if (!rainLoop && gain > 0.02) {
       rainLoop = worldAudio.createLoop(AMBIENT_RAIN_LOOP_URL)
     }

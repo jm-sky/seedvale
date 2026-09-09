@@ -41,6 +41,21 @@ export function mouthAlong(
   return (x - entrance.x) * out.dx + (z - entrance.z) * out.dz
 }
 
+/**
+ * Signed distance in the mouth plane, perpendicular to `openingDirection`.
+ * Magnitude is the lateral offset from the entrance centreline.
+ *
+ * @domain world-terrain
+ */
+export function mouthLateral(
+  x: number,
+  z: number,
+  entrance: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
+): number {
+  const out = openingDirection(entrance.yaw)
+  return (x - entrance.x) * -out.dz + (z - entrance.z) * out.dx
+}
+
 /** Same Hermite smoothstep `THREE.MathUtils.smoothstep` uses, so the
  *  gameplay portal depth matches the heightmap dig without importing Three. */
 export function smoothstep(edge0: number, edge1: number, x: number): number {

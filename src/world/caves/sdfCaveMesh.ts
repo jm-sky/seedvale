@@ -216,8 +216,8 @@ export function buildSdfCaveMesh(
     ? clipTrianglesBelowSurface(extracted.positions, extracted.indices, surfaceHeightAt)
     : extracted
   // Surface clip alone leaves the closed entrance ellipsoid's front cap
-  // sitting in the mouth pit (the "black sphere"). Drop that cap at the
-  // mouth plane so the portal is an opening, not a bulb.
+  // sitting in the mouth pit (the "black sphere"). Drop the doorway
+  // aperture so the portal is an opening, not a bulb — keep the hood/sides.
   const { positions, indices } = surfaceHeightAt
     ? clipTrianglesInFrontOfMouth(surfaceClipped.positions, surfaceClipped.indices, topology.entrance)
     : surfaceClipped

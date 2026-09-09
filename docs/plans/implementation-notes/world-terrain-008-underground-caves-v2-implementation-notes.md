@@ -1449,4 +1449,110 @@ this slice.
   Sweep, `spikeTestCave.ts`.
 - Sculpted hillside doorway (pre-existing loose end).
 
+---
+
+# Milestone B3 — Entrance regression, second pass (2026-09-09)
+
+Manual playtest of `ccf64241` on seed `1136726869` still failed. Diagnosis
+was path-sampled against production topology (no browser): Grota Czarnego
+Kamienia `cave:0e3cce97` entrance `(135.843, 7.461, -17.814)` yaw `1.571`
+opening `+X`; Grota Mroczna `cave:7fd14c30`.
+
+## Diagnostic measurements (Czarny Kamień, 0.4 m along opening)
+
+First contradiction at **along = +2.4 m** (still outward of the mouth plane):
+
+| | |
+|---|---|
+| player Y | 8.94 (rim / analytic surface 9.05) |
+| carved floor | 7.71 (depth 1.33) |
+| column | `[7.71 .. 8.95]` portal, open to sky |
+| `queryGround` | cave floor 7.71 |
+| occupancy | 7.71 |
+| `queryInterior` | false (outward) |
+| `maxY` | `8.95 − PLAYER_HEIGHT = 7.15` **below the floor** |
+
+`integrateVerticalMotion` then clamped 8.94 → 7.15 (Y JUMP −1.79). That is
+the grass-sink: an open-sky portal ceiling was treated as rock overburden.
+
+Second contradiction at **along = −0.4 m** (just inside):
+
+| | |
+|---|---|
+| column | stacked `[6.20 .. 7.35]` + `[7.55 .. 9.87]` (`PORTAL_SDF_SPLIT`) |
+| player Y | 7.15 |
+| picked | lower interval, clearance 1.15 m < 1.8 m |
+| `maxY` | 5.55 → Y JUMP −1.60 through the floor |
+| occupancy / interior | false while `queryGround` still cave (`FLOOR_GRACE`) |
+
+Later samples at along −13.2 / chamber-adjacent: `queryGround` cave,
+occupancy null by ~1 cm below the column floor (interior hysteresis then
+disagreed). Opposite-hill walk: after burial, `CAVE_UNDERGROUND_MISS`
+hysteresis carried cave floor into empty columns (SDF bounds extend to
+x=139.64, ~4 m outward of the entrance). Approach disc itself does **not**
+reach along=+6..8; leakage was hysteretic, not a second radial catchment.
+
+Grota Mroczna: iso-snap placed beads at along=+0.22 (outward of the mouth
+plane) and along=−0.18 at 0.43 m from the centreline (r=0.5), sealing the
+walking strip. Column skip on outward *sources* did not catch a snap that
+crosses the plane.
+
+Geometry: clipped mesh along `[-26.01 .. 0.15]` vs unclipped maxAlong
+`+1.67`. Carve discs mouth r=1.65 + approach r=3.2 offset 2.2 → crater
+out to **5.4 m**. Half-space mouth clip removed the SDF hood that would
+have framed the hole; from interior that reads as a huge terrain cut and
+the underside of the heightfield. Carve and portal share the same discs;
+the mismatch is carve/portal vs SDF doorway, plus full-plane clip.
+
+Rain loop (`weatherSounds.ts`) was **not** gated on `queryInterior`, so
+surface rain continued even when interior state was true.
+
+## Root causes
+
+ROOT CAUSE 1
+Evidence: along=+2.4 portal interval ceiling = `surface − 0.05`;
+`PlayerController` set `maxY = ceiling − 1.8` below the carved floor.
+Affected contracts: `queryGround` ceiling, vertical motion, then
+underground-miss hysteresis (opposite hill).
+
+ROOT CAUSE 2
+Evidence: `combinePortalAndSdf` stacked a sub-player-height SDF pocket
+under the portal at along=−0.4; occupancy/interior diverged from
+`queryGround`; descent Y jumps.
+Affected contracts: column intervals, occupancy, `queryInterior`,
+descending floor continuity.
+
+ROOT CAUSE 3
+Evidence: iso-snap of inward-column beads onto the closed ellipsoid landed
+in the mouth corridor (Mroczna along=+0.22 / −0.18, dist 0.43 m, r=0.5).
+Affected contracts: occupancy-derived colliders, portal passability.
+
+ROOT CAUSE 4
+Evidence: `clipTrianglesInFrontOfMouth` dropped the entire outward
+half-space; carve crater 5.4 m vs SDF doorway ~3 m / along 0.15 m.
+Affected contracts: terrain carve ↔ mouth opening ↔ SDF presentation.
+Aperture clip is a local structural fix. The dual-disc *bowl* vs a
+hillside doorway remains a leftover — not a third ownership workaround.
+
+## Fix (local, same architecture)
+
+- Portal is used only where SDF is empty. No `PORTAL_SDF_SPLIT`.
+- Intervals whose ceiling is the heightfield clip are `openSky`; the player
+  adapter passes `ceilingY: null`. `rockCeilingMaxY` ignores a roof that
+  would clamp below the floor.
+- Occupancy epsilon 5 cm (feet on sampled floor).
+- Beads rejected after iso-snap if outward of the mouth plane **or** inside
+  the 1.5 m × 1.0 m walking corridor.
+- Mouth clip is the doorway aperture (`|lateral| ≤ width/2`), not the
+  half-space — hood/sides stay.
+- Rain gain uses the same `queryInterior` flag as cave ambience.
+
+## Leftovers
+
+- Dual-disc terrain bowl (approach r=3.2 + mouth r=1.65) is still larger
+  than the SDF doorway. Aperture clip frames the hole; it does not turn
+  the recess into a vertical hillside door. That remains the sculpted
+  doorway loose end — do not shrink carve radii as a third workaround.
+- B4 / B5 unchanged.
+
 

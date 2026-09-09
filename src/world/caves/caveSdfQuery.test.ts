@@ -156,6 +156,7 @@ describe('buildCaveSdfColumnIndex', () => {
     expect(mouthCarveDepth(0, approachZ, entrance)).toBeGreaterThan(0.2)
     const inApproach = queryColumnIndex(index, 0, mouthY, approachZ)
     expect(inApproach).not.toBeNull()
+    expect(inApproach!.openSky).toBe(true)
     // Outside the recess: no portal, still rock.
     expect(queryColumnIndex(index, 0, mouthY, 12)).toBeNull()
   })
@@ -303,6 +304,9 @@ describe('mouth-plane entrance ownership', () => {
     const hit = queryColumnIndex(index, 0, 1.3, interiorZ)
     expect(hit).not.toBeNull()
     expect(isCaveInteriorAt(index, entrance, 0, 1.3, interiorZ)).toBe(true)
+    const intervals = hit!.intervals
+    expect(intervals.length).toBe(1)
+    expect(intervals[0]!.ceilingY - intervals[0]!.floorY).toBeGreaterThan(1.8)
   })
 })
 

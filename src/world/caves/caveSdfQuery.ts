@@ -27,11 +27,18 @@ import {
   mouthCarveDepth,
 } from './mouthCarve'
 
-export type CaveVerticalInterval = { floorY: number, ceilingY: number }
+export type CaveVerticalInterval = {
+  floorY: number
+  ceilingY: number
+  /** True when `ceilingY` is the heightfield clip, not rock overburden.
+   *  PlayerController must not use it as `maxY` — the pit is open to the sky. */
+  openSky?: boolean
+}
 
 export type CaveGroundHit = {
   floorY: number
   ceilingY: number
+  openSky?: boolean
   /** All walkable intervals at this X/Z, lowest-first. L1 usually has one. */
   intervals: readonly CaveVerticalInterval[]
 }
@@ -59,9 +66,10 @@ export const CAVE_FLOOR_GRACE = 2
 
 /** Closed-interval slack for strict occupancy (collision / camera). Far
  *  smaller than `CAVE_FLOOR_GRACE` — that grace is ground continuity, not
- *  a solid test. Do not add this to the clipped ceiling: `SURFACE_CLIP_EPS`
+ *  a solid test. A few centimetres covers column-floor sampling vs feet-on
+ *  floor; do not add this to the clipped ceiling: `SURFACE_CLIP_EPS`
  *  already keeps a surface entity out. */
-export const CAVE_OCCUPANCY_EPS = 1e-4
+export const CAVE_OCCUPANCY_EPS = 0.05
 
 /** Reject a void thinner than this — iso-boundary noise, not a route. */
 const MIN_INTERVAL_HEIGHT = 0.45
@@ -72,13 +80,6 @@ const SURFACE_CLIP_EPS = 0.05
 
 /** Minimum carve depth that still counts as mouth-portal space. */
 const MIN_PORTAL_DEPTH = 0.05
-/** Portal and SDF intervals only merge when their floors are this close —
- *  otherwise a deep interior bowl would steal a surface player in the
- *  carved recess. Slightly above `STEP_DOWN_MAX` (0.45). */
-const WALKABLE_FLOOR_MERGE = 0.6
-/** Keep a stacked interior interval this far below the portal floor so
- *  `unionIntervals` cannot glue them back into one tall column. */
-const PORTAL_SDF_SPLIT = 0.2
 
 /** `sampleHeight - playerY` above this is an underground miss, not a
  *  legitimate cave→surface exit (mouth exit has the two heights meeting). */
@@ -91,25 +92,6 @@ export type SurfaceHeightSampler = (x: number, z: number) => number
 
 function snapDown(value: number, step: number): number {
   return Math.floor(value / step) * step
-}
-
-function unionIntervals(intervals: readonly CaveVerticalInterval[]): CaveVerticalInterval[] {
-  if (intervals.length === 0) return []
-  const sorted = intervals
-    .map((interval) => ({ floorY: interval.floorY, ceilingY: interval.ceilingY }))
-    .sort((a, b) => a.floorY - b.floorY)
-  const out: CaveVerticalInterval[] = [sorted[0]!]
-  for (let i = 1; i < sorted.length; i++) {
-    const cur = sorted[i]!
-    const last = out[out.length - 1]!
-    if (cur.floorY <= last.ceilingY + SURFACE_CLIP_EPS) {
-      last.floorY = Math.min(last.floorY, cur.floorY)
-      last.ceilingY = Math.max(last.ceilingY, cur.ceilingY)
-    } else {
-      out.push(cur)
-    }
-  }
-  return out
 }
 
 function refineZeroCrossing(
@@ -153,7 +135,9 @@ function scanSdfIntervals(
       inside = false
       const floorY = runStart
       const ceilingY = refineZeroCrossing(sampleY, prevY, yClamped, false)
-      if (ceilingY - floorY >= MIN_INTERVAL_HEIGHT) out.push({ floorY, ceilingY })
+      if (ceilingY - floorY >= MIN_INTERVAL_HEIGHT) {
+        out.push(taggedInterval(floorY, ceilingY, surfaceY))
+      }
     }
     prevY = yClamped
     if (yClamped >= top) break
@@ -161,9 +145,16 @@ function scanSdfIntervals(
   if (inside) {
     const floorY = runStart
     const ceilingY = top
-    if (ceilingY - floorY >= MIN_INTERVAL_HEIGHT) out.push({ floorY, ceilingY })
+    if (ceilingY - floorY >= MIN_INTERVAL_HEIGHT) {
+      out.push(taggedInterval(floorY, ceilingY, surfaceY))
+    }
   }
   return out
+}
+
+function taggedInterval(floorY: number, ceilingY: number, surfaceY: number): CaveVerticalInterval {
+  const openSky = ceilingY >= surfaceY - SURFACE_CLIP_EPS - 1e-6
+  return openSky ? { floorY, ceilingY, openSky: true } : { floorY, ceilingY }
 }
 
 function portalInterval(x: number, z: number, entrance: CaveEntrance, surfaceY: number): CaveVerticalInterval | null {
@@ -172,7 +163,7 @@ function portalInterval(x: number, z: number, entrance: CaveEntrance, surfaceY: 
   const floorY = surfaceY - depth
   const ceilingY = surfaceY - SURFACE_CLIP_EPS
   if (ceilingY - floorY < MIN_INTERVAL_HEIGHT) return null
-  return { floorY, ceilingY }
+  return { floorY, ceilingY, openSky: true }
 }
 
 function expandBoundsForMouth(
@@ -198,21 +189,19 @@ function combinePortalAndSdf(
   sdf: readonly CaveVerticalInterval[],
   portal: CaveVerticalInterval | null,
 ): CaveVerticalInterval[] {
-  if (!portal) return sdf.map((interval) => ({ floorY: interval.floorY, ceilingY: interval.ceilingY }))
-  if (sdf.length === 0) return [portal]
-  const compatible: CaveVerticalInterval[] = []
-  const separate: CaveVerticalInterval[] = []
-  for (const interval of sdf) {
-    if (Math.abs(interval.floorY - portal.floorY) <= WALKABLE_FLOOR_MERGE) {
-      compatible.push(interval)
-      continue
-    }
-    const clippedCeiling = Math.min(interval.ceilingY, portal.floorY - PORTAL_SDF_SPLIT)
-    if (clippedCeiling - interval.floorY >= MIN_INTERVAL_HEIGHT) {
-      separate.push({ floorY: interval.floorY, ceilingY: clippedCeiling })
-    }
+  // SDF void is the interior. The portal is only the open-sky carved recess
+  // where the closed ellipsoid is *not* indexed (outward of the mouth plane).
+  // Unioning them stacked a fake mid-ceiling shorter than the player and
+  // clamped them through the floor (seed 1136726869, along ≈ −0.4).
+  if (sdf.length > 0) {
+    return sdf.map((interval) => ({
+      floorY: interval.floorY,
+      ceilingY: interval.ceilingY,
+      ...(interval.openSky ? { openSky: true } : {}),
+    }))
   }
-  return [...separate, ...unionIntervals([...compatible, portal])].sort((a, b) => a.floorY - b.floorY)
+  if (!portal) return []
+  return [{ floorY: portal.floorY, ceilingY: portal.ceilingY, openSky: true }]
 }
 
 function intervalsForColumn(
@@ -342,7 +331,12 @@ export function queryColumnIndex(
   const intervals = columnIntervalsAt(index, x, z)
   const picked = pickInterval(intervals, y)
   if (!picked) return null
-  return { floorY: picked.floorY, ceilingY: picked.ceilingY, intervals }
+  return {
+    floorY: picked.floorY,
+    ceilingY: picked.ceilingY,
+    openSky: Boolean(picked.openSky),
+    intervals,
+  }
 }
 
 /**

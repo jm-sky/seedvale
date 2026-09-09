@@ -67,6 +67,16 @@ const JUMP_TILT_FACTOR = 0.05
 const LOOK_AT_OFFSET_FAR = 0.9
 const LOOK_AT_OFFSET_NEAR = 1.6
 export const PLAYER_HEIGHT = 1.8
+
+/** A reported cave ceiling is rock overburden, not the open sky above a
+ *  mouth/approach pit. If clamping to `ceiling - PLAYER_HEIGHT` would put
+ *  the player *below* the walkable floor, ignore it. */
+export function rockCeilingMaxY(ceilingY: number | null | undefined, floorY: number): number | undefined {
+  if (ceilingY == null) return undefined
+  const maxY = ceilingY - PLAYER_HEIGHT
+  if (maxY < floorY - 1e-6) return undefined
+  return maxY
+}
 const PLAYER_LABEL = 'Ja'
 const PLAYER_MAX_HP = 100
 /** Player starting SPEA (plan npc-019 §6) — slightly above the shared `0.5`
@@ -180,7 +190,7 @@ export type ColliderSource = (x: number, z: number) => readonly Collider[]
  *  X/Z. Returns `null` outside any cave, in which case the caller falls
  *  back to `HeightSampler`. Kept as its own alias instead of importing
  *  `Caves` here, same reasoning as `HeightSampler`/`ColliderSource`. */
-export type CaveGroundQuery = (x: number, y: number, z: number) => { floorY: number, ceilingY: number } | null
+export type CaveGroundQuery = (x: number, y: number, z: number) => { floorY: number, ceilingY: number | null } | null
 /** Strict cave occupancy at the sample point (plan world-terrain-008 B3).
  *  `null` is solid / outside void. Keyed by the sample's own Y — not the
  *  player's. Sibling of `CaveGroundQuery`; do not reuse ground hysteresis
@@ -1065,7 +1075,7 @@ export class PlayerController {
       groundY,
       dt,
       jumpRequested: this.jumpRequested,
-      maxY: ground.ceiling != null ? ground.ceiling - PLAYER_HEIGHT : undefined,
+      maxY: rockCeilingMaxY(ground.ceiling, groundY),
     })
     this.jumpRequested = false
     this.mesh.position.y = next.y

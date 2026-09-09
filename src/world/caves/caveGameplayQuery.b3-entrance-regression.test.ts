@@ -14,7 +14,7 @@ import {
   CAMERA_GROUND_CLEARANCE,
   resolveCameraBoom,
 } from '../../player/cameraBoom'
-import { PLAYER_COLLISION_RADIUS } from '../../player/PlayerController'
+import { PLAYER_COLLISION_RADIUS, PLAYER_HEIGHT, rockCeilingMaxY } from '../../player/PlayerController'
 import { STEP_DOWN_MAX } from '../../player/verticalMotion'
 import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightmap'
 import { colliderActiveAtY, resolvePosition } from '../collision'
@@ -26,12 +26,16 @@ import {
   applyCaveInteriorHysteresis,
   buildCaveSdfColumnIndex,
   type CaveSdfColumnIndex,
+  columnIntervalsAt,
   isCaveInteriorAt,
+  occupancyContains,
   occupancyIntervalAt,
   queryColumnIndex,
 } from './caveSdfQuery'
-import { mouthAlong, mouthCarveDepth } from './mouthCarve'
+import { clipTrianglesInFrontOfMouth } from './clipBelowSurface'
+import { mouthAlong, mouthCarveDepth, mouthLateral } from './mouthCarve'
 import { buildProductionCaveTopology } from './productionTopology'
+import { buildSdfCaveMesh } from './sdfCaveMesh'
 
 const REPRO_SEED = 1136726869
 
@@ -258,5 +262,144 @@ describe('B3 entrance regression: seed 1136726869', () => {
     expect(flicker.interior).toBe(true)
     const left = applyCaveInteriorHysteresis(false, false, true)
     expect(left.interior).toBe(false)
+  })
+})
+
+describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () => {
+  let czarny: BuiltCave
+  let mroczna: BuiltCave
+
+  beforeAll(() => {
+    czarny = buildReproCave(GROTA_CZARNEGO_KAMIENIA.x, GROTA_CZARNEGO_KAMIENIA.z)
+    mroczna = buildReproCave(GROTA_MROCZNA.x, GROTA_MROCZNA.z)
+  })
+
+  function xzAt(cave: BuiltCave, along: number, lateral = 0): { x: number, z: number } {
+    const { entrance } = cave.topology
+    const out = openingDirection(entrance.yaw)
+    return {
+      x: entrance.x + out.dx * along - out.dz * lateral,
+      z: entrance.z + out.dz * along + out.dx * lateral,
+    }
+  }
+
+  it('Czarny Kamień: in front of the entrance at surface Y is not cave ground', () => {
+    const { x, z } = xzAt(czarny, 8)
+    const surfaceY = czarny.surfaceHeightAt(x, z)
+    expect(mouthCarveDepth(x, z, czarny.topology.entrance)).toBe(0)
+    expect(queryColumnIndex(czarny.index, x, surfaceY, z)).toBeNull()
+    expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, x, surfaceY, z)).toBe(false)
+  })
+
+  it('Czarny Kamień: beside the mouth disc at surface Y is not cave ground', () => {
+    for (const lateral of [-2.5, 2.5]) {
+      const { x, z } = xzAt(czarny, 0, lateral)
+      const surfaceY = czarny.surfaceHeightAt(x, z)
+      expect(Math.abs(mouthLateral(x, z, czarny.topology.entrance))).toBeGreaterThan(2)
+      expect(queryColumnIndex(czarny.index, x, surfaceY, z)).toBeNull()
+      expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, x, surfaceY, z)).toBe(false)
+    }
+  })
+
+  it('Czarny Kamień: opposite-hill samples have no cave ownership', () => {
+    for (const along of [6, 8]) {
+      for (const lateral of [-4, -2, 0, 2, 4]) {
+        const { x, z } = xzAt(czarny, along, lateral)
+        const surfaceY = czarny.surfaceHeightAt(x, z)
+        expect(queryColumnIndex(czarny.index, x, surfaceY, z), `along=${along} lat=${lateral} surface`).toBeNull()
+        expect(queryColumnIndex(czarny.index, x, surfaceY - 2, z), `along=${along} lat=${lateral} buried`).toBeNull()
+        expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, x, surfaceY - 2, z)).toBe(false)
+      }
+    }
+  })
+
+  it('Czarny Kamień: approach portal is open sky and does not clamp below its floor', () => {
+    const { x, z, carvedY } = approachPoint(czarny, 2.4)
+    const hit = queryColumnIndex(czarny.index, x, carvedY, z)
+    expect(hit).not.toBeNull()
+    expect(hit!.openSky).toBe(true)
+    expect(rockCeilingMaxY(hit!.openSky ? null : hit!.ceilingY, hit!.floorY)).toBeUndefined()
+    expect(hit!.ceilingY - PLAYER_HEIGHT).toBeLessThan(hit!.floorY)
+  })
+
+  it('Czarny Kamień: mouth and descending columns are a single walkable interval', () => {
+    let prevFloor: number | null = null
+    for (let along = 0; along >= -20; along -= 0.4) {
+      const { x, z } = xzAt(czarny, along)
+      const intervals = columnIntervalsAt(czarny.index, x, z)
+      expect(intervals.length, `along=${along} stacked`).toBeLessThanOrEqual(1)
+      expect(intervals.length, `along=${along} empty`).toBeGreaterThan(0)
+      const floor = intervals[0]!.floorY
+      if (prevFloor !== null) {
+        expect(Math.abs(floor - prevFloor), `along=${along} floor jump`).toBeLessThan(1.1)
+      }
+      prevFloor = floor
+      const standingY = floor + 1.1
+      const hit = queryColumnIndex(czarny.index, x, standingY, z)
+      expect(hit).not.toBeNull()
+      expect(occupancyContains(czarny.index, x, standingY, z)).toBe(true)
+      if (along < -0.5) {
+        expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, x, standingY, z)).toBe(true)
+      }
+    }
+  })
+
+  it('Czarny Kamień: stable interior is cave ground + interior occupancy', () => {
+    const standing = interiorStanding(czarny)
+    const hit = queryColumnIndex(czarny.index, standing.x, standing.y, standing.z)
+    expect(hit).not.toBeNull()
+    expect(hit!.floorY).toBeLessThan(czarny.surfaceHeightAt(standing.x, standing.z) - 4)
+    expect(occupancyContains(czarny.index, standing.x, standing.y, standing.z)).toBe(true)
+    expect(isCaveInteriorAt(czarny.index, czarny.topology.entrance, standing.x, standing.y, standing.z)).toBe(true)
+  })
+
+  it('Czarny Kamień and Grota Mroczna: portal walking strip is passable', () => {
+    for (const cave of [czarny, mroczna]) {
+      for (const along of [2.2, 0.4, 0, -0.4, -1.2]) {
+        const { x, z } = xzAt(cave, along)
+        const intervals = columnIntervalsAt(cave.index, x, z)
+        const y = (intervals[0]?.floorY ?? cave.topology.entrance.y) + 0.35
+        const active = cave.colliders.filter((c) => colliderActiveAtY(c, y))
+        const resolved = resolvePosition(x, z, PLAYER_COLLISION_RADIUS, active)
+        expect(
+          Math.hypot(resolved.x - x, resolved.z - z),
+          `${cave.topology.caveId} along=${along} y=${y.toFixed(2)}`,
+        ).toBeLessThan(0.05)
+      }
+    }
+  })
+
+  it('mouth aperture clip drops doorway triangles and keeps off-axis framing when present', () => {
+    const builtMesh = buildSdfCaveMesh(czarny.topology, undefined, czarny.surfaceHeightAt, czarny.sdf)
+    const pos = builtMesh.geometry.getAttribute('position')
+    const idx = builtMesh.geometry.getIndex()
+    expect(pos).toBeTruthy()
+    expect(idx).toBeTruthy()
+    const positions: number[] = []
+    for (let i = 0; i < pos!.count * 3; i++) positions.push(pos!.array[i]!)
+    const indices: number[] = []
+    for (let i = 0; i < idx!.count; i++) indices.push(idx!.array[i]!)
+    const { entrance } = czarny.topology
+    const half = entrance.width * 0.5
+    let apertureOutward = 0
+    for (let i = 0; i + 2 < indices.length; i += 3) {
+      const a = indices[i]!
+      const b = indices[i + 1]!
+      const c = indices[i + 2]!
+      const cx = (positions[a * 3]! + positions[b * 3]! + positions[c * 3]!) / 3
+      const cz = (positions[a * 3 + 2]! + positions[b * 3 + 2]! + positions[c * 3 + 2]!) / 3
+      if (mouthAlong(cx, cz, entrance) > 0.2 && Math.abs(mouthLateral(cx, cz, entrance)) <= half) {
+        apertureOutward += 1
+      }
+    }
+    expect(apertureOutward).toBe(0)
+    const unclipped = buildSdfCaveMesh(czarny.topology, undefined, undefined, czarny.sdf)
+    const clippedAgain = clipTrianglesInFrontOfMouth(
+      [...unclipped.geometry.getAttribute('position')!.array],
+      [...(unclipped.geometry.getIndex()?.array ?? [])],
+      entrance,
+    )
+    expect(clippedAgain.indices.length).toBeGreaterThan(0)
+    expect(clippedAgain.indices.length).toBeLessThan(unclipped.geometry.getIndex()!.count)
   })
 })

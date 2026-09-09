@@ -15,13 +15,14 @@
  *
  *  Cutting the geometry at the terrain restores the overburden invariant.
  *  The closed entrance ellipsoid's front cap still sits in the carved
- *  mouth pit after that clip; `clipTrianglesInFrontOfMouth` drops it at
- *  the mouth plane so the portal is an opening, not a black bulb.
+ *  mouth pit after that clip; `clipTrianglesInFrontOfMouth` drops the
+ *  doorway aperture so the portal is an opening, not a black bulb, while
+ *  keeping the hood/sides that frame the terrain hole.
  *
  * @domain world-terrain
  */
 
-import { MOUTH_INTERIOR_ALONG, mouthAlong } from './mouthCarve'
+import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthLateral } from './mouthCarve'
 
 /** Height sampler used to clip cave presentation geometry. Must be the
  *  deterministic analytic surface (`ChunkManager.sampleBaseHeight`), never a
@@ -74,17 +75,18 @@ export function clipTrianglesBelowSurface(
 }
 
 /**
- * Drops triangles whose centroid sits outward of the mouth plane. The SDF
- * iso-surface is a closed ellipsoid, so without this the front cap remains
- * in the carved recess as a black bulb (clipping only at the heightfield
- * leaves everything below the meadow).
+ * Drops triangles in the doorway *aperture* outward of the mouth plane.
+ * The SDF iso-surface is a closed ellipsoid, so a full half-space clip
+ * removes the front cap (good) *and* the hood/sides that should frame the
+ * terrain hole (bad — looking out shows the underside of the heightfield).
+ * Keep anything whose centroid is outward but off the opening centreline.
  *
  * @domain world-terrain
  */
 export function clipTrianglesInFrontOfMouth(
   positions: readonly number[],
   indices: readonly number[],
-  entrance: { x: number, z: number, yaw: number },
+  entrance: { x: number, z: number, yaw: number, width?: number },
 ): { positions: number[], indices: number[] } {
   const vertexCount = positions.length / 3
   const remap = new Int32Array(vertexCount).fill(-1)
@@ -100,13 +102,16 @@ export function clipTrianglesInFrontOfMouth(
     return mapped
   }
 
+  const halfWidth = (entrance.width ?? 3) * 0.5
   for (let i = 0; i + 2 < indices.length; i += 3) {
     const a = indices[i]!
     const b = indices[i + 1]!
     const c = indices[i + 2]!
     const cx = (positions[a * 3]! + positions[b * 3]! + positions[c * 3]!) / 3
     const cz = (positions[a * 3 + 2]! + positions[b * 3 + 2]! + positions[c * 3 + 2]!) / 3
-    if (mouthAlong(cx, cz, entrance) > MOUTH_INTERIOR_ALONG) continue
+    const along = mouthAlong(cx, cz, entrance)
+    const lateral = Math.abs(mouthLateral(cx, cz, entrance))
+    if (along > MOUTH_INTERIOR_ALONG && lateral <= halfWidth) continue
     outIndices.push(keep(a), keep(b), keep(c))
   }
 

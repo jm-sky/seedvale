@@ -684,7 +684,7 @@ export async function createApp(
   const caveGroundQuery: CaveGroundQuery = (x, y, z) => {
     const hit = bundle.caves.queryGround(x, y, z)
     if (!hit) return null
-    return { floorY: hit.floorY, ceilingY: hit.ceilingY }
+    return { floorY: hit.floorY, ceilingY: hit.openSky ? null : hit.ceilingY }
   }
   const caveOccupancyQuery: CaveOccupancyQuery = (x, y, z) => bundle.caves.occupancyAt(x, y, z)
 

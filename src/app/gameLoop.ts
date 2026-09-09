@@ -1852,7 +1852,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       )
       clouds.update(dt, climate.weather, cachedSky.elev, player.mesh.position.x, player.mesh.position.z, climate.season)
       groundFog.update(dt, climate.weather, player.mesh.position.x, player.mesh.position.z, bundle.chunkManager.sampleHeight)
-      weatherAudio.update(climate.weather)
+      const inCaveInterior = bundle.caves.queryInterior(
+        player.mesh.position.x,
+        player.mesh.position.y,
+        player.mesh.position.z,
+      )
+      weatherAudio.update(climate.weather, inCaveInterior)
       ambientAudio.update(
         dt,
         cachedSky.dayFactor,
@@ -1860,11 +1865,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         climate.weather,
         player.mesh.position.x,
         player.mesh.position.z,
-        bundle.caves.queryInterior(
-          player.mesh.position.x,
-          player.mesh.position.y,
-          player.mesh.position.z,
-        ),
+        inCaveInterior,
       )
       hud.setTime(dayNight.timeOfDay)
       // Plan 164 §9 — one authoritative load calc, recomputed every frame

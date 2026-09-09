@@ -16,7 +16,7 @@ import {
   occupancyContains,
   type SurfaceHeightSampler,
 } from './caveSdfQuery'
-import { MOUTH_INTERIOR_ALONG, mouthAlong } from './mouthCarve'
+import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthLateral } from './mouthCarve'
 
 /** Matches V1 `caveColliders.ts` bead size so `resolvePosition` overlap
  *  stays continuous along a wall (`step` 0.4 < 2 × radius). */
@@ -28,6 +28,10 @@ const ISO_SNAP_ITERS = 8
 /** Sit the bead slightly into the rock so a point just past the iso is
  *  still on the cave-facing side of the bead centre. */
 const ISO_OUTWARD_EXTRA = 0.1
+/** First metres of the throat plus the approach: no beads on the walking strip. */
+const MOUTH_CORRIDOR_ALONG = -1.5
+/** Half-width of the clear walking strip (metres from the entrance centreline). */
+const MOUTH_CORRIDOR_HALF = 1.0
 
 const NEIGHBORS: readonly { dx: number, dz: number }[] = [
   { dx: 1, dz: 0 },
@@ -75,6 +79,15 @@ function snapBeadToIso(
   }
   const isoDist = (lo + hi) * 0.5 + CAVE_SDF_BEAD_RADIUS + ISO_OUTWARD_EXTRA
   return { x: fromX + dirX * isoDist, z: fromZ + dirZ * isoDist }
+}
+
+function blocksMouthCorridor(
+  x: number,
+  z: number,
+  entrance: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
+): boolean {
+  if (mouthAlong(x, z, entrance) <= MOUTH_CORRIDOR_ALONG) return false
+  return Math.abs(mouthLateral(x, z, entrance)) < MOUTH_CORRIDOR_HALF
 }
 
 function isPortalOnlyColumn(
@@ -129,6 +142,8 @@ export function buildCaveSdfColliders(
             const snapped = representation
               ? snapBeadToIso(representation.sample, x, z, dx, dz, midY, step)
               : { x: x + dx * (step * 0.5 + CAVE_SDF_BEAD_RADIUS), z: z + dz * (step * 0.5 + CAVE_SDF_BEAD_RADIUS) }
+            if (entrance && mouthAlong(snapped.x, snapped.z, entrance) > MOUTH_INTERIOR_ALONG) continue
+            if (entrance && blocksMouthCorridor(snapped.x, snapped.z, entrance)) continue
             const maxY = Math.min(y1 + VERTICAL_PAD, surfaceHeightAt(x, z) - 0.05)
             const minY = y0 - VERTICAL_PAD
             if (maxY <= minY) continue

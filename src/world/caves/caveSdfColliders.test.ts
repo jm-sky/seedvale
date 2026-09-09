@@ -173,6 +173,28 @@ describe('buildCaveSdfColliders', () => {
     expect(undergroundBlocked).toBe(true)
   })
 
+  it('does not place iso-snapped beads in the mouth walking corridor', () => {
+    const entrance = entranceAt(0, 0, 0, 0)
+    const surface = (): number => 10
+    const field = representation(
+      { minX: -4, maxX: 4, minY: -2, maxY: 12, minZ: -4, maxZ: 8 },
+      (x, y, z) => {
+        const dx = x / 2
+        const dy = (y - 1.3) / 1.3
+        const dz = z / 2
+        return Math.hypot(dx, dy, dz) - 1
+      },
+    )
+    const index = buildCaveSdfColumnIndex(field, topologyFor('cave:col-corridor', entrance), surface, 0.4)
+    const colliders = buildCaveSdfColliders(index, surface, field, entrance)
+    const y = 1.3
+    const active = colliders.filter((c) => colliderActiveAtY(c, y))
+    for (const along of [0.4, 0, -0.4, -1.2]) {
+      const resolved = resolvePosition(0, along, 0.35, active)
+      expect(Math.hypot(resolved.x, resolved.z - along), `along=${along}`).toBeLessThan(0.05)
+    }
+  })
+
   it('does not block the approach with the closed SDF front shell', () => {
     const entrance = entranceAt(0, 0, 0, 0)
     const surface = (): number => 10
