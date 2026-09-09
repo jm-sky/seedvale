@@ -2,156 +2,263 @@
 
 These notes are for the implementation agent. They record current-code integration points and decisions that should not need to be rediscovered. Follow the plan for scope/behaviour and current code when it has changed since these notes were written.
 
-## Existing construction seams to reuse
+## Current architecture to reuse
 
-- `src/app/actions/placementActions.ts` owns the canonical ground-placement seam: `GroundPlacementDefinition`, `previewGroundPlacement()` and `evaluatePlacementSite()`. Preview is read-only; confirmation must re-resolve/revalidate. Add houses to this path rather than creating a house-only placement controller.
-- Current suitability ultimately uses the shared ground-placement evaluation used by existing buildables. House definitions should supply their footprint/separation/rotation needs to that mechanism. The medium house is a larger instance of the same rule, not a separate placement mode.
-- `src/world/createTerrainPreparations.ts` / `TerrainPreparationRecord` already represent persistent preparation work and expose actor-neutral `contributeWork(id, amount)`. Reuse this before house placement when the footprint requires preparation; do not make house placement silently flatten terrain.
-- Existing incremental construction implementations in `src/world/createPalisades.ts` and `src/world/createStandingTorches.ts` are the closest small-object reference. Their important contract is: progress belongs to the target record; `contributeWork()` clamps to remaining useful work and returns/credits only accepted work.
-- `src/items/constructionMaterials.ts` is the generic construction-material seam. Use the existing item/material vocabulary and inventory consumption helpers rather than introducing house-specific resource accounting. House stages may define different requirement sets, but material mechanics should stay shared.
-- Well construction in `placementActions.ts` is also useful for the distinction between querying stage requirements and mutating/advancing construction. Keep requirement lookup pure enough for UI/validation; do not spend materials during preview.
+- `src/app/actions/placementActions.ts` owns the canonical player ground-placement seam. `GroundPlacementDefinition`, `previewGroundPlacement()` and `evaluatePlacementSite()` keep preview and authoritative confirmation on the same validation path. Houses should enter this path rather than introduce a house-only placement controller.
+- `src/world/createTerrainPreparations.ts` owns persistent `TerrainPreparationRecord`s and actor-neutral `contributeWork(id, amount)`. House footprint preparation must reuse this mechanism and revalidate normal placement after preparation completes.
+- `src/world/createPalisades.ts` and `src/world/createStandingTorches.ts` are the closest incremental-construction references. Progress belongs to the target record; `contributeWork()` clamps to useful remaining work and reports only accepted work.
+- `src/items/constructionMaterials.ts` is the shared construction-material seam. Reuse existing `ItemKind` values and inventory/material helpers. Do not add planks, thatch or house-only resource kinds for this plan.
+- `src/world/workContract.ts` owns the authoritative `WorkContractRecord`; `src/world/createWorkContracts.ts` owns its runtime collection/mutations; `src/ai/NpcAgent.ts` executes target work. Contracts own commitments, not construction progress.
+- `src/settlement/lodging.ts`, `src/settlement/lodgingResolver.ts` and `src/app/actions/restActions.ts` already own lodging selection, `LodgingQuality` and sleep restoration/time skip. House lodging must feed this path rather than mutate `PlayerNeeds` directly.
+- `src/settlement/household.ts` and the existing `Place(type='home')` semantics remain the occupancy/home concepts. Do not make the residential-building subsystem a second household registry.
+- `src/settlement/landOwnership.ts` is an existing player-facing land-plot ownership registry, but it is specifically a sparse `settlementId:plotId` set. Residential-building ownership is not the same thing; do not overload `LandOwnershipRegistry` to mean house ownership.
 
-## Residential-building ownership
+## Residential-building authority and identity
 
-Create one domain-owned runtime collection/registry for player-built residential buildings, analogous in lifecycle to other persistent player-built world systems. Do not store authoritative house state in Vue, `WorkContractRecord`, `Place`, or `SaveData`.
+Add one domain-owned runtime collection for player-built residential buildings, following the lifecycle of other persistent player-built world systems. `SaveData`, Vue state, Work Contracts and `Place` must not become runtime authority for construction state.
 
-A record needs stable identity from initial placement through completion. At minimum the authoritative state must be sufficient to derive:
-
-- house kind (`small_house` / `medium_house`),
-- world transform,
-- active construction stage and work progress,
-- whether the active stage's material gate has been satisfied/consumed,
-- completion,
-- settlement association if one was resolved,
-- stable home/place identity after completion.
-
-Prefer definition data for footprint, capacity, stage work and stage materials; do not copy immutable definition constants into every persisted record unless restore requires a snapshot for compatibility.
-
-Keep the three identities distinct:
+One stable building identity must survive:
 
 ```text
-ResidentialBuildingRecord  physical structure + construction
-Place(type='home')         semantic home location
-Household                  occupants/resources
+placement
+→ foundation
+→ structure
+→ roof
+→ completed home
 ```
 
-The building may exist completed with no Household. `Household.homeId` remains the household→home link; do not add a second occupancy mapping to the building subsystem.
+The authoritative record needs enough state to derive/restore:
 
-## Construction stages and materials
+- stable building id,
+- `small_house` / `medium_house`,
+- position and rotation,
+- current stage and stage work progress,
+- stage material-gate state,
+- completion,
+- owner,
+- settlement association when present,
+- stable completed `home` linkage.
 
-Use the same stage vocabulary for both sizes: `foundation` → `structure` → `roof` → complete. Size differences belong in definitions.
+Keep immutable footprint, capacity, required work and material requirements in definitions rather than copying them into every record unless persistence compatibility genuinely requires snapshots.
 
-A stage should consume/reserve its required materials once at the stage boundary, then accept work. Do not consume fractional materials per NPC/player work contribution. This is especially important once several actors can work concurrently.
+## House definitions
 
-Make stage transition atomic from the simulation's perspective: the work contribution that completes one stage must not accidentally spill into the next stage before that next stage's material gate is satisfied. Returning only actually accepted work preserves the existing Work Contract accounting contract.
+Both sizes use one definition-driven mechanism. The confirmed v1 capacities are fixed gameplay decisions, not values to rediscover during implementation:
 
-A material-blocked house must report zero useful work until supplied. This must be distinguishable from a missing/invalid/completed target so Work Contracts can pause/retry rather than falsely complete or invalidate.
+- `small_house`: housing capacity **3**,
+- `medium_house`: housing capacity **6**.
 
-## Work Contracts
+The medium house differs through definition data: larger footprint and higher work/material requirements. It must not get a separate construction pipeline.
 
-Current construction already has the correct ownership rule: Player and NPC work hit the same target `contributeWork` seam. Preserve it for houses.
+Choose exact work/material quantities from existing `ItemKind` and current construction timings during implementation. Do not introduce new material kinds merely to make a more realistic recipe.
 
-`npc-028` is a real dependency for 1+ NPCs. Consume its resulting assignment/worker representation rather than adding worker arrays or crew logic to residential buildings. The house target only needs to expose position, remaining useful work, contribution and blocked/completed/invalid status through the Work Contract target resolver.
+## Construction stages and material gates
 
-Do not put stage/material/house-size logic into `NpcAgent`. `NpcAgent` should continue executing a generic buildable contract work bout against the resolved target.
+Use exactly:
 
-When a stage is material-blocked, avoid a tight NPC retry loop. Use whatever interruption/resumption/backoff semantics exist after `npc-028`; if that dependency does not provide an adequate blocked-target state, resolve that at the Work Contract seam rather than inside house AI.
+```text
+foundation → structure → roof → completed
+```
+
+`completed` is the terminal state, not another work-bearing stage.
+
+Materials are stage-gated. The intended mutation boundary is:
+
+```text
+supply all required materials for active stage
+→ consume/commit them once
+→ stage becomes work-enabled
+→ Player/NPC contributions advance stage
+→ stage completes
+→ next stage starts blocked until its materials are supplied
+```
+
+Do not consume fractional materials per work tick. Do not spend anything during preview/query operations.
+
+A contribution that finishes a stage must not spill excess work into the next stage before that stage's material gate is satisfied. Return only actually accepted work so Work Contract accounting stays correct.
+
+Material-blocked must be distinguishable from completed/missing/invalid: it has zero useful work *now* but remains a valid construction target that can resume after supply.
+
+NPC procurement, hauling and autonomous material resupply are outside this plan. Player-supplied materials are sufficient for v1.
+
+## Shared Player/NPC work
+
+There is one authoritative building progress regardless of actor. Player and NPC work must hit the same residential-building `contributeWork(id, amount)` seam.
+
+Do not store worker ids, crew state or duplicated progress on `ResidentialBuildingRecord`. Work Contracts own commitments; the building owns useful work.
+
+Current `main` still has the Work Contract architecture centered on `WorkContractRecord`. `npc-028` is the planned multi-worker generalization. If it has not landed when implementation starts, treat it as a real dependency for the “many NPCs on one house” requirement rather than implementing house-specific crews. After it lands, consume its generic worker representation.
+
+Extend the generic contract-target resolution seam with the residential building (or a generalized construction target if dependencies have already introduced one). The target adapter needs to resolve stable id, world position, useful remaining work, blocked/completed/invalid state and contribution. Keep house stage/material constants out of `NpcAgent`.
+
+Long-lived material blocking must not leave NPCs in a hot work/retry loop. Reuse the Work Contract interruption/resumption/backoff semantics available on current code at implementation time.
 
 ## Placement and terrain preparation
 
-The final house transform used for preparation, footprint reservation and construction must be identical. In particular, rotation affects a rectangular house footprint and therefore must be resolved before terrain/coverage validation.
+House placement uses the existing preview/confirm pipeline with a definition-provided footprint. Rotation must be resolved before evaluating a rectangular footprint.
 
-Do not let preparation itself authorize placement. After preparation completes, run the normal authoritative house placement validation again. Other blockers may have appeared while preparation was in progress.
+If terrain is unsuitable:
 
-Once an unfinished house is placed, its footprint is occupied for collision/separation purposes. It must not be possible to overlap another buildable merely because the house is incomplete.
+```text
+house placement intent
+→ TerrainPreparationRecord for the same intended transform/footprint
+→ Player/NPC preparation work
+→ preparation completes
+→ authoritative house placement revalidation
+→ unfinished building placement
+```
 
-## Settlement, Place and Household integration
+Preparation does not reserve permission to build forever; placement must be revalidated because blockers may have appeared.
 
-Current generated settlement layout uses `VillagePlan` / `VillageBuildingPlan` and residential house plots. Do not mutate deterministic `VillagePlan` to insert runtime-built houses: that plan describes generated layout and is not the persistence authority for later world changes.
+Once the unfinished building is placed, its footprint is occupied/reserved. Incomplete houses must participate in collision/separation checks.
 
-Instead, after a runtime house completes, expose/register it through the existing semantic home/place layer with a stable `Place(type='home')` identity. Existing generated houses may keep their current representation; avoid a broad village-generation rewrite solely to unify storage types.
+Do not silently flatten terrain and do not create house-specific terrain-preparation state.
 
-A completed empty house is valid. Do not create a Household, spawn residents, migrate an existing family, or infer occupancy from the Player who built it. Those are follow-up systems.
+## Construction visuals
 
-If settlement association can be derived through the existing settlement/world rules at placement/completion, persist the association. Do not derive it from camera distance or make one house create a settlement.
+Rendering derives from authoritative stage state. Use discrete representations corresponding to:
 
-## Player lodging: preserve the bed requirement
+- foundation,
+- structure,
+- roof,
+- completed.
 
-The existing lodging system already models exactly the desired rest quality:
+Do not morph geometry continuously with work percentage and do not add a per-building update loop. Stage transition is the visual transition boundary.
 
-- `src/settlement/lodging.ts` defines `LodgingOption`, `LodgingType = 'bed' | 'friend' | 'paid' | 'hay'`, and `LodgingQuality = 'high' | 'normal' | 'low'`.
-- `lodgingRestQuality('high')` maps to `1`, so high-quality lodging uses the existing sleep/`PlayerNeeds` restoration path; do not add a second comfort/rest formula for houses.
-- `src/settlement/lodgingResolver.ts` already emits physical bed candidates as `type: 'bed'`, `quality: 'high'` using a bed position/approach/facing anchor.
-- Existing generated-house furniture support in `src/settlement/props.ts` derives a bed/sleep point only when the built house definition actually contains bed furniture.
+Inspect existing generated house assemblies/definitions and `src/settlement/props.ts` before deciding whether completed small/medium houses can reuse them. Reuse compatible assets/components rather than creating near-duplicates. Scene objects are never authoritative and must rebuild from records after load/rebuild.
 
-**Important scope correction:** completion of a residential building must make it *capable* of later providing high-quality lodging, but the house itself is not sufficient for sleep. A usable bed is the physical capability that enables `LodgingOption { type: 'bed', quality: 'high' }`.
+## Home, settlement and occupancy
 
-Implement this incrementally:
+Keep these concepts separate:
 
-1. Do not invent an implicit/virtual bed merely because `ResidentialBuildingRecord` is complete.
-2. If this plan includes a bed asset/anchor as part of the completed house definition, expose lodging only when that actual bed capability exists.
-3. If bed placement/installation for player-built houses is deferred, a completed house should initially provide housing/home semantics but **no Player lodging yet**. Leave a clean seam for a later bed/furniture step to register the existing lodging capability.
-4. Do not create `houseComfort`, `houseRestQuality` or a player-house-only sleep action. The eventual bed should feed the existing lodging/rest path.
+```text
+ResidentialBuildingRecord = physical building + construction + ownership
+Place(type='home')        = semantic world location
+Household.homeId          = where a household lives
+settlement association    = which settlement the building belongs to, if any
+```
 
-This also means an empty completed house can be residential capacity without being a valid Player sleep location until furnished with a bed.
+Completion exposes/registers one stable `home` Place and activates configured housing capacity. It does **not** create a Household, generate NPCs or move a family.
 
-## Rendering / assets
+Do not mutate deterministic `VillagePlan` / `VillageBuildingPlan` to insert runtime-built houses. Generated layout and persistent runtime world changes have different ownership.
 
-Generated houses already have a HouseBuilder/settlement-props path, including authored furniture and bed interaction points for supported definitions. Inspect `src/settlement/props.ts` and the current house definitions before choosing whether player-built houses can reuse those assemblies directly.
+A completed house may remain empty. A house reliably located in an existing settlement may retain that settlement association; a house outside settlements remains an independent home. One house must not implicitly create a settlement. Never derive association from Player/camera proximity.
 
-Do not couple authoritative construction state to scene objects. Render stage visuals from the record and rebuild them from persisted state. Prefer discrete stage representations over geometry mutation on every work tick.
+## Residential ownership
 
-If existing cottage assets fit small/medium definitions, reuse them; do not create duplicate near-identical assets or a second house renderer without a concrete need.
+This is intentionally separate from occupancy and from existing land-plot ownership.
 
-## Persistence / WorldBundle
+The target ownership vocabulary should be capable of representing:
 
-Follow the established player-built object path:
+```text
+Player | Household | Settlement | unowned
+```
 
-- add the residential-building collection to the `WorldBundle` ownership/rebuild boundary,
-- capture domain records in `src/app/saveState.ts`,
-- extend `src/persistence/saveData.ts` validation/defaulting and the migration/version contract,
-- restore records during world-bundle creation rather than hydrating `SaveData` as runtime state,
-- add save parsing/round-trip coverage in `src/persistence/saveData.test.ts`.
+Use the narrowest representation consistent with current shared identity conventions; do not introduce an elaborate property/economy subsystem.
 
-Old saves need an empty/default residential-building collection. Do not regenerate player-built houses from seed.
+For **settlements-005 v1**, only Player-initiated ordinary residential construction needs an acquisition flow:
 
-A `Place(home)` linkage derived from a stable house id should preferably be reproducible rather than requiring a second unrelated persisted id. If current `Place` APIs require explicit registration/id storage, document that decision in code and ensure rebuild does not duplicate the Place.
+```text
+Player initiates house construction
+→ same building identity progresses
+→ house owner = Player
+```
 
-## Removal / invalidation
+NPCs contributing labour do not gain ownership. There is no “build for NPC/Household” flow yet, no settlement-initiated residential construction, and no sale/transfer UI. The data boundary should nevertheless avoid baking in an assumption that every residential building is forever Player-owned.
 
-Use the existing Work Contract target invalidation path when an unfinished house disappears/cancels. Do not leave assignments referencing a missing building.
+Ownership and occupancy remain independent. A Player-owned house may be empty or, in future, house a Household without requiring ownership transfer. Conversely a future Household may occupy settlement-owned housing.
 
-Keep completed-house demolition out of this plan unless the current generic removal mechanism can support it without introducing household displacement semantics. An occupied/completed home being non-removable is safer than silently orphaning `Household.homeId`.
+Do not reuse `LandOwnershipRegistry` as the house owner store: it models ownership of settlement plots via composite plot keys and has no owner variants. If plot ownership matters to placement, treat it as a separate permission/input to construction.
+
+## Player lodging v1 and furniture v2
+
+The confirmed v1 rule is deliberately temporary but playable:
+
+```text
+completed Player-owned house
+→ high-quality Player lodging
+→ existing lodging/rest action
+→ existing sleep/time skip
+→ existing high-quality needs restoration
+```
+
+A physical bed is **not required in v1**. Furniture, including the real bed requirement, belongs to v2.
+
+Current lodging code already has the desired quality semantics: `lodgingRestQuality('high')` maps high-quality lodging into the existing sleep restoration path. Reuse that. Do not add `houseComfort`, custom restoration percentages or a player-house-only sleep implementation.
+
+Because `LodgingType` currently describes existing settlement lodging forms (including physical `bed`), do not pretend a virtual v1 house sleep point is a real furniture bed if that would corrupt semantics. Add/extend the narrow lodging-provider representation needed to express an owned completed house while keeping the downstream rest path shared.
+
+Use a stable entrance/approach anchor for v1 movement/interactions; no enterable interior is required. A Player-owned completed house outside a settlement must still expose lodging without creating a fake settlement.
+
+Design the provider/eligibility boundary so v2 can change only the capability rule to:
+
+```text
+completed house + access + usable physical bed → lodging
+```
+
+Do not persist a fake `hasBed` flag in v1.
+
+An unfinished house never provides lodging. A completed house that is not accessible to the Player must not become Player lodging merely because it is residential capacity.
+
+## Persistence and WorldBundle
+
+Follow the existing domain-owned player-built-object pattern:
+
+- add residential buildings to the `WorldBundle` lifecycle/rebuild boundary,
+- capture records once through `src/app/saveState.ts`,
+- extend `src/persistence/saveData.ts` schema/defaulting/migration contract,
+- restore by constructing the residential-building runtime from saved records,
+- cover parse/round-trip/migration behaviour in persistence tests.
+
+Old saves must default to no runtime-built residential houses.
+
+Persist ownership as authoritative building state. Do not persist derived `LodgingOption` data. Lodging is derived from completed state + ownership/access in v1 and later from the real furniture capability.
+
+Prefer a deterministic home-place id derived from stable building id if current `Place` APIs allow it. Otherwise persist exactly the linkage required to guarantee one stable home across reload/rebuild. Never duplicate the `Place` during rebuild.
+
+## Removal and target invalidation
+
+Cancelling/removing an unfinished house must invalidate/terminate Work Contracts through the existing target invalidation path.
+
+Do not implement sale, ownership transfer, completed-house demolition or household displacement in this plan. If generic removal cannot safely handle a completed residential home, keeping completed houses non-removable is preferable to orphaning semantic/occupancy references.
 
 ## Suggested implementation order
 
-1. Definition + authoritative residential-building record/collection, with pure stage/remaining-work helpers.
-2. Persistence/rebuild wiring and tests before UI integration.
-3. Placement definition, rotated footprint and terrain-preparation integration.
-4. Stage material gates + Player `contributeWork` path.
+1. Residential definition + authoritative record/collection, including owner representation and pure stage helpers.
+2. Persistence/rebuild wiring and tests.
+3. Placement footprint/rotation + terrain-preparation integration.
+4. Stage material gates and Player `contributeWork` path.
 5. Discrete construction/completed visuals.
-6. Work Contract target adapter, then multi-worker verification against `npc-028`.
-7. Completed `Place(home)` registration/capacity semantics.
-8. Bed/lodging integration only to the extent an actual bed capability exists; otherwise leave it deliberately unavailable and preserve the seam described above.
+6. Generic Work Contract target adapter; consume `npc-028` for multi-worker behaviour if available/required.
+7. Stable completed `Place(home)` + capacity/settlement association.
+8. Player-ownership access + v1 high-quality lodging through the existing rest path.
 
-This order establishes persistent identity and target ownership before multiple systems begin referencing the house.
+This order establishes stable identity before Work Contracts, Place and lodging begin referencing the building.
 
-## High-value tests
+## High-value automated tests
 
-Prefer unit/integration coverage around boundaries rather than scene snapshots:
+Prefer boundary tests over scene snapshots:
 
-- stage transition does not spill work through an unsatisfied next-stage material gate,
-- `contributeWork` clamps and reports accepted work correctly,
-- small/medium definitions share mechanics but differ in configured footprint/work/material/capacity,
-- rotated placement uses the correct footprint and preview/confirm agree,
+- small capacity is 3 and medium capacity is 6,
+- both sizes share the same stage mechanics,
+- only existing `ItemKind` materials are used,
+- stage materials are consumed/committed once before stage work,
+- a blocked stage accepts zero work,
+- stage-completing contribution cannot spill into an unsupplied next stage,
+- `contributeWork` clamps and reports accepted work correctly with multiple actors contributing sequentially/interleaved,
+- rotated placement evaluates the correct footprint and preview/confirm agree,
 - prepared terrain is revalidated before placement,
 - partial and completed houses round-trip through save/load,
-- Work Contract resolution survives rebuild by stable house id,
-- completed house registers exactly one stable home Place,
-- completed house creates no Household automatically,
-- completed house without a bed does **not** produce lodging,
-- a house with a usable bed produces the existing high-quality bed lodging semantics rather than a new rest path.
+- Work Contract target resolves after rebuild by stable house id,
+- completion registers exactly one stable home Place,
+- completion creates no Household,
+- Player-initiated house persists Player ownership,
+- NPC labour does not alter ownership,
+- ownership and `Household.homeId` remain independent,
+- completed Player-owned house exposes existing high-quality rest semantics without a physical bed,
+- unfinished house does not expose lodging,
+- lodging remains derivable after reload rather than being persisted separately.
 
-Browser verification remains manual by the User; implementation agents should run automated tests/typecheck/build as appropriate, not browser verification.
+Browser verification is performed manually by the User. The implementation agent should run the relevant automated tests, typecheck/build/lint checks required by the repository, but must not perform browser verification.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
