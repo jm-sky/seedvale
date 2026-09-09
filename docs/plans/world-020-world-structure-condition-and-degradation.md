@@ -12,7 +12,7 @@
 
 ## Goal
 
-Rozszerzyć istniejący player-camp condition model do małego, współdzielonego fundamentu dla trwałych world structures.
+Rozszerzyć istniejący player-camp condition model do małego, współdzielonego fundamentu dla trwałych world structures i ich naprawialnych komponentów.
 
 Fundament ma zapewnić:
 
@@ -20,7 +20,6 @@ Fundament ma zapewnić:
 persistent world-owned condition
 + elapsed world time
 + environmental exposure
-+ meaningful usage
 → current condition
 → domain-owned functional consequence
 ```
@@ -31,11 +30,23 @@ Pierwszym istniejącym consumerem pozostaje player camp:
 - bedroll,
 - raised sleeping platform.
 
-Pierwszym nowym consumerem ma być completed player-built well.
+Pierwszym nowym consumerem ma być **daszek completed player-built well**.
+
+V1 nie degraduje całej studni:
+
+```text
+pit / well body / water source
+→ brak condition w V1
+
+completed roof
+→ condition
+→ weather/time degradation
+→ reduced protection
+```
 
 Plan nie implementuje jeszcze naprawy. Ma przygotować jednoznaczny authoritative condition model, który później wykorzystają:
 
-- generic repair/maintenance work,
+- `world-021` repair work foundation,
 - `Repair` skill i targeted skill actions,
 - `items-player-019`,
 - autonomous NPC/household/settlement maintenance.
@@ -58,7 +69,7 @@ stored condition
 
 Po `items-player-018` ten sam model obejmuje również tent condition i factor-based shelter protection.
 
-Plan ma wydzielić tylko semantykę potwierdzoną przez camp + well, zamiast projektować kompletny framework dla hipotetycznych przyszłych struktur.
+Plan ma wydzielić tylko semantykę potwierdzoną przez camp + well roof, zamiast projektować kompletny framework dla hipotetycznych przyszłych struktur.
 
 Nie tworzyć:
 
@@ -67,11 +78,12 @@ Nie tworzyć:
 - globalnego registry condition-enabled objects,
 - globalnego per-frame update loop,
 - generic `Building`,
-- generic `StructureEntity`.
+- generic `StructureEntity`,
+- generic component-condition framework.
 
 ## 2. Canonical terminology
 
-Dla trwałych world structures canonical current-state field to:
+Dla trwałych world structures i ich repairable components canonical current-state value to:
 
 ```ts
 condition: number // 0..100
@@ -84,13 +96,15 @@ Znaczenie:
 0   = maksymalnie zdegradowany stan techniczny
 ```
 
-`condition` jest stanem aktualnym. Nie używać `durability` jako drugiej nazwy tego samego pola.
+`condition` jest stanem aktualnym. Nie używać `durability` jako drugiej nazwy tego samego pojęcia.
+
+Condition może należeć do całego obiektu albo do konkretnego komponentu, zależnie od domain ownership. Nie zakładać, że każdy złożony structure ma jedno globalne `structureCondition`.
 
 Istniejące weapon/item durability oraz trap durability pozostają własnością swoich domen i nie są migrowane do tego modelu. Nie próbować unifikować skali `0..1` itemów/traps z `0..100` structures.
 
 ## 3. Shared condition state contract
 
-Wydzielić minimalny współdzielony type dla struktur korzystających z lazy degradation:
+Wydzielić minimalny współdzielony type dla state korzystającego z lazy degradation:
 
 ```ts
 export type ConditionState = {
@@ -114,7 +128,9 @@ Moduł:
 - nie zna Repair skill,
 - nie posiada żadnego world-object state.
 
-`BedrollRecord`, `PlatformRecord`, tent state po `items-player-018` oraz `PlayerWellRecord` mają zachować własne pola; nie wymuszać inheritance ani wrapper objectu.
+`BedrollRecord`, `PlatformRecord`, tent state po `items-player-018` oraz well roof state mają zachować własny domain-owned storage layout.
+
+Nie wymuszać inheritance, wrapper objectu ani osobnego komponentowego frameworku tylko po to, aby współdzielić condition math. Podczas implementacji wybrać najprostszy layout zgodny z aktualnym `PlayerWellRecord` i persistence.
 
 ## 4. Shared condition primitives
 
@@ -164,7 +180,7 @@ Nie dodawać tutaj:
 
 Obecnie `computeRainExposureDays()` jest współdzielone, natomiast snow exposure istnieje lokalnie w `sleepingUtilities.ts`.
 
-Ponieważ camp i future structures będą korzystać z obu, wydzielić snow counterpart do wspólnego world/weather layer.
+Ponieważ camp i well roof będą korzystać z weather-driven degradation, wydzielić snow counterpart do wspólnego world/weather layer.
 
 Docelowy contract:
 
@@ -181,7 +197,7 @@ Weather module odpowiada za ekspozycję pogodową, a konkretna domena odpowiada 
 
 ## 6. Generic lazy degradation helper
 
-Camp i well uzasadniają wydzielenie małego pure resolvera dla condition zmieniającego się od czasu/weather.
+Camp i well roof uzasadniają wydzielenie małego pure resolvera dla condition zmieniającego się od czasu/weather.
 
 Dodać do `world/condition.ts` contract koncepcyjnie:
 
@@ -202,11 +218,13 @@ export function resolveCondition(params: {
 }): number
 ```
 
+Exact API może zostać uproszczone podczas implementacji, jeśli `passiveDays` okaże się redundantne wobec `state` + `nowDays`; zachować jednak separację shared math od domain exposure policy.
+
 Resolver:
 
 - nie pobiera world seed sam,
 - nie odczytuje weather sam,
-- nie zna shelter,
+- nie zna shelter/protection,
 - nie zna rodzaju obiektu,
 - nie mutuje recordu.
 
@@ -219,7 +237,7 @@ sleepingUtilities
 → decyduje o shelter factor i weather exposure
 
 playerWell
-→ decyduje, jaki typ decay dotyczy studni
+→ decyduje o roof exposure i roof decay rates
 
 condition.ts
 → wykonuje wyłącznie wspólną matematykę condition
@@ -284,100 +302,113 @@ Ten plan może refaktoryzować shared math, ale nie powinien zmieniać gameplay 
 
 Dodać regression tests, które potwierdzą identyczne wyniki przed/po refaktorze.
 
-## 10. Player well becomes the second structure consumer
+## 10. Well roof becomes the second structure consumer
 
-Rozszerzyć `PlayerWellRecord` o:
+Player-built well ma w V1 condition wyłącznie dla completed roof componentu.
 
-```ts
-condition: number
-lastConditionUpdateAtDays: number
-```
-
-Condition dotyczy wyłącznie funkcjonującej konstrukcji studni, nie postępu jej budowy.
-
-Podczas `pit` / `well` / `roof` construction condition pozostaje `100`. Degradation zaczyna mieć znaczenie dopiero, gdy body studni udostępnia wodę.
-
-Nie mieszać `construction workProgress` z `condition`.
-
-To dwie niezależne osie:
+Semantycznie record musi przechowywać:
 
 ```text
-workProgress = czy/z jakim postępem obiekt został zbudowany
-condition    = w jakim stanie technicznym jest istniejący obiekt
+roof condition: 0..100
+roof condition time anchor
 ```
 
-## 11. Well degradation model
+Exact storage layout (`roofCondition` + `lastRoofConditionUpdateAtDays` albo małe domain-owned grouping) ustalić podczas implementacji na podstawie aktualnego `PlayerWellRecord` i persistence. Nie wprowadzać generic component frameworku.
 
-V1 studni ma użyć dwóch realnych źródeł wear:
+Lifecycle:
 
 ```text
-passive time
-usage
+pit stage
+→ no roof condition
+
+well body available
+→ water source działa, brak roof condition effect
+
+roof completed
+→ roof condition starts at 100
+→ roof degradation becomes active
 ```
 
-Nie dodawać weather degradation dla well w tym planie.
+Nie mieszać construction `workProgress` z roof condition.
 
-Powód:
+To niezależne osie:
 
-- camp już pokrywa weather-driven degradation,
-- well ma potwierdzić drugi potrzebny przypadek: usage wear,
-- unikamy projektowania ekspozycji konstrukcji na deszcz/śnieg przed buildings/palisades.
+```text
+workProgress   = postęp budowy aktualnego stage
+roof condition = stan techniczny istniejącego daszku
+```
 
-### Passive wear
+Body studni, pit i groundwater pozostają niezniszczalne w V1.
 
-Completed/water-available well powoli traci condition wraz z czasem.
+## 11. Well roof degradation model
 
-Domain constants pozostają w `world/playerWell.ts`, np.:
+V1 daszku ma użyć realnego weather/time degradation zgodnego z charakterem drewnianego exposed componentu.
+
+Źródła wear:
+
+```text
+elapsed world time
+rain exposure
+snow exposure
+```
+
+Nie dodawać usage wear od pobierania wody.
+
+Pobranie wody:
+
+- nie uszkadza well body,
+- nie uszkadza roof,
+- nie powoduje explicit condition mutation.
+
+Domain constants pozostają w `world/playerWell.ts`, np. semantycznie:
 
 ```ts
-WELL_CONDITION_DECAY_PER_DAY
-WELL_CONDITION_SIM_WINDOW_DAYS
+WELL_ROOF_PASSIVE_DECAY_PER_DAY
+WELL_ROOF_RAIN_DECAY_PER_DAY
+WELL_ROOF_SNOW_DECAY_PER_DAY
+WELL_ROOF_SIM_WINDOW_DAYS
 ```
 
-Dokładne balance values dobrać podczas implementacji tak, aby normalna studnia wymagała maintenance w skali wielu/kilkunastu world days, a nie po kilku użyciach.
+Exact names i balance values dobrać podczas implementacji po porównaniu z tent/sleeping utility rates.
 
-Nie uzależniać passive wear od FPS ani obecności playera.
+Daszek powinien być bardziej trwały niż improwizowane camp utilities i wymagać maintenance w skali wielu/kilkunastu world days, nie po pojedynczych weather events.
 
-## 12. Well usage wear
+Nie uzależniać wear od FPS, player position, camera ani renderowania studni.
 
-Usage degradation ma być event-driven.
+## 12. Well roof condition resolution
 
-Jednostką usage jest udane pobranie wody ze studni, nie samo spojrzenie/interakcja.
-
-Condition loss następuje wyłącznie po rzeczywistym successful consumption/fill operation, która korzysta z tego well targetu.
-
-Nie naliczać wear:
-
-- przy gaze,
-- przy budowaniu `Interactable`,
-- przy query `wellWaterSource()`,
-- przy nieudanym drink/fill,
-- przy anulowaniu.
-
-Wydzielić w `playerWell.ts` domain operation, np.:
+Wydzielić domain-owned resolver, koncepcyjnie:
 
 ```ts
-applyWellUseWear(record, nowDays)
+resolveWellRoofCondition(record, nowDays, weatherContext)
 ```
 
-lub równoważny mały API wynikający z aktualnego lifecycle `PlayerWells`.
+lub równoważny API dopasowany do aktualnej architektury.
 
-Nie mutować `PlayerWellRecord` bezpośrednio z Vue/gameLoop, jeżeli `createPlayerWells.ts` jest obecnym mutation ownerem kolekcji.
+Resolver:
+
+- używa shared condition primitives,
+- korzysta z deterministic rain/snow exposure,
+- zachowuje bounded simulation window,
+- nie mutuje recordu,
+- nie zna Player/UI/Interactable.
+
+Jeżeli roof nie istnieje, nie udawać condition `100`; brak componentu i condition `100` to różne stany.
 
 ## 13. Condition checkpoint semantics
 
-Wprowadzić jasną regułę dla lazy condition + explicit mutation.
+Wprowadzić jasną regułę dla lazy condition + future explicit mutation.
 
 Przed każdą explicit zmianą condition:
 
 ```text
 resolve current lazy condition at nowDays
 → commit resolved condition
-→ set lastConditionUpdateAtDays = nowDays
-→ apply explicit delta
+→ set condition time anchor = nowDays
+→ apply explicit delta / domain mutation
 ```
 
-Dotyczy to teraz well usage wear, a później będzie dotyczyć repair, structure damage i maintenance events.
+`world-020` sam nie wymaga explicit wear event dla well roof, ale ustala tę regułę dla `world-021` repair oraz przyszłych damage/maintenance events.
 
 Nie można wykonać:
 
@@ -388,49 +419,43 @@ stored old condition
 
 bez wcześniejszego rozliczenia elapsed degradation, bo prowadziłoby to do utraty lub podwójnego naliczania wear.
 
-To jest canonical checkpoint rule dla structure condition.
+To jest canonical checkpoint rule dla structure/component condition.
 
-## 14. Well functional consequence
+## 14. Well roof functional consequence
 
-Condition studni musi mieć rzeczywisty gameplay effect już w tym planie.
+Roof condition musi mieć rzeczywisty gameplay effect już w tym planie.
 
-Nie zmieniać:
+Nie wpływa na:
 
-- water quality,
 - groundwater kind,
 - water depth,
-- contamination risk wynikającego z roof/body lifecycle.
+- bazową jakość źródła,
+- czas pobierania wody,
+- storage/capacity.
 
-Condition ma preferencyjnie wpływać na czas korzystania ze studni.
+Condition określa skuteczność ochronną istniejącego daszku.
 
-Canonical mapping, jeśli obecny action flow posiada naturalny timed seam:
-
-```text
-100 condition → 1.00 × normal duration
-  0 condition → 2.00 × normal duration
-```
-
-Płynna interpolacja:
+Preferowana continuous semantics:
 
 ```ts
-durationMultiplier = 1 + (1 - condition / 100)
+roofProtectionFactor = roofCondition / 100
 ```
 
 czyli:
 
 ```text
-100 → 1.00x
-75  → 1.25x
-50  → 1.50x
-25  → 1.75x
-0   → 2.00x
+100 → pełna ochrona daszku
+75  → 75% ochrony
+50  → 50% ochrony
+25  → 25% ochrony
+0   → brak ochrony
 ```
 
-Jeżeli obecne drink/fill flow nie posiada timed duration dla studni, nie tworzyć sztucznego nowego Busy Action tylko po to, aby condition miało efekt.
+Wpiąć ten factor w istniejący roof-protection / contamination-risk seam, zamiast tworzyć równoległy water-quality system.
 
-W takim przypadku podczas implementation recon użyć najbliższego istniejącego well-specific measurable cost; jeśli takiego nie ma, preferować `wellWaterSource()` / interaction seam rozszerzony o explicit extraction-efficiency metadata zamiast zmiany water quality.
+Jeżeli aktualny kod ma binarną semantykę `roof present → protected`, rozszerzyć ją minimalnie do factor-based protection, zachowując obecny ownership contamination/water-resolution logic.
 
-Nie zmniejszać storage/capacity ani jakości wody.
+Nie przenosić contamination state do condition module.
 
 ## 15. `condition = 0`
 
@@ -448,12 +473,13 @@ Domena decyduje o konsekwencji.
 W tym planie:
 
 - tent/bedroll/platform zachowują semantics z `items-player-018`,
-- well nadal istnieje,
-- well nadal nie zostaje automatycznie destroyed.
+- well roof nadal istnieje,
+- roof przy `0` daje `0` protection,
+- well body/water source nie są automatycznie destroyed.
 
 Nie dodawać collapse, destruction, automatic removal, replacement object ani broken mesh/state.
 
-Przyszły repair/maintenance plan może zdecydować, czy konkretne structures przy `0` stają się unusable.
+`world-021` może naprawić ten sam roof component bez tworzenia osobnego reconstruction modelu.
 
 ## 16. No persisted condition bands
 
@@ -475,84 +501,91 @@ Nie definiować thresholds w tym planie, ponieważ obecni consumers używają co
 
 ## 17. Persistence
 
-Rozszerzyć `SavePlayerWell` o:
+Rozszerzyć `SavePlayerWell` o authoritative roof condition state i jego time anchor, zgodnie z layoutem wybranym dla `PlayerWellRecord`.
 
-```ts
-condition: number
-lastConditionUpdateAtDays: number
-```
-
-oraz odpowiednie build/restore paths.
-
-Starszy save bez tych pól powinien przy restore otrzymać:
+Semantycznie persisted data musi zachować:
 
 ```text
-condition = 100
-lastConditionUpdateAtDays = current restored world time
+roof condition
+last roof condition update time
+```
+
+Dla starszego save bez tych pól:
+
+```text
+completed roof
+→ roof condition = 100
+→ anchor = current restored world time
+
+no completed roof
+→ no active roof-condition lifecycle yet
 ```
 
 Nie naliczać retroaktywnego wear od `day 0`.
 
 Jeżeli obecna save-version policy wymaga schema bump dla required fields, wykonać migrację zgodnie z aktualnym persistence pipeline.
 
-Nie opierać migracji na `?? 100` rozsianym po runtime consumers, jeżeli istnieje canonical normalization/migration seam.
+Nie opierać migracji na rozsianych runtime defaults, jeżeli istnieje canonical normalization/migration seam.
 
 ## 18. No persistence of resolved effects
 
 Nie zapisywać:
 
-- duration multiplier,
+- roof protection factor,
 - condition band,
 - maintenance need,
-- resolved degradation amount.
-
-Wszystkie są derived.
+- resolved degradation amount,
+- weather exposure history jako duplicated derived state.
 
 Persistować tylko authoritative condition state + time anchor.
 
-## 19. Future repair contract
+## 19. `world-021` repair contract
 
-Plan świadomie nie implementuje naprawy, ale ustala contract, który następny plan musi konsumować.
+Plan świadomie nie implementuje naprawy, ale ustala contract konsumowany przez `world-021-world-structure-repair-work-foundation.md`.
 
-Future repair flow:
+Repair flow:
 
 ```text
-resolve current condition
-→ checkpoint at nowDays
-→ contribute repair
-→ increase authoritative condition
+resolve current roof condition
+→ validate repair intent/materials
+→ checkpoint resolved condition at nowDays
+→ create persistent repair episode
+→ contribute repair work
+→ restore authoritative roof condition
 → reset condition anchor
 ```
 
-Repair nie powinien posiadać własnej kopii structure health.
+Condition layer nie posiada własnego repair progress ani material requirements.
 
-Nie dodawać jeszcze:
+Nie dodawać w `world-020`:
 
-- `RepairDefinition`,
+- `RepairProgress`,
 - repair materials,
-- repair work progress,
+- repair work,
 - max workers,
 - skill scaling,
 - XP.
 
-Te elementy należą do następnego planu.
+Te elementy należą do `world-021` lub późniejszych integrations.
 
 ## 20. `items-player-021` integration boundary
 
 Ten plan nie zna `Repair` skill.
 
-Po jego wdrożeniu `items-player-021` może traktować future structure repair jako zwykły domain-owned targeted action:
+Późniejszy targeted Repair może traktować structure/component repair jako zwykły domain-owned action:
 
 ```text
 select Repair
 → choose Interactable
-→ Repair consumer resolves action
-→ structure domain mutates its own condition
+→ skill/action layer resolves capability
+→ structure domain mutates its own repair/condition state
 ```
 
 `Repair` skill nie jest właścicielem condition, degradation ani structure lifecycle.
 
-Nie dodawać skill-related fields do `ConditionState` ani `PlayerWellRecord`.
+Nie dodawać skill-related fields do `ConditionState` ani well recordu.
+
+`items-player-021` nie musi technicznie zależeć od tego planu, dopóki jego vertical slice nie wymaga rzeczywistego structure repair targetu.
 
 ## 21. Future NPC maintenance boundary
 
@@ -566,7 +599,7 @@ Condition musi być możliwe do resolve bez:
 Późniejsze maintenance systems powinny móc wykonać:
 
 ```text
-resolve structure condition
+resolve component condition
 + structure importance
 + ownership/responsibility
 + functional consequence
@@ -585,11 +618,10 @@ Expected primary files:
 src/world/condition.ts                 NEW
 src/world/weather.ts                   shared snow exposure
 src/world/sleepingUtilities.ts         migrate shared primitives
-src/world/playerWell.ts                well condition rules
-src/world/createPlayerWells.ts         authoritative mutation/checkpoint
-src/app/interactables.ts               resolved well effect if required
-src/app/gameLoop.ts / water actions    successful-use wear integration
-src/persistence/saveData.ts            SavePlayerWell
+src/world/playerWell.ts                roof condition/degradation/protection rules
+src/world/createPlayerWells.ts         authoritative roof-condition checkpoint if needed
+src/app/interactables.ts               only if existing well protection lookup requires adapter
+src/persistence/saveData.ts            persisted roof condition state
 src/persistence/...                    save/restore/migration
 ```
 
@@ -621,25 +653,28 @@ same inputs before/after extraction
 → same resolved sleeping utility/tent condition
 ```
 
-Well:
+Well roof:
 
 ```text
-new well starts at 100
-elapsed passive wear resolves deterministically
-successful use applies wear exactly once
-failed/cancelled operation does not
-explicit wear checkpoints previous lazy decay
+no roof → no roof-condition lifecycle
+newly completed roof starts at 100
+elapsed passive/weather wear resolves deterministically
+water usage does not mutate roof condition
 condition never leaves 0..100
-condition changes functional effectiveness
+100 condition gives full protection
+50 condition gives half protection
+0 condition gives no roof protection
+well body/water source are not destroyed by roof condition
 ```
 
 Persistence:
 
 ```text
-condition round-trips
-anchor round-trips
-old save gets condition 100
+roof condition round-trips
+roof condition anchor round-trips
+old completed roof gets condition 100
 old save does not receive retroactive decay
+unfinished/no-roof well does not gain fake roof condition semantics
 ```
 
 Run appropriate unit tests and:
@@ -649,6 +684,8 @@ pnpm typecheck
 ```
 
 Nie uruchamiać manual browser verification — wykonuje je użytkownik.
+
+Nie uruchamiać manualnie `pnpm docs:sync`; GitHub workflow wykonuje docs sync automatycznie.
 
 ## Non-goals
 
@@ -667,6 +704,11 @@ Plan nie implementuje:
 - maintenance jobs,
 - maintenance economy,
 - repair professions,
+- well-body degradation,
+- well-body repair,
+- pit degradation,
+- well usage wear,
+- well extraction-duration penalty,
 - building condition rollout,
 - settlement storage condition,
 - palisade condition,
@@ -677,30 +719,38 @@ Plan nie implementuje:
 - structure combat damage,
 - destruction/collapse,
 - damaged visual variants,
-- generic building framework,
+- generic building/component framework,
 - global condition manager.
 
 ## Follow-ups
 
-Recommended order:
+Recommended sequencing:
 
 ```text
 items-player-018
     ↓
 world-020 — THIS PLAN
     ↓
-follow-up: repair/maintenance work foundation
-    ↓
-items-player-021 — targeted skill actions + Repair
-    ↓
-items-player-019 — player camp repair, revised to use Repair
-    ↓
-future NPC/household/settlement autonomous maintenance
+world-021 — structure repair work foundation
 ```
 
-Po utworzeniu follow-up repair/maintenance work foundation:
+`world-021` consumes the roof condition/checkpoint semantics established here.
 
-- dodać go jako dependency `items-player-021`, jeśli targeted Repair vertical slice ma korzystać z realnego repair contractu,
-- poprawić `items-player-019`, usuwając camp-specific ownership naprawy przez `Survival`.
+Further integrations can then reuse the same foundations without becoming hard dependencies of one another where not required:
+
+```text
+world-021 ─────→ items-player-019 camp repair revision
+      ╲
+       ╲ future real Repair integration
+        → items-player-021 targeted skill actions
+
+npc-028 + world-021
+        ↓
+future repair Work Contracts
+        ↓
+NPC / household / settlement autonomous maintenance
+```
+
+Jeżeli `items-player-021` zostanie później rozszerzony tak, aby jego vertical slice wymagał realnego structure repair targetu, dopiero wtedy dodać odpowiednią dependency.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
