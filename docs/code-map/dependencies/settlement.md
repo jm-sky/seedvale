@@ -732,6 +732,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/burialPressure.test.ts`
+- `ai/burialPressure.ts`
 - `app/actions/containerActions.ts`
 - `settlement/createSettlement.ts`
 - `settlement/npcPostDeath.test.ts`
@@ -747,6 +749,8 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `ai/burialPressure.test.ts`
+- `ai/burialPressure.ts`
 - `ai/socialBehaviour.test.ts`
 - `ai/socialBehaviour.ts`
 - `app/worldBundle.ts`
@@ -784,6 +788,10 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/burialPressure.test.ts`
+- `ai/burialPressure.ts`
+- `ai/graveVisitPressure.test.ts`
+- `ai/graveVisitPressure.ts`
 - `app/actions/workContractPayment.test.ts`
 - `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
@@ -958,6 +966,7 @@ Generated from TypeScript imports.
 - `world/hiddenFinds.ts`
 - `world/largeCaveVisual.ts`
 - `world/locations/worldLocationNames.ts`
+- `world/npcGraves.ts`
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
 

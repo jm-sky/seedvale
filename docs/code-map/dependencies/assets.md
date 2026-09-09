@@ -248,6 +248,7 @@ Generated from TypeScript imports.
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
+- `world/npcGraves.ts`
 - `world/palisadeProp.ts`
 - `world/residentialBuildingProp.ts`
 - `world/sleepingUtilityProp.ts`

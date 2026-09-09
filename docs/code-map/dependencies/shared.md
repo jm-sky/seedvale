@@ -13,6 +13,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/burialPressure.test.ts`
+- `ai/graveVisitPressure.test.ts`
 - `ai/npcStamina.test.ts`
 - `ai/npcVigor.test.ts`
 - `app/actions/gatheringActions.ts`

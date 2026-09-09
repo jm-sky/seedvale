@@ -60,6 +60,7 @@ Generated from TypeScript imports.
 - `world/condition.ts`
 - `world/cropLifecycle.ts`
 - `world/map/mapTypes.ts`
+- `world/npcGraves.ts`
 - `world/palisade.ts`
 - `world/playerWell.ts`
 - `world/repair.ts`

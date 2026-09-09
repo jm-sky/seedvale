@@ -12,6 +12,14 @@ Generated from exported TypeScript symbols.
 - `PLAYER_APPROACH_ARRIVE_RANGE` — const — line 19
 - `PLAYER_APPROACH_LOCAL_RANGE` — const — line 16
 
+## `ai/burialPressure.ts`
+
+- `BurialPressureInput` — type — line 30
+- `BurialPressureResult` — type — line 43
+- `NpcBurialHooks` — type — line 20
+  - domain: npc
+- `resolveBurialPressure` — function — line 94
+
 ## `ai/characters.ts`
 
 - `CharacterDef` — type — line 23
@@ -49,6 +57,23 @@ Generated from exported TypeScript symbols.
 - `familyPhrase` — function — line 63
 - `goodbyeLine` — function — line 195
 - `requestAssistanceLine` — function — line 220
+
+## `ai/graveVisitPressure.ts`
+
+- `getLastGraveVisitAtDays` — function — line 65
+- `GRAVE_VISIT_COOLDOWN_DAYS` — const — line 28
+- `GRAVE_VISIT_OPPORTUNITY_BUCKET_DAYS` — const — line 31
+- `GRAVE_VISIT_OPPORTUNITY_THRESHOLD` — const — line 33
+- `GRAVE_VISIT_PRESSURE` — const — line 30
+- `GraveVisitCandidate` — type — line 13
+  - domain: npc
+- `graveVisitOpportunity` — function — line 55
+- `GraveVisitPressureResult` — type — line 101
+- `isGraveVisitCooldownExpired` — function — line 75
+- `NpcGraveVisitHooks` — type — line 21
+- `recordGraveVisit` — function — line 84
+- `resolveGraveVisitPressure` — function — line 106
+- `revalidateGraveVisitCandidate` — function — line 146
 
 ## `ai/healingPressure.ts`
 
@@ -93,29 +118,29 @@ Generated from exported TypeScript symbols.
 ## `ai/npcAction.ts`
 
 - `ActionId` — type — line 30
-- `NpcPlannedAction` — type — line 71
+- `NpcPlannedAction` — type — line 77
 - `Phase` — type — line 10
 
 ## `ai/NpcAgent.ts`
 
-- `classifyPendingActivity` — function — line 601
-- `CurrentActivity` — type — line 447
-- `CurrentActivityKind` — type — line 440
-- `NPC_HEIGHT` — const — line 350
-- `NPC_MODEL_URLS` — const — line 414
-- `NPC_SHADOW_DISTANCE` — const — line 364
-- `NpcAgent` — class — line 918
+- `classifyPendingActivity` — function — line 620
+- `CurrentActivity` — type — line 466
+- `CurrentActivityKind` — type — line 459
+- `NPC_HEIGHT` — const — line 369
+- `NPC_MODEL_URLS` — const — line 433
+- `NPC_SHADOW_DISTANCE` — const — line 383
+- `NpcAgent` — class — line 951
   - domain: settlements-npcs
   - system: npc-agent
   - role: Central per-NPC behaviour integration point: needs, FSM/schedule, personality-driven decisions and combat.
   - owns: NpcAuthoritativeState
   - uses: Household, SettlementEconomy, Needs
   - simulation: tick
-- `NpcAgentDeps` — type — line 838
-- `NpcInspectionSnapshot` — type — line 462
-- `NpcWhy` — type — line 576
-- `projectNpcWhy` — function — line 637
-- `promoteChainKind` — function — line 593
+- `NpcAgentDeps` — type — line 867
+- `NpcInspectionSnapshot` — type — line 481
+- `NpcWhy` — type — line 595
+- `projectNpcWhy` — function — line 658
+- `promoteChainKind` — function — line 612
 
 ## `ai/npcAnimalThreat.ts`
 
@@ -181,13 +206,13 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcDecision.ts`
 
-- `decideNpcAction` — function — line 81
+- `decideNpcAction` — function — line 87
 - `NPC_DECISION_PRIORITY` — const — line 45
 - `NpcDecisionInput` — type — line 26
 - `NpcDecisionKind` — type — line 24
-- `NpcInterruptInput` — type — line 101
-- `scoreNpcDecisions` — function — line 93
-- `shouldInterruptAction` — function — line 123
+- `NpcInterruptInput` — type — line 107
+- `scoreNpcDecisions` — function — line 99
+- `shouldInterruptAction` — function — line 129
 
 ## `ai/npcLoadout.ts`
 
@@ -259,21 +284,25 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcPlan.ts`
 
-- `blockPlan` — function — line 105
-- `completePlan` — function — line 118
-- `createNpcPlan` — function — line 77
-- `goalForNeed` — function — line 43
-- `interruptPlan` — function — line 88
-- `isPlanTerminal` — function — line 67
-- `needForGoal` — function — line 56
+- `blockPlan` — function — line 133
+- `completePlan` — function — line 146
+- `createBurialPlan` — function — line 92
+- `createNpcPlan` — function — line 81
+- `goalForNeed` — function — line 45
+- `interruptPlan` — function — line 116
+- `isBurialPlan` — function — line 96
+- `isBurialPlanForDeceased` — function — line 100
+- `isPlanTerminal` — function — line 71
+- `needForGoal` — function — line 58
 - `NpcGoalId` — type — line 13
 - `NpcPlan` — type — line 33
 - `NpcPlanState` — type — line 15
-- `obsoletePlan` — function — line 112
-- `planIsResumable` — function — line 73
-- `progressPlan` — function — line 126
-- `resumePlan` — function — line 97
-- `setPlanStrategy` — function — line 81
+- `obsoletePlan` — function — line 140
+- `planIsBurialResumable` — function — line 104
+- `planIsResumable` — function — line 77
+- `progressPlan` — function — line 154
+- `resumePlan` — function — line 125
+- `setPlanStrategy` — function — line 109
 
 ## `ai/npcProfessionWork.ts`
 

@@ -1,7 +1,7 @@
 # Plan: NPC Grave Visits
 
 **Created:** 2026-09-08
-**Status:** `implemented` ✅
+**Status:** `planned` 📋
 **Priority:** medium · **Effort:** S
 **Depends on:** `npc-011`, ~~world-terrain-016~~
 **Domain:** `npc`  

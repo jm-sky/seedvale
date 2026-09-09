@@ -1727,6 +1727,30 @@ Generated from TypeScript imports.
 - `world/map/mapDiscovery.ts`
 - `world/map/mapProjection.ts`
 
+## `world/npcGraves.test.ts`
+
+**Imports**
+
+- `world/npcGraves.ts`
+
+## `world/npcGraves.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/burialPressure.ts`
+- `ai/graveVisitPressure.test.ts`
+- `ai/graveVisitPressure.ts`
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`
+- `world/npcGraves.test.ts`
+
 ## `world/palisade.test.ts`
 
 **Imports**

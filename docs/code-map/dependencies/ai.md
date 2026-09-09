@@ -44,9 +44,11 @@ Generated from TypeScript imports.
 
 - `ai/Needs.ts`
 - `ai/approachPlayer.ts`
+- `ai/burialPressure.ts`
 - `ai/characters.ts`
 - `ai/decisionModifiers.ts`
 - `ai/dialogue.ts`
+- `ai/graveVisitPressure.ts`
 - `ai/healingPressure.ts`
 - `ai/helperAssignment.ts`
 - `ai/npcAction.ts`
@@ -130,6 +132,7 @@ Generated from TypeScript imports.
 - `world/createWorkContracts.ts`
 - `world/foodSources.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/npcGraves.ts`
 - `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
@@ -176,6 +179,34 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/approachPlayer.test.ts`
+
+## `ai/burialPressure.test.ts`
+
+**Imports**
+
+- `ai/burialPressure.ts`
+- `ai/npcPlan.ts`
+- `ai/weatherPressure.ts`
+- `settlement/npcPostDeath.ts`
+- `settlement/npcRelationships.ts`
+- `settlement/npcState.ts`
+- `shared/HealthState.ts`
+- `simulation/index.ts`
+
+## `ai/burialPressure.ts`
+
+**Imports**
+
+- `ai/npcPlan.ts`
+- `settlement/npcPostDeath.ts`
+- `settlement/npcRelationships.ts`
+- `settlement/npcState.ts`
+- `world/npcGraves.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/burialPressure.test.ts`
 
 ## `ai/characters.test.ts`
 
@@ -286,6 +317,30 @@ Generated from TypeScript imports.
 
 - `ai/dialogueTemplates.test.ts`
 - `app/inventoryWiring.ts`
+
+## `ai/graveVisitPressure.test.ts`
+
+**Imports**
+
+- `ai/graveVisitPressure.ts`
+- `ai/npcDecision.ts`
+- `ai/weatherPressure.ts`
+- `settlement/npcState.ts`
+- `shared/HealthState.ts`
+- `simulation/index.ts`
+- `world/npcGraves.ts`
+
+## `ai/graveVisitPressure.ts`
+
+**Imports**
+
+- `settlement/npcState.ts`
+- `world/npcGraves.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `ai/graveVisitPressure.test.ts`
 
 ## `ai/healingPressure.test.ts`
 
@@ -482,6 +537,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/graveVisitPressure.test.ts`
 - `ai/npcDecision.test.ts`
 
 ## `ai/npcLoadout.test.ts`
@@ -603,6 +659,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/burialPressure.test.ts`
+- `ai/burialPressure.ts`
 - `ai/npcPlan.test.ts`
 - `debug/npcTrace.ts`
 - `settlement/npcState.ts`
@@ -827,6 +885,8 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `ai/burialPressure.test.ts`
+- `ai/graveVisitPressure.test.ts`
 - `ai/healingPressure.test.ts`
 - `ai/npcDecision.test.ts`
 - `ai/npcDecision.ts`

@@ -732,6 +732,18 @@ Generated from exported TypeScript symbols.
 - `MapTerrainKind` — type — line 4
 - `MapViewport` — type — line 43
 
+## `world/npcGraves.ts`
+
+- `createNpcGraves` — function — line 42
+- `ensureNpcBurialGrave` — function — line 92
+- `graveIdForDeceased` — function — line 27
+- `NpcGraveRecord` — type — line 16
+  - domain: npc
+  - role: Persistent completed burial world result.
+  - owns: NpcGraveRecord
+- `NpcGraves` — type — line 31
+- `SaveGrave` — type — line 25
+
 ## `world/palisade.ts`
 
 - `isPalisadeConstructionComplete` — function — line 117

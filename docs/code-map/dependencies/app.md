@@ -1176,6 +1176,7 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/grassForage.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/npcGraves.ts`
 - `world/palisade.ts`
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`

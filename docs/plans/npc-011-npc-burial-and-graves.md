@@ -2,6 +2,8 @@
 
 **Created:** 2026-09-01
 **Status:** `verification needed` 🔍
+**Depends on:** -
+**Domain:** `npc`
 
 ## Implementation status
 
