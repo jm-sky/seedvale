@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-018-camp-inspection-condition-and-full-camp-setup`       | 2026-09-09 10:58:37 | —                   | `items-player`   | —          |
+| `npc-028-work-contracts-multiple-workers`                              | 2026-09-09 10:11:09 | —                   | `npc`            | —          |
 | `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings` | 2026-09-09 09:36:29 | —                   | `settlements-npcs` | —          |
 | `npc-024-temporary-conditions-and-poisoning`                           | 2026-09-09 08:46:40 | —                   | `npc`            | —          |
 | `npc-025-injury-severity-and-treatment-requirements`                   | 2026-09-09 08:37:24 | —                   | `npc`            | —          |
