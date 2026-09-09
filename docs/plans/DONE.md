@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-npcs-026-npc-personal-inventory-and-persistent-belongings` | 2026-09-09 09:36:29 | —                   | `settlements-npcs` | —          |
 | `npc-024-temporary-conditions-and-poisoning`                           | 2026-09-09 08:46:40 | —                   | `npc`            | —          |
 | `npc-025-injury-severity-and-treatment-requirements`                   | 2026-09-09 08:37:24 | —                   | `npc`            | —          |
 | `world-019-persistent-player-built-site-infrastructure`                | 2026-09-08 23:33:05 | —                   | `world`          | —          |
