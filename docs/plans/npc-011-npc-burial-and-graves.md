@@ -4,325 +4,332 @@
 **Status:** `planned` 📋
 **Type:** feature
 **Priority:** medium · **Effort:** L
-**Depends on:** npc-010
+**Depends on:** ~~npc-010~~, ~~world-terrain-016~~
 **Domain:** `npc`
-**Roadmap:** `npc-professions-households-and-age`  
+**Subdomains:** `lifecycle` `behavior` `relationships`
+**Tags:** `burial` `corpse` `grave` `cemetery`
+**Roadmap:** `npc-professions-households-and-age`
 
 ## Cel
 
-Dodać społeczną reakcję na śmierć NPC oraz możliwość pochówku zmarłego, wykorzystując istniejące persisted `NpcAuthoritativeState`, households, NPC pressures/decisions/plans/actions, relationships, navigation, settlement streaming i world-object persistence.
+Dodać społeczną reakcję NPC na śmierć oraz pochówek zakończony trwałym grobem, **rozszerzając istniejący persisted corpse lifecycle z `npc-010`** i używając istniejącego settlement → cemetery assignment z `world-terrain-016`.
 
-`npc-011` nie tworzy własnego corpse systemu. Konsumuje faktyczny persisted post-death/corpse contract dostarczony przez `npc-010`.
+Nie powstaje drugi corpse registry, burial manager, movement FSM, relationship store ani off-screen NPC executor.
 
 Docelowy flow:
 
 ```text
-persisted NPC death/post-death state (npc-010)
-  ↓
-corpse available for burial
-  ↓
-relevant NPC becomes aware
-  ↓
-burial problem/pressure candidate
-  ↓
-NPC decision + plan/strategy
-  ↓
-claim corpse
-  ↓
-approach corpse
-  ↓
-atomic burial transition
-  ↓
-persistent grave
+NpcAuthoritativeState.postDeath (active corpse)
+  → local burial pressure
+  → persistent burial plan
+  → acquire corpse burial claim
+  → ordinary NpcAgent action/navigation
+  → reserve grave identity + cemetery slot
+  → idempotent burial finalization
+  → postDeath terminal(reason='buried') + persistent grave
 ```
 
-System ma być niezależny od gracza i kamery. Nie oznacza to dodawania pełnego off-screen executora żywych NPC: wykonanie action chain korzysta z obecnego poziomu symulacji settlement/NPC, a authoritative death/corpse/grave state musi pozostać poprawny przez stream-out, rebuild i save/load.
+## Aktualny punkt wyjścia
+
+`npc-010` jest już zaimplementowany.
+
+- `src/settlement/npcState.ts`
+  - `NpcAuthoritativeState.postDeath: NpcPostDeathState | null` jest authoritative ownerem stanu po śmierci.
+  - `NpcStateSnapshot.postDeath` round-tripuje przez `NpcStateRegistry.serialize()` i `SaveData.npcStates`.
+  - `personalInventory` również należy do `NpcAuthoritativeState`; transient `NpcAgent.carried` pozostaje osobnym work/logistics cargo.
+- `src/settlement/npcPostDeath.ts`
+  - `NpcPostDeathStatus = 'active' | 'claimed' | 'terminal'`.
+  - corpse identity jest dziś identity zmarłego (`NpcId` / jego `postDeath` record); nie istnieje drugi corpse id.
+  - `commitNpcDeath()` zapisuje death transform/time i jednokrotnie przenosi loadout loot z `personalInventory` do `postDeath.loot`.
+  - `claimNpcCorpseForBurial()` robi `active → claimed`; `releaseNpcCorpseBurialClaim()` robi `claimed → active`.
+  - `npcCorpseReadyToRemove()` zwraca true tylko dla `active`, więc `claimed` już blokuje naturalny cleanup.
+  - `finalizeExpiredNpcCorpse()` najpierw wypuszcza pozostały corpse loot jako world drops, potem ustawia `terminal/decay`.
+  - `markNpcPostDeathTerminal(..., 'buried')` już wspiera terminal reason pochówku.
+- `src/settlement/createSettlement.ts`
+  - przed materializacją NPC wykonywane jest `finalizeExpiredNpcCorpse(...)`, następnie `shouldSkipNpcCorpsePresentation(...)`.
+  - terminal lub naturalnie wygasły corpse nie dostaje ponownie `NpcAgent`/mesh przy reconstruction.
+
+`npc-011` musi dopasować się do tego kontraktu zamiast projektować hipotetyczne API.
 
 ## Zakres
 
-### 1. Corpse contract z `npc-010`
+### 1. Burial claim — rozszerzenie istniejącego handoff
 
-`npc-010` jest właścicielem authoritative NPC post-death state i corpse lifecycle, rozszerzanego w istniejącym `NpcAuthoritativeState` / `NpcStateSnapshot` i persystowanego przez `SaveData.npcStates`.
+Obecny `claimed` jest właściwym seamem, ale sam boolean-status nie mówi **kto** posiada claim. Rozszerzyć `NpcPostDeathState` minimalnie o persisted claimant identity, np. `burialClaimantNpcId: NpcId | null` albo równoważne pole.
 
-`npc-011` ma przejąć z faktycznej implementacji `npc-010` co najmniej semantykę pozwalającą:
-
-- znaleźć aktywny corpse po stabilnym `NpcId`,
-- odczytać rzeczywistą death position/lifecycle state,
-- rozróżnić active corpse od terminal cleanup/no-active-corpse,
-- atomowo claimować/release'ować corpse do burial,
-- zablokować natural cleanup podczas ważnego claimu,
-- wykonać idempotentny transition `active corpse → buried/terminal`,
-- po reconstruction nie odtwarzać już buried corpse.
-
-Nie projektować równoległego `NpcCorpseManager`, drugiego corpse registry ani corpse-only save path.
-
-### 2. Death awareness
-
-Awareness ma być settlement/local-context-driven, nie globalne.
-
-Preferowane źródła kandydatów:
-
-1. członkowie tego samego household/family,
-2. NPC z istniejącą relacją/rolą uzasadniającą reakcję,
-3. inni lokalni NPC tylko jeżeli aktualny model decyzji/relacji daje ku temu rzeczywisty powód.
-
-Nie tworzyć globalnego „everyone knows every death” event busa.
-
-Awareness nie musi być osobnym persisted memory systemem. Jeżeli burial eligibility/problem można deterministycznie odtworzyć z persisted corpse state + household/relationship state, preferować re-derivation po stream/reload zamiast duplikowania knowledge flags.
-
-### 3. Burial jako problem/pressure, nie `NeedId`
-
-Aktualny `NpcPlan` jest związany z `NeedId` (`goalForNeed()` / `needForGoal()`), a top-level arbitration ma już wiele producerów pressure (`Needs`, weather, healing).
-
-Burial nie jest fizjologiczną potrzebą i nie może dostać sztucznego `NeedId`.
-
-Dodać minimalny social/world-problem pressure candidate do istniejącej arbitrażowej ścieżki. Po wybraniu burial może używać zwykłego persistent Plan/strategy/action lifecycle, ale plan/goal musi istnieć niezależnie od `goalForNeed()`.
-
-Nie tworzyć `BurialManager`, osobnego burial scheduler ani burial-only scoring engine.
-
-### 4. Eligibility i odpowiedzialność
-
-Corpse kwalifikuje się do burial tylko jeśli:
-
-- `npc-010` nadal raportuje aktywny, buryable corpse,
-- corpse nie jest terminal/removed/buried,
-- istnieje odpowiedni NPC z realnym lokalnym kontekstem społecznym,
-- action jest wykonalna na aktualnym poziomie symulacji.
-
-Wybór wykonawcy powinien korzystać z istniejących danych: household/family, NPC↔NPC relationship, rola, aktywne zobowiązania/plan, dystans i dostępność.
-
-Nie zakładać „najbliższy zawsze grzebie” ani „każdy zmarły musi mieć grave”.
-
-### 5. Persistent burial plan
-
-Jeżeli burial wygra arbitration, NPC może dostać persistent plan typu `buryDeceased` (lub równoważny), niezależny od `NeedId`.
-
-Plan przechowuje tylko minimalne identity/context potrzebne do ponownej walidacji, przede wszystkim stable deceased/corpse identity z `npc-010`.
-
-Nie kopiować corpse lifecycle, position, loot ani burial flags do `NpcPlan`.
-
-Plan zapisuje się przez już istniejący persisted `activePlan` w `NpcStateSnapshot`; zmiana jego unionów/semantyki musi przejść przez aktualny save-schema validation/migration contract.
-
-### 6. Claim / coordination
-
-Wymaganie:
+Wymagana semantyka istniejących helperów po rozszerzeniu:
 
 ```text
-one corpse
-→ at most one active burial claim
-→ at most one successful burial transition
-→ at most one grave
+claim(active, claimantNpcId)
+  → claimed + claimantNpcId
+
+claim(claimed, same claimant)
+  → idempotent success
+
+claim(claimed, different claimant)
+  → false
+
+release(claimed, same claimant)
+  → active + no claimant
+
+release by non-owner
+  → false
 ```
 
-Claim/reservation powinien żyć w authoritative post-death state należącym do `npc-010`, nie w transient `NpcAgent` ani globalnym lock managerze.
+Nie tworzyć osobnego claim registry. Claim pozostaje częścią `NpcAuthoritativeState.postDeath` i przez to automatycznie podlega obecnej persistence/rebuild ścieżce.
 
-Przy wykonaniu zawsze rewalidować claim i corpse state. Claim musi być zwalniany przy cancellation/obsolete plan/reconstruction, zgodnie z kontraktem ustalonym przez `npc-010`.
+### 2. Decay / cleanup ordering
 
-### 7. Action lifecycle i navigation
+Zachować istniejący invariant: naturalny decay finalizuje wyłącznie `active` corpse. `claimed` blokuje `npcCorpseReadyToRemove()` / `finalizeExpiredNpcCorpse()`.
 
-Burial jest zwykłym action chain opartym o istniejące `PlannedAction` / `ActionLifecycle` i `NpcAgent` FSM:
+Przy próbie burial zawsze najpierw rewalidować authoritative record:
+
+- `postDeath != null`,
+- `status === 'claimed'`,
+- claimant zgadza się z wykonawcą,
+- cleanupReason nadal `null`,
+- corpse nie został wcześniej terminalnie rozstrzygnięty.
+
+Release/cancel claimu przywraca `active`; jeżeli corpse jest już starszy niż `NPC_CORPSE_REMOVE_DAYS`, istniejący cleanup może wtedy przy najbliższej materializacji/tick seam rozstrzygnąć decay. Nie dodawać drugiego corpse timeru.
+
+### 3. Corpse identity, materialization i reconstruction
+
+Stable identity dla burial to `NpcId` zmarłego + jego authoritative `postDeath`. Nie dodawać corpse entity registry ani losowego corpse id, dopóki kod nie potrzebuje wielu śmierci tego samego `NpcId` (obecny model tego nie wspiera).
+
+Corpse transform (`x/z/yaw`) i `deathAtDays` są czytane z `postDeath`, nie z mesh.
+
+`createSettlement.ts` już:
+
+1. pobiera persisted NPC state z `NpcStateRegistry`,
+2. lazy-finalizuje expired active corpse,
+3. pomija terminal corpse,
+4. materializuje active/claimed corpse przez normalnego `NpcAgent`.
+
+Burial nie może zmieniać tej reconstruction boundary.
+
+### 4. Personal inventory i corpse inventory
+
+Ownership pozostaje rozdzielony:
 
 ```text
-resolve corpse + claim
-→ resolve approach destination
-→ goTo
-→ execute timed interaction
-→ atomic burial transition
-→ create grave on success
+NpcAuthoritativeState.personalInventory
+  → trwałe osobiste belongings NPC
+
+NpcPostDeathState.loot
+  → snapshot corpse loot wyjęty przez commitNpcDeath()
+
+NpcAgent.carried
+  → transient work/logistics cargo, poza corpse loot
 ```
 
-Nie dodawać pathfindingu ani burial-specific FSM. Nie teleportować NPC do corpse w zwykłym execution flow.
+Burial nie może ponownie snapshotować `personalInventory` ani kopiować `carried` do corpse.
 
-Jeżeli corpse zniknie, claim przepadnie, plan stanie się obsolete lub destination będzie nieosiągalny, użyć istniejącego cancel/failure/replanning lifecycle i nie pozostawiać NPC w nieskończonym stanie.
+Przy successful burial trzeba jawnie rozstrzygnąć pozostałe `postDeath.loot`. Preferowana semantyka v1: **pochówek zamyka corpse razem z pozostałą zawartością** (nie dropować jej na ziemię jak przy natural decay). To odróżnia burial od `finalizeExpiredNpcCorpse()` i zapobiega powstaniu loot pile po pogrzebie. Jeżeli późniejszy plan doda ekshumację, grave inventory będzie osobnym świadomym rozszerzeniem.
 
-### 8. Atomic burial transition i idempotencja
+### 5. Burial jako pressure/problem, nie `NeedId`
 
-Finalizacja burial nie może być luźną sekwencją niezależnych zapisów typu „usuń corpse, potem spróbuj grave”.
+Aktualny top-level wybór ma dwa poziomy:
 
-Potrzebny jest wąski, idempotentny contract pomiędzy `npc-010` i `npc-011`, który pozwala dokładnie raz rozstrzygnąć corpse jako buried/terminal. Grave creation musi być powiązana z tym transition w sposób odporny na failure/retry/reload.
+- `NpcAgent` produkuje/scoruje pressure targety (`NeedId`, weather, healing),
+- `src/ai/npcDecision.ts` (`decideNpcAction`) rozstrzyga outer sequencing razem z vigor/schedule/idle.
 
-Po udanym burial:
+Burial jest social/world problem. Dodać go jako kolejny pressure/decision target w tej **samej** ścieżce, bez fake `NeedId` i bez burial-only schedulera.
 
-- corpse nie wraca po settlement reload / `WorldBundle` rebuild / save-load,
-- natural decay nie wykonuje ponownego cleanup consequence,
-- drugi executor nie może zakończyć burial dla tego samego deceased,
-- istniejący grave nie jest regenerowany z samego `health.dead`.
+`src/ai/npcPlan.ts` nadal ma need-centric `NpcGoalId`/`NpcStrategyId`. Rozszerzyć persisted `NpcPlan` minimalnie o burial goal/context tak, aby plan mógł przechowywać stable deceased `NpcId` bez przepychania burial przez `goalForNeed()` / `needForGoal()`.
 
-### 9. Grave jako persistent world object
+Nie robić przy okazji pełnego generic Goal/Problem frameworka.
 
-Grave jest world state, nie NPC state.
+### 6. Eligibility / social responsibility
 
-Minimalny record:
+Burial candidate ma być lokalny dla settlementu. Preferowana kolejność odpowiedzialności:
 
-- stable grave ID,
-- world position/yaw tylko jeśli potrzebny prezentacji,
-- stable deceased `NpcId` / death reference,
-- burial/creation time tylko jeśli istniejąca semantyka world-time tego wymaga.
+1. żywy członek tego samego household/family,
+2. istniejąca silna NPC↔NPC relationship / rola społeczna,
+3. fallback lokalnego wykonawcy tylko jeśli system decyzji ma rzeczywisty powód.
 
-Nie duplikować corpse lifecycle ani household data.
+Korzystać z istniejących `Household`/family mappings oraz `NpcRelationships`; nie tworzyć persisted `knowsNpcIsDead` ani nowego relationship store.
 
-Graves mają korzystać z istniejącego wzorca persistent world objects: runtime collection owned przez `WorldBundle` + `SaveData` field + create/rebuild carry + save/load restore.
+Eligibility jest re-derivable z persisted corpse + household/relationship state.
 
-Dodanie grave field do `SaveData` wymaga normalnego version bump, migration, validatorów i testów. Nie używać opcjonalnego pola jako obejścia migration pipeline.
+### 7. Cemetery assignment i miejsce grobu
 
-### 10. Save/load i rebuild contract
+Nie szukać „najbliższego cmentarza”. Użyć kanonicznego assignment z `world-terrain-016`:
 
-Aktualny NPC health/death oraz `activePlan` już są persisted przez `SaveData.npcStates`. `npc-010` ma rozszerzyć ten sam snapshot o post-death/corpse state.
+- `ChunkManager.resolveCemeteryForSettlement(settlementId)` — publiczny runtime lookup,
+- underlying `resolveCemeteryTopologyForSettlement()` / `ResolvedCemeteryPlacement`,
+- `servedSettlementIdsForCemeteryId()` — reverse lookup shared cemetery → settlements.
 
-`npc-011` nie ma więc „dodać persistence NPC”. Ma zachować jeden ownership boundary:
+`ResolvedCemeteryPlacement` daje stable `id`, `assignmentId`, `servedSettlementIds`, `x/z`, `rotationY`, `size`.
+
+Grave record powinien zapisać `cemeteryId` (oraz settlement/deceased identity), a nie ponownie wyprowadzać ownera z nearest-settlement heuristics.
+
+Slot/offset grobu w obrębie cemetery powinien być deterministyczny z `graveId`/`deceasedNpcId` + cemetery placement, z walidacją footprintu. Nie modyfikować proceduralnego cemetery assignment po fakcie i nie tworzyć osobnego cemetery registry.
+
+### 8. Persistent grave world object
+
+Grave jest world-owned completed consequence, nie polem NPC poza reference w finalization.
+
+Dodać mały record, np.:
+
+```ts
+type GraveRecord = {
+  id: string
+  deceasedNpcId: NpcId
+  settlementId: string
+  cemeteryId: string
+  x: number
+  z: number
+  yaw: number
+  buriedAtDays: number
+}
+```
+
+Wzorzec implementacyjny: plain authoritative record + runtime projection + `nodes()`/`find()`/idempotent `ensure()` + `dispose()`, analogicznie do `createResidentialBuildings.ts` i innych world collections w `WorldBundle`.
+
+Grave ID musi być deterministic/stable dla jednego deceased burial, np. `grave:${deceasedNpcId}`. `ensure()` po tym id zwraca istniejący record zamiast tworzyć duplikat.
+
+Thread przez:
 
 ```text
-NpcStateSnapshot
-→ dead/postDeath/corpse/claim truth
-
-SaveGrave[] / grave collection
-→ completed burial world result
+WorldBundle.graves
+→ createWorldBundle(initialSave.graves)
+→ rebuildWorldBundle(carried graves)
+→ buildSaveData() / SaveData.graves
 ```
 
-Po load/rebuild trzeba rozstrzygnąć stan z authoritative records, nie z obecności mesh/runtime action:
+Dodanie pola wymaga aktualnego `CURRENT_SAVE_VERSION` bump + nowej `SAVE_MIGRATIONS` entry + `isSaveData()`/fixtures/tests. Nie hardcodować numeru wersji z planu — sprawdzić go przy implementacji.
 
-- active corpse + brak grave → może ponownie wygenerować burial pressure,
-- active corpse + stale/transient executor → action execution zaczyna się świeżo po normalnej rewalidacji,
-- buried/terminal corpse + grave → nic nie wykonuje się ponownie,
-- terminal/no-active-corpse bez grave → nie fabrykować burial/grave.
+### 9. Atomic / idempotent corpse → grave finalization
 
-### 11. Streaming i off-screen behaviour
+Wymagany invariant:
 
-`SettlementsManager` aktualnie tickuje tylko loaded settlements; `NpcAgent` execution state (`phase`, `pendingAction`, pathfinding) nie jest persisted.
+```text
+one deceased NpcId
+→ at most one burial claim owner
+→ at most one successful burial finalization
+→ exactly one persistent grave for successful burial
+```
 
-Dlatego `npc-011` nie dodaje fikcyjnego pełnego off-screen walking/action executora.
+Nie wykonywać finalizacji jako luźnego „terminal corpse, potem losowo create grave”.
 
-Wymagania są następujące:
+Zaprojektować jeden wąski orchestration helper (w burial/grave domain, nie manager), który przy jednym wywołaniu:
 
-- corpse/post-death truth nie zależy od mesh ani loaded settlement,
-- grave truth nie zależy od loaded settlement,
-- persistent burial plan/claim nie może prowadzić do duplikacji po reconstruction,
-- jeżeli executor streamuje out w trakcie akcji, po stream-in/reload action jest rewalidowana/replanowana z authoritative state zamiast „wznawiania pathfindingu”,
-- istniejące future adaptive/off-screen simulation może później konsumować te same contracts bez zmiany ownership.
+1. rewaliduje claimed corpse + claimant,
+2. wylicza deterministic grave id i cemetery slot,
+3. `ensureGrave(graveRecord)` — idempotentnie zapewnia world result,
+4. terminalizuje **ten sam** `postDeath` przez istniejący `markNpcPostDeathTerminal(postDeath, 'buried')`,
+5. czyści claim metadata i corpse loot zgodnie z burial semantics,
+6. przy retry rozpoznaje już istniejący grave/terminal-buried state jako sukces/no-op.
 
-### 12. Household / relationships
+Ponieważ `NpcStateRegistry` i graves collection są dwoma in-memory ownerami zapisywanymi razem przez `buildSaveData()`, helper ma gwarantować convergent state przy repeated call/reconstruction. Testy muszą obejmować retry na każdej granicy. Nie wprowadzać transakcyjnego subsystemu tylko dla burial.
 
-Household/family mapping i `NpcRelationships` są już stabilnymi źródłami social context i są persisted/reconstructed niezależnie od aktywnego `NpcAgent`.
+### 10. Action / navigation lifecycle
 
-Można ich użyć do awareness/responsibility, ale nie dodawać w tym planie:
+Burial używa istniejącego `NpcAgent` action lifecycle i normalnego movement/pathfinding:
 
-- grief/mourning,
-- inheritance,
-- funeral ceremonies,
-- household restructuring,
-- legal ownership system.
+```text
+pressure wins
+→ ensure burial plan
+→ claim corpse
+→ goTo corpse
+→ execute pickup/prepare interaction
+→ goTo assigned cemetery grave slot
+→ execute timed burial
+→ finalize burial
+→ complete plan
+```
 
-Po burial nie jest wymagany osobny persisted „memory of funeral”, jeśli istniejący grave + dead NPC + relationship/household state wystarczają do przyszłych systemów.
+Nie dodawać burial-specific movement FSM. `phase`, `pendingAction`, pathfinding i execution timers pozostają transient.
+
+Po reconstruction plan/claim są rewalidowane, ale movement zaczyna się od nowa z authoritative state.
+
+### 11. Settlement streaming / off-screen
+
+`SettlementsManager` utrzymuje authoritative `NpcStateRegistry` poza konkretnym `Settlement`, ale pełne `NpcAgent.update()` wykonuje się dla loaded settlements.
+
+`npc-011` nie dodaje off-screen walking/action executora.
+
+Wymagane zachowanie:
+
+- corpse/claim state przeżywa stream-out,
+- grave przeżywa stream-out,
+- loaded executor po powrocie rewaliduje claim/plan,
+- stale claim może zostać deterministycznie odzyskany przez tego samego claimant-a, jeśli jego persisted burial plan nadal wskazuje ten deceased; w przeciwnym razie claim jest release'owany przed nową arbitrażową próbą,
+- natural decay pozostaje lazy/world-time-driven przez istniejące `postDeath.deathAtDays`.
+
+### 12. Debug
+
+Rozszerzyć istniejący NPC trace/debug, nie tworzyć osobnego frameworka. Widoczne minimum:
+
+- deceased `NpcId`, corpse status/phase/cleanupReason,
+- claimant `NpcId`,
+- burial eligibility/pressure winner,
+- burial plan target,
+- assigned cemetery/grave id,
+- finalization result / cancellation reason.
 
 ## Ownership
 
 ```text
-HealthState
-  → alive/dead source of truth
+HealthState.dead
+  → alive/dead truth
 
-NpcAuthoritativeState / NpcStateRegistry (npc-010 extension)
-  → persisted post-death/corpse/claim state
+NpcAuthoritativeState.postDeath
+  → corpse transform/time/status/loot/cleanup + burial claim
 
-Household / families / NpcRelationships
-  → local social context / responsibility inputs
+NpcStateRegistry / SaveData.npcStates
+  → persistence post-death + burial plan
 
-NPC pressure + decision + Plan
-  → chooses burial work and preserves intent
+Household + NpcRelationships
+  → social eligibility inputs
 
-NpcAgent + PlannedAction / ActionLifecycle
-  → loaded-settlement execution only
+NpcAgent + npcDecision + NpcPlan + normal action lifecycle
+  → loaded-settlement choice and execution
 
-Grave world-object collection / WorldBundle
-  → persistent completed burial result
+world-terrain cemetery assignment
+  → settlement → cemetery truth
 
-SaveData + migrations
-  → serialization of both existing NpcStateSnapshot extension and graves
+Graves collection / WorldBundle / SaveData.graves
+  → completed persistent burial result
 ```
-
-## Contracts pozostawione `npc-010`
-
-`npc-011` nie ustala nazw API, ale implementacja `npc-010` musi przed rozpoczęciem 011 dostarczyć jednoznaczne odpowiedzi na:
-
-1. Jak rozpoznać active/buryable corpse vs terminal/no-active-corpse?
-2. Jaka jest stable identity corpse — czy wystarcza `NpcId`, czy istnieje dodatkowe death/corpse id?
-3. Jak atomowo acquire/release burial claim i jak jest on persisted?
-4. Jak claim blokuje natural decay/cleanup?
-5. Jak wykonać idempotentny terminal transition oznaczający burial bez tworzenia grave po stronie `npc-010`?
-6. Jak rozstrzygać stale claim po reconstruction/crash/save-load, skoro runtime executor nie jest persisted?
-
-`npc-011` ma dopasować się do faktycznej implementacji tych kontraktów, nie odwrotnie.
-
-## Debug
-
-Rozszerzyć istniejące NPC/world debug facilities o minimum:
-
-- deceased NPC id + corpse state z `npc-010`,
-- awareness/eligibility result,
-- burial pressure/decision/plan,
-- claim owner/state,
-- action lifecycle/cancellation reason,
-- burial transition result,
-- grave id/location,
-- reload/rebuild reconstruction result.
-
-Nie tworzyć osobnego debug frameworka.
 
 ## Verification
 
-### Social / decision
+Focused automated verification podczas implementacji:
 
-1. Relevant household member może dostać burial candidate.
-2. NPC bez social reason nie dostaje automatycznie burial.
-3. Burial nie jest `NeedId`.
-4. Existing pressure arbitration nadal rozstrzyga między burial a innymi aktywnościami deterministycznie.
+- claim ownership: same claimant retry succeeds; second claimant fails; non-owner release fails,
+- claimed corpse nie natural-decayuje; release po expiry pozwala istniejącemu cleanupowi zakończyć corpse,
+- `commitNpcDeath()` nadal jest one-shot i nie mintuje loot po reconstruction,
+- burial nie kopiuje `personalInventory`/`carried` do corpse,
+- burial pressure nie używa `NeedId`,
+- same-household/socially relevant NPC może dostać candidate; unrelated NPC nie dostaje globalnej wiedzy,
+- canonical `resolveCemeteryForSettlement()` jest używany także dla shared cemetery,
+- repeated finalization daje jeden terminal `buried` corpse + jeden grave,
+- terminal buried corpse nie materializuje się po settlement reload,
+- grave round-tripuje przez save/load i `WorldBundle` rebuild,
+- stale claim po reconstruction ma deterministyczną recovery rule,
+- legacy terminal corpse nie fabrykuje grave.
 
-### Claim / action
-
-1. Dwóch NPC nie utrzymuje skutecznie tego samego claimu.
-2. Claim jest rewalidowany przed execution.
-3. Unreachable/disappeared/decayed corpse kończy action bez stuck state.
-4. Stream-out/reconstruction nie wznawia transient path state i nie duplikuje action consequence.
-
-### Burial / grave
-
-1. Udany burial wykonuje dokładnie jeden corpse terminal transition.
-2. Powstaje dokładnie jeden grave.
-3. Corpse nie wraca po reload/rebuild.
-4. Grave nie powstaje ponownie z `health.dead` ani z reconstruction planu.
-5. Failure pomiędzy validation a finalization nie zostawia dwóch źródeł prawdy.
-
-### Persistence
-
-1. `NpcStateSnapshot` post-death/claim state round-tripuje przez save/load zgodnie z implementacją `npc-010`.
-2. Burial `activePlan` round-tripuje bez fake `NeedId`.
-3. Graves round-tripują przez `SaveData` i `WorldBundle` rebuild.
-4. Migration starych save'ów nie fabrykuje graves ani burial dla legacy dead NPC bez aktywnego corpse.
-5. Stale claim po load/rebuild ma deterministyczną recovery rule.
-
-### Regression
-
-Podczas implementacji uruchomić focused NPC/persistence/world-object tests i build. Dodać testy dla claim idempotency, duplicate executors, save/load/rebuild oraz grave uniqueness.
-
-Nie uruchamiać `pnpm docs:sync` ręcznie — robi to GitHub workflow.
+Docs-only recon nie wymaga browser verification, test/build ani `pnpm docs:sync`.
 
 ## Poza zakresem
 
-- combat feedback — `npc-009`,
-- NPC death/corpse creation/decay/loot — `npc-010`,
+- drugi corpse registry / corpse manager,
+- osobny burial scheduler/scoring engine,
+- burial-specific movement/pathfinding FSM,
+- pełny off-screen NPC executor,
 - grief/mourning/funeral ceremony,
-- inheritance,
-- household restructuring,
+- inheritance / household restructuring,
+- nowy relationship store,
 - player-only burial quest,
-- global death/memory registry,
-- nowy pathfinding/navigation system,
-- pełny unloaded-settlement NPC executor,
-- legal ownership/reputation consequences,
-- osobny corpse/grave manager posiadający state NPC.
+- global death knowledge registry,
+- reputation/legal consequences,
+- ekshumacja i grave inventory.
 
 ## Powiązane plany
 
-- **007 — Interaction Destination Approach**
-- **009 — NPC Combat Feedback**
-- **010 — NPC Death & Corpse Lifecycle**
+- **npc-010 — NPC Death & Corpse Lifecycle** — implemented dependency; corpse lifecycle/loot/claim seam.
+- **world-terrain-016 — Settlement Cemeteries & Abandoned Graveyards** — implemented code seam; canonical cemetery assignment/placement.
+- **npc-026 — NPC Grave Visits** — downstream consumer of persistent graves.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
