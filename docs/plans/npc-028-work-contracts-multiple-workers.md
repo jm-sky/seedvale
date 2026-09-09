@@ -1,7 +1,7 @@
 # Plan: Work Contracts — Multiple Workers
 
 **Created:** 2026-09-08
-**Status:** `draft` 📝
+**Status:** `planned` 📋
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** ~~npc-018~~
@@ -14,7 +14,7 @@
 
 Extend one advertised Work Contract so it can hire **1+ NPCs** for the same authoritative world target.
 
-Initial UX should support small worker counts such as:
+Initial UX supports:
 
 ```text
 1 worker
@@ -22,9 +22,15 @@ Initial UX should support small worker counts such as:
 3 workers
 ```
 
-but the runtime/data model must use a general `requestedWorkerCount: number` rather than hard-code a maximum of three.
+but runtime/data uses a general:
 
-The target remains the sole owner of real work progress. Multiple NPCs and the Player contribute to the same target through the existing actor-neutral work seam.
+```ts
+requestedWorkerCount: number
+```
+
+with domain validation `>= 1`, not a hard-coded maximum of three.
+
+The target remains the sole owner of real progress. Multiple NPCs and the Player contribute through the existing actor-neutral target seam.
 
 ```text
                     WorkContract
@@ -39,22 +45,20 @@ The target remains the sole owner of real work progress. Multiple NPCs and the P
                        Player
 ```
 
-Do not create one construction-progress record per worker and do not create house/buildable-specific crew systems.
+Do not create one contract/progress record per worker and do not create target-specific crew systems.
 
 ## Current state
 
-`src/world/workContract.ts` currently assumes exactly one worker:
+`src/world/workContract.ts` currently assumes one worker:
 
-- `WorkContractRecord.workerNpcId` is the sole assignment authority,
+- `workerNpcId` is the sole assignment authority,
 - `acceptedAt` and `workStartedAt` are contract-level,
-- `accepted → travelling → working → payment_due` is a single contract-level worker lifecycle,
-- `canAcceptContract()` closes the contract after one NPC accepts,
-- `releaseWorkContract()` releases that one worker,
-- `npcWorkCompleted` tracks aggregate NPC contribution, but today that aggregate can only come from one worker.
+- `accepted → travelling → working → payment_due` mirrors one worker,
+- acceptance closes the posting after one NPC,
+- release affects that one worker,
+- `npcWorkCompleted` is aggregate but currently receives work from one assignment.
 
-`npc-018` also deliberately enforces one non-terminal Work Contract per target and lists multiple workers/crews as future work.
-
-The existing target ownership is correct and must remain unchanged:
+`npc-018` correctly established:
 
 ```text
 WorkContract
@@ -64,25 +68,13 @@ ContractTarget
 world target owns progress
 ```
 
-This plan extends worker participation, not target ownership.
+This plan changes worker participation, not target ownership.
 
 ## 1. Separate contract from worker assignment
 
-Do not replace:
+Do not replace `workerNpcId` with only `workerNpcIds: string[]`.
 
-```ts
-workerNpcId: string | null
-```
-
-with only:
-
-```ts
-workerNpcIds: string[]
-```
-
-because workers can be in different lifecycle states at the same time.
-
-Introduce a per-NPC assignment/participation concept equivalent to:
+Introduce an explicit assignment concept equivalent to:
 
 ```ts
 type WorkContractAssignment = {
@@ -94,21 +86,21 @@ type WorkContractAssignment = {
 }
 ```
 
-Exact naming/types should follow implementation recon, but the architectural ownership is required:
+Ownership:
 
 ```text
 WorkContractRecord
-    owns job/target/commitment/reward/posting
+    owns job / target / commitment / reward / posting
 
 WorkContractAssignment
-    owns one hired NPC's participation lifecycle/contribution
+    owns one NPC's execution / contribution lifecycle
 ```
 
-Do not duplicate the assignment on `NpcAgent`; NPCs should continue resolving their active Work Contract participation from the Work Contracts authority.
+Do not duplicate assignment ownership on `NpcAgent`. NPCs continue resolving participation through Work Contracts authority.
 
 ## 2. Independent worker lifecycle
 
-Each hired NPC must progress independently.
+Each assignment progresses independently.
 
 Conceptually:
 
@@ -116,10 +108,12 @@ Conceptually:
 accepted
 → travelling
 → working
-→ fulfilled / released
+→ payment_due / released
 ```
 
-At the same moment:
+`npc-016` later extends payment-side terminal outcomes such as `paid` / `unpaid`.
+
+Mixed states are valid:
 
 ```text
 NPC A = working
@@ -127,65 +121,71 @@ NPC B = travelling
 NPC C = accepted
 ```
 
-must be valid.
+One worker sleeping, fighting, path-blocked, interrupted, released or dead must not pause or rewind others.
 
-One worker becoming hungry, sleeping, fighting, path-blocked, interrupted, released or dead must not pause or rewind the other assignments.
+Do not add a synchronized crew FSM, foreman or coordinator.
 
-Do not create a synchronized crew FSM or foreman/coordinator.
+## 3. Contract-level lifecycle becomes coarse
 
-## 3. Contract-level lifecycle becomes aggregate/coarse
+Worker execution state must no longer live on one shared contract state.
 
-The current contract-level lifecycle mirrors one worker and therefore cannot remain the sole execution state for multiple workers.
+Use a coarse aggregate contract lifecycle conceptually equivalent to:
 
-Refactor it only as far as needed so the contract represents the aggregate job/posting lifecycle while assignments represent individual execution.
+```text
+available / advertised
+→ active
+→ settling
+→ completed
+```
 
-The implementation should preserve existing terminal concepts such as cancellation/invalidation and keep posting state authoritative on the contract.
+while preserving existing `cancelled` / `invalidated` semantics.
 
-Avoid encoding impossible aggregate states such as requiring all workers to be `travelling` before any may work.
+Exact names may follow implementation recon, but invariants are required:
 
-The exact aggregate-state vocabulary should be resolved during implementation against `npc-016` if that payment plan has landed, but the invariant is:
+- `travelling`, `working`, `payment_due` are not authoritative group states,
+- `active` means contractual work is still possible/required,
+- `settling` means work has ended but payment claims may remain,
+- contract settlement does not block independent assignment execution.
 
-> worker-specific execution state belongs to assignments, not to one shared contract field.
+Do not encode impossible aggregate states such as requiring all workers to travel before any may work.
 
 ## 4. Requested worker count
 
-Add contract data equivalent to:
+Add:
 
 ```ts
 requestedWorkerCount: number
 ```
 
-Initial UI presets may be 1/2/3.
+Initial UI presets are `1 / 2 / 3`.
 
-The advertised job remains open while:
+The value is frozen after contract creation/posting in this plan. Dynamic workforce resizing is a non-goal.
+
+A work slot is occupied only by an assignment still participating in contractual work. An assignment waiting for payment does **not** occupy a work slot.
+
+The posting remains discoverable while:
 
 ```text
-activeAssignments < requestedWorkerCount
+activeWorkAssignments < requestedWorkerCount
+AND groupRemaining > 0
+AND target still accepts useful work
 ```
 
-and the target still has useful contracted work available.
+An NPC may not accept the same contract twice.
 
-An NPC evaluating the job must not accept it twice.
+Authoritative acceptance must recheck slot availability to avoid double acceptance.
 
-Once all requested slots are filled, the posting is no longer available to additional NPCs unless a worker slot later reopens.
+## 5. One contract per target
 
-## 5. One contract, not one contract per worker
+Preserve one non-terminal Work Contract **job** per concrete target.
 
-Keep one Work Contract for the advertised job.
+Multiple workers are assignments inside that one contract.
 
-Do not create three independent Work Contracts pointing at the same target merely to hire three workers. That would duplicate:
-
-- posting/reward/job identity,
-- commitment snapshots,
-- cancellation/invalidation semantics,
-- employer intent,
-- target-level concurrency rules.
-
-Worker-specific state belongs under the contract as assignments.
+Do not create separate contracts per worker; that would duplicate posting, reward, commitment snapshots, cancellation/invalidation semantics and employer intent.
 
 ## 6. Group work commitment
 
-Preserve `npc-018` snapshot semantics:
+Preserve the `npc-018` snapshot fields:
 
 ```text
 requestedWorkShare
@@ -194,7 +194,7 @@ committedWork
 npcWorkCompleted
 ```
 
-`committedWork` remains the **total work promised by the hired NPC group**, not a per-worker quota multiplied by worker count.
+`committedWork` is the **total work promised by the NPC group**, not a quota multiplied by worker count.
 
 Example:
 
@@ -206,51 +206,42 @@ requested workers = 3
 committedWork = 9h total
 ```
 
-The three workers collectively owe 9h, **not 27h**.
+The workers collectively owe 9h, not 27h.
 
-Do not recalculate the commitment as workers accept, arrive, leave, or as the Player contributes.
+Do not recalculate commitment as workers join/leave or as the Player contributes.
 
-## 7. Shared workload, not rigid equal quotas
+## 7. Shared workload, no equal quotas
 
-Do not split the group commitment into fixed thirds such as 3h/3h/3h unless later gameplay explicitly requires individual quotas.
+Do not split the group commitment into fixed thirds.
 
-Prefer a shared remaining group workload:
+Use:
 
 ```text
 groupRemaining = committedWork - npcWorkCompleted
 ```
 
-Each worker contributes useful work while group commitment remains.
+Each assignment contributes while useful contracted work remains.
 
-This naturally handles:
+This supports different work speeds, late arrivals, interruptions, replacement workers and Player concurrency.
 
-- different NPC work speeds,
-- late arrivals,
-- interruptions,
-- one worker leaving,
-- Player contributions reducing target work,
-- target completion before all assignments contribute equally.
-
-Per-assignment `workCompleted` should still be tracked for payment/debugging/history, but it does not define an equal quota.
+Track per-assignment `workCompleted` for payment/debug/history, but it is not a fixed personal quota.
 
 ## 8. Contribution accounting
 
-All NPC workers contribute through the same target seam used today.
-
-For each work bout:
+Every NPC contribution uses the same authoritative target seam:
 
 ```text
-assignment NPC performs attempted work
+NPC attempts work
 → target accepts/clamps useful work
 → assignment.workCompleted += acceptedWork
 → contract.npcWorkCompleted += acceptedWork
 ```
 
-Only work actually accepted by the target counts.
+Only accepted useful work counts.
 
-The target remains responsible for clamping against remaining useful work and construction/material blocking.
+Do not infer contribution from target-progress deltas.
 
-Do not infer individual contribution from target-progress deltas.
+The target remains responsible for construction/material blocking and remaining-work clamping.
 
 ## 9. Player remains a concurrent contributor
 
@@ -261,44 +252,86 @@ Player + NPC A + NPC B + NPC C
 → same target progress
 ```
 
-No frame-level lock manager is required in the current single-threaded simulation. Each contribution is a small authoritative mutation that clamps to remaining useful work.
+No frame-level lock manager is required in the current single-threaded simulation.
 
-Keep this actor-neutral enough that future multiplayer does not require replacing Player-only construction progress.
+Keep the target seam actor-neutral enough for future multiplayer.
 
-## 10. Assignment acceptance
+## 10. NPC discovery and acceptance
 
-Each NPC evaluates the same advertised contract independently.
+Reuse current Work Contract discovery and evaluation.
 
-Acceptance succeeds only when:
+Acceptance requires:
 
-- the contract is still advertised/open,
-- the NPC does not already have an assignment on it,
-- a requested worker slot remains,
+- contract still open/discoverable,
+- NPC has no assignment on that contract,
+- NPC has no conflicting active work commitment under current rules,
+- a work slot remains,
 - target/contract remains valid,
-- normal NPC commitment rules allow acceptance.
+- useful group work remains.
 
-Acceptance adds one assignment rather than replacing a contract-level `workerNpcId`.
+Acceptance adds an assignment; it does not replace a contract-level worker field.
 
-Race-like double acceptance must be resolved by the authoritative Work Contracts mutation rechecking slot availability.
+Do not add Player-picked worker rosters in this plan.
 
-## 11. NPC discovery and evaluation
+## 11. Multi-worker opportunity scoring
 
-Reuse the current Work Contract discovery/evaluation system.
+The current evaluator charges every candidate for the entire `committedWork`; that becomes wrong after multi-worker support.
 
-Do not add crew recruitment UI or Player-picked NPC rosters in this plan.
+Estimate the candidate's expected share from current group state, conceptually:
 
-NPC evaluation must account for the fact that several workers may share the work. Do not score expected duration as if every candidate personally performs the entire `committedWork`.
+```text
+remainingGroupWork = max(0, committedWork - npcWorkCompleted)
+expectedWorkers = bounded estimate from requested slots / active assignments
+expectedCandidateWork = remainingGroupWork / expectedWorkers
+```
 
-Use a bounded estimate based on remaining group commitment and currently filled/requested worker slots. Exact scoring should reuse the existing evaluator rather than create separate multi-worker desirability logic.
+Then evaluate using the existing formula shape:
 
-## 12. Worker release and replacement
+```text
+expectedReward
++ suitability
+- travelCost
+- expectedWorkDurationCost
+- scheduleConflict
+```
 
-If one worker genuinely abandons the job, dies or otherwise cannot continue:
+Expected reward derives from the frozen contract reward rate described below, not from the whole `rewardCoins` value.
 
-- remove/mark only that assignment,
-- preserve work already contributed by that worker,
+Keep the estimator deterministic, bounded and simple. Do not build a workforce-market prediction model.
+
+## 12. Reward semantics foundation
+
+`rewardCoins` remains the **maximum total price for the original group `committedWork`**.
+
+It is not a per-worker reward and is never multiplied by worker count.
+
+Conceptually:
+
+```text
+rewardRate = rewardCoins / committedWork
+```
+
+A worker earns only for useful accepted work:
+
+```text
+assignment earned reward ∝ assignment.workCompleted × rewardRate
+```
+
+The exact integer coin claim allocation/payment lifecycle is implemented by `npc-016`, which depends on this plan.
+
+This plan must preserve enough attributable contribution data for `npc-016` to freeze deterministic per-assignment claims.
+
+Do not silently redefine `rewardCoins` in UI or persistence as "reward per worker".
+
+## 13. Worker release and replacement
+
+If one worker genuinely abandons, dies or otherwise cannot continue:
+
+- end/release only that assignment's work participation,
+- preserve its `workCompleted`,
+- preserve aggregate `npcWorkCompleted`,
 - keep all other assignments untouched,
-- reopen that worker slot if useful contracted work remains.
+- reopen one work slot if useful contracted work remains.
 
 Example:
 
@@ -309,75 +342,88 @@ B working
 C dies
 
 → A and B continue
-→ one slot reopens
+→ one work slot reopens
 → D may later accept
 ```
 
-Do not reset `npcWorkCompleted`, `committedWork` or other workers' lifecycle.
+Temporary hunger/sleep/combat/path interruptions do not release the slot automatically.
 
-Temporary needs/sleep/combat interruptions should continue using normal NPC interruption/resumption behaviour and should not automatically release the slot.
+A worker who already performed useful work retains the basis for an earned payment claim even if later released. `npc-016` owns the actual claim/payment lifecycle.
 
-## 13. Group commitment fulfilled
+## 14. Worker death
 
-The work phase is fulfilled when:
+Death must not erase historical work contribution.
+
+In this plan:
+
+- dead worker stops active work participation,
+- slot may reopen if useful work remains,
+- contribution remains attributable,
+- no household inheritance/estate transfer is implemented.
+
+`npc-016` handles the temporary payment-side outcome for a dead claimant without treating it as deliberate employer non-payment.
+
+A later dedicated household/inheritance plan may transfer such claims contextually.
+
+## 15. Group commitment fulfilled
+
+Work phase ends when:
 
 ```text
 npcWorkCompleted >= committedWork
 ```
 
-regardless of how the contribution was distributed between workers.
+regardless of contribution distribution.
 
-All still-active worker assignments must then stop contractual work cleanly.
+All still-active work assignments stop cleanly.
 
-No synthetic work is generated to make every assignment reach an equal amount.
+Do not generate synthetic work to equalize individual contributions.
 
-## 14. Target completes first
+The contract then enters its settlement/payment phase as defined by the coarse lifecycle.
 
-As in `npc-018`, the real target may complete before the group reaches the full original commitment because the Player also worked.
+## 16. Target completes first
+
+The real target may finish before group `committedWork` because the Player also contributed.
 
 When no useful target work remains:
 
-- all worker assignments stop contractual work,
-- no synthetic contribution is added,
+- all active work assignments stop,
+- no synthetic contribution is credited,
+- no replacement work slots reopen,
 - target remains complete,
-- the contract proceeds through the appropriate existing payment/completion semantics.
+- only actual accepted NPC work is eligible for payment.
 
-Do not reopen worker slots for a completed target.
+Example:
 
-## 15. Payment semantics and `npc-016`
+```text
+rewardCoins = 90
+committedWork = 9h
+NPC group actually contributes 6h
+Player finishes the target
 
-`npc-016-work-contracts-payment-and-employer-interaction.md` currently assumes one `workerNpcId` and one contract-level `payment_due` lifecycle.
+→ NPCs collectively earned only the reward corresponding to 6h
+→ remaining reward never becomes owed
+```
 
-This plan is intentionally `draft` because multi-worker payment must be reconciled before either plan is implemented on top of the other.
+## 17. Payment handoff to `npc-016`
 
-Required direction:
+This plan lands **before** `npc-016-work-contracts-payment-and-employer-interaction.md`.
 
-- each worker's contributed work must remain attributable through its assignment,
-- payment cannot rely on one shared `workerNpcId`,
-- mixed states must be possible (e.g. NPC A finished/awaiting payment while NPC B is still working),
-- payment UI/interaction must resolve the specific worker assignment being paid.
+Required handoff:
 
-Do **not** implement a shared pooled wage that is paid to an arbitrary one worker.
+- each assignment retains its own `workCompleted`,
+- mixed work/payment states are structurally possible,
+- payment never relies on one shared `workerNpcId`,
+- waiting-for-payment assignments do not consume work slots,
+- released workers retain earned contribution history,
+- dead workers retain historical claim basis,
+- contract can distinguish active work from post-work settlement.
 
-Preferred initial economic model is a **per-worker reward/claim**, with the exact reward representation resolved together with `npc-016` before implementation. Avoid silently redefining the existing `rewardCoins` field without migration/UX consideration.
+`npc-016` then adds deterministic integer `rewardCoinsDue`, local claimant interaction, `paid`/`unpaid`, request throttling and patience per assignment.
 
-Before implementing `npc-016`, update/review that plan against this draft if `npc-028` is intended to land first.
+## 18. Existing target compatibility
 
-## 16. Target concurrency rule
-
-Preserve one non-terminal **Work Contract job** per concrete target.
-
-`npc-018`'s one-contract-per-target invariant should become:
-
-> one job/contract per target, with multiple assignments inside that contract.
-
-Do not allow overlapping independent contracts for the same target in this phase.
-
-This keeps commitment accounting and cancellation/invalidation unambiguous while still allowing several NPC workers.
-
-## 17. Existing target compatibility
-
-The feature must remain generic across all currently supported Work Contract targets available at implementation time, including the existing families such as:
+Remain generic across all Work Contract targets available at implementation time, including:
 
 - well/construction,
 - terrain preparation,
@@ -386,13 +432,21 @@ The feature must remain generic across all currently supported Work Contract tar
 
 Do not add target-specific worker-count logic.
 
-Future residential-house construction (`settlements-005`) should consume this generic capability as another Work Contract target rather than introducing house crews.
+Future residential-house construction should consume this generic capability rather than creating house crews.
 
-## 18. Persistence
+## 19. Work positions / physical concurrency
 
-Persist enough authoritative state to restore multi-worker contracts deterministically.
+Do not introduce a generic work-position/interaction-slot geometry system in this plan.
 
-Conceptually:
+Multiple NPCs may currently contribute to the same target through existing work bouts even if they converge on the same logical target location.
+
+A later shared target-interaction-slot system may improve physical spacing/animation for construction, repair, harvesting and similar activities.
+
+Do not block this plan on that future presentation/interaction refinement.
+
+## 20. Persistence and migration
+
+Persist authoritative multi-worker state conceptually:
 
 ```text
 requestedWorkerCount
@@ -406,44 +460,45 @@ existing group commitment snapshot
 existing target/reward/posting state
 ```
 
-Old single-worker saves must migrate/default cleanly.
-
-When migrating a contract with `workerNpcId`:
+Migrate old single-worker saves cleanly:
 
 ```text
 requestedWorkerCount = 1
+
 workerNpcId != null
 → one equivalent assignment
 ```
 
-Do not duplicate already credited `npcWorkCompleted` during migration.
+Map old contract execution state to that assignment state.
 
-Follow the repository's current save-version migration mechanism; `SaveData` remains serialization, not runtime authority.
+Preserve existing aggregate `npcWorkCompleted`; do not credit the migrated assignment a second time into the aggregate.
 
-## 19. NPC lookup APIs
+Follow the current save-version migration mechanism. `SaveData` remains serialization, not runtime authority.
 
-Current NPC execution resolves contracts through single-worker lookup semantics such as `findByWorker()`.
+## 21. NPC lookup APIs
 
-Adapt this to assignment-based lookup without making each `NpcAgent` own a copied contract id.
-
-The authoritative query should remain conceptually:
+Replace single-worker lookup semantics such as `findByWorker()` with assignment-aware authoritative lookup conceptually:
 
 ```text
-find active assignment for npcId
+find active work assignment for npcId
 → owning contract + assignment
 ```
 
-Keep one-active-work-commitment-per-NPC rules unless current code explicitly supports multiple simultaneous commitments.
+Do not make `NpcAgent` own a copied contract id.
 
-## 20. Cancellation and invalidation
+Keep one-active-work-commitment-per-NPC unless current code explicitly supports more.
+
+Payment-side historical/claim lookup may later include non-work-active assignments through `npc-016`.
+
+## 22. Cancellation and invalidation
 
 Contract cancellation or target invalidation applies to the job as a whole.
 
-It must terminate/release every active assignment consistently and clear posting state through the existing Work Contracts authority.
+It terminates/releases every active work assignment consistently and clears posting state through Work Contracts authority.
 
-Worker-specific abandonment must **not** cancel the whole contract.
+Worker-specific abandonment does **not** cancel the contract.
 
-Keep these causes distinct:
+Keep causes distinct:
 
 ```text
 worker unavailable → assignment release
@@ -451,32 +506,32 @@ employer cancels   → contract cancellation
 invalid target     → contract invalidation
 ```
 
-## 21. Performance
+Already performed work remains attributable; exact payment consequences are handled by `npc-016`.
+
+## 23. Performance
 
 Do not add a crew manager or per-contract update loop.
 
-Worker behaviour remains driven by the existing NPC simulation/arbitration. Work Contracts are queried/mutated as authoritative records.
+NPC behaviour remains driven by existing simulation/arbitration. Work Contracts remain authoritative records queried/mutated through the current world-owned runtime.
 
-Expected worker counts are small, but data structures and queries should avoid scanning every contract for every NPC when the existing manager can maintain/index assignment lookup cheaply.
+Worker counts are expected to be small, but assignment lookup should avoid unnecessary every-contract scans in hot NPC paths when a cheap runtime index is justified.
 
-No Web Worker is justified for this feature.
+No Web Worker is justified.
 
-## 22. Implementation guidance
+## 24. Implementation guidance
 
-Before implementation, create implementation notes according to `docs/plans/PLANNING.md` and inspect the current versions of:
+Before implementation, create implementation notes according to `docs/plans/PLANNING.md` and inspect current versions of:
 
 - `src/world/workContract.ts`,
 - `src/world/createWorkContracts.ts`,
 - Work Contract persistence/migrations,
-- `NpcAgent` Work Contract discovery/accept/travel/work execution,
-- Work Contract evaluator/scoring,
-- contract posting/action UI,
-- `npc-016` if implemented or still planned,
-- all target resolvers/contribution seams available after `items-player-017`.
+- `NpcAgent` discovery/accept/travel/work execution,
+- `src/ai/npcWorkContract.ts` evaluator/scoring,
+- contract creation/posting/action UI,
+- all target contribution seams available after `items-player-017`,
+- updated `npc-016` as the direct payment consumer of this architecture.
 
-Resolve the payment representation before coding if `npc-016` has not already been adapted.
-
-Add JSDoc to important assignment lifecycle/query/mutation APIs where it improves preflight discovery; use `@domain npc`.
+Add JSDoc to important assignment lifecycle/query/mutation APIs where useful; use `@domain npc`.
 
 ## Verification
 
@@ -487,10 +542,10 @@ Browser verification is performed manually by the User, not by the implementatio
 1. Player creates a contract with `requestedWorkerCount = 3`.
 2. Contract is posted once.
 3. NPC A accepts → one assignment.
-4. Posting remains open with two slots.
+4. Posting remains open with two work slots.
 5. NPC B accepts → second assignment.
 6. NPC C accepts → third assignment.
-7. Further NPC acceptance is rejected while all slots are filled.
+7. Further acceptance is rejected while slots are filled.
 8. Only one Work Contract exists for the target.
 
 ### Independent lifecycle
@@ -503,15 +558,15 @@ B = travelling
 C = accepted/interrupted
 ```
 
-A must continue progressing the target without waiting for B/C.
+A progresses the target without waiting for B/C.
 
 ### Shared work
 
 1. Player + A + B + C work on the same target.
 2. Every contribution advances only the authoritative target.
 3. `assignment.workCompleted` credits only that NPC's accepted work.
-4. `contract.npcWorkCompleted` equals the aggregate accepted NPC work.
-5. No duplicate progress is created.
+4. `contract.npcWorkCompleted` equals aggregate accepted NPC work.
+5. No duplicate progress occurs.
 
 ### Group commitment
 
@@ -523,28 +578,33 @@ share = 75%
 workers = 3
 ```
 
-verify the group commitment is 9h total, not 27h.
+verify group commitment is 9h total, not 27h.
 
-Different contribution distributions such as 5h + 3h + 1h must all fulfill the same 9h group commitment.
+Different distributions such as 5h + 3h + 1h fulfill the same 9h commitment.
 
-### Worker replacement
+### Replacement
 
-1. Three workers are assigned.
-2. One worker genuinely becomes unavailable.
-3. Other two continue unchanged.
-4. One slot reopens.
-5. Another NPC can accept.
-6. Previously contributed work is preserved.
+1. Three workers are active.
+2. One contributes partial useful work and becomes genuinely unavailable.
+3. Its contribution remains recorded.
+4. Other workers continue unchanged.
+5. One work slot reopens.
+6. Another NPC can accept.
+7. Replacement does not reset group commitment or prior contribution.
 
 ### Player completes target first
 
-Verify that if Player contribution completes the target while several assignments remain:
+Verify:
 
-- all contractual work stops,
+- active work stops,
 - no synthetic work is credited,
-- no replacement slots reopen,
-- target remains completed,
-- payment/completion path receives correct per-assignment contribution data.
+- no replacement slot reopens,
+- target remains complete,
+- only actual NPC contribution is passed toward payment accounting.
+
+### Evaluator
+
+Verify candidates do not each price the full remaining group commitment as their personal workload/reward once multiple workers can participate.
 
 ### Save/load
 
@@ -553,49 +613,53 @@ Verify save/load with:
 - advertised contract with partially filled slots,
 - workers in different lifecycle states,
 - partial contribution from multiple workers,
-- a released/reopened slot,
+- released/reopened slot,
 - fulfilled group commitment.
 
-After load there must be no duplicated assignments or duplicated work contribution.
+After load there must be no duplicated assignments or duplicated contribution.
 
 ## Non-goals
 
-Do not implement in this plan:
+Do not implement:
 
 - permanent work crews,
-- foremen or crew hierarchy,
+- foremen / crew hierarchy,
 - synchronized worker movement/animations,
+- generic target work-position/interaction-slot geometry,
 - Player-selected named recruitment roster,
 - NPC-created work contracts,
 - autonomous settlement workforce planning,
 - material hauling/procurement,
-- specialist job roles within one contract,
+- specialist roles inside one contract,
 - individual fixed work quotas,
 - multiple independent Work Contracts on one target,
 - negotiation or dynamic workforce resizing after posting,
-- house-specific crew logic,
-- multiplayer networking/locking.
+- reward per worker,
+- pooled crew wage,
+- actual payment interaction (`npc-016`),
+- inheritance/household transfer of dead workers' claims,
+- house-specific crew systems.
 
 ## Completion criteria
 
-The system supports:
+The implemented model supports:
 
 ```text
-one posted Work Contract
+one Work Contract / target
     ↓
-requested workers = N
+requestedWorkerCount 1+
     ↓
-NPCs accept independently until N slots filled
+independent assignments
     ↓
-assignments travel/work independently
+shared group commitment
     ↓
-Player + all workers contribute to same target
+per-assignment attributable contribution
     ↓
-aggregate NPC commitment fulfilled
-OR
-target completes
+Player + multiple NPCs mutate the same authoritative target
     ↓
-worker-specific completion/payment flow
+clean work completion/replacement
+    ↓
+assignment-aware handoff to npc-016 payment claims
 ```
 
 The implementation must preserve target-owned progress, one contract per target, independent NPC simulation and future compatibility with residential/settlement construction.
