@@ -109,7 +109,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfColliders.ts`
 
-- `buildCaveSdfColliders` — function — line 96
+- `buildCaveSdfColliders` — function — line 109
   - domain: world-terrain
 - `CAVE_SDF_BEAD_RADIUS` — const — line 23
 
@@ -133,34 +133,34 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfQuery.ts`
 
-- `applyCaveGroundHysteresis` — function — line 449
+- `applyCaveGroundHysteresis` — function — line 443
   - domain: world-terrain
-- `applyCaveInteriorHysteresis` — function — line 425
+- `applyCaveInteriorHysteresis` — function — line 419
   - domain: world-terrain
-- `buildCaveSdfColumnIndex` — function — line 245
+- `buildCaveSdfColumnIndex` — function — line 234
   - domain: world-terrain
-- `CAVE_COLUMN_STEP` — const — line 52
-- `CAVE_FLOOR_GRACE` — const — line 58
-- `CAVE_OCCUPANCY_EPS` — const — line 64
-- `CAVE_UNDERGROUND_MISS` — const — line 85
-- `CaveGroundHit` — type — line 32
-- `CaveGroundHysteresis` — type — line 435
-- `CaveInteriorHysteresis` — type — line 414
-- `CaveSdfColumnIndex` — type — line 39
+- `CAVE_COLUMN_STEP` — const — line 59
+- `CAVE_FLOOR_GRACE` — const — line 65
+- `CAVE_OCCUPANCY_EPS` — const — line 72
+- `CAVE_UNDERGROUND_MISS` — const — line 86
+- `CaveGroundHit` — type — line 38
+- `CaveGroundHysteresis` — type — line 429
+- `CaveInteriorHysteresis` — type — line 408
+- `CaveSdfColumnIndex` — type — line 46
 - `CaveVerticalInterval` — type — line 30
-- `columnIntervalsAt` — function — line 285
-- `isCaveInteriorAt` — function — line 403
+- `columnIntervalsAt` — function — line 274
+- `isCaveInteriorAt` — function — line 397
   - domain: world-terrain
-- `lowestCeilingAt` — function — line 470
-- `lowestFloorAt` — function — line 464
-- `occupancyContains` — function — line 387
-- `occupancyIntervalAt` — function — line 358
+- `lowestCeilingAt` — function — line 464
+- `lowestFloorAt` — function — line 458
+- `occupancyContains` — function — line 381
+- `occupancyIntervalAt` — function — line 352
   - domain: world-terrain
-- `pickInterval` — function — line 302
+- `pickInterval` — function — line 291
   - domain: world-terrain
-- `queryColumnIndex` — function — line 336
+- `queryColumnIndex` — function — line 325
   - domain: world-terrain
-- `SurfaceHeightSampler` — type — line 90
+- `SurfaceHeightSampler` — type — line 91
 
 ## `world/caves/caveSpikeMaterial.ts`
 
@@ -187,11 +187,11 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/clipBelowSurface.ts`
 
-- `clipTrianglesBelowSurface` — function — line 38
+- `clipTrianglesBelowSurface` — function — line 39
   - domain: world-terrain
-- `clipTrianglesInFrontOfMouth` — function — line 84
+- `clipTrianglesInFrontOfMouth` — function — line 86
   - domain: world-terrain
-- `SurfaceHeightSampler` — type — line 30
+- `SurfaceHeightSampler` — type — line 31
 
 ## `world/caves/mouthCarve.ts`
 
@@ -202,9 +202,11 @@ Generated from exported TypeScript symbols.
 - `MOUTH_INTERIOR_ALONG` — const — line 27
 - `mouthAlong` — function — line 35
   - domain: world-terrain
-- `mouthCarveDepth` — function — line 72
+- `mouthCarveDepth` — function — line 87
   - domain: world-terrain
-- `smoothstep` — function — line 46
+- `mouthLateral` — function — line 50
+  - domain: world-terrain
+- `smoothstep` — function — line 61
 
 ## `world/caves/mouthOverburden.ts`
 

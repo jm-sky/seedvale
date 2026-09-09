@@ -158,6 +158,6 @@ Generated from exported TypeScript symbols.
 
 ## `audio/weatherSounds.ts`
 
-- `AMBIENT_RAIN_LOOP_URL` — const — line 8
-- `createWeatherAudio` — function — line 19
-- `WeatherAudio` — type — line 12
+- `AMBIENT_RAIN_LOOP_URL` — const — line 10
+- `createWeatherAudio` — function — line 21
+- `WeatherAudio` — type — line 14
