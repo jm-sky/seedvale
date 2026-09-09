@@ -139,8 +139,25 @@
         pointer-events: none;
         user-select: none;
       }
+      .npc-label__name-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        min-width: 0;
+        max-width: 16ch;
+      }
+
       .npc-label__name {
-        text-align: center;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .npc-label__marker {
+        flex: 0 0 auto;
       }
       .npc-label__assessment {
         text-align: center;

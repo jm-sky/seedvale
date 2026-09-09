@@ -1236,6 +1236,7 @@ export class AnimalAgent {
     // fauna-017 step 4c).
     this.labelController = createAgentStatusLabelController(
       ANIMAL_LABELS[def.kind],
+      null,
       ['hp', 'stamina', 'satiety', 'hydration'],
       this.labelHeight(),
     )
@@ -1472,6 +1473,7 @@ export class AnimalAgent {
         level: observationLevel,
         broadIdentity: speciesLabel,
         knownName,
+        questMarker: null,
         healthRatio,
         staminaRatio: getStaminaRatio(this.life.stamina),
         fullLabelInfo: playerObservation.fullLabelInfo,

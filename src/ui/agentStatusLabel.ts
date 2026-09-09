@@ -34,6 +34,7 @@ export type AgentLabelDom = {
   label: CSS2DObject
   el: HTMLDivElement
   nameEl: HTMLDivElement
+  markerEl: HTMLDivElement
   barsEl: HTMLDivElement
 }
 
@@ -48,26 +49,37 @@ export type AgentLabelDom = {
  *  `assignRenderLayer` call sites differ slightly in ordering). */
 export function createAgentLabel(
   initialName: string,
+  questMarker: string | null,
   bars: readonly { bar: HTMLDivElement }[],
   height: number,
 ): AgentLabelDom {
-  const el = document.createElement('div')
-  el.className = 'npc-label'
+  const wrapperEl = document.createElement('div')
+  wrapperEl.className = 'npc-label'
 
-  const nameEl = document.createElement('div')
-  nameEl.className = 'npc-label__name'
-  nameEl.textContent = initialName
+  const firstRowEl = document.createElement('div')
+  firstRowEl.className = 'npc-label__name-row'
+
+  const firstRowNameEl = document.createElement('div')
+  firstRowNameEl.className = 'npc-label__name'
+  firstRowNameEl.textContent = initialName
+
+  firstRowEl.append(firstRowNameEl)
+
+  const firstRowMarkerEl = document.createElement('div')
+  firstRowMarkerEl.className = 'npc-label__marker'
+  applyQuestMarkerEl(firstRowMarkerEl, questMarker)
+  firstRowEl.append(firstRowMarkerEl)
 
   const barsEl = document.createElement('div')
   barsEl.className = 'npc-label__bars'
   barsEl.append(...bars.map((b) => b.bar))
 
-  el.append(nameEl, barsEl)
+  wrapperEl.append(firstRowEl, barsEl)
 
-  const label = new CSS2DObject(el)
+  const label = new CSS2DObject(wrapperEl)
   label.position.set(0, height, 0)
 
-  return { label, el, nameEl, barsEl }
+  return { label, el: wrapperEl, nameEl: firstRowNameEl, markerEl: firstRowMarkerEl, barsEl }
 }
 
 /** `current/max` → rounded percent, `0` for a non-positive `max` — shared by
@@ -104,6 +116,8 @@ export type AgentLabelObservationPresentation = {
   broadIdentity: string
   /** Knowledge-authorized or detailed personal label when `detailed`. */
   knownName: string
+  /** Quest marker for `detailed`. */
+  questMarker: string | null
   healthRatio: number
   staminaRatio: number
   /** When set (NPC injury observation, plan npc-025), qualitative health
@@ -134,6 +148,9 @@ export type AgentStatusLabelController = {
   /** Guarded against the last-written text — a no-op DOM write when
    *  unchanged, same as every other field here. */
   setName: (text: string) => void
+  /** Guarded against the last-written text — a no-op DOM write when
+   *  unchanged, same as every other field here. */
+  setQuestMarker: (text: string | null) => void
   /** `null` hides the debug line (and skips the text guard/write); a string
    *  shows it, guarded against the last-written text. Callers own deciding
    *  *when* a debug line applies (e.g. `isDebugMode()`) — this only ever
@@ -165,11 +182,12 @@ export type AgentStatusLabelController = {
  *  `createAgentLabel`'s existing contract. */
 export function createAgentStatusLabelController(
   name: string,
+  questMarker: string | null,
   bars: readonly LabelBarKind[],
   height: number,
 ): AgentStatusLabelController {
   const builtBars = bars.map((kind) => ({ kind, ...createLabelBar(kind) }))
-  const labelDom = createAgentLabel(name, builtBars, height)
+  const labelDom = createAgentLabel(name, questMarker, builtBars, height)
   const fillByKind = new Map<LabelBarKind, HTMLDivElement>(builtBars.map((b) => [b.kind, b.fill]))
   const lastPercentByKind = new Map<LabelBarKind, number>(builtBars.map((b) => [b.kind, -1]))
 
@@ -184,6 +202,7 @@ export function createAgentStatusLabelController(
   labelDom.el.append(debugEl)
 
   let lastName = name
+  let lastQuestMarker = questMarker
   let lastAssessmentText = ''
   let lastObservationLevel: ObservationLevel | null = null
   let lastDebugText = ''
@@ -196,6 +215,11 @@ export function createAgentStatusLabelController(
       if (text === lastName) return
       lastName = text
       labelDom.nameEl.textContent = text
+    },
+    setQuestMarker: (text) => {
+      if (text === lastQuestMarker) return
+      lastQuestMarker = text
+      applyQuestMarkerEl(labelDom.markerEl, text)
     },
     setDebugLine: (text) => {
       if (text === null) {
@@ -220,17 +244,20 @@ export function createAgentStatusLabelController(
         const presentation = resolveAgentLabelObservationPresentation(observation)
         distanceState = applyAgentLabelObservationPresentation(
           labelDom.nameEl,
+          labelDom.markerEl,
           labelDom.barsEl,
           assessmentEl,
           presentation,
           {
             lastName,
+            lastQuestMarker,
             lastAssessmentText,
             lastObservationLevel,
           },
           distanceState,
         )
         lastName = presentation.nameText
+        lastQuestMarker = presentation.questMarker
         lastAssessmentText = presentation.assessmentText
         lastObservationLevel = presentation.level
         showBarsOverride = presentation.showBars
@@ -268,6 +295,7 @@ export function createAgentStatusLabelController(
 type ResolvedAgentLabelObservationPresentation = {
   level: ObservationLevel
   nameText: string
+  questMarker: string | null
   assessmentText: string
   showBars: boolean
   showName: boolean
@@ -286,6 +314,7 @@ function resolveAgentLabelObservationPresentation(
       return {
         level,
         nameText: observation.broadIdentity,
+        questMarker: observation.questMarker,
         assessmentText,
         showBars: false,
         showName: true,
@@ -295,6 +324,7 @@ function resolveAgentLabelObservationPresentation(
       return {
         level,
         nameText: observation.broadIdentity,
+        questMarker: observation.questMarker,
         assessmentText,
         showBars: false,
         showName: true,
@@ -304,6 +334,7 @@ function resolveAgentLabelObservationPresentation(
       return {
         level,
         nameText: observation.knownName,
+        questMarker: observation.questMarker,
         assessmentText,
         showBars: true,
         showName: true,
@@ -314,6 +345,7 @@ function resolveAgentLabelObservationPresentation(
         level,
         nameText: '',
         assessmentText,
+        questMarker: observation.questMarker,
         showBars: false,
         showName: false,
         showAssessment: false,
@@ -321,13 +353,22 @@ function resolveAgentLabelObservationPresentation(
   }
 }
 
+function applyQuestMarkerEl(markerEl: HTMLDivElement, text: string | null): void {
+  const value = text ?? ''
+  if (markerEl.textContent !== value) markerEl.textContent = value
+  const display = value ? '' : 'none'
+  if (markerEl.style.display !== display) markerEl.style.display = display
+}
+
 function applyAgentLabelObservationPresentation(
   nameEl: HTMLDivElement,
+  markerEl: HTMLDivElement,
   barsEl: HTMLDivElement,
   assessmentEl: HTMLDivElement,
   presentation: ResolvedAgentLabelObservationPresentation,
   prev: {
     lastName: string
+    lastQuestMarker: string | null
     lastAssessmentText: string
     lastObservationLevel: ObservationLevel | null
   },
@@ -337,6 +378,10 @@ function applyAgentLabelObservationPresentation(
   if (nameEl.style.display !== nameDisplay) nameEl.style.display = nameDisplay
   if (presentation.showName && presentation.nameText !== prev.lastName) {
     nameEl.textContent = presentation.nameText
+  }
+
+  if (presentation.questMarker !== prev.lastQuestMarker) {
+    applyQuestMarkerEl(markerEl, presentation.questMarker)
   }
 
   const assessmentDisplay = presentation.showAssessment ? '' : 'none'

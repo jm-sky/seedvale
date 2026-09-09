@@ -380,7 +380,7 @@ export class PlayerController {
 
     const hpBar = createLabelBar('hp')
     this.hpFillEl = hpBar.fill
-    const labelDom = createAgentLabel(PLAYER_LABEL, [hpBar], PLAYER_HEIGHT + 0.55)
+    const labelDom = createAgentLabel(PLAYER_LABEL, null, [hpBar], PLAYER_HEIGHT + 0.55)
     this.labelEl = labelDom.el
     this.labelNameEl = labelDom.nameEl
     this.label = labelDom.label

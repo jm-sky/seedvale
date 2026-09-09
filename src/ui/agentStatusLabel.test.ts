@@ -4,7 +4,7 @@ import { createAgentStatusLabelController } from './agentStatusLabel'
 
 describe('createAgentStatusLabelController observation presentation', () => {
   it('hides observation-owned content at none while keeping the label element', () => {
-    const controller = createAgentStatusLabelController('Jan', ['hp', 'stamina'], 2)
+    const controller = createAgentStatusLabelController('Jan', null, ['hp', 'stamina'], 2)
     controller.sync(
       { hp: { current: 50, max: 100 }, stamina: { current: 80, max: 100 } },
       controller.label,
@@ -15,6 +15,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
         level: 'none',
         broadIdentity: 'Osoba',
         knownName: 'Jan',
+        questMarker: null,
         healthRatio: 0.5,
         staminaRatio: 0.8,
       },
@@ -25,7 +26,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
   })
 
   it('shows broad identity and qualitative assessment without bars at assessed', () => {
-    const controller = createAgentStatusLabelController('Jan', ['hp', 'stamina'], 2)
+    const controller = createAgentStatusLabelController('Jan', null, ['hp', 'stamina'], 2)
     controller.sync(
       { hp: { current: 30, max: 100 }, stamina: { current: 10, max: 100 } },
       controller.label,
@@ -36,6 +37,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
         level: 'assessed',
         broadIdentity: 'Osoba',
         knownName: 'Jan',
+        questMarker: null,
         healthRatio: 0.45,
         staminaRatio: 0.1,
       },
@@ -46,7 +48,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
   })
 
   it('shows detailed name and bars at detailed', () => {
-    const controller = createAgentStatusLabelController('Jan', ['hp', 'stamina'], 2)
+    const controller = createAgentStatusLabelController('Jan', null, ['hp', 'stamina'], 2)
     controller.sync(
       { hp: { current: 100, max: 100 }, stamina: { current: 100, max: 100 } },
       controller.label,
@@ -57,6 +59,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
         level: 'detailed',
         broadIdentity: 'Osoba',
         knownName: 'Jan',
+        questMarker: null,
         healthRatio: 1,
         staminaRatio: 1,
       },
@@ -66,7 +69,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
   })
 
   it('bypasses observation gating when fullLabelInfo is set', () => {
-    const controller = createAgentStatusLabelController('Jan', ['hp', 'stamina'], 2)
+    const controller = createAgentStatusLabelController('Jan', null, ['hp', 'stamina'], 2)
     controller.sync(
       { hp: { current: 100, max: 100 }, stamina: { current: 100, max: 100 } },
       controller.label,
@@ -77,6 +80,7 @@ describe('createAgentStatusLabelController observation presentation', () => {
         level: 'none',
         broadIdentity: 'Osoba',
         knownName: 'Jan',
+        questMarker: null,
         healthRatio: 1,
         staminaRatio: 1,
         fullLabelInfo: true,

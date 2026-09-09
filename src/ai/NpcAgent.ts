@@ -1431,6 +1431,7 @@ export class NpcAgent {
 
     this.labelController = createAgentStatusLabelController(
       this.displayName,
+      null,
       ['hp', 'stamina', 'vigor'],
       NPC_HEIGHT + 0.55,
     )
@@ -2768,7 +2769,6 @@ export class NpcAgent {
       material.color.setHex(color)
       material.emissive.setHex(color)
     }
-    const questSuffix = this.questMarker ? ` · ${this.questMarker}` : ''
     const distance = this.mesh.position.distanceTo(observerPos)
     const observationLevel = resolveStableObservationLevel(
       { perception: playerObservation.perception, distance },
@@ -2796,7 +2796,8 @@ export class NpcAgent {
       {
         level: observationLevel,
         broadIdentity: NPC_BROAD_IDENTITY_LABEL,
-        knownName: `${this.displayName}${questSuffix}`,
+        knownName: this.displayName,
+        questMarker: this.questMarker,
         healthRatio,
         staminaRatio: getStaminaRatio(this.stamina),
         qualitativeHealth: (() => {
