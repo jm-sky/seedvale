@@ -87,6 +87,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | ~~fauna-003~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
+| ◼️ `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md` | -       | 🟡 | M      | -      |
 
 ---
 
@@ -194,7 +195,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - persistence: `005`
 - quests-progression: `013`
 - settlements: `007`
-- settlements-npcs: `029`
+- settlements-npcs: `030`
 - tools: `013`
 - ui-input: `013`
 - world: `022`
