@@ -12,305 +12,356 @@
 
 ## Cel
 
-Rozszerzyć istniejący system `AnimalAgent` tak, aby persistent domestic/livestock animal mógł należeć do gracza i zachowywać się jak autonomiczne zwierzę świata, a nie player-only obiekt.
+Rozszerzyć istniejący persistent livestock model tak, aby konkretne zwierzę mogło zmienić właściciela z household na playera i dalej pozostać tym samym autonomicznym mieszkańcem świata.
 
 Pierwszym pełnym konsumentem jest koń.
 
 Docelowy flow:
 
 ```text
-existing AnimalAgent
-→ ownership transfer to player
-→ same persistent animalId
+existing deterministic livestock AnimalAgent
+→ household → player ownership transfer
+→ same animalId + origin provenance
+→ detached persistent lifecycle independent of source settlement streaming
 → Follow / Stay control
-→ normal hunger/thirst/stamina and threat behaviour
+→ existing needs / foraging / roaming / threat / movement systems
 → existing riding system
 ```
 
-Nie tworzyć `PlayerHorse`, `HorseManager`, osobnego systemu potrzeb ani alternatywnego movement pipeline.
+Nie tworzyć `PlayerHorse`, `HorseManager`, player-animal AI controller, drugiego movement pipeline ani równoległego systemu persistence.
 
-## Aktualny punkt wyjścia
+## Aktualny punkt wyjścia po fauna-017
 
-Current `main` ma już:
+Current `main` po `fauna-017` ma:
 
+- `AnimalAgent` jako per-animal integration/state owner, ale wiele odpowiedzialności jest już wydzielonych do modułów,
+- `AnimalLife.ts` jako plain physiology state + free functions,
+- `animalForaging.ts` jako source selection/validation/relief,
+- `animalRoaming.ts` jako trip/probe helpers,
+- `faunaDecision.ts` jako czystą wysokopoziomową arbitrażę behaviour,
 - `horse` i `donkey` jako mountable `AnimalKind`,
-- `horse` jako domestic livestock `AnimalAgent`,
-- stable per-instance `animalId`,
-- per-individual livestock persistence,
-- hunger/thirst/stamina i shared food/water pursuit,
-- horse grazing przez shared herbivore diet,
-- household ownership przez `ownerHouseId`,
-- merchant horse jako realny `AnimalAgent`, nie dekorację,
-- riding/mount persistence,
-- brak player ownership,
-- brak follow-player behaviour po zejściu z mounta.
+- deterministic per-instance livestock `animalId`,
+- household ownership przez `ownerHouseId` + injected `Household`,
+- per-individual livestock snapshot/hydrate,
+- `createLivestockRegistry()` z persistence namespaced przez `settlementId`,
+- settlement-owned live lifecycle: `Settlement.livestock` jest capture/dispose przy stream-out,
+- riding przez `mountActions.ts`, `AnimalAgent.setMounted()` / `driveMounted()` i `SaveData.player.mountedAnimalId`,
+- brak player ownership i brak detached player-owned animal lifetime.
 
-Plan ma rozszerzyć te mechanizmy, nie tworzyć równoległych odpowiedników.
+Najważniejsza konsekwencja refaktoru: ten plan ma rozszerzyć nowe modułowe boundaries. `AnimalAgent` może nadal przechowywać authoritative per-animal ownership/control state i delegować ruch, ale nie wolno przenosić do niego z powrotem foraging, roaming ani nowej rozbudowanej Follow/Stay policy.
 
-## 1. Ownership jako część istniejącego animal state
+## 1. Authoritative ownership model
 
-Obecne `ownerHouseId` opisuje household-owned livestock. Rozszerzyć ownership model tak, aby potrafił reprezentować co najmniej:
+Dzisiejsze `ownerHouseId?: string` oraz konstrukcyjny `household?: Household | null` zakładają household-owned livestock. Rozszerzyć model o jedno authoritative ownership value, np. semantycznie:
 
-```text
-unowned
-household-owned
-player-owned
+```ts
+type AnimalOwner =
+  | { kind: 'household', houseId: string }
+  | { kind: 'player' }
+  | null
 ```
 
-Ownership ma mieć jedno źródło prawdy. Nie utrzymywać równolegle kilku pól reprezentujących ten sam fakt, np. `ownerHouseId` + `playerOwned` + `ownerType`.
+Dokładna nazwa może być inna, ale wymagania są stałe:
 
-Preferować najmniejszy contract zgodny z obecną architekturą i persistence. Reprezentacja nie powinna być booleanem typu `ownedByLocalPlayer`, jeśli równie prosto można zachować owner kind/identity i nie zamknąć drogi do przyszłego multiplayer.
+- nie dodawać równoległych `playerOwned` + `ownerHouseId` + `ownerType`,
+- `ownerHouseId` może pozostać wyłącznie jako derived compatibility accessor, jeśli istniejące call-sites tego wymagają,
+- player owner nie powinien używać display name jako identity,
+- model nie powinien utrudniać późniejszego rozszerzenia identity pod multiplayer,
+- ownership pozostaje niezależne od affinity/familiarity.
 
-Ownership pozostaje niezależne od affinity z `fauna-013`:
+`Household` runtime reference nie jest ownership source of truth. Po transferze do playera musi zostać odłączona od animal context, aby household trough/dog/yard semantics nie traktowały zwierzęcia jak nadal należącego do gospodarstwa.
 
-```text
-ownership = formalnie do kogo należy animal
-affinity  = indywidualna relacja animal → human
-```
+## 2. Jedna domenowa operacja ownership transfer
 
-Nie uzależniać ownership od karmienia, familiarity ani affinity.
-
-## 2. Jedna operacja ownership transfer
-
-Dodać jedną domenową operację zmiany ownership dla konkretnego persistent animal.
+W existing fauna/livestock boundary dodać jedną operację transferu konkretnego persistent animal.
 
 Invariant:
 
 ```text
-existing AnimalAgent
+resolve live persistent animal
 → validate transfer
-→ ownership changes exactly once
-→ same animalId remains authoritative
-→ persistence becomes dirty
+→ mutate authoritative ownership exactly once
+→ keep same AnimalAgent + animalId
+→ detach from source Settlement.livestock without dispose()
+→ retain deterministic origin provenance
+→ mark persistence/reconciliation state dirty
 ```
 
-Nie despawnować starego zwierzęcia i nie tworzyć nowego po transferze.
+Nie despawnować starego agenta i nie tworzyć nowego.
 
-Ta sama operacja ma być przyszłym integration seam dla:
+To jest przyszły publiczny seam dla merchant purchase i quest reward. Te systemy nie powinny mutować `AnimalAgent`, `Settlement.livestock` ani registry bezpośrednio.
 
-- sprzedaży konia przez merchant,
-- quest reward przekazującego konia graczowi.
+## 3. Detached player-owned lifecycle
 
-Merchant i quest system nie powinny bezpośrednio mutować wewnętrznego fauna state.
+Player-owned animal nie może pozostać własnością runtime collection źródłowego settlementu, bo `SettlementsManager` capture/dispose'uje settlement livestock przy unloadzie.
 
-## 3. Persistence i settlement spawn ownership
+Najmniejsze rozszerzenie istniejącej architektury:
 
-Player-owned animal ma nadal korzystać z istniejącej per-individual livestock persistence. Zachować istniejące snapshot semantics dla position/yaw, health, hunger, thirst, stamina, lifecycle/corpse state i innych już persistowanych pól oraz dodać ownership/control state potrzebny temu planowi.
+- source `Settlement` przestaje posiadać live agenta po transferze,
+- `SettlementsManager` / jego istniejący livestock persistence boundary przejmuje detached persistent live animal,
+- detached animal jest tickowany także wtedy, gdy source settlement jest unloaded,
+- transfer przenosi tę samą instancję bez `dispose()`/recreate,
+- nie powstaje globalny `HorseManager` ani drugi fauna manager.
 
-Po save/load musi wrócić ten sam `animalId`.
+Player-owned collection powinna mieć stable lookup po `animalId`, aktualizowany na transfer/restore/removal, zamiast per-tick skanowania wszystkich settlementów.
 
-Szczególnie ważny jest transfer zwierzęcia pochodzącego z deterministic settlement spawn slot, np. obecnego `merchant-horse-<settlementId>`.
+## 4. Origin provenance i deterministic reconciliation
 
-Po transferze:
+Ownership i origin to dwa różne fakty:
 
 ```text
-merchant/household horse → player-owned
-settlement unload/reload
-→ transferred animal remains player-owned
-→ original settlement spawn slot does not create a duplicate
+origin = settlement + deterministic spawn slot, potrzebny do reconstruction/tombstone
+owner  = household/player/unowned, zmienny gameplay state
 ```
 
-Persistence/tombstone/spawn reconciliation musi jednoznacznie odróżniać:
+`LivestockSaveRecord.settlementId` może nadal pełnić rolę origin namespace, ale nie może być interpretowany jako current runtime container albo current owner.
 
-- zwierzę nadal należące do settlement/household,
-- zwierzę legalnie przeniesione do gracza,
-- zwierzę martwe/finalnie usunięte.
-
-Nie pozwolić, aby deterministic livestock reconstruction cofnęło ownership albo wskrzesiło drugi egzemplarz.
-
-## 4. Player-owned animal lookup
-
-Zapewnić mały accessor/registry seam pozwalający znaleźć player-owned persistent animals po stabilnym `animalId` albo ownership.
-
-Nie zakładać w domenowym modelu globalnego singletonu:
+Dla deterministic slotu restore/reconciliation powinno rozróżniać:
 
 ```text
-playerHorse: AnimalAgent
+removed/tombstoned
+→ nie spawnuj
+
+saved player-owned record
+→ restore jako detached player-owned animal
+→ source settlement nie tworzy household duplicate
+
+saved household record zgodny ze slotem
+→ normal settlement livestock restore
+
+brak recordu
+→ deterministic fresh spawn
 ```
 
-V1 gameplay może używać jednego konia, ale ownership model nie powinien wymuszać jednej sztuki na gracza.
+Player-owned recordu nie wolno odrzucać tylko dlatego, że current ownership nie zgadza się z deterministic `ownerHouseId` slotu.
 
-Nie tworzyć animal-management UI ani osobnego globalnego managera skanującego wszystkie zwierzęta co tick.
+## 5. Snapshot / hydrate / save validation
 
-## 5. Follow / Stay control state
+Rozszerzyć authoritative plain-data persistence o:
 
-Player-owned controllable animal obsługuje dwa proste stany:
+- ownership,
+- Follow/Stay control state,
+- ewentualny Stay anchor, jeśli zostanie potrzebny,
+- origin provenance tylko tam, gdzie nie wynika jednoznacznie z registry namespace/slot.
+
+Zachować istniejące snapshot semantics dla position/yaw, health, `AnimalLifeState`, production i corpse state.
+
+Nie persistować:
+
+- live `Household` reference,
+- player/controller references,
+- pathfinding/navigation state,
+- source targets,
+- transient behaviour decisions.
+
+`saveData.ts` musi walidować nowe plain-data fields. Save/load ma zachować ten sam `animalId`.
+
+## 6. Follow / Stay state po fauna-017
+
+Follow/Stay jest per-animal control state należącym do fauna domain, nie do UI i nie do riding systemu.
+
+Preferować mały focused moduł z plain type + pure helpers, np. `src/fauna/ownedAnimalControl.ts`, zamiast dokładać kolejną dużą sekcję policy do `AnimalAgent.ts`.
+
+`AnimalAgent` może przechowywać authoritative control state i udostępniać cienkie metody/delegaty, analogicznie do kierunku `AnimalLife`/`animalCorpse`, ale moduł powinien posiadać reguły typu:
+
+- czy Follow jest aktywne,
+- hysteresis start/stop distance,
+- Stay anchor semantics,
+- wybór control movement target/fallback.
+
+Nie umieszczać Follow/Stay w `AnimalLife.ts` ani `animalForaging.ts` — to nie fizjologia ani source targeting.
+
+Domyślny state po pierwszym transferze do playera: `follow`.
+
+## 7. Behaviour integration
+
+`faunaDecision.ts` pozostaje wysokopoziomową arbitrażą threat/social/combat vs normal behaviour. Nie dodawać tam `follow` jako konkurenta dla `player-flee`, `fire-avoid`, `dog-guard` itd., chyba że recon implementacyjny wykaże konieczność zmiany globalnej priority semantics.
+
+Dla player-owned herbivore/mount najbardziej naturalny seam jest wewnątrz normal behaviour fallback:
 
 ```text
-Follow
-Stay
+high-level gates/decision
+→ normal prey/predator branch
+→ immediate threat/safety response
+→ pursueNeeds() using existing animalForaging
+→ owned control movement (Follow / Stay)
+→ ordinary roam/wander fallback
 ```
 
-Po pierwszym transferze ownership do gracza domyślnym stanem jest `Follow`.
+Follow/Stay nie może przejąć:
 
-Control state należy do fauna/animal state, nie do UI. UI jedynie wydaje komendę.
+- dead/mounted gates,
+- flee/threat response,
+- skutecznego hunger/thirst pursuit,
+- water traversal/collision/walkability,
+- physiology tick.
 
-`Follow` / `Stay` muszą przetrwać save/load. Jeżeli `Stay` potrzebuje anchor/origin, także musi być odtworzony w sposób zgodny z persistence contractem.
+Nie tworzyć nowego unified pressure system tylko dla ownership control.
 
-## 6. Follow behaviour
+## 8. Follow
 
-Follow jest autonomicznym zachowaniem `AnimalAgent`.
+`Follow` ma używać istniejącego locomotion/steering/walkability/water traversal pipeline.
 
-Koń powinien:
+Wymagania:
 
-- zacząć podążać dopiero po przekroczeniu sensownego dystansu,
-- zatrzymać się w sensownej odległości od gracza,
-- używać istniejącego movement/path/water-traversal pipeline,
-- przy większym dystansie legalnie użyć szybszego movement, jeżeli species capability na to pozwala,
-- nie oscylować stale pomiędzy follow i idle przy granicy dystansu.
+- player position przekazywać jako narrow plain-data tick input; bez referencji do `PlayerController`,
+- dwa progi hysteresis: `startFollowDistance > stopFollowDistance`,
+- po wejściu w Follow movement utrzymać commitment do stop threshold zamiast oscylować co tick,
+- szybszy movement może korzystać z istniejącego species speed/stamina, bez horse-specific alternatywnego movement,
+- zwykły follow nie teleportuje i nie attachuje transformu do playera,
+- lost-horse recovery/whistle pozostaje osobnym przyszłym feature.
 
-Nie attachować transformu konia do playera i nie teleportować go podczas normalnego follow.
+## 9. Stay
 
-Bardzo duży dystans nie oznacza automatycznego teleportu ani magicznego summon. Lost-horse recovery/whistle jest osobnym przyszłym problemem.
+`Stay` wyłącza follow-player, ale nie zamraża agenta.
 
-## 7. Stay behaviour
+Reuse `AnimalAgent` home/wander semantics oraz `animalRoaming` helpers zamiast tworzyć exact return-to-point FSM.
 
-`Stay` wyłącza podążanie za graczem, ale nie zamraża zwierzęcia.
-
-Preferować reuse istniejącego home/wander origin contract zamiast tworzyć osobny dokładny return-to-point system.
-
-W `Stay` animal nadal może:
+Przy przejściu do `Stay` ustawić lokalny anchor/origin. W tym stanie animal nadal może:
 
 - szukać jedzenia,
 - szukać wody,
-- reagować na zagrożenia,
-- korzystać z istniejącego flee/hazard behaviour,
-- lokalnie roamować w dozwolonym zakresie.
+- flee/reagować na hazard,
+- walczyć, jeśli species behaviour tego wymaga,
+- lokalnie roamować.
 
-Po ustaniu needs/threat behaviour powinien pozostać związany z lokalnym Stay origin zgodnie z istniejącą semantyką roaming/home.
+Po zakończeniu needs/threat behaviour wraca do lokalnego Stay roaming context, nie do starego household home.
 
-Nie wymagać powrotu do dokładnego punktu co do centymetra.
+## 10. Household → player transfer cleanup
 
-## 8. Integracja z istniejącym fauna behaviour
+Transfer musi jednocześnie odłączyć household-specific runtime semantics:
 
-Nie przebudowywać w tym planie całej fauna arbitration.
+- household water/trough preference,
+- owner-home roaming anchor,
+- dog/guard ownership assumptions zależne od `ownerHouseId`,
+- source `Settlement.livestock` lifecycle.
 
-Obecna fauna ma fixed-priority threat/social overrides oraz hunger/thirst rozwiązywane wewnątrz normal behaviour branches. Follow/Stay trzeba wpiąć w ten pipeline tak, aby zachować istniejące semantics.
+Nie modyfikować `animalForaging.ts` specjalnym `playerHorse` branchem. Jeżeli player-owned animal ma stracić household trough priority, zmienić injected foraging context/owner-derived accessor, nie wspólny scoring dla wszystkich zwierząt.
 
-W szczególności:
+## 11. Riding integration
 
-- dead/mounted hard gates pozostają nadrzędne,
-- threat/flee/combat safety nadal może przerwać follow,
-- hunger/thirst pursuit nadal musi być skuteczne,
-- Follow nie może wyłączyć normalnej fizjologii,
-- ordinary roaming ma być fallbackiem wobec aktywnego ownership control.
-
-Nie wprowadzać sztucznego nowego unified pressure system tylko dla Follow.
-
-## 9. Riding integration
-
-`fauna-003` pozostaje authority dla mounting/riding.
-
-Gdy owned animal jest mounted:
+`fauna-003` pozostaje authority dla riding.
 
 ```text
 mounted
-→ player controls movement
-→ autonomous Follow / Stay movement is suspended
+→ player drives movement through existing mount pipeline
+→ autonomous Follow/Stay movement suspended
+
+dismount
+→ same AnimalAgent
+→ same ownership
+→ previous Follow/Stay state resumes
 ```
 
-Po dismount:
+Nie dodawać drugiego mount reference.
 
-- ownership pozostaje bez zmian,
-- ten sam `AnimalAgent` wraca do autonomicznego behaviour,
-- wcześniejszy `Follow`/`Stay` state pozostaje aktywny.
+Obecny resolver w `createApp.ts` szuka mounta w loaded `Settlement.livestock` i global fauna. Po dodaniu detached collection musi używać publicznego persistent-animal resolvera, inaczej restored player-owned mount nie zostanie odnaleziony.
 
-Nie tworzyć nowej mount reference ani drugiego riding persistence contract.
+## 12. Interaction seam
 
-## 10. Needs, grazing i water pozostają wspólne
+Reuse istniejącego contextual animal interaction / dialog actions flow.
 
-Player ownership zmienia social/control context, nie fizjologię.
-
-Owned horse nadal korzysta z istniejących:
-
-- hunger/thirst/stamina,
-- species diet,
-- grass forage,
-- food targeting,
-- water targeting,
-- water traversal.
-
-Nie dodawać `horseHunger`, `horseThirst`, player-only grazing ani specjalnego horse water system.
-
-Przyszły player-built trough powinien móc wejść do tego samego istniejącego water-target pipeline bez horse-specific branch.
-
-## 11. Interaction commands
-
-Dla player-owned controllable animal udostępnić lekką contextual interaction możliwość przełączenia:
+UI ma tylko wysłać komendę:
 
 ```text
 Follow ↔ Stay
 ```
 
-Preferować istniejący contextual interaction/dialog actions seam.
+Domenowy handler waliduje, czy target jest player-owned i controllable. `domestic`, `mountable`, affinity albo sama bliskość gracza nie dają prawa do sterowania cudzym livestock.
 
-Komenda może być wydana tylko wobec zwierzęcia, którym player ma prawo sterować. Domestic sociability sama w sobie nie daje kontroli nad cudzym livestock.
+Nie tworzyć management screen w tym planie.
 
-Nie budować dużego management screen.
+## 13. Death / final removal
 
-## 12. Death i final removal
+Ownership nie zmienia `AnimalLife` ani corpse lifecycle.
 
-Ownership nie zmienia istniejącego animal death/corpse lifecycle.
+Player-owned animal może umrzeć i zostać finalnie usunięty jak inne livestock. Removal musi:
 
-Player-owned horse może umrzeć normalnie. Po final removal nie może zostać automatycznie odtworzony przez settlement spawn reconciliation ani player ownership restore.
+- usunąć detached live agent/index entry,
+- zapisać tombstone w jego origin namespace,
+- uniemożliwić source deterministic slotowi respawn duplikatu.
 
-Reuse istniejących tombstone/removal semantics zamiast tworzyć horse-specific resurrection guards.
+Nie tworzyć horse-specific resurrection guards.
 
-## Cross-domain contract dla następnych planów
+## Cross-domain contract
 
-Po ukończeniu `fauna-020` inne domeny powinny potrzebować tylko małego publicznego seam:
+Po ukończeniu planu inne domeny powinny potrzebować tylko małego publicznego API semantycznie w rodzaju:
 
 ```text
-resolve animal by stable id
-→ transfer ownership to player
-→ same AnimalAgent becomes player-owned
+resolvePersistentAnimal(animalId)
+transferAnimalOwnership(animalId, owner)
+setOwnedAnimalControl(animalId, follow | stay)
 ```
 
-Następne plany wykorzystają go dla:
+Merchant/quest/player-care plans korzystają z tych seamów bez znajomości settlement internals.
 
-- merchant purchase,
-- quest reward,
-- player-built animal care infrastructure.
+## Implementation order
 
-Nie implementować tych feature'ów tutaj.
+1. Ownership type + origin/reconciliation contract + unit tests.
+2. Rozszerzenie `LivestockSaveRecord` / registry / save validation tak, aby player-owned record był legalnym deterministic restore state.
+3. Detached live-animal ownership w `SettlementsManager`, transfer tej samej instancji i stable lookup.
+4. Shared ticking/removal path dla detached livestock bez duplikowania fauna update policy.
+5. Focused Follow/Stay state/helper module oraz `AnimalAgent` thin integration w normal-behaviour fallback.
+6. Interaction command seam.
+7. Mount resolver/restore integration.
+8. Regression tests dla household livestock, streaming, persistence i deterministic reconstruction.
 
-## Testy
+## Konkretne pliki / seams do implementacji
 
-Dodać testy przede wszystkim dla domenowych invariantów:
+Główne:
 
-- existing household ownership zachowuje dotychczasowe semantics,
-- animal może zostać przeniesiony na player ownership,
-- transfer zachowuje ten sam `animalId`,
-- transfer nie tworzy drugiego `AnimalAgent`,
-- ownership survives save/load,
-- `Follow`/`Stay` survives save/load,
-- settlement unload/reload nie cofa player ownership,
-- deterministic settlement spawn nie duplikuje transferred merchant/household animal,
-- player-owned animal domyślnie przechodzi w `Follow` po pierwszym transferze,
-- Follow zaczyna ruch po przekroczeniu odpowiedniego dystansu,
-- Follow zatrzymuje się bez ciągłej oscylacji,
-- Follow korzysta z existing movement/walkability pipeline,
-- `Stay` wyłącza player-follow, ale nadal pozwala na hunger/thirst/threat behaviour,
-- mounted animal nie wykonuje autonomous Follow/Stay movement,
-- dismount zachowuje ownership i control state,
-- obcy domestic animal nie przyjmuje player Follow/Stay command,
-- death/final removal nie powoduje resurrection ani duplicate spawn.
+- `src/fauna/AnimalAgent.ts` — authoritative per-animal owner/control fields, thin delegates, update-context integration; nie przenosić z powrotem policy z wydzielonych modułów.
+- `src/fauna/faunaDecision.ts` — zachować high-level arbitration; zmieniać tylko jeśli naprawdę potrzebne do wpięcia control fallback.
+- `src/fauna/AnimalLife.ts` — bez ownership/control logic; regression boundary dla potrzeb/staminy.
+- `src/fauna/animalForaging.ts` — bez player-specific foraging branch; reuse source pursuit.
+- `src/fauna/animalRoaming.ts` — reuse probe/trip/home-adjacent semantics dla Stay.
+- `src/fauna/ownedAnimalControl.ts` — preferowany nowy mały moduł plain state/pure control helpers, jeśli implementacja potwierdzi tę nazwę/shape.
+- `src/settlement/livestock.ts` — `LivestockSaveRecord`, `LivestockPersistence`, `LivestockRegistry`, `createLivestockRegistry()`, deterministic spawn/hydrate reconciliation, livestock tick helpers.
+- `src/settlement/SettlementsManager.ts` — detached player-owned live collection/index, streaming lifetime, save capture/restore.
+- `src/settlement/createSettlement.ts` — current settlement livestock update/removal + household context wiring; nie przejmować player-owned lifetime.
+- `src/app/createApp.ts` — mount resolver oraz narrow player-position/control wiring.
+- `src/app/actions/mountActions.ts` — istniejący riding authority; minimalne integration only.
+- `src/persistence/saveData.ts` — validation nowych plain-data fields.
+- `src/fauna/dogGuard.ts` — regression dla household-derived ownership semantics.
+
+## Test seams
+
+Dodać/rozszerzyć przede wszystkim unit/integration tests dla:
+
+- ownership discriminated state i derived household accessor,
+- household → player transfer zachowuje ten sam `AnimalAgent` i `animalId`,
+- transfer wyjmuje live agent z `Settlement.livestock` bez `dispose()`/recreate,
+- source settlement unload nie usuwa detached player-owned animal,
+- save snapshot obejmuje detached animal mimo braku w settlement collection,
+- hydrate player-owned recordu nie wymaga equality z deterministic household owner,
+- source deterministic slot nie tworzy duplicate po stream-out/in ani full save/load,
+- final removal zapisuje tombstone dla origin slotu,
+- household association/trough semantics są wyczyszczone po transferze,
+- `Follow`/`Stay` round-trip przez snapshot/hydrate/save validator,
+- Follow hysteresis i fallback priority względem needs/threat,
+- Stay anchor korzysta z roaming semantics i nie ciągnie do starego household home,
+- mounted gate suppressuje autonomous control movement,
+- dismount przywraca zapisany Follow/Stay state,
+- mount resolver znajduje detached player-owned animal,
+- existing household livestock/dogs/riding nie zmieniają zachowania bez transferu.
+
+Preferować pure tests dla ownership/control/reconciliation helpers oraz istniejące `livestock.test.ts` / fauna tests zamiast testów wymagających pełnego Three.js runtime tam, gdzie nie jest to konieczne.
 
 ## Manual verification
 
-W przeglądarce użytkownik sprawdza co najmniej:
+Browser verification wykonuje użytkownik po implementacji. Agent AI jej nie wykonuje.
 
-1. Existing horse nadal działa jako mount.
-2. Po transferze ownership ten sam koń zaczyna należeć do gracza.
-3. Koń w `Follow` podąża po oddaleniu i zatrzymuje się w sensownej odległości.
-4. Koń nie oscyluje stale wokół follow threshold.
-5. `Stay` zatrzymuje podążanie za graczem.
-6. Głodny/spragniony koń w `Stay` nadal może zaspokoić potrzeby.
-7. Zagrożenie nadal może przerwać follow.
-8. Po dismount koń wraca do wcześniejszego Follow/Stay state.
-9. Save/load zachowuje ownership oraz Follow/Stay.
-10. Settlement unload/reload nie tworzy drugiego transferred horse i nie cofa ownership.
-11. Śmierć i corpse removal działają jak dla pozostałego livestock.
+Sprawdzić manualnie co najmniej:
+
+1. Existing horse/donkey nadal działa jako mount.
+2. Household horse po transferze pozostaje tą samą instancją/id.
+3. Source settlement może unloadować się bez zniknięcia owned horse.
+4. Follow podąża z hysteresis i nie oscyluje.
+5. Stay zatrzymuje follow, ale nie potrzeby/threat response.
+6. Dismount przywraca wcześniejszy control state.
+7. Save/load zachowuje ownership/control/position/life.
+8. Settlement reload nie tworzy duplicate source horse.
+9. Death/final removal nie powoduje respawnu deterministic slotu.
 
 ## Non-goals
 
@@ -329,22 +380,13 @@ Poza zakresem:
 - multiple-animal management UI,
 - mounted combat changes.
 
-## Wskazówki implementacyjne
+## Guardrails
 
-Przed implementacją sprawdzić aktualny kod i implementation notes związane z:
-
-- `AnimalAgent` ownership/lifecycle,
-- `animalDefs`,
-- fauna decision pipeline,
-- livestock spawning i persistence,
-- merchant horse spawn slot,
-- riding/mount actions,
-- `SaveData`,
-- `fauna-003`,
-- `fauna-013` wyłącznie dla zachowania granicy ownership ≠ affinity.
-
-Preferować istniejące seams i najmniejsze rozszerzenie obecnego ownership/persistence contract.
-
-Dla ważnych nowych publicznych lub architektonicznych funkcji/classes dodać JSDoc, używając `@domain fauna` tam, gdzie pomaga to w preflight discovery.
+- Nie cofać `fauna-017`.
+- Nie robić `AnimalAgent` ponownie monolitem.
+- Nie tworzyć `HorseManager`, player-animal AI controller ani player-only physiology/movement.
+- Nie zmieniać shared foraging/roaming/life semantics tylko dla horse ownership.
+- Zachować stable `animalId`, deterministic provenance i jedno źródło prawdy ownership.
+- Nie uruchamiać `pnpm docs:sync`; synchronizacja dokumentacji odbywa się automatycznie przez GitHub workflow.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
