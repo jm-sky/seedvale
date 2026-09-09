@@ -378,6 +378,28 @@ export type SaveStandingTorch = { id: string, x: number, z: number, yaw: number,
  *  contract as `SaveStandingTorch.completedWork`. */
 export type SavePalisadeSegment = { id: string, x: number, z: number, yaw: number, completedWork: number }
 
+export type SaveResidentialOwner =
+  | { kind: 'player' }
+  | { kind: 'household', householdId: string }
+  | { kind: 'settlement', settlementId: string }
+  | { kind: 'unowned' }
+
+/** Persistent player-built residential house (plan settlements-005). Lodging
+ *  is derived on restore, never stored. */
+export type SaveResidentialBuilding = {
+  id: string
+  kind: 'small_house' | 'medium_house'
+  x: number
+  z: number
+  yaw: number
+  stage: 'foundation' | 'structure' | 'roof' | 'completed'
+  stageWorkProgress: number
+  materialsSupplied: boolean
+  owner: SaveResidentialOwner
+  settlementId: string | null
+  homePlaceId: string | null
+}
+
 /** Persistent player-built bedroll — mirrors `world/sleepingUtilities.ts`'s
  *  `BedrollRecord`. `condition`/`lastConditionUpdateAtDays` round-trip the
  *  lazy weather-degradation anchor (plan items-player-013) — same "resolve
@@ -454,15 +476,17 @@ export type SaveTerrainPreparationContractTarget = { kind: 'terrain_preparation'
  *  `StandingTorchContractTarget` (plan items-player-017 §16). */
 export type SavePalisadeContractTarget = { kind: 'palisade', targetId: string }
 export type SaveStandingTorchContractTarget = { kind: 'standing_torch', targetId: string }
+export type SaveResidentialBuildingContractTarget = { kind: 'residential_building', targetId: string }
 export type SaveContractTarget =
   | SaveConstructionContractTarget
   | SaveTerrainPreparationContractTarget
   | SavePalisadeContractTarget
   | SaveStandingTorchContractTarget
+  | SaveResidentialBuildingContractTarget
 export type SaveWorkContract = {
   id: string
   employer: string
-  workType: 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch'
+  workType: 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch' | 'residential_building'
   target: SaveContractTarget
   x: number
   z: number
@@ -493,7 +517,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 17
+export const CURRENT_SAVE_VERSION = 18
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -588,6 +612,7 @@ export type SaveData = {
   playerGardens: SavePlayerGarden[]
   standingTorches: SaveStandingTorch[]
   palisades: SavePalisadeSegment[]
+  residentialBuildings: SaveResidentialBuilding[]
   bedrolls: SaveBedroll[]
   platforms: SavePlatform[]
   /** Authoritative mining-hits-remaining override for ore deposits
@@ -1259,6 +1284,39 @@ function isPalisadesField(value: unknown): value is SavePalisadeSegment[] {
   })
 }
 
+const RESIDENTIAL_KINDS = new Set(['medium_house', 'small_house'])
+const RESIDENTIAL_STAGES = new Set(['completed', 'foundation', 'roof', 'structure'])
+
+function isResidentialOwner(value: unknown): value is SaveResidentialOwner {
+  if (!value || typeof value !== 'object') return false
+  const owner = value as Record<string, unknown>
+  if (owner.kind === 'player' || owner.kind === 'unowned') return true
+  if (owner.kind === 'household') return typeof owner.householdId === 'string'
+  if (owner.kind === 'settlement') return typeof owner.settlementId === 'string'
+  return false
+}
+
+function isResidentialBuildingsField(value: unknown): value is SaveResidentialBuilding[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const b = entry as Record<string, unknown>
+    return (
+      typeof b.id === 'string' &&
+      typeof b.kind === 'string' && RESIDENTIAL_KINDS.has(b.kind) &&
+      typeof b.x === 'number' &&
+      typeof b.z === 'number' &&
+      typeof b.yaw === 'number' &&
+      typeof b.stage === 'string' && RESIDENTIAL_STAGES.has(b.stage) &&
+      typeof b.stageWorkProgress === 'number' &&
+      typeof b.materialsSupplied === 'boolean' &&
+      isResidentialOwner(b.owner) &&
+      (b.settlementId === null || typeof b.settlementId === 'string') &&
+      (b.homePlaceId === null || typeof b.homePlaceId === 'string')
+    )
+  })
+}
+
 function isBedrollsField(value: unknown): value is SaveBedroll[] {
   if (!Array.isArray(value)) return false
   return value.every((entry) => {
@@ -1301,7 +1359,7 @@ const WORK_CONTRACT_ASSIGNMENT_STATES: ReadonlySet<string> = new Set([
 ])
 
 const WORK_CONTRACT_TARGET_KINDS: ReadonlySet<string> = new Set([
-  'construction', 'palisade', 'standing_torch', 'terrain_preparation',
+  'construction', 'palisade', 'residential_building', 'standing_torch', 'terrain_preparation',
 ])
 
 function isWorkContractAssignment(value: unknown): value is SaveWorkContractAssignment {
@@ -1665,6 +1723,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlayerGardensField(v.playerGardens)) return false
   if (!isStandingTorchesField(v.standingTorches)) return false
   if (!isPalisadesField(v.palisades)) return false
+  if (!isResidentialBuildingsField(v.residentialBuildings)) return false
   if (!isBedrollsField(v.bedrolls)) return false
   if (!isPlatformsField(v.platforms)) return false
   if (!isResourceDepositsField(v.resourceDeposits)) return false
@@ -2193,6 +2252,13 @@ function migrateSaveV16ToV17(data: unknown): unknown {
   return { ...v, version: 17 }
 }
 
+/** v17 → v18 (plan settlements-005): player-built residential houses. Older
+ *  saves have none. */
+function migrateSaveV17ToV18(data: unknown): unknown {
+  const v = data as Record<string, unknown>
+  return { ...v, version: 18, residentialBuildings: [] }
+}
+
 const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   1: migrateSaveV1ToV2,
   2: migrateSaveV2ToV3,
@@ -2210,6 +2276,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   14: migrateSaveV14ToV15,
   15: migrateSaveV15ToV16,
   16: migrateSaveV16ToV17,
+  17: migrateSaveV17ToV18,
 }
 
 function detectStoredVersion(value: unknown): number | null {

@@ -219,6 +219,8 @@ const buildActions = computed<Action[]>(() => {
   list.push({ label: 'Postaw segment palisady', cost: '2× belka', onClick: () => startPlacementPreview('palisade'), disabled: !ui.quickActions.hasPalisadeMaterial })
   list.push({ label: 'Rozłóż posłanie', cost: '3× skóra', onClick: () => startPlacementPreview('bedroll'), disabled: !ui.quickActions.hasBedrollMaterial })
   list.push({ label: 'Zbuduj podest do spania', cost: '6× gałąź', onClick: () => startPlacementPreview('platform'), disabled: !ui.quickActions.hasPlatformMaterial })
+  list.push({ label: 'Zbuduj małą chatę', cost: '', onClick: () => startPlacementPreview('smallHouse') })
+  list.push({ label: 'Zbuduj średnią chatę', cost: '', onClick: () => startPlacementPreview('mediumHouse') })
 
   list.push({ label: 'Zbuduj studnię', cost: 'łopata', onClick: buildWell })
   list.push({ label: 'Zbuduj grządkę', cost: 'łopata', onClick: buildGarden })

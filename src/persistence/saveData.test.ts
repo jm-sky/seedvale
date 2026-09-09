@@ -97,6 +97,7 @@ const validSave: SaveData = {
   }],
   standingTorches: [{ id: 'standingTorch:1', x: 9, z: 10, yaw: 0.4, lit: true, completedWork: 1 }],
   palisades: [{ id: 'palisade:1', x: 11, z: -2, yaw: 0.4, completedWork: 1.5 }],
+  residentialBuildings: [],
   bedrolls: [{ id: 'bedroll:1', x: 12, z: -3, yaw: 0.4, variant: 'leather', condition: 90, lastConditionUpdateAtDays: 3.5 }],
   platforms: [{ id: 'platform:1', x: 13, z: -4, yaw: 0.4, condition: 95, lastConditionUpdateAtDays: 3.5 }],
   resourceDeposits: { 'resource_1_2': 0, 'resource_3_4': 5 },
@@ -715,6 +716,36 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
       roofCondition: 80,
       lastRoofConditionUpdateAtDays: 4,
     }])
+  })
+
+  it('migrates a real v17 save (plan settlements-005) into v18 with no residential buildings', () => {
+    const { residentialBuildings: _houses, ...v17Fields } = validSave
+    const result = loadStoredSave({ ...v17Fields, version: 17 })
+    expect(result).toEqual({
+      status: 'ok',
+      data: { ...validSave, residentialBuildings: [] },
+    })
+  })
+
+  it('round-trips a partial residential house without persisting lodging', () => {
+    const withHouse = {
+      ...validSave,
+      residentialBuildings: [{
+        id: 'residential:1',
+        kind: 'small_house' as const,
+        x: 4,
+        z: -6,
+        yaw: 0.5,
+        stage: 'structure' as const,
+        stageWorkProgress: 1.25,
+        materialsSupplied: true,
+        owner: { kind: 'player' as const },
+        settlementId: null,
+        homePlaceId: null,
+      }],
+    }
+    expect(loadSaveData(withHouse)).toEqual(withHouse)
+    expect('lodging' in (loadSaveData(withHouse) ?? {})).toBe(false)
   })
 
   it('round-trips a current-schema well with partial roof-repair progress', () => {

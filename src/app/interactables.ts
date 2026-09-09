@@ -18,6 +18,7 @@ import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
@@ -39,6 +40,11 @@ import { isDryingComplete } from '../world/dryingRacks'
 import { isPalisadeConstructionComplete, palisadePromptLabel } from '../world/palisade'
 import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
 import { isWellCompleted, isWellWaterAvailable, resolveWellRoofCondition, wellPromptLabel, wellWaterSource } from '../world/playerWell'
+import {
+  isPlayerOwnedResidentialBuilding,
+  isResidentialBuildingComplete,
+  residentialBuildingPromptLabel,
+} from '../world/residentialBuilding'
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'
@@ -326,6 +332,7 @@ export function buildInteractables(
   playerGardens: PlayerGardens,
   standingTorches: StandingTorches,
   palisades: Palisades,
+  residentialBuildings: ResidentialBuildings,
   terrainPreparations: TerrainPreparations,
   /** Current world day (plan 159) — drives drying-complete/honey-available
    *  prompt text. */
@@ -517,6 +524,19 @@ export function buildInteractables(
       promptLabel: palisadePromptLabel(segment),
       id: segment.id,
       complete: isPalisadeConstructionComplete(segment),
+    })
+  }
+
+  for (const house of residentialBuildings.list()) {
+    if (!withinRange(house.x, house.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'residentialBuilding',
+      position: { x: house.x, z: house.z },
+      promptLabel: residentialBuildingPromptLabel(house),
+      id: house.id,
+      complete: isResidentialBuildingComplete(house),
+      materialsSupplied: house.materialsSupplied,
+      playerOwned: isPlayerOwnedResidentialBuilding(house),
     })
   }
 

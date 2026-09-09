@@ -303,8 +303,28 @@ export function resolveRoofParts(def: HouseDefinition, catalog: ConstructionCata
   return parts
 }
 
+export type HouseVisualStage = 'foundation' | 'structure' | 'roof' | 'completed'
+
+export type BuildHouseOptions = {
+  /** Discrete construction representation (plan settlements-005). Default
+   *  `'completed'` keeps generated settlement houses unchanged. */
+  visualStage?: HouseVisualStage
+  /** Player-built houses omit furniture in v1. Default `true` keeps
+   *  generated settlement interiors unchanged. */
+  includeFurniture?: boolean
+}
+
 export function houseDefinitionAssetIds(def: HouseDefinition): string[] {
+  return houseDefinitionAssetIdsForStage(def, 'completed', true)
+}
+
+export function houseDefinitionAssetIdsForStage(
+  def: HouseDefinition,
+  stage: HouseVisualStage,
+  includeFurniture: boolean,
+): string[] {
   const ids = [def.floor.assetId]
+  if (stage === 'foundation') return [...new Set(ids)]
   for (const wall of def.walls) ids.push(wall.assetId)
   for (const corner of def.corners) ids.push(corner.assetId)
   for (const opening of def.openings) {
@@ -312,11 +332,15 @@ export function houseDefinitionAssetIds(def: HouseDefinition): string[] {
     if (opening.frameAssetId) ids.push(opening.frameAssetId)
     ids.push(opening.fillAssetId)
   }
+  if (stage === 'structure') return [...new Set(ids)]
   for (const part of def.roof.parts ?? []) ids.push(part.assetId)
   if (def.roof.assetId) ids.push(def.roof.assetId)
+  if (stage === 'roof') return [...new Set(ids)]
   for (const deco of def.decorations ?? []) ids.push(deco.assetId)
-  for (const furniture of def.furniture ?? []) {
-    if (isCatalogFurnitureRole(furniture.role)) ids.push(furniture.assetId)
+  if (includeFurniture) {
+    for (const furniture of def.furniture ?? []) {
+      if (isCatalogFurnitureRole(furniture.role)) ids.push(furniture.assetId)
+    }
   }
   return [...new Set(ids)]
 }
@@ -692,8 +716,16 @@ function furnitureInteractionPoints(def: HouseDefinition): HouseInteractionPoint
   return points
 }
 
-export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseAssembly {
-  for (const assetId of houseDefinitionAssetIds(def)) requirePart(ctx, assetId)
+export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext, options?: BuildHouseOptions): HouseAssembly {
+  const visualStage = options?.visualStage ?? 'completed'
+  const includeFurniture = options?.includeFurniture ?? true
+  const includeStructure = visualStage !== 'foundation'
+  const includeRoof = visualStage === 'roof' || visualStage === 'completed'
+  const includeCompleted = visualStage === 'completed'
+
+  for (const assetId of houseDefinitionAssetIdsForStage(def, visualStage, includeFurniture)) {
+    requirePart(ctx, assetId)
+  }
 
   const root = new Group()
   root.name = `house:${def.id}`
@@ -715,79 +747,89 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
     staticSpecs.push({ assetId: def.floor.assetId, pose: { x: tile.x, y: tile.y, z: tile.z, rotationY: 0 } })
   }
 
-  for (const wall of def.walls) {
-    const pose = addVec(wall.transform?.position, wallLocalTransform(def.footprint, wall.side, wall.moduleIndex))
-    if (wall.transform?.rotationY) pose.rotationY += wall.transform.rotationY
-    staticSpecs.push({ assetId: wall.assetId, pose })
+  if (includeStructure) {
+    for (const wall of def.walls) {
+      const pose = addVec(wall.transform?.position, wallLocalTransform(def.footprint, wall.side, wall.moduleIndex))
+      if (wall.transform?.rotationY) pose.rotationY += wall.transform.rotationY
+      staticSpecs.push({ assetId: wall.assetId, pose })
+    }
+
+    for (const corner of def.corners) {
+      const pos = cornerLocalPosition(def.footprint, corner.side)
+      staticSpecs.push({ assetId: corner.assetId, pose: { x: pos.x, y: pos.y, z: pos.z, rotationY: 0 } })
+    }
   }
 
-  for (const corner of def.corners) {
-    const pos = cornerLocalPosition(def.footprint, corner.side)
-    staticSpecs.push({ assetId: corner.assetId, pose: { x: pos.x, y: pos.y, z: pos.z, rotationY: 0 } })
+  if (includeRoof) {
+    for (const part of resolveRoofParts(def, ctx.catalog)) {
+      staticSpecs.push({
+        assetId: part.assetId,
+        pose: {
+          x: part.position.x,
+          y: part.position.y,
+          z: part.position.z,
+          rotationY: part.rotationY ?? 0,
+        },
+      })
+    }
   }
 
-  for (const part of resolveRoofParts(def, ctx.catalog)) {
-    staticSpecs.push({
-      assetId: part.assetId,
-      pose: {
-        x: part.position.x,
-        y: part.position.y,
-        z: part.position.z,
-        rotationY: part.rotationY ?? 0,
-      },
-    })
-  }
+  if (includeCompleted) {
+    for (const deco of def.decorations ?? []) {
+      staticSpecs.push({
+        assetId: deco.assetId,
+        pose: {
+          x: deco.position.x,
+          y: deco.position.y,
+          z: deco.position.z,
+          rotationY: deco.rotationY ?? 0,
+        },
+      })
+    }
 
-  for (const deco of def.decorations ?? []) {
-    staticSpecs.push({
-      assetId: deco.assetId,
-      pose: {
-        x: deco.position.x,
-        y: deco.position.y,
-        z: deco.position.z,
-        rotationY: deco.rotationY ?? 0,
-      },
-    })
-  }
-
-  for (const furniture of def.furniture ?? []) {
-    if (!isCatalogFurnitureRole(furniture.role)) continue
-    staticSpecs.push({
-      assetId: furniture.assetId,
-      pose: {
-        x: furniture.position.x,
-        y: furniture.position.y,
-        z: furniture.position.z,
-        rotationY: furniture.rotationY,
-      },
-    })
+    if (includeFurniture) {
+      for (const furniture of def.furniture ?? []) {
+        if (!isCatalogFurnitureRole(furniture.role)) continue
+        staticSpecs.push({
+          assetId: furniture.assetId,
+          pose: {
+            x: furniture.position.x,
+            y: furniture.position.y,
+            z: furniture.position.z,
+            rotationY: furniture.rotationY,
+          },
+        })
+      }
+    }
   }
 
   const doors: HouseDoor[] = []
 
-  for (const opening of def.openings) {
-    const pose = openingLocalPose(def, opening)
-    if (opening.frameAssetId) {
-      staticSpecs.push({ assetId: opening.frameAssetId, pose: { ...pose } })
-    }
-    if (opening.type === 'window') {
-      staticSpecs.push({ assetId: opening.fillAssetId, pose: { ...pose } })
-      continue
-    }
+  if (includeStructure) {
+    for (const opening of def.openings) {
+      const pose = openingLocalPose(def, opening)
+      if (opening.frameAssetId) {
+        staticSpecs.push({ assetId: opening.frameAssetId, pose: { ...pose } })
+      }
+      if (opening.type === 'window') {
+        staticSpecs.push({ assetId: opening.fillAssetId, pose: { ...pose } })
+        continue
+      }
 
-    const offset = fillOffsetFor(opening.fillAssetId, opening.fillOffset)
-    const doorRoot = new Group()
-    doorRoot.name = 'door'
-    applyPose(doorRoot, pose)
-    const hinge = new Group()
-    hinge.name = 'hingePivot'
-    hinge.position.set(offset.x, offset.y, offset.z)
-    const leaf = requireTemplate(ctx, opening.fillAssetId).clone(true)
-    leaf.name = 'doorLeaf'
-    hinge.add(leaf)
-    doorRoot.add(hinge)
-    interactiveGroup.add(doorRoot)
-    doors.push(createDoorController(hinge, leaf))
+      const offset = fillOffsetFor(opening.fillAssetId, opening.fillOffset)
+      const doorRoot = new Group()
+      doorRoot.name = 'door'
+      applyPose(doorRoot, pose)
+      const hinge = new Group()
+      hinge.name = 'hingePivot'
+      hinge.position.set(offset.x, offset.y, offset.z)
+      const leaf = requireTemplate(ctx, opening.fillAssetId).clone(true)
+      leaf.name = 'doorLeaf'
+      hinge.add(leaf)
+      doorRoot.add(hinge)
+      interactiveGroup.add(doorRoot)
+      doors.push(createDoorController(hinge, leaf))
+    }
   }
 
   instantiateStatics(staticGroup, staticSpecs, ctx)
@@ -795,7 +837,7 @@ export function buildHouse(def: HouseDefinition, ctx: HouseBuildContext): HouseA
 
   const interactionPoints = [
     ...derivedInteractionPoints(def, def.interactionPoints),
-    ...furnitureInteractionPoints(def),
+    ...(includeFurniture ? furnitureInteractionPoints(def) : []),
   ]
   const census = censusAssembly(staticGroup, interactiveGroup)
 

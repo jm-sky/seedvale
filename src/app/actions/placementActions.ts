@@ -16,6 +16,7 @@ import { ITEM_DEFS } from '../../items/items'
 import { drinkFromLiquidContainer, hasLiquidContent } from '../../items/liquidContainer'
 import {
   evaluateGroundPlacement,
+  evaluateOrientedGroundPlacement,
   evaluateTentPlacement,
   TENT_PLACEMENT_MESSAGE,
   TENT_SETUP_DURATION_SEC,
@@ -29,6 +30,16 @@ import {
   physicalEffortStaminaCostPerSec,
 } from '../../player/PlayerNeeds'
 import { awardSkillXp, SKILL_XP_AWARD, survivalDurationMultiplier } from '../../player/PlayerSkills'
+import { villageSizeConfig } from '../../settlement/families'
+import { worldToCell } from '../../settlement/settlementGenerator'
+import { type DigEnv } from '../../terrain/dig'
+import {
+  averageAbsHeightDelta,
+  computeRequiredWork,
+  resolvePreparationSamples,
+  type TerrainPreparationRecord,
+  validatePreparationSamples,
+} from '../../terrain/terrainPreparation'
 import {
   TRAP_DEFS,
   TRAP_FOOTPRINT_RADIUS,
@@ -105,6 +116,23 @@ import {
   wellStageWorkHours,
 } from '../../world/playerWell'
 import { repairRemainingWork } from '../../world/repair'
+import {
+  coveringPreparationSize,
+  isResidentialBuildingComplete,
+  isResidentialBuildingMaterialBlocked,
+  RESIDENTIAL_BUILDING_PLACE_DURATION_SEC,
+  RESIDENTIAL_BUILDING_WORK_SESSION_HOURS,
+  RESIDENTIAL_BUILDING_WORK_SESSION_SEC,
+  RESIDENTIAL_PLACEMENT_MESSAGE,
+  residentialBuildingDefinition,
+  residentialBuildingFootprintRadius,
+  type ResidentialBuildingKind,
+  residentialBuildingPlaceReach,
+  residentialBuildingRemainingWork,
+  residentialBuildingSeparation,
+  type ResidentialPlacementReason,
+  residentialStageRequirements,
+} from '../../world/residentialBuilding'
 import {
   BEDROLL_FOOTPRINT_RADIUS,
   BEDROLL_MATERIAL_REQUIREMENTS,
@@ -356,6 +384,13 @@ export type PlacementActions = {
    *  items-player-013) — consumes `PLATFORM_MATERIAL_REQUIREMENTS` atomically
    *  on completion, nothing on a rejected/cancelled placement. */
   placePlatformAtAim: (objectYaw?: number, lifecycle?: PlacementMutationLifecycle) => void
+  previewSmallHousePlacement: (objectYaw?: number) => PlacementPreviewResult
+  previewMediumHousePlacement: (objectYaw?: number) => PlacementPreviewResult
+  placeSmallHouseAtAim: (objectYaw?: number) => void
+  placeMediumHouseAtAim: (objectYaw?: number) => void
+  supplyResidentialBuildingMaterials: (id: string) => void
+  workOnResidentialBuilding: (id: string) => void
+  cancelResidentialBuilding: (id: string) => void
 }
 
 export function createPlacementActions(ctx: PlayerActionContext): PlacementActions {
@@ -378,6 +413,13 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       for (const house of settlement.landmarks.houses) {
         blockers.push({ x: house.position.x, z: house.position.z, radius: 2.2 })
       }
+    }
+    for (const house of bundle.residentialBuildings.nodes()) {
+      blockers.push({
+        x: house.x,
+        z: house.z,
+        radius: residentialBuildingFootprintRadius(house.kind),
+      })
     }
     return blockers
   }
@@ -1311,6 +1353,197 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     }, { onCancel: () => lifecycle?.onCancel?.() })
   }
 
+  const settlementIdAt = (x: number, z: number): string | null => {
+    const def = bundle.settlementsManager.peekDef(worldToCell(x, z))
+    if (!def) return null
+    if (Math.hypot(x - def.x, z - def.z) > villageSizeConfig(def.size).footprintRadius) return null
+    return def.id
+  }
+
+  let nextHousePrepId = 0
+
+  const housePlacementDefinition = (
+    kind: ResidentialBuildingKind,
+    objectYaw?: number,
+  ): GroundPlacementDefinition<ResidentialPlacementReason> => {
+    const def = residentialBuildingDefinition(kind)
+    const footprintRadius = residentialBuildingFootprintRadius(kind)
+    return {
+      aim: () => placementAimSite(
+        player.mesh.position.x,
+        player.mesh.position.z,
+        mouseLook.state.yaw,
+        residentialBuildingPlaceReach(kind),
+        objectYaw,
+      ),
+      evaluate: (site) => {
+        const reason = evaluateOrientedGroundPlacement({
+          x: site.x,
+          z: site.z,
+          yaw: site.yaw,
+          width: def.footprint.width,
+          depth: def.footprint.depth,
+          sampleHeight: (sx, sz) => bundle.chunkManager.sampleHeight(sx, sz),
+          waterLevel: bundle.chunkManager.waterLevel,
+          blockers: tentBlockers(site.x, site.z),
+          peers: bundle.residentialBuildings.nodes(),
+          footprintRadius,
+          separation: residentialBuildingSeparation(kind),
+        })
+        return reason === 'occupied' ? 'house' : reason
+      },
+      footprintRadius,
+      previewFootprint: { kind: 'box', width: def.footprint.width, depth: def.footprint.depth },
+      reasonLabel: (reason) => RESIDENTIAL_PLACEMENT_MESSAGE[reason],
+    }
+  }
+
+  const tryStartHouseTerrainPrep = (kind: ResidentialBuildingKind, x: number, z: number): boolean => {
+    const def = residentialBuildingDefinition(kind)
+    const size = coveringPreparationSize(def.footprint.width, def.footprint.depth)
+    const chunkManager = bundle.chunkManager
+    const { center, samples } = resolvePreparationSamples(x, z, size, chunkManager.chunkSize, chunkManager.resolution)
+    const originalHeights = samples.map((s) => ({ x: s.x, z: s.z, height: chunkManager.sampleHeight(s.x, s.z) }))
+    const targetHeight = originalHeights.reduce((sum, s) => sum + s.height, 0) / originalHeights.length
+    const env: DigEnv = {
+      sampleHeight: chunkManager.sampleHeight,
+      sampleMountainRidge: chunkManager.sampleMountainRidge,
+      waterLevel: chunkManager.waterLevel,
+      seed: chunkManager.seed,
+    }
+    const validation = validatePreparationSamples(originalHeights, targetHeight, env)
+    if (!validation.ok) {
+      toast.show(
+        validation.reason === 'water' ? 'Tu jest za mokro na chatę.' : 'Teren jest zbyt stromy.',
+        'error',
+      )
+      return false
+    }
+    const requiredWork = computeRequiredWork(size * size, averageAbsHeightDelta(originalHeights, targetHeight))
+    const record: TerrainPreparationRecord = {
+      id: `terrainPrep:${Date.now()}:${nextHousePrepId++}`,
+      center,
+      size,
+      targetHeight,
+      originalHeights,
+      requiredWork,
+      completedWork: 0,
+      status: 'active',
+    }
+    bundle.terrainPreparations.place(record)
+    toast.show('Teren jest zbyt stromy. Rozpoczęto przygotowanie terenu — podejdź do znacznika, by pracować.')
+    return true
+  }
+
+  const placeHouseAtAim = (kind: ResidentialBuildingKind, objectYaw?: number): void => {
+    if (isActionBlocked(ctx)) return
+    const { site, reason } = evaluatePlacementSite(housePlacementDefinition(kind, objectYaw))
+    if (reason === 'slope') {
+      tryStartHouseTerrainPrep(kind, site.x, site.z)
+      return
+    }
+    if (reason !== 'ok') {
+      toast.show(RESIDENTIAL_PLACEMENT_MESSAGE[reason], 'error')
+      return
+    }
+    const label = residentialBuildingDefinition(kind).label
+    busy.start(RESIDENTIAL_BUILDING_PLACE_DURATION_SEC, `Wyznaczanie miejsca: ${label}…`, () => {
+      const { site: freshSite, reason: freshReason } = evaluatePlacementSite(housePlacementDefinition(kind, objectYaw))
+      if (freshReason === 'slope') {
+        tryStartHouseTerrainPrep(kind, freshSite.x, freshSite.z)
+        return
+      }
+      if (freshReason !== 'ok') {
+        toast.show(RESIDENTIAL_PLACEMENT_MESSAGE[freshReason], 'error')
+        return
+      }
+      bundle.residentialBuildings.place(
+        kind,
+        freshSite.x,
+        freshSite.z,
+        freshSite.yaw,
+        settlementIdAt(freshSite.x, freshSite.z),
+      )
+      toast.show(`Rozpoczęto budowę: ${label}.`)
+    })
+  }
+
+  const previewSmallHousePlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(housePlacementDefinition('small_house', objectYaw))
+  const previewMediumHousePlacement = (objectYaw?: number): PlacementPreviewResult =>
+    previewGroundPlacement(housePlacementDefinition('medium_house', objectYaw))
+  const placeSmallHouseAtAim = (objectYaw?: number): void => placeHouseAtAim('small_house', objectYaw)
+  const placeMediumHouseAtAim = (objectYaw?: number): void => placeHouseAtAim('medium_house', objectYaw)
+
+  const supplyResidentialBuildingMaterials = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const house = bundle.residentialBuildings.find(id)
+    if (!house || !isResidentialBuildingMaterialBlocked(house)) return
+    const stage = house.stage
+    if (stage === 'completed') return
+    const missing = residentialStageRequirements(house.kind, stage).filter(
+      (r) => !hasMaterial(inventory, bundle.droppedItems, house.x, house.z, CONSTRUCTION_MATERIAL_RADIUS, r),
+    )
+    if (missing.length > 0) {
+      toast.show(
+        `Potrzebujesz: ${missing.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`,
+        'error',
+      )
+      return
+    }
+    for (const r of residentialStageRequirements(house.kind, stage)) {
+      if (!consumeMaterial(inventory, bundle.droppedItems, house.x, house.z, CONSTRUCTION_MATERIAL_RADIUS, r)) return
+    }
+    bundle.residentialBuildings.supplyMaterials(id)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Dostarczono materiały.')
+  }
+
+  const workOnResidentialBuilding = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const house = bundle.residentialBuildings.find(id)
+    if (!house || isResidentialBuildingComplete(house) || isResidentialBuildingMaterialBlocked(house)) return
+    const remaining = residentialBuildingRemainingWork(house)
+    if (remaining <= 0) return
+    const sessionHours = Math.min(RESIDENTIAL_BUILDING_WORK_SESSION_HOURS, remaining)
+    const sessionSec = (sessionHours / RESIDENTIAL_BUILDING_WORK_SESSION_HOURS) * RESIDENTIAL_BUILDING_WORK_SESSION_SEC
+    const startedAt = performance.now()
+    const creditPartial = (): void => {
+      const elapsedSec = Math.min(sessionSec, Math.max(0, (performance.now() - startedAt) / 1000))
+      const fraction = sessionSec > 0 ? elapsedSec / sessionSec : 1
+      bundle.residentialBuildings.contributeWork(id, sessionHours * fraction)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours * fraction)
+    }
+    busy.start(sessionSec, 'Budowa chaty w toku…', () => {
+      bundle.residentialBuildings.contributeWork(id, sessionHours)
+      applyRepresentedPhysicalEffortVigor(player.needs.vigor, 'moderate', sessionHours)
+    }, {
+      onCancel: creditPartial,
+      staminaCostPerSec: physicalEffortStaminaCostPerSec('moderate'),
+    })
+  }
+
+  const cancelResidentialBuilding = (id: string): void => {
+    if (isActionBlocked(ctx)) return
+    const house = bundle.residentialBuildings.find(id)
+    if (!house || isResidentialBuildingComplete(house)) return
+    const recovered = house.materialsSupplied && house.stage !== 'completed'
+      ? [...residentialStageRequirements(house.kind, house.stage)]
+      : []
+    if (recovered.length > 0 && !canReceiveRecovery(inventory, recovered)) {
+      toast.show('Brak miejsca w ekwipunku na odzyskane materiały.', 'error')
+      return
+    }
+    if (!bundle.residentialBuildings.remove(id)) return
+    const contract = bundle.workContracts.findByTarget({ kind: 'residential_building', targetId: id })
+    if (contract) bundle.workContracts.invalidateTarget(contract.id)
+    if (recovered.length > 0) applyRecovery(inventory, recovered)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Anulowano budowę chaty.')
+  }
+
   return {
     tentAimPoint,
     tentBlockers,
@@ -1340,5 +1573,12 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
     placeBedrollAtAim,
     previewPlatformPlacement,
     placePlatformAtAim,
+    previewSmallHousePlacement,
+    previewMediumHousePlacement,
+    placeSmallHouseAtAim,
+    placeMediumHouseAtAim,
+    supplyResidentialBuildingMaterials,
+    workOnResidentialBuilding,
+    cancelResidentialBuilding,
   }
 }

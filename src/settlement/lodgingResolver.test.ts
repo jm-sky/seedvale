@@ -6,6 +6,7 @@ import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 import { hayLodgingId } from './lodging'
 import {
   collectLodgingCandidates,
+  collectOwnedHouseLodgingOptions,
   type LodgingSettlementInput,
   resolveBestLodging,
   selectLodgingFromCandidates,
@@ -256,5 +257,75 @@ describe('selectLodgingFromCandidates', () => {
 
   it('reports unavailable against an empty candidate list', () => {
     expect(selectLodgingFromCandidates([], 'bed')).toEqual({ kind: 'unavailable' })
+  })
+})
+
+describe('collectLodgingCandidates — owned house (plan settlements-005)', () => {
+  it('exposes high-quality lodging for a completed Player-owned house without a bed', () => {
+    const owned: LodgingOption = {
+      id: 'residential:h:owned_house',
+      type: 'owned_house',
+      settlementId: '',
+      placeId: 'home:residential:h',
+      position: { x: 8, z: 9 },
+      approachPoint: { x: 8, z: 7 },
+      facing: 0,
+      quality: 'high',
+    }
+    const candidates = collectLodgingCandidates([], {
+      getPlayerSocial: () => socialState('stranger'),
+      ownedHouses: [owned],
+    })
+    expect(candidates).toEqual([owned])
+    expect(resolveBestLodging(candidates, { x: 0, z: 0 })?.type).toBe('owned_house')
+  })
+
+  it('does not include owned houses unless they are passed in', () => {
+    const s = settlement({ haySpot: { x: 1, z: 1 } })
+    const candidates = collectLodgingCandidates([s], { getPlayerSocial: () => socialState('stranger') })
+    expect(candidates.every((c) => c.type !== 'owned_house')).toBe(true)
+  })
+
+  it('omits unfinished houses from derived lodging', () => {
+    const options = collectOwnedHouseLodgingOptions([
+      {
+        id: 'residential:unfinished',
+        kind: 'small_house',
+        x: 0,
+        z: 0,
+        yaw: 0,
+        stage: 'foundation',
+        stageWorkProgress: 0,
+        materialsSupplied: false,
+        owner: { kind: 'player' },
+        settlementId: null,
+        homePlaceId: null,
+      },
+    ])
+    expect(options).toEqual([])
+  })
+
+  it('derives high-quality lodging for a completed Player-owned house', () => {
+    const options = collectOwnedHouseLodgingOptions([
+      {
+        id: 'residential:done',
+        kind: 'small_house',
+        x: 8,
+        z: 9,
+        yaw: 0,
+        stage: 'completed',
+        stageWorkProgress: 0,
+        materialsSupplied: true,
+        owner: { kind: 'player' },
+        settlementId: 'village-1',
+        homePlaceId: 'home:residential:residential:done',
+      },
+    ])
+    expect(options).toMatchObject([{
+      type: 'owned_house',
+      quality: 'high',
+      settlementId: 'village-1',
+      placeId: 'home:residential:residential:done',
+    }])
   })
 })

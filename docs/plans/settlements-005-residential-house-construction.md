@@ -1,7 +1,7 @@
 # Plan: Residential House Construction
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** high · **Effort:** L
 **Depends on:** ~~npc-018~~, ~~items-player-017~~

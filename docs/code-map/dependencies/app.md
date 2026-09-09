@@ -284,6 +284,10 @@ Generated from TypeScript imports.
 - `items/trade.ts`
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
+- `settlement/families.ts`
+- `settlement/settlementGenerator.ts`
+- `terrain/dig.ts`
+- `terrain/terrainPreparation.ts`
 - `world/animalTraps.ts`
 - `world/cropLifecycle.ts`
 - `world/palisade.ts`
@@ -293,6 +297,7 @@ Generated from TypeScript imports.
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/repair.ts`
+- `world/residentialBuilding.ts`
 - `world/sleepingUtilities.ts`
 - `world/sleepingUtilityProp.ts`
 - `world/standingTorch.ts`
@@ -368,6 +373,7 @@ Generated from TypeScript imports.
 - `ui/createBusyOverlay.ts`
 - `ui/createQuickActions.ts`
 - `ui/createTimeSkipOverlay.ts`
+- `world/residentialBuilding.ts`
 
 **Imported by**
 
@@ -475,6 +481,7 @@ Generated from TypeScript imports.
 - `ui-vue/mount.ts`
 - `world/palisade.ts`
 - `world/playerWell.ts`
+- `world/residentialBuilding.ts`
 - `world/standingTorch.ts`
 - `world/workContract.ts`
 
@@ -874,6 +881,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/cropLifecycle.ts`
@@ -881,6 +889,7 @@ Generated from TypeScript imports.
 - `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/residentialBuilding.ts`
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 
@@ -1114,6 +1123,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
@@ -1129,6 +1139,7 @@ Generated from TypeScript imports.
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
 - `world/pointLightBudget.ts`
+- `world/residentialBuilding.ts`
 - `world/riverWaterQualityResolver.ts`
 - `world/settlementForestHooks.ts`
 - `world/siteInfrastructure.ts`

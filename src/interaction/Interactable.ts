@@ -172,6 +172,10 @@ export type Interactable =
    *  references; the record itself is re-resolved by id at interact time,
    *  never trusted from this per-frame snapshot. */
   | { kind: 'palisade', position: { x: number, z: number }, promptLabel: string, id: string, complete: boolean }
+  /** Player-built residential house (plan settlements-005). Unfinished:
+   *  `[E]` supplies materials or works, `[R]` cancels. Completed Player-owned:
+   *  `[E]` sleeps. */
+  | { kind: 'residentialBuilding', position: { x: number, z: number }, promptLabel: string, id: string, complete: boolean, materialsSupplied: boolean, playerOwned: boolean }
   /** Settlement notice board (plan npc-014) — `[E]` opens the physical-
    *  posting panel listing the player's own `available`/`not_posted` work
    *  contracts. `settlementId` resolves the board's stable id

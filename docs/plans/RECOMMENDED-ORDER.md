@@ -134,71 +134,67 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  33  
    → **unlocks:** 1/1
 
-16. `settlements-005` — **Residential House Construction**  
-  🔴 `L` · **Score:**  32  
-   → **unlocks:** 0/0
-
-17. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+16. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-18. `npc-026` — **NPC Grave Visits**  
+17. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  31  
    → **unlocks:** 0/0
 
-19. `items-player-014` — **Rope-pullable resource transport**  
+18. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-20. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+19. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-21. `tools-005` — **Seedvale Character Preparation Panel**  
+20. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-22. `items-player-020` — **Player-built animal trough and water storage**  
+21. `items-player-020` — **Player-built animal trough and water storage**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-23. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
+22. `npc-016` — **Work Contracts — Payment & Employer Interaction**  
   🟡 `M` · **Score:**  25  
    → **unlocks:** 0/0
 
-24. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+23. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-25. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+24. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-26. `items-player-019` — **Player camp repair and sewing kit**  
+25. `items-player-019` — **Player camp repair and sewing kit**  
   🟡 `L` · **Score:**  22  
    → **unlocks:** 0/0
 
-27. `fauna-013` — **Animal hand-feeding and human affinity**  
+26. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-28. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
+27. `npc-017` — **Work Contracts — Food & Drink for Hired NPCs**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-29. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
+28. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-30. `world-terrain-015` — **Water Reflection Content Budget**  
+29. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-31. `fauna-007` — **Animal leading and cart harness**  
+30. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-32. `npc-004` — **Drzewo genealogiczne NPC**  
+31. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 

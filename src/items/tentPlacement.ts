@@ -108,6 +108,73 @@ export function evaluateGroundPlacement(input: GroundPlacementInput): GroundPlac
   return 'ok'
 }
 
+/** Oriented rectangular footprint — the same rotate-then-translate convention
+ *  house/palisade placement uses (`x*cos + z*sin`, `z - x*sin + z*cos`). */
+export type OrientedGroundPlacementInput = GroundPlacementInput & {
+  yaw: number
+  width: number
+  depth: number
+}
+
+function rotateLocalToWorld(
+  originX: number,
+  originZ: number,
+  yaw: number,
+  localX: number,
+  localZ: number,
+): { x: number, z: number } {
+  const cos = Math.cos(yaw)
+  const sin = Math.sin(yaw)
+  return {
+    x: originX + localX * cos + localZ * sin,
+    z: originZ - localX * sin + localZ * cos,
+  }
+}
+
+function orientedFootprintSamplePoints(
+  x: number,
+  z: number,
+  yaw: number,
+  width: number,
+  depth: number,
+): { x: number, z: number }[] {
+  const halfW = width / 2
+  const halfD = depth / 2
+  const locals: { x: number, z: number }[] = [
+    { x: 0, z: 0 },
+    { x: -halfW, z: -halfD },
+    { x: halfW, z: -halfD },
+    { x: -halfW, z: halfD },
+    { x: halfW, z: halfD },
+    { x: 0, z: -halfD },
+    { x: 0, z: halfD },
+    { x: -halfW, z: 0 },
+    { x: halfW, z: 0 },
+  ]
+  return locals.map((local) => rotateLocalToWorld(x, z, yaw, local.x, local.z))
+}
+
+/** Suitability for a rotated rectangular footprint (plan settlements-005).
+ *  Water and slope are sampled on the actual box; blocker/peer clearance
+ *  still uses `footprintRadius` so existing circular queries stay valid. */
+export function evaluateOrientedGroundPlacement(input: OrientedGroundPlacementInput): GroundPlacementReason {
+  const { x, z, sampleHeight, waterLevel, yaw, width, depth } = input
+  const limit = waterLevel + PLACEMENT_WATER_MARGIN
+  for (const point of orientedFootprintSamplePoints(x, z, yaw, width, depth)) {
+    if (sampleHeight(point.x, point.z) <= limit) return 'water'
+    if (maxSlopeDelta(point.x, point.z, sampleHeight) > SLOPE_MAX_DELTA) return 'slope'
+  }
+  for (const peer of input.peers) {
+    if (Math.hypot(peer.x - x, peer.z - z) < input.separation) return 'occupied'
+  }
+  for (const blocker of input.blockers) {
+    if (Math.hypot(blocker.x - x, blocker.z - z) < blocker.radius + input.footprintRadius) {
+      return 'object'
+    }
+  }
+  return 'ok'
+}
+
 /** Suitability for pitching a tent at (x, z). */
 export function evaluateTentPlacement(input: TentPlacementInput): TentPlacementReason {
   const { otherTents, ...rest } = input

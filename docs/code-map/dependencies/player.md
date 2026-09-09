@@ -110,6 +110,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`

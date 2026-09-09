@@ -21,7 +21,7 @@ The correct mental model is "each domain owns its state and knows how to seriali
 Five categories. A given domain concept can span more than one row — state it per-concept, not per-domain.
 
 ### Persisted authoritative
-The save is the only copy; nothing regenerates it. *Examples:* settlement economies, households, NPC authoritative state (health/stamina/vigor/needs/injury/helper-assignment/active-plan/post-death/personal inventory), NPC↔NPC and player↔NPC relationships, player↔settlement reputation/renown, livestock individuals, player inventory/needs/skills, every player-built world object (wells, torches, palisades, gardens, containers, …), work-contract commitments, quests, the game clock, map discovery/knowledge.
+The save is the only copy; nothing regenerates it. *Examples:* settlement economies, households, NPC authoritative state (health/stamina/vigor/needs/injury/helper-assignment/active-plan/post-death/personal inventory), NPC↔NPC and player↔NPC relationships, player↔settlement reputation/renown, livestock individuals, player inventory/needs/skills, every player-built world object (wells, torches, palisades, residential houses, gardens, containers, …), work-contract commitments, quests, the game clock, map discovery/knowledge.
 
 ### Persisted delta / override
 A deterministic base plus only the deviation from it. *Examples:* player-sourced terrain modifications (system-caused carves like caves are filtered out at save time and re-derived), mining-hits-remaining on resource deposits, grass-forage-patch depletion, a fauna spawn point's FSM/recovery clock (position/type/kind stay deterministic), livestock removal tombstones, discovered map cells.

@@ -687,6 +687,7 @@ Generated from TypeScript imports.
 - `world/createPalisades.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 
 ## `world/condition.test.ts`
 
@@ -936,6 +937,34 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `world/createPlayerWells.test.ts`
+
+## `world/createResidentialBuildings.test.ts`
+
+**Imports**
+
+- `world/createResidentialBuildings.ts`
+- `world/residentialBuilding.ts`
+
+## `world/createResidentialBuildings.ts`
+
+**Imports**
+
+- `assets/constructionCatalog.ts`
+- `player/PlayerController.ts`
+- `settlement/houseBuilder.ts`
+- `settlement/props.ts`
+- `world/collision.ts`
+- `world/residentialBuilding.ts`
+- `world/residentialBuildingProp.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/interactables.ts`
+- `app/worldBundle.ts`
+- `settlement/SettlementsManager.ts`
+- `settlement/createSettlement.ts`
+- `world/createResidentialBuildings.test.ts`
 
 ## `world/createRiverWater.ts`
 
@@ -1881,6 +1910,7 @@ Generated from TypeScript imports.
 - `world/palisade.ts`
 - `world/playerWell.test.ts`
 - `world/playerWellProp.ts`
+- `world/residentialBuilding.ts`
 - `world/siteInfrastructure.test.ts`
 - `world/siteInfrastructure.ts`
 - `world/standingTorch.ts`
@@ -1929,6 +1959,49 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `world/playerWell.ts`
 - `world/repair.test.ts`
+
+## `world/residentialBuilding.test.ts`
+
+**Imports**
+
+- `items/items.ts`
+- `items/tentPlacement.ts`
+- `world/residentialBuilding.ts`
+
+## `world/residentialBuilding.ts`
+
+**Imports**
+
+- `assets/houseDefinitionExample.ts`
+- `assets/houseDefinitionExampleConfig.ts`
+- `items/constructionMaterials.ts`
+- `items/tentPlacement.ts`
+- `world/playerWell.ts`
+
+**Imported by**
+
+- `ai/NpcAgent.ts`
+- `app/actions/placementActions.ts`
+- `app/actions/restActions.ts`
+- `app/actions/workContractActions.ts`
+- `app/interactables.ts`
+- `app/worldBundle.ts`
+- `settlement/lodgingResolver.ts`
+- `world/createResidentialBuildings.test.ts`
+- `world/createResidentialBuildings.ts`
+- `world/residentialBuilding.test.ts`
+- `world/residentialBuildingProp.ts`
+
+## `world/residentialBuildingProp.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+- `world/residentialBuilding.ts`
+
+**Imported by**
+
+- `world/createResidentialBuildings.ts`
 
 ## `world/restCancel.test.ts`
 

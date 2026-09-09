@@ -76,6 +76,7 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
     playerGardens: [],
     standingTorches: [],
     palisades: [],
+    residentialBuildings: [],
     bedrolls: [],
     platforms: [],
     resourceDeposits: {},

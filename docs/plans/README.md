@@ -87,7 +87,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                  | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                  | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                          | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
-| 💡 `settlements-005-residential-house-construction.md`                      | -       | 🔴 | L      | ~~npc-018~~, ~~items-player-017~~ |
 | 💡 `fauna-020-player-owned-animals-and-follow-stay-behaviour.md`            | -       | 🟡 | M      | ~~fauna-003~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 
@@ -101,6 +100,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `settlements-005-residential-house-construction.md` | Placement małej/średniej chaty, stage-gated materiały, praca gracza i NPC, terrain prep przy stoku, ukończenie → lodging high, anulowanie niedokończonej, save/load |
 | `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | Neutralny handlarz ~90% nominalnej wartości; lepsza relacja/reputacja podbija ofertę (max ~105% dla nie-stockowanych); zużyty trap taniej proporcjonalnie do stanu; broken trap ~5% salvage; podsumowanie transakcji = finalna wypłata; brak arbitrażu buy→sell na stockowanych towarach |
 | `fauna-009-wolf-howling-and-rooster-vocalization.md` | Wycie wilków i pianie kogutów: timing, zachowanie i brak spamowania audio |
 | `items-player-003-player-physical-effort-stamina-vigor.md` | Odczuwalny balans Stamina/Vigor podczas ruchu, pracy i regeneracji |

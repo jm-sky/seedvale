@@ -395,6 +395,13 @@ Generated from exported TypeScript symbols.
 - `PlayerWellEntry` — type — line 22
 - `PlayerWells` — type — line 24
 
+## `world/createResidentialBuildings.ts`
+
+- `createResidentialBuildings` — function — line 77
+  - domain: settlements
+- `ResidentialBuildingEntry` — type — line 24
+- `ResidentialBuildings` — type — line 26
+
 ## `world/createRiverWater.ts`
 
 - `createChunkRiver` — function — line 23
@@ -927,6 +934,53 @@ Generated from exported TypeScript symbols.
   - domain: world
 - `repairRemainingWork` — function — line 23
 
+## `world/residentialBuilding.ts`
+
+- `applyResidentialBuildingWork` — function — line 271
+- `coveringPreparationSize` — function — line 350
+- `createUnfinishedResidentialBuildingRecord` — function — line 235
+- `isPlayerOwnedResidentialBuilding` — function — line 202
+- `isResidentialBuildingComplete` — function — line 157
+- `isResidentialBuildingMaterialBlocked` — function — line 161
+- `isResidentialConstructionStage` — function — line 122
+- `nextResidentialConstructionStage` — function — line 181
+- `RESIDENTIAL_BUILDING_DEFINITIONS` — const — line 99
+- `RESIDENTIAL_BUILDING_MATERIAL_BLOCK_WAIT_SEC` — const — line 145
+- `RESIDENTIAL_BUILDING_PLACE_DURATION_SEC` — const — line 140
+- `RESIDENTIAL_BUILDING_WORK_SESSION_HOURS` — const — line 142
+- `RESIDENTIAL_BUILDING_WORK_SESSION_SEC` — const — line 141
+- `RESIDENTIAL_CONSTRUCTION_STAGES` — const — line 69
+- `RESIDENTIAL_PLACEMENT_MESSAGE` — const — line 149
+- `residentialBuildingApproachLocal` — function — line 210
+- `residentialBuildingApproachPoint` — function — line 230
+- `residentialBuildingDefinition` — function — line 118
+- `ResidentialBuildingDefinition` — type — line 60
+- `residentialBuildingFootprintRadius` — function — line 126
+- `ResidentialBuildingKind` — type — line 17
+  - domain: settlements
+- `residentialBuildingLodgingId` — function — line 328
+- `residentialBuildingPlaceReach` — function — line 135
+- `residentialBuildingPromptLabel` — function — line 332
+- `ResidentialBuildingRecord` — type — line 33
+- `residentialBuildingRemainingWork` — function — line 193
+- `residentialBuildingSeparation` — function — line 131
+- `ResidentialBuildingStage` — type — line 21
+- `ResidentialConstructionStage` — type — line 19
+- `residentialHomePlaceId` — function — line 198
+- `ResidentialOwner` — type — line 27
+- `ResidentialPlacementReason` — type — line 147
+- `ResidentialStageDefinition` — type — line 55
+- `residentialStageRequiredWork` — function — line 167
+- `residentialStageRequirements` — function — line 174
+- `ResidentialWorkContribution` — type — line 259
+- `rotateLocalToWorld` — function — line 215
+- `supplyResidentialStageMaterials` — function — line 321
+
+## `world/residentialBuildingProp.ts`
+
+- `createResidentialBuildingPlaceholder` — function — line 26
+- `disposeResidentialBuildingProp` — function — line 45
+
 ## `world/riverGeometry.ts`
 
 - `buildRiverRibbonGeometry` — function — line 134
@@ -1272,44 +1326,45 @@ Generated from exported TypeScript symbols.
 
 ## `world/workContract.ts`
 
-- `acceptWorkContract` — function — line 340
-- `activeWorkAssignmentCount` — function — line 176
-- `beginContractTravel` — function — line 373
-- `beginContractWork` — function — line 381
-- `canAcceptContract` — function — line 333
-- `cancelWorkContract` — function — line 303
-- `canPostContract` — function — line 203
-- `completeContractWork` — function — line 403
+- `acceptWorkContract` — function — line 347
+- `activeWorkAssignmentCount` — function — line 183
+- `beginContractTravel` — function — line 380
+- `beginContractWork` — function — line 388
+- `canAcceptContract` — function — line 340
+- `cancelWorkContract` — function — line 310
+- `canPostContract` — function — line 210
+- `completeContractWork` — function — line 410
 - `ConstructionContractTarget` — type — line 52
-- `contractHasActiveTarget` — function — line 195
-- `contractRewardRate` — function — line 439
-- `ContractTarget` — type — line 84
-- `createWorkContractRecord` — function — line 242
-- `expectedCandidateWork` — function — line 448
-- `findAssignment` — function — line 189
-- `groupRemainingWork` — function — line 185
-- `invalidateWorkContract` — function — line 317
-- `isAssignmentWorkActive` — function — line 171
-- `isContractDiscoverable` — function — line 213
-- `isContractTerminal` — function — line 165
-- `isNpcCommitmentFulfilled` — function — line 433
-- `normalizeRequestedWorkerCount` — function — line 237
-- `noticeBoardId` — function — line 225
+- `contractHasActiveTarget` — function — line 202
+- `contractRewardRate` — function — line 446
+- `ContractTarget` — type — line 90
+- `createWorkContractRecord` — function — line 249
+- `expectedCandidateWork` — function — line 455
+- `findAssignment` — function — line 196
+- `groupRemainingWork` — function — line 192
+- `invalidateWorkContract` — function — line 324
+- `isAssignmentWorkActive` — function — line 178
+- `isContractDiscoverable` — function — line 220
+- `isContractTerminal` — function — line 172
+- `isNpcCommitmentFulfilled` — function — line 440
+- `normalizeRequestedWorkerCount` — function — line 244
+- `noticeBoardId` — function — line 232
 - `PalisadeContractTarget` — type — line 70
-- `postWorkContract` — function — line 284
-- `recordNpcWorkContribution` — function — line 461
-- `releaseWorkContract` — function — line 415
-- `sameContractTarget` — function — line 483
+- `postWorkContract` — function — line 291
+- `recordNpcWorkContribution` — function — line 468
+- `releaseWorkContract` — function — line 422
+- `ResidentialBuildingContractTarget` — type — line 83
+- `sameContractTarget` — function — line 490
 - `StandingTorchContractTarget` — type — line 77
 - `TerrainPreparationContractTarget` — type — line 61
-- `WORK_SHARE_PRESETS` — const — line 231
+- `WORK_SHARE_PRESETS` — const — line 238
 - `WorkContractAdvertisement` — type — line 40
-- `WorkContractAssignment` — type — line 94
+- `WorkContractAssignment` — type — line 101
 - `WorkContractAssignmentState` — type — line 33
-- `WorkContractRecord` — type — line 104
+- `WorkContractRecord` — type — line 111
 - `WorkContractState` — type — line 21
   - domain: npc
-- `WORKER_COUNT_PRESETS` — const — line 235
+- `WORKER_COUNT_PRESETS` — const — line 242
 - `WorkType` — type — line 44
 
 ## `world/worldContext.ts`

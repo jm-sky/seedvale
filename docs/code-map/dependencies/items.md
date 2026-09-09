@@ -259,6 +259,7 @@ Generated from TypeScript imports.
 - `world/palisade.test.ts`
 - `world/palisade.ts`
 - `world/playerWell.ts`
+- `world/residentialBuilding.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 
@@ -800,6 +801,7 @@ Generated from TypeScript imports.
 - `world/helperDeliveryHooks.ts`
 - `world/hiddenFinds.ts`
 - `world/plantedCrops.ts`
+- `world/residentialBuilding.test.ts`
 - `world/restCancel.test.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
@@ -911,6 +913,8 @@ Generated from TypeScript imports.
 - `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/residentialBuilding.test.ts`
+- `world/residentialBuilding.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 

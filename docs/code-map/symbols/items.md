@@ -325,12 +325,14 @@ Generated from exported TypeScript symbols.
 ## `items/tentPlacement.ts`
 
 - `evaluateGroundPlacement` — function — line 96
-- `evaluateTentPlacement` — function — line 112
+- `evaluateOrientedGroundPlacement` — function — line 160
+- `evaluateTentPlacement` — function — line 179
 - `GroundPlacementInput` — type — line 15
 - `GroundPlacementReason` — type — line 13
+- `OrientedGroundPlacementInput` — type — line 113
 - `PLACEMENT_WATER_MARGIN` — const — line 48
-- `TENT_PLACEMENT_MESSAGE` — const — line 129
-- `TENT_SETUP_DURATION_SEC` — const — line 127
+- `TENT_PLACEMENT_MESSAGE` — const — line 196
+- `TENT_SETUP_DURATION_SEC` — const — line 194
 - `TentPlacementInput` — type — line 30
 - `TentPlacementReason` — type — line 3
 - `WATER_MARGIN` — const — line 41

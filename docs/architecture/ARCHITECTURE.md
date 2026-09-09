@@ -38,6 +38,9 @@ WorldBundle
 ├── PlacedContainers      player storage, placed or carried (plan 164)
 ├── PlayerWells           player-built wells (plan 127)
 ├── PlayerGardens         player-built garden plots (plan 174)
+├── StandingTorches
+├── Palisades
+├── ResidentialBuildings  player-built houses (plan settlements-005)
 ├── Caves                 walk-in cave definitions/presentation/collision (plan world-terrain-007)
 ├── DryingRacks           settlement-landmark preservation (plan 159)
 └── Beehives              settlement-landmark wild hives (plan 159)

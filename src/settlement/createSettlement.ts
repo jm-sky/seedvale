@@ -19,6 +19,7 @@ import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { Palisades } from '../world/createPalisades'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
@@ -335,6 +336,9 @@ export type CreateSettlementDeps = {
   /** Player-built standing torches (plan items-player-017) — the fourth
    *  Work Contract target, forwarded the same way as `palisades`. */
   standingTorches?: StandingTorches
+  /** Player-built residential houses (plan settlements-005) — forwarded the
+   *  same way as `palisades`. */
+  residentialBuildings?: ResidentialBuildings
 }
 
 export async function createSettlement(
@@ -377,6 +381,7 @@ export async function createSettlement(
     terrainPreparations,
     palisades,
     standingTorches,
+    residentialBuildings,
   } = deps
 
   const { bootMark, bootMarkEnd } = useBootMark('createSettlement')
@@ -728,6 +733,7 @@ export async function createSettlement(
         terrainPreparations,
         palisades,
         standingTorches,
+        residentialBuildings,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent

@@ -18,6 +18,7 @@ import type { VigorState } from '../shared/VigorState'
 import type { SettlementMiningHooks } from '../terrain/resourceDeposits'
 import type { Palisades } from '../world/createPalisades'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
@@ -146,6 +147,13 @@ import {
   WELL_WORK_SESSION_SEC,
   wellRemainingWork,
 } from '../world/playerWell'
+import {
+  isResidentialBuildingComplete,
+  RESIDENTIAL_BUILDING_MATERIAL_BLOCK_WAIT_SEC,
+  RESIDENTIAL_BUILDING_WORK_SESSION_HOURS,
+  RESIDENTIAL_BUILDING_WORK_SESSION_SEC,
+  residentialBuildingRemainingWork,
+} from '../world/residentialBuilding'
 import {
   STANDING_TORCH_WORK_SESSION_HOURS,
   STANDING_TORCH_WORK_SESSION_SEC,
@@ -862,6 +870,8 @@ export type NpcAgentDeps = {
   /** Player-built standing torches (plan items-player-017) — the fourth Work
    *  Contract target kind, forwarded the same way as `palisades`. */
   standingTorches?: StandingTorches | null
+  /** Player-built residential houses (plan settlements-005). */
+  residentialBuildings?: ResidentialBuildings | null
   droppedItems?: DroppedItems | null
 }
 
@@ -1212,6 +1222,8 @@ export class NpcAgent {
   /** The fourth Work Contract target kind (plan items-player-017) — player-
    *  built standing torches, same shape as `palisades`. */
   private readonly standingTorches: StandingTorches | null
+  /** Player-built residential houses (plan settlements-005). */
+  private readonly residentialBuildings: ResidentialBuildings | null
   /** World-dropped items (plan npc-015 §9's material-provisioning analogue)
    *  — lets NPC construction work draw stone/branch left near the site
    *  through the exact same bounded `hasMaterial`/`consumeMaterial` radius
@@ -1293,6 +1305,7 @@ export class NpcAgent {
       terrainPreparations,
       palisades,
       standingTorches,
+      residentialBuildings,
       droppedItems,
     } = deps
     const playAt = deps.playAt ?? (() => {})
@@ -1334,6 +1347,7 @@ export class NpcAgent {
     this.terrainPreparations = terrainPreparations ?? null
     this.palisades = palisades ?? null
     this.standingTorches = standingTorches ?? null
+    this.residentialBuildings = residentialBuildings ?? null
     this.droppedItems = droppedItems ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
@@ -1544,6 +1558,10 @@ export class NpcAgent {
           if (mine.target.kind === 'palisade') {
             const segment = this.palisades?.list().find((e) => e.id === mine.target.targetId)
             return segment ? palisadeRemainingWork(segment) : null
+          }
+          if (mine.target.kind === 'residential_building') {
+            const house = this.residentialBuildings?.find(mine.target.targetId)
+            return house ? residentialBuildingRemainingWork(house) : null
           }
           const torch = this.standingTorches?.list().find((e) => e.id === mine.target.targetId)
           return torch ? standingTorchRemainingWork(torch) : null
@@ -4035,6 +4053,7 @@ export class NpcAgent {
     if (assignment.state === 'payment_due' || assignment.state === 'released') return false
     if (record.target.kind === 'construction') return this.pursueConstructionContract(record, assignment, contracts)
     if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, assignment, contracts)
+    if (record.target.kind === 'residential_building') return this.pursueResidentialContract(record, assignment, contracts)
     return this.pursueBuildableContract(record, assignment, contracts)
   }
 
@@ -4238,6 +4257,80 @@ export class NpcAgent {
         if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
       },
     })
+  }
+
+  /** Residential-house Work Contract execution (plan settlements-005).
+   *  Stage/material constants stay on the building record; this only
+   *  contributes remaining useful work and backs off when the stage is
+   *  material-blocked instead of spinning a work/retry loop. */
+  private pursueResidentialContract(
+    record: WorkContractRecord,
+    assignment: WorkContractAssignment,
+    contracts: WorkContracts,
+  ): boolean {
+    const runtime = this.residentialBuildings
+    if (!runtime) return false
+    const entry = runtime.find(record.target.targetId)
+    if (!entry) {
+      contracts.invalidateTarget(record.id)
+      this.trace.record({ simTime: this.simClock, type: 'contract.invalidated', contractId: record.id, reason: 'missingTarget' })
+      return true
+    }
+    if (isResidentialBuildingComplete(entry)) {
+      contracts.completeWork(record.id, this.id)
+      this.trace.record({ simTime: this.simClock, type: 'contract.workCompleted', contractId: record.id })
+      return true
+    }
+    const destination = { x: entry.x, y: this.sampleHeight(entry.x, entry.z), z: entry.z }
+    if (assignment.state === 'accepted' || assignment.state === 'travelling') {
+      if (assignment.state === 'accepted') contracts.beginTravel(record.id, this.id)
+      const contractId = record.id
+      this.startAction({
+        kind: 'work',
+        destination,
+        durationSec: 1.0 * this.waitMultiplier,
+        onComplete: () => {
+          const fresh = contracts.find(contractId)
+          const freshAssignment = fresh ? findAssignment(fresh, this.id) : undefined
+          if (freshAssignment?.state === 'travelling') {
+            contracts.beginWork(contractId, this.id, this.simClock)
+          }
+        },
+      })
+      return true
+    }
+    if (residentialBuildingRemainingWork(entry) <= 0) {
+      this.startAction({
+        kind: 'work',
+        destination,
+        durationSec: RESIDENTIAL_BUILDING_MATERIAL_BLOCK_WAIT_SEC * this.waitMultiplier,
+        onComplete: () => {},
+      })
+      return true
+    }
+    const contractId = record.id
+    const targetId = record.target.targetId
+    this.startAction({
+      kind: 'work',
+      destination,
+      durationSec: RESIDENTIAL_BUILDING_WORK_SESSION_SEC * this.waitMultiplier,
+      onComplete: () => {
+        const freshContract = contracts.find(contractId)
+        const freshAssignment = freshContract ? findAssignment(freshContract, this.id) : undefined
+        if (!freshAssignment || freshAssignment.state !== 'working') return
+        const result = runtime.contributeWork(targetId, RESIDENTIAL_BUILDING_WORK_SESSION_HOURS)
+        if (!result) {
+          contracts.invalidateTarget(contractId)
+          return
+        }
+        const creditedContract = result.acceptedWork > 0
+          ? contracts.creditNpcWork(contractId, this.id, result.acceptedWork)
+          : contracts.find(contractId)
+        const commitmentFulfilled = creditedContract != null && isNpcCommitmentFulfilled(creditedContract)
+        if (result.completed || commitmentFulfilled) contracts.completeWork(contractId, this.id)
+      },
+    })
+    return true
   }
 
   /** Plan items-player-017 §16/§17 counterpart of `pursueConstructionContract`/

@@ -9,7 +9,7 @@
  * `SettlementLandmarks`, and — once plan 169 lands — the physical bed data).
  */
 
-export type LodgingType = 'bed' | 'friend' | 'paid' | 'hay'
+export type LodgingType = 'bed' | 'friend' | 'paid' | 'hay' | 'owned_house'
 
 export type LodgingQuality = 'high' | 'normal' | 'low'
 
@@ -111,6 +111,7 @@ const LODGING_TYPE_LABEL: Record<LodgingType, string> = {
   friend: 'Nocleg u znajomego',
   paid: 'Płatny nocleg',
   hay: 'Stóg siana',
+  owned_house: 'Własna chata',
 }
 
 export function lodgingPlaceLabel(option: LodgingOption): string {

@@ -106,6 +106,7 @@ function validLegacyV8Save(): Record<string, unknown> {
     playerGardens: [],
     standingTorches: [],
     palisades: [],
+    residentialBuildings: [],
     bedrolls: [],
     platforms: [],
     resourceDeposits: {},

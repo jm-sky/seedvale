@@ -32,6 +32,8 @@ export type PlacementPreviewKind =
   | 'platform'
   | 'workContract'
   | 'well'
+  | 'smallHouse'
+  | 'mediumHouse'
 
 export type PlacementPreviewUiView = {
   label: string
@@ -66,6 +68,8 @@ const KIND_LABEL: Record<PlacementPreviewKind, string> = {
   platform: 'Podest do spania',
   workContract: 'Zlecenie budowy',
   well: 'Studnia',
+  smallHouse: 'Mała chata',
+  mediumHouse: 'Średnia chata',
 }
 
 /** Explicit rotation capability — not derived from footprint kind
@@ -82,6 +86,8 @@ const SUPPORTS_ROTATION: Record<PlacementPreviewKind, boolean> = {
   platform: true,
   workContract: false,
   well: false,
+  smallHouse: true,
+  mediumHouse: true,
 }
 
 export type PlacementPreviewActionDeps = {
@@ -100,6 +106,10 @@ export type PlacementPreviewActionDeps = {
     | 'placePlatformAtAim'
     | 'previewWellPlacement'
     | 'placeWellAtAim'
+    | 'previewSmallHousePlacement'
+    | 'placeSmallHouseAtAim'
+    | 'previewMediumHousePlacement'
+    | 'placeMediumHouseAtAim'
   >
   containers: Pick<ContainerActions, 'previewContainerPlacement' | 'placeContainerAtAim'>
   workContract: Pick<WorkContractActions, 'previewContractPlacement' | 'confirmContractPlacementAtAim'>
@@ -184,8 +194,10 @@ export function createPlacementPreviewActions(
       case 'firePit':
       case 'fireSimple':
         return previewFire()
+      case 'mediumHouse': return placement.previewMediumHousePlacement(objectYaw)
       case 'palisade': return placement.previewPalisadePlacement(objectYaw)
       case 'platform': return placement.previewPlatformPlacement(objectYaw)
+      case 'smallHouse': return placement.previewSmallHousePlacement(objectYaw)
       case 'standingTorch': return placement.previewStandingTorchPlacement()
       case 'tent': return placement.previewTentPlacement(objectYaw)
       case 'well': return placement.previewWellPlacement()
@@ -210,6 +222,7 @@ export function createPlacementPreviewActions(
         else finishIntent(true)
         return
       }
+      case 'mediumHouse': placement.placeMediumHouseAtAim(objectYaw); return
       case 'palisade': placement.placePalisadeAtAim(objectYaw); return
       case 'platform': {
         const lifecycle = intentLifecycle
@@ -217,6 +230,7 @@ export function createPlacementPreviewActions(
         placement.placePlatformAtAim(objectYaw, notifyPlacement(lifecycle, 'platform'))
         return
       }
+      case 'smallHouse': placement.placeSmallHouseAtAim(objectYaw); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
       case 'tent': {
         const lifecycle = intentLifecycle

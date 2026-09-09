@@ -510,6 +510,7 @@ Generated from TypeScript imports.
 
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/placementActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/interactables.ts`
@@ -850,6 +851,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/NpcAgent.ts`
+- `app/actions/placementActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/worldBundle.ts`

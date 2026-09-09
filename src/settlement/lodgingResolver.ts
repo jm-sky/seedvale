@@ -1,8 +1,14 @@
 import type { PlayerSocialLookup } from '../ai/reactionChance'
 import type { RelationLevel } from '../quests/quests'
+import type { ResidentialBuildingRecord } from '../world/residentialBuilding'
 import type { Settlement } from './createSettlement'
 import type { LodgingOption } from './lodging'
 import type { SettlementHouseBed } from './props'
+import {
+  residentialBuildingApproachPoint,
+  residentialBuildingLodgingId,
+  residentialHomePlaceId,
+} from '../world/residentialBuilding'
 import { hayLodgingId, lodgingRequiresPayment } from './lodging'
 import { homeIndexFromPlaceId } from './places'
 
@@ -163,6 +169,10 @@ function collectHayCandidate(settlement: LodgingSettlementInput): LodgingOption 
 
 export type LodgingCandidateContext = {
   getPlayerSocial: PlayerSocialLookup
+  /** Completed Player-owned houses (plan settlements-005) — derived, never
+   *  persisted. Always included so an out-of-settlement house still
+   *  revalidates after a direct `[E]` walk. */
+  ownedHouses?: readonly LodgingOption[]
 }
 
 export function collectLodgingCandidates(
@@ -177,10 +187,34 @@ export function collectLodgingCandidates(
     const hay = collectHayCandidate(settlement)
     if (hay) out.push(hay)
   }
+  if (ctx.ownedHouses) out.push(...ctx.ownedHouses)
   return dedupeByPhysicalPlace(out)
 }
 
-const TYPE_PRIORITY: Record<LodgingOption['type'], number> = { bed: 4, friend: 3, paid: 2, hay: 1 }
+/** Derived lodging for completed Player-owned houses (plan settlements-005
+ *  v1) — high quality, no physical bed. Unfinished houses are omitted. */
+export function collectOwnedHouseLodgingOptions(
+  buildings: readonly ResidentialBuildingRecord[],
+): LodgingOption[] {
+  const out: LodgingOption[] = []
+  for (const record of buildings) {
+    if (record.stage !== 'completed' || record.owner.kind !== 'player') continue
+    const approach = residentialBuildingApproachPoint(record)
+    out.push({
+      id: residentialBuildingLodgingId(record.id),
+      type: 'owned_house',
+      settlementId: record.settlementId ?? '',
+      placeId: record.homePlaceId ?? residentialHomePlaceId(record.id),
+      position: { x: record.x, z: record.z },
+      approachPoint: approach,
+      facing: record.yaw,
+      quality: 'high',
+    })
+  }
+  return out
+}
+
+const TYPE_PRIORITY: Record<LodgingOption['type'], number> = { owned_house: 5, bed: 4, friend: 3, paid: 2, hay: 1 }
 const QUALITY_RANK: Record<LodgingOption['quality'], number> = { high: 3, normal: 2, low: 1 }
 
 /** Two internal representations (`bed`/`friend` today) can point at the same

@@ -24,10 +24,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 340
-- `CreateSettlementDeps` — type — line 227
-- `Settlement` — type — line 114
-- `settlementSpawnPoint` — function — line 215
+- `createSettlement` — function — line 344
+- `CreateSettlementDeps` — type — line 228
+- `Settlement` — type — line 115
+- `settlementSpawnPoint` — function — line 216
 
 ## `settlement/decorProps.ts`
 
@@ -110,18 +110,19 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/houseBuilder.ts`
 
-- `buildAssemblyCollidersWorld` — function — line 633
-- `buildHouse` — function — line 695
-- `buildHouseCollidersWorld` — function — line 618
-- `buildHouseDoorCollidersLocal` — function — line 570
-- `buildHouseWallCollidersLocal` — function — line 536
-- `censusAssembly` — function — line 403
+- `buildAssemblyCollidersWorld` — function — line 657
+- `buildHouse` — function — line 719
+- `buildHouseCollidersWorld` — function — line 642
+- `buildHouseDoorCollidersLocal` — function — line 594
+- `BuildHouseOptions` — type — line 308
+- `buildHouseWallCollidersLocal` — function — line 560
+- `censusAssembly` — function — line 427
 - `cornerLocalPosition` — function — line 214
-- `createHouseStaticBatch` — function — line 834
+- `createHouseStaticBatch` — function — line 876
 - `DOOR_1_FLAT_HINGE_OFFSET_X` — const — line 39
 - `DOOR_ANIM_SPEED` — const — line 41
 - `DOOR_OPEN_ANGLE` — const — line 40
-- `fillOffsetFor` — function — line 348
+- `fillOffsetFor` — function — line 372
 - `floorTilePositions` — function — line 226
 - `HOUSE_ASSEMBLY_SCALE` — const — line 43
 - `HOUSE_DOOR_OPENING_HALF_WIDTH_M` — const — line 67
@@ -130,17 +131,19 @@ Generated from exported TypeScript symbols.
 - `HouseAssembly` — type — line 148
 - `HouseAssemblyCensus` — type — line 140
 - `HouseBuildContext` — type — line 125
-- `houseDefinitionAssetIds` — function — line 306
+- `houseDefinitionAssetIds` — function — line 317
+- `houseDefinitionAssetIdsForStage` — function — line 321
 - `HouseDoor` — type — line 131
 - `houseFootprintRadius` — function — line 247
 - `HouseLocalPose` — type — line 110
 - `HousePartPrimitive` — type — line 117
 - `HouseStaticBatch` — type — line 161
-- `loadHousePartTemplates` — function — line 332
+- `HouseVisualStage` — type — line 306
+- `loadHousePartTemplates` — function — line 356
 - `matchingWallPlacement` — function — line 252
 - `openingLocalPose` — function — line 277
 - `resolveRoofParts` — function — line 290
-- `transformHouseCollidersToWorld` — function — line 588
+- `transformHouseCollidersToWorld` — function — line 612
 - `WALL_YAW` — const — line 89
 - `wallLocalTransform` — function — line 193
 
@@ -241,29 +244,30 @@ Generated from exported TypeScript symbols.
 
 - `advanceLodgingProgress` — function — line 97
   - domain: ui-input Advances the lodging-walk stuck watchdog by one frame — a meaningful distance improvement resets the timer, otherwise `dt` accumulates until `LODGING_STUCK_TIMEOUT_SEC` is reached. Pure and frame-count-independent (driven by `dt`, not calls) so it can be unit-tested without a running game loop or a `PlayerActionContext` mock.
-- `hayLodgingId` — function — line 148
+- `hayLodgingId` — function — line 149
 - `initialLodgingProgress` — function — line 87
 - `LODGING_ARRIVE_TOLERANCE` — const — line 67
 - `LODGING_STUCK_PROGRESS_EPSILON` — const — line 73
 - `LODGING_STUCK_TIMEOUT_SEC` — const — line 79
-- `lodgingChoiceLabel` — function — line 137
+- `lodgingChoiceLabel` — function — line 138
 - `LodgingOption` — type — line 16
-- `lodgingPlaceLabel` — function — line 116
+- `lodgingPlaceLabel` — function — line 117
 - `LodgingProgress` — type — line 85
 - `LodgingQuality` — type — line 14
-- `lodgingRequiresPayment` — function — line 125
+- `lodgingRequiresPayment` — function — line 126
 - `lodgingRestQuality` — function — line 59
 - `LodgingType` — type — line 12
 
 ## `settlement/lodgingResolver.ts`
 
-- `collectLodgingCandidates` — function — line 168
-- `LodgingCandidateContext` — type — line 164
-- `LodgingSelection` — type — line 261
-- `LodgingSettlementInput` — type — line 18
-- `resolveBestLodging` — function — line 226
-- `selectLodgingFromCandidates` — function — line 275
-- `settlementLodgingInput` — function — line 62
+- `collectLodgingCandidates` — function — line 178
+- `collectOwnedHouseLodgingOptions` — function — line 196
+- `LodgingCandidateContext` — type — line 170
+- `LodgingSelection` — type — line 295
+- `LodgingSettlementInput` — type — line 24
+- `resolveBestLodging` — function — line 260
+- `selectLodgingFromCandidates` — function — line 309
+- `settlementLodgingInput` — function — line 68
 
 ## `settlement/merchantWagon.ts`
 
@@ -566,13 +570,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/SettlementsManager.ts`
 
-- `createSettlementsManager` — function — line 184
+- `createSettlementsManager` — function — line 185
   - domain: settlements
   - system: settlements-manager
   - role: Owns settlement generation, streaming and per-settlement economy/household/NPC-state registries.
   - owns: SettlementEconomy, Household
   - lifecycle: streaming
-- `SettlementsManager` — type — line 70
+- `SettlementsManager` — type — line 71
 
 ## `settlement/settlementStructures.ts`
 

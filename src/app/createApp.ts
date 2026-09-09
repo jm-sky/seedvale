@@ -529,6 +529,7 @@ export async function createApp(
       center: { x: p.x, z: p.z },
       size: p.size,
     })),
+    initialSave?.residentialBuildings ?? [],
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -1781,6 +1782,7 @@ export async function createApp(
     startTentRest: rest.startTentRest,
     inspectTent: rest.inspectTent,
     sleepInHay: rest.sleepInHay,
+    sleepInOwnedHouse: rest.sleepInOwnedHouse,
     openTrapArmDialog: gathering.openTrapArmDialog,
     disarmTrap: gathering.disarmTrap,
     collectTrap: gathering.collectTrap,
@@ -1803,6 +1805,9 @@ export async function createApp(
     workOnStandingTorch: placement.workOnStandingTorch,
     workOnPalisade: placement.workOnPalisade,
     removePalisadeSegment: placement.removePalisadeSegment,
+    supplyResidentialBuildingMaterials: placement.supplyResidentialBuildingMaterials,
+    workOnResidentialBuilding: placement.workOnResidentialBuilding,
+    cancelResidentialBuilding: placement.cancelResidentialBuilding,
     repairSettlementStorage: storageInfestation.repairSettlementStorage,
     openNoticeBoard: contracts.openNoticeBoard,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,

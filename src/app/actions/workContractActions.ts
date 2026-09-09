@@ -3,6 +3,7 @@ import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items
 import { terrainPreparationRemainingWork } from '../../terrain/terrainPreparation'
 import { isPalisadeConstructionComplete, palisadeRemainingWork } from '../../world/palisade'
 import { formatHours, isWellCompleted, WELL_FOOTPRINT_RADIUS, WELL_SEPARATION, wellRemainingWork } from '../../world/playerWell'
+import { residentialBuildingDefinition, residentialBuildingRemainingWork } from '../../world/residentialBuilding'
 import { isStandingTorchConstructionComplete, standingTorchRemainingWork } from '../../world/standingTorch'
 import {
   canPostContract,
@@ -60,6 +61,7 @@ const WORK_TYPE_LABEL: Record<WorkType, string> = {
   terrain_preparation: 'przygotowanie terenu',
   palisade: 'segment palisady',
   standing_torch: 'pochodnia',
+  residential_building: 'chata',
 }
 
 export type WorkContractQuickActionEntry = { id: string, label: string, cost: string }
@@ -255,7 +257,16 @@ export function createWorkContractActions(
         remainingWork: standingTorchRemainingWork(t),
         label: 'Pochodnia',
       }))
-    return [...wells, ...preparations, ...palisades, ...standingTorches]
+    const houses = bundle.residentialBuildings.nodes()
+      .map((h) => ({
+        target: { kind: 'residential_building' as const, targetId: h.id },
+        x: h.x,
+        z: h.z,
+        remainingWork: residentialBuildingRemainingWork(h),
+        label: residentialBuildingDefinition(h.kind).label,
+      }))
+      .filter((candidate) => candidate.remainingWork > 0)
+    return [...wells, ...preparations, ...palisades, ...standingTorches, ...houses]
       .filter((candidate) => !bundle.workContracts.hasActiveContract(candidate.target))
   }
 

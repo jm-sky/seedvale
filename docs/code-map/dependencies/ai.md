@@ -118,6 +118,7 @@ Generated from TypeScript imports.
 - `world/collision.ts`
 - `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
@@ -126,6 +127,7 @@ Generated from TypeScript imports.
 - `world/palisade.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/residentialBuilding.ts`
 - `world/settlementForestHooks.ts`
 - `world/standingTorch.ts`
 - `world/timeConversion.ts`

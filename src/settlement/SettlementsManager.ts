@@ -16,6 +16,7 @@ import type { Collider } from '../world/collision'
 import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { Palisades } from '../world/createPalisades'
 import type { PlayerWells } from '../world/createPlayerWells'
+import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
 import type { WorkContracts } from '../world/createWorkContracts'
@@ -298,6 +299,9 @@ export async function createSettlementsManager(
   /** Player-built standing torches (plan items-player-017) — forwarded the
    *  same way as `palisades`. */
   standingTorches?: StandingTorches,
+  /** Player-built residential houses (plan settlements-005) — forwarded the
+   *  same way as `palisades`. */
+  residentialBuildings?: ResidentialBuildings,
 ): Promise<SettlementsManager> {
   const roadCtx: RoadNetworkContext = {
     seed,
@@ -407,6 +411,7 @@ export async function createSettlementsManager(
     terrainPreparations,
     palisades,
     standingTorches,
+    residentialBuildings,
   }
 
   const entries = new Map<string, Entry>()

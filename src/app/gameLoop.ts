@@ -433,6 +433,10 @@ export type GameLoopDeps = {
   /** `[E]` on an unfinished palisade segment (plan items-player-017 §10) —
    *  same shape as `workOnStandingTorch`. */
   workOnPalisade?: (id: string) => void
+  supplyResidentialBuildingMaterials?: (id: string) => void
+  workOnResidentialBuilding?: (id: string) => void
+  cancelResidentialBuilding?: (id: string) => void
+  sleepInOwnedHouse?: (id: string) => void
   /** `[R]` removes one gazed-at palisade segment (plan items-player-010 §5) —
    *  the generic player-built removal/recovery seam applied to a palisade:
    *  preflights inventory capacity for the recovered materials, then removes
@@ -552,7 +556,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
-    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, repairSettlementStorage, openNoticeBoard,
+    openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, openNoticeBoard,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
@@ -919,6 +923,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.playerGardens,
         bundle.standingTorches,
         bundle.palisades,
+        bundle.residentialBuildings,
         bundle.terrainPreparations,
         dayNight.elapsedDays,
         player.mesh.position,
@@ -1545,6 +1550,16 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // construction bout; `[R]` removal stays available either way.
         if (interactPressed && !target.complete) workOnPalisade?.(target.id)
         if (altInteractPressed) removePalisadeSegment?.(target.id)
+      } else if (target?.kind === 'residentialBuilding') {
+        if (interactPressed) {
+          if (!target.complete) {
+            if (!target.materialsSupplied) supplyResidentialBuildingMaterials?.(target.id)
+            else workOnResidentialBuilding?.(target.id)
+          } else if (target.playerOwned) {
+            sleepInOwnedHouse?.(target.id)
+          }
+        }
+        if (altInteractPressed && !target.complete) cancelResidentialBuilding?.(target.id)
       } else if (target?.kind === 'settlementStorage') {
         if (interactPressed) {
           const infestationActive = bundle.settlementsManager.isStorageInfestationActive(target.settlementId)

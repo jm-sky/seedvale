@@ -161,6 +161,7 @@ Generated from TypeScript imports.
 - `settlement/houseBuilder.ts`
 - `settlement/houseDoors.test.ts`
 - `settlement/props.ts`
+- `world/createResidentialBuildings.ts`
 
 ## `assets/houseDefinitionExample.ts`
 
@@ -178,6 +179,7 @@ Generated from TypeScript imports.
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseDoors.test.ts`
 - `settlement/props.ts`
+- `world/residentialBuilding.ts`
 
 ## `assets/houseDefinitionExampleConfig.ts`
 
@@ -191,6 +193,7 @@ Generated from TypeScript imports.
 - `settlement/houseBuilder.test.ts`
 - `settlement/houseBuilder.ts`
 - `settlement/props.ts`
+- `world/residentialBuilding.ts`
 
 ## `assets/loadGltf.test.ts`
 
@@ -246,6 +249,7 @@ Generated from TypeScript imports.
 - `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
 - `world/palisadeProp.ts`
+- `world/residentialBuildingProp.ts`
 - `world/sleepingUtilityProp.ts`
 - `world/trapProp.ts`
 - `world/treeVisuals.ts`

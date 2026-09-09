@@ -17,8 +17,9 @@ import {
   lodgingPlaceLabel,
   lodgingRestQuality,
 } from '../../settlement/lodging'
-import { collectLodgingCandidates, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
+import { collectLodgingCandidates, collectOwnedHouseLodgingOptions, selectLodgingFromCandidates, settlementLodgingInput } from '../../settlement/lodgingResolver'
 import { getVigorRatio } from '../../shared/VigorState'
+import { residentialBuildingLodgingId } from '../../world/residentialBuilding'
 import { formatCampInspectionDescription, resolveCampRestSnapshot } from '../campRestSnapshot'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 
@@ -70,6 +71,8 @@ export type RestActions = {
    *  through Quick Actions. No-ops (silently, like re-pressing `startRest`
    *  while already resting) if blocked or already lodging/confirming. */
   sleepInHay: (settlementId: string) => void
+  /** Direct `[E]` on a completed Player-owned house (plan settlements-005). */
+  sleepInOwnedHouse: (buildingId: string) => void
   /** Per-frame: walks the player to the resolved lodging option and starts
    *  Sleep on arrival — called from `gameLoop.ts` the same way `restCamp.tick`
    *  is (plan 168), now with a stuck-movement watchdog/recovery (plan
@@ -208,27 +211,42 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     timeSkip.start(hours, { fadeStrength: 0.5, label: `Czekasz... (${hours}h)` })
   }
 
+  const ownedHouseOptions = (): LodgingOption[] =>
+    collectOwnedHouseLodgingOptions(bundle.residentialBuildings.nodes())
+
   /** Every currently available lodging option for the one settlement the
    *  player is actually near (plan 168 follow-up; scoped to a single
    *  settlement as a bugfix — an adjacent settlement's beds/friends/hay must
    *  never leak into this list just because it's also `getLoaded()`) — the
    *  same collection that backs both the "Nocuj w mieście" choice panel and
    *  every revalidation (selection, arrival). Re-collected fresh every call,
-   *  never cached across frames (implementation notes §4/§8). */
+   *  never cached across frames (implementation notes §4/§8). Owned houses
+   *  associated with this settlement appear here; out-of-settlement houses
+   *  are only reachable via direct `[E]`. */
   const collectNearbyLodgingOptions = (): LodgingOption[] => {
     const settlement = nearestSettlementInRange()
-    if (!settlement) return []
+    const localOwned = settlement
+      ? ownedHouseOptions().filter((option) => option.settlementId === settlement.id)
+      : []
+    if (!settlement) return localOwned
     return collectLodgingCandidates(
       [settlementLodgingInput(settlement, player.mesh.position)],
-      { getPlayerSocial },
+      { getPlayerSocial, ownedHouses: localOwned },
     )
+  }
+
+  const collectLodgingOptionsForRevalidation = (): LodgingOption[] => {
+    const nearby = collectNearbyLodgingOptions()
+    const extras = ownedHouseOptions()
+    const seen = new Set(nearby.map((option) => option.id))
+    return [...nearby, ...extras.filter((option) => !seen.has(option.id))]
   }
 
   /** Re-derived from authoritative state at arrival — never trusts a cached
    *  `available` flag from when the option was first resolved (implementation
    *  notes §4/§14). */
   const isLodgingOptionStillAvailable = (option: LodgingOption): boolean =>
-    collectNearbyLodgingOptions().some((c) => c.id === option.id)
+    collectLodgingOptionsForRevalidation().some((c) => c.id === option.id)
 
   const armLodgingWalk = (option: LodgingOption): void => {
     lodgingWalkTarget = option
@@ -282,7 +300,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
    *  falls back to a different option (plan 168 follow-up §8/§9). */
   const commitLodgingSelection = (optionId: string): void => {
     if (isActionBlocked(ctx) || lodgingWalkTarget || lodgingConfirmTarget) return
-    const selection = selectLodgingFromCandidates(collectNearbyLodgingOptions(), optionId)
+    const selection = selectLodgingFromCandidates(collectLodgingOptionsForRevalidation(), optionId)
     if (selection.kind === 'unavailable') {
       toast.show('To miejsce jest już niedostępne', 'error')
       return
@@ -299,6 +317,10 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
    *  so it's the same commit path as picking "Stóg siana" from the panel. */
   const sleepInHay = (settlementId: string): void => {
     commitLodgingSelection(hayLodgingId(settlementId))
+  }
+
+  const sleepInOwnedHouse = (buildingId: string): void => {
+    commitLodgingSelection(residentialBuildingLodgingId(buildingId))
   }
 
   /** Shared by normal arrival and stuck-recovery arrival (plan `ui-input-005`
@@ -517,6 +539,7 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
     abortBusy,
     interruptRestForDamage,
     sleepInHay,
+    sleepInOwnedHouse,
     tickLodging,
     isLodgingActive,
     canCancelRest,

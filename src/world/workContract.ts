@@ -41,7 +41,7 @@ export type WorkContractAdvertisement = 'not_posted' | 'posted'
 
 /** One entry per `ContractTarget` variant (plan npc-018 §10, extended by
  *  plan items-player-017 §2/§16 with the two simple buildable targets). */
-export type WorkType = 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch'
+export type WorkType = 'construction' | 'terrain_preparation' | 'palisade' | 'standing_torch' | 'residential_building'
 
 /** A concrete, recoverable world target a contract describes work at — never
  *  a display string like "build a well" (plan §3). `targetId` is the stable
@@ -79,13 +79,20 @@ export type StandingTorchContractTarget = {
   targetId: string
 }
 
+/** References an unfinished `ResidentialBuildingRecord` (plan settlements-005). */
+export type ResidentialBuildingContractTarget = {
+  kind: 'residential_building'
+  targetId: string
+}
+
 /** Union of every contract-target shape — one variant per `WorkType` (plan
- *  npc-018 §10, extended by plan items-player-017). */
+ *  npc-018 §10, extended by plan items-player-017 / settlements-005). */
 export type ContractTarget =
   | ConstructionContractTarget
   | TerrainPreparationContractTarget
   | PalisadeContractTarget
   | StandingTorchContractTarget
+  | ResidentialBuildingContractTarget
 
 /** One NPC's participation in a Work Contract (plan npc-028 §1). Owned by
  *  the contract, never copied onto `NpcAgent`. Historical assignments are

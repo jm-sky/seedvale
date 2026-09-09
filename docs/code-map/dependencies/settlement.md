@@ -67,6 +67,7 @@ Generated from TypeScript imports.
 - `world/createGrassForagePatches.ts`
 - `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
@@ -200,6 +201,7 @@ Generated from TypeScript imports.
 - `world/createGrassForagePatches.ts`
 - `world/createPalisades.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
 - `world/createWorkContracts.ts`
@@ -264,6 +266,7 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ai/dialogueTemplates.ts`
+- `app/actions/placementActions.ts`
 - `app/gameLoop.ts`
 - `app/worldBundle.ts`
 - `assets/houseDefinitionExample.ts`
@@ -383,6 +386,7 @@ Generated from TypeScript imports.
 - `settlement/houseDoors.test.ts`
 - `settlement/houseDoors.ts`
 - `settlement/props.ts`
+- `world/createResidentialBuildings.ts`
 
 ## `settlement/houseCatalog.test.ts`
 
@@ -641,6 +645,7 @@ Generated from TypeScript imports.
 - `settlement/lodging.ts`
 - `settlement/places.ts`
 - `settlement/props.ts`
+- `world/residentialBuilding.ts`
 
 **Imported by**
 
@@ -937,6 +942,7 @@ Generated from TypeScript imports.
 - `world/createPlacedTraps.ts`
 - `world/createPlayerGardens.ts`
 - `world/createPlayerWells.ts`
+- `world/createResidentialBuildings.ts`
 - `world/createSleepingUtilities.ts`
 - `world/createStandingTorches.ts`
 - `world/createTerrainPreparations.ts`
@@ -1057,6 +1063,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `ai/dialogueTemplates.ts`
+- `app/actions/placementActions.ts`
 - `app/worldBundle.ts`
 - `debug/locationQueries.test.ts`
 - `debug/locationQueries.ts`
