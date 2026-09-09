@@ -84,6 +84,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                      | -       | 🔴 | M      | -      |
 | ◼️ `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation.md` | -       | 🟡 | M      | -      |
 | 💡 `npc-026-npc-grave-visits.md`                                            | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
+| ◼️ `ui-input-013-character-stats.md`                                        | -       | 🟡 | M      | ~~npc-024~~, ~~npc-025~~, ~~items-player-021~~ |
 
 ---
 
@@ -198,7 +199,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - settlements: `007`
 - settlements-npcs: `030`
 - tools: `013`
-- ui-input: `013`
+- ui-input: `014`
 - world: `022`
 - world-terrain: `018`
 
