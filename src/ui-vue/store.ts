@@ -397,12 +397,13 @@ export type CharacterReputationView = {
  *  is pushed separately (`setCharacterReputation`) since its own refresh
  *  points differ (screen open + social consequence, not Hidden Finds). */
 type CharacterScreenState = CharacterStats & { open: boolean, reputation: CharacterReputationView, badges: readonly BadgeDef[] }
-/** Skills screen (plan 124, progression added by plan 128) — same
- *  presentation-only convention as `CharacterScreenState`: these mirror
- *  `PlayerController.skills`, pushed once/frame from `gameLoop.ts`.
- *  `onToggleSneak` is the one write path back out, wired once via
- *  `configureSkillsScreen` (same pattern as `PauseHandlers`). Flat numbers,
- *  not nested objects, so the per-frame push stays allocation-free. */
+/** Skills screen (plan 124, progression added by plan 128,
+ *  targeted selection by plan items-player-021) — same presentation-only
+ *  convention as `CharacterScreenState`: these mirror `PlayerController.skills`,
+ *  pushed once/frame from `gameLoop.ts`. `onToggleSneak` / `onSelectTargetedSkill`
+ *  are the write paths back out, wired once via `configureSkillsScreen`.
+ *  Flat numbers, not nested objects, so the per-frame push stays allocation-free.
+ *  `selectedSkill` is runtime targeting state, not persisted progression. */
 type SkillsScreenState = {
   open: boolean
   sneakValue: number
@@ -418,7 +419,13 @@ type SkillsScreenState = {
   archeryXp: number
   ridingValue: number
   ridingXp: number
+  medicineValue: number
+  medicineXp: number
+  repairValue: number
+  repairXp: number
+  selectedSkill: SkillId | null
   onToggleSneak: (() => void) | null
+  onSelectTargetedSkill: ((id: SkillId) => void) | null
 }
 type HudState = {
   time: string
@@ -578,7 +585,13 @@ export const ui = reactive({
     archeryXp: 0,
     ridingValue: 0,
     ridingXp: 0,
+    medicineValue: 0,
+    medicineXp: 0,
+    repairValue: 0,
+    repairXp: 0,
+    selectedSkill: null,
     onToggleSneak: null,
+    onSelectTargetedSkill: null,
   } as SkillsScreenState,
   hud: {
     time: '--',
@@ -1052,6 +1065,16 @@ export function abortBusy(): boolean {
   return abortBusyHandler?.() ?? false
 }
 
+/** Esc while a targeted skill is selected and no overlay is open (plan
+ *  items-player-021) — checked after overlay close, before pause. */
+let abortTargetedSkillHandler: (() => boolean) | null = null
+export function configureAbortTargetedSkill(handler: (() => boolean) | null): void {
+  abortTargetedSkillHandler = handler
+}
+export function abortTargetedSkill(): boolean {
+  return abortTargetedSkillHandler?.() ?? false
+}
+
 /** Esc during the `Przygotuj teren` preview or an active preparation-work
  *  session (plan `world-terrain-002`) — checked between `abortRest` and
  *  `abortBusy` in `App.vue`'s Esc chain. Mirrors `abortRest`/`abortBusy`. */
@@ -1255,8 +1278,12 @@ export function toggleSkillsScreen(): void {
   if (ui.skillsScreen.open) closeSkillsScreen()
   else openSkillsScreen()
 }
-export function configureSkillsScreen(handlers: { onToggleSneak: () => void }): void {
+export function configureSkillsScreen(handlers: {
+  onToggleSneak: () => void
+  onSelectTargetedSkill: (id: SkillId) => void
+}): void {
   ui.skillsScreen.onToggleSneak = handlers.onToggleSneak
+  ui.skillsScreen.onSelectTargetedSkill = handlers.onSelectTargetedSkill
 }
 /** Pushed once/frame by `gameLoop.ts`, same cheap-bail convention as
  *  `setCharacterStats`. */
@@ -1274,6 +1301,10 @@ export function setSkillsState(
   archeryXp: number,
   ridingValue: number,
   ridingXp: number,
+  medicineValue: number,
+  medicineXp: number,
+  repairValue: number,
+  repairXp: number,
 ): void {
   const s = ui.skillsScreen
   if (
@@ -1282,7 +1313,9 @@ export function setSkillsState(
     s.trapsValue === trapsValue && s.trapsXp === trapsXp &&
     s.defenseValue === defenseValue && s.defenseXp === defenseXp &&
     s.archeryValue === archeryValue && s.archeryXp === archeryXp &&
-    s.ridingValue === ridingValue && s.ridingXp === ridingXp
+    s.ridingValue === ridingValue && s.ridingXp === ridingXp &&
+    s.medicineValue === medicineValue && s.medicineXp === medicineXp &&
+    s.repairValue === repairValue && s.repairXp === repairXp
   ) return
   s.sneakValue = sneakValue
   s.sneakActive = sneakActive
@@ -1297,6 +1330,10 @@ export function setSkillsState(
   s.archeryXp = archeryXp
   s.ridingValue = ridingValue
   s.ridingXp = ridingXp
+  s.medicineValue = medicineValue
+  s.medicineXp = medicineXp
+  s.repairValue = repairValue
+  s.repairXp = repairXp
 }
 
 /** Forwards a live `PlayerSkills` snapshot into `ui.skillsScreen` — the same
@@ -1314,7 +1351,14 @@ export function pushSkillsState(skills: PlayerSkills): void {
     skills.defense.value, skills.defense.xp,
     skills.archery.value, skills.archery.xp,
     skills.riding.value, skills.riding.xp,
+    skills.medicine.value, skills.medicine.xp,
+    skills.repair.value, skills.repair.xp,
   )
+}
+
+export function setSelectedTargetedSkill(id: SkillId | null): void {
+  if (ui.skillsScreen.selectedSkill === id) return
+  ui.skillsScreen.selectedSkill = id
 }
 
 const SKILL_VALUE_FIELD: Record<SkillId, keyof SkillsScreenState> = {
@@ -1324,6 +1368,8 @@ const SKILL_VALUE_FIELD: Record<SkillId, keyof SkillsScreenState> = {
   defense: 'defenseValue',
   archery: 'archeryValue',
   riding: 'ridingValue',
+  medicine: 'medicineValue',
+  repair: 'repairValue',
 }
 
 /** Reads one skill's current value out of `ui.skillsScreen` — the same

@@ -33,6 +33,8 @@ without replacing `physicalInjury`, `HealthState`, NPC pressure/decision archite
 
 This plan establishes the patient-side injury model needed before Medicine competence and assisted treatment are introduced later.
 
+Player-side Medicine and assisted treatment must depend on `items-player-021` and reuse `evaluateSkillCompetence` plus the targeted-skill action seam. Do not add a parallel health system, targeting pipeline, or skill-check framework.
+
 ## Core principle
 
 `physicalInjury` remains the single authoritative injury amount.

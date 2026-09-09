@@ -1,7 +1,8 @@
 # Plan: Player skills and targeted skill actions foundation
 
 **Created:** 2026-09-09
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
+**Implemented at:** 2026-09-09 14:30
 **Type:** feature
 **Priority:** high · **Effort:** M
 **Depends on:** none

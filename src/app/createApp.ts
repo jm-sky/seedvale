@@ -74,6 +74,7 @@ import {
 } from '../player/PlayerNeeds'
 import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
+import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { QuestManager } from '../quests/QuestManager'
 import { buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
@@ -729,7 +730,14 @@ export async function createApp(
   player.setMoveAudio(worldAudio.playAt)
   scene.add(player.mesh)
   player.mesh.visible = isSystemEnabled('playerModel')
-  vueUi.configureSkillsScreen({ onToggleSneak: () => toggleSneak(player.skills) })
+  const targetedSkillSelection = createTargetedSkillSelection()
+  vueUi.configureSkillsScreen({
+    onToggleSneak: () => toggleSneak(player.skills),
+    onSelectTargetedSkill: (id) => {
+      targetedSkillSelection.toggle(id)
+      vueUi.setSelectedTargetedSkill(targetedSkillSelection.get())
+    },
+  })
   const hud = createHud(container)
   hud.setTime(dayNight.timeOfDay)
   const toast = createToast(container)
@@ -1090,6 +1098,12 @@ export async function createApp(
   onTrapBaitReturnedTarget = gathering.onTrapBaitReturned
   vueUi.configureAbortRest(rest.abortRest)
   vueUi.configureAbortBusy(rest.abortBusy)
+  vueUi.configureAbortTargetedSkill(() => {
+    if (targetedSkillSelection.get() == null) return false
+    targetedSkillSelection.clear()
+    vueUi.setSelectedTargetedSkill(null)
+    return true
+  })
   vueUi.configureAbortTerrainPreparation(terrainPrep.cancelActive)
   vueUi.configureTerrainPreparationControls({
     grow: terrainPrep.growSize,
@@ -1799,6 +1813,7 @@ export async function createApp(
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    targetedSkillSelection,
     startGroundWork: (mode, x, z) => {
       if (hasItemCapability(heldTool.held(), 'rock_mining')) {
         if (mode === 'level') ground.startPickaxeLevelAt(x, z)
@@ -1934,6 +1949,7 @@ export async function createApp(
     renderLoop.dispose()
     removeAutoSave()
     vueUi.configureAbortRest(null)
+    vueUi.configureAbortTargetedSkill(null)
     timeSkip.cancel()
     timeSkipOverlay.dispose()
     cookMealIntent.cancel()

@@ -1,6 +1,7 @@
 /**
- * Player skills (plan 124 foundation, progression added by plan 128).
- * Deliberately not a registry/framework: two skills, one shared XP curve, no
+ * Player skills (plan 124 foundation, progression added by plan 128,
+ * Medicine/Repair by plan items-player-021).
+ * Deliberately not a registry/framework: eight skills, one shared XP curve, no
  * levels, no perks, no points to spend. `xp` is the authoritative progression
  * state (the only thing persisted); `value` is always derived from it through
  * `xpToSkillValue` so the two can never drift apart.
@@ -10,7 +11,37 @@
  * @role Owns the player's skill XP curve and the single award path.
  * @owns PlayerSkills
  */
-export type SkillId = 'sneak' | 'survival' | 'traps' | 'defense' | 'archery' | 'riding'
+export type SkillId =
+  | 'sneak'
+  | 'survival'
+  | 'traps'
+  | 'defense'
+  | 'archery'
+  | 'riding'
+  | 'medicine'
+  | 'repair'
+
+/** How a skill is used. Targeted skills can be selected for world actions;
+ *  stance skills are toggled behaviour (Sneak); contextual skills modify
+ *  existing actions without a separate targeting mode. A skill may later
+ *  gain targeted actions without changing this table until that consumer
+ *  lands (plan items-player-021). */
+export type SkillUseKind = 'targeted' | 'stance' | 'contextual'
+
+export const SKILL_USE: Record<SkillId, SkillUseKind> = {
+  sneak: 'stance',
+  survival: 'contextual',
+  traps: 'targeted',
+  defense: 'contextual',
+  archery: 'contextual',
+  riding: 'contextual',
+  medicine: 'targeted',
+  repair: 'targeted',
+}
+
+export function isTargetedSkill(id: SkillId): boolean {
+  return SKILL_USE[id] === 'targeted'
+}
 
 /** Shared Polish display name per skill — single source for the Skills
  *  screen and any other UI naming a skill (plan items-player-016's book
@@ -23,6 +54,8 @@ export const SKILL_LABEL: Record<SkillId, string> = {
   defense: 'Obrona',
   archery: 'Łucznictwo',
   riding: 'Jeździectwo',
+  medicine: 'Medycyna',
+  repair: 'Naprawa',
 }
 
 export type SkillState = {
@@ -31,7 +64,8 @@ export type SkillState = {
   /** Accumulated experience; the persisted progression source. */
   xp: number
   /** Whether the skill's effect is currently switched on. Only `sneak` uses
-   *  this today; `survival` is passive and stays `false`. */
+   *  this today as a stance flag. It is not the selected targeted skill
+   *  (plan items-player-021) — that runtime state lives outside `PlayerSkills`. */
   active: boolean
 }
 
@@ -49,7 +83,7 @@ export const SKILL_MIN_VALUE = 0.2
 export const SKILL_XP_HALF_VALUE = 120
 
 /** Monotonic, bounded, deterministic: `SKILL_MIN_VALUE` at 0 xp, asymptotic
- *  to 1. Shared by both skills — no per-skill curve tuning. */
+ *  to 1. Shared by every skill — no per-skill curve tuning. */
 export function xpToSkillValue(xp: number): number {
   if (!Number.isFinite(xp) || xp <= 0) return SKILL_MIN_VALUE
   const fraction = xp / (xp + SKILL_XP_HALF_VALUE)
@@ -88,6 +122,8 @@ export function createPlayerSkills(): PlayerSkills {
     defense: createSkillState(),
     archery: createSkillState(),
     riding: createSkillState(),
+    medicine: createSkillState(),
+    repair: createSkillState(),
   }
 }
 

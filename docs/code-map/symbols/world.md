@@ -377,7 +377,7 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlacedTraps.ts`
 
-- `createPlacedTraps` — function — line 92
+- `createPlacedTraps` — function — line 95
 - `PlacedTrapEntry` — type — line 25
 - `PlacedTraps` — type — line 47
 - `PlacedTrapsHooks` — type — line 38

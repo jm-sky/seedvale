@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createPlayerSkills, restorePersistedSkills, SKILL_MIN_VALUE } from '../player/PlayerSkills'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 import {
@@ -51,14 +52,16 @@ const validSave: SaveData = {
   settlementEconomies: { home: { stock: { wood: 1 }, food: { counts: { carrot: 3 }, instances: [], foodBatches: {} } } },
   playerNeeds: { hunger: 12, thirst: 8, vigor: 40, starvationDuration: 5400, dehydrationDuration: 900 },
   ownedLandPlots: ['0_0:plot-sale-0'],
-  skills: {
-    sneak: { xp: 42 },
-    survival: { xp: 7 },
-    traps: { xp: 28 },
-    defense: { xp: 0 },
-    archery: { xp: 0 },
-    riding: { xp: 0 },
-  },
+    skills: {
+      sneak: { xp: 42 },
+      survival: { xp: 7 },
+      traps: { xp: 28 },
+      defense: { xp: 0 },
+      archery: { xp: 0 },
+      riding: { xp: 0 },
+      medicine: { xp: 0 },
+      repair: { xp: 0 },
+    },
   spawnPoints: [
     { id: 'home:cave', state: 'disabled', deathsThisCycle: 2, disabledAtDay: 9.5 },
     { id: 'home:thicket', state: 'active', deathsThisCycle: 0, disabledAtDay: null },
@@ -158,6 +161,20 @@ describe('loadSaveData v1 contract', () => {
   it('rejects a malformed skills field', () => {
     expect(loadSaveData({ ...validSave, skills: { ...validSave.skills, sneak: { xp: 'a' } } })).toBeNull()
     expect(loadSaveData({ ...validSave, skills: { sneak: { xp: 1 } } })).toBeNull()
+  })
+
+  it('accepts a current-version save missing medicine/repair (plan items-player-021)', () => {
+    const { medicine: _medicine, repair: _repair, ...skillsWithoutNew } = validSave.skills
+    const loaded = loadSaveData({ ...validSave, skills: skillsWithoutNew })
+    expect(loaded).not.toBeNull()
+    expect('medicine' in loaded!.skills).toBe(false)
+    expect('repair' in loaded!.skills).toBe(false)
+    const skills = createPlayerSkills()
+    restorePersistedSkills(skills, loaded!.skills)
+    expect(skills.medicine.xp).toBe(0)
+    expect(skills.medicine.value).toBe(SKILL_MIN_VALUE)
+    expect(skills.repair.xp).toBe(0)
+    expect(skills.repair.value).toBe(SKILL_MIN_VALUE)
   })
 
   it('rejects a malformed placed-trap record', () => {

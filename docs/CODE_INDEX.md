@@ -52,7 +52,10 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [PlayerController](../src/player/PlayerController.ts) — player movement, animation and runtime state.
 - [Slope movement constraint](../src/terrain/slopeConstraint.ts) — shared uphill speed falloff/block used by `PlayerController`, `NpcAgent` and `AnimalAgent`.
 - [PlayerNeeds](../src/player/PlayerNeeds.ts) — stamina / vigor / hunger / thirst pools.
-- [PlayerSkills](../src/player/PlayerSkills.ts) — the six skills, their XP curve and the single award path.
+- [PlayerSkills](../src/player/PlayerSkills.ts) — the eight skills, their XP curve and the single award path.
+- [Skill evaluation](../src/player/skillEvaluation.ts) — primary + optional support/context competence, independent of world targeting.
+- [Targeted skill selection](../src/player/targetedSkillSelection.ts) — runtime-only selected targeted skill.
+- [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; trap inspect is the first consumer.
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).

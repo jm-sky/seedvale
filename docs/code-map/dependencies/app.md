@@ -643,6 +643,7 @@ Generated from TypeScript imports.
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
 - `player/humanCarryCapacity.ts`
+- `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `quests/quests.ts`
 - `render/programPrewarm.ts`
@@ -759,6 +760,7 @@ Generated from TypeScript imports.
 - `interaction/Interactable.ts`
 - `interaction/findInteractionTarget.ts`
 - `interaction/resolveInteraction.ts`
+- `interaction/targetedSkillAction.ts`
 - `interaction/treeInspection.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
@@ -776,6 +778,7 @@ Generated from TypeScript imports.
 - `player/playerDamage.ts`
 - `player/playerMelee.ts`
 - `player/playerRanged.ts`
+- `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `render/createPostProcessing.ts`
 - `render/shadowBudget.ts`

@@ -54,6 +54,8 @@ Generated from TypeScript imports.
 - `fauna/createFauna.ts`
 - `fauna/trapLure.test.ts`
 - `interaction/Interactable.ts`
+- `interaction/targetedSkillAction.test.ts`
+- `interaction/targetedSkillAction.ts`
 - `items/trapItemInstances.ts`
 - `persistence/saveData.ts`
 - `ui-vue/store.ts`

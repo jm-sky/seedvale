@@ -221,8 +221,8 @@ export class PlayerController {
    *  (tightly coupled to sprint below); `app/gameLoop.ts` ticks the other
    *  three pools each frame via `PlayerNeeds.ts`'s helpers. */
   readonly needs: PlayerNeeds
-  /** Sneak + future skills (plan 124 §1) — value/active state only, no
-   *  progression yet. */
+  /** Player skills (plan 124, Medicine/Repair by items-player-021) —
+   *  XP/value progression; `active` is Sneak stance only. */
   readonly skills: PlayerSkills
   /** Temporary physical conditions (plan npc-024) — authoritative runtime state,
    *  persisted through `SaveData.playerConditions`. */

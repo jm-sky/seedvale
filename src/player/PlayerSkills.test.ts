@@ -4,11 +4,13 @@ import {
   applySneakSpeedModifier,
   awardSkillXp,
   createPlayerSkills,
+  isTargetedSkill,
   raiseSkillToValue,
   restorePersistedSkills,
   ridingSpeedMultiplier,
   ridingStaminaDrainMultiplier,
   setSkillValueForDebug,
+  SKILL_LABEL,
   SKILL_MIN_VALUE,
   SKILL_XP_AWARD,
   SNEAK_LEGACY_VALUE,
@@ -22,20 +24,28 @@ import {
 } from './PlayerSkills'
 
 describe('createPlayerSkills', () => {
-  it('starts both skills at the novice floor, inactive, with no xp', () => {
+  it('starts every skill at the novice floor, inactive, with no xp', () => {
     const skills = createPlayerSkills()
-    for (const state of [skills.sneak, skills.survival]) {
+    for (const state of Object.values(skills)) {
       expect(state.xp).toBe(0)
       expect(state.value).toBe(SKILL_MIN_VALUE)
       expect(state.active).toBe(false)
     }
   })
 
-  it('includes archery (plan 162)', () => {
+  it('includes medicine and repair (plan items-player-021)', () => {
     const skills = createPlayerSkills()
-    expect(skills.archery.xp).toBe(0)
-    expect(skills.archery.value).toBe(SKILL_MIN_VALUE)
-    expect(skills.archery.active).toBe(false)
+    expect(skills.medicine.xp).toBe(0)
+    expect(skills.repair.xp).toBe(0)
+    expect(skills.medicine.value).toBe(SKILL_MIN_VALUE)
+    expect(skills.repair.value).toBe(SKILL_MIN_VALUE)
+    expect(SKILL_LABEL.medicine).toBe('Medycyna')
+    expect(SKILL_LABEL.repair).toBe('Naprawa')
+    expect(Object.keys(SKILL_LABEL).sort()).toEqual(Object.keys(skills).sort())
+    expect(isTargetedSkill('traps')).toBe(true)
+    expect(isTargetedSkill('medicine')).toBe(true)
+    expect(isTargetedSkill('repair')).toBe(true)
+    expect(isTargetedSkill('sneak')).toBe(false)
   })
 })
 
@@ -115,6 +125,21 @@ describe('restorePersistedSkills', () => {
     restorePersistedSkills(skills, { sneak: { xp: 10 }, survival: { xp: 10 } })
     expect(skills.archery.xp).toBe(0)
     expect(skills.archery.value).toBe(SKILL_MIN_VALUE)
+  })
+
+  it('defaults missing medicine/repair keys to novice (plan items-player-021)', () => {
+    const skills = createPlayerSkills()
+    restorePersistedSkills(skills, {
+      sneak: { xp: 10 },
+      survival: { xp: 10 },
+      traps: { xp: 5 },
+    })
+    expect(skills.medicine.xp).toBe(0)
+    expect(skills.medicine.value).toBe(SKILL_MIN_VALUE)
+    expect(skills.repair.xp).toBe(0)
+    expect(skills.repair.value).toBe(SKILL_MIN_VALUE)
+    expect(skills.medicine.active).toBe(false)
+    expect(skills.repair.active).toBe(false)
   })
 })
 

@@ -89,7 +89,7 @@ function validLegacyV8Save(): Record<string, unknown> {
     settlementEconomies: {},
     playerNeeds: { hunger: 100, thirst: 100, vigor: 100, starvationDuration: 0, dehydrationDuration: 0 },
     ownedLandPlots: [],
-    skills: { sneak: { xp: 0 }, survival: { xp: 0 }, traps: { xp: 0 }, defense: { xp: 0 }, archery: { xp: 0 }, riding: { xp: 0 } },
+    skills: { sneak: { xp: 0 }, survival: { xp: 0 }, traps: { xp: 0 }, defense: { xp: 0 }, archery: { xp: 0 }, riding: { xp: 0 }, medicine: { xp: 0 }, repair: { xp: 0 } },
     spawnPoints: [],
     foodBatches: {},
     dryingRacks: [],

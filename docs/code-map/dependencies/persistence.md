@@ -23,6 +23,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `persistence/saveData.ts`
+- `player/PlayerSkills.ts`
 - `world/palisade.ts`
 - `world/standingTorch.ts`
 

@@ -895,11 +895,13 @@ function isSkillsField(value: unknown): value is SaveSkills {
     isSaveSkill(s.traps) &&
     isSaveSkill(s.defense) &&
     isSaveSkill(s.archery) &&
-    // `riding` is optional here only (plan fauna-003) — a save written
-    // before this skill existed has no such field at all; `restorePersistedSkills`
-    // already defaults a missing key's xp to 0, so this keeps old v1 saves
+    // `riding`/`medicine`/`repair` are optional here — saves written before
+    // those skills existed have no such fields; `restorePersistedSkills`
+    // already defaults a missing key's xp to 0, so this keeps old saves
     // loadable without a version bump.
-    (s.riding === undefined || isSaveSkill(s.riding))
+    (s.riding === undefined || isSaveSkill(s.riding)) &&
+    (s.medicine === undefined || isSaveSkill(s.medicine)) &&
+    (s.repair === undefined || isSaveSkill(s.repair))
   )
 }
 

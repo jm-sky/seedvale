@@ -27,6 +27,8 @@ Generated from TypeScript imports.
 - `app/gameLoop.ts`
 - `app/interactables.ts`
 - `interaction/resolveInteraction.ts`
+- `interaction/targetedSkillAction.test.ts`
+- `interaction/targetedSkillAction.ts`
 - `player/playerCombat.ts`
 
 ## `interaction/findInteractionTarget.test.ts`
@@ -60,6 +62,28 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/gameLoop.ts`
+
+## `interaction/targetedSkillAction.test.ts`
+
+**Imports**
+
+- `interaction/Interactable.ts`
+- `interaction/targetedSkillAction.ts`
+- `world/animalTraps.ts`
+
+## `interaction/targetedSkillAction.ts`
+
+**Imports**
+
+- `interaction/Interactable.ts`
+- `items/items.ts`
+- `player/PlayerSkills.ts`
+- `world/animalTraps.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `interaction/targetedSkillAction.test.ts`
 
 ## `interaction/treeInspection.test.ts`
 

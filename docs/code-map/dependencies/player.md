@@ -185,13 +185,18 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `fauna/mountedSpeed.test.ts`
+- `interaction/targetedSkillAction.ts`
 - `items/books.test.ts`
 - `items/books.ts`
 - `items/itemCatalog.ts`
+- `persistence/saveData.test.ts`
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.test.ts`
 - `player/playerDamage.ts`
+- `player/skillEvaluation.test.ts`
+- `player/skillEvaluation.ts`
+- `player/targetedSkillSelection.ts`
 - `ui-vue/store.ts`
 - `world/animalTraps.test.ts`
 
@@ -392,6 +397,41 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/mountActions.ts`
+
+## `player/skillEvaluation.test.ts`
+
+**Imports**
+
+- `player/PlayerSkills.ts`
+- `player/skillEvaluation.ts`
+
+## `player/skillEvaluation.ts`
+
+**Imports**
+
+- `player/PlayerSkills.ts`
+
+**Imported by**
+
+- `player/skillEvaluation.test.ts`
+
+## `player/targetedSkillSelection.test.ts`
+
+**Imports**
+
+- `player/targetedSkillSelection.ts`
+
+## `player/targetedSkillSelection.ts`
+
+**Imports**
+
+- `player/PlayerSkills.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+- `player/targetedSkillSelection.test.ts`
 
 ## `player/torchLightPresets.test.ts`
 

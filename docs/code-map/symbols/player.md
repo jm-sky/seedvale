@@ -144,38 +144,41 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateRidingUse` — function — line 218
-- `accumulateSneakUse` — function — line 196
-- `applySneakSpeedModifier` — function — line 237
-- `awardSkillXp` — function — line 99
-- `createPlayerSkills` — function — line 83
-- `PlayerSkills` — type — line 38
-- `RaiseSkillResult` — type — line 106
-- `raiseSkillToValue` — function — line 118
-- `restorePersistedSkills` — function — line 146
-- `RIDING_XP_DISTANCE_M` — const — line 212
-- `ridingSpeedMultiplier` — function — line 278
-- `ridingStaminaDrainMultiplier` — function — line 292
-- `setSkillValueForDebug` — function — line 136
-- `SKILL_LABEL` — const — line 19
-- `SKILL_MIN_VALUE` — const — line 44
-- `SKILL_XP_AWARD` — const — line 165
-- `SKILL_XP_HALF_VALUE` — const — line 49
-- `SkillId` — type — line 13
+- `accumulateRidingUse` — function — line 254
+- `accumulateSneakUse` — function — line 232
+- `applySneakSpeedModifier` — function — line 273
+- `awardSkillXp` — function — line 135
+- `createPlayerSkills` — function — line 117
+- `isTargetedSkill` — function — line 42
+- `PlayerSkills` — type — line 72
+- `RaiseSkillResult` — type — line 142
+- `raiseSkillToValue` — function — line 154
+- `restorePersistedSkills` — function — line 182
+- `RIDING_XP_DISTANCE_M` — const — line 248
+- `ridingSpeedMultiplier` — function — line 314
+- `ridingStaminaDrainMultiplier` — function — line 328
+- `setSkillValueForDebug` — function — line 172
+- `SKILL_LABEL` — const — line 50
+- `SKILL_MIN_VALUE` — const — line 78
+- `SKILL_USE` — const — line 31
+- `SKILL_XP_AWARD` — const — line 201
+- `SKILL_XP_HALF_VALUE` — const — line 83
+- `SkillId` — type — line 14
   - domain: items-player
   - system: player-skills
   - role: Owns the player's skill XP curve and the single award path.
   - owns: PlayerSkills
-- `SkillState` — type — line 28
-- `SNEAK_LEGACY_VALUE` — const — line 76
-- `SNEAK_LEGACY_XP` — const — line 77
-- `SNEAK_SPEED_MULTIPLIER` — const — line 235
-- `SNEAK_XP_DISTANCE_M` — const — line 188
-- `survivalDurationMultiplier` — function — line 251
-- `survivalFoodMultiplier` — function — line 301
-- `toggleSneak` — function — line 159
-- `xpForSkillValue` — function — line 66
-- `xpToSkillValue` — function — line 53
+- `SkillState` — type — line 61
+- `SkillUseKind` — type — line 29
+- `SNEAK_LEGACY_VALUE` — const — line 110
+- `SNEAK_LEGACY_XP` — const — line 111
+- `SNEAK_SPEED_MULTIPLIER` — const — line 271
+- `SNEAK_XP_DISTANCE_M` — const — line 224
+- `survivalDurationMultiplier` — function — line 287
+- `survivalFoodMultiplier` — function — line 337
+- `toggleSneak` — function — line 195
+- `xpForSkillValue` — function — line 100
+- `xpToSkillValue` — function — line 87
 
 ## `player/PlayerTorch.ts`
 
@@ -191,6 +194,24 @@ Generated from exported TypeScript symbols.
 - `fallRiskPerSecond` — function — line 38
 - `rollFall` — function — line 55
 - `StabilityInput` — type — line 11
+
+## `player/skillEvaluation.ts`
+
+- `EvaluatedSkillInput` — type — line 15
+- `evaluateSkillCompetence` — function — line 40
+- `SkillCompetence` — type — line 30
+  - domain: items-player
+  - system: player-skills
+- `SkillSupportInput` — type — line 11
+  - domain: items-player
+  - system: player-skills
+
+## `player/targetedSkillSelection.ts`
+
+- `createTargetedSkillSelection` — function — line 20
+- `TargetedSkillSelection` — type — line 10
+  - domain: items-player
+  - system: player-skills
 
 ## `player/torchLightPresets.ts`
 

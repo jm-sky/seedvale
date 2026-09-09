@@ -735,6 +735,7 @@ Generated from TypeScript imports.
 - `fauna/harvestedRemains.ts`
 - `fauna/livestockProduction.ts`
 - `interaction/Interactable.ts`
+- `interaction/targetedSkillAction.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.test.ts`
 - `items/Inventory.ts`

@@ -1,5 +1,17 @@
 # Implementation Notes: items-player-021 — Player skills and targeted skill actions foundation
 
+**Status:** implemented (2026-09-09)
+
+## Landed APIs
+
+- `SkillId` now includes `medicine` and `repair`. They reuse `SkillState`, `createPlayerSkills()`, `awardSkillXp()`, `restorePersistedSkills()` and `SKILL_LABEL`.
+- `SKILL_USE` / `isTargetedSkill()` distinguish targeted / stance / contextual skills. `SkillState.active` remains Sneak stance.
+- `src/player/skillEvaluation.ts` — `evaluateSkillCompetence(skills, primary, support?)` reads primary + optional skill/context inputs with no weighted formula.
+- `src/player/targetedSkillSelection.ts` — runtime-only selection, not persisted.
+- `src/interaction/targetedSkillAction.ts` — `queryTargetedSkillAction` / `executeTargetedSkillAction` over existing `Interactable`s. Query does not mutate; execute revalidates via `PlacedTraps.get(id)`.
+- Vertical slice: select Traps → gaze at a placed trap → `[E] Sprawdź` → FlavorDialog with live state / durability / bait. No XP.
+- Persistence: `medicine`/`repair` XP is written by `saveState.ts`. The parser still accepts older current-version saves missing those keys; restore defaults them to novice XP 0.
+
 ## Current skill ownership
 
 - `src/player/PlayerSkills.ts` is the current source of truth for `SkillId`, `SkillState`, `PlayerSkills`, labels, the shared XP curve, `createPlayerSkills()`, `awardSkillXp()`, restore, debug setters and existing skill modifiers.

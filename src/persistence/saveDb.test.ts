@@ -58,6 +58,8 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
       defense: { xp: 0 },
       archery: { xp: 0 },
       riding: { xp: 0 },
+      medicine: { xp: 0 },
+      repair: { xp: 0 },
     },
     spawnPoints: [],
     foodBatches: {},

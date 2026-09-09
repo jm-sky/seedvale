@@ -25,7 +25,7 @@ import TouchChrome from './screens/TouchChrome.vue'
 import VillagersScreen from './screens/VillagersScreen.vue'
 import WorldConfigScreen from './screens/WorldConfigScreen.vue'
 import WorldMapScreen from './screens/WorldMapScreen.vue'
-import { abortBusy, abortPlacementPreview, abortRest, abortTerrainPreparation, closeTopOverlay, togglePause, ui } from './store'
+import { abortBusy, abortPlacementPreview, abortRest, abortTargetedSkill, abortTerrainPreparation, closeTopOverlay, togglePause, ui } from './store'
 
 const touchDevice = isTouchDevice()
 
@@ -36,6 +36,7 @@ function onKeydown(event: KeyboardEvent): void {
   if (abortPlacementPreview()) return
   if (abortBusy()) return
   if (ui.openStack.length > 0) closeTopOverlay()
+  else if (abortTargetedSkill()) return
   else togglePause()
 }
 

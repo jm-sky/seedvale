@@ -17,6 +17,20 @@ Generated from exported TypeScript symbols.
 - `InteractionOutcome` — type — line 13
 - `resolveInteraction` — function — line 107
 
+## `interaction/targetedSkillAction.ts`
+
+- `executeTargetedSkillAction` — function — line 88
+- `queryTargetedSkillAction` — function — line 67
+- `TargetedSkillAction` — type — line 27
+  - domain: items-player
+  - system: interaction
+- `TargetedSkillActionId` — type — line 17
+- `TargetedSkillExecuteResult` — type — line 35
+- `targetedSkillPrompt` — function — line 105
+- `TargetedSkillQueryContext` — type — line 13
+  - domain: items-player
+  - system: interaction
+
 ## `interaction/treeInspection.ts`
 
 - `treeInspectionCanYieldBranch` — function — line 179

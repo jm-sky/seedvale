@@ -25,6 +25,17 @@ w oparciu o istniejące condition, Inventory, item instances, item capabilities,
 
 Camp repair nie tworzy równoległego immediate-condition repair modelu.
 
+### Landed foundation from `items-player-021`
+
+Reuse, do not replace:
+
+- `SkillId` `'repair'` + standard XP/value persistence
+- `evaluateSkillCompetence(skills, 'repair', [{ source: 'skill', id: 'survival' }])` for primary Repair + optional Survival support — no new weighted-average engine
+- `queryTargetedSkillAction` / `executeTargetedSkillAction` over existing `Interactable`s (tent/bedroll/platform candidates already exist)
+- runtime `targetedSkillSelection` for Repair targeting mode
+
+Do not create a second targeting pipeline, skill-check framework, or Repair manager. Condition/`RepairProgress` stay with the world object owners (`world-021`).
+
 Canonical flow:
 
 ```text

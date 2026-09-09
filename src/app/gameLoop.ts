@@ -16,6 +16,7 @@ import type { Interactable } from '../interaction/Interactable'
 import type { HeldTool } from '../items/HeldTool'
 import type { PlayerController } from '../player/PlayerController'
 import type { PlayerTorch } from '../player/PlayerTorch'
+import type { TargetedSkillSelection } from '../player/targetedSkillSelection'
 import type { QuestManager } from '../quests/QuestManager'
 import type { PostProcessing } from '../render/createPostProcessing'
 import type { LandOwnershipRegistry } from '../settlement/landOwnership'
@@ -78,6 +79,7 @@ import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
+import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt } from '../interaction/targetedSkillAction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
@@ -327,6 +329,8 @@ export type GameLoopDeps = {
   openQuestLog: () => void
   openInventory: () => void
   openSkills: () => void
+  /** Runtime targeted-skill selection (plan items-player-021) — not persisted. */
+  targetedSkillSelection: TargetedSkillSelection
   openCharacter: () => void
   startGroundWork: (mode: 'dig' | 'level', x: number, z: number) => void
   /** Start the axe chop channel for a gaze-selected tree (plan 057). */
@@ -552,6 +556,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
@@ -562,6 +567,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
   } = deps
 
   renderer.shadowMap.autoUpdate = false
+  const skillQueryContext = {
+    getTrap: (id: string) => bundle.placedTraps.get(id),
+  }
 
   const timer = new Timer()
   let lastAppliedTimeOfDay = dayNight.timeOfDay
@@ -1346,7 +1354,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         ),
       )
       const rangedDrawProgress = playerRanged.state() === 'draw' ? playerRanged.phaseProgress() : null
-      npcDialog.setPrompt(target ? `${target.promptLabel}${cycleHint}` : null, promptHighlighted, rangedDrawProgress)
+      const selectedSkill = targetedSkillSelection.get()
+      const skillAction = selectedSkill && target
+        ? queryTargetedSkillAction(selectedSkill, target, skillQueryContext)
+        : null
+      const skillPrompt = selectedSkill
+        ? targetedSkillPrompt(selectedSkill, skillAction, target != null)
+        : null
+      npcDialog.setPrompt(
+        skillPrompt ? `${skillPrompt}${cycleHint}` : (target ? `${target.promptLabel}${cycleHint}` : null),
+        promptHighlighted,
+        rangedDrawProgress,
+      )
       vueUi.setCycleTargetAvailable(
         playerCombat.isActive()
           ? livingTargets.length > 1
@@ -1400,7 +1419,15 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
       const interactPressed = keyboard.consumeInteract()
       const altInteractPressed = keyboard.consumeAltInteract()
-      if (target?.kind === 'dig') {
+      if (selectedSkill) {
+        if (interactPressed) {
+          if (target && skillAction) {
+            const result = executeTargetedSkillAction(selectedSkill, target, skillQueryContext)
+            if (result.ok) vueUi.openFlavorDialog(result.title, result.line)
+            else toast.show('Cel jest już niedostępny.', 'error')
+          }
+        }
+      } else if (target?.kind === 'dig') {
         if (interactPressed && target.profile) {
           startGroundWork('dig', target.position.x, target.position.z)
         } else if (interactPressed && !target.profile) {
@@ -1937,6 +1964,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // `lieDown`) — pushed every frame with the same cheap-bail convention
       // as the stats above so the UI never goes stale.
       vueUi.pushSkillsState(player.skills)
+      vueUi.setSelectedTargetedSkill(targetedSkillSelection.get())
       houseDoors.update(
         player.mesh.position.x,
         player.mesh.position.z,

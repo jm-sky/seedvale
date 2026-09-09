@@ -1,8 +1,8 @@
 import type { ItemKind } from '../items/items'
 import type { HouseholdResourceKind } from './household'
+import type { SettlementLandmarks } from './props'
 import { hasItemKindCategory } from '../items/items'
 import type { Vector3 } from 'three'
-import type { SettlementLandmarks } from './props'
 
 /**
  * Shared storage-destination resolution (plan settlements-npcs-009) — the

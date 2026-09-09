@@ -47,6 +47,9 @@ export type PlacedTrapsHooks = {
 export type PlacedTraps = {
   list: () => readonly PlacedTrapEntry[]
   nodes: () => readonly PlacedTrapRecord[]
+  /** Read-only lookup by stable id (plan items-player-021). Returns a copied
+   *  record, never the live mesh-bearing entry. */
+  get: (id: string) => PlacedTrapRecord | null
   /** Plan fauna-014 §3/§11 — cheap snapshot of every currently active+baited
    *  trap, world/fauna-owned (not player/camera-gated) so a future off-screen
    *  simulation can reuse the same source. Called at most once per fauna
@@ -204,6 +207,10 @@ export function createPlacedTraps(
   return {
     list: () => traps,
     nodes: () => traps.map(toRecord),
+    get(id) {
+      const entry = find(id)
+      return entry ? toRecord(entry) : null
+    },
     activeLures() {
       const lures: TrapLureDescriptor[] = []
       for (const entry of traps) {

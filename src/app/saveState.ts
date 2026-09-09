@@ -186,6 +186,8 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       defense: { xp: player.skills.defense.xp },
       archery: { xp: player.skills.archery.xp },
       riding: { xp: player.skills.riding.xp },
+      medicine: { xp: player.skills.medicine.xp },
+      repair: { xp: player.skills.repair.xp },
     },
     spawnPoints: bundle.fauna.getSpawners().map((s) => ({ id: s.id, ...snapshotSpawnPointState(s) })),
     foodBatches: inventory.foodBatchesToJSON(),
