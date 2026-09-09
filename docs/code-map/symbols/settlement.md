@@ -385,25 +385,25 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 252
-- `buildSettlementProps` — function — line 642
-- `disposeSettlementGroup` — function — line 1781
-- `SettlementHouseBed` — type — line 132
-- `SettlementHouseLandmark` — type — line 103
-- `SettlementLandmarks` — type — line 139
-- `SettlementLandPlot` — type — line 241
-- `SettlementStorageVisuals` — type — line 234
-- `SettlementTreeLandmark` — type — line 259
+- `BlacksmithWorkplace` — type — line 254
+- `buildSettlementProps` — function — line 660
+- `disposeSettlementGroup` — function — line 1794
+- `SettlementHouseBed` — type — line 134
+- `SettlementHouseLandmark` — type — line 105
+- `SettlementLandmarks` — type — line 141
+- `SettlementLandPlot` — type — line 243
+- `SettlementStorageVisuals` — type — line 236
+- `SettlementTreeLandmark` — type — line 261
 
 ## `settlement/propSpecs.ts`
 
 - `BUSH_SPECS` — const — line 17
 - `CACTUS_SPECS` — const — line 31
-- `CAMPFIRE_FIT_MAX` — const — line 120
-- `CAMPFIRE_UNLIT_URL` — const — line 118
+- `CAMPFIRE_FIT_MAX` — const — line 122
+- `CAMPFIRE_UNLIT_URL` — const — line 120
 - `CEMETERY_SPECS` — const — line 80
-- `COBBLE_FIT_MAX` — const — line 125
-- `COBBLE_URL` — const — line 122
+- `COBBLE_FIT_MAX` — const — line 127
+- `COBBLE_URL` — const — line 124
 - `CROPS_FIT_MAX` — const — line 103
 - `CROPS_URL` — const — line 101
 - `DOCK_SPECS` — const — line 64
@@ -411,11 +411,11 @@ Generated from exported TypeScript symbols.
 - `FARM_HEIGHT` — const — line 99
 - `FARM_URL` — const — line 96
 - `FERN_SPECS` — const — line 27
-- `FIRE_FX_URL` — const — line 135
+- `FIRE_FX_URL` — const — line 137
 - `GRAVE_SPECS` — const — line 84
-- `LANTERN_FLOOR_MAX` — const — line 136
-- `LANTERN_URL` — const — line 133
-- `LANTERN_WALL_MAX` — const — line 139
+- `LANTERN_FLOOR_MAX` — const — line 138
+- `LANTERN_URL` — const — line 135
+- `LANTERN_WALL_MAX` — const — line 141
 - `LILY_SPECS` — const — line 51
 - `REED_SPECS` — const — line 42
 - `RESOURCE_GOLD_SPECS` — const — line 88
@@ -423,19 +423,20 @@ Generated from exported TypeScript symbols.
 - `ROCK_CLUSTER_SPECS` — const — line 72
 - `ROCK_SPECS` — const — line 68
 - `SEAWEED_SPECS` — const — line 60
-- `TABLE_LAMP_FIT_MAX` — const — line 148
-- `TABLE_LAMP_URL` — const — line 147
+- `TABLE_LAMP_FIT_MAX` — const — line 150
+- `TABLE_LAMP_URL` — const — line 149
 - `TREE_SPECS` — const — line 5
-- `TREE_STUMP_HEIGHT` — const — line 130
-- `TREE_STUMP_URL` — const — line 127
-- `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 116
-- `VILLAGE_TORCH_HEIGHT` — const — line 140
-- `VILLAGE_TORCH_URL` — const — line 134
-- `WALL_URL` — const — line 132
+- `TREE_STUMP_HEIGHT` — const — line 132
+- `TREE_STUMP_URL` — const — line 129
+- `VILLAGE_CAMPFIRE_COLLISION_RADIUS` — const — line 118
+- `VILLAGE_TORCH_HEIGHT` — const — line 142
+- `VILLAGE_TORCH_URL` — const — line 136
+- `WALL_URL` — const — line 134
 - `WELL_HEIGHT` — const — line 107
 - `WELL_URL` — const — line 105
-- `WOOD_PILE_COLLISION_RADIUS` — const — line 114
-- `WOOD_PILE_HEIGHT` — const — line 111
+- `WOOD_PILE_COLLISION_RADIUS` — const — line 116
+- `WOOD_PILE_HEIGHT` — const — line 113
+- `WOOD_PILE_PROGRESSIVE_URL` — const — line 111
 - `WOOD_PILE_URL` — const — line 109
 
 ## `settlement/propUtils.ts`
@@ -626,25 +627,30 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/storageVisuals.ts`
 
-- `createFoodStorageVisual` — function — line 181
-- `createWoodPileVisual` — function — line 98
-- `FOOD_STORAGE_MAX_SLOTS` — const — line 124
-- `FoodStorageSlot` — type — line 136
-- `FoodStorageVisual` — type — line 164
-- `physicalWoodStockpileQuantity` — function — line 61
+- `createFoodStorageVisual` — function — line 212
+- `createWoodPileVisual` — function — line 121
+- `findWoodPileStageNodes` — function — line 92
+- `FOOD_STORAGE_MAX_SLOTS` — const — line 155
+- `FoodStorageSlot` — type — line 167
+- `FoodStorageVisual` — type — line 195
+- `physicalWoodStockpileQuantity` — function — line 55
   - domain: settlements-npcs
   - role: Resolves the single authoritative quantity the physical wood stockpile represents, shared by its visual and its inspection.
-- `selectFoodStorageSlots` — function — line 143
-- `WOOD_PILE_BANDS` — const — line 26
+- `selectFoodStorageSlots` — function — line 174
+- `WOOD_PILE_EXTRA_OFFSETS` — const — line 39
+- `WOOD_PILE_MAX_EXTRA` — const — line 31
+- `WOOD_PILE_OVERFLOW_START` — const — line 29
+- `WOOD_PILE_OVERFLOW_STEP` — const — line 30
+- `WOOD_PILE_STAGES` — const — line 24
   - domain: settlements-npcs
   - system: storage-visuals
   - role: Derives a bounded, deterministic Three.js visual from a storage destination's authoritative quantity/contents.
-- `WOOD_PILE_EXTRA_OFFSETS` — const — line 45
-- `WOOD_PILE_MAX_EXTRA` — const — line 37
-- `WOOD_PILE_OVERFLOW_STEP` — const — line 36
-- `WoodPileVisual` — type — line 82
-- `woodPileVisualState` — function — line 73
-- `WoodPileVisualState` — type — line 65
+- `woodPileOverflowCount` — function — line 78
+- `woodPileStage` — function — line 68
+- `WoodPileStage` — type — line 25
+- `WoodPileVisual` — type — line 104
+- `woodPileVisualState` — function — line 87
+- `WoodPileVisualState` — type — line 59
 
 ## `settlement/villageClearing.ts`
 
