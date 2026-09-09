@@ -211,7 +211,6 @@ Generated from TypeScript imports.
 - `settlement/household.test.ts`
 - `settlement/household.ts`
 - `settlement/storageVisuals.test.ts`
-- `settlement/storageVisuals.ts`
 
 ## `economy/stock.ts`
 

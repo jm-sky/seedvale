@@ -24,10 +24,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 344
-- `CreateSettlementDeps` — type — line 228
-- `Settlement` — type — line 115
-- `settlementSpawnPoint` — function — line 216
+- `createSettlement` — function — line 343
+- `CreateSettlementDeps` — type — line 227
+- `Settlement` — type — line 114
+- `settlementSpawnPoint` — function — line 215
 
 ## `settlement/decorProps.ts`
 
@@ -202,8 +202,8 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/householdYard.ts`
 
-- `HOUSEHOLD_YARD_PROP_OFFSETS` — const — line 26
-- `householdYardRadius` — function — line 33
+- `HOUSEHOLD_YARD_PROP_OFFSETS` — const — line 27
+- `householdYardRadius` — function — line 34
 - `MAX_HOUSE_FOOTPRINT_RADIUS` — const — line 21
 
 ## `settlement/houseLighting.ts`
@@ -389,15 +389,15 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/props.ts`
 
-- `BlacksmithWorkplace` — type — line 254
-- `buildSettlementProps` — function — line 660
-- `disposeSettlementGroup` — function — line 1794
+- `BlacksmithWorkplace` — type — line 259
+- `buildSettlementProps` — function — line 665
+- `disposeSettlementGroup` — function — line 1822
 - `SettlementHouseBed` — type — line 134
 - `SettlementHouseLandmark` — type — line 105
 - `SettlementLandmarks` — type — line 141
-- `SettlementLandPlot` — type — line 243
-- `SettlementStorageVisuals` — type — line 236
-- `SettlementTreeLandmark` — type — line 261
+- `SettlementLandPlot` — type — line 248
+- `SettlementStorageVisuals` — type — line 240
+- `SettlementTreeLandmark` — type — line 266
 
 ## `settlement/propSpecs.ts`
 
@@ -605,12 +605,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/storageDestinations.ts`
 
-- `classifyItemStorageKind` — function — line 33
+- `classifyItemStorageKind` — function — line 31
   - domain: settlements-npcs
   - system: storage-destinations
   - role: Resolves the physical destination for a wood/food delivery, given the household or settlement it belongs to.
-- `householdStorageDestination` — function — line 39
-- `settlementStorageDestination` — function — line 45
+- `householdStorageDestination` — function — line 37
+- `resolveHouseholdWoodStorage` — function — line 47
+- `settlementStorageDestination` — function — line 64
 
 ## `settlement/storageInfestation.ts`
 
@@ -631,30 +632,27 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/storageVisuals.ts`
 
-- `createFoodStorageVisual` — function — line 212
-- `createWoodPileVisual` — function — line 121
-- `findWoodPileStageNodes` — function — line 92
-- `FOOD_STORAGE_MAX_SLOTS` — const — line 155
-- `FoodStorageSlot` — type — line 167
-- `FoodStorageVisual` — type — line 195
-- `physicalWoodStockpileQuantity` — function — line 55
-  - domain: settlements-npcs
-  - role: Resolves the single authoritative quantity the physical wood stockpile represents, shared by its visual and its inspection.
-- `selectFoodStorageSlots` — function — line 174
-- `WOOD_PILE_EXTRA_OFFSETS` — const — line 39
-- `WOOD_PILE_MAX_EXTRA` — const — line 31
-- `WOOD_PILE_OVERFLOW_START` — const — line 29
-- `WOOD_PILE_OVERFLOW_STEP` — const — line 30
-- `WOOD_PILE_STAGES` — const — line 24
+- `createFoodStorageVisual` — function — line 196
+- `createWoodPileVisual` — function — line 105
+- `findWoodPileStageNodes` — function — line 76
+- `FOOD_STORAGE_MAX_SLOTS` — const — line 139
+- `FoodStorageSlot` — type — line 151
+- `FoodStorageVisual` — type — line 179
+- `selectFoodStorageSlots` — function — line 158
+- `WOOD_PILE_EXTRA_OFFSETS` — const — line 37
+- `WOOD_PILE_MAX_EXTRA` — const — line 29
+- `WOOD_PILE_OVERFLOW_START` — const — line 27
+- `WOOD_PILE_OVERFLOW_STEP` — const — line 28
+- `WOOD_PILE_STAGES` — const — line 22
   - domain: settlements-npcs
   - system: storage-visuals
   - role: Derives a bounded, deterministic Three.js visual from a storage destination's authoritative quantity/contents.
-- `woodPileOverflowCount` — function — line 78
-- `woodPileStage` — function — line 68
-- `WoodPileStage` — type — line 25
-- `WoodPileVisual` — type — line 104
-- `woodPileVisualState` — function — line 87
-- `WoodPileVisualState` — type — line 59
+- `woodPileOverflowCount` — function — line 62
+- `woodPileStage` — function — line 52
+- `WoodPileStage` — type — line 23
+- `WoodPileVisual` — type — line 88
+- `woodPileVisualState` — function — line 71
+- `WoodPileVisualState` — type — line 43
 
 ## `settlement/villageClearing.ts`
 

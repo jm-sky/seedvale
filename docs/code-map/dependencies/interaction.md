@@ -55,7 +55,6 @@ Generated from TypeScript imports.
 - `interaction/treeInspection.ts`
 - `quests/QuestManager.ts`
 - `settlement/household.ts`
-- `settlement/storageVisuals.ts`
 - `terrain/chunkEnvironment.ts`
 
 **Imported by**

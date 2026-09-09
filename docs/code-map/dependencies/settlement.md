@@ -188,7 +188,6 @@ Generated from TypeScript imports.
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementPropColliders.ts`
 - `settlement/settlementSignposts.ts`
-- `settlement/storageVisuals.ts`
 - `settlement/wellInteractionQueue.ts`
 - `shared/SettlementName.ts`
 - `shared/bootMark.ts`
@@ -500,7 +499,6 @@ Generated from TypeScript imports.
 - `settlement/rats.ts`
 - `settlement/storageDestinations.ts`
 - `settlement/storageVisuals.test.ts`
-- `settlement/storageVisuals.ts`
 
 ## `settlement/householdExchange.test.ts`
 
@@ -931,6 +929,7 @@ Generated from TypeScript imports.
 - `settlement/settlementNightCycle.ts`
 - `settlement/settlementSignposts.test.ts`
 - `settlement/settlementSignposts.ts`
+- `settlement/storageDestinations.ts`
 - `settlement/wellInteractionQueue.test.ts`
 - `terrain/chunkEnvironment.ts`
 - `terrain/chunkManager.ts`
@@ -1250,6 +1249,7 @@ Generated from TypeScript imports.
 
 - `items/items.ts`
 - `settlement/household.ts`
+- `settlement/props.ts`
 
 **Imported by**
 
@@ -1301,17 +1301,13 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
-- `economy/settlementEconomy.ts`
 - `items/Inventory.ts`
 - `items/foodItems.ts`
 - `items/items.ts`
-- `settlement/household.ts`
 - `settlement/propUtils.ts`
 
 **Imported by**
 
-- `interaction/resolveInteraction.ts`
-- `settlement/createSettlement.ts`
 - `settlement/props.ts`
 - `settlement/storageVisuals.test.ts`
 

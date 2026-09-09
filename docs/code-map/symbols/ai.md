@@ -246,10 +246,10 @@ Generated from exported TypeScript symbols.
 
 ## `ai/npcProfessionWork.ts`
 
-- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 45
-- `findWeaponNeedingMaintenance` — function — line 71
-- `NpcWorkContext` — type — line 91
-- `planProfessionWork` — function — line 447
+- `BLACKSMITH_SHARPEN_THRESHOLD` — const — line 49
+- `findWeaponNeedingMaintenance` — function — line 75
+- `NpcWorkContext` — type — line 95
+- `planProfessionWork` — function — line 455
 
 ## `ai/npcStrategies.ts`
 
