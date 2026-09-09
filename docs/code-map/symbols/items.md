@@ -343,9 +343,11 @@ Generated from exported TypeScript symbols.
 
 ## `items/primaryWeapons.ts`
 
-- `createPrimaryWeaponSelection` — function — line 43
-- `isPrimaryMeleeAssignment` — function — line 71
-- `isPrimaryRangedAssignment` — function — line 77
+- `createPrimaryWeaponSelection` — function — line 68
+- `inventoryOwnsPrimaryWeaponChoice` — function — line 50
+- `inventoryOwnsPrimaryWeaponKind` — function — line 41
+- `isPrimaryMeleeAssignment` — function — line 96
+- `isPrimaryRangedAssignment` — function — line 102
 - `PrimaryWeaponChoice` — type — line 6
 - `PrimaryWeaponSelection` — type — line 13
 - `SavePrimaryWeaponChoice` — type — line 8

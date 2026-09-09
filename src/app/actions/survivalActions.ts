@@ -99,6 +99,10 @@ export type SurvivalActions = {
   startDestroySpawner: (spawner: PreySpawner) => ActionResult
   drinkFromWaterSource: (source: WaterSource) => ActionResult
   fillWaterskin: (source: WaterSource) => ActionResult
+  /** Instant fill of one carried liquid-container instance at a water source
+   *  (plan `ui-input-014`). Revalidates source, rope, instance identity and
+   *  `canFillLiquidContainer` at execute time. */
+  fillWaterContainer: (source: WaterSource, instanceId: string) => ActionResult
   consumeItem: (kind: ItemKind) => ActionResult
   /** Milks a live `cow`/`sheep` into a carried bucket (busy channel, plan
    *  fauna-002 §3/§4). */
@@ -474,6 +478,37 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     return toResult([targetRequirement(false, carried.length > 0 ? 'containerFull' : 'waterContainer')])
   }
 
+  /** Instant fill of a specific carried container instance (plan `ui-input-014`).
+   *  Revalidates the live instance and source; does not auto-select another
+   *  container the way `fillWaterskin` does. */
+  const fillWaterContainer = (source: WaterSource, instanceId: string): ActionResult => {
+    if (isActionBlocked(ctx)) return { ok: false, missing: [] }
+    if (source.quality === 'undrinkable') {
+      toast.show(UNDRINKABLE_WATER_WARNING, 'error')
+      return toResult([targetRequirement(false, 'drinkableWater')])
+    }
+    if (!hasRopeIfRequired(source)) return toResult([itemRequirement(0, 1, 'rope')])
+    const held = inventory.getInstance(instanceId)
+    if (!held || !isLiquidContainerInstance(held)) {
+      toast.show('Nie masz już tego pojemnika.', 'error')
+      return toResult([targetRequirement(false, 'waterContainer')])
+    }
+    if (!canFillLiquidContainer(held, 'water')) {
+      toast.show(held.amountLitres >= liquidContainerCapacity(held.kind) ? 'Pojemnik jest już pełny.' : 'Tego pojemnika nie da się napełnić wodą.', 'error')
+      return toResult([targetRequirement(false, 'containerFull')])
+    }
+    const applied = inventory.updateInstance(held.id, (inst) => fillLiquidContainer(inst as LiquidContainerItemInstance, 'water')!)
+    if (!applied) {
+      toast.show('Nie masz już tego pojemnika.', 'error')
+      return toResult([targetRequirement(false, 'waterContainer')])
+    }
+    playActionWell(worldAudio.playAt, player.mesh.position)
+    hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+    ctx.onInventoryChanged()
+    toast.show('Napełniono pojemnik.', 'pickup')
+    return { ok: true }
+  }
+
   /** Carried liquid-container instances that could hold at least some milk
    *  right now — same shape as `carriedWaterContainers`, filtered for the
    *  `milk`-specific rules (`canFillLiquidContainer` already refuses a
@@ -591,6 +626,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     startDestroySpawner,
     drinkFromWaterSource,
     fillWaterskin,
+    fillWaterContainer,
     consumeItem,
     startMilkAnimal,
   }

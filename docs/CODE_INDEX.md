@@ -35,7 +35,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Placement preview](../src/app/actions/placementPreviewActions.ts) — shared aim/ghost/confirm/cancel/rotation lifecycle for built objects; domain modules still own validity and mutation.
 - [Placement preview ghost](../src/world/placementPreview.ts) — circle/box footprint renderer for the shared placement preview.
 - [Container actions](../src/app/actions/containerActions.ts) — placing, carrying and opening a chest, plus the transfer screen wiring.
-- [Work contract actions](../src/app/actions/workContractActions.ts) — creating a construction work contract, posting it at a settlement notice board, and cancelling one.
+- [Work contract actions](../src/app/actions/workContractActions.ts) — creating a construction work contract, posting it at a settlement notice board, and cancelling one. `beginHireHelpForTarget` is the shared live-target entry used by Quick Actions and world inspection.
+- [World inspection](../src/app/inspection/buildWorldInspection.ts) — read-model resolver for the `[V]` / inspect screen; Vue only renders the snapshot. Actions live in [inspectionActions](../src/app/actions/inspectionActions.ts).
 - [Work contract payment](../src/app/actions/workContractPayment.ts) — atomic player-coin → NPC `personalInventory` wage transfer for a payable assignment claim.
 - [Terrain preparation](../src/terrain/terrainPreparation.ts) — metre-sized `Przygotuj teren` domain rules, bounded sizes `2…9`, and compact completed-area facts.
 - [Site infrastructure query](../src/world/siteInfrastructure.ts) — read-only bounded lookup of completed preparations, usable Player wells and live Player gardens.
@@ -75,6 +76,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [Inventory / trade wiring](../src/app/inventoryWiring.ts) — inventory-screen handlers plus every home-trader buy/sell path.
 - [Vue UI mount](../src/ui-vue/mount.ts) — the `VueUi` facade the app layer talks to.
+- [World inspection screen](../src/ui-vue/screens/WorldInspectionScreen.vue) — construction/details overlay opened by `[V]` / the mobile inspect button.
 - [Vanilla UI facades](../src/ui/) — `create*` modules; most are now thin wrappers over Vue screens.
 
 ## Reputation / progression

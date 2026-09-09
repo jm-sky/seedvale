@@ -12,9 +12,11 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/inspectionActions.ts`
 - `app/actions/survivalActions.test.ts`
 - `app/actions/survivalActions.ts`
 - `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `interaction/Interactable.ts`
 - `items/itemCatalog.ts`
@@ -1790,6 +1792,8 @@ Generated from TypeScript imports.
 - `app/actions/workContractActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/createApp.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.test.ts`
@@ -2011,6 +2015,8 @@ Generated from TypeScript imports.
 - `app/busyChannelDurations.test.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
@@ -2101,6 +2107,8 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
 - `app/actions/workContractActions.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `settlement/lodgingResolver.ts`
@@ -2323,6 +2331,8 @@ Generated from TypeScript imports.
 - `ai/NpcAgent.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/workContractActions.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.test.ts`
@@ -2579,6 +2589,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/inspection/buildWorldInspection.test.ts`
 - `persistence/saveData.ts`
 - `world/createPlayerWells.test.ts`
 - `world/createPlayerWells.ts`
@@ -2600,8 +2611,12 @@ Generated from TypeScript imports.
 - `ai/npcPersonalProvisions.ts`
 - `ai/npcWorkContract.test.ts`
 - `ai/npcWorkContract.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/actions/workContractPayment.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
+- `app/inspection/inspectionTarget.ts`
 - `app/worldBundle.ts`
 - `world/createWorkContracts.test.ts`
 - `world/createWorkContracts.ts`

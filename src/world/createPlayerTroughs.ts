@@ -1,17 +1,17 @@
-import type { Scene } from 'three'
 import type { AnimalWaterSourceProvider } from '../fauna/animalForaging'
 import type { HeightSampler } from '../player/PlayerController'
 import { disposeObject3D } from '../assets/loadGltf'
-import { createTroughVisual, type TroughVisual } from '../settlement/settlementStructures'
 import { placeOnGround } from '../settlement/props'
+import { createTroughVisual, type TroughVisual } from '../settlement/settlementStructures'
 import {
   clampPlayerTroughWaterLitres,
   isPlayerTroughConstructionComplete,
   PLAYER_TROUGH_REQUIRED_WORK,
   playerTroughFreeCapacity,
-  playerTroughRemainingWork,
   type PlayerTroughRecord,
+  playerTroughRemainingWork,
 } from './playerTrough'
+import type { Scene } from 'three'
 
 export type PlayerTroughEntry = PlayerTroughRecord & { visual: TroughVisual }
 

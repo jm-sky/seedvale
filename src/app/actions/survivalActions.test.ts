@@ -10,9 +10,9 @@ import { createWaterSource, type WaterSource } from '../../world/WaterSource'
 import { createBusyAction } from '../busyAction'
 import { createSurvivalActions, type FeedableAnimal, feedAnimal } from './survivalActions'
 
-function setup() {
+function setup(instances?: LiquidContainerItemInstance[]) {
   const emptyWaterskin: LiquidContainerItemInstance = { id: 'test-waterskin', kind: 'waterskin_medium', liquid: null, amountLitres: 0 }
-  const inventory = new Inventory({}, 100, [emptyWaterskin], {}, Infinity)
+  const inventory = new Inventory({}, 100, instances ?? [emptyWaterskin], {}, Infinity)
   const needs = createPlayerNeeds()
   const health = createHealthState(100)
   const toast = { show: vi.fn() }
@@ -118,7 +118,53 @@ describe('fillWaterskin (plan world-011)', () => {
   })
 })
 
-describe('drinkFromWaterSource / fillWaterskin — deep well rope requirement (plan world-004 §4)', () => {
+describe('fillWaterContainer (plan ui-input-014)', () => {
+  it('fills the selected instance rather than the smallest auto-select', () => {
+    const small: LiquidContainerItemInstance = { id: 'ws-small', kind: 'waterskin_small', liquid: null, amountLitres: 0 }
+    const medium: LiquidContainerItemInstance = { id: 'ws-medium', kind: 'waterskin_medium', liquid: null, amountLitres: 0 }
+    const { actions, inventory } = setup([small, medium])
+
+    const result = actions.fillWaterContainer(createWaterSource('river'), 'ws-medium')
+
+    expect(result.ok).toBe(true)
+    const filled = inventory.getInstance('ws-medium') as LiquidContainerItemInstance
+    const untouched = inventory.getInstance('ws-small') as LiquidContainerItemInstance
+    expect(filled.liquid).toBe('water')
+    expect(filled.amountLitres).toBeGreaterThan(0)
+    expect(untouched.amountLitres).toBe(0)
+  })
+
+  it('rejects a stale or missing instance', () => {
+    const { actions, toast } = setup()
+    const result = actions.fillWaterContainer(createWaterSource('river'), 'missing-id')
+    expect(result.ok).toBe(false)
+    expect(toast.show).toHaveBeenCalledWith('Nie masz już tego pojemnika.', 'error')
+  })
+
+  it('still refuses an undrinkable source', () => {
+    const { actions, inventory, toast } = setup()
+    const result = actions.fillWaterContainer(createWaterSource('ocean'), 'test-waterskin')
+    expect(result.ok).toBe(false)
+    const instance = inventory.getInstance('test-waterskin') as LiquidContainerItemInstance
+    expect(instance.amountLitres).toBe(0)
+    expect(toast.show).toHaveBeenCalledWith('Ta woda jest słona — nie da się jej pić.', 'error')
+  })
+
+  it('refuses a full container', () => {
+    const full: LiquidContainerItemInstance = {
+      id: 'full-skin',
+      kind: 'waterskin_medium',
+      liquid: 'water',
+      amountLitres: 5,
+    }
+    const { actions, toast } = setup([full])
+    const result = actions.fillWaterContainer(createWaterSource('river'), 'full-skin')
+    expect(result.ok).toBe(false)
+    expect(toast.show).toHaveBeenCalledWith('Pojemnik jest już pełny.', 'error')
+  })
+})
+
+describe('drinkFromWaterSource — deep well rope gate (plan world-011)', () => {
   const deepWellSource: WaterSource = { kind: 'well', quality: 'safe', requiresRope: true }
 
   it('refuses to drink from a deep well with no carried rope', () => {

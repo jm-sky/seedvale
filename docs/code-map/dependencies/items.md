@@ -99,6 +99,8 @@ Generated from TypeScript imports.
 - `app/actions/workContractPayment.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `app/saveState.ts`
@@ -287,6 +289,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/restActions.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `items/campRepair.ts`
 - `items/constructionMaterials.test.ts`
 - `items/createPlacedTents.ts`
@@ -709,6 +712,8 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/inventoryWiring.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.test.ts`
@@ -774,6 +779,7 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/interactables.ts`
 - `app/inventoryWiring.ts`
 - `combat/projectile.ts`
@@ -885,6 +891,7 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/createApp.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `items/Inventory.ts`
 - `items/inventoryView.ts`
 - `items/liquidContainer.test.ts`
@@ -897,6 +904,7 @@ Generated from TypeScript imports.
 
 - `items/Inventory.ts`
 - `items/primaryWeapons.ts`
+- `items/weaponMaintenance.ts`
 - `persistence/saveData.ts`
 
 ## `items/primaryWeapons.ts`
@@ -1147,6 +1155,7 @@ Generated from TypeScript imports.
 - `items/highQualityWeapons.test.ts`
 - `items/inventoryTransfer.test.ts`
 - `items/inventoryView.ts`
+- `items/primaryWeapons.test.ts`
 - `items/trade.test.ts`
 - `items/trade.ts`
 - `items/weaponMaintenance.test.ts`

@@ -1,12 +1,12 @@
 import type { NpcRelationships } from '../settlement/npcRelationships'
 import type { NpcAuthoritativeState, NpcId } from '../settlement/npcState'
+import type { NpcGraves } from '../world/npcGraves'
 import {
   hasActiveNpcCorpse,
   isNpcCorpseBuryable,
   npcCorpseBurialClaimOwner,
   recoverStaleNpcBurialClaim,
 } from '../settlement/npcPostDeath'
-import type { NpcGraves } from '../world/npcGraves'
 import { isBurialPlanForDeceased, type NpcPlan } from './npcPlan'
 
 /**

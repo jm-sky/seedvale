@@ -118,10 +118,10 @@ import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
 import { PALISADE_MATERIAL_REQUIREMENTS } from '../world/palisade'
-import { PLAYER_TROUGH_MATERIAL_REQUIREMENTS } from '../world/playerTrough'
 import { hasExplicitUrlSeed, randomSeed, setUrlSearchParam, syncSeedInUrl } from '../world/parseSeed'
 import { parsePlantedCrops } from '../world/plantedCrops'
 import { parsePlantedTrees } from '../world/plantedTrees'
+import { PLAYER_TROUGH_MATERIAL_REQUIREMENTS } from '../world/playerTrough'
 import { listSeedRecords, resolveNewGameSeed } from '../world/seedLibrary'
 import { BEDROLL_MATERIAL_REQUIREMENTS, PLATFORM_MATERIAL_REQUIREMENTS } from '../world/sleepingUtilities'
 import { createTimeSkip } from '../world/timeSkip'
@@ -134,6 +134,7 @@ import { createCookMealIntent, runEatAnything } from './actions/cookMealIntent'
 import { createFullCampIntent } from './actions/fullCampIntent'
 import { createGatheringActions } from './actions/gatheringActions'
 import { createGroundActions } from './actions/groundActions'
+import { createInspectionActions } from './actions/inspectionActions'
 import { createMountActions } from './actions/mountActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
@@ -1097,6 +1098,26 @@ export async function createApp(
     isOtherPreviewActive: () => placementPreviewIsActive(),
   })
 
+  const inspection = createInspectionActions(actionCtx, {
+    vueUi,
+    workOnWell: placement.workOnWell,
+    workOnWellRoofRepair: placement.workOnWellRoofRepair,
+    describeWellWork: placement.describeWellWork,
+    describeWellRoofRepair: placement.describeWellRoofRepair,
+    workOnPalisade: placement.workOnPalisade,
+    removePalisadeSegment: placement.removePalisadeSegment,
+    workOnStandingTorch: placement.workOnStandingTorch,
+    igniteStandingTorch: placement.igniteStandingTorch,
+    supplyResidentialBuildingMaterials: placement.supplyResidentialBuildingMaterials,
+    workOnResidentialBuilding: placement.workOnResidentialBuilding,
+    cancelResidentialBuilding: placement.cancelResidentialBuilding,
+    sleepInOwnedHouse: rest.sleepInOwnedHouse,
+    resumeTerrainPreparationWork: terrainPrep.resumeWork,
+    beginHireHelpForTarget: contracts.beginHireHelpForTarget,
+    drinkFromWaterSource: survival.drinkFromWaterSource,
+    fillWaterContainer: survival.fillWaterContainer,
+  })
+
   onTrapCaptureTarget = gathering.onTrapCapture
   onTrapBaitReturnedTarget = gathering.onTrapBaitReturned
   vueUi.configureAbortRest(rest.abortRest)
@@ -1748,7 +1769,8 @@ export async function createApp(
     vueUi.isNotesOpen() ||
     vueUi.isSkillsScreenOpen() ||
     vueUi.isCharacterScreenOpen() ||
-    vueUi.isWorldMapOpen()
+    vueUi.isWorldMapOpen() ||
+    vueUi.isWorldInspectionOpen()
   const scheduleRestorePointerLockAfterFlavorDialog = (): void => {
     queueMicrotask(() => {
       if (!restorePointerLockAfterFlavorDialog) return
@@ -1758,6 +1780,17 @@ export async function createApp(
     })
   }
   vueUi.configureFlavorDialog({
+    onOpen: () => {
+      if (exitGamePointerLock(renderer.domElement)) {
+        restorePointerLockAfterFlavorDialog = true
+      }
+    },
+    onClose: () => {
+      scheduleRestorePointerLockAfterFlavorDialog()
+      inspection.syncOpenView()
+    },
+  })
+  vueUi.configureWorldInspection({
     onOpen: () => {
       if (exitGamePointerLock(renderer.domElement)) {
         restorePointerLockAfterFlavorDialog = true
@@ -1779,7 +1812,8 @@ export async function createApp(
     !inventoryScreen.isOpen() &&
     !vueUi.isNpcDialogueMenuOpen() &&
     !vueUi.isWorldConfigScreenOpen() &&
-    !vueUi.isNotesOpen()
+    !vueUi.isNotesOpen() &&
+    !vueUi.isWorldInspectionOpen()
 
   touchControls = isTouchDevice()
     ? createTouchControls(container, keyboard.state, mouseLook.state, {
@@ -1874,6 +1908,8 @@ export async function createApp(
     cancelResidentialBuilding: placement.cancelResidentialBuilding,
     repairSettlementStorage: storageInfestation.repairSettlementStorage,
     openNoticeBoard: contracts.openNoticeBoard,
+    openWorldInspection: inspection.openFromTarget,
+    syncWorldInspection: inspection.syncOpenView,
     tickTerrainPreparationPreview: terrainPrep.tickPreview,
     tickPlacementPreview: placementPreview.tick,
     resumeTerrainPreparationWork: terrainPrep.resumeWork,

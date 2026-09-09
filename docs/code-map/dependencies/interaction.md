@@ -24,7 +24,10 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/actions/inspectionActions.ts`
 - `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/inspectionTarget.ts`
 - `app/interactables.ts`
 - `interaction/resolveInteraction.ts`
 - `interaction/targetedSkillAction.test.ts`

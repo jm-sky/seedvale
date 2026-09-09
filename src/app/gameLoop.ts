@@ -77,6 +77,7 @@ import { ANIMAL_LABELS, FAUNA_SHADOW_DISTANCE, selectDietFeedKind } from '../fau
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { combatTargetForAnimal, isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
+import { isTouchDevice } from '../input/isTouchDevice'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
 import { pickInGaze } from '../interaction/findInteractionTarget'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
@@ -85,6 +86,7 @@ import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
 import { Inventory, inventoryFullToastText, type SaveItemInstance, toSaveItemInstance } from '../items/Inventory'
 import { ARROW_DAMAGE_BONUS, hasItemCapability, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { isInstanceBackedKind, isWeaponItemInstance } from '../items/itemInstances'
+import { isLiquidContainerInstance, LIQUID_CONTAINER_KIND_LIST } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
 import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenanceProfile } from '../items/weaponMaintenance'
@@ -140,8 +142,8 @@ import { updateFoliageWind } from '../world/foliageWind'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
 import { computeSurfaceWeather, tickClimate } from '../world/weather'
 import { applyWeatherOverlay } from '../world/weatherVisuals'
-import { isLiquidContainerInstance, LIQUID_CONTAINER_KIND_LIST } from '../items/itemInstances'
 import { feedAnimal, hasCarriedMilkContainer } from './actions/survivalActions'
+import { inspectionTargetRef } from './inspection/inspectionTarget'
 import {
   buildCombatTarget,
   buildDigTarget,
@@ -362,6 +364,10 @@ export type GameLoopDeps = {
   /** Instant fill of a carried empty waterskin at a well/lake/river — refused
    *  for an undrinkable source (plan 106 §4, plan world-011). */
   fillWaterskin?: (source: WaterSource) => void
+  /** Opens world inspection for the current gaze target (plan `ui-input-014`). */
+  openWorldInspection?: (target: Interactable) => void
+  /** Rebuilds an already-open inspection from live world state. */
+  syncWorldInspection?: () => void
   /** Consumes an item already in inventory (eat/drink/use) — reused by the
    *  world `[R]` quick-action so pickup+use is one keypress (plan 153). */
   consumeItem?: (kind: ItemKind) => void
@@ -570,6 +576,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     drinkFromWaterSource, fillWaterskin, consumeItem, startTentRest, inspectTent, inspectBedroll, inspectPlatform, sleepInHay, openTrapArmDialog, disarmTrap, collectTrap,
     startFishing, applyFishingBait, interactDryingRack, collectHive, burnHive, harvestCrop, tidyGardenPlot, waterGardenPlot,
     openContainer, openNpcCorpse, pickUpContainer, workOnWell, describeWellWork, describeWellRoofRepair, workOnWellRoofRepair, igniteStandingTorch, workOnStandingTorch, workOnPlayerTrough, fillPlayerTrough, workOnPalisade, removePalisadeSegment, supplyResidentialBuildingMaterials, workOnResidentialBuilding, cancelResidentialBuilding, sleepInOwnedHouse, repairSettlementStorage, openNoticeBoard,
+    openWorldInspection, syncWorldInspection,
     tickTerrainPreparationPreview, tickPlacementPreview, resumeTerrainPreparationWork, tickTerrainPreparationWork, isTerrainPreparationWorkActive, onTerrainPreparationWorkFinished,
     onSleepFinished, tickLodging, isLodgingActive, canCancelRest, interruptLongActivityOnDamage, onInventoryChanged, setFrameTiming, syncPointLightBudget, getPlayerObservation,
   } = deps
@@ -853,6 +860,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const interactConsumed = keyboard.consumeInteract()
       keyboard.consumeInteractRelease()
       keyboard.consumeAltInteract()
+      keyboard.consumeInspect()
       const questLogConsumed = keyboard.consumeQuestLog()
       keyboard.consumeDrop()
       keyboard.consumeRotateLeft()
@@ -864,6 +872,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const characterConsumed = keyboard.consumeCharacter()
       setHighlight(null)
       vueUi.setCycleTargetAvailable(false)
+      vueUi.setInspectAvailable(false)
       // Modal safety (plan 123): cancel any in-flight attack rather than let
       // it keep timing out/resolving while input is blocked.
       if (playerMelee.isAttacking()) {
@@ -892,6 +901,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           break
         case 'character':
           if (characterConsumed) vueUi.closeCharacterScreen()
+          break
+        case 'inspection':
           break
         case 'inventory':
           if (inventoryConsumed) inventoryScreen.close()
@@ -1378,8 +1389,11 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const skillPrompt = selectedSkill
         ? targetedSkillPrompt(selectedSkill, skillAction, target != null)
         : null
+      const inspectHint = !isTouchDevice() && target && inspectionTargetRef(target)
+        ? ' · [V] Sprawdź'
+        : ''
       npcDialog.setPrompt(
-        skillPrompt ? `${skillPrompt}${cycleHint}` : (target ? `${target.promptLabel}${cycleHint}` : null),
+        skillPrompt ? `${skillPrompt}${cycleHint}` : (target ? `${target.promptLabel}${cycleHint}${inspectHint}` : null),
         promptHighlighted,
         rangedDrawProgress,
       )
@@ -1388,6 +1402,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           ? livingTargets.length > 1
           : cycleCandidates.length > 1,
       )
+      vueUi.setInspectAvailable(inspectionTargetRef(target) !== null)
 
       if (isDebugMode()) {
         if (target?.kind === 'house') {
@@ -1436,6 +1451,10 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       }
       const interactPressed = keyboard.consumeInteract()
       const altInteractPressed = keyboard.consumeAltInteract()
+      const inspectPressed = keyboard.consumeInspect()
+      if (inspectPressed && target && inspectionTargetRef(target)) {
+        openWorldInspection?.(target)
+      }
       if (selectedSkill) {
         if (interactPressed) {
           if (target && skillAction) {
@@ -1877,6 +1896,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
       }
     }
+
+    if (vueUi.isWorldInspectionOpen()) syncWorldInspection?.()
 
     if (
       !pauseMenu.isPaused() &&

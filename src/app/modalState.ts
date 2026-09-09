@@ -26,6 +26,7 @@ export type ActiveModal =
   | 'worldMap'
   | 'skills'
   | 'character'
+  | 'inspection'
   | null
 
 export function activeModal(
@@ -59,5 +60,6 @@ export function activeModal(
   if (vueUi.isSkillsScreenOpen()) return 'skills'
   if (vueUi.isCharacterScreenOpen()) return 'character'
   if (vueUi.isWorldMapOpen()) return 'worldMap'
+  if (vueUi.isWorldInspectionOpen()) return 'inspection'
   return null
 }

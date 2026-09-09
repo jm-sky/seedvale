@@ -917,6 +917,8 @@ Generated from TypeScript imports.
 - `app/actions/placementActions.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
 - `terrain/digAction.ts`

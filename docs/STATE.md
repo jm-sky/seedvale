@@ -83,7 +83,7 @@ IndexedDB-backed (`src/persistence/`), named save slots (up to 8). `SaveData` is
 
 ### UI / input
 
-Keyboard/mouse plus mobile touch (joystick + look-drag, vanilla). Vue 3 + Tailwind v4 + `lucide-vue-next` mounts under `#vue-ui` after world boot; migration is incremental — most screens (HUD, inventory, quick actions, quest log, merchant, minimap/world map, skills, and more) are Vue, with `src/ui/create*.ts` as thin facades for the rest. The shared contextual dialog (`FlavorDialog.vue`) can carry an optional actions list beyond plain text, resolved by the gameplay layer rather than switched on interactable kind. lil-gui is hidden by default (`?debug=1`/`?gui=1`).
+Keyboard/mouse plus mobile touch (joystick + look-drag, vanilla). Vue 3 + Tailwind v4 + `lucide-vue-next` mounts under `#vue-ui` after world boot; migration is incremental — most screens (HUD, inventory, quick actions, quest log, merchant, minimap/world map, skills, world inspection, and more) are Vue, with `src/ui/create*.ts` as thin facades for the rest. Global interaction is three channels: `[E]` primary, `[R]` alternate, `[V]` inspect/details for selected construction targets (player well, terrain preparation, palisade, standing torch, residential house). Mobile shows `[Inspect] [R] [E]` with Inspect visible only for inspectable gaze targets. The shared contextual dialog (`FlavorDialog.vue`) can carry an optional actions list beyond plain text, resolved by the gameplay layer rather than switched on interactable kind. lil-gui is hidden by default (`?debug=1`/`?gui=1`).
 
 ## Important shared concepts
 

@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `items-player-020-player-built-animal-trough-and-water-storage`        | 2026-09-09 21:40:48 | —                   | `items-player`   | —          |
+| `fauna-020-player-owned-animals-and-follow-stay-behaviour`             | 2026-09-09 21:14:01 | —                   | `fauna`          | —          |
 | `npc-016-work-contracts-payment-and-employer-interaction`              | 2026-09-09 16:50:32 | —                   | `npc`            | —          |
 | `npc-011-npc-burial-and-graves`                                        | 2026-09-09 16:23:02 | —                   | `npc`            | —          |
 | `items-player-019-player-camp-repair-and-sewing-kit`                   | 2026-09-09 15:59:12 | —                   | `items-player`   | —          |

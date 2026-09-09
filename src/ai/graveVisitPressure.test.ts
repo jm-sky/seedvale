@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest'
+import type { NpcDecisionTarget } from './weatherPressure'
 import { createNpcStateRegistry } from '../settlement/npcState'
 import { damageHealth } from '../shared/HealthState'
-import { graveIdForDeceased, type NpcGraves } from '../world/npcGraves'
 import { pickActionKind } from '../simulation'
-import type { NpcDecisionTarget } from './weatherPressure'
-import { decideNpcAction } from './npcDecision'
+import { graveIdForDeceased, type NpcGraves } from '../world/npcGraves'
 import {
+  getLastGraveVisitAtDays,
   GRAVE_VISIT_COOLDOWN_DAYS,
   GRAVE_VISIT_PRESSURE,
-  getLastGraveVisitAtDays,
   graveVisitOpportunity,
   isGraveVisitCooldownExpired,
   recordGraveVisit,
   resolveGraveVisitPressure,
 } from './graveVisitPressure'
+import { decideNpcAction } from './npcDecision'
 
 function makeGraves(records: Array<{ deceasedNpcId: string, x: number, z: number, yaw?: number }>): NpcGraves {
   const byDeceased = new Map(records.map((r) => [r.deceasedNpcId, r]))

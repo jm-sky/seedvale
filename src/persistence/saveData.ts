@@ -34,8 +34,8 @@ import { QUEST_STATES, type QuestProgressEntry } from '../quests/quests'
 import { isPreparationSize, type PreparationSize } from '../terrain/terrainPreparation'
 import { CONDITION_MAX } from '../world/condition'
 import { PALISADE_REQUIRED_WORK } from '../world/palisade'
-import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
+import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent

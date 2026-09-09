@@ -2,6 +2,7 @@ import { markRaw, type Raw, reactive } from 'vue'
 import type { NpcAgent } from '../ai/NpcAgent'
 import type { ActionAvailability, ActionResult } from '../app/actions/actionContracts'
 import type { PlacementPreviewKind } from '../app/actions/placementPreviewActions'
+import type { InspectionActionId, WorldInspectionView } from '../app/inspection/worldInspectionView'
 import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
@@ -370,6 +371,14 @@ type WorldConfigScreenState = {
   onLodScaleChange: (() => void) | null
 }
 type NotesState = { open: boolean }
+type WorldInspectionState = {
+  open: boolean
+  view: WorldInspectionView | null
+  onAction: ((id: InspectionActionId) => void) | null
+  onFillContainer: ((instanceId: string) => void) | null
+  onOpen: (() => void) | null
+  onClose: (() => void) | null
+}
 type WorldMapState = { open: boolean; playerX: number; playerZ: number }
 type StatBar = { current: number, max: number }
 /** Character screen (plan 105 §"Character Screen") — presentation-only
@@ -472,11 +481,13 @@ type TouchChromeState = {
   visible: boolean
   inputEnabled: boolean
   cycleTargetAvailable: boolean
+  inspectAvailable: boolean
   onPause: (() => void) | null
   onQuickActions: (() => void) | null
   onInteract: (() => void) | null
   onInteractUp: (() => void) | null
   onAltInteract: (() => void) | null
+  onInspect: (() => void) | null
   onCycleTarget: (() => void) | null
 }
 
@@ -564,6 +575,14 @@ export const ui = reactive({
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
+  worldInspection: {
+    open: false,
+    view: null,
+    onAction: null,
+    onFillContainer: null,
+    onOpen: null,
+    onClose: null,
+  } as WorldInspectionState,
   worldMap: { open: false, playerX: 0, playerZ: 0 } as WorldMapState,
   characterScreen: {
     open: false,
@@ -622,11 +641,13 @@ export const ui = reactive({
     visible: false,
     inputEnabled: true,
     cycleTargetAvailable: false,
+    inspectAvailable: false,
     onPause: null,
     onQuickActions: null,
     onInteract: null,
     onInteractUp: null,
     onAltInteract: null,
+    onInspect: null,
     onCycleTarget: null,
   } as TouchChromeState,
   openStack: [] as string[],
@@ -1231,6 +1252,50 @@ export function openNotes(): void { ui.notes.open = true }
 export function closeNotes(): void { ui.notes.open = false }
 export function isNotesOpen(): boolean { return ui.notes.open }
 
+export function configureWorldInspection(handlers: {
+  onAction?: ((id: InspectionActionId) => void) | null
+  onFillContainer?: ((instanceId: string) => void) | null
+  onOpen?: (() => void) | null
+  onClose?: (() => void) | null
+}): void {
+  if (handlers.onAction !== undefined) ui.worldInspection.onAction = handlers.onAction
+  if (handlers.onFillContainer !== undefined) ui.worldInspection.onFillContainer = handlers.onFillContainer
+  if (handlers.onOpen !== undefined) ui.worldInspection.onOpen = handlers.onOpen
+  if (handlers.onClose !== undefined) {
+    const previous = ui.worldInspection.onClose
+    const next = handlers.onClose
+    ui.worldInspection.onClose = next
+      ? () => { previous?.(); next() }
+      : previous
+  }
+}
+
+export function openWorldInspection(view: WorldInspectionView): void {
+  const wasOpen = ui.worldInspection.open
+  ui.worldInspection.view = view
+  ui.worldInspection.open = true
+  if (!wasOpen) {
+    emitUiOpen()
+    ui.worldInspection.onOpen?.()
+  }
+}
+
+export function refreshWorldInspection(view: WorldInspectionView): void {
+  if (!ui.worldInspection.open) return
+  ui.worldInspection.view = view
+}
+
+export function closeWorldInspection(): void {
+  if (!ui.worldInspection.open) return
+  ui.worldInspection.open = false
+  ui.worldInspection.view = null
+  ui.worldInspection.onClose?.()
+}
+
+export function isWorldInspectionOpen(): boolean {
+  return ui.worldInspection.open
+}
+
 export function openWorldMap(playerX: number, playerZ: number): void {
   if (document.pointerLockElement) document.exitPointerLock()
   ui.worldMap.playerX = playerX
@@ -1492,7 +1557,7 @@ export function clearToasts(): void {
   ui.toast.items = []
 }
 
-type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onInteractUp' | 'onAltInteract' | 'onCycleTarget'>>
+type TouchChromeHandlers = Partial<Pick<TouchChromeState, 'onPause' | 'onQuickActions' | 'onInteract' | 'onInteractUp' | 'onAltInteract' | 'onInspect' | 'onCycleTarget'>>
 export function configureTouchChrome(handlers: TouchChromeHandlers): void {
   ui.touch.visible = true
   Object.assign(ui.touch, handlers)
@@ -1500,6 +1565,10 @@ export function configureTouchChrome(handlers: TouchChromeHandlers): void {
 export function setCycleTargetAvailable(available: boolean): void {
   if (ui.touch.cycleTargetAvailable === available) return
   ui.touch.cycleTargetAvailable = available
+}
+export function setInspectAvailable(available: boolean): void {
+  if (ui.touch.inspectAvailable === available) return
+  ui.touch.inspectAvailable = available
 }
 export function setTouchInputEnabled(enabled: boolean): void {
   if (ui.touch.inputEnabled === enabled) return
@@ -1509,10 +1578,12 @@ export function clearTouchChrome(): void {
   ui.touch.visible = false
   ui.touch.inputEnabled = true
   ui.touch.cycleTargetAvailable = false
+  ui.touch.inspectAvailable = false
   ui.touch.onPause = null
   ui.touch.onQuickActions = null
   ui.touch.onInteract = null
   ui.touch.onInteractUp = null
   ui.touch.onAltInteract = null
+  ui.touch.onInspect = null
   ui.touch.onCycleTarget = null
 }

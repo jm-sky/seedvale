@@ -52,6 +52,12 @@ Generated from exported TypeScript symbols.
 - `GroundActions` — type — line 53
 - `GroundActionsDeps` — type — line 77
 
+## `app/actions/inspectionActions.ts`
+
+- `createInspectionActions` — function — line 53
+- `InspectionActionDeps` — type — line 20
+- `InspectionActions` — type — line 40
+
 ## `app/actions/mountActions.ts`
 
 - `createMountActions` — function — line 44
@@ -106,10 +112,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/survivalActions.ts`
 
-- `createSurvivalActions` — function — line 152
-- `FeedableAnimal` — type — line 130
-- `feedAnimal` — function — line 143
-- `hasCarriedMilkContainer` — function — line 120
+- `createSurvivalActions` — function — line 156
+- `FeedableAnimal` — type — line 134
+- `feedAnimal` — function — line 147
+- `hasCarriedMilkContainer` — function — line 124
 - `SurvivalActionLifecycle` — type — line 84
 - `SurvivalActions` — type — line 94
 
@@ -122,8 +128,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/workContractActions.ts`
 
-- `createWorkContractActions` — function — line 102
-- `WorkContractActionDeps` — type — line 96
+- `createWorkContractActions` — function — line 107
+- `WorkContractActionDeps` — type — line 101
 - `WorkContractActions` — type — line 69
 - `WorkContractQuickActionEntry` — type — line 67
 
@@ -184,29 +190,58 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 244
+- `createApp` — function — line 245
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 214
+- `NewAppOptions` — type — line 215
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 560
+- `createGameLoop` — function — line 566
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 528
-- `GameLoopDeps` — type — line 272
+- `GameLoop` — type — line 534
+- `GameLoopDeps` — type — line 274
 
 ## `app/graphicsSettings.ts`
 
 - `createGraphicsSettings` — function — line 54
 - `GraphicsSettings` — type — line 19
 - `GraphicsSettingsDeps` — type — line 41
+
+## `app/inspection/buildWorldInspection.ts`
+
+- `buildWorldInspection` — function — line 97
+- `listWaterContainerOptions` — function — line 595
+- `liveWellWaterSource` — function — line 641
+- `WorldInspectionLookup` — type — line 80
+
+## `app/inspection/inspectionTarget.ts`
+
+- `contractTargetFor` — function — line 24
+- `inspectionTargetRef` — function — line 10
+
+## `app/inspection/worldInspectionView.ts`
+
+- `InspectionAction` — type — line 72
+- `InspectionActionId` — type — line 61
+- `InspectionContractRow` — type — line 43
+- `InspectionInfoRow` — type — line 4
+- `InspectionLiquidContainerOption` — type — line 29
+- `InspectionLiquidContainersRow` — type — line 37
+- `InspectionMaterialItem` — type — line 18
+- `InspectionMaterialsRow` — type — line 23
+- `InspectionProgressRow` — type — line 10
+- `InspectionRow` — type — line 49
+- `InspectionSection` — type — line 56
+- `InspectionTargetKind` — type — line 88
+- `InspectionTargetRef` — type — line 95
+- `WorldInspectionView` — type — line 80
 
 ## `app/interactables.ts`
 
@@ -225,14 +260,14 @@ Generated from exported TypeScript symbols.
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 126
-- `InventoryWiring` — type — line 72
-- `InventoryWiringDeps` — type — line 95
-- `MerchantInventoryView` — type — line 59
+- `createInventoryWiring` — function — line 127
+- `InventoryWiring` — type — line 73
+- `InventoryWiringDeps` — type — line 96
+- `MerchantInventoryView` — type — line 60
 
 ## `app/modalState.ts`
 
-- `activeModal` — function — line 31
+- `activeModal` — function — line 32
 - `ActiveModal` — type — line 13
 
 ## `app/npcEngagement.ts`

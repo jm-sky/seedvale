@@ -26,6 +26,8 @@ import type { SettlementFoodSourceHooks } from '../world/foodSources'
 import type { HelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import type { SettlementForestHooks } from '../world/settlementForestHooks'
 import type { WeatherState } from '../world/weather'
+import type { NpcBurialHooks } from './burialPressure'
+import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
 import type { HelperAssignment } from './helperAssignment'
 import type { ActionId, NpcPlannedAction, Phase } from './npcAction'
 import {
@@ -86,7 +88,6 @@ import {
   resolveNpcCorpsePhase,
 } from '../settlement/npcPostDeath'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
-import { ensureNpcBurialGrave } from '../world/npcGraves'
 import { householdStorageDestination, resolveHouseholdWoodStorage } from '../settlement/storageDestinations'
 import { type AgentAnimationSet, createAgentAnimationSet } from '../shared/agentAnimationSet'
 import { resolveNpcEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
@@ -145,6 +146,7 @@ import { type AgentStatusLabelController, createAgentStatusLabelController } fro
 import { gazeOpacityFactor } from '../ui/labelDistance'
 import { recordBloodHit } from '../world/bloodTraces'
 import { colliderActiveAtY } from '../world/collision'
+import { ensureNpcBurialGrave } from '../world/npcGraves'
 import { PALISADE_WORK_SESSION_HOURS, PALISADE_WORK_SESSION_SEC, palisadeRemainingWork } from '../world/palisade'
 import { CARE_MAINTAINED_THRESHOLD, HYDRATION_DROUGHT_THRESHOLD } from '../world/playerGarden'
 import {
@@ -189,6 +191,7 @@ import {
   isPlayerApproachArrived,
   isPlayerLocallyEligible,
 } from './approachPlayer'
+import { resolveBurialPressure } from './burialPressure'
 import {
   type CharacterDef,
   genderForName,
@@ -204,13 +207,10 @@ import {
   type Personality,
   pickDialogueLine,
 } from './dialogue'
-import type { NpcBurialHooks } from './burialPressure'
-import { resolveBurialPressure } from './burialPressure'
-import type { GraveVisitCandidate, NpcGraveVisitHooks } from './graveVisitPressure'
 import {
   recordGraveVisit,
-  revalidateGraveVisitCandidate,
   resolveGraveVisitPressure,
+  revalidateGraveVisitCandidate,
 } from './graveVisitPressure'
 import { healingPressure } from './healingPressure'
 import {

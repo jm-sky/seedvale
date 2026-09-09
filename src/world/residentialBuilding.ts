@@ -195,6 +195,44 @@ export function residentialBuildingRemainingWork(record: ResidentialBuildingReco
   return Math.max(0, residentialStageRequiredWork(record.kind, record.stage) - record.stageWorkProgress)
 }
 
+/** Sum of required work across every construction stage — the overall
+ *  inspection denominator (plan `ui-input-014`). Independent of the Work
+ *  Contract remaining-work authority (`residentialBuildingRemainingWork`). */
+export function residentialBuildingTotalRequiredWork(kind: ResidentialBuildingKind): number {
+  const stages = residentialBuildingDefinition(kind).stages
+  let total = 0
+  for (const stage of RESIDENTIAL_CONSTRUCTION_STAGES) total += stages[stage].requiredWork
+  return total
+}
+
+/** Hours already applied toward a finished house: completed prior stages
+ *  plus the current stage's `stageWorkProgress`. Completed houses report
+ *  the full required total. */
+export function residentialBuildingCompletedWork(record: ResidentialBuildingRecord): number {
+  const stages = residentialBuildingDefinition(record.kind).stages
+  if (!isResidentialConstructionStage(record.stage)) {
+    return residentialBuildingTotalRequiredWork(record.kind)
+  }
+  let completed = record.stageWorkProgress
+  for (const stage of RESIDENTIAL_CONSTRUCTION_STAGES) {
+    if (stage === record.stage) break
+    completed += stages[stage].requiredWork
+  }
+  return completed
+}
+
+/** Total remaining construction work until the house is complete, including
+ *  future unsupplied stages. Not a Work Contract remaining-work authority. */
+export function residentialBuildingTotalRemainingWork(record: ResidentialBuildingRecord): number {
+  return Math.max(0, residentialBuildingTotalRequiredWork(record.kind) - residentialBuildingCompletedWork(record))
+}
+
+export function residentialConstructionStageLabel(stage: ResidentialConstructionStage): string {
+  if (stage === 'foundation') return 'fundament'
+  if (stage === 'structure') return 'konstrukcja'
+  return 'dach'
+}
+
 export function residentialHomePlaceId(buildingId: string): string {
   return `home:residential:${buildingId}`
 }
@@ -336,15 +374,9 @@ export function residentialBuildingPromptLabel(record: ResidentialBuildingRecord
   const stage = record.stage as ResidentialConstructionStage
   const required = residentialStageRequiredWork(record.kind, stage)
   if (!record.materialsSupplied) {
-    return `[E] Dostarcz materiały (${stageLabel(stage)}) · [R] Anuluj budowę`
+    return `[E] Dostarcz materiały (${residentialConstructionStageLabel(stage)}) · [R] Anuluj budowę`
   }
-  return `[E] Buduj (${stageLabel(stage)} ${formatHours(record.stageWorkProgress)}/${formatHours(required)} h) · [R] Anuluj budowę`
-}
-
-function stageLabel(stage: ResidentialConstructionStage): string {
-  if (stage === 'foundation') return 'fundament'
-  if (stage === 'structure') return 'konstrukcja'
-  return 'dach'
+  return `[E] Buduj (${residentialConstructionStageLabel(stage)} ${formatHours(record.stageWorkProgress)}/${formatHours(required)} h) · [R] Anuluj budowę`
 }
 
 export function coveringPreparationSize(width: number, depth: number): 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 {

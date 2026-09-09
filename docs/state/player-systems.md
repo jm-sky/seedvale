@@ -131,6 +131,10 @@ Lifecycle: `available → advertised → active → settling → completed` (plu
 
 Both the player's own `[E]` work bouts and an accepted NPC's contract work bouts drive the *same* target through one actor-neutral `contributeWork(id, amount)` seam ("clamp to remaining, credit only accepted work") — never a duplicated per-actor progress field. This is what lets a hired NPC advance a well/torch/palisade the player is also free to work on directly. See [npc.md](./npc.md#work-and-routines) for the NPC-side discovery/evaluation/execution half (a pure scoring evaluator plus a discover→accept→travel→work-bout state machine) — that mechanism is not duplicated here.
 
+## World inspection (plan ui-input-014)
+
+`[V]` is a third global input channel (`Keyboard.ts` `inspect` / `consumeInspect()`, `KeyV`), independent of `[E]`/`[R]`. Mobile `TouchChrome.vue` shows an inspect button left of `[R] [E]` only while `ui.touch.inspectAvailable` is true for the current gaze target. Availability and the screen contents come from one app-layer resolver (`app/inspection/inspectionTarget.ts` + `buildWorldInspection.ts`) over the existing gaze `Interactable`; Vue (`WorldInspectionScreen.vue`) only renders the snapshot. v1 inspectable kinds: player well, terrain preparation, palisade, standing torch, residential house. Mutations go through existing placement/survival/contract actions; `fillWaterContainer(source, instanceId)` is the live-revalidated instance fill next to auto-select `fillWaterskin()`. `beginHireHelpForTarget` is the shared Work Contract picker entry — inspection does not create a second hiring flow. Residential overall progress uses `residentialBuildingCompletedWork` / `residentialBuildingTotalRemainingWork`; Work Contracts still read `residentialBuildingRemainingWork()` (current useful stage only). `[E]`/`[R]` bindings are unchanged, including the completed-well `[R]` repair dialog.
+
 ## Riding
 
 Any species whose `AnimalDef.mount` is set is ridable (today: horse, donkey) — the mount itself (`AnimalAgent`) stays fauna-owned and authoritative for HP/stamina/position; the player only stores a reference. `app/actions/mountActions.ts` resolves the mountable animal and applies player-side riding cost/benefit each frame via `PlayerSkills.ridingSpeedMultiplier`/`ridingStaminaDrainMultiplier`. The persisted reference is `SaveData.player.mountedAnimalId` — a livestock id specifically, since only livestock kinds have a deterministic id that survives a reload (`riding` above is the unrelated `SkillId`). See [fauna.md](./fauna.md#player--riding) for the fauna-side ownership.
@@ -173,6 +177,8 @@ src/app/actions/groundActions.ts
 src/app/actions/terrainPreparationActions.ts
 src/app/actions/workContractActions.ts
 src/app/actions/workContractPayment.ts
+src/app/actions/inspectionActions.ts
+src/app/inspection/buildWorldInspection.ts
 src/app/actions/mountActions.ts
 src/world/workContract.ts
 src/terrain/dig.ts

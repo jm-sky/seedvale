@@ -11,8 +11,11 @@ import {
   nextResidentialConstructionStage,
   RESIDENTIAL_BUILDING_DEFINITIONS,
   residentialBuildingApproachPoint,
+  residentialBuildingCompletedWork,
   type ResidentialBuildingRecord,
   residentialBuildingRemainingWork,
+  residentialBuildingTotalRemainingWork,
+  residentialBuildingTotalRequiredWork,
   residentialHomePlaceId,
   residentialStageRequirements,
   supplyResidentialStageMaterials,
@@ -131,6 +134,38 @@ describe('residential building work (plan settlements-005)', () => {
     }
     expect(record.owner).toEqual({ kind: 'player' })
     expect('householdId' in record).toBe(false)
+  })
+})
+
+describe('residential overall progress (plan ui-input-014)', () => {
+  it('counts completed prior stages plus current progress without changing remaining-work semantics', () => {
+    const blocked = unfinished()
+    expect(residentialBuildingRemainingWork(blocked)).toBe(0)
+    expect(residentialBuildingCompletedWork(blocked)).toBe(0)
+    expect(residentialBuildingTotalRemainingWork(blocked)).toBe(residentialBuildingTotalRequiredWork('small_house'))
+
+    const supplied = supplyResidentialStageMaterials(blocked)!
+    const foundation = RESIDENTIAL_BUILDING_DEFINITIONS.small_house.stages.foundation.requiredWork
+    const afterPartial = { ...supplied, stageWorkProgress: 1 }
+    expect(residentialBuildingRemainingWork(afterPartial)).toBe(foundation - 1)
+    expect(residentialBuildingCompletedWork(afterPartial)).toBe(1)
+    expect(residentialBuildingTotalRemainingWork(afterPartial)).toBe(
+      residentialBuildingTotalRequiredWork('small_house') - 1,
+    )
+  })
+
+  it('reports full required work once the house is complete', () => {
+    let record = unfinished()
+    for (const stage of ['foundation', 'structure', 'roof'] as const) {
+      record = supplyResidentialStageMaterials(record)!
+      record = applyResidentialBuildingWork(
+        record,
+        RESIDENTIAL_BUILDING_DEFINITIONS.small_house.stages[stage].requiredWork,
+      ).next
+    }
+    expect(residentialBuildingCompletedWork(record)).toBe(residentialBuildingTotalRequiredWork('small_house'))
+    expect(residentialBuildingTotalRemainingWork(record)).toBe(0)
+    expect(residentialBuildingRemainingWork(record)).toBe(0)
   })
 })
 

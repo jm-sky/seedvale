@@ -34,7 +34,8 @@ const FORWARDED_FNS = [
   'configureSkillsScreen', 'setSkillsState', 'pushSkillsState', 'setSelectedTargetedSkill', 'openSkillsScreen', 'closeSkillsScreen', 'isSkillsScreenOpen', 'toggleSkillsScreen',
   'toggleMinimap', 'setMinimapCollapsed', 'isMinimapCollapsed',
   'showToast', 'clearToasts',
-  'configureTouchChrome', 'setTouchInputEnabled', 'setCycleTargetAvailable', 'clearTouchChrome',
+  'configureTouchChrome', 'setTouchInputEnabled', 'setCycleTargetAvailable', 'setInspectAvailable', 'clearTouchChrome',
+  'configureWorldInspection', 'openWorldInspection', 'refreshWorldInspection', 'closeWorldInspection', 'isWorldInspectionOpen',
 ] as const
 
 export type VueUi = Pick<StoreModule, typeof FORWARDED_FNS[number]> & { dispose: () => void }

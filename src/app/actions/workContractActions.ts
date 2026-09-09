@@ -91,6 +91,11 @@ export type WorkContractActions = {
    *  reward → create flow `confirmContractPlacementAtAim` uses for a
    *  brand-new target. */
   openHireHelp: () => void
+  /** Inspection / shared entry for hiring help on one already-known target
+   *  (plan `ui-input-014`). Re-resolves the live record, position and current
+   *  useful remaining work before opening the picker — never trusts an
+   *  inspection snapshot. */
+  beginHireHelpForTarget: (target: ContractTarget) => void
 }
 
 export type WorkContractActionDeps = {
@@ -270,6 +275,58 @@ export function createWorkContractActions(
       .filter((candidate) => !bundle.workContracts.hasActiveContract(candidate.target))
   }
 
+  /** Live useful remaining work + position for an existing construction
+   *  target. `null` when the record is gone or currently accepts no useful
+   *  work (including a material-blocked residential stage). */
+  const resolveLiveHireTarget = (
+    target: ContractTarget,
+  ): { x: number, z: number, remainingWork: number } | null => {
+    if (target.kind === 'construction') {
+      const well = bundle.playerWells.nodes().find((entry) => entry.id === target.targetId)
+      if (!well || isWellCompleted(well)) return null
+      return { x: well.x, z: well.z, remainingWork: wellRemainingWork(well) }
+    }
+    if (target.kind === 'terrain_preparation') {
+      const record = bundle.terrainPreparations.find(target.targetId)
+      if (!record) return null
+      const remainingWork = terrainPreparationRemainingWork(record)
+      if (remainingWork <= 0) return null
+      return { x: record.center.x, z: record.center.z, remainingWork }
+    }
+    if (target.kind === 'palisade') {
+      const record = bundle.palisades.nodes().find((entry) => entry.id === target.targetId)
+      if (!record || isPalisadeConstructionComplete(record)) return null
+      return { x: record.x, z: record.z, remainingWork: palisadeRemainingWork(record) }
+    }
+    if (target.kind === 'standing_torch') {
+      const record = bundle.standingTorches.nodes().find((entry) => entry.id === target.targetId)
+      if (!record || isStandingTorchConstructionComplete(record)) return null
+      return { x: record.x, z: record.z, remainingWork: standingTorchRemainingWork(record) }
+    }
+    const house = bundle.residentialBuildings.find(target.targetId)
+    if (!house) return null
+    const remainingWork = residentialBuildingRemainingWork(house)
+    if (remainingWork <= 0) return null
+    return { x: house.x, z: house.z, remainingWork }
+  }
+
+  /** Shared hire-help entry (plan `ui-input-014`). Re-resolves the live
+   *  record, position, and current useful remaining work before opening the
+   *  existing contract-creation picker. */
+  const beginHireHelpForTarget = (target: ContractTarget): void => {
+    if (isActionBlocked(ctx)) return
+    if (bundle.workContracts.hasActiveContract(target)) {
+      toast.show('Ten cel ma już aktywne zlecenie.', 'error')
+      return
+    }
+    const live = resolveLiveHireTarget(target)
+    if (!live) {
+      toast.show('Nie można zlecić pomocy do tej pracy.', 'error')
+      return
+    }
+    beginContractCreation('Zleć pomoc', target, live.x, live.z, live.remainingWork)
+  }
+
   const openHireHelp = (): void => {
     const candidates = hireHelpCandidates()
     if (candidates.length === 0) {
@@ -283,7 +340,7 @@ export function createWorkContractActions(
         label: `${candidate.label} — pozostało ${formatHours(candidate.remainingWork)} h`,
         enabled: true,
         reasonLabel: '',
-        run: () => beginContractCreation('Zleć pomoc', candidate.target, candidate.x, candidate.z, candidate.remainingWork),
+        run: () => beginHireHelpForTarget(candidate.target),
       })),
     )
   }
@@ -333,5 +390,6 @@ export function createWorkContractActions(
     cancelContract,
     quickActionsList,
     openHireHelp,
+    beginHireHelpForTarget,
   }
 }

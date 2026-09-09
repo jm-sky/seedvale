@@ -2,6 +2,12 @@
 
 Generated from TypeScript imports.
 
+## `input/Keyboard.test.ts`
+
+**Imports**
+
+- `input/Keyboard.ts`
+
 ## `input/Keyboard.ts`
 
 **Imported by**
@@ -9,6 +15,7 @@ Generated from TypeScript imports.
 - `app/actions/actionContext.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
+- `input/Keyboard.test.ts`
 - `input/MouseLook.ts`
 - `input/createTouchControls.ts`
 - `player/PlayerController.ts`
@@ -57,6 +64,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/gameLoop.ts`
 - `input/MouseLook.ts`
 - `ui-vue/composables/useCompactMerchantLayout.ts`
 - `ui-vue/composables/useTouchScroll.ts`

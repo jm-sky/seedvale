@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { createNpcRelationships } from '../settlement/npcRelationships'
+import type { NpcDecisionTarget } from './weatherPressure'
 import {
   claimNpcCorpseForBurial,
   createActiveNpcPostDeath,
   createLegacyTerminalNpcPostDeath,
 } from '../settlement/npcPostDeath'
+import { createNpcRelationships } from '../settlement/npcRelationships'
 import { createNpcAuthoritativeState } from '../settlement/npcState'
 import { damageHealth } from '../shared/HealthState'
 import { pickActionKind } from '../simulation'
-import type { NpcDecisionTarget } from './weatherPressure'
-import { createBurialPlan } from './npcPlan'
 import { resolveBurialPressure } from './burialPressure'
+import { createBurialPlan } from './npcPlan'
 
 function makeState(id: string, opts?: { dead?: boolean, postDeath?: ReturnType<typeof createActiveNpcPostDeath> }) {
   const state = createNpcAuthoritativeState(id, 0)

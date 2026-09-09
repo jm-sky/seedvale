@@ -1,7 +1,7 @@
 # Plan: Construction Status, Inspection and Context Actions
 
 **Created:** 2026-09-09
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** polish
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~ui-input-002~~, ~~items-player-017~~, ~~npc-018~~, ~~settlements-005~~, ~~world-021~~

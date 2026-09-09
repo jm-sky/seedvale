@@ -193,6 +193,7 @@ export function createTouchControls(
     onInteract: () => { keys.interact = true },
     onInteractUp: () => { keys.interactReleased = true },
     onAltInteract: () => { keys.altInteract = true },
+    onInspect: () => { keys.inspect = true },
     onCycleTarget: () => { keys.cycleTarget = true },
   })
 

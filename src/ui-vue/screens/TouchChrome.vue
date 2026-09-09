@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BowArrow, Crosshair, Sword, Zap } from 'lucide-vue-next'
+import { BowArrow, Crosshair, Search, Sword, Zap } from 'lucide-vue-next'
 import { isTouchDevice } from '../../input/isTouchDevice'
 import { equipPrimaryMelee, equipPrimaryRanged, ui } from '../store'
 
@@ -55,7 +55,26 @@ const touch = isTouchDevice()
       >
         <Zap :size="22" />
       </button>
-      <div class="relative">
+      <div class="flex items-end gap-1">
+        <button
+          v-if="ui.touch.inspectAvailable"
+          type="button"
+          class="pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(92,180,196,0.55)] text-ink [-webkit-tap-highlight-color:transparent]"
+          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+          aria-label="Sprawdź"
+          @click="ui.touch.onInspect?.()"
+        >
+          <Search :size="20" />
+        </button>
+        <button
+          type="button"
+          class="pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(161,123,209,0.50)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
+          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+          aria-label="Interakcja alternatywna"
+          @click="ui.touch.onAltInteract?.()"
+        >
+          R
+        </button>
         <button
           type="button"
           class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
@@ -66,15 +85,6 @@ const touch = isTouchDevice()
           @pointerleave="ui.touch.onInteractUp?.()"
         >
           E
-        </button>
-        <button
-          type="button"
-          class="absolute right-full mr-1 top-2 pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(161,123,209,0.50)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
-          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
-          aria-label="Interakcja alternatywna"
-          @click="ui.touch.onAltInteract?.()"
-        >
-          R
         </button>
       </div>
     </div>

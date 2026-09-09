@@ -977,10 +977,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/residentialBuilding.ts`
 
-- `applyResidentialBuildingWork` — function — line 271
-- `coveringPreparationSize` — function — line 350
-- `createUnfinishedResidentialBuildingRecord` — function — line 235
-- `isPlayerOwnedResidentialBuilding` — function — line 202
+- `applyResidentialBuildingWork` — function — line 309
+- `coveringPreparationSize` — function — line 382
+- `createUnfinishedResidentialBuildingRecord` — function — line 273
+- `isPlayerOwnedResidentialBuilding` — function — line 240
 - `isResidentialBuildingComplete` — function — line 157
 - `isResidentialBuildingMaterialBlocked` — function — line 161
 - `isResidentialConstructionStage` — function — line 122
@@ -992,30 +992,34 @@ Generated from exported TypeScript symbols.
 - `RESIDENTIAL_BUILDING_WORK_SESSION_SEC` — const — line 141
 - `RESIDENTIAL_CONSTRUCTION_STAGES` — const — line 69
 - `RESIDENTIAL_PLACEMENT_MESSAGE` — const — line 149
-- `residentialBuildingApproachLocal` — function — line 210
-- `residentialBuildingApproachPoint` — function — line 230
+- `residentialBuildingApproachLocal` — function — line 248
+- `residentialBuildingApproachPoint` — function — line 268
+- `residentialBuildingCompletedWork` — function — line 211
 - `residentialBuildingDefinition` — function — line 118
 - `ResidentialBuildingDefinition` — type — line 60
 - `residentialBuildingFootprintRadius` — function — line 126
 - `ResidentialBuildingKind` — type — line 17
   - domain: settlements
-- `residentialBuildingLodgingId` — function — line 328
+- `residentialBuildingLodgingId` — function — line 366
 - `residentialBuildingPlaceReach` — function — line 135
-- `residentialBuildingPromptLabel` — function — line 332
+- `residentialBuildingPromptLabel` — function — line 370
 - `ResidentialBuildingRecord` — type — line 33
 - `residentialBuildingRemainingWork` — function — line 193
 - `residentialBuildingSeparation` — function — line 131
 - `ResidentialBuildingStage` — type — line 21
+- `residentialBuildingTotalRemainingWork` — function — line 226
+- `residentialBuildingTotalRequiredWork` — function — line 201
 - `ResidentialConstructionStage` — type — line 19
-- `residentialHomePlaceId` — function — line 198
+- `residentialConstructionStageLabel` — function — line 230
+- `residentialHomePlaceId` — function — line 236
 - `ResidentialOwner` — type — line 27
 - `ResidentialPlacementReason` — type — line 147
 - `ResidentialStageDefinition` — type — line 55
 - `residentialStageRequiredWork` — function — line 167
 - `residentialStageRequirements` — function — line 174
-- `ResidentialWorkContribution` — type — line 259
-- `rotateLocalToWorld` — function — line 215
-- `supplyResidentialStageMaterials` — function — line 321
+- `ResidentialWorkContribution` — type — line 297
+- `rotateLocalToWorld` — function — line 253
+- `supplyResidentialStageMaterials` — function — line 359
 
 ## `world/residentialBuildingProp.ts`
 

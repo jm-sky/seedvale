@@ -95,6 +95,7 @@ Generated from TypeScript imports.
 
 - `app/actions/containerActions.ts`
 - `app/actions/gatheringActions.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`
 - `app/gameLoop.ts`
@@ -143,6 +144,7 @@ Generated from TypeScript imports.
 - `ai/npcVoiceLines.ts`
 - `app/actions/actionContracts.ts`
 - `app/actions/placementPreviewActions.ts`
+- `app/inspection/worldInspectionView.ts`
 - `audio/audioSettings.ts`
 - `audio/createWorldAudio.ts`
 - `audio/uiSounds.ts`

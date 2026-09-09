@@ -18,7 +18,7 @@ Generated from exported TypeScript symbols.
 
 ## `input/Keyboard.ts`
 
-- `createKeyboard` — function — line 108
+- `createKeyboard` — function — line 113
 - `KeyState` — type — line 1
 
 ## `input/MouseLook.ts`

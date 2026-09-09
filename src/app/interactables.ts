@@ -17,6 +17,7 @@ import type { Palisades } from '../world/createPalisades'
 import type { PlacedContainers } from '../world/createPlacedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
+import type { PlayerTroughs } from '../world/createPlayerTroughs'
 import type { PlayerWells } from '../world/createPlayerWells'
 import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { SleepingUtilities } from '../world/createSleepingUtilities'
@@ -40,14 +41,13 @@ import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifec
 import { isDryingComplete } from '../world/dryingRacks'
 import { isPalisadeConstructionComplete, palisadePromptLabel } from '../world/palisade'
 import { gardenPlotPromptLabel, resolveCultivationCare } from '../world/playerGarden'
+import { isPlayerTroughConstructionComplete, playerTroughPromptLabel } from '../world/playerTrough'
 import { isWellCompleted, isWellWaterAvailable, resolveWellRoofCondition, wellPromptLabel, wellWaterSource } from '../world/playerWell'
 import {
   isPlayerOwnedResidentialBuilding,
   isResidentialBuildingComplete,
   residentialBuildingPromptLabel,
 } from '../world/residentialBuilding'
-import type { PlayerTroughs } from '../world/createPlayerTroughs'
-import { isPlayerTroughConstructionComplete, playerTroughPromptLabel } from '../world/playerTrough'
 import { isStandingTorchConstructionComplete, standingTorchPromptLabel } from '../world/standingTorch'
 import { isChoppableStage } from '../world/treeLifecycle'
 import { createWaterSource, type WaterBodyKind, type WaterQuality } from '../world/WaterSource'

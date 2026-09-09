@@ -95,6 +95,21 @@ import {
   WATERING_LITRES,
 } from '../../world/playerGarden'
 import {
+  isPlayerTroughConstructionComplete,
+  PLAYER_TROUGH_FILL_DURATION_SEC,
+  PLAYER_TROUGH_FOOTPRINT_RADIUS,
+  PLAYER_TROUGH_MATERIAL_REQUIREMENTS,
+  PLAYER_TROUGH_PLACE_DURATION_SEC,
+  PLAYER_TROUGH_PLACE_REACH,
+  PLAYER_TROUGH_PLACEMENT_MESSAGE,
+  PLAYER_TROUGH_SEPARATION,
+  PLAYER_TROUGH_WORK_SESSION_HOURS,
+  PLAYER_TROUGH_WORK_SESSION_SEC,
+  playerTroughFreeCapacity,
+  type PlayerTroughPlacementReason,
+  playerTroughRemainingWork,
+} from '../../world/playerTrough'
+import {
   activeWellStage,
   advanceWellConstruction,
   formatWorkDuration,
@@ -168,21 +183,6 @@ import {
   type StandingTorchPlacementReason,
   standingTorchRemainingWork,
 } from '../../world/standingTorch'
-import {
-  isPlayerTroughConstructionComplete,
-  PLAYER_TROUGH_FILL_DURATION_SEC,
-  PLAYER_TROUGH_FOOTPRINT_RADIUS,
-  PLAYER_TROUGH_MATERIAL_REQUIREMENTS,
-  PLAYER_TROUGH_PLACE_DURATION_SEC,
-  PLAYER_TROUGH_PLACE_REACH,
-  PLAYER_TROUGH_PLACEMENT_MESSAGE,
-  PLAYER_TROUGH_SEPARATION,
-  PLAYER_TROUGH_WORK_SESSION_HOURS,
-  PLAYER_TROUGH_WORK_SESSION_SEC,
-  playerTroughFreeCapacity,
-  type PlayerTroughPlacementReason,
-  playerTroughRemainingWork,
-} from '../../world/playerTrough'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { placementAimSite } from './placementYaw'
 

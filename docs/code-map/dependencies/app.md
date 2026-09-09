@@ -34,6 +34,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
@@ -55,6 +56,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/cookMealIntent.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/userActions.ts`
@@ -251,6 +253,25 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/createApp.ts`
 
+## `app/actions/inspectionActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `app/actions/actionContracts.ts`
+- `app/actions/placementActions.ts`
+- `app/inspection/buildWorldInspection.ts`
+- `app/inspection/inspectionTarget.ts`
+- `app/inspection/worldInspectionView.ts`
+- `interaction/Interactable.ts`
+- `ui-vue/mount.ts`
+- `world/WaterSource.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+
 ## `app/actions/mountActions.ts`
 
 **Imports**
@@ -308,11 +329,13 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/containerActions.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/placementPreviewActions.ts`
 - `app/actions/placementPreviewContract.test.ts`
 - `app/actions/terrainPreparationActions.ts`
 - `app/actions/workContractActions.ts`
 - `app/createApp.ts`
+- `app/inspection/buildWorldInspection.ts`
 - `app/userActions.ts`
 
 ## `app/actions/placementPreviewActions.ts`
@@ -624,6 +647,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.ts`
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
+- `app/actions/inspectionActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
@@ -766,6 +790,7 @@ Generated from TypeScript imports.
 - `app/actions/mountActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
+- `app/inspection/inspectionTarget.ts`
 - `app/interactables.ts`
 - `app/modalState.ts`
 - `app/restCampSequence.ts`
@@ -795,6 +820,7 @@ Generated from TypeScript imports.
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `input/createTouchControls.ts`
+- `input/isTouchDevice.ts`
 - `interaction/Interactable.ts`
 - `interaction/findInteractionTarget.ts`
 - `interaction/resolveInteraction.ts`
@@ -878,6 +904,70 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+
+## `app/inspection/buildWorldInspection.test.ts`
+
+**Imports**
+
+- `app/inspection/buildWorldInspection.ts`
+- `app/inspection/inspectionTarget.ts`
+- `interaction/Interactable.ts`
+- `items/Inventory.ts`
+- `items/itemInstances.ts`
+- `terrain/terrainPreparation.ts`
+- `world/palisade.ts`
+- `world/playerWell.ts`
+- `world/residentialBuilding.ts`
+- `world/standingTorch.ts`
+- `world/wellGroundwater.ts`
+- `world/workContract.ts`
+
+## `app/inspection/buildWorldInspection.ts`
+
+**Imports**
+
+- `app/actions/placementActions.ts`
+- `app/inspection/worldInspectionView.ts`
+- `items/Inventory.ts`
+- `items/constructionMaterials.ts`
+- `items/itemInstances.ts`
+- `items/items.ts`
+- `items/liquidContainer.ts`
+- `terrain/terrainPreparation.ts`
+- `world/WaterSource.ts`
+- `world/palisade.ts`
+- `world/playerWell.ts`
+- `world/residentialBuilding.ts`
+- `world/standingTorch.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `app/actions/inspectionActions.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+
+## `app/inspection/inspectionTarget.ts`
+
+**Imports**
+
+- `app/inspection/worldInspectionView.ts`
+- `interaction/Interactable.ts`
+- `world/workContract.ts`
+
+**Imported by**
+
+- `app/actions/inspectionActions.ts`
+- `app/gameLoop.ts`
+- `app/inspection/buildWorldInspection.test.ts`
+
+## `app/inspection/worldInspectionView.ts`
+
+**Imported by**
+
+- `app/actions/inspectionActions.ts`
+- `app/inspection/buildWorldInspection.ts`
+- `app/inspection/inspectionTarget.ts`
+- `ui-vue/store.ts`
 
 ## `app/interactables.test.ts`
 

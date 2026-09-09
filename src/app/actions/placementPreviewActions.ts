@@ -202,9 +202,9 @@ export function createPlacementPreviewActions(
       case 'mediumHouse': return placement.previewMediumHousePlacement(objectYaw)
       case 'palisade': return placement.previewPalisadePlacement(objectYaw)
       case 'platform': return placement.previewPlatformPlacement(objectYaw)
+      case 'playerTrough': return placement.previewPlayerTroughPlacement()
       case 'smallHouse': return placement.previewSmallHousePlacement(objectYaw)
       case 'standingTorch': return placement.previewStandingTorchPlacement()
-      case 'playerTrough': return placement.previewPlayerTroughPlacement()
       case 'tent': return placement.previewTentPlacement(objectYaw)
       case 'well': return placement.previewWellPlacement()
       case 'workContract': return workContract.previewContractPlacement()
@@ -236,9 +236,9 @@ export function createPlacementPreviewActions(
         placement.placePlatformAtAim(objectYaw, notifyPlacement(lifecycle, 'platform'))
         return
       }
+      case 'playerTrough': placement.placePlayerTroughAtAim(); return
       case 'smallHouse': placement.placeSmallHouseAtAim(objectYaw); return
       case 'standingTorch': placement.placeStandingTorchAtAim(); return
-      case 'playerTrough': placement.placePlayerTroughAtAim(); return
       case 'tent': {
         const lifecycle = intentLifecycle
         intentLifecycle = null
