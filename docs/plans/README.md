@@ -93,7 +93,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `quests-progression-006-settlement-rat-infestation.md`                   | -       | 🔴 | M      | fauna-016, settlements-npcs-012, quests-progression-002 |
 | 💡 `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | -       | 🟡 | S      | ~~quests-progression-001~~ |
 | 💡 `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | -       | 🔴 | M      | -      |
-| ◼️ `npc-028-work-contracts-multiple-workers.md`                             | -       | 🔴 | M      | ~~npc-018~~ |
+| 💡 `npc-028-work-contracts-multiple-workers.md`                             | -       | 🔴 | M      | ~~npc-018~~ |
 | ◼️ `world-020-world-structure-condition-and-degradation.md`                 | -       | 🔴 | M      | items-player-018 |
 | ◼️ `world-021-world-structure-repair-work-foundation.md`                    | -       | 🔴 | M      | world-020 |
 

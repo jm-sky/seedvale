@@ -1,13 +1,12 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-09 07:29:39  
+> Date: 2026-09-09 07:51:35  
 
 ## PLANS
 
 - `npc-004-npc-genealogy-lineages.md`
 - `npc-027-spatial-context-and-cave-traversal.md`
-- `npc-028-work-contracts-multiple-workers.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-017-production-demand-and-economic-pressures.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
@@ -67,37 +66,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/npc-027-spatial-context-and-cave-traversal-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `npc-028-work-contracts-multiple-workers.md`
-
-Prompt:
-
-```
-Zrób review planu `npc-028-work-contracts-multiple-workers.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/npc-028-work-contracts-multiple-workers.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/npc-028-work-contracts-multiple-workers-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
