@@ -255,6 +255,7 @@ Generated from TypeScript imports.
 - `app/actions/fullCampIntent.ts`
 - `app/actions/placementActions.ts`
 - `items/constructionMaterials.test.ts`
+- `world/createPlayerWells.ts`
 - `world/palisade.test.ts`
 - `world/palisade.ts`
 - `world/playerWell.ts`

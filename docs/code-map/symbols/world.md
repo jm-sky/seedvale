@@ -380,9 +380,9 @@ Generated from exported TypeScript symbols.
 
 ## `world/createPlayerWells.ts`
 
-- `createPlayerWells` — function — line 66
-- `PlayerWellEntry` — type — line 18
-- `PlayerWells` — type — line 20
+- `createPlayerWells` — function — line 89
+- `PlayerWellEntry` — type — line 22
+- `PlayerWells` — type — line 24
 
 ## `world/createRiverWater.ts`
 
@@ -832,51 +832,64 @@ Generated from exported TypeScript symbols.
 
 ## `world/playerWell.ts`
 
-- `activeWellStage` — function — line 397
-- `advanceWellConstruction` — function — line 179
-- `applyWellRoofConditionDelta` — function — line 337
+- `activeWellStage` — function — line 542
+- `advanceWellConstruction` — function — line 317
+- `applyWellRoofConditionDelta` — function — line 477
   - domain: world
-- `formatHours` — function — line 454
-- `getWellPitWorkHours` — function — line 85
-- `hasWellRoofCondition` — function — line 264
-- `initializeWellRoofCondition` — function — line 283
+- `applyWellRoofRepairWork` — function — line 272
   - domain: world
-- `initialWellRoofCondition` — function — line 270
-- `isWellCompleted` — function — line 243
-- `isWellStageWorkComplete` — function — line 234
-- `isWellWaterAvailable` — function — line 358
-- `NearbyPlayerWellLookup` — type — line 484
-- `nextWellStage` — function — line 229
-- `PlayerWellRecord` — type — line 36
-- `resolveWellRoofCondition` — function — line 298
+- `beginWellRoofRepair` — function — line 235
   - domain: world
-- `WELL_FOOTPRINT_RADIUS` — const — line 414
-- `WELL_PLACE_DURATION_SEC` — const — line 420
-- `WELL_PLACE_REACH` — const — line 417
-- `WELL_PLACEMENT_MESSAGE` — const — line 404
-- `WELL_ROOF_PASSIVE_DECAY_PER_DAY` — const — line 251
-- `WELL_ROOF_RAIN_DECAY_PER_DAY` — const — line 252
-- `WELL_ROOF_SIM_WINDOW_DAYS` — const — line 254
-- `WELL_ROOF_SNOW_DECAY_PER_DAY` — const — line 253
-- `WELL_SEPARATION` — const — line 415
-- `WELL_STAGE_CAPABILITY` — const — line 120
-- `WELL_STAGE_COST` — const — line 108
-- `WELL_STAGE_START_PROMPT` — const — line 438
-- `WELL_STAGE_WORK_HOURS` — const — line 71
-- `WELL_WORK_LABEL` — const — line 445
-- `WELL_WORK_SESSION_HOURS` — const — line 435
-- `WELL_WORK_SESSION_SEC` — const — line 426
-- `WellMaterialCost` — type — line 102
-- `WellPlacementReason` — type — line 402
-- `wellPromptLabel` — function — line 466
-- `wellRemainingWork` — function — line 214
-- `wellRoofProtectionFactor` — function — line 325
-- `WellStage` — type — line 29
-- `wellStageCapabilities` — function — line 133
-- `wellStageRequirements` — function — line 145
-- `wellStageWorkHours` — function — line 98
-- `wellWaterSource` — function — line 370
-- `WellWorkOutcome` — type — line 166
+- `formatHours` — function — line 602
+- `formatWorkDuration` — function — line 607
+- `getWellPitWorkHours` — function — line 89
+- `hasActiveWellRoofRepair` — function — line 181
+- `hasWellRoofCondition` — function — line 402
+- `initializeWellRoofCondition` — function — line 421
+  - domain: world
+- `initialWellRoofCondition` — function — line 408
+- `isWellCompleted` — function — line 381
+- `isWellStageWorkComplete` — function — line 372
+- `isWellWaterAvailable` — function — line 499
+- `NearbyPlayerWellLookup` — type — line 644
+- `nextWellStage` — function — line 367
+- `PlayerWellRecord` — type — line 37
+- `quoteWellRoofRepair` — function — line 208
+  - domain: world
+- `resolveWellRoofCondition` — function — line 436
+  - domain: world
+- `WELL_FOOTPRINT_RADIUS` — const — line 559
+- `WELL_PLACE_DURATION_SEC` — const — line 565
+- `WELL_PLACE_REACH` — const — line 562
+- `WELL_PLACEMENT_MESSAGE` — const — line 549
+- `WELL_ROOF_PASSIVE_DECAY_PER_DAY` — const — line 389
+- `WELL_ROOF_RAIN_DECAY_PER_DAY` — const — line 390
+- `WELL_ROOF_REPAIR_COST_FACTOR` — const — line 160
+- `WELL_ROOF_REPAIR_WORK_LABEL` — const — line 583
+- `WELL_ROOF_SIM_WINDOW_DAYS` — const — line 392
+- `WELL_ROOF_SNOW_DECAY_PER_DAY` — const — line 391
+- `WELL_SEPARATION` — const — line 560
+- `WELL_STAGE_CAPABILITY` — const — line 124
+- `WELL_STAGE_COST` — const — line 112
+- `WELL_STAGE_START_PROMPT` — const — line 586
+- `WELL_STAGE_WORK_HOURS` — const — line 75
+- `WELL_WATER_UNAVAILABLE_DURING_REPAIR` — const — line 505
+- `WELL_WORK_LABEL` — const — line 593
+- `WELL_WORK_SESSION_HOURS` — const — line 580
+- `WELL_WORK_SESSION_SEC` — const — line 571
+- `WellMaterialCost` — type — line 106
+- `WellPlacementReason` — type — line 547
+- `wellPromptLabel` — function — line 619
+- `wellRemainingWork` — function — line 352
+- `wellRoofProtectionFactor` — function — line 465
+- `WellRoofRepairQuote` — type — line 162
+- `WellRoofRepairStartOutcome` — type — line 169
+- `WellStage` — type — line 30
+- `wellStageCapabilities` — function — line 137
+- `wellStageRequirements` — function — line 149
+- `wellStageWorkHours` — function — line 102
+- `wellWaterSource` — function — line 515
+- `WellWorkOutcome` — type — line 304
 
 ## `world/playerWellProp.ts`
 
@@ -893,6 +906,15 @@ Generated from exported TypeScript symbols.
 - `POINT_LIGHT_PROTECT_RADIUS` — const — line 42
 - `PointLightBudget` — type — line 71
 - `PointLightBudgetSnapshot` — type — line 44
+
+## `world/repair.ts`
+
+- `applyRepairWork` — function — line 39
+  - domain: world
+- `isRepairComplete` — function — line 27
+- `RepairProgress` — type — line 11
+  - domain: world
+- `repairRemainingWork` — function — line 23
 
 ## `world/riverGeometry.ts`
 

@@ -870,6 +870,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `assets/loadGltf.ts`
+- `items/constructionMaterials.ts`
 - `player/PlayerController.ts`
 - `settlement/props.ts`
 - `world/collision.ts`
@@ -1806,6 +1807,7 @@ Generated from TypeScript imports.
 - `items/tentPlacement.ts`
 - `world/WaterSource.ts`
 - `world/condition.ts`
+- `world/repair.ts`
 - `world/weather.ts`
 - `world/wellGroundwater.ts`
 
@@ -1816,6 +1818,7 @@ Generated from TypeScript imports.
 - `app/actions/workContractActions.ts`
 - `app/busyChannelDurations.test.ts`
 - `app/createApp.ts`
+- `app/gameLoop.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `interaction/Interactable.ts`
@@ -1860,6 +1863,21 @@ Generated from TypeScript imports.
 - `settlement/createSettlement.ts`
 - `world/createStandingTorches.ts`
 - `world/pointLightBudget.test.ts`
+
+## `world/repair.test.ts`
+
+**Imports**
+
+- `world/repair.ts`
+
+## `world/repair.ts`
+
+**Imported by**
+
+- `app/actions/placementActions.ts`
+- `persistence/saveData.ts`
+- `world/playerWell.ts`
+- `world/repair.test.ts`
 
 ## `world/restCancel.test.ts`
 

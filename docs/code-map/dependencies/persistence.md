@@ -61,6 +61,7 @@ Generated from TypeScript imports.
 - `world/map/mapTypes.ts`
 - `world/palisade.ts`
 - `world/playerWell.ts`
+- `world/repair.ts`
 - `world/sleepingUtilities.ts`
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`

@@ -15,7 +15,7 @@ Generated from exported TypeScript symbols.
 
 - `formatSettlementStorageLines` — function — line 53
 - `InteractionOutcome` — type — line 14
-- `resolveInteraction` — function — line 109
+- `resolveInteraction` — function — line 110
 
 ## `interaction/treeInspection.ts`
 

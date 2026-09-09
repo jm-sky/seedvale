@@ -292,6 +292,7 @@ Generated from TypeScript imports.
 - `world/plantedTrees.ts`
 - `world/playerGarden.ts`
 - `world/playerWell.ts`
+- `world/repair.ts`
 - `world/sleepingUtilities.ts`
 - `world/sleepingUtilityProp.ts`
 - `world/standingTorch.ts`
@@ -802,6 +803,7 @@ Generated from TypeScript imports.
 - `world/foliageWind.ts`
 - `world/groundFog.ts`
 - `world/map/mapDiscovery.ts`
+- `world/playerWell.ts`
 - `world/timeSkip.ts`
 - `world/weather.ts`
 - `world/weatherParticles.ts`

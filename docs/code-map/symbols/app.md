@@ -60,17 +60,18 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/placementActions.ts`
 
-- `createPlacementActions` — function — line 342
-- `evaluatePlacementSite` — function — line 203
-- `GroundPlacementDefinition` — type — line 186
+- `createPlacementActions` — function — line 361
+- `evaluatePlacementSite` — function — line 209
+- `GroundPlacementDefinition` — type — line 192
   - domain: world
-- `GroundPlacementSite` — type — line 170
-- `PlacementActions` — type — line 236
-- `PlacementBlocker` — type — line 145
-- `PlacementMutationLifecycle` — type — line 197
-- `PlacementPreviewResult` — type — line 156
-- `previewGroundPlacement` — function — line 213
-- `WellWorkView` — type — line 229
+- `GroundPlacementSite` — type — line 176
+- `PlacementActions` — type — line 251
+- `PlacementBlocker` — type — line 151
+- `PlacementMutationLifecycle` — type — line 203
+- `PlacementPreviewResult` — type — line 162
+- `previewGroundPlacement` — function — line 219
+- `WellRoofRepairView` — type — line 242
+- `WellWorkView` — type — line 235
 
 ## `app/actions/placementPreviewActions.ts`
 
@@ -186,13 +187,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 534
+- `createGameLoop` — function — line 544
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 502
-- `GameLoopDeps` — type — line 267
+- `GameLoop` — type — line 512
+- `GameLoopDeps` — type — line 268
 
 ## `app/graphicsSettings.ts`
 
@@ -202,10 +203,10 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 910
-- `buildDigTarget` — function — line 857
+- `buildCombatTarget` — function — line 902
+- `buildDigTarget` — function — line 849
 - `buildInteractables` — function — line 312
-- `collectItem` — function — line 957
+- `collectItem` — function — line 949
 - `COMBAT_TARGET_CONE_DOT` — const — line 80
 - `COMBAT_TARGET_RANGE` — const — line 65
 - `CombatAimMode` — type — line 70
