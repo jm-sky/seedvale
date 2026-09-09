@@ -13,6 +13,7 @@
  * and implementation notes for why a second utility engine is out of scope.
  */
 export type NpcStrategyId =
+  | 'personalFood'
   | 'householdFood'
   | 'economyWithdraw'
   | 'householdExchange'
@@ -20,6 +21,7 @@ export type NpcStrategyId =
   | 'nearbyFoodSource'
   | 'gardenGather'
   | 'playerStorageDelivery'
+  | 'personalWater'
   | 'householdWater'
   | 'well'
   | 'fetchDeposit'
@@ -61,12 +63,17 @@ export type FoodStrategyContext = {
   /** Local resource exchange — a same-settlement household currently has
    *  real surplus food this household's real shortage can claim. */
   householdExchangeAvailable: boolean
+  /** Usable food already on this NPC's authoritative `personalInventory`
+   *  (plan npc-017) — beats a trip home when the worker is already carrying
+   *  provisions. */
+  personalFoodAvailable: boolean
 }
 
 /**
  * Food's vertical slice (ai-003 §2, extended by plan 167 and
- * settlements-npcs-005): `playerStorageDelivery` (only when eligible, see
- * `FoodStrategyContext` above) → `householdFood` → `economyWithdraw` →
+ * settlements-npcs-005, npc-017): `playerStorageDelivery` (only when eligible,
+ * see `FoodStrategyContext` above) → `personalFood` → `householdFood` →
+ * `economyWithdraw` →
  * `householdExchange` → `hunt` (hunters only) → `nearbyFoodSource` →
  * `gardenGather`. The two local-exchange strategies sit right after the
  * household's own pantry and before hunting/foraging/the abstract garden —
@@ -79,6 +86,7 @@ export type FoodStrategyContext = {
 export function getFoodStrategyCandidates(ctx: FoodStrategyContext): NpcStrategyCandidate[] {
   const candidates: NpcStrategyCandidate[] = []
   if (ctx.deliveryAvailable) candidates.push({ id: 'playerStorageDelivery', available: true })
+  candidates.push({ id: 'personalFood', available: ctx.personalFoodAvailable })
   candidates.push({ id: 'householdFood', available: ctx.householdHasFood })
   candidates.push({ id: 'economyWithdraw', available: ctx.economyWithdrawAvailable })
   candidates.push({ id: 'householdExchange', available: ctx.householdExchangeAvailable })
@@ -90,12 +98,17 @@ export function getFoodStrategyCandidates(ctx: FoodStrategyContext): NpcStrategy
 
 export type WaterStrategyContext = {
   householdHasWater: boolean
+  /** A non-empty personal liquid container (plan npc-017) — beats a trip to
+   *  household stock or a distant well when water is already on the worker. */
+  personalWaterAvailable: boolean
 }
 
-/** Personal thirst (`NeedId.water`) — household reserve first, the well
- *  (queued or not) is the existing unconditional fallback. */
+/** Personal thirst (`NeedId.water`) — personal container first (npc-017),
+ *  then household reserve, then the well (queued or not) as the unconditional
+ *  fallback. */
 export function getWaterStrategyCandidates(ctx: WaterStrategyContext): NpcStrategyCandidate[] {
   return [
+    { id: 'personalWater', available: ctx.personalWaterAvailable },
     { id: 'householdWater', available: ctx.householdHasWater },
     { id: 'well', available: true },
   ]

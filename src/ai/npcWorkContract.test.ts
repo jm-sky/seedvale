@@ -30,6 +30,13 @@ function baseInput(overrides: Partial<WorkContractEvaluationInput> = {}): WorkCo
     hasWorkplace: true,
     dayLengthSec: 600,
     walkSpeed: 2.4,
+    hunger: 0.2,
+    thirst: 0.2,
+    personalFoodUnits: 0,
+    personalDrinkPortions: 0,
+    householdFoodUnits: 3,
+    householdWaterUnits: 3,
+    canFillWaterskin: false,
     ...overrides,
   }
 }
@@ -183,5 +190,16 @@ describe('selectBestWorkContract', () => {
     const { best, scored } = selectBestWorkContract([], baseInput())
     expect(best).toBeNull()
     expect(scored).toEqual([])
+  })
+
+  it('rejects obviously non-survivable remote contracts when supplies are empty', () => {
+    const farAway = makeContract(200, 5000, 5000)
+    const { best } = selectBestWorkContract([farAway], baseInput({
+      householdFoodUnits: 0,
+      householdWaterUnits: 0,
+      hunger: 0.6,
+      thirst: 0.6,
+    }))
+    expect(best).toBeNull()
   })
 })

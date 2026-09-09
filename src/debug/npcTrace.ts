@@ -85,6 +85,14 @@ export type NpcTraceEvent =
   | { simTime: number; type: 'contract.invalidated'; contractId: string; reason: 'missingTarget' }
   | { simTime: number; type: 'contract.workCompleted'; contractId: string }
   | { simTime: number; type: 'contract.paymentRequested'; contractId: string }
+  | {
+    simTime: number
+    type: 'contract.provisioned'
+    contractId: string
+    foodProvisioned: number
+    drinksAdded: number
+    failureReason: string | null
+  }
 
 export type NpcTraceEventType = NpcTraceEvent['type']
 

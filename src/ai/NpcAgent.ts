@@ -62,8 +62,11 @@ import {
   WOODCUTTING_PRODUCTION,
 } from '../economy'
 import { CONSTRUCTION_MATERIAL_RADIUS, consumeMaterial, hasMaterial } from '../items/constructionMaterials'
+import { foodItemCount, takeOneFoodItem } from '../items/foodItems'
 import { Inventory } from '../items/Inventory'
 import { ITEM_CATALOG } from '../items/itemCatalog'
+import { isLiquidContainerInstance } from '../items/itemInstances'
+import { drinkFromLiquidContainer } from '../items/liquidContainer'
 import { type AgentProfile, DEFAULT_CELL_SIZE, findPath, type NavigationQuery, type PathPoint } from '../navigation/navigation'
 import { beginActivePath, endActivePath, recordPathRequest, recordRepath } from '../navigation/navigationStats'
 import {
@@ -261,6 +264,14 @@ import {
   resetMovementWatchdog,
   tickMovementWatchdog,
 } from './npcMovementWatchdog'
+import {
+  buildContractProvisionContext,
+  countPersonalDrinkPortions,
+  countPersonalFood,
+  findDrinkablePersonalWaterContainer,
+  provisionContractSupplies,
+  readContractProvisionAvailability,
+} from './npcPersonalProvisions'
 import {
   blockPlan,
   createNpcPlan,
@@ -549,6 +560,12 @@ export type NpcInspectionSnapshot = {
     cleanupReason: NpcPostDeathState['cleanupReason']
   } | null
   household: { food: number, wood: number, water: number } | null
+  /** Authoritative personal food/water on the worker (plan npc-017). */
+  personalProvisions?: {
+    foodUnits: number
+    drinkPortions: number
+    lastProvisionFailureReason: string | null
+  }
   frozen: boolean
 }
 
@@ -1225,6 +1242,8 @@ export class NpcAgent {
   /** Transient nearby-player approach for a payable claim. Never persisted. */
   private paymentApproachIntent: ApproachPlayerIntent | null = null
   private paymentApproachInterruptReason: string | null = null
+  /** Last bounded contract-provision failure, if any (plan npc-017). */
+  private lastProvisionFailureReason: string | null = null
   /** The one construction target kind a work contract can reference today
    *  (plan npc-015 §7) — NPC construction execution advances this same
    *  world-owned record the player's own `[E]` well-work would, through the
@@ -1643,6 +1662,11 @@ export class NpcAgent {
             water: this.household.water.current,
           }
         : null,
+      personalProvisions: {
+        foodUnits: countPersonalFood(this.personalInventory),
+        drinkPortions: countPersonalDrinkPortions(this.personalInventory),
+        lastProvisionFailureReason: this.lastProvisionFailureReason,
+      },
       frozen: this.frozen,
     }
   }
@@ -3385,6 +3409,7 @@ export class NpcAgent {
       const household = this.household
       const selected = this.selectAndTraceStrategy('water', getWaterStrategyCandidates({
         householdHasWater: household?.water.has(WATER_DRINK_FROM_STOCK_AMOUNT) ?? false,
+        personalWaterAvailable: findDrinkablePersonalWaterContainer(this.personalInventory) != null,
       }))
       switch (selected) {
         case 'householdWater': {
@@ -3395,6 +3420,24 @@ export class NpcAgent {
             durationSec: 1.2 * this.waitMultiplier,
             onComplete: () => {
               household.water.remove(WATER_DRINK_FROM_STOCK_AMOUNT)
+              relieveNeed(this.needs, 'water')
+            },
+          })
+          return
+        }
+        case 'personalWater': {
+          const container = findDrinkablePersonalWaterContainer(this.personalInventory)
+          if (!container) break
+          const containerId = container.id
+          this.startAction({
+            kind: 'drink',
+            destination: copyVec3(this.mesh.position),
+            durationSec: 0.8 * this.waitMultiplier,
+            onComplete: () => {
+              this.personalInventory.updateInstance(containerId, (current) => {
+                if (!isLiquidContainerInstance(current)) return current
+                return drinkFromLiquidContainer(current) ?? current
+              })
               relieveNeed(this.needs, 'water')
             },
           })
@@ -3528,6 +3571,19 @@ export class NpcAgent {
         case 'nearbyFoodSource':
           this.beginRealFoodGathering(household)
           return
+        case 'personalFood': {
+          if (foodItemCount(this.personalInventory) <= 0) break
+          this.startAction({
+            kind: 'eat',
+            destination: copyVec3(this.mesh.position),
+            durationSec: 0.8 * this.waitMultiplier,
+            onComplete: () => {
+              takeOneFoodItem(this.personalInventory, this.nowDays())
+              relieveNeed(this.needs, 'food')
+            },
+          })
+          return
+        }
         // Helper resource delivery (plan 167) — only ever selected (see
         // `computeDeliveryAvailable`) when this NPC isn't genuinely hungry,
         // so real hunger always keeps priority over donating surplus
@@ -3668,6 +3724,7 @@ export class NpcAgent {
       deliveryAvailable: this.computeDeliveryAvailable(),
       economyWithdrawAvailable: this.computeEconomyWithdrawAvailable('food'),
       householdExchangeAvailable: this.computeHouseholdExchangeAvailable('food'),
+      personalFoodAvailable: foodItemCount(this.personalInventory) > 0,
     })
   }
 
@@ -4163,6 +4220,7 @@ export class NpcAgent {
     if (!settlementId) return false
     const candidates = contracts.discoverableAt(noticeBoardId(settlementId))
     if (candidates.length === 0) return false
+    const provisionAvailability = readContractProvisionAvailability(this.personalInventory, this.household)
     const { best, scored } = selectBestWorkContract(candidates, {
       npcX: this.mesh.position.x,
       npcZ: this.mesh.position.z,
@@ -4171,6 +4229,13 @@ export class NpcAgent {
       hasWorkplace: this.workplace != null,
       dayLengthSec: this.dayLengthSec,
       walkSpeed: WALK_SPEED,
+      hunger: this.needs.hunger,
+      thirst: this.needs.thirst,
+      personalFoodUnits: provisionAvailability.personalFoodUnits,
+      personalDrinkPortions: provisionAvailability.personalDrinkPortions,
+      householdFoodUnits: provisionAvailability.householdFoodUnits,
+      householdWaterUnits: provisionAvailability.householdWaterUnits,
+      canFillWaterskin: provisionAvailability.canFillWaterskin,
     })
     this.trace.record({ simTime: this.simClock, type: 'contract.evaluated', candidates: scored.map((s) => ({ contractId: s.contract.id, score: s.score })) })
     if (!best) return false
@@ -4180,6 +4245,39 @@ export class NpcAgent {
     if (!assignment) return false
     this.trace.record({ simTime: this.simClock, type: 'contract.accepted', contractId: accepted.id, score: best.score })
     return this.pursueAcceptedContract(accepted, assignment)
+  }
+
+  /** Bounded post-acceptance provisioning into `personalInventory` (plan
+   *  npc-017) — real household transfers only; never mints items. */
+  private prepareWorkContractProvisions(record: WorkContractRecord): void {
+    const { estimate, availability } = buildContractProvisionContext({
+      contract: record,
+      needs: this.needs,
+      personalInventory: this.personalInventory,
+      household: this.household,
+      npcX: this.mesh.position.x,
+      npcZ: this.mesh.position.z,
+      walkSpeed: WALK_SPEED,
+      dayLengthSec: this.dayLengthSec,
+    })
+    const result = provisionContractSupplies({
+      personalInventory: this.personalInventory,
+      household: this.household,
+      estimate,
+      availability,
+      nowDays: this.nowDays(),
+    })
+    this.lastProvisionFailureReason = result.failureReason
+    if (result.foodProvisioned > 0 || result.drinksAdded > 0 || result.failureReason) {
+      this.trace.record({
+        simTime: this.simClock,
+        type: 'contract.provisioned',
+        contractId: record.id,
+        foodProvisioned: result.foodProvisioned,
+        drinksAdded: result.drinksAdded,
+        failureReason: result.failureReason,
+      })
+    }
   }
 
   /** Drives one step of this NPC's already-accepted assignment (plan npc-015
@@ -4195,6 +4293,7 @@ export class NpcAgent {
     const contracts = this.workContracts
     if (!contracts) return false
     if (!isAssignmentWorkActive(assignment)) return false
+    if (assignment.state === 'accepted') this.prepareWorkContractProvisions(record)
     if (record.target.kind === 'construction') return this.pursueConstructionContract(record, assignment, contracts)
     if (record.target.kind === 'terrain_preparation') return this.pursueTerrainContract(record, assignment, contracts)
     if (record.target.kind === 'residential_building') return this.pursueResidentialContract(record, assignment, contracts)

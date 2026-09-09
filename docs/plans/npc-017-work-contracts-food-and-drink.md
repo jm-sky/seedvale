@@ -1,7 +1,7 @@
 # Plan: Work Contracts — Food & Drink for Hired NPCs
 
 **Created:** 2026-09-01
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** ~~npc-015~~, ~~settlements-npcs-026~~

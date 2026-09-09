@@ -200,6 +200,7 @@ function formatEvent(event: NpcTraceEvent): string {
     case 'contract.evaluated': return `${t}s contract.evaluated → ${event.candidates.map((c) => `${c.contractId}:${c.score.toFixed(1)}`).join(', ') || '-'}`
     case 'contract.invalidated': return `${t}s contract.invalidated → ${event.contractId} (${event.reason})`
     case 'contract.paymentRequested': return `${t}s contract.paymentRequested → ${event.contractId}`
+    case 'contract.provisioned': return `${t}s contract.provisioned → ${event.contractId} (food ${event.foodProvisioned}, drinks +${event.drinksAdded}${event.failureReason ? `, ${event.failureReason}` : ''})`
     case 'contract.workCompleted': return `${t}s contract.workCompleted → ${event.contractId}`
     case 'debug.freeze': return `${t}s debug.freeze`
     case 'debug.reevaluate': return `${t}s debug.reevaluate`

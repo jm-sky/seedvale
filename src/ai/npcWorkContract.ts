@@ -1,11 +1,15 @@
 import type { Role } from './characters'
 import type { ScheduleActivity } from './schedule'
-import { realSecondsToGameHours } from '../world/timeConversion'
 import {
   contractRewardRate,
   expectedCandidateWork,
   type WorkContractRecord,
 } from '../world/workContract'
+import {
+  contractProvisionFeasibilityPenalty,
+  contractTravelHours,
+  estimateContractProvisionNeed,
+} from './npcPersonalProvisions'
 import { idleIntentFor } from './schedule'
 
 /**
@@ -70,6 +74,15 @@ export type WorkContractEvaluationInput = {
    *  long the trip will actually take (plan §4: "reuse existing travel...
    *  estimates"). */
   walkSpeed: number
+  /** Current hunger/thirst for bounded remote-work provisioning feasibility
+   *  (plan npc-017) — read-only inputs; the scorer never mutates inventory. */
+  hunger: number
+  thirst: number
+  personalFoodUnits: number
+  personalDrinkPortions: number
+  householdFoodUnits: number
+  householdWaterUnits: number
+  canFillWaterskin: boolean
 }
 
 /** Deterministic net-value score for `contract` given `input` — see this
@@ -80,23 +93,33 @@ export function scoreWorkContractOpportunity(
   contract: WorkContractRecord,
   input: WorkContractEvaluationInput,
 ): number {
-  const dx = contract.x - input.npcX
-  const dz = contract.z - input.npcZ
-  const distance = Math.hypot(dx, dz)
-  const travelRealSeconds = input.walkSpeed > 0 ? distance / input.walkSpeed : 0
-  const travelHours = realSecondsToGameHours(travelRealSeconds, input.dayLengthSec)
+  const travelHours = contractTravelHours(contract, input)
   const suitability = CONTRACT_SUITABILITY_BY_ROLE[input.role] ?? 0
   const scheduleConflict =
     input.hasWorkplace && idleIntentFor(input.scheduledActivity) === 'work' ? CONTRACT_SCHEDULE_CONFLICT_PENALTY : 0
   const expectedWork = expectedCandidateWork(contract)
   const expectedReward = expectedWork * contractRewardRate(contract)
-  return (
+  const baseScore =
     expectedReward
     + suitability
     - travelHours * CONTRACT_TRAVEL_HOUR_COST
     - expectedWork * CONTRACT_WORK_HOUR_COST
     - scheduleConflict
-  )
+  const estimate = estimateContractProvisionNeed({
+    travelHours: contractTravelHours(contract, input),
+    workHours: expectedWork,
+    hunger: input.hunger,
+    thirst: input.thirst,
+  })
+  const provisionPenalty = contractProvisionFeasibilityPenalty(estimate, {
+    personalFoodUnits: input.personalFoodUnits,
+    personalDrinkPortions: input.personalDrinkPortions,
+    householdFoodUnits: input.householdFoodUnits,
+    householdWaterUnits: input.householdWaterUnits,
+    canFillWaterskin: input.canFillWaterskin,
+  })
+  if (!Number.isFinite(provisionPenalty)) return Number.NEGATIVE_INFINITY
+  return baseScore - provisionPenalty
 }
 
 export type ScoredWorkContract = { contract: WorkContractRecord, score: number }

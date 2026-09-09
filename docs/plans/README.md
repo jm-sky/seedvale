@@ -66,7 +66,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md` | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
 | ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md` | -       | 🔴 | M      | -      |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                           | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
-| 💡 `npc-017-work-contracts-food-and-drink.md`                               | -       | 🟡 | M      | ~~npc-015~~, ~~settlements-npcs-026~~ |
 | 💡 `npc-011-npc-burial-and-graves.md`                                       | -       | 🟡 | L      | ~~npc-010~~, ~~world-terrain-016~~ |
 | ◼️ `npc-004-npc-genealogy-lineages.md`                                      | -       | ⚪ | S      | -      |
 | 💡 `world-terrain-015-water-reflection-content-budget.md`                   | -       | 🟡 | S      | -      |
@@ -112,6 +111,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `npc-013-night-campfire-gathering.md` | Naturalność nocnych spotkań NPC przy ognisku |
 | `npc-012-weather-reaction-and-shelter.md` | Naturalność reakcji NPC na złą pogodę i powrotu do rutyny |
 | `npc-015-work-contracts-npc-work-and-construction.md` | Pełny przebieg kontraktu NPC w świecie, w tym przerwanie przez potrzeby i wznowienie |
+| `npc-017-work-contracts-food-and-drink.md` | Długi/zdalny kontrakt: ograniczone zaopatrzenie do `personalInventory`, jedzenie/picie z własnych zapasów w trakcie podróży/pracy, przerwanie głodem/pragnieniem bez `releaseWorkContract()`, wyczerpanie zapasów bez magicznego refillu, save/reconstruction zachowuje `personalInventory` |
 | `npc-028-work-contracts-multiple-workers.md` | Zlecenie na 2–3 najemników: kilku NPC przyjmuje to samo ogłoszenie, pracują niezależnie na tym samym celu, zwolnienie/śmierć jednego otwiera slot bez resetu wkładu, wynagrodzenie jest łączne (nie per osoba), save/load nie duplikuje assignmentów |
 | `fauna-006-wolf-settlement-entry.md` | Wilk sensownie ściga cel do osady, ale nie wchodzi do niej bez powodu |
 | `world-terrain-005-distance-based-terrain-detail-lod.md` | Jakość i wydajność grass/road LOD z różnych odległości |
