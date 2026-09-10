@@ -73,6 +73,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `ui-input-016-building-placement-construction-ux-coherence.md`              | -       | 🔴 | L      | ~~ui-input-014~~, ~~ui-input-015~~, items-player-024 |
+| ◼️ `quests-progression-018-quest-playtest-reachability-and-dialogue-conflicts.md` | -       | 🔴 | M      | ~~quests-progression-005~~, quests-progression-014 |
 
 ---
 
@@ -197,7 +198,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `025`
 - npc: `029`
 - persistence: `005`
-- quests-progression: `018`
+- quests-progression: `019`
 - settlements: `007`
 - settlements-npcs: `030`
 - tools: `014`
