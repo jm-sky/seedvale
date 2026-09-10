@@ -26,12 +26,6 @@ queries / colliders / presentation extraction
 
 Do not introduce a second topology type for the heightfield spike.
 
-## Do not infer current runtime from old Cave V2 notes
-
-Current `docs/STATE.md` says production presentation extraction is already asynchronous and uses a dedicated worker with 55/80 m hysteresis. Older B4 planning notes may describe async extraction as future work.
-
-For this plan that distinction is mostly irrelevant because the spike bypasses production cave runtime entirely, but it matters for avoiding accidental "fixes" to work that is already implemented.
-
 ## Existing minimal-scene seam to reuse
 
 `src/debug/createModelTestScene.ts` is the canonical lightweight scene pattern:
@@ -52,34 +46,12 @@ Use this as the structural reference rather than creating another Vite app/packa
 
 Current routing is two-stage:
 
-1. `src/main.ts`
-   - checks `isModelTestMode()` before save/start-screen work;
-   - calls `createApp(container, undefined, { modelTest: true })` and returns.
-
-2. `src/app/createApp.ts`
-   - checks `options?.modelTest` at the very beginning of app creation;
-   - immediately returns `createModelTestScene(container)` before normal world/save/UI bootstrap.
+1. `src/main.ts` checks `isModelTestMode()` before save/start-screen work;
+2. `src/app/createApp.ts` immediately returns `createModelTestScene(container)` before normal world bootstrap.
 
 The cave heightfield test should follow the same early-return semantics.
 
-Implementation can either:
-
-- add a parallel boolean option such as `caveHeightfieldTest`, or
-- extract a tiny debug-scene routing seam if doing so is genuinely smaller/clearer.
-
-Do **not** introduce a general debug-app framework as part of this plan.
-
-## URL flag seam
-
-`src/debug/debugMode.ts` owns URL-driven lightweight flags through its private `urlFlag()` helper.
-
-Add one explicit function matching the existing style, e.g.:
-
-```ts
-isCaveHeightfieldTestMode()
-```
-
-Do not add a second URL parser.
+Add an explicit flag in `src/debug/debugMode.ts`, e.g. `isCaveHeightfieldTestMode()`, using the existing private `urlFlag()` helper. Do not add a second URL parser or generic debug-app framework.
 
 ## Heightfield representation boundary
 
@@ -99,177 +71,190 @@ type CaveHeightfieldRepresentation = {
 }
 ```
 
-Exact naming/storage is implementation-owned. The important constraints are:
+Exact naming/storage is implementation-owned. Important constraints:
 
 - one canonical 2D grid;
 - no THREE types in representation builder;
-- floor/ceiling indexed by the same cell/grid coordinates;
-- cells outside footprint are explicitly represented as outside, not via magic height values;
-- deterministic output from topology + config/seed.
-
-Typed arrays are preferable to nested arrays because they make cost/memory visible and keep a future worker seam possible without committing to workerization now.
+- floor/ceiling indexed by same grid;
+- outside cells explicit through the mask;
+- deterministic output from topology + config/seed;
+- typed arrays preferred.
 
 ## Footprint derivation
 
-Reuse the semantics already encoded in `CaveTopology` instead of reverse-engineering the SDF primitives.
-
-Recommended derivation:
+Reuse `CaveTopology` semantics directly:
 
 ```text
 segment.centerline
-    ↓ fixed-distance resample in XZ/3D arc length
+    ↓ fixed-distance resample
 node targetWidth interpolation
     ↓
-2D capsule/disc coverage per station/segment
+2D capsule/disc coverage
     ↓
 inside mask
 ```
 
-Important pitfall: topology centerlines may contain different control-point densities because production generation adapts to terrain. Coverage density must therefore depend on an explicit sampling step, not raw control-point count. This is the same reason production SDF uses fixed arc-length primitive spacing.
-
-For width interpolation, identify segment `from`/`to` nodes by id. Do not hardcode the historical `MAIN_CHAIN` names from the rejected Sweep spike.
+Do not use raw centerline point density as sampling density. Do not hardcode historical Sweep node ids or return to ring sweep geometry.
 
 ## Floor/ceiling derivation
 
-For an inside grid sample, resolve a local centerline station / nearest relevant segment sample and derive:
+For every inside grid sample resolve local centerline height and target height, then derive:
 
 ```text
-baseFloorY
-local targetHeight
+floorY = baseFloorY + bounded floor detail
+ceilingY = baseFloorY + targetHeight + bounded ceiling detail
 ```
 
-Then apply bounded deterministic detail:
-
-```text
-floorY = baseFloorY + floorDetail
-ceilingY = baseFloorY + targetHeight + ceilingDetail
-```
-
-Enforce:
+Always enforce:
 
 ```text
 ceilingY - floorY >= topology.minClearance
 ```
 
-Do not derive ceiling as `surfaceHeight - constant`, because that would couple interior shape to surface and defeat the representation comparison.
-
-Do not use noise amplitude large enough to alter topology connectivity.
+Do not derive ceiling as `surfaceHeight - constant`. Noise must not alter topology connectivity.
 
 ## Boundary wall extraction
 
-A naive and adequate spike implementation is grid-edge based:
+A grid-edge implementation is sufficient for the first spike:
 
-- for every inside cell, inspect its 4 orthogonal neighbors;
-- when neighbor is outside, emit the side quad(s) between local floor and ceiling along that grid edge;
-- ensure consistent winding toward the cave interior;
-- avoid duplicate faces by owning each boundary edge once.
+- inspect orthogonal neighbors of every inside cell;
+- where neighbor is outside, emit wall faces between floor and ceiling;
+- own each boundary edge once;
+- ensure winding faces cave interior.
 
-This is intentionally simpler than contour tracing. Only add contour extraction if the grid-edge result is visually too stair-stepped at the resolution required for a fair comparison.
-
-Do not solve wall quality by returning to a ring sweep around centerline.
-
-## Floor and ceiling mesh
-
-A simple regular-grid triangulation over inside cells is sufficient for the first comparison.
-
-Watch for cells where only part of a quad is inside. The implementation must choose a deterministic policy that does not create holes or triangles spanning outside the footprint. A conservative cell-based mask is acceptable for the initial spike.
-
-Ceiling winding must face inward/downward. Reusing floor indices without reversing them will make the ceiling invisible under normal back-face culling.
+Only add contour tracing if the simple result is visibly inadequate at otherwise acceptable grid resolution.
 
 ## Surface fixture
 
-Do not import `ChunkManager` or run the worker terrain pipeline.
+Do not import `ChunkManager` or run terrain worker generation.
 
-Use a tiny local fixture builder in the debug scope. It only needs to make the entrance readable:
+Use a tiny deterministic local fixture with:
 
 ```text
 approach plane / gentle slope
 → steep wall/ridge near entrance
+→ cave mouth
 → enough top surface above cave footprint
 ```
 
-The fixture may be analytic or a small `PlaneGeometry` displaced by a deterministic function.
+This does not solve production mouth carving. `src/world/caves/mouthCarve.ts` and production terrain integration remain untouched.
 
-Do not claim this solves production terrain mouth carving. The current production mouth logic in `src/world/caves/mouthCarve.ts` / `caveSdfField.ts` remains untouched.
+## Two mandatory test modes
+
+The harness is not complete if it only supports OrbitControls.
+
+### Inspect mode
+
+Reuse the `OrbitControls` pattern from `createModelTestScene.ts`. It exists to inspect geometry from arbitrary angles and detect holes, bad normals, seams, footprint artifacts and surface/mouth issues.
+
+### Walk mode
+
+The Player must be able to spawn outside the entrance and physically walk through the same cave fixture.
+
+Required behavior:
+
+- visible current player/humanoid model in third person;
+- WASD movement;
+- gravity / ground following;
+- collision against floor, walls and ceiling;
+- enter from surface through the mouth and return outside;
+- camera behavior close enough to production third person to expose traversal/camera problems.
+
+Do **not** boot the full player/world stack just to obtain this. Start by inspecting reusable low-dependency pieces around:
+
+```text
+src/player/PlayerController.ts
+src/player/cameraBoom.ts
+src/world/collision.ts
+src/input/Keyboard.ts
+src/input/MouseLook.ts
+```
+
+Reuse a helper only if its dependency surface stays lightweight. If importing `PlayerController` pulls WorldBundle/gameplay ownership, create a small debug-only traversal controller instead.
+
+The debug controller should own only test state such as position, velocity/yaw and camera relation. It must not duplicate inventory, needs, skills, interaction, combat, saves or other gameplay systems.
+
+## Collision source of truth
+
+Do not hand-author invisible collision boxes separately from generated cave shape.
+
+Heightfield walk collision should be derived from the same representation:
+
+- floor contact from `floorY(x,z)` or equivalent bilinear query;
+- ceiling limit from `ceilingY(x,z)`;
+- containment/wall response from footprint/boundary.
+
+This is intentionally not the final production cave collision architecture. The purpose is to test whether the representation itself supports reliable traversal.
+
+For SDF comparison, reuse existing SDF query/collision helpers if they are callable without production world boot; otherwise provide the smallest debug adapter from the SDF representation rather than inventing unrelated collider geometry.
+
+## Player model
+
+Prefer the current player model/asset path already used by production or `createModelTestScene.ts` if it can be loaded independently. The model serves two purposes:
+
+- real third-person scale;
+- traversal/camera readability.
+
+Do not spend spike scope on full production animation state. Idle + walk/run if trivial is enough; even a single locomotion-compatible model is acceptable if geometry/traversal remains clear.
 
 ## Topology fixtures
 
-Prefer explicit small `CaveTopology` fixtures under the debug/spike scope if the production topology builder needs world placement/terrain context.
-
-Fixtures should preserve the real type and semantics and cover:
+Use the real `CaveTopology` type. Prefer small deterministic fixtures if production topology construction needs broad world context:
 
 ```text
-basic      entrance → passage → chamber
-bend       entrance → curved passage → widening → chamber
-branch     trunk + one branch/junction
+basic   entrance → passage → chamber
+bend    entrance → curved passage → widening → chamber
+branch  trunk + one branch/junction
 ```
 
-Keep coordinates, widths and heights deterministic and plausible for third-person scale.
-
-Do not hand-author a final footprint; hand-authoring topology fixtures is fine because topology, not geometry, is the comparison input.
+Each should be traversable in Walk mode unless intentionally constructed otherwise. Hand-authoring topology fixtures is acceptable; hand-authoring final footprint geometry is not.
 
 ## SDF baseline
 
-For the comparison variant, reuse current production SDF builder/extraction functions where they can be called without bringing world boot dependencies.
-
-Likely relevant:
+Reuse current production SDF representation/extraction where callable without world boot. Inspect current signatures first; likely relevant files include:
 
 ```text
 src/world/caves/caveSdfField.ts
-  buildCaveSdfRepresentation()
-
 src/world/caves/sdfCaveMesh.ts
-  buildSdfCaveMesh() / current extraction-facing API
+src/world/caves/caveSdfQuery.ts
+src/world/caves/caveSdfColliders.ts
 ```
 
-Inspect current signatures before wiring. Do not copy the SDF algorithm into the debug folder.
+Do not copy the SDF algorithm into debug code.
 
-If current SDF presentation requires a surface sampler for clipping, provide the same local fixture's analytic surface function rather than production terrain/chunk state.
+## Controls
 
-## Comparison controls
-
-Keep controls deliberately small. Preferred order:
-
-1. URL params for initial fixture/variant;
-2. one keyboard toggle for `heightfield ↔ sdf` if trivial;
-3. minimal on-screen text only if needed to avoid reading console repeatedly.
-
-Do not build a Vue panel or generic observatory for this spike.
-
-Useful URL shape, exact names implementation-owned:
+Keep controls small and obvious. Suggested URL shape:
 
 ```text
 ?caveHeightfieldTest&variant=heightfield&fixture=basic
 ?caveHeightfieldTest&variant=sdf&fixture=basic
 ```
 
+Add simple runtime controls for:
+
+- `heightfield ↔ sdf`;
+- `Walk ↔ Inspect`;
+- fixture change if cheap.
+
+Do not build a Vue observatory/panel for this spike.
+
 ## Metrics
 
-Use `performance.now()` around pure stages. Keep stage boundaries comparable and report with `console.table()`.
+Use `performance.now()` around pure representation/mesh stages. Do not include app boot, renderer creation or GL compilation.
 
-Heightfield suggested stages:
-
-```text
-footprint
-floorCeiling
-mesh
-normalsBounds
- total
-```
-
-SDF should reuse/print current extraction metrics where available rather than inventing incompatible approximations.
-
-Report:
+Report at least:
 
 ```text
+representation/build time
+mesh generation/extraction time
+total generation time
 vertices
 triangles
 geometryBytes
 ```
 
-For typed arrays, raw byte cost is `byteLength`; for final `BufferGeometry`, sum actual attribute/index array byte lengths where practical.
-
-Do not include renderer creation, GL compilation or app boot in the representation benchmark.
+For heightfield also report grid resolution/cell size, inside cell count and boundary edge count.
 
 ## Files to inspect first during implementation
 
@@ -281,62 +266,69 @@ src/app/createApp.ts
 src/world/caves/caveTopology.ts
 src/world/caves/caveSdfField.ts
 src/world/caves/sdfCaveMesh.ts
-src/world/caves/productionTopology.ts
-src/world/caves/mouthCarve.ts
+src/world/caves/caveSdfQuery.ts
+src/world/caves/caveSdfColliders.ts
+src/player/PlayerController.ts
+src/player/cameraBoom.ts
+src/world/collision.ts
+src/input/Keyboard.ts
+src/input/MouseLook.ts
 ```
 
-Only inspect broader terrain/world code if a concrete missing contract requires it.
+Inspect only the relevant symbols/dependency seams; do not broaden into a repository-wide player/world recon.
 
 ## Expected new files
 
-Prefer keeping experimental code out of production cave modules until the spike passes:
+Prefer keeping experimental code under debug scope:
 
 ```text
 src/debug/caves/caveHeightfieldFixtures.ts
 src/debug/caves/caveHeightfieldRepresentation.ts
 src/debug/caves/caveHeightfieldMesh.ts
+src/debug/caves/caveHeightfieldTraversal.ts
 src/debug/createCaveHeightfieldTestScene.ts
 ```
 
-If pure builder tests become useful, colocate them with these files.
-
-Moving a successful representation into `src/world/caves/` belongs to a later migration plan, not this spike.
+Exact names are not mandatory if current code exposes a clearer existing seam.
 
 ## Tests worth writing
 
 Focused pure tests only:
 
-1. identical topology/config produces identical typed arrays;
-2. every inside cell satisfies `ceilingY - floorY >= minClearance`;
-3. straight passage footprint has no internal holes;
+1. deterministic topology/config → deterministic arrays;
+2. every inside cell satisfies min clearance;
+3. straight passage has no internal holes;
 4. widening increases footprint width;
-5. branch fixture forms one connected footprint at intended junction;
-6. boundary wall extraction emits no duplicate boundary edge faces;
-7. no generated floor/ceiling triangle references outside array bounds / NaN heights.
+5. branch creates one connected intended junction;
+6. boundary wall extraction has no duplicate boundary faces;
+7. floor/ceiling arrays contain no invalid values;
+8. traversal query returns valid floor/ceiling inside and outside/blocked state beyond boundary;
+9. a representative player capsule/point cannot pass through boundary or ceiling in pure movement tests, if the debug collision code is pure enough to test cheaply.
 
-Avoid broad scene tests requiring WebGL/DOM scaffolding unless current test helpers already make them trivial.
+Avoid WebGL/DOM scene tests unless existing helpers make them trivial.
 
 ## Common mistakes to avoid
 
-- Booting the real world from the test mode and defeating the point of the harness.
-- Creating an independent `CaveHeightfieldTopology`.
-- Hardcoding production node ids / `MAIN_CHAIN`.
-- Using raw centerline point count as sampling density.
-- Creating "walls" by forcing huge height gradients in floor/ceiling grids.
+- Booting the real world and defeating the purpose of the harness.
+- Using OrbitControls as the only validation path.
+- Importing full `PlayerController` despite broad WorldBundle/gameplay dependencies.
+- Creating a fake invisible collision layout unrelated to generated cave geometry.
+- Creating an independent cave topology type.
+- Hardcoding Sweep-specific topology ids.
+- Creating walls through extreme height gradients.
 - Reusing floor winding for ceiling.
-- Comparing different cave layouts between SDF and heightfield.
-- Importing production `ChunkManager` just to obtain a hill for the entrance.
-- Adding special cases for stacked tunnels/overhangs to hide the representation's 2.5D limitation.
-- Replacing current production SDF or cave worker during the spike.
-- Treating historical Sweep code as a base implementation.
+- Comparing different topology between SDF and heightfield.
+- Importing `ChunkManager` just to create entrance terrain.
+- Hiding 2.5D limitations with special cases.
+- Replacing production SDF/worker/collision during the spike.
 - Running browser verification as the implementation agent.
 
 ## Completion output
 
-Implementation is complete when the Player can open the lightweight URL directly and switch/compare SDF and heightfield on the same deterministic topology without waiting for Seedvale world generation.
+Implementation is complete when the Player can open `?caveHeightfieldTest`, immediately receive the lightweight scene, switch between SDF/heightfield, switch between Inspect/Walk, and physically traverse the same deterministic cave topology without waiting for normal Seedvale world generation.
 
-The implementation commit should not change production cave behaviour.
+The implementation commit must not change production cave behavior.
 
-After Player comparison, record measured results and the architecture decision in a dedicated review/decision note before planning any migration.
+After Player comparison, record measured results and architecture decision before planning any production migration.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
