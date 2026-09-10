@@ -1,14 +1,15 @@
 import * as THREE from 'three'
 import type { LargeCaveSite } from './largeCaves'
-import { createLargeRock, createRockCluster, placeOnGround } from '../settlement/props'
+import { createLargeRock, placeOnGround } from '../settlement/props'
 
-const ROCK_MAT = 0x6a6560
 const DARK_MAT = 0x2a2622
 
 /**
  * Irregular rock framing for a large cave. Local +Z is the opening (same
  * convention as `createCaveMouth`); the caller yaws the group downhill.
  * Complements the heightmap carve — does not fake the hole itself (plan 090).
+ * No approach-side rubble: the group sits on analytic surface height, so a
+ * cluster in the carved pit would float.
  */
 export function createLargeCaveVisual(site: LargeCaveSite): THREE.Group {
   const group = new THREE.Group()
@@ -44,10 +45,6 @@ export function createLargeCaveVisual(site: LargeCaveSite): THREE.Group {
     const a = (i / 5) * Math.PI - Math.PI * 0.5
     addRock(Math.cos(a) * 1.1, -length + Math.sin(a) * 0.4, 0.95 + ((v * (i + 2)) % 1) * 0.4, 0.4 + i * 0.11)
   }
-
-  const rubble = createRockCluster(1.1, v, ROCK_MAT)
-  rubble.position.set(0, 0, 1.6)
-  group.add(rubble)
 
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(1.4, 10),

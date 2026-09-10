@@ -18,6 +18,7 @@ import * as THREE from 'three'
 import type { CaveSpikeMetrics } from './caveSpikeMetrics'
 import type { CaveTopology, CaveTopologyPoint } from './caveTopology'
 import { isSystemEnabled } from '../../debug/debugMode'
+import { openingDirection } from '../largeCaves'
 import {
   type Bounds,
   buildCaveSdfRepresentation,
@@ -28,6 +29,7 @@ import {
   type VoidPrimitive,
 } from './caveSdfField'
 import { clipTrianglesBelowSurface, clipTrianglesInFrontOfMouth, type SurfaceHeightSampler } from './clipBelowSurface'
+import { deriveMouthGeometry } from './mouthCarve'
 
 export { DEFAULT_SDF_PARAMS, type SdfCaveParams } from './caveSdfField'
 
@@ -206,18 +208,26 @@ export function buildSdfCaveMesh(
   const field = representation ?? buildCaveSdfRepresentation(topology, params, detailEnabled)
   const t1 = now()
 
-  const grid = sampleGrid(field.bounds, params.cellSize, field.sample)
+  const mouth = deriveMouthGeometry(topology.entrance)
+  const out = openingDirection(topology.entrance.yaw)
+  const framePad = mouth.apertureHalfWidth + mouth.frameThickness + params.cellSize * 2
+  const meshBounds: Bounds = {
+    minX: Math.min(field.bounds.minX, topology.entrance.x + out.dx * mouth.frameOutward - framePad),
+    maxX: Math.max(field.bounds.maxX, topology.entrance.x + out.dx * mouth.frameOutward + framePad),
+    minY: Math.min(field.bounds.minY, topology.entrance.y - mouth.lipDepth - params.cellSize),
+    maxY: Math.max(field.bounds.maxY, mouth.lintelY + mouth.hoodHeight + params.cellSize),
+    minZ: Math.min(field.bounds.minZ, topology.entrance.z + out.dz * mouth.frameOutward - framePad),
+    maxZ: Math.max(field.bounds.maxZ, topology.entrance.z + out.dz * mouth.frameOutward + framePad),
+  }
+  const grid = sampleGrid(meshBounds, params.cellSize, field.sample)
 
   const extracted = extractSurfaceNets(grid)
-  // The iso-surface is closed, so without this the entrance ellipsoid is
-  // capped into a sealed dome standing proud of the meadow instead of an
-  // open portal — see `clipBelowSurface.ts`.
+  // Terrain clip still owns overburden: no interior geometry above the
+  // analytic surface. The doorway itself is in the SDF (aperture + frame);
+  // the mouth clip only drops the sleeve's outer cap.
   const surfaceClipped = surfaceHeightAt
     ? clipTrianglesBelowSurface(extracted.positions, extracted.indices, surfaceHeightAt)
     : extracted
-  // Surface clip alone leaves the closed entrance ellipsoid's front cap
-  // sitting in the mouth pit (the "black sphere"). Drop the doorway
-  // aperture so the portal is an opening, not a bulb — keep the hood/sides.
   const { positions, indices } = surfaceHeightAt
     ? clipTrianglesInFrontOfMouth(surfaceClipped.positions, surfaceClipped.indices, topology.entrance)
     : surfaceClipped

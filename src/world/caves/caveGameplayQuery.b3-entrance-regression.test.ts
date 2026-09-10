@@ -36,7 +36,14 @@ import {
   queryColumnIndex,
 } from './caveSdfQuery'
 import { clipTrianglesInFrontOfMouth } from './clipBelowSurface'
-import { mouthAlong, mouthCarveDepth, mouthLateral } from './mouthCarve'
+import {
+  deriveMouthGeometry,
+  inMouthAperture,
+  mouthAlong,
+  mouthCarveDepth,
+  mouthCarveDiscs,
+  mouthLateral,
+} from './mouthCarve'
 import { buildProductionCaveTopology } from './productionTopology'
 import { buildSdfCaveMesh } from './sdfCaveMesh'
 
@@ -447,7 +454,25 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
     }
   })
 
-  it('mouth aperture clip drops doorway triangles and keeps off-axis framing when present', () => {
+  it('SDF aperture is void and hood/sides are rock before meshing', () => {
+    const { entrance } = czarny.topology
+    const { sdf } = czarny
+    const mouth = deriveMouthGeometry(entrance)
+    const out = openingDirection(entrance.yaw)
+    const at = (along: number, lateral: number, y: number) => {
+      const x = entrance.x + out.dx * along - out.dz * lateral
+      const z = entrance.z + out.dz * along + out.dx * lateral
+      return sdf.sample(x, y, z)
+    }
+    const midY = entrance.y + entrance.height * 0.5
+    expect(at(0.25, 0, midY)).toBeLessThan(0)
+    expect(at(0.4, 0, mouth.lintelY + 0.12)).toBeGreaterThan(0)
+    expect(at(0.25, 2.05, midY)).toBeGreaterThan(0)
+    expect(at(0.25, -2.05, midY)).toBeGreaterThan(0)
+    expect(at(-1.0, 0, midY)).toBeLessThan(0)
+  })
+
+  it('mouth aperture clip drops doorway-cap triangles and keeps hood/sides', () => {
     const builtMesh = buildSdfCaveMesh(czarny.topology, undefined, czarny.surfaceHeightAt, czarny.sdf)
     const pos = builtMesh.geometry.getAttribute('position')
     const idx = builtMesh.geometry.getIndex()
@@ -458,19 +483,25 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
     const indices: number[] = []
     for (let i = 0; i < idx!.count; i++) indices.push(idx!.array[i]!)
     const { entrance } = czarny.topology
-    const half = entrance.width * 0.5
+    const mouth = deriveMouthGeometry(entrance)
     let apertureOutward = 0
+    let hoodOrSide = 0
     for (let i = 0; i + 2 < indices.length; i += 3) {
       const a = indices[i]!
       const b = indices[i + 1]!
       const c = indices[i + 2]!
       const cx = (positions[a * 3]! + positions[b * 3]! + positions[c * 3]!) / 3
+      const cy = (positions[a * 3 + 1]! + positions[b * 3 + 1]! + positions[c * 3 + 1]!) / 3
       const cz = (positions[a * 3 + 2]! + positions[b * 3 + 2]! + positions[c * 3 + 2]!) / 3
-      if (mouthAlong(cx, cz, entrance) > 0.2 && Math.abs(mouthLateral(cx, cz, entrance)) <= half) {
-        apertureOutward += 1
+      const along = mouthAlong(cx, cz, entrance)
+      const lateral = mouthLateral(cx, cz, entrance)
+      if (inMouthAperture(along, lateral, cy, mouth)) apertureOutward += 1
+      if (along > 0.2 && (cy > mouth.lintelY - 0.08 || Math.abs(lateral) >= mouth.apertureHalfWidth - 0.08)) {
+        hoodOrSide += 1
       }
     }
     expect(apertureOutward).toBe(0)
+    expect(hoodOrSide).toBeGreaterThan(0)
     const unclipped = buildSdfCaveMesh(czarny.topology, undefined, undefined, czarny.sdf)
     const clippedAgain = clipTrianglesInFrontOfMouth(
       [...unclipped.geometry.getAttribute('position')!.array],
@@ -478,30 +509,44 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
       entrance,
     )
     expect(clippedAgain.indices.length).toBeGreaterThan(0)
-    expect(clippedAgain.indices.length).toBeLessThan(unclipped.geometry.getIndex()!.count)
   })
 
-  it('doorway leftover: dual-disc carve crater extends past the mesh aperture (not a closed visual contract)', () => {
+  it('terrain carve stays B3-stable and the mesh frame meets the carved shell', () => {
     const { entrance } = czarny.topology
-    let maxCarveAlong = 0
-    for (let along = 0; along <= 6.5; along += 0.2) {
-      const { x, z } = xzAt(czarny, along)
-      if (mouthCarveDepth(x, z, entrance) > 0.2) maxCarveAlong = along
-    }
+    const mouth = deriveMouthGeometry(entrance)
+    const discs = mouthCarveDiscs(entrance)
+    expect(discs.some((d) => Math.abs(d.radius - mouth.approachRadius) < 1e-9)).toBe(true)
+    expect(mouth.approachRadius).toBe(3.2)
+
+    const { x: farX, z: farZ } = xzAt(czarny, 8)
+    expect(mouthCarveDepth(farX, farZ, entrance)).toBe(0)
+
     const builtMesh = buildSdfCaveMesh(czarny.topology, undefined, czarny.surfaceHeightAt, czarny.sdf)
     const pos = builtMesh.geometry.getAttribute('position')!
     const idx = builtMesh.geometry.getIndex()!
-    let maxMeshAlong = -Infinity
+    let maxFrameAlong = -Infinity
+    let minVertexAboveTerrain = Infinity
     for (let i = 0; i + 2 < idx.count; i += 3) {
       const a = idx.array[i]!
       const b = idx.array[i + 1]!
       const c = idx.array[i + 2]!
       const cx = (pos.array[a * 3]! + pos.array[b * 3]! + pos.array[c * 3]!) / 3
+      const cy = (pos.array[a * 3 + 1]! + pos.array[b * 3 + 1]! + pos.array[c * 3 + 1]!) / 3
       const cz = (pos.array[a * 3 + 2]! + pos.array[b * 3 + 2]! + pos.array[c * 3 + 2]!) / 3
-      maxMeshAlong = Math.max(maxMeshAlong, mouthAlong(cx, cz, entrance))
+      const along = mouthAlong(cx, cz, entrance)
+      const lateral = mouthLateral(cx, cz, entrance)
+      if (along > 0.15 && (cy > mouth.lintelY - 0.1 || Math.abs(lateral) >= mouth.apertureHalfWidth - 0.08)) {
+        maxFrameAlong = Math.max(maxFrameAlong, along)
+      }
     }
-    expect(maxCarveAlong).toBeGreaterThan(4)
-    expect(maxMeshAlong).toBeLessThan(1)
-    expect(maxCarveAlong - maxMeshAlong).toBeGreaterThan(3.5)
+    for (let v = 0; v < pos.count; v++) {
+      const x = pos.getX(v)
+      const y = pos.getY(v)
+      const z = pos.getZ(v)
+      minVertexAboveTerrain = Math.min(minVertexAboveTerrain, czarny.surfaceHeightAt(x, z) - y)
+    }
+    expect(maxFrameAlong).toBeGreaterThan(0.35)
+    expect(maxFrameAlong).toBeGreaterThan(mouth.apertureOutward * 0.35)
+    expect(minVertexAboveTerrain).toBeGreaterThanOrEqual(-1e-6)
   })
 })

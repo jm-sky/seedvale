@@ -1653,35 +1653,30 @@ representation failure. No neighbor-aware lookup and no FLOOR_GRACE bump.
 - `Caves.contains` is strict `occupancyContains` (torch). It no longer
   calls hysteretic `queryGround`.
 
-## Doorway seam — STOP (dual-disc bowl)
+## Doorway seam — mouth geometry contract (2026-09-10)
 
-Same coordinate space, Grota Czarnego Kamienia:
+Entrance quality/geometry slice. B3 mechanics on seed `1136726869`,
+`cave:0e3cce97` stay the verified walking/camera/collision contract.
 
-```text
-terrain carve crater   along outward to ~5.4 m  (approach r=3.2 + offset 2.2)
-mesh after aperture    maxAlong ≈ 0.70 m (hood); aperture strip along ≲ 0.04
-entrance roof          −0.20 m (ellipsoid through terrain)
-```
-
-Dual-disc bowl + vertical aperture clip cannot make a hillside doorway:
-
-- Outside: hood + surface-flush clip + grass hide any real hole.
-- Inside: SDF rim at the mouth plane vs 5.4 m carve crater → sky gap /
-  exposed underside.
-
-This is not a local carve/aperture/clip mismatch that a third geometry
-hack can close. **No further doorway workaround in this B3 slice.**
-
-Minimal correct doorway contract (not implemented here):
+Shared derived mouth (`mouthCarve.ts` `deriveMouthGeometry`):
 
 ```text
-mouth-plane rectangular heightfield cut = entrance.width × entrance.height
-SDF clip at the same plane
-shell meets the cut
-no approach bowl
+CaveTopology.entrance
+        ↓
+aperture (width × height) + sides/lip/hood
+        ↓
+terrain carve discs (B3 approach/mouth)  |  SDF aperture/frame  |  3D cap-clip
 ```
 
-Fog / darkness / torch / oversized portal must not mask this.
+The aperture exists in the SDF before Surface Nets
+(`applyMouthGeometryToField`). `clipTrianglesInFrontOfMouth` only drops
+the 3D doorway-cap (not the hood/sides). Approach stays open-sky via the
+column-index portal; occupancy still stops at the mouth plane. Terrain
+carve discs stay the B3-verified mouth+approach pits so portal floors
+and column-grid origin do not shift.
+
+Tests: `caveMouthGeometry.test.ts`,
+`caveGameplayQuery.b3-entrance-regression.test.ts` (this seed).
 
 ## Cave size / overburden (not changed)
 
@@ -1707,21 +1702,22 @@ is already near the drop cap.
 Safe modest gain: a little extra **width** on passage/widening, and
 chamber height only by dropping the floor if `MAX_TOTAL_DROP` is raised
 with a per-station overburden check. Do **not** raise ceilings toward
-the surface. Skip any size bump until the doorway contract exists —
-bigger void against the same bowl would worsen the sky gap.
+the surface.
 
 ## Remaining B3 leftovers
 
-- Hillside doorway / terrain hole / interior sky seam (needs the
-  doorway contract above, not another clip tweak). RC3 from the
-  descending-snap recon — not this slice.
+- Hillside doorway visual quality: implemented 2026-09-10 (SDF aperture +
+  frame; B3 mouth+approach discs unchanged). **Manual verification still
+  required** on seed `1136726869`, Grota Czarnego Kamienia — look for
+  sky/underside seam vs natural rock sides/lip/hood. Do not treat tests
+  as browser proof.
 - Descending-snap RC1+RC2 (camera) implemented 2026-09-09; **manual
   verification still required** on seed `1136726869`, Grota Czarnego
   Kamienia. See recon note + fix below.
 - **Player Y surface snap ~16 m in** (2026-09-10). Not camera-only.
   See `world-terrain-008-underground-caves-v2-b3-chamber-snap-recon.md`.
   Harness does not reproduce +9.7 m while cave hysteresis is primed.
-- Cave size increase (blocked on overburden + doorway).
+- Cave size increase (blocked on overburden; doorway contract exists).
 - B4 streaming/workers/performance, B5 cleanup: untouched.
 
 ---

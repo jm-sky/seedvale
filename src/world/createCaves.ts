@@ -26,20 +26,16 @@ import {
 } from './caves/caveSdfQuery'
 import { createCaveSpikeMaterial } from './caves/caveSpikeMaterial'
 import {
-  CAVE_APPROACH_DEPTH,
-  CAVE_APPROACH_OFFSET,
-  CAVE_APPROACH_RADIUS,
-  CAVE_MOUTH_DEPTH,
-  CAVE_MOUTH_RADIUS,
   MOUTH_INTERIOR_ALONG,
   mouthAlong,
+  mouthCarveDiscs,
   mouthLateral,
 } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
 import { buildSdfCaveMesh } from './caves/sdfCaveMesh'
 import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition } from './caveVolume'
-import { type LargeCaveSite, openingDirection, pickLargeCaveSites } from './largeCaves'
+import { type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
 import { createLargeCaveVisual, placeLargeCaveVisual } from './largeCaveVisual'
 import type { Scene } from 'three'
 
@@ -204,20 +200,12 @@ export function createCaves(
     console.warn('[caves] no cave sites accepted for this seed — try a different ?seed=')
   }
 
-  // Local entrance recess only — deterministic from `definition.entrance`,
-  // redone from scratch on every world build, never persisted (same
-  // 'system' contract `createLargeCaves.ts` used). Depths/radii are the
-  // same constants `mouthCarve.ts` uses for the gameplay portal.
+  // Local entrance recess only — discs come from `deriveMouthGeometry` /
+  // `mouthCarveDiscs` so carve matches the gameplay portal (B3).
   for (const def of definitions) {
-    const out = openingDirection(def.entrance.yaw)
-    chunkManager.modifyTerrain(
-      def.entrance.x + out.dx * CAVE_APPROACH_OFFSET,
-      def.entrance.z + out.dz * CAVE_APPROACH_OFFSET,
-      CAVE_APPROACH_RADIUS,
-      CAVE_APPROACH_DEPTH,
-      'system',
-    )
-    chunkManager.modifyTerrain(def.entrance.x, def.entrance.z, CAVE_MOUTH_RADIUS, CAVE_MOUTH_DEPTH, 'system')
+    for (const disc of mouthCarveDiscs(def.entrance)) {
+      chunkManager.modifyTerrain(disc.x, disc.z, disc.radius, disc.depth, 'system')
+    }
   }
 
   const grid = new Map<string, CaveDefinition[]>()

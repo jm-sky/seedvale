@@ -14,15 +14,14 @@
  *    ~0.2 m proud of the terrain by construction, for every seed.
  *
  *  Cutting the geometry at the terrain restores the overburden invariant.
- *  The closed entrance ellipsoid's front cap still sits in the carved
- *  mouth pit after that clip; `clipTrianglesInFrontOfMouth` drops the
- *  doorway aperture so the portal is an opening, not a black bulb, while
- *  keeping the hood/sides that frame the terrain hole.
+ *  The doorway aperture, sides, lip and hood live in the SDF field
+ *  (`applyMouthGeometryToField`); `clipTrianglesInFrontOfMouth` only drops
+ *  the sleeve's outer cap inside the 3D aperture rectangle.
  *
  * @domain world-terrain
  */
 
-import { MOUTH_INTERIOR_ALONG, mouthAlong, mouthLateral } from './mouthCarve'
+import { deriveMouthGeometry, inMouthAperture, mouthAlong, mouthLateral } from './mouthCarve'
 
 /** Height sampler used to clip cave presentation geometry. Must be the
  *  deterministic analytic surface (`ChunkManager.sampleBaseHeight`), never a
@@ -75,18 +74,16 @@ export function clipTrianglesBelowSurface(
 }
 
 /**
- * Drops triangles in the doorway *aperture* outward of the mouth plane.
- * The SDF iso-surface is a closed ellipsoid, so a full half-space clip
- * removes the front cap (good) *and* the hood/sides that should frame the
- * terrain hole (bad — looking out shows the underside of the heightfield).
- * Keep anything whose centroid is outward but off the opening centreline.
+ * Drops leftover triangles *inside* the 3D doorway aperture outward of the
+ * mouth plane — the sleeve cap Surface Nets still emits after the SDF
+ * aperture/frame exist. Hood (above the lintel), sides and lip are kept.
  *
  * @domain world-terrain
  */
 export function clipTrianglesInFrontOfMouth(
   positions: readonly number[],
   indices: readonly number[],
-  entrance: { x: number, z: number, yaw: number, width?: number },
+  entrance: { x: number, y?: number, z: number, yaw: number, width?: number, height?: number },
 ): { positions: number[], indices: number[] } {
   const vertexCount = positions.length / 3
   const remap = new Int32Array(vertexCount).fill(-1)
@@ -102,16 +99,24 @@ export function clipTrianglesInFrontOfMouth(
     return mapped
   }
 
-  const halfWidth = (entrance.width ?? 3) * 0.5
+  const mouth = deriveMouthGeometry({
+    x: entrance.x,
+    y: entrance.y ?? 0,
+    z: entrance.z,
+    yaw: entrance.yaw,
+    width: entrance.width ?? 3,
+    height: entrance.height ?? 2.6,
+  })
   for (let i = 0; i + 2 < indices.length; i += 3) {
     const a = indices[i]!
     const b = indices[i + 1]!
     const c = indices[i + 2]!
     const cx = (positions[a * 3]! + positions[b * 3]! + positions[c * 3]!) / 3
+    const cy = (positions[a * 3 + 1]! + positions[b * 3 + 1]! + positions[c * 3 + 1]!) / 3
     const cz = (positions[a * 3 + 2]! + positions[b * 3 + 2]! + positions[c * 3 + 2]!) / 3
     const along = mouthAlong(cx, cz, entrance)
-    const lateral = Math.abs(mouthLateral(cx, cz, entrance))
-    if (along > MOUTH_INTERIOR_ALONG && lateral <= halfWidth) continue
+    const lateral = mouthLateral(cx, cz, entrance)
+    if (inMouthAperture(along, lateral, cy, mouth)) continue
     outIndices.push(keep(a), keep(b), keep(c))
   }
 

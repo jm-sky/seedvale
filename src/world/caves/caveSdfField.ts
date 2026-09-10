@@ -18,7 +18,17 @@
  * @domain world-terrain
  */
 
+import type { CaveEntrance } from '../caveVolume'
 import type { CaveTopology, CaveTopologySegment } from './caveTopology'
+import {
+  type CaveMouthGeometry,
+  deriveMouthGeometry,
+  MOUTH_INTERIOR_ALONG,
+  mouthAlong,
+  mouthApertureVoidSDF,
+  mouthFrameSolidSDF,
+  mouthLateral,
+} from './mouthCarve'
 import { createMultiScaleNoise1D, type NoiseOctave } from './spikeNoise'
 
 export type SdfCaveParams = {
@@ -73,6 +83,42 @@ export function smin(a: number, b: number, k: number): number {
   if (k <= 0) return Math.min(a, b)
   const h = Math.max(k - Math.abs(a - b), 0) / k
   return Math.min(a, b) - h * h * k * 0.25
+}
+
+/** Smooth-union k for the doorway sleeve — smaller than passage `smoothK`
+ *  so the opening stays a readable aperture rather than a melted blob. */
+const MOUTH_APERTURE_SMOOTH_K = 0.35
+
+/**
+ * Closes the outward half of the entrance ellipsoid, punches the doorway
+ * sleeve, then adds rock sides/hood/lip. The aperture exists in the field
+ * before Surface Nets; presentation clip only drops the sleeve's outer cap.
+ *
+ * @domain world-terrain
+ */
+export function applyMouthGeometryToField(
+  sample: (x: number, y: number, z: number) => number,
+  entrance: CaveEntrance,
+  mouth: CaveMouthGeometry = deriveMouthGeometry(entrance),
+): (x: number, y: number, z: number) => number {
+  const influence = mouth.frameOutward + mouth.apertureHalfWidth + mouth.frameThickness + 1.5
+  const influenceSq = influence * influence
+  return (x, y, z) => {
+    let d = sample(x, y, z)
+    const dx = x - entrance.x
+    const dz = z - entrance.z
+    if (dx * dx + dz * dz > influenceSq) return d
+    const along = mouthAlong(x, z, entrance)
+    // Doorway CSG is strictly the outward opening. Interior floor/walls stay
+    // the production ellipsoid chain (B3 floor-continuity).
+    if (along <= MOUTH_INTERIOR_ALONG) return d
+    const lateral = mouthLateral(x, z, entrance)
+    const yHill = y + along * 0.3
+    d = Math.max(d, along - MOUTH_INTERIOR_ALONG)
+    d = smin(d, mouthApertureVoidSDF(along, yHill, lateral, mouth), MOUTH_APERTURE_SMOOTH_K)
+    d = Math.max(d, -mouthFrameSolidSDF(along, yHill, lateral, mouth))
+    return d
+  }
 }
 
 export function boxSDF(x: number, y: number, z: number, cx: number, cy: number, cz: number, hx: number, hy: number, hz: number): number {
@@ -222,8 +268,10 @@ export function buildVoidField(
 
 /**
  * Builds the production SDF spatial representation for `topology`: bounds
- * plus a pure `sample(x, y, z)` field. No grid sampling, no mesh extraction
- * — see `sdfCaveMesh.ts` for the derived presentation.
+ * plus a pure `sample(x, y, z)` field. Mouth aperture and rock frame are
+ * applied here (`applyMouthGeometryToField`) so Surface Nets extracts a
+ * doorway rather than a closed ellipsoid. No grid sampling, no mesh
+ * extraction — see `sdfCaveMesh.ts` for the derived presentation.
  *
  * @domain world-terrain
  */
@@ -243,7 +291,8 @@ export function buildCaveSdfRepresentation(
 
   const primitives = topology.segments.flatMap((seg) => placePrimitivesAlongPath(segmentStations(topology, seg), params.primitiveSpacing))
   const features = featureBoxesFromTopology(topology)
-  const sample = buildVoidField(primitives, features, params.smoothK, noise)
+  const interior = buildVoidField(primitives, features, params.smoothK, noise)
+  const sample = applyMouthGeometryToField(interior, topology.entrance)
   const bounds = computeTopologyBounds(topology, params.cellSize * 2)
 
   return { bounds, sample }

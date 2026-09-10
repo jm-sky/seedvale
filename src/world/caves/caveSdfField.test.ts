@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { CaveEntrance } from '../caveVolume'
 import type { CaveTopology } from './caveTopology'
 import { buildCaveSdfRepresentation, DEFAULT_SDF_PARAMS, placePrimitivesAlongPath } from './caveSdfField'
+import { deriveMouthGeometry } from './mouthCarve'
 
 function baseEntrance(): CaveEntrance {
   return { x: 0, y: 0, z: 0, yaw: 0, width: 3, height: 2.6 }
@@ -68,6 +69,23 @@ describe('buildCaveSdfRepresentation (plan world-terrain-008 B1)', () => {
       expect(node.position.z).toBeGreaterThanOrEqual(bounds.minZ)
       expect(node.position.z).toBeLessThanOrEqual(bounds.maxZ)
     }
+  })
+
+  it('represents the doorway aperture as void and the hood/sides as rock before meshing', () => {
+    const topology = customGraphTopology()
+    const field = buildCaveSdfRepresentation(topology, DEFAULT_SDF_PARAMS, false)
+    const mouth = deriveMouthGeometry(topology.entrance)
+    const floorY = topology.entrance.y
+    const height = topology.entrance.height
+    // Doorway centre, slightly outward of the mouth plane.
+    expect(field.sample(0, floorY + height * 0.5, 0.25)).toBeLessThan(0)
+    // Hood / lintel rock on the centreline, below the analytic surface.
+    expect(field.sample(0, mouth.lintelY + 0.12, 0.4)).toBeGreaterThan(0)
+    // Rock sides just outside the aperture half-width.
+    expect(field.sample(2.05, floorY + height * 0.5, 0.25)).toBeGreaterThan(0)
+    expect(field.sample(-2.05, floorY + height * 0.5, 0.25)).toBeGreaterThan(0)
+    // Interior just inside the mouth stays void.
+    expect(field.sample(0, floorY + height * 0.5, -1.0)).toBeLessThan(0)
   })
 })
 
