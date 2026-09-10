@@ -52,10 +52,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/6
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `quests-progression-013` — **Rat infestation nest and reproduction**  
-   🟡 `M` · ✅ ready · unlocks 0/0
-5. `settlements-npcs-022` — **Household help and age-based work participation**  
+4. `settlements-npcs-022` — **Household help and age-based work participation**  
    🔴 `M` · ✅ ready · unlocks 0/0
+5. `settlements-npcs-025` — **Resource storage visualization**  
+   🟡 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -105,55 +105,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-9. `quests-progression-013` — **Rat infestation nest and reproduction**  
-  🟡 `M` · **Score:**  45  
-   → **unlocks:** 0/0
-
-10. `settlements-npcs-022` — **Household help and age-based work participation**  
+9. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-11. `settlements-npcs-025` — **Resource storage visualization**  
+10. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-12. `fauna-018` — **Persistent habitat occupants**  
+11. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
 
-13. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+12. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-14. `items-player-014` — **Rope-pullable resource transport**  
+13. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-15. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+14. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `tools-005` — **Seedvale Character Preparation Panel**  
+15. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+16. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-18. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+17. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-19. `fauna-013` — **Animal hand-feeding and human affinity**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-20. `npc-026` — **NPC Grave Visits**  
+18. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `fauna-007` — **Animal leading and cart harness**  
+19. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
