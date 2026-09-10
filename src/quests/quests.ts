@@ -890,15 +890,16 @@ export const QUESTS: readonly QuestDef[] = [
   {
     id: 'dzik-przy-szlaku',
     title: 'Dzik przy szlaku',
-    description: 'Mieszkańcy omijają część okolicy, gdzie regularnie widywany jest duży dzik. Marek prosi, żebyś się tym zajął.',
+    description:
+      'Mieszkańcy omijają część lasu przy szlaku, gdzie regularnie widywany jest duży dzik. Marek prosi o pomoc i radzi najpierw porozmawiać z Piotrem, który dobrze zna tę okolicę.',
     giverName: 'Marek',
     offerLine:
       'Przy szlaku regularnie widują dużego dzika, ludzie omijają tamtędy. Piotr lepiej zna las — najpierw z nim pogadaj, potem zajmij się bestią.',
     stages: [
       {
         objective: { type: 'talk_to_npc', npcName: 'Piotr' },
-        description: 'Porozmawiaj z Piotrem o dziku.',
-        reminderLine: 'Pytałeś już Piotra o dzika?',
+        description: 'Porozmawiaj z Piotrem i dowiedz się, gdzie widywano dzika.',
+        reminderLine: 'Porozmawiaj z Piotrem — wie, gdzie kręci się dzik przy szlaku.',
         progressLine: 'Tak, przy szlaku w lesie kręci się duży dzik. Uważaj na siebie.',
       },
       {

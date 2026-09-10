@@ -4,7 +4,7 @@ import type { NpcAgent } from '../ai/NpcAgent'
 import { nearestArchetype } from '../ai/dialogue'
 import { aboutSelfLine, aboutVillageLine, currentActivityLine, goodbyeLine } from '../ai/dialogueTemplates'
 import { useOverlayScreen } from './composables/useOverlayScreen'
-import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, ui } from './store'
+import { acceptNpcDialogueOffer, closeNpcDialogueMenu, emitUiClick, isNpcDialogueMenuOpen, resolveNpcDialogueOpenTopic, ui } from './store'
 
 const BACKDROP_CLOSE_GUARD_MS = 300
 
@@ -120,7 +120,8 @@ watch(() => state.open, (open) => {
 
   openedAt.value = performance.now()
   resetMenu()
-  if (state.paymentClaim) topic.value = 'payment'
+  const initialTopic = resolveNpcDialogueOpenTopic()
+  if (initialTopic) topic.value = initialTopic
 })
 </script>
 

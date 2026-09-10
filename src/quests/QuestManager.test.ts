@@ -1595,7 +1595,7 @@ describe('QuestManager dzik-przy-szlaku (plan quests-progression-005)', () => {
       boarLookup(10),
     )
     acceptOffer(qm, 'Marek')
-    expect(qm.onInteract('Marek')?.line).toBe('Pytałeś już Piotra o dzika?')
+    expect(qm.onInteract('Marek')?.line).toBe('Porozmawiaj z Piotrem — wie, gdzie kręci się dzik przy szlaku.')
     expect(qm.onInteract('Piotr')?.line).toBe('Tak, przy szlaku w lesie kręci się duży dzik. Uważaj na siebie.')
     expect(marked).toEqual([])
     expect(qm.onInteractObjective({ type: 'animal_died', animalId: 'boar-2' })).toBeNull()
