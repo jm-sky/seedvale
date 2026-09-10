@@ -567,35 +567,219 @@ Nie powiększać cave tylko po to, aby maskować camera bug.
 
 # B4 — Streaming + lifecycle + performance
 
-## 17. Streaming/lifecycle
+**B4 status (2026-09-10): recon complete, implementation pending.**  
+Current-code recon and detailed decisions: `docs/design/caves/05-b4-streaming-lifecycle-performance-recon.md`.  
+Implementation contract: `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b4-implementation-notes.md`.
 
-Reuse istniejący `WorldBundle` lifecycle i grid-based cave activation.
+B4 preserves persistent gameplay/world spatial truth and changes only how expensive cave presentation is scheduled, measured and disposed.
 
-Po unload/rebuild:
+Current production baseline:
 
-- meshes disposed;
-- colliders cleared;
-- runtime refs released;
-- ta sama cave identity/topology wraca dla tego samego seed/version.
+```text
+createCaves()
+  → eager persistent CaveTopology
+  → eager CaveSdfSpatialRepresentation
+  → eager CaveSdfColumnIndex
+  → eager SDF-derived collider data
 
-Nie skanować wszystkich caves per frame i nie generować wszystkich meshes upfront.
+Caves.update()
+  → <= 55 m: synchronous presentation extraction + activation
+  → >= 80 m: presentation dispose + collider unregister
+```
 
-## 18. Performance
+`queryGround`, occupancy and `queryInterior` already remain available independently of render activation. Do not regress this separation.
 
-Zmierzyć:
+B4 is implemented in three ordered slices:
 
-- topology generation;
-- SDF representation build;
-- mesh extraction;
-- peak temporary memory;
-- geometry memory;
-- vertices/triangles;
-- activation hitch;
-- collision proxy size.
+```text
+B4.1 lifecycle seam + production instrumentation
+B4.2 asynchronous SDF extraction
+B4.3 disposal / memory / cache closure
+```
 
-Milestone-A baseline (`~112.6 ms` SDF extraction przy `cellSize=0.4`) jest punktem odniesienia, nie akceptowanym automatycznie production budgetem.
+Do not expand one slice into the next without completing its acceptance boundary.
 
-Najpierw profilować i optymalizować data/layout/grid resolution/caching. Web Worker tylko wtedy, gdy main-thread blocking pozostaje istotny i transfer overhead ma sens.
+## 17. B4.1 — lifecycle seam + production instrumentation
+
+### Goal
+
+Prepare the existing cave runtime for asynchronous presentation extraction without changing Cave V2 generation or B2/B3 gameplay behaviour.
+
+Reuse existing `WorldBundle` ownership and grid-based cave relevance. Do not introduce a `CaveManager`.
+
+Introduce explicit presentation lifecycle semantics capable of representing at least:
+
+```text
+inactive
+queued/requested
+building
+active
+```
+
+A cave may have persistent gameplay/spatial truth while its presentation is absent or building.
+
+Add per-cave request/generation identity so a future asynchronous result can be rejected after deactivation, reactivation, rebuild or dispose.
+
+### Relevance and collider ownership
+
+Keep current streaming hysteresis initially:
+
+```text
+distance <= 55 m
+  → cave wanted
+  → register already-built colliders immediately
+  → request/build presentation if absent
+
+55 m < distance < 80 m
+  → retain current relevance/presentation state
+
+distance >= 80 m
+  → cave not wanted
+  → clear registered colliders
+  → detach/dispose presentation
+  → invalidate pending presentation generation
+```
+
+Collider **data** remains persistent and derived from SDF spatial truth. Collider registration is relevance-scoped but must not structurally wait for render mesh completion.
+
+### Measurements
+
+Instrument production costs separately:
+
+```text
+BOOT
+cave.topology
+cave.sdfRepresentation
+cave.columnIndex
+cave.colliders
+
+STREAMING / PRESENTATION
+cave.sdfSampling
+cave.surfaceNets
+cave.clipping
+cave.bufferGeometry
+cave.normalsBounds
+cave.framing
+cave.activationTotal
+```
+
+Also record where practical:
+
+- vertices / triangles;
+- collider count / proxy size;
+- final geometry bytes;
+- estimated temporary bytes;
+- activation hitch using existing Seedvale streaming/performance conventions.
+
+Current coarse `createCaves` boot mark and historical `CaveSpikeMetrics` are not sufficient to close B4 because they do not isolate eager column/collider costs or all main-thread presentation finalisation.
+
+### B4.1 acceptance
+
+B4.1 is complete when:
+
+- gameplay/spatial truth still works without active render presentation;
+- collider registration is independent of presentation completion;
+- presentation has an explicit pending/building lifecycle;
+- stale-generation/request identity exists;
+- production timings identify boot and presentation costs;
+- current 55/80 m hysteresis is preserved;
+- material/disposal ownership is checked without unrelated refactor;
+- targeted automated verification passes;
+- no topology/SDF/B2/B3 behaviour was intentionally changed.
+
+Browser verification belongs to Player.
+
+## 18. B4.2 — asynchronous SDF extraction
+
+Historical Milestone-A extraction (`~112.6 ms` at `cellSize=0.4`) plus current-code recon justify moving the CPU-heavy render extraction off the main thread once B4.1 instrumentation/lifecycle is present.
+
+Use a dedicated cave extraction worker/client, reusing terrain worker protocol semantics but not mechanically sharing the terrain worker pool.
+
+Worker boundary:
+
+```text
+MAIN
+CaveTopology
++ serializable SDF/extraction config
++ caveId/requestId
+      ↓
+CAVE EXTRACTION WORKER
+rebuild deterministic SDF representation
+sample SDF grid
+Surface Nets extraction
+      ↓
+transferable typed arrays + metrics
+      ↓
+MAIN
+world-dependent clipping/finalisation where required
+BufferGeometry
+normals/bounds
+THREE.Mesh / group
+scene registration
+```
+
+Do not transfer Three.js objects. Do not attempt to transfer the executable `CaveSdfSpatialRepresentation`; rebuild it deterministically from serializable topology/configuration.
+
+Current production clipping depends on analytic surface height. Inspect the exact current seam and keep world-owned surface truth on main unless a clean serializable input already exists. Do not duplicate terrain truth inside the worker.
+
+Initial scheduling policy:
+
+- max **1** cave extraction in flight;
+- queue additional wanted caves;
+- nearest/currently most relevant cave first;
+- duplicate requests coalesce;
+- queued stale work is removed/reprioritised;
+- running stale work may finish but its result is discarded;
+- world dispose terminates worker/client and invalidates pending generations;
+- no synchronous heavy extraction fallback on the hot streaming update path after B4.2.
+
+## 18a. B4.3 — disposal, memory and cache closure
+
+Validate repeated visit/unload behaviour:
+
+- render geometry is disposed;
+- transferred raw arrays are released;
+- pending/in-flight worker state is released on rebuild/dispose;
+- shared cave material lifecycle is explicit and correct;
+- active/queued/in-flight counters return to expected baseline;
+- visiting many caves does not cause unbounded render-memory growth.
+
+Initial cache policy: **no persistent geometry cache**.
+
+If production measurements later show repeated revisit extraction is materially harmful, consider only a bounded byte-budget/LRU cache. Do not introduce an unlimited geometry cache.
+
+### B4 automated coverage
+
+At minimum cover:
+
+1. duplicate cave request → one presentation job;
+2. deactivate before completion → stale result cannot mutate scene;
+3. deactivate → reactivate → older generation cannot override newer one;
+4. dispose during in-flight work → completion ignored;
+5. nearby caves obey concurrency/relevance ordering;
+6. 55/80 m hysteresis does not thrash;
+7. inactive cave still answers gameplay spatial queries;
+8. collider relevance does not depend on mesh readiness;
+9. extraction is deterministic for identical topology/config;
+10. repeated activate/deactivate returns retained render memory/state to baseline.
+
+### B4 guardrails
+
+Do not:
+
+- change production topology/generation quality;
+- change SDF shape/representation semantics;
+- change B2 ground/query ownership;
+- change B3 collision/camera behaviour;
+- change swimming/water ownership, entrance correctness or player movement;
+- restore `CaveVolume` as gameplay truth;
+- make gameplay/world truth depend on presentation activation;
+- introduce global voxel terrain;
+- create a monolithic `CaveManager`;
+- workerize unrelated eager cave work without measurement;
+- perform unrelated refactors.
+
+World/simulation truth must remain independent from player/camera presentation relevance so this architecture remains compatible with future server/multiplayer simulation.
 
 ---
 
