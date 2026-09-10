@@ -65,7 +65,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-016-first-processing-chain-and-blacksmith-production.md`  | -       | 🔴 | M      | settlements-npcs-015 |
 | 💡 `settlements-npcs-017-production-demand-and-economic-pressures.md`          | -       | 🔴 | M      | settlements-npcs-016 |
 | 💡 `settlements-npcs-022-household-help-and-age-based-work-participation.md`   | -       | 🔴 | M      | ~~settlements-npcs-002~~ |
-| ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md`    | -       | 🔴 | M      | -      |
+| 💡 `settlements-npcs-023-profession-staffing-and-settlement-composition.md`    | -       | 🔴 | M      | -      |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-008, fauna-016 |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
@@ -74,7 +74,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
-| ◼️ `ui-input-016-building-placement-construction-ux-coherence.md`              | -       | 🔴 | L      | ~~ui-input-014~~, ~~ui-input-015~~, items-player-024 |
+| 💡 `ui-input-016-building-placement-construction-ux-coherence.md`              | -       | 🔴 | L      | ~~ui-input-014~~, ~~ui-input-015~~, items-player-024 |
 
 ---
 

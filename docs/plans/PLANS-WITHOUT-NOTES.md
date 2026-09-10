@@ -1,15 +1,13 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-10 20:09:35  
+> Date: 2026-09-10 20:11:03  
 
 ## PLANS
 
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
-- `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
 - `tools-005-seedvale-character-preparation-panel.md`
-- `ui-input-016-building-placement-construction-ux-coherence.md`
 
 --------------------------------
 ## PROMPTS
@@ -76,37 +74,6 @@ Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywisty
 Plik dodaj na branch `main` w repozytorium.
 ```
 
-### `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
-
-Prompt:
-
-```
-Zrób review planu `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/settlements-npcs-023-profession-staffing-and-settlement-composition.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/settlements-npcs-023-profession-staffing-and-settlement-composition-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
 ### `tools-005-seedvale-character-preparation-panel.md`
 
 Prompt:
@@ -123,37 +90,6 @@ Wczytaj:
 
 Na podstawie review utwórz w repo plik:
 `docs/plans/implementation-notes/tools-005-seedvale-character-preparation-panel-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
-
-### `ui-input-016-building-placement-construction-ux-coherence.md`
-
-Prompt:
-
-```
-Zrób review planu `ui-input-016-building-placement-construction-ux-coherence.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/ui-input-016-building-placement-construction-ux-coherence.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/ui-input-016-building-placement-construction-ux-coherence-implementation-notes.md`
 
 Umieść w nim:
 - sugestie dotyczące implementacji,
