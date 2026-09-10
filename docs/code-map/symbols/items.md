@@ -442,33 +442,33 @@ Generated from exported TypeScript symbols.
 
 ## `items/tradeCatalog.ts`
 
-- `BASE_SELL_FACTOR` — const — line 181
+- `BASE_SELL_FACTOR` — const — line 186
   - domain: settlements — full-condition sell factor bounds (plan settlements-006).
-- `BROKEN_SELL_MULTIPLIER` — const — line 283
-- `canSell` — function — line 212
-- `fullConditionSellFactor` — function — line 245
+- `BROKEN_SELL_MULTIPLIER` — const — line 288
+- `canSell` — function — line 217
+- `fullConditionSellFactor` — function — line 250
   - domain: settlements — sell factor for a full-condition item before durability scaling.
-- `isMerchantStock` — function — line 196
-- `MAX_SELL_FACTOR` — const — line 183
-- `MERCHANT_PRICES` — const — line 13
-- `MERCHANT_STOCK` — const — line 87
-- `merchantPrice` — function — line 192
-- `MIN_SELL_FACTOR` — const — line 182
-- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 173
+- `isMerchantStock` — function — line 201
+- `MAX_SELL_FACTOR` — const — line 188
+- `MERCHANT_PRICES` — const — line 14
+- `MERCHANT_STOCK` — const — line 91
+- `merchantPrice` — function — line 197
+- `MIN_SELL_FACTOR` — const — line 187
+- `NEUTRAL_SELL_PRICE_CONTEXT` — const — line 178
   - domain: settlements — neutral social standing for merchant sell pricing.
-- `offerValue` — function — line 274
-- `relationshipEffect` — function — line 221
+- `offerValue` — function — line 279
+- `relationshipEffect` — function — line 226
   - domain: settlements — relation tier bonus in percentage points (0.01 = 1 pp).
-- `reputationEffect` — function — line 234
+- `reputationEffect` — function — line 239
   - domain: settlements — weighted reputation × renown amplification (percentage points).
-- `resolveInstanceSellPrice` — function — line 286
+- `resolveInstanceSellPrice` — function — line 291
   - domain: settlements — merchant buyback for a concrete item instance — price is derived, never stored.
-- `roundSellPrice` — function — line 254
+- `roundSellPrice` — function — line 259
   - domain: settlements — deterministic integer coin rounding shared by stack and instance pricing.
-- `sellPrice` — function — line 264
+- `sellPrice` — function — line 269
   - domain: settlements — merchant buyback for a stackable kind at full condition.
-- `SellPriceContext` — type — line 185
-- `tradeValue` — function — line 201
+- `SellPriceContext` — type — line 190
+- `tradeValue` — function — line 206
 
 ## `items/trapItemInstances.ts`
 

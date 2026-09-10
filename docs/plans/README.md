@@ -73,7 +73,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `ui-input-016-building-placement-construction-ux-coherence.md`              | -       | 🔴 | L      | ~~ui-input-014~~, ~~ui-input-015~~, items-player-024 |
-| 💡 `quests-progression-018-quest-playtest-reachability-and-dialogue-conflicts.md` | -       | 🔴 | M      | ~~quests-progression-005~~, quests-progression-014 |
 
 ---
 
