@@ -42,6 +42,19 @@ Generated from TypeScript imports.
 - `ui-vue/store.ts`
 - `ui/createQuestLog.ts`
 
+## `quests/cardinalDirection.test.ts`
+
+**Imports**
+
+- `quests/cardinalDirection.ts`
+
+## `quests/cardinalDirection.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/cardinalDirection.test.ts`
+
 ## `quests/quests.test.ts`
 
 **Imports**

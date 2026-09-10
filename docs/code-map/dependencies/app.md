@@ -683,6 +683,7 @@ Generated from TypeScript imports.
 - `debug/npcInspectTrigger.ts`
 - `debug/playerGroundTrace.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/createFauna.ts`
 - `input/Keyboard.ts`
 - `input/MouseLook.ts`
 - `input/createTouchControls.ts`
@@ -710,6 +711,7 @@ Generated from TypeScript imports.
 - `player/humanCarryCapacity.ts`
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
+- `quests/cardinalDirection.ts`
 - `quests/quests.ts`
 - `render/programPrewarm.ts`
 - `reputation/ReputationManager.ts`

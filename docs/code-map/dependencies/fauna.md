@@ -409,6 +409,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/survivalActions.ts`
+- `app/createApp.ts`
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 - `assets/assetIndex.ts`

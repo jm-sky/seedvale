@@ -223,19 +223,20 @@ Generated from exported TypeScript symbols.
 ## `fauna/createFauna.ts`
 
 - `clearsRiverChannel` — function — line 229
-- `createFauna` — function — line 463
+- `createFauna` — function — line 474
 - `Fauna` — type — line 71
-- `FAUNA_URLS` — const — line 387
+- `FAUNA_URLS` — const — line 398
+- `findHomeCaveSpawner` — function — line 357
 - `isDeerEdgeHabitat` — function — line 260
 - `isNearRoadCorridor` — function — line 241
 - `measureSlope` — function — line 299
-- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 363
-- `SPAWNER_DESTROYING_GENITIVE` — const — line 371
-- `SPAWNER_LABELS` — const — line 355
+- `SPAWNER_DESTROY_ACCUSATIVE` — const — line 374
+- `SPAWNER_DESTROYING_GENITIVE` — const — line 382
+- `SPAWNER_LABELS` — const — line 366
 - `SPAWNER_RING_OFFSET` — const — line 200
 - `SPAWNER_SPECS` — const — line 333
-- `spawnerDestroyBusyLabel` — function — line 382
-- `spawnerDestroyPromptLabel` — function — line 378
+- `spawnerDestroyBusyLabel` — function — line 393
+- `spawnerDestroyPromptLabel` — function — line 389
 - `spawnerId` — function — line 351
 
 ## `fauna/dogGuard.ts`
