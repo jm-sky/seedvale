@@ -257,10 +257,15 @@ describe('drinkFromWaterSource — uncovered player-well consumption risk (plan 
 })
 
 describe('feedAnimal (plan fauna-011 §6)', () => {
-  function fakeAnimal(dietItems: Partial<Record<string, number>> | undefined, feedByPlayerResult = true): FeedableAnimal & { feedByPlayer: ReturnType<typeof vi.fn> } {
+  function fakeAnimal(
+    dietItems: Partial<Record<string, number>> | undefined,
+    feedByPlayerResult = true,
+    canAccept = true,
+  ): FeedableAnimal & { feedByPlayer: ReturnType<typeof vi.fn> } {
     return {
       def: { diet: dietItems ? { items: dietItems } : undefined },
       feedByPlayer: vi.fn(() => feedByPlayerResult),
+      canAcceptHandFeedItem: vi.fn(() => canAccept),
     }
   }
 
@@ -309,6 +314,16 @@ describe('feedAnimal (plan fauna-011 §6)', () => {
 
     expect(fed).toBe(false)
     expect(animal.feedByPlayer).toHaveBeenCalledWith('raw_meat')
+    expect(inventory.has('raw_meat', 1)).toBe(true)
+  })
+
+  it('satiated animal (canAcceptHandFeedItem false) does not consume inventory', () => {
+    const inventory = new Inventory({}, Infinity)
+    inventory.add('raw_meat', 1)
+    const animal = fakeAnimal({ raw_meat: 0.8 }, true, false)
+
+    expect(feedAnimal(animal, inventory)).toBe(false)
+    expect(animal.feedByPlayer).not.toHaveBeenCalled()
     expect(inventory.has('raw_meat', 1)).toBe(true)
   })
 })

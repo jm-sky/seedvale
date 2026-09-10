@@ -5,15 +5,18 @@ import { Inventory } from '../items/Inventory'
 import { ANIMAL_DEFS } from './animalDefs'
 import {
   applySourceRelief,
+  canAcceptHandFeed,
   type CarcassCandidate,
+  dietItemReliefScale,
   findFoodTarget,
   findTroughTarget,
   findWaterTarget,
   type ForagingContext,
   isSourceTargetValid,
   type SourceTarget,
+  tryCommitHandFeed,
 } from './animalForaging'
-import { createAnimalLifeState, DEFAULT_ANIMAL_METABOLISM } from './AnimalLife'
+import { createAnimalLifeState, DEFAULT_ANIMAL_METABOLISM, FOOD_RELIEF, NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 
 function fakeHousehold(overrides: Partial<{
   waterAmount: number
@@ -297,5 +300,29 @@ describe('findFoodTarget / isSourceTargetValid — carcass tier gating (plan fau
     expect(target).not.toBeNull()
     expect(corpse.foodClaimedBy).toBe(eaterA)
     expect(findFoodTarget(ctx, eaterB, [corpse])).toBeNull()
+  })
+})
+
+describe('hand-feed diet contract (plan fauna-013)', () => {
+  it('uses the same relief scale as household feed for a diet item', () => {
+    const diet = ANIMAL_DEFS.dog.diet
+    expect(dietItemReliefScale(diet, 'raw_meat')).toBe(diet?.items?.raw_meat)
+  })
+
+  it('rejects satiated animals and accepts hungry ones', () => {
+    const life = createAnimalLifeState(0.5, DEFAULT_ANIMAL_METABOLISM)
+    const diet = ANIMAL_DEFS.horse.diet
+    life.hunger = NEED_ELEVATED_THRESHOLD - 0.01
+    expect(canAcceptHandFeed(life, diet, 'hay')).toBe(false)
+    life.hunger = NEED_ELEVATED_THRESHOLD
+    expect(canAcceptHandFeed(life, diet, 'hay')).toBe(true)
+  })
+
+  it('tryCommitHandFeed applies configured relief once', () => {
+    const life = createAnimalLifeState(0.5, DEFAULT_ANIMAL_METABOLISM)
+    life.hunger = 0.9
+    const relief = ANIMAL_DEFS.dog.diet?.items?.raw_meat ?? 1
+    expect(tryCommitHandFeed(life, ANIMAL_DEFS.dog.diet, 'raw_meat')).toBe(true)
+    expect(life.hunger).toBeCloseTo(0.9 - FOOD_RELIEF * relief, 5)
   })
 })

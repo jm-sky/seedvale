@@ -55,7 +55,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                       | -       | 🟡 | M      | ~~fauna-010~~, ~~fauna-011~~, ~~fauna-017~~ |
+| 💡 `fauna-013-animal-hand-feeding-and-human-affinity.md`                       | -       | ✅ | M      | ~~fauna-010~~, ~~fauna-011~~, ~~fauna-017~~ |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`               | -       | 🔴 | M      | ~~settlements-npcs-014~~ |

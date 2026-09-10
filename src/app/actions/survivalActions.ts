@@ -133,7 +133,8 @@ export function hasCarriedMilkContainer(inventory: Inventory): boolean {
  *  success" contract without constructing a full agent/mesh. */
 export type FeedableAnimal = {
   def: { diet?: { items?: Partial<Record<ItemKind, number>> } }
-  feedByPlayer: (itemKind: ItemKind) => boolean
+  feedByPlayer: (itemKind: ItemKind, humanId?: string) => boolean
+  canAcceptHandFeedItem?: (itemKind: ItemKind) => boolean
 }
 
 /** Player -> animal feeding (plan fauna-011 §6) — a generic seam for any
@@ -148,7 +149,9 @@ export function feedAnimal(animal: FeedableAnimal, inventory: Inventory): boolea
   const dietItems = animal.def.diet?.items
   if (!dietItems) return false
   const feedKind = selectDietFeedKind(inventory, dietItems)
-  if (!feedKind || !animal.feedByPlayer(feedKind)) return false
+  if (!feedKind) return false
+  if (animal.canAcceptHandFeedItem && !animal.canAcceptHandFeedItem(feedKind)) return false
+  if (!animal.feedByPlayer(feedKind)) return false
   inventory.remove(feedKind, 1)
   return true
 }

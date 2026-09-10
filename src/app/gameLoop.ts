@@ -971,7 +971,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         (kind) => questManager.activeSpotAnimalRange(kind),
         hasMilkContainer,
         hasCarriedWaterContainer,
-        (animal) => (animal.def.diet?.items ? selectDietFeedKind(inventory, animal.def.diet.items) : null),
+        (animal) => {
+          const items = animal.def.diet?.items
+          if (!items) return null
+          const kind = selectDietFeedKind(inventory, items)
+          if (!kind || !animal.canAcceptHandFeedItem(kind)) return null
+          return kind
+        },
         bundle.riverWaterQuality.resolve,
         bundle.settlementsManager.getDetachedLivestock(),
         getSeed(),

@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { AnimalAgent, type AnimalAgentDeps } from './AnimalAgent'
 import { ANIMAL_DEFS } from './animalDefs'
+import { FAUNA_PLAYER_HUMAN_ID } from './animalHumanAffinity'
+import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
 
 const sampleHeight = () => 0
@@ -190,5 +192,40 @@ describe('AnimalAgent', () => {
     const scaleAfterMaturity = juvenile.mesh.scale.x
     juvenile.resolveTimeSkip(8 * 3600)
     expect(juvenile.mesh.scale.x).toBeCloseTo(scaleAfterMaturity, 10)
+  })
+
+  describe('hand-feed and human affinity (plan fauna-013)', () => {
+    it('dog feed increments only the feeding human affinity', () => {
+      const dog = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-1' }))
+      dog.life.hunger = 0.9
+      expect(dog.tryHandFeed(FAUNA_PLAYER_HUMAN_ID, 'raw_meat')).toBe(true)
+      expect(dog.getHumanAffinityValue(FAUNA_PLAYER_HUMAN_ID)).toBe(0.25)
+      expect(dog.getHumanAffinityValue('npc:other')).toBe(0)
+    })
+
+    it('horse hand-feed does not allocate affinity state', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'horse-1' }))
+      horse.life.hunger = 0.9
+      expect(horse.tryHandFeed(FAUNA_PLAYER_HUMAN_ID, 'hay')).toBe(true)
+      expect(horse.getDebugInfo().humanAffinity).toBeNull()
+    })
+
+    it('rejects hand-feed when not hungry enough', () => {
+      const dog = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-2' }))
+      dog.life.hunger = NEED_ELEVATED_THRESHOLD - 0.05
+      expect(dog.tryHandFeed(FAUNA_PLAYER_HUMAN_ID, 'raw_meat')).toBe(false)
+    })
+
+    it('affinity round-trips through snapshot and hydrate', () => {
+      const dog = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-3' }))
+      dog.life.hunger = 0.9
+      dog.tryHandFeed(FAUNA_PLAYER_HUMAN_ID, 'raw_meat')
+      const snap = dog.snapshot()
+      expect(snap.affinity).toEqual([{ humanId: FAUNA_PLAYER_HUMAN_ID, value: 0.25 }])
+
+      const loaded = new AnimalAgent(makeDeps({ def: ANIMAL_DEFS.dog, animalId: 'dog-4' }))
+      loaded.hydrate({ ...snap, x: 0, z: 0, yaw: 0 })
+      expect(loaded.getHumanAffinityValue(FAUNA_PLAYER_HUMAN_ID)).toBe(0.25)
+    })
   })
 })

@@ -138,6 +138,16 @@ describe('resolveDogBarkStimulus', () => {
     )
     expect(stimulus).toBeNull()
   })
+
+  it('a trusted outsider near the house does not trigger stranger bark (plan fauna-013)', () => {
+    const stimulus = resolveDogBarkStimulus(
+      HOME, 'house-1', false,
+      [], DOG_BARK_HOWL_RADIUS,
+      [{ x: 2, z: 0, homeId: 'house-2', humanId: 'player', trusted: true }],
+      DOG_BARK_STRANGER_RADIUS,
+    )
+    expect(stimulus).toBeNull()
+  })
 })
 
 function rat(overrides: Partial<DogPestCandidate>): DogPestCandidate {

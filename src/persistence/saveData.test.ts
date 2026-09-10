@@ -342,6 +342,32 @@ describe('loadSaveData v1 contract', () => {
     expect(loadSaveData(withPersistence)).toEqual(withPersistence)
   })
 
+  it('accepts optional livestock affinity and rejects malformed entries (plan fauna-013)', () => {
+    const withAffinity = {
+      ...validSave,
+      livestock: [{
+        settlementId: 'home',
+        animalId: 'dog-house0-0',
+        kind: 'dog',
+        ownerHouseId: 'home:home:0',
+        x: 1,
+        z: 2,
+        yaw: 0.5,
+        health: { current: 10, max: 10, dead: false },
+        life: { hunger: 0.2, thirst: 0.1, stamina: 1 },
+        productionReadyAtDays: null,
+        eggPending: false,
+        corpse: null,
+        affinity: [{ humanId: 'player', value: 0.5 }],
+      }],
+    }
+    expect(loadSaveData(withAffinity)).toEqual(withAffinity)
+    expect(loadSaveData({
+      ...withAffinity,
+      livestock: [{ ...withAffinity.livestock[0], affinity: [{ humanId: '', value: 0.5 }] }],
+    })).toBeNull()
+  })
+
   it('rejects a malformed npcStates record', () => {
     expect(loadSaveData({
       ...validSave,

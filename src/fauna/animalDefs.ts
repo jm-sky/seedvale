@@ -141,6 +141,20 @@ export type AnimalDef = {
   trips?: {
     water?: WaterTripConfig
   }
+  /** Presence of this field IS the human-affinity capability (plan fauna-013)
+   *  — only species that consume it (dog in V1) get sparse per-individual
+   *  relationship state; other hand-fed livestock use the same feeding flow
+   *  without allocating affinity. */
+  affinity?: AnimalAffinityConfig
+}
+
+/** Per-species human-affinity tuning (plan fauna-013) — gain applies only
+ *  after a successful hand-feed commit; `trustedThreshold` is interpreted by
+ *  behaviour (e.g. dog stranger bark), not ownership/guard priority. */
+export type AnimalAffinityConfig = {
+  gainPerSuccessfulFeed: number
+  max: number
+  trustedThreshold: number
 }
 
 /** One species' water-trip policy (plan fauna-016 §5) — deliberately not a
@@ -562,6 +576,7 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
     playerPanicRange: 0,
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: MEAT_DIET,
+    affinity: { gainPerSuccessfulFeed: 0.25, max: 1, trustedThreshold: 0.75 },
   },
   // Plan fauna-016 §7: settlement-habitat pest. `sociability: 'domestic'`
   // (not `'wild'`) is deliberate, not a species-flavor accident — it's what

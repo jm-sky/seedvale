@@ -1713,6 +1713,19 @@ function isOwnedAnimalControlField(value: unknown): boolean {
   return typeof a.x === 'number' && typeof a.z === 'number'
 }
 
+/** Optional sparse human affinity on livestock individuals (plan fauna-013). */
+function isAnimalAffinityField(value: unknown): boolean {
+  if (value === undefined) return true
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const e = entry as Record<string, unknown>
+    if (typeof e.humanId !== 'string' || e.humanId.length === 0) return false
+    if (typeof e.value !== 'number' || !Number.isFinite(e.value)) return false
+    return e.value >= 0 && e.value <= 1
+  })
+}
+
 /** Validates one `LivestockSaveRecord` (plan persistence-001) — `kind` is
  *  validated against the full `AnimalKind` set (not just `LIVESTOCK_KINDS`)
  *  since a merchant horse is a plain `'horse'` too; `livestock.ts`'s own
@@ -1735,7 +1748,8 @@ function isLivestockSaveRecord(value: unknown): value is LivestockSaveRecord {
     isLivestockLife(r.life) &&
     (r.productionReadyAtDays === null || typeof r.productionReadyAtDays === 'number') &&
     typeof r.eggPending === 'boolean' &&
-    isLivestockCorpse(r.corpse)
+    isLivestockCorpse(r.corpse) &&
+    isAnimalAffinityField(r.affinity)
   )
 }
 

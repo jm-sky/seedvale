@@ -135,7 +135,15 @@ export type DogBarkStimulus = 'guard' | 'wolf-howl' | 'stranger'
  *  check (plan fauna-011 §7's dog-to-dog cascade guard). */
 export type RecentVocalizeCandidate = { x: number, z: number }
 
-export type StrangerNpcCandidate = { x: number, z: number, homeId?: string }
+export type StrangerNpcCandidate = {
+  x: number
+  z: number
+  homeId?: string
+  /** Stable human id when known (plan fauna-013) — for affinity interpretation. */
+  humanId?: string
+  /** When true, stranger bark relevance is suppressed (trusted outsider). */
+  trusted?: boolean
+}
 
 /**
  * Three stimulus tiers, highest first (plan fauna-011 §7/§8): an active
@@ -159,6 +167,7 @@ export function resolveDogBarkStimulus(
   }
   for (const npc of nearbyNpcs) {
     if (npc.homeId != null && npc.homeId === ownerHouseId) continue
+    if (npc.trusted) continue
     if (Math.hypot(npc.x - home.x, npc.z - home.z) <= strangerRadius) return 'stranger'
   }
   return null

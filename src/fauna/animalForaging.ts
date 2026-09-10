@@ -6,7 +6,8 @@ import type { GrassForageService } from '../world/createGrassForagePatches'
 import type { CorpsePhase } from './animalCorpse'
 import type { AnimalDef, AnimalRole, ScavengingConfig } from './animalDefs'
 import { shoreProbeHits } from '../terrain/waterBodyKind'
-import { type AnimalLifeState, consumeFood, drinkWater } from './AnimalLife'
+import { type AnimalLifeState, consumeFood, drinkWater, NEED_ELEVATED_THRESHOLD } from './AnimalLife'
+import type { AnimalDietConfig } from './animalDefs'
 import { probeBestPointNear } from './animalRoaming'
 
 /**
@@ -119,6 +120,40 @@ export function selectDietFeedKind(
     if (items.has(kind, 1)) return kind
   }
   return null
+}
+
+/** Relief scale for one `diet.items` entry — shared by autonomous household
+ *  feed (`applySourceRelief`'s `feed` arm) and player/NPC hand-feeding. */
+export function dietItemReliefScale(
+  diet: AnimalDietConfig | undefined,
+  itemKind: ItemKind,
+): number | null {
+  const relief = diet?.items?.[itemKind]
+  return relief == null ? null : relief
+}
+
+/** Read-only hand-feed acceptance (plan fauna-013) — same hunger threshold as
+ *  elevated food seeking (`NEED_ELEVATED_THRESHOLD`). */
+export function canAcceptHandFeed(
+  life: AnimalLifeState,
+  diet: AnimalDietConfig | undefined,
+  itemKind: ItemKind,
+): boolean {
+  if (dietItemReliefScale(diet, itemKind) == null) return false
+  return life.hunger >= NEED_ELEVATED_THRESHOLD
+}
+
+/** Commits one diet-item hunger relief if still accepted — caller owns
+ *  lifecycle/inventory; no affinity side effects here. */
+export function tryCommitHandFeed(
+  life: AnimalLifeState,
+  diet: AnimalDietConfig | undefined,
+  itemKind: ItemKind,
+): boolean {
+  const relief = dietItemReliefScale(diet, itemKind)
+  if (relief == null || life.hunger < NEED_ELEVATED_THRESHOLD) return false
+  consumeFood(life, relief)
+  return true
 }
 
 /** Whether a corpse can feed this eater (plan 094). `consumed` is set once
@@ -530,7 +565,8 @@ export function applySourceRelief(ctx: ForagingContext, target: SourceTarget): v
     // (another consumer took the last unit first) grants no relief; the
     // next search replans through the existing retry/cooldown path.
     if (ctx.household?.items.remove(target.feedItemKind, 1)) {
-      consumeFood(ctx.life, ctx.def.diet?.items?.[target.feedItemKind] ?? 1)
+      const relief = dietItemReliefScale(ctx.def.diet, target.feedItemKind) ?? 1
+      consumeFood(ctx.life, relief)
     }
   } else if (target.kind === 'grassPatch' && target.patchId) {
     // Atomic first-wins consumption (plan fauna-010 §3/§4) — a losing

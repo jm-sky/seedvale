@@ -76,6 +76,7 @@ import {
 } from './animalDefs'
 import {
   applySourceRelief,
+  canAcceptHandFeed,
   DRINK_DURATION_SEC,
   EAT_DURATION_SEC,
   findFoodTarget,
@@ -86,18 +87,27 @@ import {
   SOURCE_SEARCH_COOLDOWN_SEC,
   SOURCE_TARGET_TIMEOUT_SEC,
   type SourceTarget,
+  tryCommitHandFeed,
   WATER_INTERACTION_RANGE,
 } from './animalForaging'
 import {
   type AnimalLifeState,
   BIAS_STRENGTH,
-  consumeFood,
   createAnimalLifeState,
   NEED_ELEVATED_THRESHOLD,
   SLEEP_HUNGER_THIRST_RATE,
   STAMINA_REST_THRESHOLD,
   tickAnimalLife,
 } from './AnimalLife'
+import {
+  applyAffinityGain,
+  deserializeHumanAffinity,
+  FAUNA_PLAYER_HUMAN_ID,
+  faunaNpcHumanId,
+  isAffinityTrusted,
+  type SparseHumanAffinity,
+  serializeHumanAffinity,
+} from './animalHumanAffinity'
 import {
   type AnimalOwner,
   deriveOwnerHouseId,
@@ -118,6 +128,7 @@ import {
   resolveDogBarkStimulus,
   resolveDogGuardTarget,
   resolveDogPestTarget,
+  type StrangerNpcCandidate,
 } from './dogGuard'
 import { createHealthState, damageFor, damageVsHuman, MAX_HP } from './faunaCombat'
 import {
@@ -462,6 +473,10 @@ export type AnimalAgentDebugInfo = {
     hasHurtClip: boolean
     hasDeathClip: boolean
   }
+  /** Hand-feed gating (plan fauna-013) — `null` for species without diet items. */
+  handFeed: { hunger: number, canAcceptFood: boolean } | null
+  /** Sparse affinity entries when this species has `def.affinity` (plan fauna-013). */
+  humanAffinity: { entries: { humanId: string, value: number }[], trustedForPlayer: boolean } | null
 }
 
 /** Plain-data persistence contract for one livestock/mount individual (plan
@@ -490,6 +505,8 @@ export type AnimalSaveState = {
     mode: OwnedAnimalControlMode
     stayAnchor?: { x: number, z: number }
   }
+  /** Sparse human affinity (plan fauna-013) — optional, backward-compatible. */
+  affinity?: { humanId: string, value: number }[]
 }
 
 type EnvironmentSense = {
@@ -608,6 +625,7 @@ const dogGuardWolfScratch: DogGuardWolfCandidate[] = []
 const dogGuardNpcTargetScratch: { npcId: string, homeId?: string }[] = []
 const dogPestScratch: DogPestCandidate[] = []
 const dogHowlScratch: RecentVocalizeCandidate[] = []
+const dogStrangerScratch: StrangerNpcCandidate[] = []
 
 function scratchAt<T>(buf: T[], i: number, create: () => T): T {
   let item = buf[i]
@@ -1060,6 +1078,9 @@ export class AnimalAgent {
   /** Diagnostic-only record of the last stimulus that actually fired a bark
    *  (plan fauna-011 §15) — not itself read by any decision logic. */
   private lastBarkStimulus: 'guard' | 'wolf-howl' | 'stranger' | null = null
+  /** Sparse per-human affinity (plan fauna-013) — only allocated for species
+   *  with `def.affinity` and only after the first successful gain. */
+  private humanAffinityById: SparseHumanAffinity | null = null
   /** Seconds remaining since this animal last vocalized (any kind) — the
    *  "wolf howled recently" stimulus a nearby dog's `resolveBarkStimulus()`
    *  reads via `recentVocalizeAlert`, instead of depending on WebAudio/
@@ -1638,18 +1659,47 @@ export class AnimalAgent {
       : null
   }
 
-  /** Player-fed compatible diet item (plan fauna-011 §6) — generic seam for
-   *  any species with `def.diet.items`, not dog-specific (`findFoodTarget()`/
-   *  `performSourceAction()` already gate their own autonomous feeding the
-   *  same way). Applies hunger relief at the item's configured diet scale;
-   *  does not touch inventory — `gameLoop.ts` calls `Inventory.remove()`
-   *  itself only after this returns `true`, so an incompatible item is never
-   *  consumed. */
-  feedByPlayer(itemKind: ItemKind): boolean {
-    const relief = this.def.diet?.items?.[itemKind]
-    if (relief == null) return false
-    consumeFood(this.life, relief)
+  /** Read-only hand-feed gate for UI (plan fauna-013) — authoritative commit
+   *  still revalidates in `tryHandFeed()`. */
+  canAcceptHandFeedItem(itemKind: ItemKind): boolean {
+    if (this.health.dead) return false
+    return canAcceptHandFeed(this.life, this.def.diet, itemKind)
+  }
+
+  getHumanAffinityValue(humanId: string): number {
+    return this.humanAffinityById?.get(humanId) ?? 0
+  }
+
+  isHumanAffinityTrusted(humanId: string): boolean {
+    const cfg = this.def.affinity
+    if (!cfg) return false
+    return isAffinityTrusted(this.getHumanAffinityValue(humanId), cfg.trustedThreshold)
+  }
+
+  private ensureHumanAffinityMap(): SparseHumanAffinity {
+    if (!this.humanAffinityById) this.humanAffinityById = new Map()
+    return this.humanAffinityById
+  }
+
+  private applyHandFeedAffinityGain(humanId: string): void {
+    const cfg = this.def.affinity
+    if (!cfg) return
+    applyAffinityGain(this.ensureHumanAffinityMap(), humanId, cfg.gainPerSuccessfulFeed, cfg.max)
+  }
+
+  /** Actor-aware hand-feed commit (plan fauna-013) — lifecycle + shared diet/
+   *  hunger rules in `animalForaging`; affinity only after food commit. */
+  tryHandFeed(humanId: string, itemKind: ItemKind): boolean {
+    if (this.health.dead) return false
+    if (!tryCommitHandFeed(this.life, this.def.diet, itemKind)) return false
+    this.applyHandFeedAffinityGain(humanId)
     return true
+  }
+
+  /** Player-fed compatible diet item (plan fauna-011 §6) — thin adapter over
+   *  `tryHandFeed()` for the existing player interaction seam. */
+  feedByPlayer(itemKind: ItemKind, humanId = FAUNA_PLAYER_HUMAN_ID): boolean {
+    return this.tryHandFeed(humanId, itemKind)
   }
 
   /** Toggles the gaze-highlight glow on this animal's label. Idempotent — no
@@ -1778,6 +1828,20 @@ export class AnimalAgent {
         hasHurtClip: this.anim.has('hurt'),
         hasDeathClip: this.anim.has('death'),
       },
+      handFeed: this.def.diet?.items
+        ? {
+            hunger: this.life.hunger,
+            canAcceptFood: Object.keys(this.def.diet.items).some((kind) =>
+              this.canAcceptHandFeedItem(kind as ItemKind),
+            ),
+          }
+        : null,
+      humanAffinity: this.def.affinity
+        ? {
+            entries: serializeHumanAffinity(this.humanAffinityById) ?? [],
+            trustedForPlayer: this.isHumanAffinityTrusted(FAUNA_PLAYER_HUMAN_ID),
+          }
+        : null,
     }
   }
 
@@ -1803,6 +1867,7 @@ export class AnimalAgent {
         : null,
       owner: this._owner,
       control: this.isPlayerOwned() ? snapshotOwnedAnimalControl(this._control) : undefined,
+      affinity: serializeHumanAffinity(this.humanAffinityById),
     }
   }
 
@@ -1854,6 +1919,7 @@ export class AnimalAgent {
       this.labelController.settleAtZeroHp()
     }
     if (state.owner !== undefined) this._owner = state.owner
+    this.humanAffinityById = deserializeHumanAffinity(state.affinity)
     hydrateOwnedAnimalControl(this._control, state.control)
     if (this._control.stayAnchor) {
       this.home.set(this._control.stayAnchor.x, 0, this._control.stayAnchor.z)
@@ -2357,7 +2423,7 @@ export class AnimalAgent {
         this.threateningHuman = true
       }
       if (this.def.kind === 'dog') {
-        this.updateDogVocalization(dt, guardTarget, nearbyPredators, nearbySettlementNpcs, onVocalize)
+        this.updateDogVocalization(dt, guardTarget, nearbyPredators, nearbySettlementNpcs, observerPos, onVocalize)
       }
     }
     if (this.threateningHuman && !this.wasThreateningHuman) {
@@ -3207,6 +3273,7 @@ export class AnimalAgent {
     guardTarget: DogGuardTarget | null,
     nearbyPredators: readonly AnimalAgent[],
     nearbySettlementNpcs: readonly NearbyNpcCandidate[],
+    observerPos: THREE.Vector3,
     onVocalize?: (kind: AnimalKind, x: number, z: number) => void,
   ): void {
     if (this.barkCooldownSec > 0) this.barkCooldownSec -= dt
@@ -3220,13 +3287,32 @@ export class AnimalAgent {
       howlN++
     }
     dogHowlScratch.length = howlN
+    let strangerN = 0
+    for (const npc of nearbySettlementNpcs) {
+      const c = scratchAt(dogStrangerScratch, strangerN, (): StrangerNpcCandidate => ({ x: 0, z: 0 }))
+      c.x = npc.x
+      c.z = npc.z
+      c.homeId = npc.homeId
+      c.humanId = faunaNpcHumanId(npc.id)
+      c.trusted = this.def.affinity ? this.isHumanAffinityTrusted(c.humanId) : undefined
+      strangerN++
+    }
+    if (Math.hypot(observerPos.x - this.home.x, observerPos.z - this.home.z) <= DOG_BARK_STRANGER_RADIUS) {
+      const c = scratchAt(dogStrangerScratch, strangerN, (): StrangerNpcCandidate => ({ x: 0, z: 0 }))
+      c.x = observerPos.x
+      c.z = observerPos.z
+      c.humanId = FAUNA_PLAYER_HUMAN_ID
+      c.trusted = this.def.affinity ? this.isHumanAffinityTrusted(FAUNA_PLAYER_HUMAN_ID) : undefined
+      strangerN++
+    }
+    dogStrangerScratch.length = strangerN
     const stimulus = resolveDogBarkStimulus(
       this.home,
       this.ownerHouseId,
       guardTarget !== null,
       dogHowlScratch,
       DOG_BARK_HOWL_RADIUS,
-      nearbySettlementNpcs,
+      dogStrangerScratch,
       DOG_BARK_STRANGER_RADIUS,
     )
     if (!stimulus) return
