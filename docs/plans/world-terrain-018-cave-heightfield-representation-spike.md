@@ -14,9 +14,10 @@
 
 Sprawdzić w izolowanej, szybko uruchamianej scenie debugowej, czy Cave V2 może używać znacznie tańszej reprezentacji opartej o lokalny footprint + wysokość podłogi + wysokość sufitu zamiast pełnego lokalnego 3D SDF.
 
-Spike ma odpowiedzieć na pytanie architektoniczne przed dalszą optymalizacją reprezentacji SDF:
+Spike ma odpowiedzieć na dwa pytania jednocześnie:
 
-> Czy dla obecnego i przewidywalnego krótkoterminowo kształtu jaskiń Seedvale reprezentacja 2.5D `floor + ceiling + boundary walls` daje wystarczającą jakość wizualną i gameplayową przy zdecydowanie niższym koszcie generacji?
+1. czy reprezentacja 2.5D `floor + ceiling + boundary walls` daje wystarczającą jakość wizualną;
+2. czy jaskinia z tej reprezentacji jest poprawna i naturalna w użyciu z perspektywy chodzącego gracza, przy zdecydowanie niższym koszcie generacji.
 
 To jest **eksperyment porównawczy**, nie migracja produkcyjnego Cave V2.
 
@@ -73,7 +74,7 @@ Dzięki temu:
 
 Nie uruchamiać pełnego świata do iteracji nad spike'em.
 
-Dodać lekki tryb URL zgodny z istniejącym wzorcem `?modelTest`, roboczo:
+Dodać lekki tryb URL zgodny z istniejącym wzorcem `?modelTest`:
 
 ```text
 ?caveHeightfieldTest
@@ -92,16 +93,45 @@ Tryb ma ominąć:
 Scena ma zawierać tylko elementy potrzebne do porównania reprezentacji:
 
 - renderer;
-- camera + `OrbitControls`;
-- światło;
 - lokalny surface terrain fixture;
 - jedno wejście;
 - jedną deterministyczną `CaveTopology`;
 - wariant heightfield;
 - wariant SDF do porównania;
-- prosty obiekt referencyjny o rozmiarze człowieka lub inne jednoznaczne odniesienie skali.
+- model gracza / jednoznaczny humanoidalny model skali;
+- dwa tryby kamery/testu: **Walk** i **Inspect**.
 
 Nie tworzyć drugiego projektu Vite ani osobnego package/app.
+
+### 5.1. Walk mode — obowiązkowy
+
+Harness musi pozwolić wejść do jaskini i przejść ją jako gracz.
+
+Minimalne wymagania:
+
+- model gracza widoczny w third-person;
+- WASD / obecny podstawowy schemat ruchu desktopowego;
+- kamera zachowująca się możliwie podobnie do produkcyjnej third-person camera;
+- grawitacja / przyklejenie do podłoża;
+- kolizja z cave floor, boundary walls i ceiling;
+- możliwość wejścia z powierzchni przez mouth/portal do wnętrza;
+- brak przechodzenia przez ściany, sufit i podłogę;
+- spawn przed wejściem, aby test obejmował transition surface → cave.
+
+Nie importować pełnego `PlayerController`, jeśli wymaga on szerokiego runtime/world context. Preferować mały debugowy kontroler ruchu, ale reużywać istniejące czyste parametry/algorytmy ruchu lub collision, jeśli da się to zrobić bez bootowania świata.
+
+Walk mode nie ma implementować survivalu, stamina, inventory, interaction, combat ani innych systemów gracza.
+
+### 5.2. Inspect mode — obowiązkowy
+
+Drugi tryb ma używać `OrbitControls` lub równoważnej lekkiej kamery inspekcyjnej, aby można było:
+
+- obejrzeć cave z zewnątrz i od środka;
+- sprawdzić floor/walls/ceiling i seam wejścia;
+- wykrywać dziury, odwrócone normale, przecinanie geometrii i artefakty footprintu;
+- porównać warianty SDF i heightfield z podobnych ujęć.
+
+Przełączenie Walk ↔ Inspect powinno być proste i nie wymagać reloadu całej aplikacji.
 
 ## 6. Surface fixture i wejście
 
@@ -151,7 +181,7 @@ Wymagania:
 - zachować minimalny clearance wymagany przez `CaveTopology.minClearance`;
 - nierówności nie mogą losowo zamykać tunelu.
 
-## 9. Mesh
+## 9. Mesh i collision proxy
 
 Wygenerować trzy logiczne części geometrii:
 
@@ -165,7 +195,9 @@ Mogą trafić do jednego `BufferGeometry`, jeśli to upraszcza kod i pomiary.
 
 Ceiling musi mieć poprawny winding/normals widoczne od wnętrza. Boundary walls muszą łączyć floor z ceiling bez szczelin.
 
-Nie próbować podczas spike'a odtwarzać wszystkich finalnych efektów materiałowych produkcyjnego Cave V2. Wspólny/prosty materiał jest wystarczający do oceny geometrii; warianty powinny jednak być oświetlone w sposób pozwalający czytać floor/walls/ceiling.
+Walk mode wymaga również lekkiego collision proxy. Nie budować drugiego kompletnego systemu fizyki. Proxy powinno wynikać z tej samej reprezentacji heightfield/footprint, a nie z niezależnej ręcznie utrzymywanej geometrii kolizji.
+
+Nie próbować podczas spike'a odtwarzać wszystkich finalnych efektów materiałowych produkcyjnego Cave V2. Wspólny/prosty materiał jest wystarczający do oceny geometrii.
 
 ## 10. SDF comparison
 
@@ -175,6 +207,8 @@ Harness powinien umożliwiać porównanie **tej samej** `CaveTopology` w co najm
 heightfield
 sdf
 ```
+
+Porównanie powinno być możliwe zarówno w Inspect mode, jak i podczas przejścia jaskini w Walk mode.
 
 Dopuszczalne UI:
 
@@ -211,6 +245,8 @@ Nie kończyć oceny na jednym prostym korytarzu. Ten sam harness powinien dać c
 2. **bend + widening** — sprawdzenie granic, ścian i interpolacji floor/ceiling;
 3. **branch / junction** — sprawdzenie union footprintu i zachowania ścian przy połączeniu.
 
+Każdy fixture musi być możliwy do przejścia w Walk mode, o ile topology sama nie definiuje celowo nieprzechodniego fragmentu.
+
 Jeżeli obecny production topology builder łatwo daje odpowiedni fixture bez world dependencies, można go reuse. Jeśli wymaga szerokiego world context, użyć małych, jawnych `CaveTopology` fixtures zamiast wciągać world boot do harnessu.
 
 ## 13. Ograniczenia, które spike ma jawnie pokazać
@@ -238,7 +274,8 @@ W tym planie nie:
 - usuwać SDF;
 - zmieniać cave streaming/worker lifecycle;
 - zmieniać collision/gameplay query production ownership;
-- zmieniać third-person camera;
+- przepisywać produkcyjnego `PlayerController` ani third-person camera;
+- odtwarzać wszystkich systemów gracza w harnessie;
 - zmieniać save/persistence;
 - zmieniać proceduralnego world siting caves;
 - integrować nowej reprezentacji z realnymi terrain chunks;
@@ -251,11 +288,14 @@ W tym planie nie:
 1. **Ta sama topology** — nie porównywać ładnego ręcznie ustawionego heightfieldu z inną jaskinią SDF.
 2. **Nie mylić ze Sweep** — footprint/floor/ceiling nie może być ring sweepem przebranym za heightfield.
 3. **Nie mierzyć world bootu** — interesuje nas koszt samej reprezentacji i mesha.
-4. **Nie optymalizować przed pomiarem** — pierwsza wersja ma być prosta i czytelna.
-5. **Nie rozszerzać produkcji** — wynik spike'a najpierw ocenia Player.
-6. **Nie ukrywać 2.5D limitations** — brak stacked geometry jest architektonicznym trade-offem, nie bugiem do łatania wyjątkami.
-7. **Nie duplikować topology truth** — szerokość/wysokość/path pochodzą z `CaveTopology`.
-8. **Determinism** — topology fixture i noise mają być powtarzalne.
+4. **Nie oceniać tylko z OrbitControls** — jaskinia musi zostać przejścia w Walk mode.
+5. **Nie budować fake collision** — collision proxy ma wynikać z tej samej cave representation.
+6. **Nie optymalizować przed pomiarem** — pierwsza wersja ma być prosta i czytelna.
+7. **Nie rozszerzać produkcji** — wynik spike'a najpierw ocenia Player.
+8. **Nie ukrywać 2.5D limitations** — brak stacked geometry jest architektonicznym trade-offem, nie bugiem do łatania wyjątkami.
+9. **Nie duplikować topology truth** — szerokość/wysokość/path pochodzą z `CaveTopology`.
+10. **Determinism** — topology fixture i noise mają być powtarzalne.
+11. **Nie bootować pełnego gracza** — ruch testowy ma być tak lekki, jak pozwala na to wiarygodne sprawdzenie traversal/collision.
 
 ## 16. Oczekiwane pliki / integration surface
 
@@ -266,13 +306,14 @@ src/debug/debugMode.ts
 src/main.ts
 src/app/createApp.ts
 src/debug/createCaveHeightfieldTestScene.ts
-src/world/caves/caveHeightfieldRepresentation.ts
-src/world/caves/caveHeightfieldMesh.ts
+src/debug/caves/caveHeightfieldRepresentation.ts
+src/debug/caves/caveHeightfieldMesh.ts
+src/debug/caves/caveHeightfieldPlayer.ts
 ```
 
-Jeżeli reprezentacja ma istnieć wyłącznie na czas spike'a, dopuszczalne jest trzymanie builderów pod `src/debug/caves/` zamiast `src/world/caves/`. Preferować tę opcję, jeśli produkcyjny kod nie musi jeszcze niczego importować.
+Jeżeli da się bezpiecznie reuse istniejące czyste helpery ruchu/collision/camera, zrobić to zamiast kopiować ich logikę. Nie wolno jednak przez ten reuse wciągnąć normalnego world bootu.
 
-Nie zakładać nazw plików jako obowiązkowych, jeśli current code podczas implementacji pokazuje lepszy istniejący seam.
+Preferować trzymanie experimental representation pod `src/debug/caves/` dopóki spike nie zostanie zaakceptowany.
 
 ## 17. Weryfikacja techniczna
 
@@ -281,13 +322,16 @@ Agent implementacyjny:
 - typecheck;
 - lint dla zmienionego zakresu / normalny lint projektu;
 - build;
-- focused unit tests dla czystych builderów, jeśli dają istotną wartość.
+- focused unit tests dla czystych builderów i collision queries, jeśli dają istotną wartość.
 
 Player wykonuje manual browser verification.
 
 Manual comparison powinien odpowiedzieć:
 
 - czy wejście czyta się jako naturalne przejście z surface do wnętrza;
+- czy da się płynnie wejść, przejść passage/bend/chamber i wrócić;
+- czy gracz nie wpada w floor, nie przenika walls i nie przebija ceiling;
+- czy kamera third-person zachowuje się sensownie w wąskich i szerokich fragmentach;
 - czy passage/chamber nie wyglądają jak pipe;
 - czy floor/walls/ceiling są naturalne i bez seams;
 - czy bend/widening/junction są przekonujące;
@@ -306,10 +350,10 @@ B. promising but insufficient → kolejny ograniczony spike
 C. accept direction → przygotować osobny plan migracji Cave V2
 ```
 
-Dopiero wariant C może prowadzić do zmian `createCaves()`, gameplay queries, collision i streaming.
+Wariant C wymaga zarówno akceptowalnej jakości wizualnej, jak i poprawnego Walk mode/traversal. Dopiero wtedy można planować zmiany `createCaves()`, gameplay queries, collision i streaming.
 
 ## 19. JSDoc / discoverability
 
-Ważne publiczne/czyste funkcje reprezentacji i meshera opisać JSDocem wskazującym, że należą do **experimental cave heightfield spike**, oraz dodać `@domain world-terrain` tam, gdzie poprawia to późniejszy preflight/code-map discovery.
+Ważne publiczne/czyste funkcje reprezentacji, meshera i lekkiego traversal/collision opisać JSDocem wskazującym, że należą do **experimental cave heightfield spike**, oraz dodać `@domain world-terrain` tam, gdzie poprawia to późniejszy preflight/code-map discovery.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
