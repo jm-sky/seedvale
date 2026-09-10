@@ -63,7 +63,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
 | 💡 `quests-progression-015-stable-npc-identity-for-quests.md`                  | -       | 🔴 | M      | -      |
 | 💡 `quests-progression-016-world-driven-settlement-quest-opportunities.md`     | -       | 🔴 | M      | quests-progression-015 |
-| ◼️ `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
+| 💡 `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | 💡 `settlements-npcs-018-physical-goods-transport-foundation.md`               | -       | 🔴 | M      | ~~settlements-npcs-014~~ |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
