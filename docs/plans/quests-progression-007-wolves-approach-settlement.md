@@ -1,7 +1,7 @@
 # Plan: Wilki podchodzą pod osadę
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `implemented` ✅
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-016
 **Domain:** `quests-progression`  

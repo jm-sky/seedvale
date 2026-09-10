@@ -741,6 +741,9 @@ export type AnimalAgentDeps = {
   motherId?: string
   household?: Household | null
   spawnPointId?: string
+  /** Inherited from an active wolf-den spawner at spawn time (plan
+   *  quests-progression-007) — not persisted on the animal. */
+  humanTaste?: boolean
 }
 
 /** Per-tick inputs for `AnimalAgent.update()` (plan fauna-017 step 2) — same
@@ -871,6 +874,8 @@ export class AnimalAgent {
    *  spawned/respawned by a managed `PreySpawner` (`createFauna.ts`); ring
    *  spawns and livestock leave it `undefined`. */
   readonly spawnPointId?: string
+  /** Den-sourced human-hunting bias (plan quests-progression-007). */
+  readonly humanTaste: boolean
   /** Reports this animal's death, once, regardless of cause (player melee or
    *  predator kill) — called from `collapse()`. Lets `QuestManager` observe
    *  `animal_died` generically without `AnimalAgent` importing quests
@@ -1213,6 +1218,7 @@ export class AnimalAgent {
       motherId,
       household,
       spawnPointId,
+      humanTaste = false,
     } = deps
     this.def = def
     this.animalId = animalId
@@ -1222,6 +1228,7 @@ export class AnimalAgent {
     this._owner = ownerFromHouseId(ownerHouseId)
     this._household = household ?? null
     this.spawnPointId = spawnPointId
+    this.humanTaste = humanTaste
     this.onDeath = onDeath
     this.sampleHeight = sampleHeight
     this.waterLevel = waterLevel
@@ -2562,6 +2569,7 @@ export class AnimalAgent {
       // attack), with the same low-HP flee floor still applying.
       provoked: this.provokedTimer > 0 || this.frenzied,
       aggressionRoll,
+      humanTaste: this.humanTaste,
     })
   }
 
@@ -2653,7 +2661,24 @@ export class AnimalAgent {
       selfHpRatio: hpRatio,
       provoked: this.provokedTimer > 0 || this.frenzied,
       aggressionRoll,
+      humanTaste: this.humanTaste,
     })
+  }
+
+  hasActiveTrip(): boolean {
+    return this.trip !== null
+  }
+
+  /** Commits a one-shot settlement outskirts trip (plan quests-progression-007). */
+  startSettlementDirectedTrip(destination: { x: number, z: number }, stayDurationSec: number): boolean {
+    if (this.trip) return false
+    this.trip = {
+      kind: 'settlement',
+      destination: new THREE.Vector3(destination.x, 0, destination.z),
+      phase: 'traveling',
+      stayRemainingSec: stayDurationSec,
+    }
+    return true
   }
 
   /** Same throttled-refresh idiom as `refreshThrottledHumanIntent`, for the

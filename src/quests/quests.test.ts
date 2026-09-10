@@ -98,6 +98,7 @@ describe('QUESTS social consequence calibration (plan quests-progression-001 §6
       'plaga-szcurow',
       'sporne-drewno',
       'wilcza-jama',
+      'wilki-pod-osada',
       'zaginiona-przesylka',
     ])
   })

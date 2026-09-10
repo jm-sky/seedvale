@@ -69,6 +69,7 @@ function makeManager(
   initial?: QuestManagerInitial,
   socialAvailability?: QuestSocialAvailabilityLookup,
   settlementRatInfestation?: import('./QuestManager').SettlementRatInfestationLookup,
+  spawnPointDestruction?: import('./QuestManager').SpawnPointDestructionLookup,
 ): QuestManager {
   return new QuestManager(
     defs,
@@ -81,6 +82,9 @@ function makeManager(
     undefined,
     socialAvailability,
     settlementRatInfestation,
+    undefined,
+    undefined,
+    spawnPointDestruction,
   )
 }
 
@@ -318,6 +322,45 @@ describe('QuestManager resolve_storage_rat_infestation', () => {
     snapshot = { storageDamaged: false, nestDestroyed: true, aliveRatCount: 1 }
     qm.pollSettlementRatInfestationObjectives()
     expect(qm.getState('plaga')).toBe('ready_to_report')
+  })
+})
+
+describe('QuestManager destroy_spawn_point', () => {
+  const destroyDenQuest = quest({
+    id: 'wilki-pod-osada',
+    giverName: 'Anna',
+    offerLine: 'offer destroy',
+    stages: [
+      {
+        objective: { type: 'destroy_spawn_point', spawnerId: WOLF_DEN_ID },
+        description: 'destroy den',
+        reminderLine: 'remind destroy',
+      },
+    ],
+    reportLine: 'report destroy',
+  })
+
+  it('does not complete on depleted alone', () => {
+    let destroyed = false
+    const qm = makeManager([destroyDenQuest], undefined, undefined, undefined, undefined, undefined, {
+      isPermanentlyDestroyed: () => destroyed,
+    })
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState('wilki-pod-osada')).toBe('active')
+    destroyed = false
+    qm.pollDestroySpawnPointObjectives()
+    expect(qm.getState('wilki-pod-osada')).toBe('active')
+  })
+
+  it('completes after permanent destruction', () => {
+    let destroyed = false
+    const qm = makeManager([destroyDenQuest], undefined, undefined, undefined, undefined, undefined, {
+      isPermanentlyDestroyed: () => destroyed,
+    })
+    acceptOffer(qm, 'Anna')
+    destroyed = true
+    qm.pollDestroySpawnPointObjectives()
+    expect(qm.getState('wilki-pod-osada')).toBe('ready_to_report')
   })
 })
 

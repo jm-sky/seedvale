@@ -29,7 +29,7 @@ const WATER_TRIP_SEARCH_ATTEMPTS = 16
  *  touches it. `'water'` is the only trip kind so far, but the shape
  *  (destination + phase + committed state) is meant to generalize to a
  *  later trip kind without a second movement system. */
-export type AnimalTripKind = 'water'
+export type AnimalTripKind = 'water' | 'settlement'
 export type AnimalTripPhase = 'traveling' | 'staying' | 'returning'
 export type AnimalTrip = {
   kind: AnimalTripKind
@@ -117,6 +117,37 @@ export type TripDestinationContext = {
  *  allowed out to `searchRadius`, deliberately past `ROAM_RADIUS`/
  *  `wanderRadius`. Only ever called once, when a trip is starting — never
  *  scans per-frame or across all loaded water features. */
+const SETTLEMENT_TRIP_SEARCH_ATTEMPTS = 16
+
+/** Settlement outskirts destination for a pressure-driven wolf den trip (plan
+ *  quests-progression-007) — ring around the settlement footprint, not the
+ *  village center. */
+export function findSettlementOutskirtsDestination(
+  settlementCenter: { readonly x: number, readonly z: number },
+  outskirtsRadius: number,
+  sampleHeight: HeightSampler,
+  waterLevel: number,
+  isWalkable: (x: number, z: number) => boolean,
+  random: () => number = Math.random,
+): { x: number, z: number } | null {
+  return probeBestPointNear(
+    settlementCenter,
+    outskirtsRadius,
+    SETTLEMENT_TRIP_SEARCH_ATTEMPTS,
+    (x, z) => {
+      if (!isWalkable(x, z)) return false
+      if (sampleHeight(x, z) <= waterLevel + 0.6) return false
+      const dist = Math.hypot(x - settlementCenter.x, z - settlementCenter.z)
+      return dist >= outskirtsRadius * 0.55
+    },
+    (x, z) => {
+      const dist = Math.hypot(x - settlementCenter.x, z - settlementCenter.z)
+      return -Math.abs(dist - outskirtsRadius)
+    },
+    random,
+  )
+}
+
 export function findWaterTripDestination(ctx: TripDestinationContext): { x: number, z: number } | null {
   return probeBestPointNear(
     ctx.home,

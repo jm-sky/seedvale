@@ -1,4 +1,5 @@
 import type { AnimalKind } from './AnimalAgent'
+import { effectiveMaxPreyCount, effectiveRespawnIntervalDays } from './wolfDenScenario'
 
 /** `wolfDen` (plan 093 Etap E) reuses this same spawner shape — a fixed
  *  `respawnIntervalDays: Infinity` opts it out of `updateSpawners`' respawn
@@ -80,6 +81,19 @@ export type PreySpawner = {
   /** `elapsedDays` at the moment `Zniszcz` disabled this point, or `null`
    *  while not disabled/recovering. */
   disabledAtDay: number | null
+  /** Normalized den pressure `0..1` (plan quests-progression-007) — only
+   *  meaningful on `wolfDen`; stays `0` elsewhere. */
+  pressure: number
+  /** When true, predator-human scoring treats humans as more attractive prey
+   *  (plan quests-progression-007) — authoritative on the spawner, not on
+   *  individual wolves. */
+  humanTaste: boolean
+  /** When false, `disabled` never enters the generic recovery path (permanent
+   *  destruction for the quest wolf den). Ordinary caves/thickets stay `true`. */
+  canRecover: boolean
+  /** Last `elapsedDays` when a settlement-directed trip opportunity was
+   *  consumed for this den, or `null` before the first trip. */
+  lastSettlementTripOpportunityDay: number | null
 }
 
 /** Animals of the spawner's `kind` within this radius count toward its
@@ -125,27 +139,29 @@ export function updateSpawners(
   if (dayDelta <= 0) return
   for (const spawner of spawners) {
     if (spawner.state !== 'active') continue
-    if (!Number.isFinite(spawner.respawnIntervalDays) || spawner.respawnIntervalDays <= 0) continue
+    const respawnIntervalDays = effectiveRespawnIntervalDays(spawner)
+    if (!Number.isFinite(respawnIntervalDays) || respawnIntervalDays <= 0) continue
     spawner.daysSinceLastRespawn += dayDelta
 
+    const cap = effectiveMaxPreyCount(spawner)
     let nearby = animalPositions.filter(
       (p) =>
         p.kind === spawner.kind &&
         Math.hypot(p.x - spawner.x, p.z - spawner.z) < SPAWNER_RADIUS,
     ).length
-    if (nearby >= spawner.maxPreyCount) {
+    if (nearby >= cap) {
       spawner.daysSinceLastRespawn = 0
       continue
     }
 
-    while (nearby < spawner.maxPreyCount) {
-      const interval = respawnIntervalDaysFor(spawner.respawnIntervalDays, nearby)
+    while (nearby < cap) {
+      const interval = respawnIntervalDaysFor(respawnIntervalDays, nearby)
       if (spawner.daysSinceLastRespawn < interval) break
       spawner.daysSinceLastRespawn -= interval
       onRespawn(spawner)
       nearby++
     }
-    if (nearby >= spawner.maxPreyCount) spawner.daysSinceLastRespawn = 0
+    if (nearby >= cap) spawner.daysSinceLastRespawn = 0
   }
 }
 
@@ -165,6 +181,7 @@ export function tickSpawnPointRecovery(
   nowDays: number,
   nearbySameKindCount: number,
 ): void {
+  if (spawner.canRecover === false) return
   if (spawner.state === 'disabled') {
     if (spawner.disabledAtDay == null || nowDays - spawner.disabledAtDay < RECOVERY_DAYS) return
     spawner.state = 'recovering'
@@ -185,6 +202,10 @@ export type SavedSpawnPointState = {
   state: SpawnPointState
   deathsThisCycle: number
   disabledAtDay: number | null
+  pressure?: number
+  humanTaste?: boolean
+  canRecover?: boolean
+  lastSettlementTripOpportunityDay?: number | null
 }
 
 /** Pure snapshot for `SaveData` — pairs with `restoreSpawnPointState`. */
@@ -193,6 +214,10 @@ export function snapshotSpawnPointState(spawner: PreySpawner): SavedSpawnPointSt
     state: spawner.state,
     deathsThisCycle: spawner.deathsThisCycle,
     disabledAtDay: spawner.disabledAtDay,
+    pressure: spawner.pressure,
+    humanTaste: spawner.humanTaste,
+    canRecover: spawner.canRecover,
+    lastSettlementTripOpportunityDay: spawner.lastSettlementTripOpportunityDay,
   }
 }
 
@@ -205,4 +230,23 @@ export function restoreSpawnPointState(spawner: PreySpawner, saved: SavedSpawnPo
   spawner.state = saved.state
   spawner.deathsThisCycle = saved.deathsThisCycle
   spawner.disabledAtDay = saved.disabledAtDay
+  if (saved.pressure !== undefined) spawner.pressure = saved.pressure
+  if (saved.humanTaste !== undefined) spawner.humanTaste = saved.humanTaste
+  if (saved.canRecover !== undefined) spawner.canRecover = saved.canRecover
+  if (saved.lastSettlementTripOpportunityDay !== undefined) {
+    spawner.lastSettlementTripOpportunityDay = saved.lastSettlementTripOpportunityDay
+  }
+}
+
+/** Default scenario fields for a freshly constructed habitat spawner. */
+export function defaultSpawnPointScenarioFields(type: SpawnerType): Pick<
+  PreySpawner,
+  'pressure' | 'humanTaste' | 'canRecover' | 'lastSettlementTripOpportunityDay'
+> {
+  return {
+    pressure: 0,
+    humanTaste: false,
+    canRecover: type !== 'wolfDen',
+    lastSettlementTripOpportunityDay: null,
+  }
 }

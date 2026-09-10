@@ -36,6 +36,9 @@ export type PredatorHumanDecisionInput = {
    * Tests pass a fixed value; runtime rolls once per decision refresh.
    */
   aggressionRoll: number
+  /** When true (wolf den with active problem), humans are less feared and
+   *  more attractive as prey — plan quests-progression-007. */
+  humanTaste?: boolean
 }
 
 /** Hunger only starts pushing toward attack above this level. */
@@ -130,8 +133,12 @@ export function scorePredatorHumanIntents(
   const bias = ATTACK_BIAS[input.kind] ?? 0
   const fleeBias = FLEE_BIAS[input.kind] ?? 0
 
-  const fleeScore = FLEE_BASELINE + proximity * 0.72 + fire + crowd + fleeBias
-  const attackScore = hunger * 0.95 + bias - proximity * 0.2 - fire * 0.5 - crowd
+  const humanTaste = input.humanTaste === true
+  const proximityFear = humanTaste ? proximity * 0.45 : proximity * 0.72
+  const fleeScore = FLEE_BASELINE + proximityFear + fire + crowd + fleeBias
+  const attackScore = hunger * 0.95 + bias + (humanTaste ? 0.18 : 0)
+    - (humanTaste ? proximity * 0.1 : proximity * 0.2)
+    - fire * 0.5 - crowd
 
   return [
     { kind: 'flee', score: fleeScore },

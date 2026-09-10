@@ -281,6 +281,28 @@ describe('bear playtest fixes (plan §3 — less skittish, close/provoked defend
   })
 })
 
+describe('humanTaste (plan quests-progression-007)', () => {
+  it('raises attack score and lowers flee vs baseline while fire still matters', () => {
+    const baseline = scorePredatorHumanIntents({ ...base, hunger: 0.7, humanDistance: 8 })
+    const tasted = scorePredatorHumanIntents({ ...base, hunger: 0.7, humanDistance: 8, humanTaste: true })
+    const baseAttack = baseline.find((c) => c.kind === 'attack')!.score
+    const tasteAttack = tasted.find((c) => c.kind === 'attack')!.score
+    const baseFlee = baseline.find((c) => c.kind === 'flee')!.score
+    const tasteFlee = tasted.find((c) => c.kind === 'flee')!.score
+    expect(tasteAttack).toBeGreaterThan(baseAttack)
+    expect(tasteFlee).toBeLessThan(baseFlee)
+    expect(
+      decidePredatorHumanIntent({
+        ...base,
+        hunger: 0.95,
+        humanDistance: 9,
+        fireNearby: true,
+        humanTaste: true,
+      }),
+    ).toBe('flee')
+  })
+})
+
 describe('countNearbyHumans', () => {
   it('always counts the player as 1 with no NPCs', () => {
     expect(countNearbyHumans(0, 0, [])).toBe(1)

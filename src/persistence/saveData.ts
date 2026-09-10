@@ -208,6 +208,10 @@ export type SaveSpawnPoint = {
   state: SpawnPointState
   deathsThisCycle: number
   disabledAtDay: number | null
+  pressure?: number
+  humanTaste?: boolean
+  canRecover?: boolean
+  lastSettlementTripOpportunityDay?: number | null
 }
 
 /** Persistent drying rack (`world/dryingRacks.ts`'s `DryingRackRecord`) —
@@ -549,7 +553,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 23
+export const CURRENT_SAVE_VERSION = 24
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -2593,6 +2597,12 @@ function migrateSaveV21ToV22(data: unknown): unknown {
 /** v22 → v23 (plan quests-progression-013): storage infestation becomes
  *  `{ storageDamaged, nestDestroyed }`. Legacy `'repaired'` keeps the nest
  *  intact — old saves only knew about storage repair. */
+/** v23 → v24 (plan quests-progression-007): optional wolf-den scenario fields
+ *  on spawn points — defaults applied on restore when absent. */
+function migrateSaveV23ToV24(data: unknown): unknown {
+  return { ...(data as Record<string, unknown>), version: 24 }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2630,6 +2640,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   20: migrateSaveV20ToV21,
   21: migrateSaveV21ToV22,
   22: migrateSaveV22ToV23,
+  23: migrateSaveV23ToV24,
 }
 
 function detectStoredVersion(value: unknown): number | null {

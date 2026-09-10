@@ -285,6 +285,10 @@ export type QuestObjective =
    *  alive rat count is <= 1. `QuestManager` reads live world state through
    *  an injected lookup, never by importing settlement/fauna managers. */
   | { type: 'resolve_storage_rat_infestation' }
+  /** Permanent habitat destruction (plan quests-progression-007) — cleared when
+   *  the real spawn point is `disabled` with no recovery (`canRecover === false`).
+   *  `spawnerId` may be a stable logical id such as `WOLF_DEN_ID`. */
+  | { type: 'destroy_spawn_point', spawnerId: string }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -664,6 +668,42 @@ export const QUESTS: readonly QuestDef[] = [
         consequences: {
           relations: [{ npcName: 'Anna', delta: 3 }],
           social: { reputation: { competence: 15, courage: 18, benevolence: 6 }, renown: 25 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'wilki-pod-osada',
+    title: 'Wilki pod osadą',
+    description:
+      'Wilki coraz częściej podchodzą pod osadę i atakują ludzi. Anna podejrzewa, że źródłem jest pobliskie siedlisko — samo zabijanie pojedynczych wilków nie wystarczy.',
+    giverName: 'Anna',
+    offerLine:
+      'Wilki coraz częściej podchodzą pod osadę i atakują ludzi. Chyba mają jamę niedaleko — samo zabijanie pojedynczych wilków nie wystarczy. Znajdź siedlisko i zniszcz je na zawsze.',
+    stages: [
+      {
+        objective: { type: 'destroy_spawn_point', spawnerId: WOLF_DEN_ID },
+        description: 'Znajdź wilczą jamę i trwale zniszcz siedlisko.',
+        reminderLine: 'Dopóki jama stoi, wilki będą wracać — musisz zniszczyć siedlisko.',
+        progressLine: 'Siedlisko zniszczone. Wróć do Anny.',
+      },
+    ],
+    reportLine: 'Dzięki — źródło zagrożenia zniknęło. Osada może odetchnąć.',
+    availability: {
+      prerequisites: [
+        { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+      ],
+    },
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        consequences: {
+          relations: [{ npcName: 'Anna', delta: 2 }],
+          social: {
+            reputation: { competence: 20, courage: 22, benevolence: 8 },
+            renown: 35,
+          },
         },
       },
     ],

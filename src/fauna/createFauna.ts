@@ -32,6 +32,7 @@ import {
   type VillageInfo,
 } from './AnimalAgent'
 import {
+  defaultSpawnPointScenarioFields,
   type PreySpawner,
   restoreSpawnPointState,
   type SavedSpawnPointState,
@@ -40,6 +41,16 @@ import {
   tickSpawnPointRecovery,
   updateSpawners,
 } from './AnimalSpawner'
+import { findSettlementOutskirtsDestination } from './animalRoaming'
+import {
+  activateWolfDenProblem,
+  canOfferSettlementTrip,
+  effectiveMaxPreyCount,
+  isQuestSpawnPointPermanentlyDestroyed,
+  recordSettlementTripOpportunity,
+  SETTLEMENT_TRIP_STAY_SEC,
+  shouldActivateWolfDenProblem,
+} from './wolfDenScenario'
 import {
   HERD_CLUSTER_RADIUS,
   HERD_SPECIES,
@@ -133,6 +144,10 @@ export type Fauna = {
    *  returns `false` (no state change, no branches should be spent) if
    *  `spawnerId` isn't found or isn't currently `depleted`. */
   destroySpawner: (spawnerId: string, nowDays: number) => boolean
+  /** Permanent habitat destruction for quest `destroy_spawn_point` (plan
+   *  quests-progression-007) — accepts stable `WOLF_DEN_ID` or a real
+   *  `PreySpawner.id`. */
+  isQuestSpawnPointPermanentlyDestroyed: (questSpawnerId: string) => boolean
 }
 
 /** Where a species prefers to spawn relative to the home settlement (plan
@@ -527,6 +542,8 @@ export async function createFauna(
    *  when given a `spawnPointId`, consumed (and removed) exactly once by
    *  `handleAnimalDeath` so one animal can never be counted twice. */
   const animalToSpawner = new Map<string, string>()
+  /** At most one settlement-directed trip per wolf den at a time (runtime). */
+  const settlementTripAnimalBySpawner = new Map<string, string>()
 
   /** Wraps the injected `onAnimalDeath` (quest hook, plan 110) with local
    *  spawn-point death accounting (plan 125 §4) — every animal this factory
@@ -535,13 +552,16 @@ export async function createFauna(
    *  starvation): `AnimalAgent.collapse()` is the single call site regardless
    *  of what triggered it. */
   const handleAnimalDeath = (animalId: string): void => {
+    for (const [denId, travellerId] of settlementTripAnimalBySpawner) {
+      if (travellerId === animalId) settlementTripAnimalBySpawner.delete(denId)
+    }
     const spawnerId = animalToSpawner.get(animalId)
     if (spawnerId) {
       animalToSpawner.delete(animalId)
       const spawner = spawnerById.get(spawnerId)
       if (spawner && spawner.state === 'active') {
         spawner.deathsThisCycle++
-        if (shouldDeplete(spawner.deathsThisCycle, spawner.maxPreyCount)) spawner.state = 'depleted'
+        if (shouldDeplete(spawner.deathsThisCycle, effectiveMaxPreyCount(spawner))) spawner.state = 'depleted'
       }
     }
     onAnimalDeath?.(animalId)
@@ -651,6 +671,7 @@ export async function createFauna(
     }
     const animalId = `${kind}-${nextAnimalId++}`
     if (spawnPointId) animalToSpawner.set(animalId, spawnPointId)
+    const boundSpawner = spawnPointId ? spawnerById.get(spawnPointId) : undefined
     return new AnimalAgent({
       def: ANIMAL_DEFS[kind],
       animalId,
@@ -668,6 +689,7 @@ export async function createFauna(
       lifeStage,
       motherId,
       spawnPointId,
+      humanTaste: boundSpawner?.humanTaste ?? false,
     })
   }
 
@@ -825,6 +847,7 @@ export async function createFauna(
       state: 'active',
       deathsThisCycle: 0,
       disabledAtDay: null,
+      ...defaultSpawnPointScenarioFields(spec.type),
     }
     restoreSpawnPointState(spawner, initialSpawnerState?.get(spawner.id))
     spawners.push(spawner)
@@ -1018,6 +1041,51 @@ export async function createFauna(
       if (dayIndex !== lastRecoveryCheckDay) {
         lastRecoveryCheckDay = dayIndex
         for (const spawner of spawners) {
+          if (spawner.type === 'wolfDen') {
+            if (shouldActivateWolfDenProblem(spawner, dayIndex)) {
+              activateWolfDenProblem(spawner)
+              const targetCap = effectiveMaxPreyCount(spawner)
+              let nearby = 0
+              for (const a of agents) {
+                if (a.isDead() || a.spawnPointId !== spawner.id) continue
+                nearby++
+              }
+              while (nearby < targetCap && spawner.state === 'active') {
+                const spot = findWalkableNear(spawner.x, spawner.z, 0, 4) ?? spawner
+                const agent = spawnAgent(spawner.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
+                scene.add(agent.mesh)
+                agents.push(agent)
+                nearby++
+              }
+            }
+            const activeTripAnimalId = settlementTripAnimalBySpawner.get(spawner.id)
+            const tripAnimal = activeTripAnimalId
+              ? agents.find((a) => a.animalId === activeTripAnimalId && !a.isDead())
+              : undefined
+            if (!tripAnimal || !tripAnimal.hasActiveTrip()) {
+              if (activeTripAnimalId) settlementTripAnimalBySpawner.delete(spawner.id)
+              if (canOfferSettlementTrip(spawner, worldDays)) {
+                const traveller = agents.find(
+                  (a) => !a.isDead()
+                    && a.spawnPointId === spawner.id
+                    && a.def.kind === 'wolf'
+                    && !a.hasActiveTrip(),
+                )
+                const destination = findSettlementOutskirtsDestination(
+                  { x: settlementCenter.x, z: settlementCenter.z },
+                  footprintRadius + 6,
+                  sampleHeight,
+                  waterLevel,
+                  (x, z) => sampleHeight(x, z) > waterLevel + 0.6,
+                  random,
+                )
+                if (traveller && destination && traveller.startSettlementDirectedTrip(destination, SETTLEMENT_TRIP_STAY_SEC)) {
+                  recordSettlementTripOpportunity(spawner, worldDays)
+                  settlementTripAnimalBySpawner.set(spawner.id, traveller.animalId)
+                }
+              }
+            }
+          }
           if (spawner.state !== 'disabled' && spawner.state !== 'recovering') continue
           let nearby = 0
           for (const a of agents) {
@@ -1086,6 +1154,9 @@ export async function createFauna(
         terrainCarving?.modifyTerrain(spawner.x, spawner.z, BURN_PATCH_RADIUS, BURN_PATCH_DEPTH, 'player')
       }
       return true
+    },
+    isQuestSpawnPointPermanentlyDestroyed(questSpawnerId: string) {
+      return isQuestSpawnPointPermanentlyDestroyed(spawners, questSpawnerId)
     },
   }
 }

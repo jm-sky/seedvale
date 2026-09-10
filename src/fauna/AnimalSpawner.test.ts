@@ -26,6 +26,10 @@ function spawner(overrides: Partial<PreySpawner> = {}): PreySpawner {
     state: 'active',
     deathsThisCycle: 0,
     disabledAtDay: null,
+    pressure: 0,
+    humanTaste: false,
+    canRecover: true,
+    lastSettlementTripOpportunityDay: null,
     ...overrides,
   }
 }
@@ -148,6 +152,12 @@ describe('tickSpawnPointRecovery', () => {
     expect(s.disabledAtDay).toBeNull()
   })
 
+  it('never recovers when canRecover is false', () => {
+    const s = spawner({ state: 'disabled', disabledAtDay: 0, canRecover: false })
+    tickSpawnPointRecovery(s, 1_000_000, 99)
+    expect(s.state).toBe('disabled')
+  })
+
   it('is a no-op for active/depleted spawners', () => {
     const active = spawner({ state: 'active' })
     tickSpawnPointRecovery(active, 1_000_000, 99)
@@ -166,6 +176,10 @@ describe('snapshotSpawnPointState / restoreSpawnPointState (persistence follow-u
       state: 'disabled',
       deathsThisCycle: 2,
       disabledAtDay: 12.5,
+      pressure: 0,
+      humanTaste: false,
+      canRecover: true,
+      lastSettlementTripOpportunityDay: null,
     })
   })
 

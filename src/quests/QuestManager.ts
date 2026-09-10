@@ -150,6 +150,16 @@ const NO_SETTLEMENT_RAT_INFESTATION: SettlementRatInfestationLookup = {
   getSnapshot: () => ({ storageDamaged: false, nestDestroyed: true, aliveRatCount: 0 }),
 }
 
+/** Read-only spawn-point destruction seam for `destroy_spawn_point` (plan
+ *  quests-progression-007). */
+export type SpawnPointDestructionLookup = {
+  isPermanentlyDestroyed: (spawnerId: string) => boolean
+}
+
+const NO_SPAWN_POINT_DESTRUCTION: SpawnPointDestructionLookup = {
+  isPermanentlyDestroyed: () => false,
+}
+
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
   getReputationDimension: () => 0,
   getRenown: () => 0,
@@ -216,6 +226,7 @@ export class QuestManager {
   private readonly applySocialConsequence: ApplySocialConsequence
   private readonly socialAvailability: QuestSocialAvailabilityLookup
   private readonly settlementRatInfestation: SettlementRatInfestationLookup
+  private readonly spawnPointDestruction: SpawnPointDestructionLookup
   private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
   private readonly canReserveHorseReward: HorseRewardAvailability
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
@@ -237,6 +248,7 @@ export class QuestManager {
     settlementRatInfestation: SettlementRatInfestationLookup = NO_SETTLEMENT_RAT_INFESTATION,
     transferAnimalOwnership: QuestAnimalOwnershipTransfer = () => false,
     canReserveHorseReward: HorseRewardAvailability = () => false,
+    spawnPointDestruction: SpawnPointDestructionLookup = NO_SPAWN_POINT_DESTRUCTION,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -248,6 +260,7 @@ export class QuestManager {
     this.applySocialConsequence = applySocialConsequence
     this.socialAvailability = socialAvailability
     this.settlementRatInfestation = settlementRatInfestation
+    this.spawnPointDestruction = spawnPointDestruction
     this.transferAnimalOwnership = transferAnimalOwnership
     this.canReserveHorseReward = canReserveHorseReward
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
@@ -462,6 +475,19 @@ export class QuestManager {
       if (!def.settlementId) continue
       const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
       if (isSettlementRatInfestationResolved(snapshot)) this.advanceStage(def, s)
+    }
+  }
+
+  /** Polls live world state for active `destroy_spawn_point` objectives (plan
+   *  quests-progression-007) — call after permanent habitat destruction. */
+  pollDestroySpawnPointObjectives(): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (stage?.objective.type !== 'destroy_spawn_point') continue
+      if (!this.spawnPointDestruction.isPermanentlyDestroyed(stage.objective.spawnerId)) continue
+      this.advanceStage(def, s)
     }
   }
 

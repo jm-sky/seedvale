@@ -304,6 +304,7 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Siedlisko zniszczone.', 'pickup')
+      ctx.onSpawnPointDestroyed?.()
     }, { blurred: true })
     return { ok: true }
   }

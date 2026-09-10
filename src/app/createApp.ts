@@ -939,6 +939,9 @@ export async function createApp(
       animal: bundle.settlementsManager.resolvePersistentAnimal(animalId),
       isReservedByQuest: questManager.isHorseRewardReserving(animalId),
     }) === 'available',
+    {
+      isPermanentlyDestroyed: (spawnerId) => bundle.fauna.isQuestSpawnPointPermanentlyDestroyed(spawnerId),
+    },
   )
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
@@ -1051,7 +1054,12 @@ export async function createApp(
     syncHeldHud: () => syncHeldHud(),
     refreshInventoryScreen: () => refreshInventoryScreen(),
     getWorldSeed: () => config.seed,
+    onSpawnPointDestroyed: () => {
+      questManager.pollDestroySpawnPointObjectives()
+    },
   }
+
+  questManager.pollDestroySpawnPointObjectives()
 
   // Riding (plan fauna-003) — livestock has a deterministic per-house
   // `animalId` (`settlement/livestock.ts`), so a saved `mountedAnimalId`

@@ -589,6 +589,7 @@ function createEmptyFauna(): Fauna {
     isWolfDenCleared: () => false,
     setSpawnerMarker: () => {},
     destroySpawner: () => false,
+    isQuestSpawnPointPermanentlyDestroyed: () => false,
   }
 }
 

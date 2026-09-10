@@ -64,6 +64,8 @@ export type PlayerActionContext = {
   refreshInventoryScreen: () => void
   /** World seed for deterministic event rolls (plan npc-024). */
   getWorldSeed: () => number
+  /** Habitat permanently destroyed (`[E] Zniszcz` on a depleted den, etc.). */
+  onSpawnPointDestroyed?: () => void
 }
 
 /** The standard "another blocking activity is already running" guard: a busy
