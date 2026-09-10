@@ -96,10 +96,11 @@ export const COMBAT_TARGET_CONE_DOT: Record<CombatAimMode, number> = {
 
 /** Plan 106 §4, extended to river/ocean shorelines by plan `ui-input-006` —
  *  `[E]` always drinks directly (well, lake, river or ocean); `[R]` fills a
- *  carried empty waterskin. Static regardless of inventory (same convention
- *  as `campfire`'s "Dołóż gałąź" prompt not checking for a branch first) —
- *  `gameLoop.ts` toasts an error if `[R]` is pressed without one. */
-const WATER_SOURCE_PROMPT = '[E] Napij się · [R] Napełnij bukłak'
+ *  carried liquid container (waterskin or bucket — plan items-player-001).
+ *  Static regardless of inventory (same convention as `campfire`'s "Dołóż
+ *  gałąź" prompt not checking for a branch first) — `gameLoop.ts` toasts an
+ *  error if `[R]` is pressed without one. */
+const WATER_SOURCE_PROMPT = '[E] Napij się · [R] Napełnij pojemnik'
 /** Plan world-011 — shown instead of `WATER_SOURCE_PROMPT` at an ocean
  *  shoreline (`createWaterSource('ocean').quality === 'undrinkable'`): salt
  *  water can't be drunk or bottled, so neither `[E]` nor `[R]` is offered as

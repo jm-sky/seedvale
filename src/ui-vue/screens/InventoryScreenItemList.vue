@@ -2,16 +2,16 @@
 import { computed, ref } from 'vue'
 import ItemsScreenItemButton from '@/components/ItemsScreenItemButton.vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
-import type { InventoryInstanceRow } from '../../items/inventoryView'
 import { isToolKind } from '../../items/HeldTool'
-import { type ConsumableNeed, consumeVerbLabel, isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../../items/itemCatalog'
+import { type InventoryInstanceRow, ITEM_METER_LABEL } from '../../items/inventoryView'
+import { isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
 import { isWeaponMaintenanceKind } from '../../items/itemInstances'
 import { hasItemCategory, ITEM_DEFS, type ItemCategory, type ItemKind, primaryItemCategory } from '../../items/items'
 import { isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from '../../items/primaryWeapons'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { ui } from '../store'
+import { openQuantityDialog, ui } from '../store'
 
 const panel = ref<HTMLElement | null>(null)
 
@@ -33,8 +33,9 @@ const allItems = computed(() => ui.inventory.groups.map((group) => ({
   count: group.count,
   condition: group.condition,
   uniformConditionPercent: group.uniformConditionPercent,
+  meterKind: group.meterKind,
   instances: group.instances,
-  consumable: ITEM_CATALOG[group.kind].consumable ?? null,
+  consumeUse: group.consumeUse,
   book: ITEM_CATALOG[group.kind].book ?? null,
 })))
 
@@ -56,9 +57,10 @@ function categoryLabels(def: (typeof allItems.value)[number]['def']): string {
 }
 
 function conditionLabel(item: (typeof allItems.value)[number]): string | null {
-  if (item.condition === 'mixed') return '[mixed usage]'
+  if (!item.meterKind) return null
+  if (item.condition === 'mixed') return `${ITEM_METER_LABEL[item.meterKind]}: różne stany`
   if (item.condition === 'uniform' && item.uniformConditionPercent != null) {
-    return `[${item.uniformConditionPercent}%]`
+    return `${ITEM_METER_LABEL[item.meterKind]} ${item.uniformConditionPercent}%`
   }
   return null
 }
@@ -70,8 +72,12 @@ const emit = defineEmits<{
 useTouchScroll(panel)
 
 function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
-function consumeLabel(need: ConsumableNeed): string { return consumeVerbLabel(need) }
-function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
+/** "Wyrzuć" (plan items-player-024) — a single unit drops immediately; a
+ *  stack of more than one opens the shared quantity dialog first. */
+function onDrop(kind: ItemKind, count: number): void {
+  if (count <= 1) { ui.inventory.onDrop?.(kind, count); return }
+  openQuantityDialog(`Wyrzuć: ${itemDisplayName(kind)}`, count, (amount) => ui.inventory.onDrop?.(kind, amount))
+}
 function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
@@ -81,6 +87,7 @@ function onPlaceTrap(kind: ItemKind): void {
   if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
 }
 function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
+function onPlaceTent(): void { ui.inventory.onPlaceTent?.() }
 
 function resolvePrimaryInstanceId(kind: ItemKind, instances: readonly InventoryInstanceRow[]): string | null {
   if (!isWeaponMaintenanceKind(kind)) return null
@@ -221,9 +228,10 @@ function setPrimaryRanged(kind: ItemKind, instances: readonly InventoryInstanceR
         <div class="mt-1 -mb-1 flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center justify-start gap-2">
             <ItemsScreenItemButton
-              v-if="item.consumable"
+              v-if="item.consumeUse"
               class="min-h-0 py-1"
-              :label="consumeLabel(item.consumable.need)"
+              :label="item.consumeUse.reasonLabel ? `${item.consumeUse.label} — ${item.consumeUse.reasonLabel}` : item.consumeUse.label"
+              :disabled="!item.consumeUse.enabled"
               @click="onConsume(item.kind)"
             />
             <ItemsScreenItemButton
@@ -243,6 +251,12 @@ function setPrimaryRanged(kind: ItemKind, instances: readonly InventoryInstanceR
               class="min-h-0 py-1"
               label="Postaw"
               @click="onPlaceContainer"
+            />
+            <ItemsScreenItemButton
+              v-if="item.kind === 'tent'"
+              class="min-h-0 py-1"
+              label="Rozstaw"
+              @click="onPlaceTent"
             />
             <ItemsScreenItemButton
               v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
@@ -274,7 +288,7 @@ function setPrimaryRanged(kind: ItemKind, instances: readonly InventoryInstanceR
               class="min-h-0 py-1"
               label="Wyrzuć"
               destructive
-              @click="onDrop(item.kind)"
+              @click="onDrop(item.kind, item.count)"
             />
           </div>
         </div>

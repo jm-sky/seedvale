@@ -1,7 +1,7 @@
 # Plan: Inventory and item-use UX coherence
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍 — implemented, `tsc`/`vue-tsc`/lint/build/test all green. Browser/manual verification not performed (see implementation notes' Manual verification checklist).
 **Type:** polish
 **Priority:** high · **Effort:** L
 **Depends on:** items-player-022, ~~ui-input-015~~

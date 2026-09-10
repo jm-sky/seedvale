@@ -118,9 +118,13 @@ export type InventoryWiring = {
   readBookItem: (kind: ItemKind) => void
   /** "Odczytaj" on a treasure-map item (plan quests-progression-009). */
   readTreasureMapItem: (kind: ItemKind) => void
-  /** Drops the whole carried stack of `kind` back into the world. */
-  dropItemStack: (kind: ItemKind) => void
-  equipTool: (kind: ItemKind) => void
+  /** "Wyrzuć" (plan items-player-024) — drops exactly `amount` of `kind`
+   *  back into the world; `amount` is clamped to what's actually carried. */
+  dropItems: (kind: ItemKind, amount: number) => void
+  /** `instanceId` picks which concrete instance to equip for a weapon-
+   *  maintenance kind — falls back to `HeldTool.equip()`'s own first-available
+   *  resolution when omitted. */
+  equipTool: (kind: ItemKind, instanceId?: string) => void
   unequipTool: () => void
   /** HUD primary-weapon shortcuts (plan `ui-input-002` §6) — equip whichever
    *  weapon `primaryWeapons` currently remembers, no-op if none is set. */
@@ -294,19 +298,25 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     deps.refreshInventoryScreen()
   }
 
-  /** Drops the whole carried stack of `kind` back into the world at the
-   *  player's feet, scattered slightly — the "Wyrzuć" action in
-   *  `createInventoryScreen.ts`. Re-`refresh()`es the (already-open) screen
+  /** Drops exactly `amount` of `kind` back into the world at the player's
+   *  feet, scattered slightly — the "Wyrzuć" action in
+   *  `createInventoryScreen.ts`. `amount` is clamped to what's actually
+   *  carried; for an instance-backed kind the first `amount` instances (in
+   *  `Inventory.getInstances()` order) are the ones dropped — a deterministic
+   *  choice, since the shared quantity dialog only names a count, not
+   *  concrete instances. Re-`refresh()`es the (already-open) screen
    *  immediately since world simulation is frozen while it's open (see the
    *  tick loop's modal-gating in `gameLoop.ts`) — nothing else will update it.
-   *  Instance-backed kinds (weapons/traps) each carry their own identity and
-   *  durability/sharpness across the drop, same as a plain world pickup
-   *  (plan 199). */
-  const dropItemStack = (kind: ItemKind): void => {
+   *  Instance-backed kinds (weapons/traps/tents/containers) each carry their
+   *  own identity and durability/sharpness/fill across the drop, same as a
+   *  plain world pickup (plan 199). */
+  const dropItems = (kind: ItemKind, amount: number): void => {
     const instanceBacked = isInstanceBackedKind(kind)
-    const instances = instanceBacked ? inventory.getInstances(kind) : []
-    const count = instanceBacked ? instances.length : inventory.count(kind)
+    const allInstances = instanceBacked ? inventory.getInstances(kind) : []
+    const available = instanceBacked ? allInstances.length : inventory.count(kind)
+    const count = Math.min(Math.max(0, Math.floor(amount)), available)
     if (count <= 0) return
+    const instances = instanceBacked ? allInstances.slice(0, count) : []
     let unitBatches: ReturnType<typeof expandFoodBatchesToUnits> = []
     if (instanceBacked) {
       for (const instance of instances) inventory.removeInstance(instance.id)
@@ -337,9 +347,9 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     deps.refreshInventoryScreen()
   }
 
-  const equipTool = (kind: ItemKind): void => {
+  const equipTool = (kind: ItemKind, instanceId?: string): void => {
     if (playerTorch.isLit()) playerTorch.extinguish()
-    if (!heldTool.equip(kind)) return
+    if (!heldTool.equip(kind, instanceId)) return
     primaryWeapons.noteEquipped(kind, heldTool.heldInstanceId())
     deps.syncHeldHud()
     deps.refreshInventoryScreen()
@@ -582,7 +592,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     sharpenInventoryWeapon,
     readBookItem,
     readTreasureMapItem,
-    dropItemStack,
+    dropItems,
     equipTool,
     unequipTool,
     equipPrimaryMeleeWeapon,

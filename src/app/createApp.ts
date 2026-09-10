@@ -1553,7 +1553,7 @@ export async function createApp(
   )
 
   const inventoryScreenHandlers: InventoryScreenHandlers = {
-    onDrop: inventoryWiring.dropItemStack,
+    onDrop: inventoryWiring.dropItems,
     onEquip: inventoryWiring.equipTool,
     onUnequip: inventoryWiring.unequipTool,
     onConsume: (kind) => survival.consumeItem(kind),
@@ -1573,6 +1573,10 @@ export async function createApp(
       inventoryScreen.close()
       containers.placeContainerAtAim()
     },
+    onPlaceTent: () => {
+      inventoryScreen.close()
+      placement.placeTentAtAim()
+    },
   }
 
   const inventoryScreen = createInventoryScreen(container, inventoryScreenHandlers)
@@ -1585,6 +1589,7 @@ export async function createApp(
       inventory.totalSize(),
       inventory.maxSize,
       heldTool.held(),
+      heldTool.heldInstanceId(),
       buildInventoryGroups(inventory, dayNight.elapsedDays),
       primaryWeapons.primaryMelee(),
       primaryWeapons.primaryRanged(),

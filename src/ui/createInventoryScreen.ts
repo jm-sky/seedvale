@@ -7,8 +7,12 @@ import type { TrapKind } from '../world/animalTraps'
 import { getMountedVueUi } from '../ui-vue/mount'
 
 export type InventoryScreenHandlers = {
-  onDrop?: (kind: ItemKind) => void
-  onEquip?: (kind: ItemKind) => void
+  /** "Wyrzuć" (plan items-player-024) — `amount` is resolved by the caller
+   *  (the shared quantity dialog for count > 1, no dialog for a single item). */
+  onDrop?: (kind: ItemKind, amount: number) => void
+  /** `instanceId` picks which concrete instance to equip for a weapon-
+   *  maintenance kind — see `HeldTool.equip()`. */
+  onEquip?: (kind: ItemKind, instanceId?: string) => void
   onUnequip?: () => void
   /** "Zjedz"/"Wypij" (plan 106) — only offered for consumable items. */
   onConsume?: (kind: ItemKind) => void
@@ -20,6 +24,9 @@ export type InventoryScreenHandlers = {
   onSharpen?: (instanceId: string) => SharpenResult
   /** "Postaw" (plan 164) — places a purchased `chest` in the world. */
   onPlaceContainer?: () => void
+  /** "Rozstaw" (plan items-player-024) — pitches a carried, packed tent, same
+   *  ground-suitability flow as Quick Actions' tent placement. */
+  onPlaceTent?: () => void
   onSetPrimaryMelee?: (kind: ItemKind, instanceId: string | null) => void
   onSetPrimaryRanged?: (kind: ItemKind, instanceId: string | null) => void
   onClose?: () => void
@@ -37,6 +44,7 @@ export type InventoryScreen = {
     totalSize: number,
     maxSize: number,
     heldTool: ItemKind | null,
+    heldInstanceId: string | null,
     groups: readonly InventoryGroupView[],
     primaryMelee: PrimaryWeaponChoice | null,
     primaryRanged: PrimaryWeaponChoice | null,
@@ -57,6 +65,7 @@ export function createInventoryScreen(
   let totalSize = 0
   let maxSize = 0
   let heldTool: ItemKind | null = null
+  let heldInstanceId: string | null = null
   let primaryMelee: PrimaryWeaponChoice | null = null
   let primaryRanged: PrimaryWeaponChoice | null = null
 
@@ -72,11 +81,12 @@ export function createInventoryScreen(
       totalSize,
       maxSize,
       heldTool,
+      heldInstanceId,
       groups,
       primaryMelee,
       primaryRanged,
-      (kind) => handlers.onDrop?.(kind),
-      (kind) => handlers.onEquip?.(kind),
+      (kind, amount) => handlers.onDrop?.(kind, amount),
+      (kind, instanceId) => handlers.onEquip?.(kind, instanceId),
       () => handlers.onUnequip?.(),
       (kind) => handlers.onConsume?.(kind),
       (kind) => handlers.onRead?.(kind),
@@ -84,6 +94,7 @@ export function createInventoryScreen(
       (ids) => handlers.onSellInstances?.(ids) ?? 'invalid_offer',
       (id) => handlers.onSharpen?.(id) ?? 'invalid',
       () => handlers.onPlaceContainer?.(),
+      () => handlers.onPlaceTent?.(),
       (kind, instanceId) => handlers.onSetPrimaryMelee?.(kind, instanceId),
       (kind, instanceId) => handlers.onSetPrimaryRanged?.(kind, instanceId),
     )
@@ -103,7 +114,7 @@ export function createInventoryScreen(
       if (isOpen()) close()
       else open()
     },
-    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextGroups, nextPrimaryMelee, nextPrimaryRanged) {
+    refresh(nextCounts, nextTotalWeight, nextMaxWeight, nextTotalSize, nextMaxSize, nextHeldTool, nextHeldInstanceId, nextGroups, nextPrimaryMelee, nextPrimaryRanged) {
       if (disposed) return
       counts = { ...nextCounts }
       groups = nextGroups
@@ -112,10 +123,11 @@ export function createInventoryScreen(
       totalSize = nextTotalSize
       maxSize = nextMaxSize
       heldTool = nextHeldTool
+      heldInstanceId = nextHeldInstanceId
       primaryMelee = nextPrimaryMelee
       primaryRanged = nextPrimaryRanged
       if (isOpen()) {
-        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, groups, primaryMelee, primaryRanged)
+        getUi()?.refreshInventory(counts, totalWeight, maxWeight, totalSize, maxSize, heldTool, heldInstanceId, groups, primaryMelee, primaryRanged)
       }
     },
     dispose() {

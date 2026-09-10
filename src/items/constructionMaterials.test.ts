@@ -5,6 +5,7 @@ import {
   CONSTRUCTION_MATERIAL_RADIUS,
   consumeMaterial,
   hasMaterial,
+  materialAvailabilityBreakdown,
   nearbyWorldMaterialCount,
 } from './constructionMaterials'
 import { Inventory } from './Inventory'
@@ -102,5 +103,34 @@ describe('hasMaterial / consumeMaterial', () => {
     const ok = consumeMaterial(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, { kind: 'branch', count: 1 })
     expect(ok).toBe(true)
     expect(dropped.nodes().map((n) => n.id)).toEqual(['far'])
+  })
+})
+
+describe('materialAvailabilityBreakdown', () => {
+  it('splits inventory vs nearby-world counts and agrees with hasMaterial at zero', () => {
+    const inventory = new Inventory({})
+    const dropped = fakeDroppedItems([])
+    const requirement = { kind: 'beam' as ItemKind, count: 7 }
+    const breakdown = materialAvailabilityBreakdown(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, requirement)
+    expect(breakdown).toEqual({ kind: 'beam', required: 7, inInventory: 0, nearbyWorld: 0, available: 0, missing: 7 })
+    expect(hasMaterial(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, requirement)).toBe(false)
+  })
+
+  it('splits inventory vs nearby-world counts and agrees with hasMaterial when partial', () => {
+    const inventory = new Inventory({ beam: 2 })
+    const dropped = fakeDroppedItems([drop('a', 'beam', 1, 0), drop('b', 'beam', 1.5, 0)])
+    const requirement = { kind: 'beam' as ItemKind, count: 7 }
+    const breakdown = materialAvailabilityBreakdown(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, requirement)
+    expect(breakdown).toEqual({ kind: 'beam', required: 7, inInventory: 2, nearbyWorld: 2, available: 4, missing: 3 })
+    expect(hasMaterial(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, requirement)).toBe(false)
+  })
+
+  it('splits inventory vs nearby-world counts and agrees with hasMaterial when sufficient', () => {
+    const inventory = new Inventory({ beam: 4 })
+    const dropped = fakeDroppedItems([drop('a', 'beam', 1, 0), drop('b', 'beam', 1.5, 0), drop('c', 'beam', 2, 0)])
+    const requirement = { kind: 'beam' as ItemKind, count: 7 }
+    const breakdown = materialAvailabilityBreakdown(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, requirement)
+    expect(breakdown).toEqual({ kind: 'beam', required: 7, inInventory: 4, nearbyWorld: 3, available: 7, missing: 0 })
+    expect(hasMaterial(inventory, dropped, 0, 0, CONSTRUCTION_MATERIAL_RADIUS, requirement)).toBe(true)
   })
 })

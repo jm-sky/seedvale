@@ -11,6 +11,10 @@ export type Hud = {
   setInventoryWeight: (current: number, max: number) => void
   /** Label for the held tool slot — empty string hides it. */
   setHeldTool: (label: string) => void
+  /** Live compatible-ammo count for a held ranged weapon (plan
+   *  items-player-024) — empty `ammoLabel` hides it. Replaces the old
+   *  per-shot "Zostało N strzał" toast. */
+  setHeldAmmo: (ammoLabel: string, count: number) => void
   /** Primary melee/ranged weapon shortcut labels (plan `ui-input-002` §6) —
    *  empty string hides the corresponding shortcut button. */
   setPrimaryWeapons: (meleeLabel: string, rangedLabel: string) => void
@@ -53,6 +57,7 @@ export function createHud(_parent: HTMLElement): Hud {
     setTime: (timeOfDay) => { if (!disposed) getUi()?.setHudTime(timeOfDay) },
     setInventoryWeight: (current, max) => { if (!disposed) getUi()?.setHudInventoryWeight(current, max) },
     setHeldTool: (label) => { if (!disposed) getUi()?.setHudHeldTool(label) },
+    setHeldAmmo: (ammoLabel, count) => { if (!disposed) getUi()?.setHudHeldAmmo(ammoLabel, count) },
     setPrimaryWeapons: (meleeLabel, rangedLabel) => { if (!disposed) getUi()?.setHudPrimaryWeapons(meleeLabel, rangedLabel) },
     setPlayerNeeds: (needs) => { if (!disposed) getUi()?.setHudPlayerNeeds(needs) },
     setPlayerCondition: (label) => { if (!disposed) getUi()?.setHudPlayerCondition(label) },

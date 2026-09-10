@@ -622,7 +622,7 @@ export function wellPromptLabel(record: PlayerWellRecord, resolvedRoofCondition:
     if (resolvedRoofCondition !== null && resolvedRoofCondition < CONDITION_MAX) {
       return '[E] Napij się · [R] Napraw'
     }
-    return '[E] Napij się · [R] Napełnij bukłak'
+    return '[E] Napij się · [R] Napełnij pojemnik'
   }
   const stage = activeWellStage(record)
   const waterHint = isWellWaterAvailable(record) ? ' · woda dostępna w [R]' : ''

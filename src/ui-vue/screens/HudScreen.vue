@@ -48,6 +48,7 @@ const needBars = computed(() => [
         class="text-amber-300"
       >{{ ui.hud.playerCondition }}</span>
       <span v-if="ui.hud.held">{{ ui.hud.held }}</span>
+      <span v-if="ui.hud.heldAmmo">{{ ui.hud.heldAmmo }}</span>
     </div>
     <div class="mt-2 flex w-[130px] flex-col gap-1 max-[700px]:w-[100px]">
       <div

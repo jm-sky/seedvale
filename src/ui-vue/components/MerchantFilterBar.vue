@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
-import type { ItemCapability } from '../../items/itemCatalog'
 import type { CapabilityFilter, CategoryFilter, PriceFilter, TradeFilters, TradeSortMode } from '../composables/useMerchantTradeState'
+import { CAPABILITY_LABEL, type ItemCapability } from '../../items/itemCatalog'
 
 const props = defineProps<{
   modelValue: TradeFilters
@@ -15,17 +15,6 @@ const emit = defineEmits<{
 }>()
 
 const { categoryLabel } = useItemCategoryLabels()
-
-const CAPABILITY_LABEL: Record<ItemCapability, string> = {
-  wood_chopping: 'Rąbanie drewna',
-  meat_harvesting: 'Oprawianie',
-  branch_trimming: 'Obcinanie gałęzi',
-  soil_digging: 'Kopanie',
-  rock_mining: 'Kucie w skale',
-  fire_starting: 'Rozpalanie ognia',
-  fishing: 'Wędkowanie',
-  textile_repair: 'Naprawa tekstyliów',
-}
 
 const categoryChips: { id: CategoryFilter, label: string }[] = [
   { id: 'all', label: 'Wszystkie' },

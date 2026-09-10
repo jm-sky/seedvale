@@ -120,6 +120,20 @@ export const CAPABILITY_NEED_LABEL: Record<ItemCapability, string> = {
   wood_chopping: 'narzędzia do rąbania',
 }
 
+/** Player-facing capability name (plan items-player-024) — shared by the
+ *  merchant capability filter and Inventory item-details "Zastosowania"
+ *  section, so the two never drift into two independent wordings. */
+export const CAPABILITY_LABEL: Record<ItemCapability, string> = {
+  wood_chopping: 'Rąbanie drewna',
+  meat_harvesting: 'Oprawianie',
+  branch_trimming: 'Obcinanie gałęzi',
+  soil_digging: 'Kopanie',
+  rock_mining: 'Kucie w skale',
+  fire_starting: 'Rozpalanie ognia',
+  fishing: 'Wędkowanie',
+  textile_repair: 'Naprawa tekstyliów',
+}
+
 /** What a `consumable` item restores — `hunger`/`thirst` map to a
  *  `PlayerNeeds` pool, `health` heals `HealthState` directly (plan 153). */
 export type ConsumableNeed = 'hunger' | 'thirst' | 'health'

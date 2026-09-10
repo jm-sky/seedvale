@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import UiButton from '@/components/UiButton.vue'
 import UiPanel from '@/components/UiPanel.vue'
+import type { ContainerScreenMode } from '../store'
 import { ITEM_DEFS, type ItemKind } from '../../items/items'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { closeContainerScreen, isContainerScreenOpen, ui } from '../store'
+import { closeContainerScreen, isContainerScreenOpen, openQuantityDialog, ui } from '../store'
 
 useOverlayScreen('containerScreen', isContainerScreenOpen, closeContainerScreen)
 
@@ -14,17 +15,34 @@ const playerPanel = ref<HTMLElement | null>(null)
 useTouchScroll(containerPanel)
 useTouchScroll(playerPanel)
 
+/** Mode-derived labels (plan items-player-024) — a corpse never had deposit
+ *  controls the player could legally use, so it gets its own source label
+ *  and an empty-state line instead of reusing the chest's "W skrzyni"
+ *  wording (or accepting a click that only bounced with an error toast). */
+const SOURCE_LABEL: Record<ContainerScreenMode, string> = { container: 'W skrzyni', corpse: 'Łup' }
+const SOURCE_EMPTY_LABEL: Record<ContainerScreenMode, string> = { container: 'Skrzynia jest pusta.', corpse: 'Przy zwłokach nic nie ma.' }
+
+const sourceLabel = computed(() => SOURCE_LABEL[ui.containerScreen.mode])
+const sourceEmptyLabel = computed(() => SOURCE_EMPTY_LABEL[ui.containerScreen.mode])
+const canDeposit = computed(() => ui.containerScreen.mode === 'container')
+const canTakeAll = computed(() => ui.containerScreen.containerGroups.length > 0)
+
 function deposit(kind: ItemKind, count: number): void {
-  ui.containerScreen.onDeposit?.(kind, count)
+  if (count <= 1) { ui.containerScreen.onDeposit?.(kind, count); return }
+  openQuantityDialog(`Włóż: ${ITEM_DEFS[kind].label}`, count, (amount) => ui.containerScreen.onDeposit?.(kind, amount))
 }
 function withdraw(kind: ItemKind, count: number): void {
-  ui.containerScreen.onWithdraw?.(kind, count)
+  if (count <= 1) { ui.containerScreen.onWithdraw?.(kind, count); return }
+  openQuantityDialog(`Weź: ${ITEM_DEFS[kind].label}`, count, (amount) => ui.containerScreen.onWithdraw?.(kind, amount))
 }
 function depositInstance(id: string): void {
   ui.containerScreen.onDepositInstance?.(id)
 }
 function withdrawInstance(id: string): void {
   ui.containerScreen.onWithdrawInstance?.(id)
+}
+function takeAll(): void {
+  ui.containerScreen.onTakeAll?.()
 }
 </script>
 
@@ -57,9 +75,18 @@ function withdrawInstance(id: string): void {
 
       <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-2">
         <section class="flex min-w-0 flex-col md:min-h-0">
-          <h3 class="mb-2 shrink-0 text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:mb-1.5 max-md:text-[11px]">
-            W skrzyni
-          </h3>
+          <div class="mb-2 flex shrink-0 items-center justify-between gap-2 max-md:mb-1.5">
+            <h3 class="text-[12px] font-semibold uppercase tracking-wide opacity-70 max-md:text-[11px]">
+              {{ sourceLabel }}
+            </h3>
+            <UiButton
+              v-if="canTakeAll"
+              class="min-h-0 px-2.5 py-1 text-xs"
+              @click="takeAll"
+            >
+              Weź wszystko
+            </UiButton>
+          </div>
           <div
             ref="containerPanel"
             class="flex flex-col gap-1.5 overflow-y-auto md:min-h-0 md:flex-1"
@@ -69,7 +96,7 @@ function withdrawInstance(id: string): void {
               v-if="ui.containerScreen.containerGroups.length === 0"
               class="text-[12px] opacity-60 max-md:text-[11px]"
             >
-              Skrzynia jest pusta.
+              {{ sourceEmptyLabel }}
             </div>
             <div
               v-for="group in ui.containerScreen.containerGroups"
@@ -123,23 +150,25 @@ function withdrawInstance(id: string): void {
               <span class="min-w-0 flex-1 truncate text-sm max-md:text-[13px]">
                 {{ ITEM_DEFS[group.kind].label }} ×{{ group.count }}
               </span>
-              <template v-if="group.instances.length > 0">
+              <template v-if="canDeposit">
+                <template v-if="group.instances.length > 0">
+                  <UiButton
+                    v-for="row in group.instances"
+                    :key="row.id"
+                    class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
+                    @click="depositInstance(row.id)"
+                  >
+                    Włóż →
+                  </UiButton>
+                </template>
                 <UiButton
-                  v-for="row in group.instances"
-                  :key="row.id"
+                  v-else
                   class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
-                  @click="depositInstance(row.id)"
+                  @click="deposit(group.kind, group.count)"
                 >
                   Włóż →
                 </UiButton>
               </template>
-              <UiButton
-                v-else
-                class="min-h-11 shrink-0 px-2.5 py-1 text-xs max-md:min-h-9"
-                @click="deposit(group.kind, group.count)"
-              >
-                Włóż →
-              </UiButton>
             </div>
           </div>
         </section>
