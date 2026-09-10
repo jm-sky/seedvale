@@ -40,6 +40,7 @@ import type { WorldSky } from '../world/createSky'
 import type { CropGrowthStage, CropId } from '../world/cropLifecycle'
 import type { DayNightState } from '../world/dayNight'
 import type { GroundFogSystem } from '../world/groundFog'
+import type { LocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import type { MapDiscovery } from '../world/map/mapDiscovery'
 import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
@@ -331,6 +332,7 @@ export type GameLoopDeps = {
   playerTorch: PlayerTorch
   minimap: Minimap
   mapDiscovery: MapDiscovery
+  locationProximityDiscovery: LocationProximityDiscovery
   openQuestLog: () => void
   openInventory: () => void
   openSkills: () => void
@@ -570,7 +572,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
     startDestroySpawner,
@@ -2069,6 +2071,9 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         worldAudio.playAt,
       )
       mapDiscovery.update(player.mesh.position.x, player.mesh.position.z)
+      for (const revealed of locationProximityDiscovery.update(player.mesh.position.x, player.mesh.position.z)) {
+        toast.show(`Odkryto: ${revealed.name}`)
+      }
       withCategory(monitor, 'TERRAIN', () => {
         bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       })

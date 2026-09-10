@@ -113,6 +113,7 @@ import { type DryingRackRecord } from '../world/dryingRacks'
 import { type FishingBaitState } from '../world/fishing'
 import { createGroundFog } from '../world/groundFog'
 import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/locations/locationKnowledge'
+import { createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
 import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
@@ -593,6 +594,11 @@ export async function createApp(
   coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
   const locationKnowledge = createLocationKnowledge(initialSave?.map.discoveredLocations)
   setActiveLocationKnowledge(locationKnowledge)
+  const locationProximityDiscovery = createLocationProximityDiscovery({
+    getCaveDefinitions: () => bundle.caves.definitions(),
+    catalog: worldLocationCatalog,
+    knowledge: locationKnowledge,
+  })
   const navigationTargets = createNavigationTargets()
   navigationTargets.restore(
     initialSave?.map.targets ?? [],
@@ -1878,7 +1884,7 @@ export async function createApp(
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
     quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
-    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
+    questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork: (mode, x, z) => {
       if (hasItemCapability(heldTool.held(), 'rock_mining')) {
