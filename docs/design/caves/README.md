@@ -65,7 +65,10 @@ B5 — V1 removal + cleanup
 - [ ] Implementation agent: B3 — collision + third-person camera.
 - [ ] Player: browser verification of movement, collision and camera before continuing.
 - [x] Architecture/recon: B4 focused streaming/lifecycle/performance recon — `05-b4-streaming-lifecycle-performance-recon.md`.
-- [ ] Implementation agent: B4 — streaming + lifecycle + performance.
+- [x] Architecture/recon: define B4.1/B4.2/B4.3 implementation contract — `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b4-implementation-notes.md`.
+- [ ] Implementation agent: B4.1 — lifecycle seam + production instrumentation.
+- [ ] Implementation agent: B4.2 — asynchronous SDF extraction.
+- [ ] Implementation agent: B4.3 — disposal/memory/cache closure.
 - [ ] Implementation agent: B5 — remove obsolete V1 geometry and disposable spike code; perform cleanup without unrelated refactors.
 - [ ] Run full technical verification required by the plan.
 - [ ] Player: complete final Cave V2 browser verification checklist.
@@ -127,8 +130,9 @@ V1 cleanup + Cave V2 completion
 | `03-advanced-sweep-vs-sdf-spike-research.md` | Seedvale-focused Sweep vs SDF comparison and shared spike definition. | `done` |
 | `04-sweep-vs-sdf-spike-results.md` | Technical measurements, player observations and architecture decision from Milestone A. | `technical comparison complete, manual comparison required` |
 | `05-b4-streaming-lifecycle-performance-recon.md` | Current-code B4 recon: lifecycle, performance risks, worker decision and recommended streaming architecture. | `recon complete` |
-| `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `Milestone B in progress` |
+| `docs/plans/world-terrain-008-underground-caves-v2.md` | Production Cave V2 plan and architecture gate. | `Milestone B4 planned in slices` |
 | `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-implementation-notes.md` | Exact current-code integration map for implementation agents. | `in progress` |
+| `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b4-implementation-notes.md` | B4 implementation contract: lifecycle seam, worker boundary, disposal and verification. | `ready for B4.1` |
 
 ## Rules
 
