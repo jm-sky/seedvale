@@ -1,20 +1,18 @@
 # Implementation Notes: Horse acquisition through merchant purchase and quest reward
 
 **Plan:** `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward.md`  
-**Reviewed against:** current `main`, 2026-09-09
+**Reviewed against:** current `main`, 2026-09-10
 
-## Blocker: `fauna-020` is not implemented yet
+## Implemented (2026-09-10)
 
-Current `main` still has settlement-owned livestock only. `AnimalAgent.ownerHouseId` / household association are not a player-ownership contract, and `Settlement.livestock` still owns the live lifecycle. There is no `transferAnimalOwnership(...)`, detached player-animal collection or Follow/Stay state in code.
+- `src/settlement/horseAcquisition.ts` — derived `getHorseAcquisitionState()`, `MERCHANT_HORSE_PRICE` (250), merchant horse id resolver.
+- `src/items/trade.ts` — `settlePricedPurchase()` / `previewPricedPurchaseNetCoins()` for atomic world-entity purchases.
+- `src/quests/quests.ts` — `buildHorseAcquisitionQuest()` (`wilki-u-kupca`, `clear_wolf_den`, `horseRewardAnimalId` on `QuestDef`).
+- `src/quests/QuestManager.ts` — transfer-before-commit outcome order, quest-state reservation, `onHorseRewardTargetDied()`.
+- `src/app/inventoryWiring.ts` + `MerchantScreen.vue` — special horse offer outside `MERCHANT_STOCK`.
+- `src/app/createApp.ts` — binds home merchant horse id, fauna transfer seam, death hook.
 
-Do not implement a parallel ownership path in this plan. Implement `quests-progression-012` only after `fauna-020` provides the reviewed contract from its implementation notes: persistent animal lookup, household → player transfer of the **same live `AnimalAgent`**, source-slot reconciliation/tombstones and player-owned lifetime outside settlement streaming.
-
-Relevant current files:
-
-- `src/fauna/AnimalAgent.ts`
-- `src/settlement/livestock.ts`
-- `src/settlement/SettlementsManager.ts`
-- `docs/plans/implementation-notes/fauna-020-player-owned-animals-and-follow-stay-behaviour-implementation-notes.md`
+Ownership transfer reuses `SettlementsManager.transferAnimalOwnership()` from fauna-020 — no parallel path.
 
 ## Existing merchant horse identity
 

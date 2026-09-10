@@ -88,6 +88,14 @@ type QuestRuntimeProgress = {
 
 export type QuestItemGrant = (kind: ItemKind, count: number) => void
 
+/** Transfers one persistent animal to the player — fauna-owned seam (plan
+ *  quests-progression-012). */
+export type QuestAnimalOwnershipTransfer = (animalId: string) => boolean
+
+/** Whether a horse-reward target may still be reserved or purchased (plan
+ *  quests-progression-012) — derived outside `QuestManager`. */
+export type HorseRewardAvailability = (animalId: string) => boolean
+
 /** What a non-NPC world interaction (well/tree/spawner/live animal) reports to
  *  `onInteractObjective`. `gather_item` has no interaction point of its own —
  *  it's resolved lazily when talking to the giver — so it's excluded here. */
@@ -208,6 +216,8 @@ export class QuestManager {
   private readonly applySocialConsequence: ApplySocialConsequence
   private readonly socialAvailability: QuestSocialAvailabilityLookup
   private readonly settlementRatInfestation: SettlementRatInfestationLookup
+  private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
+  private readonly canReserveHorseReward: HorseRewardAvailability
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
    *  clear it after recomputing labels, so per-frame work is skipped on
    *  frames where nothing quest-related happened. Starts `true` so the first
@@ -225,6 +235,8 @@ export class QuestManager {
     applySocialConsequence: ApplySocialConsequence = () => {},
     socialAvailability: QuestSocialAvailabilityLookup = NO_SOCIAL_AVAILABILITY,
     settlementRatInfestation: SettlementRatInfestationLookup = NO_SETTLEMENT_RAT_INFESTATION,
+    transferAnimalOwnership: QuestAnimalOwnershipTransfer = () => false,
+    canReserveHorseReward: HorseRewardAvailability = () => false,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -236,6 +248,8 @@ export class QuestManager {
     this.applySocialConsequence = applySocialConsequence
     this.socialAvailability = socialAvailability
     this.settlementRatInfestation = settlementRatInfestation
+    this.transferAnimalOwnership = transferAnimalOwnership
+    this.canReserveHorseReward = canReserveHorseReward
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
     if (initial) {
       for (const entry of initial.progress) {
@@ -342,9 +356,33 @@ export class QuestManager {
   /** Whether every authored `availability` prerequisite on `def` is
    *  currently satisfied. Absent availability = always available. */
   private meetsAvailability(def: QuestDef): boolean {
+    if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return false
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) return true
     return prerequisites.every((prereq) => this.meetsPrerequisite(def, prereq))
+  }
+
+  /** True while a horse-reward quest has reserved its target (plan
+   *  quests-progression-012). */
+  isHorseRewardReserving(animalId: string): boolean {
+    for (const def of this.defs) {
+      if (def.horseRewardAnimalId !== animalId) continue
+      const s = this.stateOf(def.id)
+      if (s.state === 'active' || s.state === 'ready_to_report') return true
+    }
+    return false
+  }
+
+  /** Terminal failure when a reserved horse-reward target dies (plan
+   *  quests-progression-012). */
+  onHorseRewardTargetDied(animalId: string): void {
+    for (const def of this.defs) {
+      if (def.horseRewardAnimalId !== animalId) continue
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active' && s.state !== 'ready_to_report') continue
+      const failed = uniqueOutcomeForState(def, 'failed')
+      if (failed) this.applyOutcome(def, failed.id)
+    }
   }
 
   private meetsPrerequisite(def: QuestDef, prereq: QuestPrerequisite): boolean {
@@ -521,6 +559,13 @@ export class QuestManager {
     const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
     if (!outcome) return null
 
+    if (outcome.state === 'complete' && def.horseRewardAnimalId) {
+      if (!this.transferAnimalOwnership(def.horseRewardAnimalId)) {
+        const failed = uniqueOutcomeForState(def, 'failed')
+        return failed ? this.applyOutcome(def, failed.id) : null
+      }
+    }
+
     const stageIndex = outcome.state === 'complete' ? def.stages.length : current.stageIndex
     this.setQuestState(def.id, { state: outcome.state, stageIndex, resolvedOutcomeId: outcome.id })
     this.animalTargets.delete(def.id)
@@ -575,6 +620,7 @@ export class QuestManager {
         line: def.offerLine,
         offer: {
           onAccept: () => {
+            if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
             this.setQuestState(def.id, { state: 'active', stageIndex: 0 })
             this.bindAnimalTargetIfNeeded(def, 0)
           },

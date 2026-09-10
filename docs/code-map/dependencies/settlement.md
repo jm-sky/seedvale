@@ -360,6 +360,25 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.ts`
 - `settlement/props.ts`
 
+## `settlement/horseAcquisition.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `settlement/horseAcquisition.ts`
+
+## `settlement/horseAcquisition.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/inventoryWiring.ts`
+- `settlement/horseAcquisition.test.ts`
+
 ## `settlement/houseBuilder.test.ts`
 
 **Imports**

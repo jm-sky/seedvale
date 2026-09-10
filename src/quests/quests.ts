@@ -325,6 +325,11 @@ export type QuestDef = {
    *  ever apply — a quest with deltas but no resolved settlement applies
    *  nothing. */
   settlementId?: string
+  /** When set, a successful `complete` outcome transfers this persistent
+   *  animal to the player before terminal quest state is committed (plan
+   *  quests-progression-012). Bound at composition root — never parsed from
+   *  naming conventions in authored data here. */
+  horseRewardAnimalId?: string
   /** Authored terminal results. Objective completion is not resolution —
    *  a caller picks one of these. `invalidated` is not an outcome. */
   outcomes: readonly QuestOutcome[]
@@ -1004,4 +1009,45 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
   }
 
   return quests
+}
+
+/** Merchant horse reward quest (plan quests-progression-012) — bound to one
+ *  concrete `animalId` resolved at composition root. Omitted when the home
+ *  settlement has no merchant horse acquisition target this session. */
+export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): QuestDef {
+  return {
+    id: 'wilki-u-kupca',
+    title: 'Wilki u kupca',
+    description: 'Kupiec ma problem z wilkami przy szlaku. Pomóż mu, a w nagrodę dostaniesz jego konia.',
+    giverName: 'Kasia',
+    offerLine:
+      'Wilki straszą przy szlaku — mój koń nie może spokojnie stać przy wozie. Zlikwiduj ich jamę, a oddam ci tego konia.',
+    stages: [
+      {
+        objective: { type: 'clear_wolf_den', denId: WOLF_DEN_ID },
+        description: 'Znajdź wilczą jamę i zlikwiduj zagrożenie.',
+        reminderLine: 'Jama wciąż jest zamieszkana — mój koń czeka na spokój.',
+        progressLine: 'Jama opustoszała. Wróć do Kasi po konia.',
+        failLine: 'Koń nie przeżył — nie ma już czego oddać.',
+      },
+    ],
+    reportLine: 'Dzięki. Ten koń jest twój — trzymaj go przy sobie.',
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        reward: { visibility: 'shown' },
+        consequences: {
+          relations: [{ npcName: 'Kasia', delta: 2 }],
+          social: { reputation: { competence: 8, courage: 10 }, renown: 8 },
+        },
+      },
+      {
+        id: 'horse_lost',
+        state: 'failed',
+        resultText: 'Koń padł, zanim zdążyłeś go odebrać. Nie ma już nagrody do przekazania.',
+      },
+    ],
+    horseRewardAnimalId,
+  }
 }

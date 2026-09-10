@@ -99,6 +99,8 @@ Generated from TypeScript imports.
 - `quests/quests.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/horseAcquisition.test.ts`
+- `settlement/horseAcquisition.ts`
 - `settlement/livestock.test.ts`
 - `settlement/livestock.ts`
 - `settlement/ratPersistence.ts`

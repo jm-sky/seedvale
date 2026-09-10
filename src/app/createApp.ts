@@ -76,7 +76,8 @@ import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { QuestManager } from '../quests/QuestManager'
-import { buildLandmarkQuests, QUESTS } from '../quests/quests'
+import { buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
+import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
@@ -866,9 +867,15 @@ export async function createApp(
   // rather than hardcoding a settlement id inside `QuestManager`/
   // `ReputationManager`).
   const homeSettlementId = bundle.settlementsManager.getHomeDef().id
-  const questDefs = [...QUESTS, ...landmarkQuests].map((def) => ({ ...def, settlementId: homeSettlementId }))
+  const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
+  const questDefs = [
+    ...QUESTS,
+    ...landmarkQuests,
+    buildHorseAcquisitionQuest(merchantHorseId),
+  ].map((def) => ({ ...def, settlementId: homeSettlementId }))
 
-  const questManager = new QuestManager(
+  let questManager!: QuestManager
+  questManager = new QuestManager(
     questDefs,
     worldAudio.playOnce,
     inventory,
@@ -919,6 +926,11 @@ export async function createApp(
         aliveRatCount: bundle.settlementsManager.countAliveRats(settlementId),
       }),
     },
+    (animalId) => bundle.settlementsManager.transferAnimalOwnership(animalId, { kind: 'player' }),
+    (animalId) => getHorseAcquisitionState({
+      animal: bundle.settlementsManager.resolvePersistentAnimal(animalId),
+      isReservedByQuest: questManager.isHorseRewardReserving(animalId),
+    }) === 'available',
   )
 
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
@@ -931,6 +943,7 @@ export async function createApp(
   })
   onAnimalDeathTarget = (animalId) => {
     questManager.onInteractObjective({ type: 'animal_died', animalId })
+    questManager.onHorseRewardTargetDied(animalId)
     questManager.pollSettlementRatInfestationObjectives()
   }
   // Character Screen's local reputation view (plan quests-progression-001) —

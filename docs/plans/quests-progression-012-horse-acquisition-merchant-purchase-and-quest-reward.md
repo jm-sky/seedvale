@@ -1,7 +1,7 @@
 # Plan: Horse acquisition through merchant purchase and quest reward
 
 **Created:** 2026-09-08
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-020

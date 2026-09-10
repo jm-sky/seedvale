@@ -30,7 +30,7 @@ import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
 import { inventoryOwnsPrimaryWeaponChoice } from '../items/primaryWeapons'
-import { previewTransactionNetCoins, resolveOfferLineBuyback, sellInstancesForCoins, settleTransaction } from '../items/trade'
+import { previewPricedPurchaseNetCoins, previewTransactionNetCoins, resolveOfferLineBuyback, sellInstancesForCoins, settlePricedPurchase, settleTransaction } from '../items/trade'
 import { NEUTRAL_SELL_PRICE_CONTEXT, sellPrice, type SellPriceContext } from '../items/tradeCatalog'
 import { type SharpenResult, sharpenWeapon } from '../items/weaponMaintenance'
 import { SKILL_LABEL } from '../player/PlayerSkills'
@@ -51,7 +51,15 @@ import {
   weightedTopN,
 } from '../world/locations/locationDiscovery'
 import { settlementLocationId } from '../world/locations/worldLocationCatalog'
+import {
+  getHorseAcquisitionState,
+  horseOfferStatusHint,
+  MERCHANT_HORSE_PRICE,
+  merchantHorseAnimalId,
+  resolveMerchantHorseAnimal,
+} from '../settlement/horseAcquisition'
 import { payWorkContractAssignment } from './actions/workContractPayment'
+import type { MerchantHorseOffer } from '../ui-vue/store'
 
 /** Nearest settlements the home guard always mentions each conversation
  *  (plan §8 — no pool/scarcity mechanic, unlike landmarks). */
@@ -132,7 +140,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
 
   let activeMerchantPricing: MerchantPricing | null = null
 
-  const findSettlementForNpc = (npc: NpcAgent): Settlement | null => {
+  const findSettlementForNpc = (npc: NpcAgent | null): Settlement | null => {
+    if (!npc) return null
     for (const settlement of bundle.settlementsManager.getLoaded()) {
       if (settlement.npcs.includes(npc)) return settlement
     }
@@ -318,13 +327,55 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
 
   /** Shared by every merchant buy/sell path: weight/held-tool/quick-action
    *  resync plus a full merchant re-render. */
-  const afterTrade = (): void => {
+  const horseAcquisitionStatus = (settlement: Settlement): ReturnType<typeof getHorseAcquisitionState> => {
+    const animalId = merchantHorseAnimalId(settlement.id)
+    const animal = resolveMerchantHorseAnimal(
+      (id) => bundle.settlementsManager.resolvePersistentAnimal(id),
+      settlement.id,
+    )
+    return getHorseAcquisitionState({
+      animal,
+      isReservedByQuest: questManager.isHorseRewardReserving(animalId),
+    })
+  }
+
+  const buildMerchantHorseOffer = (settlement: Settlement | null): MerchantHorseOffer | null => {
+    if (!settlement) return null
+    const animalId = merchantHorseAnimalId(settlement.id)
+    const status = horseAcquisitionStatus(settlement)
+    return {
+      label: 'Koń przy wozie',
+      price: MERCHANT_HORSE_PRICE,
+      status,
+      statusHint: horseOfferStatusHint(status),
+      previewNetCoins: (offer) => previewPricedPurchaseNetCoins(inventory, MERCHANT_HORSE_PRICE, offer, merchantSellContext()),
+      onPurchase: (offer) => {
+        if (horseAcquisitionStatus(settlement) !== 'available') return 'not_sold'
+        const result = settlePricedPurchase(
+          inventory,
+          MERCHANT_HORSE_PRICE,
+          offer,
+          merchantSellContext(),
+          () => bundle.settlementsManager.transferAnimalOwnership(animalId, { kind: 'player' }),
+        )
+        if (result === 'ok') {
+          afterTrade(buildMerchantHorseOffer(settlement))
+          toast.show('Koń jest teraz twój.', 'pickup')
+        }
+        return result
+      },
+    }
+  }
+
+  const afterTrade = (horseOffer?: MerchantHorseOffer | null): void => {
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     heldTool.syncWithInventory()
     deps.syncHeldHud()
     deps.syncQuickActionAvailability()
     const view = merchantInventoryView()
-    vueUi.refreshMerchant(view.counts, view.groups)
+    const npc = ui.merchant.npc as NpcAgent | null
+    const settlement = findSettlementForNpc(npc)
+    vueUi.refreshMerchant(view.counts, view.groups, horseOffer ?? buildMerchantHorseOffer(settlement))
   }
 
   /** Applies a purchased Near/Far map's knowledge immediately (plan §9/§10)
@@ -402,7 +453,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
       const npc = ui.npcDialogueMenu.npc as NpcAgent | null
       const pricing = createMerchantPricing(npc)
       activeMerchantPricing = pricing
-      vueUi.openMerchantFromDialogue(view.counts, view.groups, pricing)
+      const settlement = findSettlementForNpc(npc)
+      vueUi.openMerchantFromDialogue(view.counts, view.groups, pricing, buildMerchantHorseOffer(settlement))
     },
     onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
     onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),

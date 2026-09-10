@@ -710,6 +710,7 @@ Generated from TypeScript imports.
 - `render/programPrewarm.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/horseAcquisition.ts`
 - `settlement/landOwnership.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`
@@ -1067,6 +1068,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/horseAcquisition.ts`
 - `ui-vue/mount.ts`
 - `ui-vue/store.ts`
 - `ui/createHud.ts`

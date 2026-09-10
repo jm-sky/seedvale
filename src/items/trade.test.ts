@@ -4,8 +4,10 @@ import { NEUTRAL_REPUTATION } from '../reputation/ReputationManager'
 import { Inventory } from './Inventory'
 import { createTentInstance, isTentItemInstance } from './itemInstances'
 import {
+  previewPricedPurchaseNetCoins,
   previewTransactionNetCoins,
   resolveOfferLineBuyback,
+  settlePricedPurchase,
   settleTransaction,
 } from './trade'
 import {
@@ -411,5 +413,46 @@ describe('merchant transaction preview/commit parity', () => {
     expect(settleTransaction(inv, {}, { knife: 1 })).toBe('ok')
     expect(inv.getInstance(good.id)).not.toBeNull()
     expect(inv.getInstance(bad.id)).toBeNull()
+  })
+})
+
+describe('settlePricedPurchase (plan quests-progression-012)', () => {
+  const HORSE_PRICE = 250
+
+  it('is atomic: coins out and external commit runs only after validation', () => {
+    const inv = new Inventory({ coin: HORSE_PRICE })
+    let committed = false
+    expect(settlePricedPurchase(inv, HORSE_PRICE, {}, NEUTRAL_SELL_PRICE_CONTEXT, () => {
+      committed = true
+      return true
+    })).toBe('ok')
+    expect(committed).toBe(true)
+    expect(inv.count('coin')).toBe(0)
+  })
+
+  it('leaves inventory unchanged when commit fails', () => {
+    const inv = new Inventory({ coin: HORSE_PRICE })
+    expect(settlePricedPurchase(inv, HORSE_PRICE, {}, NEUTRAL_SELL_PRICE_CONTEXT, () => false)).toBe('not_sold')
+    expect(inv.count('coin')).toBe(HORSE_PRICE)
+  })
+
+  it('refuses insufficient coins without mutating inventory or calling commit', () => {
+    const inv = new Inventory({ coin: 5 })
+    let committed = false
+    expect(settlePricedPurchase(inv, HORSE_PRICE, {}, NEUTRAL_SELL_PRICE_CONTEXT, () => {
+      committed = true
+      return true
+    })).toBe('cannot_afford')
+    expect(committed).toBe(false)
+    expect(inv.count('coin')).toBe(5)
+  })
+
+  it('matches preview net coins for barter+coin horse purchases', () => {
+    const inv = new Inventory({ coin: 240, shell: 20 })
+    const offer = { shell: 10 }
+    const preview = previewPricedPurchaseNetCoins(inv, HORSE_PRICE, offer)
+    expect(settlePricedPurchase(inv, HORSE_PRICE, offer, NEUTRAL_SELL_PRICE_CONTEXT, () => true)).toBe('ok')
+    expect(inv.count('coin')).toBe(240 - preview)
+    expect(inv.count('shell')).toBe(10)
   })
 })

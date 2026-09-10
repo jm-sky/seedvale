@@ -108,6 +108,17 @@ Generated from exported TypeScript symbols.
 - `hiddenTreasureDigHit` — function — line 76
 - `hiddenTreasureMarkerPositions` — function — line 54
 
+## `settlement/horseAcquisition.ts`
+
+- `getHorseAcquisitionState` — function — line 30
+  - domain: quests-progression Single derived view over live animal state + quest reservation.
+- `HorseAcquisitionState` — type — line 10
+- `horseOfferStatusHint` — function — line 48
+- `MERCHANT_HORSE_PRICE` — const — line 5
+- `merchantHorseAnimalId` — function — line 14
+- `resolveMerchantHorseAnimal` — function — line 21
+  - domain: fauna Resolves the merchant horse acquisition target for `settlementId`.
+
 ## `settlement/houseBuilder.ts`
 
 - `buildAssemblyCollidersWorld` — function — line 657

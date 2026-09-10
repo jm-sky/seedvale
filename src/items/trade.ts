@@ -283,6 +283,49 @@ export function previewTransactionNetCoins(
   return computeNetCoins(totalBuyCost, resolveOfferBuyback(inventory, offer, context))
 }
 
+/** UI-preview net coin delta for a priced world-entity purchase (e.g. merchant
+ *  horse) — same `computeNetCoins` formula as `settlePricedPurchase`. */
+export function previewPricedPurchaseNetCoins(
+  inventory: Inventory,
+  coinPrice: number,
+  offer: Partial<Record<ItemKind, number>>,
+  context: SellPriceContext = NEUTRAL_SELL_PRICE_CONTEXT,
+): number {
+  if (coinPrice <= 0) return 0
+  return computeNetCoins(coinPrice, resolveOfferBuyback(inventory, offer, context))
+}
+
+/** Atomic priced purchase outside `MERCHANT_STOCK` — validates payment first,
+ *  runs `onCommit` (e.g. fauna ownership transfer), then mutates inventory
+ *  only after `onCommit` succeeds (plan quests-progression-012). */
+export function settlePricedPurchase(
+  inventory: Inventory,
+  coinPrice: number,
+  offer: Partial<Record<ItemKind, number>>,
+  context: SellPriceContext,
+  onCommit: () => boolean,
+): TradeResult {
+  if (coinPrice <= 0) return 'invalid_offer'
+  const offerHasEntries = (Object.entries(offer) as [ItemKind, number][]).some(([, count]) => count > 0)
+  if (!offerHasEntries) {
+    if (!inventory.has('coin', coinPrice)) return 'cannot_afford'
+    if (!wouldFitAfterTransaction(inventory, {}, {}, coinPrice)) return 'full'
+    if (!onCommit()) return 'not_sold'
+    inventory.remove('coin', coinPrice)
+    return 'ok'
+  }
+  if (!isValidOffer(inventory, offer)) return 'invalid_offer'
+  const offerResolution = resolveOfferBuyback(inventory, offer, context)
+  const netCoins = computeNetCoins(coinPrice, offerResolution)
+  if (netCoins > 0 && !inventory.has('coin', netCoins)) return 'cannot_afford'
+  if (!wouldFitAfterTransaction(inventory, offer, {}, netCoins)) return 'full'
+  if (!onCommit()) return 'not_sold'
+  removeOffer(inventory, offer, offerResolution.instanceIdsByKind)
+  if (netCoins > 0) inventory.remove('coin', netCoins)
+  else if (netCoins < 0) inventory.add('coin', -netCoins)
+  return 'ok'
+}
+
 export function settleTransaction(
   inventory: Inventory,
   purchases: Partial<Record<ItemKind, number>>,

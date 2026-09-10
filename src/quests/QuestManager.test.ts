@@ -5,7 +5,7 @@ import type { QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
 import { QuestManager } from './QuestManager'
-import { QUESTS, relationToLevel } from './quests'
+import { buildHorseAcquisitionQuest, QUESTS, relationToLevel } from './quests'
 
 function quest(
   partial: Omit<QuestDef, 'title' | 'description' | 'outcomes'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes'>>,
@@ -1603,5 +1603,102 @@ describe('QuestManager dzik-przy-szlaku (plan quests-progression-005)', () => {
     live.invalidateStaleAnimalTargets()
     expect(live.getState('dzik-przy-szlaku')).toBe('invalidated')
     expect(live.onInteractObjective({ type: 'animal_died', animalId: 'boar-1' })).toBeNull()
+  })
+})
+
+describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
+  const HORSE_ID = 'merchant-horse-home'
+  const horseQuest = (): QuestDef => ({ ...buildHorseAcquisitionQuest(HORSE_ID), settlementId: 'home' })
+
+  it('acceptance reserves the horse and suppresses re-offer when unavailable', () => {
+    let available = true
+    const qm = new QuestManager(
+      [horseQuest()],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => false,
+      () => available,
+    )
+    acceptOffer(qm, 'Kasia')
+    expect(qm.getState('wilki-u-kupca')).toBe('active')
+    expect(qm.isHorseRewardReserving(HORSE_ID)).toBe(true)
+    available = false
+    expect(qm.isQuestAvailable('wilki-u-kupca')).toBe(false)
+  })
+
+  it('transfers ownership before committing complete outcome', () => {
+    const transferred: string[] = []
+    const qm = new QuestManager(
+      [horseQuest()],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      (animalId) => {
+        transferred.push(animalId)
+        return true
+      },
+      () => true,
+    )
+    acceptOffer(qm, 'Kasia')
+    qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
+    expect(qm.getState('wilki-u-kupca')).toBe('ready_to_report')
+    qm.onInteract('Kasia')
+    expect(transferred).toEqual([HORSE_ID])
+    expect(qm.getState('wilki-u-kupca')).toBe('complete')
+  })
+
+  it('fails instead of completing when horse transfer is unavailable at turn-in', () => {
+    const qm = new QuestManager(
+      [horseQuest()],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => false,
+      () => true,
+    )
+    acceptOffer(qm, 'Kasia')
+    qm.onInteractObjective({ type: 'wolf_den_cleared', denId: 'wolf-den' })
+    qm.onInteract('Kasia')
+    expect(qm.getState('wilki-u-kupca')).toBe('failed')
+  })
+
+  it('fails an active horse-reward quest when the reserved target dies', () => {
+    const qm = new QuestManager(
+      [horseQuest()],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => false,
+      () => true,
+    )
+    acceptOffer(qm, 'Kasia')
+    qm.onHorseRewardTargetDied(HORSE_ID)
+    expect(qm.getState('wilki-u-kupca')).toBe('failed')
+    expect(qm.isHorseRewardReserving(HORSE_ID)).toBe(false)
   })
 })

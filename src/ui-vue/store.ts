@@ -280,12 +280,24 @@ export type MerchantPricing = {
   ) => number
 }
 
+/** Special world-entity horse offer outside `MERCHANT_STOCK` (plan
+ *  quests-progression-012). */
+export type MerchantHorseOffer = {
+  label: string
+  price: number
+  status: 'available' | 'reserved' | 'transferred' | 'unavailable'
+  statusHint: string | null
+  previewNetCoins: (offer: Partial<Record<ItemKind, number>>) => number
+  onPurchase: (offer: Partial<Record<ItemKind, number>>) => TradeResult
+}
+
 type MerchantState = {
   open: boolean
   npc: NpcAgent | null
   counts: Partial<Record<ItemKind, number>>
   groups: readonly InventoryGroupView[]
   pricing: MerchantPricing | null
+  horseOffer: MerchantHorseOffer | null
   /** Settles one mixed BUY+OFFER basket atomically (plan ui-input-003) —
    *  supersedes the old single-target onBuyCoins/onBuyBarter/onSellCoins. */
   onSettleTransaction: ((
@@ -566,7 +578,7 @@ export const ui = reactive({
   lodgingWalk: { active: false } as LodgingWalkState,
   terrainPreparationPreview: { visible: false, sizeLabel: '', heightLabel: '', valid: false, reasonLabel: '' } as TerrainPreparationPreviewState,
   placementPreview: { visible: false, label: '', valid: false, reasonLabel: '', supportsRotation: false } as PlacementPreviewState,
-  merchant: { open: false, npc: null, counts: {}, groups: [], pricing: null, onSettleTransaction: null, onSellInstances: null } as MerchantState,
+  merchant: { open: false, npc: null, counts: {}, groups: [], pricing: null, horseOffer: null, onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
     open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
@@ -899,10 +911,12 @@ export function openMerchant(
   groups: readonly InventoryGroupView[],
   pricing: MerchantPricing,
   npc: NpcAgent | null = null,
+  horseOffer: MerchantHorseOffer | null = null,
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
   ui.merchant.pricing = pricing
+  ui.merchant.horseOffer = horseOffer
   ui.merchant.npc = npc ? markRaw(npc) : null
   ui.merchant.open = true
 }
@@ -911,22 +925,26 @@ export function openMerchantFromDialogue(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
   pricing: MerchantPricing,
+  horseOffer: MerchantHorseOffer | null = null,
 ): void {
   const npc = ui.npcDialogueMenu.npc as NpcAgent | null
   closeNpcDialogueMenu({ decline: false })
-  openMerchant(counts, groups, pricing, npc)
+  openMerchant(counts, groups, pricing, npc, horseOffer)
 }
 export function refreshMerchant(
   counts: Partial<Record<ItemKind, number>>,
   groups: readonly InventoryGroupView[],
+  horseOffer?: MerchantHorseOffer | null,
 ): void {
   ui.merchant.counts = { ...counts }
   ui.merchant.groups = groups
+  if (horseOffer !== undefined) ui.merchant.horseOffer = horseOffer
 }
 export function closeMerchant(): void {
   ui.merchant.open = false
   ui.merchant.npc = null
   ui.merchant.pricing = null
+  ui.merchant.horseOffer = null
 }
 export function isMerchantOpen(): boolean { return ui.merchant.open }
 

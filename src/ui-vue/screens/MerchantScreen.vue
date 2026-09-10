@@ -46,6 +46,9 @@ watch(() => ui.merchant.open, (open) => {
 })
 
 const coins = computed(() => ui.merchant.counts.coin ?? 0)
+const horseOffer = computed(() => ui.merchant.horseOffer)
+const horseNetCoins = computed(() => horseOffer.value?.previewNetCoins(transaction.offer) ?? 0)
+const canBuyHorse = computed(() => horseOffer.value?.status === 'available')
 
 const BUY_SORT_OPTIONS = [
   { id: 'name' as const, label: 'Nazwa' },
@@ -197,6 +200,19 @@ function onTrade(): void {
   else showToast('Nie da się przeprowadzić tej transakcji.', 'error')
 }
 
+function onBuyHorse(): void {
+  if (!horseOffer.value || !canBuyHorse.value) return
+  const result = horseOffer.value.onPurchase(transaction.offer)
+  if (result === 'ok') {
+    transaction.offer = {}
+    if (isCompact.value) drawerOpen.value = false
+    return
+  }
+  if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
+  else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
+  else showToast('Nie da się kupić tego konia.', 'error')
+}
+
 function openDetails(kind: ItemKind): void {
   detailsKind.value = kind
 }
@@ -277,7 +293,37 @@ function openDetails(kind: ItemKind): void {
             />
             <div class="flex flex-col gap-1.5 md:min-h-0 md:flex-1 md:overflow-y-auto">
               <div
-                v-if="buyRows.length === 0"
+                v-if="horseOffer"
+                class="flex flex-col gap-1 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 max-md:px-2 max-md:py-1.5"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium capitalize max-md:text-[13px]">
+                      {{ horseOffer.label }}
+                    </p>
+                    <p class="text-[12px] opacity-70 max-md:text-[11px]">
+                      {{ horseOffer.price }} monet
+                      <span v-if="canBuyHorse && horseNetCoins > 0"> · do zapłaty {{ horseNetCoins }}</span>
+                    </p>
+                    <p
+                      v-if="horseOffer.statusHint"
+                      class="mt-1 text-[12px] opacity-80 max-md:text-[11px]"
+                    >
+                      {{ horseOffer.statusHint }}
+                    </p>
+                  </div>
+                  <button
+                    v-if="canBuyHorse"
+                    type="button"
+                    class="shrink-0 rounded-md border border-white/20 px-2 py-1 text-[12px] hover:bg-white/10 max-md:text-[11px]"
+                    @click="onBuyHorse"
+                  >
+                    Kup
+                  </button>
+                </div>
+              </div>
+              <div
+                v-if="buyRows.length === 0 && !horseOffer"
                 class="text-[12px] opacity-60"
               >
                 Brak towarów w tej kategorii.

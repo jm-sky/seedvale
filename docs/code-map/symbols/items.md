@@ -398,6 +398,7 @@ Generated from exported TypeScript symbols.
 - `createAcquiredInstance` — function — line 139
 - `InstanceSellResult` — type — line 30
 - `OfferBuybackResolution` — type — line 34
+- `previewPricedPurchaseNetCoins` — function — line 288
 - `previewTransactionNetCoins` — function — line 273
 - `resolveOfferBuyback` — function — line 222
   - domain: settlements — merchant buyback for an entire offer basket plus the concrete instance ids settlement should remove for instance-backed kinds.
@@ -405,8 +406,9 @@ Generated from exported TypeScript symbols.
   - domain: settlements — deterministic merchant buyback for one offer row, using the same worst-condition instance selection that settlement will remove.
 - `selectInstancesToSell` — function — line 157
 - `selectInstanceToPlace` — function — line 172
-- `sellInstancesForCoins` — function — line 316
-- `settleTransaction` — function — line 286
+- `sellInstancesForCoins` — function — line 359
+- `settlePricedPurchase` — function — line 301
+- `settleTransaction` — function — line 329
 - `TradeResult` — type — line 28
 
 ## `items/tradeCatalog.ts`
