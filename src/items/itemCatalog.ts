@@ -224,6 +224,15 @@ export type ItemCatalogEntry = {
     immediateHp: number
     maxSeverity: TreatableInjurySeverity
   }
+  /** Plan items-player-023 — declarative campfire-fuel value, the fuel
+   *  counterpart of `capabilities`: a consumer (`VillageFire` via
+   *  `items/itemFuel.ts`) asks the catalog for `fuel.value` instead of
+   *  matching against a fixed list of fuel `ItemKind`s. `value` is a
+   *  relative branch-equivalent multiplier — `branch = 1` is the base unit
+   *  `VillageFire`'s `fuelPerBranch` already burns for. */
+  utility?: {
+    fuel?: { value: number }
+  }
 }
 
 /** Single source of truth for the inventory/world-prompt action verb per
@@ -280,6 +289,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     notes: 'Renewable near settlement trees; axe harvest yield; lit hand visual (plan 085).',
     roadmap:
       'Holdable improvised melee (low damage, ~4–8). Natural candidate for item durability/HP wear.',
+    utility: { fuel: { value: 1 } },
   },
   beam: {
     kind: 'beam',
@@ -288,7 +298,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'none',
     modelUrl: null,
-    notes: 'Plan 187 — bucking yield alongside branch, produced once at the authoritative felled→harvested tree-harvest transition (`world/treeLifecycle.ts`\'s `advanceHarvest`/`harvestFully`). Structural construction material, resolved from inventory or nearby dropped items at the construction-material boundary (`items/constructionMaterials.ts`). Also valid campfire fuel (`settlement/VillageFire.ts`\'s `FIRE_FUEL_KINDS`) — unlike `branch`, never a hand torch (`PlayerTorch.ts`\'s `TorchSource` stays branch/wooden_torch only).',
+    notes: 'Plan 187 — bucking yield alongside branch, produced once at the authoritative felled→harvested tree-harvest transition (`world/treeLifecycle.ts`\'s `advanceHarvest`/`harvestFully`). Structural construction material, resolved from inventory or nearby dropped items at the construction-material boundary (`items/constructionMaterials.ts`). Also valid campfire fuel (plan items-player-023 — `items/itemFuel.ts`\'s catalog-driven `utility.fuel`) — unlike `branch`, never a hand torch (`PlayerTorch.ts`\'s `TorchSource` stays branch/wooden_torch only).',
+    utility: { fuel: { value: 2 } },
   },
   mushroom: {
     kind: 'mushroom',
@@ -317,7 +328,8 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
-    notes: 'World chunk collectible.',
+    notes: 'World chunk collectible. Plan items-player-023 — weak kindling: legal campfire fuel (`items/itemFuel.ts`), burns for less than a branch.',
+    utility: { fuel: { value: 0.5 } },
   },
   knife: {
     kind: 'knife',

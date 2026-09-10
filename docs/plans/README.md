@@ -74,7 +74,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
-| 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
 
 ---
 
@@ -86,6 +85,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `items-player-023-systemic-item-utility-and-food-safety.md` | Można rozpalić/dołożyć szyszkę, gałąź i belkę; szyszka daje zauważalnie mniej czasu niż gałąź, belka więcej; automatyczny wybór opału nie spala belki, gdy dostępna jest szyszka/gałąź; komunikaty przy ogniu mówią o paliwie/opale, nie tylko o gałęzi; świeże surowe mięso może spowodować zatrucie zależnie od gatunku, a medium-fresh jest bardziej ryzykowne; pieczone/suszone mięso nie wywołuje raw-meat poisoning i nadal daje większą sytość z zachowanym gatunkowym provenance; save/load nie resetuje sequence deterministycznych food-risk rolls ani aktywnego poisoning |
 | `world-terrain-018-cave-heightfield-representation-spike.md` | `?caveHeightfieldTest` od razu otwiera lekki harness (bez world boot); [1] przełącza heightfield/SDF na **tej samej** topology; [2] Walk/Inspect bez reloadu; Walk: spawn przed wejściem, wejście, przejście basic/bend/branch i powrót, bez przenikania podłogi/ścian/sufitu; Inspect: floor/walls/ceiling i mouth bez dziur; metryki w overlay/console.table |
 | `quests-progression-016-world-driven-settlement-quest-opportunities.md` | Po dniu 2, gdy jama ma pressure: hunter (albo pierwszy dorosły) oferuje generated „Wilki pod osadą”; zniszczenie jamy zalicza questa i wypłaca nagrodę; jeśli problem zniknie przed akceptacją, oferta znika; save/load aktywnego generated questa trzyma tego samego givera i `spawnerId`; authored `wilki-pod-osada` nadal istnieje osobno |
 | `items-player-022-gameplay-interaction-usability-polish.md` | Namiot+podest+posłanie = jeden cel Tab/gaze z inspection wszystkich części i repair per część; `+N%` czytelnie zielone; preview małej/średniej chaty pokazuje wejście przy obrocie; `[F]`/`[G]` oczywiste przy przyciskach; kupka gałęzi+belek to 2 cele Tab; stojąca pochodnia gaśnie po 6 h świata / time-skip / save-load |

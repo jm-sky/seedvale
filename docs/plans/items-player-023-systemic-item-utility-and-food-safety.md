@@ -1,7 +1,7 @@
 # Plan: Systemic item utility and food safety
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none

@@ -1219,6 +1219,23 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     expect(result.data.standingTorches).toEqual([{ ...legacyTorch, lit: false, burnUntilDays: null }])
   })
 
+  it('migrates a v28 save with no unsafeFoodEventCount to the current version (plan items-player-023)', () => {
+    const { unsafeFoodEventCount: _count, ...v28Fields } = validSave
+    const result = loadStoredSave({ ...v28Fields, version: 28 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.unsafeFoodEventCount).toBeUndefined()
+  })
+
+  it('round-trips a non-zero unsafeFoodEventCount and rejects a malformed one', () => {
+    const withCounter = loadStoredSave({ ...validSave, unsafeFoodEventCount: 7 })
+    expect(withCounter.status).toBe('ok')
+    if (withCounter.status === 'ok') expect(withCounter.data.unsafeFoodEventCount).toBe(7)
+
+    expect(loadStoredSave({ ...validSave, unsafeFoodEventCount: 'seven' })).toEqual({ status: 'invalid' })
+  })
+
   it('accepts a persistent habitat occupant record and rejects a malformed one (plan fauna-018)', () => {
     const occupant = {
       habitatId: 'home:cave:bear',

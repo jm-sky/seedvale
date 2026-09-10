@@ -22,8 +22,10 @@ import {
   isFoodBatchSpoiled,
   sourceSpeciesForMeatKind,
 } from '../../items/foodFreshness'
+import { resolveRawMeatSafetyRisk } from '../../items/foodSafety'
 import { type Inventory, inventoryFullToastText } from '../../items/Inventory'
 import { CAPABILITY_NEED_LABEL, hasItemCapability, ITEM_CATALOG } from '../../items/itemCatalog'
+import { fuelValue, selectFuelKind } from '../../items/itemFuel'
 import { isLiquidContainerInstance, isLiquidContainerKind, LIQUID_CONTAINER_KIND_LIST, type LiquidContainerItemInstance } from '../../items/itemInstances'
 import { ITEM_DEFS } from '../../items/items'
 import {
@@ -44,7 +46,11 @@ import {
   survivalDurationMultiplier,
   survivalFoodMultiplier,
 } from '../../player/PlayerSkills'
-import { FIRE_FUEL_KINDS, IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
+import { IGNITE_DURATION_SEC } from '../../settlement/VillageFire'
+import {
+  foodPoisoningExposureEventRoll,
+  tryApplyRawMeatPoisoningExposure,
+} from '../../shared/foodPoisoningExposure'
 import { damageHealth, healHealth } from '../../shared/HealthState'
 import { applyConditionTreatment } from '../../shared/temporaryConditions'
 import { drainVigor } from '../../shared/VigorState'
@@ -237,8 +243,8 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       toast.show(`Potrzebujesz ${CAPABILITY_NEED_LABEL.fire_starting}.`, 'error')
       return toResult([capabilityRequirement(false, 'fire_starting')])
     }
-    if (!FIRE_FUEL_KINDS.some((kind) => inventory.has(kind, 1))) {
-      toast.show('Potrzebujesz gałęzi lub belki, żeby je zapalić.', 'error')
+    if (!selectFuelKind(inventory)) {
+      toast.show('Potrzebujesz opału, żeby je zapalić.', 'error')
       return toResult([targetRequirement(false, 'fireFuel')])
     }
     // Survival is read once, when the channel starts — a running channel is
@@ -249,18 +255,14 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         lifecycle?.onComplete?.('failure')
         return
       }
-      let consumedFuel = false
-      for (const kind of FIRE_FUEL_KINDS) {
-        if (inventory.remove(kind, 1)) {
-          consumedFuel = true
-          break
-        }
-      }
-      if (!consumedFuel) {
+      // Re-resolved here, not captured when the channel started — the
+      // player's inventory may have changed during the busy channel.
+      const fuelKind = selectFuelKind(inventory)
+      if (!fuelKind || !inventory.remove(fuelKind, 1)) {
         lifecycle?.onComplete?.('failure')
         return
       }
-      fire.light()
+      fire.light('player', fuelValue(fuelKind)!)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       awardSkillXp(player.skills, 'survival', SKILL_XP_AWARD.igniteFire)
@@ -294,13 +296,13 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
         toast.show('Nie można już tego zniszczyć.', 'error')
         return
       }
-      // 4 consumed branches become the pit's fuel: `light` sets one branch of
-      // fuel, then three `addFuel` calls bring it to ~300 s (`FUEL_PER_BRANCH`).
+      // 4 consumed branches become the pit's fuel: 1 branch-equivalent from
+      // `light`, +3 more from `addFuel`, for ~300 s total (`FUEL_PER_BRANCH`).
+      // Not an inventory-driven fuel choice — always exactly 4 branch-
+      // equivalents, regardless of what fuel the player happens to carry.
       const entry = bundle.placedFires.place(spawner.x, spawner.z, 'pit', { habitatBurn: true })
-      entry.fire.light('player')
-      entry.fire.addFuel()
-      entry.fire.addFuel()
-      entry.fire.addFuel()
+      entry.fire.light('player', 1)
+      entry.fire.addFuel(3)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       toast.show('Siedlisko zniszczone.', 'pickup')
@@ -611,12 +613,13 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     // Plan 159 §3/§5 — spoiled food is non-consumable rather than acting
     // like fresh food; checked against the batch that would actually be
     // eaten (oldest first, same order `remove()` consumes in).
-    const fifo = inventory.fifoFoodBatch(kind, dayNight.elapsedDays)
-    if (fifo && getFoodBatchFreshnessStage(kind, fifo, dayNight.elapsedDays) === 'spoiled') {
+    const nowDays = dayNight.elapsedDays
+    const fifo = inventory.fifoFoodBatch(kind, nowDays)
+    if (fifo && getFoodBatchFreshnessStage(kind, fifo, nowDays) === 'spoiled') {
       toast.show('To jedzenie się zepsuło.', 'error')
       return toResult([targetRequirement(false, 'notSpoiled')])
     }
-    const consumed = inventory.removeWithFreshness(kind, 1, dayNight.elapsedDays)
+    const consumed = inventory.removeWithFreshness(kind, 1, nowDays)
     if (!consumed) return toResult([itemRequirement(0, 1, kind)])
     if (entry.resultKind) inventory.add(entry.resultKind, 1)
     const sourceSpecies = consumed[0]?.sourceSpecies ?? sourceSpeciesForMeatKind(kind)
@@ -631,13 +634,38 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
     else healHealth(player.health, relief)
     const treatment = ITEM_CATALOG[kind].conditionTreatment
     if (treatment) {
-      applyConditionTreatment(player.temporaryConditions, treatment.kind, treatment.severityReduction, dayNight.elapsedDays)
-      player.syncDerivedPhysicalCapabilities(dayNight.elapsedDays, (kg) => inventory.setBaseMaxWeight(kg))
+      applyConditionTreatment(player.temporaryConditions, treatment.kind, treatment.severityReduction, nowDays)
+      player.syncDerivedPhysicalCapabilities(nowDays, (kg) => inventory.setBaseMaxWeight(kg))
+    }
+    // Plan items-player-023 — raw-meat poisoning is a consequence of having
+    // eaten, not a gate on eating: nutrition above always applies, even when
+    // this rolls poisoned. Resolved from the batch actually consumed, not a
+    // fresh inventory lookup (the batch is already gone from Inventory).
+    let poisoned = false
+    const rawMeatRisk = resolveRawMeatSafetyRisk(kind, consumed[0], nowDays)
+    if (rawMeatRisk) {
+      const foodEventIndex = player.unsafeFoodEventCount
+      player.unsafeFoodEventCount += 1
+      const roll = foodPoisoningExposureEventRoll({
+        worldSeed: ctx.getWorldSeed(),
+        actorId: 'player',
+        foodEventIndex,
+        kind,
+        sourceSpecies,
+      })
+      poisoned = tryApplyRawMeatPoisoningExposure(player.temporaryConditions, {
+        nowDays,
+        roll,
+        chance: rawMeatRisk.chance,
+        severity: rawMeatRisk.severity,
+      })
+      if (poisoned) player.syncDerivedPhysicalCapabilities(nowDays, (kg) => inventory.setBaseMaxWeight(kg))
     }
     hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
     ctx.onInventoryChanged()
     ctx.refreshInventoryScreen()
-    toast.show(entry.need === 'hunger' ? 'Zjedzono.' : entry.need === 'thirst' ? 'Wypito.' : 'Opatrzono rany.', 'pickup')
+    if (poisoned) toast.show('To mięso spowodowało zatrucie.', 'error')
+    else toast.show(entry.need === 'hunger' ? 'Zjedzono.' : entry.need === 'thirst' ? 'Wypito.' : 'Opatrzono rany.', 'pickup')
     return { ok: true }
   }
 

@@ -764,7 +764,11 @@ export async function createApp(
     player.setPosition(initialSave.player.x, initialSave.player.z)
     restorePersistedNeeds(player.needs, initialSave.playerNeeds)
     restorePersistedSkills(player.skills, initialSave.skills)
-    player.restoreTemporaryConditionsState(initialSave.playerConditions, initialSave.waterDrinkEventCount ?? 0)
+    player.restoreTemporaryConditionsState(
+      initialSave.playerConditions,
+      initialSave.waterDrinkEventCount ?? 0,
+      initialSave.unsafeFoodEventCount ?? 0,
+    )
     player.syncDerivedPhysicalCapabilities(initialSave.elapsedDays, (kg) => inventory.setBaseMaxWeight(kg))
   } else {
     // Computed straight from `homeDef` (site position, sync the moment
