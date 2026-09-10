@@ -194,6 +194,8 @@ Generated from TypeScript imports.
 - `world/caves/topologyAdapter.test.ts`
 - `world/caves/topologyAdapter.ts`
 - `world/createCaves.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
+- `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 
 ## `world/caves/caveGameplayQuery.b2-recon.test.ts`
@@ -1545,8 +1547,33 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `world/locations/locationKnowledge.test.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
+- `world/locations/locationProximityDiscovery.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.test.ts`
+
+## `world/locations/locationProximityDiscovery.test.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/locationProximityDiscovery.ts`
+- `world/locations/worldLocationCatalog.ts`
+
+## `world/locations/locationProximityDiscovery.ts`
+
+**Imports**
+
+- `world/caveVolume.ts`
+- `world/locations/locationKnowledge.ts`
+- `world/locations/worldLocationCatalog.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
 
 ## `world/locations/locationsCoarseCache.test.ts`
 
@@ -1642,6 +1669,8 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `world/locations/locationDiscovery.test.ts`
 - `world/locations/locationDiscovery.ts`
+- `world/locations/locationProximityDiscovery.test.ts`
+- `world/locations/locationProximityDiscovery.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
 

@@ -190,23 +190,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 247
+- `createApp` — function — line 248
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 217
+- `NewAppOptions` — type — line 218
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 567
+- `createGameLoop` — function — line 569
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 535
-- `GameLoopDeps` — type — line 275
+- `GameLoop` — type — line 537
+- `GameLoopDeps` — type — line 276
 
 ## `app/graphicsSettings.ts`
 

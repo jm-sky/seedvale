@@ -747,6 +747,7 @@ Generated from TypeScript imports.
 - `world/grassForage.ts`
 - `world/groundFog.ts`
 - `world/locations/locationKnowledge.ts`
+- `world/locations/locationProximityDiscovery.ts`
 - `world/locations/locationsCoarseCache.ts`
 - `world/locations/navigationTargets.ts`
 - `world/locations/worldLocationCatalog.ts`
@@ -880,6 +881,7 @@ Generated from TypeScript imports.
 - `world/dayNight.ts`
 - `world/foliageWind.ts`
 - `world/groundFog.ts`
+- `world/locations/locationProximityDiscovery.ts`
 - `world/map/mapDiscovery.ts`
 - `world/playerWell.ts`
 - `world/timeSkip.ts`

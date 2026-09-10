@@ -641,6 +641,13 @@ Generated from exported TypeScript symbols.
 - `LocationKnowledgeEntry` — type — line 3
 - `setActiveLocationKnowledge` — function — line 79
 
+## `world/locations/locationProximityDiscovery.ts`
+
+- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 7
+- `createLocationProximityDiscovery` — function — line 47
+- `LocationProximityDiscovery` — type — line 41
+- `revealCaveEntrancesInRange` — function — line 18
+
 ## `world/locations/locationsCoarseCache.ts`
 
 - `CoarseCachePersistence` — type — line 73
