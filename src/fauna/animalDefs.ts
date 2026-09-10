@@ -146,6 +146,14 @@ export type AnimalDef = {
    *  relationship state; other hand-fed livestock use the same feeding flow
    *  without allocating affinity. */
   affinity?: AnimalAffinityConfig
+  /** Presence of this field IS the leadable capability (plan fauna-007) —
+   *  same "no separate boolean, no per-species branch" shape as `mount`.
+   *  Distances default in `animalLead.ts` when omitted. Not equivalent to
+   *  `mount`. */
+  lead?: LeadConfig
+  /** Presence of this field IS the draft/cart-pull capability (plan
+   *  fauna-007). Not equivalent to `mount` or `lead`. */
+  draft?: DraftConfig
 }
 
 /** Per-species human-affinity tuning (plan fauna-013) — gain applies only
@@ -198,6 +206,18 @@ export type ScavengingConfig = {
   /** Relative food value of `bones` remains for this species — the lowest
    *  tier, see `SCAVENGE_BONES_HUNGER_THRESHOLD`. */
   bonesValue: number
+}
+
+/** Temporary player-lead trailing band (plan fauna-007). Absent fields use
+ *  `animalLead.ts` defaults so a future leadable species only needs `lead: {}`. */
+export type LeadConfig = {
+  startDistance?: number
+  stopDistance?: number
+}
+
+/** Hitch offset behind this species when pulling a cart (plan fauna-007). */
+export type DraftConfig = {
+  hitchDistance: number
 }
 
 /** Rider seat placement for a mountable `AnimalDef` (plan fauna-003 §6) —
@@ -459,6 +479,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
       walkSpeed: 10.5,
       sprintSpeed: 17.5,
     },
+    lead: {},
+    draft: { hitchDistance: 2.35 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
   },
@@ -483,6 +505,8 @@ export const ANIMAL_DEFS: Record<AnimalKind, AnimalDef> = {
       walkSpeed: 9.0,
       sprintSpeed: 15.5,
     },
+    lead: {},
+    draft: { hitchDistance: 2.15 },
     metabolism: DEFAULT_ANIMAL_METABOLISM,
     diet: HERBIVORE_DIET,
   },

@@ -44,6 +44,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Survival actions](../src/app/actions/survivalActions.ts) — corpse butchering/burial, campfire ignite/cook, water drinking/filling, eating.
 - [Gathering actions](../src/app/actions/gatheringActions.ts) — trap arm/disarm/collect, fishing, drying racks, hives, wild-crop harvest.
 - [Rest actions](../src/app/actions/restActions.ts) — waiting, camp/town/tent rest, camp inspection, and tent/bedroll/platform repair bouts.
+- [Mount actions](../src/app/actions/mountActions.ts) — riding attach/detach and per-frame mount drive.
+- [Lead actions](../src/app/actions/leadActions.ts) — temporary player→animal lead and cart hitch/unhitch, keyed by `animalId`.
 - [Camp repair](../src/items/campRepair.ts) — tent/bedroll/platform repair quotes and start/apply helpers over shared `RepairProgress`.
 - [Camp rest quality](../src/app/campRest.ts) — the pure blanket/tent/fire → quality mapping the rest actions consume.
 - [Busy channel](../src/app/busyAction.ts) — the short real-time action channel every timed interaction above runs on.
@@ -72,6 +74,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Sleeping utilities](../src/world/sleepingUtilities.ts) — bedroll/platform domain condition, placement, and tent-shelter factor.
 - [Player well](../src/world/playerWell.ts) — player-built well construction, completed-roof condition/protection, and roof repair quotes/episodes.
 - [Residential buildings](../src/world/residentialBuilding.ts) — player-built house construction, ownership, and completed home identity; runtime collection in `createResidentialBuildings.ts`.
+- [World carts](../src/world/createCarts.ts) — movable draft-cart identity and one-way animal→cart hitch (plan fauna-007). Hitch pose in [cart.ts](../src/world/cart.ts).
 - [Weather](../src/world/weather.ts) — deterministic season/weather and rain/snow exposure.
 
 ## UI wiring
@@ -119,6 +122,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
+- [Lead / draft helpers](../src/fauna/animalLead.ts) — leadable/draft capability queries and temporary-lead hysteresis distances.
+- [Follow hysteresis](../src/fauna/followHysteresis.ts) — shared distance-band follow primitive used by owned Follow and leading.
+- [Owned animal control](../src/fauna/ownedAnimalControl.ts) — persisted Follow/Stay for player-owned livestock.
 - [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim/sanitation-reservation state machine.
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
 - [Roaming](../src/fauna/animalRoaming.ts) — water-trip state machine and shared radial probe.

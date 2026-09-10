@@ -45,6 +45,7 @@ import { preloadItemGlbModels } from '../items/itemModels'
 import { villageSizeConfig } from '../settlement/families'
 import { createPlacedFires, type PlacedFire, type PlacedFires } from '../settlement/PlacedFires'
 import { clearRoadNetworkCaches } from '../settlement/roadNetwork'
+import { settlementDefFor } from '../settlement/settlementPlanCache'
 import { createSettlementsManager, type SettlementsManager } from '../settlement/SettlementsManager'
 import { preloadAnimalTroughVisual } from '../settlement/settlementStructures'
 import { useBootMark } from '../shared/bootMark'
@@ -60,7 +61,9 @@ import {
   type SettlementMiningHooks,
 } from '../terrain/resourceDeposits'
 import { type BloodTrace, type BloodTraceSystem, createBloodTraceSystem } from '../world/bloodTraces'
+import { preloadCartProp } from '../world/cartProp'
 import { type Beehives, createBeehives } from '../world/createBeehives'
+import { type CartRecord, createWorldCarts, type WorldCarts } from '../world/createCarts'
 import { type Caves, createCaves } from '../world/createCaves'
 import { createDryingRacks, type DryingRacks } from '../world/createDryingRacks'
 import { createGrassForagePatches, type GrassForageService } from '../world/createGrassForagePatches'
@@ -83,12 +86,6 @@ import { createTerrainPreparations, type TerrainPreparations } from '../world/cr
 import { createWorkContracts, type WorkContracts } from '../world/createWorkContracts'
 import { createFoodSourceHooks } from '../world/foodSources'
 import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
-import { createNpcGraves } from '../world/npcGraves'
-import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
-import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
-import { preloadTrapProps } from '../world/trapProp'
-import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
-import { createWorldContext, type WorldContext } from '../world/worldContext'
 import {
   DARK_FOREST_TREASURE_CHEST_COINS,
   resolveDarkForestTreasureSite,
@@ -96,7 +93,12 @@ import {
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { rawSampleParamsFromWorld } from '../world/map/mapProjection'
-import { settlementDefFor } from '../settlement/settlementPlanCache'
+import { createNpcGraves } from '../world/npcGraves'
+import { createRiverWaterQualityResolver, type RiverWaterQualityResolver } from '../world/riverWaterQualityResolver'
+import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, type SiteInfrastructure } from '../world/siteInfrastructure'
+import { preloadTrapProps } from '../world/trapProp'
+import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
+import { createWorldContext, type WorldContext } from '../world/worldContext'
 import {
   createWorldGeneratedContainers,
   type SaveWorldGeneratedContainer,
@@ -153,6 +155,8 @@ export type WorldBundle = {
   placedFires: PlacedFires
   placedTents: PlacedTents
   placedTraps: PlacedTraps
+  /** Movable draft carts (plan fauna-007) — world-owned, no AI. */
+  carts: WorldCarts
   /** NPC burial graves (plan npc-011) — persistent completed burial results. */
   npcGraves: NpcGraves
   placedContainers: PlacedContainers
@@ -541,6 +545,7 @@ type WorldSystemsSeed = {
   placedFires: readonly PlacedFire[]
   placedTents: readonly PlacedTent[]
   placedTraps: readonly PlacedTrapRecord[]
+  carts: readonly CartRecord[]
   graves: readonly SaveGrave[]
   placedContainers: readonly PlacedContainerRecord[]
   worldGeneratedContainers: readonly SaveWorldGeneratedContainer[]
@@ -695,6 +700,7 @@ async function buildWorldSystems(
     placedFires: initialPlacedFires,
     placedTents: initialPlacedTents,
     placedTraps: initialPlacedTraps,
+    carts: initialCarts,
     graves: initialGraves,
     placedContainers: initialPlacedContainers,
     worldGeneratedContainers: initialWorldGeneratedContainers,
@@ -883,7 +889,7 @@ async function buildWorldSystems(
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
   bootMark('preloadAnimalTroughAndTrapProps')
-  await Promise.all([preloadAnimalTroughVisual(), preloadTrapProps()])
+  await Promise.all([preloadAnimalTroughVisual(), preloadTrapProps(), preloadCartProp()])
   bootMarkEnd('preloadAnimalTroughAndTrapProps')
 
   // Built ahead of `SettlementsManager` (plan npc-015, extended npc-018/
@@ -953,6 +959,14 @@ async function buildWorldSystems(
     { onCapture: onTrapCapture, onBaitReturned: onTrapBaitReturned },
     initialPlacedTraps,
   )
+  const carts = createWorldCarts(
+    scene,
+    chunkManager.sampleHeight,
+    initialCarts,
+    initialCarts.length === 0
+      ? { x: homeDef.x + 14, z: homeDef.z - 8, yaw: 0 }
+      : undefined,
+  )
   const sleepingUtilities = createSleepingUtilities(
     scene,
     chunkManager.sampleHeight,
@@ -988,6 +1002,7 @@ async function buildWorldSystems(
     placedFires,
     placedTents,
     placedTraps,
+    carts,
     npcGraves,
     placedContainers,
     worldGeneratedContainers,
@@ -1251,6 +1266,9 @@ export async function createWorldBundle(
   /** Plan settlements-005 — persistent player-built residential houses, same
    *  carry/restore contract as `initialPalisades`. */
   initialResidentialBuildings: readonly ResidentialBuildingRecord[] = [],
+  /** Movable draft carts (plan fauna-007) — same carry/restore contract as
+   *  `initialPlacedTents`. Empty on a fresh world spawns one demo cart near home. */
+  initialCarts: readonly CartRecord[] = [],
 ): Promise<BuiltWorldSystems> {
   return buildWorldSystems({
     scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, playAt,
@@ -1259,6 +1277,7 @@ export async function createWorldBundle(
     placedFires: initialPlacedFires,
     placedTents: initialPlacedTents,
     placedTraps: initialPlacedTraps,
+    carts: initialCarts,
     graves: initialGraves,
     placedContainers: initialPlacedContainers,
     worldGeneratedContainers: initialWorldGeneratedContainers,
@@ -1381,6 +1400,8 @@ export async function rebuildWorldBundle(
   bundle.placedTents.dispose()
   const carriedTraps = resetCollectedItems ? [] : [...bundle.placedTraps.nodes()]
   bundle.placedTraps.dispose()
+  const carriedCarts = resetCollectedItems ? [] : [...bundle.carts.nodes()]
+  bundle.carts.dispose()
   const carriedGraves = resetCollectedItems ? [] : [...bundle.npcGraves.nodes()]
   bundle.npcGraves.dispose()
   const carriedContainerNodes = resetCollectedItems ? [] : [...bundle.placedContainers.nodes()]
@@ -1466,6 +1487,7 @@ export async function rebuildWorldBundle(
     placedFires: carriedFires,
     placedTents: carriedTents,
     placedTraps: carriedTraps,
+    carts: carriedCarts,
     graves: carriedGraves,
     placedContainers: carriedContainerNodes,
     worldGeneratedContainers: carriedWorldGeneratedContainers,
@@ -1520,6 +1542,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedFires.dispose()
   bundle.placedTents.dispose()
   bundle.placedTraps.dispose()
+  bundle.carts.dispose()
   bundle.npcGraves.dispose()
   bundle.placedContainers.dispose()
   bundle.worldGeneratedContainers.dispose()

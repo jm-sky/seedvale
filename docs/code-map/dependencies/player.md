@@ -109,6 +109,7 @@ Generated from TypeScript imports.
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/createBeehives.ts`
+- `world/createCarts.ts`
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`
 - `world/createPalisades.ts`

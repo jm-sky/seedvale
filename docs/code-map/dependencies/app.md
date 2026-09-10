@@ -35,6 +35,7 @@ Generated from TypeScript imports.
 - `app/actions/groundActions.test.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/inspectionActions.ts`
+- `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
@@ -271,6 +272,20 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+
+## `app/actions/leadActions.ts`
+
+**Imports**
+
+- `app/actions/actionContext.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalLead.ts`
+- `world/cart.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
 
 ## `app/actions/mountActions.ts`
 
@@ -650,6 +665,7 @@ Generated from TypeScript imports.
 - `app/actions/gatheringActions.ts`
 - `app/actions/groundActions.ts`
 - `app/actions/inspectionActions.ts`
+- `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/placementActions.ts`
 - `app/actions/placementPreviewActions.ts`
@@ -797,6 +813,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `ai/NpcAgent.ts`
+- `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyAction.ts`
@@ -1018,6 +1035,7 @@ Generated from TypeScript imports.
 - `world/WaterSource.ts`
 - `world/animalTraps.ts`
 - `world/beehives.ts`
+- `world/cart.ts`
 - `world/createBeehives.ts`
 - `world/createDryingRacks.ts`
 - `world/createPalisades.ts`
@@ -1267,7 +1285,9 @@ Generated from TypeScript imports.
 - `world/animalTraps.ts`
 - `world/beehives.ts`
 - `world/bloodTraces.ts`
+- `world/cartProp.ts`
 - `world/createBeehives.ts`
+- `world/createCarts.ts`
 - `world/createCaves.ts`
 - `world/createDryingRacks.ts`
 - `world/createGrassForagePatches.ts`

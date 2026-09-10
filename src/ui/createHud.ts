@@ -39,6 +39,8 @@ export type Hud = {
    *  once per click; `animalLabel`/`onDismount` are ignored while `mounted`
    *  is `false`. */
   setMounted: (mounted: boolean, animalLabel: string, onDismount: (() => void) | null) => void
+  /** Minimal lead/harness status (plan fauna-007) — visible only while leading. */
+  setLeading: (leading: boolean, animalLabel: string, onDetach: (() => void) | null) => void
   dispose: () => void
 }
 
@@ -60,6 +62,9 @@ export function createHud(_parent: HTMLElement): Hud {
     setCharacterReputation: (view) => { if (!disposed) getUi()?.setCharacterReputation(view) },
     setMounted: (mounted, animalLabel, onDismount) => {
       if (!disposed) getUi()?.setHudMounted(mounted, animalLabel, onDismount)
+    },
+    setLeading: (leading, animalLabel, onDetach) => {
+      if (!disposed) getUi()?.setHudLeading(leading, animalLabel, onDetach)
     },
     dispose: () => { disposed = true },
   }

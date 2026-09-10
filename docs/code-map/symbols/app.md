@@ -58,6 +58,13 @@ Generated from exported TypeScript symbols.
 - `InspectionActionDeps` — type — line 20
 - `InspectionActions` — type — line 40
 
+## `app/actions/leadActions.ts`
+
+- `createLeadActions` — function — line 22
+- `LeadActions` — type — line 11
+  - domain: fauna
+  - role: Temporary player→animal lead attach/detach and cart hitch, keyed by stable `animalId`. Does not own Follow/Stay or AnimalOwner.
+
 ## `app/actions/mountActions.ts`
 
 - `createMountActions` — function — line 44
@@ -190,23 +197,23 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 253
+- `createApp` — function — line 254
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 223
+- `NewAppOptions` — type — line 224
 
 ## `app/gameLoop.ts`
 
-- `createGameLoop` — function — line 570
+- `createGameLoop` — function — line 573
   - system: game-loop
   - role: Runs one frame's worth of simulation update + render.
   - uses: WorldBundle, PlayerController
   - simulation: tick
-- `GameLoop` — type — line 538
-- `GameLoopDeps` — type — line 275
+- `GameLoop` — type — line 541
+- `GameLoopDeps` — type — line 276
 
 ## `app/graphicsSettings.ts`
 
@@ -245,18 +252,18 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 986
-- `buildDigTarget` — function — line 933
-- `buildInteractables` — function — line 323
-- `collectItem` — function — line 1033
-- `COMBAT_TARGET_CONE_DOT` — const — line 90
-- `COMBAT_TARGET_RANGE` — const — line 75
-- `CombatAimMode` — type — line 80
-- `DIG_REACH` — const — line 69
-- `GAZE_RANGE` — const — line 65
-- `INTERACT_MIN_DOT` — const — line 62
-- `INTERACT_RANGE` — const — line 59
-- `resolveHaySpot` — function — line 259
+- `buildCombatTarget` — function — line 1014
+- `buildDigTarget` — function — line 961
+- `buildInteractables` — function — line 335
+- `collectItem` — function — line 1061
+- `COMBAT_TARGET_CONE_DOT` — const — line 91
+- `COMBAT_TARGET_RANGE` — const — line 76
+- `CombatAimMode` — type — line 81
+- `DIG_REACH` — const — line 70
+- `GAZE_RANGE` — const — line 66
+- `INTERACT_MIN_DOT` — const — line 63
+- `INTERACT_RANGE` — const — line 60
+- `resolveHaySpot` — function — line 271
 
 ## `app/inventoryWiring.ts`
 
@@ -313,13 +320,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 660
-- `createWorldBundle` — function — line 1109
-- `disposeWorldBundle` — function — line 1515
-- `HOME_RADIUS` — const — line 110
-- `homeChunks` — function — line 121
-- `rebuildWorldBundle` — function — line 1309
-- `WorldBundle` — type — line 144
+- `BuiltWorldSystems` — type — line 665
+- `createWorldBundle` — function — line 1124
+- `disposeWorldBundle` — function — line 1537
+- `HOME_RADIUS` — const — line 112
+- `homeChunks` — function — line 123
+- `rebuildWorldBundle` — function — line 1328
+- `WorldBundle` — type — line 146
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

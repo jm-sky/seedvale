@@ -188,3 +188,5 @@ export type Interactable =
    *  (`world/workContract.ts`'s `noticeBoardId`) and its `postedAt()` query
    *  at interact time — never a cached list of postings. */
   | { kind: 'noticeBoard', position: { x: number, z: number }, promptLabel: string, settlementId: string }
+  /** Movable draft cart (plan fauna-007). */
+  | { kind: 'cart', position: { x: number, z: number }, promptLabel: string, id: string }

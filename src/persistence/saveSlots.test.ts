@@ -47,6 +47,7 @@ const currentSave = {
   playerTorch: null,
   placedTents: [],
   placedTraps: [],
+  carts: [],
   graves: [],
   worldFlags: {},
   resolvedHiddenFindSpotIds: [],

@@ -46,6 +46,7 @@ import type { TimeSkip } from '../world/timeSkip'
 import type { WaterSource } from '../world/WaterSource'
 import type { ClimateState, WeatherState } from '../world/weather'
 import type { WeatherParticles } from '../world/weatherParticles'
+import type { LeadActions } from './actions/leadActions'
 import type { MountActions } from './actions/mountActions'
 import type { BusyAction } from './busyAction'
 import type { RestCampSequence } from './restCampSequence'
@@ -318,6 +319,8 @@ export type GameLoopDeps = {
    *  fresh seat transform; the `[E]` mount action and the dedicated
    *  Dismount button both go through this. */
   mount: MountActions
+  /** Temporary animal lead + cart hitch (plan fauna-007) — not ownership. */
+  lead: LeadActions
   /** Persistent land-plot ownership (plan 129) — read by `buildInteractables`
    *  and mutated by the `[E]` purchase handler below. */
   landOwnership: LandOwnershipRegistry
@@ -572,7 +575,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork, startTreeChop, gatherBranch, startDepositMine, startBuryCorpse, startHarvestMeat, startMilkAnimal, startCookAt, startIgniteFire,
@@ -982,6 +985,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.riverWaterQuality.resolve,
         bundle.settlementsManager.getDetachedLivestock(),
         getSeed(),
+        bundle.carts.list(),
+        lead.ledAnimalId()
+          ? (bundle.settlementsManager.resolvePersistentAnimal(lead.ledAnimalId()!)
+            ?? bundle.fauna.getAgents().find((a) => a.animalId === lead.ledAnimalId())
+            ?? null)
+          : null,
       )
 
       // Universal melee tick (plan 123) — runs every frame regardless of
@@ -1504,6 +1513,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         }
         if (altInteractPressed && target.state !== 'active') collectTrap(target.id)
         else if (altInteractPressed) toast.show('Najpierw rozbrój pułapkę.', 'error')
+      } else if (target?.kind === 'cart') {
+        if (interactPressed) {
+          const cart = bundle.carts.get(target.id)
+          if (cart?.pulledByAnimalId) lead.unhitchCart(target.id)
+          else if (lead.isLeading()) lead.hitchLedToCart(target.id)
+          else toast.show('Najpierw prowadź zwierzę do wózka.', 'error')
+        }
       } else if (target?.kind === 'campfire') {
         if (interactPressed) {
           if (target.fire.isLit()) {
@@ -1790,24 +1806,42 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 player.beginRangedDraw()
               }
             }
-          } else if (target.animal.isPlayerOwned()) {
+          } else if (target.animal.isPlayerOwned() || target.animal.isLeadable() || target.animal.isMountable()) {
             const label = target.animal.getDisplayName()
+            const leadingThis = lead.ledAnimalId() === target.animal.animalId
             const actions = []
-            if (target.animal.getOwnedControlMode() !== 'follow') {
-              actions.push({
-                label: 'Podążaj',
-                enabled: true,
-                reasonLabel: '',
-                run: () => { bundle.settlementsManager.setOwnedAnimalControl(target.animal.animalId, 'follow') },
-              })
+            if (target.animal.isPlayerOwned()) {
+              if (target.animal.getOwnedControlMode() !== 'follow') {
+                actions.push({
+                  label: 'Podążaj',
+                  enabled: true,
+                  reasonLabel: '',
+                  run: () => { bundle.settlementsManager.setOwnedAnimalControl(target.animal.animalId, 'follow') },
+                })
+              }
+              if (target.animal.getOwnedControlMode() !== 'stay') {
+                actions.push({
+                  label: 'Zostań',
+                  enabled: true,
+                  reasonLabel: '',
+                  run: () => { bundle.settlementsManager.setOwnedAnimalControl(target.animal.animalId, 'stay') },
+                })
+              }
             }
-            if (target.animal.getOwnedControlMode() !== 'stay') {
-              actions.push({
-                label: 'Zostań',
-                enabled: true,
-                reasonLabel: '',
-                run: () => { bundle.settlementsManager.setOwnedAnimalControl(target.animal.animalId, 'stay') },
-              })
+            if (target.animal.isLeadable()) {
+              actions.push(leadingThis
+                ? {
+                    label: 'Odepnij linę',
+                    enabled: true,
+                    reasonLabel: '',
+                    run: () => { lead.detach() },
+                  }
+                : {
+                    label: 'Prowadź na linie',
+                    enabled: true,
+                    reasonLabel: '',
+                    run: () => { lead.tryLead(target.animal) },
+                  })
             }
             if (target.animal.isMountable()) {
               actions.push({
@@ -1817,10 +1851,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
                 run: () => { mount.tryMount(target.animal) },
               })
             }
-            vueUi.openFlavorDialog(`Steruj: ${label}`, 'Wybierz zachowanie zwierzęcia.', actions)
+            vueUi.openFlavorDialog(
+              target.animal.isPlayerOwned() ? `Steruj: ${label}` : label,
+              target.animal.isPlayerOwned() ? 'Wybierz zachowanie zwierzęcia.' : 'Wybierz interakcję.',
+              actions,
+            )
             playAnimalSound(target.animal.def.kind, worldAudio.playAt, target.position)
-          } else if (target.animal.isMountable()) {
-            mount.tryMount(target.animal)
           } else if (target.animal.canBeMilked(dayNight.elapsedDays) && hasMilkContainer) {
             startMilkAnimal?.(target.animal)
           } else if (feedAnimal(target.animal, inventory)) {
@@ -2010,6 +2046,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // while not mounted. `cachedSky.dayFactor` was just recomputed above —
       // same value every other fauna/settlement tick this frame reads.
       mount.update(dt, cachedSky.dayFactor)
+      lead.update()
       // Physical effort active this frame (plan items-player-003 §2/§11/§12)
       // — a physical `BusyAction` channel or active terrain-preparation work
       // — suppresses `player.update()`'s normal Stamina regeneration so it
@@ -2243,6 +2280,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // it reuses the agent list fauna just updated instead of a second
         // query — frozen alongside fauna during a skip for the same reason.
         bundle.placedTraps.update(dt, dayNight.elapsedDays, bundle.fauna.getAgents())
+        bundle.carts.update((animalId) => {
+          const agent = bundle.settlementsManager.resolvePersistentAnimal(animalId)
+            ?? bundle.fauna.getAgents().find((a) => a.animalId === animalId)
+            ?? null
+          if (!agent) return null
+          return {
+            def: agent.def,
+            x: agent.mesh.position.x,
+            z: agent.mesh.position.z,
+            yaw: agent.mesh.rotation.y,
+            dead: agent.isDead(),
+          }
+        })
       }
       bundle.itemSpawners.update(dt, player.mesh.position, dayFactor)
       bundle.droppedItems.tick(dt)

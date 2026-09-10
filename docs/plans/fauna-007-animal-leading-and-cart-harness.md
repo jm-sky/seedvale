@@ -1,7 +1,7 @@
 # Plan: Animal leading and cart harness
 
 **Created:** 2026-09-02
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** L
 **Depends on:** ~~fauna-014~~ ~~fauna-006~~

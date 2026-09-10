@@ -1,3 +1,5 @@
+import { resolveFollowHysteresis } from './followHysteresis'
+
 /** Per-animal Follow/Stay control state for player-owned livestock (plan fauna-020). */
 export type OwnedAnimalControlMode = 'follow' | 'stay'
 
@@ -34,15 +36,14 @@ export function resolveOwnedControlMovement(
 ): OwnedControlMovement {
   if (dead || mounted || !isPlayerOwned) return { kind: 'none' }
   if (state.mode === 'stay') return { kind: 'stay' }
-  if (!playerPos) return { kind: 'none' }
-
-  const dist = Math.hypot(playerPos.x - animalPos.x, playerPos.z - animalPos.z)
-  let following = state.following ?? false
-  if (!following && dist > FOLLOW_START_DISTANCE) following = true
-  if (following && dist < FOLLOW_STOP_DISTANCE) following = false
-  state.following = following
-
-  if (following) return { kind: 'follow', x: playerPos.x, z: playerPos.z }
+  const follow = resolveFollowHysteresis(
+    state,
+    animalPos,
+    playerPos,
+    FOLLOW_START_DISTANCE,
+    FOLLOW_STOP_DISTANCE,
+  )
+  if (follow.kind === 'follow') return { kind: 'follow', x: follow.x, z: follow.z }
   return { kind: 'none' }
 }
 

@@ -15,7 +15,6 @@ import type { Beehives } from '../world/createBeehives'
 import type { DryingRacks } from '../world/createDryingRacks'
 import type { Palisades } from '../world/createPalisades'
 import type { PlacedContainers } from '../world/createPlacedContainers'
-import type { WorldGeneratedContainers } from '../world/worldGeneratedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerTroughs } from '../world/createPlayerTroughs'
@@ -24,6 +23,7 @@ import type { ResidentialBuildings } from '../world/createResidentialBuildings'
 import type { SleepingUtilities } from '../world/createSleepingUtilities'
 import type { StandingTorches } from '../world/createStandingTorches'
 import type { TerrainPreparations } from '../world/createTerrainPreparations'
+import type { WorldGeneratedContainers } from '../world/worldGeneratedContainers'
 import { ANIMAL_DEFS, ANIMAL_LABELS, type AnimalAgent, type AnimalKind } from '../fauna/AnimalAgent'
 import { SPAWNER_LABELS, spawnerDestroyPromptLabel } from '../fauna/createFauna'
 import { isMeleeTool } from '../fauna/faunaCombat'
@@ -38,6 +38,7 @@ import { oceanMixAt } from '../terrain/waterBodies'
 import { nearestShoreProbePoint, resolveWaterBodyKind } from '../terrain/waterBodyKind'
 import { TRAP_DEFS, type TrapKind, type TrapState } from '../world/animalTraps'
 import { honeyAvailable } from '../world/beehives'
+import { cartAcceptsAnimal } from '../world/cart'
 import { CROP_DEFS, type CropGrowthStage, type CropId } from '../world/cropLifecycle'
 import { isDryingComplete } from '../world/dryingRacks'
 import { isPalisadeConstructionComplete, palisadePromptLabel } from '../world/palisade'
@@ -129,10 +130,12 @@ function animalPromptLabel(
   canMilk: boolean,
   nowDays: number,
   feedItemKind: ItemKind | null,
+  ledAnimalId: string | null = null,
 ): string {
   const kind = animal.def.kind
   const label = ANIMAL_LABELS[kind]
   if (isMeleeTool(heldTool) || isRangedTool(heldTool)) return `Atakuj: ${label}`
+  if (ledAnimalId === animal.animalId) return `Prowadzisz: ${label}`
   // Any animal carrying a `mount` config is mountable (plan fauna-003 §5) —
   // no ownership/taming gate yet, so the prompt is unconditional whenever no
   // weapon is held.
@@ -141,6 +144,15 @@ function animalPromptLabel(
   if (canMilk && animal.canBeMilked(nowDays)) return `Wydój: ${label}`
   if (feedItemKind) return `Nakarm: ${label}`
   return `Obserwuj: ${label}`
+}
+
+function cartPromptLabel(
+  cart: { pulledByAnimalId: string | null },
+  ledAnimal: AnimalAgent | null,
+): string {
+  if (cart.pulledByAnimalId) return 'Odepnij wózek'
+  if (ledAnimal && cartAcceptsAnimal(ledAnimal.def)) return 'Przywiąż do wózka'
+  return 'Wózek'
 }
 
 /** A held bow's own attack range, so a distant animal still enters the gaze
@@ -391,6 +403,12 @@ export function buildInteractables(
    *  existing callers/tests that never touch wells keep compiling; `0` is
    *  deterministic, not a hidden live clock. */
   worldSeed = 0,
+  /** Movable draft carts (plan fauna-007). Empty for callers/tests that
+   *  don't model carts. */
+  carts: readonly { id: string, x: number, z: number, pulledByAnimalId: string | null }[] = [],
+  /** Currently led animal, if any — drives cart hitch prompts and the
+   *  `Prowadzisz` animal label. */
+  ledAnimal: AnimalAgent | null = null,
 ): Interactable[] {
   const list: Interactable[] = []
   const axeHeld = hasItemCapability(heldTool, 'wood_chopping')
@@ -453,6 +471,16 @@ export function buildInteractables(
       id: trap.id,
       trapKind: trap.kind,
       state: trap.state,
+    })
+  }
+
+  for (const cart of carts) {
+    if (!withinRange(cart.x, cart.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'cart',
+      position: { x: cart.x, z: cart.z },
+      promptLabel: cartPromptLabel(cart, ledAnimal),
+      id: cart.id,
     })
   }
 
@@ -646,7 +674,7 @@ export function buildInteractables(
       list.push({
         kind: 'animal',
         position: animal.mesh.position,
-        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null),
+        promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null, ledAnimal?.animalId ?? null),
         animal,
         interactRange: rangeOverride ?? undefined,
       })
@@ -823,7 +851,7 @@ export function buildInteractables(
     list.push({
       kind: 'animal',
       position: animal.mesh.position,
-      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null),
+      promptLabel: animalPromptLabel(animal, heldTool, hasMilkContainer, nowDays, feedItemKindFor?.(animal) ?? null, ledAnimal?.animalId ?? null),
       animal,
       interactRange: rangeOverride ?? undefined,
     })

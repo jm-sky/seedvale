@@ -52,10 +52,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/6
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+4. `quests-progression-015` — **Stable NPC identity for quests**  
+   🔴 `M` · ✅ ready · unlocks 2/2
+5. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
    🟡 `M` · ✅ ready · unlocks 2/2
-5. `settlements-npcs-022` — **Household help and age-based work participation**  
-   🔴 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -101,33 +101,33 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-8. `settlements-npcs-007` — **Bandages and herbal medicine**  
+8. `quests-progression-015` — **Stable NPC identity for quests**  
+  🔴 `M` · **Score:**  55  
+   → **unlocks:** 2/2
+
+9. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-9. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+10. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  45  
    → **unlocks:** 2/2
 
-10. `settlements-npcs-022` — **Household help and age-based work participation**  
+11. `quests-progression-016` — **World-driven settlement quest opportunities**  
+  🔴 `M` · **Score:**  43  
+   → **unlocks:** 1/1
+
+12. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-11. `quests-progression-015` — **Stable NPC identity for quests**  
-  🔴 `M` · **Score:**  41  
-   → **unlocks:** 1/1
-
-12. `settlements-npcs-025` — **Resource storage visualization**  
+13. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-13. `fauna-018` — **Persistent habitat occupants**  
+14. `fauna-018` — **Persistent habitat occupants**  
   🟡 `M` · **Score:**  37  
    → **unlocks:** 1/1
-
-14. `quests-progression-016` — **World-driven settlement quest opportunities**  
-  🔴 `M` · **Score:**  29  
-   → **unlocks:** 0/0
 
 15. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
@@ -141,12 +141,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `npc-026` — **NPC Grave Visits**  
-  🟡 `S` · **Score:**  21  
-   → **unlocks:** 0/0
-
-19. `fauna-007` — **Animal leading and cart harness**  
-  🟡 `L` · **Score:**  18  
+18. `quests-progression-017` — **RPG settlement quest matrices**  
+  🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
 ---
@@ -156,9 +152,6 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)  
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
-- [`npc-026-npc-grave-visits.md`](npc-026-npc-grave-visits.md)  
-  is blocked by:
-  - [`world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`](world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md)
 - [`npc-027-spatial-context-and-cave-traversal.md`](npc-027-spatial-context-and-cave-traversal.md)  
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
@@ -170,6 +163,10 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
 - [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)  
   is blocked by:
   - [`quests-progression-015-stable-npc-identity-for-quests.md`](quests-progression-015-stable-npc-identity-for-quests.md)
+- [`quests-progression-017-rpg-settlement-quest-matrices.md`](quests-progression-017-rpg-settlement-quest-matrices.md)  
+  is blocked by:
+  - [`quests-progression-015-stable-npc-identity-for-quests.md`](quests-progression-015-stable-npc-identity-for-quests.md)
+  - [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
   - [`fauna-004-sheep-wool-and-shepherd.md`](fauna-004-sheep-wool-and-shepherd.md)
@@ -316,6 +313,7 @@ graph TD
   quests_progression_014["quests-progression-014 — Quest Dialogue Actions & Authored Dialogue Pass"]
   quests_progression_015["quests-progression-015 — Stable NPC identity for quests"]
   quests_progression_016["quests-progression-016 — World-driven settlement quest opportunities"]
+  quests_progression_017["quests-progression-017 — RPG settlement quest matrices"]
   settlements_001["settlements-001 — House Collision Geometry"]
   settlements_002["settlements-002 — House Browser"]
   settlements_003["settlements-003 — Colony settlement bootstrap"]
@@ -548,6 +546,8 @@ graph TD
   quests_progression_006 --> quests_progression_013
   quests_progression_011 --> quests_progression_008
   quests_progression_015 --> quests_progression_016
+  quests_progression_015 --> quests_progression_017
+  quests_progression_016 --> quests_progression_017
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
   settlements_005 --> ui_input_014

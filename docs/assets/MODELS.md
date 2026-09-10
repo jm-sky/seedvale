@@ -4,7 +4,7 @@ Living backlog of 3D models Seedvale still needs, or has on disk but must wire i
 
 This is **not** a full inventory. For credited in-repo assets see [CREDITS.md](./CREDITS.md). For parked MegaKit files see [`public/models/settlement/megakit/README.md`](../../public/models/settlement/megakit/README.md).
 
-**Last updated:** 2026-09-10 (fishing rod, animal trough, trap good-tier GLB; drink/cook SFX wired; previously rat nest procedural fallback M77 plan quests-progression-013; previously 2026-09-05 reed cluster + shallow coastal seaweed M76 plan world-terrain-010 Phases 5/7; previously 2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
+**Last updated:** 2026-09-10 (draft cart `parked/cart.glb` wired, fauna-007; fishing rod, animal trough, trap good-tier GLB; drink/cook SFX wired; previously rat nest procedural fallback M77 plan quests-progression-013; previously 2026-09-05 reed cluster + shallow coastal seaweed M76 plan world-terrain-010 Phases 5/7; previously 2026-09-04 asset drop — backpack/saddlebags/pan/rope/chest/coin/tomato/roasted_meat/beef/fish GLBs wired; see `docs/tmp/2026-09-04--new-3d-assets.md`)
 
 ## How to use
 
@@ -104,6 +104,7 @@ If the feature needs no new model, do nothing to this file.
 | M75 | Skill books (18 `ItemKind`s, `book_*`) | The 3 Quaternius closed-book GLBs (`Closed-book-blue`/`-belt-golden`/`-simple-golden`) wired via `ITEM_GLB_SPECS`, spread across all 18 kinds independent of skill/tier so appearance never encodes a book's level; procedural closed-book box fallback in `items/items.ts`'s `createItemMesh` for the pre-warm/load-failure case. Open-book variants (`Open-book*.glb`) stay unwired, reserved for a possible future reading presentation | `wired` | plan items-player-016 (`parked/books/`, formerly parked) |
 | M76 | Reed cluster + shallow coastal seaweed | `nature/reed_cluster_a.glb` appended as `REED_SPECS[1]` (existing indices stable), biased 65% over a single reed in `riparianPatches()`'s water-edge band (denser reed beds, plan Phase 5). `nature/seaweed_cluster_a.glb` wired as a new `VegetationKind: 'seaweed'` / `SEAWEED_SPECS`, placed only on shallow unambiguously-ocean water (`bodyScale >= 0.9`, seabed depth ≤2 m) via new `seaweedPatches()`; anchors to `tile.floorHeights` (seabed), not the water-surface `tile.heights` every other vegetation kind uses. Both GLBs are authored far above in-game scale and needed an explicit `noShadow` fit option (new on `loadPropTemplates`/`loadPropOrFallback`) to force off shadow-casting regardless of `SMALL_MESH_SHADOW_THRESHOLD`; procedural fallbacks `createReed`/`createSeaweed` | `wired` | plan world-terrain-010 Phases 5/7 |
 | M77 | Rat nest | Ground burrow behind a residential house for the authored home infestation (plan quests-progression-013). Expected `settlement/rat_nest.glb`; procedural dirt/straw/scrap fallback `createRatNest` is wired and functional | `needed` | plan quests-progression-013 |
+| M78 | Draft cart | Movable player cart pulled by a led draft animal (horse/donkey). Wires parked Quaternius `parked/cart.glb` via `world/cartProp.ts` (`preparePropFitMax(2.2)`); procedural box+wheels fallback. Distinct from the static merchant `wagon.glb` (M03) | `wired` | plan fauna-007 |
 
 ## Wired (reference — do not treat as open work)
 

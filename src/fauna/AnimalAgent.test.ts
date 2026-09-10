@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
+import type { GrassForageService } from '../world/createGrassForagePatches'
 import { DRY_WATER_SAMPLE } from '../terrain/waterSample'
 import { AnimalAgent, type AnimalAgentDeps } from './AnimalAgent'
 import { ANIMAL_DEFS, ANIMAL_LABELS } from './animalDefs'
 import { FAUNA_PLAYER_HUMAN_ID } from './animalHumanAffinity'
+import { LEAD_START_DISTANCE } from './animalLead'
 import { NEED_ELEVATED_THRESHOLD } from './AnimalLife'
 import { horseNameForAnimal } from './animalNames'
 import { JUVENILE_MATURITY_SECONDS, JUVENILE_SCALE_FACTOR } from './herdCohesion'
@@ -266,6 +268,91 @@ describe('AnimalAgent', () => {
       animal.hydrate(state)
       expect(animal.getName()).toBeUndefined()
       expect(animal.getDisplayName()).toBe(ANIMAL_LABELS.horse)
+    })
+  })
+
+  describe('leading (plan fauna-007)', () => {
+    const farObserver = new THREE.Vector3(1000, 0, 1000)
+    const stubGrass = (x: number, z: number): GrassForageService => ({
+      queryNear: () => [{ id: 'patch:test', x, z }],
+      isAvailable: () => true,
+      consume: () => true,
+      tickVisuals: () => {},
+      serialize: () => ({}),
+      dispose: () => {},
+    })
+
+    it('does not change AnimalOwner or persisted Follow/Stay', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'lead-owner' }))
+      expect(horse.getOwner()).toBeNull()
+      horse.setLeadAttached(true)
+      expect(horse.isLeadAttached()).toBe(true)
+      expect(horse.getOwner()).toBeNull()
+      horse.transferOwnershipToPlayer()
+      horse.setOwnedControlMode('stay')
+      horse.setLeadAttached(true)
+      expect(horse.getOwner()).toEqual({ kind: 'player' })
+      expect(horse.getOwnedControlMode()).toBe('stay')
+      expect(horse.isLeadAttached()).toBe(true)
+    })
+
+    it('clears lead on mount and death', () => {
+      const mounted = new AnimalAgent(makeDeps({ animalId: 'lead-mount' }))
+      mounted.setLeadAttached(true)
+      mounted.setMounted(true)
+      expect(mounted.isLeadAttached()).toBe(false)
+
+      const dying = new AnimalAgent(makeDeps({ animalId: 'lead-death' }))
+      dying.setLeadAttached(true)
+      dying.takeDamage(9999)
+      expect(dying.isDead()).toBe(true)
+      expect(dying.isLeadAttached()).toBe(false)
+    })
+
+    it('follows the player while attached, yields to elevated needs, then resumes', () => {
+      const horse = new AnimalAgent(makeDeps({ animalId: 'lead-follow' }))
+      horse.life.hunger = 0
+      horse.life.thirst = 0
+      horse.setLeadAttached(true)
+      const playerFar = { x: LEAD_START_DISTANCE + 8, z: 0 }
+      horse.update({
+        dt: 1,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        playerControlPos: playerFar,
+      })
+      expect(horse.mesh.position.x).toBeGreaterThan(0)
+
+      horse.life.hunger = NEED_ELEVATED_THRESHOLD + 0.2
+      const beforeNeed = horse.mesh.position.x
+      horse.update({
+        dt: 1,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        playerControlPos: playerFar,
+        grassForage: stubGrass(-12, 0),
+      })
+      expect(horse.mesh.position.x).toBeLessThan(beforeNeed)
+
+      horse.life.hunger = 0
+      const beforeResume = horse.mesh.position.x
+      horse.update({
+        dt: 1,
+        others: [],
+        observerPos: farObserver,
+        dayFactor: 1,
+        forestFactor: 0,
+        litFires: [],
+        playerControlPos: playerFar,
+      })
+      expect(horse.mesh.position.x).toBeGreaterThan(beforeResume)
+      expect(horse.isLeadAttached()).toBe(true)
     })
   })
 })

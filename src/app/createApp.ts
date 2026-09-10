@@ -143,6 +143,7 @@ import { createFullCampIntent } from './actions/fullCampIntent'
 import { createGatheringActions } from './actions/gatheringActions'
 import { createGroundActions } from './actions/groundActions'
 import { createInspectionActions } from './actions/inspectionActions'
+import { createLeadActions } from './actions/leadActions'
 import { createMountActions } from './actions/mountActions'
 import { createPlacementActions } from './actions/placementActions'
 import { createPlacementPreviewActions } from './actions/placementPreviewActions'
@@ -544,6 +545,7 @@ export async function createApp(
       size: p.size,
     })),
     initialSave?.residentialBuildings ?? [],
+    (initialSave?.carts ?? []).map((c) => ({ ...c, pulledByAnimalId: null })),
   )
   bootMarkEnd('createWorldBundle')
   // Already logged inside `worldBundle.ts` on failure — nothing else to do
@@ -1107,6 +1109,11 @@ export async function createApp(
   if (initialSave?.player.mountedAnimalId) {
     mount.restoreMountedAnimalId(initialSave.player.mountedAnimalId)
   }
+  const lead = createLeadActions(
+    actionCtx,
+    resolveMountAnimal,
+    (id) => mount.mountedAnimalId() === id,
+  )
 
   const placement = createPlacementActions(actionCtx)
   const storageInfestation = createStorageInfestationActions({
@@ -1937,7 +1944,7 @@ export async function createApp(
     bundle, player, camera, renderer, labelRenderer, scene, sky, lights, postProcessing, dayNight,
     climate, clouds, groundFog, weatherParticles, weatherAudio, getSeed: () => config.seed,
     keyboard, mouseLook, touchControls, pauseMenu, npcDialog, npcInspector, npcInspectTrigger, questLog, vueUi, inventoryScreen,
-    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, landOwnership, toast, hud,
+    quickActions, timeSkip, timeSkipOverlay, busy, busyOverlay, restCamp, inventory, heldTool, mount, lead, landOwnership, toast, hud,
     questManager, ambientAudio, fireAudio, houseDoors, worldAudio, playerTorch, minimap, mapDiscovery, locationProximityDiscovery, openQuestLog, openInventory, openSkills, openCharacter,
     targetedSkillSelection,
     startGroundWork: (mode, x, z) => {

@@ -10,9 +10,11 @@ Generated from TypeScript imports.
 - `fauna/AnimalLife.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalHumanAffinity.ts`
+- `fauna/animalLead.ts`
 - `fauna/animalNames.ts`
 - `fauna/herdCohesion.ts`
 - `terrain/waterSample.ts`
+- `world/createGrassForagePatches.ts`
 
 ## `fauna/AnimalAgent.ts`
 
@@ -28,12 +30,14 @@ Generated from TypeScript imports.
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.ts`
 - `fauna/animalHumanAffinity.ts`
+- `fauna/animalLead.ts`
 - `fauna/animalNames.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/dogGuard.ts`
 - `fauna/faunaCombat.ts`
 - `fauna/faunaDecision.ts`
+- `fauna/followHysteresis.ts`
 - `fauna/herdCohesion.ts`
 - `fauna/livestockProduction.ts`
 - `fauna/ownedAnimalControl.ts`
@@ -65,6 +69,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/actions/gatheringActions.ts`
+- `app/actions/leadActions.ts`
 - `app/actions/mountActions.ts`
 - `app/actions/survivalActions.ts`
 - `app/busyChannelDurations.test.ts`
@@ -218,12 +223,18 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`
+- `fauna/animalLead.test.ts`
+- `fauna/animalLead.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/animalRoamingTrips.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
 - `fauna/preyAlertPerception.ts`
 - `world/animalTraps.ts`
+- `world/cart.test.ts`
+- `world/cart.ts`
+- `world/createCarts.test.ts`
+- `world/createCarts.ts`
 
 ## `fauna/animalDialogue.ts`
 
@@ -289,6 +300,28 @@ Generated from TypeScript imports.
 
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
+
+## `fauna/animalLead.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalLead.ts`
+
+## `fauna/animalLead.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/followHysteresis.ts`
+
+**Imported by**
+
+- `app/actions/leadActions.ts`
+- `fauna/AnimalAgent.test.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalLead.test.ts`
+- `world/cart.ts`
 
 ## `fauna/animalMeat.ts`
 
@@ -505,6 +538,14 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.ts`
 - `fauna/faunaDecision.test.ts`
 
+## `fauna/followHysteresis.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalLead.ts`
+- `fauna/ownedAnimalControl.ts`
+
 ## `fauna/foodWaterTargeting.test.ts`
 
 **Imports**
@@ -632,6 +673,10 @@ Generated from TypeScript imports.
 - `fauna/ownedAnimalControl.ts`
 
 ## `fauna/ownedAnimalControl.ts`
+
+**Imports**
+
+- `fauna/followHysteresis.ts`
 
 **Imported by**
 

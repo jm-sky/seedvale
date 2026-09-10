@@ -108,6 +108,39 @@ Generated from TypeScript imports.
 - `player/playerDamage.ts`
 - `world/bloodTraces.test.ts`
 
+## `world/cart.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `world/cart.ts`
+
+## `world/cart.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `fauna/animalLead.ts`
+
+**Imported by**
+
+- `app/actions/leadActions.ts`
+- `app/interactables.ts`
+- `world/cart.test.ts`
+- `world/createCarts.test.ts`
+- `world/createCarts.ts`
+
+## `world/cartProp.ts`
+
+**Imports**
+
+- `assets/loadGltf.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/createCarts.ts`
+
 ## `world/caveColliders.test.ts`
 
 **Imports**
@@ -855,6 +888,29 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/worldBundle.ts`
 
+## `world/createCarts.test.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `world/cart.ts`
+- `world/createCarts.ts`
+
+## `world/createCarts.ts`
+
+**Imports**
+
+- `fauna/animalDefs.ts`
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `world/cart.ts`
+- `world/cartProp.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `world/createCarts.test.ts`
+
 ## `world/createCaves.ts`
 
 **Imports**
@@ -911,6 +967,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/worldBundle.ts`
+- `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalForaging.test.ts`
 - `fauna/animalForaging.ts`

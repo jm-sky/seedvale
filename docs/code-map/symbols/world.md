@@ -79,6 +79,29 @@ Generated from exported TypeScript symbols.
 - `recordBloodTrace` — function — line 162
 - `setBloodTraceSink` — function — line 228
 
+## `world/cart.ts`
+
+- `CART_HITCH_RANGE` — const — line 59
+- `cartAcceptsAnimal` — function — line 50
+- `CartHitchPose` — type — line 25
+- `CartRecord` — type — line 10
+- `DraftAnimalPose` — type — line 19
+- `hitchDistanceForAnimal` — function — line 54
+- `resolveCartHitchPose` — function — line 36
+  - domain: fauna
+  - role: Deterministic one-way animal→cart hitch pose. Cart has no AI and never feeds orientation back into the animal.
+
+## `world/cartProp.ts`
+
+- `CART_FIT_MAX` — const — line 7
+- `CART_MODEL_URL` — const — line 5
+- `CART_MODEL_YAW_OFFSET` — const — line 9
+- `createCartProp` — function — line 81
+- `disposeCartProp` — function — line 86
+- `preloadCartProp` — function — line 63
+  - domain: fauna
+  - role: Cart visual template (GLB or procedural fallback). Logical hitch is authoritative even when the mesh is the fallback.
+
 ## `world/caveColliders.ts`
 
 - `buildCaveWallColliders` — function — line 102
@@ -361,6 +384,17 @@ Generated from exported TypeScript symbols.
 - `BeehiveEntry` — type — line 13
 - `Beehives` — type — line 15
 - `createBeehives` — function — line 63
+
+## `world/createCarts.ts`
+
+- `CartEntry` — type — line 15
+- `createWorldCarts` — function — line 65
+  - domain: fauna
+  - system: world-carts
+  - role: World-owned movable cart identity/runtime (plan fauna-007). Animal movement is authoritative; the cart is attached cargo with no AI.
+  - owns: CartRecord
+- `DraftAnimalLookup` — type — line 17
+- `WorldCarts` — type — line 25
 
 ## `world/createCaves.ts`
 

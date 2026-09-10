@@ -496,6 +496,8 @@ type HudState = {
   /** Dedicated Dismount button (plan fauna-003 §10) — `active` gates the
    *  HUD's own always-visible button, independent of touch-device chrome. */
   mounted: { active: boolean, animalLabel: string, onDismount: (() => void) | null }
+  /** Temporary lead/harness chip (plan fauna-007). */
+  leading: { active: boolean, animalLabel: string, onDetach: (() => void) | null }
 }
 type AudioSettingsState = { volumes: AudioVolumes }
 type MinimapState = { collapsed: boolean }
@@ -658,6 +660,7 @@ export const ui = reactive({
     primaryMeleeLabel: '',
     primaryRangedLabel: '',
     mounted: { active: false, animalLabel: '', onDismount: null },
+    leading: { active: false, animalLabel: '', onDetach: null },
   } as HudState,
   audio: { volumes: { ...DEFAULT_AUDIO_VOLUMES } } as AudioSettingsState,
   minimap: { collapsed: false } as MinimapState,
@@ -1650,6 +1653,12 @@ export function setHudMounted(mounted: boolean, animalLabel: string, onDismount:
   ui.hud.mounted.active = mounted
   ui.hud.mounted.animalLabel = animalLabel
   ui.hud.mounted.onDismount = onDismount
+}
+
+export function setHudLeading(leading: boolean, animalLabel: string, onDetach: (() => void) | null): void {
+  ui.hud.leading.active = leading
+  ui.hud.leading.animalLabel = animalLabel
+  ui.hud.leading.onDetach = onDetach
 }
 
 export function toggleMinimap(): void { ui.minimap.collapsed = !ui.minimap.collapsed }

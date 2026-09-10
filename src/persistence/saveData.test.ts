@@ -41,6 +41,7 @@ const validSave: SaveData = {
   playerTorch: null,
   placedTents: [],
   placedTraps: [],
+  carts: [],
   graves: [],
   worldFlags: {},
   resolvedHiddenFindSpotIds: ['cemetery:0:0:0:1:0', 'stoneCircle:2:1:0:1'],
@@ -1178,6 +1179,15 @@ describe('schema versioning and migration pipeline (persistence-003)', () => {
     if (result.status !== 'ok') return
     expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
     expect(result.data.badges).toEqual({ earned: ['treasure_hunter'], hiddenFindsFound: 5 })
+  })
+
+  it('migrates v25 saves to v26 with an empty carts array (plan fauna-007)', () => {
+    const { carts: _carts, ...v25Fields } = validSave
+    const result = loadStoredSave({ ...v25Fields, version: 25 })
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.version).toBe(CURRENT_SAVE_VERSION)
+    expect(result.data.carts).toEqual([])
   })
 
   it('accepts current-version infestation objects and rejects legacy strings', () => {

@@ -55,7 +55,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
-| 💡 `fauna-007-animal-leading-and-cart-harness.md`                              | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                      | -       | 🟡 | L      | npc-006, fauna-012, fauna-016, settlements-npcs-014 |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
@@ -129,6 +128,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 | `items-player-021-player-skills-and-targeted-skill-actions-foundation.md` | Skills: Medycyna i Naprawa widoczne; wybór Pułapki wchodzi w targeting; [E] na istniejącej pułapce otwiera Sprawdź z żywym stanem/wytrzymałością/przynętą; Esc anuluje targeting bez mutacji świata; bez wybranego skilla arm/disarm/collect działają jak wcześniej |
 | `items-player-019-player-camp-repair-and-sewing-kit.md` | Zakup zestawu do szycia; naprawa namiotu/posłania/podestu; brak narzędzia/materiału; przerwa + wznowienie; save/load w trakcie naprawy; aktywna naprawa namiotu blokuje składanie; id/condition namiotu przeżywa pack → save/load → redeploy |
 | `fauna-020-player-owned-animals-and-follow-stay-behaviour.md` | Transfer konia zachowuje ten sam `animalId`; unload osady nie usuwa owned horse; Follow z hysteresis; Stay nie blokuje potrzeb/threat; dismount przywraca control state; save/load ownership/control/position; brak duplikatu po reload osady; death + tombstone blokuje respawn slotu |
+| `fauna-007-animal-leading-and-cart-harness.md` | Koń/osioł: Prowadź na linie, zwierzę idzie za graczem bez teleportu; Odepnij linę wraca do normalnego AI; potrzeby i threat wygrywają z lead; Przywiąż do wózka / Odepnij wózek; wózek jedzie za zwierzęciem; łańcuch gracz→koń→wózek; krowa nie zaprzęga; hitch nie przeżywa save/load |
 
 ---
 

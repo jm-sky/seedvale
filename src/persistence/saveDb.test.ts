@@ -44,6 +44,7 @@ function makeSaveData(overrides?: Partial<Pick<SaveData, 'savedAt' | 'elapsedDay
     playerTorch: null,
     placedTents: [],
     placedTraps: [],
+    carts: [],
     graves: [],
     worldFlags: {},
     resolvedHiddenFindSpotIds: [],

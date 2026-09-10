@@ -113,6 +113,8 @@ What fauna exposes for NPC/settlement consumption — the NPC side of consuming 
 
 Any species whose `AnimalDef.mount` is set is ridable — today, horse and donkey. Mounting hands full movement control to player input; the mount's own AI decision branch is skipped in favour of driven movement while mounted. A persisted mount reference is the only player-side state; the mount itself (`AnimalAgent`) remains fauna-owned and authoritative for HP/stamina/position. Player-side riding cost/benefit (speed, stamina drain) is resolved from the player's own riding skill — see [player-systems.md](./player-systems.md).
 
+Temporary leading is a separate runtime relation (`AnimalDef.lead`, presence = capability). It reuses the same hysteresis follow primitive as owned Follow, with a tighter trailing band, and does not mutate `AnimalOwner` or persisted Follow/Stay. Draft hitch (`AnimalDef.draft`) is a one-way animal→cart transform constraint: the cart has no AI. Hitch is runtime-only and is not saved — settlement livestock can unload while carts persist, so a saved hitch would snap the cart across the map on reload.
+
 ## Limitations
 
 - Wild-fauna individuals have no persistence and no reconstruction guarantee beyond population-level determinism (see [Persistence classes](#persistence-classes)).
@@ -143,6 +145,12 @@ src/fauna/livestockProduction.ts
 src/fauna/predatorHumanDecision.ts
 src/fauna/dogGuard.ts
 src/fauna/preyAlertPerception.ts
+src/fauna/animalLead.ts
+src/fauna/followHysteresis.ts
+src/fauna/ownedAnimalControl.ts
+src/fauna/animalOwnership.ts
+src/world/createCarts.ts
+src/world/cart.ts
 src/settlement/livestock.ts
 src/settlement/rats.ts
 src/settlement/ratPersistence.ts

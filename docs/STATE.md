@@ -56,7 +56,7 @@ Predator/prey/livestock ecosystem built on one shared `AnimalAgent` class — wi
 
 - Full architecture (species data, behaviour pipeline, corpse/rabies lifecycle, settlement-adjacent rats/livestock, persistence classes): [state/fauna.md](./state/fauna.md)
 - Animal attack & NPC defense integration: [state/combat.md](./state/combat.md)
-- Still not implemented: taming/ownership beyond livestock spawning, mounted combat, an unmounted mount following the player, disease beyond rabies.
+- Still not implemented: taming of wild animals, mounted combat, disease beyond rabies. Player-owned Follow/Stay (fauna-020) and temporary leading plus cart hitch (fauna-007) are implemented.
 
 ### Items / player
 

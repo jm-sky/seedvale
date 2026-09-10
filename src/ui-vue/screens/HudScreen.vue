@@ -90,6 +90,19 @@ const needBars = computed(() => [
     </button>
   </div>
 
+  <div
+    v-else-if="ui.hud.leading.active"
+    class="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[5] flex justify-center"
+  >
+    <button
+      type="button"
+      class="pointer-events-auto cursor-pointer rounded-full border border-white/20 bg-black/55 px-5 py-2.5 text-sm font-semibold tracking-wide text-ink shadow-lg backdrop-blur-sm transition-colors hover:bg-black/70 active:bg-black/80"
+      @click="ui.hud.leading.onDetach?.()"
+    >
+      Odepnij linę ({{ ui.hud.leading.animalLabel }})
+    </button>
+  </div>
+
   <!-- Ranged-aim reticle (plan 186 §1) — visible only while drawing a bow.
        Free Aim sits at a fixed screen-space offset from center; a soft lock
        reprojects the target's world-space aim point every frame instead

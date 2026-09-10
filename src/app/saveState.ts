@@ -157,6 +157,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
       : null,
     placedTents: bundle.placedTents.nodes().map((tent) => ({ ...tent })),
     placedTraps: bundle.placedTraps.nodes().map((trap) => ({ ...trap })),
+    carts: bundle.carts.nodes().map((cart) => ({ id: cart.id, x: cart.x, z: cart.z, yaw: cart.yaw })),
     graves: bundle.npcGraves.nodes().map((grave) => ({ ...grave })),
     worldFlags: { ...worldFlags },
     resolvedHiddenFindSpotIds: [...resolvedHiddenFindSpotIds],

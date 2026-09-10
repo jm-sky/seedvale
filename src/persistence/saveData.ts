@@ -118,6 +118,14 @@ export type SavePlacedTent = {
   repair?: RepairProgress
 }
 
+/** Movable fauna-007 cart — identity + world transform only. Hitch is runtime. */
+export type SaveCart = {
+  id: string
+  x: number
+  z: number
+  yaw: number
+}
+
 export type SaveWorldFlags = {
   /** Strażnik already gifted a long_sword (quest or dialogue, plan 090). */
   guardSwordGifted?: boolean
@@ -555,7 +563,7 @@ export type SaveWorkContract = {
  *  representation or semantics of `SaveData` change — see the plan's
  *  "Future schema-change workflow". Never duplicate this number elsewhere;
  *  `saveState.ts` imports it instead of declaring its own constant. */
-export const CURRENT_SAVE_VERSION = 25
+export const CURRENT_SAVE_VERSION = 26
 
 /** Canonical save contract for the current schema version. This module
  *  intentionally carries no history of schemas from before the v1 hard cut
@@ -607,6 +615,8 @@ export type SaveData = {
   playerTorch: SavePlayerTorch | null
   placedTents: SavePlacedTent[]
   placedTraps: SavePlacedTrap[]
+  /** Movable draft carts (plan fauna-007) — world identity/transform. */
+  carts: SaveCart[]
   /** NPC burial graves (plan npc-011) — positions aren't derivable from the
    *  seed; completed burials round-trip like `placedTraps`. */
   graves: SaveGrave[]
@@ -815,6 +825,15 @@ function isPlacedTentsField(value: unknown): value is SavePlacedTent[] {
     if (t.repair !== undefined && !isRepairProgressField(t.repair)) return false
   }
   return true
+}
+
+function isCartsField(value: unknown): value is SaveCart[] {
+  if (!Array.isArray(value)) return false
+  return value.every((raw) => {
+    if (!raw || typeof raw !== 'object') return false
+    const c = raw as Record<string, unknown>
+    return typeof c.id === 'string' && typeof c.x === 'number' && typeof c.z === 'number' && typeof c.yaw === 'number'
+  })
 }
 
 function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
@@ -1862,6 +1881,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isPlayerTorchField(v.playerTorch)) return false
   if (!isPlacedTentsField(v.placedTents)) return false
   if (!isPlacedTrapsField(v.placedTraps)) return false
+  if (!isCartsField(v.carts)) return false
   if (!isGravesField(v.graves)) return false
   if (!isWorldFlagsField(v.worldFlags)) return false
   if (!isResolvedHiddenFindSpotIdsField(v.resolvedHiddenFindSpotIds)) return false
@@ -2647,6 +2667,12 @@ function migrateSaveV24ToV25(data: unknown): unknown {
   }
 }
 
+/** v25 → v26 (plan fauna-007): persistent movable carts. Empty means a demo
+ *  cart is spawned near home on restore. */
+function migrateSaveV25ToV26(data: unknown): unknown {
+  return { ...(data as Record<string, unknown>), version: 26, carts: [] }
+}
+
 function migrateSaveV22ToV23(data: unknown): unknown {
   const v = data as Record<string, unknown>
   const prev = v.storageInfestation
@@ -2686,6 +2712,7 @@ const SAVE_MIGRATIONS: Readonly<Record<number, SaveMigration>> = {
   22: migrateSaveV22ToV23,
   23: migrateSaveV23ToV24,
   24: migrateSaveV24ToV25,
+  25: migrateSaveV25ToV26,
 }
 
 function detectStoredVersion(value: unknown): number | null {

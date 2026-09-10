@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `npc-026-npc-grave-visits`                                             | 2026-09-10 14:07:34 | —                   | `npc`            | —          |
 | `quests-progression-014-quest-dialogue-actions-and-authored-dialogue-pass` | 2026-09-10 13:27:47 | —                   | `quests-progression` | —          |
 | `world-022-world-location-discovery-hitch-and-progress`                | 2026-09-10 12:33:40 | —                   | `world`          | —          |
 | `quests-progression-009-dark-forest-ruins-treasure-map`                | 2026-09-10 11:17:20 | —                   | `quests-progression` | —          |

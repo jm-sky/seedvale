@@ -199,6 +199,7 @@ function validLegacyV8Save(): Record<string, unknown> {
     playerTorch: null,
     placedTents: [],
     placedTraps: [],
+    carts: [],
     graves: [],
     worldFlags: {},
     resolvedHiddenFindSpotIds: [],
