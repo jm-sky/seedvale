@@ -247,6 +247,7 @@ Generated from TypeScript imports.
 
 - `audio/ambientWeights.ts`
 - `config/worldConfig.ts`
+- `debug/caves/caveHeightfieldTerrain.ts`
 - `fauna/createFauna.test.ts`
 - `fauna/createFauna.ts`
 - `player/worldWaterEligibility.test.ts`

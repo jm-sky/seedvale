@@ -208,34 +208,35 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfQuery.ts`
 
-- `applyCaveGroundHysteresis` — function — line 441
+- `applyCaveGroundHysteresis` — function — line 443
   - domain: world-terrain
-- `applyCaveInteriorHysteresis` — function — line 417
+- `applyCaveInteriorHysteresis` — function — line 419
   - domain: world-terrain
-- `buildCaveSdfColumnIndex` — function — line 232
+- `buildCaveSdfColumnIndex` — function — line 234
   - domain: world-terrain
 - `CAVE_COLUMN_STEP` — const — line 59
 - `CAVE_FLOOR_GRACE` — const — line 65
 - `CAVE_OCCUPANCY_EPS` — const — line 72
-- `CAVE_UNDERGROUND_MISS` — const — line 86
+- `CAVE_UNDERGROUND_MISS` — const — line 88
 - `CaveGroundHit` — type — line 38
-- `CaveGroundHysteresis` — type — line 427
-- `CaveInteriorHysteresis` — type — line 406
+- `CaveGroundHysteresis` — type — line 429
+- `CaveInteriorHysteresis` — type — line 408
 - `CaveSdfColumnIndex` — type — line 46
 - `CaveVerticalInterval` — type — line 30
-- `columnIntervalsAt` — function — line 272
-- `isCaveInteriorAt` — function — line 395
+- `columnIntervalsAt` — function — line 274
+- `isCaveInteriorAt` — function — line 397
   - domain: world-terrain
-- `lowestCeilingAt` — function — line 462
-- `lowestFloorAt` — function — line 456
-- `occupancyContains` — function — line 379
-- `occupancyIntervalAt` — function — line 350
+- `lowestCeilingAt` — function — line 464
+- `lowestFloorAt` — function — line 458
+- `occupancyContains` — function — line 381
+- `occupancyIntervalAt` — function — line 352
   - domain: world-terrain
-- `pickInterval` — function — line 289
+- `pickInterval` — function — line 291
   - domain: world-terrain
-- `queryColumnIndex` — function — line 323
+- `queryColumnIndex` — function — line 325
   - domain: world-terrain
-- `SurfaceHeightSampler` — type — line 91
+- `SURFACE_CLIP_EPS` — const — line 81
+- `SurfaceHeightSampler` — type — line 93
 
 ## `world/caves/caveSpikeMaterial.ts`
 

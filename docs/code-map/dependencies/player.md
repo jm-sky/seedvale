@@ -58,6 +58,7 @@ Generated from TypeScript imports.
 - `app/saveState.ts`
 - `app/userActions.ts`
 - `assets/assetIndex.ts`
+- `debug/caves/caveHeightfieldTraversal.test.ts`
 - `debug/npcDebugApi.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/animalCorpse.ts`
@@ -251,6 +252,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `debug/caves/caveHeightfieldPlayer.ts`
+- `debug/caves/caveHeightfieldTraversal.test.ts`
 - `player/PlayerController.ts`
 - `player/cameraBoom.test.ts`
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
@@ -503,7 +505,6 @@ Generated from TypeScript imports.
 
 **Imported by**
 
-- `debug/caves/caveHeightfieldPlayer.ts`
 - `debug/caves/caveHeightfieldTraversal.ts`
 - `player/PlayerController.ts`
 - `player/verticalMotion.test.ts`

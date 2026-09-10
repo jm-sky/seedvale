@@ -4,21 +4,22 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldFixtures.ts`
 
-- `buildCaveHeightfieldFixture` — function — line 125
+- `buildCaveHeightfieldFixture` — function — line 205
   - domain: world-terrain
-- `CAVE_HEIGHTFIELD_ENTRANCE` — const — line 17
-- `CAVE_HEIGHTFIELD_FIXTURE_IDS` — const — line 26
-- `CAVE_HEIGHTFIELD_MODES` — const — line 32
-- `CAVE_HEIGHTFIELD_OVERBURDEN` — const — line 36
-- `CAVE_HEIGHTFIELD_VARIANTS` — const — line 29
-- `CaveHeightfieldFixtureId` — type — line 27
-- `CaveHeightfieldMode` — type — line 33
-- `CaveHeightfieldVariant` — type — line 30
-- `parseCaveHeightfieldFixtureId` — function — line 176
-- `parseCaveHeightfieldMode` — function — line 190
-- `parseCaveHeightfieldVariant` — function — line 183
-- `sampleCaveHeightfieldSurface` — function — line 91
+- `CAVE_HEIGHTFIELD_ENTRANCE` — const — line 38
+- `CAVE_HEIGHTFIELD_FIXTURE_IDS` — const — line 47
+- `CAVE_HEIGHTFIELD_MODES` — const — line 53
+- `CAVE_HEIGHTFIELD_VARIANTS` — const — line 50
+- `caveHeightfieldBaseSurfaceAt` — function — line 63
   - domain: world-terrain
+- `CaveHeightfieldFixtureId` — type — line 48
+- `CaveHeightfieldMode` — type — line 54
+- `CaveHeightfieldVariant` — type — line 51
+- `caveHeightfieldWalkSurfaceAt` — function — line 73
+  - domain: world-terrain
+- `parseCaveHeightfieldFixtureId` — function — line 255
+- `parseCaveHeightfieldMode` — function — line 269
+- `parseCaveHeightfieldVariant` — function — line 262
 
 ## `debug/caves/caveHeightfieldMesh.ts`
 
@@ -32,10 +33,9 @@ Generated from exported TypeScript symbols.
 
 ## `debug/caves/caveHeightfieldPlayer.ts`
 
-- `CaveHeightfieldWalker` — type — line 60
-- `createCaveHeightfieldWalker` — function — line 74
+- `CaveHeightfieldWalker` — type — line 41
+- `createCaveHeightfieldWalker` — function — line 55
   - domain: world-terrain
-- `HeightfieldWalkCollision` — type — line 47
 
 ## `debug/caves/caveHeightfieldRepresentation.ts`
 
@@ -59,24 +59,50 @@ Generated from exported TypeScript symbols.
 - `sampleHeightfieldAt` — function — line 525
   - domain: world-terrain
 
+## `debug/caves/caveHeightfieldTerrain.ts`
+
+- `CAVE_HEIGHTFIELD_TERRAIN_ANCHOR` — const — line 36
+- `CAVE_HEIGHTFIELD_TERRAIN_SEED` — const — line 24
+- `sampleCaveHeightfieldBaseSurface` — function — line 73
+  - domain: world-terrain
+- `sampleCaveHeightfieldWalkSurface` — function — line 90
+  - domain: world-terrain
+
 ## `debug/caves/caveHeightfieldTraversal.ts`
 
-- `HEIGHTFIELD_PLAYER_HEIGHT` — const — line 19
-- `HEIGHTFIELD_PLAYER_RADIUS` — const — line 18
-- `heightfieldCapsuleHitsCeiling` — function — line 209
+- `createDebugCaveGroundResolver` — function — line 255
   - domain: world-terrain
-- `HeightfieldGroundHit` — type — line 25
-- `heightfieldOccupancyAt` — function — line 186
+- `DebugCaveColumnQuery` — type — line 230
+- `DebugCaveGround` — type — line 232
+- `HEIGHTFIELD_PLAYER_HEIGHT` — const — line 46
+- `HEIGHTFIELD_PLAYER_RADIUS` — const — line 45
+- `heightfieldCapsuleHitsCeiling` — function — line 316
   - domain: world-terrain
-- `HeightfieldSpaceQuery` — type — line 21
-- `HeightfieldVerticalState` — type — line 147
-- `integrateHeightfieldVertical` — function — line 158
+- `heightfieldColumnIntervals` — function — line 155
   - domain: world-terrain
-- `queryHeightfieldGround` — function — line 120
+- `heightfieldFloorAt` — function — line 220
+- `heightfieldOccupancyAt` — function — line 204
   - domain: world-terrain
-- `queryHeightfieldSpace` — function — line 53
+- `heightfieldRockCeilingMaxY` — function — line 69
   - domain: world-terrain
-- `resolveHeightfieldHorizontal` — function — line 84
+- `HeightfieldSpaceQuery` — type — line 50
+- `HeightfieldVerticalState` — type — line 278
+- `integrateDebugVertical` — function — line 291
+  - domain: world-terrain
+- `queryHeightfieldColumn` — function — line 179
+  - domain: world-terrain
+- `queryHeightfieldSpace` — function — line 86
+  - domain: world-terrain
+- `resolveHeightfieldHorizontal` — function — line 117
+  - domain: world-terrain
+- `SurfaceSampler` — type — line 48
+
+## `debug/caves/caveHeightfieldWalkWorld.ts`
+
+- `CaveWalkWorld` — type — line 32
+- `createHeightfieldWalkWorld` — function — line 55
+  - domain: world-terrain
+- `createSdfWalkWorld` — function — line 82
   - domain: world-terrain
 
 ## `debug/colliderDebugView.ts`
@@ -98,8 +124,8 @@ Generated from exported TypeScript symbols.
 
 ## `debug/createCaveHeightfieldTestScene.ts`
 
-- `CaveHeightfieldSpikeMetrics` — type — line 59
-- `createCaveHeightfieldTestScene` — function — line 263
+- `CaveHeightfieldSpikeMetrics` — type — line 65
+- `createCaveHeightfieldTestScene` — function — line 285
   - domain: world-terrain
 
 ## `debug/createModelTestScene.ts`

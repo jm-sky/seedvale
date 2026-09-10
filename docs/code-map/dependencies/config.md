@@ -67,6 +67,7 @@ Generated from TypeScript imports.
 - `config/persistConfig.test.ts`
 - `config/persistConfig.ts`
 - `config/worldConfig.test.ts`
+- `debug/caves/caveHeightfieldTerrain.ts`
 - `debug/locationQueries.test.ts`
 - `debug/locationQueries.ts`
 - `debug/npcDebugApi.test.ts`
