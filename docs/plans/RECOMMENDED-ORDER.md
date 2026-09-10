@@ -133,19 +133,11 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `quests-progression-007` — **Wilki podchodzą pod osadę**  
-  🟡 `M` · **Score:**  23  
-   → **unlocks:** 0/0
-
-17. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
-  🟡 `M` · **Score:**  23  
-   → **unlocks:** 0/0
-
-18. `npc-026` — **NPC Grave Visits**  
+16. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-19. `fauna-007` — **Animal leading and cart harness**  
+17. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 

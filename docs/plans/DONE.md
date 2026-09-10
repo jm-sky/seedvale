@@ -6,6 +6,7 @@
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
 | `quests-progression-013-rat-infestation-nest-and-reproduction`         | 2026-09-10 09:58:18 | —                   | `quests-progression` | —          |
 | `settlements-npcs-029-animal-corpse-cleanup-and-household-sanitation`  | 2026-09-10 09:05:08 | —                   | `settlements-npcs` | —          |
+| `quests-progression-007-wolves-approach-settlement`                    | 2026-09-10 08:19:22 | —                   | `quests-progression` | —          |
 | `ui-input-013-character-stats`                                         | 2026-09-10 08:05:43 | —                   | `ui-input`       | —          |
 | `fauna-013-animal-hand-feeding-and-human-affinity`                     | 2026-09-10 08:05:33 | —                   | `fauna`          | —          |
 | `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward` | 2026-09-10 07:48:51 | —                   | `quests-progression` | —          |
