@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 375
-- `CreateSettlementDeps` — type — line 247
-- `Settlement` — type — line 126
-- `settlementSpawnPoint` — function — line 235
+- `createSettlement` — function — line 376
+- `CreateSettlementDeps` — type — line 248
+- `Settlement` — type — line 127
+- `settlementSpawnPoint` — function — line 236
 
 ## `settlement/decorProps.ts`
 
@@ -326,6 +326,16 @@ Generated from exported TypeScript symbols.
 - `MinorLocation` — type — line 5
 - `minorLocationsFor` — function — line 77
 
+## `settlement/npcIdentity.ts`
+
+- `flattenedSettlementMembers` — function — line 22
+  - domain: settlements-npcs
+- `SettlementNpcDescriptor` — type — line 29
+- `settlementNpcDescriptors` — function — line 41
+  - domain: settlements-npcs
+- `settlementNpcId` — function — line 12
+  - domain: settlements-npcs
+
 ## `settlement/npcPhysicalProfile.ts`
 
 - `ageMultiplierForAge` — function — line 80
@@ -583,16 +593,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 135
-- `cellKey` — function — line 120
-- `cellSeed` — function — line 163
-- `cellsWithinRadius` — function — line 147
-- `generateSettlementDef` — function — line 634
-- `generateVillagePlan` — function — line 572
+- `cellFromId` — function — line 136
+- `cellKey` — function — line 121
+- `cellSeed` — function — line 164
+- `cellsWithinRadius` — function — line 148
+- `generateSettlementDef` — function — line 635
+- `generateVillagePlan` — function — line 573
 - `SETTLEMENT_GRID_STEP` — const — line 63
 - `SettlementCell` — type — line 69
 - `SettlementDef` — type — line 71
-- `worldToCell` — function — line 124
+- `worldToCell` — function — line 125
 
 ## `settlement/settlementNightCycle.ts`
 

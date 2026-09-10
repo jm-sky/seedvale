@@ -26,6 +26,7 @@ Generated from TypeScript imports.
 - `quests/settlementRatInfestation.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/livestock.ts`
+- `settlement/npcState.ts`
 
 **Imported by**
 
@@ -55,6 +56,26 @@ Generated from TypeScript imports.
 - `app/createApp.ts`
 - `quests/cardinalDirection.test.ts`
 
+## `quests/materializeAuthoredQuests.test.ts`
+
+**Imports**
+
+- `quests/materializeAuthoredQuests.ts`
+- `quests/quests.ts`
+- `settlement/npcIdentity.ts`
+
+## `quests/materializeAuthoredQuests.ts`
+
+**Imports**
+
+- `quests/quests.ts`
+- `settlement/npcIdentity.ts`
+- `settlement/npcState.ts`
+
+**Imported by**
+
+- `quests/materializeAuthoredQuests.test.ts`
+
 ## `quests/quests.test.ts`
 
 **Imports**
@@ -69,6 +90,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `items/items.ts`
 - `reputation/ReputationManager.ts`
+- `settlement/npcState.ts`
 - `terrain/chunkEnvironment.ts`
 - `world/locations/darkForestTreasureSite.ts`
 
@@ -82,6 +104,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/materializeAuthoredQuests.test.ts`
+- `quests/materializeAuthoredQuests.ts`
 - `quests/quests.test.ts`
 - `settlement/lodgingResolver.test.ts`
 - `settlement/lodgingResolver.ts`

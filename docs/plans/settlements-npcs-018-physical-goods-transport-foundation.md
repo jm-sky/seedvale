@@ -2,7 +2,7 @@
 
 **Created:** 2026-09-04
 **Status:** `verification needed` 🔍 — implemented + technically verified; browser/gameplay verification pending.
-**Implemented at:** 2026-09-10
+**Implemented at:** 2026-09-10 14:54
 **Priority:** high · **Effort:** M
 **Depends on:** ~~settlements-npcs-014~~
 **Domain:** `settlements-npcs`

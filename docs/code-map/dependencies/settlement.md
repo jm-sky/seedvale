@@ -202,6 +202,7 @@ Generated from TypeScript imports.
 - `settlement/household.ts`
 - `settlement/householdExchange.ts`
 - `settlement/livestock.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `settlement/npcPostDeath.ts`
 - `settlement/npcRelationships.ts`
@@ -308,6 +309,8 @@ Generated from TypeScript imports.
 - `settlement/findSettlementSite.test.ts`
 - `settlement/houseCatalog.ts`
 - `settlement/livestock.ts`
+- `settlement/npcIdentity.test.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
@@ -736,6 +739,28 @@ Generated from TypeScript imports.
 - `settlement/settlementGenerator.ts`
 - `settlement/settlementSignposts.ts`
 
+## `settlement/npcIdentity.test.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/npcIdentity.ts`
+
+## `settlement/npcIdentity.ts`
+
+**Imports**
+
+- `settlement/families.ts`
+- `settlement/npcState.ts`
+- `settlement/settlementGenerator.ts`
+
+**Imported by**
+
+- `quests/materializeAuthoredQuests.test.ts`
+- `quests/materializeAuthoredQuests.ts`
+- `settlement/createSettlement.ts`
+- `settlement/npcIdentity.test.ts`
+
 ## `settlement/npcPhysicalProfile.test.ts`
 
 **Imports**
@@ -849,8 +874,12 @@ Generated from TypeScript imports.
 - `app/actions/workContractPayment.ts`
 - `app/worldBundle.ts`
 - `persistence/saveData.ts`
+- `quests/QuestManager.ts`
+- `quests/materializeAuthoredQuests.ts`
+- `quests/quests.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/npcPostDeath.test.ts`
 - `settlement/npcState.test.ts`
 
@@ -1186,6 +1215,7 @@ Generated from TypeScript imports.
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/minorLocations.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/props.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.test.ts`
