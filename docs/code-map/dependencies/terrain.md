@@ -187,6 +187,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `interaction/Interactable.ts`
 - `interaction/resolveInteraction.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/quests.ts`
 - `terrain/cemeteryPlacement.test.ts`
 - `terrain/cemeteryPlacement.ts`

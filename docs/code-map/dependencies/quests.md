@@ -41,6 +41,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `interaction/resolveInteraction.ts`
 - `quests/QuestManager.test.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
 - `ui-vue/npcDialogueOpen.test.ts`
 - `ui-vue/store.ts`
 - `ui/createQuestLog.ts`
@@ -81,6 +82,50 @@ Generated from TypeScript imports.
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/quests.test.ts`
 
+## `quests/opportunities/rpgQuestMaterialization.ts`
+
+**Imports**
+
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `terrain/chunkEnvironment.ts`
+
+**Imported by**
+
+- `quests/opportunities/rpgQuestMatrices.test.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+
+## `quests/opportunities/rpgQuestMatrices.test.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `quests/QuestManager.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
+- `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/settlementQuestSelection.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `quests/quests.ts`
+- `settlement/settlementGenerator.ts`
+
+## `quests/opportunities/rpgQuestMatrices.ts`
+
+**Imports**
+
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+- `settlement/settlementGenerator.ts`
+- `terrain/chunkEnvironment.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+
 ## `quests/opportunities/settlementQuestOpportunities.test.ts`
 
 **Imports**
@@ -101,7 +146,19 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
+- `quests/opportunities/worldQuestMaterialization.ts`
+
+## `quests/opportunities/settlementQuestSelection.ts`
+
+**Imports**
+
+- `quests/opportunities/worldQuestOpportunityTypes.ts`
+
+**Imported by**
+
+- `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 
 ## `quests/opportunities/worldQuestMaterialization.ts`
@@ -109,7 +166,10 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalSpawner.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/settlementQuestSelection.ts`
 - `quests/opportunities/worldQuestOpportunityTypes.ts`
 - `quests/quests.ts`
 - `settlement/npcIdentity.ts`
@@ -118,6 +178,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 
 ## `quests/opportunities/worldQuestOpportunityTypes.ts`
@@ -130,8 +191,12 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `quests/QuestManager.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementQuestOpportunities.test.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
+- `quests/opportunities/settlementQuestSelection.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 
 ## `quests/quests.test.ts`
@@ -165,6 +230,8 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/materializeAuthoredQuests.test.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/rpgQuestMaterialization.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.test.ts`
 - `settlement/lodgingResolver.test.ts`

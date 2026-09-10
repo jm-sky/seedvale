@@ -20,6 +20,45 @@ Generated from exported TypeScript symbols.
 - `resolveAuthoredNpcId` — function — line 23
   - domain: quests-progression
 
+## `quests/opportunities/rpgQuestMaterialization.ts`
+
+- `materializeRpgQuestOpportunity` — function — line 252
+  - domain: quests-progression
+  - system: settlement-quest-opportunities
+  - role: Materializes a selected RPG matrix candidate into a normal QuestDef.
+- `RpgMaterializationContext` — type — line 10
+
+## `quests/opportunities/rpgQuestMatrices.ts`
+
+- `adultOpportunityNpcs` — function — line 99
+  - domain: quests-progression
+- `collectOldPlaceSecretCandidate` — function — line 124
+  - domain: quests-progression
+  - role: Collects a lightweight RPG candidate bound to a real landmark id.
+- `collectRpgQuestOpportunities` — function — line 216
+  - domain: quests-progression
+  - system: settlement-quest-opportunities
+  - role: Collects RPG matrix candidates without building QuestDefs.
+- `collectSettlementAgreementCandidate` — function — line 178
+  - domain: quests-progression
+  - role: Collects a lightweight RPG candidate bound to a target settlement id.
+- `collectSuspiciousTransportCandidate` — function — line 147
+  - domain: quests-progression
+  - role: Collects a lightweight RPG candidate bound to a counterpart NPC id.
+- `nearbyRpgSettlementDefs` — function — line 241
+  - domain: quests-progression
+- `OLD_PLACE_LANDMARK_KINDS` — const — line 18
+  - domain: quests-progression
+- `parseRpgQuestId` — function — line 75
+- `RPG_NEIGHBOR_SETTLEMENT_LIMIT` — const — line 32
+  - domain: quests-progression
+- `RPG_QUEST_PREFIX` — const — line 10
+- `RpgCollectInput` — type — line 47
+- `RpgLandmarkRef` — type — line 34
+- `rpgQuestId` — function — line 71
+  - domain: quests-progression
+- `RpgSettlementRef` — type — line 39
+
 ## `quests/opportunities/settlementQuestOpportunities.ts`
 
 - `collectSettlementQuestOpportunities` — function — line 98
@@ -36,33 +75,48 @@ Generated from exported TypeScript symbols.
   - domain: quests-progression
 - `wolfDenPressureStatusFromSpawners` — function — line 85
 
+## `quests/opportunities/settlementQuestSelection.ts`
+
+- `selectSettlementQuestOpportunities` — function — line 56
+  - domain: quests-progression
+  - system: settlement-quest-opportunities
+  - role: Selects which lightweight candidates become QuestDefs.
+- `SETTLEMENT_QUEST_OPPORTUNITY_LIMIT` — const — line 9
+  - domain: quests-progression
+- `settlementOpportunityPriority` — function — line 17
+  - domain: quests-progression
+
 ## `quests/opportunities/worldQuestMaterialization.ts`
 
-- `buildWorldDrivenSettlementQuests` — function — line 126
+- `buildWorldDrivenSettlementQuests` — function — line 138
   - domain: quests-progression
-- `materializeSettlementQuestOpportunity` — function — line 106
+- `materializeSettlementQuestOpportunity` — function — line 116
   - domain: quests-progression
   - system: settlement-quest-opportunities
   - role: Materializes a selected settlement opportunity into a normal QuestDef.
-- `opportunityNpcsFromSettlement` — function — line 18
+- `opportunityNpcsFromSettlement` — function — line 27
   - domain: quests-progression
-- `selectSettlementQuestGiver` — function — line 36
+- `selectSettlementQuestGiver` — function — line 46
   - domain: quests-progression
 
 ## `quests/opportunities/worldQuestOpportunityTypes.ts`
 
-- `OpportunityNpc` — type — line 55
+- `OpportunityNpc` — type — line 77
   - domain: quests-progression
-- `SettlementQuestOpportunity` — type — line 30
-- `WolfDenPressureOpportunity` — type — line 23
+- `RpgQuestMatrixId` — type — line 23
+  - domain: quests-progression
+- `RpgQuestOpportunity` — type — line 44
+  - domain: quests-progression
+- `SettlementQuestOpportunity` — type — line 52
+- `WolfDenPressureOpportunity` — type — line 31
   - domain: quests-progression
 - `WorldQuestOpportunityKind` — type — line 15
   - domain: quests-progression
   - system: settlement-quest-opportunities
   - role: Data-only opportunity contract between settlement/world systems and quest materialization.
-- `WorldQuestSourceLookup` — type — line 46
+- `WorldQuestSourceLookup` — type — line 68
   - domain: quests-progression
-- `WorldQuestSourceStatus` — type — line 38
+- `WorldQuestSourceStatus` — type — line 60
   - domain: quests-progression
 
 ## `quests/QuestManager.ts`

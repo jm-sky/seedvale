@@ -1215,6 +1215,8 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/villageInspector.test.ts`
 - `debug/villageInspector.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`

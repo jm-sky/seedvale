@@ -742,6 +742,7 @@ Generated from TypeScript imports.
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
 - `quests/materializeAuthoredQuests.ts`
+- `quests/opportunities/rpgQuestMatrices.ts`
 - `quests/opportunities/settlementQuestOpportunities.ts`
 - `quests/opportunities/worldQuestMaterialization.ts`
 - `quests/quests.ts`

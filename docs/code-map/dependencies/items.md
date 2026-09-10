@@ -153,6 +153,7 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `quests/QuestManager.test.ts`
 - `quests/QuestManager.ts`
+- `quests/opportunities/rpgQuestMatrices.test.ts`
 - `settlement/household.ts`
 - `settlement/landPurchase.test.ts`
 - `settlement/landPurchase.ts`
