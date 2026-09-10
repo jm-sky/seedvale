@@ -75,7 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
-| ◼️ `world-terrain-018-cave-heightfield-representation-spike.md`                | -       | 🔴 | M      | -      |
+| 💡 `world-terrain-018-cave-heightfield-representation-spike.md`                | -       | 🔴 | M      | -      |
 
 ---
 
