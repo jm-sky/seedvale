@@ -4,7 +4,7 @@
 
 **Not:** item-by-item catalog data (that's [items/CATALOG.md](../items/CATALOG.md)), combat mechanics (that's [combat.md](./combat.md)), or NPC/settlement systems (that's [SETTLEMENTS.md](../state/settlements.md)).
 
-**Last verified:** 2026-09-09
+**Last verified:** 2026-09-10
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -13,6 +13,12 @@ When this file and the code disagree, the code wins — update this file.
 ## Physical attributes (SPEA, plan npc-019)
 
 `PlayerController.attributes` holds the shared `PhysicalAttributes` primitive (`src/shared/PhysicalAttributes.ts` — also used by NPCs, see [npc.md](./npc.md)): Strength, Perception, Endurance, Agility, each `0..1`. The Player starts at a fixed `{ strength: 0.6, perception: 0.6, endurance: 0.6, agility: 0.6 }` (`PLAYER_STARTING_ATTRIBUTES`), slightly above the shared `0.5` typical-healthy-adult reference — that reference point is unchanged and stays neutral for consumer mappings. Not persisted, not progressable and not configurable yet.
+
+Gameplay always reads **effective** SPEA from `src/shared/effectivePhysicalAttributes.ts` (`PlayerController.effectiveAttributes(nowDays)`), never from Vue. Base attributes stay on `PlayerController.attributes`. The resolver applies physical-injury modifiers first (NPC seam), then temporary-condition modifiers. The player wrapper supplies no injury input — HP damage is not injury, and the Player still has no authoritative physical-injury state.
+
+The same resolver can return applied (post-clamp) **modifier contributions** (`resolveEffectivePhysicalAttributesDetailed` / `PlayerController.effectiveAttributesDetailed`). Character Screen aggregates those contributions per attribute and category into badges (`illness` / `injury` / `fatigue` / `effect`); it does not persist badges or recompute formulas. Poisoning is an `illness` contribution with source id `poisoning`. Fatigue is a reserved category with no player source yet.
+
+Character Screen (`src/ui-vue/screens/CharacterScreen.vue`) is the presentation view of current player state: HP/needs, base vs effective SPEA, all eight skills, active condition sources, plus the existing local reputation/renown/known-for badges. Presentation arrays are rebuilt while the screen is open (and once at open); Vue does not own condition timers or modifier state.
 
 Strength currently has three explicit consumers, each with its own mapping (neutral at `0.5`; the Player's starting `0.6` is a small intentional advantage, not a shifted neutral point):
 
@@ -48,6 +54,8 @@ Food and water are ordinary `Inventory` items with a `consumable` catalog flag (
 `PlayerController.skills` (`src/player/PlayerSkills.ts`) has eight skills: sneak, survival, traps, defense, archery, riding, medicine, repair. There are no levels/perks/points — `SkillState { value, xp, active }`, where `xp` is the only persisted progression state and `value` is always derived through one shared curve (`xpToSkillValue()`, floor 0.2, asymptotic to 1). `awardSkillXp()` is the single mutation path; XP comes only from completed actions, never per frame (e.g. traps only on a confirmed capture, sneak per actually-sneaked metres, survival on ignite/tent-setup/cooking/camp-rest). `SkillState.active` is runtime-only and currently meaningful for Sneak stance; it is not the selected targeted skill.
 
 Skill use is categorized (`SKILL_USE`): Sneak is a stance, Survival/Defense/Archery/Riding are contextual, and Traps/Medicine/Repair are targeted-capable. Runtime selection (`src/player/targetedSkillSelection.ts`) is not persisted. Shared competence evaluation (`src/player/skillEvaluation.ts`) reads a primary skill plus optional support/context without a global weighted formula. Targeted world actions (`src/interaction/targetedSkillAction.ts`) reuse existing `Interactable` + gaze targeting; query does not mutate, execute revalidates live owner state. Current consumers: `Traps → Inspect trap` (live `PlacedTraps` record by id) and `Repair → camp tent/bedroll/platform` (same start/resume path as camp inspection). Medicine has no gameplay consumers yet.
+
+The Skills Screen lists only **actionable** skills: stance skills with a real handler (Sneak) and targeted skills with at least one implemented consumer (Traps, Repair). Visibility is derived from `SKILL_USE` plus that same consumer dispatch (`isActionablePlayerSkill`) — not a Vue-maintained list. Character Screen shows all eight skill values; there is no generic skill-modifier pipeline yet, so skills are displayed as the current value rather than `effective / base`.
 
 `riding` feeds `ridingSpeedMultiplier`/`ridingStaminaDrainMultiplier`, read by `app/actions/mountActions.ts` while the player is mounted (see [Riding](#riding) below).
 

@@ -160,6 +160,7 @@ Generated from TypeScript imports.
 - `items/weaponMaintenance.ts`
 - `persistence/saveDb.ts`
 - `player/PlayerSkills.ts`
+- `player/characterPresentation.ts`
 - `quests/QuestManager.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`

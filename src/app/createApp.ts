@@ -66,6 +66,7 @@ import {
   listSaves,
   setActiveSaveId,
 } from '../persistence/saveDb'
+import { buildCharacterPresentation } from '../player/characterPresentation'
 import { humanBodyCarryCapacityKg } from '../player/humanCarryCapacity'
 import { type CaveGroundQuery, type CaveOccupancyQuery, PLAYER_STARTING_ATTRIBUTES, PlayerController } from '../player/PlayerController'
 import {
@@ -77,10 +78,10 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { QuestManager } from '../quests/QuestManager'
 import { buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
-import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
+import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
@@ -1662,6 +1663,21 @@ export async function createApp(
     // quests-progression-001 — never a remembered `currentSettlementId`), so
     // resolve it fresh right here rather than relying on the boot-time push.
     refreshCharacterReputation()
+    const detailedAttributes = player.effectiveAttributesDetailed(dayNight.elapsedDays)
+    hud.setCharacterStats({
+      hp: { current: player.health.currentHp, max: player.health.maxHp },
+      stamina: { current: player.needs.stamina.current, max: player.needs.stamina.max },
+      vigor: { current: player.needs.vigor.current, max: player.needs.vigor.max },
+      hunger: { current: player.needs.hunger.current, max: player.needs.hunger.max },
+      thirst: { current: player.needs.thirst.current, max: player.needs.thirst.max },
+      attributes: detailedAttributes.effective,
+      presentation: buildCharacterPresentation({
+        base: player.attributes,
+        result: detailedAttributes,
+        skills: player.skills,
+        conditions: player.temporaryConditions,
+      }),
+    })
     vueUi.openCharacterScreen()
   }
 

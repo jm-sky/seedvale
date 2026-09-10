@@ -1,7 +1,7 @@
 import type { CampRepairTargetKind } from '../items/campRepair'
 import type { Interactable } from './Interactable'
 import { ITEM_DEFS } from '../items/items'
-import { SKILL_LABEL, type SkillId } from '../player/PlayerSkills'
+import { SKILL_IDS, SKILL_LABEL, SKILL_USE, type SkillId } from '../player/PlayerSkills'
 import { type PlacedTrapRecord, TRAP_DEFS, type TrapState } from '../world/animalTraps'
 
 /**
@@ -69,31 +69,41 @@ function campRepairLabel(kind: CampRepairTargetKind): string {
   return 'podest'
 }
 
-/**
- * Availability only — never mutates the world. Returns no action when the
- * selected skill has no consumer for this target.
- */
-export function queryTargetedSkillAction(
+type TargetedSkillConsumer = {
+  id: TargetedSkillActionId
+  query: (
+    skill: SkillId,
+    target: Interactable,
+    context: TargetedSkillQueryContext,
+  ) => TargetedSkillAction | null
+}
+
+function queryCampRepair(
   skill: SkillId,
   target: Interactable,
   context: TargetedSkillQueryContext,
 ): TargetedSkillAction | null {
-  if (skill === 'repair') {
-    const camp = campRepairTarget(target)
-    if (!camp) return null
-    const available = context.campRepairAvailable(camp.kind, camp.id)
-    if (!available) return null
-    return {
-      id: 'repair-camp',
-      skill,
-      targetId: camp.id,
-      targetKind: camp.kind,
-      promptLabel: available.mode === 'continue'
-        ? `[E] Kontynuuj naprawę: ${campRepairLabel(camp.kind)}`
-        : `[E] Napraw: ${campRepairLabel(camp.kind)}`,
-    }
+  const camp = campRepairTarget(target)
+  if (!camp) return null
+  const available = context.campRepairAvailable(camp.kind, camp.id)
+  if (!available) return null
+  return {
+    id: 'repair-camp',
+    skill,
+    targetId: camp.id,
+    targetKind: camp.kind,
+    promptLabel: available.mode === 'continue'
+      ? `[E] Kontynuuj naprawę: ${campRepairLabel(camp.kind)}`
+      : `[E] Napraw: ${campRepairLabel(camp.kind)}`,
   }
-  if (skill !== 'traps' || target.kind !== 'trap') return null
+}
+
+function queryInspectTrap(
+  skill: SkillId,
+  target: Interactable,
+  context: TargetedSkillQueryContext,
+): TargetedSkillAction | null {
+  if (target.kind !== 'trap') return null
   const trap = context.getTrap(target.id)
   if (!trap) return null
   return {
@@ -103,6 +113,50 @@ export function queryTargetedSkillAction(
     targetKind: 'trap',
     promptLabel: `[E] Sprawdź: ${TRAP_DEFS[trap.kind].label}`,
   }
+}
+
+/** Implemented targeted consumers — the same dispatch `queryTargetedSkillAction` uses. */
+const TARGETED_SKILL_CONSUMERS: Partial<Record<SkillId, readonly TargetedSkillConsumer[]>> = {
+  repair: [{ id: 'repair-camp', query: queryCampRepair }],
+  traps: [{ id: 'inspect-trap', query: queryInspectTrap }],
+}
+
+export function hasImplementedTargetedSkillConsumer(skill: SkillId): boolean {
+  return (TARGETED_SKILL_CONSUMERS[skill]?.length ?? 0) > 0
+}
+
+/**
+ * Skills the Skills Screen may offer as a player-chosen action. Stance
+ * skills with a real handler (today: Sneak) and targeted skills with at
+ * least one implemented consumer. Contextual skills stay Character-only.
+ */
+export function isActionablePlayerSkill(id: SkillId): boolean {
+  const kind = SKILL_USE[id]
+  if (kind === 'stance') return true
+  if (kind === 'targeted') return hasImplementedTargetedSkillConsumer(id)
+  return false
+}
+
+export function listActionablePlayerSkills(): SkillId[] {
+  return SKILL_IDS.filter(isActionablePlayerSkill)
+}
+
+/**
+ * Availability only — never mutates the world. Returns no action when the
+ * selected skill has no consumer for this target.
+ */
+export function queryTargetedSkillAction(
+  skill: SkillId,
+  target: Interactable,
+  context: TargetedSkillQueryContext,
+): TargetedSkillAction | null {
+  const consumers = TARGETED_SKILL_CONSUMERS[skill]
+  if (!consumers) return null
+  for (const consumer of consumers) {
+    const action = consumer.query(skill, target, context)
+    if (action) return action
+  }
+  return null
 }
 
 /**

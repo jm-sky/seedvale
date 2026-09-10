@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 
 - `interaction/Interactable.ts`
 - `interaction/targetedSkillAction.ts`
+- `player/PlayerSkills.ts`
 - `world/animalTraps.ts`
 
 ## `interaction/targetedSkillAction.ts`
@@ -88,6 +89,7 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `interaction/targetedSkillAction.test.ts`
+- `player/targetedSkillSelection.ts`
 
 ## `interaction/treeInspection.test.ts`
 

@@ -4,6 +4,8 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `quests-progression-012-horse-acquisition-merchant-purchase-and-quest-reward` | 2026-09-10 07:48:51 | —                   | `quests-progression` | —          |
+| `ui-input-014-construction-status-and-context-actions`                 | 2026-09-09 22:15:15 | —                   | `ui-input`       | —          |
 | `items-player-020-player-built-animal-trough-and-water-storage`        | 2026-09-09 21:40:48 | —                   | `items-player`   | —          |
 | `fauna-020-player-owned-animals-and-follow-stay-behaviour`             | 2026-09-09 21:14:01 | —                   | `fauna`          | —          |
 | `npc-016-work-contracts-payment-and-employer-interaction`              | 2026-09-09 16:50:32 | —                   | `npc`            | —          |

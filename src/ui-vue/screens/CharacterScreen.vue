@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
+import UiPanel from '@/components/UiPanel.vue'
+import type { ModifierCategory } from '../../shared/effectivePhysicalAttributes'
+import type { PhysicalAttributeId } from '../../shared/PhysicalAttributes'
+import { SKILL_LABEL } from '../../player/PlayerSkills'
+import CharacterModifierBadge from '../components/CharacterModifierBadge.vue'
+import CharacterSection from '../components/CharacterSection.vue'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
-import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeCharacterScreen, isCharacterScreenOpen, ui } from '../store'
 
-const panel = ref<HTMLElement | null>(null)
 useOverlayScreen('character', isCharacterScreenOpen, closeCharacterScreen)
-useTouchScroll(panel)
 
 /** Below this ratio a stat reads as critical — same 20% used by the fauna/NPC
  *  label bars this screen's colors are borrowed from (index.html). */
@@ -14,13 +17,27 @@ const CRITICAL_RATIO = 0.2
 
 type StatRow = { key: string, label: string, current: number, max: number, color: string }
 
-/** Presentation-only: every value is read from `ui.characterScreen`, pushed
- *  once/frame from `gameLoop.ts` (`Hud.setCharacterStats`) off the
- *  authoritative `player.health` / `player.needs` — this screen never writes
- *  back to player state. Driven by a list (not one row per stat hardcoded in
- *  the template) so future additions (Traits/Skills/Equipment/Injuries —
- *  plan 105 §"UI architecture") extend this array instead of restructuring
- *  the screen. */
+const ATTRIBUTE_LABEL: Record<PhysicalAttributeId, string> = {
+  agility: 'Zręczność',
+  endurance: 'Wytrzymałość',
+  perception: 'Percepcja',
+  strength: 'Siła',
+}
+
+const CONDITION_SECTION_LABEL: Record<ModifierCategory, string> = {
+  effect: 'Efekty',
+  fatigue: 'Zmęczenie',
+  illness: 'Choroby',
+  injury: 'Urazy',
+}
+
+const CONDITION_CATEGORY_ORDER: readonly ModifierCategory[] = [
+  'illness',
+  'injury',
+  'fatigue',
+  'effect',
+]
+
 const rows = computed<StatRow[]>(() => {
   const c = ui.characterScreen
   return [
@@ -32,19 +49,29 @@ const rows = computed<StatRow[]>(() => {
   ]
 })
 
-const attributeRows = computed(() => {
-  const a = ui.characterScreen.attributes
-
-  return [
-    { key: 'strength', label: 'Siła', value: a.strength },
-    { key: 'perception', label: 'Percepcja', value: a.perception },
-    { key: 'endurance', label: 'Wytrzymałość', value: a.endurance },
-    { key: 'agility', label: 'Zręczność', value: a.agility },
-  ]
+const conditionGroups = computed(() => {
+  const conditions = ui.characterScreen.presentation.conditions
+  return CONDITION_CATEGORY_ORDER
+    .map((category) => ({
+      category,
+      label: CONDITION_SECTION_LABEL[category],
+      items: conditions.filter((item) => item.category === category),
+    }))
+    .filter((group) => group.items.length > 0)
 })
 
 function ratio(row: StatRow): number { return row.max > 0 ? row.current / row.max : 0 }
 function isCritical(row: StatRow): boolean { return ratio(row) <= CRITICAL_RATIO }
+
+function formatSignedDelta(delta: number): string {
+  return delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`
+}
+
+function formatConditionEffects(effects: readonly { id: PhysicalAttributeId, delta: number }[]): string {
+  return effects
+    .map((effect) => `${ATTRIBUTE_LABEL[effect.id]} ${formatSignedDelta(effect.delta)}`)
+    .join(' · ')
+}
 
 /** Five reputation dimensions (plan quests-progression-001 §14) — each is
  *  its own `-100..100` value, deliberately never averaged into one score. */
@@ -67,114 +94,167 @@ const reputationRows = computed(() => {
     class="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-panel-backdrop backdrop-blur-[2px]"
     @click.self="closeCharacterScreen"
   >
-    <div
-      ref="panel"
-      class="max-h-[calc(100dvh-32px)] w-full max-w-md overflow-y-auto rounded-[10px] bg-panel p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
-      style="touch-action: pan-y"
-    >
+    <UiPanel class="max-w-3xl md:max-w-4xl">
       <h1 class="mb-4 text-lg font-semibold tracking-wide">
         Postać
       </h1>
 
-      <div class="flex flex-col gap-3">
-        <div
-          v-for="row in rows"
-          :key="row.key"
-        >
-          <div class="mb-1 flex items-baseline justify-between text-sm">
-            <span :class="isCritical(row) ? 'font-semibold text-red-400' : ''">
-              {{ row.label }}
-              <span
-                v-if="isCritical(row)"
-                class="ml-1 text-[11px] font-normal uppercase tracking-wide"
+      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
+        <CharacterSection title="Stan">
+          <div class="flex flex-col gap-3">
+            <div
+              v-for="row in rows"
+              :key="row.key"
+            >
+              <div class="mb-1 flex items-baseline justify-between text-sm">
+                <span :class="isCritical(row) ? 'font-semibold text-red-400' : ''">
+                  {{ row.label }}
+                  <span
+                    v-if="isCritical(row)"
+                    class="ml-1 text-[11px] font-normal uppercase tracking-wide"
+                  >
+                    krytyczne
+                  </span>
+                </span>
+                <span class="text-xs opacity-70">{{ Math.round(row.current) }} / {{ Math.round(row.max) }}</span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-black/45">
+                <div
+                  class="h-full rounded-full transition-[width]"
+                  :style="{ width: `${Math.round(ratio(row) * 100)}%`, background: isCritical(row) ? '#e05555' : row.color }"
+                />
+              </div>
+            </div>
+          </div>
+        </CharacterSection>
+
+        <CharacterSection title="Atrybuty">
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="row in ui.characterScreen.presentation.attributes"
+              :key="row.id"
+              class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm"
+            >
+              <span>{{ ATTRIBUTE_LABEL[row.id] }}</span>
+              <div class="flex min-w-0 flex-wrap items-baseline justify-end gap-1.5">
+                <span class="text-xs opacity-70">{{ row.effective }} / {{ row.base }}</span>
+                <CharacterModifierBadge
+                  v-for="badge in row.modifiers"
+                  :key="badge.category"
+                  :category="badge.category"
+                  :delta="badge.delta"
+                />
+              </div>
+            </div>
+          </div>
+        </CharacterSection>
+
+        <CharacterSection title="Umiejętności">
+          <div class="flex flex-col gap-1.5">
+            <div
+              v-for="row in ui.characterScreen.presentation.skills"
+              :key="row.id"
+              class="flex items-baseline justify-between gap-3 text-sm"
+            >
+              <span>{{ SKILL_LABEL[row.id] }}</span>
+              <span class="text-xs opacity-70">{{ row.value }}</span>
+            </div>
+          </div>
+        </CharacterSection>
+
+        <CharacterSection title="Stan zdrowia">
+          <div
+            v-if="conditionGroups.length === 0"
+            class="text-xs opacity-60"
+          >
+            Brak aktywnych efektów
+          </div>
+          <div
+            v-else
+            class="flex flex-col gap-3"
+          >
+            <div
+              v-for="group in conditionGroups"
+              :key="group.category"
+            >
+              <h3 class="mb-1 text-xs font-semibold uppercase tracking-wide opacity-80">
+                {{ group.label }}
+              </h3>
+              <div
+                v-for="item in group.items"
+                :key="item.sourceId"
+                class="text-sm"
               >
-                krytyczne
-              </span>
-            </span>
-            <span class="text-xs opacity-70">{{ Math.round(row.current) }} / {{ Math.round(row.max) }}</span>
+                <div>
+                  {{ item.label }}<span
+                    v-if="item.severityLabel"
+                    class="opacity-80"
+                  > — {{ item.severityLabel }}</span>
+                </div>
+                <div class="text-xs opacity-70">
+                  {{ formatConditionEffects(item.effects) }}
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="h-2 overflow-hidden rounded-full bg-black/45">
-            <div
-              class="h-full rounded-full transition-[width]"
-              :style="{ width: `${Math.round(ratio(row) * 100)}%`, background: isCritical(row) ? '#e05555' : row.color }"
-            />
-          </div>
-        </div>
-      </div>
+        </CharacterSection>
 
-      <div class="flex flex-col gap-3 mt-4 border-t border-white/40 pt-3">
-        <h2 class="text-sm font-semibold text-center">
-          Atrybuty
-        </h2>
-        <div
-          v-for="row in attributeRows"
-          :key="row.key"
+        <CharacterSection
+          class="md:col-span-2"
+          title="Reputacja"
         >
-          <div class="mb-1 flex items-baseline justify-between text-sm">
-            <span>{{ row.label }}</span>
-            <span class="text-xs opacity-70">{{ Math.round(row.value * 100) }}</span>
-          </div>
-          <div class="h-2 overflow-hidden rounded-full bg-black/45">
+          <div
+            v-if="ui.characterScreen.reputation"
+            class="flex flex-col gap-2"
+          >
+            <div class="text-sm">
+              {{ ui.characterScreen.reputation.settlementName }}
+            </div>
             <div
-              class="h-full rounded-full transition-[width]"
-              :style="{ width: `${Math.round(row.value * 100)}%`, background: '#2a8f58' }"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-4 border-t border-white/10 pt-3">
-        <div
-          v-if="ui.characterScreen.reputation"
-          class="flex flex-col gap-2"
-        >
-          <div class="text-sm font-semibold">
-            Reputacja — {{ ui.characterScreen.reputation.settlementName }}
+              v-for="row in reputationRows"
+              :key="row.key"
+              class="flex items-baseline justify-between text-xs"
+            >
+              <span class="opacity-80">{{ row.label }}</span>
+              <span class="opacity-70">{{ row.value }}</span>
+            </div>
+            <div class="mt-1 flex items-baseline justify-between text-xs">
+              <span class="opacity-80">Rozpoznawalność</span>
+              <span class="opacity-70">{{ ui.characterScreen.reputation.renown }}</span>
+            </div>
           </div>
           <div
-            v-for="row in reputationRows"
-            :key="row.key"
-            class="flex items-baseline justify-between text-xs"
+            v-else
+            class="text-xs opacity-60"
           >
-            <span class="opacity-80">{{ row.label }}</span>
-            <span class="opacity-70">{{ row.value }}</span>
+            Brak lokalnej reputacji
           </div>
-          <div class="mt-1 flex items-baseline justify-between text-xs">
-            <span class="opacity-80">Rozpoznawalność</span>
-            <span class="opacity-70">{{ ui.characterScreen.reputation.renown }}</span>
-          </div>
-        </div>
-        <div
-          v-else
-          class="text-xs opacity-60"
-        >
-          Brak lokalnej reputacji
-        </div>
-      </div>
 
-      <div
-        v-if="ui.characterScreen.badges.length > 0"
-        class="mt-3 border-t border-white/10 pt-3"
-      >
-        <div class="mb-2 text-sm">
-          Znany z
-        </div>
-        <div class="flex flex-col gap-1.5">
           <div
-            v-for="badge in ui.characterScreen.badges"
-            :key="badge.id"
-            class="text-xs"
-            :title="badge.description"
+            v-if="ui.characterScreen.badges.length > 0"
+            class="mt-3 border-t border-white/10 pt-3"
           >
-            <span class="mr-1">{{ badge.icon }}</span>
-            <span class="opacity-90">{{ badge.label }}</span>
+            <div class="mb-2 text-sm">
+              Znany z
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <div
+                v-for="badge in ui.characterScreen.badges"
+                :key="badge.id"
+                class="text-xs"
+                :title="badge.description"
+              >
+                <span class="mr-1">{{ badge.icon }}</span>
+                <span class="opacity-90">{{ badge.label }}</span>
+              </div>
+            </div>
           </div>
-        </div>
+        </CharacterSection>
       </div>
 
       <div class="mt-4 text-[11px] opacity-60">
         C / Esc — zamknij
       </div>
-    </div>
+    </UiPanel>
   </div>
 </template>

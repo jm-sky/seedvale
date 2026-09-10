@@ -20,8 +20,15 @@ describe('createTargetedSkillSelection (plan items-player-021)', () => {
 
   it('toggles the same targeted skill off', () => {
     const selection = createTargetedSkillSelection()
-    expect(selection.toggle('medicine')).toBe('medicine')
+    expect(selection.toggle('traps')).toBe('traps')
+    expect(selection.toggle('traps')).toBeNull()
+  })
+
+  it('does not select a targeted skill that has no implemented consumer', () => {
+    const selection = createTargetedSkillSelection()
+    expect(selection.select('medicine')).toBe(false)
     expect(selection.toggle('medicine')).toBeNull()
+    expect(selection.get()).toBeNull()
   })
 
   it('replaces the previous targeted skill', () => {

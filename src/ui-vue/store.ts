@@ -14,6 +14,7 @@ import type { TradeResult } from '../items/trade'
 import type { SellPriceContext } from '../items/tradeCatalog'
 import type { SharpenResult } from '../items/weaponMaintenance'
 import type { CreateSaveResult, SaveManagementResult, SaveSlotInfo, WriteSaveResult } from '../persistence/saveDb'
+import type { CharacterPresentation } from '../player/characterPresentation'
 import type { PlayerSkills, SkillId } from '../player/PlayerSkills'
 import type { QuestDialogOverride, QuestListEntry, QuestManager } from '../quests/QuestManager'
 import type { Reputation } from '../reputation/ReputationManager'
@@ -406,6 +407,9 @@ export type CharacterStats = {
   hunger: StatBar,
   thirst: StatBar,
   attributes: PhysicalAttributes,
+  /** Derived Character Screen rows — omitted on the closed-screen per-frame
+   *  push so we do not allocate modifier/skill arrays every frame. */
+  presentation?: CharacterPresentation,
 }
 /** Local settlement reputation/renown for the Character Screen (plan
  *  quests-progression-001) — the settlement "aktualnie istotny dla pozycji/
@@ -423,7 +427,12 @@ export type CharacterReputationView = {
  *  screen: it only ever changes on a discrete Hidden Find event. `reputation`
  *  is pushed separately (`setCharacterReputation`) since its own refresh
  *  points differ (screen open + social consequence, not Hidden Finds). */
-type CharacterScreenState = CharacterStats & { open: boolean, reputation: CharacterReputationView, badges: readonly BadgeDef[] }
+type CharacterScreenState = CharacterStats & {
+  open: boolean
+  reputation: CharacterReputationView
+  badges: readonly BadgeDef[]
+  presentation: CharacterPresentation
+}
 /** Skills screen (plan 124, progression added by plan 128,
  *  targeted selection by plan items-player-021) — same presentation-only
  *  convention as `CharacterScreenState`: these mirror `PlayerController.skills`,
@@ -606,6 +615,7 @@ export const ui = reactive({
     reputation: null,
     badges: [],
     attributes: { strength: 0, perception: 0, endurance: 0, agility: 0 },
+    presentation: { attributes: [], skills: [], conditions: [] },
   } as CharacterScreenState,
   skillsScreen: {
     open: false,
@@ -1336,10 +1346,12 @@ export function toggleCharacterScreen(): void {
 }
 /** Pushed once/frame by `gameLoop.ts` regardless of whether the screen is
  *  open — same convention as `setHudPlayerNeeds` — with a cheap bail so an
- *  unchanged frame doesn't touch the reactive object. */
+ *  unchanged frame doesn't touch the reactive object. Presentation arrays
+ *  are assigned only when the caller includes them (Character Screen open
+ *  / open-time refresh) and their contents actually changed. */
 export function setCharacterStats(stats: CharacterStats): void {
   const c = ui.characterScreen
-  if (
+  const primitivesUnchanged =
     c.hp.current === stats.hp.current && c.hp.max === stats.hp.max &&
     c.stamina.current === stats.stamina.current && c.stamina.max === stats.stamina.max &&
     c.vigor.current === stats.vigor.current && c.vigor.max === stats.vigor.max &&
@@ -1349,14 +1361,63 @@ export function setCharacterStats(stats: CharacterStats): void {
     c.attributes.perception === stats.attributes.perception &&
     c.attributes.endurance === stats.attributes.endurance &&
     c.attributes.agility === stats.attributes.agility
-  ) return
+  if (!primitivesUnchanged) {
+    c.hp = stats.hp
+    c.stamina = stats.stamina
+    c.vigor = stats.vigor
+    c.hunger = stats.hunger
+    c.thirst = stats.thirst
+    c.attributes = stats.attributes
+  }
 
-  c.hp = stats.hp
-  c.stamina = stats.stamina
-  c.vigor = stats.vigor
-  c.hunger = stats.hunger
-  c.thirst = stats.thirst
-  c.attributes = stats.attributes
+  if (!stats.presentation) return
+  if (sameCharacterPresentation(c.presentation, stats.presentation)) return
+  c.presentation = stats.presentation
+}
+
+function sameCharacterPresentation(a: CharacterPresentation, b: CharacterPresentation): boolean {
+  if (a.attributes.length !== b.attributes.length) return false
+  for (let i = 0; i < a.attributes.length; i++) {
+    const left = a.attributes[i]
+    const right = b.attributes[i]
+    if (
+      !left || !right ||
+      left.id !== right.id ||
+      left.base !== right.base ||
+      left.effective !== right.effective ||
+      left.modifiers.length !== right.modifiers.length
+    ) return false
+    for (let j = 0; j < left.modifiers.length; j++) {
+      const lm = left.modifiers[j]
+      const rm = right.modifiers[j]
+      if (!lm || !rm || lm.category !== rm.category || lm.delta !== rm.delta) return false
+    }
+  }
+  if (a.skills.length !== b.skills.length) return false
+  for (let i = 0; i < a.skills.length; i++) {
+    const left = a.skills[i]
+    const right = b.skills[i]
+    if (!left || !right || left.id !== right.id || left.value !== right.value || left.xp !== right.xp) return false
+  }
+  if (a.conditions.length !== b.conditions.length) return false
+  for (let i = 0; i < a.conditions.length; i++) {
+    const left = a.conditions[i]
+    const right = b.conditions[i]
+    if (
+      !left || !right ||
+      left.sourceId !== right.sourceId ||
+      left.category !== right.category ||
+      left.label !== right.label ||
+      left.severityLabel !== right.severityLabel ||
+      left.effects.length !== right.effects.length
+    ) return false
+    for (let j = 0; j < left.effects.length; j++) {
+      const le = left.effects[j]
+      const re = right.effects[j]
+      if (!le || !re || le.id !== re.id || le.delta !== re.delta) return false
+    }
+  }
+  return true
 }
 
 /** Pushed on demand — after a Hidden Find resolves, and once at startup —
@@ -1472,12 +1533,27 @@ const SKILL_VALUE_FIELD: Record<SkillId, keyof SkillsScreenState> = {
   repair: 'repairValue',
 }
 
+const SKILL_XP_FIELD: Record<SkillId, keyof SkillsScreenState> = {
+  sneak: 'sneakXp',
+  survival: 'survivalXp',
+  traps: 'trapsXp',
+  defense: 'defenseXp',
+  archery: 'archeryXp',
+  riding: 'ridingXp',
+  medicine: 'medicineXp',
+  repair: 'repairXp',
+}
+
 /** Reads one skill's current value out of `ui.skillsScreen` — the same
  *  mirrored `PlayerSkills` state the Skills screen renders, reused here so
  *  book UI (inventory details / merchant details) never needs its own
  *  "current skill value" plumbing. */
 export function getSkillValue(id: SkillId): number {
   return ui.skillsScreen[SKILL_VALUE_FIELD[id]] as number
+}
+
+export function getSkillXp(id: SkillId): number {
+  return ui.skillsScreen[SKILL_XP_FIELD[id]] as number
 }
 
 export function setHudFps(fps: number): void {

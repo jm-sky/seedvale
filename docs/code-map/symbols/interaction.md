@@ -19,12 +19,15 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/targetedSkillAction.ts`
 
-- `executeTargetedSkillAction` — function — line 113
-- `queryTargetedSkillAction` — function — line 76
+- `executeTargetedSkillAction` — function — line 167
+- `hasImplementedTargetedSkillConsumer` — function — line 124
+- `isActionablePlayerSkill` — function — line 133
+- `listActionablePlayerSkills` — function — line 140
+- `queryTargetedSkillAction` — function — line 148
 - `TargetedSkillAction` — type — line 22
 - `TargetedSkillActionId` — type — line 20
 - `TargetedSkillExecuteResult` — type — line 30
-- `targetedSkillPrompt` — function — line 138
+- `targetedSkillPrompt` — function — line 192
 - `TargetedSkillQueryContext` — type — line 14
   - domain: items-player
   - system: interaction

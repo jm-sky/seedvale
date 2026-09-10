@@ -1,4 +1,4 @@
-import type { PhysicalAttributes } from './PhysicalAttributes'
+import type { PhysicalAttributeDelta, PhysicalAttributes } from './PhysicalAttributes'
 
 /**
  * @domain shared
@@ -130,20 +130,48 @@ export function poisoningSpeaPenalties(severity: number): Pick<PhysicalAttribute
   }
 }
 
+/** Nominal (pre-clamp) SPEA deltas from currently-resolved conditions.
+ *  Resolves recovery once; the effective-attribute seam applies clamping. */
+export type TemporaryConditionContribution = {
+  sourceId: ConditionKind
+  delta: PhysicalAttributeDelta
+}
+
+const NO_CONDITION_CONTRIBUTIONS: readonly TemporaryConditionContribution[] = []
+
+export function resolveTemporaryConditionContributions(
+  state: TemporaryConditionsState,
+  nowDays: number,
+): readonly TemporaryConditionContribution[] {
+  resolveTemporaryConditionsProgress(state, nowDays)
+  const poisoningSeverity = state.conditions.poisoning?.severity ?? 0
+  if (poisoningSeverity <= 0) return NO_CONDITION_CONTRIBUTIONS
+  return [{ sourceId: 'poisoning', delta: poisoningSpeaPenalties(poisoningSeverity) }]
+}
+
 export function applyConditionModifiersToAttributes(
   base: PhysicalAttributes,
   state: TemporaryConditionsState,
   nowDays: number,
 ): PhysicalAttributes {
-  resolveTemporaryConditionsProgress(state, nowDays)
-  const poisoningSeverity = state.conditions.poisoning?.severity ?? 0
-  if (poisoningSeverity <= 0) return base
-  const penalties = poisoningSpeaPenalties(poisoningSeverity)
+  const contributions = resolveTemporaryConditionContributions(state, nowDays)
+  if (contributions.length === 0) return base
+  let current = base
+  for (const contribution of contributions) {
+    current = applyNominalConditionDelta(current, contribution.delta)
+  }
+  return current
+}
+
+function applyNominalConditionDelta(
+  base: PhysicalAttributes,
+  delta: PhysicalAttributeDelta,
+): PhysicalAttributes {
   return {
-    strength: clamp01(base.strength + penalties.strength),
-    perception: base.perception,
-    endurance: clamp01(base.endurance + penalties.endurance),
-    agility: clamp01(base.agility + penalties.agility),
+    agility: delta.agility !== undefined ? clamp01(base.agility + delta.agility) : base.agility,
+    endurance: delta.endurance !== undefined ? clamp01(base.endurance + delta.endurance) : base.endurance,
+    perception: delta.perception !== undefined ? clamp01(base.perception + delta.perception) : base.perception,
+    strength: delta.strength !== undefined ? clamp01(base.strength + delta.strength) : base.strength,
   }
 }
 

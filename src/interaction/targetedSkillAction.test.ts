@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { PlacedTrapRecord, TrapState } from '../world/animalTraps'
 import type { Interactable } from './Interactable'
+import { SKILL_IDS, SKILL_USE } from '../player/PlayerSkills'
 import {
   executeTargetedSkillAction,
+  hasImplementedTargetedSkillConsumer,
+  isActionablePlayerSkill,
+  listActionablePlayerSkills,
   queryTargetedSkillAction,
   targetedSkillPrompt,
   type TargetedSkillQueryContext,
@@ -174,3 +178,25 @@ describe('targeted Repair on camp objects (plan items-player-019)', () => {
     expect(started).toEqual([])
   })
 })
+
+describe('actionable player skills (plan ui-input-013)', () => {
+  it('derives visibility from SKILL_USE and the query consumer dispatch', () => {
+    for (const id of SKILL_IDS) {
+      const kind = SKILL_USE[id]
+      if (kind === 'stance') expect(isActionablePlayerSkill(id)).toBe(true)
+      else if (kind === 'targeted') {
+        expect(isActionablePlayerSkill(id)).toBe(hasImplementedTargetedSkillConsumer(id))
+      } else {
+        expect(isActionablePlayerSkill(id)).toBe(false)
+      }
+    }
+  })
+
+  it('currently exposes Sneak, Traps and Repair', () => {
+    expect(hasImplementedTargetedSkillConsumer('traps')).toBe(true)
+    expect(hasImplementedTargetedSkillConsumer('repair')).toBe(true)
+    expect(hasImplementedTargetedSkillConsumer('medicine')).toBe(false)
+    expect(listActionablePlayerSkills()).toEqual(['sneak', 'traps', 'repair'])
+  })
+})
+

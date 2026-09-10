@@ -56,6 +56,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Slope movement constraint](../src/terrain/slopeConstraint.ts) — shared uphill speed falloff/block used by `PlayerController`, `NpcAgent` and `AnimalAgent`.
 - [PlayerNeeds](../src/player/PlayerNeeds.ts) — stamina / vigor / hunger / thirst pools.
 - [PlayerSkills](../src/player/PlayerSkills.ts) — the eight skills, their XP curve and the single award path.
+- [Character presentation](../src/player/characterPresentation.ts) — Character Screen snapshot (base/effective SPEA, skills, condition views); Vue only renders it.
 - [Skill evaluation](../src/player/skillEvaluation.ts) — primary + optional support/context competence, independent of world targeting.
 - [Targeted skill selection](../src/player/targetedSkillSelection.ts) — runtime-only selected targeted skill.
 - [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; consumers are trap inspect and camp Repair.

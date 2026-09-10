@@ -39,6 +39,8 @@ export const SKILL_USE: Record<SkillId, SkillUseKind> = {
   repair: 'targeted',
 }
 
+export const SKILL_IDS = Object.keys(SKILL_USE) as SkillId[]
+
 export function isTargetedSkill(id: SkillId): boolean {
   return SKILL_USE[id] === 'targeted'
 }

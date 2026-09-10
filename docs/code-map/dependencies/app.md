@@ -703,6 +703,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
+- `player/characterPresentation.ts`
 - `player/humanCarryCapacity.ts`
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
@@ -840,6 +841,7 @@ Generated from TypeScript imports.
 - `player/PlayerNeeds.ts`
 - `player/PlayerSkills.ts`
 - `player/PlayerTorch.ts`
+- `player/characterPresentation.ts`
 - `player/playerCombat.ts`
 - `player/playerDamage.ts`
 - `player/playerMelee.ts`

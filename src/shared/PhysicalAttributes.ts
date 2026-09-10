@@ -25,3 +25,14 @@ export type PhysicalAttributes = {
   readonly endurance: number
   readonly agility: number
 }
+
+export type PhysicalAttributeId = keyof PhysicalAttributes
+
+export const PHYSICAL_ATTRIBUTE_IDS: readonly PhysicalAttributeId[] = [
+  'strength',
+  'perception',
+  'endurance',
+  'agility',
+]
+
+export type PhysicalAttributeDelta = Partial<Record<PhysicalAttributeId, number>>

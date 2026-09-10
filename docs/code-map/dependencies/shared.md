@@ -49,6 +49,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `player/PlayerController.ts`
+- `player/characterPresentation.ts`
 - `settlement/npcPhysicalProfile.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/injurySeverity.ts`
@@ -176,6 +177,14 @@ Generated from TypeScript imports.
 - `fauna/animalCorpse.ts`
 - `settlement/npcPostDeath.ts`
 
+## `shared/effectivePhysicalAttributes.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/temporaryConditions.ts`
+
 ## `shared/effectivePhysicalAttributes.ts`
 
 **Imports**
@@ -189,6 +198,9 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `player/PlayerController.ts`
+- `player/characterPresentation.test.ts`
+- `player/characterPresentation.ts`
+- `shared/effectivePhysicalAttributes.test.ts`
 - `shared/waterPoisoningExposure.test.ts`
 
 ## `shared/enduranceStamina.test.ts`
@@ -300,7 +312,10 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.ts`
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
+- `player/characterPresentation.test.ts`
+- `player/characterPresentation.ts`
 - `settlement/npcState.ts`
+- `shared/effectivePhysicalAttributes.test.ts`
 - `shared/effectivePhysicalAttributes.ts`
 - `shared/temporaryConditions.test.ts`
 - `shared/waterPoisoningExposure.test.ts`

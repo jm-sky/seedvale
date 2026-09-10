@@ -72,6 +72,7 @@ Generated from TypeScript imports.
 - `items/tentProp.ts`
 - `navigation/navigation.ts`
 - `player/PlayerController.test.ts`
+- `player/characterPresentation.test.ts`
 - `player/humanCarryCapacity.test.ts`
 - `player/physicalWorkStrength.test.ts`
 - `player/playerDamage.ts`
@@ -89,6 +90,7 @@ Generated from TypeScript imports.
 - `settlement/settlementSignposts.ts`
 - `settlement/villageClearing.ts`
 - `settlement/villagePlanner.ts`
+- `shared/effectivePhysicalAttributes.test.ts`
 - `shared/injurySeverity.test.ts`
 - `shared/temporaryConditions.test.ts`
 - `shared/waterPoisoningExposure.test.ts`
@@ -189,6 +191,7 @@ Generated from TypeScript imports.
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
 - `fauna/mountedSpeed.test.ts`
+- `interaction/targetedSkillAction.test.ts`
 - `interaction/targetedSkillAction.ts`
 - `items/books.test.ts`
 - `items/books.ts`
@@ -197,6 +200,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `player/PlayerController.ts`
 - `player/PlayerSkills.test.ts`
+- `player/characterPresentation.test.ts`
+- `player/characterPresentation.ts`
 - `player/playerDamage.ts`
 - `player/skillEvaluation.test.ts`
 - `player/skillEvaluation.ts`
@@ -244,6 +249,32 @@ Generated from TypeScript imports.
 - `world/caves/caveGameplayQuery.b3-descending-trace.test.ts`
 - `world/caves/caveGameplayQuery.b3-entrance-regression.test.ts`
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
+
+## `player/characterPresentation.test.ts`
+
+**Imports**
+
+- `player/PlayerController.ts`
+- `player/PlayerSkills.ts`
+- `player/characterPresentation.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/temporaryConditions.ts`
+
+## `player/characterPresentation.ts`
+
+**Imports**
+
+- `player/PlayerSkills.ts`
+- `shared/PhysicalAttributes.ts`
+- `shared/effectivePhysicalAttributes.ts`
+- `shared/temporaryConditions.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/gameLoop.ts`
+- `player/characterPresentation.test.ts`
+- `ui-vue/store.ts`
 
 ## `player/humanCarryCapacity.test.ts`
 
@@ -431,6 +462,7 @@ Generated from TypeScript imports.
 
 **Imports**
 
+- `interaction/targetedSkillAction.ts`
 - `player/PlayerSkills.ts`
 
 **Imported by**

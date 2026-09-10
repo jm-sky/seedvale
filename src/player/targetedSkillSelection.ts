@@ -1,8 +1,11 @@
+import { hasImplementedTargetedSkillConsumer } from '../interaction/targetedSkillAction'
 import { isTargetedSkill, type SkillId } from './PlayerSkills'
 
 /**
  * Runtime-only selected targeted skill (plan items-player-021). Not persisted,
  * not `SkillState.active`, and selecting it never mutates the world.
+ * Only targeted skills with an implemented `queryTargetedSkillAction`
+ * consumer can be selected (plan ui-input-013).
  *
  * @domain items-player
  * @system player-skills
@@ -22,12 +25,12 @@ export function createTargetedSkillSelection(): TargetedSkillSelection {
   return {
     get: () => selected,
     select(id) {
-      if (!isTargetedSkill(id)) return false
+      if (!isTargetedSkill(id) || !hasImplementedTargetedSkillConsumer(id)) return false
       selected = id
       return true
     },
     toggle(id) {
-      if (!isTargetedSkill(id)) return selected
+      if (!isTargetedSkill(id) || !hasImplementedTargetedSkillConsumer(id)) return selected
       selected = selected === id ? null : id
       return selected
     },

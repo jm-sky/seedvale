@@ -126,55 +126,47 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  31  
    → **unlocks:** 1/1
 
-14. `ui-input-013` — **Character stats**  
-  🟡 `M` · **Score:**  29  
-   → **unlocks:** 0/0
-
-15. `items-player-014` — **Rope-pullable resource transport**  
+14. `items-player-014` — **Rope-pullable resource transport**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-16. `settlements-npcs-023` — **Profession staffing and settlement composition**  
+15. `settlements-npcs-023` — **Profession staffing and settlement composition**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-17. `tools-005` — **Seedvale Character Preparation Panel**  
+16. `tools-005` — **Seedvale Character Preparation Panel**  
   🔴 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
-18. `quests-progression-007` — **Wilki podchodzą pod osadę**  
+17. `quests-progression-007` — **Wilki podchodzą pod osadę**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-19. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
+18. `quests-progression-009` — **Mapa do skarbu — ruiny w ciemnym lesie**  
   🟡 `M` · **Score:**  23  
    → **unlocks:** 0/0
 
-20. `fauna-013` — **Animal hand-feeding and human affinity**  
+19. `fauna-013` — **Animal hand-feeding and human affinity**  
   🟡 `M` · **Score:**  21  
    → **unlocks:** 0/0
 
-21. `npc-026` — **NPC Grave Visits**  
+20. `npc-026` — **NPC Grave Visits**  
   🟡 `S` · **Score:**  21  
    → **unlocks:** 0/0
 
-22. `quests-progression-012` — **Horse acquisition through merchant purchase and quest reward**  
-  🟡 `M` · **Score:**  21  
-   → **unlocks:** 0/0
-
-23. `world-terrain-015` — **Water Reflection Content Budget**  
+21. `world-terrain-015` — **Water Reflection Content Budget**  
   🟡 `S` · **Score:**  19  
    → **unlocks:** 0/0
 
-24. `fauna-007` — **Animal leading and cart harness**  
+22. `fauna-007` — **Animal leading and cart harness**  
   🟡 `L` · **Score:**  18  
    → **unlocks:** 0/0
 
-25. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
+23. `settlements-npcs-029` — **Animal Corpse Cleanup & Household Sanitation**  
   🟡 `M` · **Score:**  17  
    → **unlocks:** 0/0
 
-26. `npc-004` — **Drzewo genealogiczne NPC**  
+24. `npc-004` — **Drzewo genealogiczne NPC**  
   ⚪ `S` · **Score:**   9  
    → **unlocks:** 0/0
 

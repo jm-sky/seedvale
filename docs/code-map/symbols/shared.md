@@ -18,14 +18,19 @@ Generated from exported TypeScript symbols.
 
 ## `shared/effectivePhysicalAttributes.ts`
 
-- `InjuryModifierInput` — type — line 23
+- `AttributeModifierContribution` — type — line 39
+- `EffectivePhysicalAttributesResult` — type — line 45
+- `InjuryModifierInput` — type — line 27
   - domain: shared
   - system: physical-attributes
-  - role: Effective SPEA seam (plan npc-024 / npc-025) — profile/base attributes, then physical-injury modifiers, then temporary-condition modifiers. Consumers read from here instead of branching on injury or condition kind.
-- `resolveEffectivePhysicalAttributes` — function — line 37
-- `resolveNpcBasePhysicalAttributes` — function — line 28
-- `resolveNpcEffectivePhysicalAttributes` — function — line 49
-- `resolvePlayerEffectivePhysicalAttributes` — function — line 63
+  - role: Effective SPEA seam (plan npc-024 / npc-025 / ui-input-013) — profile/base attributes, then physical-injury modifiers, then temporary-condition modifiers. Gameplay and Character presentation share this path; Vue does not recompute effective values.
+- `ModifierCategory` — type — line 33
+- `resolveEffectivePhysicalAttributes` — function — line 136
+- `resolveEffectivePhysicalAttributesDetailed` — function — line 149
+- `resolveNpcBasePhysicalAttributes` — function — line 126
+- `resolveNpcEffectivePhysicalAttributes` — function — line 160
+- `resolvePlayerEffectivePhysicalAttributes` — function — line 174
+- `resolvePlayerEffectivePhysicalAttributesDetailed` — function — line 182
 
 ## `shared/enduranceStamina.ts`
 
@@ -113,6 +118,9 @@ Generated from exported TypeScript symbols.
 
 ## `shared/PhysicalAttributes.ts`
 
+- `PHYSICAL_ATTRIBUTE_IDS` — const — line 31
+- `PhysicalAttributeDelta` — type — line 38
+- `PhysicalAttributeId` — type — line 29
 - `PhysicalAttributes` — type — line 22
   - domain: shared
   - system: physical-attributes
@@ -139,11 +147,11 @@ Generated from exported TypeScript symbols.
 
 ## `shared/temporaryConditions.ts`
 
-- `applyConditionModifiersToAttributes` — function — line 133
-- `applyConditionTreatment` — function — line 191
-- `applyPoisoningExposure` — function — line 150
-- `applyPoisoningTreatment` — function — line 170
-- `clearCondition` — function — line 186
+- `applyConditionModifiersToAttributes` — function — line 152
+- `applyConditionTreatment` — function — line 219
+- `applyPoisoningExposure` — function — line 178
+- `applyPoisoningTreatment` — function — line 198
+- `clearCondition` — function — line 214
 - `cloneTemporaryConditions` — function — line 42
 - `ConditionEntry` — type — line 13
 - `ConditionKind` — type — line 11
@@ -161,10 +169,12 @@ Generated from exported TypeScript symbols.
 - `POISONING_REPEAT_EXPOSURE_SEVERITY` — const — line 28
 - `poisoningSeverityTier` — function — line 116
 - `poisoningSpeaPenalties` — function — line 123
+- `resolveTemporaryConditionContributions` — function — line 142
 - `resolveTemporaryConditionsProgress` — function — line 91
 - `restoreTemporaryConditions` — function — line 60
 - `SaveTemporaryConditionsSnapshot` — type — line 22
 - `snapshotTemporaryConditions` — function — line 50
+- `TemporaryConditionContribution` — type — line 135
 - `TemporaryConditionsState` — type — line 18
 - `UNSAFE_WATER_POISONING_EXPOSURE_CHANCE` — const — line 32
 

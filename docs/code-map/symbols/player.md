@@ -15,6 +15,26 @@ Generated from exported TypeScript symbols.
 - `resolveCameraBoom` — function — line 69
 - `withCaveFloorFallback` — function — line 386
 
+## `player/characterPresentation.ts`
+
+- `aggregateAttributeModifierBadges` — function — line 91
+- `ATTRIBUTE_DISPLAY_SCALE` — const — line 26
+  - domain: items-player
+  - system: player-ui
+  - role: Character Screen presentation snapshot (plan ui-input-013). Vue renders these views; it does not own modifier formulas or effective SPEA. Not persisted — rebuilt from authoritative player/condition/skill state.
+- `buildCharacterAttributeViews` — function — line 112
+- `buildCharacterConditionViews` — function — line 132
+- `buildCharacterPresentation` — function — line 197
+- `buildCharacterSkillViews` — function — line 124
+- `CharacterAttributeView` — type — line 47
+- `CharacterConditionEffectView` — type — line 60
+- `CharacterConditionView` — type — line 65
+- `CharacterModifierBadge` — type — line 42
+- `CharacterPresentation` — type — line 73
+- `CharacterSkillView` — type — line 54
+- `toDisplayAttribute` — function — line 79
+- `toDisplaySkill` — function — line 83
+
 ## `player/humanCarryCapacity.ts`
 
 - `HUMAN_CARRY_NEUTRAL_KG` — const — line 30
@@ -51,23 +71,23 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerController.ts`
 
-- `CaveGroundQuery` — type — line 193
-- `CaveOccupancyQuery` — type — line 198
-- `ColliderSource` — type — line 186
-- `HeightSampler` — type — line 183
-- `MOVE_SPEED` — const — line 57
-- `PLAYER_COLLISION_RADIUS` — const — line 60
-- `PLAYER_HEIGHT` — const — line 69
-- `PLAYER_MODEL_URL` — const — line 181
-- `PLAYER_STARTING_ATTRIBUTES` — const — line 85
-- `PlayerController` — class — line 210
+- `CaveGroundQuery` — type — line 197
+- `CaveOccupancyQuery` — type — line 202
+- `ColliderSource` — type — line 190
+- `HeightSampler` — type — line 187
+- `MOVE_SPEED` — const — line 61
+- `PLAYER_COLLISION_RADIUS` — const — line 64
+- `PLAYER_HEIGHT` — const — line 73
+- `PLAYER_MODEL_URL` — const — line 185
+- `PLAYER_STARTING_ATTRIBUTES` — const — line 89
+- `PlayerController` — class — line 214
   - domain: items-player
   - system: player-controller
   - role: Owns player movement, animation and runtime transform state.
   - simulation: tick
-- `PlayerMovementState` — type — line 52
-- `rockCeilingMaxY` — function — line 74
-- `SPRINT_MULTIPLIER` — const — line 61
+- `PlayerMovementState` — type — line 56
+- `rockCeilingMaxY` — function — line 78
+- `SPRINT_MULTIPLIER` — const — line 65
 
 ## `player/playerDamage.ts`
 
@@ -144,41 +164,42 @@ Generated from exported TypeScript symbols.
 
 ## `player/PlayerSkills.ts`
 
-- `accumulateRidingUse` — function — line 254
-- `accumulateSneakUse` — function — line 232
-- `applySneakSpeedModifier` — function — line 273
-- `awardSkillXp` — function — line 135
-- `createPlayerSkills` — function — line 117
-- `isTargetedSkill` — function — line 42
-- `PlayerSkills` — type — line 72
-- `RaiseSkillResult` — type — line 142
-- `raiseSkillToValue` — function — line 154
-- `restorePersistedSkills` — function — line 182
-- `RIDING_XP_DISTANCE_M` — const — line 248
-- `ridingSpeedMultiplier` — function — line 314
-- `ridingStaminaDrainMultiplier` — function — line 328
-- `setSkillValueForDebug` — function — line 172
-- `SKILL_LABEL` — const — line 50
-- `SKILL_MIN_VALUE` — const — line 78
+- `accumulateRidingUse` — function — line 256
+- `accumulateSneakUse` — function — line 234
+- `applySneakSpeedModifier` — function — line 275
+- `awardSkillXp` — function — line 137
+- `createPlayerSkills` — function — line 119
+- `isTargetedSkill` — function — line 44
+- `PlayerSkills` — type — line 74
+- `RaiseSkillResult` — type — line 144
+- `raiseSkillToValue` — function — line 156
+- `restorePersistedSkills` — function — line 184
+- `RIDING_XP_DISTANCE_M` — const — line 250
+- `ridingSpeedMultiplier` — function — line 316
+- `ridingStaminaDrainMultiplier` — function — line 330
+- `setSkillValueForDebug` — function — line 174
+- `SKILL_IDS` — const — line 42
+- `SKILL_LABEL` — const — line 52
+- `SKILL_MIN_VALUE` — const — line 80
 - `SKILL_USE` — const — line 31
-- `SKILL_XP_AWARD` — const — line 201
-- `SKILL_XP_HALF_VALUE` — const — line 83
+- `SKILL_XP_AWARD` — const — line 203
+- `SKILL_XP_HALF_VALUE` — const — line 85
 - `SkillId` — type — line 14
   - domain: items-player
   - system: player-skills
   - role: Owns the player's skill XP curve and the single award path.
   - owns: PlayerSkills
-- `SkillState` — type — line 61
+- `SkillState` — type — line 63
 - `SkillUseKind` — type — line 29
-- `SNEAK_LEGACY_VALUE` — const — line 110
-- `SNEAK_LEGACY_XP` — const — line 111
-- `SNEAK_SPEED_MULTIPLIER` — const — line 271
-- `SNEAK_XP_DISTANCE_M` — const — line 224
-- `survivalDurationMultiplier` — function — line 287
-- `survivalFoodMultiplier` — function — line 337
-- `toggleSneak` — function — line 195
-- `xpForSkillValue` — function — line 100
-- `xpToSkillValue` — function — line 87
+- `SNEAK_LEGACY_VALUE` — const — line 112
+- `SNEAK_LEGACY_XP` — const — line 113
+- `SNEAK_SPEED_MULTIPLIER` — const — line 273
+- `SNEAK_XP_DISTANCE_M` — const — line 226
+- `survivalDurationMultiplier` — function — line 289
+- `survivalFoodMultiplier` — function — line 339
+- `toggleSneak` — function — line 197
+- `xpForSkillValue` — function — line 102
+- `xpToSkillValue` — function — line 89
 
 ## `player/PlayerTorch.ts`
 
@@ -208,8 +229,8 @@ Generated from exported TypeScript symbols.
 
 ## `player/targetedSkillSelection.ts`
 
-- `createTargetedSkillSelection` — function — line 20
-- `TargetedSkillSelection` — type — line 10
+- `createTargetedSkillSelection` — function — line 23
+- `TargetedSkillSelection` — type — line 13
   - domain: items-player
   - system: player-skills
 

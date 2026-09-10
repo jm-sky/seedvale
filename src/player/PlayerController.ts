@@ -22,7 +22,11 @@ import {
   findRightHandSocket,
   mountHeldToolOnSocket,
 } from '../items/heldToolVisual'
-import { resolvePlayerEffectivePhysicalAttributes } from '../shared/effectivePhysicalAttributes'
+import {
+  type EffectivePhysicalAttributesResult,
+  resolvePlayerEffectivePhysicalAttributes,
+  resolvePlayerEffectivePhysicalAttributesDetailed,
+} from '../shared/effectivePhysicalAttributes'
 import { applyDerivedStaminaMax, resolveMaxStaminaFromEndurance } from '../shared/enduranceStamina'
 import { createHealthState, type HealthState } from '../shared/HealthState'
 import { isExhausted } from '../shared/StaminaState'
@@ -824,9 +828,15 @@ export class PlayerController {
   }
 
   /** Effective SPEA after temporary conditions (plan npc-024) — never mutates
-   *  `attributes`. */
+   *  `attributes`. Player has no physical-injury input. */
   effectiveAttributes(nowDays: number): PhysicalAttributes {
     return resolvePlayerEffectivePhysicalAttributes(this.attributes, this.temporaryConditions, nowDays)
+  }
+
+  /** Same effective SPEA as `effectiveAttributes`, plus applied modifier
+   *  contributions for Character presentation (plan ui-input-013). */
+  effectiveAttributesDetailed(nowDays: number): EffectivePhysicalAttributesResult {
+    return resolvePlayerEffectivePhysicalAttributesDetailed(this.attributes, this.temporaryConditions, nowDays)
   }
 
   /** Re-syncs derived max Stamina (with clamping) and optional carry capacity

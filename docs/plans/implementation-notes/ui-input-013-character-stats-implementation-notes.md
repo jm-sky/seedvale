@@ -1,5 +1,7 @@
 # Implementation notes: ui-input-013 Character stats
 
+Reviewed against `main` on 2026-09-09. Implemented 2026-09-10.
+
 Reviewed against `main` on 2026-09-09. The plan is directionally consistent with the current architecture; the points below are the implementation details that are easy to miss from the plan alone.
 
 ## Current ownership and data flow

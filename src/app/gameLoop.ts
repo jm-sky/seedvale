@@ -91,6 +91,7 @@ import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { createAcquiredInstance } from '../items/trade'
 import { applySharpnessWear, getSharpnessDamageModifier, getWeaponMaintenanceProfile } from '../items/weaponMaintenance'
 import { getGpuTimer, getMonitor, getProgramCensus, withCategory, withProgramCensusStage } from '../perf'
+import { buildCharacterPresentation } from '../player/characterPresentation'
 import {
   collectLivingCombatTargets,
   collectRangedAnimalCandidates,
@@ -2028,14 +2029,25 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       hud.setPlayerCondition(poisoning.active
         ? (poisoning.tier === 'severe' ? 'Zatrucie (ciężkie)' : poisoning.tier === 'moderate' ? 'Zatrucie (umiarkowane)' : 'Zatrucie')
         : '')
-      const effectiveAttributes = player.effectiveAttributes(dayNight.elapsedDays)
+      const characterOpen = vueUi.isCharacterScreenOpen()
+      const detailedAttributes = characterOpen
+        ? player.effectiveAttributesDetailed(dayNight.elapsedDays)
+        : null
       hud.setCharacterStats({
         hp: { current: player.health.currentHp, max: player.health.maxHp },
         stamina: { current: player.needs.stamina.current, max: player.needs.stamina.max },
         vigor: { current: player.needs.vigor.current, max: player.needs.vigor.max },
         hunger: { current: player.needs.hunger.current, max: player.needs.hunger.max },
         thirst: { current: player.needs.thirst.current, max: player.needs.thirst.max },
-        attributes: effectiveAttributes,
+        attributes: detailedAttributes?.effective ?? player.effectiveAttributes(dayNight.elapsedDays),
+        presentation: detailedAttributes
+          ? buildCharacterPresentation({
+            base: player.attributes,
+            result: detailedAttributes,
+            skills: player.skills,
+            conditions: player.temporaryConditions,
+          })
+          : undefined,
       })
       // Sneak's `active` flag can flip outside the Skills screen's own
       // toggle (rest auto-deactivates it, `PlayerController.crouch`/
