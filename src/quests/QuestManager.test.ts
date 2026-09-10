@@ -1,23 +1,35 @@
 import { describe, expect, it } from 'vitest'
 import type { SocialConsequence } from '../reputation/ReputationManager'
 import type { QuestDialogOverride, QuestManagerInitial, QuestSocialAvailabilityLookup } from './QuestManager'
-import type { QuestDef } from './quests'
+import type { AuthoredQuestDef, QuestDef } from './quests'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import { Inventory } from '../items/Inventory'
+import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
 import { QuestManager } from './QuestManager'
 import { bindExactCaveQuests, buildHorseAcquisitionQuest, QUESTS, relationToLevel } from './quests'
 
+const NAME_AS_ID = (['Anna', 'Piotr', 'Kasia', 'Marek'] as const).map((name) => ({ id: name, name }))
+
+function runtimeAuthored(def: AuthoredQuestDef, settlementId = 'home'): QuestDef {
+  return materializeAuthoredQuestDefs(
+    [{ ...def, settlementId: def.settlementId ?? settlementId }],
+    NAME_AS_ID,
+  )[0]!
+}
+
 function quest(
-  partial: Omit<QuestDef, 'title' | 'description' | 'outcomes'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes'>>,
+  partial: Omit<QuestDef, 'title' | 'description' | 'outcomes' | 'giver'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes' | 'giver'>>,
 ): QuestDef {
+  const giver = partial.giver ?? { npcId: partial.giverName }
   return {
     ...partial,
+    giver,
     title: partial.title ?? partial.id,
     description: partial.description ?? partial.offerLine,
     outcomes: partial.outcomes ?? [{
       id: 'complete',
       state: 'complete',
-      consequences: { relations: [{ npcName: partial.giverName, delta: 1 }] },
+      consequences: { relations: [{ npc: giver, delta: 1 }] },
     }],
   }
 }
@@ -42,7 +54,7 @@ const gatedQuest = quest({
   reportLine: 'report gated',
   availability: {
     prerequisites: [
-      { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+      { type: 'relation', npc: { npcId: 'Anna' }, minimum: 'trusted' },
     ],
   },
 })
@@ -58,7 +70,7 @@ const effectsQuest = quest({
   outcomes: [{
     id: 'complete',
     state: 'complete',
-    consequences: { relations: [{ npcName: 'Kasia', delta: 3 }] },
+    consequences: { relations: [{ npc: { npcId: 'Kasia' }, delta: 3 }] },
   }],
 })
 
@@ -156,7 +168,7 @@ describe('QuestManager availability', () => {
       outcomes: [{
         id: 'complete',
         state: 'complete',
-        consequences: { relations: [{ npcName: 'Anna', delta: 6 }] },
+        consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 6 }] },
       }],
     })
     const qm = makeManager([boosted, gatedQuest])
@@ -213,13 +225,13 @@ describe('QuestManager outcomes', () => {
       giverName: 'Anna',
       offerLine: 'offer',
       stages: [
-        { objective: { type: 'talk_to_npc', npcName: 'Piotr' }, description: 'talk', reminderLine: 'remind', progressLine: 'got it' },
+        { objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } }, description: 'talk', reminderLine: 'remind', progressLine: 'got it' },
       ],
       reportLine: 'report',
       outcomes: [{
         id: 'delivered',
         state: 'complete',
-        consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
+        consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 1 }] },
       }],
     })
     const qm = makeManager([relay])
@@ -463,7 +475,7 @@ const sheepQuest = quest({
   ],
   reportLine: 'report sheep',
   outcomes: [
-    { id: 'found_and_reported', state: 'complete', consequences: { relations: [{ npcName: 'Anna', delta: 1 }] } },
+    { id: 'found_and_reported', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 1 }] } },
     { id: 'sheep_died', state: 'failed' },
   ],
 })
@@ -667,8 +679,8 @@ describe('QuestManager dangerous trait binding', () => {
 })
 
 describe('QuestManager applySocialConsequence', () => {
-  const groznyWilkDef: QuestDef = { ...QUESTS.find((d) => d.id === 'grozny-wilk')!, settlementId: 'home' }
-  const wilczaJamaDef: QuestDef = { ...QUESTS.find((d) => d.id === 'wilcza-jama')!, settlementId: 'home' }
+  const groznyWilkDef = runtimeAuthored(QUESTS.find((d) => d.id === 'grozny-wilk')!)
+  const wilczaJamaDef = runtimeAuthored(QUESTS.find((d) => d.id === 'wilcza-jama')!)
 
   /** Both wolf quests gate on `Anna: trusted` — pre-seed the relation via
    *  `QuestManagerInitial` instead of accepting/completing an earlier quest. */
@@ -807,7 +819,7 @@ describe('QuestManager resolveQuest', () => {
         id: 'complete',
         state: 'complete',
         reward: { visibility: 'shown', items: [{ kind: 'coin', count: 1 }] },
-        consequences: { relations: [{ npcName: 'Anna', delta: 1 }] },
+        consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 1 }] },
       }],
     })
     const qm = makeManager([rewarded], undefined, (kind, count) => granted.push({ kind, count }))
@@ -823,8 +835,8 @@ describe('QuestManager resolveQuest', () => {
     const multi = quest({
       ...simpleQuest,
       outcomes: [
-        { id: 'a', state: 'complete', consequences: { relations: [{ npcName: 'Anna', delta: 1 }] } },
-        { id: 'b', state: 'complete', consequences: { relations: [{ npcName: 'Anna', delta: 2 }] } },
+        { id: 'a', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 1 }] } },
+        { id: 'b', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 2 }] } },
       ],
     })
     const qm = makeManager([multi])
@@ -880,7 +892,7 @@ describe('QuestManager promised reward preview', () => {
 })
 
 describe('QuestManager authored sheep outcomes', () => {
-  const sheepDef = QUESTS.find((d) => d.id === 'zagubiona-owca')!
+  const sheepDef = runtimeAuthored(QUESTS.find((d) => d.id === 'zagubiona-owca')!)
 
   it('resolves found_and_reported after find + report', () => {
     const granted: Array<{ kind: string, count: number }> = []
@@ -976,7 +988,7 @@ describe('QuestManager legacy restore outcome normalization', () => {
 describe('QuestManager formal vs personal relation rebalance', () => {
   it('drewno-na-naprawe grants coins without a relation bump', () => {
     const granted: Array<{ kind: string, count: number }> = []
-    const def = QUESTS.find((d) => d.id === 'drewno-na-naprawe')!
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'drewno-na-naprawe')!)
     const inventory = new Inventory()
     inventory.add('branch', 5)
     const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
@@ -989,7 +1001,7 @@ describe('QuestManager formal vs personal relation rebalance', () => {
 
   it('woda-dla-marka grants five coins instead of a sword', () => {
     const granted: Array<{ kind: string, count: number }> = []
-    const def = QUESTS.find((d) => d.id === 'woda-dla-marka')!
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'woda-dla-marka')!)
     const qm = new QuestManager([def], undefined, new Inventory(), undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Marek')
     qm.onInteractObjective({ type: 'interact_well' })
@@ -1024,7 +1036,7 @@ describe('QuestManager gather_item turn-in', () => {
       { objective: { type: 'interact_spawner', spawnerType: 'cave' }, description: 'cave', reminderLine: 'remind cave', progressLine: 'cave done' },
     ],
     reportLine: 'report multi',
-    outcomes: [{ id: 'reported', state: 'complete', consequences: { relations: [{ npcName: 'Piotr', delta: 1 }] } }],
+    outcomes: [{ id: 'reported', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Piotr' }, delta: 1 }] } }],
   })
 
   const ambiguousGather = quest({
@@ -1097,7 +1109,7 @@ describe('QuestManager gather_item turn-in', () => {
 describe('QuestManager paid quest definitions', () => {
   it('ziola-dla-anny delivers herb ×3 for 8 coins without relation', () => {
     const granted: Array<{ kind: string, count: number }> = []
-    const def = QUESTS.find((d) => d.id === 'ziola-dla-anny')!
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'ziola-dla-anny')!)
     const inventory = new Inventory()
     inventory.add('herb', 3)
     const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
@@ -1110,7 +1122,7 @@ describe('QuestManager paid quest definitions', () => {
 
   it('kamienie-dla-piotra delivers stone ×6 for 9 coins without relation', () => {
     const granted: Array<{ kind: string, count: number }> = []
-    const def = QUESTS.find((d) => d.id === 'kamienie-dla-piotra')!
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'kamienie-dla-piotra')!)
     const inventory = new Inventory()
     inventory.add('stone', 6)
     const qm = new QuestManager([def], undefined, inventory, undefined, (kind, count) => granted.push({ kind, count }))
@@ -1122,7 +1134,7 @@ describe('QuestManager paid quest definitions', () => {
 
   it('sprawdz-szlak pays 12 coins after cave interaction without relation', () => {
     const granted: Array<{ kind: string, count: number }> = []
-    const def = QUESTS.find((d) => d.id === 'sprawdz-szlak')!
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'sprawdz-szlak')!)
     const qm = new QuestManager([def], undefined, new Inventory(), undefined, (kind, count) => granted.push({ kind, count }))
     acceptOffer(qm, 'Kasia')
     qm.onInteractObjective(CAVE_REF)
@@ -1134,7 +1146,7 @@ describe('QuestManager paid quest definitions', () => {
   it('lis-przy-osadzie binds a fox, ignores other deaths, and applies social consequence once', () => {
     const granted: Array<{ kind: string, count: number }> = []
     const consequences: SocialConsequence[] = []
-    const def: QuestDef = { ...QUESTS.find((d) => d.id === 'lis-przy-osadzie')!, settlementId: 'home' }
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'lis-przy-osadzie')!)
     const qm = new QuestManager(
       [def],
       undefined,
@@ -1159,7 +1171,7 @@ describe('QuestManager paid quest definitions', () => {
 
   it('does not pay reward again after terminal restore of a completed paid quest', () => {
     const granted: Array<{ kind: string, count: number }> = []
-    const def = QUESTS.find((d) => d.id === 'ziola-dla-anny')!
+    const def = runtimeAuthored(QUESTS.find((d) => d.id === 'ziola-dla-anny')!)
     const initial: QuestManagerInitial = {
       progress: [{ id: 'ziola-dla-anny', state: 'complete', stageIndex: 1, resolvedOutcomeId: 'delivered' }],
       relations: {},
@@ -1196,7 +1208,7 @@ describe('QuestManager prerequisites (plan quests-progression-004)', () => {
     reportLine: 'den done',
     availability: {
       prerequisites: [
-        { type: 'relation', npcName: 'Anna', minimum: 'trusted' },
+        { type: 'relation', npc: { npcId: 'Anna' }, minimum: 'trusted' },
         { type: 'quest_outcome', questId: 'prereq-wolf', outcomeIds: ['reported'] },
       ],
     },
@@ -1357,8 +1369,8 @@ describe('QuestManager prerequisites (plan quests-progression-004)', () => {
   })
 
   it('restores availability from persisted relations, outcomes and social lookup after load', () => {
-    const grozny = { ...QUESTS.find((d) => d.id === 'grozny-wilk')!, settlementId: 'home' }
-    const den = { ...QUESTS.find((d) => d.id === 'wilcza-jama')!, settlementId: 'home' }
+    const grozny = runtimeAuthored(QUESTS.find((d) => d.id === 'grozny-wilk')!)
+    const den = runtimeAuthored(QUESTS.find((d) => d.id === 'wilcza-jama')!)
     const lookup: QuestSocialAvailabilityLookup = {
       getReputationDimension: () => 0,
       getRenown: () => 0,
@@ -1374,10 +1386,12 @@ describe('QuestManager prerequisites (plan quests-progression-004)', () => {
 })
 
 function homeQuest(id: string): QuestDef {
-  return bindExactCaveQuests(
-    [{ ...QUESTS.find((d) => d.id === id)!, settlementId: 'home' }],
-    { id: CAVE_REF.spawnerId, directionPhrase: null },
-  )[0]!
+  return runtimeAuthored(
+    bindExactCaveQuests(
+      [QUESTS.find((d) => d.id === id)!],
+      { id: CAVE_REF.spawnerId, directionPhrase: null },
+    )[0]!,
+  )
 }
 
 const woodPack = (): QuestDef[] => [
@@ -1489,7 +1503,7 @@ describe('QuestManager talk_to_npc_choice (plan quests-progression-005)', () => 
       giverName: 'Anna',
       offerLine: 'offer',
       stages: [
-        { objective: { type: 'talk_to_npc', npcName: 'Piotr' }, description: 'talk', reminderLine: 'remind', progressLine: 'got it' },
+        { objective: { type: 'talk_to_npc', npc: { npcId: 'Piotr' } }, description: 'talk', reminderLine: 'remind', progressLine: 'got it' },
       ],
       reportLine: 'report',
     })
@@ -1686,7 +1700,7 @@ describe('QuestManager dzik-przy-szlaku (plan quests-progression-005)', () => {
 
 describe('QuestManager horse acquisition (plan quests-progression-012)', () => {
   const HORSE_ID = 'merchant-horse-home'
-  const horseQuest = (): QuestDef => ({ ...buildHorseAcquisitionQuest(HORSE_ID), settlementId: 'home' })
+  const horseQuest = (): QuestDef => runtimeAuthored(buildHorseAcquisitionQuest(HORSE_ID))
 
   it('acceptance reserves the horse and suppresses re-offer when unavailable', () => {
     let available = true
@@ -1801,7 +1815,7 @@ describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
         id: 'complete',
         state: 'complete',
         reward: { visibility: 'shown', items: [{ kind: 'coin', count: 4 }] },
-        consequences: { relations: [{ npcName: 'Anna', delta: 2 }] },
+        consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 2 }] },
       }],
     })
     const qm = makeManager([rewarded], undefined, (kind, count) => granted.push({ kind, count }))
@@ -1825,10 +1839,10 @@ describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
   })
 
   it('advances an exact cave objective only for the bound spawner id', () => {
-    const def = bindExactCaveQuests(
+    const def = runtimeAuthored(bindExactCaveQuests(
       [QUESTS.find((q) => q.id === 'sprawdz-szlak')!],
       { id: 'home:cave', directionPhrase: null },
-    )[0]!
+    )[0]!)
     const qm = makeManager([def])
     acceptOffer(qm, 'Kasia')
     expect(qm.onInteractObjective({
@@ -1867,13 +1881,141 @@ describe('QuestManager dialogue actions (plan quests-progression-014)', () => {
   })
 
   it('does not mark an unbound cave when the objective has a specific spawnerId', () => {
-    const def = bindExactCaveQuests(
+    const def = runtimeAuthored(bindExactCaveQuests(
       [QUESTS.find((q) => q.id === 'sprawdz-szlak')!],
       { id: 'home:cave', directionPhrase: null },
-    )[0]!
+    )[0]!)
     const qm = makeManager([def])
     acceptOffer(qm, 'Kasia')
     expect(qm.spawnerMarker('cave', 'home:cave')).toBe('?')
     expect(qm.spawnerMarker('cave', 'home:cave:bear')).toBeNull()
+  })
+})
+
+describe('QuestManager stable NPC identity (plan quests-progression-015)', () => {
+  const janA = 'settlement-a:npc:3'
+  const janB = 'settlement-b:npc:7'
+
+  it('talk_to_npc completes only for the targeted id when two NPCs share a display name', () => {
+    const def = quest({
+      id: 'talk-jan',
+      giverName: 'Anna',
+      giver: { npcId: 'anna-id' },
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: janB } },
+        description: 'talk',
+        reminderLine: 'remind',
+        progressLine: 'got it',
+      }],
+      reportLine: 'report',
+    })
+    const qm = makeManager([def])
+    acceptOffer(qm, 'anna-id')
+    expect(qm.getState('talk-jan')).toBe('active')
+    expect(qm.onInteract(janA)).toBeNull()
+    expect(qm.getState('talk-jan')).toBe('active')
+    expect(selectAction(qm.onInteract(janB))).toBe('got it')
+    expect(qm.getState('talk-jan')).toBe('ready_to_report')
+  })
+
+  it('does not offer or mark a same-name NPC as the giver', () => {
+    const def = quest({
+      id: 'giver-jan',
+      giverName: 'Jan',
+      giver: { npcId: janB },
+      offerLine: 'offer from B',
+      stages: [{ objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind' }],
+      reportLine: 'report',
+    })
+    const qm = makeManager([def])
+    expect(qm.onInteract(janA)).toBeNull()
+    expect(qm.labelMarker(janA)).toBeNull()
+    expect(qm.onInteract(janB)?.line).toBe('offer from B')
+    expect(qm.labelMarker(janB)).toBe('!')
+  })
+
+  it('talk_to_npc_choice matches the authored id, not a duplicate display name', () => {
+    const def = quest({
+      id: 'choice-jan',
+      giverName: 'Anna',
+      giver: { npcId: 'anna-id' },
+      offerLine: 'offer',
+      stages: [{
+        objective: {
+          type: 'talk_to_npc_choice',
+          choices: [
+            { npc: { npcId: janA }, outcomeId: 'pick-a', playerLine: 'Talk to A' },
+            { npc: { npcId: janB }, outcomeId: 'pick-b', playerLine: 'Talk to B' },
+          ],
+        },
+        description: 'choose',
+        reminderLine: 'remind',
+      }],
+      reportLine: 'report',
+      outcomes: [
+        { id: 'pick-a', state: 'complete', resultText: 'chose A' },
+        { id: 'pick-b', state: 'complete', resultText: 'chose B' },
+      ],
+    })
+    const qm = makeManager([def])
+    acceptOffer(qm, 'anna-id')
+    expect(qm.onInteract('other-jan')).toBeNull()
+    expect(selectAction(qm.onInteract(janB))).toBe('chose B')
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBe('pick-b')
+  })
+
+  it('relation prerequisite and consequence use stable ids', () => {
+    const setup = quest({
+      id: 'setup',
+      giverName: 'Jan',
+      giver: { npcId: janB },
+      offerLine: 'offer',
+      stages: [{ objective: { type: 'interact_well' }, description: 'well', reminderLine: 'remind' }],
+      reportLine: 'report',
+      outcomes: [{
+        id: 'complete',
+        state: 'complete',
+        consequences: { relations: [{ npc: { npcId: janB }, delta: 6 }] },
+      }],
+    })
+    const gated = quest({
+      id: 'gated-jan',
+      giverName: 'Jan',
+      giver: { npcId: janB },
+      offerLine: 'offer gated',
+      stages: [{ objective: { type: 'interact_tree' }, description: 'tree', reminderLine: 'remind' }],
+      reportLine: 'report gated',
+      availability: {
+        prerequisites: [{ type: 'relation', npc: { npcId: janB }, minimum: 'trusted' }],
+      },
+    })
+    const qm = makeManager([setup, gated])
+    acceptOffer(qm, janB)
+    qm.onInteractObjective({ type: 'interact_well' })
+    speak(qm, janB)
+    expect(qm.getRelation(janA)).toBe(0)
+    expect(qm.getRelation(janB)).toBe(6)
+    expect(qm.isQuestAvailable('gated-jan')).toBe(true)
+  })
+
+  it('puts a talk marker only on the matching id', () => {
+    const def = quest({
+      id: 'mark-jan',
+      giverName: 'Anna',
+      giver: { npcId: 'anna-id' },
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'talk_to_npc', npc: { npcId: janB } },
+        description: 'talk',
+        reminderLine: 'remind',
+      }],
+      reportLine: 'report',
+    })
+    const qm = makeManager([def])
+    acceptOffer(qm, 'anna-id')
+    expect(qm.labelMarker(janA)).toBeNull()
+    expect(qm.labelMarker(janB)).toBe('?')
+    expect(qm.labelMarker('anna-id')).toBe('…')
   })
 })

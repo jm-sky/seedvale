@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { QuestDef } from './quests'
+import type { AuthoredQuestDef, QuestDef } from './quests'
+import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
 import {
   bindExactCaveQuests,
   buildLandmarkQuests,
@@ -7,6 +8,25 @@ import {
   QUESTS,
   validateQuestDefinitions,
 } from './quests'
+
+const NAME_AS_ID = (['Anna', 'Piotr', 'Kasia', 'Marek'] as const).map((name) => ({ id: name, name }))
+
+function runtimeAuthored(def: AuthoredQuestDef): QuestDef {
+  return materializeAuthoredQuestDefs(
+    [{ ...def, settlementId: def.settlementId ?? 'home' }],
+    NAME_AS_ID,
+  )[0]!
+}
+
+function runtimeQuest(
+  partial: Omit<QuestDef, 'giver'> & Partial<Pick<QuestDef, 'giver'>>,
+): QuestDef {
+  return {
+    ...partial,
+    giver: partial.giver ?? { npcId: partial.giverName },
+    settlementId: partial.settlementId ?? 'home',
+  }
+}
 
 describe('buildLandmarkQuests', () => {
   it('omits a landmark kind the resolver has no candidate for', () => {
@@ -105,10 +125,6 @@ describe('QUESTS social consequence calibration (plan quests-progression-001 §6
   })
 })
 
-function runtimeQuest(partial: QuestDef): QuestDef {
-  return { ...partial, settlementId: partial.settlementId ?? 'home' }
-}
-
 describe('validateQuestDefinitions (plan quests-progression-004)', () => {
   const baseQuest = runtimeQuest({
     id: 'base',
@@ -136,8 +152,8 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
   })
 
   it('accepts authored wolf-chain prerequisites once settlementId is bound', () => {
-    const grozny = runtimeQuest({ ...QUESTS.find((q) => q.id === 'grozny-wilk')! })
-    const den = runtimeQuest({ ...QUESTS.find((q) => q.id === 'wilcza-jama')! })
+    const grozny = runtimeAuthored(QUESTS.find((q) => q.id === 'grozny-wilk')!)
+    const den = runtimeAuthored(QUESTS.find((q) => q.id === 'wilcza-jama')!)
     expect(() => validateQuestDefinitions([grozny, den])).not.toThrow()
   })
 
@@ -199,7 +215,7 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
     const bad = runtimeQuest({
       ...baseQuest,
       stages: [{
-        objective: { type: 'talk_to_npc_choice', choices: [{ npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to tobie.' }] },
+        objective: { type: 'talk_to_npc_choice', choices: [{ npc: { npcId: 'Anna' }, outcomeId: 'done', playerLine: 'Oddaję to tobie.' }] },
         description: 'choose',
         reminderLine: 'remind',
       }],
@@ -214,15 +230,15 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to Annie.' },
-            { npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to Annie jeszcze raz.' },
+            { npc: { npcId: 'Anna' }, outcomeId: 'done', playerLine: 'Oddaję to Annie.' },
+            { npc: { npcId: 'Anna' }, outcomeId: 'done', playerLine: 'Oddaję to Annie jeszcze raz.' },
           ],
         },
         description: 'choose',
         reminderLine: 'remind',
       }],
     })
-    expect(() => validateQuestDefinitions([bad])).toThrow(/duplicate npcName/)
+    expect(() => validateQuestDefinitions([bad])).toThrow(/duplicate npcId/)
   })
 
   it('rejects talk_to_npc_choice that references an unknown outcome', () => {
@@ -232,8 +248,8 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Anna', outcomeId: 'done', playerLine: 'Oddaję to Annie.' },
-            { npcName: 'Piotr', outcomeId: 'missing', playerLine: 'Oddaję to Piotrowi.' },
+            { npc: { npcId: 'Anna' }, outcomeId: 'done', playerLine: 'Oddaję to Annie.' },
+            { npc: { npcId: 'Piotr' }, outcomeId: 'missing', playerLine: 'Oddaję to Piotrowi.' },
           ],
         },
         description: 'choose',
@@ -251,7 +267,7 @@ describe('validateQuestDefinitions (plan quests-progression-004)', () => {
       'drewno-dla-piotra',
       'dzik-przy-szlaku',
     ]
-    const defs = ids.map((id) => runtimeQuest({ ...QUESTS.find((q) => q.id === id)! }))
+    const defs = ids.map((id) => runtimeAuthored(QUESTS.find((q) => q.id === id)!))
     expect(() => validateQuestDefinitions(defs)).not.toThrow()
   })
 })
@@ -317,14 +333,14 @@ describe('QUESTS authored RPG pack (plan quests-progression-005)', () => {
 describe('quest dialogue lines and cave binding (plan quests-progression-014)', () => {
   it('rejects an empty talk_to_npc_choice playerLine', () => {
     const bad = runtimeQuest({
-      ...QUESTS.find((q) => q.id === 'relay-anna-piotr')!,
+      ...runtimeAuthored(QUESTS.find((q) => q.id === 'relay-anna-piotr')!),
       id: 'choice-empty-line',
       stages: [{
         objective: {
           type: 'talk_to_npc_choice',
           choices: [
-            { npcName: 'Anna', outcomeId: 'delivered', playerLine: '   ' },
-            { npcName: 'Piotr', outcomeId: 'delivered', playerLine: 'Oddaję to Piotrowi.' },
+            { npc: { npcId: 'Anna' }, outcomeId: 'delivered', playerLine: '   ' },
+            { npc: { npcId: 'Piotr' }, outcomeId: 'delivered', playerLine: 'Oddaję to Piotrowi.' },
           ],
         },
         description: 'choose',
@@ -336,7 +352,7 @@ describe('quest dialogue lines and cave binding (plan quests-progression-014)', 
 
   it('rejects an empty reportPlayerLine', () => {
     const bad = runtimeQuest({
-      ...QUESTS.find((q) => q.id === 'relay-anna-piotr')!,
+      ...runtimeAuthored(QUESTS.find((q) => q.id === 'relay-anna-piotr')!),
       reportPlayerLine: ' ',
     })
     expect(() => validateQuestDefinitions([bad])).toThrow(/reportPlayerLine/)

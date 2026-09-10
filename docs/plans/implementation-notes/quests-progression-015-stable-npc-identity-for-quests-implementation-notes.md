@@ -114,4 +114,11 @@ For marker rendering, only loaded NPCs are iterated, which is correct: an unload
 6. Change the two non-quest player-relation consumers (`createApp.ts`, `inventoryWiring.ts`) to id.
 7. Update focused tests and then run quest/persistence regressions, typecheck and build.
 
+## Shipped (2026-09-10)
+
+- Identity helper: `src/settlement/npcIdentity.ts` (`settlementNpcId` / `settlementNpcDescriptors`); `createSettlement.ts` uses it.
+- Authored names stay in `AuthoredQuestDef`; runtime `QuestDef` uses `QuestNpcRef`. Materialization and legacy relation-key normalization live in `src/quests/materializeAuthoredQuests.ts`, called from `createApp.ts`.
+- `QuestManager` matching, markers, relations, and `onInteract`/`labelMarker` are id-only. Live call-sites pass `npc.id`. `PlayerSocialContext.npcId` replaced `npcName`.
+- No name→id adapter in `QuestManager`. NPC↔NPC `NpcRelationships` untouched.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

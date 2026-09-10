@@ -41,10 +41,10 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/createSettlement.ts`
 
-- `createSettlement` — function — line 375
-- `CreateSettlementDeps` — type — line 247
-- `Settlement` — type — line 126
-- `settlementSpawnPoint` — function — line 235
+- `createSettlement` — function — line 376
+- `CreateSettlementDeps` — type — line 248
+- `Settlement` — type — line 127
+- `settlementSpawnPoint` — function — line 236
 
 ## `settlement/decorProps.ts`
 
@@ -83,7 +83,7 @@ Generated from exported TypeScript symbols.
 - `FamilyMember` — type — line 145
 - `FamilyMemberRef` — type — line 171
 - `FamilyRelation` — type — line 143
-- `generateFamilies` — function — line 403
+- `generateFamilies` — function — line 404
 - `RolledVillageSize` — type — line 18
 - `rollVillageSize` — function — line 210
 - `VILLAGE_SIZE_CONFIG` — const — line 64
@@ -298,13 +298,13 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/lodgingResolver.ts`
 
-- `collectLodgingCandidates` — function — line 178
-- `collectOwnedHouseLodgingOptions` — function — line 196
-- `LodgingCandidateContext` — type — line 170
-- `LodgingSelection` — type — line 295
+- `collectLodgingCandidates` — function — line 179
+- `collectOwnedHouseLodgingOptions` — function — line 197
+- `LodgingCandidateContext` — type — line 171
+- `LodgingSelection` — type — line 296
 - `LodgingSettlementInput` — type — line 24
-- `resolveBestLodging` — function — line 260
-- `selectLodgingFromCandidates` — function — line 309
+- `resolveBestLodging` — function — line 261
+- `selectLodgingFromCandidates` — function — line 310
 - `settlementLodgingInput` — function — line 68
 
 ## `settlement/merchantWagon.ts`
@@ -325,6 +325,16 @@ Generated from exported TypeScript symbols.
 - `findDockLocation` — function — line 26
 - `MinorLocation` — type — line 5
 - `minorLocationsFor` — function — line 77
+
+## `settlement/npcIdentity.ts`
+
+- `flattenedSettlementMembers` — function — line 22
+  - domain: settlements-npcs
+- `SettlementNpcDescriptor` — type — line 29
+- `settlementNpcDescriptors` — function — line 41
+  - domain: settlements-npcs
+- `settlementNpcId` — function — line 12
+  - domain: settlements-npcs
 
 ## `settlement/npcPhysicalProfile.ts`
 
@@ -583,16 +593,16 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/settlementGenerator.ts`
 
-- `cellFromId` — function — line 135
-- `cellKey` — function — line 120
-- `cellSeed` — function — line 163
-- `cellsWithinRadius` — function — line 147
-- `generateSettlementDef` — function — line 634
-- `generateVillagePlan` — function — line 572
+- `cellFromId` — function — line 136
+- `cellKey` — function — line 121
+- `cellSeed` — function — line 164
+- `cellsWithinRadius` — function — line 148
+- `generateSettlementDef` — function — line 635
+- `generateVillagePlan` — function — line 573
 - `SETTLEMENT_GRID_STEP` — const — line 63
 - `SettlementCell` — type — line 69
 - `SettlementDef` — type — line 71
-- `worldToCell` — function — line 124
+- `worldToCell` — function — line 125
 
 ## `settlement/settlementNightCycle.ts`
 

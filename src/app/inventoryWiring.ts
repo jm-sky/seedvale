@@ -184,8 +184,8 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     const settlement = findSettlementForNpc(npc)
     const settlementId = settlement?.id ?? null
     return {
-      relation: questManager.getRelation(npc.name),
-      relationLevel: questManager.getRelationLevel(npc.name),
+      relation: questManager.getRelation(npc.id),
+      relationLevel: questManager.getRelationLevel(npc.id),
       reputation: settlementId ? reputationManager.getReputation(settlementId) : NEUTRAL_SELL_PRICE_CONTEXT.reputation,
       renown: settlementId ? reputationManager.getRenown(settlementId) : 0,
     }
@@ -493,10 +493,11 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
 
   vueUi.configureNpcDialogueMenu({
     onAskSword: () => {
+      const npc = ui.npcDialogueMenu.npc as NpcAgent | null
       const result = askGuardForSword({
         alreadyGifted: worldFlags.guardSwordGifted,
         guardQuestComplete: questManager.getState('woda-dla-marka') === 'complete',
-        relation: questManager.getRelation('Marek'),
+        relation: npc ? questManager.getRelation(npc.id) : 0,
         alreadyHasSword: inventory.holdsAny('long_sword'),
       })
       if (result.grant) {

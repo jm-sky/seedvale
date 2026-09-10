@@ -107,7 +107,7 @@ function formatReward(items: ReadonlyArray<{ kind: ItemKind, count: number }>): 
             Nagroda: {{ formatReward(entry.promisedReward.items) }}
           </div>
           <div class="mt-1 text-xs opacity-70">
-            ♥ {{ entry.giverName }} {{ ui.questLog.relation(entry.giverName) }}
+            ♥ {{ entry.giverName }} {{ ui.questLog.relation(entry.giverNpcId) }}
           </div>
         </div>
       </div>

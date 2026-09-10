@@ -84,8 +84,9 @@ export type SettlementDef = {
   /** Each family gets one house (`props.ts`) and contributes its members as
    *  NPCs (`createSettlement.ts`). The home settlement's first 2 families are
    *  always the reserved Anna+Piotr/Kasia+Marek pairing — quest defs
-   *  (`quests/quests.ts`) hardcode those names, and randomizing them would
-   *  silently break the only quests the game has (see `families.ts`). */
+ *  (`quests/quests.ts`) hardcode those names until composition-root
+ *  materialization binds them to stable NPC ids, and randomizing them would
+ *  silently break the only quests the game has (see `families.ts`). */
   families: readonly FamilyDef[]
   /** Terrain clearing layout (well/stockpile/garden core + one patch per
    *  family for its house) — see `villageClearing.ts`. Compatibility

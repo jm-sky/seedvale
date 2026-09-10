@@ -11,7 +11,7 @@ export type ReactionTier = 'normal' | 'warm' | 'enthusiastic'
 /** Identifies which NPC and which settlement's social state a
  *  `PlayerSocialLookup` call is asking about (plan quests-progression-001) —
  *  reputation/renown are per-settlement, unlike per-NPC `relationLevel`. */
-export type PlayerSocialContext = { npcName: string, settlementId: string }
+export type PlayerSocialContext = { npcId: string, settlementId: string }
 
 export type PlayerSocialState = {
   relationLevel: RelationLevel
@@ -31,7 +31,7 @@ export type PlayerSocialState = {
  *  mirroring the existing `onAnimalDeath` hook (plan 110) so `NpcAgent` stays
  *  quest/reputation-agnostic (no `QuestManager`/`ReputationManager` import).
  *  `createSettlement.ts` closes over its own `settlementId` before handing a
- *  narrower `(npcName) => PlayerSocialState` lookup into `NpcAgent` — see
+ *  narrower `(npcId) => PlayerSocialState` lookup into `NpcAgent` — see
  *  `NpcAgentDeps.getPlayerSocial`. */
 export type PlayerSocialLookup = (context: PlayerSocialContext) => PlayerSocialState
 

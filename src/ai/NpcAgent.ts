@@ -934,7 +934,7 @@ export type NpcAgentDeps = {
    *  `NpcAgent` itself never resolves/imports a settlement id (plan
    *  quests-progression-001). See `reactionChance.ts`'s `PlayerSocialLookup`
    *  for the settlement-aware contract this closes over. */
-  getPlayerSocial?: (npcName: string) => PlayerSocialState
+  getPlayerSocial?: (npcId: string) => PlayerSocialState
   mining?: SettlementMiningHooks | null
   getNearbyPlayerWell?: NearbyPlayerWellLookup
   foodSources?: SettlementFoodSourceHooks
@@ -979,12 +979,13 @@ export class NpcAgent {
   readonly mesh: THREE.Object3D
   readonly label: CSS2DObject
   readonly name: string
-  /** Display-only — `name` alone stays the matching key for quests/dialogue
-   *  (`quests/quests.ts` hardcodes `giverName` as first name only). */
+  /** Display-only — `id` is the matching key for quests/relations.
+   *  Authored quest text still mentions first names (`giverName`). */
   readonly displayName: string
   /**
-   * Settlement-scoped id (`${settlementId}:npc:${i}`) for interaction queues
-   * and other shared simulation membership. Distinct from `name` (dialogue key).
+   * Settlement-scoped id (`${settlementId}:npc:${i}`) for interaction queues,
+   * quest identity, and other shared simulation membership. Distinct from
+   * `name` (presentation).
    */
   readonly id: string
   readonly gender: NpcGender
@@ -1358,10 +1359,10 @@ export class NpcAgent {
    *  extraction's worth of ore is all it ever needs to hold at once. Role
    *  weapons live on `personalInventory`. */
   private readonly carried = new Inventory(undefined, NPC_CARRY_MAX_WEIGHT)
-  /** Relation level + standing/reputation/renown lookup, by NPC name — keeps
+  /** Relation level + standing/reputation/renown lookup, by NPC id — keeps
    *  `NpcAgent` quest/reputation-agnostic (injected from `createApp.ts` via
    *  `createSettlement.ts`, plan 117 / quests-progression-001). */
-  private readonly getPlayerSocial: (npcName: string) => PlayerSocialState
+  private readonly getPlayerSocial: (npcId: string) => PlayerSocialState
   /** Bounded lookup for a nearby completed player-built well (plan 127 §10)
    *  — an alternative water-fetch destination to `landmarks.well` when
    *  closer to this NPC's household home. See `resolveWaterWellTarget`. */
@@ -1856,7 +1857,7 @@ export class NpcAgent {
    *  (see `takeCarriedConsumable`) so the dialogue wiring can still refuse to
    *  complete the transfer if the player's own inventory has no room. */
   resolveAssistanceRequest(kind: AssistanceRequestKind): AssistanceResult {
-    const social = this.getPlayerSocial(this.name)
+    const social = this.getPlayerSocial(this.id)
     const ownNeedValue = kind === 'food' ? this.needs.hunger : this.needs.thirst
     return resolveNpcAssistance(kind, this.carried, ownNeedValue, {
       personality: this.personality,
@@ -2582,7 +2583,7 @@ export class NpcAgent {
         // personality/traits/relation/reputation decide *whether* an NPC
         // reacts at all; group suppression (below) then further dampens a
         // crowd all noticing the Hero at once, same math as before this plan.
-        const social = this.getPlayerSocial(this.name)
+        const social = this.getPlayerSocial(this.id)
         const socialChance = computeReactionChance({
           personality: this.personality,
           traits: this.traits,
@@ -4262,7 +4263,7 @@ export class NpcAgent {
   private claimTiming() {
     return {
       now: this.nowDays(),
-      patienceDaysFor: () => workContractPaymentPatienceDays(this.getPlayerSocial(this.name).relationLevel),
+      patienceDaysFor: () => workContractPaymentPatienceDays(this.getPlayerSocial(this.id).relationLevel),
     }
   }
 

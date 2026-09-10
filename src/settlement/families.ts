@@ -285,7 +285,8 @@ function generateChildAge(random: () => number, parentAgeA: number, parentAgeB: 
  *  personality as `RESERVED_CHARACTERS`. Always present in the home
  *  settlement's family list (see `generateFamilies`'s `isHome` floor) so the
  *  hardcoded quest names in `quests/quests.ts` keep working regardless of
- *  what `VillageSize` the home settlement rolls. */
+ *  what `VillageSize` the home settlement rolls — composition-root
+ *  materialization binds those names to the reserved families' stable ids. */
 function reservedHomeFamilies(seed: number): FamilyDef[] {
   const [anna, piotr, kasia, marek] = RESERVED_CHARACTERS
 

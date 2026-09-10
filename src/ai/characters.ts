@@ -24,8 +24,8 @@ export type CharacterDef = {
   name: string
   /** Family surname (shared by all members of the same family, gender-agreed
    *  per member) — see `settlement/families.ts`/`ai/nameCultures.ts`.
-   *  Optional: kept out of `RESERVED_SEEDS`' matching-by-`name` use in quests
-   *  (`quests/quests.ts` matches `giverName` against `name` alone). */
+   *  Optional: reserved characters still match authored quest names by
+   *  first `name` at materialization time (`giverName` → stable `NpcId`). */
   lastName?: string
   gender: NpcGender
   role: Role

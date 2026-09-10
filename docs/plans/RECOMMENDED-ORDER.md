@@ -40,7 +40,8 @@ _No qualifying plans._
 
 ### Polish
 
-_No qualifying plans._
+1. `items-player-022` — **Gameplay interaction usability polish**  
+   🟡 `M` · ✅ ready · unlocks 0/0
 
 ---
 
@@ -52,10 +53,10 @@ _No qualifying plans._
    🔴 `M` · ✅ ready · unlocks 3/5
 3. `fauna-004` — **Sheep wool cycle and shepherd**  
    🟡 `L` · ✅ ready · unlocks 1/2
-4. `quests-progression-015` — **Stable NPC identity for quests**  
-   🔴 `M` · ✅ ready · unlocks 2/2
-5. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+4. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
    🟡 `M` · ✅ ready · unlocks 2/2
+5. `quests-progression-016` — **World-driven settlement quest opportunities**  
+   🔴 `M` · ✅ ready · unlocks 1/1
 
 ---
 
@@ -97,31 +98,31 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   🟡 `M` · **Score:**  59  
    → **unlocks:** 1/1
 
-7. `quests-progression-015` — **Stable NPC identity for quests**  
-  🔴 `M` · **Score:**  55  
-   → **unlocks:** 2/2
-
-8. `settlements-npcs-007` — **Bandages and herbal medicine**  
+7. `settlements-npcs-007` — **Bandages and herbal medicine**  
   🟡 `M` · **Score:**  47  
    → **unlocks:** 0/0
 
-9. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
+8. `world-terrain-016` — **Settlement Cemeteries & Abandoned Graveyards**  
   🟡 `M` · **Score:**  45  
    → **unlocks:** 2/2
 
-10. `quests-progression-016` — **World-driven settlement quest opportunities**  
+9. `quests-progression-016` — **World-driven settlement quest opportunities**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 1/1
 
-11. `settlements-npcs-022` — **Household help and age-based work participation**  
+10. `settlements-npcs-022` — **Household help and age-based work participation**  
   🔴 `M` · **Score:**  43  
    → **unlocks:** 0/0
 
-12. `settlements-npcs-025` — **Resource storage visualization**  
+11. `settlements-npcs-025` — **Resource storage visualization**  
   🟡 `M` · **Score:**  41  
    → **unlocks:** 0/0
 
-13. `items-player-014` — **Rope-pullable resource transport**  
+12. `items-player-014` — **Rope-pullable resource transport**  
+  🟡 `M` · **Score:**  27  
+   → **unlocks:** 0/0
+
+13. `items-player-022` — **Gameplay interaction usability polish**  
   🟡 `M` · **Score:**  27  
    → **unlocks:** 0/0
 
@@ -151,12 +152,8 @@ Score = priority + direct unlocks + transitive unlocks + depth - effort.
   is blocked by:
   - [`world-terrain-008-underground-caves-v2.md`](world-terrain-008-underground-caves-v2.md)
   - [`fauna-019-real-cave-habitats-and-animal-home-navigation.md`](fauna-019-real-cave-habitats-and-animal-home-navigation.md)
-- [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)  
-  is blocked by:
-  - [`quests-progression-015-stable-npc-identity-for-quests.md`](quests-progression-015-stable-npc-identity-for-quests.md)
 - [`quests-progression-017-rpg-settlement-quest-matrices.md`](quests-progression-017-rpg-settlement-quest-matrices.md)  
   is blocked by:
-  - [`quests-progression-015-stable-npc-identity-for-quests.md`](quests-progression-015-stable-npc-identity-for-quests.md)
   - [`quests-progression-016-world-driven-settlement-quest-opportunities.md`](quests-progression-016-world-driven-settlement-quest-opportunities.md)
 - [`settlements-npcs-006-wool-to-material.md`](settlements-npcs-006-wool-to-material.md)  
   is blocked by:
@@ -254,6 +251,7 @@ graph TD
   items_player_019["items-player-019 — Player camp repair and sewing kit"]
   items_player_020["items-player-020 — Player-built animal trough and water storage"]
   items_player_021["items-player-021 — Player skills and targeted skill actions foundation"]
+  items_player_022["items-player-022 — Gameplay interaction usability polish"]
   npc_001["npc-001 — NPC Physical Stats — Sex & Age"]
   npc_002["npc-002 — NPC Healing"]
   npc_004["npc-004 — Drzewo genealogiczne NPC"]
@@ -486,6 +484,7 @@ graph TD
   items_player_017 --> settlements_005
   items_player_017 --> ui_input_014
   items_player_018 --> items_player_019
+  items_player_018 --> items_player_022
   items_player_018 --> world_020
   items_player_021 --> items_player_019
   items_player_021 --> ui_input_013
@@ -538,6 +537,7 @@ graph TD
   quests_progression_016 --> quests_progression_017
   settlements_003 --> quests_progression_010
   settlements_004 --> quests_progression_010
+  settlements_005 --> items_player_022
   settlements_005 --> ui_input_014
   settlements_006 --> items_player_019
   settlements_npcs_002 --> settlements_npcs_005
@@ -587,6 +587,7 @@ graph TD
   ui_input_002 --> ui_input_014
   ui_input_006 --> world_016
   ui_input_010 --> items_player_018
+  ui_input_012 --> items_player_022
   world_006 --> world_016
   world_007 --> quests_progression_011
   world_008 --> items_player_009

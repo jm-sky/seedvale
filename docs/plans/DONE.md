@@ -4,6 +4,7 @@
 
 | Plan                                                                   | To verification     | Done                | Domain           | Opened |
 |------------------------------------------------------------------------|---------------------|---------------------|------------------|--------|
+| `settlements-npcs-018-physical-goods-transport-foundation`             | 2026-09-10 14:54:16 | —                   | `settlements-npcs` | —          |
 | `fauna-018-persistent-habitat-occupants`                               | 2026-09-10 14:33:27 | —                   | `fauna`          | —          |
 | `fauna-007-animal-leading-and-cart-harness`                            | 2026-09-10 14:09:43 | —                   | `fauna`          | —          |
 | `npc-026-npc-grave-visits`                                             | 2026-09-10 14:07:34 | —                   | `npc`            | —          |

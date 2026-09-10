@@ -1961,7 +1961,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       if (questManager.isDirty()) {
         for (const s of loaded) {
           for (const npc of s.npcs) {
-            npc.setQuestMarker(questManager.labelMarker(npc.name))
+            npc.setQuestMarker(questManager.labelMarker(npc.id))
           }
         }
         for (const spawner of bundle.fauna.getSpawners()) {

@@ -14,27 +14,34 @@ import {
 } from './store'
 
 function quest(
-  partial: Omit<QuestDef, 'title' | 'description' | 'outcomes'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes'>>,
+  partial: Omit<QuestDef, 'title' | 'description' | 'outcomes' | 'giver'> & Partial<Pick<QuestDef, 'title' | 'description' | 'outcomes' | 'giver'>>,
 ): QuestDef {
+  const giver = partial.giver ?? { npcId: partial.giverName }
   return {
     ...partial,
+    giver,
     title: partial.title ?? partial.id,
     description: partial.description ?? partial.offerLine,
     outcomes: partial.outcomes ?? [{
       id: 'complete',
       state: 'complete',
-      consequences: { relations: [{ npcName: partial.giverName, delta: 1 }] },
+      consequences: { relations: [{ npc: giver, delta: 1 }] },
     }],
   }
 }
 
+const ANNA_ID = 'anna-id'
+const PIOTR_ID = 'piotr-id'
+const WRONG_JAN_ID = 'other-settlement:npc:7'
+
 const talkToPiotrQuest = quest({
   id: 'relay',
   giverName: 'Anna',
+  giver: { npcId: ANNA_ID },
   offerLine: 'offer',
   stages: [
     {
-      objective: { type: 'talk_to_npc', npcName: 'Piotr' },
+      objective: { type: 'talk_to_npc', npc: { npcId: PIOTR_ID } },
       description: 'talk',
       reminderLine: 'remind',
       playerLine: 'Anna mówiła, że jutro idziecie na ryby o świcie.',
@@ -46,13 +53,19 @@ const talkToPiotrQuest = quest({
   reportLine: 'report',
 })
 
-function acceptOffer(qm: QuestManager, npcName: string): void {
-  const offer = qm.onInteract(npcName)
+function acceptOffer(qm: QuestManager, npcId: string): void {
+  const offer = qm.onInteract(npcId)
   offer?.offer?.onAccept()
 }
 
-function stubNpc(name: string, dialogueLine = 'generic greeting', paymentClaim: { contractId: string, npcId: string, coins: number } | null = null): NpcAgent {
+function stubNpc(
+  name: string,
+  id: string,
+  dialogueLine = 'generic greeting',
+  paymentClaim: { contractId: string, npcId: string, coins: number } | null = null,
+): NpcAgent {
   return {
+    id,
     name,
     displayName: name,
     getDialogueLine: () => dialogueLine,
@@ -67,10 +80,10 @@ const stubSettlement = { isHome: true, name: 'Test' } as Settlement
 describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', () => {
   it('opens on the topic list and does not advance talk_to_npc until the authored action', () => {
     const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
-    acceptOffer(qm, 'Anna')
+    acceptOffer(qm, ANNA_ID)
     expect(qm.getState('relay')).toBe('active')
 
-    openNpcDialogueMenu(stubNpc('Piotr'), stubSettlement, qm, 12)
+    openNpcDialogueMenu(stubNpc('Piotr', PIOTR_ID), stubSettlement, qm, 12)
 
     expect(ui.npcDialogueMenu.helpResult).toBeNull()
     expect(resolveNpcDialogueOpenTopic()).toBeNull()
@@ -91,7 +104,7 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
     closeNpcDialogueMenu()
 
-    openNpcDialogueMenu(stubNpc('Piotr'), stubSettlement, qm, 12)
+    openNpcDialogueMenu(stubNpc('Piotr', PIOTR_ID), stubSettlement, qm, 12)
     expect(resolveNpcDialogueOpenTopic()).toBeNull()
     expect(qm.getState('relay')).toBe('ready_to_report')
     resolveNpcDialogueHelp()
@@ -101,7 +114,7 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
   it('keeps the topic picker when only the generic greeting fallback applies', () => {
     const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
-    openNpcDialogueMenu(stubNpc('Piotr', 'hello there'), stubSettlement, qm, 12)
+    openNpcDialogueMenu(stubNpc('Piotr', PIOTR_ID, 'hello there'), stubSettlement, qm, 12)
 
     expect(ui.npcDialogueMenu.helpResult).toBeNull()
     expect(resolveNpcDialogueOpenTopic()).toBeNull()
@@ -113,7 +126,7 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
   it('does not auto-open help for a quest offer; accept appears only after the help topic', () => {
     const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
-    openNpcDialogueMenu(stubNpc('Anna'), stubSettlement, qm, 12)
+    openNpcDialogueMenu(stubNpc('Anna', ANNA_ID), stubSettlement, qm, 12)
 
     expect(resolveNpcDialogueOpenTopic()).toBeNull()
     expect(qm.getState('relay')).toBe('not_offered')
@@ -129,14 +142,14 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
   it('does not resolve ready_to_report on open; the authored report action resolves once', () => {
     const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
-    acceptOffer(qm, 'Anna')
-    openNpcDialogueMenu(stubNpc('Piotr'), stubSettlement, qm, 12)
+    acceptOffer(qm, ANNA_ID)
+    openNpcDialogueMenu(stubNpc('Piotr', PIOTR_ID), stubSettlement, qm, 12)
     resolveNpcDialogueHelp()
     selectNpcDialogueHelpAction(0)
     closeNpcDialogueMenu()
     expect(qm.getState('relay')).toBe('ready_to_report')
 
-    openNpcDialogueMenu(stubNpc('Anna'), stubSettlement, qm, 12)
+    openNpcDialogueMenu(stubNpc('Anna', ANNA_ID), stubSettlement, qm, 12)
     expect(resolveNpcDialogueOpenTopic()).toBeNull()
     expect(qm.getState('relay')).toBe('ready_to_report')
 
@@ -149,10 +162,10 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
     selectNpcDialogueHelpAction(0)
     expect(qm.getState('relay')).toBe('complete')
-    expect(qm.getRelation('Anna')).toBe(1)
+    expect(qm.getRelation(ANNA_ID)).toBe(1)
 
     closeNpcDialogueMenu()
-    openNpcDialogueMenu(stubNpc('Anna'), stubSettlement, qm, 12)
+    openNpcDialogueMenu(stubNpc('Anna', ANNA_ID), stubSettlement, qm, 12)
     resolveNpcDialogueHelp()
     expect(ui.npcDialogueMenu.helpResult?.actions).toBeUndefined()
     closeNpcDialogueMenu()
@@ -161,7 +174,7 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
   it('still auto-opens payment claims as the explicit exception', () => {
     const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
     openNpcDialogueMenu(
-      stubNpc('Piotr', 'hello there', { contractId: 'c1', npcId: 'n1', coins: 4 }),
+      stubNpc('Piotr', PIOTR_ID, 'hello there', { contractId: 'c1', npcId: 'n1', coins: 4 }),
       stubSettlement,
       qm,
       12,
@@ -169,6 +182,17 @@ describe('openNpcDialogueMenu talk_to_npc seam (plan quests-progression-014)', (
 
     expect(resolveNpcDialogueOpenTopic()).toBe('payment')
     expect(ui.npcDialogueMenu.paymentClaim?.coins).toBe(4)
+    closeNpcDialogueMenu()
+  })
+
+  it('does not advance talk_to_npc for a same-name NPC with a different id', () => {
+    const qm = new QuestManager([talkToPiotrQuest], undefined, new Inventory())
+    acceptOffer(qm, ANNA_ID)
+    openNpcDialogueMenu(stubNpc('Piotr', WRONG_JAN_ID), stubSettlement, qm, 12)
+    resolveNpcDialogueHelp()
+    expect(ui.npcDialogueMenu.helpResult?.line).toBe('generic greeting')
+    expect(ui.npcDialogueMenu.helpResult?.actions).toBeUndefined()
+    expect(qm.getState('relay')).toBe('active')
     closeNpcDialogueMenu()
   })
 })

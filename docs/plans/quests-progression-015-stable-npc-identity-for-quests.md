@@ -1,14 +1,14 @@
 # Plan: Stable NPC identity for quests
 
 **Created:** 2026-09-10  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
 **Depends on:** none  
 **Domain:** `quests-progression`  
 **Subdomains:** `quests` `relationships`  
 **Tags:** `npc-identity` `multi-settlement` `quest-runtime`  
-**Roadmap:** `quests-and-reputation.md`
+**Implemented at:** 2026-09-10 15:30
 
 ## Cel
 

@@ -79,6 +79,7 @@ import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
+import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
 import { QuestManager } from '../quests/QuestManager'
 import { bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
@@ -86,6 +87,7 @@ import { applySocialConsequence, ReputationManager } from '../reputation/Reputat
 import { settlementSpawnPoint } from '../settlement/createSettlement'
 import { getHorseAcquisitionState, merchantHorseAnimalId } from '../settlement/horseAcquisition'
 import { createLandOwnershipRegistry } from '../settlement/landOwnership'
+import { settlementNpcDescriptors } from '../settlement/npcIdentity'
 import { summarizeVillagePlan } from '../settlement/villagePlanDebug'
 import { useBootMark } from '../shared/bootMark'
 import { drainStamina } from '../shared/StaminaState'
@@ -903,18 +905,28 @@ export async function createApp(
     directionPhrase: caveDirection ? `${caveDirection} od osady` : null,
   }
   const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
-  const questDefs = bindExactCaveQuests([
-    ...QUESTS,
-    ...landmarkQuests,
-    buildDarkForestTreasureQuest(),
-    buildHorseAcquisitionQuest(merchantHorseId),
-  ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId }))
+  const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
+  const questDefs = materializeAuthoredQuestDefs(
+    bindExactCaveQuests([
+      ...QUESTS,
+      ...landmarkQuests,
+      buildDarkForestTreasureQuest(),
+      buildHorseAcquisitionQuest(merchantHorseId),
+    ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId })),
+    homeNpcDescriptors,
+  )
+  const initialQuestState = initialSave?.quests
+    ? {
+        ...initialSave.quests,
+        relations: normalizeLegacyQuestRelations(initialSave.quests.relations, homeNpcDescriptors),
+      }
+    : undefined
 
   const questManager: QuestManager = new QuestManager(
     questDefs,
     worldAudio.playOnce,
     inventory,
-    initialSave?.quests,
+    initialQuestState,
     (kind, count) => {
       if (kind === 'long_sword') {
         if (!shouldGrantQuestSword(kind, worldFlags.guardSwordGifted, inventory.holdsAny('long_sword'))) return
@@ -982,7 +994,7 @@ export async function createApp(
   // Now that `questManager` exists, the closures passed into `createWorldBundle`
   // above can actually reach it — see those call sites' comments.
   getPlayerSocialTarget = (context) => ({
-    relationLevel: questManager.getRelationLevel(context.npcName),
+    relationLevel: questManager.getRelationLevel(context.npcId),
     standing: questManager.getPlayerStanding(),
     reputation: reputation.getReputation(context.settlementId),
     renown: reputation.getRenown(context.settlementId),
@@ -1703,8 +1715,8 @@ export async function createApp(
 
   const openQuestLog = () => {
     questLog.open()
-    questLog.refresh(questManager.list(), (name) =>
-      questManager.getRelation(name),
+    questLog.refresh(questManager.list(), (npcId) =>
+      questManager.getRelation(npcId),
     )
   }
 

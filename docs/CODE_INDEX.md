@@ -87,6 +87,9 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 ## Reputation / progression
 
+- [QuestManager](../src/quests/QuestManager.ts) — quest progress, objective evaluation and player↔NPC relations keyed by stable `NpcId`.
+- [Authored quests](../src/quests/quests.ts) — name-keyed authored definitions; composition root materializes them to `QuestNpcRef`.
+- [NPC identity](../src/settlement/npcIdentity.ts) — deterministic `${settlementId}:npc:${i}` descriptors from `SettlementDef`.
 - [ReputationManager](../src/reputation/ReputationManager.ts) — per-settlement reputation dimensions and renown; callers apply an already-resolved `SocialConsequence`.
 - [Social exposure](../src/reputation/socialExposure.ts) — pure day/night + Sneak exposure roll used when a cemetery grave first resolves.
 

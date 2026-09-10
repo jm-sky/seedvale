@@ -3,6 +3,7 @@ import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { ReputationDimension, SocialConsequence } from '../reputation/ReputationManager'
+import type { NpcId } from '../settlement/npcState'
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
@@ -14,7 +15,6 @@ import {
   type QuestPrerequisite,
   type QuestProgressEntry,
   type QuestReward,
-  QUESTS,
   type QuestStage,
   type QuestState,
   RELATION_LEVEL_THRESHOLDS,
@@ -34,7 +34,8 @@ import {
  *  so a floating NPC label reads correctly even without the CSS color that
  *  usually accompanies it. `TALK_TARGET` is a separate case (a non-giver NPC
  *  named by an active `talk_to_npc` objective, or any NPC named by an active
- *  `talk_to_npc_choice`) from the giver's own 3 states. */
+ *  `talk_to_npc_choice`) from the giver's own 3 states. Matching is by
+ *  stable NPC id, not display name. */
 export const QUEST_MARKER_AVAILABLE = '!'
 export const QUEST_MARKER_IN_PROGRESS = '…'
 export const QUEST_MARKER_READY = '✓'
@@ -75,6 +76,7 @@ export type QuestListEntry = {
   title: string
   description: string
   giverName: string
+  giverNpcId: NpcId
   state: QuestState
   stageIndex: number
   totalStages: number
@@ -232,10 +234,10 @@ function objectiveMatchesRef(objective: QuestObjective, ref: ObjectiveRef, bound
 
 function matchingTalkChoice(
   objective: QuestObjective | undefined,
-  npcName: string,
-): { npcName: string, outcomeId: QuestOutcomeId, playerLine: string, npcLine?: string } | undefined {
+  npcId: NpcId,
+): { npc: { npcId: NpcId }, outcomeId: QuestOutcomeId, playerLine: string, npcLine?: string } | undefined {
   if (objective?.type !== 'talk_to_npc_choice') return undefined
-  return objective.choices.find((choice) => choice.npcName === npcName)
+  return objective.choices.find((choice) => choice.npc.npcId === npcId)
 }
 
 /** Drives multi-stage quests. Kept out of `NpcAgent`/world objects so they stay
@@ -273,7 +275,7 @@ export class QuestManager {
   private dirty = true
 
   constructor(
-    defs: readonly QuestDef[] = QUESTS,
+    defs: readonly QuestDef[],
     playSound: (url: string, volume?: number) => void = () => {},
     inventory: Inventory,
     initial?: QuestManagerInitial,
@@ -327,7 +329,7 @@ export class QuestManager {
         }
         this.states.set(entry.id, runtimeProgress(restored))
       }
-      for (const [name, value] of Object.entries(initial.relations)) this.relations.set(name, value)
+      for (const [npcId, value] of Object.entries(initial.relations)) this.relations.set(npcId, value)
       for (const def of this.defs) {
         const s = this.stateOf(def.id)
         if (s.state === 'active') this.catchUpActiveWorldObjectives(def, s)
@@ -387,14 +389,14 @@ export class QuestManager {
     return this.stateOf(id).state
   }
 
-  /** Sympathy score for an NPC by name, bumped on quest completion. Defaults to 0. */
-  getRelation(npcName: string): number {
-    return this.relations.get(npcName) ?? 0
+  /** Sympathy score for an NPC by stable id, bumped on quest completion. Defaults to 0. */
+  getRelation(npcId: NpcId): number {
+    return this.relations.get(npcId) ?? 0
   }
 
-  /** Coarse relation tier for an NPC by name — see `RelationLevel`. */
-  getRelationLevel(npcName: string): RelationLevel {
-    return relationToLevel(this.getRelation(npcName))
+  /** Coarse relation tier for an NPC by stable id — see `RelationLevel`. */
+  getRelationLevel(npcId: NpcId): RelationLevel {
+    return relationToLevel(this.getRelation(npcId))
   }
 
   /** How well-known/liked the player is across every NPC met so far, derived
@@ -449,7 +451,7 @@ export class QuestManager {
         return prereq.outcomeIds.includes(resolvedOutcomeId)
       }
       case 'relation':
-        return relationLevelMeetsMinimum(this.getRelationLevel(prereq.npcName), prereq.minimum)
+        return relationLevelMeetsMinimum(this.getRelationLevel(prereq.npc.npcId), prereq.minimum)
       case 'renown':
         if (!def.settlementId) return false
         return this.socialAvailability.getRenown(def.settlementId) >= prereq.minimum
@@ -494,6 +496,7 @@ export class QuestManager {
           title: def.title,
           description: def.description,
           giverName: def.giverName,
+          giverNpcId: def.giver.npcId,
           state: s.state,
           stageIndex: s.stageIndex,
           totalStages: def.stages.length,
@@ -595,8 +598,8 @@ export class QuestManager {
     return { line }
   }
 
-  private bumpRelation(npcName: string, amount: number): void {
-    this.relations.set(npcName, this.getRelation(npcName) + amount)
+  private bumpRelation(npcId: NpcId, amount: number): void {
+    this.relations.set(npcId, this.getRelation(npcId) + amount)
   }
 
   /** Plays a "thank you" clip matching the giver's gender, or a random one if
@@ -686,7 +689,7 @@ export class QuestManager {
       for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
     }
     if (outcome.consequences?.relations) {
-      for (const rel of outcome.consequences.relations) this.bumpRelation(rel.npcName, rel.delta)
+      for (const rel of outcome.consequences.relations) this.bumpRelation(rel.npc.npcId, rel.delta)
     }
     if (def.settlementId && outcome.consequences?.social) {
       this.applySocialConsequence({ settlementId: def.settlementId, ...outcome.consequences.social })
@@ -775,11 +778,11 @@ export class QuestManager {
    *
    * @domain quests-progression
    */
-  private resolveTalkToNpcChoice(def: QuestDef, npcName: string): QuestDialogOverride | null {
+  private resolveTalkToNpcChoice(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
     const s = this.stateOf(def.id)
     if (s.state !== 'active') return null
     const stage = this.currentStage(def, s.stageIndex)
-    const choice = matchingTalkChoice(stage?.objective, npcName)
+    const choice = matchingTalkChoice(stage?.objective, npcId)
     if (!choice) return null
     if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) return null
     const stageIndex = s.stageIndex
@@ -787,7 +790,7 @@ export class QuestManager {
       line: choice.npcLine ?? DEFAULT_NPC_PROMPT,
       actions: [{
         label: choice.playerLine,
-        onSelect: () => this.selectTalkToNpcChoice(def, npcName, choice.outcomeId, stageIndex),
+        onSelect: () => this.selectTalkToNpcChoice(def, npcId, choice.outcomeId, stageIndex),
       }],
     }
   }
@@ -811,18 +814,18 @@ export class QuestManager {
     return this.resolveSuccessfulTurnIn(def) ?? def.reportLine
   }
 
-  private selectTalkToNpc(def: QuestDef, npcName: string, stageIndex: number, progressLine: string): string {
+  private selectTalkToNpc(def: QuestDef, npcId: NpcId, stageIndex: number, progressLine: string): string {
     const current = this.stateOf(def.id)
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return progressLine
     const stage = this.currentStage(def, current.stageIndex)
-    if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npcName !== npcName) return progressLine
+    if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npc.npcId !== npcId) return progressLine
     this.advanceStage(def, current)
     return progressLine
   }
 
   private selectTalkToNpcChoice(
     def: QuestDef,
-    npcName: string,
+    npcId: NpcId,
     outcomeId: QuestOutcomeId,
     stageIndex: number,
   ): string {
@@ -830,7 +833,7 @@ export class QuestManager {
     const outcome = def.outcomes.find((entry) => entry.id === outcomeId)
     const resolvedLine = outcome?.resultText ?? def.reportLine
     if (current.state !== 'active' || current.stageIndex !== stageIndex) return resolvedLine
-    const choice = matchingTalkChoice(this.currentStage(def, current.stageIndex)?.objective, npcName)
+    const choice = matchingTalkChoice(this.currentStage(def, current.stageIndex)?.objective, npcId)
     if (!choice || choice.outcomeId !== outcomeId) return resolvedLine
     const applied = this.applyOutcome(def, outcomeId)
     return applied ? (applied.resultText ?? def.reportLine) : resolvedLine
@@ -858,22 +861,23 @@ export class QuestManager {
     return this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine ?? def.reportLine
   }
 
-  /** Quest-driven line/offer for talking to `npcName` right now, or null if
+  /** Quest-driven line/offer for talking to `npcId` right now, or null if
    *  this NPC has nothing quest-related to say (caller falls back to normal
-   *  dialogue). `completedFallback` (plan 153) — an already-turned-in
+   *  dialogue). Matching is by stable NPC id, not display name.
+   *  `completedFallback` (plan 153) — an already-turned-in
    *  quest's `reportLine`, used only if nothing else this giver offers
    *  (a new quest, a reminder, a report) takes priority; a giver of several
-   *  quests (Anna, Piotr) must still offer their next quest normally once
+   *  quests must still offer their next quest normally once
    *  it becomes available, not get stuck repeating an old completion line. */
-  onInteract(npcName: string): QuestDialogOverride | null {
+  onInteract(npcId: NpcId): QuestDialogOverride | null {
     let completedFallback: QuestDialogOverride | null = null
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
 
-      const choiceResult = this.resolveTalkToNpcChoice(def, npcName)
+      const choiceResult = this.resolveTalkToNpcChoice(def, npcId)
       if (choiceResult) return choiceResult
 
-      if (npcName === def.giverName) {
+      if (npcId === def.giver.npcId) {
         const result = this.handleGiverInteract(def, s)
         if (result) return result
         if (s.state === 'complete' && !completedFallback) {
@@ -881,16 +885,16 @@ export class QuestManager {
         }
       }
 
-      if (s.state === 'active' && npcName !== def.giverName) {
+      if (s.state === 'active' && npcId !== def.giver.npcId) {
         const stage = this.currentStage(def, s.stageIndex)
-        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npcName === npcName) {
+        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npc.npcId === npcId) {
           const stageIndex = s.stageIndex
           const progressLine = stage.progressLine ?? stage.description
           return {
             line: DEFAULT_NPC_PROMPT,
             actions: [{
               label: stage.playerLine ?? DEFAULT_TALK_PLAYER_LINE,
-              onSelect: () => this.selectTalkToNpc(def, npcName, stageIndex, progressLine),
+              onSelect: () => this.selectTalkToNpc(def, npcId, stageIndex, progressLine),
             }],
           }
         }
@@ -926,18 +930,19 @@ export class QuestManager {
     return null
   }
 
-  /** Label suffix for `npcName`, or null when no quest wants to flag them.
+  /** Label suffix for `npcId`, or null when no quest wants to flag them.
+   *  Matching is by stable NPC id, not display name.
    *  Three visually distinct giver states (plan 153) — available/in-progress
    *  used to share `'!'`, making a quest already accepted indistinguishable
    *  from one not yet offered at a glance. */
-  labelMarker(npcName: string): string | null {
+  labelMarker(npcId: NpcId): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
       if (s.state === 'active') {
         const stage = this.currentStage(def, s.stageIndex)
-        if (matchingTalkChoice(stage?.objective, npcName)) return QUEST_MARKER_TALK_TARGET
+        if (matchingTalkChoice(stage?.objective, npcId)) return QUEST_MARKER_TALK_TARGET
       }
-      if (npcName === def.giverName) {
+      if (npcId === def.giver.npcId) {
         if (s.state === 'ready_to_report') return QUEST_MARKER_READY
         if (s.state === 'active') return QUEST_MARKER_IN_PROGRESS
         if (s.state === 'offered') return QUEST_MARKER_AVAILABLE
@@ -945,7 +950,7 @@ export class QuestManager {
       }
       if (s.state === 'active') {
         const stage = this.currentStage(def, s.stageIndex)
-        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npcName === npcName) return QUEST_MARKER_TALK_TARGET
+        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npc.npcId === npcId) return QUEST_MARKER_TALK_TARGET
       }
     }
     return null

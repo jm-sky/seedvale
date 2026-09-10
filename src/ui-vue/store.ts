@@ -120,7 +120,7 @@ type PauseMenuState = {
   onCharacter: (() => void) | null
   saveStatus: string
 }
-type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; relation: (name: string) => number }
+type QuestLogState = { open: boolean; entries: readonly QuestListEntry[]; relation: (npcId: string) => number }
 /** One button in the shared contextual interaction panel (plan `ui-input-002`
  *  §2/§3) — `reasonLabel` explains a disabled action (e.g. missing
  *  materials/capability). `run` is the real domain callback (e.g.
@@ -734,8 +734,8 @@ export function setPausePlayerName(name: string): void { ui.pauseMenu.playerName
 export function setPauseSaveStatus(status: string): void { ui.pauseMenu.saveStatus = status }
 export function setPauseActiveSaveName(name: string): void { ui.pauseMenu.activeSaveName = name }
 
-export function openQuestLog(entries: readonly QuestListEntry[], relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
-export function refreshQuestLog(entries: readonly QuestListEntry[], relation: (name: string) => number): void { ui.questLog.entries = entries; ui.questLog.relation = relation }
+export function openQuestLog(entries: readonly QuestListEntry[], relation: (npcId: string) => number): void { ui.questLog.entries = entries; ui.questLog.relation = relation; ui.questLog.open = true; emitUiOpen() }
+export function refreshQuestLog(entries: readonly QuestListEntry[], relation: (npcId: string) => number): void { ui.questLog.entries = entries; ui.questLog.relation = relation }
 export function closeQuestLog(): void { ui.questLog.open = false }
 export function isQuestLogOpen(): boolean { return ui.questLog.open }
 
@@ -789,7 +789,7 @@ export function openNpcDialogueMenu(npc: NpcAgent, settlement: Settlement, quest
   state.settlement = settlement
   state.timeOfDay = timeOfDay
   state.helpResult = null
-  state.resolveQuestHelp = () => questManager.onInteract(npc.name)
+  state.resolveQuestHelp = () => questManager.onInteract(npc.id)
   state.canAskSword = state.getCanAskSword?.() ?? false
   state.paymentClaim = npc.preparePaymentRequest()
   state.open = true

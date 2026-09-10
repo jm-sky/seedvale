@@ -59,7 +59,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
-| 💡 `quests-progression-015-stable-npc-identity-for-quests.md`                  | -       | 🔴 | M      | -      |
 | 💡 `quests-progression-016-world-driven-settlement-quest-opportunities.md`     | -       | 🔴 | M      | quests-progression-015 |
 | 💡 `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
@@ -88,6 +87,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-015-stable-npc-identity-for-quests.md` | Dwa NPC o tym samym imieniu: rozmowa z niewłaściwym nie zalicza `talk_to_npc` / choice / oferty givera; marker zostaje przy właściwym id; save/load i stream-out/in osady trzymają ten sam target; authored Anna/Piotr/Kasia/Marek nadal oferują, przechodzą etapy, kończą się i wypłacają jak wcześniej |
 | `npc-016-work-contracts-payment-and-employer-interaction.md` | Najemnik po skończonej pracy podchodzi tylko gdy gracz jest w pobliżu; dialog otwiera Zapłać N / Jeszcze nie; monety schodzą z gracza do `personalInventory` NPC; za mało monet / pełny ekwipunek NPC nic nie rusza; powtórne Zapłać nic nie robi; śmierć najemnika nie obciąża gracza; save/load zachowuje należność i już wypłacone monety |
 | `settlements-005-residential-house-construction.md` | Placement małej/średniej chaty, stage-gated materiały, praca gracza i NPC, terrain prep przy stoku, ukończenie → lodging high, anulowanie niedokończonej, save/load |
 | `settlements-006-merchant-sell-pricing-condition-and-social-standing.md` | Neutralny handlarz ~90% nominalnej wartości; lepsza relacja/reputacja podbija ofertę (max ~105% dla nie-stockowanych); zużyty trap taniej proporcjonalnie do stanu; broken trap ~5% salvage; podsumowanie transakcji = finalna wypłata; brak arbitrażu buy→sell na stockowanych towarach |

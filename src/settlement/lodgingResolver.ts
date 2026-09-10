@@ -23,7 +23,7 @@ import { homeIndexFromPlaceId } from './places'
 /** Narrow, three.js-free view of a settlement's lodging-relevant state. */
 export type LodgingSettlementInput = {
   id: string
-  npcs: readonly { name: string, household: { id: string, homeId: string } | null }[]
+  npcs: readonly { id: string, name: string, household: { id: string, homeId: string } | null }[]
   /** Index-aligned with the settlement's home `Place` index — same
    *  `landmarks.houses[i]` ↔ `homePlaceId(settlementId, i)` pairing
    *  `createSettlement.ts` already relies on. */
@@ -72,6 +72,7 @@ export function settlementLodgingInput(
   return {
     id: settlement.id,
     npcs: settlement.npcs.map((npc) => ({
+      id: npc.id,
       name: npc.name,
       household: npc.household ? { id: npc.household.id, homeId: npc.household.homeId } : null,
     })),
@@ -126,7 +127,7 @@ function collectFriendCandidates(
   for (const npc of settlement.npcs) {
     const household = npc.household
     if (!household || seenHouseholds.has(household.id)) continue
-    if (!FRIEND_RELATION_LEVELS.has(getPlayerSocial({ npcName: npc.name, settlementId: settlement.id }).relationLevel)) continue
+    if (!FRIEND_RELATION_LEVELS.has(getPlayerSocial({ npcId: npc.id, settlementId: settlement.id }).relationLevel)) continue
     const houseIndex = homeIndexFromPlaceId(settlement.id, household.homeId)
     const house = houseIndex != null ? settlement.houses[houseIndex] : undefined
     if (!house) continue

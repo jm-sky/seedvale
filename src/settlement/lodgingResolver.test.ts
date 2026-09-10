@@ -89,7 +89,7 @@ function house(overrides: { x: number, z: number, bed?: LodgingSettlementInput['
 describe('collectLodgingCandidates — friend lodging', () => {
   it('produces a candidate for a friendly NPC with an available household home', () => {
     const s = settlement({
-      npcs: [{ name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
+      npcs: [{ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
       houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
@@ -101,7 +101,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
 
   it('produces no candidate for a stranger', () => {
     const s = settlement({
-      npcs: [{ name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
+      npcs: [{ id: 'anna', name: 'Anna', household: { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' } }],
       houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
@@ -111,7 +111,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
   })
 
   it('produces no candidate for an NPC without a household', () => {
-    const s = settlement({ npcs: [{ name: 'Anna', household: null }], houses: [house({ x: 5, z: 7 })] })
+    const s = settlement({ npcs: [{ id: 'anna', name: 'Anna', household: null }], houses: [house({ x: 5, z: 7 })] })
     const candidates = collectLodgingCandidates([s], {
       getPlayerSocial: () => socialState('trusted'),
     })
@@ -121,7 +121,7 @@ describe('collectLodgingCandidates — friend lodging', () => {
   it('does not duplicate a candidate for two family members sharing one household', () => {
     const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
     const s = settlement({
-      npcs: [{ name: 'Anna', household }, { name: 'Piotr', household }],
+      npcs: [{ id: 'anna', name: 'Anna', household }, { id: 'piotr', name: 'Piotr', household }],
       houses: [house({ x: 5, z: 7 })],
     })
     const candidates = collectLodgingCandidates([s], {
@@ -161,7 +161,7 @@ describe('collectLodgingCandidates — bed lodging (plan 169 provider)', () => {
   it('a bed beats a friendly NPC in the same settlement (class priority)', () => {
     const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
     const s = settlement({
-      npcs: [{ name: 'Anna', household }],
+      npcs: [{ id: 'anna', name: 'Anna', household }],
       houses: [house({
         x: 5,
         z: 7,
@@ -203,7 +203,7 @@ describe('collectLodgingCandidates — multiple sources for the choice panel', (
     // distinct physical places here — house 0's bed candidate is unrelated.
     const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:1' }
     const s = settlement({
-      npcs: [{ name: 'Anna', household }],
+      npcs: [{ id: 'anna', name: 'Anna', household }],
       houses: [
         house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null } }),
         house({ x: 9, z: 9 }),
@@ -221,7 +221,7 @@ describe('collectLodgingCandidates — multiple sources for the choice panel', (
     // same real place backs both the `bed` and `friend` internal candidates.
     const household = { id: 'settlement-1:household:0', homeId: 'settlement-1:home:0' }
     const s = settlement({
-      npcs: [{ name: 'Anna', household }],
+      npcs: [{ id: 'anna', name: 'Anna', household }],
       houses: [
         house({ x: 5, z: 7, bed: { position: { x: 5, z: 7 }, approach: { x: 5, z: 7 }, facing: null } }),
       ],

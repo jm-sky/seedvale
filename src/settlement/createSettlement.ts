@@ -63,6 +63,7 @@ import { createHouseDoorController } from './houseDoors'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
 import { createHouseholdExchangeHooks, type HouseholdSurplusCandidate } from './householdExchange'
 import { disposeLivestock, type LivestockPersistence, spawnLivestock, tickSettlementLivestock } from './livestock'
+import { settlementNpcId } from './npcIdentity'
 import { generatePhysicalProfile } from './npcPhysicalProfile'
 import {
   finalizeExpiredNpcCorpse,
@@ -423,10 +424,10 @@ export async function createSettlement(
   // Closes over this settlement's own `def.id` so `NpcAgent` never resolves
   // or imports a settlement id itself (plan quests-progression-001) —
   // `getPlayerSocial` above is the settlement-aware app-level contract,
-  // `npcGetPlayerSocial` is the narrower per-NPC-name closure every
+  // `npcGetPlayerSocial` is the narrower per-NPC-id closure every
   // `NpcAgent.create` call below actually receives.
   const npcGetPlayerSocial = getPlayerSocial
-    ? (npcName: string) => getPlayerSocial({ npcName, settlementId: def.id })
+    ? (npcId: string) => getPlayerSocial({ npcId, settlementId: def.id })
     : undefined
 
   const site = { x: def.x, z: def.z, y: def.y }
@@ -712,7 +713,7 @@ export async function createSettlement(
   const npcHouseholdById = new Map<string, string>()
   const settlementNpcStates: [string, import('./npcState').NpcAuthoritativeState][] = []
   flatMembers.forEach(({ household }, i) => {
-    const npcId = `${def.id}:npc:${i}`
+    const npcId = settlementNpcId(def.id, i)
     npcHouseholdById.set(npcId, household.id)
     const state = npcStateRegistry.get(npcId)
     if (state) settlementNpcStates.push([npcId, state])
@@ -723,7 +724,7 @@ export async function createSettlement(
     const familyNpcIds = flatMembers
       .map((member, j) => ({ member, j }))
       .filter(({ member }) => member.familyIndex === familyIndex)
-      .map(({ j }) => `${def.id}:npc:${j}`)
+      .map(({ j }) => settlementNpcId(def.id, j))
     for (const visitorId of familyNpcIds) {
       familyNpcIdsByVisitor.set(visitorId, familyNpcIds.filter((id) => id !== visitorId))
     }
@@ -790,7 +791,7 @@ export async function createSettlement(
   agents = (await Promise.all(
     flatMembers.map(async ({ home, household, member, familyIndex, familyMembers }, i) => {
       const workplace = workplaceFor(def.id, member.character.role, landmarks, i, familyIndex)
-      const npcId = `${def.id}:npc:${i}`
+      const npcId = settlementNpcId(def.id, i)
       const needOffset = i / Math.max(1, flatMembers.length - 1)
       // Deterministic max HP/stamina/vigor + base SPEA from sex + age (plan
       // npc-001/npc-019) — own seed stream (settlement seed + flat member

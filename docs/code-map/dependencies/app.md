@@ -728,12 +728,14 @@ Generated from TypeScript imports.
 - `player/targetedSkillSelection.ts`
 - `quests/QuestManager.ts`
 - `quests/cardinalDirection.ts`
+- `quests/materializeAuthoredQuests.ts`
 - `quests/quests.ts`
 - `render/programPrewarm.ts`
 - `reputation/ReputationManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/horseAcquisition.ts`
 - `settlement/landOwnership.ts`
+- `settlement/npcIdentity.ts`
 - `settlement/villagePlanDebug.ts`
 - `shared/StaminaState.ts`
 - `shared/VigorState.ts`

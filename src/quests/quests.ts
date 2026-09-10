@@ -2,6 +2,7 @@ import type { AnimalKind } from '../fauna/AnimalAgent'
 import type { SpawnerType } from '../fauna/AnimalSpawner'
 import type { ItemKind } from '../items/items'
 import type { ReputationDimension } from '../reputation/ReputationManager'
+import type { NpcId } from '../settlement/npcState'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
 import {
@@ -49,11 +50,22 @@ export function relationToLevel(relation: number): RelationLevel {
   return 'stranger'
 }
 
+/**
+ * Quest-facing reference to a specific NPC.
+ * Stable `npcId` is authoritative identity. Display name is not identity.
+ * Runtime NPC objects are not quest state.
+ *
+ * @domain quests-progression
+ */
+export type QuestNpcRef = {
+  npcId: NpcId
+}
+
 /** One authored gate on whether a `not_offered` quest may enter the offer
  *  lifecycle. All prerequisites on a quest combine with AND semantics;
  *  `quest_outcome.outcomeIds` is the only local OR (membership check). */
 export type QuestPrerequisite =
-  | { type: 'relation', npcName: string, minimum: RelationLevel }
+  | { type: 'relation', npc: QuestNpcRef, minimum: RelationLevel }
   | { type: 'quest_outcome', questId: string, outcomeIds: readonly QuestOutcomeId[] }
   | { type: 'reputation', dimension: ReputationDimension, minimum: number }
   | { type: 'renown', minimum: number }
@@ -161,16 +173,16 @@ function validateTalkToNpcChoiceObjective(def: QuestDef): void {
         `Quest "${def.id}" talk_to_npc_choice needs at least 2 choices`,
       )
     }
-    const names = objective.choices.map((choice) => choice.npcName)
-    if (new Set(names).size !== names.length) {
+    const ids = objective.choices.map((choice) => choice.npc.npcId)
+    if (new Set(ids).size !== ids.length) {
       throw new QuestDefinitionValidationError(
-        `Quest "${def.id}" talk_to_npc_choice has duplicate npcName`,
+        `Quest "${def.id}" talk_to_npc_choice has duplicate npcId`,
       )
     }
     for (const choice of objective.choices) {
       if (choice.playerLine.trim().length === 0) {
         throw new QuestDefinitionValidationError(
-          `Quest "${def.id}" talk_to_npc_choice is missing a playerLine for "${choice.npcName}"`,
+          `Quest "${def.id}" talk_to_npc_choice is missing a playerLine for "${choice.npc.npcId}"`,
         )
       }
       if (!def.outcomes.some((outcome) => outcome.id === choice.outcomeId)) {
@@ -194,7 +206,7 @@ export type QuestReward = {
 /** Changes to other systems: player↔NPC relation and settlement
  *  reputation/renown. Applied exactly once by `QuestManager` resolution. */
 export type QuestConsequences = {
-  relations?: ReadonlyArray<{ npcName: string, delta: number }>
+  relations?: ReadonlyArray<{ npc: QuestNpcRef, delta: number }>
   social?: {
     reputation?: Partial<Record<ReputationDimension, number>>
     renown?: number
@@ -239,7 +251,7 @@ export function uniqueOutcomeForState(
 }
 
 export type QuestObjective =
-  | { type: 'talk_to_npc', npcName: string }
+  | { type: 'talk_to_npc', npc: QuestNpcRef }
   /** Talking to one of the authored NPCs presents a player dialogue action
    *  (plan quests-progression-014). Selecting that action resolves through
    *  the same outcome path as other terminals — not a dialogue tree. The
@@ -249,7 +261,7 @@ export type QuestObjective =
   | {
       type: 'talk_to_npc_choice'
       choices: readonly {
-        npcName: string
+        npc: QuestNpcRef
         outcomeId: QuestOutcomeId
         /** Player-facing declaration shown as the dialogue action. */
         playerLine: string
@@ -356,8 +368,15 @@ export type QuestDef = {
   id: string
   title: string
   description: string
-  /** Must match an `NPC_NAMES` entry in `ai/NpcAgent.ts`. */
+  /** Presentation-only giver display name. Not identity — see `giver`. */
   giverName: string
+  /**
+   * Stable NPC identity of the quest giver. Display name is not identity;
+   * runtime NPC references are not quest state.
+   *
+   * @domain quests-progression
+   */
+  giver: QuestNpcRef
   offerLine: string
   stages: readonly QuestStage[]
   /** Giver's line once every stage is cleared and the player reports back. */
@@ -388,7 +407,47 @@ export type QuestDef = {
   outcomes: readonly QuestOutcome[]
 }
 
-export const QUESTS: readonly QuestDef[] = [
+export type AuthoredQuestObjective =
+  | { type: 'talk_to_npc', npcName: string }
+  | {
+      type: 'talk_to_npc_choice'
+      choices: readonly {
+        npcName: string
+        outcomeId: QuestOutcomeId
+        playerLine: string
+        npcLine?: string
+      }[]
+    }
+  | Exclude<QuestObjective, { type: 'talk_to_npc' } | { type: 'talk_to_npc_choice' }>
+
+export type AuthoredQuestStage = Omit<QuestStage, 'objective'> & {
+  objective: AuthoredQuestObjective
+}
+
+export type AuthoredQuestPrerequisite =
+  | { type: 'relation', npcName: string, minimum: RelationLevel }
+  | Exclude<QuestPrerequisite, { type: 'relation' }>
+
+export type AuthoredQuestConsequences = Omit<QuestConsequences, 'relations'> & {
+  relations?: ReadonlyArray<{ npcName: string, delta: number }>
+}
+
+export type AuthoredQuestOutcome = Omit<QuestOutcome, 'consequences'> & {
+  consequences?: AuthoredQuestConsequences
+}
+
+/** Name-keyed authored quest content. Identity-bearing fields become
+ *  `QuestNpcRef` at composition-root materialization — never matched by
+ *  display name at runtime.
+ *
+ *  @domain quests-progression */
+export type AuthoredQuestDef = Omit<QuestDef, 'giver' | 'stages' | 'availability' | 'outcomes'> & {
+  stages: readonly AuthoredQuestStage[]
+  availability?: { prerequisites: readonly AuthoredQuestPrerequisite[] }
+  outcomes: readonly AuthoredQuestOutcome[]
+}
+
+export const QUESTS: readonly AuthoredQuestDef[] = [
   {
     id: 'relay-anna-piotr',
     title: 'Wiadomość dla Piotra',
@@ -1079,8 +1138,8 @@ export type LandmarkResolver = (kind: LandmarkKind) => string | undefined
  *  session rather than offered broken — not every world is guaranteed to
  *  roll every landmark kind near the home settlement. Callers append the
  *  result to `QUESTS` before constructing `QuestManager`. */
-export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
-  const quests: QuestDef[] = []
+export function buildLandmarkQuests(resolve: LandmarkResolver): AuthoredQuestDef[] {
+  const quests: AuthoredQuestDef[] = []
 
   const ruinsId = resolve('smallRuins')
   if (ruinsId) {
@@ -1181,7 +1240,7 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
  *  concrete `animalId` resolved at composition root. Omitted when the home
  *  settlement has no merchant horse acquisition target this session. */
 /** Deep-forest ruins treasure map quest (plan quests-progression-009). */
-export function buildDarkForestTreasureQuest(): QuestDef {
+export function buildDarkForestTreasureQuest(): AuthoredQuestDef {
   return {
     id: 'mapa-do-skarbu',
     title: 'Mapa do skarbu',
@@ -1228,7 +1287,7 @@ export function buildDarkForestTreasureQuest(): QuestDef {
   }
 }
 
-export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): QuestDef {
+export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): AuthoredQuestDef {
   return {
     id: 'wilki-u-kupca',
     title: 'Wilki u kupca',
@@ -1287,9 +1346,9 @@ function applyCavePlaceToken(text: string, phrase: string): string {
  *  authored cave quests. Direction is already-resolved presentation data
  *  — never persisted. */
 export function bindExactCaveQuests(
-  defs: readonly QuestDef[],
+  defs: readonly AuthoredQuestDef[],
   cave: { id: string, directionPhrase: string | null } | undefined,
-): QuestDef[] {
+): AuthoredQuestDef[] {
   const cavePlace = cavePlacePhrase(cave?.directionPhrase ?? null)
   const caveId = cave?.id
   return defs.map((def) => {
