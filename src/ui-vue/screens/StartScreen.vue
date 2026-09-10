@@ -104,6 +104,13 @@ async function openNewGame(): Promise<void> {
   playerNameInput.value?.select()
 }
 
+async function openLoadGame(): Promise<void> {
+  showNewGame.value = false
+  await nextTick()
+  playerNameInput.value?.focus()
+  playerNameInput.value?.select()
+}
+
 function submitNew(): void {
   if (atLimit.value) {
     error.value = saveErrorMessage('limit')
@@ -145,53 +152,55 @@ function useSeedFromLibrary(seed: number): void {
         Seedvale
       </h1>
 
-      <div
-        v-if="entries.length > 0"
-        class="mb-3.5 flex flex-col gap-2"
-      >
+      <template v-if="!showNewGame">
         <div
-          v-for="entry in entries"
-          :key="entry.id"
-          class="flex items-stretch overflow-hidden rounded-md border border-white/15 bg-white/5"
-          :class="entry.status === 'ok' && entry.id === activeId ? 'border-blue-400/70 bg-blue-500/20' : ''"
+          v-if="entries.length > 0"
+          class="mb-3.5 flex flex-col gap-2"
         >
-          <button
-            v-if="entry.status === 'ok'"
-            type="button"
-            class="cursor-pointer min-w-0 flex-1 px-3 py-2.5 text-left text-sm hover:bg-white/10"
-            @click="loadSlot(entry)"
-          >
-            <span class="block font-semibold">{{ entry.name }}</span>
-            <span class="mt-0.5 block text-[11px] opacity-70">{{ formatMeta(entry) }}</span>
-          </button>
           <div
-            v-else
-            class="min-w-0 flex-1 px-3 py-2.5 text-left text-sm opacity-70"
+            v-for="entry in entries"
+            :key="entry.id"
+            class="flex items-stretch overflow-hidden rounded-md border border-white/15 bg-white/5"
+            :class="entry.status === 'ok' && entry.id === activeId ? 'border-blue-400/70 bg-blue-500/20' : ''"
           >
-            <span class="block font-semibold">{{ entry.name ?? 'Zapis' }}</span>
-            <span class="mt-0.5 block text-[11px] text-red-300">{{ unhealthySaveStatusLabel(entry.status) }} — nie można wczytać</span>
+            <button
+              v-if="entry.status === 'ok'"
+              type="button"
+              class="cursor-pointer min-w-0 flex-1 px-3 py-2.5 text-left text-sm hover:bg-white/10"
+              @click="loadSlot(entry)"
+            >
+              <span class="block font-semibold">{{ entry.name }}</span>
+              <span class="mt-0.5 block text-[11px] opacity-70">{{ formatMeta(entry) }}</span>
+            </button>
+            <div
+              v-else
+              class="min-w-0 flex-1 px-3 py-2.5 text-left text-sm opacity-70"
+            >
+              <span class="block font-semibold">{{ entry.name ?? 'Zapis' }}</span>
+              <span class="mt-0.5 block text-[11px] text-red-300">{{ unhealthySaveStatusLabel(entry.status) }} — nie można wczytać</span>
+            </div>
+            <button
+              type="button"
+              class="cursor-pointer w-11 shrink-0 border-l border-white/12 text-xs text-red-300 hover:bg-red-400/10"
+              @click="removeEntry(entry)"
+            >
+              Usuń
+            </button>
           </div>
-          <button
-            type="button"
-            class="cursor-pointer w-11 shrink-0 border-l border-white/12 text-xs text-red-300 hover:bg-red-400/10"
-            @click="removeEntry(entry)"
-          >
-            Usuń
-          </button>
         </div>
-      </div>
 
-      <!-- Nothing healthy to continue (no saves at all, or only unhealthy
-           rows) — `Kontynuuj` is not actionable then (plan ui-input-011 §3),
-           so it stays out of the way instead of sitting there disabled. -->
-      <UiButton
-        v-if="healthySlots.length > 0"
-        variant="primary"
-        class="mb-2 w-full"
-        @click="emit('choose', { type: 'continue' })"
-      >
-        Kontynuuj
-      </UiButton>
+        <!-- Nothing healthy to continue (no saves at all, or only unhealthy
+            rows) — `Kontynuuj` is not actionable then (plan ui-input-011 §3),
+            so it stays out of the way instead of sitting there disabled. -->
+        <UiButton
+          v-if="healthySlots.length > 0"
+          variant="primary"
+          class="mb-2 w-full"
+          @click="emit('choose', { type: 'continue' })"
+        >
+          Kontynuuj
+        </UiButton>
+      </template>
 
       <UiButton
         v-if="!showNewGame"
@@ -200,6 +209,13 @@ function useSeedFromLibrary(seed: number): void {
         @click="openNewGame"
       >
         {{ atLimit ? 'Nowa gra (limit 8)' : 'Nowa gra' }}
+      </UiButton>
+      <UiButton
+        v-if="showNewGame && entries.length > 0"
+        class="mb-2 w-full"
+        @click="openLoadGame"
+      >
+        {{ 'Wybierz zapis' }}
       </UiButton>
       <div v-if="showNewGame">
         <label
