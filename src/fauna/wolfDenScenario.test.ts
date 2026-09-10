@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PreySpawner } from './AnimalSpawner'
 import { tickSpawnPointRecovery } from './AnimalSpawner'
+import { WOLF_DEN_ID } from './AnimalSpawner'
 import {
   activateWolfDenProblem,
   canOfferSettlementTrip,
@@ -8,11 +9,11 @@ import {
   effectiveRespawnIntervalDays,
   isQuestSpawnPointPermanentlyDestroyed,
   isWolfDenPermanentlyDestroyed,
+  isWolfDenPressureProblem,
   shouldActivateWolfDenProblem,
   WOLF_DEN_ACTIVE_PRESSURE,
   WOLF_DEN_PROBLEM_START_DAY,
 } from './wolfDenScenario'
-import { WOLF_DEN_ID } from './AnimalSpawner'
 
 function wolfDen(overrides: Partial<PreySpawner> = {}): PreySpawner {
   return {
@@ -90,6 +91,18 @@ describe('permanent destruction', () => {
     const den = wolfDen({ state: 'disabled', disabledAtDay: 0, canRecover: false })
     tickSpawnPointRecovery(den, 100, 99)
     expect(den.state).toBe('disabled')
+  })
+})
+
+describe('wolf den pressure problem', () => {
+  it('is a live threat only while pressure is on and the den is not destroyed', () => {
+    expect(isWolfDenPressureProblem(wolfDen())).toBe(false)
+    expect(isWolfDenPressureProblem(wolfDen({ pressure: 0.75 }))).toBe(true)
+    expect(isWolfDenPressureProblem(wolfDen({
+      pressure: 0.75,
+      state: 'disabled',
+      canRecover: false,
+    }))).toBe(false)
   })
 })
 

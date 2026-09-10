@@ -4,6 +4,7 @@ import type { Inventory } from '../items/Inventory'
 import type { ItemKind } from '../items/items'
 import type { ReputationDimension, SocialConsequence } from '../reputation/ReputationManager'
 import type { NpcId } from '../settlement/npcState'
+import type { WorldQuestSourceLookup, WorldQuestSourceStatus } from './opportunities/worldQuestOpportunityTypes'
 import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
@@ -191,6 +192,12 @@ const NO_WORLD_PROGRESS: QuestWorldProgressLookup = {
   isWorldContainerLooted: () => false,
 }
 
+const NO_WORLD_QUEST_SOURCE: WorldQuestSourceLookup = {
+  getStatus: () => 'untracked',
+}
+
+export type { WorldQuestSourceLookup, WorldQuestSourceStatus }
+
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
   getReputationDimension: () => 0,
   getRenown: () => 0,
@@ -247,7 +254,7 @@ function matchingTalkChoice(
  * @system quest-manager
  * @role Owns quest progress, objective/stage evaluation and NPC relation levels.
  * @owns QuestProgressEntry
- * @integration Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly.
+ * @integration Bound to world entities (fauna, wells, spawners) via injected resolvers, never by importing them directly. World-driven opportunities use a read-only source lookup; QuestManager owns quest progress only.
  */
 export class QuestManager {
   private readonly defs: readonly QuestDef[]
@@ -266,6 +273,7 @@ export class QuestManager {
   private readonly settlementRatInfestation: SettlementRatInfestationLookup
   private readonly spawnPointDestruction: SpawnPointDestructionLookup
   private readonly worldProgress: QuestWorldProgressLookup
+  private readonly worldQuestSource: WorldQuestSourceLookup
   private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
   private readonly canReserveHorseReward: HorseRewardAvailability
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
@@ -289,6 +297,7 @@ export class QuestManager {
     canReserveHorseReward: HorseRewardAvailability = () => false,
     spawnPointDestruction: SpawnPointDestructionLookup = NO_SPAWN_POINT_DESTRUCTION,
     worldProgress: QuestWorldProgressLookup = NO_WORLD_PROGRESS,
+    worldQuestSource: WorldQuestSourceLookup = NO_WORLD_QUEST_SOURCE,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -302,6 +311,7 @@ export class QuestManager {
     this.settlementRatInfestation = settlementRatInfestation
     this.spawnPointDestruction = spawnPointDestruction
     this.worldProgress = worldProgress
+    this.worldQuestSource = worldQuestSource
     this.transferAnimalOwnership = transferAnimalOwnership
     this.canReserveHorseReward = canReserveHorseReward
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
@@ -412,9 +422,12 @@ export class QuestManager {
   }
 
   /** Whether every authored `availability` prerequisite on `def` is
-   *  currently satisfied. Absent availability = always available. */
+   *  currently satisfied. Absent availability = always available.
+   *  World-driven quests additionally require a live `present` source. */
   private meetsAvailability(def: QuestDef): boolean {
     if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return false
+    const source = this.worldQuestSource.getStatus(def.id)
+    if (source !== 'untracked' && source !== 'present') return false
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) return true
     return prerequisites.every((prereq) => this.meetsPrerequisite(def, prereq))
@@ -534,6 +547,36 @@ export class QuestManager {
       if (stage?.objective.type !== 'destroy_spawn_point') continue
       if (!this.spawnPointDestruction.isPermanentlyDestroyed(stage.objective.spawnerId)) continue
       this.advanceStage(def, s)
+    }
+  }
+
+  /** Polls live world-driven source status for generated settlement quests.
+   *  Unaccepted offers disappear when the source problem is gone. An accepted
+   *  quest whose source resolved without completing the objective takes the
+   *  existing `failed` outcome (no normal player reward). A missing source
+   *  binding on an active quest is `invalidated`. Call after spawn-point
+   *  destruction catch-up so a player destroy still completes normally.
+   *
+   * @domain quests-progression
+   */
+  pollWorldDrivenSources(): void {
+    for (const def of this.defs) {
+      const status = this.worldQuestSource.getStatus(def.id)
+      if (status === 'untracked') continue
+      const s = this.stateOf(def.id)
+      if (s.state === 'offered' && status !== 'present') {
+        this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 })
+        continue
+      }
+      if (s.state !== 'active') continue
+      if (status === 'absent') {
+        this.setQuestState(def.id, { state: 'invalidated', stageIndex: s.stageIndex })
+        continue
+      }
+      if (status === 'resolved') {
+        const failed = uniqueOutcomeForState(def, 'failed')
+        if (failed) this.applyOutcome(def, failed.id)
+      }
     }
   }
 

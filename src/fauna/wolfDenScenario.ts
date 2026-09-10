@@ -33,6 +33,17 @@ export function isWolfDenPermanentlyDestroyed(spawner: PreySpawner): boolean {
   return spawner.type === 'wolfDen' && spawner.state === 'disabled' && spawner.canRecover === false
 }
 
+/**
+ * Authoritative settlement wolf-den threat: den pressure is live and the
+ * habitat has not been permanently destroyed. Quest opportunities observe
+ * this; they do not own it.
+ *
+ * @domain fauna
+ */
+export function isWolfDenPressureProblem(spawner: PreySpawner): boolean {
+  return spawner.type === 'wolfDen' && spawner.pressure > 0 && !isWolfDenPermanentlyDestroyed(spawner)
+}
+
 /** Quest objectives may reference stable `WOLF_DEN_ID` instead of `${settlement}:wolfDen`. */
 export function matchesQuestSpawnPointId(spawner: PreySpawner, questSpawnerId: string): boolean {
   if (questSpawnerId === WOLF_DEN_ID) return spawner.type === 'wolfDen'

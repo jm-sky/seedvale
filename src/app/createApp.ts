@@ -80,6 +80,14 @@ import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { cardinalDirectionPhrase } from '../quests/cardinalDirection'
 import { materializeAuthoredQuestDefs, normalizeLegacyQuestRelations } from '../quests/materializeAuthoredQuests'
+import {
+  parseWolfDenPressureQuestId,
+  wolfDenPressureStatusFromSpawners,
+} from '../quests/opportunities/settlementQuestOpportunities'
+import {
+  buildWorldDrivenSettlementQuests,
+  opportunityNpcsFromSettlement,
+} from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
 import { bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
@@ -906,7 +914,7 @@ export async function createApp(
   }
   const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
   const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
-  const questDefs = materializeAuthoredQuestDefs(
+  const authoredQuestDefs = materializeAuthoredQuestDefs(
     bindExactCaveQuests([
       ...QUESTS,
       ...landmarkQuests,
@@ -915,6 +923,14 @@ export async function createApp(
     ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId })),
     homeNpcDescriptors,
   )
+  const worldDrivenQuestDefs = buildWorldDrivenSettlementQuests({
+    settlementId: homeSettlementId,
+    settlementName: homeDef.name,
+    spawners: bundle.fauna.getSpawners(),
+    npcs: opportunityNpcsFromSettlement(homeDef),
+    persistedQuestIds: initialSave?.quests.progress.map((entry) => entry.id),
+  })
+  const questDefs = [...authoredQuestDefs, ...worldDrivenQuestDefs]
   const initialQuestState = initialSave?.quests
     ? {
         ...initialSave.quests,
@@ -988,6 +1004,13 @@ export async function createApp(
       isWorldContainerLooted: (containerId) => isDarkForestTreasureChestLooted(
         bundle.worldGeneratedContainers.containerCounts(containerId),
       ),
+    },
+    {
+      getStatus: (questId) => {
+        const parsed = parseWolfDenPressureQuestId(questId)
+        if (!parsed) return 'untracked'
+        return wolfDenPressureStatusFromSpawners(parsed.spawnerId, bundle.fauna.getSpawners())
+      },
     },
   )
 
@@ -1104,6 +1127,7 @@ export async function createApp(
     getWorldSeed: () => config.seed,
     onSpawnPointDestroyed: () => {
       questManager.pollDestroySpawnPointObjectives()
+      questManager.pollWorldDrivenSources()
     },
     onWorldContainerWithdraw: () => {
       questManager.pollWorldProgressionObjectives()
@@ -1111,6 +1135,7 @@ export async function createApp(
   }
 
   questManager.pollDestroySpawnPointObjectives()
+  questManager.pollWorldDrivenSources()
   questManager.pollWorldProgressionObjectives()
 
   // Riding (plan fauna-003) — livestock has a deterministic per-house

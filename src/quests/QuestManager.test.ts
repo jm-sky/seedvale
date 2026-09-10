@@ -82,6 +82,7 @@ function makeManager(
   socialAvailability?: QuestSocialAvailabilityLookup,
   settlementRatInfestation?: import('./QuestManager').SettlementRatInfestationLookup,
   spawnPointDestruction?: import('./QuestManager').SpawnPointDestructionLookup,
+  worldQuestSource?: import('./QuestManager').WorldQuestSourceLookup,
 ): QuestManager {
   return new QuestManager(
     defs,
@@ -97,6 +98,8 @@ function makeManager(
     undefined,
     undefined,
     spawnPointDestruction,
+    undefined,
+    worldQuestSource,
   )
 }
 
@@ -2017,5 +2020,139 @@ describe('QuestManager stable NPC identity (plan quests-progression-015)', () =>
     expect(qm.labelMarker(janA)).toBeNull()
     expect(qm.labelMarker(janB)).toBe('?')
     expect(qm.labelMarker('anna-id')).toBe('…')
+  })
+})
+
+describe('QuestManager world-driven settlement sources', () => {
+  const sourceQuest = quest({
+    id: 'world:wolf-den-pressure:home:wolfDen',
+    giverName: 'Anna',
+    offerLine: 'offer den',
+    stages: [
+      { objective: { type: 'destroy_spawn_point', spawnerId: 'home:wolfDen' }, description: 'destroy', reminderLine: 'remind' },
+    ],
+    reportLine: 'report den',
+    outcomes: [
+      { id: 'den_destroyed', state: 'complete', consequences: { relations: [{ npc: { npcId: 'Anna' }, delta: 2 }] } },
+      { id: 'resolved_without_player', state: 'failed', resultText: 'gone' },
+    ],
+  })
+
+  function sourceLookup(status: import('./QuestManager').WorldQuestSourceStatus) {
+    return { getStatus: (questId: string) => questId === sourceQuest.id ? status : 'untracked' as const }
+  }
+
+  it('hides an unaccepted generated quest while the source problem is absent', () => {
+    const qm = makeManager([sourceQuest], undefined, undefined, undefined, undefined, undefined, undefined, sourceLookup('absent'))
+    expect(qm.isQuestAvailable(sourceQuest.id)).toBe(false)
+    expect(qm.onInteract('Anna')).toBeNull()
+    expect(qm.list()).toHaveLength(0)
+    expect(qm.getState(sourceQuest.id)).toBe('not_offered')
+  })
+
+  it('offers a generated quest only while the source problem is present', () => {
+    const qm = makeManager([sourceQuest], undefined, undefined, undefined, undefined, undefined, undefined, sourceLookup('present'))
+    expect(qm.isQuestAvailable(sourceQuest.id)).toBe(true)
+    expect(qm.onInteract('Anna')?.offer).toBeDefined()
+  })
+
+  it('drops an unaccepted offer when the source problem disappears', () => {
+    let status: import('./QuestManager').WorldQuestSourceStatus = 'present'
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { getStatus: () => status },
+    )
+    expect(qm.onInteract('Anna')?.offer).toBeDefined()
+    expect(qm.getState(sourceQuest.id)).toBe('offered')
+    status = 'resolved'
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(sourceQuest.id)).toBe('not_offered')
+    expect(qm.list()).toHaveLength(0)
+    expect(qm.onInteract('Anna')).toBeNull()
+  })
+
+  it('fails an accepted generated quest without reward when the source resolves externally', () => {
+    const granted: string[] = []
+    let status: import('./QuestManager').WorldQuestSourceStatus = 'present'
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      (kind) => granted.push(kind),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { getStatus: () => status },
+    )
+    acceptOffer(qm, 'Anna')
+    expect(qm.getState(sourceQuest.id)).toBe('active')
+    status = 'resolved'
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(sourceQuest.id)).toBe('failed')
+    expect(qm.list()[0]?.resolvedOutcomeId).toBe('resolved_without_player')
+    expect(granted).toEqual([])
+    expect(qm.getRelation('Anna')).toBe(0)
+  })
+
+  it('lets a player destroy complete before external-resolution polling', () => {
+    let status: import('./QuestManager').WorldQuestSourceStatus = 'present'
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { isPermanentlyDestroyed: () => true },
+      { getStatus: () => status },
+    )
+    acceptOffer(qm, 'Anna')
+    status = 'resolved'
+    qm.pollDestroySpawnPointObjectives()
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(sourceQuest.id)).toBe('ready_to_report')
+    expect(speak(qm, 'Anna')).toBe('report den')
+    expect(qm.getState(sourceQuest.id)).toBe('complete')
+    expect(qm.getRelation('Anna')).toBe(2)
+  })
+
+  it('invalidates an active generated quest whose source binding is gone', () => {
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      undefined,
+      { progress: [{ id: sourceQuest.id, state: 'active', stageIndex: 0 }], relations: {} },
+      undefined,
+      undefined,
+      undefined,
+      sourceLookup('absent'),
+    )
+    expect(qm.getState(sourceQuest.id)).toBe('active')
+    qm.pollWorldDrivenSources()
+    expect(qm.getState(sourceQuest.id)).toBe('invalidated')
+  })
+
+  it('restores persisted generated-quest progress when the same definition id is present', () => {
+    const qm = makeManager(
+      [sourceQuest],
+      undefined,
+      undefined,
+      {
+        progress: [{ id: sourceQuest.id, state: 'active', stageIndex: 0 }],
+        relations: {},
+      },
+      undefined,
+      undefined,
+      undefined,
+      sourceLookup('present'),
+    )
+    expect(qm.getState(sourceQuest.id)).toBe('active')
+    expect(qm.list()[0]?.id).toBe(sourceQuest.id)
   })
 })

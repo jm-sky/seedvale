@@ -1,14 +1,15 @@
 # Plan: World-driven settlement quest opportunities
 
 **Created:** 2026-09-10  
-**Status:** `planned` 📋  
+**Status:** `verification needed` 🔍  
 **Type:** feature  
 **Priority:** high · **Effort:** M  
-**Depends on:** quests-progression-015  
+**Depends on:** ~~quests-progression-015~~  
 **Domain:** `quests-progression`  
 **Subdomains:** `quests` `settlements` `fauna` `world`  
 **Tags:** `world-driven` `settlement-opportunities` `emergent-quests`  
-**Roadmap:** `quests-and-reputation.md`
+**Roadmap:** `quests-and-reputation.md`  
+**Implemented at:** 2026-09-10 15:25
 
 ## Cel
 

@@ -59,7 +59,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
 | 💡 `settlements-npcs-007-bandages-and-herbal-medicine.md`                      | -       | 🟡 | M      | settlements-npcs-006, settlements-npcs-015 |
-| 💡 `quests-progression-016-world-driven-settlement-quest-opportunities.md`     | -       | 🔴 | M      | quests-progression-015 |
 | 💡 `quests-progression-017-rpg-settlement-quest-matrices.md`                   | -       | 🟡 | M      | quests-progression-015, quests-progression-016 |
 | 💡 `items-player-014-rope-pullable-resource-transport.md`                      | -       | 🟡 | M      | ~~155~~ ~~122~~ |
 | ◼️ `settlements-npcs-019-persistent-and-off-screen-transport.md`               | -       | 🔴 | M      | settlements-npcs-018 |
@@ -87,6 +86,7 @@ Implementation is complete; only meaningful browser/manual verification remains.
 
 | Plan | Sprawdź |
 |------|---------|
+| `quests-progression-016-world-driven-settlement-quest-opportunities.md` | Po dniu 2, gdy jama ma pressure: hunter (albo pierwszy dorosły) oferuje generated „Wilki pod osadą”; zniszczenie jamy zalicza questa i wypłaca nagrodę; jeśli problem zniknie przed akceptacją, oferta znika; save/load aktywnego generated questa trzyma tego samego givera i `spawnerId`; authored `wilki-pod-osada` nadal istnieje osobno |
 | `items-player-022-gameplay-interaction-usability-polish.md` | Namiot+podest+posłanie = jeden cel Tab/gaze z inspection wszystkich części i repair per część; `+N%` czytelnie zielone; preview małej/średniej chaty pokazuje wejście przy obrocie; `[F]`/`[G]` oczywiste przy przyciskach; kupka gałęzi+belek to 2 cele Tab; stojąca pochodnia gaśnie po 6 h świata / time-skip / save-load |
 | `quests-progression-015-stable-npc-identity-for-quests.md` | Dwa NPC o tym samym imieniu: rozmowa z niewłaściwym nie zalicza `talk_to_npc` / choice / oferty givera; marker zostaje przy właściwym id; save/load i stream-out/in osady trzymają ten sam target; authored Anna/Piotr/Kasia/Marek nadal oferują, przechodzą etapy, kończą się i wypłacają jak wcześniej |
 | `npc-016-work-contracts-payment-and-employer-interaction.md` | Najemnik po skończonej pracy podchodzi tylko gdy gracz jest w pobliżu; dialog otwiera Zapłać N / Jeszcze nie; monety schodzą z gracza do `personalInventory` NPC; za mało monet / pełny ekwipunek NPC nic nie rusza; powtórne Zapłać nic nie robi; śmierć najemnika nie obciąża gracza; save/load zachowuje należność i już wypłacone monety |
@@ -225,7 +225,7 @@ Household economy & storage
   (122) → (126 seed planting), (127 player-built well)
 
 World-driven quests
-  (049) + 093 + (110) → 132
+  (049) + 093 + (110) → 132 → 016 (settlement opportunities, wolf-den pressure slice)
 
 Rendering performance
   (157 PointLight budget 16) → 149 shader program first-use hitch

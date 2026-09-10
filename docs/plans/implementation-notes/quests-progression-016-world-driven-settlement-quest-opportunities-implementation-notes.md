@@ -769,4 +769,17 @@ save/load reconstructs the same quest
 
 Dopiero gdy ten przepływ działa bez quest-owned state i bez nowej mechaniki domenowej, kolejne world-driven source kinds mogą korzystać z tego samego seam.
 
+## Shipped (2026-09-10)
+
+Vertical slice: home-settlement **wolf-den pressure** (`isWolfDenPressureProblem` on `${settlementId}:wolfDen`). Not a new threat simulation. `WOLF_DEN_ID` stays the authored-quest alias; generated quests bind the real per-settlement spawner id.
+
+- Opportunity layer: `src/quests/opportunities/` — data-only `WolfDenPressureOpportunity`, deterministic id `world:wolf-den-pressure:${spawnerId}`, materializer → normal `QuestDef`.
+- Composition: `createApp.ts` appends generated defs next to authored ones **before** `new QuestManager`. Candidate is always recorded from the deterministic spawner id so stub fauna / day-0 boot still produce a definition; live lookup gates offering.
+- `QuestManager` gained `WorldQuestSourceLookup` + `pollWorldDrivenSources()`. Progress ownership unchanged. Unaccepted offers revert when the source is not `present`. Active + `resolved` without a prior `destroy_spawn_point` catch-up → unique `failed` outcome (no reward). Active + `absent` → `invalidated`.
+- Player completion reuses `destroy_spawn_point` + existing destroy poll (call destroy poll **before** world-driven poll).
+- Giver: hunter in flattened family order, else first adult; stable `NpcId` from 015.
+- No `SaveData` bump. Reconstruction uses the same quest id + settlement NPC order.
+- Not implemented here (see LOOSE-ENDS): household food shortage (no player→household transfer), lost livestock (no missing predicate), generic settlement building repair, multi-source priority/limit (single source, no scoring framework).
+- Authored `wilki-pod-osada` is unchanged and may overlap after day 2.
+
 > **Zrób git commit i push do main, rebase jeżeli trzeba**
