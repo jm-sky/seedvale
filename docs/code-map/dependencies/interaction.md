@@ -29,6 +29,8 @@ Generated from TypeScript imports.
 - `app/inspection/buildWorldInspection.test.ts`
 - `app/inspection/inspectionTarget.ts`
 - `app/interactables.ts`
+- `interaction/interactionView.test.ts`
+- `interaction/interactionView.ts`
 - `interaction/resolveInteraction.ts`
 - `interaction/targetedSkillAction.test.ts`
 - `interaction/targetedSkillAction.ts`
@@ -46,6 +48,25 @@ Generated from TypeScript imports.
 
 - `app/gameLoop.ts`
 - `interaction/findInteractionTarget.test.ts`
+
+## `interaction/interactionView.test.ts`
+
+**Imports**
+
+- `interaction/Interactable.ts`
+- `interaction/interactionView.ts`
+
+## `interaction/interactionView.ts`
+
+**Imports**
+
+- `interaction/Interactable.ts`
+
+**Imported by**
+
+- `app/gameLoop.ts`
+- `interaction/interactionView.test.ts`
+- `ui-vue/store.ts`
 
 ## `interaction/resolveInteraction.ts`
 

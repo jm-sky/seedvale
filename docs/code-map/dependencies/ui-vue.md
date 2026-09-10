@@ -185,6 +185,7 @@ Generated from TypeScript imports.
 - `config/qualityProfiles.ts`
 - `config/worldConfig.ts`
 - `input/isTouchDevice.ts`
+- `interaction/interactionView.ts`
 - `items/inventoryView.ts`
 - `items/items.ts`
 - `items/primaryWeapons.ts`

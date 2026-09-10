@@ -853,6 +853,7 @@ Generated from TypeScript imports.
 - `input/isTouchDevice.ts`
 - `interaction/Interactable.ts`
 - `interaction/findInteractionTarget.ts`
+- `interaction/interactionView.ts`
 - `interaction/resolveInteraction.ts`
 - `interaction/targetedSkillAction.ts`
 - `interaction/treeInspection.ts`

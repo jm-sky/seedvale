@@ -4,12 +4,36 @@ Generated from exported TypeScript symbols.
 
 ## `interaction/findInteractionTarget.ts`
 
-- `pickInGaze` — function — line 6
+- `compareGazeRanked` — function — line 77
+- `GAZE_CENTEREDNESS_TIE_EPSILON` — const — line 7
+- `GAZE_HYSTERESIS_MARGIN` — const — line 10
+- `GazeRanked` — type — line 12
+- `pickInGaze` — function — line 101
+- `PickInGazeOptions` — type — line 20
+- `rankInGaze` — function — line 48
 
 ## `interaction/Interactable.ts`
 
 - `Interactable` — type — line 32
 - `WorldItemRef` — type — line 17
+
+## `interaction/interactionView.ts`
+
+- `alternateActionState` — function — line 318
+- `buildInteractionGazePrompt` — function — line 300
+- `buildInteractionView` — function — line 246
+- `hasInspectAction` — function — line 310
+- `interactableStableKey` — function — line 161
+- `interactionActionFromSkillPrompt` — function — line 323
+- `InteractionActionSlot` — type — line 5
+  - domain: ui-input
+- `InteractionActionView` — type — line 7
+- `InteractionGazePrompt` — type — line 19
+- `InteractionView` — type — line 14
+- `InteractionViewContext` — type — line 23
+- `isInteractableActionable` — function — line 287
+- `primaryActionState` — function — line 314
+- `slotInputKey` — function — line 294
 
 ## `interaction/resolveInteraction.ts`
 
