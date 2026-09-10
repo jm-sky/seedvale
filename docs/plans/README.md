@@ -76,7 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `items-player-022-gameplay-interaction-usability-polish.md`                 | -       | 🟡 | M      | ~~items-player-018~~, ~~ui-input-012~~, ~~settlements-005~~ |
-| ◼️ `ui-input-015-interaction-targeting-and-action-semantics.md`                | -       | 🔴 | M      | ui-input-014 |
+| 💡 `ui-input-015-interaction-targeting-and-action-semantics.md`                | -       | 🔴 | M      | ui-input-014 |
 
 ---
 
