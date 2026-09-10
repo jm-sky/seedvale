@@ -76,6 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 | 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
 | 💡 `world-terrain-018-cave-heightfield-representation-spike.md`                | -       | 🔴 | M      | -      |
+| ◼️ `items-player-024-inventory-item-use-ux-coherence.md`                       | -       | 🔴 | L      | items-player-022, ~~ui-input-015~~ |
 
 ---
 
@@ -193,7 +194,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `021`
-- items-player: `024`
+- items-player: `025`
 - npc: `029`
 - persistence: `005`
 - quests-progression: `018`
