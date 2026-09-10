@@ -1,156 +1,337 @@
 # Implementation Notes: Animal leading and cart harness
 
-**Plan:** `fauna-007-animal-leading-and-cart-harness.md`
-**Status:** `planned` 📋
-**Created:** 2026-09-02
-**Purpose:** implementation guide based on current `main` recon.
+**Plan:** `fauna-007-animal-leading-and-cart-harness.md`  
+**Reviewed against:** current `main` after `fauna-017` and implemented `fauna-020`, 2026-09-10  
+**Purpose:** implementation guide for the current architecture; current code wins over older plan assumptions.
 
-## 1. Current code facts
+## Recon conclusion
 
-- `AnimalAgent` is the authoritative runtime fauna entity. `horse` and `donkey` already exist and both expose riding capability through `AnimalDef.mount`.
-- The closest existing relationship pattern is `src/app/actions/mountActions.ts`, but its semantics must **not** be copied for leading: riding calls `driveMounted()` and then `AnimalAgent.update()` early-returns. Leading must keep normal animal AI/update active.
-- Animal movement is currently `stepWithSlopeAndCollision()` plus `steerToward()`. Shared A* in `src/navigation/navigation.ts` is a watchdog/repath mechanism, not a generic follow controller.
-- Animal needs/decisions live in `AnimalLife.ts` and `AnimalAgent.update()`/fauna decision code. Existing food/water target selection and threat/flee behaviour already provide the priority model the plan wants.
-- `PlayerActionContext` in `src/app/actions/actionContext.ts` is the existing ownership seam for player interaction actions; `gameLoop.ts` centralizes interaction dispatch/gating.
-- **There is currently no cart runtime and no rope/harness runtime.** The plan's wording about reusing an existing rope/cart representation does not match current `main`.
-- `src/items/createDroppedItems.ts`, `WorldBundle`, and existing player-placed object modules are useful lifecycle/ownership patterns for a new physical cart; do not make the cart an unowned scene-only object.
+The plan remains valid, but the implementation approach is materially simpler than the original notes assumed:
 
-## 2. Capabilities
+- `fauna-017` split species data / foraging / roaming responsibilities out of `AnimalAgent` while keeping `AnimalAgent` as the per-animal state/integration owner.
+- `fauna-020` already implemented player ownership, detached persistent livestock, Follow/Stay control, stable persistent-animal lookup and a player-position movement seam.
+- Therefore leading must **reuse the same normal-animal movement/control seam** instead of introducing another follow controller.
+- Leading is still a temporary relation and must not be encoded as player ownership or as the persisted Follow/Stay mode.
+- The largest genuinely new runtime concept in this plan is now `animal --pull--> cart`.
+- `public/models/parked/cart.glb` already exists and is the intended v1 cart asset. No new cart model is required.
+- There will be **no separate harness model in v1**. Do not block implementation on harness/rope art or realistic rope physics.
 
-- Keep the existing data-driven `AnimalDef` capability pattern. Do not scatter `kind === 'horse'` / `kind === 'donkey'` checks through the transport code.
-- `mount` and draft/leading capability are semantically different. Add a separate config only if the existing type cannot express draft semantics cleanly.
-- Cart compatibility should be data-driven too; do not assume every cart can be pulled by every transporter.
+## 1. Current fauna ownership boundaries
 
-## 3. Leading architecture
+### `src/fauna/animalDefs.ts`
+
+This is now the canonical owner of `AnimalDef`, `AnimalKind`, `MountPointConfig` and per-species capability/config data.
+
+If leading/draft capability needs declarative species data, extend `AnimalDef` here. Do not put new species config back into `AnimalAgent.ts` and do not scatter `kind === 'horse'` / `kind === 'donkey'` checks through interaction or cart code.
+
+`mount` is not equivalent to `leadable` or draft capability. Reuse the presence-as-capability convention, not the mounted semantics.
+
+### `src/fauna/AnimalLife.ts`
+
+Owns hunger/thirst/stamina physiology. Leading and harness state do not belong here.
+
+### `src/fauna/animalForaging.ts`
+
+Owns food/water source selection, validation and relief. Do not add lead-specific feeding logic or thresholds here.
+
+### `src/fauna/animalRoaming.ts`
+
+Owns roaming trip/probe helpers. Leading is not a roaming mode and should not become a second trip FSM.
+
+### `src/fauna/faunaDecision.ts`
+
+Owns high-level fauna arbitration such as player/NPC threat, fire, frenzy and normal predator/prey branches.
+
+Leading should not automatically become a new `FaunaBehaviourKind`. The existing `fauna-020` precedent shows that player-directed movement can live inside the normal-behaviour path after stronger survival/needs work has had its chance.
+
+### `src/fauna/AnimalAgent.ts`
+
+Still owns authoritative per-animal runtime state, movement integration and locomotion execution. It is the correct integration point for a narrow leading relation/control input, but do not re-absorb policy extracted by `fauna-017`.
+
+## 2. Reuse `fauna-020`, do not duplicate Follow
+
+`fauna-020` already provides:
+
+- `src/fauna/animalOwnership.ts` — authoritative household/player ownership,
+- `src/fauna/ownedAnimalControl.ts` — Follow/Stay state + hysteresis + pure movement resolver,
+- `AnimalUpdateContext.playerControlPos` — narrow player world-position input,
+- `AnimalAgent` integration of owned-animal movement in the normal behaviour path,
+- `SettlementsManager.resolvePersistentAnimal(animalId)`,
+- `SettlementsManager.transferAnimalOwnership(...)`,
+- `SettlementsManager.setOwnedAnimalControl(...)`,
+- detached persistent livestock lifecycle and lookup.
+
+Leading must reuse this **movement/control integration pattern**, but not conflate semantics:
+
+```text
+owned Follow/Stay = persistent player-owned control state
+lead             = temporary player↔animal relation
+```
+
+Do not implement leading by silently switching the animal to `OwnedAnimalControlMode = 'follow'`; that would corrupt ownership/control semantics and persistence.
+
+Preferred shape: extract/reuse the small pure "follow a target with hysteresis / trailing distance" primitive where useful, while keeping separate state for the temporary lead relation.
+
+## 3. Leading relation ownership
+
+Keep the relation explicit and identity-based:
+
+```text
+Player --lead--> AnimalAgent(animalId)
+```
 
 Recommended ownership:
 
-- The player action layer owns the current player↔animal lead relationship and attach/detach lifecycle.
-- `AnimalAgent` owns the animal-side relationship/reference and exposes only the operations needed by movement/decision code.
-- Store the relation by stable `animalId`, not by UI/camera state or raw scene references.
-- Detach must be idempotent. Animal death/removal/unresolvable references must clear the relation.
-- Do not create `HorseManager`, `AnimalFollowManager`, `HorseAI` or another global per-frame manager.
+- app/action layer owns attach/detach initiated by the player,
+- relation identity is stored by stable `animalId`, not a scene object,
+- `AnimalAgent` receives only the narrow current lead state/input needed by normal movement,
+- detach is idempotent,
+- death/removal/unresolvable animal clears the relation,
+- no `HorseManager`, `LeadManager`, `AnimalFollowManager` or global per-frame relation scan.
 
-**Lead is a relationship, not a second AI.** It should provide a player-derived movement target to the normal animal decision/movement path.
+Leading is temporary runtime control unless current save contracts at implementation time explicitly require persistence. Do not persist raw Three.js references.
 
-## 4. Do not copy mounted behaviour
+## 4. Leading movement priority
 
-Current riding is:
+The correct behavioural intent is the same ordering already established by `fauna-020`:
 
-`mountActions.update()` → `driveMounted()` → `AnimalAgent.update()` early return.
+```text
+high-level safety / combat / flee gates
+→ normal predator/prey branch
+→ immediate local behaviour
+→ pursueNeeds()
+→ player-directed movement (owned Follow OR active lead)
+→ ordinary roam/wander fallback
+```
 
-That is correct for riding and wrong for leading. For leading:
+Leading must therefore:
 
-- `AnimalAgent.update()` continues to tick needs, stamina, lifecycle, animation and decisions.
-- `PlayerController.update()` remains the sole player movement path.
-- When lead is active and no higher-priority autonomous action has won, use a trailing target near the player's current world position and existing `steerToward()`/collision movement.
-- Never teleport/snap the animal to the player.
-- Do not create a second follow state machine.
+- keep `AnimalAgent.update()` active,
+- keep hunger/thirst/stamina ticking,
+- keep threat/flee/combat authoritative,
+- let an actual needs action temporarily override the player's direction,
+- resume following while the lead relation remains attached after the stronger action ends,
+- use normal steering/collision/grounding,
+- never teleport/snap the animal to the player.
 
-A good v1 seam is to let lead supply the movement target only when ordinary autonomous movement has not selected a stronger action. This keeps food/water and threat responses authoritative.
+Do not add lead-specific hunger thresholds unless the current arbitration genuinely cannot express the desired interruption behaviour.
 
-## 5. Follow target
+## 5. Follow target / spacing
 
-Do not target the player's exact position. Use a small trailing distance/radius so the animal does not constantly collide with or overshoot the player.
+Do not target the player's exact position.
 
-The target should be derived from the player's live world position (optionally movement direction) and calculated only for the active relation. No global target registry is needed.
+Reuse the existing `fauna-020` idea of hysteresis / distance bands, but leading will probably need a smaller trailing distance than ordinary player-owned Follow. Keep those numbers in one small control helper/config rather than scattered through `AnimalAgent` and interaction code.
 
-Do not reuse `pickFollowTarget()` as the implementation: that is existing animal→animal herd/mother cohesion with different ownership and priority semantics.
+The target should be derived from narrow plain data such as player world position and, only if useful, player heading. Do not pass `PlayerController`, camera or app objects into fauna.
 
-## 6. Autonomy / interruption
+Do not reuse herd/mother follow state as the lead relation; those are animal↔animal cohesion semantics.
 
-Do not implement a `forceFollowPlayer`-style bypass.
+## 6. Riding interaction
 
-The existing animal decision system already distinguishes food/water seeking, threat/flee and ordinary wander. Lead should be lower priority than survival reactions:
+`src/app/actions/mountActions.ts` remains the authority for riding.
 
-- moderate hunger should not necessarily cancel leading;
-- when the existing decision system actually chooses a food/water source, the animal may leave the player's path;
-- threat/flee keeps its existing priority;
-- when that autonomous action ceases to be active, the still-attached lead relation becomes usable again.
+Mounted behaviour is intentionally different:
 
-Avoid introducing lead-specific hunger thresholds unless recon proves the existing arbitration cannot express this.
+```text
+mountActions.update()
+→ AnimalAgent.driveMounted()
+→ mounted gate suppresses autonomous movement
+```
 
-## 7. Pathfinding
+Do **not** copy that for leading. A led animal remains autonomous and continues the normal update/decision pipeline.
 
-`src/navigation/navigation.ts` is not a generic follow system. Normal `steerToward()` is still straight-line steering with local obstacle handling; A* is invoked by the movement watchdog when genuinely blocked.
+Define obvious mutual-exclusion rules at the action boundary, e.g. an animal should not remain player-led while the player is mounted on it. Reuse existing action blocking/context rules instead of inventing a second input state machine.
 
-Therefore start with normal steering and let the existing watchdog trigger A* when needed. Do not call A* every frame, add path caching, or introduce a worker for this feature.
+## 7. Persistent-animal lookup and player-owned animals
 
-## 8. Harness/cart
+Because `fauna-020` is implemented, player-owned livestock may live outside `Settlement.livestock` in the detached persistent collection.
 
-There is no cart implementation to extend. Implement only the minimal physical cart required by fauna-007:
+Any leading action that resolves by `animalId` should use the existing public persistent-animal boundary:
 
-- world-owned cart record/runtime with stable identity;
-- explicit animal↔cart attachment point/constraint;
-- no cart AI and no direct player→cart steering;
-- cart follows the animal's resolved movement/transform;
-- detach leaves the cart at its current world position.
+```text
+SettlementsManager.resolvePersistentAnimal(animalId)
+```
 
-A deterministic attachment constraint plus optional simple rope visual is sufficient. Do not build realistic rope physics.
+plus the existing wild-fauna lookup only if the intended leading capability is allowed for non-persistent/wild animals.
 
-Prefer an explicit logical attachment over Three.js reparenting if reparenting complicates world-space ownership, rebuild or persistence.
+Do not reintroduce scans over loaded settlement livestock in app code.
 
-## 9. Chained transport
+Leading must work correctly for the player-owned horse acquired by the already implemented horse acquisition flow.
 
-For `Player → lead → Horse → pull → Cart`:
+## 8. Interaction integration
 
-1. Player movement remains authoritative.
-2. Lead supplies the horse's follow target.
-3. Horse remains an ordinary `AnimalAgent`.
-4. Cart derives movement from the horse attachment.
-5. No direct PlayerCart relationship is created.
+Current player-owned animal interaction already uses contextual animal actions in `src/app/gameLoop.ts`, and `src/app/interactables.ts` includes detached livestock as live interaction candidates.
 
-Do not put cart-follow logic into `PlayerController` or the player movement loop.
+Extend that path rather than registering another global key handler.
 
-## 10. Interaction integration
+Relevant files:
 
-Use the existing interaction/prompt/dispatch path in `src/app/interactables.ts` + `src/app/gameLoop.ts` and the `PlayerActionContext` seam.
+- `src/app/interactables.ts` — animal target/prompt construction,
+- `src/app/gameLoop.ts` — contextual interaction dispatch/dialog actions,
+- `src/app/actions/actionContext.ts` — shared player action context/gating,
+- `src/app/actions/mountActions.ts` — useful lifecycle/id-resolution precedent only.
 
-The current riding implementation is a good pattern for resolving an `AnimalAgent` by target/id and for minimal HUD state, but do not copy its mounted-state shortcut that disables interaction/animal AI.
+Leading should appear as a contextual action only when the animal's capability and current relation state allow it. Detach/end-leading belongs in the same contextual action lifecycle.
 
-Before adding a new input, inspect current keyboard bindings and existing `E`/`R` semantics. Keep interaction context-driven rather than registering a second global key handler.
+## 9. Cart asset facts
 
-## 11. Physical-object/lifecycle patterns
+Use:
 
-Inspect and reuse as appropriate:
+```text
+public/models/parked/cart.glb
+```
 
-- `src/items/createDroppedItems.ts` — record/mesh ownership and disposal;
-- `src/app/worldBundle.ts` — WorldBundle ownership/rebuild lifecycle;
-- existing placed containers/fires/traps — stable IDs and world-object lifecycle.
+This asset is currently parked and described as a pushcart. Move/wire it into the appropriate runtime asset location as part of implementation if the repository's asset conventions require parked assets to leave `public/models/parked/` when activated.
 
-A cart should have a clear owner and disposal/rebuild path. If persistence is implemented, persist stable records/IDs, never Three.js references.
+Do not create a new cart model.
 
-## 12. Physics pitfalls
+There is also an already-wired merchant wagon:
 
-Current animal movement is terrain-aware, not rigid-body physics. Keep the cart equally simple.
+```text
+public/models/settlement/megakit/wagon.glb
+src/settlement/merchantWagon.ts
+```
 
-Watch for:
+That wagon is a static settlement prop/placement concept. Its pose helper can be useful as evidence for world yaw/horse↔wagon spacing conventions, but **do not turn the merchant wagon runtime into the movable fauna-007 cart** and do not couple the new cart lifecycle to merchant settlement placement.
 
-- cart spawning inside the animal;
-- attachment jitter/drift;
-- cart grounding fighting the attachment transform;
-- steep terrain/water causing the cart to diverge from the animal;
-- cart collision feeding back into animal movement and causing a watchdog loop.
+## 10. Harness visual scope
 
-Keep the dependency one-way: animal movement is authoritative; cart follows.
+There is no harness model and none is required for v1.
 
-## 13. Useful implementation order
+Explicit v1 decision:
 
-1. Reconfirm current interaction/input APIs and `mountActions` ownership.
-2. Add only the required data-driven lead/draft capabilities.
-3. Add minimal lead relation ownership/lifecycle.
-4. Integrate lead target selection into `AnimalAgent` without bypassing `update()`.
-5. Reuse steering + existing watchdog pathfinding.
-6. Add minimal cart record/runtime and explicit animal↔cart attachment.
-7. Propagate animal movement to cart; verify detach/death/removal cleanup.
-8. Add minimal HUD state only if the existing HUD facade has a natural transport seam.
-9. Add focused tests for relation/compatibility invariants where useful.
-10. Run typecheck/lint/build/tests; browser verification remains manual.
+- no separate harness GLB,
+- no realistic rope simulation,
+- no requirement for animated straps,
+- optional minimal procedural line/shaft visual only if cheap and useful,
+- logical attachment is authoritative even if there is no visible harness.
 
-## 14. Important discrepancy
+Do not create an art dependency that blocks the gameplay relation.
 
-The plan mentions existing rope/cart/physics mechanisms. **Current `main` has neither.** Treat those statements as architectural guidance, not dependencies.
+## 11. Cart runtime ownership
 
-Likewise, `mountActions.ts` proves the species-agnostic capability pattern for horse/donkey, but there is currently no generic player-follow behaviour for fauna. Adding such behaviour must be integrated into the existing decision/movement lifecycle rather than assumed to exist.
+There is still no reusable movable cart runtime to extend. Implement the smallest world-owned runtime needed by this plan.
+
+Required invariants:
+
+```text
+cart has stable identity
+animalId/cartId relation is explicit
+animal movement is authoritative
+cart has no AI
+cart does not steer the animal
+cart can detach and remain in the world
+```
+
+Prefer a small dedicated cart record/runtime owned by the existing world/app bundle boundary over an unowned scene-only `Object3D`.
+
+Inspect existing placed/world-object lifecycle patterns only to reuse identity/load/dispose conventions; do not make cart an inventory drop merely because `createDroppedItems.ts` has a convenient mesh record pattern.
+
+Persistence scope should follow the actual plan/current save requirements. If cart state is persisted, save plain identity/transform/attachment data only — never scene references.
+
+## 12. Animal → cart attachment
+
+Represent harnessing logically:
+
+```text
+AnimalAgent(animalId) --pull--> Cart(cartId)
+```
+
+Do not parent the cart under the animal unless current world-space lifecycle code proves that reparenting is safe. A logical relation plus deterministic transform constraint is easier to keep independent from fauna ownership/persistence.
+
+The cart follows the animal's **resolved transform after animal movement**. Keep the dependency one-way:
+
+```text
+animal moves
+→ resolve rear/draft attachment pose
+→ cart moves/rotates toward constrained pose
+```
+
+Do not feed cart collision or orientation back into `AnimalAgent` in v1 unless required to prevent an obvious invalid state. The plan explicitly does not require rigid-body vehicle physics.
+
+## 13. Cart grounding / terrain pitfalls
+
+Current fauna locomotion is terrain-aware rather than rigid-body physics. Keep the cart equally lightweight.
+
+Watch specifically for:
+
+- wrong forward axis / pivot in `cart.glb`,
+- cart spawning intersecting the animal,
+- yaw inversion between model forward and animal forward,
+- cart grounding fighting the attachment offset,
+- steep slopes creating large vertical separation,
+- shallow/deep water producing visually invalid attachment,
+- jitter when the animal stops/turns,
+- collision feedback causing fauna movement watchdog/repath loops.
+
+Before hard-coding offsets, inspect the actual loaded `cart.glb` bounds/orientation and normalize through the same asset-fit conventions used elsewhere where practical.
+
+## 14. Cart compatibility / capabilities
+
+Keep species compatibility data-driven.
+
+Likely semantic distinction:
+
+```text
+leadable
+canPullCart / draft capability
+```
+
+Exact names should follow current `AnimalDef` style at implementation time. Do not reuse `mount` as a proxy just because horse/donkey currently have it.
+
+Likewise the cart runtime/config should express which draft capability it accepts rather than assuming all animals can pull every cart.
+
+## 15. `items-player-014` / rope boundary
+
+Do not depend on a generic rope runtime being available. The existing `items-player-014` notes already record that rope pulling has separate item/player semantics.
+
+Keep these concepts distinct:
+
+```text
+item --ropePull--> player
+player --lead--> animal
+animal --pull--> cart
+```
+
+If a tiny low-level attachment/constraint helper genuinely becomes reusable, sharing it is fine. Do not unify the domain relations or force fauna-007 through `ropePullable`.
+
+## 16. Suggested implementation order
+
+1. Reconfirm current `fauna-020` control integration and interaction call-sites have not changed since this recon.
+2. Add only the required declarative lead/draft capability data in `animalDefs.ts`.
+3. Add temporary lead relation/action lifecycle keyed by `animalId`.
+4. Reuse/extract the existing player-target follow movement primitive instead of implementing another Follow controller.
+5. Integrate lead movement into the same normal-behaviour fallback seam used by owned Follow, preserving needs/threat priority.
+6. Activate/load `public/models/parked/cart.glb`; inspect/normalize orientation, scale, bounds and attachment offset.
+7. Add minimal world-owned cart identity/runtime.
+8. Add explicit animal↔cart attach/detach relation and one-way transform propagation.
+9. Wire contextual lead/harness/detach actions through existing animal interaction flow.
+10. Add focused tests around relation lifecycle, priority, capability compatibility and deterministic cart transform helpers.
+11. Run typecheck/lint/tests/build as appropriate. Browser verification is performed manually by the user.
+
+## 17. High-value regression checks
+
+Automated tests should focus on pure/state invariants where possible:
+
+- leading does not change `AnimalOwner`,
+- leading does not mutate persisted Follow/Stay mode,
+- detach is idempotent,
+- death/removal clears lead/harness relations safely,
+- needs/threat win over lead movement,
+- lead resumes after a temporary stronger action while still attached,
+- horse/donkey capability checks are data-driven,
+- cart compatibility rejects invalid animals,
+- cart transform follows animal yaw/position deterministically,
+- cart detach preserves its current world transform,
+- mounted and leading states cannot conflict,
+- no global per-frame scan of all animals/carts is introduced.
+
+## 18. Important plan/code discrepancies now resolved by recon
+
+Old notes said there was no generic player-follow behaviour. That is no longer true: `fauna-020` implemented Follow/Stay and its movement integration. Reuse that seam.
+
+Old notes treated the cart asset as missing. That is no longer true: `public/models/parked/cart.glb` exists and should be activated for this feature.
+
+There is still no reusable movable cart runtime and no generic harness/rope physics runtime. Implement only the minimal logical/runtime pieces required by fauna-007.
 
 **Zrób git commit i push do main, rebase jeżeli trzeba**
