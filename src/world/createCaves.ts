@@ -7,7 +7,7 @@ import { isSystemEnabled } from '../debug/debugMode'
 import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
-import { buildCaveSdfColliders } from './caves/caveSdfColliders'
+import { buildCaveSdfColliders, caveMouthColliderFilter } from './caves/caveSdfColliders'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caves/caveSdfField'
 import {
   applyCaveGroundHysteresis,
@@ -193,7 +193,7 @@ export function createCaves(
       definition: topologyToCaveDefinition(topology),
       representation,
       index,
-      colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation, topology.entrance),
+      colliders: buildCaveSdfColliders(index, analyticSurfaceHeight, representation, caveMouthColliderFilter(topology)),
     })
     siteByCaveId.set(topology.caveId, site)
   }

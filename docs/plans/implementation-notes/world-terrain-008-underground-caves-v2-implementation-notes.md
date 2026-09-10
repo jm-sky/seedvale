@@ -1549,7 +1549,11 @@ hillside doorway remains a leftover — not a third ownership workaround.
   would clamp below the floor.
 - Occupancy epsilon 5 cm (feet on sampled floor).
 - Beads rejected after iso-snap if outward of the mouth plane **or** inside
-  the 1.5 m × 1.0 m walking corridor.
+  the walkable mouth corridor. The inner along bound is the topology
+  `transition` station (`mouthWalkCorridorAlong`), not a hardcoded −1.5 m
+  (that leftover sealed the post-ramp throat with floor-band beads).
+  Strip half-width follows `max(1.0 m, entrance.width / 2)` plus bead radius
+  so iso-snap cannot nibble the centreline.
 - Mouth clip is the doorway aperture (`|lateral| ≤ width/2`), not the
   half-space — hood/sides stay.
 - Rain gain uses the same `queryInterior` flag as cave ambience.
@@ -1791,5 +1795,49 @@ This cave after the ramp: widening floor y=2.13, chamber y=-3.57 (still
 
 B3 stays in progress. Manual: same cave, walk chamber → tunnel both ways
 on ordinary movement; do not expect a climb buff.
+
+---
+
+# Milestone B3 — Mouth corridor colliders (2026-09-10)
+
+Manual: Grota Czarnego Kamienia (`seed=1136726869`, `cave:0e3cce97`) —
+chamber ↔ tunnel walk is fine; ~1 m before the surface exit an invisible
+wall blocks the player. Not SDF/topology/floor-ramp/swim/camera/movement.
+
+**Root cause:** Y-banded occupancy beads on the *rising floor* of
+`seg-transition`. Neighbour columns fail `occupancyContains` at the low
+band mid-Y (floor is higher toward the mouth), so the silhouette treats
+the ramp as a wall. First blocking bead on this seed (player feet Y):
+
+```text
+circle  (133.314, z=-18.0)  r=0.5  minY=3.926  maxY=4.426
+along=-2.529  lat=-0.186
+resolvePosition at along=-3.25  disp=0.104 m (pushed deeper, resAlong=-3.35)
+```
+
+A ladder of the same beads at along ≈ −2.53 / −2.15 / −1.78, all on the
+walking strip. `PLAYER_COLLISION_RADIUS` 0.35 + bead 0.5 = 0.85 m overlap.
+
+**Why exclusion missed them:** `blocksMouthCorridor` only cleared
+`along > -1.5` × `|lat| < 1.0`. After a9430c47 the transition station is
+at along ≈ −5.45 with a densified 40° ramp; floor-band beads sit at
+−3.3…−1.8, just inside the old bound. Source-column skip
+(`mouthAlong > MOUTH_INTERIOR_ALONG`) and post-snap outward reject do not
+see an *inward* iso-snap onto the ramp floor. Existing portal tests
+sampled along ∈ {−1.2, −0.4, 0, 0.4, 2.2} — they never walked the
+transition→mouth strip at feet Y.
+
+**Fix:** `caveMouthColliderFilter(topology)` / `mouthWalkCorridorAlong`
+tie the strip to the `transition` node (plus bead radius along/lat slack).
+`createCaves` and production test harnesses pass that filter. No change
+to SDF, topology, floor ramp, swim, camera, or player slope/step.
+
+Tests: `caveGameplayQuery.b3-entrance-regression.test.ts` (this seed,
+transition→mouth at feet Y); `caveSdfColliders.test.ts` (yaw 0 / π/2 / π /
+−0.7). B3 stays in progress.
+
+Manual: same cave, walk **out** from the passage through the doorway onto
+the hillside. No invisible stop ~1 m before daylight. Side walls of the
+throat should still block. Inward walk still works.
 
 

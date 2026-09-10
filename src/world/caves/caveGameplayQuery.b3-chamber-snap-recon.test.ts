@@ -18,7 +18,7 @@ import {
 import { colliderActiveAtY, resolvePosition } from '../collision'
 import { type LargeCaveSite, openingDirection, pickLargeCaveSites } from '../largeCaves'
 import { landmarkName } from '../locations/worldLocationNames'
-import { buildCaveSdfColliders } from './caveSdfColliders'
+import { buildCaveSdfColliders, caveMouthColliderFilter } from './caveSdfColliders'
 import { buildCaveSdfRepresentation } from './caveSdfField'
 import {
   applyCaveGroundHysteresis,
@@ -167,7 +167,7 @@ function buildCaseA() {
   if (!topology) throw new Error('Case A topology rejected')
   const sdf = buildCaveSdfRepresentation(topology)
   const index = buildCaveSdfColumnIndex(sdf, topology, surfaceHeightAt)
-  const colliders = buildCaveSdfColliders(index, surfaceHeightAt, sdf, topology.entrance)
+  const colliders = buildCaveSdfColliders(index, surfaceHeightAt, sdf, caveMouthColliderFilter(topology))
   return { topology, sdf, index, colliders, surfaceHeightAt }
 }
 

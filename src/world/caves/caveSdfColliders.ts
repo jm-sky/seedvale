@@ -11,6 +11,7 @@
 import type { CaveEntrance } from '../caveVolume'
 import type { Collider } from '../collision'
 import type { CaveSdfSpatialRepresentation } from './caveSdfField'
+import type { CaveTopology } from './caveTopology'
 import {
   type CaveSdfColumnIndex,
   occupancyContains,
@@ -28,10 +29,39 @@ const ISO_SNAP_ITERS = 8
 /** Sit the bead slightly into the rock so a point just past the iso is
  *  still on the cave-facing side of the bead centre. */
 const ISO_OUTWARD_EXTRA = 0.1
-/** First metres of the throat plus the approach: no beads on the walking strip. */
-const MOUTH_CORRIDOR_ALONG = -1.5
+/** Fallback inner along bound when topology has no `transition` node.
+ *  Production uses the transition station — a hardcoded −1.5 m left
+ *  floor-band beads on the post-a9430c47 mouth ramp (along ≈ −3.3…−1.8). */
+export const MOUTH_CORRIDOR_ALONG = -1.5
 /** Half-width of the clear walking strip (metres from the entrance centreline). */
-const MOUTH_CORRIDOR_HALF = 1.0
+export const MOUTH_CORRIDOR_HALF = 1.0
+
+export type MouthColliderFilter = {
+  width?: number
+  /** Inner `mouthAlong` of the walking strip (transition station). Beads
+   *  whose sphere overlaps `(corridorAlong, mouth plane]` × strip are
+   *  dropped. Default `MOUTH_CORRIDOR_ALONG`. */
+  corridorAlong?: number
+} & Pick<CaveEntrance, 'x' | 'z' | 'yaw'>
+
+/** Inner along bound of the walkable mouth corridor: the production
+ *  `transition` node, so densified/lengthened entrance ramps stay in the
+ *  exclusion. Falls back to `MOUTH_CORRIDOR_ALONG` when the graph has no
+ *  transition (unit-test stubs). */
+export function mouthWalkCorridorAlong(
+  topology: Pick<CaveTopology, 'entrance' | 'nodes'>,
+): number {
+  const transition = topology.nodes.find((n) => n.id === 'transition')
+  if (!transition) return MOUTH_CORRIDOR_ALONG
+  return mouthAlong(transition.position.x, transition.position.z, topology.entrance)
+}
+
+/** Entrance + corridor bound for occupancy-derived beads — pass this
+ *  instead of a bare `entrance` so iso-snap cannot seal the portal after
+ *  topology length/station changes. */
+export function caveMouthColliderFilter(topology: CaveTopology): MouthColliderFilter {
+  return { ...topology.entrance, corridorAlong: mouthWalkCorridorAlong(topology) }
+}
 
 const NEIGHBORS: readonly { dx: number, dz: number }[] = [
   { dx: 1, dz: 0 },
@@ -81,13 +111,18 @@ function snapBeadToIso(
   return { x: fromX + dirX * isoDist, z: fromZ + dirZ * isoDist }
 }
 
-function blocksMouthCorridor(
-  x: number,
-  z: number,
-  entrance: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
-): boolean {
-  if (mouthAlong(x, z, entrance) <= MOUTH_CORRIDOR_ALONG) return false
-  return Math.abs(mouthLateral(x, z, entrance)) < MOUTH_CORRIDOR_HALF
+function corridorHalfWidth(entrance: MouthColliderFilter): number {
+  return Math.max(MOUTH_CORRIDOR_HALF, (entrance.width ?? 0) / 2)
+}
+
+function corridorInnerAlong(entrance: MouthColliderFilter): number {
+  return entrance.corridorAlong ?? MOUTH_CORRIDOR_ALONG
+}
+
+function blocksMouthCorridor(x: number, z: number, entrance: MouthColliderFilter): boolean {
+  const along = mouthAlong(x, z, entrance)
+  if (along <= corridorInnerAlong(entrance) - CAVE_SDF_BEAD_RADIUS) return false
+  return Math.abs(mouthLateral(x, z, entrance)) < corridorHalfWidth(entrance) + CAVE_SDF_BEAD_RADIUS
 }
 
 function isPortalOnlyColumn(
@@ -110,7 +145,7 @@ export function buildCaveSdfColliders(
   index: CaveSdfColumnIndex,
   surfaceHeightAt: SurfaceHeightSampler,
   representation?: CaveSdfSpatialRepresentation,
-  entrance?: Pick<CaveEntrance, 'x' | 'z' | 'yaw'>,
+  entrance?: MouthColliderFilter,
 ): Collider[] {
   const out: Collider[] = []
   const { step } = index

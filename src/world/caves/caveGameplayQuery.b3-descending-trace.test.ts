@@ -27,7 +27,7 @@ import { applySlopeMovementConstraint, sampleSlope } from '../../terrain/slopeCo
 import { colliderActiveAtY, resolvePosition } from '../collision'
 import { type LargeCaveSite, openingDirection } from '../largeCaves'
 import { makeCaveId } from './caveIdentity'
-import { buildCaveSdfColliders } from './caveSdfColliders'
+import { buildCaveSdfColliders, caveMouthColliderFilter } from './caveSdfColliders'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caveSdfField'
 import {
   applyCaveGroundHysteresis,
@@ -119,7 +119,7 @@ function buildReproCave(x: number, z: number): BuiltCave {
     topology,
     sdf,
     index,
-    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, topology.entrance),
+    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, caveMouthColliderFilter(topology)),
     surfaceHeightAt,
   }
 }

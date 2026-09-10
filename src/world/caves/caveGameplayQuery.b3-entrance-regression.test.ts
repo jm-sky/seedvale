@@ -23,7 +23,7 @@ import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightm
 import { colliderActiveAtY, resolvePosition } from '../collision'
 import { type LargeCaveSite, openingDirection } from '../largeCaves'
 import { makeCaveId } from './caveIdentity'
-import { buildCaveSdfColliders } from './caveSdfColliders'
+import { buildCaveSdfColliders, caveMouthColliderFilter, mouthWalkCorridorAlong } from './caveSdfColliders'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caveSdfField'
 import {
   applyCaveInteriorHysteresis,
@@ -107,7 +107,7 @@ function buildReproCave(x: number, z: number): BuiltCave {
     topology,
     sdf,
     index,
-    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, topology.entrance),
+    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, caveMouthColliderFilter(topology)),
     surfaceHeightAt,
   }
 }
@@ -427,6 +427,23 @@ describe('B3 entrance contracts: seed 1136726869 path / lateral / geometry', () 
           `${cave.topology.caveId} along=${along} y=${y.toFixed(2)}`,
         ).toBeLessThan(0.05)
       }
+    }
+  })
+
+  it('Czarny Kamień: player-sized path from transition through the mouth is unblocked at feet Y', () => {
+    const inner = mouthWalkCorridorAlong(czarny.topology)
+    expect(inner).toBeLessThan(-4)
+    for (let along = inner; along <= 2.2; along += 0.2) {
+      const { x, z } = xzAt(czarny, along)
+      const intervals = columnIntervalsAt(czarny.index, x, z)
+      const floor = intervals[0]?.floorY ?? czarny.topology.entrance.y
+      const y = floor + 0.02
+      const active = czarny.colliders.filter((c) => colliderActiveAtY(c, y))
+      const resolved = resolvePosition(x, z, PLAYER_COLLISION_RADIUS, active)
+      expect(
+        Math.hypot(resolved.x - x, resolved.z - z),
+        `along=${along.toFixed(2)} y=${y.toFixed(2)}`,
+      ).toBeLessThan(0.05)
     }
   })
 

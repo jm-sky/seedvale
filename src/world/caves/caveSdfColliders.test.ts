@@ -6,6 +6,7 @@ import type { CaveEntrance } from '../caveVolume'
 import type { CaveSdfSpatialRepresentation } from './caveSdfField'
 import type { CaveTopology } from './caveTopology'
 import { colliderActiveAtY, colliderContainsPoint, resolvePosition } from '../collision'
+import { openingDirection } from '../largeCaves'
 import { buildCaveSdfColliders, CAVE_SDF_BEAD_RADIUS } from './caveSdfColliders'
 import { buildCaveSdfColumnIndex, occupancyContains } from './caveSdfQuery'
 import { mouthCarveDepth } from './mouthCarve'
@@ -214,5 +215,35 @@ describe('buildCaveSdfColliders', () => {
     const active = colliders.filter((c) => colliderActiveAtY(c, y))
     const resolved = resolvePosition(0, approachZ, 0.35, active)
     expect(Math.hypot(resolved.x, resolved.z - approachZ)).toBeLessThan(0.05)
+  })
+
+  it('keeps the walking strip clear for several entrance yaws when corridorAlong follows the throat', () => {
+    const surface = (): number => 10
+    const field = representation(
+      { minX: -8, maxX: 8, minY: -2, maxY: 12, minZ: -8, maxZ: 8 },
+      (x, y, z) => {
+        const dx = x / 2
+        const dy = (y - 1.3) / 1.3
+        const dz = z / 2
+        return Math.hypot(dx, dy, dz) - 1
+      },
+    )
+    for (const yaw of [0, Math.PI / 2, Math.PI, -0.7]) {
+      const entrance = entranceAt(0, 0, 0, yaw)
+      const index = buildCaveSdfColumnIndex(field, topologyFor(`cave:col-yaw-${yaw}`, entrance), surface, 0.4)
+      const colliders = buildCaveSdfColliders(index, surface, field, { ...entrance, corridorAlong: -4 })
+      const y = 1.3
+      const active = colliders.filter((c) => colliderActiveAtY(c, y))
+      const out = openingDirection(yaw)
+      for (const along of [-3.2, -2, -1, 0, 0.4]) {
+        const x = out.dx * along
+        const z = out.dz * along
+        const resolved = resolvePosition(x, z, 0.35, active)
+        expect(
+          Math.hypot(resolved.x - x, resolved.z - z),
+          `yaw=${yaw.toFixed(2)} along=${along}`,
+        ).toBeLessThan(0.05)
+      }
+    }
   })
 })

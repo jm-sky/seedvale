@@ -19,7 +19,7 @@ import { type RawSampleParams, sampleHeightAt } from '../../terrain/chunkHeightm
 import { colliderActiveAtY, colliderContainsPoint, resolvePosition } from '../collision'
 import { type LargeCaveSite, openingDirection } from '../largeCaves'
 import { makeCaveId } from './caveIdentity'
-import { buildCaveSdfColliders, CAVE_SDF_BEAD_RADIUS } from './caveSdfColliders'
+import { buildCaveSdfColliders, CAVE_SDF_BEAD_RADIUS, caveMouthColliderFilter } from './caveSdfColliders'
 import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caveSdfField'
 import {
   applyCaveGroundHysteresis,
@@ -95,7 +95,7 @@ function buildReproCave(x: number, z: number): BuiltCave {
     topology,
     sdf,
     index,
-    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, topology.entrance),
+    colliders: buildCaveSdfColliders(index, surfaceHeightAt, sdf, caveMouthColliderFilter(topology)),
     surfaceHeightAt,
   }
 }
@@ -216,7 +216,7 @@ describe('B3 collision: seed 1136726869 Grota Czarnego Kamienia', () => {
   })
 
   it('derived colliders are deterministic', () => {
-    const again = buildCaveSdfColliders(cave.index, cave.surfaceHeightAt, cave.sdf, cave.topology.entrance)
+    const again = buildCaveSdfColliders(cave.index, cave.surfaceHeightAt, cave.sdf, caveMouthColliderFilter(cave.topology))
     expect(again).toEqual(cave.colliders)
   })
 
