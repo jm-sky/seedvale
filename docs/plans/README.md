@@ -72,7 +72,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
 | 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-008, fauna-016 |
 | 💡 `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
-| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, ~~fauna-018~~, fauna-019, quests-progression-002, quests-progression-011 |
+| ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |
 | 💡 `world-terrain-016-settlement-cemeteries-and-abandoned-graveyards.md`       | -       | 🟡 | M      | -      |
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |

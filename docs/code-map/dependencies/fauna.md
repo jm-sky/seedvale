@@ -98,6 +98,8 @@ Generated from TypeScript imports.
 - `fauna/huntingHooks.ts`
 - `fauna/livestockProduction.test.ts`
 - `fauna/mountedSpeed.test.ts`
+- `fauna/persistentOccupants.test.ts`
+- `fauna/persistentOccupants.ts`
 - `fauna/rabies.test.ts`
 - `fauna/trapLure.test.ts`
 - `fauna/villageAvoidance.test.ts`
@@ -152,6 +154,7 @@ Generated from TypeScript imports.
 **Imports**
 
 - `fauna/AnimalAgent.ts`
+- `fauna/persistentOccupants.ts`
 - `fauna/wolfDenScenario.ts`
 
 **Imported by**
@@ -229,6 +232,7 @@ Generated from TypeScript imports.
 - `fauna/animalRoamingTrips.test.ts`
 - `fauna/corpseDecay.test.ts`
 - `fauna/foodWaterTargeting.test.ts`
+- `fauna/persistentOccupants.test.ts`
 - `fauna/preyAlertPerception.ts`
 - `world/animalTraps.ts`
 - `world/cart.test.ts`
@@ -437,6 +441,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/herdCohesion.ts`
+- `fauna/persistentOccupants.ts`
 - `fauna/playerAwareness.ts`
 - `fauna/proceduralAnimals.ts`
 - `fauna/wolfDenScenario.ts`
@@ -684,6 +689,29 @@ Generated from TypeScript imports.
 - `fauna/ownedAnimalControl.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/livestock.ts`
+
+## `fauna/persistentOccupants.test.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+- `fauna/animalDefs.ts`
+- `fauna/persistentOccupants.ts`
+- `terrain/waterSample.ts`
+
+## `fauna/persistentOccupants.ts`
+
+**Imports**
+
+- `fauna/AnimalAgent.ts`
+
+**Imported by**
+
+- `app/worldBundle.ts`
+- `fauna/AnimalSpawner.ts`
+- `fauna/createFauna.ts`
+- `fauna/persistentOccupants.test.ts`
+- `persistence/saveData.ts`
 
 ## `fauna/playerAwareness.test.ts`
 

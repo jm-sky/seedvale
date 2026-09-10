@@ -1033,6 +1033,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalAgent.test.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/createFauna.ts`
+- `fauna/persistentOccupants.test.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/createSettlement.ts`
 - `settlement/livestock.ts`

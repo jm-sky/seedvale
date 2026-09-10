@@ -36,6 +36,7 @@ Generated from TypeScript imports.
 - `economy/settlementEconomy.ts`
 - `fauna/AnimalAgent.ts`
 - `fauna/AnimalSpawner.ts`
+- `fauna/persistentOccupants.ts`
 - `items/HeldTool.ts`
 - `items/Inventory.ts`
 - `items/container.ts`

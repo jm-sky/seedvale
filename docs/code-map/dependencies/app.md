@@ -1259,6 +1259,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalSpawner.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
+- `fauna/persistentOccupants.ts`
 - `items/createDroppedItems.ts`
 - `items/createItemSpawners.ts`
 - `items/createPlacedTents.ts`
