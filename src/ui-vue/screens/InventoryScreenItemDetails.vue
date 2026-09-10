@@ -7,17 +7,19 @@ import { useItemCategoryLabels } from '@/composables/useItemCategoryLabels'
 import { firstUpperCase } from '@/lib/firstUpperCase'
 import { FOOD_SOURCE_SPECIES_LABEL, foodHungerRelief, FRESHNESS_STAGE_LABEL } from '../../items/foodFreshness'
 import { isToolKind } from '../../items/HeldTool'
-import { isMeleeToolKind, isRangedTool } from '../../items/itemCatalog'
-import { type BookTier, consumeNeedNoun, consumeVerbLabel, ITEM_CATALOG } from '../../items/itemCatalog'
+import { ITEM_METER_LABEL, type ItemMeterKind } from '../../items/inventoryView'
+import { CAPABILITY_LABEL, isMeleeToolKind, isRangedTool } from '../../items/itemCatalog'
+import { type BookTier, consumeNeedNoun, ITEM_CATALOG } from '../../items/itemCatalog'
 import { itemDisplayName } from '../../items/itemDisplay'
 import { isWeaponMaintenanceKind } from '../../items/itemInstances'
 import { ITEM_DEFS, type ItemCategory, type ItemDef, type ItemKind, primaryItemCategory } from '../../items/items'
+import { resolveReadBookUseView } from '../../items/itemUseView'
 import { isPrimaryMeleeAssignment, isPrimaryRangedAssignment } from '../../items/primaryWeapons'
 import { tradeValue } from '../../items/tradeCatalog'
 import { SKILL_LABEL } from '../../player/PlayerSkills'
 import { trapKindForItem } from '../../world/animalTraps'
 import { useTouchScroll } from '../composables/useTouchScroll'
-import { getSkillValue, showToast, ui } from '../store'
+import { getSkillValue, openQuantityDialog, showToast, ui } from '../store'
 
 const BOOK_TIER_LABEL: Record<BookTier, string> = {
   basic: 'podstawowy',
@@ -62,8 +64,21 @@ const meleeSpeed = computed<string | null>(() => {
   return 'wolny'
 })
 const ranged = computed(() => catalogEntry.value?.ranged ?? null)
+/** Ammo kind(s)/current count(s) for a held-ready ranged weapon (plan
+ *  items-player-024) — derived from the ranged config's own `ammoKinds` plus
+ *  live inventory counts, no separate combat/ammo state. */
+const ammoText = computed<string | null>(() => {
+  const r = ranged.value
+  if (!r) return null
+  return r.ammoKinds
+    .map((kind) => `${ITEM_DEFS[kind].label}: ${ui.inventory.counts[kind] ?? 0}`)
+    .join(' · ')
+})
 const consumable = computed(() => catalogEntry.value?.consumable ?? null)
-const consumeLabel = computed(() => consumable.value ? consumeVerbLabel(consumable.value.need) : 'Zjedz')
+/** "Zjedz"/"Wypij" availability (plan items-player-024) — null when `kind`
+ *  isn't consumable; otherwise reflects spoiled food / an empty liquid
+ *  container before the player ever clicks. */
+const consumeUse = computed(() => group.value?.consumeUse ?? null)
 const consumableRelief = computed(() => {
   if (!consumable.value || !props.selectedItem) return 0
   return foodHungerRelief(props.selectedItem, group.value?.sourceSpecies)
@@ -83,19 +98,16 @@ const treasureMap = computed(() => catalogEntry.value?.treasureMap ?? null)
  *  items-player-016), so this stays fresh even while the inventory modal
  *  freezes the normal per-frame push. */
 const bookSkillValue = computed<number | null>(() => book.value ? getSkillValue(book.value.skill) : null)
-const bookState = computed<'learnable' | 'too_low' | 'known' | null>(() => {
+/** "Czytaj" availability (plan items-player-024) — null when `kind` isn't a
+ *  book; disabled with a reason for "too advanced"/"already known" before
+ *  the player clicks (`readBook()` itself is always a safe no-op either
+ *  way, so this is purely upfront clarity, not a hard block). */
+const readUse = computed(() => {
   const b = book.value
   const value = bookSkillValue.value
-  if (!b || value == null) return null
-  if (value < b.requiredSkillValue) return 'too_low'
-  if (value >= b.targetSkillValue) return 'known'
-  return 'learnable'
+  return b && value != null ? resolveReadBookUseView(b, value) : null
 })
-const BOOK_STATE_LABEL: Record<'learnable' | 'too_low' | 'known', string> = {
-  learnable: 'Możesz się nauczyć',
-  too_low: 'Zbyt trudna',
-  known: 'Znana wiedza',
-}
+const bookStateLabel = computed(() => readUse.value ? (readUse.value.reasonLabel || 'Możesz się nauczyć') : null)
 const itemValue = computed<number>(() => item.value ? tradeValue(item.value.kind) : 0)
 const itemCategoryText = computed(() => item.value ? item.value.categories.map((cat) => categoryLabel[cat]).join(' · ') : '')
 const itemCategoryIcon = computed(() => item.value ? CATEGORY_ICON[primaryItemCategory(item.value)] : Sword)
@@ -103,7 +115,7 @@ const imageUrl = computed<string | null>(() => null)
 
 const instanceRows = computed(() => {
   if (!group.value || group.value.instances.length === 0) return []
-  const buckets = new Map<string, { count: number, ids: string[], sellPrice: number, conditionPercent: number, sharpnessPercent: number | null }>()
+  const buckets = new Map<string, { count: number, ids: string[], sellPrice: number, meterKind: ItemMeterKind, conditionPercent: number, sharpnessPercent: number | null }>()
   for (const row of group.value.instances) {
     const key = `${row.conditionPercent}:${row.sharpnessPercent ?? ''}`
     const existing = buckets.get(key)
@@ -115,6 +127,7 @@ const instanceRows = computed(() => {
         count: 1,
         ids: [row.id],
         sellPrice: row.sellPrice,
+        meterKind: row.meterKind,
         conditionPercent: row.conditionPercent,
         sharpnessPercent: row.sharpnessPercent,
       })
@@ -122,6 +135,11 @@ const instanceRows = computed(() => {
   }
   return [...buckets.values()].sort((a, b) => b.conditionPercent - a.conditionPercent)
 })
+
+/** Player-facing gameplay uses of this item (plan items-player-024) —
+ *  `ITEM_CATALOG[kind].capabilities` stays the only source of truth; this
+ *  only maps it to the same wording the merchant capability filter uses. */
+const capabilityLabels = computed<string[]>(() => (catalogEntry.value?.capabilities ?? []).map((cap) => CAPABILITY_LABEL[cap]))
 
 const whetstoneCount = computed<number>(() => ui.inventory.counts.whetstone ?? 0)
 const merchantOpen = computed(() => ui.merchant.open)
@@ -143,9 +161,18 @@ const showSetPrimaryRanged = computed(() =>
 useTouchScroll(panel)
 
 function formatWeight(kg: number): string { return `${kg.toFixed(1)} kg` }
-function onDrop(kind: ItemKind): void { ui.inventory.onDrop?.(kind) }
-function onEquip(kind: ItemKind): void { ui.inventory.onEquip?.(kind) }
+/** "Wyrzuć" (plan items-player-024) — a single unit drops immediately; a
+ *  stack of more than one opens the shared quantity dialog first. */
+function onDrop(kind: ItemKind): void {
+  const count = itemCount.value
+  if (count <= 1) { ui.inventory.onDrop?.(kind, count); return }
+  openQuantityDialog(`Wyrzuć: ${displayName.value}`, count, (amount) => ui.inventory.onDrop?.(kind, amount))
+}
+function onEquip(kind: ItemKind, instanceId?: string): void { ui.inventory.onEquip?.(kind, instanceId) }
 function onUnequip(): void { ui.inventory.onUnequip?.() }
+function isInstanceHeld(id: string): boolean {
+  return ui.inventory.heldTool === props.selectedItem && ui.inventory.heldInstanceId === id
+}
 function onConsume(kind: ItemKind): void { ui.inventory.onConsume?.(kind) }
 function onRead(kind: ItemKind): void { ui.inventory.onRead?.(kind) }
 function percent(value: number): string { return `${Math.round(value * 100)}%` }
@@ -153,6 +180,8 @@ function onPlaceTrap(kind: ItemKind): void {
   const trapKind = trapKindForItem(kind)
   if (trapKind) ui.inventory.onPlaceTrap?.(trapKind)
 }
+function onPlaceContainer(): void { ui.inventory.onPlaceContainer?.() }
+function onPlaceTent(): void { ui.inventory.onPlaceTent?.() }
 
 function sellInstance(id: string): void {
   const result = ui.inventory.onSellInstances?.([id]) ?? 'invalid_offer'
@@ -282,6 +311,12 @@ function isInstancePrimaryRanged(id: string): boolean {
       />
 
       <InventoryScreenSection
+        v-if="ammoText"
+        label="Amunicja"
+        :value="ammoText"
+      />
+
+      <InventoryScreenSection
         v-if="consumable"
         label="Efekt"
         :value="`+${consumableRelief} ${consumeNeedNoun(consumable.need)}`"
@@ -324,9 +359,9 @@ function isInstancePrimaryRanged(id: string): boolean {
       />
 
       <InventoryScreenSection
-        v-if="book && bookState"
+        v-if="book && bookStateLabel"
         label="Stan"
-        :value="BOOK_STATE_LABEL[bookState]"
+        :value="bookStateLabel"
       />
 
       <InventoryScreenSection
@@ -339,6 +374,12 @@ function isInstancePrimaryRanged(id: string): boolean {
         v-if="isPrimaryRanged"
         label="Skrót"
         value="Podstawowa broń dystansowa"
+      />
+
+      <InventoryScreenSection
+        v-if="capabilityLabels.length > 0"
+        label="Zastosowania"
+        :value="capabilityLabels.join(' · ')"
       />
     </div>
 
@@ -357,17 +398,8 @@ function isInstancePrimaryRanged(id: string): boolean {
         >
           <div class="flex flex-wrap items-center gap-2">
             <span class="font-medium">{{ row.count }}×</span>
-            <span
-              v-if="row.sharpnessPercent !== null"
-              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
-            >
-              Stan {{ row.conditionPercent }}%
-            </span>
-            <span
-              v-else
-              class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm"
-            >
-              {{ row.conditionPercent }}%
+            <span class="rounded-full bg-white/10 -my-1 px-2.5 py-1 text-sm">
+              {{ ITEM_METER_LABEL[row.meterKind] }} {{ row.conditionPercent }}%
             </span>
             <span
               v-if="row.sharpnessPercent !== null"
@@ -403,6 +435,18 @@ function isInstancePrimaryRanged(id: string): boolean {
             </div>
             <div class="flex flex-wrap gap-2">
               <ItemsScreenItemButton
+                v-if="isToolKind(item.kind) && !isInstanceHeld(id)"
+                class="min-h-0 py-1"
+                label="Weź"
+                @click="onEquip(item.kind, id)"
+              />
+              <ItemsScreenItemButton
+                v-if="isToolKind(item.kind) && isInstanceHeld(id)"
+                class="min-h-0 py-1"
+                label="Odłóż"
+                @click="onUnequip"
+              />
+              <ItemsScreenItemButton
                 v-if="melee && isWeaponMaintenanceKind(item.kind) && !isInstancePrimaryMelee(id)"
                 class="min-h-0 py-1"
                 label="Ustaw podstawową"
@@ -437,13 +481,15 @@ function isInstancePrimaryRanged(id: string): boolean {
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mx-auto max-w-md">
       <ItemsScreenItemButton
-        v-if="consumable"
-        :label="consumeLabel"
+        v-if="consumeUse"
+        :label="consumeUse.reasonLabel ? `${consumeUse.label} — ${consumeUse.reasonLabel}` : consumeUse.label"
+        :disabled="!consumeUse.enabled"
         @click="onConsume(item.kind)"
       />
       <ItemsScreenItemButton
-        v-if="book"
-        label="Czytaj"
+        v-if="readUse"
+        :label="readUse.reasonLabel ? `${readUse.label} — ${readUse.reasonLabel}` : readUse.label"
+        :disabled="!readUse.enabled"
         @click="onRead(item.kind)"
       />
       <ItemsScreenItemButton
@@ -457,6 +503,16 @@ function isInstancePrimaryRanged(id: string): boolean {
         @click="onPlaceTrap(item.kind)"
       />
       <ItemsScreenItemButton
+        v-if="item.kind === 'chest'"
+        label="Postaw"
+        @click="onPlaceContainer"
+      />
+      <ItemsScreenItemButton
+        v-if="item.kind === 'tent'"
+        label="Rozstaw"
+        @click="onPlaceTent"
+      />
+      <ItemsScreenItemButton
         v-if="showSetPrimaryMelee"
         label="Ustaw jako podstawową broń białą"
         @click="setPrimaryMelee(item.kind)"
@@ -467,12 +523,12 @@ function isInstancePrimaryRanged(id: string): boolean {
         @click="setPrimaryRanged(item.kind)"
       />
       <ItemsScreenItemButton
-        v-if="isToolKind(item.kind) && ui.inventory.heldTool !== item.kind"
+        v-if="isToolKind(item.kind) && !isWeaponMaintenanceKind(item.kind) && ui.inventory.heldTool !== item.kind"
         label="Weź"
         @click="onEquip(item.kind)"
       />
       <ItemsScreenItemButton
-        v-if="ui.inventory.heldTool === item.kind"
+        v-if="!isWeaponMaintenanceKind(item.kind) && ui.inventory.heldTool === item.kind"
         label="Odłóż"
         @click="onUnequip"
       />

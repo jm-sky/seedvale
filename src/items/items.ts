@@ -493,6 +493,10 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     color: 0xc99a52,
     description: 'Bochenek chleba. Dobrze się przechowuje — przydatny na czarną godzinę.'
   },
+  // `waterskin_empty`/`waterskin_full` are legacy (plan items-player-001) —
+  // migrated to a `waterskin_medium` instance at load, before gameplay ever
+  // reads them. No player-facing `description`; that migration note belongs
+  // here, not in copy a player could ever actually see.
   waterskin_empty: {
     kind: 'waterskin_empty',
     label: 'bukłak (pusty)',
@@ -500,7 +504,6 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 0.3,
     size: 'SM',
     color: 0x6b5a3a,
-    description: 'Legacy — migrowany do instancji `waterskin_medium` przy wczytaniu (plan items-player-001).'
   },
   waterskin_full: {
     kind: 'waterskin_full',
@@ -509,7 +512,6 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     weight: 1.3,
     size: 'SM',
     color: 0x4a9fd8,
-    description: 'Legacy — migrowany do instancji `waterskin_medium` przy wczytaniu (plan items-player-001).'
   },
   waterskin_small: {
     kind: 'waterskin_small',

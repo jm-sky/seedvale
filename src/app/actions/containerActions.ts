@@ -1,4 +1,6 @@
 import type { NpcAgent } from '../../ai/NpcAgent'
+import type { Inventory } from '../../items/Inventory'
+import type { ItemKind } from '../../items/items'
 import type { VueUi } from '../../ui-vue/mount'
 import type { GroundPlacementDefinition, PlacementBlocker, PlacementPreviewResult } from './placementActions'
 import { exitGamePointerLock } from '../../input/MouseLook'
@@ -13,12 +15,25 @@ import {
 import { skipBatchCount } from '../../items/foodItems'
 import { inventoryFullToastText } from '../../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../../items/inventoryView'
+import { INSTANCE_BACKED_KINDS } from '../../items/itemInstances'
 import { evaluateGroundPlacement, type GroundPlacementReason } from '../../items/tentPlacement'
 import { canLootNpcCorpse, corpseLootInventory, transferCorpseCountTo, transferCorpseInstanceTo } from '../../settlement/npcPostDeath'
 import { CHEST_DEPTH, CHEST_WIDTH } from '../../world/containerProp'
 import { isActionBlocked, type PlayerActionContext } from './actionContext'
 import { evaluatePlacementSite, previewGroundPlacement } from './placementActions'
 import { placementAimSite } from './placementYaw'
+
+/** How many more of `kind` (up to `available`) would actually fit in
+ *  `inventory` right now — used by "Weź wszystko" (plan items-player-024) to
+ *  request only the capacity-legal amount instead of an all-or-nothing
+ *  transfer. Walks one unit at a time (bounded by a chest/corpse's own small
+ *  contents) rather than a closed-form calc, since a carried backpack can
+ *  grow `maxWeight` mid-walk. */
+function maxTransferable(inventory: Inventory, kind: ItemKind, available: number): number {
+  let n = 0
+  while (n < available && inventory.canAdd(kind, n + 1)) n++
+  return n
+}
 
 /** Everything the generic player storage (plan 164) does from the app layer:
  *  putting a bought chest down, carrying one, and the transfer screen that
@@ -154,6 +169,7 @@ export function createContainerActions(
     const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest
     vueUi.openContainerScreen(
       def.label,
+      'container',
       entry.contents.toJSON(),
       buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
       containerTotalWeight(def, entry.contents.totalWeight()),
@@ -209,6 +225,7 @@ export function createContainerActions(
     const contents = corpseLootInventory(post.loot)
     vueUi.openContainerScreen(
       `Zwłoki: ${npc.displayName}`,
+      'corpse',
       contents.toJSON(),
       buildInventoryGroups(contents, ctx.dayNight.elapsedDays),
       contents.totalWeight(),
@@ -334,6 +351,63 @@ export function createContainerActions(
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
       ctx.onWorldContainerWithdraw?.(openTransfer.id, withdrawn.kind, 1)
+      refreshContainerScreenFor(openTransfer.id)
+    },
+    /** "Weź wszystko" (plan items-player-024) — transfers as much of the
+     *  source's contents as legally fits (`maxTransferable`), leaving any
+     *  capacity-limited remainder in place. Preserves food freshness (via
+     *  the same `withdraw`/`transferCorpseCountTo` primitives regular
+     *  transfers use) and instance identity (per-instance withdraw, never a
+     *  bulk copy). Partial success is intended, not a failure. */
+    onTakeAll: () => {
+      if (!openTransfer) return
+      let transferredAny = false
+      if (openTransfer.kind === 'npcCorpse') {
+        const post = openTransfer.npc.getPostDeath()
+        if (!post) return
+        const loot = corpseLootInventory(post.loot)
+        for (const [kind, count] of Object.entries(loot.toJSON()) as [ItemKind, number][]) {
+          if (count <= 0) continue
+          const n = maxTransferable(inventory, kind, count)
+          if (n > 0 && transferCorpseCountTo(post, inventory, kind, n)) transferredAny = true
+        }
+        for (const kind of INSTANCE_BACKED_KINDS) {
+          for (const instance of loot.getInstances(kind)) {
+            if (inventory.canAddInstance(instance) && transferCorpseInstanceTo(post, inventory, instance.id)) transferredAny = true
+          }
+        }
+        if (!transferredAny) return
+        hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+        ctx.onInventoryChanged()
+        refreshNpcCorpseScreen(openTransfer.npc)
+        return
+      }
+      const nowDays = ctx.dayNight.elapsedDays
+      const store = containerContents(openTransfer.id)
+      const entry = store?.find(openTransfer.id)
+      if (!store || !entry) return
+      for (const [kind, count] of Object.entries(entry.contents.toJSON()) as [ItemKind, number][]) {
+        if (count <= 0) continue
+        const n = maxTransferable(inventory, kind, count)
+        if (n <= 0) continue
+        const withdrawn = store.withdraw(openTransfer.id, kind, n, nowDays)
+        if (withdrawn.amount <= 0) continue
+        inventory.addWithFreshness(kind, withdrawn.amount, withdrawn.batches, nowDays)
+        ctx.onWorldContainerWithdraw?.(openTransfer.id, kind, withdrawn.amount)
+        transferredAny = true
+      }
+      for (const kind of INSTANCE_BACKED_KINDS) {
+        for (const instance of entry.contents.getInstances(kind)) {
+          if (!inventory.canAddInstance(instance)) continue
+          const withdrawn = store.withdrawInstance(openTransfer.id, instance.id)
+          if (!withdrawn || !inventory.addInstance(withdrawn)) continue
+          ctx.onWorldContainerWithdraw?.(openTransfer.id, withdrawn.kind, 1)
+          transferredAny = true
+        }
+      }
+      if (!transferredAny) return
+      hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
+      ctx.onInventoryChanged()
       refreshContainerScreenFor(openTransfer.id)
     },
   })

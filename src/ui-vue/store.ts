@@ -84,8 +84,15 @@ type InventoryState = {
   totalSize: number
   maxSize: number
   heldTool: ItemKind | null
-  onDrop: ((kind: ItemKind) => void) | null
-  onEquip: ((kind: ItemKind) => void) | null
+  /** Concrete instance in hand — only meaningful for weapon-maintenance kinds
+   *  (plan items-player-024) — see `HeldTool.heldInstanceId()`. */
+  heldInstanceId: string | null
+  /** "Wyrzuć" (plan items-player-024) — `amount` is resolved by the caller
+   *  (the shared quantity dialog for count > 1, no dialog for a single item). */
+  onDrop: ((kind: ItemKind, amount: number) => void) | null
+  /** `instanceId` picks which concrete instance to equip for a weapon-
+   *  maintenance kind — see `HeldTool.equip()`. */
+  onEquip: ((kind: ItemKind, instanceId?: string) => void) | null
   onUnequip: (() => void) | null
   /** "Zjedz"/"Wypij" (plan 106) — only offered for `ITEM_CATALOG[kind].consumable` items. */
   onConsume: ((kind: ItemKind) => void) | null
@@ -97,6 +104,9 @@ type InventoryState = {
   /** "Postaw" (plan 164) — places a purchased `chest` in the world ahead of
    *  the player, same ground-suitability flow as `onPlaceTent`. */
   onPlaceContainer: (() => void) | null
+  /** "Rozstaw" (plan items-player-024) — pitches a carried, packed tent from
+   *  Inventory, delegating to the same placement handler Quick Actions uses. */
+  onPlaceTent: (() => void) | null
   primaryMelee: PrimaryWeaponChoice | null
   primaryRanged: PrimaryWeaponChoice | null
   onSetPrimaryMelee: ((kind: ItemKind, instanceId: string | null) => void) | null
@@ -327,9 +337,17 @@ type MerchantState = {
  *  the plan asks for, minus prices: `container*` mirrors `merchant`'s stock
  *  column, `player*` mirrors the player's own inventory. Kind-agnostic (any
  *  `ContainerKind`) — `label` is the only per-container-instance text. */
+/** `container` = a placed chest/world container (deposit + withdraw both
+ *  legal). `corpse` = NPC post-death loot (plan npc-010) — withdraw-only, the
+ *  player was never able to deposit here; `ContainerScreen.vue` derives every
+ *  mode-dependent label/control from this instead of a screen-specific
+ *  corpse component (plan items-player-024). */
+export type ContainerScreenMode = 'container' | 'corpse'
+
 type ContainerScreenState = {
   open: boolean
   label: string
+  mode: ContainerScreenMode
   containerCounts: Partial<Record<ItemKind, number>>
   containerGroups: readonly InventoryGroupView[]
   containerWeightKg: number
@@ -345,6 +363,23 @@ type ContainerScreenState = {
   onWithdraw: ((kind: ItemKind, amount: number) => void) | null
   onDepositInstance: ((instanceId: string) => void) | null
   onWithdrawInstance: ((instanceId: string) => void) | null
+  /** "Weź wszystko" (plan items-player-024) — transfers as much of the
+   *  source's contents as legally fits in the player's inventory, leaving any
+   *  capacity-limited remainder behind. Always container→player, so it's
+   *  offered in both modes. */
+  onTakeAll: (() => void) | null
+}
+/** Shared `1..max` amount picker (plan items-player-024) — one reusable
+ *  overlay for Inventory "Wyrzuć" and container/corpse "Weź"/"Włóż" instead
+ *  of a bespoke stepper per screen. The caller only supplies `label`/`max`
+ *  and gets the confirmed amount back through `onConfirm`; callers skip
+ *  opening this entirely for a single-unit stack (see each call site). */
+type QuantityDialogState = {
+  open: boolean
+  label: string
+  max: number
+  value: number
+  onConfirm: ((amount: number) => void) | null
 }
 type TimeSkipState = { visible: boolean; label: string; fadeVisible: boolean; fadeStrength: number; progress: number; canCancelRest: boolean; canCancelTerrainPreparation: boolean }
 /** Lodging autowalk cancel HUD (plan `ui-input-005`) — separate from
@@ -487,6 +522,10 @@ type HudState = {
   showFps: boolean
   weight: string
   held: string
+  /** Live compatible-ammo count for the held ranged weapon (plan
+   *  items-player-024) — empty string hides it, same convention as `held`.
+   *  Replaces the old per-shot "Zostało N strzał" toast. */
+  heldAmmo: string
   hint: string
   /** Ratios (0-1) for the HUD bars under the clock (plan 106 + issue 034).
    *  `hp` is `HealthState`, not a `PlayerNeeds` pool — same blob so the HUD
@@ -568,7 +607,7 @@ export function emitUiClick(): void {
 export const ui = reactive({
   npcDialogueMenu: { open: false, npc: null, settlement: null, timeOfDay: 0, helpResult: null, resolveQuestHelp: null, canAskSword: false, getCanAskSword: null, onAskSword: null, onOpenTrade: null, onRequestFood: null, onRequestWater: null, onAskAboutArea: null, paymentClaim: null, onPayWage: null } as NpcDialogueMenuState,
   villagers: { open: false, entries: [] as VillagerEntry[], page: 0, containers: [] as VillagerContainerOption[] },
-  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
+  inventory: { open: false, counts: {}, groups: [], totalWeight: 0, maxWeight: 0, totalSize: 0, maxSize: 0, heldTool: null, heldInstanceId: null, primaryMelee: null, primaryRanged: null, onDrop: null, onEquip: null, onUnequip: null, onConsume: null, onRead: null, onPlaceTrap: null, onSellInstances: null, onSharpen: null, onPlaceContainer: null, onPlaceTent: null, onSetPrimaryMelee: null, onSetPrimaryRanged: null } as InventoryState,
   pauseMenu: {
     open: false, seed: 0, playerName: '', activeSaveName: '', onPause: null, onResume: null, onToggleGui: null,
     onNameChange: null, onNameCommit: null, onSave: null, onSaveAs: null, onLoadSave: null, onListSaves: null,
@@ -606,10 +645,11 @@ export const ui = reactive({
   placementPreview: { visible: false, label: '', valid: false, reasonLabel: '', supportsRotation: false } as PlacementPreviewState,
   merchant: { open: false, npc: null, counts: {}, groups: [], pricing: null, horseOffer: null, onSettleTransaction: null, onSellInstances: null } as MerchantState,
   containerScreen: {
-    open: false, label: '', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
+    open: false, label: '', mode: 'container', containerCounts: {}, containerGroups: [], containerWeightKg: 0, containerMaxSizeUnits: 0,
     playerCounts: {}, playerGroups: [], playerTotalWeight: 0, playerMaxWeight: 0,
-    onDeposit: null, onWithdraw: null, onDepositInstance: null, onWithdrawInstance: null,
+    onDeposit: null, onWithdraw: null, onDepositInstance: null, onWithdrawInstance: null, onTakeAll: null,
   } as ContainerScreenState,
+  quantityDialog: { open: false, label: '', max: 1, value: 1, onConfirm: null } as QuantityDialogState,
   busy: { visible: false, label: '', blurred: false, progress: null } as BusyState,
   worldConfigScreen: { open: false, config: null, dayNight: null, onTerrainChange: null, onDayNightChange: null, onPostProcessingChange: null, onRenderQualityChange: null, onTerrainShadowChange: null, onQualityPresetChange: null, onShadowMapSizeChange: null, onLodScaleChange: null } as WorldConfigScreenState,
   notes: { open: false } as NotesState,
@@ -664,6 +704,7 @@ export const ui = reactive({
     showFps: false,
     weight: '',
     held: '',
+    heldAmmo: '',
     hint: isTouchDevice() ? HUD_HINT_TOUCH : HUD_HINT_DESKTOP,
     playerNeeds: { hp: 1, stamina: 1, vigor: 1, hunger: 1, thirst: 1 },
     playerCondition: '',
@@ -909,11 +950,12 @@ export function openInventory(
   totalSize: number,
   maxSize: number,
   heldTool: ItemKind | null,
+  heldInstanceId: string | null,
   groups: readonly InventoryGroupView[],
   primaryMelee: PrimaryWeaponChoice | null,
   primaryRanged: PrimaryWeaponChoice | null,
-  onDrop: (kind: ItemKind) => void,
-  onEquip: (kind: ItemKind) => void,
+  onDrop: (kind: ItemKind, amount: number) => void,
+  onEquip: (kind: ItemKind, instanceId?: string) => void,
   onUnequip: () => void,
   onConsume: (kind: ItemKind) => void,
   onRead: (kind: ItemKind) => void,
@@ -921,6 +963,7 @@ export function openInventory(
   onSellInstances: (instanceIds: readonly string[]) => TradeResult,
   onSharpen: (instanceId: string) => SharpenResult,
   onPlaceContainer: () => void,
+  onPlaceTent: () => void,
   onSetPrimaryMelee: (kind: ItemKind, instanceId: string | null) => void,
   onSetPrimaryRanged: (kind: ItemKind, instanceId: string | null) => void,
 ): void {
@@ -931,6 +974,7 @@ export function openInventory(
   ui.inventory.totalSize = totalSize
   ui.inventory.maxSize = maxSize
   ui.inventory.heldTool = heldTool
+  ui.inventory.heldInstanceId = heldInstanceId
   ui.inventory.primaryMelee = primaryMelee
   ui.inventory.primaryRanged = primaryRanged
   ui.inventory.onDrop = onDrop
@@ -942,6 +986,7 @@ export function openInventory(
   ui.inventory.onSellInstances = onSellInstances
   ui.inventory.onSharpen = onSharpen
   ui.inventory.onPlaceContainer = onPlaceContainer
+  ui.inventory.onPlaceTent = onPlaceTent
   ui.inventory.onSetPrimaryMelee = onSetPrimaryMelee
   ui.inventory.onSetPrimaryRanged = onSetPrimaryRanged
   ui.inventory.open = true
@@ -954,6 +999,7 @@ export function refreshInventory(
   totalSize: number,
   maxSize: number,
   heldTool: ItemKind | null,
+  heldInstanceId: string | null,
   groups: readonly InventoryGroupView[],
   primaryMelee: PrimaryWeaponChoice | null,
   primaryRanged: PrimaryWeaponChoice | null,
@@ -965,6 +1011,7 @@ export function refreshInventory(
   ui.inventory.totalSize = totalSize
   ui.inventory.maxSize = maxSize
   ui.inventory.heldTool = heldTool
+  ui.inventory.heldInstanceId = heldInstanceId
   ui.inventory.primaryMelee = primaryMelee
   ui.inventory.primaryRanged = primaryRanged
 }
@@ -1022,11 +1069,12 @@ export function closeMerchant(): void {
 }
 export function isMerchantOpen(): boolean { return ui.merchant.open }
 
-export function configureContainerScreen(handlers: Pick<ContainerScreenState, 'onDeposit' | 'onWithdraw' | 'onDepositInstance' | 'onWithdrawInstance'>): void {
+export function configureContainerScreen(handlers: Pick<ContainerScreenState, 'onDeposit' | 'onWithdraw' | 'onDepositInstance' | 'onWithdrawInstance' | 'onTakeAll'>): void {
   Object.assign(ui.containerScreen, handlers)
 }
 export function openContainerScreen(
   label: string,
+  mode: ContainerScreenMode,
   containerCounts: Partial<Record<ItemKind, number>>,
   containerGroups: readonly InventoryGroupView[],
   containerWeightKg: number,
@@ -1037,6 +1085,7 @@ export function openContainerScreen(
   playerMaxWeight: number,
 ): void {
   ui.containerScreen.label = label
+  ui.containerScreen.mode = mode
   ui.containerScreen.containerCounts = { ...containerCounts }
   ui.containerScreen.containerGroups = containerGroups
   ui.containerScreen.containerWeightKg = containerWeightKg
@@ -1070,6 +1119,33 @@ export function refreshContainerScreen(
 }
 export function closeContainerScreen(): void { ui.containerScreen.open = false }
 export function isContainerScreenOpen(): boolean { return ui.containerScreen.open }
+
+/** Opens the shared quantity dialog (plan items-player-024). Callers only
+ *  reach this for `max > 1` — a single-unit stack acts immediately without a
+ *  dialog (see `InventoryScreenItemList.vue`/`ContainerScreen.vue`). */
+export function openQuantityDialog(label: string, max: number, onConfirm: (amount: number) => void): void {
+  const bounded = Math.max(1, Math.floor(max))
+  ui.quantityDialog.label = label
+  ui.quantityDialog.max = bounded
+  ui.quantityDialog.value = bounded
+  ui.quantityDialog.onConfirm = onConfirm
+  ui.quantityDialog.open = true
+  emitUiOpen()
+}
+export function setQuantityDialogValue(value: number): void {
+  ui.quantityDialog.value = Math.max(1, Math.min(ui.quantityDialog.max, Math.round(value)))
+}
+export function closeQuantityDialog(): void {
+  ui.quantityDialog.open = false
+  ui.quantityDialog.onConfirm = null
+}
+export function confirmQuantityDialog(): void {
+  const onConfirm = ui.quantityDialog.onConfirm
+  const amount = ui.quantityDialog.value
+  closeQuantityDialog()
+  onConfirm?.(amount)
+}
+export function isQuantityDialogOpen(): boolean { return ui.quantityDialog.open }
 
 export function configureQuickActions(handlers: Partial<Omit<QuickActionsState, 'open'>>): void { Object.assign(ui.quickActions, handlers) }
 export function setQuickActionsHasDiggingTool(hasDiggingTool: boolean): void { ui.quickActions.hasDiggingTool = hasDiggingTool }
@@ -1641,6 +1717,13 @@ export function setHudHeldTool(label: string): void {
   const text = label ? `w ręce: ${label}` : ''
   if (ui.hud.held === text) return
   ui.hud.held = text
+}
+/** Live ammo readout for a held ranged weapon (plan items-player-024) —
+ *  `ammoLabel`/`count` empty/0 hides it, same convention as `setHudHeldTool`. */
+export function setHudHeldAmmo(ammoLabel: string, count: number): void {
+  const text = ammoLabel ? `${ammoLabel}: ${count}` : ''
+  if (ui.hud.heldAmmo === text) return
+  ui.hud.heldAmmo = text
 }
 /** Primary melee/ranged weapon shortcut buttons — empty label hides the
  *  button. `label` is `''` when no weapon of that kind has been equipped

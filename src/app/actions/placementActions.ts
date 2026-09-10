@@ -8,6 +8,7 @@ import {
   CONSTRUCTION_MATERIAL_RADIUS,
   consumeMaterial,
   hasMaterial,
+  materialAvailabilityBreakdown,
   type MaterialRequirement,
 } from '../../items/constructionMaterials'
 import { CAPABILITY_NEED_LABEL } from '../../items/itemCatalog'
@@ -696,7 +697,10 @@ export function createPlacementActions(ctx: PlayerActionContext): PlacementActio
       // cost build, never `advanceWellConstruction` (which mutates).
       const requirements = wellStageRequirements(stage)
       const description = requirements.length > 0
-        ? `Wymagane surowce: ${requirements.map((r) => `${r.count}× ${ITEM_DEFS[r.kind].label}`).join(', ')}.`
+        ? requirements.map((r) => {
+          const b = materialAvailabilityBreakdown(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r)
+          return `${ITEM_DEFS[r.kind].label}: ${b.available}/${b.required} — przy sobie ${b.inInventory} · w pobliżu ${b.nearbyWorld}`
+        }).join('\n')
         : ''
       const missing = requirements.filter(
         (r) => !hasMaterial(inventory, bundle.droppedItems, well.x, well.z, CONSTRUCTION_MATERIAL_RADIUS, r),

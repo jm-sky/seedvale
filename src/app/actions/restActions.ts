@@ -19,6 +19,7 @@ import {
   CONSTRUCTION_MATERIAL_RADIUS,
   consumeMaterial,
   hasMaterial,
+  materialAvailabilityBreakdown,
   type MaterialRequirement,
 } from '../../items/constructionMaterials'
 import { inventoryFullToastText } from '../../items/Inventory'
@@ -560,7 +561,10 @@ export function createRestActions(ctx: PlayerActionContext, deps: RestActionDeps
       (r) => !hasMaterial(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r),
     )
     const materialLines = quote.materials.length > 0
-      ? quote.materials.map((r) => `${r.count} × ${ITEM_DEFS[r.kind].label}`).join('\n')
+      ? quote.materials.map((r) => {
+        const b = materialAvailabilityBreakdown(inventory, bundle.droppedItems, x, z, CONSTRUCTION_MATERIAL_RADIUS, r)
+        return `${ITEM_DEFS[r.kind].label}: ${b.available}/${b.required} — przy sobie ${b.inInventory} · w pobliżu ${b.nearbyWorld}`
+      }).join('\n')
       : 'brak'
     return {
       title,

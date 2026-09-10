@@ -15,6 +15,7 @@ import MinimapScreen from './screens/MinimapScreen.vue'
 import NotesScreen from './screens/NotesScreen.vue'
 import PauseMenu from './screens/PauseMenu.vue'
 import PlacementPreviewOverlay from './screens/PlacementPreviewOverlay.vue'
+import QuantityDialog from './screens/QuantityDialog.vue'
 import QuestLogScreen from './screens/QuestLogScreen.vue'
 import QuickActionsScreen from './screens/QuickActionsScreen.vue'
 import SkillsScreen from './screens/SkillsScreen.vue'
@@ -60,6 +61,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <SkillsScreen />
     <MerchantScreen />
     <ContainerScreen />
+    <QuantityDialog />
     <QuickActionsScreen />
     <WorldConfigScreen />
     <NotesScreen />

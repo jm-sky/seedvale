@@ -145,6 +145,7 @@ import { getHungerRatio } from '../shared/HungerState'
 import { drainStamina, getStaminaRatio } from '../shared/StaminaState'
 import { getThirstRatio } from '../shared/ThirstState'
 import { getVigorRatio } from '../shared/VigorState'
+import { firstUpperCase } from '../ui-vue/lib/firstUpperCase'
 import { skyParamsFromTime, tickDayNight } from '../world/dayNight'
 import { updateFoliageWind } from '../world/foliageWind'
 import { WELL_WATER_UNAVAILABLE_DURING_REPAIR } from '../world/playerWell'
@@ -1183,7 +1184,6 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
           const aimYaw = currentRangedAimYaw()
           inventory.remove(ammoKind, 1)
           hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
-          toast.show(`Zostało ${inventory.count(ammoKind)} strzał`)
           attackAttemptCounter++
           const archeryValue = player.skills.archery.value
           const accuracy = rangedAccuracy(config, archeryValue)
@@ -1573,7 +1573,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
               onInventoryChanged()
               toast.show(`Dołożono ${ITEM_DEFS[fuelKind].label} do ogniska.`)
             } else {
-              toast.show('Potrzebujesz gałęzi lub belki, żeby je zapalić.', 'error')
+              toast.show('Potrzebujesz gałęzi lub belki, żeby je dołożyć.', 'error')
             }
           } else {
             startIgniteFire?.(target.fire)
@@ -1758,6 +1758,13 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             playInventoryPickUp(worldAudio.playOnce)
             hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
             onInventoryChanged()
+            // Delta + resulting total (plan items-player-024) — count-stack
+            // resources only; an instance-backed pickup (weapon/trap/tent/
+            // liquid container) each carries its own condition, which this
+            // generic format can't summarize, so it keeps no toast here.
+            if (lastKind && !isInstanceBackedKind(lastKind)) {
+              toast.show(`${firstUpperCase(ITEM_DEFS[lastKind].label)} +${picked} · Masz: ${inventory.count(lastKind)}`, 'pickup')
+            }
             if (!grouped && altInteractPressed && lastKind && ITEM_CATALOG[lastKind].consumable) {
               consumeItem?.(lastKind)
             }
@@ -2084,6 +2091,18 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         inCaveInterior,
       )
       hud.setTime(dayNight.timeOfDay)
+      // Live ammo readout (plan items-player-024) — cheap early-exit for the
+      // common non-ranged-held case; recomputed every frame (like the load
+      // calc just below) rather than threaded through every ammo-count
+      // mutation site (pickup, drop, trade, firing all reach it for free).
+      const heldForAmmo = heldTool.held()
+      const heldRanged = heldForAmmo ? ITEM_CATALOG[heldForAmmo].ranged : null
+      if (heldRanged) {
+        const ammoCount = heldRanged.ammoKinds.reduce((sum, kind) => sum + inventory.count(kind), 0)
+        hud.setHeldAmmo('Amunicja', ammoCount)
+      } else {
+        hud.setHeldAmmo('', 0)
+      }
       // Plan 164 §9 — one authoritative load calc, recomputed every frame
       // (cheap: `totalWeight()`/`carriedWeightKg()` are small-map sums, same
       // order of cost as the HUD weight readout already updated on every

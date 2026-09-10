@@ -619,7 +619,7 @@ describe('well roof repair (plan world-021)', () => {
   })
 
   it('prompt exposes repair on a damaged completed roof and continue while active', () => {
-    expect(wellPromptLabel(completedRoof(), 100)).toBe('[E] Napij się · [R] Napełnij bukłak')
+    expect(wellPromptLabel(completedRoof(), 100)).toBe('[E] Napij się · [R] Napełnij pojemnik')
     expect(wellPromptLabel(completedRoof({ roofCondition: 40 }), 40)).toBe('[E] Napij się · [R] Napraw')
     expect(wellPromptLabel(completedRoof({
       roofRepair: { startedCondition: 40, targetCondition: 100, requiredWork: 1, completedWork: 0 },

@@ -28,7 +28,7 @@ const FORWARDED_FNS = [
   'configureWorldConfigScreen', 'openWorldConfigScreen', 'closeWorldConfigScreen', 'isWorldConfigScreenOpen',
   'openNotes', 'closeNotes', 'isNotesOpen',
   'openWorldMap', 'closeWorldMap', 'isWorldMapOpen', 'toggleWorldMap',
-  'setHudFps', 'setHudTime', 'setHudInventoryWeight', 'setHudHeldTool', 'setHudPlayerNeeds', 'setHudPlayerCondition', 'setHudAiming',
+  'setHudFps', 'setHudTime', 'setHudInventoryWeight', 'setHudHeldTool', 'setHudHeldAmmo', 'setHudPlayerNeeds', 'setHudPlayerCondition', 'setHudAiming',
   'setHudPrimaryWeapons', 'configurePrimaryWeaponShortcuts', 'setHudMounted', 'setHudLeading',
   'setCharacterStats', 'setCharacterBadges', 'setCharacterReputation', 'openCharacterScreen', 'closeCharacterScreen', 'isCharacterScreenOpen', 'toggleCharacterScreen',
   'configureSkillsScreen', 'setSkillsState', 'pushSkillsState', 'setSelectedTargetedSkill', 'openSkillsScreen', 'closeSkillsScreen', 'isSkillsScreenOpen', 'toggleSkillsScreen',

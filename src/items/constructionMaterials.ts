@@ -47,6 +47,41 @@ export function nearbyWorldMaterialCount(
   return nearbyDroppedByKind(droppedItems, x, z, radius, kind).length
 }
 
+/** Per-requirement read-only breakdown (plan items-player-024) — the same
+ *  inventory + nearby-dropped-items count `hasMaterial()` decides feasibility
+ *  from, split out so player-facing quotes can show e.g. "Belki: 4/7 — przy
+ *  sobie 2 · w pobliżu 2" instead of only a pass/fail. Never mutates; pair
+ *  with `consumeMaterial()` for the actual spend. */
+export type MaterialAvailabilityView = {
+  kind: ItemKind
+  required: number
+  inInventory: number
+  nearbyWorld: number
+  available: number
+  missing: number
+}
+
+export function materialAvailabilityBreakdown(
+  inventory: Inventory,
+  droppedItems: DroppedItems,
+  x: number,
+  z: number,
+  radius: number,
+  requirement: MaterialRequirement,
+): MaterialAvailabilityView {
+  const inInventory = inventory.count(requirement.kind)
+  const nearbyWorld = nearbyWorldMaterialCount(droppedItems, x, z, radius, requirement.kind)
+  const available = inInventory + nearbyWorld
+  return {
+    kind: requirement.kind,
+    required: requirement.count,
+    inInventory,
+    nearbyWorld,
+    available,
+    missing: Math.max(0, requirement.count - available),
+  }
+}
+
 /** Would `requirement` be satisfiable from `inventory` plus dropped items
  *  within `radius` of (x, z)? Read-only — pair with `consumeMaterial` to
  *  actually spend it. */

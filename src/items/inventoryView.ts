@@ -8,19 +8,38 @@ import {
 import {
   INSTANCE_BACKED_KINDS,
   isLiquidContainerInstance,
+  isTentItemInstance,
   isTrapItemInstance,
   isWeaponItemInstance,
   type ItemInstance,
   type LiquidContainerItemInstance,
 } from './itemInstances'
+import { type ItemUseView, resolveConsumeUseView } from './itemUseView'
 import { liquidContainerCapacity } from './liquidContainer'
 import { resolveInstanceSellPrice } from './tradeCatalog'
 import { trapConditionPercent } from './trapItemInstances'
 import { weaponDurabilityPercent, weaponSharpnessPercent } from './weaponMaintenance'
 
+/** What an instance row's `conditionPercent` actually measures — the UI must
+ *  never render a bare `%` without knowing which of these it is (plan
+ *  items-player-024). `sharpnessPercent` stays its own field (only weapons
+ *  carry it independently of `conditionPercent`/durability). */
+export type ItemMeterKind = 'condition' | 'durability' | 'fill'
+
+/** Player-facing label for `ItemMeterKind` — shared by every screen that
+ *  renders an instance/group meter so "Stan"/"Napełnienie" wording can't
+ *  drift between Inventory, Container and Merchant presentations. */
+export const ITEM_METER_LABEL: Record<ItemMeterKind, string> = {
+  condition: 'Stan',
+  durability: 'Stan',
+  fill: 'Napełnienie',
+}
+
 export type InventoryInstanceRow = {
   id: string
-  /** Trap: overall condition. Weapon: durability — see `sharpnessPercent`. */
+  /** What `conditionPercent` means for this row — see `ItemMeterKind`. */
+  meterKind: ItemMeterKind
+  /** Trap/tent: overall condition. Weapon: durability. Liquid container: fill. */
   conditionPercent: number
   /** Weapon instances only — sharpness is shown/sharpened independently of
    *  `conditionPercent` (durability). */
@@ -35,10 +54,17 @@ export type InventoryGroupView = {
   condition: 'uniform' | 'mixed' | null
   /** Set when `condition === 'uniform'` — e.g. 100 for full durability traps. */
   uniformConditionPercent: number | null
+  /** What `uniformConditionPercent`/each row's `conditionPercent` means — null
+   *  for a count-only stackable group (no instances, no meter at all). */
+  meterKind: ItemMeterKind | null
   instances: readonly InventoryInstanceRow[]
   /** FIFO perishable batch at `nowDays` — presentation only (plan items-player-002). */
   freshnessStage?: FreshnessStage
   sourceSpecies?: FoodSourceSpecies
+  /** "Zjedz"/"Wypij" availability (plan items-player-024) — null when `kind`
+   *  has no `ITEM_CATALOG[kind].consumable` entry at all. Presentation only;
+   *  `survivalActions.ts`'s `consumeItem()` re-validates at execution time. */
+  consumeUse: ItemUseView | null
 }
 
 function buildTrapGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
@@ -46,6 +72,7 @@ function buildTrapGroup(kind: ItemKind, instances: readonly ItemInstance[]): Inv
   if (traps.length === 0) return null
   const rows: InventoryInstanceRow[] = traps.map((inst) => ({
     id: inst.id,
+    meterKind: 'condition',
     conditionPercent: trapConditionPercent(inst),
     sharpnessPercent: null,
     sellPrice: resolveInstanceSellPrice(inst) ?? 0,
@@ -57,7 +84,9 @@ function buildTrapGroup(kind: ItemKind, instances: readonly ItemInstance[]): Inv
     count: rows.length,
     condition: allSame ? 'uniform' : 'mixed',
     uniformConditionPercent: allSame ? percents[0]! : null,
+    meterKind: 'condition',
     instances: rows,
+    consumeUse: null,
   }
 }
 
@@ -68,6 +97,7 @@ function buildWeaponGroup(kind: ItemKind, instances: readonly ItemInstance[]): I
   if (weapons.length === 0) return null
   const rows: InventoryInstanceRow[] = weapons.map((inst) => ({
     id: inst.id,
+    meterKind: 'durability',
     conditionPercent: weaponDurabilityPercent(inst),
     sharpnessPercent: weaponSharpnessPercent(inst),
     sellPrice: resolveInstanceSellPrice(inst) ?? 0,
@@ -79,14 +109,13 @@ function buildWeaponGroup(kind: ItemKind, instances: readonly ItemInstance[]): I
     count: rows.length,
     condition: allSame ? 'uniform' : 'mixed',
     uniformConditionPercent: allSame ? first.conditionPercent : null,
+    meterKind: 'durability',
     instances: rows,
+    consumeUse: null,
   }
 }
 
-/** Percent-full reading used as a liquid container's `conditionPercent` — the
- *  closest existing UI concept ("stan X%") to "how full is it", so
- *  waterskins/buckets get a visible fill indicator for free through the same
- *  instance-grouping UI traps/weapons already use, no new UI needed. */
+/** Percent-full reading for a liquid container's fill level. */
 function liquidFillPercent(instance: LiquidContainerItemInstance): number {
   const capacity = liquidContainerCapacity(instance.kind)
   if (capacity <= 0) return 0
@@ -95,11 +124,12 @@ function liquidFillPercent(instance: LiquidContainerItemInstance): number {
 
 /** Plan items-player-001 — mirrors `buildTrapGroup`; `conditionPercent` reads
  *  as fill percentage (`sharpnessPercent` stays null, not applicable). */
-function buildLiquidContainerGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
+function buildLiquidContainerGroup(kind: ItemKind, instances: readonly ItemInstance[], inventory: Inventory, nowDays: number): InventoryGroupView | null {
   const containers = instances.filter(isLiquidContainerInstance)
   if (containers.length === 0) return null
   const rows: InventoryInstanceRow[] = containers.map((inst) => ({
     id: inst.id,
+    meterKind: 'fill',
     conditionPercent: liquidFillPercent(inst),
     sharpnessPercent: null,
     sellPrice: resolveInstanceSellPrice(inst) ?? 0,
@@ -111,7 +141,36 @@ function buildLiquidContainerGroup(kind: ItemKind, instances: readonly ItemInsta
     count: rows.length,
     condition: allSame ? 'uniform' : 'mixed',
     uniformConditionPercent: allSame ? percents[0]! : null,
+    meterKind: 'fill',
     instances: rows,
+    consumeUse: resolveConsumeUseView(inventory, kind, nowDays),
+  }
+}
+
+/** Plan items-player-024 — packed tents are instance-backed (0..100
+ *  condition, `itemInstances.ts`'s `TentItemInstance`) but had no builder, so
+ *  an owned tent silently disappeared from `[I]` even though
+ *  `inventoryCountsForUi()` already counted it. Mirrors `buildTrapGroup`. */
+function buildTentGroup(kind: ItemKind, instances: readonly ItemInstance[]): InventoryGroupView | null {
+  const tents = instances.filter(isTentItemInstance)
+  if (tents.length === 0) return null
+  const rows: InventoryInstanceRow[] = tents.map((inst) => ({
+    id: inst.id,
+    meterKind: 'condition',
+    conditionPercent: Math.round(inst.condition),
+    sharpnessPercent: null,
+    sellPrice: resolveInstanceSellPrice(inst) ?? 0,
+  }))
+  const percents = rows.map((r) => r.conditionPercent)
+  const allSame = percents.every((p) => p === percents[0])
+  return {
+    kind,
+    count: rows.length,
+    condition: allSame ? 'uniform' : 'mixed',
+    uniformConditionPercent: allSame ? percents[0]! : null,
+    meterKind: 'condition',
+    instances: rows,
+    consumeUse: null,
   }
 }
 
@@ -121,7 +180,10 @@ export function buildInventoryGroups(inventory: Inventory, nowDays = 0): Invento
 
   for (const kind of INSTANCE_BACKED_KINDS) {
     const instances = inventory.getInstances(kind)
-    const group = buildTrapGroup(kind, instances) ?? buildWeaponGroup(kind, instances) ?? buildLiquidContainerGroup(kind, instances)
+    const group = buildTrapGroup(kind, instances)
+      ?? buildWeaponGroup(kind, instances)
+      ?? buildLiquidContainerGroup(kind, instances, inventory, nowDays)
+      ?? buildTentGroup(kind, instances)
     if (group) groups.push(group)
   }
 
@@ -133,7 +195,9 @@ export function buildInventoryGroups(inventory: Inventory, nowDays = 0): Invento
         count,
         condition: null,
         uniformConditionPercent: null,
+        meterKind: null,
         instances: [],
+        consumeUse: resolveConsumeUseView(inventory, kind, nowDays),
       }
       if (fifo) {
         group.freshnessStage = getFoodBatchFreshnessStage(kind, fifo, nowDays)

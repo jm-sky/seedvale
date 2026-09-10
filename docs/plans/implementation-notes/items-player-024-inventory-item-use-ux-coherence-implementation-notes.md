@@ -284,6 +284,114 @@ High-value pure/unit tests before Vue integration:
 
 Then add focused component/store tests for quantity dialog, corpse mode hiding deposit, disabled item actions and HUD text.
 
+## Implementation summary (2026-09-10)
+
+Implemented on branch `claude/inventory-item-use-ux-gaezgb`, over the existing
+owners listed above — no parallel inventory/equipment/action system was
+introduced.
+
+- **Meters/tent (§1).** `inventoryView.ts` gained `ItemMeterKind` (`condition`
+  / `durability` / `fill`) + `ITEM_METER_LABEL`, a `meterKind` field on
+  `InventoryGroupView`/`InventoryInstanceRow`, and `buildTentGroup()` as a
+  fourth fallback in `buildInventoryGroups()`'s builder chain. `conditionPercent`/
+  `sharpnessPercent` field names were kept (not renamed) to avoid touching the
+  unrelated Merchant screens, which read the same view type.
+- **Capabilities + instance equip (§2).** Lifted `CAPABILITY_LABEL` into
+  `itemCatalog.ts` (`MerchantFilterBar.vue` now imports it instead of holding
+  its own copy); `InventoryScreenItemDetails.vue` renders a "Zastosowania"
+  section from it. `onEquip` now threads an optional `instanceId` end-to-end
+  (`store.ts` → `createInventoryScreen.ts` → `inventoryWiring.ts` →
+  `HeldTool.equip()`, which already supported it); a new `heldInstanceId` on
+  `ui.inventory` lets Details show "Weź"/"Odłóż" per concrete weapon instance
+  bucket. The bottom generic Weź/Odłóż pair is hidden for weapon-maintenance
+  kinds so there is exactly one equip affordance once instances are visible.
+- **`ItemUseView` (§3).** New `items/itemUseView.ts` —
+  `resolveConsumeUseView()` (mirrors `consumeItem()`'s spoiled-food/empty-
+  container checks) and `resolveReadBookUseView()` (mirrors `readBook()`'s
+  too-low/known outcomes). `buildInventoryGroups()` attaches `consumeUse` per
+  group; both Inventory screens show the consume/read buttons disabled with a
+  reason instead of hiding or silently failing them. Equip/drop/place stay
+  "enabled whenever shown" (no impossible-but-visible case existed for them),
+  so no `ItemUseView` was added for those — would be pure ceremony.
+- **Placement verbs (§4).** Added "Rozstaw" (tent, `onPlaceTent` →
+  `placement.placeTentAtAim()`) to both Inventory screens, and "Postaw"
+  (chest) to Details (List already had it). Traps already had "Zastaw" in
+  both screens. Wooden torch was **not** added: the only existing "placed
+  torch" mechanic is `standingTorch.ts`, a generic-material construction
+  object unrelated to the `wooden_torch` item kind (which is a hand-held,
+  firestarter-lit tool) — the plan's own wording ("jeśli obecny placement
+  pipeline traktuje ją jako inventory-owned placeable") is conditional and
+  that condition doesn't hold.
+- **Quantity dialog + amount-aware drop (§5).** New `ui.quantityDialog` store
+  slice + `QuantityDialog.vue` (mounted once in `App.vue`), opened by callers
+  for `count > 1` and skipped for a single unit. `inventoryWiring.dropItemStack`
+  became `dropItems(kind, amount)`; for instance-backed kinds it drops the
+  first `amount` instances in `Inventory.getInstances()` order (deterministic,
+  no selection UI exists yet for "which N instances").
+- **Container/corpse mode + Weź wszystko (§6).** `ui.containerScreen` gained
+  `mode: 'container' | 'corpse'`; `ContainerScreen.vue` derives source
+  label/empty-label from it and hides deposit controls entirely in corpse
+  mode (previously: shown, then rejected by toast on click). Added
+  `onTakeAll` (`containerActions.ts`) — a local `maxTransferable()` walks
+  `canAdd()` one unit at a time (handles a mid-walk backpack capacity bump
+  correctly, unlike a closed-form calc) then transfers via the same
+  `withdraw`/`withdrawInstance`/`transferCorpseCountTo`/`transferCorpseInstanceTo`
+  primitives regular transfers use — partial success by design.
+- **Construction material breakdown (§7).** `constructionMaterials.ts` gained
+  `materialAvailabilityBreakdown()` (required/inInventory/nearbyWorld/available/
+  missing), reusing `nearbyWorldMaterialCount()`. Wired into the two existing
+  player-facing quotes that already listed raw requirement counts: camp
+  repair (`restActions.ts`'s `formatQuoteView`) and well construction
+  (`placementActions.ts`'s `describeWellWork`) — both now render
+  `Label: available/required — przy sobie N · w pobliżu M`.
+- **Pickup delta feedback (§8).** `gameLoop.ts`'s item-pickup handler (there
+  was previously **no** pickup toast at all for regular items) now shows
+  `Label +N · Masz: total` for non-instance-backed kinds only, using the
+  actual `picked` count after capacity limits — instance-backed pickups
+  (weapons/traps/tents/liquid containers) keep no toast, since a generic
+  delta format can't summarize per-item condition.
+- **Ranged ammo (§9).** `gameLoop.ts` computes a per-frame ammo readout
+  (cheap early-exit when not holding a ranged weapon) and calls the new
+  `hud.setHeldAmmo()` — same "recompute every frame instead of threading
+  through every mutation site" pattern already used for load. The per-shot
+  "Zostało N strzał" toast was removed. Inventory details show per-ammo-kind
+  counts for a held-ready bow.
+- **Copy cleanup (§10).** Fixed `[mixed usage]` → "różne stany", the two
+  legacy waterskin `description`s (moved the migration note to a code
+  comment), `Napełnij bukłak` → `Napełnij pojemnik` (the action already fills
+  any liquid container, not just waterskins) at both remaining call sites,
+  and one `zapalić`/`dołożyć` mismatch (the *lit*-campfire "add fuel" error
+  toast was wrongly using "light it" wording).
+
+### Deviations from the plan's literal contract shapes
+
+- `ItemMeterKind` ships without a separate `'sharpness'` member — sharpness
+  stayed its own `sharpnessPercent` field (as it already was), since folding
+  it into a generic `meters[]` array would have touched the Merchant screens
+  for no behavioural gain. The acceptance criteria (no anonymous `%`, correct
+  labels, mixed-state Polish copy) are met either way.
+- `ItemUseView` was scoped to consume + read (the two cases the plan gives
+  concrete disabled-with-reason examples for). Equip/drop/place don't have an
+  "impossible but visible" state today, so a real contract for them would
+  have nothing meaningful to express yet.
+
+### Verification
+
+- `pnpm run type-check` (`vue-tsc --noEmit`): clean.
+- `pnpm run lint` / `lint:fix`: clean.
+- `pnpm run build`: succeeds.
+- `pnpm run test`: 4586 passed, 3 failed — all 3 pre-existing and unrelated
+  (`scripts/docs/plan-metadata.test.ts`'s status-normalization case,
+  `src/player/worldWaterEligibility.test.ts` cave/water occupancy cases);
+  confirmed failing identically on the pre-change tree via `git stash`.
+- Added `src/items/inventoryView.test.ts`, `src/items/itemUseView.test.ts`,
+  and extended `src/items/constructionMaterials.test.ts` — 20 new tests,
+  covering tent coverage, meter semantics, mixed-state detection,
+  `consumeUse`/`resolveConsumeUseView`/`resolveReadBookUseView`, and the
+  material breakdown agreeing with `hasMaterial()` at zero/partial/sufficient.
+- Browser/manual verification not performed per task instructions — the
+  Manual verification section above is still the user's checklist to run.
+
 ## Pitfalls
 
 - Do not “fix” missing specialist-tool UX by making every world action visible disabled; product decision is the opposite for most specialist actions.
