@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
+import { slotInputKey } from '../../interaction/interactionView'
 import { useOverlayScreen } from '../composables/useOverlayScreen'
 import { useTouchScroll } from '../composables/useTouchScroll'
 import { closeFlavorDialog, isFlavorDialogOpen, ui } from '../store'
@@ -129,11 +130,32 @@ function onPanelKeyDown(event: KeyboardEvent): void {
   </div>
 
   <div
-    v-if="!ui.flavorDialog.open && ui.flavorDialog.prompt"
+    v-if="!ui.flavorDialog.open && (ui.flavorDialog.interactionPrompt || ui.flavorDialog.prompt)"
     class="pointer-events-none fixed bottom-[90px] left-1/2 z-[6] -translate-x-1/2 rounded-md bg-black/70 px-3.5 py-1.5 text-[13px] text-white shadow"
     :class="ui.flavorDialog.promptHighlighted ? 'ring-1 ring-[rgba(255,196,92,0.9)] shadow-[0_0_10px_2px_rgba(255,196,92,0.5)]' : ''"
   >
-    {{ ui.flavorDialog.prompt.startsWith('[') ? ui.flavorDialog.prompt : `[E] ${ui.flavorDialog.prompt}` }}
+    <template v-if="ui.flavorDialog.interactionPrompt">
+      <span v-if="ui.flavorDialog.interactionPrompt.targetLabel">
+        {{ ui.flavorDialog.interactionPrompt.targetLabel }}
+      </span>
+      <template
+        v-for="(action, index) in ui.flavorDialog.interactionPrompt.actions"
+        :key="`${action.slot}-${action.label}`"
+      >
+        <span v-if="index > 0 || ui.flavorDialog.interactionPrompt.targetLabel"> · </span>
+        <span :class="action.enabled ? '' : 'opacity-55'">
+          [{{ slotInputKey(action.slot) }}] {{ action.label }}
+          <span
+            v-if="!action.enabled && action.reasonLabel"
+            class="text-red-300"
+          > — {{ action.reasonLabel }}</span>
+        </span>
+      </template>
+      <span v-if="ui.flavorDialog.interactionPrompt.cycleHint">{{ ui.flavorDialog.interactionPrompt.cycleHint }}</span>
+    </template>
+    <template v-else>
+      {{ ui.flavorDialog.prompt!.startsWith('[') ? ui.flavorDialog.prompt : `[E] ${ui.flavorDialog.prompt}` }}
+    </template>
     <div
       v-if="ui.flavorDialog.progress !== null"
       class="mt-1.5 h-1 w-32 overflow-hidden rounded-full bg-white/20"

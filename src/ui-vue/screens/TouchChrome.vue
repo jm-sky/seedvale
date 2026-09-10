@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { BowArrow, Crosshair, Search, Sword, Zap } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { isTouchDevice } from '../../input/isTouchDevice'
+import { alternateActionState, primaryActionState } from '../../interaction/interactionView'
 import { equipPrimaryMelee, equipPrimaryRanged, ui } from '../store'
 
 const touch = isTouchDevice()
+const primaryAction = computed(() => primaryActionState(ui.flavorDialog.interactionPrompt))
+const alternateAction = computed(() => alternateActionState(ui.flavorDialog.interactionPrompt))
+const showAlternate = computed(() => alternateAction.value != null)
+const alternateEnabled = computed(() => alternateAction.value?.enabled ?? false)
+const primaryEnabled = computed(() => primaryAction.value?.enabled ?? true)
 </script>
 
 <template>
@@ -67,9 +74,10 @@ const touch = isTouchDevice()
           <Search :size="20" />
         </button>
         <button
+          v-if="showAlternate"
           type="button"
           class="pointer-events-auto flex size-13 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(161,123,209,0.50)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
-          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled }"
+          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled || !alternateEnabled }"
           aria-label="Interakcja alternatywna"
           @click="ui.touch.onAltInteract?.()"
         >
@@ -78,6 +86,7 @@ const touch = isTouchDevice()
         <button
           type="button"
           class="pointer-events-auto flex size-17 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-[rgba(61,123,209,0.75)] text-lg font-semibold text-ink [-webkit-tap-highlight-color:transparent]"
+          :class="{ 'pointer-events-none opacity-40': !ui.touch.inputEnabled || !primaryEnabled }"
           aria-label="Interakcja"
           @pointerdown="ui.touch.onInteract?.()"
           @pointerup="ui.touch.onInteractUp?.()"

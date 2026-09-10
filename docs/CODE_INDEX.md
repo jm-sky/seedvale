@@ -63,6 +63,8 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [Skill evaluation](../src/player/skillEvaluation.ts) — primary + optional support/context competence, independent of world targeting.
 - [Targeted skill selection](../src/player/targetedSkillSelection.ts) — runtime-only selected targeted skill.
 - [Targeted skill actions](../src/interaction/targetedSkillAction.ts) — query/execute seam over existing `Interactable`s; consumers are trap inspect and camp Repair.
+- [Interaction view](../src/interaction/interactionView.ts) — derived primary/alternate/inspect presentation slots for gaze prompt and touch chrome (plan ui-input-015).
+- [Gaze target ranking](../src/interaction/findInteractionTarget.ts) — `pickInGaze` / `rankInGaze` with tie-breaks and hysteresis (plan ui-input-015).
 - [Inventory](../src/items/Inventory.ts) — item ownership (player *and* NPC), stacks, instances and food batches.
 - [HeldTool](../src/items/HeldTool.ts) — the single right-hand tool slot.
 - [Item catalog](../src/items/itemCatalog.ts) — the per-`ItemKind` gameplay flags (melee, ranged, consumable, `capabilities`, …) and the capability queries built on them (`hasItemCapability`, `CAPABILITY_KINDS`, `HOLDABLE_KINDS`).

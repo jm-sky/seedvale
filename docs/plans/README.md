@@ -75,7 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
-| 💡 `ui-input-015-interaction-targeting-and-action-semantics.md`                | -       | 🔴 | M      | ui-input-014 |
+| 💡 `ui-input-015-interaction-targeting-and-action-semantics.md`                | -       | 🟢 | M      | ui-input-014 |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
 
 ---

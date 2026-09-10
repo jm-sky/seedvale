@@ -7,6 +7,7 @@ import type { PlayAt } from '../audio/createWorldAudio'
 import type { BadgeDef } from '../badges/badges'
 import type { QualityPreset } from '../config/qualityProfiles'
 import type { WorldConfig } from '../config/worldConfig'
+import type { InteractionGazePrompt } from '../interaction/interactionView'
 import type { InventoryGroupView } from '../items/inventoryView'
 import type { ItemKind } from '../items/items'
 import type { PrimaryWeaponChoice } from '../items/primaryWeapons'
@@ -134,9 +135,11 @@ export type FlavorDialogDetailRow = {
   secondaryValue?: string
   tone?: 'positive' | 'warning' | 'muted'
 }
+
 type FlavorDialogState = {
   open: boolean
   prompt: string | null
+  interactionPrompt: InteractionGazePrompt | null
   promptHighlighted: boolean
   progress: number | null
   name: string
@@ -575,7 +578,7 @@ export const ui = reactive({
     saveStatus: '',
   } as PauseMenuState,
   questLog: { open: false, entries: [], relation: () => 0 } as QuestLogState,
-  flavorDialog: { open: false, prompt: null, promptHighlighted: false, progress: null, name: '', line: '', details: [], actions: [], onOpen: null, onClose: null } as FlavorDialogState,
+  flavorDialog: { open: false, prompt: null, interactionPrompt: null, promptHighlighted: false, progress: null, name: '', line: '', details: [], actions: [], onOpen: null, onClose: null } as FlavorDialogState,
   quickActions: {
     open: false, category: null, hasDiggingTool: false, nearTown: false, hasTent: false, hasChest: false, hasWoodenTorch: false,
     hasPalisadeMaterial: false, hasTroughMaterial: false, hasBedrollMaterial: false, hasPlatformMaterial: false,
@@ -760,6 +763,7 @@ export function openFlavorDialog(
 ): void {
   const wasOpen = ui.flavorDialog.open
   ui.flavorDialog.prompt = null
+  ui.flavorDialog.interactionPrompt = null
   ui.flavorDialog.progress = null
   ui.flavorDialog.name = name
   ui.flavorDialog.line = line
@@ -774,6 +778,19 @@ export function openFlavorDialog(
 export function setFlavorPrompt(text: string | null, highlighted = false, progress: number | null = null): void {
   if (!ui.flavorDialog.open) {
     ui.flavorDialog.prompt = text
+    ui.flavorDialog.interactionPrompt = null
+    ui.flavorDialog.promptHighlighted = highlighted
+    ui.flavorDialog.progress = progress
+  }
+}
+export function setFlavorInteractionPrompt(
+  prompt: InteractionGazePrompt | null,
+  highlighted = false,
+  progress: number | null = null,
+): void {
+  if (!ui.flavorDialog.open) {
+    ui.flavorDialog.prompt = null
+    ui.flavorDialog.interactionPrompt = prompt
     ui.flavorDialog.promptHighlighted = highlighted
     ui.flavorDialog.progress = progress
   }

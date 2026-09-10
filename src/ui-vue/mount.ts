@@ -11,7 +11,7 @@ const FORWARDED_FNS = [
   'configureContainerScreen', 'openContainerScreen', 'refreshContainerScreen', 'closeContainerScreen', 'isContainerScreenOpen',
   'configurePauseMenu', 'setPauseSeed', 'setPauseActiveSaveName', 'openPauseMenu', 'closePauseMenu', 'togglePause', 'isPauseMenuOpen',
   'openQuestLog', 'refreshQuestLog', 'closeQuestLog', 'isQuestLogOpen',
-  'configureFlavorDialog', 'openFlavorDialog', 'setFlavorPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
+  'configureFlavorDialog', 'openFlavorDialog', 'setFlavorPrompt', 'setFlavorInteractionPrompt', 'closeFlavorDialog', 'isFlavorDialogOpen',
   'configureQuickActions', 'setQuickActionsHasDiggingTool', 'setQuickActionsHasTent', 'setQuickActionsHasChest', 'setQuickActionsHasWoodenTorch', 'setQuickActionsHasPalisadeMaterial', 'setQuickActionsHasTroughMaterial', 'setQuickActionsHasBedrollMaterial', 'setQuickActionsHasPlatformMaterial', 'setQuickActionsHasCarriedContainer', 'setQuickActionsNearTown', 'setQuickActionsTraps', 'setQuickActionsFireAvailability', 'setQuickActionsHasTreeSeed', 'setQuickActionsCropSeeds', 'setQuickActionsHasFishingRod', 'setQuickActionsWorkContracts', 'toggleQuickActions', 'closeQuickActions', 'isQuickActionsOpen',
   'configureAbortRest', 'abortRest',
   'configureAbortBusy', 'abortBusy',

@@ -2,7 +2,15 @@
 
 **Reviewed:** 2026-09-10  
 **Plan:** `ui-input-015-interaction-targeting-and-action-semantics.md`  
-**Codebase baseline:** `main`
+**Codebase baseline:** `main`  
+**Implemented:** 2026-09-10
+
+## Implementation summary
+
+- Added `src/interaction/interactionView.ts` (`InteractionView`, `buildInteractionView`, stable keys, touch/desktop helpers) with incremental legacy `promptLabel` parsing and read-only well-work enrichment via existing `describeWellWork` / `describeWellRoofRepair` hooks.
+- Extended `src/interaction/findInteractionTarget.ts` with `rankInGaze`, deterministic tie-breaks, documented epsilon/hysteresis constants, and hysteresis-aware `pickInGaze`.
+- `gameLoop.ts` builds gaze-ranked non-combat cycle sets, keeps runtime-only `gazeStableTargetKey`, and publishes structured gaze prompts via `setFlavorInteractionPrompt`.
+- `FlavorDialog.vue` renders structured slots; `TouchChrome.vue` shows/hides/disables E/R from the same view. Tests in `findInteractionTarget.test.ts` and `interactionView.test.ts`.
 
 ## Current ownership
 

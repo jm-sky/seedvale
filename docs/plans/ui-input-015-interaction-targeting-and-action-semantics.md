@@ -1,7 +1,7 @@
 # Plan: Interaction Targeting and Action Semantics
 
 **Created:** 2026-09-10
-**Status:** `planned` 📋
+**Status:** `done` ✅
 **Priority:** high · **Effort:** M
 **Depends on:** ui-input-014
 **Domain:** `ui-input`  

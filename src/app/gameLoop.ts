@@ -80,7 +80,13 @@ import { combatTargetForAnimal, isMeleeTool } from '../fauna/faunaCombat'
 import { countNearbyHumans } from '../fauna/predatorHumanDecision'
 import { isTouchDevice } from '../input/isTouchDevice'
 import { type createMouseLook, exitGamePointerLock } from '../input/MouseLook'
-import { pickInGaze } from '../interaction/findInteractionTarget'
+import { pickInGaze, rankInGaze } from '../interaction/findInteractionTarget'
+import {
+  buildInteractionGazePrompt,
+  interactableStableKey,
+  interactionActionFromSkillPrompt,
+  isInteractableActionable,
+} from '../interaction/interactionView'
 import { formatSettlementStorageLines, resolveInteraction } from '../interaction/resolveInteraction'
 import { executeTargetedSkillAction, queryTargetedSkillAction, targetedSkillPrompt, type TargetedSkillQueryContext } from '../interaction/targetedSkillAction'
 import { treeInspectionCanYieldBranch } from '../interaction/treeInspection'
@@ -722,6 +728,8 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
    *  alternate source for the same `target` variable. */
   let cycleActive = false
   let cycleIndex = 0
+  /** Runtime-only gaze stability key (plan ui-input-015) — not persisted. */
+  let gazeStableTargetKey: string | null = null
   const setHighlight = (next: Highlightable | null): void => {
     if (highlightedTarget === next) return
     highlightedTarget?.setHighlighted(false)
@@ -1268,12 +1276,19 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         playerCombat.setSoftLock(null)
       }
 
-      const cycleRangeSq = INTERACT_RANGE * INTERACT_RANGE
-      const cycleCandidates = interactables.filter((c) => {
-        const dx = c.position.x - player.mesh.position.x
-        const dz = c.position.z - player.mesh.position.z
-        return dx * dx + dz * dz <= cycleRangeSq
-      })
+      const gazeRankOptions = {
+        isActionable: isInteractableActionable,
+        stableKey: interactableStableKey,
+      }
+      const gazeRanked = rankInGaze(
+        interactables,
+        player.mesh.position,
+        mouseLook.state.yaw,
+        INTERACT_RANGE,
+        INTERACT_MIN_DOT,
+        gazeRankOptions,
+      )
+      const cycleCandidates = gazeRanked.map((entry) => entry.candidate)
       const worldCycleCandidates = filterWorldCycleTargets(cycleCandidates)
       const cycleTargetPressed = keyboard.consumeCycleTarget()
       const shiftHeld = keyboard.state.sprint
@@ -1365,12 +1380,20 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             )
         }
       } else {
+        const gazePrevious = gazeStableTargetKey
+          ? cycleCandidates.find((candidate) => interactableStableKey(candidate) === gazeStableTargetKey) ?? null
+          : null
         target = (cycleActive ? cycleCandidates[cycleIndex]! : null) ?? pickInGaze(
           interactables,
           player.mesh.position,
           mouseLook.state.yaw,
           INTERACT_RANGE,
           INTERACT_MIN_DOT,
+          {
+            ...gazeRankOptions,
+            previous: gazePrevious,
+            sameCandidate: (a, b) => interactableStableKey(a) === interactableStableKey(b),
+          },
         ) ?? buildDigTarget(
           player.mesh.position,
           mouseLook.state.yaw,
@@ -1393,6 +1416,12 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       // on-foot state.
       if (mount.isMounted()) target = null
 
+      if (!playerCombat.isActive()) {
+        gazeStableTargetKey = target ? interactableStableKey(target) : null
+      } else if (!target) {
+        gazeStableTargetKey = null
+      }
+
       const cycleHint = playerCombat.isActive()
         ? (livingTargets.length > 1 ? ' · [Tab] Cel · [Shift+Tab] Świat' : ' · [Shift+Tab] Świat')
         : (target && cycleCandidates.length > 1 ? ` · [Tab] Dalej (${cycleIndex + 1}/${cycleCandidates.length})` : '')
@@ -1410,20 +1439,30 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       const skillPrompt = selectedSkill
         ? targetedSkillPrompt(selectedSkill, skillAction, target != null)
         : null
-      const inspectHint = !isTouchDevice() && target && inspectionTargetRef(target)
-        ? ' · [V] Sprawdź'
-        : ''
-      npcDialog.setPrompt(
-        skillPrompt ? `${skillPrompt}${cycleHint}` : (target ? `${target.promptLabel}${cycleHint}${inspectHint}` : null),
-        promptHighlighted,
-        rangedDrawProgress,
-      )
+      const inspectAvailable = inspectionTargetRef(target) !== null
+      const interactionPrompt = selectedSkill
+        ? (skillAction && target
+          ? buildInteractionGazePrompt(target, {
+              hasInspect: !isTouchDevice() && inspectAvailable,
+              describeWellWork,
+              describeWellRoofRepair,
+              primaryOverride: interactionActionFromSkillPrompt(skillAction.promptLabel),
+            }, cycleHint)
+          : { targetLabel: skillPrompt ?? '', actions: [], cycleHint })
+        : (target
+          ? buildInteractionGazePrompt(target, {
+              hasInspect: !isTouchDevice() && inspectAvailable,
+              describeWellWork,
+              describeWellRoofRepair,
+            }, cycleHint)
+          : null)
+      vueUi.setFlavorInteractionPrompt(interactionPrompt, promptHighlighted, rangedDrawProgress)
       vueUi.setCycleTargetAvailable(
         playerCombat.isActive()
           ? livingTargets.length > 1
           : cycleCandidates.length > 1,
       )
-      vueUi.setInspectAvailable(inspectionTargetRef(target) !== null)
+      vueUi.setInspectAvailable(inspectAvailable)
 
       if (isDebugMode()) {
         if (target?.kind === 'house') {
