@@ -56,7 +56,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | File                                                                           | Summary | Pri | Effort | Depends |
 | ------------------------------------------------------------------------------ | ------- | --- | ------ | ------- |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                              | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
-| 💡 `npc-026-npc-grave-visits.md`                                               | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
 | 💡 `fauna-004-sheep-wool-and-shepherd.md`                                      | -       | 🟡 | L      | npc-006, fauna-012, fauna-016, settlements-npcs-014 |
 | 💡 `settlements-npcs-015-economic-production-and-input-integration.md`         | -       | 🔴 | M      | settlements-npcs-014 |
 | 💡 `settlements-npcs-006-wool-to-material.md`                                  | -       | 🟡 | M      | fauna-004, settlements-npcs-015 |
