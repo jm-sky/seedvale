@@ -133,6 +133,8 @@ export type SettlementsManager = {
     nearbyPredators?: readonly AnimalAgent[],
     /** Player-as-observer presentation inputs (npc-023). */
     playerObservation?: import('../simulation/observation').PlayerObservationInput,
+    /** Dead wild fauna from the loaded `Fauna` (plan settlements-npcs-029). */
+    nearbyWildCorpses?: readonly AnimalAgent[],
   ) => void
   /** Forwarded to every loaded settlement's `setDayNight` (house window
    *  glow) — also remembered so a settlement streamed in later starts at the
@@ -678,7 +680,7 @@ export async function createSettlementsManager(
         for (const npc of entry.settlement.npcs) npc.resolveTimeSkip(startTimeOfDay, hours, dayLengthSec)
       }
     },
-    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation) {
+    update(dt, playerPos, playerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats, dropLivestockProduct, nowDays, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpses) {
       if (Math.hypot(playerPos.x - lastCheckX, playerPos.z - lastCheckZ) >= recheckDistance) {
         recheck(playerPos.x, playerPos.z)
       }
@@ -699,6 +701,7 @@ export async function createSettlementsManager(
           weather,
           nearbyPredators,
           playerObservation,
+          nearbyWildCorpses,
         )
       }
       if (detachedLivestock.length > 0) {

@@ -4,7 +4,7 @@
 
 **Not:** settlement generation, `Household`/`SettlementEconomy` internals (that's [SETTLEMENTS.md](./settlements.md)), fauna's own behaviour pipeline or `AnimalAgent` internals (that's [fauna.md](./fauna.md) — this doc only covers how NPCs *consume* what fauna exposes), combat resolver internals ([combat.md](./combat.md) owns those; this doc covers only where combat hands off into NPC state), the work-contract commitment record itself ([player-systems.md](./player-systems.md)'s Work Contracts section owns that; this doc covers only the NPC-side evaluation/execution), or a plan/changelog.
 
-**Last verified:** 2026-09-09
+**Last verified:** 2026-09-10
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -37,25 +37,34 @@ When this file and the code disagree, the code wins — update this file.
 
 ## Decision architecture
 
-`NpcAgent.choose()` is a pipeline of three independent pressure producers feeding one arbitration, then a fixed-priority sequencing table, then strategy selection, then execution:
+`NpcAgent.choose()` is a pipeline of independent pressure producers feeding one arbitration, then a fixed-priority sequencing table, then strategy selection, then execution:
 
 ```text
-1. PRESSURE GENERATION — three independent producers, one scoring domain
+1. PRESSURE GENERATION — independent producers, one scoring domain
    a. Needs        physiological + duty meters (water/wood/waterDuty/food/idle),
                     re-ranked (never added/removed) by personality/role modifiers
    b. Weather       a single 'seekShelter' candidate, scored from current weather
    c. Healing       a single 'heal' candidate, scored from derived injury
                     severity + a catalog-suitable physical-injury treatment
                     (not a generic health consumable)
+   d. NPC burial    a 'buryDeceased' candidate from settlement-local NPC corpses
+                    (npc-011) — social burial, not animal sanitation
+   e. Grave visit   a low optional 'visitGrave' candidate (npc-026)
+   f. Animal        a 'cleanAnimalCorpse' sanitation candidate from a
+      sanitation    settlement-bounded corpse view (settlements-npcs-029).
+                    Fauna owns corpse state; household is responsibility only.
 
-2. ARBITRATION      one winner: a real need | 'seekShelter' | 'heal' | 'idle'
+2. ARBITRATION      one winner: a real need | 'seekShelter' | 'heal' |
+                    'buryDeceased' | 'visitGrave' | 'cleanAnimalCorpse' | 'idle'
 
 3. SEQUENCING       fixed priority table (gaps of 10 for future inserts):
                     collapseSleep(100) > seekShelter(90) > need/heal(80,
-                    mutually exclusive by construction) > scheduledSleep(70)
-                    > idle(60)
+                    mutually exclusive by construction) > buryDeceased(78)
+                    > scheduledSleep(70) > cleanAnimalCorpse(68) >
+                    visitGrave(65) > idle(60)
 
 4. DISPATCH         per decision kind: beginSeekShelter / beginHeal /
+                    beginBurial / beginAnimalCorpseCleanup / beginVisitGrave /
                     ensurePlanForNeed→beginNeed / beginGoSleep / beginIdle
 
 5. STRATEGY         (need only) "first available candidate wins" — deliberately
@@ -74,7 +83,7 @@ When this file and the code disagree, the code wins — update this file.
                     inventory) — never another NPC's authoritative state directly
 ```
 
-This is the domain's central extensibility point: a fourth pressure producer needs no change to the other three or to the arbitration call site, only a new candidate pushed into the same array.
+This is the domain's central extensibility point: a new pressure producer needs no change to the other producers or to the arbitration call site, only a new candidate pushed into the same array.
 
 **A persistent Plan layer sits beside, not inside, this pipeline.** A `Plan` (`{goal, strategy, state, progress, currentStep}`, part of `activePlan` above) records intent and progress against a `NeedId`-derived goal (secure food/water, obtain wood, fulfil a work duty) — it is "what I want and where I am," never a queued action list; `beginNeed()` alone resolves the concrete next action. A Plan survives interruption (marked `interrupted`, never cleared) and resumes once `choose()` re-derives the same need on a later tick. This is genuinely three composable layers with three different lifetimes — Goal/Plan (persists across interruption and reconstruction), Strategy (re-selected every `beginNeed()` call), Action (single-use) — easy to collapse mentally into "the decision system," but not the same thing.
 
@@ -147,7 +156,7 @@ The authoritative `NpcAuthoritativeState` fields (health/stamina/vigor/needs/phy
 - **Settlements/households/economy:** `Household`/`SettlementEconomy` are the only channel through which one NPC's work reaches another NPC — no NPC ever mutates another NPC's authoritative state directly. See [settlements.md](./settlements.md).
 - **Player/work contracts:** see [Work and routines](#work-and-routines) above and [player-systems.md](./player-systems.md).
 - **Combat:** see [Health, injury, and healing](#health-injury-and-healing) above and [combat.md](./combat.md).
-- **Fauna:** two narrow seams, both fauna-owned and read-only from the NPC side — a hunting-target query/harvest hook (used by a hunter's `food`-need branch) and three read-only threat accessors an NPC's own animal-threat response reads to decide defend/flee. NPCs never import fauna's decision logic directly. The one confirmed exception to this "hooks, not imports" convention runs the other way: `fauna/AnimalAgent.ts` imports the NPC-owned movement watchdog module directly, for its own chase/flee stuck detection — a deliberate reuse, not a boundary violation. See [fauna.md](./fauna.md) for the fauna-side detail of both seams.
+- **Fauna:** hunting-target query/harvest, animal-threat perception, and a settlement-bounded animal-corpse sanitation view (plan settlements-npcs-029) — fauna owns corpse lifecycle and the sanitation reservation; household/NPC only derive responsibility and execute `bury()`. NPCs never import fauna's decision logic directly. The one confirmed exception to this "hooks, not imports" convention runs the other way: `fauna/AnimalAgent.ts` imports the NPC-owned movement watchdog module directly, for its own chase/flee stuck detection — a deliberate reuse, not a boundary violation. See [fauna.md](./fauna.md) for the fauna-side detail of both seams.
 - **Weather/environment:** current weather is threaded live, once per frame, from the game loop through the settlements layer into every NPC's decision tick (never recomputed per NPC) and competes as the `seekShelter` pressure candidate above.
 - **Persistence:** see [Persistence](#persistence) above.
 

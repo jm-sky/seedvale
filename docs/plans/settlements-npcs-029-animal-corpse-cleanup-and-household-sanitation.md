@@ -1,7 +1,7 @@
 # Plan: Animal Corpse Cleanup & Household Sanitation
 
 **Created:** 2026-09-09
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** none

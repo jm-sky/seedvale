@@ -8,6 +8,7 @@ import type { HuntTarget, SettlementHuntingHooks } from '../fauna/huntingHooks'
 import type { DroppedItems } from '../items/createDroppedItems'
 import type { ItemKind } from '../items/items'
 import type { ColliderSource, HeightSampler } from '../player/PlayerController'
+import type { SettlementCorpseCleanupHooks } from '../settlement/animalCorpseSanitation'
 import type { FamilyMember, FamilyMemberRef, FamilyRelation } from '../settlement/families'
 import type { Household, HouseholdResourceKind } from '../settlement/household'
 import type { HouseholdExchangeHooks } from '../settlement/householdExchange'
@@ -186,6 +187,10 @@ import {
   type WorkContractRecord,
   type WorkContractState,
 } from '../world/workContract'
+import {
+  type AnimalCorpseCleanupPressureResult,
+  resolveAnimalCorpseCleanupPressure,
+} from './animalCorpseCleanupPressure'
 import {
   type ApproachPlayerIntent,
   isPlayerApproachArrived,
@@ -578,6 +583,18 @@ export type NpcInspectionSnapshot = {
     burialClaimed: boolean
     cleanupReason: NpcPostDeathState['cleanupReason']
   } | null
+  /** Last animal-corpse sanitation evaluation (plan settlements-npcs-029).
+   *  Optional on synthetic test snapshots. */
+  animalCorpseCleanup?: {
+    animalId: string | null
+    kind: string | null
+    phase: 'bones' | 'fresh' | 'rotting' | null
+    rejectionReason: string | null
+    responsibleHouseholdId: string | null
+    score: number
+    claimOwner: string | null
+    actionAnimalId: string | null
+  } | null
   household: { food: number, wood: number, water: number } | null
   /** Authoritative personal food/water on the worker (plan npc-017). */
   personalProvisions?: {
@@ -645,6 +662,7 @@ export function classifyPendingActivity(
   // sheltering/settling at the campfire above.
   if (pending.kind === 'heal' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'bury' && activeNeed === 'idle') return 'idle'
+  if (pending.kind === 'cleanAnimalCorpse' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'visitGrave' && activeNeed === 'idle') return 'idle'
   if (pending.kind === 'approachPlayer' && activeNeed === 'idle') return 'idle'
   return 'need'
@@ -795,6 +813,10 @@ const BURIAL_DURATION_SEC = 2.5
  *  occupies the NPC at a persistent family grave (plan npc-026). */
 const GRAVE_VISIT_DURATION_SEC = 2.0
 
+/** How long (seconds, before `waitMultiplier`) animal-corpse sanitation
+ *  occupies the NPC at the carcass (plan settlements-npcs-029). */
+const ANIMAL_CORPSE_CLEANUP_DURATION_SEC = 2.5
+
 /** stamina/sec while walking toward a task (`goTo`) — deliberately low so
  *  ordinary errands (house → well → workplace → storage) don't meaningfully
  *  dent stamina; only sustained heavy work should. */
@@ -937,6 +959,8 @@ export type NpcAgentDeps = {
   burialHooks?: NpcBurialHooks | null
   /** Family grave-visit lookup context (plan npc-026) — null in isolated fallbacks. */
   graveVisitHooks?: NpcGraveVisitHooks | null
+  /** Loaded-settlement animal-corpse sanitation (plan settlements-npcs-029). */
+  corpseCleanupHooks?: SettlementCorpseCleanupHooks | null
 }
 
 /**
@@ -1055,6 +1079,10 @@ export class NpcAgent {
   /** The strategy `selectStrategy()` picked for the current `beginNeed()`
    *  call — `null` only when every candidate was unavailable. */
   private selectedStrategy: NpcStrategyId | null = null
+  /** Last animal-corpse sanitation pressure evaluation (plan settlements-npcs-029). */
+  private lastCorpseCleanup: AnimalCorpseCleanupPressureResult | null = null
+  /** Transient sanitation target currently claimed/held by this NPC. */
+  private sanitationCleanupAnimalId: string | null = null
   /** Set by `startAction()`, consumed by the `goTo`/`execute` phases — the
    *  generic "walk there, do this" step currently in flight. `null` only
    *  outside those two phases. */
@@ -1306,6 +1334,7 @@ export class NpcAgent {
   private readonly droppedItems: DroppedItems | null
   private readonly burialHooks: NpcBurialHooks | null
   private readonly graveVisitHooks: NpcGraveVisitHooks | null
+  private readonly corpseCleanupHooks: SettlementCorpseCleanupHooks | null
   /** Cached from `update()`'s `nowDays` argument (plan npc-026) — absolute
    *  simulation days for persisted grave-visit cooldowns. Falls back to
    *  `forest.getWorldDays()` for isolated callers/tests. */
@@ -1388,6 +1417,7 @@ export class NpcAgent {
       droppedItems,
       burialHooks,
       graveVisitHooks,
+      corpseCleanupHooks,
     } = deps
     const playAt = deps.playAt ?? (() => {})
     const npcId = deps.npcId ?? ''
@@ -1432,6 +1462,7 @@ export class NpcAgent {
     this.droppedItems = droppedItems ?? null
     this.burialHooks = burialHooks ?? null
     this.graveVisitHooks = graveVisitHooks ?? null
+    this.corpseCleanupHooks = corpseCleanupHooks ?? null
     this.getPlayerSocial = getPlayerSocial
     this.getNearbyPlayerWell = getNearbyPlayerWell
     this.foodSources = foodSources ?? null
@@ -1698,6 +1729,18 @@ export class NpcAgent {
       physicalInjury: this.npcState.physicalInjury,
       injurySeverity: resolveInjurySeverity(this.npcState.physicalInjury, this.health.maxHp),
       postDeath: this.inspectPostDeath(),
+      animalCorpseCleanup: this.lastCorpseCleanup
+        ? {
+            animalId: this.lastCorpseCleanup.animalId,
+            kind: this.lastCorpseCleanup.kind,
+            phase: this.lastCorpseCleanup.phase,
+            rejectionReason: this.lastCorpseCleanup.rejectionReason,
+            responsibleHouseholdId: this.lastCorpseCleanup.responsibleHouseholdId,
+            score: this.lastCorpseCleanup.score,
+            claimOwner: this.lastCorpseCleanup.claimOwner,
+            actionAnimalId: this.sanitationCleanupAnimalId,
+          }
+        : null,
       household: this.household
         ? {
             food: this.household.foodCount(),
@@ -2619,6 +2662,8 @@ export class NpcAgent {
         this.reevaluateBurialPlan()
         const burial = this.burialPressureCandidate()
         const graveVisit = this.graveVisitPressureCandidate()
+        const corpseCleanup = this.animalCorpseCleanupPressureCandidate()
+        this.lastCorpseCleanup = corpseCleanup
         const decision = pickActionKind<NpcDecisionTarget>(
           [
             ...candidates.map((c) => ({ kind: c.target, score: c.final })),
@@ -2626,6 +2671,7 @@ export class NpcAgent {
             { kind: 'heal', score: healPressure },
             { kind: 'buryDeceased', score: burial.score },
             { kind: 'visitGrave', score: graveVisit.score },
+            { kind: 'cleanAnimalCorpse', score: corpseCleanup.score },
           ],
           'idle',
         )
@@ -2672,6 +2718,12 @@ export class NpcAgent {
           this.activeNeed = 'idle'
           this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
           if (graveVisit.candidate) this.beginVisitGrave(graveVisit.candidate)
+          break
+        }
+        if (outcome === 'cleanAnimalCorpse') {
+          this.activeNeed = 'idle'
+          this.trace.record({ simTime: this.simClock, type: 'need.selected', need: 'idle', pressures, candidates })
+          if (corpseCleanup.animalId) this.beginAnimalCorpseCleanup(corpseCleanup.animalId)
           break
         }
         const need = outcome === 'need' ? (decision as NeedId) : 'idle'
@@ -3413,6 +3465,7 @@ export class NpcAgent {
     markPlanInterrupted: boolean
   }): void {
     this.releaseConversationIfAny()
+    this.releaseSanitationCleanupReservation()
     if (opts.lifecycle === 'fail') failActionLifecycle(this.actionLifecycle)
     this.leaveActiveQueue()
     if (this.pendingAction?.kind === 'approachPlayer') this.clearPaymentApproach('interrupted')
@@ -4946,6 +4999,87 @@ export class NpcAgent {
     if (!grave || grave.deceasedNpcId !== deceasedNpcId) return
     if (!hooks.getNpcState(deceasedNpcId)?.health.dead) return
     recordGraveVisit(this.npcState.graveVisits, deceasedNpcId, this.nowDays())
+  }
+
+  private animalCorpseCleanupPressureCandidate(): AnimalCorpseCleanupPressureResult {
+    const empty: AnimalCorpseCleanupPressureResult = {
+      score: 0,
+      animalId: null,
+      kind: null,
+      phase: null,
+      responsibleHouseholdId: null,
+      claimOwner: null,
+      rejectionReason: null,
+    }
+    const hooks = this.corpseCleanupHooks
+    if (!hooks || this.health.dead) return empty
+    return resolveAnimalCorpseCleanupPressure({
+      claimantId: this.id,
+      claimantHouseholdId: this.household?.id ?? null,
+      claimantPosition: { x: this.mesh.position.x, z: this.mesh.position.z },
+      candidates: hooks.listCandidates(),
+    })
+  }
+
+  private releaseSanitationCleanupReservation(): void {
+    const animalId = this.sanitationCleanupAnimalId
+    if (!animalId) return
+    this.sanitationCleanupAnimalId = null
+    const handle = this.corpseCleanupHooks?.resolve(animalId)
+    if (!handle) return
+    handle.releaseCleanupClaim(this.id)
+    handle.releaseCorpseHold()
+  }
+
+  private beginAnimalCorpseCleanup(animalId: string): void {
+    const hooks = this.corpseCleanupHooks
+    if (!hooks || this.health.dead) return
+    const handle = hooks.resolve(animalId)
+    if (!handle || !this.isAnimalCorpseCleanupValid(handle)) return
+    if (!handle.claimForCleanup(this.id)) return
+    handle.holdCorpse()
+    this.sanitationCleanupAnimalId = animalId
+    const pos = handle.position()
+    this.startAction({
+      kind: 'cleanAnimalCorpse',
+      destination: copyVec3({ x: pos.x, y: 0, z: pos.z }),
+      durationSec: ANIMAL_CORPSE_CLEANUP_DURATION_SEC * this.waitMultiplier,
+      onComplete: () => this.executeAnimalCorpseCleanup(animalId),
+    })
+    if (this.pendingAction?.kind !== 'cleanAnimalCorpse') {
+      this.releaseSanitationCleanupReservation()
+    }
+  }
+
+  private isAnimalCorpseCleanupValid(handle: {
+    isDead: () => boolean
+    isBuried: () => boolean
+    isHeld: () => boolean
+    readyToRemove: () => boolean
+    foodClaimedBy: () => unknown
+    cleanupClaimantNpcId: () => string | null
+  }): boolean {
+    if (!handle.isDead() || handle.isBuried() || handle.readyToRemove()) return false
+    if (handle.foodClaimedBy() != null) return false
+    const owner = handle.cleanupClaimantNpcId()
+    if (owner != null && owner !== this.id) return false
+    if (handle.isHeld() && owner !== this.id) return false
+    return true
+  }
+
+  private executeAnimalCorpseCleanup(animalId: string): void {
+    const hooks = this.corpseCleanupHooks
+    const handle = hooks?.resolve(animalId)
+    if (!handle || !this.isAnimalCorpseCleanupValid(handle)) {
+      this.releaseSanitationCleanupReservation()
+      return
+    }
+    if (handle.cleanupClaimantNpcId() !== this.id && !handle.claimForCleanup(this.id)) {
+      this.releaseSanitationCleanupReservation()
+      return
+    }
+    handle.bury()
+    this.releaseSanitationCleanupReservation()
   }
 
   /**

@@ -2132,6 +2132,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         // array, never a per-dog scan (see `AnimalAgent.update()`'s
         // `nearbyPredators` param doc).
         const nearbyWolves = bundle.fauna.getAgents().filter((a) => a.def.kind === 'wolf' && !a.isDead())
+        const nearbyWildCorpses = bundle.fauna.getAgents().filter((a) => a.isDead())
         const playerObservation = getPlayerObservation()
         withCategory(monitor, 'NPC', () => {
           bundle.settlementsManager.update(
@@ -2150,6 +2151,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
             climate.weather,
             nearbyWolves,
             playerObservation,
+            nearbyWildCorpses,
           )
         })
         withCategory(monitor, 'FAUNA', () => {

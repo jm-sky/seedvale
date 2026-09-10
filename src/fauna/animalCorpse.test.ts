@@ -5,6 +5,7 @@ import {
   buryCorpse,
   canHarvestMeatFrom,
   claimCorpseAsFood,
+  claimCorpseForCleanup,
   type CorpseHost,
   type CorpseNeighbour,
   corpsePhaseFromElapsed,
@@ -15,6 +16,7 @@ import {
   hideLivingVisual,
   markCorpseFoodConsumed,
   releaseCorpseClaim,
+  releaseCorpseCleanupClaim,
   rotFxRelevant,
 } from './animalCorpse'
 
@@ -294,6 +296,50 @@ describe('claimCorpseAsFood / releaseCorpseClaim / markCorpseFoodConsumed (plan 
     const wolfA = {}
     expect(claimCorpseAsFood(state, wolfA)).toBe(true)
     expect(claimCorpseAsFood(state, wolfA)).toBe(true)
+  })
+})
+
+describe('sanitation cleanup reservation (plan settlements-npcs-029)', () => {
+  it('allows only one sanitation claimant', () => {
+    const state = createAnimalCorpseState()
+    expect(claimCorpseForCleanup(state, 'npc-a')).toBe(true)
+    expect(claimCorpseForCleanup(state, 'npc-b')).toBe(false)
+    expect(claimCorpseForCleanup(state, 'npc-a')).toBe(true)
+  })
+
+  it('makes food claim and sanitation mutually exclusive', () => {
+    const foodFirst = createAnimalCorpseState()
+    expect(claimCorpseAsFood(foodFirst, {})).toBe(true)
+    expect(claimCorpseForCleanup(foodFirst, 'npc-a')).toBe(false)
+
+    const cleanupFirst = createAnimalCorpseState()
+    expect(claimCorpseForCleanup(cleanupFirst, 'npc-a')).toBe(true)
+    expect(claimCorpseAsFood(cleanupFirst, {})).toBe(false)
+  })
+
+  it('refuses a player-held corpse that is not already this NPC\'s claim', () => {
+    const state = createAnimalCorpseState()
+    state.held = true
+    expect(claimCorpseForCleanup(state, 'npc-a')).toBe(false)
+  })
+
+  it('releases only the matching claimant', () => {
+    const state = createAnimalCorpseState()
+    claimCorpseForCleanup(state, 'npc-a')
+    releaseCorpseCleanupClaim(state, 'npc-b')
+    expect(state.cleanupClaimantNpcId).toBe('npc-a')
+    releaseCorpseCleanupClaim(state, 'npc-a')
+    expect(state.cleanupClaimantNpcId).toBeNull()
+  })
+
+  it('a held cleanup corpse is not ready to remove until hold is released', () => {
+    const state = createAnimalCorpseState()
+    claimCorpseForCleanup(state, 'npc-a')
+    state.held = true
+    state.timeSinceDeath = 1000
+    expect(corpseReadyToRemove(state, true)).toBe(false)
+    state.held = false
+    expect(corpseReadyToRemove(state, true)).toBe(true)
   })
 })
 

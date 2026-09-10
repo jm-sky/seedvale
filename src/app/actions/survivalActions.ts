@@ -158,17 +158,26 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
 
   const startBuryCorpse = (animal: AnimalAgent): ActionResult => {
     if (isChannelBusy(ctx)) return { ok: false, missing: [] }
+    if (animal.cleanupClaimantNpcId()) {
+      toast.show('Mieszkaniec właśnie sprząta te zwłoki.', 'error')
+      return toResult([targetRequirement(false, 'corpseAvailable')])
+    }
     const result = toResult([
       capabilityRequirement(hasItemCapability(heldTool.held(), 'soil_digging'), 'soil_digging'),
       targetRequirement(animal.isDead() && !animal.readyToRemove(), 'corpseAvailable'),
     ])
     if (!result.ok) return result
     playActionDig(worldAudio.playOnce)
+    animal.holdCorpse()
     busy.start(BURY_DURATION_SEC, 'Zakopywanie…', () => {
-      if (!animal.isDead() || animal.readyToRemove()) return
-      animal.bury()
-      toast.show('Zwłoki zakopane.')
-    })
+      try {
+        if (!animal.isDead() || animal.readyToRemove()) return
+        animal.bury()
+        toast.show('Zwłoki zakopane.')
+      } finally {
+        animal.releaseCorpseHold()
+      }
+    }, { onCancel: () => animal.releaseCorpseHold() })
     return { ok: true }
   }
 
@@ -189,6 +198,10 @@ export function createSurvivalActions(ctx: PlayerActionContext): SurvivalActions
       ctx.syncHeldHud()
     }
     if (!animal.canHarvestMeat()) return toResult([targetRequirement(false, 'corpseAvailable')])
+    if (animal.cleanupClaimantNpcId()) {
+      toast.show('Mieszkaniec właśnie sprząta te zwłoki.', 'error')
+      return toResult([targetRequirement(false, 'corpseAvailable')])
+    }
     const meatKind = meatKindForAnimal(animal.def.kind)
     if (!inventory.canAdd(meatKind, 1)) {
       toast.show(inventoryFullToastText(inventory, meatKind, 1), 'error')

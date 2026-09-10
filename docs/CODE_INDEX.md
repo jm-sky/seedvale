@@ -103,8 +103,12 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 - [NPC profession work](../src/ai/npcProfessionWork.ts) — the eight profession `work`-block planners (miner/hunter/farmer/fisher/guard/trader/blacksmith) as pure functions.
 - [NPC strategies](../src/ai/npcStrategies.ts) — per-need candidate strategy lists + `selectStrategy()`, the authoritative source `beginNeed()` switches on.
 - [NPC decision](../src/ai/npcDecision.ts) — the top-level `choose()`/`tickCriticalInterrupt()` priority tables, fauna-style.
+- [Burial pressure](../src/ai/burialPressure.ts) — household/social burial of a deceased NPC (`npc-011`).
+- [Grave-visit pressure](../src/ai/graveVisitPressure.ts) — optional family grave visits (`npc-026`).
+- [Animal-corpse cleanup pressure](../src/ai/animalCorpseCleanupPressure.ts) — settlement sanitation of animal corpses (`settlements-npcs-029`).
 - [NPC collider rim](../src/ai/npcColliderRim.ts) — pure collider geometry (walkability, segment bypass, rim points, exterior sampling) shared by movement/rescue.
 - [NPC post-death](../src/settlement/npcPostDeath.ts) — authoritative corpse lifecycle, loadout loot snapshot, burial claim handoff.
+- [Animal-corpse sanitation](../src/settlement/animalCorpseSanitation.ts) — settlement influence + nearest-household responsibility for animal corpses.
 - [Agent animation set](../src/shared/agentAnimationSet.ts) — clip resolve/crossfade/one-shot/settle owner over an `AnimationMixer`.
 - [Agent status label](../src/ui/agentStatusLabel.ts) — the shared floating name/bars/debug-line CSS2D label and its controller.
 
@@ -114,7 +118,7 @@ Each module below takes the shared [`PlayerActionContext`](../src/app/actions/ac
 
 - [AnimalAgent](../src/fauna/AnimalAgent.ts) — per-animal decision dispatch, movement, combat, riding, needs pursuit, production, persistence, public API.
 - [Species defs](../src/fauna/animalDefs.ts) — taxonomy, `ANIMAL_DEFS`, diets and labels.
-- [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim state machine.
+- [Corpse lifecycle](../src/fauna/animalCorpse.ts) — corpse/remains/decay/rabies-exposure/food-claim/sanitation-reservation state machine.
 - [Foraging](../src/fauna/animalForaging.ts) — source selection, validation and atomic hunger/thirst relief.
 - [Roaming](../src/fauna/animalRoaming.ts) — water-trip state machine and shared radial probe.
 - [Fauna decision](../src/fauna/faunaDecision.ts) — fixed-priority behaviour table.

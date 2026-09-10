@@ -140,8 +140,14 @@ export type AnimalCorpseState = {
    *  guards against two predators completing an eat action on the same
    *  corpse (plan 094). Untyped (`unknown`) rather than `AnimalAgent` so
    *  this module never imports that class as a value — same structural-
-   *  candidate technique `pickRabidTarget`/`resolveDogGuardTarget` use. */
+   *  candidate technique `pickRabidTarget`/`resolveDogGuardTarget` use.
+   *  Mutually exclusive with `cleanupClaimantNpcId` (plan settlements-npcs-029). */
   claimedBy: unknown | null
+  /** Transient NPC sanitation reservation (plan settlements-npcs-029) —
+   *  at most one household executor. Not a food claim and not persisted;
+   *  reconstruction re-derives the sanitation problem. Mutually exclusive
+   *  with `claimedBy`. */
+  cleanupClaimantNpcId: string | null
   /** The `CorpsePhase` a predator was in when it last finished eating this
    *  corpse, `null` until then (plan 094/fauna-005) — per-phase rather than
    *  a single flag so a corpse eaten `fresh` can still be scavenged again
@@ -177,6 +183,7 @@ export function createAnimalCorpseState(): AnimalCorpseState {
     meatHarvested: false,
     held: false,
     claimedBy: null,
+    cleanupClaimantNpcId: null,
     consumedPhase: null,
     exposedAnimalIds: new Set(),
     bloodSplat: null,
@@ -419,8 +426,10 @@ export function advanceAnimalCorpse(
 /** True if this corpse's current phase is unclaimed or already claimed by
  *  `by` — guards against two predators both completing an eat action on
  *  one carcass. Once this phase's food is gone (`consumedPhase`), a later
- *  decay into a new phase (plan fauna-005) makes it claimable again. */
+ *  decay into a new phase (plan fauna-005) makes it claimable again.
+ *  Refuses a sanitation-reserved corpse (plan settlements-npcs-029). */
 export function claimCorpseAsFood(state: AnimalCorpseState, by: unknown): boolean {
+  if (state.cleanupClaimantNpcId != null) return false
   if (state.consumedPhase === state.phase) return false
   if (state.claimedBy != null && state.claimedBy !== by) return false
   state.claimedBy = by
@@ -429,6 +438,25 @@ export function claimCorpseAsFood(state: AnimalCorpseState, by: unknown): boolea
 
 export function releaseCorpseClaim(state: AnimalCorpseState, by: unknown): void {
   if (state.claimedBy === by) state.claimedBy = null
+}
+
+/**
+ * Transient household-sanitation reservation (plan settlements-npcs-029).
+ * One corpse, at most one NPC executor. Fails when a predator already
+ * holds the food claim, another NPC holds cleanup, or a non-cleanup hold
+ * is already pinning the corpse (player harvest/bury).
+ */
+export function claimCorpseForCleanup(state: AnimalCorpseState, npcId: string): boolean {
+  if (state.buried) return false
+  if (state.claimedBy != null) return false
+  if (state.held && state.cleanupClaimantNpcId !== npcId) return false
+  if (state.cleanupClaimantNpcId != null && state.cleanupClaimantNpcId !== npcId) return false
+  state.cleanupClaimantNpcId = npcId
+  return true
+}
+
+export function releaseCorpseCleanupClaim(state: AnimalCorpseState, npcId: string): void {
+  if (state.cleanupClaimantNpcId === npcId) state.cleanupClaimantNpcId = null
 }
 
 /** Marks `phase` as eaten-out on this corpse (plan fauna-005) — the eater

@@ -51,6 +51,7 @@ import {
   buryCorpse,
   canHarvestMeatFrom,
   claimCorpseAsFood,
+  claimCorpseForCleanup,
   type CorpsePhase,
   corpseReadyToRemove,
   createAnimalCorpseState,
@@ -59,6 +60,7 @@ import {
   hideLivingVisual,
   markCorpseFoodConsumed,
   releaseCorpseClaim,
+  releaseCorpseCleanupClaim,
   rollsRabiesInfection,
   spawnDeathSplat,
   spawnHarvestedRemains,
@@ -1894,6 +1896,14 @@ export class AnimalAgent {
     buryCorpse(this.corpse)
   }
 
+  isCorpseBuried(): boolean {
+    return this.corpse.buried
+  }
+
+  isCorpseHeld(): boolean {
+    return this.corpse.held
+  }
+
   /** Plan 106/188 — a dead, not-yet-harvested, unburied corpse can yield
    *  `raw_meat`, but only while still `fresh`: once natural decay has moved
    *  it into `rotting`/`bones`, the meat is a lost source (plan 188 follow-up). */
@@ -3374,6 +3384,24 @@ export class AnimalAgent {
 
   releaseFoodClaim(by: unknown): void {
     releaseCorpseClaim(this.corpse, by)
+  }
+
+  /**
+   * Household sanitation reservation (plan settlements-npcs-029) — not a
+   * food claim. Fails when this corpse is already food-claimed, held by
+   * another actor, buried, or reserved by a different NPC.
+   */
+  claimForCleanup(npcId: string): boolean {
+    if (!this.health.dead) return false
+    return claimCorpseForCleanup(this.corpse, npcId)
+  }
+
+  releaseCleanupClaim(npcId: string): void {
+    releaseCorpseCleanupClaim(this.corpse, npcId)
+  }
+
+  cleanupClaimantNpcId(): string | null {
+    return this.corpse.cleanupClaimantNpcId
   }
 
   /** Marks `phase` as eaten-out on this corpse (plan fauna-005) — the eater

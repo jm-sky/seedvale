@@ -69,6 +69,19 @@ describe('decideNpcAction', () => {
     })).toBe('scheduledSleep')
   })
 
+  it('cleanAnimalCorpse beats idle and visitGrave but loses to scheduled sleep (plan settlements-npcs-029)', () => {
+    expect(decideNpcAction({
+      collapsing: false,
+      wonNeed: 'cleanAnimalCorpse',
+      scheduleActivity: 'work',
+    })).toBe('cleanAnimalCorpse')
+    expect(decideNpcAction({
+      collapsing: false,
+      wonNeed: 'cleanAnimalCorpse',
+      scheduleActivity: 'sleep',
+    })).toBe('scheduledSleep')
+  })
+
   it('collapse still outranks heal', () => {
     expect(decideNpcAction({
       collapsing: true,

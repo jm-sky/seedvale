@@ -4,7 +4,7 @@
 
 **Not:** NPC decision-consumption logic ([npc.md](./npc.md) owns how a hunter/farmer *consumes* what this doc exposes), settlement economy internals ([settlements.md](./settlements.md)), combat resolver internals ([combat.md](./combat.md) owns the damage pipeline; this doc covers only fauna's own outgoing-damage asymmetry), water-traversal ownership ([water.md](./water.md) owns the physical water answer; this doc covers only how fauna consumes it), or a plan/changelog.
 
-**Last verified:** 2026-09-08
+**Last verified:** 2026-09-10
 
 When this file and the code disagree, the code wins — update this file.
 
@@ -42,7 +42,7 @@ Top-level arbitration is a fixed priority table (13 behaviour kinds, gaps of 10,
 
 ## Corpse, decay, and rabies lifecycle
 
-Death (`takeDamage()` → collapse, `onDeath` fires once regardless of cause) starts a decay timeline: **fresh → rotting → bones**, then removal after a linger window (longer if knife-harvested first). Knife-harvest is gated to the fresh phase only, unharvested, unburied. A rotting corpse gets lightweight presentation-only decay FX and saps stamina from nearby live fauna within a small radius — a genuine, if small, ecosystem-consequence hook reusing the existing stamina resource rather than a new status-effect system. Once the linger window ends, the corpse is actually removed from the world — **the concrete difference from NPC death, which has no disposal path at all** (see [npc.md](./npc.md)).
+Death (`takeDamage()` → collapse, `onDeath` fires once regardless of cause) starts a decay timeline: **fresh → rotting → bones**, then removal after a linger window (longer if knife-harvested first). Knife-harvest is gated to the fresh phase only, unharvested, unburied. A rotting corpse gets lightweight presentation-only decay FX and saps stamina from nearby live fauna within a small radius — a genuine, if small, ecosystem-consequence hook reusing the existing stamina resource rather than a new status-effect system. Once the linger window ends, the corpse is actually removed from the world — **the concrete difference from NPC death, which has no disposal path at all** (see [npc.md](./npc.md)). Predator food-claim (`claimedBy`) and household sanitation reservation (`cleanupClaimantNpcId`) are mutually exclusive transient locks on that same corpse state — sanitation is not a second corpse lifecycle, and it is not persisted (plan settlements-npcs-029).
 
 **Rabies is a separate infection state layered on top of, and overriding, the normal decision pipeline** — no incubation, the very next tick after infection uses rabid behaviour. Transmission is two-vector: a landed bite (rolled once per attack, never per-tick) or corpse contact (only while the corpse is rotting and was itself rabid; each live/corpse pair rolls at most once). A rabid animal bypasses the behaviour table entirely and single-mindedly chases the nearest live target within a fixed detection range, ignoring human/NPC/fire fear. `frenzied` is a structurally independent boolean (wolf-den/quest-related) — a frenzied predator still participates in the normal priority table (at an elevated priority) rather than bypassing it the way rabies does.
 

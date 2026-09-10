@@ -47,6 +47,15 @@ import {
 } from '../simulation'
 import { createNullPointLightBudget, type PointLightBudget } from '../world/pointLightBudget'
 import { applyTreeStageVisual } from '../world/treeVisuals'
+import {
+  type AnimalCorpseCleanupCandidate,
+  type AnimalCorpseView,
+  animalCorpseViewFromAgent,
+  collectAnimalCorpseCleanupCandidates,
+  resolveAnimalCorpseCleanupHandle,
+  type SettlementCorpseCleanupHooks,
+} from './animalCorpseSanitation'
+import { villageSizeConfig } from './families'
 import { buildAssemblyCollidersWorld, type HouseAssembly } from './houseBuilder'
 import { createHouseDoorController } from './houseDoors'
 import { type Household, householdIdFor, type HouseholdRegistry } from './household'
@@ -191,6 +200,10 @@ export type Settlement = {
     /** Player-as-observer presentation inputs (npc-023) — forwarded to each
      *  `NpcAgent.update()` and livestock `AnimalAgent.update()`. */
     playerObservation?: PlayerObservationInput,
+    /** Bounded dead wild fauna from the loaded `Fauna` (plan settlements-npcs-029)
+     *  — combined with this settlement's own livestock/rats into a local
+     *  sanitation candidate view. Never a per-NPC world scan. */
+    nearbyWildCorpses?: readonly AnimalAgent[],
   ) => void
   /** Fades every house's window glow in/out — `t`: 0 (day, off) .. 1 (full
    *  night glow). Called from `SettlementsManager.setDayNight`, itself only
@@ -716,6 +729,42 @@ export async function createSettlement(
       }
     : null
 
+  const householdAnchors = householdExchangeCandidates.map(({ household, position }) => ({
+    id: household.id,
+    x: position.x,
+    z: position.z,
+  }))
+  const sanitationInfluence = {
+    x: site.x,
+    z: site.z,
+    radius: villageSizeConfig(def.size).footprintRadius,
+  }
+  let nearbyWildCorpses: readonly AnimalAgent[] = []
+  let sanitationCandidates: AnimalCorpseCleanupCandidate[] = []
+
+  function refreshSanitationCandidates(wild: readonly AnimalAgent[] = nearbyWildCorpses): void {
+    nearbyWildCorpses = wild
+    const views: AnimalCorpseView[] = []
+    for (const animal of livestock) {
+      if (animal.isDead()) views.push(animalCorpseViewFromAgent(animal))
+    }
+    for (const animal of rats.getAgents()) {
+      if (animal.isDead()) views.push(animalCorpseViewFromAgent(animal))
+    }
+    for (const animal of nearbyWildCorpses) {
+      views.push(animalCorpseViewFromAgent(animal))
+    }
+    sanitationCandidates = collectAnimalCorpseCleanupCandidates(views, householdAnchors, sanitationInfluence)
+  }
+
+  const corpseCleanupHooks: SettlementCorpseCleanupHooks = {
+    listCandidates: () => sanitationCandidates,
+    resolve: (animalId) => resolveAnimalCorpseCleanupHandle(
+      animalId,
+      [livestock, rats.getAgents(), nearbyWildCorpses],
+    ),
+  }
+
   bootMark('npcCreation')
   let agents: NpcAgent[]
   try {
@@ -783,6 +832,7 @@ export async function createSettlement(
           ? { ...burialHooks, householdId: household.id }
           : null,
         graveVisitHooks,
+        corpseCleanupHooks,
       })
       if (isSystemEnabled('npcs')) scene.add(agent.mesh)
       return agent
@@ -843,8 +893,9 @@ export async function createSettlement(
     households,
     householdStorages,
     fire,
-    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators, playerObservation) {
+    update(dt, observerPos, observerYaw, timeOfDay, dayFactor, litFires, villages, dayLengthSec, nearbyAnimalThreats = [], dropLivestockProduct, nowDays = 0, onAnimalVocalize, weather, nearbyPredators, playerObservation, nearbyWildCorpsesIn = []) {
       currentNowDays = nowDays
+      refreshSanitationCandidates(nearbyWildCorpsesIn)
       const agentCpu = getAgentCpuDiag()
       agentCpu.beginNpcCrowd()
       const crowd = npcCrowd.run(agents, dt)

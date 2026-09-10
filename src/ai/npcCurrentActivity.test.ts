@@ -54,6 +54,10 @@ describe('classifyPendingActivity / promoteChainKind', () => {
     expect(classifyPendingActivity({ kind: 'approachPlayer' }, 'idle')).toBe('idle')
   })
 
+  it('reports idle for animal-corpse sanitation (plan settlements-npcs-029)', () => {
+    expect(classifyPendingActivity({ kind: 'cleanAnimalCorpse' }, 'idle')).toBe('idle')
+  })
+
   it('reports idle when there is no pending action', () => {
     expect(classifyPendingActivity(undefined, 'idle')).toBe('idle')
   })
