@@ -57,9 +57,14 @@ function worstOverburdenShortfall(topology: CaveTopology, sampleBaseHeight: (x: 
       for (let s = 0; s <= steps; s++) {
         const local = s / steps
         const global = pts.length > 1 ? (i + local) / (pts.length - 1) : 0
-        const width = from.targetWidth + (to.targetWidth - from.targetWidth) * global
-        const height = from.targetHeight + (to.targetHeight - from.targetHeight) * global
-        consider(a.x + (b.x - a.x) * local, a.y + (b.y - a.y) * local, a.z + (b.z - a.z) * local, width, height)
+        const drop = from.position.y - to.position.y
+        const y = a.y + (b.y - a.y) * local
+        const tShape = drop > 1e-6
+          ? Math.min(1, Math.max(0, (from.position.y - y) / drop))
+          : global
+        const width = from.targetWidth + (to.targetWidth - from.targetWidth) * tShape
+        const height = from.targetHeight + (to.targetHeight - from.targetHeight) * tShape
+        consider(a.x + (b.x - a.x) * local, y, a.z + (b.z - a.z) * local, width, height)
       }
     }
   }
@@ -105,7 +110,7 @@ describe('buildProductionCaveTopology (plan world-terrain-008 B1)', () => {
     // Generation adapts at each control/wobble station (~1.5-2 m apart), not
     // at an arbitrarily dense probe grid, and leaves `STATION_SAFETY` (0.35 m)
     // of margin against exactly the kind of between-station dip this denser
-    // re-check can surface — see `productionTopology.ts`'s `adaptStation`.
+    // re-check can surface — see `productionTopology.ts`'s `walkSegment`.
     // The residual must stay within that documented margin, not hit zero.
     const STATION_SAFETY_TOLERANCE = 0.4
     expect(worstOverburdenShortfall(topology!, gentleHill)).toBeLessThanOrEqual(STATION_SAFETY_TOLERANCE)

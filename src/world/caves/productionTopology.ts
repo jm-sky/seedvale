@@ -18,11 +18,12 @@
 import type { CaveEntrance } from '../caveVolume'
 import type { CaveTopology, CaveTopologyFeature, CaveTopologyNode, CaveTopologyPoint, CaveTopologySegment } from './caveTopology'
 import type { SurfaceHeightSampler } from './clipBelowSurface'
+import { SLOPE_MAX_WALKABLE_DEG } from '../../terrain/slopeConstraint'
 import { CAVE_MOUTH_DEPTH } from '../caveGenerator'
 import { LARGE_CAVE_MOUTH_WIDTH, type LargeCaveSite, tunnelDirection } from '../largeCaves'
 import { makeCaveId } from './caveIdentity'
 import { CAVE_RNG_SALT, createCaveRandom } from './caveRng'
-import { mouthOverburdenRequirement } from './mouthOverburden'
+import { MOUTH_TRANSITION_RANGE, mouthOverburdenRequirement } from './mouthOverburden'
 import { minSurfaceOverFootprint } from './terrainFootprint'
 import { PROXY_MARGIN } from './topologyAdapter'
 
@@ -40,8 +41,17 @@ const CHAMBER_HEIGHT: readonly [number, number] = [9, 11]
 
 /** Baseline floor descent even where terrain is generous — keeps caves
  *  reading as a route going *into* the hill rather than a flat corridor.
- *  Actual descent is topology-aware on top of this (see `adaptStation`). */
+ *  Actual descent is topology-aware on top of this (see `walkSegment`). */
 const NOMINAL_DESCENT_PER_METER = 0.12
+/**
+ * Max |Δfloor|/Δxz between consecutive topology stations. 40° — below
+ * `SLOPE_MAX_WALKABLE_DEG` (55°) so the SDF blend still leaves a ramp the
+ * player can walk both ways without a climb-stat buff.
+ */
+const TRAVERSABLE_FLOOR_ANGLE_DEG = Math.min(40, SLOPE_MAX_WALKABLE_DEG - 10)
+export const MAX_TRAVERSABLE_FLOOR_GRADE = Math.tan((TRAVERSABLE_FLOOR_ANGLE_DEG * Math.PI) / 180)
+/** Centerline sample spacing for descent ramps (metres of XZ). */
+export const FLOOR_RAMP_STATION_SPACING = 1.5
 /** Slack on top of the required overburden, covering the gap between the
  *  station spacing below and an arbitrarily dense check of the same
  *  envelope (same role as `spikeTestCave.ts`'s `OVERBURDEN_SAFETY`, slightly
@@ -88,16 +98,8 @@ function pick(range: readonly [number, number], t: number): number {
 
 type Cursor = { x: number, y: number, z: number, rejected: boolean }
 
-/** Advances `cursor` to `(x, z)`, choosing the lowest `y` that satisfies
- *  both a baseline descent trend and the local terrain overburden — the
- *  local, topology-aware replacement for Milestone A's one uniform
- *  `sinkUnderTerrain()` drop (implementation notes §3 "Uniform terrain sink
- *  is spike-only"). Monotonic by construction (`y` only ever decreases),
- *  so the route never yo-yos back toward the surface mid-passage. Rejects
- *  (`cursor.rejected = true`) once the cumulative drop from the mouth
- *  exceeds `MAX_TOTAL_DROP` rather than forcing an arbitrarily deep route. */
-function adaptStation(
-  cursor: Cursor,
+function unconstrainedFloorY(
+  cursorY: number,
   mouthFloorY: number,
   entrance: CaveEntrance,
   sampleBaseHeight: SurfaceHeightSampler,
@@ -105,10 +107,9 @@ function adaptStation(
   z: number,
   width: number,
   height: number,
-): void {
-  if (cursor.rejected) return
-  const stepDist = Math.hypot(x - cursor.x, z - cursor.z)
-  let y = cursor.y - NOMINAL_DESCENT_PER_METER * stepDist
+  stepDist: number,
+): { y: number, rejected: boolean } {
+  let y = cursorY - NOMINAL_DESCENT_PER_METER * stepDist
   const distanceFromMouth = Math.hypot(x - entrance.x, z - entrance.z)
   const required = mouthOverburdenRequirement(entrance, distanceFromMouth, PROXY_MARGIN)
   if (required !== null) {
@@ -116,16 +117,103 @@ function adaptStation(
     const allowedCeiling = minSurfaceOverFootprint(sampleBaseHeight, x, z, radius) - required - STATION_SAFETY
     y = Math.min(y, allowedCeiling - height)
   }
-  if (mouthFloorY - y > MAX_TOTAL_DROP) {
-    cursor.rejected = true
-    return
+  return { y, rejected: mouthFloorY - y > MAX_TOTAL_DROP }
+}
+
+function clamp01(t: number): number {
+  return t < 0 ? 0 : t > 1 ? 1 : t
+}
+
+/** Extra XZ so a fat dest ellipsoid (chamber/widening) cannot swallow the ramp.
+ *  Passage-to-passage width changes stay on their planned length. */
+function extraRunForSdf(fromWidth: number, toWidth: number): number {
+  if (toWidth - fromWidth < 1.5) return 0
+  return toWidth * 0.45
+}
+
+function planDestination(
+  cursor: Cursor,
+  mouthFloorY: number,
+  entrance: CaveEntrance,
+  sampleBaseHeight: SurfaceHeightSampler,
+  toXZ: { x: number, z: number },
+  fromWidth: number,
+  toWidth: number,
+  toHeight: number,
+): { x: number, z: number } {
+  let dest = toXZ
+  const extra = extraRunForSdf(fromWidth, toWidth)
+  for (let i = 0; i < 4; i++) {
+    const dist = Math.hypot(dest.x - cursor.x, dest.z - cursor.z)
+    const preview = unconstrainedFloorY(
+      cursor.y, mouthFloorY, entrance, sampleBaseHeight,
+      dest.x, dest.z, toWidth, toHeight, dist,
+    )
+    const drop = Math.max(0, cursor.y - preview.y)
+    const minDist = (drop > 0 ? drop / MAX_TRAVERSABLE_FLOOR_GRADE : 0) + extra
+    if (dist >= minDist - 1e-6 || dist < 1e-6) return dest
+    const scale = minDist / dist
+    const next = {
+      x: cursor.x + (dest.x - cursor.x) * scale,
+      z: cursor.z + (dest.z - cursor.z) * scale,
+    }
+    if (Math.hypot(next.x - dest.x, next.z - dest.z) < 0.05) return next
+    dest = next
   }
-  cursor.x = x
-  cursor.y = y
-  cursor.z = z
+  return dest
+}
+
+function rampInterior(
+  from: { x: number, z: number },
+  to: { x: number, z: number },
+  spacing: number,
+  wobble?: { perpDx: number, perpDz: number, random: () => number, amplitude: number },
+): InteriorPoint[] {
+  const dist = Math.hypot(to.x - from.x, to.z - from.z)
+  const count = Math.max(0, Math.ceil(dist / spacing) - 1)
+  const out: InteriorPoint[] = []
+  for (let i = 1; i <= count; i++) {
+    const t = i / (count + 1)
+    let x = from.x + (to.x - from.x) * t
+    let z = from.z + (to.z - from.z) * t
+    if (wobble) {
+      const offset = (wobble.random() - 0.5) * wobble.amplitude
+      x += wobble.perpDx * offset
+      z += wobble.perpDz * offset
+    }
+    out.push({ xz: { x, z }, t })
+  }
+  return out
+}
+
+/** |Δfloor|/Δxz between consecutive centerline samples — topology intent, not SDF. */
+export function maxCenterlineFloorGrade(centerline: readonly CaveTopologyPoint[]): number {
+  let max = 0
+  for (let i = 1; i < centerline.length; i++) {
+    const a = centerline[i - 1]!
+    const b = centerline[i]!
+    const dist = Math.hypot(b.x - a.x, b.z - a.z)
+    if (dist < 1e-6) continue
+    max = Math.max(max, Math.abs(b.y - a.y) / dist)
+  }
+  return max
+}
+
+/** Floor Y for one station: follow the segment ramp, dump extra only when
+ *  local overburden needs it, never steeper than `MAX_TRAVERSABLE_FLOOR_GRADE`. */
+function rampStationY(
+  cursorY: number,
+  rampY: number,
+  previewY: number,
+  stepDist: number,
+): number {
+  const gradeFloor = cursorY - MAX_TRAVERSABLE_FLOOR_GRADE * Math.max(stepDist, 1e-6)
+  return Math.max(gradeFloor, Math.min(rampY, previewY))
 }
 
 type InteriorPoint = { xz: { x: number, z: number }, t: number }
+
+type WalkWobble = { perpDx: number, perpDz: number, random: () => number, amplitude: number }
 
 function walkSegment(
   cursor: Cursor,
@@ -137,37 +225,69 @@ function walkSegment(
   toXZ: { x: number, z: number },
   toWidth: number,
   toHeight: number,
-  interior: readonly InteriorPoint[],
+  wobble?: WalkWobble,
 ): { interiorPoints: CaveTopologyPoint[], toPoint: CaveTopologyPoint } {
+  const start = { x: cursor.x, y: cursor.y, z: cursor.z }
+  const dest = planDestination(
+    cursor, mouthFloorY, entrance, sampleBaseHeight, toXZ, fromWidth, toWidth, toHeight,
+  )
+  const totalDist = Math.hypot(dest.x - start.x, dest.z - start.z)
+  const destPreview = unconstrainedFloorY(
+    start.y, mouthFloorY, entrance, sampleBaseHeight,
+    dest.x, dest.z, toWidth, toHeight, totalDist,
+  )
+  if (destPreview.rejected) {
+    cursor.rejected = true
+    return { interiorPoints: [], toPoint: { x: dest.x, y: start.y, z: dest.z } }
+  }
+  const destY = Math.max(
+    destPreview.y,
+    start.y - MAX_TRAVERSABLE_FLOOR_GRADE * Math.max(totalDist, 1e-6),
+  )
+
+  const stepTo = (x: number, z: number): void => {
+    if (cursor.rejected) return
+    const stepDist = Math.hypot(x - cursor.x, z - cursor.z)
+    const traveled = Math.hypot(x - start.x, z - start.z)
+    const tPath = totalDist > 1e-6 ? clamp01(traveled / totalDist) : 1
+    const yRamp = start.y + (destY - start.y) * tPath
+    let width = fromWidth
+    let height = fromHeight
+    let y = yRamp
+    for (let k = 0; k < 4; k++) {
+      const preview = unconstrainedFloorY(
+        cursor.y, mouthFloorY, entrance, sampleBaseHeight, x, z, width, height, stepDist,
+      )
+      if (preview.rejected) {
+        cursor.rejected = true
+        return
+      }
+      y = rampStationY(cursor.y, yRamp, preview.y, stepDist)
+      const tShape = start.y - destY > 1e-6
+        ? clamp01((start.y - y) / (start.y - destY))
+        : tPath
+      width = fromWidth + (toWidth - fromWidth) * tShape
+      height = fromHeight + (toHeight - fromHeight) * tShape
+    }
+    cursor.x = x
+    cursor.y = y
+    cursor.z = z
+  }
+
+  const interior = rampInterior(
+    { x: start.x, z: start.z },
+    dest,
+    FLOOR_RAMP_STATION_SPACING,
+    wobble,
+  )
   const interiorPoints: CaveTopologyPoint[] = []
   for (const pt of interior) {
-    const width = fromWidth + (toWidth - fromWidth) * pt.t
-    const height = fromHeight + (toHeight - fromHeight) * pt.t
-    adaptStation(cursor, mouthFloorY, entrance, sampleBaseHeight, pt.xz.x, pt.xz.z, width, height)
+    stepTo(pt.xz.x, pt.xz.z)
+    if (cursor.rejected) break
     interiorPoints.push({ x: pt.xz.x, y: cursor.y, z: pt.xz.z })
   }
-  adaptStation(cursor, mouthFloorY, entrance, sampleBaseHeight, toXZ.x, toXZ.z, toWidth, toHeight)
-  return { interiorPoints, toPoint: { x: toXZ.x, y: cursor.y, z: toXZ.z } }
-}
-
-function irregularXZ(
-  from: { x: number, z: number },
-  to: { x: number, z: number },
-  perpDx: number,
-  perpDz: number,
-  count: number,
-  wobbleRandom: () => number,
-): InteriorPoint[] {
-  const out: InteriorPoint[] = []
-  const steps = count + 1
-  for (let i = 1; i <= count; i++) {
-    const t = i / steps
-    const baseX = from.x + (to.x - from.x) * t
-    const baseZ = from.z + (to.z - from.z) * t
-    const wobble = (wobbleRandom() - 0.5) * 1.8
-    out.push({ xz: { x: baseX + perpDx * wobble, z: baseZ + perpDz * wobble }, t })
-  }
-  return out
+  stepTo(dest.x, dest.z)
+  return { interiorPoints, toPoint: { x: dest.x, y: cursor.y, z: dest.z } }
 }
 
 type RadialStation = { x: number, z: number, radius: number }
@@ -232,7 +352,9 @@ export function buildProductionCaveTopology(input: ProductionTopologyInput): Cav
   const entrance: CaveEntrance = { x: site.x, y: mouthFloorY, z: site.z, yaw: site.yaw, width: LARGE_CAVE_MOUTH_WIDTH, height: ENTRANCE_HEIGHT }
   const entrancePoint: CaveTopologyPoint = { x: entrance.x, y: mouthFloorY, z: entrance.z }
 
-  const transitionLength = 3.5 + structureRandom() * 1
+  // Past `MOUTH_TRANSITION_RANGE` so the thin-roof → `MIN_OVERBURDEN` step is
+  // absorbed by this ramp instead of a 1 m floor cliff at 4 m from the mouth.
+  const transitionLength = MOUTH_TRANSITION_RANGE + 1.2 + structureRandom() * 1
   const passageLength = 6 + structureRandom() * 2
   const bendLength = 5 + structureRandom() * 1.5
   const chamberOffsetLength = 6 + structureRandom() * 2
@@ -258,21 +380,24 @@ export function buildProductionCaveTopology(input: ProductionTopologyInput): Cav
 
   const cursor: Cursor = { x: entrance.x, y: mouthFloorY, z: entrance.z, rejected: false }
 
-  const seg1 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, entrance.width, entrance.height, transitionXZ, transitionWidth, transitionHeight, [])
+  const seg1 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, entrance.width, entrance.height, transitionXZ, transitionWidth, transitionHeight)
   if (cursor.rejected) return null
   const transitionPoint = seg1.toPoint
 
-  const passageInterior = irregularXZ(transitionXZ, passageXZ, perp.dx, perp.dz, 2, centerlineRandom)
-  const seg2 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, transitionWidth, transitionHeight, passageXZ, passageWidth, passageHeight, passageInterior)
+  const seg2 = walkSegment(
+    cursor, mouthFloorY, entrance, sampleBaseHeight,
+    transitionWidth, transitionHeight, passageXZ, passageWidth, passageHeight,
+    { perpDx: perp.dx, perpDz: perp.dz, random: centerlineRandom, amplitude: 1.8 },
+  )
   if (cursor.rejected) return null
   const passagePoint = seg2.toPoint
 
-  const seg3 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, passageWidth, passageHeight, bendXZ, bendWidth, bendHeight, [])
+  const seg3 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, passageWidth, passageHeight, bendXZ, bendWidth, bendHeight)
   if (cursor.rejected) return null
   const bendPoint = seg3.toPoint
   const bendCursorSnapshot: Cursor = { ...cursor }
 
-  const seg4 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, bendWidth, bendHeight, chamberXZ, chamberWidth, chamberHeight, [])
+  const seg4 = walkSegment(cursor, mouthFloorY, entrance, sampleBaseHeight, bendWidth, bendHeight, chamberXZ, chamberWidth, chamberHeight)
   if (cursor.rejected) return null
   const chamberPoint = seg4.toPoint
 
@@ -285,10 +410,10 @@ export function buildProductionCaveTopology(input: ProductionTopologyInput): Cav
   ]
 
   const segments: CaveTopologySegment[] = [
-    { id: 'seg-transition', from: 'entrance', to: 'transition', centerline: [entrancePoint, transitionPoint] },
+    { id: 'seg-transition', from: 'entrance', to: 'transition', centerline: [entrancePoint, ...seg1.interiorPoints, transitionPoint] },
     { id: 'seg-passage', from: 'transition', to: 'passage', centerline: [transitionPoint, ...seg2.interiorPoints, passagePoint] },
-    { id: 'seg-bend', from: 'passage', to: 'widening-bend', centerline: [passagePoint, bendPoint] },
-    { id: 'seg-chamber', from: 'widening-bend', to: 'chamber', centerline: [bendPoint, chamberPoint] },
+    { id: 'seg-bend', from: 'passage', to: 'widening-bend', centerline: [passagePoint, ...seg3.interiorPoints, bendPoint] },
+    { id: 'seg-chamber', from: 'widening-bend', to: 'chamber', centerline: [bendPoint, ...seg4.interiorPoints, chamberPoint] },
   ]
 
   const wantsShelf = featureRandom() < 0.5
@@ -335,7 +460,7 @@ export function buildProductionCaveTopology(input: ProductionTopologyInput): Cav
     const branchXZ = { x: bendPoint.x + branchDir.dx * branchLength, z: bendPoint.z + branchDir.dz * branchLength }
 
     const branchCursor: Cursor = { ...bendCursorSnapshot }
-    const branchWalk = walkSegment(branchCursor, mouthFloorY, entrance, sampleBaseHeight, bendWidth, bendHeight, branchXZ, branchWidth, branchHeight, [])
+    const branchWalk = walkSegment(branchCursor, mouthFloorY, entrance, sampleBaseHeight, bendWidth, bendHeight, branchXZ, branchWidth, branchHeight)
     if (!branchCursor.rejected) {
       const branchPoint = branchWalk.toPoint
       const mainStations: RadialStation[] = [
@@ -357,7 +482,7 @@ export function buildProductionCaveTopology(input: ProductionTopologyInput): Cav
       const minGap = minGapBetweenPaths(mainStations, branchStations, bendPoint, bendWidth / 2 + 1)
       if (minGap >= MIN_DISCONNECTED_CLEARANCE) {
         nodes.push({ id: 'branch-chamber', kind: 'chamber', position: branchPoint, targetWidth: branchWidth, targetHeight: branchHeight })
-        segments.push({ id: 'seg-branch', from: 'widening-bend', to: 'branch-chamber', centerline: [bendPoint, branchPoint] })
+        segments.push({ id: 'seg-branch', from: 'widening-bend', to: 'branch-chamber', centerline: [bendPoint, ...branchWalk.interiorPoints, branchPoint] })
       }
     }
   }

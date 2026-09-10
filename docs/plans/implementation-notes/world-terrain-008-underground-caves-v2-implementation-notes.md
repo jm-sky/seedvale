@@ -1179,12 +1179,19 @@ from production code any more.
   primitive count must depend on `primitiveSpacing` alone, not on centerline
   density, or SDF field cost regresses.
 - **Terrain adaptation is a sequential, monotonic station walk**
-  (`adaptStation`/`walkSegment` in `productionTopology.ts`), not a rewrite of
+  (`walkSegment` in `productionTopology.ts`), not a rewrite of
   Milestone A's single global `sinkUnderTerrain()` deficit. Each control
-  point's floor Y is the lower of (a) a gentle nominal per-metre descent and
-  (b) whatever the local terrain footprint at that exact point requires,
-  never rising back up — so descent is local/smooth rather than one uniform
-  drop dumped on the first segment (implementation notes §3's bug). It is
+  point's floor Y follows a planned segment ramp: the lower of (a) a gentle
+  nominal per-metre descent and (b) whatever the local terrain footprint at
+  that exact point requires, never rising back up — so descent is
+  local/smooth rather than one uniform drop dumped on the first segment
+  (implementation notes §3's bug). Per-step drop is also capped at
+  `MAX_TRAVERSABLE_FLOOR_GRADE` (tan 40°, under `SLOPE_MAX_WALKABLE_DEG`
+  55°) and the destination is lengthened when a tall chamber's overburden
+  would otherwise dump as a cliff. Cross-section width/height follow
+  floor-drop progress, matching `caveSdfField.ts` `segmentStations`. The
+  leading transition is long enough to sit past `MOUTH_TRANSITION_RANGE`,
+  so the thin-roof → `MIN_OVERBURDEN` step is absorbed by that ramp. It is
   **not** a mathematically tight full-footprint guarantee between control
   points — it leaves `STATION_SAFETY` (0.35 m) of margin for the gap between
   the probe pattern and an arbitrarily dense check, exactly like Milestone
@@ -1751,5 +1758,38 @@ B3 complete from this slice.
 
 Recon only: `world-terrain-008-underground-caves-v2-b3-chamber-snap-recon.md`.
 No production gameplay change. B3 stays in progress.
+
+---
+
+# Milestone B3 — Chamber ↔ tunnel floor ramp (2026-09-10)
+
+Manual: player could walk *into* Grota Czarnego Kamienia (`seed=1136726869`,
+`cave:0e3cce97`) but not back out — the widening→chamber floor was a cliff.
+Not a climb-stat issue. Player constraints stay
+`SLOPE_MAX_WALKABLE_DEG = 55` / `STEP_DOWN_MAX = 0.45`.
+
+**Root cause:** `adaptStation` dumped chamber overburden in one step.
+`NOMINAL_DESCENT_PER_METER` (0.12) is gentle, but `y = min(y, allowedCeiling - height)`
+drops ~6 m when height jumps 5.5 m → 11 m. `seg-chamber` was two points
+~5.5 m apart (~48° average; local SDF ~62°, above 55°). Downhill
+`STEP_DOWN_MAX` lets the player fall in; uphill slope/geometry blocked return.
+Same class on any tall chamber/branch, not this seed only.
+
+**Fix (generation, not movement):** `walkSegment` plans dest Y, lengthens XZ
+so |Δfloor|/Δxz ≤ `MAX_TRAVERSABLE_FLOOR_GRADE` (tan 40°) plus extra run for
+a fat dest ellipsoid, densifies the centerline (`FLOOR_RAMP_STATION_SPACING`
+1.5 m), and lerps floor + cross-section along that ramp. SDF
+`segmentStations` already lerps width/height by floor-drop (`tShape`).
+Mouth `transitionLength` starts past `MOUTH_TRANSITION_RANGE` so the
+0.35 → 1.4 m overburden step is on the same ramp, not a 4 m cliff.
+Chamber size/depth, shelf/overhang, and SDF representation are unchanged.
+
+This cave after the ramp: widening floor y=2.13, chamber y=-3.57 (still
+~5.7 m deeper); `seg-chamber` span 11.1 m; topology 34.5°; gameplay SDF
+46.3° / max 0.36 m step at 0.4 m samples. Tests:
+`productionTopology.floor-continuity.test.ts`.
+
+B3 stays in progress. Manual: same cave, walk chamber → tunnel both ways
+on ordinary movement; do not expect a climb buff.
 
 

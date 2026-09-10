@@ -42,6 +42,7 @@ import {
   queryColumnIndex,
 } from './caveSdfQuery'
 import { mouthAlong, mouthCarveDepth, mouthLateral } from './mouthCarve'
+import { MOUTH_TRANSITION_RANGE } from './mouthOverburden'
 import { buildProductionCaveTopology } from './productionTopology'
 
 const REPRO_SEED = 1136726869
@@ -551,7 +552,9 @@ describe('B3 descending movement trace: seed 1136726869', () => {
     const ids = czarny.topology.nodes.map((n) => n.id)
     expect(ids).toEqual(['entrance', 'transition', 'passage', 'widening-bend', 'chamber'])
     const transition = czarny.topology.nodes.find((n) => n.id === 'transition')!
-    expect(mouthAlong(transition.position.x, transition.position.z, entrance)).toBeCloseTo(-3.75, 1)
+    const transitionAlong = mouthAlong(transition.position.x, transition.position.z, entrance)
+    expect(transitionAlong).toBeLessThan(-MOUTH_TRANSITION_RANGE)
+    expect(transitionAlong).toBeGreaterThan(-(MOUTH_TRANSITION_RANGE + 2.5))
   })
 
   it('player world Y / queryGround / occupancy / interior stay cave-owned through the descent', () => {

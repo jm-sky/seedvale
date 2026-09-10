@@ -274,6 +274,60 @@ Live follow-up (seq 124): occupancy=false, queryInterior=false, but `source=cave
 
 B3 remains in progress (doorway seam / other entrance work). Manual check: seed `1136726869`, Grota Czarnego Kamienia, walk the passage→chamber descent **into the lower chamber** (Y≈-2.7). Player Y must stay on the cave floor / fall in-cave, not jump to ~10.6. Outdoor swimming/wading must still work.
 
+---
+
+## Chamber ↔ tunnel floor continuity (2026-09-10)
+
+Surface teleports are manually confirmed. New issue: the player can *enter*
+the chamber but cannot walk back into the tunnel — the floor is too steep.
+Not player movement. Floor profile / topology shaping.
+
+### Recon (this seed, before the ramp)
+
+| node | along | floor y | w×h |
+|---|---|---|---|
+| widening-bend | -16.34 | 2.62 | 5.37×5.52 |
+| chamber | -21.88 | -3.51 | 9.58×10.96 |
+
+ΔY ≈ 6.13 m over ≈ 5.54 m (~48° average). Spatial trace on the last metres:
+Δfloor −0.75 m / 0.62 m then −1.17 m / 0.63 m (~62°), above
+`SLOPE_MAX_WALKABLE_DEG` (55°). `STEP_DOWN_MAX` (0.45 m) still lets the
+player fall *in*. Snap-up does not help a 55°+ wall on the way *out*.
+
+`NOMINAL_DESCENT_PER_METER` (0.12) is not the cliff. `unconstrainedFloorY`
+dumps `y = min(y, allowedCeiling - height)` when the chamber is 9–11 m tall
+vs widening ~5.5–6.5 m. `seg-chamber` was `[bendPoint, chamberPoint]`.
+SDF ellipsoids (`rx = width/2`) overlap that short corridor; smooth union
+makes a bowl. Same class for other chamber/branch segments.
+
+Column quantization / shelf-overhang subtraction are not the walk-back
+blocker (shelf splits the column later, along≈-21).
+
+### Fix
+
+`walkSegment` in `productionTopology.ts`:
+
+- plan dest Y (nominal + overburden) then **lengthen** XZ so grade ≤
+  `MAX_TRAVERSABLE_FLOOR_GRADE` (tan 40°) plus `toWidth * 0.45` when the
+  dest is ≥1.5 m wider (chamber ellipsoid must not swallow the ramp);
+- densify interiors every `FLOOR_RAMP_STATION_SPACING` (1.5 m);
+- lerp floor along the ramp; grow width/height with floor-drop (`tShape`),
+  matching `caveSdfField.ts` `segmentStations`;
+- `transitionLength` starts at `MOUTH_TRANSITION_RANGE + 1.2` so the mouth
+  overburden step (0.35 → 1.4 m at 4 m) is on the entrance ramp.
+
+Player slope/step constants are unchanged. Chamber depth on this seed stays
+~5.7 m below the widening (y=2.13 → −3.57). After: `seg-chamber` span 11.1 m,
+topology 34.5°, gameplay SDF 46.3°, max 0.36 m step at 0.4 m samples.
+
+Tests: `productionTopology.floor-continuity.test.ts` (topology grade on
+several seeds; this seed's gameplay SDF on passage / widening / chamber /
+branch). Mouth lip (`seg-transition`) is portal/carve, not this invariant.
+
+B3 still in progress. Manual: same cave, walk **chamber → tunnel and back**
+on ordinary movement. Other caves: any chamber entrance that used to dump
+height in one station.
+
 ## Classification (Case A)
 
 ```text

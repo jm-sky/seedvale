@@ -135,14 +135,20 @@ function segmentStations(topology: CaveTopology, seg: CaveTopologySegment): Path
   const toNode = nodeById.get(seg.to)
   if (!fromNode || !toNode) throw new Error(`caveSdfField: unknown node in segment ${seg.id}`)
   const pts = seg.centerline
+  const fromY = fromNode.position.y
+  const toY = toNode.position.y
+  const drop = fromY - toY
   return pts.map((p, i) => {
-    const t = pts.length > 1 ? i / (pts.length - 1) : 0
+    const tIndex = pts.length > 1 ? i / (pts.length - 1) : 0
+    const tShape = drop > 1e-6
+      ? Math.min(1, Math.max(0, (fromY - p.y) / drop))
+      : tIndex
     return {
       x: p.x,
       y: p.y,
       z: p.z,
-      width: fromNode.targetWidth + (toNode.targetWidth - fromNode.targetWidth) * t,
-      height: fromNode.targetHeight + (toNode.targetHeight - fromNode.targetHeight) * t,
+      width: fromNode.targetWidth + (toNode.targetWidth - fromNode.targetWidth) * tShape,
+      height: fromNode.targetHeight + (toNode.targetHeight - fromNode.targetHeight) * tShape,
     }
   })
 }
