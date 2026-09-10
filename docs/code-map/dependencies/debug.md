@@ -354,6 +354,7 @@ Generated from TypeScript imports.
 - `config/worldConfig.ts`
 - `debug/npcDebugApi.ts`
 - `debug/playerGroundTrace.ts`
+- `fauna/AnimalSpawner.ts`
 - `player/PlayerSkills.ts`
 - `quests/QuestManager.ts`
 - `settlement/SettlementsManager.ts`
@@ -382,6 +383,8 @@ Generated from TypeScript imports.
 - `debug/playerGroundTrace.ts`
 - `debug/villageInspector.ts`
 - `fauna/AnimalAgent.ts`
+- `fauna/AnimalSpawner.ts`
+- `fauna/wolfDenScenario.ts`
 - `navigation/navigationStats.ts`
 - `player/PlayerController.ts`
 - `player/PlayerNeeds.ts`

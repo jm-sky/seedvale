@@ -200,22 +200,25 @@ Generated from exported TypeScript symbols.
 
 ## `debug/npcDebugApi.ts`
 
-- `ConditionsDebugApi` — type — line 193
-- `HiddenTreasureDebugApi` — type — line 165
-- `HouseholdDebugHandle` — type — line 84
-- `InjuryDebugApi` — type — line 201
-- `installNpcDebugApi` — function — line 371
-- `LocationsDebugApi` — type — line 116
-- `NpcDebugHandle` — type — line 69
-- `PlayerDebugApi` — type — line 208
-- `SeedvaleDebugApi` — type — line 246
-- `SettlementHistoryDebugHandle` — type — line 92
-- `SkillsDebugApi` — type — line 183
-- `TeleportToDebugApi` — type — line 128
-- `TransportOrderDebugSnapshot` — type — line 220
-- `VillageDebugHandle` — type — line 99
-- `WorldLocationDebugEntry` — type — line 149
-- `WorldLocationsDebugApi` — type — line 150
+- `ConditionsDebugApi` — type — line 195
+- `HiddenTreasureDebugApi` — type — line 167
+- `HouseholdDebugHandle` — type — line 86
+- `InjuryDebugApi` — type — line 203
+- `installNpcDebugApi` — function — line 454
+- `LocationsDebugApi` — type — line 118
+- `NpcDebugHandle` — type — line 71
+- `PlayerDebugApi` — type — line 249
+- `QuestsDebugApi` — type — line 239
+- `QuestSpawnPointDebugSnapshot` — type — line 212
+- `QuestTargetDebugSnapshot` — type — line 227
+- `SeedvaleDebugApi` — type — line 323
+- `SettlementHistoryDebugHandle` — type — line 94
+- `SkillsDebugApi` — type — line 185
+- `TeleportToDebugApi` — type — line 130
+- `TransportOrderDebugSnapshot` — type — line 261
+- `VillageDebugHandle` — type — line 101
+- `WorldLocationDebugEntry` — type — line 151
+- `WorldLocationsDebugApi` — type — line 152
 
 ## `debug/npcInspector.ts`
 

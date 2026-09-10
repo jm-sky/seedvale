@@ -165,6 +165,8 @@ Generated from TypeScript imports.
 - `app/interactables.ts`
 - `app/saveState.ts`
 - `app/worldBundle.ts`
+- `debug/npcDebugApi.test.ts`
+- `debug/npcDebugApi.ts`
 - `fauna/AnimalSpawner.test.ts`
 - `fauna/createFauna.ts`
 - `fauna/huntingHooks.ts`
@@ -834,6 +836,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `debug/npcDebugApi.ts`
 - `fauna/AnimalSpawner.ts`
 - `fauna/createFauna.ts`
 - `fauna/wolfDenScenario.test.ts`
