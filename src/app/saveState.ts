@@ -71,7 +71,7 @@ export type SaveStateDeps = {
   navigationTargets: NavigationTargets
   landOwnership: LandOwnershipRegistry
   vueUi: VueUi
-  worldFlags: { guardSwordGifted: boolean, hiddenTreasureFound: boolean }
+  worldFlags: { guardSwordGifted: boolean, hiddenTreasureFound: boolean, treasureMapDarkForestRead: boolean }
   /** Hidden Finds resolved spot ids (plan world-007) — a stable `Set`
    *  reference, never reassigned (`createApp.ts` clears it in place on New
    *  Game), so it's read directly rather than through a live accessor. */
@@ -207,6 +207,7 @@ export function createSaveState(deps: SaveStateDeps): SaveState {
     fishingBait: Object.fromEntries(fishingBait),
     harvestedCropIds: [...deps.getRemovedCropIds()],
     placedContainers: bundle.placedContainers.nodes().map((c) => ({ ...c })),
+    worldGeneratedContainers: bundle.worldGeneratedContainers.nodes().map((c) => ({ ...c })),
     carriedContainer: bundle.placedContainers.carriedNode(),
     playerWells: bundle.playerWells.nodes().map((w) => ({ ...w })),
     terrainPreparations: bundle.terrainPreparations.nodes().map((p) => ({

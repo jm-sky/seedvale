@@ -953,6 +953,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
         bundle.sleepingUtilities,
         bundle.placedTraps,
         bundle.placedContainers,
+        bundle.worldGeneratedContainers,
         bundle.resourceDeposits,
         bundle.dryingRacks,
         bundle.hives,
@@ -2081,6 +2082,7 @@ export function createGameLoop(deps: GameLoopDeps): GameLoop {
       for (const revealed of locationProximityDiscovery.update(player.mesh.position.x, player.mesh.position.z)) {
         toast.show(`Odkryto: ${revealed.name}`)
       }
+      questManager.pollWorldProgressionObjectives()
       withCategory(monitor, 'TERRAIN', () => {
         bundle.chunkManager.update(player.mesh.position.x, player.mesh.position.z)
       })

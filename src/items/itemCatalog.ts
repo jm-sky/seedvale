@@ -195,6 +195,8 @@ export type ItemCatalogEntry = {
     targetSkillValue: number
     tier: BookTier
   }
+  /** Plan quests-progression-009 — readable map revealing a fixed world location. */
+  treasureMap?: { locationId: string }
   /** Plan npc-024 — catalog-driven temporary-condition treatment. Narrow and
    *  data-driven; not implied by `consumable.need === 'health'`. */
   conditionTreatment?: {
@@ -1098,6 +1100,25 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     spawn: 'none',
     modelUrl: null,
     notes: 'Plan world-012 — Kupiec stock. A knowledge-delivery token: purchase reveals distant (60-200 km) landmarks/settlements into `LocationKnowledge` immediately; the item itself has no other effect.',
+  },
+  treasure_map_dark_forest: {
+    kind: 'treasure_map_dark_forest',
+    label: 'mapa do skarbu',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    treasureMap: { locationId: 'ruins:dark-forest-treasure' },
+    notes: 'Plan quests-progression-009 — physical map; inventory action "Odczytaj" reveals the authored deep-forest ruins location.',
+  },
+  ruby: {
+    kind: 'ruby',
+    label: 'rubin',
+    holdable: false,
+    melee: null,
+    spawn: 'none',
+    modelUrl: null,
+    notes: 'Plan quests-progression-009 — treasure loot from the deep-forest ruins chest.',
   },
   rope: {
     kind: 'rope',

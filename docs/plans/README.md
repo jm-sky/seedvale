@@ -68,7 +68,6 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `settlements-npcs-023-profession-staffing-and-settlement-composition.md`    | -       | 🔴 | M      | -      |
 | 💡 `fauna-007-animal-leading-and-cart-harness.md`                              | -       | 🟡 | L      | ~~fauna-014~~ ~~fauna-006~~ |
 | 💡 `settlements-npcs-025-resource-storage-visualization.md`                    | -       | 🟡 | M      | ~~settlements-npcs-009~~, ~~settlements-npcs-010~~ |
-| 💡 `quests-progression-009-dark-forest-ruins-treasure-map.md`                  | -       | 🟡 | M      | fauna-016, world-012 |
 | 💡 `fauna-018-persistent-habitat-occupants.md`                                 | -       | 🟡 | M      | fauna-016, fauna-017 |
 | 💡 `fauna-019-real-cave-habitats-and-animal-home-navigation.md`                | -       | 🟡 | L      | world-terrain-008, fauna-016 |
 | ◼️ `quests-progression-008-treasure-map-bear-cave.md`                          | -       | 🟡 | M      | world-terrain-008, fauna-018, fauna-019, quests-progression-002, quests-progression-011 |

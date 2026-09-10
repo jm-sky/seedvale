@@ -160,6 +160,7 @@ Generated from TypeScript imports.
 - `terrain/digAction.ts`
 - `world/createPlacedContainers.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `items/ItemSpawner.ts`
 
@@ -322,6 +323,7 @@ Generated from TypeScript imports.
 - `items/container.test.ts`
 - `persistence/saveData.ts`
 - `world/createPlacedContainers.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `items/cookingFireResolver.ts`
 
@@ -451,6 +453,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.test.ts`
 - `world/createPlacedContainers.ts`
 - `world/dryingRacks.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `items/foodItems.test.ts`
 
@@ -868,6 +871,7 @@ Generated from TypeScript imports.
 - `world/restCancel.test.ts`
 - `world/treeHarvest.ts`
 - `world/treeLifecycle.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `items/liquidContainer.test.ts`
 

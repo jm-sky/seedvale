@@ -69,6 +69,7 @@ Generated from TypeScript imports.
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
 - `world/wellGroundwater.ts`
+- `world/worldGeneratedContainers.ts`
 
 **Imported by**
 

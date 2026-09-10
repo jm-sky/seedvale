@@ -1,7 +1,7 @@
 # Plan: Mapa do skarbu — ruiny w ciemnym lesie
 
 **Created:** 2026-09-07
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** feature
 **Priority:** medium · **Effort:** M
 **Depends on:** fauna-016, world-012

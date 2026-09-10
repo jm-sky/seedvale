@@ -1024,6 +1024,7 @@ Generated from TypeScript imports.
 - `world/npcGraves.ts`
 - `world/treeHarvest.ts`
 - `world/treeVisuals.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `settlement/ratInfestation.test.ts`
 
@@ -1252,6 +1253,7 @@ Generated from TypeScript imports.
 
 **Imported by**
 
+- `app/worldBundle.ts`
 - `settlement/SettlementsManager.ts`
 - `settlement/roadNetwork.ts`
 - `terrain/chunkManager.ts`

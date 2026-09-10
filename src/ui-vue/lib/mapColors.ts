@@ -41,6 +41,7 @@ export const LOCATION_KIND_COLOR: Record<WorldLocationKind, string> = {
   cemetery: '#9a9a9a',
   lake: '#3f9fd1',
   mountainPeak: '#6f8f52',
+  ruins: '#a68b6a',
 }
 
 /** Fallback for a marker whose kind can't be resolved from its id (should
@@ -62,6 +63,7 @@ export const LOCATION_KIND_EMOJI: Record<WorldLocationKind, string> = {
   cemetery: '⚰️',
   lake: '💧',
   mountainPeak: '⛰️',
+  ruins: '🏚️',
 }
 
 export function mapCellFillStyle(cell: MapCellData): string {

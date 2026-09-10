@@ -89,6 +89,19 @@ import { querySiteInfrastructure as collectSiteInfrastructure, type SiteBounds, 
 import { preloadTrapProps } from '../world/trapProp'
 import { createWaterMirror, type WaterMirror } from '../world/waterMirror'
 import { createWorldContext, type WorldContext } from '../world/worldContext'
+import {
+  DARK_FOREST_TREASURE_CHEST_COINS,
+  resolveDarkForestTreasureSite,
+} from '../world/locations/darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { rawSampleParamsFromWorld } from '../world/map/mapProjection'
+import { settlementDefFor } from '../settlement/settlementPlanCache'
+import {
+  createWorldGeneratedContainers,
+  type SaveWorldGeneratedContainer,
+  type WorldGeneratedContainers,
+} from '../world/worldGeneratedContainers'
 
 /** Fixed radius (world units) for settlement/fauna spatial logic — deliberately
  *  independent of the streamed terrain's loaded region, so the village and its
@@ -143,6 +156,7 @@ export type WorldBundle = {
   /** NPC burial graves (plan npc-011) — persistent completed burial results. */
   npcGraves: NpcGraves
   placedContainers: PlacedContainers
+  worldGeneratedContainers: WorldGeneratedContainers
   playerWells: PlayerWells
   playerGardens: PlayerGardens
   standingTorches: StandingTorches
@@ -391,6 +405,15 @@ function buildFauna(
    *  forwarded unchanged into `createFauna`. */
   grassForage?: GrassForageService,
   waterSourceProvider?: import('../fauna/animalForaging').AnimalWaterSourceProvider,
+  extraHabitatSpawners?: readonly {
+    id: string
+    x: number
+    z: number
+    type: 'wolfDen'
+    kind: 'wolf'
+    respawnIntervalDays: number
+    maxPreyCount: number
+  }[],
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('buildFauna')
 
@@ -443,6 +466,7 @@ function buildFauna(
     grassForage,
     waterSourceProvider,
     chunkManager.riverShoreDistance,
+    extraHabitatSpawners,
   ).finally(() => bootMarkEnd('createFauna'))
 }
 
@@ -456,6 +480,15 @@ function buildItemSpawners(
     settlement.landmarks.gardens.length > 0
       ? settlement.landmarks.gardens
       : [settlement.landmarks.garden]
+  const treasureSite = getActiveDarkForestTreasureSite()
+  const extraOneTimePickups = treasureSite
+    ? [{
+        id: treasureSite.treasureMapPickupId,
+        kind: 'treasure_map_dark_forest' as const,
+        x: treasureSite.treasureMapPickupX,
+        z: treasureSite.treasureMapPickupZ,
+      }]
+    : []
   return createItemSpawners(
     scene,
     chunkManager.sampleHeight,
@@ -466,6 +499,7 @@ function buildItemSpawners(
     seed,
     { campfire: settlement.landmarks.campfire?.position, garden: settlement.landmarks.garden, stockpile: settlement.landmarks.stockpile },
     gardens,
+    extraOneTimePickups,
   )
 }
 
@@ -509,6 +543,7 @@ type WorldSystemsSeed = {
   placedTraps: readonly PlacedTrapRecord[]
   graves: readonly SaveGrave[]
   placedContainers: readonly PlacedContainerRecord[]
+  worldGeneratedContainers: readonly SaveWorldGeneratedContainer[]
   carriedContainer: SaveCarriedContainer | null
   playerWells: readonly PlayerWellRecord[]
   playerGardens: readonly PlayerGardenRecord[]
@@ -662,6 +697,7 @@ async function buildWorldSystems(
     placedTraps: initialPlacedTraps,
     graves: initialGraves,
     placedContainers: initialPlacedContainers,
+    worldGeneratedContainers: initialWorldGeneratedContainers,
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
@@ -704,6 +740,31 @@ async function buildWorldSystems(
   bootMark('buildChunkManager')
   const chunkManager = buildChunkManager(scene, config, collectedItemIds, removedCropIds, plantedTrees, plantedCrops, modifications, treeLifecycle, getWorldDays, waterMirror)
   bootMarkEnd('buildChunkManager')
+
+  const homeDefForSite = settlementDefFor({ gx: 0, gz: 0 }, {
+    seed: config.seed,
+    sampleHeight: chunkManager.sampleHeight,
+    waterLevel: config.terrain.waterLevel,
+    localSearchRadius: HOME_RADIUS,
+    terrainSamplers: {
+      sampleContinentalness: chunkManager.sampleContinentalness,
+      sampleMountainRidge: chunkManager.sampleMountainRidge,
+      sampleMoistureRegion: chunkManager.sampleMoistureRegion,
+    },
+    heightScale: config.terrain.heightScale,
+    region: config.terrain.region,
+    homeSize: config.settlements.homeSize,
+  })
+  if (!homeDefForSite) {
+    throw new Error('[worldBundle] home settlement (0,0) failed to resolve for treasure site')
+  }
+  const darkForestTreasureSite = resolveDarkForestTreasureSite({
+    seed: config.seed,
+    homeX: homeDefForSite.x,
+    homeZ: homeDefForSite.z,
+    sampleParams: rawSampleParamsFromWorld(config),
+  })
+  setActiveDarkForestTreasureSite(darkForestTreasureSite)
 
   // Plan world-009 — bounded to roughly the streamed terrain footprint
   // (chunkSize * loadRadius) rather than depending on ChunkManager's own
@@ -803,6 +864,22 @@ async function buildWorldSystems(
     initialCarriedContainer,
   )
   bootMarkEnd('createPlacedContainers')
+  const chestYaw = darkForestTreasureSite.rotationY + 0.35
+  const chestX = darkForestTreasureSite.x + Math.cos(chestYaw) * 2.8
+  const chestZ = darkForestTreasureSite.z + Math.sin(chestYaw) * 2.8
+  const worldGeneratedContainers = createWorldGeneratedContainers(
+    scene,
+    chunkManager.sampleHeight,
+    [{
+      id: darkForestTreasureSite.chestId,
+      kind: 'chest',
+      x: chestX,
+      z: chestZ,
+      yaw: chestYaw,
+      initialCounts: { coin: DARK_FOREST_TREASURE_CHEST_COINS, ruby: 1 },
+    }],
+    initialWorldGeneratedContainers,
+  )
   const helperDelivery = createHelperDeliveryHooks(placedContainers)
 
   bootMark('preloadAnimalTroughAndTrapProps')
@@ -913,6 +990,7 @@ async function buildWorldSystems(
     placedTraps,
     npcGraves,
     placedContainers,
+    worldGeneratedContainers,
     playerWells,
     playerGardens,
     standingTorches,
@@ -950,7 +1028,26 @@ async function buildWorldSystems(
         (async () => {
           bootMark('background:buildFauna')
           try {
-            return await buildFauna(scene, chunkManager, homeDef, config.seed, config.terrain.region.coastThreshold, onAnimalDeath, initialSpawnerState, grassForage, playerTroughs)
+            return await buildFauna(
+              scene,
+              chunkManager,
+              homeDef,
+              config.seed,
+              config.terrain.region.coastThreshold,
+              onAnimalDeath,
+              initialSpawnerState,
+              grassForage,
+              playerTroughs,
+              darkForestTreasureSite.wolfDens.map((den) => ({
+                id: den.id,
+                x: den.x,
+                z: den.z,
+                type: 'wolfDen' as const,
+                kind: 'wolf' as const,
+                respawnIntervalDays: Infinity,
+                maxPreyCount: 2,
+              })),
+            )
           } finally {
             bootMarkEnd('background:buildFauna')
           }
@@ -1037,6 +1134,7 @@ export async function createWorldBundle(
    *  across rebuild, reset only on a genuinely new world" contract as
    *  `initialPlacedTents`/`initialPlacedTraps`. */
   initialPlacedContainers: readonly PlacedContainerRecord[],
+  initialWorldGeneratedContainers: readonly SaveWorldGeneratedContainer[] = [],
   /** Plan 164 — the container currently in the player's hands (if any),
    *  same reset contract. */
   initialCarriedContainer: SaveCarriedContainer | null,
@@ -1163,6 +1261,7 @@ export async function createWorldBundle(
     placedTraps: initialPlacedTraps,
     graves: initialGraves,
     placedContainers: initialPlacedContainers,
+    worldGeneratedContainers: initialWorldGeneratedContainers,
     carriedContainer: initialCarriedContainer,
     playerWells: initialPlayerWells,
     playerGardens: initialPlayerGardens,
@@ -1287,6 +1386,8 @@ export async function rebuildWorldBundle(
   const carriedContainerNodes = resetCollectedItems ? [] : [...bundle.placedContainers.nodes()]
   const carriedContainerHeld = resetCollectedItems ? null : bundle.placedContainers.carriedNode()
   bundle.placedContainers.dispose()
+  const carriedWorldGeneratedContainers = resetCollectedItems ? [] : [...bundle.worldGeneratedContainers.nodes()]
+  bundle.worldGeneratedContainers.dispose()
   // Player-built wells are positioned by the player, not seed-derived — kept
   // across an unrelated terrain-param rebuild, same reset contract as tents/
   // traps/containers above.
@@ -1367,6 +1468,7 @@ export async function rebuildWorldBundle(
     placedTraps: carriedTraps,
     graves: carriedGraves,
     placedContainers: carriedContainerNodes,
+    worldGeneratedContainers: carriedWorldGeneratedContainers,
     carriedContainer: carriedContainerHeld,
     playerWells: carriedPlayerWells,
     playerGardens: carriedPlayerGardens,
@@ -1420,6 +1522,7 @@ export function disposeWorldBundle(bundle: WorldBundle): void {
   bundle.placedTraps.dispose()
   bundle.npcGraves.dispose()
   bundle.placedContainers.dispose()
+  bundle.worldGeneratedContainers.dispose()
   bundle.playerWells.dispose()
   bundle.playerGardens.dispose()
   bundle.standingTorches.dispose()

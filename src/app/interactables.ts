@@ -15,6 +15,7 @@ import type { Beehives } from '../world/createBeehives'
 import type { DryingRacks } from '../world/createDryingRacks'
 import type { Palisades } from '../world/createPalisades'
 import type { PlacedContainers } from '../world/createPlacedContainers'
+import type { WorldGeneratedContainers } from '../world/worldGeneratedContainers'
 import type { PlacedTraps } from '../world/createPlacedTraps'
 import type { PlayerGardens } from '../world/createPlayerGardens'
 import type { PlayerTroughs } from '../world/createPlayerTroughs'
@@ -330,6 +331,7 @@ export function buildInteractables(
   sleepingUtilities: SleepingUtilities,
   placedTraps: PlacedTraps,
   placedContainers: PlacedContainers,
+  worldGeneratedContainers: WorldGeneratedContainers,
   resourceDeposits: ResourceDeposits,
   dryingRacks: DryingRacks,
   hives: Beehives,
@@ -460,6 +462,16 @@ export function buildInteractables(
       kind: 'container',
       position: { x: container.x, z: container.z },
       promptLabel: '[E] Otwórz skrzynię · [R] Podnieś skrzynię',
+      id: container.id,
+    })
+  }
+
+  for (const container of worldGeneratedContainers.list()) {
+    if (!withinRange(container.x, container.z, playerPos, GAZE_RANGE)) continue
+    list.push({
+      kind: 'container',
+      position: { x: container.x, z: container.z },
+      promptLabel: '[E] Otwórz skrzynię',
       id: container.id,
     })
   }

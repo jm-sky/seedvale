@@ -788,6 +788,7 @@ Generated from TypeScript imports.
 - `app/actions/containerActions.ts`
 - `settlement/props.ts`
 - `world/createPlacedContainers.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `world/createBeehives.ts`
 
@@ -1497,6 +1498,46 @@ Generated from TypeScript imports.
 - `world/largeCaveVisual.ts`
 - `world/largeCaves.test.ts`
 
+## `world/locations/darkForestTreasureSite.test.ts`
+
+**Imports**
+
+- `world/locations/darkForestTreasureSite.ts`
+
+## `world/locations/darkForestTreasureSite.ts`
+
+**Imports**
+
+- `terrain/biomeRegions.ts`
+- `terrain/chunkGrid.ts`
+- `terrain/chunkHeightmap.ts`
+- `world/parseSeed.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `quests/quests.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkManager.ts`
+- `world/locations/darkForestTreasureSite.test.ts`
+- `world/locations/darkForestTreasureSiteRuntime.ts`
+- `world/locations/locationProximityDiscovery.ts`
+
+## `world/locations/darkForestTreasureSiteRuntime.ts`
+
+**Imports**
+
+- `world/locations/darkForestTreasureSite.ts`
+
+**Imported by**
+
+- `app/createApp.ts`
+- `app/worldBundle.ts`
+- `terrain/chunkEnvironment.ts`
+- `terrain/chunkManager.ts`
+- `world/locations/locationProximityDiscovery.ts`
+
 ## `world/locations/locationConfig.ts`
 
 **Imported by**
@@ -1553,6 +1594,7 @@ Generated from TypeScript imports.
 - `world/locations/locationKnowledge.test.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
+- `world/locations/revealLocationKnowledge.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.test.ts`
 
@@ -1570,6 +1612,8 @@ Generated from TypeScript imports.
 **Imports**
 
 - `world/caveVolume.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
 
@@ -1610,10 +1654,24 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/inventoryWiring.ts`
 - `app/saveState.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
 - `world/locations/navigationTargets.test.ts`
+- `world/locations/revealLocationKnowledge.ts`
+
+## `world/locations/revealLocationKnowledge.ts`
+
+**Imports**
+
+- `world/locations/locationKnowledge.ts`
+- `world/locations/navigationTargets.ts`
+- `world/locations/worldLocationCatalog.ts`
+
+**Imported by**
+
+- `app/inventoryWiring.ts`
 
 ## `world/locations/seedProfile.test.ts`
 
@@ -1675,6 +1733,7 @@ Generated from TypeScript imports.
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationProximityDiscovery.test.ts`
 - `world/locations/locationProximityDiscovery.ts`
+- `world/locations/revealLocationKnowledge.ts`
 - `world/locations/worldLocationCatalog.test.ts`
 - `world/map/mapData.ts`
 
@@ -1791,6 +1850,7 @@ Generated from TypeScript imports.
 **Imported by**
 
 - `app/createApp.ts`
+- `app/worldBundle.ts`
 - `debug/locationQueries.ts`
 - `main.ts`
 - `ui-vue/lib/drawMap.ts`
@@ -1939,6 +1999,7 @@ Generated from TypeScript imports.
 - `world/grassForage.ts`
 - `world/hiddenFinds.ts`
 - `world/largeCaves.ts`
+- `world/locations/darkForestTreasureSite.ts`
 - `world/locations/seedProfile.ts`
 - `world/parseSeed.test.ts`
 - `world/seedLibrary.ts`
@@ -2712,3 +2773,21 @@ Generated from TypeScript imports.
 - `debug/locationQueries.ts`
 - `debug/npcDebugApi.test.ts`
 - `debug/npcDebugApi.ts`
+
+## `world/worldGeneratedContainers.ts`
+
+**Imports**
+
+- `items/Inventory.ts`
+- `items/container.ts`
+- `items/foodFreshness.ts`
+- `items/items.ts`
+- `player/PlayerController.ts`
+- `settlement/props.ts`
+- `world/containerProp.ts`
+
+**Imported by**
+
+- `app/interactables.ts`
+- `app/worldBundle.ts`
+- `persistence/saveData.ts`

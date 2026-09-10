@@ -302,6 +302,17 @@ export type ChunkTileParams = {
    *  (`cemeteryPlacement.ts`) — populated by `chunkManager.paramsFor()`. */
   /** Empty when no settlements are near this chunk — assignment-driven cemeteries are skipped. */
   cemeterySettlements?: readonly CemeterySettlementRef[]
+  /** Single authored expedition ruins site (plan quests-progression-009) —
+   *  injected by `chunkManager` when the deterministic site falls in this
+   *  chunk. Absent on older call paths / tests. */
+  authoredExpeditionRuins?: {
+    id: string
+    x: number
+    z: number
+    rotationY: number
+    variant: number
+    scale: number
+  } | null
 }
 
 export type RawSampleParams = Omit<
@@ -317,6 +328,7 @@ export type RawSampleParams = Omit<
   | 'regional'
   | 'riverSegments'
   | 'cemeterySettlements'
+  | 'authoredExpeditionRuins'
 >
 
 export type ChunkTileData = {

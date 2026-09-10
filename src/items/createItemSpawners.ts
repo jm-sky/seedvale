@@ -114,6 +114,13 @@ const BRANCH_SPAWN_POINTS_MIN = 3
 const BRANCH_SPAWN_POINTS_MAX = 8
 const BRANCH_TREES_PER_POINT = 4
 
+export type OneTimeWorldItemPickup = {
+  id: string
+  kind: ItemKind
+  x: number
+  z: number
+}
+
 export function createItemSpawners(
   scene: Scene,
   sampleHeight: HeightSampler,
@@ -131,6 +138,7 @@ export function createItemSpawners(
   shovelLandmarks: { campfire?: Vector3, garden: Vector3, stockpile?: Vector3 },
   /** Extra garden pads (plan 077 / 082) — farm tools scatter near these. */
   gardens: readonly Vector3[] = [],
+  extraOneTimePickups: readonly OneTimeWorldItemPickup[] = [],
 ): ItemSpawners {
   const random = createSeededRandom(seed ^ 0x17ea)
   const points: ItemSpawnPoint[] = []
@@ -163,10 +171,15 @@ export function createItemSpawners(
     meshes[index] = mesh
   }
 
-  const addSpawnPoint = (kind: ItemKind, respawnTime: number, pos: { x: number, z: number }): void => {
+  const addSpawnPoint = (
+    kind: ItemKind,
+    respawnTime: number,
+    pos: { x: number, z: number },
+    id?: string,
+  ): void => {
     const index = points.length
     points.push({
-      id: `spawner:${index}`,
+      id: id ?? `spawner:${index}`,
       x: pos.x,
       z: pos.z,
       kind,
@@ -184,6 +197,11 @@ export function createItemSpawners(
     label.position.set(pos.x, sampleHeight(pos.x, pos.z) + 0.4, pos.z)
     scene.add(label)
     labels.push({ object: label, el })
+  }
+
+  for (const extra of extraOneTimePickups) {
+    if (sampleHeight(extra.x, extra.z) <= waterLevel + 0.6) continue
+    addSpawnPoint(extra.kind, Infinity, { x: extra.x, z: extra.z }, extra.id)
   }
 
   for (const spec of SPAWN_SPECS) {

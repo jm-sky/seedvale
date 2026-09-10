@@ -77,6 +77,7 @@ const sourceSpeciesLabel = computed(() => {
   return species ? FOOD_SOURCE_SPECIES_LABEL[species] : null
 })
 const book = computed(() => catalogEntry.value?.book ?? null)
+const treasureMap = computed(() => catalogEntry.value?.treasureMap ?? null)
 /** Live current value of the book's skill — `ui.skillsScreen` is pushed
  *  explicitly by `readBookItem` right after a successful read (plan
  *  items-player-016), so this stays fresh even while the inventory modal
@@ -443,6 +444,11 @@ function isInstancePrimaryRanged(id: string): boolean {
       <ItemsScreenItemButton
         v-if="book"
         label="Czytaj"
+        @click="onRead(item.kind)"
+      />
+      <ItemsScreenItemButton
+        v-if="treasureMap"
+        label="Odczytaj"
         @click="onRead(item.kind)"
       />
       <ItemsScreenItemButton

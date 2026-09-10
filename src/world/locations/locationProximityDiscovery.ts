@@ -1,4 +1,6 @@
 import type { CaveDefinition } from '../caveVolume'
+import { ruinsDiscoveryRadius } from './darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from './darkForestTreasureSiteRuntime'
 import type { LocationKnowledge } from './locationKnowledge'
 import type { WorldLocationCatalog } from './worldLocationCatalog'
 
@@ -65,7 +67,20 @@ export function createLocationProximityDiscovery(deps: {
       const t = now()
       if (t < nextCheckAt) return []
       nextCheckAt = t + checkIntervalS
-      return revealCaveEntrancesInRange(playerX, playerZ, getCaveDefinitions(), catalog, knowledge)
+      const revealed = [...revealCaveEntrancesInRange(playerX, playerZ, getCaveDefinitions(), catalog, knowledge)]
+      const site = getActiveDarkForestTreasureSite()
+      if (site) {
+        const radius = ruinsDiscoveryRadius()
+        const dx = playerX - site.x
+        const dz = playerZ - site.z
+        if (dx * dx + dz * dz <= radius * radius) {
+          if (knowledge.reveal(site.locationId, 'discovered', 'exploration')) {
+            const location = catalog.getById(site.locationId)
+            if (location) revealed.push({ id: location.id, name: location.name })
+          }
+        }
+      }
+      return revealed
     },
   }
 }

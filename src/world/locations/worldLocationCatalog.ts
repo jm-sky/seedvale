@@ -53,6 +53,8 @@ export type WorldLocationCatalogDeps = {
    *  caller to batch/debounce into IndexedDB. Best-effort only — must never
    *  affect catalog correctness. */
   onTileDirty?: (tx: number, tz: number, tile: { state: Uint8Array, height: Float32Array }) => void
+  /** Authored expedition ruins site (plan quests-progression-009). */
+  getDarkForestTreasureSite?: () => { locationId: string, x: number, z: number } | null
 }
 
 /** Cheap running totals for the coarse terrain scan (plan world-013 §1) — no
@@ -223,6 +225,19 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       const cz = Number(czStr)
       if (!Number.isInteger(cx) || !Number.isInteger(cz)) return null
       return scanGridLocation(kind, cx, cz)
+    }
+    if (kind === 'ruins') {
+      const site = deps.getDarkForestTreasureSite?.()
+      if (!site || site.locationId !== id) return null
+      const seed = getSeed()
+      return {
+        id: site.locationId,
+        kind: 'ruins',
+        x: site.x,
+        z: site.z,
+        name: landmarkName(seed, 'ruins', site.locationId),
+        discoveryWeight: weightOf(seed, site.locationId),
+      }
     }
     return null
   }

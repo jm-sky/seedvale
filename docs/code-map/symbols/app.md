@@ -4,8 +4,8 @@ Generated from exported TypeScript symbols.
 
 ## `app/actions/actionContext.ts`
 
-- `isActionBlocked` — function — line 73
-- `isChannelBusy` — function — line 80
+- `isActionBlocked` — function — line 75
+- `isChannelBusy` — function — line 82
 - `PlayerActionContext` — type — line 30
 
 ## `app/actions/actionContracts.ts`
@@ -190,13 +190,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/createApp.ts`
 
-- `createApp` — function — line 249
+- `createApp` — function — line 251
   - system: app-composition
   - role: Composition root: builds every long-lived system, threads their dependencies and owns app-level lifecycle (boot, rebuild, dispose).
   - owns: WorldBundle, GameLoop, AppRenderLoop
   - lifecycle: boot
   - integration: Wires world, player, UI, persistence and audio systems together.
-- `NewAppOptions` — type — line 219
+- `NewAppOptions` — type — line 221
 
 ## `app/gameLoop.ts`
 
@@ -245,25 +245,25 @@ Generated from exported TypeScript symbols.
 
 ## `app/interactables.ts`
 
-- `buildCombatTarget` — function — line 974
-- `buildDigTarget` — function — line 921
-- `buildInteractables` — function — line 322
-- `collectItem` — function — line 1021
-- `COMBAT_TARGET_CONE_DOT` — const — line 89
-- `COMBAT_TARGET_RANGE` — const — line 74
-- `CombatAimMode` — type — line 79
-- `DIG_REACH` — const — line 68
-- `GAZE_RANGE` — const — line 64
-- `INTERACT_MIN_DOT` — const — line 61
-- `INTERACT_RANGE` — const — line 58
-- `resolveHaySpot` — function — line 258
+- `buildCombatTarget` — function — line 986
+- `buildDigTarget` — function — line 933
+- `buildInteractables` — function — line 323
+- `collectItem` — function — line 1033
+- `COMBAT_TARGET_CONE_DOT` — const — line 90
+- `COMBAT_TARGET_RANGE` — const — line 75
+- `CombatAimMode` — type — line 80
+- `DIG_REACH` — const — line 69
+- `GAZE_RANGE` — const — line 65
+- `INTERACT_MIN_DOT` — const — line 62
+- `INTERACT_RANGE` — const — line 59
+- `resolveHaySpot` — function — line 259
 
 ## `app/inventoryWiring.ts`
 
-- `createInventoryWiring` — function — line 135
-- `InventoryWiring` — type — line 81
-- `InventoryWiringDeps` — type — line 104
-- `MerchantInventoryView` — type — line 68
+- `createInventoryWiring` — function — line 140
+- `InventoryWiring` — type — line 83
+- `InventoryWiringDeps` — type — line 108
+- `MerchantInventoryView` — type — line 70
 
 ## `app/modalState.ts`
 
@@ -313,13 +313,13 @@ Generated from exported TypeScript symbols.
 
 ## `app/worldBundle.ts`
 
-- `BuiltWorldSystems` — type — line 625
-- `createWorldBundle` — function — line 1012
-- `disposeWorldBundle` — function — line 1413
-- `HOME_RADIUS` — const — line 97
-- `homeChunks` — function — line 108
-- `rebuildWorldBundle` — function — line 1210
-- `WorldBundle` — type — line 131
+- `BuiltWorldSystems` — type — line 660
+- `createWorldBundle` — function — line 1109
+- `disposeWorldBundle` — function — line 1515
+- `HOME_RADIUS` — const — line 110
+- `homeChunks` — function — line 121
+- `rebuildWorldBundle` — function — line 1309
+- `WorldBundle` — type — line 144
   - system: world-bundle
   - role: Owns the lifetime/rebuild boundary for all world systems (terrain, settlements, fauna, items, player-placed structures).
   - owns: WorldBundle

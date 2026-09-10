@@ -52,6 +52,7 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.ts`
 - `terrain/grassPlacement.ts`
 - `terrain/naturalResources.ts`
+- `world/locations/darkForestTreasureSite.ts`
 - `world/map/mapProjection.ts`
 - `world/treeLifecycle.ts`
 - `world/worldContext.ts`
@@ -163,6 +164,8 @@ Generated from TypeScript imports.
 - `terrain/chunkGrid.ts`
 - `terrain/chunkHeightmap.ts`
 - `terrain/chunkVegetation.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/parseSeed.ts`
 
 **Imported by**
@@ -202,6 +205,7 @@ Generated from TypeScript imports.
 - `terrain/chunkVegetation.ts`
 - `terrain/grass.ts`
 - `terrain/vegetationRegionBatcher.ts`
+- `world/locations/darkForestTreasureSite.ts`
 
 ## `terrain/chunkHeightmap.test.ts`
 
@@ -286,6 +290,7 @@ Generated from TypeScript imports.
 - `world/caves/caveGameplayQuery.b3-recon.test.ts`
 - `world/caves/caveSurfaceIntegration.test.ts`
 - `world/largeCaves.ts`
+- `world/locations/darkForestTreasureSite.ts`
 - `world/locations/locationsCoarseCache.test.ts`
 - `world/locations/locationsCoarseCache.ts`
 - `world/locations/seedProfile.test.ts`
@@ -405,6 +410,8 @@ Generated from TypeScript imports.
 - `world/createWater.ts`
 - `world/cropLifecycle.ts`
 - `world/cropVisuals.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/plantedCrops.ts`
 - `world/plantedTrees.ts`
 - `world/treeLifecycle.ts`

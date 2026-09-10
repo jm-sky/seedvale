@@ -48,19 +48,20 @@ Generated from exported TypeScript symbols.
 
 ## `settlement/decorProps.ts`
 
-- `cemeteryGraveLayout` — function — line 579
-- `CemeterySize` — type — line 547
-- `CemeteryTemplates` — type — line 539
+- `cemeteryGraveLayout` — function — line 646
+- `CemeterySize` — type — line 614
+- `CemeteryTemplates` — type — line 606
 - `createBush` — function — line 103
 - `createCactus` — function — line 144
-- `createCaveMouth` — function — line 688
-- `createCemetery` — function — line 617
-- `createCemeteryPlot` — function — line 524
+- `createCaveMouth` — function — line 755
+- `createCemetery` — function — line 684
+- `createCemeteryPlot` — function — line 591
 - `createCobblePlate` — function — line 178
+- `createExpeditionRuins` — function — line 506
 - `createFallenLog` — function — line 290
 - `createFelledTree` — function — line 90
 - `createFern` — function — line 163
-- `createGraveStone` — function — line 506
+- `createGraveStone` — function — line 573
 - `createLargeRock` — function — line 241
 - `createLilyPad` — function — line 209
 - `createLimbedTree` — function — line 61
@@ -433,8 +434,8 @@ Generated from exported TypeScript symbols.
 ## `settlement/props.ts`
 
 - `BlacksmithWorkplace` — type — line 270
-- `buildSettlementProps` — function — line 677
-- `disposeSettlementGroup` — function — line 1861
+- `buildSettlementProps` — function — line 678
+- `disposeSettlementGroup` — function — line 1862
 - `SettlementHouseBed` — type — line 138
 - `SettlementHouseLandmark` — type — line 109
 - `SettlementLandmarks` — type — line 145

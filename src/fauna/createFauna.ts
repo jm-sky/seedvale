@@ -510,6 +510,17 @@ export async function createFauna(
    *  hydrology keep prior behaviour; when present, every wild spawn and
    *  habitat spawn point keeps clear of the active channel. */
   riverShoreDistance?: (x: number, z: number) => number | null,
+  /** Fixed-position habitat spawners (plan quests-progression-009) — world
+   *  sites outside the settlement ring, same lifecycle as settlement dens. */
+  extraHabitatSpawners?: readonly {
+    id: string
+    x: number
+    z: number
+    type: PreySpawner['type']
+    kind: AnimalKind
+    respawnIntervalDays: number
+    maxPreyCount: number
+  }[],
 ): Promise<Fauna> {
   const { bootMark, bootMarkEnd } = useBootMark('createFauna')
 
@@ -939,6 +950,50 @@ export async function createFauna(
     label.position.set(pos.x, groundY + labelH, pos.z)
     scene.add(label)
     spawnerLabels.push({ type: spec.type, object: label, el, marker: null, lastOpacity: -1 })
+  }
+
+  for (const extra of extraHabitatSpawners ?? []) {
+    if (!spawnerSiteOk(extra.x, extra.z)) continue
+    const spawner: PreySpawner = {
+      x: extra.x,
+      z: extra.z,
+      type: extra.type,
+      kind: extra.kind,
+      respawnIntervalDays: extra.respawnIntervalDays,
+      maxPreyCount: extra.maxPreyCount,
+      id: extra.id,
+      daysSinceLastRespawn: 0,
+      state: 'active',
+      deathsThisCycle: 0,
+      disabledAtDay: null,
+      ...defaultSpawnPointScenarioFields(extra.type),
+    }
+    restoreSpawnPointState(spawner, initialSpawnerState?.get(spawner.id))
+    spawners.push(spawner)
+    spawnerById.set(spawner.id, spawner)
+    const groundY = sampleHeight(extra.x, extra.z)
+    const facing = Math.atan2(extra.x - settlementCenter.x, extra.z - settlementCenter.z)
+    const mouth = createCaveMouth(1, random())
+    mouth.position.set(extra.x, groundY, extra.z)
+    mouth.rotation.y = facing
+    scene.add(mouth)
+    spawnerMeshes.push(mouth)
+    spawnerMeshById.set(spawner.id, mouth)
+    if (spawner.state === 'active') {
+      for (let i = 0; i < extra.maxPreyCount; i++) {
+        const spot = findWalkableNear(extra.x, extra.z, 0, 4) ?? { x: extra.x, z: extra.z }
+        const agent = spawnAgent(extra.kind, spot.x, spot.z, undefined, undefined, undefined, spawner.id)
+        scene.add(agent.mesh)
+        agents.push(agent)
+      }
+    }
+    const el = document.createElement('div')
+    el.className = 'npc-label'
+    el.textContent = SPAWNER_LABELS[extra.type]
+    const label = new CSS2DObject(el)
+    label.position.set(extra.x, groundY + CAVE_LABEL_HEIGHT, extra.z)
+    scene.add(label)
+    spawnerLabels.push({ type: extra.type, object: label, el, marker: null, lastOpacity: -1 })
   }
   } finally {
     bootMarkEnd('habitatSpawners')

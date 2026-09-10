@@ -31,6 +31,7 @@ const LANDMARK_FLAVOR_LINES: Record<LandmarkKind, readonly string[]> = {
   monolith: ['Stary głaz, porośnięty mchem. Ktoś ustawił go tu dawno temu.'],
   stoneCircle: ['Krąg kamieni ułożony z jakimś zamysłem — trudno dziś powiedzieć, jakim.'],
   smallRuins: ['Fragment starego muru, resztki fundamentów. Nikt tu dawno nie mieszkał.'],
+  ruins: ['Większe ruiny, porośnięte mchem. Ktoś tu kiedyś mieszkał — dawno temu.'],
   cemetery: ['Ciche miejsce. Kilka nagrobków, zarośniętych chwastami.'],
 }
 

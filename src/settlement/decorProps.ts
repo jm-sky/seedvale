@@ -500,6 +500,73 @@ export function createSmallRuins(scale = 1, variant = 0.5, terrain?: TerrainPlac
   return group
 }
 
+/** Larger expedition ruin layout (plan quests-progression-009) — semantically
+ *  distinct from procedural `smallRuins`: a readable corner of a bigger
+ *  structure with a partial second wall run and more rubble. */
+export function createExpeditionRuins(scale = 1, variant = 0.5, terrain?: TerrainPlacementContext): THREE.Group {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x857f73, flatShading: true, roughness: 1 })
+  const baseY = terrain ? terrain.sampleHeight(terrain.worldX, terrain.worldZ) : 0
+  const size = 5.4 * scale
+
+  const foundation = new THREE.Mesh(new THREE.BoxGeometry(size * 1.05, 0.18 * scale, size * 1.05), mat)
+  foundation.position.y = 0.09 * scale
+  if (terrain) foundation.rotation.y = terrain.rotationY
+  foundation.receiveShadow = true
+  group.add(foundation)
+
+  const addWall = (
+    localX: number,
+    localZ: number,
+    w: number,
+    h: number,
+    d: number,
+    heightMul: number,
+  ): void => {
+    const wallHeight = h * heightMul * scale
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w * scale, wallHeight, d * scale), mat)
+    wall.position.set(localX, wallHeight / 2, localZ)
+    if (terrain) {
+      const { x: rx, z: rz } = rotateOffsetY(localX, localZ, terrain.rotationY)
+      const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX + rx, terrain.worldZ + rz, RUINS_TILT_STEP)
+      wall.position.set(rx, sample.height - baseY + wallHeight / 2, rz)
+      wall.rotation.y = terrain.rotationY
+      applyTerrainTilt(wall, sample.normal, RUINS_MAX_TILT_RAD)
+    }
+    wall.castShadow = true
+    wall.receiveShadow = true
+    group.add(wall)
+  }
+
+  const wallH = 1.35 + variant * 0.85
+  addWall(0, -size / 2 + 0.2 * scale, size, wallH, 0.32, 1)
+  addWall(-size / 2 + 0.2 * scale, 0, 0.32, wallH, size * 0.72, 0.55 + variant * 0.25)
+  addWall(size / 2 - 0.2 * scale, size * 0.15, 0.28, wallH * 0.65, size * 0.45, 0.4 + variant * 0.2)
+
+  const rubbleCount = 4 + Math.floor(variant * 4)
+  for (let i = 0; i < rubbleCount; i++) {
+    const a = variant * Math.PI * 2 + i * 1.37
+    const r = size * 0.28 + ((variant * (i + 3)) % 1) * size * 0.32
+    const rubble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28 * scale, 0), mat)
+    const localX = Math.cos(a) * r
+    const localZ = Math.sin(a) * r
+    if (terrain) {
+      const { x: rx, z: rz } = rotateOffsetY(localX, localZ, terrain.rotationY)
+      const sample = sampleLocalTerrain(terrain.sampleHeight, terrain.worldX + rx, terrain.worldZ + rz, RUINS_TILT_STEP)
+      rubble.position.set(rx, sample.height - baseY + 0.12 * scale, rz)
+      rubble.rotation.set(a, a * 1.1, 0)
+      applyTerrainTilt(rubble, sample.normal, RUINS_MAX_TILT_RAD)
+    } else {
+      rubble.position.set(localX, 0.12 * scale, localZ)
+      rubble.rotation.set(a, a * 1.1, 0)
+    }
+    rubble.castShadow = true
+    group.add(rubble)
+  }
+
+  return group
+}
+
 /** Single headstone fallback (plans/2026-08-09--049) — used when the Jarlan
  *  Perez `grave_a.glb` fails to load, and as extra stones around the cemetery
  *  plot. Origin at feet. */

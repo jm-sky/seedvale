@@ -598,6 +598,27 @@ Generated from exported TypeScript symbols.
 - `createLargeCaveVisual` — function — line 13
 - `placeLargeCaveVisual` — function — line 63
 
+## `world/locations/darkForestTreasureSite.ts`
+
+- `DARK_FOREST_TREASURE_CHEST_COINS` — const — line 207
+- `DARK_FOREST_TREASURE_LANDMARK_ID` — const — line 18
+- `DARK_FOREST_TREASURE_LOCATION_ID` — const — line 16
+- `DARK_FOREST_TREASURE_SITE_KEY` — const — line 14
+- `darkForestTreasureChestId` — function — line 20
+- `DarkForestTreasureSite` — type — line 28
+- `DarkForestTreasureSiteInput` — type — line 44
+- `darkForestTreasureWolfDenId` — function — line 24
+- `isDarkForestTreasureChestLooted` — function — line 209
+- `resolveDarkForestTreasureSite` — function — line 144
+  - domain: quests-progression
+- `ruinsDiscoveryRadius` — function — line 229
+- `siteChunkContainsPoint` — function — line 215
+
+## `world/locations/darkForestTreasureSiteRuntime.ts`
+
+- `getActiveDarkForestTreasureSite` — function — line 11
+- `setActiveDarkForestTreasureSite` — function — line 7
+
 ## `world/locations/locationConfig.ts`
 
 - `CEMETERY_SEARCH_CHUNK_RADIUS` — const — line 45
@@ -643,10 +664,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/locationProximityDiscovery.ts`
 
-- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 7
-- `createLocationProximityDiscovery` — function — line 47
-- `LocationProximityDiscovery` — type — line 41
-- `revealCaveEntrancesInRange` — function — line 18
+- `CAVE_ENTRANCE_DISCOVERY_RADIUS` — const — line 9
+- `createLocationProximityDiscovery` — function — line 49
+- `LocationProximityDiscovery` — type — line 43
+- `revealCaveEntrancesInRange` — function — line 20
 
 ## `world/locations/locationsCoarseCache.ts`
 
@@ -672,6 +693,12 @@ Generated from exported TypeScript symbols.
 - `setActiveNavigationTargets` — function — line 90
 - `SetTargetResult` — type — line 12
 
+## `world/locations/revealLocationKnowledge.ts`
+
+- `revealLocationKnowledge` — function — line 17
+  - domain: world
+- `RevealLocationKnowledgeResult` — type — line 5
+
 ## `world/locations/seedProfile.ts`
 
 - `generateSeedName` — function — line 82
@@ -680,15 +707,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/locations/worldLocationCatalog.ts`
 
-- `createWorldLocationCatalog` — function — line 166
-- `LocationScanDiagnostics` — type — line 63
-- `settlementLocationId` — function — line 557
-- `WorldLocationCatalog` — type — line 97
+- `createWorldLocationCatalog` — function — line 168
+- `LocationScanDiagnostics` — type — line 65
+- `settlementLocationId` — function — line 572
+- `WorldLocationCatalog` — type — line 99
 - `WorldLocationCatalogDeps` — type — line 23
 
 ## `world/locations/worldLocationNames.ts`
 
-- `landmarkName` — function — line 67
+- `landmarkName` — function — line 74
 
 ## `world/locations/worldLocationTypes.ts`
 
@@ -1441,3 +1468,12 @@ Generated from exported TypeScript symbols.
 
 - `createWorldContext` — function — line 39
 - `WorldContext` — type — line 17
+
+## `world/worldGeneratedContainers.ts`
+
+- `createWorldGeneratedContainers` — function — line 80
+  - domain: world
+- `SaveWorldGeneratedContainer` — type — line 10
+- `WorldGeneratedContainerEntry` — type — line 20
+- `WorldGeneratedContainers` — type — line 30
+- `WorldGeneratedContainerSpec` — type — line 65

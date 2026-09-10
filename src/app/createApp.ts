@@ -40,7 +40,7 @@ import { shouldGrantQuestSword } from '../items/guardSword'
 import { createHeldTool } from '../items/HeldTool'
 import { DEFAULT_MAX_SIZE, Inventory, toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { hasItemCapability } from '../items/itemCatalog'
+import { hasItemCapability, ITEM_CATALOG } from '../items/itemCatalog'
 import { isWeaponMaintenanceKind } from '../items/itemInstances'
 import { ITEM_DEFS, type ItemKind } from '../items/items'
 import { migrateLegacyWaterskinsToInstances } from '../items/liquidContainer'
@@ -78,7 +78,7 @@ import { restorePersistedSkills, toggleSneak } from '../player/PlayerSkills'
 import { createPlayerTorch } from '../player/PlayerTorch'
 import { createTargetedSkillSelection } from '../player/targetedSkillSelection'
 import { QuestManager } from '../quests/QuestManager'
-import { buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
+import { buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
@@ -117,7 +117,9 @@ import { createLocationKnowledge, setActiveLocationKnowledge } from '../world/lo
 import { createLocationProximityDiscovery } from '../world/locations/locationProximityDiscovery'
 import { createCoarseCachePersistence, locationsCoarseFingerprint } from '../world/locations/locationsCoarseCache'
 import { createNavigationTargets, setActiveNavigationTargets } from '../world/locations/navigationTargets'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { createWorldLocationCatalog } from '../world/locations/worldLocationCatalog'
+import { isDarkForestTreasureChestLooted } from '../world/locations/darkForestTreasureSite'
 import { createMapData, setActiveMapData } from '../world/map/mapData'
 import { createMapDiscovery } from '../world/map/mapDiscovery'
 import { createMapProjection, rawSampleParamsFromWorld } from '../world/map/mapProjection'
@@ -488,6 +490,7 @@ export async function createApp(
     (initialSave?.placedTraps ?? []).map((t) => ({ ...t, baitKind: t.baitKind ?? null })),
     initialSave?.graves ?? [],
     initialSave?.placedContainers ?? [],
+    initialSave?.worldGeneratedContainers ?? [],
     initialSave?.carriedContainer ?? null,
     initialSave?.playerWells ?? [],
     treeLifecycle,
@@ -591,6 +594,10 @@ export async function createApp(
     getChunkSize: () => config.terrain.chunkSize,
     hydrateTile: (tx, tz) => coarseCachePersistence.hydrateTile(tx, tz),
     onTileDirty: (tx, tz, tile) => coarseCachePersistence.onTileDirty(tx, tz, tile),
+    getDarkForestTreasureSite: () => {
+      const site = getActiveDarkForestTreasureSite()
+      return site ? { locationId: site.locationId, x: site.x, z: site.z } : null
+    },
   })
   coarseCachePersistence.activate(config.seed, locationsCoarseFingerprint(rawSampleParamsFromWorld(config)))
   const locationKnowledge = createLocationKnowledge(initialSave?.map.discoveredLocations)
@@ -823,6 +830,7 @@ export async function createApp(
   const worldFlags = {
     guardSwordGifted: initialSave?.worldFlags?.guardSwordGifted ?? false,
     hiddenTreasureFound: initialSave?.worldFlags?.hiddenTreasureFound ?? false,
+    treasureMapDarkForestRead: initialSave?.worldFlags?.treasureMapDarkForestRead ?? false,
   }
 
   const grantItem = (kind: ItemKind, count: number): void => {
@@ -879,6 +887,7 @@ export async function createApp(
   const questDefs = [
     ...QUESTS,
     ...landmarkQuests,
+    buildDarkForestTreasureQuest(),
     buildHorseAcquisitionQuest(merchantHorseId),
   ].map((def) => ({ ...def, settlementId: homeSettlementId }))
 
@@ -941,6 +950,13 @@ export async function createApp(
     }) === 'available',
     {
       isPermanentlyDestroyed: (spawnerId) => bundle.fauna.isQuestSpawnPointPermanentlyDestroyed(spawnerId),
+    },
+    {
+      hasReadItem: (itemKind) => itemKind === 'treasure_map_dark_forest' && worldFlags.treasureMapDarkForestRead,
+      hasDiscoveredLocation: (locationId) => locationKnowledge.has(locationId),
+      isWorldContainerLooted: (containerId) => isDarkForestTreasureChestLooted(
+        bundle.worldGeneratedContainers.containerCounts(containerId),
+      ),
     },
   )
 
@@ -1006,6 +1022,7 @@ export async function createApp(
     refreshInventoryScreen: () => refreshInventoryScreen(),
     locationCatalog: worldLocationCatalog,
     locationKnowledge,
+    navigationTargets,
     dayNight,
   })
   vueUi.configurePrimaryWeaponShortcuts({
@@ -1057,9 +1074,13 @@ export async function createApp(
     onSpawnPointDestroyed: () => {
       questManager.pollDestroySpawnPointObjectives()
     },
+    onWorldContainerWithdraw: () => {
+      questManager.pollWorldProgressionObjectives()
+    },
   }
 
   questManager.pollDestroySpawnPointObjectives()
+  questManager.pollWorldProgressionObjectives()
 
   // Riding (plan fauna-003) — livestock has a deterministic per-house
   // `animalId` (`settlement/livestock.ts`), so a saved `mountedAnimalId`
@@ -1281,6 +1302,7 @@ export async function createApp(
         playerTorch.extinguish()
         worldFlags.guardSwordGifted = false
         worldFlags.hiddenTreasureFound = false
+        worldFlags.treasureMapDarkForestRead = false
         ground.resetTreasureProgress()
         resolvedHiddenFindSpotIds.clear()
         badges.reset()
@@ -1465,7 +1487,10 @@ export async function createApp(
     onEquip: inventoryWiring.equipTool,
     onUnequip: inventoryWiring.unequipTool,
     onConsume: (kind) => survival.consumeItem(kind),
-    onRead: inventoryWiring.readBookItem,
+    onRead: (kind) => {
+      if (ITEM_CATALOG[kind].treasureMap) inventoryWiring.readTreasureMapItem(kind)
+      else inventoryWiring.readBookItem(kind)
+    },
     onSellInstances: inventoryWiring.sellInventoryInstances,
     onSharpen: inventoryWiring.sharpenInventoryWeapon,
     onSetPrimaryMelee: inventoryWiring.setPrimaryMeleeWeapon,

@@ -2,6 +2,8 @@ import type { ChunkCoord } from './chunkGrid'
 import type { VegetationPlacement } from './chunkVegetation'
 import { distanceToSegment } from '../math/segment'
 import { cemeteryGraveLayout, type CemeterySize } from '../settlement/props'
+import { siteChunkContainsPoint } from '../world/locations/darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { createSeededRandom } from '../world/parseSeed'
 import { biomeWeightsAt, forestDensityAt } from './biomeRegions'
 import { resolveCemeteriesForChunk } from './cemeteryPlacement'
@@ -21,6 +23,7 @@ export type EnvironmentKind =
   | 'monolith'
   | 'stoneCircle'
   | 'smallRuins'
+  | 'ruins'
   | 'cemetery'
 
 export type EnvironmentPlacement = {
@@ -101,7 +104,7 @@ export type LandmarkBiasKind = 'monolith' | 'stoneCircle' | 'smallRuins'
 
 /** The four `EnvironmentKind`s that carry a stable `EnvironmentPlacement.id`
  *  (plan 110) — the only ones a landmark quest can target (plan 132). */
-export type LandmarkKind = 'monolith' | 'stoneCircle' | 'smallRuins' | 'cemetery'
+export type LandmarkKind = 'monolith' | 'stoneCircle' | 'smallRuins' | 'ruins' | 'cemetery'
 
 /** Display label for interaction prompts/dialogue speaker names (plan 132) —
  *  same role as `ANIMAL_LABELS`/`SPAWNER_LABELS` for their own domains. */
@@ -109,6 +112,7 @@ export const LANDMARK_LABELS: Record<LandmarkKind, string> = {
   monolith: 'Monolit',
   stoneCircle: 'Krąg kamieni',
   smallRuins: 'Ruiny',
+  ruins: 'Ruiny',
   cemetery: 'Cmentarz',
 }
 
@@ -503,6 +507,34 @@ export function computeChunkEnvironment(
     roadTintAt: (wx: number, wz: number) => sample(tile.roadTint, wx, wz),
   }
   placements.push(...resolveCemeteriesForChunk(coord, params, cemeteryTerrain))
+
+  const authored = params.authoredExpeditionRuins ?? (() => {
+    const site = getActiveDarkForestTreasureSite()
+    if (!site) return null
+    return {
+      id: site.landmarkId,
+      x: site.x,
+      z: site.z,
+      rotationY: site.rotationY,
+      variant: site.variant,
+      scale: site.scale,
+    }
+  })()
+  if (
+    authored
+    && siteChunkContainsPoint(coord, chunkSize, authored.x, authored.z)
+    && !placements.some((p) => p.id === authored.id)
+  ) {
+    placements.push({
+      x: authored.x,
+      z: authored.z,
+      kind: 'ruins',
+      scale: authored.scale,
+      rotationY: authored.rotationY,
+      variant: authored.variant,
+      id: authored.id,
+    })
+  }
 
   return placements
 }

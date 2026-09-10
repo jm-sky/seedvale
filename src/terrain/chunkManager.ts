@@ -30,6 +30,7 @@ import {
   createReed,
   createRockCluster,
   createSeaweed,
+  createExpeditionRuins,
   createSmallRuins,
   createStoneCircle,
   createTree,
@@ -47,6 +48,8 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
+import { siteChunkContainsPoint } from '../world/locations/darkForestTreasureSite'
 import { cellFromId } from '../settlement/settlementGenerator'
 import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
@@ -207,6 +210,7 @@ const ENVIRONMENT_COLLISION_RADIUS: Record<EnvironmentKind, number> = {
   monolith: 0.4,
   stoneCircle: 0,
   smallRuins: 0,
+  ruins: 0,
   cemetery: 0,
 }
 
@@ -276,6 +280,13 @@ export function resolveUnloadedLandmark(
     const placement = resolveCemeteryPlacement(coord, params, createLocalTerrainSampler(coord, params))
     return placement?.id ? { id: placement.id, x: placement.x, z: placement.z } : undefined
   }
+  if (kind === 'ruins') {
+    const authored = params.authoredExpeditionRuins
+    if (authored && siteChunkContainsPoint(coord, params.chunkSize, authored.x, authored.z)) {
+      return { id: authored.id, x: authored.x, z: authored.z }
+    }
+    return undefined
+  }
   const environment = computeChunkEnvironment(coord, computeChunkTile(params), params, [])
   const found = environment.find((p) => p.kind === kind && p.id)
   return found?.id ? { id: found.id, x: found.x, z: found.z } : undefined
@@ -304,6 +315,8 @@ function createProceduralEnvironmentProp(
       return createRockCluster(scale, variant)
     case 'smallRuins':
       return createSmallRuins(scale, variant)
+    case 'ruins':
+      return createExpeditionRuins(scale, variant)
     case 'stoneCircle':
       return createStoneCircle(scale, variant)
   }
@@ -397,6 +410,15 @@ export type ChunkManagerConfig = {
   /** Quality-profile grass filler-coverage knob (plan world-terrain-005,
    *  0..1). Live — see `ChunkManager.setGrassFillerCoverage`. */
   grassFillerCoverage: number
+  /** Authored expedition ruins placement (plan quests-progression-009). */
+  authoredExpeditionRuins?: {
+    id: string
+    x: number
+    z: number
+    rotationY: number
+    variant: number
+    scale: number
+  } | null
 }
 
 type ChunkState = 'generating' | 'ready'
@@ -1132,6 +1154,18 @@ export function createChunkManager(
       regional: village.regional,
       riverSegments,
       cemeterySettlements,
+      authoredExpeditionRuins: config.authoredExpeditionRuins ?? (() => {
+        const site = getActiveDarkForestTreasureSite()
+        if (!site) return null
+        return {
+          id: site.landmarkId,
+          x: site.x,
+          z: site.z,
+          rotationY: site.rotationY,
+          variant: site.variant,
+          scale: site.scale,
+        }
+      })(),
     }
   }
 
@@ -1898,7 +1932,7 @@ export function createChunkManager(
         placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
         return prop
       }
-      if (placement.kind === 'monolith' || placement.kind === 'smallRuins') {
+      if (placement.kind === 'monolith' || placement.kind === 'smallRuins' || placement.kind === 'ruins') {
         const terrain = {
           worldX: placement.x,
           worldZ: placement.z,
@@ -1908,7 +1942,9 @@ export function createChunkManager(
         const prop =
           placement.kind === 'monolith'
             ? createMonolith(placement.scale, placement.variant, terrain)
-            : createSmallRuins(placement.scale, placement.variant, terrain)
+            : placement.kind === 'ruins'
+              ? createExpeditionRuins(placement.scale, placement.variant, terrain)
+              : createSmallRuins(placement.scale, placement.variant, terrain)
         placeOnGround(prop, placement.x, placement.z, sampleTileHeight)
         return prop
       }

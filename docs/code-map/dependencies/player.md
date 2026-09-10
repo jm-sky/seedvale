@@ -125,6 +125,7 @@ Generated from TypeScript imports.
 - `world/groundFog.ts`
 - `world/npcGraves.ts`
 - `world/worldContext.ts`
+- `world/worldGeneratedContainers.ts`
 
 ## `player/PlayerNeeds.test.ts`
 

@@ -18,6 +18,8 @@ import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { DayNightState } from '../world/dayNight'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
+import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
+import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
 import { aboutAreaLine, requestAssistanceLine } from '../ai/dialogueTemplates'
@@ -27,7 +29,7 @@ import { expandFoodBatchesToUnits } from '../items/foodItems'
 import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
+import { ITEM_CATALOG, isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
 import { inventoryOwnsPrimaryWeaponChoice } from '../items/primaryWeapons'
@@ -89,6 +91,8 @@ export type InventoryWiring = {
    *  `ITEM_CATALOG[kind].book` + `player.skills`, then resyncs the Skills
    *  screen state and shows the outcome via the existing toast pipeline. */
   readBookItem: (kind: ItemKind) => void
+  /** "Odczytaj" on a treasure-map item (plan quests-progression-009). */
+  readTreasureMapItem: (kind: ItemKind) => void
   /** Drops the whole carried stack of `kind` back into the world. */
   dropItemStack: (kind: ItemKind) => void
   equipTool: (kind: ItemKind) => void
@@ -115,7 +119,7 @@ export type InventoryWiringDeps = {
   reputationManager: ReputationManager
   /** Persisted one-shot world flags (`SaveData.worldFlags`) — the guard's
    *  sword gift is the only consumer today. Mutated in place. */
-  worldFlags: { guardSwordGifted: boolean }
+  worldFlags: { guardSwordGifted: boolean, treasureMapDarkForestRead: boolean }
   playOnce: ReturnType<typeof createWorldAudio>['playOnce']
   /** Adds an acquired item (creating an `ItemInstance` when the kind needs
    *  one) and re-syncs HUD/held tool — owned by `createApp.ts` because quest
@@ -129,13 +133,15 @@ export type InventoryWiringDeps = {
    *  purchases both reveal into the same player-wide `LocationKnowledge`. */
   locationCatalog: WorldLocationCatalog
   locationKnowledge: LocationKnowledge
+  navigationTargets: NavigationTargets
   dayNight: DayNightState
 }
 
 export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWiring {
   const {
     bundle, player, inventory, heldTool, primaryWeapons, playerTorch, hud, toast, vueUi,
-    questManager, reputationManager, worldFlags, playOnce, grantItem, locationCatalog, locationKnowledge, dayNight,
+    questManager, reputationManager, worldFlags, playOnce, grantItem,
+    locationCatalog, locationKnowledge, navigationTargets, dayNight,
   } = deps
 
   let activeMerchantPricing: MerchantPricing | null = null
@@ -222,6 +228,26 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
    *  change. Inventory stays open (no `close()` call, unlike `onPlaceTrap`/
    *  `onPlaceContainer`), so this pushes its own resyncs instead of waiting
    *  for the next gated `gameLoop.ts` frame. */
+  const readTreasureMapItem = (kind: ItemKind): void => {
+    const map = ITEM_CATALOG[kind].treasureMap
+    if (!map) return
+    const result = revealLocationKnowledge(
+      map.locationId,
+      locationCatalog,
+      locationKnowledge,
+      navigationTargets,
+      { setNavigation: true },
+    )
+    if (kind === 'treasure_map_dark_forest') worldFlags.treasureMapDarkForestRead = true
+    questManager.onReadItem(kind)
+    questManager.pollWorldProgressionObjectives()
+    const name = result.locationName ?? 'ruiny'
+    toast.show(
+      result.newlyDiscovered ? `Odkryto: ${name}` : `Cel nawigacji: ${name}`,
+      'pickup',
+    )
+  }
+
   const readBookItem = (kind: ItemKind): void => {
     const result = readBook(player.skills, kind)
     if (result.outcome === 'not_a_book' || !result.skill) return
@@ -516,6 +542,7 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     sellInventoryInstances,
     sharpenInventoryWeapon,
     readBookItem,
+    readTreasureMapItem,
     dropItemStack,
     equipTool,
     unequipTool,

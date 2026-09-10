@@ -17,7 +17,7 @@ Generated from exported TypeScript symbols.
 - `QuestDialogOverride` — type — line 43
 - `QuestItemGrant` — type — line 89
 - `QuestListEntry` — type — line 58
-- `QuestManager` — class — line 214
+- `QuestManager` — class — line 228
   - domain: quests-progression
   - system: quest-manager
   - role: Owns quest progress, objective/stage evaluation and NPC relation levels.
@@ -26,34 +26,36 @@ Generated from exported TypeScript symbols.
 - `QuestManagerInitial` — type — line 78
 - `QuestPromisedReward` — type — line 54
 - `QuestSocialAvailabilityLookup` — type — line 138
+- `QuestWorldProgressLookup` — type — line 165
 - `SettlementRatInfestationLookup` — type — line 145
 - `SpawnPointDestructionLookup` — type — line 155
 
 ## `quests/quests.ts`
 
-- `buildHorseAcquisitionQuest` — function — line 1057
-- `buildLandmarkQuests` — function — line 964
-- `LandmarkResolver` — type — line 953
-- `QUEST_STATES` — const — line 197
-- `QuestAvailability` — type — line 59
-- `QuestConsequences` — type — line 172
-- `QuestDef` — type — line 310
-- `QuestDefinitionValidationError` — class — line 75
-- `QuestObjective` — type — line 217
-- `QuestOutcome` — type — line 180
-- `QuestOutcomeId` — type — line 161
-- `QuestPrerequisite` — type — line 51
-- `QuestProgressEntry` — type — line 190
-- `QuestReward` — type — line 165
-- `QUESTS` — const — line 342
-- `QuestStage` — type — line 293
-- `QuestState` — type — line 8
-- `RELATION_LEVEL_THRESHOLDS` — const — line 31
-- `RelationLevel` — type — line 27
-- `relationLevelMeetsMinimum` — function — line 66
-- `relationToLevel` — function — line 41
-- `uniqueOutcomeForState` — function — line 209
-- `validateQuestDefinitions` — function — line 81
+- `buildDarkForestTreasureQuest` — function — line 1072
+- `buildHorseAcquisitionQuest` — function — line 1117
+- `buildLandmarkQuests` — function — line 978
+- `LandmarkResolver` — type — line 967
+- `QUEST_STATES` — const — line 201
+- `QuestAvailability` — type — line 63
+- `QuestConsequences` — type — line 176
+- `QuestDef` — type — line 324
+- `QuestDefinitionValidationError` — class — line 79
+- `QuestObjective` — type — line 221
+- `QuestOutcome` — type — line 184
+- `QuestOutcomeId` — type — line 165
+- `QuestPrerequisite` — type — line 55
+- `QuestProgressEntry` — type — line 194
+- `QuestReward` — type — line 169
+- `QUESTS` — const — line 356
+- `QuestStage` — type — line 307
+- `QuestState` — type — line 12
+- `RELATION_LEVEL_THRESHOLDS` — const — line 35
+- `RelationLevel` — type — line 31
+- `relationLevelMeetsMinimum` — function — line 70
+- `relationToLevel` — function — line 45
+- `uniqueOutcomeForState` — function — line 213
+- `validateQuestDefinitions` — function — line 85
 
 ## `quests/settlementRatInfestation.ts`
 

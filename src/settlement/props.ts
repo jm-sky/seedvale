@@ -318,6 +318,7 @@ export {
   createRockCluster,
   createSeaweed,
   createSmallRuins,
+  createExpeditionRuins,
   createStoneCircle,
   createThicket,
   createTree,

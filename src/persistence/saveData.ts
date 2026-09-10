@@ -37,6 +37,7 @@ import { PALISADE_REQUIRED_WORK } from '../world/palisade'
 import { PLAYER_TROUGH_CAPACITY_LITRES, PLAYER_TROUGH_REQUIRED_WORK } from '../world/playerTrough'
 import { WELL_STAGE_WORK_HOURS } from '../world/playerWell'
 import { STANDING_TORCH_REQUIRED_WORK } from '../world/standingTorch'
+import type { SaveWorldGeneratedContainer } from '../world/worldGeneratedContainers'
 
 /** Same shape as `StoredConfig` in `config/persistConfig.ts` — kept independent
  *  here so this module doesn't reach into config internals. */
@@ -124,6 +125,8 @@ export type SaveWorldFlags = {
    *  second reward chest from spawning after all 3 flower markers are dug
    *  again post-reload. */
   hiddenTreasureFound?: boolean
+  /** Plan quests-progression-009 — treasure map was read at least once. */
+  treasureMapDarkForestRead?: boolean
 }
 
 /** Player knowledge of a concrete `WorldLocation` (plan world-012 §3/§20) —
@@ -639,6 +642,8 @@ export type SaveData = {
    *  are intentionally distinct. */
   harvestedCropIds: string[]
   placedContainers: SavePlacedContainer[]
+  /** Plan quests-progression-009 — world-authored chests (not player-placed). */
+  worldGeneratedContainers?: SaveWorldGeneratedContainer[]
   carriedContainer: SaveCarriedContainer | null
   playerWells: SavePlayerWell[]
   terrainPreparations: SaveTerrainPreparation[]
@@ -818,6 +823,7 @@ function isWorldFlagsField(value: unknown): value is SaveWorldFlags {
   const flags = value as Record<string, unknown>
   if (flags.guardSwordGifted !== undefined && typeof flags.guardSwordGifted !== 'boolean') return false
   if (flags.hiddenTreasureFound !== undefined && typeof flags.hiddenTreasureFound !== 'boolean') return false
+  if (flags.treasureMapDarkForestRead !== undefined && typeof flags.treasureMapDarkForestRead !== 'boolean') return false
   return true
 }
 
@@ -1123,6 +1129,23 @@ function isPlacedContainersField(value: unknown): value is SavePlacedContainer[]
     return (
       typeof c.id === 'string' &&
       typeof c.kind === 'string' && CONTAINER_KINDS.has(c.kind) &&
+      typeof c.x === 'number' &&
+      typeof c.z === 'number' &&
+      typeof c.yaw === 'number' &&
+      !!c.counts && typeof c.counts === 'object' &&
+      isSaveItemInstancesField(c.instances) &&
+      isOptionalFoodBatchesField(c.foodBatches)
+    )
+  })
+}
+
+function isWorldGeneratedContainersField(value: unknown): value is SaveWorldGeneratedContainer[] {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const c = entry as Record<string, unknown>
+    return (
+      typeof c.id === 'string' &&
       typeof c.x === 'number' &&
       typeof c.z === 'number' &&
       typeof c.yaw === 'number' &&
@@ -1857,6 +1880,7 @@ export function isSaveData(value: unknown): value is SaveData {
   if (!isFishingBaitField(v.fishingBait)) return false
   if (!isHarvestedCropIdsField(v.harvestedCropIds)) return false
   if (!isPlacedContainersField(v.placedContainers)) return false
+  if (v.worldGeneratedContainers !== undefined && !isWorldGeneratedContainersField(v.worldGeneratedContainers)) return false
   if (!isCarriedContainerField(v.carriedContainer)) return false
   if (!isPlayerWellsField(v.playerWells)) return false
   if (!isTerrainPreparationsField(v.terrainPreparations)) return false

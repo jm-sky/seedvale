@@ -1,4 +1,4 @@
-export type WorldLocationKind = 'settlement' | 'cave' | 'cemetery' | 'lake' | 'mountainPeak'
+export type WorldLocationKind = 'settlement' | 'cave' | 'cemetery' | 'lake' | 'mountainPeak' | 'ruins'
 
 /**
  * A concrete, named place in the world (plan world-012) — pure world data,
@@ -26,7 +26,7 @@ export type WorldLocation = {
 
 export type DiscoveryRange = 'near' | 'medium' | 'far'
 
-const WORLD_LOCATION_KINDS: readonly WorldLocationKind[] = ['settlement', 'cave', 'cemetery', 'lake', 'mountainPeak']
+const WORLD_LOCATION_KINDS: readonly WorldLocationKind[] = ['settlement', 'cave', 'cemetery', 'lake', 'mountainPeak', 'ruins']
 
 /**
  * Reads the `WorldLocationKind` encoded in a `WorldLocation.id`'s

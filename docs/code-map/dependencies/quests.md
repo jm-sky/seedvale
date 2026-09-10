@@ -56,6 +56,7 @@ Generated from TypeScript imports.
 - `items/items.ts`
 - `reputation/ReputationManager.ts`
 - `terrain/chunkEnvironment.ts`
+- `world/locations/darkForestTreasureSite.ts`
 
 **Imported by**
 

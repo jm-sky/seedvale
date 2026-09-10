@@ -66,6 +66,8 @@ export type PlayerActionContext = {
   getWorldSeed: () => number
   /** Habitat permanently destroyed (`[E] Zniszcz` on a depleted den, etc.). */
   onSpawnPointDestroyed?: () => void
+  /** World-authored container withdraw (plan quests-progression-009). */
+  onWorldContainerWithdraw?: (containerId: string, kind: ItemKind, amount: number) => void
 }
 
 /** The standard "another blocking activity is already running" guard: a busy

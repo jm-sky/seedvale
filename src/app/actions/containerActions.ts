@@ -60,6 +60,12 @@ export function createContainerActions(
    *  act on this session so the Vue screen stays inventory-agnostic. */
   let openTransfer: { kind: 'container', id: string } | { kind: 'npcCorpse', npc: NpcAgent } | null = null
 
+  const containerContents = (id: string) => {
+    if (bundle.placedContainers.find(id)) return bundle.placedContainers
+    if (bundle.worldGeneratedContainers.find(id)) return bundle.worldGeneratedContainers
+    return null
+  }
+
   /** Shared placement contract for a container (plan `world-008`) — one
    *  `aim` + `evaluate` pair `previewContainerPlacement`, `placeContainerAtAim`
    *  and `putDownContainerAtAim` all build from, so the three can never
@@ -139,11 +145,13 @@ export function createContainerActions(
 
   const openContainer = (id: string): void => {
     if (isActionBlocked(ctx)) return
-    const entry = bundle.placedContainers.find(id)
+    const placed = bundle.placedContainers.find(id)
+    const world = placed ? undefined : bundle.worldGeneratedContainers.find(id)
+    const entry = placed ?? world
     if (!entry) return
     exitGamePointerLock(rendererElement)
     openTransfer = { kind: 'container', id }
-    const def = CONTAINER_DEFS[entry.kind]
+    const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest
     vueUi.openContainerScreen(
       def.label,
       entry.contents.toJSON(),
@@ -158,9 +166,11 @@ export function createContainerActions(
   }
 
   const refreshContainerScreenFor = (id: string): void => {
-    const entry = bundle.placedContainers.find(id)
+    const placed = bundle.placedContainers.find(id)
+    const world = placed ? undefined : bundle.worldGeneratedContainers.find(id)
+    const entry = placed ?? world
     if (!entry || !vueUi.isContainerScreenOpen()) return
-    const def = CONTAINER_DEFS[entry.kind]
+    const def = placed ? CONTAINER_DEFS[placed.kind] : CONTAINER_DEFS.chest
     vueUi.refreshContainerScreen(
       entry.contents.toJSON(),
       buildInventoryGroups(entry.contents, ctx.dayNight.elapsedDays),
@@ -212,6 +222,7 @@ export function createContainerActions(
 
   const pickUpContainer = (id: string): void => {
     if (isActionBlocked(ctx)) return
+    if (bundle.worldGeneratedContainers.find(id)) return
     if (!bundle.placedContainers.pickUp(id)) return
     if (openTransfer?.kind === 'container' && openTransfer.id === id) {
       vueUi.closeContainerScreen()
@@ -231,7 +242,9 @@ export function createContainerActions(
       const nowDays = ctx.dayNight.elapsedDays
       const batches = inventory.removeWithFreshness(kind, amount, nowDays)
       if (!batches) return
-      const accepted = bundle.placedContainers.deposit(openTransfer.id, kind, amount, nowDays, batches)
+      const store = containerContents(openTransfer.id)
+      if (!store) return
+      const accepted = store.deposit(openTransfer.id, kind, amount, nowDays, batches)
       if (accepted <= 0) {
         inventory.addWithFreshness(kind, amount, batches, nowDays)
         toast.show('Brak miejsca w skrzyni.', 'error')
@@ -259,11 +272,14 @@ export function createContainerActions(
         return
       }
       const nowDays = ctx.dayNight.elapsedDays
-      const withdrawn = bundle.placedContainers.withdraw(openTransfer.id, kind, amount, nowDays)
+      const store = containerContents(openTransfer.id)
+      if (!store) return
+      const withdrawn = store.withdraw(openTransfer.id, kind, amount, nowDays)
       if (withdrawn.amount <= 0) return
       inventory.addWithFreshness(kind, withdrawn.amount, withdrawn.batches, nowDays)
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
+      ctx.onWorldContainerWithdraw?.(openTransfer.id, kind, withdrawn.amount)
       refreshContainerScreenFor(openTransfer.id)
     },
     onDepositInstance: (instanceId) => {
@@ -274,7 +290,9 @@ export function createContainerActions(
       }
       const instance = inventory.getInstance(instanceId)
       if (!instance) return
-      if (!bundle.placedContainers.depositInstance(openTransfer.id, instance)) {
+      const store = containerContents(openTransfer.id)
+      if (!store) return
+      if (!store.depositInstance(openTransfer.id, instance)) {
         toast.show('Brak miejsca w skrzyni.', 'error')
         return
       }
@@ -302,17 +320,20 @@ export function createContainerActions(
         refreshNpcCorpseScreen(openTransfer.npc)
         return
       }
-      const instance = bundle.placedContainers.find(openTransfer.id)?.contents.getInstance(instanceId)
-      if (!instance) return
+      const store = containerContents(openTransfer.id)
+      const entry = store?.find(openTransfer.id)
+      const instance = entry?.contents.getInstance(instanceId)
+      if (!instance || !store) return
       if (!inventory.canAddInstance(instance)) {
         toast.show(inventoryFullToastText(inventory, instance.kind, 1), 'error')
         return
       }
-      const withdrawn = bundle.placedContainers.withdrawInstance(openTransfer.id, instanceId)
+      const withdrawn = store.withdrawInstance(openTransfer.id, instanceId)
       if (!withdrawn) return
       if (!inventory.addInstance(withdrawn)) return
       hud.setInventoryWeight(inventory.totalWeight(), inventory.maxWeight)
       ctx.onInventoryChanged()
+      ctx.onWorldContainerWithdraw?.(openTransfer.id, withdrawn.kind, 1)
       refreshContainerScreenFor(openTransfer.id)
     },
   })

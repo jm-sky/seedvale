@@ -93,25 +93,25 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkEnvironment.ts`
 
-- `CEMETERY_CLEARING_PAD` — const — line 96
-- `CEMETERY_INNER_FRAC` — const — line 94
-- `CEMETERY_OUTER_FRAC` — const — line 95
-- `cemeteryFitsVillageFringe` — function — line 163
-- `cemeteryFootprintClearsRoads` — function — line 224
-- `CemeteryTerrainSampler` — type — line 284
-- `computeChunkEnvironment` — function — line 300
-- `deriveLandmarkId` — function — line 265
-- `EnvironmentKind` — type — line 16
-- `EnvironmentPlacement` — type — line 26
-- `LANDMARK_BIAS_MAX` — const — line 98
-- `LANDMARK_BIAS_MIN` — const — line 97
-- `LANDMARK_LABELS` — const — line 108
-- `LandmarkBiasInput` — type — line 115
-- `LandmarkBiasKind` — type — line 100
-- `landmarkChanceBias` — function — line 136
-- `LandmarkKind` — type — line 104
-- `rollCemeterySize` — function — line 242
-- `VillageDisk` — type — line 124
+- `CEMETERY_CLEARING_PAD` — const — line 99
+- `CEMETERY_INNER_FRAC` — const — line 97
+- `CEMETERY_OUTER_FRAC` — const — line 98
+- `cemeteryFitsVillageFringe` — function — line 167
+- `cemeteryFootprintClearsRoads` — function — line 228
+- `CemeteryTerrainSampler` — type — line 288
+- `computeChunkEnvironment` — function — line 304
+- `deriveLandmarkId` — function — line 269
+- `EnvironmentKind` — type — line 18
+- `EnvironmentPlacement` — type — line 29
+- `LANDMARK_BIAS_MAX` — const — line 101
+- `LANDMARK_BIAS_MIN` — const — line 100
+- `LANDMARK_LABELS` — const — line 111
+- `LandmarkBiasInput` — type — line 119
+- `LandmarkBiasKind` — type — line 103
+- `landmarkChanceBias` — function — line 140
+- `LandmarkKind` — type — line 107
+- `rollCemeterySize` — function — line 246
+- `VillageDisk` — type — line 128
 
 ## `terrain/chunkGrid.ts`
 
@@ -128,30 +128,30 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkHeightmap.ts`
 
-- `apronGridWeights` — function — line 667
-- `ApronGridWeights` — type — line 658
-- `apronOriginWorld` — function — line 638
-- `ChunkTileData` — type — line 322
+- `apronGridWeights` — function — line 679
+- `ApronGridWeights` — type — line 670
+- `apronOriginWorld` — function — line 650
+- `ChunkTileData` — type — line 334
 - `ChunkTileParams` — type — line 237
 - `ClearingSegment` — type — line 169
-- `computeChunkTile` — function — line 1088
-- `createLocalTerrainSampler` — function — line 1163
+- `computeChunkTile` — function — line 1100
+- `createLocalTerrainSampler` — function — line 1175
   - domain: world-terrain
-- `extractCoreGrid` — function — line 722
-- `RawSampleParams` — type — line 307
+- `extractCoreGrid` — function — line 734
+- `RawSampleParams` — type — line 318
 - `RegionalSmoothingSegment` — type — line 229
 - `RegionParams` — type — line 20
 - `RiverChannelSegment` — type — line 205
 - `RoadCorridorSegment` — type — line 151
 - `RoadNetworkParams` — type — line 88
-- `sampleApronGrid` — function — line 705
-- `sampleApronGridWeighted` — function — line 690
-- `sampleBiomeAt` — function — line 609
-- `sampleContinentalnessAt` — function — line 613
-- `sampleFloorAt` — function — line 605
-- `sampleHeightAt` — function — line 601
-- `sampleMoistureRegionAt` — function — line 621
-- `sampleMountainRidgeAt` — function — line 629
+- `sampleApronGrid` — function — line 717
+- `sampleApronGridWeighted` — function — line 702
+- `sampleBiomeAt` — function — line 621
+- `sampleContinentalnessAt` — function — line 625
+- `sampleFloorAt` — function — line 617
+- `sampleHeightAt` — function — line 613
+- `sampleMoistureRegionAt` — function — line 633
+- `sampleMountainRidgeAt` — function — line 641
 - `VegetationKind` — type — line 18
 - `VillageClearingParams` — type — line 69
 
@@ -169,26 +169,26 @@ Generated from exported TypeScript symbols.
 
 ## `terrain/chunkManager.ts`
 
-- `applyChunkWaterDayNight` — function — line 882
-- `applyModificationToTile` — function — line 739
-- `ChunkManager` — type — line 464
-- `ChunkManagerConfig` — type — line 312
-- `createChunkManager` — function — line 907
+- `applyChunkWaterDayNight` — function — line 904
+- `applyModificationToTile` — function — line 761
+- `ChunkManager` — type — line 486
+- `ChunkManagerConfig` — type — line 325
+- `createChunkManager` — function — line 929
   - domain: world-terrain
   - system: chunk-manager
   - role: Owns terrain chunk streaming, sampling and environment-facing world queries.
   - simulation: on-demand
   - performance: nearby-only
-- `CropHarvestOutcome` — type — line 896
-- `drainByBudget` — function — line 857
-- `FinalizeStage` — type — line 404
-- `pickNearestQueuedKey` — function — line 817
-- `pickNextFinalizeKey` — function — line 835
-- `resolveUnloadedLandmark` — function — line 270
+- `CropHarvestOutcome` — type — line 918
+- `drainByBudget` — function — line 879
+- `FinalizeStage` — type — line 426
+- `pickNearestQueuedKey` — function — line 839
+- `pickNextFinalizeKey` — function — line 857
+- `resolveUnloadedLandmark` — function — line 274
   - domain: world-terrain
-- `ringChunkOffsets` — function — line 230
-- `TerrainModification` — type — line 696
-- `tickChunkWaterSurfaces` — function — line 870
+- `ringChunkOffsets` — function — line 234
+- `TerrainModification` — type — line 718
+- `tickChunkWaterSurfaces` — function — line 892
 
 ## `terrain/chunkMeshCache.ts`
 

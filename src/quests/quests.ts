@@ -4,6 +4,10 @@ import type { ItemKind } from '../items/items'
 import type { ReputationDimension } from '../reputation/ReputationManager'
 import type { LandmarkKind } from '../terrain/chunkEnvironment'
 import { WOLF_DEN_ID } from '../fauna/AnimalSpawner'
+import {
+  DARK_FOREST_TREASURE_LOCATION_ID,
+  darkForestTreasureChestId,
+} from '../world/locations/darkForestTreasureSite'
 
 export type QuestState =
   | 'active'
@@ -289,6 +293,16 @@ export type QuestObjective =
    *  the real spawn point is `disabled` with no recovery (`canRecover === false`).
    *  `spawnerId` may be a stable logical id such as `WOLF_DEN_ID`. */
   | { type: 'destroy_spawn_point', spawnerId: string }
+  /** Physical item read action (plan quests-progression-009) — cleared when the
+   *  player uses the item's inventory action while this stage is active, or
+   *  on restore when the persisted read flag is already set. */
+  | { type: 'read_item', itemKind: ItemKind }
+  /** Player knowledge includes the location (plan quests-progression-009) —
+   *  satisfied by proximity discovery, map reveal, or other knowledge seams. */
+  | { type: 'discover_location', locationId: string }
+  /** Authored treasure payload removed from a world-generated container (plan
+   *  quests-progression-009) — not satisfied by merely opening the UI. */
+  | { type: 'loot_world_container', containerId: string }
 
 export type QuestStage = {
   objective: QuestObjective
@@ -1054,6 +1068,52 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): QuestDef[] {
 /** Merchant horse reward quest (plan quests-progression-012) — bound to one
  *  concrete `animalId` resolved at composition root. Omitted when the home
  *  settlement has no merchant horse acquisition target this session. */
+/** Deep-forest ruins treasure map quest (plan quests-progression-009). */
+export function buildDarkForestTreasureQuest(): QuestDef {
+  return {
+    id: 'mapa-do-skarbu',
+    title: 'Mapa do skarbu',
+    description: 'Piotr słyszał o starych ruinach głęboko w ciemnym lesie i o skarbie, który tam spoczywa.',
+    giverName: 'Piotr',
+    offerLine:
+      'Podobno w ciemnym lesie są stare ruiny, a w nich skarb. Jeśli znajdziesz mapę i dotrzesz tam żywy, opowiem o tym więcej.',
+    stages: [
+      {
+        objective: { type: 'read_item', itemKind: 'treasure_map_dark_forest' },
+        description: 'Znajdź mapę do skarbu i odczytaj ją.',
+        reminderLine: 'Bez mapy nie wiesz, gdzie szukać ruin.',
+        progressLine: 'Ruiny są zaznaczone — teraz trzeba tam dotrzeć.',
+      },
+      {
+        objective: { type: 'discover_location', locationId: DARK_FOREST_TREASURE_LOCATION_ID },
+        description: 'Dotrzyj do ruin w ciemnym lesie.',
+        reminderLine: 'Ruiny wciąż czekają głęboko w lesie.',
+        progressLine: 'Ruiny są na miejscu. Została skrzynia.',
+      },
+      {
+        objective: { type: 'loot_world_container', containerId: darkForestTreasureChestId() },
+        description: 'Zabierz skarb ze skrzyni w ruinach.',
+        reminderLine: 'Skrzynia w ruinach wciąż może coś kryć.',
+        progressLine: 'Masz skarb. Wróć do Piotra.',
+      },
+    ],
+    reportLine: 'Wiedziałem, że tam coś jest. Dzięki, że to sprawdziłeś.',
+    outcomes: [
+      {
+        id: 'reported',
+        state: 'complete',
+        consequences: {
+          relations: [{ npcName: 'Piotr', delta: 2 }],
+          social: { reputation: { competence: 6, courage: 8 }, renown: 6 },
+        },
+      },
+    ],
+    availability: {
+      prerequisites: [{ type: 'relation', npcName: 'Piotr', minimum: 'acquainted' }],
+    },
+  }
+}
+
 export function buildHorseAcquisitionQuest(horseRewardAnimalId: string): QuestDef {
   return {
     id: 'wilki-u-kupca',

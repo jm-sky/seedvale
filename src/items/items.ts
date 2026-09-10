@@ -58,6 +58,8 @@ export type ItemKind =
   | 'cheese'
   | 'dried_meat'
   | 'coin'
+  | 'ruby'
+  | 'treasure_map_dark_forest'
   | 'herb'
   | 'bandage'
   | 'damascus_knife'
@@ -670,6 +672,24 @@ export const ITEM_DEFS: Record<ItemKind, ItemDef> = {
     size: 'XXS',
     color: 0xc9a227,
     description: 'Bity krążek metalu. Kupiec płaci nim za towar i przyjmuje go za zakupy — także za działki na sprzedaż.'
+  },
+  ruby: {
+    kind: 'ruby',
+    label: 'rubin',
+    categories: ['resource'],
+    weight: 0.02,
+    size: 'XXS',
+    color: 0xb02040,
+    description: 'Czerwony kamień szlachetny — rzadki i ceniony przez handlarzy.',
+  },
+  treasure_map_dark_forest: {
+    kind: 'treasure_map_dark_forest',
+    label: 'mapa do skarbu',
+    categories: ['utility'],
+    weight: 0.05,
+    size: 'XS',
+    color: 0xc4a574,
+    description: 'Zużyta mapa prowadząca do ukrytych ruin głęboko w ciemnym lesie.',
   },
   herb: {
     kind: 'herb',
@@ -1697,6 +1717,15 @@ function buildProceduralItemMesh(kind: ItemKind): THREE.Object3D {
     )
     mesh.rotation.x = Math.PI / 2
     mesh.position.y = 0.02
+    mesh.castShadow = true
+    return mesh
+  }
+  if (kind === 'ruby') {
+    const mesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.09, 0),
+      new THREE.MeshStandardMaterial({ color: ITEM_DEFS.ruby.color, flatShading: true, metalness: 0.2 }),
+    )
+    mesh.position.y = 0.06
     mesh.castShadow = true
     return mesh
   }

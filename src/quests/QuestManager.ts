@@ -160,6 +160,20 @@ const NO_SPAWN_POINT_DESTRUCTION: SpawnPointDestructionLookup = {
   isPermanentlyDestroyed: () => false,
 }
 
+/** Read-only world-state seam for map/discovery/loot objectives (plan
+ *  quests-progression-009). */
+export type QuestWorldProgressLookup = {
+  hasReadItem: (itemKind: ItemKind) => boolean
+  hasDiscoveredLocation: (locationId: string) => boolean
+  isWorldContainerLooted: (containerId: string) => boolean
+}
+
+const NO_WORLD_PROGRESS: QuestWorldProgressLookup = {
+  hasReadItem: () => false,
+  hasDiscoveredLocation: () => false,
+  isWorldContainerLooted: () => false,
+}
+
 const NO_SOCIAL_AVAILABILITY: QuestSocialAvailabilityLookup = {
   getReputationDimension: () => 0,
   getRenown: () => 0,
@@ -227,6 +241,7 @@ export class QuestManager {
   private readonly socialAvailability: QuestSocialAvailabilityLookup
   private readonly settlementRatInfestation: SettlementRatInfestationLookup
   private readonly spawnPointDestruction: SpawnPointDestructionLookup
+  private readonly worldProgress: QuestWorldProgressLookup
   private readonly transferAnimalOwnership: QuestAnimalOwnershipTransfer
   private readonly canReserveHorseReward: HorseRewardAvailability
   /** Set whenever quest state changes; consumers (gameLoop's marker refresh)
@@ -249,6 +264,7 @@ export class QuestManager {
     transferAnimalOwnership: QuestAnimalOwnershipTransfer = () => false,
     canReserveHorseReward: HorseRewardAvailability = () => false,
     spawnPointDestruction: SpawnPointDestructionLookup = NO_SPAWN_POINT_DESTRUCTION,
+    worldProgress: QuestWorldProgressLookup = NO_WORLD_PROGRESS,
   ) {
     validateQuestDefinitions(defs)
     this.defs = defs
@@ -261,6 +277,7 @@ export class QuestManager {
     this.socialAvailability = socialAvailability
     this.settlementRatInfestation = settlementRatInfestation
     this.spawnPointDestruction = spawnPointDestruction
+    this.worldProgress = worldProgress
     this.transferAnimalOwnership = transferAnimalOwnership
     this.canReserveHorseReward = canReserveHorseReward
     for (const def of defs) this.states.set(def.id, { state: 'not_offered', stageIndex: 0 })
@@ -289,6 +306,10 @@ export class QuestManager {
         this.states.set(entry.id, runtimeProgress(restored))
       }
       for (const [name, value] of Object.entries(initial.relations)) this.relations.set(name, value)
+      for (const def of this.defs) {
+        const s = this.stateOf(def.id)
+        if (s.state === 'active') this.catchUpActiveWorldObjectives(def, s)
+      }
     }
   }
 
@@ -491,6 +512,51 @@ export class QuestManager {
     }
   }
 
+  /** Polls live knowledge/container state for active world-progression
+   *  objectives (plan quests-progression-009). */
+  pollWorldProgressionObjectives(): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      this.catchUpActiveWorldObjectives(def, s)
+    }
+  }
+
+  /** Inventory "Odczytaj" on a treasure-map item (plan quests-progression-009). */
+  onReadItem(itemKind: ItemKind): void {
+    for (const def of this.defs) {
+      const s = this.stateOf(def.id)
+      if (s.state !== 'active') continue
+      const stage = this.currentStage(def, s.stageIndex)
+      if (stage?.objective.type !== 'read_item' || stage.objective.itemKind !== itemKind) continue
+      this.advanceStage(def, s)
+      this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
+    }
+  }
+
+  private isWorldObjectiveSatisfied(objective: QuestObjective): boolean {
+    switch (objective.type) {
+      case 'read_item':
+        return this.worldProgress.hasReadItem(objective.itemKind)
+      case 'discover_location':
+        return this.worldProgress.hasDiscoveredLocation(objective.locationId)
+      case 'loot_world_container':
+        return this.worldProgress.isWorldContainerLooted(objective.containerId)
+      default:
+        return false
+    }
+  }
+
+  private catchUpActiveWorldObjectives(def: QuestDef, s: QuestRuntimeProgress): void {
+    let current = s
+    while (current.state === 'active') {
+      const stage = this.currentStage(def, current.stageIndex)
+      if (!stage || !this.isWorldObjectiveSatisfied(stage.objective)) break
+      this.advanceStage(def, current)
+      current = this.stateOf(def.id)
+    }
+  }
+
   private handleStorageRatInfestationGiver(
     def: QuestDef,
     s: QuestRuntimeProgress,
@@ -650,6 +716,7 @@ export class QuestManager {
             if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
             this.setQuestState(def.id, { state: 'active', stageIndex: 0 })
             this.bindAnimalTargetIfNeeded(def, 0)
+            this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
           },
           onDecline: () => this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 }),
         },

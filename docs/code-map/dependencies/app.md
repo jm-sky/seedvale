@@ -749,6 +749,8 @@ Generated from TypeScript imports.
 - `world/fishing.ts`
 - `world/grassForage.ts`
 - `world/groundFog.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/locations/darkForestTreasureSiteRuntime.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/locations/locationProximityDiscovery.ts`
 - `world/locations/locationsCoarseCache.ts`
@@ -1035,6 +1037,7 @@ Generated from TypeScript imports.
 - `world/residentialBuilding.ts`
 - `world/standingTorch.ts`
 - `world/treeLifecycle.ts`
+- `world/worldGeneratedContainers.ts`
 
 **Imported by**
 
@@ -1084,6 +1087,8 @@ Generated from TypeScript imports.
 - `world/locations/locationConfig.ts`
 - `world/locations/locationDiscovery.ts`
 - `world/locations/locationKnowledge.ts`
+- `world/locations/navigationTargets.ts`
+- `world/locations/revealLocationKnowledge.ts`
 - `world/locations/worldLocationCatalog.ts`
 
 **Imported by**
@@ -1249,6 +1254,7 @@ Generated from TypeScript imports.
 - `settlement/npcState.ts`
 - `settlement/roadNetwork.ts`
 - `settlement/settlementGenerator.ts`
+- `settlement/settlementPlanCache.ts`
 - `settlement/settlementStructures.ts`
 - `shared/bootMark.ts`
 - `terrain/chunkGrid.ts`
@@ -1281,6 +1287,9 @@ Generated from TypeScript imports.
 - `world/foodSources.ts`
 - `world/grassForage.ts`
 - `world/helperDeliveryHooks.ts`
+- `world/locations/darkForestTreasureSite.ts`
+- `world/locations/darkForestTreasureSiteRuntime.ts`
+- `world/map/mapProjection.ts`
 - `world/npcGraves.ts`
 - `world/palisade.ts`
 - `world/plantedTrees.ts`
@@ -1299,6 +1308,7 @@ Generated from TypeScript imports.
 - `world/waterMirror.ts`
 - `world/workContract.ts`
 - `world/worldContext.ts`
+- `world/worldGeneratedContainers.ts`
 
 **Imported by**
 
