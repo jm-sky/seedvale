@@ -261,8 +261,9 @@ Generated from exported TypeScript symbols.
 
 ## `player/worldWaterEligibility.ts`
 
-- `MAX_SWIM_DEPTH` — const — line 16
+- `MAX_SWIM_DEPTH` — const — line 18
   - domain: items-player
-- `swimFeetY` — function — line 32
-- `worldWaterAppliesInCurrentSpace` — function — line 26
-- `WorldWaterOccupancy` — type — line 18
+- `swimFeetY` — function — line 50
+- `worldWaterAppliesInCurrentSpace` — function — line 43
+- `WorldWaterEligibilityInput` — type — line 24
+- `WorldWaterOccupancy` — type — line 20
