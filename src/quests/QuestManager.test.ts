@@ -2156,3 +2156,203 @@ describe('QuestManager world-driven settlement sources', () => {
     expect(qm.list()[0]?.id).toBe(sourceQuest.id)
   })
 })
+
+describe('QuestManager playtest reachability (plan quests-progression-018)', () => {
+  const STAG_LIE = 'Tak, widziałem jelenia.'
+  const STAG_HONEST = 'Nie widziałem jelenia.'
+  const BOAR_TALK = 'Marek mówi, że przy szlaku kręci się duży dzik. Wiesz, gdzie go szukać?'
+  const boarLookup = (renown: number): QuestSocialAvailabilityLookup => ({
+    getReputationDimension: () => 0,
+    getRenown: () => renown,
+  })
+
+  function labels(dialog: QuestDialogOverride | null): string[] {
+    return dialog?.actions?.map((action) => action.label) ?? []
+  }
+
+  function selectLabel(dialog: QuestDialogOverride | null, label: string): string | undefined {
+    return dialog?.actions?.find((action) => action.label === label)?.onSelect()
+  }
+
+  function startScoutAtStag(qm: QuestManager): void {
+    acceptOffer(qm, 'Piotr')
+    qm.onInteractObjective(CAVE_REF)
+  }
+
+  it('spot_animal stag still advances zwiadowca to stones without talking to Piotr', () => {
+    const qm = new QuestManager([homeQuest('zwiadowca')], undefined, new Inventory())
+    startScoutAtStag(qm)
+    expect(qm.onInteractObjective({ type: 'spot_animal', kind: 'stag' })?.line).toContain('Jeleń zerwał się')
+    expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(2)
+    expect(labels(qm.onInteract('Piotr'))).not.toContain(STAG_LIE)
+    expect(qm.onInteract('Piotr')?.line).toBe('Masz już kamienie z gór?')
+  })
+
+  it('shows lie and honest replies while the stag stage is unresolved', () => {
+    const qm = new QuestManager([homeQuest('zwiadowca')], undefined, new Inventory())
+    startScoutAtStag(qm)
+    const dialog = qm.onInteract('Piotr')
+    expect(dialog?.line).toBe('Widziałeś już jelenia?')
+    expect(labels(dialog)).toEqual([STAG_LIE, STAG_HONEST])
+    expect(qm.getState('zwiadowca')).toBe('active')
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(1)
+  })
+
+  it('the lie advances only the stag stage and applies integrity once', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = new QuestManager(
+      [homeQuest('zwiadowca')],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      (consequence) => consequences.push(consequence),
+    )
+    startScoutAtStag(qm)
+    const dialog = qm.onInteract('Piotr')
+    expect(selectLabel(dialog, STAG_LIE)).toBe('Skoro tak. Zostały kamienie z gór — przynieś dwa.')
+    expect(qm.getState('zwiadowca')).toBe('active')
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(2)
+    expect(qm.exportProgress()[0]?.resolvedOutcomeId).toBeUndefined()
+    expect(consequences).toEqual([{ settlementId: 'home', reputation: { integrity: -2 } }])
+    expect(selectLabel(dialog, STAG_HONEST)).toBe('Masz już kamienie z gór?')
+    expect(consequences).toHaveLength(1)
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(2)
+  })
+
+  it('the honest reply advances only the stag stage without an integrity penalty', () => {
+    const consequences: SocialConsequence[] = []
+    const qm = new QuestManager(
+      [homeQuest('zwiadowca')],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      (consequence) => consequences.push(consequence),
+    )
+    startScoutAtStag(qm)
+    const dialog = qm.onInteract('Piotr')
+    expect(selectLabel(dialog, STAG_HONEST)).toBe(
+      'Trudno. Przynieś przynajmniej dwa kamienie z gór, żebym wiedział, że tam byłeś.',
+    )
+    expect(qm.getState('zwiadowca')).toBe('active')
+    expect(qm.exportProgress()[0]?.stageIndex).toBe(2)
+    expect(consequences).toEqual([])
+  })
+
+  it('does not let Piotr\'s giver reminder hide dzik-przy-szlaku talk_to_npc', () => {
+    const qm = new QuestManager(
+      [homeQuest('zwiadowca'), homeQuest('dzik-przy-szlaku')],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'boar-1',
+      undefined,
+      undefined,
+      boarLookup(10),
+    )
+    acceptOffer(qm, 'Piotr')
+    acceptOffer(qm, 'Marek')
+    expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(0)
+    const dialog = qm.onInteract('Piotr')
+    expect(labels(dialog)).toEqual([BOAR_TALK])
+    expect(selectLabel(dialog, BOAR_TALK)).toContain('Przy szlaku w lesie')
+    expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
+    expect(qm.getState('zwiadowca')).toBe('active')
+    expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(0)
+  })
+
+  it('shows concurrent Piotr actions deterministically and selecting one does not fire the other', () => {
+    const qm = new QuestManager(
+      [homeQuest('zwiadowca'), homeQuest('dzik-przy-szlaku')],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'boar-1',
+      undefined,
+      undefined,
+      boarLookup(10),
+    )
+    startScoutAtStag(qm)
+    acceptOffer(qm, 'Marek')
+    const dialog = qm.onInteract('Piotr')
+    expect(labels(dialog)).toEqual([STAG_LIE, STAG_HONEST, BOAR_TALK])
+    expect(selectLabel(dialog, BOAR_TALK)).toContain('Przy szlaku w lesie')
+    expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(1)
+    expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
+    expect(selectLabel(dialog, STAG_LIE)).toBe('Skoro tak. Zostały kamienie z gór — przynieś dwa.')
+    expect(qm.exportProgress().find((entry) => entry.id === 'zwiadowca')?.stageIndex).toBe(2)
+    expect(qm.exportProgress().find((entry) => entry.id === 'dzik-przy-szlaku')?.stageIndex).toBe(1)
+    expect(qm.getState('zwiadowca')).toBe('active')
+  })
+
+  it('labelMarker prefers a required talk target over giver in-progress', () => {
+    const qm = new QuestManager(
+      [homeQuest('zwiadowca'), homeQuest('dzik-przy-szlaku')],
+      undefined,
+      new Inventory(),
+      undefined,
+      undefined,
+      () => 'boar-1',
+      undefined,
+      undefined,
+      boarLookup(10),
+    )
+    acceptOffer(qm, 'Piotr')
+    acceptOffer(qm, 'Marek')
+    expect(qm.labelMarker('Piotr')).toBe('?')
+    expect(qm.labelMarker('Marek')).toBe('…')
+  })
+
+  it('marks Piotr as a talk target while zwiadowca stage dialogue actions are available', () => {
+    const qm = new QuestManager([homeQuest('zwiadowca')], undefined, new Inventory())
+    startScoutAtStag(qm)
+    expect(qm.labelMarker('Piotr')).toBe('?')
+  })
+
+  it('keeps offer, report, talk choice, and completed fallback working', () => {
+    const offerQm = makeManager([simpleQuest])
+    expect(offerQm.onInteract('Anna')?.offer).toBeDefined()
+    expect(offerQm.getState('simple')).toBe('offered')
+
+    const reportQm = makeManager([simpleQuest])
+    acceptOffer(reportQm, 'Anna')
+    reportQm.onInteractObjective({ type: 'interact_well' })
+    const report = reportQm.onInteract('Anna')
+    expect(report?.actions).toHaveLength(1)
+    expect(selectAction(report)).toBe('report')
+    expect(reportQm.getState('simple')).toBe('complete')
+    expect(reportQm.onInteract('Anna')).toEqual({ line: 'report' })
+
+    const choiceQm = new QuestManager([homeQuest('zaginiona-przesylka')], undefined, new Inventory())
+    acceptOffer(choiceQm, 'Kasia')
+    choiceQm.onInteractObjective(CAVE_REF)
+    expect(choiceQm.onInteract('Kasia')?.actions?.[0]?.label).toBe('Znalazłem przesyłkę. Proszę, jest twoja.')
+    expect(choiceQm.getState('zaginiona-przesylka')).toBe('active')
+  })
+
+  it('turns in ziola-dla-anny herbs from inventory without a quest-specific purchase path', () => {
+    const granted: Array<{ kind: string, count: number }> = []
+    const inventory = new Inventory()
+    inventory.add('herb', 3)
+    const qm = new QuestManager(
+      [homeQuest('ziola-dla-anny')],
+      undefined,
+      inventory,
+      undefined,
+      (kind, count) => granted.push({ kind, count }),
+    )
+    acceptOffer(qm, 'Anna')
+    expect(qm.onInteract('Anna')?.actions?.[0]?.label).toBe('Tak. Zebrałem trzy zioła — proszę.')
+    expect(selectAction(qm.onInteract('Anna'))).toBe('Dziękuję, dokładnie tyle mi trzeba.')
+    expect(inventory.count('herb')).toBe(0)
+    expect(granted).toEqual([{ kind: 'coin', count: 8 }])
+    expect(qm.getState('ziola-dla-anny')).toBe('complete')
+  })
+})

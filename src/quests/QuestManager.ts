@@ -9,6 +9,7 @@ import { genderForName } from '../ai/NpcAgent'
 import { NPC_QUEST_COMPLETE_SOUND_URLS } from '../ai/npcVoiceLines'
 import { LIVESTOCK_KINDS } from '../settlement/livestock'
 import {
+  type QuestConsequences,
   type QuestDef,
   type QuestObjective,
   type QuestOutcome,
@@ -33,10 +34,10 @@ import {
 
 /** `labelMarker`'s glyphs (plan 153) — distinct per state, not color-only,
  *  so a floating NPC label reads correctly even without the CSS color that
- *  usually accompanies it. `TALK_TARGET` is a separate case (a non-giver NPC
- *  named by an active `talk_to_npc` objective, or any NPC named by an active
- *  `talk_to_npc_choice`) from the giver's own 3 states. Matching is by
- *  stable NPC id, not display name. */
+ *  usually accompanies it. `TALK_TARGET` is a required dialogue target: an
+ *  active `talk_to_npc` / `talk_to_npc_choice` NPC, or an NPC named by an
+ *  active stage `dialogueActions` entry. Matching is by stable NPC id, not
+ *  display name. Required dialogue targets outrank giver in-progress. */
 export const QUEST_MARKER_AVAILABLE = '!'
 export const QUEST_MARKER_IN_PROGRESS = '…'
 export const QUEST_MARKER_READY = '✓'
@@ -62,7 +63,8 @@ export type QuestDialogOverride = {
     onAccept: () => void
     onDecline: () => void
   }
-  /** Conscious player speech for report / talk_to_npc / talk_to_npc_choice. */
+  /** Conscious player speech for report / talk_to_npc / talk_to_npc_choice /
+   *  stage dialogue actions / gather hand-in. */
   actions?: readonly QuestDialogAction[]
 }
 
@@ -245,6 +247,20 @@ function matchingTalkChoice(
 ): { npc: { npcId: NpcId }, outcomeId: QuestOutcomeId, playerLine: string, npcLine?: string } | undefined {
   if (objective?.type !== 'talk_to_npc_choice') return undefined
   return objective.choices.find((choice) => choice.npc.npcId === npcId)
+}
+
+function matchingStageDialogueActions(
+  stage: QuestStage | undefined,
+  npcId: NpcId,
+): readonly NonNullable<QuestStage['dialogueActions']>[number][] {
+  return stage?.dialogueActions?.filter((action) => action.npc.npcId === npcId) ?? []
+}
+
+function isRequiredDialogueTarget(stage: QuestStage | undefined, npcId: NpcId): boolean {
+  if (!stage) return false
+  if (matchingTalkChoice(stage.objective, npcId)) return true
+  if (stage.objective.type === 'talk_to_npc' && stage.objective.npc.npcId === npcId) return true
+  return matchingStageDialogueActions(stage, npcId).length > 0
 }
 
 /** Drives multi-stage quests. Kept out of `NpcAgent`/world objects so they stay
@@ -625,20 +641,17 @@ export class QuestManager {
     }
   }
 
-  private handleStorageRatInfestationGiver(
-    def: QuestDef,
-    s: QuestRuntimeProgress,
-    stage: QuestStage,
-  ): QuestDialogOverride | null {
-    if (!def.settlementId) return { line: stage.reminderLine }
+  private maybeAdvanceResolvedStorageRatInfestation(def: QuestDef, s: QuestRuntimeProgress): boolean {
+    if (!def.settlementId) return false
     const snapshot = this.settlementRatInfestation.getSnapshot(def.settlementId)
-    const line = settlementRatInfestationReminderLine(snapshot)
-    if (isSettlementRatInfestationResolved(snapshot)) {
-      this.advanceStage(def, s)
-      const updated = this.stateOf(def.id)
-      if (updated.state === 'ready_to_report') return this.reportOverride(def)
-    }
-    return { line }
+    if (!isSettlementRatInfestationResolved(snapshot)) return false
+    this.advanceStage(def, s)
+    return true
+  }
+
+  private storageRatInfestationReminder(def: QuestDef, stage: QuestStage): string {
+    if (!def.settlementId) return stage.reminderLine
+    return settlementRatInfestationReminderLine(this.settlementRatInfestation.getSnapshot(def.settlementId))
   }
 
   private bumpRelation(npcId: NpcId, amount: number): void {
@@ -731,14 +744,20 @@ export class QuestManager {
     if (outcome.reward?.items) {
       for (const item of outcome.reward.items) this.grantItem(item.kind, item.count)
     }
-    if (outcome.consequences?.relations) {
-      for (const rel of outcome.consequences.relations) this.bumpRelation(rel.npc.npcId, rel.delta)
-    }
-    if (def.settlementId && outcome.consequences?.social) {
-      this.applySocialConsequence({ settlementId: def.settlementId, ...outcome.consequences.social })
-    }
+    this.applyConsequences(def, outcome.consequences)
     if (outcome.state === 'complete') this.playQuestCompleteSound(def.giverName)
     return outcome
+  }
+
+  /** Relation/social deltas only — no reward, sound, or terminal state. */
+  private applyConsequences(def: QuestDef, consequences: QuestConsequences | undefined): void {
+    if (!consequences) return
+    if (consequences.relations) {
+      for (const rel of consequences.relations) this.bumpRelation(rel.npc.npcId, rel.delta)
+    }
+    if (def.settlementId && consequences.social) {
+      this.applySocialConsequence({ settlementId: def.settlementId, ...consequences.social })
+    }
   }
 
   private resolveSuccessfulTurnIn(def: QuestDef): string | null {
@@ -764,40 +783,56 @@ export class QuestManager {
     if (nextState === 'active') this.bindAnimalTargetIfNeeded(def, nextIndex)
   }
 
-  private handleGiverInteract(
-    def: QuestDef,
-    s: QuestRuntimeProgress,
-  ): QuestDialogOverride | null {
+  private handleGiverOffer(def: QuestDef): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
     if (s.state === 'not_offered') {
       if (!this.meetsAvailability(def)) return null
       this.setQuestState(def.id, { state: 'offered', stageIndex: 0 })
     }
-    const current = this.stateOf(def.id)
-    if (current.state === 'offered') {
-      return {
-        line: def.offerLine,
-        offer: {
-          onAccept: () => {
-            if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
-            this.setQuestState(def.id, { state: 'active', stageIndex: 0 })
-            this.bindAnimalTargetIfNeeded(def, 0)
-            this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
-          },
-          onDecline: () => this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 }),
+    if (this.stateOf(def.id).state !== 'offered') return null
+    return {
+      line: def.offerLine,
+      offer: {
+        onAccept: () => {
+          if (def.horseRewardAnimalId && !this.canReserveHorseReward(def.horseRewardAnimalId)) return
+          this.setQuestState(def.id, { state: 'active', stageIndex: 0 })
+          this.bindAnimalTargetIfNeeded(def, 0)
+          this.catchUpActiveWorldObjectives(def, this.stateOf(def.id))
         },
-      }
+        onDecline: () => this.setQuestState(def.id, { state: 'not_offered', stageIndex: 0 }),
+      },
     }
+  }
+
+  private handleGiverReminder(def: QuestDef): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return null
+    const stage = this.currentStage(def, s.stageIndex)
+    if (!stage) return null
+    if (stage.objective.type === 'resolve_storage_rat_infestation') {
+      return { line: this.storageRatInfestationReminder(def, stage) }
+    }
+    return { line: stage.reminderLine }
+  }
+
+  private collectGiverActions(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    if (npcId !== def.giver.npcId) return null
+    const s = this.stateOf(def.id)
     if (s.state === 'active') {
       const stage = this.currentStage(def, s.stageIndex)
       if (!stage) return null
       if (stage.objective.type === 'resolve_storage_rat_infestation') {
-        return this.handleStorageRatInfestationGiver(def, s, stage)
+        if (this.maybeAdvanceResolvedStorageRatInfestation(def, s)) {
+          const updated = this.stateOf(def.id)
+          if (updated.state === 'ready_to_report') return this.reportOverride(def)
+        }
+        return null
       }
       if (stage.objective.type === 'gather_item') {
         const { kind, count } = stage.objective
         const isFinalStage = s.stageIndex >= def.stages.length - 1
-        if (isFinalStage && !uniqueOutcomeForState(def, 'complete')) return { line: stage.reminderLine }
-        if (!this.inventory.has(kind, count)) return { line: stage.reminderLine }
+        if (isFinalStage && !uniqueOutcomeForState(def, 'complete')) return null
+        if (!this.inventory.has(kind, count)) return null
         const stageIndex = s.stageIndex
         return {
           line: stage.reminderLine,
@@ -807,7 +842,7 @@ export class QuestManager {
           }],
         }
       }
-      return { line: stage.reminderLine }
+      return null
     }
     if (s.state === 'ready_to_report') return this.reportOverride(def)
     return null
@@ -816,8 +851,7 @@ export class QuestManager {
   /**
    * Active `talk_to_npc_choice`: talking to a matching NPC presents that
    * choice's player action. Selecting the action resolves through
-   * `applyOutcome`. Must run before giver reminder handling because the
-   * giver may also be a choice target (plan quests-progression-005 / 014).
+   * `applyOutcome`.
    *
    * @domain quests-progression
    */
@@ -847,6 +881,82 @@ export class QuestManager {
         onSelect: () => this.selectSuccessfulTurnIn(def),
       }],
     }
+  }
+
+  private resolveTalkToNpc(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return null
+    const stage = this.currentStage(def, s.stageIndex)
+    if (stage?.objective.type !== 'talk_to_npc' || stage.objective.npc.npcId !== npcId) return null
+    const stageIndex = s.stageIndex
+    const progressLine = stage.progressLine ?? stage.description
+    return {
+      line: DEFAULT_NPC_PROMPT,
+      actions: [{
+        label: stage.playerLine ?? DEFAULT_TALK_PLAYER_LINE,
+        onSelect: () => this.selectTalkToNpc(def, npcId, stageIndex, progressLine),
+      }],
+    }
+  }
+
+  private resolveStageDialogueActions(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const s = this.stateOf(def.id)
+    if (s.state !== 'active') return null
+    const stage = this.currentStage(def, s.stageIndex)
+    const matching = matchingStageDialogueActions(stage, npcId)
+    if (!stage || matching.length === 0) return null
+    const stageIndex = s.stageIndex
+    return {
+      line: stage.reminderLine,
+      actions: matching.map((action) => ({
+        label: action.playerLine,
+        onSelect: () => this.selectStageDialogueAction(
+          def,
+          npcId,
+          stageIndex,
+          stage.dialogueActions?.indexOf(action) ?? -1,
+        ),
+      })),
+    }
+  }
+
+  private selectStageDialogueAction(
+    def: QuestDef,
+    npcId: NpcId,
+    stageIndex: number,
+    actionIndex: number,
+  ): string {
+    const current = this.stateOf(def.id)
+    const stage = this.currentStage(def, current.stageIndex)
+    const action = stage?.dialogueActions?.[actionIndex]
+    const fallback = action?.npcLine ?? stage?.reminderLine ?? def.reportLine
+    if (current.state !== 'active' || current.stageIndex !== stageIndex) return fallback
+    if (!action || action.npc.npcId !== npcId) return fallback
+    this.applyConsequences(def, action.consequences)
+    this.advanceStage(def, current)
+    return action.npcLine
+      ?? this.currentStage(def, this.stateOf(def.id).stageIndex)?.reminderLine
+      ?? fallback
+  }
+
+  /**
+   * Collect explicit quest dialogue actions for `npcId` from one definition.
+   * Does not present offers or informational reminders.
+   */
+  private collectQuestActionsForNpc(def: QuestDef, npcId: NpcId): QuestDialogOverride | null {
+    const actions: QuestDialogAction[] = []
+    let line: string | undefined
+    const push = (override: QuestDialogOverride | null): void => {
+      if (!override?.actions?.length) return
+      line ??= override.line
+      actions.push(...override.actions)
+    }
+    push(this.resolveTalkToNpcChoice(def, npcId))
+    push(this.resolveTalkToNpc(def, npcId))
+    push(this.resolveStageDialogueActions(def, npcId))
+    push(this.collectGiverActions(def, npcId))
+    if (actions.length === 0) return null
+    return { line: line ?? DEFAULT_NPC_PROMPT, actions }
   }
 
   private selectSuccessfulTurnIn(def: QuestDef): string {
@@ -907,41 +1017,38 @@ export class QuestManager {
   /** Quest-driven line/offer for talking to `npcId` right now, or null if
    *  this NPC has nothing quest-related to say (caller falls back to normal
    *  dialogue). Matching is by stable NPC id, not display name.
-   *  `completedFallback` (plan 153) — an already-turned-in
-   *  quest's `reportLine`, used only if nothing else this giver offers
-   *  (a new quest, a reminder, a report) takes priority; a giver of several
-   *  quests must still offer their next quest normally once
-   *  it becomes available, not get stuck repeating an old completion line. */
+   *  Explicit quest actions from every definition are collected first so a
+   *  giver reminder cannot hide another quest's `talk_to_npc` / stage
+   *  dialogue action (plan quests-progression-018). `completedFallback`
+   *  (plan 153) — an already-turned-in quest's `reportLine`, used only if
+   *  nothing else this giver offers (a new quest, a reminder, a report)
+   *  takes priority. */
   onInteract(npcId: NpcId): QuestDialogOverride | null {
+    const actionOverrides: QuestDialogOverride[] = []
     let completedFallback: QuestDialogOverride | null = null
     for (const def of this.defs) {
+      const collected = this.collectQuestActionsForNpc(def, npcId)
+      if (collected) actionOverrides.push(collected)
       const s = this.stateOf(def.id)
-
-      const choiceResult = this.resolveTalkToNpcChoice(def, npcId)
-      if (choiceResult) return choiceResult
-
-      if (npcId === def.giver.npcId) {
-        const result = this.handleGiverInteract(def, s)
-        if (result) return result
-        if (s.state === 'complete' && !completedFallback) {
-          completedFallback = { line: def.reportLine }
-        }
+      if (npcId === def.giver.npcId && s.state === 'complete' && !completedFallback) {
+        completedFallback = { line: def.reportLine }
       }
-
-      if (s.state === 'active' && npcId !== def.giver.npcId) {
-        const stage = this.currentStage(def, s.stageIndex)
-        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npc.npcId === npcId) {
-          const stageIndex = s.stageIndex
-          const progressLine = stage.progressLine ?? stage.description
-          return {
-            line: DEFAULT_NPC_PROMPT,
-            actions: [{
-              label: stage.playerLine ?? DEFAULT_TALK_PLAYER_LINE,
-              onSelect: () => this.selectTalkToNpc(def, npcId, stageIndex, progressLine),
-            }],
-          }
-        }
+    }
+    if (actionOverrides.length > 0) {
+      return {
+        line: actionOverrides[0]!.line,
+        actions: actionOverrides.flatMap((override) => override.actions ?? []),
       }
+    }
+    for (const def of this.defs) {
+      if (npcId !== def.giver.npcId) continue
+      const offer = this.handleGiverOffer(def)
+      if (offer) return offer
+    }
+    for (const def of this.defs) {
+      if (npcId !== def.giver.npcId) continue
+      const reminder = this.handleGiverReminder(def)
+      if (reminder) return reminder
     }
     return completedFallback
   }
@@ -981,20 +1088,18 @@ export class QuestManager {
   labelMarker(npcId: NpcId): string | null {
     for (const def of this.defs) {
       const s = this.stateOf(def.id)
-      if (s.state === 'active') {
-        const stage = this.currentStage(def, s.stageIndex)
-        if (matchingTalkChoice(stage?.objective, npcId)) return QUEST_MARKER_TALK_TARGET
+      if (s.state !== 'active') continue
+      if (isRequiredDialogueTarget(this.currentStage(def, s.stageIndex), npcId)) {
+        return QUEST_MARKER_TALK_TARGET
       }
-      if (npcId === def.giver.npcId) {
-        if (s.state === 'ready_to_report') return QUEST_MARKER_READY
-        if (s.state === 'active') return QUEST_MARKER_IN_PROGRESS
-        if (s.state === 'offered') return QUEST_MARKER_AVAILABLE
-        if (s.state === 'not_offered' && this.meetsAvailability(def)) return QUEST_MARKER_AVAILABLE
-      }
-      if (s.state === 'active') {
-        const stage = this.currentStage(def, s.stageIndex)
-        if (stage?.objective.type === 'talk_to_npc' && stage.objective.npc.npcId === npcId) return QUEST_MARKER_TALK_TARGET
-      }
+    }
+    for (const def of this.defs) {
+      if (npcId !== def.giver.npcId) continue
+      const s = this.stateOf(def.id)
+      if (s.state === 'ready_to_report') return QUEST_MARKER_READY
+      if (s.state === 'active') return QUEST_MARKER_IN_PROGRESS
+      if (s.state === 'offered') return QUEST_MARKER_AVAILABLE
+      if (s.state === 'not_offered' && this.meetsAvailability(def)) return QUEST_MARKER_AVAILABLE
     }
     return null
   }

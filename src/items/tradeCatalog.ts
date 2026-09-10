@@ -7,7 +7,8 @@ import { trapConditionRatio } from './trapItemInstances'
 /**
  * Central merchant price list (plan 090, unit = `coin` since issue 035) —
  * coin cost to buy each stocked item. Also used as that item's `tradeValue`
- * for barter. Not sold: raw materials (stone, branches, ores, forage).
+ * for barter. Not sold: raw materials (stone, branches, ores, forage) except
+ * `herb`, stocked as a reachability fallback (plan quests-progression-018).
  * Shells stay barter-only (`canSell('shell')` is false).
  */
 export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
@@ -40,6 +41,9 @@ export const MERCHANT_PRICES: Readonly<Partial<Record<ItemKind, number>>> = {
   cheese: 8,
   dried_meat: 10,
   bandage: 10,
+  // Plan quests-progression-018 — buyable fallback for `ziola-dla-anny`.
+  // Priced above the quest reward (3×5=15 > 8) so gathering stays better.
+  herb: 5,
   fishing_rod: 18,
   whetstone: 6,
   sewing_kit: 18,
@@ -114,6 +118,7 @@ export const MERCHANT_STOCK: readonly ItemKind[] = [
   'cheese',
   'dried_meat',
   'bandage',
+  'herb',
   'fishing_rod',
   'whetstone',
   'sewing_kit',

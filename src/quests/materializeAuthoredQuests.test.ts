@@ -99,6 +99,36 @@ describe('materializeAuthoredQuestDefs', () => {
       }
     }
   })
+
+  it('binds stage dialogue action npc names and relation consequences to stable ids', () => {
+    const scout: AuthoredQuestDef = {
+      id: 'scout-actions',
+      title: 'Scout',
+      description: 'desc',
+      giverName: 'Piotr',
+      offerLine: 'offer',
+      stages: [{
+        objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+        description: 'spot',
+        reminderLine: 'remind',
+        dialogueActions: [{
+          npcName: 'Piotr',
+          playerLine: 'Tak, widziałem jelenia.',
+          npcLine: 'Skoro tak.',
+          consequences: { relations: [{ npcName: 'Piotr', delta: -1 }] },
+        }],
+      }],
+      reportLine: 'report',
+      outcomes: [{ id: 'reported', state: 'complete' }],
+    }
+    const [def] = materializeAuthoredQuestDefs([scout], descriptors)
+    expect(def?.stages[0]?.dialogueActions).toEqual([{
+      npc: { npcId: 'home:npc:0' },
+      playerLine: 'Tak, widziałem jelenia.',
+      npcLine: 'Skoro tak.',
+      consequences: { relations: [{ npc: { npcId: 'home:npc:0' }, delta: -1 }] },
+    }])
+  })
 })
 
 describe('normalizeLegacyQuestRelations', () => {

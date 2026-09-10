@@ -1,7 +1,7 @@
 # Plan: Quest playtest reachability and dialogue conflicts
 
 **Created:** 2026-09-11
-**Status:** `planned` 📋
+**Status:** `verification needed` 🔍
 **Type:** fix
 **Priority:** high · **Effort:** M
 **Depends on:** ~~quests-progression-005~~, quests-progression-014
@@ -9,6 +9,11 @@
 **Subdomains:** `quests` `relationships`
 **Tags:** `dialogue` `merchant` `reachability` `playtest`
 **Roadmap:** `quests-and-reputation.md`
+**Implemented at:** 2026-09-11 00:46
+
+## Implementation status
+
+Landed 2026-09-11. `herb` is merchant stock at 5 coins. `zwiadowca` keeps real `spot_animal stag` and adds two Piotr stage dialogue actions (lie/honest) that advance only that stage. `QuestManager.onInteract` collects explicit actions across defs before giver reminders; `labelMarker` prefers a required talk target over giver in-progress. Automated tests cover the playtest regressions. Browser verification is still required.
 
 ## Cel
 

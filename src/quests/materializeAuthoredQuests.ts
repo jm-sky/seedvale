@@ -3,9 +3,11 @@ import type { NpcId } from '../settlement/npcState'
 import type {
   AuthoredQuestDef,
   AuthoredQuestObjective,
+  AuthoredQuestStageDialogueAction,
   QuestDef,
   QuestNpcRef,
   QuestObjective,
+  QuestStageDialogueAction,
 } from './quests'
 
 export class AuthoredNpcResolutionError extends Error {}
@@ -56,6 +58,27 @@ function materializeObjective(
   return objective
 }
 
+function materializeDialogueActions(
+  actions: readonly AuthoredQuestStageDialogueAction[] | undefined,
+  resolve: (name: string) => NpcId,
+): readonly QuestStageDialogueAction[] | undefined {
+  if (!actions) return undefined
+  return actions.map((action) => ({
+    npc: questNpcRef(resolve(action.npcName)),
+    playerLine: action.playerLine,
+    npcLine: action.npcLine,
+    consequences: action.consequences
+      ? {
+          ...action.consequences,
+          relations: action.consequences.relations?.map((rel) => ({
+            npc: questNpcRef(resolve(rel.npcName)),
+            delta: rel.delta,
+          })),
+        }
+      : undefined,
+  }))
+}
+
 /**
  * Bind authored NPC names to stable `QuestNpcRef` identities. `giverName`
  * remains presentation data and does not participate in matching.
@@ -74,6 +97,7 @@ export function materializeAuthoredQuestDefs(
       stages: def.stages.map((stage) => ({
         ...stage,
         objective: materializeObjective(stage.objective, resolve),
+        dialogueActions: materializeDialogueActions(stage.dialogueActions, resolve),
       })),
       availability: def.availability
         ? {

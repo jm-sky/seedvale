@@ -773,7 +773,7 @@ export const ITEM_CATALOG: Record<ItemKind, ItemCatalogEntry> = {
     melee: null,
     spawn: 'world_chunk',
     modelUrl: null,
-    notes: 'Plan 153 — world chunk collectible (same flora pool as mushroom/flower, `terrain/chunkItems.ts`). Small, free healing source.',
+    notes: 'Plan 153 — world chunk collectible (same flora pool as mushroom/flower, `terrain/chunkItems.ts`). Small, free healing source. Plan quests-progression-018 — also merchant stock at 5 coins as a reachability fallback for `ziola-dla-anny`; gathering remains cheaper than buying.',
     consumable: { need: 'health', relief: 8 },
     conditionTreatment: { kind: 'poisoning', severityReduction: 20 },
   },

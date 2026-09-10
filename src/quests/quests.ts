@@ -92,13 +92,14 @@ export class QuestDefinitionValidationError extends Error {}
 
 /** Validates final runtime quest definitions once, after composition-root
  *  settlement binding. Throws `QuestDefinitionValidationError` on invalid
- *  authored prerequisites or `talk_to_npc_choice` objectives — never clamps
- *  thresholds at runtime. */
+ *  authored prerequisites, `talk_to_npc_choice` objectives, or stage
+ *  dialogue actions — never clamps thresholds at runtime. */
 export function validateQuestDefinitions(defs: readonly QuestDef[]): void {
   const byId = new Map(defs.map((def) => [def.id, def]))
   for (const def of defs) {
     validatePlayerDialogueLines(def)
     validateTalkToNpcChoiceObjective(def)
+    validateStageDialogueActions(def)
     const prerequisites = def.availability?.prerequisites
     if (!prerequisites?.length) continue
     for (const prereq of prerequisites) {
@@ -194,6 +195,35 @@ function validateTalkToNpcChoiceObjective(def: QuestDef): void {
   }
 }
 
+function validateStageDialogueActions(def: QuestDef): void {
+  for (const [stageIndex, stage] of def.stages.entries()) {
+    const actions = stage.dialogueActions
+    if (!actions) continue
+    if (actions.length === 0) {
+      throw new QuestDefinitionValidationError(
+        `Quest "${def.id}" stage ${stageIndex} dialogueActions is empty`,
+      )
+    }
+    for (const action of actions) {
+      if (action.playerLine.trim().length === 0) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage dialogue action is missing a playerLine`,
+        )
+      }
+      if (action.npcLine !== undefined && action.npcLine.trim().length === 0) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage dialogue action npcLine is empty`,
+        )
+      }
+      if (!action.npc.npcId) {
+        throw new QuestDefinitionValidationError(
+          `Quest "${def.id}" stage dialogue action is missing an npc target`,
+        )
+      }
+    }
+  }
+}
+
 export type QuestOutcomeId = string
 
 /** Direct player compensation — items/coins. Relation/reputation/renown
@@ -204,7 +234,8 @@ export type QuestReward = {
 }
 
 /** Changes to other systems: player↔NPC relation and settlement
- *  reputation/renown. Applied exactly once by `QuestManager` resolution. */
+ *  reputation/renown. Applied by `QuestManager` on terminal resolution or
+ *  non-terminal stage dialogue-action selection. */
 export type QuestConsequences = {
   relations?: ReadonlyArray<{ npc: QuestNpcRef, delta: number }>
   social?: {
@@ -343,6 +374,20 @@ export type QuestObjective =
    *  quests-progression-009) — not satisfied by merely opening the UI. */
   | { type: 'loot_world_container', containerId: string }
 
+/**
+ * Player-facing speech available while this stage is active. Selection
+ * advances the current stage through `QuestManager.advanceStage()` without
+ * resolving the quest. Optional consequences apply on selection only.
+ *
+ * @domain quests-progression
+ */
+export type QuestStageDialogueAction = {
+  npc: QuestNpcRef
+  playerLine: string
+  npcLine?: string
+  consequences?: QuestConsequences
+}
+
 export type QuestStage = {
   objective: QuestObjective
   /** Shown in the quest log for this stage. */
@@ -362,6 +407,9 @@ export type QuestStage = {
    *  target dies before being found). Falls back to a generic line in
    *  `QuestManager` when absent. */
   failLine?: string
+  /** Alternate conscious replies while this stage is active
+   *  (plan quests-progression-018). Not a second objective. */
+  dialogueActions?: readonly QuestStageDialogueAction[]
 }
 
 export type QuestDef = {
@@ -420,16 +468,30 @@ export type AuthoredQuestObjective =
     }
   | Exclude<QuestObjective, { type: 'talk_to_npc' } | { type: 'talk_to_npc_choice' }>
 
-export type AuthoredQuestStage = Omit<QuestStage, 'objective'> & {
-  objective: AuthoredQuestObjective
-}
-
 export type AuthoredQuestPrerequisite =
   | { type: 'relation', npcName: string, minimum: RelationLevel }
   | Exclude<QuestPrerequisite, { type: 'relation' }>
 
 export type AuthoredQuestConsequences = Omit<QuestConsequences, 'relations'> & {
   relations?: ReadonlyArray<{ npcName: string, delta: number }>
+}
+
+/**
+ * Authored stage dialogue action. `npcName` is bound to `QuestNpcRef` at
+ * composition-root materialization — never matched by display name at runtime.
+ *
+ * @domain quests-progression
+ */
+export type AuthoredQuestStageDialogueAction = {
+  npcName: string
+  playerLine: string
+  npcLine?: string
+  consequences?: AuthoredQuestConsequences
+}
+
+export type AuthoredQuestStage = Omit<QuestStage, 'objective' | 'dialogueActions'> & {
+  objective: AuthoredQuestObjective
+  dialogueActions?: readonly AuthoredQuestStageDialogueAction[]
 }
 
 export type AuthoredQuestOutcome = Omit<QuestOutcome, 'consequences'> & {
@@ -555,6 +617,22 @@ export const QUESTS: readonly AuthoredQuestDef[] = [
         description: 'Wypatrz jelenia w terenie.',
         reminderLine: 'Widziałeś już jelenia?',
         progressLine: 'Jeleń zerwał się z miejsca i zniknął między drzewami. Zostały kamienie z gór.',
+        // Seed-dependent stag spawn must not block the quest: talking to
+        // Piotr while this stage is still active is itself proof the real
+        // `spot_animal` did not happen (plan quests-progression-018).
+        dialogueActions: [
+          {
+            npcName: 'Piotr',
+            playerLine: 'Tak, widziałem jelenia.',
+            npcLine: 'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
+            consequences: { social: { reputation: { integrity: -2 } } },
+          },
+          {
+            npcName: 'Piotr',
+            playerLine: 'Nie widziałem jelenia.',
+            npcLine: 'Trudno. Przynieś przynajmniej dwa kamienie z gór, żebym wiedział, że tam byłeś.',
+          },
+        ],
       },
       {
         objective: { type: 'gather_item', kind: 'stone', count: 2 },

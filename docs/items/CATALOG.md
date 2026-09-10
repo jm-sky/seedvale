@@ -5,7 +5,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 [`src/items/items.ts`](../../src/items/items.ts) (`ITEM_DEFS`). Flags/roadmap:
 [`src/items/itemCatalog.ts`](../../src/items/itemCatalog.ts).
 
-**Last updated:** 2026-09-10 (plan items-player-023 — catalog-driven campfire fuel + raw-meat food safety)
+**Last updated:** 2026-09-11 (plan quests-progression-018 — herb merchant fallback)
 
 ## Quick rules
 
@@ -99,7 +99,7 @@ implemented, and what is planned. Code source of truth for weights/labels:
 | cheese | ser | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+20 hunger) |
 | dried_meat | suszone mięso | — | — | none (Kupiec) | procedural | plan 134; Zjedz (+25 hunger); light, long-lasting |
 | coin | moneta | — | — | world chunk (rare) | `items/coin.glb` | plan 129 / issue 035; near-zero weight (0.001 kg); Kupiec buy/sell currency + quest reward + land-plot price; shells stay barter-only |
-| herb | zioło lecznicze | — | — | world chunk (flora pool) | procedural | plan 153 / npc-024; Opatrz (+8 health) + poisoning treatment; **not** physical-injury treatment (npc-025) |
+| herb | zioło lecznicze | — | — | world chunk (flora pool) + Kupiec | procedural | plan 153 / npc-024; Opatrz (+8 health) + poisoning treatment; **not** physical-injury treatment (npc-025); Kupiec stock at 5 coins as a reachability fallback for `ziola-dla-anny` (quests-progression-018) |
 | bandage | opatrunek | — | — | none (Kupiec) | procedural | plan 153 / npc-025; Opatrz (+35 health) and catalog `injuryTreatment` up to critical |
 | damascus_knife | nóż damasceński | yes | 16 | none (Kupiec) | `items/damascus_knife.glb` (M44) | plan 160; teal/silver damascus, not gray; harvests corpses like knife |
 | damascus_short_sword | krótki miecz damasceński | yes | 24 | none (Kupiec) | `items/damascus_short_sword.glb` (M45) | plan 160; teal/navy damascus, not gray |

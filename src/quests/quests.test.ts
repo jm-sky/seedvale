@@ -396,3 +396,57 @@ describe('quest dialogue lines and cave binding (plan quests-progression-014)', 
     expect(wolves.availability).toBeUndefined()
   })
 })
+
+describe('quest stage dialogue actions (plan quests-progression-018)', () => {
+  it('authors Piotr lie/honest replies on zwiadowca stag without replacing spot_animal', () => {
+    const scout = QUESTS.find((q) => q.id === 'zwiadowca')!
+    expect(scout.stages[1]?.objective).toEqual({ type: 'spot_animal', kind: 'stag', range: 16 })
+    expect(scout.stages[1]?.dialogueActions).toEqual([
+      {
+        npcName: 'Piotr',
+        playerLine: 'Tak, widziałem jelenia.',
+        npcLine: 'Skoro tak. Zostały kamienie z gór — przynieś dwa.',
+        consequences: { social: { reputation: { integrity: -2 } } },
+      },
+      {
+        npcName: 'Piotr',
+        playerLine: 'Nie widziałem jelenia.',
+        npcLine: 'Trudno. Przynieś przynajmniej dwa kamienie z gór, żebym wiedział, że tam byłeś.',
+      },
+    ])
+    expect(scout.stages[2]?.objective).toEqual({ type: 'gather_item', kind: 'stone', count: 2 })
+  })
+
+  it('keeps ziola-dla-anny on gather_item herb ×3', () => {
+    const herbs = QUESTS.find((q) => q.id === 'ziola-dla-anny')!
+    expect(herbs.stages[0]?.objective).toEqual({ type: 'gather_item', kind: 'herb', count: 3 })
+  })
+
+  it('rejects an empty stage dialogue playerLine', () => {
+    const bad = runtimeQuest({
+      ...runtimeAuthored(QUESTS.find((q) => q.id === 'zwiadowca')!),
+      id: 'stage-action-empty-line',
+      stages: [{
+        objective: { type: 'spot_animal', kind: 'stag', range: 16 },
+        description: 'spot',
+        reminderLine: 'remind',
+        dialogueActions: [{ npc: { npcId: 'Piotr' }, playerLine: '   ' }],
+      }],
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/playerLine/)
+  })
+
+  it('rejects an empty stage dialogueActions list', () => {
+    const bad = runtimeQuest({
+      ...runtimeAuthored(QUESTS.find((q) => q.id === 'relay-anna-piotr')!),
+      id: 'stage-action-empty-list',
+      stages: [{
+        objective: { type: 'spot_animal', kind: 'stag' },
+        description: 'spot',
+        reminderLine: 'remind',
+        dialogueActions: [],
+      }],
+    })
+    expect(() => validateQuestDefinitions([bad])).toThrow(/dialogueActions is empty/)
+  })
+})

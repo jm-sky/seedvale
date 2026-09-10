@@ -70,6 +70,12 @@ describe('tradeCatalog (plan 090)', () => {
     expect(merchantPrice('shell')).toBeNull()
   })
 
+  it('stocks herb at 5 coins as a quest reachability fallback', () => {
+    expect(merchantPrice('herb')).toBe(5)
+    expect(tradeValue('herb')).toBe(5)
+    expect(MERCHANT_STOCK).toContain('herb')
+  })
+
   it('gives shells a barter value of 1', () => {
     expect(tradeValue('shell')).toBe(1)
   })
