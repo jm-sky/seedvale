@@ -15,6 +15,7 @@ Generated from TypeScript imports.
 - `perf/index.ts`
 - `terrain/chunkManager.ts`
 - `ui/createDebugGui.ts`
+- `world/createCaves.ts`
 
 ## `perf/agentCpuDiag.test.ts`
 

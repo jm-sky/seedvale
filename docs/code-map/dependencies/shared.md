@@ -171,6 +171,7 @@ Generated from TypeScript imports.
 - `app/worldBundle.ts`
 - `fauna/createFauna.ts`
 - `settlement/createSettlement.ts`
+- `world/createCaves.ts`
 
 ## `shared/corpseLifecycle.ts`
 

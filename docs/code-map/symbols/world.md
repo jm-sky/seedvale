@@ -108,22 +108,56 @@ Generated from exported TypeScript symbols.
 
 ## `world/caveGenerator.ts`
 
-- `CAVE_MOUTH_DEPTH` — const — line 37
-- `CaveGeneratorInput` — type — line 81
-- `generateCaveDefinitions` — function — line 254
-- `MIN_OVERBURDEN` — const — line 62
-- `MOUTH_FOOTPRINT_MARGIN` — const — line 79
-- `MOUTH_ROOF_MIN` — const — line 75
+- `CaveGeneratorInput` — type — line 74
+- `generateCaveDefinitions` — function — line 247
+- `MIN_OVERBURDEN` — const — line 55
+- `MOUTH_FOOTPRINT_MARGIN` — const — line 72
+- `MOUTH_ROOF_MIN` — const — line 68
 
 ## `world/caveMesh.ts`
 
 - `createCaveInteriorMesh` — function — line 117
+
+## `world/caves/caveExtractionClient.ts`
+
+- `CaveExtractionClient` — type — line 20
+- `CaveExtractionJobRunner` — type — line 15
+- `createCaveExtractionClient` — function — line 97
+- `createCaveExtractionWorkerRunner` — function — line 40
+  - domain: world-terrain
+
+## `world/caves/caveExtractionProtocol.ts`
+
+- `CaveExtractionMetrics` — type — line 21
+- `CaveExtractionRequest` — type — line 11
+- `CaveExtractionResult` — type — line 31
+- `CaveWorkerRequest` — type — line 39
+- `CaveWorkerResponse` — type — line 41
 
 ## `world/caves/caveIdentity.ts`
 
 - `CaveIdentitySite` — type — line 11
   - domain: world-terrain
 - `makeCaveId` — function — line 15
+
+## `world/caves/caveOrientation.ts`
+
+- `openingDirection` — function — line 12
+- `tunnelDirection` — function — line 8
+  - domain: world-terrain
+
+## `world/caves/cavePresentationLifecycle.ts`
+
+- `CAVE_ACTIVATE_DISTANCE` — const — line 9
+  - domain: world-terrain
+- `CAVE_DEACTIVATE_DISTANCE` — const — line 10
+- `CavePresentationPhase` — type — line 12
+- `CaveStreamingHooks` — type — line 29
+- `CaveStreamingSnapshot` — type — line 14
+- `CaveStreamingStats` — type — line 21
+- `caveWantedAtDistance` — function — line 43
+- `createCaveStreamingController` — function — line 62
+  - domain: world-terrain
 
 ## `world/caves/caveRng.ts`
 
@@ -140,6 +174,17 @@ Generated from exported TypeScript symbols.
 - `MOUTH_CORRIDOR_HALF` — const — line 37
 - `MouthColliderFilter` — type — line 39
 - `mouthWalkCorridorAlong` — function — line 51
+
+## `world/caves/caveSdfExtraction.ts`
+
+- `cavePresentationBounds` — function — line 171
+- `CaveSdfExtraction` — type — line 189
+- `extractCaveSdfSurface` — function — line 215
+  - domain: world-terrain
+- `ExtractCaveSdfSurfaceInput` — type — line 201
+- `extractSurfaceNets` — function — line 108
+- `SampledGrid` — type — line 34
+- `sampleGrid` — function — line 45
 
 ## `world/caves/caveSdfField.ts`
 
@@ -201,8 +246,8 @@ Generated from exported TypeScript symbols.
 - `CaveSpikeMetrics` — type — line 11
 - `CaveSpikeVariant` — type — line 9
   - domain: world-terrain
-- `reportCaveSpikeMetrics` — function — line 48
-- `runMedianOfN` — function — line 28
+- `reportCaveSpikeMetrics` — function — line 53
+- `runMedianOfN` — function — line 33
 
 ## `world/caves/caveTopology.ts`
 
@@ -225,40 +270,41 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/mouthCarve.ts`
 
-- `CAVE_APPROACH_DEPTH` — const — line 20
-- `CAVE_APPROACH_OFFSET` — const — line 22
-- `CAVE_APPROACH_RADIUS` — const — line 24
-- `CAVE_MOUTH_RADIUS` — const — line 23
-- `CaveMouthGeometry` — type — line 58
+- `CAVE_APPROACH_DEPTH` — const — line 24
+- `CAVE_APPROACH_OFFSET` — const — line 26
+- `CAVE_APPROACH_RADIUS` — const — line 28
+- `CAVE_MOUTH_DEPTH` — const — line 22
+- `CAVE_MOUTH_RADIUS` — const — line 27
+- `CaveMouthGeometry` — type — line 62
   - domain: world-terrain
-- `deriveMouthGeometry` — function — line 87
+- `deriveMouthGeometry` — function — line 91
   - domain: world-terrain
-- `inMouthAperture` — function — line 222
+- `inMouthAperture` — function — line 226
   - domain: world-terrain
-- `MOUTH_APERTURE_INWARD` — const — line 41
-- `MOUTH_APERTURE_OUTWARD` — const — line 42
-- `MOUTH_FRAME_INWARD` — const — line 35
-- `MOUTH_FRAME_OUTWARD` — const — line 34
-- `MOUTH_FRAME_THICKNESS` — const — line 33
-- `MOUTH_HOOD_HEIGHT` — const — line 36
-- `MOUTH_INTERIOR_ALONG` — const — line 30
-- `MOUTH_LIP_DEPTH` — const — line 37
-- `mouthAlong` — function — line 126
+- `MOUTH_APERTURE_INWARD` — const — line 45
+- `MOUTH_APERTURE_OUTWARD` — const — line 46
+- `MOUTH_FRAME_INWARD` — const — line 39
+- `MOUTH_FRAME_OUTWARD` — const — line 38
+- `MOUTH_FRAME_THICKNESS` — const — line 37
+- `MOUTH_HOOD_HEIGHT` — const — line 40
+- `MOUTH_INTERIOR_ALONG` — const — line 34
+- `MOUTH_LIP_DEPTH` — const — line 41
+- `mouthAlong` — function — line 130
   - domain: world-terrain
-- `mouthApertureVoidSDF` — function — line 270
+- `mouthApertureVoidSDF` — function — line 274
   - domain: world-terrain
-- `mouthCarveDepth` — function — line 204
+- `mouthCarveDepth` — function — line 208
   - domain: world-terrain
-- `MouthCarveDisc` — type — line 44
-- `mouthCarveDiscs` — function — line 170
+- `MouthCarveDisc` — type — line 48
+- `mouthCarveDiscs` — function — line 174
   - domain: world-terrain
-- `mouthFrameSolidSDF` — function — line 293
+- `mouthFrameSolidSDF` — function — line 297
   - domain: world-terrain
-- `mouthLateral` — function — line 141
+- `mouthLateral` — function — line 145
   - domain: world-terrain
-- `mouthLocalBoxSDF` — function — line 240
+- `mouthLocalBoxSDF` — function — line 244
   - domain: world-terrain
-- `smoothstep` — function — line 152
+- `smoothstep` — function — line 156
 
 ## `world/caves/mouthOverburden.ts`
 
@@ -280,13 +326,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/sdfCaveMesh.ts`
 
-- `AccidentalUnionStressConfig` — type — line 268
-- `buildAccidentalUnionStressMesh` — function — line 283
+- `AccidentalUnionStressConfig` — type — line 137
+- `buildAccidentalUnionStressMesh` — function — line 152
   - domain: world-terrain
-- `buildSdfCaveMesh` — function — line 199
+- `buildSdfCaveMesh` — function — line 93
   - domain: world-terrain
-- `countConnectedComponents` — function — line 306
-- `SdfCaveResult` — type — line 190
+- `countConnectedComponents` — function — line 175
+- `finalizeSdfCaveMesh` — function — line 46
+  - domain: world-terrain
+- `SdfCaveResult` — type — line 38
 
 ## `world/caves/spikeNoise.ts`
 
@@ -398,10 +446,10 @@ Generated from exported TypeScript symbols.
 
 ## `world/createCaves.ts`
 
-- `Caves` — type — line 55
-- `createCaves` — function — line 141
+- `Caves` — type — line 62
+- `createCaves` — function — line 154
   - system: caves
-  - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation, occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
+  - role: Owns cave topologies, retained SDF/column-index gameplay space, streamed interior presentation (async SDF extraction), occupancy-derived wall colliders, and strict occupancy queries; `PlayerController` ground goes through `queryGround` and camera through `occupancyAt`. `queryInterior` is the hysteretic player-position cave-interior signal (audio / diagnostics).
   - owns: Caves
   - lifecycle: rebuild
 
@@ -654,17 +702,15 @@ Generated from exported TypeScript symbols.
 
 ## `world/largeCaves.ts`
 
-- `LARGE_CAVE_MAX_LENGTH` — const — line 33
-- `LARGE_CAVE_MIN_HOME_DIST` — const — line 35
-- `LARGE_CAVE_MIN_LENGTH` — const — line 32
-- `LARGE_CAVE_MIN_SEPARATION` — const — line 34
-- `LARGE_CAVE_MOUTH_WIDTH` — const — line 31
-- `LargeCavePlacementInput` — type — line 19
-- `LargeCaveSite` — type — line 7
-- `openingDirection` — function — line 131
-- `pickLargeCaveSites` — function — line 98
-- `tunnelDirection` — function — line 127
-- `VillageFootprint` — type — line 17
+- `LARGE_CAVE_MAX_LENGTH` — const — line 36
+- `LARGE_CAVE_MIN_HOME_DIST` — const — line 38
+- `LARGE_CAVE_MIN_LENGTH` — const — line 35
+- `LARGE_CAVE_MIN_SEPARATION` — const — line 37
+- `LARGE_CAVE_MOUTH_WIDTH` — const — line 34
+- `LargeCavePlacementInput` — type — line 22
+- `LargeCaveSite` — type — line 10
+- `pickLargeCaveSites` — function — line 101
+- `VillageFootprint` — type — line 20
 
 ## `world/largeCaveVisual.ts`
 
