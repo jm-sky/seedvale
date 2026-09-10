@@ -44,18 +44,18 @@ Generated from exported TypeScript symbols.
 
 ## `ui-vue/lib/drawMinimap.ts`
 
-- `adjustMinimapZoom` — function — line 37
-- `DEFAULT_ARROW_TIP_SIZE` — const — line 25
-- `drawMinimapFrame` — function — line 77
-- `getMinimapZoom` — function — line 29
-- `lastMinimapPlayer` — function — line 209
-- `MINIMAP_SCALE` — const — line 23
-- `MinimapDrawContext` — type — line 41
-- `MinimapSettlement` — type — line 9
-- `minimapSize` — function — line 18
-- `registerMinimapDrawer` — function — line 215
-- `setMinimapZoom` — function — line 33
-- `updateRegisteredMinimap` — function — line 219
+- `adjustMinimapZoom` — function — line 39
+- `DEFAULT_ARROW_TIP_SIZE` — const — line 27
+- `drawMinimapFrame` — function — line 79
+- `getMinimapZoom` — function — line 31
+- `lastMinimapPlayer` — function — line 231
+- `MINIMAP_SCALE` — const — line 25
+- `MinimapDrawContext` — type — line 43
+- `MinimapSettlement` — type — line 11
+- `minimapSize` — function — line 20
+- `registerMinimapDrawer` — function — line 237
+- `setMinimapZoom` — function — line 35
+- `updateRegisteredMinimap` — function — line 241
 
 ## `ui-vue/lib/firstUpperCase.ts`
 
@@ -72,6 +72,16 @@ Generated from exported TypeScript symbols.
 - `mapCellFillStyle` — function — line 67
 - `TARGET_SLOT_COLORS` — const — line 27
 - `targetSlotColor` — function — line 29
+
+## `ui-vue/lib/minimapLocationMarkers.ts`
+
+- `classifyNavigationTargetMinimap` — function — line 53
+- `isMinimapCanvasPoint` — function — line 27
+- `minimapHalfRange` — function — line 3
+- `minimapQueryRange` — function — line 7
+- `minimapQueryViewport` — function — line 11
+- `NavigationTargetMinimapPlacement` — type — line 47
+- `selectNearbyMinimapPois` — function — line 33
 
 ## `ui-vue/lib/utils.ts`
 

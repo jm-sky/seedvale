@@ -1705,6 +1705,7 @@ Generated from TypeScript imports.
 
 - `debug/npcDebugApi.ts`
 - `ui-vue/lib/drawMap.ts`
+- `ui-vue/lib/drawMinimap.ts`
 - `ui-vue/lib/mapColors.ts`
 - `ui-vue/lib/worldLocationDisplay.ts`
 - `world/locations/locationDiscovery.test.ts`
@@ -1802,6 +1803,8 @@ Generated from TypeScript imports.
 - `persistence/saveData.ts`
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/mapColors.ts`
+- `ui-vue/lib/minimapLocationMarkers.test.ts`
+- `ui-vue/lib/minimapLocationMarkers.ts`
 - `world/locations/locationKnowledge.ts`
 - `world/map/mapData.ts`
 - `world/map/mapDiscovery.ts`

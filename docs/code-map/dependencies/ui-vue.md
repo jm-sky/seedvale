@@ -54,13 +54,16 @@ Generated from TypeScript imports.
 
 - `ai/NpcAgent.ts`
 - `ui-vue/lib/mapColors.ts`
+- `ui-vue/lib/minimapLocationMarkers.ts`
 - `world/locations/navigationTargets.ts`
+- `world/locations/worldLocationTypes.ts`
 - `world/map/mapConfig.ts`
 - `world/map/mapData.ts`
 - `world/map/mapProjection.ts`
 
 **Imported by**
 
+- `ui-vue/lib/minimapLocationMarkers.test.ts`
 - `ui/createMinimap.ts`
 
 ## `ui-vue/lib/firstUpperCase.ts`
@@ -76,6 +79,25 @@ Generated from TypeScript imports.
 
 - `ui-vue/lib/drawMap.ts`
 - `ui-vue/lib/drawMinimap.ts`
+
+## `ui-vue/lib/minimapLocationMarkers.test.ts`
+
+**Imports**
+
+- `ui-vue/lib/drawMinimap.ts`
+- `ui-vue/lib/minimapLocationMarkers.ts`
+- `world/map/mapTypes.ts`
+
+## `ui-vue/lib/minimapLocationMarkers.ts`
+
+**Imports**
+
+- `world/map/mapTypes.ts`
+
+**Imported by**
+
+- `ui-vue/lib/drawMinimap.ts`
+- `ui-vue/lib/minimapLocationMarkers.test.ts`
 
 ## `ui-vue/lib/utils.ts`
 
