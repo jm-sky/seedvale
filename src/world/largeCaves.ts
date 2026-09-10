@@ -2,7 +2,10 @@ import type { RoadCorridorSegment } from '../terrain/chunkHeightmap'
 import { measureSlope } from '../fauna/createFauna'
 import { distanceToSegment } from '../math/segment'
 import { isCoastalPlacement } from '../terrain/coastPlacement'
+import { openingDirection, tunnelDirection } from './caves/caveOrientation'
 import { createSeededRandom } from './parseSeed'
+
+export { openingDirection, tunnelDirection }
 
 export type LargeCaveSite = {
   x: number
@@ -124,10 +127,3 @@ export function pickLargeCaveSites(input: LargeCavePlacementInput): LargeCaveSit
   return placed
 }
 
-export function tunnelDirection(yaw: number): { dx: number, dz: number } {
-  return { dx: -Math.sin(yaw), dz: -Math.cos(yaw) }
-}
-
-export function openingDirection(yaw: number): { dx: number, dz: number } {
-  return { dx: Math.sin(yaw), dz: Math.cos(yaw) }
-}

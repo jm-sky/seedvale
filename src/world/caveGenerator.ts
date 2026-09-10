@@ -7,6 +7,7 @@
  *  Three.js, no `ChunkManager`, deterministic from its inputs only. */
 
 import { makeCaveId } from './caves/caveIdentity'
+import { CAVE_MOUTH_DEPTH } from './caves/mouthCarve'
 import {
   type CaveBounds,
   type CaveDefinition,
@@ -24,17 +25,9 @@ import {
 } from './largeCaves'
 import { createSeededRandom } from './parseSeed'
 
+export { CAVE_MOUTH_DEPTH }
+
 const MOUTH_RADIUS = LARGE_CAVE_MOUTH_WIDTH * 0.55
-/** Depth of the deterministic mouth recess `createCaves.ts` carves into the
- *  surface heightmap (`chunkManager.modifyTerrain`). The interior starts at
- *  the *bottom* of that recess, never at the raw surface height: otherwise
- *  the whole graph sits `CAVE_MOUTH_DEPTH` too high, so the first metres of
- *  tunnel roof stand above the terrain (visible rock arch cutting through the
- *  meadow) and the cave's vertical envelope keeps overlapping the surface far
- *  past the mouth, capturing the ground query of an entity that is merely
- *  walking over the tunnel (contract §14). Shared with `createCaves.ts` so
- *  the carve and the geometry can't drift apart. */
-export const CAVE_MOUTH_DEPTH = 2.4
 const ENTRANCE_HEIGHT = 2.6
 const TUNNEL_RADIUS = 1.7
 const TUNNEL_CEILING_HEIGHT = 2.6

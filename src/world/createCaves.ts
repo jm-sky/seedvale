@@ -3,12 +3,23 @@ import type { ChunkManager } from '../terrain/chunkManager'
 import type { CaveTopology } from './caves/caveTopology'
 import type { Collider } from './collision'
 import { disposeObject3D } from '../assets/loadGltf'
-import { isSystemEnabled } from '../debug/debugMode'
+import { isBootMarkMode, isSystemEnabled } from '../debug/debugMode'
 import { type CaveGroundQueryDebug, writeHitSnapshot } from '../debug/playerGroundTrace'
+import { getMonitor } from '../perf/active'
 import { villageSizeConfig } from '../settlement/families'
 import { cellsWithinRadius, SETTLEMENT_GRID_STEP } from '../settlement/settlementGenerator'
+import { useBootMark } from '../shared/bootMark'
+import {
+  createCaveExtractionClient,
+  createCaveExtractionWorkerRunner,
+} from './caves/caveExtractionClient'
+import {
+  type CaveStreamingStats,
+  createCaveStreamingController,
+} from './caves/cavePresentationLifecycle'
 import { buildCaveSdfColliders, caveMouthColliderFilter } from './caves/caveSdfColliders'
-import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation } from './caves/caveSdfField'
+import { cavePresentationBounds } from './caves/caveSdfExtraction'
+import { buildCaveSdfRepresentation, type CaveSdfSpatialRepresentation, DEFAULT_SDF_PARAMS } from './caves/caveSdfField'
 import {
   applyCaveGroundHysteresis,
   applyCaveInteriorHysteresis,
@@ -32,7 +43,7 @@ import {
   mouthLateral,
 } from './caves/mouthCarve'
 import { buildProductionCaveTopology } from './caves/productionTopology'
-import { buildSdfCaveMesh } from './caves/sdfCaveMesh'
+import { finalizeSdfCaveMesh } from './caves/sdfCaveMesh'
 import { topologyToCaveDefinition } from './caves/topologyAdapter'
 import { type CaveBounds, type CaveDefinition } from './caveVolume'
 import { type LargeCaveSite, pickLargeCaveSites } from './largeCaves'
@@ -47,10 +58,6 @@ const MOUTH_FRAMING_LENGTH = 3
 /** World-scale grid cell (independent of the terrain chunk grid) used only
  *  to narrow streaming candidates — not cave identity/generation. */
 const CAVE_GRID_CELL = 500
-const ACTIVATE_DISTANCE = 55
-/** > ACTIVATE_DISTANCE — hysteresis ring avoiding activate/deactivate
- *  thrashing right at the boundary (same pattern as settlement streaming). */
-const DEACTIVATE_DISTANCE = 80
 
 export type Caves = {
   definitions: () => readonly CaveDefinition[]
@@ -76,6 +83,11 @@ export type Caves = {
    * Approach/mouth portal occupancy is not interior.
    */
   queryInterior: (x: number, y: number, z: number) => boolean
+  /**
+   * Presentation/relevance counters (B4). Debug / tests — gameplay must use
+   * `queryGround` / `occupancyAt`, never this.
+   */
+  peekStreamingDebug: () => CaveStreamingStats & { queuedJobs: number, inFlightJobs: number }
   /** Strict occupancy at `(x, y, z)`. Not hysteretic `queryGround` — torch
    *  / audio callers must not mutate the player's floor hysteresis. */
   contains: (x: number, y: number, z: number) => boolean
@@ -113,11 +125,12 @@ function colliderOwnerKey(caveId: string): string {
 }
 
 /**
- * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B3):
+ * Owns the Cave V2 subsystem (plan world-terrain-008 Milestone B4):
  * deterministic production `CaveTopology`s, retained SDF representations and
  * derived column indexes (cheap, all computed up front), streamed SDF
- * presentation and occupancy-derived cave-wall collision for whichever caves
- * are near the player.
+ * presentation (async extraction) and occupancy-derived cave-wall collision
+ * for whichever caves are near the player. Collider registration is
+ * relevance-scoped and does not wait for render mesh completion.
  *
  * Placement reuses `pickLargeCaveSites()` unchanged; topology generation and
  * terrain acceptance are owned by `productionTopology.ts`. Gameplay
@@ -131,10 +144,10 @@ function colliderOwnerKey(caveId: string): string {
  *
  * @system caves
  * @role Owns cave topologies, retained SDF/column-index gameplay space,
- *  streamed interior presentation, occupancy-derived wall colliders, and
- *  strict occupancy queries; `PlayerController` ground goes through
- *  `queryGround` and camera through `occupancyAt`. `queryInterior` is the
- *  hysteretic player-position cave-interior signal (audio / diagnostics).
+ *  streamed interior presentation (async SDF extraction), occupancy-derived
+ *  wall colliders, and strict occupancy queries; `PlayerController` ground
+ *  goes through `queryGround` and camera through `occupancyAt`. `queryInterior`
+ *  is the hysteretic player-position cave-interior signal (audio / diagnostics).
  * @owns Caves
  * @lifecycle rebuild
  */
@@ -170,10 +183,14 @@ export function createCaves(
 
   // Topology + SDF field + column index are cheap relative to mesh
   // extraction and must be available to gameplay queries even when the
-  // cave is not activated. Presentation geometry stays lazy on activate.
+  // cave is not activated. Presentation geometry stays lazy on streaming.
+  const { bootMark, bootMarkEnd } = useBootMark('createCaves')
   const detailEnabled = isSystemEnabled('caveDetail')
   const v2ByCaveId = new Map<string, CaveRuntime>()
   const siteByCaveId = new Map<string, LargeCaveSite>()
+
+  bootMark('cave.topology')
+  const accepted: { site: LargeCaveSite, topology: CaveTopology }[] = []
   for (const site of sites) {
     const topology = buildProductionCaveTopology({
       seed,
@@ -181,9 +198,27 @@ export function createCaves(
       sampleHeight: (x, z) => chunkManager.sampleHeight(x, z),
       sampleBaseHeight: analyticSurfaceHeight,
     })
-    if (!topology) continue
-    const representation = buildCaveSdfRepresentation(topology, undefined, detailEnabled)
-    const index = buildCaveSdfColumnIndex(representation, topology, analyticSurfaceHeight)
+    if (topology) accepted.push({ site, topology })
+  }
+  bootMarkEnd('cave.topology')
+
+  bootMark('cave.sdfRepresentation')
+  const representations = accepted.map(({ topology }) => (
+    buildCaveSdfRepresentation(topology, DEFAULT_SDF_PARAMS, detailEnabled)
+  ))
+  bootMarkEnd('cave.sdfRepresentation')
+
+  bootMark('cave.columnIndex')
+  const indexes = accepted.map(({ topology }, i) => (
+    buildCaveSdfColumnIndex(representations[i]!, topology, analyticSurfaceHeight)
+  ))
+  bootMarkEnd('cave.columnIndex')
+
+  bootMark('cave.colliders')
+  for (let i = 0; i < accepted.length; i++) {
+    const { site, topology } = accepted[i]!
+    const representation = representations[i]!
+    const index = indexes[i]!
     v2ByCaveId.set(topology.caveId, {
       topology,
       definition: topologyToCaveDefinition(topology),
@@ -193,6 +228,7 @@ export function createCaves(
     })
     siteByCaveId.set(topology.caveId, site)
   }
+  bootMarkEnd('cave.colliders')
 
   const runtimes: readonly CaveRuntime[] = [...v2ByCaveId.values()]
   const definitions: CaveDefinition[] = runtimes.map((v) => v.definition)
@@ -220,8 +256,9 @@ export function createCaves(
     bucket.push(def)
   }
 
-  const active = new Map<string, THREE.Object3D>()
+  const presentations = new Map<string, THREE.Object3D>()
   const caveMaterial = createCaveSpikeMaterial('sdf')
+  caveMaterial.userData.sharedGpu = true
   let lastGroundHit: CaveGroundHit | null = null
   let lastInteriorRaw: boolean | null = null
   let interiorConfirmed = false
@@ -269,37 +306,123 @@ export function createCaves(
     groundQueryDebug.lateral = entrance ? mouthLateral(x, z, entrance) : null
   }
 
-  function activate(def: CaveDefinition): void {
-    if (active.has(def.caveId)) return
-    const v2 = v2ByCaveId.get(def.caveId)!
+  function disposePresentation(caveId: string): void {
+    const group = presentations.get(caveId)
+    if (!group) return
+    group.removeFromParent()
+    disposeObject3D(group)
+    presentations.delete(caveId)
+  }
+
+  function attachPresentation(
+    caveId: string,
+    positions: ArrayLike<number>,
+    indices: ArrayLike<number>,
+    extraction: { sdfSamplingMs: number, surfaceNetsMs: number, representationMs: number, peakTempBytes: number, vertices: number, triangles: number },
+  ): void {
+    const v2 = v2ByCaveId.get(caveId)
+    const site = siteByCaveId.get(caveId)
+    if (!v2 || !site) return
+    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const finalized = finalizeSdfCaveMesh(positions, indices, v2.topology, analyticSurfaceHeight)
     const group = new THREE.Group()
-    group.name = `cave:${def.caveId}`
-    // Built fresh on every activation (not cached) — `deactivate()` disposes
-    // the group's geometry, so a shared/cached mesh would render nothing (or
-    // throw) on the next activation. The SDF *field* is retained from world
-    // build and reused so meshing does not reconstruct primitives.
-    const built = buildSdfCaveMesh(v2.topology, undefined, analyticSurfaceHeight, v2.representation)
-    const mesh = new THREE.Mesh(built.geometry, caveMaterial)
-    mesh.name = `cave-interior:${def.caveId}`
+    group.name = `cave:${caveId}`
+    const mesh = new THREE.Mesh(finalized.geometry, caveMaterial)
+    mesh.name = `cave-interior:${caveId}`
     mesh.receiveShadow = true
     group.add(mesh)
-    const site = siteByCaveId.get(def.caveId)!
+    const tFraming = typeof performance !== 'undefined' ? performance.now() : Date.now()
     const framingSite = { ...site, length: MOUTH_FRAMING_LENGTH }
     const framing = createLargeCaveVisual(framingSite)
     placeLargeCaveVisual(framing, framingSite, (x, z) => chunkManager.sampleBaseHeight(x, z))
     group.add(framing)
     scene.add(group)
-    chunkManager.registerColliders(colliderOwnerKey(def.caveId), v2.colliders)
-    active.set(def.caveId, group)
+    presentations.set(caveId, group)
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const framingMs = now - tFraming
+    const activationTotalMs = now - t0
+    getMonitor().recordHitch('STREAMING', activationTotalMs, 'cave presentation')
+    if (isBootMarkMode()) {
+      console.log(`[caves] presentation ${caveId}`)
+      console.table({
+        'cave.sdfSampling': extraction.sdfSamplingMs,
+        'cave.surfaceNets': extraction.surfaceNetsMs,
+        'cave.clipping': finalized.clippingMs,
+        'cave.bufferGeometry': finalized.bufferGeometryMs,
+        'cave.normalsBounds': finalized.normalsBoundsMs,
+        'cave.framing': framingMs,
+        'cave.activationTotal': activationTotalMs,
+        vertices: finalized.vertices,
+        triangles: finalized.triangles,
+        geometryBytes: finalized.geometryBytes,
+        peakTempBytes: extraction.peakTempBytes,
+        colliderCount: v2.colliders.length,
+      })
+    }
   }
 
-  function deactivate(caveId: string): void {
-    const group = active.get(caveId)
-    if (!group) return
-    group.removeFromParent()
-    disposeObject3D(group)
-    chunkManager.clearColliders(colliderOwnerKey(caveId))
-    active.delete(caveId)
+  const presentationJobs = {
+    request: (_caveId: string, _generation: number, _distance: number): void => {},
+    reprioritise: (_caveId: string, _distance: number): void => {},
+    cancel: (_caveId: string): void => {},
+  }
+  const streaming = createCaveStreamingController({
+    registerColliders(caveId) {
+      const v2 = v2ByCaveId.get(caveId)
+      if (!v2) return
+      chunkManager.registerColliders(colliderOwnerKey(caveId), v2.colliders)
+    },
+    clearColliders(caveId) {
+      chunkManager.clearColliders(colliderOwnerKey(caveId))
+    },
+    requestPresentation(caveId, generation, distance) {
+      presentationJobs.request(caveId, generation, distance)
+    },
+    reprioritisePresentation(caveId, distance) {
+      presentationJobs.reprioritise(caveId, distance)
+    },
+    cancelPresentation(caveId) {
+      presentationJobs.cancel(caveId)
+    },
+    disposePresentation,
+  })
+  const extraction = createCaveExtractionClient({
+    runner: createCaveExtractionWorkerRunner(),
+    onStarted(caveId, requestId) {
+      streaming.markBuilding(caveId, requestId)
+    },
+    onComplete(result) {
+      const snap = streaming.snapshot(result.caveId)
+      if (!snap || snap.generation !== result.requestId) return
+      if (snap.phase !== 'building' && snap.phase !== 'queued') return
+      attachPresentation(result.caveId, result.positions, result.indices, result.metrics)
+      if (!streaming.accept(result.caveId, result.requestId)) {
+        disposePresentation(result.caveId)
+      }
+    },
+    onError(caveId, requestId, error) {
+      console.error('[caves] presentation extraction failed', caveId, error)
+      streaming.fail(caveId, requestId)
+    },
+  })
+  presentationJobs.request = (caveId, generation, distance) => {
+    const v2 = v2ByCaveId.get(caveId)
+    if (!v2) return
+    extraction.request({
+      caveId,
+      requestId: generation,
+      topology: v2.topology,
+      params: DEFAULT_SDF_PARAMS,
+      detailEnabled,
+      meshBounds: cavePresentationBounds(v2.representation.bounds, v2.topology, DEFAULT_SDF_PARAMS),
+      distance,
+    })
+  }
+  presentationJobs.reprioritise = (caveId, distance) => {
+    extraction.reprioritise(caveId, distance)
+  }
+  presentationJobs.cancel = (caveId) => {
+    extraction.cancel(caveId)
   }
 
   function queryGround(x: number, y: number, z: number): CaveGroundHit | null {
@@ -333,20 +456,23 @@ export function createCaves(
           if (!bucket) continue
           for (const def of bucket) {
             nearby.add(def.caveId)
-            const distance = distanceToBoundsXZ(def.bounds, observerX, observerZ)
-            if (distance <= ACTIVATE_DISTANCE) activate(def)
-            else if (distance >= DEACTIVATE_DISTANCE) deactivate(def.caveId)
+            streaming.apply(def.caveId, distanceToBoundsXZ(def.bounds, observerX, observerZ))
           }
         }
       }
-      // Anything active outside the current 3x3 grid neighborhood is well
-      // past DEACTIVATE_DISTANCE by construction — drop it too.
-      for (const caveId of active.keys()) {
-        if (!nearby.has(caveId)) deactivate(caveId)
+      // Anything still tracked outside the current 3x3 grid neighborhood is
+      // well past CAVE_DEACTIVATE_DISTANCE by construction — drop it too.
+      for (const caveId of streaming.trackedIds()) {
+        if (!nearby.has(caveId)) streaming.drop(caveId)
       }
     },
     queryGround,
     peekGroundQueryDebug: () => groundQueryDebug,
+    peekStreamingDebug: () => ({
+      ...streaming.stats(),
+      queuedJobs: extraction.queuedCount,
+      inFlightJobs: extraction.inFlightCount,
+    }),
     occupancyAt(x, y, z) {
       for (const runtime of runtimes) {
         const hit = occupancyIntervalAt(runtime.index, x, y, z)
@@ -399,7 +525,9 @@ export function createCaves(
       lastInteriorRaw = null
       interiorConfirmed = false
       writeGroundQueryDebug(0, 0, 0, null, null, null, 0, null)
-      for (const caveId of [...active.keys()]) deactivate(caveId)
+      streaming.dispose()
+      extraction.dispose()
+      caveMaterial.dispose()
     },
   }
 }

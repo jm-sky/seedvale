@@ -318,10 +318,61 @@ Do not:
 
 Future multiplayer/server simulation must not depend on camera/player presentation activation state.
 
+---
+
+# Milestone B4 — Implementation Summary
+
+**Date:** 2026-09-10  
+**Status:** implemented (technical checks). Browser/manual verification remains Player-owned.
+
+B4.1–B4.3 landed together once the lifecycle seam existed, because the worker client is what makes pending/building/stale-generation observable and the disposal path has to own that client.
+
+## What changed
+
+Persistent `CaveRuntime` is unchanged: topology, SDF representation, column index and collider *data* are still eager at world build. Presentation is no longer `activate() → buildSdfCaveMesh()` on the streaming tick.
+
+```text
+distance <= 55 m
+  → register retained colliders immediately
+  → queue presentation (phase queued → building → active)
+
+55 m < distance < 80 m
+  → retain relevance / presentation / collider registration
+
+distance >= 80 m
+  → clear colliders
+  → dispose render objects (no geometry cache)
+  → invalidate generation; discard in-flight worker results
+```
+
+Worker boundary (`caveExtraction.worker.ts`, ~8 KB production chunk): rebuild SDF from serializable topology/config → sample grid → Surface Nets. Main thread keeps analytic-surface clipping, BufferGeometry, framing and scene add. Terrain worker pool is not shared. Max **1** extraction in flight; nearest queued cave next; duplicate requests coalesce.
+
+Shared cave material is flagged `sharedGpu` so `disposeObject3D()` does not free it on every unload; `Caves.dispose()` disposes the material after presentations are gone.
+
+Boot marks (`?bootMark=1`): `cave.topology`, `cave.sdfRepresentation`, `cave.columnIndex`, `cave.colliders`. Presentation stages log as a table (`cave.sdfSampling` … `cave.activationTotal`) and main-thread finalisation records a `STREAMING` hitch (`cave presentation`).
+
+## Files
+
+| File | Role |
+|---|---|
+| `src/world/caves/cavePresentationLifecycle.ts` | 55/80 hysteresis, phase, generation, collider-registration flags |
+| `src/world/caves/caveSdfExtraction.ts` | Pure sampling + Surface Nets (no Three.js) |
+| `src/world/caves/caveExtractionClient.ts` | Queue / one-in-flight / stale discard |
+| `src/world/caves/caveExtraction.worker.ts` | Dedicated worker |
+| `src/world/createCaves.ts` | Streaming owner: colliders vs presentation |
+| `src/world/caves/caveOrientation.ts` | Yaw helpers extracted so the worker does not import `largeCaves` → fauna |
+| `src/world/caves/mouthCarve.ts` | Owns `CAVE_MOUTH_DEPTH` (same reason) |
+
+## Deviations / leftovers
+
+- Worker reconstruction of the SDF field duplicates the eager main-thread representation. That is required (the sample fn is not transferable) and keeps extraction deterministic.
+- No persistent geometry cache (B4.3 policy). Revisit only with a bounded LRU if revisit hitch is measured in production.
+- Eager column-index / collider boot was instrumented, not workerized.
+- B5 (V1/Sweep/`CaveVolume` cleanup) is untouched.
+- Browser verification of activation hitch, pop-in, and repeated visit/unload is Player-owned.
+
 ## Technical verification
 
-Run the relevant repository checks after implementation, following current scripts/configuration. At minimum use the cave-targeted tests plus TypeScript/lint/build checks required by current project guidance.
-
-Browser/manual verification remains Player-owned.
+`npx tsc --noEmit`, `pnpm run lint:fix`, `pnpm run build`, cave-targeted vitest (including new lifecycle/client/extraction tests). Worker bundle size on `vite build` is ~8 kB, confirming the fauna/Three.js import chain was not pulled in.
 
 > **Zrób git commit i push do main, rebase jeżeli trzeba**

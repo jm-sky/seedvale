@@ -13,6 +13,11 @@ export type CaveSpikeMetrics = {
   topologyBuildMs: number
   representationMs: number
   meshBuildMs: number
+  sdfSamplingMs?: number
+  surfaceNetsMs?: number
+  clippingMs?: number
+  bufferGeometryMs?: number
+  normalsBoundsMs?: number
   vertices: number
   triangles: number
   geometryBytes: number

@@ -567,9 +567,15 @@ Nie powiększać cave tylko po to, aby maskować camera bug.
 
 # B4 — Streaming + lifecycle + performance
 
-**B4 status (2026-09-10): recon complete, implementation pending.**  
-Current-code recon and detailed decisions: `docs/design/caves/05-b4-streaming-lifecycle-performance-recon.md`.  
-Implementation contract: `docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b4-implementation-notes.md`.
+**B4 status (2026-09-10): implemented.** Presentation extraction runs on a
+dedicated worker (`caveExtraction.worker.ts`) with max-one in flight,
+nearest-first queue, generation tokens and no geometry cache. Collider
+registration is relevance-scoped and independent of mesh completion.
+Gameplay/spatial queries stay on the retained SDF column index. Details
+and deviations: see the "Milestone B4 — Implementation Summary" section in
+`docs/plans/implementation-notes/world-terrain-008-underground-caves-v2-b4-implementation-notes.md`.
+Browser/manual verification is still open — technical checks (`tsc`,
+`lint`, `build`, cave-targeted tests) pass.
 
 B4 preserves persistent gameplay/world spatial truth and changes only how expensive cave presentation is scheduled, measured and disposed.
 

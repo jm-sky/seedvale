@@ -36,8 +36,8 @@ export type SurfaceHeightSampler = (x: number, z: number) => number
  * @domain world-terrain
  */
 export function clipTrianglesBelowSurface(
-  positions: readonly number[],
-  indices: readonly number[],
+  positions: ArrayLike<number>,
+  indices: ArrayLike<number>,
   surfaceHeightAt: SurfaceHeightSampler,
 ): { positions: number[], indices: number[] } {
   const vertexCount = positions.length / 3
@@ -81,8 +81,8 @@ export function clipTrianglesBelowSurface(
  * @domain world-terrain
  */
 export function clipTrianglesInFrontOfMouth(
-  positions: readonly number[],
-  indices: readonly number[],
+  positions: ArrayLike<number>,
+  indices: ArrayLike<number>,
   entrance: { x: number, y?: number, z: number, yaw: number, width?: number, height?: number },
 ): { positions: number[], indices: number[] } {
   const vertexCount = positions.length / 3

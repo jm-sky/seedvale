@@ -12,10 +12,14 @@
  */
 
 import type { CaveEntrance } from '../caveVolume'
-import { CAVE_MOUTH_DEPTH } from '../caveGenerator'
-import { openingDirection } from '../largeCaves'
+import { openingDirection } from './caveOrientation'
 
-export { CAVE_MOUTH_DEPTH }
+/** Depth of the deterministic mouth recess `createCaves.ts` carves into
+ *  the surface heightmap (`chunkManager.modifyTerrain`). The interior starts
+ *  at the *bottom* of that recess, never at the raw surface height. Owned
+ *  here so SDF extraction/workers can import mouth geometry without V1
+ *  `caveGenerator.ts` → `largeCaves.ts` → fauna. */
+export const CAVE_MOUTH_DEPTH = 2.4
 
 export const CAVE_APPROACH_DEPTH = 1.35
 /** Centre of the approach pit, along `openingDirection`, from the entrance. */
