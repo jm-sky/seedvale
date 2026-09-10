@@ -1,11 +1,10 @@
 # PLANS PLANNED WITHOUT NOTES
 
 > Generated with `pnpm plans:without-notes`  
-> Date: 2026-09-10 16:39:01  
+> Date: 2026-09-10 16:57:52  
 
 ## PLANS
 
-- `items-player-023-systemic-item-utility-and-food-safety.md`
 - `quests-progression-008-treasure-map-bear-cave.md`
 - `settlements-npcs-019-persistent-and-off-screen-transport.md`
 - `settlements-npcs-023-profession-staffing-and-settlement-composition.md`
@@ -13,37 +12,6 @@
 
 --------------------------------
 ## PROMPTS
-
-### `items-player-023-systemic-item-utility-and-food-safety.md`
-
-Prompt:
-
-```
-Zrób review planu `items-player-023-systemic-item-utility-and-food-safety.md`
-
-Wczytaj:
-- `docs/STATE.md`
-- `docs/plans/PLANNING.md` (Implementation Notes section),
-- `docs/plans/items-player-023-systemic-item-utility-and-food-safety.md`
-- aktualny codebase,
-- potrzebne zależności i powiązane implementacje.
-
-Na podstawie review utwórz w repo plik:
-`docs/plans/implementation-notes/items-player-023-systemic-item-utility-and-food-safety-implementation-notes.md`
-
-Umieść w nim:
-- sugestie dotyczące implementacji,
-- istotne detale techniczne,
-- decyzje architektoniczne,
-- informacje o istniejących systemach i implementacjach, które należy wykorzystać,
-- potencjalne problemy, zależności i pułapki,
-- inne konkretne wskazówki, które ułatwią agentowi AI poprawną implementację planu.
-
-Uwzględnij aktualny stan codebase — nie zakładaj, że plan opisuje aktualną implementację.
-Bądź oszczędny - pisz to co jest realnie potrzebne, nie pisz rzeczy oczywistych.
-
-Plik dodaj na branch `main` w repozytorium.
-```
 
 ### `quests-progression-008-treasure-map-bear-cave.md`
 

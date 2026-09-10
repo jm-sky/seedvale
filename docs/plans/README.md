@@ -75,7 +75,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `tools-013-npc-decision-verification-and-scenario-tooling.md`               | -       | 🔴 | M      | -      |
-| ◼️ `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
+| 💡 `items-player-023-systemic-item-utility-and-food-safety.md`                 | -       | 🟡 | M      | -      |
 
 ---
 
