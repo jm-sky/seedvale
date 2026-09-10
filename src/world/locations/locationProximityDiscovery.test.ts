@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { CaveDefinition } from '../caveVolume'
-import type { WorldLocationCatalog } from './worldLocationCatalog'
 import { createLocationKnowledge } from './locationKnowledge'
 import { CAVE_ENTRANCE_DISCOVERY_RADIUS, revealCaveEntrancesInRange } from './locationProximityDiscovery'
+import { emptyLocationScanDiagnostics, type WorldLocationCatalog } from './worldLocationCatalog'
 
 function caveDef(caveId: string, x: number, z: number): CaveDefinition {
   return {
@@ -25,21 +25,9 @@ function fakeCatalog(names: Record<string, string>): WorldLocationCatalog {
     nearestSettlements: () => [],
     landmarksWithin: () => [],
     landmarksInRange: () => [],
+    landmarksInRangeAsync: async () => [],
     invalidateScanCache: () => {},
-    getScanDiagnostics: () => ({
-      sampledCells: 0,
-      cacheHitCells: 0,
-      sampleFloorCalls: 0,
-      sampleContinentalnessCalls: 0,
-      sampleRidgeCalls: 0,
-      sampleHeightCalls: 0,
-      waterCells: 0,
-      mountainCells: 0,
-      classificationMs: 0,
-      lakeExtractionMs: 0,
-      peakExtractionMs: 0,
-      cemeteryMs: 0,
-    }),
+    getScanDiagnostics: () => emptyLocationScanDiagnostics(),
   }
 }
 

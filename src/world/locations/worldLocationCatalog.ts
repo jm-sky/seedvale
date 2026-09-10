@@ -5,6 +5,10 @@ import type { Caves } from '../createCaves'
 import type { WorldLocation, WorldLocationKind } from './worldLocationTypes'
 import { cellFromId, cellsWithinRadius, SETTLEMENT_GRID_STEP, worldToCell } from '../../settlement/settlementGenerator'
 import { isAbandonedCemeteryId } from '../../terrain/cemeteryAssignment'
+import {
+  abandonedCemeteryMaxOffsetFromCenter,
+  chunkPassesAbandonedCemeteryRoll,
+} from '../../terrain/cemeteryPlacement'
 import { sampleContinentalnessAt, sampleFloorAt, sampleHeightAt, sampleMountainRidgeAt } from '../../terrain/chunkHeightmap'
 import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
 import {
@@ -77,9 +81,19 @@ export type LocationScanDiagnostics = {
   lakeExtractionMs: number
   peakExtractionMs: number
   cemeteryMs: number
+  /** Chunks visited by the abandoned-cemetery bounding scan this session. */
+  cemeteryChunksConsidered: number
+  /** Chunks whose possible cemetery AABB cannot meet `(minKm, maxKm]`. */
+  cemeteryChunksRejectedByRange: number
+  /** Chunks rejected by `chunkPassesAbandonedCemeteryRoll` before probe. */
+  cemeteryChunksRejectedByAbandonedRoll: number
+  /** Chunks that paid `probeAbandonedCemeteryAtChunk` (params + sampler). */
+  cemeteryExpensiveProbes: number
+  /** Abandoned cemeteries actually returned from those probes. */
+  cemeteryAbandonedResolved: number
 }
 
-function emptyDiagnostics(): LocationScanDiagnostics {
+export function emptyLocationScanDiagnostics(): LocationScanDiagnostics {
   return {
     sampledCells: 0,
     cacheHitCells: 0,
@@ -93,8 +107,28 @@ function emptyDiagnostics(): LocationScanDiagnostics {
     lakeExtractionMs: 0,
     peakExtractionMs: 0,
     cemeteryMs: 0,
+    cemeteryChunksConsidered: 0,
+    cemeteryChunksRejectedByRange: 0,
+    cemeteryChunksRejectedByAbandonedRoll: 0,
+    cemeteryExpensiveProbes: 0,
+    cemeteryAbandonedResolved: 0,
   }
 }
+
+/** Yield/progress options for cooperative abandoned-cemetery probing
+ *  (plan world-022). Sync `landmarksInRange` is the reference path. */
+export type LandmarkQueryOptions = {
+  onProgress?: (progress: number) => void
+  yieldToPaint?: () => Promise<void>
+  /** Wall-clock budget per batch of expensive probes before yielding. */
+  probeBudgetMs?: number
+  /** Yield after this many probes (overrides `probeBudgetMs`). Tests use `1`. */
+  yieldEveryProbes?: number
+}
+
+/** Probe counts above this use cooperative yielding on the async path so Far
+ *  Map can paint BusyOverlay progress; Near/Guard stay in one sync stretch. */
+export const COOPERATIVE_ABANDONED_PROBE_THRESHOLD = 24
 
 export type WorldLocationCatalog = {
   /** Resolves a stable `WorldLocation.id` back to its (deterministic)
@@ -115,6 +149,20 @@ export type WorldLocationCatalog = {
    *  generating `0..maxKm` and filtering afterwards. `landmarksWithin` is the
    *  `minKm = 0` case of this. */
   landmarksInRange(x: number, z: number, minKm: number, maxKm: number): WorldLocation[]
+  /**
+   * Cooperative `landmarksInRange` (plan world-022). Result is identical to
+   * the sync method. Yields between abandoned-cemetery probe batches when
+   * enough expensive probes remain that a single stretch could hitch.
+   * `onProgress` is monotonic and ends at `1`.
+   * @domain world
+   */
+  landmarksInRangeAsync(
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+    options?: LandmarkQueryOptions,
+  ): Promise<WorldLocation[]>
   /** Drops the internal coarse-terrain tile cache and cemetery-lookup cache
    *  (and resets `getScanDiagnostics()`) — call after a world rebuild (new
    *  seed/terrain params), same "must not silently reuse stale terrain data
@@ -127,6 +175,42 @@ export type WorldLocationCatalog = {
 
 function distanceKm(ax: number, az: number, bx: number, bz: number): number {
   return worldUnitsToKm(Math.hypot(ax - bx, az - bz))
+}
+
+/**
+ * Whether an abandoned cemetery placed anywhere inside chunk `(cx, cz)`
+ * could satisfy the half-open band `(minKm, maxKm]` around `(originX, originZ)`.
+ * Uses the SM-margin reach so a cemetery on the chunk fringe is not dropped.
+ * @domain world
+ */
+export function abandonedCemeteryChunkIntersectsKmBand(
+  cx: number,
+  cz: number,
+  originX: number,
+  originZ: number,
+  chunkSize: number,
+  minKm: number,
+  maxKm: number,
+): boolean {
+  const reach = abandonedCemeteryMaxOffsetFromCenter(chunkSize)
+  const centerX = cx * chunkSize
+  const centerZ = cz * chunkSize
+  const absDx = Math.abs(originX - centerX)
+  const absDz = Math.abs(originZ - centerZ)
+  const minDist = Math.hypot(Math.max(absDx - reach, 0), Math.max(absDz - reach, 0))
+  const maxDist = Math.hypot(absDx + reach, absDz + reach)
+  const minWorld = kmToWorldUnits(minKm)
+  const maxWorld = kmToWorldUnits(maxKm)
+  if (minDist > maxWorld) return false
+  if (maxDist <= minWorld) return false
+  return true
+}
+
+function defaultYieldToPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve())
+    else setTimeout(resolve, 0)
+  })
 }
 
 function hashLocationId(seed: number, id: string): number {
@@ -168,7 +252,7 @@ const NEIGHBOR4: readonly (readonly [number, number])[] = [[1, 0], [-1, 0], [0, 
 export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): WorldLocationCatalog {
   const { getSeed, getCaves, getChunkManager, lookupSettlement, getSampleParams, getChunkSize, hydrateTile, onTileDirty } = deps
 
-  let diagnostics = emptyDiagnostics()
+  let diagnostics = emptyLocationScanDiagnostics()
 
   function settlementLocation(def: SettlementDef): WorldLocation {
     return { id: `settlement:${def.id}`, kind: 'settlement', x: def.x, z: def.z, name: def.name, discoveryWeight: 0 }
@@ -271,13 +355,25 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
   }
 
   function cemeteryCandidates(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
+    const { seen, out } = settlementCemeteryCandidates(x, z, minKm, maxKm)
+    const toProbe = collectAbandonedChunksToProbe(x, z, minKm, maxKm)
+    appendAbandonedProbes(toProbe, x, z, minKm, maxKm, seen, out)
+    return out
+  }
+
+  function settlementCemeteryCandidates(
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+  ): { seen: Set<string>, out: WorldLocation[] } {
     const center = worldToCell(x, z)
     const searchMarginKm = 5
     const radiusCells = Math.ceil(kmToWorldUnits(maxKm + searchMarginKm) / SETTLEMENT_GRID_STEP) + 1
     const settlements = cellsWithinRadius(center, radiusCells)
       .map((cell) => lookupSettlement(cell))
       .filter((def): def is SettlementDef => def != null)
-      .sort((a, b) => distanceKm(x, z, a.x, a.z) - distanceKm(x, z, b.x, a.z))
+      .sort((a, b) => distanceKm(x, z, a.x, a.z) - distanceKm(x, z, b.x, b.z))
       .slice(0, MAX_CEMETERY_SETTLEMENTS_SEARCHED)
 
     const seen = new Set<string>()
@@ -290,24 +386,110 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
       seen.add(loc.id)
       out.push(loc)
     }
+    return { seen, out }
+  }
 
+  function collectAbandonedChunksToProbe(
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+  ): { cx: number, cz: number }[] {
     const chunkSize = getChunkSize()
-    const outerWorld = kmToWorldUnits(maxKm)
+    const reach = abandonedCemeteryMaxOffsetFromCenter(chunkSize)
+    const outerWorld = kmToWorldUnits(maxKm) + reach
     const minCx = Math.floor((x - outerWorld) / chunkSize)
     const maxCx = Math.floor((x + outerWorld) / chunkSize)
     const minCz = Math.floor((z - outerWorld) / chunkSize)
     const maxCz = Math.floor((z + outerWorld) / chunkSize)
+    const seed = getSeed()
+    const toProbe: { cx: number, cz: number }[] = []
     for (let cz = minCz; cz <= maxCz; cz++) {
       for (let cx = minCx; cx <= maxCx; cx++) {
-        const abandoned = getChunkManager().probeAbandonedCemeteryAtChunk({ cx, cz })
-        if (!abandoned || !isAbandonedCemeteryId(abandoned.id) || seen.has(abandoned.id)) continue
-        const km = distanceKm(x, z, abandoned.x, abandoned.z)
-        if (km > maxKm || km <= minKm) continue
-        seen.add(abandoned.id)
-        out.push(cemeteryLocationFromResolved(abandoned))
+        diagnostics.cemeteryChunksConsidered++
+        if (!abandonedCemeteryChunkIntersectsKmBand(cx, cz, x, z, chunkSize, minKm, maxKm)) {
+          diagnostics.cemeteryChunksRejectedByRange++
+          continue
+        }
+        if (!chunkPassesAbandonedCemeteryRoll(seed, cx, cz)) {
+          diagnostics.cemeteryChunksRejectedByAbandonedRoll++
+          continue
+        }
+        toProbe.push({ cx, cz })
       }
     }
-    return out
+    return toProbe
+  }
+
+  function probeAbandonedChunk(
+    coord: { cx: number, cz: number },
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+    seen: Set<string>,
+    out: WorldLocation[],
+  ): void {
+    diagnostics.cemeteryExpensiveProbes++
+    const abandoned = getChunkManager().probeAbandonedCemeteryAtChunk(coord)
+    if (!abandoned || !isAbandonedCemeteryId(abandoned.id) || seen.has(abandoned.id)) return
+    const km = distanceKm(x, z, abandoned.x, abandoned.z)
+    if (km > maxKm || km <= minKm) return
+    seen.add(abandoned.id)
+    diagnostics.cemeteryAbandonedResolved++
+    out.push(cemeteryLocationFromResolved(abandoned))
+  }
+
+  function appendAbandonedProbes(
+    toProbe: readonly { cx: number, cz: number }[],
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+    seen: Set<string>,
+    out: WorldLocation[],
+  ): void {
+    for (const coord of toProbe) probeAbandonedChunk(coord, x, z, minKm, maxKm, seen, out)
+  }
+
+  async function appendAbandonedProbesAsync(
+    toProbe: readonly { cx: number, cz: number }[],
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+    seen: Set<string>,
+    out: WorldLocation[],
+    options: LandmarkQueryOptions | undefined,
+  ): Promise<void> {
+    const total = toProbe.length
+    const onProgress = options?.onProgress
+    if (total === 0) {
+      onProgress?.(1)
+      return
+    }
+    const yieldToPaint = options?.yieldToPaint ?? defaultYieldToPaint
+    const yieldEvery = options?.yieldEveryProbes
+    const budgetMs = options?.probeBudgetMs ?? 8
+    const cooperate = total > COOPERATIVE_ABANDONED_PROBE_THRESHOLD
+      || yieldEvery != null
+    let i = 0
+    while (i < total) {
+      const batchStart = performance.now()
+      let batchCount = 0
+      do {
+        probeAbandonedChunk(toProbe[i]!, x, z, minKm, maxKm, seen, out)
+        i++
+        batchCount++
+        if (yieldEvery != null && batchCount >= yieldEvery) break
+      } while (
+        i < total
+        && (yieldEvery != null || performance.now() - batchStart < budgetMs)
+      )
+      onProgress?.(i / total)
+      if (cooperate && i < total) await yieldToPaint()
+    }
+    onProgress?.(1)
   }
 
   function caveCandidates(x: number, z: number, minKm: number, maxKm: number): WorldLocation[] {
@@ -547,6 +729,25 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     ]
   }
 
+  async function landmarksInRangeAsync(
+    x: number,
+    z: number,
+    minKm: number,
+    maxKm: number,
+    options?: LandmarkQueryOptions,
+  ): Promise<WorldLocation[]> {
+    const cemeteryStart = performance.now()
+    const { seen, out } = settlementCemeteryCandidates(x, z, minKm, maxKm)
+    const toProbe = collectAbandonedChunksToProbe(x, z, minKm, maxKm)
+    await appendAbandonedProbesAsync(toProbe, x, z, minKm, maxKm, seen, out, options)
+    diagnostics.cemeteryMs += performance.now() - cemeteryStart
+    return [
+      ...caveCandidates(x, z, minKm, maxKm),
+      ...out,
+      ...scanLakesAndPeaks(x, z, minKm, maxKm),
+    ]
+  }
+
   function landmarksWithin(x: number, z: number, maxKm: number): WorldLocation[] {
     return landmarksInRange(x, z, 0, maxKm)
   }
@@ -556,10 +757,11 @@ export function createWorldLocationCatalog(deps: WorldLocationCatalogDeps): Worl
     nearestSettlements,
     landmarksWithin,
     landmarksInRange,
+    landmarksInRangeAsync,
     invalidateScanCache: () => {
       tiles.clear()
       cemeteryCache.clear()
-      diagnostics = emptyDiagnostics()
+      diagnostics = emptyLocationScanDiagnostics()
     },
     getScanDiagnostics: () => diagnostics,
   }

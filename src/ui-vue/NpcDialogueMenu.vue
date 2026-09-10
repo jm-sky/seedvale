@@ -24,6 +24,7 @@ const foodLine = ref('')
 const waterLine = ref('')
 const areaLine = ref('')
 const paymentLine = ref('')
+const discoveringArea = ref(false)
 
 const responseText = computed(() => {
   if (!state.npc || topic.value === null) return ''
@@ -78,10 +79,16 @@ function requestWater(): void {
   topic.value = 'requestWater'
 }
 
-function askAboutArea(): void {
+async function askAboutArea(): Promise<void> {
+  if (discoveringArea.value) return
   emitUiClick()
-  areaLine.value = state.onAskAboutArea?.() ?? ''
-  topic.value = 'aboutArea'
+  discoveringArea.value = true
+  try {
+    areaLine.value = await state.onAskAboutArea?.() ?? ''
+    topic.value = 'aboutArea'
+  } finally {
+    discoveringArea.value = false
+  }
 }
 
 function payWage(): void {
@@ -162,6 +169,7 @@ watch(() => state.open, (open) => {
           v-if="isHomeGuard"
           type="button"
           class="cursor-pointer rounded-md bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+          :disabled="discoveringArea"
           @click="askAboutArea"
         >
           Opowiedz mi coś o okolicy.

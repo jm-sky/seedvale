@@ -34,6 +34,32 @@ const CEMETERY_MARGIN_BY_SIZE: Record<CemeterySize, number> = { SM: 6, MD: 9, LG
 /** Rare deterministic wilderness roll — much lower than the old `0.28` fringe gate. */
 export const ABANDONED_CEMETERY_CHANCE = 0.012
 
+/**
+ * Largest distance from a chunk center at which an abandoned cemetery
+ * placement point can land (`SM` margin is smaller than `MD`, so `SM` can sit
+ * closer to the edge). Catalog range-pruning must use this reach so a
+ * cemetery on a chunk fringe is not dropped from a query band.
+ * @domain world-terrain
+ */
+export function abandonedCemeteryMaxOffsetFromCenter(chunkSize: number): number {
+  return chunkSize / 2 - CEMETERY_MARGIN_BY_SIZE.SM
+}
+
+function abandonedRoll(seed: number, cx: number, cz: number): number {
+  return createSeededRandom(seed ^ hashString(`${cx},${cz}:abandoned`))()
+}
+
+/**
+ * Cheap deterministic gate shared by streamed chunk generation and World
+ * Location catalog/probe lookup. True iff this chunk's abandoned-cemetery
+ * roll succeeds (~`ABANDONED_CEMETERY_CHANCE`). Does not validate terrain
+ * or settlement separation.
+ * @domain world-terrain
+ */
+export function chunkPassesAbandonedCemeteryRoll(seed: number, cx: number, cz: number): boolean {
+  return abandonedRoll(seed, cx, cz) <= ABANDONED_CEMETERY_CHANCE
+}
+
 export type ResolvedCemeteryPlacement = {
   assignmentId: string
   servedSettlementIds: readonly string[]
@@ -288,10 +314,6 @@ export function resolvedPlacementToEnvironment(p: ResolvedCemeteryPlacement): En
   }
 }
 
-function abandonedRoll(seed: number, cx: number, cz: number): number {
-  return createSeededRandom(seed ^ hashString(`${cx},${cz}:abandoned`))()
-}
-
 function isTooNearAnySettlement(x: number, z: number, peekRef: PeekSettlementRef): boolean {
   const center = worldToCell(x, z)
   for (const cell of cellsWithinRadius(center, 2)) {
@@ -302,12 +324,29 @@ function isTooNearAnySettlement(x: number, z: number, peekRef: PeekSettlementRef
   return false
 }
 
+/**
+ * Catalog / unloaded-probe entry: skip `paramsFor` + terrain sampling when
+ * the deterministic wilderness roll already rejects the chunk.
+ * Streamed generation keeps calling `resolveAbandonedCemeteryForChunk`
+ * with the sampler it already built.
+ * @domain world-terrain
+ */
+export function resolveAbandonedCemeteryAfterRoll(
+  coord: ChunkCoord,
+  seed: number,
+  materialize: () => { params: ChunkTileParams, terrain: CemeteryTerrainSampler },
+): EnvironmentPlacement | null {
+  if (!chunkPassesAbandonedCemeteryRoll(seed, coord.cx, coord.cz)) return null
+  const { params, terrain } = materialize()
+  return resolveAbandonedCemeteryForChunk(coord, params, terrain)
+}
+
 export function resolveAbandonedCemeteryForChunk(
   coord: ChunkCoord,
   params: ChunkTileParams,
   terrain: CemeteryTerrainSampler,
 ): EnvironmentPlacement | null {
-  if (abandonedRoll(params.seed, coord.cx, coord.cz) > ABANDONED_CEMETERY_CHANCE) return null
+  if (!chunkPassesAbandonedCemeteryRoll(params.seed, coord.cx, coord.cz)) return null
 
   const peekRef = makeSettlementRefPeek(params.cemeterySettlements ?? [])
   const { chunkSize, seed } = params

@@ -1,4 +1,4 @@
-import type { WorldLocationCatalog } from './worldLocationCatalog'
+import type { LandmarkQueryOptions, WorldLocationCatalog } from './worldLocationCatalog'
 import type { DiscoveryRange, WorldLocation } from './worldLocationTypes'
 import { FAR_RANGE_KM, kmToDays, MEDIUM_RANGE_KM, NEAR_RANGE_KM, worldUnitsToKm } from './locationConfig'
 
@@ -71,6 +71,18 @@ export function landmarksInBand(
   maxKm: number,
 ): WorldLocation[] {
   return catalog.landmarksInRange(x, z, minKm, maxKm)
+}
+
+/** Async `landmarksInBand` — same catalog pipeline, cooperative cemetery probes. */
+export function landmarksInBandAsync(
+  catalog: WorldLocationCatalog,
+  x: number,
+  z: number,
+  minKm: number,
+  maxKm: number,
+  options?: LandmarkQueryOptions,
+): Promise<WorldLocation[]> {
+  return catalog.landmarksInRangeAsync(x, z, minKm, maxKm, options)
 }
 
 export function settlementsInBand(

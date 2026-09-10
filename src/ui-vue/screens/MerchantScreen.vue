@@ -160,6 +160,7 @@ const netCoins = computed(() =>
   ui.merchant.pricing?.previewNetCoins(transaction.purchases, transaction.offer) ?? 0,
 )
 const canTrade = computed(() => purchaseLines.value.length > 0 || offerLines.value.length > 0)
+const trading = ref(false)
 
 function clampStaleTransaction(): boolean {
   let changed = false
@@ -183,21 +184,27 @@ function clampStaleTransaction(): boolean {
   return changed
 }
 
-function onTrade(): void {
+async function onTrade(): Promise<void> {
+  if (trading.value) return
   if (clampStaleTransaction()) {
     showToast('Oferta się zmieniła — sprawdź transakcję ponownie.', 'error')
     return
   }
-  const result = ui.merchant.onSettleTransaction?.(transaction.purchases, transaction.offer) ?? 'not_sold'
-  if (result === 'ok') {
-    transaction.purchases = {}
-    transaction.offer = {}
-    if (isCompact.value) drawerOpen.value = false
-    return
+  trading.value = true
+  try {
+    const result = await ui.merchant.onSettleTransaction?.(transaction.purchases, transaction.offer) ?? 'not_sold'
+    if (result === 'ok') {
+      transaction.purchases = {}
+      transaction.offer = {}
+      if (isCompact.value) drawerOpen.value = false
+      return
+    }
+    if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
+    else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
+    else showToast('Nie da się przeprowadzić tej transakcji.', 'error')
+  } finally {
+    trading.value = false
   }
-  if (result === 'cannot_afford') showToast('Za mało monet.', 'error')
-  else if (result === 'full') showToast('Ekwipunek jest za ciężki.', 'error')
-  else showToast('Nie da się przeprowadzić tej transakcji.', 'error')
 }
 
 function onBuyHorse(): void {
@@ -390,7 +397,7 @@ function openDetails(kind: ItemKind): void {
               :offer-items="offerLines"
               :net-coins="netCoins"
               :coins="coins"
-              :can-trade="canTrade"
+              :can-trade="canTrade && !trading"
               @trade="onTrade"
               @remove-purchase="onClearPurchase"
               @remove-offer="onClearOffer"
@@ -427,7 +434,7 @@ function openDetails(kind: ItemKind): void {
           :offer-items="offerLines"
           :net-coins="netCoins"
           :coins="coins"
-          :can-trade="canTrade"
+          :can-trade="canTrade && !trading"
           @trade="onTrade"
           @remove-purchase="onClearPurchase"
           @remove-offer="onClearOffer"

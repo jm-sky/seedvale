@@ -6,11 +6,16 @@ import type { CaveDefinition } from '../caveVolume'
 import type { Caves } from '../createCaves'
 import type { WorldLocation } from './worldLocationTypes'
 import { cellKey } from '../../settlement/settlementGenerator'
+import { chunkPassesAbandonedCemeteryRoll } from '../../terrain/cemeteryPlacement'
 import { sampleContinentalnessAt, sampleFloorAt, sampleMountainRidgeAt } from '../../terrain/chunkHeightmap'
 import { isMountainRidge, isOceanMix, isWetFloor } from '../../terrain/terrainClassification'
 import { projectCellAt } from '../map/mapProjection'
-import { FAR_RANGE_KM, LOCATION_SCAN_STEP, MEDIUM_RANGE_KM, NEAR_RANGE_KM } from './locationConfig'
-import { createWorldLocationCatalog, settlementLocationId } from './worldLocationCatalog'
+import { FAR_RANGE_KM, LOCATION_SCAN_STEP, MEDIUM_RANGE_KM, NEAR_RANGE_KM, WORLD_UNITS_PER_KM } from './locationConfig'
+import {
+  abandonedCemeteryChunkIntersectsKmBand,
+  createWorldLocationCatalog,
+  settlementLocationId,
+} from './worldLocationCatalog'
 
 function rawParams(overrides: Partial<RawSampleParams> = {}): RawSampleParams {
   return {
@@ -89,6 +94,7 @@ function fakeCaves(defs: Partial<CaveDefinition>[]): Caves {
 function fakeChunkManager(
   cemeteries: { chunkX: number, chunkZ: number, id: string, x: number, z: number }[] = [],
   bySettlement: Record<string, { id: string, x: number, z: number }> = {},
+  probeLog?: { cx: number, cz: number }[],
 ): ChunkManager {
   const abandoned = cemeteries.filter((c) => c.id.startsWith('cemetery:w:'))
   return {
@@ -108,10 +114,36 @@ function fakeChunkManager(
       return hit ? { id: hit.id, x: hit.x, z: hit.z } : undefined
     },
     probeAbandonedCemeteryAtChunk: (coord: { cx: number, cz: number }) => {
+      probeLog?.push(coord)
       const hit = abandoned.find((c) => c.chunkX === coord.cx && c.chunkZ === coord.cz)
       return hit ? { id: hit.id, x: hit.x, z: hit.z } : undefined
     },
   } as unknown as ChunkManager
+}
+
+function findRollChunk(
+  seed: number,
+  passes: boolean,
+  pred: (cx: number, cz: number) => boolean,
+  limit = 80,
+): { cx: number, cz: number } {
+  for (let cz = -limit; cz <= limit; cz++) {
+    for (let cx = -limit; cx <= limit; cx++) {
+      if (chunkPassesAbandonedCemeteryRoll(seed, cx, cz) !== passes) continue
+      if (pred(cx, cz)) return { cx, cz }
+    }
+  }
+  throw new Error('no matching abandoned-roll chunk')
+}
+
+function cemeteryAtChunk(cx: number, cz: number, chunkSize = 64) {
+  return {
+    chunkX: cx,
+    chunkZ: cz,
+    id: `cemetery:w:${cx}:${cz}:0:test`,
+    x: cx * chunkSize,
+    z: cz * chunkSize,
+  }
 }
 
 function makeSettlementDef(gx: number, gz: number, name: string): SettlementDef {
@@ -462,3 +494,151 @@ describe('persistent worldgen cache hooks (plan world-015 §11/§13/§15)', () =
     expect(catalog.getScanDiagnostics().sampledCells).toBeGreaterThan(0)
   })
 })
+
+describe('abandoned cemetery scan (plan world-022)', () => {
+  const SEED = 42
+  const CHUNK = 64
+
+  function catalogFor(
+    cemeteries: { chunkX: number, chunkZ: number, id: string, x: number, z: number }[],
+    probeLog?: { cx: number, cz: number }[],
+    seed = SEED,
+  ) {
+    return createWorldLocationCatalog({
+      getSeed: () => seed,
+      getCaves: () => fakeCaves([]),
+      getChunkManager: () => fakeChunkManager(cemeteries, {}, probeLog),
+      lookupSettlement: () => null,
+      getSampleParams: () => rawParams({ seed }),
+      getChunkSize: () => CHUNK,
+    })
+  }
+
+  it('keeps an abandoned cemetery just inside minKm and just at maxKm', () => {
+    const justOverMin = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > MEDIUM_RANGE_KM && km <= MEDIUM_RANGE_KM + 4
+    })
+    const atMax = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > FAR_RANGE_KM - 4 && km <= FAR_RANGE_KM
+    })
+    const catalog = catalogFor([cemeteryAtChunk(justOverMin.cx, justOverMin.cz), cemeteryAtChunk(atMax.cx, atMax.cz)])
+    const far = catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const ids = far.filter((l) => l.kind === 'cemetery').map((l) => l.id)
+    expect(ids).toContain(`cemetery:w:${justOverMin.cx}:${justOverMin.cz}:0:test`)
+    expect(ids).toContain(`cemetery:w:${atMax.cx}:${atMax.cz}:0:test`)
+  })
+
+  it('does not probe obvious Far inner-band chunks or bounding-square corners', () => {
+    const probeLog: { cx: number, cz: number }[] = []
+    const inner = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km < 10
+    })
+    const corner = { cx: 62, cz: 62 }
+    const catalog = catalogFor(
+      [cemeteryAtChunk(inner.cx, inner.cz), cemeteryAtChunk(corner.cx, corner.cz)],
+      probeLog,
+    )
+    const far = catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    expect(far.some((l) => l.id.includes(`${inner.cx}:${inner.cz}`))).toBe(false)
+    expect(probeLog.some((c) => c.cx === inner.cx && c.cz === inner.cz)).toBe(false)
+    expect(probeLog.some((c) => c.cx === corner.cx && c.cz === corner.cz)).toBe(false)
+    expect(abandonedCemeteryChunkIntersectsKmBand(inner.cx, inner.cz, 0, 0, CHUNK, MEDIUM_RANGE_KM, FAR_RANGE_KM)).toBe(false)
+    expect(abandonedCemeteryChunkIntersectsKmBand(corner.cx, corner.cz, 0, 0, CHUNK, MEDIUM_RANGE_KM, FAR_RANGE_KM)).toBe(false)
+  })
+
+  it('does not call the expensive probe for a chunk rejected by the cheap abandoned roll', () => {
+    const probeLog: { cx: number, cz: number }[] = []
+    const fail = findRollChunk(SEED, false, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+    })
+    const catalog = catalogFor([cemeteryAtChunk(fail.cx, fail.cz)], probeLog)
+    catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    expect(probeLog.some((c) => c.cx === fail.cx && c.cz === fail.cz)).toBe(false)
+    expect(catalog.getScanDiagnostics().cemeteryChunksRejectedByAbandonedRoll).toBeGreaterThan(0)
+  })
+
+  it('Far expensive probes are a small subset of considered chunks (range + roll prune)', () => {
+    const catalog = catalogFor([])
+    catalog.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const d = catalog.getScanDiagnostics()
+    expect(d.cemeteryChunksConsidered).toBeGreaterThan(1000)
+    expect(d.cemeteryChunksRejectedByRange).toBeGreaterThan(0)
+    expect(d.cemeteryChunksRejectedByAbandonedRoll).toBeGreaterThan(0)
+    expect(d.cemeteryExpensiveProbes).toBe(d.cemeteryChunksConsidered - d.cemeteryChunksRejectedByRange - d.cemeteryChunksRejectedByAbandonedRoll)
+    expect(d.cemeteryExpensiveProbes).toBeLessThan(d.cemeteryChunksConsidered * 0.05)
+  })
+
+  it('Near / Guard / Far keep query-order independence including abandoned cemeteries', () => {
+    const a = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > 2 && km <= NEAR_RANGE_KM
+    })
+    const b = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > MEDIUM_RANGE_KM && km <= MEDIUM_RANGE_KM + 8 && !(cx === a.cx && cz === a.cz)
+    })
+    const fixtures = [cemeteryAtChunk(a.cx, a.cz), cemeteryAtChunk(b.cx, b.cz)]
+    const forward = catalogFor(fixtures)
+    const near1 = forward.landmarksInRange(0, 0, 0, NEAR_RANGE_KM).map((l) => l.id).sort()
+    const guard1 = forward.landmarksInRange(0, 0, 0, MEDIUM_RANGE_KM).map((l) => l.id).sort()
+    const far1 = forward.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM).map((l) => l.id).sort()
+
+    const backward = catalogFor(fixtures)
+    const far2 = backward.landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM).map((l) => l.id).sort()
+    const guard2 = backward.landmarksInRange(0, 0, 0, MEDIUM_RANGE_KM).map((l) => l.id).sort()
+    const near2 = backward.landmarksInRange(0, 0, 0, NEAR_RANGE_KM).map((l) => l.id).sort()
+    expect(near2).toEqual(near1)
+    expect(guard2).toEqual(guard1)
+    expect(far2).toEqual(far1)
+  })
+
+  it('async cooperative path matches sync and reports monotonic progress ending at 1', async () => {
+    const pass = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+    })
+    const fixtures = [cemeteryAtChunk(pass.cx, pass.cz)]
+    const sync = catalogFor(fixtures).landmarksInRange(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+      .map((l) => l.id)
+      .sort()
+    const progress: number[] = []
+    const asyncCat = catalogFor(fixtures)
+    const asyncResult = await asyncCat.landmarksInRangeAsync(0, 0, MEDIUM_RANGE_KM, FAR_RANGE_KM, {
+      yieldEveryProbes: 1,
+      yieldToPaint: async () => {},
+      onProgress: (p) => progress.push(p),
+    })
+    expect(asyncResult.map((l) => l.id).sort()).toEqual(sync)
+    expect(progress.length).toBeGreaterThan(0)
+    expect(progress[progress.length - 1]).toBe(1)
+    for (let i = 1; i < progress.length; i++) expect(progress[i]!).toBeGreaterThanOrEqual(progress[i - 1]!)
+  })
+
+  it('yields do not expose a prefix result — the promise resolves with the full set once', async () => {
+    const pass = findRollChunk(SEED, true, (cx, cz) => {
+      const km = Math.hypot(cx * CHUNK, cz * CHUNK) / WORLD_UNITS_PER_KM
+      return km > MEDIUM_RANGE_KM && km <= FAR_RANGE_KM
+    })
+    let settled = false
+    const promise = catalogFor([cemeteryAtChunk(pass.cx, pass.cz)]).landmarksInRangeAsync(
+      0,
+      0,
+      MEDIUM_RANGE_KM,
+      FAR_RANGE_KM,
+      {
+        yieldEveryProbes: 1,
+        yieldToPaint: async () => {
+          expect(settled).toBe(false)
+        },
+      },
+    )
+    const result = await promise
+    settled = true
+    expect(result.filter((l) => l.kind === 'cemetery')).toHaveLength(1)
+  })
+})
+

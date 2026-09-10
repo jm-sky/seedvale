@@ -21,6 +21,7 @@ import {
   createCampfire,
   createCemetery,
   createCemeteryPlot,
+  createExpeditionRuins,
   createFallenLog,
   createFern,
   createGraveStone,
@@ -30,7 +31,6 @@ import {
   createReed,
   createRockCluster,
   createSeaweed,
-  createExpeditionRuins,
   createSmallRuins,
   createStoneCircle,
   createTree,
@@ -48,8 +48,6 @@ import {
   TREE_SPECS,
 } from '../settlement/props'
 import { type RoadNetworkContext, segmentsNear, villageSegmentsNear } from '../settlement/roadNetwork'
-import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
-import { siteChunkContainsPoint } from '../world/locations/darkForestTreasureSite'
 import { cellFromId } from '../settlement/settlementGenerator'
 import { setSettlementRiverQuery, settlementDefFor } from '../settlement/settlementPlanCache'
 import { type Collider, createColliderRegistry } from '../world/collision'
@@ -64,6 +62,8 @@ import {
   resolveCropStage,
 } from '../world/cropLifecycle'
 import { createCropStageMesh } from '../world/cropVisuals'
+import { siteChunkContainsPoint } from '../world/locations/darkForestTreasureSite'
+import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { makePlantedCropId } from '../world/plantedCrops'
 import { makePlantedTreeId, pickPlantedTreeSpecies, type PlantedTreeRecord } from '../world/plantedTrees'
 import { coastalFactor, rollSizeClass, type TreeSizeClass } from '../world/treeLifecycle'
@@ -77,7 +77,7 @@ import {
   makeSettlementRefPeek,
   resolveCemeteryTopologyForSettlement,
 } from './cemeteryAssignment'
-import { resolveAbandonedCemeteryForChunk, resolvePlacementForTopology } from './cemeteryPlacement'
+import { resolveAbandonedCemeteryAfterRoll, resolvePlacementForTopology } from './cemeteryPlacement'
 import { computeChunkEnvironment, type EnvironmentKind, type LandmarkKind, resolveCemeteryPlacement } from './chunkEnvironment'
 import {
   chebyshevDistance,
@@ -313,10 +313,10 @@ function createProceduralEnvironmentProp(
       return createMonolith(scale, variant)
     case 'rockCluster':
       return createRockCluster(scale, variant)
-    case 'smallRuins':
-      return createSmallRuins(scale, variant)
     case 'ruins':
       return createExpeditionRuins(scale, variant)
+    case 'smallRuins':
+      return createSmallRuins(scale, variant)
     case 'stoneCircle':
       return createStoneCircle(scale, variant)
   }
@@ -1185,8 +1185,10 @@ export function createChunkManager(
   }
 
   function probeAbandonedCemeteryAtChunk(coord: ChunkCoord) {
-    const params = paramsFor(coord, [])
-    const placement = resolveAbandonedCemeteryForChunk(coord, params, createLocalTerrainSampler(coord, params))
+    const placement = resolveAbandonedCemeteryAfterRoll(coord, config.seed, () => {
+      const params = paramsFor(coord, [])
+      return { params, terrain: createLocalTerrainSampler(coord, params) }
+    })
     if (!placement?.id) return undefined
     return { id: placement.id, x: placement.x, z: placement.z }
   }
@@ -1198,8 +1200,10 @@ export function createChunkManager(
       const cz = Number(parts[3])
       if (!Number.isInteger(cx) || !Number.isInteger(cz)) return undefined
       const coord = { cx, cz }
-      const params = paramsFor(coord, [])
-      const placement = resolveAbandonedCemeteryForChunk(coord, params, createLocalTerrainSampler(coord, params))
+      const placement = resolveAbandonedCemeteryAfterRoll(coord, config.seed, () => {
+        const params = paramsFor(coord, [])
+        return { params, terrain: createLocalTerrainSampler(coord, params) }
+      })
       if (!placement?.id || placement.id !== cemeteryId) return undefined
       return { id: placement.id, x: placement.x, z: placement.z, cemeterySize: placement.cemeterySize }
     }

@@ -68,8 +68,8 @@ type NpcDialogueMenuState = {
   onRequestWater: ((npc: NpcAgent) => string) | null
   /** "Opowiedz mi coś o okolicy" (plan world-012 §7) — home guard only, same
    *  "no args, resolved against whatever NPC/settlement is open" shape as
-   *  `onAskSword`. */
-  onAskAboutArea: (() => string) | null
+   *  `onAskSword`. May be async when location discovery yields (plan world-022). */
+  onAskAboutArea: (() => string | Promise<string>) | null
   /** Wage-claim context for the open NPC (plan npc-016) — stable ids only.
    *  `onPayWage` re-resolves live contract/assignment/inventories. */
   paymentClaim: { contractId: string, npcId: string, coins: number } | null
@@ -308,7 +308,7 @@ type MerchantState = {
   onSettleTransaction: ((
     purchases: Partial<Record<ItemKind, number>>,
     offer: Partial<Record<ItemKind, number>>,
-  ) => TradeResult) | null
+  ) => TradeResult | Promise<TradeResult>) | null
   onSellInstances: ((instanceIds: readonly string[]) => TradeResult) | null
 }
 /** Generic container transfer screen (plan 164 §7) — same "seller/buyer
@@ -840,7 +840,7 @@ export function configureNpcDialogueMenu(handlers: {
   getCanAskSword: () => boolean
   onRequestFood: (npc: NpcAgent) => string
   onRequestWater: (npc: NpcAgent) => string
-  onAskAboutArea: () => string
+  onAskAboutArea: () => string | Promise<string>
   onPayWage: () => string
 }): void {
   ui.npcDialogueMenu.onAskSword = handlers.onAskSword

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { WorldLocationCatalog } from './worldLocationCatalog'
 import type { WorldLocation } from './worldLocationTypes'
 import { FAR_RANGE_KM, MEDIUM_RANGE_KM, NEAR_RANGE_KM, WORLD_UNITS_PER_KM } from './locationConfig'
 import {
@@ -11,6 +10,7 @@ import {
   settlementsInBand,
   weightedTopN,
 } from './locationDiscovery'
+import { emptyLocationScanDiagnostics, type WorldLocationCatalog } from './worldLocationCatalog'
 
 function loc(id: string, km: number, discoveryWeight = 0): WorldLocation {
   return { id, kind: 'cave', x: km * WORLD_UNITS_PER_KM, z: 0, name: id, discoveryWeight }
@@ -98,21 +98,9 @@ describe('landmarksInBand / settlementsInBand', () => {
       nearestSettlements: (x, z, maxKm) => all.filter((l) => kmOf(x, z, l) <= maxKm),
       landmarksWithin: (x, z, maxKm) => all.filter((l) => kmOf(x, z, l) <= maxKm),
       landmarksInRange: (x, z, minKm, maxKm) => all.filter((l) => kmOf(x, z, l) > minKm && kmOf(x, z, l) <= maxKm),
+      landmarksInRangeAsync: async (x, z, minKm, maxKm) => all.filter((l) => kmOf(x, z, l) > minKm && kmOf(x, z, l) <= maxKm),
       invalidateScanCache: () => {},
-      getScanDiagnostics: () => ({
-        sampledCells: 0,
-        cacheHitCells: 0,
-        sampleFloorCalls: 0,
-        sampleContinentalnessCalls: 0,
-        sampleRidgeCalls: 0,
-        sampleHeightCalls: 0,
-        waterCells: 0,
-        mountainCells: 0,
-        classificationMs: 0,
-        lakeExtractionMs: 0,
-        peakExtractionMs: 0,
-        cemeteryMs: 0,
-      }),
+      getScanDiagnostics: () => emptyLocationScanDiagnostics(),
     }
   }
 

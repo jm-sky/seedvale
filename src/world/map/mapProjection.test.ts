@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
 import type { WorldLocation } from '../locations/worldLocationTypes'
 import { createLocationKnowledge } from '../locations/locationKnowledge'
+import { emptyLocationScanDiagnostics } from '../locations/worldLocationCatalog'
 import { MAP_CELL_SIZE, MAP_DISCOVERY_RADIUS } from './mapConfig'
 import { createMapData } from './mapData'
 import { cellsInDiscoveryRadius, createMapDiscovery } from './mapDiscovery'
@@ -195,21 +196,9 @@ describe('map data filtering', () => {
       nearestSettlements: () => [],
       landmarksWithin: () => [],
       landmarksInRange: () => [],
+      landmarksInRangeAsync: async () => [],
       invalidateScanCache: () => {},
-      getScanDiagnostics: () => ({
-        sampledCells: 0,
-        cacheHitCells: 0,
-        sampleFloorCalls: 0,
-        sampleContinentalnessCalls: 0,
-        sampleRidgeCalls: 0,
-        sampleHeightCalls: 0,
-        waterCells: 0,
-        mountainCells: 0,
-        classificationMs: 0,
-        lakeExtractionMs: 0,
-        peakExtractionMs: 0,
-        cemeteryMs: 0,
-      }),
+      getScanDiagnostics: () => emptyLocationScanDiagnostics(),
     }
   }
 

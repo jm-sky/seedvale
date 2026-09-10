@@ -18,7 +18,6 @@ import type { Hud } from '../ui/createHud'
 import type { Toast } from '../ui/createToast'
 import type { DayNightState } from '../world/dayNight'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
-import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import type { NavigationTargets } from '../world/locations/navigationTargets'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldBundle } from './worldBundle'
@@ -29,7 +28,7 @@ import { expandFoodBatchesToUnits } from '../items/foodItems'
 import { askGuardForSword } from '../items/guardSword'
 import { toSaveItemInstance } from '../items/Inventory'
 import { buildInventoryGroups, inventoryCountsForUi } from '../items/inventoryView'
-import { ITEM_CATALOG, isMeleeToolKind, isRangedTool } from '../items/itemCatalog'
+import { isMeleeToolKind, isRangedTool, ITEM_CATALOG } from '../items/itemCatalog'
 import { isInstanceBackedKind } from '../items/itemInstances'
 import { ITEM_DEFS } from '../items/items'
 import { inventoryOwnsPrimaryWeaponChoice } from '../items/primaryWeapons'
@@ -44,7 +43,7 @@ import {
   merchantHorseAnimalId,
   resolveMerchantHorseAnimal,
 } from '../settlement/horseAcquisition'
-import { ui } from '../ui-vue/store'
+import { hideBusy, showBusy, ui } from '../ui-vue/store'
 import {
   FAR_RANGE_KM,
   GUARD_LANDMARK_POOL_SIZE,
@@ -55,17 +54,42 @@ import {
   NEAR_RANGE_KM,
 } from '../world/locations/locationConfig'
 import {
-  landmarksInBand,
+  landmarksInBandAsync,
   pickRandomReveal,
   settlementsInBand,
   weightedTopN,
 } from '../world/locations/locationDiscovery'
+import { revealLocationKnowledge } from '../world/locations/revealLocationKnowledge'
 import { settlementLocationId } from '../world/locations/worldLocationCatalog'
 import { payWorkContractAssignment } from './actions/workContractPayment'
 
 /** Nearest settlements the home guard always mentions each conversation
  *  (plan §8 — no pool/scarcity mechanic, unlike landmarks). */
 const GUARD_SETTLEMENT_REVEAL_COUNT = 3
+
+/** Delay BusyOverlay so Near/NPC queries that finish immediately never flicker. */
+const LOCATION_DISCOVERY_BUSY_DELAY_MS = 80
+const LOCATION_DISCOVERY_BUSY_LABEL = 'Przeszukuję okolicę…'
+
+async function withLocationDiscoveryBusy<T>(
+  work: (onProgress: (progress: number) => void) => Promise<T>,
+): Promise<T> {
+  let shown = false
+  let lastProgress = 0
+  const timer = setTimeout(() => {
+    shown = true
+    showBusy(LOCATION_DISCOVERY_BUSY_LABEL, false, lastProgress)
+  }, LOCATION_DISCOVERY_BUSY_DELAY_MS)
+  try {
+    return await work((progress) => {
+      lastProgress = progress
+      if (shown) showBusy(LOCATION_DISCOVERY_BUSY_LABEL, false, progress)
+    })
+  } finally {
+    clearTimeout(timer)
+    if (shown) hideBusy()
+  }
+}
 
 export type MerchantInventoryView = {
   counts: Partial<Record<ItemKind, number>>
@@ -78,8 +102,9 @@ export type MerchantInventoryView = {
  *  `Inventory`/relation state).
  *
  *  It is deliberately *not* a `PlayerActionContext` consumer: these are UI
- *  handlers over `Inventory` + `vueUi`, not world interactions, and they never
- *  open a busy channel. */
+ *  handlers over `Inventory` + `vueUi`, not world interactions. Map/area
+ *  discovery may reuse `showBusy` progress (plan world-022) but never
+ *  `BusyAction`. */
 export type InventoryWiring = {
   /** Counts + grouped view the merchant screen renders the player bag from. */
   merchantInventoryView: () => MerchantInventoryView
@@ -409,12 +434,14 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
    *  selling it afterwards never revokes what it already revealed. Origin
    *  is wherever the player is standing (the home trader), matching the
    *  guard's own "wherever this conversation is happening" reference point. */
-  const applyLocationMap = (range: 'map_near' | 'map_far'): number => {
+  const applyLocationMap = async (range: 'map_near' | 'map_far'): Promise<number> => {
     const originX = player.mesh.position.x
     const originZ = player.mesh.position.z
-    const landmarks = range === 'map_near'
-      ? landmarksInBand(locationCatalog, originX, originZ, 0, NEAR_RANGE_KM)
-      : landmarksInBand(locationCatalog, originX, originZ, MEDIUM_RANGE_KM, FAR_RANGE_KM)
+    const minKm = range === 'map_near' ? 0 : MEDIUM_RANGE_KM
+    const maxKm = range === 'map_near' ? NEAR_RANGE_KM : FAR_RANGE_KM
+    const landmarks = await withLocationDiscoveryBusy((onProgress) =>
+      landmarksInBandAsync(locationCatalog, originX, originZ, minKm, maxKm, { onProgress }),
+    )
     const settlements = range === 'map_near'
       ? settlementsInBand(locationCatalog, originX, originZ, 0, NEAR_RANGE_KM)
       : settlementsInBand(locationCatalog, originX, originZ, MEDIUM_RANGE_KM, FAR_RANGE_KM)
@@ -426,13 +453,19 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
   }
 
   vueUi.configureMerchant({
-    onSettleTransaction: (purchases, offer) => {
+    onSettleTransaction: async (purchases, offer) => {
       const result = settleTransaction(inventory, purchases, offer, merchantSellContext())
       if (result === 'ok') {
         afterTrade()
+        const needsNear = (purchases.map_near ?? 0) > 0
+        const needsFar = (purchases.map_far ?? 0) > 0
+        if (!needsNear && !needsFar) {
+          toast.show('Transakcja zakończona.', 'pickup')
+          return result
+        }
         let newlyDiscovered = 0
-        if ((purchases.map_near ?? 0) > 0) newlyDiscovered += applyLocationMap('map_near')
-        if ((purchases.map_far ?? 0) > 0) newlyDiscovered += applyLocationMap('map_far')
+        if (needsNear) newlyDiscovered += await applyLocationMap('map_near')
+        if (needsFar) newlyDiscovered += await applyLocationMap('map_far')
         toast.show(newlyDiscovered > 0 ? `Odkryto ${newlyDiscovered} nowych miejsc.` : 'Transakcja zakończona.', 'pickup')
       }
       return result
@@ -484,12 +517,17 @@ export function createInventoryWiring(deps: InventoryWiringDeps): InventoryWirin
     },
     onRequestFood: (npc) => resolveAssistanceDialogue(npc, 'food'),
     onRequestWater: (npc) => resolveAssistanceDialogue(npc, 'water'),
-    onAskAboutArea: () => {
+    onAskAboutArea: async () => {
       const originX = player.mesh.position.x
       const originZ = player.mesh.position.z
       const homeId = bundle.settlementsManager.home ? settlementLocationId(bundle.settlementsManager.home) : null
 
-      const pool = weightedTopN(locationCatalog.landmarksWithin(originX, originZ, MEDIUM_RANGE_KM), GUARD_LANDMARK_POOL_SIZE)
+      const pool = weightedTopN(
+        await withLocationDiscoveryBusy((onProgress) =>
+          locationCatalog.landmarksInRangeAsync(originX, originZ, 0, MEDIUM_RANGE_KM, { onProgress }),
+        ),
+        GUARD_LANDMARK_POOL_SIZE,
+      )
       const revealedLandmarks = pickRandomReveal(pool, GUARD_REVEAL_MIN, GUARD_REVEAL_MAX, Math.random)
         .filter((location) => locationKnowledge.reveal(location.id, 'discovered', 'npc'))
 
