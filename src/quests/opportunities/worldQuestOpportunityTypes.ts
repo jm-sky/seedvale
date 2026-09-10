@@ -15,6 +15,14 @@ import type { NpcId } from '../../settlement/npcState'
 export type WorldQuestOpportunityKind = 'wolf-den-pressure'
 
 /**
+ * Authored RPG scenario matrices. Eligibility binds real world refs;
+ * materialization builds a normal `QuestDef`.
+ *
+ * @domain quests-progression
+ */
+export type RpgQuestMatrixId = 'old-place-secret' | 'suspicious-transport' | 'settlement-agreement'
+
+/**
  * Wolf-den pressure opportunity for one settlement-owned den.
  * `spawnerId` is the stable fauna habitat id (`${settlementId}:wolfDen`).
  *
@@ -27,7 +35,21 @@ export type WolfDenPressureOpportunity = {
   spawnerId: string
 }
 
-export type SettlementQuestOpportunity = WolfDenPressureOpportunity
+/**
+ * Lightweight RPG matrix candidate. `sourceId` is a stable world/NPC/settlement
+ * ref used both as the quest-id variant and as materialization input.
+ *
+ * @domain quests-progression
+ */
+export type RpgQuestOpportunity = {
+  id: string
+  settlementId: string
+  kind: 'rpg-matrix'
+  matrixId: RpgQuestMatrixId
+  sourceId: string
+}
+
+export type SettlementQuestOpportunity = WolfDenPressureOpportunity | RpgQuestOpportunity
 
 /**
  * Live source status for a materialized world-driven quest.
