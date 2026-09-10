@@ -17,7 +17,6 @@ import type { WorldContext } from '../world/worldContext'
 import type { HouseholdHistoryEvent } from './householdHistory'
 import type { WorldPoint } from './locationSearch'
 import type { NpcTraceEvent } from './npcTrace'
-import type { PlayerGroundTraceBuffer, PlayerGroundTraceTick } from './playerGroundTrace'
 import { getNavigationStats, type NavigationStats } from '../navigation/navigationStats'
 import { awardSkillXp, type PlayerSkills, setSkillValueForDebug, type SkillId } from '../player/PlayerSkills'
 import {
@@ -55,6 +54,7 @@ import {
   settlementHistory,
   unfreezeNpc,
 } from './npcInspector'
+import { emptyPlayerGroundTrace, type PlayerGroundTraceBuffer, type PlayerGroundTraceSnapshot } from './playerGroundTrace'
 import { findVillageDef } from './villageInspector'
 
 /**
@@ -211,8 +211,8 @@ export type PlayerDebugApi = {
   needs: () => PlayerNeeds
   skills: () => PlayerSkills
   temporaryConditions: () => TemporaryConditionsState
-  /** Last ~60 player ground-resolution ticks (Cave V2 B3 snap capture). */
-  groundTrace: () => PlayerGroundTraceTick[]
+  /** Last ~120 player ground-resolution ticks; latches on a cave surface snap. */
+  groundTrace: () => PlayerGroundTraceSnapshot
   clearGroundTrace: () => void
 }
 
@@ -279,8 +279,8 @@ export type SeedvaleDebugApi = {
   injury: InjuryDebugApi
   spotAnimal: (kind: AnimalKind) => void
   help: () => string
-  /** Alias of `player.groundTrace()` — last ~60 cave/surface ground ticks. */
-  getPlayerGroundTrace: () => PlayerGroundTraceTick[]
+  /** Alias of `player.groundTrace()` — rolling ticks, latched after a snap. */
+  getPlayerGroundTrace: () => PlayerGroundTraceSnapshot
   /** Alias of `player.clearGroundTrace()`. */
   clearPlayerGroundTrace: () => void
 }
@@ -296,8 +296,8 @@ type VillageIdentityLike = { id: string, name: string, size: VillageSize, x: num
 const HELP_TEXT = [
   'window.seedvale.debug — developer console API (?debug=1 only)',
   'player.position() — current player world position {x, y, z}',
-  'player.groundTrace() / getPlayerGroundTrace() — last ~60 player ground-resolution ticks (cave/hysteresis/surface); copy after a cave snap',
-  'player.clearGroundTrace() / clearPlayerGroundTrace() — empty the ground-resolution ring before a repro',
+  'player.groundTrace() / getPlayerGroundTrace() — last ~120 player ground-resolution ticks; auto-freezes on a >2m upward Y snap or cave→surface takeover. copy(JSON.stringify(seedvale.debug.getPlayerGroundTrace(), null, 2))',
+  'player.clearGroundTrace() / clearPlayerGroundTrace() — empty the ring and reset the snap latch before a repro',
   'player.health() — current player health {hp, maxHp, status}',
   'player.attributes() — current player attributes {strength, agility, endurance, intelligence, wisdom, charisma}',
   'player.needs() — current player needs {hunger, thirst, sleep, rest}',
@@ -517,7 +517,7 @@ export function installNpcDebugApi(
       needs: () => getPlayer().needs,
       skills: () => getPlayer().skills,
       temporaryConditions: () => getPlayer().temporaryConditions,
-      groundTrace: () => groundTrace?.snapshot() ?? [],
+      groundTrace: () => groundTrace?.snapshot() ?? emptyPlayerGroundTrace(),
       clearGroundTrace: () => { groundTrace?.clear() },
     },
     npc: (id) => {
@@ -573,7 +573,7 @@ export function installNpcDebugApi(
       })
     },
     help: () => HELP_TEXT,
-    getPlayerGroundTrace: () => groundTrace?.snapshot() ?? [],
+    getPlayerGroundTrace: () => groundTrace?.snapshot() ?? emptyPlayerGroundTrace(),
     clearPlayerGroundTrace: () => { groundTrace?.clear() },
   }
   window.seedvale = { ...window.seedvale, debug: api }

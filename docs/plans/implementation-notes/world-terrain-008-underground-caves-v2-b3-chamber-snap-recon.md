@@ -234,7 +234,7 @@ Without `lastGroundHit` + raw query on that exact tick, Case A’s +9.7 m writer
 
 ## Live capture (`seedvale.debug`, 2026-09-10)
 
-Debug-only ring of the last ~60 player ground-resolution ticks. No gameplay change.
+Debug-only ring of the last ~120 player ground-resolution ticks. Auto-latches on a vertical snap (`after.y - before.y > 2`, or cave/hysteresis → surface with overburden > 2 m), keeps 10 post ticks, then ignores further walking. No gameplay change.
 
 Before entering the cave:
 
@@ -242,15 +242,17 @@ Before entering the cave:
 seedvale.debug.clearPlayerGroundTrace()
 ```
 
-After the snap, copy JSON (pasteable into the next prompt):
+After the snap you can stand still; then copy JSON (pasteable into the next prompt):
 
 ```js
 copy(JSON.stringify(seedvale.debug.getPlayerGroundTrace(), null, 2))
 ```
 
+The object has `frozen: true`, `triggerReason`, `triggerSeq`, and `ticks`. The triggering sample has `triggerReason` set. `clearPlayerGroundTrace()` resets the latch.
+
 Aliases: `seedvale.debug.player.groundTrace()` / `seedvale.debug.player.clearGroundTrace()`.
 
-Each record is one `updateVerticalMotion` / `snapToGround` / swim tick: `before` (after XZ, before vertical) → `raw` / `lastGroundHit` / `source` (`cave|hysteresis|surface`) / `groundY` → `after` (mesh Y after `integrateVerticalMotion`). `queryInterior` here is raw occupancy on the interior mouth side, not hysteretic `Caves.queryInterior`.
+Each tick: `before` (after XZ, before vertical) → `raw` / `lastGroundHit` / `source` (`cave|hysteresis|surface`) / `groundY` → `after` (mesh Y after `integrateVerticalMotion`). `queryInterior` here is raw occupancy on the interior mouth side, not hysteretic `Caves.queryInterior`.
 
 ## Classification (Case A)
 

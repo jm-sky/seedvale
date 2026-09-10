@@ -1173,6 +1173,7 @@ export class PlayerController {
       caveId: debug?.caveId ?? null,
       along: debug?.along ?? null,
       lateral: debug?.lateral ?? null,
+      triggerReason: null,
     })
   }
 
