@@ -109,9 +109,14 @@ Generated from exported TypeScript symbols.
 
 ## `world/caves/caveSdfColliders.ts`
 
-- `buildCaveSdfColliders` — function — line 109
+- `buildCaveSdfColliders` — function — line 144
   - domain: world-terrain
-- `CAVE_SDF_BEAD_RADIUS` — const — line 23
+- `CAVE_SDF_BEAD_RADIUS` — const — line 24
+- `caveMouthColliderFilter` — function — line 62
+- `MOUTH_CORRIDOR_ALONG` — const — line 35
+- `MOUTH_CORRIDOR_HALF` — const — line 37
+- `MouthColliderFilter` — type — line 39
+- `mouthWalkCorridorAlong` — function — line 51
 
 ## `world/caves/caveSdfField.ts`
 
