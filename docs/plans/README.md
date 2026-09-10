@@ -76,6 +76,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | 💡 `world-terrain-017-abandoned-mountain-mine-landmark.md`                     | -       | 🔴 | M      | world-terrain-008 |
 | 💡 `world-018-cave-aware-rich-finite-resource-deposits.md`                     | -       | 🔴 | M      | world-terrain-008, world-terrain-017 |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
+| ◼️ `items-player-022-gameplay-interaction-usability-polish.md`                 | -       | 🟡 | M      | items-player-018, ui-input-012, settlements-005 |
 
 ---
 
@@ -189,7 +190,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 
 - ai: `005`
 - fauna: `021`
-- items-player: `022`
+- items-player: `023`
 - npc: `029`
 - persistence: `005`
 - quests-progression: `018`
