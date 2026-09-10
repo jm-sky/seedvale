@@ -4,32 +4,32 @@ Generated from exported TypeScript symbols.
 
 ## `fauna/AnimalAgent.ts`
 
-- `AnimalAgent` — class — line 855
+- `AnimalAgent` — class — line 858
   - domain: fauna
   - system: animal-agent
   - role: Central per-animal behaviour integration point: predator/prey AI, needs, health, production (livestock) and riding (mounts).
   - uses: HealthState, StaminaState
   - simulation: tick
-- `AnimalAgentDebugInfo` — type — line 388
-- `AnimalAgentDeps` — type — line 720
-- `AnimalSaveState` — type — line 489
-- `AnimalUpdateContext` — type — line 754
-- `BURY_DURATION_SEC` — const — line 258
-- `canPredatorPursueIntoVillage` — function — line 549
-- `FAUNA_SHADOW_DISTANCE` — const — line 225
-- `FaunaAiBranch` — type — line 367
-- `FaunaNavRescueDebugInfo` — type — line 372
-- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 318
-- `FrenzyWolfCandidate` — type — line 655
-- `HARVEST_MEAT_DURATION_SEC` — const — line 261
-- `isWithinVillageRadius` — function — line 530
-- `NearbyNpcCandidate` — type — line 650
-- `pickNearestEligibleWolf` — function — line 664
-- `pickRabidTarget` — function — line 689
-- `RABIES_BITE_INFECTION_CHANCE` — const — line 243
-- `resolveLureTarget` — function — line 578
-- `villageFleeBiasFalloff` — function — line 557
-- `VillageInfo` — type — line 524
+- `AnimalAgentDebugInfo` — type — line 389
+- `AnimalAgentDeps` — type — line 723
+- `AnimalSaveState` — type — line 490
+- `AnimalUpdateContext` — type — line 757
+- `BURY_DURATION_SEC` — const — line 259
+- `canPredatorPursueIntoVillage` — function — line 552
+- `FAUNA_SHADOW_DISTANCE` — const — line 226
+- `FaunaAiBranch` — type — line 368
+- `FaunaNavRescueDebugInfo` — type — line 373
+- `FRENZY_VILLAGE_ARRIVAL_RADIUS` — const — line 319
+- `FrenzyWolfCandidate` — type — line 658
+- `HARVEST_MEAT_DURATION_SEC` — const — line 262
+- `isWithinVillageRadius` — function — line 533
+- `NearbyNpcCandidate` — type — line 653
+- `pickNearestEligibleWolf` — function — line 667
+- `pickRabidTarget` — function — line 692
+- `RABIES_BITE_INFECTION_CHANCE` — const — line 244
+- `resolveLureTarget` — function — line 581
+- `villageFleeBiasFalloff` — function — line 560
+- `VillageInfo` — type — line 527
 
 ## `fauna/animalCorpse.ts`
 
@@ -165,6 +165,11 @@ Generated from exported TypeScript symbols.
 
 - `MEAT_KIND_BY_ANIMAL` — const — line 13
 - `meatKindForAnimal` — function — line 21
+
+## `fauna/animalNames.ts`
+
+- `HORSE_NAMES` — const — line 1
+- `horseNameForAnimal` — function — line 27
 
 ## `fauna/animalOwnership.ts`
 

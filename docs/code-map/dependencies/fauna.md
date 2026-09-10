@@ -10,6 +10,7 @@ Generated from TypeScript imports.
 - `fauna/AnimalLife.ts`
 - `fauna/animalDefs.ts`
 - `fauna/animalHumanAffinity.ts`
+- `fauna/animalNames.ts`
 - `fauna/herdCohesion.ts`
 - `terrain/waterSample.ts`
 
@@ -27,6 +28,7 @@ Generated from TypeScript imports.
 - `fauna/animalDefs.ts`
 - `fauna/animalForaging.ts`
 - `fauna/animalHumanAffinity.ts`
+- `fauna/animalNames.ts`
 - `fauna/animalOwnership.ts`
 - `fauna/animalRoaming.ts`
 - `fauna/dogGuard.ts`
@@ -300,6 +302,20 @@ Generated from TypeScript imports.
 - `app/actions/survivalActions.ts`
 - `fauna/animalHarvest.ts`
 - `fauna/harvestedRemains.ts`
+
+## `fauna/animalNames.test.ts`
+
+**Imports**
+
+- `fauna/animalNames.ts`
+
+## `fauna/animalNames.ts`
+
+**Imported by**
+
+- `fauna/AnimalAgent.test.ts`
+- `fauna/AnimalAgent.ts`
+- `fauna/animalNames.test.ts`
 
 ## `fauna/animalOwnership.test.ts`
 
