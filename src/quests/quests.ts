@@ -1317,6 +1317,10 @@ export function buildLandmarkQuests(resolve: LandmarkResolver): AuthoredQuestDef
 /** Merchant horse reward quest (plan quests-progression-012) — bound to one
  *  concrete `animalId` resolved at composition root. Omitted when the home
  *  settlement has no merchant horse acquisition target this session. */
+/** Placeholder replaced once at composition with a concrete map-source
+ *  place phrase (cave/cemetery + cheap direction from the home settlement). */
+export const MAP_SOURCE_PLACE_TOKEN = '{mapSourcePlace}'
+
 /** Deep-forest ruins treasure map quest (plan quests-progression-009). */
 export function buildDarkForestTreasureQuest(): AuthoredQuestDef {
   return {
@@ -1325,12 +1329,12 @@ export function buildDarkForestTreasureQuest(): AuthoredQuestDef {
     description: 'Piotr słyszał o starych ruinach głęboko w ciemnym lesie i o skarbie, który tam spoczywa.',
     giverName: 'Piotr',
     offerLine:
-      'Słyszałem o starych ruinach głęboko w ciemnym lesie. Podobno ktoś zostawił tam skarb i mapę, która do niego prowadzi. Jeśli mapę odczytasz i wrócisz żywy — opowiedz, co tam znalazłeś.',
+      `Słyszałem, że starą mapę ukryto ${MAP_SOURCE_PLACE_TOKEN}. Podobno prowadzi do ruin głęboko w ciemnym lesie. Jeśli mapę odczytasz i wrócisz żywy — opowiedz, co tam znalazłeś.`,
     stages: [
       {
         objective: { type: 'read_item', itemKind: 'treasure_map_dark_forest' },
-        description: 'Znajdź mapę do skarbu i odczytaj ją.',
-        reminderLine: 'Bez mapy nie wiesz, gdzie szukać ruin.',
+        description: `Znajdź mapę ${MAP_SOURCE_PLACE_TOKEN} i odczytaj ją.`,
+        reminderLine: `Mapa miała być ukryta ${MAP_SOURCE_PLACE_TOKEN}.`,
         progressLine: 'Na mapie widać ruiny głęboko w ciemnym lesie. Teraz trzeba tam dotrzeć.',
       },
       {
@@ -1420,6 +1424,24 @@ function applyCavePlaceToken(text: string, phrase: string): string {
   return text.replaceAll(CAVE_PLACE_TOKEN, phrase)
 }
 
+function applyMapSourcePlaceToken(text: string, phrase: string): string {
+  return text.replaceAll(MAP_SOURCE_PLACE_TOKEN, phrase)
+}
+
+/**
+ * Polish phrase naming the treasure-map source place, e.g.
+ * `w jaskini na północny zachód od osady`.
+ */
+export function treasureMapSourcePlacePhrase(
+  kind: 'cave' | 'cemetery' | null,
+  directionFromSettlement: string | null,
+): string {
+  const where = directionFromSettlement ?? 'poza osadą'
+  if (kind === 'cemetery') return `na cmentarzu ${where}`
+  if (kind === 'cave') return `w jaskini ${where}`
+  return where
+}
+
 /** Binds exact home-cave identity and cheap direction prose onto the
  *  authored cave quests. Direction is already-resolved presentation data
  *  — never persisted. */
@@ -1444,4 +1466,23 @@ export function bindExactCaveQuests(
       })),
     }
   })
+}
+
+/** Binds cheap direction prose for `mapa-do-skarbu` onto the actual
+ *  cave/cemetery source place chosen for this seed. */
+export function bindDarkForestTreasureQuest(
+  def: AuthoredQuestDef,
+  source: { kind: 'cave' | 'cemetery', directionPhrase: string | null } | null,
+): AuthoredQuestDef {
+  if (def.id !== 'mapa-do-skarbu') return def
+  const phrase = treasureMapSourcePlacePhrase(source?.kind ?? null, source?.directionPhrase ?? null)
+  return {
+    ...def,
+    offerLine: applyMapSourcePlaceToken(def.offerLine, phrase),
+    stages: def.stages.map((stage) => ({
+      ...stage,
+      description: applyMapSourcePlaceToken(stage.description, phrase),
+      reminderLine: applyMapSourcePlaceToken(stage.reminderLine, phrase),
+    })),
+  }
 }

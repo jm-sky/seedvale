@@ -96,7 +96,7 @@ import {
   opportunityNpcsFromSettlement,
 } from '../quests/opportunities/worldQuestMaterialization'
 import { QuestManager } from '../quests/QuestManager'
-import { bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
+import { bindDarkForestTreasureQuest, bindExactCaveQuests, buildDarkForestTreasureQuest, buildHorseAcquisitionQuest, buildLandmarkQuests, QUESTS } from '../quests/quests'
 import { prewarmRenderPrograms } from '../render/programPrewarm'
 import { applySocialConsequence, ReputationManager } from '../reputation/ReputationManager'
 import { settlementSpawnPoint } from '../settlement/createSettlement'
@@ -931,13 +931,23 @@ export async function createApp(
     id: homeCave?.id ?? `${homeSettlementId}:cave`,
     directionPhrase: caveDirection ? `${caveDirection} od osady` : null,
   }
+  const treasureMapSource = getActiveDarkForestTreasureSite()?.treasureMap
+  const treasureMapDirection = treasureMapSource
+    ? cardinalDirectionPhrase(treasureMapSource.x - homeDef.x, treasureMapSource.z - homeDef.z)
+    : null
+  const treasureMapBinding = treasureMapSource
+    ? {
+        kind: treasureMapSource.kind,
+        directionPhrase: treasureMapDirection ? `${treasureMapDirection} od osady` : null,
+      }
+    : null
   const merchantHorseId = merchantHorseAnimalId(homeSettlementId)
   const homeNpcDescriptors = settlementNpcDescriptors(homeDef)
   const authoredQuestDefs = materializeAuthoredQuestDefs(
     bindExactCaveQuests([
       ...QUESTS,
       ...landmarkQuests,
-      buildDarkForestTreasureQuest(),
+      bindDarkForestTreasureQuest(buildDarkForestTreasureQuest(), treasureMapBinding),
       buildHorseAcquisitionQuest(merchantHorseId),
     ], caveBinding).map((def) => ({ ...def, settlementId: homeSettlementId })),
     homeNpcDescriptors,

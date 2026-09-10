@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { AuthoredQuestDef, QuestDef } from './quests'
 import { materializeAuthoredQuestDefs } from './materializeAuthoredQuests'
 import {
+  bindDarkForestTreasureQuest,
   bindExactCaveQuests,
+  buildDarkForestTreasureQuest,
   buildLandmarkQuests,
   QuestDefinitionValidationError,
   QUESTS,
@@ -380,6 +382,26 @@ describe('quest dialogue lines and cave binding (plan quests-progression-014)', 
     expect(check.offerLine).toContain('na północny wschód od osady')
     expect(check.offerLine).not.toContain('{cavePlace}')
     expect(lost.stages[0]?.reminderLine).toContain('na północny wschód od osady')
+  })
+
+  it('binds mapa-do-skarbu prose to the concrete map source place', () => {
+    const bound = bindDarkForestTreasureQuest(buildDarkForestTreasureQuest(), {
+      kind: 'cave',
+      directionPhrase: 'na północny zachód od osady',
+    })
+    expect(bound.offerLine).toContain('w jaskini na północny zachód od osady')
+    expect(bound.offerLine).not.toContain('{mapSourcePlace}')
+    expect(bound.stages[0]?.description).toContain('w jaskini na północny zachód od osady')
+    expect(bound.stages[0]?.reminderLine).toBe('Mapa miała być ukryta w jaskini na północny zachód od osady.')
+  })
+
+  it('uses cemetery phrasing when the map source is a cemetery', () => {
+    const bound = bindDarkForestTreasureQuest(buildDarkForestTreasureQuest(), {
+      kind: 'cemetery',
+      directionPhrase: 'na wschód od osady',
+    })
+    expect(bound.offerLine).toContain('na cmentarzu na wschód od osady')
+    expect(bound.stages[0]?.reminderLine).toContain('na cmentarzu na wschód od osady')
   })
 
   it('uses the neutral cave-place fallback when no direction is available', () => {

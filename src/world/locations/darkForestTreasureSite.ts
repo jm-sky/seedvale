@@ -1,5 +1,6 @@
 import type { ChunkCoord } from '../../terrain/chunkGrid'
 import type { RawSampleParams } from '../../terrain/chunkHeightmap'
+import type { CaveDefinition } from '../caveVolume'
 import { biomeWeightsAt, forestBiomeAt, forestDensityAt } from '../../terrain/biomeRegions'
 import {
   sampleContinentalnessAt,
@@ -8,6 +9,7 @@ import {
   sampleMoistureRegionAt,
   sampleMountainRidgeAt,
 } from '../../terrain/chunkHeightmap'
+import { openingDirection } from '../caves/caveOrientation'
 import { createSeededRandom } from '../parseSeed'
 
 /** Stable site key — encoded in `WorldLocation.id`, chest id and wolf-den ids. */
@@ -25,6 +27,28 @@ export function darkForestTreasureWolfDenId(ordinal: number): string {
   return `${DARK_FOREST_TREASURE_SITE_KEY}:wolfDen:${ordinal}`
 }
 
+export function darkForestTreasureMapPickupId(): string {
+  return `treasure-map-pickup:${DARK_FOREST_TREASURE_SITE_KEY}`
+}
+
+/** World-location kinds eligible to host the physical treasure map. */
+export type TreasureMapSourceKind = 'cave' | 'cemetery'
+
+/**
+ * Existing world place that owns the physical treasure-map pickup
+ * (plan quests-progression-009 fix — not a quest-owned ring point).
+ */
+export type TreasureMapSourcePlace = {
+  locationId: string
+  kind: TreasureMapSourceKind
+  /** Authoritative place center (cave entrance / cemetery). */
+  x: number
+  z: number
+  pickupId: string
+  pickupX: number
+  pickupZ: number
+}
+
 export type DarkForestTreasureSite = {
   locationId: string
   landmarkId: string
@@ -36,9 +60,9 @@ export type DarkForestTreasureSite = {
   scale: number
   wolfDenCount: number
   wolfDens: readonly { id: string, x: number, z: number }[]
-  treasureMapPickupId: string
-  treasureMapPickupX: number
-  treasureMapPickupZ: number
+  /** Set after caves/cemetery resolve — null only for the brief boot window
+   *  before `attachTreasureMapSourcePlace`. */
+  treasureMap: TreasureMapSourcePlace | null
 }
 
 export type DarkForestTreasureSiteInput = {
@@ -46,6 +70,15 @@ export type DarkForestTreasureSiteInput = {
   homeX: number
   homeZ: number
   sampleParams: RawSampleParams
+}
+
+/** Preferred home→source band (world units). Matches large-cave ring scale. */
+export const TREASURE_MAP_SOURCE_PREFERRED_MIN = 100
+export const TREASURE_MAP_SOURCE_PREFERRED_MAX = 400
+
+/** Catalog id for a production cave (`cave:${CaveDefinition.caveId}`). */
+export function caveWorldLocationId(caveId: string): string {
+  return `cave:${caveId}`
 }
 
 const CANDIDATE_COUNT = 40
@@ -180,12 +213,6 @@ export function resolveDarkForestTreasureSite(input: DarkForestTreasureSiteInput
     })
   }
 
-  const mapRng = createSeededRandom(hashMix(seed, 0x009a_4d31))
-  const mapAngle = mapRng() * Math.PI * 2
-  const mapDist = 55 + mapRng() * 35
-  const treasureMapPickupX = homeX + Math.cos(mapAngle) * mapDist
-  const treasureMapPickupZ = homeZ + Math.sin(mapAngle) * mapDist
-
   return {
     locationId: DARK_FOREST_TREASURE_LOCATION_ID,
     landmarkId: DARK_FOREST_TREASURE_LANDMARK_ID,
@@ -197,10 +224,127 @@ export function resolveDarkForestTreasureSite(input: DarkForestTreasureSiteInput
     scale,
     wolfDenCount,
     wolfDens,
-    treasureMapPickupId: `treasure-map-pickup:${DARK_FOREST_TREASURE_SITE_KEY}`,
-    treasureMapPickupX,
-    treasureMapPickupZ,
+    treasureMap: null,
   }
+}
+
+export type TreasureMapSourceCandidate = {
+  locationId: string
+  kind: TreasureMapSourceKind
+  x: number
+  z: number
+  /** Cave mouth yaw — required for cave placement beside the entrance. */
+  yaw?: number
+}
+
+export type ResolveTreasureMapSourcePlaceInput = {
+  seed: number
+  homeX: number
+  homeZ: number
+  caves: readonly CaveDefinition[]
+  /** Home settlement cemetery when no cave qualifies. */
+  cemetery: { id: string, x: number, z: number } | null
+  preferredMinDist?: number
+  preferredMaxDist?: number
+}
+
+function caveSourceCandidate(def: CaveDefinition): TreasureMapSourceCandidate {
+  return {
+    locationId: caveWorldLocationId(def.caveId),
+    kind: 'cave',
+    x: def.entrance.x,
+    z: def.entrance.z,
+    yaw: def.entrance.yaw,
+  }
+}
+
+function placePickupAtSource(
+  seed: number,
+  candidate: TreasureMapSourceCandidate,
+): { pickupX: number, pickupZ: number } {
+  const placeRng = createSeededRandom(hashMix(seed, hashMix(0x009a_4d31, hashMix(
+    Math.round(candidate.x * 100),
+    Math.round(candidate.z * 100),
+  ))))
+  if (candidate.kind === 'cave' && candidate.yaw !== undefined) {
+    const out = openingDirection(candidate.yaw)
+    // Outside the mouth on the approach pad — solid open-sky ground owned by
+    // the cave site (not the carved mouth floor, which can fail water checks).
+    const along = 3.4 + placeRng() * 0.8
+    const side = (placeRng() < 0.5 ? -1 : 1) * (1.6 + placeRng() * 0.7)
+    return {
+      pickupX: candidate.x + out.dx * along - out.dz * side,
+      pickupZ: candidate.z + out.dz * along + out.dx * side,
+    }
+  }
+  const angle = placeRng() * Math.PI * 2
+  const dist = 3.5 + placeRng() * 2.5
+  return {
+    pickupX: candidate.x + Math.cos(angle) * dist,
+    pickupZ: candidate.z + Math.sin(angle) * dist,
+  }
+}
+
+function pickDeterministicCandidate(
+  seed: number,
+  candidates: readonly TreasureMapSourceCandidate[],
+): TreasureMapSourceCandidate {
+  const ordered = [...candidates].sort((a, b) => a.locationId.localeCompare(b.locationId))
+  const idx = hashMix(seed, 0x009a_4d31) % ordered.length
+  return ordered[idx]!
+}
+
+/**
+ * Picks an existing world place for the physical treasure map.
+ * Prefer caves in a bounded home band; fall back to any cave, then cemetery.
+ * Pure / deterministic — never scans loaded chunks.
+ *
+ * @domain quests-progression
+ */
+export function resolveTreasureMapSourcePlace(
+  input: ResolveTreasureMapSourcePlaceInput,
+): TreasureMapSourcePlace | null {
+  const {
+    seed,
+    homeX,
+    homeZ,
+    caves,
+    cemetery,
+    preferredMinDist = TREASURE_MAP_SOURCE_PREFERRED_MIN,
+    preferredMaxDist = TREASURE_MAP_SOURCE_PREFERRED_MAX,
+  } = input
+
+  const caveCandidates = caves.map(caveSourceCandidate)
+  const inBand = caveCandidates.filter((c) => {
+    const dist = Math.hypot(c.x - homeX, c.z - homeZ)
+    return dist >= preferredMinDist && dist <= preferredMaxDist
+  })
+  const cavePool = inBand.length > 0 ? inBand : caveCandidates
+  const chosen = cavePool.length > 0
+    ? pickDeterministicCandidate(seed, cavePool)
+    : cemetery
+      ? { locationId: cemetery.id, kind: 'cemetery' as const, x: cemetery.x, z: cemetery.z }
+      : null
+  if (!chosen) return null
+
+  const { pickupX, pickupZ } = placePickupAtSource(seed, chosen)
+  return {
+    locationId: chosen.locationId,
+    kind: chosen.kind,
+    x: chosen.x,
+    z: chosen.z,
+    pickupId: darkForestTreasureMapPickupId(),
+    pickupX,
+    pickupZ,
+  }
+}
+
+/** Attaches a resolved map source onto an existing ruins site. */
+export function withTreasureMapSourcePlace(
+  site: DarkForestTreasureSite,
+  treasureMap: TreasureMapSourcePlace,
+): DarkForestTreasureSite {
+  return { ...site, treasureMap }
 }
 
 /** Authored chest loot (plan 009 V1). */

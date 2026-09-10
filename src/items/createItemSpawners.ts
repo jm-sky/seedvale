@@ -119,6 +119,12 @@ export type OneTimeWorldItemPickup = {
   kind: ItemKind
   x: number
   z: number
+  /**
+   * When true, the pickup is owned by an existing world place (cave/cemetery/…).
+   * Always materialize — do not apply opportunistic water/terrain rejection
+   * meant for loosely scattered settlement spawns.
+   */
+  anchoredToWorldPlace?: boolean
 }
 
 export function createItemSpawners(
@@ -200,7 +206,7 @@ export function createItemSpawners(
   }
 
   for (const extra of extraOneTimePickups) {
-    if (sampleHeight(extra.x, extra.z) <= waterLevel + 0.6) continue
+    if (!extra.anchoredToWorldPlace && sampleHeight(extra.x, extra.z) <= waterLevel + 0.6) continue
     addSpawnPoint(extra.kind, Infinity, { x: extra.x, z: extra.z }, extra.id)
   }
 

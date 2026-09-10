@@ -91,6 +91,8 @@ import { createHelperDeliveryHooks } from '../world/helperDeliveryHooks'
 import {
   DARK_FOREST_TREASURE_CHEST_COINS,
   resolveDarkForestTreasureSite,
+  resolveTreasureMapSourcePlace,
+  withTreasureMapSourcePlace,
 } from '../world/locations/darkForestTreasureSite'
 import { getActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
 import { setActiveDarkForestTreasureSite } from '../world/locations/darkForestTreasureSiteRuntime'
@@ -499,12 +501,15 @@ function buildItemSpawners(
       ? settlement.landmarks.gardens
       : [settlement.landmarks.garden]
   const treasureSite = getActiveDarkForestTreasureSite()
-  const extraOneTimePickups = treasureSite
+  const mapSource = treasureSite?.treasureMap
+  const extraOneTimePickups = mapSource
     ? [{
-        id: treasureSite.treasureMapPickupId,
+        id: mapSource.pickupId,
         kind: 'treasure_map_dark_forest' as const,
-        x: treasureSite.treasureMapPickupX,
-        z: treasureSite.treasureMapPickupZ,
+        x: mapSource.pickupX,
+        z: mapSource.pickupZ,
+        /** Owned by an existing cave/cemetery place — always materialize. */
+        anchoredToWorldPlace: true,
       }]
     : []
   return createItemSpawners(
@@ -1009,6 +1014,25 @@ async function buildWorldSystems(
     config.terrain.region.coastThreshold,
   )
   bootMarkEnd('createCaves')
+
+  // Physical treasure map binds to an existing cave (preferred) or the home
+  // cemetery — after caves exist, still pure of loaded-chunk landmark scans.
+  const activeTreasureSite = getActiveDarkForestTreasureSite()
+  if (activeTreasureSite && !activeTreasureSite.treasureMap) {
+    const cemetery = chunkManager.resolveCemeteryForSettlement(homeDef.id)
+    const mapSource = resolveTreasureMapSourcePlace({
+      seed: config.seed,
+      homeX: homeDef.x,
+      homeZ: homeDef.z,
+      caves: caves.definitions(),
+      cemetery: cemetery ? { id: cemetery.id, x: cemetery.x, z: cemetery.z } : null,
+    })
+    if (mapSource) {
+      setActiveDarkForestTreasureSite(withTreasureMapSourcePlace(activeTreasureSite, mapSource))
+    } else {
+      console.warn('[worldBundle] no cave/cemetery source place for treasure map')
+    }
+  }
 
   const bundle: WorldBundle = {
     chunkManager,
