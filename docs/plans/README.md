@@ -77,6 +77,7 @@ Unless noted otherwise, `verification needed` means implementation has passed au
 | ◼️ `npc-027-spatial-context-and-cave-traversal.md`                             | -       | 🔴 | L      | world-terrain-008, ~~npc-006~~, ~~npc-007~~ |
 | ◼️ `tools-005-seedvale-character-preparation-panel.md`                         | -       | 🔴 | M      | -      |
 | 💡 `npc-026-npc-grave-visits.md`                                               | -       | 🟡 | S      | `npc-011`, ~~world-terrain-016~~ |
+| ◼️ `quests-progression-014-quest-dialogue-actions-and-authored-dialogue-pass.md` | -       | 🔴 | M      | quests-progression-005 |
 
 ---
 
@@ -190,7 +191,7 @@ New plans declare a primary `Domain:` in frontmatter. Use optional `Tags:` only 
 - items-player: `022`
 - npc: `029`
 - persistence: `005`
-- quests-progression: `014`
+- quests-progression: `015`
 - settlements: `007`
 - settlements-npcs: `030`
 - tools: `013`
