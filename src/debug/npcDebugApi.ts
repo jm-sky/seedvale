@@ -3,10 +3,13 @@ import type { WorldBundle } from '../app/worldBundle'
 import type { WorldConfig } from '../config/worldConfig'
 import type { AnimalAgent, AnimalKind } from '../fauna/AnimalAgent'
 import type { PlayerController } from '../player/PlayerController'
+import type { PlayerNeeds } from '../player/PlayerNeeds'
 import type { QuestManager } from '../quests/QuestManager'
 import type { VillageSize } from '../settlement/families'
 import type { HouseholdId } from '../settlement/household'
+import type { HealthState } from '../shared/HealthState'
 import type { TreatableInjurySeverity } from '../shared/injurySeverity'
+import type { PhysicalAttributes } from '../shared/PhysicalAttributes'
 import type { LocationKnowledge } from '../world/locations/locationKnowledge'
 import type { WorldLocationCatalog } from '../world/locations/worldLocationCatalog'
 import type { WorldLocation } from '../world/locations/worldLocationTypes'
@@ -21,6 +24,7 @@ import {
   clearCondition,
   getResolvedPoisoningSeverity,
   POISONING_INITIAL_EXPOSURE_SEVERITY,
+  type TemporaryConditionsState,
 } from '../shared/temporaryConditions'
 import { FAR_RANGE_KM } from '../world/locations/locationConfig'
 import { isAdminMode, isDebugMode } from './debugMode'
@@ -199,7 +203,17 @@ export type InjuryDebugApi = {
   giveNpcBandage: (npcId: string) => boolean
 }
 
+export type PlayerDebugApi = {
+  position: () => { x: number, y: number, z: number }
+  health: () => HealthState
+  attributes: () => PhysicalAttributes
+  needs: () => PlayerNeeds
+  skills: () => PlayerSkills
+  temporaryConditions: () => TemporaryConditionsState
+}
+
 export type SeedvaleDebugApi = {
+  player: PlayerDebugApi
   npc: (id: string) => NpcDebugHandle | null
   npcs: (filter?: NpcQueryFilter) => NpcQueryResult[]
   /** Authoritative NPC state including post-death/corpse (plan npc-010) —
@@ -273,6 +287,12 @@ type VillageIdentityLike = { id: string, name: string, size: VillageSize, x: num
 
 const HELP_TEXT = [
   'window.seedvale.debug — developer console API (?debug=1 only)',
+  'player.position() — current player world position {x, y, z}',
+  'player.health() — current player health {hp, maxHp, status}',
+  'player.attributes() — current player attributes {strength, agility, endurance, intelligence, wisdom, charisma}',
+  'player.needs() — current player needs {hunger, thirst, sleep, rest}',
+  'player.skills() — current player skills {sneak, stealth, sneakUse, sneakUseDistance, sneakUseDuration, sneakUseRange, sneakUseSpeed, sneakUseAccuracy, sneakUseCriticalChance, sneakUseCriticalDamage, sneakUseCriticalMultiplier, sneakUseCriticalChance, sneakUseCriticalDamage, sneakUseCriticalMultiplier}',
+  'player.temporaryConditions() — current player temporary conditions {poisoning, bleeding, infection,饥饿, 口渴, 疲劳, 寒冷, 炎热, 中毒, 出血, 感染, 饥饿, 口渴, 疲劳, 寒冷, 炎热, 中毒, 出血, 感染, 饥饿, 口渴, 疲劳, 寒冷, 炎热, 中毒, 出血, 感染}',
   'npc(id) / npcs(filter?) — inspect a live NPC by id / query all loaded NPCs',
   'npcState(id) — authoritative NPC snapshot including post-death/corpse (works without a live agent)',
   'npc(id).history(filter?) — NPC decision/action trace (plan 170); household(id).history(filter?) — household resource mutations; settlement(id).history(filter?) — merged NPC+household+economy timeline (plan settlements-npcs-013); filter: {since?, limit?, types?}',
@@ -476,6 +496,17 @@ export function installNpcDebugApi(
   }
 
   const api: SeedvaleDebugApi = {
+    player: {
+      position: () => {
+        const { x, y, z } = getPlayer().mesh.position
+        return { x, y, z }
+      },
+      health: () => getPlayer().health,
+      attributes: () => getPlayer().attributes,
+      needs: () => getPlayer().needs,
+      skills: () => getPlayer().skills,
+      temporaryConditions: () => getPlayer().temporaryConditions,
+    },
     npc: (id) => {
       if (!findNpcById(bundle, id)) return null
       return {
